@@ -8,6 +8,7 @@ mod layer;
 mod list;
 mod pad;
 mod power;
+mod words;
 
 pub(super) use held::Went;
 
@@ -67,6 +68,8 @@ pub(super) struct Inner {
     power: PowerChanged,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
+    /// The module runs, so a picked word may type.
+    up: bool,
 }
 
 impl Inner {
@@ -100,6 +103,7 @@ impl Inner {
             known,
             power: PowerChanged::OFF,
             unshown: false,
+            up: false,
         }
     }
 

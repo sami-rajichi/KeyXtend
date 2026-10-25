@@ -17,10 +17,11 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Capability | Why |
 |---|---|
 | `InjectInput` | It gates all four services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector` and `Shortcuts`. |
+| `ReadFocusedText` | It gates `Typed`, `TypingMode` and `TypeWord` (ADR-0033), so only a module that may read typed text hears what was typed or asks for a word. |
 
 ## The board
 
-`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; the `kx-ui` translations (`i18n/*.ftl`) and `kx-theme` (`tokens/icons.toml`) give them by key id. A key's `nav` says what it does in an open list. A `send` key with `repeat = true` repeats while held (Backspace, Delete, Enter, Space and the arrows), as every character key does; `BoardSpec::repeating` lists them, and any other key with the flag is refused.
+`board.toml` holds the grid sizes, the five main rows (key ids, widths in key units, kinds, scan codes in hex and roles; 48 character keys), the side block and the D-pad. Row 4 is ISO, with the key 0x56 (FR `< >`, AR `|`) after a short left Shift, as on real French keyboards. It is compiled in and checked when read: every row spans the grid, every key is whole grid columns, ids are unique and each role fits its key. A character key's id is `c-` and its scan code, such as `c-0x002C`, so adding or moving a key renames no other key. Key names, labels and icons are not in the board; the `kx-ui` translations (`i18n/*.ftl`) and `kx-theme` (`tokens/icons.toml`) give them by key id. A key's `nav` says what it does in an open list. A `send` key with `repeat = true` repeats while held (Backspace, Delete, Enter, Space and the arrows), as every character key does; `BoardSpec::repeating` lists them, and any other key with the flag is refused. A `send` key's `tell` says what word prediction hears when it goes out alone: Backspace `"erase"`, Enter and Tab `"advance"`, the space bar `{ text = " " }`; `BoardSpec::tells` lists them, `BoardSpec::erase_key` names the key a picked word erases with, and a `tell` on any other role is refused.
 
 `[layer]` places the shortcuts layer (spec §4.2): it fills every side cell but the `layer` key's in reading order, and with more than one page `next` (column, row) holds the Next key, so a page holds 13 shortcuts, or 14 alone. `BoardSpec::layer_grid` gives those cells and that room. The layer's keys are generated: `sc-` and the shortcut id (`shortcut_key_id`, such as `sc-copy-all`) and `layer-next` (`NEXT_ID`); a board id in either form is refused, as is a second `layer` key or a Next cell off the side grid or on that key.
 
@@ -143,6 +144,15 @@ The keyboard never depends on the power module; they talk only through `kx_modul
 
 Handlers run on the sender's thread and take the face's lock briefly; nothing is published while it is held, so a handler may call back into the face.
 
+## Word prediction on the bus
+
+The keyboard never depends on the prediction module; they talk only through `kx_module_api::ports::words` events (ADR-0033), and the keyboard stays the only typist.
+
+- **Typed:** each piece that reached the app, wholly or in part, is told once: text sent as text (the space bar's space too), `Erase` for Backspace, `Advance` for Enter and Tab, and `Break` for any other send, a chord, a dead key or the key after it, a layer shortcut and a language switch. Caps, latches and side keys tell nothing, and a held key's repeats tell one piece each.
+- **One sender:** pieces wait in typing's list under the face's lock, in the order they reached the app, and leave through their own `Outbox`, so the bus hears each once and in order from any thread.
+- **TypingMode:** Shift latched, Caps Lock and a shortcut latch (as `LegendMods::shortcut` reads it) go out at each start and on each change, beside the latched set; `LatchesAsk` resends only the set.
+- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used and a dead key's wait ends; it is told like keys. It types nothing while a shortcut latch is on, while the module is stopped, or past `text_cap`; the prediction module checks the round.
+
 ## Settings (`[keyboard]`, version 1)
 
 | Key | Default | Meaning |
@@ -158,6 +168,7 @@ Handlers run on the sender's thread and take the face's lock briefly; nothing is
 | `repeat_delay_ms` | `800` | How long a key is held before it repeats, in ms; within `REPEAT_DELAY_MS` in `settings.rs`, so a slow click never repeats. |
 | `repeat_every_ms` | `100` | The time between repeats, in ms; within `REPEAT_EVERY_MS` in `settings.rs`. |
 | `key_apps` | `["scrcpy.exe"]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. scrcpy reads letters only as key presses. |
+| `text_cap` | `256` | The most characters a picked word may erase or type; within `TEXT_CAP` in `settings.rs`, and a longer request types nothing. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |
 | `shortcut_pages` | the owner's three pages (spec §4.2) | The shortcuts layer's pages, by shortcut id: at most `MAX_PAGES` in `settings.rs` (so the Next key's dots fit one line inside its cap), none empty or past the layer's room, no id twice; an empty list is allowed. |
@@ -171,14 +182,14 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `NO_SHORTCUTS_TIP`, `POWER_OFF_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`; for the layer `with_layer`, `LayerState`, `SHORTCUT_ICON_PREFIX`, `SHORTCUT_NAME_PREFIX`, `NEXT_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
 - `panel`: `LangList`, `Moved`, `navs`, `list_view`, `ListView`, `LangRow`, `CURRENT_ICON`.
-- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav` and `repeat`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`, and for the shortcuts layer `LayerSpec`, `SideCell`, `LayerGrid` (`cells`, `capacity`, `next`; from `BoardSpec::layer_grid`), `BoardSpec::layer_hides` (whether the layer hides a side key), `shortcut_key_id`, `NEXT_ID`.
+- `spec`: `BoardSpec` (`shipped`, `read`, `columns`, `row_keys`, `char_scans`, `roles`, `repeating`, `tells`, `erase_key`), `Tell` (`piece`), `BoardError` (`kind`, and `From` into a start error), `KeyKind`, `Latch`, `LatchRole` (`of`), `Assist` (into `Toggle`), `Role`, `KeySpec` (with `nav`, `repeat` and `tell`), `Nav`, `CharSpec`, `RowItem`, `RowKey`, `SideSpec`, `DpadSpec`, `char_id`, and for the shortcuts layer `LayerSpec`, `SideCell`, `LayerGrid` (`cells`, `capacity`, `next`; from `BoardSpec::layer_grid`), `BoardSpec::layer_hides` (whether the layer hides a side key), `shortcut_key_id`, `NEXT_ID`.
 - `layer`: `Layer` (`new`, `renew`, `toggle`, `next_page`, `shown`, `any`, `page_count`, `page`, `cells`), the pure shortcuts layer over the setting's pages, the platform's known ids and the board's `LayerGrid`; `LayerCell` and `LayerKey` (`id`, `role`). It drops unknown ids, repeats and empty pages, keeps its page while hidden, and its debug output hides the ids.
 - A new shortcut also needs its line in `tests/keyboard/known.rs`, which the app's agree test pins to the Windows table, and, with an icon, a place on the default pages.
 - `latch`: `Latches` (`new`, `mode`, `set_mode`, `toggle`, `is_on`, `unused`, `held`, `used`, `spend`); its debug output shows only the mode, and `LegendMods`, `KeyState` and `StateView` hide latches and Caps Lock too.
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `layer_plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `told` and `type_word`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
 - `geom`: `board`, `side_area`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.

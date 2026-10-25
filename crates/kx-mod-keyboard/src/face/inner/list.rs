@@ -1,5 +1,5 @@
 //! The language list in the face's state (spec §3.3): the language key opens and steps it, the board's keys move it,
-//! and a pick switches the layout.
+//! and a pick switches the layout; a switch asked tells word prediction a break.
 
 use super::{Inner, notice};
 use crate::face::STATE;
@@ -8,7 +8,7 @@ use crate::panel::{LangList, Moved};
 use crate::settings::LangKey;
 use crate::spec::Nav;
 use kx_module_api::keys;
-use kx_module_api::ports::{FaceError, FaceReply};
+use kx_module_api::ports::{FaceError, FaceReply, Piece};
 
 impl Inner {
     /// A click on the language key: a step asks the app to switch, which a later refresh sees. With one layout
@@ -22,6 +22,7 @@ impl Inner {
                     if self.settings.lang_key == LangKey::Carousel {
                         self.turn.asked(by);
                     }
+                    self.typing.tell(Piece::Break);
                     FaceReply::default()
                 }
                 Err(_) => notice(keys::LANG_NOT_SWITCHED, FaceReply::default()),
@@ -62,7 +63,10 @@ impl Inner {
         self.list = None;
         self.turn.clear();
         Ok(match self.ports.layouts.pick(label.id) {
-            Ok(()) => STATE,
+            Ok(()) => {
+                self.typing.tell(Piece::Break);
+                STATE
+            }
             Err(_) => notice(keys::LANG_NOT_SWITCHED, STATE),
         })
     }

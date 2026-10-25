@@ -1,17 +1,20 @@
 //! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
-//! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out.
+//! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
+//! what reached the app waits to be told.
 
 mod held;
 mod layer;
 mod ports;
+mod told;
+mod word;
 
 pub use ports::{Io, Ports};
 
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
-use crate::spec::{BoardSpec, LatchRole, Role};
-use kx_module_api::ports::{InjectError, Scan, ShortcutError, Toggle};
+use crate::spec::{BoardSpec, LatchRole, Role, Tell};
+use kx_module_api::ports::{InjectError, Piece, Scan, ShortcutError, Toggle};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use thiserror::Error;
@@ -62,11 +65,19 @@ pub struct Typing {
     keys: HashMap<String, (Role, Option<Scan>)>,
     /// The keys the board lets repeat while held.
     repeating: HashSet<String>,
+    /// What the keys that tell more than a break tell, by id.
+    tells: HashMap<String, Tell>,
+    /// The key a picked word erases with.
+    erase: Option<Scan>,
     apps: Vec<String>,
+    /// The most characters a picked word may erase or type.
+    cap: u16,
     latches: Latches,
     dead: bool,
     /// While a held key repeats: whether a key went out, so the latches let go when the burst ends.
     burst: Option<bool>,
+    /// The pieces that reached the app and wait to be told, oldest first.
+    pieces: Vec<Piece>,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -84,10 +95,14 @@ impl Typing {
         Self {
             keys: keys.map(|(id, role, sc)| (id, (role, sc))).collect(),
             repeating: spec.repeating(),
+            tells: spec.tells(),
+            erase: spec.erase_key(),
             apps: settings.key_apps.clone(),
+            cap: settings.text_cap,
             latches: Latches::new(settings.modifiers),
             dead: false,
             burst: None,
+            pieces: Vec::new(),
         }
     }
 
@@ -102,9 +117,10 @@ impl Typing {
         self.latches.used()
     }
 
-    /// Takes a new `modifiers` mode and `key_apps` list, keeping the latched modifiers and a dead key's wait.
+    /// Takes a new `modifiers` mode, `key_apps` list and `text_cap`, keeping the latched modifiers and a dead key's wait.
     pub fn update(&mut self, settings: &KeyboardSettings) {
         self.apps.clone_from(&settings.key_apps);
+        self.cap = settings.text_cap;
         self.latches.set_mode(settings.modifiers);
     }
 
@@ -135,7 +151,10 @@ impl Typing {
             None => layer::planned(io, id).ok_or(TapError::UnknownKey)?,
         };
         match planned {
-            Plan::Send { route, wait } => self.send(io, &route, wait)?,
+            Plan::Send { route, wait } => {
+                let piece = told::piece(&route, wait, self.tells.get(id));
+                self.send(io, &route, wait, piece)?;
+            }
             Plan::Caps(key) => self.caps(io, key)?,
             Plan::Latch(r, key) => self.latch(io, r, key)?,
             Plan::Shortcut(id) => self.shortcut(io, &id)?,
@@ -168,8 +187,15 @@ impl Typing {
         }
     }
 
-    /// Sends `route`; once any of it reached the app, the latches are used and the dead-key wait follows `wait`.
-    fn send(&mut self, io: &Io<'_>, route: &Route, wait: Wait) -> Result<(), TapError> {
+    /// Sends `route`; once any of it reached the app, the latches are used, the dead-key wait follows `wait` and
+    /// `piece` waits to be told.
+    fn send(
+        &mut self,
+        io: &Io<'_>,
+        route: &Route,
+        wait: Wait,
+        piece: Piece,
+    ) -> Result<(), TapError> {
         let went = match route {
             Route::Tap(key) => io.injector.tap(*key),
             Route::Chord(held, key) => io.injector.chord(held, *key),
@@ -182,6 +208,7 @@ impl Typing {
                 Wait::Ask => !types(io, route),
             };
             self.used();
+            self.pieces.push(piece);
         }
         Ok(went?)
     }

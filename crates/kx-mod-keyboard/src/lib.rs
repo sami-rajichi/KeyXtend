@@ -1,6 +1,6 @@
-//! The keyboard module: the board and its geometry, the keyboard's size and place, typing with sticky
-//! modifiers, the language key, the shortcuts layer and the `KeyboardFace` the UI draws. It talks to the OS only
-//! through ports.
+//! The keyboard module: the board and its geometry, the keyboard's size and place, typing with sticky modifiers, the
+//! language key, the shortcuts layer, the `KeyboardFace` the UI draws, and the pieces it typed and the words it types
+//! for word prediction (ADR-0033). It talks to the OS only through ports.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -36,7 +36,7 @@ pub use repeat::Repeat;
 pub use run::{Io, Ports, TapError, Tapped, Typing};
 pub use settings::{Corner, KeyboardSettings, LangKey, MAX_PAGES, Modifiers, SPEC};
 pub use sizer::{Limits, Resize, SizeError, Sizer};
-pub use spec::{Assist, BoardError, BoardSpec, KeyKind, Latch, LatchRole, Nav, Role};
+pub use spec::{Assist, BoardError, BoardSpec, KeyKind, Latch, LatchRole, Nav, Role, Tell};
 pub use view::{BoardView, KeyState, KeyView, StateView};
 
 use kx_module_api::ports::KeyboardFaceKey;
@@ -69,7 +69,15 @@ impl Module for KeyboardModule {
         };
         cx.provide::<KeyboardFaceKey>(face.clone())?;
         face::listen(cx, &face)?;
+        face.set_up(true);
         self.face = Some(face);
         Ok(())
+    }
+
+    /// The face stops typing picked words, as a handler may still run on the sender's thread; the UI keeps it.
+    fn stop(&mut self) {
+        if let Some(face) = &self.face {
+            face.set_up(false);
+        }
     }
 }

@@ -5,10 +5,12 @@ mod check;
 mod error;
 mod keys;
 mod layer;
+mod tell;
 
 pub use error::BoardError;
 pub use keys::{RowKey, char_id};
 pub use layer::{LayerGrid, LayerSpec, NEXT_ID, SideCell, shortcut_key_id};
+pub use tell::Tell;
 
 use kx_module_api::ports::{Scan, Toggle};
 use serde::{Deserialize, Serialize};
@@ -166,6 +168,9 @@ pub struct KeySpec {
     /// It repeats while held; only a `send` key may.
     #[serde(default)]
     pub repeat: bool,
+    /// What it tells word prediction when it goes out alone; only a `send` key may, and one without tells a break.
+    #[serde(default)]
+    pub tell: Option<Tell>,
 }
 
 /// A run of one-unit character keys, by scan code.

@@ -249,5 +249,6 @@ fn the_saved_place_holds_only_once_placed() {
     assert_eq!(s.place(), Some(Point { x: -1200, y: 40 }));
 }
 
+mod cap;
 mod pages;
 mod repeat;

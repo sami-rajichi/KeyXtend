@@ -7,6 +7,7 @@ mod inner;
 mod layer;
 mod outbox;
 mod pad;
+mod words;
 
 pub(crate) use bus::listen;
 
@@ -19,6 +20,7 @@ use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
+use outbox::Outbox;
 use pad::Peeks;
 use std::collections::HashMap;
 use std::fmt;
@@ -48,10 +50,12 @@ pub struct Face {
     /// The same keys in board order, which the state lists.
     nav_keys: Vec<(String, Nav)>,
     inner: Mutex<Inner>,
-    /// The latched set the bus last heard.
+    /// The latched set and typing mode the bus last heard.
     told: Told,
     /// What the scroll module last heard of the pointer on the pad.
     peeks: Peeks,
+    /// The typed pieces' sender, one thread at a time.
+    pieces: Outbox,
 }
 
 /// Shows no key, place or typing state.
@@ -81,6 +85,7 @@ impl Face {
             inner: Mutex::new(inner),
             told: Told::default(),
             peeks: Peeks::default(),
+            pieces: Outbox::default(),
         }
     }
 
@@ -269,9 +274,10 @@ impl KeyboardFace for Face {
         self.spec.row_px
     }
 
-    /// Does `action`, then tells the bus the latched set if it changed.
+    /// Does `action`, then tells the bus the pieces it typed, and the latched set and typing mode if they changed.
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         let reply = self.route(action);
+        self.pour();
         self.tell(false);
         reply
     }

@@ -8,18 +8,20 @@
 use crate::host::{FakeHost, fake, store};
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{BoardSpec, ID, KeyboardModule, KeyboardSettings, Ports, Tapped, Typing};
-use kx_module_api::Capability::{InjectInput, KeyboardUi};
+use kx_module_api::Capability::{InjectInput, KeyboardUi, ReadFocusedText};
 use kx_module_api::ports::{
     InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, ShortcutsKey, TextRoute,
+    TypeWord,
 };
 use kx_module_api::{
-    Capability, Module, ModuleCx, ModuleError, Redacted, ServiceError, ServiceKey, SettingsError,
+    Capability, Event, EventError, Module, ModuleCx, ModuleError, Redacted, ServiceError,
+    ServiceKey, SettingsError,
 };
 use kx_platform_fake::Stroke;
 use std::sync::Arc;
 
-/// Both capabilities the module declares.
-const BOTH: [Capability; 2] = [InjectInput, KeyboardUi];
+/// The capabilities the module declares.
+const ALL: [Capability; 3] = [InjectInput, KeyboardUi, ReadFocusedText];
 
 fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
     KeyboardModule::default().start(&mut ModuleCx::new(host))
@@ -29,7 +31,7 @@ fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
 fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
     let mut host = fake(None);
     store(&mut host, None);
-    host.granted = BOTH.to_vec();
+    host.granted = ALL.to_vec();
     assert_eq!(start(&mut host), Ok(()));
 }
 
@@ -37,7 +39,7 @@ fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
 fn it_provides_the_face_behind_keyboard_ui() {
     let mut host = fake(None);
     store(&mut host, None);
-    host.granted = BOTH.to_vec();
+    host.granted = ALL.to_vec();
     start(&mut host).unwrap();
     let (gate, service) = &host.services[&KeyboardFaceKey::ID];
     assert_eq!(*gate, Some(KeyboardUi));
@@ -55,6 +57,15 @@ fn without_keyboard_ui_it_cannot_offer_the_face() {
 }
 
 #[test]
+fn without_read_focused_text_it_cannot_hear_picked_words() {
+    let mut host = fake(None);
+    store(&mut host, None);
+    host.granted = vec![InjectInput, KeyboardUi];
+    let refused = EventError::NotGranted(TypeWord::NAME, ReadFocusedText);
+    assert_eq!(start(&mut host), Err(ModuleError::Event(refused)));
+}
+
+#[test]
 fn without_inject_input_it_cannot_reach_the_injector() {
     let mut host = fake(None);
     store(&mut host, None);
@@ -66,7 +77,7 @@ fn without_inject_input_it_cannot_reach_the_injector() {
 fn without_the_layouts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(LayoutsKey::ID));
-    host.granted = BOTH.to_vec();
+    host.granted = ALL.to_vec();
     let missing = ServiceError::Missing(LayoutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -75,7 +86,7 @@ fn without_the_layouts_service_it_fails_to_start() {
 fn without_the_shortcuts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(ShortcutsKey::ID));
-    host.granted = BOTH.to_vec();
+    host.granted = ALL.to_vec();
     let missing = ServiceError::Missing(ShortcutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -102,7 +113,7 @@ fn its_handle_writes_its_own_section() {
 fn a_tap_through_the_kernels_ports_types_in_the_layout_shown() {
     let mut host = fake(None);
     let fakes = store(&mut host, None);
-    host.granted = BOTH.to_vec();
+    host.granted = ALL.to_vec();
     let ports = Ports::from_cx(&ModuleCx::new(&mut host)).unwrap();
     let settings = KeyboardSettings::from_defaults().unwrap();
     let mut typing = Typing::new(&BoardSpec::shipped().unwrap(), &settings);

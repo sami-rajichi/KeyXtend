@@ -1,5 +1,6 @@
 //! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
-//! shortcuts, and it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`.
+//! shortcuts, it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`, and it tells and types words behind
+//! `ReadFocusedText`.
 
 use crate::settings::SPEC;
 use kx_module_api::ports::{
@@ -10,7 +11,8 @@ use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("keyboard");
 
-/// The module's manifest: `InjectInput` gates all four services it needs, and `KeyboardUi` the face it provides.
+/// The module's manifest: `InjectInput` gates all four services it needs, `KeyboardUi` the face it provides, and
+/// `ReadFocusedText` the typed pieces, the typing mode and the picked words.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -21,13 +23,19 @@ pub static MANIFEST: Manifest = Manifest {
         ShortcutsKey::ID,
     ],
     provides: &[KeyboardFaceKey::ID],
-    capabilities: &[Capability::InjectInput, Capability::KeyboardUi],
+    capabilities: &[
+        Capability::InjectInput,
+        Capability::KeyboardUi,
+        Capability::ReadFocusedText,
+    ],
     settings: Some(&SPEC),
 };
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kx_module_api::Event;
+    use kx_module_api::ports::{TypeWord, Typed, TypingMode};
 
     #[test]
     fn it_types_through_the_injector_the_layouts_and_the_shortcuts() {
@@ -47,8 +55,13 @@ mod tests {
     }
 
     #[test]
-    fn it_holds_inject_input_for_all_four_and_keyboard_ui_for_the_face() {
-        let want = [Capability::InjectInput, Capability::KeyboardUi];
+    fn it_holds_inject_input_for_all_four_keyboard_ui_for_the_face_and_read_focused_text_for_words()
+    {
+        let want = [
+            Capability::InjectInput,
+            Capability::KeyboardUi,
+            Capability::ReadFocusedText,
+        ];
         assert_eq!(MANIFEST.capabilities, want);
         let gates = [
             InputInjectorKey::CAPABILITY,
@@ -57,6 +70,16 @@ mod tests {
             ShortcutsKey::CAPABILITY,
         ];
         assert!(gates.iter().all(|&c| c == Some(Capability::InjectInput)));
+        let words = [
+            Typed::CAPABILITY,
+            TypingMode::CAPABILITY,
+            TypeWord::CAPABILITY,
+        ];
+        assert!(
+            words
+                .iter()
+                .all(|&c| c == Some(Capability::ReadFocusedText))
+        );
     }
 
     #[test]

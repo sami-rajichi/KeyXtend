@@ -22,6 +22,8 @@ repeat_every_ms = 100
 # Apps that get text as key presses in their own layout, by file name such as "app.exe"; scrcpy (a phone mirror)
 # reads letters only as key presses.
 key_apps = ["scrcpy.exe"]
+# The most characters a picked word may erase or type; a longer request types nothing.
+text_cap = 256
 # Where the user last put the keyboard, in physical pixels; used only when `placed` is true.
 x = 0
 y = 0

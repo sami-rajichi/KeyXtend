@@ -1,6 +1,7 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
 //! pointer hook, the scroll target and the power dialog each reach only the module whose manifest declares their
-//! capability, `KeyboardUi` goes only to the ui and its sources, and the shortcuts reach the keyboard's layer.
+//! capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only to the modules that read typed
+//! text, and the shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
@@ -163,6 +164,22 @@ fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
     assert_eq!(
         holders, want,
         "ADR-0033: the ui, the face's provider and the notes' sender"
+    );
+}
+
+#[test]
+fn read_focused_text_goes_only_to_the_keyboard_among_the_modules_shipped_now() {
+    let shipped = modules(&Rig::new().load().hub);
+    let holders: Vec<_> = shipped
+        .iter()
+        .map(|m| m.manifest())
+        .filter(|m| m.capabilities.contains(&Capability::ReadFocusedText))
+        .map(|m| m.id)
+        .collect();
+    assert_eq!(
+        holders,
+        [kx_mod_keyboard::ID],
+        "ADR-0033: the typist; predict and the ui join when they ship"
     );
 }
 
