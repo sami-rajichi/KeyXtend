@@ -14,7 +14,7 @@
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
 | The data key (`KEY_LEN` random bytes from `getrandom`) | Secret | `sealed.key` in the data folder, wrapped by the OS guard; in memory only as `Zeroizing`, on the heap | Yes, by the guard (DPAPI on Windows) | Until the user deletes the data folder |
-| Blobs: learned words, emails (P7) | Sensitive | `<name>.sealed` in the data folder | XChaCha20-Poly1305, a fresh 24-byte nonce per save; the tag covers the magic, the version and the blob's name | Until replaced or deleted |
+| Blobs: learned words, emails (P7) | Sensitive | `<name>.sealed` in the data folder | XChaCha20-Poly1305, a fresh `NONCE_LEN`-byte nonce per save; the tag covers the magic, the version and the blob's name | Until replaced or deleted |
 | Opened bytes | Sensitive | Memory; `open` returns them as `Zeroizing`, but `SealedFiles::load` hands them on as the port's plain `Vec<u8>` | N/A | Handed to the caller (Accepted below) |
 | A blob that would not open | Sensitive (still sealed) | `<name>.damaged`, replacing an older one | Yes, as it was | Until the next damaged copy of that name |
 

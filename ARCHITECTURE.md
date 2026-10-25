@@ -279,11 +279,11 @@ pub trait Module: Send + 'static {
 ## Word prediction (P7, ADR-0032, ADR-0033)
 
 - **The keyboard stays the only typist.** `kx-mod-predict` holds no `InjectInput`: a pick sends `TypeWord`, and the keyboard types it through its own route, latches and dead-key rule, within `[keyboard] text_cap`, or types nothing.
-- **Events.** `Typed` and `TypingMode` (keyboard to predict), `Suggested` (predict to the ui), `ChipPicked` and `WordsAsk` (ui to predict) and `TypeWord` (predict to the keyboard) all name `ReadFocusedText`. `PressesWanted` and `PressesAsk` carry nothing and name none: they keep the mouse module's hook telling presses (`PointerPressed`) while predict wants them, in any start order.
+- **Events.** `Typed` and `TypingMode` (keyboard to predict), `Suggested` (predict to the ui), `ChipPicked` and `WordsAsk` (ui to predict) and `TypeWord` (predict to the keyboard) all name `ReadFocusedText`. `PressesWanted` (a flag) and `PressesAsk` (nothing) carry no typed data and name none: they keep the mouse module's hook telling presses (`PointerPressed`) while predict wants them, in any start order.
 - **Ports.** `FieldWatch` (`ReadFocusedText`) tells the focused box's kind and reads at most `[predict] context_words` words before the cursor, never in a password or unknown box. `WordPacks` (no gate: public data) maps one language's pack, and `SealedStore` (`SecretStore`) keeps sealed blobs.
 - **Who holds what.** `ReadFocusedText`: the keyboard, predict and the ui. `SecretStore`: predict alone. `KeyboardUi`, which gates `KeyboardFaceKey`, `AssistNote` and `PointerMoved`: the ui, and their sources, the keyboard and the mouse module. The app's `tests/life/ships.rs` pins each list.
-- **Files.** The packs (`<iso>.kxw`, the index `PACK_INDEX`, their licence and credits) sit in `PACK_DIR` beside the program, read through read-only maps; a debug build also reads where `cargo xtask words` writes them. The learned words and emails are sealed in `SEALED_DIR` under the data folder (ADR-0015), by one `SealedFiles` per data folder.
-- **Adapters.** Each OS fills only `Probe`, `Reader`, `PackDisk` and `KeyGuard`; the shared rules live in `kx-platform` and `kx-crypto` (code map), and the OS calls are in Platform notes below.
+- **Files.** The packs (`<iso>.kxw`), the index `PACK_INDEX`, their licence and credits sit in `PACK_DIR` beside the program, and a debug build also reads where `cargo xtask words` writes them; only the packs and the index are read through read-only maps. The learned words and emails are sealed in `SEALED_DIR` under the data folder (ADR-0015), by one `SealedFiles` per data folder.
+- **Adapters.** Each OS fills only `Probe`, `Reader`, `PackDisk`, `KeyGuard` and the watch thread's body (its OS start-up, client and focus handler); the shared rules live in `kx-platform` and `kx-crypto` (code map), and the OS calls are in Platform notes below.
 
 ## Platform notes
 
@@ -294,7 +294,7 @@ pub trait Module: Send + 'static {
 | Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
 | Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
-| Focused box (P7) | UI Automation focus handler on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
+| Focused box (P7) | UI Automation focus handler, called on its own threads; reads on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
 | Word packs (P7) | A read-shared file, mapped `PAGE_READONLY` | A read-only `mmap` from a folder only the system writes, else a copy | The same as macOS |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
 | Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |
