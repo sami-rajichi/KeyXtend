@@ -76,16 +76,7 @@ pub(crate) fn check_source(source: &Path, target: &Path, max_mb: u64) -> Result<
     if paths::overlaps(source, target) {
         return Err(DevError::Overlap(paths::text(source)));
     }
-    fits(paths::folder_size(source)?, max_mb)
-}
-
-/// Refuses `bytes` installed over `max_mb`, the most an install copies; the stage check holds its stage to it too.
-pub(crate) fn fits(bytes: u64, max_mb: u64) -> Result<(), DevError> {
-    let mb = paths::mb(bytes);
-    if mb > max_mb {
-        return Err(DevError::TooBig { mb, max: max_mb });
-    }
-    Ok(())
+    paths::fits(paths::folder_size(source)?, max_mb)
 }
 
 /// True if `folder` holds the app's `program` directly, so its install gets the shortcut.

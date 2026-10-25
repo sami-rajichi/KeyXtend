@@ -138,7 +138,7 @@ fn a_network_library_only_the_listed_libraries_import_passes() {
         ),
     ]);
     let summary = stage.check().unwrap();
-    assert_eq!((summary.files, summary.bytes), (5, 0));
+    assert_eq!((summary.files, summary.size.bytes), (5, 0));
 }
 
 #[test]

@@ -17,13 +17,22 @@ pub(super) const LIB_EXT: &str = "dll";
 pub(crate) struct Summary {
     /// Files in the stage.
     pub files: usize,
-    /// Their total size in bytes, as installed.
+    /// Their total size.
+    pub size: Size,
+    /// The packs folder's share of it.
+    pub packs: Size,
+}
+
+/// A size in bytes, as installed and deflated, as the download carries it.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Size {
+    /// As installed.
     pub bytes: u64,
-    /// Their total size deflated, as the download carries them.
+    /// Deflated.
     pub deflated: u64,
 }
 
-impl Summary {
+impl Size {
     /// The download size in MB, rounded up: the figure the budget counts.
     pub(crate) fn mb(&self) -> u64 {
         paths::mb(self.deflated)
@@ -32,6 +41,12 @@ impl Summary {
     /// The installed size in MB, rounded up.
     pub(crate) fn raw_mb(&self) -> u64 {
         paths::mb(self.bytes)
+    }
+
+    /// Adds `other` to this size.
+    fn add(&mut self, other: Self) {
+        self.bytes = self.bytes.saturating_add(other.bytes);
+        self.deflated = self.deflated.saturating_add(other.deflated);
     }
 }
 
@@ -64,28 +79,36 @@ pub(crate) fn check(
     }
     refuse_unplanned(&files, &planned(config))?;
     let summary = measure(stage, &files, level)?;
-    if summary.mb() > config.max_mb {
-        let (mb, max) = (summary.mb(), config.max_mb);
+    if summary.size.mb() > config.max_mb {
+        let (mb, max) = (summary.size.mb(), config.max_mb);
         return Err(StageError::OverBudget { mb, max }.into());
     }
     Ok(summary)
 }
 
-/// The count, installed bytes and deflated bytes of the stage-relative `files` in `stage`, each deflated at `level`.
-pub(crate) fn measure(stage: &Path, files: &[PathBuf], level: u32) -> Result<Summary, DevError> {
-    let (mut bytes, mut deflated) = (0, 0);
+/// The count and size of the stage-relative `files` in `stage`, each read once and deflated at `level`, with the
+/// packs folder's share.
+fn measure(stage: &Path, files: &[PathBuf], level: u32) -> Result<Summary, DevError> {
+    let (mut size, mut packs) = (Size::default(), Size::default());
+    let total = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
     for file in files {
         let path = stage.join(file);
         let read = std::fs::read(&path)
             .map_err(|e| DevError::Io(format!("{}: {e}", paths::text(&path))))?;
-        bytes += read.len();
-        deflated += crate::deflate::deflated(&read, level)?;
+        let deflated = crate::deflate::deflated(&read, level)?;
+        let one = Size {
+            bytes: total(read.len()),
+            deflated: total(deflated),
+        };
+        size.add(one);
+        if words::inside(file) {
+            packs.add(one);
+        }
     }
-    let total = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
     Ok(Summary {
         files: files.len(),
-        bytes: total(bytes),
-        deflated: total(deflated),
+        size,
+        packs,
     })
 }
 
@@ -130,7 +153,7 @@ fn refuse_unplanned(files: &[PathBuf], planned: &[PathBuf]) -> Result<(), DevErr
 }
 
 /// The key a stage-relative path is matched by: its parts in lower case, joined the same way on every system.
-pub(super) fn path_key(path: &Path) -> String {
+fn path_key(path: &Path) -> String {
     let parts: Vec<String> = path.iter().map(|p| key(&p.to_string_lossy())).collect();
     parts.join("/")
 }

@@ -257,13 +257,13 @@ fn fill_case(label: &str) -> (TempDir, PathBuf, [Copy; 1]) {
     (dir, stage, files)
 }
 
-/// A summary of `files` files of `bytes` bytes each way.
+/// A summary of `files` files of `bytes` bytes each way, with no packs.
 fn summary(files: usize, bytes: u64) -> check::Summary {
     let deflated = bytes;
     check::Summary {
         files,
-        bytes,
-        deflated,
+        size: check::Size { bytes, deflated },
+        packs: check::Size::default(),
     }
 }
 

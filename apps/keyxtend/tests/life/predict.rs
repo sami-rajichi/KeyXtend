@@ -11,7 +11,8 @@ use kx_mod_layouts::{LayoutsModule, LayoutsSettings, label};
 use kx_mod_predict::PredictModule;
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
-    FieldWatchKey, LayoutSource, LayoutSourceKey, PACK_INDEX, SealedStoreKey, WordPacksKey,
+    FieldWatchKey, LayoutSource, LayoutSourceKey, PACK_DIR, PACK_INDEX, SealedStoreKey,
+    WordPacksKey,
 };
 use kx_module_api::{Module, Notice, NoticeArg, args, keys};
 use std::path::Path;
@@ -100,6 +101,8 @@ fn predict_opens_the_language_in_front_whether_it_starts_before_or_after_layouts
         kernel.start().unwrap();
         let why = format!("predict first: {predict_first}");
         assert!(told_missing(&notices, &iso), "{why}: it opened {iso}");
+        // Dropping the kernel stops every module, so a late second open is counted too.
+        drop(kernel);
         assert_eq!(rig.packs.opens(&iso), 1, "{why}: once");
     }
 }
@@ -126,7 +129,7 @@ fn with_predict_switched_off_nothing_watches_the_box_or_opens_a_pack() {
 fn packs_are_read_from_the_words_folder_beside_the_program_first() {
     let exe = Path::new("app");
     let dirs = pack_dirs(exe);
-    assert_eq!(dirs.first(), Some(&exe.join("words")));
+    assert_eq!(dirs.first(), Some(&exe.join(PACK_DIR)));
     let debug = usize::from(cfg!(debug_assertions));
     assert_eq!(
         dirs.len(),

@@ -16,12 +16,10 @@ pub(crate) use self::pe::bare_image;
 
 use std::path::{Path, PathBuf};
 
-use kx_module_api::ports::PACK_DIR;
-
 use self::qt::QtDirs;
 use self::words::Words;
 use super::config::DevSetup;
-use super::{DevError, install, paths};
+use super::{DevError, paths};
 use crate::workspace::{self, LoadError};
 
 /// The section name under `workspace.metadata`.
@@ -123,7 +121,7 @@ pub(crate) fn verify(
     let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
     let in_system = |lib: &str| system.join(lib).is_file();
     let summary = check::check(folder, config, level()?, pe::read, in_system)?;
-    install::fits(summary.bytes, setup.config.install_max_mb)?;
+    paths::fits(summary.size.bytes, setup.config.install_max_mb)?;
     words::check(folder, &Words::load(&setup.root)?.credits)?;
     Ok(summary)
 }
@@ -177,19 +175,19 @@ pub(crate) fn run() -> Result<(), DevError> {
     files.extend(words);
     let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);
-    let packs = stage.join(PACK_DIR);
-    let packs = check::measure(&packs, &paths::files(&packs)?, level()?)?;
-    let (deflated, raw) = (packs.mb(), packs.raw_mb());
-    println!("Word packs: {deflated} MB deflated of it, {raw} MB installed.");
     Ok(())
 }
 
-/// Prints where the stage is, its files, and its download against the budget beside its installed size.
+/// Prints where the stage is, its files, its download against the budget beside its installed size, and the packs'
+/// share of both.
 fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check::Summary) {
     let rel = stage.strip_prefix(&setup.root).unwrap_or(stage);
     println!("Staged {}: {} files.", paths::text(rel), summary.files);
-    let (mb, max, raw) = (summary.mb(), config.max_mb, summary.raw_mb());
+    let (size, packs) = (summary.size, summary.packs);
+    let (mb, max, raw) = (size.mb(), config.max_mb, size.raw_mb());
     println!("Download: {mb} MB deflated of the {max} MB budget; {raw} MB installed.");
+    let (deflated, raw) = (packs.mb(), packs.raw_mb());
+    println!("Word packs: {deflated} MB deflated of it, {raw} MB installed.");
 }
 
 #[cfg(test)]

@@ -77,6 +77,20 @@ fn a_stage_without_the_index_is_refused() {
 }
 
 #[test]
+fn an_index_that_cannot_be_read_keeps_its_own_error() {
+    let stage = stage("words-unread");
+    let index = stage.path().join(PACK_DIR).join(PACK_INDEX);
+    std::fs::remove_file(&index).unwrap();
+    std::fs::create_dir(&index).unwrap();
+    let checked = check(stage.path(), &credits());
+    let named = |t: &String| t.starts_with(&staged(PACK_INDEX));
+    assert!(
+        matches!(&checked, Err(DevError::Io(t)) if named(t)),
+        "{checked:?}"
+    );
+}
+
+#[test]
 fn a_damaged_or_empty_index_is_refused() {
     for text in ["EN\n", ""] {
         let stage = stage("words-damaged");
@@ -151,20 +165,60 @@ fn every_file_the_plan_takes_from_the_committed_packs_is_there() {
 
 #[test]
 fn only_files_in_the_packs_folder_are_left_to_this_check() {
-    let inside_of = |rel: &str| inside(&paths::join_rel(PathBuf::new(), rel));
-    assert!(inside_of("words/en.kxw") && inside_of("Words/old/x.txt"));
-    assert!(!inside_of("words") && !inside_of("qml/words/x") && !inside_of("Qt6Core.dll"));
+    let inside_of = |rel: &str| inside(&Path::new(rel).join("x.txt"));
+    let variant = PACK_DIR.to_uppercase();
+    assert_ne!(variant, PACK_DIR);
+    assert!(inside_of(PACK_DIR) && !inside_of(&variant));
+    assert!(!inside(Path::new(PACK_DIR)) && !inside_of("qml") && !inside_of(""));
+    assert!(!inside(&Path::new("qml").join(PACK_DIR).join("x")));
+}
+
+/// The stage check on `stage`, with the program beside its packs and every import found.
+fn stage_check(stage: &TempDir) -> Result<check::Summary, DevError> {
+    let config = stage_config();
+    std::fs::write(stage.path().join(config.program()), "app").unwrap();
+    let level = crate::words::download_level().unwrap();
+    check::check(stage.path(), &config, level, |_| Ok(Vec::new()), |_| true)
+}
+
+#[test]
+fn a_packs_folder_named_in_another_case_is_refused_on_any_disk() {
+    let dir = TempDir::new("words-case");
+    let variant = PACK_DIR.to_uppercase();
+    fill(&dir.path().join(&variant), &["en"]);
+    let checked = stage_check(&dir);
+    let named = |f: &String| Path::new(f).starts_with(&variant);
+    assert!(
+        matches!(&checked, Err(DevError::Stage(StageError::Unplanned(f))) if named(f)),
+        "{checked:?}"
+    );
+}
+
+#[test]
+fn a_listed_file_named_in_another_case_is_refused_on_any_disk() {
+    let stage = stage("words-file-case");
+    let dir = stage.path().join(PACK_DIR);
+    std::fs::remove_file(dir.join(PACK_INDEX)).unwrap();
+    std::fs::write(
+        dir.join(PACK_INDEX.to_uppercase()),
+        index_text(&["ar", "en", "fr"]).unwrap(),
+    )
+    .unwrap();
+    let refused = refusal(&stage);
+    // A case-blind disk finds the index, then meets the variant; a case-sensitive one finds no index.
+    let (upper, lower) = (staged(&PACK_INDEX.to_uppercase()), staged(PACK_INDEX));
+    let case_blind = refused == Some(StageError::Unplanned(upper));
+    assert!(
+        case_blind || refused == Some(StageError::NoWords(lower)),
+        "{refused:?}"
+    );
 }
 
 #[test]
 fn the_stage_check_leaves_the_packs_folder_alone_but_not_the_rest() {
     let stage = stage("words-stage");
-    let config = stage_config();
-    std::fs::write(stage.path().join(config.program()), "app").unwrap();
-    let level = crate::words::download_level().unwrap();
-    let run = |s: &Path| check::check(s, &config, level, |_| Ok(Vec::new()), |_| true);
-    assert!(run(stage.path()).is_ok());
+    assert!(stage_check(&stage).is_ok());
     std::fs::write(stage.path().join("extra.txt"), "x").unwrap();
     let extra = StageError::Unplanned("extra.txt".to_string());
-    assert_eq!(run(stage.path()), Err(extra.into()));
+    assert_eq!(stage_check(&stage), Err(extra.into()));
 }

@@ -2,8 +2,9 @@
 //! size is held to the install's limit, and a megabyte is 10⁶ bytes, rounded up.
 
 use super::*;
-use crate::devtools::install::fits;
+use crate::devtools::paths::fits;
 use crate::test_support::noise;
+use kx_module_api::ports::PACK_DIR;
 
 /// The spec, whose §10 row sets the download budget, from the workspace root.
 const SPEC: &str = "docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md";
@@ -23,8 +24,8 @@ fn program(bytes: &[u8]) -> (Fake, StageConfig) {
 fn a_stage_over_the_budget_installed_but_within_it_deflated_passes() {
     let size = usize::try_from(paths::BYTES_PER_MB).unwrap() * 2;
     let (stage, config) = program(&vec![0u8; size]);
-    let summary = stage.check_with(&config).unwrap();
-    assert_eq!((summary.raw_mb(), summary.mb()), (2, 1));
+    let size = stage.check_with(&config).unwrap().size;
+    assert_eq!((size.raw_mb(), size.mb()), (2, 1));
 }
 
 #[test]
@@ -37,19 +38,43 @@ fn a_stage_whose_download_passes_the_budget_is_refused() {
     assert!(stage.check_with(&config).is_ok());
 }
 
+/// The size of one file holding `bytes`, deflated at the download's level.
+fn sized(bytes: &[u8]) -> Size {
+    let deflated = crate::deflate::deflated(bytes, level()).unwrap();
+    Size {
+        bytes: u64::try_from(bytes.len()).unwrap(),
+        deflated: u64::try_from(deflated).unwrap(),
+    }
+}
+
 #[test]
-fn the_summary_counts_files_installed_bytes_and_deflated_bytes() {
+fn the_summary_counts_files_and_their_size_installed_and_deflated() {
     let stage = Fake::new(&[(PROGRAM, &[]), ("qml/QtQuick/qmldir", &[])]);
     std::fs::write(stage.dir.path().join(PROGRAM), [0u8; 7]).unwrap();
-    let level = crate::words::download_level().unwrap();
-    let each = |b: &[u8]| u64::try_from(crate::deflate::deflated(b, level).unwrap()).unwrap();
-    let deflated = each(&[0u8; 7]) + each(&[]);
+    let (program, qmldir) = (sized(&[0u8; 7]), sized(&[]));
+    let size = Size {
+        bytes: program.bytes + qmldir.bytes,
+        deflated: program.deflated + qmldir.deflated,
+    };
     let want = Summary {
         files: 2,
-        bytes: 7,
-        deflated,
+        size,
+        packs: Size::default(),
     };
     assert_eq!(stage.check(), Ok(want));
+}
+
+#[test]
+fn the_packs_share_comes_from_the_same_pass() {
+    let stage = Fake::new(&[(PROGRAM, &[])]);
+    std::fs::create_dir_all(stage.dir.path().join(PACK_DIR)).unwrap();
+    let file = Path::new(PACK_DIR).join("en.kxw");
+    std::fs::write(stage.dir.path().join(file), noise(64)).unwrap();
+    let summary = stage.check().unwrap();
+    let (pack, program) = (sized(&noise(64)), sized(&[]));
+    assert_eq!(summary.packs, pack);
+    assert_eq!(summary.size.bytes, pack.bytes, "the program is empty");
+    assert_eq!(summary.size.deflated, pack.deflated + program.deflated);
 }
 
 #[test]
@@ -67,12 +92,11 @@ fn the_shipped_budget_is_spec_10s_download_size() {
 #[test]
 fn a_megabyte_is_a_million_bytes_rounded_up_as_spec_10_counts() {
     assert_eq!((paths::mb(1_000_000), paths::mb(1_000_001)), (1, 2));
-    let summary = Summary {
-        files: 1,
+    let size = Size {
         bytes: paths::BYTES_PER_MB + 1,
         deflated: paths::BYTES_PER_MB,
     };
-    assert_eq!((summary.raw_mb(), summary.mb()), (2, 1));
+    assert_eq!((size.raw_mb(), size.mb()), (2, 1));
 }
 
 #[test]

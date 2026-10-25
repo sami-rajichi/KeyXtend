@@ -24,6 +24,15 @@ pub(crate) fn mb(bytes: u64) -> u64 {
     bytes.div_ceil(BYTES_PER_MB)
 }
 
+/// Refuses `bytes` installed over `max_mb`, the most an install copies; the install and the stage check both use it.
+pub(crate) fn fits(bytes: u64, max_mb: u64) -> Result<(), DevError> {
+    let mb = mb(bytes);
+    if mb > max_mb {
+        return Err(DevError::TooBig { mb, max: max_mb });
+    }
+    Ok(())
+}
+
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {
     path.to_string_lossy().into_owned()
