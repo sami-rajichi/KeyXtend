@@ -39,7 +39,7 @@ impl Model<'_> {
     }
 
     /// Offers every candidate for `folded` in full, with no early stop: the reference `offer` must match.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "build"))]
     pub(in crate::score) fn offer_every(&self, folded: &str, sink: &mut Sink<'_>) {
         self.learned
             .starting(folded, &mut |w| self.offer_learned(w, sink));

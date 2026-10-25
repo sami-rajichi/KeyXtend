@@ -112,7 +112,7 @@ enum Scan {
     /// Best first, stopping once no word left can win.
     Ranked,
     /// Every word, the reference the early stop must match.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "build"))]
     Every,
 }
 
@@ -199,7 +199,7 @@ impl<'a> Ask<'a> {
         if kept == 0 || (!model.offer_followers(&folded, &mut sink) && !folded.is_empty()) {
             match self.scan {
                 Scan::Ranked => model.offer(&folded, &mut sink),
-                #[cfg(test)]
+                #[cfg(all(test, feature = "build"))]
                 Scan::Every => model.offer_every(&folded, &mut sink),
             }
         }
