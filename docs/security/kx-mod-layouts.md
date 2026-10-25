@@ -10,7 +10,8 @@
 |---|---|---|
 | `InjectInput` | The layout source it reads is gated by `InjectInput`, because its switch request acts on the app in front; the `Layouts` service it provides is gated the same way, and a provider must hold its service's capability. | The module fails to start, so the keyboard has no key labels and no language switch. |
 
-- `LayoutChanged` names no capability, so any module may hear which layout is shown; a layout id is not sensitive.
+- `LayoutChanged` names no capability, so any module may hear which layout is shown, with its language code and direction; none of these is sensitive.
+- `LayoutAsk` names no capability either: any module may ask for the shown layout again, which tells only what `LayoutChanged` already tells.
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |

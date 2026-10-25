@@ -17,7 +17,7 @@ pub use scans::{ScanTableError, scans};
 pub use service::LayoutsService;
 pub use settings::{LayoutsSettings, SPEC};
 
-use kx_module_api::ports::{LayoutSourceKey, Layouts, LayoutsKey};
+use kx_module_api::ports::{LayoutAsk, LayoutSourceKey, Layouts, LayoutsKey};
 use kx_module_api::{Manifest, Module, ModuleCx, ModuleError};
 use std::sync::Arc;
 
@@ -37,8 +37,10 @@ impl Module for LayoutsModule {
         let source = cx.service::<LayoutSourceKey>()?;
         let settings = cx.settings::<LayoutsSettings>()?;
         let scans = scans().map_err(|_| ModuleError::Start(SCANS_BROKEN))?;
-        let service: Arc<dyn Layouts> =
-            Arc::new(LayoutsService::new(source, settings, scans, cx.bus()));
+        let service = Arc::new(LayoutsService::new(source, settings, scans, cx.bus()));
+        let teller = Arc::clone(&service);
+        cx.subscribe(move |_: &LayoutAsk| teller.tell())?;
+        let service: Arc<dyn Layouts> = service;
         cx.provide::<LayoutsKey>(service)?;
         Ok(())
     }

@@ -31,7 +31,7 @@ pub use field::{
 pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
-pub use layouts::{LangLabel, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
+pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
 pub use packs::{
     MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_EXT, PackError, PackView, WordPacks,
     WordPacksKey, fits_iso, pack_file,

@@ -26,13 +26,15 @@ struct State {
 }
 
 /// The `Layouts` service: it reads through `source` and tells `bus` when the shown layout changes.
-/// No lock is held while the bus runs its handlers, so a handler may call the service.
+/// The state's lock is free while the bus runs its handlers, so a handler may read the service.
 pub struct LayoutsService {
     source: Arc<dyn LayoutSource>,
     short: BTreeMap<String, String>,
     scans: Vec<Scan>,
     bus: Bus,
     state: Mutex<State>,
+    /// Held from reading a change to telling it, so `refresh` and `tell` tell changes in order.
+    telling: Mutex<()>,
 }
 
 impl LayoutsService {
@@ -50,13 +52,32 @@ impl LayoutsService {
             scans,
             bus,
             state: Mutex::default(),
+            telling: Mutex::default(),
         };
         service.update(&mut service.state());
         service
     }
 
+    /// Tells the shown layout again, as `LayoutAsk` asks; nothing while none is installed.
+    pub fn tell(&self) {
+        let _order = lock(&self.telling);
+        let label = {
+            let state = self.state();
+            state.follow.shown().map(|_| state.current.label.clone())
+        };
+        if let Some(label) = label {
+            self.publish(&label);
+        }
+    }
+
     fn state(&self) -> MutexGuard<'_, State> {
-        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+        lock(&self.state)
+    }
+
+    /// Tells the bus that `label`'s layout shows.
+    fn publish(&self, label: &LangLabel) {
+        // `LayoutChanged` needs no capability, so the bus never refuses it.
+        let _ = self.bus.publish(&LayoutChanged::from(label));
     }
 
     /// Reads the list and the app in front into `state`; says whether the list and the shown layout changed.
@@ -114,14 +135,15 @@ impl Layouts for LayoutsService {
     }
 
     fn refresh(&self) -> bool {
+        let _order = lock(&self.telling);
         let (changed, shown) = {
             let mut state = self.state();
             let (listed, moved) = self.update(&mut state);
-            (listed || moved, state.follow.shown().filter(|_| moved))
+            let shown = state.follow.shown().filter(|_| moved);
+            (listed || moved, shown.map(|_| state.current.label.clone()))
         };
-        if let Some(id) = shown {
-            // `LayoutChanged` needs no capability, so the bus never refuses it.
-            let _ = self.bus.publish(&LayoutChanged { id });
+        if let Some(label) = shown {
+            self.publish(&label);
         }
         changed
     }
@@ -148,6 +170,11 @@ impl Layouts for LayoutsService {
         }
         self.source.request(id)
     }
+}
+
+/// Locks `mutex`, taking the value even after a panic poisoned it.
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[cfg(test)]
