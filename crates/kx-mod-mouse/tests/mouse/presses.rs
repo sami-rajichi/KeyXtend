@@ -10,7 +10,7 @@ use kx_module_api::ports::GrabState::Off;
 use kx_module_api::ports::{
     AssistChanged, HookError, Point, PointerPressed, PressesAsk, PressesWanted,
 };
-use kx_module_api::{Bus, keys};
+use kx_module_api::{Bus, Mono, keys};
 use std::sync::mpsc::Receiver;
 use tracing::Level;
 
@@ -112,21 +112,66 @@ fn a_hook_refused_for_presses_tells_no_one_and_the_next_change_tries_again() {
     assert_eq!(warned, 1, "the second refusal stays silent: {lines:?}");
 }
 
+/// The live run's engine faults, as a panic makes the host give it up.
+fn fault(rig: &mut Rig) {
+    rig.hook.give_up();
+    rig.pump();
+}
+
+/// The word ends, the hook settles at `now`, and the next word starts.
+fn next_word(rig: &mut Rig, now: Mono) {
+    rig.send(Msg::Presses(false));
+    rig.settle(now);
+    rig.send(Msg::Presses(true));
+}
+
+/// How many reset notices `heard` holds.
+fn resets(heard: &[Heard]) -> usize {
+    let reset = told(keys::MOUSE_RESET);
+    heard.iter().filter(|h| **h == reset).count()
+}
+
 #[test]
-fn a_repeated_fault_tells_the_reset_once_across_word_flips() {
+fn a_healthy_run_after_a_fault_re_arms_presses_for_the_next_word() {
+    let mut rig = wanted(Rig::new());
+    fault(&mut rig);
+    assert_eq!(rig.hook.starts(), 2, "one fresh run");
+    next_word(&mut rig, T1);
+    assert!(
+        rig.hook.running(),
+        "the fresh run ended well, so the next word starts one"
+    );
+    assert_eq!(rig.hook.starts(), 3);
+    assert!(!rig.feed(down(A), T2));
+    assert_eq!(rig.take().last(), Some(&pressed(false)));
+}
+
+#[test]
+fn a_fault_at_every_word_tells_the_reset_once_and_never_loops() {
+    let mut rig = wanted(Rig::new());
+    let words = 3;
+    for _ in 0..words {
+        fault(&mut rig);
+        next_word(&mut rig, T1);
+    }
+    assert_eq!(resets(&rig.take()), 1, "once per program run");
+    assert_eq!(
+        rig.hook.starts(),
+        1 + 2 * words,
+        "one fresh run per fault, one run per word"
+    );
+}
+
+#[test]
+fn a_fault_on_every_run_starts_nothing_more_until_the_user_acts() {
     let mut rig = wanted(Rig::new());
     for _ in 0..3 {
-        if rig.hook.running() {
-            rig.hook.give_up();
-            rig.pump();
+        while rig.hook.running() {
+            fault(&mut rig);
         }
-        rig.send(Msg::Presses(false));
-        rig.settle(T1);
-        rig.send(Msg::Presses(true));
+        next_word(&mut rig, T1);
     }
-    let reset = told(keys::MOUSE_RESET);
-    let resets = rig.take().iter().filter(|h| **h == reset).count();
-    assert_eq!(resets, 1, "word flips are not the user acting");
+    assert_eq!(resets(&rig.take()), 1);
     assert_eq!(rig.hook.starts(), 2, "the first run and one fresh run");
     rig.send(Msg::Latches(vec![SHIFT]));
     rig.send(Msg::Latches(Vec::new()));

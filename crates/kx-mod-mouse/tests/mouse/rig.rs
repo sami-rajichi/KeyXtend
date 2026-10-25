@@ -134,7 +134,7 @@ impl Rig {
         let (tx, inbox) = mpsc::channel();
         let cx = ModuleCx::new(&mut host);
         let (bus, store) = (cx.bus(), cx.settings_handle());
-        let actor = Actor::new(shared, bus, store, settings.clone(), tx);
+        let actor = Actor::new(shared, bus, store, settings.clone(), tx, Arc::default());
         let heard = Arc::default();
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);
         Self {

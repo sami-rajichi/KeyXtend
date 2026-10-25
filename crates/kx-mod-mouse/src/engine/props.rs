@@ -216,6 +216,7 @@ proptest! {
         prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
         prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
         let badge = |n: &Note| matches!(n, Note::Pressed { .. } | Note::Moved { .. });
         prop_assert!(rig.notes.iter().all(badge), "{:?}", rig.notes);
     }
@@ -229,6 +230,7 @@ proptest! {
         prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
         prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
         prop_assert!(rig.notes.iter().all(|n| matches!(n, Note::Pressed { .. })), "{:?}", rig.notes);
     }
 
@@ -243,6 +245,7 @@ proptest! {
         prop_assert_eq!(rig.unhooked, 0, "wanted, yet no hook needed");
         rig.finish();
         prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
     }
 
     /// Wanting presses never changes what happens to an event: the same input in order, drops, OS state and other

@@ -21,6 +21,8 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -34,6 +36,8 @@ const NO_THREAD: &str = "the mouse actor's thread did not start";
 pub struct MouseModule {
     /// The running actor's inbox and thread, from start to stop.
     actor: Option<(Sender<Msg>, JoinHandle<()>)>,
+    /// The reset notice was shown; it outlives each start, so the user hears it once per program run.
+    reset_told: Arc<AtomicBool>,
 }
 
 impl Module for MouseModule {
@@ -65,6 +69,7 @@ impl Module for MouseModule {
             cx.settings_handle(),
             settings,
             tx.clone(),
+            Arc::clone(&self.reset_told),
         );
         let thread = thread::Builder::new()
             .name(THREAD.to_owned())

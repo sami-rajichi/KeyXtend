@@ -158,8 +158,8 @@ fn a_layouts_module_that_starts_later_still_brings_the_language() {
 fn an_ask_for_presses_gets_the_current_flag_again() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
     field.focus(FieldKind::Text);
-    let listen = |bus: &Bus| hear::<PressesWanted>(bus);
-    let (mut run, (_p, presses)) =
+    let listen = |bus: &Bus| (hear::<PressesWanted>(bus), hear::<Suggested>(bus));
+    let (mut run, ((_p, presses), (_l, lanes))) =
         Live::start(&field, Arc::new(FakeWordPacks::new()), &store, listen);
     let on = |rx: &Receiver<PressesWanted>| rx.recv_timeout(WAIT).map(|p| p.on);
     run.send(&PressesAsk);
@@ -169,8 +169,14 @@ fn an_ask_for_presses_gets_the_current_flag_again() {
         piece: Piece::Text(Redacted::new("hel".to_owned())),
     });
     assert_eq!(on(&presses), Ok(true), "a word is held");
-    run.send(&PressesAsk);
-    assert_eq!(on(&presses), Ok(true), "told again, with no new word");
+    // The word's lane went out just before its flag, so the lanes so far are all in.
+    let _ = lanes.try_iter().count();
+    for _ in 0..2 {
+        run.send(&PressesAsk);
+        assert_eq!(on(&presses), Ok(true), "told again, with no new word");
+    }
+    // The second answer comes after the first ask was fully handled.
+    assert!(lanes.try_recv().is_err(), "an ask tells no new lane");
     run.stop();
 }
 

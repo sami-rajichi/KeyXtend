@@ -16,6 +16,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 
 /// A message for the actor, from the bus, the hook's engine or the module; it has no `Debug`, as latches are keys.
@@ -79,13 +80,16 @@ pub struct Actor {
     runs: u64,
     /// The last start failed; until one works, a quiet start (latches, scrolling or presses) fails without a word.
     failing: bool,
-    /// A give-up already restarted; until a mode tap or a change of latches or scrolling, the next one starts nothing
-    /// and presses alone start no run, as prediction flips them by itself.
+    /// A give-up already restarted; until a run ends well, a mode tap or a change of latches or scrolling, the next one
+    /// starts nothing and presses alone start no run, as prediction flips them by itself.
     restarted: bool,
+    /// The reset notice was shown this program run; the module keeps it across its starts.
+    reset_told: Arc<AtomicBool>,
 }
 
 impl Actor {
-    /// An actor with no hook yet; `inbox` sends to its own inbox, for the hook engines it starts.
+    /// An actor with no hook yet; `inbox` sends to its own inbox, for the hook engines it starts, and `reset_told`
+    /// says whether the reset notice was shown this program run.
     #[must_use]
     pub fn new(
         hook: Arc<dyn PointerHook>,
@@ -93,6 +97,7 @@ impl Actor {
         store: SettingsHandle,
         settings: MouseSettings,
         inbox: Sender<Msg>,
+        reset_told: Arc<AtomicBool>,
     ) -> Self {
         let saved = settings.rclick;
         Self {
@@ -112,6 +117,7 @@ impl Actor {
             runs: 0,
             failing: false,
             restarted: false,
+            reset_told,
         }
     }
 
@@ -240,8 +246,8 @@ impl Actor {
     }
 
     /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
-    /// session and the user hears why. A quiet need then gets one fresh run at once, and no more until the
-    /// user acts again, so a fault that repeats never loops.
+    /// session and the user hears why, once per program run. A quiet need then gets one fresh run at once, and no more
+    /// until a run ends well or the user acts, so a fault that repeats never loops.
     fn lost(&mut self, run: u64) {
         if self.live.as_ref().is_none_or(|live| live.id != run) {
             return;
@@ -256,13 +262,17 @@ impl Actor {
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
         self.tell_state();
-        self.publish(&notice(keys::MOUSE_RESET));
+        if !self.reset_told.swap(true, Ordering::Relaxed) {
+            self.publish(&notice(keys::MOUSE_RESET));
+        }
     }
 
-    /// Stops the hook once the engine reported idle after every command sent so far.
+    /// Stops the hook once the engine reported idle after every command sent so far; a run that ends well re-arms a
+    /// spent restart.
     fn idle(&mut self, applied: u64) {
         if self.live.as_ref().is_some_and(|live| live.sent == applied) {
             self.drop_run();
+            self.restarted = false;
         }
     }
 }

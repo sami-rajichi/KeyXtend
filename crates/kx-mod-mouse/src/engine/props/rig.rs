@@ -101,6 +101,8 @@ pub(super) struct Rig {
     wanted: bool,
     /// Events whose press notes differ from the one expected for a press while scrolling or wanted, else none.
     pub(super) misnoted: usize,
+    /// Presses the engine heard while scrolling or wanted, which the press notes must total.
+    pub(super) pressed: usize,
     /// Steps after which presses were wanted, yet the engine needed no hook.
     pub(super) unhooked: usize,
 }
@@ -131,6 +133,7 @@ impl Rig {
             scrolling: false,
             wanted: false,
             misnoted: 0,
+            pressed: 0,
             unhooked: 0,
         };
         rig.more(steps);
@@ -188,6 +191,7 @@ impl Rig {
             self.os.see(event);
         }
         self.send();
+        self.pressed += usize::from(want);
         self.misnoted += usize::from(presses(&self.notes[heard..]) != usize::from(want));
     }
 
@@ -260,7 +264,7 @@ impl Rig {
         }
         self.e.set_latches(Vec::new());
         self.send();
-        self.dropped = 0;
+        (self.dropped, self.pressed) = (0, 0);
         self.sent.clear();
         self.notes.clear();
     }
