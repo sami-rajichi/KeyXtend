@@ -2,7 +2,9 @@
 //! The owner's bytes wait in a sidecar file before the first write, and every copy is ended before they come back.
 #![cfg(windows)]
 
+use std::cell::Cell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::time::Instant;
 
 use kx_module_api::ModuleId;
@@ -19,25 +21,50 @@ pub struct Session<'a> {
     ctx: &'a Ctx<'a>,
     program: PathBuf,
     kept: Kept,
+    /// Set once a copy could not be ended, so the backup stays.
+    stray: Rc<Cell<bool>>,
 }
 
 /// A copy a session started; dropping it ends it, so even a panic leaves none running.
 pub struct Copy<'a> {
     ctx: &'a Ctx<'a>,
     started: Option<Started>,
+    stray: Rc<Cell<bool>>,
+}
+
+/// The program these gates start: `[g8] program`.
+fn program(ctx: &Ctx) -> PathBuf {
+    ctx.cfg.program(&ctx.cfg.g8.program)
+}
+
+/// The backup of the owner's files: `[owner_settings] backup` in kx-gates' out folder.
+fn side(ctx: &Ctx) -> PathBuf {
+    ctx.out.join(&ctx.cfg.owner_settings.backup)
+}
+
+/// Marks `stray` when a copy that went as `ended` may still run.
+fn note(stray: &Cell<bool>, ended: Option<&Ended>) {
+    if !copyend::may_follow(ended.map(|e| e.gone)) {
+        stray.set(true);
+    }
+}
+
+/// Restores the owner's files from a backup a stopped gate left, once no product copy runs: whether one was there.
+pub fn recover(ctx: &Ctx) -> Result<bool, String> {
+    let files = product::files(&program(ctx))?;
+    ownset::recover(&files, &side(ctx), || product::running().is_some())
 }
 
 impl<'a> Session<'a> {
-    /// Keeps the owner's files, in `[owner_settings] backup` in the out folder, and first restores them from a backup a
-    /// stopped run left. Refused while the product runs, as a copy reads its settings only at start.
+    /// Keeps the owner's files in the backup, and first restores them from a backup a stopped run left, naming it.
+    /// Refused while the product runs, as a copy reads its settings only at start.
     pub fn open(ctx: &'a Ctx<'a>) -> Result<Self, String> {
         if product::running().is_some() {
             return Err(format!(
                 "close {NAME} first: this gate starts its own copy on its own settings"
             ));
         }
-        let program = ctx.cfg.program(&ctx.cfg.g8.program);
-        let side = ctx.out.join(&ctx.cfg.owner_settings.backup);
+        let (program, side) = (program(ctx), side(ctx));
         let (kept, recovered) = Kept::take(&product::files(&program)?, &side)?;
         if recovered {
             say!(
@@ -45,7 +72,13 @@ impl<'a> Session<'a> {
                 side.display()
             );
         }
-        Ok(Self { ctx, program, kept })
+        let stray = Rc::default();
+        Ok(Self {
+            ctx,
+            program,
+            kept,
+            stray,
+        })
     }
 
     /// Writes the gate's settings, predict `on` with learning paused and the modules `off` switched off, then starts a
@@ -53,10 +86,12 @@ impl<'a> Session<'a> {
     pub fn start(&self, on: bool, off: &[ModuleId]) -> Result<Copy<'a>, Failed> {
         self.kept
             .write(&ownset::predict(&self.kept.table(), on, off)?)?;
-        let started = g8start::start(self.ctx, &self.program, &[], None)?;
+        let started = g8start::start(self.ctx, &self.program, &[], None)
+            .inspect_err(|f| note(&self.stray, f.ended.as_ref()))?;
         Ok(Copy {
             ctx: self.ctx,
             started: Some(started),
+            stray: Rc::clone(&self.stray),
         })
     }
 
@@ -75,9 +110,10 @@ impl<'a> Session<'a> {
         (got, Some(copy.end()))
     }
 
-    /// Puts the owner's files back and deletes the backup once they read back as kept; called once every copy ended.
+    /// Puts the owner's files back and deletes the backup once they read back as kept; the backup stays while a copy
+    /// it started may still run.
     pub fn close(self) -> Result<(), String> {
-        self.kept.put_back()
+        self.kept.put_back(self.stray.get())
     }
 }
 
@@ -97,14 +133,16 @@ impl Copy<'_> {
 
     /// Ends it once; a copy already ended reads as quit.
     fn finish(&mut self) -> Ended {
-        match self.started.take() {
-            Some(s) => copyend::end(self.ctx, &s.process),
-            None => Ended {
+        let Some(s) = self.started.take() else {
+            return Ended {
                 gone: Gone::Quit,
                 note: None,
                 released: Vec::new(),
-            },
-        }
+            };
+        };
+        let ended = copyend::end(self.ctx, &s.process);
+        note(&self.stray, Some(&ended));
+        ended
     }
 }
 

@@ -1,5 +1,6 @@
-//! `close`: the product gets Quit on its command window, as its own `--quit` sends it, and the gate waits for its
-//! process to end; nothing is started. The frozen spike face only gets `WM_CLOSE`, which leaves its process running.
+//! `close`: the product gets Quit on its command window, as `--quit` sends it, and the gate waits for its end, then
+//! restores a settings backup a stopped gate left; nothing is started. The frozen spike face only gets `WM_CLOSE`,
+//! which leaves its process running.
 #![cfg(windows)]
 
 use kx_platform::ui::{Command, Instance, UiError};
@@ -9,7 +10,7 @@ use serde_json::{Value, json};
 use crate::apps::Ctx;
 use crate::proc::Process;
 use crate::product::{self, NAME};
-use crate::{mouse, win, winfind};
+use crate::{mouse, owncopy, win, winfind};
 
 /// Why the running copy was not asked to quit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,16 +43,34 @@ impl From<UiError> for Unasked {
 /// Runs `close` on `name`: the product or the frozen face.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name == NAME {
-        let (exe, ended) = quit_running(ctx).map_err(|e| e.why)?;
-        Ok(result(&exe, ended))
+        close_product(ctx)
     } else {
         close_face(ctx, name)
     }
 }
 
-/// The result line of `close` on the product, run from `program`.
-fn result(program: &str, ended: bool) -> Value {
-    json!({ "gate": "close", "keyboard": NAME, "program": program, "pass": ended })
+/// Posts Quit to the running product, if any, then restores the owner's files from a backup a stopped gate left,
+/// once no copy runs (`owncopy::recover`).
+fn close_product(ctx: &Ctx) -> Result<Value, String> {
+    let quit = match product::running() {
+        Some(_) => Some(quit_running(ctx).map_err(|e| e.why)?),
+        None => None,
+    };
+    let back = owncopy::recover(ctx);
+    if quit.is_none() && back == Ok(false) {
+        return Err(format!("{NAME} is not running"));
+    }
+    Ok(result(quit.as_ref(), &back))
+}
+
+/// The result line of `close` on the product: the copy it asked to quit, its program and whether it ended, if one
+/// ran, and whether the owner's files came back from a backup a stopped gate left.
+fn result(quit: Option<&(String, bool)>, back: &Result<bool, String>) -> Value {
+    let (program, ended) = quit.map_or((None, true), |(p, e)| (Some(p), *e));
+    json!({
+        "gate": "close", "keyboard": NAME, "program": program, "settings_back": back.as_ref().ok(),
+        "settings_error": back.as_ref().err(), "pass": ended && back.is_ok(),
+    })
 }
 
 /// Why the running copy did not take Quit.

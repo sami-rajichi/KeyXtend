@@ -33,6 +33,8 @@ const EDGE_PASS: &str = "typed nothing";
 const EDGE_TYPED: &str = "typed";
 /// Edge 6's verdict when chip-0 left the lane after the click, so the pick check was never reached.
 const EDGE_SETUP: &str = "setup failed: chip-0 left the lane after the click";
+/// The copies G27 starts: one for the cases, one for edge 6 with the mouse module off.
+pub const COPIES: usize = 2;
 /// Why edge 6 did not run.
 const EDGE_SKIPPED: &str = "edge 6 did not run: the first copy could not be ended";
 
@@ -177,7 +179,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let settings = session.close();
     let back = cases.back && edge.back;
     let typed = all_ok(&cases.parts) && all_ok(&edge.parts);
-    let copies = [first, second];
+    let copies: [Option<Ended>; COPIES] = [first, second];
     let ended = copies.iter().all(|c| c.as_ref().is_some_and(Ended::ok));
     let left = [cases.left, edge.left].concat();
     Ok(json!({

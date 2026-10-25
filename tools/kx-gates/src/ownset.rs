@@ -15,6 +15,8 @@ use toml::{Table, Value};
 
 use saved::Pair;
 
+use crate::product::NAME;
+
 /// The owner's settings file and its last good copy, kept until `put_back`, or until dropped (a drop guard).
 #[derive(Debug)]
 pub struct Kept {
@@ -30,12 +32,7 @@ impl Kept {
         let left = saved::load(side)?;
         let recovered = left.is_some();
         let pair = match left {
-            Some(pair) if !pair.keeps(files) => {
-                return Err(format!(
-                    "{} keeps another data folder's settings; check it, then delete it",
-                    side.display()
-                ));
-            }
+            Some(pair) if !pair.keeps(files) => return Err(another(side)),
             Some(pair) => pair.restore().map(|()| pair)?,
             None => {
                 let pair = Pair::of(files)?;
@@ -72,25 +69,58 @@ impl Kept {
         fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))
     }
 
-    /// Puts both files back and deletes the sidecar, only once both read back as kept.
-    fn finish(&self) -> Result<(), String> {
-        self.pair.restore()?;
-        saved::drop_side(&self.side)
-    }
-
-    /// Puts both files back as they were, now.
-    pub fn put_back(mut self) -> Result<(), String> {
+    /// Puts both files back as they were, now, and deletes the sidecar once both read back as kept. It stays when
+    /// `copy_runs`, as that copy may write over them when it ends.
+    pub fn put_back(mut self, copy_runs: bool) -> Result<(), String> {
         self.done = true;
-        self.finish()
+        self.pair.restore()?;
+        if copy_runs {
+            return Err(stays(&self.side, "a copy may still run"));
+        }
+        saved::drop_side(&self.side)
     }
 }
 
 impl Drop for Kept {
+    /// Puts both files back but keeps the sidecar, as a drop cannot know that every copy ended.
     fn drop(&mut self) {
         if !self.done {
-            let _ = self.finish();
+            let _ = self.pair.restore();
         }
     }
+}
+
+/// Why sidecar `side` stays: `why`, and how to restore from it later.
+fn stays(side: &Path, why: &str) -> String {
+    format!(
+        "{} stays, as {why}; once no copy runs, `kx-gates close {NAME}` restores from it",
+        side.display()
+    )
+}
+
+/// Refuses sidecar `side`, which keeps another data folder's settings.
+fn another(side: &Path) -> String {
+    format!(
+        "{} keeps another data folder's settings; check it, then delete it",
+        side.display()
+    )
+}
+
+/// Restores the owner's `files` from sidecar `side` when no copy is `running`, then deletes it once both read back
+/// as kept: whether there was one.
+pub fn recover(files: &Files, side: &Path, running: impl FnOnce() -> bool) -> Result<bool, String> {
+    let Some(pair) = saved::load(side)? else {
+        return Ok(false);
+    };
+    if running() {
+        return Err(stays(side, &format!("{NAME} runs")));
+    }
+    if !pair.keeps(files) {
+        return Err(another(side));
+    }
+    pair.restore()?;
+    saved::drop_side(side)?;
+    Ok(true)
 }
 
 /// `owner`'s `[kernel]` section, typed over the kernel's defaults, with predict out of its switched-off list when `on`

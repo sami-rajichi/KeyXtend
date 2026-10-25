@@ -19,6 +19,8 @@ use crate::product;
 
 /// The name that runs G8's prediction part.
 pub const PREDICT: &str = "predict";
+/// The cold starts `g8 predict` makes: predict on, then off.
+pub const RUNS: usize = 2;
 /// Why the off run was not started.
 const STILL_RUNS: &str =
     "the predict-on copy could not be ended, so no cold start was made with predict off; close it";
@@ -54,7 +56,7 @@ pub(crate) fn typing_parts(t: &Typed, limit: f64) -> [Part; 2] {
 }
 
 /// True when both readings exist, the churn `held`, both copies `quit` by themselves and the owner's file came `back`.
-pub(crate) fn passed(split: bool, held: bool, quit: [bool; 2], back: bool) -> bool {
+pub(crate) fn passed(split: bool, held: bool, quit: [bool; RUNS], back: bool) -> bool {
     split && held && quit.iter().all(|&q| q) && back
 }
 
@@ -112,7 +114,7 @@ fn result(
     let typed = on.as_ref().ok().and_then(|s| s.typed.clone());
     let churned = typed.clone().and_then(Result::ok);
     let parts = churned.as_ref().map(|t| typing_parts(t, limit));
-    let quit = [on, off].map(|s| s.as_ref().is_ok_and(|s| s.ended.ok()));
+    let quit: [bool; RUNS] = [on, off].map(|s| s.as_ref().is_ok_and(|s| s.ended.ok()));
     let held = parts.as_ref().is_some_and(|p| budget::all_pass(p));
     let ok = passed(split.is_some(), held, quit, back.is_ok());
     json!({

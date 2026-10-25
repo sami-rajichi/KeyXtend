@@ -13,6 +13,8 @@ use crate::win;
 
 /// The exit code of a clean quit: std's `ExitCode::SUCCESS`, which the product returns.
 const CLEAN: u32 = 0;
+/// The most waits for a copy's end `finish` makes: after Quit, and after an end through its handle.
+pub(crate) const END_WAITS: usize = 2;
 
 /// How a copy a gate started went away.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

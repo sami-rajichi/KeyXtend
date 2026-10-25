@@ -134,23 +134,17 @@ pub fn warm_left(from: Instant, warm_ms: u64, now: Instant) -> Duration {
 }
 
 /// Error `e` with what G8 leaves behind: the `PresentMon` it started, which records for `secs` s from its start,
-/// and whether the product quit after `quit`.
-pub fn broke(
-    e: &str,
-    recorder: Option<u32>,
-    secs: u64,
-    quit: Option<&Result<bool, String>>,
-) -> String {
+/// and how its copy went, `copy`.
+pub fn broke(e: &str, recorder: Option<u32>, secs: u64, copy: Option<&Ended>) -> String {
     let left = recorder.map(|pid| {
         format!("; PresentMon (pid {pid}) records for up to {secs} s from its start, then stops")
     });
-    let product = match quit {
-        Some(Ok(true)) => "; the product quit".to_string(),
-        Some(Ok(false)) => "; the product still runs; close it".to_string(),
-        Some(Err(q)) => format!("; the product still runs ({q}); close it"),
-        None => String::new(),
-    };
-    format!("{e}{}{product}", left.unwrap_or_default())
+    let product = copy.map(|c| format!("; the product {}", c.gone.words()));
+    format!(
+        "{e}{}{}",
+        left.unwrap_or_default(),
+        product.unwrap_or_default()
+    )
 }
 
 #[cfg(test)]
@@ -187,20 +181,25 @@ mod tests {
 
     #[test]
     fn a_run_that_broke_off_names_the_presentmon_it_left_and_whether_the_product_quit() {
-        let e = broke("no keyboard", Some(4242), 90, Some(&Ok(false)));
+        let copy = |gone| Ended {
+            gone,
+            note: None,
+            released: Vec::new(),
+        };
+        let e = broke("no keyboard", Some(4242), 90, Some(&copy(Gone::Running)));
         assert!(e.starts_with("no keyboard"), "{e}");
         assert!(
             e.contains("PresentMon (pid 4242)") && e.contains("90 s"),
             "{e}"
         );
         assert!(e.contains("still runs"), "{e}");
-        let quit = broke("no keyboard", None, 90, Some(&Ok(true)));
+        let quit = broke("no keyboard", None, 90, Some(&copy(Gone::Quit)));
         assert!(
             !quit.contains("PresentMon") && quit.contains("quit"),
             "{quit}"
         );
-        let refused = broke("x", None, 90, Some(&Err("no command window".into())));
-        assert!(refused.contains("no command window"), "{refused}");
+        let ended = broke("x", None, 90, Some(&copy(Gone::Ended)));
+        assert!(ended.contains("ended by the gate"), "{ended}");
         assert_eq!(broke("x", None, 90, None), "x", "nothing left to name");
     }
 

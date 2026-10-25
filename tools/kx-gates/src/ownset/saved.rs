@@ -32,13 +32,19 @@ fn read(path: &Path) -> Result<Option<Vec<u8>>, String> {
     let mut bytes = Vec::new();
     let cap = MAX_FILE_BYTES.saturating_add(1);
     file.take(cap).read_to_end(&mut bytes).map_err(fail)?;
+    within_cap(path, &bytes)?;
+    Ok(Some(bytes))
+}
+
+/// Refuses `bytes` for `path` past the settings store's own cap.
+fn within_cap(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_FILE_BYTES {
         return Err(format!(
             "{} is over the settings store's {MAX_FILE_BYTES} bytes",
             path.display()
         ));
     }
-    Ok(Some(bytes))
+    Ok(())
 }
 
 impl Saved {
@@ -98,17 +104,21 @@ impl Pair {
     }
 }
 
-/// The pair a stopped run left in sidecar `side`; none when there is none.
+/// The pair a stopped run left in sidecar `side`; none when there is none. A file it holds past the settings store's
+/// cap is refused before anything is written.
 pub(super) fn load(side: &Path) -> Result<Option<Pair>, String> {
     let fail =
         |e: &dyn std::fmt::Display| format!("{}: {e}; check it, then delete it", side.display());
-    match fs::read(side) {
-        Ok(bytes) => serde_json::from_slice(&bytes)
-            .map(Some)
-            .map_err(|e| fail(&e)),
-        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(fail(&e)),
+    let bytes = match fs::read(side) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(fail(&e)),
+    };
+    let pair: Pair = serde_json::from_slice(&bytes).map_err(|e| fail(&e))?;
+    for s in [&pair.settings, &pair.previous] {
+        within_cap(&s.path, s.bytes.as_deref().unwrap_or_default()).map_err(|e| fail(&e))?;
     }
+    Ok(Some(pair))
 }
 
 /// Writes `pair` to sidecar `side` and checks it reads back the same.

@@ -1,15 +1,11 @@
 //! The least time each P7 gate holds the mouse, from config, so a run never meets the mouse guard's limit.
 
 use crate::config::GatesConfig;
+use crate::copyend::END_WAITS;
+use crate::g8predict::RUNS;
 use crate::g21prod::BOXES;
+use crate::g27::COPIES;
 use crate::p7cfg::G27;
-
-/// The cold starts `g8 predict` makes: predict on, then off.
-const RUNS: usize = 2;
-/// The copies G27 starts: one for the cases, one for edge 6 with the mouse module off.
-const G27_COPIES: usize = 2;
-/// The waits for a copy's end: after Quit, and after an end through its handle.
-const END_WAITS: usize = 2;
 
 /// The sum of `parts`, at most `u64::MAX`.
 fn total(parts: &[u64]) -> u64 {
@@ -84,7 +80,7 @@ pub fn g27_ms(c: &GatesConfig) -> u64 {
         .map(|k| word_ms(g, keys(g, &k.lang)))
         .collect();
     total(&[
-        times(G27_COPIES, copy_ms(c, g.ready_ms)),
+        times(COPIES, copy_ms(c, g.ready_ms)),
         total(&cases),
         word_ms(g, keys(g, &g.edge)),
         c.fit.guard_headroom_ms,

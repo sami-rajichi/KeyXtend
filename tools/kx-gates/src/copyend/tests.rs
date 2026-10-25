@@ -59,6 +59,43 @@ fn a_copy_that_crashed_reads_as_crashed_not_as_quit() {
 }
 
 #[test]
+fn a_copy_that_took_quit_but_exits_with_a_crash_code_reads_as_crashed() {
+    let (session, _claim) = listening();
+    let forced = Cell::new(false);
+    let sent = asked(&session, false);
+    assert_eq!(sent, Ok(Asked::Sent(1)), "Quit reached it");
+    let got = finish(&sent, || true, forcing(&forced), || Some(CRASH));
+    assert_eq!(got, (Gone::Crashed(Some(CRASH)), None));
+    assert!(!forced.get());
+}
+
+#[test]
+fn a_copy_end_waits_at_most_end_waits_times() {
+    let (session, _claim) = listening();
+    let most = [true, false].into_iter().flat_map(|heard| {
+        [Ok(()), Err("access denied".to_string())].map(|got| {
+            let waits = Cell::new(0);
+            let within = || {
+                waits.set(waits.get() + 1);
+                false
+            };
+            let quit = if heard {
+                asked(&session, false)
+            } else {
+                asked(&FakeInstance::new(), false)
+            };
+            let _ = finish(&quit, within, || got, || None);
+            waits.get()
+        })
+    });
+    assert_eq!(
+        most.max(),
+        Some(END_WAITS),
+        "`p7cfg::runs` counts this many"
+    );
+}
+
+#[test]
 fn a_copy_that_never_hears_quit_is_ended_and_still_fails() {
     let forced = Cell::new(false);
     let ended_code = || forced.get().then_some(1);

@@ -33,7 +33,7 @@ use crate::presentmon::Frames;
 use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, g2raw, g8hook, g8host, mouseguard, out};
+use crate::{copyend, g2, g2raw, g8hook, g8host, mouseguard, out};
 use crate::{g8lit, g8predict, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
@@ -229,16 +229,14 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
         s.process.pid(),
     );
     let measured = measure(ctx, &s, (&program, hold), (since, rec.as_ref()));
-    let quit = close::quit_running(ctx)
-        .map(|(_, ended)| ended)
-        .map_err(|e| e.why);
+    let copy = copyend::end(ctx, &s.process);
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
-    let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
+    let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&copy)))?;
     let end_us = g8frames::end_us(secs, rec.as_ref(), origin_us);
     let (o, [bus, frames, losses, cut]) = outside(ctx, job, &m, &frames, (origin_us, end_us));
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
-    let ended = quit.unwrap_or(false);
+    let ended = copy.ok();
     let (to_log, log_span) = m.log.unzip();
     let mut v = json!({
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
@@ -246,7 +244,7 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
         "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts, "quit": ended,
-        "host": { "before": host, "after": g8host::read(ctx) },
+        "copy": copy.line(), "host": { "before": host, "after": g8host::read(ctx) },
         "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
     });
     v[g8use::FIELD] = shown(&m.used);
