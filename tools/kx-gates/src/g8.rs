@@ -236,16 +236,15 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
     let end_us = g8frames::end_us(secs, rec.as_ref(), origin_us);
     let (o, [bus, frames, losses, cut]) = outside(ctx, job, &m, &frames, (origin_us, end_us));
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
-    let ended = copy.ok();
     let (to_log, log_span) = m.log.unzip();
     let mut v = json!({
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
-        "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts, "quit": ended,
+        "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts,
         "copy": copy.line(), "host": { "before": host, "after": g8host::read(ctx) },
-        "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
+        "pass": verdict(weak, &m.churn, met(copy.ok(), &m.presses, &parts)),
     });
     v[g8use::FIELD] = shown(&m.used);
     Ok(v)

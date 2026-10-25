@@ -44,7 +44,7 @@ pub fn predict_ms(c: &GatesConfig) -> u64 {
 }
 
 /// The longest a copy's end may take: every Quit try, the wait for its end, then the wait after an end.
-fn end_ms(c: &GatesConfig) -> u64 {
+pub(crate) fn end_ms(c: &GatesConfig) -> u64 {
     let tries = u64::from(c.g8.quit_tries).saturating_mul(c.g8.quit_try_ms);
     total(&[tries, times(END_WAITS, c.timing.quit_wait_ms)])
 }

@@ -79,9 +79,15 @@ fn the_sidecar_stays_while_a_copy_may_run() {
     let e = kept
         .put_back(true)
         .expect_err("not final while a copy runs");
-    assert!(e.contains(&side.display().to_string()), "{e}");
+    assert!(advised(&e, &side), "{e}");
     assert_eq!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
     assert!(side.exists(), "the next open restores again");
+}
+
+/// True when error `e` names sidecar `side` and the same kx-gates' `close` as the way back.
+fn advised(e: &str, side: &Path) -> bool {
+    let close = format!("close {NAME}");
+    e.contains(&side.display().to_string()) && e.contains("same kx-gates") && e.contains(&close)
 }
 
 #[test]
@@ -89,14 +95,20 @@ fn close_restores_a_left_sidecar_only_once_no_copy_runs() {
     let (_dir, files, side) = folder();
     fs::write(&files.settings, OWNER).expect("written");
     killed(&files, &side);
-    let e = recover(&files, &side, || true).expect_err("a copy runs");
-    assert!(e.contains(&side.display().to_string()), "{e}");
+    let e = recover(&files, &side, true, || true).expect_err("a copy runs");
+    assert!(advised(&e, &side), "{e}");
+    let e = recover(&files, &side, false, || false).expect_err("its Quit did not end it");
+    assert!(advised(&e, &side), "{e}");
     assert_ne!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
     assert!(side.exists(), "kept while a copy runs");
-    assert_eq!(recover(&files, &side, || false), Ok(true));
+    assert_eq!(recover(&files, &side, true, || false), Ok(true));
     assert_eq!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
     assert!(!side.exists(), "gone after a verified put-back");
-    assert_eq!(recover(&files, &side, || false), Ok(false), "none left");
+    assert_eq!(
+        recover(&files, &side, true, || false),
+        Ok(false),
+        "none left"
+    );
 }
 
 #[test]
@@ -105,10 +117,11 @@ fn close_keeps_a_sidecar_it_cannot_put_back_or_that_names_another_folder() {
     fs::write(&files.settings, OWNER).expect("written");
     killed(&files, &side);
     let other = Files::new(&dir.path().join("other"));
-    assert!(recover(&other, &side, || false).is_err());
+    assert!(recover(&other, &side, true, || false).is_err());
     let data = files.settings.parent().expect("a folder").to_path_buf();
     fs::remove_dir_all(&data).expect("the data folder goes");
-    assert!(recover(&files, &side, || false).is_err());
+    let e = recover(&files, &side, true, || false).expect_err("no folder to write");
+    assert!(advised(&e, &side), "{e}");
     assert!(side.exists(), "the owner's bytes are still kept");
 }
 
@@ -194,7 +207,8 @@ fn the_sidecar_stays_when_the_put_back_is_not_verified() {
     let (kept, _) = Kept::take(&files, &side).expect("kept");
     let data = files.settings.parent().expect("a folder").to_path_buf();
     fs::remove_dir_all(&data).expect("the data folder goes");
-    assert!(kept.put_back(false).is_err());
+    let e = kept.put_back(false).expect_err("no folder to write");
+    assert!(advised(&e, &side), "{e}");
     assert!(side.exists(), "the owner's bytes are still kept");
 }
 

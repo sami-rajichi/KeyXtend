@@ -33,7 +33,7 @@ impl Kept {
         let recovered = left.is_some();
         let pair = match left {
             Some(pair) if !pair.keeps(files) => return Err(another(side)),
-            Some(pair) => pair.restore().map(|()| pair)?,
+            Some(pair) => put(&pair, side).map(|()| pair)?,
             None => {
                 let pair = Pair::of(files)?;
                 saved::save(side, &pair)?;
@@ -73,7 +73,7 @@ impl Kept {
     /// `copy_runs`, as that copy may write over them when it ends.
     pub fn put_back(mut self, copy_runs: bool) -> Result<(), String> {
         self.done = true;
-        self.pair.restore()?;
+        put(&self.pair, &self.side)?;
         if copy_runs {
             return Err(stays(&self.side, "a copy may still run"));
         }
@@ -93,7 +93,8 @@ impl Drop for Kept {
 /// Why sidecar `side` stays: `why`, and how to restore from it later.
 fn stays(side: &Path, why: &str) -> String {
     format!(
-        "{} stays, as {why}; once no copy runs, `kx-gates close {NAME}` restores from it",
+        "{} stays, as {why}; once no copy runs, the same kx-gates' `close {NAME}` restores from it, as it reads its \
+         own out folder",
         side.display()
     )
 }
@@ -106,21 +107,35 @@ fn another(side: &Path) -> String {
     )
 }
 
-/// Restores the owner's `files` from sidecar `side` when no copy is `running`, then deletes it once both read back
-/// as kept: whether there was one.
-pub fn recover(files: &Files, side: &Path, running: impl FnOnce() -> bool) -> Result<bool, String> {
+/// Restores the owner's `files` from sidecar `side` once no copy runs: the copy `close` asked to quit `ended`, and
+/// none is `running`. It then deletes the sidecar once both read back as kept: whether there was one.
+pub fn recover(
+    files: &Files,
+    side: &Path,
+    ended: bool,
+    running: impl FnOnce() -> bool,
+) -> Result<bool, String> {
     let Some(pair) = saved::load(side)? else {
         return Ok(false);
     };
+    if !ended {
+        return Err(stays(side, &format!("{NAME} did not end after Quit")));
+    }
     if running() {
         return Err(stays(side, &format!("{NAME} runs")));
     }
     if !pair.keeps(files) {
         return Err(another(side));
     }
-    pair.restore()?;
+    put(&pair, side)?;
     saved::drop_side(side)?;
     Ok(true)
+}
+
+/// Puts `pair` back; a failure names sidecar `side`, which stays, and the way back.
+fn put(pair: &Pair, side: &Path) -> Result<(), String> {
+    pair.restore()
+        .map_err(|e| stays(side, &format!("the put-back failed: {e}")))
 }
 
 /// `owner`'s `[kernel]` section, typed over the kernel's defaults, with predict out of its switched-off list when `on`

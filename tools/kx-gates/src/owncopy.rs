@@ -4,7 +4,6 @@
 
 use std::cell::Cell;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::time::Instant;
 
 use kx_module_api::ModuleId;
@@ -22,14 +21,14 @@ pub struct Session<'a> {
     program: PathBuf,
     kept: Kept,
     /// Set once a copy could not be ended, so the backup stays.
-    stray: Rc<Cell<bool>>,
+    stray: Cell<bool>,
 }
 
-/// A copy a session started; dropping it ends it, so even a panic leaves none running.
-pub struct Copy<'a> {
-    ctx: &'a Ctx<'a>,
+/// A copy a session started; it borrows the session, so the session cannot close while it lives. Dropping it ends
+/// it, so even a panic leaves none running.
+pub struct Copy<'s> {
+    session: &'s Session<'s>,
     started: Option<Started>,
-    stray: Rc<Cell<bool>>,
 }
 
 /// The program these gates start: `[g8] program`.
@@ -38,7 +37,7 @@ fn program(ctx: &Ctx) -> PathBuf {
 }
 
 /// The backup of the owner's files: `[owner_settings] backup` in kx-gates' out folder.
-fn side(ctx: &Ctx) -> PathBuf {
+pub(crate) fn side(ctx: &Ctx) -> PathBuf {
     ctx.out.join(&ctx.cfg.owner_settings.backup)
 }
 
@@ -50,9 +49,10 @@ fn note(stray: &Cell<bool>, ended: Option<&Ended>) {
 }
 
 /// Restores the owner's files from a backup a stopped gate left, once no product copy runs: whether one was there.
-pub fn recover(ctx: &Ctx) -> Result<bool, String> {
+/// `ended` is false when the copy `close` asked to quit did not end, so it counts as running.
+pub fn recover(ctx: &Ctx, ended: bool) -> Result<bool, String> {
     let files = product::files(&program(ctx))?;
-    ownset::recover(&files, &side(ctx), || product::running().is_some())
+    ownset::recover(&files, &side(ctx), ended, || product::running().is_some())
 }
 
 impl<'a> Session<'a> {
@@ -72,26 +72,24 @@ impl<'a> Session<'a> {
                 side.display()
             );
         }
-        let stray = Rc::default();
         Ok(Self {
             ctx,
             program,
             kept,
-            stray,
+            stray: Cell::default(),
         })
     }
 
     /// Writes the gate's settings, predict `on` with learning paused and the modules `off` switched off, then starts a
     /// copy on them.
-    pub fn start(&self, on: bool, off: &[ModuleId]) -> Result<Copy<'a>, Failed> {
+    pub fn start(&self, on: bool, off: &[ModuleId]) -> Result<Copy<'_>, Failed> {
         self.kept
             .write(&ownset::predict(&self.kept.table(), on, off)?)?;
         let started = g8start::start(self.ctx, &self.program, &[], None)
             .inspect_err(|f| note(&self.stray, f.ended.as_ref()))?;
         Ok(Copy {
-            ctx: self.ctx,
+            session: self,
             started: Some(started),
-            stray: Rc::clone(&self.stray),
         })
     }
 
@@ -140,8 +138,8 @@ impl Copy<'_> {
                 released: Vec::new(),
             };
         };
-        let ended = copyend::end(self.ctx, &s.process);
-        note(&self.stray, Some(&ended));
+        let ended = copyend::end(self.session.ctx, &s.process);
+        note(&self.session.stray, Some(&ended));
         ended
     }
 }

@@ -3,6 +3,8 @@
 //! which leaves its process running.
 #![cfg(windows)]
 
+use std::path::Path;
+
 use kx_platform::ui::{Command, Instance, UiError};
 use kx_platform_windows::WindowsPlatform;
 use serde_json::{Value, json};
@@ -52,24 +54,43 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 /// Posts Quit to the running product, if any, then restores the owner's files from a backup a stopped gate left,
 /// once no copy runs (`owncopy::recover`).
 fn close_product(ctx: &Ctx) -> Result<Value, String> {
-    let quit = match product::running() {
-        Some(_) => Some(quit_running(ctx).map_err(|e| e.why)?),
-        None => None,
-    };
-    let back = owncopy::recover(ctx);
+    let quit = || product::running().map(|_| quit_running(ctx)).transpose();
+    closed(
+        quit,
+        |ended| owncopy::recover(ctx, ended),
+        &owncopy::side(ctx),
+    )
+}
+
+/// `close` on the product: `quit` asks the running copy, if any, to quit, then `recover` restores the backup at `side`,
+/// told whether that copy ended, as one still exiting may yet save settings.
+fn closed(
+    quit: impl FnOnce() -> Result<Option<(String, bool)>, Unasked>,
+    recover: impl FnOnce(bool) -> Result<bool, String>,
+    side: &Path,
+) -> Result<Value, String> {
+    let quit = quit().map_err(|e| e.why)?;
+    let back = recover(ended(quit.as_ref()));
     if quit.is_none() && back == Ok(false) {
-        return Err(format!("{NAME} is not running"));
+        let side = side.display();
+        return Err(format!(
+            "{NAME} is not running, and no backup waits at {side}"
+        ));
     }
     Ok(result(quit.as_ref(), &back))
+}
+
+/// True unless the copy `quit` asked did not end; true when none ran.
+fn ended(quit: Option<&(String, bool)>) -> bool {
+    quit.is_none_or(|(_, e)| *e)
 }
 
 /// The result line of `close` on the product: the copy it asked to quit, its program and whether it ended, if one
 /// ran, and whether the owner's files came back from a backup a stopped gate left.
 fn result(quit: Option<&(String, bool)>, back: &Result<bool, String>) -> Value {
-    let (program, ended) = quit.map_or((None, true), |(p, e)| (Some(p), *e));
     json!({
-        "gate": "close", "keyboard": NAME, "program": program, "settings_back": back.as_ref().ok(),
-        "settings_error": back.as_ref().err(), "pass": ended && back.is_ok(),
+        "gate": "close", "keyboard": NAME, "program": quit.map(|(p, _)| p), "settings_back": back.as_ref().ok(),
+        "settings_error": back.as_ref().err(), "pass": ended(quit) && back.is_ok(),
     })
 }
 

@@ -21,8 +21,25 @@ pub(super) struct Pair {
     pub previous: Saved,
 }
 
-/// The bytes of `path`, none when it does not exist; an error past the settings store's own cap.
-fn read(path: &Path) -> Result<Option<Vec<u8>>, String> {
+/// How many files a pair keeps.
+const KEPT: usize = 2;
+
+/// The most JSON bytes one kept byte takes: the digits of `u8::MAX` and a comma.
+fn byte_width() -> u64 {
+    let digits = u64::from(u8::MAX.ilog10()) + 1;
+    digits + 1
+}
+
+/// The most bytes `load` reads from a sidecar: each kept file at the store's cap, every byte at its widest, and one
+/// cap more for the paths and keys.
+fn side_cap() -> u64 {
+    let files = u64::try_from(KEPT).unwrap_or(u64::MAX);
+    let caps = files.saturating_mul(byte_width()).saturating_add(1);
+    MAX_FILE_BYTES.saturating_mul(caps)
+}
+
+/// The bytes of `path`, none when it does not exist; an error past `cap` bytes, read no further.
+fn read_within(path: &Path, cap: u64) -> Result<Option<Vec<u8>>, String> {
     let fail = |e: std::io::Error| format!("{}: {e}", path.display());
     let file = match fs::File::open(path) {
         Ok(file) => file,
@@ -30,19 +47,21 @@ fn read(path: &Path) -> Result<Option<Vec<u8>>, String> {
         Err(e) => return Err(fail(e)),
     };
     let mut bytes = Vec::new();
-    let cap = MAX_FILE_BYTES.saturating_add(1);
-    file.take(cap).read_to_end(&mut bytes).map_err(fail)?;
-    within_cap(path, &bytes)?;
+    let most = cap.saturating_add(1);
+    file.take(most).read_to_end(&mut bytes).map_err(fail)?;
+    within(path, &bytes, cap)?;
     Ok(Some(bytes))
 }
 
-/// Refuses `bytes` for `path` past the settings store's own cap.
-fn within_cap(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_FILE_BYTES {
-        return Err(format!(
-            "{} is over the settings store's {MAX_FILE_BYTES} bytes",
-            path.display()
-        ));
+/// The bytes of `path` within the settings store's own cap.
+fn read(path: &Path) -> Result<Option<Vec<u8>>, String> {
+    read_within(path, MAX_FILE_BYTES)
+}
+
+/// Refuses `bytes` for `path` past `cap`.
+fn within(path: &Path, bytes: &[u8], cap: u64) -> Result<(), String> {
+    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > cap {
+        return Err(format!("{} is over its cap of {cap} bytes", path.display()));
     }
     Ok(())
 }
@@ -90,9 +109,15 @@ impl Pair {
         self.settings.path == files.settings && self.previous.path == files.previous
     }
 
+    /// Both kept files.
+    fn both(&self) -> [&Saved; KEPT] {
+        [&self.settings, &self.previous]
+    }
+
     /// Puts both files back as kept and checks them: every error, joined.
     pub fn restore(&self) -> Result<(), String> {
-        let errors: Vec<String> = [&self.settings, &self.previous]
+        let errors: Vec<String> = self
+            .both()
             .into_iter()
             .filter_map(|s| s.restore().err())
             .collect();
@@ -104,19 +129,18 @@ impl Pair {
     }
 }
 
-/// The pair a stopped run left in sidecar `side`; none when there is none. A file it holds past the settings store's
-/// cap is refused before anything is written.
+/// The pair a stopped run left in sidecar `side`; none when there is none. A sidecar past `side_cap` is refused before
+/// it is parsed, and a file it holds past the settings store's cap before anything is written.
 pub(super) fn load(side: &Path) -> Result<Option<Pair>, String> {
-    let fail =
-        |e: &dyn std::fmt::Display| format!("{}: {e}; check it, then delete it", side.display());
-    let bytes = match fs::read(side) {
-        Ok(bytes) => bytes,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(fail(&e)),
+    let check = |e: String| format!("{e}; check it, then delete it");
+    let fail = |e: &dyn std::fmt::Display| check(format!("{}: {e}", side.display()));
+    let Some(bytes) = read_within(side, side_cap()).map_err(check)? else {
+        return Ok(None);
     };
     let pair: Pair = serde_json::from_slice(&bytes).map_err(|e| fail(&e))?;
-    for s in [&pair.settings, &pair.previous] {
-        within_cap(&s.path, s.bytes.as_deref().unwrap_or_default()).map_err(|e| fail(&e))?;
+    for s in pair.both() {
+        let bytes = s.bytes.as_deref().unwrap_or_default();
+        within(&s.path, bytes, MAX_FILE_BYTES).map_err(|e| fail(&e))?;
     }
     Ok(Some(pair))
 }
@@ -140,3 +164,6 @@ pub(super) fn drop_side(side: &Path) -> Result<(), String> {
         _ => Ok(()),
     }
 }
+
+#[cfg(test)]
+mod tests;

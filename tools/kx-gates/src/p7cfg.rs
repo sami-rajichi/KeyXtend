@@ -235,7 +235,7 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     c.g8_predict.check(c)
 }
 
-mod runs;
+pub(crate) mod runs;
 
 #[cfg(test)]
 mod tests;

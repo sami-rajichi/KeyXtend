@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::config::GatesConfig;
 use crate::g5play::{Case, cases};
 use crate::gatecfg::G2;
+use crate::p7cfg::runs::end_ms;
 
 /// `[fit]`: what a run spends beyond the steps counted here; times in ms.
 #[derive(Debug, Clone, Deserialize)]
@@ -34,7 +35,7 @@ fn ms_of(secs: u64) -> u64 {
 
 /// The least time G8 holds the mouse: its steps through G2's clicks, then the use step's rest on each of the board's
 /// `keys` and its wait, and the scroll and its wait, or its `PresentMon` capture when that ends later; then each churn
-/// round resting on each tip and scrolling once.
+/// round resting on each tip and scrolling once, and its copy's end as the P7 gates count it.
 fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
     let (g, scroll_ms) = (&c.g8, c.g8_scroll.scroll_ms);
     let rounds = g.churn_warm_rounds.saturating_add(g.churn_rounds);
@@ -43,7 +44,7 @@ fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
     let churn = total(&[times(rests, g.churn_tip_ms), times(rounds, scroll_ms)]);
     let used = total(&[g8_captured_ms(c), times(keys, g.use_hover_ms), g.warm_ms]);
     let scrolled = total(&[used, scroll_ms, g.warm_ms]);
-    total(&[ms_of(g.presentmon_secs).max(scrolled), churn])
+    total(&[ms_of(g.presentmon_secs).max(scrolled), churn, end_ms(c)])
 }
 
 /// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
