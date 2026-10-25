@@ -294,7 +294,7 @@ pub trait Module: Send + 'static {
 | Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
 | Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
-| Focused box (P7) | UI Automation focus handler, called on its own threads; reads on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
+| Focused box (P7) | UI Automation focus handler, called on UI Automation's threads; reads on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
 | Word packs (P7) | A read-shared file, mapped `PAGE_READONLY` | A read-only `mmap` from a folder only the system writes, else a copy | The same as macOS |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
 | Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |
