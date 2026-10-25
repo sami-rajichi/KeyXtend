@@ -54,11 +54,6 @@ impl Token {
         self.read = self.units();
     }
 
-    /// True when some of it came from a read.
-    pub(super) fn read(&self) -> bool {
-        self.read > 0
-    }
-
     /// True when some of it was typed.
     pub(super) fn typed(&self) -> bool {
         self.units() > self.read
@@ -97,11 +92,13 @@ pub(super) struct Parts<'t> {
     pub(super) marked: bool,
 }
 
-/// The parts of a normalised token, by the packs' word rule.
+/// The parts of a normalised token, by the packs' word rule; joiners at its end stay in the open word, as letters may
+/// follow them.
 pub(super) fn parts(normal: &str) -> Parts<'_> {
     let found = spans(normal, apostrophe());
+    let open = normal.trim_end_matches(script::joins_inside).len();
     match found.last() {
-        Some(&(start, end)) if end == normal.len() => Parts {
+        Some(&(start, end)) if end == open => Parts {
             word: normal.get(start..).unwrap_or_default(),
             marked: start > 0,
         },

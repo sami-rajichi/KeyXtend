@@ -14,8 +14,10 @@ pub(super) struct Stats {
     pub(super) typed: u64,
     /// Taps on an older lane.
     pub(super) stale: u64,
-    /// Picks of a read word the box no longer ended with.
+    /// Picks whose word the box no longer ended with.
     pub(super) moved: u64,
+    /// Picks a box that cannot confirm the erase could not type.
+    pub(super) unsure: u64,
     pub(super) forgot: u64,
     pub(super) switches: u64,
     pub(super) saves: u64,
@@ -33,6 +35,7 @@ impl Stats {
             typed = self.typed,
             stale = self.stale,
             moved = self.moved,
+            unsure = self.unsure,
             forgot = self.forgot,
             switches = self.switches,
             saves = self.saves,

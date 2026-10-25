@@ -1,5 +1,5 @@
 //! What the keyboard and the box tell: pieces, focus and clicks, and what the tracker hands back to learn or read. A
-//! password box, or prediction turned off, follows nothing.
+//! password box, or prediction turned off, follows nothing, and the watch's kind wins over a late focus event.
 
 use super::Actor;
 use super::store::Blob;
@@ -74,6 +74,9 @@ impl Actor {
         };
         let read = run.before_cursor(self.settings.context_words);
         self.stats.reads += 1;
+        if self.moved() {
+            return;
+        }
         let text = read.unwrap_or_else(|error| {
             tracing::debug!(%error, "the focused box was not read");
             None
@@ -82,9 +85,27 @@ impl Actor {
         self.tracker.read(text, &|w: &str| knows(seed, w));
     }
 
-    /// True when finished words and emails are learned: prediction and learning are on, in a text box.
-    fn learning(&self) -> bool {
-        self.settings.on && self.settings.learn && self.kind == FieldKind::Text
+    /// True when finished words and emails are learned: prediction and learning are on, in a text box the watch still
+    /// sees.
+    fn learning(&mut self) -> bool {
+        self.learns() && !self.moved() && self.kind == FieldKind::Text
+    }
+
+    /// True when prediction and learning are on.
+    pub(super) fn learns(&self) -> bool {
+        self.settings.on && self.settings.learn
+    }
+
+    /// True when the watch already sees another kind of box, and no text box, while its focus event is still on its
+    /// way: that kind wins at once, and tracking stops.
+    pub(super) fn moved(&mut self) -> bool {
+        let seen = self.ports.field.as_ref().map_or(self.kind, |r| r.kind());
+        let moved = seen != FieldKind::Text && seen != self.kind;
+        if moved {
+            self.kind = seen;
+            self.tracker.reset();
+        }
+        moved
     }
 
     /// Learns `word` after `context` today, when learning.

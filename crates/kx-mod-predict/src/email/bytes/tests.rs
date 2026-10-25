@@ -1,4 +1,5 @@
-//! The saved emails' byte form: the round trip, and every damage refused as an error, never a panic.
+//! The saved emails' byte form: the round trip, a bad entry dropped, and every other damage refused as an error, never
+//! a panic.
 
 use proptest::prelude::*;
 
@@ -58,31 +59,30 @@ fn every_cut_is_truncated_and_extra_bytes_are_refused() {
     long.push(0);
     assert_eq!(
         Emails::from_bytes(&long, MAX),
-        Err(EmailFormatError::BadEntry)
+        Err(EmailFormatError::Trailing)
     );
 }
 
 #[test]
-fn an_entry_that_is_no_email_or_no_utf8_is_refused() {
-    let one = emails(&["ab@x.org"]).to_bytes();
-    let at = one.len() - "ab@x.org".len();
-    let mut word = one.clone();
-    word.splice(at.., b"abcxorg".iter().chain(b"!").copied());
-    assert_eq!(
-        Emails::from_bytes(&word, MAX),
-        Err(EmailFormatError::BadEntry)
-    );
-    let mut broken = one;
+fn an_entry_that_is_no_email_or_no_utf8_is_dropped_and_the_rest_kept() {
+    let bytes = emails(&["sami@x.org", "ab@x.org", "nour@y.com"]).to_bytes();
+    let at = bytes
+        .windows(b"ab@x.org".len())
+        .position(|w| w == b"ab@x.org")
+        .unwrap();
+    let mut word = bytes.clone();
+    word[at + 2] = b'!';
+    let mut broken = bytes;
     broken[at] = 0xFF;
-    assert_eq!(
-        Emails::from_bytes(&broken, MAX),
-        Err(EmailFormatError::BadEntry)
-    );
+    for damaged in [word, broken] {
+        let read = Emails::from_bytes(&damaged, MAX).unwrap();
+        assert_eq!(read.list(), ["sami@x.org", "nour@y.com"]);
+    }
 }
 
 #[test]
 fn debug_of_the_error_names_no_email() {
-    let shown = format!("{:?}", EmailFormatError::BadEntry);
+    let shown = format!("{:?}", EmailFormatError::Trailing);
     assert!(!shown.contains('@'), "{shown}");
 }
 

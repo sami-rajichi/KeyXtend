@@ -191,6 +191,14 @@ impl Emails {
         true
     }
 
+    /// Removes the known `email`, in any case; true when it was known.
+    pub fn remove(&mut self, email: &str) -> bool {
+        let lower = Casing::root().lower(email);
+        let before = self.list.len();
+        self.list.retain(|e| Casing::root().lower(e) != lower);
+        self.list.len() < before
+    }
+
     /// The known emails that start with `typed` once folded, at most `lane`: only from `min_start` typed
     /// characters and before any at sign.
     #[must_use]

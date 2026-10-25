@@ -20,8 +20,10 @@ pub(crate) enum Pick {
         /// The spelling the pack or the learner stores.
         stored: Redacted<String>,
     },
-    /// Types an email or a domain by its plan.
+    /// Types a known email by its plan; a forget removes the email it types.
     Email(Plan),
+    /// Types a domain by its plan.
+    Domain(Plan),
     /// The list's chip: the UI answers it with `WordsAsk::More`.
     More,
     /// Brings back the word just forgotten.
@@ -87,9 +89,11 @@ impl Chips {
     /// Adds the email chips `ask` offered; More opens the list, the others type their plan.
     fn emails(&mut self, ask: &EmailAsk, chips: Vec<Chip>) {
         for chip in chips {
+            let plan = || ask.plan(chip.text.expose());
             let pick = match chip.kind {
                 ChipKind::More => Some(Pick::More),
-                _ => ask.plan(chip.text.expose()).map(Pick::Email),
+                ChipKind::Domain => plan().map(Pick::Domain),
+                _ => plan().map(Pick::Email),
             };
             self.push_opt(chip, pick);
         }
@@ -109,23 +113,24 @@ impl Chips {
         self.picks.truncate(limit);
     }
 
-    /// Shows the menu's state: the Undo chip at its place, reading as `rtl`, and in forget mode only the word chips.
+    /// Shows the menu's state: the Undo chip at its place, reading as `rtl`, and in forget mode only what can be
+    /// forgotten.
     pub(crate) fn with_menu(&mut self, menu: Menu, rtl: bool, limit: usize) {
         if let Some(at) = menu.undo {
             self.with_undo(at, rtl, limit);
         }
         if menu.forgetting {
-            self.words_only();
+            self.forgettable();
         }
     }
 
-    /// Keeps only the word chips, as forget mode offers only what can be forgotten.
-    fn words_only(&mut self) {
+    /// Keeps only the word and known-email chips, as forget mode offers only what can be forgotten.
+    fn forgettable(&mut self) {
         let pairs = std::mem::take(&mut self.chips)
             .into_iter()
             .zip(std::mem::take(&mut self.picks));
         (self.chips, self.picks) = pairs
-            .filter(|(_, pick)| matches!(pick, Pick::Word { .. }))
+            .filter(|(_, pick)| matches!(pick, Pick::Word { .. } | Pick::Email(_)))
             .unzip();
     }
 

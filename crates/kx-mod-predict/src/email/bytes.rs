@@ -22,9 +22,9 @@ pub enum EmailFormatError {
     /// The bytes end before what they announce.
     #[error("the saved emails file ends early")]
     Truncated,
-    /// An entry is not UTF-8 or no email, or bytes follow the end.
-    #[error("a saved email entry is malformed")]
-    BadEntry,
+    /// Bytes follow the last entry.
+    #[error("the saved emails file has bytes after its last entry")]
+    Trailing,
 }
 
 impl Emails {
@@ -47,7 +47,8 @@ impl Emails {
         out
     }
 
-    /// The emails in `bytes`, at most `max`, the most recent kept.
+    /// The emails in `bytes`, at most `max`, the most recent kept; an entry that is not UTF-8 or no email is dropped,
+    /// and the others stay.
     ///
     /// # Errors
     /// `EmailFormatError` says what is wrong when `bytes` is not a sound byte form of this version.
@@ -64,14 +65,11 @@ impl Emails {
         let mut list = Vec::new();
         for _ in 0..count {
             let len = usize::from(u16::from_le_bytes(r.array()?));
-            let text = str::from_utf8(r.take(len)?).map_err(|_| EmailFormatError::BadEntry)?;
-            if !looks_like(text) {
-                return Err(EmailFormatError::BadEntry);
-            }
-            list.push(text.to_owned());
+            let text = str::from_utf8(r.take(len)?).ok().filter(|t| looks_like(t));
+            list.extend(text.map(str::to_owned));
         }
         if !r.bytes.is_empty() {
-            return Err(EmailFormatError::BadEntry);
+            return Err(EmailFormatError::Trailing);
         }
         Ok(Self::new(&list, max))
     }

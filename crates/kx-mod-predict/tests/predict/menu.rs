@@ -1,11 +1,11 @@
 //! The menu: Pause and Off are saved through the settings handle without a restart, Forget then Undo restore the word
-//! by its stored spelling, forget mode offers word chips only, the Undo chip goes at the next key, and Again tells the
-//! lane again.
+//! by its stored spelling, forget mode offers word and known-email chips, the Undo chip goes at the next key, and
+//! Again tells the lane again.
 
 use crate::rig::{Rig, plant, saved};
 use kx_mod_predict::email::Emails;
 use kx_mod_predict::score::Learned;
-use kx_mod_predict::{ID, Msg};
+use kx_mod_predict::{ID, Msg, emails_blob};
 use kx_module_api::ports::{ChipKind, FieldKind, Lane, TypingMode, WordsAsk};
 use toml::{Table, Value};
 
@@ -128,16 +128,31 @@ fn again_tells_the_same_lane_once_more() {
     assert_eq!(rig.take(), [crate::rig::Heard::Lane(before)]);
 }
 
-#[test]
-fn forget_mode_offers_only_word_chips_and_a_pick_forgets_the_one_shown() {
+/// A rig in English whose learner knows `sad` and `safe` and that knows the emails `known`, in a text box.
+fn knowing(known: &[&str]) -> Rig {
     let mut rig = Rig::build(|f, _| {
         plant(f, "en", &["sad", "safe"]);
-        let bytes = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
-        f.store
-            .plant(&kx_mod_predict::emails_blob().unwrap(), bytes);
+        let known: Vec<String> = known.iter().map(|e| (*e).to_owned()).collect();
+        let bytes = Emails::new(&known, usize::MAX).to_bytes();
+        f.store.plant(&emails_blob().unwrap(), bytes);
     });
     rig.lang("en");
     rig.focus(FieldKind::Text);
+    rig
+}
+
+/// The emails saved now.
+fn saved_emails(rig: &Rig) -> Vec<String> {
+    let bytes = rig.fakes.store.blob(&emails_blob().unwrap()).unwrap();
+    Emails::from_bytes(&bytes, usize::MAX)
+        .unwrap()
+        .list()
+        .to_vec()
+}
+
+#[test]
+fn forget_mode_offers_word_and_email_chips_and_a_pick_forgets_the_one_shown() {
+    let mut rig = knowing(&["sami@x.org"]);
     rig.typed("sa");
     let words = rig.words();
     rig.ask(WordsAsk::Forget);
@@ -145,11 +160,39 @@ fn forget_mode_offers_only_word_chips_and_a_pick_forgets_the_one_shown() {
     let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
     assert_eq!(kinds, [ChipKind::Undo, ChipKind::Word, ChipKind::Email]);
     rig.ask(WordsAsk::Forget);
-    assert_eq!(
-        rig.chips(),
-        [(words[1].clone(), ChipKind::Word)],
-        "no Undo, no email"
-    );
+    let email = ("sami@x.org".to_owned(), ChipKind::Email);
+    let kept = [(words[1].clone(), ChipKind::Word), email];
+    assert_eq!(rig.chips(), kept, "no Undo");
     rig.pick(0);
     assert!(rig.words().is_empty(), "the word shown was forgotten");
+}
+
+#[test]
+fn a_known_email_picked_in_forget_mode_is_forgotten_and_saved() {
+    let mut rig = knowing(&["sami@x.org", "sara@y.com"]);
+    rig.typed("sa");
+    rig.ask(WordsAsk::Forget);
+    let at = rig.chips().iter().position(|c| c.0 == "sami@x.org");
+    rig.pick(u8::try_from(at.unwrap()).unwrap());
+    assert!(!rig.lane().forgetting && rig.typed_words().is_empty());
+    let shown: Vec<String> = rig.chips().into_iter().map(|c| c.0).collect();
+    assert!(!shown.contains(&"sami@x.org".to_owned()), "{shown:?}");
+    rig.advance(std::time::Duration::from_secs(rig.settings.save_s.into()));
+    rig.tick();
+    assert_eq!(saved_emails(&rig), ["sara@y.com"]);
+}
+
+#[test]
+fn forget_mode_drops_domains_and_more() {
+    let mut rig = knowing(&[]);
+    rig.typed("sami@");
+    rig.ask(WordsAsk::Forget);
+    assert!(rig.chips().is_empty(), "no domain");
+    let seven: Vec<String> = (0..7).map(|n| format!("user{n}@mail.org")).collect();
+    let seven: Vec<&str> = seven.iter().map(String::as_str).collect();
+    let mut rig = knowing(&seven);
+    rig.typed("@@");
+    rig.ask(WordsAsk::Forget);
+    let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
+    assert!(!kinds.is_empty() && kinds.iter().all(|k| *k == ChipKind::Email));
 }

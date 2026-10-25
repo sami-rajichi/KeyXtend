@@ -1,5 +1,5 @@
-//! The lane and picks: typing shows chips, a pick sends one `TypeWord` with the right erase, a stale round sends
-//! nothing, and a pick whose word no longer ends the box sends nothing and reads again.
+//! The lane and picks: typing shows chips, a pick sends one `TypeWord` erasing only what the box confirms, a stale
+//! round sends nothing, and a pick whose word no longer ends the box sends nothing and reads again.
 
 use crate::rig::{Rig, plant};
 use kx_mod_predict::Msg;
@@ -57,26 +57,16 @@ fn each_change_brings_a_new_round_and_a_stale_round_sends_nothing() {
 }
 
 #[test]
-fn a_read_word_is_checked_and_a_box_that_moved_on_or_cannot_tell_gets_nothing_and_a_new_read() {
-    for ends in [Some(false), None] {
-        let mut rig = texted(Some("we said hel"));
-        assert_eq!(rig.words(), ["hello", "help"]);
-        rig.fakes.field.set_ends(ends);
-        let reads = rig.fakes.field.before_calls();
-        rig.pick(0);
-        assert!(rig.typed_words().is_empty(), "{ends:?}: nothing erased");
-        let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
-        assert_eq!(
-            asked.as_deref(),
-            Some("hel"),
-            "{ends:?}: it checked the read word"
-        );
-        assert_eq!(
-            rig.fakes.field.before_calls(),
-            reads + 1,
-            "{ends:?}: read again"
-        );
-    }
+fn a_read_word_is_checked_and_a_box_that_moved_on_gets_nothing_and_a_new_read() {
+    let mut rig = texted(Some("we said hel"));
+    assert_eq!(rig.words(), ["hello", "help"]);
+    rig.fakes.field.set_ends(Some(false));
+    let reads = rig.fakes.field.before_calls();
+    rig.pick(0);
+    assert!(rig.typed_words().is_empty(), "nothing erased");
+    let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
+    assert_eq!(asked.as_deref(), Some("hel"), "it checked the read word");
+    assert_eq!(rig.fakes.field.before_calls(), reads + 1, "read again");
 }
 
 #[test]
@@ -88,12 +78,82 @@ fn a_read_word_the_box_still_ends_with_is_replaced() {
 }
 
 #[test]
-fn a_word_typed_here_needs_no_check() {
+fn a_typed_word_the_box_still_ends_with_is_checked_then_replaced() {
     let mut rig = texted(None);
     rig.typed("hel");
     rig.pick(0);
-    assert_eq!(rig.fakes.field.ends_calls(), 0);
+    let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
+    assert_eq!(asked.as_deref(), Some("hel"));
     assert_eq!(rig.typed_words(), [(3, "hello ".to_owned())]);
+}
+
+/// Plan edge 6, for a word typed here.
+#[test]
+fn a_typed_word_the_box_no_longer_ends_with_erases_nothing_and_the_lane_reads_again() {
+    let mut rig = texted(None);
+    rig.typed("hel");
+    let round = rig.lane().round;
+    rig.fakes.field.set_ends(Some(false));
+    rig.fakes.field.set_before(Some("we said "));
+    let reads = rig.fakes.field.before_calls();
+    rig.pick(0);
+    assert!(rig.typed_words().is_empty(), "nothing erased");
+    assert_eq!(rig.fakes.field.before_calls(), reads + 1, "read again");
+    assert!(rig.lane().round != round, "a new lane");
+    rig.typed("hel");
+    assert_eq!(rig.words(), ["hello", "help"], "the read's context holds");
+}
+
+/// Plan edge 13: no click is told, as with the mouse module off.
+#[test]
+fn with_clicks_unheard_a_caret_move_is_caught_by_the_pick_check() {
+    let mut rig = texted(Some("we said "));
+    rig.typed("hel");
+    assert_eq!(rig.presses().last(), Some(&true), "clicks wanted");
+    rig.fakes.field.set_before(Some(""));
+    rig.fakes.field.set_ends(Some(false));
+    rig.pick(0);
+    assert!(
+        rig.typed_words().is_empty(),
+        "the moved caret erases nothing"
+    );
+    rig.fakes.field.set_ends(Some(true));
+    rig.typed("hel");
+    rig.pick(0);
+    assert_eq!(rig.typed_words(), [(3, "hello ".to_owned())]);
+}
+
+#[test]
+fn a_box_that_cannot_tell_gets_only_the_rest_of_a_chip_that_starts_with_the_typed_word() {
+    for read in [None, Some("we said hel")] {
+        let mut rig = texted(read);
+        rig.fakes.field.set_ends(None);
+        if read.is_none() {
+            rig.typed("hel");
+        }
+        rig.pick(0);
+        assert_eq!(rig.typed_words(), [(0, "lo ".to_owned())], "{read:?}");
+    }
+    let mut rig = Rig::build(|f, _| plant(f, "en", &["hello", "help"]));
+    rig.lang("en");
+    rig.focus(FieldKind::Unknown);
+    rig.typed("hel");
+    rig.pick(1);
+    assert_eq!(rig.typed_words(), [(0, "p ".to_owned())], "an unknown box");
+    assert_eq!(rig.fakes.field.ends_calls(), 0, "it is never asked");
+}
+
+#[test]
+fn a_box_that_cannot_tell_gets_nothing_for_a_chip_that_changes_the_typed_word() {
+    for kind in [FieldKind::Unknown, FieldKind::None] {
+        let mut rig = Rig::build(|f, _| plant(f, "en", &["London"]));
+        rig.lang("en");
+        rig.focus(kind);
+        rig.typed("lon");
+        assert_eq!(rig.words(), ["London"], "{kind:?}");
+        rig.pick(0);
+        assert!(rig.typed_words().is_empty(), "{kind:?}: never erased");
+    }
 }
 
 #[test]

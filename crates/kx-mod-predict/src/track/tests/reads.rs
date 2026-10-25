@@ -8,7 +8,6 @@ fn a_read_fills_the_context_and_its_last_word_stays_open() {
     t.reset();
     t.read(Some("je vais à l'éc"), &knows);
     let show = t.show(&knows);
-    assert!(show.read);
     let split = (
         owned(&["vais", "à", "l'"]),
         "l'".to_owned(),
@@ -37,7 +36,6 @@ fn a_read_learns_nothing_and_an_empty_read_knows_the_box_is_empty() {
     let mut t = tracker(2);
     t.read(Some("hello world "), &knows);
     assert_eq!(t.context(), Some(owned(&["hello", "world"]).as_slice()));
-    assert!(!t.show(&knows).read);
     t.reset();
     t.read(Some(""), &knows);
     assert_eq!(t.context(), Some(&[][..]));

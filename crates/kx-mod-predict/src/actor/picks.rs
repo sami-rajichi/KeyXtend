@@ -1,5 +1,5 @@
-//! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, after checking that a word read
-//! from the box still ends it; in forget mode a word chip is forgotten instead, and the list's rows type their email.
+//! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, erasing only what the box
+//! confirms; in forget mode a word or known-email chip is forgotten instead, and the list's rows type their email.
 
 use super::Actor;
 use super::store::Blob;
@@ -8,7 +8,7 @@ use crate::learn::Learner;
 use crate::pack::Pack;
 use crate::track::{EmailAsk, Plan};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ChipPicked, TypeWord};
+use kx_module_api::ports::{ChipPicked, FieldKind, TypeWord};
 
 impl Actor {
     /// A chip was tapped; a tap on an older lane, or on no chip, does nothing. True when the lane changed.
@@ -23,8 +23,11 @@ impl Actor {
         };
         match chosen {
             Pick::Word { stored, .. } if self.menu.forgetting => self.forget(seed, &stored, at),
+            Pick::Email(plan) if self.menu.forgetting => self.forget_email(&plan.text),
             _ if self.menu.forgetting => return false,
-            Pick::Word { plan, .. } | Pick::Email(plan) => self.send(seed, &plan),
+            Pick::Word { plan, .. } | Pick::Email(plan) | Pick::Domain(plan) => {
+                self.send(seed, &plan);
+            }
             Pick::More => return false,
             Pick::Undo => self.undo(),
         }
@@ -62,34 +65,46 @@ impl Actor {
         matches!(ask, Some(EmailAsk::All(_)))
     }
 
-    /// Asks the keyboard to erase and type by `plan`; a box that no longer ends with a read word gets nothing and a
-    /// new read.
+    /// Asks the keyboard to type by `plan` as far as the box confirms it: all of it when the box still ends with what
+    /// it erases, only the rest of the chip when the box cannot tell, nothing and a new read when the box moved on.
     fn send(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) {
-        if !self.still_ends(plan) {
-            self.stats.moved += 1;
-            let told = self.tracker.reset();
-            self.act(seed, told);
+        let sent = match self.ends(plan) {
+            Some(true) => Some(plan.clone()),
+            Some(false) => {
+                self.stats.moved += 1;
+                let told = self.tracker.reset();
+                self.act(seed, told);
+                return;
+            }
+            None => plan.rest(),
+        };
+        let Some(sent) = sent else {
+            self.stats.unsure += 1;
             return;
-        }
+        };
         let word = TypeWord {
             round: self.round,
-            erase: plan.erase,
-            text: plan.text.clone(),
+            erase: sent.erase,
+            text: sent.text,
         };
         self.publish(&word);
         self.stats.typed += 1;
         self.pending = true;
     }
 
-    /// True when the box surely ends with what `plan` erases: a word typed here always does, a read one only when
-    /// the box says so.
-    fn still_ends(&mut self, plan: &Plan) -> bool {
-        let read = self.show.as_ref().is_some_and(|s| s.read);
-        if !read || plan.erase == 0 {
-            return true;
+    /// Whether the box still ends with what `plan` erases, as a text box tells; `None` when another box, or the app,
+    /// cannot tell. A box the watch already sees as another kind has moved on.
+    fn ends(&mut self, plan: &Plan) -> Option<bool> {
+        if self.moved() {
+            return Some(false);
         }
-        let run = self.ports.field.as_mut();
-        run.and_then(|run| run.ends_with(&plan.gone)) == Some(true)
+        if plan.erase == 0 {
+            return Some(true);
+        }
+        if self.kind != FieldKind::Text {
+            return None;
+        }
+        self.ports.field.as_mut()?.ends_with(&plan.gone)
     }
 
     /// Forgets the word stored as `stored`, whose chip sat at `at`; its Undo chip takes the place.
@@ -101,6 +116,15 @@ impl Actor {
         if gone {
             self.stats.forgot += 1;
             self.changed(Blob::Learned);
+        }
+    }
+
+    /// Removes the known `email` its chip types; forget mode ends.
+    fn forget_email(&mut self, email: &Redacted<String>) {
+        self.menu.forgot(None);
+        if self.emails.remove(email.expose()) {
+            self.stats.forgot += 1;
+            self.changed(Blob::Emails);
         }
     }
 }

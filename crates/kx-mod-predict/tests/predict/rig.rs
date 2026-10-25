@@ -62,7 +62,8 @@ impl Rig {
         Self::build(|_, _| {})
     }
 
-    /// A begun rig whose fakes and settings `setup` prepares first.
+    /// A begun rig whose fakes and settings `setup` prepares first; a text box confirms every pick unless it says
+    /// otherwise.
     pub fn build(setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
         let fakes = Fakes {
             field: FakeFieldWatch::new(),
@@ -71,6 +72,7 @@ impl Rig {
             clock: FakeClock::new(T0),
             day: Arc::new(AtomicU32::new(DAY)),
         };
+        fakes.field.set_ends(Some(true));
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();
         setup(&fakes, &mut host);
@@ -115,9 +117,7 @@ impl Rig {
     /// Hands `msg` to the actor, then each focus change the box told, ticking after each as the thread does.
     pub fn send(&mut self, msg: Msg) -> Flow {
         let flow = self.step(msg);
-        while let Ok(told) = self.tells.try_recv() {
-            self.step(told);
-        }
+        self.told();
         flow
     }
 
@@ -162,9 +162,19 @@ impl Rig {
     /// Focus moves to a new box of `kind`.
     pub fn focus(&mut self, kind: FieldKind) {
         self.fakes.field.focus(kind);
+        self.told();
+    }
+
+    /// Hands the actor each focus change the box told and it has not had yet.
+    pub fn told(&mut self) {
         while let Ok(told) = self.tells.try_recv() {
             self.step(told);
         }
+    }
+
+    /// Hands `msg` to the actor ahead of the focus changes the box told, as when their event lands late.
+    pub fn late(&mut self, msg: Msg) {
+        self.step(msg);
     }
 
     /// The keyboard typed `text`.

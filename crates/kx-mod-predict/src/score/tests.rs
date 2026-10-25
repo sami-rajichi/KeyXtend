@@ -217,19 +217,35 @@ fn a_typed_capital_capitalises_and_a_capitalised_word_keeps_its_form() {
 }
 
 #[test]
-fn caps_lock_or_two_typed_capitals_give_all_capitals() {
+fn caps_lock_or_two_typed_capitals_with_no_lower_case_give_all_capitals() {
     let en = english();
     let caps = TypingMode {
         caps: true,
         ..TypingMode::default()
     };
-    let found = run(&en, &NoLearned, &ask(&[], "th"), caps);
-    assert!(
-        found.iter().all(|t| t.chars().all(char::is_uppercase)),
-        "{found:?}"
-    );
+    let upper = |found: &[String]| found.iter().all(|t| t.chars().all(char::is_uppercase));
+    for prefix in ["", "T", "TH"] {
+        let found = run(&en, &NoLearned, &ask(&["in"], prefix), caps);
+        assert!(!found.is_empty() && upper(&found), "{prefix:?}: {found:?}");
+    }
+    let shifted = run(&en, &NoLearned, &ask(&[], "th"), caps);
+    assert!(!upper(&shifted), "letters typed in lower case: {shifted:?}");
     assert_eq!(first(&en, &[], "TH").as_deref(), Some("THE"));
     assert_eq!(first(&en, &[], "LO").as_deref(), Some("LONDON"));
+}
+
+#[test]
+fn two_capitals_beside_a_lower_case_letter_keep_the_words_own_capitals() {
+    let en = pack(
+        "en",
+        &[("McDonald", 120), ("USA", 120), ("usage", 110)],
+        &[],
+    );
+    assert_eq!(first(&en, &[], "McD").as_deref(), Some("McDonald"));
+    let us = run(&en, &NoLearned, &ask(&[], "US"), TypingMode::default());
+    assert_eq!(us, ["USA", "USAGE"]);
+    let nl = pack("nl", &[("IJsselmeer", 120)], &[]);
+    assert_eq!(first(&nl, &[], "IJs").as_deref(), Some("IJsselmeer"));
 }
 
 #[test]

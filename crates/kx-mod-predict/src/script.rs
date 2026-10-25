@@ -185,10 +185,20 @@ fn script(c: char) -> Script {
         .map_or(Script::Other, |(_, _, script)| *script)
 }
 
+/// The joiners that stay inside a word of any script but never start or end one: UAX #29 never breaks a word at
+/// them (ZWNJ, ZWJ), and Persian writes ZWNJ inside words.
+const JOINERS: &[char] = &['\u{200C}', '\u{200D}'];
+
 /// True when `c` is a combining mark or a modifier letter, which join a word of any script.
 #[must_use]
 pub fn joins_any(c: char) -> bool {
     script(c) == Script::Common
+}
+
+/// True when `c` is a joiner, which belongs to a word only between its letters.
+#[must_use]
+pub fn joins_inside(c: char) -> bool {
+    JOINERS.contains(&c)
 }
 
 /// True when every letter of `word` is of one script, not counting the ones that join any script.

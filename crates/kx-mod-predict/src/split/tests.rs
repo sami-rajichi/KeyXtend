@@ -21,6 +21,24 @@ fn place(alone: bool, joined: bool) -> Place {
     Place { alone, joined }
 }
 
+/// The words `spans` finds in `text`.
+fn words(text: &str) -> Vec<&str> {
+    let found = spans(text, '\'');
+    found.iter().filter_map(|&(s, e)| text.get(s..e)).collect()
+}
+
+#[test]
+fn a_joiner_inside_a_word_stays_and_one_at_its_edge_is_trimmed() {
+    assert_eq!(words("کتاب\u{200C}ها خوب"), ["کتاب\u{200C}ها", "خوب"]);
+    assert_eq!(
+        words("می\u{200C}\u{200D}خواهم"),
+        ["می\u{200C}\u{200D}خواهم"]
+    );
+    assert_eq!(words("\u{200C}کتاب\u{200D} ها"), ["کتاب", "ها"]);
+    assert_eq!(words("l'\u{200C}x"), ["l'", "x"], "after an apostrophe");
+    assert_eq!(all_edges("کتاب\u{200C} ها").len(), 2);
+}
+
 #[test]
 fn a_mark_then_a_space_leaves_a_side_free_but_breaks_the_chain() {
     let expected = [

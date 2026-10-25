@@ -1,10 +1,11 @@
 //! Saving: a changed blob saves `save_s` after its first change and at stop; a damaged blob starts empty with one
-//! notice; a locked store starts empty and saves nothing that run; a refused save keeps running; a new day purges.
+//! notice; a locked store starts empty and saves nothing that run; a refused save keeps running; a new day purges;
+//! while learning is paused, neither purges nor timed saves write.
 
 use crate::rig::{DAY, Rig, blob, learner, plant, saved};
 use kx_mod_predict::score::Learned;
 use kx_module_api::keys;
-use kx_module_api::ports::{FieldKind, SealedError};
+use kx_module_api::ports::{FieldKind, SealedError, WordsAsk};
 use std::time::Duration;
 
 /// One millisecond, the clock's step past a deadline.
@@ -130,6 +131,38 @@ fn a_locked_save_stops_saving_for_the_run() {
     rig.stop();
     assert_eq!(rig.fakes.store.saves(), 1);
     assert_eq!(rig.notices(), [keys::WORDS_LOCKED]);
+}
+
+#[test]
+fn a_paused_learner_neither_purges_nor_saves_on_time_until_it_resumes() {
+    let mut rig = english(|f| plant(f, "en", &["old"]));
+    let save = Duration::from_secs(rig.settings.save_s.into());
+    rig.typed("hello ");
+    rig.ask(WordsAsk::Pause(true));
+    assert_eq!(rig.wait(), None, "no timer while paused");
+    rig.set_day(DAY + rig.settings.forget_days + 1);
+    rig.advance(save);
+    rig.tick();
+    assert_eq!(rig.fakes.store.saves(), 0, "no purge, no timed save");
+    rig.ask(WordsAsk::Pause(false));
+    assert_eq!(rig.fakes.store.saves(), 1, "the save was due");
+    let learner = saved(&rig.fakes, "en").unwrap();
+    assert_eq!(learner.view(None).count("old"), 0, "purged on resume");
+}
+
+#[test]
+fn a_forget_while_paused_waits_for_the_stop() {
+    let mut rig = english(|f| plant(f, "en", &["hello", "help"]));
+    rig.ask(WordsAsk::Pause(true));
+    rig.typed("hel");
+    rig.ask(WordsAsk::Forget);
+    rig.pick(0);
+    rig.advance(Duration::from_secs(rig.settings.save_s.into()));
+    rig.tick();
+    assert_eq!(rig.fakes.store.saves(), 0, "no timed save");
+    rig.stop();
+    let learner = saved(&rig.fakes, "en").unwrap();
+    assert_eq!(learner.view(None).count("hello"), 0, "the stop saves it");
 }
 
 #[test]

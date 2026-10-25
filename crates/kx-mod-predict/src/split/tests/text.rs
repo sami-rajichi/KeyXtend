@@ -128,6 +128,14 @@ fn arabic_sentences_end_at_the_arabic_question_mark_and_its_comma_breaks_chains(
 }
 
 #[test]
+fn a_persian_joiner_stays_inside_its_word_and_goes_at_its_edge() {
+    let got = words("کتاب\u{200C}ها را خواندم\u{200C} ", &[]);
+    let first = got.first().unwrap();
+    assert_eq!(texts(first), ["کتاب\u{200C}ها", "را", "خواندم"]);
+    assert!(first.iter().all(|s| s.2), "each stands alone");
+}
+
+#[test]
 fn harakat_and_digits_stay_inside_words() {
     let got = words("كتابٌ in 1999 e\u{0301}cole", &[]);
     assert_eq!(

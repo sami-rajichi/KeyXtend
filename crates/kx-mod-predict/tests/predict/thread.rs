@@ -110,6 +110,7 @@ fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
     let known = learner("en", &["hello", "help", "world"], SystemDays.today());
     store.plant(&blob("en"), known.to_bytes());
     field.focus(FieldKind::Text);
+    field.set_ends(Some(true));
     let listen = |bus: &Bus| {
         (
             hear::<LayoutAsk>(bus),

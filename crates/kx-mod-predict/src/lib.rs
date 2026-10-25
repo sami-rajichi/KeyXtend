@@ -22,7 +22,8 @@ pub mod split;
 pub mod track;
 
 pub use actor::{
-    Actor, EMAILS_BLOB, Flow, Msg, Ports, STOPPED_LINE, emails_blob, learned_blob, watch,
+    ASIDE_SUFFIX, Actor, EMAILS_BLOB, Flow, Msg, Ports, STOPPED_LINE, aside_blob, emails_blob,
+    learned_blob, watch,
 };
 pub use casing::Casing;
 pub use days::{Days, SystemDays};

@@ -1,10 +1,8 @@
 //! The sealed blobs: the language in front's learned words and the known emails. Each saves `save_s` after its first
-//! unsaved change and at stop; a damaged one starts empty, a locked store saves nothing that run, and a new day purges.
+//! unsaved change and at stop, a locked store saves nothing that run, and a new day purges; while learning is paused,
+//! neither purges nor timed saves write.
 
 use super::Actor;
-use crate::email::Emails;
-use crate::learn::Learner;
-use crate::pack::Pack;
 use kx_module_api::ports::{BlobName, SealedError, fits_iso};
 use kx_module_api::{Mono, keys};
 use std::time::Duration;
@@ -13,6 +11,8 @@ use std::time::Duration;
 pub const EMAILS_BLOB: &str = "predict-emails";
 /// What each language's learned-words blob is named after: then the language code.
 const LEARNED_PREFIX: &str = "predict-";
+/// What follows a blob's name in the name of its set-aside copy.
+pub const ASIDE_SUFFIX: &str = "-aside";
 
 /// The blob of language `iso`'s learned words; `None` for a code no pack could carry.
 #[must_use]
@@ -26,6 +26,12 @@ pub fn learned_blob(iso: &str) -> Option<BlobName> {
 #[must_use]
 pub fn emails_blob() -> Option<BlobName> {
     BlobName::new(EMAILS_BLOB).ok()
+}
+
+/// The blob that keeps a copy of `name`'s bytes when they open but do not read: its name, then `ASIDE_SUFFIX`.
+#[must_use]
+pub fn aside_blob(name: &BlobName) -> Option<BlobName> {
+    BlobName::new(&format!("{}{ASIDE_SUFFIX}", name.as_str())).ok()
 }
 
 /// One of the two blobs.
@@ -88,6 +94,14 @@ impl Saves {
                 Blob::Emails => self.held_emails,
             }
     }
+
+    /// `blob` is never written over this run.
+    pub(super) fn hold(&mut self, blob: Blob) {
+        match blob {
+            Blob::Learned => self.held_learned = true,
+            Blob::Emails => self.held_emails = true,
+        }
+    }
 }
 
 impl Actor {
@@ -99,8 +113,11 @@ impl Actor {
         }
     }
 
-    /// Purges on a new day, then saves each blob whose time has come.
+    /// Purges on a new day, then saves each blob whose time has come; nothing while learning is paused.
     pub fn tick(&mut self) {
+        if !self.learns() {
+            return;
+        }
         self.new_day();
         let now = self.ports.clock.now();
         for blob in [Blob::Learned, Blob::Emails] {
@@ -140,77 +157,6 @@ impl Actor {
         }
     }
 
-    /// Loads the known emails; damaged ones start empty.
-    pub(super) fn load_emails(&mut self) {
-        let Some(name) = emails_blob() else {
-            return;
-        };
-        let bytes = self.load(&name, Blob::Emails);
-        let read = bytes.map(|b| Emails::from_bytes(&b, self.email_cfg.max_emails));
-        self.emails = match read {
-            Some(Ok(emails)) => emails,
-            Some(Err(error)) => {
-                tracing::warn!(%error, "saved emails not read");
-                self.say_once(keys::WORDS_DAMAGED);
-                Emails::default()
-            }
-            None => Emails::default(),
-        };
-    }
-
-    /// Loads the language in front's learner and merges its strays into `seed`; a damaged one, or one of another
-    /// language, starts empty.
-    pub(super) fn load_learner(&mut self, seed: Option<&Pack<'_>>) {
-        self.learner = None;
-        let Some(name) = learned_blob(&self.iso) else {
-            return;
-        };
-        let bytes = self.load(&name, Blob::Learned);
-        let read = bytes.map(|b| Learner::from_bytes(&b, self.learn_cfg));
-        let learner = match read {
-            Some(Ok(learner)) if learner.iso() == self.iso => Some(learner),
-            Some(Ok(_)) => self.unread(&"the file names another language"),
-            Some(Err(error)) => self.unread(&error),
-            None => None,
-        };
-        let mut learner = learner.or_else(|| Learner::new(&self.iso, self.learn_cfg).ok());
-        if let Some(learner) = learner.as_mut() {
-            learner.reconcile(seed);
-        }
-        self.learner = learner;
-    }
-
-    /// Logs why the saved learner was not read and tells it once; the language starts empty.
-    fn unread(&mut self, why: &dyn std::fmt::Display) -> Option<Learner> {
-        tracing::warn!(%why, "learned words not read");
-        self.say_once(keys::WORDS_DAMAGED);
-        None
-    }
-
-    /// The bytes under `name`, or none; a damaged blob tells once, a locked store locks the run, and a blob that
-    /// cannot be read is never written over this run.
-    fn load(&mut self, name: &BlobName, blob: Blob) -> Option<Vec<u8>> {
-        match self.ports.store.load(name) {
-            Ok(bytes) => bytes,
-            Err(SealedError::Damaged) => {
-                self.say_once(keys::WORDS_DAMAGED);
-                None
-            }
-            Err(SealedError::Locked) => {
-                self.lock();
-                None
-            }
-            Err(error) => {
-                tracing::warn!(%error, ?blob, "predict blob not loaded");
-                match blob {
-                    Blob::Learned => self.saves.held_learned = true,
-                    Blob::Emails => self.saves.held_emails = true,
-                }
-                None
-            }
-        }
-    }
-
     /// The language changes: the learner's timer and hold end with it.
     pub(super) fn leave(&mut self) {
         self.saves.learned = None;
@@ -219,14 +165,17 @@ impl Actor {
     }
 
     /// The OS key was refused: nothing saves this run, and the user hears it once.
-    fn lock(&mut self) {
+    pub(super) fn lock(&mut self) {
         self.saves.locked = true;
         (self.saves.learned, self.saves.emails) = (None, None);
         self.say_once(keys::WORDS_LOCKED);
     }
 
-    /// On a new day, drops what went unused for more than `forget_days`.
+    /// On a new day, drops what went unused for more than `forget_days`; nothing while learning is paused.
     pub(super) fn new_day(&mut self) {
+        if !self.learns() {
+            return;
+        }
         let today = self.ports.days.today();
         if self.saves.day.replace(today) == Some(today) {
             return;
@@ -256,6 +205,11 @@ mod tests {
         assert_eq!(en.as_deref(), Some("predict-en"));
         assert!(learned_blob("").is_none() && learned_blob("../x").is_none());
         assert!(learned_blob("fil").is_some(), "a three-letter code");
+        let fil = learned_blob("fil").unwrap();
+        for name in [emails_blob().unwrap(), fil] {
+            let aside = aside_blob(&name).map(|n| n.as_str().to_owned());
+            assert_eq!(aside, Some(format!("{}{ASIDE_SUFFIX}", name.as_str())));
+        }
     }
 
     #[test]

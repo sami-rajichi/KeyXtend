@@ -18,8 +18,6 @@ pub struct Show {
     pub words: Option<Query>,
     /// The email chips to offer, if any.
     pub emails: Option<EmailAsk>,
-    /// Some of the token came from a read, so a pick checks the box still ends with what it erases.
-    pub read: bool,
 }
 
 /// The word guesses to ask for: every way to read the open word.
@@ -62,6 +60,23 @@ pub struct Plan {
     pub gone: Redacted<String>,
     /// What to type then.
     pub text: Redacted<String>,
+}
+
+impl Plan {
+    /// This plan with nothing erased, for a box that cannot confirm what it erases: only the text after `gone`, when
+    /// the text starts with exactly `gone`.
+    #[must_use]
+    pub fn rest(&self) -> Option<Self> {
+        let rest = self
+            .text
+            .expose()
+            .strip_prefix(self.gone.expose().as_str())?;
+        (!rest.is_empty()).then(|| Self {
+            erase: 0,
+            gone: Redacted::default(),
+            text: Redacted::new(rest.to_owned()),
+        })
+    }
 }
 
 impl Query {
@@ -123,11 +138,7 @@ pub(super) fn show(
     knows: &dyn Fn(&str) -> bool,
 ) -> Show {
     let (words, emails) = offers(token, before, cfg, knows);
-    Show {
-        words,
-        emails,
-        read: token.read(),
-    }
+    Show { words, emails }
 }
 
 /// The word guesses and email chips for `token`: every known email after a typed `@@`, domains after one `@`, else

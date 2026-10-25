@@ -1,6 +1,6 @@
 //! Splits text into words the way the packs spell them, one rule for the pack builder and the tracker: a word is a
-//! run of letters, digits and marks joined by apostrophes, and an apostrophe keeps a known whole word (`quelqu'un`),
-//! else splits at a known elision (`l'homme`) or anywhere (`Muiriel's`).
+//! run of letters, digits and marks joined by apostrophes or joiners, and an apostrophe keeps a known whole word
+//! (`quelqu'un`), else splits at a known elision (`l'homme`) or anywhere (`Muiriel's`).
 
 use std::borrow::Cow;
 
@@ -83,14 +83,14 @@ pub fn is_word_char(c: char) -> bool {
 }
 
 /// The byte spans of the words of `text`: runs of word characters, each with the apostrophe that follows one of
-/// them, so a trailing apostrophe stays in its span for `split_word` to drop.
+/// them, so a trailing apostrophe stays in its span for `split_word` to drop, and the joiners between two of them.
 #[must_use]
 pub fn spans(text: &str, apostrophe: char) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut start = None;
     let mut after_letter = false;
     for (at, c) in text.char_indices() {
-        if is_word_char(c) {
+        if is_word_char(c) || (after_letter && joins(text, at, c)) {
             start.get_or_insert(at);
             after_letter = true;
         } else if c == apostrophe && after_letter {
@@ -106,6 +106,15 @@ pub fn spans(text: &str, apostrophe: char) -> Vec<(usize, usize)> {
         out.push((from, text.len()));
     }
     out
+}
+
+/// True when `c`, at byte `at` of `text`, is a joiner that a word character follows, after any further joiners.
+fn joins(text: &str, at: usize, c: char) -> bool {
+    let mut after = text.get(at..).unwrap_or_default().chars();
+    script::joins_inside(c)
+        && after
+            .find(|&n| !script::joins_inside(n))
+            .is_some_and(is_word_char)
 }
 
 /// Splits `word` at its apostrophes into `out`, each piece with true when it is an elision: a whole word `knows`

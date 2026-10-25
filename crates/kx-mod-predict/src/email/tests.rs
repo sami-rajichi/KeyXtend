@@ -152,6 +152,16 @@ fn a_finished_email_is_added_once_and_moves_to_the_front_when_reused() {
 }
 
 #[test]
+fn a_known_email_is_removed_in_any_case_and_an_unknown_one_changes_nothing() {
+    let mut emails = known(&["a@b.co", "c@d.co"]);
+    assert!(emails.remove("A@B.CO"));
+    assert_eq!(emails.list(), ["c@d.co"]);
+    assert!(!emails.remove("a@b.co"), "already gone");
+    assert!(!emails.remove("x@y.co"));
+    assert_eq!(emails.list(), ["c@d.co"]);
+}
+
+#[test]
 fn the_list_keeps_the_most_recent_up_to_its_cap() {
     let mut emails = Emails::default();
     for e in ["a@x.co", "b@x.co", "c@x.co", "d@x.co"] {

@@ -1,6 +1,28 @@
-//! Word ends: a space, marks then a space, Enter and Tab learn the word; glued forms and breaks learn nothing.
+//! Word ends: a space, marks then a space, Enter and Tab learn the word; glued forms and breaks learn nothing; a
+//! joiner stays inside a word.
 
 use super::*;
+
+#[test]
+fn a_persian_word_with_a_joiner_is_one_word_and_stays_open_at_the_joiner() {
+    let mut t = tracker(2);
+    type_text(&mut t, "کتاب\u{200C}");
+    let open = t.show(&knows).words.map(|q| q.word.expose().clone());
+    assert_eq!(open.as_deref(), Some("کتاب\u{200C}"), "still open");
+    let told = type_text(&mut t, "ها را ");
+    let expected = [
+        ("کتاب\u{200C}ها".to_owned(), owned(&[])),
+        ("را".to_owned(), owned(&["کتاب\u{200C}ها"])),
+    ];
+    assert_eq!(learned(&told), expected);
+}
+
+#[test]
+fn a_joiner_at_a_word_end_is_trimmed() {
+    let mut t = tracker(2);
+    let told = type_text(&mut t, "خواندم\u{200C} ");
+    assert_eq!(learned(&told), [("خواندم".to_owned(), owned(&[]))]);
+}
 
 #[test]
 fn a_no_break_space_ends_the_word_as_a_space_does() {

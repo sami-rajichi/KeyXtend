@@ -4,6 +4,7 @@
 
 mod asks;
 mod lang;
+mod load;
 mod notes;
 mod picks;
 mod stats;
@@ -33,7 +34,7 @@ use store::Saves;
 use notes::Notes;
 pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
-pub use store::{EMAILS_BLOB, emails_blob, learned_blob};
+pub use store::{ASIDE_SUFFIX, EMAILS_BLOB, aside_blob, emails_blob, learned_blob};
 
 /// A message for the actor, from the bus, the box or the module.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -236,9 +237,11 @@ impl Actor {
         Flow::Go
     }
 
-    /// How long the loop waits for a message before it ticks: until the next save is due, else no limit.
+    /// How long the loop waits for a message before it ticks: until the next save is due, else, or while learning is
+    /// paused, no limit.
     #[must_use]
     pub fn wait(&self) -> Option<Duration> {
-        self.saves.next(self.ports.clock.now())
+        let now = self.ports.clock.now();
+        self.learns().then(|| self.saves.next(now)).flatten()
     }
 }

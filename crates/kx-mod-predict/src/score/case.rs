@@ -15,13 +15,18 @@ pub(super) enum Case {
     All,
 }
 
+/// The typed capitals that ask for all capitals when no lower-case letter was typed.
+const ALL_FROM: usize = 2;
+
 impl Case {
-    /// The case for `prefix` typed in `mode`: Caps Lock or two typed capitals give all capitals; a typed capital
-    /// first, or Shift before any letter, gives a first capital.
+    /// The case for `prefix` typed in `mode`, by the Unicode case of each typed letter: with no lower-case letter,
+    /// Caps Lock or two capitals give all capitals; a typed capital first, or Shift before any letter, gives a first
+    /// capital.
     pub(super) fn of(prefix: &str, mode: TypingMode) -> Self {
         let capitals = prefix.chars().filter(|c| c.is_uppercase()).count();
+        let lower = prefix.chars().any(char::is_lowercase);
         let first = prefix.chars().next().is_some_and(char::is_uppercase);
-        if mode.caps || capitals > 1 {
+        if !lower && (mode.caps || capitals >= ALL_FROM) {
             Self::All
         } else if first || (prefix.is_empty() && mode.shift) {
             Self::First

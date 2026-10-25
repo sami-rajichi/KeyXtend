@@ -26,6 +26,15 @@ const ALL: [Script; 18] = [
 ];
 
 #[test]
+fn only_zwnj_and_zwj_join_inside_a_word() {
+    assert!(joins_inside('\u{200C}') && joins_inside('\u{200D}'));
+    for c in ['\u{200B}', '\u{200E}', '\u{2060}', 'a', ' ', '\''] {
+        assert!(!joins_inside(c), "{c:?}");
+    }
+    assert!(single("کتاب\u{200C}ها"), "a joiner is no letter");
+}
+
+#[test]
 fn marks_join_any_script_and_words_of_one_script_are_single() {
     assert!(joins_any('\u{0301}'));
     assert!(!joins_any('e'));
