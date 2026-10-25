@@ -171,7 +171,7 @@ impl Learner {
     }
 
     /// Removes every chain holding word `id`; gives each with its table's place.
-    fn unlink(&mut self, id: Id) -> Vec<(usize, Link)> {
+    pub(super) fn unlink(&mut self, id: Id) -> Vec<(usize, Link)> {
         let mut gone = Vec::new();
         for (at, table) in self.chains.iter_mut().enumerate() {
             let links = table.retain(|_, key, _| !key.contains(&id));

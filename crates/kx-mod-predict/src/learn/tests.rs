@@ -191,3 +191,14 @@ fn context_past_context_words_is_cut() {
     assert!(followers(&l, None, &["a", "b", "c"]).is_empty());
     assert_eq!(followers(&l, None, &["c"]), ["d"]);
 }
+
+#[test]
+fn by_count_lists_the_words_of_a_prefix_most_used_first() {
+    let mut l = learner("en");
+    teach(&mut l, None, "park pat pat pan pat pan zoo", DAY);
+    let view = l.view(None);
+    let ranked: Vec<(&str, u32)> = view.by_count("pa").collect();
+    assert_eq!(ranked, [("pat", 3), ("pan", 2), ("park", 1)]);
+    assert_eq!(view.by_count("").count(), 4);
+    assert_eq!(view.by_count("q").count(), 0);
+}

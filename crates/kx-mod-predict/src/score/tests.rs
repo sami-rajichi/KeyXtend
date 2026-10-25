@@ -14,6 +14,7 @@ use crate::track::Reading;
 
 mod elisions;
 mod learned;
+mod ranked;
 mod scripts;
 
 /// The followers each test pack keeps per context.

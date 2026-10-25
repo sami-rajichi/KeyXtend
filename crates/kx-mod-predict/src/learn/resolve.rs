@@ -8,6 +8,33 @@ use crate::fold::fold;
 use crate::pack::Pack;
 
 impl Learner {
+    /// Merges every stray into its pack spelling, as a learn would, so none stays hidden; the strays of a forgotten
+    /// word go, so it stays forgotten. Task 12 calls it when `seed` loads or changes.
+    pub fn reconcile(&mut self, seed: Option<&Pack<'_>>) {
+        self.undo = None;
+        let Some(pack) = self.own(seed) else {
+            return;
+        };
+        let spelt = |held: &str| seed_spelling(Some(pack), held).filter(|text| *text != held);
+        let mut texts: Vec<&str> = self
+            .words
+            .iter()
+            .filter_map(|(_, w)| spelt(&w.text))
+            .collect();
+        texts.sort_unstable();
+        texts.dedup();
+        for text in texts {
+            if self.blocked.contains(text) {
+                for id in self.strays(Some(pack), text) {
+                    self.words.remove(id);
+                    self.unlink(id);
+                }
+            } else {
+                self.absorb(Some(pack), text, self.words.find(text));
+            }
+        }
+    }
+
     /// The spelling `word` counts as, with the id of its entry when the learner holds one.
     pub(super) fn resolve<'s>(
         &self,
@@ -41,14 +68,13 @@ impl Learner {
             .collect()
     }
 
-    /// Merges the strays of `text` into its entry `id`, else into the first stray, spelt `text` from then on, as it
-    /// is learned on `day`; gives the entry, if any.
+    /// Merges the strays of `text` into its entry `id`, else into the first stray, spelt `text` from then on; gives
+    /// the entry, if any.
     pub(super) fn absorb(
         &mut self,
         seed: Option<&Pack<'_>>,
         text: &str,
         id: Option<Id>,
-        day: u32,
     ) -> Option<Id> {
         let mut strays = self.strays(seed, text).into_iter();
         let into = id.or_else(|| strays.next())?;
@@ -56,16 +82,20 @@ impl Learner {
             self.words.respell(into, text);
         }
         for from in strays {
-            self.merge(from, into, day);
+            self.merge(from, into);
         }
         Some(into)
     }
 
-    /// Moves word `from`'s uses onto word `into`, used on `day`, and its chains onto `into`'s.
-    fn merge(&mut self, from: Id, into: Id, day: u32) {
+    /// Moves word `from`'s uses and chains onto word `into`, which keeps the later day.
+    fn merge(&mut self, from: Id, into: Id) {
         let Some(word) = self.words.remove(from) else {
             return;
         };
+        let day = self
+            .words
+            .get(into)
+            .map_or(word.day, |w| w.day.max(word.day));
         self.words.bump(into, word.count, day);
         for table in &mut self.chains {
             table.rekey(from, into);

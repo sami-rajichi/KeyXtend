@@ -133,19 +133,18 @@ impl Words {
 
     /// Calls `each` with every word whose folded key starts with `prefix`, folded keys in order.
     pub(super) fn starting(&self, casing: &Casing, prefix: &str, each: &mut dyn FnMut(&str)) {
-        let from = if prefix.is_empty() {
-            0
-        } else {
-            self.by_fold
-                .partition_point(|&id| fold(self.text(id), casing).as_str() < prefix)
-        };
-        for &id in self.by_fold.get(from..).unwrap_or_default() {
-            let text = self.text(id);
-            if !prefix.is_empty() && !fold(text, casing).starts_with(prefix) {
-                break;
-            }
-            each(text);
+        for &id in self.span(casing, prefix) {
+            each(self.text(id));
         }
+    }
+
+    /// The ids of the words whose folded key starts with `prefix`, folded keys in order: two binary searches.
+    pub(super) fn span(&self, casing: &Casing, prefix: &str) -> &[Id] {
+        let key = |id: &Id| fold(self.text(*id), casing);
+        let from = (self.by_fold).partition_point(|id| key(id).as_str() < prefix);
+        let tail = self.by_fold.get(from..).unwrap_or_default();
+        let len = tail.partition_point(|id| key(id).starts_with(prefix));
+        tail.get(..len).unwrap_or_default()
     }
 
     /// Adds `word` under the lowest free id; `None` when every id is taken.

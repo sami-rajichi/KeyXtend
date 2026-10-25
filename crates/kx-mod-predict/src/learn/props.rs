@@ -25,24 +25,29 @@ const DAY: u32 = 20_000;
 /// One thing that can happen to the learner.
 #[derive(Debug, Clone)]
 enum Step {
-    /// Learn word `n`, with a first capital when set, after the words `context`, `days` later.
-    Learn(usize, bool, Vec<usize>, u32),
+    /// Learn word `n`, with a first capital when set, after the words `context`, `days` later, without the pack when
+    /// the last is set.
+    Learn(usize, bool, Vec<usize>, u32, bool),
     /// Forget word `n`.
     Forget(usize),
     /// Undo the last forget.
     Undo,
     /// Purge, `days` later.
     Purge(u32),
+    /// Merge the strays into the pack's spellings.
+    Reconcile,
 }
 
 /// Any step.
 fn step() -> impl Strategy<Value = Step> {
     let context = prop::collection::vec(0..VOCAB, 0..=usize::from(MAX_CHAIN));
     prop_oneof![
-        8 => (0..VOCAB, any::<bool>(), context, 0..MAX_DAYS).prop_map(|(n, c, x, d)| Step::Learn(n, c, x, d)),
+        8 => (0..VOCAB, any::<bool>(), context, 0..MAX_DAYS, any::<bool>())
+            .prop_map(|(n, c, x, d, b)| Step::Learn(n, c, x, d, b)),
         2 => (0..VOCAB).prop_map(Step::Forget),
         2 => Just(Step::Undo),
         1 => (0..MAX_DAYS * MAX_DAYS).prop_map(Step::Purge),
+        1 => Just(Step::Reconcile),
     ]
 }
 
@@ -85,7 +90,7 @@ fn seed_bytes() -> Option<Vec<u8>> {
 /// Applies `step` on `day`; true when it was a forget that took something.
 fn apply(l: &mut Learner, seed: Option<&Pack<'_>>, step: &Step, day: u32) -> bool {
     match step {
-        Step::Learn(n, capital, context, _) => {
+        Step::Learn(n, capital, context, _, bare) => {
             let typed = word(*n);
             let typed = if *capital {
                 l.casing().capital(&typed)
@@ -94,7 +99,7 @@ fn apply(l: &mut Learner, seed: Option<&Pack<'_>>, step: &Step, day: u32) -> boo
             };
             let context: Vec<String> = context.iter().map(|&c| word(c)).collect();
             let context: Vec<&str> = context.iter().map(String::as_str).collect();
-            l.learn(seed, &typed, &context, day);
+            l.learn(seed.filter(|_| !bare), &typed, &context, day);
             false
         }
         Step::Forget(n) => l.forget(seed, &word(*n), day),
@@ -104,6 +109,10 @@ fn apply(l: &mut Learner, seed: Option<&Pack<'_>>, step: &Step, day: u32) -> boo
         }
         Step::Purge(_) => {
             l.purge(day);
+            false
+        }
+        Step::Reconcile => {
+            l.reconcile(seed);
             false
         }
     }
@@ -158,12 +167,16 @@ proptest! {
         let mut l = Learner::new("en", cfg).unwrap();
         let (mut day, mut snapshot) = (DAY, None);
         for step in &steps {
-            if let Step::Learn(.., days) | Step::Purge(days) = step {
+            if let Step::Learn(.., days, _) | Step::Purge(days) = step {
                 day += days;
             }
             let before = (lengths(&l), l.clone());
             let forgot = apply(&mut l, pack.as_ref(), step, day);
             check_caps(&l, &before.0, matches!(step, Step::Learn(..)))?;
+            if let (Step::Reconcile, Some(pack)) = (step, pack.as_ref()) {
+                let own = |text: &str| seed_spelling(Some(pack), text).is_none_or(|t| t == text);
+                prop_assert!(l.words.iter().all(|(_, w)| own(&w.text)), "a stray after reconcile");
+            }
             if let (Step::Undo, Some(was)) = (step, snapshot.take()) {
                 prop_assert_eq!(&l, &was);
             }

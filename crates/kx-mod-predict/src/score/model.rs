@@ -1,8 +1,7 @@
 //! One reading's model: stupid backoff (Brants et al., 2007) over the seed's chains and over the learned chains, each
 //! step down to a shorter context multiplied by `backoff`, the two parts blended by the learned weight.
 
-use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::HashMap;
 
 use super::sink::Sink;
 use super::{Learned, ScoreConfig, float};
@@ -10,6 +9,8 @@ use crate::casing::Casing;
 use crate::fold::fold;
 use crate::pack::layout::{SCORE_CERTAIN, STEPS_PER_ZIPF, ZIPF_OFFSET};
 use crate::pack::{Pack, WordId};
+
+mod rank;
 
 /// The seed's part of a model.
 struct Seed<'m> {
@@ -59,22 +60,6 @@ impl<'m> Model<'m> {
         }
     }
 
-    /// Offers `sink` every candidate for `folded`: its completions, seed and learned, or the next-word candidates
-    /// for an empty prefix.
-    pub(super) fn offer(&self, folded: &str, sink: &mut Sink<'_>) {
-        if folded.is_empty() {
-            self.offer_next(sink);
-            return;
-        }
-        self.learned
-            .starting(folded, &mut |w| self.offer_learned(w, sink));
-        if let Some(seed) = &self.seed {
-            for id in seed.pack.completions(folded) {
-                self.offer_seed(seed, id, sink);
-            }
-        }
-    }
-
     /// Offers only the context's followers, seed and learned, that start with `folded`; false when none does, so the
     /// word list fills in for a typed prefix.
     pub(super) fn offer_followers(&self, folded: &str, sink: &mut Sink<'_>) -> bool {
@@ -99,28 +84,6 @@ impl<'m> Model<'m> {
             }
         }
         matched
-    }
-
-    /// Offers the next-word candidates: the context's followers, seed and learned, the most frequent seed words and
-    /// every learned word, as backoff reaches them all.
-    fn offer_next(&self, sink: &mut Sink<'_>) {
-        for start in 0..self.context.len() {
-            let context = self.context.get(start..).unwrap_or_default();
-            self.learned
-                .following(context, &mut |w| self.offer_learned(w, sink));
-        }
-        self.learned
-            .starting("", &mut |w| self.offer_learned(w, sink));
-        let Some(seed) = &self.seed else {
-            return;
-        };
-        let mut ids = followers(seed);
-        ids.extend(self.top(seed, sink.best.limit()));
-        ids.sort_unstable();
-        ids.dedup();
-        for id in ids {
-            self.offer_seed(seed, id, sink);
-        }
     }
 
     /// Offers the seed word `id` at its seed score, unless the user forgot it.
@@ -175,13 +138,12 @@ impl<'m> Model<'m> {
             }
             step *= self.cfg.backoff;
         }
-        step * share(seed.pack.freq(id))
+        self.steps(seed.levels.len()) * share(seed.pack.freq(id))
     }
 
     /// The learned backoff score of `word`: its share after the longest context it followed, else of all uses.
     fn learned_score(&self, word: &str) -> f64 {
-        let uses = self.learned.uses();
-        if uses == 0 {
+        if self.learned.uses() == 0 {
             return 0.0;
         }
         let mut step = 1.0;
@@ -198,29 +160,32 @@ impl<'m> Model<'m> {
             }
             step *= self.cfg.backoff;
         }
-        step * f64::from(self.learned.count(word)) / float(uses)
+        self.unseen(self.learned.count(word))
     }
 
-    /// The `limit` most frequent seed words the user did not forget, lower ids first among equals.
-    fn top(&self, seed: &Seed<'_>, limit: usize) -> Vec<WordId> {
-        let mut heap = BinaryHeap::with_capacity(limit + 1);
-        for id in 0..seed.pack.word_count() {
-            let freq = seed.pack.freq(id);
-            let full = heap.len() == limit;
-            if full && heap.peek().is_none_or(|Reverse((min, _))| freq <= *min) {
-                continue;
-            }
-            if self.learned.blocked(seed.pack.spelling(id)) {
-                continue;
-            }
-            heap.push(Reverse((freq, Reverse(id))));
-            if heap.len() > limit {
-                heap.pop();
-            }
+    /// The learned score of a word used `count` times that followed no part of the context: its share of all uses
+    /// after every backoff step.
+    fn unseen(&self, count: u32) -> f64 {
+        let uses = self.learned.uses();
+        if uses == 0 {
+            return 0.0;
         }
-        heap.into_iter()
-            .map(|Reverse((_, Reverse(id)))| id)
-            .collect()
+        self.steps(self.context.len()) * f64::from(count) / float(uses)
+    }
+
+    /// The most a word that follows nothing scores with `count` learned uses and seed frequency `freq`: the very sum
+    /// `offer_learned` makes, so it bounds every such word with no more of either.
+    fn ceiling(&self, count: u32, freq: Option<u8>) -> f64 {
+        let levels = self.seed.as_ref().map(|s| s.levels.len());
+        let seed = levels
+            .zip(freq)
+            .map_or(0.0, |(n, f)| self.steps(n) * share(f));
+        (1.0 - self.weight) * seed + self.weight * self.unseen(count)
+    }
+
+    /// `backoff` multiplied in `n` times, in the order the scores multiply it.
+    fn steps(&self, n: usize) -> f64 {
+        (0..n).fold(1.0, |step, _| step * self.cfg.backoff)
     }
 }
 

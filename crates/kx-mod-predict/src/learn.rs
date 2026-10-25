@@ -201,7 +201,7 @@ impl Learner {
             Use::Back(uses) => uses,
         };
         let casing = self.casing();
-        let Some(id) = self.absorb(seed, text, found, day) else {
+        let Some(id) = self.absorb(seed, text, found) else {
             let word = Word {
                 text: text.into(),
                 count: uses,

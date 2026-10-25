@@ -8,6 +8,7 @@ use toml::{Table, Value};
 use super::super::clean::peak;
 use super::size::{INC, MUL, SHIFT, filled};
 use super::*;
+use crate::pack::layout::{STEPS_PER_ZIPF, ZIPF_OFFSET};
 use crate::pack::{Flags, PackWriter};
 
 /// The pack build settings, which size each fixture pack like the real one.
@@ -93,8 +94,8 @@ fn fixture_pack(iso: &str, abc: &[char], s: &Sizes, contexts: usize) -> Vec<u8> 
     let followers = u8::try_from(s.followers).unwrap();
     let mut w = PackWriter::new(iso, flags, followers).unwrap();
     let words: Vec<String> = (0..s.words).map(|n| fixture_word(abc, n)).collect();
-    for (n, word) in words.iter().enumerate() {
-        let freq = u8::MAX - u8::try_from(n * usize::from(u8::MAX - 1) / s.words).unwrap();
+    let zipf = zipf_bytes(s.words);
+    for (word, freq) in words.iter().zip(zipf) {
         w.add_word(word, freq).unwrap();
     }
     for c in 0..contexts {
@@ -104,6 +105,25 @@ fn fixture_pack(iso: &str, abc: &[char], s: &Sizes, contexts: usize) -> Vec<u8> 
         }
     }
     w.finish().unwrap()
+}
+
+/// The frequency bytes of `words` words by Zipf's law, as in real lists: the word at rank r has a share of
+/// 1 / (r × H), with H the harmonic number of `words`, which puts the top English word near Zipf 7.9 as wordfreq does.
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Ranks stay far below 2^52, and each byte is clamped to 1..=255 before the cast."
+)]
+fn zipf_bytes(words: usize) -> Vec<u8> {
+    let harmonic: f64 = (1..=words).map(|r| 1.0 / r as f64).sum();
+    let byte = |rank: usize| {
+        let zipf = f64::from(ZIPF_OFFSET) - (rank as f64 * harmonic).log10();
+        (zipf * f64::from(STEPS_PER_ZIPF))
+            .round()
+            .clamp(1.0, f64::from(u8::MAX)) as u8
+    };
+    (1..=words).map(byte).collect()
 }
 
 /// A pack of words in `abc` sized like `iso`'s real one: its words, and as many contexts as fill its chain budget.
@@ -158,17 +178,28 @@ fn the_speed_report_times_guesses_with_a_full_learner() {
         let vocab: Vec<String> = (0..peak(cfg.max_words))
             .map(|n| fixture_word(&abc, if n % SEED_EVERY == 0 { n } else { words + n }))
             .collect();
+        let start = Instant::now();
         let (l, order) = filled(iso, cfg, Some(&pack), &vocab);
+        let learn = start.elapsed() / u32::try_from(order.len()).unwrap();
         let (empty, letter) = sample(&l, &pack, &vocab, &order);
         let chains: Vec<usize> = l.chains.iter().map(Chains::len).collect();
         eprintln!(
-            "{iso}: pack {} B, {words} words; learner {} words, chains {chains:?}; empty p50/p99 {:?}; one letter p50/p99 {:?}",
+            "{iso}: pack {} B, {words} words; learner {} words, chains {chains:?}; empty p50/p99 {:?}; one letter p50/p99 {:?}; a learn {learn:?}; reconcile {:?}",
             bytes.len(),
             l.words.len(),
             percentiles(empty),
             percentiles(letter),
+            reconciled(iso, cfg, &pack, &vocab),
         );
     }
+}
+
+/// The time `reconcile` takes on a learner with `cfg` filled from `vocab` without `pack`, then shown it.
+fn reconciled(iso: &str, cfg: LearnConfig, pack: &Pack<'_>, vocab: &[String]) -> Duration {
+    let (mut bare, _) = filled(iso, cfg, None, vocab);
+    let start = Instant::now();
+    bare.reconcile(Some(pack));
+    start.elapsed()
 }
 
 /// The times of `SAMPLES` queries after runs of `order`, the words learned: an empty prefix, then the next word's

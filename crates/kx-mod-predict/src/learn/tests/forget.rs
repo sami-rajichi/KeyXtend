@@ -51,6 +51,9 @@ fn undo_works_only_right_after_the_forget() {
     assert!(l.forget(None, "park", DAY));
     l.purge(DAY);
     assert!(!l.undo_forget());
+    assert!(l.forget(None, "in", DAY));
+    l.reconcile(None);
+    assert!(!l.undo_forget(), "a reconcile ends the undo");
 }
 
 #[cfg(feature = "build")]

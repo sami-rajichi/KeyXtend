@@ -1,5 +1,9 @@
 //! The learner as the scorer reads it: every word it is asked about maps to its entry by the rule learning uses.
 
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+use std::iter;
+
 use super::table::Id;
 use super::{Learner, seed_spelling};
 use crate::pack::Pack;
@@ -60,6 +64,22 @@ impl Learned for View<'_> {
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str)) {
         let casing = self.learner.casing();
         self.learner.words.starting(casing, folded_prefix, each);
+    }
+
+    fn by_count<'s>(
+        &'s self,
+        folded_prefix: &str,
+    ) -> Box<dyn Iterator<Item = (&'s str, u32)> + 's> {
+        let words = &self.learner.words;
+        let ids = words.span(self.learner.casing(), folded_prefix);
+        let counted = ids
+            .iter()
+            .filter_map(|&id| Some((words.get(id)?.count, Reverse(id))));
+        let mut heap: BinaryHeap<(u16, Reverse<Id>)> = counted.collect();
+        Box::new(iter::from_fn(move || {
+            let (count, Reverse(id)) = heap.pop()?;
+            Some((&*words.get(id)?.text, u32::from(count)))
+        }))
     }
 
     fn following(&self, context: &[&str], each: &mut dyn FnMut(&str)) {

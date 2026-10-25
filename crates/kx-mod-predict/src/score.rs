@@ -71,6 +71,10 @@ pub trait Learned {
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str));
     /// Calls `each` with every learned word that followed `context`.
     fn following(&self, context: &[&str], each: &mut dyn FnMut(&str));
+    /// Every learned word whose folded key starts with `folded_prefix`, most used first, with its uses; the scorer
+    /// stops reading once no word left can win.
+    fn by_count<'s>(&'s self, folded_prefix: &str)
+    -> Box<dyn Iterator<Item = (&'s str, u32)> + 's>;
 }
 
 /// A learner that knows nothing, for a language with learning off or before the learner loads.
@@ -97,6 +101,10 @@ impl Learned for NoLearned {
     fn starting(&self, _: &str, _: &mut dyn FnMut(&str)) {}
 
     fn following(&self, _: &[&str], _: &mut dyn FnMut(&str)) {}
+
+    fn by_count<'s>(&'s self, _: &str) -> Box<dyn Iterator<Item = (&'s str, u32)> + 's> {
+        Box::new(std::iter::empty())
+    }
 }
 
 /// True when `seed` holds `word` in any case or accents; false without a pack. The tracker splits apostrophes by it.
@@ -116,6 +124,29 @@ pub fn guesses(
     limit: usize,
     cfg: &ScoreConfig,
 ) -> Vec<Guess> {
+    guesses_by(Scan::Ranked, seed, learned, query, mode, limit, cfg)
+}
+
+/// How a reading's word list is read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scan {
+    /// Best first, stopping once no word left can win.
+    Ranked,
+    /// Every word, the reference the early stop must match.
+    #[cfg(test)]
+    Every,
+}
+
+/// `guesses`, reading each word list by `scan`.
+fn guesses_by(
+    scan: Scan,
+    seed: Option<&Pack<'_>>,
+    learned: &dyn Learned,
+    query: &Query,
+    mode: TypingMode,
+    limit: usize,
+    cfg: &ScoreConfig,
+) -> Vec<Guess> {
     let ask = Ask {
         seed,
         learned,
@@ -123,6 +154,7 @@ pub fn guesses(
         mode,
         cfg,
         casing: seed.map_or(Casing::root(), Pack::casing),
+        scan,
     };
     let mut best = Best::new(limit);
     for reading in &query.readings {
@@ -149,6 +181,8 @@ struct Ask<'a> {
     cfg: &'a ScoreConfig,
     /// How the pack's language cases its words.
     casing: &'static Casing,
+    /// How each word list is read.
+    scan: Scan,
 }
 
 impl Ask<'_> {
@@ -176,7 +210,11 @@ impl Ask<'_> {
         let model = Model::new(self.seed, self.learned, &context, self.cfg);
         let folded = fold(prefix, self.casing);
         if kept == 0 || (!model.offer_followers(&folded, &mut sink) && !folded.is_empty()) {
-            model.offer(&folded, &mut sink);
+            match self.scan {
+                Scan::Ranked => model.offer(&folded, &mut sink),
+                #[cfg(test)]
+                Scan::Every => model.offer_every(&folded, &mut sink),
+            }
         }
     }
 

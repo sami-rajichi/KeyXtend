@@ -161,3 +161,37 @@ fn a_stray_takes_the_pack_spelling_with_its_capitals() {
     assert_eq!(listed(&l, "lo"), ["London"]);
     assert_eq!(l.view(Some(&en)).count("London"), 3);
 }
+
+#[test]
+fn reconcile_merges_every_stray_into_its_pack_spelling() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "l' école", DAY);
+    teach(&mut l, None, "l' ecole l' ecole", DAY + 5);
+    l.reconcile(Some(&fr));
+    l.purge(DAY + CFG.forget_days + 1);
+    assert_eq!(
+        listed(&l, "ec"),
+        ["école"],
+        "the merged entry keeps the later day"
+    );
+    let view = l.view(Some(&fr));
+    assert_eq!((view.count("école"), view.chain(&["l'"], "école")), (3, 3));
+    assert_eq!(
+        guessed(&l, Some(&fr), &[], "e").first().map(String::as_str),
+        Some("école")
+    );
+}
+
+#[test]
+fn reconcile_drops_the_strays_of_a_forgotten_word() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    assert!(l.forget(Some(&fr), "école", DAY));
+    teach(&mut l, None, "l' ecole", DAY);
+    l.reconcile(Some(&fr));
+    assert!(listed(&l, "ec").is_empty() && l.view(Some(&fr)).blocked("école"));
+    assert_eq!(lengths(&l), [0, 0]);
+}

@@ -88,4 +88,18 @@ impl Learned for Fake {
             }
         }
     }
+
+    fn by_count<'s>(
+        &'s self,
+        folded_prefix: &str,
+    ) -> Box<dyn Iterator<Item = (&'s str, u32)> + 's> {
+        let casing = Casing::of(&self.iso);
+        let fits = |w: &&String| fold(w, casing).starts_with(folded_prefix);
+        let mut words: Vec<(&str, u32)> = (self.words.iter())
+            .filter(|(w, _)| fits(w))
+            .map(|(w, &count)| (w.as_str(), count))
+            .collect();
+        words.sort_unstable_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        Box::new(words.into_iter())
+    }
 }
