@@ -50,8 +50,7 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
-    /// The Caps Lock state the last state view showed, so a press outside the keyboard redraws it.
-    shown_caps: Option<bool>,
+    caps: CapsLook,
     /// The mouse module's state, as the bus last told it.
     assist: AssistChanged,
     /// The scroll module's state, as the bus last told it.
@@ -70,6 +69,15 @@ pub(super) struct Inner {
     unshown: bool,
     /// The module runs, so a picked word may type.
     up: bool,
+}
+
+/// Caps Lock as the UI's thread saw it, since Windows reads it per thread.
+#[derive(Default)]
+struct CapsLook {
+    /// What the last state view showed, so a press outside the keyboard redraws it.
+    shown: Option<bool>,
+    /// The last read, which the typing mode tells from any thread.
+    seen: bool,
 }
 
 impl Inner {
@@ -94,7 +102,7 @@ impl Inner {
             plate,
             overhang: 0.0,
             list: None,
-            shown_caps: None,
+            caps: CapsLook::default(),
             assist: AssistChanged::OFF,
             scroll: ScrollChanged::OFF,
             hover: false,
@@ -195,14 +203,17 @@ impl Inner {
         }
     }
 
-    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard.
-    pub(super) fn caps_moved(&self) -> bool {
-        self.shown_caps.is_some_and(|shown| shown != self.caps())
+    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard; only the
+    /// UI's thread calls it.
+    pub(super) fn caps_moved(&mut self) -> bool {
+        let now = self.look_caps();
+        self.caps.shown.is_some_and(|shown| shown != now)
     }
 
-    /// Whether Caps Lock shows lit, as the layout source says.
-    fn caps(&self) -> bool {
-        self.ports.source.caps_on()
+    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode.
+    fn look_caps(&mut self) -> bool {
+        self.caps.seen = self.ports.source.caps_on();
+        self.caps.seen
     }
 
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
@@ -214,8 +225,8 @@ impl Inner {
         rows: usize,
     ) -> StateView {
         self.seen();
-        let caps = self.caps();
-        self.shown_caps = Some(caps);
+        let caps = self.look_caps();
+        self.caps.shown = Some(caps);
         self.unshown = false;
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();

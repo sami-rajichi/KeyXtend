@@ -15,7 +15,7 @@ impl Face {
         loop {
             let (pieces, bus) = {
                 let mut inner = self.lock();
-                (inner.told(), inner.bus())
+                (inner.take_pieces(), inner.bus())
             };
             if pieces.is_empty() {
                 return;

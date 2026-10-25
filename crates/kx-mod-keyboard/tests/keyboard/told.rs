@@ -39,18 +39,18 @@ fn a_letter_space_backspace_and_enter_tell_text_text_erase_and_advance_once_each
         r.tap(id).unwrap();
     }
     let want = [text("a"), text(" "), Piece::Erase, Piece::Advance];
-    assert_eq!(r.typing.told(), want);
-    assert!(r.typing.told().is_empty(), "each is told once");
+    assert_eq!(r.typing.take_pieces(), want);
+    assert!(r.typing.take_pieces().is_empty(), "each is told once");
 }
 
 #[test]
 fn tab_advances_and_every_other_send_key_breaks() {
     let mut r = Rig::new("en-us", |_| ());
     r.tap("tab").unwrap();
-    assert_eq!(r.typing.told(), [Piece::Advance]);
+    assert_eq!(r.typing.take_pieces(), [Piece::Advance]);
     for id in ["esc", "del", "up", "left", "down", "right", "menu"] {
         r.tap(id).unwrap();
-        assert_eq!(r.typing.told(), [Piece::Break], "{id}");
+        assert_eq!(r.typing.take_pieces(), [Piece::Break], "{id}");
     }
 }
 
@@ -60,11 +60,11 @@ fn a_chord_breaks_even_on_a_key_that_types() {
     for (latch, id) in [("shift", "space"), ("shift", "enter"), ("ctrl", "bksp")] {
         r.tap(latch).unwrap();
         r.tap(id).unwrap();
-        assert_eq!(r.typing.told(), [Piece::Break], "{latch} + {id}");
+        assert_eq!(r.typing.take_pieces(), [Piece::Break], "{latch} + {id}");
     }
     r.tap("ctrl").unwrap();
     r.char(C).unwrap();
-    assert_eq!(r.typing.told(), [Piece::Break], "Ctrl+C");
+    assert_eq!(r.typing.take_pieces(), [Piece::Break], "Ctrl+C");
 }
 
 #[test]
@@ -72,9 +72,9 @@ fn a_dead_key_and_the_key_after_it_break_as_only_the_app_knows_what_they_made() 
     let mut r = Rig::new("fr-fr", |_| ());
     r.char(HAT).unwrap();
     r.char(E).unwrap();
-    assert_eq!(r.typing.told(), [Piece::Break, Piece::Break]);
+    assert_eq!(r.typing.take_pieces(), [Piece::Break, Piece::Break]);
     r.char(E).unwrap();
-    assert_eq!(r.typing.told(), [text("e")]);
+    assert_eq!(r.typing.take_pieces(), [text("e")]);
 }
 
 #[test]
@@ -83,10 +83,14 @@ fn a_send_key_while_a_dead_key_waits_breaks_as_the_app_composes_with_it() {
     for id in ["space", "bksp", "enter", "tab"] {
         r.char(HAT).unwrap();
         r.tap(id).unwrap();
-        assert_eq!(r.typing.told(), [Piece::Break, Piece::Break], "^ then {id}");
+        assert_eq!(
+            r.typing.take_pieces(),
+            [Piece::Break, Piece::Break],
+            "^ then {id}"
+        );
     }
     r.tap("space").unwrap();
-    assert_eq!(r.typing.told(), [text(" ")], "no accent waits");
+    assert_eq!(r.typing.take_pieces(), [text(" ")], "no accent waits");
 }
 
 #[test]
@@ -100,11 +104,14 @@ fn caps_the_latches_side_keys_and_an_empty_key_tell_nothing() {
     for id in ["mic", "rclick", "shortcuts", "power", "lang"] {
         r.tap(id).unwrap();
     }
-    assert!(r.typing.told().is_empty());
+    assert!(r.typing.take_pieces().is_empty());
     let mut ar = Rig::new("ar-tn", |_| ());
     ar.tap("shift").unwrap();
     ar.char(0x1F).unwrap();
-    assert!(ar.typing.told().is_empty(), "س types nothing with Shift");
+    assert!(
+        ar.typing.take_pieces().is_empty(),
+        "س types nothing with Shift"
+    );
 }
 
 #[test]
@@ -114,11 +121,11 @@ fn a_send_refused_whole_tells_nothing_and_one_taken_in_part_tells_its_piece() {
         .set_error(Some(InjectError::Refused { sent: 0, total: 2 }));
     assert!(r.char(A).is_err());
     assert!(r.tap("bksp").is_err());
-    assert!(r.typing.told().is_empty());
+    assert!(r.typing.take_pieces().is_empty());
     r.injector
         .set_error(Some(InjectError::Refused { sent: 1, total: 2 }));
     assert!(r.char(A).is_err());
-    assert_eq!(r.typing.told(), [text("a")]);
+    assert_eq!(r.typing.take_pieces(), [text("a")]);
 }
 
 /// The keys a random run clicks: letters, the send keys, Caps Lock and the latches without a lone press.
@@ -151,7 +158,7 @@ proptest! {
             r.tap(RUN[i]).map_err(|e| TestCaseError::fail(e.to_string()))?;
         }
         let want: Vec<Piece> = r.sent().iter().filter_map(piece_of).collect();
-        prop_assert_eq!(r.typing.told(), want);
+        prop_assert_eq!(r.typing.take_pieces(), want);
     }
 }
 
@@ -160,5 +167,5 @@ fn a_shortcut_on_the_layer_breaks() {
     let mut r = Rig::new("en-us", |_| ());
     r.shortcuts.set_known(only(&["copy"]));
     r.shortcut(&sid("copy")).unwrap();
-    assert_eq!(r.typing.told(), [Piece::Break]);
+    assert_eq!(r.typing.take_pieces(), [Piece::Break]);
 }

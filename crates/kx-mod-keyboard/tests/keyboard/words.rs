@@ -6,6 +6,7 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod caps;
 mod mode;
 mod threads;
 
@@ -42,6 +43,11 @@ fn take<T>(said: &Mutex<Vec<T>>) -> Vec<T> {
 impl Desk {
     /// The module on the golden layouts with `change` over the defaults, heard from before it starts.
     pub fn new(change: Option<(&str, toml::Value)>) -> Self {
+        Self::on(Fakes::golden(&GOLDEN), change)
+    }
+
+    /// The module over `fakes` with `change` over the defaults, heard from before it starts.
+    pub fn on(fakes: Fakes, change: Option<(&str, toml::Value)>) -> Self {
         let core: Arc<dyn BusCore> = Arc::new(FakeCore::default());
         let bus = Bus::new(Arc::clone(&core));
         let (pieces, modes) = (Arc::default(), Arc::default());
@@ -49,7 +55,7 @@ impl Desk {
             ear(&bus, &pieces, |e: &Typed| e.piece.clone()),
             ear(&bus, &modes, |e: &TypingMode| *e),
         ];
-        let rig = Rig::on_bus(Fakes::golden(&GOLDEN), change, core);
+        let rig = Rig::on_bus(fakes, change, core);
         Self {
             rig,
             bus,
@@ -170,4 +176,15 @@ fn a_picked_word_types_nothing_while_the_keyboard_is_down() {
     d.rig.restart(None);
     d.word(0, "hi");
     assert_eq!(d.rig.fakes.injector.strokes(), [unicode("hi")]);
+}
+
+#[test]
+fn a_new_text_cap_holds_after_a_restart() {
+    let mut d = Desk::new(None);
+    let cap = 32_u16;
+    d.rig.restart(Some(("text_cap", i64::from(cap).into())));
+    d.word(0, &"a".repeat(usize::from(cap) + 1));
+    assert!(d.rig.fakes.injector.strokes().is_empty());
+    d.word(cap, "");
+    assert_eq!(d.pieces(), vec![Piece::Erase; usize::from(cap)]);
 }

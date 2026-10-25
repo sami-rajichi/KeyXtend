@@ -81,6 +81,8 @@ pub struct Fakes {
     pub shortcuts: FakeShortcuts,
     /// The kernel's clock, which moves only when a test says so.
     pub clock: FakeClock,
+    /// Served as the layout source instead of `source` when set, such as a wrapper over it.
+    pub served: Option<Arc<dyn LayoutSource>>,
 }
 
 impl Fakes {
@@ -94,6 +96,7 @@ impl Fakes {
             layouts: Arc::new(labelled(names)),
             shortcuts,
             clock: FakeClock::new(Mono::default()),
+            served: None,
         }
     }
 
@@ -101,7 +104,10 @@ impl Fakes {
     pub fn store(&self, host: &mut FakeHost, leave: Option<ServiceId>) {
         host.clock = Arc::new(self.clock.clone());
         let injector: Arc<dyn InputInjector> = self.injector.clone();
-        let source: Arc<dyn LayoutSource> = self.source.clone();
+        let source: Arc<dyn LayoutSource> = match &self.served {
+            Some(served) => Arc::clone(served),
+            None => self.source.clone(),
+        };
         let layouts: Arc<dyn Layouts> = self.layouts.clone();
         let shortcuts: Arc<dyn Shortcuts> = Arc::new(self.shortcuts.clone());
         let stored: [(ServiceId, Box<dyn Any + Send + Sync>); 4] = [

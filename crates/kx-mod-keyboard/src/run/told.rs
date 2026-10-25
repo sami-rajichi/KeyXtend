@@ -8,7 +8,7 @@ use kx_module_api::ports::Piece;
 
 impl Typing {
     /// Takes the pieces that reached the app since the last take, oldest first.
-    pub fn told(&mut self) -> Vec<Piece> {
+    pub fn take_pieces(&mut self) -> Vec<Piece> {
         std::mem::take(&mut self.pieces)
     }
 

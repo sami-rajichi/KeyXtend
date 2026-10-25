@@ -150,8 +150,8 @@ The keyboard never depends on the prediction module; they talk only through `kx_
 
 - **Typed:** each piece that reached the app, wholly or in part, is told once: text sent as text (the space bar's space too), `Erase` for Backspace, `Advance` for Enter and Tab, and `Break` for any other send, a chord, a dead key or the key after it, a layer shortcut and a language switch. Caps, latches and side keys tell nothing, and a held key's repeats tell one piece each.
 - **One sender:** pieces wait in typing's list under the face's lock, in the order they reached the app, and leave through their own `Outbox`, so the bus hears each once and in order from any thread.
-- **TypingMode:** Shift latched, Caps Lock and a shortcut latch (as `LegendMods::shortcut` reads it) go out at each start and on each change, beside the latched set; `LatchesAsk` resends only the set.
-- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used and a dead key's wait ends; it is told like keys. It types nothing while a shortcut latch is on, while the module is stopped, or past `text_cap`; the prediction module checks the round.
+- **TypingMode:** Shift latched, Caps Lock and a shortcut latch (as `LegendMods::shortcut` reads it) go out at each start and on each change, beside the latched set; `LatchesAsk` resends only the set. Caps Lock is the one the UI's thread last read (state view or relabel tick), as Windows reads it per thread, so the mode is the same from any thread.
+- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used; it is told like keys. It types nothing while a shortcut latch is on or a dead key waits, when its text holds a control character, while the module is stopped, or past `text_cap`; the prediction module checks the round.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -189,7 +189,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `legend`: `Legend`, `LegendMods` (`of`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `layer_plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `told` and `type_word`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `take_pieces` and `type_word`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
 - `geom`: `board`, `side_area`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.

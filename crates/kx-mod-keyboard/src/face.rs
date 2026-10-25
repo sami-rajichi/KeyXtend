@@ -223,7 +223,9 @@ impl Face {
         let changed = layouts.refresh();
         let moved = {
             let mut inner = self.lock();
-            inner.seen() || inner.caps_moved() || inner.unshown()
+            // Read at every tick, so the typing mode told next holds the UI's newest Caps Lock.
+            let caps = inner.caps_moved();
+            inner.seen() || caps || inner.unshown()
         };
         FaceReply {
             state: changed || moved,

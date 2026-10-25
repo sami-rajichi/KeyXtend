@@ -83,3 +83,16 @@ fn asking_for_the_latches_does_not_tell_the_mode_again_but_a_restart_does() {
     d.rig.restart(None);
     assert_eq!(d.modes(), [SHIFT], "the latches survive a restart");
 }
+
+#[test]
+fn caps_lock_reaches_the_mode_in_the_tick_that_also_switched_the_layout() {
+    let d = Desk::new(None);
+    d.modes();
+    d.rig.fakes.source.set_caps(true);
+    d.rig.switch("fr-fr");
+    let caps = TypingMode {
+        caps: true,
+        ..TypingMode::default()
+    };
+    assert_eq!(d.modes(), [caps]);
+}

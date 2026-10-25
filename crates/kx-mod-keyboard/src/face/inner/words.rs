@@ -27,14 +27,15 @@ impl Inner {
     }
 
     /// The pieces that reached the app since the last take, oldest first.
-    pub(in crate::face) fn told(&mut self) -> Vec<Piece> {
-        self.typing.told()
+    pub(in crate::face) fn take_pieces(&mut self) -> Vec<Piece> {
+        self.typing.take_pieces()
     }
 
-    /// The latches that change what the next key types, as word prediction hears them.
+    /// The latches that change what the next key types, as word prediction hears them, with Caps Lock as the UI's
+    /// thread last read it, so any thread may build it.
     pub(in crate::face) fn mode(&self) -> TypingMode {
         let table = self.ports.layouts.current();
-        let m = LegendMods::of(self.typing.latches(), self.caps(), &table.keys);
+        let m = LegendMods::of(self.typing.latches(), self.caps.seen, &table.keys);
         TypingMode {
             shift: m.shift,
             caps: m.caps,

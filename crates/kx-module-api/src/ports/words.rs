@@ -55,7 +55,7 @@ pub struct TypeWord {
     /// How many characters (Unicode scalars) to erase first; each platform's injector turns them into Backspace
     /// presses, one per character, as one press removes a whole surrogate pair.
     pub erase: u16,
-    /// What to type then.
+    /// What to type then; the keyboard types nothing when it holds a control character.
     pub text: Redacted<String>,
 }
 

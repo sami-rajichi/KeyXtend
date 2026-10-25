@@ -99,16 +99,27 @@ impl LegendMods {
     /// The modifiers from `latches` and Caps Lock `caps`; `AltGr` counts only when `keys` has an `AltGr` character.
     #[must_use]
     pub fn of(latches: &Latches, caps: bool, keys: &BTreeMap<Scan, KeyChars>) -> Self {
-        let has_altgr = keys.values().any(|k| !k.altgr.is_empty());
-        let on = |l| latches.is_on(l);
-        let right_alt = on(Latch::AltGr) && !has_altgr;
         Self {
-            shift: on(Latch::Shift),
+            shift: latches.is_on(Latch::Shift),
             caps,
-            altgr: has_altgr && on(Latch::AltGr),
-            shortcut: on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt,
+            altgr: has_altgr(keys) && latches.is_on(Latch::AltGr),
+            shortcut: Self::shortcut(latches, keys),
         }
     }
+
+    /// True when `latches` make a click send a shortcut: Ctrl, Alt or Win, or `AltGr` as Right Alt when `keys` has no
+    /// `AltGr` character; Caps Lock plays no part.
+    #[must_use]
+    pub fn shortcut(latches: &Latches, keys: &BTreeMap<Scan, KeyChars>) -> bool {
+        let on = |l| latches.is_on(l);
+        let right_alt = on(Latch::AltGr) && !has_altgr(keys);
+        on(Latch::Ctrl) || on(Latch::Alt) || on(Latch::Win) || right_alt
+    }
+}
+
+/// True when any of `keys` has an `AltGr` character.
+fn has_altgr(keys: &BTreeMap<Scan, KeyChars>) -> bool {
+    keys.values().any(|k| !k.altgr.is_empty())
 }
 
 /// A character key's legends, ready to draw.
