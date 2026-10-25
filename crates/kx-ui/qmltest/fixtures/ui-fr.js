@@ -54,6 +54,11 @@ var texts = {
   "button.ok": "OK",
   "button.retry": "Réessayer",
   "catch": "Cliquez pour terminer le déplacement ou le redimensionnement",
+  "chip.locked": "Champ de mot de passe : rien n’est proposé ni appris",
+  "chip.more": "Autres adresses e-mail",
+  "chip.name": "Suggestion : {$word}",
+  "chip.none": "Aucune suggestion",
+  "chip.undo": "Annuler",
   "combo.join": "+",
   "combo.then": ", ",
   "dpad.down": "Défiler vers le bas",
@@ -168,6 +173,9 @@ var texts = {
   "notice.settings-reset": "Certains paramètres de « {$module} » n’étaient pas valides et ont repris leur valeur par défaut : {$keys}.",
   "notice.settings-restored": "Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.",
   "notice.settings-unsaved": "Impossible d’enregistrer les paramètres ; les modifications ne dureront que jusqu’à la fermeture du clavier.",
+  "notice.words-damaged": "Le fichier des mots appris était endommagé : l’apprentissage repart de zéro.",
+  "notice.words-locked": "Les mots appris n’ont pas pu être déverrouillés : rien de ce qui est appris n’est enregistré cette fois.",
+  "notice.words-missing": "La liste de mots pour {$lang} est introuvable : les suggestions viennent seulement des mots que vous tapez.",
   "page.back": "Page précédente",
   "page.of": "{$at} sur {$count}",
   "page.on": "Page suivante",
@@ -235,7 +243,14 @@ var texts = {
   "window.notice": "Notification de KeyXtend",
   "window.outline": "Contour de défilement",
   "window.pointer": "Aide au pointeur",
-  "window.tip": "Info-bulle de KeyXtend"
+  "window.tip": "Info-bulle de KeyXtend",
+  "words.cancel": "Annuler",
+  "words.forget": "Oublier un mot",
+  "words.menu": "Menu des suggestions",
+  "words.off": "Désactiver les suggestions",
+  "words.on": "Activer les suggestions",
+  "words.pause": "Mettre l’apprentissage en pause",
+  "words.resume": "Reprendre l’apprentissage"
 };
 var more = [
   "",

@@ -84,3 +84,27 @@ pub const COMBO_THEN: &str = "combo.then";
 pub const KEYS_TIP: &str = "tip.keys";
 /// What readers hear after the Next key's name: the shortcuts layer's page `$page` of `$pages`.
 pub const LAYER_PAGE: &str = "key.layer-page";
+/// A chip's name for readers: `$word`, the chip's text, after a word saying it is a suggestion.
+pub const CHIP_NAME: &str = "chip.name";
+/// The More chip's text, which opens the email list.
+pub const CHIP_MORE: &str = "chip.more";
+/// The Undo chip's text, which brings back the word just forgotten.
+pub const CHIP_UNDO: &str = "chip.undo";
+/// The lane's name for readers while it offers nothing.
+pub const CHIP_NONE: &str = "chip.none";
+/// The note a password box shows in place of chips.
+pub const CHIP_LOCKED: &str = "chip.locked";
+/// The suggestions menu's button.
+pub const WORDS_MENU: &str = "words.menu";
+/// The menu row that makes the next chip tapped forgotten.
+pub const WORDS_FORGET: &str = "words.forget";
+/// The chip that ends forget mode or closes the email list.
+pub const WORDS_CANCEL: &str = "words.cancel";
+/// The menu row that pauses learning.
+pub const WORDS_PAUSE: &str = "words.pause";
+/// The menu row that resumes learning.
+pub const WORDS_RESUME: &str = "words.resume";
+/// The menu row that turns suggestions off.
+pub const WORDS_OFF: &str = "words.off";
+/// The menu row that turns suggestions on.
+pub const WORDS_ON: &str = "words.on";

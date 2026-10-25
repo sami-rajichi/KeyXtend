@@ -9,10 +9,11 @@ use kx_theme::ModeChoice;
 use kx_theme::Themes;
 use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
-    BADGE_FAST, BADGE_HOLDING, BADGE_JOIN, BADGE_SLOW, BANNER_MORE, BAR, COMBO_JOIN, COMBO_THEN,
-    DPAD, KEYS_TIP, LANG_KEY, LAYER_PAGE, LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE,
-    MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON, RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME,
-    TRAY_QUIT, TRAY_SHOW,
+    BADGE_FAST, BADGE_HOLDING, BADGE_JOIN, BADGE_SLOW, BANNER_MORE, BAR, CHIP_LOCKED, CHIP_MORE,
+    CHIP_NAME, CHIP_NONE, CHIP_UNDO, COMBO_JOIN, COMBO_THEN, DPAD, KEYS_TIP, LANG_KEY, LAYER_PAGE,
+    LIST_COUNT, LIST_JOIN, LIST_MORE, MARK_JOIN, MODE, MODULE, OK, PAGE_BACK, PAGE_OF, PAGE_ON,
+    RETRY, SIZE, SIZE_NAME, SIZES, SPACE, THEME, TRAY_QUIT, TRAY_SHOW, WORDS_CANCEL, WORDS_FORGET,
+    WORDS_MENU, WORDS_OFF, WORDS_ON, WORDS_PAUSE, WORDS_RESUME,
 };
 use std::collections::BTreeSet;
 
@@ -34,6 +35,21 @@ const VIEW_KEYS: [&str; 10] = [
     "tip.power-off",
     "tip.rclick",
     "tip.grab",
+];
+/// Keys the chip lane and its menu name (P7).
+const WORDS_KEYS: [&str; 12] = [
+    CHIP_NAME,
+    CHIP_MORE,
+    CHIP_UNDO,
+    CHIP_NONE,
+    CHIP_LOCKED,
+    WORDS_MENU,
+    WORDS_FORGET,
+    WORDS_CANCEL,
+    WORDS_PAUSE,
+    WORDS_RESUME,
+    WORDS_OFF,
+    WORDS_ON,
 ];
 /// What starts a Fluent term, a text the files share but code never names.
 const TERM: char = '-';
@@ -111,6 +127,7 @@ fn every_notice_and_view_key_has_its_text() {
             .iter()
             .chain(&fixed)
             .chain(&VIEW_KEYS)
+            .chain(&WORDS_KEYS)
             .copied()
             .filter(|k| !t.has(k))
             .collect();

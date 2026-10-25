@@ -54,6 +54,11 @@ var texts = {
   "button.ok": "OK",
   "button.retry": "Try again",
   "catch": "Click to finish moving or resizing",
+  "chip.locked": "Password box: nothing is suggested or learned",
+  "chip.more": "More emails",
+  "chip.name": "Suggestion: {$word}",
+  "chip.none": "No suggestions",
+  "chip.undo": "Undo",
   "combo.join": "+",
   "combo.then": ", ",
   "dpad.down": "Scroll down",
@@ -168,6 +173,9 @@ var texts = {
   "notice.settings-reset": "Some {$module} settings were not valid, so they went back to their defaults: {$keys}.",
   "notice.settings-restored": "The settings file was damaged, so its last good copy was restored.",
   "notice.settings-unsaved": "Settings could not be saved, so changes last only until the keyboard closes.",
+  "notice.words-damaged": "The learned words file was damaged, so learning starts again from empty.",
+  "notice.words-locked": "Learned words could not be unlocked, so nothing learned is saved this time.",
+  "notice.words-missing": "The word list for {$lang} is missing, so suggestions come only from the words you type.",
   "page.back": "Previous page",
   "page.of": "{$at} of {$count}",
   "page.on": "Next page",
@@ -235,7 +243,14 @@ var texts = {
   "window.notice": "KeyXtend notice",
   "window.outline": "Scroll outline",
   "window.pointer": "Pointer helper",
-  "window.tip": "KeyXtend tip"
+  "window.tip": "KeyXtend tip",
+  "words.cancel": "Cancel",
+  "words.forget": "Forget a word",
+  "words.menu": "Suggestions menu",
+  "words.off": "Turn suggestions off",
+  "words.on": "Turn suggestions on",
+  "words.pause": "Pause learning",
+  "words.resume": "Resume learning"
 };
 var more = [
   "",

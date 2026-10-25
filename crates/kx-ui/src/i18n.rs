@@ -5,6 +5,8 @@ mod combo;
 mod compose;
 pub mod keys;
 
+pub(crate) use compose::clean;
+
 use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource};
 use fluent_langneg::{NegotiationStrategy, negotiate_languages};

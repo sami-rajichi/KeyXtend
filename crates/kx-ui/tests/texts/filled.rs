@@ -40,8 +40,11 @@ fn setting_names() -> Vec<String> {
     keyboard_defaults().keys().take(NAMED).cloned().collect()
 }
 
-/// Notice `key` about `module`, listing `names` and leaving `more` out.
+/// Notice `key` about `module`, listing `names` and leaving `more` out; its language is named as an OS names it, with
+/// every bidi control around.
 fn notice(t: &I18n, key: &'static str, module: &str, names: &[String], more: usize) -> String {
+    let controls: String = CONTROLS.iter().collect();
+    let lang = format!("{controls}{}{controls}", OS_NAMES[0]);
     t.notice(&Notice {
         key,
         module: None,
@@ -49,6 +52,7 @@ fn notice(t: &I18n, key: &'static str, module: &str, names: &[String], more: usi
             (args::MODULE, NoticeArg::Text(module.to_owned())),
             (args::KEYS, NoticeArg::List(names.to_vec())),
             (args::MORE, NoticeArg::Count(more)),
+            (args::LANG, NoticeArg::Text(lang)),
         ],
     })
 }

@@ -54,6 +54,11 @@ var texts = {
   "button.ok": "موافق",
   "button.retry": "إعادة المحاولة",
   "catch": "انقر لإنهاء النقل أو تغيير الحجم",
+  "chip.locked": "خانة كلمة مرور: لا اقتراحات ولا تعلّم",
+  "chip.more": "عناوين بريد أخرى",
+  "chip.name": "اقتراح: {$word}",
+  "chip.none": "لا توجد اقتراحات",
+  "chip.undo": "تراجع",
   "combo.join": "+",
   "combo.then": "، ",
   "dpad.down": "التمرير لأسفل",
@@ -168,6 +173,9 @@ var texts = {
   "notice.settings-reset": "بعض إعدادات {$module} لم تكن صالحة، فعادت إلى قيمها الافتراضية: {$keys}.",
   "notice.settings-restored": "كان ملف الإعدادات تالفًا، فاستُعيدت آخر نسخة سليمة منه.",
   "notice.settings-unsaved": "تعذّر حفظ الإعدادات، لذا تبقى التغييرات حتى إغلاق لوحة المفاتيح فقط.",
+  "notice.words-damaged": "كان ملف الكلمات المتعلَّمة تالفًا، لذا يبدأ التعلّم من جديد.",
+  "notice.words-locked": "تعذّر فتح الكلمات المتعلَّمة، لذا لن يُحفَظ ما يُتعلَّم هذه المرة.",
+  "notice.words-missing": "قائمة كلمات {$lang} غير موجودة، لذا تأتي الاقتراحات من الكلمات التي تكتبها فقط.",
   "page.back": "الصفحة السابقة",
   "page.of": "{$at} من {$count}",
   "page.on": "الصفحة التالية",
@@ -235,7 +243,14 @@ var texts = {
   "window.notice": "إشعار KeyXtend",
   "window.outline": "إطار التمرير",
   "window.pointer": "مساعد المؤشر",
-  "window.tip": "تلميح KeyXtend"
+  "window.tip": "تلميح KeyXtend",
+  "words.cancel": "إلغاء",
+  "words.forget": "نسيان كلمة",
+  "words.menu": "قائمة الاقتراحات",
+  "words.off": "إيقاف الاقتراحات",
+  "words.on": "تشغيل الاقتراحات",
+  "words.pause": "إيقاف التعلّم مؤقتًا",
+  "words.resume": "استئناف التعلّم"
 };
 var more = [
   "",

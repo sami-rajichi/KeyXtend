@@ -1,6 +1,6 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the tray icon, and the requests
-//! the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the tray icon,
+//! and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod assist;
@@ -15,11 +15,13 @@ mod spots;
 mod texts;
 mod tray;
 mod unread;
+mod words;
 
 pub use app::Mode;
 pub use face::{Redraw, Resize};
 pub use fonts::FontBook;
 pub use notices::Shown;
+pub use words::asks;
 
 use crate::settings::{PressFrame, UiSettings};
 use kx_module_api::ports::KeyboardFace;
@@ -88,6 +90,8 @@ pub enum Wake {
     Keys,
     /// The scroll state or its outline changed; no other comes until QML reads it.
     Scroll,
+    /// A new chip lane: the top bar reads `words_json` again.
+    Words,
     /// The pad turns our open list a page, back or on: call `turn_page` on the Qt thread.
     Page {
         /// Turn back a page.
@@ -165,6 +169,8 @@ pub struct Hub {
     scroll: scroll::Scroll,
     /// The kernel's bus and the keyboard's wake handlers.
     heard: Mutex<bus::Heard>,
+    /// The chip lane and the handle that sends its taps.
+    words: Mutex<words::Words>,
 }
 
 impl Hub {
@@ -205,6 +211,7 @@ impl Hub {
             assist: assist::Assist::default(),
             scroll: scroll::Scroll::default(),
             heard: Mutex::default(),
+            words: Mutex::default(),
         };
         Ok((Arc::new(hub), drain))
     }

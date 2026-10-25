@@ -128,9 +128,9 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     let text = std::fs::read_to_string(&files.log).unwrap();
     assert!(text.contains("try again was refused"), "{text}");
     assert!(text.contains("keyboard"), "it names the module: {text}");
-    // The mouse, scroll and power modules' states come from their own threads, at start and at stop, with the
-    // overlay's, keys' and scroll's wakes.
-    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys | Wake::Scroll);
+    // The mouse, scroll, power and prediction modules' states come from their own threads, at start and at stop, with
+    // the overlay's, keys', scroll's and chip lane's wakes.
+    let own = |w: &&Wake| !matches!(w, Wake::Assist | Wake::Keys | Wake::Scroll | Wake::Words);
     let seen: Vec<Wake> = wakes.lock().unwrap().iter().filter(own).copied().collect();
     let order = [Wake::Settings, Wake::End];
     assert_eq!(seen, order, "the modules stop, then the UI ends");
@@ -138,7 +138,7 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     assert_eq!(
         last,
         Some(Wake::End),
-        "the mouse, scroll and power modules told their stops first"
+        "the mouse, scroll, power and prediction modules told their stops first"
     );
     assert_eq!(hub.board_json(), NULL, "Quit stopped the modules");
 }

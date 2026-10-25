@@ -88,7 +88,7 @@ pub mod keys {
     pub const WORDS_LOCKED: &str = "notice.words-locked";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 19] = [
+    pub const ALL_KEYS: [&str; 22] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -108,6 +108,9 @@ pub mod keys {
         SCROLL_STOPPED,
         POWER_FAILED,
         POWER_STOPPED,
+        WORDS_DAMAGED,
+        WORDS_MISSING,
+        WORDS_LOCKED,
     ];
 }
 
@@ -183,10 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn the_words_notices_keep_their_keys() {
+    fn the_words_notices_keep_their_keys_and_are_listed() {
         assert_eq!(keys::WORDS_DAMAGED, "notice.words-damaged");
         assert_eq!(keys::WORDS_MISSING, "notice.words-missing");
         assert_eq!(keys::WORDS_LOCKED, "notice.words-locked");
+        let words = [keys::WORDS_DAMAGED, keys::WORDS_MISSING, keys::WORDS_LOCKED];
+        assert!(words.iter().all(|k| ALL_KEYS.contains(k)));
     }
 
     #[test]

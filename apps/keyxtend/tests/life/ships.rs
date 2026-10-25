@@ -164,7 +164,8 @@ fn the_power_dialog_reaches_only_the_power_module() {
 fn the_box_watch_reaches_only_the_modules_that_read_typed_text() {
     let watch: Arc<dyn FieldWatch> = Arc::new(FakeFieldWatch::new());
     let got = reached::<FieldWatchKey>(&Rig::new(), &watch);
-    assert_eq!(got, [kx_mod_keyboard::ID, kx_mod_predict::ID], "ADR-0033");
+    let want = [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID];
+    assert_eq!(got, want, "ADR-0033");
 }
 
 #[test]
@@ -198,7 +199,7 @@ fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
 }
 
 #[test]
-fn read_focused_text_goes_only_to_the_keyboard_and_predict_among_the_modules_shipped_now() {
+fn read_focused_text_goes_only_to_the_keyboard_predict_and_the_ui() {
     let shipped = modules(&Rig::new().load().hub);
     let holders: Vec<_> = shipped
         .iter()
@@ -208,8 +209,8 @@ fn read_focused_text_goes_only_to_the_keyboard_and_predict_among_the_modules_shi
         .collect();
     assert_eq!(
         holders,
-        [kx_mod_keyboard::ID, kx_mod_predict::ID],
-        "ADR-0033: the typist and prediction; the ui joins when it ships"
+        [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID],
+        "ADR-0033: the typist, prediction and the chip lane's drawer"
     );
 }
 

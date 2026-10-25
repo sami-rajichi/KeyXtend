@@ -1,5 +1,6 @@
 //! The `ui` module: it reads the `[ui]` settings, takes the keyboard face and hands both to the hub, with its
-//! settings handle for the theme button and the light or dark switch. It holds `KeyboardUi`, the face's gate.
+//! settings handle for the theme button and the light or dark switch. It holds `KeyboardUi`, the face's gate, and
+//! `ReadFocusedText`, the chip lane's (ADR-0033).
 
 use crate::hub::Hub;
 use crate::settings::{SPEC, UiSettings};
@@ -10,13 +11,14 @@ use std::sync::Arc;
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("ui");
 
-/// The module's manifest: it needs the keyboard face, behind `KeyboardUi`.
+/// The module's manifest: it needs the keyboard face, behind `KeyboardUi`, and hears the chip lane, behind
+/// `ReadFocusedText`.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
     requires: &[KeyboardFaceKey::ID],
     provides: &[],
-    capabilities: &[Capability::KeyboardUi],
+    capabilities: &[Capability::KeyboardUi, Capability::ReadFocusedText],
     settings: Some(&SPEC),
 };
 
