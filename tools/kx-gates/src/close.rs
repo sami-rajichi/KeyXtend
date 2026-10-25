@@ -4,6 +4,7 @@
 
 use kx_platform::ui::{Command, Instance, UiError};
 use kx_platform_windows::WindowsPlatform;
+use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
@@ -111,6 +112,57 @@ pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
     Ok(ended_within(ctx, process))
 }
 
+/// How a copy a gate started went away.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Gone {
+    /// It took Quit and ended in time.
+    pub quit: bool,
+    /// It has ended, by Quit or through its handle after.
+    pub ended: bool,
+}
+
+impl Gone {
+    /// True only when it quit by itself; a copy that had to be ended is a failure.
+    pub fn ok(self) -> bool {
+        self.quit && self.ended
+    }
+}
+
+/// How a copy went once Quit reached it, when `asked`: `within` waits for its end, and when it did not end, `end` ends
+/// it and `within` waits again.
+pub(crate) fn finish(
+    asked: bool,
+    within: impl Fn() -> bool,
+    end: impl FnOnce() -> Result<(), String>,
+) -> Gone {
+    if asked && within() {
+        return Gone {
+            quit: true,
+            ended: true,
+        };
+    }
+    Gone {
+        quit: false,
+        ended: end().is_ok() && within(),
+    }
+}
+
+/// Quits a copy a gate started, held as `process`, as `quit_started` does; when it does not end in time, ends it
+/// through its handle, so no copy is left running.
+pub fn end_started(ctx: &Ctx, process: &Process) -> Gone {
+    let g = &ctx.cfg.g8;
+    let platform = WindowsPlatform::new().map_err(|e| e.to_string());
+    let asked = platform.and_then(|p| {
+        let wait = || win::sleep_ms(g.quit_try_ms);
+        ask_quit_tries(&*p.instance(), g.quit_tries, || process.ended(), wait)
+    });
+    finish(
+        asked.is_ok(),
+        || ended_within(ctx, process),
+        || process.end(),
+    )
+}
+
 /// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
 /// `[timing] quit_wait_ms`.
 pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), Unasked> {
@@ -133,71 +185,4 @@ fn close_face(ctx: &Ctx, name: &str) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_platform_fake::FakeInstance;
-
-    use super::*;
-
-    #[test]
-    fn quit_is_posted_to_the_running_copy_and_starts_nothing() {
-        let session = FakeInstance::new();
-        let mut claim = session.claim().expect("the first copy runs");
-        claim.listen(Box::new(|_| {})).expect("it listens");
-        assert_eq!(ask_quit(&session.clone()), Ok(()));
-        assert_eq!(session.sent(), [Command::Quit]);
-    }
-
-    #[test]
-    fn a_copy_just_started_gets_quit_once_it_listens() {
-        let session = FakeInstance::new();
-        let late = std::cell::RefCell::new(Vec::new());
-        let waits = std::cell::Cell::new(0);
-        let wait = || {
-            waits.set(waits.get() + 1);
-            if waits.get() == 2 {
-                let mut claim = session.claim().expect("the started copy runs");
-                claim.listen(Box::new(|_| {})).expect("it listens");
-                late.borrow_mut().push(claim);
-            }
-        };
-        assert_eq!(ask_quit_tries(&session.clone(), 5, || false, wait), Ok(3));
-        assert_eq!(session.sent(), [Command::Quit]);
-        let never = ask_quit_tries(&FakeInstance::new(), 3, || false, || {});
-        assert!(
-            never.is_err_and(|e| e.contains("command window")),
-            "it never listened"
-        );
-    }
-
-    #[test]
-    fn a_copy_that_ended_by_itself_gets_no_more_tries() {
-        let session = FakeInstance::new();
-        let gone = std::cell::Cell::new(false);
-        let tries = ask_quit_tries(&session.clone(), 5, || gone.get(), || gone.set(true));
-        assert_eq!(tries, Ok(1), "one try, then it was gone");
-        assert!(session.sent().is_empty());
-    }
-
-    #[test]
-    fn a_copy_that_cannot_hear_quit_says_why() {
-        let none = ask_quit(&FakeInstance::new()).expect_err("no copy listens");
-        assert!(
-            none.why.contains("command window") && !none.refused,
-            "{none:?}"
-        );
-        let refused = Unasked::from(UiError::Refused(5));
-        assert!(refused.refused, "{refused:?}");
-        let why = refused.why;
-        assert!(why.contains("code 5") && why.contains("uiAccess"), "{why}");
-    }
-
-    #[test]
-    fn the_result_names_the_product_as_its_keyboard() {
-        let v = result(r"C:\x\keyxtend.exe", true);
-        assert_eq!(v["keyboard"], product::NAME);
-        assert_eq!(
-            (v["gate"].as_str(), v["pass"].as_bool()),
-            (Some("close"), Some(true))
-        );
-    }
-}
+mod tests;

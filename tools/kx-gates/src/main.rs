@@ -111,6 +111,7 @@ mod mouse;
 mod mouseguard;
 mod out;
 mod outline;
+mod owncopy;
 mod ownset;
 mod p3cfg;
 mod p4cfg;

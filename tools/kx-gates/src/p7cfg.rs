@@ -26,6 +26,8 @@ pub struct G27 {
     pub chip_name: String,
     /// That text's variable for the word.
     pub chip_word: String,
+    /// Wait after the gate's own copy shows its keyboard before the first click.
+    pub ready_ms: u64,
     /// Longest wait for a layout switch and for the keyboard's keys to follow it.
     pub switch_wait_ms: u64,
     /// Pause after each key click.
@@ -172,6 +174,7 @@ impl G27 {
         self.check_cases()?;
         self.check_ids()?;
         let waits = [
+            ("g27.ready_ms", self.ready_ms),
             ("g27.switch_wait_ms", self.switch_wait_ms),
             ("g27.key_gap_ms", self.key_gap_ms),
             ("g27.chip_wait_ms", self.chip_wait_ms),

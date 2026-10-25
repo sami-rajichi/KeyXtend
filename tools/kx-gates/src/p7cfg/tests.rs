@@ -89,6 +89,11 @@ fn g27_names_and_waits_out_of_range_are_refused() {
         (|c| c.g27.locked.clear(), "g27.locked"),
         (|c| c.g27.chip_name = "chip.nowhere".into(), "g27.chip_name"),
         (|c| c.g27.chip_word = "nothing".into(), "g27.chip_word"),
+        (|c| c.g27.ready_ms = 0, "g27.ready_ms"),
+        (
+            |c| c.g27.ready_ms = c.mouse_guard.limit_ms + 1,
+            "g27.ready_ms",
+        ),
         (|c| c.g27.switch_wait_ms = 0, "g27.switch_wait_ms"),
         (|c| c.g27.key_gap_ms = 0, "g27.key_gap_ms"),
         (|c| c.g27.chip_wait_ms = 0, "g27.chip_wait_ms"),

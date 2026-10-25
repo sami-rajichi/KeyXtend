@@ -55,7 +55,7 @@ pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64
 }
 
 /// Refuses a run while the product is running, as G8 times a cold start.
-pub(crate) fn cold() -> Result<(), String> {
+fn cold() -> Result<(), String> {
     match product::running() {
         Some(_) => Err(format!(
             "close {} first: G8 times a cold start",

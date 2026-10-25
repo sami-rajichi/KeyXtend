@@ -61,7 +61,8 @@ fn typing_lines() -> String {
     format!(
         "g8 {predict} reads the predict part's memory from two cold starts and types words through chips; the owner's \
          settings come back.
-g21 {NAME} and g27 {NAME} type through the running product's keys and chips into target-window and Chrome."
+g21 {NAME} and g27 {NAME} start their own copy with learning paused, so close the product first; they type \
+         through its keys and chips into target-window and Chrome, and the owner's settings come back."
     )
 }
 
@@ -184,6 +185,11 @@ mod tests {
             .find(|l| l.contains(&format!("g8 {}", g8predict::PREDICT)));
         assert!(
             told.is_some_and(|l| l.contains("settings come back")),
+            "{text}"
+        );
+        let own = text.lines().find(|l| l.starts_with(&format!("g21 {NAME}")));
+        assert!(
+            own.is_some_and(|l| l.contains("close the product first")),
             "{text}"
         );
     }

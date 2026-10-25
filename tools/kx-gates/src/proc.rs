@@ -10,7 +10,7 @@ use windows::Win32::System::ProcessStatus::{
 use windows::Win32::System::Threading::{
     GetExitCodeProcess, GetProcessId, GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS,
     PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
-    PROCESS_VM_READ, WaitForSingleObject,
+    PROCESS_VM_READ, TerminateProcess, WaitForSingleObject,
 };
 
 use crate::win::size32;
@@ -19,6 +19,8 @@ use crate::win::size32;
 const TICKS_PER_MS: f64 = 10_000.0;
 /// Bytes in one MB, as spec §10 counts memory.
 pub const MB: f64 = 1_000_000.0;
+/// The exit code a copy a gate had to end leaves.
+const ENDED_CODE: u32 = 1;
 
 /// A process's private memory, in MB.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -82,6 +84,14 @@ impl Process {
     pub fn ended(&self) -> bool {
         // SAFETY: our live handle; a wait of zero ms never blocks.
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
+    }
+
+    /// Ends the process through a handle opened `to_measure`, for a copy a gate started that would not quit.
+    #[allow(unsafe_code, reason = "Ends the process our own handle names.")]
+    pub fn end(&self) -> Result<(), String> {
+        // SAFETY: our live handle, opened with the right to end the process.
+        unsafe { TerminateProcess(self.handle, ENDED_CODE) }
+            .map_err(|e| format!("end process {}: {e}", self.pid))
     }
 
     /// Its exit code once it has ended; none while it runs, or when Windows cannot say.

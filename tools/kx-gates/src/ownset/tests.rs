@@ -32,7 +32,7 @@ fn both_files_come_back_byte_for_byte_after_the_gate_wrote_them() {
     fs::write(&files.previous, b"old\r\n").expect("written");
     let kept = Kept::take(&files).expect("kept");
     assert_eq!(kept.table(), owner());
-    kept.write(&predict(&kept.table(), false).expect("edits"))
+    kept.write(&predict(&kept.table(), false, &[]).expect("edits"))
         .expect("written");
     fs::write(&files.previous, OWNER).expect("the product's save");
     assert_ne!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
@@ -46,7 +46,7 @@ fn a_file_that_was_missing_is_removed_again() {
     let (_dir, files) = folder();
     let kept = Kept::take(&files).expect("kept");
     assert!(kept.table().is_empty(), "no file");
-    kept.write(&predict(&Table::new(), true).expect("edits"))
+    kept.write(&predict(&Table::new(), true, &[]).expect("edits"))
         .expect("written");
     assert!(files.settings.exists());
     assert_eq!(kept.put_back(), Ok(()));
@@ -78,7 +78,7 @@ fn a_file_past_the_stores_cap_is_refused_and_left_alone() {
 
 #[test]
 fn an_on_run_takes_predict_off_the_list_shows_chips_and_pauses_learning() {
-    let got = predict(&owner(), true).expect("edits");
+    let got = predict(&owner(), true, &[]).expect("edits");
     assert_eq!(disabled(&got), ["voice"], "the owner's own choice stays");
     assert_eq!(got["kernel"]["log_level"].as_str(), Some("debug"));
     assert_eq!(got["kernel"]["version"].as_integer(), Some(1));
@@ -97,17 +97,30 @@ fn an_on_run_takes_predict_off_the_list_shows_chips_and_pauses_learning() {
 
 #[test]
 fn an_off_run_lists_predict_once_and_leaves_its_section() {
-    let got = predict(&owner(), false).expect("edits");
+    let got = predict(&owner(), false, &[]).expect("edits");
     assert_eq!(disabled(&got), ["voice", "predict"]);
     assert_eq!(got["predict"], owner()["predict"]);
-    let twice = predict(&got, false).expect("edits");
+    let twice = predict(&got, false, &[]).expect("edits");
     assert_eq!(disabled(&twice), ["voice", "predict"], "never twice");
-    assert_eq!(disabled(&predict(&twice, true).expect("edits")), ["voice"]);
+    assert_eq!(
+        disabled(&predict(&twice, true, &[]).expect("edits")),
+        ["voice"]
+    );
+}
+
+#[test]
+fn modules_switched_off_for_a_run_join_the_owners_list_once_and_learning_stays_paused() {
+    let mouse = kx_mod_mouse::ID.as_str();
+    let got = predict(&owner(), true, &[kx_mod_mouse::ID]).expect("edits");
+    assert_eq!(disabled(&got), ["voice", mouse]);
+    assert_eq!(got["predict"][LEARN_KEY].as_bool(), Some(false));
+    let again = predict(&got, true, &[kx_mod_mouse::ID]).expect("edits");
+    assert_eq!(disabled(&again), ["voice", mouse], "never twice");
 }
 
 #[test]
 fn a_file_without_a_kernel_section_gets_the_kernels_defaults() {
-    let got = predict(&Table::new(), false).expect("edits");
+    let got = predict(&Table::new(), false, &[]).expect("edits");
     let defaults = KernelSettings::from_defaults().expect("defaults");
     assert_eq!(disabled(&got), ["predict"]);
     assert_eq!(

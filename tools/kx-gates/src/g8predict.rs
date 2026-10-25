@@ -1,29 +1,26 @@
 //! G8's prediction part (`g8 predict`): two cold starts of `[g8] program`, with predict on and with it in `[kernel]
 //! disabled`, each read for idle private memory after G8's warm-up. Their difference is the predict part, set beside
 //! the owner's figure as a reading, never a fail. The on run then types `[g8_predict]` words through chips, over which
-//! memory may grow at most `[g8] churn_growth_mb`. The owner's settings file is kept and put back byte for byte.
+//! memory may grow at most `[g8] churn_growth_mb`. Each copy is ended before the owner's file comes back byte for byte.
 #![cfg(windows)]
-
-use std::path::Path;
-use std::time::Instant;
 
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
+use crate::close::Gone;
 use crate::g8churn::MB_DECIMALS;
-use crate::g8start::{self, Started};
 use crate::g8words::{self, Typed};
 use crate::out::{self, say, shown};
-use crate::ownset::{self, Kept};
+use crate::owncopy::{Ended, Session};
 use crate::proc::Memory;
-use crate::{close, g8, product};
+use crate::product;
 
 /// The name that runs G8's prediction part.
 pub const PREDICT: &str = "predict";
 /// Why the off run was not started.
 const STILL_RUNS: &str =
-    "the predict-on copy still runs, so no cold start was made with predict off; close it";
+    "the predict-on copy could not be ended, so no cold start was made with predict off; close it";
 
 /// The predict part: memory with predict on less memory with it off.
 pub(crate) fn part(on: Memory, off: Memory) -> Memory {
@@ -55,48 +52,50 @@ pub(crate) fn typing_parts(t: &Typed, limit: f64) -> [Part; 2] {
     ]
 }
 
-/// One cold start: its idle memory, the typing churn when predict was on, and whether the copy quit.
+/// True when both readings exist, the churn `held`, both copies `quit` by themselves and the owner's file came `back`.
+pub(crate) fn passed(split: bool, held: bool, quit: [bool; 2], back: bool) -> bool {
+    split && held && quit.iter().all(|&q| q) && back
+}
+
+/// True when the off run may start after the on copy went `gone`: ended, by Quit or by force; none when none started.
+pub(crate) fn off_may_start(gone: Option<Gone>) -> bool {
+    gone.is_none_or(|g| g.ended)
+}
+
+/// One cold start: its idle memory, the typing churn when predict was on, and how the copy went.
 struct Side {
     memory: Result<Memory, String>,
     typed: Option<Result<Typed, String>>,
-    quit: bool,
+    ended: Ended,
 }
 
-/// Idle private memory once `[g8] warm_ms` passed since the keyboard showed.
-fn idle(ctx: &Ctx, s: &Started) -> Result<Memory, String> {
-    let shown = s.shown_at.ok_or("the keyboard did not show in time")?;
-    std::thread::sleep(g8start::warm_left(
-        shown,
-        ctx.cfg.g8.warm_ms,
-        Instant::now(),
-    ));
-    s.process.memory()
-}
-
-/// A cold start with the owner's settings set for predict `on`, measured, then asked to quit.
-fn side(ctx: &Ctx, program: &Path, kept: &Kept, on: bool) -> Result<Side, String> {
-    kept.write(&ownset::predict(&kept.table(), on)?)?;
-    let s = g8start::start(ctx, program, &[], None)?;
-    let memory = idle(ctx, &s);
-    let typed = (on && memory.is_ok()).then(|| g8words::run(ctx, &s.process));
-    let quit = close::quit_started(ctx, &s.process).unwrap_or(false);
+/// A cold start on the gate's settings with predict `on`, read once `[g8] warm_ms` passed, then ended.
+fn side(ctx: &Ctx, session: &Session, on: bool) -> Result<Side, String> {
+    let copy = session.start(on, &[])?;
+    let ready = copy.ready(ctx.cfg.g8.warm_ms);
+    let memory = ready.clone().and_then(|s| s.process.memory());
+    let typed = match ready {
+        Ok(s) if on && memory.is_ok() => Some(g8words::run(ctx, &s.process)),
+        _ => None,
+    };
     Ok(Side {
         memory,
         typed,
-        quit,
+        ended: copy.end(),
     })
 }
 
-/// A side for the result line: its memory and whether it quit, or its error.
+/// A side for the result line: its memory and how its copy went, or its error.
 fn side_line(s: &Result<Side, String>) -> Value {
     match s {
-        Ok(s) => json!({ "memory": shown(&s.memory), "quit": s.quit }),
+        Ok(s) => json!({ "memory": shown(&s.memory), "copy": s.ended.line() }),
         Err(e) => json!({ "error": e }),
     }
 }
 
 /// The result line from both sides and the settings' put-back. It passes when both readings exist, the churn kept
-/// within its limit, both copies quit and the owner's file came back; a churn that missed a word is partial at best.
+/// within its limit, both copies quit by themselves and the owner's file came back; a churn that missed a word is
+/// partial at best.
 fn result(
     ctx: &Ctx,
     on: &Result<Side, String>,
@@ -109,9 +108,9 @@ fn result(
     let typed = on.as_ref().ok().and_then(|s| s.typed.clone());
     let churned = typed.clone().and_then(Result::ok);
     let parts = churned.as_ref().map(|t| typing_parts(t, limit));
-    let quit = [on, off].iter().all(|s| s.as_ref().is_ok_and(|s| s.quit));
+    let quit = [on, off].map(|s| s.as_ref().is_ok_and(|s| s.ended.ok()));
     let held = parts.as_ref().is_some_and(|p| budget::all_pass(p));
-    let ok = split.is_some() && held && quit && back.is_ok();
+    let ok = passed(split.is_some(), held, quit, back.is_ok());
     json!({
         "gate": "G8", "part": PREDICT, "keyboard": product::NAME, "on": side_line(on), "off": side_line(off),
         "predict_mb": split, "owner_mb": owner_mb, "reading": split.map(|m| reading(m, owner_mb)),
@@ -120,17 +119,18 @@ fn result(
     })
 }
 
-/// Runs `g8 predict`, refused while the product runs, as both readings are cold starts.
+/// Runs `g8 predict`, refused while the product runs, as both readings are cold starts. Both copies are ended before
+/// the owner's file comes back.
 fn predict(ctx: &Ctx) -> Result<Value, String> {
-    g8::cold()?;
-    let program = ctx.cfg.program(&ctx.cfg.g8.program);
-    let kept = Kept::take(&product::files(&program)?)?;
-    let on = side(ctx, &program, &kept, true);
-    let off = match &on {
-        Ok(s) if !s.quit => Err(STILL_RUNS.to_string()),
-        _ => side(ctx, &program, &kept, false),
+    let session = Session::open(ctx)?;
+    let on = side(ctx, &session, true);
+    let gone = on.as_ref().ok().map(|s| s.ended.gone);
+    let off = if off_may_start(gone) {
+        side(ctx, &session, false)
+    } else {
+        Err(STILL_RUNS.to_string())
     };
-    let back = kept.put_back();
+    let back = session.close();
     let v = result(ctx, &on, &off, &back);
     say!("G8 {PREDICT}: {}", v["reading"]);
     Ok(v)
@@ -177,6 +177,30 @@ mod tests {
     fn a_predict_part_below_nothing_still_reads_as_a_number() {
         let line = reading(part(memory(60.0, 80.0), memory(60.5, 80.0)), 2.0);
         assert!(line.contains("-0.5 MB working set"), "{line}");
+    }
+
+    #[test]
+    fn a_copy_that_had_to_be_ended_fails_the_run() {
+        assert!(passed(true, true, [true, true], true));
+        assert!(
+            !passed(true, true, [true, false], true),
+            "the off copy was ended"
+        );
+        assert!(
+            !passed(true, true, [true, true], false),
+            "the owner's file did not come back"
+        );
+        assert!(!passed(false, true, [true, true], true), "no reading");
+        assert!(!passed(true, false, [true, true], true), "the churn grew");
+    }
+
+    #[test]
+    fn the_off_run_follows_a_copy_that_had_to_be_ended_never_one_still_running() {
+        let gone = |quit, ended| Gone { quit, ended };
+        assert!(off_may_start(Some(gone(true, true))));
+        assert!(off_may_start(Some(gone(false, true))), "ended, so no skip");
+        assert!(!off_may_start(Some(gone(false, false))), "it still runs");
+        assert!(off_may_start(None), "the on copy never started");
     }
 
     #[test]

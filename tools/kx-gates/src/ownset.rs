@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use kx_kernel::{KERNEL, KernelSettings};
 use kx_mod_predict::{LEARN_KEY, ON_KEY};
+use kx_module_api::ModuleId;
 use kx_settings::{Files, MAX_FILE_BYTES, VERSION_KEY};
 use toml::{Table, Value};
 
@@ -124,8 +125,8 @@ impl Drop for Kept {
 }
 
 /// `owner`'s `[kernel]` section, typed over the kernel's defaults, with predict out of its switched-off list when `on`
-/// and in it otherwise; the owner's other choices and version stay.
-fn kernel(owner: &Table, on: bool) -> Result<Table, String> {
+/// and in it otherwise, and each of `off` in it once; the owner's other choices and version stay.
+fn kernel(owner: &Table, on: bool, off: &[ModuleId]) -> Result<Table, String> {
     let fail = |e: &dyn std::fmt::Display| format!("the kernel's settings: {e}");
     let defaults = KernelSettings::from_defaults().map_err(|e| fail(&e))?;
     let mut values = owner
@@ -139,21 +140,24 @@ fn kernel(owner: &Table, on: bool) -> Result<Table, String> {
     let mut k: KernelSettings = Value::Table(merged).try_into().unwrap_or(defaults);
     let id = kx_mod_predict::ID.as_str();
     k.disabled.retain(|d| d != id);
-    if !on {
-        k.disabled.push(id.to_string());
+    let predict = (!on).then_some(kx_mod_predict::ID);
+    for m in off.iter().copied().chain(predict) {
+        if !k.disabled.iter().any(|d| d == m.as_str()) {
+            k.disabled.push(m.as_str().to_string());
+        }
     }
     let mut out = Table::try_from(&k).map_err(|e| fail(&e))?;
     out.extend(version.map(|v| (VERSION_KEY.to_string(), v)));
     Ok(out)
 }
 
-/// `owner`'s settings for a run with predict `on` or off. An on run also shows chips and pauses learning, so the
-/// gate's words never teach the owner's learner.
-pub fn predict(owner: &Table, on: bool) -> Result<Table, String> {
+/// `owner`'s settings for a run with predict `on` or off and the modules `off` switched off. An on run also shows chips
+/// and pauses learning, so the gate's words never teach the owner's learner.
+pub fn predict(owner: &Table, on: bool, off: &[ModuleId]) -> Result<Table, String> {
     let mut table = owner.clone();
     table.insert(
         KERNEL.as_str().to_string(),
-        Value::Table(kernel(owner, on)?),
+        Value::Table(kernel(owner, on, off)?),
     );
     if on {
         let id = kx_mod_predict::ID.as_str();

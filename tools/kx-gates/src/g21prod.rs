@@ -1,6 +1,7 @@
-//! G21's product half: in target-window's password box, the Chrome page's password field and target-window's plain box,
-//! the product's own field watch (`WinFieldWatch`) tells each box's kind, the product's keys type `[g21_product]`'s
-//! case, and the keyboard's lane must show the lock and no chip in a password box, and chips in the plain one.
+//! G21's product half, on a copy of the product it starts with learning paused: in target-window's password box,
+//! the Chrome page's password field and target-window's plain box, the product's own field watch (`WinFieldWatch`)
+//! tells each box's kind, the product's keys type `[g21_product]`'s case, and the lane must show the lock and no chip
+//! in a password box, and chips in the plain one.
 #![cfg(windows)]
 
 use kx_mod_predict::PredictSettings;
@@ -13,6 +14,7 @@ use serde_json::{Value, json};
 use crate::apps::{self, Ctx, Opened};
 use crate::g27lane::Lane;
 use crate::g27type::{self, Typist};
+use crate::owncopy::{Ended, Session};
 use crate::p7cfg::Case;
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
@@ -149,8 +151,8 @@ fn chrome(ctx: &Ctx, watch: &dyn FieldRun) -> Result<Value, String> {
     Ok(v)
 }
 
-/// Runs the product half on each box, with the product running and one field watch for them all.
-pub fn run(ctx: &Ctx) -> Result<Value, String> {
+/// Each box judged on the running copy, with one field watch for them all.
+fn boxes(ctx: &Ctx) -> Result<Vec<Value>, String> {
     Keyboard::find()?;
     let tell = Box::new(|_| {});
     let watch = WinFieldWatch
@@ -163,9 +165,23 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
         };
         got.unwrap_or_else(|e| json!({ "field": f.name(), "ok": false, "error": e }))
     };
-    let fields: Vec<Value> = FIELDS.into_iter().map(one).collect();
-    let pass = fields.iter().all(|f| f["ok"] == true);
-    Ok(json!({ "gate": "G21", "app": product::NAME, "pass": pass, "fields": fields }))
+    Ok(FIELDS.into_iter().map(one).collect())
+}
+
+/// Runs the product half on a copy of the product it starts with learning paused, which ends before the owner's
+/// settings file comes back; refused while the product runs.
+pub fn run(ctx: &Ctx) -> Result<Value, String> {
+    let session = Session::open(ctx)?;
+    let (fields, copy) = session.with_copy(&[], || boxes(ctx));
+    let settings = session.close();
+    let fields = fields.unwrap_or_else(|e| vec![json!({ "ok": false, "error": e })]);
+    let ended = copy.as_ref().is_some_and(Ended::ok);
+    let typed = fields.iter().all(|f| f["ok"] == true);
+    Ok(json!({
+        "gate": "G21", "app": product::NAME, "fields": fields, "copy": copy.map(|c| c.line()),
+        "settings_put_back": settings.is_ok(), "settings_error": settings.as_ref().err(),
+        "pass": typed && ended && settings.is_ok(),
+    }))
 }
 
 #[cfg(test)]

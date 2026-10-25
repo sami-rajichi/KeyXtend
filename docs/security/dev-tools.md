@@ -14,7 +14,8 @@
 | Read a program's signature and manifest | `check-uiaccess` explains why uiAccess is missing. | Only diagnosis is lost. |
 | Write and delete one shortcut in the user's own Start menu | The owner starts the installed app with one click. | The app is started from its folder instead. |
 | Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by the owner's hand. |
-| Write the `[g8] program` copy's `settings.toml` while `kx-gates g8 predict` runs, then put it and its last good copy back byte for byte | The predict part is the difference between a cold start with predict on and one with it off. | G8 cannot tell predict's memory apart. |
+| Write the `[g8] program` copy's `settings.toml` while `kx-gates g21 keyxtend`, `g27 keyxtend` or `g8 predict` runs, then put it and its last good copy back byte for byte | A copy reads its settings only at start: G8's predict part is the difference between a cold start with predict on and one with it off, and G21 and G27 pause learning and switch modules off. | G8 cannot tell predict's memory apart, and G21 and G27 would teach the owner's learner. |
+| End a copy of the product kx-gates started that did not quit in time, through the handle it opened (`TerminateProcess`) | No copy a gate started may outlive the gate or save over the owner's restored settings. | A hung copy stays running on the gate's settings. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -91,14 +92,17 @@
     - G25 never starts, clicks Power or taps Alt to bring Notepad back while any window of that class shows, old or new, whatever its program, and it names that window's class and program, never its title (`g25::front`, `g25watch.rs` `none_open`). One check covers a front's tries, up to `[timing] front_tries` Alt taps `front_wait_ms` apart, so a dialog that shows during them may still get a tap, which alone cannot confirm it.
     - The config check refuses an `esc` other than the lone Esc key and an empty class or program (`featcfg.rs` `check_g25`), and unit tests pin the Esc and Alt rules (`g25wins.rs`, `g25watch.rs`).
     - It keeps the owner's clipboard and removes its copies from Windows clipboard history after; its result names windows by class and program only, never a title.
-  - `kx-gates g27 keyxtend` clicks the running product's keys, then its best word chip, into a fresh target-window's plain box for each `[g27]` case, each click only while the keyboard is on top there.
+  - `kx-gates g21 keyxtend`, `g27 keyxtend` and `g8 predict` refuse to run while the product runs, as each starts its own copies of `[g8] program` on settings it writes (`owncopy.rs`).
+    - They keep the owner's settings file and its last good copy, refusing a file over the settings store's cap before they change anything. Both files come back byte for byte after, also on a panic (a drop guard), and the result says whether they did.
+    - Every copy they write settings for runs with learning paused (`[predict] learn = false`), so a gate never touches the owner's learned words.
+    - Every copy is ended before the owner's file comes back: Quit first, then, when it has not ended in time, through the handle kx-gates opened for it (`close::end_started`), and any button or key it left down is let go. A copy that had to be ended fails the gate and is never left running; a drop guard ends it on a panic too.
+  - `kx-gates g27 keyxtend` clicks its copy's keys, then its best word chip, into a fresh target-window's plain box for each `[g27]` case, each click only while the keyboard is on top there.
     - It switches the session's input language to the case's first installed layout, as the language hotkey does, and puts target-window's first layout back after each box, also when a step failed; the result says whether it came back.
-    - Its edge case types a prefix, clicks the box's left end to move the caret, then clicks the best chip; the box's text must not change.
+    - Its edge case runs on a second copy with the mouse module in `[kernel] disabled`, so the copy never hears the click into the box. It types a prefix, clicks the box's left end to move the caret, then clicks the best chip; the box's text must not change. When chip-0 has left the lane, the verdict is "setup failed", never a typing fail.
     - It reads the box's text by UI Automation only to compare it, capped by `[g27] max_chars`. Its result holds the config's prefixes, times and booleans, never the box's text or a chip's word.
-  - `kx-gates g21 keyxtend` runs the product's own field watch (`WinFieldWatch`) inside kx-gates over target-window's password box, the password field of G21's own Chrome page and target-window's plain box. In each it types `[g21_product]`'s case with the product's keys and puts the layout back as G27 does; its result holds each box's kind, the lock, chip counts and booleans.
-  - `kx-gates g8 predict` refuses to run while the product runs. It keeps the `[g8] program` copy's settings file and its last good copy, refusing a file over the settings store's cap before it changes anything.
-    - It writes predict on, with learning paused so the gate's words never teach the owner's learner, then predict in `[kernel] disabled`. Both files come back byte for byte after, also on a panic (a drop guard), and the result says whether they did.
-    - The on run types `[g8_predict]` words through chips into a target-window it starts, never Notepad or Word, and closes it after. When that copy does not quit, the off run is skipped, as the copy could still save its settings.
+  - `kx-gates g21 keyxtend` runs the product's own field watch (`WinFieldWatch`) inside kx-gates over target-window's password box, the password field of G21's own Chrome page and target-window's plain box. In each it types `[g21_product]`'s case with its copy's keys and puts the layout back as G27 does; its result holds each box's kind, the lock, chip counts and booleans.
+  - `kx-gates g8 predict` writes predict on, then predict in `[kernel] disabled`, for its two cold starts.
+    - The on run types `[g8_predict]` words through chips into a target-window it starts, never Notepad or Word, and closes it after. The off run starts once the on copy has ended, by Quit or through its handle; only a copy that could not be ended stops it.
   - G27, G21's product half and `g8 predict` take no screenshot and save no file. They type only the config's prefixes and the chips' words, into target-window or G21's page.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
@@ -147,7 +151,7 @@ The overlap check compares path text, so a short 8.3 name for the install folder
 
 G25 opens the real power dialog on the owner's PC, as the product must be checked there. Only Esc or the owner closes it, and a dialog that never comes to the front stays open for the owner, so a gate never confirms a shut-down.
 
-G27 and G21's product half type on the owner's running copy with the owner's own learning setting, as the product must be checked as it runs. So a picked word, or a typed prefix the product ends as a word, may count once in the owner's word memory.
+A copy G21, G27 or `g8 predict` had to end may be cut mid-write. Its learning is paused, so it writes no learned words, and the owner's settings file is put back after it ended.
 
 G25 reads the owner's own `shortcut_pages` to find each key's page. A page the owner arranged changes only where the keys sit, as G25 still clicks each one by its id.
 
