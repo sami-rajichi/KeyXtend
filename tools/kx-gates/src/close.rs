@@ -71,21 +71,30 @@ fn ask_quit(instance: &dyn Instance) -> Result<(), Unasked> {
     instance.send(Command::Quit).map_err(Unasked::from)
 }
 
+/// What the Quit tries came to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Asked {
+    /// Quit reached the copy at this try.
+    Sent(u32),
+    /// The copy had ended before Quit reached it, after this many failed tries.
+    Gone(u32),
+}
+
 /// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
-/// yet; it stops once `gone` says the copy ended. The tries it took; a refusal is final.
+/// yet; it stops once `gone` says the copy ended. A refusal is final.
 pub(crate) fn ask_quit_tries(
     instance: &dyn Instance,
     tries: u32,
     gone: impl Fn() -> bool,
     mut wait: impl FnMut(),
-) -> Result<u32, String> {
+) -> Result<Asked, String> {
     let mut n = 1;
     loop {
         if gone() {
-            return Ok(n - 1);
+            return Ok(Asked::Gone(n - 1));
         }
         match instance.send(Command::Quit) {
-            Ok(()) => return Ok(n),
+            Ok(()) => return Ok(Asked::Sent(n)),
             Err(UiError::NoWindow) if n < tries => wait(),
             Err(e) => return Err(why_not(e)),
         }

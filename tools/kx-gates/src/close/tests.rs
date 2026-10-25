@@ -26,7 +26,10 @@ fn a_copy_just_started_gets_quit_once_it_listens() {
             late.borrow_mut().push(claim);
         }
     };
-    assert_eq!(ask_quit_tries(&session.clone(), 5, || false, wait), Ok(3));
+    assert_eq!(
+        ask_quit_tries(&session.clone(), 5, || false, wait),
+        Ok(Asked::Sent(3))
+    );
     assert_eq!(session.sent(), [Command::Quit]);
     let never = ask_quit_tries(&FakeInstance::new(), 3, || false, || {});
     assert!(
@@ -40,7 +43,7 @@ fn a_copy_that_ended_by_itself_gets_no_more_tries() {
     let session = FakeInstance::new();
     let gone = std::cell::Cell::new(false);
     let tries = ask_quit_tries(&session.clone(), 5, || gone.get(), || gone.set(true));
-    assert_eq!(tries, Ok(1), "one try, then it was gone");
+    assert_eq!(tries, Ok(Asked::Gone(1)), "one try, then it was gone");
     assert!(session.sent().is_empty());
 }
 

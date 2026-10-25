@@ -6,7 +6,7 @@ use kx_platform_windows::WindowsPlatform;
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
-use crate::close::{ask_quit_tries, ended_within};
+use crate::close::{Asked, ask_quit_tries, ended_within};
 use crate::probe;
 use crate::proc::Process;
 use crate::win;
@@ -19,7 +19,7 @@ const CLEAN: u32 = 0;
 pub enum Gone {
     /// It took Quit and ended in time, cleanly.
     Quit,
-    /// It ended by itself with another exit code, or one Windows could not read.
+    /// It ended by itself before Quit reached it, or with another exit code, or one Windows could not read.
     Crashed(Option<u32>),
     /// It had to be ended through its handle.
     Ended,
@@ -73,16 +73,17 @@ impl Ended {
     }
 }
 
-/// How a copy went once Quit reached it, when `asked`: `within` waits for its end, `code` reads its exit code, and
-/// when it did not end, `end` ends it; an end that failed on a copy already gone is only a note.
+/// How a copy went after the Quit tries, `asked`: `within` waits for its end, `code` reads its exit code, and when it
+/// did not end, `end` ends it; an end that failed on a copy already gone is only a note.
 pub(crate) fn finish(
-    asked: bool,
+    asked: &Result<Asked, String>,
     within: impl Fn() -> bool,
     end: impl FnOnce() -> Result<(), String>,
     code: impl Fn() -> Option<u32>,
 ) -> (Gone, Option<String>) {
-    if asked && within() {
-        return (by_code(code()), None);
+    let sent = matches!(asked, Ok(Asked::Sent(_)));
+    if asked.is_ok() && within() {
+        return (by_itself(sent, code()), None);
     }
     let failed = end().err();
     if !within() {
@@ -90,13 +91,14 @@ pub(crate) fn finish(
     }
     match failed {
         None => (Gone::Ended, None),
-        Some(e) => (by_code(code()), Some(e)),
+        Some(e) => (by_itself(sent, code()), Some(e)),
     }
 }
 
-/// A copy that ended by itself: quit when its exit code is clean, crashed otherwise.
-fn by_code(code: Option<u32>) -> Gone {
-    if code == Some(CLEAN) {
+/// A copy that ended by itself: quit only when Quit reached it, `sent`, and its exit code is clean, crashed otherwise.
+/// A crash that exits with a clean code after Quit reached it reads as quit, as Windows gives no other sign of it.
+fn by_itself(sent: bool, code: Option<u32>) -> Gone {
+    if sent && code == Some(CLEAN) {
         Gone::Quit
     } else {
         Gone::Crashed(code)
@@ -112,12 +114,7 @@ pub fn end(ctx: &Ctx, process: &Process) -> Ended {
         ask_quit_tries(&*p.instance(), g.quit_tries, || process.ended(), wait)
     });
     let within = || ended_within(ctx, process);
-    let (gone, note) = finish(
-        asked.is_ok(),
-        within,
-        || process.end(),
-        || process.exit_code(),
-    );
+    let (gone, note) = finish(&asked, within, || process.end(), || process.exit_code());
     let released = if gone.ok() {
         Vec::new()
     } else {

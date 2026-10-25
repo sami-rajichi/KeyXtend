@@ -10,7 +10,7 @@ use spike_core::weak::Job;
 use crate::apps::Ctx;
 use crate::copyend::{self, Ended};
 use crate::proc::Process;
-use crate::{admin, budget, close, product, win};
+use crate::{admin, budget, product, win};
 
 /// The product as G8 started it.
 pub struct Started {
@@ -30,26 +30,6 @@ impl Started {
         self.shown_at
             .map(|t| budget::ms(t.saturating_duration_since(self.at)))
     }
-}
-
-/// Asks the copy G8 just started, held as `process`, to quit; what is left of it, for the error.
-fn quit_left(ctx: &Ctx, process: &Process) -> String {
-    match close::quit_started(ctx, process) {
-        Ok(true) => "it quit".to_string(),
-        Ok(false) => "it still runs; close it".to_string(),
-        Err(q) => format!("it still runs ({q}); close it"),
-    }
-}
-
-/// Puts `process`, just started, in `job`; a copy it cannot cap is asked to quit, so no uncapped copy stays.
-fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
-    let uncapped = |e| {
-        format!(
-            "{e}: the copy runs uncapped, so {}",
-            quit_left(ctx, process)
-        )
-    };
-    job.assign_handle(process.handle()).map_err(uncapped)
 }
 
 /// A start that failed: why, and how the copy it started went, none when no copy started.
@@ -76,8 +56,25 @@ impl From<Failed> for String {
     }
 }
 
+/// Why a copy just started that kx-gates cannot open to measure fails its start.
+const UNMEASURED: &str = "G8 cannot measure the copy";
+/// Why a copy just started that its job cannot hold fails its start.
+const UNCAPPED: &str = "the copy would run uncapped";
+
+/// `got`, or a failed start that names `what` and ends the copy with `end`, so no copy stays that G8 cannot hold.
+pub(crate) fn or_end<T>(
+    got: Result<T, String>,
+    what: &str,
+    end: impl FnOnce() -> Ended,
+) -> Result<T, Failed> {
+    got.map_err(|e| Failed {
+        why: format!("{e}: {what}"),
+        ended: Some(end()),
+    })
+}
+
 /// Starts the product through the shell with `args`, in `job` when given, and waits for its first shown window.
-/// A copy it cannot open is ended as a gate ends its copies (`copyend`), so the next run still starts cold.
+/// A copy it cannot open or cap is ended as a gate ends its copies (`copyend`), so the next run still starts cold.
 pub fn start(
     ctx: &Ctx,
     program: &Path,
@@ -88,12 +85,12 @@ pub fn start(
     let (at_us, at) = (budget::now_us(), Instant::now());
     let given = admin::start_shown(program, args)?;
     // The shell's handle lacks the rights to measure, so the process is opened again.
-    let process = Process::to_measure(given.pid()).map_err(|e| Failed {
-        why: format!("{e}: G8 cannot measure the copy"),
-        ended: Some(copyend::end(ctx, &given)),
+    let process = or_end(Process::to_measure(given.pid()), UNMEASURED, || {
+        copyend::end(ctx, &given)
     })?;
     if let Some(job) = job {
-        cap(ctx, job, &process)?;
+        let held = job.assign_handle(process.handle());
+        or_end(held, UNCAPPED, || copyend::end(ctx, &given))?;
     }
     let pid = process.pid();
     let shown = || {
@@ -158,7 +155,13 @@ pub fn broke(
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
+    use kx_platform_fake::FakeInstance;
+
     use super::*;
+    use crate::close::ask_quit_tries;
+    use crate::copyend::Gone;
 
     /// A sample warm-up, in ms.
     const WARM_MS: u64 = 10_000;
@@ -199,5 +202,50 @@ mod tests {
         let refused = broke("x", None, 90, Some(&Err("no command window".into())));
         assert!(refused.contains("no command window"), "{refused}");
         assert_eq!(broke("x", None, 90, None), "x", "nothing left to name");
+    }
+
+    /// How a fake copy went: Quit never lands on the fake command window, so it is ended, or still runs when `stuck`.
+    fn fake_end(stuck: bool) -> Ended {
+        let asked = ask_quit_tries(&FakeInstance::new(), 3, || false, || {});
+        let forced = Cell::new(false);
+        let end = || {
+            if stuck {
+                return Err("access denied".to_string());
+            }
+            forced.set(true);
+            Ok(())
+        };
+        let (gone, note) = copyend::finish(&asked, || forced.get(), end, || None);
+        Ended {
+            gone,
+            note,
+            released: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_copy_the_job_cannot_hold_is_ended_and_carries_its_end() {
+        let ran = Cell::new(false);
+        let uncapped = or_end::<()>(Err("job: access denied".into()), UNCAPPED, || {
+            ran.set(true);
+            fake_end(false)
+        });
+        let f = uncapped.expect_err("uncapped");
+        assert!(ran.get() && f.why.contains(UNCAPPED), "{f:?}");
+        let gone = f.ended.as_ref().map(|e| e.gone);
+        assert_eq!(gone, Some(Gone::Ended));
+        assert!(copyend::may_follow(gone), "it no longer runs");
+        assert!(String::from(f).contains("ended by the gate"));
+        let stuck = or_end::<()>(Err("job: x".into()), UNCAPPED, || fake_end(true));
+        let gone = stuck.expect_err("uncapped").ended.map(|e| e.gone);
+        assert!(
+            !copyend::may_follow(gone),
+            "it still runs, so no copy follows"
+        );
+    }
+
+    #[test]
+    fn a_copy_the_job_holds_is_never_ended() {
+        assert_eq!(or_end(Ok(7), UNCAPPED, || unreachable!("ended")), Ok(7));
     }
 }

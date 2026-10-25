@@ -27,7 +27,7 @@ use crate::modekey::{ModeKey, Wait};
 use crate::out::say;
 use crate::proc::Process;
 use crate::product::{self, Keyboard, NAME};
-use crate::{admin, close, g8start, out, probe, win};
+use crate::{admin, close, copyend, g8start, out, probe, win};
 
 /// The product's test build while it runs; dropping it quits it and starts the owner's copy again, best effort.
 pub struct TestBuild<'a> {
@@ -60,11 +60,19 @@ impl<'a> TestBuild<'a> {
             owner,
         };
         let flag = [ctx.cfg.gate_input.flag.clone()];
-        let started = g8start::start(ctx, &build.program, &flag, job)?;
+        let started =
+            g8start::start(ctx, &build.program, &flag, job).map_err(|f| build.failed(f))?;
         build.since_us = started.at_us;
         build.process = Some(started.process);
         build.ready()?;
         Ok(build)
+    }
+
+    /// Says why its start failed, after starting the owner's copy again only once the copy it started no longer runs.
+    fn failed(&mut self, f: g8start::Failed) -> String {
+        let over = copyend::may_follow(f.ended.as_ref().map(|e| e.gone));
+        let _ = self.restore(over && gone(None, || product::running().is_some()));
+        String::from(f)
     }
 
     /// Waits up to `start_ms` for its gate warning and its keyboard, and fails at once with its exit code if it ended.

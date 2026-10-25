@@ -19,8 +19,8 @@ fn listening() -> (FakeInstance, Box<dyn Claim>) {
 }
 
 /// The Quit tries on `session`, which ended by itself when `gone`.
-fn asked(session: &FakeInstance, gone: bool) -> bool {
-    ask_quit_tries(&session.clone(), 3, || gone, || {}).is_ok()
+fn asked(session: &FakeInstance, gone: bool) -> Result<Asked, String> {
+    ask_quit_tries(&session.clone(), 3, || gone, || {})
 }
 
 /// An end that marks `forced` and works.
@@ -36,7 +36,7 @@ fn a_copy_that_takes_quit_and_exits_cleanly_is_never_ended_by_force() {
     let (session, _claim) = listening();
     let forced = Cell::new(false);
     let got = finish(
-        asked(&session, false),
+        &asked(&session, false),
         || true,
         forcing(&forced),
         || Some(CLEAN),
@@ -49,7 +49,7 @@ fn a_copy_that_takes_quit_and_exits_cleanly_is_never_ended_by_force() {
 fn a_copy_that_crashed_reads_as_crashed_not_as_quit() {
     let forced = Cell::new(false);
     let got = finish(
-        asked(&FakeInstance::new(), true),
+        &asked(&FakeInstance::new(), true),
         || true,
         forcing(&forced),
         || Some(CRASH),
@@ -63,7 +63,7 @@ fn a_copy_that_never_hears_quit_is_ended_and_still_fails() {
     let forced = Cell::new(false);
     let ended_code = || forced.get().then_some(1);
     let got = finish(
-        asked(&FakeInstance::new(), false),
+        &asked(&FakeInstance::new(), false),
         || forced.get(),
         forcing(&forced),
         ended_code,
@@ -77,7 +77,7 @@ fn a_copy_that_took_quit_but_hangs_is_ended() {
     let (session, _claim) = listening();
     let forced = Cell::new(false);
     let got = finish(
-        asked(&session, false),
+        &asked(&session, false),
         || forced.get(),
         forcing(&forced),
         || None,
@@ -90,7 +90,7 @@ fn a_copy_that_took_quit_but_hangs_is_ended() {
 fn a_copy_that_cannot_be_ended_still_runs() {
     let refused = || Err("access denied".to_string());
     let got = finish(
-        asked(&FakeInstance::new(), false),
+        &asked(&FakeInstance::new(), false),
         || false,
         refused,
         || None,
@@ -101,18 +101,41 @@ fn a_copy_that_cannot_be_ended_still_runs() {
 
 #[test]
 fn an_end_that_fails_on_a_copy_already_gone_is_a_note_not_a_failure() {
+    let (session, _claim) = listening();
     let late = Cell::new(false);
     let exited = || {
         late.set(true);
         Err("access denied".to_string())
     };
     let got = finish(
-        asked(&FakeInstance::new(), false),
+        &asked(&session, false),
         || late.get(),
         exited,
         || Some(CLEAN),
     );
     assert_eq!(got, (Gone::Quit, Some("access denied".to_string())));
+}
+
+#[test]
+fn a_copy_gone_before_any_quit_reads_as_crashed_even_with_a_clean_code() {
+    let forced = Cell::new(false);
+    let gone = asked(&FakeInstance::new(), true);
+    assert_eq!(gone, Ok(Asked::Gone(0)), "no Quit was sent");
+    let got = finish(&gone, || true, forcing(&forced), || Some(CLEAN));
+    assert_eq!(got, (Gone::Crashed(Some(CLEAN)), None));
+    assert!(!forced.get());
+}
+
+#[test]
+fn a_copy_that_left_by_itself_before_quit_reached_it_reads_as_crashed() {
+    let late = Cell::new(false);
+    let exited = || {
+        late.set(true);
+        Err("access denied".to_string())
+    };
+    let unheard = asked(&FakeInstance::new(), false);
+    let got = finish(&unheard, || late.get(), exited, || Some(CLEAN));
+    assert_eq!(got.0, Gone::Crashed(Some(CLEAN)), "Quit never reached it");
 }
 
 #[test]
