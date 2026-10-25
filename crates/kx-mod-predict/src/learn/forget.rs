@@ -27,7 +27,7 @@ pub(super) enum Use {
     Back(u16),
 }
 
-/// The seed words the user forgot, by spelling; no `Debug`, so none is printed.
+/// The seed words the user forgot, by spelling, at most `max_words`; no `Debug`, so none is printed.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(super) struct Blocked {
     /// Each forgotten spelling's mark.
@@ -65,15 +65,30 @@ impl Blocked {
         Use::Back(uses)
     }
 
-    /// Adds `text` on `day` with no uses; at `cap` words it first drops the least recently used, which it gives.
+    /// Adds `text` on `day` with no uses; when full for `cap` it first drops the least recently used, which it gives.
     fn block(&mut self, text: &str, day: u32, cap: usize) -> Option<(Box<str>, Mark)> {
-        let full = self.marks.len() >= cap;
+        let full = self.marks.len() >= room(cap);
         let oldest = (self.marks.iter().filter(|_| full))
-            .min_by_key(|(text, mark)| (mark.day, mark.uses, *text))
+            .min_by_key(|(text, mark)| age(text, **mark))
             .map(|(text, _)| text.clone());
         let dropped = oldest.and_then(|t| self.marks.remove_entry(&t));
         self.marks.insert(text.into(), Mark { uses: 0, day });
         dropped
+    }
+
+    /// Drops the least recently used until the list fits `cap`, as after a `max_words` lowered since the save.
+    pub(super) fn trim(&mut self, cap: usize) {
+        let mut ages: Vec<_> = self
+            .marks
+            .iter()
+            .map(|(text, mark)| age(text, *mark))
+            .collect();
+        ages.sort_unstable();
+        let extra = ages.len().saturating_sub(room(cap));
+        let gone: Vec<Box<str>> = ages.iter().take(extra).map(|a| a.2.into()).collect();
+        for text in gone {
+            self.marks.remove(&text);
+        }
     }
 
     /// Puts `text` back with `mark`.
@@ -82,11 +97,21 @@ impl Blocked {
     }
 }
 
-/// What the last forget took, to put back; no `Debug`, as it holds a spelling.
+/// The words the blocklist keeps for `cap`: never fewer than the one just forgotten.
+fn room(cap: usize) -> usize {
+    cap.max(1)
+}
+
+/// The order the least recently used leave in: the day, then the uses, then the spelling.
+fn age(text: &str, mark: Mark) -> (u32, u16, &str) {
+    (mark.day, mark.uses, text)
+}
+
+/// What the last forget took, to put back; no `Debug`, as it holds spellings.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(super) struct Undo {
-    /// The word removed, under its id.
-    word: Option<(Id, Word)>,
+    /// The words removed, each under its id.
+    words: Vec<(Id, Word)>,
     /// The chains removed, each with its table's place.
     links: Vec<(usize, Link)>,
     /// The spelling the forget blocked.
@@ -96,19 +121,20 @@ pub(super) struct Undo {
 }
 
 impl Learner {
-    /// Forgets the word a chip shows as `spelling` on `day`, with every chain holding it; a seed word stays hidden
-    /// until typed `min_uses` times. False when there was nothing to forget.
+    /// Forgets the word a chip shows as `spelling` on `day`, with its strays and every chain holding them; a seed
+    /// word stays hidden until typed `min_uses` times. False when there was nothing to forget.
     pub fn forget(&mut self, seed: Option<&Pack<'_>>, spelling: &str, day: u32) -> bool {
         let seed = self.own(seed);
-        let id = self.lookup(seed, spelling);
+        let (spelt, id) = self.resolve(seed, spelling);
         let text: Option<Box<str>> = match id {
             Some(id) => self.words.get(id).map(|w| w.text.clone()),
             None => seed_spelling(seed, spelling).map(Box::from),
         };
         let mut undo = Undo::default();
-        if let Some(id) = id {
-            undo.word = self.words.remove(id).map(|word| (id, word));
-            undo.links = self.unlink(id);
+        for id in id.into_iter().chain(self.strays(seed, spelt)) {
+            undo.words
+                .extend(self.words.remove(id).map(|word| (id, word)));
+            undo.links.extend(self.unlink(id));
         }
         let seeded = text.filter(|t| seed_spelling(seed, t) == Some(&**t));
         if let Some(text) = seeded.filter(|t| !self.blocked.contains(t)) {
@@ -122,7 +148,7 @@ impl Learner {
         true
     }
 
-    /// Puts back the word the last forget took, exactly as it was, once and only before anything else changes.
+    /// Puts back what the last forget took, exactly as it was, once and only before anything else changes.
     pub fn undo_forget(&mut self) -> bool {
         let Some(undo) = self.undo.take() else {
             return false;
@@ -133,7 +159,7 @@ impl Learner {
         if let Some((text, mark)) = undo.dropped {
             self.blocked.put(text, mark);
         }
-        if let Some((id, word)) = undo.word {
+        for (id, word) in undo.words {
             self.words.put(self.casing(), id, word);
         }
         for (at, link) in &undo.links {

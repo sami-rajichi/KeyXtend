@@ -9,7 +9,7 @@ pub(super) const TENTHS: usize = 10;
 /// Counts halve this far below the 16-bit top: room for the most uses one learn adds, `min_uses` when a forgotten
 /// word comes back.
 pub(super) const HEADROOM: u16 = 1 << u8::BITS;
-/// The highest count a table keeps; a use past it halves the table first.
+/// The highest count a table keeps; a use past it halves every table first.
 pub(super) const COUNT_TOP: u16 = u16::MAX - HEADROOM;
 
 /// The most entries a table capped at `cap` holds before its clean-up.
@@ -17,14 +17,20 @@ pub(super) fn peak(cap: usize) -> usize {
     cap.saturating_mul(CLEAN_AT_TENTHS) / TENTHS
 }
 
-/// True when adding `n` uses to `count` passes `COUNT_TOP`, so the table halves first.
+/// The most entries a table capped at `cap` ever holds: its peak, plus the one a learn adds before the clean-up.
+pub(super) fn most(cap: usize) -> usize {
+    peak(cap).saturating_add(1)
+}
+
+/// True when adding `n` uses to `count` passes `COUNT_TOP`, so every table halves first.
 pub(super) fn too_high(count: u16, n: u16) -> bool {
     u32::from(count) + u32::from(n) > u32::from(COUNT_TOP)
 }
 
-/// `count` halved, rounded up so no entry falls to 0; a count at least another's stays so.
-pub(super) fn halved(count: u16) -> u16 {
-    count.div_ceil(2)
+/// `count` halved, rounded up, but kept at `floor` when it held that many: max(⌈c/2⌉, min(c, floor)). It is
+/// monotone, so every order holds, and with `min_uses` as `floor` an offered word stays offered.
+pub(super) fn halved(count: u16, floor: u16) -> u16 {
+    count.div_ceil(2).max(count.min(floor))
 }
 
 /// True when an entry last used on `last` was unused for more than `days` by `today`.

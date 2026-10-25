@@ -4,6 +4,7 @@
 use proptest::prelude::*;
 
 use super::clean::peak;
+use super::tests::word;
 use super::*;
 
 /// Random runs tried.
@@ -32,17 +33,6 @@ enum Step {
     Undo,
     /// Purge, `days` later.
     Purge(u32),
-}
-
-/// Word `n` of the vocabulary, in letters only.
-fn word(n: usize) -> String {
-    let letters: Vec<char> = ('a'..='z').collect();
-    let at = n % letters.len();
-    format!(
-        "w{}{}",
-        letters[at],
-        letters[n / letters.len() % letters.len()]
-    )
 }
 
 /// Any step.
@@ -125,8 +115,8 @@ fn lengths(l: &Learner) -> Vec<usize> {
     std::iter::once(l.words.len()).chain(chains).collect()
 }
 
-/// Fails unless every table is within its peak, the blocklist within `max_words`, and tables a clean-up shrank
-/// within their caps.
+/// Fails unless every table is within its peak, the blocklist within `max_words`, tables a clean-up shrank within
+/// their caps, and every chain names a held word.
 fn check_caps(l: &Learner, before: &[usize], learned: bool) -> Result<(), TestCaseError> {
     let after = lengths(l);
     let caps = std::iter::once(l.cfg.max_words).chain(l.chains.iter().map(|_| l.cfg.max_chains));
@@ -147,6 +137,11 @@ fn check_caps(l: &Learner, before: &[usize], learned: bool) -> Result<(), TestCa
             .iter()
             .all(|(text, _)| l.words.find(text).is_none())
     );
+    for table in &l.chains {
+        let mut keys = (0..table.len()).map(|at| table.entry(at).0);
+        let held = |key: &[Id]| key.iter().all(|&id| l.words.get(id).is_some());
+        prop_assert!(keys.all(held), "a chain names a word not held");
+    }
     Ok(())
 }
 

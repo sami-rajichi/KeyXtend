@@ -92,3 +92,72 @@ fn an_elision_reaches_its_learned_follower() {
     l.learn(Some(&fr), "écoute", &["l'"], DAY);
     assert_eq!(followers(&l, Some(&fr), &["l'"]), ["écoute"]);
 }
+
+#[test]
+fn an_entry_learned_before_the_pack_merges_into_the_pack_spelling() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "ecole ecole", DAY);
+    assert_eq!(l.view(Some(&fr)).count("ecole"), 0, "read through the pack");
+    l.learn(Some(&fr), "ecole", &[], DAY + 1);
+    assert_eq!(listed(&l, "ec"), ["école"]);
+    assert_eq!(l.view(Some(&fr)).count("école"), 3);
+    assert!(!guessed(&l, Some(&fr), &[], "e").contains(&"ecole".to_owned()));
+}
+
+#[test]
+fn a_merge_moves_the_counts_and_re_keys_the_chains() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "l' ecole l' ecole l' école", DAY);
+    l.learn(Some(&fr), "école", &["l'"], DAY + 1);
+    assert_eq!(listed(&l, "ec"), ["école"]);
+    let view = l.view(Some(&fr));
+    assert_eq!((view.count("école"), view.chain(&["l'"], "école")), (4, 4));
+    assert_eq!(view.chain(&["école"], "l'"), 2);
+    assert_eq!(
+        view.chain(&["école", "l'"], "école"),
+        2,
+        "merged keys add up"
+    );
+    assert_eq!(lengths(&l), [2, 2]);
+}
+
+#[test]
+fn forgetting_a_pack_spelling_takes_its_strays_and_undo_restores_them() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "l' ecole l' école", DAY);
+    let before = l.clone();
+    assert!(l.forget(Some(&fr), "école", DAY));
+    assert_eq!((listed(&l, "ec"), lengths(&l)), (vec![], vec![0, 0]));
+    assert!(l.view(Some(&fr)).blocked("école"));
+    assert!(l.undo_forget());
+    assert_eq!(l, before);
+}
+
+#[test]
+fn a_merged_chain_keeps_the_later_day() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "l' école", DAY);
+    teach(&mut l, None, "l' ecole", DAY + 5);
+    l.learn(Some(&fr), "ecole", &[], DAY + 5);
+    l.purge(DAY + CFG.forget_days + 1);
+    assert_eq!(l.view(Some(&fr)).chain(&["l'"], "école"), 2);
+}
+
+#[test]
+fn a_stray_takes_the_pack_spelling_with_its_capitals() {
+    let bytes = english();
+    let en = Pack::parse(&bytes).unwrap();
+    let mut l = learner("en");
+    teach(&mut l, None, "london london", DAY);
+    l.learn(Some(&en), "london", &[], DAY);
+    assert_eq!(listed(&l, "lo"), ["London"]);
+    assert_eq!(l.view(Some(&en)).count("London"), 3);
+}

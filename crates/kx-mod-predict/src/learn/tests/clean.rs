@@ -129,14 +129,51 @@ fn counts_near_the_limit_halve_and_keep_their_order() {
     assert_eq!(counts(&l), [top, 3, 2, 1]);
     l.learn(None, "top", &["a"], DAY);
     let half = u32::from(COUNT_TOP.div_ceil(2));
-    assert_eq!(counts(&l), [half + 1, 2, 1, 1]);
+    assert_eq!(
+        counts(&l),
+        [half + 1, 2, 2, 1],
+        "no count falls below min_uses"
+    );
     let view = l.view(None);
     assert_eq!(view.chain(&["a"], "top"), half + 1);
-    assert_eq!(view.chain(&["a"], "a"), 1);
-    assert_eq!(
-        view.chain(&["b", "a"], "a"),
-        1,
-        "another length keeps its counts"
-    );
-    assert_eq!(view.uses(), u64::from(half + 1 + 2 + 1 + 1));
+    assert_eq!(view.chain(&["a"], "a"), 2);
+    assert_eq!(view.chain(&["b", "a"], "a"), 1);
+    assert_eq!(view.uses(), u64::from(half + 1 + 2 + 2 + 1));
+}
+
+/// Learns `top` until its count passes the top once, so every table halves.
+fn halve(l: &mut Learner) {
+    for _ in 0..=COUNT_TOP {
+        l.learn(None, "top", &[], DAY);
+    }
+}
+
+#[test]
+fn a_word_at_min_uses_stays_offered_after_a_halving() {
+    let mut l = learner("en");
+    teach(&mut l, None, "zork zork odd", DAY);
+    halve(&mut l);
+    let view = l.view(None);
+    assert_eq!((view.count("zork"), view.count("odd")), (CFG.min_uses, 1));
+    assert_eq!(guessed(&l, None, &[], "zo"), ["zork"]);
+}
+
+#[test]
+fn a_halving_halves_every_table_so_chain_shares_survive() {
+    let mut l = learner("en");
+    for _ in 0..4 {
+        teach(&mut l, None, "my big park", DAY);
+        l.learn(None, "my", &[], DAY);
+    }
+    let shares = |l: &Learner| {
+        let view = l.view(None);
+        let chains = (
+            view.chain(&["my"], "big"),
+            view.chain(&["my", "big"], "park"),
+        );
+        (view.count("my"), chains)
+    };
+    assert_eq!(shares(&l), (8, (4, 4)));
+    halve(&mut l);
+    assert_eq!(shares(&l), (4, (2, 2)));
 }

@@ -10,9 +10,12 @@ use crate::track::{Query, Reading};
 mod bytes;
 mod clean;
 mod forget;
+mod load;
 #[cfg(feature = "build")]
 mod seed;
 mod size;
+#[cfg(feature = "build")]
+mod speed;
 
 /// A day number, as the module counts them.
 const DAY: u32 = 20_000;
@@ -45,8 +48,8 @@ fn learner(iso: &str) -> Learner {
     Learner::new(iso, CFG).unwrap()
 }
 
-/// The `n`th test word, in letters only, as a learned word holds no digit.
-fn word(n: usize) -> String {
+/// The `n`th test word, in letters only, as a learned word holds no digit; the property tests share it.
+pub(super) fn word(n: usize) -> String {
     let letters: Vec<char> = ('a'..='z').collect();
     let (mut n, mut out) = (n, String::from("w"));
     loop {
@@ -101,6 +104,25 @@ fn followers(l: &Learner, seed: Option<&Pack<'_>>, context: &[&str]) -> Vec<Stri
     l.view(seed)
         .following(context, &mut |w| out.push(w.to_owned()));
     out
+}
+
+#[test]
+fn a_min_uses_past_the_headroom_is_refused() {
+    let most = LearnConfig {
+        min_uses: MAX_MIN_USES,
+        ..CFG
+    };
+    assert!(Learner::new("en", most).is_ok());
+    let over = LearnConfig {
+        min_uses: MAX_MIN_USES + 1,
+        ..CFG
+    };
+    let refused = Some(LearnFormatError::BadMinUses);
+    assert_eq!(Learner::new("en", over).err(), refused);
+    assert_eq!(
+        Learner::from_bytes(&learner("en").to_bytes(), over).err(),
+        refused
+    );
 }
 
 #[test]

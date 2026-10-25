@@ -6,7 +6,6 @@ use std::fmt;
 use kx_module_api::ports::fits_iso;
 
 use crate::casing::Casing;
-use crate::fold::fold;
 use crate::pack::Pack;
 use crate::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 
@@ -14,19 +13,23 @@ mod bytes;
 mod chains;
 mod clean;
 mod forget;
+mod resolve;
 mod table;
 mod view;
 
 use bytes::MAX_TEXT;
 pub use bytes::{MAGIC, MAX_CHAINS, VERSION};
 use chains::Chains;
-use clean::{CLEAN_AT_TENTHS, HEADROOM, TENTHS, stale};
+use clean::{CLEAN_AT_TENTHS, HEADROOM, TENTHS, stale, too_high};
 use forget::{Blocked, Undo, Use};
+use resolve::seed_spelling;
 use table::{Id, Word, Words};
 pub use view::View;
 
 /// The most `max_words` a learner takes: at its peak, every word id still fits in 16 bits.
-pub const MAX_WORDS: usize = Id::MAX as usize / CLEAN_AT_TENTHS * TENTHS;
+pub const MAX_LEARNED: usize = Id::MAX as usize / CLEAN_AT_TENTHS * TENTHS;
+/// The most `min_uses` a learner takes: one learn adds at most that many uses, which the halving headroom holds.
+pub const MAX_MIN_USES: u32 = HEADROOM as u32;
 
 /// What the learner needs from the settings; the module fills it from `[predict]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,6 +58,9 @@ pub enum LearnFormatError {
     /// The language code is not one a pack could carry.
     #[error("the language code is not one a learned file can carry")]
     BadIso,
+    /// `min_uses` is above `MAX_MIN_USES`.
+    #[error("min_uses is above the most the learner takes")]
+    BadMinUses,
     /// The bytes end before what they announce.
     #[error("the learned-words file ends early")]
     Truncated,
@@ -102,18 +108,20 @@ impl PartialEq for Learner {
 }
 
 impl Learner {
-    /// An empty learner for language `iso`. Settings past a limit stop there: `min_uses` at `HEADROOM`, `max_words`
-    /// at `MAX_WORDS`, `max_chains` at `MAX_CHAINS`, `context_words` at the longest chain a pack holds.
+    /// An empty learner for language `iso`. Settings past a limit stop there: `max_words` at `MAX_LEARNED`,
+    /// `max_chains` at `MAX_CHAINS`, `context_words` at the longest chain a pack holds.
     ///
     /// # Errors
-    /// `BadIso` when `iso` is not a code a pack could carry.
+    /// `BadIso` when `iso` is not a code a pack could carry; `BadMinUses` when `min_uses` passes `MAX_MIN_USES`.
     pub fn new(iso: &str, cfg: LearnConfig) -> Result<Self, LearnFormatError> {
         if !fits_iso(iso) {
             return Err(LearnFormatError::BadIso);
         }
+        if cfg.min_uses > MAX_MIN_USES {
+            return Err(LearnFormatError::BadMinUses);
+        }
         let cfg = LearnConfig {
-            min_uses: cfg.min_uses.min(u32::from(HEADROOM)),
-            max_words: cfg.max_words.min(MAX_WORDS),
+            max_words: cfg.max_words.min(MAX_LEARNED),
             max_chains: cfg.max_chains.min(MAX_CHAINS),
             context_words: cfg.context_words.min(usize::from(MAX_CHAIN - 1)),
             ..cfg
@@ -137,7 +145,8 @@ impl Learner {
     }
 
     /// Adds one use of `word` and of each chain it ends after `context`, oldest first, on `day`; `seed` maps an
-    /// informal spelling to the pack's. A pack of another language is ignored, and so is a word over `MAX_TEXT`.
+    /// informal spelling to the pack's, and entries stored as typed that it spells so merge into it. A pack of
+    /// another language is ignored, and so is a word over `MAX_TEXT`.
     pub fn learn(&mut self, seed: Option<&Pack<'_>>, word: &str, context: &[&str], day: u32) {
         self.undo = None;
         if word.is_empty() || word.len() > MAX_TEXT {
@@ -182,34 +191,17 @@ impl Learner {
         self.chains.get(width.checked_sub(usize::from(MIN_CHAIN))?)
     }
 
-    /// The id of the learned entry `word` stands for: its own spelling, else the pack's spelling it maps to, else
-    /// the entry it differs from in capitals only.
-    fn lookup(&self, seed: Option<&Pack<'_>>, word: &str) -> Option<Id> {
-        self.words
-            .find(word)
-            .or_else(|| match seed_spelling(seed, word) {
-                Some(text) => self.words.find(text),
-                None => self.words.variant(self.casing(), word),
-            })
-    }
-
-    /// Adds one use of `word` on `day`, as the pack spells it, else as its entry or as typed; a forgotten seed word
-    /// counts on the blocklist instead until it comes back. `None` while it stays hidden.
+    /// Adds one use of `word` on `day` to the entry `resolve` maps it to, after merging its strays; a forgotten seed
+    /// word counts on the blocklist instead until it comes back. `None` while it stays hidden.
     fn add_word(&mut self, seed: Option<&Pack<'_>>, word: &str, day: u32) -> Option<Id> {
-        let casing = self.casing();
-        let spelt = seed_spelling(seed, word);
-        let text = spelt.unwrap_or(word);
+        let (text, found) = self.resolve(seed, word);
         let uses = match self.blocked.used(text, day, self.cfg.min_uses) {
             Use::Free => 1,
             Use::Held => return None,
             Use::Back(uses) => uses,
         };
-        let found = self.words.find(text);
-        let variant = match (found, spelt) {
-            (None, None) => self.words.variant(casing, text),
-            _ => None,
-        };
-        let Some(id) = found.or(variant) else {
+        let casing = self.casing();
+        let Some(id) = self.absorb(seed, text, found, day) else {
             let word = Word {
                 text: text.into(),
                 count: uses,
@@ -217,11 +209,22 @@ impl Learner {
             };
             return self.words.insert(casing, word);
         };
-        if variant.is_some() && casing.lower(text) == text {
+        let held = self.words.get(id).map(|w| (&*w.text != text, w.count));
+        if held.is_some_and(|h| h.0) && casing.lower(text) == text {
             self.words.respell(id, text);
+        }
+        if held.is_some_and(|h| too_high(h.1, uses)) {
+            self.halve();
         }
         self.words.bump(id, uses, day);
         Some(id)
+    }
+
+    /// Halves every count of every table at once, so the scorer's chain-to-word shares hold; `min_uses` is the floor.
+    fn halve(&mut self) {
+        let floor = u16::try_from(self.cfg.min_uses).unwrap_or(HEADROOM);
+        self.words.halve(floor);
+        self.chains.iter_mut().for_each(|table| table.halve(floor));
     }
 
     /// Cleans the word table past its peak, with the chains naming a dropped word, then each chain table.
@@ -243,6 +246,9 @@ impl Learner {
             };
             key.insert(0, before);
             let at = key.len() - usize::from(MIN_CHAIN);
+            if (self.chains.get(at)).is_some_and(|t| too_high(t.count(&key), 1)) {
+                self.halve();
+            }
             if let Some(table) = self.chains.get_mut(at) {
                 table.bump(&key, day);
             }
@@ -254,16 +260,6 @@ impl Learner {
 fn names(gone: &[bool], key: &[Id]) -> bool {
     key.iter()
         .any(|&id| gone.get(usize::from(id)).copied().unwrap_or_default())
-}
-
-/// The pack's spelling `typed` counts toward: itself when the pack spells it so, else the most frequent spelling of
-/// its folded key; `None` when the pack does not hold that key.
-fn seed_spelling<'p>(seed: Option<&Pack<'p>>, typed: &str) -> Option<&'p str> {
-    let pack = seed?;
-    let run = pack.run(&fold(typed, pack.casing()));
-    let exact = run.clone().find(|&id| pack.spelling(id) == typed);
-    let id = exact.or(Some(run.start)).filter(|id| run.contains(id))?;
-    Some(pack.spelling(id)).filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]

@@ -63,6 +63,7 @@ fn a_forgotten_seed_word_is_hidden_until_typed_min_uses_times() {
     assert!(l.forget(Some(&en), "The", DAY));
     let hidden = |l: &Learner| !guessed(l, Some(&en), &[], "th").contains(&"the".to_owned());
     assert!(l.view(Some(&en)).blocked("the") && hidden(&l));
+    assert!(l.view(Some(&en)).blocked("THE"), "read through the pack");
     assert_eq!(l.view(Some(&en)).count("the"), 0);
     teach(&mut l, Some(&en), "in the", DAY + 1);
     assert!(
@@ -96,7 +97,7 @@ fn undo_restores_the_blocklist_and_a_seed_word_never_typed_can_be_forgotten() {
 
 #[cfg(feature = "build")]
 #[test]
-fn the_blocklist_keeps_max_words_dropping_the_oldest_forgotten() {
+fn the_blocklist_keeps_max_words_dropping_the_least_recently_used() {
     let words: Vec<String> = (0..12).map(word).collect();
     let listed: Vec<(&str, u8)> = words.iter().map(|w| (w.as_str(), 100)).collect();
     let bytes = super::seed::pack("en", &listed);

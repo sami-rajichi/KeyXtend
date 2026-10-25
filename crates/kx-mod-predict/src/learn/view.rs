@@ -1,4 +1,4 @@
-//! The learner as the scorer reads it: every word it is asked about maps to its entry as learning mapped it.
+//! The learner as the scorer reads it: every word it is asked about maps to its entry by the rule learning uses.
 
 use super::table::Id;
 use super::{Learner, seed_spelling};
@@ -54,9 +54,7 @@ impl Learned for View<'_> {
 
     fn blocked(&self, word: &str) -> bool {
         let blocked = &self.learner.blocked;
-        blocked.len() > 0
-            && (blocked.contains(word)
-                || seed_spelling(self.seed, word).is_some_and(|t| blocked.contains(t)))
+        blocked.len() > 0 && blocked.contains(seed_spelling(self.seed, word).unwrap_or(word))
     }
 
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str)) {

@@ -3,7 +3,7 @@
 
 use std::cmp::Ordering;
 
-use super::clean::{grow, halved, oldest, peak, too_high};
+use super::clean::{grow, halved, most, oldest, peak};
 use super::table::Id;
 
 /// One chain taken out of a table, to put back on an undo.
@@ -57,18 +57,31 @@ impl Chains {
             .unwrap_or_default()
     }
 
-    /// Adds one use of the chain `key` on `day`, halving every count first when it would pass the top.
+    /// Adds one use of the chain `key` on `day`; the learner halves every table first when it would pass the top.
     pub(super) fn bump(&mut self, key: &[Id], day: u32) {
-        let at = match self.find(key) {
-            Ok(at) => at,
-            Err(at) => return self.place(at, key, 1, day),
-        };
-        if self.counts.get(at).is_some_and(|&c| too_high(c, 1)) {
-            self.counts.iter_mut().for_each(|c| *c = halved(*c));
+        match self.find(key) {
+            Ok(at) => self.add(at, 1, day),
+            Err(at) => self.place(at, key, 1, day),
         }
-        if let (Some(count), Some(last)) = (self.counts.get_mut(at), self.days.get_mut(at)) {
-            *count = count.saturating_add(1);
-            *last = day;
+    }
+
+    /// Halves every count, none below `floor` unless it was already.
+    pub(super) fn halve(&mut self, floor: u16) {
+        self.counts.iter_mut().for_each(|c| *c = halved(*c, floor));
+    }
+
+    /// Names word `into` wherever a key names word `from`; keys that then meet add their counts and keep the later
+    /// day.
+    pub(super) fn rekey(&mut self, from: Id, into: Id) {
+        for mut link in self.retain(|_, key, _| !key.contains(&from)) {
+            link.key
+                .iter_mut()
+                .filter(|id| **id == from)
+                .for_each(|id| *id = into);
+            match self.find(&link.key) {
+                Ok(at) => self.add(at, link.count, link.day.max(self.entry(at).2)),
+                Err(at) => self.place(at, &link.key, link.count, link.day),
+            }
         }
     }
 
@@ -178,9 +191,16 @@ impl Chains {
         lo
     }
 
+    /// Adds `n` uses to entry `at`, last used on `day`.
+    fn add(&mut self, at: usize, n: u16, day: u32) {
+        if let (Some(count), Some(last)) = (self.counts.get_mut(at), self.days.get_mut(at)) {
+            (*count, *last) = (count.saturating_add(n), day);
+        }
+    }
+
     /// Inserts the chain `key` at entry `at` with `count` and `day`, growing no further than its peak needs.
     fn place(&mut self, at: usize, key: &[Id], count: u16, day: u32) {
-        let most = peak(self.cap).saturating_add(1);
+        let most = most(self.cap);
         grow(&mut self.keys, self.width, most.saturating_mul(self.width));
         grow(&mut self.counts, 1, most);
         grow(&mut self.days, 1, most);

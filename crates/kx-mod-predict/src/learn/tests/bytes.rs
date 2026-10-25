@@ -4,14 +4,14 @@ use super::super::bytes::MAX_TEXT;
 use super::*;
 
 /// One word as the byte form lists it: its id, spelling, count and day.
-type W<'a> = (u16, &'a str, u16, u32);
+pub(super) type W<'a> = (u16, &'a str, u16, u32);
 /// One chain: its ids, count and day.
-type C<'a> = (&'a [u16], u16, u32);
+pub(super) type C<'a> = (&'a [u16], u16, u32);
 /// One blocked word: its spelling, uses and day.
 type B<'a> = (&'a str, u16, u32);
 
 /// Settings keeping one chain length.
-const ONE: LearnConfig = LearnConfig {
+pub(super) const ONE: LearnConfig = LearnConfig {
     context_words: 1,
     ..CFG
 };
@@ -23,7 +23,12 @@ fn text(out: &mut Vec<u8>, text: &str) {
 }
 
 /// The byte form of `iso` holding `words`, the chain `tables` and `blocked`, written by hand.
-fn encode(iso: &str, words: &[W<'_>], tables: &[&[C<'_>]], blocked: &[B<'_>]) -> Vec<u8> {
+pub(super) fn encode(
+    iso: &str,
+    words: &[W<'_>],
+    tables: &[&[C<'_>]],
+    blocked: &[B<'_>],
+) -> Vec<u8> {
     let len = |n: usize| u32::try_from(n).unwrap().to_le_bytes();
     let mut out = MAGIC.to_vec();
     out.extend(VERSION.to_le_bytes());
@@ -142,6 +147,11 @@ fn damaged_words_are_refused() {
         refused(&encode("en", &[a, (0, "b", 1, DAY)], &[], &[])),
         "an id twice"
     );
+    let far = (u16::MAX, "a", 1, DAY);
+    assert!(
+        refused(&encode("en", &[far, (u16::MAX, "b", 1, DAY)], &[], &[])),
+        "an id twice among ids renumbered"
+    );
     assert!(
         refused(&encode("en", &[a, (1, "a", 1, DAY)], &[], &[])),
         "a spelling twice"
@@ -199,32 +209,6 @@ fn a_damaged_blocklist_is_refused() {
         refused(&encode("en", &[], &[], &[("", 0, DAY)])),
         "an empty spelling"
     );
-}
-
-#[test]
-fn tables_and_caps_the_settings_drop_are_left_out_on_load() {
-    let words: Vec<String> = (0..13).map(word).collect();
-    let listed: Vec<W<'_>> = (0..13)
-        .map(|n| {
-            (
-                u16::try_from(n).unwrap(),
-                words[n].as_str(),
-                1,
-                DAY + u32::try_from(n).unwrap(),
-            )
-        })
-        .collect();
-    let longer: &[C<'_>] = &[(&[3, 4, 5], 1, DAY)];
-    let bytes = encode("en", &listed, &[&[(&[3, 4], 1, DAY)], longer], &[]);
-    let cfg = LearnConfig {
-        max_words: 10,
-        ..ONE
-    };
-    let l = Learner::from_bytes(&bytes, cfg).unwrap();
-    assert_eq!((l.words.len(), l.chains.len()), (10, 1));
-    let view = l.view(None);
-    assert_eq!((view.count(&words[2]), view.count(&words[3])), (0, 1));
-    assert_eq!(view.chain(&[&words[3]], &words[4]), 1);
 }
 
 #[test]

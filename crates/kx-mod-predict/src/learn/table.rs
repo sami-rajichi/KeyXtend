@@ -1,7 +1,7 @@
 //! The word table: each learned spelling with its count and last-used day under a stable id, which chains name, and
 //! two sorted indexes, by spelling and by folded key.
 
-use super::clean::{grow, halved, oldest, peak, too_high};
+use super::clean::{grow, halved, most, oldest, peak};
 use crate::casing::Casing;
 use crate::fold::fold;
 
@@ -46,12 +46,16 @@ impl Words {
         }
     }
 
-    /// A table of `words` under their ids, indexed at once; `None` when two share an id or a spelling.
+    /// A table of `words` under their ids, indexed at once; `None` when two share an id or a spelling, or an id
+    /// passes both the most a table capped at `cap` holds and the words given, so no slot is held ahead of them.
     pub(super) fn load(cap: usize, casing: &Casing, words: Vec<(Id, Word)>) -> Option<Self> {
         let (count, end) = (
             words.len(),
             words.iter().map(|w| usize::from(w.0) + 1).max(),
         );
+        if end.is_some_and(|end| end > most(cap).max(count)) {
+            return None;
+        }
         let mut slots = Vec::with_capacity(end.unwrap_or_default());
         slots.resize(end.unwrap_or_default(), None);
         for (id, word) in words {
@@ -107,16 +111,24 @@ impl Words {
 
     /// The id of the word that differs from `text` in capitals only.
     pub(super) fn variant(&self, casing: &Casing, text: &str) -> Option<Id> {
-        let (key, lower) = (fold(text, casing), casing.lower(text));
+        let lower = casing.lower(text);
+        self.group(casing, text)
+            .find(|&id| casing.lower(self.text(id)) == lower)
+    }
+
+    /// The ids of the words whose folded key is `text`'s, in id order.
+    pub(super) fn group<'w>(
+        &'w self,
+        casing: &'w Casing,
+        text: &str,
+    ) -> impl Iterator<Item = Id> + 'w {
+        let key = fold(text, casing);
         let from = self
             .by_fold
             .partition_point(|&id| fold(self.text(id), casing) < key);
         let tail = self.by_fold.get(from..).unwrap_or_default();
-        let same = tail
-            .iter()
-            .take_while(|&&id| fold(self.text(id), casing) == key);
-        same.copied()
-            .find(|&id| casing.lower(self.text(id)) == lower)
+        let same = move |id: &Id| fold(self.text(*id), casing) == key;
+        tail.iter().copied().take_while(same)
     }
 
     /// Calls `each` with every word whose folded key starts with `prefix`, folded keys in order.
@@ -146,7 +158,7 @@ impl Words {
 
     /// Places `word` under `id`, which must be free, and indexes it.
     pub(super) fn put(&mut self, casing: &Casing, id: Id, word: Word) {
-        let (at, most) = (usize::from(id), peak(self.cap).saturating_add(1));
+        let (at, most) = (usize::from(id), most(self.cap));
         if self.slots.len() <= at {
             let more = at + 1 - self.slots.len();
             grow(&mut self.slots, more, most);
@@ -166,23 +178,23 @@ impl Words {
         }
     }
 
-    /// Adds `n` uses to word `id` on `day`, halving every count first when it would pass the top.
+    /// Adds `n` uses to word `id` on `day`; the learner halves every table first when they would pass the top.
     pub(super) fn bump(&mut self, id: Id, n: u16, day: u32) {
-        if self.get(id).is_some_and(|w| too_high(w.count, n)) {
-            self.slots
-                .iter_mut()
-                .flatten()
-                .for_each(|w| w.count = halved(w.count));
-            self.retotal();
-        }
         if let Some(word) = self.slots.get_mut(usize::from(id)).and_then(Option::as_mut) {
-            word.count = word.count.saturating_add(n);
-            word.day = day;
-            self.total += u64::from(n);
+            let count = word.count.saturating_add(n);
+            self.total += u64::from(count - word.count);
+            (word.count, word.day) = (count, day);
         }
     }
 
-    /// Spells word `id` as `text`, which differs from its spelling in capitals only, so its folded key stays.
+    /// Halves every count, none below `floor` unless it was already.
+    pub(super) fn halve(&mut self, floor: u16) {
+        let counts = self.slots.iter_mut().flatten().map(|w| &mut w.count);
+        counts.for_each(|count| *count = halved(*count, floor));
+        self.retotal();
+    }
+
+    /// Spells word `id` as `text`, which folds to the same key, so the fold index stays as it is.
     pub(super) fn respell(&mut self, id: Id, text: &str) {
         if let Ok(at) = self.at_text(id) {
             self.by_text.remove(at);

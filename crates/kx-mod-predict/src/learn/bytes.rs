@@ -4,7 +4,7 @@
 use std::str;
 
 use super::chains::Chains;
-use super::clean::{CLEAN_AT_TENTHS, TENTHS};
+use super::clean::{CLEAN_AT_TENTHS, TENTHS, most};
 use super::forget::{Blocked, Mark};
 use super::table::{Id, Word, Words};
 use super::{LearnConfig, LearnFormatError, Learner};
@@ -72,19 +72,24 @@ impl Learner {
             _ => LearnFormatError::BadIso,
         })?;
         let mut learner = Self::new(iso, cfg)?;
-        learner.words = read_words(&mut r, &learner)?;
-        read_chains(&mut r, &mut learner)?;
+        let (words, old) = read_words(&mut r, &learner)?;
+        learner.words = words;
+        read_chains(&mut r, &mut learner, old.as_deref())?;
         learner.blocked = read_blocked(&mut r, &learner.words)?;
         if !r.bytes.is_empty() {
             return Err(LearnFormatError::BadEntry);
         }
+        learner.blocked.trim(learner.cfg.max_words);
         learner.clean();
         Ok(learner)
     }
 }
 
-/// The words, each under its id; `BadEntry` when two share an id or a spelling.
-fn read_words(r: &mut Reader<'_>, learner: &Learner) -> Result<Words, LearnFormatError> {
+/// The words, each under its id, and their old ids when renumbered; `BadEntry` when two share an id or a spelling.
+fn read_words(
+    r: &mut Reader<'_>,
+    learner: &Learner,
+) -> Result<(Words, Option<Vec<Id>>), LearnFormatError> {
     let mut words = Vec::new();
     for _ in 0..r.u32()? {
         let id = r.u16()?;
@@ -93,12 +98,45 @@ fn read_words(r: &mut Reader<'_>, learner: &Learner) -> Result<Words, LearnForma
         words.push((id, Word { text, count, day }));
     }
     let (cap, casing) = (learner.cfg.max_words, learner.casing());
-    Words::load(cap, casing, words).ok_or(LearnFormatError::BadEntry)
+    let old = renumber(&mut words, most(cap))?;
+    let words = Words::load(cap, casing, words).ok_or(LearnFormatError::BadEntry)?;
+    Ok((words, old))
 }
 
-/// The chain tables into `learner`, keeping those its settings hold; `BadEntry` for too many tables, or a chain
-/// out of order or naming a missing word.
-fn read_chains(r: &mut Reader<'_>, learner: &mut Learner) -> Result<(), LearnFormatError> {
+/// Numbers `words` 0, 1, … in id order when an id reaches `slots`, as after a `max_words` lowered since the save, so
+/// the table holds no slot ahead of its words; gives their old ids then. `BadEntry` when two share an id.
+fn renumber(words: &mut [(Id, Word)], slots: usize) -> Result<Option<Vec<Id>>, LearnFormatError> {
+    if words.iter().all(|w| usize::from(w.0) < slots) {
+        return Ok(None);
+    }
+    words.sort_unstable_by_key(|w| w.0);
+    let old: Vec<Id> = words.iter().map(|w| w.0).collect();
+    if old.windows(2).any(|p| p.first() == p.last()) {
+        return Err(LearnFormatError::BadEntry);
+    }
+    for (id, word) in (0..=Id::MAX).zip(words.iter_mut()) {
+        word.0 = id;
+    }
+    Ok(Some(old))
+}
+
+/// Word `id`'s id after `renumber`, given the old ids it renumbered, if any; `None` for an id no word held.
+fn moved(old: Option<&[Id]>, id: Id) -> Option<Id> {
+    let Some(old) = old else {
+        return Some(id);
+    };
+    old.binary_search(&id)
+        .ok()
+        .and_then(|at| Id::try_from(at).ok())
+}
+
+/// The chain tables into `learner`, keeping those its settings hold, with ids `renumber` moved; `BadEntry` for too
+/// many tables, or a chain out of order or naming a missing word.
+fn read_chains(
+    r: &mut Reader<'_>,
+    learner: &mut Learner,
+    old: Option<&[Id]>,
+) -> Result<(), LearnFormatError> {
     let tables = r.u8()?;
     if tables > MAX_TABLES {
         return Err(LearnFormatError::BadEntry);
@@ -111,8 +149,9 @@ fn read_chains(r: &mut Reader<'_>, learner: &mut Learner) -> Result<(), LearnFor
                 .map(|_| r.u16())
                 .collect::<Result<Vec<Id>, _>>()?;
             let (count, day) = r.counted()?;
-            let known = key.iter().all(|&id| learner.words.get(id).is_some());
-            if !known || !table.push(&key, count, day) {
+            let key: Option<Vec<Id>> = key.iter().map(|&id| moved(old, id)).collect();
+            let known = key.filter(|k| k.iter().all(|&id| learner.words.get(id).is_some()));
+            if !known.is_some_and(|key| table.push(&key, count, day)) {
                 return Err(LearnFormatError::BadEntry);
             }
         }
