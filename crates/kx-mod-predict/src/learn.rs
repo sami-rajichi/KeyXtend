@@ -46,6 +46,19 @@ pub struct LearnConfig {
     pub context_words: usize,
 }
 
+impl LearnConfig {
+    /// `Ok` when a learner takes these settings; the other limits stop at theirs.
+    ///
+    /// # Errors
+    /// `BadMinUses` when `min_uses` passes `MAX_MIN_USES`.
+    pub fn check(&self) -> Result<(), LearnFormatError> {
+        if self.min_uses > MAX_MIN_USES {
+            return Err(LearnFormatError::BadMinUses);
+        }
+        Ok(())
+    }
+}
+
 /// Why a learner could not be made or read.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum LearnFormatError {
@@ -117,9 +130,7 @@ impl Learner {
         if !fits_iso(iso) {
             return Err(LearnFormatError::BadIso);
         }
-        if cfg.min_uses > MAX_MIN_USES {
-            return Err(LearnFormatError::BadMinUses);
-        }
+        cfg.check()?;
         let cfg = LearnConfig {
             max_words: cfg.max_words.min(MAX_LEARNED),
             max_chains: cfg.max_chains.min(MAX_CHAINS),

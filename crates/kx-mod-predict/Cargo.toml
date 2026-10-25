@@ -1,6 +1,6 @@
 [package]
 name = "kx-mod-predict"
-description = "Word prediction: folding for loose matching, and the word-pack file format read straight from disk."
+description = "Word prediction: word chips that finish the word and guess the next one, learned on the device, with emails."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,13 +17,16 @@ workspace = true
 build = []
 
 [dependencies]
-# The packs port's file limits (`MAX_PACK_BYTES`), shared with the platform that maps the packs.
+# The ports, the bus events and the packs port's file limits (`MAX_PACK_BYTES`).
 kx-module-api = { path = "../kx-module-api" }
 # The lexicon of each word pack: an FST map from folded keys to runs of word ids (ADR-0032).
 fst = "0.4.7"
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
+kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

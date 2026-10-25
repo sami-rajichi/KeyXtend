@@ -103,10 +103,12 @@ crates/
   kx-mod-power/         the Power key's module: an actor that opens the system's own power dialog over
                          the `PowerDialog` port at each click, each open on a short thread of its own,
                          and tells the keyboard whether it runs; no settings (P6)
-  kx-mod-predict/       word prediction (P7): folding for loose matching (`fold`, tables in `fold.toml`)
-                         and the word-pack format (`pack`: `Pack` reads a mapped pack in place; the
-                         `build` feature's `PackWriter` serves `cargo xtask words` only); the engine,
-                         the learner and the email chips come later in P7
+  kx-mod-predict/       word prediction (P7): an actor on its `kx-predict` thread that follows the
+                         keyboard's pieces and the focused box, tells the lane, asks the keyboard to
+                         type picks (`TypeWord`) and learns, over the tracker (`track`), the scorer
+                         (`score`), the learner (`learn`), the email chips (`email`), folding (`fold`)
+                         and the word-pack format (`pack`; the `build` feature's `PackWriter` serves
+                         `cargo xtask words` only); `[predict]`
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)
   kx-mod-selection/     selection helper (P10)

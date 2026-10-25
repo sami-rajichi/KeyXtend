@@ -5,9 +5,9 @@ use std::ops::RangeInclusive;
 use super::float;
 
 /// The learned weights the early stop bounds: a share of the blend.
-const WEIGHTS: RangeInclusive<f64> = 0.0..=1.0;
+pub const WEIGHTS: RangeInclusive<f64> = 0.0..=1.0;
 /// The backoffs the early stop bounds: a step down to a shorter context never weighs more (Brants et al., 2007).
-const BACKOFFS: RangeInclusive<f64> = 0.0..=1.0;
+pub const BACKOFFS: RangeInclusive<f64> = 0.0..=1.0;
 
 /// The scorer's settings; the module fills them from `[predict]`.
 #[derive(Debug, Clone, Copy, PartialEq)]

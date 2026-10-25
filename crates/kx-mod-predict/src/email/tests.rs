@@ -2,20 +2,10 @@
 
 use super::*;
 
-/// The settings' defaults as Task 12 fills them.
+/// The settings' defaults, as the module fills them.
 fn cfg() -> EmailConfig {
-    let domains = [
-        "gmail.com",
-        "outlook.com",
-        "hotmail.com",
-        "yahoo.com",
-        "icloud.com",
-    ];
-    EmailConfig {
-        max_emails: 50,
-        domains: domains.map(str::to_owned).to_vec(),
-        min_start: 2,
-    }
+    let settings = crate::settings::PredictSettings::from_defaults().unwrap();
+    settings.email_config()
 }
 
 /// Each chip's text and kind.
@@ -195,4 +185,16 @@ fn the_list_pages_by_rows_and_a_page_past_the_end_shows_the_last() {
 fn debug_never_shows_an_email() {
     let emails = known(&["secret@x.co"]);
     assert!(!format!("{emails:?}").contains("secret"));
+}
+
+#[test]
+fn a_domain_is_two_or_more_labels_that_start_and_end_with_a_word_character() {
+    for good in ["gmail.com", "mail.yahoo.co.uk", "my-host.org", "بريد.مثال"] {
+        assert!(is_domain(good), "{good}");
+    }
+    for bad in [
+        "", "gmail", "-a.com", "a-.com", "a..com", "a@b.com", "a b.com",
+    ] {
+        assert!(!is_domain(bad), "{bad}");
+    }
 }

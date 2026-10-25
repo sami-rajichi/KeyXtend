@@ -23,13 +23,15 @@ use sink::Sink;
 
 #[cfg(test)]
 pub(crate) use config::CFG;
-pub use config::{ScoreConfig, ScoreConfigError};
+pub use config::{BACKOFFS, ScoreConfig, ScoreConfigError, WEIGHTS};
 
 /// One guess, as its chip shows and types it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Guess {
     /// The text that replaces the open word.
     pub text: Redacted<String>,
+    /// The word as the pack or the learner stores it, without the lead or the typed capitals; a forget passes it.
+    pub stored: Redacted<String>,
     /// The text is written right to left.
     pub rtl: bool,
 }
@@ -166,9 +168,10 @@ impl<'a> Ask<'a> {
         for reading in &self.query.readings {
             self.offer(reading, &mut best);
         }
-        let guess = |text: String| Guess {
+        let guess = |(text, stored): (String, String)| Guess {
             rtl: script::of(&text).is_some_and(Script::rtl),
             text: Redacted::new(text),
+            stored: Redacted::new(stored),
         };
         best.into_texts().into_iter().map(guess).collect()
     }

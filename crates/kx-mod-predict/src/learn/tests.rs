@@ -111,6 +111,7 @@ fn a_min_uses_past_the_headroom_is_refused() {
         ..CFG
     };
     let refused = Some(LearnFormatError::BadMinUses);
+    assert_eq!((most.check(), over.check().err()), (Ok(()), refused));
     assert_eq!(Learner::new("en", over).err(), refused);
     assert_eq!(
         Learner::from_bytes(&learner("en").to_bytes(), over).err(),

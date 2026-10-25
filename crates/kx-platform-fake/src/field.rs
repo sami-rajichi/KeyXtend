@@ -24,6 +24,8 @@ struct Log {
     config: Option<FieldConfig>,
     before_calls: usize,
     ends_calls: usize,
+    /// The text the latest `ends_with` asked about.
+    last_ends: Option<Redacted<String>>,
     watches: usize,
     stops: usize,
 }
@@ -40,6 +42,7 @@ impl Default for Log {
             config: None,
             before_calls: 0,
             ends_calls: 0,
+            last_ends: None,
             watches: 0,
             stops: 0,
         }
@@ -149,6 +152,12 @@ impl FakeFieldWatch {
     pub fn ends_calls(&self) -> usize {
         lock(&self.shared.log).ends_calls
     }
+
+    /// The text the latest `ends_with` asked about, unread ones too; `None` before any.
+    #[must_use]
+    pub fn last_ends(&self) -> Option<Redacted<String>> {
+        lock(&self.shared.log).last_ends.clone()
+    }
 }
 
 impl fmt::Debug for FakeFieldWatch {
@@ -220,6 +229,7 @@ impl FieldRun for FakeRun {
     fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
         let mut log = lock(&self.shared.log);
         log.ends_calls += 1;
+        log.last_ends = Some(text.clone());
         let fits = text.expose().chars().count() <= self.chars;
         let read = log.readable() && log.read_fail.is_none() && fits;
         log.ends.filter(|_| read)

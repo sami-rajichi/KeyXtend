@@ -17,6 +17,7 @@ mod elisions;
 mod learned;
 mod ranked;
 mod scripts;
+mod stored;
 
 /// The followers each test pack keeps per context.
 const FOLLOWERS: u8 = 8;

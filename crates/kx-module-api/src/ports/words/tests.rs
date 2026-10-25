@@ -171,6 +171,14 @@ fn erase_counts_characters_not_utf16_units() {
 }
 
 #[test]
+fn the_list_asks_carry_the_rows_the_ui_shows() {
+    let more = WordsAsk::More { rows: 5 };
+    let page = WordsAsk::Page { page: -1, rows: 4 };
+    assert_eq!(format!("{more:?}"), "More { rows: 5 }");
+    assert_eq!(format!("{page:?}"), "Page { page: -1, rows: 4 }");
+}
+
+#[test]
 fn a_type_word_still_shows_its_round_and_erase() {
     let word = TypeWord {
         round: 7,

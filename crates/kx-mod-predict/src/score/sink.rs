@@ -40,7 +40,7 @@ impl Sink<'_> {
         let text = self.query.styled(&cased);
         let spaced = script::of(&text).is_some_and(script::Script::spaced);
         if spaced && self.query.changes(&text) {
-            self.best.offer(text, score);
+            self.best.offer(text, score, word);
         }
     }
 }

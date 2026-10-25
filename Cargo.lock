@@ -747,10 +747,13 @@ version = "0.0.0"
 dependencies = [
  "fst",
  "kx-module-api",
+ "kx-platform-fake",
+ "kx-test-support",
  "proptest",
  "serde",
  "thiserror 2.0.21",
  "toml",
+ "tracing",
 ]
 
 [[package]]

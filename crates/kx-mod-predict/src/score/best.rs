@@ -1,15 +1,22 @@
-//! The best guesses so far: at most `limit` distinct texts, each with its best score, so a reading's thousands of
-//! completions never need sorting.
+//! The best guesses so far: at most `limit` distinct texts, each with its best score and the stored spelling that gave
+//! it, so a reading's thousands of completions never need sorting.
 
 use std::cmp::Ordering;
 use std::fmt;
+
+/// One kept text: what the chip shows, its best score, and the stored spelling behind that score.
+struct Item {
+    text: String,
+    score: f64,
+    stored: String,
+}
 
 /// The best distinct texts offered so far.
 pub(super) struct Best {
     /// The most texts kept.
     limit: usize,
-    /// Each kept text with its best score.
-    items: Vec<(String, f64)>,
+    /// Each kept text.
+    items: Vec<Item>,
 }
 
 impl fmt::Debug for Best {
@@ -36,11 +43,13 @@ impl Best {
         self.limit > 0 && (self.items.len() < self.limit || score >= self.min().1)
     }
 
-    /// Keeps `text` at `score` when it beats the worst kept text, by score then by text sorting first, so the texts
-    /// kept never depend on the order offered; a text kept already takes its best score.
-    pub(super) fn offer(&mut self, text: String, score: f64) {
-        if let Some(item) = self.items.iter_mut().find(|item| item.0 == text) {
-            item.1 = item.1.max(score);
+    /// Keeps `text`, stored as `stored`, at `score` when it beats the worst kept text, by score then by text sorting
+    /// first, so the texts kept never depend on the order offered; a text kept already takes its best score's spelling.
+    pub(super) fn offer(&mut self, text: String, score: f64, stored: &str) {
+        if let Some(item) = self.items.iter_mut().find(|item| item.text == text) {
+            if score > item.score {
+                (item.score, item.stored) = (score, stored.to_owned());
+            }
             return;
         }
         if self.limit == 0 {
@@ -48,26 +57,32 @@ impl Best {
         }
         if self.items.len() == self.limit {
             let (at, worst) = self.min();
-            let kept = self.items.get(at).map(|item| (worst, item.0.as_str()));
+            let kept = self.items.get(at).map(|item| (worst, item.text.as_str()));
             if kept.is_some_and(|(worst, held)| !beats((score, &text), (worst, held))) {
                 return;
             }
             self.items.swap_remove(at);
         }
-        self.items.push((text, score));
+        let stored = stored.to_owned();
+        self.items.push(Item {
+            text,
+            score,
+            stored,
+        });
     }
 
-    /// The kept texts, best first; equal scores go in text order.
-    pub(super) fn into_texts(mut self) -> Vec<String> {
-        self.items.sort_by(|a, b| rank((b.1, &b.0), (a.1, &a.0)));
-        self.items.into_iter().map(|item| item.0).collect()
+    /// The kept texts with their stored spellings, best first; equal scores go in text order.
+    pub(super) fn into_texts(mut self) -> Vec<(String, String)> {
+        self.items
+            .sort_by(|a, b| rank((b.score, &b.text), (a.score, &a.text)));
+        self.items.into_iter().map(|i| (i.text, i.stored)).collect()
     }
 
     /// The place and score of the worst kept text, by `rank`; a score no text loses to when none is kept.
     fn min(&self) -> (usize, f64) {
-        let worst =
-            (self.items.iter().enumerate()).min_by(|a, b| rank((a.1.1, &a.1.0), (b.1.1, &b.1.0)));
-        worst.map_or((0, f64::NEG_INFINITY), |(at, item)| (at, item.1))
+        let worst = (self.items.iter().enumerate())
+            .min_by(|a, b| rank((a.1.score, &a.1.text), (b.1.score, &b.1.text)));
+        worst.map_or((0, f64::NEG_INFINITY), |(at, item)| (at, item.score))
     }
 }
 
@@ -85,10 +100,15 @@ fn beats(a: (f64, &str), b: (f64, &str)) -> bool {
 mod tests {
     use super::*;
 
+    /// The kept texts, best first.
+    fn texts(best: Best) -> Vec<String> {
+        best.into_texts().into_iter().map(|t| t.0).collect()
+    }
+
     #[test]
     fn debug_shows_counts_never_the_guesses() {
         let mut best = Best::new(2);
-        best.offer("secret".to_owned(), 1.0);
+        best.offer("secret".to_owned(), 1.0, "secret");
         let shown = format!("{best:?}");
         assert!(
             !shown.contains("secret") && shown.contains("kept: 1"),
@@ -101,9 +121,18 @@ mod tests {
         for order in [["b", "a", "c"], ["c", "b", "a"], ["a", "c", "b"]] {
             let mut best = Best::new(2);
             for text in order {
-                best.offer(text.to_owned(), 1.0);
+                best.offer(text.to_owned(), 1.0, text);
             }
-            assert_eq!(best.into_texts(), ["a", "b"], "{order:?}");
+            assert_eq!(texts(best), ["a", "b"], "{order:?}");
         }
+    }
+
+    #[test]
+    fn a_text_offered_twice_keeps_the_spelling_of_its_better_score() {
+        let mut best = Best::new(2);
+        best.offer("May".to_owned(), 1.0, "may");
+        best.offer("May".to_owned(), 2.0, "May");
+        best.offer("May".to_owned(), 1.5, "may");
+        assert_eq!(best.into_texts(), [("May".to_owned(), "May".to_owned())]);
     }
 }

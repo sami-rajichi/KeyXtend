@@ -231,3 +231,17 @@ fn debug_never_prints_the_scripted_text() {
     fake.set_before(Some(TEXT));
     assert!(!format!("{fake:?}").contains(TEXT));
 }
+
+#[test]
+fn it_keeps_the_last_text_ends_with_was_asked_and_never_shows_it() {
+    let fake = FakeFieldWatch::new();
+    assert_eq!(fake.last_ends(), None, "nothing asked yet");
+    let (mut run, _) = watched(&fake);
+    ends(run.as_mut());
+    let asked = fake.last_ends().map(Redacted::into_inner);
+    assert_eq!(asked.as_deref(), Some("ap"), "asked even of no box");
+    run.ends_with(&Redacted::new(String::from("ق")));
+    let asked = fake.last_ends().map(Redacted::into_inner);
+    assert_eq!(asked.as_deref(), Some("ق"), "the latest wins");
+    assert!(!format!("{fake:?}").contains('ق'));
+}

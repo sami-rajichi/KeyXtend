@@ -171,10 +171,18 @@ pub enum WordsAsk {
     Power(bool),
     /// Bring back the word just forgotten.
     Undo,
-    /// Open the email list.
-    More,
-    /// Turn the list by this many pages.
-    Page(i8),
+    /// Open the email list, `rows` to a page (`[ui] page_rows`); the ui sends it for a tap on the More chip too.
+    More {
+        /// Rows per page.
+        rows: u8,
+    },
+    /// Turn the list by `page` pages, `rows` to a page.
+    Page {
+        /// How many pages to turn, back when below 0.
+        page: i8,
+        /// Rows per page.
+        rows: u8,
+    },
     /// Pick the row at this index of the shown page.
     ListPick(u8),
     /// Send the lane again.

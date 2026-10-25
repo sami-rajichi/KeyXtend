@@ -1,0 +1,38 @@
+# Word chips are shown and suggested.
+on = true
+# Finished words and emails are learned; false pauses learning.
+learn = true
+# The most chips in the lane.
+chips = 5
+# How many previous words guess the next one.
+context_words = 2
+# The uses a word needs before it is offered, and a forgotten seed word needs to come back.
+min_uses = 2
+# The most learned words kept per language.
+max_words = 10000
+# The most learned word chains kept of each length, per language.
+max_chains = 30000
+# Days unused after which a learned word or chain is dropped.
+forget_days = 300
+# The most weight the learned counts reach against the seed, from 0 to 1.
+learn_weight = 0.6
+# The typed words at which the learned counts reach half their most weight.
+learn_ramp = 2000
+# Each step down to a shorter context multiplies a guess's score by this, from 0 to 1.
+backoff = 0.4
+# The longest word that gets chips and is learned, in characters.
+max_word = 48
+# The most known emails kept.
+max_emails = 50
+# The fewest typed characters before a known email is offered.
+min_start = 2
+# The domains offered after one @, in order.
+domains = ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com"]
+# The languages whose word pack must ship; a missing one shows a notice.
+full_packs = ["en", "fr", "ar"]
+# The longest one read of the focused box may take, in ms.
+read_ms = 150
+# The longest text one read takes before the cursor, in characters.
+read_chars = 1024
+# Changed learned words and emails are saved this many seconds after the first change, and at stop.
+save_s = 30

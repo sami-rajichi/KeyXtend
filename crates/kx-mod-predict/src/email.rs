@@ -13,6 +13,10 @@ use crate::fold::fold;
 use crate::script;
 use crate::split::is_word_char;
 
+mod bytes;
+
+pub use bytes::{EmailFormatError, MAGIC, VERSION};
+
 /// The email marks, compiled in so they are never read from disk.
 const TABLE: &str = include_str!("email.toml");
 
@@ -101,7 +105,7 @@ pub fn capture(token: &str) -> Option<&str> {
 }
 
 /// True when `text` looks like `local@domain.tld`: one at sign, a local part of word characters and local marks,
-/// and two or more labels that start and end with a word character.
+/// and a domain as `is_domain` says.
 #[must_use]
 pub fn looks_like(text: &str) -> bool {
     let Some(m) = MARKS.as_ref() else {
@@ -114,6 +118,16 @@ pub fn looks_like(text: &str) -> bool {
     let local_ok = local
         .chars()
         .all(|c| is_word_char(c) || m.local.contains(&c));
+    !local.is_empty() && local_ok && is_domain(domain)
+}
+
+/// True when `text` is a domain: two or more labels that start and end with a word character, with only the inner
+/// marks between; the `[predict] domains` setting is checked by it.
+#[must_use]
+pub fn is_domain(text: &str) -> bool {
+    let Some(m) = MARKS.as_ref() else {
+        return false;
+    };
     let label_ok = |label: &str| {
         let ends = [label.chars().next(), label.chars().next_back()];
         ends.iter().all(|c| c.is_some_and(is_word_char))
@@ -121,8 +135,8 @@ pub fn looks_like(text: &str) -> bool {
                 .chars()
                 .all(|c| is_word_char(c) || m.inner.contains(&c))
     };
-    let labels: Vec<&str> = domain.split(m.label).collect();
-    !local.is_empty() && local_ok && labels.len() > 1 && labels.iter().all(|l| label_ok(l))
+    let labels: Vec<&str> = text.split(m.label).collect();
+    labels.len() > 1 && labels.iter().all(|l| label_ok(l))
 }
 
 /// The domain chips for `partial`, the text after the one `@`: the domains that start with it once folded, in the
