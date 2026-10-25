@@ -1,7 +1,9 @@
 //! The menu: Pause and Off are saved through the settings handle without a restart, Forget then Undo restore the word
-//! by its stored spelling, the Undo chip goes at the next key, and Again tells the lane again.
+//! by its stored spelling, forget mode offers word chips only, the Undo chip goes at the next key, and Again tells the
+//! lane again.
 
 use crate::rig::{Rig, plant, saved};
+use kx_mod_predict::email::Emails;
 use kx_mod_predict::score::Learned;
 use kx_mod_predict::{ID, Msg};
 use kx_module_api::ports::{ChipKind, FieldKind, Lane, TypingMode, WordsAsk};
@@ -124,4 +126,30 @@ fn again_tells_the_same_lane_once_more() {
     rig.take();
     rig.ask(WordsAsk::Again);
     assert_eq!(rig.take(), [crate::rig::Heard::Lane(before)]);
+}
+
+#[test]
+fn forget_mode_offers_only_word_chips_and_a_pick_forgets_the_one_shown() {
+    let mut rig = Rig::build(|f, _| {
+        plant(f, "en", &["sad", "safe"]);
+        let bytes = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
+        f.store
+            .plant(&kx_mod_predict::emails_blob().unwrap(), bytes);
+    });
+    rig.lang("en");
+    rig.focus(FieldKind::Text);
+    rig.typed("sa");
+    let words = rig.words();
+    rig.ask(WordsAsk::Forget);
+    rig.pick(0);
+    let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
+    assert_eq!(kinds, [ChipKind::Undo, ChipKind::Word, ChipKind::Email]);
+    rig.ask(WordsAsk::Forget);
+    assert_eq!(
+        rig.chips(),
+        [(words[1].clone(), ChipKind::Word)],
+        "no Undo, no email"
+    );
+    rig.pick(0);
+    assert!(rig.words().is_empty(), "the word shown was forgotten");
 }

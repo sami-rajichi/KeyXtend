@@ -5,6 +5,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{Chip, ChipKind, TypingMode};
 
 use crate::email::{self, EmailConfig, Emails};
+use crate::menu::Menu;
 use crate::pack::Pack;
 use crate::score::{Guess, Learned, ScoreConfig, guesses};
 use crate::track::{EmailAsk, Plan, Show};
@@ -106,6 +107,26 @@ impl Chips {
         self.picks.insert(at, Pick::Undo);
         self.chips.truncate(limit);
         self.picks.truncate(limit);
+    }
+
+    /// Shows the menu's state: the Undo chip at its place, reading as `rtl`, and in forget mode only the word chips.
+    pub(crate) fn with_menu(&mut self, menu: Menu, rtl: bool, limit: usize) {
+        if let Some(at) = menu.undo {
+            self.with_undo(at, rtl, limit);
+        }
+        if menu.forgetting {
+            self.words_only();
+        }
+    }
+
+    /// Keeps only the word chips, as forget mode offers only what can be forgotten.
+    fn words_only(&mut self) {
+        let pairs = std::mem::take(&mut self.chips)
+            .into_iter()
+            .zip(std::mem::take(&mut self.picks));
+        (self.chips, self.picks) = pairs
+            .filter(|(_, pick)| matches!(pick, Pick::Word { .. }))
+            .unzip();
     }
 
     /// Adds the word chip of `guess`, when its plan counts.

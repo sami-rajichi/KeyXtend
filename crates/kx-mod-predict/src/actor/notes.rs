@@ -74,9 +74,7 @@ impl Actor {
             limit,
         };
         let mut chips = Chips::of(&show, &src);
-        if let Some(at) = self.menu.undo {
-            chips.with_undo(at, self.rtl, limit);
-        }
+        chips.with_menu(self.menu, self.rtl, limit);
         let lane = if chips.chips.is_empty() {
             Lane::Empty
         } else {
