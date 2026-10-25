@@ -146,6 +146,7 @@ var texts = {
   "module.layouts": "تخطيطات لوحة المفاتيح",
   "module.mouse": "مساعد الماوس",
   "module.power": "مفتاح الطاقة",
+  "module.predict": "اقتراح الكلمات",
   "module.scroll": "لوحة التمرير",
   "module.ui": "المظهر",
   "notice.keys-not-sent": "لم تصل بعض المفاتيح إلى التطبيق النشط. تحقّق مما كُتب.",

@@ -146,6 +146,7 @@ var texts = {
   "module.layouts": "Dispositions de clavier",
   "module.mouse": "Aide à la souris",
   "module.power": "Touche Marche/Arrêt",
+  "module.predict": "Suggestions de mots",
   "module.scroll": "Pavé de défilement",
   "module.ui": "Apparence",
   "notice.keys-not-sent": "Certaines touches ne sont pas parvenues à l’application au premier plan. Vérifiez le texte saisi.",

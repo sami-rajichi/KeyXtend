@@ -205,6 +205,8 @@ api_sets = ["api-ms-", "ext-ms-"]
 system_dir = "System32"
 # The flag only the app's gate-only build (`gate-input`) takes; the check refuses a program holding its text. The app's agree test pins it.
 gate_flag = "--sim-input"
+# The word packs (ADR-0032) need no key here: the index, each pack it lists and the credits go from the folder that
+# xtask/words.toml names (`[text] out`, `[credits]`) into kx-module-api's `PACK_DIR`, which the check refuses incomplete.
 
 [workspace.metadata.sounds]
 # The sound recipes, variant jitter and resampler that `cargo xtask sounds` reads, under the workspace root.

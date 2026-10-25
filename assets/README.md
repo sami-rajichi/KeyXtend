@@ -1,6 +1,6 @@
 # Assets
 
-Fonts, icons and sounds that ship in the app. Every set keeps its licence file beside it. kx-ui's build compiles them into the app (ADR-0016): every font here and the icons the theme tokens (`icons.toml`) name as Qt resources, and the samples of the sounds `sounds.toml` names. A fresh clone builds without any download, and the app never reads this folder.
+Fonts, icons, sounds and word packs that ship with the app. Every set keeps its licence file beside it. kx-ui's build compiles the first three into the app (ADR-0016): every font here and the icons the theme tokens (`icons.toml`) name as Qt resources, and the samples of the sounds `sounds.toml` names. `cargo xtask stage` copies the word packs beside the program (ADR-0032). A fresh clone builds without any download, and only a debug build reads this folder, for its word packs.
 
 ## Fonts
 

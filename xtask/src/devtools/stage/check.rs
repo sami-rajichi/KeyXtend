@@ -1,11 +1,11 @@
 //! The stage check: no banned plugin, no gate-only build, every import found in the stage or the system folder, the
 //! network library imported only by the listed Qt libraries, no library that nothing imports, no file off the list,
-//! and the size cap.
+//! and the size cap. The packs folder is the words check's (`words::check`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use super::{Network, StageConfig, StageError, planned};
+use super::{Network, StageConfig, StageError, planned, words};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
@@ -23,8 +23,13 @@ pub(crate) struct Summary {
 impl Summary {
     /// The size in MB, rounded up.
     pub(crate) fn mb(&self) -> u64 {
-        self.bytes.div_ceil(paths::BYTES_PER_MB)
+        mb(self.bytes)
     }
+}
+
+/// `bytes` in MB, rounded up.
+pub(crate) fn mb(bytes: u64) -> u64 {
+    bytes.div_ceil(paths::BYTES_PER_MB)
 }
 
 /// Checks `stage`; `read` gives a file's imported library names and `in_system` says whether Windows has a library.
@@ -95,10 +100,12 @@ fn refuse_gate(bytes: &[u8], flag: &str, exe: &Path) -> Result<(), StageError> {
     Ok(())
 }
 
-/// Fails on the first file that is not one of the `planned` paths, in any letter case, so no unlisted file is signed.
+/// Fails on the first file outside the packs folder that is not one of the `planned` paths, in any letter case, so no
+/// unlisted file is signed; the words check looks after the packs folder.
 fn refuse_unplanned(files: &[PathBuf], planned: &[PathBuf]) -> Result<(), DevError> {
     let listed: BTreeSet<String> = planned.iter().map(|p| path_key(p)).collect();
-    let extra = files.iter().find(|f| !listed.contains(&path_key(f)));
+    let mut outside = files.iter().filter(|f| !words::inside(f));
+    let extra = outside.find(|f| !listed.contains(&path_key(f)));
     extra.map_or(
         Ok(()),
         |f| Err(StageError::Unplanned(paths::text(f)).into()),
@@ -106,7 +113,7 @@ fn refuse_unplanned(files: &[PathBuf], planned: &[PathBuf]) -> Result<(), DevErr
 }
 
 /// The key a stage-relative path is matched by: its parts in lower case, joined the same way on every system.
-fn path_key(path: &Path) -> String {
+pub(super) fn path_key(path: &Path) -> String {
     let parts: Vec<String> = path.iter().map(|p| key(&p.to_string_lossy())).collect();
     parts.join("/")
 }

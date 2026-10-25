@@ -254,6 +254,7 @@ module =
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
     .power = Touche Marche/Arrêt
+    .predict = Suggestions de mots
     .scroll = Pavé de défilement
     .ui = Apparence
 

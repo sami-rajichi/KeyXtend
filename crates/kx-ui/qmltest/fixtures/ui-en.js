@@ -146,6 +146,7 @@ var texts = {
   "module.layouts": "Keyboard layouts",
   "module.mouse": "Mouse assist",
   "module.power": "Power key",
+  "module.predict": "Word suggestions",
   "module.scroll": "Scroll pad",
   "module.ui": "Appearance",
   "notice.keys-not-sent": "Some keys did not reach the app in front. Check what was typed.",

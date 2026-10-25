@@ -33,6 +33,8 @@ pub fn pack_file(iso: &str) -> Option<String> {
 
 /// The file the build writes beside the packs, naming each language it shipped (`index_text`, `read_index`).
 pub const PACK_INDEX: &str = "packs.txt";
+/// The folder beside the program that holds the packs, their index and credits; the stage fills it and the app reads it.
+pub const PACK_DIR: &str = "words";
 
 /// One open pack's bytes, read-only; dropping it closes the pack.
 pub trait PackView: Send + Sync {

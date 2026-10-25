@@ -254,6 +254,7 @@ module =
     .layouts = Keyboard layouts
     .mouse = Mouse assist
     .power = Power key
+    .predict = Word suggestions
     .scroll = Scroll pad
     .ui = Appearance
 

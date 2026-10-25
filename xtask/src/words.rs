@@ -149,6 +149,14 @@ pub(crate) fn meter(opts: &MeterOpts<'_>) -> Result<(), WordsError> {
     meter::run(&manifest.meter, opts, &paths, &mut say)
 }
 
+/// What ships with the packs, as the manifest names it: their folder under the workspace root and the credit files
+/// written beside them.
+pub(crate) fn shipped() -> Result<(String, Vec<String>), WordsError> {
+    let manifest = Manifest::parse(MANIFEST)?;
+    let c = manifest.credits;
+    Ok((manifest.text.out, vec![c.file, c.authors, c.licence]))
+}
+
 /// The packs folder: `given`, else the manifest's folder under the workspace root that `json` names.
 fn packs_dir(manifest: &Manifest, json: &str, given: Option<&str>) -> Result<PathBuf, WordsError> {
     match given {

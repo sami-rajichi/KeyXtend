@@ -1,6 +1,6 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts and power dialog, and the shared fake
-//! UI ports; a waker keeps every wake.
+//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power dialog, box watch, word packs
+//! and sealed store, and the shared fake UI ports; a waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -10,8 +10,8 @@ use kx_module_api::ports::Scan;
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
-    FakeScrollTarget, FakeShortcuts, FakeTray,
+    FakeFieldWatch, FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
+    FakeScrollTarget, FakeSealedStore, FakeShortcuts, FakeTray, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -43,6 +43,12 @@ pub struct Rig {
     pub shortcuts: Arc<FakeShortcuts>,
     /// Behind the power dialog, which counts its opens.
     pub power: Arc<FakePowerDialog>,
+    /// Behind the box watch, with focus on no box.
+    pub field: Arc<FakeFieldWatch>,
+    /// Behind the word packs, shipping no language until a test lists one.
+    pub packs: Arc<FakeWordPacks>,
+    /// Behind the sealed store, which counts its loads.
+    pub sealed: Arc<FakeSealedStore>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
 }
@@ -61,6 +67,9 @@ impl Rig {
             scroll: Arc::new(FakeScrollTarget::new()),
             shortcuts: Arc::new(FakeShortcuts::new()),
             power: Arc::new(FakePowerDialog::new()),
+            field: Arc::new(FakeFieldWatch::new()),
+            packs: Arc::new(FakeWordPacks::new()),
+            sealed: Arc::new(FakeSealedStore::new()),
             tray: tray(),
         }
     }
@@ -88,6 +97,9 @@ impl Rig {
             scroll: self.scroll.clone(),
             shortcuts: self.shortcuts.clone(),
             power: self.power.clone(),
+            field: self.field.clone(),
+            packs: self.packs.clone(),
+            sealed: self.sealed.clone(),
         };
         let ports = ports(self.tray.clone());
         Boot::load(self.platform(), services, ports).unwrap()

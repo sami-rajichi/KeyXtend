@@ -38,6 +38,10 @@ pub(crate) enum StageError {
         /// The flag it holds.
         flag: String,
     },
+    /// The packs folder lacks its index, a pack the index lists, or a credit file.
+    NoWords(String),
+    /// The pack index is empty or does not read.
+    BadIndex(String),
     /// `QMAKE` names a Qt other than the reviewed one.
     QtVersion {
         /// The version qmake reports.
@@ -76,6 +80,13 @@ impl fmt::Display for StageError {
                     "{exe} holds {flag}: a gate-only build, which never ships"
                 )
             }
+            Self::NoWords(path) => {
+                write!(
+                    f,
+                    "{path} is missing; the packs ship with their index and credits"
+                )
+            }
+            Self::BadIndex(path) => write!(f, "{path} is empty or not a pack index"),
             Self::QtVersion { found, want } => {
                 write!(f, "qmake reports Qt {found}; only Qt {want} is reviewed")
             }

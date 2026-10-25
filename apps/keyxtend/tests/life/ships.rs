@@ -1,19 +1,22 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
-//! pointer hook, the scroll target and the power dialog each reach only the module whose manifest declares their
-//! capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only to the modules that read typed
-//! text, and the shortcuts reach the keyboard's layer.
+//! pointer hook, the scroll target, the power dialog, the box watch and the sealed store each reach only the modules
+//! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
+//! to the modules that read typed text, and the shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
 use kx_kernel::Kernel;
 use kx_module_api::ports::{
-    FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
-    ScrollTarget, ScrollTargetKey, ShortcutId, ShortcutInfo, Step,
+    FaceAction, FieldWatch, FieldWatchKey, KeyId, KeyName, PointerHook, PointerHookKey,
+    PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey, SealedStore, SealedStoreKey,
+    ShortcutId, ShortcutInfo, Step,
 };
 use kx_module_api::{
     Capability, Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey,
 };
-use kx_platform_fake::{FakePointerHook, FakePowerDialog, FakeScrollTarget};
+use kx_platform_fake::{
+    FakeFieldWatch, FakePointerHook, FakePowerDialog, FakeScrollTarget, FakeSealedStore,
+};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -27,6 +30,8 @@ const MODULE_FEATURE: &str = "mod-";
 const SCROLL_FEATURE: &str = "mod-scroll";
 /// The power module's feature.
 const POWER_FEATURE: &str = "mod-power";
+/// The prediction module's feature.
+const PREDICT_FEATURE: &str = "mod-predict";
 /// The CI workflow, whose scroll-off lint names the app's other features by hand.
 const CI: &str = include_str!("../../../../.github/workflows/ci.yml");
 /// The app's package, which that lint builds.
@@ -115,6 +120,17 @@ fn every_module_feature_is_on_by_default_the_scroll_and_power_ones_too() {
 }
 
 #[test]
+fn mod_predict_is_a_default_feature_and_the_default_build_ships_predict() {
+    assert!(defaults(&features()).contains(&PREDICT_FEATURE));
+    let shipped = modules(&Rig::new().load().hub);
+    assert!(
+        shipped
+            .iter()
+            .any(|m| m.manifest().id == kx_mod_predict::ID)
+    );
+}
+
+#[test]
 fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
     let features = features();
     let mut want = defaults(&features);
@@ -145,6 +161,20 @@ fn the_power_dialog_reaches_only_the_power_module() {
 }
 
 #[test]
+fn the_box_watch_reaches_only_the_modules_that_read_typed_text() {
+    let watch: Arc<dyn FieldWatch> = Arc::new(FakeFieldWatch::new());
+    let got = reached::<FieldWatchKey>(&Rig::new(), &watch);
+    assert_eq!(got, [kx_mod_keyboard::ID, kx_mod_predict::ID], "ADR-0033");
+}
+
+#[test]
+fn the_sealed_store_reaches_only_the_predict_module() {
+    let store: Arc<dyn SealedStore> = Arc::new(FakeSealedStore::new());
+    let got = reached::<SealedStoreKey>(&Rig::new(), &store);
+    assert_eq!(got, [kx_mod_predict::ID], "ADR-0033");
+}
+
+#[test]
 fn the_mouse_hook_still_reaches_only_the_mouse_module() {
     let hook: Arc<dyn PointerHook> = Arc::new(FakePointerHook::new());
     let got = reached::<PointerHookKey>(&Rig::new(), &hook);
@@ -168,7 +198,7 @@ fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
 }
 
 #[test]
-fn read_focused_text_goes_only_to_the_keyboard_among_the_modules_shipped_now() {
+fn read_focused_text_goes_only_to_the_keyboard_and_predict_among_the_modules_shipped_now() {
     let shipped = modules(&Rig::new().load().hub);
     let holders: Vec<_> = shipped
         .iter()
@@ -178,8 +208,8 @@ fn read_focused_text_goes_only_to_the_keyboard_among_the_modules_shipped_now() {
         .collect();
     assert_eq!(
         holders,
-        [kx_mod_keyboard::ID],
-        "ADR-0033: the typist; predict and the ui join when they ship"
+        [kx_mod_keyboard::ID, kx_mod_predict::ID],
+        "ADR-0033: the typist and prediction; the ui joins when it ships"
     );
 }
 

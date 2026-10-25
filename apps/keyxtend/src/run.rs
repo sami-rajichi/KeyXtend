@@ -6,7 +6,8 @@ use keyxtend::args::{self, Input};
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, drain, log, quiet};
+use keyxtend::{UI_ACCESS, drain, log, quiet, words};
+use kx_crypto::SealedFiles;
 use kx_kernel::KernelSettings;
 use kx_module_api::ports::PointerHook;
 use kx_platform::Platform;
@@ -103,6 +104,8 @@ fn run(
 
 /// The hub and the kernel over `platform`, with every module added and the settings loaded.
 fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError> {
+    let dirs = platform.dirs();
+    let sealed = dirs.data_dir().path().join(words::SEALED_DIR);
     let services = Services {
         injector: platform.injector(),
         layouts: platform.layouts(),
@@ -110,6 +113,9 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError
         scroll: platform.scroll_target(),
         shortcuts: platform.shortcuts(),
         power: platform.power_dialog(),
+        field: platform.field_watch(),
+        packs: platform.word_packs(words::pack_dirs(&dirs.exe_dir)),
+        sealed: Arc::new(SealedFiles::new(sealed, platform.key_guard())),
     };
     Boot::load(platform.clone(), services, ports(platform))
 }

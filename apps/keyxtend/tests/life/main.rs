@@ -1,7 +1,8 @@
 //! The app from start to stop over the fake platform, without Qt: every module starts and types, Quit stops them and
 //! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, the
-//! language shown always matches the legends, the pointer hook, the scroll target and the power dialog reach only their
-//! own modules, the shortcuts reach the keyboard's layer, the pad scrolls, and the Power key opens the dialog.
+//! language shown always matches the legends, the pointer hook, the scroll target, the power dialog, the box watch and
+//! the sealed store reach only the modules holding their gate, the shortcuts reach the keyboard's layer, the pad
+//! scrolls, the Power key opens the dialog, and prediction opens the language in front.
 
 #![allow(
     clippy::unwrap_used,
@@ -12,6 +13,7 @@
 mod fakes;
 mod lang;
 mod power;
+mod predict;
 mod rig;
 mod scroll;
 mod second;
@@ -30,12 +32,13 @@ use rig::{Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 6] = [
+const SHIPPED: [ModuleId; 7] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
     kx_mod_scroll::ID,
     kx_mod_power::ID,
+    kx_mod_predict::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -44,7 +47,7 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_the_layouts_keyboard_mouse_scroll_power_and_ui_modules() {
+fn the_app_ships_the_layouts_keyboard_mouse_scroll_power_predict_and_ui_modules() {
     let boot = Rig::new().load();
     let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);
