@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, stage_config};
+use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, noise, stage_config};
 
 const TP: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
 
@@ -63,6 +63,23 @@ fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
         matches!(result, Err(DevError::Stage(StageError::Banned(_)))),
         "{result:?}"
     );
+}
+
+#[test]
+fn dev_install_holds_an_app_folder_to_the_download_budget() {
+    let mut stage = stage_config();
+    stage.max_mb = 1;
+    let dir = TempDir::new("vet-budget");
+    let size = usize::try_from(paths::BYTES_PER_MB).unwrap();
+    let program = [stage::bare_image(), noise(size)].concat();
+    std::fs::write(dir.path().join(stage.program()), program).unwrap();
+    let setup = DevSetup {
+        root: dir.path().to_path_buf(),
+        config: devtools_config(),
+    };
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let over = StageError::OverBudget { mb: 2, max: 1 };
+    assert_eq!(vet(dir.path(), &setup, &stage, windows), Err(over.into()));
 }
 
 #[test]

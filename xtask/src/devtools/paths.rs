@@ -14,7 +14,7 @@ const NUMBERED: [&str; 2] = ["COM", "LPT"];
 const DEVICE_DIGITS: &str = "123456789¹²³";
 /// Separator of the relative paths in the settings and in `words.toml`.
 pub(crate) const SEP: char = '/';
-/// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
+/// Bytes in one MB for the size limits: 10⁶, as spec §10 and ADR-0012 count.
 pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
 /// Bytes in one KB, counted the same way: 10³.
 pub(crate) const BYTES_PER_KB: u64 = 1_000;

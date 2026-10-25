@@ -3,18 +3,12 @@
 
 use super::*;
 use crate::devtools::install::fits;
+use crate::test_support::noise;
 
-/// `len` bytes that deflate cannot shrink: a xorshift stream.
-fn noise(len: usize) -> Vec<u8> {
-    let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
-    let mut next = || {
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        x.to_le_bytes()[0]
-    };
-    (0..len).map(|_| next()).collect()
-}
+/// The spec, whose §10 row sets the download budget, from the workspace root.
+const SPEC: &str = "docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md";
+/// The start of that row.
+const DOWNLOAD_ROW: &str = "| Download size, without voice models |";
 
 /// A stage whose program holds `bytes`, and the test settings with a 1 MB budget.
 fn program(bytes: &[u8]) -> (Fake, StageConfig) {
@@ -59,7 +53,19 @@ fn the_summary_counts_files_installed_bytes_and_deflated_bytes() {
 }
 
 #[test]
-fn a_megabyte_is_a_million_bytes_rounded_up_as_spec_10_and_g8_count() {
+fn the_shipped_budget_is_spec_10s_download_size() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let read = |rel: &str| std::fs::read_to_string(root.join(rel)).unwrap();
+    let manifest: toml::Table = read("Cargo.toml").parse().unwrap();
+    let max_mb = manifest["workspace"]["metadata"]["stage"]["max_mb"].as_integer();
+    let spec = read(SPEC);
+    let row = spec.lines().find(|l| l.starts_with(DOWNLOAD_ROW));
+    let limit = row.and_then(|r| r.split("≤ ").nth(1)?.split_whitespace().next());
+    assert_eq!(limit.and_then(|n| n.parse().ok()), max_mb, "{row:?}");
+}
+
+#[test]
+fn a_megabyte_is_a_million_bytes_rounded_up_as_spec_10_counts() {
     assert_eq!((paths::mb(1_000_000), paths::mb(1_000_001)), (1, 2));
     let summary = Summary {
         files: 1,

@@ -1,8 +1,6 @@
 //! A process kx-gates watches, opened by id or given by the shell, to wait for its end or to measure its private
-//! working set, private commit and CPU time; and the size of a program's folder.
+//! working set, private commit and CPU time.
 #![cfg(windows)]
-
-use std::path::Path;
 
 use serde::Serialize;
 use windows::Win32::Foundation::{CloseHandle, FILETIME, HANDLE, WAIT_OBJECT_0};
@@ -19,7 +17,7 @@ use crate::win::size32;
 
 /// `FILETIME` ticks (100 ns) in one millisecond.
 const TICKS_PER_MS: f64 = 10_000.0;
-/// Bytes in one MB, as spec §10 counts memory and size.
+/// Bytes in one MB, as spec §10 counts memory.
 pub const MB: f64 = 1_000_000.0;
 
 /// A process's private memory, in MB.
@@ -156,38 +154,10 @@ fn ticks(t: FILETIME) -> f64 {
     ((u64::from(t.dwHighDateTime) << u32::BITS) | u64::from(t.dwLowDateTime)) as f64
 }
 
-/// Every file's size under `dir`, in MB; links are not followed.
-pub fn folder_mb(dir: &Path) -> Result<f64, String> {
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "Sizes are far below 2^53 bytes."
-    )]
-    Ok(bytes(dir)? as f64 / MB)
-}
-
-/// Every file's size under `dir`, in bytes.
-fn bytes(dir: &Path) -> Result<u64, String> {
-    let err = |e: std::io::Error| format!("{}: {e}", dir.display());
-    let mut sum = 0;
-    for entry in std::fs::read_dir(dir).map_err(err)? {
-        let entry = entry.map_err(err)?;
-        let meta = std::fs::symlink_metadata(entry.path()).map_err(err)?;
-        sum += if meta.is_dir() {
-            bytes(&entry.path())?
-        } else if meta.is_file() {
-            meta.len()
-        } else {
-            0
-        };
-    }
-    Ok(sum)
-}
-
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use std::process::{Command, Stdio};
-
-    use kx_test_support::tempdir::TempDir;
 
     use super::*;
 
@@ -278,16 +248,5 @@ mod tests {
                 .exit_code(),
             None
         );
-    }
-
-    #[test]
-    fn a_folder_counts_every_file_below_it_in_mb() {
-        let dir = TempDir::new("gates-size").expect("temp folder");
-        let half = vec![0u8; 500_000];
-        std::fs::create_dir(dir.path().join("sub")).expect("sub folder");
-        std::fs::write(dir.path().join("a"), &half).expect("file");
-        std::fs::write(dir.path().join("sub").join("b"), &half).expect("file");
-        assert!((folder_mb(dir.path()).expect("sized") - 1.0).abs() < 1e-9);
-        assert!(folder_mb(&dir.path().join("none")).is_err());
     }
 }

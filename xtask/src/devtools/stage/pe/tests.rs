@@ -114,6 +114,11 @@ fn an_image_without_tables_imports_nothing() {
 }
 
 #[test]
+fn the_bare_image_imports_nothing() {
+    assert_eq!(imports(&bare_image()), Some(Vec::new()));
+}
+
+#[test]
 fn an_old_style_delay_table_is_refused() {
     let b = image(&[], &["C.dll"], true, 0);
     assert_eq!(imports(&b), None);

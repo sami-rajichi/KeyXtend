@@ -173,6 +173,18 @@ pub(crate) fn stage_config() -> StageConfig {
     serde_json::from_value(stage_json()).expect("the test settings are valid")
 }
 
+/// `len` bytes that deflate cannot shrink: a xorshift stream.
+pub(crate) fn noise(len: usize) -> Vec<u8> {
+    let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
+    let mut next = || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        x.to_le_bytes()[0]
+    };
+    (0..len).map(|_| next()).collect()
+}
+
 /// The project's DCO config: the `Signed-off-by` trailer, with `dependabot[bot]` exempt.
 pub(crate) fn dco_config() -> DcoConfig {
     DcoConfig {

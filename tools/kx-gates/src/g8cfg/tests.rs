@@ -6,8 +6,6 @@ use super::*;
 // Workspace paths from `tools/kx-gates/src/g8cfg`; a moved crate breaks the build here, never silently.
 const RUN_RS: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
 const FACE_RS: &str = include_str!("../../../../crates/kx-ui/src/hub/face.rs");
-/// The workspace manifest, whose stage settings hold the download budget.
-const ROOT_TOML: &str = include_str!("../../../../Cargo.toml");
 /// The spec, whose §10 sets the budgets G8 holds the product to.
 const SPEC: &str =
     include_str!("../../../../docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md");
@@ -28,18 +26,6 @@ fn spec_limits(metric: &str) -> Vec<f64> {
 }
 
 #[test]
-fn the_folder_budget_is_the_stages_own_limit() {
-    let root: toml::Table = ROOT_TOML.parse().expect("is TOML");
-    let max_mb = root["workspace"]["metadata"]["stage"]["max_mb"].as_integer();
-    let max_mb = i32::try_from(max_mb.expect("a whole MB count")).expect("fits");
-    let size_mb = shipped().size_mb;
-    assert!(
-        (size_mb - f64::from(max_mb)).abs() < f64::EPSILON,
-        "{size_mb} vs {max_mb}"
-    );
-}
-
-#[test]
 fn the_shipped_budgets_are_spec_10s() {
     let g = shipped();
     assert_eq!(g.check(), Ok(()));
@@ -53,10 +39,6 @@ fn the_shipped_budgets_are_spec_10s() {
     assert_eq!(
         spec_limits("Key click to character in target app"),
         [g.char_ms]
-    );
-    assert_eq!(
-        spec_limits("Download size, without voice models"),
-        [g.size_mb]
     );
     assert_eq!(
         spec_limits("Key click to key highlight"),

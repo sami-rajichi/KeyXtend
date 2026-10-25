@@ -26,8 +26,6 @@ pub struct Measured {
     pub memory_at_ms: f64,
     /// Idle CPU, in percent of one core.
     pub core_pct: Option<f64>,
-    /// The program folder, in MB.
-    pub size_mb: f64,
     /// Key highlights.
     pub presses: Presses,
     /// Grow and shrink times.
@@ -75,7 +73,6 @@ pub fn parts(g: &G8, shown_ms: Option<f64>, m: &Measured, weak: bool, o: &Outsid
         scrolled_memory,
         scrolled_commit,
         Part::at_most("idle_core_pct", m.core_pct, g.idle_core_pct),
-        Part::at_most("size_mb", Some(m.size_mb), g.size_mb),
         lit_p50,
         lit_worst,
         Part::at_most("char_p99_ms", char_p99, g.char_ms),

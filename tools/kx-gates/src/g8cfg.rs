@@ -36,8 +36,6 @@ pub struct G8 {
     pub commit_mb: f64,
     /// Idle CPU, in percent of one core, in both modes.
     pub idle_core_pct: f64,
-    /// The program folder, in MB of 10⁶ bytes: the stage's `max_mb`.
-    pub size_mb: f64,
     /// The key pressed for the highlight check, by board id.
     pub press_key: String,
     /// How many presses are timed.
@@ -161,7 +159,6 @@ impl G8 {
             self.memory_mb,
             self.commit_mb,
             self.idle_core_pct,
-            self.size_mb,
             self.highlight_frames,
             self.highlight_worst_frames,
             self.char_ms,

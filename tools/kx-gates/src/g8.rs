@@ -1,5 +1,5 @@
-//! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, folder size, key highlight,
-//! click to character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
+//! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, key highlight, click to
+//! character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
 //! use and after a scroll (`g8scroll`) against them, times resizes and logs the machine's memory (`g8host`).
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
 //! layout in front (`g8lang`); it clicks, so only with the owner's yes.
@@ -29,7 +29,7 @@ use crate::g8ui::Spot;
 
 use crate::out::{say, shown};
 use crate::presentmon::Frames;
-use crate::proc::{self, Memory, Process};
+use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{close, g2, g2raw, g8hook, g8host, mouseguard, out};
@@ -83,7 +83,7 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 }
 
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
-/// memory, idle, folder, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
+/// memory, idle, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
 /// 2026-10-16); then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never
 /// count (`g8rounds`). `hold` runs after the presses, after G2 and after the scroll, each of which took the front.
 fn measure(
@@ -98,7 +98,6 @@ fn measure(
     let kb = Keyboard::find()?;
     let (memory, memory_at_ms) = warm(ctx, s)?;
     let core_pct = idle(ctx, &s.process)?;
-    let size_mb = proc::folder_mb(program.parent().ok_or("the program has no folder")?)?;
     let spot = Spot::of(&kb, &g.press_key)?;
     let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
     hold.fresh()?;
@@ -114,7 +113,6 @@ fn measure(
         memory,
         memory_at_ms,
         core_pct,
-        size_mb,
         presses,
         resizes,
         g2,

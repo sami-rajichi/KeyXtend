@@ -11,6 +11,8 @@ mod words;
 pub(crate) use self::check::refuse_gate_exe;
 pub(crate) use self::config::{Network, StageConfig};
 pub(crate) use self::error::StageError;
+#[cfg(test)]
+pub(crate) use self::pe::bare_image;
 
 use std::path::{Path, PathBuf};
 
