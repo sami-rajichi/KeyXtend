@@ -6,8 +6,8 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g6rec, g8, g8hook, g8lang, g8lit, g17, g18, g19, g20, g21, g22, g22bench,
-    g22type, g25, hand,
+    capture, g5, g6, g6rec, g8, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g20, g21, g22,
+    g22bench, g22type, g25, hand,
 };
 
 /// The program's name in the help.
@@ -21,20 +21,21 @@ fn names(apps: &[AppKind]) -> String {
 /// The help lines of the gates aimed at the product or its test build.
 fn product_lines() -> String {
     let (weak, arabic, lit, osk) = (g8::WEAK, g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
-    let (hook, hook_weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
+    let (hook, hook_weak, predict) = (g8hook::HOOK, g8hook::HOOK_WEAK, g8predict::PREDICT);
     let (apps, records) = (names(&g6::APPS), g6rec::NAMES.join("|"));
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
        {PROG} g4 <{NAME}> [--clicks N] [--seed S]
        {PROG} g6 <{apps}|{records}>
-       {PROG} g8 <{NAME}|{weak}|{arabic}|{lit}|{osk}|{hook}|{hook_weak}>
+       {PROG} g8 <{NAME}|{weak}|{arabic}|{lit}|{osk}|{hook}|{hook_weak}|{predict}>
        {PROG} g9 <{NAME}>
        {PROG} g10 <{NAME}>
        {PROG} g11 <{NAME}>
        {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
-       {PROG} g26 <{NAME}>"
+       {PROG} g26 <{NAME}>
+       {PROG} g27 <{NAME}>"
     )
 }
 
@@ -51,6 +52,16 @@ fn face_lines() -> String {
         g22::BENCH,
         g22bench::WITH_CLOUD,
         g22type::TYPING,
+    )
+}
+
+/// The help lines of P7's gates that type through the product's chips.
+fn typing_lines() -> String {
+    let predict = g8predict::PREDICT;
+    format!(
+        "g8 {predict} reads the predict part's memory from two cold starts and types words through chips; the owner's \
+         settings come back.
+g21 {NAME} and g27 {NAME} type through the running product's keys and chips into target-window and Chrome."
     )
 }
 
@@ -73,6 +84,7 @@ pub fn usage() -> String {
 g8 {} puts an Arabic layout in front before the cold start and the owner's layout back after.
 g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.
 g8 {} and {} judge the hook's p99 and lost echoes on the product's test build, driven with G5's cases; the second in weak mode.
+{}
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
         product_lines(),
@@ -92,6 +104,7 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         g8lit::OSK,
         g8hook::HOOK,
         g8hook::HOOK_WEAK,
+        typing_lines(),
         g5::ADMIN,
     )
 }
@@ -135,7 +148,7 @@ mod tests {
         let text = usage();
         assert!(text.contains(&format!("g12 <{NAME}>")), "{text}");
         let (hook, weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
-        let g8 = format!("|{hook}|{weak}>");
+        let g8 = format!("|{hook}|{weak}|");
         assert!(
             text.lines().any(|l| l.contains("g8 <") && l.contains(&g8)),
             "{text}"
@@ -149,6 +162,30 @@ mod tests {
             .lines()
             .find(|l| l.contains(&format!("g8 {}", g8lang::ARABIC)));
         assert!(arabic.is_some_and(|l| l.contains("back")), "{text}");
+    }
+
+    #[test]
+    fn p7_lists_g27_g21s_product_half_and_g8_predict() {
+        let text = usage();
+        assert!(text.contains(&format!("g27 <{NAME}>")), "{text}");
+        assert!(
+            text.contains(&format!("g21 <{}>", g21::NAMES.join("|"))),
+            "{text}"
+        );
+        assert!(g21::NAMES.contains(&NAME), "G21's product half");
+        let predict = format!("|{}>", g8predict::PREDICT);
+        assert!(
+            text.lines()
+                .any(|l| l.contains("g8 <") && l.contains(&predict)),
+            "{text}"
+        );
+        let told = text
+            .lines()
+            .find(|l| l.contains(&format!("g8 {}", g8predict::PREDICT)));
+        assert!(
+            told.is_some_and(|l| l.contains("settings come back")),
+            "{text}"
+        );
     }
 
     #[test]

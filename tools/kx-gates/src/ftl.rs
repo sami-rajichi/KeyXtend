@@ -1,4 +1,5 @@
-//! kx-ui's texts as the product ships them, in English, French and Arabic, for gates that know a window by its title.
+//! kx-ui's texts as the product ships them, in English, French and Arabic, for gates that know a window by its title
+//! or read a word back out of a chip's name.
 #![cfg(windows)]
 
 /// Starts a comment line.
@@ -7,6 +8,8 @@ const COMMENT: char = '#';
 const ATTR: char = '.';
 /// Starts a term's name.
 const TERM: char = '-';
+/// Starts a variable's name.
+const VAR: char = '$';
 
 /// Each language's translation file, by its tag; workspace paths from this file, all of kx-ui's (checked).
 const FILES: [(&str, &str); 3] = [
@@ -67,6 +70,32 @@ fn fill(ftl: &str, value: &str) -> Option<String> {
     }
     out.push_str(rest);
     Some(out)
+}
+
+/// The text of `key` in `ftl` around its one placeable `{ $var }`: what comes before it and after it, terms filled;
+/// none when the key, the placeable or a term is missing.
+fn split(ftl: &str, key: &str, var: &str) -> Option<(String, String)> {
+    let value = written(ftl, key)?;
+    let mut from = 0;
+    while let Some(open) = value[from..].find('{').map(|at| from + at) {
+        let close = open + value[open..].find('}')?;
+        if value[open + 1..close].trim().strip_prefix(VAR) == Some(var) {
+            return Some((fill(ftl, &value[..open])?, fill(ftl, &value[close + 1..])?));
+        }
+        from = close + 1;
+    }
+    None
+}
+
+/// The text of `key` in every shipped language split around `{ $var }`, in file order; an error naming the first
+/// language that lacks it.
+pub fn around(key: &str, var: &str) -> Result<Vec<(String, String)>, String> {
+    FILES
+        .iter()
+        .map(|(lang, ftl)| {
+            split(ftl, key, var).ok_or_else(|| format!("kx-ui has no {key} with ${var} in {lang}"))
+        })
+        .collect()
 }
 
 /// The text of `key` in every shipped language, in file order; an error naming the first language that lacks it.
@@ -137,6 +166,20 @@ mod tests {
         let mut ours: Vec<String> = FILES.iter().map(|(tag, _)| format!("{tag}.ftl")).collect();
         ours.sort();
         assert_eq!(shipped, ours);
+    }
+
+    #[test]
+    fn a_variables_text_splits_around_it_with_its_terms_filled() {
+        let ftl = "-app = KeyXtend\nchip =\n    .name = { -app } pick: { $word }!\n";
+        let got = split(ftl, "chip.name", "word");
+        assert_eq!(got, Some(("KeyXtend pick: ".into(), "!".into())));
+        assert_eq!(split(ftl, "chip.name", "other"), None, "another variable");
+        assert_eq!(split(ftl, "chip.none", "word"), None, "no such key");
+        let ar = around("chip.name", "word").expect("in all three");
+        assert_eq!(ar.len(), FILES.len());
+        assert!(ar.iter().all(|(before, _)| !before.is_empty()));
+        let e = around("chip.name", "nothing").expect_err("no such variable");
+        assert!(e.contains("$nothing") && e.contains("en"), "{e}");
     }
 
     #[test]

@@ -9,7 +9,7 @@ use crate::mouseguard::Mouse;
 use crate::usage::usage;
 use crate::{
     close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g8hook, g9, g10, g11, g12, g13,
-    g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, hand, mouseguard, out,
+    g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, g27, hand, mouseguard, out,
 };
 
 /// Gates whose runs take a random seed.
@@ -82,7 +82,7 @@ type NamedRun = fn(&Ctx, &str) -> Result<Value, String>;
 /// Every gate: whether it holds the mouse, and its run when it takes only a name. G5, G6, G12, G17 and G18 drive the
 /// test build, as `DRIVEN`'s names do; the hand try, G13 and G23 wait on the owner's own mouse, G26 runs on the CI
 /// runner and `close` moves nothing.
-const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
+const GATES: [(&str, Mouse, Option<NamedRun>); 26] = [
     ("g1", Mouse::Held, None),
     ("g2", Mouse::Held, None),
     ("g3", Mouse::Held, None),
@@ -107,6 +107,7 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 25] = [
     ("g24", Mouse::Held, Some(g24::run)),
     ("g25", Mouse::Held, Some(g25::run)),
     ("g26", Mouse::Free, Some(g26::run)),
+    ("g27", Mouse::Held, Some(g27::run)),
     ("close", Mouse::Free, Some(close::run)),
 ];
 

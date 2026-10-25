@@ -85,6 +85,9 @@ fn parses_gates_that_take_only_a_name() {
         "g11 keyxtend",
         "g13 keyxtend",
         "g26 keyxtend",
+        "g21 keyxtend",
+        "g27 keyxtend",
+        "g8 predict",
     ] {
         let a = parse(&args(probe)).expect("parses");
         assert_eq!((a.count, a.seed), (None, None));
@@ -152,7 +155,10 @@ fn the_p3_gates_take_no_option_and_only_their_names() {
         "g8 keyxtend --clicks 5",
         "g26 keyxtend --clicks 5",
         "g11 keyxtend --seed 1",
-        "g27 keyxtend",
+        "g27 qt",
+        "g27 keyxtend --seed 1",
+        "g8 predict --clicks 5",
+        "g28 keyxtend",
         "g14 keyxtend",
     ] {
         assert!(parse(&args(bad)).is_err(), "{bad} should fail");
@@ -169,7 +175,7 @@ fn the_help_names_every_gate_that_takes_only_a_name() {
 
 #[test]
 fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
-    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g25"] {
+    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g21", "g25", "g27"] {
         assert_eq!(mouse(gate, "x"), Mouse::Held, "{gate}");
     }
     for gate in ["g5", "g6", "g12", "g17", "g18"] {
@@ -195,4 +201,5 @@ fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
     assert_eq!(mouse("g8", crate::product::NAME), Mouse::Held);
     assert_eq!(mouse("g8", crate::g8::WEAK), Mouse::Held);
     assert_eq!(mouse("g8", crate::g8lang::ARABIC), Mouse::Held);
+    assert_eq!(mouse("g8", crate::g8predict::PREDICT), Mouse::Held);
 }

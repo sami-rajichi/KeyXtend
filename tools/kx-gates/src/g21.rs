@@ -1,4 +1,5 @@
-//! G21: after a click into a field, the focused element says whether it is a password box.
+//! G21: after a click into a field, the focused element says whether it is a password box; `g21 keyxtend` then checks
+//! the product's lane in those boxes (`g21prod`).
 #![cfg(windows)]
 
 use kx_platform_windows::uia::{self, Uia};
@@ -6,14 +7,14 @@ use serde_json::{Value, json};
 use spike_core::geom;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
-use crate::{launch, probe, simuser, win};
+use crate::{g21prod, launch, probe, product, simuser, win};
 
 /// Run on a web page in Chrome.
 const CHROME: &str = "chrome";
 /// Run on target-window's Win32 edit box.
 const WIN32: &str = "win32";
-/// G21's two runs.
-pub const NAMES: [&str; 2] = [CHROME, WIN32];
+/// G21's runs: the two field-kind checks, then the product half.
+pub const NAMES: [&str; 3] = [CHROME, WIN32, product::NAME];
 /// The Win32 run's boxes: target-window plain, and with its password arguments.
 const WIN32_BOXES: [(&str, bool); 2] = [("plain", false), ("password", true)];
 
@@ -121,6 +122,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     match name {
         CHROME => chrome(ctx),
         WIN32 => Ok(win32(ctx)),
+        product::NAME => g21prod::run(ctx),
         _ => Err(format!("G21 runs {}, not {name}", NAMES.join(", "))),
     }
 }

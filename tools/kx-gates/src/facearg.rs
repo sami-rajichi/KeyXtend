@@ -5,11 +5,11 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g8hook, g8lang, g8lit, g19, g22, g22bench, g22type, product};
+use crate::{g8, g8hook, g8lang, g8lit, g8predict, g19, g22, g22bench, g22type, product};
 
 /// Gates aimed at the product, which take its name.
-pub(crate) const PRODUCT_GATES: [&str; 11] = [
-    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g26", "close",
+pub(crate) const PRODUCT_GATES: [&str; 12] = [
+    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g26", "g27", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
 pub(crate) const FACE_GATES: [&str; 6] = ["g7", "g19", "g22", "g23", "g24", "close"];
@@ -31,6 +31,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g8lit::OSK,
             g8hook::HOOK,
             g8hook::HOOK_WEAK,
+            g8predict::PREDICT,
         ],
         "g19" => &[g19::CORE],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
@@ -108,6 +109,7 @@ mod tests {
             g8lit::OSK,
             g8hook::HOOK,
             g8hook::HOOK_WEAK,
+            g8predict::PREDICT,
         ] {
             assert!(check("g8", name).is_ok(), "g8 {name}");
             assert!(check("g9", name).is_err(), "{name} is G8's");

@@ -21,8 +21,9 @@ use crate::proc::{Memory, Process};
 use crate::stats;
 use crate::win::sleep_ms;
 
-/// Decimals of each MB reading in a round's error: a tenth of an MB, finer than any growth budget.
-const MB_DECIMALS: usize = 1;
+/// Decimals of each MB reading in a round's error and in `g8 predict`'s reading: a tenth of an MB, finer than any
+/// growth budget.
+pub(crate) const MB_DECIMALS: usize = 1;
 
 /// What the churn did, and private memory around its measured rounds.
 #[derive(Debug, Clone, PartialEq, Serialize)]

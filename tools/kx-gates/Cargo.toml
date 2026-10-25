@@ -31,6 +31,8 @@ kx-mod-layouts = { path = "../../crates/kx-mod-layouts" }
 kx-mod-mouse = { path = "../../crates/kx-mod-mouse" }
 # The scroll settings (`SPEC`) and stats line G6 reads from the product's test build.
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll" }
+# Word prediction's settings, folding and scripts: G27's expected text takes the gap the word's script takes.
+kx-mod-predict = { path = "../../crates/kx-mod-predict" }
 # The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.

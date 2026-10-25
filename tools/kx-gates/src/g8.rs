@@ -3,7 +3,8 @@
 //! use and after a scroll (`g8scroll`) against them, times resizes and logs the machine's memory (`g8host`).
 //! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
 //! layout in front (`g8lang`); it clicks, so only with the owner's yes.
-//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`).
+//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`), and `g8 predict` the
+//! prediction part's memory and typing churn (`g8predict`).
 #![cfg(windows)]
 
 use std::path::Path;
@@ -33,7 +34,7 @@ use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{close, g2, g2raw, g8hook, g8host, mouseguard, out};
-use crate::{g8lit, g8size, g8type, g8ui, g8use};
+use crate::{g8lit, g8predict, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -54,7 +55,7 @@ pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64
 }
 
 /// Refuses a run while the product is running, as G8 times a cold start.
-fn cold() -> Result<(), String> {
+pub(crate) fn cold() -> Result<(), String> {
     match product::running() {
         Some(_) => Err(format!(
             "close {} first: G8 times a cold start",
@@ -193,10 +194,11 @@ fn spans(ctx: &Ctx, m: &Measured) -> Result<Vec<Span>, String> {
 }
 
 /// Runs G8: `name` is the product, `weak` for weak mode or `arabic` with an Arabic layout in front, and the product
-/// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), and `hook` and
-/// `hook-weak` only the hook (`g8hook`).
+/// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), `hook` and
+/// `hook-weak` only the hook (`g8hook`), and `predict` only the prediction part (`g8predict`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if let Some(part) = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name)) {
+    let parts = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name));
+    if let Some(part) = parts.or_else(|| g8predict::run(ctx, name)) {
         return part;
     }
     cold()?;

@@ -14,6 +14,7 @@
 | Read a program's signature and manifest | `check-uiaccess` explains why uiAccess is missing. | Only diagnosis is lost. |
 | Write and delete one shortcut in the user's own Start menu | The owner starts the installed app with one click. | The app is started from its folder instead. |
 | Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by the owner's hand. |
+| Write the `[g8] program` copy's `settings.toml` while `kx-gates g8 predict` runs, then put it and its last good copy back byte for byte | The predict part is the difference between a cold start with predict on and one with it off. | G8 cannot tell predict's memory apart. |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -30,7 +31,7 @@
 | Staged programs and libraries (PE import tables) | Every read is bounds-checked and a malformed file fails the stage, never panics; only descriptors with image-relative places are read | The file's own length | Property test |
 | `APPDATA` and `USERPROFILE` for the shortcut | Both absolute, else an error, checked before anything is signed, installed or removed; the shortcut goes only under the Start-menu folder of `APPDATA`, and only inside `USERPROFILE`, never `ProgramData` | N/A | Unit tests |
 | Script output (thumbprints) | Exactly 40 hex digits each, else an error | N/A | No |
-| The running copy's `settings.toml`, for the gates | Gates read its `[keyboard]` and `[ui]` sections through `kx_settings::peek` (size cap, never writes) and `peek_section`, which checks it as the store does: a bad value gives its default, and a section that does not check gives the defaults | `MAX_FILE_BYTES`; `relabel_ms` capped by the keyboard's settings check | Unit tests |
+| The running copy's `settings.toml`, for the gates | Gates read its `[keyboard]`, `[ui]` and `[predict]` sections through `kx_settings::peek` (size cap, never writes) and `peek_section`, which checks it as the store does: a bad value gives its default, and a section that does not check gives the defaults | `MAX_FILE_BYTES`; `relabel_ms` capped by the keyboard's settings check | Unit tests |
 | `dev-install` folder and `--remove` name | One plain folder name; separators, `..`, wildcards, device names and trailing dots rejected (property test); the source must hold a program, no links or junctions, and must not overlap the target | Source capped by `install_max_mb` in Rust; the admin script re-checks the target and links | Property test |
 | `check-uiaccess` path and `ProgramFiles` variables | Compared folder by folder, ignoring case; `.` and `..` steps rejected (property test) | N/A | Property test |
 | Recordings and recipes for `cargo xtask sounds` (`import`, `join`, `render`) | WAV files are read through kx-theme's chunk walker: 8, 16 or 24-bit PCM or 32-bit float, one or two channels, every size checked, and a truncated file, a bad header, a partial frame or a NaN sample is refused without a panic; the recipe and format files refuse unknown fields | A window or a join longer than the format's `max_ms` is refused, and a trimmed recording is cut to it | Property tests: any bytes, and damaged files |
@@ -48,10 +49,10 @@
   - A staged file the check never reads, or a network name the guard never meets. Mitigation: `libs` and `plugins` may name only `.dll` files, which the check reads, and the network library and its importers must be listed in `libs`.
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - A gate-only build (the app's `gate-input`, which acts on another program's tagged input) getting signed and uiAccess. Mitigation: the stage check refuses a program holding `[workspace.metadata.stage] gate_flag`, and `dev-install` refuses to sign any exe that holds it.
-  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml` and `kx-gates-p5.toml` from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
+  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml`, `kx-gates-p5.toml` and `kx-gates-p7.toml` from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
     - They name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its token. It reads none when Windows will not say whether it has uiAccess.
-    - With uiAccess it reads all six of its settings files (those four, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
-    - `dev-install` copies every file of the build folder, so put the six files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+    - With uiAccess it reads all seven of its settings files (those five, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
+    - `dev-install` copies every file of the build folder, so put the seven files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
   - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input.
     - It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself or Windows will not say, so only the plain kx-gates starts it.
     - kx-gates starts only a program whose bytes hold the gate flag, with a `data` folder beside it, so it never reads or writes the owner's settings or log. It quits the test build at once when its log lacks the gate warning.
@@ -90,6 +91,15 @@
     - G25 never starts, clicks Power or taps Alt to bring Notepad back while any window of that class shows, old or new, whatever its program, and it names that window's class and program, never its title (`g25::front`, `g25watch.rs` `none_open`). One check covers a front's tries, up to `[timing] front_tries` Alt taps `front_wait_ms` apart, so a dialog that shows during them may still get a tap, which alone cannot confirm it.
     - The config check refuses an `esc` other than the lone Esc key and an empty class or program (`featcfg.rs` `check_g25`), and unit tests pin the Esc and Alt rules (`g25wins.rs`, `g25watch.rs`).
     - It keeps the owner's clipboard and removes its copies from Windows clipboard history after; its result names windows by class and program only, never a title.
+  - `kx-gates g27 keyxtend` clicks the running product's keys, then its best word chip, into a fresh target-window's plain box for each `[g27]` case, each click only while the keyboard is on top there.
+    - It switches the session's input language to the case's first installed layout, as the language hotkey does, and puts target-window's first layout back after each box, also when a step failed; the result says whether it came back.
+    - Its edge case types a prefix, clicks the box's left end to move the caret, then clicks the best chip; the box's text must not change.
+    - It reads the box's text by UI Automation only to compare it, capped by `[g27] max_chars`. Its result holds the config's prefixes, times and booleans, never the box's text or a chip's word.
+  - `kx-gates g21 keyxtend` runs the product's own field watch (`WinFieldWatch`) inside kx-gates over target-window's password box, the password field of G21's own Chrome page and target-window's plain box. In each it types `[g21_product]`'s case with the product's keys and puts the layout back as G27 does; its result holds each box's kind, the lock, chip counts and booleans.
+  - `kx-gates g8 predict` refuses to run while the product runs. It keeps the `[g8] program` copy's settings file and its last good copy, refusing a file over the settings store's cap before it changes anything.
+    - It writes predict on, with learning paused so the gate's words never teach the owner's learner, then predict in `[kernel] disabled`. Both files come back byte for byte after, also on a panic (a drop guard), and the result says whether they did.
+    - The on run types `[g8_predict]` words through chips into a target-window it starts, never Notepad or Word, and closes it after. When that copy does not quit, the off run is skipped, as the copy could still save its settings.
+  - G27, G21's product half and `g8 predict` take no screenshot and save no file. They type only the config's prefixes and the chips' words, into target-window or G21's page.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap gets Quit.
@@ -136,6 +146,8 @@ A same-user attacker who can edit files in the repo can already act as the owner
 The overlap check compares path text, so a short 8.3 name for the install folder slips past it. The worst case is losing that test install, which `dev-install` recreates.
 
 G25 opens the real power dialog on the owner's PC, as the product must be checked there. Only Esc or the owner closes it, and a dialog that never comes to the front stays open for the owner, so a gate never confirms a shut-down.
+
+G27 and G21's product half type on the owner's running copy with the owner's own learning setting, as the product must be checked as it runs. So a picked word, or a typed prefix the product ends as a word, may count once in the owner's word memory.
 
 G25 reads the owner's own `shortcut_pages` to find each key's page. A page the owner arranged changes only where the keys sit, as G25 still clicks each one by its id.
 
