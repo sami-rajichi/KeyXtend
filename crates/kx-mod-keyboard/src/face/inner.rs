@@ -78,6 +78,8 @@ struct CapsLook {
     shown: Option<bool>,
     /// The last read, which the typing mode tells from any thread.
     seen: bool,
+    /// Our Caps click flipped `seen`, which only the relabel tick's read replaces.
+    flipped: bool,
 }
 
 impl Inner {
@@ -205,23 +207,28 @@ impl Inner {
     }
 
     /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard; only the
-    /// UI's thread calls it.
+    /// relabel tick on the UI's thread calls it, and its read replaces our flip.
     pub(super) fn caps_moved(&mut self) -> bool {
+        self.caps.flipped = false;
         let now = self.look_caps();
         self.caps.shown.is_some_and(|shown| shown != now)
     }
 
-    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode.
+    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode; while our
+    /// flip waits for the tick, the kept view stands, as the system may not have it yet.
     fn look_caps(&mut self) -> bool {
-        self.caps.seen = self.ports.source.caps_on();
+        if !self.caps.flipped {
+            self.caps.seen = self.ports.source.caps_on();
+        }
         self.caps.seen
     }
 
-    /// After our Caps Lock tap went out, the kept view flips at once; the next tick's read corrects it if the system
-    /// disagrees.
+    /// After our Caps Lock tap went out, the kept view flips at once and outlasts state reads; the next tick's read
+    /// replaces it, correcting it if the system disagrees.
     fn follow_caps(&mut self) {
         if self.typing.took_caps() {
             self.caps.seen = !self.caps.seen;
+            self.caps.flipped = true;
         }
     }
 

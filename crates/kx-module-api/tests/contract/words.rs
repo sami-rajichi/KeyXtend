@@ -126,9 +126,7 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 6] {
     };
     let mode = TypingMode {
         shift: true,
-        caps: false,
-        shortcut: false,
-        dead: false,
+        ..TypingMode::default()
     };
     let word = TypeWord {
         round: 1,
