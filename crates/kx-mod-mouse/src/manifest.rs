@@ -9,7 +9,7 @@ use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 pub const ID: ModuleId = ModuleId::new("mouse");
 
 /// The module's manifest: `PointerHook` gates the hook, `InjectInput` covers the input its engine sends, and
-/// `KeyboardUi` the notes and pointer moves it tells the UI.
+/// `KeyboardUi` the notes and pointer moves it tells the UI; wanted and told presses carry no gate.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -27,7 +27,9 @@ pub static MANIFEST: Manifest = Manifest {
 mod tests {
     use super::*;
     use kx_module_api::Event;
-    use kx_module_api::ports::{AssistNote, AssistToggle, LatchesChanged, PointerMoved};
+    use kx_module_api::ports::{
+        AssistNote, AssistToggle, LatchesChanged, PointerMoved, PointerPressed, PressesWanted,
+    };
 
     #[test]
     fn it_needs_only_the_pointer_hook() {
@@ -52,6 +54,12 @@ mod tests {
         assert!(heard.iter().all(|&c| c == Some(Capability::InjectInput)));
         let told = [AssistNote::CAPABILITY, PointerMoved::CAPABILITY];
         assert!(told.iter().all(|&c| c == Some(Capability::KeyboardUi)));
+    }
+
+    #[test]
+    fn presses_wanted_and_told_need_no_gate() {
+        let presses = [PressesWanted::CAPABILITY, PointerPressed::CAPABILITY];
+        assert!(presses.iter().all(Option::is_none));
     }
 
     #[test]

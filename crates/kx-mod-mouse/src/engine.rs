@@ -115,6 +115,8 @@ pub struct Engine {
     mods_down: bool,
     /// The scroll pad scrolls, so moves and presses are noted.
     scrolling: bool,
+    /// Word prediction wants presses, so they are noted.
+    wanted: bool,
     /// Notes for the module, drained by `take_notes`.
     notes: Vec<Note>,
 }
@@ -137,6 +139,7 @@ impl Engine {
             mods: Vec::with_capacity(MAX_LATCHES),
             mods_down: false,
             scrolling: false,
+            wanted: false,
             notes: Vec::with_capacity(NOTE_ROOM),
         }
     }
@@ -157,13 +160,14 @@ impl Engine {
         }
     }
 
-    /// The hook is needed: a mode is on, latches are held, the pad scrolls, a press is held back or awaited, a carry
-    /// runs, or modifiers are still pressed.
+    /// The hook is needed: a mode is on, latches are held, the pad scrolls, presses are wanted, a press is held back
+    /// or awaited, a carry runs, or modifiers are still pressed.
     #[must_use]
     pub fn needs_hook(&self) -> bool {
         self.mode != Mode::Off
             || !self.latches.is_empty()
             || self.scrolling
+            || self.wanted
             || self.mods_down
             || self.state != State::Idle
     }

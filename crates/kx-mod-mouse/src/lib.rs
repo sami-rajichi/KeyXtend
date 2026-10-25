@@ -17,7 +17,7 @@ pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesChanged, PointerHookKey,
-    PointerMoved, ScrollChanged,
+    PointerMoved, PressesWanted, ScrollChanged,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
@@ -56,6 +56,8 @@ impl Module for MouseModule {
         relay(cx, &tx, |e: &ScrollChanged| {
             Msg::Scroll(e.live && e.dir.is_some())
         })?;
+        // Word prediction publishes this from its own thread; the handler only forwards it.
+        relay(cx, &tx, |e: &PressesWanted| Msg::Presses(e.on))?;
         let bus = cx.bus();
         let actor = Actor::new(
             hook,

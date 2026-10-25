@@ -1,27 +1,22 @@
 //! The module's start through the shared fake host, which gates services as the kernel does, and its actor thread
 //! over the bus.
 
+use crate::live::{Live, WAIT, hear, host, on, synced};
 use crate::logs::{MESSAGE, Planned, lines_of};
 use crate::rig::{RCLICK, SHIFT, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistNote, AssistToggle, Dir, GrabState, HookConfig, HookError,
-    HookRun, LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, ScrollAsk,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, Dir, HookConfig, HookError, HookRun,
+    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, ScrollAsk,
     ScrollChanged, Toggle,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Module, ModuleCx, ModuleError, Notice, ServiceError,
-    ServiceKey, SettingsError, Subscription, keys,
+    ServiceKey, SettingsError, keys,
 };
-use kx_platform_fake::FakePointerHook;
-use kx_test_support::host::{FakeHost, Stored};
+use kx_test_support::host::FakeHost;
 use std::sync::Arc;
-use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 use tracing::Level;
-
-/// The longest a threaded test waits for the actor; it never sleeps.
-const WAIT: Duration = Duration::from_secs(10);
 
 /// A hook that never starts.
 struct Idle;
@@ -47,17 +42,6 @@ impl PointerHook for Broken {
     ) -> Result<Box<dyn HookRun>, HookError> {
         std::panic::panic_any(Planned)
     }
-}
-
-/// A host on the defaults granting `granted`, holding `hook` if any.
-fn host(granted: &[Capability], hook: Option<Arc<dyn PointerHook>>) -> FakeHost {
-    let mut host = FakeHost::new(&MANIFEST);
-    host.granted = granted.to_vec();
-    if let Some(hook) = hook {
-        let stored: Stored = (PointerHookKey::CAPABILITY, Box::new(hook));
-        host.services.insert(PointerHookKey::ID, stored);
-    }
-    host
 }
 
 /// A host granting `granted`, holding a hook that never starts.
@@ -107,61 +91,6 @@ fn a_bad_value_fails_the_start() {
     );
 }
 
-/// A running module on a fake hook, and an unlimited bus to talk to it.
-struct Live {
-    host: FakeHost,
-    hook: Arc<FakePointerHook>,
-    module: MouseModule,
-    bus: Bus,
-}
-
-impl Live {
-    /// Starts the module on a host that `setup` changes, after `listen` subscribes on its bus.
-    fn start<T>(setup: impl FnOnce(&mut FakeHost), listen: impl FnOnce(&Bus) -> T) -> (Self, T) {
-        let hook = Arc::new(FakePointerHook::new());
-        let mut host = host(MANIFEST.capabilities, Some(hook.clone()));
-        setup(&mut host);
-        let bus = Bus::new(Arc::clone(&host.core));
-        let heard = listen(&bus);
-        let mut module = MouseModule::default();
-        module.start(&mut ModuleCx::new(&mut host)).unwrap();
-        let live = Self {
-            host,
-            hook,
-            module,
-            bus,
-        };
-        (live, heard)
-    }
-
-    /// Stops the module as the kernel does: its handlers leave the bus first.
-    fn stop(&mut self) {
-        self.host.held.clear();
-        self.module.stop();
-    }
-}
-
-/// Sends every `E` published on `bus` to the returned channel.
-fn hear<E: Event + Clone>(bus: &Bus) -> (Subscription, Receiver<E>) {
-    let (tx, rx) = mpsc::channel();
-    let sub = bus
-        .subscribe(move |e: &E| {
-            let _ = tx.send(e.clone());
-        })
-        .unwrap();
-    (sub, rx)
-}
-
-/// The live state with `rclick` and Grab off.
-fn on(rclick: bool) -> AssistChanged {
-    let grab = GrabState::Off;
-    AssistChanged {
-        live: true,
-        rclick,
-        grab,
-    }
-}
-
 #[test]
 fn the_actor_thread_says_it_is_live_hears_a_toggle_and_stops_with_the_module() {
     let (mut live, (_ear, told)) = Live::start(|_| {}, hear::<AssistChanged>);
@@ -209,12 +138,6 @@ fn the_actor_thread_asks_for_latches_and_a_latch_starts_the_hook() {
     assert!(live.hook.running());
     live.stop();
     assert_eq!(live.hook.stops(), 1);
-}
-
-/// Waits until the actor handled every message sent before this ask.
-fn synced(live: &Live, told: &Receiver<AssistChanged>) {
-    live.bus.publish(&AssistAsk).unwrap();
-    assert_eq!(told.recv_timeout(WAIT), Ok(on(false)));
 }
 
 #[test]

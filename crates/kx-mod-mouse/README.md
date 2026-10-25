@@ -1,14 +1,14 @@
 # kx-mod-mouse
 
-The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS. While the scroll pad scrolls it keeps the hook on, so the badge follows the pointer and a press can stop the scroll (ADR-0029).
+The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS. While the scroll pad scrolls it keeps the hook on, so the badge follows the pointer and a press can stop the scroll (ADR-0029). While word prediction wants presses it keeps the hook on too, so a click outside our windows ends the word (ADR-0033).
 
 ## Services
 
 | Service | Direction | Use |
 |---|---|---|
-| `PointerHook` (`PointerHookKey`) | needs | Runs the hold engine on a system-wide pointer hook, only while a mode, a latched modifier, scrolling or a carry needs it. |
+| `PointerHook` (`PointerHookKey`) | needs | Runs the hold engine on a system-wide pointer hook, only while a mode, a latched modifier, scrolling, wanted presses or a carry needs it. |
 
-It provides no service; it talks to the keyboard, the scroll module and the UI over the bus (`kx_module_api::ports` assist and scroll events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged` and `ScrollChanged`, where the pad scrolls while the module is live and has a way. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, and `PointerPressed` for each press while the pad scrolls; at start it asks for the latches (`LatchesAsk`) and the pad's state (`ScrollAsk`), so any start order works.
+It provides no service; it talks to the keyboard, the scroll module and the UI over the bus (`kx_module_api::ports` assist and scroll events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged`, `ScrollChanged`, where the pad scrolls while the module is live and has a way, and `PressesWanted` from word prediction. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, and `PointerPressed` for each press while the pad scrolls or presses are wanted; at start it asks for the latches (`LatchesAsk`) and the pad's state (`ScrollAsk`), so any start order works.
 
 ## Capabilities
 

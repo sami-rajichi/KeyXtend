@@ -97,8 +97,12 @@ pub(super) struct Rig {
     pub(super) leaks: usize,
     /// Scrolling is on.
     scrolling: bool,
-    /// Presses the engine heard while scrolling.
+    /// Presses are wanted.
+    wanted: bool,
+    /// Presses the engine heard while scrolling or wanted.
     pub(super) pressed: usize,
+    /// Steps after which presses were wanted, yet the engine needed no hook.
+    pub(super) unhooked: usize,
 }
 
 impl Rig {
@@ -125,7 +129,9 @@ impl Rig {
             unmatched: 0,
             leaks: 0,
             scrolling: false,
+            wanted: false,
             pressed: 0,
+            unhooked: 0,
         };
         rig.more(steps);
         rig
@@ -158,6 +164,10 @@ impl Rig {
                 self.scrolling = on;
                 self.e.set_scrolling(on);
             }
+            Step::Wanted(on) => {
+                self.wanted = on;
+                self.e.set_wanted(on);
+            }
             Step::Release => self.e.release(&mut self.acts),
             Step::Miss => self.miss(),
         }
@@ -165,12 +175,13 @@ impl Rig {
         let stray = (self.os.buttons[0] && !self.left) || self.os.buttons[1] || self.os.buttons[2];
         let held = stray || !self.os.keys.is_empty();
         self.leaks += usize::from(held && !self.e.needs_hook());
+        self.unhooked += usize::from(self.wanted && !self.e.needs_hook());
     }
 
     /// Runs one event; the OS sees it unless the engine drops it, then the engine's input.
     fn event(&mut self, event: PointerEvent) {
         let press = matches!(event, PointerEvent::Down { .. });
-        self.pressed += usize::from(press && self.scrolling);
+        self.pressed += usize::from(press && (self.scrolling || self.wanted));
         if self.e.on(event, Mono::from_us(self.now), &mut self.acts) {
             self.dropped += 1;
         } else {
@@ -236,10 +247,12 @@ impl Rig {
         }
     }
 
-    /// Both modes go off, the latches clear and scrolling ends; then the counts start again.
+    /// Both modes go off, the latches clear, scrolling ends and presses are no longer wanted; then the counts start
+    /// again.
     pub(super) fn calm(&mut self) {
         self.let_go();
         self.step(&Step::Scroll(false));
+        self.step(&Step::Wanted(false));
         self.e.set_rclick(false, &mut self.acts);
         if self.e.grab() != GrabState::Off {
             self.e.toggle(Toggle::Grab, &mut self.acts);

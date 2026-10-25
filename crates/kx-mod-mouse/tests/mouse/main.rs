@@ -6,8 +6,10 @@
 )]
 
 mod failures;
+mod live;
 mod logs;
 mod module;
+mod presses;
 mod props;
 mod reset;
 mod rig;

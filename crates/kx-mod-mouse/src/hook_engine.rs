@@ -21,12 +21,14 @@ pub(crate) enum Cmd {
     Latches(Vec<Scan>),
     /// The pad starts or stops scrolling.
     Scroll(bool),
+    /// Word prediction wants presses, or no longer.
+    Presses(bool),
 }
 
 impl Cmd {
     /// A start for this command tells no one when the hook refuses it: the user aimed no mouse key at the hook.
     pub(crate) const fn quiet(&self) -> bool {
-        matches!(self, Self::Latches(_) | Self::Scroll(_))
+        matches!(self, Self::Latches(_) | Self::Scroll(_) | Self::Presses(_))
     }
 
     /// Applies the command to `engine`, which pushes any input to send into `acts`.
@@ -35,6 +37,7 @@ impl Cmd {
             Self::Toggle(which) => engine.toggle(which, acts),
             Self::Latches(held) => engine.set_latches(held),
             Self::Scroll(on) => engine.set_scrolling(on),
+            Self::Presses(on) => engine.set_wanted(on),
         }
     }
 }

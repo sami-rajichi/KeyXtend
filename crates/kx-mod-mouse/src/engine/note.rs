@@ -46,7 +46,7 @@ pub enum Note {
     },
     /// A click used the latched modifiers.
     LatchesUsed,
-    /// A button went down while the pad scrolls, which may stop it.
+    /// A button went down while the pad scrolls, which may stop it, or while presses are wanted, which may end a word.
     Pressed {
         /// It landed on one of our own windows.
         ours: bool,
@@ -83,12 +83,13 @@ impl fmt::Debug for Note {
 }
 
 impl Engine {
-    /// Keeps the last point. While a mode is on or the pad scrolls a move is noted, and while it scrolls a press is.
+    /// Keeps the last point. While a mode is on or the pad scrolls a move is noted, and while it scrolls or presses
+    /// are wanted a press is.
     pub(super) fn track(&mut self, event: PointerEvent) {
         match event {
             PointerEvent::Down { at, ours, .. } => {
                 self.last = at;
-                if self.scrolling {
+                if self.scrolling || self.wanted {
                     self.note(Note::Pressed { ours });
                 }
             }

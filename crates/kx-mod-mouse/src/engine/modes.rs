@@ -1,4 +1,5 @@
-//! The commands the module sends between events: the mode toggles, the latches, scrolling and letting go.
+//! The commands the module sends between events: the mode toggles, the latches, scrolling, wanted presses and
+//! letting go.
 
 use super::{Engine, MAX_LATCHES, Mode, Note, State};
 use kx_module_api::ports::{PointerAct, Scan, Toggle};
@@ -45,6 +46,12 @@ impl Engine {
     /// badge and its stop. Every event still passes as the modes and latches say.
     pub fn set_scrolling(&mut self, on: bool) {
         self.scrolling = on;
+    }
+
+    /// Word prediction wants presses, or no longer; while it does the hook stays on and each press is noted, so a
+    /// click outside our windows ends the word. Every event still passes as the modes and latches say.
+    pub fn set_wanted(&mut self, on: bool) {
+        self.wanted = on;
     }
 
     /// Lets go of everything held, so nothing stays down: a carry is cancelled with Esc first, as `cancel` does, so it
