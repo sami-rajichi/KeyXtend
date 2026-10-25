@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::LayoutId;
 use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::{WinLayouts, layouts};
@@ -11,7 +12,7 @@ use spike_core::geom;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
-use crate::apps::{AppKind, Ctx, Opened};
+use crate::apps::{Ctx, Opened};
 use crate::g27lane::{self, Lane};
 use crate::keymap::Reader;
 use crate::p7cfg::{Case, G27};
@@ -38,18 +39,6 @@ pub fn keys_for(keys: &[CharKey], prefix: &str) -> Result<Vec<CharKey>, String> 
 /// The layout `app`'s focus types in; none when the window is gone.
 fn layout_of(app: &Opened) -> Option<LayoutId> {
     langs::layout_of(app.hwnd).map(langs::id)
-}
-
-/// Clicks the middle of target-window's box, as G21 does, and checks the box took the keyboard.
-pub fn focus_target(ctx: &Ctx, app: &Opened) -> Result<(), String> {
-    simuser::click(ctx, app, geom::centre(&win::rect(app.hwnd)?))?;
-    let target = ctx.cfg.app(AppKind::Target.name())?;
-    let edit = target.focus_class.clone().unwrap_or_default();
-    if win::class(win::focus(app.hwnd)) == edit {
-        Ok(())
-    } else {
-        Err(format!("the {edit} box did not take the focus"))
-    }
 }
 
 /// Types through the product into `app`'s box, and puts back the layout the app had first.
@@ -143,17 +132,17 @@ impl<'a> Typist<'a> {
     }
 
     /// The best chip's word now, when it shows.
-    pub fn first_word(&self) -> Option<String> {
+    pub fn first_word(&self) -> Option<Redacted<String>> {
         let lane = self.lane().ok()?;
-        g27lane::word_of(lane.first.as_deref()?, &self.forms)
+        g27lane::word_of(lane.first.as_ref()?.expose(), &self.forms)
     }
 
     /// Waits for a best chip that offers `case`'s prefix: its word, and the ms since `since`, the last key click.
-    pub fn offered(&self, case: &Case, since: Instant) -> Result<(String, u64), String> {
+    pub fn offered(&self, case: &Case, since: Instant) -> Result<(Redacted<String>, u64), String> {
         let wait = self.g().chip_wait_ms;
         let offers = || {
             let word = self.first_word()?;
-            g27lane::offers(&word, &case.prefix, &case.lang).then_some(word)
+            g27lane::offers(word.expose(), &case.prefix, &case.lang).then_some(word)
         };
         let word = self.wait_for(wait, offers);
         let word = word
@@ -168,7 +157,7 @@ impl<'a> Typist<'a> {
     }
 
     /// After `[g27] settle_ms`, reads the best chip's word and clicks it: the word.
-    pub fn pick(&self) -> Result<String, String> {
+    pub fn pick(&self) -> Result<Redacted<String>, String> {
         sleep_ms(self.g().settle_ms);
         let word = self
             .first_word()
@@ -186,9 +175,10 @@ impl<'a> Typist<'a> {
     }
 
     /// The text of target-window's box, at most `[g27] max_chars`; never logged.
-    pub fn box_text(&self) -> Result<String, String> {
+    pub fn box_text(&self) -> Result<Redacted<String>, String> {
         let el = self.edit()?;
-        uia::value(&el, self.g().max_chars).ok_or_else(|| "the box's text was not read".to_string())
+        let text = uia::value(&el, self.g().max_chars).map(Redacted::new);
+        text.ok_or_else(|| "the box's text was not read".to_string())
     }
 
     /// Clicks just inside the left end of the box's first line, which puts the caret before a left-to-right text.

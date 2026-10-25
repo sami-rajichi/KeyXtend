@@ -8,11 +8,12 @@ use serde_json::{Value, json};
 
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
-use crate::close::Gone;
+use crate::copyend::{self, Ended, Gone};
 use crate::g8churn::MB_DECIMALS;
+use crate::g8start::Failed;
 use crate::g8words::{self, Typed};
 use crate::out::{self, say, shown};
-use crate::owncopy::{Ended, Session};
+use crate::owncopy::Session;
 use crate::proc::Memory;
 use crate::product;
 
@@ -57,11 +58,6 @@ pub(crate) fn passed(split: bool, held: bool, quit: [bool; 2], back: bool) -> bo
     split && held && quit.iter().all(|&q| q) && back
 }
 
-/// True when the off run may start after the on copy went `gone`: ended, by Quit or by force; none when none started.
-pub(crate) fn off_may_start(gone: Option<Gone>) -> bool {
-    gone.is_none_or(|g| g.ended)
-}
-
 /// One cold start: its idle memory, the typing churn when predict was on, and how the copy went.
 struct Side {
     memory: Result<Memory, String>,
@@ -70,7 +66,7 @@ struct Side {
 }
 
 /// A cold start on the gate's settings with predict `on`, read once `[g8] warm_ms` passed, then ended.
-fn side(ctx: &Ctx, session: &Session, on: bool) -> Result<Side, String> {
+fn side(ctx: &Ctx, session: &Session, on: bool) -> Result<Side, Failed> {
     let copy = session.start(on, &[])?;
     let ready = copy.ready(ctx.cfg.g8.warm_ms);
     let memory = ready.clone().and_then(|s| s.process.memory());
@@ -85,11 +81,19 @@ fn side(ctx: &Ctx, session: &Session, on: bool) -> Result<Side, String> {
     })
 }
 
-/// A side for the result line: its memory and how its copy went, or its error.
-fn side_line(s: &Result<Side, String>) -> Value {
+/// A side for the result line: its memory and how its copy went, or its error and how a copy it started went.
+fn side_line(s: &Result<Side, Failed>) -> Value {
     match s {
         Ok(s) => json!({ "memory": shown(&s.memory), "copy": s.ended.line() }),
-        Err(e) => json!({ "error": e }),
+        Err(f) => json!({ "error": f.why, "copy": f.ended.as_ref().map(Ended::line) }),
+    }
+}
+
+/// How the copy a side started went; none when none started.
+fn gone(s: &Result<Side, Failed>) -> Option<Gone> {
+    match s {
+        Ok(s) => Some(s.ended.gone),
+        Err(f) => f.ended.as_ref().map(|e| e.gone),
     }
 }
 
@@ -98,12 +102,12 @@ fn side_line(s: &Result<Side, String>) -> Value {
 /// partial at best.
 fn result(
     ctx: &Ctx,
-    on: &Result<Side, String>,
-    off: &Result<Side, String>,
+    on: &Result<Side, Failed>,
+    off: &Result<Side, Failed>,
     back: &Result<(), String>,
 ) -> Value {
     let (limit, owner_mb) = (ctx.cfg.g8.churn_growth_mb, ctx.cfg.g8_predict.owner_mb);
-    let memory = |s: &Result<Side, String>| s.as_ref().ok().and_then(|s| s.memory.clone().ok());
+    let memory = |s: &Result<Side, Failed>| s.as_ref().ok().and_then(|s| s.memory.clone().ok());
     let split = memory(on).zip(memory(off)).map(|(a, b)| part(a, b));
     let typed = on.as_ref().ok().and_then(|s| s.typed.clone());
     let churned = typed.clone().and_then(Result::ok);
@@ -124,11 +128,10 @@ fn result(
 fn predict(ctx: &Ctx) -> Result<Value, String> {
     let session = Session::open(ctx)?;
     let on = side(ctx, &session, true);
-    let gone = on.as_ref().ok().map(|s| s.ended.gone);
-    let off = if off_may_start(gone) {
+    let off = if copyend::may_follow(gone(&on)) {
         side(ctx, &session, false)
     } else {
-        Err(STILL_RUNS.to_string())
+        Err(Failed::from(STILL_RUNS.to_string()))
     };
     let back = session.close();
     let v = result(ctx, &on, &off, &back);
@@ -192,15 +195,6 @@ mod tests {
         );
         assert!(!passed(false, true, [true, true], true), "no reading");
         assert!(!passed(true, false, [true, true], true), "the churn grew");
-    }
-
-    #[test]
-    fn the_off_run_follows_a_copy_that_had_to_be_ended_never_one_still_running() {
-        let gone = |quit, ended| Gone { quit, ended };
-        assert!(off_may_start(Some(gone(true, true))));
-        assert!(off_may_start(Some(gone(false, true))), "ended, so no skip");
-        assert!(!off_may_start(Some(gone(false, false))), "it still runs");
-        assert!(off_may_start(None), "the on copy never started");
     }
 
     #[test]

@@ -4,7 +4,6 @@
 
 use kx_platform::ui::{Command, Instance, UiError};
 use kx_platform_windows::WindowsPlatform;
-use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
@@ -74,7 +73,7 @@ fn ask_quit(instance: &dyn Instance) -> Result<(), Unasked> {
 
 /// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
 /// yet; it stops once `gone` says the copy ended. The tries it took; a refusal is final.
-fn ask_quit_tries(
+pub(crate) fn ask_quit_tries(
     instance: &dyn Instance,
     tries: u32,
     gone: impl Fn() -> bool,
@@ -110,57 +109,6 @@ pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
         win::sleep_ms(g.quit_try_ms);
     })?;
     Ok(ended_within(ctx, process))
-}
-
-/// How a copy a gate started went away.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct Gone {
-    /// It took Quit and ended in time.
-    pub quit: bool,
-    /// It has ended, by Quit or through its handle after.
-    pub ended: bool,
-}
-
-impl Gone {
-    /// True only when it quit by itself; a copy that had to be ended is a failure.
-    pub fn ok(self) -> bool {
-        self.quit && self.ended
-    }
-}
-
-/// How a copy went once Quit reached it, when `asked`: `within` waits for its end, and when it did not end, `end` ends
-/// it and `within` waits again.
-pub(crate) fn finish(
-    asked: bool,
-    within: impl Fn() -> bool,
-    end: impl FnOnce() -> Result<(), String>,
-) -> Gone {
-    if asked && within() {
-        return Gone {
-            quit: true,
-            ended: true,
-        };
-    }
-    Gone {
-        quit: false,
-        ended: end().is_ok() && within(),
-    }
-}
-
-/// Quits a copy a gate started, held as `process`, as `quit_started` does; when it does not end in time, ends it
-/// through its handle, so no copy is left running.
-pub fn end_started(ctx: &Ctx, process: &Process) -> Gone {
-    let g = &ctx.cfg.g8;
-    let platform = WindowsPlatform::new().map_err(|e| e.to_string());
-    let asked = platform.and_then(|p| {
-        let wait = || win::sleep_ms(g.quit_try_ms);
-        ask_quit_tries(&*p.instance(), g.quit_tries, || process.ended(), wait)
-    });
-    finish(
-        asked.is_ok(),
-        || ended_within(ctx, process),
-        || process.end(),
-    )
 }
 
 /// Posts Quit to the running product, which starts nothing; its program, and whether it ended within

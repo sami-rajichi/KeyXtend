@@ -23,6 +23,7 @@
 | Test certificate private key | Secret | Windows user key store, non-exportable | By Windows | 90 days, or until `dev-cert --remove` when the owner decides (ADR-0014) |
 | Exported certificate, launchers, admin error file | Public | `target/dev-tools/` | No | Until `target/` is cleaned |
 | Extracted manifest | Public | `target/dev-tools/` | No | Deleted after each check |
+| The owner's settings bytes while G21's product half, G27 or `g8 predict` runs | Sensitive | The sidecar `[owner_settings] backup` in kx-gates' out folder | No | Deleted after a verified put-back; a stopped run leaves it for the next run to restore |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -60,7 +61,7 @@
     - It asks the running copy to quit first, and the gate stops when that ask fails. Only a refused Quit, which a uiAccess copy gives the plain kx-gates, adds the advice to close it from the installed kx-gates.
     - It starts the owner's copy again only once the test build is gone: it quit in time, or no copy runs after a start that failed. Otherwise it prints a line to start it from the Start menu.
     - It clicks a test build key only while the keyboard is the window on top there, so a key another window covers is refused.
-    - It never kills the test build, which could leave an injected button down. The one exception is `g8 hook-weak`: when its test build does not quit in time or fails to start, closing its job ends it, and kx-gates then lets go of either button and the modifiers.
+    - It never kills the test build, which could leave an injected button down. The exceptions are `g8 hook-weak`, whose test build is ended by closing its job when it does not quit in time or fails to start, and a copy `g8start` cannot open to measure, which is ended as P7's gates end their copies. kx-gates then lets go of either button and the modifiers.
   - G5 (`plain` only), G6, G12, G17, G18, `g8 hook` and `g8 hook-weak` drive the test build: they turn its modes and latches on or off with its own keys and send only `SIM_TAG` input. `g8 hook-weak` starts it in `g8 weak`'s job object.
     - Each of them fails when the test build did not quit in time, as a quit that hangs is a mouse-assist bug (`Closed::pass`).
     - G5, `g8 hook` and `g8 hook-weak` also fail, naming the count, when the hook's stats lines show more `lost_echoes` than `[g5] max_lost_echoes`, as an act id Windows dropped from `dwExtraInfo` would lose every echo (`hooklog::lost`).
@@ -94,16 +95,22 @@
     - It keeps the owner's clipboard and removes its copies from Windows clipboard history after; its result names windows by class and program only, never a title.
   - `kx-gates g21 keyxtend`, `g27 keyxtend` and `g8 predict` refuse to run while the product runs, as each starts its own copies of `[g8] program` on settings it writes (`owncopy.rs`).
     - They keep the owner's settings file and its last good copy, refusing a file over the settings store's cap before they change anything. Both files come back byte for byte after, also on a panic (a drop guard), and the result says whether they did.
+    - Before the first gate write, the kept bytes go to a sidecar file, `[owner_settings] backup` in kx-gates' out folder (`target/gate-logs/owner-settings-backup.json` in the repo copy). It is deleted only after a put-back whose files read back as kept, so a hard stop leaves it (`ownset/saved.rs`).
+    - A run that finds that sidecar restores the owner's files from it first and says so, and keeps it as it is, so it never backs up a gate file as the owner's. It refuses a sidecar that names another data folder, or one that does not read, and leaves both for the owner.
     - Every copy they write settings for runs with learning paused (`[predict] learn = false`), so a gate never touches the owner's learned words.
-    - Every copy is ended before the owner's file comes back: Quit first, then, when it has not ended in time, through the handle kx-gates opened for it (`close::end_started`), and any button or key it left down is let go. A copy that had to be ended fails the gate and is never left running; a drop guard ends it on a panic too.
+    - Every copy is ended before the owner's file comes back: Quit first, then, when it has not ended in time, through the handle kx-gates opened for it, and any button or key it left down is let go (`copyend.rs`). Only a clean quit (exit code 0) passes. A crash, an end, or a copy still running fails the gate, and a drop guard ends a copy on a panic too.
+    - A copy that `g8start` started but cannot open to measure is ended the same way, through the shell's handle. The next copy (G27's edge copy, `g8 predict`'s off run) starts only once the last one no longer runs.
   - `kx-gates g27 keyxtend` clicks its copy's keys, then its best word chip, into a fresh target-window's plain box for each `[g27]` case, each click only while the keyboard is on top there.
     - It switches the session's input language to the case's first installed layout, as the language hotkey does, and puts target-window's first layout back after each box, also when a step failed; the result says whether it came back.
-    - Its edge case runs on a second copy with the mouse module in `[kernel] disabled`, so the copy never hears the click into the box. It types a prefix, clicks the box's left end to move the caret, then clicks the best chip; the box's text must not change. When chip-0 has left the lane, the verdict is "setup failed", never a typing fail.
-    - It reads the box's text by UI Automation only to compare it, capped by `[g27] max_chars`. Its result holds the config's prefixes, times and booleans, never the box's text or a chip's word.
+    - Its edge case runs on a second copy with the mouse module in `[kernel] disabled`, so the copy never hears the click into the box. It types a prefix, clicks the box's left end to move the caret, then clicks the best chip; the box's text must not change. When chip-0 has left the lane, the verdict is "setup failed", never a typing fail; when the first copy could not be ended, edge 6 does not run and says so.
+    - It reads the box's text by UI Automation only to compare it, capped by `[g27] max_chars`; chip words and box text stay in `Redacted` values. Its result holds the config's prefixes, times and booleans, never the box's text or a chip's word.
   - `kx-gates g21 keyxtend` runs the product's own field watch (`WinFieldWatch`) inside kx-gates over target-window's password box, the password field of G21's own Chrome page and target-window's plain box. In each it types `[g21_product]`'s case with its copy's keys and puts the layout back as G27 does; its result holds each box's kind, the lock, chip counts and booleans.
+    - It writes G21's page into the out folder before Chrome opens it, and deletes it once Chrome has closed, as G21's first half does; a page left behind is named in the result's `clean_up`.
   - `kx-gates g8 predict` writes predict on, then predict in `[kernel] disabled`, for its two cold starts.
-    - The on run types `[g8_predict]` words through chips into a target-window it starts, never Notepad or Word, and closes it after. The off run starts once the on copy has ended, by Quit or through its handle; only a copy that could not be ended stops it.
-  - G27, G21's product half and `g8 predict` take no screenshot and save no file. They type only the config's prefixes and the chips' words, into target-window or G21's page.
+    - The on run types `[g8_predict]` words through chips into a target-window it starts, never Notepad or Word, and closes it after.
+  - G27, G21's product half and `g8 predict` take no screenshot and save no file of their own beyond G21's page and the sidecar. They type only the config's prefixes and the chips' words, into target-window or G21's page.
+    - target-window logs every character it receives to its `log` setting (`target/gate-logs/target-window.log` in the repo copy), so the chip words land there. The gates do not delete it, as other gates read it too.
+  - Each of these gates' run lengths is checked against the mouse guard's limit from config: each copy's start, wait and end, and each typed word at its longest (`p7cfg/runs.rs`).
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap gets Quit.

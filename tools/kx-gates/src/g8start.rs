@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use spike_core::weak::Job;
 
 use crate::apps::Ctx;
+use crate::copyend::{self, Ended};
 use crate::proc::Process;
 use crate::{admin, budget, close, product, win};
 
@@ -51,25 +52,46 @@ fn cap(ctx: &Ctx, job: &Job, process: &Process) -> Result<(), String> {
     job.assign_handle(process.handle()).map_err(uncapped)
 }
 
+/// A start that failed: why, and how the copy it started went, none when no copy started.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Failed {
+    /// Why it failed.
+    pub why: String,
+    /// How the copy it started was ended.
+    pub ended: Option<Ended>,
+}
+
+impl From<String> for Failed {
+    fn from(why: String) -> Self {
+        Self { why, ended: None }
+    }
+}
+
+impl From<Failed> for String {
+    fn from(f: Failed) -> Self {
+        match f.ended {
+            Some(e) => format!("{}; the copy {}", f.why, e.gone.words()),
+            None => f.why,
+        }
+    }
+}
+
 /// Starts the product through the shell with `args`, in `job` when given, and waits for its first shown window.
-/// A copy it cannot open gets Quit with the same tries, so the next run still starts cold.
+/// A copy it cannot open is ended as a gate ends its copies (`copyend`), so the next run still starts cold.
 pub fn start(
     ctx: &Ctx,
     program: &Path,
     args: &[String],
     job: Option<&Job>,
-) -> Result<Started, String> {
+) -> Result<Started, Failed> {
     let g = &ctx.cfg.g8;
     let (at_us, at) = (budget::now_us(), Instant::now());
     let given = admin::start_shown(program, args)?;
     // The shell's handle lacks the rights to measure, so the process is opened again.
-    let unmeasured = |e| {
-        format!(
-            "{e}: G8 cannot measure the copy, so {}",
-            quit_left(ctx, &given)
-        )
-    };
-    let process = Process::to_measure(given.pid()).map_err(unmeasured)?;
+    let process = Process::to_measure(given.pid()).map_err(|e| Failed {
+        why: format!("{e}: G8 cannot measure the copy"),
+        ended: Some(copyend::end(ctx, &given)),
+    })?;
     if let Some(job) = job {
         cap(ctx, job, &process)?;
     }

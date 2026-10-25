@@ -1,125 +1,94 @@
 //! The owner's settings file around a gate that writes its own: the file and its last good copy kept byte for byte,
-//! the gate's predict edits, and both files put back after, also on a panic (a drop guard).
+//! first in a sidecar file that outlives a hard stop, the gate's predict edits, and both files put back after.
 #![cfg(windows)]
 
+mod saved;
+
 use std::fs;
-use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 
 use kx_kernel::{KERNEL, KernelSettings};
 use kx_mod_predict::{LEARN_KEY, ON_KEY};
 use kx_module_api::ModuleId;
-use kx_settings::{Files, MAX_FILE_BYTES, VERSION_KEY};
+use kx_settings::{Files, VERSION_KEY};
 use toml::{Table, Value};
 
-/// One kept file: its path and its bytes, none when it did not exist.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Saved {
-    path: PathBuf,
-    bytes: Option<Vec<u8>>,
-}
+use saved::Pair;
 
-/// The bytes of `path`, none when it does not exist; an error past the settings store's own cap.
-fn read(path: &Path) -> Result<Option<Vec<u8>>, String> {
-    let fail = |e: std::io::Error| format!("{}: {e}", path.display());
-    let file = match fs::File::open(path) {
-        Ok(file) => file,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(fail(e)),
-    };
-    let mut bytes = Vec::new();
-    let cap = MAX_FILE_BYTES.saturating_add(1);
-    file.take(cap).read_to_end(&mut bytes).map_err(fail)?;
-    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_FILE_BYTES {
-        return Err(format!(
-            "{} is over the settings store's {MAX_FILE_BYTES} bytes",
-            path.display()
-        ));
-    }
-    Ok(Some(bytes))
-}
-
-impl Saved {
-    /// Writes the kept bytes back, or removes the file when there was none, then checks it byte for byte.
-    fn restore(&self) -> Result<(), String> {
-        let fail = |e: std::io::Error| format!("{}: {e}", self.path.display());
-        match &self.bytes {
-            Some(bytes) => fs::write(&self.path, bytes).map_err(fail)?,
-            None if self.path.exists() => fs::remove_file(&self.path).map_err(fail)?,
-            None => {}
-        }
-        if read(&self.path)? == self.bytes {
-            Ok(())
-        } else {
-            Err(format!(
-                "{} did not come back as it was",
-                self.path.display()
-            ))
-        }
-    }
-}
-
-/// The owner's settings file and its last good copy, kept until `put_back`, or until dropped.
+/// The owner's settings file and its last good copy, kept until `put_back`, or until dropped (a drop guard).
 #[derive(Debug)]
 pub struct Kept {
-    settings: Saved,
-    previous: Saved,
+    pair: Pair,
+    side: PathBuf,
     done: bool,
 }
 
 impl Kept {
-    /// Keeps the settings file and its last good copy in `files`.
-    pub fn take(files: &Files) -> Result<Self, String> {
-        let save = |path: &PathBuf| {
-            read(path).map(|bytes| Saved {
-                path: path.clone(),
-                bytes,
-            })
+    /// Keeps the settings file and its last good copy in `files`, writing their bytes to the sidecar `side` before
+    /// any gate write. A sidecar a stopped run left is restored first and kept as it is: whether one was.
+    pub fn take(files: &Files, side: &Path) -> Result<(Self, bool), String> {
+        let left = saved::load(side)?;
+        let recovered = left.is_some();
+        let pair = match left {
+            Some(pair) if !pair.keeps(files) => {
+                return Err(format!(
+                    "{} keeps another data folder's settings; check it, then delete it",
+                    side.display()
+                ));
+            }
+            Some(pair) => pair.restore().map(|()| pair)?,
+            None => {
+                let pair = Pair::of(files)?;
+                saved::save(side, &pair)?;
+                pair
+            }
         };
-        Ok(Self {
-            settings: save(&files.settings)?,
-            previous: save(&files.previous)?,
-            done: false,
-        })
+        let side = side.to_path_buf();
+        Ok((
+            Self {
+                pair,
+                side,
+                done: false,
+            },
+            recovered,
+        ))
     }
 
     /// The owner's settings as a table; empty when there was no file or it does not read.
     pub fn table(&self) -> Table {
-        let text = self.settings.bytes.as_deref().map(String::from_utf8_lossy);
+        let text = self
+            .pair
+            .settings
+            .bytes
+            .as_deref()
+            .map(String::from_utf8_lossy);
         text.and_then(|t| t.parse().ok()).unwrap_or_default()
     }
 
     /// Writes `table` as the settings file, for the gate's run.
     pub fn write(&self, table: &Table) -> Result<(), String> {
         let text = toml::to_string(table).map_err(|e| format!("the gate's settings: {e}"))?;
-        let path = &self.settings.path;
+        let path = &self.pair.settings.path;
         fs::write(path, text).map_err(|e| format!("{}: {e}", path.display()))
     }
 
-    /// Puts both files back as they were: every error, joined.
-    fn restore(&self) -> Result<(), String> {
-        let errors: Vec<String> = [&self.settings, &self.previous]
-            .into_iter()
-            .filter_map(|s| s.restore().err())
-            .collect();
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors.join("; "))
-        }
+    /// Puts both files back and deletes the sidecar, only once both read back as kept.
+    fn finish(&self) -> Result<(), String> {
+        self.pair.restore()?;
+        saved::drop_side(&self.side)
     }
 
     /// Puts both files back as they were, now.
     pub fn put_back(mut self) -> Result<(), String> {
         self.done = true;
-        self.restore()
+        self.finish()
     }
 }
 
 impl Drop for Kept {
     fn drop(&mut self) {
         if !self.done {
-            let _ = self.restore();
+            let _ = self.finish();
         }
     }
 }

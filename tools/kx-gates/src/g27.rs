@@ -6,17 +6,18 @@
 #![cfg(windows)]
 
 use kx_mod_predict::script;
-use kx_module_api::ModuleId;
+use kx_module_api::{ModuleId, Redacted};
 use serde_json::{Value, json};
 
-use crate::apps::{self, Ctx};
+use crate::apps::Ctx;
+use crate::copyend::{self, Ended};
 use crate::g25::part;
-use crate::g27type::{self, Typist};
-use crate::owncopy::{Ended, Session};
+use crate::g27type::Typist;
+use crate::owncopy::Session;
 use crate::p7cfg::Case;
 use crate::product;
+use crate::typebox::{self, Boxed};
 use crate::win::{self, sleep_ms};
-use crate::{launch, probe};
 
 /// The text a box holding `typed` holds after a pick of `word`: `typed` less its last `prefix`, then the word and the
 /// gap its script takes; none when `typed` does not end with `prefix` or the word has no script.
@@ -32,6 +33,8 @@ const EDGE_PASS: &str = "typed nothing";
 const EDGE_TYPED: &str = "typed";
 /// Edge 6's verdict when chip-0 left the lane after the click, so the pick check was never reached.
 const EDGE_SETUP: &str = "setup failed: chip-0 left the lane after the click";
+/// Why edge 6 did not run.
+const EDGE_SKIPPED: &str = "edge 6 did not run: the first copy could not be ended";
 
 /// Edge 6's verdict: whether the lane `kept` chip-0 after the click, and whether the text stayed `unchanged`.
 pub(crate) fn edge_verdict(kept: bool, unchanged: bool) -> &'static str {
@@ -47,58 +50,48 @@ pub(crate) fn same(got: &str, want: &str) -> bool {
     got.chars().eq(want.chars())
 }
 
-/// What one fresh box gave: the drive's result, whether the app's first layout came back, and what was left open.
-struct Boxed<T> {
-    got: Result<T, String>,
+/// What one copy's boxes gave: each box's result line, whether every layout came back, and what clean-up left.
+struct Boxes {
+    parts: Vec<Value>,
     back: bool,
     left: Vec<String>,
 }
 
-impl<T> Boxed<T> {
-    /// A box that never opened, failing with `e`.
-    fn failed(e: String) -> Self {
+impl Boxes {
+    /// The boxes `run` gave, each judged.
+    fn of(run: Vec<Boxed<Value>>) -> Self {
+        let back = run.iter().all(|b| b.back);
+        let left = run.iter().flat_map(|b| b.left.clone()).collect();
+        let parts = run.into_iter().map(|b| part(b.got)).collect();
+        Self { parts, back, left }
+    }
+
+    /// No box ran, for `why`.
+    fn failed(why: String) -> Self {
         Self {
-            got: Err(e),
+            parts: vec![part(Err(why))],
             back: true,
             left: Vec::new(),
         }
     }
 }
 
-/// A fresh target-window in front with its box focused, `drive` run on it, then its first layout put back and the
-/// window closed.
-fn in_box<T>(ctx: &Ctx, drive: impl FnOnce(&Typist) -> Result<T, String>) -> Boxed<T> {
-    let started = launch::start_target(ctx).and_then(|app| launch::to_front(ctx, app));
-    let app = match started {
-        Ok(app) => app,
-        Err(e) => return Boxed::failed(e),
-    };
-    let typist = g27type::focus_target(ctx, &app).and_then(|()| Typist::new(ctx, &app));
-    let (got, back) = match typist {
-        Ok(t) => (drive(&t), t.put_back()),
-        Err(e) => (Err(e), true),
-    };
-    let mut left = probe::released();
-    left.extend(apps::clean_up(ctx, app));
-    Boxed { got, back, left }
-}
-
-/// A fresh box on a fresh copy of the product, with learning paused and the modules `off` switched off: what `drive`
-/// gave there, and how the copy went.
-fn on_copy<T>(
-    ctx: &Ctx,
+/// `boxes` run on a fresh copy of the product, with learning paused and the modules `off` switched off: what they
+/// gave, and how the copy went.
+fn on_copy(
     session: &Session,
     off: &[ModuleId],
-    drive: impl FnOnce(&Typist) -> Result<T, String>,
-) -> (Boxed<T>, Option<Ended>) {
-    let (got, ended) = session.with_copy(off, || Ok(in_box(ctx, drive)));
-    (got.unwrap_or_else(Boxed::failed), ended)
+    boxes: impl FnOnce() -> Vec<Boxed<Value>>,
+) -> (Boxes, Option<Ended>) {
+    let (got, ended) = session.with_copy(off, || Ok(boxes()));
+    (got.map_or_else(Boxes::failed, Boxes::of), ended)
 }
 
 /// Reads the box until it holds `want` or `[g27] text_wait_ms` passed: the last text read.
-fn box_until(ctx: &Ctx, t: &Typist, want: &str) -> Result<String, String> {
+fn box_until(ctx: &Ctx, t: &Typist, want: &str) -> Result<Redacted<String>, String> {
     let mut last = t.box_text();
-    let holds = |r: &Result<String, String>| r.as_deref().is_ok_and(|got| same(got, want));
+    let holds =
+        |r: &Result<Redacted<String>, String>| r.as_ref().is_ok_and(|got| same(got.expose(), want));
     win::poll_until(ctx.cfg.g27.text_wait_ms, ctx.cfg.timing.poll_ms, || {
         last = t.box_text();
         holds(&last).then_some(())
@@ -106,21 +99,24 @@ fn box_until(ctx: &Ctx, t: &Typist, want: &str) -> Result<String, String> {
     last
 }
 
-/// One case: its layout, its prefix typed, a chip that offers it picked, and the box judged.
+/// One case in a fresh box: its layout, its prefix typed, a chip that offers it picked, and the box judged.
 fn case(ctx: &Ctx, t: &Typist, c: &Case) -> Result<Value, String> {
     let layout = t.switch(&c.lang)?;
     let before = t.box_text()?;
     let last = t.type_in(layout, &c.prefix)?;
     let (_, chip_ms) = t.offered(c, last)?;
     let typed = t.box_text()?;
-    let typed_ok = same(&typed, &format!("{before}{}", c.prefix));
+    let typed_ok = same(typed.expose(), &format!("{}{}", before.expose(), c.prefix));
     let word = t.pick()?;
-    let want = after_pick(&typed, &c.prefix, &word);
+    let want = after_pick(typed.expose(), &c.prefix, word.expose()).map(Redacted::new);
     let got = match &want {
-        Some(want) => Some(box_until(ctx, t, want)?),
+        Some(want) => Some(box_until(ctx, t, want.expose())?),
         None => None,
     };
-    let ok = typed_ok && want.zip(got).is_some_and(|(w, g)| same(&g, &w));
+    let ok = typed_ok
+        && want
+            .zip(got)
+            .is_some_and(|(w, g)| same(g.expose(), w.expose()));
     Ok(
         json!({ "lang": c.lang, "prefix": c.prefix, "chip_ms": chip_ms, "prefix_typed": typed_ok, "ok": ok }),
     )
@@ -136,11 +132,11 @@ fn edge(ctx: &Ctx, t: &Typist, c: &Case) -> Result<Value, String> {
     let typed = t.box_text()?;
     t.click_start()?;
     sleep_ms(g.settle_ms);
-    let kept = t.first_word().as_deref() == Some(word.as_str());
+    let kept = t.first_word().as_ref() == Some(&word);
     let unchanged = if kept {
         t.click_first()?;
         sleep_ms(g.text_wait_ms);
-        same(&t.box_text()?, &typed)
+        same(t.box_text()?.expose(), typed.expose())
     } else {
         false
     };
@@ -155,8 +151,9 @@ fn all_ok(parts: &[Value]) -> bool {
     !parts.is_empty() && parts.iter().all(|p| p["ok"] == true)
 }
 
-/// Runs G27 on the product, called `name`, which must be closed: every case in one box on a copy of its own, then edge
-/// 6 in another box on a copy with the mouse module off. Both copies end before the owner's file comes back.
+/// Runs G27 on the product, called `name`, which must be closed: each case in a fresh box on a copy of its own, then
+/// edge 6 on a copy with the mouse module off, unless the first copy could not be ended. Every copy ends before the
+/// owner's file comes back.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name != product::NAME {
         return Err(format!("G27 runs on {}, not {name}", product::NAME));
@@ -164,22 +161,30 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let g = &ctx.cfg.g27;
     let edge_case = g.case(&g.edge).ok_or("g27.edge names no case")?;
     let session = Session::open(ctx)?;
-    let each = |t: &Typist| Ok(g.cases.iter().map(|c| part(case(ctx, t, c))).collect());
-    let (words, first) = on_copy(ctx, &session, &[], each);
-    let mouse_off = [kx_mod_mouse::ID];
-    let (edged, second) = on_copy(ctx, &session, &mouse_off, |t| edge(ctx, t, edge_case));
+    let each = || {
+        g.cases
+            .iter()
+            .map(|c| typebox::in_target(ctx, &[], |t| case(ctx, t, c)))
+            .collect()
+    };
+    let (cases, first) = on_copy(&session, &[], each);
+    let edged = || vec![typebox::in_target(ctx, &[], |t| edge(ctx, t, edge_case))];
+    let (edge, second) = if copyend::may_follow(first.as_ref().map(|e| e.gone)) {
+        on_copy(&session, &[kx_mod_mouse::ID], edged)
+    } else {
+        (Boxes::failed(EDGE_SKIPPED.to_string()), None)
+    };
     let settings = session.close();
-    let cases = words.got.unwrap_or_else(|e| vec![part(Err(e))]);
-    let edge = part(edged.got);
-    let back = words.back && edged.back;
-    let left: Vec<String> = words.left.into_iter().chain(edged.left).collect();
+    let back = cases.back && edge.back;
+    let typed = all_ok(&cases.parts) && all_ok(&edge.parts);
     let copies = [first, second];
     let ended = copies.iter().all(|c| c.as_ref().is_some_and(Ended::ok));
-    let typed = all_ok(&cases) && all_ok(std::slice::from_ref(&edge));
+    let left = [cases.left, edge.left].concat();
     Ok(json!({
-        "gate": "G27", "keyboard": name, "cases": cases, "edge": edge, "layout_put_back": back, "clean_up": left,
-        "copies": copies.map(|c| c.map(|e| e.line())), "settings_put_back": settings.is_ok(),
-        "settings_error": settings.as_ref().err(), "pass": typed && back && ended && settings.is_ok(),
+        "gate": "G27", "keyboard": name, "cases": cases.parts, "edge": edge.parts, "layout_put_back": back,
+        "clean_up": left, "copies": copies.map(|c| c.map(|e| e.line())),
+        "settings_put_back": settings.is_ok(), "settings_error": settings.as_ref().err(),
+        "pass": typed && back && ended && settings.is_ok(),
     }))
 }
 

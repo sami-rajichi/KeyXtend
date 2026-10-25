@@ -5,12 +5,12 @@
 
 use serde::Serialize;
 
-use crate::apps::{self, Ctx};
-use crate::g27type::{self, Typist};
+use crate::apps::Ctx;
+use crate::g27type::Typist;
 use crate::p7cfg::Case;
 use crate::proc::{Memory, Process};
+use crate::typebox;
 use crate::win::sleep_ms;
-use crate::{launch, probe};
 
 /// What the typing churn did, and private memory around its measured words.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -71,22 +71,12 @@ fn churn(ctx: &Ctx, t: &Typist, process: &Process) -> Result<Typed, String> {
 /// Runs the typing churn on the product G8 started, held as `process`, in a fresh target-window; the window's first
 /// layout comes back and the window closes after, or the churn fails saying so.
 pub fn run(ctx: &Ctx, process: &Process) -> Result<Typed, String> {
-    let app = launch::to_front(ctx, launch::start_target(ctx)?)?;
-    let typist = g27type::focus_target(ctx, &app).and_then(|()| Typist::new(ctx, &app));
-    let got = typist.and_then(|t| {
-        let typed = churn(ctx, &t, process);
-        let back = t.put_back();
-        typed.and_then(|c| {
-            back.then_some(c)
-                .ok_or_else(|| "target-window's first layout did not come back".to_string())
-        })
-    });
-    let mut left = probe::released();
-    left.extend(apps::clean_up(ctx, app));
-    match (got, left.is_empty()) {
-        (Ok(c), true) => Ok(c),
-        (Ok(_), false) => Err(format!("the typing churn left {left:?}")),
-        (Err(e), _) => Err(format!("{e}; clean-up: {left:?}")),
+    let b = typebox::in_target(ctx, &[], |t| churn(ctx, t, process));
+    match (b.got, b.back, b.left.is_empty()) {
+        (Ok(c), true, true) => Ok(c),
+        (Ok(_), false, _) => Err("target-window's first layout did not come back".to_string()),
+        (Ok(_), true, false) => Err(format!("the typing churn left {:?}", b.left)),
+        (Err(e), _, _) => Err(format!("{e}; clean-up: {:?}", b.left)),
     }
 }
 

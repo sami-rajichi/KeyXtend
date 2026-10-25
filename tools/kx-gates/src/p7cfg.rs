@@ -6,6 +6,7 @@ use kx_mod_predict::script::{self, Script};
 use serde::Deserialize;
 
 use crate::config::GatesConfig;
+use crate::g22cfg::plain_name;
 use crate::p5cfg::SEP;
 
 /// `[g27]`: the cases, the lane's gate ids and the waits; times in ms.
@@ -60,6 +61,14 @@ pub struct G21Product {
     pub case: String,
 }
 
+/// `[owner_settings]`: where the owner's settings bytes wait while a gate runs its own copies.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OwnerSettings {
+    /// The sidecar's file name in the out folder; a stopped run leaves it for the next run to restore.
+    pub backup: String,
+}
+
 /// `[g8_predict]`: G8's prediction part.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -105,16 +114,6 @@ fn wait(key: &str, ms: u64, most: u64) -> Result<(), String> {
             "{key} must be 1 to {most} ms, the mouse guard's limit"
         ))
     }
-}
-
-/// The sum of `parts`, at most `u64::MAX`.
-fn total(parts: &[u64]) -> u64 {
-    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
-}
-
-/// `n` times `ms`, at most `u64::MAX`.
-fn times(n: usize, ms: u64) -> u64 {
-    u64::try_from(n).map_or(u64::MAX, |n| n.saturating_mul(ms))
 }
 
 impl Case {
@@ -193,32 +192,6 @@ impl G27 {
     }
 }
 
-/// The cold starts `g8 predict` makes: predict on, then off.
-const RUNS: usize = 2;
-
-/// The least time `g8 predict` holds the mouse: each cold start and its warm-up, each typed word at its longest, the
-/// settle and the run's headroom.
-fn predict_ms(c: &GatesConfig) -> u64 {
-    let (g, p) = (&c.g27, &c.g8_predict);
-    let keys = g.cases.iter().map(|k| k.prefix.chars().count()).max();
-    let typing = times(keys.unwrap_or_default(), g.key_gap_ms);
-    let word = total(&[
-        g.switch_wait_ms,
-        typing,
-        g.chip_wait_ms,
-        g.settle_ms,
-        g.text_wait_ms,
-    ]);
-    let start = c.g8.start_wait_ms.saturating_add(c.g8.warm_ms);
-    let words = times(p.warm_words.saturating_add(p.words), word);
-    total(&[
-        times(RUNS, start),
-        words,
-        p.settle_ms,
-        c.fit.guard_headroom_ms,
-    ])
-}
-
 impl G8Predict {
     /// Refuses a figure outside 0 to `[g8] memory_mb`, no words, a bad settle, and a run past the mouse guard's limit.
     fn check(&self, c: &GatesConfig) -> Result<(), String> {
@@ -233,27 +206,36 @@ impl G8Predict {
         }
         let limit = c.mouse_guard.limit_ms;
         wait("g8_predict.settle_ms", self.settle_ms, limit)?;
-        let need = predict_ms(c);
-        if need > limit {
-            return Err(format!(
-                "g8_predict.words: g8 predict takes at least {need} ms, past the mouse guard's {limit} ms"
-            ));
-        }
-        Ok(())
+        runs::fits("g8_predict.words: g8 predict", runs::predict_ms(c), limit)
     }
 }
 
-/// Refuses P7 settings that could type nothing, pick the wrong word, wait past the mouse guard or hide a figure.
+/// Refuses P7 settings that could type nothing, pick the wrong word, wait past the mouse guard, hide a figure or keep
+/// the owner's settings outside the out folder.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
-    c.g27.check(c.mouse_guard.limit_ms, c.g1.max_read_chars)?;
+    let limit = c.mouse_guard.limit_ms;
+    c.g27.check(limit, c.g1.max_read_chars)?;
     if c.g27.case(&c.g21_product.case).is_none() {
         return Err(format!(
             "g21_product.case: {} names no g27 case",
             c.g21_product.case
         ));
     }
+    if !plain_name(&c.owner_settings.backup) {
+        return Err(
+            "owner_settings.backup must be a plain file name, in the out folder".to_string(),
+        );
+    }
+    runs::fits(
+        "g21_product.case: G21's product half",
+        runs::g21_ms(c),
+        limit,
+    )?;
+    runs::fits("g27.cases: G27", runs::g27_ms(c), limit)?;
     c.g8_predict.check(c)
 }
+
+mod runs;
 
 #[cfg(test)]
 mod tests;

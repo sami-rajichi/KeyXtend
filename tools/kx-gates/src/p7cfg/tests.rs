@@ -32,6 +32,7 @@ fn read_section(name: &str, value: toml::Value) -> Result<(), String> {
         "g27" => value.try_into::<G27>().map(drop).map_err(e),
         "g21_product" => value.try_into::<G21Product>().map(drop).map_err(e),
         "g8_predict" => value.try_into::<G8Predict>().map(drop).map_err(e),
+        "owner_settings" => value.try_into::<OwnerSettings>().map(drop).map_err(e),
         other => Err(format!("no reader for [{other}]")),
     }
 }
@@ -159,4 +160,55 @@ fn a_case_is_found_by_its_language() {
     let g = load().expect("loads").g27;
     assert_eq!(g.case("fr").map(|k| k.prefix.as_str()), Some("eco"));
     assert!(g.case("xx").is_none());
+}
+
+#[test]
+fn a_backup_outside_the_out_folder_is_refused() {
+    refused(&[
+        (|c| c.owner_settings.backup.clear(), "owner_settings.backup"),
+        (
+            |c| c.owner_settings.backup = "a/b.json".into(),
+            "owner_settings.backup",
+        ),
+        (
+            |c| c.owner_settings.backup = "..".into(),
+            "owner_settings.backup",
+        ),
+        (
+            |c| c.owner_settings.backup = "C:b.json".into(),
+            "owner_settings.backup",
+        ),
+    ]);
+}
+
+#[test]
+fn each_run_length_counts_every_copy_and_every_word() {
+    let c = load().expect("loads");
+    let (g, t) = (&c.g27, &c.g8);
+    let end = u64::from(t.quit_tries) * t.quit_try_ms + 2 * c.timing.quit_wait_ms;
+    let copy = t.start_wait_ms + g.ready_ms + end;
+    let keys = |lang: &str| g.case(lang).map_or(0, |k| k.prefix.chars().count() as u64);
+    let word = |lang| {
+        g.switch_wait_ms + keys(lang) * g.key_gap_ms + g.chip_wait_ms + g.settle_ms + g.text_wait_ms
+    };
+    let typed = keys(&c.g21_product.case) * g.key_gap_ms;
+    let boxed = g.switch_wait_ms + typed + g.chip_wait_ms;
+    let head = c.fit.guard_headroom_ms;
+    assert_eq!(runs::g21_ms(&c), copy + 3 * boxed + head);
+    let cases: u64 = g.cases.iter().map(|k| word(&k.lang)).sum();
+    assert_eq!(runs::g27_ms(&c), 2 * copy + cases + word(&g.edge) + head);
+}
+
+#[test]
+fn g21_and_g27_runs_past_the_mouse_guard_are_refused() {
+    let good = load().expect("loads");
+    let (g21, g27) = (runs::g21_ms(&good), runs::g27_ms(&good));
+    assert!(g27 > g21, "G27 starts two copies and types every case");
+    let mut c = good.clone();
+    c.mouse_guard.limit_ms = g21 - 1;
+    let e = check(&c).expect_err("G21 runs too long");
+    assert!(e.contains("g21_product"), "{e}");
+    c.mouse_guard.limit_ms = g21;
+    let e = check(&c).expect_err("G27 runs too long");
+    assert!(e.contains("g27.cases"), "{e}");
 }

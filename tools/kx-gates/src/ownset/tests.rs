@@ -2,16 +2,21 @@
 
 use kx_test_support::tempdir::TempDir;
 
+use kx_settings::MAX_FILE_BYTES;
+
 use super::*;
 
 /// An owner's file: a module switched off, a log level, a version, a predict choice and another module's section.
 const OWNER: &str = "[kernel]\nversion = 1\ndisabled = [\"voice\"]\nlog_level = \"debug\"\n\n[predict]\non = false\n\
                      chips = 4\n\n[keyboard]\nrelabel_ms = 700\n";
 
-fn folder() -> (TempDir, Files) {
+/// A temp folder holding the owner's data folder and, beside it, the sidecar's place.
+fn folder() -> (TempDir, Files, PathBuf) {
     let dir = TempDir::new("gates-ownset").expect("a temp folder");
-    let files = Files::new(dir.path());
-    (dir, files)
+    let data = dir.path().join("data");
+    fs::create_dir(&data).expect("the data folder");
+    let side = dir.path().join("side.json");
+    (dir, Files::new(&data), side)
 }
 
 fn owner() -> Table {
@@ -27,10 +32,10 @@ fn disabled(t: &Table) -> Vec<String> {
 
 #[test]
 fn both_files_come_back_byte_for_byte_after_the_gate_wrote_them() {
-    let (_dir, files) = folder();
+    let (_dir, files, side) = folder();
     fs::write(&files.settings, OWNER).expect("written");
     fs::write(&files.previous, b"old\r\n").expect("written");
-    let kept = Kept::take(&files).expect("kept");
+    let kept = Kept::take(&files, &side).expect("kept").0;
     assert_eq!(kept.table(), owner());
     kept.write(&predict(&kept.table(), false, &[]).expect("edits"))
         .expect("written");
@@ -43,8 +48,8 @@ fn both_files_come_back_byte_for_byte_after_the_gate_wrote_them() {
 
 #[test]
 fn a_file_that_was_missing_is_removed_again() {
-    let (_dir, files) = folder();
-    let kept = Kept::take(&files).expect("kept");
+    let (_dir, files, side) = folder();
+    let kept = Kept::take(&files, &side).expect("kept").0;
     assert!(kept.table().is_empty(), "no file");
     kept.write(&predict(&Table::new(), true, &[]).expect("edits"))
         .expect("written");
@@ -55,10 +60,10 @@ fn a_file_that_was_missing_is_removed_again() {
 
 #[test]
 fn a_dropped_keep_puts_the_owners_file_back() {
-    let (_dir, files) = folder();
+    let (_dir, files, side) = folder();
     fs::write(&files.settings, OWNER).expect("written");
     {
-        let kept = Kept::take(&files).expect("kept");
+        let kept = Kept::take(&files, &side).expect("kept").0;
         kept.write(&Table::new()).expect("written");
     }
     assert_eq!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
@@ -66,14 +71,82 @@ fn a_dropped_keep_puts_the_owners_file_back() {
 
 #[test]
 fn a_file_past_the_stores_cap_is_refused_and_left_alone() {
-    let (_dir, files) = folder();
+    let (_dir, files, side) = folder();
     let big = vec![b'#'; usize::try_from(MAX_FILE_BYTES).expect("fits") + 1];
     fs::write(&files.settings, &big).expect("written");
-    let Err(e) = Kept::take(&files) else {
+    let Err(e) = Kept::take(&files, &side) else {
         panic!("too big, yet kept")
     };
     assert!(e.contains(&files.settings.display().to_string()), "{e}");
     assert_eq!(fs::read(&files.settings).expect("reads"), big);
+    assert!(!side.exists(), "nothing kept, so no sidecar");
+}
+
+/// A run that wrote the gate's settings, then was killed before it put the owner's back.
+fn killed(files: &Files, side: &Path) {
+    let (kept, _) = Kept::take(files, side).expect("kept");
+    kept.write(&Table::new()).expect("written");
+    std::mem::forget(kept);
+}
+
+#[test]
+fn a_sidecar_left_by_a_killed_run_is_restored_at_the_next_open() {
+    let (_dir, files, side) = folder();
+    fs::write(&files.settings, OWNER).expect("written");
+    killed(&files, &side);
+    assert!(side.exists(), "written before the gate's first write");
+    assert_ne!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
+    let (kept, recovered) = Kept::take(&files, &side).expect("kept");
+    assert!(recovered, "it says so");
+    assert_eq!(fs::read_to_string(&files.settings).expect("reads"), OWNER);
+    assert!(
+        !files.previous.exists(),
+        "a file that was missing is missing again"
+    );
+    assert_eq!(
+        kept.table(),
+        owner(),
+        "never the gate's file as the owner's"
+    );
+    assert_eq!(kept.put_back(), Ok(()));
+    assert!(!side.exists(), "gone after a verified put-back");
+}
+
+#[test]
+fn a_second_open_never_overwrites_the_sidecar() {
+    let (_dir, files, side) = folder();
+    fs::write(&files.settings, OWNER).expect("written");
+    killed(&files, &side);
+    let first = fs::read(&side).expect("the sidecar");
+    killed(&files, &side);
+    assert_eq!(fs::read(&side).expect("the sidecar"), first);
+    let (kept, _) = Kept::take(&files, &side).expect("kept");
+    assert_eq!(kept.table(), owner());
+}
+
+#[test]
+fn the_sidecar_stays_when_the_put_back_is_not_verified() {
+    let (_dir, files, side) = folder();
+    fs::write(&files.settings, OWNER).expect("written");
+    let (kept, _) = Kept::take(&files, &side).expect("kept");
+    let data = files.settings.parent().expect("a folder").to_path_buf();
+    fs::remove_dir_all(&data).expect("the data folder goes");
+    assert!(kept.put_back().is_err());
+    assert!(side.exists(), "the owner's bytes are still kept");
+}
+
+#[test]
+fn a_sidecar_for_another_data_folder_is_refused_and_left() {
+    let (dir, files, side) = folder();
+    fs::write(&files.settings, OWNER).expect("written");
+    killed(&files, &side);
+    let other = dir.path().join("other");
+    fs::create_dir(&other).expect("another folder");
+    let Err(e) = Kept::take(&Files::new(&other), &side) else {
+        panic!("another folder's sidecar, yet kept")
+    };
+    assert!(e.contains(&side.display().to_string()), "{e}");
+    assert!(side.exists() && !Files::new(&other).settings.exists());
 }
 
 #[test]

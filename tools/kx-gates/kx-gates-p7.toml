@@ -46,3 +46,8 @@ warm_words = 3
 words = 30
 # Wait after the last word before memory is read, in ms.
 settle_ms = 2000
+
+[owner_settings]
+# The file in kx-gates' out folder that holds the owner's settings bytes while G21's product half, G27 or g8 predict
+# runs its own copies. A run that was stopped leaves it, and the next one restores the owner's files from it first.
+backup = "owner-settings-backup.json"

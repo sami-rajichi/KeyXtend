@@ -2,14 +2,17 @@
 //! the word in a chip's name, which never reaches a result line.
 #![cfg(windows)]
 
+use std::fmt;
+
 use kx_mod_predict::{Casing, fold};
+use kx_module_api::Redacted;
 use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::keymap::{KeyRead, Reader};
 use crate::p7cfg::G27;
 
-/// What the lane shows. The best chip's name holds a word, so a lane is never logged whole.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+/// What the lane shows. The best chip's name holds a word, so it stays redacted and `Debug` shows counts only.
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct Lane {
     /// The lock note shows.
     pub locked: bool,
@@ -18,7 +21,18 @@ pub struct Lane {
     /// Chips with a box on screen.
     pub shown: usize,
     /// The best chip's name, when it shows.
-    pub first: Option<String>,
+    pub first: Option<Redacted<String>>,
+}
+
+impl fmt::Debug for Lane {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Lane")
+            .field("locked", &self.locked)
+            .field("chips", &self.chips)
+            .field("shown", &self.shown)
+            .field("first", &self.first.is_some())
+            .finish()
+    }
 }
 
 /// True when box `r` has an area on screen; a hidden item's box is empty.
@@ -35,7 +49,7 @@ pub fn lane_of(buttons: &[KeyRead], locked: Option<RECT>, start: &str, best: &st
         locked: locked.is_some_and(|r| on_screen(&r)),
         chips: chips.len(),
         shown: chips.iter().filter(|b| on_screen(&b.rect)).count(),
-        first: first.map(|b| b.name.clone()),
+        first: first.map(|b| Redacted::new(b.name.clone())),
     }
 }
 
@@ -47,12 +61,12 @@ pub fn read(reader: &Reader, hwnd: HWND, g: &G27) -> Result<Lane, String> {
 }
 
 /// The word in chip name `name`: what lies between the text before and after it in the first of `forms` that fits.
-pub fn word_of(name: &str, forms: &[(String, String)]) -> Option<String> {
+pub fn word_of(name: &str, forms: &[(String, String)]) -> Option<Redacted<String>> {
     forms.iter().find_map(|(before, after)| {
         let word = name
             .strip_prefix(before.as_str())?
             .strip_suffix(after.as_str())?;
-        (!word.is_empty()).then(|| word.to_string())
+        (!word.is_empty()).then(|| Redacted::new(word.to_string()))
     })
 }
 
@@ -94,6 +108,19 @@ mod tests {
         lane_of(buttons, locked, "words.chip-", "words.chip-0")
     }
 
+    /// The text a redacted value holds, for the checks.
+    fn text(r: Option<&Redacted<String>>) -> Option<&str> {
+        r.map(|t| t.expose().as_str())
+    }
+
+    #[test]
+    fn a_lanes_debug_shows_counts_and_never_a_word() {
+        let got = lane(&[button("words.chip-0", "Suggestion: secret", SHOWN)], None);
+        let shown = format!("{got:?}");
+        assert!(!shown.contains("secret"), "{shown}");
+        assert!(shown.contains("chips: 1"), "{shown}");
+    }
+
     #[test]
     fn chips_are_counted_by_id_and_the_best_names_the_shown_first_chip() {
         let read = [
@@ -105,7 +132,7 @@ mod tests {
         ];
         let got = lane(&read, None);
         assert_eq!((got.chips, got.shown, got.locked), (3, 2, false));
-        assert_eq!(got.first.as_deref(), Some("Suggestion: hello"));
+        assert_eq!(text(got.first.as_ref()), Some("Suggestion: hello"));
     }
 
     #[test]
@@ -122,9 +149,15 @@ mod tests {
     fn a_chips_word_comes_out_of_its_name_in_any_shipped_language() {
         let forms = crate::ftl::around("chip.name", "word").expect("in all three");
         let name = |i: usize, w: &str| format!("{}{w}{}", forms[i].0, forms[i].1);
-        assert_eq!(word_of(&name(0, "hello"), &forms).as_deref(), Some("hello"));
-        assert_eq!(word_of(&name(1, "école"), &forms).as_deref(), Some("école"));
-        assert_eq!(word_of(&name(2, "أن"), &forms).as_deref(), Some("أن"));
+        assert_eq!(
+            text(word_of(&name(0, "hello"), &forms).as_ref()),
+            Some("hello")
+        );
+        assert_eq!(
+            text(word_of(&name(1, "école"), &forms).as_ref()),
+            Some("école")
+        );
+        assert_eq!(text(word_of(&name(2, "أن"), &forms).as_ref()), Some("أن"));
         assert_eq!(word_of("Undo", &forms), None, "Undo holds no word");
         assert_eq!(word_of(&name(0, ""), &forms), None, "no word at all");
     }

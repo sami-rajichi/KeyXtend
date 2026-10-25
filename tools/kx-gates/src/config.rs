@@ -20,7 +20,7 @@ use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
 use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
 use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
-use crate::p7cfg::{self, G8Predict, G21Product, G27};
+use crate::p7cfg::{self, G8Predict, G21Product, G27, OwnerSettings};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 
@@ -113,6 +113,8 @@ pub struct GatesConfig {
     pub g21_product: G21Product,
     /// G8's prediction part.
     pub g8_predict: G8Predict,
+    /// Where the owner's settings bytes wait while a gate runs its own copies.
+    pub owner_settings: OwnerSettings,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,

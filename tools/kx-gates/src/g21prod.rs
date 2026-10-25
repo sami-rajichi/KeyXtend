@@ -11,14 +11,15 @@ use kx_platform_windows::uia::Uia;
 use kx_settings::peek_section;
 use serde_json::{Value, json};
 
-use crate::apps::{self, Ctx, Opened};
+use crate::apps::Ctx;
+use crate::copyend::Ended;
 use crate::g27lane::Lane;
-use crate::g27type::{self, Typist};
-use crate::owncopy::{Ended, Session};
+use crate::g27type::Typist;
+use crate::owncopy::Session;
 use crate::p7cfg::Case;
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{g21, launch, probe};
+use crate::{g21, probe, typebox};
 
 /// A box the half types in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +38,8 @@ const FIELDS: [Field; 3] = [
     Field::ChromePassword,
     Field::Win32Plain,
 ];
+/// How many boxes the product half types in, for its run-length check.
+pub(crate) const BOXES: usize = FIELDS.len();
 
 impl Field {
     /// Its name in the result.
@@ -96,8 +99,8 @@ fn typed_lane(ctx: &Ctx, t: &Typist, case: &Case, password: bool) -> Result<Lane
     t.lane_until(|l| l.shown > 0).map_or_else(|| t.lane(), Ok)
 }
 
-/// `app`'s focused box judged: the kind the watch tells, the lane after the case's prefix, the layout put back.
-fn judge(ctx: &Ctx, watch: &dyn FieldRun, app: &Opened, f: Field) -> Result<Value, String> {
+/// The focused box judged with typist `t`: the kind the watch tells, and the lane after the case's prefix.
+fn judge(ctx: &Ctx, watch: &dyn FieldRun, t: &Typist, f: Field) -> Result<Value, String> {
     let want = if f.password() {
         FieldKind::Password
     } else {
@@ -109,46 +112,46 @@ fn judge(ctx: &Ctx, watch: &dyn FieldRun, app: &Opened, f: Field) -> Result<Valu
         .g27
         .case(&g.g21_product.case)
         .ok_or("g21_product.case names no g27 case")?;
-    let t = Typist::new(ctx, app)?;
-    let lane = typed_lane(ctx, &t, case, f.password());
-    let back = t.put_back();
-    let lane = lane?;
-    let ok = box_ok(f.password(), kind, &lane) && back;
+    let lane = typed_lane(ctx, t, case, f.password())?;
+    let ok = box_ok(f.password(), kind, &lane);
     let kind = format!("{kind:?}").to_lowercase();
     Ok(json!({
-        "field": f.name(), "kind": kind, "locked": lane.locked, "chips": lane.chips, "shown": lane.shown,
-        "layout_put_back": back, "ok": ok,
+        "field": f.name(), "kind": kind, "locked": lane.locked, "chips": lane.chips, "shown": lane.shown, "ok": ok,
     }))
 }
 
-/// target-window's box, a password box for `f`'s password, judged and then closed.
+/// A box's line `v` with whether its layout came `back` and what clean-up `left`; it passes only with the layout back.
+fn finished(mut v: Value, back: bool, left: &[String]) -> Value {
+    v["ok"] = json!(v["ok"] == true && back);
+    v["layout_put_back"] = json!(back);
+    v["clean_up"] = json!(left);
+    v
+}
+
+/// target-window's box, a password box for `f`'s password, judged in a fresh window.
 fn target(ctx: &Ctx, watch: &dyn FieldRun, f: Field) -> Result<Value, String> {
     let password = std::slice::from_ref(&ctx.target.password_arg);
     let extra = if f.password() { password } else { &[] };
-    let app = launch::to_front(ctx, launch::start_target_with(ctx, extra)?)?;
-    let got = g27type::focus_target(ctx, &app).and_then(|()| judge(ctx, watch, &app, f));
-    let mut left = probe::released();
-    left.extend(apps::clean_up(ctx, app));
-    got.map(|mut v| {
-        v["clean_up"] = json!(left);
-        v
-    })
+    let b = typebox::in_target(ctx, extra, |t| judge(ctx, watch, t, f));
+    let left = b.left;
+    b.got.map(|v| finished(v, b.back, &left))
 }
 
-/// G21's Chrome page, its password field clicked, judged, then closed.
+/// G21's Chrome page, its password field clicked, judged, then closed with the page file G21 wrote.
 fn chrome(ctx: &Ctx, watch: &dyn FieldRun) -> Result<Value, String> {
     let g = &ctx.cfg.g21;
     let body =
         g21::input(ctx, &g.user_name, "text", "") + &g21::input(ctx, &g.pass_name, "password", "");
     let doc = probe::open_page(ctx, &body)?;
-    let (mut v, left) = probe::run_on(ctx, doc, |doc| {
+    let ((v, back), left) = probe::run_on(ctx, doc, |doc| {
         let uia = Uia::new().map_err(|e| e.to_string())?;
         probe::front(ctx, &doc.app)?;
         g21::click_field(ctx, &uia, &doc.app, &g.pass_name)?;
-        judge(ctx, watch, &doc.app, Field::ChromePassword)
+        let judged = |t: &Typist| judge(ctx, watch, t, Field::ChromePassword);
+        let (got, back) = typebox::typed_in(ctx, &doc.app, judged);
+        got.map(|v| (v, back))
     })?;
-    v["clean_up"] = json!(left);
-    Ok(v)
+    Ok(finished(v, back, &left))
 }
 
 /// Each box judged on the running copy, with one field watch for them all.
