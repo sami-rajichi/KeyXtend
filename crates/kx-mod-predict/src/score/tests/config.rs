@@ -1,9 +1,9 @@
-//! The settings: a learned weight outside 0 to 1, or a backoff below 0, is refused, as the early stop cannot bound it.
+//! The settings: a learned weight or a backoff outside 0 to 1 is refused, as the early stop cannot bound it.
 
 use super::*;
 
 #[test]
-fn a_weight_outside_0_to_1_or_a_backoff_below_0_is_refused() {
+fn a_weight_or_a_backoff_outside_0_to_1_is_refused() {
     for learn_weight in [-0.1, 1.1, f64::NAN] {
         let cfg = ScoreConfig {
             learn_weight,
@@ -15,17 +15,17 @@ fn a_weight_outside_0_to_1_or_a_backoff_below_0_is_refused() {
             "{learn_weight}"
         );
     }
-    for backoff in [-0.1, f64::NAN, f64::INFINITY] {
+    for backoff in [-0.1, 1.5, 1e78, f64::NAN, f64::INFINITY] {
         let cfg = ScoreConfig { backoff, ..CFG };
         assert_eq!(cfg.check(), Err(ScoreConfigError::BadBackoff), "{backoff}");
     }
-    for (backoff, learn_weight) in [(0.0, 0.0), (2.0, 1.0)] {
+    for (backoff, learn_weight) in [(0.0, 0.0), (0.4, 0.6), (1.0, 1.0)] {
         let cfg = ScoreConfig {
             backoff,
             learn_weight,
             ..CFG
         };
-        assert_eq!(cfg.check(), Ok(()));
+        assert_eq!(cfg.check(), Ok(()), "{backoff}");
     }
     assert_eq!(CFG.check(), Ok(()));
 }

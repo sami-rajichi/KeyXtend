@@ -209,15 +209,20 @@ impl Learner {
             };
             return self.words.insert(casing, word);
         };
-        let held = self.words.get(id).map(|w| (&*w.text != text, w.count));
-        if held.is_some_and(|h| h.0) && casing.lower(text) == text {
+        let differs = self.words.get(id).is_some_and(|w| &*w.text != text);
+        if differs && casing.lower(text) == text {
             self.words.respell(id, text);
         }
-        if held.is_some_and(|h| too_high(h.1, uses)) {
+        self.bump(id, uses, day);
+        Some(id)
+    }
+
+    /// Adds `n` uses to word `id` on `day`, halving every table first when its count would pass the top.
+    fn bump(&mut self, id: Id, n: u16, day: u32) {
+        if self.words.get(id).is_some_and(|w| too_high(w.count, n)) {
             self.halve();
         }
-        self.words.bump(id, uses, day);
-        Some(id)
+        self.words.bump(id, n, day);
     }
 
     /// Halves every count of every table at once, so the scorer's chain-to-word shares hold; `min_uses` is the floor.

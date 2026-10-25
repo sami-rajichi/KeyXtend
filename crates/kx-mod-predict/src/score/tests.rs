@@ -28,14 +28,6 @@ const PLAIN: TypingMode = TypingMode {
     caps: false,
     shortcut: false,
 };
-/// The settings' defaults as Task 12 fills them.
-const CFG: ScoreConfig = ScoreConfig {
-    backoff: 0.4,
-    learn_weight: 0.6,
-    learn_ramp: 2000,
-    min_uses: 2,
-};
-
 /// One test word: its spelling, with its capitals, and its frequency byte.
 type Word<'a> = (&'a str, u8);
 /// One test chain: its context, next word and score.

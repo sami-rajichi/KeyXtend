@@ -20,6 +20,41 @@ const PREFIXES: [&str; 11] = [
     "\u{10FFFF}",
 ];
 
+/// Arabic words whose keys share the two-letter, four-byte prefix كت; its third letters cross from lead byte D8 to D9.
+const ARABIC: [(&str, u8); 9] = [
+    ("قلم", 190),
+    ("كبير", 180),
+    ("كتاب", 170),
+    ("كتابة", 160),
+    ("كتب", 150),
+    ("كتف", 140),
+    ("كثير", 130),
+    ("كلمة", 120),
+    ("لون", 110),
+];
+/// Prefixes looked up in `ARABIC`, each with the words it finds: hits, and misses before, between and past the keys.
+/// U+063F is the last letter under lead byte D8, so its successor ends in a byte no letter takes.
+const ARABIC_SPANS: [(&str, usize); 18] = [
+    ("", 9),
+    ("ف", 0),
+    ("ق", 1),
+    ("ك", 7),
+    ("كت", 4),
+    ("كتا", 2),
+    ("كتاب", 2),
+    ("كتابة", 1),
+    ("كتابي", 0),
+    ("كتب", 1),
+    ("كتت", 0),
+    ("كتف", 1),
+    ("كتق", 0),
+    ("كث", 1),
+    ("كج", 0),
+    ("ك\u{063F}", 0),
+    ("ل", 1),
+    ("م", 0),
+];
+
 /// A pack of `words` in `iso`, without chains.
 fn list(iso: &str, words: &[(&str, u8)]) -> Vec<u8> {
     let flags = Flags {
@@ -34,11 +69,21 @@ fn list(iso: &str, words: &[(&str, u8)]) -> Vec<u8> {
 }
 
 #[test]
-fn the_script_is_the_most_frequent_words() {
-    let zh = list("zh", &[("hello", 100), ("你好", 200), ("我们", 150)]);
+fn the_script_is_the_builders_main_script_over_every_spelling() {
+    let ko = list("ko", &[("漢字", 200), ("사랑", 150), ("학교", 100)]);
+    assert_eq!(
+        Pack::parse(&ko).unwrap().script(),
+        Some(Script::Hangul),
+        "Hanja counts as Korean, even first"
+    );
+    let zh = list("zh", &[("你好", 200), ("我们", 150)]);
     assert_eq!(Pack::parse(&zh).unwrap().script(), Some(Script::Han));
-    let en = list("en", &[("hello", 200), ("你好", 100)]);
-    assert_eq!(Pack::parse(&en).unwrap().script(), Some(Script::Latin));
+    let mixed = list("en", &[("hello", 200), ("world", 150), ("你好", 100)]);
+    assert_eq!(
+        Pack::parse(&mixed).unwrap().script(),
+        None,
+        "a list the builder left mixed"
+    );
 }
 
 #[test]
@@ -59,5 +104,16 @@ fn a_prefix_span_holds_the_ids_its_completions_give() {
         let span: Vec<WordId> = pack.span(prefix).collect();
         let found: Vec<WordId> = pack.completions(prefix).collect();
         assert_eq!(span, found, "{prefix}");
+    }
+}
+
+#[test]
+fn a_prefix_span_holds_its_completions_over_multi_byte_keys() {
+    let bytes = list("ar", &ARABIC);
+    let pack = Pack::parse(&bytes).unwrap();
+    for (prefix, want) in ARABIC_SPANS {
+        let span: Vec<WordId> = pack.span(prefix).collect();
+        let found: Vec<WordId> = pack.completions(prefix).collect();
+        assert_eq!((span.len(), &span), (want, &found), "{prefix}");
     }
 }

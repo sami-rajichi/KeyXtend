@@ -1,6 +1,8 @@
 //! Which script a letter belongs to, one table for the pack builder and the tracker: a word mixing scripts is never a
 //! word, and each script's row says which way it reads and what parts its words.
 
+use std::cmp::Reverse;
+
 /// A writing system, as far as the words need to tell them apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Script {
@@ -208,6 +210,26 @@ pub fn of(word: &str) -> Option<Script> {
         .filter(|c| c.is_alphabetic())
         .map(script)
         .find(|s| *s != Script::Common)
+}
+
+/// The commonest script in `scripts` when it and the scripts it holds (Hanja for Hangul) have at least `share` of the
+/// words with a script; a tie goes to the one holding more, then to the first row. The builder and `Pack` share it.
+#[must_use]
+pub fn main(scripts: impl IntoIterator<Item = Option<Script>>, share: f64) -> Option<Script> {
+    let mut counts = [0_u32; FACTS.len()];
+    for script in scripts.into_iter().flatten() {
+        let row = FACTS.iter().position(|(s, _)| *s == script);
+        if let Some(n) = row.and_then(|at| counts.get_mut(at)) {
+            *n = n.saturating_add(1);
+        }
+    }
+    let rows = || FACTS.iter().map(|row| row.0).zip(counts);
+    let sum = |all: u32, (_, n): (Script, u32)| all.saturating_add(n);
+    let held = |top: Script| rows().filter(|(s, _)| top.holds(*s)).fold(0, sum);
+    let total = rows().fold(0, sum);
+    let ranked = rows().enumerate();
+    let (_, (top, _)) = ranked.max_by_key(|&(at, (s, n))| (n, held(s), Reverse(at)))?;
+    (total > 0 && f64::from(held(top)) >= share * f64::from(total)).then_some(top)
 }
 
 #[cfg(test)]

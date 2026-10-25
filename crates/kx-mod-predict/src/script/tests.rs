@@ -89,3 +89,40 @@ fn every_script_holds_itself_and_hangul_also_holds_han_as_kore_does() {
     assert!(!Script::Han.holds(Script::Hangul), "Chinese drops Hangul");
     assert!(!Script::Latin.holds(Script::Greek));
 }
+
+#[test]
+fn the_main_script_holds_the_share_of_the_words_with_a_script() {
+    let scripts = |words: &[&str]| words.iter().map(|w| of(w)).collect::<Vec<_>>();
+    let latin = scripts(&["one", "two", "три", "123"]);
+    assert_eq!(
+        main(latin.clone(), 0.6),
+        Some(Script::Latin),
+        "the digits aside"
+    );
+    assert_eq!(main(latin, 0.7), None);
+    let korean = scripts(&["사랑", "학교", "친구", "漢字"]);
+    assert_eq!(
+        main(korean, 1.0),
+        Some(Script::Hangul),
+        "Hanja counts as Korean"
+    );
+    let chinese = scripts(&["漢字", "日本", "東京", "사랑"]);
+    assert_eq!(main(chinese.clone(), 1.0), None, "Hangul is not Chinese");
+    assert_eq!(main(chinese, 0.75), Some(Script::Han));
+    assert_eq!(main(scripts(&["123", ""]), 0.0), None, "no letter");
+}
+
+#[test]
+fn a_tie_goes_to_the_script_holding_more_then_to_the_first_row() {
+    let scripts = |words: &[&str]| words.iter().map(|w| of(w)).collect::<Vec<_>>();
+    for words in [["one", "три"], ["три", "one"]] {
+        assert_eq!(main(scripts(&words), 0.5), Some(Script::Latin), "{words:?}");
+    }
+    for words in [["사랑", "漢字"], ["漢字", "사랑"]] {
+        assert_eq!(
+            main(scripts(&words), 1.0),
+            Some(Script::Hangul),
+            "{words:?}"
+        );
+    }
+}

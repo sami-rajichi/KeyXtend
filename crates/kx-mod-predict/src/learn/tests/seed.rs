@@ -1,5 +1,6 @@
 //! The learner with a pack: seed words count at once, and informal spellings count toward the pack's.
 
+use super::super::clean::COUNT_TOP;
 use super::*;
 use crate::pack::{Flags, PackWriter};
 
@@ -205,6 +206,37 @@ fn a_forgotten_words_strays_count_on_the_blocklist_whichever_comes_first() {
         (view.count("école"), lengths(&first)),
         (CFG.min_uses, vec![1, 0])
     );
+}
+
+#[test]
+fn a_blocked_words_day_never_moves_back_to_its_strays_older_day() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let cfg = LearnConfig { min_uses: 3, ..CFG };
+    let mut l = Learner::new("fr", cfg).unwrap();
+    assert!(l.forget(Some(&fr), "école", DAY));
+    l.learn(None, "ecole", &[], DAY);
+    l.learn(Some(&fr), "école", &[], DAY + 5);
+    l.reconcile(Some(&fr));
+    let marks: Vec<(u16, u32)> = l.blocked.iter().map(|(_, m)| (m.uses, m.day)).collect();
+    assert_eq!(marks, [(2, DAY + 5)]);
+}
+
+#[test]
+fn a_word_back_from_the_blocklist_halves_every_table_before_passing_the_top() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    teach(&mut l, None, "l' l' l' l'", DAY);
+    assert!(l.forget(Some(&fr), "école", DAY));
+    l.learn(Some(&fr), "école", &[], DAY);
+    for _ in 0..COUNT_TOP {
+        l.learn(None, "ecole", &[], DAY);
+    }
+    l.reconcile(Some(&fr));
+    let view = l.view(Some(&fr));
+    let half = u32::from(COUNT_TOP.div_ceil(2));
+    assert_eq!((view.count("école"), view.count("l'")), (half + 1, 2));
 }
 
 #[test]

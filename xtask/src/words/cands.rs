@@ -4,12 +4,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use kx_mod_predict::Casing;
+use kx_mod_predict::{Casing, script};
 
 use super::dict::Dict;
 use super::manifest::{Plan, Rules};
 use super::wordfreq::{Entry, share};
-use super::{clean, merge, script};
+use super::{clean, merge};
 use crate::devtools::paths::BYTES_PER_KB;
 
 /// What became of one token.

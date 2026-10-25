@@ -21,6 +21,8 @@ use case::Case;
 use model::Model;
 use sink::Sink;
 
+#[cfg(test)]
+pub(crate) use config::CFG;
 pub use config::{ScoreConfig, ScoreConfigError};
 
 /// One guess, as its chip shows and types it.
@@ -126,7 +128,7 @@ struct Ask<'a> {
     mode: TypingMode,
     /// The settings.
     cfg: &'a ScoreConfig,
-    /// How the pack's language cases its words.
+    /// How the language in front cases its words, with or without a pack.
     casing: &'static Casing,
     /// How each word list is read.
     scan: Scan,

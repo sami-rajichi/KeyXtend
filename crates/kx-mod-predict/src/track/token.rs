@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 
 use crate::fold;
-use crate::script;
+use crate::script::{self, Script};
 use crate::split::{normalise, spans};
 
 /// The packs' apostrophe; a broken fold table, which its tests rule out, leaves NUL, which no word holds.
@@ -118,6 +118,6 @@ pub(super) fn learnable(word: &str, max_word: usize) -> bool {
     !word.is_empty()
         && !word.chars().any(char::is_numeric)
         && script::single(word)
-        && script::of(word).is_none_or(|s| !s.gap().is_empty())
+        && script::of(word).is_none_or(Script::spaced)
         && word.chars().count() <= max_word
 }

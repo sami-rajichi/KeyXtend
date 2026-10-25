@@ -1,8 +1,7 @@
 //! The token rules: which wordfreq tokens may become words.
 
 use kx_mod_predict::pack::layout::fits_spelling;
-
-use super::script;
+use kx_mod_predict::script;
 
 /// True when `word` may enter a word list: it fits a pack spelling, holds a letter, no digit and none of
 /// `drop_chars` (web addresses, emails), and its letters are of one script.

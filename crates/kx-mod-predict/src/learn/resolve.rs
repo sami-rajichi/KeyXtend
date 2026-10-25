@@ -44,7 +44,7 @@ impl Learner {
         match self.blocked.used(text, uses, day, self.cfg.min_uses) {
             Use::Back(total) => {
                 if let Some(id) = self.absorb(Some(pack), text, self.words.find(text)) {
-                    self.words.bump(id, total.saturating_sub(uses), day);
+                    self.bump(id, total.saturating_sub(uses), day);
                 }
             }
             Use::Held | Use::Free => {

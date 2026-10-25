@@ -4,7 +4,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
 
 use super::*;
-use crate::score::{Learned, ScoreConfig, guesses};
+use crate::score::{CFG as SCORE, Learned, guesses};
 use crate::track::{Query, Reading};
 
 mod bytes;
@@ -26,13 +26,6 @@ pub(crate) const CFG: LearnConfig = LearnConfig {
     max_chains: 30_000,
     forget_days: 300,
     context_words: 2,
-};
-/// The scorer's defaults as Task 12 fills them.
-const SCORE: ScoreConfig = ScoreConfig {
-    backoff: 0.4,
-    learn_weight: 0.6,
-    learn_ramp: 2000,
-    min_uses: 2,
 };
 /// No latch.
 const PLAIN: TypingMode = TypingMode {

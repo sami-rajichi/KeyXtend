@@ -21,7 +21,6 @@ mod merge;
 mod out;
 mod read;
 mod report;
-mod script;
 mod skew;
 mod tatoeba;
 #[cfg(test)]

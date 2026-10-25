@@ -1,7 +1,6 @@
 //! The pack reader: it checks the header, the sections and the lexicon's checksum once, then reads in place. A mapped
 //! file could change under it, so every offset and length read from the pack is checked again where it is used.
 
-use std::cmp::Reverse;
 use std::fmt;
 use std::ops::Range;
 use std::str;
@@ -22,6 +21,9 @@ use chains::Chain;
 use head::Head;
 use keys::{Completions, first_at, successor};
 
+/// The share of the words with a script that a pack's main script holds: all, as its builder dropped the others.
+const KEPT: f64 = 1.0;
+
 /// One language's word pack, read in place from its bytes.
 pub struct Pack<'a> {
     /// The whole pack.
@@ -30,7 +32,7 @@ pub struct Pack<'a> {
     head: Head,
     /// The lexicon, its checksum checked at parse.
     lexicon: Map<&'a [u8]>,
-    /// The script of its most frequent word, found at parse.
+    /// Its main script, found at parse.
     script: Option<Script>,
 }
 
@@ -128,7 +130,8 @@ impl<'a> Pack<'a> {
             .unwrap_or_default()
     }
 
-    /// The script of the pack's most frequent word, the main script its builder kept; `None` when it has no letter.
+    /// The main script its builder kept, found by the builder's rule (`script::main`) over every spelling; `None` for
+    /// a list the builder left mixed or with no letter.
     #[must_use]
     pub fn script(&self) -> Option<Script> {
         self.script
@@ -179,11 +182,10 @@ impl<'a> Pack<'a> {
         })
     }
 
-    /// The script of the most frequent word, the first of them on a tie.
+    /// The builder's main script over every spelling, with `KEPT` as its share.
     fn main_script(&self) -> Option<Script> {
-        let freq = self.head.freq.of(self.bytes).iter().enumerate();
-        let (top, _) = freq.max_by_key(|&(at, f)| (*f, Reverse(at)))?;
-        script::of(self.spelling(WordId::try_from(top).ok()?))
+        let ids = 0..self.head.words;
+        script::main(ids.map(|id| script::of(self.spelling(id))), KEPT)
     }
 
     /// `id` as an index into the word sections, when it names a word.
