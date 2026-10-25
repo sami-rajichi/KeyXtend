@@ -206,8 +206,8 @@ impl<'a> Counter<'a> {
         counted
     }
 
-    /// Counts one token and the chains it ends; `run` holds the candidates of the chain so far, and a sentence's first
-    /// word is never joined, so it starts a new one.
+    /// Counts one token and the chains it ends; `run` holds the candidates of the chain so far. A sentence start, an
+    /// unknown word or a word not standing alone (`est-ce`, `site.com`) ends it, as the tracker ends its context.
     fn token(&mut self, token: Token<'_>, weight: u32, scaled: bool, run: &mut Vec<u32>) {
         let w = u64::from(weight);
         self.total += w;
@@ -228,8 +228,11 @@ impl<'a> Counter<'a> {
         if let (Some(form), false, true) = (hit.form, token.first, token.alone) {
             bump(&mut self.form_seen, form);
         }
-        if !token.joined {
+        if !token.alone || !token.joined {
             run.clear();
+        }
+        if !token.alone {
+            return;
         }
         if run.len() == self.lengths.1 {
             run.remove(0);

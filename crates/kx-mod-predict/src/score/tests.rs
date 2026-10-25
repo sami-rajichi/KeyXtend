@@ -103,6 +103,7 @@ fn french() -> Vec<u8> {
         ("écologie", 110),
         ("quelqu'", 100),
         ("jusqu'", 99),
+        ("lorsqu'", 98),
     ];
     let chains: [Chain<'_>; 2] = [(&["l'"], "école", 230), (&["quelqu'"], "un", 240)];
     pack("fr", &words, &chains)

@@ -17,9 +17,17 @@ pub(super) struct Fake {
     blocked: HashSet<String>,
     /// The words learned in all.
     uses: u64,
+    /// The language in front, whose casing folds the learned words; none folds as Unicode's default.
+    iso: String,
 }
 
 impl Fake {
+    /// Sets the language in front.
+    pub(super) fn lang(mut self, iso: &str) -> Self {
+        iso.clone_into(&mut self.iso);
+        self
+    }
+
     /// Sets the words learned in all.
     pub(super) fn uses(mut self, uses: u64) -> Self {
         self.uses = uses;
@@ -67,7 +75,7 @@ impl Learned for Fake {
 
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str)) {
         for word in self.words.keys() {
-            if fold(word, Casing::root()).starts_with(folded_prefix) {
+            if fold(word, Casing::of(&self.iso)).starts_with(folded_prefix) {
                 each(word);
             }
         }

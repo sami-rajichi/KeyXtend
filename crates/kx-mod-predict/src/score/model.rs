@@ -76,7 +76,7 @@ impl<'m> Model<'m> {
     }
 
     /// Offers only the context's followers, seed and learned, that start with `folded`; false when none does, so the
-    /// word list fills in.
+    /// word list fills in for a typed prefix.
     pub(super) fn offer_followers(&self, folded: &str, sink: &mut Sink<'_>) -> bool {
         let fits = |w: &str| fold(w, self.casing).starts_with(folded) && self.offerable(w);
         let mut matched = false;

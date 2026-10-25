@@ -96,6 +96,21 @@ fn turkish_text_counts_dotless_and_dotted_words_apart() {
 }
 
 #[test]
+fn a_word_that_does_not_stand_alone_ends_the_chains_as_the_tracker_does() {
+    let words = [["est"], ["ce"], ["que"], ["site"], ["com"], ["today"]];
+    let cands: Vec<_> = (0..)
+        .zip(words)
+        .map(|(i, w)| cand(&w, 300 + i, 0))
+        .collect();
+    let (vocab, rules) = (Vocab::new(&cands, Casing::root()), rules());
+    let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
+    counter.add("Est-ce que site.com today", 1, false);
+    let got = counter.finish();
+    assert_eq!(got.chains.table.len(), 0, "no chain into que or today");
+    assert_eq!((got.text.total, got.text.alone("que")), (6, 1));
+}
+
+#[test]
 fn chains_count_within_a_sentence_and_an_unknown_word_breaks_them() {
     let (vocab, rules) = (vocab(), rules());
     let mut counter = Counter::new(&vocab, 5, &rules, '\'');

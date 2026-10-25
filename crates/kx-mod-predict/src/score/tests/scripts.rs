@@ -106,3 +106,12 @@ fn a_turkish_context_typed_in_capitals_finds_its_twin_by_turkish_casing() {
         "IRMAK lowers to ırmak"
     );
 }
+
+#[test]
+fn a_learned_turkish_word_is_found_by_turkish_folding() {
+    let learned = Fake::default().lang("tr").uses(100).word("ılık", 50);
+    let bytes = turkish();
+    let pack = Pack::parse(&bytes).unwrap();
+    let found = guesses(Some(&pack), &learned, &ask(&[], "ıl"), PLAIN, LIMIT, &CFG);
+    assert_eq!(texts(&found), ["ılık"]);
+}

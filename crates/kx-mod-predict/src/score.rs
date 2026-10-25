@@ -66,7 +66,8 @@ pub trait Learned {
     fn uses(&self) -> u64;
     /// True when `word` is a seed word the user forgot.
     fn blocked(&self, word: &str) -> bool;
-    /// Calls `each` with every learned word whose folded key starts with `folded_prefix`.
+    /// Calls `each` with every learned word whose folded key starts with `folded_prefix`, both folded with the casing
+    /// of the language in front (`Casing::of(iso)`).
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str));
     /// Calls `each` with every learned word that followed `context`.
     fn following(&self, context: &[&str], each: &mut dyn FnMut(&str));
@@ -152,7 +153,8 @@ struct Ask<'a> {
 
 impl Ask<'_> {
     /// Offers `best` every candidate of `reading`, prefixed by its lead, in the case its prefix asks for, and weighed
-    /// by its elisions' chance; after an elision its followers come first, and the word list only when none fits.
+    /// by its elisions' chance. After an elision its followers come first, and the word list only for a typed prefix
+    /// none fits.
     fn offer(&self, reading: &Reading, best: &mut Best) {
         let context: Vec<&str> = reading
             .context
@@ -173,7 +175,7 @@ impl Ask<'_> {
         };
         let model = Model::new(self.seed, self.learned, &context, self.cfg);
         let folded = fold(prefix, self.casing);
-        if kept == 0 || !model.offer_followers(&folded, &mut sink) {
+        if kept == 0 || (!model.offer_followers(&folded, &mut sink) && !folded.is_empty()) {
             model.offer(&folded, &mut sink);
         }
     }

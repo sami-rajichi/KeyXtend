@@ -1,6 +1,7 @@
 //! The pack format's tests: refused headers and random bytes here; the round trip, the writer and every damaged
 //! pack in the files below, which need the writer (`--features build`).
 
+use std::collections::BTreeSet;
 use std::hint::black_box;
 
 use kx_module_api::ports::MAX_PACK_BYTES;
@@ -69,7 +70,7 @@ fn bytes_without_the_magic_are_not_a_pack() {
 #[test]
 fn an_older_or_newer_version_is_refused_and_named() {
     // Version 1 held capital flags, which the spellings now hold.
-    for other in [1, VERSION - 1, VERSION + 1] {
+    for other in BTreeSet::from([1, VERSION - 1, VERSION + 1]) {
         let mut bytes = start();
         bytes[AT_VERSION..].copy_from_slice(&other.to_le_bytes());
         let refused = Pack::parse(&bytes).unwrap_err();

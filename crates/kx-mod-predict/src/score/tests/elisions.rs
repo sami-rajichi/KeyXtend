@@ -67,3 +67,8 @@ fn a_prefix_no_follower_starts_still_gets_word_list_guesses() {
 fn after_an_elision_only_its_followers_come_and_the_elision_itself_is_not_offered() {
     assert_eq!(typed_fr("vois l'").1, ["l'école"]);
 }
+
+#[test]
+fn an_elision_without_followers_shows_nothing_until_a_letter_is_typed() {
+    assert_eq!(typed_fr("lorsqu'").1, Vec::<String>::new());
+}
