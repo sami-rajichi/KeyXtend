@@ -126,9 +126,6 @@ pub enum FaceAction {
         /// The pointer is on the pad.
         on: bool,
     },
-    /// Debug builds only: Caps Lock shows the other way round, with no key sent, for the memory churn.
-    #[cfg(debug_assertions)]
-    FlipCaps,
 }
 
 /// What the UI must do after an action.

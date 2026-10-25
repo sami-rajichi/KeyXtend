@@ -62,6 +62,13 @@ fn picked() -> Vec<Box<dyn Module>> {
     list
 }
 
+/// The layout source the kernel serves: the platform's, which debug builds wrap so the churn can turn Caps Lock over.
+fn layout_source(source: Arc<dyn LayoutSource>) -> Arc<dyn LayoutSource> {
+    #[cfg(debug_assertions)]
+    let source = crate::layouts_debug::wrap(source);
+    source
+}
+
 /// The grants: each shipped module may use what its manifest declares, since the app vouches for what it ships.
 #[must_use]
 pub fn policy(modules: &[Box<dyn Module>]) -> Policy {
@@ -95,7 +102,7 @@ impl Boot {
         let modules = modules(&hub);
         let mut kernel = Kernel::new(platform, policy(&modules));
         kernel.provide_platform::<InputInjectorKey>(services.injector)?;
-        kernel.provide_platform::<LayoutSourceKey>(services.layouts)?;
+        kernel.provide_platform::<LayoutSourceKey>(layout_source(services.layouts))?;
         kernel.provide_platform::<PointerHookKey>(services.pointer)?;
         kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
         kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;

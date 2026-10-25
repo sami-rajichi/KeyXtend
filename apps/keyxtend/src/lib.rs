@@ -7,6 +7,8 @@ pub mod args;
 pub mod boot;
 pub mod copy;
 pub mod drain;
+#[cfg(debug_assertions)]
+pub mod layouts_debug;
 pub mod log;
 pub mod quiet;
 pub mod relay;

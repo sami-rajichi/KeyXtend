@@ -3,9 +3,25 @@
 
 use serde::Serialize;
 use std::ffi::OsStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
 
 /// The variable that turns the churn on.
 pub const CHURN_VAR: &str = "KX_UI_CHURN";
+
+/// Caps Lock reads the other way round while set: the app's debug layout source turns `caps_on` over (ADR-0033).
+static CAPS_FLIPPED: AtomicBool = AtomicBool::new(false);
+
+/// Turns the churn's Caps Lock flag over, so the next relabel shows Caps Lock changed with no key sent.
+pub fn flip_caps() {
+    CAPS_FLIPPED.fetch_xor(true, SeqCst);
+}
+
+/// True while the churn shows Caps Lock the other way round from the system's.
+#[must_use]
+pub fn caps_flipped() -> bool {
+    CAPS_FLIPPED.load(SeqCst)
+}
 
 /// The churn: ms between steps, rounds and the theme switches in each, then how many Caps Lock changes and size
 /// changes, in that order. Each round first shows a key's tip, the List design's language list and the bubble (`Churn.qml`).
@@ -60,6 +76,15 @@ mod tests {
         assert_eq!(on["caps"], 20);
         assert_eq!(on["sizes"], 24);
         assert!(on["step_ms"].as_u64().is_some_and(|ms| ms > 0));
+    }
+
+    #[test]
+    fn the_caps_flag_turns_over_at_each_flip() {
+        let before = caps_flipped();
+        flip_caps();
+        assert_eq!(caps_flipped(), !before);
+        flip_caps();
+        assert_eq!(caps_flipped(), before, "and back");
     }
 
     #[test]

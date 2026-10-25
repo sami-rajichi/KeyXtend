@@ -67,9 +67,6 @@ pub(super) struct Inner {
     power: PowerChanged,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
-    /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
-    #[cfg(debug_assertions)]
-    caps_flipped: bool,
 }
 
 impl Inner {
@@ -103,8 +100,6 @@ impl Inner {
             known,
             power: PowerChanged::OFF,
             unshown: false,
-            #[cfg(debug_assertions)]
-            caps_flipped: false,
         }
     }
 
@@ -193,11 +188,6 @@ impl Inner {
             | FaceAction::Leave
             | FaceAction::Pad { .. }
             | FaceAction::PadHover { .. } => Ok(FaceReply::default()),
-            #[cfg(debug_assertions)]
-            FaceAction::FlipCaps => {
-                self.caps_flipped = !self.caps_flipped;
-                Ok(STATE)
-            }
         }
     }
 
@@ -206,12 +196,9 @@ impl Inner {
         self.shown_caps.is_some_and(|shown| shown != self.caps())
     }
 
-    /// Whether Caps Lock shows lit: the system's state, turned over in debug builds by `FaceAction::FlipCaps`.
+    /// Whether Caps Lock shows lit, as the layout source says.
     fn caps(&self) -> bool {
-        let on = self.ports.source.caps_on();
-        #[cfg(debug_assertions)]
-        let on = on != self.caps_flipped;
-        on
+        self.ports.source.caps_on()
     }
 
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
