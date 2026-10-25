@@ -1,7 +1,8 @@
 //! A picked word (ADR-0033 decision 2): the keyboard stays the only typist, so prediction's word erases and types
 //! through the same route, latches and `text_cap` as a key, and is told like keys.
 
-use super::{Io, Typing, reached};
+use super::checks::reached;
+use super::{Io, Typing};
 use crate::legend::LegendMods;
 use crate::plan::text_route;
 use kx_module_api::Redacted;

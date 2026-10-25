@@ -31,8 +31,12 @@ impl Event for Typed {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the keyboard: the latches that change what the next key types; the default has no latch.
+/// From the keyboard: the latches and wait that change what the next key types; the default has none.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact the keyboard tells at once, read on its own by the prediction module."
+)]
 pub struct TypingMode {
     /// Shift is latched.
     pub shift: bool,
@@ -40,6 +44,8 @@ pub struct TypingMode {
     pub caps: bool,
     /// Ctrl, Alt or the system key (Win, Cmd or Super) is latched.
     pub shortcut: bool,
+    /// A dead key waits, so the app composes the next key with it and a picked word would type nothing.
+    pub dead: bool,
 }
 
 impl Event for TypingMode {

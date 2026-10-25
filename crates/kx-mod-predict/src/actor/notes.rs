@@ -56,7 +56,7 @@ impl Actor {
         if self.kind == FieldKind::Password {
             return Lane::Locked;
         }
-        if self.mode.shortcut || self.pending {
+        if self.mode.shortcut || self.mode.dead || self.pending {
             return Lane::Empty;
         }
         let show = self.tracker.show(&|w: &str| knows(seed, w));

@@ -31,8 +31,8 @@ impl Inner {
         self.typing.take_pieces()
     }
 
-    /// The latches that change what the next key types, as word prediction hears them, with Caps Lock as the UI's
-    /// thread last read it, so any thread may build it.
+    /// The latches and dead-key wait that change what the next key types, as word prediction hears them, with Caps
+    /// Lock as the UI's thread last read it, so any thread may build it.
     pub(in crate::face) fn mode(&self) -> TypingMode {
         let table = self.ports.layouts.current();
         let m = LegendMods::of(self.typing.latches(), self.caps.seen, &table.keys);
@@ -40,6 +40,7 @@ impl Inner {
             shift: m.shift,
             caps: m.caps,
             shortcut: m.shortcut,
+            dead: self.typing.waiting(),
         }
     }
 }

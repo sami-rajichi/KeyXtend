@@ -162,7 +162,7 @@ proptest! {
         let context: Vec<String> = context.iter().map(|&c| word(c, false)).collect();
         let context: Vec<&str> = context.iter().map(String::as_str).collect();
         let query = ask(&context, prefix);
-        let mode = TypingMode { shift: *shift, caps: *caps, shortcut: false };
+        let mode = TypingMode { shift: *shift, caps: *caps, shortcut: false, dead: false };
         let cfg = ScoreConfig { learn_ramp: run.score.0, min_uses: run.score.1, ..CFG };
         for seed in [Some(&pack), None] {
             let view = l.view(seed);

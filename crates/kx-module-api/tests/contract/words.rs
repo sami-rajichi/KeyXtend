@@ -128,6 +128,7 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 6] {
         shift: true,
         caps: false,
         shortcut: false,
+        dead: false,
     };
     let word = TypeWord {
         round: 1,

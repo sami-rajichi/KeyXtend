@@ -151,6 +151,7 @@ impl Inner {
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();
         let tapped = self.typing.tap(&self.ports.io(&table, &cells), id, back);
+        self.follow_caps();
         Went { tapped, ended }
     }
 
@@ -214,6 +215,14 @@ impl Inner {
     fn look_caps(&mut self) -> bool {
         self.caps.seen = self.ports.source.caps_on();
         self.caps.seen
+    }
+
+    /// After our Caps Lock tap went out, the kept view flips at once; the next tick's read corrects it if the system
+    /// disagrees.
+    fn follow_caps(&mut self) {
+        if self.typing.took_caps() {
+            self.caps.seen = !self.caps.seen;
+        }
     }
 
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted

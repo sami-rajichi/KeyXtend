@@ -2,6 +2,7 @@
 //! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
 //! what reached the app waits to be told.
 
+mod checks;
 mod held;
 mod layer;
 mod ports;
@@ -14,6 +15,7 @@ use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, LatchRole, Role, Tell};
+use checks::{keyed, reached, stale, types};
 use kx_module_api::ports::{InjectError, Piece, Scan, ShortcutError, Toggle};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -78,6 +80,8 @@ pub struct Typing {
     burst: Option<bool>,
     /// The pieces that reached the app and wait to be told, oldest first.
     pieces: Vec<Piece>,
+    /// Our Caps Lock tap reached the app since the face last asked.
+    caps_sent: bool,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -103,6 +107,7 @@ impl Typing {
             dead: false,
             burst: None,
             pieces: Vec::new(),
+            caps_sent: false,
         }
     }
 
@@ -115,6 +120,11 @@ impl Typing {
     /// A mouse click used the latches (modifier + click): they let go as their mode says. True when any let go.
     pub fn clicked(&mut self) -> bool {
         self.latches.used()
+    }
+
+    /// True once after our Caps Lock tap reached the app, so the face flips its Caps view before the system's next read.
+    pub fn took_caps(&mut self) -> bool {
+        std::mem::take(&mut self.caps_sent)
     }
 
     /// Takes a new `modifiers` mode, `key_apps` list and `text_cap`, keeping the latched modifiers and a dead key's wait.
@@ -213,11 +223,12 @@ impl Typing {
         Ok(went?)
     }
 
-    /// Taps Caps Lock `key`; once it reached the app, the latches stay on, used.
+    /// Taps Caps Lock `key`; once it reached the app, the latches stay on, used, and the face hears it was sent.
     fn caps(&mut self, io: &Io<'_>, key: Scan) -> Result<(), TapError> {
         let went = io.injector.tap(key);
         if reached(went) {
             self.latches.spend();
+            self.caps_sent = true;
         }
         Ok(went?)
     }
@@ -247,46 +258,5 @@ impl Typing {
                 self.latches.used();
             }
         }
-    }
-}
-
-/// True when any of a send reached the app: all of it, or the part the system took before refusing the rest.
-fn reached(went: Result<(), InjectError>) -> bool {
-    match went {
-        Ok(()) => true,
-        Err(InjectError::Refused { sent, .. }) => sent > 0,
-        Err(InjectError::Unmappable) => false,
-    }
-}
-
-/// True when `plan` sends a character key as a scan code, so the app's own layout decides what it types.
-fn keyed(role: Role, plan: &Plan) -> bool {
-    let scan = |p: &Plan| {
-        matches!(
-            p,
-            Plan::Send {
-                route: Route::Tap(_) | Route::Chord(..),
-                ..
-            }
-        )
-    };
-    role == Role::Char && scan(plan)
-}
-
-/// True when the app in front has another installed layout than the table shown, as `Follow` would show
-/// after a refresh; with none in front, or one that is not installed, the table shown stands.
-fn stale(io: &Io<'_>) -> bool {
-    let shown = io.table.label.id;
-    let other = io.source.foreground().filter(|&front| front != shown);
-    other.is_some_and(|front| io.source.installed().contains(&front))
-}
-
-/// True when `route` typed anything in the layout shown, as the layout source reads it.
-fn types(io: &Io<'_>, route: &Route) -> bool {
-    let layout = io.table.label.id;
-    match route {
-        Route::Tap(key) => io.source.types_any(layout, *key, &[]),
-        Route::Chord(held, key) => io.source.types_any(layout, *key, held),
-        Route::Text(..) => true,
     }
 }

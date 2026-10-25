@@ -90,3 +90,19 @@ fn a_shortcut_latch_empties_the_lane_until_it_lets_go() {
     assert!(rig.chips().iter().all(|c| c.1 == ChipKind::Word));
     assert_eq!(rig.words(), ["hello", "help"]);
 }
+
+#[test]
+fn a_waiting_dead_key_empties_the_lane_until_it_ends() {
+    use kx_mod_predict::Msg;
+    use kx_module_api::ports::TypingMode;
+    let mut rig = in_box(FieldKind::Text);
+    rig.typed("hel");
+    let dead = TypingMode {
+        dead: true,
+        ..TypingMode::default()
+    };
+    rig.send(Msg::Mode(dead));
+    assert_eq!(rig.lane().lane, Lane::Empty);
+    rig.send(Msg::Mode(TypingMode::default()));
+    assert_eq!(rig.words(), ["hello", "help"]);
+}
