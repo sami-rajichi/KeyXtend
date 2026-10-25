@@ -16,6 +16,7 @@ It provides no service; it talks to the keyboard, the scroll module, word predic
 |---|---|
 | `PointerHook` | It gates the pointer hook the engine runs on. |
 | `InjectInput` | The engine sends clicks and modifier keys, and it gates the toggle and latch events the module hears and sends. |
+| `KeyboardUi` | It gates the notes and pointer moves the module tells the ui (`AssistNote`, `PointerMoved`; ADR-0033), and the start fails without it. |
 
 ## Settings (`[mouse]`, version 1)
 

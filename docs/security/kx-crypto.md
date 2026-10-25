@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-24 (P7 Task 5: the crate is built; review fixes bind the header to the tag)
 - **Status:** Draft
-- **Scope:** `crates/kx-crypto`, a library with no module of its own. The Windows adapter implements its `KeyGuard` with DPAPI (P7 Task 6a), and the app serves `SealedFiles` as the `SealedStore` port (Task 12).
+- **Scope:** `crates/kx-crypto`, a library with no module of its own. The Windows adapter implements its `KeyGuard` with DPAPI (`kx-platform-windows.md`), and the app serves one `SealedFiles` as the `SealedStore` port (`keyxtend.md`).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -13,7 +13,7 @@
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
-| The data key (32 random bytes from `getrandom`) | Secret | `sealed.key` in the data folder, wrapped by the OS guard; in memory only as `Zeroizing`, on the heap | Yes, by the guard (DPAPI on Windows) | Until the user deletes the data folder |
+| The data key (`KEY_LEN` random bytes from `getrandom`) | Secret | `sealed.key` in the data folder, wrapped by the OS guard; in memory only as `Zeroizing`, on the heap | Yes, by the guard (DPAPI on Windows) | Until the user deletes the data folder |
 | Blobs: learned words, emails (P7) | Sensitive | `<name>.sealed` in the data folder | XChaCha20-Poly1305, a fresh 24-byte nonce per save; the tag covers the magic, the version and the blob's name | Until replaced or deleted |
 | Opened bytes | Sensitive | Memory; `open` returns them as `Zeroizing`, but `SealedFiles::load` hands them on as the port's plain `Vec<u8>` | N/A | Handed to the caller (Accepted below) |
 | A blob that would not open | Sensitive (still sealed) | `<name>.damaged`, replacing an older one | Yes, as it was | Until the next damaged copy of that name |
@@ -21,9 +21,9 @@
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` (16 MiB) plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file |
-| The key file | The guard unwraps it; anything that is not a 32-byte key is `Locked`, and the file is never deleted or replaced | `MAX_KEY_FILE_BYTES` (64 KiB); a larger file is `Locked` unread | No; tests cover a refused, a short and an oversized key file |
-| Blob names | `BlobName` (a-z, 0-9, `-`, 1–32 bytes, and no device name from the port's `RESERVED_NAMES`) before any file is touched; `SealedFiles` and the fake store take only a `BlobName`, so both refuse the same names | 32 bytes | Property test of the name form (`kx-module-api`); a test that the fake and the real store keep the same names |
+| Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file |
+| The key file | The guard unwraps it; anything that is not a `KEY_LEN`-byte key is `Locked`, and the file is never deleted or replaced | `MAX_KEY_FILE_BYTES`; a larger file is `Locked` unread | No; tests cover a refused, a short and an oversized key file |
+| Blob names | `BlobName` (a-z, 0-9, `-`, `MIN_BLOB_LEN` to `MAX_BLOB_LEN` bytes, and no device name from the port's `RESERVED_NAMES`) before any file is touched; `SealedFiles` and the fake store take only a `BlobName`, so both refuse the same names | `MAX_BLOB_LEN` bytes | Property test of the name form (`kx-module-api`); a test that the fake and the real store keep the same names |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a blob copied or renamed to another blob's name fails authentication, since the name is in the AAD.

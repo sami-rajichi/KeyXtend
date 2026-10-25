@@ -9,7 +9,7 @@ pub const MIN_BLOB_LEN: usize = 1;
 /// The longest blob name, in bytes.
 pub const MAX_BLOB_LEN: usize = 32;
 /// Names some supported OS refuses as file names (Windows keeps them for devices, even with an extension); no data
-/// is named after one, so data moves between systems.
+/// is named after one, so data moves between systems, and `fits_iso` refuses them as pack language codes too.
 pub const RESERVED_NAMES: &[&str] = &[
     "con", "prn", "aux", "nul", "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
     "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",

@@ -37,78 +37,78 @@ Cargo.toml               virtual workspace; internal crates use version 0.0.0
 rust-toolchain.toml      pinned stable toolchain
 deny.toml                cargo-deny: licences, advisories, bans, sources
 apps/
-  keyxtend/              composition root: picks the platform adapter and the enabled modules
-                         (one Cargo feature per module); the command line, one running copy,
-                         the log, the panic hook and Qt's hardened start; `gate-input` makes the
-                         gate-only test build (`--sim-input`, no uiAccess, refused by the stage
-                         and `dev-install`; ADR-0027)
+  keyxtend/              composition root: picks the platform adapter and the enabled modules (one Cargo feature
+                         per module); the command line, one running copy, the log, the panic hook and Qt's
+                         hardened start; the packs' folders and the sealed store's folder (`words.rs`, P7);
+                         `gate-input` makes the gate-only test build (`--sim-input`, no uiAccess, refused by the
+                         stage and `dev-install`; ADR-0027)
   keyxtend-worker/       worker binary (subcommands: voice, ocr, media, update) (P8)
 crates/
-  kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer
-                         hook's too: ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated
-                         by `InjectInput`, and `PowerDialog`, by `Capability::Power`: ADR-0031),
-                         events, Clock and Mono, settings contract, notices, Redacted<T>
+  kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer hook's too:
+                         ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and
+                         `PowerDialog`, by `Capability::Power`: ADR-0031; the box watch, packs, sealed store and
+                         word events: ADR-0033), events, Clock and Mono, settings contract, notices, Redacted<T>
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker protocol: message enums, codec, size limits, pipe auth (P8)
-  kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports
-                         (WindowGuard, with the entry watch and `lay_under` from P5, Screens,
-                         SystemLook, Backdrop, Instance, Tray: ADR-0019, Memory: ADR-0023,
-                         Speaker: P4); the OS-neutral halves that every adapter shares (P7):
-                         `packs` (folder order, file name, size, over an adapter's `PackDisk`)
-                         and `field` (the watch's run, thread and read deadline, a dead watch,
-                         our own focus keeping the last box, over an adapter's `Probe` and `Reader`)
+  kx-platform/          Platform (clock, AppDirs and the data folder rule) and the UI ports (WindowGuard, with
+                         the entry watch and `lay_under` from P5, Screens, SystemLook, Backdrop, Instance, Tray:
+                         ADR-0019, Memory: ADR-0023, Speaker: P4); the OS-neutral halves that every adapter
+                         shares (P7): `packs` (folder order, file name, size, over an adapter's `PackDisk`) and
+                         `field` (the watch's run, its `kx-field` thread and read deadline, a dead watch, our
+                         own focus keeping the last box, over an adapter's `Probe` and `Reader`)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
                          sound, the scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the
-                         `shortcuts.toml` and `keynames.toml` tables) and the power dialog (`WinPower`)
+                         `shortcuts.toml` and `keynames.toml` tables), the power dialog (`WinPower`), the box
+                         watch (`WinFieldWatch`, kinds from `field.toml`), the packs' maps (`WinWordPacks`) and
+                         the DPAPI key guard (`WinKeyGuard`, P7)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
-  kx-platform-fake/     deterministic fake for tests (records injected input, fake clock,
-                         golden layout tables, a layouts service, the UI ports and the speaker);
-                         `FakePointerHook` runs an engine on the test's thread, and its `let_go`
-                         and `give_up` act as the real host does; `FakeScrollTarget` answers
-                         scripted aims and reaches and records turns; `FakeShortcuts` lists
-                         scripted shortcuts and records sends with their held keys,
-                         `FakePowerDialog` counts opens or fails on cue, and the fake layout
-                         source's `types_any` follows a held Ctrl as Windows does (P6);
-                         kx-module-api's contract test uses it too
+  kx-platform-fake/     deterministic fake for tests (records injected input, fake clock, golden layout tables,
+                         a layouts service, the UI ports and the speaker); `FakePointerHook` runs an engine on
+                         the test's thread, and its `let_go` and `give_up` act as the real host does;
+                         `FakeScrollTarget` answers scripted aims and reaches and records turns; `FakeShortcuts`
+                         lists scripted shortcuts and records sends with their held keys, `FakePowerDialog`
+                         counts opens or fails on cue, and the fake layout source's `types_any` follows a held
+                         Ctrl as Windows does (P6); `FakeFieldWatch`, `FakeWordPacks` and `FakeSealedStore`
+                         script boxes, packs and blobs (P7); kx-module-api's contract test uses it too
   kx-platform-net/      worker-only HTTP (WinHTTP); `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
                          EN/FR/AR translations (`i18n/*.ftl`, Fluent, compiled in; ADR-0017), in the keyboard's
-                         language, the tray's in the system's (ADR-0020); the `keysTip` and `keysText` bridge
-                         calls name a shortcut's keys in the keyboard's language, `layerPageText` the layer's
-                         page for readers, and `PageDots.qml` draws the page dots the Next key and the Cycle
-                         design share (P6)
+                         language, the tray's in the system's (ADR-0020); the `keysTip` and `keysText` bridge calls
+                         name a shortcut's keys in the keyboard's language, `layerPageText` the layer's page for
+                         readers, and `PageDots.qml` draws the page dots the Next key and the Cycle design share
+                         (P6); the chip lane in the top bar, its menu and the paged email list (`WordLane`,
+                         `WordMenu`, `WordList`), over the hub's `words_json` (P7)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view,
                          WCAG contrast of what the keyboard draws, measured on the face's row height (`row_px`),
                          the high-contrast palette, and the strict reader kx-ui's build checks sounds with; no
                          Qt, so it tests everywhere (ADR-0016)
-  kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at
-                         any size, size steps and presets, and the place on screen per DPI;
-                         typing: sticky modifiers, legends and each click's route (ADR-0009);
-                         the face (board and state JSON, clicks, and the board's row height,
-                         `row_px`, for the theme's contrast check) and the language key's
-                         Carousel, Cycle and List; `[keyboard]` settings. The side roles
-                         `layer` (the Shortcuts key) and `power` (asks the power module over
-                         the bus), the layer's generated `shortcut` and `next` cells, the pure
-                         `layer.rs` (pages, cells, Next) and the `shortcut_pages` setting (P6)
-  kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the
-                         shown layout's table (keys from `scans.toml`), the list in the OS order,
-                         step and pick; short names in `[layouts]`
-  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4); its hook also runs while
-                         the pad scrolls, to tell presses (`PointerPressed`) and move the badge (P5)
+  kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at any size, size
+                         steps and presets, and the place on screen per DPI; typing: sticky modifiers, legends
+                         and each click's route (ADR-0009); the face (board and state JSON, clicks, and the
+                         board's row height, `row_px`, for the theme's contrast check) and the language key's
+                         Carousel, Cycle and List; `[keyboard]` settings. The side roles `layer` (the Shortcuts
+                         key) and `power` (asks the power module over the bus), the layer's generated `shortcut`
+                         and `next` cells, the pure `layer.rs` (pages, cells, Next) and the `shortcut_pages`
+                         setting (P6); the typed pieces it tells and the picked words it types (P7)
+  kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the shown layout's
+                         table (keys from `scans.toml`), the list in the OS order, step and pick; short names
+                         in `[layouts]`; `LayoutChanged` names the language, told at start and on `LayoutAsk` (P7)
+  kx-mod-mouse/         hold engine (Right-click, Grab), modifier+click (P4); its hook also runs while the pad
+                         scrolls, to tell presses (`PointerPressed`) and move the badge (P5), and while word
+                         prediction wants presses told (P7)
   kx-mod-scroll/        the scroll pad: the tap machine (`pad`), the glide (`glide`), the stop rules
                          (`stops`) and the actor, over the `ScrollTarget` port; `[scroll]` (P5)
   kx-mod-power/         the Power key's module: an actor that opens the system's own power dialog over
                          the `PowerDialog` port at each click, each open on a short thread of its own,
                          and tells the keyboard whether it runs; no settings (P6)
-  kx-mod-predict/       word prediction (P7): an actor on its `kx-predict` thread that follows the
-                         keyboard's pieces and the focused box, tells the lane, asks the keyboard to
-                         type picks (`TypeWord`) and learns, over the tracker (`track`), the scorer
-                         (`score`), the learner (`learn`), the email chips (`email`), folding (`fold`)
-                         and the word-pack format (`pack`; the `build` feature's `PackWriter` serves
-                         `cargo xtask words` only); `[predict]`
+  kx-mod-predict/       word prediction (P7): an actor on its `kx-predict` thread that follows the keyboard's
+                         pieces and the focused box, tells the lane, asks the keyboard to type picks (`TypeWord`)
+                         and learns, over the tracker (`track`), the scorer (`score`), the learner (`learn`), the
+                         email chips (`email`), folding (`fold`) and the word-pack format (`pack`; the `build`
+                         feature's `PackWriter` serves `cargo xtask words` only); `[predict]`
   kx-mod-clipboard/     history store, retention, formats, exclusion rules (P8)
   kx-mod-vault/         encrypted vault, unlock, import/export (P9)
   kx-mod-selection/     selection helper (P10)
@@ -119,33 +119,31 @@ crates/
   kx-test-support/      shared test helpers, golden files, the fake kernel host for module tests; it
                          depends on kx-settings, whose key names its fake settings sink checks as the store does
 tools/
-  kx-gates/              Windows gate runner (moved from the P1 harness; never shipped);
-                         reads kx-gates.toml and, beside it, kx-gates-p3.toml (the P3
-                         gates, the mouse guard and the run-length checks), kx-gates-p4.toml
-                         (the test build and P4's gates) and kx-gates-p5.toml (G6 on the test
-                         build's pad, and the pad's steps in G8, G9 and G10); uses
-                         spike-core widely until its gates are
-                         aimed at the product; `capture-layouts` writes the fake's golden
-                         layout tables from the layouts installed on the PC
-  kx-target-window/      test window that logs every character it receives (CI); a library plus
-                         a binary; reads kx-target-window.toml; times its log with the QPC clock
-                         from kx-platform-windows; `--layout` switches the session to an
-                         installed layout and puts the previous one back when the window closes
-                         while it holds the keyboard (gates bring it to the front first); a
-                         failed restore logs `# layout-kept`, and a killed window leaves the
-                         session switched; `--fill` gives it lines to scroll both ways, and
-                         `--dpi-unaware` makes it an unaware app (P5)
+  kx-gates/              Windows gate runner (moved from the P1 harness; never shipped); reads kx-gates.toml
+                         and, beside it, kx-gates-p3.toml (the P3 gates, the mouse guard and the run-length
+                         checks), kx-gates-p4.toml (the test build and P4's gates), kx-gates-p5.toml (G6 on the
+                         test build's pad, and the pad's steps in G8, G9 and G10) and kx-gates-p7.toml (G27's
+                         word chips, G21's product half and G8's prediction part, on copies it starts with
+                         learning off, and the owner-settings sidecar, `[owner_settings] backup`); uses
+                         spike-core widely until its gates are aimed at the product; `capture-layouts` writes
+                         the fake's golden layout tables from the layouts installed on the PC
+  kx-target-window/      test window that logs every character it receives (CI); a library plus a binary; reads
+                         kx-target-window.toml; times its log with the QPC clock from kx-platform-windows;
+                         `--layout` switches the session to an installed layout and puts the previous one back
+                         when the window closes while it holds the keyboard (gates bring it to the front first);
+                         a failed restore logs `# layout-kept`, and a killed window leaves the session switched;
+                         `--fill` gives it lines to scroll both ways, and `--dpi-unaware` makes it an unaware app (P5)
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
                          texts test lays out, and the soft shadows' adopter, so the tests draw as
                          the app does
-assets/                  fonts, icons and sounds with their licences, compiled into kx-ui (ADR-0016)
+assets/                  fonts, icons and sounds with their licences, compiled into kx-ui (ADR-0016); the word
+                         packs in `words/`, with their licence and credits, ship beside the program (P7)
 spike/                   tested P1 code, moved out phase by phase (ADR-0014, docs/spike-move-map.md)
-xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences,
-                         dist (stub until P14), stage (the release app with its Qt files),
-                         dev-cert / dev-install / check-uiaccess (uiAccess test builds),
-                         sounds (recipes, import, join; format and RIFF walker from kx-theme),
-                         words (P7: source hashes in `words.toml`, wordfreq lists checked against the
-                         Hunspell dictionaries; packs from kx-mod-predict's writer), sign (P14), sbom (P14)
+xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences, dist (stub until P14),
+                         stage (the release app with its Qt files and the word packs), dev-cert / dev-install /
+                         check-uiaccess (uiAccess test builds), sounds (recipes, import, join; format and RIFF walker
+                         from kx-theme), words (P7: source hashes in `words.toml`, wordfreq lists checked against the
+                         Hunspell dictionaries; packs from kx-mod-predict's writer, the index, the meter), sign, sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs
@@ -181,14 +179,14 @@ pub trait Module: Send + 'static {
   - `Kernel::retry` (Try again) moves `Failed → Starting`, and restarts the features that wait on it.
   - Switching a module off stops the active modules that need it, then the module itself, which ends `Stopped`. From `Pending` or `Failed` the module is skipped, with no failure notice.
   - Switching it on moves `Stopped → Starting`. A module that waits for a switched-off module stays `Stopped`, with no notice.
-- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `Predictor`, `SecretStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`, `Shortcuts` and `PowerDialog` (ADR-0031).
+- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `FieldWatch`, `WordPacks`, `SealedStore`, `ClipboardSource`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`, `Shortcuts` and `PowerDialog` (ADR-0031).
   - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused, and only the kernel builds a module's `Grants`.
   - A provider must itself hold the capability that gates its service.
 - **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
 - **Platform:** `kx-platform` holds `Platform` and `AppDirs`, which carry the data folder rule (ADR-0015).
 - **Events** are typed, and an event may name a capability (`Event::CAPABILITY`) that a module needs to subscribe, intercept or publish it:
   - *notify* events are broadcast (`KeyActivated`, `LayoutChanged`, `ModeChanged`, `ModuleStateChanged`);
-  - *intercept* events are an ordered chain that can stop propagation. Example: the "focused field is a password field" interceptor suppresses prediction learning.
+  - *intercept* events are an ordered chain that can stop propagation. No module intercepts today: a password box is the field watch's `Password` kind, which each module asks for itself (ADR-0033).
 - **Settings** (ADR-0015):
   - one `settings.toml` in the data folder holds one flat section per module, each with its own `version`. Only the user's changes are stored, and the defaults live in the module's `defaults.toml`;
   - migrations are pure functions tested with golden files;
@@ -205,7 +203,7 @@ pub trait Module: Send + 'static {
    - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`. Tidy enforces this for `tools/` and for `kx-ui`, where rule F3 refuses `unsafe` outside `src/bridges/` and any block without a `// SAFETY:` comment.
 4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
-6. No module logs typed text, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
+6. No module logs typed text, learned words, emails, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
 7. Every new dependency passes `cargo deny check` (licences that allow a closed, sold app: ADR-0030 and `deny.toml`) and is recorded in `THIRD_PARTY.md` if it ships data, fonts, models or icons.
    - No outside code is merged, and the licence-key check and signing secrets never enter this repository (ADR-0030).
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
@@ -218,7 +216,7 @@ pub trait Module: Send + 'static {
 10. Files ≤ 400 lines (aim ≤ 300), functions ≤ 40 lines, and doc comments of one or two sentences. `xtask tidy` warns about file length.
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
-13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5).
+13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5), and kx-mod-predict's `build` (the pack writer), which only xtask turns on.
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
@@ -230,7 +228,7 @@ pub trait Module: Send + 'static {
 
 - **Hexagonal (ports and adapters).** Logic depends on traits, and adapters implement them per OS. Swapping the toolkit, or Windows for macOS, touches adapters only.
 - **State machines as enums** with explicit transitions, for the keyboard, hold engine, scroll, vault lock and voice session. Time is always injected through a `Clock` trait, so tests are deterministic.
-- **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops. No cycles of bounded channels.
+- **Actors for long-running work.** A module that owns a thread exposes a cloneable handle that sends messages. The thread ends when the last handle drops, or on a quit message where an adapter holds a sender too (prediction's box watch). No cycles of bounded channels.
 - **No global mutable state.** The service registry, owned by the kernel, is the only "global". The one exception is the set-once hub `kx_ui::install` hands to the QML objects (ADR-0018). State a Win32 callback needs, kept inside the Windows adapter behind a port (per-thread window state, the COM apartment's set-once flag, the entry watch's one kept entry), is not app state. A lazy constant computed once from compiled-in data, such as `kx-ui`'s `theme_ids` memo, is not state.
 - **Errors:** `thiserror` enums in libraries and `anyhow` only in `apps/*`. Never panic on user input or IPC input.
 - **UI binding (Qt, ADR-0013):** Rust decides and QML only draws and forwards clicks. Each view has one cxx-qt bridge object (`#[qml_element]`): read-only settings as constant properties, state as small properties or JSON it redraws from, and invokables for clicks. Accessible roles and names go on every control from day one.
@@ -278,6 +276,15 @@ pub trait Module: Send + 'static {
   - `Outline.qml` makes four click-through edge windows (`Edge.qml`) only while there is a box, inside it, or just outside our own list's, which would cover them, and `WindowGuard::lay_under` puts them just under the keyboard.
 - **Other platforms (P15).** macOS fills the same port with `CGEvent` scroll events and Accessibility for boxes, and Linux with XTest or the portal and AT-SPI. Wayland has no global pointer history or posted event, so there it scrolls only what is under the pointer.
 
+## Word prediction (P7, ADR-0032, ADR-0033)
+
+- **The keyboard stays the only typist.** `kx-mod-predict` holds no `InjectInput`: a pick sends `TypeWord`, and the keyboard types it through its own route, latches and dead-key rule, within `[keyboard] text_cap`, or types nothing.
+- **Events.** `Typed` and `TypingMode` (keyboard to predict), `Suggested` (predict to the ui), `ChipPicked` and `WordsAsk` (ui to predict) and `TypeWord` (predict to the keyboard) all name `ReadFocusedText`. `PressesWanted` and `PressesAsk` carry nothing and name none: they keep the mouse module's hook telling presses (`PointerPressed`) while predict wants them, in any start order.
+- **Ports.** `FieldWatch` (`ReadFocusedText`) tells the focused box's kind and reads at most `[predict] context_words` words before the cursor, never in a password or unknown box. `WordPacks` (no gate: public data) maps one language's pack, and `SealedStore` (`SecretStore`) keeps sealed blobs.
+- **Who holds what.** `ReadFocusedText`: the keyboard, predict and the ui. `SecretStore`: predict alone. `KeyboardUi`, which gates `KeyboardFaceKey`, `AssistNote` and `PointerMoved`: the ui, and their sources, the keyboard and the mouse module. The app's `tests/life/ships.rs` pins each list.
+- **Files.** The packs (`<iso>.kxw`, the index `PACK_INDEX`, their licence and credits) sit in `PACK_DIR` beside the program, read through read-only maps; a debug build also reads where `cargo xtask words` writes them. The learned words and emails are sealed in `SEALED_DIR` under the data folder (ADR-0015), by one `SealedFiles` per data folder.
+- **Adapters.** Each OS fills only `Probe`, `Reader`, `PackDisk` and `KeyGuard`; the shared rules live in `kx-platform` and `kx-crypto` (code map), and the OS calls are in Platform notes below.
+
 ## Platform notes
 
 | Concern | Windows (v1) | macOS (later) | Linux (later) |
@@ -287,5 +294,7 @@ pub trait Module: Send + 'static {
 | Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
 | Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
 | Secrets | DPAPI + Windows Hello | Keychain + Touch ID | Secret Service |
+| Focused box (P7) | UI Automation focus handler on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
+| Word packs (P7) | A read-shared file, mapped `PAGE_READONLY` | A read-only `mmap` from a folder only the system writes, else a copy | The same as macOS |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
 | Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |

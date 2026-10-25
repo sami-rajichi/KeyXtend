@@ -1,4 +1,5 @@
-//! The data key's guard on Windows: DPAPI wraps it for the signed-in user, so only this user on this PC unwraps it.
+//! The data key's guard on Windows: DPAPI wraps it for the signed-in user, so normally only this user on this PC
+//! unwraps it (the security note says when not).
 
 use std::ptr;
 use std::sync::atomic::{Ordering, compiler_fence};
