@@ -3,7 +3,8 @@
 use proptest::prelude::*;
 
 use super::*;
-use crate::learn::{LearnConfig, Learner};
+use crate::learn::Learner;
+use crate::learn::tests::{CFG as LEARN, DAY};
 
 /// Random runs tried.
 const CASES: u32 = 256;
@@ -11,18 +12,24 @@ const CASES: u32 = 256;
 const LETTERS: [char; 3] = ['a', 'b', 'c'];
 /// The words of up to three letters.
 const VOCAB: usize = 39;
-/// The most pack words, chains or learns one run makes.
+/// The most pack words or chains one run makes.
 const MOST: usize = 32;
-/// A day number to learn on.
-const DAY: u32 = 20_000;
-/// The learner's settings, with caps no run reaches.
-const LEARN: LearnConfig = LearnConfig {
-    min_uses: 2,
-    max_words: 10_000,
-    max_chains: 30_000,
-    forget_days: 300,
-    context_words: 2,
-};
+/// The most learns one run makes.
+const MOST_LEARNS: usize = MOST * 2;
+/// The most words a pack chain's context holds: as many as the learner keeps.
+const MOST_CONTEXT: usize = LEARN.context_words;
+/// The most words a query's context holds: one more than the learner keeps.
+const QUERY_CONTEXT: usize = LEARN.context_words + 1;
+/// The most words one run forgets.
+const MOST_FORGETS: usize = 2;
+/// Typed prefixes: up to two letters, a capital among them.
+const PREFIX: &str = "[aAbc]{0,2}";
+/// The learned ramps tried: none, short, and the default.
+const RAMPS: [u32; 3] = [0, 10, CFG.learn_ramp];
+/// The highest `min_uses` tried.
+const MOST_GATE: u32 = 3;
+/// The language of every run.
+const ISO: &str = "en";
 
 /// Word `n` of the vocabulary, with a first capital when `capital` is set.
 fn word(n: usize, capital: bool) -> String {
@@ -36,7 +43,7 @@ fn word(n: usize, capital: bool) -> String {
         n = n / base - 1;
     }
     if capital {
-        Casing::of("en").capital(&out)
+        Casing::of(ISO).capital(&out)
     } else {
         out
     }
@@ -62,31 +69,28 @@ struct Run {
 /// Any run.
 fn run_of() -> impl Strategy<Value = Run> {
     let words = prop::collection::vec((0..VOCAB, any::<bool>(), 1..=u8::MAX), 1..MOST);
-    let chain = (prop::collection::vec(0..MOST, 1..=2), 0..MOST, 1..=u8::MAX);
+    let chain = (
+        prop::collection::vec(0..MOST, 1..=MOST_CONTEXT),
+        0..MOST,
+        1..=u8::MAX,
+    );
     let learn = (
         0..VOCAB,
         any::<bool>(),
-        prop::collection::vec(0..VOCAB, 0..=2),
+        prop::collection::vec(0..VOCAB, 0..=LEARN.context_words),
         any::<bool>(),
     );
-    let query = (
-        prop::collection::vec(0..VOCAB, 0..=3),
-        "[aAbc]{0,2}",
-        any::<bool>(),
-        any::<bool>(),
-        1..=LIMIT,
-    );
-    let score = (prop::sample::select(vec![0, 10, 2000]), 1..=3_u32);
+    let score = (prop::sample::select(RAMPS.to_vec()), 1..=MOST_GATE);
     (
         words,
         prop::collection::vec(chain, 0..MOST),
-        prop::collection::vec(learn, 0..MOST * 2),
+        prop::collection::vec(learn, 0..MOST_LEARNS),
     )
         .prop_flat_map(move |(w, c, l)| {
             (
                 Just((w, c, l)),
-                prop::collection::vec(0..VOCAB, 0..=2),
-                query.clone(),
+                prop::collection::vec(0..VOCAB, 0..=MOST_FORGETS),
+                query_of(),
                 score.clone(),
             )
         })
@@ -98,6 +102,17 @@ fn run_of() -> impl Strategy<Value = Run> {
             query,
             score,
         })
+}
+
+/// Any query: context places, prefix, Caps Lock, Shift and chip limit.
+fn query_of() -> impl Strategy<Value = (Vec<usize>, String, bool, bool, usize)> {
+    (
+        prop::collection::vec(0..VOCAB, 0..=QUERY_CONTEXT),
+        PREFIX,
+        any::<bool>(),
+        any::<bool>(),
+        1..=LIMIT,
+    )
 }
 
 /// The pack of `run`'s words and chains.
@@ -117,12 +132,12 @@ fn pack_of(run: &Run) -> Vec<u8> {
     let chains: Vec<(&[&str], &str, u8)> = (contexts.iter().zip(&run.chains))
         .map(|(x, c)| (x.as_slice(), at(c.1), c.2))
         .collect();
-    pack("en", &words, &chains)
+    pack(ISO, &words, &chains)
 }
 
-/// The learner `run` makes, reconciled with `pack`.
+/// The learner `run` makes, reconciled with `pack`; no run comes near the default caps.
 fn learner_of(run: &Run, pack: &Pack<'_>) -> Learner {
-    let mut l = Learner::new("en", LEARN).unwrap();
+    let mut l = Learner::new(ISO, LEARN).unwrap();
     for (n, capital, context, seeded) in &run.learns {
         let context: Vec<String> = context.iter().map(|&c| word(c, false)).collect();
         let context: Vec<&str> = context.iter().map(String::as_str).collect();
@@ -151,7 +166,10 @@ proptest! {
         let cfg = ScoreConfig { learn_ramp: run.score.0, min_uses: run.score.1, ..CFG };
         for seed in [Some(&pack), None] {
             let view = l.view(seed);
-            let by = |scan| texts(&guesses_by(scan, seed, &view, &query, mode, *limit, &cfg));
+            let by = |scan| {
+                let ask = Ask { scan, ..Ask::new(l.iso(), seed, &view, &query, mode, &cfg) };
+                texts(&ask.guesses(*limit))
+            };
             prop_assert_eq!(by(Scan::Ranked), by(Scan::Every));
         }
     }

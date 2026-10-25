@@ -16,7 +16,15 @@ fn typed_fr(text: &str) -> (Query, Vec<String>) {
     let known = |w: &str| knows(Some(&pack), w);
     tracker.typed(&Piece::Text(Redacted::new(text.to_owned())), &known);
     let query = tracker.show(&known).words.unwrap();
-    let found = guesses(Some(&pack), &NoLearned, &query, PLAIN, LIMIT, &CFG);
+    let found = guesses(
+        pack.iso(),
+        Some(&pack),
+        &NoLearned,
+        &query,
+        PLAIN,
+        LIMIT,
+        &CFG,
+    );
     (query, texts(&found))
 }
 

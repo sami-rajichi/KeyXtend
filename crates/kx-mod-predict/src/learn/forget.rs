@@ -50,12 +50,12 @@ impl Blocked {
         self.marks.iter().map(|(text, mark)| (&**text, *mark))
     }
 
-    /// Counts one use of `text` on `day`; at `min_uses` it leaves the list with its uses.
-    pub(super) fn used(&mut self, text: &str, day: u32, min_uses: u32) -> Use {
+    /// Counts `n` uses of `text` on `day`; at `min_uses` it leaves the list with its uses.
+    pub(super) fn used(&mut self, text: &str, n: u16, day: u32, min_uses: u32) -> Use {
         let Some(mark) = self.marks.get_mut(text) else {
             return Use::Free;
         };
-        mark.uses = mark.uses.saturating_add(1);
+        mark.uses = mark.uses.saturating_add(n);
         mark.day = day;
         let uses = mark.uses;
         if u32::from(uses) < min_uses {

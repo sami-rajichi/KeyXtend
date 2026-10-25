@@ -66,6 +66,7 @@ impl Learned for View<'_> {
         self.learner.words.starting(casing, folded_prefix, each);
     }
 
+    /// The stored counts, which equal `count`'s once `reconcile` ran with the pack this view reads.
     fn by_count<'s>(
         &'s self,
         folded_prefix: &str,

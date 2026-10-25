@@ -1,5 +1,6 @@
 //! A learner for the scorer's tests: counts set by hand.
 
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 
 use super::Learned;
@@ -19,6 +20,8 @@ pub(super) struct Fake {
     uses: u64,
     /// The language in front, whose casing folds the learned words; none folds as Unicode's default.
     iso: String,
+    /// The calls the scorer made, so a test sees it read nothing.
+    reads: Cell<usize>,
 }
 
 impl Fake {
@@ -47,6 +50,16 @@ impl Fake {
         self
     }
 
+    /// The calls the scorer made.
+    pub(super) fn reads(&self) -> usize {
+        self.reads.get()
+    }
+
+    /// Counts one call.
+    fn read(&self) {
+        self.reads.set(self.reads.get() + 1);
+    }
+
     /// Blocks the seed word `word`.
     pub(super) fn block(mut self, word: &str) -> Self {
         self.blocked.insert(word.to_owned());
@@ -56,24 +69,29 @@ impl Fake {
 
 impl Learned for Fake {
     fn count(&self, word: &str) -> u32 {
+        self.read();
         self.words.get(word).copied().unwrap_or_default()
     }
 
     fn chain(&self, context: &[&str], word: &str) -> u32 {
+        self.read();
         let context = context.iter().map(|w| (*w).to_owned()).collect();
         let key = (context, word.to_owned());
         self.chains.get(&key).copied().unwrap_or_default()
     }
 
     fn uses(&self) -> u64 {
+        self.read();
         self.uses
     }
 
     fn blocked(&self, word: &str) -> bool {
+        self.read();
         self.blocked.contains(word)
     }
 
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str)) {
+        self.read();
         for word in self.words.keys() {
             if fold(word, Casing::of(&self.iso)).starts_with(folded_prefix) {
                 each(word);
@@ -82,6 +100,7 @@ impl Learned for Fake {
     }
 
     fn following(&self, context: &[&str], each: &mut dyn FnMut(&str)) {
+        self.read();
         for (chain, word) in self.chains.keys() {
             if chain.iter().map(String::as_str).eq(context.iter().copied()) {
                 each(word);
@@ -93,6 +112,7 @@ impl Learned for Fake {
         &'s self,
         folded_prefix: &str,
     ) -> Box<dyn Iterator<Item = (&'s str, u32)> + 's> {
+        self.read();
         let casing = Casing::of(&self.iso);
         let fits = |w: &&String| fold(w, casing).starts_with(folded_prefix);
         let mut words: Vec<(&str, u32)> = (self.words.iter())

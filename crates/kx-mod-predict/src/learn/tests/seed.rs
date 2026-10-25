@@ -185,13 +185,37 @@ fn reconcile_merges_every_stray_into_its_pack_spelling() {
 }
 
 #[test]
-fn reconcile_drops_the_strays_of_a_forgotten_word() {
+fn a_forgotten_words_strays_count_on_the_blocklist_whichever_comes_first() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut first = learner("fr");
+    assert!(first.forget(Some(&fr), "école", DAY));
+    teach(&mut first, None, "l' ecole", DAY);
+    let mut then = first.clone();
+    first.reconcile(Some(&fr));
+    assert!(listed(&first, "ec").is_empty() && first.view(Some(&fr)).blocked("école"));
+    assert_eq!(lengths(&first), [0, 0], "a hidden stray's chains go");
+    first.learn(Some(&fr), "ecole", &["l'"], DAY);
+    then.learn(Some(&fr), "ecole", &["l'"], DAY);
+    then.reconcile(Some(&fr));
+    assert!(first == then, "the same learner in either order");
+    assert_eq!(listed(&first, "ec"), ["école"]);
+    let view = first.view(Some(&fr));
+    assert_eq!(
+        (view.count("école"), lengths(&first)),
+        (CFG.min_uses, vec![1, 0])
+    );
+}
+
+#[test]
+fn a_forgotten_word_comes_back_once_its_strays_reach_min_uses() {
     let bytes = french();
     let fr = Pack::parse(&bytes).unwrap();
     let mut l = learner("fr");
     assert!(l.forget(Some(&fr), "école", DAY));
-    teach(&mut l, None, "l' ecole", DAY);
+    teach(&mut l, None, "ecole ecole", DAY);
     l.reconcile(Some(&fr));
-    assert!(listed(&l, "ec").is_empty() && l.view(Some(&fr)).blocked("école"));
-    assert_eq!(lengths(&l), [0, 0]);
+    let view = l.view(Some(&fr));
+    assert!(!view.blocked("école") && view.count("école") == CFG.min_uses);
+    assert_eq!(listed(&l, "ec"), ["école"]);
 }

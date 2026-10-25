@@ -37,14 +37,14 @@ pub(super) struct Model<'m> {
 }
 
 impl<'m> Model<'m> {
-    /// The model of `context` over `seed` and `learned`.
+    /// The model of `context` over `seed` and `learned`, folding with `casing`, the language in front's.
     pub(super) fn new(
         seed: Option<&'m Pack<'m>>,
         learned: &'m dyn Learned,
         context: &'m [&'m str],
         cfg: &'m ScoreConfig,
+        casing: &'static Casing,
     ) -> Self {
-        let casing = seed.map_or(Casing::root(), Pack::casing);
         let seed = seed.map(|pack| Seed {
             pack,
             levels: levels(pack, context, casing),

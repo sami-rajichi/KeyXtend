@@ -195,7 +195,7 @@ impl Learner {
     /// word counts on the blocklist instead until it comes back. `None` while it stays hidden.
     fn add_word(&mut self, seed: Option<&Pack<'_>>, word: &str, day: u32) -> Option<Id> {
         let (text, found) = self.resolve(seed, word);
-        let uses = match self.blocked.used(text, day, self.cfg.min_uses) {
+        let uses = match self.blocked.used(text, 1, day, self.cfg.min_uses) {
             Use::Free => 1,
             Use::Held => return None,
             Use::Back(uses) => uses,
@@ -265,4 +265,4 @@ fn names(gone: &[bool], key: &[Id]) -> bool {
 #[cfg(test)]
 mod props;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

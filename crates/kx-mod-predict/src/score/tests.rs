@@ -12,6 +12,7 @@ use super::*;
 use crate::pack::{Flags, PackWriter};
 use crate::track::Reading;
 
+mod config;
 mod elisions;
 mod learned;
 mod ranked;
@@ -140,10 +141,14 @@ fn texts(guesses: &[Guess]) -> Vec<String> {
     guesses.iter().map(|g| g.text.expose().clone()).collect()
 }
 
+/// The guesses asked of `pack` in its language with `learned`, for `query` in `mode`.
+fn asked(pack: &Pack<'_>, learned: &dyn Learned, query: &Query, mode: TypingMode) -> Vec<Guess> {
+    guesses(pack.iso(), Some(pack), learned, query, mode, LIMIT, &CFG)
+}
+
 /// The texts guessed from `bytes`'s pack with `learned`, for `query` in `mode`.
 fn run(bytes: &[u8], learned: &dyn Learned, query: &Query, mode: TypingMode) -> Vec<String> {
-    let pack = Pack::parse(bytes).unwrap();
-    texts(&guesses(Some(&pack), learned, query, mode, LIMIT, &CFG))
+    texts(&asked(&Pack::parse(bytes).unwrap(), learned, query, mode))
 }
 
 /// The first text guessed for `prefix` after `context` with nothing learned.
@@ -195,12 +200,12 @@ fn eco_gives_ecole_first_in_its_correct_spelling() {
 fn an_gives_the_hamza_forms_first_and_they_read_right_to_left() {
     let ar = arabic();
     let pack = Pack::parse(&ar).unwrap();
-    let found = guesses(Some(&pack), &NoLearned, &ask(&[], "ان"), PLAIN, LIMIT, &CFG);
+    let found = asked(&pack, &NoLearned, &ask(&[], "ان"), PLAIN);
     assert_eq!(texts(&found), ["أن", "إن", "أنا", "انتظر"]);
     assert!(found.iter().all(|g| g.rtl));
     let bytes = english();
     let en = Pack::parse(&bytes).unwrap();
-    let latin = guesses(Some(&en), &NoLearned, &ask(&[], "th"), PLAIN, LIMIT, &CFG);
+    let latin = asked(&en, &NoLearned, &ask(&[], "th"), PLAIN);
     assert!(latin.iter().all(|g| !g.rtl));
 }
 
@@ -267,6 +272,7 @@ fn the_limit_holds_and_the_texts_are_distinct() {
     let pack = Pack::parse(&en).unwrap();
     for limit in 0..=LIMIT {
         let found = texts(&guesses(
+            pack.iso(),
             Some(&pack),
             &NoLearned,
             &ask(&[], ""),

@@ -18,9 +18,9 @@ mod size;
 mod speed;
 
 /// A day number, as the module counts them.
-const DAY: u32 = 20_000;
+pub(crate) const DAY: u32 = 20_000;
 /// The settings' defaults as Task 12 fills them.
-const CFG: LearnConfig = LearnConfig {
+pub(crate) const CFG: LearnConfig = LearnConfig {
     min_uses: 2,
     max_words: 10_000,
     max_chains: 30_000,
@@ -81,7 +81,7 @@ fn guessed(l: &Learner, seed: Option<&Pack<'_>>, context: &[&str], prefix: &str)
         word: Redacted::new(prefix.to_owned()),
         readings: vec![reading],
     };
-    let found = guesses(seed, &l.view(seed), &query, PLAIN, LIMIT, &SCORE);
+    let found = guesses(l.iso(), seed, &l.view(seed), &query, PLAIN, LIMIT, &SCORE);
     found.iter().map(|g| g.text.expose().clone()).collect()
 }
 

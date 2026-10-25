@@ -1,23 +1,26 @@
 //! The pack reader: it checks the header, the sections and the lexicon's checksum once, then reads in place. A mapped
 //! file could change under it, so every offset and length read from the pack is checked again where it is used.
 
+use std::cmp::Reverse;
 use std::fmt;
 use std::ops::Range;
 use std::str;
 
-use fst::automaton::{Automaton, StartsWith, Str};
-use fst::map::Stream;
-use fst::{IntoStreamer, Map, Streamer};
+use fst::automaton::{Automaton, Str};
+use fst::{IntoStreamer, Map};
 
 use super::layout::{MIN_CHAIN, OFFSET_LEN, RUN_SHIFT, fits_spelling, usize_at};
 use super::{Flags, PackFormatError, WordId};
 use crate::casing::Casing;
+use crate::script::{self, Script};
 
 mod chains;
 mod head;
+mod keys;
 
 use chains::Chain;
 use head::Head;
+use keys::{Completions, first_at, successor};
 
 /// One language's word pack, read in place from its bytes.
 pub struct Pack<'a> {
@@ -27,6 +30,8 @@ pub struct Pack<'a> {
     head: Head,
     /// The lexicon, its checksum checked at parse.
     lexicon: Map<&'a [u8]>,
+    /// The script of its most frequent word, found at parse.
+    script: Option<Script>,
 }
 
 impl fmt::Debug for Pack<'_> {
@@ -55,14 +60,16 @@ impl<'a> Pack<'a> {
             return Err(bad);
         }
         check_spellings(head.spellings.of(bytes), count)?;
-        let pack = Self {
+        let mut pack = Self {
             bytes,
             head,
             lexicon,
+            script: None,
         };
         for n in (MIN_CHAIN..).take(pack.head.chains.len()) {
             pack.chain(n).ok_or(bad)?.check()?;
         }
+        pack.script = pack.main_script();
         Ok(pack)
     }
 
@@ -121,6 +128,21 @@ impl<'a> Pack<'a> {
             .unwrap_or_default()
     }
 
+    /// The script of the pack's most frequent word, the main script its builder kept; `None` when it has no letter.
+    #[must_use]
+    pub fn script(&self) -> Option<Script> {
+        self.script
+    }
+
+    /// The ids of every word whose folded key starts with `folded_prefix`: one range, as ids follow their keys.
+    #[must_use]
+    pub fn span(&self, folded_prefix: &str) -> Range<WordId> {
+        let (prefix, words) = (folded_prefix.as_bytes(), self.head.words);
+        let from = first_at(&self.lexicon, words, prefix);
+        let to = successor(prefix).map_or(words, |next| first_at(&self.lexicon, words, &next));
+        from..to.max(from)
+    }
+
     /// The ids of every word whose folded key starts with `folded_prefix`, key by key in byte order.
     pub fn completions<'s>(&'s self, folded_prefix: &'s str) -> impl Iterator<Item = WordId> + 's {
         let keys = Str::new(folded_prefix).starts_with();
@@ -153,7 +175,15 @@ impl<'a> Pack<'a> {
             bytes,
             head: self.head.clone(),
             lexicon,
+            script: self.script,
         })
+    }
+
+    /// The script of the most frequent word, the first of them on a tie.
+    fn main_script(&self) -> Option<Script> {
+        let freq = self.head.freq.of(self.bytes).iter().enumerate();
+        let (top, _) = freq.max_by_key(|&(at, f)| (*f, Reverse(at)))?;
+        script::of(self.spelling(WordId::try_from(top).ok()?))
     }
 
     /// `id` as an index into the word sections, when it names a word.
@@ -227,31 +257,4 @@ fn check_spellings(sec: &[u8], count: usize) -> Result<(), PackFormatError> {
         str::from_utf8(word).map_err(|_| PackFormatError::BadUtf8)?;
     }
     Ok(())
-}
-
-/// The ids of each key a prefix stream finds, reading at most as many keys as the pack has words.
-struct Completions<'s> {
-    /// The lexicon's keys that start with the prefix.
-    stream: Stream<'s, StartsWith<Str<'s>>>,
-    /// The ids of the current key not yet given.
-    run: Range<WordId>,
-    /// Keys still allowed, so a damaged lexicon cannot stream forever.
-    keys_left: u32,
-    /// The pack's word count.
-    words: u32,
-}
-
-impl Iterator for Completions<'_> {
-    type Item = WordId;
-
-    fn next(&mut self) -> Option<WordId> {
-        loop {
-            if let Some(id) = self.run.next() {
-                return Some(id);
-            }
-            self.keys_left = self.keys_left.checked_sub(1)?;
-            let (_, value) = self.stream.next()?;
-            self.run = run(value, self.words).unwrap_or_default();
-        }
-    }
 }

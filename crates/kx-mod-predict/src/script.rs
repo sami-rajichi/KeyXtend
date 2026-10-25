@@ -104,6 +104,12 @@ impl Script {
         self.facts().gap
     }
 
+    /// True when this script spaces its words, so word chips serve it.
+    #[must_use]
+    pub fn spaced(self) -> bool {
+        !self.gap().is_empty()
+    }
+
     /// True when this script's writing system holds `other`: it is this script or one it mixes in.
     #[must_use]
     pub fn holds(self, other: Self) -> bool {

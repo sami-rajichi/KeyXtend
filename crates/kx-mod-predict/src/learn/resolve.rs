@@ -1,15 +1,16 @@
 //! The one rule mapping a typed word to its entry, for learning and reading alike: the pack's spelling when the pack
 //! holds its key, else the word as typed, else the entry it differs from in capitals only. An entry stored as typed
-//! that the pack spells otherwise is a stray, merged into the pack's spelling when learning reaches it.
+//! that the pack spells otherwise is a stray, merged into the pack's spelling by the next learn of it or a reconcile.
 
 use super::Learner;
+use super::forget::Use;
 use super::table::Id;
 use crate::fold::fold;
 use crate::pack::Pack;
 
 impl Learner {
-    /// Merges every stray into its pack spelling, as a learn would, so none stays hidden; the strays of a forgotten
-    /// word go, so it stays forgotten. Task 12 calls it when `seed` loads or changes.
+    /// Merges every stray into its pack spelling, as a learn would, so none stays hidden; a forgotten word's strays
+    /// count on the blocklist. Task 12 calls it when `seed` loads or changes.
     pub fn reconcile(&mut self, seed: Option<&Pack<'_>>) {
         self.undo = None;
         let Some(pack) = self.own(seed) else {
@@ -25,12 +26,32 @@ impl Learner {
         texts.dedup();
         for text in texts {
             if self.blocked.contains(text) {
-                for id in self.strays(Some(pack), text) {
+                self.release(pack, text);
+            } else {
+                self.absorb(Some(pack), text, self.words.find(text));
+            }
+        }
+    }
+
+    /// Counts the uses of the forgotten `text`'s strays on the blocklist, as learns of it would: they merge into it
+    /// once it comes back, and go while it stays hidden.
+    fn release(&mut self, pack: &Pack<'_>, text: &str) {
+        let strays = self.strays(Some(pack), text);
+        let (uses, day) = (strays.iter().filter_map(|&id| self.words.get(id)))
+            .fold((0, 0), |(n, d), w| {
+                (w.count.saturating_add(n), w.day.max(d))
+            });
+        match self.blocked.used(text, uses, day, self.cfg.min_uses) {
+            Use::Back(total) => {
+                if let Some(id) = self.absorb(Some(pack), text, self.words.find(text)) {
+                    self.words.bump(id, total.saturating_sub(uses), day);
+                }
+            }
+            Use::Held | Use::Free => {
+                for id in strays {
                     self.words.remove(id);
                     self.unlink(id);
                 }
-            } else {
-                self.absorb(Some(pack), text, self.words.find(text));
             }
         }
     }

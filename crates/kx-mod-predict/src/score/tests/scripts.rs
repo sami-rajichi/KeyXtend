@@ -46,7 +46,15 @@ fn typed(bytes: &[u8], text: &str, mode: TypingMode) -> Vec<(String, String)> {
     let Some(query) = tracker.show(&known).words else {
         return Vec::new();
     };
-    let found = guesses(Some(&pack), &NoLearned, &query, mode, LIMIT, &CFG);
+    let found = guesses(
+        pack.iso(),
+        Some(&pack),
+        &NoLearned,
+        &query,
+        mode,
+        LIMIT,
+        &CFG,
+    );
     let plan = |t: &str| query.plan(t).unwrap().text.expose().clone();
     found
         .iter()
@@ -72,7 +80,18 @@ fn chinese_and_japanese_get_no_chips_until_their_input_mode() {
     for bytes in [chinese(), japanese()] {
         assert!(typed(&bytes, "", PLAIN).is_empty());
         let pack = Pack::parse(&bytes).unwrap();
-        assert!(guesses(Some(&pack), &NoLearned, &ask(&[], ""), PLAIN, LIMIT, &CFG).is_empty());
+        assert!(
+            guesses(
+                pack.iso(),
+                Some(&pack),
+                &NoLearned,
+                &ask(&[], ""),
+                PLAIN,
+                LIMIT,
+                &CFG
+            )
+            .is_empty()
+        );
     }
     assert!(typed(&chinese(), "你", PLAIN).is_empty());
     assert!(typed(&japanese(), "こ", PLAIN).is_empty());
@@ -112,6 +131,67 @@ fn a_learned_turkish_word_is_found_by_turkish_folding() {
     let learned = Fake::default().lang("tr").uses(100).word("ılık", 50);
     let bytes = turkish();
     let pack = Pack::parse(&bytes).unwrap();
-    let found = guesses(Some(&pack), &learned, &ask(&[], "ıl"), PLAIN, LIMIT, &CFG);
+    let found = guesses(
+        pack.iso(),
+        Some(&pack),
+        &learned,
+        &ask(&[], "ıl"),
+        PLAIN,
+        LIMIT,
+        &CFG,
+    );
     assert_eq!(texts(&found), ["ılık"]);
+}
+
+#[test]
+fn turkish_with_no_pack_folds_by_turkish_casing() {
+    let learned = Fake::default()
+        .lang("tr")
+        .uses(100)
+        .word("ılık", 50)
+        .word("iyi", 50);
+    let tr = |prefix: &str| {
+        let found = guesses("tr", None, &learned, &ask(&[], prefix), PLAIN, LIMIT, &CFG);
+        texts(&found)
+    };
+    assert_eq!(tr("ıl"), ["ılık"]);
+    assert_eq!(tr("ı"), ["ılık"], "iyi starts with a dotted i");
+}
+
+#[test]
+fn a_pack_of_another_language_is_ignored() {
+    let bytes = turkish();
+    let pack = Pack::parse(&bytes).unwrap();
+    let found = guesses(
+        "en",
+        Some(&pack),
+        &NoLearned,
+        &ask(&[], "is"),
+        PLAIN,
+        LIMIT,
+        &CFG,
+    );
+    assert!(found.is_empty());
+}
+
+#[test]
+fn chinese_and_japanese_read_no_list() {
+    for bytes in [chinese(), japanese()] {
+        let pack = Pack::parse(&bytes).unwrap();
+        let learned = Fake::default().lang(pack.iso()).uses(10).word("hello", 5);
+        for (context, prefix) in [(&[][..], ""), (&["hello"][..], "h")] {
+            let query = ask(context, prefix);
+            let found = guesses(
+                pack.iso(),
+                Some(&pack),
+                &learned,
+                &query,
+                PLAIN,
+                LIMIT,
+                &CFG,
+            );
+            assert!(found.is_empty());
+        }
+        assert_eq!(learned.reads(), 0, "{}", pack.iso());
+    }
 }

@@ -53,6 +53,7 @@ fn korean_spaces_its_words_while_chinese_japanese_and_thai_do_not() {
     assert_eq!(gap("한국어"), Some(" "));
     assert_eq!(gap("أن"), Some(" "));
     assert_eq!(gap("école"), Some(" "));
+    assert!(of("한국어").is_some_and(Script::spaced) && !of("你好").is_some_and(Script::spaced));
     for unspaced in [
         "你好",
         "ひらがな",

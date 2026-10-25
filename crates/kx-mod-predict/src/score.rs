@@ -12,6 +12,7 @@ use crate::track::{Query, Reading};
 
 mod best;
 mod case;
+mod config;
 mod model;
 mod sink;
 
@@ -20,32 +21,7 @@ use case::Case;
 use model::Model;
 use sink::Sink;
 
-/// The scorer's settings; the module fills them from `[predict]`.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ScoreConfig {
-    /// Each step down to a shorter context multiplies a score by this (`backoff`).
-    pub backoff: f64,
-    /// The most weight the learned part reaches (`learn_weight`).
-    pub learn_weight: f64,
-    /// The typed words at which the learned part has half its most weight (`learn_ramp`).
-    pub learn_ramp: u32,
-    /// The uses a learned word that is not a seed word needs before it is offered (`min_uses`).
-    pub min_uses: u32,
-}
-
-impl ScoreConfig {
-    /// The learned part's weight after `uses` typed words: `learn_weight` × uses / (uses + `learn_ramp`).
-    #[must_use]
-    pub fn weight(&self, uses: u64) -> f64 {
-        let uses = float(uses);
-        let total = uses + f64::from(self.learn_ramp);
-        if total > 0.0 {
-            self.learn_weight * uses / total
-        } else {
-            0.0
-        }
-    }
-}
+pub use config::{ScoreConfig, ScoreConfigError};
 
 /// One guess, as its chip shows and types it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,8 +47,8 @@ pub trait Learned {
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str));
     /// Calls `each` with every learned word that followed `context`.
     fn following(&self, context: &[&str], each: &mut dyn FnMut(&str));
-    /// Every learned word whose folded key starts with `folded_prefix`, most used first, with its uses; the scorer
-    /// stops reading once no word left can win.
+    /// Every learned word whose folded key starts with `folded_prefix`, most used first: the words `starting` lists,
+    /// each with the uses `count` gives it. The early stop relies on both, as it stops once no word left can win.
     fn by_count<'s>(&'s self, folded_prefix: &str)
     -> Box<dyn Iterator<Item = (&'s str, u32)> + 's>;
 }
@@ -113,10 +89,11 @@ pub fn knows(seed: Option<&Pack<'_>>, word: &str) -> bool {
     seed.is_some_and(|pack| !pack.run(&fold(word, pack.casing())).is_empty())
 }
 
-/// At most `limit` distinct guesses for `query`, best first, from the `seed` pack and the `learned` counts; capitals
-/// follow each reading's typed prefix and `mode`.
+/// At most `limit` distinct guesses for `query`, best first, from the `seed` pack and the `learned` counts of `iso`,
+/// the language in front; capitals follow each reading's typed prefix and `mode`.
 #[must_use]
 pub fn guesses(
+    iso: &str,
     seed: Option<&Pack<'_>>,
     learned: &dyn Learned,
     query: &Query,
@@ -124,7 +101,7 @@ pub fn guesses(
     limit: usize,
     cfg: &ScoreConfig,
 ) -> Vec<Guess> {
-    guesses_by(Scan::Ranked, seed, learned, query, mode, limit, cfg)
+    Ask::new(iso, seed, learned, query, mode, cfg).guesses(limit)
 }
 
 /// How a reading's word list is read.
@@ -135,36 +112,6 @@ enum Scan {
     /// Every word, the reference the early stop must match.
     #[cfg(test)]
     Every,
-}
-
-/// `guesses`, reading each word list by `scan`.
-fn guesses_by(
-    scan: Scan,
-    seed: Option<&Pack<'_>>,
-    learned: &dyn Learned,
-    query: &Query,
-    mode: TypingMode,
-    limit: usize,
-    cfg: &ScoreConfig,
-) -> Vec<Guess> {
-    let ask = Ask {
-        seed,
-        learned,
-        query,
-        mode,
-        cfg,
-        casing: seed.map_or(Casing::root(), Pack::casing),
-        scan,
-    };
-    let mut best = Best::new(limit);
-    for reading in &query.readings {
-        ask.offer(reading, &mut best);
-    }
-    let guess = |text: String| Guess {
-        rtl: script::of(&text).is_some_and(Script::rtl),
-        text: Redacted::new(text),
-    };
-    best.into_texts().into_iter().map(guess).collect()
 }
 
 /// What every reading of one query is scored against.
@@ -185,7 +132,45 @@ struct Ask<'a> {
     scan: Scan,
 }
 
-impl Ask<'_> {
+impl<'a> Ask<'a> {
+    /// The ask for `query` in `iso`, folding with its casing; a pack of another language is ignored.
+    fn new(
+        iso: &str,
+        seed: Option<&'a Pack<'a>>,
+        learned: &'a dyn Learned,
+        query: &'a Query,
+        mode: TypingMode,
+        cfg: &'a ScoreConfig,
+    ) -> Self {
+        Self {
+            seed: seed.filter(|pack| pack.iso() == iso),
+            learned,
+            query,
+            mode,
+            cfg,
+            casing: Casing::of(iso),
+            scan: Scan::Ranked,
+        }
+    }
+
+    /// At most `limit` distinct guesses, best first, over every reading. None at once for settings `check` refuses, or
+    /// when the pack's script spaces no words, as those wait for the CJK input mode.
+    fn guesses(&self, limit: usize) -> Vec<Guess> {
+        let script = self.seed.and_then(Pack::script);
+        if !script.is_none_or(Script::spaced) || self.cfg.check().is_err() {
+            return Vec::new();
+        }
+        let mut best = Best::new(limit);
+        for reading in &self.query.readings {
+            self.offer(reading, &mut best);
+        }
+        let guess = |text: String| Guess {
+            rtl: script::of(&text).is_some_and(Script::rtl),
+            text: Redacted::new(text),
+        };
+        best.into_texts().into_iter().map(guess).collect()
+    }
+
     /// Offers `best` every candidate of `reading`, prefixed by its lead, in the case its prefix asks for, and weighed
     /// by its elisions' chance. After an elision its followers come first, and the word list only for a typed prefix
     /// none fits.
@@ -207,7 +192,7 @@ impl Ask<'_> {
             casing: self.casing,
             scale: self.lead_weight(&context, kept),
         };
-        let model = Model::new(self.seed, self.learned, &context, self.cfg);
+        let model = Model::new(self.seed, self.learned, &context, self.cfg, self.casing);
         let folded = fold(prefix, self.casing);
         if kept == 0 || (!model.offer_followers(&folded, &mut sink) && !folded.is_empty()) {
             match self.scan {
@@ -223,7 +208,8 @@ impl Ask<'_> {
         let first = context.len().saturating_sub(kept);
         let each = |at: usize| {
             let (before, word) = (context.get(..at)?, context.get(at)?);
-            Some(Model::new(self.seed, self.learned, before, self.cfg).score(word))
+            let model = Model::new(self.seed, self.learned, before, self.cfg, self.casing);
+            Some(model.score(word))
         };
         (first..context.len()).filter_map(each).product()
     }

@@ -71,6 +71,7 @@ fn without_a_pack_the_learned_words_still_guess() {
         .word("salut", 2)
         .word("sa", 1);
     let found = texts(&guesses(
+        "en",
         None,
         &learned,
         &ask(&[], "sa"),

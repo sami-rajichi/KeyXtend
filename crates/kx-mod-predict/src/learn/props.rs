@@ -16,7 +16,7 @@ const VOCAB: usize = 16;
 /// The highest cap the settings take, small so clean-ups happen often.
 const MAX_CAP: usize = 12;
 /// The highest `min_uses` the settings take.
-const MAX_MIN_USES: u32 = 3;
+const TOP_MIN_USES: u32 = 3;
 /// The most days one step moves the clock.
 const MAX_DAYS: u32 = 4;
 /// A day number to start from.
@@ -55,7 +55,7 @@ fn step() -> impl Strategy<Value = Step> {
 fn config() -> impl Strategy<Value = LearnConfig> {
     let chain = usize::from(MAX_CHAIN);
     (
-        1..=MAX_MIN_USES,
+        1..=TOP_MIN_USES,
         1..=MAX_CAP,
         1..=MAX_CAP,
         0..=MAX_DAYS * MAX_DAYS,

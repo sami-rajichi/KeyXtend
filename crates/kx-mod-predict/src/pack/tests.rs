@@ -13,6 +13,8 @@ use super::*;
 #[cfg(feature = "build")]
 mod damage;
 #[cfg(feature = "build")]
+mod lookup;
+#[cfg(feature = "build")]
 mod trip;
 #[cfg(feature = "build")]
 mod writer;
@@ -33,6 +35,7 @@ pub(super) fn read_all(pack: &Pack<'_>) {
         pack.word_count(),
         pack.max_chain(),
         pack.flags(),
+        pack.script(),
     ));
     let ids = 0..pack.word_count().saturating_add(2).min(MAX_READS);
     for id in ids.clone() {
@@ -42,7 +45,9 @@ pub(super) fn read_all(pack: &Pack<'_>) {
     }
     for key in LOOKUPS {
         black_box(pack.completions(key).count());
-        black_box(pack.run(key));
+        let span = pack.span(key);
+        assert!(span.start <= span.end, "a span never runs backwards");
+        black_box((pack.run(key), span));
     }
     let long: Vec<WordId> = ids.collect();
     black_box(pack.followers(&long).count());

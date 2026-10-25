@@ -1,5 +1,6 @@
 //! The speed figure at the spec's caps (report only): `guesses` with a full learner, `context_words` 4, over packs
-//! sized like the real ones by `xtask/words.toml`, for an empty prefix after a word and for a one-letter prefix.
+//! sized like the real ones by `xtask/words.toml`, for an empty prefix after a word and for a one-letter prefix;
+//! Chinese and Japanese get none, at once.
 
 use std::time::{Duration, Instant};
 
@@ -10,12 +11,13 @@ use super::size::{INC, MUL, SHIFT, filled};
 use super::*;
 use crate::pack::layout::{STEPS_PER_ZIPF, ZIPF_OFFSET};
 use crate::pack::{Flags, PackWriter};
+use crate::script::Script;
 
 /// The pack build settings, which size each fixture pack like the real one.
 const WORDS_TOML: &str = include_str!("../../../../../xtask/words.toml");
-/// The languages timed, each with its fixture letters as first-last pairs: a–z, and 28 Arabic letters no fold
-/// changes.
-const LANGS: [(&str, &[(char, char)]); 2] = [
+/// The languages timed, each with its fixture letters as first-last pairs: a–z, 28 Arabic letters no fold changes,
+/// and 26 Han letters each for Chinese and for the kanji Japanese mixes with kana.
+const LANGS: [(&str, &[(char, char)]); 4] = [
     ("en", &[('a', 'z')]),
     (
         "ar",
@@ -26,6 +28,8 @@ const LANGS: [(&str, &[(char, char)]); 2] = [
             ('\u{064A}', '\u{064A}'),
         ],
     ),
+    ("zh", &[('\u{4E00}', '\u{4E19}')]),
+    ("ja", &[('\u{65E5}', '\u{65FE}')]),
 ];
 /// One learned word in this many is a pack word; the others are new to the pack.
 const SEED_EVERY: usize = 2;
@@ -54,14 +58,15 @@ struct Sizes {
     followers: usize,
 }
 
-/// The sizes of `iso`'s pack.
+/// The sizes of `iso`'s pack: its own row, else the small lists' row, which keeps no chains.
 fn sizes(iso: &str) -> Sizes {
     let toml: Table = toml::from_str(WORDS_TOML).unwrap();
-    let lang = &toml["lang"][iso];
+    let lang = toml["lang"].get(iso).unwrap_or(&toml["small"]);
     let int = |v: &Value| usize::try_from(v.as_integer().unwrap()).unwrap();
+    let chains = lang.get("text").and_then(|t| t.get("chain_budget_kb"));
     Sizes {
         words: int(&lang["max_words"]),
-        chain_bytes: int(&lang["text"]["chain_budget_kb"]) * KB,
+        chain_bytes: chains.map_or(0, |kb| int(kb) * KB),
         followers: int(&toml["text"]["followers"]),
     }
 }
@@ -154,9 +159,9 @@ fn time(l: &Learner, pack: &Pack<'_>, context: &[String], prefix: &str) -> Durat
     };
     let view = l.view(Some(pack));
     let start = Instant::now();
-    let found = guesses(Some(pack), &view, &query, PLAIN, LIMIT, &SCORE);
+    let found = guesses(pack.iso(), Some(pack), &view, &query, PLAIN, LIMIT, &SCORE);
     let spent = start.elapsed();
-    assert!(!found.is_empty());
+    assert_eq!(found.is_empty(), !pack.script().is_none_or(Script::spaced));
     spent
 }
 

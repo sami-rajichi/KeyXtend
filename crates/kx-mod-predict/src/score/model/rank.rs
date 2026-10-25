@@ -19,7 +19,7 @@ impl Model<'_> {
         self.offer_known(folded, sink);
         let pack = self.seed.as_ref().map(|s| s.pack);
         let mut learned = self.learned.by_count(folded).peekable();
-        let ranked = pack.map(|p| by_freq(p, span(p, folded)));
+        let ranked = pack.map(|p| by_freq(p, p.span(folded)));
         let mut seed = ranked.unwrap_or_default().into_iter().peekable();
         loop {
             let count = learned.peek().map(|&(_, count)| count);
@@ -107,30 +107,4 @@ fn by_freq(pack: &Pack<'_>, span: Range<WordId>) -> Vec<WordId> {
         }
     }
     out
-}
-
-/// The ids whose folded key starts with `folded`: one run, as ids follow their keys in order.
-fn span(pack: &Pack<'_>, folded: &str) -> Range<WordId> {
-    let words = pack.word_count();
-    if folded.is_empty() {
-        return 0..words;
-    }
-    let key = |id: WordId| fold(pack.spelling(id), pack.casing());
-    let from = first(0..words, |id| key(id).as_str() >= folded);
-    let to = first(from..words, |id| !key(id).starts_with(folded));
-    from..to
-}
-
-/// The first id of `ids` from which `past` holds, as it holds from some id on; the end when it never does.
-fn first(ids: Range<WordId>, past: impl Fn(WordId) -> bool) -> WordId {
-    let (mut lo, mut hi) = (ids.start, ids.end);
-    while lo < hi {
-        let mid = lo + (hi - lo) / 2;
-        if past(mid) {
-            hi = mid;
-        } else {
-            lo = mid + 1;
-        }
-    }
-    lo
 }
