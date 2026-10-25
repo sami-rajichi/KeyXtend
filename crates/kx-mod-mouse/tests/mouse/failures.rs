@@ -62,6 +62,7 @@ fn a_saved_right_click_the_hook_refuses_starts_off_and_says_why() {
             shown(false, Off),
             Heard::AskLatches,
             Heard::AskScroll,
+            Heard::AskPresses,
         ];
         assert_eq!(rig.take(), told, "the user expects Right-click on");
         assert!(
@@ -227,6 +228,59 @@ fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
     for line in lines.iter().flat_map(|(_, f)| f.values()) {
         assert!(points.iter().all(|p| !line.contains(p.as_str())), "{line}");
     }
+}
+
+/// The levels of the stopped lines a fresh rig logs while `play` runs.
+fn stop_levels(play: impl FnOnce(&mut Rig)) -> Vec<Level> {
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.begin();
+        play(&mut rig);
+    });
+    let stopped = |f: &Fields| f.get(MESSAGE).is_some_and(|m| m == STOPPED_LINE);
+    lines
+        .iter()
+        .filter(|(_, f)| stopped(f))
+        .map(|(l, _)| *l)
+        .collect()
+}
+
+/// A run held only by `msg` turned on and then off.
+fn quiet(msg: fn(bool) -> Msg) -> impl FnOnce(&mut Rig) {
+    move |rig: &mut Rig| {
+        rig.send(msg(true));
+        rig.send(msg(false));
+        rig.settle(T0);
+    }
+}
+
+#[test]
+fn the_stopped_line_logs_at_info_for_a_mode_or_a_latch_and_at_debug_for_quiet_runs() {
+    let toggled = stop_levels(|rig| {
+        rig.send(Msg::Presses(true));
+        rig.toggle(Toggle::Grab);
+        rig.toggle(Toggle::Grab);
+        rig.send(Msg::Presses(false));
+        rig.settle(T0);
+    });
+    let latched = stop_levels(|rig| {
+        rig.send(Msg::Latches(vec![SHIFT]));
+        rig.send(Msg::Latches(Vec::new()));
+        rig.settle(T0);
+    });
+    let (info, debug) = (vec![Level::INFO], vec![Level::DEBUG]);
+    assert_eq!(
+        [toggled, latched],
+        [info.clone(), info],
+        "the user aimed at the hook"
+    );
+    let scrolled = stop_levels(quiet(Msg::Scroll));
+    let pressed = stop_levels(quiet(Msg::Presses));
+    assert_eq!(
+        [scrolled, pressed],
+        [debug.clone(), debug],
+        "only quiet needs held it"
+    );
 }
 
 #[test]

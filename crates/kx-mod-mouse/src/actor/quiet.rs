@@ -14,27 +14,28 @@ impl Actor {
         }
     }
 
-    /// Keeps whether the pad scrolls.
+    /// Keeps whether the pad scrolls; the user moved it, so a change re-arms a spent restart.
     pub(super) fn scroll(&mut self, on: bool) {
         let changed = std::mem::replace(&mut self.scrolling, on) != on;
+        self.restarted &= !changed;
         self.need(changed, on, Cmd::Scroll(on));
     }
 
-    /// Keeps whether word prediction wants presses, and logs each change, never a point.
+    /// Keeps whether word prediction wants presses, and logs each change, never a point. Prediction flips it by
+    /// itself, so it never re-arms a spent restart and starts no run while one is spent.
     pub(super) fn presses(&mut self, on: bool) {
         let changed = std::mem::replace(&mut self.wanted, on) != on;
         if changed {
             tracing::debug!(on, "mouse presses wanted");
         }
-        self.need(changed, on, Cmd::Presses(on));
+        self.need(changed, on && !self.restarted, Cmd::Presses(on));
     }
 
-    /// A quiet need is now `on`: it starts the hook, and a change goes to the running engine with `cmd`.
-    fn need(&mut self, changed: bool, on: bool, cmd: Cmd) {
-        self.restarted &= !changed;
+    /// A quiet need changed: the running engine gets `cmd`, or with no hook a need that may `start` starts one.
+    fn need(&mut self, changed: bool, start: bool, cmd: Cmd) {
         match self.live {
             Some(_) if changed => self.command(cmd),
-            None if on => self.start(Some(cmd)),
+            None if start => self.start(Some(cmd)),
             _ => {}
         }
     }

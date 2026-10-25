@@ -3,7 +3,7 @@
 
 use crate::{Capability, Event, Redacted};
 
-/// The gate of every event here but `PressesWanted`.
+/// The gate of every event here but `PressesWanted` and `PressesAsk`.
 const GATE: Option<Capability> = Some(Capability::ReadFocusedText);
 
 /// One piece of what the keyboard typed.
@@ -210,6 +210,15 @@ pub struct PressesWanted {
 
 impl Event for PressesWanted {
     const NAME: &'static str = "presses-wanted";
+}
+
+/// Asks the prediction module to send `PressesWanted` again, for a mouse module that starts later; it carries nothing,
+/// so it needs no capability.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PressesAsk;
+
+impl Event for PressesAsk {
+    const NAME: &'static str = "presses-ask";
 }
 
 #[cfg(test)]

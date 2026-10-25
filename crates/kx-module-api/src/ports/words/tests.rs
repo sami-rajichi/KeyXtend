@@ -21,7 +21,7 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The words events, in the order `events_have_their_names` checks.
-fn words() -> [(&'static str, Option<Capability>); 7] {
+fn words() -> [(&'static str, Option<Capability>); 8] {
     [
         row::<Typed>(),
         row::<TypingMode>(),
@@ -30,6 +30,7 @@ fn words() -> [(&'static str, Option<Capability>); 7] {
         row::<ChipPicked>(),
         row::<WordsAsk>(),
         row::<PressesWanted>(),
+        row::<PressesAsk>(),
     ]
 }
 
@@ -100,17 +101,18 @@ fn events_have_their_names() {
         "chip-picked",
         "words-ask",
         "presses-wanted",
+        "presses-ask",
     ];
     assert_eq!(words().map(|r| r.0), want);
 }
 
 #[test]
-fn every_event_but_presses_wanted_needs_read_focused_text() {
-    let want = [READ, READ, READ, READ, READ, READ, None];
+fn every_event_but_the_press_events_needs_read_focused_text() {
+    let want = [READ, READ, READ, READ, READ, READ, None, None];
     assert_eq!(
         words().map(|r| r.1),
         want,
-        "a press request carries nothing"
+        "a press request or ask carries nothing"
     );
 }
 

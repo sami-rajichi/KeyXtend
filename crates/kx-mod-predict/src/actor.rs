@@ -55,6 +55,8 @@ pub enum Msg {
     Picked(ChipPicked),
     /// The menu, the list or a control chip was tapped.
     Ask(WordsAsk),
+    /// The mouse module asks whether presses are wanted.
+    PressesAsk,
     /// Focus moved.
     Focus(FieldChange),
     /// The module stops.
@@ -214,6 +216,10 @@ impl Actor {
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
             Msg::Ask(ask) => self.ask(seed, ask),
+            Msg::PressesAsk => {
+                self.presses_again();
+                false
+            }
             Msg::Focus(change) => self.focus(seed, change),
             Msg::Quit => {
                 self.quit();

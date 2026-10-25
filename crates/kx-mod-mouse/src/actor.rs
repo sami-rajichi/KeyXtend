@@ -4,18 +4,19 @@
 
 mod notes;
 mod quiet;
+mod stopped;
+
+pub use stopped::STOPPED_LINE;
 
 use crate::hook_engine::{Cmd, HookEngine, Moves};
 use crate::{Engine, EngineCfg, ID, MouseSettings, Note};
 use kx_module_api::ports::{
-    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, Scan, ScrollAsk, Toggle,
+    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressesAsk, Scan,
+    ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
-
-/// The message of the line logged with the hook's numbers each time the hook stops; kx-gates reads that line back.
-pub const STOPPED_LINE: &str = "mouse hook stopped";
 
 /// A message for the actor, from the bus, the hook's engine or the module; it has no `Debug`, as latches are keys.
 pub enum Msg {
@@ -45,6 +46,8 @@ struct Live {
     id: u64,
     queue: Sender<Cmd>,
     sent: u64,
+    /// A mode or a latch held the run, so its stop line logs at info.
+    loud: bool,
 }
 
 /// The mouse module's runtime: one per start, on its own thread.
@@ -76,8 +79,8 @@ pub struct Actor {
     runs: u64,
     /// The last start failed; until one works, a quiet start (latches, scrolling or presses) fails without a word.
     failing: bool,
-    /// A give-up already restarted; until a mode tap or a change of latches, scrolling or presses, the next one starts
-    /// nothing.
+    /// A give-up already restarted; until a mode tap or a change of latches or scrolling, the next one starts nothing
+    /// and presses alone start no run, as prediction flips them by itself.
     restarted: bool,
 }
 
@@ -122,8 +125,8 @@ impl Actor {
         }
     }
 
-    /// Starts the hook at once for a saved Right-click, then tells the state and asks for the latches and the pad's
-    /// state, so any start order works.
+    /// Starts the hook at once for a saved Right-click, then tells the state and asks for the latches, the pad's state
+    /// and whether presses are wanted, so any start order works.
     pub fn begin(&mut self) {
         if self.saved {
             self.start(None);
@@ -134,6 +137,7 @@ impl Actor {
         self.tell_state();
         self.publish(&LatchesAsk);
         self.publish(&ScrollAsk);
+        self.publish(&PressesAsk);
     }
 
     /// Handles one message; false after `Stop`, when the actor is done.
@@ -177,6 +181,7 @@ impl Actor {
         let Some(live) = &mut self.live else {
             return self.start(Some(cmd));
         };
+        live.loud |= cmd.loud();
         // A run holds its engine until it drops, so the queue stays open while `live` does.
         if live.queue.send(cmd).is_ok() {
             live.sent += 1;
@@ -197,6 +202,7 @@ impl Actor {
         // A mouse key or a restored Right-click is a mode the user expects on; latches, scrolling and presses start
         // quietly.
         let expected = !first.as_ref().is_some_and(Cmd::quiet);
+        let loud = self.rclick || !self.latches.is_empty() || first.as_ref().is_none_or(Cmd::loud);
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         self.runs += 1;
@@ -214,6 +220,7 @@ impl Actor {
                     id,
                     queue,
                     sent: 0,
+                    loud,
                 });
             }
             Err(error) => self.refused(error, expected),
@@ -257,26 +264,6 @@ impl Actor {
         if self.live.as_ref().is_some_and(|live| live.sent == applied) {
             self.drop_run();
         }
-    }
-
-    /// Stops the hook, which lets go of anything held, and logs its numbers, never a point or a key.
-    fn drop_run(&mut self) {
-        let Some(live) = self.live.take() else {
-            return;
-        };
-        let s = live.run.stats();
-        drop(live);
-        tracing::info!(
-            events = s.events,
-            p99_us = s.p99_us,
-            max_us = s.max_us,
-            max_wait_ms = s.max_wait_ms,
-            reinstalls = s.reinstalls,
-            send_errors = s.send_errors,
-            lost_echoes = s.lost_echoes,
-            passed_inside = s.passed_inside,
-            "{STOPPED_LINE}"
-        );
     }
 }
 

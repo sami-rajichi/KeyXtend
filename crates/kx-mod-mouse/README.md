@@ -8,7 +8,7 @@ The mouse module: Right-click by holding still, Grab, and modifier + click (spec
 |---|---|---|
 | `PointerHook` (`PointerHookKey`) | needs | Runs the hold engine on a system-wide pointer hook, only while a mode, a latched modifier, scrolling, wanted presses or a carry needs it. |
 
-It provides no service; it talks to the keyboard, the scroll module and the UI over the bus (`kx_module_api::ports` assist and scroll events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged`, `ScrollChanged`, where the pad scrolls while the module is live and has a way, and `PressesWanted` from word prediction. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, and `PointerPressed` for each press while the pad scrolls or presses are wanted; at start it asks for the latches (`LatchesAsk`) and the pad's state (`ScrollAsk`), so any start order works.
+It provides no service; it talks to the keyboard, the scroll module, word prediction and the UI over the bus (`kx_module_api::ports` assist, scroll and words events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged`, `PressesWanted` from word prediction, and `ScrollChanged`, where the pad scrolls while the module is live and has a way. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, and `PointerPressed` for each press while the pad scrolls or presses are wanted; at start it asks for the latches (`LatchesAsk`), the pad's state (`ScrollAsk`) and whether presses are wanted (`PressesAsk`), so any start order works.
 
 ## Capabilities
 

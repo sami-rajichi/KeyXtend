@@ -52,8 +52,8 @@ pub use shortcut::{
     KeyName, MAX_ID_LEN, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
 };
 pub use words::{
-    Chip, ChipKind, ChipPicked, Lane, ListPage, Piece, PressesWanted, Suggested, TypeWord, Typed,
-    TypingMode, WordsAsk,
+    Chip, ChipKind, ChipPicked, Lane, ListPage, Piece, PressesAsk, PressesWanted, Suggested,
+    TypeWord, Typed, TypingMode, WordsAsk,
 };
 
 use crate::Redacted;

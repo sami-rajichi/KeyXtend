@@ -1,11 +1,13 @@
 //! Word prediction's events and ports (ADR-0033): typed text reaches only a module holding `ReadFocusedText`, the
-//! field watch and the sealed store sit behind their gates, and the packs and the press request are open to all.
+//! field watch and the sealed store sit behind their gates, and the packs and the press request and ask are open to
+//! all.
 
 use kx_module_api::Capability::{InjectInput, ReadFocusedText, SecretStore};
 use kx_module_api::ports::{
     BlobName, ChipPicked, FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch,
-    FieldWatchKey, Lane, PackError, PackView, Piece, PressesWanted, SealedError, SealedStore,
-    SealedStoreKey, Suggested, TypeWord, Typed, TypingMode, WordPacks, WordPacksKey, WordsAsk,
+    FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk, PressesWanted, SealedError,
+    SealedStore, SealedStoreKey, Suggested, TypeWord, Typed, TypingMode, WordPacks, WordPacksKey,
+    WordsAsk,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -187,9 +189,10 @@ fn with_read_focused_text_a_typed_piece_reaches_its_listener_whole() {
 }
 
 #[test]
-fn a_press_request_passes_on_a_bus_with_no_grants() {
+fn a_press_request_and_its_ask_pass_on_a_bus_with_no_grants() {
     let bus = host(&[]).bus();
     assert_eq!(bus.publish(&PressesWanted { on: true }), Ok(()));
+    assert_eq!(bus.publish(&PressesAsk), Ok(()));
 }
 
 #[test]

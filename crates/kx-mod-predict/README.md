@@ -34,7 +34,7 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 | `ReadFocusedText` | It gates the box and the typed-text events (`Typed`, `TypingMode`, `TypeWord`, `Suggested`, `ChipPicked`, `WordsAsk`). |
 | `SecretStore` | It gates the sealed store. |
 
-`LayoutChanged`, `LayoutAsk`, `PointerPressed` and `PressesWanted` need no capability. It provides no service.
+`LayoutChanged`, `LayoutAsk`, `PointerPressed`, `PressesWanted` and `PressesAsk` need no capability; it answers `PressesAsk` with its current `PressesWanted`, so the mouse module may start in any order. It provides no service.
 
 ## Settings (`[predict]`, version 1)
 

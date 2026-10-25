@@ -4,7 +4,7 @@
 use kx_mod_mouse::{Actor, ID, MANIFEST, MouseSettings, Msg};
 use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
-    PointerHook, PointerMoved, PointerPressed, Scan, ScrollAsk, Toggle,
+    PointerHook, PointerMoved, PointerPressed, PressesAsk, Scan, ScrollAsk, Toggle,
 };
 use kx_module_api::{
     Bus, Event, ModuleCx, Mono, Notice, NoticeArg, Subscription, US_PER_MS, args, parse_as,
@@ -41,6 +41,7 @@ pub enum Heard {
     Used,
     AskLatches,
     AskScroll,
+    AskPresses,
     Notice(Notice),
 }
 
@@ -204,6 +205,7 @@ fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
         ear(bus, heard, |_: &LatchesAsk| Heard::AskLatches),
         ear(bus, heard, |e: &PointerPressed| Heard::Pressed(*e)),
         ear(bus, heard, |_: &ScrollAsk| Heard::AskScroll),
+        ear(bus, heard, |_: &PressesAsk| Heard::AskPresses),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.clone())),
     ]
 }

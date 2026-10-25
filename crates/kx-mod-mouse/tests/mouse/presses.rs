@@ -1,17 +1,23 @@
 //! The actor while word prediction wants presses (spec §6): the hook stays on and each press is told with `ours`, so a
-//! click outside our windows ends the word; every press still reaches the app as the modes say.
+//! click outside our windows ends the word; every press still reaches the app as the modes say. Each start asks for
+//! the flag, so any start order works.
 
 use crate::live::{Live, WAIT, hear, on, synced};
 use crate::logs::{MESSAGE, lines_of};
-use crate::rig::{A, B, CODE, Heard, Rig, T0, T1, T2, down, moved, ours, shown, told, up};
+use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, T2, down, moved, ours, shown, told, up};
 use kx_mod_mouse::Msg;
-use kx_module_api::keys;
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, HookError, PointerPressed, PressesWanted};
+use kx_module_api::ports::{
+    AssistChanged, HookError, Point, PointerPressed, PressesAsk, PressesWanted,
+};
+use kx_module_api::{Bus, keys};
+use std::sync::mpsc::Receiver;
 use tracing::Level;
 
 /// The field the flag's log line holds.
 const ON: &str = "on";
+/// A point whose numbers appear nowhere else in the output.
+const SPOT: Point = Point { x: 4817, y: 2963 };
 
 /// A press told on the bus.
 fn pressed(ours: bool) -> Heard {
@@ -71,14 +77,14 @@ fn scrolling_and_wanted_keep_presses_told_while_either_holds() {
     rig.send(Msg::Scroll(true));
     rig.send(Msg::Presses(false));
     rig.settle(T0);
-    let _ = rig.feed(down(A), T0);
-    let _ = rig.feed(up(A), T0);
+    assert!(!rig.feed(down(A), T0), "the press passes");
+    assert!(!rig.feed(up(A), T0));
     assert_eq!(rig.take(), [pressed(false)], "scrolling holds");
     rig.send(Msg::Presses(true));
     rig.send(Msg::Scroll(false));
     rig.settle(T1);
     assert!(rig.hook.running(), "presses hold the hook");
-    let _ = rig.feed(ours(B), T1);
+    assert!(!rig.feed(ours(B), T1), "the press passes");
     assert_eq!(rig.take(), [pressed(true)], "wanted holds");
     rig.send(Msg::Presses(false));
     rig.settle(T2);
@@ -92,16 +98,45 @@ fn a_hook_refused_for_presses_tells_no_one_and_the_next_change_tries_again() {
         let mut rig = Rig::new();
         rig.begin();
         rig.take();
-        rig.hook.fail_next(HookError::Refused(CODE));
-        rig.send(Msg::Presses(true));
-        assert!(!rig.hook.running());
+        for _ in 0..2 {
+            rig.hook.fail_next(HookError::Refused(CODE));
+            rig.send(Msg::Presses(true));
+            assert!(!rig.hook.running());
+            rig.send(Msg::Presses(false));
+        }
         assert!(rig.take().is_empty(), "the user pressed no mouse key");
-        rig.send(Msg::Presses(false));
         rig.send(Msg::Presses(true));
         assert!(rig.hook.running(), "the next change tries again");
     });
     let warned = lines.iter().filter(|(l, _)| *l == Level::WARN).count();
-    assert_eq!(warned, 1, "{lines:?}");
+    assert_eq!(warned, 1, "the second refusal stays silent: {lines:?}");
+}
+
+#[test]
+fn a_repeated_fault_tells_the_reset_once_across_word_flips() {
+    let mut rig = wanted(Rig::new());
+    for _ in 0..3 {
+        if rig.hook.running() {
+            rig.hook.give_up();
+            rig.pump();
+        }
+        rig.send(Msg::Presses(false));
+        rig.settle(T1);
+        rig.send(Msg::Presses(true));
+    }
+    let reset = told(keys::MOUSE_RESET);
+    let resets = rig.take().iter().filter(|h| **h == reset).count();
+    assert_eq!(resets, 1, "word flips are not the user acting");
+    assert_eq!(rig.hook.starts(), 2, "the first run and one fresh run");
+    rig.send(Msg::Latches(vec![SHIFT]));
+    rig.send(Msg::Latches(Vec::new()));
+    rig.settle(T2);
+    assert!(
+        rig.hook.running(),
+        "a latch change re-arms it, and presses keep it"
+    );
+    assert!(!rig.feed(down(A), T2));
+    assert_eq!(rig.take(), [pressed(false)]);
 }
 
 #[test]
@@ -112,7 +147,7 @@ fn a_given_up_engine_while_presses_are_wanted_gets_one_fresh_run() {
     assert_eq!(rig.take(), [shown(false, Off), told(keys::MOUSE_RESET)]);
     assert!(rig.hook.running(), "presses still need the hook");
     assert_eq!(rig.hook.starts(), 2, "one fresh run");
-    let _ = rig.feed(down(A), T1);
+    assert!(!rig.feed(down(A), T1));
     assert_eq!(rig.take(), [pressed(false)]);
 }
 
@@ -122,7 +157,7 @@ fn only_the_flag_s_changes_are_logged_with_no_point() {
         let mut rig = Rig::new();
         rig.begin();
         rig.send(Msg::Presses(true));
-        let _ = rig.feed(down(A), T0);
+        assert!(!rig.feed(down(SPOT), T0));
         rig.send(Msg::Presses(true));
         rig.send(Msg::Presses(false));
         rig.settle(T1);
@@ -130,13 +165,12 @@ fn only_the_flag_s_changes_are_logged_with_no_point() {
     let flags: Vec<_> = lines.iter().filter(|(_, f)| f.contains_key(ON)).collect();
     let ons: Vec<_> = flags.iter().map(|(_, f)| f[ON].as_str()).collect();
     assert_eq!(ons, ["true", "false"], "{lines:?}");
+    let points = [SPOT.x, SPOT.y].map(|n| n.to_string());
     for (_, fields) in &flags {
         let names: Vec<_> = fields.keys().copied().collect();
         assert_eq!(names, [MESSAGE, ON]);
-    }
-    let points = [A.x, A.y].map(|n| n.to_string());
-    for line in lines.iter().flat_map(|(_, f)| f.values()) {
-        assert!(points.iter().all(|p| !line.contains(p.as_str())), "{line}");
+        let shown = |v: &String| points.iter().any(|p| v.contains(p.as_str()));
+        assert!(!fields.values().any(shown), "{fields:?}");
     }
 }
 
@@ -148,12 +182,19 @@ fn a_stop_while_presses_are_wanted_lets_the_hook_go() {
     assert_eq!(rig.hook.stops(), 1);
 }
 
-#[test]
-fn the_actor_thread_hears_presses_wanted_and_a_stop_clears_it() {
-    let (mut live, (_ear, states)) = Live::start(|_| {}, hear::<AssistChanged>);
-    assert_eq!(states.recv_timeout(WAIT), Ok(on(false)));
+/// Plays word prediction holding a word: it hears the mouse's ask and answers with its flag.
+fn answer(live: &Live, asks: &Receiver<PressesAsk>, states: &Receiver<AssistChanged>) {
+    assert_eq!(asks.recv_timeout(WAIT), Ok(PressesAsk));
     live.bus.publish(&PressesWanted { on: true }).unwrap();
-    synced(&live, &states);
+    synced(live, states);
+}
+
+#[test]
+fn each_start_asks_for_presses_so_a_restart_mid_word_gets_the_hook_back() {
+    let listen = |bus: &Bus| (hear::<AssistChanged>(bus), hear::<PressesAsk>(bus));
+    let (mut live, ((_e1, states), (_e2, asks))) = Live::start(|_| {}, listen);
+    assert_eq!(states.recv_timeout(WAIT), Ok(on(false)));
+    answer(&live, &asks, &states);
     assert!(live.hook.running(), "wanted presses start the hook");
     live.stop();
     assert!(!live.hook.running(), "the stop let it go");
@@ -164,8 +205,15 @@ fn the_actor_thread_hears_presses_wanted_and_a_stop_clears_it() {
     assert_eq!(states.try_recv(), Ok(gone));
     live.restart();
     assert_eq!(states.recv_timeout(WAIT), Ok(on(false)));
-    assert!(!live.hook.running(), "a new start wants no presses");
-    live.bus.publish(&PressesWanted { on: true }).unwrap();
+    assert!(
+        !live.hook.running(),
+        "a new start wants no presses until answered"
+    );
+    answer(&live, &asks, &states);
+    assert!(
+        live.hook.running(),
+        "the answer brings it back with no new word"
+    );
     live.bus.publish(&PressesWanted { on: false }).unwrap();
     synced(&live, &states);
     live.hook.settle(T0);

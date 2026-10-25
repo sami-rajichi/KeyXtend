@@ -12,7 +12,7 @@
 | `SecretStore` | It gates `SealedStoreKey`, which keeps the learned words and emails sealed (ADR-0032). | The module does not start (`without_secret_store_it_cannot_reach_the_sealed_store`). |
 
 - It has no `InjectInput` (`manifest.rs`): a pick asks the keyboard with one `TypeWord`, and the keyboard types it (ADR-0033).
-- `WordPacksKey` is ungated: the packs are public data. `LayoutChanged`, `LayoutAsk`, `PointerPressed`, `PressesWanted` and `Notice` are ungated too.
+- `WordPacksKey` is ungated: the packs are public data. `LayoutChanged`, `LayoutAsk`, `PointerPressed`, `PressesWanted`, `PressesAsk` and `Notice` are ungated too.
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |

@@ -22,8 +22,8 @@ pub static MANIFEST: Manifest = Manifest {
 mod tests {
     use super::*;
     use kx_module_api::ports::{
-        ChipPicked, LayoutAsk, LayoutChanged, PointerPressed, PressesWanted, Suggested, TypeWord,
-        Typed, TypingMode, WordsAsk,
+        ChipPicked, LayoutAsk, LayoutChanged, PointerPressed, PressesAsk, PressesWanted, Suggested,
+        TypeWord, Typed, TypingMode, WordsAsk,
     };
     use kx_module_api::{Event, Notice};
 
@@ -64,6 +64,7 @@ mod tests {
             LayoutAsk::CAPABILITY,
             PointerPressed::CAPABILITY,
             PressesWanted::CAPABILITY,
+            PressesAsk::CAPABILITY,
             Notice::CAPABILITY,
         ];
         assert!(open.iter().all(Option::is_none));

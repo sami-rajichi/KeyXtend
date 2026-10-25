@@ -1,5 +1,5 @@
-//! What the actor publishes: the lane with a new round after each change, `PressesWanted` when it flips, both again
-//! at stop, and each notice once per run (a missing pack once per language).
+//! What the actor publishes: the lane with a new round after each change, `PressesWanted` when it flips or is asked,
+//! both again at stop, and each notice once per run (a missing pack once per language).
 
 use super::Actor;
 use super::store::Blob;
@@ -93,6 +93,11 @@ impl Actor {
             self.pressing = want;
             self.publish(&PressesWanted { on: want });
         }
+    }
+
+    /// Tells whether presses are wanted again, for a mouse module that starts later.
+    pub(super) fn presses_again(&self) {
+        self.publish(&PressesWanted { on: self.pressing });
     }
 
     /// Saves what changed, tells the lane empty and presses unwanted, and logs the counts.

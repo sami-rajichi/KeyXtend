@@ -1,12 +1,13 @@
 //! The module's thread over the bus: it asks for the layout, follows the keyboard's pieces, types a pick through the
-//! keyboard, saves at stop and says when it fails; with the pack builder, it closes one pack before it opens the next.
+//! keyboard, answers an ask for presses, saves at stop and says when it fails; with the pack builder, it closes one
+//! pack before it opens the next.
 
 use crate::rig::{blob, learner};
 use kx_mod_predict::{Days, MANIFEST, PredictModule, SystemDays};
 use kx_module_api::ports::{
     ChipPicked, FieldKind, FieldWatch, FieldWatchKey, Lane, LayoutAsk, LayoutChanged, LayoutId,
-    PackError, PackView, Piece, PressesWanted, SealedStore, SealedStoreKey, Suggested, TypeWord,
-    Typed, WordPacks, WordPacksKey,
+    PackError, PackView, Piece, PressesAsk, PressesWanted, SealedStore, SealedStoreKey, Suggested,
+    TypeWord, Typed, WordPacks, WordPacksKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, Notice, Redacted, ServiceKey, Subscription, keys,
@@ -150,6 +151,26 @@ fn a_layouts_module_that_starts_later_still_brings_the_language() {
     run.send(&lang("en"));
     // The later start's own `LayoutChanged` loads the learner, whose words show.
     lane_of(&lanes, &["hello", "help"]);
+    run.stop();
+}
+
+#[test]
+fn an_ask_for_presses_gets_the_current_flag_again() {
+    let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
+    field.focus(FieldKind::Text);
+    let listen = |bus: &Bus| hear::<PressesWanted>(bus);
+    let (mut run, (_p, presses)) =
+        Live::start(&field, Arc::new(FakeWordPacks::new()), &store, listen);
+    let on = |rx: &Receiver<PressesWanted>| rx.recv_timeout(WAIT).map(|p| p.on);
+    run.send(&PressesAsk);
+    assert_eq!(on(&presses), Ok(false), "no word yet");
+    run.send(&lang("en"));
+    run.send(&Typed {
+        piece: Piece::Text(Redacted::new("hel".to_owned())),
+    });
+    assert_eq!(on(&presses), Ok(true), "a word is held");
+    run.send(&PressesAsk);
+    assert_eq!(on(&presses), Ok(true), "told again, with no new word");
     run.stop();
 }
 

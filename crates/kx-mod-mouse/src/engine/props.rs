@@ -164,7 +164,7 @@ proptest! {
     fn with_nothing_on_everything_passes(steps in run(physical())) {
         let mut rig = Rig::play(&steps, false, Model::Strict);
         rig.finish();
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.notes.is_empty());
         prop_assert!(!rig.e.needs_hook());
     }
@@ -180,7 +180,7 @@ proptest! {
         rig.calm();
         rig.more(&after);
         rig.finish();
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.notes.is_empty());
         prop_assert!(!rig.e.needs_hook());
     }
@@ -213,9 +213,9 @@ proptest! {
     fn scrolling_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
         let mut rig = Rig::play(&[(0, Step::Scroll(true))], false, Model::Strict);
         rig.more(&steps);
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
-        prop_assert_eq!(presses(&rig.notes), rig.pressed);
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
         let badge = |n: &Note| matches!(n, Note::Pressed { .. } | Note::Moved { .. });
         prop_assert!(rig.notes.iter().all(badge), "{:?}", rig.notes);
     }
@@ -226,14 +226,14 @@ proptest! {
     fn wanted_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
         let mut rig = Rig::play(&[(0, Step::Wanted(true))], false, Model::Strict);
         rig.more(&steps);
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
-        prop_assert_eq!(presses(&rig.notes), rig.pressed);
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
         prop_assert!(rig.notes.iter().all(|n| matches!(n, Note::Pressed { .. })), "{:?}", rig.notes);
     }
 
-    /// Each physical press is noted once while scrolling or wanted and never otherwise, whatever the modes do with it;
-    /// while presses are wanted the engine always needs the hook.
+    /// Each physical press is noted once, at its own event, while scrolling or wanted and never otherwise, whatever the
+    /// modes do with it; while presses are wanted the engine always needs the hook.
     #[test]
     fn presses_are_noted_once_and_only_while_scrolling_or_wanted(
         rclick in any::<bool>(),
@@ -242,17 +242,21 @@ proptest! {
         let mut rig = Rig::play(&steps, rclick, Model::Strict);
         prop_assert_eq!(rig.unhooked, 0, "wanted, yet no hook needed");
         rig.finish();
-        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
     }
 
-    /// Wanting presses never changes what happens to an event: the same input, drops and other notes without it.
+    /// Wanting presses never changes what happens to an event: the same input in order, drops, OS state and other
+    /// notes as without it.
     #[test]
     fn wanted_changes_no_event(rclick in any::<bool>(), steps in mixed()) {
         let mut with = Rig::play(&steps, rclick, Model::Strict);
         let mut without = Rig::play(&unwanted(&steps), rclick, Model::Strict);
+        prop_assert_eq!(&with.os.buttons, &without.os.buttons);
+        prop_assert_eq!(&with.os.keys, &without.os.keys);
         with.finish();
         without.finish();
-        prop_assert_eq!((with.dropped, with.sent), (without.dropped, without.sent));
+        prop_assert_eq!(&with.sent, &without.sent);
+        prop_assert_eq!(with.dropped, without.dropped);
         prop_assert_eq!(unpressed(&with.notes), unpressed(&without.notes));
     }
 

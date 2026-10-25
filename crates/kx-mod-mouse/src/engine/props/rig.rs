@@ -89,8 +89,8 @@ pub(super) struct Rig {
     pub(super) notes: Vec<Note>,
     /// Events the engine dropped.
     pub(super) dropped: usize,
-    /// Input the engine sent.
-    pub(super) sent: usize,
+    /// Input the engine sent, in order.
+    pub(super) sent: Vec<PointerAct>,
     /// Releases after which the OS still held that button or a modifier, outside a carry.
     pub(super) unmatched: usize,
     /// Steps after which the engine needed no hook, yet the OS held a key or a button the hand does not.
@@ -99,8 +99,8 @@ pub(super) struct Rig {
     scrolling: bool,
     /// Presses are wanted.
     wanted: bool,
-    /// Presses the engine heard while scrolling or wanted.
-    pub(super) pressed: usize,
+    /// Events whose press notes differ from the one expected for a press while scrolling or wanted, else none.
+    pub(super) misnoted: usize,
     /// Steps after which presses were wanted, yet the engine needed no hook.
     pub(super) unhooked: usize,
 }
@@ -125,12 +125,12 @@ impl Rig {
             acts: Vec::new(),
             notes: Vec::new(),
             dropped: 0,
-            sent: 0,
+            sent: Vec::new(),
             unmatched: 0,
             leaks: 0,
             scrolling: false,
             wanted: false,
-            pressed: 0,
+            misnoted: 0,
             unhooked: 0,
         };
         rig.more(steps);
@@ -178,22 +178,23 @@ impl Rig {
         self.unhooked += usize::from(self.wanted && !self.e.needs_hook());
     }
 
-    /// Runs one event; the OS sees it unless the engine drops it, then the engine's input.
+    /// Runs one event; the OS sees it unless the engine drops it, then the engine's input. Its press notes are checked.
     fn event(&mut self, event: PointerEvent) {
         let press = matches!(event, PointerEvent::Down { .. });
-        self.pressed += usize::from(press && (self.scrolling || self.wanted));
+        let (want, heard) = (press && (self.scrolling || self.wanted), self.notes.len());
         if self.e.on(event, Mono::from_us(self.now), &mut self.acts) {
             self.dropped += 1;
         } else {
             self.os.see(event);
         }
         self.send();
+        self.misnoted += usize::from(presses(&self.notes[heard..]) != usize::from(want));
     }
 
     /// The OS takes one call's input, which never passes `MAX_ACTS`, and the notes are drained as the host does.
     fn send(&mut self) {
         assert!(self.acts.len() <= MAX_ACTS, "{} acts", self.acts.len());
-        self.sent += self.acts.len();
+        self.sent.extend_from_slice(&self.acts);
         for &act in &self.acts {
             self.os.act(act);
         }
@@ -259,7 +260,8 @@ impl Rig {
         }
         self.e.set_latches(Vec::new());
         self.send();
-        (self.dropped, self.sent, self.pressed) = (0, 0, 0);
+        self.dropped = 0;
+        self.sent.clear();
         self.notes.clear();
     }
 

@@ -34,8 +34,8 @@ pub use pack::{PackWriter, WriteError};
 pub use settings::{LEARN_KEY, ON_KEY, PredictSettings, SPEC};
 
 use kx_module_api::ports::{
-    ChipPicked, FieldWatchKey, Lane, LayoutChanged, PointerPressed, PressesWanted, SealedStoreKey,
-    Suggested, Typed, TypingMode, WordPacksKey, WordsAsk,
+    ChipPicked, FieldWatchKey, Lane, LayoutChanged, PointerPressed, PressesAsk, PressesWanted,
+    SealedStoreKey, Suggested, Typed, TypingMode, WordPacksKey, WordsAsk,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
@@ -76,6 +76,7 @@ impl Module for PredictModule {
         relay(cx, &tx, |e: &PointerPressed| Msg::Pressed(e.ours))?;
         relay(cx, &tx, |e: &ChipPicked| Msg::Picked(*e))?;
         relay(cx, &tx, |e: &WordsAsk| Msg::Ask(*e))?;
+        relay(cx, &tx, |_: &PressesAsk| Msg::PressesAsk)?;
         let ports = Ports {
             bus: cx.bus(),
             clock: cx.clock(),

@@ -137,8 +137,8 @@ mod tests {
     use super::*;
 
     // A workspace path from `tools/kx-gates/src`; a moved file breaks the build here, never silently.
-    /// The mouse module's actor, which logs the hook's numbers at each hook stop.
-    const ACTOR_RS: &str = include_str!("../../../crates/kx-mod-mouse/src/actor.rs");
+    /// The mouse module's stop line, which logs the hook's numbers `$s` at each hook stop.
+    const STOPPED_RS: &str = include_str!("../../../crates/kx-mod-mouse/src/actor/stopped.rs");
 
     /// A stamp of the kernel's log format, and one a second later.
     const EARLY: &str = "2026-10-14T08:00:01.000000Z";
@@ -172,8 +172,8 @@ mod tests {
         let fields = names::<HookLine>();
         assert!(!fields.is_empty());
         for name in fields {
-            let logged = format!("{name} = s.{name}");
-            assert!(ACTOR_RS.contains(&logged), "actor.rs logs no {logged}");
+            let logged = format!("{name} = $s.{name}");
+            assert!(STOPPED_RS.contains(&logged), "stopped.rs logs no {logged}");
         }
     }
 

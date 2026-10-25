@@ -31,6 +31,15 @@ impl Cmd {
         matches!(self, Self::Latches(_) | Self::Scroll(_) | Self::Presses(_))
     }
 
+    /// A mode toggle or a held latch: the user aimed at the hook, so the run's stop line logs at info.
+    pub(crate) fn loud(&self) -> bool {
+        match self {
+            Self::Toggle(_) => true,
+            Self::Latches(held) => !held.is_empty(),
+            Self::Scroll(_) | Self::Presses(_) => false,
+        }
+    }
+
     /// Applies the command to `engine`, which pushes any input to send into `acts`.
     fn apply(self, engine: &mut Engine, acts: &mut Vec<PointerAct>) {
         match self {
