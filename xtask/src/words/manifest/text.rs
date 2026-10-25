@@ -137,6 +137,13 @@ pub(crate) struct Section {
     pub(crate) to: Option<String>,
 }
 
+impl MeterRules {
+    /// The highest percentile printed, which the speed ceiling judges.
+    pub(crate) fn top(&self) -> u32 {
+        self.percentiles.last().copied().unwrap_or_default()
+    }
+}
+
 impl LangText {
     /// Every source file this language's text reads.
     pub(crate) fn files(&self) -> impl Iterator<Item = &str> {

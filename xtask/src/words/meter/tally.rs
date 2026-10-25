@@ -1,7 +1,11 @@
 //! One run's counts: sentences, words, presses without and with chips, and the time of each scorer call.
 
+use super::slow_note;
 use crate::words::float;
 use crate::words::manifest::PERCENT;
+
+/// The decimals a printed share shows.
+const DECIMALS: u8 = 1;
 
 /// One run's counts over a language's sentences.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -27,35 +31,43 @@ impl Tally {
         f64::from(PERCENT) * (1.0 - float(self.with) / float(self.without))
     }
 
-    /// The `p` percentile of the times, by nearest rank; 0 when no call was timed.
-    pub(crate) fn percentile(&self, p: u32) -> u64 {
-        percentile(&self.times, p)
-    }
-
     /// The line `iso`'s `run` prints: its counts, the saved share and each of `percentiles`, never a word.
     pub(crate) fn line(&self, iso: &str, run: &str, percentiles: &[u32]) -> String {
-        let times: Vec<String> = (percentiles.iter())
-            .map(|&p| format!("p{p} {} us", self.percentile(p)))
-            .collect();
         format!(
-            "{iso} {run}: {} sentences, {} words, {} presses without chips, {} with, saved {:.1}%, guess {}",
+            "{iso} {run}: {} sentences, {} words, {} presses without chips, {} with, saved {}%, guess {}{}",
             self.sentences,
             self.words,
             self.without,
             self.with,
-            self.saved_pct(),
-            times.join(", "),
+            shown_pct(self.saved_pct()),
+            times_text(&self.times, percentiles),
+            slow_note(),
         )
     }
 }
 
-/// The `p` percentile of `times`, by nearest rank; 0 when there are none.
+/// `pct` as printed: rounded down to `DECIMALS`, so a share under a target never prints as reaching it.
+pub(crate) fn shown_pct(pct: f64) -> String {
+    let scale = 10f64.powi(i32::from(DECIMALS));
+    let places = usize::from(DECIMALS);
+    format!("{:.places$}", (pct * scale).floor() / scale)
+}
+
+/// Each of `percentiles` of `times` as printed: `p50 120 us, p99 900 us`.
+pub(crate) fn times_text(times: &[u64], percentiles: &[u32]) -> String {
+    let parts: Vec<String> = (percentiles.iter())
+        .map(|&p| format!("p{p} {} us", percentile(times, p)))
+        .collect();
+    parts.join(", ")
+}
+
+/// The `p` percentile of `times` by nearest rank, the ⌈n·p/100⌉-th smallest; 0 when there are none.
 pub(crate) fn percentile(times: &[u64], p: u32) -> u64 {
     let mut sorted = times.to_vec();
     sorted.sort_unstable();
-    let rank =
-        |n: usize| Some(n.checked_mul(usize::try_from(p).ok()?)? / usize::try_from(PERCENT).ok()?);
-    let at = rank(sorted.len()).unwrap_or_default();
+    let n = u64::try_from(sorted.len()).unwrap_or(u64::MAX);
+    let rank = n.saturating_mul(u64::from(p)).div_ceil(u64::from(PERCENT));
+    let at = usize::try_from(rank.saturating_sub(1)).unwrap_or(usize::MAX);
     let last = sorted.len().saturating_sub(1);
     sorted.get(at.min(last)).copied().unwrap_or_default()
 }

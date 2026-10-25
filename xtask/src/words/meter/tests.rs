@@ -2,19 +2,17 @@
 //! rank by frequency alone and every count below is worked out by hand.
 
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use kx_mod_predict::{Flags, Pack, PackWriter, PredictSettings};
-use kx_module_api::ports::{PACK_INDEX, index_text, pack_file};
 
-use super::tally::Tally;
+use super::held_lines;
+use super::tally::{Tally, percentile, shown_pct};
 use super::typist::Typist;
 use super::verdict::failures;
-use super::{Opts, Paths, held_lines, run};
 use crate::test_support::TempDir;
+use crate::words::MANIFEST;
 use crate::words::fixture::{self, manifest_with};
 use crate::words::manifest::{Manifest, MeterRules};
-use crate::words::{MANIFEST, WordsError};
 
 /// The pack's words, most frequent first: three chips show `the cold cut` before a letter and `cat car` after `ca`.
 const WORDS: [(&str, u8); 6] = [
@@ -120,26 +118,49 @@ fn the_learner_run_offers_a_new_word_from_its_second_use() {
 
 #[test]
 fn every_scorer_call_is_timed() {
-    let t = typed(&[SENTENCE], false);
-    assert!(!t.times.is_empty());
-    assert!(t.percentile(50) <= t.percentile(99));
+    // Asked before T and again after Shift, before c, a and r, before s and a, and before the stop: 8 calls.
+    assert_eq!(typed(&[SENTENCE], false).times.len(), 8);
 }
 
 #[test]
-fn the_verdict_fails_a_gate_language_under_the_target_and_never_another() {
-    let rules = rules();
-    let asked = ["en".to_owned(), "fr".to_owned()];
-    let saved = |en: f64, fr: f64| BTreeMap::from([("en".to_owned(), en), ("fr".to_owned(), fr)]);
-    assert!(failures(&rules, &asked, &saved(41.0, 0.0)).is_empty());
-    assert_eq!(failures(&rules, &asked, &saved(39.0, 99.0)).len(), 1);
+fn a_percentile_is_the_nearest_rank() {
+    let times: Vec<u64> = (1..=1000).collect();
     assert_eq!(
-        failures(&rules, &asked, &BTreeMap::new()).len(),
-        1,
-        "a gate language with no held sentences"
+        [50, 99, 100].map(|p| percentile(&times, p)),
+        [500, 990, 1000]
     );
-    let fr = ["fr".to_owned()];
+    assert_eq!(percentile(&[7], 1), 7);
+    assert_eq!(percentile(&[], 99), 0);
+}
+
+#[test]
+fn a_printed_share_is_rounded_down_so_it_never_reaches_a_target_it_missed() {
+    assert_eq!(shown_pct(39.96), "39.9");
+    assert_eq!(shown_pct(40.0), "40.0");
+    let saved = BTreeMap::from([("en".to_owned(), 39.96)]);
+    let failed = failures(&rules(), None, &saved);
+    assert!(failed.iter().any(|f| f.contains("39.9%")), "{failed:?}");
+}
+
+#[test]
+fn the_verdict_fails_a_gate_language_under_the_target_or_unmeasured_and_never_another() {
+    let rules = rules();
+    let saved = |en: f64, fr: f64| BTreeMap::from([("en".to_owned(), en), ("fr".to_owned(), fr)]);
+    assert!(failures(&rules, None, &saved(41.0, 0.0)).is_empty());
+    assert_eq!(failures(&rules, None, &saved(39.0, 99.0)).len(), 1);
+    let none = BTreeMap::new();
+    assert_eq!(
+        failures(&rules, None, &none).len(),
+        1,
+        "a full run judges every gate language"
+    );
+    assert_eq!(
+        failures(&rules, Some("en"), &none).len(),
+        1,
+        "a gate language asked for"
+    );
     assert!(
-        failures(&rules, &fr, &BTreeMap::new()).is_empty(),
+        failures(&rules, Some("fr"), &none).is_empty(),
         "a gate language not asked for"
     );
 }
@@ -185,81 +206,4 @@ fn max_sentences_limits_the_lines_read() {
     assert_eq!(held_lines(&file, 3).unwrap(), ["one", "two"]);
 }
 
-/// A packs folder with the tiny pack of `en` and `fr` and an index that also lists `de`, and held sentences for
-/// `en` and `fr` only.
-fn folders(dir: &Path) -> Paths {
-    let (packs, held) = (dir.join("packs"), dir.join("held"));
-    std::fs::create_dir_all(&packs).unwrap();
-    std::fs::create_dir_all(&held).unwrap();
-    let index = index_text(&["de", "en", "fr"]).unwrap();
-    std::fs::write(packs.join(PACK_INDEX), index).unwrap();
-    for iso in ["en", "fr"] {
-        std::fs::write(packs.join(pack_file(iso).unwrap()), pack(iso)).unwrap();
-        std::fs::write(held.join(format!("{iso}.txt")), format!("{SENTENCE}\n")).unwrap();
-    }
-    Paths { packs, held }
-}
-
-#[test]
-fn the_run_prints_counts_only_and_fails_a_gate_language_under_the_target() {
-    let dir = TempDir::new("words-meter-run");
-    let paths = folders(dir.path());
-    let opts = Opts {
-        chips: Some(CHIPS),
-        ..Opts::default()
-    };
-    let mut said = Vec::new();
-    let result = run(&rules(), &opts, &paths, &mut |l| said.push(l.to_owned()));
-    let Err(WordsError::Meter(why)) = result else {
-        panic!("en saves 38% of 40%: {result:?}");
-    };
-    assert_eq!(
-        said.len(),
-        4,
-        "two runs per language with held sentences: {said:?}"
-    );
-    for text in said.iter().chain([&why]) {
-        assert!(!text.contains("car") && !text.contains("sat"), "{text}");
-    }
-}
-
-#[test]
-fn the_run_measures_only_the_language_asked_for() {
-    let dir = TempDir::new("words-meter-lang");
-    let paths = folders(dir.path());
-    let opts = Opts {
-        chips: Some(CHIPS),
-        lang: Some("fr"),
-        ..Opts::default()
-    };
-    let mut said = Vec::new();
-    run(&rules(), &opts, &paths, &mut |l| said.push(l.to_owned())).unwrap();
-    assert_eq!(said.len(), 3, "two runs, then the verdict: {said:?}");
-    assert!(
-        said.iter().take(2).all(|l| l.starts_with("fr ")),
-        "{said:?}"
-    );
-    let unknown = Opts {
-        lang: Some("it"),
-        ..Opts::default()
-    };
-    assert!(run(&rules(), &unknown, &paths, &mut |_| {}).is_err());
-}
-
-#[test]
-fn the_speed_run_fills_a_learner_and_times_both_query_kinds() {
-    let dir = TempDir::new("words-meter-speed");
-    let paths = folders(dir.path());
-    let opts = Opts {
-        speed: true,
-        ..Opts::default()
-    };
-    let mut said = Vec::new();
-    run(&rules(), &opts, &paths, &mut |l| said.push(l.to_owned())).unwrap();
-    assert_eq!(
-        said.len(),
-        3,
-        "one line per language, then the verdict: {said:?}"
-    );
-    assert!(said.iter().all(|l| !l.contains("car")), "{said:?}");
-}
+mod run;

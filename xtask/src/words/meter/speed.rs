@@ -1,4 +1,4 @@
-//! The speed figure (`--speed`): `guesses` on each real pack with a learner past its caps and the longest context,
+//! The speed figure (`--speed`): `guesses` on each shipped pack with a learner past its caps and the longest context,
 //! timed for an empty prefix after a word and for one letter, with the scorer's word sort buffer per query.
 
 use std::cmp::Reverse;
@@ -9,18 +9,19 @@ use std::time::Instant;
 use kx_mod_predict::learn::{LearnConfig, Learner};
 use kx_mod_predict::pack::layout::MAX_CHAIN;
 use kx_mod_predict::score::{Learned, ScoreConfig, guesses};
+use kx_mod_predict::script::Script;
 use kx_mod_predict::track::{Query, Reading};
 use kx_mod_predict::{Pack, PredictSettings, WordId, fold};
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
 
-use super::tally::percentile;
-use super::{DAY, Paths, each_lang};
+use super::tally::{percentile, times_text};
+use super::{DAY, Paths, RELEASE_RUN, UNOPTIMISED, each_pack, slow_note};
 use crate::words::WordsError;
 use crate::words::manifest::MeterRules;
 
 /// The query kinds timed, with the letters of the next word each types: none, then one.
-const KINDS: [(&str, usize); 2] = [("empty prefix", 0), ("one letter", 1)];
+pub(super) const KINDS: [(&str, usize); 2] = [("empty prefix", 0), ("one letter", 1)];
 
 /// What every query of one language is asked against.
 struct Bench<'a> {
@@ -42,20 +43,29 @@ struct Bench<'a> {
     width: usize,
 }
 
-/// Times each language with held sentences, printing one line for each, and gives each query kind over the ceiling.
+/// Times each language `asked`, printing one line for each. Gives how many it timed and each query kind over the
+/// ceiling; an unoptimised build refuses to judge the ceiling and names the release run instead.
 pub(crate) fn run(
     rules: &MeterRules,
     settings: &PredictSettings,
     paths: &Paths,
     asked: &[String],
     say: &mut dyn FnMut(&str),
-) -> Result<Vec<String>, WordsError> {
+) -> Result<(usize, Vec<String>), WordsError> {
     let mut slow = Vec::new();
-    each_lang(paths, asked, &mut |iso, pack, _| {
+    let mut timed_langs = 0;
+    each_pack(paths, asked, &mut |iso, pack| {
         say(&timed(iso, pack, settings, rules, &mut slow)?);
+        timed_langs += 1;
         Ok(())
     })?;
-    Ok(slow)
+    if UNOPTIMISED {
+        slow = vec![format!(
+            "an unoptimised build cannot judge the {} us ceiling: run {RELEASE_RUN} with the same flags",
+            rules.ceiling_us
+        )];
+    }
+    Ok((timed_langs, slow))
 }
 
 /// The line of `iso`: its full learner's sizes and each query kind's times, adding to `slow` each kind over the
@@ -90,14 +100,14 @@ fn timed(
         parts.push(kind_line(kind, &times, buffer, rules));
         slow.extend(over(iso, kind, &times, rules));
     }
-    Ok(parts.join("; "))
+    Ok(format!("{}{}", parts.join("; "), slow_note()))
 }
 
 /// The line that says every query kind stayed under the ceiling.
 pub(crate) fn passed(rules: &MeterRules) -> String {
-    let p = rules.percentiles.last().copied().unwrap_or_default();
     format!(
-        "speed passed: every query kind's p{p} is at most {} us",
+        "speed passed: every query kind's p{} is at most {} us",
+        rules.top(),
         rules.ceiling_us
     )
 }
@@ -147,8 +157,12 @@ impl Bench<'_> {
         u64::try_from(spent.as_micros()).unwrap_or(u64::MAX)
     }
 
-    /// The bytes of the word sort `guesses` makes for `prefix`: one id per pack word the prefix starts.
+    /// The bytes of the word sort `guesses` makes for `prefix`: one id per pack word the prefix starts. None where the
+    /// pack's script spaces no words, as `guesses` then returns at once.
     fn buffer(&self, prefix: &str) -> usize {
+        if !self.pack.script().is_none_or(Script::spaced) {
+            return 0;
+        }
         let span = self.pack.span(&fold(prefix, self.pack.casing()));
         let words = usize::try_from(span.end.saturating_sub(span.start)).unwrap_or(usize::MAX);
         words.saturating_mul(size_of::<WordId>())
@@ -195,7 +209,8 @@ fn filled(
     Ok((learner, order))
 }
 
-/// A repeatable place for step `n` among `len`: the standard hasher of `n`, so no constant of our own is needed.
+/// A place for step `n` among `len`, from the standard hasher of `n`, so no constant of our own is needed. It is
+/// repeatable within one toolchain; another Rust release may hash differently.
 fn spread(n: usize, len: usize) -> usize {
     let mut hasher = DefaultHasher::new();
     n.hash(&mut hasher);
@@ -205,15 +220,13 @@ fn spread(n: usize, len: usize) -> usize {
 
 /// One query kind's part of the line: each percentile and the largest sort buffer.
 fn kind_line(kind: &str, times: &[u64], buffer: usize, rules: &MeterRules) -> String {
-    let parts: Vec<String> = (rules.percentiles.iter())
-        .map(|&p| format!("p{p} {} us", percentile(times, p)))
-        .collect();
-    format!("{kind} {}, sort buffer up to {buffer} B", parts.join(", "))
+    let times = times_text(times, &rules.percentiles);
+    format!("{kind} {times}, sort buffer up to {buffer} B")
 }
 
 /// Why `iso`'s `kind` failed: its highest percentile over the ceiling; none when it stayed under.
 fn over(iso: &str, kind: &str, times: &[u64], rules: &MeterRules) -> Option<String> {
-    let p = rules.percentiles.last().copied().unwrap_or_default();
+    let p = rules.top();
     let took = percentile(times, p);
     (took > rules.ceiling_us).then(|| {
         format!(

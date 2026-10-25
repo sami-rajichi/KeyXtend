@@ -27,6 +27,14 @@ use super::{WordsError, io_error};
 const RUNS: [(&str, bool); 2] = [("seed", false), ("learned", true)];
 /// The day every word is learned on: the meter never purges, so one day serves a whole run.
 const DAY: u32 = 0;
+/// True in a build without optimisations, whose times are far slower than the product's.
+const UNOPTIMISED: bool = cfg!(debug_assertions);
+/// The run whose times count, which the speed refusal and `assets/README.md` name.
+const RELEASE_RUN: &str = "cargo run --release --locked -p xtask -- words meter";
+/// What every time line of an unoptimised build says.
+const SLOW: &str = "unoptimised build, times are slow";
+/// Why a run that measured no language fails.
+const NOTHING: &str = "no language was measured";
 
 /// What the command line asked for.
 #[derive(Debug, Default, Clone, Copy)]
@@ -37,7 +45,7 @@ pub(crate) struct Opts<'a> {
     pub(crate) held: Option<&'a str>,
     /// The chips in the lane, instead of the `[predict]` default.
     pub(crate) chips: Option<u8>,
-    /// The one language to measure, instead of every shipped one with held sentences.
+    /// The one language to measure, instead of every shipped one.
     pub(crate) lang: Option<&'a str>,
     /// Time the scorer with a full learner instead of counting presses.
     pub(crate) speed: bool,
@@ -52,8 +60,8 @@ pub(crate) struct Paths {
     pub(crate) held: PathBuf,
 }
 
-/// Runs the meter as `opts` asks over every shipped language with held sentences, telling `say` each line; an error
-/// names each gate language under the target, or each query kind over the time ceiling.
+/// Runs the meter as `opts` asks, telling `say` each line. An error names each gate language under the target or
+/// not measured, each query kind over the time ceiling, or a run that measured nothing.
 pub(crate) fn run(
     rules: &MeterRules,
     opts: &Opts<'_>,
@@ -62,20 +70,32 @@ pub(crate) fn run(
 ) -> Result<(), WordsError> {
     let settings = settings(opts.chips)?;
     let asked = asked(&paths.packs, opts.lang)?;
-    let failed = if opts.speed {
+    let (measured, mut failed) = if opts.speed {
         speed::run(rules, &settings, paths, &asked, say)?
     } else {
-        presses(rules, &settings, paths, &asked, say)?
+        presses(rules, &settings, paths, (&asked, opts.lang), say)?
     };
+    if measured == 0 {
+        failed.push(NOTHING.to_owned());
+    }
     if !failed.is_empty() {
         return Err(WordsError::Meter(failed.join("; ")));
     }
-    if opts.speed {
-        say(&speed::passed(rules));
+    say(&if opts.speed {
+        speed::passed(rules)
     } else {
-        say(&verdict::passed(rules));
-    }
+        verdict::passed(rules)
+    });
     Ok(())
+}
+
+/// What a time line ends with: a note in an unoptimised build, else nothing.
+fn slow_note() -> String {
+    if UNOPTIMISED {
+        format!(" ({SLOW})")
+    } else {
+        String::new()
+    }
 }
 
 /// The first `max` lines of the held file at `path`, the empty ones left out.
@@ -91,17 +111,23 @@ pub(crate) fn held_lines(path: &Path, max: usize) -> Result<Vec<String>, WordsEr
     Ok(kept)
 }
 
-/// Types each language's held sentences in both runs, printing a line for each, and gives the gate's failures.
+/// Types the held sentences of each language `asked` that has some, in both runs, printing a line for each. Gives
+/// how many languages it measured and the gate's failures, judging every gate language unless `lang` was asked for.
 fn presses(
     rules: &MeterRules,
     settings: &PredictSettings,
     paths: &Paths,
-    asked: &[String],
+    (asked, lang): (&[String], Option<&str>),
     say: &mut dyn FnMut(&str),
-) -> Result<Vec<String>, WordsError> {
+) -> Result<(usize, Vec<String>), WordsError> {
+    let held = |iso: &str| held_file(&paths.held, iso);
+    let isos: Vec<String> = (asked.iter())
+        .filter(|iso| held(iso).is_file())
+        .cloned()
+        .collect();
     let mut saved = BTreeMap::new();
-    each_lang(paths, asked, &mut |iso, pack, held| {
-        let lines = held_lines(held, rules.max_sentences)?;
+    each_pack(paths, &isos, &mut |iso, pack| {
+        let lines = held_lines(&held(iso), rules.max_sentences)?;
         for (run, learn) in RUNS {
             let tally = typed(iso, pack, settings, &lines, learn)?;
             say(&tally.line(iso, run, &rules.percentiles));
@@ -111,7 +137,7 @@ fn presses(
         }
         Ok(())
     })?;
-    Ok(verdict::failures(rules, asked, &saved))
+    Ok((saved.len(), verdict::failures(rules, lang, &saved)))
 }
 
 /// The counts after typing `lines` in `iso` over `pack`, with a learner when `learn`.
@@ -129,22 +155,18 @@ fn typed(
     Ok(typist.into_tally())
 }
 
-/// Calls `each` with every language of `asked` that has a held file, with its parsed pack and that file.
-fn each_lang(
+/// Calls `each` with every language of `isos` and its parsed pack.
+fn each_pack(
     paths: &Paths,
-    asked: &[String],
-    each: &mut dyn FnMut(&str, &Pack<'_>, &Path) -> Result<(), WordsError>,
+    isos: &[String],
+    each: &mut dyn FnMut(&str, &Pack<'_>) -> Result<(), WordsError>,
 ) -> Result<(), WordsError> {
-    for iso in asked {
-        let held = held_file(&paths.held, iso);
-        if !held.is_file() {
-            continue;
-        }
+    for iso in isos {
         let name = pack_file(iso).ok_or_else(|| WordsError::Lang(iso.clone()))?;
         let path = paths.packs.join(name);
         let bytes = std::fs::read(&path).map_err(|e| io_error(&path, &e))?;
         let pack = Pack::parse(&bytes).map_err(|e| WordsError::Pack(format!("{iso}: {e}")))?;
-        each(iso, &pack, &held)?;
+        each(iso, &pack)?;
     }
     Ok(())
 }

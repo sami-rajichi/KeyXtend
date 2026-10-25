@@ -1,24 +1,28 @@
-//! The verdict: each gate language asked for must save the target share with the seed alone; a gate language with no
-//! held sentences fails, and the other languages are reported only.
+//! The verdict: each gate language judged must save the target share with the seed alone. A full run judges every
+//! gate language, a `--lang` run only the one asked for; one not measured fails, and the others are reported only.
 
 use std::collections::BTreeMap;
 
+use super::tally::shown_pct;
 use crate::words::manifest::MeterRules;
 
-/// Why each gate language among `asked` failed, given each measured language's saved share in percent; empty when
-/// the gate passes. The reasons name languages and numbers only.
+/// Why each gate language judged failed, given each measured language's saved share in percent: every gate language
+/// in a full run, or only `lang` when one was asked for. The reasons name languages and numbers only.
 pub(crate) fn failures(
     rules: &MeterRules,
-    asked: &[String],
+    lang: Option<&str>,
     saved: &BTreeMap<String, f64>,
 ) -> Vec<String> {
-    let target = f64::from(rules.min_saved_pct);
-    let gated = (rules.gate.iter()).filter(|iso| asked.contains(iso));
-    gated
+    let target = rules.min_saved_pct;
+    let judged = (rules.gate.iter()).filter(|iso| lang.is_none_or(|l| l == iso.as_str()));
+    judged
         .filter_map(|iso| match saved.get(iso) {
-            None => Some(format!("{iso} has no held sentences to measure")),
-            Some(&pct) if pct < target => Some(format!(
-                "{iso} saved {pct:.1}% of the presses, under {target}%"
+            None => Some(format!(
+                "{iso} was not measured: no pack in the index or no held sentences"
+            )),
+            Some(&pct) if pct < f64::from(target) => Some(format!(
+                "{iso} saved {}% of the presses, under {target}%",
+                shown_pct(pct)
             )),
             Some(_) => None,
         })
