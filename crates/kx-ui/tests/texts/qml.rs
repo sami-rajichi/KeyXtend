@@ -1,6 +1,6 @@
-//! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the assets
-//! laid out as the resources hold them with the icon plugin, and the picture folders); a change or a stray file fails
-//! it until it runs with `KX_BLESS=1`.
+//! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the chip
+//! lanes and ask kinds, the assets laid out as the resources hold them with the icon plugin, and the picture folders);
+//! a change or a stray file fails it until it runs with `KX_BLESS=1`.
 
 use crate::files::keys_of;
 use crate::pictures::{PICTURES_QML, hand_over};
@@ -146,6 +146,16 @@ fn ui(tag: &str) -> String {
     )
 }
 
+/// The ask kinds QML sends and the chip lanes the tests draw, as the English hub writes them.
+fn words() -> String {
+    let (hub, _host) = hub("en");
+    format!(
+        "{HEAD}{}{}",
+        var("asks", &crate::lanes::asks(), true),
+        var("lanes", &crate::lanes::lanes(&hub), true)
+    )
+}
+
 /// Golden file `name` of the keyboard as JSON.
 fn golden(name: &str) -> Value {
     let path = crate_path(FACE).join(format!("{name}.json"));
@@ -230,6 +240,7 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
         .collect();
     written.push(fixture("face.js".into(), &face()));
     written.push(fixture("assets.js".into(), &assets()));
+    written.push(fixture("words.js".into(), &words()));
     let order = var("texts", &crate::filled::order(), true);
     written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
     for f in std::fs::read_dir(dir())

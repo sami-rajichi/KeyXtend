@@ -73,9 +73,10 @@ impl Hub {
     /// Sends the ask `kind` names (one of `asks`) with `arg` and a list's rows from `[ui] page_rows`; an unknown kind or
     /// an `arg` out of range sends nothing. Call it on the Qt thread.
     pub fn words_ask(&self, kind: &str, arg: i32) {
-        let rows = u8::try_from(self.settings().page_rows).unwrap_or(u8::MAX);
+        let rows = self.lock().settings.page_rows;
+        let rows = u8::try_from(rows).unwrap_or(u8::MAX);
         let Some(ask) = ask_of(kind, arg, rows) else {
-            tracing::warn!(kind, arg, "QML sent a words tap that does not read");
+            tracing::warn!(kind, arg, "QML sent an unknown words tap or a bad argument");
             return;
         };
         self.send(&ask);
@@ -123,3 +124,6 @@ fn ask_of(kind: &str, arg: i32, rows: u8) -> Option<WordsAsk> {
         _ => return None,
     })
 }
+
+#[cfg(test)]
+mod tests;

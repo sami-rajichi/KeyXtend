@@ -13,6 +13,7 @@ mod combo;
 mod compose;
 mod files;
 mod filled;
+mod lanes;
 mod markup;
 mod pictures;
 mod plugin;

@@ -1,21 +1,23 @@
 //! Taps on the words menu, the email list and the control chips: each kind QML names sends its `WordsAsk`, a list's
-//! rows come from `[ui] page_rows`, and an unknown kind or an argument out of range sends nothing.
+//! rows come from `[ui] page_rows`, and an unknown kind or an argument out of range sends nothing. QML's copy of the
+//! kinds is checked against these consts through the `words.js` fixture (`tst_words`).
 
 use super::{heard, speaking};
 use crate::Rig;
 use kx_module_api::ports::WordsAsk;
 use kx_ui::asks::{AGAIN, CANCEL, FORGET, MORE, PAGE, PAUSE, PICK, POWER, UNDO};
+use std::collections::BTreeSet;
 
 /// Rows per page in these tests, unlike the default, so the ask shows where its rows came from.
 const ROWS: u8 = 3;
 
 #[test]
-fn qml_names_each_ask_as_the_top_bar_sends_it() {
+fn each_kind_is_a_plain_name_of_its_own() {
     let kinds = [FORGET, CANCEL, PAUSE, POWER, UNDO, MORE, PAGE, PICK, AGAIN];
-    let want = [
-        "forget", "cancel", "pause", "power", "undo", "more", "page", "pick", "again",
-    ];
-    assert_eq!(kinds, want);
+    let unique: BTreeSet<&str> = kinds.into_iter().collect();
+    assert_eq!(unique.len(), kinds.len(), "no two kinds share a name");
+    let plain = |k: &str| !k.is_empty() && k.bytes().all(|b| b.is_ascii_lowercase());
+    assert!(kinds.into_iter().all(plain), "{kinds:?}");
 }
 
 #[test]

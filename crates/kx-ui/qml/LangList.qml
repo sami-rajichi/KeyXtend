@@ -125,6 +125,9 @@ Window {
                 icon: box.lk.icons.page.back
                 name: box.res.tr("page.back")
                 can: box.view.page.back && !!box.view.page_back
+                lk: box.lk
+                res: box.res
+                s: box.s
                 onClicked: box.page(box.view.page_back)
             }
             Label {
@@ -144,6 +147,9 @@ Window {
                 icon: box.lk.icons.page.on
                 name: box.res.tr("page.on")
                 can: box.view.page.on && !!box.view.page_on
+                lk: box.lk
+                res: box.res
+                s: box.s
                 onClicked: box.page(box.view.page_on)
             }
         }
@@ -171,47 +177,6 @@ Window {
             text: " "
             font.family: box.res.fam.latin
             font.pixelSize: box.sh.sub_px * box.s
-        }
-    }
-
-    // A page button (mock-up .pg), dimmed when there is no page that way.
-    component PageButton: Rectangle {
-        id: pb
-        required property string icon
-        required property string name
-        required property bool can
-        signal clicked
-        width: box.pn.page_px[0] * box.s
-        height: box.pn.page_px[1] * box.s
-        radius: box.pn.page_px[2] * box.s
-        color: box.p.pop_hover
-        border.width: box.lk.shape.line.px
-        border.color: box.p.pop_line
-        enabled: can
-        opacity: can ? 1 : box.pn.off_share
-        Accessible.role: Accessible.Button
-        Accessible.name: name
-        Accessible.onPressAction: if (can) pb.clicked()
-        Hover {
-            lk: box.lk
-            radius: pb.radius
-            tint: box.p.pop_sel
-            visible: area.containsMouse
-        }
-        Icon {
-            anchors.centerIn: parent
-            icon: pb.icon
-            base: box.res.icons
-            ext: box.res.ext
-            px: box.pn.page_px[3] * box.s
-            tint: box.lk.sel_ink
-        }
-        // It acts at let-go, wherever the pointer went (ADR-0024).
-        Act {
-            id: area
-            anchors.fill: parent
-            hoverEnabled: true
-            onActed: if (pb.can) pb.clicked()
         }
     }
 

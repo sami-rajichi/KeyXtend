@@ -109,6 +109,37 @@ fn a_bad_shortcut_or_next_icon_is_refused_with_where_it_is_used() {
 }
 
 #[test]
+fn the_chip_lane_and_its_menu_show_the_controllers_icons() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let w = &i.words;
+    let got = [
+        &w.domain, &w.email, &w.more, &w.undo, &w.locked, &w.menu, &w.forget, &w.pause, &w.resume,
+        &w.power, &w.cancel,
+    ];
+    let want = [
+        "at-sign",
+        "at-sign",
+        "chevron-right",
+        "undo-2",
+        "lock",
+        "square-menu",
+        "eraser",
+        "eye-off",
+        "eye",
+        "power",
+        "x",
+    ];
+    assert_eq!(got.map(String::as_str), want);
+    assert!(i.named().contains(&("words.menu".into(), "square-menu")));
+}
+
+#[test]
+fn a_bad_words_icon_is_refused_with_where_it_is_used() {
+    let t = text().replacen("forget = \"eraser\"", "forget = \"Eraser\"", 1);
+    assert!(parse(&t).expect_err("a capital").contains("words.forget"));
+}
+
+#[test]
 fn a_misspelt_or_missing_button_is_refused() {
     let typo = text().replacen("theme = \"palette\"", "theem = \"palette\"", 1);
     assert!(parse(&typo).expect_err("a typo").contains("theem"));

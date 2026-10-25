@@ -1,5 +1,6 @@
-// The keyboard window's body, loaded once everything has read: the plate with its top bar, main keys, side block,
-// D-pad and resize corner, and the mover over it all. The shortcuts layer takes the side block and hides the pad.
+// The keyboard window's body, loaded once everything has read: the plate with its top bar and chip lane, main keys,
+// side block, D-pad, email list and resize corner, and the mover over it all. The shortcuts layer takes the side block
+// and hides the pad.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -24,12 +25,26 @@ Item {
     // The board's main keys, then its side block, which a flip of the shortcuts layer alone makes again.
     readonly property var mains: board.keys.filter(k => !k.side)
     readonly property var sides: board.keys.filter(k => k.side)
+    // The chip lane as last read (null without a hub): a new lane, language or settings reads it again.
+    readonly property var lane: words(win.ui, win.texts, woke)
+    property int woke: 0
 
     onLayeredChanged: if (!layered) padSwap.play()
 
     // Board key `kv` is a side cell new to the side block since the board was last read; none is on the first board.
     function fresh(kv) {
         return !!kv && !!win.sideWas && kv.side && win.sideWas.indexOf(kv.id) < 0;
+    }
+    // The lane `ui` gives now, none once it has gone; the other arguments only rerun the binding that calls it.
+    function words(ui) {
+        return ui ? JSON.parse(ui.words()) : null;
+    }
+
+    Connections {
+        target: body.win.ui
+        function onWordsChanged() {
+            body.woke++;
+        }
     }
 
     Item {
@@ -67,7 +82,11 @@ Item {
             presets: body.board.presets.length
             sizes: body.win.tongue.sizes
             dark: body.lk.dark
+            lane: body.lane
+            rtl: !!body.win.tongue.rtl
             onGrip: mover.startMove()
+            onPick: (round, index) => body.win.ui.pickChip(round, index)
+            onAsk: (kind, arg) => body.win.ui.wordsAsk(kind, arg)
             onFlip: body.win.flip()
             onTheme: body.win.restyle()
             onSmaller: body.win.redraw(body.win.keyboard.smaller())
@@ -110,6 +129,20 @@ Item {
                 shift: padRise
                 lk: body.lk
                 s: body.s
+            }
+        }
+        // The email list over the keys and the pad while the lane holds one; it pops in once as it opens.
+        Loader {
+            active: !!body.lane && !!body.lane.list
+            sourceComponent: WordList {
+                list: body.lane ? body.lane.list : null
+                board: body.board
+                rows: body.win.cfg.pageRows
+                ui: body.win.ui
+                lk: body.lk
+                res: body.res
+                s: body.s
+                onAsk: (kind, arg) => body.win.ui.wordsAsk(kind, arg)
             }
         }
         Corner {

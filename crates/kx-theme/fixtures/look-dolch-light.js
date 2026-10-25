@@ -851,6 +851,19 @@ var lk = {
       "glyph": "keyboard",
       "show": "keyboard",
       "quit": "power"
+    },
+    "words": {
+      "domain": "at-sign",
+      "email": "at-sign",
+      "more": "chevron-right",
+      "undo": "undo-2",
+      "locked": "lock",
+      "menu": "square-menu",
+      "forget": "eraser",
+      "pause": "eye-off",
+      "resume": "eye",
+      "power": "power",
+      "cancel": "x"
     }
   },
   "dpad": {
