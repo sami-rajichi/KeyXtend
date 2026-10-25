@@ -174,24 +174,31 @@ dpad =
     .down = Scroll down
     .stop = Stop scrolling
 
-## The chip lane on the top bar: a chip's name for screen readers ($word is its text), the More and Undo chips, the
-## lane's name while it offers nothing, and the note a password box shows in place of chips.
+## The chip lane on the top bar: a chip's name for screen readers ($word is its text), and in forget mode, the More and
+## Undo chips, the lane's name while it offers nothing, and the note a password box shows in place of chips.
 chip =
     .name = Suggestion: { $word }
+    .forget-name = Forget: { $word }
     .more = More emails
     .undo = Undo
     .none = No suggestions
     .locked = Password box: nothing is suggested or learned
 
-## The suggestions menu: its button and rows, and the Cancel that ends forget mode or closes the email list.
+## The suggestions menu: its button, its rows with their short labels, and the Cancel that ends forget mode or closes
+## the email list.
 words =
     .menu = Suggestions menu
     .forget = Forget a word
+    .forget-short = Forget
     .cancel = Cancel
     .pause = Pause learning
+    .pause-short = Pause
     .resume = Resume learning
+    .resume-short = Resume
     .off = Turn suggestions off
+    .off-short = Off
     .on = Turn suggestions on
+    .on-short = On
 
 ## Light, dark or following Windows, by [ui] mode value.
 mode =

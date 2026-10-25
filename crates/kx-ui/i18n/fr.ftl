@@ -175,25 +175,31 @@ dpad =
     .stop = Arrêter le défilement
 
 ## La barre de suggestions en haut du clavier : le nom d’une suggestion pour les lecteurs d’écran ($word est son
-## texte), les suggestions Autres adresses et Annuler, le nom de la barre quand elle ne propose rien, et la note d’un
-## champ de mot de passe.
+## texte), en mode d’oubli aussi, les suggestions Autres adresses et Annuler, le nom de la barre quand elle ne
+## propose rien, et la note d’un champ de mot de passe.
 chip =
     .name = Suggestion : { $word }
+    .forget-name = Oublier : { $word }
     .more = Autres adresses e-mail
     .undo = Annuler
     .none = Aucune suggestion
     .locked = Champ de mot de passe : rien n’est proposé ni appris
 
-## Le menu des suggestions : son bouton, ses lignes, et le bouton Annuler qui quitte le mode d’oubli ou ferme la
-## liste des adresses.
+## Le menu des suggestions : son bouton, ses lignes et leurs libellés courts, et le bouton Annuler qui quitte le
+## mode d’oubli ou ferme la liste des adresses.
 words =
     .menu = Menu des suggestions
     .forget = Oublier un mot
+    .forget-short = Oublier
     .cancel = Annuler
     .pause = Mettre l’apprentissage en pause
+    .pause-short = Pause
     .resume = Reprendre l’apprentissage
+    .resume-short = Reprendre
     .off = Désactiver les suggestions
+    .off-short = Désactiver
     .on = Activer les suggestions
+    .on-short = Activer
 
 ## Clair, sombre ou comme Windows, par valeur de [ui] mode.
 mode =

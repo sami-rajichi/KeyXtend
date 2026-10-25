@@ -83,7 +83,10 @@ struct List {
 pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
     let lane = lane.unwrap_or(&START);
     let (kind, chips) = match &lane.lane {
-        Lane::Chips(chips) => (Kind::Chips, chips.iter().map(|c| chip(c, t)).collect()),
+        Lane::Chips(chips) => {
+            let named = chips.iter().map(|c| chip(c, t, lane.forgetting));
+            (Kind::Chips, named.collect())
+        }
         Lane::Locked => (Kind::Locked, Vec::new()),
         Lane::Off => (Kind::Off, Vec::new()),
         Lane::Empty => (Kind::Empty, Vec::new()),
@@ -99,11 +102,12 @@ pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
     }
 }
 
-/// Chip `c` as QML draws it: a word, domain or email is named by `chip.name`, More and Undo by their own text.
-fn chip(c: &Chip, t: &I18n) -> ChipView {
+/// Chip `c` as QML draws it: a word, domain or email is named by `chip.name`, or in forget mode by `chip.forget-name`;
+/// More and Undo by their own text.
+fn chip(c: &Chip, t: &I18n, forget: bool) -> ChipView {
     let text = clean(c.text.expose());
     let name = match c.kind {
-        ChipKind::Word | ChipKind::Domain | ChipKind::Email => t.chip(&text),
+        ChipKind::Word | ChipKind::Domain | ChipKind::Email => t.chip(&text, forget),
         ChipKind::More => t.text(CHIP_MORE),
         ChipKind::Undo => t.text(CHIP_UNDO),
     };

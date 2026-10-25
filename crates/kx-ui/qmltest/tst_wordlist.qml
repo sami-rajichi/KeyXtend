@@ -17,6 +17,8 @@ Item {
     height: 100
 
     readonly property var page: Words.lanes.list.list
+    // A letter key in the board's middle row (scan code 0x20), under the list.
+    readonly property string under: "c-0x0020"
 
     Component { id: uiC; FakeUi {} }
     Component { id: kbC; FakeKeyboard {} }
@@ -127,13 +129,18 @@ Item {
             verify(cancel.mapToItem(null, 0, 0).x > row.mapToItem(null, 0, 0).x, "the buttons stay on the right");
         }
 
-        // A click on the list reaches no key under it.
+        // A click on the list at a key's centre reaches no key; with the list gone, the same click reaches that key.
         function test_the_keys_under_the_list_rest() {
             const w = win(Words.lanes.list);
-            const list = keyed(w.contentItem, "words.list");
-            mouseClick(list, list.width / 2, 2);
-            const keys = w.keyboard.calls.filter(c => c.startsWith("tap") || c.startsWith("press") || c.startsWith("pad"));
-            compare(keys, [], "no key heard it");
+            const key = Board.all(w.contentItem, o => o.Accessible.id === root.under)[0];
+            const mid = key.mapToItem(w.contentItem, key.width / 2, key.height / 2);
+            const heard = () => w.keyboard.calls.filter(c => c.startsWith("tap") || c.startsWith("press") || c.startsWith("pad"));
+            mouseClick(w.contentItem, mid.x, mid.y);
+            compare(heard(), [], "no key heard it");
+            w.ui.lane = Words.lanes.chips;
+            waitForRendering(w.contentItem);
+            mouseClick(w.contentItem, mid.x, mid.y);
+            verify(heard().length > 0, "the key is there: " + key.Accessible.id);
         }
     }
 }

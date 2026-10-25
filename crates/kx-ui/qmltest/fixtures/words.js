@@ -67,6 +67,28 @@ var lanes = {
     "on": true,
     "round": 10
   },
+  "forget": {
+    "chips": [
+      {
+        "kind": "word",
+        "name": "Forget: hello",
+        "rtl": false,
+        "text": "hello"
+      },
+      {
+        "kind": "word",
+        "name": "Forget: أن",
+        "rtl": true,
+        "text": "أن"
+      }
+    ],
+    "forgetting": true,
+    "kind": "chips",
+    "learn": true,
+    "list": null,
+    "on": true,
+    "round": 12
+  },
   "list": {
     "chips": [
       {

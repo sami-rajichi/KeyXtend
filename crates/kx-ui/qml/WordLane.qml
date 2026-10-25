@@ -46,7 +46,7 @@ Item {
 
     Accessible.role: Accessible.Grouping
     Accessible.name: kind === names.empty ? res.tr("chip.none") : ""
-    Accessible.id: res.uid("words", "lane")
+    Accessible.id: res.uid(names.group, "lane")
 
     WordNames {
         id: names
@@ -74,7 +74,7 @@ Item {
                         icon: lane.lk.icons.words[modelData.kind] || "",
                         ar: named ? lane.rtl : modelData.rtl,
                         name: modelData.name,
-                        uid: lane.res.uid("words", "chip-" + index)
+                        uid: lane.res.uid(names.group, "chip-" + index)
                     })
                 forget: lane.forgetting
                 radius: lane.radius
@@ -93,7 +93,7 @@ Item {
                     text: lane.res.tr("words.cancel"),
                     icon: lane.lk.icons.words.cancel,
                     ar: lane.rtl,
-                    uid: lane.res.uid("words", "cancel")
+                    uid: lane.res.uid(names.group, "cancel")
                 })
             radius: lane.radius
             lk: lane.lk
@@ -108,7 +108,7 @@ Item {
             height: row.height
             Accessible.role: Accessible.StaticText
             Accessible.name: note.text
-            Accessible.id: lane.res.uid("words", "locked")
+            Accessible.id: lane.res.uid(names.group, "locked")
             Icon {
                 id: padlock
                 anchors.verticalCenter: parent.verticalCenter

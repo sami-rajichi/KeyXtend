@@ -42,7 +42,7 @@ Item {
     height: over.height
     Accessible.role: Accessible.List
     Accessible.name: res.tr("chip.more")
-    Accessible.id: res.uid("words", "list")
+    Accessible.id: res.uid(names.group, "list")
     Component.onCompleted: popIn.restart()
 
     WordNames {
@@ -86,43 +86,19 @@ Item {
             anchors.rightMargin: box.pad
             anchors.verticalCenter: parent.verticalCenter
             spacing: box.pn.body_gap_px * box.s
-            Column {
-                visible: box.paged
+            Pager {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: box.pn.pager_gap_px * box.s
-                PageButton {
-                    icon: box.lk.icons.page.back
-                    name: box.res.tr("page.back")
-                    can: box.paged && box.list.page > 0
-                    lk: box.lk
-                    res: box.res
-                    s: box.s
-                    uid: box.res.uid("words", "list-back")
-                    onClicked: box.ask(box.asks.page, -1)
-                }
-                Label {
-                    width: box.pn.page_px[0] * box.s
-                    text: box.paged && box.ui ? box.ui.pageText(box.list.page + 1, box.list.pages) : ""
-                    font.family: box.res.fam.ui
-                    font.pixelSize: box.pn.count_px * box.s
-                    font.weight: box.pn.count_weight
-                    color: box.p.pop_muted
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    Accessible.ignored: false
-                    Accessible.role: Accessible.StaticText
-                    Accessible.name: text
-                }
-                PageButton {
-                    icon: box.lk.icons.page.on
-                    name: box.res.tr("page.on")
-                    can: box.paged && box.list.page < box.list.pages - 1
-                    lk: box.lk
-                    res: box.res
-                    s: box.s
-                    uid: box.res.uid("words", "list-on")
-                    onClicked: box.ask(box.asks.page, 1)
-                }
+                page: box.paged ? box.list.page : 0
+                pages: box.paged ? box.list.pages : 0
+                canBack: box.paged && box.list.page > 0
+                canOn: box.paged && box.list.page < box.list.pages - 1
+                ui: box.ui
+                lk: box.lk
+                res: box.res
+                s: box.s
+                backId: box.res.uid(names.group, "list-back")
+                onId: box.res.uid(names.group, "list-on")
+                onTurn: by => box.ask(box.asks.page, by)
             }
             PageButton {
                 anchors.verticalCenter: parent.verticalCenter
@@ -132,7 +108,7 @@ Item {
                 lk: box.lk
                 res: box.res
                 s: box.s
-                uid: box.res.uid("words", "list-cancel")
+                uid: box.res.uid(names.group, "list-cancel")
                 onClicked: box.ask(box.asks.cancel, 0)
             }
         }
@@ -146,7 +122,7 @@ Item {
         readonly property bool hot: area.containsMouse
         Accessible.role: Accessible.ListItem
         Accessible.name: email
-        Accessible.id: box.res.uid("words", "list-row-" + place)
+        Accessible.id: box.res.uid(names.group, "list-row-" + place)
         Accessible.onPressAction: box.ask(box.asks.pick, r.place)
         Hover {
             lk: box.lk

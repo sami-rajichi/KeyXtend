@@ -1,6 +1,6 @@
 // The words menu on the top bar's row: its items take the chips' place in the keyboard window, with no new row or
-// window, name Resume and On by the switches, send their asks to the hub, close, and show icons alone with tips when
-// their texts do not all fit.
+// window, name Resume and On by the switches, send their asks to the hub and close; each shows its icon and short label,
+// which drop from the row's end first when room is short, and names itself as a tip.
 import QtQuick
 import QtTest
 import "../qml"
@@ -8,6 +8,7 @@ import "board.js" as Board
 import "lanes.js" as Lanes
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "fixtures/words.js" as Words
 import "../../kx-theme/fixtures/look-native-light.js" as NL
@@ -21,6 +22,8 @@ Item {
     readonly property var res: Board.resOf(NL.lk, En)
     // The menu's items by their gate ids, in order.
     readonly property var items: ["words.menu-forget", "words.menu-pause", "words.menu-power", "words.menu-cancel"]
+    // Room left over a fit, less than any label, so float rounding never hides one.
+    readonly property real slack: 0.5
 
     Component { id: uiC; FakeUi {} }
     Component { id: kbC; FakeKeyboard {} }
@@ -63,6 +66,25 @@ Item {
             mouseClick(keyed(w.contentItem, "words.menu"));
             waitForRendering(w.contentItem);
             return root.items.map(id => keyed(w.contentItem, id));
+        }
+        // A top bar in `res`'s language and box `box`, drawing `lane`, with its menu open and laid out.
+        function menuBar(res, rtl, lane, box) {
+            const props = { box: box, lk: NL.lk, res: res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false, lane: lane, rtl: rtl };
+            const b = createTemporaryObject(barC, root, props);
+            mouseClick(keyed(b, "words.menu"));
+            waitForRendering(b);
+            return b;
+        }
+        // An item's label, the box its items pop in on, and the label keys the switches in `over` give, in order.
+        function label(item) {
+            return Board.all(item, o => o.font !== undefined)[0];
+        }
+        function shelf(items) {
+            return items[0].parent.parent;
+        }
+        function shorts(over) {
+            const learn = over.learn !== false, on = over.on !== false;
+            return ["words.forget-short", learn ? "words.pause-short" : "words.resume-short", on ? "words.off-short" : "words.on-short", "words.cancel"];
         }
         // The hub calls made since the last look.
         function asks(w) {
@@ -114,6 +136,7 @@ Item {
                 w.ui.lane = Lanes.some([0], over);
                 const item = open(w)[at];
                 compare(item.Accessible.name, name);
+                compare(label(item).text, En.texts[shorts(over)[at]], "its short label");
                 mouseClick(item);
                 compare(asks(w), [sent], name);
                 compare(ids(w.contentItem, root.items[at]).length, 0, name + " closes the menu");
@@ -156,27 +179,42 @@ Item {
             verify(keyed(w.contentItem, "words.menu").mapToItem(null, 0, 0).x > xs[3], "the menu button stays at the right");
         }
 
-        // Where every text fits, each item shows its icon and text; else its icon alone, with its name as a tip.
-        function test_items_show_icons_alone_with_tips_when_their_texts_do_not_fit() {
-            const props = { box: Face.board.bar, lk: NL.lk, res: root.res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false, lane: Lanes.some([0]), rtl: false };
-            const b = createTemporaryObject(barC, root, props);
-            const menu = keyed(b, "words.menu");
-            mouseClick(menu);
-            waitForRendering(b);
-            const tight = root.items.map(id => keyed(b, id));
-            const room = tight[0].parent.parent.width;
-            const full = tight.reduce((w, i) => w + i.full, (tight.length - 1) * NL.lk.shape.chip.gap_px);
-            verify(full > room, "the default bar has no room for every text: " + full + " > " + room);
-            verify(tight.every(i => i.bare), "icons alone");
+        // At the default size each item shows its icon and short label in English, French and Arabic, by either switch.
+        function test_every_label_shows_at_the_default_size_in_each_language() {
+            for (const t of [En, Fr, Ar]) {
+                for (const over of [{}, { learn: false, on: false }]) {
+                    const b = menuBar(Board.resOf(NL.lk, t), !!t.lang.rtl, Lanes.some([0], over), Face.board.bar);
+                    const items = root.items.map(id => keyed(b, id));
+                    const used = items.reduce((w, i) => w + i.full, (items.length - 1) * NL.lk.shape.chip.gap_px);
+                    const where = t.lang.tag + (over.on === false ? ", Resume and On" : "") + ": " + used.toFixed(1) + " of " + shelf(items).width.toFixed(1) + " px";
+                    verify(items.every(i => !i.bare), where);
+                    compare(items.map(i => label(i).text), shorts(over).map(k => t.texts[k]), where);
+                    verify(items.every(i => label(i).visible), where);
+                }
+            }
+        }
+
+        // Short of room, labels drop one at a time from the row's end, Cancel's first; every item names itself as a tip.
+        function test_labels_drop_from_the_end_first_and_each_item_names_itself_as_a_tip() {
+            const b = menuBar(root.res, false, Lanes.some([0]), Face.board.bar);
+            const items = root.items.map(id => keyed(b, id));
             const spy = createTemporaryObject(spyC, root, { target: b, signalName: "tip" });
-            mouseMove(tight[0], tight[0].width / 2, tight[0].height / 2);
-            tryCompare(spy, "count", 1, 1000);
-            compare(spy.signalArguments[0][0], En.texts["words.forget"], "its name as a tip");
+            mouseMove(items[0], items[0].width / 2, items[0].height / 2);
+            const tipped = name => spy.signalArguments.some(a => a[0] === name);
+            tryVerify(() => tipped(En.texts["words.forget"]), 1000, "a labelled item's tip is its full name");
             mouseMove(b, 1, 1);
-            b.box = Object.assign({}, Face.board.bar, { w: Face.board.bar.w + full });
-            tryVerify(() => root.items.every(id => !keyed(b, id).bare), 1000, "texts where they all fit");
-            const words = root.items.map(id => keyed(b, id)).map(i => Board.all(i, o => o.font !== undefined)[0]);
-            verify(words.every(t => t.visible && t.text.length > 0), "each shows its text");
+            const gap = NL.lk.shape.chip.gap_px;
+            for (let k = items.length - 1; k >= 0; k--) {
+                const need = items.reduce((w, i, n) => w + (n < k ? i.full : i.slim), (items.length - 1) * gap);
+                const room = shelf(items).width;
+                b.box = Object.assign({}, b.box, { w: b.box.w - room + need + root.slack });
+                tryVerify(() => Math.abs(shelf(items).width - need - root.slack) < root.slack, 1000, "room for " + k);
+                waitForRendering(b);
+                compare(items.map(i => i.bare), items.map((i, n) => n >= k), k + " labels");
+            }
+            spy.clear();
+            mouseMove(items[3], items[3].width / 2, items[3].height / 2);
+            tryVerify(() => tipped(En.texts["words.cancel"]), 1000, "an icon alone names itself too");
         }
     }
 }

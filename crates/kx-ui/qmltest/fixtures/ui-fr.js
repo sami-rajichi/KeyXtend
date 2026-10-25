@@ -54,6 +54,7 @@ var texts = {
   "button.ok": "OK",
   "button.retry": "Réessayer",
   "catch": "Cliquez pour terminer le déplacement ou le redimensionnement",
+  "chip.forget-name": "Oublier : {$word}",
   "chip.locked": "Champ de mot de passe : rien n’est proposé ni appris",
   "chip.more": "Autres adresses e-mail",
   "chip.name": "Suggestion : {$word}",
@@ -246,11 +247,16 @@ var texts = {
   "window.tip": "Info-bulle de KeyXtend",
   "words.cancel": "Annuler",
   "words.forget": "Oublier un mot",
+  "words.forget-short": "Oublier",
   "words.menu": "Menu des suggestions",
   "words.off": "Désactiver les suggestions",
+  "words.off-short": "Désactiver",
   "words.on": "Activer les suggestions",
+  "words.on-short": "Activer",
   "words.pause": "Mettre l’apprentissage en pause",
-  "words.resume": "Reprendre l’apprentissage"
+  "words.pause-short": "Pause",
+  "words.resume": "Reprendre l’apprentissage",
+  "words.resume-short": "Reprendre"
 };
 var more = [
   "",

@@ -4,7 +4,7 @@
 use super::{chip, heard, lane, speaking, words};
 use crate::Rig;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ChipKind, Lane, ListPage};
+use kx_module_api::ports::{ChipKind, Lane, ListPage, Suggested};
 use kx_ui::UiSettings;
 use serde_json::{Value, json};
 
@@ -62,6 +62,27 @@ fn chip_names_speak_the_keyboards_language() {
         "تراجع",
     ];
     assert_eq!(names, want.map(Value::from));
+}
+
+#[test]
+fn in_forget_mode_each_chip_is_named_by_what_a_click_does() {
+    let rows = UiSettings::from_defaults().unwrap().page_rows;
+    let want = [
+        ("en", "Forget: hello"),
+        ("fr", "Oublier\u{a0}: hello"),
+        ("ar", "نسيان: hello"),
+    ];
+    for (iso, name) in want {
+        let (rig, _host) = speaking(iso, rows);
+        let (bus, _sent, _subs) = heard(&rig);
+        let words_only = Lane::Chips(vec![chip("hello", ChipKind::Word, false)]);
+        let forgetting = Suggested {
+            forgetting: true,
+            ..lane(2, words_only)
+        };
+        bus.publish(&forgetting).unwrap();
+        assert_eq!(words(&rig)["chips"][0]["name"], name, "{iso}");
+    }
 }
 
 #[test]

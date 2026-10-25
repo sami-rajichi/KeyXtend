@@ -156,9 +156,12 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         icon: bar.lk.icons.words.menu
         name: bar.res.tr("words.menu")
-        uid: bar.res.uid("words", "menu")
+        uid: bar.res.uid(names.group, "menu")
         lit: words.open
         onClicked: words.open = !words.open
+    }
+    WordNames {
+        id: names
     }
 
     Row {

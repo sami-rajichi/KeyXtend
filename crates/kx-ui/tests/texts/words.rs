@@ -6,7 +6,8 @@ use kx_module_api::keys::{SCROLL_FAILED, SCROLL_POINT, WORDS_DAMAGED, WORDS_LOCK
 use kx_ui::find;
 use kx_ui::i18n::keys::{
     CHIP_LOCKED, CHIP_MORE, CHIP_NONE, CHIP_UNDO, MODULE, THEME, WORDS_CANCEL, WORDS_FORGET,
-    WORDS_MENU, WORDS_OFF, WORDS_ON, WORDS_PAUSE, WORDS_RESUME,
+    WORDS_FORGET_SHORT, WORDS_MENU, WORDS_OFF, WORDS_OFF_SHORT, WORDS_ON, WORDS_ON_SHORT,
+    WORDS_PAUSE, WORDS_PAUSE_SHORT, WORDS_RESUME, WORDS_RESUME_SHORT,
 };
 
 /// Arabic names of keys that print a Latin word: "مفتاح" and that word (owner, 2026-09-30).
@@ -49,6 +50,14 @@ const AR_WORDS: [(&str, &str); 13] = [
         WORDS_LOCKED,
         "تعذّر فتح الكلمات المتعلَّمة، لذا لن يُحفَظ ما يُتعلَّم هذه المرة.",
     ),
+];
+/// The menu rows' short labels in English, French and Arabic, as the owner gave them (P7).
+const SHORT: [(&str, [&str; 3]); 5] = [
+    (WORDS_FORGET_SHORT, ["Forget", "Oublier", "نسيان"]),
+    (WORDS_PAUSE_SHORT, ["Pause", "Pause", "إيقاف مؤقت"]),
+    (WORDS_RESUME_SHORT, ["Resume", "Reprendre", "استئناف"]),
+    (WORDS_OFF_SHORT, ["Off", "Désactiver", "إيقاف"]),
+    (WORDS_ON_SHORT, ["On", "Activer", "تشغيل"]),
 ];
 /// "Switch": Arabic keeps it for the mode button, never for a key's name.
 const AR_SWITCH: &str = "التبديل";
@@ -127,6 +136,15 @@ fn the_word_suggestion_texts_read_in_arabic_as_the_owner_gave_them() {
     let ar = lang("ar");
     for (key, text) in AR_WORDS {
         assert_eq!(ar.text(key), text, "{key}");
+    }
+}
+
+#[test]
+fn the_menus_short_labels_read_as_the_owner_gave_them() {
+    for (key, texts) in SHORT {
+        for (tag, text) in ["en", "fr", "ar"].into_iter().zip(texts) {
+            assert_eq!(lang(tag).text(key), text, "{tag} {key}");
+        }
     }
 }
 

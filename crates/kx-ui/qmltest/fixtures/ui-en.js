@@ -54,6 +54,7 @@ var texts = {
   "button.ok": "OK",
   "button.retry": "Try again",
   "catch": "Click to finish moving or resizing",
+  "chip.forget-name": "Forget: {$word}",
   "chip.locked": "Password box: nothing is suggested or learned",
   "chip.more": "More emails",
   "chip.name": "Suggestion: {$word}",
@@ -246,11 +247,16 @@ var texts = {
   "window.tip": "KeyXtend tip",
   "words.cancel": "Cancel",
   "words.forget": "Forget a word",
+  "words.forget-short": "Forget",
   "words.menu": "Suggestions menu",
   "words.off": "Turn suggestions off",
+  "words.off-short": "Off",
   "words.on": "Turn suggestions on",
+  "words.on-short": "On",
   "words.pause": "Pause learning",
-  "words.resume": "Resume learning"
+  "words.pause-short": "Pause",
+  "words.resume": "Resume learning",
+  "words.resume-short": "Resume"
 };
 var more = [
   "",

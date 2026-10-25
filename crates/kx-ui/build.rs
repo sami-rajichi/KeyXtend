@@ -74,6 +74,7 @@ mod qt {
         "qml/LangCycle.qml",
         "qml/PageDots.qml",
         "qml/PageButton.qml",
+        "qml/Pager.qml",
         "qml/LangList.qml",
         "qml/LangPanel.qml",
         "qml/LangRow.qml",

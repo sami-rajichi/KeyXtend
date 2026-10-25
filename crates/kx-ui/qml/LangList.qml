@@ -113,45 +113,20 @@ Window {
                 }
             }
         }
-        Column {
+        Pager {
             id: pager
-            visible: box.pages > 1
             anchors.right: parent.right
             anchors.rightMargin: box.pad
             anchors.verticalCenter: parent.verticalCenter
-            spacing: box.pn.pager_gap_px * box.s
-
-            PageButton {
-                icon: box.lk.icons.page.back
-                name: box.res.tr("page.back")
-                can: box.view.page.back && !!box.view.page_back
-                lk: box.lk
-                res: box.res
-                s: box.s
-                onClicked: box.page(box.view.page_back)
-            }
-            Label {
-                width: box.pn.page_px[0] * box.s
-                text: box.pages > 1 && box.res ? box.ui.pageText(box.at + 1, box.pages) : ""
-                font.family: box.res.fam.ui
-                font.pixelSize: box.pn.count_px * box.s
-                font.weight: box.pn.count_weight
-                color: box.p.pop_muted
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                Accessible.ignored: false
-                Accessible.role: Accessible.StaticText
-                Accessible.name: text
-            }
-            PageButton {
-                icon: box.lk.icons.page.on
-                name: box.res.tr("page.on")
-                can: box.view.page.on && !!box.view.page_on
-                lk: box.lk
-                res: box.res
-                s: box.s
-                onClicked: box.page(box.view.page_on)
-            }
+            page: box.at
+            pages: box.pages
+            canBack: box.view.page.back && !!box.view.page_back
+            canOn: box.view.page.on && !!box.view.page_on
+            ui: box.ui
+            lk: box.lk
+            res: box.res
+            s: box.s
+            onTurn: by => box.page(by < 0 ? box.view.page_back : box.view.page_on)
         }
         PressWatch {
             onTouched: box.touched()

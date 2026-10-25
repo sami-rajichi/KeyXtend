@@ -1,5 +1,6 @@
 // The chip lane on the top bar, drawn from the lanes the hub writes: chips fit whole, best first from the left, Arabic
-// in its font right to left; clicks reach the hub; the lock note, forget mode, Undo, More and the ids gates find.
+// in its font right to left; clicks reach the hub; the lock note, forget mode and its names, Undo, More and the ids
+// gates find.
 import QtQuick
 import QtTest
 import "../qml"
@@ -14,6 +15,7 @@ import "../../kx-theme/fixtures/look-et66-light.js" as EL
 import "../../kx-theme/fixtures/look-et66-dark.js" as ED
 import "../../kx-theme/fixtures/look-dolch-light.js" as DL
 import "../../kx-theme/fixtures/look-dolch-dark.js" as DD
+import "../../kx-theme/fixtures/look-native-light-contrast.js" as HC
 import "pointer.js" as Pointer
 
 Item {
@@ -147,20 +149,24 @@ Item {
             compare(keyed(w.contentItem, "words.lane").Accessible.name, "", "a lane with chips has them to say");
         }
 
-        // Forget mode marks each chip with the eraser in the danger keys' colours and ends the row with Cancel.
+        // Forget mode, as the hub sends it, holds word chips only: each wears the eraser in the danger keys' colours and
+        // its name says a click forgets it, and Cancel ends the row.
         function test_forget_mode_marks_the_chips_and_ends_the_row_with_cancel() {
-            const w = win(Lanes.some([0, 4, 5], { forgetting: true }));
+            const lane = Words.lanes.forget;
+            verify(lane.chips.every(c => c.kind === "word"), "words only");
+            const w = win(lane);
             const marked = shown(w.contentItem);
-            compare(marked.length, 3);
-            for (const c of marked) {
+            compare(marked.length, lane.chips.length);
+            for (const [i, c] of marked.entries()) {
                 verify(c.forget, c.chip.text);
                 const icon = Board.all(c, o => o.tint !== undefined && o.icon !== undefined)[0];
                 compare(icon.icon, NL.lk.icons.words.forget);
+                compare(c.Accessible.name, En.texts["chip.forget-name"].replace("{$word}", lane.chips[i].text));
             }
             const cancel = keyed(w.contentItem, "words.cancel");
             compare(cancel.Accessible.name, En.texts["words.cancel"]);
             verify(!cancel.forget, "Cancel keeps the chip look");
-            verify(cancel.mapToItem(null, 0, 0).x > marked[2].mapToItem(null, 0, 0).x, "it ends the row");
+            verify(cancel.mapToItem(null, 0, 0).x > marked[marked.length - 1].mapToItem(null, 0, 0).x, "it ends the row");
             mouseClick(cancel);
             compare(w.ui.calls.filter(c => c.startsWith("wordsAsk")), ["wordsAsk " + Words.asks.cancel + " 0"]);
         }
@@ -195,19 +201,20 @@ Item {
                 compare(names.asks[k], Words.asks[k], k);
         }
 
-        // Chips draw the pairs kx-theme checks in every theme and mode: the word in legend and the icon in legend_2_plate
-        // on chip_bg; in forget mode both in danger_ink on danger.
+        // Chips draw the pairs kx-theme checks in every theme and mode, high contrast too: the word in legend and the icon in
+        // legend_2_plate (legend in high contrast) on chip_bg; in forget mode both in danger_ink on danger.
         function test_chips_take_the_pairs_the_theme_checks_in_every_look() {
-            for (const lk of [NL.lk, ND.lk, EL.lk, ED.lk, DL.lk, DD.lk]) {
+            for (const lk of [NL.lk, ND.lk, EL.lk, ED.lk, DL.lk, DD.lk, HC.lk]) {
                 for (const forget of [false, true]) {
                     const chip = { text: "hello", icon: lk.icons.words.email };
                     const c = createTemporaryObject(chipC, root, { chip: chip, lk: lk, res: root.res, s: 1, radius: 4, forget: forget });
                     const p = lk.palette;
-                    const where = lk.look.id + (lk.dark ? " dark" : " light") + (forget ? ", forget" : "");
+                    const where = lk.look.id + (lk.dark ? " dark" : " light") + (lk.contrast ? ", contrast" : "") + (forget ? ", forget" : "");
                     verify(Qt.colorEqual(c.fill, forget ? p.danger : p.chip_bg), where);
                     verify(Qt.colorEqual(label(c).color, forget ? p.danger_ink : p.legend), where);
                     const icon = Board.all(c, o => o.tint !== undefined && o.icon !== undefined)[0];
-                    verify(Qt.colorEqual(icon.tint, forget ? p.danger_ink : p.legend_2_plate), where);
+                    const mark = forget ? p.danger_ink : lk.contrast ? p.legend : p.legend_2_plate;
+                    verify(Qt.colorEqual(icon.tint, mark), where);
                 }
             }
         }

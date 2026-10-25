@@ -1,5 +1,5 @@
-// The names the chip lane's JSON and `Ui.wordsAsk` use, held once in QML: tst_words checks the asks against the hub's
-// own (`kx_ui::asks`) and draws the lanes the hub writes.
+// The names the chip lane's JSON, `Ui.wordsAsk` and the gates use, held once in QML: tst_words checks the asks against
+// the hub's own (`kx_ui::asks`) and draws the lanes the hub writes.
 import QtQuick
 
 QtObject {
@@ -20,4 +20,6 @@ QtObject {
     readonly property string empty: "empty"
     // The chip kind that opens the email list.
     readonly property string more: "more"
+    // The gate-id group of the lane, its menu and the email list.
+    readonly property string group: "words"
 }

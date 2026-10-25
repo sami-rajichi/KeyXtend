@@ -54,7 +54,8 @@ fn chips(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     let p = &v.palette;
     let chip = p.chip_bg.on(plate);
     let chips = vec![chip, p.hover.on(chip)];
-    // In forget mode a chip takes the danger keys' colours, as forgetting erases.
+    // In forget mode a chip takes the danger keys' colours, as forgetting erases; its mark shares the word's ink, so the
+    // word's AA check covers it.
     let forget = p.danger.on(plate);
     let forgets = vec![forget, p.hover.on(forget)];
     // A chip is a button, so high contrast draws its icon in ButtonText, as its word.
@@ -66,18 +67,7 @@ fn chips(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     let pairs = [
         ("legend on chip", p.legend, chips.clone(), WCAG_AA),
         ("chip icon on chip", icon, chips, WCAG_SHAPES),
-        (
-            "danger_ink on forget chip",
-            p.danger_ink,
-            forgets.clone(),
-            WCAG_AA,
-        ),
-        (
-            "forget mark on forget chip",
-            p.danger_ink,
-            forgets,
-            WCAG_SHAPES,
-        ),
+        ("danger_ink on forget chip", p.danger_ink, forgets, WCAG_AA),
     ];
     for (name, ink, bgs, min) in pairs {
         out.push(worst(&format!("{name}{tag}"), ink, 1.0, &bgs, min));

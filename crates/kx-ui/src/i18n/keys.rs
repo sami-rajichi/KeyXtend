@@ -86,6 +86,8 @@ pub const KEYS_TIP: &str = "tip.keys";
 pub const LAYER_PAGE: &str = "key.layer-page";
 /// A chip's name for readers: `$word`, the chip's text, after a word saying it is a suggestion.
 pub const CHIP_NAME: &str = "chip.name";
+/// A chip's name for readers in forget mode: `$word`, after a word saying a click forgets it.
+pub const CHIP_FORGET_NAME: &str = "chip.forget-name";
 /// The More chip's text, which opens the email list.
 pub const CHIP_MORE: &str = "chip.more";
 /// The Undo chip's text, which brings back the word just forgotten.
@@ -98,13 +100,23 @@ pub const CHIP_LOCKED: &str = "chip.locked";
 pub const WORDS_MENU: &str = "words.menu";
 /// The menu row that makes the next chip tapped forgotten.
 pub const WORDS_FORGET: &str = "words.forget";
+/// The forget row's short label.
+pub const WORDS_FORGET_SHORT: &str = "words.forget-short";
 /// The chip that ends forget mode or closes the email list.
 pub const WORDS_CANCEL: &str = "words.cancel";
 /// The menu row that pauses learning.
 pub const WORDS_PAUSE: &str = "words.pause";
+/// The pause row's short label.
+pub const WORDS_PAUSE_SHORT: &str = "words.pause-short";
 /// The menu row that resumes learning.
 pub const WORDS_RESUME: &str = "words.resume";
+/// The resume row's short label.
+pub const WORDS_RESUME_SHORT: &str = "words.resume-short";
 /// The menu row that turns suggestions off.
 pub const WORDS_OFF: &str = "words.off";
+/// The off row's short label.
+pub const WORDS_OFF_SHORT: &str = "words.off-short";
 /// The menu row that turns suggestions on.
 pub const WORDS_ON: &str = "words.on";
+/// The on row's short label.
+pub const WORDS_ON_SHORT: &str = "words.on-short";

@@ -54,6 +54,7 @@ var texts = {
   "button.ok": "موافق",
   "button.retry": "إعادة المحاولة",
   "catch": "انقر لإنهاء النقل أو تغيير الحجم",
+  "chip.forget-name": "نسيان: {$word}",
   "chip.locked": "خانة كلمة مرور: لا اقتراحات ولا تعلّم",
   "chip.more": "عناوين بريد أخرى",
   "chip.name": "اقتراح: {$word}",
@@ -246,11 +247,16 @@ var texts = {
   "window.tip": "تلميح KeyXtend",
   "words.cancel": "إلغاء",
   "words.forget": "نسيان كلمة",
+  "words.forget-short": "نسيان",
   "words.menu": "قائمة الاقتراحات",
   "words.off": "إيقاف الاقتراحات",
+  "words.off-short": "إيقاف",
   "words.on": "تشغيل الاقتراحات",
+  "words.on-short": "تشغيل",
   "words.pause": "إيقاف التعلّم مؤقتًا",
-  "words.resume": "استئناف التعلّم"
+  "words.pause-short": "إيقاف مؤقت",
+  "words.resume": "استئناف التعلّم",
+  "words.resume-short": "استئناف"
 };
 var more = [
   "",

@@ -3,7 +3,8 @@
 
 use super::I18n;
 use super::keys::{
-    BANNER_MORE, CHIP_NAME, LAYER_PAGE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE, PAGE_OF, SPACE,
+    BANNER_MORE, CHIP_FORGET_NAME, CHIP_NAME, LAYER_PAGE, LIST_COUNT, LIST_JOIN, LIST_MORE, MODULE,
+    PAGE_OF, SPACE,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::{Notice, NoticeArg, args, is_hidden};
@@ -108,12 +109,14 @@ impl I18n {
         self.format(LAYER_PAGE, Some(&values))
     }
 
-    /// The name readers hear for a chip showing `word`, which loses its hidden marks first.
+    /// The name readers hear for a chip showing `word`, which loses its hidden marks first; in forget mode it says a
+    /// click forgets the word.
     #[must_use]
-    pub fn chip(&self, word: &str) -> String {
+    pub fn chip(&self, word: &str, forget: bool) -> String {
         let mut values = FluentArgs::new();
         values.set(WORD_VAR, clean(word));
-        self.format(CHIP_NAME, Some(&values))
+        let key = if forget { CHIP_FORGET_NAME } else { CHIP_NAME };
+        self.format(key, Some(&values))
     }
 
     /// The space bar's text from `parts`, the OS's names: the language, then the layout when known. Each loses its

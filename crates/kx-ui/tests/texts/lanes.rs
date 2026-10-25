@@ -54,8 +54,17 @@ fn lane(round: u32, lane: Lane) -> Suggested {
     }
 }
 
-/// The lanes by name as `hub` shows them: the start's, chips of every kind with an Arabic word, the lock, off, empty,
-/// and an open email list on its first page.
+/// The open list's first page.
+fn page() -> ListPage {
+    ListPage {
+        items: EMAILS.map(|e| Redacted::new(e.to_owned())).to_vec(),
+        page: 0,
+        pages: PAGES,
+    }
+}
+
+/// The lanes by name as `hub` shows them: the start's, chips of every kind with an Arabic word, forget mode's word
+/// chips, the lock, off, empty, and an open email list on its first page.
 pub fn lanes(hub: &Arc<Hub>) -> Value {
     let start: Value = serde_json::from_str(&hub.words_json()).expect("lane JSON");
     let bus = Bus::new(Arc::new(FakeCore::default()));
@@ -72,14 +81,13 @@ pub fn lanes(hub: &Arc<Hub>) -> Value {
         chip("", ChipKind::Undo, false),
         chip("", ChipKind::More, false),
     ];
-    let page = ListPage {
-        items: EMAILS.map(|e| Redacted::new(e.to_owned())).to_vec(),
-        page: 0,
-        pages: PAGES,
-    };
     let list = Suggested {
-        list: Some(page),
+        list: Some(page()),
         ..lane(11, Lane::Chips(chips.clone()))
+    };
+    let forget = Suggested {
+        forgetting: true,
+        ..lane(12, Lane::Chips(chips[..2].to_vec()))
     };
     let off = Suggested {
         on: false,
@@ -88,6 +96,7 @@ pub fn lanes(hub: &Arc<Hub>) -> Value {
     json!({
         "start": start,
         "chips": shown(lane(7, Lane::Chips(chips))),
+        "forget": shown(forget),
         "locked": shown(lane(8, Lane::Locked)),
         "off": shown(off),
         "empty": shown(lane(10, Lane::Empty)),
