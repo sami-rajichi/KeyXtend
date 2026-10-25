@@ -38,21 +38,49 @@ fn a_mixed_list_stays_whole() {
 }
 
 #[test]
-fn kanji_kana_and_hangul_count_as_one_script() {
-    let cjk = [
+fn kanji_and_kana_count_as_one_script_and_hangul_as_another() {
+    let japanese = [
         "食べる",
         "ひらがな",
         "漢字",
         "カタカナ",
-        "한국어",
+        "寿司",
         "日本",
         "東京",
         "すし",
         "ラーメン",
     ];
-    let mut words: Vec<(String, u32)> = (100..).zip(cjk).map(|(b, w)| (w.to_string(), b)).collect();
-    words.push(("sushi".to_string(), 99));
+    let mut words: Vec<(String, u32)> = (100..)
+        .zip(japanese)
+        .map(|(b, w)| (w.to_string(), b))
+        .collect();
+    words.push(("한국어".to_string(), 99));
     let list = run(&words);
-    assert_eq!(spellings(&list), cjk, "nine of ten words share the script");
-    assert_eq!(list.facts.script.first, ["sushi"]);
+    assert_eq!(
+        spellings(&list),
+        japanese,
+        "nine of ten words share the script"
+    );
+    assert_eq!(list.facts.script.first, ["한국어"]);
+}
+
+#[test]
+fn korean_counts_hanja_with_hangul_as_iso_15924_kore_does() {
+    let hangul = [
+        "사랑", "학교", "친구", "음식", "가족", "시간", "사람", "하늘", "바다", "나무", "도시",
+        "마음", "노래", "여름", "겨울", "아침", "저녁",
+    ];
+    let mut words: Vec<(String, u32)> = (100..)
+        .zip(hangul.iter().chain(&["漢字"]))
+        .map(|(b, w)| ((*w).to_string(), b))
+        .collect();
+    words.extend([("tv", 90), ("com", 91)].map(|(w, b)| (w.to_string(), b)));
+    let list = run(&words);
+    assert_eq!(
+        list.words.len(),
+        18,
+        "Hangul holds 0.85, and 0.9 with Hanja"
+    );
+    assert_eq!(list.facts.script.count, 2);
+    assert!(spellings(&list).contains(&"漢字"));
 }

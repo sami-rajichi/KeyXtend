@@ -7,6 +7,8 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::casing::Casing;
+
 /// The fold tables, compiled in so they are never read from disk.
 const TABLE: &str = include_str!("fold.toml");
 /// The table section that folds each apostrophe form to the one apostrophe words keep.
@@ -15,11 +17,12 @@ const APOSTROPHE: &str = "apostrophe";
 /// The tables, parsed once; a broken table would fold case only, and a test keeps it sound.
 static FOLDS: LazyLock<Folds> = LazyLock::new(|| Folds::parse(TABLE).unwrap_or_default());
 
-/// `word` in lower case, with the characters `fold.toml` lists dropped or replaced: accents, harakat and tatweel go,
-/// the alef forms and ى fold, and `’` becomes `'`. Folding a folded word changes nothing.
+/// `word` in lower case as `casing` says, with the characters `fold.toml` lists dropped or replaced unless the casing
+/// keeps them: accents, harakat and tatweel go, the alef forms and ى fold, and `’` becomes `'`. Folding twice changes
+/// nothing.
 #[must_use]
-pub fn fold(word: &str) -> String {
-    FOLDS.apply(word)
+pub fn fold(word: &str, casing: &Casing) -> String {
+    FOLDS.apply(word, casing)
 }
 
 /// The apostrophe that elided and joined words keep (`l'`, `don't`), which every other form folds to; `None` only
@@ -127,11 +130,11 @@ impl Folds {
             .map_or(Ok(()), |c| Err(FoldTableError::Chained(c)))
     }
 
-    /// `word` lower-cased, then each character dropped, replaced or kept.
-    fn apply(&self, word: &str) -> String {
+    /// `word` lower-cased by `casing`, then each character dropped, replaced or kept.
+    fn apply(&self, word: &str, casing: &Casing) -> String {
         let mut out = String::with_capacity(word.len());
-        for c in word.to_lowercase().chars() {
-            match self.map.get(&c) {
+        for c in casing.lower(word).chars() {
+            match self.map.get(&c).filter(|_| !casing.keeps(c)) {
                 None => out.push(c),
                 Some(Some(to)) => out.push_str(to),
                 Some(None) => {}

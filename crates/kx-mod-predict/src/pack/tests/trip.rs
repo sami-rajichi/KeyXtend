@@ -3,27 +3,28 @@
 use std::collections::BTreeSet;
 
 use super::super::*;
+use crate::casing::Casing;
 use crate::fold::fold;
 
 /// The sample pack's language.
 const ISO: &str = "fr";
 /// Followers kept per context; the sample gives `the` three, so the lowest goes.
 const FOLLOWERS: u8 = 2;
-/// The sample's words: spelling, frequency bucket and whether it is always capitalised.
+/// The sample's words: spelling, with its capitals, and frequency bucket.
 const WORDS: &[Word] = &[
-    ("école", 200, false),
-    ("économie", 150, false),
-    ("à", 250, false),
-    ("a", 255, false),
-    ("the", 255, false),
-    ("London", 180, true),
-    ("I", 240, true),
-    ("أن", 240, false),
-    ("إن", 230, false),
-    ("أنا", 220, false),
-    ("على", 250, false),
-    ("إلى", 245, false),
-    ("المدرسة", 150, false),
+    ("école", 200),
+    ("économie", 150),
+    ("à", 250),
+    ("a", 255),
+    ("the", 255),
+    ("London", 180),
+    ("I", 240),
+    ("أن", 240),
+    ("إن", 230),
+    ("أنا", 220),
+    ("على", 250),
+    ("إلى", 245),
+    ("المدرسة", 150),
 ];
 /// The sample's chains: the words before, the next word and its score.
 const CHAINS: &[Chain] = &[
@@ -36,7 +37,7 @@ const CHAINS: &[Chain] = &[
 ];
 
 /// A word as the sample lists it.
-type Word = (&'static str, u8, bool);
+type Word = (&'static str, u8);
 /// A chain as the sample lists it.
 type Chain = (&'static [&'static str], &'static str, u8);
 
@@ -55,8 +56,8 @@ fn written<'w>(
         chains: true,
     };
     let mut writer = PackWriter::new(ISO, flags, FOLLOWERS).unwrap();
-    for (spelling, freq, capital) in words {
-        writer.add_word(spelling, *freq, *capital).unwrap();
+    for (spelling, freq) in words {
+        writer.add_word(spelling, *freq).unwrap();
     }
     for (context, next, score) in chains {
         writer.add_chain(context, next, *score).unwrap();
@@ -74,7 +75,7 @@ fn the_same_words_and_chains_in_another_order_give_the_same_bytes() {
 
 /// The id of `spelling` in `pack`, found through its folded key's run.
 pub(super) fn id(pack: &Pack<'_>, spelling: &str) -> WordId {
-    let run = pack.run(&fold(spelling));
+    let run = pack.run(&fold(spelling, Casing::of(ISO)));
     run.into_iter()
         .find(|&id| pack.spelling(id) == spelling)
         .unwrap()
@@ -102,13 +103,13 @@ fn the_header_round_trips() {
 }
 
 #[test]
-fn every_word_round_trips_with_its_frequency_and_capital() {
+fn every_word_round_trips_with_its_capitals_and_frequency() {
     let bytes = sample();
     let pack = Pack::parse(&bytes).unwrap();
-    for (spelling, freq, capital) in WORDS {
+    for (spelling, freq) in WORDS {
         let id = id(&pack, spelling);
+        assert_eq!(pack.spelling(id), *spelling);
         assert_eq!(pack.freq(id), *freq, "{spelling}");
-        assert_eq!(pack.capital(id), *capital, "{spelling}");
     }
 }
 
@@ -117,10 +118,13 @@ fn one_folded_key_is_one_run_highest_frequency_first() {
     let bytes = sample();
     let pack = Pack::parse(&bytes).unwrap();
     assert_eq!(spellings(&pack, pack.run("a")), ["a", "à"]);
-    assert_eq!(spellings(&pack, pack.run(&fold("إن"))), ["أن", "إن"]);
+    assert_eq!(
+        spellings(&pack, pack.run(&fold("إن", Casing::of(ISO)))),
+        ["أن", "إن"]
+    );
     assert!(pack.run("zz").is_empty());
     let keys: Vec<String> = (0..pack.word_count())
-        .map(|id| fold(pack.spelling(id)))
+        .map(|id| fold(pack.spelling(id), Casing::of(ISO)))
         .collect();
     assert!(keys.is_sorted(), "the word table is sorted by folded key");
 }

@@ -14,6 +14,7 @@ use crate::track::Reading;
 
 mod elisions;
 mod learned;
+mod scripts;
 
 /// The followers each test pack keeps per context.
 const FOLLOWERS: u8 = 8;
@@ -33,8 +34,8 @@ const CFG: ScoreConfig = ScoreConfig {
     min_uses: 2,
 };
 
-/// One test word: its spelling, frequency byte and capital flag.
-type Word<'a> = (&'a str, u8, bool);
+/// One test word: its spelling, with its capitals, and its frequency byte.
+type Word<'a> = (&'a str, u8);
 /// One test chain: its context, next word and score.
 type Chain<'a> = (&'a [&'a str], &'a str, u8);
 
@@ -45,8 +46,8 @@ fn pack(iso: &str, words: &[Word<'_>], chains: &[Chain<'_>]) -> Vec<u8> {
         chains: !chains.is_empty(),
     };
     let mut writer = PackWriter::new(iso, flags, FOLLOWERS).unwrap();
-    for (spelling, freq, capital) in words {
-        writer.add_word(spelling, *freq, *capital).unwrap();
+    for (spelling, freq) in words {
+        writer.add_word(spelling, *freq).unwrap();
     }
     for (context, next, score) in chains {
         writer.add_chain(context, next, *score).unwrap();
@@ -58,18 +59,18 @@ fn pack(iso: &str, words: &[Word<'_>], chains: &[Chain<'_>]) -> Vec<u8> {
 /// between `of`'s share and that share times the backoff.
 fn english() -> Vec<u8> {
     let words = [
-        ("of", 195, false),
-        ("park", 190, false),
-        ("the", 180, false),
-        ("in", 170, false),
-        ("they", 165, false),
-        ("there", 160, false),
-        ("then", 158, false),
-        ("walk", 140, false),
-        ("run", 140, false),
-        ("fast", 130, false),
-        ("London", 130, true),
-        ("theory", 110, false),
+        ("of", 195),
+        ("park", 190),
+        ("the", 180),
+        ("in", 170),
+        ("they", 165),
+        ("there", 160),
+        ("then", 158),
+        ("walk", 140),
+        ("run", 140),
+        ("fast", 130),
+        ("London", 130),
+        ("theory", 110),
     ];
     let chains: [Chain<'_>; 4] = [
         (&["in"], "the", 240),
@@ -80,34 +81,41 @@ fn english() -> Vec<u8> {
     pack("en", &words, &chains)
 }
 
-/// French: accented words, elisions and a whole word holding an apostrophe.
+/// French: accented words, elisions with their followers, and whole words holding an apostrophe; `et` and `unis` are
+/// frequent words that never follow an elision.
 fn french() -> Vec<u8> {
     let words = [
-        ("à", 181, false),
-        ("l'", 181, false),
-        ("a", 175, false),
-        ("au", 169, false),
-        ("école", 150, false),
-        ("écoute", 140, false),
-        ("jusqu'à", 137, false),
-        ("économie", 130, false),
-        ("jusqu'au", 124, false),
-        ("vois", 120, false),
-        ("écologie", 110, false),
-        ("jusqu'", 99, false),
+        ("et", 190),
+        ("un", 185),
+        ("à", 181),
+        ("l'", 181),
+        ("a", 175),
+        ("au", 169),
+        ("école", 150),
+        ("unis", 150),
+        ("quelqu'un", 145),
+        ("écoute", 140),
+        ("homme", 140),
+        ("jusqu'à", 137),
+        ("économie", 130),
+        ("jusqu'au", 124),
+        ("vois", 120),
+        ("écologie", 110),
+        ("quelqu'", 100),
+        ("jusqu'", 99),
     ];
-    let chains: [Chain<'_>; 1] = [(&["l'"], "école", 230)];
+    let chains: [Chain<'_>; 2] = [(&["l'"], "école", 230), (&["quelqu'"], "un", 240)];
     pack("fr", &words, &chains)
 }
 
 /// Arabic: the hamza forms of `أن` and `إن`, and words that fold alike.
 fn arabic() -> Vec<u8> {
     let words = [
-        ("من", 187, false),
-        ("أن", 175, false),
-        ("إن", 156, false),
-        ("أنا", 147, false),
-        ("انتظر", 120, false),
+        ("من", 187),
+        ("أن", 175),
+        ("إن", 156),
+        ("أنا", 147),
+        ("انتظر", 120),
     ];
     pack("ar", &words, &[])
 }

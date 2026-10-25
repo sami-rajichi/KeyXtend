@@ -23,6 +23,16 @@ fn a_read_fills_the_context_and_its_last_word_stays_open() {
 }
 
 #[test]
+fn a_read_word_is_learned_only_when_some_of_it_was_typed() {
+    let mut t = tracker(2);
+    t.read(Some("hel"), &knows);
+    assert!(learned(&type_text(&mut t, " ")).is_empty());
+    t.read(Some("hel"), &knows);
+    let told = type_text(&mut t, "lo ");
+    assert_eq!(learned(&told), [("hello".to_owned(), owned(&[]))]);
+}
+
+#[test]
 fn a_read_learns_nothing_and_an_empty_read_knows_the_box_is_empty() {
     let mut t = tracker(2);
     t.read(Some("hello world "), &knows);

@@ -13,8 +13,10 @@ mod script;
 mod text;
 mod wordfreq;
 
+use kx_mod_predict::{Casing, Pack};
+
 use super::cands::candidates;
-use super::clean;
+use super::chains::Picked;
 use super::dict::Dict;
 use super::fixture::{self, AFF, dic};
 use super::list::{self, Word, WordList};
@@ -22,6 +24,7 @@ use super::manifest::Plan;
 use super::report::report;
 use super::text::TextCounts;
 use super::wordfreq::{Entry, freq};
+use super::{clean, out};
 
 fn entries(words: &[(&str, u32)]) -> Vec<Entry> {
     let entry = |(word, bucket): &(&str, u32)| Entry {
@@ -60,11 +63,10 @@ fn spellings(list: &WordList) -> Vec<&str> {
     list.words.iter().map(|w| w.spelling.as_str()).collect()
 }
 
-fn word(spelling: &str, bucket: u32, capital: bool) -> Word {
+fn word(spelling: &str, bucket: u32) -> Word {
     Word {
         spelling: spelling.to_string(),
         freq: freq(bucket),
-        capital,
     }
 }
 
@@ -72,25 +74,24 @@ fn word(spelling: &str, bucket: u32, capital: bool) -> Word {
 fn the_dictionary_drops_ete_into_ete_and_keeps_a_and_a_grave() {
     let words = [("ete", 300), ("été", 310), ("a", 200), ("à", 250)];
     let list = build(&words, &["été", "a", "à"]);
-    let expected = [
-        word("a", 200, false),
-        word("à", 250, false),
-        word("été", 300, false),
-    ];
+    let expected = [word("a", 200), word("à", 250), word("été", 300)];
     assert_eq!(list.words, expected, "ete gives its frequency to été");
     assert_eq!(list.facts.merged.first, ["ete → été"]);
 }
 
 #[test]
-fn capitals_return_with_their_flag() {
+fn dictionary_capitals_return_in_the_spellings_the_pack_holds() {
     let words = [("london", 400), ("i", 150), ("the", 130)];
     let list = build(&words, &["I", "London", "the"]);
-    let expected = [
-        word("the", 130, false),
-        word("I", 150, true),
-        word("London", 400, true),
-    ];
+    let expected = [word("the", 130), word("I", 150), word("London", 400)];
     assert_eq!(list.words, expected);
+    let bytes = out::write_pack("en", &list, &Picked::default(), 1).unwrap();
+    let pack = Pack::parse(&bytes).unwrap();
+    let spelt: Vec<&str> = (0..pack.word_count()).map(|id| pack.spelling(id)).collect();
+    assert!(
+        spelt.contains(&"London") && spelt.contains(&"I"),
+        "{spelt:?}"
+    );
 }
 
 #[test]
@@ -99,7 +100,7 @@ fn the_dictionary_lists_each_form_it_accepts_its_own_first() {
         AFF,
         &["été", "London", "i", "I", "l", "l'", "jusqu'", "أنا"],
     );
-    let forms = |w: &str| dict.forms(w);
+    let forms = |w: &str| dict.forms(w, Casing::root());
     assert_eq!(forms("été"), ["été"]);
     assert_eq!(forms("london"), ["London"]);
     assert_eq!(forms("i"), ["i", "I"]);
@@ -107,6 +108,20 @@ fn the_dictionary_lists_each_form_it_accepts_its_own_first() {
     assert_eq!(forms("jusqu"), ["jusqu'"]);
     assert_eq!(forms("أنا"), ["أنا"]);
     assert!(forms("ete").is_empty() && forms("انا").is_empty());
+}
+
+#[test]
+fn a_turkish_list_takes_the_dictionary_capitals_turkish_casing_writes() {
+    let rules = fixture::rules();
+    let dict = dict(AFF, &["İstanbul", "Irmak", "ılık"]);
+    let plan = Plan {
+        iso: "tr".to_string(),
+        ..plan(100)
+    };
+    let words = [("istanbul", 300), ("ırmak", 200), ("ılık", 190)];
+    let cands = candidates(entries(&words), &plan, Some(&dict), &rules);
+    let list = list::finish(cands, None, &rules).unwrap();
+    assert_eq!(spellings(&list), ["ılık", "Irmak", "İstanbul"]);
 }
 
 #[test]
@@ -120,10 +135,7 @@ fn an_elided_form_comes_from_the_dictionary() {
 fn a_join_takes_the_frequency_of_its_rarer_piece() {
     let words = [("aujourd", 500), ("hui", 520), ("homme", 300)];
     let list = build(&words, &["aujourd'hui", "homme"]);
-    assert_eq!(
-        list.words,
-        [word("homme", 300, false), word("aujourd'hui", 520, false)]
-    );
+    assert_eq!(list.words, [word("homme", 300), word("aujourd'hui", 520)]);
     assert_eq!(list.facts.joins.first, ["aujourd'hui"]);
     let gaps = list.coverage.map(|c| c.first);
     assert_eq!(

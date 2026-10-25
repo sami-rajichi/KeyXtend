@@ -39,13 +39,13 @@ impl<'a> Judge<'a> {
             let seen = text.count(form);
             let pieces: HashSet<String> = (form.split(apostrophe))
                 .filter(|p| !p.is_empty())
-                .map(str::to_lowercase)
+                .map(|p| text.casing.lower(p))
                 .collect();
             for piece in pieces {
                 *joined.entry(piece).or_default() += seen;
             }
             let last = form.rsplit(apostrophe).next().unwrap_or_default();
-            *ending.entry(last.to_lowercase()).or_default() += seen;
+            *ending.entry(text.casing.lower(last)).or_default() += seen;
         }
         Self {
             text,
@@ -58,7 +58,7 @@ impl<'a> Judge<'a> {
     /// How often the apostrophe words holding `spelling` were seen, when it is a piece: they were seen at least
     /// `piece_min_seen` times and over `piece_ratio` times as often as it stands alone (`ll` of `I'll`).
     pub(crate) fn piece(&self, spelling: &str, rules: &Rules) -> Option<u64> {
-        let joined = self.joined.get(&spelling.to_lowercase()).copied();
+        let joined = self.joined.get(&self.text.casing.lower(spelling)).copied();
         let joined = joined.unwrap_or_default();
         let dwarfed = float(joined) > rules.piece_ratio * float(self.text.alone(spelling));
         (joined >= rules.piece_min_seen && dwarfed).then_some(joined)
@@ -68,23 +68,21 @@ impl<'a> Judge<'a> {
     /// stem rule decides its frequency.
     pub(crate) fn is_stem(&self, spelling: &str, apostrophe: char) -> bool {
         let mut pieces = spelling.split(apostrophe).filter(|p| !p.is_empty());
-        spelling.contains(apostrophe) && pieces.all(|p| self.tokens.contains_key(&p.to_lowercase()))
+        spelling.contains(apostrophe)
+            && pieces.all(|p| self.tokens.contains_key(&self.text.casing.lower(p)))
     }
 
     /// The bucket of the stem `spelling` of `bucket`, `None` when the text never shows it. An elision (`l'`), even
     /// unseen, and a wordfreq token keep their own; any other takes its share of every sighting of its right piece
     /// (`s` of `vent's`), alone or glued to any word, as wordfreq counted them.
     pub(crate) fn stem_bucket(&self, spelling: &str, bucket: u32, apostrophe: char) -> Option<u32> {
-        let right = spelling
-            .rsplit(apostrophe)
-            .next()
-            .unwrap_or_default()
-            .to_lowercase();
+        let right =
+            (self.text.casing).lower(spelling.rsplit(apostrophe).next().unwrap_or_default());
         let Some(&piece) = self.tokens.get(&right) else {
             return Some(bucket);
         };
         let seen = self.text.count(spelling);
-        if seen == 0 || self.tokens.contains_key(&spelling.to_lowercase()) {
+        if seen == 0 || self.tokens.contains_key(&self.text.casing.lower(spelling)) {
             return (seen > 0).then_some(bucket);
         }
         let ending = self.ending.get(&right).copied().unwrap_or_default();

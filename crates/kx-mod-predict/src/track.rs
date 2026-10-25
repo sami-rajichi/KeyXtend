@@ -7,13 +7,13 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{FieldChange, Piece};
 
 use crate::email;
-use crate::split::split_word;
+use crate::split::{Place, edges, places, spans, split_word};
 
 mod show;
 mod token;
 
 pub use show::{EmailAsk, Plan, Query, Reading, Show};
-use token::{Token, apostrophe, learnable, parts};
+use token::{Token, apostrophe, learnable};
 
 /// What the tracker needs from the settings; the module fills it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,6 +106,10 @@ impl Tracker {
                 told.push(Told::Read);
             }
             Piece::Erase => {}
+            Piece::Advance => {
+                self.end(knows, Source::Typed, &mut told);
+                self.state = State::Known(Vec::new());
+            }
             Piece::Break => return self.reset(),
         }
         told
@@ -180,10 +184,15 @@ impl Tracker {
 
     /// Takes one character: a space ends the token, anything else joins it.
     fn feed(&mut self, c: char, knows: &dyn Fn(&str) -> bool, from: Source, told: &mut Vec<Told>) {
-        if !c.is_whitespace() {
+        if c.is_whitespace() {
+            self.end(knows, from, told);
+        } else {
             self.token.push(c);
-            return;
         }
+    }
+
+    /// Ends the token whole, as a space or Enter does; only a token with typed characters hands anything out.
+    fn end(&mut self, knows: &dyn Fn(&str) -> bool, from: Source, told: &mut Vec<Told>) {
         let token = std::mem::take(&mut self.token);
         if token.is_empty() {
             return;
@@ -197,8 +206,8 @@ impl Tracker {
         self.state = State::Known(before);
     }
 
-    /// Ends `token` after the words `before`: an email is told, a word splits at its apostrophes and each piece
-    /// standing alone is learned and joins the context; anything else clears it. `told` is `None` for a read.
+    /// Ends `token` after the words `before`: an email is told; otherwise each word is split and placed by the
+    /// build's rule, and a mark after the last word clears the context. `told` is `None` for a read.
     fn finish(
         &self,
         token: &Token,
@@ -207,44 +216,59 @@ impl Tracker {
         mut told: Option<&mut Vec<Told>>,
     ) {
         if email::at().is_some_and(|a| token.text().contains(a)) {
-            let tail = email::tail(token.text());
-            if let Some(told) = told.filter(|_| email::looks_like(tail)) {
-                told.push(Told::Email(Redacted::new(tail.to_owned())));
-            }
-            before.clear();
+            finish_email(token.text(), before, told);
             return;
         }
         let normal = token.normal();
-        let found = parts(&normal);
-        let alone = !found.glued && learnable(found.word, self.cfg.max_word);
-        if found.marked || !alone {
+        let found = spans(&normal, apostrophe());
+        let mut pieces = Vec::new();
+        for (k, &(start, end)) in found.iter().enumerate() {
+            let (free, joined) = edges(&normal, &found, k);
+            pieces.clear();
+            let word = normal.get(start..end).unwrap_or_default();
+            split_word(word, apostrophe(), knows, &mut pieces);
+            for (&(piece, _), place) in pieces.iter().zip(places(&pieces, free, joined)) {
+                self.take(piece, place, before, told.as_deref_mut());
+            }
+        }
+        if found.last().is_none_or(|&(_, end)| end < normal.len()) {
             before.clear();
         }
-        if !alone {
+    }
+
+    /// Learns `piece` after `before` when it stands alone and may be learned; a piece that does not join clears the
+    /// context first, and one that is not learned ends it.
+    fn take(
+        &self,
+        piece: &str,
+        place: Place,
+        before: &mut Vec<String>,
+        told: Option<&mut Vec<Told>>,
+    ) {
+        if !place.joined {
+            before.clear();
+        }
+        if !place.alone || !learnable(piece, self.cfg.max_word) {
+            before.clear();
             return;
         }
-        let mut pieces = Vec::new();
-        split_word(found.word, apostrophe(), knows, &mut pieces);
-        let last = pieces.len().saturating_sub(1);
-        for (j, &(piece, elided)) in pieces.iter().enumerate() {
-            let left = j
-                .checked_sub(1)
-                .and_then(|p| pieces.get(p))
-                .is_none_or(|p| p.1);
-            if !(left && (j == last || elided)) {
-                before.clear();
-                continue;
-            }
-            if let Some(told) = told.as_deref_mut() {
-                let (word, context) = (
-                    Redacted::new(piece.to_owned()),
-                    Redacted::new(before.clone()),
-                );
-                told.push(Told::Learn { word, context });
-            }
-            push_capped(before, piece.to_owned(), self.cfg.context_words);
+        if let Some(told) = told {
+            let (word, context) = (
+                Redacted::new(piece.to_owned()),
+                Redacted::new(before.clone()),
+            );
+            told.push(Told::Learn { word, context });
         }
+        push_capped(before, piece.to_owned(), self.cfg.context_words);
     }
+}
+
+/// Tells the email `token` holds, if any, and clears the context, as an email is never a word.
+fn finish_email(token: &str, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
+    if let (Some(told), Some(email)) = (told, email::capture(token)) {
+        told.push(Told::Email(Redacted::new(email.to_owned())));
+    }
+    before.clear();
 }
 
 /// Adds `word` after `words`, dropping the oldest past `cap`.

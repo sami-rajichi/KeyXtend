@@ -93,8 +93,6 @@ impl Token {
 pub(super) struct Parts<'t> {
     /// The word at the token's end; empty when a mark ends the token.
     pub(super) word: &'t str,
-    /// True when another word comes before it in the token, glued by a mark (`a.b`, `site.com/path`).
-    pub(super) glued: bool,
     /// True when anything comes before it in the token, so no chain runs into it.
     pub(super) marked: bool,
 }
@@ -105,22 +103,21 @@ pub(super) fn parts(normal: &str) -> Parts<'_> {
     match found.last() {
         Some(&(start, end)) if end == normal.len() => Parts {
             word: normal.get(start..).unwrap_or_default(),
-            glued: found.len() > 1,
             marked: start > 0,
         },
         _ => Parts {
             word: "",
-            glued: !found.is_empty(),
             marked: !normal.is_empty(),
         },
     }
 }
 
-/// True when `word` may get guesses and be learned: it holds no digit, one script, and at most `max_word`
-/// characters.
+/// True when `word` may get guesses and be learned: it holds no digit, one script that spaces its words, and at most
+/// `max_word` characters. Unspaced scripts wait for the CJK input mode, as spaces cannot end their words.
 pub(super) fn learnable(word: &str, max_word: usize) -> bool {
     !word.is_empty()
         && !word.chars().any(char::is_numeric)
         && script::single(word)
+        && script::of(word).is_none_or(|s| !s.gap().is_empty())
         && word.chars().count() <= max_word
 }

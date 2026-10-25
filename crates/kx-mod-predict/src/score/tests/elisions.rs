@@ -40,6 +40,30 @@ fn a_split_reading_weighs_its_elision_so_whole_words_come_first() {
 }
 
 #[test]
+fn a_typed_apostrophe_form_is_kept_whichever_reading_wins() {
+    let (_, found) = typed_fr("jusqu\u{2019}a");
+    assert!(found.iter().all(|t| !t.contains('\'')), "{found:?}");
+    let once = found.iter().filter(|t| *t == "jusqu\u{2019}à").count();
+    assert_eq!(once, 1, "{found:?}");
+}
+
+#[test]
+fn after_an_elision_a_frequent_word_that_never_follows_it_is_not_offered() {
+    let (_, found) = typed_fr("vois l'e");
+    assert!(found.contains(&"l'école".to_owned()), "{found:?}");
+    assert!(!found.contains(&"l'et".to_owned()), "{found:?}");
+    let (_, whole) = typed_fr("quelqu'un");
+    assert!(whole.contains(&"quelqu'un".to_owned()), "{whole:?}");
+    assert!(!whole.iter().any(|t| t == "quelqu'unis"), "{whole:?}");
+}
+
+#[test]
+fn a_prefix_no_follower_starts_still_gets_word_list_guesses() {
+    let (_, found) = typed_fr("vois l'h");
+    assert_eq!(found.first().map(String::as_str), Some("l'homme"));
+}
+
+#[test]
 fn after_an_elision_only_its_followers_come_and_the_elision_itself_is_not_offered() {
     assert_eq!(typed_fr("vois l'").1, ["l'école"]);
 }

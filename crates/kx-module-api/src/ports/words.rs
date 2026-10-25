@@ -13,7 +13,9 @@ pub enum Piece {
     Text(Redacted<String>),
     /// One Backspace.
     Erase,
-    /// Enter, Tab, an arrow, Delete, Home, End, Esc, a shortcut or chord, or a language switch.
+    /// Enter or Tab: the word ends whole, as at a space, and a new line or field starts.
+    Advance,
+    /// An arrow, Delete, Home, End, Esc, a shortcut or chord, or a language switch: the word may be half edited.
     Break,
 }
 

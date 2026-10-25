@@ -5,6 +5,8 @@
     reason = "The chain counts here are sums of whole numbers and halves, exact in an f32."
 )]
 
+use kx_mod_predict::Casing;
+
 use super::super::count::{
     ChainKey, Chains, Counted, Counter, KEY_LEN, NONE, Repeats, key as key_of,
 };
@@ -39,7 +41,7 @@ fn vocab() -> Vocab {
         .zip(words)
         .map(|(i, w)| cand(&w, 300 + i, 0))
         .collect();
-    Vocab::new(&cands)
+    Vocab::new(&cands, Casing::root())
 }
 
 #[test]
@@ -51,7 +53,7 @@ fn a_token_finds_its_candidate_by_spelling_lower_case_or_fold_key() {
         cand(&["a"], 210, 3),
         cand(&["à"], 220, 4),
     ];
-    let vocab = Vocab::new(&cands);
+    let vocab = Vocab::new(&cands, Casing::root());
     let found = |t: &str| vocab.find(t).map(|h| (h.cand, h.form.is_some()));
     assert_eq!(found("l'"), Some((0, true)));
     assert_eq!(found("L'"), Some((0, false)));
@@ -66,6 +68,31 @@ fn a_token_finds_its_candidate_by_spelling_lower_case_or_fold_key() {
         (Some((3, false)), Some((4, false)))
     );
     assert_eq!(found("zzz"), None);
+}
+
+#[test]
+fn a_turkish_token_finds_its_candidate_by_turkish_casing() {
+    let cands = [cand(&["ılık"], 200, 0), cand(&["ilik"], 210, 1)];
+    let tr = Vocab::new(&cands, Casing::of("tr"));
+    let found = |v: &Vocab, t: &str| v.find(t).map(|h| h.cand);
+    assert_eq!((found(&tr, "ILIK"), found(&tr, "İLİK")), (Some(0), Some(1)));
+    let en = Vocab::new(&cands, Casing::root());
+    assert_eq!(
+        found(&en, "ILIK"),
+        Some(1),
+        "Unicode's default lowers I to i"
+    );
+}
+
+#[test]
+fn turkish_text_counts_dotless_and_dotted_words_apart() {
+    let cands = [cand(&["ılık"], 200, 0), cand(&["ilik"], 210, 1)];
+    let (vocab, rules) = (Vocab::new(&cands, Casing::of("tr")), rules());
+    let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
+    counter.add("ılık ılık ilik ılık", 1, false);
+    let text = counter.finish().text;
+    assert_eq!((text.alone("ılık"), text.alone("ilik")), (3, 1));
+    assert_eq!((text.seen("ılık"), text.seen("ilik")), (2, 1));
 }
 
 #[test]
@@ -117,7 +144,7 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
         cand(&["est"], 210, 2),
         cand(&["a"], 220, 3),
     ];
-    let (vocab, rules) = (Vocab::new(&cands), rules());
+    let (vocab, rules) = (Vocab::new(&cands, Casing::root()), rules());
     let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
     counter.add("C'est vrai. c'est ç'a", 1, false);
     let text = counter.finish().text;

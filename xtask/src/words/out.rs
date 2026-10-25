@@ -25,7 +25,7 @@ pub(crate) fn write_pack(
     let mut writer = PackWriter::new(iso, flags, followers).map_err(refused)?;
     for word in &list.words {
         writer
-            .add_word(&word.spelling, word.freq, word.capital)
+            .add_word(&word.spelling, word.freq)
             .map_err(refused)?;
     }
     for context in &picked.contexts {

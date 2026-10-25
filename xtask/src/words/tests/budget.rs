@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 
+use kx_mod_predict::Casing;
 use kx_mod_predict::split::Splitter;
 
 use super::super::WordsError;
@@ -89,7 +90,7 @@ fn only_a_wordfreq_token_past_the_ratio_gets_a_factor_and_a_repeat_counts_once()
         cand(&["don't"], 400, 2),
     ];
     let tokens = HashMap::from([("tom".to_string(), 400), ("the".to_string(), 120)]);
-    let vocab = Vocab::new(&cands);
+    let vocab = Vocab::new(&cands, Casing::root());
     let split = Splitter {
         ends: &['.'],
         apostrophe: '\'',

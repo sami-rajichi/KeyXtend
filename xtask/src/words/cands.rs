@@ -4,6 +4,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use kx_mod_predict::Casing;
+
 use super::dict::Dict;
 use super::manifest::{Plan, Rules};
 use super::wordfreq::{Entry, share};
@@ -113,14 +115,15 @@ pub(crate) fn candidates(
         tokens.entry(entry.word.clone()).or_insert(entry.bucket);
     }
     let mut facts = Facts::default();
+    let casing = Casing::of(&plan.iso);
     let mut cands: Vec<Cand> = main_script(entries, rules, &mut facts.script)
         .into_iter()
-        .map(|(rank, entry)| cand(rank, entry, dict, rules, &mut facts.elisions))
+        .map(|(rank, entry)| cand(rank, entry, dict, casing, rules, &mut facts.elisions))
         .collect();
     if let Some(dict) = dict {
-        join(&mut cands, dict, rules.show, &mut facts.joins);
-        merge::merge(&mut cands, dict, rules, &mut facts);
-        stems(&mut cands, dict, &tokens);
+        join(&mut cands, dict, casing, rules.show, &mut facts.joins);
+        merge::merge(&mut cands, dict, casing, rules, &mut facts);
+        stems(&mut cands, dict, casing, &tokens);
     }
     let budget = plan.words_budget_kb.saturating_mul(BYTES_PER_KB);
     Candidates {
@@ -136,8 +139,8 @@ pub(crate) fn candidates(
     }
 }
 
-/// The entries that pass the token rules, with their places; when one script holds `main_script_share` of them,
-/// the others go and are counted in `dropped`.
+/// The entries that pass the token rules, with their places; when one script, with those it holds, has
+/// `main_script_share` of them, the others go and are counted in `dropped`.
 fn main_script(entries: Vec<Entry>, rules: &Rules, dropped: &mut Tally) -> Vec<(usize, Entry)> {
     let kept: Vec<(usize, Entry)> = entries
         .into_iter()
@@ -150,23 +153,25 @@ fn main_script(entries: Vec<Entry>, rules: &Rules, dropped: &mut Tally) -> Vec<(
     };
     let (ours, others): (Vec<_>, Vec<_>) = kept
         .into_iter()
-        .partition(|(_, e)| script::of(&e.word).is_none_or(|s| s == main));
+        .partition(|(_, e)| script::of(&e.word).is_none_or(|s| main.holds(s)));
     for (_, entry) in others {
         dropped.add(rules.show, || entry.word);
     }
     ours
 }
 
-/// The candidate of one token; a token whose elision the dictionary accepts is that elision, never its bare piece,
-/// and is counted in `elisions`.
+/// The candidate of one token, its capitals as `casing` writes them; a token whose elision the dictionary accepts is
+/// that elision, never its bare piece, and is counted in `elisions`.
 fn cand(
     rank: usize,
     entry: Entry,
     dict: Option<&Dict>,
+    casing: &Casing,
     rules: &Rules,
     elisions: &mut Tally,
 ) -> Cand {
-    let mut forms = dict.map_or_else(|| vec![entry.word.clone()], |d| d.forms(&entry.word));
+    let forms_of = |d: &Dict| d.forms(&entry.word, casing);
+    let mut forms = dict.map_or_else(|| vec![entry.word.clone()], forms_of);
     let elided = format!("{}{}", entry.word, rules.apostrophe);
     if forms.contains(&elided) {
         elisions.add(rules.show, || format!("{} → {elided}", entry.word));
@@ -188,13 +193,13 @@ fn cand(
 
 /// Adds each stem of `dict` whose left piece is a rejected token and whose right piece is a token; it takes the
 /// rarer piece's bucket and the left piece's place, and the left piece is marked joined.
-fn join(cands: &mut Vec<Cand>, dict: &Dict, show: usize, joins: &mut Tally) {
+fn join(cands: &mut Vec<Cand>, dict: &Dict, casing: &Casing, show: usize, joins: &mut Tally) {
     let index: HashMap<String, usize> = cands
         .iter()
         .enumerate()
         .map(|(i, c)| (c.word.clone(), i))
         .collect();
-    let find = |piece: &str| index.get(&piece.to_lowercase()).copied();
+    let find = |piece: &str| index.get(&casing.lower(piece)).copied();
     let mut found: Vec<(usize, u32, String)> = Vec::new();
     for (stem, left, right) in dict.joins() {
         let (Some(l), Some(r)) = (find(left), find(right)) else {
@@ -226,16 +231,16 @@ fn join(cands: &mut Vec<Cand>, dict: &Dict, show: usize, joins: &mut Tally) {
 
 /// Adds each stem of `dict` whose two pieces are tokens and that no candidate spells yet, as a `Stem` that only text
 /// keeps; it takes the rarer piece's bucket and the left piece's place.
-fn stems(cands: &mut Vec<Cand>, dict: &Dict, tokens: &HashMap<String, u32>) {
-    let spelt: HashSet<String> = cands.iter().map(|c| c.word.to_lowercase()).collect();
+fn stems(cands: &mut Vec<Cand>, dict: &Dict, casing: &Casing, tokens: &HashMap<String, u32>) {
+    let spelt: HashSet<String> = cands.iter().map(|c| casing.lower(&c.word)).collect();
     let place: HashMap<&str, (u32, usize)> = cands
         .iter()
         .map(|c| (c.word.as_str(), (c.bucket, c.rank)))
         .collect();
     let mut found = Vec::new();
     for (stem, left, right) in dict.joins() {
-        let (left, right) = (left.to_lowercase(), right.to_lowercase());
-        if spelt.contains(&stem.to_lowercase())
+        let (left, right) = (casing.lower(left), casing.lower(right));
+        if spelt.contains(&casing.lower(stem))
             || !tokens.contains_key(&left)
             || !tokens.contains_key(&right)
         {

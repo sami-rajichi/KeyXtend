@@ -7,6 +7,7 @@ use kx_module_api::ports::{FieldChange, FieldKind, Piece};
 use super::*;
 
 mod emails;
+mod ends;
 mod reads;
 
 /// The words a test language knows: elisions and whole words that hold an apostrophe.
@@ -78,13 +79,6 @@ fn hello_world_hands_out_both_words_and_keeps_them_in_context() {
 }
 
 #[test]
-fn a_no_break_space_ends_the_word_as_a_space_does() {
-    let mut t = tracker(2);
-    let told = type_text(&mut t, "oui\u{00A0}!");
-    assert_eq!(learned(&told), [("oui".to_owned(), owned(&[]))]);
-}
-
-#[test]
 fn the_context_keeps_only_the_last_words() {
     let mut t = tracker(2);
     let told = type_text(&mut t, "one two three ");
@@ -93,40 +87,6 @@ fn the_context_keeps_only_the_last_words() {
         Some(owned(&["one", "two"]))
     );
     assert_eq!(t.context(), Some(owned(&["two", "three"]).as_slice()));
-}
-
-#[test]
-fn a_mark_ends_the_word_unlearned_and_clears_the_context() {
-    let mut t = tracker(2);
-    let told = type_text(&mut t, "one a.b ");
-    assert_eq!(learned(&told), [("one".to_owned(), owned(&[]))]);
-    assert_eq!(t.context(), Some(&[][..]));
-    let told = type_text(&mut t, "hello, ");
-    assert!(learned(&told).is_empty());
-    assert_eq!(t.context(), Some(&[][..]));
-}
-
-#[test]
-fn right_after_a_mark_nothing_shows_and_an_erase_brings_the_word_back() {
-    let mut t = tracker(2);
-    type_text(&mut t, "say hello,");
-    assert_eq!(t.show(&knows).words, None);
-    t.typed(&Piece::Erase, &knows);
-    assert_eq!(
-        readings(&t.show(&knows)),
-        [(owned(&["say"]), String::new(), "hello".to_owned())]
-    );
-}
-
-#[test]
-fn a_word_after_a_leading_mark_is_learned_without_context() {
-    let mut t = tracker(2);
-    let told = type_text(&mut t, "say \"hello ");
-    assert_eq!(
-        learned(&told).last(),
-        Some(&("hello".to_owned(), owned(&[])))
-    );
-    assert_eq!(t.context(), Some(owned(&["hello"]).as_slice()));
 }
 
 #[test]

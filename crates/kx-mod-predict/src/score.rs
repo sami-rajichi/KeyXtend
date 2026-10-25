@@ -4,6 +4,7 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
 
+use crate::casing::Casing;
 use crate::fold::{fold, is_apostrophe};
 use crate::pack::Pack;
 use crate::script::{self, Script};
@@ -12,10 +13,12 @@ use crate::track::{Query, Reading};
 mod best;
 mod case;
 mod model;
+mod sink;
 
 use best::Best;
 use case::Case;
-use model::{Model, Sink};
+use model::Model;
+use sink::Sink;
 
 /// The scorer's settings; the module fills them from `[predict]`.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -98,7 +101,7 @@ impl Learned for NoLearned {
 /// True when `seed` holds `word` in any case or accents; false without a pack. The tracker splits apostrophes by it.
 #[must_use]
 pub fn knows(seed: Option<&Pack<'_>>, word: &str) -> bool {
-    seed.is_some_and(|pack| !pack.run(&fold(word)).is_empty())
+    seed.is_some_and(|pack| !pack.run(&fold(word, pack.casing())).is_empty())
 }
 
 /// At most `limit` distinct guesses for `query`, best first, from the `seed` pack and the `learned` counts; capitals
@@ -118,6 +121,7 @@ pub fn guesses(
         query,
         mode,
         cfg,
+        casing: seed.map_or(Casing::root(), Pack::casing),
     };
     let mut best = Best::new(limit);
     for reading in &query.readings {
@@ -142,11 +146,13 @@ struct Ask<'a> {
     mode: TypingMode,
     /// The settings.
     cfg: &'a ScoreConfig,
+    /// How the pack's language cases its words.
+    casing: &'static Casing,
 }
 
 impl Ask<'_> {
     /// Offers `best` every candidate of `reading`, prefixed by its lead, in the case its prefix asks for, and weighed
-    /// by its elisions' chance; after an elision only the followers come next.
+    /// by its elisions' chance; after an elision its followers come first, and the word list only when none fits.
     fn offer(&self, reading: &Reading, best: &mut Best) {
         let context: Vec<&str> = reading
             .context
@@ -162,10 +168,14 @@ impl Ask<'_> {
             query: self.query,
             lead,
             case: Case::of(prefix, self.mode),
+            casing: self.casing,
             scale: self.lead_weight(&context, kept),
         };
         let model = Model::new(self.seed, self.learned, &context, self.cfg);
-        model.offer(&fold(prefix), kept == 0, &mut sink);
+        let folded = fold(prefix, self.casing);
+        if kept == 0 || !model.offer_followers(&folded, &mut sink) {
+            model.offer(&folded, &mut sink);
+        }
     }
 
     /// The chance of the last `kept` words of `context`, the lead's elisions, each after the words before it.

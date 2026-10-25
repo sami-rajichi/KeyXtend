@@ -8,6 +8,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{Chip, ChipKind, ListPage};
 use serde::Deserialize;
 
+use crate::casing::Casing;
 use crate::fold::fold;
 use crate::script;
 use crate::split::is_word_char;
@@ -75,6 +76,28 @@ pub fn tail(token: &str) -> &str {
         .last()
         .map_or(token.len(), |(at, _)| at);
     token.get(start..).unwrap_or_default()
+}
+
+/// The email in a finished `token`: the run of email characters around its at sign, less the trailing marks no label
+/// ends with; `None` when that run does not look like an email.
+#[must_use]
+pub fn capture(token: &str) -> Option<&str> {
+    let sign = token.find(at()?)?;
+    let (head, rest) = token.split_at(sign);
+    let start = head
+        .char_indices()
+        .rev()
+        .take_while(|&(_, c)| is_email_char(c))
+        .last()
+        .map_or(sign, |(i, _)| i);
+    let end = rest
+        .char_indices()
+        .find(|&(_, c)| !is_email_char(c))
+        .map_or(token.len(), |(i, _)| sign + i);
+    let run = token
+        .get(start..end)?
+        .trim_end_matches(|c| !is_word_char(c));
+    looks_like(run).then_some(run)
 }
 
 /// True when `text` looks like `local@domain.tld`: one at sign, a local part of word characters and local marks,
@@ -147,8 +170,8 @@ impl Emails {
         if !looks_like(token) {
             return false;
         }
-        let lower = token.to_lowercase();
-        self.list.retain(|e| e.to_lowercase() != lower);
+        let lower = Casing::root().lower(token);
+        self.list.retain(|e| Casing::root().lower(e) != lower);
         self.list.insert(0, token.to_owned());
         self.list.truncate(max);
         true
@@ -201,9 +224,9 @@ impl Emails {
 
 /// The texts of `all` that start with `typed` once folded and are not `typed` itself, at most `lane`, as `kind`.
 fn completing(all: &[String], typed: &str, lane: usize, kind: ChipKind) -> Vec<Chip> {
-    let key = fold(typed);
+    let key = fold(typed, Casing::root());
     let fits = |text: &&String| {
-        let folded = fold(text);
+        let folded = fold(text, Casing::root());
         folded.starts_with(&key) && folded != key
     };
     all.iter()

@@ -60,6 +60,36 @@ fn a_finished_email_is_told_never_learned_and_clears_the_context() {
 }
 
 #[test]
+fn a_finished_email_is_captured_whole_and_without_the_marks_around_it() {
+    let cases = [
+        ("o'brien@x.com ", "o'brien@x.com"),
+        ("sami@x.org. ", "sami@x.org"),
+        ("sami@x.org, ", "sami@x.org"),
+        ("(sami@x.org) ", "sami@x.org"),
+        ("<sami@x.org> ", "sami@x.org"),
+    ];
+    for (typed, email) in cases {
+        let mut t = tracker(2);
+        let told = type_text(&mut t, typed);
+        assert_eq!(
+            told,
+            [Told::Email(Redacted::new(email.to_owned()))],
+            "{typed}"
+        );
+    }
+}
+
+#[test]
+fn an_email_is_told_only_when_some_of_it_was_typed() {
+    let mut t = tracker(2);
+    t.read(Some("sami@x.org"), &knows);
+    assert!(type_text(&mut t, " ").is_empty());
+    t.read(Some("sami@x.or"), &knows);
+    let told = type_text(&mut t, "g ");
+    assert_eq!(told, [Told::Email(Redacted::new("sami@x.org".to_owned()))]);
+}
+
+#[test]
 fn plans_erase_what_they_replace_and_add_a_space_only_after_a_word() {
     let mut t = tracker(2);
     type_text(&mut t, "say héllo");
@@ -98,4 +128,17 @@ fn an_elision_chip_adds_no_space_and_one_that_changes_nothing_is_no_change() {
     let query = t.show(&knows).words.unwrap();
     assert!(!query.changes("l'"));
     assert!(query.changes("l'école"));
+}
+
+#[test]
+fn a_typed_apostrophe_form_matches_the_plain_one_and_guesses_take_it() {
+    let mut t = tracker(2);
+    type_text(&mut t, "l\u{2019}");
+    let query = t.show(&knows).words.unwrap();
+    assert!(!query.changes("l'"));
+    assert_eq!(query.styled("l'école"), "l\u{2019}école");
+    let mut t = tracker(2);
+    type_text(&mut t, "jusqu");
+    let query = t.show(&knows).words.unwrap();
+    assert_eq!(query.styled("jusqu'à"), "jusqu'à");
 }

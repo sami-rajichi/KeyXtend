@@ -2,9 +2,9 @@
 
 use super::super::layout::{
     AT_FLAGS, AT_FOLLOWERS, AT_ISO, AT_ISO_LEN, AT_MAX_CHAIN, AT_SECTIONS, AT_VERSION, AT_WORDS,
-    CHAINS_BASE, ENTRY_AT_LEN, ENTRY_AT_OFFSET, ENTRY_LEN, FLAGS, FREQ, HEAD_LEN, ISO_FIELD,
-    LEXICON, MAGIC, MAX_CHAIN, MAX_WORDS, MIN_CHAIN, NO_CHAINS, VERSION, WORDS, u8_at, u16_at,
-    u32_at, usize_at,
+    CHAINS_BASE, ENTRY_AT_LEN, ENTRY_AT_OFFSET, ENTRY_LEN, FREQ, HEAD_LEN, ISO_FIELD, LEXICON,
+    MAGIC, MAX_CHAIN, MAX_WORDS, MIN_CHAIN, NO_CHAINS, VERSION, WORDS, u8_at, u16_at, u32_at,
+    usize_at,
 };
 use super::super::{Flags, PackFormatError};
 use kx_module_api::ports::fits_iso;
@@ -45,8 +45,6 @@ pub(super) struct Head {
     pub spellings: Span,
     /// The `Freq` section.
     pub freq: Span,
-    /// The `Flags` section.
-    pub caps: Span,
     /// The chain sections, from `MIN_CHAIN` to `max_chain`.
     pub chains: Vec<Span>,
 }
@@ -57,7 +55,6 @@ struct Found {
     lexicon: Option<Span>,
     spellings: Option<Span>,
     freq: Option<Span>,
-    caps: Option<Span>,
     chains: Vec<Option<Span>>,
 }
 
@@ -68,7 +65,6 @@ impl Found {
             LEXICON => &mut self.lexicon,
             WORDS => &mut self.spellings,
             FREQ => &mut self.freq,
-            FLAGS => &mut self.caps,
             _ => kind
                 .checked_sub(CHAINS_BASE)
                 .and_then(|n| n.checked_sub(MIN_CHAIN))
@@ -117,7 +113,6 @@ impl Head {
             lexicon: found.lexicon.ok_or(missing)?,
             spellings: found.spellings.ok_or(missing)?,
             freq: found.freq.ok_or(missing)?,
-            caps: found.caps.ok_or(missing)?,
             chains: chains(found.chains, max_chain)?,
         })
     }

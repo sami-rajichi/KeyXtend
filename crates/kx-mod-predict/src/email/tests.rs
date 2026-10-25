@@ -45,7 +45,14 @@ fn the_table_parses_and_names_the_at_sign() {
 
 #[test]
 fn only_local_at_domain_dot_tld_looks_like_an_email() {
-    for ok in ["a@b.co", "first.last+tag@mail.example.com", "x_y-z@a-b.org"] {
+    let good = [
+        "a@b.co",
+        "first.last+tag@mail.example.com",
+        "x_y-z@a-b.org",
+        "o'brien@x.com",
+        "!#$%&'*+/=?^_`{|}~-.@x.co",
+    ];
+    for ok in good {
         assert!(looks_like(ok), "{ok}");
     }
     let bad = [
@@ -69,6 +76,25 @@ fn the_tail_is_the_email_like_end_of_a_token() {
     assert_eq!(tail("mailto:sami@x.org"), "sami@x.org");
     assert_eq!(tail("(sami.r"), "sami.r");
     assert_eq!(tail("hello,"), "");
+}
+
+#[test]
+fn a_capture_takes_the_run_around_the_at_sign_less_the_trailing_marks() {
+    assert_eq!(capture("o'brien@x.com"), Some("o'brien@x.com"));
+    let wrapped = [
+        "sami@x.org.",
+        "sami@x.org,",
+        "(sami@x.org)",
+        "<sami@x.org>",
+        "mailto:sami@x.org",
+        "sami@x.org;bob@y.org",
+    ];
+    for token in wrapped {
+        assert_eq!(capture(token), Some("sami@x.org"), "{token}");
+    }
+    assert_eq!(capture("سامي@مثال.شبكة»"), Some("سامي@مثال.شبكة"));
+    assert_eq!(capture("a@b@c.co"), None);
+    assert_eq!(capture("hello"), None);
 }
 
 #[test]

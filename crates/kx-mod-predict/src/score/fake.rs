@@ -3,6 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::Learned;
+use crate::casing::Casing;
 use crate::fold::fold;
 
 /// Learned counts a test sets.
@@ -66,7 +67,7 @@ impl Learned for Fake {
 
     fn starting(&self, folded_prefix: &str, each: &mut dyn FnMut(&str)) {
         for word in self.words.keys() {
-            if fold(word).starts_with(folded_prefix) {
+            if fold(word, Casing::root()).starts_with(folded_prefix) {
                 each(word);
             }
         }

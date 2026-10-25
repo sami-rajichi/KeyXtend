@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::fold;
+use kx_mod_predict::{Casing, fold};
 
 use super::cands::{Cand, Fate};
 use super::text::{KeyCounts, TextCounts};
@@ -33,7 +33,7 @@ pub(crate) struct Hit {
 }
 
 /// The spellings of every candidate the text may count: the kept ones and the stems.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct Vocab {
     /// Every form.
     forms: Vec<Form>,
@@ -43,16 +43,25 @@ pub(crate) struct Vocab {
     keys: Vec<String>,
     /// Each fold key, to the form of its most frequent candidate.
     folded: HashMap<String, u32>,
+    /// How the language cases tokens, which the keys were folded with.
+    casing: &'static Casing,
 }
 
 impl Vocab {
-    /// The index of `cands`; a spelling or key shared by two candidates goes to the more frequent one.
-    pub(crate) fn new(cands: &[Cand]) -> Self {
+    /// The index of `cands` in a language cased by `casing`; a spelling or key shared by two candidates goes to the
+    /// more frequent one.
+    pub(crate) fn new(cands: &[Cand], casing: &'static Casing) -> Self {
         let mut order: Vec<(usize, &Cand)> = (cands.iter().enumerate())
             .filter(|(_, c)| matches!(c.fate, Fate::Kept | Fate::Stem))
             .collect();
         order.sort_by_key(|(_, c)| (c.bucket, c.rank));
-        let mut vocab = Self::default();
+        let mut vocab = Self {
+            forms: Vec::new(),
+            exact: HashMap::new(),
+            keys: Vec::new(),
+            folded: HashMap::new(),
+            casing,
+        };
         let mut key_ids: HashMap<String, u32> = HashMap::new();
         for (cand, c) in order {
             let Ok(cand) = u32::try_from(cand) else {
@@ -73,7 +82,7 @@ impl Vocab {
         ) else {
             return;
         };
-        let key = fold(spelling);
+        let key = fold(spelling, self.casing);
         let next = u32::try_from(self.keys.len()).unwrap_or(u32::MAX);
         let key_id = *key_ids.entry(key.clone()).or_insert(next);
         if key_id == next {
@@ -93,11 +102,11 @@ impl Vocab {
         if let Some(&form) = self.exact.get(token) {
             return self.hit(form, true);
         }
-        let lower = token.to_lowercase();
+        let lower = self.casing.lower(token);
         if let Some(&form) = self.exact.get(&lower) {
             return self.hit(form, false);
         }
-        let form = *self.folded.get(&fold(&lower))?;
+        let form = *self.folded.get(&fold(&lower, self.casing))?;
         self.hit(form, false)
     }
 
@@ -154,6 +163,7 @@ impl Vocab {
             total,
             keys,
             found: by_form,
+            casing: self.casing,
         }
     }
 }

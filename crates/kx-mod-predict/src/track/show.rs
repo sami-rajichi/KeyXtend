@@ -1,5 +1,5 @@
 //! What the lane may offer for the tracker's token, and the plan a pick sends: erase what the chip replaces, then
-//! type the chip, with a space after a word only.
+//! type the chip, with its script's gap after a word only.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypeWord;
@@ -8,9 +8,8 @@ use super::token::{Token, apostrophe, learnable, parts};
 use super::{TrackConfig, push_capped};
 use crate::email;
 use crate::fold::is_apostrophe;
-
-/// The space a word chip types after its word.
-const SPACE: char = ' ';
+use crate::script::{self, Script};
+use crate::split::normalise;
 
 /// What the lane may offer now.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,28 +65,36 @@ pub struct Plan {
 }
 
 impl Query {
-    /// The plan for the word chip `guess`: it replaces the open word and adds a space, except after an elision
-    /// (`l'`), which joins the next word.
+    /// The plan for the word chip `guess`: it replaces the open word and adds its script's gap, except after an
+    /// elision (`l'`), which joins the next word.
     #[must_use]
     pub fn plan(&self, guess: &str) -> Option<Plan> {
-        let text = if spaced(guess) {
-            format!("{guess}{SPACE}")
-        } else {
-            guess.to_owned()
-        };
-        plan(self.word.expose(), text)
+        plan(self.word.expose(), format!("{guess}{}", after(guess)))
     }
 
-    /// True when picking `guess` changes the text: it differs from the open word or adds a space.
+    /// True when picking `guess` changes the text: it differs from the open word, apostrophe forms aside, or adds a
+    /// gap.
     #[must_use]
     pub fn changes(&self, guess: &str) -> bool {
-        guess != self.word.expose() || spaced(guess)
+        let ap = apostrophe();
+        normalise(guess, ap) != normalise(self.word.expose(), ap) || !after(guess).is_empty()
+    }
+
+    /// `guess` with every apostrophe in the form the open word was typed with, when it holds one.
+    #[must_use]
+    pub fn styled(&self, guess: &str) -> String {
+        let typed = self.word.expose().chars().find(|&c| is_apostrophe(c));
+        let swap = |c: char| typed.filter(|_| is_apostrophe(c)).unwrap_or(c);
+        guess.chars().map(swap).collect()
     }
 }
 
-/// True when a word chip types a space after `guess`: always but after an elision, which ends with an apostrophe.
-fn spaced(guess: &str) -> bool {
-    !guess.chars().next_back().is_some_and(is_apostrophe)
+/// What a word chip types after `guess`: its script's gap, but nothing after an elision, which ends with an apostrophe.
+fn after(guess: &str) -> &'static str {
+    if guess.chars().next_back().is_some_and(is_apostrophe) {
+        return "";
+    }
+    script::of(guess).map_or("", Script::gap)
 }
 
 impl EmailAsk {

@@ -9,8 +9,9 @@ use fst::automaton::{Automaton, StartsWith, Str};
 use fst::map::Stream;
 use fst::{IntoStreamer, Map, Streamer};
 
-use super::layout::{CAPITAL, MIN_CHAIN, OFFSET_LEN, RUN_SHIFT, fits_spelling, usize_at};
+use super::layout::{MIN_CHAIN, OFFSET_LEN, RUN_SHIFT, fits_spelling, usize_at};
 use super::{Flags, PackFormatError, WordId};
+use crate::casing::Casing;
 
 mod chains;
 mod head;
@@ -50,7 +51,7 @@ impl<'a> Pack<'a> {
         let lexicon = Map::new(head.lexicon.of(bytes)).map_err(|_| bad)?;
         lexicon.as_fst().verify().map_err(|_| bad)?;
         let count = usize::try_from(head.words).map_err(|_| bad)?;
-        if lexicon.len() > count || head.freq.len != count || head.caps.len != count {
+        if lexicon.len() > count || head.freq.len != count {
             return Err(bad);
         }
         check_spellings(head.spellings.of(bytes), count)?;
@@ -69,6 +70,12 @@ impl<'a> Pack<'a> {
     #[must_use]
     pub fn iso(&self) -> &str {
         &self.head.iso
+    }
+
+    /// How the pack's language cases its words, which its keys were folded with.
+    #[must_use]
+    pub fn casing(&self) -> &'static Casing {
+        Casing::of(self.iso())
     }
 
     /// How many words the pack holds; ids run from 0 to this, exclusive.
@@ -103,15 +110,6 @@ impl<'a> Pack<'a> {
         self.index(id)
             .and_then(|i| self.head.freq.of(self.bytes).get(i).copied())
             .unwrap_or_default()
-    }
-
-    /// True when word `id` is always capitalised, as `London` or `I`.
-    #[must_use]
-    pub fn capital(&self, id: WordId) -> bool {
-        let caps = self.head.caps.of(self.bytes);
-        self.index(id)
-            .and_then(|i| caps.get(i))
-            .is_some_and(|f| f & CAPITAL != 0)
     }
 
     /// The ids of every word that folds to exactly `folded`, highest frequency first; empty when none does.

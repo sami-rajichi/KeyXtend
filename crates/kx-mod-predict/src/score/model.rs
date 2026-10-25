@@ -4,45 +4,12 @@
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
-use super::best::Best;
-use super::case::Case;
+use super::sink::Sink;
 use super::{Learned, ScoreConfig, float};
+use crate::casing::Casing;
 use crate::fold::fold;
 use crate::pack::layout::{SCORE_CERTAIN, STEPS_PER_ZIPF, ZIPF_OFFSET};
 use crate::pack::{Pack, WordId};
-use crate::track::Query;
-
-/// Where one reading's candidates go: prefixed by its lead, cased as its prefix asks and weighed by its lead.
-pub(super) struct Sink<'s> {
-    /// The best texts so far, across readings.
-    pub(super) best: &'s mut Best,
-    /// The query, so a guess that changes nothing is dropped.
-    pub(super) query: &'s Query,
-    /// The typed elisions each text starts with.
-    pub(super) lead: &'s str,
-    /// The case each candidate takes.
-    pub(super) case: Case,
-    /// The lead's chance, which every score of the reading is multiplied by.
-    pub(super) scale: f64,
-}
-
-impl Sink<'_> {
-    /// True when a candidate scoring `score` could enter.
-    fn wants(&self, score: f64) -> bool {
-        self.best.wants(score * self.scale)
-    }
-
-    /// Keeps `word` at `score` when it can enter and picking it changes the text.
-    fn take(&mut self, word: &str, score: f64) {
-        let score = score * self.scale;
-        if self.best.wants(score) {
-            let text = format!("{}{}", self.lead, self.case.apply(word));
-            if self.query.changes(&text) {
-                self.best.offer(text, score);
-            }
-        }
-    }
-}
 
 /// The seed's part of a model.
 struct Seed<'m> {
@@ -64,6 +31,8 @@ pub(super) struct Model<'m> {
     cfg: &'m ScoreConfig,
     /// The learned part's weight.
     weight: f64,
+    /// How the language cases its words.
+    casing: &'static Casing,
 }
 
 impl<'m> Model<'m> {
@@ -74,9 +43,10 @@ impl<'m> Model<'m> {
         context: &'m [&'m str],
         cfg: &'m ScoreConfig,
     ) -> Self {
+        let casing = seed.map_or(Casing::root(), Pack::casing);
         let seed = seed.map(|pack| Seed {
             pack,
-            levels: levels(pack, context),
+            levels: levels(pack, context, casing),
         });
         let weight = cfg.weight(learned.uses());
         Self {
@@ -85,14 +55,15 @@ impl<'m> Model<'m> {
             context,
             cfg,
             weight,
+            casing,
         }
     }
 
     /// Offers `sink` every candidate for `folded`: its completions, seed and learned, or the next-word candidates
     /// for an empty prefix.
-    pub(super) fn offer(&self, folded: &str, fill: bool, sink: &mut Sink<'_>) {
+    pub(super) fn offer(&self, folded: &str, sink: &mut Sink<'_>) {
         if folded.is_empty() {
-            self.offer_next(fill, sink);
+            self.offer_next(sink);
             return;
         }
         self.learned
@@ -104,28 +75,47 @@ impl<'m> Model<'m> {
         }
     }
 
-    /// Offers the next-word candidates: the context's followers, seed and learned, and with `fill` the most frequent
-    /// seed words and every learned word, as backoff reaches them all.
-    fn offer_next(&self, fill: bool, sink: &mut Sink<'_>) {
+    /// Offers only the context's followers, seed and learned, that start with `folded`; false when none does, so the
+    /// word list fills in.
+    pub(super) fn offer_followers(&self, folded: &str, sink: &mut Sink<'_>) -> bool {
+        let fits = |w: &str| fold(w, self.casing).starts_with(folded) && self.offerable(w);
+        let mut matched = false;
+        for start in 0..self.context.len() {
+            let context = self.context.get(start..).unwrap_or_default();
+            self.learned.following(context, &mut |w| {
+                if fits(w) {
+                    matched = true;
+                    self.offer_learned(w, sink);
+                }
+            });
+        }
+        let Some(seed) = &self.seed else {
+            return matched;
+        };
+        for id in followers(seed) {
+            if fits(seed.pack.spelling(id)) {
+                matched = true;
+                self.offer_seed(seed, id, sink);
+            }
+        }
+        matched
+    }
+
+    /// Offers the next-word candidates: the context's followers, seed and learned, the most frequent seed words and
+    /// every learned word, as backoff reaches them all.
+    fn offer_next(&self, sink: &mut Sink<'_>) {
         for start in 0..self.context.len() {
             let context = self.context.get(start..).unwrap_or_default();
             self.learned
                 .following(context, &mut |w| self.offer_learned(w, sink));
         }
-        if fill {
-            self.learned
-                .starting("", &mut |w| self.offer_learned(w, sink));
-        }
+        self.learned
+            .starting("", &mut |w| self.offer_learned(w, sink));
         let Some(seed) = &self.seed else {
             return;
         };
-        let top = if fill {
-            self.top(seed, sink.best.limit())
-        } else {
-            Vec::new()
-        };
-        let followers = seed.levels.iter().flat_map(HashMap::keys).copied();
-        let mut ids: Vec<WordId> = followers.chain(top).collect();
+        let mut ids = followers(seed);
+        ids.extend(self.top(seed, sink.best.limit()));
         ids.sort_unstable();
         ids.dedup();
         for id in ids {
@@ -147,10 +137,7 @@ impl<'m> Model<'m> {
 
     /// Offers the learned `word`: a seed word blends both parts unless forgotten; another word needs `min_uses`.
     fn offer_learned(&self, word: &str, sink: &mut Sink<'_>) {
-        let seed = self
-            .seed
-            .as_ref()
-            .and_then(|s| Some((s, exact(s.pack, word)?)));
+        let seed = (self.seed.as_ref()).and_then(|s| Some((s, exact(s.pack, word, self.casing)?)));
         let learned = self.weight * self.learned_score(word);
         let score = match seed {
             Some(_) if self.learned.blocked(word) => return,
@@ -161,12 +148,21 @@ impl<'m> Model<'m> {
         sink.take(word, score);
     }
 
+    /// True when `word` may be offered: a seed word the user did not forget, or another word used `min_uses` times.
+    fn offerable(&self, word: &str) -> bool {
+        let seeded =
+            (self.seed.as_ref()).is_some_and(|s| exact(s.pack, word, self.casing).is_some());
+        if seeded {
+            !self.learned.blocked(word)
+        } else {
+            self.learned.count(word) >= self.cfg.min_uses
+        }
+    }
+
     /// The blended score of `word` after the context, as `offer` would weigh it.
     pub(super) fn score(&self, word: &str) -> f64 {
-        let seed = self
-            .seed
-            .as_ref()
-            .and_then(|s| Some(self.seed_score(s, id_of(s.pack, word)?)));
+        let seed = (self.seed.as_ref())
+            .and_then(|s| Some(self.seed_score(s, id_of(s.pack, word, self.casing)?)));
         (1.0 - self.weight) * seed.unwrap_or_default() + self.weight * self.learned_score(word)
     }
 
@@ -228,11 +224,24 @@ impl<'m> Model<'m> {
     }
 }
 
+/// The followers of every level of `seed`, once each, in id order.
+fn followers(seed: &Seed<'_>) -> Vec<WordId> {
+    let mut ids: Vec<WordId> = seed
+        .levels
+        .iter()
+        .flat_map(HashMap::keys)
+        .copied()
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
 /// The followers of each context suffix the pack's chains can hold, longest first; an unknown word leaves its levels
 /// empty, so they back off.
-fn levels(pack: &Pack<'_>, context: &[&str]) -> Vec<HashMap<WordId, u8>> {
+fn levels(pack: &Pack<'_>, context: &[&str], casing: &Casing) -> Vec<HashMap<WordId, u8>> {
     let longest = usize::from(pack.max_chain().saturating_sub(1)).min(context.len());
-    let ids: Vec<Option<WordId>> = context.iter().map(|w| id_of(pack, w)).collect();
+    let ids: Vec<Option<WordId>> = context.iter().map(|w| id_of(pack, w, casing)).collect();
     (1..=longest)
         .rev()
         .map(|n| {
@@ -245,17 +254,18 @@ fn levels(pack: &Pack<'_>, context: &[&str]) -> Vec<HashMap<WordId, u8>> {
 
 /// The id of `word` as the pack builder found it: its spelling, then in lower case, then its fold's most frequent
 /// spelling.
-fn id_of(pack: &Pack<'_>, word: &str) -> Option<WordId> {
-    let run = pack.run(&fold(word));
+fn id_of(pack: &Pack<'_>, word: &str, casing: &Casing) -> Option<WordId> {
+    let run = pack.run(&fold(word, casing));
     let spelt = |w: &str| run.clone().find(|&id| pack.spelling(id) == w);
     spelt(word)
-        .or_else(|| spelt(&word.to_lowercase()))
+        .or_else(|| spelt(&casing.lower(word)))
         .or_else(|| run.clone().next())
 }
 
 /// The id of the seed word spelt exactly `word`.
-fn exact(pack: &Pack<'_>, word: &str) -> Option<WordId> {
-    pack.run(&fold(word)).find(|&id| pack.spelling(id) == word)
+fn exact(pack: &Pack<'_>, word: &str, casing: &Casing) -> Option<WordId> {
+    pack.run(&fold(word, casing))
+        .find(|&id| pack.spelling(id) == word)
 }
 
 /// A follower's chance after its context, from its score byte.

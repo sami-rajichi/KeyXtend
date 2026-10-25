@@ -18,8 +18,6 @@ pub(crate) struct Word {
     pub(crate) spelling: String,
     /// Its frequency byte: higher is more frequent.
     pub(crate) freq: u8,
-    /// True when it is always capitalised.
-    pub(crate) capital: bool,
 }
 
 /// How many of the most frequent words the dictionary rejected.
@@ -228,7 +226,6 @@ fn survivors(kept: Vec<Kept>, max_words: usize, cands: usize) -> (Vec<Kept>, Vec
 /// The finished word of `kept`.
 fn word(kept: &Kept) -> Word {
     Word {
-        capital: kept.spelling.chars().next().is_some_and(char::is_uppercase),
         freq: freq(kept.bucket),
         spelling: kept.spelling.clone(),
     }

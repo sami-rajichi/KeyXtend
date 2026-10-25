@@ -1,4 +1,4 @@
-//! The word-pack format v1 (`.kxw`), little-endian, one definition for the reader and the writer. A pack is a header,
+//! The word-pack format v2 (`.kxw`), little-endian, one definition for the reader and the writer. A pack is a header,
 //! a section table, then the sections; every number of the format is named here.
 
 use std::mem::size_of;
@@ -7,8 +7,8 @@ use kx_module_api::ports::{MAX_ISO_LEN, MAX_PACK_BYTES};
 
 /// The first bytes of every pack.
 pub const MAGIC: [u8; 4] = *b"KXW1";
-/// The format version this crate reads and writes.
-pub const VERSION: u16 = 1;
+/// The format version this crate reads and writes; v2 dropped v1's per-word capital flags, as spellings hold them.
+pub const VERSION: u16 = 2;
 /// The language code's field, in bytes: the code that `fits_iso` takes, then zeros.
 pub const ISO_FIELD: usize = 8;
 const _: () = assert!(MAX_ISO_LEN <= ISO_FIELD, "the longest code fits its field");
@@ -44,8 +44,6 @@ pub const CHECKED: u8 = 1;
 pub const CHAINS: u8 = 1 << 1;
 /// Every flag this version knows; a pack with another is refused.
 pub const KNOWN_FLAGS: u8 = CHECKED | CHAINS;
-/// A word's flag in the `Flags` section: the word is always capitalised.
-pub const CAPITAL: u8 = 1;
 
 /// The `Lexicon` section: an `fst` map from folded key bytes to a run, the first id in the low half of the value and
 /// the count in the high half. A key's run is the contiguous ids of every word that folds to it.
@@ -59,8 +57,6 @@ pub const FREQ: u8 = 3;
 pub const STEPS_PER_ZIPF: u32 = 25;
 /// wordfreq's Zipf value is this plus log10 of the frequency, so Zipf 0 is a frequency of 10^-9.
 pub const ZIPF_OFFSET: u32 = 9;
-/// The `Flags` section: one byte per word, `CAPITAL` or zero.
-pub const FLAGS: u8 = 4;
 /// The kind of chain section `n` is this plus `n`. Its contexts of `n − 1` ids are sorted, so a search halves them.
 pub const CHAINS_BASE: u8 = 0x10;
 

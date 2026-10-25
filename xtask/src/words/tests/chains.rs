@@ -110,7 +110,6 @@ fn the_written_pack_reads_back_its_followers_and_its_chain_sections_fit_the_budg
     let words = ["the", "cat", "sat", "down"].map(|w| Word {
         spelling: w.into(),
         freq: 100,
-        capital: false,
     });
     let list = WordList {
         words: words.to_vec(),
@@ -151,7 +150,6 @@ fn a_chain_on_a_place_past_the_list_is_refused_not_shortened() {
             Word {
                 spelling: "the".into(),
                 freq: 100,
-                capital: false,
             };
             4
         ],

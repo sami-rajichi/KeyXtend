@@ -6,8 +6,8 @@
 at = "@"
 # How many at signs typed in a row list every known email (the spec's `@@`).
 at_run = 2
-# The local part's marks: the dot and the commonest `atext` marks (first.last, first_last, first-last, name+tag).
-local = [".", "_", "-", "+"]
+# The local part's marks: the dot and every mark of the standard's `atext` (letters of any script stay allowed).
+local = [".", "!", "#", "$", "%", "&", "'", "*", "+", "/", "=", "?", "^", "_", "`", "{", "|", "}", "~", "-"]
 # The mark between a domain's labels.
 label = "."
 # The marks inside a label, never at its start or end.

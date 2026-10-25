@@ -2,6 +2,8 @@
 
 use kx_module_api::ports::TypingMode;
 
+use crate::casing::Casing;
+
 /// How a guess is capitalised.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Case {
@@ -28,16 +30,12 @@ impl Case {
         }
     }
 
-    /// `word` in this case; capitals already in it stay.
-    pub(super) fn apply(self, word: &str) -> String {
+    /// `word` in this case, as `casing` writes capitals; capitals already in it stay.
+    pub(super) fn apply(self, word: &str, casing: &Casing) -> String {
         match self {
             Self::Keep => word.to_owned(),
-            Self::All => word.to_uppercase(),
-            Self::First => {
-                let mut chars = word.chars();
-                let first = chars.next().into_iter().flat_map(char::to_uppercase);
-                first.chain(chars).collect()
-            }
+            Self::All => casing.upper(word),
+            Self::First => casing.capital(word),
         }
     }
 }

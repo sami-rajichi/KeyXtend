@@ -8,10 +8,11 @@ use kx_module_api::ports::{MAX_ISO_LEN, MIN_ISO_LEN, fits_iso};
 use thiserror::Error;
 
 use super::layout::{
-    CAPITAL, CHAINS_BASE, FLAGS, FREQ, LEXICON, MAX_CHAIN, MAX_SPELLING, MAX_WORDS, MIN_CHAIN,
-    NO_CHAINS, WORDS, fits_spelling,
+    CHAINS_BASE, FREQ, LEXICON, MAX_CHAIN, MAX_SPELLING, MAX_WORDS, MIN_CHAIN, NO_CHAINS, WORDS,
+    fits_spelling,
 };
 use super::{Flags, WordId};
+use crate::casing::Casing;
 use crate::fold::fold;
 
 mod encode;
@@ -58,8 +59,6 @@ struct Word {
     key: String,
     /// Its frequency byte.
     freq: u8,
-    /// True when it is always capitalised.
-    capital: bool,
 }
 
 /// Builds one pack: add the words, then the chains between them, then `finish`.
@@ -112,12 +111,12 @@ impl PackWriter {
         })
     }
 
-    /// Adds a word; a spelling added again keeps the higher frequency, and is capitalised if either was.
+    /// Adds a word, spelt with its capitals; a spelling added again keeps the higher frequency.
     ///
     /// # Errors
     /// `BadSpelling` when it is empty, over `MAX_SPELLING` bytes, or folds to nothing.
-    pub fn add_word(&mut self, spelling: &str, freq: u8, capital: bool) -> Result<(), WriteError> {
-        let key = fold(spelling);
+    pub fn add_word(&mut self, spelling: &str, freq: u8) -> Result<(), WriteError> {
+        let key = fold(spelling, Casing::of(&self.iso));
         if key.is_empty() || !fits_spelling(spelling.len()) {
             return Err(WriteError::BadSpelling);
         }
@@ -127,7 +126,6 @@ impl PackWriter {
             .and_then(|&i| self.words.get_mut(i))
         {
             word.freq = word.freq.max(freq);
-            word.capital |= capital;
             return Ok(());
         }
         self.index.insert(spelling.to_owned(), self.words.len());
@@ -135,7 +133,6 @@ impl PackWriter {
             spelling: spelling.to_owned(),
             key,
             freq,
-            capital,
         });
         Ok(())
     }
@@ -181,13 +178,6 @@ impl PackWriter {
             (LEXICON, encode::lexicon(&sorted)?),
             (WORDS, encode::spellings(&sorted)?),
             (FREQ, sorted.iter().map(|w| w.freq).collect()),
-            (
-                FLAGS,
-                sorted
-                    .iter()
-                    .map(|w| if w.capital { CAPITAL } else { 0 })
-                    .collect(),
-            ),
         ];
         let max_chain = tables.keys().next_back().copied().unwrap_or(NO_CHAINS);
         let empty = encode::Table::new();

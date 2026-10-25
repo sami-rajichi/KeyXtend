@@ -4,15 +4,22 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::fold;
+use kx_mod_predict::{Casing, fold};
 
 use super::cands::{Cand, Facts, Fate};
 use super::dict::Dict;
 use super::manifest::Rules;
 
-/// Blocks each rejected prefix, then merges each other rejected token into its fold twin, counting both in `facts`.
-pub(crate) fn merge(cands: &mut [Cand], dict: &Dict, rules: &Rules, facts: &mut Facts) {
-    let twins = twins(cands);
+/// Blocks each rejected prefix, then merges each other rejected token into its fold twin, folding as `casing` cases,
+/// and counts both in `facts`.
+pub(crate) fn merge(
+    cands: &mut [Cand],
+    dict: &Dict,
+    casing: &Casing,
+    rules: &Rules,
+    facts: &mut Facts,
+) {
+    let twins = twins(cands, casing);
     let mut moves = Vec::new();
     for (i, cand) in cands.iter().enumerate() {
         if cand.fate != Fate::Rejected {
@@ -26,17 +33,17 @@ pub(crate) fn merge(cands: &mut [Cand], dict: &Dict, rules: &Rules, facts: &mut 
             let limit = cand.bucket.saturating_add(rules.max_gap_cb);
             cands.get(*j).is_some_and(|t| t.bucket <= limit)
         };
-        if let Some(j) = twins.get(&fold(&cand.word)).copied().filter(near) {
+        if let Some(j) = twins.get(&fold(&cand.word, casing)).copied().filter(near) {
             moves.push((i, Some(j)));
         }
     }
     for (from, to) in moves {
-        apply(cands, from, to, rules.show, facts);
+        apply(cands, from, to, casing, rules.show, facts);
     }
 }
 
 /// For each fold key, the most frequent kept candidate with a form of that key, whatever the list's order.
-fn twins(cands: &[Cand]) -> HashMap<String, usize> {
+fn twins(cands: &[Cand], casing: &Casing) -> HashMap<String, usize> {
     let mut best: HashMap<String, usize> = HashMap::new();
     let order = |i: usize| cands.get(i).map(|c| (c.bucket, c.rank));
     for (i, cand) in cands.iter().enumerate() {
@@ -44,7 +51,7 @@ fn twins(cands: &[Cand]) -> HashMap<String, usize> {
             continue;
         }
         for form in &cand.forms {
-            let slot = best.entry(fold(form)).or_insert(i);
+            let slot = best.entry(fold(form, casing)).or_insert(i);
             if order(i) < order(*slot) {
                 *slot = i;
             }
@@ -54,15 +61,22 @@ fn twins(cands: &[Cand]) -> HashMap<String, usize> {
 }
 
 /// Blocks `cands[from]` when `to` is `None`; otherwise merges it, giving `cands[to]` the lower bucket of the two.
-fn apply(cands: &mut [Cand], from: usize, to: Option<usize>, show: usize, facts: &mut Facts) {
+fn apply(
+    cands: &mut [Cand],
+    from: usize,
+    to: Option<usize>,
+    casing: &Casing,
+    show: usize,
+    facts: &mut Facts,
+) {
     let Some((word, bucket)) = cands.get(from).map(|c| (c.word.clone(), c.bucket)) else {
         return;
     };
-    let key = fold(&word);
+    let key = fold(&word, casing);
     let fate = match to.map(|j| cands.get_mut(j)) {
         Some(Some(target)) => {
             target.bucket = target.bucket.min(bucket);
-            let spelling = target.forms.iter().find(|f| fold(f) == key);
+            let spelling = target.forms.iter().find(|f| fold(f, casing) == key);
             let spelling = spelling.cloned().unwrap_or_default();
             facts.merged.add(show, || format!("{word} → {spelling}"));
             Fate::Merged

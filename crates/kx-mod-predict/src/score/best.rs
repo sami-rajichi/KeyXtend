@@ -1,13 +1,23 @@
 //! The best guesses so far: at most `limit` distinct texts, each with its best score, so a reading's thousands of
 //! completions never need sorting.
 
+use std::fmt;
+
 /// The best distinct texts offered so far.
-#[derive(Debug)]
 pub(super) struct Best {
     /// The most texts kept.
     limit: usize,
     /// Each kept text with its best score.
     items: Vec<(String, f64)>,
+}
+
+impl fmt::Debug for Best {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Best")
+            .field("limit", &self.limit)
+            .field("kept", &self.items.len())
+            .finish()
+    }
 }
 
 impl Best {
@@ -60,5 +70,21 @@ impl Best {
             .enumerate()
             .min_by(|a, b| a.1.1.total_cmp(&b.1.1));
         worst.map_or((0, f64::NEG_INFINITY), |(at, item)| (at, item.1))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn debug_shows_counts_never_the_guesses() {
+        let mut best = Best::new(2);
+        best.offer("secret".to_owned(), 1.0);
+        let shown = format!("{best:?}");
+        assert!(
+            !shown.contains("secret") && shown.contains("kept: 1"),
+            "{shown}"
+        );
     }
 }

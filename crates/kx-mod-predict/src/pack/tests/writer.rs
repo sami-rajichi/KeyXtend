@@ -25,7 +25,7 @@ const FOLLOWERS: u8 = 3;
 fn writer(flags: Flags, words: &[&str]) -> PackWriter {
     let mut writer = PackWriter::new(ISO, flags, FOLLOWERS).unwrap();
     for word in words {
-        writer.add_word(word, 1, false).unwrap();
+        writer.add_word(word, 1).unwrap();
     }
     writer
 }
@@ -49,7 +49,7 @@ fn a_bad_spelling_is_refused() {
     let mut writer = writer(LIST, &[]);
     for spelling in ["", "\u{064E}\u{0640}", long.as_str()] {
         assert_eq!(
-            writer.add_word(spelling, 1, false).unwrap_err(),
+            writer.add_word(spelling, 1).unwrap_err(),
             WriteError::BadSpelling
         );
     }
@@ -85,19 +85,49 @@ fn the_chains_flag_must_match_the_chains_added() {
 }
 
 #[test]
+fn case_twins_stay_two_words_in_one_run_each_with_its_own_capitals() {
+    let mut writer = writer(LIST, &[]);
+    writer.add_word("polish", 7).unwrap();
+    writer.add_word("Polish", 9).unwrap();
+    let bytes = writer.finish().unwrap();
+    let pack = Pack::parse(&bytes).unwrap();
+    let run: Vec<_> = pack
+        .run("polish")
+        .map(|id| (pack.spelling(id), pack.freq(id)))
+        .collect();
+    assert_eq!(run, [("Polish", 9), ("polish", 7)]);
+}
+
+#[test]
+fn a_turkish_pack_keys_dotless_i_apart_and_an_english_pack_does_not() {
+    let keys = |iso: &str| {
+        let mut writer = PackWriter::new(iso, LIST, 0).unwrap();
+        writer.add_word("ılık", 7).unwrap();
+        writer.add_word("Ilık", 6).unwrap();
+        writer.add_word("ilik", 5).unwrap();
+        let bytes = writer.finish().unwrap();
+        let pack = Pack::parse(&bytes).unwrap();
+        let run: Vec<String> = pack
+            .run("ilik")
+            .map(|id| pack.spelling(id).to_owned())
+            .collect();
+        run
+    };
+    assert_eq!(keys("tr"), ["ilik"]);
+    assert_eq!(keys("en"), ["ılık", "Ilık", "ilik"]);
+}
+
+#[test]
 fn repeats_keep_the_highest_frequency_and_score() {
     let mut writer = writer(FULL, &["a", "b"]);
-    writer.add_word("a", 9, true).unwrap();
-    writer.add_word("a", 5, false).unwrap();
+    writer.add_word("a", 9).unwrap();
+    writer.add_word("a", 5).unwrap();
     writer.add_chain(&["a"], "b", 40).unwrap();
     writer.add_chain(&["a"], "b", 10).unwrap();
     let bytes = writer.finish().unwrap();
     let pack = Pack::parse(&bytes).unwrap();
     let a = id(&pack, "a");
-    assert_eq!(
-        (pack.word_count(), pack.freq(a), pack.capital(a)),
-        (2, 9, true)
-    );
+    assert_eq!((pack.word_count(), pack.freq(a)), (2, 9));
     let found: Vec<_> = pack.followers(&[a]).collect();
     assert_eq!(found, [(id(&pack, "b"), 40)]);
 }

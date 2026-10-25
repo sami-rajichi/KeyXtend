@@ -35,7 +35,7 @@ pub(super) fn read_all(pack: &Pack<'_>) {
     ));
     let ids = 0..pack.word_count().saturating_add(2).min(MAX_READS);
     for id in ids.clone() {
-        black_box((pack.spelling(id), pack.freq(id), pack.capital(id)));
+        black_box((pack.spelling(id), pack.freq(id)));
         black_box(pack.followers(&[id]).count());
         black_box(pack.followers(&[id, id.wrapping_add(1)]).count());
     }
@@ -67,14 +67,15 @@ fn bytes_without_the_magic_are_not_a_pack() {
 }
 
 #[test]
-fn another_version_is_refused() {
-    let mut bytes = start();
-    let next = VERSION + 1;
-    bytes[AT_VERSION..].copy_from_slice(&next.to_le_bytes());
-    assert_eq!(
-        Pack::parse(&bytes).unwrap_err(),
-        PackFormatError::BadVersion(next)
-    );
+fn an_older_or_newer_version_is_refused_and_named() {
+    // Version 1 held capital flags, which the spellings now hold.
+    for other in [1, VERSION - 1, VERSION + 1] {
+        let mut bytes = start();
+        bytes[AT_VERSION..].copy_from_slice(&other.to_le_bytes());
+        let refused = Pack::parse(&bytes).unwrap_err();
+        assert_eq!(refused, PackFormatError::BadVersion(other));
+        assert!(refused.to_string().contains(&other.to_string()));
+    }
 }
 
 #[test]

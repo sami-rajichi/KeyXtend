@@ -13,6 +13,58 @@ mod text;
 #[cfg(feature = "build")]
 pub use text::{Splitter, Token};
 
+/// Whether each side of a word is free: a space or the text's edge is there, not a hyphen or a mark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Edges {
+    /// Before the word.
+    pub before: bool,
+    /// After the word.
+    pub after: bool,
+}
+
+/// Where one apostrophe piece of a word stands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Place {
+    /// Both its sides are free or parted by an elision, so it counts as a word on its own.
+    pub alone: bool,
+    /// A chain may run into it from the word before: only spaces or an elision part them.
+    pub joined: bool,
+}
+
+/// The edges of word `k` of `spans` in `text`, and whether only spaces part it from the word before or the text's
+/// start. The first word's start and the last word's end are free; any other side is free when its gap holds a space.
+#[must_use]
+pub fn edges(text: &str, spans: &[(usize, usize)], k: usize) -> (Edges, bool) {
+    let gap = |from: usize, to: usize| text.get(from..to).unwrap_or_default();
+    let (start, end) = spans.get(k).copied().unwrap_or_default();
+    let before_from = k
+        .checked_sub(1)
+        .and_then(|p| spans.get(p))
+        .map_or(0, |s| s.1);
+    let after_to = spans.get(k + 1).map_or(text.len(), |s| s.0);
+    let (before, after) = (gap(before_from, start), gap(end, after_to));
+    let free = Edges {
+        before: k == 0 || before.chars().any(char::is_whitespace),
+        after: k + 1 == spans.len() || after.chars().any(char::is_whitespace),
+    };
+    (free, before.chars().all(char::is_whitespace))
+}
+
+/// The place of each of a word's `pieces` (from `split_word`), given the word's `free` edges and whether it `joined`
+/// the word before: an elision frees the side it parts and lets the chain through.
+pub fn places(pieces: &[(&str, bool)], free: Edges, joined: bool) -> impl Iterator<Item = Place> {
+    let last = pieces.len().saturating_sub(1);
+    pieces.iter().enumerate().map(move |(j, &(_, elided))| {
+        let elided_before = j.checked_sub(1).and_then(|p| pieces.get(p)).map(|p| p.1);
+        let left = elided_before.unwrap_or(free.before);
+        let right = if j == last { free.after } else { elided };
+        Place {
+            alone: left && right,
+            joined: elided_before.unwrap_or(joined),
+        }
+    })
+}
+
 /// `text` with every apostrophe form made `apostrophe`; borrowed when it holds none.
 #[must_use]
 pub fn normalise(text: &str, apostrophe: char) -> Cow<'_, str> {

@@ -2,7 +2,7 @@
 //! rule that did something.
 
 use super::cands::Tally;
-use super::list::WordList;
+use super::list::{Word, WordList};
 use crate::text::plural;
 
 /// The noun the report counts.
@@ -13,7 +13,8 @@ const PERCENT: f64 = 100.0;
 /// The lines printed for `iso`: the counts, the coverage line, one line per rule that did something, and a note
 /// when no text was given to a checked list.
 pub(crate) fn report(iso: &str, list: &WordList) -> Vec<String> {
-    let caps = list.words.iter().filter(|w| w.capital).count();
+    let capital = |w: &&Word| w.spelling.chars().next().is_some_and(char::is_uppercase);
+    let caps = list.words.iter().filter(capital).count();
     let low = list.words.iter().map(|w| w.freq).min().unwrap_or_default();
     let high = list.words.iter().map(|w| w.freq).max().unwrap_or_default();
     let (kept, read) = (list.words.len(), list.read);

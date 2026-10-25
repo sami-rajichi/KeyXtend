@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use kx_mod_predict::Casing;
+
 use super::super::fixture::AFF;
 use super::super::text::{KeyCounts, TextCounts};
 use super::super::wordfreq::{bucket_of_share, freq, share};
@@ -30,6 +32,7 @@ fn text(total: u64, keys: &[Key<'_>]) -> TextCounts {
         total,
         keys: keys.collect(),
         found,
+        casing: Casing::root(),
     }
 }
 
@@ -46,7 +49,7 @@ fn a_twin_seen_often_away_from_sentence_starts_wins() {
     let dict = dict(AFF, &["i", "I"]);
     let counts = text(1_000, &[("i", 900, &[("I", 100), ("i", 5)])]);
     let list = build_with(&[("i", 150)], Some(&dict), Some(&counts));
-    assert_eq!(list.words, [word("I", 150, true)]);
+    assert_eq!(list.words, [word("I", 150)]);
     assert_eq!(list.text_facts.twins.first, ["i → I"]);
 }
 
@@ -64,7 +67,7 @@ fn a_twin_seen_exactly_the_minimum_wins() {
     let dict = dict(AFF, &["may", "May"]);
     let counts = text(1_000, &[("may", 900, &[("May", 20), ("may", 1)])]);
     let list = build_with(&[("may", 300)], Some(&dict), Some(&counts));
-    assert_eq!(list.words, [word("May", 300, true)]);
+    assert_eq!(list.words, [word("May", 300)]);
     assert_eq!(list.text_facts.twins.first, ["may → May"]);
 }
 
@@ -94,12 +97,12 @@ fn an_elision_is_never_a_piece_and_keeps_wordfreqs_frequency() {
     let find = |s: &str| list.words.iter().find(|w| w.spelling == s);
     assert_eq!(
         find("jusqu'"),
-        Some(&word("jusqu'", 350, false)),
+        Some(&word("jusqu'", 350)),
         "jusqu'à is counted whole, so jusqu' is never seen alone"
     );
     assert_eq!(
         find("t'"),
-        Some(&word("t'", 300, false)),
+        Some(&word("t'", 300)),
         "the bare t is seen alone, t' never"
     );
     assert!(find("jusqu'à").is_some() && find("jusqu").is_none() && find("t").is_none());
@@ -126,7 +129,7 @@ fn a_spelling_with_the_apostrophe_is_never_a_piece() {
     let list = build_with(&words, Some(&dict), Some(&counts));
     assert_eq!(
         list.words,
-        [word("l'", 140, false), word("aujourd'hui", 410, false)],
+        [word("l'", 140), word("aujourd'hui", 410)],
         "both stand alone 0 times; the elision keeps wordfreq's frequency, aujourd'hui takes all of hui's"
     );
     assert_eq!(list.text_facts.pieces.count, 0);
@@ -211,11 +214,11 @@ fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
         "5000 and 10000 of t's 5000 sightings and its 15000 joined"
     );
     let find = |s: &str| list.words.iter().find(|w| w.spelling == s);
-    assert_eq!(find("don't"), Some(&word("don't", dont, false)));
-    assert_eq!(find("can't"), Some(&word("can't", cant, false)));
+    assert_eq!(find("don't"), Some(&word("don't", dont)));
+    assert_eq!(find("can't"), Some(&word("can't", cant)));
     assert_eq!(
         find("it's"),
-        Some(&word("it's", 230, false)),
+        Some(&word("it's", 230)),
         "a wordfreq token keeps its own"
     );
     let shift = format!("can't {} → {}", freq(300), freq(cant));

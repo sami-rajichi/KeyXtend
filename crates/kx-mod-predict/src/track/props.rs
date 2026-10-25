@@ -29,6 +29,8 @@ enum Step {
     Text(String),
     /// A Backspace.
     Erase,
+    /// Enter or Tab.
+    Advance,
     /// A word break.
     Break,
     /// A click outside our windows or a layout switch.
@@ -49,6 +51,7 @@ fn step() -> impl Strategy<Value = Step> {
     prop_oneof![
         4 => text().prop_map(Step::Text),
         2 => Just(Step::Erase),
+        1 => Just(Step::Advance),
         1 => Just(Step::Break),
         1 => Just(Step::Reset),
         1 => (0u64..3).prop_map(Step::Focus),
@@ -66,6 +69,7 @@ fn apply(t: &mut Tracker, step: &Step) -> Vec<Told> {
     match step {
         Step::Text(s) => t.typed(&Piece::Text(Redacted::new(s.clone())), &knows),
         Step::Erase => t.typed(&Piece::Erase, &knows),
+        Step::Advance => t.typed(&Piece::Advance, &knows),
         Step::Break => t.typed(&Piece::Break, &knows),
         Step::Reset => t.reset(),
         Step::Focus(n) => t.focus(FieldChange {

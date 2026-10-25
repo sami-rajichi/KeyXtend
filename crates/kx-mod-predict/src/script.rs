@@ -1,5 +1,5 @@
 //! Which script a letter belongs to, one table for the pack builder and the tracker: a word mixing scripts is never a
-//! word, and a guess in a right-to-left script reads right to left.
+//! word, and each script's row says which way it reads and what parts its words.
 
 /// A writing system, as far as the words need to tell them apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,20 +26,94 @@ pub enum Script {
     Tamil,
     /// Thai.
     Thai,
+    /// Lao.
+    Lao,
+    /// Myanmar.
+    Myanmar,
+    /// Khmer.
+    Khmer,
     /// Georgian.
     Georgian,
-    /// Han, kana and Hangul: Japanese mixes kanji and kana in one word, so they count as one.
-    Cjk,
+    /// Han and kana: Japanese mixes kanji and kana in one word, so they count as one.
+    Han,
+    /// Hangul, which Korean spaces between words.
+    Hangul,
     /// Any letter of a script this table does not list.
     Other,
 }
 
+/// What a script's words need from the chips.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Facts {
+    /// Written right to left, after the bidirectional classes of its letters (R and AL).
+    rtl: bool,
+    /// The text between two words, after UAX #14's line-break classes: nothing for ID and SA scripts.
+    gap: &'static str,
+    /// The other scripts its writing system holds, after ISO 15924's composite codes.
+    mixes: &'static [Script],
+}
+
+/// A script that spaces its words and reads left to right.
+const LTR: Facts = Facts {
+    rtl: false,
+    gap: " ",
+    mixes: &[],
+};
+/// A script that spaces its words and reads right to left.
+const RTL: Facts = Facts { rtl: true, ..LTR };
+/// A script whose lines break between words without spaces (UAX #14 classes ID and SA).
+const UNSPACED: Facts = Facts { gap: "", ..LTR };
+/// Korean: ISO 15924's Kore writes Hangul with Han (Hanja).
+const KORE: Facts = Facts {
+    mixes: &[Script::Han],
+    ..LTR
+};
+
+/// Each script's facts; a test checks every script has one row.
+const FACTS: &[(Script, Facts)] = &[
+    (Script::Common, LTR),
+    (Script::Latin, LTR),
+    (Script::Greek, LTR),
+    (Script::Cyrillic, LTR),
+    (Script::Armenian, LTR),
+    (Script::Hebrew, RTL),
+    (Script::Arabic, RTL),
+    (Script::Devanagari, LTR),
+    (Script::Bengali, LTR),
+    (Script::Tamil, LTR),
+    (Script::Thai, UNSPACED),
+    (Script::Lao, UNSPACED),
+    (Script::Myanmar, UNSPACED),
+    (Script::Khmer, UNSPACED),
+    (Script::Georgian, LTR),
+    (Script::Han, UNSPACED),
+    (Script::Hangul, KORE),
+    (Script::Other, LTR),
+];
+
 impl Script {
-    /// True for the scripts of this table written right to left, after the Unicode bidirectional classes of their
-    /// letters (R and AL).
+    /// True for a script written right to left.
     #[must_use]
     pub fn rtl(self) -> bool {
-        matches!(self, Self::Hebrew | Self::Arabic)
+        self.facts().rtl
+    }
+
+    /// The text a word chip types after a word of this script: a space, or nothing where words are not spaced.
+    #[must_use]
+    pub fn gap(self) -> &'static str {
+        self.facts().gap
+    }
+
+    /// True when this script's writing system holds `other`: it is this script or one it mixes in.
+    #[must_use]
+    pub fn holds(self, other: Self) -> bool {
+        self == other || self.facts().mixes.contains(&other)
+    }
+
+    /// This script's row; an unlisted script, which a test rules out, takes `Other`'s.
+    fn facts(self) -> Facts {
+        let row = |s: Self| FACTS.iter().find(|(script, _)| *script == s).map(|r| r.1);
+        row(self).or_else(|| row(Self::Other)).unwrap_or(LTR)
     }
 }
 
@@ -61,31 +135,38 @@ const BLOCKS: &[(char, char, Script)] = &[
     ('\u{0980}', '\u{09FF}', Script::Bengali),
     ('\u{0B80}', '\u{0BFF}', Script::Tamil),
     ('\u{0E00}', '\u{0E7F}', Script::Thai),
+    ('\u{0E80}', '\u{0EFF}', Script::Lao),
+    ('\u{1000}', '\u{109F}', Script::Myanmar),
     ('\u{10A0}', '\u{10FF}', Script::Georgian),
-    ('\u{1100}', '\u{11FF}', Script::Cjk),
+    ('\u{1100}', '\u{11FF}', Script::Hangul),
+    ('\u{1780}', '\u{17FF}', Script::Khmer),
     ('\u{1C80}', '\u{1C8F}', Script::Cyrillic),
     ('\u{1DC0}', '\u{1DFF}', Script::Common),
     ('\u{1E00}', '\u{1EFF}', Script::Latin),
     ('\u{1F00}', '\u{1FFF}', Script::Greek),
     ('\u{2C60}', '\u{2C7F}', Script::Latin),
     ('\u{2DE0}', '\u{2DFF}', Script::Cyrillic),
-    ('\u{3000}', '\u{303F}', Script::Cjk),
-    ('\u{3040}', '\u{31FF}', Script::Cjk),
-    ('\u{3400}', '\u{4DBF}', Script::Cjk),
-    ('\u{4E00}', '\u{9FFF}', Script::Cjk),
+    ('\u{3000}', '\u{303F}', Script::Han),
+    ('\u{3040}', '\u{312F}', Script::Han),
+    ('\u{3130}', '\u{318F}', Script::Hangul),
+    ('\u{3190}', '\u{31FF}', Script::Han),
+    ('\u{3400}', '\u{4DBF}', Script::Han),
+    ('\u{4E00}', '\u{9FFF}', Script::Han),
     ('\u{A640}', '\u{A69F}', Script::Cyrillic),
     ('\u{A720}', '\u{A7FF}', Script::Latin),
     ('\u{A8E0}', '\u{A8FF}', Script::Devanagari),
+    ('\u{A960}', '\u{A97F}', Script::Hangul),
     ('\u{AB30}', '\u{AB6F}', Script::Latin),
-    ('\u{AC00}', '\u{D7AF}', Script::Cjk),
-    ('\u{F900}', '\u{FAFF}', Script::Cjk),
+    ('\u{AC00}', '\u{D7FF}', Script::Hangul),
+    ('\u{F900}', '\u{FAFF}', Script::Han),
     ('\u{FB1D}', '\u{FB4F}', Script::Hebrew),
     ('\u{FB50}', '\u{FDFF}', Script::Arabic),
     ('\u{FE70}', '\u{FEFF}', Script::Arabic),
     ('\u{FF21}', '\u{FF3A}', Script::Latin),
     ('\u{FF41}', '\u{FF5A}', Script::Latin),
-    ('\u{FF66}', '\u{FFDC}', Script::Cjk),
-    ('\u{20000}', '\u{3134F}', Script::Cjk),
+    ('\u{FF66}', '\u{FF9F}', Script::Han),
+    ('\u{FFA0}', '\u{FFDC}', Script::Hangul),
+    ('\u{20000}', '\u{3134F}', Script::Han),
 ];
 
 /// The script of the letter `c`.
@@ -124,33 +205,4 @@ pub fn of(word: &str) -> Option<Script> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn marks_join_any_script_and_words_of_one_script_are_single() {
-        assert!(joins_any('\u{0301}'));
-        assert!(!joins_any('e'));
-        for word in ["e\u{0301}cole", "كتابٌ", "食べる", "l'homme", "x2"] {
-            assert!(single(word), "{word}");
-        }
-        assert!(!single("abcعربي"));
-        assert!(!single("hello\u{043C}"));
-    }
-
-    #[test]
-    fn a_word_takes_its_first_script_and_only_hebrew_and_arabic_read_right_to_left() {
-        assert_eq!(of("\u{0301}é"), Some(Script::Latin));
-        assert_eq!(of("123"), None);
-        assert!(of("أن").is_some_and(Script::rtl));
-        assert!(of("שלום").is_some_and(Script::rtl));
-        assert!(!of("école").is_some_and(Script::rtl));
-        assert!(!of("слово").is_some_and(Script::rtl));
-    }
-
-    #[test]
-    fn the_blocks_are_ordered_and_apart() {
-        let pairs = BLOCKS.windows(2);
-        assert!(pairs.into_iter().all(|p| p[0].1 < p[1].0));
-    }
-}
+mod tests;

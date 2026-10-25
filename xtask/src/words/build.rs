@@ -4,6 +4,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use kx_mod_predict::Casing;
 use kx_module_api::ports::pack_file;
 
 use super::cands::Candidates;
@@ -105,7 +106,7 @@ fn counted(
     authors: &mut BTreeSet<String>,
 ) -> Result<(WordList, Picked, Vec<String>), WordsError> {
     let (rules, t) = (&manifest.rules, &manifest.text);
-    let vocab = Vocab::new(&cands.cands);
+    let vocab = Vocab::new(&cands.cands, Casing::of(iso));
     let mut counter = Counter::new(&vocab, cands.cands.len(), t, rules.apostrophe);
     let read = read::text(
         manifest,

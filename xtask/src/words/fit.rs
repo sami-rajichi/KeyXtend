@@ -30,7 +30,7 @@ pub(crate) fn size(iso: &str, words: &[Word]) -> Result<usize, WordsError> {
     let mut writer = PackWriter::new(iso, Flags::default(), 0).map_err(refused)?;
     for word in words {
         writer
-            .add_word(&word.spelling, word.freq, word.capital)
+            .add_word(&word.spelling, word.freq)
             .map_err(refused)?;
     }
     Ok(writer.finish().map_err(refused)?.len())

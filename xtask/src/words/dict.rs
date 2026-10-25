@@ -4,6 +4,7 @@
 use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
 
+use kx_mod_predict::Casing;
 use spellbook::Dictionary;
 
 use super::{WordsError, io_error};
@@ -61,16 +62,16 @@ impl Dict {
             .map_err(|why| WordsError::Dict(format!("{}: {why}", dic.display())))
     }
 
-    /// Each form of `word` the dictionary accepts, its own first: as it is, its capital, then its elision.
-    /// A capital beside an accepted word counts only when it is a stem of its own (`I` beside `i`).
-    pub(crate) fn forms(&self, word: &str) -> Vec<String> {
+    /// Each form of `word` the dictionary accepts, its own first: as it is, its capital as `casing` writes it, then
+    /// its elision. A capital beside an accepted word counts only when it is a stem of its own (`I` beside `i`).
+    pub(crate) fn forms(&self, word: &str, casing: &Casing) -> Vec<String> {
         let mut forms = Vec::new();
         let plain = self.words.check(word);
         if plain {
             forms.push(word.to_string());
         }
         let own = |c: &String| !plain || self.stems.contains(c);
-        forms.extend(capitalise(word).filter(|c| self.words.check(c) && own(c)));
+        forms.extend(capitalise(word, casing).filter(|c| self.words.check(c) && own(c)));
         let elided = format!("{word}{}", self.apostrophe);
         if self.stems.contains(&elided) && self.words.check(&elided) {
             forms.push(elided);
@@ -113,10 +114,8 @@ fn prefix(line: &str) -> Option<&str> {
     (add != EMPTY && !add.is_empty()).then_some(add)
 }
 
-/// `word` with its first letter in upper case; `None` when that changes nothing, as in Arabic.
-fn capitalise(word: &str) -> Option<String> {
-    let mut chars = word.chars();
-    let first = chars.next()?;
-    let capital: String = first.to_uppercase().chain(chars).collect();
+/// `word` with its first letter in capitals as `casing` writes it; `None` when that changes nothing, as in Arabic.
+fn capitalise(word: &str, casing: &Casing) -> Option<String> {
+    let capital = casing.capital(word);
     (capital != word).then_some(capital)
 }
