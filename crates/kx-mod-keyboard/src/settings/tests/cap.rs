@@ -2,9 +2,9 @@
 
 use super::*;
 
-/// The agreed cap and range, in characters (P7 plan, 2026-10-24).
+/// The agreed cap and range, in characters (P7 plan, 2026-10-24; the floor rose to fit `[predict] max_word`).
 const CAP: u16 = 256;
-const RANGE: (i64, i64) = (32, 1_024);
+const RANGE: (i64, i64) = (128, 1_024);
 
 #[test]
 fn a_picked_word_may_erase_or_type_256_characters_by_default() {

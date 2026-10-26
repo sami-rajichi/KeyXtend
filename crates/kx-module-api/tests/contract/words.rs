@@ -4,10 +4,10 @@
 
 use kx_module_api::Capability::{InjectInput, ReadFocusedText, SecretStore};
 use kx_module_api::ports::{
-    BlobName, ChipPicked, FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch,
-    FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk, PressesWanted, SealedError,
-    SealedStore, SealedStoreKey, Suggested, TypeWord, Typed, TypingMode, WordPacks, WordPacksKey,
-    WordsAsk,
+    BlobName, ChipPicked, FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun,
+    FieldWatch, FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk, PressesWanted,
+    SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord, Typed, TypingMode,
+    TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -58,8 +58,12 @@ impl FieldRun for OneRun {
         FieldKind::Text
     }
 
-    fn before_cursor(&mut self, _: u8) -> Result<Option<Redacted<String>>, FieldError> {
-        Ok(Some(Redacted::new(TEXT.to_owned())))
+    fn before_cursor(&mut self, _: u8) -> Result<FieldRead, FieldError> {
+        let text = Some(Redacted::new(TEXT.to_owned()));
+        Ok(FieldRead {
+            kind: FieldKind::Text,
+            text,
+        })
     }
 
     fn ends_with(&mut self, end: &Redacted<String>) -> Option<bool> {
@@ -75,8 +79,8 @@ impl WordPacks for NoPacks {
         Ok(None)
     }
 
-    fn ships(&self, _: &str) -> bool {
-        false
+    fn pack_of(&self, _: &str) -> Option<String> {
+        None
     }
 }
 
@@ -117,7 +121,7 @@ fn host(granted: &[Capability]) -> FakeHost {
 }
 
 /// Sends one of each gated event on `bus`.
-fn send_all(bus: &Bus) -> [Result<(), EventError>; 6] {
+fn send_all(bus: &Bus) -> [Result<(), EventError>; 7] {
     let lane = Suggested {
         round: 1,
         lane: Lane::Empty,
@@ -140,6 +144,7 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 6] {
             piece: Piece::Erase,
         }),
         bus.publish(&mode),
+        bus.publish(&TypingModeAsk),
         bus.publish(&word),
         bus.publish(&lane),
         bus.publish(&ChipPicked { round: 1, index: 0 }),
@@ -158,6 +163,7 @@ fn without_read_focused_text_no_typed_text_travels() {
     let want = [
         refused::<Typed>(),
         refused::<TypingMode>(),
+        refused::<TypingModeAsk>(),
         refused::<TypeWord>(),
         refused::<Suggested>(),
         refused::<ChipPicked>(),
@@ -184,7 +190,7 @@ fn with_read_focused_text_a_typed_piece_reaches_its_listener_whole() {
     assert_eq!(*seen.lock().unwrap(), [piece]);
     assert_eq!(
         send_all(&bus),
-        [Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(())]
+        [Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(())]
     );
 }
 
@@ -227,8 +233,9 @@ fn a_watch_reached_through_its_gate_tells_the_box_and_reads_before_the_cursor() 
     };
     assert_eq!(*told.lock().unwrap(), [change]);
     assert_eq!(run.kind(), FieldKind::Text);
-    let before = run.before_cursor(2).unwrap().map(Redacted::into_inner);
-    assert_eq!(before.as_deref(), Some(TEXT));
+    let read = run.before_cursor(2).unwrap();
+    assert_eq!(read.kind, FieldKind::Text);
+    assert_eq!(read.text.map(Redacted::into_inner).as_deref(), Some(TEXT));
     assert_eq!(run.ends_with(&Redacted::new(END.to_owned())), Some(true));
 }
 

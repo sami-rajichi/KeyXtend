@@ -46,13 +46,14 @@ impl Actor {
         }
     }
 
-    /// The lane now, keeping its chips' picks and what the tracker showed for them.
+    /// The lane now, for the box the watch sees, keeping its chips' picks and what the tracker showed for them.
     fn lane(&mut self, seed: Option<&Pack<'_>>) -> Lane {
         self.chips = Chips::default();
         self.show = None;
         if !self.settings.on {
             return Lane::Off;
         }
+        self.moved();
         if self.kind == FieldKind::Password {
             return Lane::Locked;
         }
@@ -64,7 +65,7 @@ impl Actor {
         let learned: &dyn Learned = view.as_ref().map_or(&NoLearned, |v| v);
         let limit = usize::from(self.settings.chips);
         let src = Sources {
-            iso: &self.iso,
+            iso: &self.code,
             seed,
             learned,
             mode: self.mode,
@@ -128,7 +129,7 @@ impl Actor {
     /// Tells once per language and run, by the language's name, that the language in front has no pack though the build
     /// shipped one.
     pub(super) fn say_missing(&mut self) {
-        let shipped = self.ports.packs.ships(&self.iso);
+        let shipped = self.ports.packs.pack_of(&self.iso).is_some();
         if shipped && self.notes.missing.insert(self.iso.clone()) {
             let lang = (args::LANG, NoticeArg::Text(self.lang_name.clone()));
             self.publish(&notice(keys::WORDS_MISSING, vec![lang]));

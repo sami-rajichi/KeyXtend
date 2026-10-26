@@ -140,7 +140,7 @@ impl Actor {
             Blob::Learned => self
                 .learner
                 .as_ref()
-                .and_then(|l| Some((learned_blob(l.iso())?, l.to_bytes()))),
+                .and_then(|l| Some((learned_blob(&self.iso)?, l.to_bytes()))),
             Blob::Emails => emails_blob().map(|name| (name, self.emails.to_bytes())),
         };
         let Some((name, bytes)) = saving else {

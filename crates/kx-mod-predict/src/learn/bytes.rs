@@ -9,6 +9,7 @@ use super::forget::{Blocked, Mark};
 use super::table::{Id, Word, Words};
 use super::{LearnConfig, LearnFormatError, Learner};
 use crate::pack::layout::{MAX_CHAIN, MIN_CHAIN};
+use crate::track::could_learn;
 
 /// The first bytes of every learned file.
 pub const MAGIC: [u8; 4] = *b"KXL1";
@@ -72,9 +73,9 @@ impl Learner {
             _ => LearnFormatError::BadIso,
         })?;
         let mut learner = Self::new(iso, cfg)?;
-        let (words, old) = read_words(&mut r, &learner)?;
+        let (words, old, dropped) = read_words(&mut r, &learner)?;
         learner.words = words;
-        read_chains(&mut r, &mut learner, old.as_deref())?;
+        read_chains(&mut r, &mut learner, old.as_deref(), &dropped)?;
         learner.blocked = read_blocked(&mut r, &learner.words)?;
         if !r.bytes.is_empty() {
             return Err(LearnFormatError::BadEntry);
@@ -85,22 +86,28 @@ impl Learner {
     }
 }
 
-/// The words, each under its id, and their old ids when renumbered; `BadEntry` when two share an id or a spelling.
-fn read_words(
-    r: &mut Reader<'_>,
-    learner: &Learner,
-) -> Result<(Words, Option<Vec<Id>>), LearnFormatError> {
-    let mut words = Vec::new();
+/// The words read back, their old ids when renumbered, and the ids of the words dropped.
+type WordsRead = (Words, Option<Vec<Id>>, Vec<Id>);
+
+/// The words, each under its id, their old ids when renumbered, and the ids of the words the learning rule
+/// (`could_learn`) drops; `BadEntry` when two share an id or a spelling.
+fn read_words(r: &mut Reader<'_>, learner: &Learner) -> Result<WordsRead, LearnFormatError> {
+    let (mut words, mut dropped) = (Vec::new(), Vec::new());
     for _ in 0..r.u32()? {
         let id = r.u16()?;
-        let text = r.text()?.into();
+        let text = r.text()?;
         let (count, day) = r.counted()?;
+        if !could_learn(text) {
+            dropped.push(id);
+            continue;
+        }
+        let text = text.into();
         words.push((id, Word { text, count, day }));
     }
     let (cap, casing) = (learner.cfg.max_words, learner.casing());
     let old = renumber(&mut words, most(cap))?;
     let words = Words::load(cap, casing, words).ok_or(LearnFormatError::BadEntry)?;
-    Ok((words, old))
+    Ok((words, old, dropped))
 }
 
 /// Numbers `words` 0, 1, … in id order when an id reaches `slots`, as after a `max_words` lowered since the save, so
@@ -130,12 +137,13 @@ fn moved(old: Option<&[Id]>, id: Id) -> Option<Id> {
         .and_then(|at| Id::try_from(at).ok())
 }
 
-/// The chain tables into `learner`, keeping those its settings hold, with ids `renumber` moved; `BadEntry` for too
-/// many tables, or a chain out of order or naming a missing word.
+/// The chain tables into `learner`, keeping those its settings hold, with ids `renumber` moved and none naming a
+/// `dropped` word; `BadEntry` for too many tables, or a chain out of order or naming a missing word.
 fn read_chains(
     r: &mut Reader<'_>,
     learner: &mut Learner,
     old: Option<&[Id]>,
+    dropped: &[Id],
 ) -> Result<(), LearnFormatError> {
     let tables = r.u8()?;
     if tables > MAX_TABLES {
@@ -149,6 +157,9 @@ fn read_chains(
                 .map(|_| r.u16())
                 .collect::<Result<Vec<Id>, _>>()?;
             let (count, day) = r.counted()?;
+            if key.iter().any(|id| dropped.contains(id)) {
+                continue;
+            }
             let key: Option<Vec<Id>> = key.iter().map(|&id| moved(old, id)).collect();
             let known = key.filter(|k| k.iter().all(|&id| learner.words.get(id).is_some()));
             if !known.is_some_and(|key| table.push(&key, count, day)) {
@@ -162,7 +173,8 @@ fn read_chains(
     Ok(())
 }
 
-/// The blocklist; `BadEntry` when out of order, or for a word also in `words`.
+/// The blocklist, without the entries the learning rule (`could_learn`) drops; `BadEntry` when out of order, or for a
+/// word also in `words`.
 fn read_blocked(r: &mut Reader<'_>, words: &Words) -> Result<Blocked, LearnFormatError> {
     let mut blocked = Blocked::default();
     let mut last = None;
@@ -175,7 +187,9 @@ fn read_blocked(r: &mut Reader<'_>, words: &Words) -> Result<Blocked, LearnForma
         if last.is_some_and(|l| l >= text) || words.find(text).is_some() {
             return Err(LearnFormatError::BadEntry);
         }
-        blocked.put(text.into(), mark);
+        if could_learn(text) {
+            blocked.put(text.into(), mark);
+        }
         last = Some(text);
     }
     Ok(blocked)

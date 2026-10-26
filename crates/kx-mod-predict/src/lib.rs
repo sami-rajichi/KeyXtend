@@ -32,7 +32,7 @@ pub use manifest::{ID, MANIFEST};
 pub use pack::{Flags, Pack, PackFormatError, WordId};
 #[cfg(feature = "build")]
 pub use pack::{PackWriter, WriteError};
-pub use settings::{LEARN_KEY, ON_KEY, PredictSettings, SPEC};
+pub use settings::{LEARN_KEY, MAX_WORD, ON_KEY, PredictSettings, SPEC};
 
 use kx_module_api::ports::{
     ChipPicked, FieldWatchKey, Lane, LayoutChanged, PointerPressed, PressesAsk, PressesWanted,

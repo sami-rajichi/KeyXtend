@@ -168,3 +168,70 @@ fn a_waiting_dead_key_empties_the_lane_until_it_ends() {
     rig.send(Msg::Mode(TypingMode::default()));
     assert_eq!(rig.words(), ["hello", "help"]);
 }
+
+#[test]
+fn letters_typed_after_an_unheard_move_to_a_password_box_feed_nothing_and_show_no_chip() {
+    let mut rig = in_box(FieldKind::Text);
+    rig.typed("he");
+    rig.fakes.field.focus(FieldKind::Password);
+    rig.late(text("l"));
+    assert_eq!(
+        rig.lane().lane,
+        Lane::Locked,
+        "the watch's kind wins at the piece"
+    );
+    assert_eq!(
+        rig.presses().last(),
+        Some(&false),
+        "nothing is followed there"
+    );
+}
+
+#[test]
+fn a_box_the_watch_already_sees_as_a_password_box_is_never_read() {
+    let mut rig = in_box(FieldKind::Text);
+    rig.fakes.field.focus(FieldKind::Password);
+    let reads = rig.fakes.field.before_calls();
+    rig.late(Msg::Lang {
+        iso: "fr".to_owned(),
+        name: "fr".to_owned(),
+        rtl: false,
+    });
+    assert_eq!(rig.fakes.field.before_calls(), reads, "no read was sent");
+    assert_eq!(rig.lane().lane, Lane::Locked);
+}
+
+#[test]
+fn a_read_that_finds_a_password_box_no_event_named_locks_the_lane_and_learns_nothing() {
+    let mut rig = in_box(FieldKind::Text);
+    rig.typed("hel");
+    rig.fakes.field.move_unheard(FieldKind::Password);
+    rig.send(Msg::Pressed(false));
+    assert_eq!(
+        rig.lane().lane,
+        Lane::Locked,
+        "the read's kind wins at once"
+    );
+    rig.typed("secret ");
+    assert_eq!(rig.lane().lane, Lane::Locked);
+    rig.stop();
+    assert_eq!(uses(&rig, "secret"), 0, "nothing learned");
+    assert_eq!(rig.fakes.store.saves(), 0);
+}
+
+#[test]
+fn a_read_that_finds_an_unknown_box_no_event_named_stops_learning() {
+    let mut rig = in_box(FieldKind::Text);
+    rig.fakes.field.move_unheard(FieldKind::Unknown);
+    rig.send(Msg::Pressed(false));
+    rig.typed("hel");
+    assert_eq!(
+        rig.words(),
+        ["hello", "help"],
+        "an unknown box still gets chips"
+    );
+    rig.typed("lo ");
+    rig.stop();
+    assert_eq!(uses(&rig, "hello"), 2, "nothing learned");
+    assert_eq!(rig.fakes.store.saves(), 0);
+}

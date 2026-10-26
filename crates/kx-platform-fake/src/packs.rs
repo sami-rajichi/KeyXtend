@@ -2,7 +2,7 @@
 //! the opens.
 
 use crate::lock;
-use kx_module_api::ports::{PackError, PackView, WordPacks, fits_iso, pack_file};
+use kx_module_api::ports::{PackError, PackIndex, PackView, WordPacks, fits_iso, pack_file};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -14,6 +14,8 @@ struct Log {
     packs: BTreeMap<String, Arc<[u8]>>,
     /// The languages the index lists, packs or not.
     shipped: BTreeSet<String>,
+    /// The layout codes the index lists after each pack.
+    aliases: BTreeMap<String, Vec<String>>,
     fail: bool,
     opens: BTreeMap<String, usize>,
 }
@@ -47,6 +49,15 @@ impl FakeWordPacks {
     /// Lists language `iso` in the index, as the build does for each pack it wrote; a pack need not be added.
     pub fn ship(&self, iso: &str) {
         lock(&self.log).shipped.insert(iso.to_owned());
+    }
+
+    /// Lists layout code `iso` after pack `pack` in the index, as `words.toml`'s aliases do; `pack` must also ship.
+    pub fn alias(&self, pack: &str, iso: &str) {
+        let mut log = lock(&self.log);
+        log.aliases
+            .entry(pack.to_owned())
+            .or_default()
+            .push(iso.to_owned());
     }
 
     /// Refuses the next open, whatever its language, with `Unreadable`.
@@ -83,8 +94,12 @@ impl WordPacks for FakeWordPacks {
         Ok(found.map(|bytes| Box::new(FakePack(bytes)) as Box<dyn PackView>))
     }
 
-    fn ships(&self, iso: &str) -> bool {
-        fits_iso(iso) && lock(&self.log).shipped.contains(iso)
+    fn pack_of(&self, iso: &str) -> Option<String> {
+        let log = lock(&self.log);
+        let packs: Vec<&str> = log.shipped.iter().map(String::as_str).collect();
+        let index = PackIndex::new(&packs, &log.aliases).ok()?;
+        let pack = fits_iso(iso).then(|| index.pack_of(iso)).flatten();
+        pack.map(str::to_owned)
     }
 }
 

@@ -126,12 +126,15 @@ pub(crate) fn build(src: &str, out: Option<&str>) -> Result<(), WordsError> {
     build::run(&manifest, &paths, &mut |line| println!("{line}"))
 }
 
-/// Runs `cargo xtask words index`: rewrites the pack index from the packs in `packs`, by default the manifest's folder.
+/// Runs `cargo xtask words index`: rewrites the pack index from the packs in `packs`, by default the manifest's folder,
+/// with the manifest's aliases.
 pub(crate) fn index(packs: Option<&str>) -> Result<(), WordsError> {
     let manifest = Manifest::parse(MANIFEST)?;
     let json = workspace::metadata_json().map_err(|e| lost(&e))?;
     let dir = packs_dir(&manifest, &json, packs)?;
-    index::run(&dir, &mut |line| println!("{line}"))
+    index::run(&dir, &manifest.packs.aliases, &mut |line| {
+        println!("{line}");
+    })
 }
 
 /// Runs `cargo xtask words meter`: counts the presses the chips save on the held-back sentences, or times the scorer,

@@ -31,7 +31,7 @@ pub const LEARN_WEIGHT: RangeInclusive<f64> = WEIGHTS;
 pub const LEARN_RAMP: RangeInclusive<u32> = 100..=100_000;
 /// The step down to a shorter context: the scorer's own bound.
 pub const BACKOFF: RangeInclusive<f64> = BACKOFFS;
-/// The longest word with chips, in characters.
+/// The longest word with chips, in characters; the app ties its top below the keyboard's `text_cap` floor.
 pub const MAX_WORD: RangeInclusive<usize> = 16..=64;
 /// The known emails kept.
 pub const MAX_EMAILS: RangeInclusive<usize> = 5..=200;

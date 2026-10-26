@@ -6,7 +6,7 @@ use crate::{Capability, ServiceId, ServiceKey};
 use thiserror::Error;
 
 mod index;
-pub use index::{IndexError, index_text, read_index};
+pub use index::{IndexError, PackIndex};
 
 /// The extension of a pack file, after its language's code: `fr.kxw`.
 pub const PACK_EXT: &str = "kxw";
@@ -31,7 +31,7 @@ pub fn pack_file(iso: &str) -> Option<String> {
     fits_iso(iso).then(|| format!("{iso}.{PACK_EXT}"))
 }
 
-/// The file the build writes beside the packs, naming each language it shipped (`index_text`, `read_index`).
+/// The file the build writes beside the packs, naming each language it shipped and the codes it serves (`PackIndex`).
 pub const PACK_INDEX: &str = "packs.txt";
 /// The folder beside the program that holds the packs, their index and credits; the stage fills it and the app reads it.
 pub const PACK_DIR: &str = "words";
@@ -53,16 +53,15 @@ pub enum PackError {
 
 /// Opens the shipped word packs; the platform provides it.
 pub trait WordPacks: Send + Sync {
-    /// The pack of language `iso`, as `LangLabel::iso` names it; `Ok(None)` when the language has no pack or `iso`
-    /// fails `fits_iso`.
+    /// The pack named `iso`, as `pack_of` names it; `Ok(None)` when there is none or `iso` fails `fits_iso`.
     ///
     /// # Errors
     /// `Unreadable` when the pack is there but cannot be read.
     fn open(&self, iso: &str) -> Result<Option<Box<dyn PackView>>, PackError>;
 
-    /// True when the build shipped a pack for `iso`, as the index beside the packs lists; false when `iso` fails
-    /// `fits_iso`, or no index reads.
-    fn ships(&self, iso: &str) -> bool;
+    /// The code of the pack the build shipped for layout language `iso` (`LangLabel::iso`), as the index beside the
+    /// packs resolves it (`PackIndex::pack_of`); `None` if it shipped none, `iso` fails `fits_iso`, or no index reads.
+    fn pack_of(&self, iso: &str) -> Option<String>;
 }
 
 /// The word packs service; it needs no capability.

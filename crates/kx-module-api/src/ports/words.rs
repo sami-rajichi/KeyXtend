@@ -46,10 +46,21 @@ pub struct TypingMode {
     pub shortcut: bool,
     /// A dead key waits, so the app composes the next key with it and a picked word would type nothing.
     pub dead: bool,
+    /// The most characters a picked word may erase or type (`[keyboard] text_cap`); `None` until the keyboard tells.
+    pub cap: Option<u16>,
 }
 
 impl Event for TypingMode {
     const NAME: &'static str = "typing-mode";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// To the keyboard: send `TypingMode` again, for a prediction module that starts after the keyboard.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct TypingModeAsk;
+
+impl Event for TypingModeAsk {
+    const NAME: &'static str = "typing-mode-ask";
     const CAPABILITY: Option<Capability> = GATE;
 }
 
@@ -61,7 +72,7 @@ pub struct TypeWord {
     /// How many characters (Unicode scalars) to erase first; each platform's injector turns them into Backspace
     /// presses, one per character, as one press removes a whole surrogate pair.
     pub erase: u16,
-    /// What to type then; the keyboard types nothing when it holds a control character.
+    /// What to type then; the keyboard types nothing when it holds a hidden mark (`is_hidden`).
     pub text: Redacted<String>,
 }
 
@@ -70,6 +81,12 @@ impl TypeWord {
     #[must_use]
     pub fn erase_of(typed: &str) -> Option<u16> {
         u16::try_from(typed.chars().count()).ok()
+    }
+
+    /// True when `erase` and the characters of `text` each stay within `cap`, as the keyboard's `text_cap` allows.
+    #[must_use]
+    pub fn fits(erase: u16, text: &str, cap: u16) -> bool {
+        erase <= cap && text.chars().count() <= usize::from(cap)
     }
 }
 

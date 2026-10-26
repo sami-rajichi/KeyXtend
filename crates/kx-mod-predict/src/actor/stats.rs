@@ -18,6 +18,8 @@ pub(super) struct Stats {
     pub(super) moved: u64,
     /// Picks a box that cannot confirm the erase could not type.
     pub(super) unsure: u64,
+    /// Picks past the keyboard's text cap.
+    pub(super) long: u64,
     pub(super) forgot: u64,
     pub(super) switches: u64,
     pub(super) saves: u64,
@@ -36,6 +38,7 @@ impl Stats {
             stale = self.stale,
             moved = self.moved,
             unsure = self.unsure,
+            long = self.long,
             forgot = self.forgot,
             switches = self.switches,
             saves = self.saves,

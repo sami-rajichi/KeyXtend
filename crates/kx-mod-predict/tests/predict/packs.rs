@@ -3,7 +3,8 @@
 
 #![cfg(feature = "build")]
 
-use crate::rig::{Rig, plant};
+use crate::rig::{Rig, plant, saved};
+use kx_mod_predict::score::Learned;
 use kx_mod_predict::{Flags, PackWriter};
 use kx_module_api::keys;
 use kx_module_api::ports::FieldKind;
@@ -68,4 +69,42 @@ fn a_pack_that_cannot_be_opened_counts_as_missing() {
     });
     rig.lang("fr");
     assert_eq!(rig.notices(), [keys::WORDS_MISSING]);
+}
+
+#[test]
+fn a_croatian_layout_takes_the_serbo_croatian_pack_and_keeps_its_own_learned_file() {
+    let mut rig = Rig::build(|f, _| {
+        f.packs.ship("sh");
+        f.packs.alias("sh", "hr");
+        f.packs.add("sh", pack("sh", &["hvala", "hvatati"]));
+    });
+    rig.lang("hr");
+    rig.focus(FieldKind::Text);
+    rig.typed("hva");
+    assert_eq!(rig.words(), ["hvala", "hvatati"], "the pack's words");
+    assert!(rig.notices().is_empty(), "nothing is missing");
+    rig.typed("la ");
+    rig.stop();
+    assert_eq!(
+        rig.fakes.packs.opens("hr"),
+        0,
+        "no file of the layout's code"
+    );
+    let hr = saved(&rig.fakes, "hr").unwrap();
+    assert_eq!(
+        hr.view(None).count("hvala"),
+        1,
+        "learned under the layout's code"
+    );
+}
+
+#[test]
+fn a_shipped_alias_whose_pack_is_gone_is_told_missing_and_serbian_never() {
+    let mut rig = Rig::build(|f, _| {
+        f.packs.ship("sh");
+        f.packs.alias("sh", "bs");
+    });
+    rig.lang("bs");
+    rig.lang("sr");
+    assert_eq!(rig.notices(), [keys::WORDS_MISSING], "Bosnian only");
 }

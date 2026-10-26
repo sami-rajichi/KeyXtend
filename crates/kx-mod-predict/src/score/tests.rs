@@ -17,6 +17,7 @@ mod elisions;
 mod learned;
 mod ranked;
 mod scripts;
+mod shift;
 mod stored;
 
 /// The followers each test pack keeps per context.
@@ -246,19 +247,6 @@ fn two_capitals_beside_a_lower_case_letter_keep_the_words_own_capitals() {
     assert_eq!(us, ["USA", "USAGE"]);
     let nl = pack("nl", &[("IJsselmeer", 120)], &[]);
     assert_eq!(first(&nl, &[], "IJs").as_deref(), Some("IJsselmeer"));
-}
-
-#[test]
-fn shift_with_no_prefix_capitalises_the_next_word_only() {
-    let en = english();
-    let shift = TypingMode {
-        shift: true,
-        ..TypingMode::default()
-    };
-    let next = run(&en, &NoLearned, &ask(&["in"], ""), shift);
-    assert_eq!(next.first().map(String::as_str), Some("The"));
-    let typed = run(&en, &NoLearned, &ask(&[], "th"), shift);
-    assert_eq!(typed.first().map(String::as_str), Some("the"));
 }
 
 #[test]

@@ -220,3 +220,31 @@ fn a_word_longer_than_the_byte_form_allows_is_not_learned() {
     assert_eq!((l.words.len(), l.view(None).count(&long)), (0, 0));
     assert_eq!(Learner::from_bytes(&l.to_bytes(), CFG), Ok(l));
 }
+
+#[test]
+fn a_stored_word_that_fails_the_learning_rule_goes_with_its_chains_and_the_rest_stay() {
+    // A line separator, a bidi override, a zero-width space, a digit, a space and two scripts.
+    for bad in [
+        "a\u{2028}b",
+        "\u{202e}ab",
+        "a\u{200b}b",
+        "a1",
+        "a b",
+        "a\u{431}",
+    ] {
+        let words = [(0, "hello", 2, DAY), (1, bad, 2, DAY), (2, "world", 2, DAY)];
+        let chains: &[C<'_>] = &[(&[0, 1], 1, DAY), (&[0, 2], 1, DAY), (&[1, 2], 1, DAY)];
+        let forged = encode("en", &words, &[chains], &[(bad, 1, DAY)]);
+        let kept = [(0, "hello", 2, DAY), (2, "world", 2, DAY)];
+        let clean = encode("en", &kept, &[&[(&[0, 2], 1, DAY)]], &[]);
+        let want = Learner::from_bytes(&clean, ONE);
+        assert_eq!(Learner::from_bytes(&forged, ONE), want, "{bad:?}");
+    }
+}
+
+#[test]
+fn a_persian_word_with_its_joiner_is_kept() {
+    let words = [(0, "می\u{200c}خواهم", 2, DAY)];
+    let read = Learner::from_bytes(&encode("fa", &words, &[], &[]), ONE).unwrap();
+    assert_eq!(read.view(None).count("می\u{200c}خواهم"), 2);
+}

@@ -120,8 +120,10 @@ pub struct Actor {
     score: ScoreConfig,
     learn_cfg: LearnConfig,
     email_cfg: EmailConfig,
-    /// The language in front, its name for notices, and whether it reads right to left.
+    /// The language in front as the layout names it, the code of its words (the pack serving it, else the same), its
+    /// name for notices, and whether it reads right to left.
     iso: String,
+    code: String,
     lang_name: String,
     rtl: bool,
     kind: FieldKind,
@@ -155,6 +157,7 @@ impl Actor {
             learn_cfg: settings.learn_config(),
             email_cfg: settings.email_config(),
             iso: String::new(),
+            code: String::new(),
             lang_name: String::new(),
             rtl: false,
             kind: FieldKind::None,

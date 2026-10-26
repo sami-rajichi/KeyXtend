@@ -196,8 +196,8 @@ impl WordPacks for Broken {
         Ok(None)
     }
 
-    fn ships(&self, _: &str) -> bool {
-        false
+    fn pack_of(&self, _: &str) -> Option<String> {
+        None
     }
 }
 
@@ -243,3 +243,5 @@ fn a_missing_pack_is_told_by_the_name_the_layouts_gave() {
 
 #[cfg(feature = "build")]
 mod closes;
+
+mod order;

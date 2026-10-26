@@ -109,12 +109,21 @@ pub(super) fn parts(normal: &str) -> Parts<'_> {
     }
 }
 
-/// True when `word` may get guesses and be learned: it holds no digit, one script that spaces its words, and at most
-/// `max_word` characters. Unspaced scripts wait for the CJK input mode, as spaces cannot end their words.
+/// True when `word` may get guesses and be learned: it is `lettered` and holds at most `max_word` characters.
 pub(super) fn learnable(word: &str, max_word: usize) -> bool {
+    lettered(word) && word.chars().count() <= max_word
+}
+
+/// True when the learner may keep `word` it reads back: one whole word by the packs' rule, and `lettered`.
+pub(crate) fn could_learn(word: &str) -> bool {
+    spans(word, apostrophe()) == [(0, word.len())] && lettered(word)
+}
+
+/// True when `word` holds no digit and one script that spaces its words. Unspaced scripts wait for the CJK input
+/// mode, as spaces cannot end their words.
+fn lettered(word: &str) -> bool {
     !word.is_empty()
         && !word.chars().any(char::is_numeric)
         && script::single(word)
         && script::of(word).is_none_or(Script::spaced)
-        && word.chars().count() <= max_word
 }

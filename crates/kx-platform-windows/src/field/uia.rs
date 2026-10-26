@@ -4,7 +4,8 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::time::Instant;
 
-use kx_module_api::ports::{FieldError, FieldKind, last_words};
+use kx_module_api::Redacted;
+use kx_module_api::ports::{FieldError, FieldKind, FieldRead, last_words};
 use kx_platform::field::{after_first, late};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Variant::VT_BOOL;
@@ -124,22 +125,37 @@ pub(super) fn focused(auto: &IUIAutomation) -> Result<IUIAutomationElement, Fiel
     unsafe { auto.GetFocusedElement() }.map_err(failed)
 }
 
-/// At most `max_words` words before the caret of text box `el`, from at most `chars` characters; `None` when `el` is
-/// no text box or has no caret.
+/// At most `max_words` words before the caret of text box `el`, from at most `chars` characters, with the kind the
+/// read saw; no text when `el` is no text box or has no caret.
 pub(super) fn before_cursor(
     el: &IUIAutomationElement,
     max_words: u8,
     by: Instant,
     chars: usize,
-) -> Result<Option<String>, FieldError> {
-    let Some(caret) = text_caret(el, by)? else {
-        return Ok(None);
+) -> Result<FieldRead, FieldError> {
+    let (kind, caret) = text_caret(el, by)?;
+    let text = match caret {
+        Some(caret) => words_before(&caret, max_words, by, chars)?,
+        None => None,
     };
+    Ok(FieldRead {
+        kind,
+        text: text.map(Redacted::new),
+    })
+}
+
+/// At most `max_words` words before `caret`, from at most `chars` characters; `None` when the box does not tell.
+fn words_before(
+    caret: &IUIAutomationTextRange,
+    max_words: u8,
+    by: Instant,
+    chars: usize,
+) -> Result<Option<String>, FieldError> {
     let words = i32::from(max_words) + 1;
-    if let Some(text) = tail(&caret, TextUnit_Word, words, by, chars)? {
+    if let Some(text) = tail(caret, TextUnit_Word, words, by, chars)? {
         return Ok(Some(last_words(&text, max_words).to_owned()));
     }
-    let text = tail(&caret, TextUnit_Character, span(chars), by, chars)?;
+    let text = tail(caret, TextUnit_Character, span(chars), by, chars)?;
     Ok(text.map(|t| last_words(after_first(&t), max_words).to_owned()))
 }
 
@@ -155,17 +171,17 @@ pub(super) fn ends_with(
     let Some(back) = back.ok().filter(|_| want.chars().count() <= chars) else {
         return Ok(None);
     };
-    let Some(caret) = text_caret(el, by)? else {
+    let (_, Some(caret)) = text_caret(el, by)? else {
         return Ok(None);
     };
     Ok(tail(&caret, TextUnit_Character, back, by, chars)?.map(|t| t.ends_with(want)))
 }
 
-/// The caret of text box `el`; `None` unless `el` is a text box with one. The kind check fetches it once.
+/// The kind of `el` checked now, and its caret, which only a text box with one gives; the check fetches it once.
 fn text_caret(
     el: &IUIAutomationElement,
     by: Instant,
-) -> Result<Option<IUIAutomationTextRange>, FieldError> {
+) -> Result<(FieldKind, Option<IUIAutomationTextRange>), FieldError> {
     let mut caret = None;
     let kind = kind(&facts(el), table(), || {
         let got = caret_of(el);
@@ -174,10 +190,10 @@ fn text_caret(
         fixed
     });
     if kind != FieldKind::Text {
-        return Ok(None);
+        return Ok((kind, None));
     }
     late(by)?;
-    caret.unwrap_or_else(|| caret_of(el))
+    Ok((kind, caret.unwrap_or_else(|| caret_of(el))?))
 }
 
 /// The caret of `el`, from `TextPattern2` or else the first selection; `None` when it has none.

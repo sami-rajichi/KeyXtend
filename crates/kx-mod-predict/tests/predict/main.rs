@@ -13,6 +13,7 @@ mod lane;
 mod lang;
 mod logs;
 mod menu;
+mod mode;
 mod module;
 mod packs;
 mod props;

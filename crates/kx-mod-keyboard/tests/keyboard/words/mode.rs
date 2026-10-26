@@ -1,16 +1,18 @@
-//! The typing mode on the bus: told at start, again at each restart, and on each change of Shift, Caps Lock, a
-//! shortcut latch or a dead key's wait, from a click, a mouse click that used the latches or the relabel tick; never
-//! when nothing changed.
+//! The typing mode on the bus: told at start, again at each restart and each ask, and on each change of Shift, Caps
+//! Lock, a shortcut latch or a dead key's wait, from a click, a mouse click that used the latches or the relabel
+//! tick; never when nothing changed.
 
-use super::Desk;
+use super::{Desk, plain};
 use crate::held::A;
-use kx_module_api::ports::{FaceAction, InjectError, LatchesAsk, LatchesUsed, TypingMode};
+use kx_module_api::ports::{
+    FaceAction, InjectError, LatchesAsk, LatchesUsed, TypingMode, TypingModeAsk,
+};
 
 /// The mode with Shift latched.
 fn shift() -> TypingMode {
     TypingMode {
         shift: true,
-        ..TypingMode::default()
+        ..plain()
     }
 }
 
@@ -18,7 +20,7 @@ fn shift() -> TypingMode {
 fn caps() -> TypingMode {
     TypingMode {
         caps: true,
-        ..TypingMode::default()
+        ..plain()
     }
 }
 
@@ -26,22 +28,18 @@ fn caps() -> TypingMode {
 fn shortcut() -> TypingMode {
     TypingMode {
         shortcut: true,
-        ..TypingMode::default()
+        ..plain()
     }
 }
 
 #[test]
 fn the_mode_is_told_at_start_and_at_each_change_only() {
     let d = Desk::new(None);
-    assert_eq!(d.modes(), [TypingMode::default()], "at start");
+    assert_eq!(d.modes(), [plain()], "at start");
     d.rig.tap("shift").unwrap();
     assert_eq!(d.modes(), [shift()]);
     d.rig.tap(A).unwrap();
-    assert_eq!(
-        d.modes(),
-        [TypingMode::default()],
-        "the one-shot Shift let go"
-    );
+    assert_eq!(d.modes(), [plain()], "the one-shot Shift let go");
     d.rig.tap(A).unwrap();
     d.rig.act(FaceAction::Relabel).unwrap();
     assert!(d.modes().is_empty(), "nothing changed");
@@ -55,7 +53,7 @@ fn ctrl_alt_and_win_each_make_a_shortcut() {
         d.rig.tap(latch).unwrap();
         assert_eq!(d.modes(), [shortcut()], "{latch}");
         d.rig.tap(latch).unwrap();
-        assert_eq!(d.modes(), [TypingMode::default()], "{latch} let go");
+        assert_eq!(d.modes(), [plain()], "{latch} let go");
     }
 }
 
@@ -76,7 +74,7 @@ fn a_mouse_click_that_used_the_latches_tells_the_mode() {
     d.rig.tap("shift").unwrap();
     d.modes();
     d.bus.publish(&LatchesUsed).unwrap();
-    assert_eq!(d.modes(), [TypingMode::default()]);
+    assert_eq!(d.modes(), [plain()]);
 }
 
 #[test]
@@ -107,11 +105,11 @@ fn a_dead_key_tells_its_wait_and_the_next_key_ends_it() {
     d.rig.tap("c-0x001A").unwrap();
     let dead = TypingMode {
         dead: true,
-        ..TypingMode::default()
+        ..plain()
     };
     assert_eq!(d.modes(), [dead], "the French ^ waits");
     d.rig.tap("c-0x0012").unwrap();
-    assert_eq!(d.modes(), [TypingMode::default()], "ê ends it");
+    assert_eq!(d.modes(), [plain()], "ê ends it");
 }
 
 #[test]
@@ -124,7 +122,7 @@ fn a_caps_click_tells_caps_lock_at_once_and_the_tick_corrects_it() {
     d.rig.act(FaceAction::Relabel).unwrap();
     assert!(d.modes().is_empty(), "the system agrees");
     d.rig.tap("caps").unwrap();
-    assert_eq!(d.modes(), [TypingMode::default()]);
+    assert_eq!(d.modes(), [plain()]);
     d.rig.act(FaceAction::Relabel).unwrap();
     assert_eq!(d.modes(), [caps()], "the system still has it on");
 }
@@ -162,11 +160,7 @@ fn the_caps_flip_outlasts_the_state_read_until_the_tick() {
         "lit from the flip"
     );
     d.rig.act(FaceAction::Relabel).unwrap();
-    assert_eq!(
-        d.modes(),
-        [TypingMode::default()],
-        "the tick reads the system"
-    );
+    assert_eq!(d.modes(), [plain()], "the tick reads the system");
 }
 
 #[test]
@@ -175,7 +169,34 @@ fn two_caps_clicks_with_a_state_read_between_tell_no_wrong_value() {
     d.modes();
     d.rig.tap("caps").unwrap();
     d.rig.tap("caps").unwrap();
-    assert_eq!(d.modes(), [caps(), TypingMode::default()]);
+    assert_eq!(d.modes(), [caps(), plain()]);
     d.rig.act(FaceAction::Relabel).unwrap();
     assert!(d.modes().is_empty(), "the system is off too");
+}
+
+#[test]
+fn asking_for_the_mode_tells_it_again_and_not_the_latches() {
+    let d = Desk::new(None);
+    d.rig.tap("ctrl").unwrap();
+    d.modes();
+    let latches = d.rig.fakes.injector.strokes().len();
+    d.bus.publish(&TypingModeAsk).unwrap();
+    assert_eq!(d.modes(), [shortcut()], "told unchanged, for a later start");
+    d.bus.publish(&TypingModeAsk).unwrap();
+    assert_eq!(d.modes(), [shortcut()], "each ask is answered");
+    assert_eq!(
+        d.rig.fakes.injector.strokes().len(),
+        latches,
+        "nothing typed"
+    );
+}
+
+#[test]
+fn the_mode_carries_the_text_cap_the_settings_give() {
+    let d = Desk::new(Some(("text_cap", toml::Value::Integer(300))));
+    let want = TypingMode {
+        cap: Some(300),
+        ..plain()
+    };
+    assert_eq!(d.modes(), [want]);
 }

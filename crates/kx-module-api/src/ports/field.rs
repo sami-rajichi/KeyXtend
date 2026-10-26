@@ -35,6 +35,15 @@ pub struct FieldConfig {
     pub read_chars: u16,
 }
 
+/// What one read of the focused box found.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FieldRead {
+    /// The kind of the box the platform saw at the read, or told last when nothing was read.
+    pub kind: FieldKind,
+    /// At most the asked words before the cursor; `None` when the app does not tell, or the box is no text box.
+    pub text: Option<Redacted<String>>,
+}
+
 /// Why the box could not be watched or read.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum FieldError {
@@ -54,12 +63,12 @@ pub trait FieldRun: Send {
     /// The kind of the box with focus now.
     fn kind(&self) -> FieldKind;
 
-    /// At most `max_words` words before the cursor, read within `FieldConfig::read_ms`; `None` when the app does not
-    /// tell, or the box is a password or unknown box.
+    /// At most `max_words` words before the cursor, read within `FieldConfig::read_ms`, with the kind of box the read
+    /// saw; no text when the app does not tell, or the box is a password or unknown box.
     ///
     /// # Errors
     /// `TimedOut` when the read takes too long, `Refused` when the app refuses, `Unavailable` when nothing can read.
-    fn before_cursor(&mut self, max_words: u8) -> Result<Option<Redacted<String>>, FieldError>;
+    fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError>;
 
     /// Whether the text just before the cursor ends with `text`; `None` when it cannot be read.
     fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool>;

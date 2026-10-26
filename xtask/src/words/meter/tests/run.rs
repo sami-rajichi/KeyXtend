@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use kx_mod_predict::{Flags, PackWriter};
-use kx_module_api::ports::{PACK_INDEX, index_text, pack_file};
+use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
 
 use super::super::speed::KINDS;
 use super::super::{NOTHING, Opts, Paths, RELEASE_RUN, SLOW, UNOPTIMISED, run};
@@ -11,6 +11,13 @@ use super::{CHIPS, SENTENCE, pack, rules};
 use crate::test_support::TempDir;
 use crate::words::WordsError;
 use crate::words::read::held_file;
+
+/// The index text listing `isos`, which serve no other code.
+fn index_text(isos: &[&str]) -> String {
+    PackIndex::new(isos, &std::collections::BTreeMap::new())
+        .unwrap()
+        .text()
+}
 
 /// A packs folder holding the tiny pack of each language of `index`, which its index lists, and held sentences for
 /// each language of `held`.
@@ -21,7 +28,7 @@ fn folders(dir: &Path, index: &[&str], held: &[&str]) -> Paths {
     };
     std::fs::create_dir_all(&paths.packs).unwrap();
     std::fs::create_dir_all(&paths.held).unwrap();
-    std::fs::write(paths.packs.join(PACK_INDEX), index_text(index).unwrap()).unwrap();
+    std::fs::write(paths.packs.join(PACK_INDEX), index_text(index)).unwrap();
     for iso in index {
         std::fs::write(paths.packs.join(pack_file(iso).unwrap()), pack(iso)).unwrap();
     }
@@ -169,7 +176,7 @@ fn the_speed_run_times_every_shipped_language_in_both_query_kinds() {
 fn a_pack_whose_script_spaces_no_words_sorts_nothing() {
     let dir = TempDir::new("words-meter-han");
     let paths = folders(dir.path(), &[], &[]);
-    std::fs::write(paths.packs.join(PACK_INDEX), index_text(&["zh"]).unwrap()).unwrap();
+    std::fs::write(paths.packs.join(PACK_INDEX), index_text(&["zh"])).unwrap();
     std::fs::write(paths.packs.join(pack_file("zh").unwrap()), han_pack()).unwrap();
     let (said, _) = ran(&timing(), &paths);
     let empty = said

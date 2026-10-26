@@ -13,6 +13,7 @@ mod show;
 mod token;
 
 pub use show::{EmailAsk, Plan, Query, Reading, Show};
+pub(crate) use token::could_learn;
 use token::{Token, apostrophe, learnable};
 
 /// What the tracker needs from the settings; the module fills it.

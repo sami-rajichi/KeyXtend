@@ -3,7 +3,7 @@
 
 use super::Actor;
 use super::store::Blob;
-use crate::lane::Pick;
+use crate::lane::{Pick, fits};
 use crate::learn::Learner;
 use crate::pack::Pack;
 use crate::track::{EmailAsk, Plan};
@@ -67,7 +67,12 @@ impl Actor {
 
     /// Asks the keyboard to type by `plan` as far as the box confirms it: all of it when the box still ends with what
     /// it erases, only the rest of the chip when the box cannot tell, nothing and a new read when the box moved on.
+    /// A plan past the keyboard's text cap sends nothing, as the keyboard would refuse it.
     fn send(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) {
+        if !fits(plan, self.mode) {
+            self.stats.long += 1;
+            return;
+        }
         let sent = match self.ends(plan) {
             Some(true) => Some(plan.clone()),
             Some(false) => {

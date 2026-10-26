@@ -17,7 +17,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | Capability | Why |
 |---|---|
 | `InjectInput` | It gates all four services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector` and `Shortcuts`. |
-| `ReadFocusedText` | It gates `Typed`, `TypingMode` and `TypeWord` (ADR-0033), so only a module that may read typed text hears what was typed or asks for a word. |
+| `ReadFocusedText` | It gates `Typed`, `TypingMode`, `TypingModeAsk` and `TypeWord` (ADR-0033), so only a module that may read typed text hears what was typed or asks for a word. |
 
 ## The board
 
@@ -150,8 +150,8 @@ The keyboard never depends on the prediction module; they talk only through `kx_
 
 - **Typed:** each piece that reached the app, wholly or in part, is told once: text sent as text (the space bar's space too), `Erase` for Backspace, `Advance` for Enter and Tab, and `Break` for any other send, a chord, a dead key or the key after it, a layer shortcut and a language switch. Caps, latches and side keys tell nothing, and a held key's repeats tell one piece each.
 - **One sender:** pieces wait in typing's list under the face's lock, in the order they reached the app, and leave through their own `Outbox`, so the bus hears each once and in order from any thread.
-- **TypingMode:** Shift latched, Caps Lock, a shortcut latch (as `LegendMods::shortcut` reads it) and a dead key's wait go out at each start and on each change, beside the latched set; `LatchesAsk` resends only the set. Caps Lock is the one the UI's thread last read (state view or relabel tick), as Windows reads it per thread; our own Caps click flips it at once, state reads keep that flip, and only the next tick's read replaces it, correcting it if the system disagrees.
-- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used; it is told like keys. It types nothing while a shortcut latch is on or a dead key waits, when its text holds a control character, while the module is stopped, or past `text_cap`; the prediction module checks the round.
+- **TypingMode:** Shift latched, Caps Lock, a shortcut latch (as `LegendMods::shortcut` reads it) and a dead key's wait go out with the `text_cap` at each start, on each change and on `TypingModeAsk`, beside the latched set; `LatchesAsk` resends only the set. Caps Lock is the one the UI's thread last read (state view or relabel tick), as Windows reads it per thread; our own Caps click flips it at once, state reads keep that flip, and only the next tick's read replaces it, correcting it if the system disagrees.
+- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used; it is told like keys. It types nothing while a shortcut latch is on or a dead key waits, when its text holds a hidden mark (`is_hidden`: a control, bidi or other invisible format character), while the module is stopped, or past `text_cap` (`TypeWord::fits`); after a Backspace the app took only in part it stops; the prediction module checks the round.
 
 ## Settings (`[keyboard]`, version 1)
 

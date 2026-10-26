@@ -134,6 +134,12 @@ impl Typing {
         self.latches.set_mode(settings.modifiers);
     }
 
+    /// The most characters a picked word may erase or type (`text_cap`).
+    #[must_use]
+    pub fn cap(&self) -> u16 {
+        self.cap
+    }
+
     /// True while a dead key waits for the next key.
     #[must_use]
     pub fn waiting(&self) -> bool {

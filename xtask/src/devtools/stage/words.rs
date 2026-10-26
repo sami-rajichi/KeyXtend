@@ -6,7 +6,7 @@ use std::ffi::OsStr;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-use kx_module_api::ports::{PACK_DIR, PACK_INDEX, pack_file, read_index};
+use kx_module_api::ports::{PACK_DIR, PACK_INDEX, PackIndex, pack_file};
 
 use super::{Copy, StageError};
 use crate::devtools::{DevError, paths};
@@ -70,11 +70,11 @@ fn names(dir: &Path, credits: &[String], shown: &Path) -> Result<Vec<String>, De
         ErrorKind::NotFound => DevError::from(StageError::NoWords(index.clone())),
         _ => DevError::Io(format!("{index}: {e}")),
     })?;
-    let isos = read_index(&bytes)
+    let isos = PackIndex::read(&bytes)
         .ok()
         .filter(|_| !bytes.is_empty())
         .ok_or(StageError::BadIndex(index))?;
-    let packs = isos.iter().filter_map(|iso| pack_file(iso));
+    let packs = isos.packs().filter_map(pack_file);
     let names = std::iter::once(PACK_INDEX.to_string()).chain(packs);
     Ok(names.chain(credits.iter().cloned()).collect())
 }

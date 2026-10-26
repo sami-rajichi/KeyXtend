@@ -3,18 +3,20 @@
 //! and which process an element shows in.
 
 use super::*;
-use crate::field::testedit::{CHARS, CONFIG, TestEdit, element, far, started};
+use crate::field::testedit::{CHARS, CONFIG, TestEdit, far, started};
 use crate::field::win::WinProbe;
 use crate::lock;
 use crate::scroll::testwin::{WAIT, one_client};
 use crate::uia::{caret, value};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldChange, FieldRun};
-use kx_platform::field::{Job, Probe, Reader, Shared, serve, spawn};
-use std::cell::Cell;
+use kx_module_api::ports::{FieldChange, FieldRead, FieldRun};
+use kx_platform::field::{Probe, Shared, spawn};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use windows::Win32::UI::WindowsAndMessaging::{ES_PASSWORD, ES_READONLY};
+
+mod errors;
+mod stale;
 
 /// Latin words, the caret after the last.
 const LATIN: &str = "alpha beta gamma delta";
@@ -31,6 +33,16 @@ type Heard = Arc<Mutex<Vec<FieldChange>>>;
 /// The test reads' cap.
 fn chars() -> usize {
     usize::from(CHARS)
+}
+
+/// The text of `read`, unwrapped.
+fn text(read: Result<FieldRead, FieldError>) -> Result<Option<String>, FieldError> {
+    read.map(|r| r.text.map(Redacted::into_inner))
+}
+
+/// A read that found a box of `kind` and no text.
+fn closed(kind: FieldKind) -> FieldRead {
+    FieldRead { kind, text: None }
 }
 
 #[test]
@@ -64,7 +76,7 @@ fn the_words_before_the_caret_are_cut_to_the_last_n_in_latin_and_arabic() {
     let (_com, auto) = started();
     let (latin_box, arabic_box) = (TestEdit::start(LATIN, 0), TestEdit::start(ARABIC, 0));
     let (latin, arabic) = (latin_box.element(&auto), arabic_box.element(&auto));
-    let read = |el: &IUIAutomationElement, n| before_cursor(el, n, far(), chars());
+    let read = |el: &IUIAutomationElement, n| text(before_cursor(el, n, far(), chars()));
     assert_eq!(read(&arabic, 2), Ok(Some("القراءة كثيرا".to_owned())));
     assert_eq!(read(&arabic, 9), Ok(Some(ARABIC.to_owned())));
     assert_eq!(read(&latin, 2), Ok(Some("gamma delta".to_owned())));
@@ -79,7 +91,7 @@ fn a_read_past_the_cap_in_characters_keeps_only_the_whole_words_inside_it() {
     let (_com, auto) = started();
     let (latin_box, arabic_box) = (TestEdit::start(LATIN, 0), TestEdit::start(ARABIC, 0));
     let (latin, arabic) = (latin_box.element(&auto), arabic_box.element(&auto));
-    let read = |el: &IUIAutomationElement| before_cursor(el, 2, far(), SHORT);
+    let read = |el: &IUIAutomationElement| text(before_cursor(el, 2, far(), SHORT));
     assert_eq!(read(&latin), Ok(Some("delta".to_owned())));
     assert_eq!(read(&arabic), Ok(Some("كثيرا".to_owned())));
     let long = "a".repeat(SHORT + 1);
@@ -87,7 +99,7 @@ fn a_read_past_the_cap_in_characters_keeps_only_the_whole_words_inside_it() {
 }
 
 #[test]
-fn a_password_box_is_never_read_and_a_late_read_times_out() {
+fn a_password_box_is_never_read_but_reported_and_a_late_read_times_out() {
     let _one = one_client();
     let (_com, auto) = started();
     let (secret_box, plain_box) = (
@@ -95,7 +107,12 @@ fn a_password_box_is_never_read_and_a_late_read_times_out() {
         TestEdit::start(LATIN, 0),
     );
     let secret = secret_box.element(&auto);
-    assert_eq!(before_cursor(&secret, 2, far(), chars()), Ok(None));
+    let read = before_cursor(&secret, 2, far(), chars());
+    assert_eq!(
+        read,
+        Ok(closed(FieldKind::Password)),
+        "the read tells the kind it saw"
+    );
     assert_eq!(ends_with(&secret, "delta", far(), chars()), Ok(None));
     let plain = plain_box.element(&auto);
     let past = Instant::now();
@@ -148,7 +165,10 @@ fn a_read_only_box_is_unknown_and_never_read() {
     let fixed = fixed_box.element(&auto);
     assert!(facts(&fixed).read_only);
     assert_eq!(kind_of(&fixed), FieldKind::Unknown);
-    assert_eq!(before_cursor(&fixed, 2, far(), chars()), Ok(None));
+    assert_eq!(
+        before_cursor(&fixed, 2, far(), chars()),
+        Ok(closed(FieldKind::Unknown))
+    );
 }
 
 #[test]
@@ -162,104 +182,6 @@ fn the_caret_range_alone_tells_a_read_only_text() {
     let range = |edit: &TestEdit| caret_of(&edit.element(&auto)).unwrap().unwrap();
     assert!(read_only_range(&range(&fixed_box)));
     assert!(!read_only_range(&range(&plain_box)));
-}
-
-/// A reader whose focus is one box of another app, read as the watch reads.
-struct Pinned(IUIAutomationElement);
-
-impl Probe for Pinned {
-    type El = IUIAutomationElement;
-
-    fn ours(&self, _: &IUIAutomationElement) -> bool {
-        false
-    }
-
-    fn change(&self, el: &IUIAutomationElement) -> FieldChange {
-        WinProbe::new().change(el)
-    }
-}
-
-impl Reader for Pinned {
-    fn focused(&self) -> Result<IUIAutomationElement, FieldError> {
-        Ok(self.0.clone())
-    }
-
-    fn before_cursor(
-        &self,
-        el: &IUIAutomationElement,
-        max_words: u8,
-        by: Instant,
-    ) -> Result<Option<String>, FieldError> {
-        before_cursor(el, max_words, by, chars())
-    }
-
-    fn ends_with(
-        &self,
-        el: &IUIAutomationElement,
-        text: &str,
-        by: Instant,
-    ) -> Result<Option<bool>, FieldError> {
-        ends_with(el, text, by, chars())
-    }
-}
-
-/// A probe that tells a scripted box as another app's.
-struct Told;
-
-impl Probe for Told {
-    type El = FieldChange;
-
-    fn ours(&self, _: &FieldChange) -> bool {
-        false
-    }
-
-    fn change(&self, change: &FieldChange) -> FieldChange {
-        *change
-    }
-}
-
-/// What a run told a stale `Text` reads from the box with raw handle `raw`, and how many text calls its thread made;
-/// its thread and client are gone on return.
-fn stale_read(raw: isize) -> (Result<Option<String>, FieldError>, usize) {
-    let (give, got) = mpsc::channel();
-    let (count, counted) = mpsc::channel();
-    let (ended, done) = mpsc::channel();
-    let body = move |inbox: &Receiver<Job>, shared: &Arc<Shared>, _| {
-        let _ = give.send(Arc::clone(shared));
-        let (com, auto) = started();
-        let pinned = Pinned(element(&auto, raw));
-        for job in inbox {
-            serve(&pinned, job);
-            let _ = count.send(TEXT_CALLS.with(Cell::get));
-        }
-        drop((pinned, auto, com));
-        let _ = ended.send(());
-    };
-    let mut run = spawn(CONFIG, Box::new(|_: FieldChange| {}), body).unwrap();
-    let shared: Arc<Shared> = got.recv_timeout(WAIT).unwrap();
-    let text = FieldChange {
-        kind: FieldKind::Text,
-        box_id: 1,
-    };
-    shared.moved(&Told, &text);
-    let read = run.before_cursor(2).map(|t| t.map(Redacted::into_inner));
-    let calls = counted.recv_timeout(WAIT).unwrap();
-    drop(run);
-    done.recv_timeout(WAIT).unwrap();
-    (read, calls)
-}
-
-#[test]
-fn a_stale_text_kind_never_reads_a_box_that_is_now_a_password_box() {
-    let _one = one_client();
-    let (secret, plain) = (
-        TestEdit::start(LATIN, ES_PASSWORD),
-        TestEdit::start(LATIN, 0),
-    );
-    assert_eq!(stale_read(secret.raw()), (Ok(None), 0));
-    let (read, calls) = stale_read(plain.raw());
-    assert_eq!(read, Ok(Some("gamma delta".to_owned())));
-    assert!(calls > 0, "the plain box is read");
 }
 
 #[test]

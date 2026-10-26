@@ -2,7 +2,7 @@
 //! chips, at most the lane's size.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{Chip, ChipKind, TypingMode};
+use kx_module_api::ports::{Chip, ChipKind, TypeWord, TypingMode};
 
 use crate::email::{self, EmailConfig, Emails};
 use crate::menu::Menu;
@@ -41,13 +41,13 @@ pub(crate) struct Chips {
 
 /// What the chips are drawn from.
 pub(crate) struct Sources<'a> {
-    /// The language in front.
+    /// The code of the words in front, which its pack carries.
     pub(crate) iso: &'a str,
     /// Its pack, when it has one.
     pub(crate) seed: Option<&'a Pack<'a>>,
     /// The learned counts.
     pub(crate) learned: &'a dyn Learned,
-    /// The latches.
+    /// The latches and the keyboard's text cap.
     pub(crate) mode: TypingMode,
     /// The scorer's settings.
     pub(crate) score: &'a ScoreConfig,
@@ -77,19 +77,22 @@ impl Chips {
                 src.score,
             );
             for guess in found {
-                out.word(query.plan(guess.text.expose()), guess);
+                let plan = query
+                    .plan(guess.text.expose())
+                    .filter(|p| fits(p, src.mode));
+                out.word(plan, guess);
             }
         }
         if let Some((ask, chips)) = emails {
-            out.emails(ask, chips);
+            out.emails(ask, chips, src.mode);
         }
         out
     }
 
-    /// Adds the email chips `ask` offered; More opens the list, the others type their plan.
-    fn emails(&mut self, ask: &EmailAsk, chips: Vec<Chip>) {
+    /// Adds the email chips `ask` offered; More opens the list, the others type their plan when it fits `mode`.
+    fn emails(&mut self, ask: &EmailAsk, chips: Vec<Chip>, mode: TypingMode) {
         for chip in chips {
-            let plan = || ask.plan(chip.text.expose());
+            let plan = || ask.plan(chip.text.expose()).filter(|p| fits(p, mode));
             let pick = match chip.kind {
                 ChipKind::More => Some(Pick::More),
                 ChipKind::Domain => plan().map(Pick::Domain),
@@ -155,6 +158,12 @@ impl Chips {
             self.picks.push(pick);
         }
     }
+}
+
+/// True when `plan` fits the keyboard's text cap in `mode`, or the keyboard told none yet.
+pub(crate) fn fits(plan: &Plan, mode: TypingMode) -> bool {
+    mode.cap
+        .is_none_or(|cap| TypeWord::fits(plan.erase, plan.text.expose(), cap))
 }
 
 /// The email chips `ask` offers, at most the lane's size.

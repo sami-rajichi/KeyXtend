@@ -90,8 +90,23 @@ fn clones_share_the_packs_and_serve_as_the_port_from_another_thread() {
 fn a_language_ships_only_once_the_test_lists_it() {
     let packs = FakeWordPacks::new();
     packs.add("en", EN.to_vec());
-    assert!(!packs.ships("en"), "a pack alone is not in the index");
+    assert_eq!(
+        packs.pack_of("en"),
+        None,
+        "a pack alone is not in the index"
+    );
     packs.ship("fr");
-    assert!(packs.ships("fr") && !packs.ships("en"));
-    assert!(!packs.ships("FR"), "only a code `fits_iso` takes");
+    assert_eq!(packs.pack_of("fr").as_deref(), Some("fr"));
+    assert_eq!(packs.pack_of("en"), None);
+    assert_eq!(packs.pack_of("FR"), None, "only a code `fits_iso` takes");
+}
+
+#[test]
+fn an_alias_is_served_by_its_shipped_pack() {
+    let packs = FakeWordPacks::new();
+    packs.alias("sh", "hr");
+    assert_eq!(packs.pack_of("hr"), None, "the pack does not ship yet");
+    packs.ship("sh");
+    assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
+    assert_eq!(packs.pack_of("bs"), None);
 }

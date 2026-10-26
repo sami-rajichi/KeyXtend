@@ -61,6 +61,7 @@ fn a_build_over_the_download_budget_is_refused() {
     let packs = Packs {
         download_kb: 1,
         level: 6,
+        aliases: std::collections::BTreeMap::new(),
     };
     let line = check(&[(5_000, 600), (100, 400)], &packs).unwrap();
     assert_eq!(

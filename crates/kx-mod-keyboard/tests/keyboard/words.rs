@@ -16,6 +16,7 @@ use crate::host::{Fakes, GOLDEN};
 use crate::rig::{Rig, STATE};
 use crate::told::text;
 use crate::typing::{tap, unicode};
+use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::ports::{FaceAction, InjectError, Piece, TypeWord, Typed, TypingMode};
 use kx_module_api::{Bus, BusCore, Module, Redacted, Subscription};
 use kx_test_support::host::FakeCore;
@@ -33,6 +34,15 @@ pub struct Desk {
     pieces: Arc<Mutex<Vec<Piece>>>,
     modes: Arc<Mutex<Vec<TypingMode>>>,
     _ears: Vec<Subscription>,
+}
+
+/// The mode with nothing latched or waiting, at the default `text_cap`.
+pub fn plain() -> TypingMode {
+    let cap = KeyboardSettings::from_defaults().unwrap().text_cap;
+    TypingMode {
+        cap: Some(cap),
+        ..TypingMode::default()
+    }
 }
 
 /// Takes what `said` holds.
@@ -181,7 +191,7 @@ fn a_picked_word_types_nothing_while_the_keyboard_is_down() {
 #[test]
 fn a_new_text_cap_holds_after_a_restart() {
     let mut d = Desk::new(None);
-    let cap = 32_u16;
+    let cap = *kx_mod_keyboard::TEXT_CAP.start();
     d.rig.restart(Some(("text_cap", i64::from(cap).into())));
     d.word(0, &"a".repeat(usize::from(cap) + 1));
     assert!(d.rig.fakes.injector.strokes().is_empty());

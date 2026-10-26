@@ -21,10 +21,11 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The words events, in the order `events_have_their_names` checks.
-fn words() -> [(&'static str, Option<Capability>); 8] {
+fn words() -> [(&'static str, Option<Capability>); 9] {
     [
         row::<Typed>(),
         row::<TypingMode>(),
+        row::<TypingModeAsk>(),
         row::<TypeWord>(),
         row::<Suggested>(),
         row::<ChipPicked>(),
@@ -96,6 +97,7 @@ fn events_have_their_names() {
     let want = [
         "typed",
         "typing-mode",
+        "typing-mode-ask",
         "type-word",
         "suggested",
         "chip-picked",
@@ -108,7 +110,7 @@ fn events_have_their_names() {
 
 #[test]
 fn every_event_but_the_press_events_needs_read_focused_text() {
-    let want = [READ, READ, READ, READ, READ, READ, None, None];
+    let want = [READ, READ, READ, READ, READ, READ, READ, None, None];
     assert_eq!(
         words().map(|r| r.1),
         want,
@@ -189,4 +191,24 @@ fn a_type_word_still_shows_its_round_and_erase() {
     };
     let want = format!("TypeWord {{ round: 7, erase: 2, text: {REDACTED_MARKER} }}");
     assert_eq!(format!("{word:?}"), want);
+}
+
+#[test]
+fn a_word_fits_the_cap_when_its_erase_and_its_characters_each_stay_within() {
+    assert!(TypeWord::fits(3, "hello ", 6));
+    assert!(!TypeWord::fits(7, "hi", 6), "the erase is over");
+    assert!(!TypeWord::fits(0, "hello there", 6), "the text is over");
+    assert!(
+        TypeWord::fits(2, SECRETS[1], 5),
+        "Arabic letters count once each"
+    );
+    assert!(
+        TypeWord::fits(0, "\u{1F600}\u{1F600}", 2),
+        "a surrogate pair counts once"
+    );
+}
+
+#[test]
+fn the_mode_tells_no_cap_until_the_keyboard_does() {
+    assert_eq!(TypingMode::default().cap, None);
 }

@@ -97,6 +97,7 @@ out = "out"
 [packs]
 download_kb = 1000
 level = 6
+aliases = { fr = ["wa"] }
 
 [meter]
 gate = ["en"]

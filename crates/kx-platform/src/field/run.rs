@@ -7,7 +7,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRun};
+use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun};
 
 use super::Probe;
 use crate::deadline;
@@ -18,7 +18,7 @@ const THREAD: &str = "kx-field";
 /// The module's callback for each focus change.
 pub type Tell = Box<dyn Fn(FieldChange) + Send>;
 
-/// Where a read answers: what it read, `None` when the box does not tell.
+/// Where a read answers: what it read, `None` when focus is in our own process or the box does not tell.
 pub(super) type Reply<T> = Sender<Result<Option<T>, FieldError>>;
 
 /// One read for the watch's thread, which hands it to `serve`; one past its deadline is answered `TimedOut` unstarted.
@@ -30,7 +30,7 @@ pub(super) enum Ask {
     Before {
         max_words: u8,
         by: Instant,
-        reply: Reply<String>,
+        reply: Reply<FieldRead>,
     },
     /// Whether the text before the caret ends with `text`.
     Ends {
@@ -197,19 +197,23 @@ impl FieldRun for Run {
         self.shared.kind()
     }
 
-    fn before_cursor(&mut self, max_words: u8) -> Result<Option<Redacted<String>>, FieldError> {
+    fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError> {
         if self.shared.dead() {
             return Err(FieldError::Unavailable);
         }
+        let told = FieldRead {
+            kind: self.shared.kind(),
+            text: None,
+        };
         if !self.readable() {
-            return Ok(None);
+            return Ok(told);
         }
-        let text = self.ask(|reply, by| Ask::Before {
+        let read = self.ask(|reply, by| Ask::Before {
             max_words,
             by,
             reply,
         })?;
-        Ok(text.map(Redacted::new))
+        Ok(read.unwrap_or(told))
     }
 
     fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {

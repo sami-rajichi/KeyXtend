@@ -3,7 +3,7 @@
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch, last_words,
+    FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch, last_words,
 };
 use kx_platform::field::after_first;
 use std::fmt;
@@ -16,6 +16,8 @@ type Tell = Box<dyn Fn(FieldChange) + Send>;
 struct Log {
     kind: FieldKind,
     box_id: u64,
+    /// The kind of a box focus moved to unheard, which reads see until the next told move.
+    unheard: Option<FieldKind>,
     before: Option<String>,
     ends: Option<bool>,
     /// Fails every read until focus moves to a new box.
@@ -35,6 +37,7 @@ impl Default for Log {
         Self {
             kind: FieldKind::None,
             box_id: 0,
+            unheard: None,
             before: None,
             ends: None,
             read_fail: None,
@@ -50,9 +53,14 @@ impl Default for Log {
 }
 
 impl Log {
-    /// Whether a read may reach the box: only a text box is ever read, as on the real adapter.
+    /// Whether a read may reach the box: only a box told as a text box is asked, as on the real adapter.
     fn readable(&self) -> bool {
         self.kind == FieldKind::Text
+    }
+
+    /// The kind a read finds: the box focus moved to unheard, else the one told.
+    fn seen(&self) -> FieldKind {
+        self.unheard.unwrap_or(self.kind)
     }
 }
 
@@ -85,6 +93,7 @@ impl FakeFieldWatch {
             let mut log = lock(&self.shared.log);
             log.kind = kind;
             log.box_id += 1;
+            log.unheard = None;
             log.read_fail = None;
             FieldChange {
                 kind,
@@ -94,6 +103,12 @@ impl FakeFieldWatch {
         if let Some(tell) = lock(&self.shared.tell).as_ref() {
             tell(change);
         }
+    }
+
+    /// Moves focus to a box of `kind` that raises no focus event: `kind` and the module keep the box told last, and
+    /// reads find the new one, as the real adapter checks the kind afresh at each read.
+    pub fn move_unheard(&self, kind: FieldKind) {
+        lock(&self.shared.log).unheard = Some(kind);
     }
 
     /// Makes a text box hold `text` before its cursor, or not tell with `None`.
@@ -213,17 +228,26 @@ impl FieldRun for FakeRun {
         lock(&self.shared.log).kind
     }
 
-    fn before_cursor(&mut self, max_words: u8) -> Result<Option<Redacted<String>>, FieldError> {
+    fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError> {
         let mut log = lock(&self.shared.log);
         log.before_calls += 1;
+        let told = FieldRead {
+            kind: log.kind,
+            text: None,
+        };
         if !log.readable() {
-            return Ok(None);
+            return Ok(told);
         }
         if let Some(error) = log.read_fail {
             return Err(error);
         }
-        let text = log.before.as_deref().map(|t| capped(t, self.chars));
-        Ok(text.map(|t| Redacted::new(last_words(t, max_words).to_owned())))
+        let kind = log.seen();
+        let text = log.before.as_deref().filter(|_| kind == FieldKind::Text);
+        let text = text.map(|t| last_words(capped(t, self.chars), max_words).to_owned());
+        Ok(FieldRead {
+            kind,
+            text: text.map(Redacted::new),
+        })
     }
 
     fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
@@ -231,7 +255,8 @@ impl FieldRun for FakeRun {
         log.ends_calls += 1;
         log.last_ends = Some(text.clone());
         let fits = text.expose().chars().count() <= self.chars;
-        let read = log.readable() && log.read_fail.is_none() && fits;
+        let read =
+            log.readable() && log.seen() == FieldKind::Text && log.read_fail.is_none() && fits;
         log.ends.filter(|_| read)
     }
 }

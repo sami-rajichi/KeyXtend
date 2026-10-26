@@ -18,8 +18,9 @@ pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
 pub(crate) const REPEAT_DELAY_MS: RangeInclusive<u64> = 300..=3_000;
 /// The time between repeats, in ms: from about 30 a second to one a second.
 pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
-/// The most characters a picked word may erase or type: room for a long word or email, and never a page of text.
-pub(crate) const TEXT_CAP: RangeInclusive<u16> = 32..=1_024;
+/// The most characters a picked word may erase or type: room for the longest word with chips and its gap (the app ties
+/// it to `[predict] max_word`) or a long email, and never a page of text.
+pub const TEXT_CAP: RangeInclusive<u16> = 128..=1_024;
 /// The smallest `size_min` the settings take: the lowest size step where every key cell is still 24 px across
 /// (the spacing rule of WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
 pub(crate) const SIZE_FLOOR: f64 = 0.8;

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use flate2::Compression;
 use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
-use kx_module_api::ports::fits_iso;
+use kx_module_api::ports::{PackIndex, fits_iso};
 
 use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
@@ -106,6 +106,19 @@ pub(super) fn packs(packs: &Packs) -> Result<(), WordsError> {
         Err(bad(&format!(
             "[packs] needs a download budget and a level of 0 to {best}"
         )))
+    }
+}
+
+/// Refuses an alias of a pack not built, and aliases the pack index refuses: a bad code, or a pack's own code.
+pub(super) fn aliases(packs: &Packs, isos: &[String]) -> Result<(), WordsError> {
+    let built = packs.aliases.keys().all(|pack| isos.contains(pack));
+    let isos: Vec<&str> = isos.iter().map(String::as_str).collect();
+    if built && PackIndex::new(&isos, &packs.aliases).is_ok() {
+        Ok(())
+    } else {
+        Err(bad(
+            "[packs] aliases must name built packs and serve other codes",
+        ))
     }
 }
 

@@ -76,3 +76,11 @@ fn a_split_apostrophe_glues_both_pieces_and_breaks_the_chain() {
     let found: Vec<Place> = places(&pieces, free(true, true), true).collect();
     assert_eq!(found, [place(false, true), place(false, false)]);
 }
+
+#[test]
+fn no_hidden_mark_is_a_word_character() {
+    // The learning rule keeps words to word characters, so it refuses every mark the keyboard refuses to type.
+    let hidden = ('\0'..=char::MAX).filter(|c| kx_module_api::is_hidden(*c));
+    let words: Vec<char> = hidden.filter(|c| super::is_word_char(*c)).collect();
+    assert!(words.is_empty(), "{words:?}");
+}

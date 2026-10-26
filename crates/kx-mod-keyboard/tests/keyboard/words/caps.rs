@@ -81,7 +81,7 @@ fn a_mode_built_off_the_ui_thread_keeps_the_caps_lock_the_ui_saw() {
     d.rig.tap("shift").unwrap();
     let lit = TypingMode {
         caps: true,
-        ..TypingMode::default()
+        ..super::plain()
     };
     let shifted = TypingMode { shift: true, ..lit };
     assert_eq!(d.modes()[1..], [lit, shifted], "read on the UI's thread");

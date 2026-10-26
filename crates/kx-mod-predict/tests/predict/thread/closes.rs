@@ -39,8 +39,8 @@ impl WordPacks for Counted {
         Ok(Some(Box::new(View(view, Arc::clone(&self.live)))))
     }
 
-    fn ships(&self, iso: &str) -> bool {
-        self.packs.ships(iso)
+    fn pack_of(&self, iso: &str) -> Option<String> {
+        self.packs.pack_of(iso)
     }
 }
 

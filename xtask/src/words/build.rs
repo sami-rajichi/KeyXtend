@@ -55,7 +55,7 @@ pub(crate) fn run(
     }
     let mut credits = credits::files(manifest, &paths.src, &authors)?;
     let listed: Vec<&str> = isos.iter().map(String::as_str).collect();
-    credits.push(index::file(&listed)?);
+    credits.push(index::file(&listed, &manifest.packs.aliases)?);
     for (_, bytes) in &credits {
         sizes.push((bytes.len(), download::deflated(bytes, level)?));
     }

@@ -33,8 +33,8 @@ impl Actor {
         self.emails = emails.unwrap_or_default();
     }
 
-    /// Loads the language in front's learner and merges its strays into `seed`; a damaged or unread one, or one of
-    /// another language, starts empty.
+    /// Loads the language in front's learner, saved under the layout's code and learning in its words' code, and merges
+    /// its strays into `seed`; a damaged or unread one, or one of another language, starts empty.
     pub(super) fn load_learner(&mut self, seed: Option<&Pack<'_>>) {
         self.learner = None;
         let Some(name) = learned_blob(&self.iso) else {
@@ -46,12 +46,12 @@ impl Actor {
             (b, learner)
         });
         let learner = match read {
-            Some((_, Ok(learner))) if learner.iso() == self.iso => Some(learner),
+            Some((_, Ok(learner))) if learner.iso() == self.code => Some(learner),
             Some((bytes, Ok(_))) => self.unread(&name, Blob::Learned, &bytes, &OTHER_LANGUAGE),
             Some((bytes, Err(error))) => self.unread(&name, Blob::Learned, &bytes, &error),
             None => None,
         };
-        let mut learner = learner.or_else(|| Learner::new(&self.iso, cfg).ok());
+        let mut learner = learner.or_else(|| Learner::new(&self.code, cfg).ok());
         if let Some(learner) = learner.as_mut() {
             learner.reconcile(seed);
         }

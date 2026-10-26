@@ -5,7 +5,7 @@ mod run;
 
 use std::time::Instant;
 
-use kx_module_api::ports::{FieldChange, FieldError};
+use kx_module_api::ports::{FieldChange, FieldError, FieldRead};
 
 use run::Ask;
 pub use run::{Job, Shared, Tell, spawn};
@@ -31,7 +31,8 @@ pub trait Reader: Probe {
     /// `TimedOut` or `Refused`, as the OS answers.
     fn focused(&self) -> Result<Self::El, FieldError>;
 
-    /// At most `max_words` words before the caret of `el`; `None` when `el` is no text box or has no caret.
+    /// At most `max_words` words before the caret of `el`, with the kind its check found; no text when `el` is no text
+    /// box or has no caret.
     ///
     /// # Errors
     /// `TimedOut` past `by`, `Refused` when the app refuses.
@@ -40,7 +41,7 @@ pub trait Reader: Probe {
         el: &Self::El,
         max_words: u8,
         by: Instant,
-    ) -> Result<Option<String>, FieldError>;
+    ) -> Result<FieldRead, FieldError>;
 
     /// Whether the text before the caret of `el` ends with `text`; `None` when it cannot tell.
     ///
@@ -59,7 +60,9 @@ pub fn serve<R: Reader>(reader: &R, job: Job) {
             by,
             reply,
         } => {
-            let read = on_focus(reader, by, |el| reader.before_cursor(el, max_words, by));
+            let read = on_focus(reader, by, |el| {
+                reader.before_cursor(el, max_words, by).map(Some)
+            });
             let _ = reply.send(read);
         }
         Ask::Ends { text, by, reply } => {

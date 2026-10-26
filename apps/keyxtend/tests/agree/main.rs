@@ -2,7 +2,8 @@
 //! language key's designs have their texts in every language, the shortcuts agree with the Windows table, the board's
 //! icons resolve, every paint names tokens each theme has, the Next key holds the most pages' dots, every character
 //! key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a rule go back to
-//! their default, and the stage puts Qt's QML where the app pins it.
+//! their default, the stage puts Qt's QML where the app pins it, and the longest word with chips fits the keyboard's
+//! text cap.
 
 #![allow(
     clippy::unwrap_used,
@@ -23,6 +24,9 @@ mod shortcuts;
 mod sizes;
 mod stage;
 mod texts;
+// Predict is an optional module.
+#[cfg(feature = "mod-predict")]
+mod words;
 
 use kx_mod_keyboard::view::{BoardView, board_view, with_layer};
 use kx_mod_keyboard::{BoardSpec, KeyboardSettings, LangKey, Layer, SPEC};

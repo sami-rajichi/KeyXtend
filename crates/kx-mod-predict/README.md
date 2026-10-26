@@ -15,10 +15,11 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 
 `PredictModule` watches the focused box, follows the keyboard's pieces and tells the lane (`Suggested`) with a new round after each change. A pick asks the keyboard to type with one `TypeWord`; the module never types itself (ADR-0033). Only the language in front is loaded: its pack, parsed once per switch, and its learner, sealed as `predict-<iso>`; known emails are one blob, `predict-emails`.
 
-- **Boxes:** a password box locks the lane and is never followed, read or learned from. An unknown box, or none, gets chips but is never read or learned from. A text box is read for its last words at a new box or a click outside our windows. When the watch already sees another kind of box, that kind wins at once over the focus event still on its way.
-- **Picks:** a tap on an older lane does nothing. A pick erases only after a text box says it still ends with what is erased; otherwise nothing is typed and the module reads again. A box that cannot tell gets only the rest of a chip that starts with exactly what was typed, and nothing for any other chip.
+- **Boxes:** a password box locks the lane and is never followed, read or learned from. An unknown box, or none, gets chips but is never read or learned from. A text box is read for its last words at a new box or a click outside our windows. When the watch, or a read, already sees another kind of box, that kind wins at once over the focus event still on its way, at each piece, lane and read; a box the watch sees as a password box is never read.
+- **Picks:** a tap on an older lane does nothing. A pick erases only after a text box says it still ends with what is erased; otherwise nothing is typed and the module reads again. A box that cannot tell gets only the rest of a chip that starts with exactly what was typed, and nothing for any other chip. A chip past the keyboard's `text_cap`, which `TypingMode` carries, is never shown, and a list row past it types nothing. A latched Shift gives the chips a first capital, as the pick spends it.
 - **Menu (`WordsAsk`):** Forget, then a word or known-email chip, forgets it; a word's Undo chip shows until the next key. Pause and Off save `learn` and `on` through the module's own settings. The email list opens from More, with the rows the UI shows, and pages by them; a row past the page does nothing.
-- **Language:** it asks `LayoutAsk` at start and follows each `LayoutChanged`; the layouts module also tells its layout once at its own start, so any start order works.
+- **Language:** it asks `LayoutAsk` at start and follows each `LayoutChanged`; the layouts module also tells its layout once at its own start, so any start order works. A layout code the pack index lists after a pack, such as `hr` and `bs` after `sh`, takes that pack; its learned file keeps the layout's code.
+- **Typing mode:** it asks `TypingModeAsk` at start, and the keyboard answers with `TypingMode`; the keyboard also tells it at its own start.
 - **Saving:** each blob saves `save_s` after its first change, and at stop; while learning is paused, neither the daily purge nor these timed saves write. A damaged blob starts empty with `notice.words-damaged`. A blob that opens but does not read, or names another language, does the same, is copied once to its aside blob (`aside_blob`), and is never written over that run, as is one whose load fails. A locked store saves nothing that run with `notice.words-locked`. A missing or unreadable pack of a language the build shipped, as the pack index lists, shows `notice.words-missing` once per language and run.
 
 ## Services and capabilities
@@ -26,12 +27,12 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 | Service | Direction | Use |
 |---|---|---|
 | `FieldWatch` (`FieldWatchKey`) | needs | The focused box's kind, the words before the cursor, and whether it still ends with a read word. |
-| `WordPacks` (`WordPacksKey`) | needs | Opens the language in front's pack, and tells whether the build shipped one. |
+| `WordPacks` (`WordPacksKey`) | needs | Opens the pack serving the language in front, and names it from the build's index. |
 | `SealedStore` (`SealedStoreKey`) | needs | Loads and saves the learned words and emails, sealed. |
 
 | Capability | Why |
 |---|---|
-| `ReadFocusedText` | It gates the box and the typed-text events (`Typed`, `TypingMode`, `TypeWord`, `Suggested`, `ChipPicked`, `WordsAsk`). |
+| `ReadFocusedText` | It gates the box and the typed-text events (`Typed`, `TypingMode`, `TypingModeAsk`, `TypeWord`, `Suggested`, `ChipPicked`, `WordsAsk`). |
 | `SecretStore` | It gates the sealed store. |
 
 `LayoutChanged`, `LayoutAsk`, `PointerPressed`, `PressesWanted` and `PressesAsk` need no capability; it answers `PressesAsk` with its current `PressesWanted`, so the mouse module may start in any order. It provides no service.

@@ -81,6 +81,23 @@ fn an_entry_that_is_no_email_or_no_utf8_is_dropped_and_the_rest_kept() {
 }
 
 #[test]
+fn a_stored_email_holding_a_hidden_mark_is_dropped_and_the_rest_kept() {
+    // A line separator, a bidi override and a zero-width space, each unseen in a chip.
+    for mark in ['\u{2028}', '\u{202e}', '\u{200b}'] {
+        let bad = format!("sa{mark}mi@x.org");
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend(VERSION.to_le_bytes());
+        bytes.extend(2_u32.to_le_bytes());
+        for email in [bad.as_str(), "nour@y.com"] {
+            bytes.extend(u16::try_from(email.len()).unwrap().to_le_bytes());
+            bytes.extend(email.as_bytes());
+        }
+        let read = Emails::from_bytes(&bytes, MAX).unwrap();
+        assert_eq!(read.list(), ["nour@y.com"], "{mark:?}");
+    }
+}
+
+#[test]
 fn debug_of_the_error_names_no_email() {
     let shown = format!("{:?}", EmailFormatError::Trailing);
     assert!(!shown.contains('@'), "{shown}");

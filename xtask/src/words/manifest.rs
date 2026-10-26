@@ -183,6 +183,7 @@ impl Manifest {
         check::meter(&manifest.meter)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
+        check::aliases(&manifest.packs, &manifest.isos())?;
         check::credits(&manifest.credits, &manifest.sources)?;
         Ok(manifest)
     }

@@ -25,8 +25,8 @@ pub use face::{
     FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey, MAX_PRESETS,
 };
 pub use field::{
-    FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch, FieldWatchKey,
-    last_words,
+    FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch,
+    FieldWatchKey, last_words,
 };
 pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
@@ -34,7 +34,7 @@ pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, S
 pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
 pub use packs::{
     IndexError, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_DIR, PACK_EXT, PACK_INDEX,
-    PackError, PackView, WordPacks, WordPacksKey, fits_iso, index_text, pack_file, read_index,
+    PackError, PackIndex, PackView, WordPacks, WordPacksKey, fits_iso, pack_file,
 };
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
@@ -53,7 +53,7 @@ pub use shortcut::{
 };
 pub use words::{
     Chip, ChipKind, ChipPicked, Lane, ListPage, Piece, PressesAsk, PressesWanted, Suggested,
-    TypeWord, Typed, TypingMode, WordsAsk,
+    TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
 };
 
 use crate::Redacted;

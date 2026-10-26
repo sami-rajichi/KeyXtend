@@ -41,7 +41,13 @@ fn capped(read_chars: u16) -> FieldConfig {
 /// The text a run reads before the cursor, unwrapped.
 fn read(run: &mut dyn FieldRun, max_words: u8) -> Result<Option<String>, FieldError> {
     run.before_cursor(max_words)
-        .map(|text| text.map(Redacted::into_inner))
+        .map(|read| read.text.map(Redacted::into_inner))
+}
+
+/// The kind a run's read reports.
+fn kind_read(run: &mut dyn FieldRun) -> FieldKind {
+    run.before_cursor(1)
+        .map_or(FieldKind::None, |read| read.kind)
 }
 
 /// Asks the run whether the text ends with a word.
@@ -142,9 +148,10 @@ fn a_password_unknown_or_empty_focus_reads_nothing_and_is_still_counted() {
     for kind in [FieldKind::Password, FieldKind::Unknown, FieldKind::None] {
         fake.focus(kind);
         assert_eq!(read(run.as_mut(), 3), Ok(None), "{kind:?} is never read");
+        assert_eq!(kind_read(run.as_mut()), kind, "the kind told");
         assert_eq!(ends(run.as_mut()), None, "{kind:?} is never read");
     }
-    assert_eq!((fake.before_calls(), fake.ends_calls()), (3, 3));
+    assert_eq!((fake.before_calls(), fake.ends_calls()), (6, 3));
     fake.focus(FieldKind::Text);
     assert_eq!(read(run.as_mut(), 1), Ok(Some("ap".to_owned())));
     assert_eq!(ends(run.as_mut()), Some(true));
@@ -244,4 +251,24 @@ fn it_keeps_the_last_text_ends_with_was_asked_and_never_shows_it() {
     let asked = fake.last_ends().map(Redacted::into_inner);
     assert_eq!(asked.as_deref(), Some("ق"), "the latest wins");
     assert!(!format!("{fake:?}").contains('ق'));
+}
+
+#[test]
+fn a_move_no_event_tells_is_found_by_the_next_read_and_a_told_move_ends_it() {
+    let fake = FakeFieldWatch::new();
+    let (mut run, heard) = watched(&fake);
+    fake.set_before(Some(TEXT));
+    fake.set_ends(Some(true));
+    fake.focus(FieldKind::Text);
+    for kind in [FieldKind::Password, FieldKind::Unknown] {
+        fake.move_unheard(kind);
+        assert_eq!(run.kind(), FieldKind::Text, "{kind:?}: still the box told");
+        assert_eq!(kind_read(run.as_mut()), kind, "the read finds it");
+        assert_eq!(read(run.as_mut(), 3), Ok(None), "{kind:?} gives no text");
+        assert_eq!(ends(run.as_mut()), None, "{kind:?} cannot tell");
+    }
+    assert_eq!(heard.lock().unwrap().len(), 1, "no event told");
+    fake.focus(FieldKind::Text);
+    assert_eq!(kind_read(run.as_mut()), FieldKind::Text);
+    assert_eq!(read(run.as_mut(), 1), Ok(Some("ap".to_owned())));
 }

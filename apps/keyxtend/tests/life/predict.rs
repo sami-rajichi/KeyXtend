@@ -1,6 +1,7 @@
 //! Prediction over the whole app: predict watches the box, reads the sealed store and opens the language in front
-//! whichever of it and layouts starts first; Quit ends its watch, and switched off it touches nothing. The packs are
-//! read beside the program, and in a debug build where `cargo xtask words` writes them.
+//! whichever of it and layouts starts first, and asks the keyboard that started first for its typing mode; Quit ends
+//! its watch, and switched off it touches nothing. The packs are read beside the program, and in a debug build where
+//! `cargo xtask words` writes them.
 
 use crate::rig::{Rig, WAIT, hear};
 use keyxtend::boot::{Boot, policy};
@@ -12,12 +13,12 @@ use kx_mod_predict::PredictModule;
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
     FieldWatchKey, LayoutChanged, LayoutSource, LayoutSourceKey, PACK_DIR, PACK_INDEX,
-    SealedStoreKey, WordPacksKey,
+    SealedStoreKey, TypingMode, TypingModeAsk, WordPacksKey,
 };
-use kx_module_api::{Module, Notice, NoticeArg, args, keys};
+use kx_module_api::{Bus, Event, Module, Notice, NoticeArg, Subscription, args, keys};
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{self, Receiver};
 
 /// The layout in front, as layouts tells it: its language's code and name.
 fn front(rig: &Rig) -> LayoutChanged {
@@ -153,4 +154,44 @@ fn a_debug_build_also_reads_the_packs_in_the_workspace_assets() {
         want.join(PACK_INDEX).is_file(),
         "the build's index is there"
     );
+}
+
+/// Each `TypingModeAsk` and `TypingMode` on `bus`, by name, in order.
+fn modes(bus: &Bus) -> ([Subscription; 2], Receiver<&'static str>) {
+    let (tx, rx) = mpsc::channel();
+    let asked = tx.clone();
+    let ask = bus.subscribe(move |_: &TypingModeAsk| {
+        let _ = asked.send(TypingModeAsk::NAME);
+    });
+    let mode = bus.subscribe(move |_: &TypingMode| {
+        let _ = tx.send(TypingMode::NAME);
+    });
+    ([ask.unwrap(), mode.unwrap()], rx)
+}
+
+#[test]
+fn predict_asks_the_keyboard_that_started_first_for_the_typing_mode_and_hears_it() {
+    let rig = Rig::new();
+    let mut boot = rig.load();
+    let (_ears, heard) = modes(&boot.kernel.bus());
+    boot.start().unwrap();
+    let (mut log, mut asked) = (Vec::new(), false);
+    while let Ok(name) = heard.recv_timeout(WAIT) {
+        log.push(name);
+        asked |= name == TypingModeAsk::NAME;
+        if asked && name == TypingMode::NAME {
+            break;
+        }
+    }
+    assert_eq!(
+        log.first(),
+        Some(&TypingMode::NAME),
+        "the keyboard told first: {log:?}"
+    );
+    assert_eq!(
+        log.last(),
+        Some(&TypingMode::NAME),
+        "the ask was answered: {log:?}"
+    );
+    assert!(log.contains(&TypingModeAsk::NAME), "{log:?}");
 }

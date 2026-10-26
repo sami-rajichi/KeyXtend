@@ -14,7 +14,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use kx_mod_predict::{Pack, PredictSettings};
-use kx_module_api::ports::{PACK_INDEX, pack_file, read_index};
+use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
 use kx_module_api::{Settings, SettingsError};
 
 use self::tally::Tally;
@@ -175,10 +175,11 @@ fn each_pack(
 fn asked(packs: &Path, lang: Option<&str>) -> Result<Vec<String>, WordsError> {
     let path = packs.join(PACK_INDEX);
     let bytes = std::fs::read(&path).map_err(|e| io_error(&path, &e))?;
-    let index = read_index(&bytes).map_err(|e| WordsError::Pack(format!("{PACK_INDEX}: {e}")))?;
+    let index = PackIndex::read(&bytes);
+    let index = index.map_err(|e| WordsError::Pack(format!("{PACK_INDEX}: {e}")))?;
     match lang {
-        None => Ok(index.into_iter().collect()),
-        Some(iso) if index.contains(iso) => Ok(vec![iso.to_owned()]),
+        None => Ok(index.packs().map(str::to_owned).collect()),
+        Some(iso) if index.packs().any(|p| p == iso) => Ok(vec![iso.to_owned()]),
         Some(iso) => Err(WordsError::Lang(iso.to_owned())),
     }
 }

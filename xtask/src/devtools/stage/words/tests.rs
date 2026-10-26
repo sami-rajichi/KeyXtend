@@ -1,7 +1,14 @@
 use super::*;
 use crate::devtools::stage::check;
 use crate::test_support::{TempDir, stage_config};
-use kx_module_api::ports::index_text;
+use kx_module_api::ports::PackIndex;
+
+/// The index text listing `isos`, which serve no other code.
+fn index_text(isos: &[&str]) -> String {
+    PackIndex::new(isos, &std::collections::BTreeMap::new())
+        .unwrap()
+        .text()
+}
 
 /// The credit files the words manifest names.
 fn credits() -> Vec<String> {
@@ -13,7 +20,7 @@ fn credits() -> Vec<String> {
 /// Writes a packs folder at `dir` whose index lists `isos`, with each pack and every credit.
 fn fill(dir: &Path, isos: &[&str]) {
     std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join(PACK_INDEX), index_text(isos).unwrap()).unwrap();
+    std::fs::write(dir.join(PACK_INDEX), index_text(isos)).unwrap();
     for iso in isos {
         std::fs::write(dir.join(pack_file(iso).unwrap()), iso).unwrap();
     }
@@ -201,7 +208,7 @@ fn a_listed_file_named_in_another_case_is_refused_on_any_disk() {
     std::fs::remove_file(dir.join(PACK_INDEX)).unwrap();
     std::fs::write(
         dir.join(PACK_INDEX.to_uppercase()),
-        index_text(&["ar", "en", "fr"]).unwrap(),
+        index_text(&["ar", "en", "fr"]),
     )
     .unwrap();
     let refused = refusal(&stage);

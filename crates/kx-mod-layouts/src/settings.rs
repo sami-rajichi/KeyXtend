@@ -1,18 +1,16 @@
 //! The `[layouts]` settings: what the language key shows for each language.
 
+use kx_module_api::ports::fits_iso;
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::ops::RangeInclusive;
 
 /// Why a `short` key was refused.
-const BAD_CODE: &str = "short: every key must be an ISO 639 code in lower-case letters";
+const BAD_CODE: &str = "short: every key must be an ISO 639 code of 2 or 3 lower-case letters";
 /// Why a blank `short` value was refused.
 const BLANK: &str = "short: a short name is blank";
 /// Why a long `short` value was refused.
 const TOO_LONG: &str = "short: a short name is too long for the language key";
-/// Letters in an ISO 639 code: two (639-1) or three (639-2 and 639-3).
-const ISO_LETTERS: RangeInclusive<usize> = 2..=3;
 /// The longest short name, in characters, so it fits on the language key.
 const MAX_SHORT_CHARS: usize = 4;
 
@@ -45,7 +43,7 @@ impl LayoutsSettings {
 impl Settings for LayoutsSettings {
     fn check(&self) -> Result<(), SettingsError> {
         let invalid = |why: &str| Err(SettingsError::Invalid(why.to_owned()));
-        if !self.short.keys().all(|k| is_iso_code(k)) {
+        if !self.short.keys().all(|k| fits_iso(k)) {
             return invalid(BAD_CODE);
         }
         if self.short.values().any(|v| v.trim().is_empty()) {
@@ -60,11 +58,6 @@ impl Settings for LayoutsSettings {
         }
         Ok(())
     }
-}
-
-/// True for an ISO 639 code as the OS gives it: two or three lower-case ASCII letters.
-fn is_iso_code(code: &str) -> bool {
-    ISO_LETTERS.contains(&code.len()) && code.bytes().all(|b| b.is_ascii_lowercase())
 }
 
 #[cfg(test)]
@@ -99,9 +92,11 @@ mod tests {
     }
 
     #[test]
-    fn a_short_key_must_be_a_lower_case_iso_code() {
+    fn a_short_key_must_be_a_code_fits_iso_takes() {
         assert!(!invalid(&with_short(&[("fa", "ف"), ("haw", "HAW")])));
-        for bad in ["", "a", "abcd", "AR", "Ar", "a1", "ar-tn", " ar", "ع"] {
+        for bad in [
+            "", "a", "abcd", "AR", "Ar", "a1", "ar-tn", " ar", "ع", "con",
+        ] {
             assert!(invalid(&with_short(&[(bad, "x")])), "{bad:?}");
         }
     }

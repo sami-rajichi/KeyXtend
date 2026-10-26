@@ -4,7 +4,7 @@
 use super::store::Blob;
 use super::{Actor, Flow};
 use crate::pack::Pack;
-use kx_module_api::ports::{PackView, fits_iso};
+use kx_module_api::ports::{LayoutAsk, PackView, TypingModeAsk, fits_iso};
 
 impl Actor {
     /// The keyboard shows a layout in `iso`, named `name`: the word ends unlearned, and a new language saves the old
@@ -30,17 +30,22 @@ impl Actor {
         }
         self.save(Blob::Learned);
         self.leave();
+        self.code = self
+            .ports
+            .packs
+            .pack_of(&iso)
+            .unwrap_or_else(|| iso.clone());
         self.iso = iso;
         self.stats.switches += 1;
         Flow::Switch
     }
 
-    /// Opens the language in front's pack; a missing or unreadable one is told once when the build shipped it.
+    /// Opens the pack serving the language in front; a missing or unreadable one is told once if the build shipped it.
     pub fn open(&mut self) -> Option<Box<dyn PackView>> {
-        if !fits_iso(&self.iso) {
+        if !fits_iso(&self.code) {
             return None;
         }
-        let opened = self.ports.packs.open(&self.iso);
+        let opened = self.ports.packs.open(&self.code);
         let view = opened.unwrap_or_else(|error| {
             tracing::warn!(%error, "word pack not opened");
             None
@@ -51,12 +56,12 @@ impl Actor {
         view
     }
 
-    /// Reads `view` once as the language in front's pack; one that does not read, or names another language, counts
-    /// as missing.
+    /// Reads `view` once as the pack serving the language in front; one that does not read, or names another language
+    /// than its words' code, counts as missing.
     pub fn parse<'v>(&mut self, view: Option<&'v dyn PackView>) -> Option<Pack<'v>> {
         let parsed = Pack::parse(view?.bytes());
         let pack = match parsed {
-            Ok(pack) if pack.iso() == self.iso => Some(pack),
+            Ok(pack) if pack.iso() == self.code => Some(pack),
             Ok(_) => {
                 tracing::warn!("word pack of another language");
                 None
@@ -81,12 +86,14 @@ impl Actor {
         self.tell(seed);
     }
 
-    /// Says the module is here: loads the known emails, takes the box's kind and asks for the language in front.
+    /// Says the module is here: loads the known emails, takes the box's kind and asks for the language in front and the
+    /// typing mode, as the layouts and the keyboard may have started first.
     pub fn begin(&mut self) {
         if let Some(run) = self.ports.field.as_ref() {
             self.kind = run.kind();
         }
         self.load_emails();
-        self.publish(&kx_module_api::ports::LayoutAsk);
+        self.publish(&LayoutAsk);
+        self.publish(&TypingModeAsk);
     }
 }

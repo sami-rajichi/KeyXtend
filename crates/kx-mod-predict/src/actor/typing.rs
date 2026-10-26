@@ -1,5 +1,6 @@
 //! What the keyboard and the box tell: pieces, focus and clicks, and what the tracker hands back to learn or read. A
-//! password box, or prediction turned off, follows nothing, and the watch's kind wins over a late focus event.
+//! password box, or prediction turned off, follows nothing, and the kind the watch or a read sees wins over a late
+//! focus event.
 
 use super::Actor;
 use super::store::Blob;
@@ -46,8 +47,10 @@ impl Actor {
         true
     }
 
-    /// True when the tracker follows the box: prediction is on and the box is no password box.
-    pub(super) fn following(&self) -> bool {
+    /// True when the tracker follows the box: prediction is on and the box, as the watch sees it now, is no password
+    /// box.
+    pub(super) fn following(&mut self) -> bool {
+        self.moved();
         self.settings.on && self.kind != FieldKind::Password
     }
 
@@ -64,9 +67,10 @@ impl Actor {
         }
     }
 
-    /// Reads at most `context_words` words before the cursor of a text box; a failed read counts as no context.
+    /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a failed read counts
+    /// as no context, and another kind the read saw wins at once.
     pub(super) fn read(&mut self, seed: Option<&Pack<'_>>) {
-        if !self.settings.on || self.kind != FieldKind::Text {
+        if !self.settings.on || self.moved() || self.kind != FieldKind::Text {
             return;
         }
         let Some(run) = self.ports.field.as_mut() else {
@@ -74,13 +78,17 @@ impl Actor {
         };
         let read = run.before_cursor(self.settings.context_words);
         self.stats.reads += 1;
+        let text = match read {
+            Ok(read) if self.seen(read.kind) => return,
+            Ok(read) => read.text,
+            Err(error) => {
+                tracing::debug!(%error, "the focused box was not read");
+                None
+            }
+        };
         if self.moved() {
             return;
         }
-        let text = read.unwrap_or_else(|error| {
-            tracing::debug!(%error, "the focused box was not read");
-            None
-        });
         let text = text.as_ref().map(|t| t.expose().as_str());
         self.tracker.read(text, &|w: &str| knows(seed, w));
     }
@@ -100,6 +108,12 @@ impl Actor {
     /// way: that kind wins at once, and tracking stops.
     pub(super) fn moved(&mut self) -> bool {
         let seen = self.ports.field.as_ref().map_or(self.kind, |r| r.kind());
+        self.seen(seen)
+    }
+
+    /// True when `seen`, the kind the platform saw, is another kind than the box followed and no text box: it wins,
+    /// and tracking stops.
+    fn seen(&mut self, seen: FieldKind) -> bool {
         let moved = seen != FieldKind::Text && seen != self.kind;
         if moved {
             self.kind = seen;

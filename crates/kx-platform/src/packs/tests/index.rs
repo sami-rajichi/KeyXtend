@@ -50,13 +50,21 @@ fn packs(dirs: &[PathBuf], indexes: &[(&PathBuf, Result<&[u8], PackError>)]) -> 
     DiskPacks::new(disk, dirs.to_vec())
 }
 
+/// True when `packs` ships a pack serving layout code `iso`.
+fn ships(packs: &DiskPacks<Texts>, iso: &str) -> bool {
+    packs.pack_of(iso).is_some()
+}
+
 #[test]
 fn a_language_ships_when_the_index_lists_it() {
     let dir = folder("a");
     let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(b"ar\nen\n"))]);
-    assert!(packs.ships("en") && packs.ships("ar"));
-    assert!(!packs.ships("fr"), "not listed");
-    assert!(!packs.ships("EN") && !packs.ships("../en"), "no such code");
+    assert!(ships(&packs, "en") && ships(&packs, "ar"));
+    assert!(!ships(&packs, "fr"), "not listed");
+    assert!(
+        !ships(&packs, "EN") && !ships(&packs, "../en"),
+        "no such code"
+    );
 }
 
 #[test]
@@ -68,7 +76,7 @@ fn the_index_is_read_once_at_the_first_ask() {
         "nothing read at start"
     );
     for _ in 0..3 {
-        assert!(packs.ships("en"));
+        assert!(ships(&packs, "en"));
     }
     assert_eq!(*packs.disk.opened.lock().unwrap(), [dir.join(PACK_INDEX)]);
 }
@@ -81,26 +89,42 @@ fn every_absolute_folders_index_counts_and_a_relative_one_is_never_read() {
         &dirs,
         &[(&rel, Ok(b"de\n")), (&a, Ok(b"en\n")), (&b, Ok(b"fr\n"))],
     );
-    assert!(packs.ships("en") && packs.ships("fr"));
-    assert!(!packs.ships("de"), "the working folder never lists a pack");
+    assert!(ships(&packs, "en") && ships(&packs, "fr"));
+    assert!(
+        !ships(&packs, "de"),
+        "the working folder never lists a pack"
+    );
 }
 
 #[test]
 fn a_missing_damaged_or_unreadable_index_ships_nothing_from_its_folder() {
     let (a, b) = (folder("a"), folder("b"));
     let dirs = [a.clone(), b.clone()];
-    assert!(!packs(&dirs, &[]).ships("en"), "no index anywhere");
+    assert!(!ships(&packs(&dirs, &[]), "en"), "no index anywhere");
     let damaged = packs(&dirs, &[(&a, Ok(b"en\nEN\n")), (&b, Ok(b"fr\n"))]);
-    assert!(!damaged.ships("en") && damaged.ships("fr"));
+    assert!(!ships(&damaged, "en") && ships(&damaged, "fr"));
     let unreadable = packs(
         &dirs,
         &[(&a, Err(PackError::Unreadable)), (&b, Ok(b"fr\n"))],
     );
-    assert!(!unreadable.ships("en") && unreadable.ships("fr"));
+    assert!(!ships(&unreadable, "en") && ships(&unreadable, "fr"));
 }
 
 #[test]
 fn an_empty_index_is_unreadable_and_ships_nothing() {
     let dir = folder("a");
-    assert!(!packs(std::slice::from_ref(&dir), &[(&dir, Ok(b""))]).ships("en"));
+    assert!(!ships(
+        &packs(std::slice::from_ref(&dir), &[(&dir, Ok(b""))]),
+        "en"
+    ));
+}
+
+#[test]
+fn a_layout_code_the_index_lists_after_a_pack_is_served_by_that_pack() {
+    let dir = folder("a");
+    let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(b"en\nsh bs hr\n"))]);
+    assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
+    assert_eq!(packs.pack_of("sh").as_deref(), Some("sh"));
+    assert_eq!(packs.pack_of("en").as_deref(), Some("en"));
+    assert_eq!(packs.pack_of("sr"), None);
 }

@@ -4,7 +4,7 @@
 use super::*;
 use crate::deadline;
 use kx_module_api::Redacted;
-use kx_module_api::ports::FieldKind;
+use kx_module_api::ports::{FieldKind, FieldRead};
 use std::cell::Cell;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -48,14 +48,13 @@ impl Reader for Desk {
         self.focus
     }
 
-    fn before_cursor(
-        &self,
-        _: &El,
-        max_words: u8,
-        _: Instant,
-    ) -> Result<Option<String>, FieldError> {
+    fn before_cursor(&self, el: &El, max_words: u8, _: Instant) -> Result<FieldRead, FieldError> {
         self.reads.set(self.reads.get() + 1);
-        Ok(Some(format!("{max_words} words")))
+        let text = Some(Redacted::new(format!("{max_words} words")));
+        Ok(FieldRead {
+            kind: el.1.kind,
+            text,
+        })
     }
 
     fn ends_with(&self, _: &El, text: &str, _: Instant) -> Result<Option<bool>, FieldError> {
@@ -79,7 +78,7 @@ fn far() -> Instant {
 }
 
 /// What `serve` answers to two words before the caret, read by `by`.
-fn before(desk: &Desk, by: Instant) -> Result<Option<String>, FieldError> {
+fn before(desk: &Desk, by: Instant) -> Result<Option<(FieldKind, String)>, FieldError> {
     let (reply, answer) = mpsc::channel();
     let max_words = 2;
     serve(
@@ -90,7 +89,8 @@ fn before(desk: &Desk, by: Instant) -> Result<Option<String>, FieldError> {
             reply,
         }),
     );
-    answer.recv().unwrap()
+    let read = answer.recv().unwrap()?;
+    Ok(read.map(|r| (r.kind, r.text.map(Redacted::into_inner).unwrap_or_default())))
 }
 
 /// What `serve` answers to whether the text ends with `ap`, read by `by`.
@@ -104,7 +104,10 @@ fn ends(desk: &Desk, by: Instant) -> Result<Option<bool>, FieldError> {
 #[test]
 fn a_read_comes_back_from_the_focused_box() {
     let desk = Desk::on(Ok(theirs()));
-    assert_eq!(before(&desk, far()), Ok(Some("2 words".to_owned())));
+    assert_eq!(
+        before(&desk, far()),
+        Ok(Some((FieldKind::Text, "2 words".to_owned())))
+    );
     assert_eq!(ends(&desk, far()), Ok(Some(true)));
     assert_eq!(desk.reads.get(), 2);
 }

@@ -1,5 +1,5 @@
 //! A picked word on the typing state (ADR-0033 decision 2): Backspaces, then the text by the route a letter takes now;
-//! refused whole while a shortcut latch is on or a dead key waits, for a control character or past `text_cap`, and
+//! refused whole while a shortcut latch is on or a dead key waits, for a hidden mark or past `text_cap`, and
 //! told as one `Erase` per Backspace and one `Text`.
 
 #![allow(
@@ -9,7 +9,7 @@
 
 use crate::told::text;
 use crate::typing::{Rig, tap, unicode};
-use kx_mod_keyboard::{Io, KeyboardSettings, Latch};
+use kx_mod_keyboard::{Io, KeyboardSettings, Latch, TEXT_CAP};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, Piece, TextRoute};
 use kx_platform_fake::Stroke;
@@ -17,7 +17,7 @@ use kx_platform_fake::Stroke;
 /// Backspace's scan code.
 const BKSP: u16 = 0x0E;
 /// The smallest `text_cap` the settings take.
-const CAP: u16 = 32;
+const CAP: u16 = *TEXT_CAP.start();
 
 /// Types a picked word on `r`: `erase` Backspaces, then `t`; true when any of it reached the app.
 fn word(r: &mut Rig, erase: u16, t: &str) -> bool {
@@ -125,7 +125,10 @@ fn an_erase_or_a_text_past_the_cap_types_nothing_and_the_cap_counts_characters()
     assert!(!word(&mut r, 0, &long));
     assert!(r.sent().is_empty() && r.typing.take_pieces().is_empty());
     let wide = "😀".repeat(usize::from(CAP));
-    assert!(word(&mut r, CAP, &wide), "64 UTF-16 units, 32 characters");
+    assert!(
+        word(&mut r, CAP, &wide),
+        "two UTF-16 units each, one character each"
+    );
     assert_eq!(r.sent().len(), usize::from(CAP) + 1);
 }
 
@@ -147,4 +150,38 @@ fn an_empty_word_types_nothing() {
     assert!(!word(&mut r, 0, ""));
     assert!(r.sent().is_empty());
     assert!(r.typing.latches().is_on(Latch::Shift));
+}
+
+#[test]
+fn a_hidden_mark_in_the_text_refuses_the_word_whole() {
+    // A line separator, a right-to-left override, an isolate, a zero-width space and a BOM: none draws on a chip.
+    for t in [
+        "a\u{2028}b",
+        "\u{202e}hi",
+        "x\u{2067}",
+        "y\u{200b}z",
+        "\u{feff}w",
+    ] {
+        let mut r = Rig::new("en-us", |_| ());
+        assert!(!word(&mut r, 1, t), "{t:?}");
+        assert!(r.sent().is_empty() && r.typing.take_pieces().is_empty());
+    }
+    let mut r = Rig::new("en-us", |_| ());
+    assert!(
+        word(&mut r, 0, "می\u{200c}خواهم"),
+        "ZWNJ is a Persian letter joiner"
+    );
+}
+
+#[test]
+fn a_backspace_the_app_takes_only_in_part_stops_the_word_after_one_erase() {
+    let mut r = Rig::new("en-us", |_| ());
+    r.injector
+        .set_error(Some(InjectError::Refused { sent: 1, total: 2 }));
+    assert!(word(&mut r, 3, "hi"), "the part that went counts");
+    assert_eq!(
+        r.typing.take_pieces(),
+        [Piece::Erase],
+        "one Erase told, no second Backspace and no text"
+    );
 }

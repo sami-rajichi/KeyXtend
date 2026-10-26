@@ -85,7 +85,12 @@ fn answers(inbox: &Receiver<Job>) {
             Ask::Before {
                 max_words, reply, ..
             } => {
-                let _ = reply.send(Ok(Some(format!("{max_words} words"))));
+                let text = Some(Redacted::new(format!("{max_words} words")));
+                let read = FieldRead {
+                    kind: FieldKind::Text,
+                    text,
+                };
+                let _ = reply.send(Ok(Some(read)));
             }
             Ask::Ends { text, reply, .. } => {
                 let _ = reply.send(Ok(Some(text.expose() == "ap")));
@@ -97,7 +102,12 @@ fn answers(inbox: &Receiver<Job>) {
 /// The text a run reads before the cursor, unwrapped.
 fn read(run: &mut dyn FieldRun, max_words: u8) -> Result<Option<String>, FieldError> {
     run.before_cursor(max_words)
-        .map(|t| t.map(Redacted::into_inner))
+        .map(|r| r.text.map(Redacted::into_inner))
+}
+
+/// The kind a run's read reports.
+fn kind_read(run: &mut dyn FieldRun) -> Result<FieldKind, FieldError> {
+    run.before_cursor(1).map(|r| r.kind)
 }
 
 /// Asks the run whether the text ends with `ap`.
@@ -122,6 +132,7 @@ fn a_password_unknown_or_empty_box_sends_no_read() {
     {
         shared.moved(&Script, &other(kind, id));
         assert_eq!(read(run.as_mut(), 2), Ok(None), "{kind:?}");
+        assert_eq!(kind_read(run.as_mut()), Ok(kind), "the kind told last");
         assert_eq!(ends(run.as_mut()), None, "{kind:?}");
     }
     assert_eq!(jobs.load(Ordering::SeqCst), 0);
@@ -224,4 +235,31 @@ fn focus_in_our_own_process_keeps_the_last_box() {
     shared.moved(&Script, &own(FieldKind::Text, 3));
     assert_eq!(*lock(&heard), [change(FieldKind::Password, 2)]);
     assert_eq!(shared.kind(), FieldKind::Password);
+}
+
+#[test]
+fn a_read_reports_the_kind_the_reader_saw_and_our_own_focus_the_kind_told_last() {
+    let (mut run, shared, _) = started(LONG_MS, |inbox| {
+        for (job, n) in inbox.iter().zip(0_u8..) {
+            let Ask::Before { reply, .. } = job.0 else {
+                continue;
+            };
+            let read = FieldRead {
+                kind: FieldKind::Password,
+                text: None,
+            };
+            let _ = reply.send(Ok((n == 0).then_some(read)));
+        }
+    });
+    shared.moved(&Script, &other(FieldKind::Text, 1));
+    assert_eq!(
+        kind_read(run.as_mut()),
+        Ok(FieldKind::Password),
+        "seen at the read"
+    );
+    assert_eq!(
+        kind_read(run.as_mut()),
+        Ok(FieldKind::Text),
+        "our own focus"
+    );
 }

@@ -8,6 +8,7 @@ use super::outbox::Outbox;
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, PowerAsk,
     PowerAsked, PowerChanged, Scan, ScrollAsk, ScrollChanged, Toggle, TypeWord, TypingMode,
+    TypingModeAsk,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -22,7 +23,7 @@ pub(super) struct Told {
     outbox: Outbox,
     /// `LatchesAsk` came, or the module started, so the set goes out even if unchanged.
     again: AtomicBool,
-    /// The module started, so the mode goes out even if unchanged.
+    /// The module started or `TypingModeAsk` came, so the mode goes out even if unchanged.
     fresh: AtomicBool,
     /// What was last sent, which only the sending thread touches.
     last: Mutex<Last>,
@@ -51,6 +52,12 @@ impl Face {
     fn tell_all(&self) {
         self.told.fresh.store(true, SeqCst);
         self.tell(true);
+    }
+
+    /// A prediction module asked: the typing mode goes out even when unchanged, the latched set only if it changed.
+    fn tell_mode(&self) {
+        self.told.fresh.store(true, SeqCst);
+        self.tell(false);
     }
 
     /// Sends the latched set when it differs from the last sent or `again`, then the mode when it differs or `fresh`;
@@ -123,13 +130,13 @@ impl Face {
     }
 }
 
-/// Hears the mouse, scroll and power modules' states, the latch events and picked words for `face` until the module
-/// stops, then tells the latched set and typing mode, forgets the three modules' states and asks for them, as each may
-/// have missed the others while it was down.
+/// Hears the mouse, scroll and power modules' states, the latch events, the mode ask and picked words for `face` until
+/// the module stops, then tells the latched set and typing mode, forgets the three modules' states and asks for them,
+/// as each may have missed the others while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, or `ReadFocusedText`,
-/// which picked words need.
+/// which picked words and the mode ask need.
 pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
@@ -137,6 +144,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
     on(cx, face, |f, e: &PowerChanged| f.lock().heard_power(*e))?;
     on(cx, face, |f, e: &TypeWord| f.type_word(e))?;
+    on(cx, face, |f, _: &TypingModeAsk| f.tell_mode())?;
     face.tell_all();
     face.forget();
     cx.bus().publish(&AssistAsk)?;

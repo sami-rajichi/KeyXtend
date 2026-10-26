@@ -1,6 +1,8 @@
 //! The manifest's text tables: how Tatoeba and Wikipedia are read and counted into word chains, each language's
 //! text sources, and the credits written beside the packs.
 
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 
 /// A share per mille is out of this many.
@@ -50,6 +52,9 @@ pub(crate) struct Packs {
     pub(crate) download_kb: u64,
     /// The deflate level the download size is measured at.
     pub(crate) level: u32,
+    /// The layout codes each pack serves besides its own, as the pack index lists them.
+    #[serde(default)]
+    pub(crate) aliases: BTreeMap<String, Vec<String>>,
 }
 
 /// The meter's rules: the `[meter]` table.
