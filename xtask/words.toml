@@ -68,8 +68,8 @@ out = "assets/words"
 download_kb = 20480
 level = 6
 # The layout codes the OS reports that a pack under another code serves: wordfreq's Serbo-Croatian pack serves the
-# Croatian and Bosnian layouts. Serbian is left out, as its layouts carry no script tag to tell Latin from Cyrillic.
-aliases = { sh = ["hr", "bs"] }
+# Croatian layouts. Serbian and Bosnian are left out, as Windows names their Latin and Cyrillic layouts alike.
+aliases = { sh = ["hr"] }
 
 # The meter (`cargo xtask words meter`) types the held-back sentences with and without chips (spec §6 "Target").
 [meter]

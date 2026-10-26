@@ -146,9 +146,10 @@ fn a_later_folder_whose_index_clashes_with_an_earlier_one_adds_nothing() {
 #[test]
 fn a_layout_code_the_index_lists_after_a_pack_is_served_by_that_pack() {
     let dir = folder("a");
-    let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(b"en\nsh bs hr\n"))]);
+    let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(b"en\nsh hr\n"))]);
     assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
     assert_eq!(packs.pack_of("sh").as_deref(), Some("sh"));
     assert_eq!(packs.pack_of("en").as_deref(), Some("en"));
     assert_eq!(packs.pack_of("sr"), None);
+    assert_eq!(packs.pack_of("bs"), None);
 }

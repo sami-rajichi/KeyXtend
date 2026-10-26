@@ -12,9 +12,9 @@ fn none() -> BTreeMap<String, Vec<String>> {
     BTreeMap::new()
 }
 
-/// Wordfreq's Serbo-Croatian pack serving the Croatian and Bosnian layouts.
+/// Wordfreq's Serbo-Croatian pack serving the Croatian layouts.
 fn sh() -> BTreeMap<String, Vec<String>> {
-    BTreeMap::from([("sh".to_owned(), vec!["hr".to_owned(), "bs".to_owned()])])
+    BTreeMap::from([("sh".to_owned(), vec!["hr".to_owned()])])
 }
 
 /// The packs `index` lists.
@@ -33,23 +33,27 @@ fn the_index_lists_each_code_once_sorted_one_per_line() {
 #[test]
 fn a_pack_serves_its_own_code_and_the_layout_codes_listed_after_it() {
     let index = PackIndex::new(&["en", "sh"], &sh()).unwrap();
-    assert_eq!(index.text(), "en\nsh bs hr\n");
+    assert_eq!(index.text(), "en\nsh hr\n");
     let read = PackIndex::read(index.text().as_bytes()).unwrap();
     assert_eq!(read, index);
     for (iso, pack) in [
         ("en", Some("en")),
         ("sh", Some("sh")),
         ("hr", Some("sh")),
-        ("bs", Some("sh")),
+        ("sr", None),
+        ("bs", None),
     ] {
         assert_eq!(read.pack_of(iso), pack, "{iso}");
     }
-    assert_eq!(
-        read.pack_of("sr"),
-        None,
-        "Serbian has no Latin tag to go by"
-    );
     assert_eq!(packs(&read), ["en", "sh"], "an alias is no pack");
+}
+
+#[test]
+fn the_layout_codes_a_pack_serves_are_written_sorted() {
+    // A made-up pair: French serving the Walloon and Picard layout codes, given out of order.
+    let fr = BTreeMap::from([("fr".to_owned(), vec!["wa".to_owned(), "pcd".to_owned()])]);
+    let index = PackIndex::new(&["fr"], &fr).unwrap();
+    assert_eq!(index.text(), "fr pcd wa\n");
 }
 
 #[test]

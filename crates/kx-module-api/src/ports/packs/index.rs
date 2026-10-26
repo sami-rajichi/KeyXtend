@@ -7,7 +7,7 @@ use thiserror::Error;
 
 /// Ends each line of the index; a reader also takes `\r\n`.
 const LINE_END: char = '\n';
-/// Parts a pack's code from the layout codes it also serves, on its line: `sh hr bs`.
+/// Parts a pack's code from the layout codes it also serves, on its line: `sh hr`.
 const SEP: char = ' ';
 
 /// Why the index could not be read.

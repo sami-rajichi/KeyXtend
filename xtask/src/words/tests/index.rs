@@ -63,21 +63,17 @@ fn the_build_writes_each_alias_after_its_pack() {
 }
 
 #[test]
-fn the_project_serves_croatian_and_bosnian_from_serbo_croatian_and_never_serbian() {
+fn the_project_serves_croatian_from_serbo_croatian_and_never_serbian_or_bosnian() {
     let manifest = Manifest::parse(MANIFEST).unwrap();
-    assert_eq!(manifest.packs.aliases, aliases("sh", &["hr", "bs"]));
+    assert_eq!(manifest.packs.aliases, aliases("sh", &["hr"]));
     let isos = manifest.isos();
     let isos: Vec<&str> = isos.iter().map(String::as_str).collect();
     let index = PackIndex::new(&isos, &manifest.packs.aliases).unwrap();
-    assert_eq!(
-        (index.pack_of("hr"), index.pack_of("bs")),
-        (Some("sh"), Some("sh"))
-    );
-    assert_eq!(
-        index.pack_of("sr"),
-        None,
-        "no script tag tells Latin Serbian"
-    );
+    assert_eq!(index.pack_of("hr"), Some("sh"));
+    for code in ["sr", "bs"] {
+        let why = "Windows names its Latin and Cyrillic layouts alike";
+        assert_eq!(index.pack_of(code), None, "{code}: {why}");
+    }
 }
 
 #[test]
