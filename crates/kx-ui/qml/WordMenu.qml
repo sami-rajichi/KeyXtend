@@ -19,8 +19,10 @@ Item {
     // It shows in place of the chips.
     property bool open: false
 
-    // An item's `Ui.wordsAsk` kind and number; the pointer came onto an item (its name) or left it (empty).
+    // An item's `Ui.wordsAsk` kind and number, a tap it handles alone (Cancel), and the pointer came onto an item (its
+    // name) or left it (empty).
     signal ask(string kind, int arg)
+    signal tapped
     signal tip(string name, Item at)
 
     readonly property var icons: lk.icons.words
@@ -95,6 +97,8 @@ Item {
                         menu.open = false;
                         if (modelData.kind)
                             menu.ask(modelData.kind, modelData.arg);
+                        else
+                            menu.tapped();
                     }
                 }
             }

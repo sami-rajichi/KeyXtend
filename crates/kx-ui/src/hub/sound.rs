@@ -74,6 +74,11 @@ impl Hub {
         redraw
     }
 
+    /// A tap on the chip lane, its menu or the email list: it plays the key sound, as a key's press does.
+    pub fn tapped(&self) {
+        self.sound(Event::Key);
+    }
+
     /// Hands the speaker every clip again when `[ui] sound_idle_ms` went from `before` to `now`.
     pub(super) fn idle_changed(&self, before: u32, now: u32) {
         if before != now {

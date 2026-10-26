@@ -189,6 +189,10 @@ pub mod qobject {
         #[qinvokable]
         fn words_ask(&self, kind: &QString, arg: i32);
 
+        /// A tap the top bar handles alone, such as the words menu button: it sounds as a key does.
+        #[qinvokable]
+        fn tapped(&self);
+
         /// The settings or face changed: read everything again.
         #[qsignal]
         fn settings_changed(self: Pin<&mut Self>);

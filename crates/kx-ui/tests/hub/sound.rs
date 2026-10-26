@@ -1,5 +1,6 @@
 //! The key and mouse sounds through the hub: each event's takes in turn at its gain under the `[ui]` switches and
-//! volume, after a key's frame mark and on a pad tap, and never on a repeat, a top-bar button or a list key.
+//! volume, after a key's frame mark and on a pad tap, and never on a repeat, a size or theme button or a list key;
+//! the chip lane's taps sound in `words/sounds.rs`.
 
 use crate::{FakeFace, Rig};
 use kx_module_api::Bus;
@@ -36,7 +37,7 @@ fn cue(event: Event) -> sounds::Cue {
 }
 
 /// `event`'s first `n` plays at `volume`: its takes in turn, each at the event's gain times the volume.
-fn takes(event: Event, n: usize, volume: u8) -> Vec<(ClipId, f32)> {
+pub(crate) fn takes(event: Event, n: usize, volume: u8) -> Vec<(ClipId, f32)> {
     let cue = cue(event);
     let gain = cue.gain * f32::from(volume) / FULL;
     cue.clips
@@ -57,7 +58,7 @@ fn first_of(events: impl IntoIterator<Item = Event>) -> Vec<(ClipId, f32)> {
 }
 
 /// Fails unless `got` plays the clips of `want` in order, each at its gain.
-fn assert_plays(got: &[(ClipId, f32)], want: &[(ClipId, f32)]) {
+pub(crate) fn assert_plays(got: &[(ClipId, f32)], want: &[(ClipId, f32)]) {
     let ids = |plays: &[(ClipId, f32)]| plays.iter().map(|p| p.0).collect::<Vec<_>>();
     assert_eq!(ids(got), ids(want), "the clips");
     for ((_, g), (_, w)) in got.iter().zip(want) {
@@ -66,7 +67,7 @@ fn assert_plays(got: &[(ClipId, f32)], want: &[(ClipId, f32)]) {
 }
 
 /// A rig whose face is attached with the `[ui]` defaults that `change` changed.
-fn rig_with(change: impl FnOnce(&mut UiSettings)) -> (Rig, Arc<FakeFace>, FakeHost) {
+pub(crate) fn rig_with(change: impl FnOnce(&mut UiSettings)) -> (Rig, Arc<FakeFace>, FakeHost) {
     let rig = Rig::new();
     let face = Arc::new(FakeFace::default());
     let mut host = FakeHost::new(&MANIFEST);

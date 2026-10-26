@@ -60,26 +60,31 @@ impl Hub {
         json(&view::of(last.as_ref(), &self.i18n()))
     }
 
-    /// Sends a tap on chip `index` of lane `round`, the round QML drew, so the module drops a tap on an old lane; a
-    /// round or index out of range sends nothing. Call it on the Qt thread.
+    /// Sends a tap on chip `index` of lane `round`, the round QML drew, so the module drops a tap on an old lane, and
+    /// sounds as a key does; a round or index out of range sends nothing. Call it on the Qt thread.
     pub fn pick_chip(&self, round: i64, index: i32) {
-        let (Ok(round), Ok(index)) = (u32::try_from(round), u8::try_from(index)) else {
+        if let (Ok(round), Ok(index)) = (u32::try_from(round), u8::try_from(index)) {
+            self.send(&ChipPicked { round, index });
+        } else {
             tracing::warn!("QML sent a chip tap out of range, so nothing was sent");
-            return;
-        };
-        self.send(&ChipPicked { round, index });
+        }
+        self.tapped();
     }
 
-    /// Sends the ask `kind` names (one of `asks`) with `arg` and a list's rows from `[ui] page_rows`; an unknown kind or
-    /// an `arg` out of range sends nothing. Call it on the Qt thread.
+    /// Sends the ask `kind` names (one of `asks`) with `arg` and a list's rows from `[ui] page_rows`, and sounds as a
+    /// key does unless it is the lane's own `again`; an unknown kind or an `arg` out of range sends nothing. Call it on
+    /// the Qt thread.
     pub fn words_ask(&self, kind: &str, arg: i32) {
         let rows = self.lock().settings.page_rows;
         let rows = u8::try_from(rows).unwrap_or(u8::MAX);
-        let Some(ask) = ask_of(kind, arg, rows) else {
+        if let Some(ask) = ask_of(kind, arg, rows) {
+            self.send(&ask);
+        } else {
             tracing::warn!(kind, arg, "QML sent an unknown words tap or a bad argument");
-            return;
-        };
-        self.send(&ask);
+        }
+        if kind != asks::AGAIN {
+            self.tapped();
+        }
     }
 
     /// Keeps `lane` and wakes the top bar.

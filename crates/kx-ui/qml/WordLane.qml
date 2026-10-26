@@ -18,10 +18,11 @@ Item {
     // The words menu shows in the chips' place.
     property alias open: menu.open
 
-    // A chip click (its round and place), a menu, list or control tap (its `Ui.wordsAsk` kind and number), and a menu
-    // item's tip (its name, or empty once the pointer left).
+    // A chip click (its round and place), a menu, list or control tap (its `Ui.wordsAsk` kind and number), a menu tap
+    // it handles alone, and a menu item's tip (its name, or empty once the pointer left).
     signal pick(real round, int index)
     signal ask(string kind, int arg)
+    signal tapped
     signal tip(string name, Item at)
 
     // What the lane shows, its chips, forget mode, and whether no module runs, which closes the menu.
@@ -146,6 +147,7 @@ Item {
         radius: lane.radius
         rtl: lane.rtl
         onAsk: (kind, arg) => lane.ask(kind, arg)
+        onTapped: lane.tapped()
         onTip: (name, at) => lane.tip(name, at)
     }
 }

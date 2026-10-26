@@ -236,8 +236,8 @@ QtObject {
         note("backdrop " + title);
         return frosted;
     }
-    // The chip lane, counted in `reads`, a chip click and a menu, list or control tap, noted as `pickChip round index`
-    // and `wordsAsk kind arg`.
+    // The chip lane, counted in `reads`, a chip click, a menu, list or control tap, and a tap the top bar handles alone,
+    // noted as `pickChip round index`, `wordsAsk kind arg` and `tapped`.
     function words() {
         reads.words++;
         return JSON.stringify(lane);
@@ -247,5 +247,8 @@ QtObject {
     }
     function wordsAsk(kind, arg) {
         note("wordsAsk " + kind + " " + arg);
+    }
+    function tapped() {
+        note("tapped");
     }
 }

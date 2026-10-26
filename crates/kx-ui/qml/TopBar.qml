@@ -23,10 +23,12 @@ Item {
     property bool rtl: false
 
     // One signal per button; sizes carry their index, a chip click its lane's round and its place, and a menu, list or
-    // control chip tap its `Ui.wordsAsk` kind and number.
+    // control chip tap its `Ui.wordsAsk` kind and number. `tapped` is a lane tap the bar handles alone, such as the menu
+    // button, which sounds as a key does.
     signal grip
     signal pick(real round, int index)
     signal ask(string kind, int arg)
+    signal tapped
     signal flip
     signal theme
     signal smaller
@@ -145,6 +147,7 @@ Item {
         rtl: bar.rtl
         onPick: (round, index) => bar.pick(round, index)
         onAsk: (kind, arg) => bar.ask(kind, arg)
+        onTapped: bar.tapped()
         onTip: (name, at) => bar.tip(name, at)
     }
 
@@ -160,7 +163,10 @@ Item {
         name: bar.res.tr("words.menu")
         uid: bar.res.uid(names.group, names.ids.menu)
         lit: words.open
-        onClicked: words.open = !words.open
+        onClicked: {
+            words.open = !words.open;
+            bar.tapped();
+        }
     }
     WordNames {
         id: names

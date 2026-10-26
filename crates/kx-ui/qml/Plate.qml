@@ -87,6 +87,7 @@ Item {
             onGrip: mover.startMove()
             onPick: (round, index) => body.win.ui.pickChip(round, index)
             onAsk: (kind, arg) => body.win.ui.wordsAsk(kind, arg)
+            onTapped: body.win.ui.tapped()
             onFlip: body.win.flip()
             onTheme: body.win.restyle()
             onSmaller: body.win.redraw(body.win.keyboard.smaller())

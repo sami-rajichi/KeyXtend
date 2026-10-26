@@ -1,4 +1,5 @@
-//! `Ui`'s chip lane: the lane as JSON for the top bar, and its clicks sent on to the prediction module.
+//! `Ui`'s chip lane: the lane as JSON for the top bar, its clicks sent on to the prediction module, and the sound of a
+//! tap the top bar handles alone.
 
 use super::qobject;
 use crate::bridges::qs;
@@ -17,5 +18,9 @@ impl qobject::Ui {
     pub(super) fn words_ask(&self, kind: &QString, arg: i32) {
         let kind = kind.to_string();
         self.with((), |h| h.words_ask(&kind, arg));
+    }
+
+    pub(super) fn tapped(&self) {
+        self.with((), Hub::tapped);
     }
 }

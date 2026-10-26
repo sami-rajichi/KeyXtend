@@ -2,6 +2,7 @@
 //! lane as it starts listening, and no log line holds a chip's text.
 
 mod asks;
+mod sounds;
 mod view;
 
 use crate::logs::lines_of;
