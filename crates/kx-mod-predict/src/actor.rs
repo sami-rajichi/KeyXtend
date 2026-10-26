@@ -112,10 +112,6 @@ pub fn watch(
 }
 
 /// The prediction module's runtime: one per start, on its own thread.
-#[allow(
-    clippy::struct_excessive_bools,
-    reason = "Each flag is one fact kept between messages: the layout's direction, the emails loaded, a pick in flight, presses wanted."
-)]
 pub struct Actor {
     ports: Ports,
     /// The settings, with `on` and `learn` as the menu last set them.
