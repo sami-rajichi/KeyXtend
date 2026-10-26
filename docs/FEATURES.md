@@ -17,8 +17,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P4 | Mouse assist: Right-click hold, Grab, ring and sounds | Done (v0.2) |
 | P5 | Scroll pad | Done (v0.3) |
 | P6 | Shortcuts layer and Power key | Done (v0.3) |
-| P7 | Word prediction and emails | Ready |
-| P8 | Clipboard history | Waiting |
+| P7 | Word prediction and emails | Done (v0.4) |
+| P8 | Clipboard history | Ready |
 | P9 | Quick-fill vault | Waiting |
 | P10 | Selection helper | Waiting |
 | P11 | Voice typing (local Whisper) | Waiting |

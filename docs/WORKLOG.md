@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-26 23:35 — P7 done: word prediction and emails (v0.4)
+Five chips above the keys finish the word or guess the next one in the layout's language, from n-gram packs built from wordfreq, Wikipedia and Tatoeba and checked against Hunspell (ADR-0032, ADR-0033); English saves 48 % of key presses and French 47 %. Words and emails typed with the keyboard are learned and sealed on this PC, `@@` lists the known emails, password boxes show a lock, and the lane's menu forgets, pauses or turns suggestions off. A pick erases only the letters that differ, paces its Backspaces for apps such as the new Notepad, never erases into a selection, and stops at a click or key elsewhere; every lane tap sounds like a key. G21, G27, G8's prediction part and G7 passed on the installed build, G8's memory was accepted with P13 owning it, and the owner's hands-on check passed.
+
 ## 2026-10-24 01:51 — P7: typed-text events, field, pack and sealed ports, and the `KeyboardUi` gate
 `kx-module-api` now has the shared types word prediction needs (ADR-0033): `Typed`, `TypeWord`, `Suggested` and the other typed-text events need `ReadFocusedText` and print every text redacted, while `PressesWanted` carries nothing and is open. Three new ports follow: `FieldWatch` tells the focused box's kind and reads a few words before its cursor (behind `ReadFocusedText`), `WordPacks` opens each language's seed with no gate, and `SealedStore` keeps blobs with checked names sealed (behind `SecretStore`). The new `KeyboardUi` capability gates the keyboard face, the mouse module's notes and its pointer moves, so the ui, keyboard and mouse modules declare it. Nothing uses the new events or ports yet.
 

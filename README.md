@@ -91,6 +91,7 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
 - **Word suggestions** (the chips in the top bar) finish the word you type or guess the next one, from word lists for English, French and Arabic, and shorter ones for many other languages; a click types the word.
   - They learn your words and emails on this PC only, and never show or learn in a password box.
+  - After `@`, chips finish the address with common domains; typing `@@` lists the emails you typed before.
   - The menu button at their end forgets a word, pauses learning or turns suggestions off.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
