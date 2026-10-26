@@ -152,7 +152,7 @@ The keyboard never depends on the prediction module; they talk only through `kx_
 - **Typed:** each piece that reached the app, wholly or in part, is told once: text sent as text (the space bar's space too), `Erase` for Backspace, `Advance` for Enter and Tab, and `Break` for any other send, a chord, a dead key or the key after it, a layer shortcut and a language switch. Caps, latches and side keys tell nothing, and a held key's repeats tell one piece each.
 - **One sender:** pieces wait in typing's list under the face's lock, in the order they reached the app, and leave through their own `Outbox`, so the bus hears each once and in order from any thread.
 - **TypingMode:** Shift latched, Caps Lock, a shortcut latch (as `LegendMods::shortcut` reads it) and a dead key's wait go out with the `text_cap` at each start, on each change and on `TypingModeAsk`, beside the latched set; `LatchesAsk` resends only the set. Caps Lock is the one the UI's thread last read (state view or relabel tick), as Windows reads it per thread; our own Caps click flips it at once, and the flip holds until the next tick's read or a state read one `relabel_ms` after the click, whichever comes first, correcting it if the system disagrees.
-- **TypeWord:** a picked word types on the sender's thread: its Backspaces, then its text by the route a letter takes now, after which the latches are used; it is told like keys. It types nothing while a shortcut latch is on or a dead key waits, when its text holds a hidden mark (`is_hidden`), while the module is stopped, or past `text_cap` (`TypeWord::fits`); after a Backspace the app took only in part it stops; the prediction module checks the round.
+- **TypeWord:** a picked word types on the sender's thread (the prediction module's `kx-predict`), one part per lock: each Backspace, then `erase_gap_ms` waited through `Ports::pause` with the lock free, then its text by the route a letter takes now, after which the latches are used; it is told like keys. It types nothing while a shortcut latch is on or a dead key waits, when its text holds a hidden mark (`is_hidden`), while the module is stopped, or past `text_cap` (`TypeWord::fits`); after a Backspace the app took only in part it stops; the prediction module checks the round. A click from the UI's thread may land between its parts, and is told in the order it reached the app.
 
 ## Settings (`[keyboard]`, version 1)
 
@@ -170,6 +170,7 @@ The keyboard never depends on the prediction module; they talk only through `kx_
 | `repeat_every_ms` | `100` | The time between repeats, in ms; within `REPEAT_EVERY_MS` in `settings.rs`. |
 | `key_apps` | `["scrcpy.exe"]` | Apps that get text as key presses in their own layout, by file name, matched without case; no blank names. scrcpy reads letters only as key presses. |
 | `text_cap` | `256` | The most characters a picked word may erase or type; within `TEXT_CAP` in `settings.rs`, whose floor fits predict's longest word with chips (`MAX_WORD`) and its gap; a longer request types nothing. |
+| `erase_gap_ms` | `10` | The pause after each Backspace of a picked word, in ms, so apps that drop fast key bursts (Notepad) take every key; within `ERASE_GAP_MS` in `settings.rs`, and 0 waits nothing. |
 | `x`, `y`, `placed` | `0`, `0`, `false` | Where the user last put the keyboard, in physical pixels; the module writes them, and they hold only once `placed` is true. |
 | `bubble_corner` | `"right"` | The bottom corner of the keyboard's screen where the minimise bubble goes: `"right"` or `"left"`. |
 | `shortcut_pages` | the owner's three pages (spec §4.2) | The shortcuts layer's pages, by shortcut id: at most `MAX_PAGES` in `settings.rs` (so the Next key's dots fit one line inside its cap), none empty or past the layer's room, no id twice; an empty list is allowed. |
@@ -178,7 +179,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 
 ## Public API
 
-- `KeyboardModule` (keeps its face across restarts), `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `MAX_PAGES` (the most shortcut pages the setting holds), `Modifiers`, `LangKey`, `Corner`.
+- `KeyboardModule` (keeps its face across restarts; `with_pause` takes a test's pause, `default` sleeps), `ERASE_GAP_MS`, `ID`, `MANIFEST`, `SPEC`, `KeyboardSettings` (with `from_defaults` and `place`), `MAX_PAGES` (the most shortcut pages the setting holds), `Modifiers`, `LangKey`, `Corner`.
 - `face`: `Face` (`new`, `renew`), the `KeyboardFace` service.
 - `view`: `board_view`, `state_view`, `BoardView`, `KeyView`, `DpadView`, `StateView`, `KeyState`, `StateInput`, `PadState`, `pad_state`, `Paint`, `paint`, `DIM`, and the name prefixes `NAME_PREFIX`, `LABEL_PREFIX`, `ICON_PREFIX`, `LATER_TIP`, `LONE_TIP`, `MOUSE_OFF_TIP`, `SCROLL_OFF_TIP`, `RCLICK_TIP`, `GRAB_TIP`, `NO_SHORTCUTS_TIP`, `POWER_OFF_TIP`, `DPAD_NAME`, `EMPTY_NAME`, `CYCLE_ICON`, `LIST_ICON`; for the layer `with_layer`, `LayerState`, `SHORTCUT_ICON_PREFIX`, `SHORTCUT_NAME_PREFIX`, `NEXT_ICON`.
 - `langkey`: `click`, `lone`, `LangClick`, `lang_view`, `LangView`, `LangName`, `Turn`.
@@ -190,7 +191,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `legend`: `Legend`, `LegendMods` (`of`, `shortcut`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `layer_plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `take_pieces`, `type_word` and `took_caps`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`).
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `take_pieces`, `type_word` (or one part at a time: `word`, `part`, `end`) and `took_caps`, and for a held key `repeats`, `hold`, `release`), `Tapped`, `TapError`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`, and the `pause`), `Pause` with its real `Sleep`, and a picked word in parts: `Word`, `Part`, `drive`.
 - `geom`: `board`, `side_area`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.

@@ -9,16 +9,40 @@
 
 use crate::told::{BKSP, text};
 use crate::typing::{Rig, tap, unicode};
-use kx_mod_keyboard::{Io, KeyboardSettings, Latch, TEXT_CAP};
+use kx_mod_keyboard::{Io, KeyboardSettings, Latch, Pause, TEXT_CAP};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, Piece, TextRoute};
-use kx_platform_fake::Stroke;
+use kx_platform_fake::{FakeInjector, Stroke};
+use std::sync::Mutex;
+use std::time::Duration;
 
 /// The smallest `text_cap` the settings take.
 const CAP: u16 = *TEXT_CAP.start();
 
+/// Each wait a picked word asks for, with how many strokes had gone out by then; it never sleeps.
+struct Waits<'a> {
+    injector: &'a FakeInjector,
+    seen: Mutex<Vec<(usize, Duration)>>,
+}
+
+impl Pause for Waits<'_> {
+    fn wait(&self, gap: Duration) {
+        let sent = self.injector.strokes().len();
+        self.seen.lock().unwrap().push((sent, gap));
+    }
+}
+
 /// Types a picked word on `r`: `erase` Backspaces, then `t`; true when any of it reached the app.
 fn word(r: &mut Rig, erase: u16, t: &str) -> bool {
+    timed(r, erase, t).0
+}
+
+/// Types a picked word on `r` as `word` does, and gives the waits it asked for.
+fn timed(r: &mut Rig, erase: u16, t: &str) -> (bool, Vec<(usize, Duration)>) {
+    let waits = Waits {
+        injector: &r.injector,
+        seen: Mutex::default(),
+    };
     let io = Io {
         injector: &r.injector,
         source: &r.source,
@@ -26,7 +50,45 @@ fn word(r: &mut Rig, erase: u16, t: &str) -> bool {
         shortcuts: &r.shortcuts,
         layer: &[],
     };
-    r.typing.type_word(&io, erase, &Redacted::new(t.into()))
+    let went = r
+        .typing
+        .type_word(&io, erase, &Redacted::new(t.into()), &waits);
+    (went, waits.seen.into_inner().unwrap())
+}
+
+/// `ms` milliseconds, the `[keyboard] erase_gap_ms` unit.
+fn ms(ms: u64) -> Duration {
+    Duration::from_millis(ms)
+}
+
+#[test]
+fn a_pick_erasing_three_waits_after_each_backspace_and_types_after_the_last_wait() {
+    let mut r = Rig::new("en-us", |_| ());
+    let gap = ms(KeyboardSettings::from_defaults().unwrap().erase_gap_ms);
+    let (went, waits) = timed(&mut r, 3, "hello ");
+    assert!(went);
+    assert_eq!(waits, [(1, gap), (2, gap), (3, gap)], "after each tap");
+    let taps = [tap(BKSP), tap(BKSP), tap(BKSP), unicode("hello ")];
+    assert_eq!(r.sent(), taps, "the text after the last wait");
+}
+
+#[test]
+fn a_pick_that_erases_nothing_or_a_zero_gap_waits_for_nothing() {
+    let mut r = Rig::new("en-us", |_| ());
+    assert_eq!(timed(&mut r, 0, "lp "), (true, Vec::new()), "no erase");
+    let mut r = Rig::new("en-us", |s| s.erase_gap_ms = 0);
+    assert_eq!(timed(&mut r, 2, "hi"), (true, Vec::new()), "a zero gap");
+    assert_eq!(r.sent(), [tap(BKSP), tap(BKSP), unicode("hi")]);
+}
+
+#[test]
+fn a_new_gap_takes_effect_through_update() {
+    let mut r = Rig::new("en-us", |_| ());
+    let mut s = KeyboardSettings::from_defaults().unwrap();
+    s.erase_gap_ms = *kx_mod_keyboard::ERASE_GAP_MS.end();
+    r.typing.update(&s);
+    let (_, waits) = timed(&mut r, 1, "a");
+    assert_eq!(waits, [(1, ms(s.erase_gap_ms))]);
 }
 
 #[test]

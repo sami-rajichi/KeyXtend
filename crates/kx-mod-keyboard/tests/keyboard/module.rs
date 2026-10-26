@@ -118,7 +118,7 @@ fn a_tap_through_the_kernels_ports_types_in_the_layout_shown() {
     let mut host = fake(None);
     let fakes = store(&mut host, None);
     host.granted = all();
-    let ports = Ports::from_cx(&ModuleCx::new(&mut host)).unwrap();
+    let ports = Ports::from_cx(&ModuleCx::new(&mut host), fakes.pause.clone()).unwrap();
     let settings = KeyboardSettings::from_defaults().unwrap();
     let mut typing = Typing::new(&BoardSpec::shipped().unwrap(), &settings);
     let q = char_id(Scan::new(0x10));

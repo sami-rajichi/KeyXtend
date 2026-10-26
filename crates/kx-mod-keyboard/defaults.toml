@@ -25,6 +25,8 @@ repeat_every_ms = 100
 key_apps = ["scrcpy.exe"]
 # The most characters a picked word may erase or type; a longer request types nothing.
 text_cap = 256
+# The pause after each Backspace of a picked word, in ms, so apps that drop fast key bursts take every key.
+erase_gap_ms = 10
 # Where the user last put the keyboard, in physical pixels; used only when `placed` is true.
 x = 0
 y = 0

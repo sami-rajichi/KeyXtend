@@ -9,7 +9,8 @@ mod ports;
 mod told;
 mod word;
 
-pub use ports::{Io, Ports};
+pub use ports::{Io, Pause, Ports, Sleep};
+pub use word::{Part, Word, drive};
 
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
@@ -19,6 +20,7 @@ use checks::{keyed, reached, stale, types};
 use kx_module_api::ports::{InjectError, Piece, Scan, ShortcutError, Toggle};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::time::Duration;
 use thiserror::Error;
 
 /// Why a tap sent nothing, or not all of it.
@@ -74,6 +76,8 @@ pub struct Typing {
     apps: Vec<String>,
     /// The most characters a picked word may erase or type.
     cap: u16,
+    /// The pause after each Backspace of a picked word.
+    gap: Duration,
     latches: Latches,
     dead: bool,
     /// While a held key repeats: whether a key went out, so the latches let go when the burst ends.
@@ -103,6 +107,7 @@ impl Typing {
             erase: spec.erase_key(),
             apps: settings.key_apps.clone(),
             cap: settings.text_cap,
+            gap: gap(settings),
             latches: Latches::new(settings.modifiers),
             dead: false,
             burst: None,
@@ -127,10 +132,12 @@ impl Typing {
         std::mem::take(&mut self.caps_sent)
     }
 
-    /// Takes a new `modifiers` mode, `key_apps` list and `text_cap`, keeping the latched modifiers and a dead key's wait.
+    /// Takes a new `modifiers` mode, `key_apps` list, `text_cap` and `erase_gap_ms`, keeping the latched modifiers and
+    /// a dead key's wait.
     pub fn update(&mut self, settings: &KeyboardSettings) {
         self.apps.clone_from(&settings.key_apps);
         self.cap = settings.text_cap;
+        self.gap = gap(settings);
         self.latches.set_mode(settings.modifiers);
     }
 
@@ -266,4 +273,9 @@ impl Typing {
             }
         }
     }
+}
+
+/// The pause after each Backspace of a picked word, from `erase_gap_ms`.
+fn gap(settings: &KeyboardSettings) -> Duration {
+    Duration::from_millis(settings.erase_gap_ms)
 }

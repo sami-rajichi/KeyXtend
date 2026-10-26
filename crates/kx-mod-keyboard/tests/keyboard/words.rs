@@ -7,6 +7,7 @@
 )]
 
 mod caps;
+mod gap;
 mod mode;
 mod threads;
 

@@ -110,7 +110,7 @@ impl Rig {
         change: Option<(&str, toml::Value)>,
         core: Arc<dyn BusCore>,
     ) -> Self {
-        let mut module = KeyboardModule::default();
+        let mut module = KeyboardModule::with_pause(fakes.pause.clone());
         let (host, face) = start(&mut module, &fakes, change, &core);
         Self {
             host,

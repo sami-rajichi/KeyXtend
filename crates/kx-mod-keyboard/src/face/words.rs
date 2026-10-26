@@ -1,7 +1,9 @@
 //! Word prediction on the face (ADR-0033): the typed pieces leave in order, one thread at a time and outside the lock,
-//! so the bus hears each once; a picked word from the bus types on the sender's thread and blocks on nothing it holds.
+//! so the bus hears each once; a picked word from the bus types on the sender's thread, one part per lock, and waits
+//! its pauses outside the lock.
 
 use super::Face;
+use crate::run::drive;
 use kx_module_api::ports::{TypeWord, Typed};
 
 impl Face {
@@ -27,10 +29,16 @@ impl Face {
         }
     }
 
-    /// A picked word from the prediction module, whose round that module checked: it types as keys would, then its
-    /// pieces and the typing mode go out.
+    /// A picked word from the prediction module, whose round that module checked: it types as keys would, waiting each
+    /// pause on the sender's thread with the lock free, then its pieces and the typing mode go out.
     pub(super) fn type_word(&self, word: &TypeWord) {
-        self.lock().type_word(word.erase, &word.text);
+        let (start, pause) = {
+            let inner = self.lock();
+            (inner.start_word(word.erase, &word.text), inner.pause())
+        };
+        if let Some(mut left) = start {
+            drive(|| self.lock().word_part(&mut left), &*pause);
+        }
         self.pour();
         self.tell(false);
     }

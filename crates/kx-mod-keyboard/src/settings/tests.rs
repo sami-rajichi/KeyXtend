@@ -250,5 +250,6 @@ fn the_saved_place_holds_only_once_placed() {
 }
 
 mod cap;
+mod gap;
 mod pages;
 mod repeat;
