@@ -30,7 +30,7 @@ pl
 pt
 ro
 ru
-sh
+sh bs hr
 sk
 sl
 sv
