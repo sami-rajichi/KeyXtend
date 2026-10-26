@@ -195,11 +195,11 @@ impl<'a> Typist<'a> {
         text.ok_or_else(|| "the box's text was not read".to_string())
     }
 
-    /// Clicks just inside the left end of the box's first line, which puts the caret before a left-to-right text.
+    /// Clicks just inside the box's left edge, halfway down: in a fresh one-line box that puts the caret before a
+    /// left-to-right text. The installed gate got no text pattern from this box, so its lines are not asked.
     pub fn click_start(&self) -> Result<(), String> {
-        let lines = uia::lines(&self.edit()?).map_err(|e| e.to_string())?;
-        let line = lines.first().ok_or("the box shows no text line")?;
-        let (start, _) = geom::line_points(line, self.ctx.cfg.probes.inset_px);
+        let found = uia::rect(&self.edit()?).map_err(|e| e.to_string())?;
+        let (start, _) = geom::line_points(&found, self.ctx.cfg.probes.inset_px);
         simuser::click(self.ctx, self.app, start)
     }
 
