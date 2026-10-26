@@ -4,7 +4,7 @@
 use super::*;
 use crate::deadline;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldKind, FieldRead};
+use kx_module_api::ports::{FieldEnds, FieldKind, FieldRead};
 use std::cell::Cell;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -57,9 +57,12 @@ impl Reader for Desk {
         })
     }
 
-    fn ends_with(&self, _: &El, text: &str, _: Instant) -> Result<Option<bool>, FieldError> {
+    fn ends_with(&self, el: &El, text: &str, _: Instant) -> Result<FieldEnds, FieldError> {
         self.reads.set(self.reads.get() + 1);
-        Ok(Some(text == "ap"))
+        Ok(FieldEnds {
+            kind: el.1.kind,
+            ends: Some(text == "ap"),
+        })
     }
 }
 
@@ -94,7 +97,7 @@ fn before(desk: &Desk, by: Instant) -> Result<Option<(FieldKind, String)>, Field
 }
 
 /// What `serve` answers to whether the text ends with `ap`, read by `by`.
-fn ends(desk: &Desk, by: Instant) -> Result<Option<bool>, FieldError> {
+fn ends(desk: &Desk, by: Instant) -> Result<Option<FieldEnds>, FieldError> {
     let (reply, answer) = mpsc::channel();
     let text = Redacted::new(String::from("ap"));
     serve(desk, Job(Ask::Ends { text, by, reply }));
@@ -108,7 +111,15 @@ fn a_read_comes_back_from_the_focused_box() {
         before(&desk, far()),
         Ok(Some((FieldKind::Text, "2 words".to_owned())))
     );
-    assert_eq!(ends(&desk, far()), Ok(Some(true)));
+    let ended = FieldEnds {
+        kind: FieldKind::Text,
+        ends: Some(true),
+    };
+    assert_eq!(
+        ends(&desk, far()),
+        Ok(Some(ended)),
+        "with the kind the check saw"
+    );
     assert_eq!(desk.reads.get(), 2);
 }
 

@@ -77,8 +77,8 @@ impl Rig {
         Self::build(|_, _| {})
     }
 
-    /// A begun rig whose fakes and settings `setup` prepares first; a text box confirms every pick unless it says
-    /// otherwise.
+    /// A begun rig whose fakes and settings `setup` prepares first; a text box tells its text, empty, and confirms every
+    /// pick unless it says otherwise.
     pub fn build(setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
         let fakes = Fakes {
             field: FakeFieldWatch::new(),
@@ -87,6 +87,7 @@ impl Rig {
             clock: FakeClock::new(T0),
             day: Arc::new(AtomicU32::new(DAY)),
         };
+        fakes.field.set_before(Some(""));
         fakes.field.set_ends(Some(true));
         let mut host = FakeHost::new(&MANIFEST);
         host.granted = MANIFEST.capabilities.to_vec();

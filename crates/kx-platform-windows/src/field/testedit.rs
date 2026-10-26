@@ -80,6 +80,11 @@ impl TestEdit {
     pub(super) fn raw(&self) -> isize {
         self.hwnd
     }
+
+    /// Selects from UTF-16 unit `from` to `to`, the caret at `to`; a `to` before `from` selects backwards.
+    pub(super) fn select(&self, from: usize, to: usize) {
+        set_sel(crate::window::from_raw(self.hwnd), from, to);
+    }
 }
 
 impl Drop for TestEdit {
@@ -125,10 +130,15 @@ fn make(text: &[u16], style: i32) -> HWND {
     }
     .unwrap();
     let end = text.len() - 1;
-    let at = (Some(WPARAM(end)), Some(LPARAM(end.cast_signed())));
-    // SAFETY: a plain message to the box this thread owns.
-    unsafe { SendMessageW(hwnd, EM_SETSEL, at.0, at.1) };
+    set_sel(hwnd, end, end);
     hwnd
+}
+
+/// Sets the selection of test box `hwnd` from unit `from` to `to`, where the caret goes.
+fn set_sel(hwnd: HWND, from: usize, to: usize) {
+    let at = (Some(WPARAM(from)), Some(LPARAM(to.cast_signed())));
+    // SAFETY: a plain message to a live test box; its own thread answers it.
+    unsafe { SendMessageW(hwnd, EM_SETSEL, at.0, at.1) };
 }
 
 /// A client for the tests, with COM on this thread while the guard lives.

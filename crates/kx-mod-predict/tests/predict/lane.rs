@@ -6,7 +6,7 @@ use kx_mod_predict::Msg;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ChipPicked, FieldKind, Lane, Piece};
 
-/// A rig in English whose learner knows `hello` and `help`, in a text box holding `before`.
+/// A rig in English whose learner knows `hello` and `help`, in a text box that tells `before`.
 fn texted(before: Option<&str>) -> Rig {
     let mut rig = Rig::build(|f, _| {
         plant(f, "en", &["hello", "help"]);
@@ -19,7 +19,7 @@ fn texted(before: Option<&str>) -> Rig {
 
 #[test]
 fn typing_hel_shows_chips_and_a_pick_sends_one_word_typing_only_its_rest() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("h");
     rig.typed("el");
     assert_eq!(rig.words(), ["hello", "help"]);
@@ -39,7 +39,7 @@ fn typing_hel_shows_chips_and_a_pick_sends_one_word_typing_only_its_rest() {
 
 #[test]
 fn each_change_brings_a_new_round_and_a_stale_round_sends_nothing() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("he");
     let old = rig.lane().round;
     rig.typed("l");
@@ -79,7 +79,7 @@ fn a_read_word_the_box_still_ends_with_is_replaced() {
 
 #[test]
 fn a_typed_word_the_box_still_ends_with_is_checked_then_replaced() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     rig.pick(0);
     let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
@@ -90,7 +90,7 @@ fn a_typed_word_the_box_still_ends_with_is_checked_then_replaced() {
 /// Plan edge 6, for a word typed here.
 #[test]
 fn a_typed_word_the_box_no_longer_ends_with_erases_nothing_and_the_lane_reads_again() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     let round = rig.lane().round;
     rig.fakes.field.set_ends(Some(false));
@@ -143,18 +143,65 @@ fn a_box_that_cannot_tell_gets_only_the_rest_of_a_chip_that_starts_with_the_type
     assert_eq!(rig.fakes.field.ends_calls(), 0, "it is never asked");
 }
 
-#[test]
-fn a_text_box_that_cannot_tell_gets_nothing_for_a_chip_that_erases() {
-    let mut rig = Rig::build(|f, _| plant(f, "en", &["London", "long"]));
+/// A rig in English whose learner knows `London` and `long`, in a text box that tells `before`.
+fn londoned(before: Option<&str>) -> Rig {
+    let mut rig = Rig::build(|f, _| {
+        plant(f, "en", &["London", "long"]);
+        f.field.set_before(before);
+    });
     rig.lang("en");
     rig.focus(FieldKind::Text);
+    rig
+}
+
+/// The word chips after `lon`, sorted.
+fn after_lon(rig: &mut Rig) -> Vec<String> {
     rig.typed("lon");
+    let mut words = rig.words();
+    words.sort();
+    words
+}
+
+#[test]
+fn a_text_box_that_gives_no_text_offers_no_chip_that_erases_until_focus_moves() {
+    let mut rig = londoned(None);
+    assert_eq!(after_lon(&mut rig), ["long"], "London would erase the l");
+    rig.pick(0);
+    assert_eq!(rig.typed_words(), [(0, "g ".to_owned())], "only the rest");
+    assert_eq!(rig.fakes.field.ends_calls(), 0, "it is never asked");
+    rig.fakes.field.set_before(Some(""));
+    rig.focus(FieldKind::Text);
+    assert_eq!(after_lon(&mut rig), ["London", "long"], "a new box");
+}
+
+#[test]
+fn a_text_box_that_cannot_tell_an_end_offers_no_chip_that_erases_until_focus_moves() {
+    let mut rig = londoned(Some(""));
+    assert_eq!(after_lon(&mut rig), ["London", "long"]);
     rig.fakes.field.set_ends(None);
-    let at = rig.words().iter().position(|w| w == "London").unwrap();
+    let at = rig.words().iter().position(|w| w == "long").unwrap();
     rig.pick(u8::try_from(at).unwrap());
-    assert!(rig.typed_words().is_empty(), "London erases the typed l");
     let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
     assert_eq!(asked.as_deref(), Some("lon"), "the box was asked");
+    assert_eq!(rig.typed_words(), [(0, "g ".to_owned())], "only the rest");
+    rig.typed("g ");
+    assert_eq!(after_lon(&mut rig), ["long"], "London would erase the l");
+    rig.focus(FieldKind::Text);
+    assert_eq!(after_lon(&mut rig), ["London", "long"], "a new box");
+}
+
+#[test]
+fn a_pick_while_the_box_holds_a_selection_erases_nothing_and_reads_again() {
+    let mut rig = texted(Some("we said "));
+    rig.typed("hel");
+    rig.fakes.field.select("hel");
+    let reads = rig.fakes.field.before_calls();
+    rig.pick(0);
+    assert!(
+        rig.typed_words().is_empty(),
+        "nothing typed over the selection"
+    );
+    assert_eq!(rig.fakes.field.before_calls(), reads + 1, "read again");
 }
 
 #[test]
@@ -185,7 +232,7 @@ fn a_box_that_cannot_confirm_offers_only_chips_that_extend_the_typed_word_and_ne
 /// Plan edge 14: focus moves to a new box between a key and a pick.
 #[test]
 fn a_pick_on_the_lane_of_a_box_focus_left_sends_nothing_and_the_new_box_is_read() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     let old = rig.lane().round;
     let reads = rig.fakes.field.before_calls();
@@ -202,7 +249,7 @@ fn a_pick_on_the_lane_of_a_box_focus_left_sends_nothing_and_the_new_box_is_read(
 
 #[test]
 fn after_a_pick_the_lane_is_empty_until_the_keyboard_types_it() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     rig.pick(0);
     assert_eq!(rig.lane().lane, Lane::Empty, "no chips until the echo");
@@ -212,7 +259,7 @@ fn after_a_pick_the_lane_is_empty_until_the_keyboard_types_it() {
 
 #[test]
 fn the_echo_of_a_pick_brings_the_chips_back() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     rig.pick(0);
     for _ in 0..3 {
@@ -224,7 +271,7 @@ fn the_echo_of_a_pick_brings_the_chips_back() {
 
 #[test]
 fn presses_are_wanted_while_a_word_or_context_is_held_and_not_after_a_reset_or_stop() {
-    let mut rig = texted(None);
+    let mut rig = texted(Some(""));
     rig.typed("hel");
     assert_eq!(rig.presses().last(), Some(&true));
     rig.send(Msg::Pressed(true));

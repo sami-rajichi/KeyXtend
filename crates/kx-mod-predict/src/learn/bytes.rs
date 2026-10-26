@@ -90,18 +90,53 @@ impl Learner {
 }
 
 /// The words read back, their old ids when renumbered, and the ids of the words dropped.
-type WordsRead = (Words, Option<Vec<Id>>, Vec<Id>);
+type WordsRead = (Words, Option<Vec<Id>>, IdSet);
+
+/// Word ids, one bit for each id the id type names, so a chain entry is checked against them in constant time.
+pub(super) struct IdSet(Vec<u64>);
+
+/// The ids one word of an `IdSet` holds.
+const SET_BITS: usize = u64::BITS as usize;
+
+impl Default for IdSet {
+    fn default() -> Self {
+        let ids = usize::from(Id::MAX) + 1;
+        Self(vec![0; ids.div_ceil(SET_BITS)])
+    }
+}
+
+impl IdSet {
+    /// Adds `id`.
+    pub(super) fn insert(&mut self, id: Id) {
+        let (word, bit) = Self::spot(id);
+        if let Some(word) = self.0.get_mut(word) {
+            *word |= bit;
+        }
+    }
+
+    /// True when `id` was added.
+    pub(super) fn contains(&self, id: Id) -> bool {
+        let (word, bit) = Self::spot(id);
+        self.0.get(word).is_some_and(|w| w & bit != 0)
+    }
+
+    /// The word that holds `id`, and its bit there.
+    fn spot(id: Id) -> (usize, u64) {
+        let at = usize::from(id);
+        (at / SET_BITS, 1 << (at % SET_BITS))
+    }
+}
 
 /// The words, each under its id, their old ids when renumbered, and the ids of the words the learning rule
 /// (`could_learn`) drops; `BadEntry` when two share an id or a spelling.
 fn read_words(r: &mut Read<'_>, learner: &Learner) -> Result<WordsRead, LearnFormatError> {
-    let (mut words, mut dropped) = (Vec::new(), Vec::new());
+    let (mut words, mut dropped) = (Vec::new(), IdSet::default());
     for _ in 0..r.u32()? {
         let id = r.u16()?;
         let text = r.text()?;
         let (count, day) = r.counted()?;
         if !could_learn(text) {
-            dropped.push(id);
+            dropped.insert(id);
             continue;
         }
         let text = text.into();
@@ -146,7 +181,7 @@ fn read_chains(
     r: &mut Read<'_>,
     learner: &mut Learner,
     old: Option<&[Id]>,
-    dropped: &[Id],
+    dropped: &IdSet,
 ) -> Result<(), LearnFormatError> {
     let tables = r.u8()?;
     if tables > MAX_TABLES {
@@ -160,7 +195,7 @@ fn read_chains(
                 .map(|_| r.u16())
                 .collect::<Result<Vec<Id>, _>>()?;
             let (count, day) = r.counted()?;
-            if key.iter().any(|id| dropped.contains(id)) {
+            if key.iter().any(|&id| dropped.contains(id)) {
                 continue;
             }
             let key: Option<Vec<Id>> = key.iter().map(|&id| moved(old, id)).collect();

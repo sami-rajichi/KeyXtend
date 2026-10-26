@@ -6,7 +6,9 @@ use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
-use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldRead, FieldRun, FieldWatch};
+use kx_module_api::ports::{
+    FieldChange, FieldConfig, FieldEnds, FieldError, FieldRead, FieldRun, FieldWatch,
+};
 use kx_platform::field::{Job, Probe, Reader, Shared, Tell, serve, spawn};
 use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 
@@ -91,7 +93,7 @@ impl Reader for WinReader {
         el: &IUIAutomationElement,
         text: &str,
         by: Instant,
-    ) -> Result<Option<bool>, FieldError> {
+    ) -> Result<FieldEnds, FieldError> {
         ends_with(el, text, by, self.chars)
     }
 }

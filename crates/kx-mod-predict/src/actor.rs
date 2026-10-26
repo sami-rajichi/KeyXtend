@@ -112,6 +112,10 @@ pub fn watch(
 }
 
 /// The prediction module's runtime: one per start, on its own thread.
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact kept between messages: a blind box, the emails loaded, a pick in flight, presses wanted."
+)]
 pub struct Actor {
     ports: Ports,
     /// The settings, with `on` and `learn` as the menu last set them.
@@ -125,6 +129,8 @@ pub struct Actor {
     code: String,
     lang_name: String,
     kind: FieldKind,
+    /// The text box gave no text or could not tell an end, so it confirms no erase until focus moves to another box.
+    blind: bool,
     mode: TypingMode,
     tracker: Tracker,
     learner: Option<Learner>,
@@ -142,6 +148,8 @@ pub struct Actor {
     pending: bool,
     /// The text of the domain chip sent last, until the keyboard tells it; its address is learned then.
     domain: Option<Redacted<String>>,
+    /// The address the last learn added new, which a later address of the same token replaces.
+    taught: Option<Redacted<String>>,
     /// The last lane told, for `Again`.
     last: Option<Suggested>,
     /// The last `PressesWanted` told.
@@ -164,6 +172,7 @@ impl Actor {
             code: String::new(),
             lang_name: String::new(),
             kind: FieldKind::None,
+            blind: false,
             mode: TypingMode::default(),
             tracker: Tracker::new(settings.track_config()),
             learner: None,
@@ -176,6 +185,7 @@ impl Actor {
             show: None,
             pending: false,
             domain: None,
+            taught: None,
             last: None,
             pressing: false,
             saves: Saves::new(Duration::from_secs(settings.save_s.into())),

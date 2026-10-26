@@ -1,6 +1,6 @@
 //! The byte form: its layout, the round trip, and every damage refused as an error, never a panic.
 
-use super::super::bytes::MAX_TEXT;
+use super::super::bytes::{IdSet, MAX_TEXT};
 use super::*;
 
 /// One word as the byte form lists it: its id, spelling, count and day.
@@ -259,4 +259,34 @@ fn a_persian_word_with_its_joiner_is_kept() {
     let words = [(0, "می\u{200c}خواهم", 2, DAY)];
     let read = Learner::from_bytes(&encode("fa", &words, &[], &[]), ONE).unwrap();
     assert_eq!(read.view(None).count("می\u{200c}خواهم"), 2);
+}
+
+#[test]
+fn the_dropped_id_set_holds_every_id_the_id_type_names() {
+    let mut set = IdSet::default();
+    assert!(!set.contains(0) && !set.contains(u16::MAX), "empty");
+    for id in [0, 1, 63, 64, u16::MAX - 1, u16::MAX, 1] {
+        set.insert(id);
+    }
+    for id in [0, 1, 63, 64, u16::MAX - 1, u16::MAX] {
+        assert!(set.contains(id), "{id}");
+    }
+    assert!(!set.contains(2) && !set.contains(65), "only what went in");
+}
+
+#[test]
+fn a_forged_blob_of_many_dropped_words_and_their_chains_reads_back_as_its_clean_part() {
+    // Every id but the last names a word the learning rule drops, and one chain names each of them.
+    let last = u16::MAX;
+    let mut words: Vec<W<'_>> = (0..last).map(|id| (id, "a1", 1, DAY)).collect();
+    words.push((last, "hello", 2, DAY));
+    let keys: Vec<[u16; 2]> = (0..last).map(|id| [id, last]).collect();
+    let mut chains: Vec<C<'_>> = keys.iter().map(|k| (&k[..], 1, DAY)).collect();
+    let kept = [last, last];
+    chains.push((&kept, 1, DAY));
+    let forged = encode("en", &words, &[&chains], &[]);
+    let clean = encode("en", &[(last, "hello", 2, DAY)], &[&[(&kept, 1, DAY)]], &[]);
+    let read = Learner::from_bytes(&forged, ONE);
+    assert!(read.is_ok());
+    assert_eq!(read, Learner::from_bytes(&clean, ONE));
 }

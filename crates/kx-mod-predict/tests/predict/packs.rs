@@ -99,12 +99,13 @@ fn a_croatian_layout_takes_the_serbo_croatian_pack_and_keeps_its_own_learned_fil
 }
 
 #[test]
-fn a_shipped_alias_whose_pack_is_gone_is_told_missing_and_serbian_never() {
+fn a_shipped_alias_whose_pack_is_gone_is_told_missing_and_serbian_or_bosnian_never() {
     let mut rig = Rig::build(|f, _| {
         f.packs.ship("sh");
-        f.packs.alias("sh", "bs");
+        f.packs.alias("sh", "hr");
     });
-    rig.lang("bs");
+    rig.lang("hr");
     rig.lang("sr");
-    assert_eq!(rig.notices(), [keys::WORDS_MISSING], "Bosnian only");
+    rig.lang("bs");
+    assert_eq!(rig.notices(), [keys::WORDS_MISSING], "Croatian only");
 }

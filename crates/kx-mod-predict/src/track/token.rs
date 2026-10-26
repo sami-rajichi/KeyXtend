@@ -3,6 +3,8 @@
 
 use std::borrow::Cow;
 
+use kx_module_api::Redacted;
+
 use crate::email;
 use crate::fold;
 use crate::script::{self, Script};
@@ -11,6 +13,25 @@ use crate::split::{normalise, spans};
 /// The packs' apostrophe; a broken fold table, which its tests rule out, leaves NUL, which no word holds.
 pub(super) fn apostrophe() -> char {
     fold::apostrophe().unwrap_or_default()
+}
+
+/// An email a token tells: its address, and the one the same token told before, which it replaces.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Address {
+    /// The address.
+    pub email: Redacted<String>,
+    /// The address told before from the same token, as when a domain chip landed; `None` for the first.
+    pub over: Option<Redacted<String>>,
+}
+
+impl Address {
+    /// `email`, replacing `over`.
+    pub(super) fn of(email: &str, over: Option<&str>) -> Self {
+        Self {
+            email: Redacted::new(email.to_owned()),
+            over: over.map(|o| Redacted::new(o.to_owned())),
+        }
+    }
 }
 
 /// The characters since the last space or reset.
@@ -83,11 +104,23 @@ impl Token {
         email::at().is_some_and(|a| self.text.contains(a))
     }
 
-    /// The email it holds, unless told already: the run `email::capture` takes as a full address, when some of the
-    /// token was typed.
+    /// The email it holds, unless told already: the run `email::capture` takes as a full address, when its at sign was
+    /// typed, not read.
     pub(super) fn email(&self) -> Option<&str> {
-        let email = email::capture(&self.text).filter(|_| self.typed())?;
+        let email = email::capture(&self.text).filter(|_| self.typed_at())?;
         (self.told.as_deref() != Some(email)).then_some(email)
+    }
+
+    /// True when its first at sign, the one `email::capture` reads an address around, was typed.
+    fn typed_at(&self) -> bool {
+        let sign = email::at().and_then(|a| self.text.find(a));
+        let before = sign.and_then(|at| self.text.get(..at));
+        before.is_some_and(|b| b.chars().count() >= self.read)
+    }
+
+    /// The email told from it last, if any.
+    pub(super) fn told(&self) -> Option<&str> {
+        self.told.as_deref()
     }
 
     /// Notes `email` as told, so `email` gives it no more.

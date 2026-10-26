@@ -188,9 +188,20 @@ impl Emails {
 
     /// Removes the known `email`, in any case; gives its place and spelling, `None` when it was not known.
     pub fn remove(&mut self, email: &str) -> Option<(usize, String)> {
-        let lower = Casing::root().lower(email);
-        let at = (self.list.iter()).position(|e| Casing::root().lower(e) == lower)?;
+        let at = self.place(email)?;
         Some((at, self.list.remove(at)))
+    }
+
+    /// True when `email` is known, in any case.
+    #[must_use]
+    pub fn knows(&self, email: &str) -> bool {
+        self.place(email).is_some()
+    }
+
+    /// Where the known `email` sits, in any case.
+    fn place(&self, email: &str) -> Option<usize> {
+        let lower = Casing::root().lower(email);
+        (self.list.iter()).position(|e| Casing::root().lower(e) == lower)
     }
 
     /// Puts `email` back at place `at`, as the undo of a remove.

@@ -6,7 +6,7 @@ mod run;
 
 use std::time::Instant;
 
-use kx_module_api::ports::{FieldChange, FieldError, FieldRead};
+use kx_module_api::ports::{FieldChange, FieldEnds, FieldError, FieldRead};
 
 pub use kind::{BoxFacts, kind};
 use run::Ask;
@@ -33,8 +33,8 @@ pub trait Reader: Probe {
     /// `TimedOut` or `Refused`, as the OS answers.
     fn focused(&self) -> Result<Self::El, FieldError>;
 
-    /// At most `max_words` words before the caret of `el`, with the kind its check found; no text when `el` is no text
-    /// box or has no caret.
+    /// At most `max_words` words before the caret of `el`, or before a selection's start, with the kind its check found;
+    /// no text when `el` is no text box or has no caret.
     ///
     /// # Errors
     /// `TimedOut` past `by`, `Refused` when the app refuses.
@@ -45,12 +45,12 @@ pub trait Reader: Probe {
         by: Instant,
     ) -> Result<FieldRead, FieldError>;
 
-    /// Whether the text before the caret of `el` ends with `text`; `None` when it cannot tell.
+    /// Whether the text before the caret of `el` ends with `text`, with the kind its check found: no for a selection
+    /// that is not empty, or a box that is no text box; `None` when it has no caret.
     ///
     /// # Errors
     /// `TimedOut` past `by`, `Refused` when the app refuses.
-    fn ends_with(&self, el: &Self::El, text: &str, by: Instant)
-    -> Result<Option<bool>, FieldError>;
+    fn ends_with(&self, el: &Self::El, text: &str, by: Instant) -> Result<FieldEnds, FieldError>;
 }
 
 /// Answers `job` from the focused element: one past its deadline is `TimedOut` unstarted, and focus in our own process
@@ -68,7 +68,9 @@ pub fn serve<R: Reader>(reader: &R, job: Job) {
             let _ = reply.send(read);
         }
         Ask::Ends { text, by, reply } => {
-            let read = on_focus(reader, by, |el| reader.ends_with(el, text.expose(), by));
+            let read = on_focus(reader, by, |el| {
+                reader.ends_with(el, text.expose(), by).map(Some)
+            });
             let _ = reply.send(read);
         }
     }

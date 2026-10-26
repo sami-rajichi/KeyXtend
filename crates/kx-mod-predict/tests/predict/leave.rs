@@ -1,6 +1,7 @@
 //! Emails learned when the user leaves them (owner, 2026-10-26): a domain chip that completes the address once its
-//! text reaches the app, a click outside our windows or focus on another box; never a partial or read address, never
-//! in a box that is no text box, and never while learning is paused or prediction is off.
+//! text reaches the app, a click outside our windows or focus on another box; never a partial address or one whose at
+//! sign was read, never in a box that is no text box, and never while learning is paused or prediction is off. A longer
+//! address replaces the one a domain chip taught.
 
 use crate::rig::Rig;
 use kx_mod_predict::Msg;
@@ -145,4 +146,47 @@ fn a_break_still_ends_a_typed_address_unlearned() {
     rig.send(Msg::Typed(Piece::Break));
     rig.send(Msg::Pressed(false));
     assert!(kept(&mut rig).is_empty());
+}
+
+#[test]
+fn a_read_address_then_a_typed_comma_or_letter_learns_nothing() {
+    for typed in [",", "m", ", "] {
+        let mut rig = Rig::build(|f, _| f.field.set_before(Some("to bob@x.com")));
+        rig.lang("en");
+        rig.focus(FieldKind::Text);
+        rig.typed(typed);
+        rig.send(Msg::Pressed(false));
+        assert!(kept(&mut rig).is_empty(), "{typed:?}: its at sign was read");
+    }
+}
+
+/// Types `start`, then picks the domain chip `domain`, whose text the keyboard tells.
+fn domain_landed(rig: &mut Rig, start: &str, domain: &str) {
+    rig.typed(start);
+    let at = rig.chips().iter().position(|c| c.0 == domain).unwrap();
+    rig.pick(u8::try_from(at).unwrap());
+    rig.typed(domain);
+}
+
+#[test]
+fn a_longer_address_after_a_domain_chip_replaces_the_one_it_taught() {
+    let mut rig = in_box(FieldKind::Text);
+    domain_landed(&mut rig, "x@", "yahoo.com");
+    rig.typed(".br");
+    rig.typed(" ");
+    assert_eq!(kept(&mut rig), ["x@yahoo.com.br"]);
+    let mut rig = in_box(FieldKind::Text);
+    domain_landed(&mut rig, "x@", "yahoo.com");
+    rig.typed(".br");
+    rig.send(Msg::Pressed(false));
+    assert_eq!(kept(&mut rig), ["x@yahoo.com.br"], "left, not ended");
+}
+
+#[test]
+fn a_longer_address_keeps_one_the_user_knew_before_the_chip() {
+    let mut rig = in_box(FieldKind::Text);
+    rig.typed("x@yahoo.com ");
+    domain_landed(&mut rig, "x@", "yahoo.com");
+    rig.typed(".br ");
+    assert_eq!(kept(&mut rig), ["x@yahoo.com.br", "x@yahoo.com"]);
 }

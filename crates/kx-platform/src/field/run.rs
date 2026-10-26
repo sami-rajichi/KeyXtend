@@ -7,7 +7,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun};
+use kx_module_api::ports::{
+    FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun,
+};
 
 use super::Probe;
 use crate::deadline;
@@ -36,7 +38,7 @@ pub(super) enum Ask {
     Ends {
         text: Redacted<String>,
         by: Instant,
-        reply: Reply<bool>,
+        reply: Reply<FieldEnds>,
     },
 }
 
@@ -223,14 +225,21 @@ impl FieldRun for Run {
         Ok(read.unwrap_or(told))
     }
 
-    fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
-        if !self.readable() || !self.cfg.fits(text.expose()) {
-            return None;
+    fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds {
+        let kind = self.shared.kind();
+        if !kind.reads() {
+            return FieldEnds {
+                kind,
+                ends: Some(false),
+            };
+        }
+        let unsure = FieldEnds { kind, ends: None };
+        if !self.cfg.fits(text.expose()) {
+            return unsure;
         }
         let text = text.clone();
-        self.ask(|reply, by| Ask::Ends { text, by, reply })
-            .ok()
-            .flatten()
+        let ended = self.ask(|reply, by| Ask::Ends { text, by, reply });
+        ended.ok().flatten().unwrap_or(unsure)
     }
 }
 

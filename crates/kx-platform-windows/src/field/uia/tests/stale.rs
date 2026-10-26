@@ -5,7 +5,7 @@ use super::{LATIN, chars, closed, text};
 use crate::field::testedit::{CONFIG, TestEdit, element, started};
 use crate::field::win::WinProbe;
 use crate::scroll::testwin::{WAIT, one_client};
-use kx_module_api::ports::{FieldChange, FieldError, FieldKind, FieldRead};
+use kx_module_api::ports::{FieldChange, FieldEnds, FieldError, FieldKind, FieldRead};
 use kx_platform::field::{Job, Probe, Reader, Shared, serve, spawn};
 use std::cell::Cell;
 use std::sync::Arc;
@@ -48,7 +48,7 @@ impl Reader for Pinned {
         el: &IUIAutomationElement,
         text: &str,
         by: Instant,
-    ) -> Result<Option<bool>, FieldError> {
+    ) -> Result<FieldEnds, FieldError> {
         ends_with(el, text, by, chars())
     }
 }

@@ -5,15 +5,15 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::time::Instant;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldError, FieldKind, FieldRead, last_words};
+use kx_module_api::ports::{FieldEnds, FieldError, FieldKind, FieldRead, last_words};
 use kx_platform::field::{after_first, late};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Variant::VT_BOOL;
 use windows::Win32::UI::Accessibility::{
-    IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern, IUIAutomationTextPattern2,
-    IUIAutomationTextRange, IUIAutomationValuePattern, TextPatternRangeEndpoint_End,
-    TextPatternRangeEndpoint_Start, TextUnit, TextUnit_Character, TextUnit_Word, UIA_E_TIMEOUT,
-    UIA_IsReadOnlyAttributeId, UIA_TextPattern2Id, UIA_TextPatternId, UIA_ValuePatternId,
+    IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern, IUIAutomationTextRange,
+    IUIAutomationValuePattern, TextPatternRangeEndpoint_End, TextPatternRangeEndpoint_Start,
+    TextUnit, TextUnit_Character, TextUnit_Word, UIA_E_TIMEOUT, UIA_IsReadOnlyAttributeId,
+    UIA_TextPatternId, UIA_ValuePatternId,
 };
 use windows::Win32::UI::WindowsAndMessaging::{GA_ROOT, GetAncestor};
 use windows::core::BOOL;
@@ -21,6 +21,9 @@ use windows::core::BOOL;
 use super::{Facts, kind, table};
 use crate::uia::{class_of, span, style_of, vector};
 use crate::window::foreground;
+use caret::{Caret, Found, caret_of};
+
+mod caret;
 
 /// What UI Automation and Win32 tell about `el`; a part that cannot be read reads as unknown. Never its text.
 #[allow(unsafe_code, reason = "Plain UI Automation reads.")]
@@ -57,11 +60,11 @@ pub(super) fn kind_of(el: &IUIAutomationElement) -> FieldKind {
 
 /// The kind of `el`, and the caret its read-only probe fetched; only a would-be text box is probed, so a text box
 /// always comes with its caret's answer.
-fn probed(el: &IUIAutomationElement) -> (FieldKind, Option<Caret>) {
+fn probed(el: &IUIAutomationElement) -> (FieldKind, Option<Found>) {
     let mut caret = None;
     let kind = kind(&facts(el), table(), || {
         let got = caret_of(el);
-        let fixed = matches!(&got, Ok(Some(range)) if read_only_range(range));
+        let fixed = matches!(&got, Ok(Some(caret)) if read_only_range(&caret.range));
         caret = Some(got);
         fixed
     });
@@ -134,8 +137,8 @@ pub(super) fn focused(auto: &IUIAutomation) -> Result<IUIAutomationElement, Fiel
     unsafe { auto.GetFocusedElement() }.map_err(failed)
 }
 
-/// At most `max_words` words before the caret of text box `el`, from at most `chars` characters, with the kind the
-/// read saw; no text when `el` is no text box or has no caret.
+/// At most `max_words` words before the caret of text box `el`, or before its selection's start, from at most `chars`
+/// characters, with the kind the read saw; no text when `el` is no text box or has no caret.
 pub(super) fn before_cursor(
     el: &IUIAutomationElement,
     max_words: u8,
@@ -144,7 +147,7 @@ pub(super) fn before_cursor(
 ) -> Result<FieldRead, FieldError> {
     let (kind, caret) = text_caret(el, by)?;
     let text = match caret {
-        Some(caret) => words_before(&caret, max_words, by, chars)?,
+        Some(caret) => words_before(&caret.range, max_words, by, chars)?,
         None => None,
     };
     Ok(FieldRead {
@@ -168,60 +171,38 @@ fn words_before(
     Ok(text.map(|t| last_words(after_first(&t), max_words).to_owned()))
 }
 
-/// Whether the text before the caret of text box `el` ends with `want`, read within `chars` characters; `None` when it
-/// cannot tell. It steps back in UTF-16 units, UI Automation's character on Windows.
+/// Whether the text before the caret of text box `el` ends with `want`, read within `chars` characters, with the kind
+/// the check saw: no for a box that is no text box or holds a selection; `None` when it has no caret. It steps back
+/// in UTF-16 units, UI Automation's character on Windows.
 pub(super) fn ends_with(
     el: &IUIAutomationElement,
     want: &str,
     by: Instant,
     chars: usize,
-) -> Result<Option<bool>, FieldError> {
-    let Ok(back) = i32::try_from(want.encode_utf16().count()) else {
-        return Ok(None);
+) -> Result<FieldEnds, FieldError> {
+    let (kind, caret) = text_caret(el, by)?;
+    let ends = match (caret, i32::try_from(want.encode_utf16().count())) {
+        _ if !kind.reads() => Some(false),
+        (Some(caret), _) if caret.selected => Some(false),
+        (Some(caret), Ok(back)) => {
+            tail(&caret.range, TextUnit_Character, back, by, chars)?.map(|t| t.ends_with(want))
+        }
+        _ => None,
     };
-    let (_, Some(caret)) = text_caret(el, by)? else {
-        return Ok(None);
-    };
-    Ok(tail(&caret, TextUnit_Character, back, by, chars)?.map(|t| t.ends_with(want)))
+    Ok(FieldEnds { kind, ends })
 }
 
 /// The kind of `el` checked now, and its caret, which only a text box with one gives; the check fetches it once.
 fn text_caret(
     el: &IUIAutomationElement,
     by: Instant,
-) -> Result<(FieldKind, Option<IUIAutomationTextRange>), FieldError> {
+) -> Result<(FieldKind, Option<Caret>), FieldError> {
     let (kind, caret) = probed(el);
     if !kind.reads() {
         return Ok((kind, None));
     }
     late(by)?;
     Ok((kind, caret.unwrap_or(Ok(None))?))
-}
-
-/// A caret lookup's answer: the range, none, or why it failed.
-type Caret = Result<Option<IUIAutomationTextRange>, FieldError>;
-
-/// The caret of `el`, from `TextPattern2` or else the first selection; `None` when it has none.
-#[allow(unsafe_code, reason = "Plain UI Automation pattern calls.")]
-fn caret_of(el: &IUIAutomationElement) -> Caret {
-    text_call();
-    // SAFETY: plain pattern calls on a live element; `active` is a local that outlives the call.
-    unsafe {
-        if let Ok(text) = el.GetCurrentPatternAs::<IUIAutomationTextPattern2>(UIA_TextPattern2Id) {
-            let mut active = BOOL::default();
-            if let Ok(caret) = text.GetCaretRange(&raw mut active) {
-                return Ok(Some(caret));
-            }
-        }
-        let Ok(text) = el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId) else {
-            return Ok(None);
-        };
-        let ranges = text.GetSelection().map_err(failed)?;
-        if ranges.Length().map_err(failed)? == 0 {
-            return Ok(None);
-        }
-        ranges.GetElement(0).map(Some).map_err(failed)
-    }
 }
 
 /// The text from `back` units of `unit` before the caret up to it; `None` when it is longer than `chars` characters.

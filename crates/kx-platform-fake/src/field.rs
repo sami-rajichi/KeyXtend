@@ -3,7 +3,8 @@
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch, last_words,
+    FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch,
+    last_words,
 };
 use kx_platform::field::after_first;
 use std::fmt;
@@ -19,6 +20,8 @@ struct Log {
     /// The kind of a box focus moved to unheard, which reads see until the next told move.
     unheard: Option<FieldKind>,
     before: Option<String>,
+    /// The text selected right after `before`; empty for a caret.
+    selected: String,
     ends: Option<bool>,
     /// Fails every read until focus moves to a new box.
     read_fail: Option<FieldError>,
@@ -39,6 +42,7 @@ impl Default for Log {
             box_id: 0,
             unheard: None,
             before: None,
+            selected: String::new(),
             ends: None,
             read_fail: None,
             watch_fail: None,
@@ -74,8 +78,9 @@ struct Shared {
 /// A field watch shared by its clones: focus starts on no box, and only a text box is read, the scripted text cut to the
 /// read cap and the asked words.
 ///
-/// The scripted text and `ends_with` answer stay across focus changes; a read failure lasts only for its box. A `tell`
-/// runs under the fake's lock, so it must not call `focus` or drop its run, and a second watch replaces the first's.
+/// The scripted text, selection and `ends_with` answer stay across focus changes; a read failure lasts only for its
+/// box. A `tell` runs under the fake's lock, so it must not call `focus` or drop its run, and a second watch replaces
+/// the first's.
 #[derive(Clone, Default)]
 pub struct FakeFieldWatch {
     shared: Arc<Shared>,
@@ -112,12 +117,17 @@ impl FakeFieldWatch {
         lock(&self.shared.log).unheard = Some(kind);
     }
 
-    /// Makes a text box hold `text` before its cursor, or not tell with `None`.
+    /// Makes a text box hold `text` before its cursor, or before its selection's start, or not tell with `None`.
     pub fn set_before(&self, text: Option<&str>) {
         lock(&self.shared.log).before = text.map(str::to_owned);
     }
 
-    /// Makes `ends_with` in a text box answer `ends`, whatever text it asks about.
+    /// Selects `text` right after the text before the cursor; empty leaves a caret. Reads still end before it.
+    pub fn select(&self, text: &str) {
+        text.clone_into(&mut lock(&self.shared.log).selected);
+    }
+
+    /// Makes `ends_with` in a text box answer `ends`, whatever text it asks about, while it holds no selection.
     pub fn set_ends(&self, ends: Option<bool>) {
         lock(&self.shared.log).ends = ends;
     }
@@ -253,15 +263,22 @@ impl FieldRun for FakeRun {
         })
     }
 
-    fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
+    fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds {
         let mut log = lock(&self.shared.log);
         log.ends_calls += 1;
         log.last_ends = Some(text.clone());
-        let read = log.readable()
-            && log.seen().reads()
-            && log.read_fail.is_none()
-            && self.cfg.fits(text.expose());
-        log.ends.filter(|_| read)
+        let unsure = log.read_fail.is_some() || !self.cfg.fits(text.expose());
+        if !log.readable() || unsure {
+            let ends = (!log.readable()).then_some(false);
+            return FieldEnds {
+                kind: log.kind,
+                ends,
+            };
+        }
+        let kind = log.seen();
+        let open = kind.reads() && log.selected.is_empty();
+        let ends = if open { log.ends } else { Some(false) };
+        FieldEnds { kind, ends }
     }
 }
 

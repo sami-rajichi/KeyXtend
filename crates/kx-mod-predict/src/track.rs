@@ -12,6 +12,7 @@ mod show;
 mod token;
 
 pub use show::{EmailAsk, Plan, Query, Reading, Show};
+pub use token::Address;
 pub(crate) use token::could_learn;
 use token::{Token, apostrophe, learnable};
 
@@ -35,7 +36,7 @@ pub enum Told {
         context: Redacted<Vec<String>>,
     },
     /// A finished token that looks like an email.
-    Email(Redacted<String>),
+    Email(Address),
     /// The words before the cursor are unknown: read the box.
     Read,
 }
@@ -138,12 +139,13 @@ impl Tracker {
         self.field != Some(change.box_id)
     }
 
-    /// The open token's email, told once: a full address with some of it typed, as the user leaves it or a domain chip
-    /// completes it. Its end then tells it no more.
-    pub fn email(&mut self) -> Option<Redacted<String>> {
+    /// The open token's email, told once: a full address whose at sign was typed, as the user leaves it or a domain chip
+    /// completes it. Its end then tells it no more, and a later address of the same token replaces it.
+    pub fn email(&mut self) -> Option<Address> {
         let email = self.token.email()?.to_owned();
+        let address = Address::of(&email, self.token.told());
         self.token.tell(&email);
-        Some(Redacted::new(email))
+        Some(address)
     }
 
     /// Takes a read of the words before the cursor: they fill the context, and a last word with no space after it
@@ -277,10 +279,10 @@ impl Tracker {
     }
 }
 
-/// Tells the email `token` holds, unless told already, and clears the context, as an email is never a word.
+/// Tells the email `token` holds unless told already, over one told before, and clears the context.
 fn finish_email(token: &Token, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
     if let (Some(told), Some(email)) = (told, token.email()) {
-        told.push(Told::Email(Redacted::new(email.to_owned())));
+        told.push(Told::Email(Address::of(email, token.told())));
     }
     before.clear();
 }

@@ -54,7 +54,7 @@ fn the_start_of_a_token_may_start_a_known_email() {
 fn a_finished_email_is_told_never_learned_and_clears_the_context() {
     let mut t = tracker(2);
     let told = type_text(&mut t, "mail a@b.co ");
-    assert!(told.contains(&Told::Email(Redacted::new("a@b.co".to_owned()))));
+    assert!(told.contains(&mail("a@b.co")));
     assert_eq!(learned(&told), [("mail".to_owned(), owned(&[]))]);
     assert_eq!(t.context(), Some(&[][..]));
 }
@@ -71,22 +71,24 @@ fn a_finished_email_is_captured_whole_and_without_the_marks_around_it() {
     for (typed, email) in cases {
         let mut t = tracker(2);
         let told = type_text(&mut t, typed);
-        assert_eq!(
-            told,
-            [Told::Email(Redacted::new(email.to_owned()))],
-            "{typed}"
-        );
+        assert_eq!(told, [mail(email)], "{typed}");
     }
 }
 
 #[test]
-fn an_email_is_told_only_when_some_of_it_was_typed() {
+fn an_email_is_told_only_when_its_at_sign_was_typed() {
+    for (read, typed) in [
+        ("sami@x.org", " "),
+        ("sami@x.or", "g "),
+        ("bob@x.com", ", "),
+    ] {
+        let mut t = tracker(2);
+        t.read(Some(read), &knows);
+        assert!(type_text(&mut t, typed).is_empty(), "{read} then {typed:?}");
+    }
     let mut t = tracker(2);
-    t.read(Some("sami@x.org"), &knows);
-    assert!(type_text(&mut t, " ").is_empty());
-    t.read(Some("sami@x.or"), &knows);
-    let told = type_text(&mut t, "g ");
-    assert_eq!(told, [Told::Email(Redacted::new("sami@x.org".to_owned()))]);
+    t.read(Some("sami"), &knows);
+    assert_eq!(type_text(&mut t, "@x.org "), [mail("sami@x.org")]);
 }
 
 #[test]

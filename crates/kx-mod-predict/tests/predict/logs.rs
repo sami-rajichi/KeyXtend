@@ -125,6 +125,22 @@ fn a_domain_chip_then_a_space_counts_one_email() {
 }
 
 #[test]
+fn a_longer_address_after_a_domain_chip_counts_one_email() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.lang("en");
+        rig.focus(FieldKind::Text);
+        rig.typed("x@y");
+        rig.pick(0);
+        rig.typed("ahoo.com");
+        rig.typed(".br ");
+        rig.stop();
+    });
+    let stopped = lines.iter().find(|l| l.contains(STOPPED_LINE)).unwrap();
+    assert!(stopped.contains("emails=1 "), "{stopped}");
+}
+
+#[test]
 fn a_learner_that_does_not_read_logs_why() {
     let name = kx_mod_predict::learned_blob("en").unwrap();
     let damaged = lines_of(|| {

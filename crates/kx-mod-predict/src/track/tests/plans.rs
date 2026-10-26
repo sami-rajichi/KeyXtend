@@ -124,14 +124,11 @@ fn after_an_email_pick_the_tracker_holds_the_whole_address() {
     let ask = t.show(&knows).emails.unwrap();
     apply(&mut t, &ask.plan("gmail.com").unwrap());
     let told = type_text(&mut t, " ");
-    assert_eq!(
-        told,
-        [Told::Email(Redacted::new("sami@gmail.com".to_owned()))]
-    );
+    assert_eq!(told, [mail("sami@gmail.com")]);
     let mut t = tracker(2);
     type_text(&mut t, "to @@");
     let ask = t.show(&knows).emails.unwrap();
     apply(&mut t, &ask.plan("a@b.co").unwrap());
     let told = type_text(&mut t, " ");
-    assert_eq!(told, [Told::Email(Redacted::new("a@b.co".to_owned()))]);
+    assert_eq!(told, [mail("a@b.co")]);
 }

@@ -6,7 +6,7 @@ use super::Actor;
 use super::store::Blob;
 use crate::pack::Pack;
 use crate::score::knows;
-use crate::track::Told;
+use crate::track::{Address, Told};
 use kx_module_api::ports::{FieldChange, FieldKind, Piece};
 
 impl Actor {
@@ -36,11 +36,12 @@ impl Actor {
         matches!(piece, Piece::Text(text) if sent.as_ref() == Some(text))
     }
 
-    /// Focus moved: leaving the box learns its open email, before the new box's kind counts; a new box resets the
-    /// tracker and is read when it is a text box.
+    /// Focus moved: leaving the box learns its open email, unless the watch already sees another kind of box, which
+    /// drops the token. A new box clears the blind mark, resets the tracker and is read when it is a text box.
     pub(super) fn focus(&mut self, seed: Option<&Pack<'_>>, change: FieldChange) -> bool {
         if self.tracker.leaves(change) {
             self.keep_email();
+            self.blind = false;
         }
         self.kind = change.kind;
         self.menu.key();
@@ -69,8 +70,8 @@ impl Actor {
         if !self.learning() {
             return;
         }
-        if let Some(email) = self.tracker.email() {
-            self.learn_email(email.expose());
+        if let Some(address) = self.tracker.email() {
+            self.learn_email(&address);
         }
     }
 
@@ -103,14 +104,14 @@ impl Actor {
                 Told::Learn { word, context } => {
                     self.learn_word(seed, word.expose(), context.expose());
                 }
-                Told::Email(email) => self.learn_email(email.expose()),
+                Told::Email(address) => self.learn_email(&address),
                 Told::Read => self.read(seed),
             }
         }
     }
 
-    /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a failed read counts
-    /// as no context, and another kind the read saw wins at once.
+    /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a read with no text
+    /// counts as no context and leaves the box blind, and another kind the read saw wins at once.
     pub(super) fn read(&mut self, seed: Option<&Pack<'_>>) {
         if !self.settings.on || self.moved() || !self.kind.reads() {
             return;
@@ -128,6 +129,7 @@ impl Actor {
                 None
             }
         };
+        self.blind |= text.is_none();
         if self.moved() {
             return;
         }
@@ -155,7 +157,7 @@ impl Actor {
 
     /// True when `seen`, the kind the platform saw, is another kind than the box followed and no text box: it wins,
     /// and tracking stops.
-    fn seen(&mut self, seen: FieldKind) -> bool {
+    pub(super) fn seen(&mut self, seen: FieldKind) -> bool {
         let moved = seen != FieldKind::Text && seen != self.kind;
         if moved {
             self.kind = seen;
@@ -178,11 +180,28 @@ impl Actor {
         self.changed(Blob::Learned);
     }
 
-    /// Puts `email` first in the known emails, when learning.
-    fn learn_email(&mut self, email: &str) {
-        if self.learning() && self.emails.add(email, self.email_cfg.max_emails) {
-            self.stats.emails += 1;
+    /// Puts `address` first in the known emails, when learning. The one it replaces goes if the last learn added it new,
+    /// as a domain chip's landing does, and a token's address counts once.
+    fn learn_email(&mut self, address: &Address) {
+        if !self.learning() {
+            return;
+        }
+        let email = address.email.expose();
+        let fresh = !self.emails.knows(email);
+        let taught = self.taught.take();
+        if let Some(over) = address
+            .over
+            .as_ref()
+            .filter(|o| taught.as_ref() == Some(*o))
+        {
+            self.emails.remove(over.expose());
+        }
+        if self.emails.add(email, self.email_cfg.max_emails) {
+            if address.over.is_none() {
+                self.stats.emails += 1;
+            }
             self.changed(Blob::Emails);
         }
+        self.taught = fresh.then(|| address.email.clone());
     }
 }

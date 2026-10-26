@@ -84,9 +84,10 @@ impl Actor {
         }
     }
 
-    /// True when the box confirms what a pick erases: a text box.
+    /// True when the box confirms what a pick erases: a text box that has given its text and told each end asked since
+    /// focus came.
     pub(super) fn confirms(&self) -> bool {
-        self.kind == FieldKind::Text
+        self.kind == FieldKind::Text && !self.blind
     }
 
     /// Asks the keyboard to type by `plan` as far as the box confirms it, and gives the text asked for: all of it when
@@ -123,7 +124,8 @@ impl Actor {
     }
 
     /// Whether the box still ends with what `plan` replaces, as a text box tells, even when the plan erases none of it;
-    /// `None` when another box, or the app, cannot tell. A box the watch already sees as another kind has moved on.
+    /// `None` when another box, or the app, cannot tell, which leaves the box blind. A box the watch or the check sees
+    /// as another kind has moved on.
     fn ends(&mut self, plan: &Plan) -> Option<bool> {
         if self.moved() {
             return Some(false);
@@ -134,7 +136,12 @@ impl Actor {
         if !self.confirms() {
             return None;
         }
-        self.ports.field.as_mut()?.ends_with(&plan.gone)
+        let checked = self.ports.field.as_mut()?.ends_with(&plan.gone);
+        if self.seen(checked.kind) {
+            return Some(false);
+        }
+        self.blind |= checked.ends.is_none();
+        checked.ends
     }
 
     /// Forgets the word stored as `stored`, whose chip sat at `at`; its Undo chip takes the place.

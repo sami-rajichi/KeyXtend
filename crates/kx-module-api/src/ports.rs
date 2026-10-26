@@ -25,7 +25,7 @@ pub use face::{
     FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey, MAX_PRESETS,
 };
 pub use field::{
-    FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch,
+    FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch,
     FieldWatchKey, last_words,
 };
 pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};

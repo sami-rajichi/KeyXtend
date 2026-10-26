@@ -4,10 +4,10 @@
 
 use kx_module_api::Capability::{InjectInput, ReadFocusedText, SecretStore};
 use kx_module_api::ports::{
-    BlobName, ChipPicked, FieldChange, FieldConfig, FieldError, FieldKind, FieldRead, FieldRun,
-    FieldWatch, FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk, PressesWanted,
-    SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord, Typed, TypingMode,
-    TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
+    BlobName, ChipPicked, FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead,
+    FieldRun, FieldWatch, FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk,
+    PressesWanted, SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord, Typed,
+    TypingMode, TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -66,8 +66,11 @@ impl FieldRun for OneRun {
         })
     }
 
-    fn ends_with(&mut self, end: &Redacted<String>) -> Option<bool> {
-        Some(TEXT.ends_with(end.expose().as_str()))
+    fn ends_with(&mut self, end: &Redacted<String>) -> FieldEnds {
+        FieldEnds {
+            kind: FieldKind::Text,
+            ends: Some(TEXT.ends_with(end.expose().as_str())),
+        }
     }
 }
 
@@ -247,7 +250,8 @@ fn a_watch_reached_through_its_gate_tells_the_box_and_reads_before_the_cursor() 
     let read = run.before_cursor(2).unwrap();
     assert_eq!(read.kind, FieldKind::Text);
     assert_eq!(read.text.map(Redacted::into_inner).as_deref(), Some(TEXT));
-    assert_eq!(run.ends_with(&Redacted::new(END.to_owned())), Some(true));
+    let ended = run.ends_with(&Redacted::new(END.to_owned()));
+    assert_eq!((ended.kind, ended.ends), (FieldKind::Text, Some(true)));
 }
 
 #[test]

@@ -9,13 +9,14 @@ use crate::lock;
 use crate::scroll::testwin::{WAIT, one_client};
 use crate::uia::{caret, value};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{FieldChange, FieldRead, FieldRun};
+use kx_module_api::ports::{FieldChange, FieldEnds, FieldRead, FieldRun};
 use kx_platform::field::{Probe, Shared, spawn};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use windows::Win32::UI::WindowsAndMessaging::{ES_PASSWORD, ES_READONLY};
 
 mod errors;
+mod select;
 mod stale;
 
 /// Latin words, the caret after the last.
@@ -81,8 +82,20 @@ fn the_words_before_the_caret_are_cut_to_the_last_n_in_latin_and_arabic() {
     assert_eq!(read(&arabic, 9), Ok(Some(ARABIC.to_owned())));
     assert_eq!(read(&latin, 2), Ok(Some("gamma delta".to_owned())));
     assert_eq!(read(&latin, 0), Ok(Some(String::new())));
-    assert_eq!(ends_with(&latin, "delta", far(), chars()), Ok(Some(true)));
-    assert_eq!(ends_with(&latin, "gamma", far(), chars()), Ok(Some(false)));
+    let ended = |ends| {
+        Ok(FieldEnds {
+            kind: FieldKind::Text,
+            ends,
+        })
+    };
+    assert_eq!(
+        ends_with(&latin, "delta", far(), chars()),
+        ended(Some(true))
+    );
+    assert_eq!(
+        ends_with(&latin, "gamma", far(), chars()),
+        ended(Some(false))
+    );
 }
 
 #[test]
@@ -95,7 +108,11 @@ fn a_read_past_the_cap_in_characters_keeps_only_the_whole_words_inside_it() {
     assert_eq!(read(&latin), Ok(Some("delta".to_owned())));
     assert_eq!(read(&arabic), Ok(Some("كثيرا".to_owned())));
     let long = "a".repeat(SHORT + 1);
-    assert_eq!(ends_with(&latin, &long, far(), SHORT), Ok(None));
+    let unsure = FieldEnds {
+        kind: FieldKind::Text,
+        ends: None,
+    };
+    assert_eq!(ends_with(&latin, &long, far(), SHORT), Ok(unsure));
 }
 
 #[test]
@@ -113,7 +130,15 @@ fn a_password_box_is_never_read_but_reported_and_a_late_read_times_out() {
         Ok(closed(FieldKind::Password)),
         "the read tells the kind it saw"
     );
-    assert_eq!(ends_with(&secret, "delta", far(), chars()), Ok(None));
+    let no = FieldEnds {
+        kind: FieldKind::Password,
+        ends: Some(false),
+    };
+    assert_eq!(
+        ends_with(&secret, "delta", far(), chars()),
+        Ok(no),
+        "a box that is no text box never ends with a word"
+    );
     let plain = plain_box.element(&auto);
     let past = Instant::now();
     let late = before_cursor(&plain, 2, past, chars());
@@ -179,7 +204,7 @@ fn the_caret_range_alone_tells_a_read_only_text() {
         TestEdit::start(LATIN, ES_READONLY),
         TestEdit::start(LATIN, 0),
     );
-    let range = |edit: &TestEdit| caret_of(&edit.element(&auto)).unwrap().unwrap();
+    let range = |edit: &TestEdit| caret_of(&edit.element(&auto)).unwrap().unwrap().range;
     assert!(read_only_range(&range(&fixed_box)));
     assert!(!read_only_range(&range(&plain_box)));
 }

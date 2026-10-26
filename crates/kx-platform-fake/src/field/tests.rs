@@ -4,6 +4,8 @@
 use super::*;
 use std::thread::{self, ThreadId};
 
+mod ends;
+
 /// Test values, whose read cap holds every scripted text; the real ones come from the predict module's settings.
 const CONFIG: FieldConfig = FieldConfig {
     read_ms: 1,
@@ -51,8 +53,13 @@ fn kind_read(run: &mut dyn FieldRun) -> FieldKind {
 }
 
 /// Asks the run whether the text ends with a word.
-fn ends(run: &mut dyn FieldRun) -> Option<bool> {
+fn ends(run: &mut dyn FieldRun) -> FieldEnds {
     run.ends_with(&Redacted::new(String::from("ap")))
+}
+
+/// A check that saw a box of `kind` and answered `ends`.
+fn ended(kind: FieldKind, ends: Option<bool>) -> FieldEnds {
+    FieldEnds { kind, ends }
 }
 
 #[test]
@@ -134,7 +141,7 @@ fn a_text_past_the_read_cap_keeps_only_the_whole_words_inside_it() {
     let (mut short, _) = watched_with(&fake, capped(1));
     assert_eq!(
         ends(short.as_mut()),
-        None,
+        ended(FieldKind::Text, None),
         "the asked end is longer than the cap"
     );
 }
@@ -149,12 +156,13 @@ fn a_password_unknown_or_empty_focus_reads_nothing_and_is_still_counted() {
         fake.focus(kind);
         assert_eq!(read(run.as_mut(), 3), Ok(None), "{kind:?} is never read");
         assert_eq!(kind_read(run.as_mut()), kind, "the kind told");
-        assert_eq!(ends(run.as_mut()), None, "{kind:?} is never read");
+        let no = ended(kind, Some(false));
+        assert_eq!(ends(run.as_mut()), no, "{kind:?} is never read");
     }
     assert_eq!((fake.before_calls(), fake.ends_calls()), (6, 3));
     fake.focus(FieldKind::Text);
     assert_eq!(read(run.as_mut(), 1), Ok(Some("ap".to_owned())));
-    assert_eq!(ends(run.as_mut()), Some(true));
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, Some(true)));
 }
 
 #[test]
@@ -163,9 +171,10 @@ fn a_text_box_answers_as_scripted_and_none_when_the_app_does_not_tell() {
     let (mut run, _) = watched(&fake);
     fake.focus(FieldKind::Text);
     assert_eq!(read(run.as_mut(), 3), Ok(None), "nothing scripted");
-    assert_eq!(ends(run.as_mut()), None, "nothing scripted");
+    let text = |ends| ended(FieldKind::Text, ends);
+    assert_eq!(ends(run.as_mut()), text(None), "nothing scripted");
     fake.set_ends(Some(false));
-    assert_eq!(ends(run.as_mut()), Some(false));
+    assert_eq!(ends(run.as_mut()), text(Some(false)));
     fake.set_before(Some(TEXT));
     fake.set_before(None);
     assert_eq!(read(run.as_mut(), 3), Ok(None));
@@ -181,7 +190,7 @@ fn failed_reads_last_until_focus_moves_to_a_new_box() {
     fake.fail_reads(FieldError::TimedOut);
     assert_eq!(read(run.as_mut(), 1), Err(FieldError::TimedOut));
     assert_eq!(read(run.as_mut(), 1), Err(FieldError::TimedOut));
-    assert_eq!(ends(run.as_mut()), None);
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, None));
     assert_eq!(
         (fake.before_calls(), fake.ends_calls()),
         (2, 1),
@@ -189,7 +198,7 @@ fn failed_reads_last_until_focus_moves_to_a_new_box() {
     );
     fake.focus(FieldKind::Text);
     assert_eq!(read(run.as_mut(), 1), Ok(Some("ap".to_owned())));
-    assert_eq!(ends(run.as_mut()), Some(true));
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, Some(true)));
 }
 
 #[test]
@@ -240,20 +249,6 @@ fn debug_never_prints_the_scripted_text() {
 }
 
 #[test]
-fn it_keeps_the_last_text_ends_with_was_asked_and_never_shows_it() {
-    let fake = FakeFieldWatch::new();
-    assert_eq!(fake.last_ends(), None, "nothing asked yet");
-    let (mut run, _) = watched(&fake);
-    ends(run.as_mut());
-    let asked = fake.last_ends().map(Redacted::into_inner);
-    assert_eq!(asked.as_deref(), Some("ap"), "asked even of no box");
-    run.ends_with(&Redacted::new(String::from("ق")));
-    let asked = fake.last_ends().map(Redacted::into_inner);
-    assert_eq!(asked.as_deref(), Some("ق"), "the latest wins");
-    assert!(!format!("{fake:?}").contains('ق'));
-}
-
-#[test]
 fn a_move_no_event_tells_is_found_by_the_next_read_and_a_told_move_ends_it() {
     let fake = FakeFieldWatch::new();
     let (mut run, heard) = watched(&fake);
@@ -265,7 +260,8 @@ fn a_move_no_event_tells_is_found_by_the_next_read_and_a_told_move_ends_it() {
         assert_eq!(run.kind(), FieldKind::Text, "{kind:?}: still the box told");
         assert_eq!(kind_read(run.as_mut()), kind, "the read finds it");
         assert_eq!(read(run.as_mut(), 3), Ok(None), "{kind:?} gives no text");
-        assert_eq!(ends(run.as_mut()), None, "{kind:?} cannot tell");
+        let no = ended(kind, Some(false));
+        assert_eq!(ends(run.as_mut()), no, "{kind:?} is no text box");
     }
     assert_eq!(heard.lock().unwrap().len(), 1, "no event told");
     fake.focus(FieldKind::Text);
@@ -283,7 +279,7 @@ fn a_read_failure_never_reaches_a_password_box_which_is_never_read() {
     fake.fail_reads(FieldError::TimedOut);
     assert_eq!(read(run.as_mut(), 2), Ok(None), "no error and no text");
     assert_eq!(kind_read(run.as_mut()), FieldKind::Password);
-    assert_eq!(ends(run.as_mut()), None);
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Password, Some(false)));
 }
 
 #[cfg(debug_assertions)]

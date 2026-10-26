@@ -40,6 +40,11 @@ fn type_text(t: &mut Tracker, text: &str) -> Vec<Told> {
     told
 }
 
+/// The email `email` as a token tells it first.
+fn mail(email: &str) -> Told {
+    Told::Email(Address::of(email, None))
+}
+
 /// The words handed out for learning, each with its context.
 fn learned(told: &[Told]) -> Vec<(String, Vec<String>)> {
     let each = |t: &Told| match t {

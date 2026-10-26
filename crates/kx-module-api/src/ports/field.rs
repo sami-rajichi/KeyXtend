@@ -56,8 +56,19 @@ impl FieldConfig {
 pub struct FieldRead {
     /// The kind of the box the platform saw at the read, or told last when nothing was read.
     pub kind: FieldKind,
-    /// At most the asked words before the cursor; `None` when the app does not tell, or the box is no text box.
+    /// At most the asked words before the cursor, or before a selection's start; `None` when the app does not tell,
+    /// or the box is no text box.
     pub text: Option<Redacted<String>>,
+}
+
+/// What one check of the focused box's end found.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct FieldEnds {
+    /// The kind of the box the platform saw at the check, or told last when nothing was checked.
+    pub kind: FieldKind,
+    /// Whether the text before the cursor ends with the asked text, false too for a box that is no text box or holds a
+    /// selection; `None` when it cannot tell, as after a timeout or in a box with no caret.
+    pub ends: Option<bool>,
 }
 
 /// Why the box could not be watched or read.
@@ -79,15 +90,16 @@ pub trait FieldRun: Send {
     /// The kind of the box with focus now.
     fn kind(&self) -> FieldKind;
 
-    /// At most `max_words` words before the cursor, read within `FieldConfig::read_ms`, with the kind of box the read
-    /// saw; no text when the app does not tell, or the box is a password or unknown box.
+    /// At most `max_words` words before the cursor, or before a selection's start, read within `FieldConfig::read_ms`,
+    /// with the kind of box the read saw; no text when the app does not tell, or the box is a password or unknown box.
     ///
     /// # Errors
     /// `TimedOut` when the read takes too long, `Refused` when the app refuses, `Unavailable` when nothing can read.
     fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError>;
 
-    /// Whether the text just before the cursor ends with `text`; `None` when it cannot be read.
-    fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool>;
+    /// Whether the text just before the cursor ends with `text`, with the kind of box the check saw; a selection that
+    /// is not empty, or a box that is no text box, never ends with it.
+    fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds;
 }
 
 /// Watches the focused box in other apps; the platform provides it.

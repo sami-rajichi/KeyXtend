@@ -4,6 +4,8 @@
 use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+mod ends;
+
 /// How long a test waits for a thread; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(5);
 /// A short `read_ms`, for the read that is never answered.
@@ -93,7 +95,11 @@ fn answers(inbox: &Receiver<Job>) {
                 let _ = reply.send(Ok(Some(read)));
             }
             Ask::Ends { text, reply, .. } => {
-                let _ = reply.send(Ok(Some(text.expose() == "ap")));
+                let ended = FieldEnds {
+                    kind: FieldKind::Text,
+                    ends: Some(text.expose() == "ap"),
+                };
+                let _ = reply.send(Ok(Some(ended)));
             }
         }
     }
@@ -111,8 +117,13 @@ fn kind_read(run: &mut dyn FieldRun) -> Result<FieldKind, FieldError> {
 }
 
 /// Asks the run whether the text ends with `ap`.
-fn ends(run: &mut dyn FieldRun) -> Option<bool> {
+fn ends(run: &mut dyn FieldRun) -> FieldEnds {
     run.ends_with(&Redacted::new(String::from("ap")))
+}
+
+/// A check that saw a box of `kind` and answered `ends`.
+fn ended(kind: FieldKind, ends: Option<bool>) -> FieldEnds {
+    FieldEnds { kind, ends }
 }
 
 #[test]
@@ -133,7 +144,7 @@ fn a_password_unknown_or_empty_box_sends_no_read() {
         shared.moved(&Script, &other(kind, id));
         assert_eq!(read(run.as_mut(), 2), Ok(None), "{kind:?}");
         assert_eq!(kind_read(run.as_mut()), Ok(kind), "the kind told last");
-        assert_eq!(ends(run.as_mut()), None, "{kind:?}");
+        assert_eq!(ends(run.as_mut()), ended(kind, Some(false)), "{kind:?}");
     }
     assert_eq!(jobs.load(Ordering::SeqCst), 0);
 }
@@ -144,7 +155,7 @@ fn a_text_box_read_comes_back_from_the_thread() {
     shared.moved(&Script, &other(FieldKind::Text, 7));
     assert_eq!(run.kind(), FieldKind::Text);
     assert_eq!(read(run.as_mut(), 3), Ok(Some("3 words".to_owned())));
-    assert_eq!(ends(run.as_mut()), Some(true));
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, Some(true)));
     assert_eq!(*lock(&heard), [change(FieldKind::Text, 7)]);
 }
 
@@ -156,7 +167,7 @@ fn a_read_past_its_cap_times_out() {
     });
     shared.moved(&Script, &other(FieldKind::Text, 1));
     assert_eq!(read(run.as_mut(), 2), Err(FieldError::TimedOut));
-    assert_eq!(ends(run.as_mut()), None);
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, None));
 }
 
 #[test]
@@ -164,7 +175,7 @@ fn a_thread_that_ended_is_unavailable() {
     let (mut run, shared, _) = started(LONG_MS, |_| {});
     shared.moved(&Script, &other(FieldKind::Text, 1));
     assert_eq!(read(run.as_mut(), 2), Err(FieldError::Unavailable));
-    assert_eq!(ends(run.as_mut()), None);
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Text, None));
 }
 
 #[test]
@@ -213,7 +224,7 @@ fn a_watch_that_failed_to_start_tells_unknown_once_and_reads_nothing() {
     assert_eq!(run.kind(), FieldKind::Unknown);
     assert_eq!(*lock(&heard), [change(FieldKind::Unknown, 0)]);
     assert_eq!(read(run.as_mut(), 2), Err(FieldError::Unavailable));
-    assert_eq!(ends(run.as_mut()), None);
+    assert_eq!(ends(run.as_mut()), ended(FieldKind::Unknown, Some(false)));
 }
 
 #[test]
@@ -262,23 +273,4 @@ fn a_read_reports_the_kind_the_reader_saw_and_our_own_focus_the_kind_told_last()
         Ok(FieldKind::Text),
         "our own focus"
     );
-}
-
-#[test]
-fn an_end_longer_than_read_chars_answers_none_and_sends_no_read() {
-    let jobs = Arc::new(AtomicUsize::new(0));
-    let seen = Arc::clone(&jobs);
-    let (mut run, shared, _) = started(LONG_MS, move |inbox| {
-        for job in inbox {
-            seen.fetch_add(1, Ordering::SeqCst);
-            if let Ask::Ends { reply, .. } = job.0 {
-                let _ = reply.send(Ok(Some(true)));
-            }
-        }
-    });
-    shared.moved(&Script, &other(FieldKind::Text, 1));
-    let end = |n: u16| Redacted::new("ب".repeat(usize::from(n)));
-    assert_eq!(run.ends_with(&end(CHARS)), Some(true), "at the cap");
-    assert_eq!(run.ends_with(&end(CHARS + 1)), None, "past the cap");
-    assert_eq!(jobs.load(Ordering::SeqCst), 1);
 }
