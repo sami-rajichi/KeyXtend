@@ -1,5 +1,5 @@
 //! A picked word's pauses (`[keyboard] erase_gap_ms`): each waits on the thread that sent the word, with the face
-//! free, so a click from the UI's thread goes through meanwhile; a restart brings a new gap.
+//! free, so a click from the UI's thread goes through meanwhile and stops the rest; a restart brings a new gap.
 
 use super::{BKSP, Desk, text};
 use crate::held::A;
@@ -41,9 +41,13 @@ fn a_picked_word_waits_on_the_senders_thread_and_leaves_the_face_free() {
         waits,
         [(thread::current().id(), Duration::from_millis(gap))]
     );
-    let strokes = [tap(BKSP), unicode("a"), unicode("ab")];
-    assert_eq!(d.rig.fakes.injector.strokes(), strokes);
-    assert_eq!(d.pieces(), [Piece::Erase, text("a"), text("ab")], "as sent");
+    let strokes = [tap(BKSP), unicode("a")];
+    assert_eq!(
+        d.rig.fakes.injector.strokes(),
+        strokes,
+        "the key stops the rest"
+    );
+    assert_eq!(d.pieces(), [Piece::Erase, text("a")], "as sent");
 }
 
 #[test]

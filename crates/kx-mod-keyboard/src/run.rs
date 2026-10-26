@@ -86,6 +86,8 @@ pub struct Typing {
     pieces: Vec<Piece>,
     /// Our Caps Lock tap reached the app since the face last asked.
     caps_sent: bool,
+    /// How many board keys reached the app, so a picked word stops when one goes out during it.
+    sent: u64,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -113,6 +115,7 @@ impl Typing {
             burst: None,
             pieces: Vec::new(),
             caps_sent: false,
+            sent: 0,
         }
     }
 
@@ -243,6 +246,7 @@ impl Typing {
         if reached(went) {
             self.latches.spend();
             self.caps_sent = true;
+            self.sent = self.sent.wrapping_add(1);
         }
         Ok(went?)
     }
@@ -261,8 +265,10 @@ impl Typing {
         Ok(went?)
     }
 
-    /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats.
+    /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats, and a
+    /// picked word going out stops.
     fn used(&mut self) {
+        self.sent = self.sent.wrapping_add(1);
         let now = self.latches.clone();
         self.used_of(&now);
     }

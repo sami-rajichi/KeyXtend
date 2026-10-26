@@ -21,6 +21,8 @@ pub struct Word {
     then: Latches,
     /// Some of it reached the app.
     any: bool,
+    /// The board keys sent before it started: one more stops it, as that key may have moved the caret.
+    keys: u64,
 }
 
 /// What a picked word's part asks for next.
@@ -63,7 +65,8 @@ impl Typing {
 
     /// The picked word of `erase` Backspaces, then `text`, when it may go: refused while a shortcut latch is on or a
     /// dead key waits, for a hidden mark (`is_hidden`), past `text_cap`, or when it asks for nothing. Only this
-    /// start's state counts, so a latch or dead key clicked during the word neither stops it nor is spent by it.
+    /// start's state counts, so a latch clicked during the word neither stops it nor is spent by it; a key sent then,
+    /// a dead key too, stops it.
     #[must_use]
     pub fn word(&self, io: &Io<'_>, erase: u16, text: &Redacted<String>) -> Option<Word> {
         self.takes(io, erase, text.expose()).then(|| Word {
@@ -71,12 +74,16 @@ impl Typing {
             text: Some(text.clone()),
             then: self.latches.clone(),
             any: false,
+            keys: self.sent,
         })
     }
 
     /// Sends `word`'s next part: one Backspace while any is left, then the gap; else its text. Each part is told once
-    /// it reached the app, and a Backspace not taken whole ends the word.
+    /// it reached the app; a Backspace not taken whole, or a board key sent since the word started, ends it.
     pub fn part(&mut self, io: &Io<'_>, word: &mut Word) -> Part {
+        if self.sent != word.keys {
+            return self.end(word);
+        }
         if word.erase > 0 {
             return self.erase_one(io, word);
         }

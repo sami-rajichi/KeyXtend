@@ -1,7 +1,7 @@
-//! What a picked word's pause lets in: a click outside our windows stops the rest of the word at once, with what went
-//! told before it; a click on our windows, a latch or a dead key clicked then neither stops it nor joins it.
+//! What a picked word's pause lets in: a click outside our windows, or a board key that goes out, stops the rest of the
+//! word, with what went told before it; a click on our windows or a latch clicked then neither stops it nor joins it.
 
-use super::{BKSP, Desk, text};
+use super::{A, BKSP, Desk, text};
 use crate::typing::{tap, unicode};
 use kx_module_api::ports::{FaceAction, KeyId, Piece, PointerPressed, Typed};
 use kx_platform_fake::Stroke;
@@ -25,17 +25,31 @@ fn press_during(d: &Desk, ours: bool) {
 
 /// Taps key `id` on the face inside the first pause only, as the UI's thread does.
 fn tap_during(d: &Desk, id: &'static str) {
+    act_during(
+        d,
+        FaceAction::Tap {
+            id: KeyId::new(id),
+            back: false,
+        },
+    );
+}
+
+/// Hands `action` to the face inside the first pause only, as the UI's thread does.
+fn act_during(d: &Desk, action: FaceAction) {
     let face = Arc::clone(&d.rig.face);
-    let mut once = true;
+    let mut once = Some(action);
     d.rig.fakes.pause.during(move || {
-        if std::mem::take(&mut once) {
-            let action = FaceAction::Tap {
-                id: KeyId::new(id),
-                back: false,
-            };
+        if let Some(action) = once.take() {
             face.act(action).unwrap();
         }
     });
+}
+
+/// What the fake app saw when key `id` was tapped alone.
+fn alone(id: &str) -> Vec<Stroke> {
+    let d = Desk::new(None);
+    d.rig.tap(id).unwrap();
+    d.rig.fakes.injector.strokes()
 }
 
 /// A Backspace as the fake app saw it.
@@ -125,7 +139,27 @@ fn a_shift_latched_before_the_pick_is_spent_by_it() {
 }
 
 #[test]
-fn a_dead_key_clicked_during_a_pause_keeps_the_text_and_still_waits() {
+fn a_board_key_tapped_or_pressed_during_a_pause_goes_out_and_stops_the_rest() {
+    for action in [
+        FaceAction::Tap {
+            id: KeyId::new(A),
+            back: false,
+        },
+        FaceAction::Press { id: KeyId::new(A) },
+    ] {
+        let d = Desk::new(None);
+        act_during(&d, action.clone());
+        d.word(3, "hello ");
+        let mut want = vec![bksp()];
+        want.extend(alone(A));
+        assert_eq!(d.rig.fakes.injector.strokes(), want, "{action:?}");
+        assert_eq!(d.pieces(), [Piece::Erase, text("a")], "{action:?}");
+        assert_eq!(d.rig.fakes.pause.waits().len(), 1, "{action:?}");
+    }
+}
+
+#[test]
+fn a_dead_key_clicked_during_a_pause_stops_the_text_and_still_waits() {
     let d = Desk::new(None);
     d.rig.switch("fr-fr");
     d.pieces();
@@ -133,8 +167,8 @@ fn a_dead_key_clicked_during_a_pause_keeps_the_text_and_still_waits() {
     d.word(1, "ab");
     let strokes = d.rig.fakes.injector.strokes();
     assert_eq!(strokes.first(), Some(&bksp()));
-    assert_eq!(strokes.last(), Some(&unicode("ab")));
-    let told = [Piece::Erase, Piece::Break, text("ab")];
+    assert!(!strokes.contains(&unicode("ab")), "the ^ stops the word");
+    let told = [Piece::Erase, Piece::Break];
     assert_eq!(d.pieces(), told, "the ^ breaks the word where it went");
     assert_eq!(d.modes().last().map(|m| m.dead), Some(true), "the ^ waits");
     d.rig.tap(E).unwrap();

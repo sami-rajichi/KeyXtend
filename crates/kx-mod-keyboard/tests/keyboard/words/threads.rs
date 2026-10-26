@@ -1,5 +1,6 @@
-//! Pieces from two threads at once: a click on the UI's thread and a picked word on the prediction module's; every
-//! piece is told once, in the order it reached the app, and a module that answers a piece at once deadlocks nothing.
+//! Pieces from two threads at once: a click on the UI's thread and a picked word on the prediction module's, which the
+//! click may stop; every piece is told once, in the order it reached the app, and a module that answers a piece at once
+//! deadlocks nothing.
 
 use super::{BKSP, Desk, text};
 use crate::held::A;
@@ -51,7 +52,12 @@ fn a_click_and_a_picked_word_at_once_tell_every_piece_once_in_the_order_sent() {
         });
     });
     let strokes = d.rig.fakes.injector.strokes();
-    assert_eq!(strokes.len(), ROUNDS * 3);
+    let clicks = strokes.iter().filter(|s| told(s) == text("a")).count();
+    assert_eq!(clicks, ROUNDS, "every click went");
+    assert!(
+        strokes.len() <= ROUNDS * 3,
+        "a word sends at most its two parts"
+    );
     let want: Vec<Piece> = strokes.iter().map(told).collect();
     assert_eq!(d.pieces(), want);
 }
