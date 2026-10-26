@@ -1,10 +1,11 @@
 //! Word prediction on the face (ADR-0033): the typed pieces leave in order, one thread at a time and outside the lock,
-//! so the bus hears each once; a picked word from the bus types on the sender's thread, one part per lock, and waits
-//! its pauses outside the lock.
+//! so the bus hears each once; a picked word from the bus types on the sender's thread, one part per lock, waits its
+//! pauses outside the lock, and stops at a click outside our windows.
 
 use super::Face;
 use crate::run::drive;
-use kx_module_api::ports::{TypeWord, Typed};
+use kx_module_api::ports::{PointerPressed, TypeWord, Typed};
+use std::sync::atomic::Ordering::SeqCst;
 
 impl Face {
     /// Tells the bus every piece typed and not yet told, through the outbox, so none goes out twice or out of order.
@@ -30,17 +31,28 @@ impl Face {
     }
 
     /// A picked word from the prediction module, whose round that module checked: it types as keys would, waiting each
-    /// pause on the sender's thread with the lock free, then its pieces and the typing mode go out.
+    /// pause on the sender's thread with the lock free, and a click outside our windows meanwhile stops the rest. Then
+    /// its pieces and the typing mode go out.
     pub(super) fn type_word(&self, word: &TypeWord) {
+        let seen = self.clicks.load(SeqCst);
         let (start, pause) = {
             let inner = self.lock();
             (inner.start_word(word.erase, &word.text), inner.pause())
         };
         if let Some(mut left) = start {
-            drive(|| self.lock().word_part(&mut left), &*pause);
+            let away = || self.clicks.load(SeqCst) != seen;
+            drive(|| self.lock().word_part(&mut left, away()), &*pause);
         }
         self.pour();
         self.tell(false);
+    }
+
+    /// A press the mouse module heard: one outside our windows may have moved the caret, so a word going out stops.
+    /// It takes no lock, as the sender may be mid-word.
+    pub(super) fn pressed(&self, press: PointerPressed) {
+        if !press.ours {
+            self.clicks.fetch_add(1, SeqCst);
+        }
     }
 
     /// The module started, or stopped when `on` is false; a picked word types only while it runs.

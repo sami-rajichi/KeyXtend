@@ -1,14 +1,14 @@
 //! The face on the kernel's bus (spec §4.4, §5.1, §5.2, §6, §8.5): the side keys ask the mouse module to flip a mode
 //! and the power module for its dialog, the mouse, scroll and power modules' states come back, the latched set goes
-//! out for modifier + click, the typing mode for word prediction, and picked words come in. Handlers run on the
-//! sender's thread, so nothing is sent while the face's lock is held.
+//! out for modifier + click, the typing mode for word prediction, and picked words come in, which a press outside our
+//! windows stops. Handlers run on the sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
 use super::outbox::Outbox;
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed, PowerAsk,
-    PowerAsked, PowerChanged, Scan, ScrollAsk, ScrollChanged, Toggle, TypeWord, TypingMode,
-    TypingModeAsk,
+    AssistAsk, AssistChanged, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed,
+    PointerPressed, PowerAsk, PowerAsked, PowerChanged, Scan, ScrollAsk, ScrollChanged, Toggle,
+    TypeWord, TypingMode, TypingModeAsk,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -130,9 +130,9 @@ impl Face {
     }
 }
 
-/// Hears the mouse, scroll and power modules' states, the latch events, the mode ask and picked words for `face` until
-/// the module stops, then tells the latched set and typing mode, forgets the three modules' states and asks for them,
-/// as each may have missed the others while it was down.
+/// Hears the mouse, scroll and power modules' states, the latch events, the mode ask, picked words and pointer presses
+/// for `face` until the module stops, then tells the latched set and typing mode, forgets the three modules' states
+/// and asks for them, as each may have missed the others while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, or `ReadFocusedText`,
@@ -144,6 +144,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &ScrollChanged| f.scrolled(*e))?;
     on(cx, face, |f, e: &PowerChanged| f.lock().heard_power(*e))?;
     on(cx, face, |f, e: &TypeWord| f.type_word(e))?;
+    on(cx, face, |f, e: &PointerPressed| f.pressed(*e))?;
     on(cx, face, |f, _: &TypingModeAsk| f.tell_mode())?;
     face.tell_all();
     face.forget();

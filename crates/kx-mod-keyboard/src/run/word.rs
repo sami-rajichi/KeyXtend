@@ -5,17 +5,20 @@
 use super::checks::reached;
 use super::ports::Pause;
 use super::{Io, Typing};
+use crate::latch::Latches;
 use crate::legend::LegendMods;
 use crate::plan::text_route;
 use kx_module_api::ports::{Piece, TypeWord};
 use kx_module_api::{Redacted, is_hidden};
 use std::time::Duration;
 
-/// A picked word on its way out: the Backspaces left, then its text.
+/// A picked word on its way out: the Backspaces left, then its text, and the latches on when it started.
 #[derive(Debug)]
 pub struct Word {
     erase: u16,
     text: Option<Redacted<String>>,
+    /// The latches it may spend: a latch clicked during the word is the next key's.
+    then: Latches,
     /// Some of it reached the app.
     any: bool,
 }
@@ -59,54 +62,58 @@ impl Typing {
     }
 
     /// The picked word of `erase` Backspaces, then `text`, when it may go: refused while a shortcut latch is on or a
-    /// dead key waits, for a hidden mark (`is_hidden`), past `text_cap`, or when it asks for nothing.
+    /// dead key waits, for a hidden mark (`is_hidden`), past `text_cap`, or when it asks for nothing. Only this
+    /// start's state counts, so a latch or dead key clicked during the word neither stops it nor is spent by it.
     #[must_use]
     pub fn word(&self, io: &Io<'_>, erase: u16, text: &Redacted<String>) -> Option<Word> {
         self.takes(io, erase, text.expose()).then(|| Word {
             erase,
             text: Some(text.clone()),
+            then: self.latches.clone(),
             any: false,
         })
     }
 
-    /// Sends `word`'s next part: one Backspace while any is left, then the gap; else its text, unless a shortcut latch
-    /// or a dead key came meanwhile. Each part is told once it reached the app, and a Backspace not taken whole ends
-    /// the word.
+    /// Sends `word`'s next part: one Backspace while any is left, then the gap; else its text. Each part is told once
+    /// it reached the app, and a Backspace not taken whole ends the word.
     pub fn part(&mut self, io: &Io<'_>, word: &mut Word) -> Part {
         if word.erase > 0 {
             return self.erase_one(io, word);
         }
-        let text = word.text.take().filter(|t| !t.expose().is_empty());
-        if let Some(text) = text.filter(|_| self.free(io)) {
+        if let Some(text) = word.text.take().filter(|t| !t.expose().is_empty()) {
             word.any |= self.type_text(io, &text);
         }
         self.end(word)
     }
 
-    /// Ends `word` with nothing more sent; once any of it reached the app, the latches are used.
+    /// Ends `word` with nothing more sent; once any of it reached the app, the latches on at its start are used.
     pub fn end(&mut self, word: &mut Word) -> Part {
         word.erase = 0;
         word.text = None;
         if word.any {
-            self.used();
+            match &mut self.burst {
+                Some(went) => {
+                    *went = true;
+                    self.latches.spend_of(&word.then);
+                }
+                None => {
+                    self.latches.used_of(&word.then);
+                }
+            }
         }
         Part::Done(word.any)
     }
 
-    /// True when a word may go: it is `free`, the text holds no hidden mark, both parts fit `text_cap` in characters
+    /// True when a word may go: no shortcut latch is on (Ctrl, Alt, Win, or `AltGr` as Right Alt on a layout with no
+    /// `AltGr` characters), no dead key waits, the text holds no hidden mark, both parts fit `text_cap` in characters
     /// (`TypeWord::fits`), it asks for something, and the board has a key to erase with.
     fn takes(&self, io: &Io<'_>, erase: u16, text: &str) -> bool {
+        let free = !LegendMods::shortcut(&self.latches, &io.table.keys) && !self.dead;
         let plain = !text.chars().any(is_hidden);
         let fits = TypeWord::fits(erase, text, self.cap);
         let some = erase > 0 || !text.is_empty();
         let can = erase == 0 || self.erase.is_some();
-        self.free(io) && plain && fits && some && can
-    }
-
-    /// True when no shortcut latch is on (Ctrl, Alt, Win, or `AltGr` as Right Alt on a layout with no `AltGr`
-    /// characters) and no dead key waits.
-    fn free(&self, io: &Io<'_>) -> bool {
-        !LegendMods::shortcut(&self.latches, &io.table.keys) && !self.dead
+        free && plain && fits && some && can
     }
 
     /// Taps one Backspace of `word`, told once it reached the app; then the gap, or the end when not taken whole.

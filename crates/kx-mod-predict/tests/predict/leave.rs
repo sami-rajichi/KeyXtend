@@ -25,31 +25,36 @@ fn kept(rig: &mut Rig) -> Vec<String> {
     })
 }
 
-/// Picks the first domain chip after `sami@g`, then the keyboard tells its text when `told`.
-fn domain_picked(rig: &mut Rig, told: bool) {
-    rig.typed("sami@g");
+/// Typed starts and the rest the first domain chip types after each: after the `@` alone, which it replaces none of, or
+/// after the domain's first letter.
+const STARTS: [(&str, &str); 2] = [("sami@", "gmail.com"), ("sami@g", "mail.com")];
+
+/// Types `start`, picks the first domain chip, which types `rest`, then the keyboard tells that text when `told`.
+fn domain_picked(rig: &mut Rig, (start, rest): (&str, &str), told: bool) {
+    rig.typed(start);
     rig.pick(0);
-    let sent = rig.typed_words();
-    assert_eq!(sent, [(0, "mail.com".to_owned())]);
+    assert_eq!(rig.typed_words(), [(0, rest.to_owned())], "{start}");
     if told {
-        rig.typed("mail.com");
+        rig.typed(rest);
     }
 }
 
 #[test]
 fn a_domain_chip_that_completes_the_address_learns_it_once_its_text_reaches_the_app() {
-    let mut rig = in_box(FieldKind::Text);
-    domain_picked(&mut rig, true);
-    assert_eq!(kept(&mut rig), ["sami@gmail.com"]);
-    let mut rig = in_box(FieldKind::Text);
-    domain_picked(&mut rig, false);
-    assert!(kept(&mut rig).is_empty(), "the keyboard never told it");
+    for start in STARTS {
+        let mut rig = in_box(FieldKind::Text);
+        domain_picked(&mut rig, start, true);
+        assert_eq!(kept(&mut rig), ["sami@gmail.com"], "{}", start.0);
+        let mut rig = in_box(FieldKind::Text);
+        domain_picked(&mut rig, start, false);
+        assert!(kept(&mut rig).is_empty(), "the keyboard never told it");
+    }
 }
 
 #[test]
 fn another_text_after_a_domain_chip_learns_nothing() {
     let mut rig = in_box(FieldKind::Text);
-    domain_picked(&mut rig, false);
+    domain_picked(&mut rig, STARTS[1], false);
     rig.send(Msg::Typed(Piece::Break));
     rig.typed("sami@gmail.com");
     assert!(kept(&mut rig).is_empty(), "the break ended the wait");
@@ -119,7 +124,7 @@ fn paused_learning_or_prediction_off_learns_nothing_on_leave() {
     }
     let mut rig = in_box(FieldKind::Text);
     rig.ask(WordsAsk::Pause(true));
-    domain_picked(&mut rig, true);
+    domain_picked(&mut rig, STARTS[0], true);
     rig.typed(" ");
     assert!(kept(&mut rig).is_empty(), "a domain chip while paused");
 }

@@ -25,9 +25,10 @@ impl Inner {
             .word(&self.ports.io(&table, &cells), erase, text)
     }
 
-    /// Sends `word`'s next part while the module runs, else ends it; the next relabel redraws the latches it used.
-    pub(in crate::face) fn word_part(&mut self, word: &mut Word) -> Part {
-        let part = if self.running {
+    /// Sends `word`'s next part while the module runs and nothing `stop`s it, else ends it; the next relabel redraws the
+    /// latches it used.
+    pub(in crate::face) fn word_part(&mut self, word: &mut Word, stop: bool) -> Part {
+        let part = if self.running && !stop {
             let table = self.ports.layouts.current();
             let cells = self.layer.cells();
             self.typing.part(&self.ports.io(&table, &cells), word)

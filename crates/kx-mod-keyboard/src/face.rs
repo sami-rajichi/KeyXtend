@@ -24,6 +24,7 @@ use outbox::Outbox;
 use pad::Peeks;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 /// A reply that redraws the state alone.
@@ -56,6 +57,8 @@ pub struct Face {
     peeks: Peeks,
     /// The typed pieces' sender, one thread at a time.
     pieces: Outbox,
+    /// How many clicks outside our windows were heard, so a picked word going out stops at one.
+    clicks: AtomicU64,
 }
 
 /// Shows no key, place or typing state.
@@ -86,6 +89,7 @@ impl Face {
             told: Told::default(),
             peeks: Peeks::default(),
             pieces: Outbox::default(),
+            clicks: AtomicU64::new(0),
         }
     }
 
