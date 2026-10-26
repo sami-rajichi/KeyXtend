@@ -1,11 +1,12 @@
 //! Fake word packs: the test adds each language's bytes and lists the languages the index names, and the fake counts
-//! the opens.
+//! the opens and wakes a test waiting for one.
 
 use crate::lock;
 use kx_module_api::ports::{PackError, PackIndex, PackView, WordPacks, fits_iso, pack_file};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::time::Duration;
 
 /// What the opens did, and what the test set for them.
 #[derive(Default)]
@@ -26,6 +27,8 @@ struct Log {
 #[derive(Clone, Default)]
 pub struct FakeWordPacks {
     log: Arc<Mutex<Log>>,
+    /// The signal each counted open gives, for a test waiting on another thread.
+    opened: Arc<Condvar>,
 }
 
 impl FakeWordPacks {
@@ -70,6 +73,17 @@ impl FakeWordPacks {
     pub fn opens(&self, iso: &str) -> usize {
         lock(&self.log).opens.get(iso).copied().unwrap_or(0)
     }
+
+    /// Waits up to `within` until `count` opens asked for language `iso`, so a test never sleeps; true when they did.
+    #[must_use]
+    pub fn wait_opens(&self, iso: &str, count: usize, within: Duration) -> bool {
+        let fewer = |l: &mut Log| l.opens.get(iso).copied().unwrap_or(0) < count;
+        let waited = self
+            .opened
+            .wait_timeout_while(lock(&self.log), within, fewer);
+        let (mut log, _) = waited.unwrap_or_else(PoisonError::into_inner);
+        !fewer(&mut log)
+    }
 }
 
 impl fmt::Debug for FakeWordPacks {
@@ -87,6 +101,7 @@ impl WordPacks for FakeWordPacks {
     fn open(&self, iso: &str) -> Result<Option<Box<dyn PackView>>, PackError> {
         let mut log = lock(&self.log);
         *log.opens.entry(iso.to_owned()).or_default() += 1;
+        self.opened.notify_all();
         if std::mem::take(&mut log.fail) {
             return Err(PackError::Unreadable);
         }

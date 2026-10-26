@@ -105,6 +105,10 @@ fn a_typed_start_brings_a_chip_whose_pick_types_the_word_which_is_learned_and_se
     let bus = boot.kernel.bus();
     let (_lanes, lanes) = hear::<Suggested>(&bus);
     boot.start().unwrap();
+    assert!(
+        rig.settled(&bus, ISO),
+        "predict settled in the language in front"
+    );
     rig.field.focus(FieldKind::Text);
     type_start(&boot);
     let typed = WORD.get(..TYPED.len()).unwrap();

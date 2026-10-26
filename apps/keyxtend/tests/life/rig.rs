@@ -6,7 +6,7 @@ use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
-use kx_module_api::ports::Scan;
+use kx_module_api::ports::{Scan, TypingMode, TypingModeAsk};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
@@ -104,6 +104,19 @@ impl Rig {
         };
         let ports = ports(self.tray.clone());
         Boot::load(self.platform(), services, ports).unwrap()
+    }
+
+    /// True once the started predict module settled in language `iso`: it opened that pack and heard the typing mode,
+    /// so keys typed next follow both, as its thread asks for them only after the start.
+    pub fn settled(&self, bus: &Bus, iso: &str) -> bool {
+        // Handlers run in subscription order, so a mode this later ear hears reached predict first.
+        let (_ear, modes) = hear::<TypingMode>(bus);
+        if !self.packs.wait_opens(iso, 1, WAIT) {
+            return false;
+        }
+        // Asked after predict's own ask, which went before its open; the keyboard answers both in order.
+        bus.publish(&TypingModeAsk).unwrap();
+        modes.recv_timeout(WAIT).is_ok()
     }
 }
 

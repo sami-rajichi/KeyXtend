@@ -1,8 +1,12 @@
 //! The fake word packs, held to the port: added bytes come back whole, a missing language is `None`, a failure on cue,
-//! and opens counted per language.
+//! and opens counted per language, which a test on another thread can wait for.
 
 use super::*;
 use std::thread;
+use std::time::Duration;
+
+/// The longest a test waits for another thread; it never sleeps.
+const WAIT: Duration = Duration::from_secs(10);
 
 const EN: &[u8] = b"en pack";
 const AR: &[u8] = "حزمة".as_bytes();
@@ -109,4 +113,25 @@ fn an_alias_is_served_by_its_shipped_pack() {
     packs.ship("sh");
     assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
     assert_eq!(packs.pack_of("bs"), None);
+}
+
+#[test]
+fn a_waiter_wakes_when_another_thread_opens_the_language_and_says_when_none_came() {
+    let packs = FakeWordPacks::new();
+    assert!(
+        !packs.wait_opens("en", 1, Duration::ZERO),
+        "nothing opened yet"
+    );
+    let port: Arc<dyn WordPacks> = Arc::new(packs.clone());
+    let opener = thread::spawn(move || {
+        let _ = read(port.as_ref(), "fr");
+        read(port.as_ref(), "en")
+    });
+    assert!(packs.wait_opens("en", 1, WAIT));
+    assert_eq!(opener.join().unwrap(), Ok(None));
+    assert!(
+        packs.wait_opens("en", 1, Duration::ZERO),
+        "an open already counted"
+    );
+    assert!(!packs.wait_opens("en", 2, Duration::ZERO));
 }
