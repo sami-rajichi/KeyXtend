@@ -4,6 +4,8 @@
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 
+use kx_module_api::is_hidden;
+
 use super::cands::{Cand, Candidates, Facts, Fate, Tally};
 use super::judge::{self, Judge};
 use super::manifest::Rules;
@@ -57,6 +59,8 @@ pub(crate) struct WordList {
     pub(crate) facts: Facts,
     /// What the text rules did.
     pub(crate) text_facts: TextFacts,
+    /// Spellings dropped for a hidden mark, as the keyboard types no word holding one.
+    pub(crate) hidden: Tally,
     /// For each candidate, its word's place in `words`, when it made the list.
     pub(crate) of_cand: Vec<Option<u32>>,
     /// True when text counts were given.
@@ -86,18 +90,37 @@ pub(crate) fn finish(
     rules: &Rules,
 ) -> Result<WordList, WordsError> {
     let coverage = cands.checked.then(|| coverage(&cands.cands, rules));
-    let mut facts = TextFacts::default();
+    let (mut facts, mut hidden) = (TextFacts::default(), Tally::default());
     let judge = text.map(|text| Judge::new(&cands.cands, &cands.tokens, text, rules.apostrophe));
     let wanted = |c: &Cand| c.fate == Fate::Kept || (c.fate == Fate::Stem && text.is_some());
     let kept: Vec<Kept> = (cands.cands.iter().enumerate())
         .filter(|(_, c)| wanted(c))
         .filter_map(|(i, c)| keep(i, c, judge.as_ref(), rules, &mut facts))
+        .filter(|k| typable(k, rules.show, &mut hidden))
         .collect();
     let (mut kept, mut of_cand) = survivors(kept, cands.max_words, cands.cands.len());
     let all: Vec<Word> = kept.iter().map(word).collect();
     let fits = fit::fitting(&cands.iso, &all, cands.words_budget)?;
     let cut = kept.len() - fits;
     kept.truncate(fits);
+    unplace_cut(&mut of_cand, fits);
+    let covers = covered(&cands, &of_cand) / cands.mass.max(f64::MIN_POSITIVE);
+    Ok(WordList {
+        words: kept.iter().map(word).collect(),
+        read: cands.read,
+        coverage,
+        facts: cands.facts,
+        text_facts: facts,
+        hidden,
+        of_cand,
+        text: text.is_some(),
+        covers,
+        cut: (cut, cands.words_budget),
+    })
+}
+
+/// Clears each candidate's place at `fits` or past it, where the words budget cut its word.
+fn unplace_cut(of_cand: &mut [Option<u32>], fits: usize) {
     let gone = |w: &Option<u32>| {
         w.and_then(|w| usize::try_from(w).ok())
             .is_some_and(|w| w >= fits)
@@ -106,18 +129,15 @@ pub(crate) fn finish(
         .iter_mut()
         .filter(|w| gone(w))
         .for_each(|w| *w = None);
-    let covers = covered(&cands, &of_cand) / cands.mass.max(f64::MIN_POSITIVE);
-    Ok(WordList {
-        words: kept.iter().map(word).collect(),
-        read: cands.read,
-        coverage,
-        facts: cands.facts,
-        text_facts: facts,
-        of_cand,
-        text: text.is_some(),
-        covers,
-        cut: (cut, cands.words_budget),
-    })
+}
+
+/// True when `kept`'s spelling holds no hidden mark; one that does is counted in `hidden`, escaped.
+fn typable(kept: &Kept, show: usize, hidden: &mut Tally) -> bool {
+    let typable = !kept.spelling.chars().any(is_hidden);
+    if !typable {
+        hidden.add(show, || format!("{:?}", kept.spelling));
+    }
+    typable
 }
 
 /// The wordfreq share of the tokens whose candidates made the list, each token once, so it never passes the list's.

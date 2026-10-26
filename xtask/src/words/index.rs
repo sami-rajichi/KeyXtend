@@ -9,13 +9,24 @@ use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
 
 use super::{WordsError, io_error, out};
 
+/// Why an index that lists no pack is refused.
+const NO_PACK: &str = "lists no pack";
+
+/// True when `index` lists a pack; the writer and the stage check refuse one that lists none.
+pub(crate) fn lists_a_pack(index: &PackIndex) -> bool {
+    index.packs().next().is_some()
+}
+
 /// The index of `isos`, each serving the layout codes `aliases` gives it, as a named file beside the packs.
 pub(crate) fn file(
     isos: &[&str],
     aliases: &BTreeMap<String, Vec<String>>,
 ) -> Result<(String, Vec<u8>), WordsError> {
-    let index = PackIndex::new(isos, aliases);
-    let index = index.map_err(|e| WordsError::Pack(format!("{PACK_INDEX}: {e}")))?;
+    let refused = |why: String| WordsError::Pack(format!("{PACK_INDEX}: {why}"));
+    let index = PackIndex::new(isos, aliases).map_err(|e| refused(e.to_string()))?;
+    if !lists_a_pack(&index) {
+        return Err(refused(NO_PACK.to_owned()));
+    }
     Ok((PACK_INDEX.to_owned(), index.text().into_bytes()))
 }
 

@@ -216,6 +216,14 @@ mod tests {
     }
 
     #[test]
+    fn blank_build_tool_is_rejected() {
+        let mut config = tidy();
+        config.build_tool = " ".to_string();
+        let want = Err(ConfigError::EmptyValue("build_tool"));
+        assert_eq!(config.validate(), want);
+    }
+
+    #[test]
     fn error_messages_name_their_values() {
         assert_eq!(
             ConfigError::ZeroValue("x").to_string(),
@@ -252,7 +260,7 @@ mod tests {
         let json = r#"{
             "max_file_lines": 400, "warn_file_lines": 300,
             "extensions": [], "scan_dirs": [], "skip_dirs": [],
-            "app_dir": "apps", "tool_dir": "tools",
+            "app_dir": "apps", "tool_dir": "tools", "build_tool": "xtask",
             "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
             "module_allowed": [], "app": "keyxtend",
             "banned_network": [], "banned_media": [], "banned_features": {},
@@ -261,6 +269,11 @@ mod tests {
             "bridge_dir": "d", "safety_tag": "t", "bogus": 1
         }"#;
         assert!(serde_json::from_str::<TidyConfig>(json).is_err());
+        let known = json.replace(r#", "bogus": 1"#, "");
+        assert!(
+            serde_json::from_str::<TidyConfig>(&known).is_ok(),
+            "only the unknown field fails"
+        );
     }
 
     #[test]

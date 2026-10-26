@@ -50,11 +50,16 @@ fn sources(src: &Path, files: &[(&str, Vec<u8>)]) -> String {
     lines
 }
 
-/// Four ids Tatoeba counts, then one it holds back.
+/// Four ids Tatoeba counts, then one it holds back, at the fixture's held-back share.
 fn ids() -> (Vec<String>, String) {
+    let per_mille = fixture::manifest_with("").unwrap().text.held_back_per_mille;
     let all = (1..).map(|i: u32| i.to_string());
-    let counted = all.clone().filter(|id| !held(id, 20)).take(4).collect();
-    (counted, all.clone().find(|id| held(id, 20)).unwrap())
+    let counted = all
+        .clone()
+        .filter(|id| !held(id, per_mille))
+        .take(4)
+        .collect();
+    (counted, all.clone().find(|id| held(id, per_mille)).unwrap())
 }
 
 /// The fixture manifest with real French files, French text, a German small list and credit sections, written

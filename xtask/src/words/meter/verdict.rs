@@ -3,8 +3,8 @@
 
 use std::collections::BTreeMap;
 
-use super::tally::shown_pct;
 use crate::words::manifest::MeterRules;
+use crate::words::report::shown_pct;
 
 /// Why each gate language judged failed, given each measured language's saved share in percent: every gate language
 /// in a full run, or only `lang` when one was asked for. The reasons name languages and numbers only.

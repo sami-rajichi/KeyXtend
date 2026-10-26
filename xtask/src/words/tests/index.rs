@@ -111,6 +111,14 @@ fn the_index_command_lists_the_packs_in_a_folder_and_the_codes_they_serve() {
 }
 
 #[test]
+fn a_folder_without_packs_writes_no_index() {
+    let dir = TempDir::new("words-index-empty");
+    let result = index::run(dir.path(), &BTreeMap::new(), &mut |_| {});
+    assert!(matches!(result, Err(WordsError::Pack(_))), "{result:?}");
+    assert!(!dir.path().join(PACK_INDEX).exists());
+}
+
+#[test]
 fn a_pack_of_another_language_or_a_damaged_one_writes_no_index() {
     for (name, bytes) in [("en", pack("fr")), ("en", b"not a pack".to_vec())] {
         let dir = TempDir::new("words-index-bad");

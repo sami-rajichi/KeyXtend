@@ -35,6 +35,8 @@ const SUB_WORDS: &str = "words";
 const FLAG_REMOVE: &str = "--remove";
 /// Prefix of every flag; a path argument never starts with it.
 const FLAG_PREFIX: &str = "--";
+/// Flag naming the folder a subcommand writes to, instead of its default.
+const FLAG_OUT: &str = "--out";
 
 /// Builds the usage line from the subcommand-name constants, so each name is
 /// spelled exactly once.
@@ -53,6 +55,11 @@ fn usage_line() -> String {
     forms.extend(sounds::forms(SUB_SOUNDS));
     forms.extend(words::forms(SUB_WORDS));
     format!("usage: cargo xtask <{}>", forms.join("|"))
+}
+
+/// The subcommand that checks the word sources and downloads the missing ones, from the names above.
+pub(crate) fn words_fetch() -> String {
+    format!("{SUB_WORDS} {}", words::FETCH)
 }
 
 /// A parsed xtask subcommand.

@@ -5,6 +5,7 @@ use std::io::Write as _;
 
 use bzip2::Compression;
 use bzip2::write::BzEncoder;
+use kx_mod_predict::Casing;
 
 use super::super::cands::{Cand, Fate};
 
@@ -39,10 +40,10 @@ pub(crate) fn wiki(docs: &[Option<&str>]) -> Vec<u8> {
     bz2(text.as_bytes())
 }
 
-/// A kept candidate with `forms`, its own first.
+/// A kept candidate with `forms`, its own first, its word in lower case by the root casing.
 pub(crate) fn cand(forms: &[&str], bucket: u32, rank: usize) -> Cand {
     Cand {
-        word: forms.first().unwrap().to_lowercase(),
+        word: Casing::root().lower(forms.first().unwrap()),
         forms: forms.iter().map(|f| (*f).to_string()).collect(),
         bucket,
         rank,

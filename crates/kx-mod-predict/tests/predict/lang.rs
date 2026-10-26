@@ -2,10 +2,11 @@
 //! missing shipped pack is told once per language and run, and with prediction off nothing opens.
 
 use crate::rig::{Rig, blob, plant, saved};
+use kx_mod_predict::email::Emails;
 use kx_mod_predict::score::Learned;
-use kx_mod_predict::{Flow, ON_KEY};
+use kx_mod_predict::{Flow, ON_KEY, emails_blob};
 use kx_module_api::keys;
-use kx_module_api::ports::{FieldKind, WordsAsk};
+use kx_module_api::ports::{ChipKind, FieldKind, WordsAsk};
 use toml::Value;
 
 #[test]
@@ -114,6 +115,29 @@ fn with_prediction_off_no_pack_or_learner_opens_and_nothing_is_told_until_it_tur
     );
     rig.lang("fr");
     assert_eq!(rig.fakes.packs.opens("fr"), 0);
+}
+
+#[test]
+fn with_prediction_off_the_known_emails_load_only_once_it_turns_on() {
+    let bytes = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
+    let mut rig = Rig::build(|f, host| {
+        f.store.plant(&emails_blob().unwrap(), bytes);
+        host.put(ON_KEY, Value::Boolean(false));
+    });
+    rig.lang("en");
+    assert_eq!(rig.fakes.store.loads(), 0, "nothing is read while off");
+    rig.ask(WordsAsk::Power(true));
+    rig.focus(FieldKind::Text);
+    rig.typed("nour@y.com ");
+    rig.lang("fr");
+    rig.typed("sa");
+    let email = |text: &str| (text.to_owned(), ChipKind::Email);
+    assert!(rig.chips().contains(&email("sami@x.org")), "loaded once on");
+    rig.typed(" no");
+    assert!(
+        rig.chips().contains(&email("nour@y.com")),
+        "a switch keeps the new one"
+    );
 }
 
 #[test]

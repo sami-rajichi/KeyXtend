@@ -28,6 +28,6 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 ## Word packs
 
 - `words/`: the word packs (`<iso>.kxw`) that `cargo xtask words build` writes, shared under CC BY-SA 4.0 as `words/LICENSE.txt` says, with every source credited in `words/CREDITS.txt`; they ship as separate files beside the program. `words/packs.txt` lists the languages the build shipped (`cargo xtask words index` rewrites it).
-- `cargo xtask words meter` counts the presses the chips save on the held-back sentences (spec §6 "Target"). Its times count only from a release build: `cargo run --release --locked -p xtask -- words meter`, the only build where `--speed` judges its ceiling.
+- `cargo xtask words meter` counts the presses the chips save on the held-back sentences (spec §6 "Target"). Its times count only from a release build: a debug `--speed` run refuses to judge its ceiling and names the release command to run.
 
 Add a font, icon or sound only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

@@ -2,10 +2,11 @@
 
 use std::path::{Path, PathBuf};
 
-use super::super::WordsError;
 use super::super::fetch::{self, Get};
 use super::super::fixture::{self, abc_source};
 use super::super::manifest::Manifest;
+use super::super::{MANIFEST_NAME, WordsError};
+use crate::cli::words_fetch;
 use crate::devtools::paths::join_rel;
 use crate::test_support::TempDir;
 
@@ -165,15 +166,13 @@ fn verify_names_each_missing_or_wrong_file() {
     let Err(WordsError::Bad(bad)) = fetch::verify(&manifest, dir.path(), &files) else {
         panic!("verify passed");
     };
-    let starts = [
-        "d/fr.dic: SHA-256",
-        "w/large_fr.gz: missing",
-        "nope: not in words.toml",
-    ];
+    let unknown = format!("nope: not in {MANIFEST_NAME}");
+    let starts = ["d/fr.dic: SHA-256", "w/large_fr.gz: missing", &unknown];
     assert_eq!(bad.len(), starts.len());
     for (line, start) in bad.iter().zip(starts) {
         assert!(line.starts_with(start), "{line}");
     }
+    assert!(bad[1].contains(&words_fetch()), "names the fetch command");
 }
 
 #[test]

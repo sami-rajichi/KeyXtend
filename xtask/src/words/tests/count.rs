@@ -7,11 +7,9 @@
 
 use kx_mod_predict::Casing;
 
-use super::super::count::{
-    ChainKey, Chains, Counted, Counter, KEY_LEN, NONE, Repeats, key as key_of,
-};
+use super::super::count::{ChainKey, Chains, Counted, Counter, NONE, Repeats, key as key_of};
 use super::super::fixture::text::{cand, tatoeba, wiki};
-use super::super::fixture::{TEXT, manifest_with};
+use super::super::fixture::{self, TEXT, manifest_with};
 use super::super::manifest::TextRules;
 use super::super::vocab::Vocab;
 use super::super::{tatoeba as tsv, wiki as dump};
@@ -22,11 +20,14 @@ fn rules() -> TextRules {
     manifest_with("").unwrap().text
 }
 
+/// The apostrophe of elided and joined words, from the fold table.
+fn apostrophe() -> char {
+    fixture::rules().apostrophe
+}
+
 /// The chain key of candidate places `ids`.
 fn key(ids: &[u32]) -> ChainKey {
-    let mut key = [NONE; KEY_LEN];
-    key.iter_mut().zip(ids).for_each(|(slot, id)| *slot = *id);
-    key
+    std::array::from_fn(|i| ids.get(i).copied().unwrap_or(NONE))
 }
 
 /// The count of chain `ids` in `got`.
@@ -88,7 +89,7 @@ fn a_turkish_token_finds_its_candidate_by_turkish_casing() {
 fn turkish_text_counts_dotless_and_dotted_words_apart() {
     let cands = [cand(&["ılık"], 200, 0), cand(&["ilik"], 210, 1)];
     let (vocab, rules) = (Vocab::new(&cands, Casing::of("tr")), rules());
-    let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
+    let mut counter = Counter::new(&vocab, cands.len(), &rules, apostrophe());
     counter.add("ılık ılık ilik ılık", 1, false);
     let text = counter.finish().text;
     assert_eq!((text.alone("ılık"), text.alone("ilik")), (3, 1));
@@ -103,7 +104,7 @@ fn a_word_that_does_not_stand_alone_ends_the_chains_as_the_tracker_does() {
         .map(|(i, w)| cand(&w, 300 + i, 0))
         .collect();
     let (vocab, rules) = (Vocab::new(&cands, Casing::root()), rules());
-    let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
+    let mut counter = Counter::new(&vocab, cands.len(), &rules, apostrophe());
     counter.add("Est-ce que site.com today", 1, false);
     let got = counter.finish();
     assert_eq!(got.chains.table.len(), 0, "no chain into que or today");
@@ -113,7 +114,7 @@ fn a_word_that_does_not_stand_alone_ends_the_chains_as_the_tracker_does() {
 #[test]
 fn chains_count_within_a_sentence_and_an_unknown_word_breaks_them() {
     let (vocab, rules) = (vocab(), rules());
-    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    let mut counter = Counter::new(&vocab, 5, &rules, apostrophe());
     counter.add("The cat sat. Down the cat zzz sat down", 1, false);
     let got = counter.finish();
     let (the, cat, sat, down) = (0, 1, 2, 3);
@@ -137,7 +138,7 @@ fn chains_count_within_a_sentence_and_an_unknown_word_breaks_them() {
 #[test]
 fn counts_are_weighted_and_spellings_count_alone_away_from_sentence_starts() {
     let (vocab, rules) = (vocab(), rules());
-    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    let mut counter = Counter::new(&vocab, 5, &rules, apostrophe());
     counter.add("I sat. The cat and I, x-I", 4, false);
     let got = counter.finish();
     let text = &got.text;
@@ -160,7 +161,7 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
         cand(&["a"], 220, 3),
     ];
     let (vocab, rules) = (Vocab::new(&cands, Casing::root()), rules());
-    let mut counter = Counter::new(&vocab, cands.len(), &rules, '\'');
+    let mut counter = Counter::new(&vocab, cands.len(), &rules, apostrophe());
     counter.add("C'est vrai. c'est ç'a", 1, false);
     let text = counter.finish().text;
     assert_eq!(
@@ -173,7 +174,7 @@ fn spellings_sharing_a_fold_key_keep_their_own_counts() {
 #[test]
 fn a_repeated_sentence_counts_once_for_words_and_chains() {
     let (vocab, rules) = (vocab(), rules());
-    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    let mut counter = Counter::new(&vocab, 5, &rules, apostrophe());
     assert!(counter.add("The cat sat. The cat, sat? the cat sat.", 1, false));
     assert!(
         !counter.add("The cat sat.", 1, false),
@@ -209,7 +210,7 @@ fn past_the_cap_a_new_sentence_counts_but_is_not_remembered() {
 #[test]
 fn scaled_text_scales_the_chains_its_words_end_and_other_text_does_not() {
     let (vocab, rules) = (vocab(), rules());
-    let mut counter = Counter::new(&vocab, 5, &rules, '\'');
+    let mut counter = Counter::new(&vocab, 5, &rules, apostrophe());
     counter.scale(vec![1.0, 0.5, 1.0, 1.0, 1.0]);
     counter.add("The cat sat.", 2, true);
     counter.add("The cat sat down.", 2, false);

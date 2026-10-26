@@ -8,8 +8,15 @@ use super::manifest::{Manifest, Origin, Section};
 use super::{WordsError, io_error};
 use crate::devtools::paths::join_rel;
 
+/// The credits template's file name beside `src`: one literal for the compiled-in copy and its errors.
+macro_rules! template_name {
+    () => {
+        "words-credits.txt"
+    };
+}
+
 /// The credits template, compiled in.
-const TEMPLATE: &str = include_str!("../../words-credits.txt");
+const TEMPLATE: &str = include_str!(concat!("../../", template_name!()));
 /// Opens a placeholder in the template.
 const OPEN: char = '{';
 /// Closes a placeholder.
@@ -20,8 +27,8 @@ const BULLET: &str = "- ";
 const LIST_SEP: &str = ", ";
 
 /// Every source file the build reads, each once: each language's files, then those the credits copy from.
-pub(crate) fn sources(manifest: &Manifest) -> Vec<String> {
-    let files = Files::of(manifest);
+pub(crate) fn sources(manifest: &Manifest) -> Result<Vec<String>, WordsError> {
+    let files = Files::of(manifest)?;
     let mut all = files.lists;
     let read = [files.dictionaries, files.tatoeba, files.wiki].concat();
     all.extend(read.into_iter().map(str::to_string));
@@ -31,7 +38,7 @@ pub(crate) fn sources(manifest: &Manifest) -> Vec<String> {
             all.push(file.clone());
         }
     }
-    all
+    Ok(all)
 }
 
 /// The credits, the authors and the licence as named files, reading the licence sections under `src` (checked by
@@ -43,7 +50,7 @@ pub(crate) fn files(
 ) -> Result<Vec<(String, Vec<u8>)>, WordsError> {
     let c = &manifest.credits;
     let section = |s: &Section| copy(&join_rel(src.to_path_buf(), &s.file), s);
-    let files = Files::of(manifest);
+    let files = Files::of(manifest)?;
     let values = BTreeMap::from([
         ("licence", c.licence.clone()),
         ("authors", c.authors.clone()),
@@ -86,13 +93,11 @@ struct Files<'a> {
 }
 
 impl<'a> Files<'a> {
-    /// Every file `manifest`'s languages read, by kind.
-    fn of(manifest: &'a Manifest) -> Self {
+    /// Every file `manifest`'s languages read, by kind; a language without a plan is refused, never skipped.
+    fn of(manifest: &'a Manifest) -> Result<Self, WordsError> {
         let mut files = Self::default();
         for iso in manifest.isos() {
-            let Ok(plan) = manifest.plan(&iso) else {
-                continue;
-            };
+            let plan = manifest.plan(&iso)?;
             files.lists.push(plan.list);
             files
                 .dictionaries
@@ -110,7 +115,7 @@ impl<'a> Files<'a> {
                 files.editions.push(iso);
             }
         }
-        files
+        Ok(files)
     }
 }
 
@@ -182,6 +187,7 @@ pub(crate) fn fill(template: &str, values: &BTreeMap<&str, String>) -> Result<St
 /// The error for a placeholder the template cannot fill.
 fn bad_slot(name: &str) -> WordsError {
     WordsError::Manifest(format!(
-        "words-credits.txt: no value for the placeholder {name:?}"
+        "{}: no value for the placeholder {name:?}",
+        template_name!()
     ))
 }

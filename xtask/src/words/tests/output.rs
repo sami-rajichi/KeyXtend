@@ -174,7 +174,7 @@ fn a_section_without_an_end_runs_to_the_files_end_and_a_missing_mark_is_refused(
 #[test]
 fn each_source_is_checked_once_though_two_credit_sections_share_it() {
     let dir = TempDir::new("words-build");
-    let all = credits::sources(&manifest(&paths(&dir).src, NO_SKEW));
+    let all = credits::sources(&manifest(&paths(&dir).src, NO_SKEW)).unwrap();
     let readme = all.iter().filter(|f| *f == "w/README.md").count();
     assert_eq!(readme, 1, "{all:?}");
 }

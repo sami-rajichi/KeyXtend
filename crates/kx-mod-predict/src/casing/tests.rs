@@ -38,6 +38,14 @@ fn greek_drops_the_tonos_in_all_capitals_and_keeps_it_on_a_first_capital() {
 }
 
 #[test]
+fn greek_lower_case_keeps_the_final_sigma_beside_a_capital_with_tonos() {
+    let el = Casing::of("el");
+    assert_eq!(el.lower("ΚΑΛΏΣ"), "καλώς", "Σ ends the word after Ώ");
+    assert_eq!(el.lower("ΚΑΣΈΤΑ"), "κασέτα", "Σ inside the word before Έ");
+    assert_eq!(el.lower("ΚΑΛΏΣ ΉΡΘΕΣ"), "καλώς ήρθες", "each word's last Σ");
+}
+
+#[test]
 fn greek_all_capitals_keep_a_vowel_pair_apart_with_a_diaeresis() {
     let el = Casing::of("el");
     assert_eq!(el.upper("τσάι"), "ΤΣΑΪ");
@@ -105,5 +113,12 @@ proptest! {
         let tr = Casing::of("tr");
         let once = fold(&text, tr);
         prop_assert_eq!(fold(&once, tr), once);
+    }
+
+    #[test]
+    fn greek_and_dutch_lower_case_as_unicodes_default(text in "\\PC{0,12}") {
+        for iso in ["el", "nl"] {
+            prop_assert_eq!(Casing::of(iso).lower(&text), text.to_lowercase(), "{}", iso);
+        }
     }
 }

@@ -37,9 +37,10 @@ impl Actor {
     }
 
     /// Picks row `row` of the open list's page: its email replaces the typed `@@`, and the list closes. A row with no
-    /// email does nothing.
+    /// email does nothing, as does any row while the lane is held empty.
     pub(super) fn list_pick(&mut self, seed: Option<&Pack<'_>>, row: u8) {
-        let Some(at) = self.menu.list.and_then(|list| list.at(row)) else {
+        let at = self.menu.list.and_then(|list| list.at(row));
+        let Some(at) = at.filter(|_| !self.held()) else {
             return;
         };
         let ask = self.show.as_ref().and_then(|s| s.emails.clone());

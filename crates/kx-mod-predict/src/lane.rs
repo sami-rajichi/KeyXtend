@@ -64,9 +64,10 @@ pub(crate) struct Sources<'a> {
 }
 
 impl Sources<'_> {
-    /// True when a tap can send `plan`, as `sendable` says for this lane's mode and box.
+    /// True when a tap on `plan`'s chip does something: in forget mode always, as forgetting types nothing, else when
+    /// `sendable` says so for this lane's mode and box.
     fn can_send(&self, plan: &Plan) -> bool {
-        sendable(plan, self.mode, self.confirms)
+        self.forgetting || sendable(plan, self.mode, self.confirms)
     }
 }
 
@@ -182,14 +183,19 @@ pub(crate) fn sendable(plan: &Plan, mode: TypingMode, confirms: bool) -> bool {
 
 /// The known emails the `@@` of `ask` can send in `mode`, in a box that `confirms` erases or not.
 pub(crate) fn listed(emails: &Emails, ask: &EmailAsk, mode: TypingMode, confirms: bool) -> Emails {
-    emails.kept(|e| ask.plan(e).is_some_and(|p| sendable(&p, mode, confirms)))
+    kept_by(emails, ask, |p| sendable(p, mode, confirms))
 }
 
-/// The email chips `ask` offers that a tap can send, at most the lane's size; forget mode lists no More.
+/// The known emails whose plan for the `@@` of `ask` passes `can`.
+fn kept_by(emails: &Emails, ask: &EmailAsk, can: impl Fn(&Plan) -> bool) -> Emails {
+    emails.kept(|e| ask.plan(e).is_some_and(|p| can(&p)))
+}
+
+/// The email chips `ask` offers that a tap acts on, at most the lane's size; forget mode lists no More.
 fn email_chips(ask: &EmailAsk, src: &Sources<'_>) -> Vec<Chip> {
     let found = match ask {
         EmailAsk::All(_) => {
-            let sent = listed(src.emails, ask, src.mode, src.confirms);
+            let sent = kept_by(src.emails, ask, |p| src.can_send(p));
             return if src.forgetting {
                 sent.first(src.limit)
             } else {

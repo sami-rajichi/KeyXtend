@@ -14,8 +14,12 @@ use std::fmt::Display;
 pub const OTHER_LANGUAGE: &str = "the file names another language";
 
 impl Actor {
-    /// Loads the known emails; damaged or unread ones start empty.
+    /// Loads the known emails once while prediction is on; damaged or unread ones start empty.
     pub(super) fn load_emails(&mut self) {
+        if self.emails_loaded || !self.settings.on {
+            return;
+        }
+        self.emails_loaded = true;
         let Some(name) = emails_blob() else {
             return;
         };

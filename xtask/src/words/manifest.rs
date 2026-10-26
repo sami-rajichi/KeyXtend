@@ -253,7 +253,8 @@ impl Manifest {
         self.sources.get(rel).is_some_and(|s| s.base.is_some())
     }
 
-    /// Refuses a language whose files are not sources, or whose limit is zero.
+    /// Refuses a language whose files are not sources, whose small list is a source no plan reads, or whose limit is
+    /// zero.
     fn check_langs(&self) -> Result<(), WordsError> {
         let small = &self.small;
         if !small.list.contains(ISO_SLOT) || small.max_words == 0 || small.words_budget_kb == 0 {
@@ -265,11 +266,15 @@ impl Manifest {
             let mut files = vec![lang.list.as_str(), &lang.aff, &lang.dic];
             files.extend(lang.text.iter().flat_map(LangText::files));
             let known = files.iter().all(|f| self.sources.contains_key(*f));
+            let unread = self
+                .sources
+                .contains_key(&small.list.replace(ISO_SLOT, iso));
             let text_ok = lang.text.as_ref().is_none_or(check::lang_text);
             let limits = lang.max_words > 0 && lang.words_budget_kb > 0;
-            if !fits_iso(iso) || !known || !limits || !text_ok {
+            if !fits_iso(iso) || !known || unread || !limits || !text_ok {
                 return Err(bad(&format!(
-                    "[lang.{iso}] needs a pack code, known files, some max_words, a words budget and sound text limits"
+                    "[lang.{iso}] needs a pack code, known files, no small list, some max_words, a words budget and \
+                     sound text limits"
                 )));
             }
         }

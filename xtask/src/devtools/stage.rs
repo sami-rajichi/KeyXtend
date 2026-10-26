@@ -184,10 +184,10 @@ fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check:
     let rel = stage.strip_prefix(&setup.root).unwrap_or(stage);
     println!("Staged {}: {} files.", paths::text(rel), summary.files);
     let (size, packs) = (summary.size, summary.packs);
-    let (mb, max, raw) = (size.mb(), config.max_mb, size.raw_mb());
-    println!("Download: {mb} MB deflated of the {max} MB budget; {raw} MB installed.");
-    let (deflated, raw) = (packs.mb(), packs.raw_mb());
-    println!("Word packs: {deflated} MB deflated of it, {raw} MB installed.");
+    let (mb, max, installed) = (size.mb(), config.max_mb, size.raw_mb());
+    println!("Download: {mb} MB deflated of the {max} MB budget; {installed} MB installed.");
+    let (packs_mb, packs_installed) = (packs.mb(), packs.raw_mb());
+    println!("Word packs: {packs_mb} MB deflated of it, {packs_installed} MB installed.");
 }
 
 #[cfg(test)]

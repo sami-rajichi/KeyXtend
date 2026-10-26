@@ -3,6 +3,7 @@
 //! neither purges nor timed saves write. A language left while its save failed keeps its words until one lands.
 
 use super::Actor;
+use crate::email::Emails;
 use kx_module_api::ports::{BlobName, SealedError, fits_iso};
 use kx_module_api::{Mono, Redacted, keys};
 use std::collections::BTreeMap;
@@ -208,6 +209,14 @@ impl Actor {
             self.changed(Blob::Left);
         }
         self.saves.held_learned = false;
+    }
+
+    /// Saves the known emails and lets them go, so prediction off holds none; a refused save keeps them for the next.
+    pub(super) fn drop_emails(&mut self) {
+        self.save(Blob::Emails);
+        if self.saves.emails.is_none() {
+            (self.emails, self.emails_loaded) = (Emails::default(), false);
+        }
     }
 
     /// The OS key was refused: nothing saves this run, and the user hears it once.

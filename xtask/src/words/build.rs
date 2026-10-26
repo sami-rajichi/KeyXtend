@@ -37,7 +37,7 @@ pub(crate) fn run(
     paths: &Paths,
     say: &mut dyn FnMut(&str),
 ) -> Result<(), WordsError> {
-    let sources = credits::sources(manifest);
+    let sources = credits::sources(manifest)?;
     let rels: Vec<&str> = sources.iter().map(String::as_str).collect();
     fetch::verify(manifest, &paths.src, &rels)?;
     let level = manifest.packs.level;

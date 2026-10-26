@@ -10,10 +10,12 @@ mod index;
 mod manifest;
 mod merge;
 mod output;
+mod project;
 mod script;
 mod text;
 mod wordfreq;
 
+use kx_mod_predict::pack::layout::MAX_SPELLING;
 use kx_mod_predict::{Casing, Pack};
 
 use super::cands::candidates;
@@ -149,7 +151,7 @@ fn a_join_takes_the_frequency_of_its_rarer_piece() {
 #[test]
 fn digits_web_addresses_emails_and_mixed_scripts_are_dropped() {
     let rules = fixture::rules();
-    let long = "a".repeat(129);
+    let long = "a".repeat(MAX_SPELLING + 1);
     let dropped = [
         "abc123",
         "www.x.org",
@@ -165,7 +167,7 @@ fn digits_web_addresses_emails_and_mixed_scripts_are_dropped() {
     for word in dropped {
         assert!(!clean::keeps(word, &rules.drop_chars), "{word} is kept");
     }
-    let fits = "a".repeat(128);
+    let fits = "a".repeat(MAX_SPELLING);
     let kept = [
         "été",
         "don't",
@@ -179,6 +181,17 @@ fn digits_web_addresses_emails_and_mixed_scripts_are_dropped() {
     for word in kept {
         assert!(clean::keeps(word, &rules.drop_chars), "{word} is dropped");
     }
+}
+
+#[test]
+fn a_spelling_holding_a_hidden_mark_never_reaches_a_pack() {
+    let (soft, rlm, persian) = ("co\u{ad}op", "ab\u{200f}c", "می\u{200c}خواهم");
+    let words = [("abc", 200), (soft, 210), (rlm, 220), (persian, 230)];
+    let list = build_with(&words, None, None);
+    assert_eq!(spellings(&list), ["abc", persian], "ZWNJ is no hidden mark");
+    let lines = report("fr", &list);
+    let hidden = format!("hidden fr: 2 words; first 2: {soft:?}, {rlm:?}");
+    assert!(lines.contains(&hidden), "{lines:?}");
 }
 
 #[test]

@@ -10,7 +10,7 @@ use kx_mod_predict::pack::layout::{
 };
 
 use super::super::WordsError;
-use super::super::cands::Facts;
+use super::super::cands::{Facts, Tally};
 use super::super::chains::{Context, Picked, pick, top};
 use super::super::count::{ChainKey, KEY_LEN, NONE};
 use super::super::list::{TextFacts, Word, WordList};
@@ -117,6 +117,7 @@ fn the_written_pack_reads_back_its_followers_and_its_chain_sections_fit_the_budg
         coverage: None,
         facts: Facts::default(),
         text_facts: TextFacts::default(),
+        hidden: Tally::default(),
         of_cand: SAME.to_vec(),
         text: true,
         covers: 1.0,
@@ -157,6 +158,7 @@ fn a_chain_on_a_place_past_the_list_is_refused_not_shortened() {
         coverage: None,
         facts: Facts::default(),
         text_facts: TextFacts::default(),
+        hidden: Tally::default(),
         of_cand: of_cand.to_vec(),
         text: true,
         covers: 1.0,

@@ -114,6 +114,10 @@ pub fn watch(
 }
 
 /// The prediction module's runtime: one per start, on its own thread.
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact kept between messages: the layout's direction, the emails loaded, a pick in flight, presses wanted."
+)]
 pub struct Actor {
     ports: Ports,
     /// The settings, with `on` and `learn` as the menu last set them.
@@ -131,7 +135,9 @@ pub struct Actor {
     mode: TypingMode,
     tracker: Tracker,
     learner: Option<Learner>,
+    /// The known emails, and whether they are loaded: only while prediction is on.
     emails: Emails,
+    emails_loaded: bool,
     menu: Menu,
     /// The email forget mode just removed, with its place, for its Undo chip.
     lost: Option<(usize, Redacted<String>)>,
@@ -168,6 +174,7 @@ impl Actor {
             tracker: Tracker::new(settings.track_config()),
             learner: None,
             emails: Emails::default(),
+            emails_loaded: false,
             menu: Menu::default(),
             lost: None,
             round: 0,

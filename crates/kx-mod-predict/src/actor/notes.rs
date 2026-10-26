@@ -7,6 +7,7 @@ use crate::ID;
 use crate::lane::{Chips, Sources};
 use crate::pack::Pack;
 use crate::score::{Learned, NoLearned, knows};
+use crate::track::Show;
 use kx_module_api::ports::{FieldKind, Lane, PressesWanted, Suggested};
 use kx_module_api::{Event, Notice, NoticeArg, args, keys};
 use std::collections::BTreeSet;
@@ -46,7 +47,8 @@ impl Actor {
         }
     }
 
-    /// The lane now, for the box the watch sees, keeping its chips' picks and what the tracker showed for them.
+    /// The lane now, for the box the watch sees, keeping its chips' picks and what the tracker showed, which the open
+    /// list pages even while the lane is held empty.
     fn lane(&mut self, seed: Option<&Pack<'_>>) -> Lane {
         self.chips = Chips::default();
         self.show = None;
@@ -57,10 +59,25 @@ impl Actor {
         if self.kind == FieldKind::Password {
             return Lane::Locked;
         }
-        if self.mode.shortcut || self.mode.dead || self.pending {
-            return Lane::Empty;
-        }
         let show = self.tracker.show(&|w: &str| knows(seed, w));
+        if !self.held() {
+            self.chips = self.chips_of(seed, &show);
+        }
+        self.show = Some(show);
+        if self.chips.chips.is_empty() {
+            Lane::Empty
+        } else {
+            Lane::Chips(self.chips.chips.clone())
+        }
+    }
+
+    /// True while a shortcut latch, a dead key or a sent pick holds the lane empty, as the keyboard would refuse a pick.
+    pub(super) fn held(&self) -> bool {
+        self.mode.shortcut || self.mode.dead || self.pending
+    }
+
+    /// The chips for what the tracker `show`s, with the menu's state.
+    fn chips_of(&self, seed: Option<&Pack<'_>>, show: &Show) -> Chips {
         let view = self.learner.as_ref().map(|l| l.view(seed));
         let learned: &dyn Learned = view.as_ref().map_or(&NoLearned, |v| v);
         let limit = usize::from(self.settings.chips);
@@ -76,15 +93,9 @@ impl Actor {
             confirms: self.confirms(),
             forgetting: self.menu.forgetting,
         };
-        let mut chips = Chips::of(&show, &src);
+        let mut chips = Chips::of(show, &src);
         chips.with_menu(self.menu, self.rtl, limit);
-        let lane = if chips.chips.is_empty() {
-            Lane::Empty
-        } else {
-            Lane::Chips(chips.chips.clone())
-        };
-        (self.chips, self.show) = (chips, Some(show));
-        lane
+        chips
     }
 
     /// Tells the mouse module to report presses while the tracker holds a word or its context.

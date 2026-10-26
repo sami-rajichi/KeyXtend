@@ -3,12 +3,20 @@
 
 use super::cands::Tally;
 use super::list::{Word, WordList};
+use super::manifest::PERCENT;
 use crate::text::plural;
 
 /// The noun the report counts.
 const WORD: &str = "word";
-/// A share as a percentage.
-const PERCENT: f64 = 100.0;
+/// The decimals a printed share shows.
+const DECIMALS: u8 = 1;
+
+/// `pct` as printed: rounded down to `DECIMALS`, so a share under a target never prints as reaching it.
+pub(crate) fn shown_pct(pct: f64) -> String {
+    let scale = 10f64.powi(i32::from(DECIMALS));
+    let places = usize::from(DECIMALS);
+    format!("{:.places$}", (pct * scale).floor() / scale)
+}
 
 /// The lines printed for `iso`: the counts, the coverage line, one line per rule that did something, and a note
 /// when no text was given to a checked list.
@@ -18,10 +26,10 @@ pub(crate) fn report(iso: &str, list: &WordList) -> Vec<String> {
     let low = list.words.iter().map(|w| w.freq).min().unwrap_or_default();
     let high = list.words.iter().map(|w| w.freq).max().unwrap_or_default();
     let (kept, read) = (list.words.len(), list.read);
-    let covers = list.covers * PERCENT;
+    let covers = shown_pct(list.covers * f64::from(PERCENT));
     let mut lines = vec![format!(
         "{iso}: {kept} {} kept ({caps} capitalised, frequency {low}..={high}) of {read} in wordfreq, covering \
-         {covers:.1}% of its frequency mass",
+         {covers}% of its frequency mass",
         plural(kept, WORD)
     )];
     let (cut, budget) = list.cut;
@@ -62,6 +70,7 @@ fn rule_lines(iso: &str, list: &WordList) -> Vec<String> {
         ("pieces", &t.pieces),
         ("stems", &t.stems),
         ("unseen", &t.unseen),
+        ("hidden", &list.hidden),
     ];
     rules
         .iter()

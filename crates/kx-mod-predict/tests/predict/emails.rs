@@ -2,8 +2,9 @@
 //! the UI tells, a list pick sends the email, and typed emails are learned in text boxes only.
 
 use crate::rig::{ROWS, Rig};
+use kx_mod_predict::Msg;
 use kx_mod_predict::email::Emails;
-use kx_module_api::ports::{ChipKind, FieldKind, WordsAsk};
+use kx_module_api::ports::{ChipKind, FieldKind, Lane, TypingMode, WordsAsk};
 
 /// Seven known emails, the most recent first.
 fn seven() -> Vec<String> {
@@ -86,6 +87,39 @@ fn a_row_past_the_last_pages_emails_types_nothing_and_keeps_the_list() {
     rig.ask(WordsAsk::ListPick(ROWS - 1));
     assert!(rig.typed_words().is_empty());
     assert_eq!(rig.lane().list.map(|l| l.page), Some(1), "still open");
+}
+
+#[test]
+fn the_open_list_keeps_its_rows_while_a_latch_a_dead_key_or_a_pick_empties_the_lane() {
+    let mut rig = knowing(&seven());
+    rig.typed("@@");
+    rig.ask(WordsAsk::More { rows: ROWS });
+    let latch = TypingMode {
+        shortcut: true,
+        ..TypingMode::default()
+    };
+    let dead = TypingMode {
+        dead: true,
+        ..TypingMode::default()
+    };
+    let rows = |rig: &Rig| rig.lane().list.map(|l| l.items.len());
+    for mode in [latch, dead] {
+        rig.send(Msg::Mode(mode));
+        assert_eq!(
+            (rig.lane().lane, rows(&rig)),
+            (Lane::Empty, Some(5)),
+            "{mode:?}"
+        );
+        rig.ask(WordsAsk::ListPick(0));
+        assert!(rig.typed_words().is_empty(), "the keyboard would refuse it");
+        rig.send(Msg::Mode(TypingMode::default()));
+    }
+    rig.pick(0);
+    assert_eq!(
+        (rig.lane().lane, rows(&rig)),
+        (Lane::Empty, Some(5)),
+        "a pick waits"
+    );
 }
 
 #[test]

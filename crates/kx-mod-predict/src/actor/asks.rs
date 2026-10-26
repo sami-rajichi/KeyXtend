@@ -39,8 +39,8 @@ impl Actor {
         Flow::Go
     }
 
-    /// Turns prediction on or off: the menu closes and the word ends. A change saves and drops the learner, and the
-    /// loop opens the language again, so prediction off holds no pack or learner.
+    /// Turns prediction on or off: the menu closes and the word ends. A change saves and drops the learner and the known
+    /// emails, and the loop opens the language again, so prediction off holds no pack, learner or email.
     fn power(&mut self, seed: Option<&Pack<'_>>, on: bool) -> Flow {
         let flip = on != self.settings.on;
         self.settings.on = on;
@@ -50,6 +50,7 @@ impl Actor {
             self.drop_word();
             self.save(Blob::Learned);
             self.leave();
+            self.drop_emails();
             return Flow::Switch;
         }
         self.end_word(seed);

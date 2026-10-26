@@ -26,8 +26,9 @@ rows = [
     { text = "ij", lower = "ij", title = "IJ", upper = "IJ" },
 ]
 
-# Greek, monotonic (ICU's Greek uppercasing): all capitals drop the tonos, and a vowel with the tonos before ι or υ
-# gives that ι or υ a diaeresis, so the two stay apart (τσάι, ΤΣΑΪ). A first capital keeps the tonos (Όλα).
+# Greek, monotonic (ICU's Greek uppercasing): all capitals drop the tonos, ΐ and ΰ keep only their diaeresis, and in
+# the eight pairs below (άι to όυ) the ι or υ takes a diaeresis so the two stay apart (τσάι, ΤΣΑΪ). A first capital
+# keeps the tonos (Όλα); lower case is Unicode's default, which keeps the final sigma.
 [el]
 rows = [
     { text = "ά", lower = "ά", title = "Ά", upper = "Α" },

@@ -1,9 +1,10 @@
 //! Caps and their clean-up, least recently used first; the purge after `forget_days`; halving near the count limit,
 //! a merge's included.
 
-use super::super::clean::{COUNT_TOP, HEADROOM};
-use super::seed::french;
+use super::super::clean::COUNT_TOP;
 use super::*;
+#[cfg(feature = "build")]
+use {super::super::clean::HEADROOM, super::seed::french};
 
 /// Caps of 10 words and 10 chains of each length.
 const SMALL: LearnConfig = LearnConfig {
@@ -180,6 +181,7 @@ fn a_halving_halves_every_table_so_chain_shares_survive() {
     assert_eq!(shares(&l), (4, (2, 2)));
 }
 
+#[cfg(feature = "build")]
 #[test]
 fn a_merge_halves_every_table_before_a_word_count_would_pass_the_top() {
     let bytes = french();
@@ -195,6 +197,7 @@ fn a_merge_halves_every_table_before_a_word_count_would_pass_the_top() {
     assert_eq!(l.view(Some(&fr)).count("école"), 2 * half);
 }
 
+#[cfg(feature = "build")]
 #[test]
 fn a_merge_halves_every_table_before_a_met_chain_would_pass_the_top() {
     let words = [

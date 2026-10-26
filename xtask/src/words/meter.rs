@@ -12,7 +12,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
+use kx_mod_predict::learn::{LearnConfig, Learner};
 use kx_mod_predict::{Pack, PredictSettings};
 use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
 use kx_module_api::{Settings, SettingsError};
@@ -29,7 +31,7 @@ const RUNS: [(&str, bool); 2] = [("seed", false), ("learned", true)];
 const DAY: u32 = 0;
 /// True in a build without optimisations, whose times are far slower than the product's.
 const UNOPTIMISED: bool = cfg!(debug_assertions);
-/// The run whose times count, which the speed refusal and `assets/README.md` name.
+/// The run whose times count, which the speed refusal names.
 const RELEASE_RUN: &str = "cargo run --release --locked -p xtask -- words meter";
 /// What every time line of an unoptimised build says.
 const SLOW: &str = "unoptimised build, times are slow";
@@ -73,7 +75,8 @@ pub(crate) fn run(
     let (measured, mut failed) = if opts.speed {
         speed::run(rules, &settings, paths, &asked, say)?
     } else {
-        presses(rules, &settings, paths, (&asked, opts.lang), say)?
+        let saved = presses(rules, &settings, paths, &asked, say)?;
+        (saved.len(), verdict::failures(rules, opts.lang, &saved))
     };
     if measured == 0 {
         failed.push(NOTHING.to_owned());
@@ -87,6 +90,21 @@ pub(crate) fn run(
         verdict::passed(rules)
     });
     Ok(())
+}
+
+/// What `run` gives, with the time it took in whole microseconds.
+fn timed_us<T>(run: impl FnOnce() -> T) -> (T, u64) {
+    let start = Instant::now();
+    let out = run();
+    (
+        out,
+        u64::try_from(start.elapsed().as_micros()).unwrap_or(u64::MAX),
+    )
+}
+
+/// A learner for `iso` with `cfg`, its refusal as a meter error.
+fn new_learner(iso: &str, cfg: LearnConfig) -> Result<Learner, WordsError> {
+    Learner::new(iso, cfg).map_err(|e| WordsError::Meter(format!("{iso} learner: {e}")))
 }
 
 /// What a time line ends with: a note in an unoptimised build, else nothing.
@@ -112,14 +130,14 @@ pub(crate) fn held_lines(path: &Path, max: usize) -> Result<Vec<String>, WordsEr
 }
 
 /// Types the held sentences of each language `asked` that has some, in both runs, printing a line for each. Gives
-/// how many languages it measured and the gate's failures, judging every gate language unless `lang` was asked for.
+/// the share of presses each measured language saved with the seed alone.
 fn presses(
     rules: &MeterRules,
     settings: &PredictSettings,
     paths: &Paths,
-    (asked, lang): (&[String], Option<&str>),
+    asked: &[String],
     say: &mut dyn FnMut(&str),
-) -> Result<(usize, Vec<String>), WordsError> {
+) -> Result<BTreeMap<String, f64>, WordsError> {
     let held = |iso: &str| held_file(&paths.held, iso);
     let isos: Vec<String> = (asked.iter())
         .filter(|iso| held(iso).is_file())
@@ -137,7 +155,7 @@ fn presses(
         }
         Ok(())
     })?;
-    Ok((saved.len(), verdict::failures(rules, lang, &saved)))
+    Ok(saved)
 }
 
 /// The counts after typing `lines` in `iso` over `pack`, with a learner when `learn`.

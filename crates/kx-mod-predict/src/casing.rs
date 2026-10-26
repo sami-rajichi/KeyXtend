@@ -95,9 +95,7 @@ impl Casing {
         if let Some((from, to)) = row {
             return format!("{to}{}", word.get(from.len()..).unwrap_or_default());
         }
-        let mut chars = word.chars();
-        let first = chars.next().into_iter().flat_map(char::to_uppercase);
-        first.chain(chars).collect()
+        first_upper(word)
     }
 
     /// True when folding leaves `c` as it is in this language.
@@ -105,6 +103,13 @@ impl Casing {
     pub fn keeps(&self, c: char) -> bool {
         self.keep.contains(&c)
     }
+}
+
+/// `word` with its first letter in Unicode's default capital and the rest as it is.
+fn first_upper(word: &str) -> String {
+    let mut chars = word.chars();
+    let first = chars.next().into_iter().flat_map(char::to_uppercase);
+    first.chain(chars).collect()
 }
 
 /// `text` with each of `rows`' texts replaced, longest first, and the runs between them cased by `default`.
@@ -135,23 +140,25 @@ fn parse(text: &str) -> Option<HashMap<String, Casing>> {
     sections.into_iter().map(each).collect()
 }
 
-/// The casing of one section, each form's rows longest first; `None` when a row's text is empty.
+/// The casing of one section, each form's rows longest first; `None` when a row's text is empty. A row enters a
+/// form's table only where that form differs from Unicode's default, so the default cases whole runs in context
+/// (Greek final sigma).
 fn casing(section: Section) -> Option<Casing> {
     if section.rows.iter().any(|r| r.text.is_empty()) {
         return None;
     }
-    let pairs = |form: fn(&Row) -> &String| {
+    let pairs = |form: fn(&Row) -> &String, default: fn(&str) -> String| {
         let mut out: Vec<(String, String)> = (section.rows.iter())
-            .filter(|r| *form(r) != r.text)
+            .filter(|r| *form(r) != default(&r.text))
             .map(|r| (r.text.clone(), form(r).clone()))
             .collect();
         out.sort_by_key(|(from, _)| Reverse(from.len()));
         out
     };
     Some(Casing {
-        lower: pairs(|r| &r.lower),
-        title: pairs(|r| &r.title),
-        upper: pairs(|r| &r.upper),
+        lower: pairs(|r| &r.lower, str::to_lowercase),
+        title: pairs(|r| &r.title, first_upper),
+        upper: pairs(|r| &r.upper, str::to_uppercase),
         keep: section.keep,
     })
 }

@@ -158,15 +158,23 @@ fn the_words_manifest_names_the_assets_folder_and_the_three_credit_files() {
 }
 
 #[test]
-fn every_file_the_plan_takes_from_the_committed_packs_is_there() {
+fn every_file_the_plan_takes_from_the_committed_packs_is_there_named_exactly() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let files = plan(&Words::load(&root).unwrap()).unwrap();
+    let words = Words::load(&root).unwrap();
+    let files = plan(&words).unwrap();
     assert!(
         files
             .iter()
             .any(|c| c.to == Path::new(PACK_DIR).join(PACK_INDEX))
     );
-    let gone: Vec<_> = files.iter().filter(|c| !c.from.is_file()).collect();
+    // A listing gives each name as the disk holds it, so case drift shows on a case-blind disk too.
+    let listed: BTreeSet<PathBuf> = paths::files(&words.dir).unwrap().into_iter().collect();
+    let named = |c: &&Copy| {
+        c.from
+            .strip_prefix(&words.dir)
+            .is_ok_and(|n| listed.contains(n))
+    };
+    let gone: Vec<_> = files.iter().filter(|c| !named(c)).collect();
     assert!(gone.is_empty(), "{gone:?}");
 }
 

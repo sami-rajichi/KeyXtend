@@ -7,7 +7,7 @@ use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
 
 use super::super::speed::KINDS;
 use super::super::{NOTHING, Opts, Paths, RELEASE_RUN, SLOW, UNOPTIMISED, run};
-use super::{CHIPS, SENTENCE, pack, rules};
+use super::{SENTENCE, chips, pack, rules};
 use crate::test_support::TempDir;
 use crate::words::WordsError;
 use crate::words::read::held_file;
@@ -57,7 +57,7 @@ fn ran(opts: &Opts<'_>, paths: &Paths) -> (Vec<String>, Result<(), WordsError>) 
 /// A run that counts presses with the lane's chips.
 fn counting() -> Opts<'static> {
     Opts {
-        chips: Some(CHIPS),
+        chips: Some(chips()),
         ..Opts::default()
     }
 }

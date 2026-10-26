@@ -2,7 +2,8 @@
 
 use super::*;
 
-fn args(values: &[&str]) -> Vec<String> {
+/// The command-line arguments `values`, as owned strings.
+pub(super) fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|v| (*v).to_string()).collect()
 }
 

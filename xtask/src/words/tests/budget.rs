@@ -12,8 +12,8 @@ use super::super::download::{check, deflated};
 use super::super::fit::size;
 use super::super::fixture::{self, text::cand};
 use super::super::list::{self, WordList};
-use super::super::manifest::Packs;
-use super::super::report::report;
+use super::super::manifest::{PERCENT, Packs};
+use super::super::report::{report, shown_pct};
 use super::super::skew::Shares;
 use super::super::vocab::Vocab;
 use super::super::wordfreq::share;
@@ -46,10 +46,8 @@ fn the_words_budget_cuts_the_rarest_words_until_the_pack_fits() {
     let lines = report("de", &cut);
     let budget = format!("budget de: the 2 rarest words cut to fit {two} bytes");
     assert!(lines.contains(&budget), "{lines:?}");
-    let covers = format!(
-        "covering {:.1}% of its frequency mass",
-        100.0 * kept / total
-    );
+    let pct = shown_pct(f64::from(PERCENT) * kept / total);
+    let covers = format!("covering {pct}% of its frequency mass");
     assert!(
         lines.first().is_some_and(|l| l.ends_with(&covers)),
         "{lines:?}"
@@ -94,7 +92,7 @@ fn only_a_wordfreq_token_past_the_ratio_gets_a_factor_and_a_repeat_counts_once()
     let vocab = Vocab::new(&cands, Casing::root());
     let split = Splitter {
         ends: &['.'],
-        apostrophe: '\'',
+        apostrophe: fixture::rules().apostrophe,
     };
     let mut shares = Shares::new(&vocab, cands.len(), split, 10);
     shares.add("Tom saw the cat. Tom saw the cat. Tom don't.");

@@ -64,13 +64,10 @@ pub(super) fn parse(args: &[String]) -> Result<MeterArgs, UsageError> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::tests::args;
     use super::super::super::{Command, parse as parse_all};
     use super::super::WordsAction;
     use super::*;
-
-    fn args(values: &[&str]) -> Vec<String> {
-        values.iter().map(|v| (*v).to_string()).collect()
-    }
 
     fn meter(values: &[&str]) -> Result<Command, UsageError> {
         let all = [&["words", "meter"][..], values].concat();

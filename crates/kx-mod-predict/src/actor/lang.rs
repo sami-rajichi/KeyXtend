@@ -75,11 +75,12 @@ impl Actor {
         pack
     }
 
-    /// Settles in the language whose pack is `seed`: loads its learner while prediction is on, purges, reads the box
-    /// and tells the lane.
+    /// Settles in the language whose pack is `seed`: loads its learner, and the known emails once, while prediction is
+    /// on, purges, reads the box and tells the lane.
     pub fn arrive(&mut self, seed: Option<&Pack<'_>>) {
         if self.settings.on {
             self.load_learner(seed);
+            self.load_emails();
         }
         self.saves.day = None;
         self.new_day();
@@ -87,13 +88,12 @@ impl Actor {
         self.tell(seed);
     }
 
-    /// Says the module is here: loads the known emails, takes the box's kind and asks for the language in front and the
-    /// typing mode, as the layouts and the keyboard may have started first.
+    /// Says the module is here: takes the box's kind and asks for the language in front and the typing mode, as the
+    /// layouts and the keyboard may have started first.
     pub fn begin(&mut self) {
         if let Some(run) = self.ports.field.as_ref() {
             self.kind = run.kind();
         }
-        self.load_emails();
         self.publish(&LayoutAsk);
         self.publish(&TypingModeAsk);
     }

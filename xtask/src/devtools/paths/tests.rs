@@ -39,8 +39,20 @@ fn device_names_are_refused() {
         "aux.x.y",
         "COM¹",
         "lpt³.txt",
+        "COM0",
+        "Lpt0.log",
     ] {
         assert!(!is_plain_name(bad), "{bad:?} was accepted");
+    }
+}
+
+#[test]
+fn every_reserved_name_is_refused_in_any_case() {
+    for name in kx_module_api::ports::RESERVED_NAMES {
+        let upper = name.to_ascii_uppercase();
+        for bad in [(*name).to_owned(), format!("{upper}.txt"), upper] {
+            assert!(!is_plain_name(&bad), "{bad:?} was accepted");
+        }
     }
 }
 

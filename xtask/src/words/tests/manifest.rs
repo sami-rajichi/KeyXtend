@@ -1,77 +1,12 @@
-//! The manifest: the project's own `words.toml`, the sources and languages a manifest refuses, and the credits
-//! template.
+//! The manifest: the sources, languages and values a manifest refuses, and the credits template.
+
+use flate2::Compression;
+use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 
 use super::super::fixture::{self, ABC_SHA256, abc_source};
-use super::super::manifest::{Manifest, Origin};
-use super::super::{MANIFEST, WordsError, credits};
-
-#[test]
-fn the_project_manifest_parses_with_every_language_file() {
-    let manifest = Manifest::parse(MANIFEST).unwrap();
-    for (iso, max) in [("en", 150_000), ("fr", 150_000), ("ar", 250_000)] {
-        let plan = manifest.plan(iso).unwrap();
-        assert_eq!(plan.list, format!("wordfreq/large_{iso}.msgpack.gz"));
-        assert_eq!(plan.max_words, max);
-        assert!(plan.dict.is_some(), "{iso} has a dictionary");
-    }
-    let de = manifest.plan("de").unwrap();
-    assert_eq!(
-        (de.list.as_str(), de.max_words),
-        ("wordfreq/small_de.msgpack.gz", 60_000)
-    );
-    assert!(de.dict.is_none());
-}
-
-#[test]
-fn the_project_manifest_hardens_curl() {
-    let fetch = Manifest::parse(MANIFEST).unwrap().fetch;
-    assert_eq!(
-        fetch.args.first().map(String::as_str),
-        Some("-q"),
-        "no curl config file is read"
-    );
-    let has = |flag: &str| {
-        fetch
-            .args
-            .windows(2)
-            .any(|w| w[0] == flag && w[1] == "=https")
-    };
-    assert!(has("--proto") && has("--proto-redir"), "{:?}", fetch.args);
-    let flags = [&fetch.size_flag, &fetch.out_flag, &fetch.url_flag];
-    assert_eq!(flags, ["--max-filesize", "--output", "--url"]);
-}
-
-#[test]
-fn the_project_manifest_gives_each_source_its_origin() {
-    let manifest = Manifest::parse(MANIFEST).unwrap();
-    let wordfreq = "https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1";
-    let url = |rel: &str| manifest.origin(rel);
-    assert_eq!(
-        url("wordfreq/large_en.msgpack.gz"),
-        Some(Origin::Url(format!(
-            "{wordfreq}/wordfreq/data/large_en.msgpack.gz"
-        )))
-    );
-    assert_eq!(
-        url("wordfreq/README.md"),
-        Some(Origin::Url(format!("{wordfreq}/README.md")))
-    );
-    let zip = "dict/en/hunspell-en_US-2026.02.25.zip";
-    assert_eq!(url("dict/en/unzipped/en_US.aff"), Some(Origin::Zip(zip)));
-    assert_eq!(url("nope"), None);
-    assert_eq!(manifest.sources.len(), 66);
-}
-
-#[test]
-fn an_unknown_language_has_no_plan() {
-    let manifest = Manifest::parse(MANIFEST).unwrap();
-    for iso in ["xx", "", "de/../en", "{iso}"] {
-        assert_eq!(
-            manifest.plan(iso).err(),
-            Some(WordsError::Lang(iso.to_string()))
-        );
-    }
-}
+use super::super::manifest::Manifest;
+use super::super::wordfreq::ZIPF_TOP_CB;
+use super::super::{WordsError, credits};
 
 #[test]
 fn the_fixture_manifest_parses() {
@@ -126,10 +61,17 @@ fn a_bad_language_is_refused() {
     }
 }
 
+#[test]
+fn a_small_list_of_a_full_language_is_refused_as_never_read() {
+    let line =
+        format!(r#""w/small_fr.gz" = {{ base = "test", sha256 = "{ABC_SHA256}", size = 3 }}"#);
+    let result = fixture::manifest_with(&line);
+    assert!(matches!(result, Err(WordsError::Manifest(_))), "{result:?}");
+}
+
 /// Swaps that each put one rule, text or credits value out of its range.
 const OUT_OF_RANGE: &[(&str, &str)] = &[
     ("max_gap_cb = 100", "max_gap_cb = 0"),
-    ("max_gap_cb = 100", "max_gap_cb = 901"),
     ("main_script_share = 0.9", "main_script_share = 0.5"),
     ("main_script_share = 0.9", "main_script_share = 1.1"),
     ("min_case_seen = 20", "min_case_seen = 0"),
@@ -143,8 +85,6 @@ const OUT_OF_RANGE: &[(&str, &str)] = &[
     (r#"part = "part""#, r#"part = """#),
     (r#"part = "part""#, r#"part = "a/b""#),
     ("https://example.invalid", "http://example.invalid"),
-    ("min_chain = 2", "min_chain = 1"),
-    ("max_chain = 3", "max_chain = 6"),
     ("max_chain = 3", "max_chain = 1"),
     ("tatoeba_weight = 4", "tatoeba_weight = 0"),
     ("held_back_per_mille = 20", "held_back_per_mille = 1000"),
@@ -165,17 +105,34 @@ const OUT_OF_RANGE: &[(&str, &str)] = &[
     ("report_contexts = 2", "report_contexts = 0"),
     ("report_followers = 2", "report_followers = 0"),
     ("download_kb = 1000", "download_kb = 0"),
-    ("level = 6", "level = 10"),
     ("words_budget_kb = 100", "words_budget_kb = 0"),
     ("words_budget_kb = 200", "words_budget_kb = 0"),
 ];
 
+/// Swaps onto each edge the code owns, the Zipf top, the pack's chain lengths and the best deflate level, and one past
+/// it: each pair's first is taken, its second refused.
+fn code_edges() -> [(&'static str, String, String); 4] {
+    let swap =
+        |key: &str, edge: u32, past: u32| (format!("{key} = {edge}"), format!("{key} = {past}"));
+    let (top, best) = (ZIPF_TOP_CB, Compression::best().level());
+    let (min, max) = (u32::from(MIN_CHAIN), u32::from(MAX_CHAIN));
+    let edges = [
+        ("max_gap_cb = 100", swap("max_gap_cb", top, top + 1)),
+        ("min_chain = 2", swap("min_chain", min, min - 1)),
+        ("max_chain = 3", swap("max_chain", max, max + 1)),
+        ("level = 6", swap("level", best, best + 1)),
+    ];
+    edges.map(|(from, (edge, past))| (from, edge, past))
+}
+
 #[test]
 fn a_rule_threshold_out_of_range_is_refused() {
     let text = fixture::manifest_text("");
-    for &(from, to) in OUT_OF_RANGE {
+    let past = code_edges().map(|(from, _, past)| (from, past));
+    let swaps = OUT_OF_RANGE.iter().map(|&(f, t)| (f, t.to_owned()));
+    for (from, to) in swaps.chain(past) {
         assert!(text.contains(from), "{from}");
-        let result = Manifest::parse(&text.replacen(from, to, 1));
+        let result = Manifest::parse(&text.replacen(from, &to, 1));
         assert!(
             matches!(result, Err(WordsError::Manifest(_))),
             "{to} was accepted"
@@ -187,68 +144,23 @@ fn a_rule_threshold_out_of_range_is_refused() {
 fn the_edges_of_each_range_are_accepted() {
     let text = fixture::manifest_text("");
     let swaps = [
-        ("max_gap_cb = 100", "max_gap_cb = 900"),
         ("main_script_share = 0.9", "main_script_share = 1.0"),
         ("min_case_seen = 20", "min_case_seen = 1"),
         ("twin_ratio = 10.0", "twin_ratio = 1.0"),
         ("max_chain = 3", "max_chain = 2"),
-        ("max_chain = 3", "max_chain = 5"),
         ("held_back_per_mille = 20", "held_back_per_mille = 999"),
         ("skew_ratio = 10.0", "skew_ratio = 1.0"),
-        ("level = 6", "level = 9"),
         ("level = 6", "level = 0"),
     ];
-    for (from, to) in swaps {
-        let result = Manifest::parse(&text.replacen(from, to, 1));
+    let edges = code_edges().map(|(from, edge, _)| (from, edge));
+    for (from, to) in swaps
+        .map(|(f, t)| (f, t.to_owned()))
+        .into_iter()
+        .chain(edges)
+    {
+        let result = Manifest::parse(&text.replacen(from, &to, 1));
         assert!(result.is_ok(), "{to} was refused: {result:?}");
     }
-}
-
-#[test]
-fn the_project_manifest_gives_en_fr_and_ar_their_text_and_budget() {
-    let manifest = Manifest::parse(MANIFEST).unwrap();
-    for (iso, kb) in [("en", 3000), ("fr", 3000), ("ar", 4000)] {
-        let text = manifest.plan(iso).unwrap().text.unwrap();
-        assert_eq!(text.chain_budget_kb, kb, "{iso}");
-        assert!(text.tatoeba.is_some() && text.wiki.is_some(), "{iso}");
-    }
-    assert!(manifest.plan("de").unwrap().text.is_none());
-    let budget = |iso: &str| manifest.plan(iso).unwrap().words_budget_kb;
-    let budgets = ["en", "fr", "ar", "de"].map(budget);
-    assert_eq!(
-        budgets,
-        [2000, 3000, 6000, 700],
-        "the full packs keep every word"
-    );
-    assert_eq!(
-        (manifest.packs.download_kb, manifest.packs.level),
-        (20480, 6)
-    );
-    let t = &manifest.text;
-    let values = (
-        t.min_chain,
-        t.max_chain,
-        t.tatoeba_weight,
-        t.held_back_per_mille,
-        t.followers,
-    );
-    assert_eq!(values, (2, 3, 4, 20, 8));
-    assert_eq!(
-        (t.out.as_str(), t.held.as_str()),
-        ("assets/words", "words/held")
-    );
-}
-
-#[test]
-fn every_language_gets_one_pack_the_full_ones_first() {
-    let isos = Manifest::parse(MANIFEST).unwrap().isos();
-    assert_eq!(
-        isos.get(..3),
-        Some(&["ar", "en", "fr"].map(String::from)[..])
-    );
-    assert_eq!(isos.len(), 42, "3 full and 39 word-only packs");
-    assert_eq!(isos.iter().filter(|i| *i == "ar").count(), 1);
-    assert!(isos.contains(&"fil".to_string()) && isos.contains(&"de".to_string()));
 }
 
 #[test]

@@ -1,8 +1,6 @@
 //! The simulated user (spec §6 "Target"): types each sentence through the module's own tracker as the keyboard
 //! would, and before each letter picks a chip when one holds the word. A capital costs Shift on both sides.
 
-use std::time::Instant;
-
 use kx_mod_predict::learn::Learner;
 use kx_mod_predict::score::{Guess, Learned, NoLearned, ScoreConfig, guesses, knows};
 use kx_mod_predict::split::{is_word_char, normalise, spans};
@@ -11,8 +9,8 @@ use kx_mod_predict::{Pack, PredictSettings, fold};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Piece, TypingMode};
 
-use super::DAY;
 use super::tally::Tally;
+use super::{DAY, new_learner, timed_us};
 use crate::words::WordsError;
 
 /// Types sentences in one language and counts the presses.
@@ -130,20 +128,11 @@ impl<'p> Typist<'p> {
         let view = self.learner.as_ref().map(|l| l.view(Some(self.seed)));
         let learned: &dyn Learned = view.as_ref().map_or(&NoLearned, |v| v);
         let (seed, mode) = (Some(self.seed), self.mode);
-        let start = Instant::now();
-        let found = guesses(
-            &self.iso,
-            seed,
-            learned,
-            query,
-            mode,
-            self.chips,
-            &self.score,
-        );
-        let spent = start.elapsed().as_micros();
-        self.tally
-            .times
-            .push(u64::try_from(spent).unwrap_or(u64::MAX));
+        let (found, us) = timed_us(|| {
+            let (iso, score) = (&self.iso, &self.score);
+            guesses(iso, seed, learned, query, mode, self.chips, score)
+        });
+        self.tally.times.push(us);
         found
     }
 
@@ -191,8 +180,7 @@ fn landing(text: &[char], at: usize, plan: &Plan, guess: &str, apostrophe: char)
 
 /// A learner for `iso` reconciled with `seed`, as the module loads a new one.
 fn learner(iso: &str, seed: &Pack<'_>, settings: &PredictSettings) -> Result<Learner, WordsError> {
-    let mut learner = Learner::new(iso, settings.learn_config())
-        .map_err(|e| WordsError::Meter(format!("{iso} learner: {e}")))?;
+    let mut learner = new_learner(iso, settings.learn_config())?;
     learner.reconcile(Some(seed));
     Ok(learner)
 }

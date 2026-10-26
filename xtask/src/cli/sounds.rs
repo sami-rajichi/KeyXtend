@@ -1,6 +1,6 @@
 //! Parsing of `cargo xtask sounds render|import|join`.
 
-use super::{UsageError, is_path};
+use super::{FLAG_OUT, UsageError, is_path};
 
 /// Renders every recipe to WAV files.
 const RENDER: &str = "render";
@@ -8,8 +8,6 @@ const RENDER: &str = "render";
 const IMPORT: &str = "import";
 /// Mixes two shipping-format files into one.
 const JOIN: &str = "join";
-/// Flag naming the folder `render` writes to.
-const FLAG_OUT: &str = "--out";
 /// Flag giving where `import`'s window starts, in ms.
 const FLAG_START_MS: &str = "--start-ms";
 /// Flag giving `import`'s window length, in ms.

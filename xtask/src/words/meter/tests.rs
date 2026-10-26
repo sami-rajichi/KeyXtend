@@ -4,15 +4,17 @@
 use std::collections::BTreeMap;
 
 use kx_mod_predict::{Flags, Pack, PackWriter, PredictSettings};
+use kx_module_api::Settings;
 
 use super::held_lines;
-use super::tally::{Tally, percentile, shown_pct};
+use super::tally::{Tally, percentile};
 use super::typist::Typist;
 use super::verdict::failures;
 use crate::test_support::TempDir;
 use crate::words::MANIFEST;
 use crate::words::fixture::{self, manifest_with};
 use crate::words::manifest::{Manifest, MeterRules};
+use crate::words::report::shown_pct;
 
 /// The pack's words, most frequent first: three chips show `the cold cut` before a letter and `cat car` after `ca`.
 const WORDS: [(&str, u8); 6] = [
@@ -23,10 +25,19 @@ const WORDS: [(&str, u8); 6] = [
     ("car", 92),
     ("sat", 50),
 ];
-/// The chips in the lane: the fewest the settings take, so the tiny pack can leave a word out.
-const CHIPS: u8 = 3;
 /// What the sentence tests type: a capital, a word offered after two letters and a full stop.
 const SENTENCE: &str = "The car sat.";
+
+/// The chips in the lane: the fewest the settings take (three, as the counts below assume), so the tiny pack can
+/// leave a word out.
+fn chips() -> u8 {
+    let mut settings = PredictSettings::from_defaults().unwrap();
+    let taken = |n: &u8| {
+        settings.chips = *n;
+        settings.check().is_ok()
+    };
+    (0..=u8::MAX).find(taken).unwrap()
+}
 
 /// The tiny pack of `iso`.
 fn pack(iso: &str) -> Vec<u8> {
@@ -37,10 +48,10 @@ fn pack(iso: &str) -> Vec<u8> {
     writer.finish().unwrap()
 }
 
-/// The module's defaults with `CHIPS` chips.
+/// The module's defaults with the fewest chips.
 fn settings() -> PredictSettings {
     let mut settings = PredictSettings::from_defaults().unwrap();
-    settings.chips = CHIPS;
+    settings.chips = chips();
     settings
 }
 
@@ -207,3 +218,4 @@ fn max_sentences_limits_the_lines_read() {
 }
 
 mod run;
+mod speed;

@@ -2,20 +2,18 @@
 
 mod meter;
 
-use super::{UsageError, is_path};
+use super::{FLAG_OUT, UsageError, is_path};
 
 pub(crate) use self::meter::MeterArgs;
 
 /// Checks every source file, downloading the missing ones.
-const FETCH: &str = "fetch";
+pub(super) const FETCH: &str = "fetch";
 /// Prints one language's word counts and coverage line.
 const LIST: &str = "list";
 /// Builds every pack and its credits.
 const BUILD: &str = "build";
 /// Flag naming the source folder; it is always given, never assumed.
 const FLAG_SRC: &str = "--src";
-/// Flag naming the folder the packs go to, instead of the manifest's.
-const FLAG_OUT: &str = "--out";
 /// Rewrites the pack index from the packs in a folder.
 const INDEX: &str = "index";
 /// Flag naming the packs folder, instead of the manifest's.
@@ -103,12 +101,9 @@ pub(super) fn parse(args: &[String]) -> Result<WordsAction, UsageError> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::tests::args;
     use super::super::{Command, parse as parse_all};
     use super::*;
-
-    fn args(values: &[&str]) -> Vec<String> {
-        values.iter().map(|v| (*v).to_string()).collect()
-    }
 
     #[test]
     fn fetch_and_list_parse_with_their_source_folder() {

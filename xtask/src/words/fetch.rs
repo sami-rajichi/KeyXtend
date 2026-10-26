@@ -11,7 +11,8 @@ use std::process::Command;
 use sha2::{Digest, Sha256};
 
 use super::manifest::{FetchConfig, HASH_HEX, Manifest, Origin, Source};
-use super::{WordsError, io_error, with_added_ext};
+use super::{MANIFEST_NAME, WordsError, io_error, with_added_ext};
+use crate::cli::words_fetch;
 use crate::devtools::paths::join_rel;
 
 /// Bytes read per hashing step: one MiB keeps the 3 GB check fast with little memory.
@@ -78,12 +79,22 @@ pub(crate) fn verify(manifest: &Manifest, src: &Path, files: &[&str]) -> Result<
         match source.map(|s| check(&path, s)) {
             Some(Ok(Check::Good)) => {}
             Some(Ok(Check::Wrong(why))) => bad.push(format!("{rel}: {why}")),
-            Some(Ok(Check::Missing)) => bad.push(format!("{rel}: missing; run `words fetch`")),
+            Some(Ok(Check::Missing)) => bad.push(missing(rel)),
             Some(Err(err)) => bad.push(format!("{rel}: {err}")),
-            None => bad.push(format!("{rel}: not in words.toml")),
+            None => bad.push(unknown(rel)),
         }
     }
     all_good(bad)
+}
+
+/// Why `rel` fails a check: it is not there, and the fetch command gets it.
+fn missing(rel: &str) -> String {
+    format!("{rel}: missing; run `{}`", words_fetch())
+}
+
+/// Why `rel` cannot be checked: the manifest does not list it.
+fn unknown(rel: &str) -> String {
+    format!("{rel}: not in {MANIFEST_NAME}")
 }
 
 /// `Ok` when no file is in `bad`.
@@ -105,7 +116,7 @@ fn download(
     let (url, source) = match (manifest.origin(rel), manifest.sources.get(rel)) {
         (Some(Origin::Url(url)), Some(source)) => (url, source),
         (Some(Origin::Zip(zip)), _) => return Err(format!("{rel}: missing; unzip it from {zip}")),
-        _ => return Err(format!("{rel}: not in words.toml")),
+        _ => return Err(unknown(rel)),
     };
     let part = with_added_ext(path, &manifest.fetch.part);
     let fetched = path

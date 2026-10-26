@@ -4,7 +4,6 @@
 use std::cmp::Reverse;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::hint::black_box;
-use std::time::Instant;
 
 use kx_mod_predict::learn::{LearnConfig, Learner};
 use kx_mod_predict::pack::layout::MAX_CHAIN;
@@ -16,7 +15,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
 
 use super::tally::{percentile, times_text};
-use super::{DAY, Paths, RELEASE_RUN, UNOPTIMISED, each_pack, slow_note};
+use super::{DAY, Paths, RELEASE_RUN, UNOPTIMISED, each_pack, new_learner, slow_note, timed_us};
 use crate::words::WordsError;
 use crate::words::manifest::MeterRules;
 
@@ -142,19 +141,12 @@ impl Bench<'_> {
             readings: vec![reading],
         };
         let (pack, mode) = (Some(self.pack), TypingMode::default());
-        let start = Instant::now();
-        let found = guesses(
-            self.iso,
-            pack,
-            self.learned,
-            &query,
-            mode,
-            self.chips,
-            &self.score,
-        );
-        let spent = start.elapsed();
+        let (found, us) = timed_us(|| {
+            let (learned, score) = (self.learned, &self.score);
+            guesses(self.iso, pack, learned, &query, mode, self.chips, score)
+        });
         drop(black_box(found));
-        u64::try_from(spent.as_micros()).unwrap_or(u64::MAX)
+        us
     }
 
     /// The bytes of the word sort `guesses` makes for `prefix`: one id per pack word the prefix starts. None where the
@@ -186,8 +178,7 @@ fn filled(
     vocab: &[&str],
     learns: usize,
 ) -> Result<(Learner, Vec<usize>), WordsError> {
-    let mut learner =
-        Learner::new(iso, cfg).map_err(|e| WordsError::Meter(format!("{iso} learner: {e}")))?;
+    let mut learner = new_learner(iso, cfg)?;
     let mut order: Vec<usize> = Vec::with_capacity(learns);
     for n in 0..learns {
         let next = if n < vocab.len() {
@@ -225,7 +216,7 @@ fn kind_line(kind: &str, times: &[u64], buffer: usize, rules: &MeterRules) -> St
 }
 
 /// Why `iso`'s `kind` failed: its highest percentile over the ceiling; none when it stayed under.
-fn over(iso: &str, kind: &str, times: &[u64], rules: &MeterRules) -> Option<String> {
+pub(super) fn over(iso: &str, kind: &str, times: &[u64], rules: &MeterRules) -> Option<String> {
     let p = rules.top();
     let took = percentile(times, p);
     (took > rules.ceiling_us).then(|| {

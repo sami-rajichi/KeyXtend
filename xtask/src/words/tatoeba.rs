@@ -1,11 +1,11 @@
 //! Reads Tatoeba's sentence files (`<lang>_sentences_detailed.tsv.bz2`) as a stream: one line per entry, its fields
 //! id, language, text, username, added and modified, split by tabs.
 
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 
-use bzip2::read::MultiBzDecoder;
 use sha2::{Digest, Sha256};
 
+use super::lines::Lines;
 use super::manifest::PER_MILLE;
 
 /// Separates a line's fields.
@@ -16,8 +16,6 @@ const ID: usize = 0;
 const TEXT: usize = 2;
 /// The field of its author's username.
 const USER: usize = 3;
-/// What ends a line.
-const LINE_END: u8 = b'\n';
 /// The bytes of the hash read as the share's number.
 const HASH_BYTES: usize = 8;
 
@@ -38,20 +36,14 @@ pub(crate) fn read(
     max: u64,
     each: &mut dyn FnMut(Entry<'_>),
 ) -> Result<u64, String> {
-    let mut lines = BufReader::new(MultiBzDecoder::new(reader));
-    let mut buf = Vec::new();
+    let mut lines = Lines::new(reader);
     let mut read = 0;
     while read < max {
-        buf.clear();
-        if lines
-            .read_until(LINE_END, &mut buf)
-            .map_err(|e| e.to_string())?
-            == 0
-        {
+        let Some(buf) = lines.line()? else {
             break;
-        }
+        };
         read += 1;
-        let line = String::from_utf8_lossy(&buf);
+        let line = String::from_utf8_lossy(buf);
         let fields: Vec<&str> = line.trim_end().split(TAB).collect();
         let (Some(id), Some(text), Some(user)) =
             (fields.get(ID), fields.get(TEXT), fields.get(USER))

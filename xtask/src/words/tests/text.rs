@@ -191,21 +191,22 @@ const STEM_WORDS: [(&str, u32); 6] = [
     ("s", 310),
 ];
 
+/// The dictionary of the stem test: both stems, `it's`, and every piece.
+const STEM_DICT: [&str; 8] = ["don't", "don", "t", "it", "can't", "can", "it's", "s"];
+/// The stem test's text: `t` seen 5000 times and alone 1000, its stems `don't` 5000 and `can't` 10000.
+const STEM_KEYS: [Key<'static>; 6] = [
+    ("don't", 0, &[("don't", 5_000)]),
+    ("can't", 0, &[("can't", 10_000)]),
+    ("it's", 0, &[("it's", 1)]),
+    ("t", 1_000, &[("t", 5_000)]),
+    ("can", 20_000, &[]),
+    ("it", 9_000, &[]),
+];
+
 #[test]
 fn an_apostrophe_word_takes_its_share_of_its_right_pieces_wordfreq_frequency() {
-    let dict = dict(
-        AFF,
-        &["don't", "don", "t", "it", "can't", "can", "it's", "s"],
-    );
-    let keys: [Key<'_>; 6] = [
-        ("don't", 0, &[("don't", 5_000)]),
-        ("can't", 0, &[("can't", 10_000)]),
-        ("it's", 0, &[("it's", 1)]),
-        ("t", 1_000, &[("t", 5_000)]),
-        ("can", 20_000, &[]),
-        ("it", 9_000, &[]),
-    ];
-    let list = build_with(&STEM_WORDS, Some(&dict), Some(&text(1_000_000, &keys)));
+    let dict = dict(AFF, &STEM_DICT);
+    let list = build_with(&STEM_WORDS, Some(&dict), Some(&text(1_000_000, &STEM_KEYS)));
     let part = |n: f64| bucket_of_share(share(300) * n).unwrap();
     let (dont, cant) = (part(0.25), part(0.5));
     assert_eq!(

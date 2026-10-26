@@ -234,6 +234,30 @@ fn forget_mode_opened_while_undo_shows_offers_a_full_lane_of_words() {
 }
 
 #[test]
+fn forget_mode_in_a_box_that_cannot_confirm_offers_what_a_tap_could_not_send() {
+    let mut rig = Rig::build(|f, _| plant(f, "en", &["café"]));
+    rig.lang("en");
+    rig.focus(FieldKind::Unknown);
+    rig.typed("cafe");
+    assert!(rig.words().is_empty(), "café would erase the typed e");
+    rig.ask(WordsAsk::Forget);
+    assert_eq!(rig.words(), ["café"], "forgetting types nothing");
+    rig.pick(0);
+    rig.ask(WordsAsk::Forget);
+    assert!(rig.words().is_empty(), "forgotten");
+    let seven: Vec<String> = (0..7).map(|n| format!("user{n}@mail.org")).collect();
+    let mut rig = knowing(&seven.iter().map(String::as_str).collect::<Vec<_>>());
+    rig.focus(FieldKind::Unknown);
+    rig.typed("@@");
+    rig.ask(WordsAsk::Forget);
+    let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
+    assert_eq!(
+        kinds,
+        vec![ChipKind::Email; usize::from(rig.settings.chips)]
+    );
+}
+
+#[test]
 fn a_late_more_tap_in_forget_mode_keeps_it_and_opens_no_list() {
     let seven: Vec<String> = (0..7).map(|n| format!("user{n}@mail.org")).collect();
     let seven: Vec<&str> = seven.iter().map(String::as_str).collect();

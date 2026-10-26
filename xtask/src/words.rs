@@ -16,6 +16,7 @@ mod fit;
 mod fixture;
 mod index;
 mod judge;
+mod lines;
 mod list;
 mod manifest;
 mod merge;
@@ -35,6 +36,7 @@ mod wordfreq;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+pub(crate) use self::index::lists_a_pack;
 pub(crate) use self::meter::Opts as MeterOpts;
 
 use self::cands::Candidates;
@@ -43,8 +45,17 @@ use self::manifest::Manifest;
 use crate::devtools::paths::join_rel;
 use crate::workspace;
 
+/// The manifest's file name beside `src`: one literal for the compiled-in copy and every message.
+macro_rules! manifest_name {
+    () => {
+        "words.toml"
+    };
+}
+
+/// The manifest's file name, as messages show it.
+const MANIFEST_NAME: &str = manifest_name!();
 /// The manifest, compiled in: sources, hashes and rules.
-const MANIFEST: &str = include_str!("../words.toml");
+const MANIFEST: &str = include_str!(concat!("../", manifest_name!()));
 
 /// Why a `words` command failed.
 #[derive(Debug, PartialEq, Eq)]
@@ -74,7 +85,7 @@ pub(crate) enum WordsError {
 impl fmt::Display for WordsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Manifest(why) => write!(f, "words.toml: {why}"),
+            Self::Manifest(why) => write!(f, "{MANIFEST_NAME}: {why}"),
             Self::Io(why) => write!(f, "file error: {why}"),
             Self::Wordfreq(why) => write!(f, "wordfreq list: {why}"),
             Self::Dict(why) => write!(f, "dictionary: {why}"),

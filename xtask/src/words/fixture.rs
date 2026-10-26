@@ -8,8 +8,6 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use rmpv::Value;
 
-use kx_mod_predict::fold;
-
 use super::manifest::{Manifest, Rules};
 
 /// The header wordfreq writes.
@@ -51,20 +49,9 @@ pub(crate) fn dic(words: &[&str]) -> String {
     text
 }
 
-/// The project's rules, with a coverage line over the top 3 words and report lines that print 2.
+/// The fixture manifest's rules: a coverage line over the top 3 words and report lines that print 2.
 pub(crate) fn rules() -> Rules {
-    Rules {
-        drop_chars: vec!['@', '/', '.'],
-        apostrophe: fold::apostrophe().unwrap(),
-        max_gap_cb: 100,
-        main_script_share: 0.9,
-        min_case_seen: 20,
-        twin_ratio: 10.0,
-        piece_ratio: 20.0,
-        piece_min_seen: 100,
-        coverage_top: 3,
-        show: 2,
-    }
+    manifest_with("").unwrap().rules
 }
 
 /// The SHA-256 of `abc`, from FIPS 180-2's first example.

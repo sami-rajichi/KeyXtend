@@ -3,9 +3,11 @@
 //! while learning is paused, neither purges nor timed saves write.
 
 use crate::rig::{DAY, Rig, blob, learner, plant, saved};
+use kx_mod_predict::email::Emails;
+use kx_mod_predict::emails_blob;
 use kx_mod_predict::score::Learned;
 use kx_module_api::keys;
-use kx_module_api::ports::{FieldKind, SealedError, WordsAsk};
+use kx_module_api::ports::{ChipKind, FieldKind, SealedError, WordsAsk};
 use std::time::Duration;
 
 /// One millisecond, the clock's step past a deadline.
@@ -118,6 +120,23 @@ fn a_refused_save_keeps_running_and_tries_again_after_save_s() {
     rig.tick();
     assert_eq!(rig.fakes.store.saves(), 2);
     assert!(rig.fakes.store.blob(&blob("en")).is_some());
+}
+
+#[test]
+fn prediction_off_whose_emails_save_fails_keeps_them_for_the_next_save() {
+    let mut rig = english(|_| {});
+    rig.typed("sami@x.org ");
+    rig.fakes.store.fail_save(SealedError::Io);
+    rig.ask(WordsAsk::Power(false));
+    assert_eq!(rig.fakes.store.saves(), 1, "tried at once");
+    rig.ask(WordsAsk::Power(true));
+    rig.typed("sa");
+    let chip = ("sami@x.org".to_owned(), ChipKind::Email);
+    assert!(rig.chips().contains(&chip), "kept while unsaved");
+    rig.stop();
+    let bytes = rig.fakes.store.blob(&emails_blob().unwrap()).unwrap();
+    let saved = Emails::from_bytes(&bytes, usize::MAX).unwrap();
+    assert_eq!(saved.list(), ["sami@x.org"], "never saved empty");
 }
 
 #[test]

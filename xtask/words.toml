@@ -1,6 +1,6 @@
-# Sources and rules for `cargo xtask words`: every downloaded file with its hash, and the thresholds of the rules.
-# Every word fact comes from the sources themselves; the source folder is always given with `--src`. The apostrophe
-# comes from kx-mod-predict's fold table, so the build and the tracker split words alike.
+# Sources and rules for `cargo xtask words`: every downloaded file with its hash, and the rules' thresholds; the
+# source folder is always given with `--src`. Every word fact comes from the sources, and the apostrophe from
+# kx-mod-predict's fold table, so the build and the tracker split words alike.
 
 [rules]
 # A word holding any of these is dropped: web addresses, emails and paths.
@@ -20,8 +20,8 @@ twin_ratio = 10.0
 # A word is a tokenizer piece when the apostrophe words holding it are seen this many times more often than it
 # stands alone: `ll` of `I'll`. At the set caps the real words reach 26 (haven) and the pieces start at 69 (t).
 piece_ratio = 40.0
-# Pieces are judged only when their apostrophe words are seen this often: under 5 alone where 100 are joined is
-# not chance.
+# Pieces are judged only when their apostrophe words are seen this often, so a word rarely seen alone beside them is
+# past chance.
 piece_min_seen = 100
 # The coverage line checks this many of wordfreq's most frequent words against the dictionary.
 coverage_top = 10000
@@ -67,7 +67,7 @@ out = "assets/words"
 [packs]
 download_kb = 20480
 level = 6
-# The layout codes Windows reports that a pack under another code serves: wordfreq's Serbo-Croatian pack serves the
+# The layout codes the OS reports that a pack under another code serves: wordfreq's Serbo-Croatian pack serves the
 # Croatian and Bosnian layouts. Serbian is left out, as its layouts carry no script tag to tell Latin from Cyrillic.
 aliases = { sh = ["hr", "bs"] }
 
@@ -211,7 +211,6 @@ wiki = "https://dumps.wikimedia.org/other/cirrus_search_index/20261018/"
 "wordfreq/large_ar.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "aa12410764f1946f21d986a920c289c22accb069d9b287d71b61657005516eec", size = 3063585 }
 "wordfreq/large_en.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "dffae8066b78dce0a6667cf5f58e567054f902674667090a7ac8a8a44628b05c", size = 1494836 }
 "wordfreq/large_fr.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "6f16cd80b9b66c5698ed002becea83ae30d0584c3205f1cf01714ad562c00c8b", size = 1491216 }
-"wordfreq/small_ar.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "a132f33543885d96dab7255ae8a4e6eab0b89cb3f79b2c7240787181ee4785cc", size = 259359 }
 "wordfreq/small_bg.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "b19e0a302b7c50439af94ed72b4e3d049b5233db9956add43f16922349fca359", size = 202364 }
 "wordfreq/small_bn.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "5dd9f6f83be5389dcda4b037e96d6d7f659793c8a344d4a7531e903131534a31", size = 207377 }
 "wordfreq/small_ca.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "13fa468e915d70f3b2991244f71fa5c160ab1d097d3f084546b8a7f15e8a5f03", size = 119705 }
@@ -219,12 +218,10 @@ wiki = "https://dumps.wikimedia.org/other/cirrus_search_index/20261018/"
 "wordfreq/small_da.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "80db682ff7bb30e7c8fd3e5dac2b9fe8c12faa206c45438f1a799a048ab10d8b", size = 130515 }
 "wordfreq/small_de.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "2115b5bb4adb671a3352555a480b9c2f5b03493e9f7e4047997361d62310017a", size = 186094 }
 "wordfreq/small_el.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "9ec327293a1657eac51518d6506e387dda453b548e506f47ef6e720592c1d9c9", size = 275904 }
-"wordfreq/small_en.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "f94a80cba6a3857b260d0666b5432bb7ea9b85315574dee9c306e87f61298247", size = 124892 }
 "wordfreq/small_es.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "ff5853040f65bcc9cb3ed3721d1d09d4405389c1741ebbf529612220829ff5af", size = 154340 }
 "wordfreq/small_fa.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "bfb503f6b0d6bdddce720ee8154faf1c79d8b0417e6c865643da3b17b7638057", size = 147747 }
 "wordfreq/small_fi.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "7c33d07743908b9ae43347d96f60e4d1d30fa3529f59fdefcbf16441040183d7", size = 286020 }
 "wordfreq/small_fil.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "e18224d2efa12c3ca6e8eaee76ec4eae0cf4c437988545e8e8dae36a1a7a940d", size = 132820 }
-"wordfreq/small_fr.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "8fbbf619ff2e6ff5b3d99d41e69c105daf5795771ce8ef36529f210d571abe6e", size = 138496 }
 "wordfreq/small_he.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "b68a4d94dbda037255c3992d4c3ae7250ac6a67aedcf90246afc020681a462e5", size = 252281 }
 "wordfreq/small_hi.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "92ccbf70297d28e97af55a2a517b95c3d8b599e4cc943fb6d4612a3d44a86992", size = 148115 }
 "wordfreq/small_hu.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "84130f74f9ea8f097bfb25d3778d03d26449dba255df7e60f42bbef463fdc582", size = 228299 }

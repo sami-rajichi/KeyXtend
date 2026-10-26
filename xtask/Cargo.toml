@@ -15,8 +15,8 @@ kx-theme = { path = "../crates/kx-theme", features = ["files"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }
-# `cargo xtask words`, at build time only: bzip2 dumps (Task 8b), wordfreq's gzipped msgpack lists, Hunspell
-# dictionaries, SHA-256 source checks, and the word-pack writer.
+# `cargo xtask words`, at build time only: bzip2 dumps, wordfreq's gzipped msgpack lists, Hunspell dictionaries,
+# SHA-256 source checks, and the word-pack writer.
 bzip2 = "0.6.1"
 flate2 = "1.1.10"
 kx-mod-predict = { path = "../crates/kx-mod-predict", features = ["build"] }

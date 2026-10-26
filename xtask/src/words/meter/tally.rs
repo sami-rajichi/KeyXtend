@@ -3,9 +3,7 @@
 use super::slow_note;
 use crate::words::float;
 use crate::words::manifest::PERCENT;
-
-/// The decimals a printed share shows.
-const DECIMALS: u8 = 1;
+use crate::words::report::shown_pct;
 
 /// One run's counts over a language's sentences.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -44,13 +42,6 @@ impl Tally {
             slow_note(),
         )
     }
-}
-
-/// `pct` as printed: rounded down to `DECIMALS`, so a share under a target never prints as reaching it.
-pub(crate) fn shown_pct(pct: f64) -> String {
-    let scale = 10f64.powi(i32::from(DECIMALS));
-    let places = usize::from(DECIMALS);
-    format!("{:.places$}", (pct * scale).floor() / scale)
 }
 
 /// Each of `percentiles` of `times` as printed: `p50 120 us, p99 900 us`.
