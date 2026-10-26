@@ -1,8 +1,8 @@
 # Security note: kx-crypto
 
 - **Owner:** product owner
-- **Last review:** 2026-10-24 (P7 Task 5: the crate is built; review fixes bind the header to the tag)
-- **Status:** Draft
+- **Last review:** 2026-10-26 (P7 security review: what the tag defeats, rollback and a lost key file)
+- **Status:** Reviewed
 - **Scope:** `crates/kx-crypto`, a library with no module of its own. The Windows adapter implements its `KeyGuard` with DPAPI (`kx-platform-windows.md`), and the app serves one `SealedFiles` as the `SealedStore` port (`keyxtend.md`).
 
 ## Capabilities
@@ -13,25 +13,26 @@
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
-| The data key (`KEY_LEN` random bytes from `getrandom`) | Secret | `sealed.key` in the data folder, wrapped by the OS guard; in memory only as `Zeroizing`, on the heap | Yes, by the guard (DPAPI on Windows) | Until the user deletes the data folder |
-| Blobs: learned words, emails (P7) | Sensitive | `<name>.sealed` in the data folder | XChaCha20-Poly1305, a fresh `NONCE_LEN`-byte nonce per save; the tag covers the magic, the version and the blob's name | Until replaced or deleted |
+| The data key (`KEY_LEN` random bytes from `getrandom`) | Secret | `sealed.key` in the store's folder (the app's `SEALED_DIR`), wrapped by the OS guard; in memory only as `Zeroizing`, on the heap | Yes, by the guard (DPAPI on Windows) | Until the user deletes the data folder |
+| Blobs: learned words, emails (P7) | Sensitive | `<name>.sealed` in the store's folder | XChaCha20-Poly1305, a fresh `NONCE_LEN`-byte nonce per save; the tag covers the magic, the version and the blob's name | Until replaced or deleted |
 | Opened bytes | Sensitive | Memory; `open` returns them as `Zeroizing`, but `SealedFiles::load` hands them on as the port's plain `Vec<u8>` | N/A | Handed to the caller (Accepted below) |
 | A blob that would not open | Sensitive (still sealed) | `<name>.damaged`, replacing an older one | Yes, as it was | Until the next damaged copy of that name |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file |
+| Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file. No `cargo fuzz` target (see Accepted) |
 | The key file | The guard unwraps it; anything that is not a `KEY_LEN`-byte key is `Locked`, and the file is never deleted or replaced | `MAX_KEY_FILE_BYTES`; a larger file is `Locked` unread | No; tests cover a refused, a short and an oversized key file |
 | Blob names | `BlobName` (a-z, 0-9, `-`, `MIN_BLOB_LEN` to `MAX_BLOB_LEN` bytes, and no device name from the port's `RESERVED_NAMES`) before any file is touched; `SealedFiles` and the fake store take only a `BlobName`, so both refuse the same names | `MAX_BLOB_LEN` bytes | Property test of the name form (`kx-module-api`); a test that the fake and the real store keep the same names |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a blob copied or renamed to another blob's name fails authentication, since the name is in the AAD.
 - **Tampering:** any changed bit fails the tag, and the tag covers the magic and version too, so a later format version cannot be swapped in under the same key. The blob is then renamed to `<name>.damaged` and reported once as `Damaged`.
+  - The tag defeats other users, other PCs and damage, not programs running as this user: they can unwrap the key (`kx-platform-windows.md`) and seal blobs that pass. An older copy put back also passes (see Accepted).
   - A save writes a temp file in the same folder, syncs it, then renames it over the old file, so a crash never leaves half a file.
 - **Logging / repudiation:** the crate never logs. Its errors name only the kind, and `SealedFiles`' `Debug` shows neither the folder (it holds the account name) nor the key.
 - **Information disclosure:** a copy of the folder on another PC or account cannot be opened, since only the guard unwraps the key (ADR-0010). The key, the cipher's copy of it and every buffer that holds plain bytes inside the crate are wiped on drop; `load` hands opened bytes to the caller unwiped (Accepted below).
-- **Denial of service:** reads are capped by size. A lost key file sets the old blobs aside and the next save makes a new key; a key file the guard refuses keeps the store `Locked` rather than losing the data.
+- **Denial of service:** reads are capped by size. A lost key file sets the old blobs aside and the next save makes a new key, dropping the key still held in memory; a key file the guard refuses keeps the store `Locked` rather than losing the data.
 - **Elevation:** none; `#![forbid(unsafe_code)]`, and no primitives of our own (RustCrypto's `chacha20poly1305`).
 
 ## Findings
@@ -44,4 +45,7 @@
 - The port has no "too large" error, so a save over `MAX_BLOB_BYTES` is `Io`; the learner's caps keep its blobs far below the limit.
 - Stack copies of the key may outlive a call (Rust can move values); the key itself lives on the heap and is wiped, which is the `zeroize` crate's documented limit.
 - Opened bytes leave `Zeroizing` at the port boundary, since `SealedStore::load` returns a plain `Vec<u8>`. Wiping them is then the caller's job; changing the port's type is a decision for its users.
-- One `SealedFiles` per data folder: the key file is written by a replacing rename, so two stores over one folder could race on the first save and leave blobs under a lost key. The app runs one instance, which owns the folder.
+- Rollback: an older sealed copy put back, by a backup restore or a program running as the user, passes the tag; the format has no version counter.
+- A key file deleted while the app runs makes the next save drop the held key and make a new one, so blobs sealed under the old key are set aside when next loaded. It needs a manual or antivirus deletion.
+- No `cargo fuzz` target: property tests stand in until the owner allows the nightly toolchain, as in `kx-kernel.md`.
+- One `SealedFiles` per folder: the key file is written by a replacing rename, so two stores over one folder could race on the first save and leave blobs under a lost key. The app runs one instance, which owns the folder.

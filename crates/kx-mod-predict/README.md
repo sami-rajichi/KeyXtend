@@ -13,7 +13,7 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 
 ## The module
 
-`PredictModule` watches the focused box, follows the keyboard's pieces and tells the lane (`Suggested`) with a new round after each change. A pick asks the keyboard to type with one `TypeWord`; the module never types itself (ADR-0033). Only the language in front is loaded: its pack, parsed once per switch, and its learner, sealed as `predict-<iso>`; known emails are one blob, `predict-emails`.
+`PredictModule` watches the focused box, follows the keyboard's pieces and tells the lane (`Suggested`) with a new round after each change. A pick asks the keyboard to type with one `TypeWord`; the module never types itself (ADR-0033). At its stop, or when its thread panics, the lane says `Lane::Stopped`, which offers no menu. Only the language in front is loaded: its pack, parsed once per switch, and its learner, sealed as `predict-<iso>`; known emails are one blob, `predict-emails`.
 
 - **Boxes:** a password box locks the lane and is never followed, read or learned from. An unknown box, or none, gets chips but is never read or learned from. A text box is read for its last words at a new box or a click outside our windows. When the watch, or a read, already sees another kind of box, that kind wins at once over the focus event still on its way, at each piece, lane and read; a box the watch sees as a password box is never read.
 - **Picks:** a tap on an older lane does nothing. A pick erases only after a text box says it still ends with what is erased; otherwise nothing is typed and the module reads again. A box that cannot tell offers only next-word chips and chips that start with exactly what was typed, and types their rest; an email it could not type without erasing is never offered, in the lane, the `@@` list or More. A chip or list row past the keyboard's `text_cap`, which `TypingMode` carries, is never shown. A latched Shift gives the chips a first capital, as the pick spends it.
@@ -52,7 +52,7 @@ Word prediction (spec §6, ADR-0032): the module below, over pure parts: folding
 | `learn_weight` | `0.6` | The most weight the learned counts reach; within `LEARN_WEIGHT`, the scorer's own bound. |
 | `learn_ramp` | `2000` | The typed words at which the learned counts weigh half their most; within `LEARN_RAMP`. |
 | `backoff` | `0.4` | Each step to a shorter context multiplies a score by this; within `BACKOFF`, the scorer's own bound. |
-| `max_word` | `48` | The longest word with chips, in characters; within `MAX_WORD`. |
+| `max_word` | `48` | The longest word with chips, in characters; within `MAX_WORD`, whose top and its gap fit the keyboard's smallest `text_cap` (`TEXT_CAP`). |
 | `max_emails` | `50` | The known emails kept; within `MAX_EMAILS`. |
 | `min_start` | `2` | The typed characters before a known email is offered; within `MIN_START`. |
 | `domains` | five common domains | The domains offered after one `@`, in order; each a domain, at most the end of `DOMAINS`. |

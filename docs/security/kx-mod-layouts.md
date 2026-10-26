@@ -1,7 +1,7 @@
 # Security note: kx-mod-layouts
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02
+- **Last review:** 2026-10-26 (P7 fix pass: the short keys follow `fits_iso`, and the adapter's key-text cap is `KEY_TEXT_UNITS`)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-layouts`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -24,8 +24,8 @@ No typed text, clipboard content or secret passes through this module.
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| Layout list, layout in front, key texts and facts from `LayoutSource` | Duplicate ids dropped; a layout in front that is not installed is never shown; a short or empty answer only leaves keys out | Key texts capped by the adapter (`TEXT_CAP`); keys read only for `scans.toml`'s codes, once per layout | Property tests over the fake (random adds, removals, switches and failures) |
-| `[layouts] short` | `deny_unknown_fields`; keys are two or three lower-case ISO 639 letters; names may not be blank | Names hold at most `MAX_SHORT_CHARS` characters; the kernel caps the settings file (`MAX_FILE_BYTES`) | No |
+| Layout list, layout in front, key texts and facts from `LayoutSource` | Duplicate ids dropped; a layout in front that is not installed is never shown; a short or empty answer only leaves keys out | Key texts capped by the adapter (`KEY_TEXT_UNITS`); keys read only for `scans.toml`'s codes, once per layout | Property tests over the fake (random adds, removals, switches and failures) |
+| `[layouts] short` | `deny_unknown_fields`; keys are codes `fits_iso` takes: two or three lower-case ISO 639 letters, never a reserved device name (`RESERVED_NAMES`); names may not be blank | Names hold at most `MAX_SHORT_CHARS` characters; the kernel caps the settings file (`MAX_FILE_BYTES`) | No |
 | `scans.toml` | Compiled in; parsed with `deny_unknown_fields` and a range check, and a broken table fails the start | Fixed at build time | N/A |
 
 ## Threats (STRIDE-lite)

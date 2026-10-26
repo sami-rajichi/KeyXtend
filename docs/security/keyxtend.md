@@ -1,7 +1,7 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-25 (P7 docs: the box watch, word packs and sealed store it provides, the packs' folders and the sealed folder)
+- **Last review:** 2026-10-26 (P7 security review: what the sealed tag defeats, the set-aside rule and the crates P7 ships)
 - **Status:** Reviewed
 - **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the box watch, word packs and sealed store it provides for word prediction (`words.rs`), the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
@@ -46,7 +46,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - A same-user program that holds `Local\KeyXtend.Running` without a command window makes the next copy stop with "another copy runs but did not answer", after its tries; it never starts a second keyboard. Each try claims again first, so a copy that quits meanwhile leaves the session to the new one.
 - **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag, or, in the gate-only build only, `--sim-input` alone or before `--show`.
   - The word packs are files beside the program, so whoever can write that folder can change the seed words; every pack passes `Pack::parse` and holds no user data (`kx-mod-predict.md`). An installed copy's folder is writable by administrators only.
-  - A changed or swapped sealed file fails its tag and is set aside (`kx-crypto.md`).
+  - A changed or swapped sealed file fails its tag and is set aside (`kx-crypto.md`), unless a program running as this user unwrapped the key and sealed it. A blob that opens but does not read is copied to its aside blob by predict before any save (`kx-mod-predict.md`).
 - **Logging / repudiation:**
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
@@ -56,7 +56,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004), and tidy D7 refuses kx-theme's `files` feature, its asset and WAV readers, in the app's normal tree, so the uiAccess app links no media parser.
   - P6 added no outside crate: `kx-mod-power` is the lock file's one new package, and the adapter's new `serde` and `toml` were already in the app's tree.
-  - P7 adds `kx-crypto` with RustCrypto's `chacha20poly1305`, `zeroize` and `getrandom`, `fst` for the packs' lexicon, and `windows-core` in the adapter; none reaches the network, and `THIRD_PARTY.md` records each.
+  - P7 adds `kx-crypto` with RustCrypto's `chacha20poly1305` and the crates under it (`chacha20`, `poly1305`, `aead`, `universal-hash`, `cipher`, `inout`, `hybrid-array`, `crypto-common`, `typenum`, `cpufeatures`, `block-buffer`, `ctutils`, `cmov`), `zeroize` and `getrandom`, `fst` for the packs' lexicon, and `windows-core` in the adapter; none reaches the network, and `THIRD_PARTY.md` records each.
   - The stage copies into `PACK_DIR` the packs the source index lists, the index and the credit files, and its words check refuses a stage that lacks one or holds any other file there. It holds the download, measured deflated, to `[workspace.metadata.stage] max_mb`, and the installed size to `[workspace.metadata.devtools] install_max_mb` (`dev-tools.md`).
   - The app makes one `SealedFiles` for its data folder, as two stores over one folder could race on the key file (`kx-crypto.md`).
   - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
