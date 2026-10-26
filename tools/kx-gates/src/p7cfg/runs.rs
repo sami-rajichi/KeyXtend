@@ -91,9 +91,20 @@ mod tests {
         g.switch_wait_ms + typed + g.chip_wait_ms + g.settle_ms + g.text_wait_ms
     }
 
-    /// The characters of `lang`'s prefix.
-    fn keys(g: &G27, lang: &str) -> usize {
-        g.case(lang).map_or(0, |k| k.prefix.chars().count())
+    /// The longest case prefix's characters.
+    fn longest(g: &G27) -> usize {
+        let all = g.cases.iter().map(|k| keys(g, &k.lang));
+        all.max().expect("cases")
+    }
+
+    /// `g8 predict` worked out apart from `predict_ms`: both copies, the judged churn at its own prefix, the mixed
+    /// churn at the longest, and a settle before each churn's two readings.
+    fn predict(c: &GatesConfig) -> u64 {
+        let (g, p) = (&c.g27, &c.g8_predict);
+        let copy = c.g8.start_wait_ms + c.g8.warm_ms + end(c);
+        let judged = (p.warm_words + p.words) as u64 * word(g, keys(g, &p.lang));
+        let mixed = (g.cases.len() + p.mixed_words) as u64 * word(g, longest(g));
+        2 * copy + judged + mixed + 2 * 2 * p.settle_ms
     }
 
     #[test]
@@ -111,21 +122,17 @@ mod tests {
     #[test]
     fn g8_predict_counts_both_copies_and_both_churns() {
         let c = load().expect("loads");
-        let (g, p) = (&c.g27, &c.g8_predict);
-        let copy = c.g8.start_wait_ms + c.g8.warm_ms + end(&c);
-        let judged = (p.warm_words + p.words) as u64 * word(g, keys(g, &p.lang));
-        let longest = g.cases.iter().map(|k| keys(g, &k.lang)).max();
-        let mixed_word = word(g, longest.expect("cases"));
-        let mixed = (g.cases.len() + p.mixed_words) as u64 * mixed_word;
-        let settles = 2 * 2 * p.settle_ms;
-        assert_eq!(
-            predict_ms(&c),
-            2 * copy + judged + mixed + settles,
-            "a settle before each churn's two readings"
-        );
+        let g = &c.g27;
+        assert_eq!(predict_ms(&c), predict(&c));
+        let short = g.cases.iter().min_by_key(|k| keys(g, &k.lang));
+        let short = short.expect("cases");
+        assert!(keys(g, &short.lang) < longest(g), "a shorter prefix");
+        let mut other = c.clone();
+        other.g8_predict.lang.clone_from(&short.lang);
+        assert_eq!(predict_ms(&other), predict(&other), "its own prefix");
         let mut more = c.clone();
         more.g8_predict.mixed_words += 1;
-        assert_eq!(predict_ms(&more), predict_ms(&c) + mixed_word);
+        assert_eq!(predict_ms(&more), predict_ms(&c) + word(g, longest(g)));
     }
 
     #[test]

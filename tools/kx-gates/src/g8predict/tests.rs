@@ -73,6 +73,26 @@ fn the_judged_churn_decides_and_the_mixed_one_is_only_read() {
 }
 
 #[test]
+fn a_mixed_churn_that_missed_a_word_never_makes_the_result_partial() {
+    let cfg = crate::config::load().expect("loads");
+    let judged = typed(memory(60.0, 80.0), memory(60.5, 80.5));
+    let mut mixed = judged.clone();
+    mixed.picked -= 1;
+    mixed.note = Some("no chip offered the fr prefix".into());
+    let both = Churns {
+        judged,
+        mixed: Ok(mixed),
+    };
+    let on = Ok(side_of(memory(64.0, 90.0), Some(both), Gone::Quit));
+    let off = Ok(side_of(memory(62.0, 87.0), None, Gone::Quit));
+    let v = result(&cfg, &on, &off, &Ok(()));
+    assert_eq!(v["pass"], true, "not partial: {v}");
+    assert_eq!(v["typing_mixed"]["note"], "no chip offered the fr prefix");
+    let line = v["mixed_reading"].as_str().expect("a reading");
+    assert!(line.contains("29 of 30"), "{line}");
+}
+
+#[test]
 fn the_result_passes_on_two_clean_quits_and_is_partial_after_a_missed_word() {
     let cfg = crate::config::load().expect("loads");
     let whole = typed(memory(60.0, 80.0), memory(60.5, 80.5));
@@ -114,9 +134,9 @@ fn an_off_side_never_started_after_a_stuck_copy_fails_the_result() {
 
 #[test]
 fn the_predict_part_is_the_on_reading_less_the_off_reading() {
-    let got = less(memory(64.5, 90.0), memory(62.5, 87.0));
+    let got = memory(64.5, 90.0).less(memory(62.5, 87.0));
     assert_eq!(got, memory(2.0, 3.0));
-    let line = reading(less(memory(64.5, 90.0), memory(62.3, 87.0)), 2.0);
+    let line = reading(memory(64.5, 90.0).less(memory(62.3, 87.0)), 2.0);
     assert!(line.contains("2.2 MB working set"), "{line}");
     assert!(
         line.contains("3.0 MB commit") && line.contains("about 2.0 MB"),
@@ -126,7 +146,7 @@ fn the_predict_part_is_the_on_reading_less_the_off_reading() {
 
 #[test]
 fn a_predict_part_below_nothing_still_reads_as_a_number() {
-    let line = reading(less(memory(60.0, 80.0), memory(60.5, 80.0)), 2.0);
+    let line = reading(memory(60.0, 80.0).less(memory(60.5, 80.0)), 2.0);
     assert!(line.contains("-0.5 MB working set"), "{line}");
 }
 

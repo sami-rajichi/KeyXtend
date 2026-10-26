@@ -25,14 +25,6 @@ pub const RUNS: usize = 2;
 const STILL_RUNS: &str =
     "the predict-on copy could not be ended, so no cold start was made with predict off; close it";
 
-/// Memory `a` less memory `b`: the predict part (on less off), or a churn's growth (after less before).
-pub(crate) fn less(a: Memory, b: Memory) -> Memory {
-    Memory {
-        working_mb: a.working_mb - b.working_mb,
-        commit_mb: a.commit_mb - b.commit_mb,
-    }
-}
-
 /// The reading line: the predict part beside the owner's figure, in MB.
 pub(crate) fn reading(part: Memory, owner_mb: f64) -> String {
     let (w, c) = (part.working_mb, part.commit_mb);
@@ -44,7 +36,7 @@ pub(crate) fn reading(part: Memory, owner_mb: f64) -> String {
 
 /// The mixed churn's line: its growth in MB over the words it picked; a reading, never a fail.
 pub(crate) fn mixed_reading(t: &Typed) -> String {
-    let grown = less(t.after, t.before);
+    let grown = t.after.less(t.before);
     let (w, c, picked, words) = (grown.working_mb, grown.commit_mb, t.picked, t.words);
     format!(
         "mixed typing grew {w:.MB_DECIMALS$} MB working set, {c:.MB_DECIMALS$} MB commit over {picked} of {words} \
@@ -103,10 +95,10 @@ fn gone(s: &Result<Side, Failed>) -> Option<Gone> {
 }
 
 /// A churn for the result line, or why it gave none; none when it never ran.
-type Shown = Option<Result<Typed, String>>;
+type Outcome = Option<Result<Typed, String>>;
 
 /// The on side's judged churn and its mixed one; a failed typing run is the judged churn's error alone.
-fn typing(on: &Result<Side, Failed>) -> (Shown, Shown) {
+fn typing(on: &Result<Side, Failed>) -> (Outcome, Outcome) {
     let churns = on.as_ref().ok().and_then(|s| s.typed.clone());
     let mixed = churns.clone().and_then(Result::ok).map(|c| c.mixed);
     (churns.map(|r| r.map(|c| c.judged)), mixed)
@@ -114,7 +106,7 @@ fn typing(on: &Result<Side, Failed>) -> (Shown, Shown) {
 
 /// The result line from both sides and the settings' put-back. It passes when both readings exist, the judged churn
 /// kept within its limit, both copies quit by themselves and the owner's file came back; a judged churn that missed a
-/// word is partial at best. The mixed churn only reports.
+/// word is partial at best, and the mixed churn only reports.
 fn result(
     cfg: &GatesConfig,
     on: &Result<Side, Failed>,
@@ -123,7 +115,7 @@ fn result(
 ) -> Value {
     let (limit, owner_mb) = (cfg.g8.churn_growth_mb, cfg.g8_predict.owner_mb);
     let memory = |s: &Result<Side, Failed>| s.as_ref().ok().and_then(|s| s.memory.clone().ok());
-    let split = memory(on).zip(memory(off)).map(|(a, b)| less(a, b));
+    let split = memory(on).zip(memory(off)).map(|(a, b)| a.less(b));
     let (typed, mixed) = typing(on);
     let churned = typed.clone().and_then(Result::ok);
     let parts = churned.as_ref().map(|t| typing_parts(t, limit));

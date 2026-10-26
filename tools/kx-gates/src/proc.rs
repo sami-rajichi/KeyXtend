@@ -31,6 +31,16 @@ pub struct Memory {
     pub commit_mb: f64,
 }
 
+impl Memory {
+    /// This less `b`, each figure on its own: a growth (after less before) or a part (on less off).
+    pub fn less(self, b: Self) -> Self {
+        Self {
+            working_mb: self.working_mb - b.working_mb,
+            commit_mb: self.commit_mb - b.commit_mb,
+        }
+    }
+}
+
 /// A process handle and the process's id; the handle closes on drop.
 pub struct Process {
     handle: HANDLE,

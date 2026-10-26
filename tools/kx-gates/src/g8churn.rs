@@ -130,10 +130,10 @@ pub(crate) fn growth(
     after: Memory,
     most: f64,
 ) -> [Part; 2] {
-    let [working, commit] = names;
+    let ([working, commit], grown) = (names, after.less(before));
     [
-        Part::at_most(working, Some(after.working_mb - before.working_mb), most),
-        Part::at_most(commit, Some(after.commit_mb - before.commit_mb), most),
+        Part::at_most(working, Some(grown.working_mb), most),
+        Part::at_most(commit, Some(grown.commit_mb), most),
     ]
 }
 

@@ -80,10 +80,10 @@ fn the_mixed_churn_warms_one_word_per_case_then_takes_the_cases_in_turn() {
 
 #[test]
 fn a_judged_churn_a_failed_word_end_stopped_runs_no_mixed_churn() {
-    let churns = after(typed(0, true), || panic!("no mixed churn"));
+    let churns = then_mixed(typed(0, true), || panic!("no mixed churn"));
     let e = churns.mixed.expect_err("not run");
     assert_eq!(e, NO_MIXED);
-    let churns = after(typed(29, false), || Ok(typed(30, false)));
+    let churns = then_mixed(typed(29, false), || Ok(typed(30, false)));
     assert_eq!(
         churns.mixed,
         Ok(typed(30, false)),

@@ -1,6 +1,6 @@
 //! G8's typing churns (`g8 predict`): words typed through the product's chips in a target-window G8 starts, never
 //! Notepad. The judged churn types `[g8_predict] lang`'s case alone; the mixed churn then takes every `[g27]` case in
-//! turn, as a reading only. Each reads private memory after its warm-up and again after its measured words.
+//! turn, as a reading only.
 #![cfg(windows)]
 
 use serde::Serialize;
@@ -47,7 +47,7 @@ impl Typed {
 }
 
 /// Both churns: the judged one, and the mixed one, which never fails the run.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Churns {
     /// The churn of `[g8_predict] lang`'s case, judged against `[g8] churn_growth_mb`.
     pub judged: Typed,
@@ -195,7 +195,7 @@ fn measure(
 }
 
 /// Both churns from the judged one; the mixed one runs unless a failed word end stopped the judged one.
-fn after(judged: Typed, mixed: impl FnOnce() -> Result<Typed, String>) -> Churns {
+fn then_mixed(judged: Typed, mixed: impl FnOnce() -> Result<Typed, String>) -> Churns {
     let mixed = if judged.stopped {
         Err(NO_MIXED.to_string())
     } else {
@@ -208,7 +208,9 @@ fn after(judged: Typed, mixed: impl FnOnce() -> Result<Typed, String>) -> Churns
 fn both(ctx: &Ctx, t: &Typist, process: &Process) -> Result<Churns, String> {
     let (g, p) = (&ctx.cfg.g27, &ctx.cfg.g8_predict);
     let judged = churn(ctx, t, process, &Plan::judged(g, p)?)?;
-    Ok(after(judged, || churn(ctx, t, process, &Plan::mixed(g, p))))
+    Ok(then_mixed(judged, || {
+        churn(ctx, t, process, &Plan::mixed(g, p))
+    }))
 }
 
 /// Runs both typing churns on the product G8 started, held as `process`, in a fresh target-window; the window's first
