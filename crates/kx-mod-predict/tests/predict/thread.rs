@@ -202,7 +202,7 @@ impl WordPacks for Broken {
 }
 
 #[test]
-fn a_panic_on_the_thread_empties_the_lane_lets_presses_go_and_tells_the_user() {
+fn a_panic_on_the_thread_stops_the_lane_lets_presses_go_and_tells_the_user() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
     let known = learner("en", &["hello", "help"], DAY);
     store.plant(&blob("en"), known.to_bytes());
@@ -222,7 +222,7 @@ fn a_panic_on_the_thread_empties_the_lane_lets_presses_go_and_tells_the_user() {
     let wanted: Vec<bool> = presses.try_iter().map(|p| p.on).collect();
     assert_eq!(wanted, [false], "presses let go");
     let last = lanes.try_iter().last().map(|l| l.lane);
-    assert_eq!(last, Some(Lane::Empty), "the chips went");
+    assert_eq!(last, Some(Lane::Stopped), "the chips and the menu went");
     run.stop();
 }
 

@@ -17,6 +17,7 @@ use kx_module_api::{
 use kx_platform_fake::{
     FakeFieldWatch, FakePointerHook, FakePowerDialog, FakeScrollTarget, FakeSealedStore,
 };
+use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -76,7 +77,7 @@ impl<K: ServiceKey> Module for Probe<K> {
 }
 
 /// The shipped modules under whose id a probe gets `service` from the platform, with the app's grants.
-fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> Vec<ModuleId> {
+fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> BTreeSet<ModuleId> {
     let shipped = modules(&rig.load().hub);
     let grants = policy(&shipped);
     let gets = |id: ModuleId| {
@@ -150,68 +151,67 @@ fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
 fn the_scroll_target_reaches_only_the_scroll_module() {
     let target: Arc<dyn ScrollTarget> = Arc::new(FakeScrollTarget::new());
     let got = reached::<ScrollTargetKey>(&Rig::new(), &target);
-    assert_eq!(got, [kx_mod_scroll::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_scroll::ID]));
 }
 
 #[test]
 fn the_power_dialog_reaches_only_the_power_module() {
     let dialog: Arc<dyn PowerDialog> = Arc::new(FakePowerDialog::new());
     let got = reached::<PowerDialogKey>(&Rig::new(), &dialog);
-    assert_eq!(got, [kx_mod_power::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_power::ID]));
 }
 
 #[test]
 fn the_box_watch_reaches_only_the_modules_that_read_typed_text() {
     let watch: Arc<dyn FieldWatch> = Arc::new(FakeFieldWatch::new());
     let got = reached::<FieldWatchKey>(&Rig::new(), &watch);
-    let want = [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID];
-    assert_eq!(got, want, "ADR-0033");
+    assert_eq!(got, holders(Capability::ReadFocusedText), "ADR-0033");
 }
 
 #[test]
 fn the_sealed_store_reaches_only_the_predict_module() {
     let store: Arc<dyn SealedStore> = Arc::new(FakeSealedStore::new());
     let got = reached::<SealedStoreKey>(&Rig::new(), &store);
-    assert_eq!(got, [kx_mod_predict::ID], "ADR-0033");
+    assert_eq!(got, BTreeSet::from([kx_mod_predict::ID]), "ADR-0033");
 }
 
 #[test]
 fn the_mouse_hook_still_reaches_only_the_mouse_module() {
     let hook: Arc<dyn PointerHook> = Arc::new(FakePointerHook::new());
     let got = reached::<PointerHookKey>(&Rig::new(), &hook);
-    assert_eq!(got, [kx_mod_mouse::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_mouse::ID]));
 }
 
 #[test]
 fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
-    let shipped = modules(&Rig::new().load().hub);
-    let holders: Vec<_> = shipped
-        .iter()
-        .map(|m| m.manifest())
-        .filter(|m| m.capabilities.contains(&Capability::KeyboardUi))
-        .map(|m| m.id)
-        .collect();
-    let want = [kx_mod_keyboard::ID, kx_mod_mouse::ID, kx_ui::ID];
+    let want = BTreeSet::from([kx_mod_keyboard::ID, kx_mod_mouse::ID, kx_ui::ID]);
     assert_eq!(
-        holders, want,
+        holders(Capability::KeyboardUi),
+        want,
         "ADR-0033: the ui, the face's provider and the notes' sender"
     );
 }
 
 #[test]
 fn read_focused_text_goes_only_to_the_keyboard_predict_and_the_ui() {
-    let shipped = modules(&Rig::new().load().hub);
-    let holders: Vec<_> = shipped
-        .iter()
-        .map(|m| m.manifest())
-        .filter(|m| m.capabilities.contains(&Capability::ReadFocusedText))
-        .map(|m| m.id)
-        .collect();
+    let want = BTreeSet::from([kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID]);
     assert_eq!(
-        holders,
-        [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID],
+        holders(Capability::ReadFocusedText),
+        want,
         "ADR-0033: the typist, prediction and the chip lane's drawer"
     );
+}
+
+/// The shipped modules whose manifest declares `cap`, in any order.
+fn holders(cap: Capability) -> BTreeSet<ModuleId> {
+    let shipped = modules(&Rig::new().load().hub);
+    let declares = |m: &&Manifest| m.capabilities.contains(&cap);
+    shipped
+        .iter()
+        .map(|m| m.manifest())
+        .filter(declares)
+        .map(|m| m.id)
+        .collect()
 }
 
 #[test]

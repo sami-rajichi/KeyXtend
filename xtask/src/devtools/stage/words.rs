@@ -63,18 +63,15 @@ pub(crate) fn inside(file: &Path) -> bool {
 }
 
 /// The files a packs folder `dir` holds: the index, each pack it lists, then `credits`; a refusal names them under
-/// `shown`. A missing index reads as missing, any other read error keeps its own text, and one listing no pack is
-/// refused, as the words build refuses to write it.
+/// `shown`. A missing index reads as missing, any other read error keeps its own text, and one the index's rules refuse
+/// (one listing no pack too) is a bad index.
 fn names(dir: &Path, credits: &[String], shown: &Path) -> Result<Vec<String>, DevError> {
     let index = paths::text(&shown.join(PACK_INDEX));
     let bytes = std::fs::read(dir.join(PACK_INDEX)).map_err(|e| match e.kind() {
         ErrorKind::NotFound => DevError::from(StageError::NoWords(index.clone())),
         _ => DevError::Io(format!("{index}: {e}")),
     })?;
-    let isos = PackIndex::read(&bytes)
-        .ok()
-        .filter(crate::words::lists_a_pack)
-        .ok_or(StageError::BadIndex(index))?;
+    let isos = PackIndex::read(&bytes).map_err(|_| StageError::BadIndex(index))?;
     let packs = isos.packs().filter_map(pack_file);
     let names = std::iter::once(PACK_INDEX.to_string()).chain(packs);
     Ok(names.chain(credits.iter().cloned()).collect())

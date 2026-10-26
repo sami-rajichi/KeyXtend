@@ -26,6 +26,8 @@ mod scroll;
 #[cfg(feature = "qt")]
 mod sound;
 mod spots;
+#[path = "../shared/suggest.rs"]
+mod suggest;
 mod texts;
 mod tray;
 mod words;

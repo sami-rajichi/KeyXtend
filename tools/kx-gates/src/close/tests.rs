@@ -117,14 +117,14 @@ fn a_quit_that_did_not_end_keeps_the_backup_and_says_so() {
     let (_dir, files, side) = left();
     let back = |ended| ownset::recover(&files, &side, ended, || false);
     let hung = || Ok(Some((EXE.to_string(), false)));
-    let v = closed(hung, back, &side).expect("a result");
+    let v = closed(hung, back, Ok(side.clone())).expect("a result");
     let e = v["settings_error"].as_str().unwrap_or_default();
     assert!(e.contains(&side.display().to_string()), "{v}");
     assert_eq!(v["pass"].as_bool(), Some(false));
     assert!(side.exists(), "a copy still exiting may yet save");
     assert_ne!(text(&files), OWNER, "nothing restored under it");
     let quit = || Ok(Some((EXE.to_string(), true)));
-    let v = closed(quit, back, &side).expect("a result");
+    let v = closed(quit, back, Ok(side.clone())).expect("a result");
     assert_eq!(v["settings_back"].as_bool(), Some(true), "{v}");
     assert_eq!((text(&files), side.exists()), (OWNER.to_string(), false));
 }
@@ -134,9 +134,25 @@ fn with_no_copy_and_no_backup_it_names_the_place_it_checked() {
     let dir = TempDir::new("gates-close").expect("a temp folder");
     let (files, side) = (Files::new(dir.path()), dir.path().join("side.json"));
     let back = |ended| ownset::recover(&files, &side, ended, || false);
-    let e = closed(|| Ok(None), back, &side).expect_err("nothing to do");
+    let e = closed(|| Ok(None), back, Ok(side.clone())).expect_err("nothing to do");
     assert!(e.contains(&side.display().to_string()), "{e}");
     let refused = || Err(Unasked::from(UiError::Refused(5)));
-    let e = closed(refused, |_| panic!("no restore"), &side).expect_err("refused");
+    let e = closed(refused, |_| panic!("no restore"), Ok(side.clone())).expect_err("refused");
     assert!(e.contains("uiAccess"), "{e}");
+}
+
+#[test]
+fn a_refused_backup_name_still_asks_the_copy_to_quit_first_then_says_why() {
+    let asked = std::cell::Cell::new(false);
+    let quit = || {
+        asked.set(true);
+        Ok(Some((EXE.to_string(), true)))
+    };
+    let bad = Err("the backup is named as the results file".to_string());
+    let v = closed(quit, |_| panic!("no restore"), bad).expect("a result");
+    assert!(asked.get(), "the copy was asked to quit");
+    assert_eq!(v["program"].as_str(), Some(EXE));
+    let e = v["settings_error"].as_str().unwrap_or_default();
+    assert!(e.contains("results file"), "{v}");
+    assert_eq!(v["pass"].as_bool(), Some(false));
 }

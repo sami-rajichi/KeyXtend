@@ -145,7 +145,7 @@ proptest! {
         let told = rig.presses();
         prop_assert!(told.windows(2).all(|w| w[0] != w[1]), "presses told twice: {told:?}");
         rig.stop();
-        prop_assert_eq!(rig.lane().lane, Lane::Empty);
+        prop_assert_eq!(rig.lane().lane, Lane::Stopped);
         prop_assert_eq!(rig.presses().last().copied(), Some(false), "a stop lets presses go");
     }
 }

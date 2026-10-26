@@ -12,6 +12,7 @@ use kx_platform_fake::{
 };
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
+use kx_test_support::tempdir::TempDir;
 use kx_theme::assets::{ICON_EXT, SYSTEM_FONTS, bundle, icon_url};
 use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
@@ -258,18 +259,17 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
 #[test]
 fn the_bundle_is_laid_out_as_the_app_resources_hold_it() {
     let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
-    let mirror = crate_path(MIRROR);
-    if mirror.exists() {
-        std::fs::remove_dir_all(&mirror).expect("the old layout goes");
-    }
+    let fresh = TempDir::new("qmltest-assets").expect("a folder of its own");
     for f in b.icons.iter().chain(&b.fonts) {
-        let to = mirror.join(&f.name);
+        let to = fresh.path().join(&f.name);
         std::fs::create_dir_all(to.parent().expect("a folder")).expect("the folder is made");
         std::fs::copy(&f.file, &to).expect("the file is copied");
     }
+    crate::plugin::lay_out(fresh.path());
+    hand_over(fresh.path());
+    let mirror = crate_path(MIRROR);
+    crate::sync::sync(fresh.path(), &mirror);
     let icon = b.icons.first().expect("an icon");
     assert!(mirror.join(&icon.name).is_file());
-    crate::plugin::lay_out(&mirror);
-    hand_over(&mirror);
     assert!(mirror.join(PICTURES_QML).is_file());
 }

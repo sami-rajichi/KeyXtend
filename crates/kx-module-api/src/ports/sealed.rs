@@ -8,6 +8,8 @@ use thiserror::Error;
 pub const MIN_BLOB_LEN: usize = 1;
 /// The longest blob name, in bytes.
 pub const MAX_BLOB_LEN: usize = 32;
+/// The largest blob a store seals or opens, 16 MiB; a larger save is `Io`.
+pub const MAX_BLOB_BYTES: usize = 16 * 1024 * 1024;
 /// Names some supported OS refuses as file names (Windows keeps them for devices, even with an extension); no data
 /// is named after one, so data moves between systems, and `fits_iso` refuses them as pack language codes too.
 pub const RESERVED_NAMES: &[&str] = &[

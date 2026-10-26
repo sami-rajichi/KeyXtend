@@ -69,6 +69,13 @@ fn a_small_list_of_a_full_language_is_refused_as_never_read() {
     assert!(matches!(result, Err(WordsError::Manifest(_))), "{result:?}");
 }
 
+#[test]
+fn a_full_language_whose_own_list_is_its_small_list_is_kept() {
+    let text = fixture::manifest_text("").replace("w/large_fr.gz", "w/small_fr.gz");
+    let manifest = Manifest::parse(&text);
+    assert!(manifest.is_ok(), "{manifest:?}");
+}
+
 /// Swaps that each put one rule, text or credits value out of its range.
 const OUT_OF_RANGE: &[(&str, &str)] = &[
     ("max_gap_cb = 100", "max_gap_cb = 0"),

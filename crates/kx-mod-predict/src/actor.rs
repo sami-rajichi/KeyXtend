@@ -135,7 +135,7 @@ pub struct Actor {
     mode: TypingMode,
     tracker: Tracker,
     learner: Option<Learner>,
-    /// The known emails, and whether they are loaded: only while prediction is on.
+    /// The known emails, and whether they are loaded: only while prediction is on, or while a refused save keeps them.
     emails: Emails,
     emails_loaded: bool,
     menu: Menu,

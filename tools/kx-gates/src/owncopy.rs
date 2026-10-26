@@ -13,7 +13,7 @@ use kx_platform_windows::WindowsPlatform;
 use crate::apps::Ctx;
 use crate::copyend::{self, Ended, Gone};
 use crate::g8start::{self, Failed, Started};
-use crate::out::{self, say};
+use crate::out::say;
 use crate::ownset::{self, Kept};
 use crate::p7cfg;
 use crate::product::{self, NAME};
@@ -40,14 +40,14 @@ fn program(ctx: &Ctx) -> PathBuf {
 }
 
 /// The backup of the owner's files: `[owner_settings] backup` in kx-gates' out folder; refused when target-window's
-/// log or the results file has its name, as each start of target-window deletes that log.
+/// log or a gate file (`p7cfg::gate_files`) has its name, as each start of target-window deletes that log.
 pub(crate) fn side(ctx: &Ctx) -> Result<PathBuf, String> {
     let backup = &ctx.cfg.owner_settings.backup;
     let log = ctx.target.log.file_name().map(|n| n.to_string_lossy());
     let taken: Vec<&str> = log
         .iter()
         .map(AsRef::as_ref)
-        .chain([out::RESULTS])
+        .chain(p7cfg::gate_files(ctx.cfg))
         .collect();
     p7cfg::backup_free(backup, &taken)?;
     Ok(ctx.out.join(backup))

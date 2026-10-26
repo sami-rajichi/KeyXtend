@@ -17,6 +17,14 @@ pub enum FieldKind {
     None,
 }
 
+impl FieldKind {
+    /// True when a box of this kind may be read: only a text box is, on every platform.
+    #[must_use]
+    pub fn reads(self) -> bool {
+        self == Self::Text
+    }
+}
+
 /// Told on each focus change; a new `box_id` means a new box.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct FieldChange {
@@ -33,6 +41,14 @@ pub struct FieldConfig {
     pub read_ms: u32,
     /// The longest text one read takes before the cursor, in characters; a longer one is cut to whole words.
     pub read_chars: u16,
+}
+
+impl FieldConfig {
+    /// True when `text` holds at most `read_chars` characters, so one read can check that the box ends with it.
+    #[must_use]
+    pub fn fits(&self, text: &str) -> bool {
+        text.chars().count() <= usize::from(self.read_chars)
+    }
 }
 
 /// What one read of the focused box found.

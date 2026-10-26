@@ -148,15 +148,17 @@ Item {
         onTip: (name, at) => bar.tip(name, at)
     }
 
-    // The words menu's button at the lane's right end; the menu opens on this row, in the chips' place.
+    // The words menu's button at the lane's right end, gone while no module runs; the menu opens on this row, in the
+    // chips' place.
     Button {
         id: menuButton
+        visible: !words.stopped
         anchors.right: rightRow.left
         anchors.rightMargin: bar.sh.gap_px * bar.s
         anchors.verticalCenter: parent.verticalCenter
         icon: bar.lk.icons.words.menu
         name: bar.res.tr("words.menu")
-        uid: bar.res.uid(names.group, "menu")
+        uid: bar.res.uid(names.group, names.ids.menu)
         lit: words.open
         onClicked: words.open = !words.open
     }

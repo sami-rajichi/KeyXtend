@@ -1,6 +1,6 @@
-// The words menu in the chips' place on the top bar's row (spec §6 Controls): Forget a word, Pause or Resume learning,
-// suggestions off or on, and Cancel, each a chip with its icon and short label that sends its ask and closes the menu;
-// its full name is its tip and what readers hear. Short of room, labels drop from the row's end first. It pops in once.
+// The words menu in the chips' place on the top bar's row (spec §6 Controls): Forget, Pause or Resume, suggestions off
+// or on, and Cancel, each a chip with its icon and short label that sends its ask, closes and pops in once as it opens.
+// Its full name is its tip and what readers hear, and short of room, labels drop from the row's end first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -82,7 +82,7 @@ Item {
                             name: menu.res.tr(modelData.key),
                             icon: modelData.icon,
                             ar: menu.rtl,
-                            uid: menu.res.uid(names.group, "menu-" + modelData.id)
+                            uid: menu.res.uid(names.group, names.ids.item + modelData.id)
                         })
                     bare: index >= menu.labelled
                     tipped: true

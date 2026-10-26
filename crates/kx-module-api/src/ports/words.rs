@@ -132,6 +132,8 @@ pub enum Lane {
     Off,
     /// Nothing to offer.
     Empty,
+    /// The module is not running, as before its first lane and after it stops or fails: no chips and no menu.
+    Stopped,
 }
 
 /// The email list's shown page.

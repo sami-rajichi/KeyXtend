@@ -8,7 +8,7 @@ mod files;
 mod guard;
 mod seal;
 
-pub use consts::{KEY_LEN, MAX_BLOB_BYTES};
+pub use consts::KEY_LEN;
 pub use files::SealedFiles;
 pub use guard::{GuardError, KeyGuard};
 pub use seal::{CryptoError, open, seal};

@@ -215,8 +215,8 @@ impl Inner {
         self.caps.shown.is_some_and(|shown| shown != now)
     }
 
-    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode; while our
-    /// flip waits for the tick, the kept view stands, as the system may not have it yet.
+    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode. Within one
+    /// `relabel_ms` of our flip the kept view stands, as the system may not have it yet.
     fn look_caps(&mut self) -> bool {
         let period = Duration::from_millis(self.settings.relabel_ms);
         let now = self.ports.clock.now();
@@ -231,8 +231,8 @@ impl Inner {
         self.caps.seen
     }
 
-    /// After our Caps Lock tap went out, the kept view flips at once and outlasts state reads; the next tick's read
-    /// replaces it, correcting it if the system disagrees.
+    /// After our Caps Lock tap went out, the kept view flips at once. The next tick's read, or a state read one
+    /// `relabel_ms` after the tap, replaces it, whichever comes first.
     fn follow_caps(&mut self) {
         if self.typing.took_caps() {
             self.caps.seen = !self.caps.seen;

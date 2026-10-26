@@ -1,13 +1,14 @@
 // The email list over the keys and the pad (spec §6 Emails; mock-up .langs and .lg-it): one page of known emails, a
 // pager beside them when there is more than one page, and Cancel, never a scroll bar (ADR-0008). Rows read left to
-// right in every language; each tap goes to the hub, which pages and closes it, and it pops in once as it opens.
+// right in every language, Arabic script in the Arabic font; each tap goes to the hub, and it pops in once.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
     id: box
 
-    // The list's page (`{items, page, pages}`, the page from 0), the board whose keys and pad it covers, rows per page,
+    // The list's page (`{items, page, pages}`, the page from 0, each item `{text, arabic}`), the board whose keys and pad
+    // it covers, rows per page,
     // the app's Ui object for the page number, and the look, fonts, icons, texts and size.
     required property var list
     required property var board
@@ -42,7 +43,7 @@ Item {
     height: over.height
     Accessible.role: Accessible.List
     Accessible.name: res.tr("chip.more")
-    Accessible.id: res.uid(names.group, "list")
+    Accessible.id: res.uid(names.group, names.ids.list)
     Component.onCompleted: popIn.restart()
 
     WordNames {
@@ -71,11 +72,12 @@ Item {
             Repeater {
                 model: box.shown
                 delegate: EmailRow {
-                    required property string modelData
+                    required property var modelData
                     required property int index
                     width: rowsBox.width
                     height: (box.height - 2 * box.pad) / box.per
-                    email: modelData
+                    email: modelData.text
+                    arabic: modelData.arabic
                     place: index
                 }
             }
@@ -96,8 +98,8 @@ Item {
                 lk: box.lk
                 res: box.res
                 s: box.s
-                backId: box.res.uid(names.group, "list-back")
-                onId: box.res.uid(names.group, "list-on")
+                backId: box.res.uid(names.group, names.ids.back)
+                onId: box.res.uid(names.group, names.ids.on)
                 onTurn: by => box.ask(box.asks.page, by)
             }
             PageButton {
@@ -108,7 +110,7 @@ Item {
                 lk: box.lk
                 res: box.res
                 s: box.s
-                uid: box.res.uid(names.group, "list-cancel")
+                uid: box.res.uid(names.group, names.ids.close)
                 onClicked: box.ask(box.asks.cancel, 0)
             }
         }
@@ -118,11 +120,12 @@ Item {
     component EmailRow: Item {
         id: r
         required property string email
+        required property bool arabic
         required property int place
         readonly property bool hot: area.containsMouse
         Accessible.role: Accessible.ListItem
         Accessible.name: email
-        Accessible.id: box.res.uid(names.group, "list-row-" + place)
+        Accessible.id: box.res.uid(names.group, names.ids.row + place)
         Accessible.onPressAction: box.ask(box.asks.pick, r.place)
         Hover {
             lk: box.lk
@@ -151,7 +154,7 @@ Item {
             text: r.email
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignLeft
-            font.family: box.res.fam.latin
+            font.family: r.arabic ? box.res.fam.arabic : box.res.fam.latin
             font.pixelSize: box.sh.name_px * box.s
             color: r.hot ? box.lk.sel_ink : box.p.pop_ink
         }

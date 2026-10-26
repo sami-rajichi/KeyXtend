@@ -1,12 +1,14 @@
 //! The OS-neutral half of a field watch (ADR-0033): the run and its thread, each read's deadline, and the rules every
 //! OS shares. An adapter only says what box has focus and whether it is ours (`Probe`), and reads its text (`Reader`).
 
+mod kind;
 mod run;
 
 use std::time::Instant;
 
 use kx_module_api::ports::{FieldChange, FieldError, FieldRead};
 
+pub use kind::{BoxFacts, kind};
 use run::Ask;
 pub use run::{Job, Shared, Tell, spawn};
 

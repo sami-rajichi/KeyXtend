@@ -17,6 +17,8 @@ use crate::win::sleep_ms;
 pub(crate) const READINGS: usize = 2;
 /// Why a churn typed no more words after a missed one.
 const STOPPED: &str = "the missed word could not be ended, so no word followed";
+/// Begins the note of a churn whose warm-up stopped, so no word was measured.
+const WARM_UP: &str = "the warm-up stopped";
 
 /// What the typing churn did, and private memory around its measured words.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -53,30 +55,40 @@ fn turn(cases: &[Case], skip: usize, count: usize) -> impl Iterator<Item = &Case
     cases.iter().cycle().skip(skip).take(count)
 }
 
-/// Types each of `cases` with `word`: how many were picked, and why the first missed one failed. A missed word is
-/// ended with `end` before the next starts, so its prefix never runs into the next; when that end fails, none follows.
+/// What one pass typed: the words picked, why the first missed one failed, and whether a failed word end stopped it.
+#[derive(Debug, Default)]
+struct Pass {
+    picked: usize,
+    note: Option<String>,
+    stopped: bool,
+}
+
+/// Types each of `cases` with `word`. A missed word is ended with `end` before the next starts, so its prefix never
+/// runs into the next; when that end fails, none follows.
 fn tally<'c>(
     cases: impl Iterator<Item = &'c Case>,
     mut word: impl FnMut(&Case) -> Result<(), String>,
     mut end: impl FnMut(&Case) -> Result<(), String>,
-) -> (usize, Option<String>) {
-    let (mut picked, mut note) = (0, None::<String>);
+) -> Pass {
+    let mut pass = Pass::default();
     for case in cases {
         let Err(e) = word(case) else {
-            picked += 1;
+            pass.picked += 1;
             continue;
         };
-        let first = note.take().unwrap_or(e);
-        match end(case) {
-            Ok(()) => note = Some(first),
-            Err(stop) => return (picked, Some(format!("{first}; {STOPPED}: {stop}"))),
+        let first = pass.note.take().unwrap_or(e);
+        if let Err(stop) = end(case) {
+            pass.note = Some(format!("{first}; {STOPPED}: {stop}"));
+            pass.stopped = true;
+            return pass;
         }
+        pass.note = Some(first);
     }
-    (picked, note)
+    pass
 }
 
 /// Types `count` words, the cases taken in turn from the `skip`th on, each missed one ended with the space bar's gap.
-fn words(t: &Typist, cases: &[Case], skip: usize, count: usize) -> (usize, Option<String>) {
+fn words(t: &Typist, cases: &[Case], skip: usize, count: usize) -> Pass {
     tally(
         turn(cases, skip, count),
         |c| word(t, c),
@@ -98,14 +110,34 @@ fn churn(ctx: &Ctx, t: &Typist, process: &Process) -> Result<Typed, String> {
         process.memory().map(|m| (typed, m))
     };
     let [warm, measured] = passes(p.warm_words, p.words);
-    let (_, before) = read(warm)?;
-    let ((picked, note), after) = read(measured)?;
+    measure(p.words, read(warm)?, || read(measured))
+}
+
+/// The churn of `words` measured words from the warm-up pass and its reading, then the measured pass. A warm-up that a
+/// failed word end stopped measures nothing and carries its note.
+fn measure(
+    words: usize,
+    (warm, before): (Pass, Memory),
+    measured: impl FnOnce() -> Result<(Pass, Memory), String>,
+) -> Result<Typed, String> {
+    if warm.stopped {
+        let note = warm.note.map(|n| format!("{WARM_UP}: {n}"));
+        let after = before;
+        return Ok(Typed {
+            words,
+            picked: 0,
+            before,
+            after,
+            note,
+        });
+    }
+    let (pass, after) = measured()?;
     Ok(Typed {
-        words: p.words,
-        picked,
+        words,
+        picked: pass.picked,
         before,
         after,
-        note,
+        note: pass.note,
     })
 }
 
@@ -171,10 +203,44 @@ mod tests {
             ended.borrow_mut().push(c.lang.clone());
             Ok(())
         };
-        let (picked, note) = tally(turn(&cases, 0, 4), word, end);
-        assert_eq!((picked, note.as_deref()), (3, Some("no chip")));
+        let pass = tally(turn(&cases, 0, 4), word, end);
+        assert_eq!((pass.picked, pass.note.as_deref()), (3, Some("no chip")));
+        assert!(!pass.stopped);
         assert_eq!(*typed.borrow(), ["en", "fr", "ar", "en"]);
         assert_eq!(*ended.borrow(), ["fr"], "only the missed word is ended");
+    }
+
+    #[test]
+    fn a_warm_up_a_failed_end_stopped_measures_nothing_and_carries_its_note() {
+        let warm = Pass {
+            picked: 1,
+            note: Some("miss; stopped".into()),
+            stopped: true,
+        };
+        let typed = measure(30, (warm, memory(60.0)), || panic!("no measured pass"));
+        let typed = typed.unwrap();
+        assert_eq!((typed.picked, typed.after), (0, memory(60.0)));
+        assert!(!typed.whole());
+        let note = typed.note.expect("a note");
+        assert!(note.contains(WARM_UP) && note.contains("miss"), "{note}");
+    }
+
+    #[test]
+    fn a_warm_up_that_went_on_is_followed_by_the_measured_words() {
+        let warm = Pass {
+            picked: 2,
+            note: Some("miss".into()),
+            stopped: false,
+        };
+        let measured = Pass {
+            picked: 30,
+            note: None,
+            stopped: false,
+        };
+        let typed = measure(30, (warm, memory(60.0)), || Ok((measured, memory(61.0))));
+        let typed = typed.unwrap();
+        assert!(typed.whole() && typed.note.is_none());
+        assert_eq!((typed.before, typed.after), (memory(60.0), memory(61.0)));
     }
 
     #[test]
@@ -185,9 +251,14 @@ mod tests {
             tries.set(tries.get() + 1);
             Err(format!("miss {}", tries.get()))
         };
-        let (picked, note) = tally(turn(&cases, 0, 5), word, |_| Err("no gap key".into()));
-        assert_eq!((picked, tries.get()), (0, 1), "stopped after the first");
-        let note = note.expect("a note");
+        let pass = tally(turn(&cases, 0, 5), word, |_| Err("no gap key".into()));
+        assert_eq!(
+            (pass.picked, tries.get()),
+            (0, 1),
+            "stopped after the first"
+        );
+        assert!(pass.stopped);
+        let note = pass.note.expect("a note");
         assert!(
             note.contains("miss 1") && note.contains("no gap key"),
             "{note}"

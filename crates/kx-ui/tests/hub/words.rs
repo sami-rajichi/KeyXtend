@@ -6,7 +6,7 @@ mod view;
 
 use crate::logs::lines_of;
 use crate::{FakeFace, Rig};
-use kx_module_api::ports::{Chip, ChipKind, ChipPicked, Lane, ListPage, Suggested, WordsAsk};
+use kx_module_api::ports::{ChipKind, ChipPicked, Lane, ListPage, Suggested, WordsAsk};
 use kx_module_api::{Bus, Capability, Event, EventError, Redacted, Subscription};
 use kx_test_support::host::{FakeCore, FakeHost};
 use kx_ui::{MANIFEST, UiSettings, Wake};
@@ -48,26 +48,7 @@ pub fn heard(rig: &Rig) -> (Bus, Arc<Sent>, Vec<Subscription>) {
     (bus, sent, subs)
 }
 
-/// A chip showing `text`.
-pub fn chip(text: &str, kind: ChipKind, rtl: bool) -> Chip {
-    Chip {
-        text: Redacted::new(text.to_owned()),
-        kind,
-        rtl,
-    }
-}
-
-/// Lane `round` showing `lane`, with learning and prediction on.
-pub fn lane(round: u32, lane: Lane) -> Suggested {
-    Suggested {
-        round,
-        lane,
-        forgetting: false,
-        learn: true,
-        on: true,
-        list: None,
-    }
-}
+pub use crate::suggest::{chip, lane};
 
 /// The lane as the top bar reads it.
 pub fn words(rig: &Rig) -> Value {
@@ -112,10 +93,10 @@ fn listening_asks_for_the_lane_again_so_any_start_order_works() {
 }
 
 #[test]
-fn before_any_lane_prediction_counts_as_on_with_nothing_to_offer() {
+fn before_any_lane_prediction_counts_as_stopped_with_no_menu_to_offer() {
     let rig = Rig::new();
     let shown = words(&rig);
-    assert_eq!(shown["kind"], "empty");
+    assert_eq!(shown["kind"], "stopped");
     assert_eq!(shown["chips"], Value::Array(Vec::new()));
     assert_eq!(
         (&shown["on"], &shown["learn"]),

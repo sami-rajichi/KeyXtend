@@ -114,6 +114,8 @@ fn without_keyboard_ui_the_pointer_notes_neither_go_nor_come() {
     assert_eq!(moved, Err(refused::<PointerMoved>()));
     let heard = bus.subscribe(|_: &AssistNote| {}).err();
     assert_eq!(heard, Some(refused::<AssistNote>()));
+    let heard = bus.subscribe(|_: &PointerMoved| {}).err();
+    assert_eq!(heard, Some(refused::<PointerMoved>()));
 }
 
 #[test]

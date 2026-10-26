@@ -111,12 +111,36 @@ fn a_missing_damaged_or_unreadable_index_ships_nothing_from_its_folder() {
 }
 
 #[test]
-fn an_empty_index_is_unreadable_and_ships_nothing() {
+fn an_empty_index_file_is_refused_by_the_index_rule_and_ships_nothing() {
     let dir = folder("a");
-    assert!(!ships(
-        &packs(std::slice::from_ref(&dir), &[(&dir, Ok(b""))]),
-        "en"
-    ));
+    let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(b""))]);
+    assert_eq!(
+        index(&packs.disk, &dir.join(PACK_INDEX)),
+        Err(PackIndex::read(b"").unwrap_err())
+    );
+    assert!(!ships(&packs, "en"));
+}
+
+#[test]
+fn an_index_file_past_the_index_cap_is_unreadable() {
+    let dir = folder("a");
+    let cap = usize::try_from(MAX_INDEX_BYTES).unwrap();
+    let over = "en\n".repeat(cap).into_bytes();
+    let packs = packs(std::slice::from_ref(&dir), &[(&dir, Ok(&over))]);
+    assert_eq!(
+        index(&packs.disk, &dir.join(PACK_INDEX)),
+        Err(IndexError::Unreadable)
+    );
+    assert!(!ships(&packs, "en"));
+}
+
+#[test]
+fn a_later_folder_whose_index_clashes_with_an_earlier_one_adds_nothing() {
+    let (a, b) = (folder("a"), folder("b"));
+    let dirs = [a.clone(), b.clone()];
+    let packs = packs(&dirs, &[(&a, Ok(b"sh hr\n")), (&b, Ok(b"fr\nsl hr\n"))]);
+    assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
+    assert!(!ships(&packs, "fr") && !ships(&packs, "sl"));
 }
 
 #[test]

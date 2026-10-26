@@ -23,7 +23,7 @@ mod tests {
     use super::*;
     use kx_module_api::ports::{
         ChipPicked, LayoutAsk, LayoutChanged, PointerPressed, PressesAsk, PressesWanted, Suggested,
-        TypeWord, Typed, TypingMode, WordsAsk,
+        TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
     };
     use kx_module_api::{Event, Notice};
 
@@ -53,6 +53,7 @@ mod tests {
         let gated = [
             Typed::CAPABILITY,
             TypingMode::CAPABILITY,
+            TypingModeAsk::CAPABILITY,
             TypeWord::CAPABILITY,
             Suggested::CAPABILITY,
             ChipPicked::CAPABILITY,

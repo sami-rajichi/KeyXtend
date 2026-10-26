@@ -68,7 +68,7 @@ Item {
             const w = win(Words.lanes.list);
             const list = keyed(w.contentItem, "words.list");
             compare(list.Accessible.name, En.texts["chip.more"]);
-            compare(rows(w).map(r => r.Accessible.name), root.page.items);
+            compare(rows(w).map(r => r.Accessible.name), root.page.items.map(i => i.text));
             compare(rows(w).map(r => r.Accessible.id), [0, 1, 2, 3, 4].map(i => "words.list-row-" + i));
             const boxes = Face.board.keys.concat([Face.board.dpad]);
             const left = Math.min(...boxes.map(b => b.x)), top = Math.min(...boxes.map(b => b.y));
@@ -79,7 +79,7 @@ Item {
             while (topmost.parent)
                 topmost = topmost.parent;
             compare(topmost, w.contentItem, "inside the keyboard window");
-            w.ui.lane = listing({ items: root.page.items.concat(["extra@example.org", "more@example.org"]) });
+            w.ui.lane = listing({ items: root.page.items.concat(["extra@example.org", "more@example.org"].map(e => ({ text: e, arabic: false }))) });
             compare(rows(w).length, 5, "never more than a page");
             w.ui.lane = Lanes.some([0]);
             compare(ids(w.contentItem, "words.list").length, 0, "it goes with the list");
@@ -123,10 +123,19 @@ Item {
             waitForRendering(w.contentItem);
             compare(keyed(w.contentItem, "words.list-cancel").Accessible.name, Ar.texts["words.cancel"]);
             const row = rows(w)[0];
-            const text = Board.all(row, o => o.font !== undefined && o.text === root.page.items[0])[0];
+            const text = Board.all(row, o => o.font !== undefined && o.text === root.page.items[0].text)[0];
             compare(text.effectiveHorizontalAlignment, Text.AlignLeft);
             const cancel = keyed(w.contentItem, "words.list-cancel");
             verify(cancel.mapToItem(null, 0, 0).x > row.mapToItem(null, 0, 0).x, "the buttons stay on the right");
+        }
+
+        // A row takes the Arabic font by the script the hub reads (`arabic`), as the same email's chip does.
+        function test_an_arabic_script_row_takes_the_arabic_font() {
+            const arabic = { text: "سارة@example.com", arabic: true };
+            const w = win(listing({ items: [arabic, root.page.items[0]], pages: 1 }));
+            const font = i => Board.all(rows(w)[i], o => o.font !== undefined && o.text.length > 0)[0].font.family;
+            compare(font(0), w.res.fam.arabic);
+            compare(font(1), w.res.fam.latin);
         }
 
         // A click on the list at a key's centre reaches no key; with the list gone, the same click reaches that key.

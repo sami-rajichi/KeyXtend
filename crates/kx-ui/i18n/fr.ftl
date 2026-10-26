@@ -174,9 +174,9 @@ dpad =
     .down = Défiler vers le bas
     .stop = Arrêter le défilement
 
-## La barre de suggestions en haut du clavier : le nom d’une suggestion pour les lecteurs d’écran ($word est son
-## texte), en mode d’oubli aussi, les suggestions Autres adresses et Annuler, le nom de la barre quand elle ne
-## propose rien, et la note d’un champ de mot de passe.
+## La barre de suggestions : le nom d’une suggestion pour les lecteurs d’écran ($word est son texte), aussi en mode
+## d’oubli. Puis les suggestions Autres adresses et Annuler, le nom de la barre vide et la note d’un champ de mot
+## de passe.
 chip =
     .name = Suggestion : { $word }
     .forget-name = Oublier : { $word }

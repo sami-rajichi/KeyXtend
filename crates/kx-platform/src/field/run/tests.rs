@@ -263,3 +263,22 @@ fn a_read_reports_the_kind_the_reader_saw_and_our_own_focus_the_kind_told_last()
         "our own focus"
     );
 }
+
+#[test]
+fn an_end_longer_than_read_chars_answers_none_and_sends_no_read() {
+    let jobs = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::clone(&jobs);
+    let (mut run, shared, _) = started(LONG_MS, move |inbox| {
+        for job in inbox {
+            seen.fetch_add(1, Ordering::SeqCst);
+            if let Ask::Ends { reply, .. } = job.0 {
+                let _ = reply.send(Ok(Some(true)));
+            }
+        }
+    });
+    shared.moved(&Script, &other(FieldKind::Text, 1));
+    let end = |n: u16| Redacted::new("ب".repeat(usize::from(n)));
+    assert_eq!(run.ends_with(&end(CHARS)), Some(true), "at the cap");
+    assert_eq!(run.ends_with(&end(CHARS + 1)), None, "past the cap");
+    assert_eq!(jobs.load(Ordering::SeqCst), 1);
+}

@@ -8,10 +8,10 @@ pub const HIDDEN_MARKS: [char; 14] = [
     '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
 
-/// Characters that draw nothing, as first and last of each run: the soft hyphen, the Hangul fillers, the Mongolian
-/// vowel separator, the zero-width space, the word joiner and invisible operators, the deprecated inhibitors, the BOM,
-/// the interlinear annotation marks, the shorthand and musical format controls, and the tags. ZWNJ and ZWJ stay out,
-/// as Persian words and emoji need them.
+/// Characters that draw nothing, as first and last of each run: `Default_Ignorable` ones (the soft hyphen, the Hangul
+/// filler letters, the Mongolian vowel separator, the zero-width space, the word joiner and invisible operators, the
+/// deprecated inhibitors, the BOM, the shorthand and musical format controls, the tags) and the interlinear annotation
+/// formats. ZWNJ and ZWJ stay out, as Persian words and emoji need them.
 pub const INVISIBLE: [(char, char); 14] = [
     ('\u{ad}', '\u{ad}'),
     ('\u{115f}', '\u{1160}'),
@@ -29,8 +29,9 @@ pub const INVISIBLE: [(char, char); 14] = [
     ('\u{e0020}', '\u{e007f}'),
 ];
 
-/// True for a control character, line breaks included, one of `HIDDEN_MARKS`, or an `INVISIBLE` format character.
-/// Logs escape these characters, notices and chips drop them, and the keyboard types no word holding one.
+/// True for a control character, line breaks included, one of `HIDDEN_MARKS`, or an `INVISIBLE` character, which may
+/// be a format or a letter (the Hangul fillers). Logs escape them, notices and chips drop them, and the keyboard types
+/// no word holding one.
 #[must_use]
 pub fn is_hidden(c: char) -> bool {
     let invisible = INVISIBLE

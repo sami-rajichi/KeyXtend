@@ -80,7 +80,7 @@ impl Actor {
     /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a failed read counts
     /// as no context, and another kind the read saw wins at once.
     pub(super) fn read(&mut self, seed: Option<&Pack<'_>>) {
-        if !self.settings.on || self.moved() || self.kind != FieldKind::Text {
+        if !self.settings.on || self.moved() || !self.kind.reads() {
             return;
         }
         let Some(run) = self.ports.field.as_mut() else {

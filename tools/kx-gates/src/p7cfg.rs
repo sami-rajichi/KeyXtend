@@ -232,12 +232,18 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
             "owner_settings.backup must be a plain file name, in the out folder".to_string(),
         );
     }
-    backup_free(&c.owner_settings.backup, &[out::RESULTS])?;
+    backup_free(&c.owner_settings.backup, &gate_files(c))?;
     let target = AppKind::Target.name();
     apps::focus_class(target, c.app(target)?)?;
     held_fits(c, "g21_product.case: G21's product half", runs::g21_ms(c))?;
     held_fits(c, "g27.cases: G27", runs::g27_ms(c))?;
     c.g8_predict.check(c)
+}
+
+/// The out folder's files, besides run files, that a gate deletes or writes: the results file and both `PresentMon`
+/// CSVs `c` names.
+pub(crate) fn gate_files(c: &GatesConfig) -> [&str; 3] {
+    [out::RESULTS, &c.g8.presentmon, &c.g12.presentmon]
 }
 
 /// Refuses a backup name a gate's own clean-up may delete or append to: one of `taken`, or a run's own file, which

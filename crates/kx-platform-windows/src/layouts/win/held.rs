@@ -2,7 +2,7 @@
 //! Ctrl makes a letter key type its control character and a digit key nothing, and Win or Alt alone change nothing.
 
 use super::{Win32, WinLayouts};
-use crate::layouts::{Os, TEXT_CAP, state};
+use crate::layouts::{KEY_TEXT_UNITS, Os, state};
 use kx_module_api::ports::{LayoutId, LayoutSource, Scan};
 use std::ops::RangeInclusive;
 
@@ -27,12 +27,12 @@ fn keys(layout: LayoutId) -> impl Iterator<Item = (Scan, u16)> {
 }
 
 /// Windows' answer for `key`, virtual key `vk`, in `layout` with the scan codes `held` down: the count and the text.
-fn typed(layout: LayoutId, key: Scan, vk: u16, held: &[u16]) -> (i32, [u16; TEXT_CAP]) {
+fn typed(layout: LayoutId, key: Scan, vk: u16, held: &[u16]) -> (i32, [u16; KEY_TEXT_UNITS]) {
     let vks: Vec<u16> = held
         .iter()
         .map(|&h| Win32.vk_of(Scan::new(h), layout))
         .collect();
-    let mut buf = [0; TEXT_CAP];
+    let mut buf = [0; KEY_TEXT_UNITS];
     let n = Win32.to_unicode(vk, key, &state(&vks, false), layout, &mut buf);
     (n, buf)
 }

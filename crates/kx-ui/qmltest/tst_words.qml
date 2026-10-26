@@ -1,6 +1,5 @@
 // The chip lane on the top bar, drawn from the lanes the hub writes: chips fit whole, best first from the left, Arabic
-// in its font right to left; clicks reach the hub; the lock note, forget mode and its names, Undo, More and the ids
-// gates find.
+// script in its font; clicks reach the hub; the lock note, forget mode, Undo, More, a stopped module and the gate ids.
 import QtQuick
 import QtTest
 import "../qml"
@@ -8,6 +7,7 @@ import "board.js" as Board
 import "lanes.js" as Lanes
 import "fixtures/face.js" as Face
 import "fixtures/ui-en.js" as En
+import "fixtures/ui-fr.js" as Fr
 import "fixtures/words.js" as Words
 import "../../kx-theme/fixtures/look-native-light.js" as NL
 import "../../kx-theme/fixtures/look-native-dark.js" as ND
@@ -122,6 +122,38 @@ Item {
             verify(xs[0] < xs[1] && xs[1] < xs[2], "best first from the left: " + xs);
         }
 
+        // The font follows the script the hub reads (`arabic`), not the direction: a Hebrew word keeps the Latin font.
+        function test_a_right_to_left_word_of_another_script_keeps_the_latin_font() {
+            const hebrew = Object.assign({}, Words.lanes.chips.chips[1], { text: "שלום", name: "שלום", arabic: false });
+            const b = bar(Object.assign({}, Words.lanes.chips, { chips: [hebrew] }), true);
+            const [chip] = shown(b);
+            compare(label(chip).font.family, root.res.fam.latin);
+            compare(label(chip).font.pixelSize, Math.round(NL.lk.shape.chip.font_px[0]), "the Latin size");
+        }
+
+        // A new keyboard language reads the lane again, so chip names follow it.
+        function test_a_new_keyboard_language_reads_the_lane_again() {
+            const w = win(Lanes.some([0]));
+            const read = w.ui.reads.words;
+            w.ui.texts = Fr.texts;
+            compare(w.ui.reads.words, read + 1);
+        }
+
+        // With no module running the menu button goes and an open menu closes; a lane that comes back brings the button.
+        function test_a_stopped_lane_hides_the_menu_button_and_closes_the_menu() {
+            compare(Words.lanes.start.kind, Words.lanes.stopped.kind, "stopped until the module tells a lane");
+            const w = win(Words.lanes.empty);
+            mouseClick(keyed(w.contentItem, "words.menu"));
+            keyed(w.contentItem, "words.menu-forget");
+            w.ui.lane = Words.lanes.stopped;
+            compare(ids(w.contentItem, "words.menu").length, 0, "no menu button");
+            compare(ids(w.contentItem, "words.menu-forget").length, 0, "the menu closed");
+            compare(shown(w.contentItem).length, 0, "no chips");
+            w.ui.lane = Words.lanes.empty;
+            keyed(w.contentItem, "words.menu");
+            compare(ids(w.contentItem, "words.menu-forget").length, 0, "it stays closed");
+        }
+
         function test_a_click_on_chip_2_picks_it_on_the_drawn_round() {
             const w = win(Lanes.some([0, 1, 2]));
             mouseClick(keyed(w.contentItem, "words.chip-2"));
@@ -149,11 +181,12 @@ Item {
             compare(keyed(w.contentItem, "words.lane").Accessible.name, "", "a lane with chips has them to say");
         }
 
-        // Forget mode, as the hub sends it, holds word chips only: each wears the eraser in the danger keys' colours and
-        // its name says a click forgets it, and Cancel ends the row.
+        // Forget mode, as the hub sends it, holds word and known-email chips: each wears the eraser in the danger keys'
+        // colours and its name says a click forgets it, and Cancel ends the row.
         function test_forget_mode_marks_the_chips_and_ends_the_row_with_cancel() {
             const lane = Words.lanes.forget;
-            verify(lane.chips.every(c => c.kind === "word"), "words only");
+            verify(lane.chips.every(c => c.kind === "word" || c.kind === "email"), "words and known emails only");
+            verify(lane.chips.some(c => c.kind === "email"), "a known email among them");
             const w = win(lane);
             const marked = shown(w.contentItem);
             compare(marked.length, lane.chips.length);

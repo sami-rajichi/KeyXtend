@@ -148,9 +148,9 @@ fn the_key_guard_wraps_and_unwraps_on_another_thread() {
 
 #[test]
 fn the_word_packs_port_opens_a_pack_on_another_thread() {
-    use kx_module_api::ports::PACK_EXT;
+    use kx_module_api::ports::pack_file;
     let dir = kx_test_support::tempdir::TempDir::new("platform-packs").unwrap();
-    std::fs::write(dir.path().join(format!("en.{PACK_EXT}")), b"pack").unwrap();
+    std::fs::write(dir.path().join(pack_file("en").unwrap()), b"pack").unwrap();
     let packs = WindowsPlatform::new()
         .unwrap()
         .word_packs(vec![dir.path().to_path_buf()]);

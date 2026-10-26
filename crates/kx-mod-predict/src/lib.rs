@@ -137,19 +137,19 @@ impl PredictModule {
     }
 }
 
-/// The actor's thread. A panic there empties the lane, lets presses go and tells the user; then `halt` logs it.
+/// The actor's thread. A panic there stops the lane, lets presses go and tells the user; then `halt` logs it.
 fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
-        let empty = Suggested {
+        let stopped = Suggested {
             round: 0,
-            lane: Lane::Empty,
+            lane: Lane::Stopped,
             forgetting: false,
             learn: false,
             on: false,
             list: None,
         };
         // The module holds every gate these need, so none is refused.
-        let _ = bus.publish(&empty);
+        let _ = bus.publish(&stopped);
         let _ = bus.publish(&PressesWanted { on: false });
         let _ = bus.publish(&actor::notice(keys::MODULE_FAILED, Vec::new()));
         resume_unwind(panic);

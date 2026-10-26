@@ -1,7 +1,8 @@
 //! The chip lanes the Qt Quick tests draw, as the hub writes them for `Ui.words`, and the ask kinds QML sends to
 //! `Ui.wordsAsk`, by the name QML holds each under (WordNames.qml).
 
-use kx_module_api::ports::{Chip, ChipKind, Lane, ListPage, Suggested};
+use crate::suggest::{chip, lane};
+use kx_module_api::ports::{ChipKind, Lane, ListPage, Suggested};
 use kx_module_api::{Bus, Redacted};
 use kx_test_support::host::FakeCore;
 use kx_ui::{Hub, asks};
@@ -33,27 +34,6 @@ pub fn asks() -> Value {
     })
 }
 
-/// A chip of `kind` showing `text`.
-fn chip(text: &str, kind: ChipKind, rtl: bool) -> Chip {
-    Chip {
-        text: Redacted::new(text.to_owned()),
-        kind,
-        rtl,
-    }
-}
-
-/// Lane `round` showing `lane`, learning and prediction on, no list open.
-fn lane(round: u32, lane: Lane) -> Suggested {
-    Suggested {
-        round,
-        lane,
-        forgetting: false,
-        learn: true,
-        on: true,
-        list: None,
-    }
-}
-
 /// The open list's first page.
 fn page() -> ListPage {
     ListPage {
@@ -63,8 +43,8 @@ fn page() -> ListPage {
     }
 }
 
-/// The lanes by name as `hub` shows them: the start's, chips of every kind with an Arabic word, forget mode's word
-/// chips, the lock, off, empty, and an open email list on its first page.
+/// The lanes by name as `hub` shows them: the start's, chips of every kind with an Arabic word, forget mode's word and
+/// known-email chips, the lock, off, empty, stopped, and an open email list on its first page.
 pub fn lanes(hub: &Arc<Hub>) -> Value {
     let start: Value = serde_json::from_str(&hub.words_json()).expect("lane JSON");
     let bus = Bus::new(Arc::new(FakeCore::default()));
@@ -87,7 +67,10 @@ pub fn lanes(hub: &Arc<Hub>) -> Value {
     };
     let forget = Suggested {
         forgetting: true,
-        ..lane(12, Lane::Chips(chips[..2].to_vec()))
+        ..lane(
+            12,
+            Lane::Chips([0, 1, 3].map(|i| chips[i].clone()).to_vec()),
+        )
     };
     let off = Suggested {
         on: false,
@@ -100,6 +83,7 @@ pub fn lanes(hub: &Arc<Hub>) -> Value {
         "locked": shown(lane(8, Lane::Locked)),
         "off": shown(off),
         "empty": shown(lane(10, Lane::Empty)),
+        "stopped": shown(lane(13, Lane::Stopped)),
         "list": shown(list),
     })
 }

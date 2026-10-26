@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use kx_mod_predict::{Flags, PackWriter};
-use kx_module_api::ports::{PACK_EXT, PACK_INDEX, PackIndex, pack_file};
+use kx_module_api::ports::{IndexError, PACK_EXT, PACK_INDEX, PackIndex, pack_file};
 
 use super::super::fixture;
 use super::super::index;
@@ -114,7 +114,11 @@ fn the_index_command_lists_the_packs_in_a_folder_and_the_codes_they_serve() {
 fn a_folder_without_packs_writes_no_index() {
     let dir = TempDir::new("words-index-empty");
     let result = index::run(dir.path(), &BTreeMap::new(), &mut |_| {});
-    assert!(matches!(result, Err(WordsError::Pack(_))), "{result:?}");
+    let empty = IndexError::Empty.to_string();
+    assert!(
+        matches!(&result, Err(WordsError::Pack(t)) if t.contains(&empty)),
+        "the index's own rule refuses it: {result:?}"
+    );
     assert!(!dir.path().join(PACK_INDEX).exists());
 }
 

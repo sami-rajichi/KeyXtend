@@ -147,7 +147,7 @@ fn packs_are_read_from_the_words_folder_beside_the_program_first() {
 #[test]
 fn a_debug_build_also_reads_the_packs_in_the_workspace_assets() {
     let dirs = pack_dirs(Path::new("app"));
-    let want = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/words");
+    let want = crate::rig::words_out();
     let real = |p: &Path| std::fs::canonicalize(p).unwrap();
     assert_eq!(dirs.get(1).map(|d| real(d)), Some(real(&want)));
     assert!(

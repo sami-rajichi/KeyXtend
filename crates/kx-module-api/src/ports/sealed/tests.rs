@@ -17,13 +17,15 @@ const BAD: [&str; 7] = [
     "ع",
 ];
 
-/// The form, written out as the port states it.
-fn well_formed(text: &str) -> bool {
-    let chars = text
-        .bytes()
-        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
-    let sized = (MIN_BLOB_LEN..=MAX_BLOB_LEN).contains(&text.len());
-    sized && chars && !RESERVED_NAMES.contains(&text)
+/// Every character the form takes, as data rather than a second copy of the check.
+fn alphabet() -> Vec<char> {
+    ('a'..='z').chain('0'..='9').chain(['-']).collect()
+}
+
+/// Names built from the form's characters, `MIN_BLOB_LEN` to `max` long.
+fn formed(max: usize) -> impl Strategy<Value = String> {
+    let chars = prop::sample::select(alphabet());
+    prop::collection::vec(chars, MIN_BLOB_LEN..=max).prop_map(String::from_iter)
 }
 
 #[test]
@@ -70,13 +72,22 @@ fn a_name_is_at_most_max_blob_len_long() {
 
 proptest! {
     #[test]
-    fn any_text_is_taken_just_when_it_has_the_form(
-        text in prop_oneof![
-            "[a-z0-9_ A-Z-]{0,40}",
-            prop::sample::select(RESERVED_NAMES).prop_map(str::to_owned),
-        ],
+    fn a_name_built_from_the_form_is_taken_as_it_is(text in formed(MAX_BLOB_LEN)) {
+        prop_assume!(!RESERVED_NAMES.contains(&text.as_str()));
+        let taken = BlobName::new(&text).map(|n| n.as_str().to_owned());
+        prop_assert_eq!(taken, Ok(text));
+    }
+
+    #[test]
+    fn one_character_outside_the_form_is_refused(
+        text in formed(MAX_BLOB_LEN - 1),
+        at in any::<prop::sample::Index>(),
+        sign in any::<char>().prop_filter("outside the form", |c| !alphabet().contains(c)),
     ) {
-        prop_assert_eq!(BlobName::new(&text).is_ok(), well_formed(&text));
+        let mut chars: Vec<char> = text.chars().collect();
+        chars.insert(at.index(chars.len() + 1), sign);
+        let bad = String::from_iter(chars);
+        prop_assert_eq!(BlobName::new(&bad), Err(SealedError::BadName));
     }
 }
 

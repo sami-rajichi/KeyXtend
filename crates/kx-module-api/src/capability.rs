@@ -32,7 +32,7 @@ capabilities! {
     PointerHook => "pointer-hook",
     /// Read the clipboard.
     ReadClipboard => "read-clipboard",
-    /// Reads what is typed into the focused box, and the words before its cursor.
+    /// Read what is typed into the focused box, and the words before its cursor.
     ReadFocusedText => "read-focused-text",
     /// Record from the microphone.
     Microphone => "microphone",
@@ -46,7 +46,8 @@ capabilities! {
     Scroll => "scroll",
     /// Open the system's power dialog.
     Power => "power",
-    /// Draws the keyboard and hears its pointer notes.
+    /// Reach the keyboard's face and its pointer notes: the keyboard offers the face, the ui draws it, the mouse module
+    /// sends the notes.
     KeyboardUi => "keyboard-ui",
 }
 

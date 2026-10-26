@@ -272,3 +272,23 @@ fn a_move_no_event_tells_is_found_by_the_next_read_and_a_told_move_ends_it() {
     assert_eq!(kind_read(run.as_mut()), FieldKind::Text);
     assert_eq!(read(run.as_mut(), 1), Ok(Some("ap".to_owned())));
 }
+
+#[test]
+fn a_read_failure_never_reaches_a_password_box_which_is_never_read() {
+    let fake = FakeFieldWatch::new();
+    let (mut run, _) = watched(&fake);
+    fake.set_before(Some(TEXT));
+    fake.set_ends(Some(true));
+    fake.focus(FieldKind::Password);
+    fake.fail_reads(FieldError::TimedOut);
+    assert_eq!(read(run.as_mut(), 2), Ok(None), "no error and no text");
+    assert_eq!(kind_read(run.as_mut()), FieldKind::Password);
+    assert_eq!(ends(run.as_mut()), None);
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "never returns")]
+fn a_watch_error_the_port_never_returns_is_a_test_mistake() {
+    FakeFieldWatch::new().fail_watch(FieldError::TimedOut);
+}

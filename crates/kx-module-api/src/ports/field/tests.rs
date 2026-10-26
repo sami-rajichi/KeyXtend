@@ -22,6 +22,28 @@ fn each_error_says_something_else() {
 }
 
 #[test]
+fn only_a_text_box_is_read() {
+    let kinds = [
+        FieldKind::Text,
+        FieldKind::Password,
+        FieldKind::Unknown,
+        FieldKind::None,
+    ];
+    assert_eq!(kinds.map(FieldKind::reads), [true, false, false, false]);
+}
+
+#[test]
+fn an_end_fits_one_read_up_to_read_chars_characters_in_any_script() {
+    let cfg = FieldConfig {
+        read_ms: 1,
+        read_chars: 3,
+    };
+    assert!(cfg.fits("abc") && cfg.fits("كلم"), "three characters");
+    assert!(!cfg.fits("abcd") && !cfg.fits("كلمة"), "four characters");
+    assert!(cfg.fits(""));
+}
+
+#[test]
 fn the_cut_keeps_the_last_whole_words_in_latin_and_arabic() {
     assert_eq!(last_words("I really like ap", 2), "like ap");
     assert_eq!(

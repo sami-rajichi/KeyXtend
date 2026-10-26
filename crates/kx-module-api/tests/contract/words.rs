@@ -152,6 +152,19 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 7] {
     ]
 }
 
+/// Subscribes to each gated event on `bus`, in `send_all`'s order, and drops each subscription at once.
+fn hear_all(bus: &Bus) -> [Result<(), EventError>; 7] {
+    [
+        bus.subscribe(|_: &Typed| {}).map(drop),
+        bus.subscribe(|_: &TypingMode| {}).map(drop),
+        bus.subscribe(|_: &TypingModeAsk| {}).map(drop),
+        bus.subscribe(|_: &TypeWord| {}).map(drop),
+        bus.subscribe(|_: &Suggested| {}).map(drop),
+        bus.subscribe(|_: &ChipPicked| {}).map(drop),
+        bus.subscribe(|_: &WordsAsk| {}).map(drop),
+    ]
+}
+
 /// The refusal of `E` for want of `ReadFocusedText`.
 fn refused<E: Event>() -> Result<(), EventError> {
     Err(EventError::NotGranted(E::NAME, ReadFocusedText))
@@ -170,8 +183,7 @@ fn without_read_focused_text_no_typed_text_travels() {
         refused::<WordsAsk>(),
     ];
     assert_eq!(send_all(&bus), want);
-    let heard = bus.subscribe(|_: &Typed| {}).map(drop);
-    assert_eq!(heard, refused::<Typed>());
+    assert_eq!(hear_all(&bus), want, "no one may listen either");
 }
 
 #[test]
@@ -188,10 +200,9 @@ fn with_read_focused_text_a_typed_piece_reaches_its_listener_whole() {
     })
     .unwrap();
     assert_eq!(*seen.lock().unwrap(), [piece]);
-    assert_eq!(
-        send_all(&bus),
-        [Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(())]
-    );
+    let all = [Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(())];
+    assert_eq!(send_all(&bus), all);
+    assert_eq!(hear_all(&bus), all);
 }
 
 #[test]

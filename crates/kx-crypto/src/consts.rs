@@ -20,8 +20,8 @@ pub(crate) const HEADER_LEN: usize = MARK.len() + NONCE_LEN;
 /// What sealing adds to a blob: the header and the tag.
 pub(crate) const OVERHEAD: usize = HEADER_LEN + TAG_LEN;
 
-/// The largest blob that is sealed or opened, 16 MiB.
-pub const MAX_BLOB_BYTES: usize = 16 * 1024 * 1024;
+/// The largest blob that is sealed or opened, as the port names it.
+pub(crate) use kx_module_api::ports::MAX_BLOB_BYTES;
 /// The largest key file that is read; a wrapped 32-byte key is far smaller.
 pub(crate) const MAX_KEY_FILE_BYTES: usize = 64 * 1024;
 

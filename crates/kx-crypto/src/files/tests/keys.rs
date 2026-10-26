@@ -39,6 +39,7 @@ fn a_key_file_the_guard_cannot_read_stays_locked() {
 fn an_oversized_key_file_stays_locked_and_untouched() {
     let c = case();
     c.store.save(&name("emails"), b"a@b.c").unwrap();
+    let sealed = fs::read(c.file("emails", SEALED_EXT)).unwrap();
     let big = vec![1; MAX_KEY_FILE_BYTES + 1];
     fs::write(c.key_file(), &big).unwrap();
     let guard = Mirror::default();
@@ -49,7 +50,8 @@ fn an_oversized_key_file_stays_locked_and_untouched() {
         Err(SealedError::Locked)
     );
     assert_eq!(fs::read(c.key_file()).unwrap(), big);
-    assert!(c.file("emails", SEALED_EXT).is_file());
+    let kept = fs::read(c.file("emails", SEALED_EXT)).unwrap();
+    assert_eq!(kept, sealed, "the blob is untouched");
     assert_eq!(guard.calls(), 0, "the guard never sees an oversized file");
 }
 

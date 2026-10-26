@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use kx_mod_predict::{Flags, PackWriter};
-use kx_module_api::ports::{PACK_INDEX, PackIndex, pack_file};
+use kx_module_api::ports::{IndexError, PACK_INDEX, PackIndex, pack_file};
 
 use super::super::speed::KINDS;
 use super::super::{NOTHING, Opts, Paths, RELEASE_RUN, SLOW, UNOPTIMISED, run};
@@ -12,11 +12,10 @@ use crate::test_support::TempDir;
 use crate::words::WordsError;
 use crate::words::read::held_file;
 
-/// The index text listing `isos`, which serve no other code.
+/// The index text listing `isos`, which serve no other code; none lists nothing, which the index refuses.
 fn index_text(isos: &[&str]) -> String {
-    PackIndex::new(isos, &std::collections::BTreeMap::new())
-        .unwrap()
-        .text()
+    let index = PackIndex::new(isos, &std::collections::BTreeMap::new());
+    index.map(|i| i.text()).unwrap_or_default()
 }
 
 /// A packs folder holding the tiny pack of each language of `index`, which its index lists, and held sentences for
@@ -141,9 +140,19 @@ fn a_run_that_measures_nothing_fails() {
     };
     let (said, result) = ran(&de, &paths);
     assert!(said.is_empty() && why(result).contains(NOTHING), "{said:?}");
+}
+
+#[test]
+fn a_folder_whose_index_lists_no_pack_is_refused_by_the_index_rule() {
     let empty = TempDir::new("words-meter-empty");
     let paths = folders(empty.path(), &[], &[]);
-    assert!(why(ran(&timing(), &paths).1).contains(NOTHING));
+    let (said, result) = ran(&timing(), &paths);
+    let refused = IndexError::Empty.to_string();
+    assert!(said.is_empty(), "{said:?}");
+    assert!(
+        matches!(&result, Err(WordsError::Pack(t)) if t.contains(&refused)),
+        "{result:?}"
+    );
 }
 
 #[test]

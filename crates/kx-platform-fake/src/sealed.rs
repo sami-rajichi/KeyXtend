@@ -1,7 +1,8 @@
-//! A fake sealed store: blobs kept in memory by name, one failure on cue each way, and counted calls.
+//! A fake sealed store: blobs kept in memory by name up to the port's `MAX_BLOB_BYTES`, one failure on cue each way,
+//! and counted calls.
 
 use crate::lock;
-use kx_module_api::ports::{BlobName, SealedError, SealedStore};
+use kx_module_api::ports::{BlobName, MAX_BLOB_BYTES, SealedError, SealedStore};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -31,13 +32,20 @@ impl FakeSealedStore {
         Self::default()
     }
 
-    /// Refuses the next load with `error`.
+    /// Refuses the next load with `error`; a debug build stops on one `SealedStore::load` never returns.
     pub fn fail_load(&self, error: SealedError) {
+        debug_assert!(
+            error != SealedError::BadName,
+            "the port never returns {error:?} from a load"
+        );
         lock(&self.log).load_fail = Some(error);
     }
 
-    /// Refuses the next save with `error`, keeping the old blob.
+    /// Refuses the next save with `error`, keeping the old blob; a debug build stops on one `SealedStore::save` never
+    /// returns.
     pub fn fail_save(&self, error: SealedError) {
+        let ported = matches!(error, SealedError::Locked | SealedError::Io);
+        debug_assert!(ported, "the port never returns {error:?} from a save");
         lock(&self.log).save_fail = Some(error);
     }
 
@@ -95,6 +103,9 @@ impl SealedStore for FakeSealedStore {
         log.saves += 1;
         if let Some(error) = log.save_fail.take() {
             return Err(error);
+        }
+        if bytes.len() > MAX_BLOB_BYTES {
+            return Err(SealedError::Io);
         }
         log.blobs.insert(name.clone(), bytes.to_vec());
         Ok(())

@@ -7,8 +7,8 @@ import QtQuick
 Item {
     id: lane
 
-    // The lane as `Ui.words` gives it (null until read), the look, fonts, icons and texts, size, the chips' corner radius,
-    // and whether the keyboard's language reads right to left, as the lane's own texts do.
+    // The lane as `Ui.words` gives it (null until read), the look, size and corner radius, and whether the lane's own
+    // texts read right to left.
     required property var view
     required property var lk
     required property var res
@@ -18,16 +18,18 @@ Item {
     // The words menu shows in the chips' place.
     property alias open: menu.open
 
-    // A chip click: its lane's round and its place; a menu, list or control tap: its `Ui.wordsAsk` kind and number; the
-    // pointer came onto an icon-only menu item (its name) or left it (empty).
+    // A chip click (its round and place), a menu, list or control tap (its `Ui.wordsAsk` kind and number), and a menu
+    // item's tip (its name, or empty once the pointer left).
     signal pick(real round, int index)
     signal ask(string kind, int arg)
     signal tip(string name, Item at)
 
-    // What the lane shows, its chips, and forget mode.
+    // What the lane shows, its chips, forget mode, and whether no module runs, which closes the menu.
     readonly property string kind: view ? view.kind : ""
     readonly property var chips: view ? view.chips : []
     readonly property bool forgetting: !!view && view.forgetting
+    readonly property bool stopped: kind === names.stopped
+    onStoppedChanged: if (stopped) menu.open = false
     // How many chips fit whole, best first, beside Cancel in forget mode; `made` reruns it as chips come and go.
     readonly property int fit: fits(row.width - (forgetting ? cancel.width + row.spacing : 0), rep.count, made)
     property int made: 0
@@ -46,7 +48,7 @@ Item {
 
     Accessible.role: Accessible.Grouping
     Accessible.name: kind === names.empty ? res.tr("chip.none") : ""
-    Accessible.id: res.uid(names.group, "lane")
+    Accessible.id: res.uid(names.group, names.ids.lane)
 
     WordNames {
         id: names
@@ -66,15 +68,16 @@ Item {
             delegate: Chip {
                 required property var modelData
                 required property int index
-                // More and Undo carry no text, so they show their name, in the keyboard's language.
+                // More and Undo carry no text, so they show their name, in the keyboard's language; a word takes the
+                // Arabic font by its script, as the hub tells it.
                 readonly property bool named: modelData.text.length === 0
                 visible: index < lane.fit
                 chip: ({
                         text: named ? modelData.name : modelData.text,
                         icon: lane.lk.icons.words[modelData.kind] || "",
-                        ar: named ? lane.rtl : modelData.rtl,
+                        ar: named ? lane.rtl : modelData.arabic,
                         name: modelData.name,
-                        uid: lane.res.uid(names.group, "chip-" + index)
+                        uid: lane.res.uid(names.group, names.ids.chip + index)
                     })
                 forget: lane.forgetting
                 radius: lane.radius
@@ -93,7 +96,7 @@ Item {
                     text: lane.res.tr("words.cancel"),
                     icon: lane.lk.icons.words.cancel,
                     ar: lane.rtl,
-                    uid: lane.res.uid(names.group, "cancel")
+                    uid: lane.res.uid(names.group, names.ids.cancel)
                 })
             radius: lane.radius
             lk: lane.lk
@@ -108,7 +111,7 @@ Item {
             height: row.height
             Accessible.role: Accessible.StaticText
             Accessible.name: note.text
-            Accessible.id: lane.res.uid(names.group, "locked")
+            Accessible.id: lane.res.uid(names.group, names.ids.note)
             Icon {
                 id: padlock
                 anchors.verticalCenter: parent.verticalCenter

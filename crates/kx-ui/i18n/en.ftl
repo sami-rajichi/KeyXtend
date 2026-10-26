@@ -174,8 +174,8 @@ dpad =
     .down = Scroll down
     .stop = Stop scrolling
 
-## The chip lane on the top bar: a chip's name for screen readers ($word is its text), and in forget mode, the More and
-## Undo chips, the lane's name while it offers nothing, and the note a password box shows in place of chips.
+## The chip lane on the top bar: a chip's name for screen readers ($word is its text), also in forget mode.
+## Then the More and Undo chips, the lane's name while it offers nothing, and a password box's note.
 chip =
     .name = Suggestion: { $word }
     .forget-name = Forget: { $word }

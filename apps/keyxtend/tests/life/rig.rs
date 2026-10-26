@@ -16,6 +16,7 @@ use kx_platform_fake::{
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -135,4 +136,12 @@ pub fn char_key(sc: u16) -> String {
         _ => None,
     })
     .unwrap()
+}
+
+/// The folder `cargo xtask words` writes the packs to: `xtask/words.toml`'s `[text] out`, under the workspace root.
+pub fn words_out() -> PathBuf {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest = std::fs::read_to_string(root.join("xtask/words.toml")).unwrap();
+    let manifest: toml::Table = manifest.parse().unwrap();
+    root.join(manifest["text"]["out"].as_str().unwrap())
 }

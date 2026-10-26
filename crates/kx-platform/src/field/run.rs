@@ -161,7 +161,12 @@ where
         return Err(FieldError::Unavailable);
     }
     let cap = Duration::from_millis(u64::from(cfg.read_ms));
-    Ok(Box::new(Run { shared, jobs, cap }))
+    Ok(Box::new(Run {
+        shared,
+        jobs,
+        cap,
+        cfg,
+    }))
 }
 
 /// A running watch; dropping it stops its tells, and its thread ends once the running read returns.
@@ -170,6 +175,8 @@ struct Run {
     jobs: Sender<Job>,
     /// How long a read may take.
     cap: Duration,
+    /// The watch's config, whose `read_chars` bounds an end `ends_with` checks.
+    cfg: FieldConfig,
 }
 
 impl Run {
@@ -188,7 +195,7 @@ impl Run {
 
     /// Whether the box told last may be read: only a text box is.
     fn readable(&self) -> bool {
-        self.shared.kind() == FieldKind::Text
+        self.shared.kind().reads()
     }
 }
 
@@ -217,7 +224,7 @@ impl FieldRun for Run {
     }
 
     fn ends_with(&mut self, text: &Redacted<String>) -> Option<bool> {
-        if !self.readable() {
+        if !self.readable() || !self.cfg.fits(text.expose()) {
             return None;
         }
         let text = text.clone();

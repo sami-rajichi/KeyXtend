@@ -15,39 +15,39 @@ var lanes = {
   "chips": {
     "chips": [
       {
+        "arabic": false,
         "kind": "word",
         "name": "Suggestion: hello",
-        "rtl": false,
         "text": "hello"
       },
       {
+        "arabic": true,
         "kind": "word",
         "name": "Suggestion: أن",
-        "rtl": true,
         "text": "أن"
       },
       {
+        "arabic": false,
         "kind": "domain",
         "name": "Suggestion: gmail.com",
-        "rtl": false,
         "text": "gmail.com"
       },
       {
+        "arabic": false,
         "kind": "email",
         "name": "Suggestion: ali@example.org",
-        "rtl": false,
         "text": "ali@example.org"
       },
       {
+        "arabic": false,
         "kind": "undo",
         "name": "Undo",
-        "rtl": false,
         "text": ""
       },
       {
+        "arabic": false,
         "kind": "more",
         "name": "More emails",
-        "rtl": false,
         "text": ""
       }
     ],
@@ -70,16 +70,22 @@ var lanes = {
   "forget": {
     "chips": [
       {
+        "arabic": false,
         "kind": "word",
         "name": "Forget: hello",
-        "rtl": false,
         "text": "hello"
       },
       {
+        "arabic": true,
         "kind": "word",
         "name": "Forget: أن",
-        "rtl": true,
         "text": "أن"
+      },
+      {
+        "arabic": false,
+        "kind": "email",
+        "name": "Forget: ali@example.org",
+        "text": "ali@example.org"
       }
     ],
     "forgetting": true,
@@ -92,39 +98,39 @@ var lanes = {
   "list": {
     "chips": [
       {
+        "arabic": false,
         "kind": "word",
         "name": "Suggestion: hello",
-        "rtl": false,
         "text": "hello"
       },
       {
+        "arabic": true,
         "kind": "word",
         "name": "Suggestion: أن",
-        "rtl": true,
         "text": "أن"
       },
       {
+        "arabic": false,
         "kind": "domain",
         "name": "Suggestion: gmail.com",
-        "rtl": false,
         "text": "gmail.com"
       },
       {
+        "arabic": false,
         "kind": "email",
         "name": "Suggestion: ali@example.org",
-        "rtl": false,
         "text": "ali@example.org"
       },
       {
+        "arabic": false,
         "kind": "undo",
         "name": "Undo",
-        "rtl": false,
         "text": ""
       },
       {
+        "arabic": false,
         "kind": "more",
         "name": "More emails",
-        "rtl": false,
         "text": ""
       }
     ],
@@ -133,11 +139,26 @@ var lanes = {
     "learn": true,
     "list": {
       "items": [
-        "ali@example.org",
-        "mona@example.net",
-        "sam@example.com",
-        "lea@example.fr",
-        "omar@example.org"
+        {
+          "arabic": false,
+          "text": "ali@example.org"
+        },
+        {
+          "arabic": false,
+          "text": "mona@example.net"
+        },
+        {
+          "arabic": false,
+          "text": "sam@example.com"
+        },
+        {
+          "arabic": false,
+          "text": "lea@example.fr"
+        },
+        {
+          "arabic": false,
+          "text": "omar@example.org"
+        }
       ],
       "page": 0,
       "pages": 2
@@ -166,10 +187,19 @@ var lanes = {
   "start": {
     "chips": [],
     "forgetting": false,
-    "kind": "empty",
+    "kind": "stopped",
     "learn": true,
     "list": null,
     "on": true,
     "round": 0
+  },
+  "stopped": {
+    "chips": [],
+    "forgetting": false,
+    "kind": "stopped",
+    "learn": true,
+    "list": null,
+    "on": true,
+    "round": 13
   }
 };

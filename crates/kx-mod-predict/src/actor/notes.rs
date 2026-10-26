@@ -112,7 +112,7 @@ impl Actor {
         self.publish(&PressesWanted { on: self.pressing });
     }
 
-    /// Saves what changed, tells the lane empty and presses unwanted, and logs the counts.
+    /// Saves what changed, tells the lane stopped and presses unwanted, and logs the counts.
     pub(super) fn quit(&mut self) {
         for blob in [Blob::Learned, Blob::Emails, Blob::Left] {
             self.save(blob);
@@ -121,7 +121,7 @@ impl Actor {
         self.round = self.round.wrapping_add(1);
         let lane = Suggested {
             round: self.round,
-            lane: Lane::Empty,
+            lane: Lane::Stopped,
             forgetting: false,
             learn: self.settings.learn,
             on: self.settings.on,

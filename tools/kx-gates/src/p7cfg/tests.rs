@@ -6,7 +6,7 @@ use crate::config::load;
 /// The shipped file, whose every key the tests remove in turn.
 const SHIPPED: &str = include_str!("../../kx-gates-p7.toml");
 // Workspace paths from `tools/kx-gates/src/p7cfg`; a moved file breaks the build here, never silently.
-/// The lane's names, its gate-id group among them.
+/// The lane's names, its gate-id group and part ids among them.
 const NAMES_QML: &str = include_str!("../../../../crates/kx-ui/qml/WordNames.qml");
 /// The lane, which gives each chip and the lock note its id.
 const LANE_QML: &str = include_str!("../../../../crates/kx-ui/qml/WordLane.qml");
@@ -147,12 +147,16 @@ fn the_lane_ids_are_the_ones_kx_ui_gives_its_chips_and_lock_note() {
         NAMES_QML.contains(&format!("group: \"{}\"", g.group)),
         "group"
     );
-    let uid = |id: &str| format!("res.uid(names.group, \"{id}\"");
+    let named = |key: &str, id: &str| NAMES_QML.contains(&format!("{key}: \"{id}\""));
+    assert!(named("chip", &g.chip) && named("note", &g.locked), "ids");
     assert!(
-        LANE_QML.contains(&format!("{} + index)", uid(&g.chip))),
+        LANE_QML.contains("res.uid(names.group, names.ids.chip + index)"),
         "chips"
     );
-    assert!(LANE_QML.contains(&format!("{})", uid(&g.locked))), "lock");
+    assert!(
+        LANE_QML.contains("res.uid(names.group, names.ids.note)"),
+        "lock"
+    );
     assert_eq!(g.chip_id(0), "words.chip-0");
     assert_eq!(g.chip_start(), "words.chip-");
     assert_eq!(g.locked_id(), "words.locked");
@@ -197,6 +201,20 @@ fn a_backup_named_as_a_file_a_gate_deletes_or_appends_to_is_refused() {
         ),
         (
             |c| c.owner_settings.backup = "G8-predict-2.html".into(),
+            "owner_settings.backup",
+        ),
+        (
+            |c| {
+                c.g8.presentmon = "frames.csv".into();
+                c.owner_settings.backup = "Frames.csv".into();
+            },
+            "owner_settings.backup",
+        ),
+        (
+            |c| {
+                c.g12.presentmon = "presses.csv".into();
+                c.owner_settings.backup = "presses.csv".into();
+            },
             "owner_settings.backup",
         ),
     ]);

@@ -52,11 +52,20 @@ pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
 
 /// The kind of box `el` is; only a would-be text box gets its caret's range asked whether it is read-only.
 pub(super) fn kind_of(el: &IUIAutomationElement) -> FieldKind {
-    kind(
-        &facts(el),
-        table(),
-        || matches!(caret_of(el), Ok(Some(range)) if read_only_range(&range)),
-    )
+    probed(el).0
+}
+
+/// The kind of `el`, and the caret its read-only probe fetched; only a would-be text box is probed, so a text box
+/// always comes with its caret's answer.
+fn probed(el: &IUIAutomationElement) -> (FieldKind, Option<Caret>) {
+    let mut caret = None;
+    let kind = kind(&facts(el), table(), || {
+        let got = caret_of(el);
+        let fixed = matches!(&got, Ok(Some(range)) if read_only_range(range));
+        caret = Some(got);
+        fixed
+    });
+    (kind, caret)
 }
 
 /// The top-level window `hwnd` sits in.
@@ -159,16 +168,15 @@ fn words_before(
     Ok(text.map(|t| last_words(after_first(&t), max_words).to_owned()))
 }
 
-/// Whether the text before the caret of text box `el` ends with `want`; `None` when it cannot tell or `want` is longer
-/// than `chars` characters. It steps back in UTF-16 units, UI Automation's character on Windows.
+/// Whether the text before the caret of text box `el` ends with `want`, read within `chars` characters; `None` when it
+/// cannot tell. It steps back in UTF-16 units, UI Automation's character on Windows.
 pub(super) fn ends_with(
     el: &IUIAutomationElement,
     want: &str,
     by: Instant,
     chars: usize,
 ) -> Result<Option<bool>, FieldError> {
-    let back = i32::try_from(want.encode_utf16().count());
-    let Some(back) = back.ok().filter(|_| want.chars().count() <= chars) else {
+    let Ok(back) = i32::try_from(want.encode_utf16().count()) else {
         return Ok(None);
     };
     let (_, Some(caret)) = text_caret(el, by)? else {
@@ -182,23 +190,20 @@ fn text_caret(
     el: &IUIAutomationElement,
     by: Instant,
 ) -> Result<(FieldKind, Option<IUIAutomationTextRange>), FieldError> {
-    let mut caret = None;
-    let kind = kind(&facts(el), table(), || {
-        let got = caret_of(el);
-        let fixed = matches!(&got, Ok(Some(range)) if read_only_range(range));
-        caret = Some(got);
-        fixed
-    });
-    if kind != FieldKind::Text {
+    let (kind, caret) = probed(el);
+    if !kind.reads() {
         return Ok((kind, None));
     }
     late(by)?;
-    Ok((kind, caret.unwrap_or_else(|| caret_of(el))?))
+    Ok((kind, caret.unwrap_or(Ok(None))?))
 }
+
+/// A caret lookup's answer: the range, none, or why it failed.
+type Caret = Result<Option<IUIAutomationTextRange>, FieldError>;
 
 /// The caret of `el`, from `TextPattern2` or else the first selection; `None` when it has none.
 #[allow(unsafe_code, reason = "Plain UI Automation pattern calls.")]
-fn caret_of(el: &IUIAutomationElement) -> Result<Option<IUIAutomationTextRange>, FieldError> {
+fn caret_of(el: &IUIAutomationElement) -> Caret {
     text_call();
     // SAFETY: plain pattern calls on a live element; `active` is a local that outlives the call.
     unsafe {

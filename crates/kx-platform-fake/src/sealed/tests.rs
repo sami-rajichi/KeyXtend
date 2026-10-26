@@ -89,3 +89,35 @@ fn debug_never_prints_the_bytes() {
     assert!(text.contains("predict-en"));
     assert!(!text.contains(&*String::from_utf8_lossy(OLD)));
 }
+
+#[test]
+fn a_blob_past_the_ports_cap_is_refused_as_io_like_the_real_store() {
+    let store = FakeSealedStore::new();
+    let en = name("predict-en");
+    assert_eq!(
+        store.save(&en, &vec![0; MAX_BLOB_BYTES]),
+        Ok(()),
+        "at the cap"
+    );
+    let big = vec![0; MAX_BLOB_BYTES + 1];
+    assert_eq!(store.save(&en, &big), Err(SealedError::Io));
+    assert_eq!(
+        store.blob(&en).map(|b| b.len()),
+        Some(MAX_BLOB_BYTES),
+        "kept"
+    );
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "never returns")]
+fn a_save_error_the_port_never_returns_is_a_test_mistake() {
+    FakeSealedStore::new().fail_save(SealedError::Damaged);
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "never returns")]
+fn a_load_error_the_port_never_returns_is_a_test_mistake() {
+    FakeSealedStore::new().fail_load(SealedError::BadName);
+}

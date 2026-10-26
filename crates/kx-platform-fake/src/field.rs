@@ -55,7 +55,7 @@ impl Default for Log {
 impl Log {
     /// Whether a read may reach the box: only a box told as a text box is asked, as on the real adapter.
     fn readable(&self) -> bool {
-        self.kind == FieldKind::Text
+        self.kind.reads()
     }
 
     /// The kind a read finds: the box focus moved to unheard, else the one told.
@@ -74,7 +74,8 @@ struct Shared {
 /// A field watch shared by its clones: focus starts on no box, and only a text box is read, the scripted text cut to the
 /// read cap and the asked words.
 ///
-/// The scripted text and `ends_with` answer stay across focus changes; a read failure lasts only for its box.
+/// The scripted text and `ends_with` answer stay across focus changes; a read failure lasts only for its box. A `tell`
+/// runs under the fake's lock, so it must not call `focus` or drop its run, and a second watch replaces the first's.
 #[derive(Clone, Default)]
 pub struct FakeFieldWatch {
     shared: Arc<Shared>,
@@ -121,8 +122,10 @@ impl FakeFieldWatch {
         lock(&self.shared.log).ends = ends;
     }
 
-    /// Refuses the next watch with `error`.
+    /// Refuses the next watch with `error`; a debug build stops on one `FieldWatch::watch` never returns.
     pub fn fail_watch(&self, error: FieldError) {
+        let ported = matches!(error, FieldError::Unavailable | FieldError::Refused);
+        debug_assert!(ported, "the port never returns {error:?} from a watch");
         lock(&self.shared.log).watch_fail = Some(error);
     }
 
@@ -197,8 +200,7 @@ impl FieldWatch for FakeFieldWatch {
         drop(log);
         *lock(&self.shared.tell) = Some(tell);
         let shared = Arc::clone(&self.shared);
-        let chars = usize::from(cfg.read_chars);
-        Ok(Box::new(FakeRun { shared, chars }))
+        Ok(Box::new(FakeRun { shared, cfg }))
     }
 }
 
@@ -219,8 +221,8 @@ fn capped(text: &str, chars: usize) -> &str {
 /// A live fake watch; dropping it stops the watch and its tells.
 struct FakeRun {
     shared: Arc<Shared>,
-    /// The watch's read cap, in characters.
-    chars: usize,
+    /// The watch's config, whose `read_chars` caps each read.
+    cfg: FieldConfig,
 }
 
 impl FieldRun for FakeRun {
@@ -242,8 +244,9 @@ impl FieldRun for FakeRun {
             return Err(error);
         }
         let kind = log.seen();
-        let text = log.before.as_deref().filter(|_| kind == FieldKind::Text);
-        let text = text.map(|t| last_words(capped(t, self.chars), max_words).to_owned());
+        let text = log.before.as_deref().filter(|_| kind.reads());
+        let text = text
+            .map(|t| last_words(capped(t, usize::from(self.cfg.read_chars)), max_words).to_owned());
         Ok(FieldRead {
             kind,
             text: text.map(Redacted::new),
@@ -254,9 +257,10 @@ impl FieldRun for FakeRun {
         let mut log = lock(&self.shared.log);
         log.ends_calls += 1;
         log.last_ends = Some(text.clone());
-        let fits = text.expose().chars().count() <= self.chars;
-        let read =
-            log.readable() && log.seen() == FieldKind::Text && log.read_fail.is_none() && fits;
+        let read = log.readable()
+            && log.seen().reads()
+            && log.read_fail.is_none()
+            && self.cfg.fits(text.expose());
         log.ends.filter(|_| read)
     }
 }

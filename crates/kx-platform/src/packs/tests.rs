@@ -119,13 +119,14 @@ fn a_relative_folder_is_never_tried() {
 }
 
 #[test]
-fn a_pack_is_one_byte_to_max_pack_bytes() {
+fn a_view_is_one_byte_to_its_cap() {
     let max = usize::try_from(MAX_PACK_BYTES).unwrap();
-    assert_eq!(view_len(0), Err(PackError::Unreadable));
-    assert_eq!(view_len(1), Ok(1));
-    assert_eq!(view_len(MAX_PACK_BYTES), Ok(max));
-    assert_eq!(view_len(MAX_PACK_BYTES + 1), Err(PackError::Unreadable));
-    assert_eq!(view_len(u64::MAX), Err(PackError::Unreadable));
+    let cap = MAX_PACK_BYTES;
+    assert_eq!(view_len(0, cap), Err(PackError::Unreadable));
+    assert_eq!(view_len(1, cap), Ok(1));
+    assert_eq!(view_len(cap, cap), Ok(max));
+    assert_eq!(view_len(cap + 1, cap), Err(PackError::Unreadable));
+    assert_eq!(view_len(u64::MAX, cap), Err(PackError::Unreadable));
 }
 
 #[test]

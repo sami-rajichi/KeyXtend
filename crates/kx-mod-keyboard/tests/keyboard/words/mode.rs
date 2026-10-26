@@ -150,7 +150,7 @@ fn a_caps_press_tells_caps_lock_at_once_as_a_click_does() {
 }
 
 #[test]
-fn the_caps_flip_outlasts_the_state_read_until_the_tick() {
+fn the_caps_flip_outlasts_a_state_read_made_at_once_and_the_tick_reads_the_system() {
     // The app reads the state after each click, and the system may not have the new Caps Lock yet.
     let d = Desk::new(None);
     d.modes();

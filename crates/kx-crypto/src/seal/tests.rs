@@ -38,7 +38,7 @@ fn the_tag_covers_the_mark_then_the_name() {
 #[test]
 fn a_tag_made_for_another_version_is_refused() {
     let mut other = MARK;
-    other[MAGIC.len()] = VERSION + 1;
+    other[MAGIC.len()] = VERSION.wrapping_add(1);
     let file = sealed_under(&aad_with(&other));
     assert_eq!(
         file[..MARK.len()],
@@ -144,7 +144,7 @@ fn a_bad_magic_or_version_is_refused() {
     magic[..MAGIC.len()].copy_from_slice(b"KXSX");
     assert_eq!(open(&KEY, AAD, &magic).unwrap_err(), CryptoError::BadMagic);
     let mut version = sealed();
-    version[MAGIC.len()] = VERSION + 1;
+    version[MAGIC.len()] = VERSION.wrapping_add(1);
     assert_eq!(
         open(&KEY, AAD, &version).unwrap_err(),
         CryptoError::BadMagic

@@ -1,16 +1,17 @@
-//! The chip lane as the top bar reads it: each chip's text without hidden marks, its kind and direction, and the name
-//! readers hear in the keyboard's language.
+//! The chip lane as the top bar reads it: each chip's text without hidden marks, its kind, whether it is Arabic script
+//! (`is_arabic`, as the keyboard's legends choose their font), and the name readers hear in the keyboard's language.
 
 use crate::I18n;
 use crate::i18n::clean;
 use crate::i18n::keys::{CHIP_MORE, CHIP_UNDO};
+use kx_module_api::is_arabic;
 use kx_module_api::ports::{Chip, ChipKind, Lane, ListPage, Suggested};
 use serde::Serialize;
 
-/// The lane before the first `Suggested`: prediction counts as on, with nothing to offer.
+/// The lane before the first `Suggested`: the module counts as stopped, so no menu shows until it tells a lane.
 static START: Suggested = Suggested {
     round: 0,
-    lane: Lane::Empty,
+    lane: Lane::Stopped,
     forgetting: false,
     learn: true,
     on: true,
@@ -37,6 +38,7 @@ enum Kind {
     Locked,
     Off,
     Empty,
+    Stopped,
 }
 
 /// What a chip offers, as QML names it.
@@ -67,14 +69,21 @@ impl From<ChipKind> for Offer {
 struct ChipView {
     text: String,
     kind: Offer,
-    rtl: bool,
+    arabic: bool,
     name: String,
+}
+
+/// One email list row as QML draws it.
+#[derive(Serialize)]
+struct Row {
+    text: String,
+    arabic: bool,
 }
 
 /// The email list's page as QML draws it.
 #[derive(Serialize)]
 struct List {
-    items: Vec<String>,
+    items: Vec<Row>,
     page: u16,
     pages: u16,
 }
@@ -90,6 +99,7 @@ pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
         Lane::Locked => (Kind::Locked, Vec::new()),
         Lane::Off => (Kind::Off, Vec::new()),
         Lane::Empty => (Kind::Empty, Vec::new()),
+        Lane::Stopped => (Kind::Stopped, Vec::new()),
     };
     View {
         round: lane.round,
@@ -112,17 +122,21 @@ fn chip(c: &Chip, t: &I18n, forget: bool) -> ChipView {
         ChipKind::Undo => t.text(CHIP_UNDO),
     };
     ChipView {
+        arabic: is_arabic(&text),
         text,
         kind: c.kind.into(),
-        rtl: c.rtl,
         name,
     }
 }
 
 /// The email list's page `list`, each row without hidden marks.
 fn page(list: &ListPage) -> List {
+    let row = |text: String| Row {
+        arabic: is_arabic(&text),
+        text,
+    };
     List {
-        items: list.items.iter().map(|i| clean(i.expose())).collect(),
+        items: list.items.iter().map(|i| row(clean(i.expose()))).collect(),
         page: list.page,
         pages: list.pages,
     }

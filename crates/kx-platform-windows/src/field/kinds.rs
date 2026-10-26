@@ -1,6 +1,8 @@
-//! The kind of the focused box, decided from what UI Automation and Win32 tell about it and the kind table.
+//! The kind of the focused box: what UI Automation and Win32 tell about it, read through the kind table into the
+//! shared facts, which `kx_platform::field::kind` orders.
 
 use kx_module_api::ports::FieldKind;
+use kx_platform::field::{self, BoxFacts};
 
 use super::Table;
 
@@ -23,29 +25,16 @@ pub(crate) struct Facts {
     pub(crate) read_only: bool,
 }
 
-/// The kind `facts` tell under `table`: a password box by UIA or the edit style first, then unknown when the table is
-/// closed, a fact could not be read or the window hides its boxes, then text, else no box. A text box that says it is
-/// read-only, by its facts or else by `probe` (asked for nothing else), is unknown.
+/// The kind `facts` tell under `table`: UIA's flag or the edit style marks a password box, a closed table or an
+/// unread control type leaves a fact missing, and `probe` asks a would-be text box whether it is read-only.
 pub(crate) fn kind(facts: &Facts, table: &Table, probe: impl FnOnce() -> bool) -> FieldKind {
-    if facts.password == Some(true) || table.hides(&facts.class, facts.style) {
-        return FieldKind::Password;
-    }
-    if table.is_closed() {
-        return FieldKind::Unknown;
-    }
-    let Some(control) = facts.control else {
-        return FieldKind::Unknown;
+    let hides = table.hides(&facts.class, facts.style);
+    let shared = BoxFacts {
+        password: if hides { Some(true) } else { facts.password },
+        known: !table.is_closed() && facts.control.is_some(),
+        hidden: table.opaque(&facts.class) || table.opaque(&facts.top),
+        text: facts.control.is_some_and(|c| table.holds_text(c)) || facts.editable,
+        read_only: facts.read_only,
     };
-    let hidden = table.opaque(&facts.class) || table.opaque(&facts.top);
-    if facts.password.is_none() || hidden {
-        return FieldKind::Unknown;
-    }
-    if !table.holds_text(control) && !facts.editable {
-        return FieldKind::None;
-    }
-    if facts.read_only || probe() {
-        FieldKind::Unknown
-    } else {
-        FieldKind::Text
-    }
+    field::kind(shared, probe)
 }

@@ -60,11 +60,32 @@ fn aliases_of_a_pack_not_built_are_left_out() {
 }
 
 #[test]
-fn an_empty_index_ships_nothing() {
-    let empty = PackIndex::new(&[], &none()).unwrap();
-    assert_eq!(empty.text(), "");
-    assert_eq!(PackIndex::read(b""), Ok(PackIndex::default()));
-    assert_eq!(empty.pack_of("en"), None);
+fn an_index_that_lists_no_pack_is_refused_both_ways() {
+    assert_eq!(PackIndex::new(&[], &none()), Err(IndexError::Empty));
+    assert_eq!(PackIndex::new(&[], &sh()), Err(IndexError::Empty));
+    assert_eq!(PackIndex::read(b""), Err(IndexError::Empty));
+    assert_eq!(PackIndex::default().pack_of("en"), None);
+}
+
+#[test]
+fn an_index_past_its_cap_is_unreadable() {
+    let cap = usize::try_from(MAX_INDEX_BYTES).unwrap();
+    let line = "en\n";
+    let fits = line.repeat(cap / line.len());
+    assert!(PackIndex::read(fits.as_bytes()).is_ok());
+    let over = format!("{fits}{line}");
+    assert!(over.len() > cap);
+    assert_eq!(
+        PackIndex::read(over.as_bytes()),
+        Err(IndexError::Unreadable)
+    );
+}
+
+#[test]
+fn a_layout_code_and_its_pack_clash_in_either_order() {
+    for bad in [&b"sh en\nen\n"[..], b"en\nsh en\n", b"sh hr\nhr\n"] {
+        assert_eq!(PackIndex::read(bad), Err(IndexError::Damaged), "{bad:?}");
+    }
 }
 
 #[test]
@@ -114,9 +135,29 @@ fn a_layout_code_that_is_a_pack_or_served_twice_is_damage() {
 #[test]
 fn merging_two_folders_keeps_every_pack_and_alias() {
     let mut first = PackIndex::read(b"en\n").unwrap();
-    first.merge(PackIndex::read(b"fr\nsh hr\n").unwrap());
+    first
+        .merge(&PackIndex::read(b"fr\nsh hr\n").unwrap())
+        .unwrap();
     assert_eq!(packs(&first), ["en", "fr", "sh"]);
     assert_eq!(first.pack_of("hr"), Some("sh"));
+    let same = first.clone();
+    first.merge(&same).unwrap();
+    assert_eq!(first, same, "the same index twice changes nothing");
+}
+
+#[test]
+fn merging_folders_that_clash_is_refused_and_keeps_the_first() {
+    for (first, other) in [
+        (&b"sh hr\n"[..], &b"sl hr\n"[..]),
+        (b"sh hr\n", b"hr\n"),
+        (b"hr\n", b"sh hr\n"),
+    ] {
+        let mut index = PackIndex::read(first).unwrap();
+        let kept = index.clone();
+        let other = PackIndex::read(other).unwrap();
+        assert_eq!(index.merge(&other), Err(IndexError::Damaged), "{first:?}");
+        assert_eq!(index, kept, "{first:?}");
+    }
 }
 
 #[test]
@@ -125,6 +166,7 @@ fn each_error_names_the_index() {
         IndexError::Missing,
         IndexError::Unreadable,
         IndexError::Damaged,
+        IndexError::Empty,
     ] {
         assert!(e.to_string().contains("index"), "{e}");
     }
@@ -139,8 +181,9 @@ proptest! {
     }
 
     #[test]
-    fn any_codes_round_trip(codes in prop::collection::vec("[a-z]{2,3}", 0..8)) {
+    fn any_codes_round_trip(codes in prop::collection::vec("[a-z]{2,3}", 1..8)) {
         let codes: Vec<&str> = codes.iter().map(String::as_str).filter(|c| fits_iso(c)).collect();
+        prop_assume!(!codes.is_empty());
         let index = PackIndex::new(&codes, &none()).unwrap();
         prop_assert_eq!(PackIndex::read(index.text().as_bytes()), Ok(index));
     }

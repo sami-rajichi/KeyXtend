@@ -12,6 +12,7 @@
 #[path = "../common/fakes.rs"]
 mod fakes;
 mod lang;
+mod pick;
 mod power;
 mod predict;
 mod rig;

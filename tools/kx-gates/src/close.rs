@@ -3,7 +3,7 @@
 //! which leaves its process running.
 #![cfg(windows)]
 
-use std::path::Path;
+use std::path::PathBuf;
 
 use kx_platform::ui::{Command, Instance, UiError};
 use kx_platform_windows::WindowsPlatform;
@@ -58,18 +58,23 @@ fn close_product(ctx: &Ctx) -> Result<Value, String> {
     closed(
         quit,
         |ended| owncopy::recover(ctx, ended),
-        &owncopy::side(ctx)?,
+        owncopy::side(ctx),
     )
 }
 
 /// `close` on the product: `quit` asks the running copy, if any, to quit, then `recover` restores the backup at `side`,
-/// told whether that copy ended, as one still exiting may yet save settings.
+/// told whether that copy ended, as one still exiting may yet save settings. A refused backup name is reported after
+/// the Quit, never instead of it.
 fn closed(
     quit: impl FnOnce() -> Result<Option<(String, bool)>, Unasked>,
     recover: impl FnOnce(bool) -> Result<bool, String>,
-    side: &Path,
+    side: Result<PathBuf, String>,
 ) -> Result<Value, String> {
     let quit = quit().map_err(|e| e.why)?;
+    let side = match side {
+        Ok(side) => side,
+        Err(e) => return Ok(result(quit.as_ref(), &Err(e))),
+    };
     let back = recover(ended(quit.as_ref()));
     if quit.is_none() && back == Ok(false) {
         let side = side.display();

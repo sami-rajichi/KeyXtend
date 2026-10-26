@@ -36,7 +36,6 @@ mod wordfreq;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-pub(crate) use self::index::lists_a_pack;
 pub(crate) use self::meter::Opts as MeterOpts;
 
 use self::cands::Candidates;

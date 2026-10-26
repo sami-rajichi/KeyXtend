@@ -12,6 +12,8 @@ pub use index::{IndexError, PackIndex};
 pub const PACK_EXT: &str = "kxw";
 /// The largest pack a platform maps and a writer makes, 64 MiB.
 pub const MAX_PACK_BYTES: u64 = 64 * 1024 * 1024;
+/// The largest pack index a platform maps and `PackIndex::read` takes, 64 KiB: far more than a code per language.
+pub const MAX_INDEX_BYTES: u64 = 64 * 1024;
 /// The shortest language code: ISO 639-1.
 pub const MIN_ISO_LEN: usize = 2;
 /// The longest language code: ISO 639-2 or 639-3, as layouts give a language with no two-letter code.

@@ -128,8 +128,8 @@ part = "part"
 list = "wordfreq/small_{iso}.msgpack.gz"
 # The most words a list keeps, most frequent first; the words budget then cuts the rarest.
 max_words = 60000
-# The most KB a pack may take without its chains; its rarest words go until it fits. 700 keeps the 39 packs near
-# 10.3 MB deflated, so the full packs keep every word and chain.
+# The most KB a pack may take without its chains; its rarest words go until it fits. It keeps the small packs small
+# enough that the full packs keep every word and chain inside the download budget.
 words_budget_kb = 700
 
 [lang.en]

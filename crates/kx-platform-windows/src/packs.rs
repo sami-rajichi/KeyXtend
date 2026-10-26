@@ -55,8 +55,9 @@ impl View {
     /// The whole file.
     #[allow(unsafe_code, reason = "Reads the mapped file.")]
     fn bytes(&self) -> &[u8] {
-        // SAFETY: `at` maps `len` readable bytes until `self` drops, and the file is shared for reading only, so no
-        // handle can write it.
+        // SAFETY: `at` maps `len` readable bytes until `self` drops. The file is shared for reading only, but a program
+        // that mapped it writable first can still change the bytes, so readers check every offset; release packs sit
+        // under Program Files.
         unsafe { std::slice::from_raw_parts(self.at.Value.cast::<u8>(), self.len) }
     }
 }

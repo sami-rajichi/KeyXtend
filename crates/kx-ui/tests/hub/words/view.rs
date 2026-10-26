@@ -1,5 +1,5 @@
-//! The lane as `words_json` gives it for each kind: chips with their kind, direction and the name readers hear, the
-//! lock, off and empty lanes, the menu's switches and the email list's page.
+//! The lane as `words_json` gives it for each kind: chips with their kind, Arabic script and the name readers hear, the
+//! lock, off, empty and stopped lanes, the menu's switches and the email list's page.
 
 use super::{chip, heard, lane, speaking, words};
 use crate::Rig;
@@ -31,14 +31,46 @@ fn chips_show_their_text_kind_and_direction_with_the_name_readers_hear() {
         (&6.into(), &"chips".into())
     );
     let want = json!([
-        { "text": "hello", "kind": "word", "rtl": false, "name": "Suggestion: hello" },
-        { "text": "مرحبا", "kind": "word", "rtl": true, "name": "Suggestion: مرحبا" },
-        { "text": "example.com", "kind": "domain", "rtl": false, "name": "Suggestion: example.com" },
-        { "text": "sam@example.com", "kind": "email", "rtl": false, "name": "Suggestion: sam@example.com" },
-        { "text": "", "kind": "more", "rtl": false, "name": "More emails" },
-        { "text": "", "kind": "undo", "rtl": false, "name": "Undo" },
+        { "text": "hello", "kind": "word", "arabic": false, "name": "Suggestion: hello" },
+        { "text": "مرحبا", "kind": "word", "arabic": true, "name": "Suggestion: مرحبا" },
+        { "text": "example.com", "kind": "domain", "arabic": false, "name": "Suggestion: example.com" },
+        { "text": "sam@example.com", "kind": "email", "arabic": false, "name": "Suggestion: sam@example.com" },
+        { "text": "", "kind": "more", "arabic": false, "name": "More emails" },
+        { "text": "", "kind": "undo", "arabic": false, "name": "Undo" },
     ]);
     assert_eq!(shown["chips"], want);
+}
+
+#[test]
+fn only_arabic_script_text_is_drawn_as_arabic_whatever_its_direction() {
+    let rig = Rig::new();
+    let (bus, _sent, _subs) = heard(&rig);
+    let texts = [
+        ("שלום", true, false),
+        ("ܫܠܡܐ", true, false),
+        ("سلام", true, true),
+    ];
+    let chips = texts
+        .map(|(t, rtl, _)| chip(t, ChipKind::Word, rtl))
+        .to_vec();
+    let mut shown = lane(4, Lane::Chips(chips));
+    shown.list = Some(ListPage {
+        items: ["سارة@example.com", "sara@example.com"]
+            .map(|e| Redacted::new(e.to_owned()))
+            .to_vec(),
+        page: 0,
+        pages: 1,
+    });
+    bus.publish(&shown).unwrap();
+    let v = words(&rig);
+    for (i, (text, _, arabic)) in texts.iter().enumerate() {
+        assert_eq!(v["chips"][i]["arabic"], *arabic, "{text}");
+    }
+    let rows = [
+        &v["list"]["items"][0]["arabic"],
+        &v["list"]["items"][1]["arabic"],
+    ];
+    assert_eq!(rows, [&json!(true), &json!(false)]);
 }
 
 #[test]
@@ -86,13 +118,14 @@ fn in_forget_mode_each_chip_is_named_by_what_a_click_does() {
 }
 
 #[test]
-fn the_lock_off_and_empty_lanes_show_no_chips() {
+fn the_lock_off_empty_and_stopped_lanes_show_no_chips() {
     let rig = Rig::new();
     let (bus, _sent, _subs) = heard(&rig);
     for (shown, kind) in [
         (Lane::Locked, "locked"),
         (Lane::Off, "off"),
         (Lane::Empty, "empty"),
+        (Lane::Stopped, "stopped"),
     ] {
         bus.publish(&lane(2, shown)).unwrap();
         let v = words(&rig);
@@ -122,7 +155,11 @@ fn the_menus_switches_and_the_email_list_pass_through() {
     let v = words(&rig);
     let flags = [&v["forgetting"], &v["learn"], &v["on"]];
     assert_eq!(flags, [&json!(true), &json!(false), &json!(false)]);
-    assert_eq!(v["list"], json!({ "items": emails, "page": 1, "pages": 3 }));
+    let items: Vec<Value> = emails
+        .iter()
+        .map(|e| json!({ "text": e, "arabic": false }))
+        .collect();
+    assert_eq!(v["list"], json!({ "items": items, "page": 1, "pages": 3 }));
 }
 
 #[test]
@@ -140,5 +177,5 @@ fn hidden_marks_never_reach_a_chip_or_a_row() {
     let v = words(&rig);
     assert_eq!(v["chips"][0]["text"], "abc");
     assert_eq!(v["chips"][0]["name"], "Suggestion: abc");
-    assert_eq!(v["list"]["items"], json!(["abc"]));
+    assert_eq!(v["list"]["items"][0]["text"], "abc");
 }
