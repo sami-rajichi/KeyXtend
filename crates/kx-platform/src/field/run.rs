@@ -228,12 +228,9 @@ impl FieldRun for Run {
     fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds {
         let kind = self.shared.kind();
         if !kind.reads() {
-            return FieldEnds {
-                kind,
-                ends: Some(false),
-            };
+            return FieldEnds::new(kind, Some(false));
         }
-        let unsure = FieldEnds { kind, ends: None };
+        let unsure = FieldEnds::new(kind, None);
         if !self.cfg.fits(text.expose()) {
             return unsure;
         }

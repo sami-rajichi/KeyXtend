@@ -67,10 +67,7 @@ impl FieldRun for OneRun {
     }
 
     fn ends_with(&mut self, end: &Redacted<String>) -> FieldEnds {
-        FieldEnds {
-            kind: FieldKind::Text,
-            ends: Some(TEXT.ends_with(end.expose().as_str())),
-        }
+        FieldEnds::new(FieldKind::Text, Some(TEXT.ends_with(end.expose().as_str())))
     }
 }
 

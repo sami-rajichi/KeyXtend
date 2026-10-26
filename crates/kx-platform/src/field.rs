@@ -46,7 +46,8 @@ pub trait Reader: Probe {
     ) -> Result<FieldRead, FieldError>;
 
     /// Whether the text before the caret of `el` ends with `text`, with the kind its check found: no for a selection
-    /// that is not empty, or a box that is no text box; `None` when it has no caret.
+    /// that is not empty, which it says, or a box that is no text box; `None` when it has no caret or cannot tell its
+    /// selection.
     ///
     /// # Errors
     /// `TimedOut` past `by`, `Refused` when the app refuses.

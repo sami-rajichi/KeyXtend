@@ -2,6 +2,7 @@
 //! and failures on cue.
 
 use super::*;
+use kx_module_api::ports::FieldEnds;
 use std::thread::{self, ThreadId};
 
 mod ends;
@@ -59,7 +60,7 @@ fn ends(run: &mut dyn FieldRun) -> FieldEnds {
 
 /// A check that saw a box of `kind` and answered `ends`.
 fn ended(kind: FieldKind, ends: Option<bool>) -> FieldEnds {
-    FieldEnds { kind, ends }
+    FieldEnds::new(kind, ends)
 }
 
 #[test]

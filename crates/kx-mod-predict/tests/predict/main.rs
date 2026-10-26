@@ -6,6 +6,7 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+mod blind;
 mod boxes;
 mod emails;
 mod held;

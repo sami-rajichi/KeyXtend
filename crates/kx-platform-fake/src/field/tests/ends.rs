@@ -17,8 +17,9 @@ fn a_read_with_a_selection_ends_at_its_start_and_a_check_says_no_until_it_is_a_c
         before,
         "the selected words are not read"
     );
-    let no = ended(FieldKind::Text, Some(false));
+    let no = FieldEnds::selection(FieldKind::Text);
     assert_eq!(ends(run.as_mut()), no, "a selection never ends with a word");
+    assert!(no.selected, "and says so");
     fake.select("");
     let yes = ended(FieldKind::Text, Some(true));
     assert_eq!(ends(run.as_mut()), yes, "a caret answers as scripted");

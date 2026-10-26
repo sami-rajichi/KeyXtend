@@ -144,15 +144,19 @@ fn a_pick_after_an_unheard_move_to_a_password_box_types_nothing() {
 
 #[test]
 fn a_pick_whose_check_sees_a_password_box_types_nothing_and_resets_while_the_watch_tells_text() {
-    let mut rig = in_box(FieldKind::Text);
-    rig.typed("hel");
-    rig.fakes.field.move_unheard(FieldKind::Password);
-    let reads = rig.fakes.field.before_calls();
-    rig.pick(0);
-    assert!(rig.typed_words().is_empty(), "not even the chip's rest");
-    assert_eq!(rig.fakes.field.ends_calls(), 1, "the check saw it");
-    assert_eq!(rig.lane().lane, Lane::Locked, "the check's kind wins");
-    assert_eq!(rig.fakes.field.before_calls(), reads, "and is never read");
+    // A word's rest, a next word and a domain, which replaces nothing.
+    for typed in ["hel", "hello ", "x@"] {
+        let mut rig = in_box(FieldKind::Text);
+        rig.typed(typed);
+        assert!(!rig.chips().is_empty(), "{typed:?}: a chip to pick");
+        rig.fakes.field.move_unheard(FieldKind::Password);
+        let reads = rig.fakes.field.before_calls();
+        rig.pick(0);
+        assert!(rig.typed_words().is_empty(), "{typed:?}: nothing typed");
+        assert_eq!(rig.fakes.field.ends_calls(), 1, "{typed:?}: checked");
+        assert_eq!(rig.lane().lane, Lane::Locked, "{typed:?}: its kind wins");
+        assert_eq!(rig.fakes.field.before_calls(), reads, "{typed:?}: unread");
+    }
 }
 
 #[test]

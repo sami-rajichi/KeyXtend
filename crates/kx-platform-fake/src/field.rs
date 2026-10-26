@@ -2,11 +2,8 @@
 
 use crate::lock;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{
-    FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, FieldWatch,
-    last_words,
-};
-use kx_platform::field::after_first;
+use kx_module_api::ports::{FieldChange, FieldConfig, FieldError, FieldKind, FieldRun, FieldWatch};
+use run::FakeRun;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
@@ -144,6 +141,11 @@ impl FakeFieldWatch {
         lock(&self.shared.log).read_fail = Some(error);
     }
 
+    /// Lets reads of the focused box through again, as an app does once it is no longer busy.
+    pub fn heal_reads(&self) {
+        lock(&self.shared.log).read_fail = None;
+    }
+
     /// The focused box's id; 0 before any focus.
     #[must_use]
     pub fn box_id(&self) -> u64 {
@@ -214,86 +216,7 @@ impl FieldWatch for FakeFieldWatch {
     }
 }
 
-/// The end of `text` one read of at most `chars` characters takes: all of it when it fits, else its last `chars`
-/// characters without the first word they may split, as on the real adapter.
-fn capped(text: &str, chars: usize) -> &str {
-    let skip = text.chars().count().saturating_sub(chars);
-    if skip == 0 {
-        return text;
-    }
-    let at = text
-        .char_indices()
-        .nth(skip)
-        .map_or(text.len(), |(at, _)| at);
-    after_first(&text[at..])
-}
-
-/// A live fake watch; dropping it stops the watch and its tells.
-struct FakeRun {
-    shared: Arc<Shared>,
-    /// The watch's config, whose `read_chars` caps each read.
-    cfg: FieldConfig,
-}
-
-impl FieldRun for FakeRun {
-    fn kind(&self) -> FieldKind {
-        lock(&self.shared.log).kind
-    }
-
-    fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError> {
-        let mut log = lock(&self.shared.log);
-        log.before_calls += 1;
-        let told = FieldRead {
-            kind: log.kind,
-            text: None,
-        };
-        if !log.readable() {
-            return Ok(told);
-        }
-        if let Some(error) = log.read_fail {
-            return Err(error);
-        }
-        let kind = log.seen();
-        let text = log.before.as_deref().filter(|_| kind.reads());
-        let text = text
-            .map(|t| last_words(capped(t, usize::from(self.cfg.read_chars)), max_words).to_owned());
-        Ok(FieldRead {
-            kind,
-            text: text.map(Redacted::new),
-        })
-    }
-
-    fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds {
-        let mut log = lock(&self.shared.log);
-        log.ends_calls += 1;
-        log.last_ends = Some(text.clone());
-        let unsure = log.read_fail.is_some() || !self.cfg.fits(text.expose());
-        if !log.readable() || unsure {
-            let ends = (!log.readable()).then_some(false);
-            return FieldEnds {
-                kind: log.kind,
-                ends,
-            };
-        }
-        let kind = log.seen();
-        let open = kind.reads() && log.selected.is_empty();
-        let ends = if open { log.ends } else { Some(false) };
-        FieldEnds { kind, ends }
-    }
-}
-
-impl Drop for FakeRun {
-    fn drop(&mut self) {
-        let mut log = lock(&self.shared.log);
-        log.stops += 1;
-        let idle = log.watches == log.stops;
-        drop(log);
-        if idle {
-            let gone = lock(&self.shared.tell).take();
-            drop(gone);
-        }
-    }
-}
+mod run;
 
 #[cfg(test)]
 mod tests;

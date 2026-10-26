@@ -143,67 +143,6 @@ fn a_box_that_cannot_tell_gets_only_the_rest_of_a_chip_that_starts_with_the_type
     assert_eq!(rig.fakes.field.ends_calls(), 0, "it is never asked");
 }
 
-/// A rig in English whose learner knows `London` and `long`, in a text box that tells `before`.
-fn londoned(before: Option<&str>) -> Rig {
-    let mut rig = Rig::build(|f, _| {
-        plant(f, "en", &["London", "long"]);
-        f.field.set_before(before);
-    });
-    rig.lang("en");
-    rig.focus(FieldKind::Text);
-    rig
-}
-
-/// The word chips after `lon`, sorted.
-fn after_lon(rig: &mut Rig) -> Vec<String> {
-    rig.typed("lon");
-    let mut words = rig.words();
-    words.sort();
-    words
-}
-
-#[test]
-fn a_text_box_that_gives_no_text_offers_no_chip_that_erases_until_focus_moves() {
-    let mut rig = londoned(None);
-    assert_eq!(after_lon(&mut rig), ["long"], "London would erase the l");
-    rig.pick(0);
-    assert_eq!(rig.typed_words(), [(0, "g ".to_owned())], "only the rest");
-    assert_eq!(rig.fakes.field.ends_calls(), 0, "it is never asked");
-    rig.fakes.field.set_before(Some(""));
-    rig.focus(FieldKind::Text);
-    assert_eq!(after_lon(&mut rig), ["London", "long"], "a new box");
-}
-
-#[test]
-fn a_text_box_that_cannot_tell_an_end_offers_no_chip_that_erases_until_focus_moves() {
-    let mut rig = londoned(Some(""));
-    assert_eq!(after_lon(&mut rig), ["London", "long"]);
-    rig.fakes.field.set_ends(None);
-    let at = rig.words().iter().position(|w| w == "long").unwrap();
-    rig.pick(u8::try_from(at).unwrap());
-    let asked = rig.fakes.field.last_ends().map(Redacted::into_inner);
-    assert_eq!(asked.as_deref(), Some("lon"), "the box was asked");
-    assert_eq!(rig.typed_words(), [(0, "g ".to_owned())], "only the rest");
-    rig.typed("g ");
-    assert_eq!(after_lon(&mut rig), ["long"], "London would erase the l");
-    rig.focus(FieldKind::Text);
-    assert_eq!(after_lon(&mut rig), ["London", "long"], "a new box");
-}
-
-#[test]
-fn a_pick_while_the_box_holds_a_selection_erases_nothing_and_reads_again() {
-    let mut rig = texted(Some("we said "));
-    rig.typed("hel");
-    rig.fakes.field.select("hel");
-    let reads = rig.fakes.field.before_calls();
-    rig.pick(0);
-    assert!(
-        rig.typed_words().is_empty(),
-        "nothing typed over the selection"
-    );
-    assert_eq!(rig.fakes.field.before_calls(), reads + 1, "read again");
-}
-
 #[test]
 fn a_box_that_cannot_confirm_offers_only_chips_that_extend_the_typed_word_and_next_words() {
     for kind in [FieldKind::Unknown, FieldKind::None] {

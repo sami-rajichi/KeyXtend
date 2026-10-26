@@ -66,9 +66,33 @@ pub struct FieldRead {
 pub struct FieldEnds {
     /// The kind of the box the platform saw at the check, or told last when nothing was checked.
     pub kind: FieldKind,
-    /// Whether the text before the cursor ends with the asked text, false too for a box that is no text box or holds a
-    /// selection; `None` when it cannot tell, as after a timeout or in a box with no caret.
+    /// Whether the text before the cursor ends with the asked text, false too for a box that is no text box or holds
+    /// a selection; `None` when it cannot tell, as after a timeout, with no caret, or with its selection unknown.
     pub ends: Option<bool>,
+    /// True when a selection that holds text gave the no, so a pick would type over it.
+    pub selected: bool,
+}
+
+impl FieldEnds {
+    /// What a check of a box of `kind` that holds no selection found.
+    #[must_use]
+    pub const fn new(kind: FieldKind, ends: Option<bool>) -> Self {
+        Self {
+            kind,
+            ends,
+            selected: false,
+        }
+    }
+
+    /// The no of a box of `kind` whose selection holds text.
+    #[must_use]
+    pub const fn selection(kind: FieldKind) -> Self {
+        Self {
+            kind,
+            ends: Some(false),
+            selected: true,
+        }
+    }
 }
 
 /// Why the box could not be watched or read.
@@ -98,7 +122,7 @@ pub trait FieldRun: Send {
     fn before_cursor(&mut self, max_words: u8) -> Result<FieldRead, FieldError>;
 
     /// Whether the text just before the cursor ends with `text`, with the kind of box the check saw; a selection that
-    /// is not empty, or a box that is no text box, never ends with it.
+    /// is not empty, which the answer names, or a box that is no text box, never ends with it.
     fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds;
 }
 

@@ -21,7 +21,7 @@ use windows::core::BOOL;
 use super::{Facts, kind, table};
 use crate::uia::{class_of, span, style_of, vector};
 use crate::window::foreground;
-use caret::{Caret, Found, caret_of};
+use caret::{Caret, Found, Held, caret_of};
 
 mod caret;
 
@@ -172,8 +172,8 @@ fn words_before(
 }
 
 /// Whether the text before the caret of text box `el` ends with `want`, read within `chars` characters, with the kind
-/// the check saw: no for a box that is no text box or holds a selection; `None` when it has no caret. It steps back
-/// in UTF-16 units, UI Automation's character on Windows.
+/// the check saw: no for a box that is no text box or holds a selection; `None` when it has no caret or its selection
+/// is unknown. It steps back in UTF-16 units, UI Automation's character on Windows.
 pub(super) fn ends_with(
     el: &IUIAutomationElement,
     want: &str,
@@ -183,13 +183,13 @@ pub(super) fn ends_with(
     let (kind, caret) = text_caret(el, by)?;
     let ends = match (caret, i32::try_from(want.encode_utf16().count())) {
         _ if !kind.reads() => Some(false),
-        (Some(caret), _) if caret.selected => Some(false),
-        (Some(caret), Ok(back)) => {
+        (Some(caret), _) if caret.held == Held::Yes => return Ok(FieldEnds::selection(kind)),
+        (Some(caret), Ok(back)) if caret.held == Held::No => {
             tail(&caret.range, TextUnit_Character, back, by, chars)?.map(|t| t.ends_with(want))
         }
         _ => None,
     };
-    Ok(FieldEnds { kind, ends })
+    Ok(FieldEnds::new(kind, ends))
 }
 
 /// The kind of `el` checked now, and its caret, which only a text box with one gives; the check fetches it once.

@@ -84,8 +84,8 @@ impl Actor {
         }
     }
 
-    /// True when the box confirms what a pick erases: a text box that has given its text and told each end asked since
-    /// focus came.
+    /// True when the box confirms what a pick erases: a text box whose last read gave text and whose checks since could
+    /// tell.
     pub(super) fn confirms(&self) -> bool {
         self.kind == FieldKind::Text && !self.blind
     }
@@ -119,29 +119,28 @@ impl Actor {
         };
         self.publish(&word);
         self.stats.sent += 1;
-        self.pending = true;
+        self.hold = true;
         Some(sent.text)
     }
 
-    /// Whether the box still ends with what `plan` replaces, as a text box tells, even when the plan erases none of it;
-    /// `None` when another box, or the app, cannot tell, which leaves the box blind. A box the watch or the check sees
-    /// as another kind has moved on.
+    /// Whether the box still ends with what `plan` replaces, as a text box tells, even when the plan replaces nothing,
+    /// so the kind its check sees wins for every pick; `None` when another box, or the app, cannot tell, which leaves a
+    /// text box blind. A box that cannot confirm never confirms an erase, and a selection's no holds the lane empty.
     fn ends(&mut self, plan: &Plan) -> Option<bool> {
         if self.moved() {
             return Some(false);
         }
-        if plan.gone.expose().is_empty() {
-            return Some(true);
+        if self.kind != FieldKind::Text {
+            return plan.gone.expose().is_empty().then_some(true);
         }
-        if !self.confirms() {
-            return None;
-        }
+        let confirms = self.confirms();
         let checked = self.ports.field.as_mut()?.ends_with(&plan.gone);
         if self.seen(checked.kind) {
             return Some(false);
         }
         self.blind |= checked.ends.is_none();
-        checked.ends
+        self.hold |= checked.selected;
+        checked.ends.filter(|&ends| confirms || !ends)
     }
 
     /// Forgets the word stored as `stored`, whose chip sat at `at`; its Undo chip takes the place.

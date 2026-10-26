@@ -15,7 +15,7 @@ impl Actor {
     pub(super) fn typed(&mut self, seed: Option<&Pack<'_>>, piece: &Piece) -> bool {
         self.stats.pieces += 1;
         self.menu.key();
-        self.pending = false;
+        self.hold = false;
         let landed = self.landed(piece);
         if self.following() {
             let told = self.tracker.typed(piece, &|w: &str| knows(seed, w));
@@ -45,7 +45,7 @@ impl Actor {
         }
         self.kind = change.kind;
         self.menu.key();
-        self.pending = false;
+        self.hold = false;
         self.domain = None;
         let told = self.tracker.focus(change);
         if self.following() {
@@ -85,7 +85,7 @@ impl Actor {
 
     /// Ends the word unlearned and drops a pick still waiting; gives what the tracker asks for.
     pub(super) fn drop_word(&mut self) -> Vec<Told> {
-        self.pending = false;
+        self.hold = false;
         self.domain = None;
         self.tracker.reset()
     }
@@ -111,7 +111,7 @@ impl Actor {
     }
 
     /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a read with no text
-    /// counts as no context and leaves the box blind, and another kind the read saw wins at once.
+    /// counts as no context and leaves the box blind, one with text heals it, and another kind the read saw wins.
     pub(super) fn read(&mut self, seed: Option<&Pack<'_>>) {
         if !self.settings.on || self.moved() || !self.kind.reads() {
             return;
@@ -129,7 +129,7 @@ impl Actor {
                 None
             }
         };
-        self.blind |= text.is_none();
+        self.blind = text.is_none();
         if self.moved() {
             return;
         }

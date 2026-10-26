@@ -95,10 +95,7 @@ fn answers(inbox: &Receiver<Job>) {
                 let _ = reply.send(Ok(Some(read)));
             }
             Ask::Ends { text, reply, .. } => {
-                let ended = FieldEnds {
-                    kind: FieldKind::Text,
-                    ends: Some(text.expose() == "ap"),
-                };
+                let ended = FieldEnds::new(FieldKind::Text, Some(text.expose() == "ap"));
                 let _ = reply.send(Ok(Some(ended)));
             }
         }
@@ -123,7 +120,7 @@ fn ends(run: &mut dyn FieldRun) -> FieldEnds {
 
 /// A check that saw a box of `kind` and answered `ends`.
 fn ended(kind: FieldKind, ends: Option<bool>) -> FieldEnds {
-    FieldEnds { kind, ends }
+    FieldEnds::new(kind, ends)
 }
 
 #[test]

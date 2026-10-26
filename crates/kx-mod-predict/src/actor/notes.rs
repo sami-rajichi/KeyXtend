@@ -71,9 +71,10 @@ impl Actor {
         }
     }
 
-    /// True while a shortcut latch, a dead key or a sent pick holds the lane empty, as the keyboard would refuse a pick.
+    /// True while a shortcut latch, a dead key, a sent pick or a selection that refused one holds the lane empty, as
+    /// the keyboard or the box would refuse a pick.
     pub(super) fn held(&self) -> bool {
-        self.mode.shortcut || self.mode.dead || self.pending
+        self.mode.shortcut || self.mode.dead || self.hold
     }
 
     /// The chips for what the tracker `show`s, with the menu's state.

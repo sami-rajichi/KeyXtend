@@ -59,10 +59,7 @@ impl Reader for Desk {
 
     fn ends_with(&self, el: &El, text: &str, _: Instant) -> Result<FieldEnds, FieldError> {
         self.reads.set(self.reads.get() + 1);
-        Ok(FieldEnds {
-            kind: el.1.kind,
-            ends: Some(text == "ap"),
-        })
+        Ok(FieldEnds::new(el.1.kind, Some(text == "ap")))
     }
 }
 
@@ -111,10 +108,7 @@ fn a_read_comes_back_from_the_focused_box() {
         before(&desk, far()),
         Ok(Some((FieldKind::Text, "2 words".to_owned())))
     );
-    let ended = FieldEnds {
-        kind: FieldKind::Text,
-        ends: Some(true),
-    };
+    let ended = FieldEnds::new(FieldKind::Text, Some(true));
     assert_eq!(
         ends(&desk, far()),
         Ok(Some(ended)),

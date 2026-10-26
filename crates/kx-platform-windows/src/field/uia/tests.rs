@@ -15,6 +15,7 @@ use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use windows::Win32::UI::WindowsAndMessaging::{ES_PASSWORD, ES_READONLY};
 
+mod chosen;
 mod errors;
 mod select;
 mod stale;
@@ -82,12 +83,7 @@ fn the_words_before_the_caret_are_cut_to_the_last_n_in_latin_and_arabic() {
     assert_eq!(read(&arabic, 9), Ok(Some(ARABIC.to_owned())));
     assert_eq!(read(&latin, 2), Ok(Some("gamma delta".to_owned())));
     assert_eq!(read(&latin, 0), Ok(Some(String::new())));
-    let ended = |ends| {
-        Ok(FieldEnds {
-            kind: FieldKind::Text,
-            ends,
-        })
-    };
+    let ended = |ends| Ok(FieldEnds::new(FieldKind::Text, ends));
     assert_eq!(
         ends_with(&latin, "delta", far(), chars()),
         ended(Some(true))
@@ -108,10 +104,7 @@ fn a_read_past_the_cap_in_characters_keeps_only_the_whole_words_inside_it() {
     assert_eq!(read(&latin), Ok(Some("delta".to_owned())));
     assert_eq!(read(&arabic), Ok(Some("كثيرا".to_owned())));
     let long = "a".repeat(SHORT + 1);
-    let unsure = FieldEnds {
-        kind: FieldKind::Text,
-        ends: None,
-    };
+    let unsure = FieldEnds::new(FieldKind::Text, None);
     assert_eq!(ends_with(&latin, &long, far(), SHORT), Ok(unsure));
 }
 
@@ -130,10 +123,7 @@ fn a_password_box_is_never_read_but_reported_and_a_late_read_times_out() {
         Ok(closed(FieldKind::Password)),
         "the read tells the kind it saw"
     );
-    let no = FieldEnds {
-        kind: FieldKind::Password,
-        ends: Some(false),
-    };
+    let no = FieldEnds::new(FieldKind::Password, Some(false));
     assert_eq!(
         ends_with(&secret, "delta", far(), chars()),
         Ok(no),
