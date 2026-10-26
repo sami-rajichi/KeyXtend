@@ -1,26 +1,28 @@
-//! G8's typing churn (`g8 predict`): words typed through the product's chips in a target-window G8 starts, never
-//! Notepad, taking `[g27]`'s cases in turn. Private memory is read after `[g8_predict] warm_words` and again after
-//! `words` more.
+//! G8's typing churns (`g8 predict`): words typed through the product's chips in a target-window G8 starts, never
+//! Notepad. The judged churn types `[g8_predict] lang`'s case alone; the mixed churn then takes every `[g27]` case in
+//! turn, as a reading only. Each reads private memory after its warm-up and again after its measured words.
 #![cfg(windows)]
 
 use serde::Serialize;
 
 use crate::apps::Ctx;
 use crate::g27type::Typist;
-use crate::p7cfg::Case;
+use crate::p7cfg::{Case, G8Predict, G27};
 use crate::proc::{Memory, Process};
 use crate::typebox;
 use crate::win::sleep_ms;
 
-/// The churn's memory readings, each after its words and `[g8_predict] settle_ms`: after the warm-up, then after the
+/// Each churn's memory readings, each after its words and `[g8_predict] settle_ms`: after the warm-up, then after the
 /// measured words.
 pub(crate) const READINGS: usize = 2;
 /// Why a churn typed no more words after a missed one.
 const STOPPED: &str = "the missed word could not be ended, so no word followed";
 /// Begins the note of a churn whose warm-up stopped, so no word was measured.
 const WARM_UP: &str = "the warm-up stopped";
+/// Why the mixed churn did not run.
+const NO_MIXED: &str = "a failed word end stopped the judged churn, so the mixed churn did not run";
 
-/// What the typing churn did, and private memory around its measured words.
+/// What a typing churn did, and private memory around its measured words.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Typed {
     /// Words it measured.
@@ -33,12 +35,61 @@ pub struct Typed {
     pub after: Memory,
     /// Why the first missed measured word failed; none when every word was picked.
     pub note: Option<String>,
+    /// A missed word could not be ended, so no word followed it.
+    pub stopped: bool,
 }
 
 impl Typed {
     /// True when every measured word was picked, so the churn churned all it counts.
     pub fn whole(&self) -> bool {
         self.picked == self.words
+    }
+}
+
+/// Both churns: the judged one, and the mixed one, which never fails the run.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Churns {
+    /// The churn of `[g8_predict] lang`'s case, judged against `[g8] churn_growth_mb`.
+    pub judged: Typed,
+    /// The churn of every case in turn, or why it did not run; a reading only.
+    pub mixed: Result<Typed, String>,
+}
+
+/// A churn's cases, taken in turn, and its passes before each reading, as words skipped and typed.
+#[derive(Debug)]
+pub(crate) struct Plan<'c> {
+    cases: &'c [Case],
+    passes: [(usize, usize); READINGS],
+}
+
+impl<'c> Plan<'c> {
+    /// The judged churn: `p.lang`'s case alone, `warm_words` of it, then `words`; an error when no case has it.
+    pub fn judged(g: &'c G27, p: &G8Predict) -> Result<Self, String> {
+        Ok(Self {
+            cases: std::slice::from_ref(p.case(g)?),
+            passes: passes(p.warm_words, p.words),
+        })
+    }
+
+    /// The mixed churn: every case in turn, a warm-up round of one word each, then `mixed_words`.
+    pub fn mixed(g: &'c G27, p: &G8Predict) -> Self {
+        Self {
+            cases: &g.cases,
+            passes: passes(g.cases.len(), p.mixed_words),
+        }
+    }
+
+    /// Words it types in all.
+    pub fn words(&self) -> usize {
+        self.passes
+            .iter()
+            .fold(0, |n, &(_, count)| n.saturating_add(count))
+    }
+
+    /// Its longest prefix, in characters.
+    pub fn keys(&self) -> usize {
+        let keys = self.cases.iter().map(|k| k.prefix.chars().count());
+        keys.max().unwrap_or_default()
     }
 }
 
@@ -96,21 +147,21 @@ fn words(t: &Typist, cases: &[Case], skip: usize, count: usize) -> Pass {
     )
 }
 
-/// The churn's passes before each reading, as words skipped and typed: the `warm` words, then `measured` more.
+/// A churn's passes before each reading, as words skipped and typed: the `warm` words, then `measured` more.
 fn passes(warm: usize, measured: usize) -> [(usize, usize); READINGS] {
     [(0, warm), (warm, measured)]
 }
 
-/// Each pass's words, then `[g8_predict] settle_ms` and a memory reading.
-fn churn(ctx: &Ctx, t: &Typist, process: &Process) -> Result<Typed, String> {
-    let (cases, p) = (&ctx.cfg.g27.cases, &ctx.cfg.g8_predict);
+/// Each of `plan`'s passes, then `[g8_predict] settle_ms` and a memory reading.
+fn churn(ctx: &Ctx, t: &Typist, process: &Process, plan: &Plan) -> Result<Typed, String> {
+    let settle_ms = ctx.cfg.g8_predict.settle_ms;
     let read = |(skip, count)| {
-        let typed = words(t, cases, skip, count);
-        sleep_ms(p.settle_ms);
+        let typed = words(t, plan.cases, skip, count);
+        sleep_ms(settle_ms);
         process.memory().map(|m| (typed, m))
     };
-    let [warm, measured] = passes(p.warm_words, p.words);
-    measure(p.words, read(warm)?, || read(measured))
+    let [warm, measured] = plan.passes;
+    measure(measured.1, read(warm)?, || read(measured))
 }
 
 /// The churn of `words` measured words from the warm-up pass and its reading, then the measured pass. A warm-up that a
@@ -129,6 +180,7 @@ fn measure(
             before,
             after,
             note,
+            stopped: true,
         });
     }
     let (pass, after) = measured()?;
@@ -138,151 +190,38 @@ fn measure(
         before,
         after,
         note: pass.note,
+        stopped: pass.stopped,
     })
 }
 
-/// Runs the typing churn on the product G8 started, held as `process`, in a fresh target-window; the window's first
-/// layout comes back and the window closes after, or the churn fails saying so.
-pub fn run(ctx: &Ctx, process: &Process) -> Result<Typed, String> {
-    let b = typebox::in_target(ctx, &[], |t| churn(ctx, t, process));
+/// Both churns from the judged one; the mixed one runs unless a failed word end stopped the judged one.
+fn after(judged: Typed, mixed: impl FnOnce() -> Result<Typed, String>) -> Churns {
+    let mixed = if judged.stopped {
+        Err(NO_MIXED.to_string())
+    } else {
+        mixed()
+    };
+    Churns { judged, mixed }
+}
+
+/// The judged churn, then the mixed one in the same box.
+fn both(ctx: &Ctx, t: &Typist, process: &Process) -> Result<Churns, String> {
+    let (g, p) = (&ctx.cfg.g27, &ctx.cfg.g8_predict);
+    let judged = churn(ctx, t, process, &Plan::judged(g, p)?)?;
+    Ok(after(judged, || churn(ctx, t, process, &Plan::mixed(g, p))))
+}
+
+/// Runs both typing churns on the product G8 started, held as `process`, in a fresh target-window; the window's first
+/// layout comes back and the window closes after, or the run fails saying so.
+pub fn run(ctx: &Ctx, process: &Process) -> Result<Churns, String> {
+    let b = typebox::in_target(ctx, &[], |t| both(ctx, t, process));
     match (b.got, b.back, b.left.is_empty()) {
         (Ok(c), true, true) => Ok(c),
         (Ok(_), false, _) => Err("target-window's first layout did not come back".to_string()),
-        (Ok(_), true, false) => Err(format!("the typing churn left {:?}", b.left)),
+        (Ok(_), true, false) => Err(format!("the typing churns left {:?}", b.left)),
         (Err(e), _, _) => Err(format!("{e}; clean-up: {:?}", b.left)),
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use std::cell::{Cell, RefCell};
-
-    use super::*;
-
-    fn memory(mb: f64) -> Memory {
-        Memory {
-            working_mb: mb,
-            commit_mb: mb,
-        }
-    }
-
-    #[test]
-    fn the_churn_is_whole_only_when_every_measured_word_was_picked() {
-        let mut c = Typed {
-            words: 30,
-            picked: 30,
-            before: memory(60.0),
-            after: memory(61.0),
-            note: None,
-        };
-        assert!(c.whole());
-        c.picked = 29;
-        assert!(!c.whole());
-    }
-
-    fn case(lang: &str) -> Case {
-        Case {
-            lang: lang.into(),
-            prefix: "x".into(),
-        }
-    }
-
-    #[test]
-    fn a_missed_word_keeps_its_error_and_is_ended_before_the_next_starts() {
-        let cases = [case("en"), case("fr"), case("ar")];
-        let (typed, ended) = (RefCell::new(Vec::new()), RefCell::new(Vec::new()));
-        let word = |c: &Case| {
-            typed.borrow_mut().push(c.lang.clone());
-            if c.lang == "fr" {
-                Err("no chip".to_string())
-            } else {
-                Ok(())
-            }
-        };
-        let end = |c: &Case| {
-            ended.borrow_mut().push(c.lang.clone());
-            Ok(())
-        };
-        let pass = tally(turn(&cases, 0, 4), word, end);
-        assert_eq!((pass.picked, pass.note.as_deref()), (3, Some("no chip")));
-        assert!(!pass.stopped);
-        assert_eq!(*typed.borrow(), ["en", "fr", "ar", "en"]);
-        assert_eq!(*ended.borrow(), ["fr"], "only the missed word is ended");
-    }
-
-    #[test]
-    fn a_warm_up_a_failed_end_stopped_measures_nothing_and_carries_its_note() {
-        let warm = Pass {
-            picked: 1,
-            note: Some("miss; stopped".into()),
-            stopped: true,
-        };
-        let typed = measure(30, (warm, memory(60.0)), || panic!("no measured pass"));
-        let typed = typed.unwrap();
-        assert_eq!((typed.picked, typed.after), (0, memory(60.0)));
-        assert!(!typed.whole());
-        let note = typed.note.expect("a note");
-        assert!(note.contains(WARM_UP) && note.contains("miss"), "{note}");
-    }
-
-    #[test]
-    fn a_warm_up_that_went_on_is_followed_by_the_measured_words() {
-        let warm = Pass {
-            picked: 2,
-            note: Some("miss".into()),
-            stopped: false,
-        };
-        let measured = Pass {
-            picked: 30,
-            note: None,
-            stopped: false,
-        };
-        let typed = measure(30, (warm, memory(60.0)), || Ok((measured, memory(61.0))));
-        let typed = typed.unwrap();
-        assert!(typed.whole() && typed.note.is_none());
-        assert_eq!((typed.before, typed.after), (memory(60.0), memory(61.0)));
-    }
-
-    #[test]
-    fn a_word_end_that_fails_starts_no_further_word_and_the_first_error_stays() {
-        let cases = [case("en")];
-        let tries = Cell::new(0);
-        let word = |_: &Case| {
-            tries.set(tries.get() + 1);
-            Err(format!("miss {}", tries.get()))
-        };
-        let pass = tally(turn(&cases, 0, 5), word, |_| Err("no gap key".into()));
-        assert_eq!(
-            (pass.picked, tries.get()),
-            (0, 1),
-            "stopped after the first"
-        );
-        assert!(pass.stopped);
-        let note = pass.note.expect("a note");
-        assert!(
-            note.contains("miss 1") && note.contains("no gap key"),
-            "{note}"
-        );
-    }
-
-    #[test]
-    fn memory_is_read_after_the_warm_up_and_after_the_measured_words() {
-        assert_eq!(passes(3, 30), [(0, 3), (3, 30)]);
-    }
-
-    #[test]
-    fn the_cases_are_taken_in_turn_from_where_the_warm_up_stopped() {
-        let cases = [case("en"), case("fr"), case("ar")];
-        let langs = |skip, count| {
-            let taken = turn(&cases, skip, count).map(|c| c.lang.as_str());
-            taken.collect::<Vec<_>>()
-        };
-        assert_eq!(langs(0, 2), ["en", "fr"], "the warm-up");
-        assert_eq!(
-            langs(2, 4),
-            ["ar", "en", "fr", "ar"],
-            "the measured words go on"
-        );
-        assert!(langs(0, 0).is_empty());
-    }
-}
+mod tests;

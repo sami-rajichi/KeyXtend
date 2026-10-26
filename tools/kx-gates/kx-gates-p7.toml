@@ -40,11 +40,14 @@ case = "en"
 [g8_predict]
 # The owner's accepted predict part (2026-10-24): about this many MB of idle private memory; a reading, never a fail.
 owner_mb = 2.0
-# Words typed through chips before the typing churn's first memory reading, then the words it measures; the growth
-# must stay within [g8] churn_growth_mb.
+# The [g27] case the judged churn types alone; its growth must stay within [g8] churn_growth_mb (owner, 2026-10-26).
+lang = "en"
+# Words the judged churn types through chips before its first memory reading, then the words it measures.
 warm_words = 3
 words = 30
-# Wait before each memory reading, after the warm-up words and after the measured words, in ms.
+# Words the mixed churn measures after one warm-up word per case, taking the cases in turn; a reading, never a fail.
+mixed_words = 30
+# Wait before each memory reading, after a churn's warm-up and after its measured words, in ms.
 settle_ms = 2000
 
 [owner_settings]

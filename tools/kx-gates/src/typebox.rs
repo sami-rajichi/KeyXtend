@@ -1,5 +1,5 @@
-//! A fresh target-window box typed in through the product, as G27, G21's product half and G8's typing churn need: it is
-//! started, focused and typed in, then its first layout comes back, held input is let go and the window closes.
+//! A fresh target-window box typed in through the product, as G27, G21's product half and G8's typing churns need: it
+//! is started, focused and typed in, then its first layout comes back, held input is let go and the window closes.
 #![cfg(windows)]
 
 use spike_core::geom;

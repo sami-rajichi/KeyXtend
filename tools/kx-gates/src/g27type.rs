@@ -1,5 +1,5 @@
 //! Typing through the product's keys and chips into another app's box: the layout in front, the keys for a prefix, the
-//! first chip that offers it, and its click. G27, G21's product half and G8's typing churn share it.
+//! first chip that offers it, and its click. G27, G21's product half and G8's typing churns share it.
 #![cfg(windows)]
 
 use std::time::Instant;

@@ -44,6 +44,8 @@ fn the_shipped_settings_pass_with_the_owners_figure() {
     let langs: Vec<&str> = c.g27.cases.iter().map(|k| k.lang.as_str()).collect();
     assert_eq!(langs, ["en", "fr", "ar"]);
     assert!((c.g8_predict.owner_mb - 2.0).abs() < f64::EPSILON);
+    let judged = c.g8_predict.case(&c.g27).map(|k| k.lang.as_str());
+    assert_eq!(judged, Ok("en"), "the owner's ruling: one language judged");
 }
 
 #[test]
@@ -129,9 +131,16 @@ fn g8_predict_values_out_of_range_are_refused() {
             |c| c.g8_predict.owner_mb = c.g8.memory_mb + 1.0,
             "g8_predict.owner_mb",
         ),
+        (|c| c.g8_predict.lang = "xx".into(), "g8_predict.lang"),
+        (|c| c.g8_predict.lang.clear(), "g8_predict.lang"),
         (|c| c.g8_predict.warm_words = 0, "g8_predict.warm_words"),
         (|c| c.g8_predict.words = 0, "g8_predict.words"),
         (|c| c.g8_predict.words = 1_000_000, "g8_predict.words"),
+        (|c| c.g8_predict.mixed_words = 0, "g8_predict.mixed_words"),
+        (
+            |c| c.g8_predict.mixed_words = 1_000_000,
+            "g8_predict.mixed_words",
+        ),
         (|c| c.g8_predict.settle_ms = 0, "g8_predict.settle_ms"),
         (
             |c| c.g8_predict.settle_ms = c.mouse_guard.limit_ms + 1,
@@ -231,32 +240,6 @@ fn the_typed_box_needs_its_focus_class() {
     c.apps.get_mut(target).expect("target").focus_class = None;
     let e = check(&c).expect_err("no focus class");
     assert!(e.contains("focus_class"), "{e}");
-}
-
-#[test]
-fn each_run_length_counts_every_copy_and_every_word() {
-    let c = load().expect("loads");
-    let (g, t) = (&c.g27, &c.g8);
-    let end = u64::from(t.quit_tries) * t.quit_try_ms + 2 * c.timing.quit_wait_ms;
-    let copy = t.start_wait_ms + g.ready_ms + end;
-    let keys = |lang: &str| g.case(lang).map_or(0, |k| k.prefix.chars().count() as u64);
-    let word = |lang| {
-        g.switch_wait_ms + keys(lang) * g.key_gap_ms + g.chip_wait_ms + g.settle_ms + g.text_wait_ms
-    };
-    let typed = keys(&c.g21_product.case) * g.key_gap_ms;
-    let boxed = g.switch_wait_ms + typed + g.chip_wait_ms;
-    assert_eq!(runs::g21_ms(&c), copy + 3 * boxed);
-    let cases: u64 = g.cases.iter().map(|k| word(&k.lang)).sum();
-    assert_eq!(runs::g27_ms(&c), 2 * copy + cases + word(&g.edge));
-    let p = &c.g8_predict;
-    let longest = g.cases.iter().map(|k| word(&k.lang)).max().expect("cases");
-    let copy_warm = t.start_wait_ms + t.warm_ms + end;
-    let words = (p.warm_words + p.words) as u64 * longest;
-    assert_eq!(
-        runs::predict_ms(&c),
-        2 * copy_warm + words + 2 * p.settle_ms,
-        "a settle before each of the two readings"
-    );
 }
 
 #[test]

@@ -79,11 +79,15 @@ pub struct OwnerSettings {
 pub struct G8Predict {
     /// The owner's accepted predict part, in MB; a reading, never a fail.
     pub owner_mb: f64,
-    /// Words typed before the typing churn's first reading.
+    /// The `[g27]` case the judged churn types, by its language.
+    pub lang: String,
+    /// Words the judged churn types before its first reading.
     pub warm_words: usize,
-    /// Words the typing churn measures.
+    /// Words the judged churn measures.
     pub words: usize,
-    /// Wait before each memory reading, after the warm-up words and after the measured words, in ms.
+    /// Words the mixed churn measures after its warm-up round, taking every case in turn; a reading, never judged.
+    pub mixed_words: usize,
+    /// Wait before each memory reading, after a churn's warm-up and after its measured words, in ms.
     pub settle_ms: u64,
 }
 
@@ -196,7 +200,14 @@ impl G27 {
 }
 
 impl G8Predict {
-    /// Refuses a figure outside 0 to `[g8] memory_mb`, no words, a bad settle, and a run past the mouse guard's limit.
+    /// The judged churn's case in `g`, or an error naming `lang`.
+    pub fn case<'g>(&self, g: &'g G27) -> Result<&'g Case, String> {
+        g.case(&self.lang)
+            .ok_or_else(|| format!("g8_predict.lang: {} names no g27 case", self.lang))
+    }
+
+    /// Refuses a figure outside 0 to `[g8] memory_mb`, a language with no case, no words, a bad settle, and a run past
+    /// the mouse guard's limit.
     fn check(&self, c: &GatesConfig) -> Result<(), String> {
         let most = c.g8.memory_mb;
         if !(self.owner_mb > 0.0 && self.owner_mb <= most) {
@@ -204,17 +215,21 @@ impl G8Predict {
                 "g8_predict.owner_mb must be above 0 and at most g8.memory_mb ({most} MB)"
             ));
         }
-        if self.warm_words == 0 || self.words == 0 {
-            return Err("g8_predict.warm_words and g8_predict.words must be above 0".to_string());
+        self.case(&c.g27)?;
+        if [self.warm_words, self.words, self.mixed_words].contains(&0) {
+            return Err(format!("{WORDS} must be above 0"));
         }
         wait(
             "g8_predict.settle_ms",
             self.settle_ms,
             c.mouse_guard.limit_ms,
         )?;
-        held_fits(c, "g8_predict.words: g8 predict", runs::predict_ms(c))
+        held_fits(c, &format!("{WORDS}: g8 predict"), runs::predict_ms(c))
     }
 }
+
+/// The word counts of `g8 predict`, named in its errors.
+const WORDS: &str = "g8_predict.warm_words, g8_predict.words and g8_predict.mixed_words";
 
 /// Refuses P7 settings that could type nothing, pick the wrong word, wait past the mouse guard, hide a figure, keep
 /// the owner's settings outside the out folder or in a file a gate deletes, or type in a box with no focus class.

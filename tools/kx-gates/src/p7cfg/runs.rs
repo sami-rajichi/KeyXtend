@@ -4,7 +4,7 @@ use crate::config::GatesConfig;
 use crate::copyend::END_WAITS;
 use crate::fit::{times, total};
 use crate::g8predict::RUNS;
-use crate::g8words::READINGS;
+use crate::g8words::{Plan, READINGS};
 use crate::g21prod::BOXES;
 use crate::g27::COPIES;
 use crate::p7cfg::G27;
@@ -20,18 +20,19 @@ fn word_ms(g: &G27, keys: usize) -> u64 {
     ])
 }
 
-/// The least time `g8 predict` holds the mouse: each copy with its warm-up and end, each typed word at its longest,
-/// and the settle before each memory reading.
+/// One churn: each of its words at its longest prefix, and the settle before each memory reading.
+fn churn_ms(g: &G27, plan: &Plan, settle_ms: u64) -> u64 {
+    let words = times(plan.words(), word_ms(g, plan.keys()));
+    total(&[words, times(READINGS, settle_ms)])
+}
+
+/// The least time `g8 predict` holds the mouse: each copy with its warm-up and end, then the judged and the mixed
+/// churn. A `lang` with no case adds no judged churn, as load refuses it first.
 pub fn predict_ms(c: &GatesConfig) -> u64 {
     let (g, p) = (&c.g27, &c.g8_predict);
-    let keys = g.cases.iter().map(|k| k.prefix.chars().count()).max();
-    let word = word_ms(g, keys.unwrap_or_default());
-    let words = times(p.warm_words.saturating_add(p.words), word);
-    total(&[
-        times(RUNS, copy_ms(c, c.g8.warm_ms)),
-        words,
-        times(READINGS, p.settle_ms),
-    ])
+    let judged = Plan::judged(g, p).map_or(0, |k| churn_ms(g, &k, p.settle_ms));
+    let mixed = churn_ms(g, &Plan::mixed(g, p), p.settle_ms);
+    total(&[times(RUNS, copy_ms(c, c.g8.warm_ms)), judged, mixed])
 }
 
 /// The longest a copy's end may take: every Quit try, the wait for its end, then the wait after an end.
@@ -71,4 +72,68 @@ pub fn g27_ms(c: &GatesConfig) -> u64 {
         total(&cases),
         word_ms(g, keys(g, &g.edge)),
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::load;
+    use crate::fit::held_fits;
+
+    /// The longest a copy's end takes: every Quit try and both end waits.
+    fn end(c: &GatesConfig) -> u64 {
+        u64::from(c.g8.quit_tries) * c.g8.quit_try_ms + 2 * c.timing.quit_wait_ms
+    }
+
+    /// One word of `keys` characters at its longest.
+    fn word(g: &G27, keys: usize) -> u64 {
+        let typed = keys as u64 * g.key_gap_ms;
+        g.switch_wait_ms + typed + g.chip_wait_ms + g.settle_ms + g.text_wait_ms
+    }
+
+    /// The characters of `lang`'s prefix.
+    fn keys(g: &G27, lang: &str) -> usize {
+        g.case(lang).map_or(0, |k| k.prefix.chars().count())
+    }
+
+    #[test]
+    fn g21_and_g27_count_every_copy_and_every_word() {
+        let c = load().expect("loads");
+        let g = &c.g27;
+        let copy = c.g8.start_wait_ms + g.ready_ms + end(&c);
+        let typed = keys(g, &c.g21_product.case) as u64 * g.key_gap_ms;
+        let boxed = g.switch_wait_ms + typed + g.chip_wait_ms;
+        assert_eq!(g21_ms(&c), copy + 3 * boxed);
+        let cases: u64 = g.cases.iter().map(|k| word(g, keys(g, &k.lang))).sum();
+        assert_eq!(g27_ms(&c), 2 * copy + cases + word(g, keys(g, &g.edge)));
+    }
+
+    #[test]
+    fn g8_predict_counts_both_copies_and_both_churns() {
+        let c = load().expect("loads");
+        let (g, p) = (&c.g27, &c.g8_predict);
+        let copy = c.g8.start_wait_ms + c.g8.warm_ms + end(&c);
+        let judged = (p.warm_words + p.words) as u64 * word(g, keys(g, &p.lang));
+        let longest = g.cases.iter().map(|k| keys(g, &k.lang)).max();
+        let mixed_word = word(g, longest.expect("cases"));
+        let mixed = (g.cases.len() + p.mixed_words) as u64 * mixed_word;
+        let settles = 2 * 2 * p.settle_ms;
+        assert_eq!(
+            predict_ms(&c),
+            2 * copy + judged + mixed + settles,
+            "a settle before each churn's two readings"
+        );
+        let mut more = c.clone();
+        more.g8_predict.mixed_words += 1;
+        assert_eq!(predict_ms(&more), predict_ms(&c) + mixed_word);
+    }
+
+    #[test]
+    fn todays_g8_predict_fits_the_mouse_guard() {
+        let c = load().expect("loads");
+        let need = predict_ms(&c) + c.fit.guard_headroom_ms;
+        assert!(c.mouse_guard.on, "the shipped guard is on");
+        assert!(need <= c.mouse_guard.limit_ms, "{need} ms");
+        assert_eq!(held_fits(&c, "g8 predict", predict_ms(&c)), Ok(()));
+    }
 }
