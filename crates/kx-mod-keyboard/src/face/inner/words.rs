@@ -8,14 +8,14 @@ use kx_module_api::ports::{Piece, TypingMode};
 
 impl Inner {
     /// Notes whether the module runs; a picked word types only while it does.
-    pub(in crate::face) fn set_up(&mut self, on: bool) {
-        self.up = on;
+    pub(in crate::face) fn set_running(&mut self, on: bool) {
+        self.running = on;
     }
 
     /// Types a picked word while the module runs: `erase` Backspaces, then `text`; the next relabel redraws the
     /// latches it used.
     pub(in crate::face) fn type_word(&mut self, erase: u16, text: &Redacted<String>) {
-        if !self.up {
+        if !self.running {
             return;
         }
         let table = self.ports.layouts.current();

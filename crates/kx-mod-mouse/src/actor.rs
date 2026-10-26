@@ -8,7 +8,7 @@ mod stopped;
 
 pub use stopped::STOPPED_LINE;
 
-use crate::hook_engine::{Cmd, HookEngine, Moves};
+use crate::hook_engine::{Cmd, HookEngine, Moves, aimed};
 use crate::{Engine, EngineCfg, ID, MouseSettings, Note};
 use kx_module_api::ports::{
     AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressesAsk, Scan,
@@ -47,7 +47,8 @@ struct Live {
     id: u64,
     queue: Sender<Cmd>,
     sent: u64,
-    /// A mode or a latch held the run, so its stop line logs at info.
+    /// A mode or a latch held the run, or a mode tap went to it (`aimed`), so its stop logs at info and its loss
+    /// always tells.
     loud: bool,
 }
 
@@ -208,7 +209,8 @@ impl Actor {
         // A mouse key or a restored Right-click is a mode the user expects on; latches, scrolling and presses start
         // quietly.
         let expected = !first.as_ref().is_some_and(Cmd::quiet);
-        let loud = self.rclick || !self.latches.is_empty() || first.as_ref().is_none_or(Cmd::loud);
+        let mode = self.rclick || self.grab != GrabState::Off;
+        let loud = aimed(mode, &self.latches) || first.as_ref().is_none_or(Cmd::loud);
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         self.runs += 1;
@@ -246,16 +248,14 @@ impl Actor {
     }
 
     /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
-    /// session and the user hears why: always when a mode or a latch goes dark, else once per program run. A quiet need
-    /// then gets one fresh run at once, and no more until a run ends well or the user acts, so a fault never loops.
+    /// session and the user hears why: always for a loud run, else once per program run. A quiet need then gets one
+    /// fresh run at once, and no more until a run ends well or the user acts, so a fault never loops.
     fn lost(&mut self, run: u64) {
-        if self.live.as_ref().is_none_or(|live| live.id != run) {
+        let Some(loud) = self.live.as_ref().filter(|l| l.id == run).map(|l| l.loud) else {
             return;
-        }
+        };
         tracing::warn!("mouse hook gave up its engine");
         self.drop_run();
-        // A mode or a latch the user turned on goes dark, so the notice always tells.
-        let seen = self.rclick || self.grab != GrabState::Off || !self.latches.is_empty();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
         let needed = self.scrolling || self.wanted || !self.latches.is_empty();
@@ -264,7 +264,8 @@ impl Actor {
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
         self.tell_state();
-        if seen || !self.reset_told.swap(true, Ordering::Relaxed) {
+        // A mode or a latch the user aimed at the run goes dark, even one the engine had no time to note.
+        if loud || !self.reset_told.swap(true, Ordering::Relaxed) {
             self.publish(&notice(keys::MOUSE_RESET));
         }
     }

@@ -1,6 +1,7 @@
 //! An engine the hook gave up: the modes turn off for this session, so one tap on a mode key starts afresh, and held
 //! latches get one fresh run at once, once until the user acts again; a late word from an older run changes nothing.
-//! The user always hears why a mode or a latch went dark, and once per program run when only quiet needs did.
+//! The user always hears why a run a mode tap or a latch held went dark, and once per program run when only quiet
+//! needs held it.
 
 use crate::live::{Live, WAIT, hear, on, synced};
 use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
@@ -108,6 +109,42 @@ fn a_mode_tap_after_a_repeated_give_up_earns_the_latches_one_more_fresh_run() {
     rig.pump();
     assert!(rig.hook.running(), "the latch still gets its fresh run");
     assert_eq!(rig.hook.starts(), 4);
+}
+
+#[test]
+fn a_fault_that_turns_a_latch_dark_leaves_the_quiet_allowance_unused() {
+    let mut rig = latched();
+    rig.hook.give_up();
+    rig.pump();
+    rig.send(Msg::Latches(Vec::new()));
+    rig.settle(T0);
+    assert!(!rig.hook.running(), "the fresh run ended well");
+    rig.send(Msg::Presses(true));
+    rig.take();
+    rig.hook.give_up();
+    rig.pump();
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    assert_eq!(rig.take(), reset, "the first quiet fault still tells");
+}
+
+#[test]
+fn a_fault_after_a_mode_tap_the_engine_never_noted_still_tells() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.send(Msg::Presses(true));
+    rig.hook.give_up();
+    rig.pump();
+    rig.take();
+    // The tap reaches the fresh run, which faults before it notes the mode.
+    rig.toggle(Toggle::RightClick);
+    rig.hook.give_up();
+    rig.pump();
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    assert_eq!(
+        rig.take(),
+        reset,
+        "the quiet allowance is spent, yet the tap hears why"
+    );
 }
 
 #[test]

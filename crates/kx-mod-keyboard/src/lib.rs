@@ -69,7 +69,7 @@ impl Module for KeyboardModule {
         };
         cx.provide::<KeyboardFaceKey>(face.clone())?;
         face::listen(cx, &face)?;
-        face.set_up(true);
+        face.set_running(true);
         self.face = Some(face);
         Ok(())
     }
@@ -77,7 +77,7 @@ impl Module for KeyboardModule {
     /// The face stops typing picked words, as a handler may still run on the sender's thread; the UI keeps it.
     fn stop(&mut self) {
         if let Some(face) = &self.face {
-            face.set_up(false);
+            face.set_running(false);
         }
     }
 }

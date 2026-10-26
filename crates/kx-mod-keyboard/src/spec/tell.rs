@@ -49,7 +49,7 @@ impl BoardSpec {
     }
 
     /// The named keys of the main rows, row by row.
-    fn named(&self) -> impl Iterator<Item = &KeySpec> {
+    pub(super) fn named(&self) -> impl Iterator<Item = &KeySpec> {
         self.rows.iter().flatten().filter_map(|i| match i {
             RowItem::Key(k) => Some(k),
             RowItem::Chars(_) => None,

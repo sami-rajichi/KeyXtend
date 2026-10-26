@@ -7,7 +7,9 @@
 
 use crate::host::{FakeHost, fake, store};
 use kx_mod_keyboard::spec::char_id;
-use kx_mod_keyboard::{BoardSpec, ID, KeyboardModule, KeyboardSettings, Ports, Tapped, Typing};
+use kx_mod_keyboard::{
+    BoardSpec, ID, KeyboardModule, KeyboardSettings, MANIFEST, Ports, Tapped, Typing,
+};
 use kx_module_api::Capability::{InjectInput, KeyboardUi, ReadFocusedText};
 use kx_module_api::ports::{
     InputInjectorKey, KeyboardFace, KeyboardFaceKey, LayoutsKey, Scan, ShortcutsKey, TextRoute,
@@ -20,8 +22,10 @@ use kx_module_api::{
 use kx_platform_fake::Stroke;
 use std::sync::Arc;
 
-/// The capabilities the module declares.
-const ALL: [Capability; 3] = [InjectInput, KeyboardUi, ReadFocusedText];
+/// The capabilities the module declares, from its manifest.
+fn all() -> Vec<Capability> {
+    MANIFEST.capabilities.to_vec()
+}
 
 fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
     KeyboardModule::default().start(&mut ModuleCx::new(host))
@@ -31,7 +35,7 @@ fn start(host: &mut FakeHost) -> Result<(), ModuleError> {
 fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
     let mut host = fake(None);
     store(&mut host, None);
-    host.granted = ALL.to_vec();
+    host.granted = all();
     assert_eq!(start(&mut host), Ok(()));
 }
 
@@ -39,7 +43,7 @@ fn it_starts_on_the_defaults_the_shipped_board_and_the_typing_services() {
 fn it_provides_the_face_behind_keyboard_ui() {
     let mut host = fake(None);
     store(&mut host, None);
-    host.granted = ALL.to_vec();
+    host.granted = all();
     start(&mut host).unwrap();
     let (gate, service) = &host.services[&KeyboardFaceKey::ID];
     assert_eq!(*gate, Some(KeyboardUi));
@@ -77,7 +81,7 @@ fn without_inject_input_it_cannot_reach_the_injector() {
 fn without_the_layouts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(LayoutsKey::ID));
-    host.granted = ALL.to_vec();
+    host.granted = all();
     let missing = ServiceError::Missing(LayoutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -86,7 +90,7 @@ fn without_the_layouts_service_it_fails_to_start() {
 fn without_the_shortcuts_service_it_fails_to_start() {
     let mut host = fake(None);
     store(&mut host, Some(ShortcutsKey::ID));
-    host.granted = ALL.to_vec();
+    host.granted = all();
     let missing = ServiceError::Missing(ShortcutsKey::ID);
     assert_eq!(start(&mut host), Err(ModuleError::Service(missing)));
 }
@@ -113,7 +117,7 @@ fn its_handle_writes_its_own_section() {
 fn a_tap_through_the_kernels_ports_types_in_the_layout_shown() {
     let mut host = fake(None);
     let fakes = store(&mut host, None);
-    host.granted = ALL.to_vec();
+    host.granted = all();
     let ports = Ports::from_cx(&ModuleCx::new(&mut host)).unwrap();
     let settings = KeyboardSettings::from_defaults().unwrap();
     let mut typing = Typing::new(&BoardSpec::shipped().unwrap(), &settings);

@@ -8,7 +8,7 @@ The layouts module: it reads the keyboard layouts installed in the OS and provid
 |---|---|---|
 | `LayoutSource` (`LayoutSourceKey`) | Requires | The installed layouts, the layout of the app in front, what each key types, the language facts, and the switch request. |
 | `Layouts` (`LayoutsKey`) | Provides | `current`, `list`, `refresh`, `step` and `pick`, below. |
-| `LayoutChanged` (event) | Publishes | The keyboard now shows another installed layout, with its language code and direction; sent once at start, then by `refresh` and `tell`. |
+| `LayoutChanged` (event) | Publishes | The keyboard now shows another installed layout, with its language code, its name for the user (which word prediction's notices show) and direction; sent once at start, then by `refresh` and `tell`. |
 | `LayoutAsk` (event) | Hears | A module that started later asks for the shown layout; `tell` sends it again, or nothing while none is installed. With the start's own `LayoutChanged`, any start order works. |
 
 ## How it behaves
@@ -30,7 +30,7 @@ The layouts module: it reads the keyboard layouts installed in the OS and provid
 
 | Key | Default | Meaning |
 |---|---|---|
-| `short` | `{ ar = "ع" }` | What the language key shows for a language, by its ISO 639 code (two or three lower-case letters, `ISO_LETTERS`); a language not listed shows its code in capitals. A short name may not be blank, and holds at most `MAX_SHORT_CHARS` characters so it fits on the key. A user's map replaces the default one. |
+| `short` | `{ ar = "ع" }` | What the language key shows for a language, by its ISO 639 code (one that `kx_module_api::ports::fits_iso` takes, so no reserved device name); a language not listed shows its code in capitals. A short name may not be blank, and holds at most `MAX_SHORT_CHARS` characters so it fits on the key. A user's map replaces the default one. |
 
 The defaults live only in `defaults.toml`. The space bar's joiner is not a setting: the UI joins the name parts with a translated text.
 

@@ -3,10 +3,14 @@
 //! tick; never when nothing changed.
 
 use super::{Desk, plain};
+use crate::assist::ear;
 use crate::held::A;
+use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::ports::{
-    FaceAction, InjectError, LatchesAsk, LatchesUsed, TypingMode, TypingModeAsk,
+    FaceAction, InjectError, LatchesAsk, LatchesChanged, LatchesUsed, TypingMode, TypingModeAsk,
 };
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// The mode with Shift latched.
 fn shift() -> TypingMode {
@@ -179,16 +183,33 @@ fn asking_for_the_mode_tells_it_again_and_not_the_latches() {
     let d = Desk::new(None);
     d.rig.tap("ctrl").unwrap();
     d.modes();
-    let latches = d.rig.fakes.injector.strokes().len();
+    let latches: Arc<Mutex<Vec<()>>> = Arc::default();
+    let _ear = ear(&d.bus, &latches, |_: &LatchesChanged| ());
+    let typed = d.rig.fakes.injector.strokes().len();
     d.bus.publish(&TypingModeAsk).unwrap();
     assert_eq!(d.modes(), [shortcut()], "told unchanged, for a later start");
     d.bus.publish(&TypingModeAsk).unwrap();
     assert_eq!(d.modes(), [shortcut()], "each ask is answered");
-    assert_eq!(
-        d.rig.fakes.injector.strokes().len(),
-        latches,
-        "nothing typed"
+    assert!(
+        latches.lock().unwrap().is_empty(),
+        "the latches stay untold"
     );
+    assert_eq!(d.rig.fakes.injector.strokes().len(), typed, "nothing typed");
+}
+
+#[test]
+fn a_caps_flip_left_by_a_hidden_window_gives_way_one_relabel_period_on() {
+    // The window hid before its tick, so only a wake's state read comes.
+    let d = Desk::new(None);
+    d.modes();
+    d.rig.tap("caps").unwrap();
+    let period = KeyboardSettings::from_defaults().unwrap().relabel_ms;
+    d.rig.fakes.clock.advance(Duration::from_millis(period - 1));
+    assert_eq!(d.rig.state()["keys"]["caps"]["on"], true, "the flip holds");
+    d.rig.fakes.clock.advance(Duration::from_millis(1));
+    assert_eq!(d.rig.state()["keys"]["caps"]["on"], false, "the system's");
+    d.bus.publish(&LatchesUsed).unwrap();
+    assert_eq!(d.modes(), [caps(), plain()], "the mode follows the read");
 }
 
 #[test]

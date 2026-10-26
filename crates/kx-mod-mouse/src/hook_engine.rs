@@ -25,18 +25,24 @@ pub(crate) enum Cmd {
     Presses(bool),
 }
 
+/// The user aims at the hook through a mode or held latches, while scrolling and presses are quiet: the one rule for a
+/// run whose stop logs at info and whose loss always tells.
+pub(crate) fn aimed(mode: bool, latches: &[Scan]) -> bool {
+    mode || !latches.is_empty()
+}
+
 impl Cmd {
-    /// A start for this command tells no one when the hook refuses it: the user aimed no mouse key at the hook.
+    /// A start for this command tells no one when the hook refuses it: no mouse key asked for it.
     pub(crate) const fn quiet(&self) -> bool {
         matches!(self, Self::Latches(_) | Self::Scroll(_) | Self::Presses(_))
     }
 
-    /// A mode toggle or a held latch: the user aimed at the hook, so the run's stop line logs at info.
+    /// The command aims at the hook by `aimed`: a toggle changes a mode, and latches may hold keys.
     pub(crate) fn loud(&self) -> bool {
         match self {
-            Self::Toggle(_) => true,
-            Self::Latches(held) => !held.is_empty(),
-            Self::Scroll(_) | Self::Presses(_) => false,
+            Self::Toggle(_) => aimed(true, &[]),
+            Self::Latches(held) => aimed(false, held),
+            Self::Scroll(_) | Self::Presses(_) => aimed(false, &[]),
         }
     }
 

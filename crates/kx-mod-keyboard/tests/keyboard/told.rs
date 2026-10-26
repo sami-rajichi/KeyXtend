@@ -8,6 +8,7 @@
 
 use crate::known::{only, sid};
 use crate::typing::Rig;
+use kx_mod_keyboard::BoardSpec;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, Piece, Scan};
 use kx_platform_fake::Stroke;
@@ -16,8 +17,8 @@ use proptest::prelude::*;
 /// The US "a" and "c" keys' scan codes.
 const A: u16 = 0x1E;
 const C: u16 = 0x2E;
-/// The scan codes of Backspace, the space bar, Enter, Tab and Caps Lock.
-const BKSP: u16 = 0x0E;
+/// The scan codes of Backspace (shared with the other test files), the space bar, Enter, Tab and Caps Lock.
+pub const BKSP: u16 = 0x0E;
 const SPACE: u16 = 0x39;
 const ENTER: u16 = 0x1C;
 const TAB: u16 = 0x0F;
@@ -41,6 +42,12 @@ fn a_letter_space_backspace_and_enter_tell_text_text_erase_and_advance_once_each
     let want = [text("a"), text(" "), Piece::Erase, Piece::Advance];
     assert_eq!(r.typing.take_pieces(), want);
     assert!(r.typing.take_pieces().is_empty(), "each is told once");
+}
+
+#[test]
+fn the_shared_backspace_is_the_key_a_picked_word_erases_with() {
+    let erase = BoardSpec::shipped().unwrap().erase_key();
+    assert_eq!(erase, Some(Scan::new(BKSP)));
 }
 
 #[test]

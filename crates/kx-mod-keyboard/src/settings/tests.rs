@@ -157,9 +157,9 @@ fn the_floor_is_the_lowest_default_step_where_every_key_cell_spans_the_target_sp
 }
 
 #[test]
-fn the_defaults_name_the_hard_bounds_with_an_example() {
-    let bounds = format!("down to size_min = {SIZE_FLOOR} and up to size_max = {SIZE_CEILING}");
-    assert!(SPEC.defaults.contains(&bounds), "{bounds}");
+fn the_defaults_name_the_hard_bounds_by_their_constants() {
+    let bounds = "size_min down to SIZE_FLOOR and size_max up to SIZE_CEILING";
+    assert!(SPEC.defaults.contains(bounds), "{bounds}");
 }
 
 #[test]

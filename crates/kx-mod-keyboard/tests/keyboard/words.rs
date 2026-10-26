@@ -14,16 +14,13 @@ use crate::assist::ear;
 use crate::held::{A, hold};
 use crate::host::{Fakes, GOLDEN};
 use crate::rig::{Rig, STATE};
-use crate::told::text;
+use crate::told::{BKSP, text};
 use crate::typing::{tap, unicode};
 use kx_mod_keyboard::KeyboardSettings;
 use kx_module_api::ports::{FaceAction, InjectError, Piece, TypeWord, Typed, TypingMode};
 use kx_module_api::{Bus, BusCore, Module, Redacted, Subscription};
 use kx_test_support::host::FakeCore;
 use std::sync::{Arc, Mutex, PoisonError};
-
-/// Backspace's scan code.
-const BKSP: u16 = 0x0E;
 
 /// The module on a bus the test hears the pieces and modes on, and sends picked words on.
 pub struct Desk {

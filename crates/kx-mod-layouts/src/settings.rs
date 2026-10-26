@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Why a `short` key was refused.
-const BAD_CODE: &str = "short: every key must be an ISO 639 code of 2 or 3 lower-case letters";
+const BAD_CODE: &str =
+    "short: every key must be a lower-case ISO 639 code. Reserved device names are refused too.";
 /// Why a blank `short` value was refused.
 const BLANK: &str = "short: a short name is blank";
 /// Why a long `short` value was refused.
@@ -94,10 +95,12 @@ mod tests {
     #[test]
     fn a_short_key_must_be_a_code_fits_iso_takes() {
         assert!(!invalid(&with_short(&[("fa", "ف"), ("haw", "HAW")])));
+        let refused = Err(SettingsError::Invalid(BAD_CODE.to_owned()));
         for bad in [
             "", "a", "abcd", "AR", "Ar", "a1", "ar-tn", " ar", "ع", "con",
         ] {
-            assert!(invalid(&with_short(&[(bad, "x")])), "{bad:?}");
+            let got = validate_as::<LayoutsSettings>(&with_short(&[(bad, "x")]));
+            assert_eq!(got, refused, "{bad:?}");
         }
     }
 

@@ -10,13 +10,14 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `LayoutSource` | needs | Says whether Caps Lock is on, and whether a key typed anything while a dead key waits. |
 | `Layouts` | needs | Its current table says what each key types in the layout shown. |
 | `Shortcuts` | needs | Names the shortcuts the platform knows, with their steps, and sends the layer's shortcuts with the latched modifiers held. |
-| `KeyboardFace` | provides | The board and state JSON the UI draws, the board's row the theme's drawn check measures caps by, and each click it forwards; see "The face". |
+| `KeyboardFace` | provides | Behind `KeyboardUi`: the board and state JSON the UI draws, the board's row the theme's drawn check measures caps by, and each click it forwards; see "The face". |
 
 ## Capabilities
 
 | Capability | Why |
 |---|---|
 | `InjectInput` | It gates all four services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector` and `Shortcuts`. |
+| `KeyboardUi` | It gates the `KeyboardFace` the module provides, so only the UI draws the board and forwards its clicks. |
 | `ReadFocusedText` | It gates `Typed`, `TypingMode`, `TypingModeAsk` and `TypeWord` (ADR-0033), so only a module that may read typed text hears what was typed or asks for a word. |
 
 ## The board

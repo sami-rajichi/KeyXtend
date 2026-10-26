@@ -7,7 +7,8 @@ size = 1.0
 # The S, M and L sizes.
 presets = [1.0, 1.25, 1.5]
 # Change per smaller or bigger click, and the smallest and largest sizes.
-# A hand-edited file may go down to size_min = 0.8 and up to size_max = 4; past those, a value goes back to default.
+# A hand-edited file may set size_min down to SIZE_FLOOR and size_max up to SIZE_CEILING (src/settings.rs); past
+# those, a value goes back to default.
 size_step = 0.05
 size_min = 0.8
 size_max = 1.8

@@ -7,15 +7,13 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-use crate::told::text;
+use crate::told::{BKSP, text};
 use crate::typing::{Rig, tap, unicode};
 use kx_mod_keyboard::{Io, KeyboardSettings, Latch, TEXT_CAP};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InjectError, Piece, TextRoute};
 use kx_platform_fake::Stroke;
 
-/// Backspace's scan code.
-const BKSP: u16 = 0x0E;
 /// The smallest `text_cap` the settings take.
 const CAP: u16 = *TEXT_CAP.start();
 

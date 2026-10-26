@@ -35,7 +35,7 @@ pub static MANIFEST: Manifest = Manifest {
 mod tests {
     use super::*;
     use kx_module_api::Event;
-    use kx_module_api::ports::{TypeWord, Typed, TypingMode};
+    use kx_module_api::ports::{TypeWord, Typed, TypingMode, TypingModeAsk};
 
     #[test]
     fn it_types_through_the_injector_the_layouts_and_the_shortcuts() {
@@ -55,8 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn it_holds_inject_input_for_all_four_keyboard_ui_for_the_face_and_read_focused_text_for_words()
-    {
+    fn it_holds_the_gates_of_typing_the_face_and_words() {
         let want = [
             Capability::InjectInput,
             Capability::KeyboardUi,
@@ -73,6 +72,7 @@ mod tests {
         let words = [
             Typed::CAPABILITY,
             TypingMode::CAPABILITY,
+            TypingModeAsk::CAPABILITY,
             TypeWord::CAPABILITY,
         ];
         assert!(

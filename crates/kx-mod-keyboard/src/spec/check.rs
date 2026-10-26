@@ -116,12 +116,9 @@ impl BoardSpec {
     /// layer or asks for the power dialog, a key that sends a scan code when its role sends none, or the reverse, and a
     /// key that repeats or tells but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
-        let named = self.rows.iter().flatten().filter_map(|i| match i {
-            RowItem::Key(k) => {
-                let send_only = k.repeat || k.tell.is_some();
-                Some((&k.id, k.role, k.sc.is_some(), send_only, false))
-            }
-            RowItem::Chars(_) => None,
+        let named = self.named().map(|k| {
+            let send_only = k.repeat || k.tell.is_some();
+            (&k.id, k.role, k.sc.is_some(), send_only, false)
         });
         let side = self
             .side

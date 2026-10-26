@@ -36,7 +36,7 @@ impl Face {
     }
 
     /// The module started, or stopped when `on` is false; a picked word types only while it runs.
-    pub(crate) fn set_up(&self, on: bool) {
-        self.lock().set_up(on);
+    pub(crate) fn set_running(&self, on: bool) {
+        self.lock().set_running(on);
     }
 }

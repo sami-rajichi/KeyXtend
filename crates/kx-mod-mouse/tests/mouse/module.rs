@@ -7,8 +7,8 @@ use crate::rig::{RCLICK, SHIFT, T0};
 use kx_mod_mouse::{MANIFEST, MouseModule};
 use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, Dir, HookConfig, HookError, HookRun,
-    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, ScrollAsk,
-    ScrollChanged, Toggle,
+    LatchesAsk, LatchesChanged, PointerEngine, PointerHook, PointerHookKey, PointerMoved,
+    ScrollAsk, ScrollChanged, Toggle,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Module, ModuleCx, ModuleError, Notice, ServiceError,
@@ -71,6 +71,23 @@ fn without_keyboard_ui_it_cannot_tell_its_notes_and_fails_to_start() {
     let mut host = idle(&[Capability::PointerHook, Capability::InjectInput]);
     let refused = EventError::NotGranted(AssistNote::NAME, Capability::KeyboardUi);
     assert_eq!(start(&mut host), Err(ModuleError::Event(refused)));
+}
+
+#[test]
+fn without_the_gate_its_pointer_moves_need_it_fails_to_start() {
+    // Read from the event, so the check still counts if moves ever get a gate of their own.
+    let gate = PointerMoved::CAPABILITY.unwrap();
+    let granted: Vec<_> = MANIFEST
+        .capabilities
+        .iter()
+        .copied()
+        .filter(|&c| c != gate)
+        .collect();
+    let refused = start(&mut idle(&granted));
+    assert!(
+        matches!(refused, Err(ModuleError::Event(EventError::NotGranted(_, c))) if c == gate),
+        "{refused:?}"
+    );
 }
 
 #[test]

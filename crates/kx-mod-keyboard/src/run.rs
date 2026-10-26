@@ -140,7 +140,8 @@ impl Typing {
         self.cap
     }
 
-    /// True while a dead key waits for the next key.
+    /// True while a dead key waits for the next key. It outlasts a focus change: the keyboard hears none, and the OS
+    /// may still hold the accent, so a picked word never types over it.
     #[must_use]
     pub fn waiting(&self) -> bool {
         self.dead
