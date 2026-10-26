@@ -205,16 +205,11 @@ fn eco_gives_ecole_first_in_its_correct_spelling() {
 }
 
 #[test]
-fn an_gives_the_hamza_forms_first_and_they_read_right_to_left() {
+fn an_gives_the_hamza_forms_first() {
     let ar = arabic();
     let pack = Pack::parse(&ar).unwrap();
     let found = asked(&pack, &NoLearned, &ask(&[], "ان"), TypingMode::default());
     assert_eq!(texts(&found), ["أن", "إن", "أنا", "انتظر"]);
-    assert!(found.iter().all(|g| g.rtl));
-    let bytes = english();
-    let en = Pack::parse(&bytes).unwrap();
-    let latin = asked(&en, &NoLearned, &ask(&[], "th"), TypingMode::default());
-    assert!(latin.iter().all(|g| !g.rtl));
 }
 
 #[test]

@@ -7,7 +7,7 @@ use kx_module_api::ports::TypingMode;
 use crate::casing::Casing;
 use crate::fold::{fold, is_apostrophe};
 use crate::pack::Pack;
-use crate::script::{self, Script};
+use crate::script::Script;
 use crate::track::{Query, Reading};
 
 mod best;
@@ -32,8 +32,6 @@ pub struct Guess {
     pub text: Redacted<String>,
     /// The word as the pack or the learner stores it, without the lead or the typed capitals; a forget passes it.
     pub stored: Redacted<String>,
-    /// The text is written right to left.
-    pub rtl: bool,
 }
 
 /// What the learner tells the scorer; the learner implements it.
@@ -169,7 +167,6 @@ impl<'a> Ask<'a> {
             self.offer(reading, &mut best);
         }
         let guess = |(text, stored): (String, String)| Guess {
-            rtl: script::of(&text).is_some_and(Script::rtl),
             text: Redacted::new(text),
             stored: Redacted::new(stored),
         };

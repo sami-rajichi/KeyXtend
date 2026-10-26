@@ -94,7 +94,7 @@ impl Actor {
             forgetting: self.menu.forgetting,
         };
         let mut chips = Chips::of(show, &src);
-        chips.with_menu(self.menu, self.rtl, limit);
+        chips.with_menu(self.menu, limit);
         chips
     }
 

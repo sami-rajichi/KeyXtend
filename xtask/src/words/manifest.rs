@@ -22,6 +22,8 @@ use super::WordsError;
 const ISO_SLOT: &str = "{iso}";
 /// A SHA-256 is 32 bytes, written as two lowercase hex digits each.
 pub(crate) const HASH_HEX: usize = 64;
+/// The error of a manifest that builds no pack.
+pub(crate) const NO_LANGS: &str = "[lang] and [small] name no language to build";
 
 /// The whole manifest.
 #[derive(Debug, Deserialize)]
@@ -183,7 +185,9 @@ impl Manifest {
         check::meter(&manifest.meter)?;
         manifest.check_sources()?;
         manifest.check_langs()?;
-        check::aliases(&manifest.packs, &manifest.isos())?;
+        let isos = manifest.isos();
+        check::langs(&isos)?;
+        check::aliases(&manifest.packs, &isos)?;
         check::credits(&manifest.credits, &manifest.sources)?;
         Ok(manifest)
     }

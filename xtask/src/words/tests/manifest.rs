@@ -4,7 +4,7 @@ use flate2::Compression;
 use kx_mod_predict::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 
 use super::super::fixture::{self, ABC_SHA256, abc_source};
-use super::super::manifest::Manifest;
+use super::super::manifest::{Manifest, NO_LANGS};
 use super::super::wordfreq::ZIPF_TOP_CB;
 use super::super::{WordsError, credits};
 
@@ -74,6 +74,21 @@ fn a_full_language_whose_own_list_is_its_small_list_is_kept() {
     let text = fixture::manifest_text("").replace("w/large_fr.gz", "w/small_fr.gz");
     let manifest = Manifest::parse(&text);
     assert!(manifest.is_ok(), "{manifest:?}");
+}
+
+#[test]
+fn a_manifest_of_no_language_says_so_rather_than_blaming_its_aliases() {
+    let aliases = r#"aliases = { fr = ["wa"] }"#;
+    let text = fixture::manifest_text("");
+    assert!(text.contains(aliases));
+    let text = text.replace(aliases, "aliases = {}");
+    let (head, rest) = text.split_once("[lang.fr]").unwrap();
+    let (_, tail) = rest.split_once("[bases]").unwrap();
+    let result = Manifest::parse(&format!("{head}[lang]\n\n[bases]{tail}"));
+    assert!(
+        matches!(&result, Err(WordsError::Manifest(t)) if t == NO_LANGS),
+        "{result:?}"
+    );
 }
 
 /// Swaps that each put one rule, text or credits value out of its range.

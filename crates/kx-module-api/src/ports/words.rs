@@ -117,8 +117,6 @@ pub struct Chip {
     pub text: Redacted<String>,
     /// What it offers.
     pub kind: ChipKind,
-    /// The text is written right to left.
-    pub rtl: bool,
 }
 
 /// What the chip lane shows.

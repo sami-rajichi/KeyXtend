@@ -82,7 +82,6 @@ impl Module for PredictModule {
         relay(cx, &tx, |e: &LayoutChanged| Msg::Lang {
             iso: e.iso.clone(),
             name: e.name.clone(),
-            rtl: e.rtl,
         })?;
         relay(cx, &tx, |e: &PointerPressed| Msg::Pressed(e.ours))?;
         relay(cx, &tx, |e: &ChipPicked| Msg::Picked(*e))?;

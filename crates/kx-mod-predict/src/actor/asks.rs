@@ -40,8 +40,8 @@ impl Actor {
     }
 
     /// Turns prediction on or off: the menu closes and the word ends. A change saves and drops the learner and the known
-    /// emails, and the loop opens the language again, so prediction off holds no pack or learner; emails whose save
-    /// was refused stay for the next save.
+    /// emails, and the loop opens the language again, so prediction off holds no pack or live learner; a learner or
+    /// emails whose save was refused stay, the learner as bytes, until a later save.
     fn power(&mut self, seed: Option<&Pack<'_>>, on: bool) -> Flow {
         let flip = on != self.settings.on;
         self.settings.on = on;

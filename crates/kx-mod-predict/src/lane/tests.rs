@@ -72,14 +72,11 @@ fn each_pick_carries_its_plan_and_a_word_its_stored_spelling() {
 #[test]
 fn the_undo_chip_takes_its_place_and_the_lane_keeps_its_size() {
     let mut chips = lane("sa", &["same", "say", "salt"], &[], 3);
-    chips.with_undo(1, false, 3);
+    chips.with_undo(1, 3);
     let kinds: Vec<ChipKind> = chips.chips.iter().map(|c| c.kind).collect();
     assert_eq!(kinds, [ChipKind::Word, ChipKind::Undo, ChipKind::Word]);
     assert_eq!(chips.picks.get(1), Some(&Pick::Undo));
     let mut short = Chips::default();
-    short.with_undo(4, true, 3);
-    assert_eq!(
-        short.chips.first().map(|c| (c.kind, c.rtl)),
-        Some((ChipKind::Undo, true))
-    );
+    short.with_undo(4, 3);
+    assert_eq!(short.chips.first().map(|c| c.kind), Some(ChipKind::Undo));
 }

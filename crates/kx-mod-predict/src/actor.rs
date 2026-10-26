@@ -50,8 +50,6 @@ pub enum Msg {
         iso: String,
         /// Its name for the user, as `LayoutChanged::name` gives it.
         name: String,
-        /// It is written right to left.
-        rtl: bool,
     },
     /// A press landed on our windows (true) or elsewhere.
     Pressed(bool),
@@ -125,12 +123,11 @@ pub struct Actor {
     score_cfg: ScoreConfig,
     learn_cfg: LearnConfig,
     email_cfg: EmailConfig,
-    /// The language in front as the layout names it, the code of its words (the pack serving it, else the same), its
-    /// name for notices, and whether it reads right to left.
+    /// The language in front as the layout names it, the code of its words (the pack serving it, else the same), and
+    /// its name for notices.
     iso: String,
     code: String,
     lang_name: String,
-    rtl: bool,
     kind: FieldKind,
     mode: TypingMode,
     tracker: Tracker,
@@ -168,7 +165,6 @@ impl Actor {
             iso: String::new(),
             code: String::new(),
             lang_name: String::new(),
-            rtl: false,
             kind: FieldKind::None,
             mode: TypingMode::default(),
             tracker: Tracker::new(settings.track_config()),
@@ -231,7 +227,7 @@ impl Actor {
                 self.mode = mode;
                 true
             }
-            Msg::Lang { iso, name, rtl } => return self.lang(seed, iso, name, rtl),
+            Msg::Lang { iso, name } => return self.lang(seed, iso, name),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
             Msg::Ask(ask) => return self.ask(seed, ask),

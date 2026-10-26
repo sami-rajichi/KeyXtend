@@ -9,14 +9,7 @@ use kx_module_api::ports::{LayoutAsk, PackView, TypingModeAsk, fits_iso};
 impl Actor {
     /// The keyboard shows a layout in `iso`, named `name`: the word ends unlearned, and a new language saves the old
     /// learner.
-    pub(super) fn lang(
-        &mut self,
-        seed: Option<&Pack<'_>>,
-        iso: String,
-        name: String,
-        rtl: bool,
-    ) -> Flow {
-        self.rtl = rtl;
+    pub(super) fn lang(&mut self, seed: Option<&Pack<'_>>, iso: String, name: String) -> Flow {
         self.lang_name = name;
         self.menu.key();
         if iso == self.iso {

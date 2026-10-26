@@ -112,13 +112,12 @@ impl Chips {
         }
     }
 
-    /// Puts an Undo chip, reading as `rtl`, at `at`, keeping at most `limit` chips.
-    pub(crate) fn with_undo(&mut self, at: usize, rtl: bool, limit: usize) {
+    /// Puts an Undo chip at `at`, keeping at most `limit` chips.
+    pub(crate) fn with_undo(&mut self, at: usize, limit: usize) {
         let at = at.min(self.chips.len());
         let chip = Chip {
             text: Redacted::default(),
             kind: ChipKind::Undo,
-            rtl,
         };
         self.chips.insert(at, chip);
         self.picks.insert(at, Pick::Undo);
@@ -126,13 +125,12 @@ impl Chips {
         self.picks.truncate(limit);
     }
 
-    /// Shows the menu's state: in forget mode only what can be forgotten, else the Undo chip at its place, reading as
-    /// `rtl`.
-    pub(crate) fn with_menu(&mut self, menu: Menu, rtl: bool, limit: usize) {
+    /// Shows the menu's state: in forget mode only what can be forgotten, else the Undo chip at its place.
+    pub(crate) fn with_menu(&mut self, menu: Menu, limit: usize) {
         if menu.forgetting {
             self.forgettable();
         } else if let Some(at) = menu.undo {
-            self.with_undo(at, rtl, limit);
+            self.with_undo(at, limit);
         }
     }
 
@@ -155,7 +153,6 @@ impl Chips {
         let chip = Chip {
             text: guess.text,
             kind: ChipKind::Word,
-            rtl: guess.rtl,
         };
         self.push_opt(chip, pick);
     }

@@ -72,7 +72,7 @@ pub fn speaking(iso: &str, rows: usize) -> (Rig, FakeHost) {
 fn a_lane_wakes_the_top_bar_once_and_two_wake_twice_with_the_newest_shown() {
     let rig = Rig::new();
     let (bus, _sent, _subs) = heard(&rig);
-    let word = |w: &str| Lane::Chips(vec![chip(w, ChipKind::Word, false)]);
+    let word = |w: &str| Lane::Chips(vec![chip(w, ChipKind::Word)]);
     bus.publish(&lane(3, word("hello"))).unwrap();
     assert_eq!(rig.wakes(), [Wake::Words]);
     assert_eq!(words(&rig)["round"], 3);
@@ -182,9 +182,9 @@ fn no_log_line_or_wake_holds_a_chip_or_an_email() {
         let rig = Rig::new();
         let (bus, _sent, _subs) = heard(&rig);
         let chips = vec![
-            chip(secrets[0], ChipKind::Word, false),
-            chip(secrets[1], ChipKind::Word, true),
-            chip(secrets[2], ChipKind::Email, false),
+            chip(secrets[0], ChipKind::Word),
+            chip(secrets[1], ChipKind::Word),
+            chip(secrets[2], ChipKind::Email),
         ];
         let mut shown = lane(2, Lane::Chips(chips));
         shown.list = Some(ListPage {

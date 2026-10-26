@@ -1,6 +1,6 @@
 # Accessible on-screen keyboard — design spec, modules
 
-- **Date:** 2026-09-26. Part of the design spec (`2026-09-26-accessible-keyboard-design.md`), split out to keep each file short; the section numbers are the spec's own.
+- **Date:** 2026-09-26. Part of the design spec ([`2026-09-26-accessible-keyboard-design.md`](2026-09-26-accessible-keyboard-design.md)), split out to keep each file short; the section numbers are the spec's own.
 
 ---
 

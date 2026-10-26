@@ -166,11 +166,9 @@ impl Rig {
 
     /// The keyboard now shows language `iso`, which the OS names `name`.
     pub fn named(&mut self, iso: &str, name: &str) -> Flow {
-        let rtl = false;
         self.send(Msg::Lang {
             iso: iso.to_owned(),
             name: name.to_owned(),
-            rtl,
         })
     }
 

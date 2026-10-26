@@ -4,11 +4,10 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{Chip, ChipKind, Lane, Suggested};
 
 /// A chip of `kind` showing `text`.
-pub fn chip(text: &str, kind: ChipKind, rtl: bool) -> Chip {
+pub fn chip(text: &str, kind: ChipKind) -> Chip {
     Chip {
         text: Redacted::new(text.to_owned()),
         kind,
-        rtl,
     }
 }
 

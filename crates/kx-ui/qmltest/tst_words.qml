@@ -160,7 +160,8 @@ Item {
             compare(w.ui.calls.filter(c => c.startsWith("pickChip")), ["pickChip " + Words.lanes.chips.round + " 2"]);
         }
 
-        // In a password box the lock and its note stand in for chips; the menu button stays in every kind.
+        // In a password box the lock and its note stand in for chips. The menu button stays in the lock, off and empty
+        // lanes, and hides only in the `stopped` lane.
         function test_the_lock_off_and_empty_lanes_keep_the_menu_button() {
             const w = win(Words.lanes.locked);
             const note = keyed(w.contentItem, "words.locked");

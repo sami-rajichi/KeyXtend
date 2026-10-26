@@ -11,17 +11,17 @@ use serde_json::{Value, json};
 /// Every chip kind, an Arabic word among them, as the module may send them.
 fn every_kind() -> Lane {
     Lane::Chips(vec![
-        chip("hello", ChipKind::Word, false),
-        chip("مرحبا", ChipKind::Word, true),
-        chip("example.com", ChipKind::Domain, false),
-        chip("sam@example.com", ChipKind::Email, false),
-        chip("", ChipKind::More, false),
-        chip("", ChipKind::Undo, false),
+        chip("hello", ChipKind::Word),
+        chip("مرحبا", ChipKind::Word),
+        chip("example.com", ChipKind::Domain),
+        chip("sam@example.com", ChipKind::Email),
+        chip("", ChipKind::More),
+        chip("", ChipKind::Undo),
     ])
 }
 
 #[test]
-fn chips_show_their_text_kind_and_direction_with_the_name_readers_hear() {
+fn chips_show_their_text_kind_and_script_with_the_name_readers_hear() {
     let rig = Rig::new();
     let (bus, _sent, _subs) = heard(&rig);
     bus.publish(&lane(6, every_kind())).unwrap();
@@ -45,14 +45,8 @@ fn chips_show_their_text_kind_and_direction_with_the_name_readers_hear() {
 fn only_arabic_script_text_is_drawn_as_arabic_whatever_its_direction() {
     let rig = Rig::new();
     let (bus, _sent, _subs) = heard(&rig);
-    let texts = [
-        ("שלום", true, false),
-        ("ܫܠܡܐ", true, false),
-        ("سلام", true, true),
-    ];
-    let chips = texts
-        .map(|(t, rtl, _)| chip(t, ChipKind::Word, rtl))
-        .to_vec();
+    let texts = [("שלום", false), ("ܫܠܡܐ", false), ("سلام", true)];
+    let chips = texts.map(|(t, _)| chip(t, ChipKind::Word)).to_vec();
     let mut shown = lane(4, Lane::Chips(chips));
     shown.list = Some(ListPage {
         items: ["سارة@example.com", "sara@example.com"]
@@ -63,7 +57,7 @@ fn only_arabic_script_text_is_drawn_as_arabic_whatever_its_direction() {
     });
     bus.publish(&shown).unwrap();
     let v = words(&rig);
-    for (i, (text, _, arabic)) in texts.iter().enumerate() {
+    for (i, (text, arabic)) in texts.iter().enumerate() {
         assert_eq!(v["chips"][i]["arabic"], *arabic, "{text}");
     }
     let rows = [
@@ -107,7 +101,7 @@ fn in_forget_mode_each_chip_is_named_by_what_a_click_does() {
     for (iso, name) in want {
         let (rig, _host) = speaking(iso, rows);
         let (bus, _sent, _subs) = heard(&rig);
-        let words_only = Lane::Chips(vec![chip("hello", ChipKind::Word, false)]);
+        let words_only = Lane::Chips(vec![chip("hello", ChipKind::Word)]);
         let forgetting = Suggested {
             forgetting: true,
             ..lane(2, words_only)
@@ -167,7 +161,7 @@ fn hidden_marks_never_reach_a_chip_or_a_row() {
     let rig = Rig::new();
     let (bus, _sent, _subs) = heard(&rig);
     let marked = "\u{202e}ab\u{200f}c\u{2066}";
-    let mut shown = lane(3, Lane::Chips(vec![chip(marked, ChipKind::Word, false)]));
+    let mut shown = lane(3, Lane::Chips(vec![chip(marked, ChipKind::Word)]));
     shown.list = Some(ListPage {
         items: vec![Redacted::new(marked.to_owned())],
         page: 0,

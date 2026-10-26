@@ -11,7 +11,6 @@ use serde::Deserialize;
 use crate::casing::Casing;
 use crate::fold::fold;
 use crate::menu::pages;
-use crate::script;
 use crate::split::is_word_char;
 
 mod bytes;
@@ -266,12 +265,11 @@ fn completing(all: &[String], typed: &str, lane: usize, kind: ChipKind) -> Vec<C
         .collect()
 }
 
-/// A chip of `kind` showing `text`, right to left in a right-to-left script.
+/// A chip of `kind` showing `text`.
 fn chip(text: &str, kind: ChipKind) -> Chip {
     Chip {
         text: Redacted::new(text.to_owned()),
         kind,
-        rtl: script::of(text).is_some_and(script::Script::rtl),
     }
 }
 

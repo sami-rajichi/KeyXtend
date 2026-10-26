@@ -11,8 +11,8 @@ use super::super::WordsError;
 use super::super::wordfreq::ZIPF_TOP_CB;
 use super::text::{PER_MILLE, PERCENT};
 use super::{
-    Credits, FetchConfig, HASH_HEX, LangText, MeterRules, Packs, Rules, Section, Source, TextRules,
-    bad,
+    Credits, FetchConfig, HASH_HEX, LangText, MeterRules, NO_LANGS, Packs, Rules, Section, Source,
+    TextRules, bad,
 };
 use crate::devtools::paths::{is_plain_name, is_relative_plain};
 
@@ -106,6 +106,15 @@ pub(super) fn packs(packs: &Packs) -> Result<(), WordsError> {
         Err(bad(&format!(
             "[packs] needs a download budget and a level of 0 to {best}"
         )))
+    }
+}
+
+/// Refuses a manifest that builds no pack, before its aliases are judged against none.
+pub(super) fn langs(isos: &[String]) -> Result<(), WordsError> {
+    if isos.is_empty() {
+        Err(bad(NO_LANGS))
+    } else {
+        Ok(())
     }
 }
 

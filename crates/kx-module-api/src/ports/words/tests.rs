@@ -75,7 +75,6 @@ fn suggested() -> Suggested {
     let chip = |n| Chip {
         text: secret(n),
         kind: ChipKind::Word,
-        rtl: n == 1,
     };
     let list = ListPage {
         items: vec![secret(0), secret(1)],

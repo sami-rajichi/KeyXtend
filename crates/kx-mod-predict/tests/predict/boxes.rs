@@ -211,7 +211,6 @@ fn a_box_the_watch_already_sees_as_a_password_box_is_never_read() {
     rig.late(Msg::Lang {
         iso: "fr".to_owned(),
         name: "fr".to_owned(),
-        rtl: false,
     });
     assert_eq!(rig.fakes.field.before_calls(), reads, "no read was sent");
     assert_eq!(rig.lane().lane, Lane::Locked);

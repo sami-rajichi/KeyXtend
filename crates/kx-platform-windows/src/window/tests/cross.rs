@@ -146,6 +146,7 @@ fn a_lift_that_does_not_land_during_another_threads_drop_is_made_again_after_it(
 #[test]
 fn the_checks_end_when_a_lift_never_lands() {
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    MOVES.set((0, 0));
     let shadow = Hidden::tip("KeyXtend test: shadow never lifted", None);
     let kb = Hidden::topmost("KeyXtend test: keyboard over it", Some(shadow.0));
     guard_these(listed(&[&kb, &shadow]), None, None).unwrap();

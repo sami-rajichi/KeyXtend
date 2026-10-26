@@ -54,11 +54,11 @@ fn only_local_at_domain_dot_tld_looks_like_an_email() {
 }
 
 #[test]
-fn an_arabic_address_looks_like_an_email_and_its_chip_reads_right_to_left() {
+fn an_arabic_address_looks_like_an_email_and_its_chip_shows_it() {
     let email = "سامي@مثال.شبكة";
     assert!(looks_like(email));
     let chips = known(&[email]).all(cfg().domains.len());
-    assert!(chips.first().is_some_and(|c| c.rtl));
+    assert!(chips.first().is_some_and(|c| c.text.expose() == email));
 }
 
 #[test]

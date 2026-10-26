@@ -7,9 +7,9 @@ import QtQuick
 Item {
     id: box
 
-    // The list's page (`{items, page, pages}`, the page from 0, each item `{text, arabic}`), the board whose keys and pad
-    // it covers, rows per page,
-    // the app's Ui object for the page number, and the look, fonts, icons, texts and size.
+    // The list's page (`{items, page, pages}`, the page from 0, each item `{text, arabic}`), the board whose keys
+    // and pad it covers, and the rows per page. The pager reads the page number through the app's Ui object, and the
+    // rest are the look, fonts, icons, texts and size.
     required property var list
     required property var board
     required property int rows

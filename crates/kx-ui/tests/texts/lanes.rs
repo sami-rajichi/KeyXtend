@@ -54,12 +54,12 @@ pub fn lanes(hub: &Arc<Hub>) -> Value {
         serde_json::from_str(&hub.words_json()).expect("lane JSON")
     };
     let chips = vec![
-        chip("hello", ChipKind::Word, false),
-        chip("أن", ChipKind::Word, true),
-        chip("gmail.com", ChipKind::Domain, false),
-        chip(EMAILS[0], ChipKind::Email, false),
-        chip("", ChipKind::Undo, false),
-        chip("", ChipKind::More, false),
+        chip("hello", ChipKind::Word),
+        chip("أن", ChipKind::Word),
+        chip("gmail.com", ChipKind::Domain),
+        chip(EMAILS[0], ChipKind::Email),
+        chip("", ChipKind::Undo),
+        chip("", ChipKind::More),
     ];
     let list = Suggested {
         list: Some(page()),
