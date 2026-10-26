@@ -24,7 +24,7 @@ fn the_tracker_and_the_scorer_finish_an_elided_word() {
     let (query, found) = typed_fr("vois l'éc");
     assert_eq!(found.first().map(String::as_str), Some("l'école"));
     let plan = query.plan("l'école").unwrap();
-    assert_eq!((plan.erase, plan.text.expose().as_str()), (4, "l'école "));
+    assert_eq!((plan.erase, plan.text.expose().as_str()), (0, "ole "));
 }
 
 #[test]

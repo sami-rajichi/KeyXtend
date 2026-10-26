@@ -90,7 +90,7 @@ fn an_email_is_told_only_when_some_of_it_was_typed() {
 }
 
 #[test]
-fn plans_erase_what_they_replace_and_add_a_space_only_after_a_word() {
+fn plans_erase_only_what_differs_and_add_a_space_only_after_a_word() {
     let mut t = tracker(2);
     type_text(&mut t, "say héllo");
     let query = t.show(&knows).words.unwrap();
@@ -101,7 +101,7 @@ fn plans_erase_what_they_replace_and_add_a_space_only_after_a_word() {
             plan.gone.expose().as_str(),
             plan.text.expose().as_str()
         ),
-        (5, "héllo", "hello ")
+        (4, "héllo", "ello ")
     );
     let all = EmailAsk::All(Redacted::new("@@".to_owned()))
         .plan("a@b.co")
@@ -112,7 +112,7 @@ fn plans_erase_what_they_replace_and_add_a_space_only_after_a_word() {
         .unwrap();
     assert_eq!(
         (domain.erase, domain.text.expose().as_str()),
-        (2, "gmail.com")
+        (0, "ail.com")
     );
 }
 
@@ -122,7 +122,7 @@ fn an_elision_chip_adds_no_space_and_one_that_changes_nothing_is_no_change() {
     type_text(&mut t, "l");
     let query = t.show(&knows).words.unwrap();
     let plan = query.plan("l'").map(|p| p.text.expose().clone());
-    assert_eq!(plan.as_deref(), Some("l'"));
+    assert_eq!(plan.as_deref(), Some("'"), "the typed l stays");
     assert!(query.changes("l'") && query.changes("l"));
     type_text(&mut t, "'");
     let query = t.show(&knows).words.unwrap();

@@ -20,6 +20,8 @@ pub(super) struct Token {
     text: String,
     /// How many of its first characters came from a read.
     read: usize,
+    /// The email already told from it, so its end tells that one no more.
+    told: Option<String>,
 }
 
 impl Token {
@@ -79,6 +81,18 @@ impl Token {
     /// True when it holds the email at sign, so it is an email and never words.
     pub(super) fn has_at(&self) -> bool {
         email::at().is_some_and(|a| self.text.contains(a))
+    }
+
+    /// The email it holds, unless told already: the run `email::capture` takes as a full address, when some of the
+    /// token was typed.
+    pub(super) fn email(&self) -> Option<&str> {
+        let email = email::capture(&self.text).filter(|_| self.typed())?;
+        (self.told.as_deref() != Some(email)).then_some(email)
+    }
+
+    /// Notes `email` as told, so `email` gives it no more.
+    pub(super) fn tell(&mut self, email: &str) {
+        self.told = Some(email.to_owned());
     }
 
     /// The `n` `at` signs that end it when all were typed, not read.

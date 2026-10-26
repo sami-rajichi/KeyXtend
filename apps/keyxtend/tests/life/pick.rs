@@ -1,5 +1,5 @@
-//! The whole word loop over the app: keys typed in a text box bring a chip from the shipped pack, its pick erases what
-//! was typed and types the word through the keyboard, and the word is learned and sealed at Quit.
+//! The whole word loop over the app: keys typed in a text box bring a chip from the shipped pack, its pick keeps what
+//! was typed and types the rest of the word through the keyboard, and the word is learned and sealed at Quit.
 
 use crate::rig::{Rig, WAIT, char_key, hear, words_out};
 use keyxtend::boot::Boot;
@@ -51,7 +51,7 @@ fn typed_text(pieces: &Receiver<Typed>) -> Option<String> {
     None
 }
 
-/// A rig whose packs serve the shipped `ISO` pack, its box saying it ends with what a pick erases.
+/// A rig whose packs serve the shipped `ISO` pack, its box saying it ends with what a pick replaces.
 fn shipped() -> Rig {
     let rig = Rig::new();
     let pack = std::fs::read(words_out().join(pack_file(ISO).unwrap())).unwrap();
@@ -83,14 +83,12 @@ fn type_start(boot: &Boot) {
     }
 }
 
-/// Checks a pick's strokes: one tap of the board's erase key per typed letter, then `text`, and nothing else.
+/// Checks a pick's strokes: no tap of the board's erase key, as the typed start stays, then `text` and nothing else.
 fn check_strokes(picked: &[Stroke], text: &str) {
     let erase = Stroke::Tap(BoardSpec::shipped().unwrap().erase_key().unwrap());
-    let erased = picked.iter().filter(|s| **s == erase).count();
-    assert_eq!(erased, TYPED.len(), "one Backspace per typed letter");
-    let strokes = TYPED.len() + 1;
-    assert_eq!(picked.len(), strokes, "then the word, and nothing else");
-    assert!(matches!(picked.last(), Some(Stroke::Text(t, _)) if t.expose() == text));
+    assert!(!picked.contains(&erase), "the typed start stays");
+    let alone = matches!(picked, [Stroke::Text(t, _)] if t.expose() == text);
+    assert!(alone, "the rest of the word, and nothing else");
 }
 
 /// The learner `rig`'s store sealed for `ISO`; `None` when none was saved or it does not read.
@@ -118,7 +116,8 @@ fn a_typed_start_brings_a_chip_whose_pick_types_the_word_which_is_learned_and_se
         .pick_chip(i64::from(round), i32::try_from(at).unwrap());
     let text = typed_text(&pieces).expect("the pick typed");
     let gap = script::of(WORD).map_or("", Script::gap);
-    assert_eq!(text, format!("{WORD}{gap}"), "the word typed whole");
+    let rest = WORD.get(TYPED.len()..).unwrap();
+    assert_eq!(text, format!("{rest}{gap}"), "only the rest of the word");
     check_strokes(&rig.injector.strokes().split_off(before), &text);
     quit(boot);
     let learner = sealed(&rig).expect("saved at Quit");

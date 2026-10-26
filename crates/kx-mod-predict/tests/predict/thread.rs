@@ -134,7 +134,7 @@ fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
     let word = words.recv_timeout(WAIT).unwrap();
     assert_eq!(
         (word.round, word.erase, word.text.expose().as_str()),
-        (shown.round, 3, "hello ")
+        (shown.round, 0, "lo ")
     );
     run.send(&Typed {
         piece: Piece::Text(Redacted::new("lo ".to_owned())),

@@ -123,6 +123,7 @@ Decided with the owner on 2026-10-24, from the research report on keyboard predi
   - Typing the start of a known email shows it as a chip with an @ icon.
   - Typing `@@` with the keyboard shows the known emails as chips, and picking one replaces the `@@`. Only an `@@` the keyboard has just typed counts. With more emails than fit, a "More" chip opens a paged list (5 rows per page).
   - Known emails are the ones typed with the keyboard, encrypted and removable; the vault (P9) adds its saved emails with a key icon.
+  - An email is learned when the user leaves it: a space, Enter or Tab after it, a domain chip that completes it, a click outside the keyboard, or focus on another box (owner, 2026-10-26).
   - An email chip adds no space.
 - **Password boxes** (UI Automation `IsPassword`, with the Win32 password style as a fallback): no chips and no learning; the chip lane shows a lock and a short note.
   - Filling passwords belongs to the vault (P9).

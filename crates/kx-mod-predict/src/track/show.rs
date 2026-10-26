@@ -1,5 +1,5 @@
-//! What the lane may offer for the tracker's token, and the plan a pick sends: erase what the chip replaces, then
-//! type the chip, with its script's gap after a word only.
+//! What the lane may offer for the tracker's token, and the plan a pick sends: erase what the chip replaces past their
+//! exact common start, then type the rest of the chip, with its script's gap after a word only.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypeWord;
@@ -51,31 +51,32 @@ pub enum EmailAsk {
     Start(Redacted<String>),
 }
 
-/// What a pick sends: erase `erase` characters, which hold `gone`, then type `text`.
+/// What a pick sends: erase the last `erase` characters of `gone`, then type `text`, the rest of the chip.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Plan {
-    /// How many characters to erase first.
+    /// How many characters to erase first: those of `gone` past its exact common start with the chip.
     pub erase: u16,
-    /// The text those characters hold, so the module can check the box still ends with it.
+    /// The whole text the chip replaces, so the module can check the box still ends with it.
     pub gone: Redacted<String>,
-    /// What to type then.
+    /// What to type then: the chip past that common start.
     pub text: Redacted<String>,
 }
 
 impl Plan {
-    /// This plan with nothing erased, for a box that cannot confirm what it erases: only the text after `gone`, when
-    /// the text starts with exactly `gone`.
+    /// The plan a box that cannot confirm an erase may get: this one when it erases nothing, else none.
     #[must_use]
     pub fn rest(&self) -> Option<Self> {
-        let rest = self
-            .text
-            .expose()
-            .strip_prefix(self.gone.expose().as_str())?;
-        (!rest.is_empty()).then(|| Self {
-            erase: 0,
-            gone: Redacted::default(),
-            text: Redacted::new(rest.to_owned()),
-        })
+        (self.erase == 0).then(|| self.clone())
+    }
+
+    /// The chip's whole text: the start of `gone` it keeps, then `text`.
+    #[must_use]
+    pub fn chip(&self) -> Redacted<String> {
+        let gone = self.gone.expose();
+        let keep = gone.chars().count().saturating_sub(usize::from(self.erase));
+        let mut whole: String = gone.chars().take(keep).collect();
+        whole.push_str(self.text.expose());
+        Redacted::new(whole)
     }
 }
 
@@ -84,7 +85,7 @@ impl Query {
     /// elision (`l'`), which joins the next word.
     #[must_use]
     pub fn plan(&self, guess: &str) -> Option<Plan> {
-        plan(self.word.expose(), format!("{guess}{}", after(guess)))
+        plan(self.word.expose(), &format!("{guess}{}", after(guess)))
     }
 
     /// True when picking `guess` changes the text: it differs from the open word, apostrophe forms aside, or adds a
@@ -117,16 +118,25 @@ impl EmailAsk {
     #[must_use]
     pub fn plan(&self, text: &str) -> Option<Plan> {
         let (Self::Domains(gone) | Self::All(gone) | Self::Start(gone)) = self;
-        plan(gone.expose(), text.to_owned())
+        plan(gone.expose(), text)
     }
 }
 
-/// Erase `gone`, then type `text`; `None` when `gone` is too long to count.
-fn plan(gone: &str, text: String) -> Option<Plan> {
-    Some(Plan {
-        erase: TypeWord::erase_of(gone)?,
+/// Replace `gone` by `text`, keeping their exact common start, compared by `char` with case and marks; `None` when
+/// the rest of `gone` is too long to count, or the plan would change nothing.
+fn plan(gone: &str, text: &str) -> Option<Plan> {
+    let kept: usize = gone
+        .chars()
+        .zip(text.chars())
+        .take_while(|(a, b)| a == b)
+        .map(|(c, _)| c.len_utf8())
+        .sum();
+    let (erased, typed) = (gone.get(kept..)?, text.get(kept..)?);
+    let erase = TypeWord::erase_of(erased)?;
+    (erase > 0 || !typed.is_empty()).then(|| Plan {
+        erase,
         gone: Redacted::new(gone.to_owned()),
-        text: Redacted::new(text),
+        text: Redacted::new(typed.to_owned()),
     })
 }
 

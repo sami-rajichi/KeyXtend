@@ -115,7 +115,7 @@ fn cancel_leaves_forget_mode_and_a_word_chip_then_types() {
     rig.ask(WordsAsk::Cancel);
     assert!(!rig.lane().forgetting);
     rig.pick(0);
-    assert_eq!(rig.typed_words(), [(3, "hello ".to_owned())]);
+    assert_eq!(rig.typed_words(), [(0, "lo ".to_owned())]);
 }
 
 #[test]

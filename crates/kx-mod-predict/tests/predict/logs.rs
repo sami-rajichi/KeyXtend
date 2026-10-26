@@ -93,6 +93,38 @@ fn no_log_line_shows_a_typed_word_a_learned_word_or_an_email() {
 }
 
 #[test]
+fn the_stopped_line_shows_the_words_sent_under_a_name_the_log_prints() {
+    // `typed` is a sensitive name part, so the app's log would print that count redacted.
+    let lines = lines_of(|| {
+        let mut rig = Rig::build(|f, _| plant(f, "en", &["hello"]));
+        rig.lang("en");
+        rig.focus(FieldKind::Text);
+        rig.typed("hel");
+        rig.pick(0);
+        rig.stop();
+    });
+    let stopped = lines.iter().find(|l| l.contains(STOPPED_LINE)).unwrap();
+    assert!(stopped.contains("sent=1 "), "{stopped}");
+    assert!(!stopped.contains("typed="), "{stopped}");
+}
+
+#[test]
+fn a_domain_chip_then_a_space_counts_one_email() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.lang("en");
+        rig.focus(FieldKind::Text);
+        rig.typed("sami@g");
+        rig.pick(0);
+        rig.typed("mail.com");
+        rig.typed(" ");
+        rig.stop();
+    });
+    let stopped = lines.iter().find(|l| l.contains(STOPPED_LINE)).unwrap();
+    assert!(stopped.contains("emails=1 "), "{stopped}");
+}
+
+#[test]
 fn a_learner_that_does_not_read_logs_why() {
     let name = kx_mod_predict::learned_blob("en").unwrap();
     let damaged = lines_of(|| {

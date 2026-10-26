@@ -11,6 +11,7 @@ mod emails;
 mod held;
 mod lane;
 mod lang;
+mod leave;
 mod logs;
 mod menu;
 mod mode;

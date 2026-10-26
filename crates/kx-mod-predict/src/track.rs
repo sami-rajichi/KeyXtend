@@ -6,7 +6,6 @@ use std::fmt;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{FieldChange, Piece};
 
-use crate::email;
 use crate::split::{Place, edges, places, spans, split_word};
 
 mod show;
@@ -126,11 +125,25 @@ impl Tracker {
 
     /// Resets when focus moved to a new box; the same box again changes nothing.
     pub fn focus(&mut self, change: FieldChange) -> Vec<Told> {
-        if self.field == Some(change.box_id) {
+        if !self.leaves(change) {
             return Vec::new();
         }
         self.field = Some(change.box_id);
         self.reset()
+    }
+
+    /// True when `change` moves focus to another box than the one followed.
+    #[must_use]
+    pub fn leaves(&self, change: FieldChange) -> bool {
+        self.field != Some(change.box_id)
+    }
+
+    /// The open token's email, told once: a full address with some of it typed, as the user leaves it or a domain chip
+    /// completes it. Its end then tells it no more.
+    pub fn email(&mut self) -> Option<Redacted<String>> {
+        let email = self.token.email()?.to_owned();
+        self.token.tell(&email);
+        Some(Redacted::new(email))
     }
 
     /// Takes a read of the words before the cursor: they fill the context, and a last word with no space after it
@@ -217,7 +230,7 @@ impl Tracker {
         mut told: Option<&mut Vec<Told>>,
     ) {
         if token.has_at() {
-            finish_email(token.text(), before, told);
+            finish_email(token, before, told);
             return;
         }
         let normal = token.normal();
@@ -264,9 +277,9 @@ impl Tracker {
     }
 }
 
-/// Tells the email `token` holds, if any, and clears the context, as an email is never a word.
-fn finish_email(token: &str, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
-    if let (Some(told), Some(email)) = (told, email::capture(token)) {
+/// Tells the email `token` holds, unless told already, and clears the context, as an email is never a word.
+fn finish_email(token: &Token, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
+    if let (Some(told), Some(email)) = (told, token.email()) {
         told.push(Told::Email(Redacted::new(email.to_owned())));
     }
     before.clear();

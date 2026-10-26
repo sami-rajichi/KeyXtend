@@ -31,7 +31,7 @@ fn turkish() -> Vec<u8> {
     )
 }
 
-/// Each guess after typing `text` with `bytes`'s pack in `mode`, with the text its plan types.
+/// Each guess after typing `text` with `bytes`'s pack in `mode`, with the whole text its chip leaves, gap included.
 fn typed(bytes: &[u8], text: &str, mode: TypingMode) -> Vec<(String, String)> {
     let pack = Pack::parse(bytes).unwrap();
     let Some(query) = typed_query(&pack, text) else {
@@ -46,7 +46,7 @@ fn typed(bytes: &[u8], text: &str, mode: TypingMode) -> Vec<(String, String)> {
         LIMIT,
         &CFG,
     );
-    let plan = |t: &str| query.plan(t).unwrap().text.expose().clone();
+    let plan = |t: &str| query.plan(t).unwrap().chip().into_inner();
     found
         .iter()
         .map(|g| (g.text.expose().clone(), plan(g.text.expose())))

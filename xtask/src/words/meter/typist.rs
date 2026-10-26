@@ -104,7 +104,7 @@ impl<'p> Typist<'p> {
     }
 
     /// Asks for the chips the tracker allows and picks the first that types the word at `at`: one press, then the
-    /// keyboard erases the open word and types the chip. Gives where the next step starts.
+    /// keyboard erases and types only what differs from the open word. Gives where the next step starts.
     fn pick(&mut self, text: &[char], at: usize) -> Option<usize> {
         let seed = self.seed;
         let query = self.tracker.show(&|w: &str| knows(Some(seed), w)).words?;
@@ -162,12 +162,13 @@ impl<'p> Typist<'p> {
 /// token (spec §6). `None` when the chip is another word, only starts it, would part it from a joined word
 /// (`vas-tu`), or moves nothing forward.
 fn landing(text: &[char], at: usize, plan: &Plan, guess: &str, apostrophe: char) -> Option<usize> {
-    let start = at.checked_sub(usize::from(plan.erase))?;
+    let start = at.checked_sub(plan.gone.expose().chars().count())?;
     let end = start + guess.chars().count();
     if !text.get(start..end)?.iter().copied().eq(guess.chars()) {
         return None;
     }
-    let gap = plan.text.expose().strip_prefix(guess).unwrap_or_default();
+    let chip = plan.chip();
+    let gap = chip.expose().strip_prefix(guess).unwrap_or_default();
     let (gapped, rest) = (!gap.is_empty(), text.get(end..).unwrap_or_default());
     let mut token = rest.iter().take_while(|c| !c.is_whitespace());
     let next = match rest.first() {

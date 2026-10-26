@@ -8,6 +8,8 @@ use super::*;
 
 mod emails;
 mod ends;
+mod leave;
+mod plans;
 mod reads;
 
 /// The words a test language knows: elisions and whole words that hold an apostrophe.

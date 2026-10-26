@@ -61,7 +61,7 @@ fn each_pick_carries_its_plan_and_a_word_its_stored_spelling() {
     let Some(Pick::Word { plan, stored }) = chips.picks.first() else {
         panic!("a word chip")
     };
-    assert_eq!((plan.erase, plan.text.expose().as_str()), (2, "Salt "));
+    assert_eq!((plan.erase, plan.text.expose().as_str()), (0, "lt "));
     assert_eq!(stored.expose(), "salt");
     let at = lane("@@", &[], &["a@x.org", "b@x.org", "c@x.org"], 2);
     let kinds: Vec<ChipKind> = at.chips.iter().map(|c| c.kind).collect();

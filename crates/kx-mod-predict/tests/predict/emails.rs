@@ -32,7 +32,7 @@ fn one_at_lists_the_domains_in_order() {
     rig.typed("g");
     assert_eq!(rig.chips(), [("gmail.com".to_owned(), ChipKind::Domain)]);
     rig.pick(0);
-    assert_eq!(rig.typed_words(), [(1, "gmail.com".to_owned())], "no space");
+    assert_eq!(rig.typed_words(), [(0, "mail.com".to_owned())], "no space");
 }
 
 #[test]

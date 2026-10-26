@@ -11,7 +11,7 @@ pub(super) struct Stats {
     pub(super) learned: u64,
     pub(super) emails: u64,
     /// Words asked of the keyboard.
-    pub(super) typed: u64,
+    pub(super) sent: u64,
     /// Taps on an older lane.
     pub(super) stale: u64,
     /// Picks whose word the box no longer ended with.
@@ -34,7 +34,7 @@ impl Stats {
             reads = self.reads,
             learned = self.learned,
             emails = self.emails,
-            typed = self.typed,
+            sent = self.sent,
             stale = self.stale,
             moved = self.moved,
             unsure = self.unsure,

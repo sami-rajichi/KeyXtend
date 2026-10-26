@@ -10,23 +10,42 @@ use crate::track::Told;
 use kx_module_api::ports::{FieldChange, FieldKind, Piece};
 
 impl Actor {
-    /// Follows one piece the keyboard typed; true, as the lane changes.
+    /// Follows one piece the keyboard typed, learning the address a domain chip's text completes; true, as the lane
+    /// changes.
     pub(super) fn typed(&mut self, seed: Option<&Pack<'_>>, piece: &Piece) -> bool {
         self.stats.pieces += 1;
         self.menu.key();
         self.pending = false;
+        let landed = self.landed(piece);
         if self.following() {
             let told = self.tracker.typed(piece, &|w: &str| knows(seed, w));
             self.act(seed, told);
+            if landed {
+                self.keep_email();
+            }
         }
         true
     }
 
-    /// Focus moved: a new box resets the tracker and is read when it is a text box.
+    /// True when `piece` is the text of the domain chip sent last; any piece but an erase ends that wait.
+    fn landed(&mut self, piece: &Piece) -> bool {
+        if *piece == Piece::Erase {
+            return false;
+        }
+        let sent = self.domain.take();
+        matches!(piece, Piece::Text(text) if sent.as_ref() == Some(text))
+    }
+
+    /// Focus moved: leaving the box learns its open email, before the new box's kind counts; a new box resets the
+    /// tracker and is read when it is a text box.
     pub(super) fn focus(&mut self, seed: Option<&Pack<'_>>, change: FieldChange) -> bool {
+        if self.tracker.leaves(change) {
+            self.keep_email();
+        }
         self.kind = change.kind;
         self.menu.key();
         self.pending = false;
+        self.domain = None;
         let told = self.tracker.focus(change);
         if self.following() {
             self.act(seed, told);
@@ -36,11 +55,23 @@ impl Actor {
         true
     }
 
-    /// A press outside our windows ends the word and reads the box again.
+    /// A press outside our windows learns the open email, then ends the word and reads the box again.
     pub(super) fn clicked(&mut self, seed: Option<&Pack<'_>>) -> bool {
         self.menu.key();
+        self.keep_email();
         self.end_word(seed);
         true
+    }
+
+    /// Learns the open token's email, told once, when learning: the user left it, or a domain chip completed it. A box
+    /// the watch already sees as another kind drops the token first.
+    fn keep_email(&mut self) {
+        if !self.learning() {
+            return;
+        }
+        if let Some(email) = self.tracker.email() {
+            self.learn_email(email.expose());
+        }
     }
 
     /// Ends the word unlearned, then reads the box again when it is followed.
@@ -54,6 +85,7 @@ impl Actor {
     /// Ends the word unlearned and drops a pick still waiting; gives what the tracker asks for.
     pub(super) fn drop_word(&mut self) -> Vec<Told> {
         self.pending = false;
+        self.domain = None;
         self.tracker.reset()
     }
 

@@ -41,9 +41,13 @@ fn it_asks_for_the_typing_mode_once_at_start() {
 #[test]
 fn a_word_chip_past_the_cap_is_dropped() {
     let mut rig = ready();
-    rig.send(Msg::Mode(capped(5)));
+    rig.send(Msg::Mode(capped(2)));
     rig.typed("hel");
-    assert_eq!(rig.words(), ["help"], "hello and its space take 6");
+    assert_eq!(
+        rig.words(),
+        ["help"],
+        "the rest of hello and its space take 3"
+    );
     rig.send(Msg::Mode(TypingMode::default()));
     assert_eq!(rig.words(), ["hello", "help"], "no cap told, none dropped");
 }

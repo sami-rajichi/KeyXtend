@@ -140,6 +140,8 @@ pub struct Actor {
     show: Option<Show>,
     /// A pick was sent and the keyboard has not told it yet.
     pending: bool,
+    /// The text of the domain chip sent last, until the keyboard tells it; its address is learned then.
+    domain: Option<Redacted<String>>,
     /// The last lane told, for `Again`.
     last: Option<Suggested>,
     /// The last `PressesWanted` told.
@@ -173,6 +175,7 @@ impl Actor {
             chips: Chips::default(),
             show: None,
             pending: false,
+            domain: None,
             last: None,
             pressing: false,
             saves: Saves::new(Duration::from_secs(settings.save_s.into())),

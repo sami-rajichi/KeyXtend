@@ -1,6 +1,6 @@
-//! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, erasing only what the box
-//! confirms; in forget mode a word or known-email chip is forgotten instead, with an Undo chip in its place, and the
-//! list's rows type their email.
+//! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, erasing only what differs once
+//! the box confirms it; in forget mode a word or known-email chip is forgotten instead, with an Undo chip in its
+//! place, and the list's rows type their email.
 
 use super::Actor;
 use super::store::Blob;
@@ -25,11 +25,12 @@ impl Actor {
         };
         match chosen {
             Pick::Word { stored, .. } if self.menu.forgetting => self.forget(seed, &stored, at),
-            Pick::Email(plan) if self.menu.forgetting => self.forget_email(&plan.text, at),
+            Pick::Email(plan) if self.menu.forgetting => self.forget_email(&plan.chip(), at),
             _ if self.menu.forgetting => return false,
-            Pick::Word { plan, .. } | Pick::Email(plan) | Pick::Domain(plan) => {
+            Pick::Word { plan, .. } | Pick::Email(plan) => {
                 self.send(seed, &plan);
             }
+            Pick::Domain(plan) => self.domain = self.send(seed, &plan),
             Pick::More => return false,
             Pick::Undo => self.undo(),
         }
@@ -88,13 +89,13 @@ impl Actor {
         self.kind == FieldKind::Text
     }
 
-    /// Asks the keyboard to type by `plan` as far as the box confirms it: all of it when the box still ends with what
-    /// it erases, only the rest of the chip when the box cannot tell, nothing and a new read when the box moved on.
-    /// A plan past the keyboard's text cap sends nothing, as the keyboard would refuse it.
-    fn send(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) {
+    /// Asks the keyboard to type by `plan` as far as the box confirms it, and gives the text asked for: all of it when
+    /// the box still ends with what the chip replaces, a plan that erases nothing when the box cannot tell, nothing and
+    /// a new read when it moved on. A plan past the keyboard's text cap sends nothing, as the keyboard would refuse it.
+    fn send(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) -> Option<Redacted<String>> {
         if !fits(plan, self.mode) {
             self.stats.long += 1;
-            return;
+            return None;
         }
         let sent = match self.ends(plan) {
             Some(true) => Some(plan.clone()),
@@ -102,31 +103,32 @@ impl Actor {
                 self.stats.moved += 1;
                 let told = self.tracker.reset();
                 self.act(seed, told);
-                return;
+                return None;
             }
             None => plan.rest(),
         };
         let Some(sent) = sent else {
             self.stats.unsure += 1;
-            return;
+            return None;
         };
         let word = TypeWord {
             round: self.round,
             erase: sent.erase,
-            text: sent.text,
+            text: sent.text.clone(),
         };
         self.publish(&word);
-        self.stats.typed += 1;
+        self.stats.sent += 1;
         self.pending = true;
+        Some(sent.text)
     }
 
-    /// Whether the box still ends with what `plan` erases, as a text box tells; `None` when another box, or the app,
-    /// cannot tell. A box the watch already sees as another kind has moved on.
+    /// Whether the box still ends with what `plan` replaces, as a text box tells, even when the plan erases none of it;
+    /// `None` when another box, or the app, cannot tell. A box the watch already sees as another kind has moved on.
     fn ends(&mut self, plan: &Plan) -> Option<bool> {
         if self.moved() {
             return Some(false);
         }
-        if plan.erase == 0 {
+        if plan.gone.expose().is_empty() {
             return Some(true);
         }
         if !self.confirms() {
