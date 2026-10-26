@@ -90,7 +90,8 @@ pub fn start(
     })?;
     if let Some(job) = job {
         let held = job.assign_handle(process.handle());
-        or_end(held, UNCAPPED, || copyend::end(ctx, &given))?;
+        // Ended through the measuring handle, which holds the rights to end it and wait for its end.
+        or_end(held, UNCAPPED, || copyend::end(ctx, &process))?;
     }
     let pid = process.pid();
     let shown = || {

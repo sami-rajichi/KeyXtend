@@ -7,12 +7,15 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use kx_module_api::ModuleId;
+use kx_platform::ui::Instance;
+use kx_platform_windows::WindowsPlatform;
 
 use crate::apps::Ctx;
 use crate::copyend::{self, Ended, Gone};
 use crate::g8start::{self, Failed, Started};
-use crate::out::say;
+use crate::out::{self, say};
 use crate::ownset::{self, Kept};
+use crate::p7cfg;
 use crate::product::{self, NAME};
 
 /// The owner's settings file, kept while a gate runs its own copies of `[g8] program`.
@@ -36,9 +39,18 @@ fn program(ctx: &Ctx) -> PathBuf {
     ctx.cfg.program(&ctx.cfg.g8.program)
 }
 
-/// The backup of the owner's files: `[owner_settings] backup` in kx-gates' out folder.
-pub(crate) fn side(ctx: &Ctx) -> PathBuf {
-    ctx.out.join(&ctx.cfg.owner_settings.backup)
+/// The backup of the owner's files: `[owner_settings] backup` in kx-gates' out folder; refused when target-window's
+/// log or the results file has its name, as each start of target-window deletes that log.
+pub(crate) fn side(ctx: &Ctx) -> Result<PathBuf, String> {
+    let backup = &ctx.cfg.owner_settings.backup;
+    let log = ctx.target.log.file_name().map(|n| n.to_string_lossy());
+    let taken: Vec<&str> = log
+        .iter()
+        .map(AsRef::as_ref)
+        .chain([out::RESULTS])
+        .collect();
+    p7cfg::backup_free(backup, &taken)?;
+    Ok(ctx.out.join(backup))
 }
 
 /// Marks `stray` when a copy that went as `ended` may still run.
@@ -52,19 +64,19 @@ fn note(stray: &Cell<bool>, ended: Option<&Ended>) {
 /// `ended` is false when the copy `close` asked to quit did not end, so it counts as running.
 pub fn recover(ctx: &Ctx, ended: bool) -> Result<bool, String> {
     let files = product::files(&program(ctx))?;
-    ownset::recover(&files, &side(ctx), ended, || product::running().is_some())
+    ownset::recover(&files, &side(ctx)?, ended, runs)
 }
 
 impl<'a> Session<'a> {
     /// Keeps the owner's files in the backup, and first restores them from a backup a stopped run left, naming it.
     /// Refused while the product runs, as a copy reads its settings only at start.
     pub fn open(ctx: &'a Ctx<'a>) -> Result<Self, String> {
-        if product::running().is_some() {
+        if runs() {
             return Err(format!(
                 "close {NAME} first: this gate starts its own copy on its own settings"
             ));
         }
-        let (program, side) = (program(ctx), side(ctx));
+        let (program, side) = (program(ctx), side(ctx)?);
         let (kept, recovered) = Kept::take(&product::files(&program)?, &side)?;
         if recovered {
             say!(
@@ -129,23 +141,95 @@ impl Copy<'_> {
         self.finish()
     }
 
-    /// Ends it once; a copy already ended reads as quit.
+    /// Ends it once, as `once` says.
     fn finish(&mut self) -> Ended {
-        let Some(s) = self.started.take() else {
-            return Ended {
-                gone: Gone::Quit,
-                note: None,
-                released: Vec::new(),
-            };
-        };
-        let ended = copyend::end(self.session.ctx, &s.process);
-        note(&self.session.stray, Some(&ended));
-        ended
+        let session = self.session;
+        once(&mut self.started, |s| {
+            let ended = copyend::end(session.ctx, &s.process);
+            note(&session.stray, Some(&ended));
+            ended
+        })
     }
+}
+
+/// Ends the copy in `started` with `end` and takes it; one already taken reads as quit.
+fn once<S>(started: &mut Option<S>, end: impl FnOnce(S) -> Ended) -> Ended {
+    started.take().map_or_else(
+        || Ended {
+            gone: Gone::Quit,
+            note: None,
+            released: Vec::new(),
+        },
+        end,
+    )
+}
+
+/// True when a copy holds `instance`'s session claim; a claim this look takes goes at once.
+fn held(instance: &dyn Instance) -> bool {
+    instance.claim().is_err()
+}
+
+/// True while a product copy runs: one with a window, or one exiting windowless that still holds its session claim
+/// and may yet save; true when the platform cannot be asked.
+fn runs() -> bool {
+    product::running().is_some() || WindowsPlatform::new().map_or(true, |p| held(&*p.instance()))
 }
 
 impl Drop for Copy<'_> {
     fn drop(&mut self) {
         let _ = self.finish();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+
+    use kx_platform_fake::FakeInstance;
+
+    use super::*;
+
+    fn ended(gone: Gone) -> Ended {
+        Ended {
+            gone,
+            note: None,
+            released: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn only_a_copy_that_may_still_run_keeps_the_backup() {
+        let stray = Cell::new(false);
+        note(&stray, None);
+        for gone in [Gone::Quit, Gone::Crashed(None), Gone::Ended] {
+            note(&stray, Some(&ended(gone)));
+        }
+        assert!(!stray.get(), "every copy is gone");
+        note(&stray, Some(&ended(Gone::Running)));
+        note(&stray, Some(&ended(Gone::Quit)));
+        assert!(stray.get(), "one copy may still run, and that stays");
+    }
+
+    #[test]
+    fn a_copy_is_ended_once_and_after_that_reads_as_quit() {
+        let (mut started, calls) = (Some(7_u8), Cell::new(0));
+        let end = |_: u8| {
+            calls.set(calls.get() + 1);
+            ended(Gone::Ended)
+        };
+        assert_eq!(once(&mut started, end).gone, Gone::Ended);
+        assert_eq!(once(&mut started, end).gone, Gone::Quit);
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn the_session_reads_as_held_only_while_a_copy_claims_it() {
+        let session = FakeInstance::new();
+        assert!(!held(&session));
+        assert!(session.claim().is_ok(), "the look let go of its claim");
+        let claim = session.claim().expect("a copy runs");
+        assert!(held(&session));
+        drop(claim);
+        assert!(!held(&session));
     }
 }

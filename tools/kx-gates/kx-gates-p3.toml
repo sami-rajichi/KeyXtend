@@ -94,8 +94,7 @@ presentmon_wait_ms = 2000
 # Longest wait past the recording time for PresentMon to stop and write its last rows, in ms, whether G8 or the
 # owner started it.
 presentmon_stop_ms = 15000
-# A copy G8 started but could not open or cap gets Quit up to quit_tries times, quit_try_ms apart, as its command
-# window may not exist yet.
+# Every copy a gate ends gets Quit up to quit_tries times, quit_try_ms apart, as its command window may not exist yet.
 quit_tries = 50
 quit_try_ms = 200
 # Churn (spec §10, no growth), last in a G8 run: each round hovers keys for their tips, opens and closes the language

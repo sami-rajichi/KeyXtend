@@ -52,43 +52,46 @@ fn a_click_run_counts_its_option_or_setting_and_refuses_one_past_the_guards_limi
     assert!(e.contains("g4") && e.contains("limit"), "{e}");
 }
 
+/// Command lines of gates that take only a name, each of which `parse` must take.
+const NAME_ONLY: &[&str] = &[
+    "g6 chrome",
+    "g6 hang",
+    "g6 unaware",
+    "g7 qt",
+    "g12 keyxtend",
+    "g17 explorer",
+    "g18 notepad",
+    "g19 core",
+    "g20 notepad",
+    "g21 win32",
+    "g19 qt",
+    "g22 qt",
+    "g22 bench",
+    "g22 bench-cloud",
+    "g22 typing",
+    "g23 qt",
+    "g24 qt",
+    "g25 notepad",
+    "close qt",
+    "close keyxtend",
+    "g8 keyxtend",
+    "g8 weak",
+    "g8 arabic",
+    "g8 hook",
+    "g8 hook-weak",
+    "g9 keyxtend",
+    "g10 keyxtend",
+    "g11 keyxtend",
+    "g13 keyxtend",
+    "g26 keyxtend",
+    "g21 keyxtend",
+    "g27 keyxtend",
+    "g8 predict",
+];
+
 #[test]
 fn parses_gates_that_take_only_a_name() {
-    for probe in [
-        "g6 chrome",
-        "g6 hang",
-        "g6 unaware",
-        "g7 qt",
-        "g12 keyxtend",
-        "g17 explorer",
-        "g18 notepad",
-        "g19 core",
-        "g20 notepad",
-        "g21 win32",
-        "g19 qt",
-        "g22 qt",
-        "g22 bench",
-        "g22 bench-cloud",
-        "g22 typing",
-        "g23 qt",
-        "g24 qt",
-        "g25 notepad",
-        "close qt",
-        "close keyxtend",
-        "g8 keyxtend",
-        "g8 weak",
-        "g8 arabic",
-        "g8 hook",
-        "g8 hook-weak",
-        "g9 keyxtend",
-        "g10 keyxtend",
-        "g11 keyxtend",
-        "g13 keyxtend",
-        "g26 keyxtend",
-        "g21 keyxtend",
-        "g27 keyxtend",
-        "g8 predict",
-    ] {
+    for probe in NAME_ONLY {
         let a = parse(&args(probe)).expect("parses");
         assert_eq!((a.count, a.seed), (None, None));
         assert!(named(&a.gate).is_some(), "{probe} has no run");
@@ -149,7 +152,7 @@ fn rejects_bad_input() {
 }
 
 #[test]
-fn the_p3_gates_take_no_option_and_only_their_names() {
+fn named_gates_take_no_option_and_only_their_names() {
     for bad in [
         "g8 qt",
         "g8 keyxtend --clicks 5",

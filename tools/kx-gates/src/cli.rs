@@ -14,6 +14,8 @@ use crate::{
 
 /// Gates whose runs take a random seed.
 const SEEDED: [&str; 3] = ["g1", "g2", "g4"];
+/// What joins a run's gate, name and stamp into the start of each file it writes in the out folder.
+pub(crate) const RUN_SEP: &str = "-";
 
 /// Parsed command line.
 #[derive(Debug, PartialEq)]
@@ -114,6 +116,11 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 26] = [
 /// A gate's names that drive the test build, though the gate itself holds the mouse.
 const DRIVEN: [(&str, &str); 2] = [("g8", g8hook::HOOK), ("g8", g8hook::HOOK_WEAK)];
 
+/// Every gate's name.
+pub(crate) fn gates() -> impl Iterator<Item = &'static str> {
+    GATES.iter().map(|g| g.0)
+}
+
 /// The run of `gate` when it takes only a name.
 fn named(gate: &str) -> Option<NamedRun> {
     GATES.iter().find(|(g, ..)| *g == gate).and_then(|g| g.2)
@@ -178,7 +185,8 @@ pub fn run(args: &Args) -> Result<Value, String> {
     let spike = spike_core::config::load()?;
     let target = kx_target_window::config::load().map_err(|e| e.to_string())?;
     let out = out::out_dir(&cfg.out_dir())?;
-    let base = format!("{}-{}-{}", args.gate, args.name, out::stamp());
+    let (gate, name, stamp) = (&args.gate, &args.name, out::stamp());
+    let base = format!("{gate}{RUN_SEP}{name}{RUN_SEP}{stamp}");
     let ctx = Ctx {
         cfg: &cfg,
         spike: &spike,

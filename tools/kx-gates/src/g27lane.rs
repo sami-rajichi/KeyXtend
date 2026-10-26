@@ -147,7 +147,8 @@ mod tests {
 
     #[test]
     fn a_chips_word_comes_out_of_its_name_in_any_shipped_language() {
-        let forms = crate::ftl::around("chip.name", "word").expect("in all three");
+        let g = crate::config::load().expect("loads").g27;
+        let forms = crate::ftl::around(&g.chip_name, &g.chip_word).expect("in all three");
         let name = |i: usize, w: &str| format!("{}{w}{}", forms[i].0, forms[i].1);
         assert_eq!(
             text(word_of(&name(0, "hello"), &forms).as_ref()),

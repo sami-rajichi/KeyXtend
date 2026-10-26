@@ -108,9 +108,10 @@ pub fn highlight(g: &G8, presses: &Presses, hz: Option<f64>) -> [Part; 2] {
     ]
 }
 
-/// True when the product `ended`, its `presses` typed exactly their characters and every budget in `parts` passed.
-pub fn met(ended: bool, presses: &Presses, parts: &[Part]) -> bool {
-    ended && presses.typed_ok && budget::all_pass(parts)
+/// True when the product `quit` cleanly, its `presses` typed exactly their characters and every budget in `parts`
+/// passed.
+pub fn met(quit: bool, presses: &Presses, parts: &[Part]) -> bool {
+    quit && presses.typed_ok && budget::all_pass(parts)
 }
 
 /// G8's `pass`: true when every budget was `met`; only `out::PARTIAL` then in weak mode, when not every churn

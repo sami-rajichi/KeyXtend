@@ -6,6 +6,7 @@ use kx_platform::ui::{Claim, Instance};
 use kx_platform_fake::FakeInstance;
 
 use super::*;
+use crate::close::ask_quit_tries;
 
 /// An exit code other than a clean one, as a crash leaves.
 const CRASH: u32 = 3;
@@ -196,7 +197,7 @@ fn a_line_says_how_the_copy_went_and_what_was_let_go() {
     assert!(
         line["gone"]
             .as_str()
-            .is_some_and(|g| g.contains("crashed") && g.contains('3'))
+            .is_some_and(|g| g.contains("crashed") && g.contains(&CRASH.to_string()))
     );
     assert_eq!(line["released"].as_array().map(Vec::len), Some(1));
     assert!(

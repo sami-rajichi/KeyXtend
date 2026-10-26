@@ -242,6 +242,26 @@ mod tests {
     }
 
     #[test]
+    fn a_process_ended_through_its_handle_leaves_the_ended_code_never_a_clean_one() {
+        let mut child = Command::new("cmd")
+            .args(["/C", "pause"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("starts");
+        let p = Process::to_measure(child.id()).expect("opens");
+        assert!(!p.ended(), "it waits for a key");
+        p.end().expect("ends");
+        child.wait().expect("waits for its end");
+        assert_eq!(p.exit_code(), Some(ENDED_CODE));
+        assert_ne!(
+            ENDED_CODE,
+            crate::copyend::CLEAN,
+            "an end never reads as quit"
+        );
+    }
+
+    #[test]
     fn an_ended_process_gives_its_exit_code_and_a_running_one_none() {
         let mut child = Command::new("cmd")
             .args(["/C", "exit", "7"])

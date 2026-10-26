@@ -227,10 +227,10 @@ fn checked(ctx: &Ctx) -> Result<PathBuf, String> {
 
 /// Asks the running copy, if any, to quit; the copy to start again later, never the test build at `program`.
 fn quit_running(ctx: &Ctx, program: &Path) -> Result<Option<PathBuf>, String> {
-    if product::running().is_none() {
+    let Some(running) = product::running() else {
         return Ok(None);
-    }
-    let (exe, ended) = close::quit_running(ctx).map_err(not_asked)?;
+    };
+    let (exe, ended) = close::quit_running(ctx, running).map_err(not_asked)?;
     if !ended {
         return Err(format!(
             "the running {NAME} {SLOW} and is not started again; close it, try again, then {START_MENU}"

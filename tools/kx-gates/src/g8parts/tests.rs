@@ -8,8 +8,7 @@ use super::*;
 /// Idle CPU time of a QML animation at 60 Hz and 0.5 ms a frame over a 10 s measure, and that measure, in ms.
 const ANIMATION_MS: (f64, f64) = (300.0, 10_000.0);
 
-/// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, a 55.4 MiB or 58.1 MB stage, 165 Hz) on the shipped
-/// budgets.
+/// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, 165 Hz) on the shipped budgets.
 fn sample() -> (G8, Measured, Outside) {
     let g = crate::config::load().expect("kx-gates.toml loads").g8;
     // Flat memory under churn, near ADR-0021's expected idle.

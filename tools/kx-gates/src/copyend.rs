@@ -2,17 +2,15 @@
 //! then any button or key it left down is let go. Only a clean quit passes; a crash, an end or a running copy fails.
 #![cfg(windows)]
 
-use kx_platform_windows::WindowsPlatform;
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
-use crate::close::{Asked, ask_quit_tries, ended_within};
+use crate::close::{Asked, ask_started, ended_within};
 use crate::probe;
 use crate::proc::Process;
-use crate::win;
 
 /// The exit code of a clean quit: std's `ExitCode::SUCCESS`, which the product returns.
-const CLEAN: u32 = 0;
+pub(crate) const CLEAN: u32 = 0;
 /// The most waits for a copy's end `finish` makes: after Quit, and after an end through its handle.
 pub(crate) const END_WAITS: usize = 2;
 
@@ -109,12 +107,7 @@ fn by_itself(sent: bool, code: Option<u32>) -> Gone {
 
 /// Ends `process`, a copy a gate started, as the module says; no copy is left running unless Windows refuses both.
 pub fn end(ctx: &Ctx, process: &Process) -> Ended {
-    let g = &ctx.cfg.g8;
-    let platform = WindowsPlatform::new().map_err(|e| e.to_string());
-    let asked = platform.and_then(|p| {
-        let wait = || win::sleep_ms(g.quit_try_ms);
-        ask_quit_tries(&*p.instance(), g.quit_tries, || process.ended(), wait)
-    });
+    let asked = ask_started(ctx, process);
     let within = || ended_within(ctx, process);
     let (gone, note) = finish(&asked, within, || process.end(), || process.exit_code());
     let released = if gone.ok() {

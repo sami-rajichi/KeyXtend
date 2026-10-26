@@ -1,21 +1,13 @@
-//! The least time each P7 gate holds the mouse, from config, so a run never meets the mouse guard's limit.
+//! The least time each P7 gate holds the mouse, from config; `fit::held_fits` adds the headroom and checks the guard.
 
 use crate::config::GatesConfig;
 use crate::copyend::END_WAITS;
+use crate::fit::{times, total};
 use crate::g8predict::RUNS;
+use crate::g8words::READINGS;
 use crate::g21prod::BOXES;
 use crate::g27::COPIES;
 use crate::p7cfg::G27;
-
-/// The sum of `parts`, at most `u64::MAX`.
-fn total(parts: &[u64]) -> u64 {
-    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
-}
-
-/// `n` times `ms`, at most `u64::MAX`.
-fn times(n: usize, ms: u64) -> u64 {
-    u64::try_from(n).map_or(u64::MAX, |n| n.saturating_mul(ms))
-}
 
 /// One typed word at its longest: the switch, `keys` key clicks, the chip, the settle and the box's text.
 fn word_ms(g: &G27, keys: usize) -> u64 {
@@ -29,7 +21,7 @@ fn word_ms(g: &G27, keys: usize) -> u64 {
 }
 
 /// The least time `g8 predict` holds the mouse: each copy with its warm-up and end, each typed word at its longest,
-/// the settle and the run's headroom.
+/// and the settle before each memory reading.
 pub fn predict_ms(c: &GatesConfig) -> u64 {
     let (g, p) = (&c.g27, &c.g8_predict);
     let keys = g.cases.iter().map(|k| k.prefix.chars().count()).max();
@@ -38,8 +30,7 @@ pub fn predict_ms(c: &GatesConfig) -> u64 {
     total(&[
         times(RUNS, copy_ms(c, c.g8.warm_ms)),
         words,
-        p.settle_ms,
-        c.fit.guard_headroom_ms,
+        times(READINGS, p.settle_ms),
     ])
 }
 
@@ -64,11 +55,7 @@ pub fn g21_ms(c: &GatesConfig) -> u64 {
     let g = &c.g27;
     let typed = times(keys(g, &c.g21_product.case), g.key_gap_ms);
     let boxed = total(&[g.switch_wait_ms, typed, g.chip_wait_ms]);
-    total(&[
-        copy_ms(c, g.ready_ms),
-        times(BOXES, boxed),
-        c.fit.guard_headroom_ms,
-    ])
+    total(&[copy_ms(c, g.ready_ms), times(BOXES, boxed)])
 }
 
 /// The least time G27 holds the mouse: its two copies, each case's word and edge 6's.
@@ -83,17 +70,5 @@ pub fn g27_ms(c: &GatesConfig) -> u64 {
         times(COPIES, copy_ms(c, g.ready_ms)),
         total(&cases),
         word_ms(g, keys(g, &g.edge)),
-        c.fit.guard_headroom_ms,
     ])
-}
-
-/// Refuses a run of `need` ms past the mouse guard's `limit`, naming `what` and its key.
-pub fn fits(what: &str, need: u64, limit: u64) -> Result<(), String> {
-    if need <= limit {
-        Ok(())
-    } else {
-        Err(format!(
-            "{what} takes at least {need} ms, past the mouse guard's {limit} ms"
-        ))
-    }
 }

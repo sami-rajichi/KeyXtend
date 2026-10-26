@@ -54,11 +54,11 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 /// Posts Quit to the running product, if any, then restores the owner's files from a backup a stopped gate left,
 /// once no copy runs (`owncopy::recover`).
 fn close_product(ctx: &Ctx) -> Result<Value, String> {
-    let quit = || product::running().map(|_| quit_running(ctx)).transpose();
+    let quit = || product::running().map(|c| quit_running(ctx, c)).transpose();
     closed(
         quit,
         |ended| owncopy::recover(ctx, ended),
-        &owncopy::side(ctx),
+        &owncopy::side(ctx)?,
     )
 }
 
@@ -148,23 +148,30 @@ pub fn ended_within(ctx: &Ctx, process: &Process) -> bool {
     win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(())).is_some()
 }
 
-/// Posts Quit to a copy a gate just started, trying `[g8] quit_tries` times as its command window may not exist yet;
-/// whether `process` ended within `[timing] quit_wait_ms`.
-pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
+/// Posts Quit to `process`, a copy a gate just started, up to `[g8] quit_tries` times `quit_try_ms` apart, as its
+/// command window may not exist yet.
+pub(crate) fn ask_started(ctx: &Ctx, process: &Process) -> Result<Asked, String> {
     let g = &ctx.cfg.g8;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
-    let gone = || process.ended();
-    ask_quit_tries(&*platform.instance(), g.quit_tries, gone, || {
-        win::sleep_ms(g.quit_try_ms);
-    })?;
+    let wait = || win::sleep_ms(g.quit_try_ms);
+    ask_quit_tries(
+        &*platform.instance(),
+        g.quit_tries,
+        || process.ended(),
+        wait,
+    )
+}
+
+/// Posts Quit to a copy a gate just started (`ask_started`); whether `process` ended within `[timing] quit_wait_ms`.
+pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
+    ask_started(ctx, process)?;
     Ok(ended_within(ctx, process))
 }
 
-/// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
-/// `[timing] quit_wait_ms`.
-pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), Unasked> {
-    let not_running = || format!("{NAME} is not running");
-    let (pid, exe) = product::running().ok_or_else(not_running)?;
+/// Posts Quit to `running`, the copy `product::running` found, and starts nothing; its program, and whether it ended
+/// within `[timing] quit_wait_ms`. The caller's one look serves, so a copy gone since then is not looked for again.
+pub fn quit_running(ctx: &Ctx, running: (u32, String)) -> Result<(String, bool), Unasked> {
+    let (pid, exe) = running;
     // Opened before the quit, so the id cannot name another process by the time we look.
     let process = Process::to_wait(pid)?;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;

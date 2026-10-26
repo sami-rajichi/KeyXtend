@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(
             chosen(true, true, &ALL),
             Ok(EXE_DIR.into()),
-            "uiAccess, all six beside"
+            "uiAccess, all beside"
         );
     }
 

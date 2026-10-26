@@ -74,6 +74,9 @@ fn g27_cases_that_could_type_nothing_or_the_wrong_word_are_refused() {
         (|c| c.g27.cases[0].prefix = "heا".into(), "g27.cases"),
         (|c| c.g27.cases[0].lang.clear(), "g27.cases"),
         (|c| c.g27.cases[0].lang = "EN".into(), "g27.cases"),
+        (|c| c.g27.cases[0].lang = "e".into(), "g27.cases"),
+        (|c| c.g27.cases[0].lang = "engl".into(), "g27.cases"),
+        (|c| c.g27.cases[0].lang = "con".into(), "g27.cases"),
         (|c| c.g27.cases[1].lang = "en".into(), "g27.cases"),
         (|c| c.g27.edge = "xx".into(), "g27.edge"),
         (|c| c.g27.edge = "ar".into(), "g27.edge"),
@@ -182,6 +185,37 @@ fn a_backup_outside_the_out_folder_is_refused() {
 }
 
 #[test]
+fn a_backup_named_as_a_file_a_gate_deletes_or_appends_to_is_refused() {
+    refused(&[
+        (
+            |c| c.owner_settings.backup = crate::out::RESULTS.into(),
+            "owner_settings.backup",
+        ),
+        (
+            |c| c.owner_settings.backup = "g27-keyxtend-1.json".into(),
+            "owner_settings.backup",
+        ),
+        (
+            |c| c.owner_settings.backup = "G8-predict-2.html".into(),
+            "owner_settings.backup",
+        ),
+    ]);
+    let log = "target-window.log";
+    let e = backup_free("Target-Window.log", &[log]).expect_err("the log's name");
+    assert!(e.contains("owner_settings.backup"), "{e}");
+    assert_eq!(backup_free("owner-settings-backup.json", &[log]), Ok(()));
+}
+
+#[test]
+fn the_typed_box_needs_its_focus_class() {
+    let target = crate::apps::AppKind::Target.name();
+    let mut c = load().expect("loads");
+    c.apps.get_mut(target).expect("target").focus_class = None;
+    let e = check(&c).expect_err("no focus class");
+    assert!(e.contains("focus_class"), "{e}");
+}
+
+#[test]
 fn each_run_length_counts_every_copy_and_every_word() {
     let c = load().expect("loads");
     let (g, t) = (&c.g27, &c.g8);
@@ -193,16 +227,25 @@ fn each_run_length_counts_every_copy_and_every_word() {
     };
     let typed = keys(&c.g21_product.case) * g.key_gap_ms;
     let boxed = g.switch_wait_ms + typed + g.chip_wait_ms;
-    let head = c.fit.guard_headroom_ms;
-    assert_eq!(runs::g21_ms(&c), copy + 3 * boxed + head);
+    assert_eq!(runs::g21_ms(&c), copy + 3 * boxed);
     let cases: u64 = g.cases.iter().map(|k| word(&k.lang)).sum();
-    assert_eq!(runs::g27_ms(&c), 2 * copy + cases + word(&g.edge) + head);
+    assert_eq!(runs::g27_ms(&c), 2 * copy + cases + word(&g.edge));
+    let p = &c.g8_predict;
+    let longest = g.cases.iter().map(|k| word(&k.lang)).max().expect("cases");
+    let copy_warm = t.start_wait_ms + t.warm_ms + end;
+    let words = (p.warm_words + p.words) as u64 * longest;
+    assert_eq!(
+        runs::predict_ms(&c),
+        2 * copy_warm + words + 2 * p.settle_ms,
+        "a settle before each of the two readings"
+    );
 }
 
 #[test]
 fn g21_and_g27_runs_past_the_mouse_guard_are_refused() {
     let good = load().expect("loads");
-    let (g21, g27) = (runs::g21_ms(&good), runs::g27_ms(&good));
+    let head = good.fit.guard_headroom_ms;
+    let (g21, g27) = (runs::g21_ms(&good) + head, runs::g27_ms(&good) + head);
     assert!(g27 > g21, "G27 starts two copies and types every case");
     let mut c = good.clone();
     c.mouse_guard.limit_ms = g21 - 1;
@@ -211,4 +254,16 @@ fn g21_and_g27_runs_past_the_mouse_guard_are_refused() {
     c.mouse_guard.limit_ms = g21;
     let e = check(&c).expect_err("G27 runs too long");
     assert!(e.contains("g27.cases"), "{e}");
+}
+
+#[test]
+fn with_the_guard_off_no_p7_run_is_refused_for_its_length() {
+    let mut c = load().expect("loads");
+    let longest = [runs::g21_ms(&c), runs::g27_ms(&c), runs::predict_ms(&c)];
+    let waits = [c.g27.ready_ms, c.g27.text_wait_ms, c.g8_predict.settle_ms];
+    c.mouse_guard.limit_ms = waits.into_iter().max().expect("waits");
+    assert!(longest.iter().all(|&ms| ms > c.mouse_guard.limit_ms));
+    assert!(check(&c).is_err(), "the guard on cuts them short");
+    c.mouse_guard.on = false;
+    assert_eq!(check(&c), Ok(()));
 }

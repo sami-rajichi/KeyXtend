@@ -1,15 +1,14 @@
-//! G8's prediction part (`g8 predict`): two cold starts of `[g8] program`, with predict on and with it in `[kernel]
-//! disabled`, each read for idle private memory after G8's warm-up. Their difference is the predict part, set beside
-//! the owner's figure as a reading, never a fail. The on run then types `[g8_predict]` words through chips, over which
-//! memory may grow at most `[g8] churn_growth_mb`. Each copy is ended before the owner's file comes back byte for byte.
+//! G8's prediction part (`g8 predict`): idle private memory with predict on less with it off, set beside the owner's
+//! figure as a reading, never a fail. The on run's typing churn may grow memory at most `[g8] churn_growth_mb`.
 #![cfg(windows)]
 
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
+use crate::config::GatesConfig;
 use crate::copyend::{self, Ended, Gone};
-use crate::g8churn::MB_DECIMALS;
+use crate::g8churn::{self, MB_DECIMALS};
 use crate::g8start::Failed;
 use crate::g8words::{self, Typed};
 use crate::out::{self, say, shown};
@@ -44,15 +43,8 @@ pub(crate) fn reading(part: Memory, owner_mb: f64) -> String {
 
 /// The typing churn's growth of the working set and of the commit, each against `limit`, `[g8] churn_growth_mb`.
 pub(crate) fn typing_parts(t: &Typed, limit: f64) -> [Part; 2] {
-    let (b, a) = (t.before, t.after);
-    [
-        Part::at_most(
-            "typing_working_mb",
-            Some(a.working_mb - b.working_mb),
-            limit,
-        ),
-        Part::at_most("typing_commit_mb", Some(a.commit_mb - b.commit_mb), limit),
-    ]
+    let names = ["typing_working_mb", "typing_commit_mb"];
+    g8churn::growth(names, t.before, t.after, limit)
 }
 
 /// True when both readings exist, the churn `held`, both copies `quit` by themselves and the owner's file came `back`.
@@ -103,12 +95,12 @@ fn gone(s: &Result<Side, Failed>) -> Option<Gone> {
 /// within its limit, both copies quit by themselves and the owner's file came back; a churn that missed a word is
 /// partial at best.
 fn result(
-    ctx: &Ctx,
+    cfg: &GatesConfig,
     on: &Result<Side, Failed>,
     off: &Result<Side, Failed>,
     back: &Result<(), String>,
 ) -> Value {
-    let (limit, owner_mb) = (ctx.cfg.g8.churn_growth_mb, ctx.cfg.g8_predict.owner_mb);
+    let (limit, owner_mb) = (cfg.g8.churn_growth_mb, cfg.g8_predict.owner_mb);
     let memory = |s: &Result<Side, Failed>| s.as_ref().ok().and_then(|s| s.memory.clone().ok());
     let split = memory(on).zip(memory(off)).map(|(a, b)| part(a, b));
     let typed = on.as_ref().ok().and_then(|s| s.typed.clone());
@@ -125,8 +117,9 @@ fn result(
     })
 }
 
-/// Runs `g8 predict`, refused while the product runs, as both readings are cold starts. Both copies are ended before
-/// the owner's file comes back.
+/// Runs `g8 predict`, refused while the product runs: two cold starts of `[g8] program`, predict on then in `[kernel]
+/// disabled`, each read after G8's warm-up, the on run then typing `[g8_predict]` words through chips. Both copies are
+/// ended before the owner's file comes back byte for byte.
 fn predict(ctx: &Ctx) -> Result<Value, String> {
     let session = Session::open(ctx)?;
     let on = side(ctx, &session, true);
@@ -136,7 +129,7 @@ fn predict(ctx: &Ctx) -> Result<Value, String> {
         Err(Failed::from(STILL_RUNS.to_string()))
     };
     let back = session.close();
-    let v = result(ctx, &on, &off, &back);
+    let v = result(ctx.cfg, &on, &off, &back);
     say!("G8 {PREDICT}: {}", v["reading"]);
     Ok(v)
 }
@@ -163,7 +156,55 @@ mod tests {
             picked: 30,
             before,
             after,
+            note: None,
         }
+    }
+
+    fn ended(gone: Gone) -> Ended {
+        Ended {
+            gone,
+            note: None,
+            released: Vec::new(),
+        }
+    }
+
+    /// A side read as `m`, with the churn `typed` when predict was on, whose copy went `gone`.
+    fn side_of(m: Memory, typed: Option<Typed>, gone: Gone) -> Side {
+        Side {
+            memory: Ok(m),
+            typed: typed.map(Ok),
+            ended: ended(gone),
+        }
+    }
+
+    #[test]
+    fn the_result_passes_on_two_clean_quits_and_is_partial_after_a_missed_word() {
+        let cfg = crate::config::load().expect("loads");
+        let whole = typed(memory(60.0, 80.0), memory(60.5, 80.5));
+        let off = Ok(side_of(memory(62.0, 87.0), None, Gone::Quit));
+        let on = |t: &Typed| Ok(side_of(memory(64.0, 90.0), Some(t.clone()), Gone::Quit));
+        let v = result(&cfg, &on(&whole), &off, &Ok(()));
+        assert_eq!(v["pass"], true, "{v}");
+        let mut missed = whole.clone();
+        missed.picked -= 1;
+        missed.note = Some("no chip offered the en prefix".into());
+        let v = result(&cfg, &on(&missed), &off, &Ok(()));
+        assert_eq!(v["pass"], out::PARTIAL, "{v}");
+        assert_eq!(v["typing"]["note"], "no chip offered the en prefix");
+        let v = result(&cfg, &on(&whole), &off, &Err("not back".into()));
+        assert_eq!(v["pass"], false, "the owner's file did not come back");
+    }
+
+    #[test]
+    fn an_off_side_never_started_after_a_stuck_copy_fails_the_result() {
+        let cfg = crate::config::load().expect("loads");
+        let whole = typed(memory(60.0, 80.0), memory(60.5, 80.5));
+        let on = Ok(side_of(memory(64.0, 90.0), Some(whole), Gone::Running));
+        let off = Err(Failed::from(STILL_RUNS.to_string()));
+        let v = result(&cfg, &on, &off, &Ok(()));
+        assert_eq!(v["pass"], false, "{v}");
+        assert_eq!(v["off"]["error"], STILL_RUNS);
+        assert!(v["predict_mb"].is_null(), "no off reading");
     }
 
     #[test]

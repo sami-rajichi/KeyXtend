@@ -83,8 +83,7 @@ pub struct G8 {
     /// Longest wait past the recording time for `PresentMon` to stop and write its last rows, whether G8 or the owner
     /// started it.
     pub presentmon_stop_ms: u64,
-    /// Quit tries on a copy G8 started but could not open or cap, whose command window may not exist yet, and the
-    /// wait between them.
+    /// Quit tries on every copy a gate ends (`copyend`, `close::quit_started`), whose command window may not exist yet.
     pub quit_tries: u32,
     /// The wait between those quit tries, in ms.
     pub quit_try_ms: u64,

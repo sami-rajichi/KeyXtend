@@ -109,14 +109,29 @@ fn attach_class<'a>(name: &str, app: &'a AppConfig) -> Result<&'a str, String> {
         .ok_or_else(|| format!("--attach needs a class in [apps.{name}]"))
 }
 
-/// True if the program at `image` has the file name of `exe`, ignoring case; the one rule the gates match programs by.
+/// The class of `app`'s text box, which must take the keyboard; refused when `[apps.<name>]` names none.
+pub(crate) fn focus_class<'a>(name: &str, app: &'a AppConfig) -> Result<&'a str, String> {
+    app.focus_class
+        .as_deref()
+        .ok_or_else(|| format!("[apps.{name}] needs a focus_class"))
+}
+
+/// True when file names `a` and `b` match as Windows matches them, ignoring case; the one rule the gates match file
+/// names by.
+pub(crate) fn same_name(a: &str, b: &str) -> bool {
+    a.to_lowercase() == b.to_lowercase()
+}
+
+/// True if the program at `image` has the file name of `exe` (`same_name`).
 pub(crate) fn same_program(image: &str, exe: &str) -> bool {
     let name = |p: &str| {
         Path::new(p)
             .file_name()
-            .map(|n| n.to_string_lossy().to_lowercase())
+            .map(|n| n.to_string_lossy().into_owned())
     };
-    name(image).is_some_and(|n| name(exe) == Some(n))
+    name(image)
+        .zip(name(exe))
+        .is_some_and(|(a, b)| same_name(&a, &b))
 }
 
 /// Uses the app's topmost open window of the right class and program; starts and closes nothing.

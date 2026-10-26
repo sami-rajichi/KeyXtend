@@ -44,7 +44,7 @@ owner_mb = 2.0
 # must stay within [g8] churn_growth_mb.
 warm_words = 3
 words = 30
-# Wait after the last word before memory is read, in ms.
+# Wait before each memory reading, after the warm-up words and after the measured words, in ms.
 settle_ms = 2000
 
 [owner_settings]

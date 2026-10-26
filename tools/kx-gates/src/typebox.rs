@@ -29,15 +29,24 @@ impl<T> Boxed<T> {
     }
 }
 
-/// Clicks the middle of target-window's box, as G21 does, and checks the box took the keyboard.
-fn focus_target(ctx: &Ctx, app: &Opened) -> Result<(), String> {
+/// Clicks the middle of target-window's box and checks the box took the keyboard; G21 and every typed box use it.
+pub(crate) fn focus_target(ctx: &Ctx, app: &Opened) -> Result<(), String> {
+    let name = AppKind::Target.name();
+    let edit = apps::focus_class(name, ctx.cfg.app(name)?)?;
     simuser::click(ctx, app, geom::centre(&win::rect(app.hwnd)?))?;
-    let target = ctx.cfg.app(AppKind::Target.name())?;
-    let edit = target.focus_class.clone().unwrap_or_default();
     if win::class(win::focus(app.hwnd)) == edit {
         Ok(())
     } else {
         Err(format!("the {edit} box did not take the focus"))
+    }
+}
+
+/// target-window's arguments for a password box when `password`, else none.
+pub(crate) fn password_args<'a>(ctx: &'a Ctx<'_>, password: bool) -> &'a [String] {
+    if password {
+        std::slice::from_ref(&ctx.target.password_arg)
+    } else {
+        &[]
     }
 }
 

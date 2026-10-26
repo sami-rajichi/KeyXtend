@@ -1,10 +1,5 @@
-//! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, key highlight, click to
-//! character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
-//! use and after a scroll (`g8scroll`) against them, times resizes and logs the machine's memory (`g8host`).
-//! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
-//! layout in front (`g8lang`); it clicks, so only with the owner's yes.
-//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`), and `g8 predict` the
-//! prediction part's memory and typing churn (`g8predict`).
+//! G8 budgets (spec §10): it starts the product cold and sets what it measures against each budget (`g8parts`); it
+//! clicks, so only with the owner's yes. `run` names its other runs: weak mode, an Arabic layout, the hook and predict.
 #![cfg(windows)]
 
 use std::path::Path;

@@ -10,19 +10,25 @@ use serde::{Deserialize, Serialize};
 /// One kept file: its path and its bytes, none when it did not exist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(super) struct Saved {
+    /// Where the file lives.
     pub path: PathBuf,
+    /// Its bytes as kept; none when there was no file.
     pub bytes: Option<Vec<u8>>,
 }
 
 /// The settings file and its last good copy, as kept.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(super) struct Pair {
+    /// The settings file.
     pub settings: Saved,
+    /// Its last good copy, which the store falls back to.
     pub previous: Saved,
 }
 
 /// How many files a pair keeps.
 const KEPT: usize = 2;
+/// Room past the kept bytes, in store caps, for the paths and the JSON keys.
+const ROOM_CAPS: u64 = 1;
 
 /// The most JSON bytes one kept byte takes: the digits of `u8::MAX` and a comma.
 fn byte_width() -> u64 {
@@ -30,11 +36,11 @@ fn byte_width() -> u64 {
     digits + 1
 }
 
-/// The most bytes `load` reads from a sidecar: each kept file at the store's cap, every byte at its widest, and one
-/// cap more for the paths and keys.
+/// The most bytes `load` reads from a sidecar: each kept file at the store's cap, every byte at its widest, and
+/// `ROOM_CAPS` more.
 fn side_cap() -> u64 {
     let files = u64::try_from(KEPT).unwrap_or(u64::MAX);
-    let caps = files.saturating_mul(byte_width()).saturating_add(1);
+    let caps = files.saturating_mul(byte_width()).saturating_add(ROOM_CAPS);
     MAX_FILE_BYTES.saturating_mul(caps)
 }
 

@@ -1,8 +1,5 @@
 //! G27 (P7): a word typed through the product's first chip, per language, on copies of the product G27 starts with
-//! learning paused. In target-window's box the product's keys type each `[g27]` case's prefix, the first chip that
-//! offers it is picked, and the box must then hold the prefix replaced by the chip's word and its script's gap. Edge 6
-//! picks the chip after a click moved the caret, with the mouse module off: nothing types. The result holds each
-//! case's language, prefix, chip time and verdict, never the box's text or a word.
+//! learning paused. Edge 6 picks the chip after a click moved the caret, with the mouse module off: nothing types.
 #![cfg(windows)]
 
 use kx_mod_predict::script;
@@ -31,14 +28,14 @@ pub(crate) fn after_pick(typed: &str, prefix: &str, word: &str) -> Option<String
 const EDGE_PASS: &str = "typed nothing";
 /// Edge 6's verdict when the pick changed the text.
 const EDGE_TYPED: &str = "typed";
-/// Edge 6's verdict when chip-0 left the lane after the click, so the pick check was never reached.
-const EDGE_SETUP: &str = "setup failed: chip-0 left the lane after the click";
+/// Edge 6's verdict when the best chip left the lane after the click, so the pick check was never reached.
+const EDGE_SETUP: &str = "setup failed: the best chip left the lane after the click";
 /// The copies G27 starts: one for the cases, one for edge 6 with the mouse module off.
 pub const COPIES: usize = 2;
 /// Why edge 6 did not run.
 const EDGE_SKIPPED: &str = "edge 6 did not run: the first copy could not be ended";
 
-/// Edge 6's verdict: whether the lane `kept` chip-0 after the click, and whether the text stayed `unchanged`.
+/// Edge 6's verdict: whether the lane `kept` the best chip after the click, and whether the text stayed `unchanged`.
 pub(crate) fn edge_verdict(kept: bool, unchanged: bool) -> &'static str {
     match (kept, unchanged) {
         (false, _) => EDGE_SETUP,
@@ -153,9 +150,10 @@ fn all_ok(parts: &[Value]) -> bool {
     !parts.is_empty() && parts.iter().all(|p| p["ok"] == true)
 }
 
-/// Runs G27 on the product, called `name`, which must be closed: each case in a fresh box on a copy of its own, then
-/// edge 6 on a copy with the mouse module off, unless the first copy could not be ended. Every copy ends before the
-/// owner's file comes back.
+/// Runs G27 on the product, called `name`, which must be closed: every case in a fresh box on one copy, then edge 6 on
+/// a second copy with the mouse module off unless the first could not be ended, each copy ended before the owner's
+/// file comes back. Each box must hold the typed prefix replaced by the first offering chip's word and its script's
+/// gap, and the result never holds the box's text or a word.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name != product::NAME {
         return Err(format!("G27 runs on {}, not {name}", product::NAME));
@@ -237,7 +235,11 @@ mod tests {
     fn edge_6_tells_a_setup_failure_from_a_typing_fail() {
         assert_eq!(edge_verdict(true, true), EDGE_PASS);
         assert_eq!(edge_verdict(true, false), EDGE_TYPED);
-        assert_eq!(edge_verdict(false, true), EDGE_SETUP, "no chip-0 to click");
+        assert_eq!(
+            edge_verdict(false, true),
+            EDGE_SETUP,
+            "no best chip to click"
+        );
         assert_eq!(edge_verdict(false, false), EDGE_SETUP);
         assert!(EDGE_SETUP.starts_with("setup failed"), "{EDGE_SETUP}");
     }

@@ -7,10 +7,10 @@ mod saved;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use kx_kernel::{KERNEL, KernelSettings};
+use kx_kernel::{KERNEL, KernelSettings, SPEC};
 use kx_mod_predict::{LEARN_KEY, ON_KEY};
 use kx_module_api::ModuleId;
-use kx_settings::{Files, VERSION_KEY};
+use kx_settings::{Files, VERSION_KEY, peek_section};
 use toml::{Table, Value};
 
 use saved::Pair;
@@ -138,20 +138,13 @@ fn put(pair: &Pair, side: &Path) -> Result<(), String> {
         .map_err(|e| stays(side, &format!("the put-back failed: {e}")))
 }
 
-/// `owner`'s `[kernel]` section, typed over the kernel's defaults, with predict out of its switched-off list when `on`
-/// and in it otherwise, and each of `off` in it once; the owner's other choices and version stay.
+/// `owner`'s `[kernel]` section read as the store reads it, repaired value by value, with predict out of its
+/// switched-off list when `on` and in it otherwise, and each of `off` in it once; the owner's version stays.
 fn kernel(owner: &Table, on: bool, off: &[ModuleId]) -> Result<Table, String> {
     let fail = |e: &dyn std::fmt::Display| format!("the kernel's settings: {e}");
-    let defaults = KernelSettings::from_defaults().map_err(|e| fail(&e))?;
-    let mut values = owner
-        .get(KERNEL.as_str())
-        .and_then(Value::as_table)
-        .cloned()
-        .unwrap_or_default();
-    let version = values.remove(VERSION_KEY);
-    let mut merged = Table::try_from(&defaults).map_err(|e| fail(&e))?;
-    merged.extend(values);
-    let mut k: KernelSettings = Value::Table(merged).try_into().unwrap_or(defaults);
+    let mut k: KernelSettings = peek_section(Some(owner), KERNEL, &SPEC).map_err(|e| fail(&e))?;
+    let section = owner.get(KERNEL.as_str()).and_then(Value::as_table);
+    let version = section.and_then(|s| s.get(VERSION_KEY)).cloned();
     let id = kx_mod_predict::ID.as_str();
     k.disabled.retain(|d| d != id);
     let predict = (!on).then_some(kx_mod_predict::ID);

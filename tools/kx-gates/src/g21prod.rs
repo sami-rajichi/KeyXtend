@@ -76,17 +76,6 @@ fn field_config() -> Result<FieldConfig, String> {
     Ok(s.field_config())
 }
 
-/// The kind `watch` tells once it is `want`, or the last it told within `[timing] read_wait_ms`.
-fn told(ctx: &Ctx, watch: &dyn FieldRun, want: FieldKind) -> FieldKind {
-    let t = &ctx.cfg.timing;
-    let mut kind = watch.kind();
-    crate::win::poll_until(t.read_wait_ms, t.poll_ms, || {
-        kind = watch.kind();
-        (kind == want).then_some(())
-    });
-    kind
-}
-
 /// The lane after the case's prefix: a password box's after the whole chip wait, as a chip may come late; a plain
 /// box's once a chip shows.
 fn typed_lane(ctx: &Ctx, t: &Typist, case: &Case, password: bool) -> Result<Lane, String> {
@@ -101,12 +90,7 @@ fn typed_lane(ctx: &Ctx, t: &Typist, case: &Case, password: bool) -> Result<Lane
 
 /// The focused box judged with typist `t`: the kind the watch tells, and the lane after the case's prefix.
 fn judge(ctx: &Ctx, watch: &dyn FieldRun, t: &Typist, f: Field) -> Result<Value, String> {
-    let want = if f.password() {
-        FieldKind::Password
-    } else {
-        FieldKind::Text
-    };
-    let kind = told(ctx, watch, want);
+    let kind = g21::told(ctx, watch, g21::wanted(f.password()));
     let g = &ctx.cfg;
     let case = g
         .g27
@@ -114,9 +98,9 @@ fn judge(ctx: &Ctx, watch: &dyn FieldRun, t: &Typist, f: Field) -> Result<Value,
         .ok_or("g21_product.case names no g27 case")?;
     let lane = typed_lane(ctx, t, case, f.password())?;
     let ok = box_ok(f.password(), kind, &lane);
-    let kind = format!("{kind:?}").to_lowercase();
     Ok(json!({
-        "field": f.name(), "kind": kind, "locked": lane.locked, "chips": lane.chips, "shown": lane.shown, "ok": ok,
+        "field": f.name(), "kind": g21::kind_name(kind), "locked": lane.locked, "chips": lane.chips,
+        "shown": lane.shown, "ok": ok,
     }))
 }
 
@@ -130,8 +114,7 @@ fn finished(mut v: Value, back: bool, left: &[String]) -> Value {
 
 /// target-window's box, a password box for `f`'s password, judged in a fresh window.
 fn target(ctx: &Ctx, watch: &dyn FieldRun, f: Field) -> Result<Value, String> {
-    let password = std::slice::from_ref(&ctx.target.password_arg);
-    let extra = if f.password() { password } else { &[] };
+    let extra = typebox::password_args(ctx, f.password());
     let b = typebox::in_target(ctx, extra, |t| judge(ctx, watch, t, f));
     let left = b.left;
     b.got.map(|v| finished(v, b.back, &left))
@@ -140,9 +123,7 @@ fn target(ctx: &Ctx, watch: &dyn FieldRun, f: Field) -> Result<Value, String> {
 /// G21's Chrome page, its password field clicked, judged, then closed with the page file G21 wrote.
 fn chrome(ctx: &Ctx, watch: &dyn FieldRun) -> Result<Value, String> {
     let g = &ctx.cfg.g21;
-    let body =
-        g21::input(ctx, &g.user_name, "text", "") + &g21::input(ctx, &g.pass_name, "password", "");
-    let doc = probe::open_page(ctx, &body)?;
+    let doc = probe::open_page(ctx, &g21::page(ctx))?;
     let ((v, back), left) = probe::run_on(ctx, doc, |doc| {
         let uia = Uia::new().map_err(|e| e.to_string())?;
         probe::front(ctx, &doc.app)?;

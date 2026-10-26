@@ -145,11 +145,10 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
     let g = &ctx.cfg.g21;
     ask(ctx, uia, fw, app, &g.user_name, ToolButton::FillUser)?;
     let prompt_user = prompt_within_refuse(ctx);
-    // A field holding more than the test user's name fails as one that holds it does.
-    let most = ctx.spike.tools.test_user.encode_utf16().count();
+    // Read up to `[g1] max_read_chars`, so the count shows what any wrong fill left.
     let user = uia
         .named(app.hwnd, &g.user_name)
-        .and_then(|e| uia::value(&e, most));
+        .and_then(|e| uia::value(&e, ctx.cfg.g1.max_read_chars));
     ask(ctx, uia, fw, app, &g.pass_name, ToolButton::FillPassword)?;
     let prompt_pass = prompt_within_refuse(ctx);
     let len = length_in(&win::title(app.hwnd), &ctx.cfg.g23.length_mark);

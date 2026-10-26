@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use kx_mod_predict::script;
 use kx_module_api::Redacted;
 use kx_module_api::ports::LayoutId;
 use kx_platform_windows::uia::{self, Uia};
@@ -20,7 +21,7 @@ use crate::product::{self, Keyboard};
 use crate::simuser::{self, keys_ours};
 use crate::walk::{self, CharKey};
 use crate::win::{self, sleep_ms};
-use crate::{capture, ftl, langs};
+use crate::{board, capture, ftl, langs};
 
 /// The keys among `keys` that type each character of `prefix` at once, in order; an error names the first character
 /// no key types.
@@ -150,10 +151,23 @@ impl<'a> Typist<'a> {
         Ok((word, win::ms_since(since)))
     }
 
+    /// Clicks the product's key `id` with the app in front.
+    fn click(&self, id: &str) -> Result<(), String> {
+        keys_ours(self.app)?;
+        Keyboard::find()?.click(id)
+    }
+
     /// Clicks the best chip with the app in front.
     pub fn click_first(&self) -> Result<(), String> {
-        keys_ours(self.app)?;
-        Keyboard::find()?.click(&self.g().chip_id(0))
+        self.click(&self.g().chip_id(0))
+    }
+
+    /// Ends a word begun with `prefix`: the product's key that types its script's gap, then the key pause.
+    pub fn end_word(&self, prefix: &str) -> Result<(), String> {
+        let gap = script::of(prefix).ok_or("the prefix has no script")?.gap();
+        self.click(&board::typing(gap)?)?;
+        sleep_ms(self.g().key_gap_ms);
+        Ok(())
     }
 
     /// After `[g27] settle_ms`, reads the best chip's word and clicks it: the word.

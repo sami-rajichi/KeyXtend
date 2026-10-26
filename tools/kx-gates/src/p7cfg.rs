@@ -3,11 +3,15 @@
 #![cfg(windows)]
 
 use kx_mod_predict::script::{self, Script};
+use kx_module_api::ports::fits_iso;
 use serde::Deserialize;
 
+use crate::apps::{self, AppKind};
 use crate::config::GatesConfig;
+use crate::fit::held_fits;
 use crate::g22cfg::plain_name;
 use crate::p5cfg::SEP;
+use crate::{cli, out};
 
 /// `[g27]`: the cases, the lane's gate ids and the waits; times in ms.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -79,7 +83,7 @@ pub struct G8Predict {
     pub warm_words: usize,
     /// Words the typing churn measures.
     pub words: usize,
-    /// Wait after the last word before memory is read, in ms.
+    /// Wait before each memory reading, after the warm-up words and after the measured words, in ms.
     pub settle_ms: u64,
 }
 
@@ -117,17 +121,16 @@ fn wait(key: &str, ms: u64, most: u64) -> Result<(), String> {
 }
 
 impl Case {
-    /// Refuses a language that is no lower-case ISO 639 code, or a prefix that is not letters of one spaced script,
-    /// which word chips serve.
+    /// Refuses a language that is no code a pack may carry (`fits_iso`), or a prefix that is not letters of one spaced
+    /// script, which word chips serve.
     fn check(&self) -> Result<(), String> {
-        let code = !self.lang.is_empty() && self.lang.chars().all(|c| c.is_ascii_lowercase());
         let spaced = script::of(&self.prefix).is_some_and(Script::spaced);
         let letters = self.prefix.chars().all(char::is_alphabetic) && script::single(&self.prefix);
-        if code && spaced && letters {
+        if fits_iso(&self.lang) && spaced && letters {
             return Ok(());
         }
         Err(format!(
-            "g27.cases: {:?} needs a lower-case ISO 639 code and a prefix of letters of one spaced script",
+            "g27.cases: {:?} needs a language code a word pack may carry and a prefix of letters of one spaced script",
             self.lang
         ))
     }
@@ -204,14 +207,17 @@ impl G8Predict {
         if self.warm_words == 0 || self.words == 0 {
             return Err("g8_predict.warm_words and g8_predict.words must be above 0".to_string());
         }
-        let limit = c.mouse_guard.limit_ms;
-        wait("g8_predict.settle_ms", self.settle_ms, limit)?;
-        runs::fits("g8_predict.words: g8 predict", runs::predict_ms(c), limit)
+        wait(
+            "g8_predict.settle_ms",
+            self.settle_ms,
+            c.mouse_guard.limit_ms,
+        )?;
+        held_fits(c, "g8_predict.words: g8 predict", runs::predict_ms(c))
     }
 }
 
-/// Refuses P7 settings that could type nothing, pick the wrong word, wait past the mouse guard, hide a figure or keep
-/// the owner's settings outside the out folder.
+/// Refuses P7 settings that could type nothing, pick the wrong word, wait past the mouse guard, hide a figure, keep
+/// the owner's settings outside the out folder or in a file a gate deletes, or type in a box with no focus class.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
     let limit = c.mouse_guard.limit_ms;
     c.g27.check(limit, c.g1.max_read_chars)?;
@@ -226,13 +232,30 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
             "owner_settings.backup must be a plain file name, in the out folder".to_string(),
         );
     }
-    runs::fits(
-        "g21_product.case: G21's product half",
-        runs::g21_ms(c),
-        limit,
-    )?;
-    runs::fits("g27.cases: G27", runs::g27_ms(c), limit)?;
+    backup_free(&c.owner_settings.backup, &[out::RESULTS])?;
+    let target = AppKind::Target.name();
+    apps::focus_class(target, c.app(target)?)?;
+    held_fits(c, "g21_product.case: G21's product half", runs::g21_ms(c))?;
+    held_fits(c, "g27.cases: G27", runs::g27_ms(c))?;
     c.g8_predict.check(c)
+}
+
+/// Refuses a backup name a gate's own clean-up may delete or append to: one of `taken`, or a run's own file, which
+/// starts with its gate's name and the run's separator; names match as `apps::same_name` says.
+pub(crate) fn backup_free(backup: &str, taken: &[&str]) -> Result<(), String> {
+    let starts = |s: &str| {
+        backup
+            .get(..s.len())
+            .is_some_and(|head| apps::same_name(head, s))
+    };
+    let run_file = cli::gates().any(|g| starts(&format!("{g}{}", cli::RUN_SEP)));
+    let named = taken.iter().any(|t| apps::same_name(backup, t));
+    if run_file || named {
+        return Err(format!(
+            "owner_settings.backup ({backup}) must not be a file a gate deletes or writes"
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) mod runs;

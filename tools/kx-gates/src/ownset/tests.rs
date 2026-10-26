@@ -269,6 +269,22 @@ fn modules_switched_off_for_a_run_join_the_owners_list_once_and_learning_stays_p
 }
 
 #[test]
+fn a_stale_key_or_a_bad_value_keeps_the_owners_switched_off_modules() {
+    let file = "[kernel]\nversion = 1\ndisabled = [\"voice\"]\nstale = 1\nlog_max_mb = 0\n";
+    let owner: Table = file.parse().expect("TOML");
+    let got = predict(&owner, false, &[]).expect("edits");
+    assert_eq!(disabled(&got), ["voice", "predict"]);
+    let defaults = KernelSettings::from_defaults().expect("defaults");
+    assert_eq!(
+        got["kernel"]["log_max_mb"].as_integer(),
+        Some(i64::from(defaults.log_max_mb)),
+        "a bad value gives its default, as the store reads it"
+    );
+    assert!(got["kernel"].get("stale").is_none(), "a stale key goes");
+    assert_eq!(got["kernel"]["version"].as_integer(), Some(1));
+}
+
+#[test]
 fn a_file_without_a_kernel_section_gets_the_kernels_defaults() {
     let got = predict(&Table::new(), false, &[]).expect("edits");
     let defaults = KernelSettings::from_defaults().expect("defaults");
