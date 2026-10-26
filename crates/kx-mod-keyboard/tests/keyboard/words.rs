@@ -176,6 +176,25 @@ fn a_one_shot_shift_used_by_a_word_redraws_at_the_next_relabel() {
 }
 
 #[test]
+fn a_word_during_a_held_key_keeps_its_shift_down_until_the_burst_ends() {
+    let d = Desk::new(None);
+    d.rig.tap("shift").unwrap();
+    d.rig.press(A).unwrap();
+    d.word(0, "Hello");
+    assert_eq!(
+        d.rig.state()["keys"]["shift"]["on"],
+        true,
+        "down for the burst"
+    );
+    d.rig.let_go(A).unwrap();
+    assert_eq!(
+        d.rig.state()["keys"]["shift"]["on"],
+        false,
+        "let go after it"
+    );
+}
+
+#[test]
 fn a_picked_word_types_nothing_while_the_keyboard_is_down() {
     let mut d = Desk::new(None);
     // The kernel drops the handlers before the stop, but one may still be running on the sender's thread.

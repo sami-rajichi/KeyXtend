@@ -1,11 +1,11 @@
 //! What a picked word's pause lets in: a click outside our windows stops the rest of the word at once, with what went
-//! already told; a click on our windows, a latch or a dead key clicked then neither stops it nor joins it.
+//! told before it; a click on our windows, a latch or a dead key clicked then neither stops it nor joins it.
 
 use super::{BKSP, Desk, text};
 use crate::typing::{tap, unicode};
-use kx_module_api::ports::{FaceAction, KeyId, Piece, PointerPressed};
+use kx_module_api::ports::{FaceAction, KeyId, Piece, PointerPressed, Typed};
 use kx_platform_fake::Stroke;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 /// The French dead `^` and the key of virtual key E on AZERTY.
@@ -53,6 +53,28 @@ fn a_click_outside_our_windows_during_a_pick_stops_the_rest_at_once() {
         assert_eq!(d.pieces(), [Piece::Erase], "what went is told");
         assert_eq!(d.rig.fakes.pause.waits().len(), 1);
     }
+}
+
+#[test]
+fn a_stopped_picks_erase_is_heard_before_the_press_that_stopped_it() {
+    let d = Desk::new(None);
+    let heard = Arc::new(Mutex::new(Vec::new()));
+    let (pieces, presses) = (Arc::clone(&heard), Arc::clone(&heard));
+    let _ears = [
+        d.bus
+            .subscribe(move |e: &Typed| pieces.lock().unwrap().push(Some(e.piece.clone())))
+            .unwrap(),
+        d.bus
+            .subscribe(move |_: &PointerPressed| presses.lock().unwrap().push(None))
+            .unwrap(),
+    ];
+    press_during(&d, false);
+    d.word(3, "hello ");
+    assert_eq!(
+        *heard.lock().unwrap(),
+        [Some(Piece::Erase), None],
+        "the Erase, then the press"
+    );
 }
 
 #[test]

@@ -263,13 +263,20 @@ impl Typing {
 
     /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats.
     fn used(&mut self) {
+        let now = self.latches.clone();
+        self.used_of(&now);
+    }
+
+    /// A key or picked word that started under `then` went out: those latches let go as their mode says, or when the
+    /// burst ends while a held key repeats; one latched since stays.
+    fn used_of(&mut self, then: &Latches) {
         match &mut self.burst {
             Some(went) => {
                 *went = true;
-                self.latches.spend();
+                self.latches.spend_of(then);
             }
             None => {
-                self.latches.used();
+                self.latches.used_of(then);
             }
         }
     }

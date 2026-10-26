@@ -91,15 +91,7 @@ impl Typing {
         word.erase = 0;
         word.text = None;
         if word.any {
-            match &mut self.burst {
-                Some(went) => {
-                    *went = true;
-                    self.latches.spend_of(&word.then);
-                }
-                None => {
-                    self.latches.used_of(&word.then);
-                }
-            }
+            self.used_of(&word.then);
         }
         Part::Done(word.any)
     }
