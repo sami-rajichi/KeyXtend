@@ -17,17 +17,17 @@ mod resolve;
 mod table;
 mod view;
 
-use bytes::MAX_TEXT;
-pub use bytes::{MAGIC, MAX_CHAINS, VERSION};
+pub(crate) use bytes::MAX_TEXT;
+pub use bytes::{MAGIC, MAX_LEARNED_CHAINS, VERSION};
 use chains::Chains;
-use clean::{CLEAN_AT_TENTHS, HEADROOM, TENTHS, stale, too_high};
+use clean::{HEADROOM, largest_cap, stale, too_high};
 use forget::{Blocked, Undo, Use};
 use resolve::seed_spelling;
 use table::{Id, Word, Words};
 pub use view::View;
 
 /// The most `max_words` a learner takes: at its peak, every word id still fits in 16 bits.
-pub const MAX_LEARNED: usize = Id::MAX as usize / CLEAN_AT_TENTHS * TENTHS;
+pub const MAX_LEARNED: usize = largest_cap(Id::MAX as usize);
 /// The most `min_uses` a learner takes: one learn adds at most that many uses, which the halving headroom holds.
 pub const MAX_MIN_USES: u32 = HEADROOM as u32;
 
@@ -122,7 +122,7 @@ impl PartialEq for Learner {
 
 impl Learner {
     /// An empty learner for language `iso`. Settings past a limit stop there: `max_words` at `MAX_LEARNED`,
-    /// `max_chains` at `MAX_CHAINS`, `context_words` at the longest chain a pack holds.
+    /// `max_chains` at `MAX_LEARNED_CHAINS`, `context_words` at the longest chain a pack holds.
     ///
     /// # Errors
     /// `BadIso` when `iso` is not a code a pack could carry; `BadMinUses` when `min_uses` passes `MAX_MIN_USES`.
@@ -133,7 +133,7 @@ impl Learner {
         cfg.check()?;
         let cfg = LearnConfig {
             max_words: cfg.max_words.min(MAX_LEARNED),
-            max_chains: cfg.max_chains.min(MAX_CHAINS),
+            max_chains: cfg.max_chains.min(MAX_LEARNED_CHAINS),
             context_words: cfg.context_words.min(usize::from(MAX_CHAIN - 1)),
             ..cfg
         };
@@ -160,7 +160,7 @@ impl Learner {
     /// another language is ignored, and so is a word over `MAX_TEXT`.
     pub fn learn(&mut self, seed: Option<&Pack<'_>>, word: &str, context: &[&str], day: u32) {
         self.undo = None;
-        if word.is_empty() || word.len() > MAX_TEXT {
+        if !fits_text(word) {
             return;
         }
         let seed = self.own(seed);
@@ -209,7 +209,7 @@ impl Learner {
         let uses = match self.blocked.used(text, 1, day, self.cfg.min_uses) {
             Use::Free => 1,
             Use::Held => return None,
-            Use::Back(uses) => uses,
+            Use::Back(mark) => mark.uses,
         };
         let casing = self.casing();
         let Some(id) = self.absorb(seed, text, found) else {
@@ -270,6 +270,11 @@ impl Learner {
             }
         }
     }
+}
+
+/// True when `text` fits a spelling of the byte form: not empty and at most `MAX_TEXT` bytes.
+fn fits_text(text: &str) -> bool {
+    !text.is_empty() && text.len() <= MAX_TEXT
 }
 
 /// True when `key` names a word `gone` flags.

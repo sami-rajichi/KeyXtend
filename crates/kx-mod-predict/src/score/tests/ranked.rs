@@ -10,8 +10,11 @@ use crate::learn::tests::{CFG as LEARN, DAY};
 const CASES: u32 = 256;
 /// The letters words are made of: few, so words share prefixes.
 const LETTERS: [char; 3] = ['a', 'b', 'c'];
-/// The words of up to three letters.
-const VOCAB: usize = 39;
+/// The words of one, two and three letters.
+const VOCAB: usize = {
+    let n = LETTERS.len();
+    n + n * n + n * n * n
+};
 /// The most pack words or chains one run makes.
 const MOST: usize = 32;
 /// The most learns one run makes.

@@ -1,9 +1,11 @@
 //! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, erasing only what the box
-//! confirms; in forget mode a word or known-email chip is forgotten instead, and the list's rows type their email.
+//! confirms; in forget mode a word or known-email chip is forgotten instead, with an Undo chip in its place, and the
+//! list's rows type their email.
 
 use super::Actor;
 use super::store::Blob;
-use crate::lane::{Pick, fits};
+use crate::email::Emails;
+use crate::lane::{self, Pick, fits};
 use crate::learn::Learner;
 use crate::pack::Pack;
 use crate::track::{EmailAsk, Plan};
@@ -23,7 +25,7 @@ impl Actor {
         };
         match chosen {
             Pick::Word { stored, .. } if self.menu.forgetting => self.forget(seed, &stored, at),
-            Pick::Email(plan) if self.menu.forgetting => self.forget_email(&plan.text),
+            Pick::Email(plan) if self.menu.forgetting => self.forget_email(&plan.text, at),
             _ if self.menu.forgetting => return false,
             Pick::Word { plan, .. } | Pick::Email(plan) | Pick::Domain(plan) => {
                 self.send(seed, &plan);
@@ -34,35 +36,55 @@ impl Actor {
         true
     }
 
-    /// Picks row `row` of the open list's page: its email replaces the typed `@@`, and the list closes. A row past the
-    /// page does nothing.
+    /// Picks row `row` of the open list's page: its email replaces the typed `@@`, and the list closes. A row with no
+    /// email does nothing.
     pub(super) fn list_pick(&mut self, seed: Option<&Pack<'_>>, row: u8) {
         let Some(at) = self.menu.list.and_then(|list| list.at(row)) else {
             return;
         };
         let ask = self.show.as_ref().and_then(|s| s.emails.clone());
-        let email = self.emails.list().get(at);
-        let plan = match (ask, email) {
+        let listed = self.listed();
+        let plan = match (ask, listed.list().get(at)) {
             (Some(ask @ EmailAsk::All(_)), Some(email)) => ask.plan(email),
             _ => None,
         };
-        self.menu.cancel();
         if let Some(plan) = plan {
+            self.menu.cancel();
             self.send(seed, &plan);
         }
     }
 
-    /// Brings back the word just forgotten, while its Undo chip shows.
+    /// Brings back the word or email just forgotten, while its Undo chip shows.
     pub(super) fn undo(&mut self) {
-        if self.menu.undo() && self.learner.as_mut().is_some_and(Learner::undo_forget) {
+        if !self.menu.undo() {
+            return;
+        }
+        if let Some((at, email)) = self.lost.take() {
+            self.emails.put(at, email.into_inner());
+            self.changed(Blob::Emails);
+        } else if self.learner.as_mut().is_some_and(Learner::undo_forget) {
             self.changed(Blob::Learned);
         }
     }
 
-    /// True when the lane lists every known email, so the list may open.
+    /// True when the open `@@` can send a known email, so the list may open; never in forget mode.
     pub(super) fn lists_all(&self) -> bool {
-        let ask = self.show.as_ref().and_then(|s| s.emails.as_ref());
-        matches!(ask, Some(EmailAsk::All(_)))
+        !self.menu.forgetting && !self.listed().list().is_empty()
+    }
+
+    /// The known emails the open `@@` can send, which the list pages; none without one.
+    pub(super) fn listed(&self) -> Emails {
+        match self.show.as_ref().and_then(|s| s.emails.as_ref()) {
+            Some(ask @ EmailAsk::All(_)) => {
+                lane::listed(&self.emails, ask, self.mode, self.confirms())
+            }
+            _ => Emails::default(),
+        }
+    }
+
+    /// True when the box confirms what a pick erases: a text box.
+    pub(super) fn confirms(&self) -> bool {
+        self.kind == FieldKind::Text
     }
 
     /// Asks the keyboard to type by `plan` as far as the box confirms it: all of it when the box still ends with what
@@ -106,7 +128,7 @@ impl Actor {
         if plan.erase == 0 {
             return Some(true);
         }
-        if self.kind != FieldKind::Text {
+        if !self.confirms() {
             return None;
         }
         self.ports.field.as_mut()?.ends_with(&plan.gone)
@@ -119,15 +141,18 @@ impl Actor {
         let gone = learner.is_some_and(|l| l.forget(seed, stored.expose(), day));
         self.menu.forgot(gone.then_some(at));
         if gone {
+            self.lost = None;
             self.stats.forgot += 1;
             self.changed(Blob::Learned);
         }
     }
 
-    /// Removes the known `email` its chip types; forget mode ends.
-    fn forget_email(&mut self, email: &Redacted<String>) {
-        self.menu.forgot(None);
-        if self.emails.remove(email.expose()) {
+    /// Removes the known `email` its chip, at `at`, types; its Undo chip takes the place.
+    fn forget_email(&mut self, email: &Redacted<String>, at: usize) {
+        let removed = self.emails.remove(email.expose());
+        self.menu.forgot(removed.is_some().then_some(at));
+        if let Some((place, email)) = removed {
+            self.lost = Some((place, Redacted::new(email)));
             self.stats.forgot += 1;
             self.changed(Blob::Emails);
         }

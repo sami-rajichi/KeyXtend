@@ -15,6 +15,7 @@ pub mod learn;
 mod manifest;
 mod menu;
 pub mod pack;
+mod reader;
 pub mod score;
 pub mod script;
 mod settings;
@@ -22,8 +23,8 @@ pub mod split;
 pub mod track;
 
 pub use actor::{
-    ASIDE_SUFFIX, Actor, EMAILS_BLOB, Flow, Msg, Ports, STOPPED_LINE, aside_blob, emails_blob,
-    learned_blob, watch,
+    ASIDE_SUFFIX, Actor, EMAILS_BLOB, Flow, Msg, OTHER_LANGUAGE, Ports, STOPPED_LINE, aside_blob,
+    emails_blob, learned_blob, watch,
 };
 pub use casing::Casing;
 pub use days::{Days, SystemDays};
@@ -50,10 +51,18 @@ const THREAD: &str = "kx-predict";
 const NO_THREAD: &str = "the predict actor's thread did not start";
 
 /// The prediction module: it reads `[predict]`, watches the focused box and runs its actor.
-#[derive(Default)]
 pub struct PredictModule {
+    /// The calendar the learner stamps its days by.
+    days: Arc<dyn Days>,
     /// The running actor's inbox and thread, from start to stop.
     actor: Option<(Sender<Msg>, JoinHandle<()>)>,
+}
+
+impl Default for PredictModule {
+    /// A module on the system calendar.
+    fn default() -> Self {
+        Self::with_days(Arc::new(SystemDays))
+    }
 }
 
 impl Module for PredictModule {
@@ -82,7 +91,7 @@ impl Module for PredictModule {
         let ports = Ports {
             bus: cx.bus(),
             clock: cx.clock(),
-            days: Arc::new(SystemDays),
+            days: Arc::clone(&self.days),
             packs,
             store,
             handle: cx.settings_handle(),
@@ -111,6 +120,12 @@ impl Drop for PredictModule {
 }
 
 impl PredictModule {
+    /// A module whose learner stamps its days by `days`, as a test's fixed day does.
+    #[must_use]
+    pub fn with_days(days: Arc<dyn Days>) -> Self {
+        Self { days, actor: None }
+    }
+
     /// Tells the actor to quit and waits for its thread to end; a panic there is logged, with no word or email.
     fn halt(&mut self) {
         if let Some((tx, thread)) = self.actor.take() {

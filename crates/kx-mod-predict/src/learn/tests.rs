@@ -19,7 +19,7 @@ mod speed;
 
 /// A day number, as the module counts them.
 pub(crate) const DAY: u32 = 20_000;
-/// The settings' defaults as Task 12 fills them.
+/// The `[predict]` defaults, as `PredictSettings::learn_config` fills them; a settings test pins them.
 pub(crate) const CFG: LearnConfig = LearnConfig {
     min_uses: 2,
     max_words: 10_000,

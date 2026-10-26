@@ -10,10 +10,44 @@ use crate::fold::fold;
 const CASES: u32 = 256;
 
 #[test]
-fn the_table_parses_and_holds_turkish_only() {
+fn the_table_parses_and_holds_greek_dutch_and_turkish() {
     let langs = LANGS.as_ref().unwrap();
-    assert_eq!(langs.keys().collect::<Vec<_>>(), ["tr"]);
+    let mut isos: Vec<&String> = langs.keys().collect();
+    isos.sort();
+    assert_eq!(isos, ["el", "nl", "tr"]);
     assert!(std::ptr::eq(Casing::of("fr"), Casing::root()));
+}
+
+#[test]
+fn dutch_capitalises_ij_as_one_letter() {
+    let nl = Casing::of("nl");
+    assert_eq!(nl.capital("ijsselmeer"), "IJsselmeer");
+    assert_eq!(nl.capital("ijs"), "IJs");
+    assert_eq!(nl.upper("ijs"), "IJS");
+    assert_eq!(Casing::of("en").capital("ijs"), "Ijs");
+}
+
+#[test]
+fn greek_drops_the_tonos_in_all_capitals_and_keeps_it_on_a_first_capital() {
+    let el = Casing::of("el");
+    assert_eq!(el.upper("καλημέρα"), "ΚΑΛΗΜΕΡΑ");
+    assert_eq!(el.upper("Άρης"), "ΑΡΗΣ");
+    assert_eq!(el.upper("ΐ"), "Ϊ");
+    assert_eq!(el.capital("όλα"), "Όλα");
+    assert_eq!(el.lower("ΚΑΛΗΜΈΡΑ"), "καλημέρα");
+}
+
+#[test]
+fn greek_all_capitals_keep_a_vowel_pair_apart_with_a_diaeresis() {
+    let el = Casing::of("el");
+    assert_eq!(el.upper("τσάι"), "ΤΣΑΪ");
+    assert_eq!(el.upper("άυλος"), "ΑΫΛΟΣ");
+    assert_eq!(el.upper("Άυλος"), "ΑΫΛΟΣ");
+    assert_eq!(
+        el.upper("είναι"),
+        "ΕΙΝΑΙ",
+        "the tonos on the pair's second vowel"
+    );
 }
 
 #[test]

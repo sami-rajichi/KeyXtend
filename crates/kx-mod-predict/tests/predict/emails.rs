@@ -1,12 +1,9 @@
 //! Emails: one `@` lists domains, a typed `@@` lists known emails with More past the lane, the list pages by the rows
 //! the UI tells, a list pick sends the email, and typed emails are learned in text boxes only.
 
-use crate::rig::Rig;
+use crate::rig::{ROWS, Rig};
 use kx_mod_predict::email::Emails;
 use kx_module_api::ports::{ChipKind, FieldKind, WordsAsk};
-
-/// Rows per page the tests' UI shows.
-const ROWS: u8 = 5;
 
 /// Seven known emails, the most recent first.
 fn seven() -> Vec<String> {
@@ -75,6 +72,33 @@ fn a_list_row_past_the_page_types_nothing_and_keeps_the_list() {
         "the next page's first email is not typed"
     );
     assert_eq!(rig.lane().list.map(|l| l.page), Some(0));
+}
+
+#[test]
+fn a_row_past_the_last_pages_emails_types_nothing_and_keeps_the_list() {
+    let mut rig = knowing(&seven());
+    rig.typed("@@");
+    rig.ask(WordsAsk::More { rows: ROWS });
+    rig.ask(WordsAsk::Page {
+        page: 1,
+        rows: ROWS,
+    });
+    rig.ask(WordsAsk::ListPick(ROWS - 1));
+    assert!(rig.typed_words().is_empty());
+    assert_eq!(rig.lane().list.map(|l| l.page), Some(1), "still open");
+}
+
+#[test]
+fn in_a_box_that_cannot_confirm_an_at_at_offers_no_email_and_opens_no_list() {
+    let mut rig = knowing(&seven());
+    rig.focus(FieldKind::Unknown);
+    rig.typed("@@");
+    assert!(
+        rig.chips().is_empty(),
+        "each email would erase the typed @@"
+    );
+    rig.ask(WordsAsk::More { rows: ROWS });
+    assert!(rig.lane().list.is_none());
 }
 
 #[test]

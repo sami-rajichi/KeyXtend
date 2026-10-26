@@ -8,17 +8,25 @@ pub const HIDDEN_MARKS: [char; 14] = [
     '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
 
-/// Format characters that draw nothing, as first and last of each run: the soft hyphen, the Mongolian vowel
-/// separator, the zero-width space, the word joiner and invisible operators, the deprecated inhibitors, the BOM and
-/// the interlinear annotation marks. ZWNJ and ZWJ stay out, as Persian words and emoji need them.
-pub const INVISIBLE: [(char, char); 7] = [
+/// Characters that draw nothing, as first and last of each run: the soft hyphen, the Hangul fillers, the Mongolian
+/// vowel separator, the zero-width space, the word joiner and invisible operators, the deprecated inhibitors, the BOM,
+/// the interlinear annotation marks, the shorthand and musical format controls, and the tags. ZWNJ and ZWJ stay out,
+/// as Persian words and emoji need them.
+pub const INVISIBLE: [(char, char); 14] = [
     ('\u{ad}', '\u{ad}'),
+    ('\u{115f}', '\u{1160}'),
     ('\u{180e}', '\u{180e}'),
     ('\u{200b}', '\u{200b}'),
     ('\u{2060}', '\u{2064}'),
     ('\u{206a}', '\u{206f}'),
+    ('\u{3164}', '\u{3164}'),
     ('\u{feff}', '\u{feff}'),
+    ('\u{ffa0}', '\u{ffa0}'),
     ('\u{fff9}', '\u{fffb}'),
+    ('\u{1bca0}', '\u{1bca3}'),
+    ('\u{1d173}', '\u{1d17a}'),
+    ('\u{e0001}', '\u{e0001}'),
+    ('\u{e0020}', '\u{e007f}'),
 ];
 
 /// True for a control character, line breaks included, one of `HIDDEN_MARKS`, or an `INVISIBLE` format character.
@@ -63,6 +71,24 @@ mod tests {
             '\u{fff9}',
         ];
         for c in formats {
+            assert!(is_hidden(c), "{c:?}");
+        }
+    }
+
+    #[test]
+    fn hangul_fillers_shorthand_and_musical_formats_and_tags_are_hidden_marks() {
+        // The four Hangul fillers, a shorthand format control, a musical format, the language tag and a tag letter.
+        let blanks = [
+            '\u{115f}',
+            '\u{1160}',
+            '\u{3164}',
+            '\u{ffa0}',
+            '\u{1bca0}',
+            '\u{1d173}',
+            '\u{e0001}',
+            '\u{e0061}',
+        ];
+        for c in blanks {
             assert!(is_hidden(c), "{c:?}");
         }
     }

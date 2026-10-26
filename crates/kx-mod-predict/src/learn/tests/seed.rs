@@ -240,6 +240,25 @@ fn a_word_back_from_the_blocklist_halves_every_table_before_passing_the_top() {
 }
 
 #[test]
+fn a_word_back_from_the_blocklist_keeps_the_day_of_its_latest_held_use() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let cfg = LearnConfig { min_uses: 3, ..CFG };
+    let mut l = Learner::new("fr", cfg).unwrap();
+    assert!(l.forget(Some(&fr), "école", DAY));
+    l.learn(None, "ecole", &[], DAY);
+    l.learn(Some(&fr), "école", &[], DAY + 5);
+    l.learn(None, "ecole", &[], DAY);
+    l.reconcile(Some(&fr));
+    l.purge(DAY + 5 + cfg.forget_days);
+    assert_eq!(
+        listed(&l, "ec"),
+        ["école"],
+        "used on DAY + 5, so still kept"
+    );
+}
+
+#[test]
 fn a_forgotten_word_comes_back_once_its_strays_reach_min_uses() {
     let bytes = french();
     let fr = Pack::parse(&bytes).unwrap();

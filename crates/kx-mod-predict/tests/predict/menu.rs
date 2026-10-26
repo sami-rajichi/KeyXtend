@@ -5,7 +5,7 @@
 use crate::rig::{Rig, plant, saved};
 use kx_mod_predict::email::Emails;
 use kx_mod_predict::score::Learned;
-use kx_mod_predict::{ID, Msg, emails_blob};
+use kx_mod_predict::{ID, LEARN_KEY, Msg, ON_KEY, emails_blob};
 use kx_module_api::ports::{ChipKind, FieldKind, Lane, TypingMode, WordsAsk};
 use toml::{Table, Value};
 
@@ -26,7 +26,7 @@ fn write(key: &str, on: bool) -> (kx_module_api::ModuleId, Table) {
 fn pause_is_saved_and_a_paused_learner_learns_nothing() {
     let mut rig = ready();
     rig.ask(WordsAsk::Pause(true));
-    assert_eq!(rig.host.sink.writes(), [write("learn", false)]);
+    assert_eq!(rig.host.sink.writes(), [write(LEARN_KEY, false)]);
     assert!(!rig.lane().learn && rig.lane().on);
     rig.typed("hello ");
     rig.stop();
@@ -34,7 +34,7 @@ fn pause_is_saved_and_a_paused_learner_learns_nothing() {
     let mut rig = ready();
     rig.ask(WordsAsk::Pause(true));
     rig.ask(WordsAsk::Pause(false));
-    assert_eq!(rig.host.sink.writes().last(), Some(&write("learn", true)));
+    assert_eq!(rig.host.sink.writes().last(), Some(&write(LEARN_KEY, true)));
     assert!(rig.lane().learn);
 }
 
@@ -42,13 +42,13 @@ fn pause_is_saved_and_a_paused_learner_learns_nothing() {
 fn off_is_saved_empties_the_lane_and_on_brings_the_chips_back() {
     let mut rig = ready();
     rig.ask(WordsAsk::Power(false));
-    assert_eq!(rig.host.sink.writes(), [write("on", false)]);
+    assert_eq!(rig.host.sink.writes(), [write(ON_KEY, false)]);
     assert_eq!(rig.lane().lane, Lane::Off);
     assert!(!rig.lane().on);
     rig.typed("hel");
     assert_eq!(rig.lane().lane, Lane::Off, "typing changes nothing");
     rig.ask(WordsAsk::Power(true));
-    assert_eq!(rig.host.sink.writes().last(), Some(&write("on", true)));
+    assert_eq!(rig.host.sink.writes().last(), Some(&write(ON_KEY, true)));
     rig.typed("hel");
     assert_eq!(rig.words(), ["hello", "help"]);
 }
@@ -183,7 +183,7 @@ fn a_known_email_picked_in_forget_mode_is_forgotten_and_saved() {
 }
 
 #[test]
-fn forget_mode_drops_domains_and_more() {
+fn forget_mode_drops_domains_and_more_and_fills_the_lane_with_emails() {
     let mut rig = knowing(&[]);
     rig.typed("sami@");
     rig.ask(WordsAsk::Forget);
@@ -194,5 +194,54 @@ fn forget_mode_drops_domains_and_more() {
     rig.typed("@@");
     rig.ask(WordsAsk::Forget);
     let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
-    assert!(!kinds.is_empty() && kinds.iter().all(|k| *k == ChipKind::Email));
+    assert_eq!(
+        kinds,
+        vec![ChipKind::Email; usize::from(rig.settings.chips)]
+    );
+}
+
+#[test]
+fn forgetting_an_email_gives_an_undo_chip_that_brings_it_back() {
+    let mut rig = knowing(&["sami@x.org", "sara@y.com"]);
+    rig.typed("sa");
+    rig.ask(WordsAsk::Forget);
+    let at = rig
+        .chips()
+        .iter()
+        .position(|c| c.0 == "sami@x.org")
+        .unwrap();
+    rig.pick(u8::try_from(at).unwrap());
+    assert_eq!(rig.chips().get(at).map(|c| c.1), Some(ChipKind::Undo));
+    rig.pick(u8::try_from(at).unwrap());
+    let email = ("sami@x.org".to_owned(), ChipKind::Email);
+    assert_eq!(rig.chips().get(at), Some(&email), "back in its place");
+    rig.stop();
+    assert_eq!(saved_emails(&rig), ["sami@x.org", "sara@y.com"]);
+}
+
+#[test]
+fn forget_mode_opened_while_undo_shows_offers_a_full_lane_of_words() {
+    let words = ["sad", "safe", "sage", "sail", "salt", "same"];
+    let mut rig = Rig::build(|f, _| plant(f, "en", &words));
+    rig.lang("en");
+    rig.focus(FieldKind::Text);
+    rig.typed("sa");
+    rig.ask(WordsAsk::Forget);
+    rig.pick(0);
+    rig.ask(WordsAsk::Forget);
+    let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
+    assert_eq!(kinds, vec![ChipKind::Word; usize::from(rig.settings.chips)]);
+}
+
+#[test]
+fn a_late_more_tap_in_forget_mode_keeps_it_and_opens_no_list() {
+    let seven: Vec<String> = (0..7).map(|n| format!("user{n}@mail.org")).collect();
+    let seven: Vec<&str> = seven.iter().map(String::as_str).collect();
+    let mut rig = knowing(&seven);
+    rig.typed("@@");
+    rig.ask(WordsAsk::Forget);
+    rig.ask(WordsAsk::More {
+        rows: crate::rig::ROWS,
+    });
+    assert!(rig.lane().forgetting && rig.lane().list.is_none());
 }

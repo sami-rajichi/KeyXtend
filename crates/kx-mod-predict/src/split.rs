@@ -4,6 +4,8 @@
 
 use std::borrow::Cow;
 
+use kx_module_api::is_hidden;
+
 use crate::fold::is_apostrophe;
 use crate::script;
 
@@ -76,10 +78,11 @@ pub fn normalise(text: &str, apostrophe: char) -> Cow<'_, str> {
     Cow::Owned(text.chars().map(swap).collect())
 }
 
-/// True when `c` belongs inside a word: a letter, a digit, or a mark that joins any script.
+/// True when `c` belongs inside a word: a letter, a digit, or a mark that joins any script, and never a hidden mark
+/// (`kx_module_api::is_hidden`), such as a Hangul filler.
 #[must_use]
 pub fn is_word_char(c: char) -> bool {
-    !c.is_whitespace() && (c.is_alphanumeric() || script::joins_any(c))
+    !c.is_whitespace() && !is_hidden(c) && (c.is_alphanumeric() || script::joins_any(c))
 }
 
 /// The byte spans of the words of `text`: runs of word characters, each with the apostrophe that follows one of

@@ -1,6 +1,8 @@
-//! Caps and their clean-up, least recently used first; the purge after `forget_days`; halving near the count limit.
+//! Caps and their clean-up, least recently used first; the purge after `forget_days`; halving near the count limit,
+//! a merge's included.
 
-use super::super::clean::COUNT_TOP;
+use super::super::clean::{COUNT_TOP, HEADROOM};
+use super::seed::french;
 use super::*;
 
 /// Caps of 10 words and 10 chains of each length.
@@ -176,4 +178,37 @@ fn a_halving_halves_every_table_so_chain_shares_survive() {
     assert_eq!(shares(&l), (8, (4, 4)));
     halve(&mut l);
     assert_eq!(shares(&l), (4, (2, 2)));
+}
+
+#[test]
+fn a_merge_halves_every_table_before_a_word_count_would_pass_the_top() {
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    let mut l = learner("fr");
+    let many = COUNT_TOP / 2 + HEADROOM;
+    for _ in 0..many {
+        l.learn(None, "école", &[], DAY);
+        l.learn(None, "ecole", &[], DAY);
+    }
+    l.reconcile(Some(&fr));
+    let half = u32::from(many.div_ceil(2));
+    assert_eq!(l.view(Some(&fr)).count("école"), 2 * half);
+}
+
+#[test]
+fn a_merge_halves_every_table_before_a_met_chain_would_pass_the_top() {
+    let words = [
+        (0, "l'", 10, DAY),
+        (1, "école", 10, DAY),
+        (2, "ecole", 10, DAY),
+    ];
+    let high = COUNT_TOP - HEADROOM;
+    let chains: &[super::bytes::C<'_>] = &[(&[0, 1], high, DAY), (&[0, 2], high, DAY)];
+    let stored = super::bytes::encode("fr", &words, &[chains], &[]);
+    let mut l = Learner::from_bytes(&stored, CFG).unwrap();
+    let bytes = french();
+    let fr = Pack::parse(&bytes).unwrap();
+    l.reconcile(Some(&fr));
+    let half = u32::from(high.div_ceil(2));
+    assert_eq!(l.view(Some(&fr)).chain(&["l'"], "école"), 2 * half);
 }

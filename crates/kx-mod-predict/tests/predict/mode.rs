@@ -1,7 +1,7 @@
 //! The keyboard's typing mode: asked for at each start, as the keyboard may have started first, and its text cap
 //! drops every chip the keyboard would refuse, emails included.
 
-use crate::rig::{Heard, Rig, plant};
+use crate::rig::{Heard, ROWS, Rig, plant};
 use kx_mod_predict::Msg;
 use kx_mod_predict::email::Emails;
 use kx_module_api::ports::{ChipKind, FieldKind, TypingMode, WordsAsk};
@@ -49,20 +49,22 @@ fn a_word_chip_past_the_cap_is_dropped() {
 }
 
 #[test]
-fn an_email_chip_or_row_past_the_cap_is_dropped_or_sends_nothing() {
+fn an_email_chip_or_list_row_past_the_cap_is_dropped() {
     let mut rig = ready();
     rig.send(Msg::Mode(capped(12)));
     rig.typed("@@");
     let emails: Vec<String> = rig.chips().into_iter().map(|c| c.0).collect();
     assert_eq!(emails, [SHORT], "the long one does not fit");
-    rig.ask(WordsAsk::More { rows: 5 });
-    rig.ask(WordsAsk::ListPick(0));
-    assert!(rig.typed_words().is_empty(), "the long row types nothing");
-    assert_ne!(
-        rig.lane().lane,
-        kx_module_api::ports::Lane::Empty,
-        "no pick waits"
+    rig.ask(WordsAsk::More { rows: ROWS });
+    let list = rig.lane().list.unwrap();
+    let rows: Vec<&str> = list.items.iter().map(|e| e.expose().as_str()).collect();
+    assert_eq!(
+        (rows, list.pages),
+        (vec![SHORT], 1),
+        "the long row is dropped"
     );
+    rig.ask(WordsAsk::ListPick(0));
+    assert_eq!(rig.typed_words(), [(2, SHORT.to_owned())]);
     rig.typed(" so");
     let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
     assert!(!kinds.contains(&ChipKind::Email), "{kinds:?}");

@@ -4,7 +4,7 @@
 
 use std::ops::Range;
 
-use super::{Model, followers};
+use super::Model;
 use crate::fold::fold;
 use crate::pack::{Pack, WordId};
 use crate::score::sink::Sink;
@@ -62,26 +62,8 @@ impl Model<'_> {
     /// Offers every follower that fits `folded`, learned and seed, in full: a follower's score is not bounded by its
     /// count or frequency.
     fn offer_known(&self, folded: &str, sink: &mut Sink<'_>) {
-        let fits = |w: &str| {
-            !w.is_empty() && (folded.is_empty() || fold(w, self.casing).starts_with(folded))
-        };
-        for start in 0..self.context.len() {
-            let context = self.context.get(start..).unwrap_or_default();
-            self.learned.following(context, &mut |w| {
-                if fits(w) {
-                    self.offer_learned(w, sink);
-                }
-            });
-        }
-        let Some(seed) = &self.seed else {
-            return;
-        };
-        for id in followers(seed) {
-            let word = seed.pack.spelling(id);
-            if fits(word) {
-                self.offer_learned(word, sink);
-            }
-        }
+        let fits = |w: &str| folded.is_empty() || fold(w, self.casing).starts_with(folded);
+        self.each_follower(&fits, &mut |w| self.offer_learned(w, sink));
     }
 }
 

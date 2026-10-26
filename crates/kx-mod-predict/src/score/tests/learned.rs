@@ -24,7 +24,11 @@ fn a_blocked_seed_word_never_appears() {
 #[test]
 fn the_learned_weight_grows_with_uses() {
     assert!(CFG.weight(0).abs() < f64::EPSILON);
-    assert!((CFG.weight(2000) - 0.3).abs() < 1e-9);
+    let half = CFG.weight(CFG.learn_ramp.into());
+    assert!(
+        (half - CFG.learn_weight / 2.0).abs() < 1e-9,
+        "half its most at the ramp"
+    );
     let steps = [0, 10, 100, 2000, 20_000, u64::MAX];
     let weights: Vec<f64> = steps.iter().map(|&u| CFG.weight(u)).collect();
     assert!(weights.windows(2).all(|w| w[0] < w[1]), "{weights:?}");
@@ -93,5 +97,30 @@ fn learned_uses_lift_a_seed_word() {
         lifted.get(1).map(String::as_str),
         Some("theory"),
         "{lifted:?}"
+    );
+}
+
+#[test]
+fn after_an_elision_a_seed_follower_keeps_its_learned_part() {
+    let fr = french();
+    let learned = Fake::default()
+        .uses(10_000)
+        .word("école", 10_000)
+        .word("l'", 4)
+        .word("écoute", 1)
+        .chain(&["l'"], "écoute", 1);
+    let reading = Reading {
+        context: Redacted::new(vec!["l'".to_owned()]),
+        lead: Redacted::new("l'".to_owned()),
+        prefix: Redacted::new("é".to_owned()),
+    };
+    let query = Query {
+        word: Redacted::new("l'é".to_owned()),
+        readings: vec![reading],
+    };
+    let found = run(&fr, &learned, &query, TypingMode::default());
+    assert_eq!(
+        found.get(..2),
+        Some(&["l'école".to_owned(), "l'écoute".to_owned()][..])
     );
 }

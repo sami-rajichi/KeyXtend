@@ -4,6 +4,7 @@
 use std::str;
 
 use super::{Emails, looks_like};
+use crate::reader::Reader;
 
 /// The first bytes of every saved emails file.
 pub const MAGIC: [u8; 4] = *b"KXE1";
@@ -53,47 +54,25 @@ impl Emails {
     /// # Errors
     /// `EmailFormatError` says what is wrong when `bytes` is not a sound byte form of this version.
     pub fn from_bytes(bytes: &[u8], max: usize) -> Result<Self, EmailFormatError> {
-        let mut r = Reader { bytes };
+        let mut r = Reader::new(bytes, EmailFormatError::Truncated);
         if r.take(MAGIC.len())? != MAGIC {
             return Err(EmailFormatError::BadMagic);
         }
-        let version = u16::from_le_bytes(r.array()?);
+        let version = r.u16()?;
         if version != VERSION {
             return Err(EmailFormatError::BadVersion(version));
         }
-        let count = u32::from_le_bytes(r.array()?);
+        let count = r.u32()?;
         let mut list = Vec::new();
         for _ in 0..count {
-            let len = usize::from(u16::from_le_bytes(r.array()?));
+            let len = usize::from(r.u16()?);
             let text = str::from_utf8(r.take(len)?).ok().filter(|t| looks_like(t));
             list.extend(text.map(str::to_owned));
         }
-        if !r.bytes.is_empty() {
+        if !r.done() {
             return Err(EmailFormatError::Trailing);
         }
         Ok(Self::new(&list, max))
-    }
-}
-
-/// Reads the byte form front to back; every read checks what is left.
-struct Reader<'b> {
-    /// The bytes not read yet.
-    bytes: &'b [u8],
-}
-
-impl<'b> Reader<'b> {
-    /// The next `n` bytes; `Truncated` past the end.
-    fn take(&mut self, n: usize) -> Result<&'b [u8], EmailFormatError> {
-        let (head, tail) = (self.bytes.split_at_checked(n)).ok_or(EmailFormatError::Truncated)?;
-        self.bytes = tail;
-        Ok(head)
-    }
-
-    /// The next `N` bytes.
-    fn array<const N: usize>(&mut self) -> Result<[u8; N], EmailFormatError> {
-        self.take(N)?
-            .try_into()
-            .map_err(|_| EmailFormatError::Truncated)
     }
 }
 

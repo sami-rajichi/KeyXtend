@@ -65,36 +65,29 @@ impl<'m> Model<'m> {
     pub(super) fn offer_followers(&self, folded: &str, sink: &mut Sink<'_>) -> bool {
         let fits = |w: &str| fold(w, self.casing).starts_with(folded) && self.offerable(w);
         let mut matched = false;
-        for start in 0..self.context.len() {
-            let context = self.context.get(start..).unwrap_or_default();
-            self.learned.following(context, &mut |w| {
-                if fits(w) {
-                    matched = true;
-                    self.offer_learned(w, sink);
-                }
-            });
-        }
-        let Some(seed) = &self.seed else {
-            return matched;
-        };
-        for id in followers(seed) {
-            if fits(seed.pack.spelling(id)) {
-                matched = true;
-                self.offer_seed(seed, id, sink);
-            }
-        }
+        self.each_follower(&fits, &mut |w| {
+            matched = true;
+            self.offer_learned(w, sink);
+        });
         matched
     }
 
-    /// Offers the seed word `id` at its seed score, unless the user forgot it.
-    fn offer_seed(&self, seed: &Seed<'_>, id: WordId, sink: &mut Sink<'_>) {
-        let score = (1.0 - self.weight) * self.seed_score(seed, id);
-        if !sink.wants(score) {
-            return;
+    /// Calls `each` with every follower of the context that `fits` takes, learned then seed, never an empty spelling.
+    pub(super) fn each_follower(&self, fits: &dyn Fn(&str) -> bool, each: &mut dyn FnMut(&str)) {
+        let mut take = |w: &str| {
+            if !w.is_empty() && fits(w) {
+                each(w);
+            }
+        };
+        for start in 0..self.context.len() {
+            let context = self.context.get(start..).unwrap_or_default();
+            self.learned.following(context, &mut take);
         }
-        let word = seed.pack.spelling(id);
-        if !word.is_empty() && !self.learned.blocked(word) {
-            sink.take(word, score);
+        let Some(seed) = &self.seed else {
+            return;
+        };
+        for id in followers(seed) {
+            take(seed.pack.spelling(id));
         }
     }
 

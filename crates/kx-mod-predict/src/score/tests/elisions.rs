@@ -1,21 +1,12 @@
 //! Elisions through the tracker and the scorer: a split reading, its weight and its followers.
 
-use kx_module_api::ports::Piece;
-
 use super::*;
-use crate::track::{TrackConfig, Tracker};
 
 /// The query after typing `text` in French, and its guesses as the module asks for them.
 fn typed_fr(text: &str) -> (Query, Vec<String>) {
     let fr = french();
     let pack = Pack::parse(&fr).unwrap();
-    let mut tracker = Tracker::new(TrackConfig {
-        context_words: 2,
-        max_word: 48,
-    });
-    let known = |w: &str| knows(Some(&pack), w);
-    tracker.typed(&Piece::Text(Redacted::new(text.to_owned())), &known);
-    let query = tracker.show(&known).words.unwrap();
+    let query = typed_query(&pack, text).unwrap();
     let found = guesses(
         pack.iso(),
         Some(&pack),

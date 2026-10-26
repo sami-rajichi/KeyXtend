@@ -24,13 +24,14 @@ use kx_module_api::ports::{
     ChipPicked, FieldChange, FieldConfig, FieldKind, FieldRun, FieldWatch, Piece, SealedStore,
     Suggested, TypingMode, WordPacks, WordsAsk,
 };
-use kx_module_api::{Bus, Clock, SettingsHandle};
+use kx_module_api::{Bus, Clock, Redacted, SettingsHandle};
 use stats::Stats;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 use store::Saves;
 
+pub use load::OTHER_LANGUAGE;
 use notes::Notes;
 pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
@@ -117,7 +118,7 @@ pub struct Actor {
     ports: Ports,
     /// The settings, with `on` and `learn` as the menu last set them.
     settings: PredictSettings,
-    score: ScoreConfig,
+    score_cfg: ScoreConfig,
     learn_cfg: LearnConfig,
     email_cfg: EmailConfig,
     /// The language in front as the layout names it, the code of its words (the pack serving it, else the same), its
@@ -132,6 +133,8 @@ pub struct Actor {
     learner: Option<Learner>,
     emails: Emails,
     menu: Menu,
+    /// The email forget mode just removed, with its place, for its Undo chip.
+    lost: Option<(usize, Redacted<String>)>,
     /// The lane's round, its chips and what the tracker showed for them.
     round: u32,
     chips: Chips,
@@ -153,7 +156,7 @@ impl Actor {
     pub fn new(ports: Ports, settings: &PredictSettings) -> Self {
         Self {
             ports,
-            score: settings.score_config(),
+            score_cfg: settings.score_config(),
             learn_cfg: settings.learn_config(),
             email_cfg: settings.email_config(),
             iso: String::new(),
@@ -166,6 +169,7 @@ impl Actor {
             learner: None,
             emails: Emails::default(),
             menu: Menu::default(),
+            lost: None,
             round: 0,
             chips: Chips::default(),
             show: None,
@@ -223,7 +227,7 @@ impl Actor {
             Msg::Lang { iso, name, rtl } => return self.lang(seed, iso, name, rtl),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
-            Msg::Ask(ask) => self.ask(seed, ask),
+            Msg::Ask(ask) => return self.ask(seed, ask),
             Msg::PressesAsk => {
                 self.presses_again();
                 false

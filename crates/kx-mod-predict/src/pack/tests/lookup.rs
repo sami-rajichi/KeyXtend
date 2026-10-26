@@ -78,6 +78,15 @@ fn the_script_is_the_builders_main_script_over_every_spelling() {
     );
     let zh = list("zh", &[("你好", 200), ("我们", 150)]);
     assert_eq!(Pack::parse(&zh).unwrap().script(), Some(Script::Han));
+    let ja = list(
+        "ja",
+        &[("ひらがな", 200), ("日本語", 150), ("カタカナ", 100)],
+    );
+    assert_eq!(
+        Pack::parse(&ja).unwrap().script(),
+        Some(Script::Han),
+        "kana and kanji count as one"
+    );
     let mixed = list("en", &[("hello", 200), ("world", 150), ("你好", 100)]);
     assert_eq!(
         Pack::parse(&mixed).unwrap().script(),

@@ -57,6 +57,17 @@ pub(crate) struct Sources<'a> {
     pub(crate) email: &'a EmailConfig,
     /// The most chips.
     pub(crate) limit: usize,
+    /// The box confirms what a pick erases, so a chip may change the typed word.
+    pub(crate) confirms: bool,
+    /// Forget mode is on, so the email chips leave out More.
+    pub(crate) forgetting: bool,
+}
+
+impl Sources<'_> {
+    /// True when a tap can send `plan`, as `sendable` says for this lane's mode and box.
+    fn can_send(&self, plan: &Plan) -> bool {
+        sendable(plan, self.mode, self.confirms)
+    }
 }
 
 impl Chips {
@@ -77,22 +88,20 @@ impl Chips {
                 src.score,
             );
             for guess in found {
-                let plan = query
-                    .plan(guess.text.expose())
-                    .filter(|p| fits(p, src.mode));
-                out.word(plan, guess);
+                let plan = query.plan(guess.text.expose());
+                out.word(plan.filter(|p| src.can_send(p)), guess);
             }
         }
         if let Some((ask, chips)) = emails {
-            out.emails(ask, chips, src.mode);
+            out.emails(ask, chips);
         }
         out
     }
 
-    /// Adds the email chips `ask` offered; More opens the list, the others type their plan when it fits `mode`.
-    fn emails(&mut self, ask: &EmailAsk, chips: Vec<Chip>, mode: TypingMode) {
+    /// Adds the email chips `ask` offered, each one a tap can send; More opens the list, the others type their plan.
+    fn emails(&mut self, ask: &EmailAsk, chips: Vec<Chip>) {
         for chip in chips {
-            let plan = || ask.plan(chip.text.expose()).filter(|p| fits(p, mode));
+            let plan = || ask.plan(chip.text.expose());
             let pick = match chip.kind {
                 ChipKind::More => Some(Pick::More),
                 ChipKind::Domain => plan().map(Pick::Domain),
@@ -116,14 +125,13 @@ impl Chips {
         self.picks.truncate(limit);
     }
 
-    /// Shows the menu's state: the Undo chip at its place, reading as `rtl`, and in forget mode only what can be
-    /// forgotten.
+    /// Shows the menu's state: in forget mode only what can be forgotten, else the Undo chip at its place, reading as
+    /// `rtl`.
     pub(crate) fn with_menu(&mut self, menu: Menu, rtl: bool, limit: usize) {
-        if let Some(at) = menu.undo {
-            self.with_undo(at, rtl, limit);
-        }
         if menu.forgetting {
             self.forgettable();
+        } else if let Some(at) = menu.undo {
+            self.with_undo(at, rtl, limit);
         }
     }
 
@@ -166,13 +174,33 @@ pub(crate) fn fits(plan: &Plan, mode: TypingMode) -> bool {
         .is_none_or(|cap| TypeWord::fits(plan.erase, plan.text.expose(), cap))
 }
 
-/// The email chips `ask` offers, at most the lane's size.
+/// True when a tap can send `plan`: it fits the text cap in `mode`, and a box that cannot confirm an erase
+/// (`confirms` false) still gets the rest of the chip after exactly what was typed. No chip is a dead tap.
+pub(crate) fn sendable(plan: &Plan, mode: TypingMode, confirms: bool) -> bool {
+    fits(plan, mode) && (confirms || plan.rest().is_some())
+}
+
+/// The known emails the `@@` of `ask` can send in `mode`, in a box that `confirms` erases or not.
+pub(crate) fn listed(emails: &Emails, ask: &EmailAsk, mode: TypingMode, confirms: bool) -> Emails {
+    emails.kept(|e| ask.plan(e).is_some_and(|p| sendable(&p, mode, confirms)))
+}
+
+/// The email chips `ask` offers that a tap can send, at most the lane's size; forget mode lists no More.
 fn email_chips(ask: &EmailAsk, src: &Sources<'_>) -> Vec<Chip> {
-    match ask {
-        EmailAsk::Domains(partial) => email::domains(partial.expose(), src.email, src.limit),
-        EmailAsk::All(_) => src.emails.all(src.limit),
-        EmailAsk::Start(tail) => src.emails.starting(tail.expose(), src.email, src.limit),
-    }
+    let found = match ask {
+        EmailAsk::All(_) => {
+            let sent = listed(src.emails, ask, src.mode, src.confirms);
+            return if src.forgetting {
+                sent.first(src.limit)
+            } else {
+                sent.all(src.limit)
+            };
+        }
+        EmailAsk::Domains(partial) => email::domains(partial.expose(), src.email, usize::MAX),
+        EmailAsk::Start(tail) => src.emails.starting(tail.expose(), src.email, usize::MAX),
+    };
+    let can = |c: &Chip| ask.plan(c.text.expose()).is_some_and(|p| src.can_send(&p));
+    found.into_iter().filter(can).take(src.limit).collect()
 }
 
 #[cfg(test)]

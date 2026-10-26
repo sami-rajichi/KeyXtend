@@ -1,14 +1,17 @@
 //! The learner's byte form, little-endian: a magic, a version, the language code, then the words, the chain tables
-//! and the blocklist, and nothing else. Task 12 seals it; reading checks every length against what is left.
+//! and the blocklist, and nothing else. The actor seals it; reading checks every length against what is left.
 
 use std::str;
 
+use kx_module_api::is_hidden;
+
 use super::chains::Chains;
-use super::clean::{CLEAN_AT_TENTHS, TENTHS, most};
+use super::clean::{largest_cap, most};
 use super::forget::{Blocked, Mark};
 use super::table::{Id, Word, Words};
-use super::{LearnConfig, LearnFormatError, Learner};
+use super::{LearnConfig, LearnFormatError, Learner, fits_text};
 use crate::pack::layout::{MAX_CHAIN, MIN_CHAIN};
+use crate::reader::Reader;
 use crate::track::could_learn;
 
 /// The first bytes of every learned file.
@@ -16,11 +19,11 @@ pub const MAGIC: [u8; 4] = *b"KXL1";
 /// The format version this crate reads and writes.
 pub const VERSION: u16 = 1;
 /// The longest spelling, in UTF-8 bytes, as its length is one byte.
-pub(super) const MAX_TEXT: usize = u8::MAX as usize;
+pub(crate) const MAX_TEXT: usize = u8::MAX as usize;
 /// The most chain tables a byte form holds: one per length from `MIN_CHAIN` to `MAX_CHAIN`.
 const MAX_TABLES: u8 = MAX_CHAIN - MIN_CHAIN + 1;
 /// The most `max_chains` a learner takes: at its peak, a table's length still fits the byte form's u32.
-pub const MAX_CHAINS: usize = u32::MAX as usize / CLEAN_AT_TENTHS * TENTHS;
+pub const MAX_LEARNED_CHAINS: usize = largest_cap(u32::MAX as usize);
 
 impl Learner {
     /// The learner's byte form, which `from_bytes` reads back equal; every spelling fits `MAX_TEXT`.
@@ -60,7 +63,7 @@ impl Learner {
     /// # Errors
     /// `LearnFormatError` says what is wrong when `bytes` is not a sound byte form of this version.
     pub fn from_bytes(bytes: &[u8], cfg: LearnConfig) -> Result<Self, LearnFormatError> {
-        let mut r = Reader { bytes };
+        let mut r = Reader::new(bytes, LearnFormatError::Truncated);
         if r.array()? != MAGIC {
             return Err(LearnFormatError::BadMagic);
         }
@@ -77,7 +80,7 @@ impl Learner {
         learner.words = words;
         read_chains(&mut r, &mut learner, old.as_deref(), &dropped)?;
         learner.blocked = read_blocked(&mut r, &learner.words)?;
-        if !r.bytes.is_empty() {
+        if !r.done() {
             return Err(LearnFormatError::BadEntry);
         }
         learner.blocked.trim(learner.cfg.max_words);
@@ -91,7 +94,7 @@ type WordsRead = (Words, Option<Vec<Id>>, Vec<Id>);
 
 /// The words, each under its id, their old ids when renumbered, and the ids of the words the learning rule
 /// (`could_learn`) drops; `BadEntry` when two share an id or a spelling.
-fn read_words(r: &mut Reader<'_>, learner: &Learner) -> Result<WordsRead, LearnFormatError> {
+fn read_words(r: &mut Read<'_>, learner: &Learner) -> Result<WordsRead, LearnFormatError> {
     let (mut words, mut dropped) = (Vec::new(), Vec::new());
     for _ in 0..r.u32()? {
         let id = r.u16()?;
@@ -140,7 +143,7 @@ fn moved(old: Option<&[Id]>, id: Id) -> Option<Id> {
 /// The chain tables into `learner`, keeping those its settings hold, with ids `renumber` moved and none naming a
 /// `dropped` word; `BadEntry` for too many tables, or a chain out of order or naming a missing word.
 fn read_chains(
-    r: &mut Reader<'_>,
+    r: &mut Read<'_>,
     learner: &mut Learner,
     old: Option<&[Id]>,
     dropped: &[Id],
@@ -173,9 +176,9 @@ fn read_chains(
     Ok(())
 }
 
-/// The blocklist, without the entries the learning rule (`could_learn`) drops; `BadEntry` when out of order, or for a
-/// word also in `words`.
-fn read_blocked(r: &mut Reader<'_>, words: &Words) -> Result<Blocked, LearnFormatError> {
+/// The blocklist, without the entries `could_block` refuses; `BadEntry` when out of order, or for a word also in
+/// `words`.
+fn read_blocked(r: &mut Read<'_>, words: &Words) -> Result<Blocked, LearnFormatError> {
     let mut blocked = Blocked::default();
     let mut last = None;
     for _ in 0..r.u32()? {
@@ -187,12 +190,18 @@ fn read_blocked(r: &mut Reader<'_>, words: &Words) -> Result<Blocked, LearnForma
         if last.is_some_and(|l| l >= text) || words.find(text).is_some() {
             return Err(LearnFormatError::BadEntry);
         }
-        if could_learn(text) {
+        if could_block(text) {
             blocked.put(text.into(), mark);
         }
         last = Some(text);
     }
     Ok(blocked)
+}
+
+/// True when the blocklist may keep the pack spelling `text` it reads back: it fits the byte form and holds no hidden
+/// mark. An entry only hides a word and never types one, so the typed-word rule does not apply.
+fn could_block(text: &str) -> bool {
+    fits_text(text) && !text.chars().any(is_hidden)
 }
 
 /// Appends `text` after its one-byte length.
@@ -212,42 +221,10 @@ fn put_use(out: &mut Vec<u8>, count: u16, day: u32) {
     out.extend(day.to_le_bytes());
 }
 
-/// Reads the byte form front to back; every read checks what is left.
-struct Reader<'b> {
-    /// The bytes not read yet.
-    bytes: &'b [u8],
-}
+/// The learner's reader: texts and counted entries on top of the shared one.
+type Read<'b> = Reader<'b, LearnFormatError>;
 
-impl<'b> Reader<'b> {
-    /// The next `n` bytes; `Truncated` past the end.
-    fn take(&mut self, n: usize) -> Result<&'b [u8], LearnFormatError> {
-        let (head, tail) = (self.bytes.split_at_checked(n)).ok_or(LearnFormatError::Truncated)?;
-        self.bytes = tail;
-        Ok(head)
-    }
-
-    /// The next `N` bytes.
-    fn array<const N: usize>(&mut self) -> Result<[u8; N], LearnFormatError> {
-        self.take(N)?
-            .try_into()
-            .map_err(|_| LearnFormatError::Truncated)
-    }
-
-    /// The next u8.
-    fn u8(&mut self) -> Result<u8, LearnFormatError> {
-        self.array().map(u8::from_le_bytes)
-    }
-
-    /// The next little-endian u16.
-    fn u16(&mut self) -> Result<u16, LearnFormatError> {
-        self.array().map(u16::from_le_bytes)
-    }
-
-    /// The next little-endian u32.
-    fn u32(&mut self) -> Result<u32, LearnFormatError> {
-        self.array().map(u32::from_le_bytes)
-    }
-
+impl<'b> Read<'b> {
     /// The next text after its one-byte length; `BadEntry` when empty or not UTF-8.
     fn text(&mut self) -> Result<&'b str, LearnFormatError> {
         let len = usize::from(self.u8()?);

@@ -2,7 +2,7 @@
 //! a pick types at most one word, presses are told only when they flip, and a stop leaves the lane empty and presses
 //! let go.
 
-use crate::rig::{Heard, Rig, plant};
+use crate::rig::{Heard, ROWS, Rig, plant};
 use kx_mod_predict::{Msg, PredictSettings};
 use kx_module_api::ports::{ChipPicked, FieldKind, Lane, Piece, WordsAsk};
 use proptest::collection::vec;
@@ -60,8 +60,11 @@ fn step() -> impl Strategy<Value = Step> {
         WordsAsk::Power(false),
         WordsAsk::Power(true),
         WordsAsk::Undo,
-        WordsAsk::More { rows: 5 },
-        WordsAsk::Page { page: 1, rows: 5 },
+        WordsAsk::More { rows: ROWS },
+        WordsAsk::Page {
+            page: 1,
+            rows: ROWS,
+        },
         WordsAsk::ListPick(0),
         WordsAsk::Again,
     ]);

@@ -18,6 +18,8 @@ use std::time::Duration;
 pub const T0: Mono = Mono::from_us(1_000_000);
 /// Each test's first day number.
 pub const DAY: u32 = 20_000;
+/// Rows per page the tests' UI shows in the email list.
+pub const ROWS: u8 = 5;
 
 mod heard;
 mod stored;
@@ -34,20 +36,33 @@ impl Days for Today {
     }
 }
 
+/// A calendar that stays on `DAY`, for a module a test starts on its thread.
+pub fn on_day() -> Arc<dyn Days> {
+    Arc::new(Today(Arc::new(AtomicU32::new(DAY))))
+}
+
 /// The fakes behind the actor's ports.
 #[derive(Clone)]
 pub struct Fakes {
+    /// The focused box the actor watches.
     pub field: FakeFieldWatch,
+    /// The word packs it opens.
     pub packs: FakeWordPacks,
+    /// The sealed store it loads and saves in.
     pub store: FakeSealedStore,
+    /// The clock its save timers read.
     pub clock: FakeClock,
+    /// The day number its learner stamps.
     pub day: Arc<AtomicU32>,
 }
 
 /// The actor on a fake host, its fakes, and what it published.
 pub struct Rig {
+    /// The fakes behind its ports.
     pub fakes: Fakes,
+    /// The host it started on.
     pub host: FakeHost,
+    /// The settings it runs with.
     pub settings: PredictSettings,
     actor: Actor,
     tells: Receiver<Msg>,

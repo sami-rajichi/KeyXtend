@@ -1,6 +1,7 @@
-# Casing by language: the language rows of Unicode's SpecialCasing.txt (Unicode 16.0.0,
-# https://www.unicode.org/Public/16.0.0/ucd/SpecialCasing.txt) for the packs we ship, copied from the published text
-# as no copy of the file was on this PC. `casing.rs` reads it; a language without a section cases as Unicode's default.
+# Casing by language for the packs we ship: the language rows of Unicode's SpecialCasing.txt (Unicode 16.0.0,
+# https://www.unicode.org/Public/16.0.0/ucd/SpecialCasing.txt), copied from the published text, and two language rules
+# ICU applies beyond it (Dutch IJ titlecasing, Greek uppercasing). `casing.rs` reads it; a language without a section
+# cases as Unicode's default.
 #
 # Each row is a text with its lower, title and upper forms. Left out: az (the same rows as tr, but no pack), and lt,
 # whose rows only add or drop U+0307 around i, which no lt spelling holds, so they would only stop lookups matching.
@@ -18,3 +19,47 @@ rows = [
 ]
 # fold.toml folds ı to i; Turkish keeps them apart, as they are two letters.
 keep = ["ı"]
+
+# Dutch writes the digraph ij as one letter, so a first capital takes both (ICU's Dutch titlecasing: IJsselmeer).
+[nl]
+rows = [
+    { text = "ij", lower = "ij", title = "IJ", upper = "IJ" },
+]
+
+# Greek, monotonic (ICU's Greek uppercasing): all capitals drop the tonos, and a vowel with the tonos before ι or υ
+# gives that ι or υ a diaeresis, so the two stay apart (τσάι, ΤΣΑΪ). A first capital keeps the tonos (Όλα).
+[el]
+rows = [
+    { text = "ά", lower = "ά", title = "Ά", upper = "Α" },
+    { text = "έ", lower = "έ", title = "Έ", upper = "Ε" },
+    { text = "ή", lower = "ή", title = "Ή", upper = "Η" },
+    { text = "ί", lower = "ί", title = "Ί", upper = "Ι" },
+    { text = "ό", lower = "ό", title = "Ό", upper = "Ο" },
+    { text = "ύ", lower = "ύ", title = "Ύ", upper = "Υ" },
+    { text = "ώ", lower = "ώ", title = "Ώ", upper = "Ω" },
+    { text = "ΐ", lower = "ΐ", title = "Ϊ́", upper = "Ϊ" },
+    { text = "ΰ", lower = "ΰ", title = "Ϋ́", upper = "Ϋ" },
+    { text = "Ά", lower = "ά", title = "Ά", upper = "Α" },
+    { text = "Έ", lower = "έ", title = "Έ", upper = "Ε" },
+    { text = "Ή", lower = "ή", title = "Ή", upper = "Η" },
+    { text = "Ί", lower = "ί", title = "Ί", upper = "Ι" },
+    { text = "Ό", lower = "ό", title = "Ό", upper = "Ο" },
+    { text = "Ύ", lower = "ύ", title = "Ύ", upper = "Υ" },
+    { text = "Ώ", lower = "ώ", title = "Ώ", upper = "Ω" },
+    { text = "άι", lower = "άι", title = "Άι", upper = "ΑΪ" },
+    { text = "έι", lower = "έι", title = "Έι", upper = "ΕΪ" },
+    { text = "όι", lower = "όι", title = "Όι", upper = "ΟΪ" },
+    { text = "ύι", lower = "ύι", title = "Ύι", upper = "ΥΪ" },
+    { text = "άυ", lower = "άυ", title = "Άυ", upper = "ΑΫ" },
+    { text = "έυ", lower = "έυ", title = "Έυ", upper = "ΕΫ" },
+    { text = "ήυ", lower = "ήυ", title = "Ήυ", upper = "ΗΫ" },
+    { text = "όυ", lower = "όυ", title = "Όυ", upper = "ΟΫ" },
+    { text = "Άι", lower = "άι", title = "Άι", upper = "ΑΪ" },
+    { text = "Έι", lower = "έι", title = "Έι", upper = "ΕΪ" },
+    { text = "Όι", lower = "όι", title = "Όι", upper = "ΟΪ" },
+    { text = "Ύι", lower = "ύι", title = "Ύι", upper = "ΥΪ" },
+    { text = "Άυ", lower = "άυ", title = "Άυ", upper = "ΑΫ" },
+    { text = "Έυ", lower = "έυ", title = "Έυ", upper = "ΕΫ" },
+    { text = "Ήυ", lower = "ήυ", title = "Ήυ", upper = "ΗΫ" },
+    { text = "Όυ", lower = "όυ", title = "Όυ", upper = "ΟΫ" },
+]

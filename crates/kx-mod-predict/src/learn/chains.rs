@@ -2,8 +2,9 @@
 //! last-used day. The keys sit in one flat list, so a full table holds no per-entry overhead.
 
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
-use super::clean::{grow, halved, most, oldest, peak};
+use super::clean::{grow, halved, most, oldest, over_top, peak};
 use super::table::Id;
 
 /// One chain taken out of a table, to put back on an undo.
@@ -83,6 +84,20 @@ impl Chains {
                 Err(at) => self.place(at, &link.key, link.count, link.day),
             }
         }
+    }
+
+    /// True when a `rekey` of word `from` into word `into` would meet chains whose counts add past the top.
+    pub(super) fn rekey_too_high(&self, from: Id, into: Id) -> bool {
+        let mut met: BTreeMap<Vec<Id>, u32> = BTreeMap::new();
+        for at in 0..self.len() {
+            let (key, count, _) = self.entry(at);
+            if key.contains(&from) {
+                let swap = |&id: &Id| if id == from { into } else { id };
+                let sum = met.entry(key.iter().map(swap).collect());
+                *sum.or_insert_with_key(|key| self.count(key).into()) += u32::from(count);
+            }
+        }
+        met.into_values().any(over_top)
     }
 
     /// Appends the chain `key` with `count` and `day` when it is `width` long and sorts after every chain held.

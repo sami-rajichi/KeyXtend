@@ -8,7 +8,7 @@ use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
 use crate::email::{EmailConfig, is_domain};
-use crate::learn::{LearnConfig, MAX_LEARNED};
+use crate::learn::{LearnConfig, MAX_LEARNED, MAX_TEXT};
 use crate::pack::layout::MAX_CHAIN;
 use crate::score::{BACKOFFS, ScoreConfig, WEIGHTS};
 use crate::track::TrackConfig;
@@ -21,7 +21,7 @@ pub const CONTEXT_WORDS: RangeInclusive<u8> = 1..=MAX_CHAIN - 1;
 pub const MIN_USES: RangeInclusive<u32> = 1..=9;
 /// The learned words kept per language, up to the most a learner holds.
 pub const MAX_WORDS: RangeInclusive<usize> = 100..=MAX_LEARNED;
-/// The learned chains kept of each length; a test keeps it within the learner's `MAX_CHAINS`.
+/// The learned chains kept of each length; a test keeps it within the learner's `MAX_LEARNED_CHAINS`.
 pub const MAX_CHAINS: RangeInclusive<usize> = 1_000..=300_000;
 /// The days an unused entry is kept.
 pub const FORGET_DAYS: RangeInclusive<u32> = 30..=3_650;
@@ -31,8 +31,9 @@ pub const LEARN_WEIGHT: RangeInclusive<f64> = WEIGHTS;
 pub const LEARN_RAMP: RangeInclusive<u32> = 100..=100_000;
 /// The step down to a shorter context: the scorer's own bound.
 pub const BACKOFF: RangeInclusive<f64> = BACKOFFS;
-/// The longest word with chips, in characters; the app ties its top below the keyboard's `text_cap` floor.
-pub const MAX_WORD: RangeInclusive<usize> = 16..=64;
+/// The longest word with chips, in characters: at most what the learner's `MAX_TEXT` bytes hold in any script, and the
+/// app ties its top below the keyboard's `text_cap` floor.
+pub const MAX_WORD: RangeInclusive<usize> = 16..=MAX_TEXT / char::MAX.len_utf8();
 /// The known emails kept.
 pub const MAX_EMAILS: RangeInclusive<usize> = 5..=200;
 /// The typed characters before a known email is offered.

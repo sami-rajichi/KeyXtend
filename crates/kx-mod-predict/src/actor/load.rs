@@ -1,6 +1,5 @@
 //! Loading the sealed blobs: a damaged one starts empty and tells once, and a locked store locks the run. One that
-//! cannot be loaded, or opens but does not read, starts empty and is never written over that run; the unread one is
-//! also set aside once.
+//! opens but does not read is set aside like a damaged one, and one that cannot be loaded is never written that run.
 
 use super::Actor;
 use super::store::{Blob, aside_blob, emails_blob, learned_blob};
@@ -11,8 +10,8 @@ use kx_module_api::keys;
 use kx_module_api::ports::{BlobName, SealedError};
 use std::fmt::Display;
 
-/// Why a learned file of another language is not read, as logged.
-const OTHER_LANGUAGE: &str = "the file names another language";
+/// Why a learned file of another language is not read, as logged; tests look for it.
+pub const OTHER_LANGUAGE: &str = "the file names another language";
 
 impl Actor {
     /// Loads the known emails; damaged or unread ones start empty.
@@ -34,14 +33,17 @@ impl Actor {
     }
 
     /// Loads the language in front's learner, saved under the layout's code and learning in its words' code, and merges
-    /// its strays into `seed`; a damaged or unread one, or one of another language, starts empty.
+    /// its strays into `seed`; words a failed save left come back first. A damaged or unread one, or one of another
+    /// language, starts empty.
     pub(super) fn load_learner(&mut self, seed: Option<&Pack<'_>>) {
         self.learner = None;
         let Some(name) = learned_blob(&self.iso) else {
             return;
         };
         let cfg = self.learn_cfg;
-        let read = self.load(&name, Blob::Learned).map(|b| {
+        let left = self.saves.take_left(&name);
+        let back = left.is_some();
+        let read = left.or_else(|| self.load(&name, Blob::Learned)).map(|b| {
             let learner = Learner::from_bytes(&b, cfg);
             (b, learner)
         });
@@ -56,10 +58,13 @@ impl Actor {
             learner.reconcile(seed);
         }
         self.learner = learner;
+        if back {
+            self.changed(Blob::Learned);
+        }
     }
 
-    /// Blob `name` opened as `bytes` but did not read, for `why`: it is logged, told once, never written over this
-    /// run, and copied to its aside blob unless an earlier copy is there; nothing is read from it.
+    /// Blob `name` opened as `bytes` but did not read, for `why` (plan edge 10): it is logged, told once and copied
+    /// into its aside blob, the newest copy winning, so saves resume; a copy that fails holds the blob for the run.
     fn unread<T>(
         &mut self,
         name: &BlobName,
@@ -69,12 +74,12 @@ impl Actor {
     ) -> Option<T> {
         tracing::warn!(%why, ?blob, "predict blob not read");
         self.say_once(keys::WORDS_DAMAGED);
-        self.saves.hold(blob);
-        let aside = aside_blob(name);
-        let store = &self.ports.store;
-        let free = aside.filter(|a| matches!(store.load(a), Ok(None)));
-        if let Some(Err(error)) = free.map(|a| store.save(&a, bytes)) {
+        let copied = aside_blob(name).map(|aside| self.ports.store.save(&aside, bytes));
+        if let Some(Err(error)) = copied {
             tracing::warn!(%error, ?blob, "predict blob not set aside");
+        }
+        if !matches!(copied, Some(Ok(()))) {
+            self.saves.hold(blob);
         }
         None
     }

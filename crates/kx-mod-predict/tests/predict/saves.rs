@@ -121,6 +121,55 @@ fn a_refused_save_keeps_running_and_tries_again_after_save_s() {
 }
 
 #[test]
+fn a_switch_whose_save_fails_keeps_the_words_and_saves_them_save_s_later() {
+    let mut rig = english(|_| {});
+    let save = Duration::from_secs(rig.settings.save_s.into());
+    rig.typed("hello ");
+    rig.fakes.store.fail_save(SealedError::Io);
+    rig.lang("fr");
+    assert_eq!(rig.wait(), Some(save), "tries again later");
+    rig.advance(save);
+    rig.tick();
+    assert_eq!(rig.fakes.store.saves(), 2);
+    assert_eq!(
+        saved(&rig.fakes, "en").unwrap().view(None).count("hello"),
+        1
+    );
+    assert_eq!(rig.wait(), None);
+}
+
+#[test]
+fn words_whose_switch_save_failed_come_back_with_their_language_and_save_at_stop() {
+    let mut rig = english(|_| {});
+    rig.typed("hello ");
+    rig.fakes.store.fail_save(SealedError::Io);
+    rig.lang("fr");
+    rig.lang("en");
+    rig.typed("hel");
+    assert_eq!(
+        rig.words(),
+        Vec::<String>::new(),
+        "one use, not offered yet"
+    );
+    rig.typed("lo ");
+    rig.stop();
+    assert_eq!(
+        saved(&rig.fakes, "en").unwrap().view(None).count("hello"),
+        2
+    );
+    let mut rig = english(|_| {});
+    rig.typed("hello ");
+    rig.fakes.store.fail_save(SealedError::Io);
+    rig.lang("fr");
+    rig.stop();
+    assert_eq!(
+        saved(&rig.fakes, "en").unwrap().view(None).count("hello"),
+        1,
+        "at stop"
+    );
+}
+
+#[test]
 fn a_locked_save_stops_saving_for_the_run() {
     let mut rig = english(|_| {});
     rig.typed("hello ");

@@ -78,6 +78,15 @@ fn a_split_apostrophe_glues_both_pieces_and_breaks_the_chain() {
 }
 
 #[test]
+fn a_hangul_filler_is_no_word_character_and_splits_a_word() {
+    for filler in ['\u{115f}', '\u{1160}', '\u{3164}', '\u{ffa0}'] {
+        assert!(!super::is_word_char(filler), "{filler:?}");
+        let text = format!("가{filler}나");
+        assert_eq!(spans(&text, '\''), [(0, 3), (6, 9)], "{filler:?}");
+    }
+}
+
+#[test]
 fn no_hidden_mark_is_a_word_character() {
     // The learning rule keeps words to word characters, so it refuses every mark the keyboard refuses to type.
     let hidden = ('\0'..=char::MAX).filter(|c| kx_module_api::is_hidden(*c));

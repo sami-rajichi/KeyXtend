@@ -5,12 +5,13 @@
 use std::collections::HashSet;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::TypingMode;
+use kx_module_api::ports::{Piece, TypingMode};
 
 use super::fake::Fake;
 use super::*;
 use crate::pack::{Flags, PackWriter};
-use crate::track::Reading;
+use crate::settings::PredictSettings;
+use crate::track::{Reading, Tracker};
 
 mod config;
 mod elisions;
@@ -43,6 +44,15 @@ fn pack(iso: &str, words: &[Word<'_>], chains: &[Chain<'_>]) -> Vec<u8> {
         writer.add_chain(context, next, *score).unwrap();
     }
     writer.finish().unwrap()
+}
+
+/// The words query after typing `text` with `pack`, tracked as the default settings track.
+fn typed_query(pack: &Pack<'_>, text: &str) -> Option<Query> {
+    let settings = PredictSettings::from_defaults().unwrap();
+    let mut tracker = Tracker::new(settings.track_config());
+    let known = |w: &str| knows(Some(pack), w);
+    tracker.typed(&Piece::Text(Redacted::new(text.to_owned())), &known);
+    tracker.show(&known).words
 }
 
 /// English: `park` is more frequent than `the`, yet `the` follows `in` more often; `walk` follows `in` with a chance

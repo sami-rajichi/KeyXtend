@@ -2,7 +2,7 @@
 //! engine's own limits so no limit is typed twice.
 
 use super::*;
-use crate::learn::{MAX_CHAINS as LEARN_CHAINS, MAX_LEARNED, MAX_MIN_USES};
+use crate::learn::{MAX_LEARNED, MAX_LEARNED_CHAINS, MAX_MIN_USES, MAX_TEXT};
 use crate::pack::layout::MAX_CHAIN;
 use crate::score::{BACKOFFS, WEIGHTS};
 use kx_module_api::parse_as;
@@ -133,8 +133,13 @@ fn the_ranges_are_tied_to_the_engines_limits() {
     );
     assert!(*MIN_USES.end() <= MAX_MIN_USES, "the learner's headroom");
     assert_eq!(*MAX_WORDS.end(), MAX_LEARNED);
-    assert!(*MAX_CHAINS.end() <= LEARN_CHAINS);
+    assert!(*MAX_CHAINS.end() <= MAX_LEARNED_CHAINS);
     assert_eq!((LEARN_WEIGHT, BACKOFF), (WEIGHTS, BACKOFFS));
+    let longest = *MAX_WORD.end() * char::MAX.len_utf8();
+    assert!(
+        longest <= MAX_TEXT,
+        "every learnable word fits a spelling of the byte form"
+    );
 }
 
 #[test]

@@ -49,3 +49,14 @@ fn a_refused_setting_gives_no_guess() {
     );
     assert!(found.is_empty());
 }
+
+#[test]
+fn each_refusal_names_the_ends_of_its_range() {
+    for (error, range) in [
+        (ScoreConfigError::BadWeight, WEIGHTS),
+        (ScoreConfigError::BadBackoff, BACKOFFS),
+    ] {
+        let ends = format!("{} to {}", range.start(), range.end());
+        assert!(error.to_string().ends_with(&ends), "{error}");
+    }
+}

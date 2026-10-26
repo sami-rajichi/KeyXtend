@@ -2,8 +2,7 @@
 //! shortcut latch holds the lane empty from the first word.
 
 use super::{Live, WAIT, hear, lang};
-use crate::rig::{blob, learner};
-use kx_mod_predict::{Days, SystemDays};
+use crate::rig::{DAY, blob, learner};
 use kx_module_api::ports::{
     FieldKind, Lane, Piece, Suggested, Typed, TypingMode, TypingModeAsk, WordsAsk,
 };
@@ -42,7 +41,7 @@ fn before_again(lanes: &Receiver<Suggested>) -> Suggested {
 #[test]
 fn a_keyboard_that_started_first_answers_each_start_and_its_latch_holds_the_lane_empty() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
-    let known = learner("en", &["hello", "help"], SystemDays.today());
+    let known = learner("en", &["hello", "help"], DAY);
     store.plant(&blob("en"), known.to_bytes());
     field.focus(FieldKind::Text);
     let listen = |bus: &Bus| (keyboard(bus), hear::<Suggested>(bus));

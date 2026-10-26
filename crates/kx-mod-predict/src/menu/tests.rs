@@ -105,7 +105,7 @@ proptest! {
             if let Some(list) = menu.list {
                 prop_assert!(list.rows > 0);
                 prop_assert!(!menu.forgetting, "the list and forget mode never both open");
-                let pages = count.div_ceil(usize::from(list.rows)).max(1);
+                let pages = pages(count, list.rows.into());
                 prop_assert!(usize::from(list.page) < pages || list.page == 0);
             }
         }

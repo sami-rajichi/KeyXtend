@@ -144,16 +144,46 @@ fn a_box_that_cannot_tell_gets_only_the_rest_of_a_chip_that_starts_with_the_type
 }
 
 #[test]
-fn a_box_that_cannot_tell_gets_nothing_for_a_chip_that_changes_the_typed_word() {
+fn a_box_that_cannot_confirm_offers_only_chips_that_extend_the_typed_word_and_next_words() {
     for kind in [FieldKind::Unknown, FieldKind::None] {
-        let mut rig = Rig::build(|f, _| plant(f, "en", &["London"]));
+        let mut rig = Rig::build(|f, _| plant(f, "en", &["London", "long"]));
         rig.lang("en");
         rig.focus(kind);
         rig.typed("lon");
-        assert_eq!(rig.words(), ["London"], "{kind:?}");
+        assert_eq!(
+            rig.words(),
+            ["long"],
+            "{kind:?}: London would erase the typed word"
+        );
         rig.pick(0);
-        assert!(rig.typed_words().is_empty(), "{kind:?}: never erased");
+        assert_eq!(rig.typed_words(), [(0, "g ".to_owned())], "{kind:?}");
+        rig.typed("g ");
+        let mut next = rig.words();
+        next.sort();
+        assert_eq!(
+            next,
+            ["London", "long"],
+            "{kind:?}: next words erase nothing"
+        );
     }
+}
+
+/// Plan edge 14: focus moves to a new box between a key and a pick.
+#[test]
+fn a_pick_on_the_lane_of_a_box_focus_left_sends_nothing_and_the_new_box_is_read() {
+    let mut rig = texted(None);
+    rig.typed("hel");
+    let old = rig.lane().round;
+    let reads = rig.fakes.field.before_calls();
+    rig.focus(FieldKind::Text);
+    assert_eq!(rig.fakes.field.before_calls(), reads + 1, "one read");
+    assert_ne!(rig.lane().round, old, "a new round");
+    rig.send(Msg::Picked(ChipPicked {
+        round: old,
+        index: 0,
+    }));
+    assert!(rig.typed_words().is_empty(), "the old lane types nothing");
+    assert_eq!(rig.fakes.field.before_calls(), reads + 1);
 }
 
 #[test]

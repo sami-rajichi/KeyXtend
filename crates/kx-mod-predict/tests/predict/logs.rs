@@ -2,7 +2,7 @@
 
 use crate::rig::{Rig, plant};
 use kx_mod_predict::learn::{LearnFormatError, Learner};
-use kx_mod_predict::{PredictSettings, STOPPED_LINE};
+use kx_mod_predict::{OTHER_LANGUAGE, PredictSettings, STOPPED_LINE};
 use kx_module_api::ports::{FieldKind, SealedError, WordsAsk};
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
@@ -110,7 +110,7 @@ fn a_learner_that_does_not_read_logs_why() {
         rig.lang("en");
     });
     assert!(
-        other.iter().any(|l| l.contains("another language")),
+        other.iter().any(|l| l.contains(OTHER_LANGUAGE)),
         "{other:?}"
     );
 }

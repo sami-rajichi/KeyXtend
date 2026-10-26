@@ -31,6 +31,8 @@ fn lane(text: &str, words: &[&str], known: &[&str], limit: usize) -> Chips {
         emails: &emails,
         email: &email,
         limit,
+        confirms: true,
+        forgetting: false,
     };
     Chips::of(&tracker.show(&unknown), &src)
 }

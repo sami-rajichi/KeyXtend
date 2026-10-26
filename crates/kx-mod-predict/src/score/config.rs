@@ -22,7 +22,7 @@ pub struct ScoreConfig {
     pub min_uses: u32,
 }
 
-/// The settings' defaults as Task 12 fills them, which the scorer's and the learner's tests share.
+/// The `[predict]` defaults, which a settings test pins and the scorer's and the learner's tests share.
 #[cfg(test)]
 pub(crate) const CFG: ScoreConfig = ScoreConfig {
     backoff: 0.4,
@@ -34,11 +34,11 @@ pub(crate) const CFG: ScoreConfig = ScoreConfig {
 /// Why the scorer refuses its settings: the early stop cannot bound the scores they give.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum ScoreConfigError {
-    /// `learn_weight` is outside 0 to 1.
-    #[error("learn_weight is outside 0 to 1")]
+    /// `learn_weight` is outside `WEIGHTS`.
+    #[error("learn_weight is outside {} to {}", WEIGHTS.start(), WEIGHTS.end())]
     BadWeight,
-    /// `backoff` is outside 0 to 1.
-    #[error("backoff is outside 0 to 1")]
+    /// `backoff` is outside `BACKOFFS`.
+    #[error("backoff is outside {} to {}", BACKOFFS.start(), BACKOFFS.end())]
     BadBackoff,
 }
 
@@ -46,7 +46,7 @@ impl ScoreConfig {
     /// `Ok` when the early stop can bound the scores these settings give; `guesses` gives nothing otherwise.
     ///
     /// # Errors
-    /// `BadWeight` when `learn_weight` is outside 0 to 1; `BadBackoff` when `backoff` is.
+    /// `BadWeight` when `learn_weight` is outside `WEIGHTS`; `BadBackoff` when `backoff` is outside `BACKOFFS`.
     pub fn check(&self) -> Result<(), ScoreConfigError> {
         if !WEIGHTS.contains(&self.learn_weight) {
             return Err(ScoreConfigError::BadWeight);

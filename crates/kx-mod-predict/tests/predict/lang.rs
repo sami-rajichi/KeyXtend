@@ -1,11 +1,12 @@
-//! The language in front: a switch saves the old learner and loads the new one, only that language is opened, and a
-//! missing full pack is told once per language and run.
+//! The language in front: a switch saves the old learner and loads the new one, only that language is opened, a
+//! missing shipped pack is told once per language and run, and with prediction off nothing opens.
 
 use crate::rig::{Rig, blob, plant, saved};
-use kx_mod_predict::Flow;
 use kx_mod_predict::score::Learned;
+use kx_mod_predict::{Flow, ON_KEY};
 use kx_module_api::keys;
-use kx_module_api::ports::FieldKind;
+use kx_module_api::ports::{FieldKind, WordsAsk};
+use toml::Value;
 
 #[test]
 fn a_switch_saves_the_old_learner_and_loads_the_new_one() {
@@ -24,7 +25,7 @@ fn a_switch_saves_the_old_learner_and_loads_the_new_one() {
         "the English learner saved at once"
     );
     let en = saved(&rig.fakes, "en").unwrap();
-    assert_eq!(en.view(None).count("hello"), 3);
+    assert_eq!(en.view(None).count("hello"), rig.settings.min_uses + 1);
     assert_eq!(
         rig.fakes.store.loads(),
         loads + 1,
@@ -36,7 +37,7 @@ fn a_switch_saves_the_old_learner_and_loads_the_new_one() {
     assert_eq!(rig.lang("fr"), Flow::Go, "the same language stays");
     rig.stop();
     let fr = saved(&rig.fakes, "fr").unwrap();
-    assert_eq!(fr.view(None).count("bonjour"), 3);
+    assert_eq!(fr.view(None).count("bonjour"), rig.settings.min_uses + 1);
 }
 
 #[test]
@@ -84,6 +85,35 @@ fn a_missing_shipped_pack_is_told_once_per_language_and_an_unlisted_language_nev
     rig.lang("en");
     let missing: Vec<&str> = rig.notices();
     assert_eq!(missing, [keys::WORDS_MISSING; 2]);
+}
+
+#[test]
+fn with_prediction_off_no_pack_or_learner_opens_and_nothing_is_told_until_it_turns_on() {
+    let mut rig = Rig::build(|f, host| {
+        f.packs.ship("en");
+        plant(f, "en", &["hello"]);
+        host.put(ON_KEY, Value::Boolean(false));
+    });
+    let loads = rig.fakes.store.loads();
+    rig.lang("en");
+    rig.lang("fr");
+    rig.lang("en");
+    assert_eq!(rig.fakes.packs.opens("en"), 0);
+    assert_eq!(rig.fakes.store.loads(), loads, "no learner loaded");
+    assert!(rig.notices().is_empty());
+    rig.ask(WordsAsk::Power(true));
+    assert_eq!(rig.fakes.packs.opens("en"), 1);
+    assert_eq!(rig.notices(), [keys::WORDS_MISSING]);
+    rig.focus(FieldKind::Text);
+    rig.typed("hello ");
+    rig.ask(WordsAsk::Power(false));
+    assert_eq!(rig.fakes.store.saves(), 1, "turning off saves the learner");
+    assert_eq!(
+        saved(&rig.fakes, "en").unwrap().view(None).count("hello"),
+        rig.settings.min_uses + 1
+    );
+    rig.lang("fr");
+    assert_eq!(rig.fakes.packs.opens("fr"), 0);
 }
 
 #[test]

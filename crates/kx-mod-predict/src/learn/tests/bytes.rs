@@ -222,24 +222,36 @@ fn a_word_longer_than_the_byte_form_allows_is_not_learned() {
 }
 
 #[test]
-fn a_stored_word_that_fails_the_learning_rule_goes_with_its_chains_and_the_rest_stay() {
-    // A line separator, a bidi override, a zero-width space, a digit, a space and two scripts.
-    for bad in [
-        "a\u{2028}b",
-        "\u{202e}ab",
-        "a\u{200b}b",
-        "a1",
-        "a b",
-        "a\u{431}",
+fn a_stored_word_learning_refuses_goes_with_its_chains_and_a_hidden_one_leaves_the_blocklist() {
+    // A line separator, a bidi override and a zero-width space are hidden; a digit, a space and two scripts are not.
+    for (bad, hidden) in [
+        ("a\u{2028}b", true),
+        ("\u{202e}ab", true),
+        ("a\u{200b}b", true),
+        ("a1", false),
+        ("a b", false),
+        ("a\u{431}", false),
     ] {
         let words = [(0, "hello", 2, DAY), (1, bad, 2, DAY), (2, "world", 2, DAY)];
         let chains: &[C<'_>] = &[(&[0, 1], 1, DAY), (&[0, 2], 1, DAY), (&[1, 2], 1, DAY)];
         let forged = encode("en", &words, &[chains], &[(bad, 1, DAY)]);
         let kept = [(0, "hello", 2, DAY), (2, "world", 2, DAY)];
-        let clean = encode("en", &kept, &[&[(&[0, 2], 1, DAY)]], &[]);
+        let blocked: &[B<'_>] = if hidden { &[] } else { &[(bad, 1, DAY)] };
+        let clean = encode("en", &kept, &[&[(&[0, 2], 1, DAY)]], blocked);
         let want = Learner::from_bytes(&clean, ONE);
-        assert_eq!(Learner::from_bytes(&forged, ONE), want, "{bad:?}");
+        let read = Learner::from_bytes(&forged, ONE);
+        assert_eq!(read, want, "{bad:?}");
+        assert_eq!(read.unwrap().view(None).blocked(bad), !hidden, "{bad:?}");
     }
+}
+
+#[test]
+fn a_forgotten_pack_spelling_the_word_rule_splits_stays_forgotten() {
+    // Catalan's middle dot (U+00B7) splits a typed word, yet the pack spells col·lecció as one.
+    let spelling = "col\u{b7}lecci\u{f3}";
+    let bytes = encode("ca", &[], &[], &[(spelling, 0, DAY)]);
+    let read = Learner::from_bytes(&bytes, ONE).unwrap();
+    assert!(read.view(None).blocked(spelling));
 }
 
 #[test]

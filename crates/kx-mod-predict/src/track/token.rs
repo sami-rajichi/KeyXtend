@@ -3,6 +3,7 @@
 
 use std::borrow::Cow;
 
+use crate::email;
 use crate::fold;
 use crate::script::{self, Script};
 use crate::split::{normalise, spans};
@@ -73,6 +74,11 @@ impl Token {
             .nth(skip)
             .map_or(self.text.len(), |(at, _)| at);
         self.text.get(at..).unwrap_or_default()
+    }
+
+    /// True when it holds the email at sign, so it is an email and never words.
+    pub(super) fn has_at(&self) -> bool {
+        email::at().is_some_and(|a| self.text.contains(a))
     }
 
     /// The `n` `at` signs that end it when all were typed, not read.

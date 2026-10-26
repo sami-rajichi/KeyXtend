@@ -17,6 +17,8 @@ const CASES: u32 = 1_024;
 const LATIN_1_LETTERS: u32 = 0x00C0;
 /// The last code point of Latin Extended-A, `ſ`.
 const EXTENDED_A_END: u32 = 0x017F;
+/// The Vietnamese letters of Latin Extended Additional, `Ạ` to `ỹ`.
+const VIETNAMESE: (u32, u32) = (0x1EA0, 0x1EF9);
 /// The first combining diacritic, the grave accent.
 const COMBINING_FIRST: u32 = 0x0300;
 /// The last combining diacritic of its block.
@@ -76,6 +78,33 @@ fn other_latin_letters_fold_to_their_base() {
         ("İstanbul", "istanbul"),
         ("Ångström", "angstrom"),
     ]);
+}
+
+#[test]
+fn romanian_and_vietnamese_letters_fold_to_their_base() {
+    folds(&[
+        ("ţară", "tara"),
+        ("Știință", "stiinta"),
+        ("țară", "tara"),
+        ("Việt", "viet"),
+        ("người", "nguoi"),
+        ("ơn", "on"),
+        ("Đường", "duong"),
+        ("tiếng", "tieng"),
+        ("ngữ", "ngu"),
+        ("kỳ", "ky"),
+    ]);
+}
+
+#[test]
+fn every_vietnamese_letter_of_latin_extended_additional_folds_to_ascii() {
+    for code in VIETNAMESE.0..=VIETNAMESE.1 {
+        let Some(c) = char::from_u32(code) else {
+            continue;
+        };
+        let folded = fold(&c.to_string());
+        assert!(folded.is_ascii(), "U+{code:04X} folds to {folded}");
+    }
 }
 
 #[test]

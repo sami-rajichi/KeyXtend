@@ -2,8 +2,8 @@
 //! keyboard, answers an ask for presses, saves at stop and says when it fails; with the pack builder, it closes one
 //! pack before it opens the next.
 
-use crate::rig::{blob, learner};
-use kx_mod_predict::{Days, MANIFEST, PredictModule, SystemDays};
+use crate::rig::{DAY, blob, learner, on_day};
+use kx_mod_predict::{MANIFEST, PredictModule};
 use kx_module_api::ports::{
     ChipPicked, FieldKind, FieldWatch, FieldWatchKey, Lane, LayoutAsk, LayoutChanged, LayoutId,
     PackError, PackView, Piece, PressesAsk, PressesWanted, SealedStore, SealedStoreKey, Suggested,
@@ -48,7 +48,7 @@ impl Live {
         host.services.insert(SealedStoreKey::ID, stored);
         let bus = Bus::new(Arc::clone(&host.core));
         let heard = listen(&bus);
-        let mut module = PredictModule::default();
+        let mut module = PredictModule::with_days(on_day());
         module.start(&mut ModuleCx::new(&mut host)).unwrap();
         (Self { host, module, bus }, heard)
     }
@@ -106,8 +106,8 @@ fn lang(iso: &str) -> LayoutChanged {
 #[test]
 fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
-    // Learned today, so the real day's purge keeps them; "world" keeps the first lane from matching the typed one.
-    let known = learner("en", &["hello", "help", "world"], SystemDays.today());
+    // Learned on the module's day, so its purge keeps them; "world" keeps the first lane from matching the typed one.
+    let known = learner("en", &["hello", "help", "world"], DAY);
     store.plant(&blob("en"), known.to_bytes());
     field.focus(FieldKind::Text);
     field.set_ends(Some(true));
@@ -149,7 +149,7 @@ fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
 #[test]
 fn a_layouts_module_that_starts_later_still_brings_the_language() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
-    let known = learner("en", &["hello", "help"], SystemDays.today());
+    let known = learner("en", &["hello", "help"], DAY);
     store.plant(&blob("en"), known.to_bytes());
     let listen = |bus: &Bus| (hear::<LayoutAsk>(bus), hear::<Suggested>(bus));
     let (mut run, ((_a, asks), (_l, lanes))) =
@@ -204,7 +204,7 @@ impl WordPacks for Broken {
 #[test]
 fn a_panic_on_the_thread_empties_the_lane_lets_presses_go_and_tells_the_user() {
     let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
-    let known = learner("en", &["hello", "help"], SystemDays.today());
+    let known = learner("en", &["hello", "help"], DAY);
     store.plant(&blob("en"), known.to_bytes());
     let listen = |bus: &Bus| {
         (

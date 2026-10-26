@@ -1,10 +1,7 @@
 //! Casing by language and word spaces by script, through the tracker and the scorer: Turkish capitals, Korean gaps,
 //! and no chips yet for Chinese and Japanese.
 
-use kx_module_api::ports::Piece;
-
 use super::*;
-use crate::track::{TrackConfig, Tracker};
 
 /// Korean, which spaces its words.
 fn korean() -> Vec<u8> {
@@ -37,13 +34,7 @@ fn turkish() -> Vec<u8> {
 /// Each guess after typing `text` with `bytes`'s pack in `mode`, with the text its plan types.
 fn typed(bytes: &[u8], text: &str, mode: TypingMode) -> Vec<(String, String)> {
     let pack = Pack::parse(bytes).unwrap();
-    let mut tracker = Tracker::new(TrackConfig {
-        context_words: 2,
-        max_word: 48,
-    });
-    let known = |w: &str| knows(Some(&pack), w);
-    tracker.typed(&Piece::Text(Redacted::new(text.to_owned())), &known);
-    let Some(query) = tracker.show(&known).words else {
+    let Some(query) = typed_query(&pack, text) else {
         return Vec::new();
     };
     let found = guesses(

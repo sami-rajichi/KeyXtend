@@ -10,6 +10,7 @@ use serde::Deserialize;
 
 use crate::casing::Casing;
 use crate::fold::fold;
+use crate::menu::pages;
 use crate::script;
 use crate::split::is_word_char;
 
@@ -88,12 +89,7 @@ pub fn tail(token: &str) -> &str {
 pub fn capture(token: &str) -> Option<&str> {
     let sign = token.find(at()?)?;
     let (head, rest) = token.split_at(sign);
-    let start = head
-        .char_indices()
-        .rev()
-        .take_while(|&(_, c)| is_email_char(c))
-        .last()
-        .map_or(sign, |(i, _)| i);
+    let start = sign - tail(head).len();
     let end = rest
         .char_indices()
         .find(|&(_, c)| !is_email_char(c))
@@ -191,12 +187,23 @@ impl Emails {
         true
     }
 
-    /// Removes the known `email`, in any case; true when it was known.
-    pub fn remove(&mut self, email: &str) -> bool {
+    /// Removes the known `email`, in any case; gives its place and spelling, `None` when it was not known.
+    pub fn remove(&mut self, email: &str) -> Option<(usize, String)> {
         let lower = Casing::root().lower(email);
-        let before = self.list.len();
-        self.list.retain(|e| Casing::root().lower(e) != lower);
-        self.list.len() < before
+        let at = (self.list.iter()).position(|e| Casing::root().lower(e) == lower)?;
+        Some((at, self.list.remove(at)))
+    }
+
+    /// Puts `email` back at place `at`, as the undo of a remove.
+    pub fn put(&mut self, at: usize, email: String) {
+        self.list.insert(at.min(self.list.len()), email);
+    }
+
+    /// The known emails `keep` takes, in the same order.
+    #[must_use]
+    pub fn kept(&self, keep: impl Fn(&str) -> bool) -> Self {
+        let list = self.list.iter().filter(|e| keep(e)).cloned().collect();
+        Self { list }
     }
 
     /// The known emails that start with `typed` once folded, at most `lane`: only from `min_start` typed
@@ -214,26 +221,27 @@ impl Emails {
     #[must_use]
     pub fn all(&self, lane: usize) -> Vec<Chip> {
         if self.list.len() <= lane {
-            return self.list.iter().map(|e| chip(e, ChipKind::Email)).collect();
+            return self.first(lane);
         }
-        let shown = lane.saturating_sub(1);
-        let mut chips: Vec<Chip> = self
-            .list
-            .iter()
-            .take(shown)
-            .map(|e| chip(e, ChipKind::Email))
-            .collect();
+        let mut chips = self.first(lane.saturating_sub(1));
         if lane > 0 {
             chips.push(chip("", ChipKind::More));
         }
         chips
     }
 
+    /// The first `lane` known emails, most recent first, as chips.
+    #[must_use]
+    pub fn first(&self, lane: usize) -> Vec<Chip> {
+        let shown = self.list.iter().take(lane);
+        shown.map(|e| chip(e, ChipKind::Email)).collect()
+    }
+
     /// Page `page` of the list, `rows` per page (`[ui] page_rows`); a page past the end shows the last one.
     #[must_use]
     pub fn page(&self, page: u16, rows: usize) -> ListPage {
         let rows = rows.max(1);
-        let pages = self.list.len().div_ceil(rows).max(1);
+        let pages = pages(self.list.len(), rows);
         let at = usize::from(page).min(pages - 1);
         let items = self.list.iter().skip(at * rows).take(rows);
         ListPage {

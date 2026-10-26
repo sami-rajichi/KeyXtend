@@ -12,6 +12,11 @@ pub(super) const HEADROOM: u16 = 1 << u8::BITS;
 /// The highest count a table keeps; a use past it halves every table first.
 pub(super) const COUNT_TOP: u16 = u16::MAX - HEADROOM;
 
+/// The largest cap whose peak still fits `top`: `top` / `CLEAN_AT_TENTHS` × `TENTHS`.
+pub(super) const fn largest_cap(top: usize) -> usize {
+    top / CLEAN_AT_TENTHS * TENTHS
+}
+
 /// The most entries a table capped at `cap` holds before its clean-up.
 pub(super) fn peak(cap: usize) -> usize {
     cap.saturating_mul(CLEAN_AT_TENTHS) / TENTHS
@@ -24,7 +29,12 @@ pub(super) fn most(cap: usize) -> usize {
 
 /// True when adding `n` uses to `count` passes `COUNT_TOP`, so every table halves first.
 pub(super) fn too_high(count: u16, n: u16) -> bool {
-    u32::from(count) + u32::from(n) > u32::from(COUNT_TOP)
+    over_top(u32::from(count) + u32::from(n))
+}
+
+/// True when the sum of counts `sum` passes `COUNT_TOP`.
+pub(super) fn over_top(sum: u32) -> bool {
+    sum > u32::from(COUNT_TOP)
 }
 
 /// `count` halved, rounded up, but kept at `floor` when it held that many: max(⌈c/2⌉, min(c, floor)). It is

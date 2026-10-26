@@ -154,11 +154,24 @@ fn a_finished_email_is_added_once_and_moves_to_the_front_when_reused() {
 #[test]
 fn a_known_email_is_removed_in_any_case_and_an_unknown_one_changes_nothing() {
     let mut emails = known(&["a@b.co", "c@d.co"]);
-    assert!(emails.remove("A@B.CO"));
+    assert_eq!(emails.remove("A@B.CO"), Some((1, "a@b.co".to_owned())));
     assert_eq!(emails.list(), ["c@d.co"]);
-    assert!(!emails.remove("a@b.co"), "already gone");
-    assert!(!emails.remove("x@y.co"));
+    assert_eq!(emails.remove("a@b.co"), None, "already gone");
+    assert_eq!(emails.remove("x@y.co"), None);
     assert_eq!(emails.list(), ["c@d.co"]);
+    emails.put(1, "a@b.co".to_owned());
+    assert_eq!(emails.list(), ["c@d.co", "a@b.co"], "put back in its place");
+}
+
+#[test]
+fn the_first_emails_show_with_no_more_chip_and_kept_keeps_the_order() {
+    let emails = known(&["a@x.co", "b@x.co", "c@x.co"]);
+    assert_eq!(
+        seen(&emails.first(2)),
+        [("c@x.co", ChipKind::Email), ("b@x.co", ChipKind::Email)]
+    );
+    let kept = emails.kept(|e| e != "b@x.co");
+    assert_eq!(kept.list(), ["c@x.co", "a@x.co"]);
 }
 
 #[test]

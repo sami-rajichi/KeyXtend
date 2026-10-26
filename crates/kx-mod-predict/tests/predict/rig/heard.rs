@@ -7,11 +7,17 @@ use std::sync::{Arc, Mutex};
 /// One event the actor published.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Heard {
+    /// A lane of chips.
     Lane(Suggested),
+    /// A pick to type.
     Word(TypeWord),
+    /// A notice for the user.
     Notice(Notice),
+    /// Whether it wants the keyboard's presses.
     Presses(bool),
+    /// An ask for the language in front.
     Ask,
+    /// An ask for the typing mode.
     ModeAsk,
 }
 

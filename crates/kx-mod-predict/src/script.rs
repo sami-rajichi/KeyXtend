@@ -18,8 +18,14 @@ pub enum Script {
     Armenian,
     /// Hebrew.
     Hebrew,
+    /// Syriac.
+    Syriac,
     /// Arabic, with its presentation forms.
     Arabic,
+    /// Thaana.
+    Thaana,
+    /// N'Ko.
+    Nko,
     /// Devanagari.
     Devanagari,
     /// Bengali.
@@ -34,7 +40,7 @@ pub enum Script {
     Myanmar,
     /// Khmer.
     Khmer,
-    /// Georgian.
+    /// Georgian, with its Mtavruli capitals and Nuskhuri.
     Georgian,
     /// Han and kana: Japanese mixes kanji and kana in one word, so they count as one.
     Han,
@@ -79,7 +85,10 @@ const FACTS: &[(Script, Facts)] = &[
     (Script::Cyrillic, LTR),
     (Script::Armenian, LTR),
     (Script::Hebrew, RTL),
+    (Script::Syriac, RTL),
     (Script::Arabic, RTL),
+    (Script::Thaana, RTL),
+    (Script::Nko, RTL),
     (Script::Devanagari, LTR),
     (Script::Bengali, LTR),
     (Script::Tamil, LTR),
@@ -129,6 +138,8 @@ impl Script {
 const BLOCKS: &[(char, char, Script)] = &[
     ('A', 'Z', Script::Latin),
     ('a', 'z', Script::Latin),
+    ('\u{00AA}', '\u{00AA}', Script::Latin),
+    ('\u{00BA}', '\u{00BA}', Script::Latin),
     ('\u{00C0}', '\u{024F}', Script::Latin),
     ('\u{0250}', '\u{02AF}', Script::Latin),
     ('\u{02B0}', '\u{036F}', Script::Common),
@@ -137,7 +148,10 @@ const BLOCKS: &[(char, char, Script)] = &[
     ('\u{0530}', '\u{058F}', Script::Armenian),
     ('\u{0590}', '\u{05FF}', Script::Hebrew),
     ('\u{0600}', '\u{06FF}', Script::Arabic),
+    ('\u{0700}', '\u{074F}', Script::Syriac),
     ('\u{0750}', '\u{077F}', Script::Arabic),
+    ('\u{0780}', '\u{07BF}', Script::Thaana),
+    ('\u{07C0}', '\u{07FF}', Script::Nko),
     ('\u{0870}', '\u{08FF}', Script::Arabic),
     ('\u{0900}', '\u{097F}', Script::Devanagari),
     ('\u{0980}', '\u{09FF}', Script::Bengali),
@@ -149,10 +163,12 @@ const BLOCKS: &[(char, char, Script)] = &[
     ('\u{1100}', '\u{11FF}', Script::Hangul),
     ('\u{1780}', '\u{17FF}', Script::Khmer),
     ('\u{1C80}', '\u{1C8F}', Script::Cyrillic),
+    ('\u{1C90}', '\u{1CBF}', Script::Georgian),
     ('\u{1DC0}', '\u{1DFF}', Script::Common),
     ('\u{1E00}', '\u{1EFF}', Script::Latin),
     ('\u{1F00}', '\u{1FFF}', Script::Greek),
     ('\u{2C60}', '\u{2C7F}', Script::Latin),
+    ('\u{2D00}', '\u{2D2F}', Script::Georgian),
     ('\u{2DE0}', '\u{2DFF}', Script::Cyrillic),
     ('\u{3000}', '\u{303F}', Script::Han),
     ('\u{3040}', '\u{312F}', Script::Han),

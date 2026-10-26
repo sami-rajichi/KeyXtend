@@ -39,12 +39,22 @@ impl Actor {
     /// A press outside our windows ends the word and reads the box again.
     pub(super) fn clicked(&mut self, seed: Option<&Pack<'_>>) -> bool {
         self.menu.key();
-        self.pending = false;
-        let told = self.tracker.reset();
+        self.end_word(seed);
+        true
+    }
+
+    /// Ends the word unlearned, then reads the box again when it is followed.
+    pub(super) fn end_word(&mut self, seed: Option<&Pack<'_>>) {
+        let told = self.drop_word();
         if self.following() {
             self.act(seed, told);
         }
-        true
+    }
+
+    /// Ends the word unlearned and drops a pick still waiting; gives what the tracker asks for.
+    pub(super) fn drop_word(&mut self) -> Vec<Told> {
+        self.pending = false;
+        self.tracker.reset()
     }
 
     /// True when the tracker follows the box: prediction is on and the box, as the watch sees it now, is no password

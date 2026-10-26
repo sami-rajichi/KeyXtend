@@ -4,14 +4,17 @@
 use super::*;
 
 /// Every script, so a test can check each has a row.
-const ALL: [Script; 18] = [
+const ALL: [Script; 21] = [
     Script::Common,
     Script::Latin,
     Script::Greek,
     Script::Cyrillic,
     Script::Armenian,
     Script::Hebrew,
+    Script::Syriac,
     Script::Arabic,
+    Script::Thaana,
+    Script::Nko,
     Script::Devanagari,
     Script::Bengali,
     Script::Tamil,
@@ -47,13 +50,31 @@ fn marks_join_any_script_and_words_of_one_script_are_single() {
 }
 
 #[test]
-fn a_word_takes_its_first_script_and_only_hebrew_and_arabic_read_right_to_left() {
+fn a_word_takes_its_first_script_and_hebrew_and_arabic_read_right_to_left() {
     assert_eq!(of("\u{0301}é"), Some(Script::Latin));
     assert_eq!(of("123"), None);
     assert!(of("أن").is_some_and(Script::rtl));
     assert!(of("שלום").is_some_and(Script::rtl));
     assert!(!of("école").is_some_and(Script::rtl));
     assert!(!of("слово").is_some_and(Script::rtl));
+}
+
+#[test]
+fn syriac_thaana_and_nko_read_right_to_left_and_georgian_and_latin_keep_their_other_letters() {
+    for word in ["ܫܠܡܐ", "ދިވެހި", "ߒߞߏ"] {
+        assert!(of(word).is_some_and(Script::rtl), "{word}");
+    }
+    let mtavruli = "ქართული".to_uppercase();
+    assert_eq!(of(&mtavruli), Some(Script::Georgian));
+    assert!(
+        single(&format!("{mtavruli}ქართული")),
+        "Mtavruli beside Mkhedruli"
+    );
+    assert_eq!(of(&"Ⴀ".to_lowercase()), Some(Script::Georgian), "Nuskhuri");
+    assert!(
+        single("Nª") && single("nº"),
+        "the ordinal indicators are Latin"
+    );
 }
 
 #[test]

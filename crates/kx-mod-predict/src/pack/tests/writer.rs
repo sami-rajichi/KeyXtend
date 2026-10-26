@@ -2,7 +2,7 @@
 
 use kx_module_api::ports::{MAX_ISO_LEN, RESERVED_NAMES};
 
-use super::super::layout::{MAX_CHAIN, MAX_SPELLING};
+use super::super::layout::{MAX_CHAIN, MAX_SPELLING, NO_CHAINS};
 use super::super::*;
 use super::trip::id;
 
@@ -41,6 +41,15 @@ fn a_bad_language_code_is_refused() {
             "{iso}"
         );
     }
+}
+
+#[test]
+fn chains_with_no_follower_kept_are_refused() {
+    assert_eq!(
+        PackWriter::new(ISO, FULL, 0).unwrap_err(),
+        WriteError::NoFollowers
+    );
+    assert!(PackWriter::new(ISO, LIST, 0).is_ok(), "a list keeps none");
 }
 
 #[test]
@@ -151,7 +160,7 @@ fn a_longer_chain_alone_still_gives_every_shorter_section() {
 fn a_word_list_has_no_chains() {
     let bytes = writer(LIST, &["b", "a"]).finish().unwrap();
     let pack = Pack::parse(&bytes).unwrap();
-    assert_eq!((pack.max_chain(), pack.flags()), (1, LIST));
+    assert_eq!((pack.max_chain(), pack.flags()), (NO_CHAINS, LIST));
     assert_eq!(pack.followers(&[id(&pack, "a")]).count(), 0);
     assert_eq!(pack.spelling(0), "a");
 }

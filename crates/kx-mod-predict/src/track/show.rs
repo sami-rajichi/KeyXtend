@@ -155,7 +155,7 @@ fn offers(
         return (None, Some(EmailAsk::All(Redacted::new(typed.to_owned()))));
     }
     let tail = email::tail(token.text());
-    if at.is_some_and(|a| token.text().contains(a)) {
+    if token.has_at() {
         return (None, domains(tail));
     }
     let start = (!tail.is_empty()).then(|| EmailAsk::Start(Redacted::new(tail.to_owned())));

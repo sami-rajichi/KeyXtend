@@ -1,5 +1,5 @@
 //! The language in front: a switch saves the old learner and resets the tracker, then the loop opens only the new
-//! language's pack, parses it once, and loads its learner reconciled with it.
+//! language's pack, parses it once, and loads its learner reconciled with it. With prediction off nothing opens.
 
 use super::store::Blob;
 use super::{Actor, Flow};
@@ -19,15 +19,12 @@ impl Actor {
         self.rtl = rtl;
         self.lang_name = name;
         self.menu.key();
-        self.pending = false;
-        let told = self.tracker.reset();
         if iso == self.iso {
-            if self.following() {
-                self.act(seed, told);
-            }
+            self.end_word(seed);
             self.tell(seed);
             return Flow::Go;
         }
+        self.drop_word();
         self.save(Blob::Learned);
         self.leave();
         self.code = self
@@ -40,9 +37,10 @@ impl Actor {
         Flow::Switch
     }
 
-    /// Opens the pack serving the language in front; a missing or unreadable one is told once if the build shipped it.
+    /// Opens the pack serving the language in front, while prediction is on; a missing or unreadable one is told once
+    /// if the build shipped it.
     pub fn open(&mut self) -> Option<Box<dyn PackView>> {
-        if !fits_iso(&self.code) {
+        if !self.settings.on || !fits_iso(&self.code) {
             return None;
         }
         let opened = self.ports.packs.open(&self.code);
@@ -77,9 +75,12 @@ impl Actor {
         pack
     }
 
-    /// Settles in the language whose pack is `seed`: loads its learner, purges, reads the box and tells the lane.
+    /// Settles in the language whose pack is `seed`: loads its learner while prediction is on, purges, reads the box
+    /// and tells the lane.
     pub fn arrive(&mut self, seed: Option<&Pack<'_>>) {
-        self.load_learner(seed);
+        if self.settings.on {
+            self.load_learner(seed);
+        }
         self.saves.day = None;
         self.new_day();
         self.read(seed);

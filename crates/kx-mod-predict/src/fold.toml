@@ -1,7 +1,8 @@
 # Folding for loose matching (spec §6 "Matching", ADR-0032 decision 5): `fold.rs` lower-cases a word, then drops
 # each `drop` character and replaces each `map` key. Keys are lower case, as folding lower-cases first.
 
-# Latin-1 Supplement and Latin Extended-A, after Lucene's ASCIIFoldingFilter: accents go, ligatures spell out.
+# Latin-1 Supplement, Latin Extended-A and the letters of the shipped packs beyond them, after Lucene's
+# ASCIIFoldingFilter: accents go, ligatures spell out.
 [latin]
 # Combining diacritics go, so decomposed Latin-1 and Latin Extended-A letters fold as their precomposed forms do,
 # and İ, which lower-cases to i and U+0307, folds to i.
@@ -122,6 +123,57 @@ drop = [
 "ż" = "z"
 "ž" = "z"
 "ſ" = "s"
+# Latin Extended-B for the ro and vi packs: o and u with a horn, s and t with a comma below.
+"\u01A1" = "o"
+"\u01B0" = "u"
+"\u0219" = "s"
+"\u021B" = "t"
+# Latin Extended Additional for the vi pack: every Vietnamese letter, ạ (U+1EA1) to ỹ (U+1EF9), to its base.
+"\u1EA1" = "a"
+"\u1EA3" = "a"
+"\u1EA5" = "a"
+"\u1EA7" = "a"
+"\u1EA9" = "a"
+"\u1EAB" = "a"
+"\u1EAD" = "a"
+"\u1EAF" = "a"
+"\u1EB1" = "a"
+"\u1EB3" = "a"
+"\u1EB5" = "a"
+"\u1EB7" = "a"
+"\u1EB9" = "e"
+"\u1EBB" = "e"
+"\u1EBD" = "e"
+"\u1EBF" = "e"
+"\u1EC1" = "e"
+"\u1EC3" = "e"
+"\u1EC5" = "e"
+"\u1EC7" = "e"
+"\u1EC9" = "i"
+"\u1ECB" = "i"
+"\u1ECD" = "o"
+"\u1ECF" = "o"
+"\u1ED1" = "o"
+"\u1ED3" = "o"
+"\u1ED5" = "o"
+"\u1ED7" = "o"
+"\u1ED9" = "o"
+"\u1EDB" = "o"
+"\u1EDD" = "o"
+"\u1EDF" = "o"
+"\u1EE1" = "o"
+"\u1EE3" = "o"
+"\u1EE5" = "u"
+"\u1EE7" = "u"
+"\u1EE9" = "u"
+"\u1EEB" = "u"
+"\u1EED" = "u"
+"\u1EEF" = "u"
+"\u1EF1" = "u"
+"\u1EF3" = "y"
+"\u1EF5" = "y"
+"\u1EF7" = "y"
+"\u1EF9" = "y"
 
 # Arabic: harakat, the superscript alef and tatweel go; the hamza and wasla alef forms fold to bare alef, and alef
 # maksura to ya. Ta marbuta, hamza on waw or ya, and every other letter stay.

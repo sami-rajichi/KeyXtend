@@ -1,10 +1,11 @@
 //! The sealed blobs: the language in front's learned words and the known emails. Each saves `save_s` after its first
 //! unsaved change and at stop, a locked store saves nothing that run, and a new day purges; while learning is paused,
-//! neither purges nor timed saves write.
+//! neither purges nor timed saves write. A language left while its save failed keeps its words until one lands.
 
 use super::Actor;
 use kx_module_api::ports::{BlobName, SealedError, fits_iso};
-use kx_module_api::{Mono, keys};
+use kx_module_api::{Mono, Redacted, keys};
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 /// The blob of the known emails, one for every language.
@@ -34,13 +35,15 @@ pub fn aside_blob(name: &BlobName) -> Option<BlobName> {
     BlobName::new(&format!("{}{ASIDE_SUFFIX}", name.as_str())).ok()
 }
 
-/// One of the two blobs.
+/// What saves on its own timer.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(super) enum Blob {
     /// The language in front's learned words.
     Learned,
     /// The known emails.
     Emails,
+    /// The learned words of languages left while their save failed.
+    Left,
 }
 
 /// When each blob changed first since its last save, and what keeps it from saving.
@@ -50,9 +53,12 @@ pub(super) struct Saves {
     every: Duration,
     learned: Option<Mono>,
     emails: Option<Mono>,
+    left_at: Option<Mono>,
+    /// The left languages' unsaved byte forms, by blob.
+    left: BTreeMap<BlobName, Redacted<Vec<u8>>>,
     /// The OS key was refused: nothing saves this run.
     locked: bool,
-    /// The blob could not be read, so it is never written over this run.
+    /// The blob could not be loaded or set aside, so it is never written over this run.
     held_learned: bool,
     held_emails: bool,
     /// The day of the last purge.
@@ -72,10 +78,19 @@ impl Saves {
     pub(super) fn next(&self, now: Mono) -> Option<Duration> {
         let due =
             |first: Option<Mono>| first.map(|t| t.saturating_add(self.every).saturating_since(now));
-        [due(self.learned), due(self.emails)]
+        [due(self.learned), due(self.emails), due(self.left_at)]
             .into_iter()
             .flatten()
             .min()
+    }
+
+    /// Takes the words of `name` left unsaved, which come back with their language.
+    pub(super) fn take_left(&mut self, name: &BlobName) -> Option<Vec<u8>> {
+        let bytes = self.left.remove(name)?;
+        if self.left.is_empty() {
+            self.left_at = None;
+        }
+        Some(bytes.into_inner())
     }
 
     /// The first unsaved change of `blob`.
@@ -83,6 +98,7 @@ impl Saves {
         match blob {
             Blob::Learned => &mut self.learned,
             Blob::Emails => &mut self.emails,
+            Blob::Left => &mut self.left_at,
         }
     }
 
@@ -92,6 +108,7 @@ impl Saves {
             || match blob {
                 Blob::Learned => self.held_learned,
                 Blob::Emails => self.held_emails,
+                Blob::Left => false,
             }
     }
 
@@ -100,6 +117,7 @@ impl Saves {
         match blob {
             Blob::Learned => self.held_learned = true,
             Blob::Emails => self.held_emails = true,
+            Blob::Left => {}
         }
     }
 }
@@ -120,7 +138,7 @@ impl Actor {
         }
         self.new_day();
         let now = self.ports.clock.now();
-        for blob in [Blob::Learned, Blob::Emails] {
+        for blob in [Blob::Learned, Blob::Emails, Blob::Left] {
             if self
                 .saves
                 .first(blob)
@@ -142,32 +160,60 @@ impl Actor {
                 .as_ref()
                 .and_then(|l| Some((learned_blob(&self.iso)?, l.to_bytes()))),
             Blob::Emails => emails_blob().map(|name| (name, self.emails.to_bytes())),
+            Blob::Left => return self.save_left(),
         };
-        let Some((name, bytes)) = saving else {
-            return;
-        };
-        match self.ports.store.save(&name, &bytes) {
-            Ok(()) => self.stats.saves += 1,
-            Err(SealedError::Locked) => self.lock(),
+        if let Some((name, bytes)) = saving {
+            self.put(blob, &name, &bytes);
+        }
+    }
+
+    /// Writes `bytes` under `name` for `blob`; true when they landed. A refusal tries again `save_s` later, and a
+    /// locked store locks the run.
+    fn put(&mut self, blob: Blob, name: &BlobName, bytes: &[u8]) -> bool {
+        match self.ports.store.save(name, bytes) {
+            Ok(()) => {
+                self.stats.saves += 1;
+                true
+            }
+            Err(SealedError::Locked) => {
+                self.lock();
+                false
+            }
             Err(error) => {
                 tracing::warn!(%error, ?blob, "predict blob not saved");
                 self.stats.unsaved += 1;
                 *self.saves.first(blob) = Some(self.ports.clock.now());
+                false
             }
         }
     }
 
-    /// The language changes: the learner's timer and hold end with it.
+    /// Saves the words of the languages left unsaved; those refused wait again.
+    fn save_left(&mut self) {
+        for (name, bytes) in std::mem::take(&mut self.saves.left) {
+            if self.saves.locked || !self.put(Blob::Left, &name, bytes.expose()) {
+                self.saves.left.insert(name, bytes);
+            }
+        }
+    }
+
+    /// The language changes: words its failed save left wait for a later one, and its timer and hold end.
     pub(super) fn leave(&mut self) {
-        self.saves.learned = None;
+        let unsaved = self.saves.learned.take().is_some();
+        let learner = self.learner.take();
+        if let (true, Some(learner), Some(name)) = (unsaved, learner, learned_blob(&self.iso)) {
+            self.saves
+                .left
+                .insert(name, Redacted::new(learner.to_bytes()));
+            self.changed(Blob::Left);
+        }
         self.saves.held_learned = false;
-        self.learner = None;
     }
 
     /// The OS key was refused: nothing saves this run, and the user hears it once.
     pub(super) fn lock(&mut self) {
         self.saves.locked = true;
-        (self.saves.learned, self.saves.emails) = (None, None);
+        (self.saves.learned, self.saves.emails, self.saves.left_at) = (None, None, None);
         self.say_once(keys::WORDS_LOCKED);
     }
 
@@ -220,6 +266,8 @@ mod tests {
         saves.emails = Some(at(10));
         saves.learned = Some(at(5));
         assert_eq!(saves.next(at(20)), Some(Duration::from_secs(15)));
+        saves.left_at = Some(at(1));
+        assert_eq!(saves.next(at(20)), Some(Duration::from_secs(11)));
         assert_eq!(saves.next(at(99)), Some(Duration::ZERO), "overdue");
     }
 }

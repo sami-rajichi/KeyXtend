@@ -28,7 +28,11 @@ fn a_password_box_locks_the_lane_learns_nothing_and_is_never_read() {
     rig.typed("lo ");
     rig.typed("sami@x.org ");
     rig.stop();
-    assert_eq!(uses(&rig, "hello"), 2, "nothing learned");
+    assert_eq!(
+        uses(&rig, "hello"),
+        rig.settings.min_uses,
+        "nothing learned"
+    );
     assert_eq!(rig.fakes.store.saves(), 0, "nothing saved");
     let field = &rig.fakes.field;
     assert_eq!((field.before_calls(), field.ends_calls()), (0, 0));
@@ -47,7 +51,11 @@ fn an_unknown_box_or_none_suggests_but_learns_nothing_and_is_never_read() {
         rig.typed("lo ");
         rig.typed("sami@x.org ");
         rig.stop();
-        assert_eq!(uses(&rig, "hello"), 2, "{kind:?} learns nothing");
+        assert_eq!(
+            uses(&rig, "hello"),
+            rig.settings.min_uses,
+            "{kind:?} learns nothing"
+        );
         assert_eq!(rig.fakes.store.saves(), 0, "{kind:?}");
         let field = &rig.fakes.field;
         assert_eq!(
@@ -72,7 +80,11 @@ fn a_text_box_is_read_for_its_last_words_and_learned_from() {
     rig.typed("lo ");
     rig.typed("sami@x.org ");
     rig.stop();
-    assert_eq!(uses(&rig, "hello"), 3, "the finished word is learned");
+    assert_eq!(
+        uses(&rig, "hello"),
+        rig.settings.min_uses + 1,
+        "the finished word is learned"
+    );
     assert_eq!(rig.fakes.store.saves(), 2, "the words and the emails");
 }
 
@@ -105,7 +117,11 @@ fn a_read_that_finds_an_unknown_box_stops_learning_before_its_late_focus_event()
     rig.late(text("hello "));
     rig.told();
     rig.stop();
-    assert_eq!(uses(&rig, "hello"), 2, "nothing learned");
+    assert_eq!(
+        uses(&rig, "hello"),
+        rig.settings.min_uses,
+        "nothing learned"
+    );
     assert_eq!(rig.fakes.store.saves(), 0);
 }
 
@@ -232,6 +248,10 @@ fn a_read_that_finds_an_unknown_box_no_event_named_stops_learning() {
     );
     rig.typed("lo ");
     rig.stop();
-    assert_eq!(uses(&rig, "hello"), 2, "nothing learned");
+    assert_eq!(
+        uses(&rig, "hello"),
+        rig.settings.min_uses,
+        "nothing learned"
+    );
     assert_eq!(rig.fakes.store.saves(), 0);
 }

@@ -12,6 +12,8 @@ mod reads;
 
 /// The words a test language knows: elisions and whole words that hold an apostrophe.
 const KNOWN: [&str; 4] = ["l'", "qu'", "quelqu'un", "aujourd'hui"];
+/// The longest word the test tracker guesses and learns, in characters.
+const MAX_WORD: usize = 48;
 
 /// True for the test language's words, in any case.
 fn knows(word: &str) -> bool {
@@ -22,7 +24,7 @@ fn knows(word: &str) -> bool {
 fn tracker(n: usize) -> Tracker {
     Tracker::new(TrackConfig {
         context_words: n,
-        max_word: 48,
+        max_word: MAX_WORD,
     })
 }
 
@@ -142,7 +144,7 @@ fn the_same_box_again_changes_nothing() {
 
 #[test]
 fn digits_mixed_scripts_and_long_tokens_get_no_word_guesses_and_are_never_learned() {
-    for token in ["abc123", "abcعربي", &"a".repeat(49)] {
+    for token in ["abc123", "abcعربي", &"a".repeat(MAX_WORD + 1)] {
         let mut t = tracker(2);
         type_text(&mut t, "one ");
         type_text(&mut t, token);
@@ -152,7 +154,7 @@ fn digits_mixed_scripts_and_long_tokens_get_no_word_guesses_and_are_never_learne
         assert_eq!(t.context(), Some(&[][..]), "{token}");
     }
     let mut t = tracker(2);
-    type_text(&mut t, &"a".repeat(48));
+    type_text(&mut t, &"a".repeat(MAX_WORD));
     assert!(t.show(&knows).words.is_some());
 }
 

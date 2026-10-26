@@ -74,8 +74,7 @@ impl Menu {
             return;
         };
         let rows = rows.max(1);
-        let pages = count.div_ceil(usize::from(rows)).max(1);
-        let end = i64::try_from(pages - 1).unwrap_or(i64::MAX);
+        let end = i64::try_from(pages(count, rows.into()) - 1).unwrap_or(i64::MAX);
         let page = (i64::from(list.page) + i64::from(by)).clamp(0, end);
         list.page = u16::try_from(page).unwrap_or(u16::MAX);
         list.rows = rows;
@@ -85,6 +84,11 @@ impl Menu {
     pub(crate) fn off(&mut self) {
         *self = Self::default();
     }
+}
+
+/// The pages `count` entries fill at `rows` to a page; at least one, so an empty list still shows a page.
+pub(crate) fn pages(count: usize, rows: usize) -> usize {
+    count.div_ceil(rows.max(1)).max(1)
 }
 
 #[cfg(test)]

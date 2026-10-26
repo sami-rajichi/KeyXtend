@@ -2,7 +2,7 @@
 
 use super::super::{Splitter, Token};
 
-/// The project's sentence ends.
+/// The tests' own sentence ends.
 const ENDS: [char; 7] = ['.', '!', '?', '\u{061F}', '\u{2026}', '\n', '\r'];
 
 /// One word as a test reads it: its text, then first, alone and joined.

@@ -216,7 +216,7 @@ impl Tracker {
         knows: &dyn Fn(&str) -> bool,
         mut told: Option<&mut Vec<Told>>,
     ) {
-        if email::at().is_some_and(|a| token.text().contains(a)) {
+        if token.has_at() {
             finish_email(token.text(), before, told);
             return;
         }

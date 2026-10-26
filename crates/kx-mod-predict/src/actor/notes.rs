@@ -25,14 +25,14 @@ impl Actor {
     pub(super) fn tell(&mut self, seed: Option<&Pack<'_>>) {
         self.round = self.round.wrapping_add(1);
         let lane = self.lane(seed);
-        let rows = |l: crate::menu::List| self.emails.page(l.page, usize::from(l.rows));
+        let list = (self.menu.list).map(|l| self.listed().page(l.page, usize::from(l.rows)));
         let suggested = Suggested {
             round: self.round,
             lane,
             forgetting: self.menu.forgetting,
             learn: self.settings.learn,
             on: self.settings.on,
-            list: self.menu.list.map(rows),
+            list,
         };
         self.publish(&suggested);
         self.last = Some(suggested);
@@ -69,10 +69,12 @@ impl Actor {
             seed,
             learned,
             mode: self.mode,
-            score: &self.score,
+            score: &self.score_cfg,
             emails: &self.emails,
             email: &self.email_cfg,
             limit,
+            confirms: self.confirms(),
+            forgetting: self.menu.forgetting,
         };
         let mut chips = Chips::of(&show, &src);
         chips.with_menu(self.menu, self.rtl, limit);
@@ -101,8 +103,9 @@ impl Actor {
 
     /// Saves what changed, tells the lane empty and presses unwanted, and logs the counts.
     pub(super) fn quit(&mut self) {
-        self.save(Blob::Learned);
-        self.save(Blob::Emails);
+        for blob in [Blob::Learned, Blob::Emails, Blob::Left] {
+            self.save(blob);
+        }
         (self.chips, self.show) = (Chips::default(), None);
         self.round = self.round.wrapping_add(1);
         let lane = Suggested {
