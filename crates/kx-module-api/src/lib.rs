@@ -28,7 +28,7 @@ pub use event::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, Subscription, 
 pub use handle::{SettingsHandle, SettingsSink};
 pub use ids::{ModuleId, ServiceId};
 pub use manifest::{Manifest, Module};
-pub use marks::{HIDDEN_MARKS, is_hidden};
+pub use marks::{HIDDEN_MARKS, INVISIBLE, is_hidden};
 pub use notice::{ModuleState, ModuleStateChanged, Notice, NoticeArg, SettingsChanged, args, keys};
 pub use redacted::{REDACTED_MARKER, Redacted};
 pub use script::{ARABIC_BLOCKS, is_arabic};

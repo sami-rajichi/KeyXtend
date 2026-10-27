@@ -13,11 +13,15 @@ mod combo;
 mod compose;
 mod files;
 mod filled;
+mod lanes;
 mod markup;
 mod pictures;
 mod plugin;
 mod plural;
 mod qml;
+#[path = "../shared/suggest.rs"]
+mod suggest;
+mod sync;
 mod windows;
 mod words;
 

@@ -108,3 +108,18 @@ icon = "keyboard"
 glyph = "keyboard"
 show = "keyboard"
 quit = "power"
+
+# The chip lane (spec §6; mock-up suggHTML, line 1042): the chip kinds as the lane names them (domain, email, more,
+# undo), the password note's lock, the menu button, and the menu's items, whose forget mark each chip wears in forget mode.
+[words]
+domain = "at-sign"
+email = "at-sign"
+more = "chevron-right"
+undo = "undo-2"
+locked = "lock"
+menu = "square-menu"
+forget = "eraser"
+pause = "eye-off"
+resume = "eye"
+power = "power"
+cancel = "x"

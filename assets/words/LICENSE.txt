@@ -1,0 +1,3 @@
+The word packs in this folder (*.kxw) are adaptations of the works credited in CREDITS.txt, shared under the
+Creative Commons Attribution-ShareAlike 4.0 International licence: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+The credits of every source, with its own licence, are in CREDITS.txt.

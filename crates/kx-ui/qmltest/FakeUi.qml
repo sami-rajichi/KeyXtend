@@ -4,6 +4,7 @@ import QtQuick
 import QtQml.Models
 import "fixtures/ui-en.js" as En
 import "fixtures/assets.js" as Assets
+import "fixtures/words.js" as Words
 import "../../kx-theme/fixtures/look-native-light.js" as Look
 
 QtObject {
@@ -42,6 +43,10 @@ QtObject {
     property point popSpot: Qt.point(40, 30)
     // The keyboard's mode the hub keeps, as `keepMode` last set it.
     property var mode: ({ away: false, minimised: false })
+    // The chip lane as the hub writes it, the start's until a test sets one; setting it sends `wordsChanged`. How many
+    // times QML read it, counted where no binding sees it.
+    property var lane: Words.lanes.start
+    readonly property var reads: ({ words: 0 })
     // The keyboard's language and texts as the calls read them, copied on each change where no binding sees it, as the
     // real object's calls are not tracked: QML must read them again on `textsChanged`.
     readonly property var said: ({ lang: En.lang, texts: En.texts })
@@ -49,6 +54,7 @@ QtObject {
     onLangChanged: said.lang = lang
     onTextsChanged: said.texts = texts
     onAssistChanged: newest = assist
+    onLaneChanged: wordsChanged()
     Component.onCompleted: {
         said.lang = lang;
         said.texts = texts;
@@ -75,6 +81,8 @@ QtObject {
     signal trayAway
     // A mouse mode changed or a latch let go, so the keyboard reads its state again.
     signal keysChanged
+    // A new chip lane: read `words` again.
+    signal wordsChanged
 
     function note(call) {
         calls = calls.concat([call]);
@@ -227,5 +235,20 @@ QtObject {
     function backdrop(title) {
         note("backdrop " + title);
         return frosted;
+    }
+    // The chip lane, counted in `reads`, a chip click, a menu, list or control tap, and a tap the top bar handles alone,
+    // noted as `pickChip round index`, `wordsAsk kind arg` and `tapped`.
+    function words() {
+        reads.words++;
+        return JSON.stringify(lane);
+    }
+    function pickChip(round, index) {
+        note("pickChip " + round + " " + index);
+    }
+    function wordsAsk(kind, arg) {
+        note("wordsAsk " + kind + " " + arg);
+    }
+    function tapped() {
+        note("tapped");
     }
 }

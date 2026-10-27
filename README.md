@@ -36,7 +36,7 @@ KeyXtend is in early development; this is what it is being built to do.
   - Voice typing runs free on your PC.
   - Clipboard history, the vault, learned words and transcripts are encrypted.
   - No telemetry; nothing leaves the PC unless you turn that feature on.
-- **Light.** Targets: a download of 80 MB or less (without voice models), 80 MB of memory or less when idle, and near-zero CPU while idle.
+- **Light.** Targets: a download of 80 MB or less (without voice models; measured deflated, a conservative stand-in for the installer's LZMA2), 80 MB of memory or less when idle, and near-zero CPU while idle.
 
 ## Features (v1.0, Windows)
 
@@ -89,6 +89,10 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
   - The `[keyboard] shortcut_pages` setting lists the pages by shortcut id: editing first, then Windows, tabs and zoom, then F1 to F12. A page holds 13 shortcuts, or 14 when it is the only one, with at most 6 pages, and an id Windows does not know is skipped; the Settings window will arrange the pages (P13).
 - **The Power key** opens Windows' own power dialog, where you choose what to do or cancel; KeyXtend never shuts down by itself. It dims, with a tip, when the Power key is switched off, and a notice says so when the dialog cannot open.
 - **The language key** switches the keyboard and the app in front to another installed language. Keys and tips follow the keyboard's language.
+- **Word suggestions** (the chips in the top bar) finish the word you type or guess the next one, from word lists for English, French and Arabic, and shorter ones for many other languages; a click types the word.
+  - They learn your words and emails on this PC only, and never show or learn in a password box.
+  - After `@`, chips finish the address with common domains; typing `@@` lists the emails you typed before.
+  - The menu button at their end forgets a word, pauses learning or turns suggestions off.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
 - **Starting KeyXtend again** shows the running keyboard, and `keyxtend --quit` ends it.
@@ -101,6 +105,7 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 - **A damaged file is repaired, and you are told.** A bad value goes back to its default on its own. If the whole file is unreadable, it is set aside as `settings.broken.toml` and your last good copy comes back.
 - **Comments you type into the file are not kept.** The program writes the whole file again each time it saves.
 - **The log keeps two runs**, this one and the one before, in a `logs` folder inside that settings folder. It is small and never holds what you type, your clipboard or your passwords.
+- **Learned words and emails** are sealed in a `words` folder there, under a key the system keeps for your account.
 - **Nothing is sent anywhere.** The settings and the log stay on your PC.
 
 ## Documents
@@ -112,3 +117,5 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 
 ## Licence
 Source-available, all rights reserved: you may read the code and keep a copy to read it, but not use, change or share it without permission ([LICENSE](LICENSE), ADR-0030). Earlier versions keep the licence they were published under.
+
+The word packs (the `words` folder beside the program) are data shared under CC BY-SA 4.0 ([LICENSE.txt](assets/words/LICENSE.txt)), and `words/CREDITS.txt` credits every source ([CREDITS.txt](assets/words/CREDITS.txt)).

@@ -7,9 +7,9 @@ use std::time::Instant;
 
 use kx_module_api::ports::Dir;
 use kx_platform_windows::screen;
+use kx_platform_windows::uia::Uia;
 use kx_target_window::log::{HUNG, WOKE};
 use serde_json::{Value, json};
-use spike_core::uia::Uia;
 use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::HiDpi::{GetDpiForWindow, PhysicalToLogicalPointForPerMonitorDPI};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -83,7 +83,7 @@ pub fn between(wheels: &[Wheel], from_us: i64, to_us: i64) -> usize {
 
 /// Takes record `name` on a filled target-window under the test build's pad; it passes when the test build quit.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let build = TestBuild::open(ctx, None)?;
     build.set(RCLICK, false)?;
     let target = open(ctx, name)?;

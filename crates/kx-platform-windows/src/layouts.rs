@@ -27,7 +27,7 @@ const DOWN: u8 = 0x80;
 /// Key-state bit of a toggle key that is on.
 const TOGGLED: u8 = 0x01;
 /// Longest text read for one key, in UTF-16 units.
-pub(crate) const TEXT_CAP: usize = 32;
+pub(crate) const KEY_TEXT_UNITS: usize = 32;
 /// Keys held for the Shift slots.
 const SHIFT: [u16; 1] = [VK_SHIFT];
 
@@ -137,8 +137,8 @@ fn answer<O: Os>(
     key: Scan,
     vk: u16,
     state: &KeyState,
-) -> (i32, [u16; TEXT_CAP]) {
-    let mut buf = [0; TEXT_CAP];
+) -> (i32, [u16; KEY_TEXT_UNITS]) {
+    let mut buf = [0; KEY_TEXT_UNITS];
     if vk == 0 {
         return (0, buf);
     }

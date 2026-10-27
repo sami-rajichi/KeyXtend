@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use kx_mod_keyboard::spec::{RowKey, char_id};
+use kx_mod_keyboard::spec::{RowKey, Tell, char_id};
 use kx_mod_keyboard::{BoardSpec, Latch, Layer, Nav, Role};
 use kx_module_api::ports::{Scan, ShortcutId, Shortcuts};
 use kx_platform_windows::WinShortcuts;
@@ -61,6 +61,15 @@ pub fn latch_id(latch: Latch) -> Result<String, String> {
         .ok_or_else(|| format!("the product's board has no {latch:?} key"))
 }
 
+/// The id of the named key that types `text` when it goes out alone, as the space bar types its space.
+pub fn typing(text: &str) -> Result<String, String> {
+    let want = Tell::Text(text.to_string());
+    let found = shipped()?.tells().into_iter().find(|(_, t)| *t == want);
+    found
+        .map(|(id, _)| id)
+        .ok_or_else(|| format!("the product's board has no key that types {text:?}"))
+}
+
 /// The id of the character key with scan code `code`.
 pub fn char_key(code: u16) -> Result<String, String> {
     let found = char_keys()?.into_iter().find(|(sc, _)| sc.code() == code);
@@ -86,7 +95,7 @@ pub fn layer_pages(pages: &[Vec<ShortcutId>]) -> Result<Vec<Vec<String>>, String
 #[cfg(test)]
 mod tests {
     use kx_mod_keyboard::KeyboardSettings;
-    use kx_mod_keyboard::spec::NEXT_ID;
+    use kx_mod_keyboard::spec::{KeyKind, NEXT_ID};
 
     use super::*;
 
@@ -123,6 +132,19 @@ mod tests {
         assert_eq!(char_key(0x2F).expect("V's place"), "c-0x002F");
         assert!(char_key(0x01).is_err(), "Esc is a named key");
         assert!(char_key(0xFFFF).is_err());
+    }
+
+    #[test]
+    fn a_word_ends_on_the_space_bar_and_no_key_types_a_letter_alone() {
+        let space = typing(" ").expect("the space bar");
+        let board = BoardSpec::shipped().expect("reads");
+        let mut keys = (0..board.rows.len()).flat_map(|r| board.row_keys(r));
+        assert!(
+            keys.any(
+                |k| matches!(k, RowKey::Named(n) if n.id == space && n.kind == KeyKind::Space)
+            )
+        );
+        assert!(typing("x").is_err(), "letters come from the layout");
     }
 
     #[test]

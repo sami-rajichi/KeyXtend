@@ -149,6 +149,29 @@ fn app_depending_on_platform_is_not_a_d2_violation() {
 }
 
 #[test]
+fn the_build_tool_may_depend_on_a_module_but_not_on_a_platform_adapter() {
+    let ws = WorkspaceBuilder::new()
+        .member(
+            "xtask",
+            "xtask",
+            vec![
+                dep("kx-mod-a", DependencyKind::Normal),
+                dep("kx-platform-windows", DependencyKind::Normal),
+            ],
+        )
+        .member("kx-mod-a", "crates", vec![])
+        .member("kx-platform-windows", "crates", vec![])
+        .build();
+    let violations = d2_app_only_platform_and_module(&ws);
+    assert_eq!(violations.len(), 1);
+    assert!(
+        violations[0]
+            .message
+            .ends_with("platform adapter kx-platform-windows")
+    );
+}
+
+#[test]
 fn tool_depending_on_a_module_and_a_platform_adapter_is_not_a_d2_violation() {
     let ws = WorkspaceBuilder::new()
         .member(

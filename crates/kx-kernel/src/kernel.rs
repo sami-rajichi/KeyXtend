@@ -22,12 +22,12 @@ use kx_module_api::{
 };
 use kx_platform::Platform;
 use kx_settings::StoreError;
-use settings::{DISABLED_KEY, SPEC, switched_off};
+use settings::{DISABLED_KEY, switched_off};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use thiserror::Error;
 
-pub use settings::KernelSettings;
+pub use settings::{KernelSettings, SPEC};
 
 /// The kernel's own settings section id; no module may take it.
 pub const KERNEL: ModuleId = ModuleId::new("kernel");

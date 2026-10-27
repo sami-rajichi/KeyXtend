@@ -36,8 +36,6 @@ pub struct G8 {
     pub commit_mb: f64,
     /// Idle CPU, in percent of one core, in both modes.
     pub idle_core_pct: f64,
-    /// The program folder, in MB of 10⁶ bytes: the stage's `max_mb`.
-    pub size_mb: f64,
     /// The key pressed for the highlight check, by board id.
     pub press_key: String,
     /// How many presses are timed.
@@ -85,8 +83,7 @@ pub struct G8 {
     /// Longest wait past the recording time for `PresentMon` to stop and write its last rows, whether G8 or the owner
     /// started it.
     pub presentmon_stop_ms: u64,
-    /// Quit tries on a copy G8 started but could not open or cap, whose command window may not exist yet, and the
-    /// wait between them.
+    /// Quit tries on every copy a gate ends (`copyend`, `close::quit_started`), whose command window may not exist yet.
     pub quit_tries: u32,
     /// The wait between those quit tries, in ms.
     pub quit_try_ms: u64,
@@ -161,7 +158,6 @@ impl G8 {
             self.memory_mb,
             self.commit_mb,
             self.idle_core_pct,
-            self.size_mb,
             self.highlight_frames,
             self.highlight_worst_frames,
             self.char_ms,

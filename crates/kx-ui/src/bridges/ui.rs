@@ -1,6 +1,6 @@
 //! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go, the
-//! overlay and scroll states and the app's commands. It follows the system look and hears the hub's wakes on the Qt
-//! thread, so make one per app, in the root file.
+//! overlay and scroll states, the chip lane and the app's commands. It follows the system look and hears the hub's
+//! wakes on the Qt thread, so make one per app, in the root file.
 
 mod look;
 mod notices;
@@ -9,17 +9,16 @@ mod spots;
 mod texts;
 mod tray;
 mod wake;
+mod words;
 
 use super::{hub, qs};
 use crate::hub::{Hub, Mode, NULL};
-use cxx_qt::{CxxQtType, Threading};
+use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
 use kx_platform::ui::WatchGuard;
-use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(debug_assertions)]
 pub use wake::wakes;
-use wake::woken;
 
 /// The cxx-qt bridge that makes `Ui` a QML type.
 #[cxx_qt::bridge]
@@ -178,6 +177,22 @@ pub mod qobject {
         #[qinvokable]
         fn quit(&self) -> bool;
 
+        /// The chip lane and the menu's switches as JSON, for the top bar.
+        #[qinvokable]
+        fn words(&self) -> QString;
+
+        /// A click on chip `index` of lane `round`, the round the top bar drew.
+        #[qinvokable]
+        fn pick_chip(&self, round: i64, index: i32);
+
+        /// A click on the words menu, the email list or a control chip: `kind` names it and `arg` carries its number.
+        #[qinvokable]
+        fn words_ask(&self, kind: &QString, arg: i32);
+
+        /// A tap the top bar handles alone, such as the words menu button: it sounds as a key does.
+        #[qinvokable]
+        fn tapped(&self);
+
         /// The settings or face changed: read everything again.
         #[qsignal]
         fn settings_changed(self: Pin<&mut Self>);
@@ -225,6 +240,10 @@ pub mod qobject {
         /// The scroll state or its outline changed: read `scroll_json`.
         #[qsignal]
         fn scroll_changed(self: Pin<&mut Self>);
+
+        /// A new chip lane: read `words`.
+        #[qsignal]
+        fn words_changed(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}
@@ -248,23 +267,6 @@ impl Default for UiRust {
             hub,
             watch: None,
             drawn,
-        }
-    }
-}
-
-impl cxx_qt::Initialize for qobject::Ui {
-    fn initialize(mut self: Pin<&mut Self>) {
-        let Some(hub) = self.rust().hub.clone() else {
-            return;
-        };
-        let qt = self.qt_thread();
-        hub.set_waker(Box::new(move |wake| {
-            // A queue refused after the object is gone has nobody left to tell.
-            let _ = qt.queue(move |ui| woken(ui, wake));
-        }));
-        match hub.watch() {
-            Ok(watch) => self.as_mut().rust_mut().watch = Some(watch),
-            Err(e) => tracing::warn!(error = %e, "the system look will not be followed"),
         }
     }
 }

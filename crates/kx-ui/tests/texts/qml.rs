@@ -1,6 +1,6 @@
-//! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the assets
-//! laid out as the resources hold them with the icon plugin, and the picture folders); a change or a stray file fails
-//! it until it runs with `KX_BLESS=1`.
+//! Writes what the Qt Quick tests read (settings, texts, filled texts, the keyboard's golden board and states, the chip
+//! lanes and ask kinds, the assets laid out as the resources hold them with the icon plugin, and the picture folders);
+//! a change or a stray file fails it until it runs with `KX_BLESS=1`.
 
 use crate::files::keys_of;
 use crate::pictures::{PICTURES_QML, hand_over};
@@ -12,6 +12,7 @@ use kx_platform_fake::{
 };
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
+use kx_test_support::tempdir::TempDir;
 use kx_theme::assets::{ICON_EXT, SYSTEM_FONTS, bundle, icon_url};
 use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
@@ -146,6 +147,16 @@ fn ui(tag: &str) -> String {
     )
 }
 
+/// The ask kinds QML sends and the chip lanes the tests draw, as the English hub writes them.
+fn words() -> String {
+    let (hub, _host) = hub("en");
+    format!(
+        "{HEAD}{}{}",
+        var("asks", &crate::lanes::asks(), true),
+        var("lanes", &crate::lanes::lanes(&hub), true)
+    )
+}
+
 /// Golden file `name` of the keyboard as JSON.
 fn golden(name: &str) -> Value {
     let path = crate_path(FACE).join(format!("{name}.json"));
@@ -230,6 +241,7 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
         .collect();
     written.push(fixture("face.js".into(), &face()));
     written.push(fixture("assets.js".into(), &assets()));
+    written.push(fixture("words.js".into(), &words()));
     let order = var("texts", &crate::filled::order(), true);
     written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
     for f in std::fs::read_dir(dir())
@@ -247,18 +259,17 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
 #[test]
 fn the_bundle_is_laid_out_as_the_app_resources_hold_it() {
     let b = bundle(&crate_path(ASSETS)).expect("the bundle is found");
-    let mirror = crate_path(MIRROR);
-    if mirror.exists() {
-        std::fs::remove_dir_all(&mirror).expect("the old layout goes");
-    }
+    let fresh = TempDir::new("qmltest-assets").expect("a folder of its own");
     for f in b.icons.iter().chain(&b.fonts) {
-        let to = mirror.join(&f.name);
+        let to = fresh.path().join(&f.name);
         std::fs::create_dir_all(to.parent().expect("a folder")).expect("the folder is made");
         std::fs::copy(&f.file, &to).expect("the file is copied");
     }
+    crate::plugin::lay_out(fresh.path());
+    hand_over(fresh.path());
+    let mirror = crate_path(MIRROR);
+    crate::sync::sync(fresh.path(), &mirror);
     let icon = b.icons.first().expect("an icon");
     assert!(mirror.join(&icon.name).is_file());
-    crate::plugin::lay_out(&mirror);
-    hand_over(&mirror);
     assert!(mirror.join(PICTURES_QML).is_file());
 }

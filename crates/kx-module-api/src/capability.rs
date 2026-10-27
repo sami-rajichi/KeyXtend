@@ -32,7 +32,7 @@ capabilities! {
     PointerHook => "pointer-hook",
     /// Read the clipboard.
     ReadClipboard => "read-clipboard",
-    /// Read the text of the focused field in another app.
+    /// Read what is typed into the focused box, and the words before its cursor.
     ReadFocusedText => "read-focused-text",
     /// Record from the microphone.
     Microphone => "microphone",
@@ -46,6 +46,9 @@ capabilities! {
     Scroll => "scroll",
     /// Open the system's power dialog.
     Power => "power",
+    /// Reach the keyboard's face and its pointer notes: the keyboard offers the face, the ui draws it, the mouse module
+    /// sends the notes.
+    KeyboardUi => "keyboard-ui",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -91,5 +94,14 @@ mod tests {
     fn power_is_its_own_capability() {
         assert!(Capability::ALL.contains(&Capability::Power));
         assert_eq!(Capability::Power.name(), "power");
+    }
+
+    #[test]
+    fn keyboard_ui_is_its_own_capability() {
+        let ui = Capability::KeyboardUi;
+        assert_eq!(ui.name(), "keyboard-ui");
+        let others: Vec<_> = Capability::ALL.into_iter().filter(|&c| c != ui).collect();
+        assert_eq!(others.len(), Capability::ALL.len() - 1, "listed once");
+        assert!(others.iter().all(|c| c.name() != ui.name()), "{others:?}");
     }
 }

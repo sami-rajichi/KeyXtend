@@ -21,8 +21,9 @@ use crate::proc::{Memory, Process};
 use crate::stats;
 use crate::win::sleep_ms;
 
-/// Decimals of each MB reading in a round's error: a tenth of an MB, finer than any growth budget.
-const MB_DECIMALS: usize = 1;
+/// Decimals of each MB reading in a round's error and in `g8 predict`'s reading: a tenth of an MB, finer than any
+/// growth budget.
+pub(crate) const MB_DECIMALS: usize = 1;
 
 /// What the churn did, and private memory around its measured rounds.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -121,14 +122,25 @@ fn median(readings: &[Memory]) -> Option<Memory> {
     })
 }
 
-/// The growth of the working set and of the commit, from the first rounds' medians to the last rounds', each against
-/// `[g8] churn_growth_mb`.
-pub fn parts(g: &G8, c: &Churn) -> [Part; 2] {
-    let (b, a, most) = (c.first_median, c.last_median, g.churn_growth_mb);
+/// The growth of the working set and of the commit from `before` to `after`, named `names` in that order, each against
+/// `most`.
+pub(crate) fn growth(
+    names: [&'static str; 2],
+    before: Memory,
+    after: Memory,
+    most: f64,
+) -> [Part; 2] {
+    let ([working, commit], grown) = (names, after.less(before));
     [
-        Part::at_most("churn_working_mb", Some(a.working_mb - b.working_mb), most),
-        Part::at_most("churn_commit_mb", Some(a.commit_mb - b.commit_mb), most),
+        Part::at_most(working, Some(grown.working_mb), most),
+        Part::at_most(commit, Some(grown.commit_mb), most),
     ]
+}
+
+/// The growth from the first rounds' medians to the last rounds', each against `[g8] churn_growth_mb`.
+pub fn parts(g: &G8, c: &Churn) -> [Part; 2] {
+    let names = ["churn_working_mb", "churn_commit_mb"];
+    growth(names, c.first_median, c.last_median, g.churn_growth_mb)
 }
 
 /// Refuses churn settings that could pass with nothing churned, or whose two medians would share rounds.

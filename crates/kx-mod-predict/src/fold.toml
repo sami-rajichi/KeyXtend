@@ -1,0 +1,208 @@
+# Folding for loose matching (spec §6 "Matching", ADR-0032 decision 5): `fold.rs` lower-cases a word, then drops
+# each `drop` character and replaces each `map` key. Keys are lower case, as folding lower-cases first.
+
+# Latin-1 Supplement, Latin Extended-A and the letters of the shipped packs beyond them, after Lucene's
+# ASCIIFoldingFilter: accents go, ligatures spell out.
+[latin]
+# Combining diacritics go, so decomposed Latin-1 and Latin Extended-A letters fold as their precomposed forms do,
+# and İ, which lower-cases to i and U+0307, folds to i.
+# Decomposed letters of other scripts fold to their base letter, but their precomposed forms do not (`docs/items/P7.md`).
+drop = [
+    "\u0300", "\u0301", "\u0302", "\u0303", "\u0304", "\u0305", "\u0306", "\u0307",
+    "\u0308", "\u0309", "\u030A", "\u030B", "\u030C", "\u030D", "\u030E", "\u030F",
+    "\u0310", "\u0311", "\u0312", "\u0313", "\u0314", "\u0315", "\u0316", "\u0317",
+    "\u0318", "\u0319", "\u031A", "\u031B", "\u031C", "\u031D", "\u031E", "\u031F",
+    "\u0320", "\u0321", "\u0322", "\u0323", "\u0324", "\u0325", "\u0326", "\u0327",
+    "\u0328", "\u0329", "\u032A", "\u032B", "\u032C", "\u032D", "\u032E", "\u032F",
+    "\u0330", "\u0331", "\u0332", "\u0333", "\u0334", "\u0335", "\u0336", "\u0337",
+    "\u0338", "\u0339", "\u033A", "\u033B", "\u033C", "\u033D", "\u033E", "\u033F",
+    "\u0340", "\u0341", "\u0342", "\u0343", "\u0344", "\u0345", "\u0346", "\u0347",
+    "\u0348", "\u0349", "\u034A", "\u034B", "\u034C", "\u034D", "\u034E", "\u034F",
+    "\u0350", "\u0351", "\u0352", "\u0353", "\u0354", "\u0355", "\u0356", "\u0357",
+    "\u0358", "\u0359", "\u035A", "\u035B", "\u035C", "\u035D", "\u035E", "\u035F",
+    "\u0360", "\u0361", "\u0362", "\u0363", "\u0364", "\u0365", "\u0366", "\u0367",
+    "\u0368", "\u0369", "\u036A", "\u036B", "\u036C", "\u036D", "\u036E", "\u036F",
+]
+
+[latin.map]
+"ß" = "ss"
+"à" = "a"
+"á" = "a"
+"â" = "a"
+"ã" = "a"
+"ä" = "a"
+"å" = "a"
+"æ" = "ae"
+"ç" = "c"
+"è" = "e"
+"é" = "e"
+"ê" = "e"
+"ë" = "e"
+"ì" = "i"
+"í" = "i"
+"î" = "i"
+"ï" = "i"
+"ð" = "d"
+"ñ" = "n"
+"ò" = "o"
+"ó" = "o"
+"ô" = "o"
+"õ" = "o"
+"ö" = "o"
+"ø" = "o"
+"ù" = "u"
+"ú" = "u"
+"û" = "u"
+"ü" = "u"
+"ý" = "y"
+"þ" = "th"
+"ÿ" = "y"
+"ā" = "a"
+"ă" = "a"
+"ą" = "a"
+"ć" = "c"
+"ĉ" = "c"
+"ċ" = "c"
+"č" = "c"
+"ď" = "d"
+"đ" = "d"
+"ē" = "e"
+"ĕ" = "e"
+"ė" = "e"
+"ę" = "e"
+"ě" = "e"
+"ĝ" = "g"
+"ğ" = "g"
+"ġ" = "g"
+"ģ" = "g"
+"ĥ" = "h"
+"ħ" = "h"
+"ĩ" = "i"
+"ī" = "i"
+"ĭ" = "i"
+"į" = "i"
+"ı" = "i"
+"ĳ" = "ij"
+"ĵ" = "j"
+"ķ" = "k"
+"ĸ" = "q"
+"ĺ" = "l"
+"ļ" = "l"
+"ľ" = "l"
+"ŀ" = "l"
+"ł" = "l"
+"ń" = "n"
+"ņ" = "n"
+"ň" = "n"
+# Lucene spells it 'n; the apostrophe is left out, so the key stays letters.
+"ŉ" = "n"
+"ŋ" = "n"
+"ō" = "o"
+"ŏ" = "o"
+"ő" = "o"
+"œ" = "oe"
+"ŕ" = "r"
+"ŗ" = "r"
+"ř" = "r"
+"ś" = "s"
+"ŝ" = "s"
+"ş" = "s"
+"š" = "s"
+"ţ" = "t"
+"ť" = "t"
+"ŧ" = "t"
+"ũ" = "u"
+"ū" = "u"
+"ŭ" = "u"
+"ů" = "u"
+"ű" = "u"
+"ų" = "u"
+"ŵ" = "w"
+"ŷ" = "y"
+"ź" = "z"
+"ż" = "z"
+"ž" = "z"
+"ſ" = "s"
+# Latin Extended-B for the ro and vi packs: o and u with a horn, s and t with a comma below.
+"\u01A1" = "o"
+"\u01B0" = "u"
+"\u0219" = "s"
+"\u021B" = "t"
+# Latin Extended Additional for the vi pack: every Vietnamese letter, ạ (U+1EA1) to ỹ (U+1EF9), to its base.
+"\u1EA1" = "a"
+"\u1EA3" = "a"
+"\u1EA5" = "a"
+"\u1EA7" = "a"
+"\u1EA9" = "a"
+"\u1EAB" = "a"
+"\u1EAD" = "a"
+"\u1EAF" = "a"
+"\u1EB1" = "a"
+"\u1EB3" = "a"
+"\u1EB5" = "a"
+"\u1EB7" = "a"
+"\u1EB9" = "e"
+"\u1EBB" = "e"
+"\u1EBD" = "e"
+"\u1EBF" = "e"
+"\u1EC1" = "e"
+"\u1EC3" = "e"
+"\u1EC5" = "e"
+"\u1EC7" = "e"
+"\u1EC9" = "i"
+"\u1ECB" = "i"
+"\u1ECD" = "o"
+"\u1ECF" = "o"
+"\u1ED1" = "o"
+"\u1ED3" = "o"
+"\u1ED5" = "o"
+"\u1ED7" = "o"
+"\u1ED9" = "o"
+"\u1EDB" = "o"
+"\u1EDD" = "o"
+"\u1EDF" = "o"
+"\u1EE1" = "o"
+"\u1EE3" = "o"
+"\u1EE5" = "u"
+"\u1EE7" = "u"
+"\u1EE9" = "u"
+"\u1EEB" = "u"
+"\u1EED" = "u"
+"\u1EEF" = "u"
+"\u1EF1" = "u"
+"\u1EF3" = "y"
+"\u1EF5" = "y"
+"\u1EF7" = "y"
+"\u1EF9" = "y"
+
+# Arabic: harakat, the superscript alef and tatweel go; the hamza and wasla alef forms fold to bare alef, and alef
+# maksura to ya. Ta marbuta, hamza on waw or ya, and every other letter stay.
+[arabic]
+drop = [
+    "\u064B", # fathatan
+    "\u064C", # dammatan
+    "\u064D", # kasratan
+    "\u064E", # fatha
+    "\u064F", # damma
+    "\u0650", # kasra
+    "\u0651", # shadda
+    "\u0652", # sukun
+    "\u0670", # superscript alef
+    "\u0640", # tatweel
+]
+
+[arabic.map]
+"\u0623" = "\u0627" # alef with hamza above to alef
+"\u0625" = "\u0627" # alef with hamza below to alef
+"\u0622" = "\u0627" # alef with madda to alef
+"\u0671" = "\u0627" # alef wasla to alef
+"\u0649" = "\u064A" # alef maksura to ya
+
+# The apostrophe: the typographic one that phones and word processors type folds to the plain one that elided and
+# joined words keep (l'homme, don't), so the build tool and the tracker split and match words alike.
+[apostrophe.map]
+"’" = "'" # right single quotation mark to apostrophe
+
+# Greek: final sigma folds to sigma, so a word typed so far finds its longer forms.
+[greek.map]
+"\u03C2" = "\u03C3" # final sigma to sigma

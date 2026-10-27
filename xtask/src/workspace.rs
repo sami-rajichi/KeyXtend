@@ -207,6 +207,12 @@ pub(crate) fn root_and_section<T: serde::de::DeserializeOwned>(
     ))
 }
 
+/// The workspace root, from `cargo metadata` JSON.
+pub(crate) fn root(json: &str) -> Result<PathBuf, LoadError> {
+    let raw: raw::RawSections = serde_json::from_str(json).map_err(LoadError::Json)?;
+    Ok(PathBuf::from(raw.workspace_root))
+}
+
 /// Cargo's output folder, from `cargo metadata` JSON.
 pub(crate) fn target_dir(json: &str) -> Result<PathBuf, LoadError> {
     let raw: raw::RawTargetDir = serde_json::from_str(json).map_err(LoadError::Json)?;

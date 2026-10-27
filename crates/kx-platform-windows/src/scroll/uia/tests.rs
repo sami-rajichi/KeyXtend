@@ -2,11 +2,12 @@
 //! window that stopped reading its messages, which a read gives up on at its cap.
 
 use super::down::{Tree, View};
-use super::work::{amounts, client, look, step};
+use super::work::{amounts, look, step};
 use super::*;
 use crate::com::Com;
 use crate::scroll::testwin::{TestWin, WAIT, one_client};
 use crate::scroll::win::handle;
+use crate::uia::client;
 use kx_module_api::ports::{Point, Rect};
 use windows::Win32::UI::Accessibility::{
     ScrollAmount_NoAmount, ScrollAmount_SmallDecrement, ScrollAmount_SmallIncrement,

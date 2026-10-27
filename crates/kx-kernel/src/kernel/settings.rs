@@ -14,7 +14,7 @@ pub(crate) const MAX_LOG_MB: u32 = 100;
 pub(super) const DISABLED_KEY: &str = "disabled";
 
 /// How the store reads the kernel's section: version 1, with the defaults embedded.
-pub(super) static SPEC: SettingsSpec = SettingsSpec {
+pub static SPEC: SettingsSpec = SettingsSpec {
     version: 1,
     defaults: include_str!("../../defaults.toml"),
     migrations: &[],

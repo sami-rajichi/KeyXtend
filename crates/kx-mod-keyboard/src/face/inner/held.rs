@@ -29,6 +29,7 @@ impl Inner {
             self.typing.hold();
         }
         let tapped = self.typing.tap(&io, id, false);
+        self.follow_caps();
         if repeats && matches!(tapped, Ok(Tapped::Done)) {
             self.repeat.press(id.to_owned(), self.ports.clock.now());
             return Went { tapped, ended };

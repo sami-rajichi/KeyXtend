@@ -1,5 +1,6 @@
-// The top bar: move grip, suggestion chips, light or dark, the theme, the size buttons, minimise and close (mock-up
-// topBar plus the owner's sizes and theme button). It never mirrors: in Arabic only its texts change (ADR-0020).
+// The top bar: move grip, the chip lane and its menu button, light or dark, the theme, the size buttons, minimise and
+// close (mock-up topBar plus the owner's sizes and theme button). It never mirrors: in Arabic only its texts change
+// (ADR-0020).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -16,12 +17,18 @@ Item {
     required property int presets
     required property var sizes
     required property bool dark
-    // Suggestion chips, `{text, icon, ar}`; none until word suggestions come.
-    property var chips: []
+    // The chip lane as `Ui.words` gives it (null until read), and whether the keyboard's language reads right to left,
+    // as the bar's own texts on chips do.
+    property var lane: null
+    property bool rtl: false
 
-    // One signal per button; chips and sizes carry their index.
+    // One signal per button; sizes carry their index, a chip click its lane's round and its place, and a menu, list or
+    // control chip tap its `Ui.wordsAsk` kind and number. `tapped` is a lane tap the bar handles alone, such as the menu
+    // button, which sounds as a key does.
     signal grip
-    signal chip(int i)
+    signal pick(real round, int index)
+    signal ask(string kind, int arg)
+    signal tapped
     signal flip
     signal theme
     signal smaller
@@ -48,6 +55,7 @@ Item {
         id: b
         property string part: ""
         property string text: ""
+        property string icon: part ? bar.lk.icons.bar[part] : ""
         property string name: bar.res.bar(part)
         // The gates find each button by this id, whatever the language.
         property string uid: part ? bar.res.uid("bar", part) : ""
@@ -72,7 +80,7 @@ Item {
         Icon {
             visible: !b.text
             anchors.centerIn: parent
-            icon: b.text ? "" : bar.lk.icons.bar[b.part]
+            icon: b.text ? "" : b.icon
             base: bar.res.icons
             ext: bar.res.ext
             px: bar.sh.icon_px * bar.s
@@ -123,26 +131,45 @@ Item {
         }
     }
 
-    Row {
+    // The chip lane between the grip and the menu button, where the words menu opens in place.
+    WordLane {
+        id: words
         anchors.left: leftRow.right
+        anchors.right: menuButton.left
+        anchors.leftMargin: bar.sh.gap_px * bar.s
+        anchors.rightMargin: bar.sh.gap_px * bar.s
+        height: parent.height
+        view: bar.lane
+        lk: bar.lk
+        res: bar.res
+        s: bar.s
+        radius: bar.radius
+        rtl: bar.rtl
+        onPick: (round, index) => bar.pick(round, index)
+        onAsk: (kind, arg) => bar.ask(kind, arg)
+        onTapped: bar.tapped()
+        onTip: (name, at) => bar.tip(name, at)
+    }
+
+    // The words menu's button at the lane's right end, gone while no module runs; the menu opens on this row, in the
+    // chips' place.
+    Button {
+        id: menuButton
+        visible: !words.stopped
         anchors.right: rightRow.left
-        anchors.margins: bar.sh.gap_px * bar.s
+        anchors.rightMargin: bar.sh.gap_px * bar.s
         anchors.verticalCenter: parent.verticalCenter
-        clip: true
-        spacing: bar.lk.shape.chip.gap_px * bar.s
-        Repeater {
-            model: bar.chips
-            delegate: Chip {
-                required property var modelData
-                required property int index
-                chip: modelData
-                radius: bar.radius
-                lk: bar.lk
-                res: bar.res
-                s: bar.s
-                onClicked: bar.chip(index)
-            }
+        icon: bar.lk.icons.words.menu
+        name: bar.res.tr("words.menu")
+        uid: bar.res.uid(names.group, names.ids.menu)
+        lit: words.open
+        onClicked: {
+            words.open = !words.open;
+            bar.tapped();
         }
+    }
+    WordNames {
+        id: names
     }
 
     Row {

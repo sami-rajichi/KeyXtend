@@ -1,9 +1,9 @@
 //! A click on the shortcuts layer (spec §4.2): a cell's plan, and its shortcut sent with every latch held, after which
-//! the latches let go as after any key and a dead key's wait ends.
+//! the latches let go as after any key, a dead key's wait ends and word prediction hears a break.
 
 use super::{Io, TapError, Typing};
 use crate::plan::{Plan, layer_plan};
-use kx_module_api::ports::{ShortcutError, ShortcutId};
+use kx_module_api::ports::{Piece, ShortcutError, ShortcutId};
 
 impl Typing {
     /// Sends shortcut `id` with every latched key held around each step; once any of it reached the app, the latches
@@ -14,6 +14,7 @@ impl Typing {
         if reached(went) {
             self.dead = false;
             self.used();
+            self.tell(Piece::Break);
         }
         Ok(went?)
     }

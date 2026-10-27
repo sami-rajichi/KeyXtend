@@ -145,6 +145,13 @@ fn target_dir_reads_cargo_output_folder() {
 }
 
 #[test]
+fn root_reads_the_workspace_root() {
+    let json = r#"{"workspace_root": "/ws", "target_directory": "/ws/target"}"#;
+    assert_eq!(root(json).unwrap(), PathBuf::from("/ws"));
+    assert!(matches!(root("{}").unwrap_err(), LoadError::Json(_)));
+}
+
+#[test]
 fn target_dir_without_the_folder_is_a_json_error() {
     let err = target_dir(r#"{"workspace_root": "/ws"}"#).unwrap_err();
     assert!(matches!(err, LoadError::Json(_)), "got: {err}");

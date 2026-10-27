@@ -1,10 +1,12 @@
 //! Subcommand parsing for the xtask CLI.
 
 mod sounds;
+mod words;
 
 use std::fmt;
 
 pub(crate) use self::sounds::SoundsAction;
+pub(crate) use self::words::WordsAction;
 
 /// Exit code for a successful run.
 pub(crate) const EXIT_SUCCESS: u8 = 0;
@@ -27,8 +29,14 @@ const SUB_DEV_INSTALL: &str = "dev-install";
 const SUB_CHECK_UIACCESS: &str = "check-uiaccess";
 /// Renders, imports or joins sounds.
 const SUB_SOUNDS: &str = "sounds";
+/// Checks the word sources, lists the cleaned words and builds the word packs.
+const SUB_WORDS: &str = "words";
 /// Flag that turns `dev-cert` and `dev-install` into their undo.
 const FLAG_REMOVE: &str = "--remove";
+/// Prefix of every flag; a path argument never starts with it.
+const FLAG_PREFIX: &str = "--";
+/// Flag naming the folder a subcommand writes to, instead of its default.
+const FLAG_OUT: &str = "--out";
 
 /// Builds the usage line from the subcommand-name constants, so each name is
 /// spelled exactly once.
@@ -45,7 +53,13 @@ fn usage_line() -> String {
         format!("{SUB_CHECK_UIACCESS} <exe>"),
     ];
     forms.extend(sounds::forms(SUB_SOUNDS));
+    forms.extend(words::forms(SUB_WORDS));
     format!("usage: cargo xtask <{}>", forms.join("|"))
+}
+
+/// The subcommand that checks the word sources and downloads the missing ones, from the names above.
+pub(crate) fn words_fetch() -> String {
+    format!("{SUB_WORDS} {}", words::FETCH)
 }
 
 /// A parsed xtask subcommand.
@@ -88,6 +102,8 @@ pub(crate) enum Command {
     },
     /// Render, import or join sounds.
     Sounds(SoundsAction),
+    /// Check the word sources, list one language's words, or build the packs.
+    Words(WordsAction),
 }
 
 /// A command-line usage error. Its `Display` is the usage line.
@@ -98,6 +114,11 @@ impl fmt::Display for UsageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", usage_line())
     }
+}
+
+/// True if `arg` can be a path: it is not empty and is not a flag.
+fn is_path(arg: &str) -> bool {
+    !arg.is_empty() && !arg.starts_with(FLAG_PREFIX)
 }
 
 /// Parses xtask's arguments (excluding the program name) into a [`Command`].
@@ -129,160 +150,10 @@ pub(crate) fn parse(args: &[String]) -> Result<Command, UsageError> {
             Ok(Command::CheckUiAccess { exe: exe.clone() })
         }
         [name, rest @ ..] if name == SUB_SOUNDS => sounds::parse(rest).map(Command::Sounds),
+        [name, rest @ ..] if name == SUB_WORDS => words::parse(rest).map(Command::Words),
         _ => Err(UsageError),
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn args(values: &[&str]) -> Vec<String> {
-        values.iter().map(|v| (*v).to_string()).collect()
-    }
-
-    #[test]
-    fn unknown_subcommand_is_a_usage_error() {
-        assert_eq!(parse(&args(&["foo"])), Err(UsageError));
-    }
-
-    #[test]
-    fn no_subcommand_is_a_usage_error() {
-        assert_eq!(parse(&args(&[])), Err(UsageError));
-    }
-
-    #[test]
-    fn tidy_parses() {
-        assert_eq!(parse(&args(&["tidy"])), Ok(Command::Tidy));
-    }
-
-    #[test]
-    fn licences_parses() {
-        assert_eq!(parse(&args(&["licences"])), Ok(Command::Licences));
-    }
-
-    #[test]
-    fn dist_parses() {
-        assert_eq!(parse(&args(&["dist"])), Ok(Command::Dist));
-    }
-
-    #[test]
-    fn dco_parses_with_base_and_head() {
-        assert_eq!(
-            parse(&args(&["dco", "main", "HEAD"])),
-            Ok(Command::Dco {
-                base: "main".into(),
-                head: "HEAD".into(),
-            })
-        );
-    }
-
-    #[test]
-    fn dco_with_zero_arguments_is_a_usage_error() {
-        assert_eq!(parse(&args(&["dco"])), Err(UsageError));
-    }
-
-    #[test]
-    fn dco_with_one_argument_is_a_usage_error() {
-        assert_eq!(parse(&args(&["dco", "main"])), Err(UsageError));
-    }
-
-    #[test]
-    fn dco_with_three_arguments_is_a_usage_error() {
-        assert_eq!(
-            parse(&args(&["dco", "main", "HEAD", "extra"])),
-            Err(UsageError)
-        );
-    }
-
-    #[test]
-    fn stage_parses_alone() {
-        assert_eq!(parse(&args(&["stage"])), Ok(Command::Stage));
-        assert_eq!(parse(&args(&["stage", "x"])), Err(UsageError));
-    }
-
-    #[test]
-    fn dev_cert_parses_with_and_without_remove() {
-        assert_eq!(
-            parse(&args(&["dev-cert"])),
-            Ok(Command::DevCert { remove: false })
-        );
-        assert_eq!(
-            parse(&args(&["dev-cert", "--remove"])),
-            Ok(Command::DevCert { remove: true })
-        );
-    }
-
-    #[test]
-    fn dev_cert_with_another_argument_is_a_usage_error() {
-        assert_eq!(parse(&args(&["dev-cert", "x"])), Err(UsageError));
-    }
-
-    #[test]
-    fn dev_cert_remove_with_an_extra_argument_is_a_usage_error() {
-        assert_eq!(
-            parse(&args(&["dev-cert", "--remove", "x"])),
-            Err(UsageError)
-        );
-    }
-
-    #[test]
-    fn dev_install_with_two_folders_is_a_usage_error() {
-        assert_eq!(parse(&args(&["dev-install", "a", "b"])), Err(UsageError));
-    }
-
-    #[test]
-    fn dev_install_parses_a_folder() {
-        assert_eq!(
-            parse(&args(&["dev-install", "out/kb"])),
-            Ok(Command::DevInstall {
-                folder: "out/kb".into()
-            })
-        );
-    }
-
-    #[test]
-    fn dev_install_remove_parses_a_name() {
-        assert_eq!(
-            parse(&args(&["dev-install", "--remove", "kb"])),
-            Ok(Command::DevUninstall { name: "kb".into() })
-        );
-    }
-
-    #[test]
-    fn dev_install_without_a_folder_is_a_usage_error() {
-        assert_eq!(parse(&args(&["dev-install"])), Err(UsageError));
-        assert_eq!(parse(&args(&["dev-install", "--remove"])), Err(UsageError));
-    }
-
-    #[test]
-    fn check_uiaccess_parses_an_exe() {
-        assert_eq!(
-            parse(&args(&["check-uiaccess", "kb.exe"])),
-            Ok(Command::CheckUiAccess {
-                exe: "kb.exe".into()
-            })
-        );
-        assert_eq!(parse(&args(&["check-uiaccess"])), Err(UsageError));
-    }
-
-    #[test]
-    fn usage_error_message_mentions_every_subcommand() {
-        let message = UsageError.to_string();
-        let names = [
-            SUB_TIDY,
-            SUB_DCO,
-            SUB_LICENCES,
-            SUB_DIST,
-            SUB_STAGE,
-            SUB_DEV_CERT,
-            SUB_DEV_INSTALL,
-            SUB_CHECK_UIACCESS,
-            SUB_SOUNDS,
-            FLAG_REMOVE,
-        ];
-        for name in names {
-            assert!(message.contains(name), "usage message missing {name}");
-        }
-    }
-}
+mod tests;

@@ -1,8 +1,6 @@
 //! A process kx-gates watches, opened by id or given by the shell, to wait for its end or to measure its private
-//! working set, private commit and CPU time; and the size of a program's folder.
+//! working set, private commit and CPU time.
 #![cfg(windows)]
-
-use std::path::Path;
 
 use serde::Serialize;
 use windows::Win32::Foundation::{CloseHandle, FILETIME, HANDLE, WAIT_OBJECT_0};
@@ -12,15 +10,17 @@ use windows::Win32::System::ProcessStatus::{
 use windows::Win32::System::Threading::{
     GetExitCodeProcess, GetProcessId, GetProcessTimes, OpenProcess, PROCESS_ACCESS_RIGHTS,
     PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE,
-    PROCESS_VM_READ, WaitForSingleObject,
+    PROCESS_VM_READ, TerminateProcess, WaitForSingleObject,
 };
 
 use crate::win::size32;
 
 /// `FILETIME` ticks (100 ns) in one millisecond.
 const TICKS_PER_MS: f64 = 10_000.0;
-/// Bytes in one MB, as spec §10 counts memory and size.
+/// Bytes in one MB, as spec §10 counts memory.
 pub const MB: f64 = 1_000_000.0;
+/// The exit code a copy a gate had to end leaves.
+const ENDED_CODE: u32 = 1;
 
 /// A process's private memory, in MB.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -29,6 +29,16 @@ pub struct Memory {
     pub working_mb: f64,
     /// The private commit: what the process holds in memory or paged out, which a trim never lowers.
     pub commit_mb: f64,
+}
+
+impl Memory {
+    /// This less `b`, each figure on its own: a growth (after less before) or a part (on less off).
+    pub fn less(self, b: Self) -> Self {
+        Self {
+            working_mb: self.working_mb - b.working_mb,
+            commit_mb: self.commit_mb - b.commit_mb,
+        }
+    }
 }
 
 /// A process handle and the process's id; the handle closes on drop.
@@ -84,6 +94,14 @@ impl Process {
     pub fn ended(&self) -> bool {
         // SAFETY: our live handle; a wait of zero ms never blocks.
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
+    }
+
+    /// Ends the process through our handle, opened `to_measure` or given by the shell, for a copy that would not quit.
+    #[allow(unsafe_code, reason = "Ends the process our own handle names.")]
+    pub fn end(&self) -> Result<(), String> {
+        // SAFETY: our live handle; a handle without the right to end the process makes the call fail, never misbehave.
+        unsafe { TerminateProcess(self.handle, ENDED_CODE) }
+            .map_err(|e| format!("end process {}: {e}", self.pid))
     }
 
     /// Its exit code once it has ended; none while it runs, or when Windows cannot say.
@@ -156,38 +174,10 @@ fn ticks(t: FILETIME) -> f64 {
     ((u64::from(t.dwHighDateTime) << u32::BITS) | u64::from(t.dwLowDateTime)) as f64
 }
 
-/// Every file's size under `dir`, in MB; links are not followed.
-pub fn folder_mb(dir: &Path) -> Result<f64, String> {
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "Sizes are far below 2^53 bytes."
-    )]
-    Ok(bytes(dir)? as f64 / MB)
-}
-
-/// Every file's size under `dir`, in bytes.
-fn bytes(dir: &Path) -> Result<u64, String> {
-    let err = |e: std::io::Error| format!("{}: {e}", dir.display());
-    let mut sum = 0;
-    for entry in std::fs::read_dir(dir).map_err(err)? {
-        let entry = entry.map_err(err)?;
-        let meta = std::fs::symlink_metadata(entry.path()).map_err(err)?;
-        sum += if meta.is_dir() {
-            bytes(&entry.path())?
-        } else if meta.is_file() {
-            meta.len()
-        } else {
-            0
-        };
-    }
-    Ok(sum)
-}
-
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use std::process::{Command, Stdio};
-
-    use kx_test_support::tempdir::TempDir;
 
     use super::*;
 
@@ -262,6 +252,26 @@ mod tests {
     }
 
     #[test]
+    fn a_process_ended_through_its_handle_leaves_the_ended_code_never_a_clean_one() {
+        let mut child = Command::new("cmd")
+            .args(["/C", "pause"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("starts");
+        let p = Process::to_measure(child.id()).expect("opens");
+        assert!(!p.ended(), "it waits for a key");
+        p.end().expect("ends");
+        child.wait().expect("waits for its end");
+        assert_eq!(p.exit_code(), Some(ENDED_CODE));
+        assert_ne!(
+            ENDED_CODE,
+            crate::copyend::CLEAN,
+            "an end never reads as quit"
+        );
+    }
+
+    #[test]
     fn an_ended_process_gives_its_exit_code_and_a_running_one_none() {
         let mut child = Command::new("cmd")
             .args(["/C", "exit", "7"])
@@ -278,16 +288,5 @@ mod tests {
                 .exit_code(),
             None
         );
-    }
-
-    #[test]
-    fn a_folder_counts_every_file_below_it_in_mb() {
-        let dir = TempDir::new("gates-size").expect("temp folder");
-        let half = vec![0u8; 500_000];
-        std::fs::create_dir(dir.path().join("sub")).expect("sub folder");
-        std::fs::write(dir.path().join("a"), &half).expect("file");
-        std::fs::write(dir.path().join("sub").join("b"), &half).expect("file");
-        assert!((folder_mb(dir.path()).expect("sized") - 1.0).abs() < 1e-9);
-        assert!(folder_mb(&dir.path().join("none")).is_err());
     }
 }

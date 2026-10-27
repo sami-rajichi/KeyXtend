@@ -7,7 +7,7 @@ use kx_mod_keyboard::{Assist, Role};
 use kx_mod_mouse::MouseSettings;
 use kx_platform_windows::screen;
 use serde_json::{Value, json};
-use spike_core::uia;
+use spike_core::geom;
 
 use crate::apps::{self, Ctx, Opened};
 use crate::g5play::{self, Hold, Played};
@@ -125,7 +125,7 @@ fn drive(
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring target-window to the front".to_string());
     }
-    let p = uia::centre(&win::rect(target.hwnd)?);
+    let p = geom::centre(&win::rect(target.hwnd)?);
     let hold = Hold {
         ms: u64::from(mouse.hold_ms),
         radius_px: g5play::radius(mouse.still_px, screen::dpi_of(&g5play::dot(p))),

@@ -96,6 +96,53 @@ pub struct TrayIcons {
     pub quit: String,
 }
 
+/// The chip lane: its chip kinds as the lane names them, the password note, the menu button and the menu's items.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct WordsIcons {
+    /// An email domain chip.
+    pub domain: String,
+    /// A known email chip.
+    pub email: String,
+    /// The More chip, which opens the email list.
+    pub more: String,
+    /// The Undo chip, which brings back the word just forgotten.
+    pub undo: String,
+    /// The password box note.
+    pub locked: String,
+    /// The menu button.
+    pub menu: String,
+    /// Forget a word, and the mark on each chip in forget mode.
+    pub forget: String,
+    /// Pause learning.
+    pub pause: String,
+    /// Resume learning.
+    pub resume: String,
+    /// Suggestions on or off.
+    pub power: String,
+    /// Cancel: ends forget mode, closes the menu or the email list.
+    pub cancel: String,
+}
+
+impl WordsIcons {
+    /// Every name with where it is used, such as `words.menu`.
+    fn named(&self) -> [(&'static str, &str); 11] {
+        [
+            ("words.domain", &self.domain),
+            ("words.email", &self.email),
+            ("words.more", &self.more),
+            ("words.undo", &self.undo),
+            ("words.locked", &self.locked),
+            ("words.menu", &self.menu),
+            ("words.forget", &self.forget),
+            ("words.pause", &self.pause),
+            ("words.resume", &self.resume),
+            ("words.power", &self.power),
+            ("words.cancel", &self.cancel),
+        ]
+    }
+}
+
 /// Every icon name, by the part that shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -118,6 +165,8 @@ pub struct Icons {
     pub notice: NoticeIcons,
     /// The tray icon and its menu.
     pub tray: TrayIcons,
+    /// The chip lane and its menu.
+    pub words: WordsIcons,
 }
 
 impl Icons {
@@ -154,9 +203,11 @@ impl Icons {
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
+        let words = self.words.named().into_iter();
         let keys = by_id("keys", &self.keys);
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)
+            .chain(words.map(|(at, v)| (at.to_string(), v)))
             .collect()
     }
 

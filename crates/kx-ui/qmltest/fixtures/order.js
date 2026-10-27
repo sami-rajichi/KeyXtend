@@ -6,9 +6,9 @@ var texts = {
       "more": "و3 إعدادات أخرى",
       "names": [
         "bubble_corner",
-        "key_apps"
+        "erase_gap_ms"
       ],
-      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner و key_apps و3 إعدادات أخرى."
+      "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner و erase_gap_ms و3 إعدادات أخرى."
     },
     "spaces": [
       {
@@ -64,9 +64,9 @@ var texts = {
       "more": "and 3 more",
       "names": [
         "bubble_corner",
-        "key_apps"
+        "erase_gap_ms"
       ],
-      "text": "Some mystery settings were not valid, so they went back to their defaults: bubble_corner, key_apps and 3 more."
+      "text": "Some mystery settings were not valid, so they went back to their defaults: bubble_corner, erase_gap_ms and 3 more."
     },
     "spaces": [
       {
@@ -122,9 +122,9 @@ var texts = {
       "more": "et 3 autres",
       "names": [
         "bubble_corner",
-        "key_apps"
+        "erase_gap_ms"
       ],
-      "text": "Certains paramètres de « mystery » n’étaient pas valides et ont repris leur valeur par défaut : bubble_corner, key_apps et 3 autres."
+      "text": "Certains paramètres de « mystery » n’étaient pas valides et ont repris leur valeur par défaut : bubble_corner, erase_gap_ms et 3 autres."
     },
     "spaces": [
       {

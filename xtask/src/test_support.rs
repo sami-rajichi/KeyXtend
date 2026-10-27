@@ -78,6 +78,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
         skip_dirs: vec!["target".to_string()],
         app_dir: "apps".to_string(),
         tool_dir: "tools".to_string(),
+        build_tool: "xtask".to_string(),
         module_prefix: "kx-mod-".to_string(),
         platform_prefix: "kx-platform-".to_string(),
         module_allowed: vec!["kx-module-api".to_string()],
@@ -170,6 +171,18 @@ pub(crate) fn stage_json() -> serde_json::Value {
 /// The test stage settings, deserialized.
 pub(crate) fn stage_config() -> StageConfig {
     serde_json::from_value(stage_json()).expect("the test settings are valid")
+}
+
+/// `len` bytes that deflate cannot shrink: a xorshift stream.
+pub(crate) fn noise(len: usize) -> Vec<u8> {
+    let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
+    let mut next = || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        x.to_le_bytes()[0]
+    };
+    (0..len).map(|_| next()).collect()
 }
 
 /// The project's DCO config: the `Signed-off-by` trailer, with `dependabot[bot]` exempt.

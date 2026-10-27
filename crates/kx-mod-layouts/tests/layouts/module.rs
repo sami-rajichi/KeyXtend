@@ -51,7 +51,11 @@ fn it_provides_the_layouts_of_the_app_in_front() {
     assert_eq!(shorts, ["EN", "FR", "ع"]);
     assert_eq!(layouts.pick(fr), Ok(()));
     assert!(layouts.refresh());
-    assert_eq!(heard.ids(), [fr], "the change goes out on the bus");
+    assert_eq!(
+        heard.ids(),
+        [en, fr],
+        "the start, then the change, go out on the bus"
+    );
 }
 
 #[test]

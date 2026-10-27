@@ -174,6 +174,33 @@ dpad =
     .down = Défiler vers le bas
     .stop = Arrêter le défilement
 
+## La barre de suggestions : le nom d’une suggestion pour les lecteurs d’écran ($word est son texte), aussi en mode
+## d’oubli. Puis les suggestions Autres adresses et Annuler, le nom de la barre vide et la note d’un champ de mot
+## de passe.
+chip =
+    .name = Suggestion : { $word }
+    .forget-name = Oublier : { $word }
+    .more = Autres adresses e-mail
+    .undo = Annuler
+    .none = Aucune suggestion
+    .locked = Champ de mot de passe : rien n’est proposé ni appris
+
+## Le menu des suggestions : son bouton, ses lignes et leurs libellés courts, et le bouton Annuler qui quitte le
+## mode d’oubli ou ferme la liste des adresses.
+words =
+    .menu = Menu des suggestions
+    .forget = Oublier un mot
+    .forget-short = Oublier
+    .cancel = Annuler
+    .pause = Mettre l’apprentissage en pause
+    .pause-short = Pause
+    .resume = Reprendre l’apprentissage
+    .resume-short = Reprendre
+    .off = Désactiver les suggestions
+    .off-short = Désactiver
+    .on = Activer les suggestions
+    .on-short = Activer
+
 ## Clair, sombre ou comme Windows, par valeur de [ui] mode.
 mode =
     .light = Clair
@@ -225,7 +252,7 @@ page =
     .on = Page suivante
     .of = { $at } sur { $count }
 
-## Notifications, par clé de kx-module-api. $module est un nom de module et $keys une liste de paramètres.
+## Notifications, par clé de kx-module-api. $module est un nom de module, $keys une liste de paramètres et $lang un nom de langue.
 notice =
     .settings-reset = Certains paramètres de « { $module } » n’étaient pas valides et ont repris leur valeur par défaut : { $keys }.
     .settings-restored = Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.
@@ -246,6 +273,9 @@ notice =
     .scroll-stopped = Le pavé de défilement s’est arrêté après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
     .power-failed = La fenêtre Marche/Arrêt du système n’a pas pu s’ouvrir.
     .power-stopped = La touche Marche/Arrêt s’est arrêtée après une erreur. Redémarrez { -app } pour l’utiliser de nouveau.
+    .words-damaged = Le fichier des mots appris était endommagé : l’apprentissage repart de zéro.
+    .words-missing = La liste de mots pour { $lang } est introuvable : les suggestions viennent seulement des mots que vous tapez.
+    .words-locked = Les mots appris n’ont pas pu être déverrouillés : rien de ce qui est appris n’est enregistré cette fois.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
@@ -254,6 +284,7 @@ module =
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris
     .power = Touche Marche/Arrêt
+    .predict = Suggestions de mots
     .scroll = Pavé de défilement
     .ui = Apparence
 

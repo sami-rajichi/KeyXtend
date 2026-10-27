@@ -4,8 +4,9 @@
 
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
-    InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, PointerHook, PointerHookKey,
-    PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey, Shortcuts, ShortcutsKey,
+    FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey,
+    PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey,
+    SealedStore, SealedStoreKey, Shortcuts, ShortcutsKey, WordPacks, WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -31,6 +32,12 @@ pub struct Services {
     pub shortcuts: Arc<dyn Shortcuts>,
     /// Opens the system's power dialog, for the power module.
     pub power: Arc<dyn PowerDialog>,
+    /// Watches the focused box, for the modules that read typed text.
+    pub field: Arc<dyn FieldWatch>,
+    /// Opens the word packs, for prediction.
+    pub packs: Arc<dyn WordPacks>,
+    /// Keeps the learned words sealed, for prediction.
+    pub sealed: Arc<dyn SealedStore>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -59,7 +66,16 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_scroll::ScrollModule::default()));
     #[cfg(feature = "mod-power")]
     list.push(Box::new(kx_mod_power::PowerModule::default()));
+    #[cfg(feature = "mod-predict")]
+    list.push(Box::new(kx_mod_predict::PredictModule::default()));
     list
+}
+
+/// The layout source the kernel serves: the platform's, which debug builds wrap so the churn can turn Caps Lock over.
+fn layout_source(source: Arc<dyn LayoutSource>) -> Arc<dyn LayoutSource> {
+    #[cfg(debug_assertions)]
+    let source = crate::layouts_debug::wrap(source);
+    source
 }
 
 /// The grants: each shipped module may use what its manifest declares, since the app vouches for what it ships.
@@ -95,11 +111,14 @@ impl Boot {
         let modules = modules(&hub);
         let mut kernel = Kernel::new(platform, policy(&modules));
         kernel.provide_platform::<InputInjectorKey>(services.injector)?;
-        kernel.provide_platform::<LayoutSourceKey>(services.layouts)?;
+        kernel.provide_platform::<LayoutSourceKey>(layout_source(services.layouts))?;
         kernel.provide_platform::<PointerHookKey>(services.pointer)?;
         kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
         kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;
         kernel.provide_platform::<PowerDialogKey>(services.power)?;
+        kernel.provide_platform::<FieldWatchKey>(services.field)?;
+        kernel.provide_platform::<WordPacksKey>(services.packs)?;
+        kernel.provide_platform::<SealedStoreKey>(services.sealed)?;
         for module in modules {
             kernel.add(module)?;
         }

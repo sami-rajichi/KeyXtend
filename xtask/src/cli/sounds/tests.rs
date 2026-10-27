@@ -1,9 +1,6 @@
+use super::super::tests::args;
 use super::super::{Command, parse as parse_all};
 use super::*;
-
-fn args(values: &[&str]) -> Vec<String> {
-    values.iter().map(|v| (*v).to_string()).collect()
-}
 
 fn sounds(action: SoundsAction) -> Command {
     Command::Sounds(action)

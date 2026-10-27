@@ -7,7 +7,7 @@
 )]
 
 use crate::known;
-use kx_mod_keyboard::{KeyboardSettings, MANIFEST};
+use kx_mod_keyboard::{KeyboardSettings, MANIFEST, Pause};
 use kx_module_api::ports::{
     InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey, LayoutTable, Layouts,
     LayoutsKey, Shortcuts, ShortcutsKey,
@@ -19,7 +19,9 @@ use kx_platform_fake::{
 };
 pub use kx_test_support::host::FakeHost;
 use std::any::Any;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::thread::{self, ThreadId};
+use std::time::Duration;
 
 /// The captured tables: English, French AZERTY and Arabic (102) AZERTY.
 pub const GOLDEN: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
@@ -68,7 +70,41 @@ pub fn labelled(names: &[&str]) -> FakeLayouts {
     FakeLayouts::new(names.iter().map(|n| table(n)).collect())
 }
 
-/// The fakes behind the four typing services.
+/// What a test runs inside each pause.
+type During = Box<dyn FnMut() + Send>;
+
+/// A pause that never sleeps: it notes each wait and the thread that waited, and runs `during` inside it.
+#[derive(Default)]
+pub struct FakePause {
+    waits: Mutex<Vec<(ThreadId, Duration)>>,
+    during: Mutex<Option<During>>,
+}
+
+impl FakePause {
+    /// Runs `then` inside each wait from now on.
+    pub fn during(&self, then: impl FnMut() + Send + 'static) {
+        *self.during.lock().unwrap() = Some(Box::new(then));
+    }
+
+    /// The waits since the last look, each with the thread that waited.
+    pub fn waits(&self) -> Vec<(ThreadId, Duration)> {
+        std::mem::take(&mut *self.waits.lock().unwrap())
+    }
+}
+
+impl Pause for FakePause {
+    fn wait(&self, gap: Duration) {
+        self.waits
+            .lock()
+            .unwrap()
+            .push((thread::current().id(), gap));
+        if let Some(then) = self.during.lock().unwrap().as_mut() {
+            then();
+        }
+    }
+}
+
+/// The fakes behind the four typing services, and the pause between a picked word's keys.
 #[derive(Clone)]
 pub struct Fakes {
     /// Behind the input injector.
@@ -81,6 +117,10 @@ pub struct Fakes {
     pub shortcuts: FakeShortcuts,
     /// The kernel's clock, which moves only when a test says so.
     pub clock: FakeClock,
+    /// Served as the layout source instead of `source` when set, such as a wrapper over it.
+    pub served: Option<Arc<dyn LayoutSource>>,
+    /// The pause the module waits on between a picked word's keys.
+    pub pause: Arc<FakePause>,
 }
 
 impl Fakes {
@@ -94,6 +134,8 @@ impl Fakes {
             layouts: Arc::new(labelled(names)),
             shortcuts,
             clock: FakeClock::new(Mono::default()),
+            served: None,
+            pause: Arc::default(),
         }
     }
 
@@ -101,7 +143,10 @@ impl Fakes {
     pub fn store(&self, host: &mut FakeHost, leave: Option<ServiceId>) {
         host.clock = Arc::new(self.clock.clone());
         let injector: Arc<dyn InputInjector> = self.injector.clone();
-        let source: Arc<dyn LayoutSource> = self.source.clone();
+        let source: Arc<dyn LayoutSource> = match &self.served {
+            Some(served) => Arc::clone(served),
+            None => self.source.clone(),
+        };
         let layouts: Arc<dyn Layouts> = self.layouts.clone();
         let shortcuts: Arc<dyn Shortcuts> = Arc::new(self.shortcuts.clone());
         let stored: [(ServiceId, Box<dyn Any + Send + Sync>); 4] = [

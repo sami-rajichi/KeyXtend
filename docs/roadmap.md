@@ -79,7 +79,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G5 Hold engine (core) | With Right-click on, over normal windows by the gate and over an admin window in the owner's hands-on check: short clicks and drags are unaffected, a 1.5 s still hold becomes a right-click, and the hook never times out |
 | G6 Scroll (core) | Scrolls up and down in a long Notepad text, a Chrome page and an Explorer list, and left and right where the content overflows sideways (always in Chrome), using the last point outside the keyboard as the target. Word was dropped, as its sign-in and subscription windows block every test (owner, 2026-10-16) |
 | G7 Arabic UI | Joined legends, `لا`, harakat on ◌ (Rubik for Dolch, with Noto Sans Arabic as fallback), a panel whose Arabic text reads right to left in place (ADR-0020), and an Arabic text field whose caret moves correctly |
-| G8 Budgets | Spec §10 targets on the development PC and in weak mode: after a warm-up, and again after a sweep over every key with a mouse mode on (ADR-0028), at most 100 MB of private working set and 140 MB of private commit, staying flat while tips, the language list and themes come and go (churn, ADR-0021). One run has the Arabic layout in front. Frame times measured with PresentMon; a pressed key lights up within the next frame at the median and one refresh later at worst, as Windows' On-Screen Keyboard (ADR-0025) |
+| G8 Budgets | Spec §10 targets on the development PC and in weak mode: after a warm-up, and again after a sweep over every key with a mouse mode on (ADR-0028), at most 100 MB of private working set and 140 MB of private commit, staying flat while tips, the language list and themes come and go (churn, ADR-0021). One run has the Arabic layout in front. From P7, a typing churn (`g8 predict`) types `[g8_predict]` words of one language through the product's chips after a warm-up, and private memory grows at most `[g8] churn_growth_mb`. Its growth with every language in turn, and the idle predict memory against the owner's accepted figure, are readings, never a fail. Frame times measured with PresentMon; a pressed key lights up within the next frame at the median and one refresh later at worst, as Windows' On-Screen Keyboard (ADR-0025) |
 | G9 Window flags survive | No-focus, tool-window and topmost flags stay set after hide/show, a topmost toggle, a click-through toggle and a resize |
 | G10 Screen readers | Narrator and NVDA read and activate every key. Each key is also hit-tested at its centre, as Narrator's mouse mode reads what is under the pointer, and must be found there |
 | G11 DPI | 100 %, 150 % and the largest scale Windows offers on the development PC's one screen (175 % at 1920×1080) keep the size and sharpness. The move between mixed-DPI monitors is checked by beta testers in P14 |
@@ -98,6 +98,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
 | G25 Language and shortcuts (core) | The language key also switches the target app's input language; the shortcuts layer's Copy, Paste, Undo, Copy all and Switch app, Win+V and the Power key's dialog (always cancelled) work from the keyboard |
 | G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact. The Japanese IME part (key presses produce 日本) moved to F16 |
+| G27 Word prediction (P7) | With learning paused, each case in `kx-gates-p7.toml` `[g27]` (one per language: EN, FR and AR) is typed by the product's keys in the test window and its first chip picked; the box then holds the typed text less the prefix, the word and its script's gap. Edge 6: after a click moves the caret with the mouse module off, a pick types nothing |
 
 **Decision rule:** ADR-0011. **Kept:** `cargo xtask dev-cert`, `dev-install` and `check-uiaccess`, and the spike code (ADR-0014). **Deleted:** screenshots, logs, scratch scripts and virtual PCs. The owner decides when the test certificate and the Program Files test install go.
 
@@ -186,13 +187,15 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 7 — Word prediction — v0.4
 
-- `kx-mod-predict`: trie + n-gram, wordfreq seed data (CC-BY-SA, separate files), the learner, `@` domains, saved emails, hold-@ and hold-P.
-- Password-field detection with UIA `IsPassword` (intercept event).
-- **Edge cases:** mixed scripts in one word, an RTL caret, a very long token, learning off in password fields, "forget word".
+- `kx-mod-predict` (spec §6, ADR-0032): word lists and word chains (n-grams) seeded from wordfreq, Wikipedia and Tatoeba (separate files), the learner, `@` domains, `@@` emails, the chips and their menu.
+- `kx-crypto`, now with its first user here (moved from P8, owner, 2026-10-24): the learned words are encrypted.
+- Password-field detection with UIA `IsPassword`, and the few words before the cursor read through UIA.
+- **Edge cases:** mixed scripts in one word, an RTL caret, a very long token, learning off in password fields, "forget word", a click in the middle of a word, an `@@` already in the text, a layout switch mid-word, a chip picked while Ctrl is latched, a damaged learned-words file.
+- **Gates to pass here:** G21 on the product (no chips in a password box), G27 word prediction, and G8 with its predict part.
 
 ## Phase 8 — Clipboard history — v0.5
 
-- `kx-mod-clipboard` plus the `media` worker (thumbnails), and `kx-crypto`, its first user (moved from P3).
+- `kx-mod-clipboard` plus the `media` worker (thumbnails), over `kx-crypto` (built in P7).
 - The encrypted store, retention, exclusion formats, the paged panel, multi-paste, pasting files and images, and Win+V routing (a setting, moved from P6).
 - **Edge cases:**
   - a 200 MB image;
@@ -208,7 +211,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
   - Hello unavailable (fall back to the master password);
   - a corrupt file;
   - a wrong import format;
-  - a locked vault during hold-P;
+  - a locked vault when a password box asks for a fill;
   - filling while the focus changes.
 
 ## Phase 10 — Selection helper — v0.6

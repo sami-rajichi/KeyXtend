@@ -52,6 +52,8 @@ enum Step {
     Latch(Vec<Scan>),
     /// Scrolling starts or ends.
     Scroll(bool),
+    /// Presses become wanted, or no longer.
+    Wanted(bool),
     /// The host stops mid-run and starts again with the same engine.
     Release,
     /// The hook misses the left button's release.
@@ -75,6 +77,7 @@ fn command() -> impl Strategy<Value = Step> {
         any::<bool>().prop_map(Step::Rclick),
         subsequence(mods, 0..=MODS).prop_map(Step::Latch),
         any::<bool>().prop_map(Step::Scroll),
+        any::<bool>().prop_map(Step::Wanted),
     ]
 }
 
@@ -116,6 +119,21 @@ fn presses(notes: &[Note]) -> usize {
         .count()
 }
 
+/// `notes` with every press note left out.
+fn unpressed(notes: &[Note]) -> Vec<Note> {
+    let kept = |n: &&Note| !matches!(n, Note::Pressed { .. });
+    notes.iter().filter(kept).copied().collect()
+}
+
+/// `steps` with presses never wanted.
+fn unwanted(steps: &[(u64, Step)]) -> Vec<(u64, Step)> {
+    let off = |step: &Step| match step {
+        Step::Wanted(_) => Step::Wanted(false),
+        other => other.clone(),
+    };
+    steps.iter().map(|(gap, step)| (*gap, off(step))).collect()
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
@@ -146,7 +164,7 @@ proptest! {
     fn with_nothing_on_everything_passes(steps in run(physical())) {
         let mut rig = Rig::play(&steps, false, Model::Strict);
         rig.finish();
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.notes.is_empty());
         prop_assert!(!rig.e.needs_hook());
     }
@@ -162,7 +180,7 @@ proptest! {
         rig.calm();
         rig.more(&after);
         rig.finish();
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.notes.is_empty());
         prop_assert!(!rig.e.needs_hook());
     }
@@ -195,19 +213,54 @@ proptest! {
     fn scrolling_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
         let mut rig = Rig::play(&[(0, Step::Scroll(true))], false, Model::Strict);
         rig.more(&steps);
-        prop_assert_eq!((rig.dropped, rig.sent), (0, 0));
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
-        prop_assert_eq!(presses(&rig.notes), rig.pressed);
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
         let badge = |n: &Note| matches!(n, Note::Pressed { .. } | Note::Moved { .. });
         prop_assert!(rig.notes.iter().all(badge), "{:?}", rig.notes);
     }
 
-    /// Each physical press is noted once while scrolling and never otherwise, whatever the modes do with it.
+    /// While presses are wanted with no mode, latch or scroll, every event passes, nothing is sent, and only presses
+    /// are noted, each once.
     #[test]
-    fn presses_are_noted_once_and_only_while_scrolling(rclick in any::<bool>(), steps in mixed()) {
-        let mut rig = Rig::play(&steps, rclick, Model::Strict);
-        rig.finish();
+    fn wanted_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
+        let mut rig = Rig::play(&[(0, Step::Wanted(true))], false, Model::Strict);
+        rig.more(&steps);
+        prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
+        prop_assert!(rig.e.needs_hook());
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
         prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
+        prop_assert!(rig.notes.iter().all(|n| matches!(n, Note::Pressed { .. })), "{:?}", rig.notes);
+    }
+
+    /// Each physical press is noted once, at its own event, while scrolling or wanted and never otherwise, whatever the
+    /// modes do with it; while presses are wanted the engine always needs the hook.
+    #[test]
+    fn presses_are_noted_once_and_only_while_scrolling_or_wanted(
+        rclick in any::<bool>(),
+        steps in mixed(),
+    ) {
+        let mut rig = Rig::play(&steps, rclick, Model::Strict);
+        prop_assert_eq!(rig.unhooked, 0, "wanted, yet no hook needed");
+        rig.finish();
+        prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
+        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
+    }
+
+    /// Wanting presses never changes what happens to an event: the same input in order, drops, OS state and other
+    /// notes as without it.
+    #[test]
+    fn wanted_changes_no_event(rclick in any::<bool>(), steps in mixed()) {
+        let mut with = Rig::play(&steps, rclick, Model::Strict);
+        let mut without = Rig::play(&unwanted(&steps), rclick, Model::Strict);
+        prop_assert_eq!(&with.os.buttons, &without.os.buttons);
+        prop_assert_eq!(&with.os.keys, &without.os.keys);
+        with.finish();
+        without.finish();
+        prop_assert_eq!(&with.sent, &without.sent);
+        prop_assert_eq!(with.dropped, without.dropped);
+        prop_assert_eq!(unpressed(&with.notes), unpressed(&without.notes));
     }
 
     /// Each hold's ring is closed once, by an end or a fire, before the next starts, so the overlay never keeps one.

@@ -69,7 +69,7 @@ impl Event for AssistAsk {
     const NAME: &'static str = "assist-ask";
 }
 
-/// Feedback for the UI; its `Debug` hides every point.
+/// Feedback for the UI; it needs `KeyboardUi` (ADR-0033), and its `Debug` hides every point.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum AssistNote {
     /// A still hold began.
@@ -104,6 +104,7 @@ pub enum AssistNote {
 
 impl Event for AssistNote {
     const NAME: &'static str = "assist-note";
+    const CAPABILITY: Option<Capability> = Some(Capability::KeyboardUi);
 }
 
 impl fmt::Debug for AssistNote {
@@ -128,7 +129,7 @@ impl fmt::Debug for AssistNote {
     }
 }
 
-/// The latest pointer point, for the badge; its `Debug` hides it.
+/// The latest pointer point, for the badge; it needs `KeyboardUi`, and its `Debug` hides the point.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct PointerMoved {
     /// The point, in physical pixels.
@@ -137,6 +138,7 @@ pub struct PointerMoved {
 
 impl Event for PointerMoved {
     const NAME: &'static str = "pointer-moved";
+    const CAPABILITY: Option<Capability> = Some(Capability::KeyboardUi);
 }
 
 impl fmt::Debug for PointerMoved {

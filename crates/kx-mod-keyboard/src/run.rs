@@ -1,19 +1,26 @@
 //! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
-//! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out.
+//! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
+//! what reached the app waits to be told.
 
+mod checks;
 mod held;
 mod layer;
 mod ports;
+mod told;
+mod word;
 
-pub use ports::{Io, Ports};
+pub use ports::{Io, Pause, Ports, Sleep};
+pub use word::{Part, Word, drive};
 
 use crate::latch::Latches;
 use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
-use crate::spec::{BoardSpec, LatchRole, Role};
-use kx_module_api::ports::{InjectError, Scan, ShortcutError, Toggle};
+use crate::spec::{BoardSpec, LatchRole, Role, Tell};
+use checks::{keyed, reached, stale, types};
+use kx_module_api::ports::{InjectError, Piece, Scan, ShortcutError, Toggle};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::time::Duration;
 use thiserror::Error;
 
 /// Why a tap sent nothing, or not all of it.
@@ -62,11 +69,25 @@ pub struct Typing {
     keys: HashMap<String, (Role, Option<Scan>)>,
     /// The keys the board lets repeat while held.
     repeating: HashSet<String>,
+    /// What the keys that tell more than a break tell, by id.
+    tells: HashMap<String, Tell>,
+    /// The key a picked word erases with.
+    erase: Option<Scan>,
     apps: Vec<String>,
+    /// The most characters a picked word may erase or type.
+    cap: u16,
+    /// The pause after each Backspace of a picked word.
+    gap: Duration,
     latches: Latches,
     dead: bool,
     /// While a held key repeats: whether a key went out, so the latches let go when the burst ends.
     burst: Option<bool>,
+    /// The pieces that reached the app and wait to be told, oldest first.
+    pieces: Vec<Piece>,
+    /// Our Caps Lock tap reached the app since the face last asked.
+    caps_sent: bool,
+    /// How many board keys reached the app, so a picked word stops when one goes out during it.
+    sent: u64,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -84,10 +105,17 @@ impl Typing {
         Self {
             keys: keys.map(|(id, role, sc)| (id, (role, sc))).collect(),
             repeating: spec.repeating(),
+            tells: spec.tells(),
+            erase: spec.erase_key(),
             apps: settings.key_apps.clone(),
+            cap: settings.text_cap,
+            gap: gap(settings),
             latches: Latches::new(settings.modifiers),
             dead: false,
             burst: None,
+            pieces: Vec::new(),
+            caps_sent: false,
+            sent: 0,
         }
     }
 
@@ -102,13 +130,28 @@ impl Typing {
         self.latches.used()
     }
 
-    /// Takes a new `modifiers` mode and `key_apps` list, keeping the latched modifiers and a dead key's wait.
+    /// True once after our Caps Lock tap reached the app, so the face flips its Caps view before the system's next read.
+    pub fn took_caps(&mut self) -> bool {
+        std::mem::take(&mut self.caps_sent)
+    }
+
+    /// Takes a new `modifiers` mode, `key_apps` list, `text_cap` and `erase_gap_ms`, keeping the latched modifiers and
+    /// a dead key's wait.
     pub fn update(&mut self, settings: &KeyboardSettings) {
         self.apps.clone_from(&settings.key_apps);
+        self.cap = settings.text_cap;
+        self.gap = gap(settings);
         self.latches.set_mode(settings.modifiers);
     }
 
-    /// True while a dead key waits for the next key.
+    /// The most characters a picked word may erase or type (`text_cap`).
+    #[must_use]
+    pub fn cap(&self) -> u16 {
+        self.cap
+    }
+
+    /// True while a dead key waits for the next key. It outlasts a focus change: the keyboard hears none, and the OS
+    /// may still hold the accent, so a picked word never types over it.
     #[must_use]
     pub fn waiting(&self) -> bool {
         self.dead
@@ -135,7 +178,10 @@ impl Typing {
             None => layer::planned(io, id).ok_or(TapError::UnknownKey)?,
         };
         match planned {
-            Plan::Send { route, wait } => self.send(io, &route, wait)?,
+            Plan::Send { route, wait } => {
+                let piece = told::piece(&route, wait, self.tells.get(id));
+                self.send(io, &route, wait, piece)?;
+            }
             Plan::Caps(key) => self.caps(io, key)?,
             Plan::Latch(r, key) => self.latch(io, r, key)?,
             Plan::Shortcut(id) => self.shortcut(io, &id)?,
@@ -168,8 +214,15 @@ impl Typing {
         }
     }
 
-    /// Sends `route`; once any of it reached the app, the latches are used and the dead-key wait follows `wait`.
-    fn send(&mut self, io: &Io<'_>, route: &Route, wait: Wait) -> Result<(), TapError> {
+    /// Sends `route`; once any of it reached the app, the latches are used, the dead-key wait follows `wait` and
+    /// `piece` waits to be told.
+    fn send(
+        &mut self,
+        io: &Io<'_>,
+        route: &Route,
+        wait: Wait,
+        piece: Piece,
+    ) -> Result<(), TapError> {
         let went = match route {
             Route::Tap(key) => io.injector.tap(*key),
             Route::Chord(held, key) => io.injector.chord(held, *key),
@@ -182,15 +235,18 @@ impl Typing {
                 Wait::Ask => !types(io, route),
             };
             self.used();
+            self.pieces.push(piece);
         }
         Ok(went?)
     }
 
-    /// Taps Caps Lock `key`; once it reached the app, the latches stay on, used.
+    /// Taps Caps Lock `key`; once it reached the app, the latches stay on, used, and the face hears it was sent.
     fn caps(&mut self, io: &Io<'_>, key: Scan) -> Result<(), TapError> {
         let went = io.injector.tap(key);
         if reached(went) {
             self.latches.spend();
+            self.caps_sent = true;
+            self.sent = self.sent.wrapping_add(1);
         }
         Ok(went?)
     }
@@ -209,57 +265,30 @@ impl Typing {
         Ok(went?)
     }
 
-    /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats.
+    /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats, and a
+    /// picked word going out stops.
     fn used(&mut self) {
+        self.sent = self.sent.wrapping_add(1);
+        let now = self.latches.clone();
+        self.used_of(&now);
+    }
+
+    /// A key or picked word that started under `then` went out: those latches let go as their mode says, or when the
+    /// burst ends while a held key repeats; one latched since stays.
+    fn used_of(&mut self, then: &Latches) {
         match &mut self.burst {
             Some(went) => {
                 *went = true;
-                self.latches.spend();
+                self.latches.spend_of(then);
             }
             None => {
-                self.latches.used();
+                self.latches.used_of(then);
             }
         }
     }
 }
 
-/// True when any of a send reached the app: all of it, or the part the system took before refusing the rest.
-fn reached(went: Result<(), InjectError>) -> bool {
-    match went {
-        Ok(()) => true,
-        Err(InjectError::Refused { sent, .. }) => sent > 0,
-        Err(InjectError::Unmappable) => false,
-    }
-}
-
-/// True when `plan` sends a character key as a scan code, so the app's own layout decides what it types.
-fn keyed(role: Role, plan: &Plan) -> bool {
-    let scan = |p: &Plan| {
-        matches!(
-            p,
-            Plan::Send {
-                route: Route::Tap(_) | Route::Chord(..),
-                ..
-            }
-        )
-    };
-    role == Role::Char && scan(plan)
-}
-
-/// True when the app in front has another installed layout than the table shown, as `Follow` would show
-/// after a refresh; with none in front, or one that is not installed, the table shown stands.
-fn stale(io: &Io<'_>) -> bool {
-    let shown = io.table.label.id;
-    let other = io.source.foreground().filter(|&front| front != shown);
-    other.is_some_and(|front| io.source.installed().contains(&front))
-}
-
-/// True when `route` typed anything in the layout shown, as the layout source reads it.
-fn types(io: &Io<'_>, route: &Route) -> bool {
-    let layout = io.table.label.id;
-    match route {
-        Route::Tap(key) => io.source.types_any(layout, *key, &[]),
-        Route::Chord(held, key) => io.source.types_any(layout, *key, held),
-        Route::Text(..) => true,
-    }
+/// The pause after each Backspace of a picked word, from `erase_gap_ms`.
+fn gap(settings: &KeyboardSettings) -> Duration {
+    Duration::from_millis(settings.erase_gap_ms)
 }

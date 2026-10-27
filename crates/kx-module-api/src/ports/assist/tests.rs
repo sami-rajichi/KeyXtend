@@ -16,13 +16,15 @@ const HELD: [Scan; 2] = [Scan::new(0x2A), Scan::new(0xE01D)];
 const HELD_TEXT: [&str; 7] = ["42", "2A", "2a", "57373", "E01D", "e01d", "Scan"];
 /// The `InjectInput` gate.
 const INJECT: Option<Capability> = Some(Capability::InjectInput);
+/// The `KeyboardUi` gate.
+const UI: Option<Capability> = Some(Capability::KeyboardUi);
 
 /// An event's name and gate.
 fn row<E: Event>() -> (&'static str, Option<Capability>) {
     (E::NAME, E::CAPABILITY)
 }
 
-/// The assist events, in the order `gates_are_inject_input_for_toggles_and_latches_only` checks.
+/// The assist events, in the order `gates_are_inject_input_for_toggles_and_latches_and_keyboard_ui_for_notes` checks.
 fn assist() -> [(&'static str, Option<Capability>); 9] {
     [
         row::<AssistToggle>(),
@@ -62,9 +64,9 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
 }
 
 #[test]
-fn gates_are_inject_input_for_toggles_and_latches_only() {
+fn gates_are_inject_input_for_toggles_and_latches_and_keyboard_ui_for_notes() {
     let gates = assist().map(|r| r.1);
-    let want = [INJECT, None, None, None, None, None, INJECT, INJECT, INJECT];
+    let want = [INJECT, None, None, UI, UI, None, INJECT, INJECT, INJECT];
     assert_eq!(gates, want);
 }
 

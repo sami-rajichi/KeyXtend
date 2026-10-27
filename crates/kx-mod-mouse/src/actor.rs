@@ -1,20 +1,23 @@
-//! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands and the pad's
-//! scrolling to the engine, and turns the engine's notes into bus events. A plain struct driven by messages, plus a
-//! thread loop.
+//! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands, the pad's
+//! scrolling and the presses prediction wants to the engine, and turns the engine's notes into bus events. A plain
+//! struct driven by messages, plus a thread loop.
 
 mod notes;
+mod quiet;
+mod stopped;
 
-use crate::hook_engine::{Cmd, HookEngine, Moves};
+pub use stopped::STOPPED_LINE;
+
+use crate::hook_engine::{Cmd, HookEngine, Moves, aimed};
 use crate::{Engine, EngineCfg, ID, MouseSettings, Note};
 use kx_module_api::ports::{
-    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, Scan, ScrollAsk, Toggle,
+    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressesAsk, Scan,
+    ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-
-/// The message of the line logged with the hook's numbers each time the hook stops; kx-gates reads that line back.
-pub const STOPPED_LINE: &str = "mouse hook stopped";
 
 /// A message for the actor, from the bus, the hook's engine or the module; it has no `Debug`, as latches are keys.
 pub enum Msg {
@@ -26,6 +29,8 @@ pub enum Msg {
     Ask,
     /// The pad started or stopped scrolling.
     Scroll(bool),
+    /// Word prediction wants each press told, or no longer.
+    Presses(bool),
     /// The engine noted something; for a move, the latest point waits in the shared move slot.
     Note(Note),
     /// The engine no longer needs the hook, after applying this many queued commands.
@@ -42,12 +47,15 @@ struct Live {
     id: u64,
     queue: Sender<Cmd>,
     sent: u64,
+    /// A mode or a latch held the run, or a mode tap went to it (`aimed`), so its stop logs at info and its loss
+    /// always tells.
+    loud: bool,
 }
 
 /// The mouse module's runtime: one per start, on its own thread.
 #[allow(
     clippy::struct_excessive_bools,
-    reason = "Each flag is one fact kept between messages: Right-click saved and shown, the pad scrolling, a failing start, a spent restart."
+    reason = "Each flag is one fact kept between messages: Right-click saved and shown, the pad scrolling, presses wanted, a failing start, a spent restart."
 )]
 pub struct Actor {
     hook: Arc<dyn PointerHook>,
@@ -66,17 +74,23 @@ pub struct Actor {
     latches: Vec<Scan>,
     /// The scroll pad scrolls.
     scrolling: bool,
+    /// Word prediction wants presses.
+    wanted: bool,
     live: Option<Live>,
     /// How many engines were made; each run carries its number.
     runs: u64,
-    /// The last start failed; until one works, a quiet start (latches or scrolling) fails without a word.
+    /// The last start failed; until one works, a quiet start (latches, scrolling or presses) fails without a word.
     failing: bool,
-    /// A give-up already restarted; until a mode tap, a latch change or a scroll change, the next one starts nothing.
+    /// A give-up already restarted; until a run ends well, a mode tap or a change of latches or scrolling, the next one
+    /// starts nothing and presses alone start no run, as prediction flips them by itself.
     restarted: bool,
+    /// The notice for a fault of quiet needs alone was shown this program run; the module keeps it across its starts.
+    reset_told: Arc<AtomicBool>,
 }
 
 impl Actor {
-    /// An actor with no hook yet; `inbox` sends to its own inbox, for the hook engines it starts.
+    /// An actor with no hook yet; `inbox` sends to its own inbox, for the hook engines it starts, and `reset_told`
+    /// says whether the notice for a quiet-only fault was shown this program run.
     #[must_use]
     pub fn new(
         hook: Arc<dyn PointerHook>,
@@ -84,6 +98,7 @@ impl Actor {
         store: SettingsHandle,
         settings: MouseSettings,
         inbox: Sender<Msg>,
+        reset_told: Arc<AtomicBool>,
     ) -> Self {
         let saved = settings.rclick;
         Self {
@@ -98,10 +113,12 @@ impl Actor {
             grab: GrabState::Off,
             latches: Vec::new(),
             scrolling: false,
+            wanted: false,
             live: None,
             runs: 0,
             failing: false,
             restarted: false,
+            reset_told,
         }
     }
 
@@ -115,8 +132,8 @@ impl Actor {
         }
     }
 
-    /// Starts the hook at once for a saved Right-click, then tells the state and asks for the latches and the pad's
-    /// state, so any start order works.
+    /// Starts the hook at once for a saved Right-click, then tells the state and asks for the latches, the pad's state
+    /// and whether presses are wanted, so any start order works.
     pub fn begin(&mut self) {
         if self.saved {
             self.start(None);
@@ -127,6 +144,7 @@ impl Actor {
         self.tell_state();
         self.publish(&LatchesAsk);
         self.publish(&ScrollAsk);
+        self.publish(&PressesAsk);
     }
 
     /// Handles one message; false after `Stop`, when the actor is done.
@@ -142,6 +160,7 @@ impl Actor {
             }
             Msg::Ask => self.tell_state(),
             Msg::Scroll(on) => self.scroll(on),
+            Msg::Presses(on) => self.presses(on),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
             Msg::Lost(run) => self.lost(run),
@@ -169,30 +188,12 @@ impl Actor {
         let Some(live) = &mut self.live else {
             return self.start(Some(cmd));
         };
+        live.loud |= cmd.loud();
         // A run holds its engine until it drops, so the queue stays open while `live` does.
         if live.queue.send(cmd).is_ok() {
             live.sent += 1;
         }
         live.run.wake();
-    }
-
-    /// Keeps the keyboard's latches; they start the hook when they hold a key.
-    fn latch(&mut self, held: Vec<Scan>) {
-        self.latches.clone_from(&held);
-        if self.live.is_some() || !held.is_empty() {
-            self.command(Cmd::Latches(held));
-        }
-    }
-
-    /// Keeps whether the pad scrolls: scrolling starts the hook, and a change goes to the running engine.
-    fn scroll(&mut self, on: bool) {
-        let changed = std::mem::replace(&mut self.scrolling, on) != on;
-        self.restarted &= !changed;
-        match self.live {
-            Some(_) if changed => self.command(Cmd::Scroll(on)),
-            None if on => self.start(Some(Cmd::Scroll(on))),
-            _ => {}
-        }
     }
 
     /// Starts the hook with a fresh engine in the wanted state, given `first` at once.
@@ -204,8 +205,12 @@ impl Actor {
         });
         engine.set_latches(self.latches.clone());
         engine.set_scrolling(self.scrolling);
-        // A mouse key or a restored Right-click is a mode the user expects on; latches and scrolling start quietly.
+        engine.set_wanted(self.wanted);
+        // A mouse key or a restored Right-click is a mode the user expects on; latches, scrolling and presses start
+        // quietly.
         let expected = !first.as_ref().is_some_and(Cmd::quiet);
+        let mode = self.rclick || self.grab != GrabState::Off;
+        let loud = aimed(mode, &self.latches) || first.as_ref().is_none_or(Cmd::loud);
         let (queue, cmds) = mpsc::channel();
         let moves = Arc::clone(&self.moves);
         self.runs += 1;
@@ -223,6 +228,7 @@ impl Actor {
                     id,
                     queue,
                     sent: 0,
+                    loud,
                 });
             }
             Err(error) => self.refused(error, expected),
@@ -230,7 +236,7 @@ impl Actor {
     }
 
     /// The hook did not start, so the modes stay off. A mode the user `expected` on tells them, and they can press
-    /// its key again; a quiet start (latches or scrolling) warns once per streak of failures.
+    /// its key again; a quiet start (latches, scrolling or presses) warns once per streak of failures.
     fn refused(&mut self, error: HookError, expected: bool) {
         if expected || !self.failing {
             tracing::warn!(%error, "mouse hook did not start");
@@ -242,50 +248,35 @@ impl Actor {
     }
 
     /// The host gave up run `run`'s engine after a panic: if that is the live run, it goes, both modes turn off for this
-    /// session and the user hears why. Held latches or scrolling then get one fresh run at once, and no more until the
-    /// user acts again, so a fault that repeats never loops.
+    /// session and the user hears why: always for a loud run, else once per program run. A quiet need then gets one
+    /// fresh run at once, and no more until a run ends well or the user acts, so a fault never loops.
     fn lost(&mut self, run: u64) {
-        if self.live.as_ref().is_none_or(|live| live.id != run) {
+        let Some(loud) = self.live.as_ref().filter(|l| l.id == run).map(|l| l.loud) else {
             return;
-        }
+        };
         tracing::warn!("mouse hook gave up its engine");
         self.drop_run();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
-        let wanted = self.scrolling || !self.latches.is_empty();
-        if wanted && !std::mem::replace(&mut self.restarted, true) {
-            // A quiet start: the engine takes the latches and scrolling as they stand.
+        let needed = self.scrolling || self.wanted || !self.latches.is_empty();
+        if needed && !std::mem::replace(&mut self.restarted, true) {
+            // A quiet start: the engine takes the latches, scrolling and presses as they stand.
             self.start(Some(Cmd::Latches(self.latches.clone())));
         }
         self.tell_state();
-        self.publish(&notice(keys::MOUSE_RESET));
-    }
-
-    /// Stops the hook once the engine reported idle after every command sent so far.
-    fn idle(&mut self, applied: u64) {
-        if self.live.as_ref().is_some_and(|live| live.sent == applied) {
-            self.drop_run();
+        // A mode or a latch the user aimed at the run goes dark, even one the engine had no time to note.
+        if loud || !self.reset_told.swap(true, Ordering::Relaxed) {
+            self.publish(&notice(keys::MOUSE_RESET));
         }
     }
 
-    /// Stops the hook, which lets go of anything held, and logs its numbers, never a point or a key.
-    fn drop_run(&mut self) {
-        let Some(live) = self.live.take() else {
-            return;
-        };
-        let s = live.run.stats();
-        drop(live);
-        tracing::info!(
-            events = s.events,
-            p99_us = s.p99_us,
-            max_us = s.max_us,
-            max_wait_ms = s.max_wait_ms,
-            reinstalls = s.reinstalls,
-            send_errors = s.send_errors,
-            lost_echoes = s.lost_echoes,
-            passed_inside = s.passed_inside,
-            "{STOPPED_LINE}"
-        );
+    /// Stops the hook once the engine reported idle after every command sent so far; a run that ends well re-arms a
+    /// spent restart.
+    fn idle(&mut self, applied: u64) {
+        if self.live.as_ref().is_some_and(|live| live.sent == applied) {
+            self.drop_run();
+            self.restarted = false;
+        }
     }
 }
 

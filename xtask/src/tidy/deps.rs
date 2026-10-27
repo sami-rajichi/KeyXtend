@@ -31,7 +31,7 @@ pub(crate) fn d1_module_isolation(ws: &Workspace) -> Vec<Violation> {
     violations
 }
 
-/// D2: only the app and the test tools may depend on a module or a platform adapter.
+/// D2: only the app and the test tools may depend on a module or a platform adapter; the build tool, on a module.
 ///
 /// Modules are skipped, because D1 already covers every workspace dependency they have.
 pub(crate) fn d2_app_only_platform_and_module(ws: &Workspace) -> Vec<Violation> {
@@ -40,9 +40,12 @@ pub(crate) fn d2_app_only_platform_and_module(ws: &Workspace) -> Vec<Violation> 
         if ws.is_app(package) || ws.is_tool(package) || is_module(package, ws) {
             continue;
         }
+        let build_tool = package.name == ws.tidy.build_tool;
         for name in member_deps(package, ws) {
             if name.starts_with(ws.tidy.module_prefix.as_str()) {
-                violations.push(d2_violation(package, name, "module"));
+                if !build_tool {
+                    violations.push(d2_violation(package, name, "module"));
+                }
             } else if name.starts_with(ws.tidy.platform_prefix.as_str()) {
                 violations.push(d2_violation(package, name, "platform adapter"));
             }

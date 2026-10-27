@@ -94,6 +94,25 @@ impl Latches {
             on.used = true;
         }
     }
+
+    /// As `used`, for a word that started under `then`: only the latches `then` held and still on count, so one
+    /// clicked during the word stays. True when any let go.
+    pub fn used_of(&mut self, then: &Self) -> bool {
+        self.spend_of(then);
+        let held: Vec<Latch> = self.on.keys().copied().filter(|l| then.is_on(*l)).collect();
+        let go = self.mode == Modifiers::Release && !held.is_empty();
+        if go {
+            self.on.retain(|l, _| !held.contains(l));
+        }
+        go
+    }
+
+    /// As `spend`, for a word that started under `then`: only the latches `then` held are used.
+    pub fn spend_of(&mut self, then: &Self) {
+        for (l, on) in &mut self.on {
+            on.used |= then.is_on(*l);
+        }
+    }
 }
 
 #[cfg(test)]

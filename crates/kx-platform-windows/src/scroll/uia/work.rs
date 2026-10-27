@@ -8,18 +8,18 @@ use std::time::Instant;
 
 use kx_module_api::ports::Dir;
 use windows::Win32::Foundation::POINT;
-use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance};
 use windows::Win32::UI::Accessibility::{
-    CUIAutomation8, IUIAutomation, IUIAutomation2, IUIAutomationElement,
-    IUIAutomationScrollPattern, ScrollAmount, ScrollAmount_NoAmount, ScrollAmount_SmallDecrement,
-    ScrollAmount_SmallIncrement, UIA_ScrollPatternId,
+    IUIAutomation, IUIAutomationElement, IUIAutomationScrollPattern, ScrollAmount,
+    ScrollAmount_NoAmount, ScrollAmount_SmallDecrement, ScrollAmount_SmallIncrement,
+    UIA_ScrollPatternId,
 };
-use windows::core::{BOOL, Interface};
+use windows::core::BOOL;
 
 use super::down::{View, deepest};
 use super::{DOWN_SHARE, Job, Read, Seek};
 use crate::com::Com;
 use crate::scroll::win::handle;
+use crate::uia::client;
 
 /// The pattern of what scrolls at a place along one axis (true for sideways), held for the steps that follow a read
 /// there.
@@ -57,22 +57,6 @@ pub(super) fn run(inbox: &Receiver<Job>, pending: &AtomicUsize, read_ms: u32) {
             }
         }
     }
-}
-
-/// The system's client, with its connection and call timeouts at `read_ms`.
-#[allow(unsafe_code, reason = "Makes and sets up the UI Automation client.")]
-pub(super) fn client(read_ms: u32) -> Option<IUIAutomation> {
-    // SAFETY: makes the system's UI Automation client on this thread, where COM runs.
-    let auto: IUIAutomation =
-        unsafe { CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER) }.ok()?;
-    if let Ok(timed) = auto.cast::<IUIAutomation2>() {
-        // SAFETY: plain settings on our own client; a refusal keeps Windows' defaults.
-        unsafe {
-            let _ = timed.SetConnectionTimeout(read_ms);
-            let _ = timed.SetTransactionTimeout(read_ms);
-        }
-    }
-    Some(auto)
 }
 
 /// The element `seek` names; none when UI Automation cannot say. In a window, it goes down from the window's element

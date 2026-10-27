@@ -101,6 +101,15 @@ fn g8s_scroll_after_use_and_each_rounds_scroll_count_in_its_hold() {
 }
 
 #[test]
+fn g8s_hold_counts_its_copys_end_as_the_p7_gates_do() {
+    let base = load().expect("loads");
+    let more = with(|c| c.g8.quit_tries += 10);
+    let end = end_ms(&more) - end_ms(&base);
+    assert!(end > 0, "more Quit tries take longer");
+    assert_eq!(g8_ms(&more, 0) - g8_ms(&base, 0), end);
+}
+
+#[test]
 fn churn_rounds_past_any_count_are_refused_without_a_panic() {
     let c = with(|c| (c.g8.churn_warm_rounds, c.g8.churn_rounds) = (usize::MAX, 1));
     assert!(check(&c).expect_err("G8 too long").contains("g8"));

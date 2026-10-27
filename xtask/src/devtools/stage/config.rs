@@ -17,7 +17,7 @@ pub(crate) struct StageConfig {
     pub app: String,
     /// Folder, under the workspace root, holding the stage.
     pub out_dir: String,
-    /// Largest stage, in MB.
+    /// The download budget, in MB: the staged files deflated.
     pub max_mb: u64,
     /// Env var naming Qt's qmake.
     pub qmake_env: String,

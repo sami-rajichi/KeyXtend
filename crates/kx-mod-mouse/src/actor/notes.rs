@@ -67,7 +67,8 @@ impl Actor {
         });
     }
 
-    /// Publishes `event`; the start's subscriptions already checked the grants these events need.
+    /// Publishes `event`; the start checked `InjectInput` through its subscriptions and `KeyboardUi` directly, so
+    /// none is refused.
     pub(super) fn publish<E: Event>(&self, event: &E) {
         let _ = self.bus.publish(event);
     }

@@ -20,3 +20,7 @@ toml.workspace = true
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
+
+# The locked-file test opens the settings file with the OS's own read-only share flag.
+[target.'cfg(windows)'.dev-dependencies]
+windows = { workspace = true, features = ["Win32_Storage_FileSystem"] }

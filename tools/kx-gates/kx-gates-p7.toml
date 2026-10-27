@@ -1,0 +1,56 @@
+# Settings P7 adds: G27 (a word typed through the product's first chip), G21's product half and G8's prediction
+# part. kx-gates reads them with kx-gates.toml, from its folder.
+
+[g27]
+# One case per language: the first installed layout of `lang` (ISO 639) goes in front of target-window, the product's
+# keys type `prefix`, and the first chip is picked. These prefixes are the only typed text a result line ever holds.
+cases = [
+    { lang = "en", prefix = "hel" },
+    { lang = "fr", prefix = "eco" },
+    { lang = "ar", prefix = "ان" },
+]
+# The case edge 6 types in a fresh box before it clicks the box's start; its prefix must read left to right.
+edge = "en"
+# The chip lane's gate ids, as kx-ui names them: the group, then a chip's id before its place, and the lock note's.
+group = "words"
+chip = "chip-"
+locked = "locked"
+# kx-ui's text that names a word chip, and its variable for the word, which G27 reads back out of the chip's name.
+chip_name = "chip.name"
+chip_word = "word"
+# Wait after the gate's own copy shows its keyboard before the first click, so its word lists have loaded, in ms.
+ready_ms = 5000
+# Longest wait for a layout switch and for the keyboard's keys to follow it, in ms.
+switch_wait_ms = 3000
+# Pause after each key click, in ms.
+key_gap_ms = 300
+# Longest wait from the last key click to a first chip that offers the prefix, in ms.
+chip_wait_ms = 3000
+# Pause before a chip is read and clicked, so a lane still on its way has drawn, in ms.
+settle_ms = 300
+# Longest wait for the box to hold the picked word, and edge 6's wait before it reads the box unchanged, in ms.
+text_wait_ms = 2000
+# Longest box text read through UI Automation, in UTF-16 units.
+max_chars = 4000
+
+[g21_product]
+# The G27 case whose layout and prefix G21's product half types in each box.
+case = "en"
+
+[g8_predict]
+# The owner's accepted predict part (2026-10-24): about this many MB of idle private memory; a reading, never a fail.
+owner_mb = 2.0
+# The [g27] case the judged churn types alone; its growth must stay within [g8] churn_growth_mb (owner, 2026-10-26).
+lang = "en"
+# Words the judged churn types through chips before its first memory reading, then the words it measures.
+warm_words = 3
+words = 30
+# Words the mixed churn measures after one warm-up word per case, taking the cases in turn; a reading, never a fail.
+mixed_words = 30
+# Wait before each memory reading, after a churn's warm-up and after its measured words, in ms.
+settle_ms = 2000
+
+[owner_settings]
+# The file in kx-gates' out folder that holds the owner's settings bytes while G21's product half, G27 or g8 predict
+# runs its own copies. A run that was stopped leaves it, and the next one restores the owner's files from it first.
+backup = "owner-settings-backup.json"

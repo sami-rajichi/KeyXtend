@@ -1,21 +1,22 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts and power dialog, and the shared fake
-//! UI ports; a waker keeps every wake.
+//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power dialog, box watch, word packs
+//! and sealed store, and the shared fake UI ports; a waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
-use kx_module_api::ports::Scan;
+use kx_module_api::ports::{Scan, TypingMode, TypingModeAsk};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
-    FakeScrollTarget, FakeShortcuts, FakeTray,
+    FakeFieldWatch, FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
+    FakeScrollTarget, FakeSealedStore, FakeShortcuts, FakeTray, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 use kx_ui::Wake;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -43,6 +44,12 @@ pub struct Rig {
     pub shortcuts: Arc<FakeShortcuts>,
     /// Behind the power dialog, which counts its opens.
     pub power: Arc<FakePowerDialog>,
+    /// Behind the box watch, with focus on no box.
+    pub field: Arc<FakeFieldWatch>,
+    /// Behind the word packs, shipping no language until a test lists one.
+    pub packs: Arc<FakeWordPacks>,
+    /// Behind the sealed store, which counts its loads.
+    pub sealed: Arc<FakeSealedStore>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
 }
@@ -61,6 +68,9 @@ impl Rig {
             scroll: Arc::new(FakeScrollTarget::new()),
             shortcuts: Arc::new(FakeShortcuts::new()),
             power: Arc::new(FakePowerDialog::new()),
+            field: Arc::new(FakeFieldWatch::new()),
+            packs: Arc::new(FakeWordPacks::new()),
+            sealed: Arc::new(FakeSealedStore::new()),
             tray: tray(),
         }
     }
@@ -88,9 +98,25 @@ impl Rig {
             scroll: self.scroll.clone(),
             shortcuts: self.shortcuts.clone(),
             power: self.power.clone(),
+            field: self.field.clone(),
+            packs: self.packs.clone(),
+            sealed: self.sealed.clone(),
         };
         let ports = ports(self.tray.clone());
         Boot::load(self.platform(), services, ports).unwrap()
+    }
+
+    /// True once the started predict module settled in language `iso`: it opened that pack and heard the typing mode,
+    /// so keys typed next follow both, as its thread asks for them only after the start.
+    pub fn settled(&self, bus: &Bus, iso: &str) -> bool {
+        // Handlers run in subscription order, so a mode this later ear hears reached predict first.
+        let (_ear, modes) = hear::<TypingMode>(bus);
+        if !self.packs.wait_opens(iso, 1, WAIT) {
+            return false;
+        }
+        // Asked after predict's own ask, which went before its open; the keyboard answers both in order.
+        bus.publish(&TypingModeAsk).unwrap();
+        modes.recv_timeout(WAIT).is_ok()
     }
 }
 
@@ -123,4 +149,12 @@ pub fn char_key(sc: u16) -> String {
         _ => None,
     })
     .unwrap()
+}
+
+/// The folder `cargo xtask words` writes the packs to: `xtask/words.toml`'s `[text] out`, under the workspace root.
+pub fn words_out() -> PathBuf {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest = std::fs::read_to_string(root.join("xtask/words.toml")).unwrap();
+    let manifest: toml::Table = manifest.parse().unwrap();
+    root.join(manifest["text"]["out"].as_str().unwrap())
 }

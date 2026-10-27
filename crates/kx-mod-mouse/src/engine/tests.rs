@@ -8,6 +8,7 @@ use kx_module_api::ports::Toggle;
 mod grab;
 mod mods;
 mod notes;
+mod presses;
 mod scroll;
 mod timing;
 

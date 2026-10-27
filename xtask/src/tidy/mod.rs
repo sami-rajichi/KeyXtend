@@ -11,7 +11,7 @@ use crate::workspace::Workspace;
 
 /// D1: a module depends on a workspace member outside `module_allowed`.
 pub(crate) const D1: &str = "D1";
-/// D2: a package other than the app or a tool depends on a platform adapter or a module.
+/// D2: a package other than the app or a tool depends on a platform adapter, or one other than the build tool on a module.
 pub(crate) const D2: &str = "D2";
 /// D3: a `banned_network` crate is reachable from the app.
 pub(crate) const D3: &str = "D3";

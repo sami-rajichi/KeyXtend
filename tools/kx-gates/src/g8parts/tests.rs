@@ -8,8 +8,7 @@ use super::*;
 /// Idle CPU time of a QML animation at 60 Hz and 0.5 ms a frame over a 10 s measure, and that measure, in ms.
 const ANIMATION_MS: (f64, f64) = (300.0, 10_000.0);
 
-/// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, a 55.4 MiB or 58.1 MB stage, 165 Hz) on the shipped
-/// budgets.
+/// A run like the P1 numbers (ADR-0013: G2 p99 13.1 ms, 165 Hz) on the shipped budgets.
 fn sample() -> (G8, Measured, Outside) {
     let g = crate::config::load().expect("kx-gates.toml loads").g8;
     // Flat memory under churn, near ADR-0021's expected idle.
@@ -26,7 +25,6 @@ fn sample() -> (G8, Measured, Outside) {
         },
         memory_at_ms: 10_000.0,
         core_pct: Some(0.1),
-        size_mb: 58.1,
         presses: Presses {
             lit_ms: vec![Some(9.0), Some(12.5)],
             copy_ms: vec![2.0, 2.5, 3.0],
@@ -62,7 +60,7 @@ fn a_run_within_every_budget_passes() {
     assert!(budget::all_pass(&parts), "{:?}", failed(&parts));
     assert_eq!(
         parts.len(),
-        16,
+        15,
         "one part per spec §10 budget G8 owns, two for the key light, two for the memory after use and two after a \
          scroll"
     );

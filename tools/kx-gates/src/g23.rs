@@ -4,11 +4,11 @@
 
 use std::time::Instant;
 
+use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::hello;
-use spike_core::uia::{self, Uia};
 
 use crate::apps::{Ctx, Opened};
 use crate::facetools::FaceWin;
@@ -76,7 +76,9 @@ fn confirmed(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, 
     let prompt = within(ctx, || prompt_up(ctx));
     let typed = within(ctx, || {
         let el = uia.named(app.hwnd, &g.user_name);
-        el.and_then(|e| uia::value(&e)).as_deref() == Some(want.as_str())
+        el.and_then(|e| uia::value(&e, want.encode_utf16().count()))
+            .as_deref()
+            == Some(want.as_str())
     });
     let back = foreground() == app.hwnd;
     let ok = prompt.is_some() && typed.is_some() && back;
@@ -143,9 +145,10 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
     let g = &ctx.cfg.g21;
     ask(ctx, uia, fw, app, &g.user_name, ToolButton::FillUser)?;
     let prompt_user = prompt_within_refuse(ctx);
+    // Read up to `[g1] max_read_chars`, so the count shows what any wrong fill left.
     let user = uia
         .named(app.hwnd, &g.user_name)
-        .and_then(|e| uia::value(&e));
+        .and_then(|e| uia::value(&e, ctx.cfg.g1.max_read_chars));
     ask(ctx, uia, fw, app, &g.pass_name, ToolButton::FillPassword)?;
     let prompt_pass = prompt_within_refuse(ctx);
     let len = length_in(&win::title(app.hwnd), &ctx.cfg.g23.length_mark);
@@ -159,7 +162,7 @@ fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, St
 
 /// With Hello: the owner confirms, cancels, then confirms again, as `ORDER` says. Without it: nothing may be typed.
 fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     probe::front(ctx, app)?;
     if !hello::available()? {
         let r = refused(ctx, &uia, fw, app)?;

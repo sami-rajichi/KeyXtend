@@ -1,0 +1,252 @@
+# Sources and rules for `cargo xtask words`: every downloaded file with its hash, and the rules' thresholds; the
+# source folder is always given with `--src`. Every word fact comes from the sources, and the apostrophe from
+# kx-mod-predict's fold table, so the build and the tracker split words alike.
+
+[rules]
+# A word holding any of these is dropped: web addresses, emails and paths.
+drop_chars = ["@", "/", "."]
+# A rejected word merges only into a fold twin at most this many centibels rarer: 100 is 10 times, so a stray
+# rare form (ألذى beside الذى) never takes a common word's frequency.
+max_gap_cb = 100
+# A list with this share of its words in one script drops the others' words: 0.9 drops stray foreign words but
+# leaves a list split between two scripts whole.
+main_script_share = 0.9
+# A twin spelling must be seen this often standing alone away from sentence starts before it wins: 20 to nothing is
+# past chance.
+min_case_seen = 20
+# A twin differing only in case must be seen this many times more often than the word's own spelling: Wikipedia
+# writes Bill, King and Federal in names about as often as the words, but March, China and I far more.
+twin_ratio = 10.0
+# A word is a tokenizer piece when the apostrophe words holding it are seen this many times more often than it
+# stands alone: `ll` of `I'll`. At the set caps the real words reach 26 (haven) and the pieces start at 69 (t).
+piece_ratio = 40.0
+# Pieces are judged only when their apostrophe words are seen this often, so a word rarely seen alone beside them is
+# past chance.
+piece_min_seen = 100
+# The coverage line checks this many of wordfreq's most frequent words against the dictionary.
+coverage_top = 10000
+# Every report line prints this many words.
+show = 30
+
+# How Tatoeba and Wikipedia text is read and counted into word chains, for each `[lang.<iso>.text]`. Each language's
+# `max_sentences` and `max_bytes` bound a run: a release build counts about 1 MB of Wikipedia a second, and Arabic,
+# with little Tatoeba, reads more Wikipedia.
+[text]
+# A sentence ends at each of these when a space or the text's end follows, so `U.S.` and `3.14` stay whole; a chain
+# never runs past one.
+sentence_ends = [".", "!", "?", "؟", "…", "\n", "\r"]
+# The shortest and longest chains counted, in words: a word and the one or two before it.
+min_chain = 2
+max_chain = 3
+# A Tatoeba count weighs this many Wikipedia ones: its everyday sentences are closer to what people type.
+tatoeba_weight = 4
+# This many Tatoeba sentences in a thousand are held back for the meter, picked by a hash of their id.
+held_back_per_mille = 20
+# The most chains counted at once; past it the rarest go (lossy counting), so memory stays near 0.4 GB.
+max_live_chains = 12000000
+# A sentence whose letters were already seen in the language's run counts once, so templated lines (references,
+# navboxes) do not skew chains. This many keys are kept, about 0.15 GB; past it new sentences are not remembered.
+max_seen_sentences = 14000000
+# A word this many times more common in Tatoeba than in wordfreq has the Tatoeba chains it ends scaled down to this
+# ratio: Tatoeba's everyday words reach 24 times (أليس, plaît), its fixed names 33 to 1190 (Mary in French, Layla).
+skew_ratio = 30.0
+# The report shows the followers of this many of the most seen one-word contexts, this many each.
+report_contexts = 10
+report_followers = 4
+# The next words kept per context, best first.
+followers = 8
+# What Tatoeba writes for an empty field.
+null = '\N'
+# The held-back sentences go to `<iso>.txt` here, under cargo's target folder, so they are never committed.
+held = "words/held"
+# The packs and their credits go here, under the workspace root, unless `--out` names another folder.
+out = "assets/words"
+
+# The packs together: every file written must fit this many KB once deflated (spec §6, about 20 MB of the download),
+# measured at zip's default level; a build over it is refused.
+[packs]
+download_kb = 20480
+level = 6
+# The layout codes the OS reports that a pack under another code serves: wordfreq's Serbo-Croatian pack serves the
+# Croatian layouts. Serbian and Bosnian are left out, as Windows names their Latin and Cyrillic layouts alike.
+aliases = { sh = ["hr"] }
+
+# The meter (`cargo xtask words meter`) types the held-back sentences with and without chips (spec §6 "Target").
+[meter]
+# These languages must save this share of the presses, in percent, with the seed alone; the others are reported only.
+gate = ["en", "fr"]
+min_saved_pct = 40
+# The most held-back sentences typed per language, so a run is bounded.
+max_sentences = 2000
+# The percentiles of the time per guess that each line prints.
+percentiles = [50, 99]
+# `--speed` fails when a query kind's highest percentile takes longer than this, in microseconds: the 10 ms ceiling.
+ceiling_us = 10000
+# `--speed` fills a learner past its caps with this many words, then times this many queries of each kind.
+speed_learns = 60000
+speed_samples = 1000
+
+# The files written beside the packs; every fixed sentence of `CREDITS.txt` is in `words-credits.txt`.
+[credits]
+file = "CREDITS.txt"
+authors = "TATOEBA-AUTHORS.txt"
+licence = "LICENSE.txt"
+# The lines of `LICENSE.txt`: two sentences.
+licence_text = [
+    "The word packs in this folder (*.kxw) are adaptations of the works credited in CREDITS.txt, shared under the",
+    "Creative Commons Attribution-ShareAlike 4.0 International licence: https://creativecommons.org/licenses/by-sa/4.0/legalcode",
+    "The credits of every source, with its own licence, are in CREDITS.txt.",
+]
+# wordfreq's licence section, copied word for word from its heading to the next heading.
+wordfreq = { file = "wordfreq/README.md", from = "## License", to = "## " }
+# SCOWLv2's full notice, copied word for word from its heading to the build line.
+scowl = { file = "dict/en/unzipped/README_en_US.txt", from = "COPYRIGHT, SOURCES, and CREDITS:", to = "Build Date:" }
+# The works wordfreq is built on, whose SUBTLEX authors its licence says to credit: from the heading to the file's end.
+citations = { file = "wordfreq/README.md", from = "## Citations to work that wordfreq is built on" }
+
+[fetch]
+# Env var naming the Windows folder, so the system's own curl runs there.
+root_env = "SystemRoot"
+# curl, under that folder.
+curl = "System32/curl.exe"
+# The program run when that curl is not there, as on Linux and macOS: curl on the PATH.
+fallback = "curl"
+# curl's first arguments: no config file, fail on errors, and https only, redirects included.
+args = ["-q", "--fail", "--location", "--silent", "--show-error", "--retry", "3", "--proto", "=https", "--proto-redir", "=https"]
+# The flag before the source's size from this manifest, so a larger download stops early.
+size_flag = "--max-filesize"
+# The flag before the part file.
+out_flag = "--output"
+# The flag before the URL, so a URL can never read as an option.
+url_flag = "--url"
+# A download is written beside its file with this extension, then checked and renamed.
+part = "part"
+
+# Every other language with a wordfreq small list: no dictionary.
+[small]
+# The list, with `{iso}` for the language code.
+list = "wordfreq/small_{iso}.msgpack.gz"
+# The most words a list keeps, most frequent first; the words budget then cuts the rarest.
+max_words = 60000
+# The most KB a pack may take without its chains; its rarest words go until it fits. It keeps the small packs small
+# enough that the full packs keep every word and chain inside the download budget.
+words_budget_kb = 700
+
+[lang.en]
+list = "wordfreq/large_en.msgpack.gz"
+aff = "dict/en/unzipped/en_US.aff"
+dic = "dict/en/unzipped/en_US.dic"
+max_words = 150000
+words_budget_kb = 2000
+
+[lang.en.text]
+chain_budget_kb = 3000
+tatoeba = { file = "tatoeba/eng_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = ["wiki/enwiki_content-20261018-00000.json.bz2"], max_bytes = 300000000 }
+
+[lang.fr]
+list = "wordfreq/large_fr.msgpack.gz"
+aff = "dict/fr/fr.aff"
+dic = "dict/fr/fr.dic"
+max_words = 150000
+words_budget_kb = 3000
+
+[lang.fr.text]
+chain_budget_kb = 3000
+tatoeba = { file = "tatoeba/fra_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = ["wiki/frwiki_content-20261018-00000.json.bz2"], max_bytes = 300000000 }
+
+[lang.ar]
+list = "wordfreq/large_ar.msgpack.gz"
+aff = "dict/ar/ar.aff"
+dic = "dict/ar/ar.dic"
+max_words = 250000
+words_budget_kb = 6000
+
+[lang.ar.text]
+chain_budget_kb = 4000
+tatoeba = { file = "tatoeba/ara_sentences_detailed.tsv.bz2", max_sentences = 3000000 }
+wiki = { files = [
+    "wiki/arwiki_content-20261018-00000.json.bz2",
+    "wiki/arwiki_content-20261018-00001.json.bz2",
+    "wiki/arwiki_content-20261018-00002.json.bz2",
+], max_bytes = 1000000000 }
+
+# Where each source comes from: its base, then its folder under that base, then its file name.
+[bases]
+# wordfreq at commit 912caf64.
+wordfreq = "https://raw.githubusercontent.com/rspeer/wordfreq/912caf64b657478d1dff1138efdc078947d54bb1/"
+# SCOWLv2's en_US Hunspell release.
+scowl = "https://github.com/en-wl/wordlist/releases/download/rel-2026.02.25/"
+# LibreOffice's dictionaries at commit 67032ee9.
+libreoffice = "https://raw.githubusercontent.com/LibreOffice/dictionaries/67032ee957631908098a72edf48dc81cac27e369/"
+# Tatoeba's sentences per language.
+tatoeba = "https://downloads.tatoeba.org/exports/per_language/"
+# Wikipedia's plain-text search index, dump of 2026-10-18.
+wiki = "https://dumps.wikimedia.org/other/cirrus_search_index/20261018/"
+
+# Each file under the source folder: its base and folder there, or the archive it is unzipped from; then its hash.
+[sources]
+"dict/ar/AUTHORS.txt" = { base = "libreoffice", dir = "ar/", sha256 = "bade1d2d0d47dff5956c08732cdb9c02432d9b0b8016a56e27f58b8d7e842462", size = 200 }
+"dict/ar/COPYING.txt" = { base = "libreoffice", dir = "ar/", sha256 = "73480d918cd78d655508e80aa88c022cbd53634524a0f714b5f2519f2cf19124", size = 532 }
+"dict/ar/README_ar.txt" = { base = "libreoffice", dir = "ar/", sha256 = "5ead684ae5211ccf615686959e24bd21ef6eebbb6195997529fda08b993f615e", size = 420 }
+"dict/ar/ar.aff" = { base = "libreoffice", dir = "ar/", sha256 = "cec30b8621001e49618feb05aec1984c5fcfbf7d2ec309901d5cbf66585217a3", size = 86949 }
+"dict/ar/ar.dic" = { base = "libreoffice", dir = "ar/", sha256 = "2a3e5367f61c1583734db9d66734f5603e6be5c2d227cf5c5cd7e4ca586e34fe", size = 7217161 }
+"dict/en/hunspell-en_US-2026.02.25.zip" = { base = "scowl", sha256 = "ac8e73310e951d88c52c2cf2ba54ceaca34f8486a81630ac8a75dc5f931179f9", size = 187271 }
+"dict/en/unzipped/README_en_US.txt" = { zip = "dict/en/hunspell-en_US-2026.02.25.zip", sha256 = "d63c711523fc9504fb71e1278489c6d7bb8cafcba75158c107cd17844955470f", size = 6976 }
+"dict/en/unzipped/en_US.aff" = { zip = "dict/en/hunspell-en_US-2026.02.25.zip", sha256 = "526e1dc32d1c0e8806dd72809c017b5546f2104b08b9424a4c47311aca526cca", size = 3240 }
+"dict/en/unzipped/en_US.dic" = { zip = "dict/en/hunspell-en_US-2026.02.25.zip", sha256 = "ab012ae86ce4b46b60db5b150869288de9c4a87bc747911764e582125b1b961e", size = 508614 }
+"dict/fr/README_dict_fr.txt" = { base = "libreoffice", dir = "fr_FR/dictionaries/", sha256 = "4a25abf740ad6ba5e8d0cfc0d2ffadc3c13c303f8fe389f323b061a389350f83", size = 2758 }
+"dict/fr/fr.aff" = { base = "libreoffice", dir = "fr_FR/dictionaries/", sha256 = "c176610cd5dc4846806a65ddd029f422d87978bf58f224aa44222662a16a2de5", size = 199870 }
+"dict/fr/fr.dic" = { base = "libreoffice", dir = "fr_FR/dictionaries/", sha256 = "b78a868e31dd6e373b6c3217969afb898a9acde828a5e7ef97308da42218c88c", size = 1236490 }
+"tatoeba/ara_sentences_detailed.tsv.bz2" = { base = "tatoeba", dir = "ara/", sha256 = "1876cd58d858b23eaf5446cd7f44ae0f007c435776f601dede194af4fb01a362", size = 1211660 }
+"tatoeba/eng_sentences_detailed.tsv.bz2" = { base = "tatoeba", dir = "eng/", sha256 = "c39d2fab0cc5bc2b798b539134b83abaf5dec723a059ce55496907d08e3e9030", size = 34953888 }
+"tatoeba/fra_sentences_detailed.tsv.bz2" = { base = "tatoeba", dir = "fra/", sha256 = "07208a7630b7ec3e51d9cbbcd5112295cdba41de82cf35d41ab8797ae9a5802e", size = 14874868 }
+"wiki/arwiki_content-20261018-00000.json.bz2" = { base = "wiki", dir = "index_name=arwiki_content/", sha256 = "a96af1e463045139e80b218001a01eedeb8ab9eb1cb2223c61c0e113027d385a", size = 689628567 }
+"wiki/arwiki_content-20261018-00001.json.bz2" = { base = "wiki", dir = "index_name=arwiki_content/", sha256 = "21c24891b8bda35a51a987a8b1fc9a01b96f55501fcdbd7ba7c8485a85e3e85b", size = 678913580 }
+"wiki/arwiki_content-20261018-00002.json.bz2" = { base = "wiki", dir = "index_name=arwiki_content/", sha256 = "81a7c38cbf017bc0a0464ed33ad89e8aa81c507b25e8761d5461e64b73df110c", size = 682826890 }
+"wiki/enwiki_content-20261018-00000.json.bz2" = { base = "wiki", dir = "index_name=enwiki_content/", sha256 = "782bc3614fd64a7fec7fccdcb351a8ac446ffa44bb2be475cee391fff3212658", size = 636099274 }
+"wiki/frwiki_content-20261018-00000.json.bz2" = { base = "wiki", dir = "index_name=frwiki_content/", sha256 = "504aafdbaded2ccc5362fbca4654e75f66c70348345e38fd8ff0a8b67e81f85b", size = 621856428 }
+"wordfreq/README.md" = { base = "wordfreq", sha256 = "0f1db058e1df2e6bda2db5d0ea851a7111d2390ec16a9939d971ef53ea24f684", size = 27642 }
+"wordfreq/large_ar.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "aa12410764f1946f21d986a920c289c22accb069d9b287d71b61657005516eec", size = 3063585 }
+"wordfreq/large_en.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "dffae8066b78dce0a6667cf5f58e567054f902674667090a7ac8a8a44628b05c", size = 1494836 }
+"wordfreq/large_fr.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "6f16cd80b9b66c5698ed002becea83ae30d0584c3205f1cf01714ad562c00c8b", size = 1491216 }
+"wordfreq/small_bg.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "b19e0a302b7c50439af94ed72b4e3d049b5233db9956add43f16922349fca359", size = 202364 }
+"wordfreq/small_bn.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "5dd9f6f83be5389dcda4b037e96d6d7f659793c8a344d4a7531e903131534a31", size = 207377 }
+"wordfreq/small_ca.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "13fa468e915d70f3b2991244f71fa5c160ab1d097d3f084546b8a7f15e8a5f03", size = 119705 }
+"wordfreq/small_cs.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "213812b32ab2b2cdb626e5e1ced308d0d89e2990ae1eb5cf183c5e1f16d52940", size = 244134 }
+"wordfreq/small_da.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "80db682ff7bb30e7c8fd3e5dac2b9fe8c12faa206c45438f1a799a048ab10d8b", size = 130515 }
+"wordfreq/small_de.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "2115b5bb4adb671a3352555a480b9c2f5b03493e9f7e4047997361d62310017a", size = 186094 }
+"wordfreq/small_el.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "9ec327293a1657eac51518d6506e387dda453b548e506f47ef6e720592c1d9c9", size = 275904 }
+"wordfreq/small_es.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "ff5853040f65bcc9cb3ed3721d1d09d4405389c1741ebbf529612220829ff5af", size = 154340 }
+"wordfreq/small_fa.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "bfb503f6b0d6bdddce720ee8154faf1c79d8b0417e6c865643da3b17b7638057", size = 147747 }
+"wordfreq/small_fi.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "7c33d07743908b9ae43347d96f60e4d1d30fa3529f59fdefcbf16441040183d7", size = 286020 }
+"wordfreq/small_fil.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "e18224d2efa12c3ca6e8eaee76ec4eae0cf4c437988545e8e8dae36a1a7a940d", size = 132820 }
+"wordfreq/small_he.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "b68a4d94dbda037255c3992d4c3ae7250ac6a67aedcf90246afc020681a462e5", size = 252281 }
+"wordfreq/small_hi.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "92ccbf70297d28e97af55a2a517b95c3d8b599e4cc943fb6d4612a3d44a86992", size = 148115 }
+"wordfreq/small_hu.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "84130f74f9ea8f097bfb25d3778d03d26449dba255df7e60f42bbef463fdc582", size = 228299 }
+"wordfreq/small_id.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "6fd891027cd6395b5c038c0e6402fa7e107ffd8973f862053246b897beb1bcd3", size = 133311 }
+"wordfreq/small_is.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "2c4d79aa407c827278c145d394e4843c6ce3b7c7d56847fba548b9170def87a4", size = 198345 }
+"wordfreq/small_it.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "07a4355d735d9cc864ce9fe679d94a13dee4cefa2495b6b013ecdb214b231c66", size = 157993 }
+"wordfreq/small_ja.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "cb86d1b139615d650573ee66ada5f6cb61ff0825557943de9db46f5f3f0e71f9", size = 141445 }
+"wordfreq/small_ko.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "01014287a9e779d232f965d054a9cb5eb10b0bc46ee464fbd42935a5df7c8319", size = 131176 }
+"wordfreq/small_lt.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "36ea5906d64376a4ad1eef03b4d03f5f86b374a50018a1ac7b45dc49dd8f2044", size = 303381 }
+"wordfreq/small_lv.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "fa1996db4bb977099205d4fb57aa9181f320573cab9ac477c89b90cf4a67c639", size = 210864 }
+"wordfreq/small_mk.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "9960970cc6ea2323ba42c2c352542c39cfd892bee3d6f89b5ab0949fdc4ccd18", size = 181786 }
+"wordfreq/small_ms.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "dca0d42e666ae1998b74685963570d35407fb3d7c4a4796b21b3cd33954ffc1a", size = 119736 }
+"wordfreq/small_nb.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "f979e2d16f41758572ce8c3992047f015cbef65c012702a86e7c416ab8d83659", size = 114636 }
+"wordfreq/small_nl.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "ae0d64f10e9d11898b2b9481c0b20698ec40c79b8025edfdd70856bd593ad4b0", size = 132025 }
+"wordfreq/small_pl.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "95691a55cc2afe0719c11f187fe55a8956bef0654ec476e945af3c495b4aa285", size = 232166 }
+"wordfreq/small_pt.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "fe4e551f6da739583d66cd5ef4fca28a1ccfa2ae5a53a5cbf48aa73dd7c91e0c", size = 147253 }
+"wordfreq/small_ro.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "c17fe82952ed209bb45b95c56cb5c7f077ca921a84578c3807d48ddc1dd842e2", size = 196154 }
+"wordfreq/small_ru.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "ddb45281a609f8c5c4bf3ece7b045c540f76fe36bb438a108e2a45c6f593a078", size = 348771 }
+"wordfreq/small_sh.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "aea3996335662bd8101383ba69d49123f7b5bc82d7f907f69f477d040bf74d89", size = 239434 }
+"wordfreq/small_sk.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "ed772a1d7efd8125d025b2ee21736cfcf186847e059ada62ea3fd7ecf4437a71", size = 281773 }
+"wordfreq/small_sl.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "68fa0bfb6c083e90cef397435832fd744f7e7a6b90e60319ab969fb266124ae1", size = 235774 }
+"wordfreq/small_sv.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "a7c52a3d3576db1b7d4280be47aafccabdc70f9a56c5a40bc94b9139e271adf6", size = 137451 }
+"wordfreq/small_ta.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "68ed68a8bd703e1aafe8c0adc3827dada57eb3226837dabf26716187fb796547", size = 453574 }
+"wordfreq/small_tr.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "10980704ee3ac5b52f226579251905412a04ead57092a12182dd0b8be6a765df", size = 300420 }
+"wordfreq/small_uk.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "c8cc895dd13da4a905d268d96382f2675f49fed770e89804c4f8f114a2564dec", size = 272025 }
+"wordfreq/small_ur.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "2587f23e5974e940e4dbeff64e9d3c918b5bd81b5089020cb6803f3c09626ac6", size = 103189 }
+"wordfreq/small_vi.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "bde76e2846f38fc8f4ad5112493d524c0c7f5e5545072b4de773d0a83159f15f", size = 39727 }
+"wordfreq/small_zh.msgpack.gz" = { base = "wordfreq", dir = "wordfreq/data/", sha256 = "441ce2e01370185606f0e3c5da47f64887981758b0f65ae511c0a5927b1ab359", size = 179188 }

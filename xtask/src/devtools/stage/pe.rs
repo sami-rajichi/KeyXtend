@@ -149,6 +149,20 @@ fn text_at(bytes: &[u8], at: usize) -> Option<String> {
     Some(String::from_utf8_lossy(&rest[..end]).into_owned())
 }
 
+/// The smallest well-formed 64-bit image: no sections and no data directories, so it imports nothing.
+#[cfg(test)]
+pub(crate) fn bare_image() -> Vec<u8> {
+    let pe = PE_AT + size_of::<u32>();
+    let opt = pe + PE_MAGIC.len() + COFF_LEN;
+    let mut b = vec![0u8; opt + DIRS_AT_64];
+    b[..DOS_MAGIC.len()].copy_from_slice(DOS_MAGIC);
+    let at = u32::try_from(pe).expect("the header is small");
+    b[PE_AT..pe].copy_from_slice(&at.to_le_bytes());
+    b[pe..pe + PE_MAGIC.len()].copy_from_slice(PE_MAGIC);
+    b[opt..opt + size_of::<u16>()].copy_from_slice(&PE64.to_le_bytes());
+    b
+}
+
 /// The library names the file at `path` imports.
 pub(crate) fn read(path: &Path) -> Result<Vec<String>, DevError> {
     let bytes = std::fs::read(path)?;

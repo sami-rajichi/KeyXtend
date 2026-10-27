@@ -60,6 +60,28 @@ fn the_next_key_holds_every_latch_once_in_release_mode() {
 }
 
 #[test]
+fn a_word_that_started_under_some_latches_uses_or_spends_only_those() {
+    let mut m = Latches::new(Modifiers::Release);
+    m.toggle(Latch::Shift, SHIFT);
+    let then = m.clone();
+    m.toggle(Latch::Ctrl, CTRL);
+    assert!(m.used_of(&then));
+    assert!(
+        !m.is_on(Latch::Shift) && m.unused(Latch::Ctrl),
+        "Ctrl came later"
+    );
+    let mut s = Latches::new(Modifiers::Stay);
+    let then = s.clone();
+    s.toggle(Latch::Shift, SHIFT);
+    assert!(!s.used_of(&then), "nothing was on at the start");
+    s.spend_of(&then);
+    assert!(s.unused(Latch::Shift));
+    let then = s.clone();
+    s.spend_of(&then);
+    assert!(s.is_on(Latch::Shift) && !s.unused(Latch::Shift));
+}
+
+#[test]
 fn latches_stay_after_keys_in_stay_mode_until_clicked_again() {
     let mut m = Latches::new(Modifiers::Stay);
     m.toggle(Latch::Shift, SHIFT);

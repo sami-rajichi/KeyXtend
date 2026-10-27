@@ -5,9 +5,9 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
 use spike_core::sendkeys;
-use spike_core::uia::Uia;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::g22::{added, words_in};
@@ -66,7 +66,7 @@ fn exact_by_gap(rows: &[Value]) -> BTreeMap<u64, usize> {
 
 /// Every gap over every sentence, then Notepad's text length through UIA and from its saved file.
 fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     probe::front(ctx, app)?;
     let g = &ctx.cfg.g22;
     let mut rows = Vec::new();

@@ -2,9 +2,13 @@
 
 use crate::files::keys_of;
 use crate::{all, lang};
-use kx_module_api::keys::{SCROLL_FAILED, SCROLL_POINT};
+use kx_module_api::keys::{SCROLL_FAILED, SCROLL_POINT, WORDS_DAMAGED, WORDS_LOCKED};
 use kx_ui::find;
-use kx_ui::i18n::keys::{MODULE, THEME};
+use kx_ui::i18n::keys::{
+    CHIP_LOCKED, CHIP_MORE, CHIP_NONE, CHIP_UNDO, MODULE, THEME, WORDS_CANCEL, WORDS_FORGET,
+    WORDS_FORGET_SHORT, WORDS_MENU, WORDS_OFF, WORDS_OFF_SHORT, WORDS_ON, WORDS_ON_SHORT,
+    WORDS_PAUSE, WORDS_PAUSE_SHORT, WORDS_RESUME, WORDS_RESUME_SHORT,
+};
 
 /// Arabic names of keys that print a Latin word: "مفتاح" and that word (owner, 2026-09-30).
 const AR_LATIN_NAMES: [(&str, &str); 8] = [
@@ -24,6 +28,36 @@ const AR_TERMS: [(&str, &str); 5] = [
     ("enter", "إدخال"),
     ("caps", "تأمين الأحرف الكبيرة"),
     ("space", "مسافة"),
+];
+/// The word suggestion texts in Arabic, as the owner gave them (P7).
+const AR_WORDS: [(&str, &str); 13] = [
+    (CHIP_MORE, "عناوين بريد أخرى"),
+    (CHIP_UNDO, "تراجع"),
+    (CHIP_NONE, "لا توجد اقتراحات"),
+    (CHIP_LOCKED, "خانة كلمة مرور: لا اقتراحات ولا تعلّم"),
+    (WORDS_MENU, "قائمة الاقتراحات"),
+    (WORDS_FORGET, "نسيان كلمة"),
+    (WORDS_CANCEL, "إلغاء"),
+    (WORDS_PAUSE, "إيقاف التعلّم مؤقتًا"),
+    (WORDS_RESUME, "استئناف التعلّم"),
+    (WORDS_OFF, "إيقاف الاقتراحات"),
+    (WORDS_ON, "تشغيل الاقتراحات"),
+    (
+        WORDS_DAMAGED,
+        "كان ملف الكلمات المتعلَّمة تالفًا، لذا يبدأ التعلّم من جديد.",
+    ),
+    (
+        WORDS_LOCKED,
+        "تعذّر فتح الكلمات المتعلَّمة، لذا لن يُحفَظ ما يُتعلَّم هذه المرة.",
+    ),
+];
+/// The menu rows' short labels in English, French and Arabic, as the owner gave them (P7).
+const SHORT: [(&str, [&str; 3]); 5] = [
+    (WORDS_FORGET_SHORT, ["Forget", "Oublier", "نسيان"]),
+    (WORDS_PAUSE_SHORT, ["Pause", "Pause", "إيقاف مؤقت"]),
+    (WORDS_RESUME_SHORT, ["Resume", "Reprendre", "استئناف"]),
+    (WORDS_OFF_SHORT, ["Off", "Désactiver", "إيقاف"]),
+    (WORDS_ON_SHORT, ["On", "Activer", "تشغيل"]),
 ];
 /// "Switch": Arabic keeps it for the mode button, never for a key's name.
 const AR_SWITCH: &str = "التبديل";
@@ -94,6 +128,23 @@ fn arabic_names_latin_printed_keys_by_that_word_and_the_others_by_microsoft_term
         .filter(|k| k.starts_with(KEY_GROUP));
     for key in names {
         assert!(!ar.text(&key).contains(AR_SWITCH), "{key}");
+    }
+}
+
+#[test]
+fn the_word_suggestion_texts_read_in_arabic_as_the_owner_gave_them() {
+    let ar = lang("ar");
+    for (key, text) in AR_WORDS {
+        assert_eq!(ar.text(key), text, "{key}");
+    }
+}
+
+#[test]
+fn the_menus_short_labels_read_as_the_owner_gave_them() {
+    for (key, texts) in SHORT {
+        for (tag, text) in ["en", "fr", "ar"].into_iter().zip(texts) {
+            assert_eq!(lang(tag).text(key), text, "{tag} {key}");
+        }
     }
 }
 

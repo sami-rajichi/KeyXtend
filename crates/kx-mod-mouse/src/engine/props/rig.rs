@@ -89,16 +89,22 @@ pub(super) struct Rig {
     pub(super) notes: Vec<Note>,
     /// Events the engine dropped.
     pub(super) dropped: usize,
-    /// Input the engine sent.
-    pub(super) sent: usize,
+    /// Input the engine sent, in order.
+    pub(super) sent: Vec<PointerAct>,
     /// Releases after which the OS still held that button or a modifier, outside a carry.
     pub(super) unmatched: usize,
     /// Steps after which the engine needed no hook, yet the OS held a key or a button the hand does not.
     pub(super) leaks: usize,
     /// Scrolling is on.
     scrolling: bool,
-    /// Presses the engine heard while scrolling.
+    /// Presses are wanted.
+    wanted: bool,
+    /// Events whose press notes differ from the one expected for a press while scrolling or wanted, else none.
+    pub(super) misnoted: usize,
+    /// Presses the engine heard while scrolling or wanted, which the press notes must total.
     pub(super) pressed: usize,
+    /// Steps after which presses were wanted, yet the engine needed no hook.
+    pub(super) unhooked: usize,
 }
 
 impl Rig {
@@ -121,11 +127,14 @@ impl Rig {
             acts: Vec::new(),
             notes: Vec::new(),
             dropped: 0,
-            sent: 0,
+            sent: Vec::new(),
             unmatched: 0,
             leaks: 0,
             scrolling: false,
+            wanted: false,
+            misnoted: 0,
             pressed: 0,
+            unhooked: 0,
         };
         rig.more(steps);
         rig
@@ -158,6 +167,10 @@ impl Rig {
                 self.scrolling = on;
                 self.e.set_scrolling(on);
             }
+            Step::Wanted(on) => {
+                self.wanted = on;
+                self.e.set_wanted(on);
+            }
             Step::Release => self.e.release(&mut self.acts),
             Step::Miss => self.miss(),
         }
@@ -165,24 +178,27 @@ impl Rig {
         let stray = (self.os.buttons[0] && !self.left) || self.os.buttons[1] || self.os.buttons[2];
         let held = stray || !self.os.keys.is_empty();
         self.leaks += usize::from(held && !self.e.needs_hook());
+        self.unhooked += usize::from(self.wanted && !self.e.needs_hook());
     }
 
-    /// Runs one event; the OS sees it unless the engine drops it, then the engine's input.
+    /// Runs one event; the OS sees it unless the engine drops it, then the engine's input. Its press notes are checked.
     fn event(&mut self, event: PointerEvent) {
         let press = matches!(event, PointerEvent::Down { .. });
-        self.pressed += usize::from(press && self.scrolling);
+        let (want, heard) = (press && (self.scrolling || self.wanted), self.notes.len());
         if self.e.on(event, Mono::from_us(self.now), &mut self.acts) {
             self.dropped += 1;
         } else {
             self.os.see(event);
         }
         self.send();
+        self.pressed += usize::from(want);
+        self.misnoted += usize::from(presses(&self.notes[heard..]) != usize::from(want));
     }
 
     /// The OS takes one call's input, which never passes `MAX_ACTS`, and the notes are drained as the host does.
     fn send(&mut self) {
         assert!(self.acts.len() <= MAX_ACTS, "{} acts", self.acts.len());
-        self.sent += self.acts.len();
+        self.sent.extend_from_slice(&self.acts);
         for &act in &self.acts {
             self.os.act(act);
         }
@@ -236,17 +252,20 @@ impl Rig {
         }
     }
 
-    /// Both modes go off, the latches clear and scrolling ends; then the counts start again.
+    /// Both modes go off, the latches clear, scrolling ends and presses are no longer wanted; then the counts start
+    /// again.
     pub(super) fn calm(&mut self) {
         self.let_go();
         self.step(&Step::Scroll(false));
+        self.step(&Step::Wanted(false));
         self.e.set_rclick(false, &mut self.acts);
         if self.e.grab() != GrabState::Off {
             self.e.toggle(Toggle::Grab, &mut self.acts);
         }
         self.e.set_latches(Vec::new());
         self.send();
-        (self.dropped, self.sent, self.pressed) = (0, 0, 0);
+        (self.dropped, self.pressed) = (0, 0);
+        self.sent.clear();
         self.notes.clear();
     }
 

@@ -2,20 +2,34 @@
 
 use std::path::{Component, Path, PathBuf};
 
+use kx_module_api::ports::RESERVED_NAMES;
+
 use super::DevError;
 
 /// Characters Windows forbids in a folder name, both separators, and PowerShell wildcards.
 const FORBIDDEN: &str = "\\/:*?\"<>|[]`";
-/// Windows device names, which no folder may use, with or without an extension.
-const DEVICES: [&str; 4] = ["CON", "PRN", "AUX", "NUL"];
-/// Device-name prefixes that take one digit (`COM1`, `LPT9`, `COM¹`).
-const NUMBERED: [&str; 2] = ["COM", "LPT"];
-/// The digits Windows accepts after a numbered device prefix, superscripts included.
-const DEVICE_DIGITS: &str = "123456789¹²³";
-/// Separator of the relative folders in the settings.
-const SETTINGS_SEP: char = '/';
-/// Bytes in one MB for the size limits: 10⁶, as spec §10, ADR-0012 and G8 count.
+/// The superscript digits Windows also takes after a numbered device name (`COM¹`), each with its plain digit.
+const SUPERSCRIPTS: [(char, char); 3] = [('¹', '1'), ('²', '2'), ('³', '3')];
+/// Separator of the relative paths in the settings and in `words.toml`.
+pub(crate) const SEP: char = '/';
+/// Bytes in one MB for the size limits: 10⁶, as spec §10 and ADR-0012 count.
 pub(crate) const BYTES_PER_MB: u64 = 1_000_000;
+/// Bytes in one KB, counted the same way: 10³.
+pub(crate) const BYTES_PER_KB: u64 = 1_000;
+
+/// `bytes` in MB of `BYTES_PER_MB`, rounded up, as every size limit counts them.
+pub(crate) fn mb(bytes: u64) -> u64 {
+    bytes.div_ceil(BYTES_PER_MB)
+}
+
+/// Refuses `bytes` installed over `max_mb`, the most an install copies; the install and the stage check both use it.
+pub(crate) fn fits(bytes: u64, max_mb: u64) -> Result<(), DevError> {
+    let mb = mb(bytes);
+    if mb > max_mb {
+        return Err(DevError::TooBig { mb, max: max_mb });
+    }
+    Ok(())
+}
 
 /// A path as text for messages and program arguments.
 pub(crate) fn text(path: &Path) -> String {
@@ -32,31 +46,28 @@ pub(crate) fn is_plain_name(name: &str) -> bool {
         && !is_device(name)
 }
 
-/// True if `name`, before its first dot, is a Windows device name.
+/// True if `name`, before its first dot, is one of `RESERVED_NAMES` in any letter case, a superscript digit read as
+/// its plain one.
 fn is_device(name: &str) -> bool {
-    let stem = name
-        .split('.')
-        .next()
-        .unwrap_or_default()
-        .to_ascii_uppercase();
-    DEVICES.contains(&stem.as_str())
-        || NUMBERED.iter().any(|prefix| {
-            stem.strip_prefix(prefix).is_some_and(|rest| {
-                let mut chars = rest.chars();
-                matches!((chars.next(), chars.next()), (Some(d), None) if DEVICE_DIGITS.contains(d))
-            })
-        })
+    let stem = name.split('.').next().unwrap_or_default();
+    let plain = |c: char| {
+        SUPERSCRIPTS
+            .iter()
+            .find(|(s, _)| *s == c)
+            .map_or(c, |(_, d)| *d)
+    };
+    let stem: String = stem.chars().map(plain).collect();
+    RESERVED_NAMES.iter().any(|r| r.eq_ignore_ascii_case(&stem))
 }
 
 /// True if `rel` is a relative, `/`-separated path of plain names.
 pub(crate) fn is_relative_plain(rel: &str) -> bool {
-    rel.split(SETTINGS_SEP).all(is_plain_name)
+    rel.split(SEP).all(is_plain_name)
 }
 
 /// `base` joined with each part of the `/`-separated settings path `rel`.
 pub(crate) fn join_rel(base: PathBuf, rel: &str) -> PathBuf {
-    rel.split(SETTINGS_SEP)
-        .fold(base, |acc, part| acc.join(part))
+    rel.split(SEP).fold(base, |acc, part| acc.join(part))
 }
 
 /// True if `path` lies strictly inside `dir`, ignoring letter case.

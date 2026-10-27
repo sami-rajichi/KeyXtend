@@ -16,10 +16,13 @@ pub use manifest::{ID, MANIFEST};
 pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, LatchesChanged, PointerHookKey, ScrollChanged,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesChanged, PointerHookKey,
+    PointerMoved, PressesWanted, ScrollChanged,
 };
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
@@ -33,6 +36,8 @@ const NO_THREAD: &str = "the mouse actor's thread did not start";
 pub struct MouseModule {
     /// The running actor's inbox and thread, from start to stop.
     actor: Option<(Sender<Msg>, JoinHandle<()>)>,
+    /// The notice for a quiet-only fault was shown; it outlives each start, so it shows once per program run.
+    reset_told: Arc<AtomicBool>,
 }
 
 impl Module for MouseModule {
@@ -44,6 +49,9 @@ impl Module for MouseModule {
         self.halt();
         let settings = cx.settings::<MouseSettings>()?;
         let hook = cx.service::<PointerHookKey>()?;
+        // The notes and moves it only sends need `KeyboardUi`; without it the start fails, as the keyboard's does.
+        cx.bus().check::<AssistNote>()?;
+        cx.bus().check::<PointerMoved>()?;
         let (tx, inbox) = mpsc::channel();
         relay(cx, &tx, |e: &AssistToggle| Msg::Toggle(e.which))?;
         relay(cx, &tx, |_: &AssistAsk| Msg::Ask)?;
@@ -52,6 +60,8 @@ impl Module for MouseModule {
         relay(cx, &tx, |e: &ScrollChanged| {
             Msg::Scroll(e.live && e.dir.is_some())
         })?;
+        // Word prediction publishes this from its own thread; the handler only forwards it.
+        relay(cx, &tx, |e: &PressesWanted| Msg::Presses(e.on))?;
         let bus = cx.bus();
         let actor = Actor::new(
             hook,
@@ -59,6 +69,7 @@ impl Module for MouseModule {
             cx.settings_handle(),
             settings,
             tx.clone(),
+            Arc::clone(&self.reset_told),
         );
         let thread = thread::Builder::new()
             .name(THREAD.to_owned())

@@ -110,8 +110,9 @@ Item {
                 if (says)
                     out.push({ item: named(face, t.texts[k.name]), says: says });
             }
+            // An icon button's id is its text key, the words menu's too.
             for (const b of all(face, o => o.part !== undefined && o.visible)) {
-                const says = b.text ? t.lang.sizes.find(z => z.label === b.text).name : t.texts["bar." + b.part];
+                const says = b.text ? t.lang.sizes.find(z => z.label === b.text).name : t.texts[b.uid];
                 out.push({ item: b, says: says });
             }
             out.push({ item: named(face, t.texts["bar.corner"]), says: t.texts["bar.corner"] });

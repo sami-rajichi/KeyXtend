@@ -2,7 +2,7 @@
 //! and the keyboard focus put on its list. None of them moves the pointer.
 #![cfg(windows)]
 
-use spike_core::uia;
+use kx_platform_windows::uia;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{

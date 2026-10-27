@@ -138,10 +138,11 @@ fn a_run_started_for_a_mode_while_scrolling_tells_presses_too() {
 fn a_given_up_engine_while_scrolling_gets_one_fresh_run_until_scrolling_changes() {
     let mut rig = scrolling(Rig::new());
     let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
-    for _ in 0..2 {
+    let again = [shown(false, Off)];
+    for want in [&reset[..], &again[..]] {
         rig.hook.give_up();
         rig.pump();
-        assert_eq!(rig.take(), reset);
+        assert_eq!(rig.take(), want, "the notice shows once per program run");
     }
     assert_eq!(rig.hook.starts(), 2, "one fresh run, never a loop");
     assert!(!rig.hook.running());

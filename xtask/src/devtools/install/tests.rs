@@ -1,5 +1,7 @@
+use kx_module_api::ports::{PACK_DIR, PACK_INDEX};
+
 use super::*;
-use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, stage_config};
+use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, noise, stage_config};
 
 const TP: &str = "0123456789ABCDEF0123456789ABCDEF01234567";
 
@@ -62,6 +64,60 @@ fn dev_install_refuses_an_app_folder_that_fails_the_stage_check() {
     assert!(
         matches!(result, Err(DevError::Stage(StageError::Banned(_)))),
         "{result:?}"
+    );
+}
+
+#[test]
+fn dev_install_holds_an_app_folder_to_the_download_budget() {
+    let mut stage = stage_config();
+    stage.max_mb = 1;
+    let dir = TempDir::new("vet-budget");
+    let size = usize::try_from(paths::BYTES_PER_MB).unwrap();
+    let program = [stage::bare_image(), noise(size)].concat();
+    std::fs::write(dir.path().join(stage.program()), program).unwrap();
+    let setup = DevSetup {
+        root: dir.path().to_path_buf(),
+        config: devtools_config(),
+    };
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let over = StageError::OverBudget { mb: 2, max: 1 };
+    assert_eq!(vet(dir.path(), &setup, &stage, windows), Err(over.into()));
+}
+
+/// A folder holding only the program, a bare image importing nothing, with settings rooted there.
+fn bare_app(label: &str) -> (TempDir, DevSetup) {
+    let dir = TempDir::new(label);
+    let program = dir.path().join(stage_config().program());
+    std::fs::write(program, stage::bare_image()).unwrap();
+    let setup = DevSetup {
+        root: dir.path().to_path_buf(),
+        config: devtools_config(),
+    };
+    (dir, setup)
+}
+
+#[test]
+fn dev_install_refuses_an_app_folder_without_its_word_packs() {
+    let (dir, setup) = bare_app("vet-words");
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let index = paths::text(&Path::new(PACK_DIR).join(PACK_INDEX));
+    let missing = StageError::NoWords(index);
+    let result = vet(dir.path(), &setup, &stage_config(), windows);
+    assert_eq!(result, Err(missing.into()));
+}
+
+#[test]
+fn dev_install_holds_an_app_folder_to_the_install_limit() {
+    let (dir, mut setup) = bare_app("vet-installed");
+    setup.config.install_max_mb = 1;
+    let zeros = vec![0u8; usize::try_from(paths::BYTES_PER_MB).unwrap()];
+    let program = [stage::bare_image(), zeros].concat();
+    std::fs::write(dir.path().join(stage_config().program()), program).unwrap();
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let too_big = DevError::TooBig { mb: 2, max: 1 };
+    assert_eq!(
+        vet(dir.path(), &setup, &stage_config(), windows),
+        Err(too_big)
     );
 }
 

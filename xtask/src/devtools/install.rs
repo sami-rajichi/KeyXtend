@@ -76,11 +76,7 @@ pub(crate) fn check_source(source: &Path, target: &Path, max_mb: u64) -> Result<
     if paths::overlaps(source, target) {
         return Err(DevError::Overlap(paths::text(source)));
     }
-    let mb = paths::folder_size(source)?.div_ceil(paths::BYTES_PER_MB);
-    if mb > max_mb {
-        return Err(DevError::TooBig { mb, max: max_mb });
-    }
-    Ok(())
+    paths::fits(paths::folder_size(source)?, max_mb)
 }
 
 /// True if `folder` holds the app's `program` directly, so its install gets the shortcut.

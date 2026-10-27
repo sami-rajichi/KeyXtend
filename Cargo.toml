@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "crates/kx-crypto", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -36,10 +36,16 @@ toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }
 windows = "0.62.2"
+# windows-rs's `implement` macro writes `windows_core` paths, so the crate that uses it names it too; same release.
+windows-core = "0.62.2"
 embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
 fluent-langneg = "0.13.1"
 unic-langid = "0.9.6"
+# Sealed files (ADR-0010): RustCrypto's AEAD, OS randomness and wiping secrets from memory.
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["zeroize"] }
+getrandom = "0.4.3"
+zeroize = "1.9.1"
 # Qt through cxx-qt, pinned: every upgrade is reviewed (ADR-0013).
 cxx = "1.0.202"
 cxx-qt = "=0.10.0"
@@ -61,6 +67,8 @@ skip_dirs = ["target"]
 app_dir = "apps"
 # Packages whose manifest is under this folder are test tools, which never ship.
 tool_dir = "tools"
+# The build tool, which never ships; like the test tools, it may depend on a module (kx-mod-predict's pack writer).
+build_tool = "xtask"
 # Crate-name prefix for feature modules.
 module_prefix = "kx-mod-"
 # Crate-name prefix for platform adapters.
@@ -77,7 +85,7 @@ banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreame
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
 # WAV files, which the uiAccess app never does (ADR-0004).
-build_only_features = { kx-theme = ["files"] }
+build_only_features = { kx-mod-predict = ["build"], kx-theme = ["files"] }
 # Attribute every non-platform crate root must carry.
 unsafe_attr = "#![forbid(unsafe_code)]"
 # Attribute a test tool's or the bridge crate's roots may carry instead, so a scoped allow can hold the unsafe code.
@@ -172,7 +180,9 @@ profile_env = "USERPROFILE"
 app = "keyxtend"
 # Folder, under the workspace root, holding the stage; the app's own folder in it is emptied first.
 out_dir = "target/stage"
-# Largest stage, in MB of 10⁶ bytes: the download budget (ADR-0012). G8's `size_mb` must match; a kx-gates test checks.
+# The download budget (ADR-0012), in MB of 10⁶ bytes: the staged files deflated at words.toml's `[packs] level`, a
+# conservative stand-in for the installer's LZMA2; the installed size answers to `install_max_mb`. Spec §10 sets it; an
+# xtask test checks.
 max_mb = 80
 # Env var naming Qt's qmake; Qt's folders come from `qmake -query`, so the stage takes the Qt the app was built with.
 qmake_env = "QMAKE"
@@ -197,6 +207,8 @@ api_sets = ["api-ms-", "ext-ms-"]
 system_dir = "System32"
 # The flag only the app's gate-only build (`gate-input`) takes; the check refuses a program holding its text. The app's agree test pins it.
 gate_flag = "--sim-input"
+# The word packs (ADR-0032) need no key here: the index, each pack it lists and the credits go from the folder that
+# xtask/words.toml names (`[text] out`, `[credits]`) into kx-module-api's `PACK_DIR`, which the check refuses incomplete.
 
 [workspace.metadata.sounds]
 # The sound recipes, variant jitter and resampler that `cargo xtask sounds` reads, under the workspace root.
@@ -205,3 +217,15 @@ recipes = "assets/sounds/recipes.toml"
 format = "crates/kx-theme/tokens/sounds.toml"
 # Folder, under the workspace root, that `cargo xtask sounds render` writes to unless given `--out`.
 out_dir = "target/sounds"
+
+# `cargo xtask words` decompresses gigabytes of bzip2 text and checks every word with Hunspell, so these two run
+# optimised in dev builds too. The full pack build still runs best in release, about six times faster.
+[profile.dev.package.libbz2-rs-sys]
+opt-level = 3
+
+[profile.dev.package.spellbook]
+opt-level = 3
+
+# The stage deflates every staged file to measure the download, about 95 MB, so the deflater runs optimised too.
+[profile.dev.package.miniz_oxide]
+opt-level = 3

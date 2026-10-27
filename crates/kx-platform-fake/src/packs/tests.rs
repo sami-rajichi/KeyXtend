@@ -1,0 +1,137 @@
+//! The fake word packs, held to the port: added bytes come back whole, a missing language is `None`, a failure on cue,
+//! and opens counted per language, which a test on another thread can wait for.
+
+use super::*;
+use std::thread;
+use std::time::Duration;
+
+/// The longest a test waits for another thread; it never sleeps.
+const WAIT: Duration = Duration::from_secs(10);
+
+const EN: &[u8] = b"en pack";
+const AR: &[u8] = "حزمة".as_bytes();
+
+/// The bytes of language `iso`'s pack, copied out of the view.
+fn read(packs: &dyn WordPacks, iso: &str) -> Result<Option<Vec<u8>>, PackError> {
+    packs
+        .open(iso)
+        .map(|view| view.map(|pack| pack.bytes().to_vec()))
+}
+
+#[test]
+fn added_bytes_come_back_whole_per_language() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    packs.add("ar", AR.to_vec());
+    assert_eq!(read(&packs, "en"), Ok(Some(EN.to_vec())));
+    assert_eq!(read(&packs, "ar"), Ok(Some(AR.to_vec())));
+    packs.add("en", AR.to_vec());
+    assert_eq!(
+        read(&packs, "en"),
+        Ok(Some(AR.to_vec())),
+        "a later add replaces"
+    );
+}
+
+#[test]
+fn a_language_without_a_pack_opens_none() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    assert_eq!(read(&packs, "fr"), Ok(None));
+}
+
+#[test]
+fn a_code_no_platform_could_name_has_no_pack() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    for iso in ["EN", "../en", "con"] {
+        assert_eq!(read(&packs, iso), Ok(None), "{iso}");
+        assert_eq!(packs.opens(iso), 1, "{iso}");
+    }
+}
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "names no pack file")]
+fn adding_a_code_no_platform_could_name_stops_a_debug_test() {
+    FakeWordPacks::new().add("EN", EN.to_vec());
+}
+
+#[test]
+fn a_scripted_failure_refuses_the_next_open_only() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    packs.fail_open();
+    assert_eq!(read(&packs, "en"), Err(PackError::Unreadable));
+    assert_eq!(read(&packs, "en"), Ok(Some(EN.to_vec())));
+}
+
+#[test]
+fn opens_are_counted_per_language_failed_and_missing_ones_too() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    packs.fail_open();
+    for iso in ["en", "en", "fr"] {
+        let _ = read(&packs, iso);
+    }
+    assert_eq!(
+        [packs.opens("en"), packs.opens("fr"), packs.opens("ar")],
+        [2, 1, 0]
+    );
+}
+
+#[test]
+fn clones_share_the_packs_and_serve_as_the_port_from_another_thread() {
+    let packs = FakeWordPacks::new();
+    let port: Arc<dyn WordPacks> = Arc::new(packs.clone());
+    packs.add("en", EN.to_vec());
+    let opened = thread::spawn(move || read(port.as_ref(), "en"));
+    assert_eq!(opened.join().unwrap(), Ok(Some(EN.to_vec())));
+    assert_eq!(packs.opens("en"), 1);
+}
+
+#[test]
+fn a_language_ships_only_once_the_test_lists_it() {
+    let packs = FakeWordPacks::new();
+    packs.add("en", EN.to_vec());
+    assert_eq!(
+        packs.pack_of("en"),
+        None,
+        "a pack alone is not in the index"
+    );
+    packs.ship("fr");
+    assert_eq!(packs.pack_of("fr").as_deref(), Some("fr"));
+    assert_eq!(packs.pack_of("en"), None);
+    assert_eq!(packs.pack_of("FR"), None, "only a code `fits_iso` takes");
+}
+
+#[test]
+fn an_alias_is_served_by_its_shipped_pack() {
+    let packs = FakeWordPacks::new();
+    packs.alias("sh", "hr");
+    assert_eq!(packs.pack_of("hr"), None, "the pack does not ship yet");
+    packs.ship("sh");
+    assert_eq!(packs.pack_of("hr").as_deref(), Some("sh"));
+    assert_eq!(packs.pack_of("bs"), None);
+}
+
+#[test]
+fn a_waiter_wakes_when_another_thread_opens_the_language_and_says_when_none_came() {
+    let packs = FakeWordPacks::new();
+    assert!(
+        !packs.wait_opens("en", 1, Duration::ZERO),
+        "nothing opened yet"
+    );
+    let port: Arc<dyn WordPacks> = Arc::new(packs.clone());
+    let opener = thread::spawn(move || {
+        let _ = read(port.as_ref(), "fr");
+        read(port.as_ref(), "en")
+    });
+    assert!(packs.wait_opens("en", 1, WAIT));
+    assert_eq!(opener.join().unwrap(), Ok(None));
+    assert!(
+        packs.wait_opens("en", 1, Duration::ZERO),
+        "an open already counted"
+    );
+    assert!(!packs.wait_opens("en", 2, Duration::ZERO));
+}

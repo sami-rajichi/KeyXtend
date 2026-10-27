@@ -1,4 +1,4 @@
-//! kx-gates: the Windows gate runner for gates G1-G13, G17-G26 and the hand try; it prints one JSON line per run.
+//! kx-gates: the Windows gate runner for gates G1-G13, G17-G27 and the hand try; it prints one JSON line per run.
 //! It moves the real mouse and types into real apps, so it runs only with the owner's yes; `capture-layouts` only reads.
 #![deny(unsafe_code)]
 
@@ -19,6 +19,7 @@ mod cliplisten;
 mod cliptext;
 mod close;
 mod config;
+mod copyend;
 mod diff;
 mod facearg;
 mod facetools;
@@ -43,6 +44,7 @@ mod g19pill;
 mod g2;
 mod g20;
 mod g21;
+mod g21prod;
 mod g22;
 mod g22bench;
 mod g22cfg;
@@ -54,6 +56,9 @@ mod g25layer;
 mod g25watch;
 mod g25wins;
 mod g26;
+mod g27;
+mod g27lane;
+mod g27type;
 mod g2hand;
 mod g2raw;
 mod g3;
@@ -80,6 +85,7 @@ mod g8lit;
 mod g8loss;
 mod g8parts;
 mod g8pops;
+mod g8predict;
 mod g8rounds;
 mod g8scroll;
 mod g8size;
@@ -89,6 +95,7 @@ mod g8tips;
 mod g8type;
 mod g8ui;
 mod g8use;
+mod g8words;
 mod g9;
 mod g9pad;
 mod g9win;
@@ -105,9 +112,12 @@ mod mouse;
 mod mouseguard;
 mod out;
 mod outline;
+mod owncopy;
+mod ownset;
 mod p3cfg;
 mod p4cfg;
 mod p5cfg;
+mod p7cfg;
 mod padgeom;
 mod padread;
 mod pin;
@@ -128,6 +138,7 @@ mod stats;
 mod testbuild;
 mod text;
 mod tlog;
+mod typebox;
 mod uilook;
 mod usage;
 mod walk;

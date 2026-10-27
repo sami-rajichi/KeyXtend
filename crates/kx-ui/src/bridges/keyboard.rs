@@ -148,7 +148,8 @@ pub mod qobject {
         #[qinvokable]
         fn churn_plan(&self) -> QString;
 
-        /// Debug builds only: Caps Lock shows the other way round, with no key sent.
+        /// Debug builds only: Caps Lock reads the other way round through the app's layout source, and the relabel
+        /// redraws it, with no key sent.
         #[cfg(debug_assertions)]
         #[qinvokable]
         fn flip_caps(&self) -> QString;
@@ -274,7 +275,8 @@ impl qobject::Keyboard {
 
     #[cfg(debug_assertions)]
     fn flip_caps(&self) -> QString {
-        self.run(FaceAction::FlipCaps)
+        crate::churn::flip_caps();
+        self.relabel()
     }
 
     #[cfg(debug_assertions)]

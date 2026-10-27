@@ -13,22 +13,26 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-scroll"]
+default = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
 mod-mouse = ["dep:kx-mod-mouse"]
 mod-power = ["dep:kx-mod-power"]
+mod-predict = ["dep:kx-mod-predict"]
 mod-scroll = ["dep:kx-mod-scroll"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
 # ships, and `cargo xtask stage` refuses a program that holds the flag.
 gate-input = ["kx-platform-windows/sim-input"]
 
 [dependencies]
+# The sealed files that keep the learned words, under the data key the platform's guard wraps (ADR-0010).
+kx-crypto = { path = "../../crates/kx-crypto" }
 kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard", optional = true }
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts", optional = true }
 kx-mod-mouse = { path = "../../crates/kx-mod-mouse", optional = true }
 kx-mod-power = { path = "../../crates/kx-mod-power", optional = true }
+kx-mod-predict = { path = "../../crates/kx-mod-predict", optional = true }
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
 kx-platform = { path = "../../crates/kx-platform" }
@@ -36,7 +40,7 @@ kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 # The data folder's file names, where the log opens.
 kx-settings = { path = "../../crates/kx-settings" }
 kx-ui = { path = "../../crates/kx-ui" }
-# A later copy reads the user's `[ui]` section without changing the file.
+# A later copy reads the user's `[ui]` section without changing the file, and a debug build reads the words manifest.
 toml.workspace = true
 tracing.workspace = true
 # Qt's app object and QML engine, which run the UI on the main thread.
@@ -60,4 +64,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-scroll"]
+required-features = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]

@@ -7,8 +7,7 @@
 )]
 
 use crate::host::{FakeHost, Fakes, fake, id};
-use kx_mod_keyboard::KeyboardModule;
-use kx_module_api::Capability::InjectInput;
+use kx_mod_keyboard::{KeyboardModule, MANIFEST};
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyId, KeyboardFace, KeyboardFaceKey,
 };
@@ -86,7 +85,7 @@ fn start(
     let mut host = fake(change);
     host.core = Arc::clone(core);
     fakes.store(&mut host, None);
-    host.granted = vec![InjectInput];
+    host.granted = MANIFEST.capabilities.to_vec();
     module.start(&mut ModuleCx::new(&mut host)).unwrap();
     let (_, service) = &host.services[&KeyboardFaceKey::ID];
     let face = service.downcast_ref::<Arc<dyn KeyboardFace>>().unwrap();
@@ -111,7 +110,7 @@ impl Rig {
         change: Option<(&str, toml::Value)>,
         core: Arc<dyn BusCore>,
     ) -> Self {
-        let mut module = KeyboardModule::default();
+        let mut module = KeyboardModule::with_pause(fakes.pause.clone());
         let (host, face) = start(&mut module, &fakes, change, &core);
         Self {
             host,
@@ -132,15 +131,24 @@ impl Rig {
         self.face = face;
     }
 
-    /// Does `action`.
+    /// Does `action`, as the face answers it, with no state read after.
     pub fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         self.face.act(action)
+    }
+
+    /// Does key `action`, then reads the state when the reply redraws anything, as the app does after a key.
+    fn key(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
+        let reply = self.act(action);
+        if reply.as_ref().is_ok_and(|r| r.board || r.state) {
+            self.face.state_json(ROWS);
+        }
+        reply
     }
 
     /// A click on key `id`, on the language key's back part when `back`.
     pub fn click(&self, id: &str, back: bool) -> Result<FaceReply, FaceError> {
         let id = KeyId::new(id);
-        self.act(FaceAction::Tap { id, back })
+        self.key(FaceAction::Tap { id, back })
     }
 
     /// A click on key `id`.
@@ -151,28 +159,28 @@ impl Rig {
     /// Key `id` sent to the open panel, at `rows` rows per page.
     pub fn panel(&self, id: &str, rows: usize) -> Result<FaceReply, FaceError> {
         let key = KeyId::new(id);
-        self.act(FaceAction::PanelKey { key, rows })
+        self.key(FaceAction::PanelKey { key, rows })
     }
 
     /// The pointer goes down on key `id`.
     pub fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
-        self.act(FaceAction::Press { id: KeyId::new(id) })
+        self.key(FaceAction::Press { id: KeyId::new(id) })
     }
 
     /// The hold timer ticks `ms` later.
     pub fn tick_in(&self, ms: u64) -> FaceReply {
         self.fakes.clock.advance(Duration::from_millis(ms));
-        self.act(FaceAction::Tick).unwrap()
+        self.key(FaceAction::Tick).unwrap()
     }
 
     /// The pointer lets go of key `id` on it.
     pub fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
-        self.act(FaceAction::LetGo { id: KeyId::new(id) })
+        self.key(FaceAction::LetGo { id: KeyId::new(id) })
     }
 
     /// The pointer leaves the held key, or the keyboard hides.
     pub fn leave(&self) -> FaceReply {
-        self.act(FaceAction::Leave).unwrap()
+        self.key(FaceAction::Leave).unwrap()
     }
 
     /// The app in front switched to golden layout `name`, and the relabel timer ran.

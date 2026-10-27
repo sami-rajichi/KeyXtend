@@ -1,10 +1,11 @@
-//! `Ui`'s wakes on the Qt thread: each tells QML what changed, a new theme's fonts load before QML reads the new look
-//! and the last theme's go after, and only a look that changed has the windows drop what Qt cached for the last one.
+//! `Ui`'s wakes on the Qt thread: the object takes the hub's wakes as it starts, each tells QML what changed, a new
+//! theme's fonts load before QML reads the new look and the last theme's go after, and only a look that changed has the
+//! windows drop what Qt cached for the last one.
 
 use super::qobject;
 use crate::bridges::device::release_after_frame;
 use crate::hub::{Hub, Wake};
-use cxx_qt::CxxQtType;
+use cxx_qt::{CxxQtType, Threading};
 use kx_platform::ui::TrayEvent;
 use std::pin::Pin;
 #[cfg(debug_assertions)]
@@ -26,9 +27,26 @@ pub fn wakes() -> (usize, usize) {
     )
 }
 
+impl cxx_qt::Initialize for qobject::Ui {
+    fn initialize(mut self: Pin<&mut Self>) {
+        let Some(hub) = self.rust().hub.clone() else {
+            return;
+        };
+        let qt = self.qt_thread();
+        hub.set_waker(Box::new(move |wake| {
+            // A queue refused after the object is gone has nobody left to tell.
+            let _ = qt.queue(move |ui| woken(ui, wake));
+        }));
+        match hub.watch() {
+            Ok(watch) => self.as_mut().rust_mut().watch = Some(watch),
+            Err(e) => tracing::warn!(error = %e, "the system look will not be followed"),
+        }
+    }
+}
+
 /// Tells QML what changed, so no text asks Qt for a family it lacks: `fonts_changed` comes after the look's signal.
 /// When the look QML reads is new, each shown window then drops what Qt cached for the last one once it drew it.
-pub(super) fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
+fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
     let relook = matches!(wake, Wake::Settings | Wake::Look);
     let loaded = relook && ui.with(false, Hub::load_fonts);
     let release = relook && ui.as_mut().relooked();
@@ -44,6 +62,7 @@ pub(super) fn woken(mut ui: Pin<&mut qobject::Ui>, wake: Wake) {
         Wake::Assist => ui.as_mut().assist_changed(),
         Wake::Keys => ui.as_mut().keys_changed(),
         Wake::Scroll => ui.as_mut().scroll_changed(),
+        Wake::Words => ui.as_mut().words_changed(),
         Wake::Page { back } => ui.with((), |h| h.turn_page(back)),
     }
     let dropped = relook && ui.with(false, Hub::drop_fonts);

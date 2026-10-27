@@ -25,20 +25,12 @@ pub(super) fn plate(v: &LookView, out: &mut Vec<Drawn>) {
 fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
     let p = &v.palette;
     let hot = p.pop_hover.on(plate);
-    let chip = p.chip_bg.on(plate);
-    let chips = vec![chip, p.hover.on(chip)];
     // The lit size letter is text in pop_ink and the ring marks it, under the pointer too; in high contrast the hovered
     // button is Highlight, so both take sel_ink there, checked as hovered plate text.
     let lit = if v.contrast {
         vec![plate]
     } else {
         vec![plate, hot]
-    };
-    // A chip is a button, so high contrast draws its icon in ButtonText, as its word (Chip.qml).
-    let icon = if v.contrast {
-        p.legend
-    } else {
-        p.legend_2_plate
     };
     let pairs = [
         (
@@ -50,8 +42,32 @@ fn on_plate(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
         ("sel_ink on hovered plate", v.sel_ink, vec![hot], WCAG_AA),
         ("lit size letter on plate", p.pop_ink, lit.clone(), WCAG_AA),
         ("ring on plate", p.ring, lit, WCAG_SHAPES),
+    ];
+    for (name, ink, bgs, min) in pairs {
+        out.push(worst(&format!("{name}{tag}"), ink, 1.0, &bgs, min));
+    }
+    chips(v, plate, tag, out);
+}
+
+/// A chip's word and icon on `plate`, at rest and hovered, and in forget mode, named with `tag` (Chip.qml).
+fn chips(v: &LookView, plate: Rgba, tag: &str, out: &mut Vec<Drawn>) {
+    let p = &v.palette;
+    let chip = p.chip_bg.on(plate);
+    let chips = vec![chip, p.hover.on(chip)];
+    // In forget mode a chip takes the danger keys' colours, as forgetting erases; its mark shares the word's ink, so the
+    // word's AA check covers it.
+    let forget = p.danger.on(plate);
+    let forgets = vec![forget, p.hover.on(forget)];
+    // A chip is a button, so high contrast draws its icon in ButtonText, as its word.
+    let icon = if v.contrast {
+        p.legend
+    } else {
+        p.legend_2_plate
+    };
+    let pairs = [
         ("legend on chip", p.legend, chips.clone(), WCAG_AA),
         ("chip icon on chip", icon, chips, WCAG_SHAPES),
+        ("danger_ink on forget chip", p.danger_ink, forgets, WCAG_AA),
     ];
     for (name, ink, bgs, min) in pairs {
         out.push(worst(&format!("{name}{tag}"), ink, 1.0, &bgs, min));

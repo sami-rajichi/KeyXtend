@@ -1,6 +1,9 @@
-//! `close`: the product gets Quit on its command window, as its own `--quit` sends it, and the gate waits for its
-//! process to end; nothing is started. The frozen spike face only gets `WM_CLOSE`, which leaves its process running.
+//! `close`: the product gets Quit on its command window, as `--quit` sends it, and the gate waits for its end, then
+//! restores a settings backup a stopped gate left; nothing is started. The frozen spike face only gets `WM_CLOSE`,
+//! which leaves its process running.
 #![cfg(windows)]
+
+use std::path::PathBuf;
 
 use kx_platform::ui::{Command, Instance, UiError};
 use kx_platform_windows::WindowsPlatform;
@@ -9,7 +12,7 @@ use serde_json::{Value, json};
 use crate::apps::Ctx;
 use crate::proc::Process;
 use crate::product::{self, NAME};
-use crate::{mouse, win, winfind};
+use crate::{mouse, owncopy, win, winfind};
 
 /// Why the running copy was not asked to quit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,16 +45,58 @@ impl From<UiError> for Unasked {
 /// Runs `close` on `name`: the product or the frozen face.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name == NAME {
-        let (exe, ended) = quit_running(ctx).map_err(|e| e.why)?;
-        Ok(result(&exe, ended))
+        close_product(ctx)
     } else {
         close_face(ctx, name)
     }
 }
 
-/// The result line of `close` on the product, run from `program`.
-fn result(program: &str, ended: bool) -> Value {
-    json!({ "gate": "close", "keyboard": NAME, "program": program, "pass": ended })
+/// Posts Quit to the running product, if any, then restores the owner's files from a backup a stopped gate left,
+/// once no copy runs (`owncopy::recover`).
+fn close_product(ctx: &Ctx) -> Result<Value, String> {
+    let quit = || product::running().map(|c| quit_running(ctx, c)).transpose();
+    closed(
+        quit,
+        |ended| owncopy::recover(ctx, ended),
+        owncopy::side(ctx),
+    )
+}
+
+/// `close` on the product: `quit` asks the running copy, if any, to quit, then `recover` restores the backup at `side`,
+/// told whether that copy ended, as one still exiting may yet save settings. A refused backup name is reported after
+/// the Quit, never instead of it.
+fn closed(
+    quit: impl FnOnce() -> Result<Option<(String, bool)>, Unasked>,
+    recover: impl FnOnce(bool) -> Result<bool, String>,
+    side: Result<PathBuf, String>,
+) -> Result<Value, String> {
+    let quit = quit().map_err(|e| e.why)?;
+    let side = match side {
+        Ok(side) => side,
+        Err(e) => return Ok(result(quit.as_ref(), &Err(e))),
+    };
+    let back = recover(ended(quit.as_ref()));
+    if quit.is_none() && back == Ok(false) {
+        let side = side.display();
+        return Err(format!(
+            "{NAME} is not running, and no backup waits at {side}"
+        ));
+    }
+    Ok(result(quit.as_ref(), &back))
+}
+
+/// True unless the copy `quit` asked did not end; true when none ran.
+fn ended(quit: Option<&(String, bool)>) -> bool {
+    quit.is_none_or(|(_, e)| *e)
+}
+
+/// The result line of `close` on the product: the copy it asked to quit, its program and whether it ended, if one
+/// ran, and whether the owner's files came back from a backup a stopped gate left.
+fn result(quit: Option<&(String, bool)>, back: &Result<bool, String>) -> Value {
+    json!({
+        "gate": "close", "keyboard": NAME, "program": quit.map(|(p, _)| p), "settings_back": back.as_ref().ok(),
+        "settings_error": back.as_ref().err(), "pass": ended(quit) && back.is_ok(),
+    })
 }
 
 /// Why the running copy did not take Quit.
@@ -71,21 +116,30 @@ fn ask_quit(instance: &dyn Instance) -> Result<(), Unasked> {
     instance.send(Command::Quit).map_err(Unasked::from)
 }
 
+/// What the Quit tries came to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Asked {
+    /// Quit reached the copy at this try.
+    Sent(u32),
+    /// The copy had ended before Quit reached it, after this many failed tries.
+    Gone(u32),
+}
+
 /// Posts Quit to `instance` up to `tries` times, calling `wait` between them, as a copy just started may not listen
-/// yet; it stops once `gone` says the copy ended. The tries it took; a refusal is final.
-fn ask_quit_tries(
+/// yet; it stops once `gone` says the copy ended. A refusal is final.
+pub(crate) fn ask_quit_tries(
     instance: &dyn Instance,
     tries: u32,
     gone: impl Fn() -> bool,
     mut wait: impl FnMut(),
-) -> Result<u32, String> {
+) -> Result<Asked, String> {
     let mut n = 1;
     loop {
         if gone() {
-            return Ok(n - 1);
+            return Ok(Asked::Gone(n - 1));
         }
         match instance.send(Command::Quit) {
-            Ok(()) => return Ok(n),
+            Ok(()) => return Ok(Asked::Sent(n)),
             Err(UiError::NoWindow) if n < tries => wait(),
             Err(e) => return Err(why_not(e)),
         }
@@ -99,23 +153,30 @@ pub fn ended_within(ctx: &Ctx, process: &Process) -> bool {
     win::poll_until(t.quit_wait_ms, t.poll_ms, || process.ended().then_some(())).is_some()
 }
 
-/// Posts Quit to a copy a gate just started, trying `[g8] quit_tries` times as its command window may not exist yet;
-/// whether `process` ended within `[timing] quit_wait_ms`.
-pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
+/// Posts Quit to `process`, a copy a gate just started, up to `[g8] quit_tries` times `quit_try_ms` apart, as its
+/// command window may not exist yet.
+pub(crate) fn ask_started(ctx: &Ctx, process: &Process) -> Result<Asked, String> {
     let g = &ctx.cfg.g8;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
-    let gone = || process.ended();
-    ask_quit_tries(&*platform.instance(), g.quit_tries, gone, || {
-        win::sleep_ms(g.quit_try_ms);
-    })?;
+    let wait = || win::sleep_ms(g.quit_try_ms);
+    ask_quit_tries(
+        &*platform.instance(),
+        g.quit_tries,
+        || process.ended(),
+        wait,
+    )
+}
+
+/// Posts Quit to a copy a gate just started (`ask_started`); whether `process` ended within `[timing] quit_wait_ms`.
+pub fn quit_started(ctx: &Ctx, process: &Process) -> Result<bool, String> {
+    ask_started(ctx, process)?;
     Ok(ended_within(ctx, process))
 }
 
-/// Posts Quit to the running product, which starts nothing; its program, and whether it ended within
-/// `[timing] quit_wait_ms`.
-pub fn quit_running(ctx: &Ctx) -> Result<(String, bool), Unasked> {
-    let not_running = || format!("{NAME} is not running");
-    let (pid, exe) = product::running().ok_or_else(not_running)?;
+/// Posts Quit to `running`, the copy `product::running` found, and starts nothing; its program, and whether it ended
+/// within `[timing] quit_wait_ms`. The caller's one look serves, so a copy gone since then is not looked for again.
+pub fn quit_running(ctx: &Ctx, running: (u32, String)) -> Result<(String, bool), Unasked> {
+    let (pid, exe) = running;
     // Opened before the quit, so the id cannot name another process by the time we look.
     let process = Process::to_wait(pid)?;
     let platform = WindowsPlatform::new().map_err(|e| e.to_string())?;
@@ -133,71 +194,4 @@ fn close_face(ctx: &Ctx, name: &str) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_platform_fake::FakeInstance;
-
-    use super::*;
-
-    #[test]
-    fn quit_is_posted_to_the_running_copy_and_starts_nothing() {
-        let session = FakeInstance::new();
-        let mut claim = session.claim().expect("the first copy runs");
-        claim.listen(Box::new(|_| {})).expect("it listens");
-        assert_eq!(ask_quit(&session.clone()), Ok(()));
-        assert_eq!(session.sent(), [Command::Quit]);
-    }
-
-    #[test]
-    fn a_copy_just_started_gets_quit_once_it_listens() {
-        let session = FakeInstance::new();
-        let late = std::cell::RefCell::new(Vec::new());
-        let waits = std::cell::Cell::new(0);
-        let wait = || {
-            waits.set(waits.get() + 1);
-            if waits.get() == 2 {
-                let mut claim = session.claim().expect("the started copy runs");
-                claim.listen(Box::new(|_| {})).expect("it listens");
-                late.borrow_mut().push(claim);
-            }
-        };
-        assert_eq!(ask_quit_tries(&session.clone(), 5, || false, wait), Ok(3));
-        assert_eq!(session.sent(), [Command::Quit]);
-        let never = ask_quit_tries(&FakeInstance::new(), 3, || false, || {});
-        assert!(
-            never.is_err_and(|e| e.contains("command window")),
-            "it never listened"
-        );
-    }
-
-    #[test]
-    fn a_copy_that_ended_by_itself_gets_no_more_tries() {
-        let session = FakeInstance::new();
-        let gone = std::cell::Cell::new(false);
-        let tries = ask_quit_tries(&session.clone(), 5, || gone.get(), || gone.set(true));
-        assert_eq!(tries, Ok(1), "one try, then it was gone");
-        assert!(session.sent().is_empty());
-    }
-
-    #[test]
-    fn a_copy_that_cannot_hear_quit_says_why() {
-        let none = ask_quit(&FakeInstance::new()).expect_err("no copy listens");
-        assert!(
-            none.why.contains("command window") && !none.refused,
-            "{none:?}"
-        );
-        let refused = Unasked::from(UiError::Refused(5));
-        assert!(refused.refused, "{refused:?}");
-        let why = refused.why;
-        assert!(why.contains("code 5") && why.contains("uiAccess"), "{why}");
-    }
-
-    #[test]
-    fn the_result_names_the_product_as_its_keyboard() {
-        let v = result(r"C:\x\keyxtend.exe", true);
-        assert_eq!(v["keyboard"], product::NAME);
-        assert_eq!(
-            (v["gate"].as_str(), v["pass"].as_bool()),
-            (Some("close"), Some(true))
-        );
-    }
-}
+mod tests;

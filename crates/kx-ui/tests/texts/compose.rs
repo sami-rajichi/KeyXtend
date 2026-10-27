@@ -1,7 +1,9 @@
 //! Texts built from parts: notices with their arguments, joined lists, hidden marks and the space bar.
 
 use crate::{CONTROLS, all, items, lang};
-use kx_module_api::keys::{ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED};
+use kx_module_api::keys::{
+    ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED, WORDS_MISSING,
+};
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
 use kx_ui::i18n::keys::{BADGE_JOIN, LIST_JOIN};
 
@@ -19,6 +21,7 @@ fn sample(key: &'static str) -> Notice {
             (args::MODULE, NoticeArg::Text("keyboard".into())),
             (args::KEYS, NoticeArg::List(items(&["size", "x"]))),
             (args::MORE, NoticeArg::Count(3)),
+            (args::LANG, NoticeArg::Text("fr".into())),
         ],
     }
 }
@@ -28,6 +31,18 @@ fn a_notice_shows_its_module_list_and_count() {
     let text = lang("en").notice(&sample(SETTINGS_RESET));
     let want = "Some Keyboard settings were not valid, so they went back to their defaults: size, x and 3 more.";
     assert_eq!(text, want);
+}
+
+#[test]
+fn a_missing_word_list_is_told_by_the_language_name_the_notice_carries() {
+    let mut notice = sample(WORDS_MISSING);
+    notice.args[3].1 = NoticeArg::Text("\u{2067}français\u{2069}".into());
+    let en =
+        "The word list for français is missing, so suggestions come only from the words you type.";
+    assert_eq!(lang("en").notice(&notice), en);
+    notice.args[3].1 = NoticeArg::Text("العربية".into());
+    let ar = "قائمة كلمات العربية غير موجودة، لذا تأتي الاقتراحات من الكلمات التي تكتبها فقط.";
+    assert_eq!(lang("ar").notice(&notice), ar);
 }
 
 #[test]

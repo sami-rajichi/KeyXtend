@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory and sound."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation and the focused box."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,6 +17,8 @@ workspace = true
 sim-input = []
 
 [dependencies]
+# The `KeyGuard` trait that DPAPI implements.
+kx-crypto = { path = "../kx-crypto" }
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
 # The compiled-in shortcut and key-name tables.
@@ -29,10 +31,11 @@ tracing.workspace = true
 # The OS calls are Windows-only; the pure maths builds and tests everywhere.
 [target.'cfg(windows)'.dependencies]
 # The accent pair comes from WinRT's `UISettings` (`UI_ViewManagement`); DWM gives the backdrops, DXGI ranks the
-# graphics adapters by power, the heap calls give free pages back (`System_Memory`, `System_SystemServices`), the
-# mouse hook reads the tick count (`System_SystemInformation`) and tests the input desktop
-# (`System_StationsAndDesktops`), the speaker plays through XAudio2, and the Lock PC shortcut locks the session
-# (`System_Shutdown`).
+# graphics adapters by power, the heap calls give free pages back and map the word packs (`System_Memory`,
+# `System_SystemServices`), the mouse hook reads the tick count (`System_SystemInformation`) and tests the input
+# desktop (`System_StationsAndDesktops`), the speaker plays through XAudio2, the Lock PC shortcut locks the session
+# (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), packs open with read sharing only
+# (`Storage_FileSystem`), and UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -43,10 +46,13 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Gdi",
     "Win32_Media_Audio_XAudio2",
     "Win32_Security",
+    "Win32_Security_Cryptography",
+    "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
+    "Win32_System_Ole",
     "Win32_System_Performance",
     "Win32_System_Registry",
     "Win32_System_Shutdown",
@@ -54,6 +60,7 @@ windows = { workspace = true, features = [
     "Win32_System_StationsAndDesktops",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
+    "Win32_System_Variant",
     "Win32_UI_Accessibility",
     "Win32_UI_Controls",
     "Win32_UI_HiDpi",
@@ -61,6 +68,8 @@ windows = { workspace = true, features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
+# The `implement` macro behind the field watch's focus handler names this crate.
+windows-core.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }

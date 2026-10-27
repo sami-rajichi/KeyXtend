@@ -38,6 +38,18 @@ fn only_word_can_be_attached_with_the_shipped_file() {
 }
 
 #[test]
+fn a_text_box_class_is_read_and_a_missing_one_is_refused_naming_the_app() {
+    let mut target = app(&[], None);
+    let e = focus_class("target", &target).expect_err("none set");
+    assert!(
+        e.contains("[apps.target]") && e.contains("focus_class"),
+        "{e}"
+    );
+    target.focus_class = Some("Edit".into());
+    assert_eq!(focus_class("target", &target), Ok("Edit"));
+}
+
+#[test]
 fn only_titles_that_start_with_a_test_page_count() {
     let pages = ["KeyXtend probe page", ""];
     assert!(is_test_page(

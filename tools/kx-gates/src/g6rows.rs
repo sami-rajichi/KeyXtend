@@ -6,9 +6,9 @@
 use std::cell::Cell;
 
 use kx_module_api::MS_PER_S;
+use kx_platform_windows::uia::{self, Uia};
 use kx_target_window::fill::NUMBER;
 use serde::Serialize;
-use spike_core::uia::{self, Uia};
 
 use crate::apps::Ctx;
 use crate::p5cfg::G6;

@@ -14,7 +14,7 @@ use kx_module_api::ports::{InjectError, LayoutId, Scan, TextRoute};
 use kx_module_api::{REDACTED_MARKER, Redacted};
 
 use crate::keys::{self, ENTER, LINE_FEED};
-use crate::layouts::TEXT_CAP;
+use crate::layouts::KEY_TEXT_UNITS;
 use crate::strokes::{self, Key, KeyEvent};
 
 #[cfg(windows)]
@@ -180,7 +180,7 @@ fn typed<O: Os>(
     caps: bool,
     layout: LayoutId,
 ) -> Option<(u16, bool)> {
-    let mut buf = [0; TEXT_CAP];
+    let mut buf = [0; KEY_TEXT_UNITS];
     let n = os.to_unicode(vk, &held(shift, altgr), caps, layout, &mut buf);
     (n.unsigned_abs() == 1).then_some((buf[0], n < 0))
 }

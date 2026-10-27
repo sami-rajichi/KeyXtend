@@ -1,0 +1,182 @@
+//! Forgetting (spec §6 "Controls: Forget a word"): a word goes with every chain holding it, a seed word stays hidden
+//! on the blocklist until typed `min_uses` times, and the last forget can be undone once.
+
+use std::collections::BTreeMap;
+
+use super::chains::Link;
+use super::table::{Id, Word};
+use super::{Learner, seed_spelling};
+use crate::pack::Pack;
+
+/// A forgotten seed word's uses since it was forgotten, and the day of the last.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Mark {
+    /// Its uses since.
+    pub(super) uses: u16,
+    /// The day it was forgotten or last used.
+    pub(super) day: u32,
+}
+
+/// What one use of a word does to the blocklist.
+pub(super) enum Use {
+    /// The word is not on it.
+    Free,
+    /// The use was counted and the word stays hidden.
+    Held,
+    /// The word reached `min_uses` and came back with this mark: its uses and the day of the last.
+    Back(Mark),
+}
+
+/// The seed words the user forgot, by spelling, at most `max_words`; no `Debug`, so none is printed.
+#[derive(Clone, Default, PartialEq, Eq)]
+pub(super) struct Blocked {
+    /// Each forgotten spelling's mark.
+    marks: BTreeMap<Box<str>, Mark>,
+}
+
+impl Blocked {
+    /// How many words it holds.
+    pub(super) fn len(&self) -> usize {
+        self.marks.len()
+    }
+
+    /// True when `text` is on it.
+    pub(super) fn contains(&self, text: &str) -> bool {
+        self.marks.contains_key(text)
+    }
+
+    /// Every spelling with its mark, in spelling order.
+    pub(super) fn iter(&self) -> impl Iterator<Item = (&str, Mark)> {
+        self.marks.iter().map(|(text, mark)| (&**text, *mark))
+    }
+
+    /// Counts `n` uses of `text` on `day`, keeping the later day; at `min_uses` it leaves the list with its mark.
+    pub(super) fn used(&mut self, text: &str, n: u16, day: u32, min_uses: u32) -> Use {
+        let Some(mark) = self.marks.get_mut(text) else {
+            return Use::Free;
+        };
+        mark.uses = mark.uses.saturating_add(n);
+        mark.day = mark.day.max(day);
+        let back = *mark;
+        if u32::from(back.uses) < min_uses {
+            return Use::Held;
+        }
+        self.marks.remove(text);
+        Use::Back(back)
+    }
+
+    /// Adds `text` on `day` with no uses; when full for `cap` it first drops the least recently used, which it gives.
+    fn block(&mut self, text: &str, day: u32, cap: usize) -> Option<(Box<str>, Mark)> {
+        let full = self.marks.len() >= room(cap);
+        let oldest = (self.marks.iter().filter(|_| full))
+            .min_by_key(|(text, mark)| age(text, **mark))
+            .map(|(text, _)| text.clone());
+        let dropped = oldest.and_then(|t| self.marks.remove_entry(&t));
+        self.marks.insert(text.into(), Mark { uses: 0, day });
+        dropped
+    }
+
+    /// Drops the least recently used until the list fits `cap`, as after a `max_words` lowered since the save.
+    pub(super) fn trim(&mut self, cap: usize) {
+        let mut ages: Vec<_> = self
+            .marks
+            .iter()
+            .map(|(text, mark)| age(text, *mark))
+            .collect();
+        ages.sort_unstable();
+        let extra = ages.len().saturating_sub(room(cap));
+        let gone: Vec<Box<str>> = ages.iter().take(extra).map(|a| a.2.into()).collect();
+        for text in gone {
+            self.marks.remove(&text);
+        }
+    }
+
+    /// Puts `text` back with `mark`.
+    pub(super) fn put(&mut self, text: Box<str>, mark: Mark) {
+        self.marks.insert(text, mark);
+    }
+}
+
+/// The words the blocklist keeps for `cap`: never fewer than the one just forgotten.
+fn room(cap: usize) -> usize {
+    cap.max(1)
+}
+
+/// The order the least recently used leave in: the day, then the uses, then the spelling.
+fn age(text: &str, mark: Mark) -> (u32, u16, &str) {
+    (mark.day, mark.uses, text)
+}
+
+/// What the last forget took, to put back; no `Debug`, as it holds spellings.
+#[derive(Clone, Default, PartialEq, Eq)]
+pub(super) struct Undo {
+    /// The words removed, each under its id.
+    words: Vec<(Id, Word)>,
+    /// The chains removed, each with its table's place.
+    links: Vec<(usize, Link)>,
+    /// The spelling the forget blocked.
+    blocked: Option<Box<str>>,
+    /// The blocklist entry the forget pushed out.
+    dropped: Option<(Box<str>, Mark)>,
+}
+
+impl Learner {
+    /// Forgets the word a chip shows as `spelling` on `day`, with its strays and every chain holding them; a seed
+    /// word stays hidden until typed `min_uses` times. False when there was nothing to forget.
+    pub fn forget(&mut self, seed: Option<&Pack<'_>>, spelling: &str, day: u32) -> bool {
+        let seed = self.own(seed);
+        let (spelt, id) = self.resolve(seed, spelling);
+        let text: Option<Box<str>> = match id {
+            Some(id) => self.words.get(id).map(|w| w.text.clone()),
+            None => seed_spelling(seed, spelling).map(Box::from),
+        };
+        let mut undo = Undo::default();
+        for id in id.into_iter().chain(self.strays(seed, spelt)) {
+            undo.words
+                .extend(self.words.remove(id).map(|word| (id, word)));
+            undo.links.extend(self.unlink(id));
+        }
+        let seeded = text.filter(|t| seed_spelling(seed, t) == Some(&**t));
+        if let Some(text) = seeded.filter(|t| !self.blocked.contains(t)) {
+            undo.dropped = self.blocked.block(&text, day, self.cfg.max_words);
+            undo.blocked = Some(text);
+        }
+        if undo == Undo::default() {
+            return false;
+        }
+        self.undo = Some(undo);
+        true
+    }
+
+    /// Puts back what the last forget took, exactly as it was, once and only before anything else changes.
+    pub fn undo_forget(&mut self) -> bool {
+        let Some(undo) = self.undo.take() else {
+            return false;
+        };
+        if let Some(text) = &undo.blocked {
+            self.blocked.marks.remove(text);
+        }
+        if let Some((text, mark)) = undo.dropped {
+            self.blocked.put(text, mark);
+        }
+        for (id, word) in undo.words {
+            self.words.put(self.casing(), id, word);
+        }
+        for (at, link) in &undo.links {
+            if let Some(table) = self.chains.get_mut(*at) {
+                table.insert(link);
+            }
+        }
+        true
+    }
+
+    /// Removes every chain holding word `id`; gives each with its table's place.
+    pub(super) fn unlink(&mut self, id: Id) -> Vec<(usize, Link)> {
+        let mut gone = Vec::new();
+        for (at, table) in self.chains.iter_mut().enumerate() {
+            let links = table.retain(|_, key, _| !key.contains(&id));
+            gone.extend(links.into_iter().map(|link| (at, link)));
+        }
+        gone
+    }
+}

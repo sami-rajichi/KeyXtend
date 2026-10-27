@@ -10,10 +10,11 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallWindowProcW, DispatchMessageW, GWLP_WNDPROC, HWND_NOTOPMOST, InSendMessage, MSG, PM_REMOVE,
     PeekMessageW, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SetWindowLongPtrW,
-    SetWindowPos, TranslateMessage, WINDOWPOS, WM_WINDOWPOSCHANGING,
+    SetWindowPos, TranslateMessage, WINDOWPOS, WM_WINDOWPOSCHANGED, WM_WINDOWPOSCHANGING,
 };
 
-use super::super::guard::{Proc, next};
+use super::super::band::is_top;
+use super::super::guard::{Proc, ex_of, next};
 use super::super::top::lifting;
 use super::super::win::guard_these;
 use super::z_order::{Z_ORDER, above, listed, put_after, topmost};
@@ -27,23 +28,38 @@ thread_local! {
     static STUCK_BEHIND: Cell<isize> = const { Cell::new(0) };
     /// True when `stuck` keeps its window where it is on every lift, not only inside another thread's call.
     static STUCK_ALWAYS: Cell<bool> = const { Cell::new(false) };
+    /// How many of the guard's moves `stuck` held, and how many moves made on this thread left its window topmost.
+    static MOVES: Cell<(usize, usize)> = const { Cell::new((0, 0)) };
+}
+
+/// Adds `held` to the moves held and `landed` to the moves that landed in the topmost band.
+fn count(held: bool, landed: bool) {
+    let (kept, up) = MOVES.get();
+    MOVES.set((kept + usize::from(held), up + usize::from(landed)));
 }
 
 /// A subclass in front of the guard that keeps its window where it is when the guard lifts it while another thread's
-/// call is still running, as G9 suggests the installed shadow does: a lift made there does not land.
+/// call is still running, as G9 suggests the installed shadow does: a lift made there does not land. It counts the
+/// moves it held and those that landed on top.
 unsafe extern "system" fn stuck(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // SAFETY: a plain query of this thread's state.
-    let held = STUCK_ALWAYS.get() || unsafe { InSendMessage() }.as_bool();
-    if msg == WM_WINDOWPOSCHANGING && lifting() && held {
+    let sent = unsafe { InSendMessage() }.as_bool();
+    let held = (STUCK_ALWAYS.get() || sent) && lifting();
+    if msg == WM_WINDOWPOSCHANGING && held {
         let pos = std::ptr::with_exposed_provenance_mut::<WINDOWPOS>(lparam.0.cast_unsigned());
         // SAFETY: for this message `lparam` points to a live WINDOWPOS.
         if let Some(pos) = unsafe { pos.as_mut() } {
+            count(pos.flags & SWP_NOZORDER != SWP_NOZORDER, false);
             pos.flags |= SWP_NOZORDER;
         }
     }
     let behind = STUCK_BEHIND.get().cast_unsigned();
     // SAFETY: hands every message to the guard this subclass replaced, as a subclass must.
-    unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
+    let answer = unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) };
+    if msg == WM_WINDOWPOSCHANGED && STUCK_ALWAYS.get() && !sent {
+        count(false, is_top(ex_of(hwnd)));
+    }
+    answer
 }
 
 /// Puts `stuck` in front of the guard on `window`.
@@ -125,10 +141,12 @@ fn a_lift_that_does_not_land_during_another_threads_drop_is_made_again_after_it(
     assert!(above(&kb, &shadow), "above its shadow");
 }
 
-/// A lift that never lands is checked again a few times, never over and over: a posted check posts none.
+/// A lift that never lands is checked again a few times, never over and over: a posted check posts none. The z-order
+/// is the desktop's, so another process's window tests can move the shadow too; the test counts the guard's own lifts.
 #[test]
 fn the_checks_end_when_a_lift_never_lands() {
     let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    MOVES.set((0, 0));
     let shadow = Hidden::tip("KeyXtend test: shadow never lifted", None);
     let kb = Hidden::topmost("KeyXtend test: keyboard over it", Some(shadow.0));
     guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
@@ -137,6 +155,8 @@ fn the_checks_end_when_a_lift_never_lands() {
     put_after(&kb, HWND_NOTOPMOST);
     let answered = pump();
     STUCK_ALWAYS.set(false);
+    let (held, landed) = MOVES.get();
     assert!(answered < CAP, "the checks ended after {answered} messages");
-    assert!(!topmost(&shadow), "the shadow's lift never landed");
+    assert!(held > 0, "the guard tried to lift the shadow");
+    assert_eq!(landed, 0, "and no move made here put it back on top");
 }

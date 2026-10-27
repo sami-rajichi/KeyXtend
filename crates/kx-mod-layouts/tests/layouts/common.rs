@@ -30,13 +30,18 @@ pub fn source() -> Arc<FakeLayoutSource> {
     Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap())
 }
 
-/// A bus core that keeps the id of every `LayoutChanged` it carries.
+/// A bus core that keeps every `LayoutChanged` it carries.
 #[derive(Default)]
-pub struct Heard(Mutex<Vec<LayoutId>>);
+pub struct Heard(Mutex<Vec<LayoutChanged>>);
 
 impl Heard {
     /// Every id heard, oldest first.
     pub fn ids(&self) -> Vec<LayoutId> {
+        self.changes().iter().map(|e| e.id).collect()
+    }
+
+    /// Every change heard, oldest first.
+    pub fn changes(&self) -> Vec<LayoutChanged> {
         self.0.lock().unwrap().clone()
     }
 }
@@ -44,7 +49,7 @@ impl Heard {
 impl BusCore for Heard {
     fn publish(&self, _: TypeId, _: &'static str, event: &(dyn Any + Send + Sync)) {
         if let Some(e) = event.downcast_ref::<LayoutChanged>() {
-            self.0.lock().unwrap().push(e.id);
+            self.0.lock().unwrap().push(e.clone());
         }
     }
 

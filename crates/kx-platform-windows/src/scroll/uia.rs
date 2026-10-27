@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 use kx_module_api::ports::Dir;
 
 use super::{Read, Seek};
+use kx_platform::deadline;
 
 /// The UI Automation thread's name.
 const THREAD: &str = "kx-scroll-uia";
@@ -120,12 +121,6 @@ impl Uia {
         }
         given
     }
-}
-
-/// `cap` from now, or now when the clock cannot go that far.
-fn deadline(cap: Duration) -> Instant {
-    let now = Instant::now();
-    now.checked_add(cap).unwrap_or(now)
 }
 
 #[cfg(test)]

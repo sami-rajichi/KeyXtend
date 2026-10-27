@@ -1,18 +1,23 @@
-//! `cargo xtask stage`: builds the app in release and stages it with only the Qt files it loads, then checks the stage.
+//! `cargo xtask stage`: builds the app in release and stages it with only the Qt files it loads and the word packs,
+//! then checks the stage.
 
 mod check;
 mod config;
 mod error;
 mod pe;
 mod qt;
+mod words;
 
 pub(crate) use self::check::refuse_gate_exe;
 pub(crate) use self::config::{Network, StageConfig};
 pub(crate) use self::error::StageError;
+#[cfg(test)]
+pub(crate) use self::pe::bare_image;
 
 use std::path::{Path, PathBuf};
 
 use self::qt::QtDirs;
+use self::words::Words;
 use super::config::DevSetup;
 use super::{DevError, paths};
 use crate::workspace::{self, LoadError};
@@ -60,7 +65,7 @@ pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, exe: &Path) -> Vec<Copy> {
         .collect()
 }
 
-/// The stage-relative path of every file `plan` stages; the check refuses any other file.
+/// The stage-relative path of every file `plan` stages; the check refuses any other file outside the packs folder.
 pub(crate) fn planned(config: &StageConfig) -> Vec<PathBuf> {
     let unread = QtDirs::default();
     let files = plan(config, &unread, Path::new(""));
@@ -105,7 +110,8 @@ fn discard(stage: &Path, err: DevError) -> DevError {
     }
 }
 
-/// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder.
+/// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder and measuring the
+/// download at the words build's level, then holds its installed size to the install's limit and checks its packs.
 pub(crate) fn verify(
     setup: &DevSetup,
     config: &StageConfig,
@@ -113,7 +119,16 @@ pub(crate) fn verify(
     env: impl Fn(&str) -> Option<String>,
 ) -> Result<check::Summary, DevError> {
     let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
-    check::check(folder, config, pe::read, |lib| system.join(lib).is_file())
+    let in_system = |lib: &str| system.join(lib).is_file();
+    let summary = check::check(folder, config, level()?, pe::read, in_system)?;
+    paths::fits(summary.size.bytes, setup.config.install_max_mb)?;
+    words::check(folder, &Words::load(&setup.root)?.credits)?;
+    Ok(summary)
+}
+
+/// The deflate level every download budget is measured at, from the words manifest.
+fn level() -> Result<u32, DevError> {
+    crate::words::download_level().map_err(|e| DevError::Config(e.to_string()))
 }
 
 /// Loads and validates the stage settings from `cargo metadata` JSON.
@@ -150,22 +165,29 @@ pub(crate) fn run() -> Result<(), DevError> {
     let (setup, config) = (super::config::load(&json)?, load(&json)?);
     let env = |key: &str| std::env::var(key).ok();
     let qt = qt::find(&config, env)?;
+    let words = words::plan(&Words::load(&setup.root)?)?;
     build(&config)?;
     let exe = workspace::target_dir(&json)?
         .join(RELEASE_DIR)
         .join(config.program());
     let stage = setup.path(&config.out_dir).join(&config.app);
-    let files = plan(&config, &qt, &exe);
+    let mut files = plan(&config, &qt, &exe);
+    files.extend(words);
     let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);
     Ok(())
 }
 
-/// Prints where the stage is, its files and its size against the cap.
+/// Prints where the stage is, its files, its download against the budget beside its installed size, and the packs'
+/// share of both.
 fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check::Summary) {
     let rel = stage.strip_prefix(&setup.root).unwrap_or(stage);
     println!("Staged {}: {} files.", paths::text(rel), summary.files);
-    println!("Size: {} MB of {} MB.", summary.mb(), config.max_mb);
+    let (size, packs) = (summary.size, summary.packs);
+    let (mb, max, installed) = (size.mb(), config.max_mb, size.raw_mb());
+    println!("Download: {mb} MB deflated of the {max} MB budget; {installed} MB installed.");
+    let (packs_mb, packs_installed) = (packs.mb(), packs.raw_mb());
+    println!("Word packs: {packs_mb} MB deflated of it, {packs_installed} MB installed.");
 }
 
 #[cfg(test)]

@@ -1,25 +1,13 @@
-//! What goes wrong: a hook the OS refuses, a setting that cannot be saved, a stop mid-carry, and the log lines; an
-//! engine the hook gave up is in `reset`.
+//! What goes wrong: a hook the OS refuses, a setting that cannot be saved, a stop mid-carry, and the warnings; an
+//! engine the hook gave up is in `reset`, and the stop line in `stopped`.
 
 use crate::logs::{Fields, MESSAGE, lines_of};
-use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, down, moved, shown, told};
-use kx_mod_mouse::{ESC, ID, Msg, STOPPED_LINE};
+use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told};
+use kx_mod_mouse::{ESC, ID, Msg};
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, Button, HookError, HookStats, PointerAct, Toggle};
+use kx_module_api::ports::{AssistChanged, Button, HookError, PointerAct, Toggle};
 use kx_module_api::{SettingsError, WriteError, keys};
 use tracing::Level;
-
-/// Stats whose numbers appear nowhere else.
-const STATS: HookStats = HookStats {
-    events: 101,
-    p99_us: 202,
-    max_us: 303,
-    max_wait_ms: 404,
-    reinstalls: 5,
-    send_errors: 6,
-    lost_echoes: 7,
-    passed_inside: 8,
-};
 
 /// The field that names a refused write's kind.
 const KIND: &str = "kind";
@@ -62,6 +50,7 @@ fn a_saved_right_click_the_hook_refuses_starts_off_and_says_why() {
             shown(false, Off),
             Heard::AskLatches,
             Heard::AskScroll,
+            Heard::AskPresses,
         ];
         assert_eq!(rig.take(), told, "the user expects Right-click on");
         assert!(
@@ -189,44 +178,6 @@ fn a_stop_keeps_the_saved_right_click_in_its_last_word() {
         grab: Off,
     };
     assert_eq!(rig.take(), [Heard::Changed(off)]);
-}
-
-#[test]
-fn the_stopped_line_logs_the_hook_numbers_and_no_point() {
-    let lines = lines_of(|| {
-        let mut rig = Rig::saved_rclick();
-        rig.hook.set_stats(STATS);
-        rig.begin();
-        let _ = rig.feed(moved(B), T0);
-        let _ = rig.feed(down(A), T1);
-        rig.send(Msg::Stop);
-    });
-    let stopped: Vec<_> = lines
-        .iter()
-        .filter(|(_, f)| f[MESSAGE] == STOPPED_LINE)
-        .collect();
-    assert_eq!(stopped.len(), 1, "{lines:?}");
-    let (level, fields) = stopped[0];
-    assert_eq!(*level, Level::INFO);
-    let numbers = [
-        ("events", STATS.events),
-        ("p99_us", STATS.p99_us.into()),
-        ("max_us", STATS.max_us.into()),
-        ("max_wait_ms", STATS.max_wait_ms.into()),
-        ("reinstalls", STATS.reinstalls.into()),
-        ("send_errors", STATS.send_errors.into()),
-        ("lost_echoes", STATS.lost_echoes.into()),
-        ("passed_inside", STATS.passed_inside.into()),
-    ];
-    let mut want: Vec<_> = numbers.map(|(k, v)| (k, v.to_string())).to_vec();
-    want.push((MESSAGE, STOPPED_LINE.to_owned()));
-    want.sort_unstable();
-    let got: Vec<_> = fields.iter().map(|(k, v)| (*k, v.clone())).collect();
-    assert_eq!(got, want);
-    let points = [A.x, A.y, B.x, B.y].map(|n| n.to_string());
-    for line in lines.iter().flat_map(|(_, f)| f.values()) {
-        assert!(points.iter().all(|p| !line.contains(p.as_str())), "{line}");
-    }
 }
 
 #[test]

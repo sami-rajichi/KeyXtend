@@ -174,6 +174,32 @@ dpad =
     .down = Scroll down
     .stop = Stop scrolling
 
+## The chip lane on the top bar: a chip's name for screen readers ($word is its text), also in forget mode.
+## Then the More and Undo chips, the lane's name while it offers nothing, and a password box's note.
+chip =
+    .name = Suggestion: { $word }
+    .forget-name = Forget: { $word }
+    .more = More emails
+    .undo = Undo
+    .none = No suggestions
+    .locked = Password box: nothing is suggested or learned
+
+## The suggestions menu: its button, its rows with their short labels, and the Cancel that ends forget mode or closes
+## the email list.
+words =
+    .menu = Suggestions menu
+    .forget = Forget a word
+    .forget-short = Forget
+    .cancel = Cancel
+    .pause = Pause learning
+    .pause-short = Pause
+    .resume = Resume learning
+    .resume-short = Resume
+    .off = Turn suggestions off
+    .off-short = Off
+    .on = Turn suggestions on
+    .on-short = On
+
 ## Light, dark or following Windows, by [ui] mode value.
 mode =
     .light = Light
@@ -225,7 +251,7 @@ page =
     .on = Next page
     .of = { $at } of { $count }
 
-## Notices by kx-module-api key. $module is a module name and $keys a list of setting names.
+## Notices by kx-module-api key. $module is a module name, $keys a list of setting names and $lang a language name.
 notice =
     .settings-reset = Some { $module } settings were not valid, so they went back to their defaults: { $keys }.
     .settings-restored = The settings file was damaged, so its last good copy was restored.
@@ -246,6 +272,9 @@ notice =
     .scroll-stopped = The scroll pad stopped after an error. Restart { -app } to use it again.
     .power-failed = The system's power dialog could not open.
     .power-stopped = The power key stopped after an error. Restart { -app } to use it again.
+    .words-damaged = The learned words file was damaged, so learning starts again from empty.
+    .words-missing = The word list for { $lang } is missing, so suggestions come only from the words you type.
+    .words-locked = Learned words could not be unlocked, so nothing learned is saved this time.
 
 ## Module names by module id; an id not listed shows itself.
 module =
@@ -254,6 +283,7 @@ module =
     .layouts = Keyboard layouts
     .mouse = Mouse assist
     .power = Power key
+    .predict = Word suggestions
     .scroll = Scroll pad
     .ui = Appearance
 

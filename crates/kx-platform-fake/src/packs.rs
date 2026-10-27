@@ -1,0 +1,131 @@
+//! Fake word packs: the test adds each language's bytes and lists the languages the index names, and the fake counts
+//! the opens and wakes a test waiting for one.
+
+use crate::lock;
+use kx_module_api::ports::{PackError, PackIndex, PackView, WordPacks, fits_iso, pack_file};
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::time::Duration;
+
+/// What the opens did, and what the test set for them.
+#[derive(Default)]
+struct Log {
+    /// Each pack's bytes, by its file name, as a platform finds it.
+    packs: BTreeMap<String, Arc<[u8]>>,
+    /// The languages the index lists, packs or not.
+    shipped: BTreeSet<String>,
+    /// The layout codes the index lists after each pack.
+    aliases: BTreeMap<String, Vec<String>>,
+    fail: bool,
+    opens: BTreeMap<String, usize>,
+}
+
+/// Word packs shared by their clones: each open gives a view over the bytes added for its language, or `None`.
+///
+/// A language code that names no pack file (`pack_file`) never has a pack, as on every platform.
+#[derive(Clone, Default)]
+pub struct FakeWordPacks {
+    log: Arc<Mutex<Log>>,
+    /// The signal each counted open gives, for a test waiting on another thread.
+    opened: Arc<Condvar>,
+}
+
+impl FakeWordPacks {
+    /// Packs with no language.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Makes `bytes` the pack of language `iso`, in place of any before; open views keep their bytes.
+    ///
+    /// A code that names no pack file (`pack_file`) is a test's mistake, so a debug build stops on it.
+    pub fn add(&self, iso: &str, bytes: Vec<u8>) {
+        let file = pack_file(iso);
+        debug_assert!(file.is_some(), "{iso:?} names no pack file");
+        if let Some(file) = file {
+            lock(&self.log).packs.insert(file, bytes.into());
+        }
+    }
+
+    /// Lists language `iso` in the index, as the build does for each pack it wrote; a pack need not be added.
+    pub fn ship(&self, iso: &str) {
+        lock(&self.log).shipped.insert(iso.to_owned());
+    }
+
+    /// Lists layout code `iso` after pack `pack` in the index, as `words.toml`'s aliases do; `pack` must also ship.
+    pub fn alias(&self, pack: &str, iso: &str) {
+        let mut log = lock(&self.log);
+        log.aliases
+            .entry(pack.to_owned())
+            .or_default()
+            .push(iso.to_owned());
+    }
+
+    /// Refuses the next open, whatever its language, with `Unreadable`.
+    pub fn fail_open(&self) {
+        lock(&self.log).fail = true;
+    }
+
+    /// How many opens asked for language `iso`, failed and missing ones too.
+    #[must_use]
+    pub fn opens(&self, iso: &str) -> usize {
+        lock(&self.log).opens.get(iso).copied().unwrap_or(0)
+    }
+
+    /// Waits up to `within` until `count` opens asked for language `iso`, so a test never sleeps; true when they did.
+    #[must_use]
+    pub fn wait_opens(&self, iso: &str, count: usize, within: Duration) -> bool {
+        let fewer = |l: &mut Log| l.opens.get(iso).copied().unwrap_or(0) < count;
+        let waited = self
+            .opened
+            .wait_timeout_while(lock(&self.log), within, fewer);
+        let (mut log, _) = waited.unwrap_or_else(PoisonError::into_inner);
+        !fewer(&mut log)
+    }
+}
+
+impl fmt::Debug for FakeWordPacks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let log = lock(&self.log);
+        f.debug_struct("FakeWordPacks")
+            .field("files", &log.packs.keys().collect::<Vec<_>>())
+            .field("shipped", &log.shipped)
+            .field("opens", &log.opens)
+            .finish_non_exhaustive()
+    }
+}
+
+impl WordPacks for FakeWordPacks {
+    fn open(&self, iso: &str) -> Result<Option<Box<dyn PackView>>, PackError> {
+        let mut log = lock(&self.log);
+        *log.opens.entry(iso.to_owned()).or_default() += 1;
+        self.opened.notify_all();
+        if std::mem::take(&mut log.fail) {
+            return Err(PackError::Unreadable);
+        }
+        let found = pack_file(iso).and_then(|file| log.packs.get(&file).map(Arc::clone));
+        Ok(found.map(|bytes| Box::new(FakePack(bytes)) as Box<dyn PackView>))
+    }
+
+    fn pack_of(&self, iso: &str) -> Option<String> {
+        let log = lock(&self.log);
+        let packs: Vec<&str> = log.shipped.iter().map(String::as_str).collect();
+        let index = PackIndex::new(&packs, &log.aliases).ok()?;
+        let pack = fits_iso(iso).then(|| index.pack_of(iso)).flatten();
+        pack.map(str::to_owned)
+    }
+}
+
+/// An open fake pack: a share of the bytes it was opened over.
+struct FakePack(Arc<[u8]>);
+
+impl PackView for FakePack {
+    fn bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests;

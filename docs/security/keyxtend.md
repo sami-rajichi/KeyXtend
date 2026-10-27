@@ -1,9 +1,9 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (P6 security check: the shortcuts and power dialog grants, and the shell class the Power key adds to P14's COM check)
+- **Last review:** 2026-10-26 (P7 security review: what the sealed tag defeats, the set-aside rule and the crates P7 ships)
 - **Status:** Reviewed
-- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
+- **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the box watch, word packs and sealed store it provides for word prediction (`words.rs`), the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -12,6 +12,10 @@
 | Provides the platform's `ScrollTarget` under `ScrollTargetKey`, gated by `Scroll` (P5, ADR-0029) | Only the scroll module declares `Scroll`, so the target reaches it alone (`the_scroll_target_reaches_only_the_scroll_module`), as the mouse hook reaches only the mouse module | Without the `mod-scroll` feature the target is still provided but no module can reach it, and the pad dims |
 | Provides the platform's `Shortcuts` under `ShortcutsKey`, gated by `InjectInput` (P6, ADR-0031) | Only the keyboard requires it, for the shortcuts layer (`the_shortcuts_reach_the_keyboard_whose_layer_sends_them`); a module must also hold `InjectInput` to reach it | The keyboard does not start |
 | Provides the platform's `PowerDialog` under `PowerDialogKey`, gated by `Power` (P6, ADR-0031) | Only the power module declares `Power`, so the dialog reaches it alone (`the_power_dialog_reaches_only_the_power_module`); the keyboard only asks over the bus. `mod-power` is a default feature (`every_module_feature_is_on_by_default_the_scroll_and_power_ones_too`) | Without the `mod-power` feature, or with `power` in `[kernel] disabled`, the dialog is still provided but no module can reach it, and the Power key dims |
+| Provides the platform's `FieldWatch` under `FieldWatchKey`, gated by `ReadFocusedText` (P7, ADR-0033) | Only the keyboard, predict and the ui hold `ReadFocusedText`, so only they may require it (`the_box_watch_reaches_only_the_modules_that_read_typed_text`, `read_focused_text_goes_only_to_the_keyboard_predict_and_the_ui`); only predict does | Without `mod-predict`, or with `predict` in `[kernel] disabled`, the watch is provided but nothing watches |
+| Provides the platform's `WordPacks` under `WordPacksKey`, with no gate (P7, ADR-0032) | Packs are public seed data, read from the folders `words::pack_dirs` names; only predict requires them | A pack that is missing or does not read leaves the lane with learned words only, and `notice.words-missing` names a shipped language |
+| Provides one `SealedFiles` under `SealedStoreKey`, gated by `SecretStore` (P7) | Only predict declares `SecretStore` (`the_sealed_store_reaches_only_the_predict_module`); the store seals in `SEALED_DIR` under the data folder, with the platform's key guard. `mod-predict` is a default feature (`mod_predict_is_a_default_feature_and_the_default_build_ships_predict`) | A store the OS cannot unlock keeps learned words in memory for the run, with `notice.words-locked` |
+| `KeyboardUi` in the policy (P7, ADR-0033) | It gates the face and the pointer notes; only the ui, the keyboard and the mouse module declare it (`keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module`) | A module without it cannot reach the face or hear the notes |
 | uiAccess (release manifest only, `asInvoker`) | Stay above the Start menu and type into windows above our integrity level | UIPI drops keys sent to elevated windows, and the keyboard hides under the Start menu |
 
 ## Data handled
@@ -21,6 +25,8 @@
 | The log (`logs/keyxtend.log` and the previous run's) | Public (sensitive fields redacted by `kx_kernel::log`) | Data folder (ADR-0015) | No | This run and the previous one, each capped at `log_max_mb` |
 | A panic's place (file, line, column) | Public | The log; standard error until the log is set up | No | As the log |
 | The settings file, read by a later copy | Public | Data folder | No | Read only, never changed by that copy |
+| The word packs, their index (`PACK_INDEX`) and the licence and credit files `xtask/words.toml` `[credits]` names (P7) | Public (shipped seed data) | `PACK_DIR` beside the program, staged by `cargo xtask stage` | No | As shipped |
+| Learned words and emails, and their wrapped data key (P7) | Sensitive (the key Secret) | `SEALED_DIR` under the data folder (ADR-0015), one sealed store for the folder (`kx-crypto.md`) | Yes | Until replaced, forgotten or the data folder is deleted |
 
 Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), so the app writes nothing outside the data folder. Every QML file is compiled ahead by qmlcachegen and the stage ships no `.qml` file, so no `.qmlc` cache is written or read (Task 20); pinning that is a Should fix.
 
@@ -32,12 +38,15 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
 | `[ui] send_tries`, `send_wait_ms` in a later copy | `kx_settings::peek` reads the file with the settings' size cap and never repairs or writes it; `peek_section` reads the `[ui]` section as the store does: migrated, a bad value back to its default, and the defaults for a newer version or any fault | `MAX_FILE_BYTES` | Unit tests |
 | `[kernel] log_level`, `log_max_mb` | Checked by the kernel's settings; the kernel's defaults open the log when they did not load | As the kernel's note | Property tests (kernel) |
 | Qt's environment (names starting `QT_`, `QML`, `QSG_` or `QV4_`, in any case, whatever follows) | Before Qt's app object exists, in every build, `qunsetenv` clears every such name found in the C runtime's narrow copy (Qt's byte reads) from it and from the wide copy (Qt's text reads); a name the ANSI code page narrows to a Qt one (a fullwidth `ＱＴ_`, a best-fit last letter) goes too | All of them | Property tests of the name filter; a Qt test plants plain names and two such aliases in a child process and checks Qt's narrow and wide reads find none |
+| The packs' folders (`words::pack_dirs`, P7) | A release build reads only `PACK_DIR` beside the program. A debug build adds the folder `xtask/words.toml` `[text] out` names, from the manifest compiled into debug builds only. The adapter and predict check every file (`kx-platform-windows.md`, `kx-mod-predict.md`) | `MAX_PACK_BYTES` per file | Life test of both folder lists (`tests/life/predict.rs`) |
 | Libraries named without a folder | The uiAccess build: `SetDefaultDllDirectories` limits them to the app's folder and System32 first thing in `main`. The exe's own imports load before `main`, by Windows' standard order (see Elevation) | N/A | A test that a copy in the working folder stops loading; the stage check of every import |
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a later copy speaks only through the adapter's command window, which acts on its fixed codes.
   - A same-user program that holds `Local\KeyXtend.Running` without a command window makes the next copy stop with "another copy runs but did not answer", after its tries; it never starts a second keyboard. Each try claims again first, so a copy that quits meanwhile leaves the session to the new one.
 - **Tampering:** the QML, fonts and icons are compiled in (see `kx-ui.md`); the command line is refused unless it is exactly one known flag, or, in the gate-only build only, `--sim-input` alone or before `--show`.
+  - The word packs are files beside the program, so whoever can write that folder can change the seed words; every pack passes `Pack::parse` and holds no user data (`kx-mod-predict.md`). An installed copy's folder is writable by administrators only.
+  - A changed or swapped sealed file fails its tag and is set aside (`kx-crypto.md`), unless a program running as this user unwrapped the key and sealed it. A blob that opens but does not read is copied to its aside blob by predict before any save (`kx-mod-predict.md`).
 - **Logging / repudiation:**
   - The log opens after the kernel loads its settings and before any module starts; when they did not load, the kernel's defaults open it, so a failed boot is logged. If the file cannot open, the app logs to standard error and says so once.
   - A later copy never opens the log, since opening sets the running copy's log aside; its refusals go to standard error only.
@@ -47,6 +56,9 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The first line gives the version and whether uiAccess is on; the last says the app ended.
 - **Information disclosure:** nothing is sent anywhere; `cargo tree -p keyxtend` holds no network, TLS or media crate (ADR-0004), and tidy D7 refuses kx-theme's `files` feature, its asset and WAV readers, in the app's normal tree, so the uiAccess app links no media parser.
   - P6 added no outside crate: `kx-mod-power` is the lock file's one new package, and the adapter's new `serde` and `toml` were already in the app's tree.
+  - P7 adds `kx-crypto` with RustCrypto's `chacha20poly1305` and the crates under it (`chacha20`, `poly1305`, `aead`, `universal-hash`, `cipher`, `inout`, `hybrid-array`, `crypto-common`, `typenum`, `cpufeatures`, `block-buffer`, `ctutils`, `cmov`), `zeroize` and `getrandom`, `fst` for the packs' lexicon, and `windows-core` in the adapter; none reaches the network, and `THIRD_PARTY.md` records each.
+  - The stage copies into `PACK_DIR` the packs the source index lists, the index and the credit files, and its words check refuses a stage that lacks one or holds any other file there. It holds the download, measured deflated, to `[workspace.metadata.stage] max_mb`, and the installed size to `[workspace.metadata.devtools] install_max_mb` (`dev-tools.md`).
+  - The app makes one `SealedFiles` for its data folder, as two stores over one folder could race on the key file (`kx-crypto.md`).
   - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
   - Quit ends the request queue; the kernel's thread stops the modules, then ends the UI even if stopping panics (a drop guard). After Qt's loop, `drain::stop` removes the tray icon and joins the thread, whether it was running, already asked to quit, or ended in a panic.

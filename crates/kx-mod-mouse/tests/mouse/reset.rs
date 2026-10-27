@@ -1,13 +1,16 @@
 //! An engine the hook gave up: the modes turn off for this session, so one tap on a mode key starts afresh, and held
 //! latches get one fresh run at once, once until the user acts again; a late word from an older run changes nothing.
+//! The user always hears why a run a mode tap or a latch held went dark, and once per program run when only quiet
+//! needs held it.
 
+use crate::live::{Live, WAIT, hear, on, synced};
 use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
 use kx_mod_mouse::Msg;
-use kx_module_api::keys;
 use kx_module_api::ports::Button::Left;
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::PointerAct::{Down, KeyDown, KeyUp, Up};
-use kx_module_api::ports::{HookError, Toggle};
+use kx_module_api::ports::{AssistChanged, HookError, PressesWanted, Toggle};
+use kx_module_api::{Bus, Notice, keys};
 
 /// A rig whose hook runs only for a latched Shift, with what it said so far taken.
 fn latched() -> Rig {
@@ -82,7 +85,7 @@ fn a_give_up_that_repeats_restarts_for_latches_once_until_a_latch_changes() {
     for _ in 0..2 {
         rig.hook.give_up();
         rig.pump();
-        assert_eq!(rig.take(), reset);
+        assert_eq!(rig.take(), reset, "a held latch always hears why");
     }
     assert!(!rig.hook.running(), "the second give-up starts nothing");
     assert_eq!(rig.hook.starts(), 2, "one fresh run, never a loop");
@@ -109,6 +112,42 @@ fn a_mode_tap_after_a_repeated_give_up_earns_the_latches_one_more_fresh_run() {
 }
 
 #[test]
+fn a_fault_that_turns_a_latch_dark_leaves_the_quiet_allowance_unused() {
+    let mut rig = latched();
+    rig.hook.give_up();
+    rig.pump();
+    rig.send(Msg::Latches(Vec::new()));
+    rig.settle(T0);
+    assert!(!rig.hook.running(), "the fresh run ended well");
+    rig.send(Msg::Presses(true));
+    rig.take();
+    rig.hook.give_up();
+    rig.pump();
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    assert_eq!(rig.take(), reset, "the first quiet fault still tells");
+}
+
+#[test]
+fn a_fault_after_a_mode_tap_the_engine_never_noted_still_tells() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.send(Msg::Presses(true));
+    rig.hook.give_up();
+    rig.pump();
+    rig.take();
+    // The tap reaches the fresh run, which faults before it notes the mode.
+    rig.toggle(Toggle::RightClick);
+    rig.hook.give_up();
+    rig.pump();
+    let reset = [shown(false, Off), told(keys::MOUSE_RESET)];
+    assert_eq!(
+        rig.take(),
+        reset,
+        "the quiet allowance is spent, yet the tap hears why"
+    );
+}
+
+#[test]
 fn a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone() {
     let mut rig = Rig::new();
     rig.begin();
@@ -122,4 +161,29 @@ fn a_late_word_from_an_older_runs_engine_leaves_the_live_run_alone() {
     rig.send(Msg::Lost(1));
     assert!(rig.hook.running() && !rig.ended);
     assert!(rig.take().is_empty());
+}
+
+#[test]
+fn a_quiet_fault_tells_once_per_program_run_even_across_module_restarts() {
+    let listen = |bus: &Bus| (hear::<AssistChanged>(bus), hear::<Notice>(bus));
+    let (mut live, ((_e1, states), (_e2, notices))) = Live::start(|_| {}, listen);
+    for round in 0..2 {
+        assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "live");
+        live.bus.publish(&PressesWanted { on: true }).unwrap();
+        synced(&live, &states);
+        live.hook.give_up();
+        assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "the fault");
+        synced(&live, &states);
+        let heard: Vec<_> = notices.try_iter().map(|n| n.key).collect();
+        let want = if round == 0 {
+            vec![keys::MOUSE_RESET]
+        } else {
+            Vec::new()
+        };
+        assert_eq!(heard, want, "round {round}");
+        live.stop();
+        assert_eq!(states.try_recv().map(|s| s.live), Ok(false), "stopped");
+        live.restart();
+    }
+    live.stop();
 }

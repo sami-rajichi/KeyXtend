@@ -2,8 +2,8 @@
 //! is under the pointer. `ElementFromPoint` takes a point, so the pointer never moves.
 #![cfg(windows)]
 
+use kx_platform_windows::uia;
 use serde_json::{Value, json};
-use spike_core::uia;
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 

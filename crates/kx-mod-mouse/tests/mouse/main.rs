@@ -6,11 +6,14 @@
 )]
 
 mod failures;
+mod live;
 mod logs;
 mod module;
+mod presses;
 mod props;
 mod reset;
 mod rig;
 mod runtime;
 mod scroll;
+mod stopped;
 mod wakes;

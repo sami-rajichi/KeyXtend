@@ -1,6 +1,6 @@
 # Assets
 
-Fonts, icons and sounds that ship in the app. Every set keeps its licence file beside it. kx-ui's build compiles them into the app (ADR-0016): every font here and the icons the theme tokens (`icons.toml`) name as Qt resources, and the samples of the sounds `sounds.toml` names. A fresh clone builds without any download, and the app never reads this folder.
+Fonts, icons, sounds and word packs that ship with the app. Every set keeps its licence file beside it. kx-ui's build compiles the first three into the app (ADR-0016): every font here and the icons the theme tokens (`icons.toml`) name as Qt resources, and the samples of the sounds `sounds.toml` names. `cargo xtask stage` copies the word packs beside the program (ADR-0032). A fresh clone builds without any download, and only a debug build reads this folder, for its word packs.
 
 ## Fonts
 
@@ -24,5 +24,10 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 - `sounds/mouse-click.wav`, `sounds/mouse-press.wav`: the right-click and pick-up sounds, from "Middle Mouse Click" by 1j01 (https://opengameart.org/node/186493).
 - `sounds/card-down.wav`: the drop sound, from "Playing Card Sounds" by BMacZero (https://opengameart.org/node/118338).
 - `sounds/recipes.toml`: KeyXtend's own candidate recipes, all rights reserved like the code; the shipping format is in kx-theme's `tokens/sounds.toml`.
+
+## Word packs
+
+- `words/`: the word packs (`<iso>.kxw`) that `cargo xtask words build` writes, shared under CC BY-SA 4.0 as `words/LICENSE.txt` says, with every source credited in `words/CREDITS.txt`; they ship as separate files beside the program. `words/packs.txt` lists the languages the build shipped (`cargo xtask words index` rewrites it).
+- `cargo xtask words meter` counts the presses the chips save on the held-back sentences (spec §6 "Target"). Its times count only from a release build: a debug `--speed` run refuses to judge its ceiling and names the release command to run.
 
 Add a font, icon or sound only after the `kx-licence-check` skill passes, and list it in `THIRD_PARTY.md`.

@@ -46,13 +46,12 @@ idle_ms = 10000
 # Memory is read this long after the keyboard shows, and again this long after the use below, in ms: a fixed warm-up so
 # runs compare. G8 never trims (ADR-0021).
 warm_ms = 10000
-# Idle private working set and private commit (ADR-0021), and the program folder below, in MB of 10⁶ bytes (spec §10);
-# idle CPU in percent of one core in both modes: 5 ms of CPU a second, which a 60 Hz animation or a fast timer goes over.
+# Idle private working set and private commit (ADR-0021), in MB of 10⁶ bytes (spec §10); the download budget is the
+# stage check's (root Cargo.toml `max_mb`). Idle CPU in percent of one core in both modes: 5 ms of CPU a second, which
+# a 60 Hz animation or a fast timer goes over.
 memory_mb = 100.0
 commit_mb = 140.0
 idle_core_pct = 0.5
-# The program folder's budget is the stage's own `max_mb` (root Cargo.toml); a test keeps the two equal.
-size_mb = 80.0
 # The key G8 presses, by board id, and how many times.
 press_key = "c-0x001E"
 presses = 20
@@ -95,8 +94,7 @@ presentmon_wait_ms = 2000
 # Longest wait past the recording time for PresentMon to stop and write its last rows, in ms, whether G8 or the
 # owner started it.
 presentmon_stop_ms = 15000
-# A copy G8 started but could not open or cap gets Quit up to quit_tries times, quit_try_ms apart, as its command
-# window may not exist yet.
+# Every copy a gate ends gets Quit up to quit_tries times, quit_try_ms apart, as its command window may not exist yet.
 quit_tries = 50
 quit_try_ms = 200
 # Churn (spec §10, no growth), last in a G8 run: each round hovers keys for their tips, opens and closes the language

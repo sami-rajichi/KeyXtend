@@ -16,7 +16,8 @@ pub struct LangLabel {
     pub short: String,
     /// The space bar's text parts: the language, then the layout when known; the UI joins them.
     pub name: Vec<String>,
-    /// The language's ISO 639 code in lower case, such as `fr`, which the keyboard's texts follow; empty when unknown.
+    /// The language's ISO 639 code in lower case, such as `fr`, which the keyboard's texts follow and packs take
+    /// when `fits_iso` agrees; empty when unknown.
     pub iso: String,
     /// The language is written right to left.
     pub rtl: bool,
@@ -82,16 +83,43 @@ impl ServiceKey for LayoutsKey {
     const CAPABILITY: Option<Capability> = Some(Capability::InjectInput);
 }
 
-/// The keyboard now shows layout `id`.
+/// The keyboard now shows layout `id`, in language `iso`; a `LayoutAsk` tells it again.
 /// The id is a hint: a listener reads `Layouts::current` for the table, which may have moved on since.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LayoutChanged {
     /// The layout shown now.
     pub id: LayoutId,
+    /// Its language, as `LangLabel::iso` names it; empty when unknown.
+    pub iso: String,
+    /// Its language's name for the user: the OS's own name the space bar shows, else the language key's short name.
+    pub name: String,
+    /// Its language is written right to left.
+    pub rtl: bool,
+}
+
+impl From<&LangLabel> for LayoutChanged {
+    fn from(label: &LangLabel) -> Self {
+        let named = label.name.first().filter(|n| !n.is_empty());
+        Self {
+            id: label.id,
+            iso: label.iso.clone(),
+            name: named.unwrap_or(&label.short).clone(),
+            rtl: label.rtl,
+        }
+    }
 }
 
 impl Event for LayoutChanged {
     const NAME: &'static str = "layout-changed";
+}
+
+/// Asks the layouts service to tell the shown layout again, for a module that started after its last change.
+/// A `LayoutChanged` handler must not publish it, as the service tells one change at a time.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct LayoutAsk;
+
+impl Event for LayoutAsk {
+    const NAME: &'static str = "layout-ask";
 }
 
 #[cfg(test)]

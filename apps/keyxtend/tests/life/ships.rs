@@ -1,16 +1,23 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
-//! pointer hook, the scroll target and the power dialog each reach only the module whose manifest declares their
-//! capability, and the shortcuts reach the keyboard's layer.
+//! pointer hook, the scroll target, the power dialog, the box watch and the sealed store each reach only the modules
+//! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
+//! to the modules that read typed text, and the shortcuts reach the keyboard's layer.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
 use kx_kernel::Kernel;
 use kx_module_api::ports::{
-    FaceAction, KeyId, KeyName, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
-    ScrollTarget, ScrollTargetKey, ShortcutId, ShortcutInfo, Step,
+    FaceAction, FieldWatch, FieldWatchKey, KeyId, KeyName, PointerHook, PointerHookKey,
+    PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey, SealedStore, SealedStoreKey,
+    ShortcutId, ShortcutInfo, Step,
 };
-use kx_module_api::{Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey};
-use kx_platform_fake::{FakePointerHook, FakePowerDialog, FakeScrollTarget};
+use kx_module_api::{
+    Capability, Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey,
+};
+use kx_platform_fake::{
+    FakeFieldWatch, FakePointerHook, FakePowerDialog, FakeScrollTarget, FakeSealedStore,
+};
+use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -24,6 +31,8 @@ const MODULE_FEATURE: &str = "mod-";
 const SCROLL_FEATURE: &str = "mod-scroll";
 /// The power module's feature.
 const POWER_FEATURE: &str = "mod-power";
+/// The prediction module's feature.
+const PREDICT_FEATURE: &str = "mod-predict";
 /// The CI workflow, whose scroll-off lint names the app's other features by hand.
 const CI: &str = include_str!("../../../../.github/workflows/ci.yml");
 /// The app's package, which that lint builds.
@@ -68,7 +77,7 @@ impl<K: ServiceKey> Module for Probe<K> {
 }
 
 /// The shipped modules under whose id a probe gets `service` from the platform, with the app's grants.
-fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> Vec<ModuleId> {
+fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> BTreeSet<ModuleId> {
     let shipped = modules(&rig.load().hub);
     let grants = policy(&shipped);
     let gets = |id: ModuleId| {
@@ -112,6 +121,17 @@ fn every_module_feature_is_on_by_default_the_scroll_and_power_ones_too() {
 }
 
 #[test]
+fn mod_predict_is_a_default_feature_and_the_default_build_ships_predict() {
+    assert!(defaults(&features()).contains(&PREDICT_FEATURE));
+    let shipped = modules(&Rig::new().load().hub);
+    assert!(
+        shipped
+            .iter()
+            .any(|m| m.manifest().id == kx_mod_predict::ID)
+    );
+}
+
+#[test]
 fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
     let features = features();
     let mut want = defaults(&features);
@@ -131,21 +151,67 @@ fn the_scroll_off_lint_lists_the_defaults_without_scroll() {
 fn the_scroll_target_reaches_only_the_scroll_module() {
     let target: Arc<dyn ScrollTarget> = Arc::new(FakeScrollTarget::new());
     let got = reached::<ScrollTargetKey>(&Rig::new(), &target);
-    assert_eq!(got, [kx_mod_scroll::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_scroll::ID]));
 }
 
 #[test]
 fn the_power_dialog_reaches_only_the_power_module() {
     let dialog: Arc<dyn PowerDialog> = Arc::new(FakePowerDialog::new());
     let got = reached::<PowerDialogKey>(&Rig::new(), &dialog);
-    assert_eq!(got, [kx_mod_power::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_power::ID]));
+}
+
+#[test]
+fn the_box_watch_reaches_only_the_modules_that_read_typed_text() {
+    let watch: Arc<dyn FieldWatch> = Arc::new(FakeFieldWatch::new());
+    let got = reached::<FieldWatchKey>(&Rig::new(), &watch);
+    assert_eq!(got, holders(Capability::ReadFocusedText), "ADR-0033");
+}
+
+#[test]
+fn the_sealed_store_reaches_only_the_predict_module() {
+    let store: Arc<dyn SealedStore> = Arc::new(FakeSealedStore::new());
+    let got = reached::<SealedStoreKey>(&Rig::new(), &store);
+    assert_eq!(got, BTreeSet::from([kx_mod_predict::ID]), "ADR-0033");
 }
 
 #[test]
 fn the_mouse_hook_still_reaches_only_the_mouse_module() {
     let hook: Arc<dyn PointerHook> = Arc::new(FakePointerHook::new());
     let got = reached::<PointerHookKey>(&Rig::new(), &hook);
-    assert_eq!(got, [kx_mod_mouse::ID]);
+    assert_eq!(got, BTreeSet::from([kx_mod_mouse::ID]));
+}
+
+#[test]
+fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
+    let want = BTreeSet::from([kx_mod_keyboard::ID, kx_mod_mouse::ID, kx_ui::ID]);
+    assert_eq!(
+        holders(Capability::KeyboardUi),
+        want,
+        "ADR-0033: the ui, the face's provider and the notes' sender"
+    );
+}
+
+#[test]
+fn read_focused_text_goes_only_to_the_keyboard_predict_and_the_ui() {
+    let want = BTreeSet::from([kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID]);
+    assert_eq!(
+        holders(Capability::ReadFocusedText),
+        want,
+        "ADR-0033: the typist, prediction and the chip lane's drawer"
+    );
+}
+
+/// The shipped modules whose manifest declares `cap`, in any order.
+fn holders(cap: Capability) -> BTreeSet<ModuleId> {
+    let shipped = modules(&Rig::new().load().hub);
+    let declares = |m: &&Manifest| m.capabilities.contains(&cap);
+    shipped
+        .iter()
+        .map(|m| m.manifest())
+        .filter(declares)
+        .map(|m| m.id)
+        .collect()
 }
 
 #[test]

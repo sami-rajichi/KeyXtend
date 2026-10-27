@@ -11,8 +11,11 @@ pub mod com;
 pub mod dirs;
 #[cfg(windows)]
 pub mod dll;
+pub mod field;
 pub mod front;
 pub mod gpu;
+#[cfg(windows)]
+pub mod guard_key;
 #[cfg(windows)]
 mod hidden;
 pub mod hook;
@@ -24,6 +27,8 @@ pub mod layouts;
 #[cfg(windows)]
 pub mod memory;
 #[cfg(windows)]
+pub mod packs;
+#[cfg(windows)]
 mod platform;
 pub mod power;
 pub mod screen;
@@ -33,6 +38,8 @@ pub mod sound;
 pub mod strokes;
 pub mod sysui;
 pub mod tray;
+#[cfg(windows)]
+pub mod uia;
 #[cfg(windows)]
 pub mod uiaccess;
 pub mod watch;
@@ -44,6 +51,10 @@ pub use backdrop::WinBackdrop;
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
 #[cfg(windows)]
+pub use field::WinFieldWatch;
+#[cfg(windows)]
+pub use guard_key::WinKeyGuard;
+#[cfg(windows)]
 pub use hook::{WinPointerHook, release_now};
 #[cfg(windows)]
 pub use inject::WinInjector;
@@ -53,6 +64,8 @@ pub use instance::WinInstance;
 pub use layouts::WinLayouts;
 #[cfg(windows)]
 pub use memory::WinMemory;
+#[cfg(windows)]
+pub use packs::{WinPackDisk, WinWordPacks};
 #[cfg(windows)]
 pub use platform::WindowsPlatform;
 #[cfg(windows)]

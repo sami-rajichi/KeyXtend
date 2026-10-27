@@ -113,39 +113,20 @@ Window {
                 }
             }
         }
-        Column {
+        Pager {
             id: pager
-            visible: box.pages > 1
             anchors.right: parent.right
             anchors.rightMargin: box.pad
             anchors.verticalCenter: parent.verticalCenter
-            spacing: box.pn.pager_gap_px * box.s
-
-            PageButton {
-                icon: box.lk.icons.page.back
-                name: box.res.tr("page.back")
-                can: box.view.page.back && !!box.view.page_back
-                onClicked: box.page(box.view.page_back)
-            }
-            Label {
-                width: box.pn.page_px[0] * box.s
-                text: box.pages > 1 && box.res ? box.ui.pageText(box.at + 1, box.pages) : ""
-                font.family: box.res.fam.ui
-                font.pixelSize: box.pn.count_px * box.s
-                font.weight: box.pn.count_weight
-                color: box.p.pop_muted
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                Accessible.ignored: false
-                Accessible.role: Accessible.StaticText
-                Accessible.name: text
-            }
-            PageButton {
-                icon: box.lk.icons.page.on
-                name: box.res.tr("page.on")
-                can: box.view.page.on && !!box.view.page_on
-                onClicked: box.page(box.view.page_on)
-            }
+            page: box.at
+            pages: box.pages
+            canBack: box.view.page.back && !!box.view.page_back
+            canOn: box.view.page.on && !!box.view.page_on
+            ui: box.ui
+            lk: box.lk
+            res: box.res
+            s: box.s
+            onTurn: by => box.page(by < 0 ? box.view.page_back : box.view.page_on)
         }
         PressWatch {
             onTouched: box.touched()
@@ -171,47 +152,6 @@ Window {
             text: " "
             font.family: box.res.fam.latin
             font.pixelSize: box.sh.sub_px * box.s
-        }
-    }
-
-    // A page button (mock-up .pg), dimmed when there is no page that way.
-    component PageButton: Rectangle {
-        id: pb
-        required property string icon
-        required property string name
-        required property bool can
-        signal clicked
-        width: box.pn.page_px[0] * box.s
-        height: box.pn.page_px[1] * box.s
-        radius: box.pn.page_px[2] * box.s
-        color: box.p.pop_hover
-        border.width: box.lk.shape.line.px
-        border.color: box.p.pop_line
-        enabled: can
-        opacity: can ? 1 : box.pn.off_share
-        Accessible.role: Accessible.Button
-        Accessible.name: name
-        Accessible.onPressAction: if (can) pb.clicked()
-        Hover {
-            lk: box.lk
-            radius: pb.radius
-            tint: box.p.pop_sel
-            visible: area.containsMouse
-        }
-        Icon {
-            anchors.centerIn: parent
-            icon: pb.icon
-            base: box.res.icons
-            ext: box.res.ext
-            px: box.pn.page_px[3] * box.s
-            tint: box.lk.sel_ink
-        }
-        // It acts at let-go, wherever the pointer went (ADR-0024).
-        Act {
-            id: area
-            anchors.fill: parent
-            hoverEnabled: true
-            onActed: if (pb.can) pb.clicked()
         }
     }
 

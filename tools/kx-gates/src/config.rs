@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p5.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p7.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -20,6 +20,7 @@ use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
 use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
 use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
+use crate::p7cfg::{self, G8Predict, G21Product, G27, OwnerSettings};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 
@@ -106,6 +107,14 @@ pub struct GatesConfig {
     pub fit: Fit,
     /// The product's test build, which P4's gates drive.
     pub gate_input: GateInput,
+    /// G27 settings.
+    pub g27: G27,
+    /// G21's product half.
+    pub g21_product: G21Product,
+    /// G8's prediction part.
+    pub g8_predict: G8Predict,
+    /// Where the owner's settings bytes wait while a gate runs its own copies.
+    pub owner_settings: OwnerSettings,
     /// Folder the file was read from; relative paths start here.
     #[serde(skip)]
     pub dir: PathBuf,
@@ -137,7 +146,7 @@ pub struct Timing {
     pub close_wait_ms: u64,
     /// Longest wait for an app's text box to take the keyboard.
     pub focus_wait_ms: u64,
-    /// Longest wait for the product to end after `close` posts it Quit.
+    /// Longest wait for the product to end after `close` or a gate copy's end posts it Quit.
     pub quit_wait_ms: u64,
 }
 
@@ -226,6 +235,7 @@ pub fn load() -> Result<GatesConfig, String> {
     fit::check(&config)?;
     p3cfg::check(&config)?;
     p5cfg::check(&config)?;
+    p7cfg::check(&config)?;
     Ok(config)
 }
 

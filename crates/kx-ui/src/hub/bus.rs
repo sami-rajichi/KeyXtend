@@ -1,7 +1,7 @@
-//! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, and the scroll module's
-//! state, outline and page turns, each through a handler that holds the hub weakly, then asks the scroll module for its
-//! state. The keyboard's wake, power changes included, is heard only while a face is attached, after the face's own
-//! handlers.
+//! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
+//! state, outline and page turns, and the chip lane, each through a handler that holds the hub weakly, then asks the
+//! scroll and prediction modules for their state. The keyboard's wake, power changes included, is heard only while a
+//! face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use kx_module_api::ports::{
@@ -19,15 +19,15 @@ pub(super) struct Heard {
 }
 
 impl Hub {
-    /// Hears every notice, mouse-assist and scroll event on `bus` until the subscriptions drop, keeps `bus` for the
-    /// keyboard's wake, and asks the scroll module for its state, so any start order works; the app calls it before
-    /// the kernel loads.
+    /// Hears every notice, mouse-assist and scroll event and the chip lane on `bus` until the subscriptions drop, keeps
+    /// `bus` for the keyboard's wake, and asks the scroll and prediction modules for their state, so any start order
+    /// works; the app calls it before the kernel loads.
     ///
     /// # Errors
-    /// `EventError` when the bus refuses a subscription or the ask.
+    /// `EventError` when the bus refuses a subscription or an ask.
     pub fn listen(self: &Arc<Self>, bus: &Bus) -> Result<Vec<Subscription>, EventError> {
         self.heard().bus = Some(bus.clone());
-        let heard = vec![
+        let mut heard = vec![
             self.hear(bus, |hub, notice: &Notice| hub.notice(notice.clone()))?,
             self.hear(bus, Self::note)?,
             self.hear(bus, |hub, now: &AssistChanged| hub.assist_changed(*now))?,
@@ -38,6 +38,7 @@ impl Hub {
                 hub.wake(Wake::Page { back: page.back });
             })?,
         ];
+        heard.push(self.hear_words(bus)?);
         bus.publish(&ScrollAsk)?;
         Ok(heard)
     }
@@ -77,7 +78,7 @@ impl Hub {
     }
 
     /// Calls `f` on the hub for every `E` on `bus`, holding the hub weakly.
-    fn hear<E: Event>(
+    pub(super) fn hear<E: Event>(
         self: &Arc<Self>,
         bus: &Bus,
         f: impl Fn(&Self, &E) + Send + Sync + 'static,

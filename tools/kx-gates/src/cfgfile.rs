@@ -14,14 +14,17 @@ pub const P3_FILE: &str = "kx-gates-p3.toml";
 pub const P4_FILE: &str = "kx-gates-p4.toml";
 /// File name of the settings P5 adds; it is read only from the folder of `FILE`.
 pub const P5_FILE: &str = "kx-gates-p5.toml";
+/// File name of the settings P7 adds; it is read only from the folder of `FILE`.
+pub const P7_FILE: &str = "kx-gates-p7.toml";
 /// kx-gates' own settings files, in the order they are read.
-pub const OWN: [&str; 4] = [FILE, P3_FILE, P4_FILE, P5_FILE];
+pub const OWN: [&str; 5] = [FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE];
 /// Every settings file kx-gates reads: its own, the spike's and target-window's.
-pub const ALL: [&str; 6] = [
+pub const ALL: [&str; 7] = [
     FILE,
     P3_FILE,
     P4_FILE,
     P5_FILE,
+    P7_FILE,
     spike_core::config::FILE,
     kx_target_window::config::FILE,
 ];
@@ -81,6 +84,8 @@ mod tests {
     const SHIPPED_P4: &str = include_str!("../kx-gates-p4.toml");
     /// The shipped settings P5 adds.
     const SHIPPED_P5: &str = include_str!("../kx-gates-p5.toml");
+    /// The shipped settings P7 adds.
+    const SHIPPED_P7: &str = include_str!("../kx-gates-p7.toml");
     /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
     const WORKSPACE: &str = include_str!("../../../Cargo.toml");
 
@@ -95,6 +100,7 @@ mod tests {
             (P3_FILE, SHIPPED_P3),
             (P4_FILE, SHIPPED_P4),
             (P5_FILE, SHIPPED_P5),
+            (P7_FILE, SHIPPED_P7),
         ] {
             let lines = i64::try_from(text.lines().count()).expect("fits");
             assert!(
@@ -207,7 +213,7 @@ mod tests {
         assert_eq!(
             chosen(true, true, &ALL),
             Ok(EXE_DIR.into()),
-            "uiAccess, all six beside"
+            "uiAccess, all beside"
         );
     }
 
@@ -255,7 +261,7 @@ mod tests {
         let mut paths = vec![cfg.out_dir(), cfg.dir.join(&cfg.g22.worker_dir)];
         paths.extend(cfg.apps.values().map(|app| cfg.program(&app.exe)));
         let mut strings = Vec::new();
-        for shipped in [SHIPPED, SHIPPED_P3, SHIPPED_P4, SHIPPED_P5] {
+        for shipped in [SHIPPED, SHIPPED_P3, SHIPPED_P4, SHIPPED_P5, SHIPPED_P7] {
             dotted(&toml::from_str(shipped).expect("parses"), &mut strings);
         }
         paths.extend(strings.iter().map(|s| cfg.dir.join(s)));

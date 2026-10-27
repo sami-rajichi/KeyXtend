@@ -8,6 +8,7 @@ mod layer;
 mod list;
 mod pad;
 mod power;
+mod words;
 
 pub(super) use held::Went;
 
@@ -23,11 +24,11 @@ use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
-use kx_module_api::SettingsHandle;
 use kx_module_api::ports::{
     AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, PowerChanged,
     Screen, ScrollChanged, ShortcutInfo,
 };
+use kx_module_api::{Mono, SettingsHandle};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -49,8 +50,7 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
-    /// The Caps Lock state the last state view showed, so a press outside the keyboard redraws it.
-    shown_caps: Option<bool>,
+    caps: CapsLook,
     /// The mouse module's state, as the bus last told it.
     assist: AssistChanged,
     /// The scroll module's state, as the bus last told it.
@@ -67,9 +67,20 @@ pub(super) struct Inner {
     power: PowerChanged,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
-    /// Debug builds only: Caps Lock shows the other way round from the system's (`FaceAction::FlipCaps`).
-    #[cfg(debug_assertions)]
-    caps_flipped: bool,
+    /// The module runs, so a picked word may type.
+    running: bool,
+}
+
+/// Caps Lock as the UI's thread saw it, since Windows reads it per thread.
+#[derive(Default)]
+struct CapsLook {
+    /// What the last state view showed, so a press outside the keyboard redraws it.
+    shown: Option<bool>,
+    /// The last read, which the typing mode tells from any thread.
+    seen: bool,
+    /// When our Caps click flipped `seen`; the UI thread's refresh replaces the flip, and any read a relabel period
+    /// later does too, as when the window hid before its tick.
+    flipped: Option<Mono>,
 }
 
 impl Inner {
@@ -94,7 +105,7 @@ impl Inner {
             plate,
             overhang: 0.0,
             list: None,
-            shown_caps: None,
+            caps: CapsLook::default(),
             assist: AssistChanged::OFF,
             scroll: ScrollChanged::OFF,
             hover: false,
@@ -103,8 +114,7 @@ impl Inner {
             known,
             power: PowerChanged::OFF,
             unshown: false,
-            #[cfg(debug_assertions)]
-            caps_flipped: false,
+            running: false,
         }
     }
 
@@ -144,6 +154,7 @@ impl Inner {
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();
         let tapped = self.typing.tap(&self.ports.io(&table, &cells), id, back);
+        self.follow_caps();
         Went { tapped, ended }
     }
 
@@ -193,25 +204,40 @@ impl Inner {
             | FaceAction::Leave
             | FaceAction::Pad { .. }
             | FaceAction::PadHover { .. } => Ok(FaceReply::default()),
-            #[cfg(debug_assertions)]
-            FaceAction::FlipCaps => {
-                self.caps_flipped = !self.caps_flipped;
-                Ok(STATE)
-            }
         }
     }
 
-    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard.
-    pub(super) fn caps_moved(&self) -> bool {
-        self.shown_caps.is_some_and(|shown| shown != self.caps())
+    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard. The UI
+    /// thread's refresh calls it, at the relabel tick or after a stale tap, and its read replaces our flip.
+    pub(super) fn caps_moved(&mut self) -> bool {
+        self.caps.flipped = None;
+        let now = self.look_caps();
+        self.caps.shown.is_some_and(|shown| shown != now)
     }
 
-    /// Whether Caps Lock shows lit: the system's state, turned over in debug builds by `FaceAction::FlipCaps`.
-    fn caps(&self) -> bool {
-        let on = self.ports.source.caps_on();
-        #[cfg(debug_assertions)]
-        let on = on != self.caps_flipped;
-        on
+    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode. Within one
+    /// `relabel_ms` of our flip the kept view stands, as the system may not have it yet.
+    fn look_caps(&mut self) -> bool {
+        let period = Duration::from_millis(self.settings.relabel_ms);
+        let now = self.ports.clock.now();
+        if self
+            .caps
+            .flipped
+            .is_none_or(|at| now >= at.saturating_add(period))
+        {
+            self.caps.flipped = None;
+            self.caps.seen = self.ports.source.caps_on();
+        }
+        self.caps.seen
+    }
+
+    /// After our Caps Lock tap went out, the kept view flips at once. The next tick's read, or a state read one
+    /// `relabel_ms` after the tap, replaces it, whichever comes first.
+    fn follow_caps(&mut self) {
+        if self.typing.took_caps() {
+            self.caps.seen = !self.caps.seen;
+            self.caps.flipped = Some(self.ports.clock.now());
+        }
     }
 
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
@@ -223,8 +249,8 @@ impl Inner {
         rows: usize,
     ) -> StateView {
         self.seen();
-        let caps = self.caps();
-        self.shown_caps = Some(caps);
+        let caps = self.look_caps();
+        self.caps.shown = Some(caps);
         self.unshown = false;
         let table = self.ports.layouts.current();
         let list = self.ports.layouts.list();

@@ -127,6 +127,18 @@ fn an_event_without_a_capability_passes_on_any_limit() {
 }
 
 #[test]
+fn a_check_says_ahead_whether_a_handle_may_use_an_event() {
+    let (_core, bus) = open_bus();
+    assert_eq!(
+        bus.restricted(&[Microphone]).check::<Secret>(),
+        Err(refused())
+    );
+    assert_eq!(bus.restricted(&[NEED]).check::<Secret>(), Ok(()));
+    assert_eq!(bus.restricted(&[]).check::<Open>(), Ok(()));
+    assert_eq!(bus.check::<Secret>(), Ok(()), "no limit");
+}
+
+#[test]
 fn limiting_again_only_narrows() {
     let (_core, bus) = open_bus();
     let narrowed = bus.restricted(&[NEED]).restricted(&[]);

@@ -1,5 +1,5 @@
-//! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place, the bubble corner and the
-//! shortcut pages.
+//! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place, the bubble corner, the
+//! shortcut pages, and the text cap and erase gap of a picked word.
 
 pub use kx_module_api::ports::Corner;
 
@@ -18,6 +18,11 @@ pub(crate) const RELABEL_MS: RangeInclusive<u64> = 50..=10_000;
 pub(crate) const REPEAT_DELAY_MS: RangeInclusive<u64> = 300..=3_000;
 /// The time between repeats, in ms: from about 30 a second to one a second.
 pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
+/// The most characters a picked word may erase or type: room for the longest word with chips and its gap (the app ties
+/// it to `[predict] max_word`) or a long email, and never a page of text.
+pub const TEXT_CAP: RangeInclusive<u16> = 128..=1_024;
+/// The pause after each Backspace of a picked word, in ms: none, up to one too short to notice across a word.
+pub const ERASE_GAP_MS: RangeInclusive<u64> = 0..=50;
 /// The smallest `size_min` the settings take: the lowest size step where every key cell is still 24 px across
 /// (the spacing rule of WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
@@ -108,6 +113,10 @@ pub struct KeyboardSettings {
     pub repeat_every_ms: u64,
     /// Apps that get text as key presses in their own layout, by file name.
     pub key_apps: Vec<String>,
+    /// The most characters a picked word may erase or type; a longer request types nothing.
+    pub text_cap: u16,
+    /// The pause after each Backspace of a picked word, in ms.
+    pub erase_gap_ms: u64,
     /// The saved left edge, in physical pixels.
     pub x: i32,
     /// The saved top edge, in physical pixels.
@@ -151,6 +160,8 @@ impl Settings for KeyboardSettings {
         within("relabel_ms", self.relabel_ms, &RELABEL_MS)?;
         within("repeat_delay_ms", self.repeat_delay_ms, &REPEAT_DELAY_MS)?;
         within("repeat_every_ms", self.repeat_every_ms, &REPEAT_EVERY_MS)?;
+        within("text_cap", self.text_cap, &TEXT_CAP)?;
+        within("erase_gap_ms", self.erase_gap_ms, &ERASE_GAP_MS)?;
         if self.key_apps.iter().any(|a| a.trim().is_empty()) {
             return Err(invalid(BLANK_APP));
         }

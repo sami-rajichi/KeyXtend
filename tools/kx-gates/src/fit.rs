@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::config::GatesConfig;
 use crate::g5play::{Case, cases};
 use crate::gatecfg::G2;
+use crate::p7cfg::runs::end_ms;
 
 /// `[fit]`: what a run spends beyond the steps counted here; times in ms.
 #[derive(Debug, Clone, Deserialize)]
@@ -23,8 +24,17 @@ pub struct Fit {
 
 /// The least time `clicks` of G2's clicks take: each holds `press_ms`, then rests `click_gap_ms`.
 pub fn clicks_ms(g2: &G2, clicks: usize) -> u64 {
-    let each = g2.press_ms.saturating_add(g2.click_gap_ms);
-    u64::try_from(clicks).map_or(u64::MAX, |n| n.saturating_mul(each))
+    times(clicks, g2.press_ms.saturating_add(g2.click_gap_ms))
+}
+
+/// The sum of `parts`, at most `u64::MAX`.
+pub(crate) fn total(parts: &[u64]) -> u64 {
+    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
+}
+
+/// `n` times `ms`, at most `u64::MAX`.
+pub(crate) fn times(n: usize, ms: u64) -> u64 {
+    u64::try_from(n).map_or(u64::MAX, |n| n.saturating_mul(ms))
 }
 
 /// `secs` in ms.
@@ -34,16 +44,15 @@ fn ms_of(secs: u64) -> u64 {
 
 /// The least time G8 holds the mouse: its steps through G2's clicks, then the use step's rest on each of the board's
 /// `keys` and its wait, and the scroll and its wait, or its `PresentMon` capture when that ends later; then each churn
-/// round resting on each tip and scrolling once.
+/// round resting on each tip and scrolling once, and its copy's end as the P7 gates count it.
 fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
     let (g, scroll_ms) = (&c.g8, c.g8_scroll.scroll_ms);
     let rounds = g.churn_warm_rounds.saturating_add(g.churn_rounds);
     let rests = rounds.saturating_mul(g.churn_tips.len());
-    let times = |n: usize, ms: u64| u64::try_from(n).map_or(u64::MAX, |n| n.saturating_mul(ms));
     let churn = total(&[times(rests, g.churn_tip_ms), times(rounds, scroll_ms)]);
     let used = total(&[g8_captured_ms(c), times(keys, g.use_hover_ms), g.warm_ms]);
     let scrolled = total(&[used, scroll_ms, g.warm_ms]);
-    total(&[ms_of(g.presentmon_secs).max(scrolled), churn])
+    total(&[ms_of(g.presentmon_secs).max(scrolled), churn, end_ms(c)])
 }
 
 /// G8's counted steps from `PresentMon`'s start until its G2 clicks end: the warm-up, the idle time, each press at its
@@ -51,8 +60,8 @@ fn g8_ms(c: &GatesConfig, keys: usize) -> u64 {
 fn g8_captured_ms(c: &GatesConfig) -> u64 {
     let g = &c.g8;
     let press = g.hover_settle_ms.saturating_add(g.press_wait_ms);
-    let presses = u64::try_from(g.presses).map_or(u64::MAX, |n| n.saturating_mul(press));
-    let waits = [
+    let presses = times(g.presses, press);
+    total(&[
         g.presentmon_wait_ms,
         g.warm_ms,
         g.idle_settle_ms,
@@ -62,8 +71,7 @@ fn g8_captured_ms(c: &GatesConfig) -> u64 {
         c.g2.drain_ms,
         clicks_ms(&c.g2, g.clicks),
         c.g2.drain_ms,
-    ];
-    waits.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
+    ])
 }
 
 /// Refuses a G8 capture that would end before its G2 clicks, so their frames would go unseen.
@@ -76,11 +84,6 @@ fn check_capture(c: &GatesConfig) -> Result<(), String> {
         ));
     }
     Ok(())
-}
-
-/// The sum of `parts`, at most `u64::MAX`.
-fn total(parts: &[u64]) -> u64 {
-    parts.iter().fold(0, |sum, &ms| sum.saturating_add(ms))
 }
 
 /// G12's counted steps from `PresentMon`'s start: its wait, then each press at its longest, `hold_ms` less
@@ -109,7 +112,7 @@ fn rounds_ms(c: &GatesConfig, rounds: usize, hold_ms: u64) -> u64 {
         total(&[s.step_ms, s.step_ms, press, g.settle_ms, hang])
     };
     let round = total(&cases(g, 0).iter().map(case).collect::<Vec<_>>());
-    u64::try_from(rounds).map_or(u64::MAX, |n| n.saturating_mul(round))
+    times(rounds, round)
 }
 
 /// Refuses a G12 capture that would end before its presses, so their frames would go unseen, or a G12 run past the
@@ -126,7 +129,7 @@ fn check_g12(c: &GatesConfig, hold_ms: u64) -> Result<(), String> {
 
 /// Refuses a run of `gate` that holds the mouse `ms` and, with `[fit] guard_headroom_ms`, passes the guard's limit, as
 /// the guard would stop it midway; with the guard off, nothing is held.
-fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
+pub(crate) fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
     let (need, limit) = (
         ms.saturating_add(c.fit.guard_headroom_ms),
         c.mouse_guard.limit_ms,
@@ -134,7 +137,7 @@ fn held_fits(c: &GatesConfig, gate: &str, ms: u64) -> Result<(), String> {
     if c.mouse_guard.on && need > limit {
         return Err(format!(
             "{gate} holds the mouse at least {need} ms with fit.guard_headroom_ms, past mouse_guard.limit_ms \
-             {limit}: count fewer clicks or raise the limit"
+             {limit}: shorten the run or raise the limit"
         ));
     }
     Ok(())

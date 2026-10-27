@@ -32,6 +32,8 @@ pub mod args {
     pub const KEYS: &str = "keys";
     /// How many items the notice's list leaves out; absent when it names them all.
     pub const MORE: &str = "more";
+    /// A language, by the name the layouts give it.
+    pub const LANG: &str = "lang";
 }
 
 impl Event for Notice {
@@ -78,9 +80,15 @@ pub mod keys {
     pub const POWER_FAILED: &str = "notice.power-failed";
     /// The power module stopped after an error; it comes back when the app restarts.
     pub const POWER_STOPPED: &str = "notice.power-stopped";
+    /// The learned words or emails were damaged, so learning starts again from empty.
+    pub const WORDS_DAMAGED: &str = "notice.words-damaged";
+    /// A full language's word pack is missing, so its suggestions come only from the words typed.
+    pub const WORDS_MISSING: &str = "notice.words-missing";
+    /// The learned words could not be unlocked, so nothing learned is saved this run.
+    pub const WORDS_LOCKED: &str = "notice.words-locked";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 19] = [
+    pub const ALL_KEYS: [&str; 22] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -100,6 +108,9 @@ pub mod keys {
         SCROLL_STOPPED,
         POWER_FAILED,
         POWER_STOPPED,
+        WORDS_DAMAGED,
+        WORDS_MISSING,
+        WORDS_LOCKED,
     ];
 }
 
@@ -169,9 +180,18 @@ mod tests {
     #[test]
     fn arguments_keep_the_names_translations_use() {
         assert_eq!(
-            (args::MODULE, args::KEYS, args::MORE),
-            ("module", "keys", "more")
+            (args::MODULE, args::KEYS, args::MORE, args::LANG),
+            ("module", "keys", "more", "lang")
         );
+    }
+
+    #[test]
+    fn the_words_notices_keep_their_keys_and_are_listed() {
+        assert_eq!(keys::WORDS_DAMAGED, "notice.words-damaged");
+        assert_eq!(keys::WORDS_MISSING, "notice.words-missing");
+        assert_eq!(keys::WORDS_LOCKED, "notice.words-locked");
+        let words = [keys::WORDS_DAMAGED, keys::WORDS_MISSING, keys::WORDS_LOCKED];
+        assert!(words.iter().all(|k| ALL_KEYS.contains(k)));
     }
 
     #[test]

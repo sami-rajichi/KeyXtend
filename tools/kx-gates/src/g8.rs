@@ -1,9 +1,5 @@
-//! G8 budgets (spec §10): it starts the product and sets cold start, idle memory and CPU, folder size, key highlight,
-//! click to character, a bus publish, `PresentMon`'s dropped frames, memory growth under pop-up churn and memory after
-//! use and after a scroll (`g8scroll`) against them, times resizes and logs the machine's memory (`g8host`).
-//! `g8 weak` caps it as the spike's weak mode does (`spike.toml [voice.weak]`), and `g8 arabic` runs it with an Arabic
-//! layout in front (`g8lang`); it clicks, so only with the owner's yes.
-//! `g8 hook` and `g8 hook-weak` judge the hook's p99 on the test build instead (`g8hook`).
+//! G8 budgets (spec §10): it starts the product cold and sets what it measures against each budget (`g8parts`); it
+//! clicks, so only with the owner's yes. `run` names its other runs: weak mode, an Arabic layout, the hook and predict.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -29,11 +25,11 @@ use crate::g8ui::Spot;
 
 use crate::out::{say, shown};
 use crate::presentmon::Frames;
-use crate::proc::{self, Memory, Process};
+use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
-use crate::{close, g2, g2raw, g8hook, g8host, mouseguard, out};
-use crate::{g8lit, g8size, g8type, g8ui, g8use};
+use crate::{copyend, g2, g2raw, g8hook, g8host, mouseguard, out};
+use crate::{g8lit, g8predict, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -83,7 +79,7 @@ fn idle(ctx: &Ctx, p: &Process) -> Result<Option<f64>, String> {
 }
 
 /// Everything G8 measures on the started product once its holds fit the running repeat delay, in order: start-up log,
-/// memory, idle, folder, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
+/// memory, idle, presses, resizes, G2, the memory after use and after a scroll, before any theme round (owner,
 /// 2026-10-16); then `PresentMon`'s frames once its capture ends, and only then the churn, whose theme switches never
 /// count (`g8rounds`). `hold` runs after the presses, after G2 and after the scroll, each of which took the front.
 fn measure(
@@ -98,7 +94,6 @@ fn measure(
     let kb = Keyboard::find()?;
     let (memory, memory_at_ms) = warm(ctx, s)?;
     let core_pct = idle(ctx, &s.process)?;
-    let size_mb = proc::folder_mb(program.parent().ok_or("the program has no folder")?)?;
     let spot = Spot::of(&kb, &g.press_key)?;
     let presses = g8type::presses(ctx, &spot, Expect::Key(&g.press_key))?;
     hold.fresh()?;
@@ -114,7 +109,6 @@ fn measure(
         memory,
         memory_at_ms,
         core_pct,
-        size_mb,
         presses,
         resizes,
         g2,
@@ -195,10 +189,11 @@ fn spans(ctx: &Ctx, m: &Measured) -> Result<Vec<Span>, String> {
 }
 
 /// Runs G8: `name` is the product, `weak` for weak mode or `arabic` with an Arabic layout in front, and the product
-/// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), and `hook` and
-/// `hook-weak` only the hook (`g8hook`).
+/// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), `hook` and
+/// `hook-weak` only the hook (`g8hook`), and `predict` only the prediction part (`g8predict`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if let Some(part) = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name)) {
+    let parts = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name));
+    if let Some(part) = parts.or_else(|| g8predict::run(ctx, name)) {
         return part;
     }
     cold()?;
@@ -220,8 +215,8 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
     let (since, origin_us) = (SystemTime::now(), now_us());
     let rec = g8frames::record(ctx, &Capture::of_g8(&ctx.cfg.g8), &program)?;
     let (pm, secs) = (rec.as_ref().map(Recorder::pid), ctx.cfg.g8.presentmon_secs);
-    let s =
-        g8start::start(ctx, &program, &[], job.as_ref()).map_err(|e| broke(&e, pm, secs, None))?;
+    let s = g8start::start(ctx, &program, &[], job.as_ref())
+        .map_err(|e| broke(&String::from(e), pm, secs, None))?;
     let shown_ms = s.shown_ms();
     say!(
         "G8 {name}: started {} (pid {}); shown after {shown_ms:?} ms",
@@ -229,25 +224,22 @@ fn started(ctx: &Ctx, name: &str, hold: Hold) -> Result<Value, String> {
         s.process.pid(),
     );
     let measured = measure(ctx, &s, (&program, hold), (since, rec.as_ref()));
-    let quit = close::quit_running(ctx)
-        .map(|(_, ended)| ended)
-        .map_err(|e| e.why);
+    let copy = copyend::end(ctx, &s.process);
     // The pointer work is over, so the bus bench runs with the owner's mouse free.
     mouseguard::let_go();
-    let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&quit)))?;
+    let (m, frames) = measured.map_err(|e| broke(&e, pm, secs, Some(&copy)))?;
     let end_us = g8frames::end_us(secs, rec.as_ref(), origin_us);
     let (o, [bus, frames, losses, cut]) = outside(ctx, job, &m, &frames, (origin_us, end_us));
     let parts = parts(&ctx.cfg.g8, shown_ms, &m, weak, &o);
-    let ended = quit.unwrap_or(false);
     let (to_log, log_span) = m.log.unzip();
     let mut v = json!({
         "gate": "G8", "keyboard": product::NAME, "weak": weak, "program": program, "cpu_cores": cpu_cores,
         "renderer": weak.then_some(NO_SOFTWARE), "caps": weak.then_some(CAPS_LATE), "start_to_log_ms": to_log,
         "log_to_guarded_ms": log_span, "memory_at_ms": m.memory_at_ms, "resizes": m.resizes, "presses": m.presses,
         "g2": m.g2, "churn": m.churn, "bus": bus, "frames": frames, "losses": losses, "capture_cut": cut,
-        "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts, "quit": ended,
-        "host": { "before": host, "after": g8host::read(ctx) },
-        "pass": verdict(weak, &m.churn, met(ended, &m.presses, &parts)),
+        "scroll": shown(&m.scrolled), "scroll_left_open": m.scroll_left, "parts": parts,
+        "copy": copy.line(), "host": { "before": host, "after": g8host::read(ctx) },
+        "pass": verdict(weak, &m.churn, met(copy.ok(), &m.presses, &parts)),
     });
     v[g8use::FIELD] = shown(&m.used);
     Ok(v)

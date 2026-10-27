@@ -110,7 +110,11 @@ impl Bus {
             .is_none_or(|granted| granted.contains(&cap))
     }
 
-    fn check<E: Event>(&self) -> Result<(), EventError> {
+    /// Says ahead whether this handle may use `E`, so a module that only sends `E` can fail its start without it.
+    ///
+    /// # Errors
+    /// `EventError::NotGranted` when `E` needs a capability this handle lacks.
+    pub fn check<E: Event>(&self) -> Result<(), EventError> {
         match E::CAPABILITY {
             Some(cap) if !self.allows(cap) => Err(EventError::NotGranted(E::NAME, cap)),
             _ => Ok(()),

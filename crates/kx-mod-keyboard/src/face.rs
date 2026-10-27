@@ -7,6 +7,7 @@ mod inner;
 mod layer;
 mod outbox;
 mod pad;
+mod words;
 
 pub(crate) use bus::listen;
 
@@ -19,9 +20,11 @@ use bus::Told;
 use inner::{Inner, Went};
 use kx_module_api::ports::{FaceAction, FaceError, FaceReply, KeyboardFace};
 use kx_module_api::{SettingsHandle, keys};
+use outbox::Outbox;
 use pad::Peeks;
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 /// A reply that redraws the state alone.
@@ -48,10 +51,14 @@ pub struct Face {
     /// The same keys in board order, which the state lists.
     nav_keys: Vec<(String, Nav)>,
     inner: Mutex<Inner>,
-    /// The latched set the bus last heard.
+    /// The latched set and typing mode the bus last heard.
     told: Told,
     /// What the scroll module last heard of the pointer on the pad.
     peeks: Peeks,
+    /// The typed pieces' sender, one thread at a time.
+    pieces: Outbox,
+    /// How many clicks outside our windows were heard, so a picked word going out stops at one.
+    clicks: AtomicU64,
 }
 
 /// Shows no key, place or typing state.
@@ -81,6 +88,8 @@ impl Face {
             inner: Mutex::new(inner),
             told: Told::default(),
             peeks: Peeks::default(),
+            pieces: Outbox::default(),
+            clicks: AtomicU64::new(0),
         }
     }
 
@@ -218,7 +227,9 @@ impl Face {
         let changed = layouts.refresh();
         let moved = {
             let mut inner = self.lock();
-            inner.seen() || inner.caps_moved() || inner.unshown()
+            // Read at every tick, so the typing mode told next holds the UI's newest Caps Lock.
+            let caps = inner.caps_moved();
+            inner.seen() || caps || inner.unshown()
         };
         FaceReply {
             state: changed || moved,
@@ -269,9 +280,10 @@ impl KeyboardFace for Face {
         self.spec.row_px
     }
 
-    /// Does `action`, then tells the bus the latched set if it changed.
+    /// Does `action`, then tells the bus the pieces it typed, and the latched set and typing mode if they changed.
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
         let reply = self.route(action);
+        self.pour();
         self.tell(false);
         reply
     }

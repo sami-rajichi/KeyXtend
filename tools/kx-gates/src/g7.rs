@@ -4,8 +4,8 @@
 #![cfg(windows)]
 
 use kx_mod_keyboard::legend::is_mark;
+use kx_platform_windows::uia::{self, Uia};
 use serde_json::{Value, json};
-use spike_core::uia::{self, Uia};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -62,7 +62,7 @@ fn expected(word: &str, keys: &[Move]) -> Vec<usize> {
 /// Opens the panel on face `name`, runs the check, then closes the panel and checks that it went.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let t = &ctx.cfg.timing;
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let face = mouse::find_face(ctx.spike, name)?;
     let pid = win::owner(face).0;
     let key = uia
@@ -101,13 +101,15 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
     let (g, p, t) = (&ctx.cfg.g7, &ctx.spike.panel, &ctx.cfg.timing);
     let field = win::poll_until(t.read_wait_ms, t.poll_ms, || uia.named(panel, &p.field))
         .ok_or("the panel has no text field")?;
-    uia::focus(&field)?;
+    uia::focus(&field).map_err(|e| e.to_string())?;
     // Brought forward without keys: an Alt tap would reach the app in front.
     let forward = || spike_core::window::bring_back(panel, 0).then_some(());
     let _ = win::poll_until(t.focus_wait_ms, t.poll_ms, forward);
     in_front(panel)?;
     keys::text(&g.word)?;
-    let typed = || (uia::value(&field).as_deref() == Some(g.word.as_str())).then_some(());
+    // Reads go up to `[g1] max_read_chars`, so a field holding more than the word still shows its caret stops.
+    let most = ctx.cfg.g1.max_read_chars;
+    let typed = || (uia::value(&field, most).as_deref() == Some(g.word.as_str())).then_some(());
     let typed_ok = win::poll_until(t.read_wait_ms, t.poll_ms, typed).is_some();
     let tp = uia.text_of(&field).ok_or("the field has no TextPattern")?;
     let mut caret = Vec::new();
@@ -115,7 +117,7 @@ fn check(ctx: &Ctx, uia: &Uia, panel: HWND) -> Result<Value, String> {
         in_front(panel)?;
         keys::combo(&[vk(k).0])?;
         sleep_ms(t.key_settle_ms);
-        caret.push(uia::caret(&tp)?);
+        caret.push(uia::caret(&tp, most).map_err(|e| e.to_string())?);
     }
     let want = expected(&g.word, &g.keys);
     let pass = typed_ok && caret == want;

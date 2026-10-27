@@ -4,8 +4,8 @@
 
 use kx_mod_keyboard::{Assist, Role};
 use kx_mod_mouse::ESC;
+use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
-use spike_core::uia::Uia;
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_LBUTTON;
 
 use crate::apps::{AppKind, Ctx};
@@ -121,7 +121,7 @@ fn open(ctx: &Ctx, kind: AppKind) -> Result<Doc, String> {
 /// passes when every case did and the test build quit.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
-    let uia = Uia::new()?;
+    let uia = Uia::new().map_err(|e| e.to_string())?;
     let build = TestBuild::open(ctx, None)?;
     build.set(RCLICK, false)?;
     let doc = open(ctx, kind)?;
