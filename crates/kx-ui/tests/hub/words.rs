@@ -2,6 +2,8 @@
 //! lane as it starts listening, and no log line holds a chip's text.
 
 mod asks;
+// It uses `crate::sound`'s helpers, which need `qt`'s sound table.
+#[cfg(feature = "qt")]
 mod sounds;
 mod view;
 
