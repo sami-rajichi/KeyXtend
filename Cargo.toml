@@ -40,7 +40,7 @@ windows = "0.62.2"
 windows-core = "0.62.2"
 embed-manifest = "1.5.1"
 fluent-bundle = "0.16.0"
-fluent-langneg = "0.13.1"
+fluent-langneg = "0.14.2"
 unic-langid = "0.9.6"
 # Sealed files (ADR-0010): RustCrypto's AEAD, OS randomness and wiping secrets from memory.
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["zeroize"] }
