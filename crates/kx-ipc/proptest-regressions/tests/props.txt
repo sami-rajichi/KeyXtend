@@ -1,0 +1,13 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9eb4ee3fdcdda2928ffbbc111a5c30d2d3a44cf06e270a8c7cfb37aa890152d3 # shrinks to have = 0, more = 65537
+cc ff66a044bca6fc9391996017b8ba49c674438a883b392751c5cac89b470f790d # shrinks to reply = Reply, pick = Index(14647336462236869149), flip = 224
+cc 18c55f2821c331efd493f7c5b2f1e77464dd22e4f4cc6768c3977aaedd50cd42 # shrinks to ask = Ask
+cc 4b2a6cdcb2b9b690f118be91591629de3cb7118bfc0fbb592a49eea41b90bd0e # shrinks to reply = Reply
+cc 27d42e2a641188f13a02b5ebf30e2c19fd4725d7149a35cd337fe1503f8d376a # shrinks to kind = 2, len = 1, tail = []
+cc c95691e4ad00e46adbddfeea0c79860622259b336b6f5c614eb21308a713b35a # shrinks to ask = Ask, pick = Index(0), flip = 1
+cc 8bc33bfecb29f62c5f098e3121148be72f8466943473cc144be4d86f99565f2c # shrinks to ask = Ask, reply = Reply, pick = Index(17868617998454532809)

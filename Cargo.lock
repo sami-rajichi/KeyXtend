@@ -677,6 +677,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kx-ipc"
+version = "0.0.0"
+dependencies = [
+ "proptest",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "kx-kernel"
 version = "0.0.0"
 dependencies = [
