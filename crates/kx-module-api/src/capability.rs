@@ -32,6 +32,8 @@ capabilities! {
     PointerHook => "pointer-hook",
     /// Read the clipboard.
     ReadClipboard => "read-clipboard",
+    /// Set the clipboard and ask the keyboard for a paste.
+    WriteClipboard => "write-clipboard",
     /// Read what is typed into the focused box, and the words before its cursor.
     ReadFocusedText => "read-focused-text",
     /// Record from the microphone.
@@ -94,6 +96,14 @@ mod tests {
     fn power_is_its_own_capability() {
         assert!(Capability::ALL.contains(&Capability::Power));
         assert_eq!(Capability::Power.name(), "power");
+    }
+
+    #[test]
+    fn write_clipboard_follows_read_clipboard() {
+        let write = Capability::WriteClipboard;
+        assert_eq!(write.name(), "write-clipboard");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        assert_eq!(at(write), at(Capability::ReadClipboard).map(|i| i + 1));
     }
 
     #[test]

@@ -1,5 +1,5 @@
 //! The contract between the kernel and feature modules: ids, manifests, services, events, settings, notices, time,
-//! redaction, hidden marks, the Arabic script blocks, the ports (service traits) in `ports`, and folding in `text`.
+//! redaction, hidden marks, the script blocks, the ports (service traits) in `ports`, and folding in `text`.
 //! Modules depend on this crate and on nothing else in the workspace.
 
 #![forbid(unsafe_code)]
@@ -32,6 +32,6 @@ pub use manifest::{Manifest, Module};
 pub use marks::{HIDDEN_MARKS, INVISIBLE, is_hidden};
 pub use notice::{ModuleState, ModuleStateChanged, Notice, NoticeArg, SettingsChanged, args, keys};
 pub use redacted::{REDACTED_MARKER, Redacted};
-pub use script::{ARABIC_BLOCKS, is_arabic};
+pub use script::{ARABIC_BLOCKS, RTL_BLOCKS, is_arabic, is_rtl};
 pub use service::ServiceKey;
 pub use settings::{Migration, Settings, SettingsSpec, parse_as, validate_as, within};
