@@ -196,13 +196,15 @@ Versions are pre-1.0 until the Windows feature set is complete.
 ## Phase 8 — Clipboard history — v0.5
 
 - `kx-mod-clipboard` plus the `media` worker (thumbnails), over `kx-crypto` (built in P7).
-- The encrypted store, retention, exclusion formats, the paged panel, multi-paste, pasting files and images, and Win+V routing (a setting, moved from P6).
+- The encrypted store in day folders, retention, the size and disk limits, exclusion markers, the paged panel with search and a preview page, tick-then-Insert, pasting files and images, and the history shortcut (a setting, moved from P6). Spec §7 has the owner's decisions (2026-10-30).
 - **Edge cases:**
-  - a 200 MB image;
-  - 10,000 entries;
+  - a 200 MB image (not kept, with a note);
+  - 10,000 entries in a settings file (the limit is 5,000);
   - a password-manager copy (must be skipped);
-  - a file reference whose file was later deleted;
-  - two paste targets.
+  - a file reference whose file was later deleted (the entry leaves);
+  - two paste targets (Insert goes to the app in front at that moment);
+  - a nearly full drive, a day folder deleted by hand, and the day changing while the app runs;
+  - the media worker crashing, hanging or sending bad pixels.
 
 ## Phase 9 — Quick-fill vault — v0.6
 
