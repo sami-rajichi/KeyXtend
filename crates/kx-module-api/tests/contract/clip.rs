@@ -4,10 +4,10 @@
 use kx_module_api::Capability::{InjectInput, ReadClipboard, SecretStore, WriteClipboard};
 use kx_module_api::ports::{
     BlobName, Calendar, CalendarKey, ClipAct, ClipConfig, ClipError, ClipKey, ClipNote, ClipOpen,
-    ClipPanel, ClipPart, ClipRun, ClipView, Clipboard, ClipboardKey, ClipboardWriter,
-    ClipboardWriterKey, Date, FileFact, Filter, HistoryAsk, HistoryWanted, LocalTime, PanelKey,
-    PasteAsk, Pasted, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey,
-    Pixels, Room, SealedError, SealedShelf, SealedShelfKey,
+    ClipPage, ClipPanel, ClipPart, ClipRun, ClipView, ClipWait, Clipboard, ClipboardKey,
+    ClipboardWriter, ClipboardWriterKey, Date, FileFact, Filter, HistoryAsk, HistoryWanted,
+    LocalTime, Pages, PanelKey, PasteAsk, Pasted, PictureAsk, PictureConfig, PictureError,
+    PictureRun, Pictures, PicturesKey, Pixels, Room, SealedError, SealedShelf, SealedShelfKey,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -51,13 +51,13 @@ impl Clipboard for Stuck {
         Ok(Box::new(Deaf))
     }
 
-    fn files(&self, paths: &[PathBuf]) -> Vec<FileFact> {
-        paths.iter().map(|_| FileFact::Gone).collect()
+    fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
+        paths.expose().iter().map(|_| FileFact::Gone).collect()
     }
 }
 
 impl ClipboardWriter for Stuck {
-    fn write(&self, _: &[ClipPart], _: ClipConfig) -> Result<(), ClipError> {
+    fn write(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
         Err(ClipError::Busy)
     }
 }
@@ -151,6 +151,34 @@ fn gated(bus: &Bus) -> [Result<(), EventError>; 10] {
     ]
 }
 
+/// The search line of `page` ("hello").
+const SEARCH: &str = "مرحبا";
+
+/// An empty history's page, searched for `SEARCH`.
+fn page() -> ClipPage {
+    ClipPage {
+        round: 1,
+        rows: Vec::new(),
+        highlight: None,
+        filter: Filter::All,
+        search: Redacted::new(SEARCH.to_owned()),
+        pages: Pages::default(),
+        ticked: 0,
+        unpin: false,
+        preview: None,
+        confirm: None,
+        room: Room {
+            used: 0,
+            free: 1,
+            drive: "D:".to_owned(),
+        },
+        cap: 1,
+        note: None,
+        kept_days: 7,
+        empty: true,
+    }
+}
+
 /// The refusal of `E` for want of `cap`.
 fn refused<E: Event>(cap: Capability) -> Result<(), EventError> {
     Err(EventError::NotGranted(E::NAME, cap))
@@ -178,10 +206,38 @@ fn without_the_clipboard_gates_no_content_or_paste_travels() {
 #[test]
 fn read_clipboard_alone_opens_content_but_not_the_paste() {
     let bus = host(&[ReadClipboard]).bus();
-    let got = gated(&bus);
-    assert_eq!(got[..2], [Ok(()), Ok(())]);
-    assert_eq!(got[2], refused::<PasteAsk>(WriteClipboard));
-    assert_eq!(got[4..7], [Ok(()), Ok(()), Ok(())]);
+    let want = [
+        Ok(()),
+        Ok(()),
+        refused::<PasteAsk>(WriteClipboard),
+        refused::<Pasted>(WriteClipboard),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        refused::<PasteAsk>(WriteClipboard),
+        refused::<Pasted>(WriteClipboard),
+        Ok(()),
+    ];
+    assert_eq!(gated(&bus), want);
+}
+
+#[test]
+fn a_view_reaches_its_listener_only_with_read_clipboard() {
+    let view = ClipView::new(page());
+    let closed = host(&[WriteClipboard, SecretStore]).bus();
+    assert_eq!(closed.publish(&view), refused::<ClipView>(ReadClipboard));
+    let bus = host(&[ReadClipboard]).bus();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let _sub = bus
+        .subscribe(move |v: &ClipView| tx.send(v.clone()).unwrap())
+        .unwrap();
+    assert_eq!(bus.publish(&view), Ok(()));
+    let heard = rx.try_recv().unwrap();
+    assert!(
+        Arc::ptr_eq(&heard.0, &view.0),
+        "the listener shares the page"
+    );
+    assert_eq!(heard.0.search.expose(), SEARCH);
 }
 
 #[test]
@@ -211,20 +267,20 @@ fn each_port_needs_its_gate_and_pictures_and_the_calendar_none() {
 fn ports_reached_through_their_gates_answer() {
     let mut host = host(&[ReadClipboard, WriteClipboard, SecretStore]);
     let cx = ModuleCx::new(&mut host);
-    let cfg = ClipConfig {
-        max_bytes: 1,
+    let wait = ClipWait {
         open_ms: 1,
         poll_ms: 1,
     };
+    let cfg = ClipConfig { max_bytes: 1, wait };
     let (tx, rx) = std::sync::mpsc::channel();
     let tell = Box::new(move |n: ClipNote| tx.send(n).unwrap());
     let clipboard = cx.service::<ClipboardKey>().unwrap();
     let _run = clipboard.watch(cfg, tell).unwrap();
     assert_eq!(rx.try_recv(), Ok(ClipNote::Busy));
-    let gone = clipboard.files(&[PathBuf::from("a.txt")]);
+    let gone = clipboard.files(&Redacted::new(vec![PathBuf::from("a.txt")]));
     assert_eq!(gone, [FileFact::Gone]);
     let writer = cx.service::<ClipboardWriterKey>().unwrap();
-    assert_eq!(writer.write(&[], cfg), Err(ClipError::Busy));
+    assert_eq!(writer.write(&[], wait), Err(ClipError::Busy));
     let shelf = cx.service::<SealedShelfKey>().unwrap();
     assert_eq!(shelf.room(), Err(SealedError::Locked));
 }

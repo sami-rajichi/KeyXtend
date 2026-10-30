@@ -108,17 +108,19 @@ pub enum Preview {
     Files(Redacted<Vec<PathBuf>>),
 }
 
-/// A note on why a copy was not kept, or on the store.
+/// A note on why a copy was not kept, or why an insert stopped; a damaged store is a notice, not a note.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PanelNote {
-    /// The last copy was over the entry size limit.
+    /// An entry over the size limit was not kept.
     TooBig,
-    /// The drive has too little room, so nothing new is kept.
+    /// The drive is under the free-space floor, so nothing new is kept.
     Disk,
     /// Pinned entries alone fill a limit, so nothing new is kept.
     PinnedFull,
-    /// A damaged day list was set aside.
-    Damaged,
+    /// Setting the clipboard failed, so Insert stopped.
+    Busy,
+    /// The keyboard did not paste, so Insert stopped.
+    PasteFailed,
 }
 
 /// Where the shown page is in the list.
@@ -147,7 +149,7 @@ pub struct ClipPage {
     pub pages: Pages,
     /// How many entries are ticked, in every view.
     pub ticked: u16,
-    /// The pin action reads Unpin, as every ticked entry is pinned.
+    /// The pin action reads Unpin: every ticked entry, or the previewed one, is pinned.
     pub unpin: bool,
     /// The preview page, while it shows.
     pub preview: Option<Preview>,

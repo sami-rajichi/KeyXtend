@@ -27,7 +27,7 @@ pub use assist::{
 };
 pub use calendar::{Calendar, CalendarKey, Date, LocalTime, Weekday};
 pub use clip::{
-    AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, Clipboard, ClipboardKey,
+    AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard, ClipboardKey,
     ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec,
 };
 pub use clips::{

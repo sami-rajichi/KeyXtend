@@ -45,7 +45,7 @@ pub enum PanelKey {
     Right,
     /// Insert the ticked rows, or the highlighted one when none is ticked.
     Enter,
-    /// Clear the search, or close the panel when it is empty.
+    /// Back out one step: close the Delete-all question, else the preview, else clear the search, else the panel.
     Esc,
     /// Tick or untick the highlighted row: the Space key.
     Tick,
@@ -81,7 +81,8 @@ impl Event for ClipView {
     const CAPABILITY: Option<Capability> = READ;
 }
 
-/// From the ui: a click on the panel; the footer's actions act on the ticked rows.
+/// From the ui: a click on the panel; the actions act on the ticked rows, or on the previewed entry while the preview
+/// page is open.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ClipAct {
     /// Tick or untick a row of a shown page.
@@ -93,16 +94,16 @@ pub enum ClipAct {
     },
     /// Show this filter.
     Filter(Filter),
-    /// Turn a page.
+    /// Turn a page, from the panel's arrows or a scroll pad page tap, which the ui turns into this.
     Page {
         /// Turn back.
         back: bool,
     },
-    /// Insert the ticked rows, in tick order.
+    /// Insert the ticked rows in tick order, or the previewed entry.
     Insert,
-    /// Pin the ticked rows, or unpin them when all are pinned.
+    /// Pin the ticked rows or the previewed entry, or unpin them when all are pinned.
     Pin,
-    /// Delete the ticked rows at once.
+    /// Delete the ticked rows or the previewed entry at once.
     Delete,
     /// Ask to delete every unpinned entry.
     DeleteAll,

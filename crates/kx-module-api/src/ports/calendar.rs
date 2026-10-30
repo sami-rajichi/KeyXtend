@@ -1,7 +1,21 @@
 //! The local calendar (spec §7 "Limits"): the wall time a module dates entries by, which needs no capability, and pure
 //! day sums, so a module says today, yesterday, a weekday or a date and sweeps by calendar days.
 
-use crate::{Capability, ServiceId, ServiceKey};
+use crate::{Capability, MS_PER_S, ServiceId, ServiceKey};
+use std::fmt;
+
+/// Seconds in a minute.
+const S_PER_MIN: i64 = 60;
+/// Minutes in an hour.
+const MIN_PER_HOUR: i64 = 60;
+/// Hours in a day.
+const HOURS_PER_DAY: i64 = 24;
+/// The fewest digits a year takes in text.
+const YEAR_DIGITS: usize = 4;
+/// The digits a month and a day take in text.
+const PART_DIGITS: usize = 2;
+/// What stands between a date's year, month and day in text.
+const DATE_SEP: char = '-';
 
 /// Days in each month of a common year, January first.
 const MONTH_DAYS: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -145,11 +159,33 @@ impl Date {
         Weekday::ALL[usize::try_from(at).unwrap_or_default()]
     }
 
+    /// The date in `text` written as `Display` writes it, `yyyy-mm-dd`, as day folders are named; `None` for any
+    /// other text.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        let mut parts = text.splitn(3, DATE_SEP);
+        let year = parts.next()?.parse().ok()?;
+        let month = parts.next()?.parse().ok()?;
+        let day = parts.next()?.parse().ok()?;
+        Self::new(year, month, day).filter(|d| d.to_string() == text)
+    }
+
     /// Days since 0001-01-01.
     fn ordinal(self) -> i64 {
         let months = (1..self.month).filter_map(|m| month_days(self.year, m));
         let before: i64 = months.map(i64::from).sum();
         year_start(i64::from(self.year)) + before + i64::from(self.day) - 1
+    }
+}
+
+/// Writes ISO 8601's `yyyy-mm-dd`, as `Date::parse` reads it.
+impl fmt::Display for Date {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (y, m, d) = (self.year, self.month, self.day);
+        write!(
+            f,
+            "{y:0YEAR_DIGITS$}{DATE_SEP}{m:0PART_DIGITS$}{DATE_SEP}{d:0PART_DIGITS$}"
+        )
     }
 }
 
@@ -186,9 +222,29 @@ pub struct LocalTime {
     pub offset_min: i16,
 }
 
+impl LocalTime {
+    /// The wall time at `unix_ms` for a place `offset_min` minutes east of UTC; `None` past the years a `Date` holds.
+    #[must_use]
+    pub fn at(unix_ms: i64, offset_min: i16) -> Option<Self> {
+        let min_ms = i64::from(MS_PER_S) * S_PER_MIN;
+        let local = unix_ms.checked_add(i64::from(offset_min) * min_ms)?;
+        let minutes = local.div_euclid(min_ms);
+        let day_min = MIN_PER_HOUR * HOURS_PER_DAY;
+        let of_day = minutes.rem_euclid(day_min);
+        Some(Self {
+            unix_ms,
+            date: Date::from_day_number(minutes.div_euclid(day_min))?,
+            hour: u8::try_from(of_day / MIN_PER_HOUR).ok()?,
+            minute: u8::try_from(of_day % MIN_PER_HOUR).ok()?,
+            offset_min,
+        })
+    }
+}
+
 /// Tells the local wall time; the platform provides it, and tests use a fake.
 pub trait Calendar: Send + Sync {
-    /// The local wall time now.
+    /// The local wall time now. A caller stores `unix_ms` with `offset_min`, so `LocalTime::at` shows a saved moment
+    /// at its own local time, across a summer-time change.
     fn now(&self) -> LocalTime;
 }
 

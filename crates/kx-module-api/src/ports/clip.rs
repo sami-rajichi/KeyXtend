@@ -81,19 +81,26 @@ pub enum ClipNote {
         /// How many bytes the copy holds.
         bytes: u64,
     },
-    /// The clipboard stayed locked past `ClipConfig::open_ms`, so this copy was missed.
+    /// The clipboard stayed locked past `ClipWait::open_ms`, so this copy was missed.
     Busy,
 }
 
-/// How the platform reads and sets the clipboard; the module fills it from its settings.
+/// How long the platform waits for another app to let go of the clipboard; the module fills it from its settings.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct ClipWait {
+    /// The longest wait, in ms.
+    pub open_ms: u32,
+    /// How often to try again within that wait, in ms.
+    pub poll_ms: u32,
+}
+
+/// How the platform reads the clipboard; the module fills it from its settings.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClipConfig {
     /// The most bytes one copy may hold to be read.
     pub max_bytes: u64,
-    /// The longest wait for another app to let go of the clipboard, in ms.
-    pub open_ms: u32,
-    /// How often to try again within that wait, in ms.
-    pub poll_ms: u32,
+    /// The wait to open the clipboard.
+    pub wait: ClipWait,
 }
 
 /// What the platform finds at a copied path.
@@ -108,7 +115,7 @@ pub enum FileFact {
 /// Why the clipboard could not be watched or set.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum ClipError {
-    /// Another app held the clipboard past `ClipConfig::open_ms`.
+    /// Another app held the clipboard past `ClipWait::open_ms`.
     #[error("another app holds the clipboard")]
     Busy,
     /// The OS refused.
@@ -136,7 +143,7 @@ pub trait Clipboard: Send + Sync {
     ) -> Result<Box<dyn ClipRun>, ClipError>;
 
     /// What is at each of `paths` now, in the same order.
-    fn files(&self, paths: &[PathBuf]) -> Vec<FileFact>;
+    fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact>;
 }
 
 /// Sets the system clipboard; the platform provides it.
@@ -144,9 +151,9 @@ pub trait ClipboardWriter: Send + Sync {
     /// Sets the clipboard to `parts` with our "leave out of history" marker; files always go as a copy, never a move.
     ///
     /// # Errors
-    /// `Busy` when another app holds the clipboard past `cfg.open_ms`, `Refused` when the OS refuses, `Io` when a part
-    /// cannot be written.
-    fn write(&self, parts: &[ClipPart], cfg: ClipConfig) -> Result<(), ClipError>;
+    /// `Busy` when another app holds the clipboard past `wait.open_ms`, `Refused` when the OS refuses, `Io` when a
+    /// part cannot be written.
+    fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
 }
 
 /// The clipboard watch service; it needs `ReadClipboard`.

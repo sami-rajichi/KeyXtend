@@ -22,8 +22,17 @@ fn arsalt_without_its_hamza_finds_it_with_hamza_and_harakat() {
 }
 
 #[test]
-fn the_neutral_fold_is_the_default_casing_fold() {
-    for text in ["Istanbul", "ılık", "ΟΔΥΣ", "l\u{2019}homme"] {
-        assert_eq!(fold_any(text), fold(text, Casing::root()), "{text}");
+fn tatweel_harakat_the_alef_forms_and_alef_maksura_all_fold() {
+    assert_eq!(fold_any("مـــرحبا"), "مرحبا", "tatweel");
+    assert_eq!(fold_any("مَدْرَسَةٌ"), "مدرسة", "harakat");
+    for alef in ["أ", "إ", "آ", "ٱ"] {
+        assert_eq!(fold_any(alef), "ا", "{alef}");
     }
+    assert_eq!(fold_any("على"), "علي", "alef maksura");
+}
+
+#[test]
+fn a_capital_i_folds_to_i_in_any_language() {
+    assert_eq!(fold_any("ILIK"), "ilik", "never the Turkish dotless ı");
+    assert_eq!(fold_any("ılık"), "ilik");
 }
