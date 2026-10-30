@@ -1,6 +1,6 @@
 [package]
 name = "kx-crypto"
-description = "Sealed files for learned data: XChaCha20-Poly1305 under a data key the OS guards (ADR-0010)."
+description = "Sealed files for learned data and the clipboard history: XChaCha20-Poly1305 under a data key the OS guards (ADR-0010)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,7 +19,7 @@ thiserror.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-# The fake sealed store, which must refuse the same blob names as `SealedFiles`.
+# The fake sealed store and shelf, which must agree with `SealedFiles` and `SealedShelfFiles`.
 kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

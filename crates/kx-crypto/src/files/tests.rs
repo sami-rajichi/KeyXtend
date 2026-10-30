@@ -1,51 +1,12 @@
 use super::*;
-use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD};
-use crate::guard::GuardError;
+use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
+use crate::testing::{Mirror, listing};
 use kx_test_support::tempdir::TempDir;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
-use zeroize::Zeroizing;
+use std::fs;
+use std::sync::atomic::Ordering::SeqCst;
 
 mod agree;
 mod keys;
-
-/// A test guard that wraps by reversing the bytes, refuses on cue and counts its calls.
-#[derive(Clone, Default)]
-struct Mirror {
-    refuse: Arc<AtomicBool>,
-    calls: Arc<AtomicUsize>,
-}
-
-impl Mirror {
-    fn refusing() -> Self {
-        let guard = Self::default();
-        guard.refuse.store(true, SeqCst);
-        guard
-    }
-
-    fn calls(&self) -> usize {
-        self.calls.load(SeqCst)
-    }
-
-    fn answer(&self, error: GuardError, bytes: &[u8]) -> Result<Vec<u8>, GuardError> {
-        self.calls.fetch_add(1, SeqCst);
-        if self.refuse.load(SeqCst) {
-            return Err(error);
-        }
-        Ok(bytes.iter().rev().copied().collect())
-    }
-}
-
-impl KeyGuard for Mirror {
-    fn wrap(&self, key: &[u8]) -> Result<Vec<u8>, GuardError> {
-        self.answer(GuardError::Unavailable, key)
-    }
-
-    fn unwrap(&self, wrapped: &[u8]) -> Result<Zeroizing<Vec<u8>>, GuardError> {
-        self.answer(GuardError::Refused, wrapped)
-            .map(Zeroizing::new)
-    }
-}
 
 /// A store over a data folder that does not exist yet, inside a temp folder removed at the end.
 struct Case {
@@ -84,12 +45,7 @@ impl Case {
 
     /// The file names in the data folder, sorted.
     fn names(&self) -> Vec<String> {
-        let mut names: Vec<_> = fs::read_dir(&self.dir)
-            .unwrap()
-            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
+        listing(&self.dir)
     }
 }
 

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 00:52 — P8: the sealed shelf for the clipboard history
+`kx-crypto` now has `SealedShelfFiles`, which keeps sealed blobs in folders such as `2026-10-31` and `pinned` under one wrapped key, and deletes blobs and whole folders at once. The cipher's tag covers the folder and the name, so a file moved to another folder or renamed will not open and is set aside once. The drive's free space and name come from a small `DiskRoom` trait the platform fills, so the crate stays OS-neutral. Both stores now share one sealer, so P7's learned words open as before.
+
 ## 2026-10-31 00:48 — P8: test fakes for the clipboard, shelf, pictures and calendar
 `kx-platform-fake` now fakes the five new P8 ports, so the clipboard module and the app can be tested without Windows. A test pushes copies, skips and clears straight to the watch, scripts files that exist or are gone, and queues clipboard writes and pictures that succeed or fail, a hung worker being a queued timeout. The shelf keeps folders of blobs in memory, fails once on cue per call, reports a room the test sets and lets a test delete a day folder by hand. The calendar's wall time is set and moved by the test, and always matches `LocalTime::at`.
 

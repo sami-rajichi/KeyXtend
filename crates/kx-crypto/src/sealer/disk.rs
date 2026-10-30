@@ -1,4 +1,4 @@
-//! The file steps: read with a cap, and write a whole file through a temp file beside it.
+//! The file steps: read with a cap, write a whole file through a temp file beside it, and delete.
 
 use crate::consts::TEMP_EXT;
 use std::fs::{self, File};
@@ -34,7 +34,7 @@ pub(super) fn read(path: &Path, cap: usize) -> io::Result<Read> {
 }
 
 /// The temp file a write to `path` goes through: its name plus the temp extension.
-fn temp_of(path: &Path) -> PathBuf {
+pub(super) fn temp_of(path: &Path) -> PathBuf {
     let mut name = path.as_os_str().to_owned();
     name.push(".");
     name.push(TEMP_EXT);
@@ -57,6 +57,14 @@ pub(super) fn write_whole(path: &Path, bytes: &[u8]) -> io::Result<()> {
         let _ = fs::remove_file(&temp);
     }
     result
+}
+
+/// Deletes the file at `path` for good; a missing file is fine.
+pub(super) fn remove(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Err(e) if e.kind() != io::ErrorKind::NotFound => Err(e),
+        _ => Ok(()),
+    }
 }
 
 #[cfg(test)]
@@ -92,5 +100,17 @@ mod tests {
         assert!(write_whole(&path, b"new").is_err());
         assert!(path.join("inside").is_dir());
         assert!(!temp_of(&path).exists());
+    }
+
+    #[test]
+    fn remove_deletes_a_file_and_takes_a_missing_one() {
+        let dir = TempDir::new("crypto-disk").unwrap();
+        let path = dir.path().join("blob");
+        fs::write(&path, b"old").unwrap();
+        remove(&path).unwrap();
+        assert!(!path.exists());
+        remove(&path).unwrap();
+        fs::create_dir_all(path.join("inside")).unwrap();
+        assert!(remove(&path).is_err(), "a folder is no file");
     }
 }
