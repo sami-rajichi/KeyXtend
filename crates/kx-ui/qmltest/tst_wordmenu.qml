@@ -61,10 +61,15 @@ Item {
         function topBar(w) {
             return Board.all(w.contentItem, o => o.lane !== undefined && o.presets !== undefined)[0];
         }
-        // Opens the menu in `w` and gives its items once they are laid out and drawn.
+        // Waits until `item`'s window has placed every item: a drawn frame can predate the last change, and rows place
+        // their items only at the next polish.
+        function laidOut(item) {
+            verify(waitForPolish(item.Window.window), "laid out");
+        }
+        // Opens the menu in `w` and gives its items once they are laid out.
         function open(w) {
             mouseClick(keyed(w.contentItem, "words.menu"));
-            waitForRendering(w.contentItem);
+            laidOut(w.contentItem);
             return root.items.map(id => keyed(w.contentItem, id));
         }
         // A top bar in `res`'s language and box `box`, drawing `lane`, with its menu open and laid out.
@@ -72,7 +77,7 @@ Item {
             const props = { box: box, lk: NL.lk, res: res, s: 1, preset: 0, presets: Face.board.presets.length, sizes: En.lang.sizes, dark: false, lane: lane, rtl: rtl };
             const b = createTemporaryObject(barC, root, props);
             mouseClick(keyed(b, "words.menu"));
-            waitForRendering(b);
+            laidOut(b);
             return b;
         }
         // An item's label, the box its items pop in on, and the label keys the switches in `over` give, in order.
@@ -209,7 +214,7 @@ Item {
                 const room = shelf(items).width;
                 b.box = Object.assign({}, b.box, { w: b.box.w - room + need + root.slack });
                 tryVerify(() => Math.abs(shelf(items).width - need - root.slack) < root.slack, 1000, "room for " + k);
-                waitForRendering(b);
+                laidOut(b);
                 compare(items.map(i => i.bare), items.map((i, n) => n >= k), k + " labels");
             }
             spy.clear();

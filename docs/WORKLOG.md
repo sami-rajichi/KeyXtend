@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-30 23:35 — P8: the words menu's tip test no longer races the layout
+The words menu test failed once on main's CI: its last hover aimed at Cancel before the row had moved it, so the pointer landed on a bar button. A drawn frame can come from before the last change, so the test now waits until the window has placed every item. Under full CPU load the old test failed 1 run in 30 and the new one none.
+
 ## 2026-10-26 23:35 — P7 done: word prediction and emails (v0.4)
 Five chips above the keys finish the word or guess the next one in the layout's language, from n-gram packs built from wordfreq, Wikipedia and Tatoeba and checked against Hunspell (ADR-0032, ADR-0033); English saves 48 % of key presses and French 47 %. Words and emails typed with the keyboard are learned and sealed on this PC, `@@` lists the known emails, password boxes show a lock, and the lane's menu forgets, pauses or turns suggestions off. A pick erases only the letters that differ, paces its Backspaces for apps such as the new Notepad, never erases into a selection, and stops at a click or key elsewhere; every lane tap sounds like a key. G21, G27, G8's prediction part and G7 passed on the installed build, G8's memory was accepted with P13 owning it, and the owner's hands-on check passed.
 
