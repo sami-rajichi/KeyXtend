@@ -4,7 +4,7 @@
 use proptest::prelude::*;
 
 use super::*;
-use crate::fold::fold;
+use crate::text::fold;
 
 /// Random texts tried by the property test.
 const CASES: u32 = 256;

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::Casing;
+use kx_module_api::text::Casing;
 
 use super::super::fixture::AFF;
 use super::super::text::{KeyCounts, TextCounts};

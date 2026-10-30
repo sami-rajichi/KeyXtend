@@ -7,10 +7,10 @@ use std::str;
 
 use fst::automaton::{Automaton, Str};
 use fst::{IntoStreamer, Map};
+use kx_module_api::text::Casing;
 
 use super::layout::{MIN_CHAIN, OFFSET_LEN, RUN_SHIFT, fits_spelling, usize_at};
 use super::{Flags, PackFormatError, WordId};
-use crate::casing::Casing;
 use crate::script::{self, Script};
 
 mod chains;

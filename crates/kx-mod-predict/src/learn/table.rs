@@ -1,9 +1,9 @@
 //! The word table: each learned spelling with its count and last-used day under a stable id, which chains name, and
 //! two sorted indexes, by spelling and by folded key.
 
+use kx_module_api::text::{Casing, fold};
+
 use super::clean::{grow, halved, most, oldest, peak};
-use crate::casing::Casing;
-use crate::fold::fold;
 
 /// A word's id in its learner; chains name words by it, and a removed word's id goes to the next new word.
 pub(super) type Id = u16;

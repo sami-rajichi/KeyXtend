@@ -5,7 +5,7 @@ use std::io::Write as _;
 
 use bzip2::Compression;
 use bzip2::write::BzEncoder;
-use kx_mod_predict::Casing;
+use kx_module_api::text::Casing;
 
 use super::super::cands::{Cand, Fate};
 

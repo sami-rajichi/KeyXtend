@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::{Casing, fold};
+use kx_module_api::text::{Casing, fold};
 
 /// The counts of one fold key in the text.
 #[derive(Debug, Default)]

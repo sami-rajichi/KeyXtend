@@ -2,9 +2,9 @@
 
 use std::collections::BTreeSet;
 
+use kx_module_api::text::{Casing, fold};
+
 use super::super::*;
-use crate::casing::Casing;
-use crate::fold::fold;
 
 /// The sample pack's language.
 const ISO: &str = "fr";

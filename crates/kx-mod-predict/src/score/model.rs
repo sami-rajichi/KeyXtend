@@ -3,10 +3,10 @@
 
 use std::collections::HashMap;
 
+use kx_module_api::text::{Casing, fold};
+
 use super::sink::Sink;
 use super::{Learned, ScoreConfig, float};
-use crate::casing::Casing;
-use crate::fold::fold;
 use crate::pack::layout::{SCORE_CERTAIN, STEPS_PER_ZIPF, ZIPF_OFFSET};
 use crate::pack::{Pack, WordId};
 

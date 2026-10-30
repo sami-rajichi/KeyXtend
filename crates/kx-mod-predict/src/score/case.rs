@@ -1,8 +1,7 @@
 //! Capitals (spec §6 "Matching"): guesses follow what was typed, and a word the pack spells with a capital keeps it.
 
 use kx_module_api::ports::TypingMode;
-
-use crate::casing::Casing;
+use kx_module_api::text::Casing;
 
 /// How a guess is capitalised.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,9 +1,10 @@
 //! Where one reading's candidates go: prefixed by its lead, cased as its prefix asks, weighed by its lead's chance,
 //! and kept only when a chip may show them.
 
+use kx_module_api::text::Casing;
+
 use super::best::Best;
 use super::case::Case;
-use crate::casing::Casing;
 use crate::script;
 use crate::track::Query;
 

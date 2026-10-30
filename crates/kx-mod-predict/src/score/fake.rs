@@ -3,9 +3,9 @@
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 
+use kx_module_api::text::{Casing, fold};
+
 use super::Learned;
-use crate::casing::Casing;
-use crate::fold::fold;
 
 /// Learned counts a test sets.
 #[derive(Debug, Default)]

@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::casing::Casing;
+use super::Casing;
 
 /// The fold tables, compiled in so they are never read from disk.
 const TABLE: &str = include_str!("fold.toml");

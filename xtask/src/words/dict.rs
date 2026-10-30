@@ -4,7 +4,7 @@
 use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
 
-use kx_mod_predict::Casing;
+use kx_module_api::text::Casing;
 use spellbook::Dictionary;
 
 use super::{WordsError, io_error};
