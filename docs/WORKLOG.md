@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 00:48 — P8: test fakes for the clipboard, shelf, pictures and calendar
+`kx-platform-fake` now fakes the five new P8 ports, so the clipboard module and the app can be tested without Windows. A test pushes copies, skips and clears straight to the watch, scripts files that exist or are gone, and queues clipboard writes and pictures that succeed or fail, a hung worker being a queued timeout. The shelf keeps folders of blobs in memory, fails once on cue per call, reports a room the test sets and lets a test delete a day folder by hand. The calendar's wall time is set and moved by the test, and always matches `LocalTime::at`.
+
 ## 2026-10-31 00:11 — P8: the clipboard history's ports and events
 `kx-module-api` now holds the contract every later P8 part builds on (ADR-0034): the new `WriteClipboard` capability, the `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures` and `Calendar` ports, and the panel's nine bus events. Copied text, search, paths and app names print redacted, and contract tests check that content travels only with `ReadClipboard`, the paste only with `WriteClipboard` and the shelf only with `SecretStore`. Prediction's folding and casing moved to `kx_module_api::text` unchanged, with a neutral fold for search, so `ECOLE` finds `école` and `ارسلت` finds `أرسلت`. Checked day sums cross month ends, year ends and leap days.
 
