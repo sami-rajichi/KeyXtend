@@ -6,9 +6,8 @@ use kx_module_api::ports::{ClipPart, ImageCodec, MAX_BLOB_BYTES};
 
 use super::*;
 use crate::fixture::{CFG, LIMITS};
+use crate::settings::MAX_ENTRIES;
 
-/// The top of `max_entries`' range in the plan's settings; Task 14 replaces it with the settings range's top.
-const MOST_ENTRIES: u64 = 5000;
 /// The longest character in UTF-8, 4 bytes.
 const WIDE: char = '😀';
 
@@ -46,7 +45,8 @@ fn a_list_of_5000_entries_at_the_longest_texts_splits_and_joins() {
     let day1 = folder(on(1));
     let title = WIDE.to_string().repeat(CFG.title_chars);
     let search = WIDE.to_string().repeat(CFG.search_chars);
-    let entries = (0..MOST_ENTRIES).map(|id| {
+    let most = u64::try_from(*MAX_ENTRIES.end()).unwrap();
+    let entries = (0..most).map(|id| {
         shelf.plant(&day1, &part_name(id, 0).unwrap(), vec![]);
         let mut e = copied("x", &noon(1));
         (e.id, e.seq, e.parts) = (id, id, 1);
@@ -54,7 +54,7 @@ fn a_list_of_5000_entries_at_the_longest_texts_splits_and_joins() {
         e.search = Redacted::new(search.clone());
         e
     });
-    let h = History::new(entries.collect(), MOST_ENTRIES);
+    let h = History::new(entries.collect(), most);
     open(&shelf).save(&h).unwrap();
     let lists: Vec<String> = names(&shelf, on(1))
         .into_iter()

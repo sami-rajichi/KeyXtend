@@ -188,3 +188,42 @@ fn a_closed_panel_takes_nothing_and_opens_fresh() {
     assert_eq!(p.filter(), Filter::All);
     assert_eq!(p.act(ClipAct::Tick { round, row: 0 }, &h), Do::Stay);
 }
+
+#[test]
+fn a_key_for_a_question_its_entries_left_is_swallowed() {
+    let mut h = history(&["a", "b"]);
+    let mut p = opened();
+    assert_eq!(p.act(ClipAct::DeleteAll, &h), Do::Show);
+    for t in ["a", "b"] {
+        h.remove(id(&h, t));
+    }
+    assert_eq!(
+        p.key(&PanelKey::Esc, &h),
+        Do::Show,
+        "never closes the panel"
+    );
+    assert!(p.is_open() && !p.asking());
+}
+
+#[test]
+fn a_key_or_click_for_a_preview_its_entry_left_is_swallowed() {
+    let mut h = history(&["a", "b", "c"]);
+    let mut p = opened();
+    let round = p.shown(ids(&h, &["c"]));
+    p.act(ClipAct::Tick { round, row: 0 }, &h);
+    p.show(id(&h, "b"), content());
+    h.remove(id(&h, "b"));
+    assert_eq!(
+        p.key(&PanelKey::Enter, &h),
+        Do::Show,
+        "never inserts the list's row"
+    );
+    p.show(id(&h, "a"), content());
+    h.remove(id(&h, "a"));
+    assert_eq!(
+        p.act(ClipAct::Insert, &h),
+        Do::Show,
+        "never inserts the ticked rows"
+    );
+    assert_eq!(p.act(ClipAct::Insert, &h), Do::Insert(ids(&h, &["c"])));
+}

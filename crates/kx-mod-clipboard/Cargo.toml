@@ -14,10 +14,15 @@ workspace = true
 [dependencies]
 # The clipboard and calendar ports, the panel's types and the shared search folding.
 kx-module-api = { path = "../kx-module-api" }
-# The compiled-in media table.
+# The settings and the compiled-in media table.
 serde.workspace = true
 toml.workspace = true
+# Error kinds and counts only, never clipboard content.
+tracing.workspace = true
 
 [dev-dependencies]
 kx-platform-fake = { path = "../kx-platform-fake" }
+# The kernel's settings repair, for the bad-value test.
+kx-settings = { path = "../kx-settings" }
+kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

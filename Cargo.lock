@@ -726,9 +726,12 @@ version = "0.0.0"
 dependencies = [
  "kx-module-api",
  "kx-platform-fake",
+ "kx-settings",
+ "kx-test-support",
  "proptest",
  "serde",
  "toml",
+ "tracing",
 ]
 
 [[package]]

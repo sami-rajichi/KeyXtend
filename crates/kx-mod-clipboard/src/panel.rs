@@ -222,6 +222,14 @@ impl Panel {
         }
     }
 
+    /// Syncs with `history`; true when that closed the question or the preview, so the key or click meant for them is
+    /// swallowed rather than reaching the list.
+    pub(crate) fn resync(&mut self, history: &History) -> bool {
+        let (asked, peeked) = (self.asking(), self.preview().is_some());
+        self.sync(history);
+        (asked && !self.asking()) || (peeked && self.preview().is_none())
+    }
+
     /// Notes the entries a new view shows by row; gives that view's round.
     pub(crate) fn shown(&mut self, ids: Vec<u64>) -> u32 {
         self.round = self.round.wrapping_add(1);
@@ -259,7 +267,8 @@ impl Panel {
     }
 }
 
-/// Every unpinned entry of `history`, which Delete all deletes.
+/// Every unpinned entry of `history`, which the Delete-all question counts; Yes deletes the ids counted when asked,
+/// minus those gone or pinned since.
 #[must_use]
 pub fn unpinned(history: &History) -> Vec<u64> {
     let free = history.entries().iter().filter(|e| !e.pinned());

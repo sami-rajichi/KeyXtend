@@ -12,7 +12,9 @@ impl Panel {
     /// Takes `key` from our keyboard. The question takes only Esc (no), as only a click on Yes deletes; the preview
     /// takes Enter (insert) and Esc (back), and the list every key.
     pub fn key(&mut self, key: &PanelKey, history: &History) -> Do {
-        self.sync(history);
+        if self.resync(history) {
+            return Do::Show;
+        }
         if self.asking() {
             return match key {
                 PanelKey::Esc => self.answer(false, history),
@@ -39,11 +41,12 @@ impl Panel {
         if !self.is_open() {
             return Do::Stay;
         }
-        self.sync(history);
+        let closed = self.resync(history);
         let previewing = self.preview().is_some();
         match act {
             ClipAct::Close => self.shut(),
             ClipAct::Confirm(yes) => self.answer(yes, history),
+            ClipAct::Insert | ClipAct::Pin | ClipAct::Delete if closed => Do::Show,
             _ if self.asking() => Do::Stay,
             ClipAct::DeleteAll => self.ask(history),
             ClipAct::Insert => acted(self.targets(), Do::Insert),

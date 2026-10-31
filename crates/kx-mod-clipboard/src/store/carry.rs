@@ -1,6 +1,7 @@
 //! Moves and deletes: an entry's blobs are copied to its new folder, and the folder it left keeps naming it in its
-//! list until the list it moved to saves. A copy that fails stays pending; content found gone ends the move and
-//! queues every blob of it for removal; a delete removes them wherever a move left them.
+//! list until the list it moved to saves. A copy that fails stays pending; a move whose blobs are gone restarts once
+//! from the folder it left when that folder still holds the entry whole, else ends and queues every blob of it for
+//! removal; a delete removes them wherever a move left them.
 
 use std::collections::BTreeSet;
 use std::mem;

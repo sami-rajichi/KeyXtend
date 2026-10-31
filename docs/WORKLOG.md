@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 05:15 — P8: the clipboard module
+`ClipboardModule` now reads `[clipboard]`, loads the sealed history, watches copies and runs the `kx-clip` actor, which keeps each copy within the limits, draws the panel once the ui tells its rows, saves after `save_ms` and sweeps at local midnight. Insert pastes the ticked entries in tick order with one `PasteAsk` per step, a join between texts pasted as text, files still there, and `paste_gap_ms` between steps; a busy clipboard or a missing answer stops it with a note. Pictures draw in the worker on `kx-clip-media`, and file checks run on `kx-clip-files`, so a share out of reach never blocks the panel. A locked shelf or a newer list fails the start with nothing changed, every stop closes the panel and frees the chord, and a key whose question or preview just went is swallowed.
+
 ## 2026-10-31 04:47 — P8: the clipboard panel's hub, texts and reveal port
 The ui hub now hears the clipboard panel through its `ReadClipboard` gate, keeps the last view while the panel is open, wakes QML once per read, and words every text in `clip_json`: sizes in MB with the language's decimal mark, the storage line in MB or GB, times as today, yesterday, a weekday or the date, and Arabic's six plural forms. Clicks go out as `ClipAct` with the view's round, the ui's rows go out as the panel opens and as `[ui]` changes (Ruling 32), and a scroll-pad page tap turns the open panel. A picture provider serves `image://clip/<round>/<id>` from the kept round only, and Open folder asks the new `Reveal` port, whose Windows adapter has the running Explorer open the folder, so nothing starts with our uiAccess. The clipboard texts live in `i18n/clip/{en,fr,ar}.ftl`, loaded into the same bundles as the main files.
 
