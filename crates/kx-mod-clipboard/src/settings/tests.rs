@@ -254,3 +254,11 @@ fn the_worker_holds_two_of_the_largest_entry_a_preview_and_itself() {
     t.insert("worker_mb".to_owned(), 224.into());
     assert!(taken(&t));
 }
+
+/// The worker's base and a read's peak come from its frames' crate, so a change there needs no edit here (M3).
+#[test]
+fn the_workers_base_and_read_follow_its_frames_crate() {
+    let decode = u64::try_from(WORKER_DECODE_BYTES).unwrap();
+    assert_eq!(WORKER_BASE_MB, decode.div_ceil(MB) + WORKER_OWN_MB);
+    assert_eq!(READ, u64::try_from(WORKER_READ_TIMES).unwrap());
+}

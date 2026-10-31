@@ -12,6 +12,8 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+# The worker's memory facts, re-exported beside the pictures port so the settings that size its memory follow them.
+kx-ipc = { path = "../kx-ipc" }
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true

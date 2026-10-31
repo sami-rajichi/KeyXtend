@@ -10,6 +10,9 @@ use thiserror::Error;
 /// Bytes in one RGBA8 pixel.
 pub const RGBA_BYTES: usize = 4;
 
+/// The worker's own facts from its frames' crate: its decoder's budget, and the most times its length a read holds.
+pub use kx_ipc::{DECODE_BYTES as WORKER_DECODE_BYTES, READ_TIMES as WORKER_READ_TIMES};
+
 /// How the platform runs the worker; the module fills it from its settings.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PictureConfig {

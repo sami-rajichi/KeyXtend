@@ -2,9 +2,9 @@
 //! decoder's memory capped and its text and colour-profile chunks skipped.
 
 use super::scale::{Rgba, Scaler};
-use super::{DECODE_BYTES, Picture, check_size};
+use super::{Picture, check_size};
 use ::png::{BitDepth, ColorType, Decoder, DecodingError, Limits, Transformations};
-use kx_ipc::Why;
+use kx_ipc::{DECODE_BYTES, Why};
 use std::io::Cursor;
 
 /// Every colour type and depth comes out as 8-bit grey with alpha, or RGBA.

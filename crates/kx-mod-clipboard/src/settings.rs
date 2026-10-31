@@ -7,7 +7,7 @@ mod parts;
 use std::fmt;
 use std::ops::RangeInclusive;
 
-use kx_module_api::ports::{MB, RGBA_BYTES};
+use kx_module_api::ports::{MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES};
 use kx_module_api::{Redacted, Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
@@ -67,10 +67,12 @@ pub const POLL_MS: RangeInclusive<u32> = 1..=100;
 pub const QUEUE_COPIES: RangeInclusive<usize> = 1..=64;
 /// The save's wait after a first change, in ms.
 pub const SAVE_MS: RangeInclusive<u32> = 100..=60_000;
-/// How many times one entry's bytes the worker holds while it reads them; kx-ipc's read briefly takes about 1.5 times.
-pub const READ_TIMES: u64 = 2;
-/// The worker's own memory, in MB: its code, the decoder's rows and its buffers (`keyxtend-worker.md`).
-pub const WORKER_BASE_MB: u64 = 32;
+/// The worker's memory beside its decoder, in MB: its code, stacks and pipe buffers (`keyxtend-worker.md`).
+pub const WORKER_OWN_MB: u64 = 16;
+/// The worker's own memory, in MB: its decoder's budget, rounded up, and the rest of it.
+pub const WORKER_BASE_MB: u64 = (WORKER_DECODE_BYTES as u64).div_ceil(MB) + WORKER_OWN_MB;
+/// How many times one entry's bytes the worker holds while it reads them, as kx-ipc's reader grows.
+const READ: u64 = WORKER_READ_TIMES as u64;
 
 /// The line and paragraph separators, which `char::is_control` lets through.
 const BREAKS: [char; 2] = ['\u{2028}', '\u{2029}'];
@@ -204,13 +206,13 @@ impl ClipSettings {
         )
     }
 
-    /// The memory one draw may need, in MB: `READ_TIMES` the largest entry, a preview's RGBA rounded up (which
+    /// The memory one draw may need, in MB: `READ` times the largest entry, a preview's RGBA rounded up (which
     /// covers a thumbnail too) and `WORKER_BASE_MB`.
     fn worker_need_mb(&self) -> u64 {
         let side = u64::from(self.preview_px);
         let rgba = u64::try_from(RGBA_BYTES).unwrap_or(u64::MAX);
         let preview = side.saturating_mul(side).saturating_mul(rgba).div_ceil(MB);
-        READ_TIMES * u64::from(self.max_entry_mb) + preview + WORKER_BASE_MB
+        READ * u64::from(self.max_entry_mb) + preview + WORKER_BASE_MB
     }
 
     /// The skipped apps and the separator line: each a line of text within its length.

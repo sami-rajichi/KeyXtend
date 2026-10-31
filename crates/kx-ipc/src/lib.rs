@@ -17,7 +17,8 @@ pub use code::{Codec, Why};
 pub use command::{CLEAN_EXIT, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT};
 pub use error::IpcError;
 pub use limits::{
-    MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, MAX_RGBA_BYTES, MAX_SIDE, RGBA_BYTES, VERSION,
+    DECODE_BYTES, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, MAX_RGBA_BYTES, MAX_SIDE,
+    READ_TIMES, RGBA_BYTES, VERSION,
 };
 pub use reply::Reply;
 

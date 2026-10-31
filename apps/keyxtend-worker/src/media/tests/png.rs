@@ -1,10 +1,10 @@
 //! PNG: every colour type and depth comes out as RGBA8, a large image is read row by row, and damage is refused.
 
 use crate::fixture::{Png, rgba};
+use crate::media::Picture;
 use crate::media::png::draw;
-use crate::media::{DECODE_BYTES, Picture};
 use ::png::{BitDepth, ColorType};
-use kx_ipc::{RGBA_BYTES, Why};
+use kx_ipc::{DECODE_BYTES, RGBA_BYTES, Why};
 
 /// The side the tests draw within.
 const SIDE: u32 = 64;

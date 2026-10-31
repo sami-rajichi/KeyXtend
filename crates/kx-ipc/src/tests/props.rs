@@ -123,6 +123,7 @@ proptest! {
         let next = grow(have, len);
         prop_assert!(have < next && next <= len);
         prop_assert!(next <= (2 * have).max(READ_CHUNK));
+        prop_assert!(have + next <= READ_TIMES * len, "the old and new buffers together");
     }
 
     #[test]

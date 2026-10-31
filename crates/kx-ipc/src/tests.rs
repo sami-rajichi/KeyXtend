@@ -7,7 +7,9 @@ mod refuse;
 use crate::code::{Code, Kind};
 use crate::frame::{Head, grow, read_tail};
 use crate::limits::{HEADER_LEN, MAGIC, MAX_SIDE, READ_CHUNK, RGBA_BYTES, VERSION};
-use crate::{Ask, Codec, IpcError, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, Reply, Why};
+use crate::{
+    Ask, Codec, IpcError, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, READ_TIMES, Reply, Why,
+};
 use std::borrow::Cow;
 use std::io::{self, Read};
 

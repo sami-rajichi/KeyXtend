@@ -31,6 +31,10 @@ pub const MAX_REPLY_LEN: usize = PIXELS_HEAD + MAX_RGBA_BYTES;
 
 /// The first buffer a payload read takes; it then doubles only as bytes arrive, up to the declared length.
 pub(crate) const READ_CHUNK: usize = 64 * 1024;
+/// The most times its length a payload read holds while its buffer grows: the old and new buffers together.
+pub const READ_TIMES: usize = 2;
+/// What the worker's PNG decoder may allocate for its rows and chunks: 16 MiB, rows up to 4 million pixels wide.
+pub const DECODE_BYTES: usize = 16 * 1024 * 1024;
 
 // Every payload length fits the header's `u32` field.
 const _: () = assert!(MAX_ASK_LEN <= u32::MAX as usize);

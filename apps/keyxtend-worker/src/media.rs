@@ -7,9 +7,6 @@ mod scale;
 
 use kx_ipc::{Codec, Why};
 
-/// What the PNG decoder may allocate for its rows and chunks: 16 MiB, rows up to 4 million pixels wide.
-const DECODE_BYTES: usize = 16 * 1024 * 1024;
-
 /// Pixels drawn for one ask: RGBA8, row by row from the top.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Picture {

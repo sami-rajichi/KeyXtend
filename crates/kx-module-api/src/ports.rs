@@ -54,6 +54,7 @@ pub use packs::{
 };
 pub use pictures::{
     PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey, Pixels, RGBA_BYTES,
+    WORKER_DECODE_BYTES, WORKER_READ_TIMES,
 };
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,
