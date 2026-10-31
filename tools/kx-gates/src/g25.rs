@@ -1,4 +1,4 @@
-//! G25 on its own copy of the test build in Notepad, the history key off (Ruling 55): its language key cycles
+//! G25 on its own copy of the test build in Notepad, the history key off, as G20 checks ours: its language key cycles
 //! Notepad's layouts, its shortcuts layer's keys work, its Win and V keys open Windows' clipboard panel, and its Power
 //! key opens the power dialog, which G25 only ever cancels.
 #![cfg(windows)]
@@ -193,7 +193,7 @@ pub(crate) fn on_copy(
     v
 }
 
-/// Runs G25 on `name` on its own copy of the test build with `[g25] history_key` off (Ruling 55), refused under
+/// Runs G25 on `name` on its own copy of the test build with `[g25] history_key` off, refused under
 /// uiAccess, while a product copy runs or a window of the power dialog's class shows. Its copied text leaves Windows
 /// clipboard history, and the test build's settings come back, even when the run fails.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {

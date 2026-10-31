@@ -36,7 +36,7 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 - **Information disclosure:** content stays in memory and on the two pipes. The worker opens nothing else and has no network crate; ADR-0004 allows network access only in the voice and update jobs.
 - **Denial of service:**
   - A decompression bomb is refused from its header: `too_many_pixels_are_refused_from_the_header_alone`, `a_declared_size_past_the_limit_is_always_too_big`.
-  - No full-size copy of an image is ever held (ledger Ruling 12): PNG rows and DIB rows go one at a time into a box filter that keeps the output and one row of sums (`a_large_image_scales_holding_only_the_output_and_one_row_of_sums`, `a_large_png_is_read_row_by_row_within_the_decoder_budget`, 8000 × 6000).
+  - No full-size copy of an image is ever held, so a large image stays within the worker's memory: PNG rows and DIB rows go one at a time into a box filter that keeps the output and one row of sums (`a_large_image_scales_holding_only_the_output_and_one_row_of_sums`, `a_large_png_is_read_row_by_row_within_the_decoder_budget`, 8000 × 6000).
   - Peak memory is the ask (kx-ipc's read can briefly hold about 1.5× of it, up to 64 MiB of image), the decoder's rows (≤ 16 MiB counted, plus a few raw rows each at most twice that row), the output (≤ 64 MiB) and the sums (≤ 128 KiB). That stays within `worker_mb` (512 MB); the job object's cap ends the worker if it does not, and the host restarts it (task 9).
   - Time grows with the pixels, at most `max_pixels`; the host's deadline (`media_ms`) stops a slow draw (task 9). The worker and its decoder run optimised in dev builds too, so a debug build meets that deadline.
 - **Elevation:** the worker runs in its own process without uiAccess at normal integrity (task 9). `#![forbid(unsafe_code)]`; its only dependencies are `kx-ipc`, `png` and `thiserror`: no `kx-platform*`, no `kx-mod-*`, no network crate. Tidy bans `png` and `fdeflate` from the uiAccess app's tree. A compromised worker can only send replies, which the host checks (`kx-ipc`, then `Pixels::new`).
@@ -50,7 +50,7 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 - Task 19's gate should copy real images from several apps (Paint, a browser, Office, a Qt app, a screenshot) and check their thumbnails, above all V4 and V5 DIBs with bit masks, whose masks some writers repeat after the header.
 - Done (task 9): the host's command line matches `args::MEDIA` and `args::MAX_PIXELS`, and its exit codes 0 and 1; `the_real_worker_draws_through_the_host` and `the_workers_words_and_exit_codes_match_the_host` in `kx-platform-windows` start the real worker.
 ### Accepted (with reason)
-- Interlaced PNGs are refused: their seven passes cover the whole image, so drawing one needs a full-size buffer (Ruling 12). Apps rarely copy interlaced PNGs; the history row keeps its type icon.
+- Interlaced PNGs are refused: their seven passes cover the whole image, so drawing one needs a full-size buffer, which the row-by-row decoders never hold. Apps rarely copy interlaced PNGs; the history row keeps its type icon.
 - Colour profiles, gamma and DIB colour spaces are ignored; pixels are taken as sRGB, which suits a thumbnail.
 - 32-bit DIB alpha is taken as straight, not premultiplied; an all-zero alpha means opaque.
 - An animated PNG shows its default image only.

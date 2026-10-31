@@ -1,5 +1,5 @@
 //! The start and the stop: the watch and the picture session follow them, a missing gate or a refused watch fails
-//! the start, a locked shelf fails it until a try again (edge 15), and a newer list fails it untouched (Ruling 26).
+//! the start, a locked shelf fails it until a try again (edge 15), and a newer list fails it untouched.
 
 use kx_mod_clipboard::{ClipSettings, ClipboardModule, MANIFEST};
 use kx_module_api::ports::{
@@ -75,7 +75,7 @@ fn a_locked_shelf_fails_the_start_with_no_notice_of_its_own_and_a_try_again_star
     ));
     assert!(
         heard.notices().is_empty(),
-        "the kernel tells a failed start (Ruling 40)"
+        "the kernel tells a failed start, not the module"
     );
     assert_eq!(fakes.clip.watches(), 0, "nothing ran");
     start(&mut module, &mut host).unwrap();

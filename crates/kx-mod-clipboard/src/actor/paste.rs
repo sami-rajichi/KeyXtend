@@ -1,6 +1,6 @@
 //! Inserting (spec §7 "Insert", ADR-0034 decision 2): the files are looked at first, then each step is written to
 //! the clipboard and the keyboard is asked to paste it once, waiting for `Pasted` up to `paste_wait_ms`, then
-//! `paste_gap_ms`. A missed paste or a files thread gone stops with a note (Ruling 41).
+//! `paste_gap_ms`. A missed paste or a files thread gone stops with a note, and the panel stays open.
 
 mod step;
 

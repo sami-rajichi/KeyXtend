@@ -1,4 +1,4 @@
-//! The kind rules (module shape, Ruling 20): files are media when every extension is in `media.toml`, else files;
+//! The kind rules (module shape): files are media when every extension is in `media.toml`, else files;
 //! then text, a link when it is one web address; then an image; else text. An image beside text is not kept.
 
 use std::path::Path;

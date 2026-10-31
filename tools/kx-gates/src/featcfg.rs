@@ -57,7 +57,7 @@ fn check_g7(g: &G7) -> Result<(), String> {
 
 /// Refuses a G25 run that could miss a window or press another key: an empty class or program, an `esc` other than
 /// the lone Esc key, which the power dialog gets, a V that is no character key of the product's board, the history key
-/// on in its copy (Ruling 55), or a ready wait outside 1 ms to `most_ms`.
+/// on in its copy (G25 checks Windows' own history; G20 checks ours), or a ready wait outside 1 ms to `most_ms`.
 fn check_g25(g: &G25, most_ms: u64) -> Result<(), String> {
     let empty = |list: &[String]| list.is_empty() || list.iter().any(String::is_empty);
     let names = [&g.power_class, &g.power_program];

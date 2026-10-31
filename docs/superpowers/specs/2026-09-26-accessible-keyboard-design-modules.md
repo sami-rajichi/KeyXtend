@@ -186,19 +186,19 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - The store is encrypted at rest (§9.1), and clipboard content is never logged (`Redacted<T>`).
   - Image thumbnails and previews are decoded in the `media` worker (§11, ADR-0004): a process with normal rights and no uiAccess, which gets the bytes over a size-limited pipe and returns small plain pixels the panel draws. The uiAccess process never decodes an image: it only stores the bytes it read and sets them back.
 - **As built (P8, 2026-10-31):** where the build settles or differs from the text above.
-  - An Arabic row flips its text only; the tick box, thumbnail, pin and chip keep their places (ADR-0020, Ruling 49).
-  - Delete all stays in the header, as above (Ruling 50). It dims while no entry is unpinned (Ruling 34), and in its question Esc is No and only a click on Yes deletes (Ruling 33).
-  - The panel stays open while Insert runs and closes when it ends; a failed step stops the insert and keeps the panel open with a note (Ruling 41).
-  - A file found gone is left out of the paste, and the entry goes only when every file is gone (Ruling 39). A file whose drive or share does not answer keeps its row and is skipped (Ruling 25).
-  - Follow-the-clear spares pinned entries (Ruling 22).
-  - A clipboard watch the system refuses fails the module's start, with Try again (Ruling 38).
-  - Sizes use each language's thousands grouping and decimal mark (Ruling 37).
-  - The worker decodes PNG and DIB only, and an interlaced PNG keeps its type icon (Ruling 18).
-  - A copy with text keeps no picture beside it, as Office copies carry one (Ruling 20).
-  - A copy is refused when keeping it would leave less than `min_free_mb` free (Ruling 23).
-  - The panel opens above the keyboard, else below, else shrinks to fit, never below 0.80 of its size (Ruling 53).
-  - The history's folder is made at boot, so Open folder always opens (Ruling 47), and a note takes only the storage line's text, with Open folder beside it (Ruling 58).
-  - The scroll pad turns the list's pages; the preview's long text pages by its own buttons only (Ruling 52, `docs/items/P8.md`).
+  - An Arabic row flips its text only; the tick box, thumbnail, pin and chip keep their places (ADR-0020; owner).
+  - Delete all stays in the header, as above. It dims while no entry is unpinned, so a click never does nothing silently, and in its question Esc is No and only a click on Yes deletes, as destructive actions default to safe (builder's call).
+  - The panel stays open while Insert runs and closes when it ends; a failed step stops the insert and keeps the panel open with a note (builder's call).
+  - A file found gone is left out of the paste, and the entry goes only when every file is gone (owner). A file whose drive or share does not answer keeps its row and is skipped, so an unplugged stick loses no rows (builder's call).
+  - Follow-the-clear spares pinned entries, as a pin is a deliberate keep (builder's call).
+  - A clipboard watch the system refuses fails the module's start, with Try again, as a history that silently records nothing is worse (builder's call).
+  - Sizes use each language's thousands grouping and decimal mark (CLDR).
+  - The worker decodes PNG and DIB only, and an interlaced PNG keeps its type icon, as its passes would need a full-size buffer (builder's call).
+  - A copy with text keeps no picture beside it, as Office copies carry one (builder's call).
+  - A copy is refused when keeping it would leave less than `min_free_mb` free (builder's call).
+  - The panel opens above the keyboard, else below, else shrinks to fit, never below 0.80 of its size (§3.4).
+  - The history's folder is made at boot, so Open folder always opens, and a note takes only the storage line's text, with Open folder beside it as the way out when the disk is low (builder's call).
+  - The scroll pad turns the list's pages; the preview's long text pages by its own buttons only (builder's call, `docs/items/P8.md`).
 
 ---
 

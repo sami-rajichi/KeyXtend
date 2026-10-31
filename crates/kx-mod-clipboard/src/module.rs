@@ -1,5 +1,6 @@
 //! The module: it reads `[clipboard]`, loads the history, starts the watch, the helper threads and its actor on
-//! `kx-clip`. A locked shelf or a newer version's list fails the start with nothing changed (edge 15, Ruling 26).
+//! `kx-clip`. A locked shelf or a newer version's list fails the start with nothing changed (edge 15), so an older
+//! app never spoils a newer history.
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
@@ -134,7 +135,8 @@ fn run_actor(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     }
 }
 
-/// Why a load failed, as the start's error; the kernel tells the user and offers Try again (Ruling 40).
+/// Why a load failed, as the start's error; the kernel tells the user and offers Try again, so the module adds no
+/// notice of its own.
 fn refuse(error: StoreError) -> ModuleError {
     tracing::warn!(%error, "the clipboard history did not load");
     match error {

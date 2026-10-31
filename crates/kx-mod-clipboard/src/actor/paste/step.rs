@@ -1,5 +1,6 @@
 //! One insert step: the next entry is read first, and only then is its join written, the entry waiting behind it;
-//! an entry whose content is gone gets no join. A failed write stops with `Busy` or `PasteFailed` (Ruling 41).
+//! an entry whose content is gone gets no join. A failed write stops with `Busy` when the clipboard is held, else
+//! `PasteFailed`.
 
 use kx_module_api::ports::{ClipError, ClipPart, PanelNote, PasteAsk, SealedError};
 use kx_module_api::{Redacted, keys};

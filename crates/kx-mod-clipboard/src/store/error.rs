@@ -1,4 +1,4 @@
-//! Why a load failed (Ruling 26): a list from a newer version of the app, found before anything was changed, or the
+//! Why a load failed: a list from a newer version of the app, found before anything was changed, or the
 //! shelf's own error.
 
 use std::error::Error;

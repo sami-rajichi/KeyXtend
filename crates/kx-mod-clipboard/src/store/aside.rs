@@ -1,5 +1,6 @@
-//! Setting a list aside (Ruling 26): a list that will not read at this version is kept in its folder as aside blobs,
-//! which no clean or list read takes, and the folder's content stays as orphans until its day drops.
+//! Setting a list aside, so a damaged list loses nothing: a list that will not read at this version is kept in its
+//! folder as aside blobs, which no clean or list read takes, and the folder's content stays as orphans until its day
+//! drops.
 
 use std::collections::BTreeSet;
 

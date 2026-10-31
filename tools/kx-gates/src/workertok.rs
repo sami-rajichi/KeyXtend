@@ -83,7 +83,7 @@ impl Verdict {
 }
 
 /// The verdict on the `workers` of a product whose token gives `product`: a worker passes without uiAccess at Medium
-/// integrity or lower, and fails with uiAccess or above Medium, such as High or System (Ruling 61).
+/// integrity or lower, and fails with uiAccess or above Medium, such as High or System; less privilege is safe.
 pub fn verdict(product: Rights, workers: &[Rights]) -> Verdict {
     let broad = |w: &Rights| w.ui_access || w.level > MEDIUM;
     match (product.ui_access, workers) {

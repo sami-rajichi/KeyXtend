@@ -1,4 +1,4 @@
-//! The test build's portable data folder around a clipboard gate (Rulings 57 and 60): a folder the gate makes carries
+//! The test build's portable data folder around a clipboard gate, never the owner's: a folder the gate makes carries
 //! its marker and goes at the end, a marked leftover of a hard stop is made afresh, and an unmarked one is never removed.
 #![cfg(windows)]
 

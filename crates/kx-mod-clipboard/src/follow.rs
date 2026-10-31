@@ -1,6 +1,6 @@
 //! Follow-the-clear and skipped apps (spec §7 "Skipped copies"): a clear by the app that made the last kept copy,
-//! within `clear_follow_s`, deletes that entry for good, as password managers intend, unless it is pinned (Ruling 22);
-//! copies from `skip_apps` are never kept.
+//! within `clear_follow_s`, deletes that entry for good, as password managers intend, unless it is pinned (a pin is a
+//! deliberate keep); copies from `skip_apps` are never kept.
 
 use std::time::Duration;
 

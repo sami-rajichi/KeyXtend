@@ -66,7 +66,7 @@ Item {
         anchors.rightMargin: head.pn.head_pad_px[1] * head.s
         anchors.verticalCenter: parent.verticalCenter
         spacing: head.gap
-        // Ruling 34: with nothing unpinned it shows dimmed; it waits while a question or a preview shows.
+        // With nothing unpinned it shows dimmed, never a silent no-op; it waits while a question or a preview shows.
         ClipButton {
             label: head.view.words.deleteAll
             icon: head.lk.icons.clip.delete

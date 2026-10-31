@@ -1,5 +1,5 @@
-// Delete all's question (spec §7; Ruling 33): it takes the list's place, names how many unpinned entries go, and only a
-// click on Yes deletes them; No keeps them. It rises in as it comes.
+// Delete all's question (spec §7): it takes the list's place, names how many unpinned entries go, and only a click on
+// Yes deletes them, as a destructive answer is never the default; No keeps them. It rises in as it comes.
 import QtQuick
 
 Item {

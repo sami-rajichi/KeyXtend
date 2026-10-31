@@ -1,5 +1,5 @@
 // The clipboard panel's storage line (spec §7): what the history takes and what the drive has free, or a note in its
-// place, beside Open folder, which shows the history's folder in the file manager and stays as the way out (Ruling 58).
+// place, beside Open folder, which shows the history's folder in the file manager and stays as the way out.
 import QtQuick
 
 Item {

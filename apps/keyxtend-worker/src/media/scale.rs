@@ -1,5 +1,6 @@
-//! A box filter that shrinks an image as its rows arrive, top first, so only one row of sums and the small output are
-//! ever held (ledger Ruling 12). Colours are averaged by alpha, so clear pixels do not darken their neighbours.
+//! A box filter that shrinks an image as its rows arrive, top first, holding only one row of sums and the small
+//! output, so a large image stays within the worker's memory. Colours are averaged by alpha, so clear pixels do not
+//! darken their neighbours.
 
 use super::Picture;
 use kx_ipc::{MAX_SIDE, RGBA_BYTES, Why};

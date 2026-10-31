@@ -1,5 +1,5 @@
 //! The panel (spec §7 "Panel"): `ClipOpen` toggles it, keys and clicks go to its state machine, and the view goes out
-//! once per message while it is open, held until the ui tells its rows (Ruling 32).
+//! once per message while it is open, held until the ui tells its rows per page (`ClipAct::Rows`).
 
 use kx_module_api::keys;
 use kx_module_api::ports::{ClipAct, ClipKind, ClipPanel, HistoryWanted, Room, SealedError};
@@ -11,7 +11,8 @@ use crate::panel::Do;
 use crate::view::{self, Facts, build};
 
 impl Actor {
-    /// Opens the panel, or closes it when open (Ruling 29); an open first drops what vanished and looks at the files.
+    /// Opens the panel, or closes it when open (ADR-0034's `ClipOpen`); an open first drops what vanished and looks
+    /// at the files.
     pub(super) fn toggle(&mut self) {
         if self.panel.is_open() {
             self.panel.close();

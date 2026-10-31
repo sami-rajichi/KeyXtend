@@ -1,5 +1,5 @@
 //! What one look gathers, pure over how a format is sized and a part read. Text, HTML, RTF and files come first; an
-//! image is fetched only when no text is left, as a picture beside text is not kept (rulings 20, 21 and 24).
+//! image is fetched only when no text is left, as the picture Office puts beside text is not kept.
 
 use kx_module_api::ports::ClipPart;
 

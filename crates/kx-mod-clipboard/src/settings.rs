@@ -1,5 +1,6 @@
-//! The `[clipboard]` settings (spec §7, plan Task 14, Ruling 8): the limits, the insert's joins and waits, the
-//! history shortcut, the texts' lengths, the media worker and the clipboard waits. Each range is a named const.
+//! The `[clipboard]` settings (spec §7, plan Task 14, plus the insert and worker waits the build added): the limits,
+//! the insert's joins and waits, the history shortcut, the texts' lengths, the media worker and the clipboard waits.
+//! Each range is a named const.
 
 mod parts;
 

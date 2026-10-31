@@ -1,5 +1,5 @@
-//! Inserts that stop with a note (Ruling 41): a refused or failed write, nothing left to paste, a files thread gone,
-//! and damaged content at Insert or Preview.
+//! Inserts that stop with a note, the panel left open: a refused or failed write, nothing left to paste, a files
+//! thread gone, and damaged content at Insert or Preview.
 
 use kx_module_api::keys;
 use kx_module_api::ports::{ClipAct, ClipError, FileFact, PanelNote, SealedError};

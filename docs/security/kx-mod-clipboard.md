@@ -44,7 +44,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - **Tampering:** a blob changed outside fails its AEAD; a damaged list is set aside once and copies go on. Programs running as this user can unwrap the key, so the decoders treat every blob as untrusted.
 - **Logging / repudiation:** log lines hold fixed texts and error kinds only, never copied content, paths or app names.
 - **Information disclosure:**
-  - Content rests sealed. A `Locked` shelf fails the start, which the kernel tells with `notice.module-failed` and Try again (Ruling 40), so nothing is kept unsealed; a lock found while running says `notice.clip-locked` once.
+  - Content rests sealed. A `Locked` shelf fails the start, which the kernel tells with `notice.module-failed` and Try again, so nothing is kept unsealed; a lock found while running says `notice.clip-locked` once.
   - Each insert step puts its content on the system clipboard, where any app can read it, and the last entry stays there.
   - Each paste goes to whichever app has focus at that step; the keyboard sends it, never this module.
   - Follow-the-clear drops what an app clears within `clear_follow_s`, unless pinned.
@@ -60,5 +60,5 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - The watch thread can be held by an app that renders its data late; its drop is bounded, and a late note after the stop is dropped.
 - Content in memory is not wiped after use; the process runs as the user, who can read it anyway.
 - The actor's inbox has no bound; its senders are this module's own threads and gated events.
-- One `SecretStore` gates both this shelf and predict's word store, so either module could require the other's service. Each store keeps its own folder and key file, and a gate per store would need a new ADR (Ruling 46).
-- The keyboard and the ui could require the clipboard services their gates allow, not only the events ADR-0034 names; neither does, and the keyboard already sends input. A service-only gate would need a new ADR (Ruling 48).
+- One `SecretStore` gates both this shelf and predict's word store, so either module could require the other's service. Each store keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
+- The keyboard and the ui could require the clipboard services their gates allow, not only the events ADR-0034 names; neither does, and the keyboard already sends input. A service-only gate would need a new ADR (builder's call).

@@ -123,7 +123,8 @@ Item {
             box.visible = false;
         }
 
-        // Ruling 33: only a click on Yes deletes; the question covers the list until it is answered.
+        // Only a click on Yes deletes, as a destructive answer is never the default; the question covers the list until
+        // it is answered.
         function test_delete_all_asks_with_the_count_and_yes_or_no_answers() {
             const box = open("confirm");
             const question = Kit.texts(box.contentItem, box.view.confirm.text)[0];
@@ -140,7 +141,7 @@ Item {
             box.visible = false;
         }
 
-        // The note takes the storage text's place under the footer, so it adds little height; Ruling 58: Open folder
+        // The note takes the storage text's place under the footer, so it adds little height, and Open folder
         // keeps its place beside it, as the way out when the disk is low.
         function test_the_note_takes_the_storage_texts_place_beside_open_folder() {
             const box = open("confirm");

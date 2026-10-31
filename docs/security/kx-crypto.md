@@ -57,7 +57,7 @@
 - No `cargo fuzz` target: property tests stand in until the owner allows the nightly toolchain, as in `kx-kernel.md`.
 - One `SealedFiles` per folder: the key file is written by a replacing rename, so two stores over one folder could race on the first save and leave blobs under a lost key. The app runs one instance, which owns the folder.
   - The same holds for one `SealedShelfFiles` per root, and a store and a shelf never share a folder (`<data>/words` and the clipboard's own root).
-- One `SecretStore` capability gates both ports (ADR-0034), so a module holding it could require either store. Each keeps its own folder and key file, and a gate per store would need a new ADR (Ruling 46).
+- One `SecretStore` capability gates both ports (ADR-0034), so a module holding it could require either store. Each keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
 - A shelf delete is not a secure wipe: the drive may keep the freed blocks. They hold only sealed bytes, which a program running as the user could still open with the key.
 - Listings have no count cap: only a program running as the user could fill the shelf's folders, and the history's own caps keep them small.
 - The room's `used` counts only `.sealed` blobs, not damaged copies or stray files, so it matches what the history can delete.

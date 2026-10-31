@@ -44,7 +44,7 @@ impl ClipSettings {
         }
     }
 
-    /// What the panel needs; its rows come from the ui (Ruling 32), so they start at none.
+    /// What the panel needs; its rows per page come from the ui (`ClipAct::Rows`), so they start at none.
     #[must_use]
     pub fn panel_config(&self) -> PanelConfig {
         PanelConfig {

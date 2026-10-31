@@ -86,7 +86,7 @@ pub(crate) struct Actor {
     history: History,
     follow: Follow,
     panel: Panel,
-    /// The ui told its rows, so views may show (Ruling 32).
+    /// The ui told its rows per page, so views may show.
     rows_heard: bool,
     /// The calendar day the history was last swept on.
     today: Date,

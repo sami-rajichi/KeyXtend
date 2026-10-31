@@ -1,5 +1,6 @@
 // The clipboard panel's note band (spec §7): why a copy was not kept, or an insert failed. It takes the storage text's
-// place beside Open folder while it shows (Ruling 58) and rises in with each new note.
+// place beside Open folder while it shows, as Open folder is the way out when the disk is low, and rises in with each
+// new note.
 import QtQuick
 
 Item {

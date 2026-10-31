@@ -1,6 +1,6 @@
-//! Ruling 26: a list from a newer version fails the load before anything changes; a list that will not read at ours
-//! is kept aside in its folder with its content, told once, spared by later loads and saves, and dropped with its
-//! day past `keep_days`.
+//! Lists set aside: a list from a newer version fails the load before anything changes; a list that will not read at
+//! ours is kept aside in its folder with its content, told once, spared by later loads and saves, and dropped with
+//! its day past `keep_days`.
 
 use std::mem::size_of;
 

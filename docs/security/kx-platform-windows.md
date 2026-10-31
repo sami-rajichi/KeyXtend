@@ -282,7 +282,7 @@ A hook thread that misses its stop wait is left running after its hooks are remo
 
 A speaker thread that misses its stop wait is left running; once its audio call returns, it finishes that one ask, serves no more, drops its voices and engine and ends.
 
-A starting worker's two pipe ends are inheritable until `CreateProcessAsUserW` returns. Our own starts name their handles, but a plain `std::process::Command` started on another thread at that moment inherits every inheritable handle and could hold the worker's pipe open. Tidy F4 bans `std::process::Command` and `QProcess` in product code, so the app starts no process that way.
+A starting worker's two pipe ends are inheritable until `CreateProcessAsUserW` returns. Our own starts name their handles, but a plain `std::process::Command` started on another thread at that moment inherits every inheritable handle and could hold the worker's pipe open. Tidy F4 bans `std::process::Command` and `QProcess` in product code, so the app starts no process that way. A raw `CreateProcess*` call with `bInheritHandles` = TRUE elsewhere would get past F4; today `worker/start.rs` is the only product code that starts a process (the reveal asks the running Explorer), and none uses `std::process::Command`.
 
 A UI Automation call to a stuck app holds every UI Automation call in the process until its timeout, `read_ms`, so the scroll pad's end check reads unknown that long. Windows marks an app hung only after 5 s, so the run pings the target at each aim, turn and reach instead: from the last ping it answered until the next goes unanswered, one turn's interval plus `read_ms` at most, a few turns may still queue for a busy app.
 
@@ -304,7 +304,7 @@ A copy whose app renders it only when asked (delayed rendering) makes `GetClipbo
 
 Dropping the watch waits `STOP_WAIT` for a thread such an app holds, then warns and leaves it to end alone; that thread may still tell its one copy after the drop.
 
-The cap bounds what we copy and hand on, not the copy Windows makes: `GetClipboardData` brings each format we size into our process before `GlobalSize` can be read, so each format sized, up to the one that passes the cap, costs its memory once. Formats after that one, and a picture beside text, are never fetched; a picture beside a file list is.
+The cap bounds what we copy and hand on, not the copy Windows makes: to size a format, `GetClipboardData` brings it into our process before `GlobalSize` can be read, so every format sized, up to and including the one that passes the cap, costs its memory once. Formats after that one, and a picture beside text, are never fetched; a picture beside a file list is fetched, though the files decide the entry's kind.
 
 A password manager that marks nothing is read like any copy; the spec's follow-the-clear and `skip_apps` cover it in the module. A Unicode file list is the only kind read: a 16-bit era ANSI list is left out, as no current app writes one.
 
