@@ -53,8 +53,12 @@ fn debug_never_shows_the_bytes() {
         bytes: Redacted::new(bytes.clone()),
         side: SIDE,
     };
+    let dib = DibAsk {
+        png: Redacted::new(bytes.clone()),
+        max_bytes: 9,
+    };
     let drawn = Pixels::new(1, 1, bytes, SIDE).unwrap();
-    for shown in [format!("{ask:?}"), format!("{drawn:?}")] {
+    for shown in [format!("{ask:?}"), format!("{dib:?}"), format!("{drawn:?}")] {
         assert!(shown.contains(REDACTED_MARKER), "{shown}");
         assert!(!shown.contains(&raw), "{shown} shows {raw}");
     }

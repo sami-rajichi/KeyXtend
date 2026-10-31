@@ -1,10 +1,10 @@
-//! Sessions on their own threads over a scripted worker: a draw goes through and a dropped session stops its worker,
-//! an idle worker stops by itself, a worker that never starts is down, and exit codes read as notes.
+//! Sessions on their own threads over a scripted worker: draws and DIBs go through, a dropped session stops its
+//! worker, an idle worker stops by itself, a worker that never starts is down, and exit codes read as notes.
 
 use super::*;
 use fake::{Act, Call, Hands, Script};
 use kx_module_api::Redacted;
-use kx_module_api::ports::ImageCodec;
+use kx_module_api::ports::{DibAsk, ImageCodec};
 use std::collections::HashSet;
 
 /// How long a test waits for the session thread; a wait, never a sleep.
@@ -63,6 +63,21 @@ fn a_session_draws_on_its_thread_and_its_drop_stops_the_worker() {
     drop(run);
     ended(&told);
     assert!(script.calls().ends_with(&[Call::Bye, code(), Call::End]));
+}
+
+#[test]
+fn a_session_makes_a_dib_on_its_thread_beside_its_draws() {
+    let script = Script::default();
+    let (pictures, _told) = pictures(&script);
+    let mut run = pictures.open(CFG);
+    script.act(Act::Dib(44));
+    let png = Redacted::new(vec![1, 2, 3]);
+    let made = run
+        .dib(DibAsk { png, max_bytes: 44 })
+        .map(Redacted::into_inner);
+    assert_eq!(made, Ok(vec![0; 44]));
+    assert!(run.draw(ask()).is_ok());
+    assert_eq!(script.spawns(), 1);
 }
 
 #[test]

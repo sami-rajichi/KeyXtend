@@ -53,8 +53,8 @@ pub use packs::{
     PACK_INDEX, PackError, PackIndex, PackView, WordPacks, WordPacksKey, fits_iso, pack_file,
 };
 pub use pictures::{
-    PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey, Pixels, RGBA_BYTES,
-    WORKER_DECODE_BYTES, WORKER_READ_TIMES,
+    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, PicturesKey, Pixels,
+    RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
 };
 pub use pointer::{
     Button, HookConfig, HookError, HookRun, HookStats, MAX_HELD_KEYS, PointerAct, PointerEngine,

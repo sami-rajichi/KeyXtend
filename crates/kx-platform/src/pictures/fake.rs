@@ -1,4 +1,4 @@
-//! A scripted spawner and worker for the host's tests: each draw takes the next act, and every call is kept in order.
+//! A scripted spawner and worker for the host's tests: each ask takes the next act, and every call is kept in order.
 //! It never sleeps: a silent worker is late at once, and the clock moves only when a test moves it.
 
 use super::{Heard, Launch, SpawnError, Spawner, Worker};
@@ -10,11 +10,13 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-/// What the worker does with the next draw; with none queued it draws one pixel.
+/// What the worker does with the next ask; with none queued it draws one pixel.
 #[derive(Clone, Debug)]
 pub enum Act {
-    /// Pixels `w` by `h` for the draw's id.
+    /// Pixels `w` by `h` for the ask's id.
     Draw(u32, u32),
+    /// A DIB of this many bytes for the ask's id.
+    Dib(usize),
     /// A failure for the draw's id.
     Fail(Why),
     /// This reply, whatever the draw's id.
@@ -29,6 +31,7 @@ pub enum Act {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
+    Dib { id: u32, max_bytes: u32 },
     Bye,
     Reply { within: Duration },
     End,
@@ -47,7 +50,7 @@ struct Log {
     calls: Vec<Call>,
     /// How the live worker quit, if it did; a worker that quit reads as closed.
     exit: Option<u32>,
-    /// The id of the draw that waits for its reply.
+    /// The id of the ask that waits for its reply.
     asked: Option<u32>,
     /// Hears each call, for a test on another thread.
     tell: Option<Sender<Call>>,
@@ -137,6 +140,10 @@ impl Worker for FakeWorker {
                 self.0.log().asked = Some(id);
                 self.0.record(Call::Draw { id, side });
             }
+            Ask::Dib { id, max_bytes, .. } => {
+                self.0.log().asked = Some(id);
+                self.0.record(Call::Dib { id, max_bytes });
+            }
             Ask::Bye => {
                 self.0.log().exit = Some(u32::from(CLEAN_EXIT));
                 self.0.record(Call::Bye);
@@ -162,6 +169,10 @@ impl Worker for FakeWorker {
                     rgba,
                 }))
             }
+            Act::Dib(len) => Heard::Frame(Ok(Reply::Dib {
+                id,
+                bytes: vec![0; len],
+            })),
             Act::Fail(why) => Heard::Frame(Ok(Reply::Failed { id, why })),
             Act::Raw(reply) => Heard::Frame(Ok(reply)),
             Act::Silent => Heard::Late,

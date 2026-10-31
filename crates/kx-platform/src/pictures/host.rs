@@ -1,9 +1,9 @@
 //! A session's state: its worker, when it last answered, and the backoff before the next start.
 
 use super::{Heard, Launch, Spawner, Worker, exit_note};
-use kx_ipc::{Ask, CLEAN_EXIT, Codec, IpcError, MAX_SIDE, Reply, Why};
-use kx_module_api::ports::{ImageCodec, PictureAsk, PictureConfig, PictureError, Pixels};
-use kx_module_api::{Clock, Mono};
+use kx_ipc::{Ask, CLEAN_EXIT, Codec, IpcError, MAX_IMAGE_BYTES, MAX_SIDE, Reply, Why};
+use kx_module_api::ports::{DibAsk, ImageCodec, PictureAsk, PictureConfig, PictureError, Pixels};
+use kx_module_api::{Clock, Mono, Redacted};
 use std::borrow::Cow;
 use std::io;
 use std::sync::Arc;
@@ -16,8 +16,8 @@ enum Fault {
     Late,
     /// A reply that names another draw.
     Stray,
-    /// Pixels that do not fit what was asked.
-    BadPixels,
+    /// A reply of another kind than asked, or one that does not fit the ask.
+    BadReply,
     /// A frame that could not be read.
     BadFrame,
     /// The worker closed its output.
@@ -57,21 +57,54 @@ impl<S: Spawner> Host<S> {
 
     /// Draws `ask` on the worker, started first if need be: one draw at a time, within the deadline.
     pub(super) fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
-        self.idle();
-        let (id, side) = (self.next, ask.side.min(MAX_SIDE));
-        let ask = Ask::Draw {
+        let side = ask.side.min(MAX_SIDE);
+        let (id, heard) = self.ask(|id| Ask::Draw {
             id,
             codec: codec(ask.codec),
             side,
             bytes: Cow::Owned(ask.bytes.into_inner()),
-        };
+        })?;
+        self.judge(id, heard, |reply| match reply {
+            Reply::Pixels {
+                width,
+                height,
+                rgba,
+                ..
+            } => Pixels::new(width, height, rgba, side),
+            _ => None,
+        })
+    }
+
+    /// Makes the DIB of `ask`'s PNG on the worker, within the deadline; only its length is checked, never its bytes.
+    pub(super) fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        let max_bytes = cap(ask.max_bytes);
+        let (id, heard) = self.ask(|id| Ask::Dib {
+            id,
+            max_bytes,
+            bytes: Cow::Owned(ask.png.into_inner()),
+        })?;
+        let fits = |bytes: &[u8]| u32::try_from(bytes.len()).is_ok_and(|n| n <= max_bytes);
+        self.judge(id, heard, |reply| match reply {
+            Reply::Dib { bytes, .. } if fits(&bytes) => Some(Redacted::new(bytes)),
+            _ => None,
+        })
+    }
+
+    /// Sends the ask `make` builds with the next id, the worker started first if need be, and waits the deadline for
+    /// its reply; an ask the worker would refuse starts nothing.
+    fn ask(
+        &mut self,
+        make: impl FnOnce(u32) -> Ask<'static>,
+    ) -> Result<(u32, Heard), PictureError> {
+        self.idle();
+        let id = self.next;
+        let ask = make(id);
         fits(&ask)?;
         self.next = id.checked_add(1).unwrap_or(1);
         let deadline = ms(self.cfg.deadline_ms);
         let worker = self.start()?;
         worker.send(ask);
-        let heard = worker.reply(deadline);
-        self.judge(id, side, heard)
+        Ok((id, worker.reply(deadline)))
     }
 
     /// How long the session may wait before the idle check; `None` without a worker.
@@ -130,27 +163,27 @@ impl<S: Spawner> Host<S> {
         }
     }
 
-    /// Checks the reply to draw `id` of longest side `side`; a worker that lies or is late is ended.
-    fn judge(&mut self, id: u32, side: u32, heard: Heard) -> Result<Pixels, PictureError> {
+    /// Checks the reply to ask `id`, whose answer `take` reads when it fits; a worker that lies or is late is ended.
+    fn judge<T>(
+        &mut self,
+        id: u32,
+        heard: Heard,
+        take: impl FnOnce(Reply) -> Option<T>,
+    ) -> Result<T, PictureError> {
         match heard {
             Heard::Late => Err(self.fail(Fault::Late)),
             Heard::Frame(Ok(reply)) if reply.id() != id => Err(self.fail(Fault::Stray)),
-            Heard::Frame(Ok(Reply::Pixels {
-                width,
-                height,
-                rgba,
-                ..
-            })) => match Pixels::new(width, height, rgba, side) {
-                Some(pixels) => {
-                    self.served();
-                    Ok(pixels)
-                }
-                None => Err(self.fail(Fault::BadPixels)),
-            },
             Heard::Frame(Ok(Reply::Failed { why, .. })) => {
                 self.served();
                 Err(refusal(why))
             }
+            Heard::Frame(Ok(reply)) => match take(reply) {
+                Some(answer) => {
+                    self.served();
+                    Ok(answer)
+                }
+                None => Err(self.fail(Fault::BadReply)),
+            },
             Heard::Frame(Err(IpcError::Closed)) => Err(self.fail(Fault::Ended)),
             Heard::Frame(Err(_)) => Err(self.fail(Fault::BadFrame)),
         }
@@ -226,6 +259,12 @@ fn fits(ask: &Ask<'_>) -> Result<(), PictureError> {
         IpcError::TooLong => PictureError::TooBig,
         _ => PictureError::Refused,
     })
+}
+
+/// The most bytes a DIB may hold, as a frame carries it: never past `MAX_IMAGE_BYTES`.
+fn cap(max_bytes: u64) -> u32 {
+    let largest = u64::try_from(MAX_IMAGE_BYTES).unwrap_or(u64::MAX);
+    u32::try_from(max_bytes.min(largest)).unwrap_or(u32::MAX)
 }
 
 /// The frame's code for `codec`.

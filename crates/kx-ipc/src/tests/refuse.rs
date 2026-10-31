@@ -44,7 +44,8 @@ fn another_version_is_refused() {
 
 #[test]
 fn an_unknown_kind_is_refused() {
-    for kind in [0, 5, u8::MAX] {
+    let next = u8::try_from(Kind::ALL.len() + 1).unwrap();
+    for kind in [0, next, u8::MAX] {
         let bad = head(MAGIC, VERSION, kind, 0, 0);
         assert_eq!(both(&bad), (Err(BadKind), Err(BadKind)));
     }

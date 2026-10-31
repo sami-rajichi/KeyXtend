@@ -107,6 +107,46 @@ fn the_media_job_answers_until_bye() {
     assert_eq!(Reply::read(&mut stdout), Err(IpcError::Closed));
 }
 
+/// A 1 by 1 RGB PNG of red 1, green 2, blue 3.
+fn tiny_png() -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut encoder = png::Encoder::new(&mut out, 1, 1);
+    encoder.set_color(png::ColorType::Rgb);
+    let mut writer = encoder.write_header().unwrap();
+    writer.write_image_data(&[1, 2, 3]).unwrap();
+    writer.finish().unwrap();
+    out
+}
+
+#[test]
+fn the_media_job_makes_a_dib_from_a_png() {
+    let mut input = Vec::new();
+    for (id, png) in [(1, tiny_png()), (2, b"junk".to_vec())] {
+        let bytes = Cow::Owned(png);
+        let ask = Ask::Dib {
+            id,
+            max_bytes: 1_000,
+            bytes,
+        };
+        ask.write(&mut input).unwrap();
+    }
+    let out = run(&MEDIA, &input);
+    assert!(exited(&out, CLEAN_EXIT), "{:?}", out.stderr);
+    let mut stdout = &out.stdout[..];
+    let Ok(Reply::Dib { id: 1, bytes }) = Reply::read(&mut stdout) else {
+        panic!("a DIB for ask 1");
+    };
+    assert_eq!(
+        (bytes.len(), &bytes[..4], &bytes[40..]),
+        (44, &[40, 0, 0, 0][..], &[3, 2, 1, 255][..])
+    );
+    let refused = Reply::Failed {
+        id: 2,
+        why: Why::Refused,
+    };
+    assert_eq!(Reply::read(&mut stdout), Ok(refused));
+}
+
 #[test]
 fn the_end_of_input_ends_the_job_cleanly() {
     let out = run(&MEDIA, b"");

@@ -133,3 +133,26 @@ fn debug_never_prints_the_bytes() {
         assert!(!text.contains(shown), "the ask's bytes as {shown:?}");
     }
 }
+
+#[test]
+fn a_dib_takes_its_own_queued_answers_and_its_ask_is_kept_and_counted() {
+    let pics = FakePictures::new();
+    let mut run = pics.open(CFG);
+    let dib = |n: u8| DibAsk {
+        png: Redacted::new(vec![n]),
+        max_bytes: 9,
+    };
+    assert_eq!(run.dib(dib(1)), Err(PictureError::Gone), "nothing queued");
+    pics.queue_dib(Ok(vec![40; 12]));
+    pics.queue_dib(Err(PictureError::TooBig));
+    let made = run.dib(dib(2)).map(Redacted::into_inner);
+    assert_eq!(made, Ok(vec![40; 12]), "as queued, even past its cap");
+    assert_eq!(run.dib(dib(3)), Err(PictureError::TooBig));
+    assert_eq!(
+        run.dib(dib(4)),
+        Err(PictureError::TooBig),
+        "the latest repeats"
+    );
+    assert_eq!((pics.dib_asks(), pics.asks()), (4, 0), "draws count apart");
+    assert_eq!(pics.last_dib(), Some(dib(4)));
+}

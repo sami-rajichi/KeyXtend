@@ -6,7 +6,7 @@ use kx_module_api::Capability::{InjectInput, ReadClipboard, SecretStore, WriteCl
 use kx_module_api::ports::{
     BlobName, Calendar, CalendarKey, ClipAct, ClipConfig, ClipError, ClipKey, ClipNote, ClipOpen,
     ClipPage, ClipPanel, ClipPart, ClipRun, ClipView, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, Date, FileFact, Filter, HistoryAsk, HistoryWanted,
+    ClipboardWriter, ClipboardWriterKey, Date, DibAsk, FileFact, Filter, HistoryAsk, HistoryWanted,
     LocalTime, Pages, PanelKey, PasteAsk, Pasted, PictureAsk, PictureConfig, PictureError,
     PictureRun, Pictures, PicturesKey, Pixels, Room, SealedError, SealedShelf, SealedShelfKey,
 };
@@ -95,6 +95,10 @@ impl SealedShelf for Stuck {
 
 impl PictureRun for Stuck {
     fn draw(&mut self, _: PictureAsk) -> Result<Pixels, PictureError> {
+        Err(PictureError::Gone)
+    }
+
+    fn dib(&mut self, _: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
         Err(PictureError::Gone)
     }
 }

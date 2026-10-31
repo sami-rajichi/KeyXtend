@@ -1,4 +1,4 @@
-//! What the worker sends back: pixels, or a fixed reason it drew none.
+//! What the worker sends back: pixels, a DIB, or a fixed reason it made neither.
 
 use crate::code::{Code, Kind, Why};
 use crate::error::IpcError;
@@ -7,7 +7,7 @@ use crate::limits::{FAILED_LEN, PIXELS_HEAD, RGBA_BYTES};
 use std::fmt;
 use std::io::{Read, Write};
 
-/// A message from the worker to the host, answering one draw.
+/// A message from the worker to the host, answering one ask.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Reply {
     /// RGBA8 pixels, row by row from the top.
@@ -21,17 +21,24 @@ pub enum Reply {
         /// `width` × `height` × `RGBA_BYTES` bytes.
         rgba: Vec<u8>,
     },
-    /// No pixels, for a fixed reason.
-    Failed {
-        /// The draw this answers.
+    /// A `CF_DIB` made from a PNG.
+    Dib {
+        /// The ask this answers.
         id: u32,
-        /// Why nothing was drawn.
+        /// The DIB, from 1 to `MAX_IMAGE_BYTES` bytes.
+        bytes: Vec<u8>,
+    },
+    /// No pixels or DIB, for a fixed reason.
+    Failed {
+        /// The ask this answers.
+        id: u32,
+        /// Why nothing was made.
         why: Why,
     },
 }
 
 /// The kinds a reply may be.
-pub(crate) const KINDS: &[Kind] = &[Kind::Pixels, Kind::Failed];
+pub(crate) const KINDS: &[Kind] = &[Kind::Pixels, Kind::Dib, Kind::Failed];
 
 impl Reply {
     /// Reads one reply from the worker.
@@ -42,8 +49,12 @@ impl Reply {
         let head = Head::read(r, KINDS)?;
         match head.kind {
             Kind::Pixels => read_pixels(r, head),
+            Kind::Dib => Ok(Reply::Dib {
+                id: head.id,
+                bytes: read_tail(r, head.len)?,
+            }),
             Kind::Failed => read_failed(r, head),
-            Kind::Draw | Kind::Bye => Err(IpcError::BadKind),
+            Kind::Draw | Kind::Bye | Kind::MakeDib => Err(IpcError::BadKind),
         }
     }
 
@@ -69,6 +80,10 @@ impl Reply {
                 w.write_all(&height.to_le_bytes())?;
                 w.write_all(rgba)?;
             }
+            Self::Dib { id, bytes } => {
+                write_head(w, Kind::Dib, *id, bytes.len())?;
+                w.write_all(bytes)?;
+            }
             Self::Failed { id, why } => {
                 write_head(w, Kind::Failed, *id, FAILED_LEN)?;
                 w.write_all(&[why.code()])?;
@@ -78,11 +93,11 @@ impl Reply {
         Ok(())
     }
 
-    /// The draw this reply answers.
+    /// The ask this reply answers.
     #[must_use]
     pub const fn id(&self) -> u32 {
         match self {
-            Self::Pixels { id, .. } | Self::Failed { id, .. } => *id,
+            Self::Pixels { id, .. } | Self::Dib { id, .. } | Self::Failed { id, .. } => *id,
         }
     }
 }
@@ -135,6 +150,11 @@ impl fmt::Debug for Reply {
                 .field("width", width)
                 .field("height", height)
                 .field("len", &rgba.len())
+                .finish(),
+            Self::Dib { id, bytes } => f
+                .debug_struct("Dib")
+                .field("id", id)
+                .field("len", &bytes.len())
                 .finish(),
             Self::Failed { id, why } => f
                 .debug_struct("Failed")

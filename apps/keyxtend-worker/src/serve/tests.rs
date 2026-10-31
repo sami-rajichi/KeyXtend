@@ -1,9 +1,10 @@
-//! The loop, driven with in-memory streams: each draw gets its reply in order, a panic is a failure, and a broken
-//! frame or stream ends the loop.
+//! The loop, driven with in-memory streams: each draw or DIB ask gets its reply in order, a panic is a failure, and
+//! a broken frame or stream ends the loop.
 
 use super::*;
-use crate::fixture::{Dib, rgba};
+use crate::fixture::{Dib, Png, rgba};
 use crate::media;
+use ::png::{BitDepth, ColorType};
 use kx_ipc::{Ask, Reply};
 use std::borrow::Cow;
 use std::process::Command;
@@ -24,6 +25,10 @@ const ANSWERED: &str = "hushed draw answered";
 
 fn drawing(codec: Codec, bytes: &[u8], side: u32) -> Result<Picture, Why> {
     media::draw(codec, bytes, side, MAX_PIXELS)
+}
+
+fn making(png: &[u8], max_bytes: usize) -> Result<Vec<u8>, Why> {
+    media::make_dib(png, max_bytes, MAX_PIXELS)
 }
 
 fn draw_ask(id: u32, codec: Codec, bytes: &[u8]) -> Ask<'_> {
@@ -49,6 +54,12 @@ fn test_draw(codec: Codec, bytes: &[u8], side: u32) -> Result<Picture, Why> {
     drawing(codec, bytes, side)
 }
 
+/// The tests' DIB maker, which panics on `BOOM`.
+fn test_dib(png: &[u8], max_bytes: usize) -> Result<Vec<u8>, Why> {
+    assert_ne!(png, BOOM, "the test DIB maker panics");
+    making(png, max_bytes)
+}
+
 /// Every reply in `out`.
 fn replies(out: &[u8]) -> Vec<Reply> {
     let mut written = out;
@@ -58,7 +69,7 @@ fn replies(out: &[u8]) -> Vec<Reply> {
 /// Runs the loop over `input`, returning its outcome and every reply it wrote.
 fn run(input: &[u8]) -> (Result<(), IpcError>, Vec<Reply>) {
     let mut out = Vec::new();
-    let outcome = serve(&mut &input[..], &mut out, test_draw);
+    let outcome = serve(&mut &input[..], &mut out, test_draw, test_dib);
     (outcome, replies(&out))
 }
 
@@ -127,6 +138,37 @@ fn a_panic_is_an_internal_failure_and_the_loop_goes_on() {
     assert!(matches!(replies[1], Reply::Pixels { id: 2, .. }));
 }
 
+/// A DIB ask of `png` within `max_bytes`.
+fn dib_ask(id: u32, max_bytes: u32, png: &[u8]) -> Ask<'_> {
+    Ask::Dib {
+        id,
+        max_bytes,
+        bytes: Cow::Borrowed(png),
+    }
+}
+
+#[test]
+fn a_dib_ask_gets_its_dib_and_a_refused_or_panicking_one_a_failure() {
+    let png = Png::new(1, 1, ColorType::Rgb, BitDepth::Eight).encode(&[1, 2, 3]);
+    let asks = [
+        dib_ask(4, 1_000, &png),
+        dib_ask(5, 43, &png),
+        dib_ask(6, 1_000, b"junk"),
+        dib_ask(7, 1_000, BOOM),
+    ];
+    let (outcome, replies) = run(&frames(&asks));
+    assert_eq!(outcome, Ok(()));
+    let made = making(&png, 1_000).unwrap();
+    let failed = |id, why| Reply::Failed { id, why };
+    let want = [
+        Reply::Dib { id: 4, bytes: made },
+        failed(5, Why::TooBig),
+        failed(6, Why::Refused),
+        failed(7, Why::Internal),
+    ];
+    assert_eq!(replies, want);
+}
+
 /// The panic hook is global, so the check runs in a child copy of this test program, filtered to `hushed_child`.
 #[test]
 fn a_hushed_panic_writes_nothing_on_stderr() {
@@ -150,7 +192,7 @@ fn hushed_child() {
         return;
     }
     let (input, mut out) = (frames(&[draw_ask(1, Codec::Dib, BOOM)]), Vec::new());
-    let outcome = answer(&mut &input[..], &mut out, test_draw);
+    let outcome = answer(&mut &input[..], &mut out, test_draw, test_dib);
     assert_eq!(outcome, Ok(()));
     assert_eq!(
         replies(&out),
@@ -184,7 +226,7 @@ fn nothing_after_bye_is_read() {
     let input = [frames(&[Ask::Bye]), tail.clone()].concat();
     let mut rest = &input[..];
     let mut out = Vec::new();
-    assert_eq!(serve(&mut rest, &mut out, drawing), Ok(()));
+    assert_eq!(serve(&mut rest, &mut out, drawing, making), Ok(()));
     assert_eq!((rest, out.len()), (&tail[..], 0));
 }
 
@@ -216,6 +258,6 @@ impl Write for Gone {
 fn a_stream_that_cannot_be_written_ends_the_loop() {
     let (dib, _) = tiny();
     let input = frames(&[draw_ask(1, Codec::Dib, &dib)]);
-    let outcome = serve(&mut &input[..], &mut Gone, drawing);
+    let outcome = serve(&mut &input[..], &mut Gone, drawing, making);
     assert_eq!(outcome, Err(IpcError::Io(io::ErrorKind::BrokenPipe)));
 }

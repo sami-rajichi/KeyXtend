@@ -2,7 +2,7 @@
 
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
-use crate::limits::{HEADER_LEN, MAGIC, MAX_SIDE, READ_CHUNK, VERSION};
+use crate::limits::{HEADER_LEN, MAGIC, MAX_IMAGE_BYTES, MAX_SIDE, READ_CHUNK, VERSION};
 use std::io::{ErrorKind, Read, Write};
 
 /// A checked header: a kind the reader takes, and a length within that kind's range.
@@ -82,6 +82,12 @@ pub(crate) fn check_side(n: u32) -> Result<u32, IpcError> {
     } else {
         Err(IpcError::BadField)
     }
+}
+
+/// `n` as the most bytes a DIB may hold, when it is from 1 to `MAX_IMAGE_BYTES`.
+pub(crate) fn check_cap(n: u32) -> Result<u32, IpcError> {
+    let fits = usize::try_from(n).is_ok_and(|n| (1..=MAX_IMAGE_BYTES).contains(&n));
+    if fits { Ok(n) } else { Err(IpcError::BadField) }
 }
 
 /// Reads exactly `N` payload bytes.

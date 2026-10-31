@@ -1,6 +1,8 @@
 //! The host over a scripted worker: it starts on demand, draws one at a time, ends a late or lying worker and is down a
 //! growing backoff before the next start, refuses asks the worker would refuse, and stops when idle; nothing sleeps.
 
+mod dib;
+
 use super::*;
 use crate::pictures::Launch;
 use crate::pictures::fake::{Act, Call, Hands, Script};

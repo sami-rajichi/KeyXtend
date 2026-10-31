@@ -1,5 +1,5 @@
-//! Pictures (ADR-0034 decisions 3 and 5): image bytes in, small RGBA pixels out, drawn outside our process by the
-//! media worker, so it needs no capability. Both sides are copied content, so no `Debug` here prints their bytes.
+//! Pictures (ADR-0034 decisions 3 and 5): image bytes in, small RGBA pixels or a PNG's DIB out, made outside our
+//! process by the media worker, so it needs no capability. Both sides are copied content, so no `Debug` prints bytes.
 
 use super::ImageCodec;
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
@@ -39,6 +39,15 @@ pub struct PictureAsk {
     pub bytes: Redacted<Vec<u8>>,
     /// The longest side wanted, in pixels; a smaller image keeps its size.
     pub side: u32,
+}
+
+/// A `CF_DIB` to make from a PNG, for an insert that sets both.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DibAsk {
+    /// The PNG's bytes.
+    pub png: Redacted<Vec<u8>>,
+    /// The most bytes the DIB may hold; a larger one is refused before it is decoded.
+    pub max_bytes: u64,
 }
 
 /// Checked RGBA8 pixels, row by row from the top; cloning shares the bytes.
@@ -119,6 +128,13 @@ pub trait PictureRun: Send {
     /// `Refused` for bytes that are no image, `TooBig` past `max_pixels`, `Timeout` past the deadline, `Gone` when the
     /// worker ends or answers badly on it, and `Down` when the worker rests or cannot start, so it was not tried.
     fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError>;
+
+    /// Makes the `CF_DIB` of `ask`'s PNG within its `max_bytes`, one ask at a time, within `deadline_ms`. Our side
+    /// checks only its length, never its bytes.
+    ///
+    /// # Errors
+    /// As `draw`; `TooBig` also when the DIB would pass `max_bytes`.
+    fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError>;
 }
 
 /// Draws images outside our process; the platform provides it.

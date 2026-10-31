@@ -1,9 +1,9 @@
-//! What the host sends the worker: a picture to draw, or goodbye.
+//! What the host sends the worker: a picture to draw, a DIB to make from a PNG, or goodbye.
 
 use crate::code::{Code, Codec, Kind};
 use crate::error::IpcError;
-use crate::frame::{Head, check_side, read_array, read_tail, write_head};
-use crate::limits::DRAW_HEAD;
+use crate::frame::{Head, check_cap, check_side, read_array, read_tail, write_head};
+use crate::limits::{DRAW_HEAD, MAKE_HEAD};
 use std::borrow::Cow;
 use std::fmt;
 use std::io::{Read, Write};
@@ -22,12 +22,21 @@ pub enum Ask<'a> {
         /// The image, from 1 to `MAX_IMAGE_BYTES` bytes.
         bytes: Cow<'a, [u8]>,
     },
+    /// Make a `CF_DIB` of a PNG, at most `max_bytes` long.
+    Dib {
+        /// The request, which the reply repeats.
+        id: u32,
+        /// The most bytes the DIB may hold, from 1 to `MAX_IMAGE_BYTES`.
+        max_bytes: u32,
+        /// The PNG, from 1 to `MAX_IMAGE_BYTES` bytes.
+        bytes: Cow<'a, [u8]>,
+    },
     /// End: the worker exits after this frame.
     Bye,
 }
 
 /// The kinds an ask may be.
-pub(crate) const KINDS: &[Kind] = &[Kind::Draw, Kind::Bye];
+pub(crate) const KINDS: &[Kind] = &[Kind::Draw, Kind::MakeDib, Kind::Bye];
 
 impl Ask<'_> {
     /// Reads one ask from the host.
@@ -38,9 +47,10 @@ impl Ask<'_> {
         let head = Head::read(r, KINDS)?;
         match head.kind {
             Kind::Draw => read_draw(r, head),
+            Kind::MakeDib => read_make(r, head),
             Kind::Bye if head.id == 0 => Ok(Ask::Bye),
             Kind::Bye => Err(IpcError::Inconsistent),
-            Kind::Pixels | Kind::Failed => Err(IpcError::BadKind),
+            Kind::Pixels | Kind::Failed | Kind::Dib => Err(IpcError::BadKind),
         }
     }
 
@@ -61,6 +71,16 @@ impl Ask<'_> {
                 write_head(w, Kind::Draw, *id, DRAW_HEAD.saturating_add(bytes.len()))?;
                 w.write_all(&[codec.code()])?;
                 w.write_all(&side.to_le_bytes())?;
+                w.write_all(bytes)?;
+            }
+            Self::Dib {
+                id,
+                max_bytes,
+                bytes,
+            } => {
+                check_cap(*max_bytes)?;
+                write_head(w, Kind::MakeDib, *id, MAKE_HEAD.saturating_add(bytes.len()))?;
+                w.write_all(&max_bytes.to_le_bytes())?;
                 w.write_all(bytes)?;
             }
             Self::Bye => write_head(w, Kind::Bye, 0, 0)?,
@@ -88,6 +108,21 @@ fn read_draw<R: Read + ?Sized>(r: &mut R, head: Head) -> Result<Ask<'static>, Ip
     })
 }
 
+/// Reads a DIB ask's cap, checks it, then reads its PNG.
+fn read_make<R: Read + ?Sized>(r: &mut R, head: Head) -> Result<Ask<'static>, IpcError> {
+    let max_bytes = check_cap(u32::from_le_bytes(read_array::<MAKE_HEAD, _>(r)?))?;
+    let len = head
+        .len
+        .checked_sub(MAKE_HEAD)
+        .ok_or(IpcError::Inconsistent)?;
+    let bytes = Cow::Owned(read_tail(r, len)?);
+    Ok(Ask::Dib {
+        id: head.id,
+        max_bytes,
+        bytes,
+    })
+}
+
 impl fmt::Debug for Ask<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -101,6 +136,16 @@ impl fmt::Debug for Ask<'_> {
                 .field("id", id)
                 .field("codec", codec)
                 .field("side", side)
+                .field("len", &bytes.len())
+                .finish(),
+            Self::Dib {
+                id,
+                max_bytes,
+                bytes,
+            } => f
+                .debug_struct("Dib")
+                .field("id", id)
+                .field("max_bytes", max_bytes)
                 .field("len", &bytes.len())
                 .finish(),
             Self::Bye => f.write_str("Bye"),

@@ -1,6 +1,7 @@
-//! The media job (ADR-0034 decision 5): PNG and DIB bytes in, RGBA8 pixels no larger than the asked side out. Rows
-//! are scaled as they are read, so no full-size copy of an image is ever held.
+//! The media job (ADR-0034 decision 5): PNG and DIB bytes in, RGBA8 pixels no larger than the asked side out, rows
+//! scaled as they are read; and a PNG made into a `CF_DIB` for an insert, within the size the host asks.
 
+mod bitmap;
 mod dib;
 mod png;
 mod scale;
@@ -27,6 +28,14 @@ pub fn draw(codec: Codec, bytes: &[u8], side: u32, max_pixels: u64) -> Result<Pi
         Codec::Png => png::draw(bytes, side, max_pixels),
         Codec::Dib => dib::draw(bytes, side, max_pixels),
     }
+}
+
+/// Makes the `CF_DIB` of `png`, at most `max_bytes` long.
+///
+/// # Errors
+/// `TooBig` past `max_pixels` or `max_bytes`, before any row is decoded; `Refused` for a damaged, cut or interlaced PNG.
+pub fn make_dib(png: &[u8], max_bytes: usize, max_pixels: u64) -> Result<Vec<u8>, Why> {
+    bitmap::make(png, max_bytes, max_pixels)
 }
 
 /// Refuses an image of `width` by `height` that is empty or holds more than `max_pixels` pixels.

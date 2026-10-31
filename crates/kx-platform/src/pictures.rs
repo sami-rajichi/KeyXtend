@@ -1,5 +1,5 @@
 //! The OS-neutral worker host behind `Pictures` (ADR-0004, ADR-0034 decision 5): each session's `kx-pictures` thread
-//! starts the media worker on demand, sends one draw at a time and checks each reply. An adapter only starts it.
+//! starts the media worker on demand, sends one draw or DIB at a time and checks each reply. An adapter only starts it.
 
 mod host;
 mod piped;
@@ -8,8 +8,10 @@ pub use piped::{Child, Piped};
 
 use host::Host;
 use kx_ipc::{Ask, CLEAN_EXIT, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, Reply};
-use kx_module_api::Clock;
-use kx_module_api::ports::{PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels};
+use kx_module_api::ports::{
+    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
+};
+use kx_module_api::{Clock, Redacted};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread;
@@ -132,10 +134,12 @@ impl<S: Spawner> Pictures for WorkerPictures<S> {
     }
 }
 
-/// One draw for the session thread, and where its answer goes.
-struct Job {
-    ask: PictureAsk,
-    answer: Sender<Result<Pixels, PictureError>>,
+/// One ask for the session thread, and where its answer goes.
+enum Job {
+    /// Pixels to draw.
+    Draw(PictureAsk, Sender<Result<Pixels, PictureError>>),
+    /// A DIB to make.
+    Dib(DibAsk, Sender<Result<Redacted<Vec<u8>>, PictureError>>),
 }
 
 /// A session; dropping it ends its thread, which stops the worker.
@@ -144,18 +148,31 @@ struct Session {
     jobs: Option<Sender<Job>>,
 }
 
-impl PictureRun for Session {
-    fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
+impl Session {
+    /// Hands the job `wrap` makes to the session thread and waits for its answer; `Gone` without the thread.
+    fn ask<T>(
+        &self,
+        wrap: impl FnOnce(Sender<Result<T, PictureError>>) -> Job,
+    ) -> Result<T, PictureError> {
         let jobs = self.jobs.as_ref().ok_or(PictureError::Gone)?;
         let (answer, heard) = mpsc::channel();
         // The ask moves on to the session thread, so its bytes are never copied here.
-        jobs.send(Job { ask, answer })
-            .map_err(|_| PictureError::Gone)?;
+        jobs.send(wrap(answer)).map_err(|_| PictureError::Gone)?;
         heard.recv().unwrap_or(Err(PictureError::Gone))
     }
 }
 
-/// The session thread: it draws each job, stops an idle worker, and ends with the session.
+impl PictureRun for Session {
+    fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
+        self.ask(|answer| Job::Draw(ask, answer))
+    }
+
+    fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        self.ask(|answer| Job::Dib(ask, answer))
+    }
+}
+
+/// The session thread: it answers each job, stops an idle worker, and ends with the session.
 fn serve<S: Spawner>(mut host: Host<S>, inbox: &Receiver<Job>) {
     loop {
         let next = match host.wake_in() {
@@ -163,9 +180,8 @@ fn serve<S: Spawner>(mut host: Host<S>, inbox: &Receiver<Job>) {
             None => inbox.recv().map_err(|_| RecvTimeoutError::Disconnected),
         };
         match next {
-            Ok(job) => {
-                let _ = job.answer.send(host.draw(job.ask));
-            }
+            Ok(Job::Draw(ask, answer)) => drop(answer.send(host.draw(ask))),
+            Ok(Job::Dib(ask, answer)) => drop(answer.send(host.dib(ask))),
             Err(RecvTimeoutError::Timeout) => host.idle(),
             Err(RecvTimeoutError::Disconnected) => return,
         }

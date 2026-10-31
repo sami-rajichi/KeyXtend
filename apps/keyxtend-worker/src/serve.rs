@@ -1,48 +1,56 @@
-//! The worker's loop: one ask in, one reply out, until goodbye or the end of input. Every failed draw is a `Failed`
-//! reply, a panic included; a frame that cannot be read or written ends the loop.
+//! The worker's loop: one ask in, one reply out, until goodbye or the end of input. Every failed draw or DIB is a
+//! `Failed` reply, a panic included; a frame that cannot be read or written ends the loop.
 
 use crate::media::Picture;
 use kx_ipc::{Ask, Codec, IpcError, Reply, Why};
 use std::io::{Read, Write};
 use std::panic::{self, AssertUnwindSafe};
 
-/// The media job's loop: `serve` with every draw's panic kept off stderr.
+/// The media job's loop: `serve` with every ask's panic kept off stderr.
 ///
 /// # Errors
 /// As `serve`.
-pub fn answer<R, W, D>(r: &mut R, w: &mut W, draw: D) -> Result<(), IpcError>
+pub fn answer<R, W, D, M>(r: &mut R, w: &mut W, draw: D, make: M) -> Result<(), IpcError>
 where
     R: Read + ?Sized,
     W: Write + ?Sized,
     D: Fn(Codec, &[u8], u32) -> Result<Picture, Why>,
+    M: Fn(&[u8], usize) -> Result<Vec<u8>, Why>,
 {
     hush();
-    serve(r, w, draw)
+    serve(r, w, draw, make)
 }
 
-/// Answers each draw read from `r` on `w` with `draw`, one at a time, until `Bye` or the end of input.
+/// Answers each ask read from `r` on `w`, a draw with `draw` and a DIB with `make`, one at a time, until `Bye` or the
+/// end of input.
 ///
 /// # Errors
 /// The first frame that cannot be read or written; the stream is then out of step, so the worker exits.
-fn serve<R, W, D>(r: &mut R, w: &mut W, draw: D) -> Result<(), IpcError>
+fn serve<R, W, D, M>(r: &mut R, w: &mut W, draw: D, make: M) -> Result<(), IpcError>
 where
     R: Read + ?Sized,
     W: Write + ?Sized,
     D: Fn(Codec, &[u8], u32) -> Result<Picture, Why>,
+    M: Fn(&[u8], usize) -> Result<Vec<u8>, Why>,
 {
     loop {
-        let (id, outcome) = match Ask::read(r) {
+        // The image's bytes drop with the ask in its arm, before the reply is written.
+        let reply = match Ask::read(r) {
             Ok(Ask::Draw {
                 id,
                 codec,
                 side,
                 bytes,
-            }) => (id, guard(|| draw(codec, &bytes, side))),
+            }) => pixels(id, guard(|| draw(codec, &bytes, side))),
+            Ok(Ask::Dib {
+                id,
+                max_bytes,
+                bytes,
+            }) => made(id, guard(|| make(&bytes, cap(max_bytes)))),
             Ok(Ask::Bye) | Err(IpcError::Closed) => return Ok(()),
             Err(e) => return Err(e),
         };
-        // The image's bytes were dropped with the ask above, before the reply is written.
-        reply(id, outcome).write(w)?;
+        reply.write(w)?;
     }
 }
 
@@ -51,13 +59,18 @@ fn hush() {
     panic::set_hook(Box::new(|_| {}));
 }
 
-/// Runs `draw`, taking a panic as an internal failure.
-fn guard(draw: impl FnOnce() -> Result<Picture, Why>) -> Result<Picture, Why> {
-    panic::catch_unwind(AssertUnwindSafe(draw)).unwrap_or(Err(Why::Internal))
+/// Runs `work`, taking a panic as an internal failure.
+fn guard<T>(work: impl FnOnce() -> Result<T, Why>) -> Result<T, Why> {
+    panic::catch_unwind(AssertUnwindSafe(work)).unwrap_or(Err(Why::Internal))
+}
+
+/// The most bytes a DIB may hold, as asked; the frame keeps it within `MAX_IMAGE_BYTES`.
+fn cap(max_bytes: u32) -> usize {
+    usize::try_from(max_bytes).unwrap_or(usize::MAX)
 }
 
 /// The reply to draw `id`: its pixels, or why there are none.
-fn reply(id: u32, outcome: Result<Picture, Why>) -> Reply {
+fn pixels(id: u32, outcome: Result<Picture, Why>) -> Reply {
     match outcome {
         Ok(p) => Reply::Pixels {
             id,
@@ -65,6 +78,14 @@ fn reply(id: u32, outcome: Result<Picture, Why>) -> Reply {
             height: p.height,
             rgba: p.rgba,
         },
+        Err(why) => Reply::Failed { id, why },
+    }
+}
+
+/// The reply to DIB ask `id`: its bytes, or why there are none.
+fn made(id: u32, outcome: Result<Vec<u8>, Why>) -> Reply {
+    match outcome {
+        Ok(bytes) => Reply::Dib { id, bytes },
         Err(why) => Reply::Failed { id, why },
     }
 }

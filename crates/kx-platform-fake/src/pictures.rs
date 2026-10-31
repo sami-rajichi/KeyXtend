@@ -1,40 +1,53 @@
-//! A fake pictures service: each draw takes the answer the test queued, the latest repeating, and the fake records the
-//! session's config and counts the asks. It never sleeps: a hung worker is a queued `Timeout`.
+//! A fake pictures service: each draw or DIB takes the answer the test queued for its kind, the latest repeating, and
+//! the fake records the session's config and counts the asks. It never sleeps: a hung worker is a queued `Timeout`.
 
 use crate::lock;
-use kx_module_api::ports::{PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels};
+use kx_module_api::Redacted;
+use kx_module_api::ports::{
+    DibAsk, PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels,
+};
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::Duration;
 
-/// What one draw returns.
-type Drawn = Result<Pixels, PictureError>;
+/// The answers queued for one kind of ask: the next in turn, else the latest again, else `Gone`.
+struct Answers<T> {
+    queued: VecDeque<Result<T, PictureError>>,
+    last: Option<Result<T, PictureError>>,
+}
+
+impl<T> Default for Answers<T> {
+    fn default() -> Self {
+        Self {
+            queued: VecDeque::new(),
+            last: None,
+        }
+    }
+}
+
+impl<T: Clone> Answers<T> {
+    /// The next queued answer, else the latest, else `Gone`.
+    fn next(&mut self) -> Result<T, PictureError> {
+        if let Some(next) = self.queued.pop_front() {
+            self.last = Some(next);
+        }
+        self.last.clone().unwrap_or(Err(PictureError::Gone))
+    }
+}
 
 /// What the sessions did, and what the test set for them.
 #[derive(Default)]
 struct Log {
-    /// The answers still to come, oldest first.
-    queued: VecDeque<Drawn>,
-    /// The latest answer given, which repeats once the queue is empty.
-    last: Option<Drawn>,
+    draws: Answers<Pixels>,
+    dibs: Answers<Vec<u8>>,
     last_ask: Option<PictureAsk>,
+    last_dib: Option<DibAsk>,
     config: Option<PictureConfig>,
     opens: usize,
     stops: usize,
     asks: usize,
-}
-
-impl Log {
-    /// The next queued answer, else the latest, else `Gone`; pixels past `side` are `Gone`, as bad pixels are.
-    fn answer(&mut self, side: u32) -> Drawn {
-        if let Some(next) = self.queued.pop_front() {
-            self.last = Some(next);
-        }
-        let drawn = self.last.clone().unwrap_or(Err(PictureError::Gone))?;
-        let fits = drawn.width().max(drawn.height()) <= side;
-        fits.then_some(drawn).ok_or(PictureError::Gone)
-    }
+    dib_asks: usize,
 }
 
 /// The log, and the signal each ask gives, for a test waiting on another thread.
@@ -44,8 +57,8 @@ struct Shared {
     asked: Condvar,
 }
 
-/// Pictures shared by their clones: each draw of any session takes the next queued answer, the latest repeating once
-/// they run out, and `Gone` before any.
+/// Pictures shared by their clones: each draw or DIB of any session takes the next answer queued for its kind, the
+/// latest repeating once they run out, and `Gone` before any.
 #[derive(Clone, Default)]
 pub struct FakePictures {
     shared: Arc<Shared>,
@@ -60,7 +73,12 @@ impl FakePictures {
 
     /// Queues `drawn` for a later draw, after those already queued: pixels, or any `PictureError`.
     pub fn queue(&self, drawn: Result<Pixels, PictureError>) {
-        lock(&self.shared.log).queued.push_back(drawn);
+        lock(&self.shared.log).draws.queued.push_back(drawn);
+    }
+
+    /// Queues `made` for a later DIB, given back as it is, even past the ask's cap.
+    pub fn queue_dib(&self, made: Result<Vec<u8>, PictureError>) {
+        lock(&self.shared.log).dibs.queued.push_back(made);
     }
 
     /// How many sessions opened.
@@ -88,10 +106,22 @@ impl FakePictures {
         lock(&self.shared.log).asks
     }
 
+    /// How many DIBs were asked, failed ones too.
+    #[must_use]
+    pub fn dib_asks(&self) -> usize {
+        lock(&self.shared.log).dib_asks
+    }
+
     /// The latest draw's ask, failed or not.
     #[must_use]
     pub fn last_ask(&self) -> Option<PictureAsk> {
         lock(&self.shared.log).last_ask.clone()
+    }
+
+    /// The latest DIB's ask, failed or not.
+    #[must_use]
+    pub fn last_dib(&self) -> Option<DibAsk> {
+        lock(&self.shared.log).last_dib.clone()
     }
 
     /// Waits up to `within` until `count` draws were asked, so a test never sleeps; true when they were.
@@ -114,7 +144,8 @@ impl fmt::Debug for FakePictures {
         f.debug_struct("FakePictures")
             .field("opens", &log.opens)
             .field("asks", &log.asks)
-            .field("queued", &log.queued.len())
+            .field("dib_asks", &log.dib_asks)
+            .field("queued", &log.draws.queued.len())
             .finish_non_exhaustive()
     }
 }
@@ -135,13 +166,24 @@ struct FakePictureRun {
 }
 
 impl PictureRun for FakePictureRun {
+    /// Pixels past the ask's side are `Gone`, as bad pixels are.
     fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
         let mut log = lock(&self.shared.log);
         log.asks += 1;
         let side = ask.side;
         log.last_ask = Some(ask);
         self.shared.asked.notify_all();
-        log.answer(side)
+        let drawn = log.draws.next()?;
+        let fits = drawn.width().max(drawn.height()) <= side;
+        fits.then_some(drawn).ok_or(PictureError::Gone)
+    }
+
+    fn dib(&mut self, ask: DibAsk) -> Result<Redacted<Vec<u8>>, PictureError> {
+        let mut log = lock(&self.shared.log);
+        log.dib_asks += 1;
+        log.last_dib = Some(ask);
+        self.shared.asked.notify_all();
+        log.dibs.next().map(Redacted::new)
     }
 }
 

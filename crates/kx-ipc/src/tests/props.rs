@@ -15,16 +15,23 @@ const MAX_JUNK_BYTES: usize = 256;
 const NEAR_CAP: u32 = 2;
 
 fn an_ask() -> impl Strategy<Value = Ask<'static>> {
-    let bytes = prop::collection::vec(any::<u8>(), 1..MAX_CASE_BYTES);
+    let bytes = || prop::collection::vec(any::<u8>(), 1..MAX_CASE_BYTES);
     let codec = prop::sample::select(Codec::ALL);
-    let draw =
-        (any::<u32>(), codec, 1..=MAX_SIDE, bytes).prop_map(|(id, codec, side, bytes)| Ask::Draw {
+    let draw = (any::<u32>(), codec, 1..=MAX_SIDE, bytes()).prop_map(|(id, codec, side, bytes)| {
+        Ask::Draw {
             id,
             codec,
             side,
             bytes: Cow::Owned(bytes),
-        });
-    prop_oneof![draw, Just(Ask::Bye)]
+        }
+    });
+    let cap = 1..=u32::try_from(MAX_IMAGE_BYTES).unwrap();
+    let dib = (any::<u32>(), cap, bytes()).prop_map(|(id, max_bytes, bytes)| Ask::Dib {
+        id,
+        max_bytes,
+        bytes: Cow::Owned(bytes),
+    });
+    prop_oneof![draw, dib, Just(Ask::Bye)]
 }
 
 fn a_reply() -> impl Strategy<Value = Reply> {
@@ -40,7 +47,9 @@ fn a_reply() -> impl Strategy<Value = Reply> {
     });
     let why = prop::sample::select(Why::ALL);
     let failed = (any::<u32>(), why).prop_map(|(id, why)| Reply::Failed { id, why });
-    prop_oneof![pixels, failed]
+    let bytes = prop::collection::vec(any::<u8>(), 1..MAX_CASE_BYTES);
+    let dib = (any::<u32>(), bytes).prop_map(|(id, bytes)| Reply::Dib { id, bytes });
+    prop_oneof![pixels, failed, dib]
 }
 
 /// Payload lengths: small ones, ones around each cap, and any at all.
@@ -53,6 +62,7 @@ fn a_len() -> impl Strategy<Value = u32> {
         0..64u32,
         near(MAX_ASK_LEN),
         near(MAX_REPLY_LEN),
+        near(MAX_IMAGE_BYTES),
         any::<u32>()
     ]
 }

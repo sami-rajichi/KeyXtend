@@ -6,7 +6,7 @@ use super::{Picture, check_size};
 use kx_ipc::{RGBA_BYTES, Why};
 
 /// Header sizes read: `BITMAPINFOHEADER`, `BITMAPV4HEADER` and `BITMAPV5HEADER`.
-const INFO: usize = 40;
+pub(super) const INFO: usize = 40;
 const V4: usize = 108;
 const V5: usize = 124;
 /// Field offsets in every header.
@@ -20,9 +20,9 @@ const COLOURS: usize = 32;
 const MASKS: usize = 40;
 /// Bits per pixel read: plain 24-bit rows, and 32-bit rows plain or with masks.
 const BITS_RGB: u16 = 24;
-const BITS_RGBA: u16 = 32;
+pub(super) const BITS_RGBA: u16 = 32;
 /// Compression codes read: plain rows, and rows with bit masks.
-const BI_RGB: u32 = 0;
+pub(super) const BI_RGB: u32 = 0;
 const BI_BITFIELDS: u32 = 3;
 /// Bytes in a mask or a colour-table entry.
 const DWORD: usize = size_of::<u32>();
@@ -30,6 +30,8 @@ const DWORD: usize = size_of::<u32>();
 const RGB_MASKS: usize = 3 * DWORD;
 /// Rows are padded to a multiple of this many bytes.
 const ROW_ALIGN: u64 = 4;
+/// A DIB's plane count, which is always one.
+pub(super) const ONE_PLANE: u16 = 1;
 
 /// Where each channel sits in a stored pixel.
 #[derive(Copy, Clone)]
@@ -109,7 +111,7 @@ impl Dib {
         let width = u32::try_from(i32_at(bytes, WIDTH)?).map_err(|_| Why::Refused)?;
         let height = i32_at(bytes, HEIGHT)?;
         check_size(width, height.unsigned_abs(), max_pixels)?;
-        if u16_at(bytes, PLANES)? != 1 {
+        if u16_at(bytes, PLANES)? != ONE_PLANE {
             return Err(Why::Refused);
         }
         let (layout, masked) = layout(bytes, size)?;

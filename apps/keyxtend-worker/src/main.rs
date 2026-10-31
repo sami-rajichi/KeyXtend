@@ -24,10 +24,16 @@ fn main() -> ExitCode {
     }
 }
 
-/// Answers draws on stdin and stdout until goodbye or the end of input.
+/// Answers draws and DIB asks on stdin and stdout until goodbye or the end of input.
 fn media_job(max_pixels: u64) -> ExitCode {
     let draw = |codec, bytes: &[u8], side| media::draw(codec, bytes, side, max_pixels);
-    match serve::answer(&mut io::stdin().lock(), &mut io::stdout().lock(), draw) {
+    let make = |png: &[u8], max_bytes| media::make_dib(png, max_bytes, max_pixels);
+    match serve::answer(
+        &mut io::stdin().lock(),
+        &mut io::stdout().lock(),
+        draw,
+        make,
+    ) {
         Ok(()) => ExitCode::from(CLEAN_EXIT),
         Err(e) => fail(&e),
     }

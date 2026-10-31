@@ -144,7 +144,7 @@ fn too_many_pixels_are_refused_from_the_header_alone() {
 }
 
 /// The signature and the IHDR chunk: 8 bytes, then length, type, 13 bytes of fields and the checksum.
-const IHDR_END: usize = 8 + 4 + 4 + 13 + 4;
+pub(super) const IHDR_END: usize = 8 + 4 + 4 + 13 + 4;
 
 #[test]
 fn rows_wider_than_the_decoder_budget_are_too_big() {

@@ -18,6 +18,8 @@ pub const MAX_RGBA_BYTES: usize = MAX_SIDE as usize * MAX_SIDE as usize * RGBA_B
 
 /// A draw's fields before its image: the codec and the longest side.
 pub(crate) const DRAW_HEAD: usize = size_of::<u8>() + size_of::<u32>();
+/// A DIB ask's field before its PNG: the most bytes the DIB may hold.
+pub(crate) const MAKE_HEAD: usize = size_of::<u32>();
 /// The fewest image bytes a draw carries: an empty image is refused.
 pub(crate) const MIN_IMAGE_BYTES: usize = 1;
 /// A pixel reply's fields before its pixels: the width and the height.
@@ -39,3 +41,6 @@ pub const DECODE_BYTES: usize = 16 * 1024 * 1024;
 // Every payload length fits the header's `u32` field.
 const _: () = assert!(MAX_ASK_LEN <= u32::MAX as usize);
 const _: () = assert!(MAX_REPLY_LEN <= u32::MAX as usize);
+// A DIB ask and its reply fit within the largest payloads.
+const _: () = assert!(MAKE_HEAD + MAX_IMAGE_BYTES <= MAX_ASK_LEN);
+const _: () = assert!(MAX_IMAGE_BYTES <= MAX_REPLY_LEN);
