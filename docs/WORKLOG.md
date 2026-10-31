@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 03:50 — P8: the clipboard panel's search, state and view
+`kx-mod-clipboard` now folds a search exactly as each entry's search text (case, accents, harakat, tatweel and alef forms, line breaks as one space), so `ECOLE` finds `école` and `ارسلت` finds `أرسلت`, and filters by kind (Text with links, Images, Files, Media). The new `Panel` state machine takes our keyboard's keys and the ui's clicks: the arrows move the highlight and switch filters, Space and row clicks tick in tick order that survives searches and filters, Enter inserts the ticked rows or the highlighted one, Esc closes the question, then the preview, then clears the search, then the panel, and a click from an older view is ignored. Delete all asks with the count of every unpinned entry, whatever the view, and ticks drop when their entry goes. `view::build` gives the `ClipView` page at the ui's page size, with tick numbers, local days, pins, media expiring today, Unpin, the preview, the storage line and the note, and no words of its own.
+
 ## 2026-10-31 03:49 — P8: the keyboard's clipboard panel review fixes
 A dead key pressed while the clipboard panel takes keys now only spends the latches and keeps the keyboard's wait, so it stays in step with an accent the app may still hold. A panel key now first ends a burst left open by a held key, as a tap does, so its latches never ride on the search letter. Tests now show that without `WriteClipboard` the keyboard does not start and without `ReadClipboard` the panel hears no keys, and the search oracle covers Shift and `AltGr` with Caps Lock. The README says the language list takes Esc first when it opens over the panel.
 
