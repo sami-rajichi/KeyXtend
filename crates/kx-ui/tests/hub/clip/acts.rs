@@ -1,6 +1,6 @@
 //! Clicks on the panel: each kind QML names sends its `ClipAct`, a tick carries the round QML drew and goes only
-//! while that view is kept, and the filters follow `Filter::ORDER`. An unknown kind, a row or filter out of range, or
-//! a tick with no view sends nothing, with one warning that holds no content.
+//! while that view is kept, and the filters follow `Filter::ORDER`. An unknown kind or a row or filter out of range
+//! sends nothing, with one warning that holds no content; a late tick sends nothing quietly.
 
 use super::{heard, page, row, shown};
 use crate::Rig;
@@ -97,12 +97,14 @@ fn a_bad_click_sends_nothing_and_warns_once_without_content() {
     assert!(lines.iter().all(|l| !l.contains(SECRET)), "{lines:?}");
 }
 
+/// A tick that races the panel's close finds no view kept: a late click, dropped quietly like an older view's.
 #[test]
-fn with_no_view_a_tick_sends_nothing_and_close_still_goes() {
+fn with_no_view_a_tick_sends_nothing_quietly_and_close_still_goes() {
     let rig = Rig::new();
     let (_bus, acts, _subs) = heard(&rig);
-    rig.hub.clip_act(TICK, 0, 0);
+    let warned = warnings_of(|| rig.hub.clip_act(TICK, 0, 0));
     assert!(acts.take().is_empty(), "no round to name");
+    assert!(warned.is_empty(), "a late click is no fault: {warned:?}");
     rig.hub.clip_act(CLOSE, 0, 0);
     assert_eq!(acts.take(), [ClipAct::Close]);
 }

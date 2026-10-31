@@ -26,7 +26,12 @@ fn the_kept_handle_sends_clicks_and_can_never_paste() {
 
 #[test]
 fn only_a_tick_needs_the_kept_view_and_its_round() {
-    assert_eq!(act_of(acts::TICK, 0, 4, None), Err(Dropped::Bad));
+    let closing = act_of(acts::TICK, 0, 4, None);
+    assert_eq!(
+        closing,
+        Err(Dropped::Stale),
+        "a tick as the panel closes is late"
+    );
     assert_eq!(act_of(acts::CLOSE, 0, 1, None), Ok(ClipAct::Close));
     let tick = ClipAct::Tick { round: 4, row: 2 };
     assert_eq!(act_of(acts::TICK, 2, 4, Some((4, 3))), Ok(tick));

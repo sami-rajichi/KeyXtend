@@ -32,9 +32,9 @@ pub const CLOSE: &str = "close";
 /// Why a click sends nothing.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(super) enum Dropped {
-    /// It names a row of a view the hub no longer keeps, so that row may hold another entry now.
+    /// It names a row of a view the hub no longer keeps, or of none as the panel closes: a harmless late click.
     Stale,
-    /// An unknown kind, an argument out of range, or a tick with no view: QML sent what it never should.
+    /// An unknown kind or an argument out of range: QML sent what it never should.
     Bad,
 }
 
@@ -48,7 +48,7 @@ pub(super) fn act_of(
 ) -> Result<ClipAct, Dropped> {
     Ok(match kind {
         TICK => {
-            let (kept, rows) = shown.ok_or(Dropped::Bad)?;
+            let (kept, rows) = shown.ok_or(Dropped::Stale)?;
             let round = u32::try_from(round).ok().filter(|&r| r == kept);
             let round = round.ok_or(Dropped::Stale)?;
             let row = u8::try_from(arg).ok().filter(|&r| usize::from(r) < rows);
