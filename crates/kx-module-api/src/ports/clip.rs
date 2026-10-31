@@ -78,7 +78,7 @@ pub enum ClipNote {
     TooBig {
         /// The app that copied.
         app: Option<AppRef>,
-        /// How many bytes the copy holds.
+        /// At least how many bytes the copy holds: the count stops once it passes the cap.
         bytes: u64,
     },
     /// The clipboard stayed locked past `ClipWait::open_ms`, so this copy was missed.
@@ -110,6 +110,8 @@ pub enum FileFact {
     Size(u64),
     /// Nothing is there any more.
     Gone,
+    /// Its drive or share is out of reach now, so the row stays and an insert skips it.
+    Away,
 }
 
 /// Why the clipboard could not be watched or set.

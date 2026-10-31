@@ -148,7 +148,7 @@ impl Entry {
     pub fn size_files(&mut self, facts: &[FileFact]) {
         let sizes = facts.iter().map(|f| match f {
             FileFact::Size(n) => *n,
-            FileFact::Gone => 0,
+            FileFact::Gone | FileFact::Away => 0,
         });
         self.shown = sizes.fold(0, u64::saturating_add);
     }

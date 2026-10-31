@@ -1,9 +1,11 @@
 //! The watch: a message-only window on its own thread (`kx-clip-watch`) hears each clipboard change through
-//! `AddClipboardFormatListener` and tells its note there. Dropping the run removes the listener and ends the thread.
+//! `AddClipboardFormatListener` and tells its note there. Dropping the run removes the listener and ends the thread,
+//! waiting `STOP_WAIT` at most.
 
 use std::cell::OnceCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
+use std::time::Duration;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipConfig, ClipError, ClipNote, ClipRun, Clipboard, FileFact};
@@ -24,6 +26,8 @@ const CLASS: &str = "KeyXtend.ClipWatch";
 const THREAD: &str = "kx-clip-watch";
 /// What `WM_CREATE` answers so the window is not made: Windows refused the listener.
 const NOT_MADE: LRESULT = LRESULT(-1);
+/// How long dropping a watch waits for its thread before it leaves the thread to end alone.
+const STOP_WAIT: Duration = Duration::from_secs(1);
 
 /// Where a watch tells its notes.
 type Tell = Box<dyn Fn(ClipNote) + Send>;
@@ -89,9 +93,15 @@ struct Run(Option<Hidden>);
 impl ClipRun for Run {}
 
 impl Drop for Run {
+    /// Waits `STOP_WAIT` at most. A thread an app's late rendering holds ends alone once it is let go, and may tell
+    /// that one copy's note after the drop.
     fn drop(&mut self) {
-        if let Some(hidden) = self.0.take() {
-            hidden.stop();
+        let Some(hidden) = self.0.take() else {
+            return;
+        };
+        if !hidden.stop_within(STOP_WAIT) {
+            let wait_ms = STOP_WAIT.as_millis();
+            tracing::warn!(wait_ms, "the clipboard watch did not stop in time");
         }
     }
 }

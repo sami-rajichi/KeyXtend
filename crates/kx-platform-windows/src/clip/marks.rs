@@ -47,13 +47,29 @@ impl Marks {
         self.present.iter().any(|n| has(n)) || self.zero.iter().any(|n| dword(n) == Some(0))
     }
 
-    /// Whether the open clipboard carries one of these markers. A marker Windows cannot name counts as there, so a
-    /// failure never reads a marked copy.
+    /// Whether the open clipboard carries one of these markers. A marker Windows cannot name, or a number marker it
+    /// cannot read, counts as there, so a failure never reads a marked copy.
     #[cfg(windows)]
     pub(crate) fn on(&self, open: &Open) -> bool {
-        let has = |n: &str| open::format_id(n).map_or(true, |id| open::available(open, id));
-        let dword = |n: &str| open::format_id(n).map_or(Some(0), |id| open::dword_of(open, id));
+        let there = |id: u32| open::available(open, id);
+        let has = |n: &str| open::format_id(n).map_or(true, there);
+        let read = |id: u32| open::dword_of(open, id);
+        let dword = |n: &str| number(open::format_id(n).ok(), there, read);
         self.marked(has, dword)
+    }
+}
+
+/// The number a marker format with `id` holds (`None` when Windows cannot register it): none when it is not
+/// `there`, and 0 when it cannot be named or `read`, so a failure counts as marked.
+pub(crate) fn number(
+    id: Option<u32>,
+    there: impl Fn(u32) -> bool,
+    read: impl Fn(u32) -> Option<u32>,
+) -> Option<u32> {
+    match id {
+        None => Some(0),
+        Some(id) if there(id) => read(id).or(Some(0)),
+        Some(_) => None,
     }
 }
 

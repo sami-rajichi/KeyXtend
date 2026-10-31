@@ -11,6 +11,7 @@ use super::*;
 #[cfg(windows)]
 mod app;
 mod bytes;
+mod gather;
 #[cfg(windows)]
 mod live;
 
@@ -85,6 +86,19 @@ fn a_number_marker_skips_only_when_it_holds_zero() {
     assert!(m.marked(|_| false, |_| Some(0)));
     assert!(!m.marked(|_| false, |_| Some(1)));
     assert!(!m.marked(|_| false, |_| None), "absent");
+}
+
+#[test]
+fn a_number_marker_that_cannot_be_named_or_read_counts_as_zero() {
+    use super::marks::number;
+    assert_eq!(number(None, |_| false, |_| None), Some(0), "not registered");
+    assert_eq!(
+        number(Some(1), |_| true, |_| None),
+        Some(0),
+        "there, unreadable"
+    );
+    assert_eq!(number(Some(1), |_| true, |_| Some(7)), Some(7), "read");
+    assert_eq!(number(Some(1), |_| false, |_| Some(7)), None, "absent");
 }
 
 #[test]
@@ -193,6 +207,29 @@ fn file_facts_see_a_file_and_then_its_deletion() {
     assert_eq!(facts(&paths), [FileFact::Size(5), FileFact::Size(0)]);
     std::fs::remove_file(&path).unwrap();
     assert_eq!(facts(&paths), [FileFact::Gone, FileFact::Size(0)]);
+}
+
+#[cfg(windows)]
+#[test]
+fn a_path_on_a_drive_that_is_not_there_is_away_not_gone() {
+    let Some(free) = free_drive() else {
+        return;
+    };
+    let path = PathBuf::from(format!(r"{free}:\kx-test\gone.txt"));
+    assert_eq!(facts(&Redacted::new(vec![path])), [FileFact::Away]);
+}
+
+/// A drive letter no drive uses now; `None` when every letter is taken.
+#[cfg(windows)]
+#[allow(unsafe_code, reason = "A plain query of the drive letters in use.")]
+fn free_drive() -> Option<char> {
+    // SAFETY: a plain query with no arguments.
+    let used = unsafe { windows::Win32::Storage::FileSystem::GetLogicalDrives() };
+    let letters = ('A'..='Z').zip(0..u32::BITS);
+    letters
+        .filter(|&(_, bit)| used & (1 << bit) == 0)
+        .last()
+        .map(|(c, _)| c)
 }
 
 #[test]

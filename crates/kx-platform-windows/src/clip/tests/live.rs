@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use kx_module_api::ports::{
     ClipConfig, ClipError, ClipNote, ClipRun, ClipWait, Clipboard, ClipboardWriter,
 };
+use windows::Win32::System::Ole::CF_UNICODETEXT;
 
 use super::*;
 use crate::clip::open;
@@ -108,11 +109,19 @@ fn a_written_text_comes_back_with_windows_line_breaks() {
 }
 
 #[test]
-fn a_write_carries_our_marker_so_our_own_watch_skips_it() {
+fn a_write_carries_our_marker_first_so_our_own_watch_skips_it() {
     let _real = hold();
     let watch = Watch::shipped(ROOMY);
     write(&[text(TEXT)]);
     assert!(watch.hear(is_marked).is_some());
+    let open = open::open(WAIT).unwrap();
+    let held = open::formats(&open);
+    let at = |f: u32| held.iter().position(|&h| h == f).unwrap();
+    let marker = open::format_id(HISTORY).unwrap();
+    assert!(
+        at(marker) < at(u32::from(CF_UNICODETEXT.0)),
+        "the marker before any part"
+    );
 }
 
 #[test]

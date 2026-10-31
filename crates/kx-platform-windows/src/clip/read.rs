@@ -1,4 +1,4 @@
-//! Reading one copy: the markers first, then a clear and the size, and only then the parts. The app is named after
+//! Reading one copy: the markers first, then a clear, then each part sized before it is read. The app is named after
 //! the clipboard closes, so no other app waits on our file reads.
 
 use kx_module_api::Redacted;
@@ -6,8 +6,9 @@ use kx_module_api::ports::{AppRef, ClipConfig, ClipError, ClipNote, ClipPart, Cl
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Ole::{CF_DIB, CF_DIBV5, CF_HDROP, CF_UNICODETEXT, DROPEFFECT_COPY};
 
+use super::gather::{Found, gather};
 use super::open::{self, Open};
-use super::parts::{Formats, Kind, UNITS_PER_CHAR, Want, blank, text_of, until_nul};
+use super::parts::{Formats, Kind, UNITS_PER_CHAR, Want, text_of, until_nul};
 use super::{Marks, Table, app, hdrop};
 
 /// What one look at the clipboard saw, before its app is named.
@@ -59,8 +60,8 @@ pub(crate) fn note(owner: HWND, cfg: &ClipConfig, marks: &Marks, formats: &Forma
     seen.note(app::of(maker))
 }
 
-/// The markers first, then an empty clipboard and the summed size, and only then the parts. A blank text is dropped,
-/// and alone it makes a clear.
+/// The markers first, then an empty clipboard, then the parts as `gather` fetches them. A blank text is dropped, and
+/// alone it makes a clear.
 fn look(open: &Open, max_bytes: u64, marks: &Marks, formats: &Formats) -> Seen {
     if marks.on(open) {
         return Seen::Marked;
@@ -70,22 +71,11 @@ fn look(open: &Open, max_bytes: u64, marks: &Marks, formats: &Formats) -> Seen {
         return Seen::Cleared;
     }
     let wants = formats.pick(&held);
-    let sizes = wants.iter().filter_map(|w| open::size(open, w.format));
-    let bytes = sizes.fold(0, u64::saturating_add);
-    if bytes > max_bytes {
-        return Seen::TooBig(bytes);
-    }
-    let mut blanked = false;
-    let mut parts: Vec<ClipPart> = wants.iter().filter_map(|&w| part(open, w)).collect();
-    parts.retain(|p| {
-        let gone = matches!(p, ClipPart::Text(t) if blank(t.expose()));
-        blanked |= gone;
-        !gone
-    });
-    if parts.is_empty() && blanked {
-        Seen::Cleared
-    } else {
-        Seen::Copied(parts)
+    let size = |format| open::size(open, format);
+    match gather(&wants, max_bytes, size, |want| part(open, want)) {
+        Err(bytes) => Seen::TooBig(bytes),
+        Ok(Found { parts, blanked }) if parts.is_empty() && blanked => Seen::Cleared,
+        Ok(Found { parts, .. }) => Seen::Copied(parts),
     }
 }
 

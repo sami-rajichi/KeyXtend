@@ -21,10 +21,10 @@ impl ClipboardWriter for WinClipboardWriter {
         let formats = read::ids(table)?;
         let open = open::open(wait)?;
         open::empty(&open)?;
+        // The marker goes first, so a part that fails never leaves a half copy that becomes a row.
+        mark(&open, table)?;
         let mut encoded = parts.iter().flat_map(|p| formats.encode(p));
-        let wrote = encoded.try_for_each(|(format, bytes)| open::put(&open, format, &bytes));
-        // A part that failed still leaves the marker, so no half copy becomes a row.
-        mark(&open, table).and(wrote)
+        encoded.try_for_each(|(format, bytes)| open::put(&open, format, &bytes))
     }
 }
 

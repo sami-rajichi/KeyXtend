@@ -1,9 +1,10 @@
 //! A hidden window on its own thread that hears messages until it is stopped; it is never shown and never takes the focus.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{Builder, JoinHandle};
+use std::time::Duration;
 
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
@@ -34,6 +35,8 @@ pub(crate) struct Hidden {
     join: JoinHandle<()>,
     /// Set by `stop` before its `WM_QUIT`, so a quit another program posts is ignored.
     stopping: Arc<AtomicBool>,
+    /// Hears the thread end, as its sender drops there; in a `Mutex` only so a `Hidden` is `Sync`.
+    ended: Mutex<Receiver<()>>,
 }
 
 impl Hidden {
@@ -79,9 +82,11 @@ impl Hidden {
         setup: impl FnOnce() + Send + 'static,
     ) -> Result<Self, UiError> {
         let (tx, rx) = mpsc::channel();
+        let (done, ended) = mpsc::channel::<()>();
         let stopping = Arc::new(AtomicBool::new(false));
         let asked = Arc::clone(&stopping);
         let spawned = builder.spawn(move || {
+            let _done = done;
             setup();
             match window(PCWSTR(class.as_ptr()), kind, proc) {
                 Ok(hwnd) => {
@@ -98,22 +103,38 @@ impl Hidden {
             thread,
             join,
             stopping,
+            ended: Mutex::new(ended),
         })
     }
 
     /// Ends the window and its thread, and waits for it as `waits` says.
-    #[allow(unsafe_code, reason = "Posts a quit message to our own thread.")]
     pub(crate) fn stop(self) {
+        self.end(None);
+    }
+
+    /// Like `stop`, but waits `wait` at most: a thread still busy then ends alone later. True when it ended in time.
+    pub(crate) fn stop_within(self, wait: Duration) -> bool {
+        self.end(Some(wait))
+    }
+
+    /// Asks the thread to end and waits for it as `waits` says, for `wait` at most; true when it was joined.
+    #[allow(unsafe_code, reason = "Posts a quit message to our own thread.")]
+    fn end(self, wait: Option<Duration>) -> bool {
         self.stopping.store(true, Ordering::SeqCst);
         // SAFETY: posts WM_QUIT to our own window thread; a thread already gone just refuses it.
         let posted =
             unsafe { PostThreadMessageW(self.thread, WM_QUIT, WPARAM(0), LPARAM(0)) }.is_ok();
-        if waits(
-            posted,
-            self.join.thread().id() == std::thread::current().id(),
-        ) {
-            let _ = self.join.join();
+        let own = self.join.thread().id() == std::thread::current().id();
+        let ended = self
+            .ended
+            .into_inner()
+            .unwrap_or_else(PoisonError::into_inner);
+        let late = |w| matches!(ended.recv_timeout(w), Err(RecvTimeoutError::Timeout));
+        if !waits(posted, own) || wait.is_some_and(late) {
+            return false;
         }
+        let _ = self.join.join();
+        true
     }
 }
 
@@ -219,46 +240,4 @@ fn destroy(hwnd: HWND) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use windows::Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, IsWindow, SendMessageW, WM_CLOSE,
-    };
-
-    #[test]
-    fn only_stop_or_an_error_ends_the_loop() {
-        assert!(ends(0, true), "stop's WM_QUIT");
-        assert!(!ends(0, false), "a WM_QUIT another program posts");
-        assert!(
-            ends(1, true),
-            "any message once stopping, so a refused quit still ends it"
-        );
-        assert!(!ends(1, false), "any other message");
-        assert!(ends(-1, false) && ends(-1, true), "an error");
-    }
-
-    #[test]
-    fn stop_waits_only_for_a_quit_it_posted_and_never_from_the_window_thread() {
-        assert!(waits(true, false), "a posted quit ends the loop");
-        assert!(!waits(false, false), "a full queue refused the quit");
-        assert!(!waits(true, true) && !waits(false, true), "its own thread");
-    }
-
-    #[test]
-    #[allow(
-        unsafe_code,
-        reason = "Finds and messages the test's own hidden window."
-    )]
-    fn another_program_cannot_close_a_hidden_window() {
-        let class = crate::wide(&format!("KeyXtendTest.{}.close", std::process::id()));
-        let hidden = Hidden::start(class.clone(), Kind::TopLevel, Some(answer), || ()).unwrap();
-        // SAFETY: the class name ends with a null; WM_CLOSE carries no pointers.
-        let open = unsafe {
-            let window = FindWindowExW(None, None, PCWSTR(class.as_ptr()), PCWSTR::null()).unwrap();
-            SendMessageW(window, WM_CLOSE, None, None);
-            IsWindow(Some(window)).as_bool()
-        };
-        hidden.stop();
-        assert!(open, "the window ignored WM_CLOSE");
-    }
-}
+mod tests;

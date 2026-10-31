@@ -44,6 +44,21 @@ fn images_keep_their_bytes_in_their_own_format() {
 }
 
 #[test]
+fn a_dib_with_a_v4_or_v5_header_goes_as_dibv5_and_a_smaller_one_as_dib() {
+    let dib = |header: u32| ClipPart::Image {
+        codec: ImageCodec::Dib,
+        bytes: Redacted::new(header.to_le_bytes().into_iter().chain([0; 8]).collect()),
+    };
+    for (header, format) in [(40, F.dib), (108, F.dib_v5), (124, F.dib_v5)] {
+        assert_eq!(
+            F.encode(&dib(header))[0].0,
+            format,
+            "a {header}-byte header"
+        );
+    }
+}
+
+#[test]
 fn files_go_as_a_list_that_says_copy() {
     let paths = vec![PathBuf::from(r"C:\a.txt"), PathBuf::from(r"D:\b c\é.png")];
     let part = ClipPart::Files(Redacted::new(paths.clone()));
@@ -89,6 +104,14 @@ fn a_list_without_its_last_nul_keeps_only_the_paths_that_ended() {
     let mut bytes = hdrop::encode(&[PathBuf::from("a"), PathBuf::from("bc")]);
     bytes.truncate(bytes.len() - 4);
     assert_eq!(hdrop::decode(&bytes), Some(vec![PathBuf::from("a")]));
+}
+
+#[cfg(windows)]
+#[test]
+fn a_dibv5_header_starts_at_the_size_of_windows_v4_header() {
+    use windows::Win32::Graphics::Gdi::BITMAPV4HEADER;
+    let v4 = usize::try_from(crate::clip::parts::V4_HEADER).unwrap();
+    assert_eq!(v4, size_of::<BITMAPV4HEADER>());
 }
 
 #[cfg(windows)]

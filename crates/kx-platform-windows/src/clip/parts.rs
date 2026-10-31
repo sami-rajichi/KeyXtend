@@ -88,11 +88,13 @@ impl Formats {
             ClipPart::Html(b) => vec![(self.html, with_nul(b.expose()).into())],
             ClipPart::Rtf(b) => vec![(self.rtf, with_nul(b.expose()).into())],
             ClipPart::Image { codec, bytes } => {
+                let bytes = bytes.expose().as_slice();
                 let format = match codec {
                     ImageCodec::Png => self.png,
+                    ImageCodec::Dib if header(bytes) >= Some(V4_HEADER) => self.dib_v5,
                     ImageCodec::Dib => self.dib,
                 };
-                vec![(format, Cow::Borrowed(bytes.expose().as_slice()))]
+                vec![(format, Cow::Borrowed(bytes))]
             }
             ClipPart::Files(paths) => vec![
                 (self.files, hdrop::encode(paths.expose()).into()),
@@ -118,6 +120,15 @@ impl Formats {
             _ => return None,
         })
     }
+}
+
+/// Bytes in a `BITMAPV4HEADER`: a DIB whose header is this long or longer goes as `CF_DIBV5`, and Windows makes the
+/// `CF_DIB` from it.
+pub(crate) const V4_HEADER: u32 = 108;
+
+/// The header size a DIB starts with; `None` when it is too short to say.
+fn header(dib: &[u8]) -> Option<u32> {
+    dib.first_chunk::<4>().copied().map(u32::from_le_bytes)
 }
 
 /// `text` with each line feed that follows no carriage return made CR LF, as Windows text breaks lines.
