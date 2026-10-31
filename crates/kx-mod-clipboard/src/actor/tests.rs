@@ -20,6 +20,7 @@ mod paste;
 mod pictures;
 mod props;
 mod rig;
+mod room;
 mod saves;
 mod stops;
 

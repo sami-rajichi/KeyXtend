@@ -165,6 +165,21 @@ Item {
             box.visible = plain.visible = false;
         }
 
+        // Until the module reads the room, no storage line or its icon shows, and Open folder keeps its place.
+        function test_a_room_not_read_yet_shows_no_storage_line() {
+            const box = open("list");
+            const plain = box.height;
+            const v = Kit.view("en", "list");
+            v.room = null;
+            box.view = v;
+            verify(waitForPolish(box));
+            const drive = Board.all(box.contentItem, o => o.visible && o.icon === NL.lk.icons.clip.room);
+            compare(drive.length, 0, "no storage icon alone");
+            verify(button(box, "clip.open-folder").enabled, "Open folder stays");
+            compare(box.height, plain, "the panel keeps its size");
+            box.visible = false;
+        }
+
         function test_a_press_on_the_panel_is_seen_and_still_acts() {
             const box = open("list");
             const spy = createTemporaryObject(spyC, root, { target: box, signalName: "touched" });

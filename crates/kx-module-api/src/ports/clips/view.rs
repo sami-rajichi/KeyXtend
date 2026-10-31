@@ -174,8 +174,8 @@ pub struct ClipPage {
     pub confirm: Option<u16>,
     /// The number of unpinned entries, so the ui disables Delete all at 0.
     pub unpinned: u16,
-    /// What the history takes and its drive has free.
-    pub room: Room,
+    /// What the history takes and its drive has free, once read; `None` until then, so no storage line shows.
+    pub room: Option<Room>,
     /// The history's size limit, in bytes.
     pub cap: u64,
     /// A note to show, if any.

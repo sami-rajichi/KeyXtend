@@ -38,7 +38,8 @@ pub(super) struct View {
     words: Words,
     preview: Option<Shown>,
     confirm: Option<Ask>,
-    room: String,
+    /// The storage line, or null until the module read the room.
+    room: Option<String>,
     note: Option<String>,
     empty: Option<String>,
 }
@@ -142,7 +143,7 @@ pub(super) fn of(page: &ClipPage, t: &I18n) -> View {
         confirm: page.confirm.map(|count| Ask {
             text: t.counted(CLIP_CONFIRM, usize::from(count)),
         }),
-        room: t.clip_room(&page.room, page.cap),
+        room: page.room.as_ref().map(|r| t.clip_room(r, page.cap)),
         note: page
             .note
             .map(|n| t.text(&format!("{CLIP_NOTE}{}", note_id(n)))),

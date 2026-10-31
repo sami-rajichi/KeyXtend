@@ -115,11 +115,11 @@ fn page(rows: Vec<ClipRow>) -> ClipPage {
         preview: None,
         confirm: None,
         unpinned: 40,
-        room: Room {
+        room: Some(Room {
             used: 182 * MB,
             free: 412 * GB,
             drive: "D:".to_owned(),
-        },
+        }),
         cap: GB,
         note: None,
         kept_days: 7,

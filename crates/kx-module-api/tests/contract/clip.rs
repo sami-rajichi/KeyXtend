@@ -171,11 +171,11 @@ fn page() -> ClipPage {
         preview: None,
         confirm: None,
         unpinned: 0,
-        room: Room {
+        room: Some(Room {
             used: 0,
             free: 1,
             drive: "D:".to_owned(),
-        },
+        }),
         cap: 1,
         note: None,
         kept_days: 7,

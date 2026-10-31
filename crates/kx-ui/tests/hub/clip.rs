@@ -105,11 +105,11 @@ pub fn page(round: u32, rows: Vec<ClipRow>) -> ClipPage {
         unpin: false,
         preview: None,
         confirm: None,
-        room: Room {
+        room: Some(Room {
             used: 1 << 20,
             free: 1 << 30,
             drive: "D:".to_owned(),
-        },
+        }),
         cap: 1 << 30,
         note: None,
         kept_days: 7,

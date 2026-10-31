@@ -92,11 +92,11 @@ fn page() -> Result<ClipPage, String> {
         preview: Some(Preview::Image(Some(pixels(LARGE)?))),
         confirm: None,
         unpinned: 2,
-        room: Room {
+        room: Some(Room {
             used: 0,
             free: 0,
             drive: String::new(),
-        },
+        }),
         cap: 1,
         note: None,
         kept_days: 1,

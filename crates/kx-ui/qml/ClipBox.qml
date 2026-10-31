@@ -182,7 +182,7 @@ Window {
             // The storage line, with a note in its text's place, so the note adds little height.
             ClipRoom {
                 width: col.width
-                text: box.view.room
+                text: box.view.room || ""
                 note: box.view.note
                 folder: box.view.words.openFolder
                 names: names

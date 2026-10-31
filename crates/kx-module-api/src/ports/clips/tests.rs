@@ -122,11 +122,11 @@ fn page(preview: Preview) -> ClipPage {
         preview: Some(preview),
         confirm: None,
         unpinned: 1,
-        room: Room {
+        room: Some(Room {
             used: 1,
             free: 2,
             drive: "D:".to_owned(),
-        },
+        }),
         cap: 3,
         note: Some(PanelNote::Disk),
         kept_days: 7,

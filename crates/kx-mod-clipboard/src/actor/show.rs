@@ -2,7 +2,7 @@
 //! once per message while it is open, held until the ui tells its rows per page (`ClipAct::Rows`).
 
 use kx_module_api::keys;
-use kx_module_api::ports::{ClipAct, ClipKind, ClipPanel, HistoryWanted, Room, SealedError};
+use kx_module_api::ports::{ClipAct, ClipKind, ClipPanel, HistoryWanted, SealedError};
 
 use super::Actor;
 use super::paste::Paste;
@@ -83,14 +83,9 @@ impl Actor {
         if self.room_stale {
             self.refresh_room();
         }
-        let none = || Room {
-            used: 0,
-            free: 0,
-            drive: String::new(),
-        };
         let facts = Facts {
             now: self.ports.calendar.now(),
-            room: self.room.clone().unwrap_or_else(none),
+            room: self.room.clone(),
             note: self.note,
         };
         let store = &self.store;

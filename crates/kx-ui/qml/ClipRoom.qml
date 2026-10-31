@@ -5,7 +5,8 @@ import QtQuick
 Item {
     id: room
 
-    // The storage line, the note or null, Open folder's label, the click names, the look, fonts, icons and size.
+    // The storage line, empty until the room is read; the note or null, Open folder's label, the click names, the
+    // look, fonts, icons and size.
     required property string text
     required property var note
     required property string folder
@@ -20,6 +21,8 @@ Item {
     readonly property var sh: lk.shape.clip.room_px
     readonly property real side: lk.shape.panel.foot_pad_px[1] * s
     readonly property real gap: lk.shape.panel.head_gap_px * s
+    // The storage line shows, with its icon, once it says something and no note holds its place.
+    readonly property bool told: !band.visible && text.length > 0
 
     height: Math.max(button.height, band.visible ? band.height : line.height) + 2 * sh[0] * s
 
@@ -27,7 +30,7 @@ Item {
         id: glyph
         x: room.side
         anchors.verticalCenter: parent.verticalCenter
-        visible: !band.visible
+        visible: room.told
         icon: room.lk.icons.clip.room
         base: room.res.icons
         ext: room.res.ext
@@ -36,7 +39,7 @@ Item {
     }
     Label {
         id: line
-        visible: !band.visible
+        visible: room.told
         anchors.left: glyph.right
         anchors.leftMargin: room.gap
         anchors.right: button.left

@@ -18,8 +18,8 @@ use crate::panel::{Panel, unpinned};
 pub struct Facts {
     /// The wall time now, for the rows' days and the expiry chips.
     pub now: LocalTime,
-    /// What the history takes and its drive has free.
-    pub room: Room,
+    /// What the history takes and its drive has free, once read.
+    pub room: Option<Room>,
     /// The note to show, if any.
     pub note: Option<PanelNote>,
 }

@@ -20,7 +20,7 @@ fn facts() -> Facts {
     };
     Facts {
         now: now(),
-        room,
+        room: Some(room),
         note: None,
     }
 }

@@ -2,7 +2,7 @@
 //! ticks dense and in their order, the question's count right and the page inside its bounds.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipAct, ClipPage, Filter, PanelKey, Preview, Room};
+use kx_module_api::ports::{ClipAct, ClipPage, Filter, PanelKey, Preview};
 use proptest::prelude::*;
 
 use super::rig::{PANEL, now};
@@ -37,13 +37,6 @@ const WORDS: [&str; 8] = [
 ];
 /// What the search line gets typed.
 const TYPED: [&str; 7] = ["e", "é", "ا", "أ", "o", " ", "x"];
-/// A drive the storage line does not matter for.
-const NO_ROOM: Room = Room {
-    used: 0,
-    free: 0,
-    drive: String::new(),
-};
-
 /// One thing that happens while the panel is open.
 #[derive(Debug, Clone)]
 enum Step {
@@ -211,7 +204,7 @@ impl Run {
     fn check(&mut self, before: &[u64]) -> Result<(), TestCaseError> {
         let facts = Facts {
             now: now(),
-            room: NO_ROOM,
+            room: None,
             note: None,
         };
         let view = build(&mut self.panel, &self.history, &facts, &LIMITS, |_| None);

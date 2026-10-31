@@ -232,21 +232,15 @@ fn the_uis_rows_page_the_list_keep_the_highlight_and_hold_while_closed() {
 #[test]
 fn fewer_rows_move_the_page_to_the_highlighted_entry() {
     use crate::view::{Facts, build};
-    use kx_module_api::ports::Room;
     let names: Vec<String> = (1..=12).map(|n| n.to_string()).collect();
     let h = history(&names.iter().map(String::as_str).collect::<Vec<_>>());
     let mut p = opened();
     for _ in 0..7 {
         p.key(&PanelKey::Down, &h);
     }
-    let room = Room {
-        used: 0,
-        free: 0,
-        drive: String::new(),
-    };
     let facts = Facts {
         now: crate::panel::rig::now(),
-        room,
+        room: None,
         note: None,
     };
     let page = |p: &mut Panel| build(p, &h, &facts, &crate::fixture::LIMITS, |_| None).0;

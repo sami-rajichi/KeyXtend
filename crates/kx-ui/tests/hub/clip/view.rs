@@ -34,11 +34,11 @@ fn sized() -> ClipPage {
     small.app = None;
     small.when.days_ago = 1;
     let mut p = page(3, vec![big, small]);
-    p.room = Room {
+    p.room = Some(Room {
         used: GB / 2 * 3,
         free: 412 * GB,
         drive: "D:".to_owned(),
-    };
+    });
     p.cap = 2 * GB;
     p.ticked = 3;
     p
@@ -179,21 +179,19 @@ fn the_page_filters_search_and_footer_are_worded() {
 }
 
 #[test]
-fn a_note_and_an_empty_history_are_worded() {
+fn a_note_and_an_empty_history_are_worded_and_an_unread_room_shows_no_line() {
     let mut p = page(1, Vec::new());
     p.note = Some(PanelNote::Disk);
     p.empty = true;
+    p.room = None;
     let v = read("en", p);
+    assert_eq!(v["room"], Value::Null, "no half-empty storage line");
     assert_eq!(
         v["note"],
         "The drive is nearly full, so new copies are not kept."
     );
-    assert!(
-        v["empty"]
-            .as_str()
-            .unwrap()
-            .starts_with("Nothing copied yet.")
-    );
+    let empty = v["empty"].as_str().unwrap();
+    assert!(empty.starts_with("Nothing copied yet."));
     assert_eq!(v["anyUnpinned"], false);
 }
 
