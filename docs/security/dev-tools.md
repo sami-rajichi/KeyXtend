@@ -88,7 +88,7 @@
     - G8 reads memory once after a scroll and scrolls once per churn round, unless `[g8_scroll] churn` is false, a control run that leaves the scroll out and so is partial at best. Its result logs the machine's free RAM and its VMs' working sets (`[host] vm`, by PDH counter name, no process handle).
     - G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language, with target-window still in front. When the edges are not under the keyboard it records the windows between by class and program only, never a title.
     - G10 presses each arrow and Stop, puts Stop back after a failed step, and asks UI Automation which element is at each arrow's icon without moving the pointer.
-  - `kx-gates g25` clicks the product's keys in its own Notepad file: the language key, the shortcuts layer's Select all, Copy, Paste, Undo, Copy all and Switch app, then Win and V, then Power, each only while the keyboard is on top there.
+  - `kx-gates g25` runs its own copy of the test build with `[g25] history_key` off, through the clipboard gates' session, and clicks that copy's keys in its own Notepad file: the language key, the shortcuts layer's Select all, Copy, Paste, Undo, Copy all and Switch app, then Win and V, then Power, each only while the keyboard is on top there.
     - Its own keys are Ctrl+End, Ctrl+S, Esc, and the Alt tap of `probe::front`, which brings Notepad back before each part, after Power and once the switcher closes. `[g25] esc` must be the Esc key alone, or the config check refuses it.
     - Esc goes out only while the window it closes is in front, or Notepad for the panel, and for Switch app only once the switcher's own wait ran out; so it never reaches another app.
     - It puts the layer back on the page it showed first, shown or hidden as it found it, hides it around Power, whose key it covers, then puts it back the same way, and lets Win go without a lone press, as G10 does, so Start never opens.
@@ -170,6 +170,6 @@ G25 opens the real power dialog on the owner's PC, as the product must be checke
 
 A copy G21, G27 or `g8 predict` had to end may be cut mid-write. Its learning is paused, so it writes no learned words, and the owner's settings file is put back after it ended.
 
-G25 reads the owner's own `shortcut_pages` to find each key's page. A page the owner arranged changes only where the keys sit, as G25 still clicks each one by its id.
+G25 reads its copy's `shortcut_pages`, from the test build's settings, to find each key's page. A page arranged there changes only where the keys sit, as G25 still clicks each one by its id.
 
 The mouse guard's lost-hook check misses a hook lost within the last `alive_ms` before a gate ends, and a late count of an earlier batch can hide one lost batch until the next. Waiting at every gate's end, or sending input only to check, would slow every run or move the owner's pointer.

@@ -49,8 +49,8 @@ crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer hook's too:
                          ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and
                          `PowerDialog`, by `Capability::Power`: ADR-0031; the box watch, packs, sealed store and
-                         word events: ADR-0033; `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures`,
-                         `Calendar` and the clipboard panel's events: ADR-0034), events, Clock and Mono, settings
+                         word events: ADR-0033; `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures` and
+                         the clipboard panel's events: ADR-0034; `Calendar`: P8), events, Clock and Mono, settings
                          contract, notices, Redacted<T>, and `text`: folding and casing, which prediction and the
                          clipboard search share (P8)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
@@ -168,8 +168,9 @@ spike/                   tested P1 code, moved out phase by phase (ADR-0014, doc
 xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off check), licences, dist (stub until P14),
                          stage (the release app with its Qt files, the word packs and the media worker),
                          dev-cert / dev-install / check-uiaccess (uiAccess test builds), sounds (recipes, import,
-                         join; format and RIFF walker from kx-theme), words (P7: source hashes in `words.toml`, wordfreq lists checked against the
-                         Hunspell dictionaries; packs from kx-mod-predict's writer, the index, the meter), sign, sbom (P14)
+                         join; format and RIFF walker from kx-theme), words (P7: source hashes in `words.toml`,
+                         wordfreq lists checked against the Hunspell dictionaries; packs from kx-mod-predict's
+                         writer, the index, the meter), sign, sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
   superpowers/specs/     design specs
