@@ -23,29 +23,44 @@ pub struct Kept {
     pair: Pair,
     side: PathBuf,
     done: bool,
+    /// How the sidecar comes back when it stays.
+    later: String,
+}
+
+/// How the owner's sidecar comes back after a stop: `close`, which reads the same out folder.
+fn by_close() -> String {
+    format!(
+        "once no copy runs, the same kx-gates' `close {NAME}` restores from it, as it reads its own out folder"
+    )
 }
 
 impl Kept {
     /// Keeps the settings file and its last good copy in `files`, writing their bytes to the sidecar `side` before
     /// any gate write. A sidecar a stopped run left is restored first and kept as it is: whether one was.
     pub fn take(files: &Files, side: &Path) -> Result<(Self, bool), String> {
+        Self::take_as(files, side, &by_close())
+    }
+
+    /// As `take`, for a sidecar that `later` says how to restore when it stays.
+    pub fn take_as(files: &Files, side: &Path, later: &str) -> Result<(Self, bool), String> {
         let left = saved::load(side)?;
         let recovered = left.is_some();
         let pair = match left {
             Some(pair) if !pair.keeps(files) => return Err(another(side)),
-            Some(pair) => put(&pair, side).map(|()| pair)?,
+            Some(pair) => put(&pair, side, later).map(|()| pair)?,
             None => {
                 let pair = Pair::of(files)?;
                 saved::save(side, &pair)?;
                 pair
             }
         };
-        let side = side.to_path_buf();
+        let (side, later, done) = (side.to_path_buf(), later.to_string(), false);
         Ok((
             Self {
                 pair,
                 side,
-                done: false,
+                done,
+                later,
             },
             recovered,
         ))
@@ -73,9 +88,9 @@ impl Kept {
     /// `copy_runs`, as that copy may write over them when it ends.
     pub fn put_back(mut self, copy_runs: bool) -> Result<(), String> {
         self.done = true;
-        put(&self.pair, &self.side)?;
+        put(&self.pair, &self.side, &self.later)?;
         if copy_runs {
-            return Err(stays(&self.side, "a copy may still run"));
+            return Err(stays(&self.side, "a copy may still run", &self.later));
         }
         saved::drop_side(&self.side)
     }
@@ -90,13 +105,9 @@ impl Drop for Kept {
     }
 }
 
-/// Why sidecar `side` stays: `why`, and how to restore from it later.
-fn stays(side: &Path, why: &str) -> String {
-    format!(
-        "{} stays, as {why}; once no copy runs, the same kx-gates' `close {NAME}` restores from it, as it reads its \
-         own out folder",
-        side.display()
-    )
+/// Why sidecar `side` stays: `why`, and `later`, how to restore from it.
+fn stays(side: &Path, why: &str, later: &str) -> String {
+    format!("{} stays, as {why}; {later}", side.display())
 }
 
 /// Refuses sidecar `side`, which keeps another data folder's settings.
@@ -119,23 +130,27 @@ pub fn recover(
         return Ok(false);
     };
     if !ended {
-        return Err(stays(side, &format!("{NAME} did not end after Quit")));
+        return Err(stays(
+            side,
+            &format!("{NAME} did not end after Quit"),
+            &by_close(),
+        ));
     }
     if running() {
-        return Err(stays(side, &format!("{NAME} runs")));
+        return Err(stays(side, &format!("{NAME} runs"), &by_close()));
     }
     if !pair.keeps(files) {
         return Err(another(side));
     }
-    put(&pair, side)?;
+    put(&pair, side, &by_close())?;
     saved::drop_side(side)?;
     Ok(true)
 }
 
 /// Puts `pair` back; a failure names sidecar `side`, which stays, and the way back.
-fn put(pair: &Pair, side: &Path) -> Result<(), String> {
+fn put(pair: &Pair, side: &Path, later: &str) -> Result<(), String> {
     pair.restore()
-        .map_err(|e| stays(side, &format!("the put-back failed: {e}")))
+        .map_err(|e| stays(side, &format!("the put-back failed: {e}"), later))
 }
 
 /// `owner`'s `[kernel]` section read as the store reads it, repaired value by value, with predict out of its

@@ -3,7 +3,7 @@
 #![cfg(windows)]
 
 use kx_mod_clipboard::ClipSettings;
-use kx_platform_windows::clip;
+use kx_platform_windows::clip::{self, open};
 use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
@@ -15,6 +15,7 @@ use crate::g27type::Typist;
 use crate::p8cfg::{G20Product, Search};
 use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
+use crate::winclip::line;
 use crate::{clipkeep, g20keys, keys, readback};
 
 /// The steps' panel, its names in every language, and the gate's Notepad tab.
@@ -33,7 +34,7 @@ impl<'a> Steps<'a> {
         Ok(Self {
             ctx,
             app,
-            panel: Panel::new(ctx)?,
+            panel: Panel::new(ctx, ctx.cfg.g20_product.panel_wait_ms)?,
             names,
         })
     }
@@ -44,7 +45,7 @@ impl<'a> Steps<'a> {
     }
 
     /// Writes the gate's copies a gap apart: the plain ones oldest first and one per marker, the cleared one and its
-    /// clear through the gate's own owner, then the skipped app's copy with Ctrl+A and Ctrl+C in Notepad.
+    /// clear through the gate's own owner, then the skipped app's copy in Notepad.
     pub fn copy_all(&self) -> Result<(), String> {
         let (g, t) = (self.g(), &self.ctx.cfg.timing);
         let wait = clipkeep::wait(t);
@@ -65,11 +66,29 @@ impl<'a> Steps<'a> {
             owner.hold(g.copy_gap_ms, t.poll_ms);
         }
         drop(owner);
-        let combos = &self.ctx.cfg.keys;
+        self.copy_skipped()
+    }
+
+    /// Copies Notepad's text with Ctrl+A and Ctrl+C in the gate's own tab, then confirms the clipboard holds the
+    /// skipped text, so "it never shows" judges a copy that really happened.
+    fn copy_skipped(&self) -> Result<(), String> {
+        let (g, t, combos) = (self.g(), &self.ctx.cfg.timing, &self.ctx.cfg.keys);
+        let wait = clipkeep::wait(t);
+        let before = open::sequence();
         for combo in [&combos.select_all, &combos.copy] {
             keys_ours(self.app)?;
             keys::combo(combo)?;
             sleep_ms(t.key_settle_ms);
+        }
+        if !open::wait_change(before, wait) {
+            return Err("Notepad's copy never reached the clipboard".to_string());
+        }
+        let got =
+            clip::read_text(wait, self.ctx.cfg.g1.max_read_chars).map_err(|e| e.to_string())?;
+        if got.as_deref().map(line) != Some(g.skipped.as_str()) {
+            return Err(
+                "the clipboard does not hold Notepad's copy of the skipped text".to_string(),
+            );
         }
         sleep_ms(g.copy_gap_ms);
         Ok(())
@@ -159,8 +178,10 @@ impl<'a> Steps<'a> {
         keys_ours(self.app)?;
         keys::combo(&self.ctx.cfg.keys.select_all)?;
         sleep_ms(self.ctx.cfg.timing.key_settle_ms);
+        keys_ours(self.app)?;
         self.panel.click(&self.g().insert)?;
         let closed = self.panel.wait(false).is_ok();
+        keys_ours(self.app)?;
         let saved = readback::saved_until(self.ctx, self.app, |s| saved_as(s, &want))?;
         let count_ok = count.map(usize::from) == Some(ticks.len());
         Ok(json!({

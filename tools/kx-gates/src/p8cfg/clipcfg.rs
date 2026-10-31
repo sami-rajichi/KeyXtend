@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use super::{as_is, wait};
 use crate::clipfill;
+use crate::clipnames::PageNames;
 use crate::config::GatesConfig;
 
 /// `[g8_clip]`: the copies, the rounds and the waits; times in ms.
@@ -38,6 +39,16 @@ pub struct G8Clip {
     pub search: String,
     /// The language of the layout the search is typed on.
     pub search_lang: String,
+    /// Longest wait for the panel to open or close.
+    pub panel_wait_ms: u64,
+    /// Pause after each page turn and each search step.
+    pub pause_ms: u64,
+    /// Longest wait after the fill for the page count to show every entry.
+    pub count_wait_ms: u64,
+    /// kx-ui's text of the pager's page number.
+    pub page_name: String,
+    /// The variable in that text that holds the page count.
+    pub page_var: String,
 }
 
 impl G8Clip {
@@ -95,7 +106,8 @@ impl G8Clip {
         Ok(())
     }
 
-    /// Refuses bad counts or sizes, an empty search, a search layout that is no language, and a wait past the guard.
+    /// Refuses bad counts or sizes, an empty search, a search layout that is no language, a wait past the guard, and a
+    /// page text without its count in some language.
     pub(super) fn check(&self, c: &GatesConfig, d: &ClipSettings) -> Result<(), String> {
         self.check_counts(d)?;
         self.check_sizes(c, d)?;
@@ -104,7 +116,18 @@ impl G8Clip {
             return Err("g8_clip.search_lang must be a language code".to_string());
         }
         let limit = c.mouse_guard.limit_ms;
-        wait("g8_clip.copy_gap_ms", self.copy_gap_ms, limit)?;
-        wait("g8_clip.settle_ms", self.settle_ms, limit)
+        let waits = [
+            ("g8_clip.copy_gap_ms", self.copy_gap_ms),
+            ("g8_clip.settle_ms", self.settle_ms),
+            ("g8_clip.panel_wait_ms", self.panel_wait_ms),
+            ("g8_clip.pause_ms", self.pause_ms),
+            ("g8_clip.count_wait_ms", self.count_wait_ms),
+        ];
+        waits
+            .iter()
+            .try_for_each(|(key, ms)| wait(key, *ms, limit))?;
+        PageNames::load(self)
+            .map(drop)
+            .map_err(|e| format!("g8_clip.page_name: {e}"))
     }
 }

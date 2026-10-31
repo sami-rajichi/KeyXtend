@@ -1,5 +1,5 @@
-//! The copy G20 and `g8 clip` start: the plain kx-gates starts the test build without its gate flag, on the data folder
-//! beside it, never the owner's. Its settings bytes are kept and come back, and its history is emptied before and after.
+//! The copy G20, `g8 clip` and G25 start: the plain kx-gates starts the test build without its gate flag, on the data
+//! folder beside it (`clipdata`), never the owner's. Its settings bytes are kept and come back, its history emptied.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use kx_mod_clipboard::{ClipSettings, ID, SPEC};
-use kx_platform::PORTABLE_DIR;
 use kx_platform_windows::uiaccess;
 use kx_platform_windows::worker::WORKER_EXE;
 use kx_settings::VERSION_KEY;
@@ -17,21 +16,22 @@ use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;
 use crate::copyend::{self, Ended};
 use crate::g8start::{self, Started};
-use crate::owncopy;
+use crate::out::say;
 use crate::ownset::Kept;
 use crate::product::{self, NAME};
+use crate::{clipdata, owncopy};
 
-/// The copy's session: the test build, its history folder, and its settings bytes kept until `close`.
+/// The copy's session: the test build, its data folder, and its settings bytes kept until `close`.
 pub struct ClipSession<'a> {
     ctx: &'a Ctx<'a>,
     /// The test build's program.
     pub program: PathBuf,
     data: PathBuf,
-    /// The session made the data folder, so it goes again at the end and later runs use the owner's.
-    made: bool,
     kept: Kept,
     /// Set once a copy could not be ended, so the backup stays.
     stray: Cell<bool>,
+    /// The settings came back first from a sidecar a stopped run left.
+    pub recovered: bool,
 }
 
 /// Refuses a run under uiAccess, which the test build would inherit, or while a product copy runs, whose watch would
@@ -92,70 +92,42 @@ pub(crate) fn worker(program: &Path) -> Result<(), String> {
     ))
 }
 
-/// Makes the data folder beside `program`, so the copy is portable, and checks the product reads it there: the folder,
-/// and whether this call made it.
-fn own_data(program: &Path) -> Result<(PathBuf, bool), String> {
-    let data = program
-        .parent()
-        .ok_or("the test build has no folder")?
-        .join(PORTABLE_DIR);
-    let made = !data.exists();
-    std::fs::create_dir_all(&data).map_err(|e| format!("{}: {e}", data.display()))?;
-    match product::files(program) {
-        Ok(f) if f.dir == data => Ok((data, made)),
-        Ok(_) => {
-            let e = format!(
-                "{} is not the copy's data folder, so it would use another",
-                data.display()
-            );
-            Err(undone(&data, made, e))
-        }
-        Err(e) => Err(undone(&data, made, e)),
-    }
-}
-
-/// Error `e`, after deleting the data folder `data` when the session `made` it.
-fn undone(data: &Path, made: bool, e: String) -> String {
-    match made.then(|| empty(data)) {
-        Some(Err(left)) => format!("{e}; {left}"),
-        _ => e,
-    }
-}
-
-/// Deletes folder `dir` of the gate's own data folder, when there is one.
-fn empty(dir: &Path) -> Result<(), String> {
-    match std::fs::remove_dir_all(dir) {
-        Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-            Err(format!("{}: {e}", dir.display()))
-        }
-        _ => Ok(()),
-    }
-}
+/// How the sidecar left by a copy that may still run comes back.
+const LATER: &str =
+    "the next G20, g8 clip or G25 start of the same kx-gates restores from it once no copy runs";
 
 impl<'a> ClipSession<'a> {
-    /// Keeps the test build's settings bytes and empties its history, refused under uiAccess or while a copy runs.
+    /// Readies the test build's data folder and keeps its settings bytes, then empties its history; refused under
+    /// uiAccess or while a copy runs.
     pub fn open(ctx: &'a Ctx<'a>) -> Result<Self, String> {
         refuse(
             uiaccess::check().map_err(|e| e.to_string()),
             owncopy::runs(),
         )?;
-        let g = &ctx.cfg.g20_product;
-        let program = program(ctx)?;
-        let (data, made) = own_data(&program)?;
+        let (g, program) = (&ctx.cfg.g20_product, program(ctx)?);
+        let data = clipdata::own(&program, &g.marker)?;
         let side = ctx.out.join(&g.backup);
-        let taken = product::files(&program).and_then(|f| Kept::take(&f, &side));
-        let kept = match taken {
-            Ok((kept, _)) => kept,
-            Err(e) => return Err(undone(&data, made, e)),
-        };
-        empty(&data.join(&g.history))?;
+        let taken = product::files(&program).and_then(|f| Kept::take_as(&f, &side, LATER));
+        let (kept, recovered) = taken.map_err(|e| clipdata::undone(&data, &g.marker, e))?;
+        if let Err(e) = clipdata::remove(&data.join(&g.history)) {
+            let back = kept.put_back(false).err().map(|b| format!("; {b}"));
+            let e = format!("{e}{}", back.unwrap_or_default());
+            return Err(clipdata::undone(&data, &g.marker, e));
+        }
+        if recovered {
+            say!(
+                "the test build's settings came back first from {}, which a stopped run left",
+                side.display()
+            );
+        }
+        let stray = Cell::default();
         Ok(Self {
             ctx,
             program,
             data,
-            made,
             kept,
-            stray: Cell::default(),
+            stray,
+            recovered,
         })
     }
 
@@ -193,17 +165,12 @@ impl<'a> ClipSession<'a> {
         }
     }
 
-    /// Puts the test build's settings bytes back, then empties its history, or deletes the data folder the session
-    /// made; all of it stays while a copy may run.
+    /// Puts the test build's settings bytes back, then deletes the data folder when it is marked, else empties its
+    /// history; while a copy may run, the sidecar and the folder stay.
     pub fn close(self) -> Result<(), String> {
-        let stray = self.stray.get();
-        self.kept.put_back(stray)?;
-        let gone = if self.made {
-            self.data.clone()
-        } else {
-            self.data.join(&self.ctx.cfg.g20_product.history)
-        };
-        if stray { Ok(()) } else { empty(&gone) }
+        let g = &self.ctx.cfg.g20_product;
+        self.kept.put_back(self.stray.get())?;
+        clipdata::finish(&self.data, &g.marker, &g.history)
     }
 }
 
@@ -216,7 +183,8 @@ fn ready(s: &Started, warm_ms: u64) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use kx_settings::peek_section;
+    use kx_settings::{Files, peek_section};
+    use kx_test_support::tempdir::TempDir;
 
     use super::*;
 
@@ -250,5 +218,18 @@ mod tests {
         let on = clip_table(&Table::new(), true, "notepad.exe").expect("built");
         let s: ClipSettings = peek_section(Some(&on), ID, &SPEC).expect("reads back");
         assert!(s.history_key);
+    }
+
+    #[test]
+    fn a_clip_sidecar_that_stays_names_the_next_clip_gate_as_its_way_back() {
+        let dir = TempDir::new("gates-clipcopy").expect("a temp folder");
+        let data = dir.path().join("data");
+        std::fs::create_dir(&data).expect("the data folder");
+        let (files, side) = (Files::new(&data), dir.path().join("side.json"));
+        let (kept, recovered) = Kept::take_as(&files, &side, LATER).expect("kept");
+        assert!(!recovered);
+        let e = kept.put_back(true).expect_err("a copy may still run");
+        assert!(e.contains(LATER) && !e.contains("close"), "{e}");
+        assert!(side.exists(), "the next start restores from it");
     }
 }

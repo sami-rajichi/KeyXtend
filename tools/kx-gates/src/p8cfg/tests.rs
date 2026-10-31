@@ -193,8 +193,16 @@ fn g20_ids_names_and_waits_out_of_range_are_refused() {
 }
 
 #[test]
-fn a_backup_a_gate_deletes_or_the_owners_backup_is_refused() {
+fn a_backup_a_gate_deletes_the_owners_backup_or_a_bad_marker_is_refused() {
     refused(&[
+        (
+            |c| c.g20_product.marker = "a/b".into(),
+            "g20_product.marker",
+        ),
+        (
+            |c| c.g20_product.marker.clone_from(&c.g20_product.history),
+            "g20_product.marker",
+        ),
         (|c| c.g20_product.backup.clear(), "g20_product.backup"),
         (
             |c| c.g20_product.backup = "a/b.json".into(),
@@ -244,10 +252,30 @@ fn g8_clip_values_out_of_range_are_refused() {
             |c| c.g8_clip.search_lang = "x".into(),
             "g8_clip.search_lang",
         ),
+    ]);
+}
+
+#[test]
+fn g8_clip_waits_and_page_text_out_of_range_are_refused() {
+    refused(&[
         (|c| c.g8_clip.copy_gap_ms = 0, "g8_clip.copy_gap_ms"),
         (
             |c| c.g8_clip.settle_ms = c.mouse_guard.limit_ms + 1,
             "g8_clip.settle_ms",
+        ),
+        (|c| c.g8_clip.panel_wait_ms = 0, "g8_clip.panel_wait_ms"),
+        (|c| c.g8_clip.pause_ms = 0, "g8_clip.pause_ms"),
+        (
+            |c| c.g8_clip.count_wait_ms = c.mouse_guard.limit_ms + 1,
+            "g8_clip.count_wait_ms",
+        ),
+        (
+            |c| c.g8_clip.page_name = "page.nowhere".into(),
+            "g8_clip.page_name",
+        ),
+        (
+            |c| c.g8_clip.page_var = "nothing".into(),
+            "g8_clip.page_name",
         ),
     ]);
 }

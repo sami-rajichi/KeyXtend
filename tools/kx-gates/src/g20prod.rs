@@ -100,6 +100,7 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
     let ours: Vec<&str> = g.texts().into_iter().chain(g.hidden()).collect();
     let is_test = |t: &str| ours.contains(&line(t));
     let history = probe::forget_copies(ctx, since, &is_test);
+    let recovered = session.recovered;
     let back = session.close();
     let (parts, left) = driven?;
     let pass = passed(&parts, back.is_ok());
@@ -112,7 +113,7 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
     Ok(json!({
         "gate": "G20", "name": NAME, "program": program.display().to_string(), "first": first, "second": second,
         "history": history, "clean_up": left, "settings_put_back": back.is_ok(), "settings_error": back.err(),
-        "pass": pass,
+        "settings_recovered": recovered, "pass": pass,
     }))
 }
 

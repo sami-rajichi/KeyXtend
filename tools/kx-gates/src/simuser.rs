@@ -21,11 +21,14 @@ use crate::{keys, mouse};
 /// The high bit of `GetAsyncKeyState`: the key is down now.
 const KEY_DOWN: i16 = i16::MIN;
 
+/// True when window title `title` shows our tab: it holds `has`, our file or page name, when the app has one.
+pub(crate) fn tab_ours(title: &str, has: Option<&str>) -> bool {
+    has.is_none_or(|h| title.contains(h))
+}
+
 /// Fails unless our tab is the one shown and every point lands on our window.
 pub fn guard(app: &Opened, pts: &[Pt]) -> Result<(), String> {
-    if let Some(t) = &app.title_has
-        && !win::title(app.hwnd).contains(t.as_str())
-    {
+    if !tab_ours(&win::title(app.hwnd), app.title_has.as_deref()) {
         return Err(format!("our tab is not shown: {}", win::describe(app.hwnd)));
     }
     for p in pts {
@@ -175,5 +178,18 @@ mod tests {
         let mi = unsafe { right[0].Anonymous.mi };
         assert_eq!((mi.dwFlags, mi.dwExtraInfo), (MOUSEEVENTF_RIGHTUP, TAG));
         assert_eq!(releases(|_| true).len(), 6, "two buttons and four keys");
+    }
+
+    #[test]
+    fn only_our_tab_takes_keys_when_the_app_has_a_file_name() {
+        let ours = "g20-keyxtend-1.txt";
+        assert!(tab_ours("g20-keyxtend-1.txt - Notepad", Some(ours)));
+        assert!(
+            !tab_ours("*Some other updates - Notepad", Some(ours)),
+            "the owner's tab"
+        );
+        assert!(!tab_ours("Untitled - Notepad", Some(ours)));
+        assert!(!tab_ours("", Some(ours)), "a gone window");
+        assert!(tab_ours("Document1 - Word", None), "no file to check");
     }
 }

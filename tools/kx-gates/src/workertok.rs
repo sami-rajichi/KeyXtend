@@ -7,6 +7,7 @@ use std::path::Path;
 
 use kx_platform_windows::front::path_of;
 use kx_platform_windows::worker::WORKER_EXE;
+use serde::Serialize;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::Security::{
@@ -34,7 +35,7 @@ const FIRST_PIDS: usize = 1024;
 const SID_WORDS: usize = SECURITY_MAX_SID_SIZE as usize / size_of::<u32>();
 
 /// What a process's token allows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Rights {
     /// It has uiAccess.
     pub ui_access: bool,
@@ -81,7 +82,8 @@ impl Verdict {
     }
 }
 
-/// The verdict on the `workers` of a product whose token gives `product`.
+/// The verdict on the `workers` of a product whose token gives `product`: a worker passes without uiAccess at Medium
+/// integrity or lower, and fails with uiAccess or above Medium, such as High or System (Ruling 61).
 pub fn verdict(product: Rights, workers: &[Rights]) -> Verdict {
     let broad = |w: &Rights| w.ui_access || w.level > MEDIUM;
     match (product.ui_access, workers) {
@@ -201,7 +203,7 @@ pub fn check(pid: u32, exe: &Path) -> Value {
     match read() {
         Ok((product, workers)) => {
             let v = verdict(product, &workers);
-            json!({ "product_ui_access": product.ui_access, "workers": workers.len(), "ok": v.ok(),
+            json!({ "product": product, "workers": workers, "ok": v.ok(),
                 "fails": v.fails(), "why": v.why() })
         }
         Err(e) => json!({ "error": e, "ok": false, "fails": true }),
@@ -219,13 +221,14 @@ pub fn run(_ctx: &Ctx) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use windows::Win32::System::SystemServices::{
-        SECURITY_MANDATORY_HIGH_RID, SECURITY_MANDATORY_LOW_RID,
+        SECURITY_MANDATORY_HIGH_RID, SECURITY_MANDATORY_LOW_RID, SECURITY_MANDATORY_SYSTEM_RID,
     };
 
     use super::*;
 
     const HIGH: u32 = SECURITY_MANDATORY_HIGH_RID.cast_unsigned();
     const LOW: u32 = SECURITY_MANDATORY_LOW_RID.cast_unsigned();
+    const SYSTEM: u32 = SECURITY_MANDATORY_SYSTEM_RID.cast_unsigned();
 
     fn rights(ui_access: bool, level: u32) -> Rights {
         Rights { ui_access, level }
@@ -245,6 +248,11 @@ mod tests {
         assert_eq!(verdict(ours, &[rights(false, LOW)]), Verdict::Reduced);
         assert_eq!(verdict(ours, &[rights(true, MEDIUM)]), Verdict::Broad);
         assert_eq!(verdict(ours, &[rights(false, HIGH)]), Verdict::Broad);
+        assert_eq!(
+            verdict(ours, &[rights(false, SYSTEM)]),
+            Verdict::Broad,
+            "System fails"
+        );
         let mixed = [rights(false, MEDIUM), rights(true, MEDIUM)];
         assert_eq!(verdict(ours, &mixed), Verdict::Broad, "one is enough");
         assert_eq!(verdict(ours, &[]), Verdict::NoWorker);
@@ -281,5 +289,12 @@ mod tests {
             ),
         ];
         assert_eq!(beside(&found, dir), [4, 5]);
+    }
+
+    #[test]
+    fn each_workers_rights_are_logged_as_level_and_ui_access() {
+        let line = json!({ "workers": [rights(false, MEDIUM)] });
+        assert_eq!(line["workers"][0]["level"], MEDIUM);
+        assert_eq!(line["workers"][0]["ui_access"], false);
     }
 }

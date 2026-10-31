@@ -70,7 +70,7 @@ g21 {NAME} and g27 {NAME} start their own copy with learning paused, so close th
 fn clip_lines() -> String {
     let (clip, worker) = (g8clip::CLIP, workertok::WORKER);
     format!(
-        "g20 {NAME} and g8 {clip} start the test build on its own data folder from the plain kx-gates (cargo run -p \
+        "g20 {NAME}, g8 {clip} and g25 start the test build on its own data folder from the plain kx-gates (cargo run -p \
          kx-gates), so close the product first; they overwrite the clipboard and Windows' clipboard history.
 g20 {worker} only reads the tokens of the running product's workers: start the dev install first."
     )
@@ -235,7 +235,8 @@ mod tests {
                 .any(|l| l.contains("g8 <") && l.contains(&clip)),
             "{text}"
         );
-        let told = text.lines().find(|l| l.starts_with(&format!("g20 {NAME}")));
+        let starts = format!("g20 {NAME}, g8 {} and g25 start", g8clip::CLIP);
+        let told = text.lines().find(|l| l.starts_with(&starts));
         let warns = |l: &str| {
             l.contains("overwrite the clipboard") && l.contains("close the product first")
         };

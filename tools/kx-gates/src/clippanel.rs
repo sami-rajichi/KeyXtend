@@ -5,7 +5,8 @@
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
-    TreeScope_Descendants, UIA_ControlTypePropertyId, UIA_ListItemControlTypeId,
+    TreeScope_Descendants, UIA_CONTROLTYPE_ID, UIA_ControlTypePropertyId,
+    UIA_ListItemControlTypeId, UIA_TextControlTypeId,
 };
 
 use crate::apps::Ctx;
@@ -34,18 +35,22 @@ pub fn placed(items: &[KeyRead], prefix: &str) -> Vec<String> {
 pub struct Panel<'a> {
     ctx: &'a Ctx<'a>,
     reader: Reader,
+    /// Longest wait for the panel to open or close, from the gate's own settings.
+    wait_ms: u64,
 }
 
 impl<'a> Panel<'a> {
-    /// A reader for the panel of the product that runs now.
-    pub fn new(ctx: &'a Ctx<'a>) -> Result<Self, String> {
+    /// A reader for the panel of the product that runs now, which waits up to `wait_ms` for it to open or close.
+    pub fn new(ctx: &'a Ctx<'a>, wait_ms: u64) -> Result<Self, String> {
+        let reader = Reader::new()?;
         Ok(Self {
             ctx,
-            reader: Reader::new()?,
+            reader,
+            wait_ms,
         })
     }
 
-    /// The panel's ids and waits.
+    /// The panel's ids.
     fn g(&self) -> &G20Product {
         &self.ctx.cfg.g20_product
     }
@@ -63,30 +68,28 @@ impl<'a> Panel<'a> {
             .ok_or_else(|| "the clipboard panel is not open".to_string())
     }
 
-    /// Waits up to `panel_wait_ms` for the panel to be `open`, or closed.
+    /// Waits up to the panel's wait for it to be `open`, or closed.
     pub fn wait(&self, open: bool) -> Result<(), String> {
-        let wait = self.g().panel_wait_ms;
+        let wait = self.wait_ms;
         let now = || (self.window().is_some() == open).then_some(());
         let what = if open { "open" } else { "close" };
         win::poll_until(wait, self.ctx.cfg.timing.poll_ms, now)
             .ok_or_else(|| format!("the clipboard panel did not {what} within {wait} ms"))
     }
 
-    /// The rows' accessible names on the page shown, in place order.
+    /// Every element of control type `kind` in the open panel, as a screen reader meets it.
     #[allow(
         unsafe_code,
         reason = "UI Automation calls on objects this client made."
     )]
-    pub fn rows(&self) -> Result<Vec<String>, String> {
-        let hwnd = self.open()?;
-        let auto = self.reader.auto();
-        let item = VARIANT::from(UIA_ListItemControlTypeId.0);
+    fn all(&self, kind: UIA_CONTROLTYPE_ID) -> Result<Vec<KeyRead>, String> {
+        let (hwnd, auto) = (self.open()?, self.reader.auto());
         let err = |e: windows::core::Error| format!("UI Automation: {e}");
         let mut items = Vec::new();
         // SAFETY: plain calls on live UI Automation objects; a dead window gives an error.
         unsafe {
             let cond = auto
-                .CreatePropertyCondition(UIA_ControlTypePropertyId, &item)
+                .CreatePropertyCondition(UIA_ControlTypePropertyId, &VARIANT::from(kind.0))
                 .map_err(err)?;
             let found = auto
                 .ElementFromHandle(hwnd)
@@ -97,7 +100,24 @@ impl<'a> Panel<'a> {
                 items.push(read_one(&found.GetElement(i).map_err(err)?)?);
             }
         }
-        Ok(placed(&items, &self.g().id(&self.g().row)))
+        Ok(items)
+    }
+
+    /// The rows' accessible names on the page shown, in place order.
+    pub fn rows(&self) -> Result<Vec<String>, String> {
+        Ok(placed(
+            &self.all(UIA_ListItemControlTypeId)?,
+            &self.g().id(&self.g().row),
+        ))
+    }
+
+    /// The names of the panel's texts on screen, such as the pager's page number.
+    pub fn texts(&self) -> Result<Vec<String>, String> {
+        let shown = self
+            .all(UIA_TextControlTypeId)?
+            .into_iter()
+            .filter(|k| has_area(&k.rect));
+        Ok(shown.map(|k| k.name).collect())
     }
 
     /// The search line's text, which its description holds.

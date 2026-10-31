@@ -11,6 +11,7 @@ use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::diff::{self, Diff};
 use crate::out::say;
 use crate::rng::Rng;
+use crate::simuser::tab_ours;
 use crate::win::{self, sleep_ms};
 use crate::{launch, out, readback, shot, text};
 
@@ -50,18 +51,13 @@ fn focus_ok(inside: bool, class: &str, want: Option<&str>) -> bool {
     inside && want.is_none_or(|w| w.eq_ignore_ascii_case(class))
 }
 
-/// True when the window title shows the test file, if the app has one.
-fn title_ok(title: &str, has: Option<&str>) -> bool {
-    has.is_none_or(|h| title.contains(h))
-}
-
 /// `Err` names what holds the keyboard when the app, its test file or its text box does not.
 fn ready(app: &Opened, want: Option<&str>) -> Result<(), String> {
     let (hwnd, front) = (app.hwnd, foreground());
     if front != hwnd {
         return Err(format!("{} is in front", win::describe(front)));
     }
-    if !title_ok(&win::title(hwnd), app.title_has.as_deref()) {
+    if !tab_ours(&win::title(hwnd), app.title_has.as_deref()) {
         return Err(format!(
             "the test file left the front: {}",
             win::describe(hwnd)
@@ -287,13 +283,5 @@ mod tests {
             !passed(true, None, Some("no clipboard")),
             "nothing read back"
         );
-    }
-
-    #[test]
-    fn title_ok_needs_the_test_file_name_when_one_is_set() {
-        let ours = "g1-notepad-1.txt";
-        assert!(title_ok("g1-notepad-1.txt - Notepad", Some(ours)));
-        assert!(!title_ok("*Some other updates - Notepad", Some(ours)));
-        assert!(title_ok("Document1 - Word", None));
     }
 }

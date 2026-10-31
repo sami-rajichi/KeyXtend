@@ -1,6 +1,7 @@
-//! G8's clipboard part (`g8 clip`): the test build's history filled with `[g8_clip] entries` gate-made copies, then
-//! rounds in target-window that open the panel, turn pages, search and close. Memory after the fill and with the panel
-//! open is judged by `[g8]`, the rounds' growth by `churn_growth_mb`; the fill's and the pictures' cost only report.
+//! G8's clipboard part (`g8 clip`): the test build's history filled with `[g8_clip] entries` gate-made copies, the
+//! panel's page count confirming them, then rounds in target-window that open the panel, turn pages, search and close.
+//! Memory after the fill and with the panel open is judged by `[g8]`, the rounds' growth by `churn_growth_mb`; the
+//! fill's and the pictures' cost only report.
 #![cfg(windows)]
 
 use serde::Serialize;
@@ -9,6 +10,7 @@ use serde_json::{Value, json};
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
 use crate::clipcopy::{self, ClipSession};
+use crate::clipnames::PageNames;
 use crate::clippanel::Panel;
 use crate::copyend::Ended;
 use crate::g8cfg::G8;
@@ -19,7 +21,7 @@ use crate::out::say;
 use crate::proc::{Memory, Process};
 use crate::product::NAME;
 use crate::win::sleep_ms;
-use crate::{clipfill, clipkeep, g20keys, mouseguard, probe, typebox, winclip};
+use crate::{clipfill, clipkeep, g20keys, mouseguard, probe, typebox, win, winclip};
 
 /// The name that runs G8's clipboard part.
 pub const CLIP: &str = "clip";
@@ -85,31 +87,79 @@ fn fill(ctx: &Ctx) -> Result<(), String> {
     Ok(())
 }
 
+/// The pages `entries` entries fill at `per` rows a page, at least one.
+pub(crate) fn pages_for(entries: usize, per: usize) -> usize {
+    entries.div_ceil(per.max(1)).max(1)
+}
+
+/// True when a panel whose first page shows `rows` rows over `pages` pages holds `entries` entries, to the page; no
+/// page count reads as one page.
+pub(crate) fn holds(entries: usize, rows: usize, pages: Option<usize>) -> bool {
+    (1..=entries).contains(&rows) && pages.unwrap_or(1) == pages_for(entries, rows)
+}
+
+/// What the panel showed: its first page's rows and its page count.
+fn seen(shown: &Result<(usize, Option<usize>), String>) -> String {
+    match shown {
+        Ok((rows, Some(pages))) => format!("{rows} rows on its first page of {pages}"),
+        Ok((rows, None)) => format!("{rows} rows and no page count"),
+        Err(e) => e.clone(),
+    }
+}
+
+/// Opens the panel, waits up to `[g8_clip] count_wait_ms` for it to hold every fill copy, then shuts it; the page
+/// count, or an error that names what it found.
+fn confirm(ctx: &Ctx, t: &Typist, panel: &Panel) -> Result<usize, String> {
+    let (g, names) = (&ctx.cfg.g8_clip, PageNames::load(&ctx.cfg.g8_clip)?);
+    let read = || {
+        let pages = panel.texts()?.iter().find_map(|n| names.count(n));
+        Ok((panel.rows()?.len(), pages))
+    };
+    g20keys::clip_key(t.app(), panel, true)?;
+    let mut shown = Err("the panel was not read".to_string());
+    let got = win::poll_until(g.count_wait_ms, ctx.cfg.timing.poll_ms, || {
+        shown = read();
+        let (rows, pages) = shown.as_ref().ok().copied()?;
+        holds(g.entries, rows, pages).then_some(pages.unwrap_or(1))
+    });
+    g20keys::clip_key(t.app(), panel, false)?;
+    got.ok_or_else(|| {
+        let (n, wait) = (g.entries, g.count_wait_ms);
+        format!(
+            "the history does not hold the {n} fill copies within {wait} ms: the panel shows {}",
+            seen(&shown)
+        )
+    })
+}
+
 /// One round: the clip key opens the panel, the pages turn, the memory is read, then the search is typed, cleared
 /// with Esc, and the clip key shuts the panel.
 fn round(ctx: &Ctx, t: &Typist, panel: &Panel, process: &Process) -> Result<Memory, String> {
-    let (g, settle) = (&ctx.cfg.g8_clip, ctx.cfg.g20_product.settle_ms);
+    let g = &ctx.cfg.g8_clip;
     g20keys::clip_key(t.app(), panel, true)?;
     for _ in 0..g.pages {
         panel.click(&ctx.cfg.g20_product.page_on)?;
-        sleep_ms(settle);
+        sleep_ms(g.pause_ms);
     }
     let open = process.memory()?;
     t.type_in(t.switch(&g.search_lang)?, &g.search)?;
-    sleep_ms(settle);
+    sleep_ms(g.pause_ms);
     g20keys::esc(t.app())?;
-    sleep_ms(settle);
+    sleep_ms(g.pause_ms);
     g20keys::clip_key(t.app(), panel, false)?;
     Ok(open)
 }
 
-/// The warm-up rounds, then the judged ones: the memory before them, the most with the panel open, and after the last.
-fn rounds(ctx: &Ctx, t: &Typist, s: &Started) -> Result<[Memory; 3], String> {
-    let (g, panel) = (&ctx.cfg.g8_clip, Panel::new(ctx)?);
+/// The fill confirmed, then the warm-up rounds and the judged ones: the page count, and the memory before them, the
+/// most with the panel open, and after the last.
+fn rounds(ctx: &Ctx, t: &Typist, s: &Started) -> Result<(usize, [Memory; 3]), String> {
+    let g = &ctx.cfg.g8_clip;
+    let panel = Panel::new(ctx, g.panel_wait_ms)?;
     let read = || {
         sleep_ms(g.settle_ms);
         s.process.memory()
     };
+    let pages = confirm(ctx, t, &panel)?;
     for _ in 0..g.warm_rounds {
         round(ctx, t, &panel, &s.process)?;
     }
@@ -120,12 +170,13 @@ fn rounds(ctx: &Ctx, t: &Typist, s: &Started) -> Result<[Memory; 3], String> {
         open = Some(open.map_or(o, |m| most(m, o)));
         last = read()?;
     }
-    Ok([before, open.ok_or("no judged round ran")?, last])
+    Ok((pages, [before, open.ok_or("no judged round ran")?, last]))
 }
 
-/// What a run measured, and how target-window's box went.
+/// What a run measured, the page count that confirmed the fill, and how target-window's box went.
 struct Run {
     readings: Result<Readings, String>,
+    pages: Option<usize>,
     back: bool,
     left: Vec<String>,
 }
@@ -143,13 +194,15 @@ fn measure(ctx: &Ctx, s: &Started) -> Run {
         Err(e) => {
             return Run {
                 readings: Err(e),
+                pages: None,
                 back: true,
                 left: Vec::new(),
             };
         }
     };
     let boxed = typebox::in_target(ctx, &[], |t| rounds(ctx, t, s));
-    let readings = boxed.got.map(|[before, open, last]| Readings {
+    let pages = boxed.got.as_ref().ok().map(|(p, _)| *p);
+    let readings = boxed.got.map(|(_, [before, open, last])| Readings {
         empty,
         filled,
         open,
@@ -158,6 +211,7 @@ fn measure(ctx: &Ctx, s: &Started) -> Run {
     });
     Run {
         readings,
+        pages,
         back: boxed.back,
         left: boxed.left,
     }
@@ -181,8 +235,10 @@ fn result(
         Err(e) => Some(e.as_str()),
         Ok(r) => r.readings.as_ref().err().map(String::as_str),
     };
+    let pages = run.as_ref().ok().and_then(|r| r.pages);
     json!({
-        "gate": "G8", "part": CLIP, "keyboard": NAME, "entries": ctx.cfg.g8_clip.entries, "memory": readings,
+        "gate": "G8", "part": CLIP, "keyboard": NAME, "entries": ctx.cfg.g8_clip.entries, "pages": pages,
+        "memory": readings,
         "parts": judged, "reading": readings.map(reading), "error": error, "copy": ended.map(Ended::line),
         "layout_back": box_back, "clean_up": run.as_ref().map(|r| r.left.clone()).unwrap_or_default(),
         "history": history, "settings_put_back": back.is_ok(), "settings_error": back.as_ref().err(), "pass": ok,
@@ -199,8 +255,10 @@ fn clip(ctx: &Ctx) -> Result<Value, String> {
     };
     let prefix = ctx.cfg.g8_clip.prefix.as_str();
     let history = probe::forget_copies(ctx, since, &|t: &str| winclip::has_prefix(t, &[prefix]));
+    let recovered = session.recovered;
     let back = session.close();
-    let v = result(ctx, &run, ended.as_ref(), &history, &back);
+    let mut v = result(ctx, &run, ended.as_ref(), &history, &back);
+    v["settings_recovered"] = recovered.into();
     say!("G8 {CLIP}: {}", v["reading"]);
     Ok(v)
 }

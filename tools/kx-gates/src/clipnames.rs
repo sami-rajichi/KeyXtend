@@ -1,9 +1,9 @@
 //! The clipboard panel's accessible names, as kx-ui words them in each shipped language: a row's tick number after its
-//! title, and the count in Insert's label. The forms come from kx-ui's texts that `[g20_product]` names.
+//! title, the count in Insert's label, and the pager's page count. The forms come from kx-ui's texts the config names.
 #![cfg(windows)]
 
-use crate::ftl;
-use crate::p8cfg::G20Product;
+use crate::ftl::{self, Piece};
+use crate::p8cfg::{G8Clip, G20Product};
 
 /// A row's accessible name read back: the title it shows, and its tick number when ticked.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,6 +95,57 @@ impl Names {
     }
 }
 
+/// The pager's page number as kx-ui words it in each shipped language, and the variable that holds the page count.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PageNames {
+    shapes: Vec<Vec<Piece>>,
+    var: String,
+}
+
+/// The count of variable `var` in `name` when it reads as `shape`, every variable a run of ASCII digits; none else.
+fn page_count(shape: &[Piece], name: &str, var: &str) -> Option<usize> {
+    let (mut rest, mut found) = (name, None);
+    for piece in shape {
+        match piece {
+            Piece::Words(w) => rest = rest.strip_prefix(w.as_str())?,
+            Piece::Var(v) => {
+                let digits =
+                    rest.len() - rest.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+                let n = rest.get(..digits).filter(|d| !d.is_empty())?.parse().ok()?;
+                found = (v == var).then_some(n).or(found);
+                rest = &rest[digits..];
+            }
+        }
+    }
+    rest.is_empty().then_some(found).flatten()
+}
+
+impl PageNames {
+    /// The forms `shapes`, one per language, whose page count is variable `var`; refused when one lacks it.
+    pub fn new(shapes: Vec<Vec<Piece>>, var: &str) -> Result<Self, String> {
+        let has = |s: &Vec<Piece>| s.iter().any(|p| matches!(p, Piece::Var(v) if v == var));
+        if !shapes.iter().all(has) {
+            return Err(format!("the page number lacks ${var} in some language"));
+        }
+        Ok(Self {
+            shapes,
+            var: var.to_string(),
+        })
+    }
+
+    /// The forms of the text `g` names, from kx-ui's translation files.
+    pub fn load(g: &G8Clip) -> Result<Self, String> {
+        Self::new(ftl::shapes(&g.page_name)?, &g.page_var)
+    }
+
+    /// The page count in page-number text `name`, in any shipped language; none for any other text.
+    pub fn count(&self, name: &str) -> Option<usize> {
+        self.shapes
+            .iter()
+            .find_map(|s| page_count(s, name, &self.var))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +196,20 @@ mod tests {
         assert_eq!(n.count("Add [3]"), Some(3));
         assert_eq!(n.row("tea / #4!"), row("tea", Some(4)));
         assert_eq!(n.row("tea / #!"), row("tea / #!", None), "no number");
+    }
+
+    #[test]
+    fn the_page_count_is_read_in_every_shipped_language_and_nothing_else_is() {
+        let g = crate::config::load().expect("loads").g8_clip;
+        let pages = PageNames::load(&g).expect("in all three");
+        assert_eq!(pages.count("3 of 200"), Some(200));
+        assert_eq!(pages.count("3 sur 200"), Some(200));
+        assert_eq!(pages.count("3 من 200"), Some(200));
+        assert_eq!(pages.count("Insert (2)"), None);
+        assert_eq!(pages.count("200"), None);
+        assert_eq!(pages.count("x of 200"), None);
+        assert_eq!(pages.count("3 of 200 more"), None);
+        let lacking = PageNames::new(vec![vec![Piece::Var("at".into())]], "count");
+        assert!(lacking.is_err());
     }
 }

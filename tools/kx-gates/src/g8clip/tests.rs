@@ -65,3 +65,31 @@ fn the_reading_names_what_the_fill_and_the_open_panel_added() {
     assert!(line.contains("20.0 MB working set"), "{line}");
     assert!(line.contains("never a fail"), "{line}");
 }
+
+#[test]
+fn the_pages_round_up_and_an_empty_list_still_shows_one() {
+    assert_eq!(pages_for(10, 5), 2);
+    assert_eq!(pages_for(11, 5), 3);
+    assert_eq!(pages_for(0, 5), 1);
+    assert_eq!(
+        pages_for(3, 0),
+        3,
+        "a zero page size counts as one, as the product's does"
+    );
+}
+
+#[test]
+fn the_fill_holds_only_when_rows_and_page_count_match_every_entry() {
+    let n = load().expect("loads").g8_clip.entries;
+    let per = 5;
+    assert!(holds(n, per, Some(pages_for(n, per))));
+    assert!(!holds(n, per, Some(pages_for(n, per) - 1)), "a page short");
+    assert!(!holds(n, per, None), "no page count over many pages");
+    assert!(!holds(n, 0, Some(1)), "an empty panel");
+    assert!(!holds(n, 2, Some(1)), "a part page holds too few");
+    assert!(
+        holds(3, 3, None) && holds(3, 3, Some(1)),
+        "one page shows every row"
+    );
+    assert!(!holds(3, 4, Some(1)), "more rows than copies is no match");
+}

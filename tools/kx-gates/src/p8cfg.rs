@@ -28,6 +28,8 @@ pub struct G20Product {
     pub backup: String,
     /// The history's folder in the data folder.
     pub history: String,
+    /// The file that marks a data folder the gate made.
+    pub marker: String,
     /// One plain copy per language, oldest first.
     pub copies: Vec<Line>,
     /// Copied with each exclusion marker; it never shows.
@@ -190,6 +192,11 @@ impl G20Product {
         }
         if !plain_name(&self.history) {
             return Err("g20_product.history must be a plain folder name".to_string());
+        }
+        if !plain_name(&self.marker) || self.marker == self.history {
+            return Err(
+                "g20_product.marker must be a plain file name, not the history's".to_string(),
+            );
         }
         let named = |key: &str, e: String| format!("g20_product.{key}: {e}");
         ftl::around(&self.insert_name, &self.count_var).map_err(|e| named("insert_name", e))?;

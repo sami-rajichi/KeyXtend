@@ -1,5 +1,6 @@
-//! G25 on the product in Notepad: its language key cycles Notepad's layouts, its shortcuts layer's keys work, its Win
-//! and V keys open the clipboard panel, and its Power key opens the power dialog, which G25 only ever cancels.
+//! G25 on its own copy of the test build in Notepad, the history key off (Ruling 55): its language key cycles
+//! Notepad's layouts, its shortcuts layer's keys work, its Win and V keys open Windows' clipboard panel, and its Power
+//! key opens the power dialog, which G25 only ever cancels.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
@@ -9,9 +10,12 @@ use serde_json::{Value, json};
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 
 use crate::apps::{AppKind, Ctx, Opened};
+use crate::clipcopy::ClipSession;
+use crate::copyend::Ended;
 use crate::facetools::click_on;
 use crate::modekey::Wait;
 use crate::mouse::round_px;
+use crate::probe::Doc;
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
@@ -173,16 +177,39 @@ fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     }))
 }
 
-/// Runs G25 on `name`, refused while a window of the power dialog's class shows; its copied text leaves Windows
-/// clipboard history even when the run fails.
+/// The result of the parts `got` on G25's own copy: it passes only when they did, the copy quit by itself and the test
+/// build's settings came `back`.
+pub(crate) fn on_copy(
+    got: Result<Value, String>,
+    ended: Option<&Ended>,
+    back: &Result<(), String>,
+) -> Value {
+    let mut v = got.unwrap_or_else(|e| json!({ "gate": "G25", "error": e, "pass": false }));
+    let pass = v["pass"] == true && ended.is_some_and(Ended::ok) && back.is_ok();
+    v["copy"] = json!(ended.map(Ended::line));
+    v["settings_put_back"] = json!(back.is_ok());
+    v["settings_error"] = json!(back.as_ref().err());
+    v["pass"] = json!(pass);
+    v
+}
+
+/// Runs G25 on `name` on its own copy of the test build with `[g25] history_key` off (Ruling 55), refused under
+/// uiAccess, while a product copy runs or a window of the power dialog's class shows. Its copied text leaves Windows
+/// clipboard history, and the test build's settings come back, even when the run fails.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let kind = probe::kind_of(name, &APPS)?;
     g25wins::no_dialog(ctx)?;
+    let session = ClipSession::open(ctx)?;
     let (g, since) = (&ctx.cfg.g25, winclip::now());
-    let doc = probe::open_text(ctx, kind, &g.text)?;
-    let result = probe::run_on(ctx, doc, |doc| drive(ctx, &doc.app));
+    let copy =
+        |doc: &Doc| Ok(session.with_copy(g.history_key, g.ready_ms, |_| drive(ctx, &doc.app)));
+    let result = probe::open_text(ctx, kind, &g.text).and_then(|doc| probe::run_on(ctx, doc, copy));
     let history = probe::forget_copies(ctx, since, &|t| winclip::has_prefix(t, &[&g.text]));
-    let (mut v, notes) = result.map_err(|e| format!("{e}; history removed: {history}"))?;
+    let recovered = session.recovered;
+    let back = session.close();
+    let ((got, ended), notes) = result.map_err(|e| format!("{e}; history removed: {history}"))?;
+    let mut v = on_copy(got, ended.as_ref(), &back);
+    v["settings_recovered"] = json!(recovered);
     v["history_removed"] = history;
     v["clean_up"] = json!(notes);
     Ok(v)
@@ -190,7 +217,13 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
+    use kx_mod_clipboard::{ClipSettings, ID, SPEC};
+    use kx_settings::peek_section;
+    use toml::Table;
+
     use super::*;
+    use crate::clipcopy::clip_table;
+    use crate::copyend::Gone;
 
     #[test]
     fn the_click_lands_in_the_middle_of_the_part_that_steps_on() {
@@ -215,6 +248,43 @@ mod tests {
         assert_eq!(skip_reason(LangKey::Carousel), None);
         assert_eq!(skip_reason(LangKey::Cycle), None);
         assert!(skip_reason(LangKey::List).is_some());
+    }
+
+    #[test]
+    fn g25s_own_copy_runs_with_the_history_key_off() {
+        let c = crate::config::load().expect("loads");
+        let t = clip_table(&Table::new(), c.g25.history_key, &c.g20_product.skip_app);
+        let s: ClipSettings =
+            peek_section(Some(&t.expect("built")), ID, &SPEC).expect("reads back");
+        assert!(!s.history_key, "Win and V reach Windows' own history");
+        assert!(c.g25.ready_ms > 0);
+    }
+
+    #[test]
+    fn g25_passes_only_when_its_parts_its_copy_and_the_settings_did() {
+        let quit = Ended {
+            gone: Gone::Quit,
+            note: None,
+            released: Vec::new(),
+        };
+        let good = || Ok(json!({ "pass": true }));
+        assert_eq!(on_copy(good(), Some(&quit), &Ok(()))["pass"], true);
+        assert_eq!(on_copy(good(), None, &Ok(()))["pass"], false, "no copy");
+        let back = on_copy(good(), Some(&quit), &Err("locked".into()));
+        assert_eq!(
+            (back["pass"].as_bool(), back["settings_error"].as_str()),
+            (Some(false), Some("locked"))
+        );
+        let failed = on_copy(Err("no keyboard".into()), Some(&quit), &Ok(()));
+        assert_eq!(
+            (failed["pass"].as_bool(), failed["error"].as_str()),
+            (Some(false), Some("no keyboard"))
+        );
+        let crashed = Ended {
+            gone: Gone::Crashed(Some(1)),
+            ..quit
+        };
+        assert_eq!(on_copy(good(), Some(&crashed), &Ok(()))["pass"], false);
     }
 
     #[test]

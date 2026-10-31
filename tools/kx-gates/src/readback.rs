@@ -2,10 +2,10 @@
 #![cfg(windows)]
 
 use kx_platform_windows::clip::{self, open};
-use kx_platform_windows::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::config::GatesConfig;
+use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
 use crate::{clipkeep, keys, out, tlog};
 
@@ -32,7 +32,7 @@ fn copy_all(cfg: &GatesConfig) -> Result<String, String> {
     clipkeep::keep(cfg, || copy(cfg))
 }
 
-/// Reads back what the app holds; checks it is still in front before any shortcut.
+/// Reads back what the app holds; checks it is still in front with our tab shown before any shortcut.
 pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let (cfg, t) = (ctx.cfg, &ctx.cfg.timing);
     if app.kind == AppKind::Target {
@@ -40,13 +40,8 @@ pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
         let text = std::fs::read_to_string(log).map_err(|e| format!("{}: {e}", log.display()))?;
         return Ok(tlog::decode(&tlog::parse(&text)));
     }
-    let front = foreground();
-    if front != app.hwnd {
-        return Err(format!(
-            "not in front before reading back; front is {}",
-            win::describe(front)
-        ));
-    }
+    // Our window in front with our tab shown, or no key goes out: the owner's tabs are never saved or read.
+    keys_ours(app).map_err(|e| format!("not reading back: {e}"))?;
     let key = match app.kind {
         AppKind::Notepad => &cfg.keys.save,
         AppKind::Terminal => &cfg.keys.enter,

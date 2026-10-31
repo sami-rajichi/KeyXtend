@@ -14,6 +14,7 @@ mod cfgload;
 mod cli;
 mod clicks;
 mod clipcopy;
+mod clipdata;
 mod clipfill;
 mod clipkeep;
 mod clipnames;

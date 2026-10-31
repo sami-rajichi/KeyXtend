@@ -8,6 +8,8 @@
 backup = "clip-settings-backup.json"
 # The history's folder in the data folder (apps/keyxtend clip.rs CLIP_DIR), emptied before and after each run.
 history = "clipboard"
+# The file the gate writes in a data folder it made, so a leftover of a hard stop is known as its own and removed.
+marker = "made-by-kx-gates"
 # One plain copy per language, oldest first; each is one line, no hidden mark, within a row's title and the clean-up.
 copies = [
     { lang = "en", text = "Morning coffee notes" },
@@ -78,3 +80,13 @@ pages = 10
 # Typed into the search line in each round, on the first installed layout of `search_lang`, then cleared with Esc.
 search = "99"
 search_lang = "en"
+# Longest wait for the panel to open or close, in ms.
+panel_wait_ms = 3000
+# Pause after each page turn and each search step, before the next, in ms.
+pause_ms = 400
+# Longest wait after the fill for the panel's page count to show every entry, in ms.
+count_wait_ms = 30000
+# kx-ui's text of the pager's page number, read off the open panel.
+page_name = "page.of"
+# The variable in that text that holds the page count.
+page_var = "count"

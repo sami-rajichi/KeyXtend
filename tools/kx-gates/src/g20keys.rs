@@ -59,9 +59,11 @@ fn ours_line(
     })
 }
 
-/// The product's Win and V keys with the history key on: our panel opens instead of Windows' history, and the clip
-/// key shuts it. Win and its spare Shift are let go after, whatever happened, and the part passes only once both are.
+/// The product's Win and V keys with the history key on, from a closed panel: our panel opens instead of Windows'
+/// history, and the clip key shuts it. Win and its spare Shift are let go after, and the part passes once both are.
 pub fn ours(ctx: &Ctx, app: &Opened, panel: &Panel) -> Result<Value, String> {
+    // The panel starts closed, so only Win and V can open it.
+    clip_key(app, panel, false)?;
     let g = &ctx.cfg.g25;
     let (win_id, v) = (board::latch_id(Latch::Win)?, board::char_key(g.v_scan)?);
     let win_key = ModeKey::by_id(win_id.clone())?;

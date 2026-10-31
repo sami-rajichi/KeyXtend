@@ -18,7 +18,7 @@ const MORE_SETTLES: usize = 2;
 const HISTORY_WAITS: usize = 3;
 /// A G20 search's pauses after its typing: before the read, and after the clear.
 const SEARCH_PAUSES: usize = 2;
-/// A `g8 clip` round's panel waits: open, then shut.
+/// A `g8 clip` round's panel waits, and its fill check's: open, then shut.
 const ROUND_WAITS: usize = 2;
 /// A `g8 clip` round's pauses after its search: after the typing, and after the clear.
 const ROUND_PAUSES: usize = 2;
@@ -55,18 +55,20 @@ pub fn g20_ms(c: &GatesConfig) -> u64 {
 }
 
 /// The least time `g8 clip` holds the mouse: its copy after G8's warm-up, every fill copy, the pause before each
-/// reading, and every round's panel waits, page turns and search.
+/// reading, the fill check's panel waits and count wait, and every round's panel waits, page turns and search.
 pub fn clip_ms(c: &GatesConfig) -> u64 {
-    let (g, p) = (&c.g8_clip, &c.g20_product);
+    let g = &c.g8_clip;
+    let panel = times(ROUND_WAITS, g.panel_wait_ms);
     let round = total(&[
-        times(ROUND_WAITS, p.panel_wait_ms),
-        times(g.pages, p.settle_ms),
-        typed_ms(c, &g.search, ROUND_PAUSES, p.settle_ms),
+        panel,
+        times(g.pages, g.pause_ms),
+        typed_ms(c, &g.search, ROUND_PAUSES, g.pause_ms),
     ]);
     total(&[
         copy_ms(c, c.g8.warm_ms),
         times(g.entries, g.copy_gap_ms),
         times(READINGS + g.rounds, g.settle_ms),
+        total(&[panel, g.count_wait_ms]),
         times(g.warm_rounds + g.rounds, round),
     ])
 }
@@ -97,5 +99,15 @@ mod tests {
         let mut round = c.clone();
         round.g8_clip.rounds += 1;
         assert!(clip_ms(&round) > clip_ms(&c) + c.g8_clip.settle_ms);
+        let mut count = c.clone();
+        count.g8_clip.count_wait_ms += 1;
+        assert_eq!(
+            clip_ms(&count),
+            clip_ms(&c) + 1,
+            "the fill check's wait counts"
+        );
+        let mut pause = c.clone();
+        pause.g20_product.settle_ms += 1;
+        assert_eq!(clip_ms(&pause), clip_ms(&c), "g8 clip keeps its own pauses");
     }
 }
