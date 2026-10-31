@@ -210,6 +210,25 @@ fn the_filters_step_from_all_through_each_kind_once() {
 }
 
 #[test]
+fn every_kind_and_note_is_listed_once() {
+    // Exhaustive matches: a new variant stops this build until `ALL` lists it too.
+    let kind = |k: ClipKind| match k {
+        ClipKind::Text | ClipKind::Link | ClipKind::Image | ClipKind::File | ClipKind::Media => k,
+    };
+    let note = |n: PanelNote| match n {
+        PanelNote::TooBig
+        | PanelNote::Disk
+        | PanelNote::PinnedFull
+        | PanelNote::Busy
+        | PanelNote::PasteFailed => n,
+    };
+    let kinds: HashSet<_> = ClipKind::ALL.map(kind).into_iter().collect();
+    let notes: HashSet<_> = PanelNote::ALL.map(note).into_iter().collect();
+    let lens = (ClipKind::ALL.len(), PanelNote::ALL.len());
+    assert_eq!((kinds.len(), notes.len()), lens, "each once");
+}
+
+#[test]
 fn a_megabyte_is_the_binary_one_windows_counts_sizes_in() {
     assert_eq!(MB, 1024 * 1024);
 }

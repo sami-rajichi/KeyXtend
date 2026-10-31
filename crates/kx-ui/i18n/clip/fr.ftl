@@ -1,9 +1,8 @@
 ### Textes français du panneau du Presse-papiers (P8), chargés dans le même paquet que fr.ftl ; les trois fichiers ont les mêmes clés.
 ### Les formes du pluriel se choisissent selon $form, le nombre tel que le lisent les règles CLDR ; [0] est le nombre 0 exact.
 
-## Le panneau : titre, durée de conservation, aide de la recherche, Fermer, filtres, noms des types (ligne sans texte), pied, question.
-## L’heure d’une ligne est un jour (lundi vaut 1) et l’heure sur 24 h, sinon la date ; les tailles arrivent avec deux décimales.
-## La ligne d’infos omet l’application inconnue ; les lecteurs d’écran entendent .ticked, .pinned et .join après le texte d’une ligne.
+## Le panneau : titre, durée de conservation, aide de la recherche, Fermer, filtres, noms des types (ligne sans texte), pied, question, puis le jour d’une ligne (lundi vaut 1), l’heure sur 24 h, la date et la taille.
+## La ligne d’infos omet l’application inconnue ; les lecteurs d’écran entendent .ticked, .pinned et .join après le texte d’une ligne.
 clip =
     .title = Historique du Presse-papiers
     .kept = { $form ->

@@ -148,6 +148,9 @@ Item {
             const plain = open("list");
             const note = Kit.texts(box.contentItem, box.view.note)[0];
             verify(note, "the note shows");
+            const alert = Board.all(box.contentItem, o => o.visible && o.Accessible.name === box.view.note && !o.Accessible.ignored);
+            compare(alert.length, 1, "readers hear the note once");
+            compare(alert[0].Accessible.role, Accessible.AlertMessage, "as an alert, so it is announced");
             compare(Kit.texts(box.contentItem, box.view.room).length, 0, "the storage text gives way");
             const folder = button(box, "clip.open-folder");
             verify(folder.enabled, "Open folder stays usable");

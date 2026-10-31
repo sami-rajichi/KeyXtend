@@ -58,13 +58,10 @@ fn french_reads_sizes_in_mo_and_go_with_its_comma() {
     let v = read("fr", sized());
     let rows = &v["rows"];
     let (mb, small) = ("2,41\u{a0}Mo", "<\u{a0}0,01\u{a0}Mo");
-    assert_eq!(rows[0]["size"], mb);
-    assert_eq!(rows[1]["size"], small);
     let today = format!("Notepad · Aujourd’hui 16:32 · {mb}");
     assert_eq!(rows[0]["meta"], today);
     let yesterday = format!("Hier 16:32 · {small}");
     assert_eq!(rows[1]["meta"], yesterday, "no app known");
-    assert_eq!(rows[1]["app"], Value::Null);
     let room = "Historique\u{a0}: 1,50\u{a0}Go sur 2,00\u{a0}Go · 412,00\u{a0}Go libres sur D:";
     assert_eq!(v["room"], room);
     assert_eq!(v["words"]["insert"], "Insérer (3)");
@@ -74,8 +71,9 @@ fn french_reads_sizes_in_mo_and_go_with_its_comma() {
 #[test]
 fn arabic_reads_sizes_in_its_units_and_the_question_in_every_plural_form() {
     let v = read("ar", sized());
-    assert_eq!(v["rows"][0]["size"], "2,41 ميغابايت");
-    assert_eq!(v["rows"][1]["size"], "أقل من 0,01 ميغابايت");
+    let today = "اليوم 16:32 · 2,41 ميغابايت · Notepad";
+    assert_eq!(v["rows"][0]["meta"], today);
+    assert_eq!(v["rows"][1]["meta"], "أمس 16:32 · أقل من 0,01 ميغابايت");
     let room = "المحفوظات: 1,50 غيغابايت من 2,00 غيغابايت · 412,00 غيغابايت متوفرة على D:";
     assert_eq!(v["room"], room);
     let stay = "تبقى العناصر المثبّتة.";
@@ -92,7 +90,7 @@ fn arabic_reads_sizes_in_its_units_and_the_question_in_every_plural_form() {
         let mut p = page(1, vec![row(7, "a")]);
         p.confirm = Some(n);
         let v = read("ar", p);
-        assert_eq!(v["confirm"], json!({"text": want, "count": n}), "{n}");
+        assert_eq!(v["confirm"], json!({ "text": want }), "{n}");
     }
 }
 
@@ -114,7 +112,8 @@ fn a_rows_day_reads_today_yesterday_a_weekday_then_the_date() {
     });
     let v = read("en", page(1, rows.collect()));
     for (at, (_, want)) in days.iter().enumerate() {
-        assert_eq!(v["rows"][at]["when"], *want);
+        let meta = format!("Notepad · {want} · < 0.01 MB");
+        assert_eq!(v["rows"][at]["meta"], meta);
     }
 }
 
@@ -168,7 +167,7 @@ fn the_page_filters_search_and_footer_are_worded() {
         v["search"],
         json!({"text": "مرحبا", "hint": "Type to search", "arabic": true, "rtl": true})
     );
-    assert_eq!(v["page"], json!({"text": "2 of 4", "at": 1, "count": 4}));
+    assert_eq!(v["page"], json!({"at": 1, "count": 4}));
     assert_eq!(v["words"]["pin"], "Unpin");
     assert_eq!(v["anyUnpinned"], false, "Delete all is off");
     assert_eq!(v["title"], "Clipboard history");
@@ -208,13 +207,13 @@ fn pictures_are_urls_of_the_kept_round() {
     assert_eq!(v["rows"][1]["thumb"], Value::Null);
     assert_eq!(
         v["preview"],
-        json!({"kind": "image", "url": "image://clip/5/preview"})
+        json!({"kind": "image", "url": "image://clip/5/preview", "name": "Image"})
     );
     let mut p = page(6, vec![row(7, "a")]);
     p.preview = Some(Preview::Image(None));
     assert_eq!(
         read("en", p)["preview"],
-        json!({"kind": "image", "url": null})
+        json!({"kind": "image", "url": null, "name": "Image"})
     );
 }
 

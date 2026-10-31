@@ -4,16 +4,16 @@
 mod when;
 
 use crate::{CONTROLS, all, lang};
-use kx_module_api::ports::{MB, Room, Weekday};
+use kx_module_api::ports::{ClipKind, MB, PanelNote, Room, Weekday};
 use kx_ui::I18n;
 use kx_ui::i18n::keys::{
     CLIP_BACK, CLIP_CHARS, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DATE, CLIP_DAY, CLIP_DELETE,
     CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES, CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT,
-    CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KEPT, CLIP_KIND, CLIP_KINDS, CLIP_META, CLIP_META_BARE,
-    CLIP_NO, CLIP_NOTE, CLIP_NOTES, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW,
-    CLIP_SEARCH, CLIP_SIZE, CLIP_SIZE_GB, CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TICKED, CLIP_TIME,
-    CLIP_TITLE, CLIP_TODAY, CLIP_UNPIN, CLIP_WHEN, CLIP_YES, CLIP_YESTERDAY, MODULE, NUM_DECIMAL,
-    NUM_GROUP, WINDOW_CLIP,
+    CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KEPT, CLIP_KIND, CLIP_META, CLIP_META_BARE, CLIP_NO,
+    CLIP_NOTE, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW, CLIP_SEARCH, CLIP_SIZE,
+    CLIP_SIZE_GB, CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TICKED, CLIP_TIME, CLIP_TITLE, CLIP_TODAY,
+    CLIP_UNPIN, CLIP_WHEN, CLIP_YES, CLIP_YESTERDAY, MODULE, NUM_DECIMAL, NUM_GROUP, WINDOW_CLIP,
+    kind_id, note_id,
 };
 use std::ops::RangeInclusive;
 use when::when;
@@ -80,8 +80,8 @@ fn keys() -> Vec<String> {
     let ids = CLIP_FILTERS
         .iter()
         .map(|(_, id)| format!("{CLIP_FILTER}{id}"));
-    let ids = ids.chain(CLIP_KINDS.iter().map(|(_, id)| format!("{CLIP_KIND}{id}")));
-    let ids = ids.chain(CLIP_NOTES.iter().map(|(_, id)| format!("{CLIP_NOTE}{id}")));
+    let ids = ids.chain(ClipKind::ALL.map(|k| format!("{CLIP_KIND}{}", kind_id(k))));
+    let ids = ids.chain(PanelNote::ALL.map(|n| format!("{CLIP_NOTE}{}", note_id(n))));
     let days = (1..=Weekday::ALL.len()).map(|n| format!("{CLIP_DAY}{n}"));
     let all = FIXED.iter().chain(&OUTSIDE).map(|k| (*k).to_owned());
     all.chain(ids).chain(days).collect()

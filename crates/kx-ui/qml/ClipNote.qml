@@ -17,7 +17,8 @@ Item {
     visible: !!text
     height: band.height
     onTextChanged: if (text) rise.play()
-    Accessible.role: Accessible.StaticText
+    // An alert, so readers announce each new note as ClipConfirm's question is.
+    Accessible.role: Accessible.AlertMessage
     Accessible.name: text || ""
     Accessible.ignored: !text
 

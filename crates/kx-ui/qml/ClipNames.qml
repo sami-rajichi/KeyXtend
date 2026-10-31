@@ -1,5 +1,5 @@
-// The names the clipboard panel's clicks and gate ids use, held once in QML: tst_clip_panel checks the clicks against
-// the hub's own (`kx_ui::clip_acts`), and gates find each part by `group` and its id.
+// The names the clipboard panel's clicks, preview kinds and gate ids use, held once in QML: tst_clip_panel checks the
+// clicks against the hub's (`kx_ui::clip_acts`) and tst_clip_preview the kinds; gates find a part by `group` and id.
 import QtQuick
 
 QtObject {
@@ -17,6 +17,12 @@ QtObject {
             preview: "preview",
             back: "back",
             close: "close"
+        })
+    // Each preview page's kind, as the hub's JSON names it.
+    readonly property var previews: ({
+            text: "text",
+            image: "image",
+            files: "files"
         })
     // The gate-id group of the panel.
     readonly property string group: "clip"

@@ -144,16 +144,8 @@ pub const CLIP_FILTERS: [(Filter, &str); Filter::ORDER.len()] = [
     (Filter::Files, "files"),
     (Filter::Media, "media"),
 ];
-/// A kind's name, which a row with no text of its own shows: this, then its id in `CLIP_KINDS`.
+/// A kind's name, which a row with no text of its own shows: this, then its `kind_id`.
 pub const CLIP_KIND: &str = "clip.kind-";
-/// Each kind's id, which QML also picks the row's icon by.
-pub const CLIP_KINDS: [(ClipKind, &str); 5] = [
-    (ClipKind::Text, "text"),
-    (ClipKind::Link, "link"),
-    (ClipKind::Image, "image"),
-    (ClipKind::File, "file"),
-    (ClipKind::Media, "media"),
-];
 /// The footer's Preview.
 pub const CLIP_PREVIEW: &str = "clip.preview";
 /// The footer's Pin.
@@ -210,19 +202,35 @@ pub const CLIP_META_BARE: &str = "clip.meta-bare";
 pub const CLIP_CHARS: &str = "clip.chars";
 /// The chip on media that goes tonight.
 pub const CLIP_EXPIRES: &str = "clip.expires";
-/// A note: this, then its id in `CLIP_NOTES`.
+/// A note: this, then its `note_id`.
 pub const CLIP_NOTE: &str = "clip.note-";
-/// Each note's id.
-pub const CLIP_NOTES: [(PanelNote, &str); 5] = [
-    (PanelNote::TooBig, "too-big"),
-    (PanelNote::Disk, "disk"),
-    (PanelNote::PinnedFull, "pinned-full"),
-    (PanelNote::Busy, "busy"),
-    (PanelNote::PasteFailed, "paste-failed"),
-];
 /// What readers hear for a ticked row: its place in the tick order, `$count`.
 pub const CLIP_TICKED: &str = "clip.ticked";
 /// What readers hear for a pinned row.
 pub const CLIP_PINNED: &str = "clip.pinned";
 /// What joins the parts of a row's name for readers.
 pub const CLIP_JOIN: &str = "clip.join";
+
+/// A kind's id, which QML also picks the row's icon by; the match makes every new kind name one.
+#[must_use]
+pub const fn kind_id(kind: ClipKind) -> &'static str {
+    match kind {
+        ClipKind::Text => "text",
+        ClipKind::Link => "link",
+        ClipKind::Image => "image",
+        ClipKind::File => "file",
+        ClipKind::Media => "media",
+    }
+}
+
+/// A note's id; the match makes every new note name one.
+#[must_use]
+pub const fn note_id(note: PanelNote) -> &'static str {
+    match note {
+        PanelNote::TooBig => "too-big",
+        PanelNote::Disk => "disk",
+        PanelNote::PinnedFull => "pinned-full",
+        PanelNote::Busy => "busy",
+        PanelNote::PasteFailed => "paste-failed",
+    }
+}

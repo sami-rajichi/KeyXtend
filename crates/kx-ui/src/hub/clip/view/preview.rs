@@ -1,12 +1,12 @@
 //! The preview page as QML reads it: text with its lines kept and no hidden marks, the image's URL of the kept round,
 //! or the files' paths, each marked when it holds Arabic.
 
-use super::url;
+use super::{kind_name, url};
 use crate::I18n;
 use crate::hub::clip::PREVIEW;
 use crate::i18n::clean;
 use crate::i18n::keys::CLIP_CHARS;
-use kx_module_api::ports::Preview;
+use kx_module_api::ports::{ClipKind, Preview};
 use kx_module_api::{is_arabic, is_rtl};
 use serde::Serialize;
 
@@ -29,6 +29,8 @@ pub(super) enum Shown {
     },
     Image {
         url: Option<String>,
+        /// What readers hear: the kind's name.
+        name: String,
     },
     Files {
         paths: Vec<FilePath>,
@@ -57,6 +59,7 @@ pub(super) fn preview(p: &Preview, round: u32, t: &I18n) -> Shown {
         }
         Preview::Image(image) => Shown::Image {
             url: image.as_ref().map(|_| url(round, PREVIEW)),
+            name: kind_name(ClipKind::Image, t),
         },
         Preview::Files(paths) => Shown::Files {
             paths: paths

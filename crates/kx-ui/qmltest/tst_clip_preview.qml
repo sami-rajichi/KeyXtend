@@ -1,12 +1,13 @@
-// The clipboard panel's preview page over the hub's views: long text paged with no scrolling, each page fitting its box
-// and the pages joining back to the whole text, Arabic in its font from the right, an image with the kind's icon to
-// fall back on, files paged, and Back, Pin, Delete and Insert sent to the hub.
+// The clipboard panel's preview page over the hub's views: long text paged on demand with no scrolling, each page
+// fitting its box and the pages joining back to the whole text, Arabic in its font from the right, an image with the
+// kind's icon to fall back on, each named for readers, files paged, and Back, Pin, Delete and Insert sent to the hub.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
 import "clipkit.js" as Kit
 import "pointer.js" as Pointer
+import "fixtures/clip.js" as Clip
 import "fixtures/ui-en.js" as En
 import "../../kx-theme/fixtures/look-native-light.js" as NL
 
@@ -19,6 +20,7 @@ Item {
 
     Component { id: uiC; FakeUi {} }
     Component { id: boxC; ClipBox {} }
+    Component { id: namesC; ClipNames {} }
 
     TestCase {
         name: "clip_preview"
@@ -62,6 +64,12 @@ Item {
             }
             return seen;
         }
+        // Readers hear the image preview's one shown graphic, `what`, by the hub's name for it.
+        function named(box, what) {
+            const seen = Board.all(box.contentItem, o => o.visible && !o.Accessible.ignored && o.Accessible.role === Accessible.Graphic);
+            compare(seen.length, 1, what + " is one graphic");
+            compare(seen[0].Accessible.name, box.view.preview.name, what);
+        }
         // Text page `t` fits its box: nothing cut, nothing past its bottom.
         function fits(t) {
             verify(!t.page.truncated, "cut");
@@ -79,8 +87,34 @@ Item {
             verify(waitForPolish(box));
             compare(pager(box).page.text, pages[pages.length - 2], "back a page");
             compare(acts(box), [], "the panel pages the text itself");
-            compare(Kit.texts(box.contentItem, box.view.preview.chars).length, 1, "the character count");
+            const count = Kit.texts(box.contentItem, box.view.preview.chars);
+            compare(count.length, 1, "the character count");
+            verify(!count[0].Accessible.ignored, "readers hear the count");
+            compare(count[0].Accessible.role, Accessible.StaticText);
+            compare(count[0].Accessible.name, box.view.preview.chars);
             box.visible = false;
+        }
+
+        // The shown page and the next are laid out at once, the next on each turn, and the rest one page per frame.
+        function test_a_long_text_lays_out_its_pages_on_demand() {
+            const box = open("text");
+            const t = pager(box);
+            t.cut();
+            compare(t.ends.length, 2, "the shown page and the next, no more");
+            verify(!t.done, "the rest waits");
+            t.at = 1;
+            compare(t.ends.length, 3, "a turn lays out the page after it");
+            tryVerify(() => t.done, 5000, "the rest comes a page per frame");
+            compare(t.ends[t.count - 1], box.view.preview.text.length, "to the end");
+            box.visible = false;
+        }
+
+        // The preview kinds QML tells apart are the ones the hub's views name.
+        function test_the_preview_kinds_are_the_hubs() {
+            const names = createTemporaryObject(namesC, root);
+            const views = Object.values(Clip.views.en).filter(v => v.preview);
+            const kinds = [...new Set(views.map(v => v.preview.kind))].sort();
+            compare(Object.values(names.previews).sort(), kinds);
         }
 
         function test_arabic_text_pages_in_its_font_from_the_right() {
@@ -107,6 +141,7 @@ Item {
             verify(p.width <= p.sourceSize.width * box.s + 0.5 && p.height <= p.sourceSize.height * box.s + 0.5, "a small picture is never blown up");
             verify(Math.abs(p.x + p.width / 2 - p.parent.width / 2) <= 1, "centred");
             compare(kind().length, 0);
+            named(box, "the picture");
             const v = Kit.view("en", "image");
             v.preview.url = Kit.large;
             box.view = v;
@@ -117,6 +152,7 @@ Item {
             const drawing = open("drawing");
             const icon = Board.all(drawing.contentItem, o => o.visible && o.icon === NL.lk.icons.clip.kind_image);
             compare(icon.length, 1, "the kind's icon while the provider has none");
+            named(drawing, "the kind's icon");
             box.visible = drawing.visible = false;
         }
 

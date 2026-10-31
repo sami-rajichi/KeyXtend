@@ -9,8 +9,7 @@ use kx_ui::{ID, MANIFEST, UiModule, Wake};
 use std::sync::Arc;
 
 #[test]
-fn it_needs_the_face_behind_keyboard_ui_reads_the_chip_lane_and_the_clipboard_and_owns_the_ui_section()
- {
+fn it_needs_the_face_reads_the_lane_and_clipboard_and_owns_ui() {
     assert_eq!(ID.as_str(), "ui");
     assert_eq!(MANIFEST.requires, [KeyboardFaceKey::ID]);
     assert!(MANIFEST.provides.is_empty());

@@ -20,6 +20,11 @@ pub enum ClipKind {
     Media,
 }
 
+impl ClipKind {
+    /// Every kind.
+    pub const ALL: [Self; 5] = [Self::Text, Self::Link, Self::Image, Self::File, Self::Media];
+}
+
 /// Which entries the list shows.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Filter {
@@ -122,6 +127,17 @@ pub enum PanelNote {
     Busy,
     /// The keyboard did not paste, so Insert stopped.
     PasteFailed,
+}
+
+impl PanelNote {
+    /// Every note.
+    pub const ALL: [Self; 5] = [
+        Self::TooBig,
+        Self::Disk,
+        Self::PinnedFull,
+        Self::Busy,
+        Self::PasteFailed,
+    ];
 }
 
 /// Where the shown page is in the list.

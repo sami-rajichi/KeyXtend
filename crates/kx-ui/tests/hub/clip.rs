@@ -1,8 +1,10 @@
 //! The clipboard panel through the hub: a view wakes QML once per read and a closed panel drops it, the ui's rows go
 //! out as the panel opens and as the settings change, a pad page turns the open panel, pictures serve only the kept
-//! round, Open folder shows the folder the app handed over, and a row of unknown size says so.
+//! round, Open folder shows the folder the app handed over, a row of unknown size says so, and the JSON holds
+//! only what QML draws.
 
 mod acts;
+mod shape;
 mod size;
 mod view;
 

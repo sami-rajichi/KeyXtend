@@ -166,7 +166,11 @@ Item {
         function test_an_empty_history_shows_one_line_with_its_icon_and_no_rows() {
             const box = open("empty");
             compare(slots(box).length, 0, "no empty rows");
-            compare(Kit.texts(box.contentItem, box.view.empty).length, 1);
+            const line = Kit.texts(box.contentItem, box.view.empty);
+            compare(line.length, 1);
+            verify(!line[0].Accessible.ignored, "readers hear the empty line");
+            compare(line[0].Accessible.role, Accessible.StaticText);
+            compare(line[0].Accessible.name, box.view.empty);
             const icon = Board.all(box.contentItem, o => o.visible && o.icon === NL.lk.icons.clip.title);
             verify(icon.length >= 2, "the title's icon and the empty line's");
             verify(!one(box.contentItem, "clip.page-on"), "no pager");

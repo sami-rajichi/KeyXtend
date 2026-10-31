@@ -52,8 +52,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": {
         "arabic": true,
@@ -66,7 +65,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -75,14 +73,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -91,11 +86,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -116,8 +109,6 @@ var views = {
         "insert": "إدراج",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -127,7 +118,6 @@ var views = {
     "confirm": {
       "anyUnpinned": true,
       "confirm": {
-        "count": 40,
         "text": "هل تريد حذف 40 عنصرًا؟ تبقى العناصر المثبّتة."
       },
       "empty": null,
@@ -163,15 +153,13 @@ var views = {
       "note": "العناصر المثبّتة تملأ المحفوظات، لذا لا تُحفَظ النسخ الجديدة. ألغِ تثبيت بعضها لإفساح المجال.",
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 من 3"
+        "count": 3
       },
       "preview": null,
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -180,14 +168,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week، محدّد رقم 2",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -196,14 +181,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -212,14 +194,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس، محدّد رقم 1",
           "pinned": false,
           "rtl": true,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "اليوم 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -228,14 +207,11 @@ var views = {
           "name": "demo-recording.mp4، محدّد رقم 3",
           "pinned": false,
           "rtl": false,
-          "size": "52,00 ميغابايت",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "أمس 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -244,11 +220,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes، مثبّت",
           "pinned": true,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "الثلاثاء 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -269,8 +243,6 @@ var views = {
         "insert": "إدراج (3)",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -313,18 +285,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "صورة",
         "url": null
       },
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -333,14 +304,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -349,11 +317,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -374,8 +340,6 @@ var views = {
         "insert": "إدراج",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -418,8 +382,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 0,
-        "text": "1 من 1"
+        "count": 0
       },
       "preview": null,
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
@@ -443,8 +406,6 @@ var views = {
         "insert": "إدراج (0)",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -487,8 +448,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": {
         "kind": "files",
@@ -551,7 +511,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -560,14 +519,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -576,11 +532,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -601,8 +555,6 @@ var views = {
         "insert": "إدراج",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -645,18 +597,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "صورة",
         "url": "image://clip/7/preview"
       },
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -665,14 +616,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -681,11 +629,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -706,8 +652,6 @@ var views = {
         "insert": "إدراج",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -750,15 +694,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 من 3"
+        "count": 3
       },
       "preview": null,
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -767,14 +709,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week، محدّد رقم 2",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -783,14 +722,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -799,14 +735,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس، محدّد رقم 1",
           "pinned": false,
           "rtl": true,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "اليوم 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -815,14 +748,11 @@ var views = {
           "name": "demo-recording.mp4، محدّد رقم 3",
           "pinned": false,
           "rtl": false,
-          "size": "52,00 ميغابايت",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "أمس 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -831,11 +761,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes، مثبّت",
           "pinned": true,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "الثلاثاء 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -856,8 +784,6 @@ var views = {
         "insert": "إدراج (3)",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -900,15 +826,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": null,
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -917,11 +841,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes، محدّد رقم 1، مثبّت",
           "pinned": true,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": 1,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "الثلاثاء 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -942,8 +864,6 @@ var views = {
         "insert": "إدراج (1)",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "إلغاء التثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -986,15 +906,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": null,
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1003,14 +921,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1019,11 +934,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1044,8 +957,6 @@ var views = {
         "insert": "إدراج (0)",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -1088,8 +999,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 من 1"
+        "count": 1
       },
       "preview": {
         "arabic": false,
@@ -1102,7 +1012,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1111,14 +1020,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "أقل من 0,01 ميغابايت",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "اليوم 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1127,11 +1033,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 ميغابايت",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "اليوم 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1152,8 +1056,6 @@ var views = {
         "insert": "إدراج",
         "no": "لا",
         "openFolder": "فتح المجلد",
-        "pageBack": "الصفحة السابقة",
-        "pageOn": "الصفحة التالية",
         "pin": "تثبيت",
         "preview": "معاينة",
         "window": "محفوظات الحافظة في KeyXtend",
@@ -1198,8 +1100,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": {
         "arabic": true,
@@ -1212,7 +1113,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1221,14 +1121,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1237,11 +1134,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1262,8 +1157,6 @@ var views = {
         "insert": "Insert",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1273,7 +1166,6 @@ var views = {
     "confirm": {
       "anyUnpinned": true,
       "confirm": {
-        "count": 40,
         "text": "Delete 40 entries? Pinned ones stay."
       },
       "empty": null,
@@ -1309,15 +1201,13 @@ var views = {
       "note": "Pinned entries fill the history, so new copies are not kept. Unpin some to make room.",
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 of 3"
+        "count": 3
       },
       "preview": null,
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1326,14 +1216,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week, Ticked 2",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1342,14 +1229,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -1358,14 +1242,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس, Ticked 1",
           "pinned": false,
           "rtl": true,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "Today 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -1374,14 +1255,11 @@ var views = {
           "name": "demo-recording.mp4, Ticked 3",
           "pinned": false,
           "rtl": false,
-          "size": "52.00 MB",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "Yesterday 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -1390,11 +1268,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Pinned",
           "pinned": true,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Tue 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -1415,8 +1291,6 @@ var views = {
         "insert": "Insert (3)",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1459,18 +1333,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "Image",
         "url": null
       },
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1479,14 +1352,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1495,11 +1365,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1520,8 +1388,6 @@ var views = {
         "insert": "Insert",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1564,8 +1430,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 0,
-        "text": "1 of 1"
+        "count": 0
       },
       "preview": null,
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
@@ -1589,8 +1454,6 @@ var views = {
         "insert": "Insert (0)",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1633,8 +1496,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": {
         "kind": "files",
@@ -1697,7 +1559,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1706,14 +1567,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1722,11 +1580,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1747,8 +1603,6 @@ var views = {
         "insert": "Insert",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1791,18 +1645,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "Image",
         "url": "image://clip/7/preview"
       },
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1811,14 +1664,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1827,11 +1677,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -1852,8 +1700,6 @@ var views = {
         "insert": "Insert",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -1896,15 +1742,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 of 3"
+        "count": 3
       },
       "preview": null,
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -1913,14 +1757,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week, Ticked 2",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -1929,14 +1770,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -1945,14 +1783,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس, Ticked 1",
           "pinned": false,
           "rtl": true,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "Today 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -1961,14 +1796,11 @@ var views = {
           "name": "demo-recording.mp4, Ticked 3",
           "pinned": false,
           "rtl": false,
-          "size": "52.00 MB",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "Yesterday 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -1977,11 +1809,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Pinned",
           "pinned": true,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Tue 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -2002,8 +1832,6 @@ var views = {
         "insert": "Insert (3)",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -2046,15 +1874,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": null,
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -2063,11 +1889,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Ticked 1, Pinned",
           "pinned": true,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": 1,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Tue 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -2088,8 +1912,6 @@ var views = {
         "insert": "Insert (1)",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Unpin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -2132,15 +1954,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": null,
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2149,14 +1969,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2165,11 +1982,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2190,8 +2005,6 @@ var views = {
         "insert": "Insert (0)",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -2234,8 +2047,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 of 1"
+        "count": 1
       },
       "preview": {
         "arabic": false,
@@ -2248,7 +2060,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2257,14 +2068,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0.01 MB",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Today 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2273,11 +2081,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2.41 MB",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Today 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2298,8 +2104,6 @@ var views = {
         "insert": "Insert",
         "no": "No",
         "openFolder": "Open folder",
-        "pageBack": "Previous page",
-        "pageOn": "Next page",
         "pin": "Pin",
         "preview": "Preview",
         "window": "KeyXtend clipboard history",
@@ -2344,8 +2148,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": {
         "arabic": true,
@@ -2358,7 +2161,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2367,14 +2169,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2383,11 +2182,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2408,8 +2205,6 @@ var views = {
         "insert": "Insérer",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -2419,7 +2214,6 @@ var views = {
     "confirm": {
       "anyUnpinned": true,
       "confirm": {
-        "count": 40,
         "text": "Supprimer 40 éléments ? Les éléments épinglés restent."
       },
       "empty": null,
@@ -2455,15 +2249,13 @@ var views = {
       "note": "Les éléments épinglés remplissent l’historique ; les nouvelles copies ne sont pas conservées. Désépinglez-en pour faire de la place.",
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 sur 3"
+        "count": 3
       },
       "preview": null,
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2472,14 +2264,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week, Coché 2",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2488,14 +2277,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -2504,14 +2290,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس, Coché 1",
           "pinned": false,
           "rtl": true,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "Aujourd’hui 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -2520,14 +2303,11 @@ var views = {
           "name": "demo-recording.mp4, Coché 3",
           "pinned": false,
           "rtl": false,
-          "size": "52,00 Mo",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "Hier 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -2536,11 +2316,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Épinglé",
           "pinned": true,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Mar. 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -2561,8 +2339,6 @@ var views = {
         "insert": "Insérer (3)",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -2605,18 +2381,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "Image",
         "url": null
       },
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2625,14 +2400,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2641,11 +2413,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2666,8 +2436,6 @@ var views = {
         "insert": "Insérer",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -2710,8 +2478,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 0,
-        "text": "1 sur 1"
+        "count": 0
       },
       "preview": null,
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
@@ -2735,8 +2502,6 @@ var views = {
         "insert": "Insérer (0)",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -2779,8 +2544,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": {
         "kind": "files",
@@ -2843,7 +2607,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2852,14 +2615,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2868,11 +2628,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2893,8 +2651,6 @@ var views = {
         "insert": "Insérer",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -2937,18 +2693,17 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": {
         "kind": "image",
+        "name": "Image",
         "url": "image://clip/7/preview"
       },
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -2957,14 +2712,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -2973,11 +2725,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -2998,8 +2748,6 @@ var views = {
         "insert": "Insérer",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -3042,15 +2790,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 3,
-        "text": "1 sur 3"
+        "count": 3
       },
       "preview": null,
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -3059,14 +2805,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week, Coché 2",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": 2,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -3075,14 +2818,11 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         },
         {
-          "app": "WhatsApp",
           "arabic": true,
           "expires": false,
           "id": "13",
@@ -3091,14 +2831,11 @@ var views = {
           "name": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس, Coché 1",
           "pinned": false,
           "rtl": true,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": 1,
-          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس",
-          "when": "Aujourd’hui 15:10"
+          "title": "السلام عليكم، أرسلت لك الملف الذي طلبته أمس"
         },
         {
-          "app": "File Explorer",
           "arabic": false,
           "expires": true,
           "id": "14",
@@ -3107,14 +2844,11 @@ var views = {
           "name": "demo-recording.mp4, Coché 3",
           "pinned": false,
           "rtl": false,
-          "size": "52,00 Mo",
           "thumb": null,
           "tick": 3,
-          "title": "demo-recording.mp4",
-          "when": "Hier 15:10"
+          "title": "demo-recording.mp4"
         },
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -3123,11 +2857,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Épinglé",
           "pinned": true,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Mar. 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -3148,8 +2880,6 @@ var views = {
         "insert": "Insérer (3)",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -3192,15 +2922,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": null,
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Edge",
           "arabic": false,
           "expires": false,
           "id": "15",
@@ -3209,11 +2937,9 @@ var views = {
           "name": "https://example.com/keyxtend/notes, Coché 1, Épinglé",
           "pinned": true,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": 1,
-          "title": "https://example.com/keyxtend/notes",
-          "when": "Mar. 15:10"
+          "title": "https://example.com/keyxtend/notes"
         }
       ],
       "search": {
@@ -3234,8 +2960,6 @@ var views = {
         "insert": "Insérer (1)",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Désépingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -3278,15 +3002,13 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": null,
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -3295,14 +3017,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -3311,11 +3030,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -3336,8 +3053,6 @@ var views = {
         "insert": "Insérer (0)",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",
@@ -3380,8 +3095,7 @@ var views = {
       "note": null,
       "page": {
         "at": 0,
-        "count": 1,
-        "text": "1 sur 1"
+        "count": 1
       },
       "preview": {
         "arabic": false,
@@ -3394,7 +3108,6 @@ var views = {
       "round": 7,
       "rows": [
         {
-          "app": "Outlook",
           "arabic": false,
           "expires": false,
           "id": "11",
@@ -3403,14 +3116,11 @@ var views = {
           "name": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
           "pinned": false,
           "rtl": false,
-          "size": "< 0,01 Mo",
           "thumb": null,
           "tick": null,
-          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week",
-          "when": "Aujourd’hui 15:10"
+          "title": "Meeting moved to Thursday 10:00 in room B2, please bring the printed plan, the budget sheet and the list of open questions from last week"
         },
         {
-          "app": "Snip",
           "arabic": false,
           "expires": false,
           "id": "12",
@@ -3419,11 +3129,9 @@ var views = {
           "name": "Screenshot 2026-10-31 163012.png",
           "pinned": false,
           "rtl": false,
-          "size": "2,41 Mo",
           "thumb": "image://clip/7/12",
           "tick": null,
-          "title": "Screenshot 2026-10-31 163012.png",
-          "when": "Aujourd’hui 15:10"
+          "title": "Screenshot 2026-10-31 163012.png"
         }
       ],
       "search": {
@@ -3444,8 +3152,6 @@ var views = {
         "insert": "Insérer",
         "no": "Non",
         "openFolder": "Ouvrir le dossier",
-        "pageBack": "Page précédente",
-        "pageOn": "Page suivante",
         "pin": "Épingler",
         "preview": "Aperçu",
         "window": "Historique du Presse-papiers KeyXtend",

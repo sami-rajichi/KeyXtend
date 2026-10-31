@@ -130,6 +130,9 @@ Item {
             font.family: list.res.fam.ui
             font.pixelSize: list.pn.title_px * list.s
             color: list.lk.palette.pop_muted
+            Accessible.ignored: false
+            Accessible.role: Accessible.StaticText
+            Accessible.name: text
         }
     }
 }

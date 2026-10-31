@@ -1,9 +1,8 @@
 ### English texts of the clipboard panel (P8), loaded into the same bundle as en.ftl; all three files hold the same keys.
 ### Plural forms select on $form, which is the count as the CLDR rules read it; [0] is the exact count 0.
 
-## The panel: title, kept days, search hint, Close, filters, kind names (for a row with no text), footer, Delete-all question.
-## A row's time is a day word or a weekday (Monday is 1) and the 24-hour time, else the date; sizes come with two decimals.
-## The meta line leaves the app out when unknown; screen readers hear .ticked, .pinned and .join after a row's text.
+## The panel: title, kept days, search hint, Close, filters, kind names (for a row with no text), footer, Delete-all question, and a row's day (Monday is 1), 24-hour time, date and size.
+## The meta line leaves an unknown app out; screen readers hear .ticked, .pinned and .join after a row's text.
 clip =
     .title = Clipboard history
     .kept = { $form ->

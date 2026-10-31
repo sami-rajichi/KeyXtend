@@ -1,6 +1,6 @@
-// The clipboard panel's search line (spec §7): the letters clicked on our keyboard with a caret after them, or its hint.
-// It is no text field and never takes focus (ADR-0013); a ring-coloured line under it shows where letters go, as
-// WinUI's focused TextBox draws its accent line. Typed Arabic reads from the right in the Arabic font.
+// The clipboard panel's search line (spec §7): the letters clicked on our keyboard with a caret after them, Arabic
+// from the right in the Arabic font, or its hint. It is no text field and never takes focus (ADR-0013); a ring-coloured
+// line under it shows where letters go, as WinUI's focused TextBox draws its accent line.
 import QtQuick
 
 Rectangle {

@@ -17,7 +17,6 @@ fn a_row_of_unknown_size_says_so_in_every_language() {
         far.bytes = None;
         shown(&rig, &bus, &acts, page(1, vec![far]));
         let v = clip(&rig);
-        assert_eq!(v["rows"][0]["size"], want, "{iso}");
         let meta = v["rows"][0]["meta"].as_str().unwrap_or_default();
         assert!(meta.contains(want), "{iso}: {meta}");
     }

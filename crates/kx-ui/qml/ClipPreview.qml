@@ -1,14 +1,13 @@
-// The preview page (spec §7): the whole entry in the list's place, with Back. Long text and many files are paged with
-// the list's page buttons, never scrolled (ADR-0008); the panel pages them itself. An image shows large, never cached,
-// with the kind's icon until it comes or when the provider has none.
+// The preview page (spec §7): the whole entry in the list's place, with Back, and an image large. Long text and many
+// files are paged with the list's page buttons, never scrolled (ADR-0008); the panel pages them itself.
 import QtQuick
 
 Item {
     id: pre
 
-    // What it shows (`{kind: "text", text, chars, arabic, rtl}`, `{kind: "image", url}` or `{kind: "files", paths}`), the
-    // buttons' labels, rows per page and a row's height, the click names, the app's Ui object for the page number, the
-    // look, fonts, icons and size.
+    // What it shows (`{kind, text, chars, arabic, rtl}`, `{kind, url, name}` or `{kind, paths}`, a kind of
+    // `names.previews`), the buttons' labels, rows per page and a row's height, the panel's names, the app's Ui object
+    // for the page number, the look, fonts, icons and size.
     required property var shown
     required property var words
     required property int rows
@@ -25,9 +24,10 @@ Item {
     readonly property var pn: lk.shape.panel
     readonly property var c: lk.shape.clip
     readonly property string kind: shown ? shown.kind : ""
+    readonly property var kinds: names.previews
     readonly property real side: pn.foot_pad_px[1] * s
     // The paged part shown now: the text's or the files'.
-    readonly property Item paged: kind === "text" ? prose : kind === "files" ? files : null
+    readonly property Item paged: kind === kinds.text ? prose : kind === kinds.files ? files : null
 
     ClipButton {
         id: back
@@ -44,7 +44,7 @@ Item {
         onClicked: pre.act(pre.names.acts.back, 0)
     }
     Label {
-        visible: pre.kind === "text"
+        visible: pre.kind === pre.kinds.text
         anchors.left: back.right
         anchors.leftMargin: pre.pn.head_gap_px * pre.s
         anchors.verticalCenter: back.verticalCenter
@@ -52,6 +52,9 @@ Item {
         font.family: pre.res.fam.ui
         font.pixelSize: pre.c.kept_px * pre.s
         color: pre.lk.palette.pop_muted
+        Accessible.ignored: false
+        Accessible.role: Accessible.StaticText
+        Accessible.name: text
     }
     Item {
         id: box
@@ -63,7 +66,7 @@ Item {
         ClipText {
             id: prose
             anchors.fill: parent
-            visible: pre.kind === "text"
+            visible: pre.kind === pre.kinds.text
             text: visible ? pre.shown.text : ""
             arabic: visible && pre.shown.arabic
             rtl: visible && pre.shown.rtl
@@ -74,7 +77,7 @@ Item {
         ClipFiles {
             id: files
             anchors.fill: parent
-            visible: pre.kind === "files"
+            visible: pre.kind === pre.kinds.files
             paths: visible ? pre.shown.paths : []
             rows: pre.rows
             rowH: pre.rowH
@@ -89,20 +92,25 @@ Item {
             anchors.centerIn: parent
             width: Math.min(parent.width, sourceSize.width * pre.s)
             height: Math.min(parent.height, sourceSize.height * pre.s)
-            visible: pre.kind === "image" && status === Image.Ready && sourceSize.width > 1
-            source: pre.kind === "image" && pre.shown.url ? pre.shown.url : ""
+            visible: pre.kind === pre.kinds.image && status === Image.Ready && sourceSize.width > 1
+            source: pre.kind === pre.kinds.image && pre.shown.url ? pre.shown.url : ""
             cache: false
             fillMode: Image.PreserveAspectFit
-            Accessible.ignored: true
+            Accessible.role: Accessible.Graphic
+            Accessible.name: pre.kind === pre.kinds.image ? pre.shown.name : ""
         }
+        // The kind's icon until the picture comes, or when the provider has none; readers hear it as the picture.
         Icon {
             anchors.centerIn: parent
-            visible: pre.kind === "image" && !picture.visible
+            visible: pre.kind === pre.kinds.image && !picture.visible
             icon: pre.lk.icons.clip.kind_image
             base: pre.res.icons
             ext: pre.res.ext
             px: pre.c.empty_px * pre.s
             tint: pre.lk.palette.pop_muted
+            Accessible.ignored: false
+            Accessible.role: Accessible.Graphic
+            Accessible.name: picture.Accessible.name
         }
     }
     Pager {
