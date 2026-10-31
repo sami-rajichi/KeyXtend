@@ -3,15 +3,15 @@
 //! module's capabilities, serves the kept round's pictures, and shows the history folder. Nothing here logs a title, a
 //! search, a path or a pixel.
 
+pub mod acts;
 mod view;
 
 use super::unread::Unread;
 use super::{Hub, NULL, Wake, json};
-use crate::i18n::keys::CLIP_FILTERS;
 use crate::ui_module::MANIFEST;
+use acts::{Dropped, act_of};
 use kx_module_api::ports::{ClipAct, ClipPanel, ClipView, Pixels, Preview};
 use kx_module_api::{Bus, EventError, Subscription};
-use std::cmp::Ordering;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
@@ -24,34 +24,6 @@ const PREVIEW: &str = "preview";
 const PART: char = '/';
 /// The thread that waits on the file manager.
 const REVEAL_THREAD: &str = "kx-reveal";
-
-/// The kinds of click QML names to `Hub::clip_act`.
-pub mod acts {
-    /// Tick or untick the row at the argument's place on the page.
-    pub const TICK: &str = "tick";
-    /// Show the filter at the argument's place in `CLIP_FILTERS`, the list the panel's JSON gives.
-    pub const FILTER: &str = "filter";
-    /// Turn a page: back when the argument is below 0, on when above.
-    pub const PAGE: &str = "page";
-    /// Insert the ticked rows or the previewed entry.
-    pub const INSERT: &str = "insert";
-    /// Pin, or unpin when every target is pinned.
-    pub const PIN: &str = "pin";
-    /// Delete the ticked rows or the previewed entry.
-    pub const DELETE: &str = "delete";
-    /// Ask to delete every unpinned entry.
-    pub const DELETE_ALL: &str = "delete-all";
-    /// Yes to the Delete-all question.
-    pub const YES: &str = "yes";
-    /// No to the Delete-all question.
-    pub const NO: &str = "no";
-    /// Open the preview page.
-    pub const PREVIEW: &str = "preview";
-    /// Leave the preview page.
-    pub const BACK: &str = "back";
-    /// Close the panel.
-    pub const CLOSE: &str = "close";
-}
 
 /// The panel's side of the hub: what it shows, whether a wake waits for QML's read, the history's folder and whether
 /// a reveal of it is in flight.
@@ -108,22 +80,24 @@ impl Hub {
         view.map_or_else(|| NULL.to_owned(), |v| json(&view::of(&v.0, &self.i18n())))
     }
 
-    /// Sends the click `kind` names (one of `acts`) with `arg`, a tick with the kept view's round, and sounds as a key
-    /// does; an unknown kind, an `arg` out of range or a tick with no view sends nothing. Call it on the Qt thread.
-    pub fn clip_act(&self, kind: &str, arg: i32) {
+    /// Sends the click `kind` names (one of `acts`) with `arg` on the view of round `round`, and sounds as a key does.
+    /// A tick goes only while that view is kept; a bad click sends nothing and warns. Call it on the Qt thread.
+    pub fn clip_act(&self, kind: &str, arg: i32, round: i64) {
         let shown = self
             .clip()
             .view
             .as_ref()
             .map(|v| (v.0.round, v.0.rows.len()));
-        if let Some(act) = act_of(kind, arg, shown) {
-            self.send_clip(act);
-        } else {
-            tracing::warn!(
+        match act_of(kind, arg, round, shown) {
+            Ok(act) => self.send_clip(act),
+            Err(Dropped::Stale) => {
+                tracing::debug!(kind, "a click on an older clipboard view was dropped");
+            }
+            Err(Dropped::Bad) => tracing::warn!(
                 kind,
                 arg,
                 "QML sent an unknown clipboard click or a bad argument"
-            );
+            ),
         }
         self.tapped();
     }
@@ -257,37 +231,6 @@ impl Hub {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
     }
-}
-
-/// The act `kind` names with `arg`; a tick needs `shown`, the kept view's round and row count. None for an unknown
-/// kind or an `arg` out of range.
-fn act_of(kind: &str, arg: i32, shown: Option<(u32, usize)>) -> Option<ClipAct> {
-    Some(match kind {
-        acts::TICK => {
-            let (round, rows) = shown?;
-            let row = u8::try_from(arg).ok().filter(|&r| usize::from(r) < rows)?;
-            ClipAct::Tick { round, row }
-        }
-        acts::FILTER => {
-            let at = usize::try_from(arg).ok()?;
-            ClipAct::Filter(CLIP_FILTERS.get(at)?.0)
-        }
-        acts::PAGE => match arg.cmp(&0) {
-            Ordering::Less => ClipAct::Page { back: true },
-            Ordering::Greater => ClipAct::Page { back: false },
-            Ordering::Equal => return None,
-        },
-        acts::INSERT => ClipAct::Insert,
-        acts::PIN => ClipAct::Pin,
-        acts::DELETE => ClipAct::Delete,
-        acts::DELETE_ALL => ClipAct::DeleteAll,
-        acts::YES => ClipAct::Confirm(true),
-        acts::NO => ClipAct::Confirm(false),
-        acts::PREVIEW => ClipAct::Preview,
-        acts::BACK => ClipAct::Back,
-        acts::CLOSE => ClipAct::Close,
-        _ => return None,
-    })
 }
 
 #[cfg(test)]

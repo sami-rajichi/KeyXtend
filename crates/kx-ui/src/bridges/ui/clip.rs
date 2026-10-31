@@ -10,9 +10,9 @@ impl qobject::Ui {
         qs(&self.with(NULL.to_owned(), Hub::clip_json))
     }
 
-    pub(super) fn clip_act(&self, kind: &QString, arg: i32) {
+    pub(super) fn clip_act(&self, kind: &QString, arg: i32, round: i64) {
         let kind = kind.to_string();
-        self.with((), |h| h.clip_act(&kind, arg));
+        self.with((), |h| h.clip_act(&kind, arg, round));
     }
 
     pub(super) fn open_folder(&self) {

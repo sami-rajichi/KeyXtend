@@ -202,9 +202,9 @@ pub mod qobject {
         #[qinvokable]
         fn clip(&self) -> QString;
 
-        /// A click on the clipboard panel: `kind` names it and `arg` carries its row, filter or page way.
+        /// A click on the clipboard panel drawn from view `round`: `kind` names it, `arg` its row, filter or page way.
         #[qinvokable]
-        fn clip_act(&self, kind: &QString, arg: i32);
+        fn clip_act(&self, kind: &QString, arg: i32, round: i64);
 
         /// Shows the clipboard history's folder in the file manager.
         #[qinvokable]

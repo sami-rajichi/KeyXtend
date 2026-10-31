@@ -58,6 +58,8 @@ QtObject {
     readonly property var said: ({ lang: En.lang, texts: En.texts })
     // The clipboard panel's view as the hub writes it, null while closed; setting it sends `clipChanged`.
     property var clipView: null
+    // The round each clipboard click named, oldest first.
+    property var clipRounds: []
 
     onLangChanged: said.lang = lang
     onTextsChanged: said.texts = texts
@@ -271,11 +273,12 @@ QtObject {
     function tapped() {
         note("tapped");
     }
-    // The clipboard panel's view, a click on it, noted as `clipAct kind arg`, and Open folder.
+    // The clipboard panel's view, a click on it, noted as `clipAct kind arg` with its round kept, and Open folder.
     function clip() {
         return JSON.stringify(clipView);
     }
-    function clipAct(kind, arg) {
+    function clipAct(kind, arg, round) {
+        clipRounds = clipRounds.concat([round]);
         note("clipAct " + kind + " " + arg);
     }
     function openFolder() {

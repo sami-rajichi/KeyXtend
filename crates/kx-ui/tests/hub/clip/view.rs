@@ -9,6 +9,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     ClipKind, ClipPage, ClipPanel, ClipView, Date, Filter, PanelNote, Preview, Room, When,
 };
+use kx_ui::clip_acts::TICK;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 
@@ -284,7 +285,8 @@ fn no_title_search_or_app_reaches_a_log_line() {
         bus.publish(&ClipPanel { open: true }).unwrap();
         bus.publish(&ClipView::new(p)).unwrap();
         let _ = rig.hub.clip_json();
-        rig.hub.clip_act("mystery", 1);
+        rig.hub.clip_act("mystery", 1, 2);
+        rig.hub.clip_act(TICK, 0, 1);
         let _ = rig.hub.clip_picture(SECRETS[0]);
         rig.hub.open_folder();
         bus.publish(&ClipPanel { open: false }).unwrap();

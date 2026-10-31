@@ -52,8 +52,9 @@ Window {
         if (visible && !paged)
             paged = ui.markPages(title);
     }
+    // Sends a click with the round of the view it was drawn from, so the hub drops a tick on rows that moved since.
     function act(kind, arg) {
-        ui.clipAct(kind, arg);
+        ui.clipAct(kind, arg, view.round);
     }
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus

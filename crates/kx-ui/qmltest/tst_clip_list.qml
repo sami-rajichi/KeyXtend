@@ -87,6 +87,19 @@ Item {
             short.visible = false;
         }
 
+        // The hub drops a tick on rows that moved since they were drawn, so each click names the round it saw.
+        function test_each_click_names_the_round_of_the_view_it_was_drawn_from() {
+            const box = open("list");
+            const drawn = box.view.round;
+            mouseClick(rowsOf(box)[1]);
+            box.view = Object.assign({}, box.view, { round: drawn + 1 });
+            verify(waitForPolish(box), "laid out again");
+            mouseClick(rowsOf(box)[1]);
+            mouseClick(one(box.contentItem, "clip.page-on"));
+            compare(box.ui.clipRounds, [drawn, drawn + 1, drawn + 1]);
+            box.visible = false;
+        }
+
         function test_the_highlight_ring_sits_on_the_highlighted_row() {
             const box = open("list");
             const list = Board.all(box.contentItem, o => o.ring !== undefined)[0];
