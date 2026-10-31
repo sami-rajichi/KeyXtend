@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-31 (P8 task 9: the media worker's host and its review fixes)
 - **Status:** Draft
-- **Scope:** `crates/kx-platform`'s worker host (`pictures`), which serves the `Pictures` port over an adapter's `Spawner` (ADR-0004, ADR-0034 decision 5). The folder rule, the pack and field-watch halves and the UI ports are covered with their adapter in `kx-platform-windows.md`.
+- **Scope:** `crates/kx-platform`'s worker host (`pictures`), which serves the `Pictures` port over an adapter's `Spawner` (ADR-0004, ADR-0034 decision 5). The folder rule, the pack and field-watch halves and the UI ports, P8's `Reveal` included, are covered with their adapter in `kx-platform-windows.md`.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |

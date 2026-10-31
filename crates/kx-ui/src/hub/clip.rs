@@ -53,7 +53,8 @@ pub mod acts {
     pub const CLOSE: &str = "close";
 }
 
-/// The panel's side of the hub: what it shows, whether a wake waits for QML's read, and the history's folder.
+/// The panel's side of the hub: what it shows, whether a wake waits for QML's read, the history's folder and whether
+/// a reveal of it is in flight.
 #[derive(Default)]
 pub(super) struct Clip {
     state: Mutex<State>,

@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-10-31 (P8 task 8: the `media` job)
 - **Status:** Draft
-- **Scope:** `apps/keyxtend-worker`, the program `keyxtend-worker media --max-pixels <n>`. It decodes copied PNG and DIB images into small RGBA thumbnails outside the uiAccess keyboard (ADR-0004, ADR-0034 decision 5). The host that starts it with lowered rights is P8 task 9; the voice, OCR and update jobs come in later phases.
+- **Scope:** `apps/keyxtend-worker`, the program `keyxtend-worker media --max-pixels <n>`. It decodes copied PNG and DIB images into small RGBA thumbnails outside the uiAccess keyboard (ADR-0004, ADR-0034 decision 5). The host in `kx_platform::pictures` starts it on demand, through the adapter's spawner with lowered rights (`kx-platform.md`); the voice, OCR and update jobs come in later phases.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -40,6 +40,8 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
   - Peak memory is the ask (kx-ipc's read can briefly hold about 1.5× of it, up to 64 MiB of image), the decoder's rows (≤ 16 MiB counted, plus a few raw rows each at most twice that row), the output (≤ 64 MiB) and the sums (≤ 128 KiB). That stays within `worker_mb` (512 MB); the job object's cap ends the worker if it does not, and the host restarts it (task 9).
   - Time grows with the pixels, at most `max_pixels`; the host's deadline (`media_ms`) stops a slow draw (task 9). The worker and its decoder run optimised in dev builds too, so a debug build meets that deadline.
 - **Elevation:** the worker runs in its own process without uiAccess at normal integrity (task 9). `#![forbid(unsafe_code)]`; its only dependencies are `kx-ipc`, `png` and `thiserror`: no `kx-platform*`, no `kx-mod-*`, no network crate. Tidy bans `png` and `fdeflate` from the uiAccess app's tree. A compromised worker can only send replies, which the host checks (`kx-ipc`, then `Pixels::new`).
+  - Its job object caps its memory at `[clipboard] worker_mb`, takes no second process, bars it from shared UI such as other programs' windows and the clipboard, and ends it with the keyboard (`kx-platform-windows.md`, Elevation (worker)).
+  - The stage ships it beside the program and refuses a worker that is missing or whose manifest asks for uiAccess (`dev-tools.md`).
 
 ## Findings
 ### Must fix (blocks Definition of Done)

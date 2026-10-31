@@ -1,7 +1,8 @@
-//! Clipboard history (spec §7, ADR-0034): `ClipboardModule` keeps the copies, newest first, within the owner's
-//! limits, sealed on the shelf in day folders, and runs the panel and Insert through the keyboard. Its pure parts run
-//! no thread: entries, the hash, the order, the limits, follow-the-clear, the store, search, the panel, the view and the
-//! insert plan; the actor and the media helpers run them.
+//! Clipboard history (spec §7, ADR-0034): `ClipboardModule` reads `[clipboard]` (`settings`), keeps the copies newest
+//! first within the owner's limits, sealed on the shelf in day folders, and runs the panel and Insert through the
+//! keyboard. Its pure parts run no thread: entries (`entry`), the `hash`, the `order`, the limits (`keep`),
+//! follow-the-clear (`follow`), the `store`, search (`find`), the `panel`, its `view` and the `insert` plan; the
+//! `kx-clip` actor runs them, with the `media` threads drawing pictures and checking files.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

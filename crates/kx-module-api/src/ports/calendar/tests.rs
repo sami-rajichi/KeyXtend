@@ -107,7 +107,7 @@ proptest! {
     }
 }
 
-/// Milliseconds in a minute, an hour and a day, for building instants.
+/// Milliseconds in a minute, for building instants.
 const MIN_MS: i64 = 60_000;
 /// Milliseconds in an hour.
 const HOUR_MS: i64 = 60 * MIN_MS;

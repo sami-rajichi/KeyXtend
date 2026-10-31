@@ -60,3 +60,5 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - The watch thread can be held by an app that renders its data late; its drop is bounded, and a late note after the stop is dropped.
 - Content in memory is not wiped after use; the process runs as the user, who can read it anyway.
 - The actor's inbox has no bound; its senders are this module's own threads and gated events.
+- One `SecretStore` gates both this shelf and predict's word store, so either module could require the other's service. Each store keeps its own folder and key file, and a gate per store would need a new ADR (Ruling 46).
+- The keyboard and the ui could require the clipboard services their gates allow, not only the events ADR-0034 names; neither does, and the keyboard already sends input. A service-only gate would need a new ADR (Ruling 48).

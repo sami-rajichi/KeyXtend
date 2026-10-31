@@ -24,7 +24,7 @@ pub enum IpcError {
     /// The payload is longer than its kind allows.
     #[error("the frame is over its size limit")]
     TooLong,
-    /// The payload's length disagrees with its kind or its fields.
+    /// The payload's length disagrees with its kind or its fields, or a goodbye carries an id.
     #[error("the frame's length disagrees with its fields")]
     Inconsistent,
     /// A field holds a value outside its range: a codec, a reason or a side.

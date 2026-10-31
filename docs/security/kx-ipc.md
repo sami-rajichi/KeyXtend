@@ -44,7 +44,7 @@ The crate sets no time limit: the host's deadline (`media_ms`) and kill on timeo
 ### Must fix (blocks Definition of Done)
 - None.
 ### Should fix (tracked issue)
-- The settings must stay inside these limits: `max_entry_mb` at most 64 and `preview_px` and `thumb_px` at most `MAX_SIDE`. An agree test where both are visible (the worker host, task 9, or the app, task 16) should pin them.
+- Done (task 16): the settings stay inside these limits, `max_entry_mb` at most 64 and `preview_px` and `thumb_px` at most `MAX_SIDE`; the app's agree test pins both (`apps/keyxtend/tests/agree/clip.rs`).
 ### Accepted (with reason)
 - The host may hold up to `MAX_REPLY_LEN` for one reply; it sends one draw at a time, which bounds it.
 - No authentication or encryption on frames: the pipe is anonymous and inherited only by our child. A named pipe would need the checks in ARCHITECTURE.md's IPC section.

@@ -128,7 +128,8 @@ pub enum ClipError {
     Io,
 }
 
-/// A running watch on the platform's side. Dropping it stops the watch.
+/// A running watch on the platform's side. Dropping it stops the watch, but an adapter that bounds its wait may still
+/// tell one note after the drop, which the module drops.
 pub trait ClipRun: Send {}
 
 /// Watches the system clipboard; the platform provides it.
