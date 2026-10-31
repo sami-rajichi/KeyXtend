@@ -217,9 +217,10 @@ fn one_thumbnail_draws_at_a_time_and_only_the_newest_preview_waits() {
     let next = draws.done(Size::Preview).map(|j| j.id);
     assert_eq!(next, Some(2), "the older preview was dropped");
     assert!(
-        !draws.free(Size::Preview),
-        "the one handed back goes at once"
+        draws.free(Size::Preview),
+        "the caller sends it through went"
     );
+    draws.went(Size::Preview);
     assert!(draws.done(Size::Preview).is_none());
     assert!(draws.free(Size::Preview));
 }

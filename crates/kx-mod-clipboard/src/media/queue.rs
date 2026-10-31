@@ -37,14 +37,13 @@ impl Draws {
         self.waiting = Some(job);
     }
 
-    /// The thread answered a job of `size`; gives the preview waiting, which goes at once.
+    /// The thread answered a job of `size`, which frees its slot; gives the preview waiting, for the caller to send
+    /// at once through `went` like any other.
     pub fn done(&mut self, size: Size) -> Option<Job> {
         *self.slot(size) = false;
-        let next = (size == Size::Preview)
+        (size == Size::Preview)
             .then(|| self.waiting.take())
-            .flatten();
-        self.preview |= next.is_some();
-        next
+            .flatten()
     }
 
     /// The flag of `size`.

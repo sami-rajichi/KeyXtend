@@ -7,8 +7,10 @@ use super::super::Msg;
 use super::rig::Rig;
 use crate::fixture::{app, image, text};
 
-/// The plan's join: two line breaks.
-const JOIN: &str = "\n\n";
+/// The join the rig's settings paste between two texts.
+fn join(rig: &Rig) -> ClipPart {
+    text(&rig.settings.join_config().text())
+}
 
 /// Ticks `rows` in order, then clicks Insert.
 fn insert(rig: &mut Rig, rows: &[u8]) {
@@ -46,7 +48,7 @@ fn a_text_found_gone_between_two_texts_leaves_one_join() {
     rig.lose("b");
     insert(&mut rig, &[2, 1, 0]);
     paste_all(&mut rig);
-    let want = [vec![text("a")], vec![text(JOIN)], vec![text("c")]];
+    let want = [vec![text("a")], vec![join(&rig)], vec![text("c")]];
     assert_eq!(rig.fakes.writer.writes(), want);
 }
 
@@ -70,7 +72,7 @@ fn an_image_found_gone_between_two_texts_leaves_their_join() {
     rig.lose("");
     insert(&mut rig, &[2, 1, 0]);
     paste_all(&mut rig);
-    let want = [vec![text("a")], vec![text(JOIN)], vec![text("c")]];
+    let want = [vec![text("a")], vec![join(&rig)], vec![text("c")]];
     assert_eq!(rig.fakes.writer.writes(), want);
 }
 
@@ -85,12 +87,12 @@ fn a_text_deleted_after_it_was_read_still_follows_its_join_and_no_join_precedes_
     insert(&mut rig, &[1, 0, 2]);
     rig.answer(true);
     rig.advance(rig.settings.paste_gap());
-    assert_eq!(rig.fakes.writer.writes().last(), Some(&vec![text(JOIN)]));
+    assert_eq!(rig.fakes.writer.writes().last(), Some(&vec![join(&rig)]));
     rig.push(ClipNote::Cleared { app: Some(notes) });
     paste_all(&mut rig);
     let want: [Vec<ClipPart>; 4] = [
         vec![text("a")],
-        vec![text(JOIN)],
+        vec![join(&rig)],
         vec![text("b")],
         vec![image()],
     ];

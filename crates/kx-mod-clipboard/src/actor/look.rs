@@ -79,7 +79,7 @@ impl Actor {
         }
     }
 
-    /// Hands `job` to the media thread now, or keeps it while one of its size draws; a thumbnail kept is asked again.
+    /// Hands `job` to the media thread now, or keeps it while one of its size draws; only this marks a slot taken.
     pub(super) fn send_job(&mut self, job: Job) {
         if !self.draws.free(job.size) {
             if job.size == Size::Preview {

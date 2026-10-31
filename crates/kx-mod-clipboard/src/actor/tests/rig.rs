@@ -34,6 +34,8 @@ pub(super) struct Rig {
     jobs: Receiver<Job>,
     looks: Receiver<Look>,
     run: Box<dyn PictureRun>,
+    /// Pictures wait undrawn while set, as if the worker were busy.
+    holding: bool,
     heard: Arc<Mutex<Vec<Heard>>>,
     _ears: Vec<Subscription>,
 }
@@ -79,6 +81,7 @@ impl Rig {
             jobs,
             looks,
             run,
+            holding: false,
             heard,
             _ears: ears,
         };
@@ -103,7 +106,7 @@ impl Rig {
             };
             let msg = if let Ok(note) = self.notes.try_recv() {
                 note
-            } else if let Ok(job) = self.jobs.try_recv() {
+            } else if let Some(job) = (!self.holding).then(|| self.jobs.try_recv().ok()).flatten() {
                 Msg::Drawn(media::draw(&mut *self.run, job, sides))
             } else if let Ok(look) = self.looks.try_recv() {
                 Msg::Facts(media::look(&self.fakes.clip, &look))
@@ -113,6 +116,12 @@ impl Rig {
             self.actor.handle(msg);
             self.actor.tick();
         }
+    }
+
+    /// Holds the pictures asked from now on undrawn, or draws those held and goes on drawing.
+    pub fn hold_draws(&mut self, on: bool) {
+        self.holding = on;
+        self.pump();
     }
 
     /// The watch tells `note`.

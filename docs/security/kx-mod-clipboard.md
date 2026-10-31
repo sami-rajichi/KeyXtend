@@ -32,7 +32,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
 | Watch notes (`ClipNote`) | `keep_parts` keeps only known parts; a copy with none makes no row; notes after the stop are dropped | The adapter refuses copies past `max_entry_mb`, which show a note | No; `actor/tests/copies.rs` |
-| File facts (`Clipboard::files`) | Asked on `kx-clip-files`, never on the actor, insert checks before the newest row look (older row looks dropped); `Away` keeps the row and skips it at insert, all `Gone` deletes the entry; a files thread gone stops Insert with a note | A share out of reach holds only that thread, which is never joined | No; `actor/tests/panel.rs`, `paste.rs` |
+| File facts (`Clipboard::files`) | Asked on `kx-clip-files`, never on the actor, insert checks before the newest row look (older row looks dropped); `Away` keeps the row and skips it at insert, all `Gone` deletes the entry; a files thread gone stops Insert with a note | A share out of reach holds only that thread, which is never joined | No; `actor/tests/panel.rs`, `paste.rs`, `stops.rs`, `media/tests.rs` |
 | Panel events (`ClipKey`, `ClipAct`, gated) | A tick on an old round does nothing; rows and pages are clamped to the shown page; a key whose question or preview went is swallowed | One message each | Property tests in `panel/props.rs` |
 | `Pasted` (gated) | Only the round asked is taken; a failed or missing answer stops the insert | `paste_wait_ms` | No; `actor/tests/paste.rs` |
 | Pictures from the worker | Drawn in the worker within `max_pixels`, `media_ms` and `worker_mb`; a failure leaves the type icon | Thumbnail and preview sides from settings | No; `actor/tests/pictures.rs` |
