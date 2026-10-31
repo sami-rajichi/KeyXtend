@@ -30,9 +30,12 @@ impl Panel {
         }
     }
 
-    /// Takes `act`, a click on the panel. The question takes only its answer and Close, the preview page its footer,
-    /// and a tick from an older view is ignored.
+    /// Takes `act`, a click on the panel or the ui's rows. The question takes only its answer and Close, the preview
+    /// page its footer, and a tick from an older view is ignored.
     pub fn act(&mut self, act: ClipAct, history: &History) -> Do {
+        if let ClipAct::Rows(rows) = act {
+            return self.set_rows(rows);
+        }
         if !self.is_open() {
             return Do::Stay;
         }
@@ -52,7 +55,20 @@ impl Panel {
             ClipAct::Filter(filter) => self.set_filter(filter),
             ClipAct::Page { back } => self.turn(back, history),
             ClipAct::Preview => self.peek(history),
+            // Taken above, whatever page shows.
+            ClipAct::Rows(_) => Do::Stay,
         }
+    }
+
+    /// Pages the list by `rows`, at least one, kept while closed; the page follows the highlighted entry, so it stays
+    /// on screen.
+    fn set_rows(&mut self, rows: u8) -> Do {
+        let rows = usize::from(rows).max(1);
+        if rows == self.rows() {
+            return Do::Stay;
+        }
+        self.cfg.rows = rows;
+        if self.is_open() { Do::Show } else { Do::Stay }
     }
 
     /// A key on the list: the arrows move and filter, Space ticks, Enter inserts, Esc backs out, the rest search.

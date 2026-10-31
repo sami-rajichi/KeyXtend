@@ -19,8 +19,16 @@ use kx_ui::i18n::keys::{
 use std::collections::BTreeSet;
 
 /// Module ids whose names the texts hold today; the app checks the real list (P3 Task 19).
-const MODULES: [&str; 8] = [
-    "kernel", "keyboard", "layouts", "mouse", "power", "predict", "scroll", "ui",
+const MODULES: [&str; 9] = [
+    "clipboard",
+    "kernel",
+    "keyboard",
+    "layouts",
+    "mouse",
+    "power",
+    "predict",
+    "scroll",
+    "ui",
 ];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
@@ -83,24 +91,33 @@ pub fn keys_of(ftl: &str) -> BTreeSet<String> {
     keys
 }
 
+/// Each file's keys, the main file first.
+fn file_keys(files: impl Iterator<Item = &'static str>) -> Vec<BTreeSet<String>> {
+    files.map(keys_of).collect()
+}
+
 #[test]
-fn every_file_parses_without_errors() {
+fn every_file_parses_and_no_key_is_in_two_files() {
     for l in &LANGS {
-        let res = FluentResource::try_new(l.ftl.to_owned());
-        let res = res.unwrap_or_else(|(_, e)| panic!("{}: {e:?}", l.tag));
         let mut bundle = FluentBundle::new_concurrent(Vec::new());
-        assert!(bundle.add_resource(res).is_ok(), "{}: a key twice", l.tag);
+        for ftl in l.files() {
+            let res = FluentResource::try_new(ftl.to_owned());
+            let res = res.unwrap_or_else(|(_, e)| panic!("{}: {e:?}", l.tag));
+            assert!(bundle.add_resource(res).is_ok(), "{}: a key twice", l.tag);
+        }
     }
 }
 
 #[test]
-fn the_three_files_have_the_same_keys() {
-    let english = keys_of(LANGS[0].ftl);
-    assert!(english.len() > VIEW_KEYS.len());
+fn the_three_languages_have_the_same_files_and_keys() {
+    let english = file_keys(LANGS[0].files());
+    assert!(english.len() > 1, "the clipboard's file is loaded");
+    assert!(english[0].len() > VIEW_KEYS.len());
     for t in all() {
-        let keys = keys_of(t.lang().ftl);
-        assert_eq!(keys, english, "{}", t.lang().tag);
-        assert!(keys.iter().all(|k| t.has(k)), "{}", t.lang().tag);
+        let files = file_keys(t.lang().files());
+        assert_eq!(files, english, "{}", t.lang().tag);
+        let every = files.iter().flatten();
+        assert!(every.clone().all(|k| t.has(k)), "{}", t.lang().tag);
     }
 }
 

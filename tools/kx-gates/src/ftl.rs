@@ -154,13 +154,12 @@ mod tests {
     fn the_languages_are_exactly_the_files_kx_ui_ships() {
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/kx-ui/i18n");
         let entries = std::fs::read_dir(dir).expect("kx-ui's i18n folder");
-        let mut shipped: Vec<String> = entries
-            .map(|e| {
-                e.expect("an entry")
-                    .file_name()
-                    .to_string_lossy()
-                    .into_owned()
-            })
+        // Feature folders, such as the clipboard panel's, hold no window title, so only the main files count.
+        let files = entries
+            .map(|e| e.expect("an entry"))
+            .filter(|e| e.file_type().is_ok_and(|t| t.is_file()));
+        let mut shipped: Vec<String> = files
+            .map(|e| e.file_name().to_string_lossy().into_owned())
             .collect();
         shipped.sort();
         let mut ours: Vec<String> = FILES.iter().map(|(tag, _)| format!("{tag}.ftl")).collect();

@@ -131,4 +131,4 @@ fn ask_of(kind: &str, arg: i32, rows: u8) -> Option<WordsAsk> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

@@ -1,8 +1,10 @@
 //! The icon provider fills an icon's ink with its tint and keeps every pixel's alpha, serves each icon the tokens name
 //! from the compiled-in resources, refuses any other file with one warning and a clear image, gives a zero size one
-//! clear pixel, and keeps no texture per step of a fade. Qt wants its app object on the main thread, so this binary
-//! runs without the test harness. It reads probes only debug builds have, so a release build of it checks nothing.
+//! clear pixel, and keeps no texture per step of a fade; the clipboard panel's picture provider serves only the kept
+//! round. Qt wants its app object on the main thread, so this binary runs without the test harness. It reads probes only debug builds have, so a release build of it checks nothing.
 
+#[cfg(debug_assertions)]
+mod clips;
 #[cfg(debug_assertions)]
 mod fade;
 #[cfg(debug_assertions)]
@@ -25,12 +27,13 @@ type Outcome = Result<(), String>;
 #[cfg(debug_assertions)]
 fn main() -> ExitCode {
     let _app = cxx_qt_lib::QGuiApplication::new();
-    let checks: [fn() -> Outcome; 5] = [
+    let checks: [fn() -> Outcome; 6] = [
         ink_takes_the_tint,
         named_icons_load,
         others_are_refused,
         a_zero_size_is_clear_and_quiet,
         a_fade_keeps_one_texture,
+        clips::serves_the_kept_round_only,
     ];
     match checks.iter().try_for_each(|check| check()) {
         Ok(()) => ExitCode::SUCCESS,

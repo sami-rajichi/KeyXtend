@@ -152,6 +152,7 @@ fn ports(platform: &WindowsPlatform) -> UiPorts {
         tray: platform.tray(),
         memory: platform.memory(),
         speaker: platform.speaker(),
+        reveal: platform.reveal(),
     }
 }
 

@@ -33,6 +33,7 @@ pub mod packs;
 #[cfg(windows)]
 mod platform;
 pub mod power;
+pub mod reveal;
 pub mod screen;
 pub mod scroll;
 pub mod shortcut;
@@ -78,6 +79,8 @@ pub use packs::{WinPackDisk, WinWordPacks};
 pub use platform::WindowsPlatform;
 #[cfg(windows)]
 pub use power::WinPower;
+#[cfg(windows)]
+pub use reveal::WinReveal;
 #[cfg(windows)]
 pub use screen::WinScreens;
 #[cfg(windows)]

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 04:47 — P8: the clipboard panel's hub, texts and reveal port
+The ui hub now hears the clipboard panel through its `ReadClipboard` gate, keeps the last view while the panel is open, wakes QML once per read, and words every text in `clip_json`: sizes in MB with the language's decimal mark, the storage line in MB or GB, times as today, yesterday, a weekday or the date, and Arabic's six plural forms. Clicks go out as `ClipAct` with the view's round, the ui's rows go out as the panel opens and as `[ui]` changes (Ruling 32), and a scroll-pad page tap turns the open panel. A picture provider serves `image://clip/<round>/<id>` from the kept round only, and Open folder asks the new `Reveal` port, whose Windows adapter has the running Explorer open the folder, so nothing starts with our uiAccess. The clipboard texts live in `i18n/clip/{en,fr,ar}.ftl`, loaded into the same bundles as the main files.
+
 ## 2026-10-31 04:17 — P8: the clipboard store keeps a stuck move's blobs
 An emptied folder that a pending move's blobs still wait in, or whose list still holds a moved entry, now loses only its list, so a failed list write followed by a failed copy no longer deletes the last whole copy of the entry. When a move's blobs are gone but the folder it left still holds them all, the move starts again from there instead of ending. A save now keeps the ids of moves it found gone, and the new `gone` hands them to the module once so it deletes those entries. The load's doc records the two limits Ruling 28 accepts.
 

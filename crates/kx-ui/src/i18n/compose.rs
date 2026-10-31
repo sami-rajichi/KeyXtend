@@ -140,13 +140,13 @@ pub(crate) fn clean(text: &str) -> String {
 }
 
 /// `n` as a Fluent number, capped so the plural rules never fail on a huge count.
-fn count(n: usize) -> FluentValue<'static> {
+pub(super) fn count(n: usize) -> FluentValue<'static> {
     FluentValue::from(u32::try_from(n).unwrap_or(u32::MAX))
 }
 
 /// The number `n`'s plural form is chosen by: its last two digits past a hundred, when those are 3 or more.
 /// CLDR reads Arabic by `n % 100`, which `intl_pluralrules` 7.0.2 drops; English and French forms stay the same.
-fn form(n: usize) -> FluentValue<'static> {
+pub(super) fn form(n: usize) -> FluentValue<'static> {
     let tail = n % HUNDRED;
     let by_tail = n >= HUNDRED && tail >= LOW_TAIL;
     count(if by_tail { tail } else { n })

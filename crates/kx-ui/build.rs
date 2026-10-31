@@ -104,6 +104,7 @@ mod qt {
         "src/bridges/tint.rs",
         "src/bridges/shadows.rs",
         "src/bridges/frames.rs",
+        "src/bridges/clip.rs",
     ];
     /// The hand-written C++ `QObject` classes, which moc reads: the soft shadows' adopter.
     const MOC: &[&str] = &["cpp/shadows.h"];

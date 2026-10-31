@@ -1,10 +1,12 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
-//! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the tray icon,
-//! and the requests the app drains on its own thread. No lock is held while a face call, a port call or a waker runs.
+//! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
+//! panel, the tray icon, and the requests the app drains on its own thread. No lock is held while a face call, a port
+//! call or a waker runs.
 
 mod app;
 mod assist;
 mod bus;
+mod clip;
 mod face;
 mod fonts;
 mod look;
@@ -13,21 +15,24 @@ mod scroll;
 mod sound;
 mod spots;
 mod texts;
+mod timings;
 mod tray;
 mod unread;
 mod words;
 
 pub use app::Mode;
+pub(crate) use clip::PICTURES;
+pub use clip::acts as clip_acts;
 pub use face::{Redraw, Resize};
 pub use fonts::FontBook;
 pub use notices::Shown;
 pub use words::asks;
 
-use crate::settings::{PressFrame, UiSettings};
+use crate::settings::UiSettings;
 use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{ModuleId, SettingsError, SettingsHandle};
 use kx_platform::ui::{
-    Backdrop, FocusToken, Memory, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
+    Backdrop, FocusToken, Memory, Reveal, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
     WindowGuard,
 };
 use kx_theme::assets::FontFiles;
@@ -56,6 +61,8 @@ pub struct UiPorts {
     pub memory: Arc<dyn Memory>,
     /// Plays the sounds; any thread may call it, since it never blocks.
     pub speaker: Arc<dyn Speaker>,
+    /// Shows the clipboard history's folder in the file manager; it may wait, so the hub calls it off the UI thread.
+    pub reveal: Arc<dyn Reveal>,
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
@@ -97,6 +104,8 @@ pub enum Wake {
         /// Turn back a page.
         back: bool,
     },
+    /// The clipboard panel shows a new view or closes; no other comes until QML reads `clip_json`.
+    Clip,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -111,20 +120,6 @@ pub enum HubError {
     /// The embedded theme tokens are broken.
     #[error(transparent)]
     Theme(#[from] ThemeError),
-}
-
-/// The timings, paging, press frame and frame log QML reads, as JSON.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct QmlSettings {
-    tip_ms: u64,
-    poll_ms: u64,
-    guard_delay_ms: u64,
-    tray_grace_ms: u64,
-    page_rows: usize,
-    press_frame: PressFrame,
-    press_frame_ms: u64,
-    frame_log: bool,
 }
 
 /// What changes while the app runs.
@@ -171,6 +166,8 @@ pub struct Hub {
     heard: Mutex<bus::Heard>,
     /// The chip lane and the handle that sends its taps.
     words: Mutex<words::Words>,
+    /// The clipboard panel and the history's folder.
+    clip: clip::Clip,
 }
 
 impl Hub {
@@ -212,6 +209,7 @@ impl Hub {
             scroll: scroll::Scroll::default(),
             heard: Mutex::default(),
             words: Mutex::default(),
+            clip: clip::Clip::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -221,8 +219,8 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows, and a new `sound_idle_ms` prepares the speaker again. The
-    /// keyboard's wake is heard from now on, after the face's own handlers.
+    /// follow the language of the layout the face shows, a new `sound_idle_ms` prepares the speaker again, and an open
+    /// clipboard panel hears the rows. The keyboard's wake is heard from now on, after the face's own handlers.
     pub fn attach(
         self: &Arc<Self>,
         settings: UiSettings,
@@ -244,6 +242,7 @@ impl Hub {
             std::mem::replace(&mut live.settings, settings).sound_idle_ms
         };
         self.idle_changed(before, idle);
+        self.clip_rows();
         self.wake(Wake::Settings);
     }
 
@@ -262,22 +261,6 @@ impl Hub {
     #[must_use]
     pub fn settings(&self) -> UiSettings {
         self.lock().settings.clone()
-    }
-
-    /// The timings, paging, press frame and frame log QML reads, as JSON; the language comes apart, in `lang_json`.
-    #[must_use]
-    pub fn settings_json(&self) -> String {
-        let s = self.settings();
-        json(&QmlSettings {
-            tip_ms: s.tip_ms,
-            poll_ms: s.poll_ms,
-            guard_delay_ms: s.guard_delay_ms,
-            tray_grace_ms: s.tray_grace_ms,
-            page_rows: s.page_rows,
-            press_frame: s.press_frame,
-            press_frame_ms: s.press_frame_ms,
-            frame_log: s.frame_log,
-        })
     }
 
     /// Calls the waker, if any, outside the lock.

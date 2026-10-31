@@ -182,6 +182,7 @@ fn debug_never_shows_a_text_a_search_a_path_or_an_app() {
         format!("{:?}", ClipView::new(page(text))),
         format!("{:?}", ClipView::new(page(files))),
         format!("{:?}", ClipAct::Tick { round: 3, row: 1 }),
+        format!("{:?}", ClipAct::Rows(5)),
     ];
     for text in &shown[..3] {
         assert!(text.contains(REDACTED_MARKER), "{text}");

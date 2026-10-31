@@ -216,6 +216,7 @@ window =
     .tip = { -app } tip
     .pointer = Pointer helper
     .outline = Scroll outline
+    .clip = { -app } clipboard history
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -275,10 +276,13 @@ notice =
     .words-damaged = The learned words file was damaged, so learning starts again from empty.
     .words-missing = The word list for { $lang } is missing, so suggestions come only from the words you type.
     .words-locked = Learned words could not be unlocked, so nothing learned is saved this time.
+    .clip-damaged = Part of the clipboard history was damaged, so those entries were removed.
+    .clip-locked = Clipboard history could not be unlocked, so copies are not kept this time.
 
 ## Module names by module id; an id not listed shows itself.
 module =
     .kernel = { -app }
+    .clipboard = Clipboard history
     .keyboard = Keyboard
     .layouts = Keyboard layouts
     .mouse = Mouse assist

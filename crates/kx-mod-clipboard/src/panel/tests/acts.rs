@@ -197,3 +197,71 @@ fn a_preview_closes_when_its_entry_goes_and_a_late_redraw_waits_for_it() {
     p.sync(&h);
     assert!(p.preview().is_none());
 }
+
+#[test]
+fn the_uis_rows_page_the_list_keep_the_highlight_and_hold_while_closed() {
+    let h = history(&["a", "b", "c", "d", "e", "f", "g"]);
+    let mut p = opened();
+    for _ in 0..3 {
+        p.key(&PanelKey::Down, &h);
+    }
+    assert_eq!(p.act(ClipAct::Rows(2), &h), Do::Show);
+    assert_eq!(p.rows(), 2);
+    let list = p.list(&h);
+    assert_eq!(
+        p.highlight(&list),
+        Some(3),
+        "d stays highlighted, on page 2"
+    );
+    assert_eq!(p.act(ClipAct::Rows(2), &h), Do::Stay, "the same rows");
+    assert_eq!(p.act(ClipAct::Rows(0), &h), Do::Show);
+    assert_eq!(p.rows(), 1, "at least one");
+    p.act(ClipAct::DeleteAll, &h);
+    assert_eq!(
+        p.act(ClipAct::Rows(5), &h),
+        Do::Show,
+        "under the question too"
+    );
+    assert!(p.asking());
+    p.close();
+    assert_eq!(p.act(ClipAct::Rows(3), &h), Do::Stay, "nothing to draw");
+    p.open();
+    assert_eq!(p.rows(), 3, "kept for the next open");
+}
+
+#[test]
+fn fewer_rows_move_the_page_to_the_highlighted_entry() {
+    use crate::view::{Facts, build};
+    use kx_module_api::ports::Room;
+    let names: Vec<String> = (1..=12).map(|n| n.to_string()).collect();
+    let h = history(&names.iter().map(String::as_str).collect::<Vec<_>>());
+    let mut p = opened();
+    for _ in 0..7 {
+        p.key(&PanelKey::Down, &h);
+    }
+    let room = Room {
+        used: 0,
+        free: 0,
+        drive: String::new(),
+    };
+    let facts = Facts {
+        now: crate::panel::rig::now(),
+        room,
+        note: None,
+    };
+    let page = |p: &mut Panel| build(p, &h, &facts, &crate::fixture::LIMITS, |_| None).0;
+    let before = page(&mut p);
+    assert_eq!((before.pages.at, before.highlight), (1, Some(2)));
+    assert_eq!(p.act(ClipAct::Rows(3), &h), Do::Show);
+    let after = page(&mut p);
+    assert_eq!(
+        (after.pages.at, after.highlight),
+        (2, Some(1)),
+        "place 7 of rows of 3"
+    );
+    assert_eq!(
+        after.rows[1].id,
+        id(&h, "5"),
+        "the same entry stays highlighted"
+    );
+}

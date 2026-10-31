@@ -10,15 +10,15 @@ use kx_module_api::ports::{
     WordPacks,
 };
 use kx_platform::ui::{
-    Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
+    Backdrop, Instance, Memory, Reveal, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinFieldWatch, WinGuard, WinInjector, WinInstance,
-    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPackDisk, WinPointerHook, WinPower, WinScreens,
-    WinScroll, WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
+    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPackDisk, WinPointerHook, WinPower, WinReveal,
+    WinScreens, WinScroll, WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -130,6 +130,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn memory(&self) -> Arc<dyn Memory> {
         Arc::new(WinMemory)
+    }
+
+    /// The reveal that shows a folder in Explorer, opened by the running Explorer itself.
+    #[must_use]
+    pub fn reveal(&self) -> Arc<dyn Reveal> {
+        Arc::new(WinReveal)
     }
 
     /// The speaker: `XAudio2` on a thread of its own, which makes the engine at the first play.

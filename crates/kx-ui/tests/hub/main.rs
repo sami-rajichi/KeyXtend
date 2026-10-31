@@ -11,6 +11,7 @@ mod app;
 mod assist;
 #[path = "../shared/board.rs"]
 mod board;
+mod clip;
 mod face;
 mod fonts;
 mod held;
@@ -37,7 +38,8 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
+    FakeWindowGuard,
 };
 use kx_test_support::host::FakeHost;
 use kx_ui::{Hub, MANIFEST, Request, UiPorts, Wake};
@@ -140,6 +142,8 @@ struct Rig {
     memory: Arc<FakeMemory>,
     /// The fake speaker.
     speaker: Arc<FakeSpeaker>,
+    /// The fake file manager.
+    reveal: Arc<FakeReveal>,
     /// Every wake the hub gave.
     wakes: Arc<Mutex<Vec<Wake>>>,
 }
@@ -187,6 +191,7 @@ impl Rig {
         let tray = Arc::new(FakeTray::new(TRAY_PX));
         let memory = Arc::new(FakeMemory::new());
         let speaker = Arc::new(FakeSpeaker::new());
+        let reveal = Arc::new(FakeReveal::new());
         let ports = UiPorts {
             guard: guard.clone(),
             screens: screens.clone(),
@@ -195,6 +200,7 @@ impl Rig {
             tray: tray.clone(),
             memory: memory.clone(),
             speaker: speaker.clone(),
+            reveal: reveal.clone(),
         };
         let (hub, requests) = Hub::new(ports).expect("the hub starts");
         let wakes = Arc::new(Mutex::new(Vec::new()));
@@ -210,6 +216,7 @@ impl Rig {
             tray,
             memory,
             speaker,
+            reveal,
             wakes,
         }
     }
@@ -224,6 +231,7 @@ impl Rig {
             tray: self.tray.clone(),
             memory: self.memory.clone(),
             speaker: self.speaker.clone(),
+            reveal: self.reveal.clone(),
         }
     }
 

@@ -23,6 +23,8 @@ pub mod sounds;
 mod ui_module;
 
 #[cfg(feature = "qt")]
+pub use bridges::clip::serve_clips;
+#[cfg(feature = "qt")]
 pub use bridges::device::Device;
 #[cfg(feature = "qt")]
 pub use bridges::frames::FrameLog;
@@ -39,6 +41,7 @@ pub use bridges::shadows::serve_shadows;
 pub use bridges::tint::serve_icons;
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use bridges::{
+    clip::clip_pixels,
     device::{drawing, released, released_hidden, unreleased, wired},
     fonts::font_families,
     frames::{draw_window, mid_frame_draws},
@@ -51,6 +54,7 @@ pub use churn::{caps_flipped, flip_caps};
 pub use geom::Area;
 pub use hub::{
     FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker, asks,
+    clip_acts,
 };
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, PressFrame, SPEC, UiSettings};

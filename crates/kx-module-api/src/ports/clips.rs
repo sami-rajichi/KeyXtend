@@ -115,6 +115,8 @@ pub enum ClipAct {
     Back,
     /// Close the panel.
     Close,
+    /// The ui's rows per page; the module pages by the last one heard.
+    Rows(u8),
 }
 
 impl Event for ClipAct {

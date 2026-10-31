@@ -1,0 +1,298 @@
+//! The clipboard panel as QML reads it (spec §7): every text worded in the keyboard's language, sizes and times
+//! formatted, user strings without hidden marks (ADR-0022), and pictures as URLs of the kept round, never pixels.
+
+use super::{PART, PICTURES, PREVIEW};
+use crate::I18n;
+use crate::i18n::clean;
+use crate::i18n::keys::{
+    CLIP_BACK, CLIP_CHARS, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DELETE, CLIP_DELETE_ALL, CLIP_EMPTY,
+    CLIP_EXPIRES, CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_JOIN, CLIP_KIND, CLIP_KINDS,
+    CLIP_NO, CLIP_NOTE, CLIP_NOTES, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW,
+    CLIP_SEARCH, CLIP_TICKED, CLIP_TITLE, CLIP_UNPIN, CLIP_YES, PAGE_BACK, PAGE_ON, WINDOW_CLIP,
+};
+use kx_module_api::ports::{ClipPage, ClipRow, Preview};
+use kx_module_api::{is_arabic, is_rtl};
+use kx_theme::assets::IMAGE_SCHEME;
+use serde::Serialize;
+
+/// What ends a line of the preview's text.
+const BREAK: char = '\n';
+/// A tab, which the preview shows as a space.
+const TAB: char = '\t';
+/// What the preview shows in place of a tab.
+const SPACE: &str = " ";
+
+/// The panel, as JSON.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct View {
+    round: u32,
+    title: String,
+    kept: String,
+    search: Search,
+    filters: Vec<Chip>,
+    rows: Vec<Row>,
+    highlight: Option<u8>,
+    page: Mark,
+    ticked: u16,
+    unpin: bool,
+    /// Some entry is unpinned, so Delete all has something to delete.
+    any_unpinned: bool,
+    words: Words,
+    preview: Option<Shown>,
+    confirm: Option<Ask>,
+    room: String,
+    note: Option<String>,
+    empty: Option<String>,
+}
+
+/// The search line and its hint.
+#[derive(Serialize)]
+struct Search {
+    text: String,
+    hint: String,
+    arabic: bool,
+    rtl: bool,
+}
+
+/// A filter chip, by its id in `CLIP_FILTERS`.
+#[derive(Serialize)]
+struct Chip {
+    id: &'static str,
+    label: String,
+    on: bool,
+}
+
+/// One row; its id is a string, as JavaScript numbers lose a large one.
+#[derive(Serialize)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact QML draws on its own: direction, font, pin and expiry."
+)]
+struct Row {
+    id: String,
+    kind: &'static str,
+    title: String,
+    rtl: bool,
+    arabic: bool,
+    app: Option<String>,
+    when: String,
+    size: String,
+    meta: String,
+    tick: Option<u16>,
+    pinned: bool,
+    expires: bool,
+    thumb: Option<String>,
+    /// What readers hear: the title, its tick and its pin.
+    name: String,
+}
+
+/// The page number between the page buttons, `at` from 0.
+#[derive(Serialize)]
+struct Mark {
+    text: String,
+    at: u16,
+    count: u16,
+}
+
+/// The buttons' labels.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Words {
+    window: String,
+    close: String,
+    preview: String,
+    pin: String,
+    delete: String,
+    delete_all: String,
+    insert: String,
+    back: String,
+    yes: String,
+    no: String,
+    open_folder: String,
+    expires: String,
+    page_back: String,
+    page_on: String,
+}
+
+/// The preview page's content, by kind.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum Shown {
+    Text {
+        text: String,
+        chars: String,
+        arabic: bool,
+        rtl: bool,
+    },
+    Image {
+        url: Option<String>,
+    },
+    Files {
+        paths: Vec<String>,
+    },
+}
+
+/// The Delete-all question and how many entries it deletes.
+#[derive(Serialize)]
+struct Ask {
+    text: String,
+    count: u16,
+}
+
+/// `page` with every text in `t`.
+pub(super) fn of(page: &ClipPage, t: &I18n) -> View {
+    let pages = page.pages;
+    let shown = |n: u16| usize::from(n);
+    View {
+        round: page.round,
+        title: t.text(CLIP_TITLE),
+        kept: t.clip_kept(page.kept_days),
+        search: search(page, t),
+        filters: CLIP_FILTERS
+            .iter()
+            .map(|&(f, id)| Chip {
+                id,
+                label: t.text(&format!("{CLIP_FILTER}{id}")),
+                on: f == page.filter,
+            })
+            .collect(),
+        rows: page.rows.iter().map(|r| row(r, page.round, t)).collect(),
+        highlight: page.highlight,
+        page: Mark {
+            text: t.page(shown(pages.at) + 1, shown(pages.count.max(1))),
+            at: pages.at,
+            count: pages.count,
+        },
+        ticked: page.ticked,
+        unpin: page.unpin,
+        any_unpinned: page.unpinned > 0,
+        words: words(page, t),
+        preview: page.preview.as_ref().map(|p| preview(p, page.round, t)),
+        confirm: page.confirm.map(|count| Ask {
+            text: t.counted(CLIP_CONFIRM, usize::from(count)),
+            count,
+        }),
+        room: t.clip_room(&page.room, page.cap),
+        note: page
+            .note
+            .map(|n| t.text(&format!("{CLIP_NOTE}{}", id_of(&CLIP_NOTES, &n)))),
+        empty: page.empty.then(|| t.text(CLIP_EMPTY)),
+    }
+}
+
+/// The search line of `page`, without hidden marks, and its hint.
+fn search(page: &ClipPage, t: &I18n) -> Search {
+    let text = clean(page.search.expose());
+    Search {
+        arabic: is_arabic(&text),
+        rtl: is_rtl(&text),
+        text,
+        hint: t.text(CLIP_SEARCH),
+    }
+}
+
+/// Row `r` of view `round`; a row whose title is empty, or hidden marks alone, shows its kind's name.
+fn row(r: &ClipRow, round: u32, t: &I18n) -> Row {
+    let own = clean(r.title.expose());
+    let (title, rtl, arabic) = if own.is_empty() {
+        let name = t.text(&format!("{CLIP_KIND}{}", id_of(&CLIP_KINDS, &r.kind)));
+        (name.clone(), is_rtl(&name), is_arabic(&name))
+    } else {
+        (own, r.rtl, r.arabic)
+    };
+    let app = r.app.as_ref().map(|a| clean(a.expose()));
+    let app = app.filter(|a| !a.is_empty());
+    let (when, size) = (t.clip_when(&r.when), t.clip_size(r.bytes));
+    let id = r.id.to_string();
+    Row {
+        kind: id_of(&CLIP_KINDS, &r.kind),
+        meta: t.clip_meta(app.as_deref(), &when, &size),
+        name: reader_name(&title, r, t),
+        thumb: r.thumb.as_ref().map(|_| url(round, &id)),
+        id,
+        title,
+        rtl,
+        arabic,
+        app,
+        when,
+        size,
+        tick: r.tick,
+        pinned: r.pinned,
+        expires: r.expires,
+    }
+}
+
+/// What readers hear for row `r` shown as `title`: the title, then its tick and its pin, joined.
+fn reader_name(title: &str, r: &ClipRow, t: &I18n) -> String {
+    let mut parts = vec![title.to_owned()];
+    parts.extend(r.tick.map(|n| t.counted(CLIP_TICKED, usize::from(n))));
+    parts.extend(r.pinned.then(|| t.text(CLIP_PINNED)));
+    parts.join(&t.text(CLIP_JOIN))
+}
+
+/// The buttons' labels for `page`: Pin or Unpin as it says, and Insert with the ticked count.
+fn words(page: &ClipPage, t: &I18n) -> Words {
+    Words {
+        window: t.text(WINDOW_CLIP),
+        close: t.text(CLIP_CLOSE),
+        preview: t.text(CLIP_PREVIEW),
+        pin: t.text(if page.unpin { CLIP_UNPIN } else { CLIP_PIN }),
+        delete: t.text(CLIP_DELETE),
+        delete_all: t.text(CLIP_DELETE_ALL),
+        insert: t.counted(CLIP_INSERT, usize::from(page.ticked)),
+        back: t.text(CLIP_BACK),
+        yes: t.text(CLIP_YES),
+        no: t.text(CLIP_NO),
+        open_folder: t.text(CLIP_OPEN_FOLDER),
+        expires: t.text(CLIP_EXPIRES),
+        page_back: t.text(PAGE_BACK),
+        page_on: t.text(PAGE_ON),
+    }
+}
+
+/// Preview `p` of view `round`: text with its lines kept, the image's URL, or the files' paths.
+fn preview(p: &Preview, round: u32, t: &I18n) -> Shown {
+    match p {
+        Preview::Text { text, chars } => {
+            let text = lines(text.expose());
+            let chars = usize::try_from(*chars).unwrap_or(usize::MAX);
+            Shown::Text {
+                chars: t.counted(CLIP_CHARS, chars),
+                arabic: is_arabic(&text),
+                rtl: is_rtl(&text),
+                text,
+            }
+        }
+        Preview::Image(image) => Shown::Image {
+            url: image.as_ref().map(|_| url(round, PREVIEW)),
+        },
+        Preview::Files(paths) => Shown::Files {
+            paths: paths
+                .expose()
+                .iter()
+                .map(|p| clean(&p.to_string_lossy()))
+                .collect(),
+        },
+    }
+}
+
+/// `text` with its line breaks kept, each line without hidden marks and its tabs as spaces.
+fn lines(text: &str) -> String {
+    let each: Vec<String> = text
+        .split(BREAK)
+        .map(|l| clean(&l.replace(TAB, SPACE)))
+        .collect();
+    each.join(&BREAK.to_string())
+}
+
+/// `key`'s id in `table`, such as a kind's in `CLIP_KINDS`, which also names its icon.
+fn id_of<K: PartialEq>(table: &[(K, &'static str)], key: &K) -> &'static str {
+    let found = table.iter().find(|(k, _)| k == key);
+    found.map_or_default(|&(_, id)| id)
+}
+
+/// The URL of picture `id` of view `round`.
+fn url(round: u32, id: &str) -> String {
+    format!("{IMAGE_SCHEME}://{PICTURES}/{round}{PART}{id}")
+}

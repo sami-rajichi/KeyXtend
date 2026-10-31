@@ -9,6 +9,7 @@
 
 #[path = "../shared/board.rs"]
 mod board;
+mod clip;
 mod combo;
 mod compose;
 mod files;

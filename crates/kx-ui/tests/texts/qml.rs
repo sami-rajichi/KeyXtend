@@ -8,7 +8,8 @@ use kx_module_api::ports::{
     BASE_DPI, FaceAction, FaceError, FaceReply, KeyboardFace, Point, Rect, Screen,
 };
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
+    FakeWindowGuard,
 };
 use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
@@ -114,6 +115,7 @@ fn system(tag: &str) -> Arc<Hub> {
         tray: Arc::new(FakeTray::new(TRAY_PX)),
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
+        reveal: Arc::new(FakeReveal::new()),
     };
     Hub::new(ports).expect("the hub starts").0
 }

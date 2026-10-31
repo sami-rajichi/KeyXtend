@@ -9,6 +9,7 @@
     reason = "cxx-qt's generated glue makes each object's Rust side in a Box"
 )]
 
+pub mod clip;
 pub mod device;
 pub mod fonts;
 pub mod frames;
