@@ -76,6 +76,8 @@ pub struct Store {
     left: BTreeMap<u64, BlobName>,
     /// Folders holding a list kept aside, whose orphans no load cleans.
     kept: BTreeSet<BlobName>,
+    /// Moves a save found gone, until the module takes them.
+    gone: Vec<u64>,
 }
 
 impl Store {
@@ -91,6 +93,7 @@ impl Store {
             moves: BTreeMap::new(),
             left: BTreeMap::new(),
             kept: BTreeSet::new(),
+            gone: Vec::new(),
         }
     }
 
@@ -189,12 +192,15 @@ impl Store {
         self.moves.get(&entry.id).copied().unwrap_or(entry.place)
     }
 
-    /// True when a move still needs `folder`: its blobs wait for a copy or a removal, or its list holds a moved entry.
+    /// True when a move still needs `folder`: blobs in it wait for a removal, or `moving` says so.
     fn busy(&self, folder: &BlobName) -> bool {
+        self.pending.contains_key(folder) || self.moving(folder)
+    }
+
+    /// True when a pending move's blobs wait in `folder` for a copy, or its list holds a moved entry.
+    fn moving(&self, folder: &BlobName) -> bool {
         let here = |p: &Place| folder_of(*p).is_ok_and(|f| f == *folder);
-        self.moves.values().any(here)
-            || self.pending.contains_key(folder)
-            || self.left.values().any(|f| f == folder)
+        self.moves.values().any(here) || self.left.values().any(|f| f == folder)
     }
 
     /// Forgets what this store knew of every folder, before a load.
@@ -204,6 +210,7 @@ impl Store {
         self.moves.clear();
         self.left.clear();
         self.kept.clear();
+        self.gone.clear();
     }
 
     /// Forgets what this store knew of `folder`, once it is dropped.
@@ -240,6 +247,7 @@ impl fmt::Debug for Store {
             .field("moves", &self.moves.len())
             .field("left", &self.left.len())
             .field("kept", &self.kept.len())
+            .field("gone", &self.gone.len())
             .finish_non_exhaustive()
     }
 }

@@ -5,6 +5,7 @@ mod aside;
 mod big;
 mod cut;
 mod fault;
+mod held;
 mod moves;
 
 use std::sync::Arc;

@@ -132,10 +132,11 @@ impl Store {
         }
     }
 
-    /// Drops `folder`, left with no entry, when it holds a list or blobs of ours; an aside folder loses only its list.
+    /// Drops `folder`, left with no entry, when it holds a list or blobs of ours; an aside folder, or one a move still
+    /// needs, loses only its list.
     fn drop_empty(&mut self, folder: &BlobName) -> Result<(), SealedError> {
         let saved = self.lists.get(folder).copied();
-        if self.kept.contains(folder) {
+        if self.kept.contains(folder) || self.moving(folder) {
             if let Some(old) = saved {
                 self.shelf.remove(folder, &list::head_name()?)?;
                 self.lists.remove(folder);

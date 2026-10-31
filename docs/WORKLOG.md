@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 04:17 — P8: the clipboard store keeps a stuck move's blobs
+An emptied folder that a pending move's blobs still wait in, or whose list still holds a moved entry, now loses only its list, so a failed list write followed by a failed copy no longer deletes the last whole copy of the entry. When a move's blobs are gone but the folder it left still holds them all, the move starts again from there instead of ending. A save now keeps the ids of moves it found gone, and the new `gone` hands them to the module once so it deletes those entries. The load's doc records the two limits Ruling 28 accepts.
+
 ## 2026-10-31 04:07 — P8: the clipboard panel's review fixes
 The Delete-all question now deletes only on a click on Yes (Enter does nothing there, Esc says No), and only the entries it counted when asked, never a copy kept since; one gone or pinned meanwhile leaves the count. `ClipPage` gains `unpinned`, so the ui greys Delete all when nothing unpinned is left, and an empty row title is documented as the ui's cue for the kind's name. After Pin, Unpin or Delete the highlight keeps its place in the list, so the page does not jump, and typed text joins the search line before it is flattened, so "a " then " b" reads "a b".
 

@@ -3,11 +3,12 @@
 //! queues every blob of it for removal; a delete removes them wherever a move left them.
 
 use std::collections::BTreeSet;
+use std::mem;
 
 use kx_module_api::ports::{BlobName, SealedError};
 
 use super::parts::{self, Blob};
-use super::{Store, blob_names, folder_of, place_of};
+use super::{Store, blob_names, complete, folder_of, place_of};
 use crate::entry::{Entry, Place};
 use crate::order::History;
 
@@ -64,6 +65,12 @@ impl Store {
         if failed { Err(SealedError::Io) } else { Ok(()) }
     }
 
+    /// Takes the ids whose content a save found gone since the last call, so the module deletes them; `moved`
+    /// answers for its own id instead.
+    pub fn gone(&mut self) -> Vec<u64> {
+        mem::take(&mut self.gone)
+    }
+
     /// Carries each pending move whose entry is still in `history`, and forgets the others; a failed one is skipped.
     pub(super) fn carry_all(&mut self, history: &History) -> Result<(), SealedError> {
         self.moves.retain(|id, _| history.get(*id).is_some());
@@ -71,13 +78,17 @@ impl Store {
         let mut first = Ok(());
         let moving: Vec<u64> = self.moves.keys().copied().collect();
         for entry in moving.iter().filter_map(|id| history.get(*id)) {
-            first = first.and(self.carry(entry).map(|_| ()));
+            match self.carry(entry) {
+                Ok(true) => {}
+                Ok(false) => self.gone.push(entry.id),
+                Err(e) => first = first.and(Err(e)),
+            }
         }
         first
     }
 
     /// Copies `entry`'s blobs from where a pending move left them into its folder, and queues the old ones for
-    /// removal; false when they are gone, which ends the move.
+    /// removal; false when no folder holds them whole any more, which ends the move.
     fn carry(&mut self, entry: &Entry) -> Result<bool, SealedError> {
         let from = self.home(entry);
         if from == entry.place {
@@ -93,8 +104,9 @@ impl Store {
                 Ok(Some(bytes)) => self.shelf.save(&new, name, &bytes),
                 Ok(None) | Err(SealedError::Damaged) if thumb => continue,
                 Ok(None) | Err(SealedError::Damaged) => {
-                    self.lost(entry.id, (&old, &names), (&new, &names[..n]));
-                    return Ok(false);
+                    self.queue(&old, &names);
+                    self.queue(&new, &names[..n]);
+                    return self.lost(entry, &old);
                 }
                 Err(e) => Err(e),
             };
@@ -111,13 +123,26 @@ impl Store {
         Ok(true)
     }
 
-    /// Ends the move of `id`, whose content is gone; the blobs left in the old folder and those copied into the new
-    /// one are queued, so a delete or the next save removes them.
-    fn lost(&mut self, id: u64, old: (&BlobName, &[BlobName]), new: (&BlobName, &[BlobName])) {
-        self.moves.remove(&id);
-        self.left.remove(&id);
-        self.queue(old.0, old.1);
-        self.queue(new.0, new.1);
+    /// Ends the move of `entry`, whose blobs in `old` are gone, unless the folder it left still holds every one: the
+    /// move then starts again from there. Gives whether the entry is still whole.
+    fn lost(&mut self, entry: &Entry, old: &BlobName) -> Result<bool, SealedError> {
+        if let Some(held) = self.left.get(&entry.id).cloned()
+            && held != *old
+            && let Some(place) = place_of(&held)
+            && self.has_all(entry, &held)?
+        {
+            self.moves.insert(entry.id, place);
+            return self.carry(entry);
+        }
+        self.moves.remove(&entry.id);
+        self.left.remove(&entry.id);
+        Ok(false)
+    }
+
+    /// True when `folder` holds every content blob of `entry`.
+    fn has_all(&self, entry: &Entry, folder: &BlobName) -> Result<bool, SealedError> {
+        let names: BTreeSet<BlobName> = self.shelf.names(folder)?.into_iter().collect();
+        Ok(complete(entry, &names))
     }
 
     /// Queues `names` in `folder` for removal once its saved list no longer names them.

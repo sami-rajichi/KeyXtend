@@ -58,6 +58,10 @@ impl Store {
     /// # Errors
     /// `Newer` when a list was saved by a newer version, before any change; else the shelf's, such as `Locked`
     /// without the OS key. The module then fails to start.
+    ///
+    /// # Limits (Ruling 28)
+    /// A load that fails after the shelf set a damaged head aside and its marker would not save leaves that folder's
+    /// orphans to the next load's clean. An aside saved by a load that then fails is not told again.
     pub fn load(&mut self) -> Result<Loaded, StoreError> {
         self.forget();
         let found = self.scan()?;
