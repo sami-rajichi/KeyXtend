@@ -11,11 +11,11 @@ use serde_json::{Value, json};
 use crate::apps::{AppKind, Ctx};
 use crate::featcfg::G20;
 use crate::g20hear::{Listener, Tally, max_bytes};
+use crate::ownkeys::{self, Real};
 use crate::probe::{self, Doc};
-use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
 use crate::winclip::{self, line};
-use crate::{clipkeep, g20prod, keys, product, readback, workertok};
+use crate::{clipkeep, g20prod, product, readback, workertok};
 
 /// The app G20 copies in and pastes into.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -69,18 +69,13 @@ fn copy_lines(
 ) -> Result<(), String> {
     let (k, ek, app) = (&ctx.cfg.keys, &ctx.cfg.edit_keys, &doc.app);
     probe::front(ctx, app)?;
-    keys_ours(app)?;
-    keys::combo(&ek.doc_start)?;
+    ownkeys::send(&Real, app, &ek.doc_start)?;
     for _ in halves(&ctx.cfg.g20).1 {
-        keys_ours(app)?;
-        keys::combo(&ek.line_start)?;
-        keys::combo(&ek.select_line)?;
+        ownkeys::each(&Real, app, &[&ek.line_start, &ek.select_line])?;
         sleep_ms(ctx.cfg.timing.key_settle_ms);
-        keys_ours(app)?;
-        keys::combo(&k.copy)?;
+        ownkeys::send(&Real, app, &k.copy)?;
         hear(ctx, l, tally, notes);
-        keys_ours(app)?;
-        keys::combo(&ek.next_line)?;
+        ownkeys::send(&Real, app, &ek.next_line)?;
     }
     Ok(())
 }
@@ -106,10 +101,11 @@ fn paste_back(ctx: &Ctx, doc: &Doc, entry: &str) -> Result<bool, String> {
     clip::write_text(Some(entry), &[], clipkeep::wait(t))
         .map_err(|e| format!("paste back: {e}"))?;
     probe::front(ctx, &doc.app)?;
-    keys_ours(&doc.app)?;
-    keys::combo(&ek.doc_end)?;
-    keys::combo(&ctx.cfg.keys.enter)?;
-    keys::combo(&ek.paste)?;
+    ownkeys::each(
+        &Real,
+        &doc.app,
+        &[&ek.doc_end, &ctx.cfg.keys.enter, &ek.paste],
+    )?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     readback::saved_until(ctx, &doc.app, |text| text.trim_end().ends_with(line(entry)))
 }

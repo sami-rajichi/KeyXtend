@@ -25,7 +25,7 @@ pub enum IpcError {
     #[error("the frame is over its size limit")]
     TooLong,
     /// The payload's length disagrees with its kind or its fields, or a goodbye carries an id.
-    #[error("the frame's length disagrees with its fields")]
+    #[error("the frame's length disagrees with its fields, or a goodbye carries an id")]
     Inconsistent,
     /// A field holds a value outside its range: a codec, a reason or a side.
     #[error("a field of the frame is out of range")]

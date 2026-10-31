@@ -16,13 +16,15 @@ const MOD: &str = "mod";
 /// The keyword that opens a visibility.
 const PUB: &str = "pub";
 
-/// The test-only modules of one file.
+/// The test-only modules of one file, and the modules it builds for the product.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct Mods {
     /// Their names; each one's file and folder hold test code, even beside an inline module.
     pub names: Vec<String>,
     /// Line spans, from 0, of those written inline.
     pub spans: Vec<RangeInclusive<usize>>,
+    /// The names of the modules declared outside test-only code.
+    pub live: Vec<String>,
 }
 
 /// A name or one other character of scanned code, with its line from 0.
@@ -46,7 +48,18 @@ pub(super) fn test_mods(code: &[String]) -> Mods {
             None => i + 1,
         };
     }
+    mods.live = live_mods(&tokens, &mods);
     mods
+}
+
+/// The modules declared in `tokens` outside the test-only `mods` and their inline bodies.
+fn live_mods(tokens: &[Token<'_>], mods: &Mods) -> Vec<String> {
+    let inside = |at: usize| mods.spans.iter().any(|s| s.contains(&tokens[at].line));
+    let found = (0..tokens.len()).filter_map(|i| declared(tokens, i).filter(|_| !inside(i)));
+    found
+        .map(|(name, _)| name.to_string())
+        .filter(|name| !mods.names.contains(name))
+        .collect()
 }
 
 /// The tokens of `code`, without spaces.
@@ -106,23 +119,30 @@ fn test_only(cond: &[Token<'_>]) -> bool {
 
 /// Notes the module declared at `i`, past attributes and a visibility, if one is.
 fn take_mod(tokens: &[Token<'_>], i: usize, mods: &mut Mods) {
-    let i = skip_prefix(tokens, i);
+    if let Some((name, span)) = declared(tokens, skip_prefix(tokens, i)) {
+        mods.names.push(name.to_string());
+        mods.spans.extend(span);
+    }
+}
+
+/// The module whose `mod` keyword is at `i`: its name, and its line span when written inline; `None` for no module
+/// or an inline one that never closes.
+fn declared<'a>(
+    tokens: &[Token<'a>],
+    i: usize,
+) -> Option<(&'a str, Option<RangeInclusive<usize>>)> {
     let text = |at: usize| tokens.get(at).map(|t| t.text);
     if text(i) != Some(MOD) {
-        return;
+        return None;
     }
-    let Some(name) = text(i + 1).filter(|n| n.starts_with(part)) else {
-        return;
-    };
-    match text(i + 2) {
-        Some(";") => mods.names.push(name.to_string()),
-        Some("{") => {
-            if let Some(close) = matching(tokens, i + 2) {
-                mods.names.push(name.to_string());
-                mods.spans.push(tokens[i + 2].line..=tokens[close].line);
-            }
+    let name = text(i + 1).filter(|n| n.starts_with(part))?;
+    match text(i + 2)? {
+        ";" => Some((name, None)),
+        "{" => {
+            let close = matching(tokens, i + 2)?;
+            Some((name, Some(tokens[i + 2].line..=tokens[close].line)))
         }
-        _ => {}
+        _ => None,
     }
 }
 

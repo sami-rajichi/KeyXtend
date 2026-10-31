@@ -60,6 +60,26 @@ fn a_move_whose_home_went_starts_again_from_the_folder_it_left() {
 }
 
 #[test]
+fn a_move_whose_home_and_left_folder_both_lost_a_blob_ends_and_is_told_gone() {
+    let (shelf, mut s, mut h, x, y) = stuck();
+    let x0 = part_name(x, 0).unwrap();
+    shelf.remove(&folder(Place::Pinned), &x0).unwrap();
+    shelf.remove(&folder(on(1)), &x0).unwrap();
+    s.save(&h).unwrap();
+    assert_eq!(s.gone(), [x], "neither folder holds it whole");
+    s.delete(h.get(x).unwrap()).unwrap();
+    h.remove(x);
+    s.save(&h).unwrap();
+    let mine = format!("{x:x}-");
+    for place in [on(1), on(3), Place::Pinned] {
+        let left = names(&shelf, place);
+        assert!(left.iter().all(|n| !n.starts_with(&mine)), "{left:?}");
+    }
+    let back = open(&shelf).parts(h.get(y).unwrap());
+    assert_eq!(back, Ok(Some(vec![text("y")])), "y stays whole");
+}
+
+#[test]
 fn a_save_tells_the_moves_it_found_gone_once() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (open(&shelf), History::default());

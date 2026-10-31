@@ -218,7 +218,8 @@ proptest! {
         let mut run = Run::new();
         for (minute, step) in (0..).zip(&steps) {
             run.minute = minute;
-            let pins: Vec<u64> = run.history.entries().iter().filter(|e| e.pinned()).map(|e| e.id).collect();
+            let entries = run.history.entries().iter();
+            let pins: Vec<u64> = entries.filter(|e| e.pinned()).map(|e| e.id).collect();
             let freed = freed(&run, step);
             run.apply(step);
             check(&run.history)?;

@@ -43,6 +43,10 @@ QtObject {
     property point popSpot: Qt.point(40, 30)
     // The room above the keyboard, in Qt units, that `popFit` shrinks a pop-up panel into; endless by default.
     property real fitRoom: Infinity
+    // The keyboard's centre that `popFit` centres a panel on, in physical pixels; NaN keeps it at `popSpot`. The sizes
+    // `popFit` was asked for, `{w, h}` in Qt units.
+    property real fitCentre: NaN
+    property var fitAsks: []
     // The keyboard's mode the hub keeps, as `keepMode` last set it.
     property var mode: ({ away: false, minimised: false })
     // The chip lane as the hub writes it, the start's until a test sets one; setting it sends `wordsChanged`. How many
@@ -228,11 +232,14 @@ QtObject {
         note("popAt " + (JSON.parse(over) ? "over" : "home") + " " + (centred ? "centred" : "left"));
         return JSON.stringify({ x: popSpot.x, y: popSpot.y });
     }
-    // A pop-up panel goes where `popAt` puts pop-ups, shrunk to the room as the hub does, never below the least fit.
+    // A pop-up panel goes where `popAt` puts pop-ups, or centred on `fitCentre` at its fit, shrunk to the room as the
+    // hub does, never below the least fit. Each size asked is kept in `fitAsks`.
     function popFit(over, left, centred, w, h) {
         note("popFit " + (JSON.parse(over) ? "over" : "home") + " " + (centred ? "centred" : "left"));
+        fitAsks.push({ w: w, h: h });
         const fit = Math.min(1, Math.max(look.shape.panel.min_fit, fitRoom / h));
-        return JSON.stringify({ x: popSpot.x, y: popSpot.y, fit: fit });
+        const x = isNaN(fitCentre) ? popSpot.x : fitCentre - w * fit / 2;
+        return JSON.stringify({ x: x, y: popSpot.y, fit: fit });
     }
     // A menu goes up from the click, as the hub puts it.
     function menuAt(x, y, w, h) {

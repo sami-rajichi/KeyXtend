@@ -6,11 +6,25 @@ use kx_ipc::{Ask, Codec, IpcError, Reply, Why};
 use std::io::{Read, Write};
 use std::panic::{self, AssertUnwindSafe};
 
+/// The media job's loop: `serve` with every draw's panic kept off stderr.
+///
+/// # Errors
+/// As `serve`.
+pub fn answer<R, W, D>(r: &mut R, w: &mut W, draw: D) -> Result<(), IpcError>
+where
+    R: Read + ?Sized,
+    W: Write + ?Sized,
+    D: Fn(Codec, &[u8], u32) -> Result<Picture, Why>,
+{
+    hush();
+    serve(r, w, draw)
+}
+
 /// Answers each draw read from `r` on `w` with `draw`, one at a time, until `Bye` or the end of input.
 ///
 /// # Errors
 /// The first frame that cannot be read or written; the stream is then out of step, so the worker exits.
-pub fn serve<R, W, D>(r: &mut R, w: &mut W, draw: D) -> Result<(), IpcError>
+fn serve<R, W, D>(r: &mut R, w: &mut W, draw: D) -> Result<(), IpcError>
 where
     R: Read + ?Sized,
     W: Write + ?Sized,
@@ -33,7 +47,7 @@ where
 }
 
 /// Keeps a draw's panic off stderr: its reply says `Internal`, and its message and place are never written.
-pub fn hush() {
+fn hush() {
     panic::set_hook(Box::new(|_| {}));
 }
 

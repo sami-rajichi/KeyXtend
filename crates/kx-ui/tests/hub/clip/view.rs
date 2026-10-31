@@ -57,12 +57,15 @@ fn when(days_ago: u32, date: Date) -> When {
 fn french_reads_sizes_in_mo_and_go_with_its_comma() {
     let v = read("fr", sized());
     let rows = &v["rows"];
-    assert_eq!(rows[0]["size"], "2,41 Mo");
-    assert_eq!(rows[1]["size"], "< 0,01 Mo");
-    assert_eq!(rows[0]["meta"], "Notepad · Aujourd’hui 16:32 · 2,41 Mo");
-    assert_eq!(rows[1]["meta"], "Hier 16:32 · < 0,01 Mo", "no app known");
+    let (mb, small) = ("2,41\u{a0}Mo", "<\u{a0}0,01\u{a0}Mo");
+    assert_eq!(rows[0]["size"], mb);
+    assert_eq!(rows[1]["size"], small);
+    let today = format!("Notepad · Aujourd’hui 16:32 · {mb}");
+    assert_eq!(rows[0]["meta"], today);
+    let yesterday = format!("Hier 16:32 · {small}");
+    assert_eq!(rows[1]["meta"], yesterday, "no app known");
     assert_eq!(rows[1]["app"], Value::Null);
-    let room = "Historique\u{a0}: 1,50 Go sur 2,00 Go · 412,00 Go libres sur D:";
+    let room = "Historique\u{a0}: 1,50\u{a0}Go sur 2,00\u{a0}Go · 412,00\u{a0}Go libres sur D:";
     assert_eq!(v["room"], room);
     assert_eq!(v["words"]["insert"], "Insérer (3)");
     assert_eq!(v["kept"], "Conservés 7 jours");
@@ -121,18 +124,14 @@ fn a_row_with_no_title_shows_its_kind_and_readers_hear_its_tick_and_pin() {
     r.kind = ClipKind::Image;
     r.tick = Some(2);
     r.pinned = true;
-    let v = read(
-        "en",
-        page(1, vec![r, row(18_446_744_073_709_551_615, "plain")]),
-    );
+    let rows = vec![r, row(u64::MAX, "plain")];
+    let v = read("en", page(1, rows));
     let shown = &v["rows"][0];
     assert_eq!(shown["title"], "Image");
     assert_eq!(shown["kind"], "image");
     assert_eq!(shown["name"], "Image, Ticked 2, Pinned");
-    assert_eq!(
-        (shown["tick"].clone(), shown["pinned"].clone()),
-        (json!(2), json!(true))
-    );
+    assert_eq!(shown["tick"], json!(2));
+    assert_eq!(shown["pinned"], json!(true));
     assert_eq!(v["rows"][1]["name"], "plain");
     assert_eq!(
         v["rows"][1]["id"], "18446744073709551615",

@@ -197,6 +197,8 @@ fn a_payload_read_grows_from_one_chunk_and_ends_at_its_length() {
     let data = vec![3; READ_CHUNK * 3 + 1];
     let tail = read_tail(&mut &data[..], data.len()).unwrap();
     assert_eq!(tail, data);
+    // Today's `Vec` keeps exactly the capacity `reserve_exact` asks for, so this checks no read reserves past the
+    // length; its docs would let an allocator give more, which would fail this line without a bug.
     assert!(tail.capacity() <= data.len());
 }
 

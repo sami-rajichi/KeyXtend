@@ -114,7 +114,12 @@ fn every_clip_key_has_its_text_in_every_language() {
 fn a_rows_size_is_megabytes_with_two_decimals_and_the_languages_mark() {
     let cases = [
         ("en", "2.41 MB", "< 0.01 MB", "1,024.00 MB"),
-        ("fr", "2,41 Mo", "< 0,01 Mo", "1\u{202f}024,00 Mo"),
+        (
+            "fr",
+            "2,41\u{a0}Mo",
+            "<\u{a0}0,01\u{a0}Mo",
+            "1\u{202f}024,00\u{a0}Mo",
+        ),
         (
             "ar",
             "2,41 ميغابايت",
@@ -129,7 +134,7 @@ fn a_rows_size_is_megabytes_with_two_decimals_and_the_languages_mark() {
         assert_eq!(t.clip_size(0), small, "{tag}");
         assert_eq!(t.clip_size(GB), big, "{tag}: a row stays in MB");
     }
-    assert_eq!(lang("fr").clip_size(MB / 100 + 1), "0,01 Mo");
+    assert_eq!(lang("fr").clip_size(MB / 100 + 1), "0,01\u{a0}Mo");
     let most = "17,592,186,044,416.00 MB";
     assert_eq!(
         lang("en").clip_size(u64::MAX),
@@ -147,7 +152,7 @@ fn the_storage_line_writes_megabytes_below_one_gigabyte_and_gigabytes_from_it() 
     );
     assert_eq!(
         line("fr", GB + GB / 2, 412 * GB),
-        "Historique\u{a0}: 1,50 Go sur 1,00 Go · 412,00 Go libres sur D:"
+        "Historique\u{a0}: 1,50\u{a0}Go sur 1,00\u{a0}Go · 412,00\u{a0}Go libres sur D:"
     );
     assert_eq!(
         line("ar", 182 * MB, GB + GB / 2),

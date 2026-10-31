@@ -16,9 +16,10 @@ use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use crate::apps::{Ctx, Opened};
 use crate::g27lane::{self, Lane};
 use crate::keymap::Reader;
+use crate::ownkeys::{self, Real};
 use crate::p7cfg::{Case, G27};
 use crate::product::{self, Keyboard};
-use crate::simuser::{self, keys_ours};
+use crate::simuser;
 use crate::walk::{self, CharKey};
 use crate::win::{self, sleep_ms};
 use crate::{board, capture, ftl, langs};
@@ -119,8 +120,7 @@ impl<'a> Typist<'a> {
         let kb = Keyboard::find()?;
         let mut last = Instant::now();
         for k in &keys {
-            keys_ours(self.app)?;
-            kb.click(&k.id)?;
+            ownkeys::click(&Real, self.app, &|| kb.click(&k.id))?;
             last = Instant::now();
             sleep_ms(self.g().key_gap_ms);
         }
@@ -156,10 +156,9 @@ impl<'a> Typist<'a> {
         Ok((word, win::ms_since(since)))
     }
 
-    /// Clicks the product's key `id` with the app in front.
+    /// Clicks the product's key `id` only while the app is in front with our tab.
     fn click(&self, id: &str) -> Result<(), String> {
-        keys_ours(self.app)?;
-        Keyboard::find()?.click(id)
+        ownkeys::click(&Real, self.app, &|| Keyboard::find()?.click(id))
     }
 
     /// Clicks the best chip with the app in front.

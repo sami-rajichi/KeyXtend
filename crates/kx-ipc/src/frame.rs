@@ -53,8 +53,12 @@ pub(crate) fn write_head<W: Write + ?Sized>(
 ) -> Result<(), IpcError> {
     check_len(kind, len)?;
     let len = u32::try_from(len).map_err(|_| IpcError::TooLong)?;
-    let fields = [VERSION, kind.code()];
-    let raw = [&MAGIC[..], &fields, &id.to_le_bytes(), &len.to_le_bytes()].concat();
+    let [m0, m1, m2, m3] = MAGIC;
+    let ([i0, i1, i2, i3], [l0, l1, l2, l3]) = (id.to_le_bytes(), len.to_le_bytes());
+    let code = kind.code();
+    let raw: [u8; HEADER_LEN] = [
+        m0, m1, m2, m3, VERSION, code, i0, i1, i2, i3, l0, l1, l2, l3,
+    ];
     w.write_all(&raw)?;
     Ok(())
 }

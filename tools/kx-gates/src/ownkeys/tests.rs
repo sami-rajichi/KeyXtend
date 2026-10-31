@@ -52,3 +52,20 @@ fn our_tab_in_front_takes_the_key_and_the_click() {
     assert_eq!(click(&desk, &app, &|| Ok(())), Ok(()));
     assert_eq!((desk.sent.borrow().len(), desk.clicks.get()), (1, 1));
 }
+
+#[test]
+fn each_key_of_a_run_is_checked_so_a_tab_that_changes_stops_the_rest() {
+    let app = notepad(None);
+    let (a, b, c): (&[u16], &[u16], &[u16]) = (&[0x41], &[0x42], &[0x43]);
+    let desk = Fake::new(app.hwnd, &[OUR_TAB, OUR_TAB, OWNER_TAB]);
+    let e = each(&desk, &app, &[a, b, c]).expect_err("the tab changed");
+    assert!(e.contains("our tab is not shown"), "{e}");
+    assert_eq!(
+        *desk.sent.borrow(),
+        [a.to_vec(), b.to_vec()],
+        "the third held back"
+    );
+    let ours = Fake::new(app.hwnd, &[OUR_TAB]);
+    assert_eq!(each(&ours, &app, &[a, b, c]), Ok(()));
+    assert_eq!(ours.sent.borrow().len(), 3);
+}

@@ -110,6 +110,32 @@ fn integration_tests_and_test_modules_may_spawn() {
 }
 
 #[test]
+fn a_test_module_of_main_rs_shields_nothing_lib_rs_builds_for_the_product() {
+    let found = f4_with(&[
+        ("src/main.rs", "#[cfg(test)]\nmod run;\n"),
+        ("src/lib.rs", "pub mod run;\n"),
+        ("src/run.rs", SPAWN),
+    ]);
+    assert_eq!(places(&found), at("src/run.rs", &[1, 2]));
+}
+
+#[test]
+fn a_renamed_process_module_is_found_where_it_is_renamed() {
+    let text = concat!(
+        "use std::process as sp;\n",
+        "pub use std::process::{self as run, Stdio};\n",
+        "use std::process::{Stdio as S, self as again};\n",
+        "use std::process::ExitCode as Code;\n",
+        "fn id() -> u32 { std::process::id() }\n",
+    );
+    let found = f4_with(&[
+        ("src/alias.rs", text),
+        ("src/use.rs", "fn f() { crate::sp::Command::new(\"x\"); }\n"),
+    ]);
+    assert_eq!(places(&found), at("src/alias.rs", &[1, 2, 3]));
+}
+
+#[test]
 fn an_inline_test_module_may_spawn_but_code_after_it_may_not() {
     let text = concat!(
         "#[cfg(test)]\n",

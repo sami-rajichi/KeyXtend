@@ -169,3 +169,13 @@ fn a_combo_presses_in_order_and_releases_in_reverse() {
         [vk_key(0x11), vk_key(0x43), vk_key(0x43), vk_key(0x11)]
     );
 }
+
+#[test]
+fn a_test_that_reaches_a_real_sender_panics_before_any_input_goes_out() {
+    let refused = |send: fn()| std::panic::catch_unwind(send).is_err();
+    assert!(refused(|| drop(send(&[]))), "send");
+    assert!(refused(|| drop(send_as(&[], After::Away))), "send_as");
+    assert!(refused(|| drop(text(""))), "text");
+    assert!(refused(|| drop(paced("", 0))), "paced");
+    assert!(refused(|| drop(restore_combo(&[]))), "restore_combo");
+}

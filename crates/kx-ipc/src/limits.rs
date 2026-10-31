@@ -18,6 +18,8 @@ pub const MAX_RGBA_BYTES: usize = MAX_SIDE as usize * MAX_SIDE as usize * RGBA_B
 
 /// A draw's fields before its image: the codec and the longest side.
 pub(crate) const DRAW_HEAD: usize = size_of::<u8>() + size_of::<u32>();
+/// The fewest image bytes a draw carries: an empty image is refused.
+pub(crate) const MIN_IMAGE_BYTES: usize = 1;
 /// A pixel reply's fields before its pixels: the width and the height.
 pub(crate) const PIXELS_HEAD: usize = 2 * size_of::<u32>();
 /// A failure reply's only field: the reason.

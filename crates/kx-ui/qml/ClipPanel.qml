@@ -24,13 +24,17 @@ Glow {
     follow: pane.body
 
     // Places the panel at the hub's spot and fit for its full size, from its last layout. A fresh fit is taken as it
-    // comes; after a layout the fit only shrinks, so text that wraps differently at a new size never makes it swing.
+    // comes; after a layout the fit only shrinks, so rewrapped text never makes it swing, and a smaller fit it keeps
+    // takes the hub's spot for its own size, so it stays centred.
     function place(fresh) {
-        const p = panel.win.spots.popFit(pane.pn.width_px * panel.win.s, pane.unit * panel.win.s, NaN);
+        const w = pane.pn.width_px * panel.win.s, h = pane.unit * panel.win.s;
+        let p = panel.win.spots.popFit(w, h, NaN);
         if (!p)
             return;
         if (fresh || p.fit < fit)
             fit = p.fit;
+        else if (fit < p.fit)
+            p = panel.win.spots.popFit(w * fit, h * fit, NaN) || p;
         pane.x = p.x;
         pane.y = p.y;
     }

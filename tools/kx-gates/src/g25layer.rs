@@ -15,10 +15,10 @@ use crate::g25::{self, part};
 use crate::g25watch::Watch;
 use crate::g25wins::{self, EscTo};
 use crate::modekey::ModeKey;
+use crate::ownkeys::{self, Real};
 use crate::product::{self, Keyboard};
-use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clipkeep, keys, readback};
+use crate::{board, clipkeep, readback};
 
 /// Selects all of Notepad's text.
 const SELECT_ALL: &str = "select-all";
@@ -103,13 +103,12 @@ impl Desk<'_> {
         Ok(kb)
     }
 
-    /// Clicks shortcut `name` on its page, with Notepad in front so its keys reach Notepad alone.
+    /// Clicks shortcut `name` on its page, only while Notepad is in front with our tab, so its keys reach it alone.
     fn press(&self, name: &str) -> Result<(), String> {
         let id = key(name)?;
         let page = page_with(&self.pages, &id).ok_or_else(|| format!("{id} is on no page"))?;
         let kb = self.turn_to(page)?;
-        keys_ours(self.app)?;
-        kb.click(&id)
+        ownkeys::click(&Real, self.app, &|| kb.click(&id))
     }
 
     /// Clicks shortcut `name`, then reads the clipboard once it changed: true when it holds G25's text.
@@ -137,8 +136,7 @@ impl Desk<'_> {
         self.press(SELECT_ALL)?;
         sleep_ms(self.ctx.cfg.timing.key_settle_ms);
         let copy = self.copies(COPY)?;
-        keys_ours(self.app)?;
-        keys::combo(&self.ctx.cfg.edit_keys.doc_end)?;
+        ownkeys::send(&Real, self.app, &self.ctx.cfg.edit_keys.doc_end)?;
         let paste = self.edits(PASTE, &text.repeat(2))?;
         let undo = self.edits(UNDO, text)?;
         let copy_all = self.copies(COPY_ALL)?;

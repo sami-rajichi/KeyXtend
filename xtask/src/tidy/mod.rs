@@ -30,7 +30,8 @@ pub(crate) const F1: &str = "F1";
 pub(crate) const F2: &str = "F2";
 /// F3: the bridge crate holds `unsafe` outside its bridge folder, or without a safety comment inside it.
 pub(crate) const F3: &str = "F3";
-/// F4: product code under `spawn_dirs` names a `banned_spawns` API outside tests, test modules and build scripts.
+/// F4: product code under `spawn_dirs` names a `banned_spawns` API, or renames its module, outside tests, test modules
+/// and build scripts. A rename split over lines slips past this line-based check.
 pub(crate) const F4: &str = "F4";
 
 /// How serious a tidy [`Violation`] is.

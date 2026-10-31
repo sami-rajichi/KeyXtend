@@ -78,7 +78,8 @@ unsafe extern "system" fn gated(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LP
 fn a_bounded_stop_waits_for_an_idle_thread_and_leaves_a_held_one() {
     let class = |what: &str| crate::wide(&format!("KeyXtendTest.{}.{what}", std::process::id()));
     let idle = Hidden::start(class("idle"), Kind::TopLevel, Some(gated), || ()).unwrap();
-    assert!(idle.stop_within(IDLE_WAIT), "an idle thread ends in time");
+    let idle_end = idle.stop_within(IDLE_WAIT);
+    assert_eq!(idle_end, Stopped::Joined, "an idle thread ends in time");
     let gate = GATE.lock().unwrap_or_else(PoisonError::into_inner);
     let (tx, inside) = mpsc::channel();
     *INSIDE.lock().unwrap_or_else(PoisonError::into_inner) = Some(tx);
@@ -96,6 +97,49 @@ fn a_bounded_stop_waits_for_an_idle_thread_and_leaves_a_held_one() {
     let ended = busy.stop_within(BUSY_WAIT);
     let waited = started.elapsed();
     drop(gate);
-    assert!(!ended, "the held thread is left to end alone");
+    assert_eq!(ended, Stopped::Late, "the held thread is left to end alone");
     assert!(waited < IDLE_WAIT, "the stop came back after its wait");
+}
+
+/// A test window handed to its own thread, and where that thread tells how stopping it there ended.
+static OWN: Mutex<Option<(Hidden, mpsc::Sender<Stopped>)>> = Mutex::new(None);
+
+/// On `WM_APP` stops the window it was handed, from its own thread, and tells the outcome; else answers as ours do.
+#[allow(unsafe_code, reason = "The procedure of a test window.")]
+unsafe extern "system" fn own_stop(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_APP {
+        let own = OWN.lock().unwrap_or_else(PoisonError::into_inner).take();
+        if let Some((hidden, tx)) = own {
+            let _ = tx.send(hidden.stop_within(IDLE_WAIT));
+        }
+        return LRESULT::default();
+    }
+    // SAFETY: our own window's message, with its own values.
+    unsafe { answer(hwnd, msg, wparam, lparam) }
+}
+
+#[test]
+#[allow(
+    unsafe_code,
+    reason = "Finds and messages the test's own hidden window."
+)]
+fn a_stop_from_the_window_thread_never_waits_so_it_is_never_late() {
+    let class = crate::wide(&format!("KeyXtendTest.{}.own", std::process::id()));
+    let hidden = Hidden::start(class.clone(), Kind::TopLevel, Some(own_stop), || ()).unwrap();
+    let (tx, told) = mpsc::channel();
+    *OWN.lock().unwrap_or_else(PoisonError::into_inner) = Some((hidden, tx));
+    // SAFETY: the class name ends with a null; WM_APP carries no pointers.
+    unsafe {
+        let window = FindWindowExW(None, None, PCWSTR(class.as_ptr()), PCWSTR::null()).unwrap();
+        PostMessageW(Some(window), WM_APP, WPARAM(0), LPARAM(0)).unwrap();
+    }
+    let ended = told
+        .recv_timeout(IDLE_WAIT)
+        .expect("the window thread stopped itself");
+    assert_eq!(ended, Stopped::Unwaited, "no wait, so no warning");
 }

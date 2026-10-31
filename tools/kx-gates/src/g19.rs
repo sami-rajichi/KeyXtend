@@ -9,10 +9,11 @@ use spike_core::geom;
 use spike_core::selwatch::PillPx;
 
 use crate::apps::{AppKind, Ctx, Opened};
+use crate::ownkeys::{self, Real};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{keys, launch, out, simuser};
+use crate::{launch, out, simuser};
 
 /// G19's run name: detection only, before the pill exists.
 pub const CORE: &str = "core";
@@ -21,16 +22,13 @@ const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
 /// The apps the roadmap names for G19; Word waits for P10, as its sign-in dialog blocked it.
 const ROADMAP_APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Word, AppKind::Chrome];
 
-/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End.
+/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
     let ek = &ctx.cfg.edit_keys;
-    simuser::keys_ours(app)?;
-    keys::combo(&ek.doc_start)?;
-    for _ in 0..i {
-        keys::combo(&ek.next_line)?;
-    }
-    keys::combo(&ek.line_start)?;
-    keys::combo(&ek.select_line)?;
+    let mut run: Vec<&[u16]> = vec![&ek.doc_start];
+    run.extend(std::iter::repeat_n(ek.next_line.as_slice(), i));
+    run.extend([ek.line_start.as_slice(), ek.select_line.as_slice()]);
+    ownkeys::each(&Real, app, &run)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     Ok(())
 }

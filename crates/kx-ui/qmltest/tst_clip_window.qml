@@ -76,8 +76,32 @@ Item {
             win.visible = false;
         }
 
-        // Ruling 53: on a 1366×768 screen at 100 % the panel fits above the face fixture's keyboard at the least fit or
-        // more, with and without a note, in each look and language, so its bottom stays above the keys.
+        // A smaller fit the panel keeps after a layout is placed where the hub puts a panel of that size, so it stays
+        // centred on the keyboard.
+        function test_a_kept_smaller_fit_takes_the_spot_for_its_own_size() {
+            const win = make();
+            win.ui.fitCentre = 600;
+            win.ui.clipView = Kit.view("en", "list");
+            tryVerify(() => !!win.clips && win.clips.pane.visible, 2000, "the panel shows");
+            const panel = win.clips, pane = panel.pane;
+            verify(waitForPolish(pane));
+            const full = { w: pane.pn.width_px * win.s, h: pane.unit * win.s };
+            win.ui.fitRoom = full.h * 0.9;
+            panel.place(true);
+            const kept = panel.fit;
+            verify(kept < 1, "shrunk to the room");
+            win.ui.fitRoom = Infinity;
+            panel.place(false);
+            compare(panel.fit, kept, "the smaller fit stays");
+            const ask = win.ui.fitAsks[win.ui.fitAsks.length - 1];
+            fuzzyCompare(ask.w, full.w * kept, 0.01, "the spot is asked at the kept fit");
+            const want = win.spots.logical(win.ui.fitCentre - ask.w / 2, win.ui.popSpot.y);
+            fuzzyCompare(pane.x, want.x, 1, "centred at that size");
+            win.visible = false;
+        }
+
+        // On a 1366×768 screen at 100 % the panel fits above the face fixture's keyboard at the least fit or more
+        // (spec §3.4), with and without a note, in each look and language, so its bottom stays above the keys.
         function test_the_panel_fits_above_the_keyboard_on_a_small_screen() {
             const work = 768 - 48; // The screen less Windows' taskbar.
             const fonts = Board.loadFonts(root);

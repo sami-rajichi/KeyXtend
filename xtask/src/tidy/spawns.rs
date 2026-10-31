@@ -5,7 +5,7 @@ use std::fs;
 use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
-use super::bridges::{Scan, whole};
+use super::bridges::{Scan, part, whole};
 use super::files::{Pick, relative_place, walk_dir};
 use super::{F4, Severity, Violation};
 use crate::workspace::{Package, Workspace};
@@ -21,6 +21,10 @@ const ROOT_FILES: [&str; 3] = ["lib.rs", "main.rs", "mod.rs"];
 const RUST_EXT: &str = "rs";
 /// Separates the names of a path.
 const PATH_SEP: &str = "::";
+/// The keyword that renames an import.
+const AS: &str = "as";
+/// The import of a module itself, inside its braces.
+const SELF: &str = "self";
 
 /// One file F4 reads: its path, code lines and test-only modules.
 struct Source {
@@ -83,10 +87,21 @@ fn sources(dir: &Path, ws: &Workspace) -> Vec<Source> {
 fn shields(dir: &Path, sources: &[Source], ws: &Workspace) -> Vec<PathBuf> {
     let scripts = ws.tidy.build_scripts.iter().map(|s| dir.join(s));
     let mods = sources.iter().flat_map(|s| {
-        let names = s.mods.names.iter();
+        let names = s.mods.names.iter().filter(|n| !built(sources, s, n));
         names.flat_map(move |n| test_paths(&s.path, n))
     });
     scripts.chain(mods).chain([dir.join(TESTS_DIR)]).collect()
+}
+
+/// True when a file other than `file` whose child modules share its folder, as `lib.rs` does beside `main.rs`,
+/// builds module `name` for the product.
+fn built(sources: &[Source], file: &Source, name: &str) -> bool {
+    let dir = child_dir(&file.path);
+    let other = |s: &&Source| s.path != file.path && child_dir(&s.path) == dir;
+    sources
+        .iter()
+        .filter(other)
+        .any(|s| s.mods.live.iter().any(|n| n == name))
 }
 
 /// `path`'s lines without comments and with literals blanked; an unreadable file is F1's to report.
@@ -110,7 +125,8 @@ fn report(source: &Source, ws: &Workspace) -> Vec<Violation> {
 }
 
 /// F4's findings in a file's code lines, as (line from 1, entry); lines in `spans` are test code.
-/// An entry is found where its last name stands, in a file whose live code also names the one before it.
+/// An entry is found where its last name stands in a file whose live code also names the one before it, and wherever
+/// that one is renamed, which would hide the last name in other files.
 fn findings(
     code: &[String],
     spans: &[RangeInclusive<usize>],
@@ -121,15 +137,9 @@ fn findings(
         .enumerate()
         .filter(|(at, _)| !spans.iter().any(|s| s.contains(at)))
         .collect();
-    let lines = |word: &str| -> Vec<usize> {
-        let has = |c: &str| {
-            c.match_indices(word)
-                .any(|(at, _)| whole(c, at, word.len()))
-        };
-        live.iter()
-            .filter(|(_, c)| has(c))
-            .map(|&(at, _)| at)
-            .collect()
+    let lines = |hit: &dyn Fn(&str) -> bool| -> Vec<usize> {
+        let found = live.iter().filter(|(_, c)| hit(c));
+        found.map(|&(at, _)| at).collect()
     };
     let mut found = Vec::new();
     for entry in banned {
@@ -137,12 +147,33 @@ fn findings(
         let Some(name) = names.next() else {
             continue;
         };
-        if names.next().is_none_or(|m| !lines(m).is_empty()) {
-            found.extend(lines(name).into_iter().map(|at| (at + 1, entry.clone())));
+        let module = names.next();
+        let mut at = lines(&|c| names_word(c, name));
+        if module.is_some_and(|m| lines(&|c| names_word(c, m)).is_empty()) {
+            at.clear();
         }
+        at.extend(module.map_or_else(Vec::new, |m| lines(&|c| renames(c, m))));
+        found.extend(at.into_iter().map(|at| (at + 1, entry.clone())));
     }
     found.sort();
+    found.dedup();
     found
+}
+
+/// True when code line `line` names `word` whole.
+fn names_word(line: &str, word: &str) -> bool {
+    line.match_indices(word)
+        .any(|(at, _)| whole(line, at, word.len()))
+}
+
+/// True when code line `line` renames module `module`: `module as x`, or `self as x` in the braces after it.
+fn renames(line: &str, module: &str) -> bool {
+    line.match_indices(module).any(|(at, _)| {
+        let rest = line[at + module.len()..].split(|c: char| !part(c));
+        let words: Vec<&str> = rest.filter(|w| !w.is_empty()).collect();
+        let renamed = words.first() == Some(&AS) || words.windows(2).any(|w| w == [SELF, AS]);
+        whole(line, at, module.len()) && renamed
+    })
 }
 
 /// The file and folder that a test module `name`, declared in `file`, may live in.

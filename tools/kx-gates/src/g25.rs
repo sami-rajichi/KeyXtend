@@ -15,9 +15,9 @@ use crate::copyend::Ended;
 use crate::facetools::click_on;
 use crate::modekey::Wait;
 use crate::mouse::round_px;
+use crate::ownkeys::{self, Real};
 use crate::probe::Doc;
 use crate::product::Keyboard;
-use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
 use crate::{board, clipkeep, g25layer, g25wins, langs, probe, product, winclip};
 
@@ -131,7 +131,7 @@ fn step(ctx: &Ctx, app: &Opened, key: &LangButton) -> Value {
     let Some(want) = next(app) else {
         return json!({ "ok": false, "error": "no layout for the app's focus" });
     };
-    match keys_ours(app).and_then(|()| click_on(key.hwnd, key.at)) {
+    match ownkeys::click(&Real, app, &|| click_on(key.hwnd, key.at)) {
         Ok(()) => json!({ "to": lang(want), "ok": shows(ctx, app, want) }),
         Err(e) => json!({ "ok": false, "error": e }),
     }

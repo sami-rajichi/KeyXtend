@@ -1,6 +1,8 @@
 //! One-byte wire codes for the frame kinds, image codecs and failure reasons; code 0 is never used.
 
-use crate::limits::{DRAW_HEAD, FAILED_LEN, MAX_ASK_LEN, MAX_REPLY_LEN, PIXELS_HEAD, RGBA_BYTES};
+use crate::limits::{
+    DRAW_HEAD, FAILED_LEN, MAX_ASK_LEN, MAX_REPLY_LEN, MIN_IMAGE_BYTES, PIXELS_HEAD, RGBA_BYTES,
+};
 use std::ops::RangeInclusive;
 
 /// A small enum sent as one byte.
@@ -43,7 +45,7 @@ impl Kind {
     /// The payload lengths this kind may take: a longer one is `TooLong`, a shorter one `Inconsistent`.
     pub(crate) const fn lens(self) -> RangeInclusive<usize> {
         match self {
-            Self::Draw => DRAW_HEAD + 1..=MAX_ASK_LEN,
+            Self::Draw => DRAW_HEAD + MIN_IMAGE_BYTES..=MAX_ASK_LEN,
             Self::Bye => 0..=0,
             Self::Pixels => PIXELS_HEAD + RGBA_BYTES..=MAX_REPLY_LEN,
             Self::Failed => FAILED_LEN..=FAILED_LEN,

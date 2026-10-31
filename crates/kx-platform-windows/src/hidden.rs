@@ -112,14 +112,14 @@ impl Hidden {
         self.end(None);
     }
 
-    /// Like `stop`, but waits `wait` at most: a thread still busy then ends alone later. True when it ended in time.
-    pub(crate) fn stop_within(self, wait: Duration) -> bool {
+    /// Like `stop`, but waits `wait` at most: a thread still busy then ends alone later.
+    pub(crate) fn stop_within(self, wait: Duration) -> Stopped {
         self.end(Some(wait))
     }
 
-    /// Asks the thread to end and waits for it as `waits` says, for `wait` at most; true when it was joined.
+    /// Asks the thread to end and waits for it as `waits` says, for `wait` at most.
     #[allow(unsafe_code, reason = "Posts a quit message to our own thread.")]
-    fn end(self, wait: Option<Duration>) -> bool {
+    fn end(self, wait: Option<Duration>) -> Stopped {
         self.stopping.store(true, Ordering::SeqCst);
         // SAFETY: posts WM_QUIT to our own window thread; a thread already gone just refuses it.
         let posted =
@@ -130,12 +130,26 @@ impl Hidden {
             .into_inner()
             .unwrap_or_else(PoisonError::into_inner);
         let late = |w| matches!(ended.recv_timeout(w), Err(RecvTimeoutError::Timeout));
-        if !waits(posted, own) || wait.is_some_and(late) {
-            return false;
+        if !waits(posted, own) {
+            return Stopped::Unwaited;
+        }
+        if wait.is_some_and(late) {
+            return Stopped::Late;
         }
         let _ = self.join.join();
-        true
+        Stopped::Joined
     }
+}
+
+/// How a bounded stop ended.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Stopped {
+    /// The thread ended and was joined.
+    Joined,
+    /// The wait ran out while the thread was still busy.
+    Late,
+    /// It never waited: its quit was refused, or the stop ran on the window's own thread.
+    Unwaited,
 }
 
 /// Whether `stop` waits for the window's thread: only when its `WM_QUIT` was `posted`, so a full queue cannot hang

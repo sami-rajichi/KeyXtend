@@ -43,17 +43,23 @@ fn frames(asks: &[Ask<'_>]) -> Vec<u8> {
     out
 }
 
+/// The tests' draw, which panics on `BOOM`.
+fn test_draw(codec: Codec, bytes: &[u8], side: u32) -> Result<Picture, Why> {
+    assert_ne!(bytes, BOOM, "the test draw panics");
+    drawing(codec, bytes, side)
+}
+
+/// Every reply in `out`.
+fn replies(out: &[u8]) -> Vec<Reply> {
+    let mut written = out;
+    std::iter::from_fn(|| Reply::read(&mut written).ok()).collect()
+}
+
 /// Runs the loop over `input`, returning its outcome and every reply it wrote.
 fn run(input: &[u8]) -> (Result<(), IpcError>, Vec<Reply>) {
-    let draw = |codec, bytes: &[u8], side| {
-        assert_ne!(bytes, BOOM, "the test draw panics");
-        drawing(codec, bytes, side)
-    };
     let mut out = Vec::new();
-    let outcome = serve(&mut &input[..], &mut out, draw);
-    let mut written = &out[..];
-    let replies = std::iter::from_fn(|| Reply::read(&mut written).ok()).collect();
-    (outcome, replies)
+    let outcome = serve(&mut &input[..], &mut out, test_draw);
+    (outcome, replies(&out))
 }
 
 /// A 1 by 1 opaque DIB and its pixel.
@@ -136,17 +142,18 @@ fn a_hushed_panic_writes_nothing_on_stderr() {
     assert!(stderr.is_empty(), "{stderr}");
 }
 
-/// Does nothing unless it is that child: then it hushes panics as the media job does and answers a panicking draw.
+/// Does nothing unless it is that child: then it answers a panicking draw through the media job's own entry, so a
+/// job that stops hushing fails the parent test.
 #[test]
 fn hushed_child() {
     if env::var_os(CHILD).is_none() {
         return;
     }
-    hush();
-    let (outcome, replies) = run(&frames(&[draw_ask(1, Codec::Dib, BOOM)]));
+    let (input, mut out) = (frames(&[draw_ask(1, Codec::Dib, BOOM)]), Vec::new());
+    let outcome = answer(&mut &input[..], &mut out, test_draw);
     assert_eq!(outcome, Ok(()));
     assert_eq!(
-        replies,
+        replies(&out),
         [Reply::Failed {
             id: 1,
             why: Why::Internal

@@ -7,13 +7,12 @@ use std::time::Instant;
 
 use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
-use spike_core::sendkeys;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::g22::{added, words_in};
 use crate::simuser::keys_ours;
 use crate::win::ms_since;
-use crate::{probe, readback};
+use crate::{keys, probe, readback};
 
 /// Name that runs this check instead of a face.
 pub const TYPING: &str = "typing";
@@ -31,7 +30,7 @@ fn parts(text: &str, gap_ms: u64) -> Vec<String> {
 fn type_ours(app: &Opened, text: &str, gap_ms: u64) -> Result<(), String> {
     for p in parts(text, gap_ms) {
         keys_ours(app)?;
-        sendkeys::text_paced(&p, gap_ms)?;
+        keys::paced(&p, gap_ms)?;
     }
     Ok(())
 }

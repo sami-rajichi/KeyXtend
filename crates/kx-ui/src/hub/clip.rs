@@ -159,7 +159,7 @@ impl Hub {
                 }
             });
         shown
-            .map_err(|e| tracing::warn!(error = %e, "the clipboard folder did not open, as no thread started"))
+            .inspect_err(|e| tracing::warn!(error = %e, "the clipboard folder did not open, as no thread started"))
             .is_ok()
     }
 

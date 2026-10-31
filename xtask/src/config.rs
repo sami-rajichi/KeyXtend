@@ -59,7 +59,8 @@ pub(crate) struct TidyConfig {
     pub spawn_dirs: Vec<String>,
     /// File extensions F4 reads.
     pub spawn_extensions: Vec<String>,
-    /// Process-start APIs F4 bans, as paths: it looks for the last name in a file that also names the one before it.
+    /// Process-start APIs F4 bans, as paths: it looks for the last name in a file that also names the one before it,
+    /// and for a rename of the one before it.
     pub banned_spawns: Vec<String>,
     /// Build scripts, as paths inside their package, which may start processes.
     pub build_scripts: Vec<String>,
@@ -71,16 +72,19 @@ impl TidyConfig {
         if self.warn_file_lines > self.max_file_lines {
             return Err(ConfigError::WarnExceedsMax);
         }
-        if self.extensions.is_empty() {
-            return Err(ConfigError::EmptyList("extensions"));
-        }
-        if self.scan_dirs.is_empty() {
-            return Err(ConfigError::EmptyList("scan_dirs"));
-        }
-        if self.tool_dir.trim().is_empty() {
-            return Err(ConfigError::EmptyValue("tool_dir"));
+        // An empty list would make its check pass while reading nothing.
+        let lists = [
+            ("extensions", &self.extensions),
+            ("scan_dirs", &self.scan_dirs),
+            ("spawn_dirs", &self.spawn_dirs),
+            ("spawn_extensions", &self.spawn_extensions),
+            ("banned_spawns", &self.banned_spawns),
+        ];
+        if let Some((name, _)) = lists.iter().find(|(_, l)| l.is_empty()) {
+            return Err(ConfigError::EmptyList(name));
         }
         let texts = [
+            ("tool_dir", &self.tool_dir),
             ("build_tool", &self.build_tool),
             ("deny_attr", &self.deny_attr),
             ("bridge_crate", &self.bridge_crate),
@@ -176,17 +180,17 @@ mod tests {
     }
 
     #[test]
-    fn empty_extensions_is_rejected() {
-        let mut config = tidy();
-        config.extensions = vec![];
-        assert_eq!(config.validate(), Err(ConfigError::EmptyList("extensions")));
-    }
-
-    #[test]
-    fn empty_scan_dirs_is_rejected() {
-        let mut config = tidy();
-        config.scan_dirs = vec![];
-        assert_eq!(config.validate(), Err(ConfigError::EmptyList("scan_dirs")));
+    fn each_required_list_must_not_be_empty() {
+        let emptied = |name: &'static str, clear: fn(&mut TidyConfig)| {
+            let mut config = tidy();
+            clear(&mut config);
+            assert_eq!(config.validate(), Err(ConfigError::EmptyList(name)));
+        };
+        emptied("extensions", |c| c.extensions.clear());
+        emptied("scan_dirs", |c| c.scan_dirs.clear());
+        emptied("spawn_dirs", |c| c.spawn_dirs.clear());
+        emptied("spawn_extensions", |c| c.spawn_extensions.clear());
+        emptied("banned_spawns", |c| c.banned_spawns.clear());
     }
 
     #[test]

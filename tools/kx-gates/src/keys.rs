@@ -9,6 +9,7 @@ use kx_platform_windows::WinInjector;
 use kx_platform_windows::inject::{self, send_keys, vk_key};
 use kx_platform_windows::screen::cursor;
 use kx_platform_windows::strokes::{self, KeyEvent};
+use spike_core::sendkeys;
 use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE,
@@ -33,6 +34,13 @@ const RELEASES: u32 =
 /// A move this many pixels or more from the pointer surely moves it, as Windows rounds an absolute target by up to
 /// a pixel; a move that ends where the pointer is reaches no low-level hook.
 const SURE_MOVE_PX: i32 = 2;
+
+/// Refuses real input in a test build: gate tests go through the `ownkeys` desk, so a call that skips it fails its
+/// test instead of typing on the desktop.
+fn live() {
+    #[cfg(test)]
+    panic!("a gate test reached a real input sender; send through the ownkeys desk");
+}
 
 /// The mouse part of `input` when it is mouse input.
 #[allow(unsafe_code, reason = "Reads the union member the input's type names.")]
@@ -170,6 +178,7 @@ fn outgoing(
 /// only a batch that lets go goes out, moved as `after` says, so nothing stays pressed; input every hook sees tells
 /// the guard its hook must count it.
 pub fn send_as(inputs: &[INPUT], after: After) -> Result<(), String> {
+    live();
     let out = outgoing(inputs, mouseguard::allowed(), after)?;
     let send = || inject::send(&out).map_err(|e| format!("{e}: {}", io::Error::last_os_error()));
     if hooks_see(&out) {
@@ -186,11 +195,18 @@ pub fn send(inputs: &[INPUT]) -> Result<(), String> {
 
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
 pub fn text(text: &str) -> Result<(), String> {
+    live();
     mouseguard::allowed()?;
     let text = Redacted::new(text.to_owned());
     WinInjector
         .text(&text, TextRoute::Unicode)
         .map_err(|e| e.to_string())
+}
+
+/// Types `text` one character at a time, `gap_ms` apart, or in one batch when `gap_ms` is 0.
+pub fn paced(text: &str, gap_ms: u64) -> Result<(), String> {
+    live();
+    sendkeys::text_paced(text, gap_ms)
 }
 
 /// Virtual key `vk` pressed or released (`up`), marked `tag`.
@@ -212,6 +228,7 @@ pub fn combo(vks: &[u16]) -> Result<(), String> {
 
 /// Like `combo`, but it still goes out after the mouse guard stopped the gate, for a step that puts things back.
 pub fn restore_combo(vks: &[u16]) -> Result<(), String> {
+    live();
     send_keys(&presses(vks)).map_err(|e| e.to_string())
 }
 

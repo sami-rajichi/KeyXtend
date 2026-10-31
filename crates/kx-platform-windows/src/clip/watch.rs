@@ -17,7 +17,7 @@ use windows::Win32::UI::WindowsAndMessaging::{WM_CLIPBOARDUPDATE, WM_CREATE, WM_
 
 use super::parts::Formats;
 use super::{Marks, facts, read, table};
-use crate::hidden::{Hidden, Kind, answer};
+use crate::hidden::{Hidden, Kind, Stopped, answer};
 use crate::wide;
 
 /// Class of the watch window, local to our process.
@@ -93,13 +93,13 @@ struct Run(Option<Hidden>);
 impl ClipRun for Run {}
 
 impl Drop for Run {
-    /// Waits `STOP_WAIT` at most. A thread an app's late rendering holds ends alone once it is let go, and may tell
-    /// that one copy's note after the drop.
+    /// Waits `STOP_WAIT` at most, and warns only when that wait ran out. A thread an app's late rendering holds ends
+    /// alone once it is let go, and may tell that one copy's note after the drop.
     fn drop(&mut self) {
         let Some(hidden) = self.0.take() else {
             return;
         };
-        if !hidden.stop_within(STOP_WAIT) {
+        if hidden.stop_within(STOP_WAIT) == Stopped::Late {
             let wait_ms = STOP_WAIT.as_millis();
             tracing::warn!(wait_ms, "the clipboard watch did not stop in time");
         }

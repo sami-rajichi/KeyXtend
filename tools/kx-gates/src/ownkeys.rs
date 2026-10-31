@@ -95,6 +95,11 @@ pub fn send(desk: &dyn Desk, app: &Opened, vks: &[u16]) -> Result<(), String> {
     desk.combo(vks)
 }
 
+/// Sends each of `combos` to `app` on `desk` in turn, checking `ours` before each, so a tab that changes stops the rest.
+pub fn each(desk: &dyn Desk, app: &Opened, combos: &[&[u16]]) -> Result<(), String> {
+    combos.iter().try_for_each(|vks| send(desk, app, vks))
+}
+
 /// Runs `act`, a click that pastes into `app`, on `desk` once `ours` allows it; else nothing is clicked.
 pub fn click(
     desk: &dyn Desk,

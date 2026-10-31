@@ -8,9 +8,10 @@ use spike_core::pt::Pt;
 use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::{self, AppKind, Ctx, Opened};
+use crate::ownkeys::{self, Real};
 use crate::simuser::{self, guard, keys_ours};
 use crate::win::{self, sleep_ms};
-use crate::{clipkeep, keys, launch, out, probetext, winclip};
+use crate::{clipkeep, launch, out, probetext, winclip};
 use kx_platform_windows::clip::{self, open};
 use kx_platform_windows::uia::{self, Uia};
 use spike_core::geom;
@@ -158,13 +159,14 @@ pub fn run_on<T>(
         .map_err(|e| format!("{e}; clean-up: {notes:?}"))
 }
 
-/// Copies the selection with Ctrl+C while our window is in front; the clipboard is emptied first.
+/// Copies the selection with Ctrl+C while our window is in front, checked again right before the key; the clipboard
+/// is emptied first.
 fn copy(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let t = &ctx.cfg.timing;
     keys_ours(app)?;
     clip::write_text(None, &[], clipkeep::wait(t)).map_err(|e| e.to_string())?;
     let before = open::sequence();
-    keys::combo(&ctx.cfg.keys.copy)?;
+    ownkeys::send(&Real, app, &ctx.cfg.keys.copy)?;
     if !open::wait_change(before, clipkeep::wait(t)) {
         return Err("nothing was copied".to_string());
     }

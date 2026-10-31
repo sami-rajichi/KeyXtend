@@ -10,15 +10,14 @@ use crate::clippanel::Panel;
 use crate::g25watch::Watch;
 use crate::g25wins::{self, EscTo};
 use crate::modekey::ModeKey;
+use crate::ownkeys::{self, Real};
 use crate::product::Keyboard;
-use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
 use crate::{board, g25};
 
-/// Clicks the product's key `id` with `app` in front, so the keyboard acts for it.
+/// Clicks the product's key `id` only while `app` is in front with our tab, so the keyboard acts for it alone.
 fn tap(app: &Opened, id: &str) -> Result<(), String> {
-    keys_ours(app)?;
-    Keyboard::find()?.click(id)
+    ownkeys::click(&Real, app, &|| Keyboard::find()?.click(id))
 }
 
 /// Opens our panel with the clip key, or shuts it, unless it is so already, and waits for the panel to follow.
@@ -68,10 +67,8 @@ pub fn ours(ctx: &Ctx, app: &Opened, panel: &Panel) -> Result<Value, String> {
     let (win_id, v) = (board::latch_id(Latch::Win)?, board::char_key(g.v_scan)?);
     let win_key = ModeKey::by_id(win_id.clone())?;
     let watch = Watch::start(&g.panel_classes, None);
-    let typed = keys_ours(app)
-        .and_then(|()| win_key.set(true, g25::wait(ctx)))
-        .and_then(|()| keys_ours(app))
-        .and_then(|()| win_key.keyboard.click(&v));
+    let typed = ownkeys::click(&Real, app, &|| win_key.set(true, g25::wait(ctx)))
+        .and_then(|()| ownkeys::click(&Real, app, &|| win_key.keyboard.click(&v)));
     let opened = typed.and_then(|()| panel.wait(true));
     let mut result = ours_line(ctx, app, panel, &watch, &opened);
     let after = g25wins::let_go(&win_id).unwrap_or((None, None));

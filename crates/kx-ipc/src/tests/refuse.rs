@@ -101,6 +101,11 @@ fn a_length_short_of_its_fields_is_inconsistent() {
         read_ask(&mut &frame(Kind::Bye, 5, &[])[..]),
         Err(Inconsistent)
     );
+    let said = Inconsistent.to_string();
+    assert!(
+        said.contains("length") && said.contains("goodbye"),
+        "{said}"
+    );
 }
 
 #[test]

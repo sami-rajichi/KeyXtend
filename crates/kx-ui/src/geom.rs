@@ -176,6 +176,20 @@ fn scaled(v: i64, share: f64) -> i64 {
     s
 }
 
+/// The share of a panel `h` tall that the larger of `rooms` takes: 1 when either room holds it whole, never below
+/// `least`.
+fn share(rooms: [i64; 2], h: i64, least: f64) -> f64 {
+    if rooms.iter().any(|&r| r >= h) {
+        return 1.0;
+    }
+    #[allow(
+        clippy::cast_precision_loss,
+        reason = "room and size are far inside f64's exact range"
+    )]
+    let fit = rooms[0].max(rooms[1]) as f64 / h as f64;
+    fit.clamp(least, 1.0)
+}
+
 /// Where a `size` pop-up panel goes beside `over` and how much it shrinks (spec §3.4): whole `gap[0]` above `over`,
 /// else below it, else shrunk to the larger room but never below `least`, covering the keys only then. It stays
 /// `gap[1]` inside `work`, its left edge at `left`, or centred on `over` when `None`.
@@ -193,15 +207,7 @@ pub fn fitted(
     let bottom = top + i64::from(over.h);
     let rooms = [top - space - inner.top, inner.bottom - bottom - space];
     let (w, h) = (i64::from(size.w).max(0), i64::from(size.h).max(1));
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "room and size are far inside f64's exact range"
-    )]
-    let fit = if rooms.iter().any(|&r| r >= h) {
-        1.0
-    } else {
-        (rooms[0].max(rooms[1]) as f64 / h as f64).clamp(least, 1.0)
-    };
+    let fit = share(rooms, h, least);
     let (w, h) = (scaled(w, fit), scaled(h, fit));
     let top_y = if rooms[0] >= h {
         top - space - h
