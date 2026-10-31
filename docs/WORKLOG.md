@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 02:03 — P8: the clipboard history's rules
+The new `kx-mod-clipboard` crate holds the history's pure rules (spec §7): each copy becomes an entry with its kind (text, link, image, files, or media by the module's `media.toml`), a one-line title, a folded search text and a stable FNV-1a hash; an image beside text and a copy with nothing kept are dropped. Pinned entries come first and each group newest first by a counter, so a repeated copy, an insert or an unpin moves up, and a clock set back keeps the order. A copy too big, under the free-space floor or past a cap the pins fill is refused with a note; past the caps the oldest unpinned leaves, and a new calendar day sweeps days past `keep_days` and media past `media_days`. A clear by the copying app within `clear_follow_s` deletes its entry, and `skip_apps` copies are never kept.
+
 ## 2026-10-31 02:40 — P8: the Windows clipboard watch, writer and calendar
 `kx-platform-windows` now hears every copy through a message-only window on its own thread, checks the "leave me out of history" markers of `clip.toml` before reading anything, and reports marked, cleared, too-big and busy copies without their content. Text, HTML, RTF, one image and file lists are read only under the size cap, and the copying app is named by its exe and its file's description. The writer sets parts with our marker, Windows line breaks and files as a copy, so an Insert never adds a row here or in Windows' history; the calendar gives the local time with summer time. The spike's clipboard code moved here from the gate tool, which now uses it.
 
