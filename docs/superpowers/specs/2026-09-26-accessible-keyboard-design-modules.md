@@ -199,7 +199,7 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - Delete all stays in the header, as above. It dims while no entry is unpinned, so a click never does nothing silently, and in its question Esc is No and only a click on Yes deletes, as destructive actions default to safe (builder's call).
   - The panel stays open while Insert runs and closes when it ends; a failed step stops the insert and keeps the panel open with a note (builder's call).
   - A file found gone is left out of the paste, and the entry goes only when every file is gone (owner). A file whose drive does not answer keeps its row and is skipped, so an unplugged stick loses no rows (builder's call).
-  - Only a path on a drive, such as `C:\…`, is looked at, a drive letter mapped to a share included. A share, device or relative path, or one through a link, is never looked at: its row says "Size unknown" and Insert pastes it, so a copy never makes KeyXtend reach another machine (builder's call).
+  - Only a path on a drive, such as `C:\…`, is looked at, a drive letter mapped to a share included. A share, device or relative path, or one through a link, is never looked at: its row says "Size unknown" and Insert pastes it, so a copied share, device or link path never makes KeyXtend reach another machine (builder's call).
   - Insert's file check gives up after `check_ms` (5 s by default, 1–30 s), and the insert stops with a note, as after a failed step (builder's call).
   - A clipboard format whose size cannot be read is skipped, and the rest of the copy is kept (builder's call).
   - `ClipPanel`, the panel's open state, needs `ReadClipboard`, and the keyboard needs it to start (ADR-0035).
