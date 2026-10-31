@@ -4,11 +4,12 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{AppRef, Calendar, ClipPart, Date, LocalTime};
+use kx_module_api::ports::{AppRef, Calendar, ClipPart, Date, LocalTime, MAX_BLOB_BYTES};
 use kx_platform_fake::FakeCalendar;
 
 use crate::entry::{Entry, EntryConfig};
 use crate::keep::Limits;
+use crate::store::StoreConfig;
 
 /// Bytes in a megabyte, as the settings count them.
 pub(crate) const MB: u64 = 1024 * 1024;
@@ -32,6 +33,11 @@ pub(crate) const LIMITS: Limits = Limits {
 pub(crate) const FOLLOW: Duration = Duration::from_secs(120);
 /// Free space well over the floor.
 pub(crate) const ROOMY: u64 = 400 * 1024 * MB;
+/// The plan's `thumb_px`, and the port's blob size.
+pub(crate) const STORE: StoreConfig = StoreConfig {
+    thumb_px: 128,
+    blob_bytes: MAX_BLOB_BYTES,
+};
 
 /// A date the test knows is real.
 pub(crate) fn date(year: u16, month: u8, day: u8) -> Date {

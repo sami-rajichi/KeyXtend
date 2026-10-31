@@ -19,9 +19,8 @@ pub fn of(parts: &[ClipPart]) -> u64 {
     h.0
 }
 
-/// FNV-1a over `bytes`.
-#[cfg(test)]
-fn fnv(bytes: &[u8]) -> u64 {
+/// FNV-1a over `bytes`, which the store also uses to tell when a list changed.
+pub(crate) fn fnv(bytes: &[u8]) -> u64 {
     let mut h = Fnv(OFFSET);
     h.eat(bytes);
     h.0

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 03:07 — P8: the clipboard history's sealed store
+`kx-mod-clipboard`'s new `Store` keeps the history on the sealed shelf in one folder per calendar day plus `pinned`: each folder's list in a small versioned byte form, and each entry's content and thumbnail in blobs under the 16 MiB cap; a list past the cap splits too, so 5,000 entries at the longest title and search text fit. A load drops entries whose folder or blobs went by hand, sets a damaged list's folder aside once for the notice, removes blobs no list names, and merges an entry that two lists hold after a crash. A move copies the blobs, saves the new folder's list before the old one's, then removes the old blobs, and a split list's extra blobs take turns in two rounds, so tests that cut the writes at every point find each entry whole or gone and each list old or new. Deletes remove every blob at once, and only lists whose entries changed are written again.
+
 ## 2026-10-31 02:34 — P8: the media worker's host, with reduced rights
 `kx_platform::pictures` now serves the `Pictures` port: each session's own thread starts the media worker at the first draw, sends one draw at a time, ends a worker that is late or sends a bad reply, waits a doubling backoff (`restart_ms` to `restart_max_ms`, new in `PictureConfig`) before the next start, and stops it when idle. On Windows, `WinSpawner` starts `keyxtend-worker.exe` from a copy of our token with uiAccess cleared and Medium integrity, inheriting only its two pipe ends and no stderr, in a job that caps its memory and ends it with us; its token is read back before it runs. Tests start the real worker to check its token, its handles, its job, and the command line and exit codes it shares with the host.
 
