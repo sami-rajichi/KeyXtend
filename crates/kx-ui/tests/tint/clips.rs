@@ -70,7 +70,7 @@ fn row(id: u64, thumb: Option<Pixels>) -> Result<ClipRow, String> {
             hour: 0,
             minute: 0,
         },
-        bytes: 1,
+        bytes: Some(1),
         tick: None,
         pinned: false,
         expires: false,

@@ -1,5 +1,5 @@
-//! What the clipboard module declares (ADR-0034 decision 1): it watches and sets the clipboard, keeps the history
-//! sealed, draws pictures in the worker and reads the calendar; it never types, as the keyboard pastes for it.
+//! What the clipboard module declares (ADR-0034 decision 1, ADR-0035): it watches and sets the clipboard, keeps the
+//! history sealed, draws pictures in the worker and reads the calendar; it never types, as the keyboard pastes for it.
 
 use kx_module_api::ports::{
     CalendarKey, ClipboardKey, ClipboardWriterKey, PicturesKey, SealedShelfKey,
@@ -11,8 +11,8 @@ use crate::settings::SPEC;
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("clipboard");
 
-/// The module's manifest: `ReadClipboard` gates the watch and the panel's events, `WriteClipboard` the writer and the
-/// paste request, `SecretStore` the shelf.
+/// The module's manifest: `ReadClipboard` gates the watch and the panel's events and state, `WriteClipboard` the
+/// writer and the paste request, `SecretStore` the shelf.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -81,6 +81,7 @@ mod tests {
         let write = Some(Capability::WriteClipboard);
         assert!(
             [
+                ClipPanel::CAPABILITY,
                 ClipKey::CAPABILITY,
                 ClipView::CAPABILITY,
                 ClipAct::CAPABILITY
@@ -91,7 +92,6 @@ mod tests {
         assert_eq!([PasteAsk::CAPABILITY, Pasted::CAPABILITY], [write, write]);
         let open = [
             ClipOpen::CAPABILITY,
-            ClipPanel::CAPABILITY,
             HistoryWanted::CAPABILITY,
             HistoryAsk::CAPABILITY,
             Notice::CAPABILITY,

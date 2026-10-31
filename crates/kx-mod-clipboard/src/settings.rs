@@ -4,9 +4,10 @@
 
 mod parts;
 
+use std::fmt;
 use std::ops::RangeInclusive;
 
-use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
+use kx_module_api::{Redacted, Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
 /// Calendar days an entry, or a media entry, is kept.
@@ -33,6 +34,8 @@ pub const JOIN_RULE_CHARS: usize = 80;
 pub const PASTE_GAP_MS: RangeInclusive<u32> = 20..=2_000;
 /// The wait for the keyboard's paste, in ms.
 pub const PASTE_WAIT_MS: RangeInclusive<u32> = 100..=5_000;
+/// The wait for an insert.s file check, in ms.
+pub const CHECK_MS: RangeInclusive<u32> = 1_000..=30_000;
 /// The characters search reads.
 pub const SEARCH_CHARS: RangeInclusive<usize> = 100..=2_000;
 /// The characters a title keeps.
@@ -80,7 +83,7 @@ pub static SPEC: SettingsSpec = SettingsSpec {
 };
 
 /// The module's settings; every value comes from `defaults.toml` or the user's file.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ClipSettings {
     /// Calendar days an entry is kept.
@@ -107,6 +110,8 @@ pub struct ClipSettings {
     pub paste_gap_ms: u32,
     /// How long an insert waits for the keyboard to paste, in ms.
     pub paste_wait_ms: u32,
+    /// How long an insert waits for its files to be checked, in ms.
+    pub check_ms: u32,
     /// The system's clipboard-history shortcut opens our panel.
     pub history_key: bool,
     /// The characters of each text search reads.
@@ -160,6 +165,7 @@ impl ClipSettings {
         within("join_breaks", self.join_breaks, &JOIN_BREAKS)?;
         within("paste_gap_ms", self.paste_gap_ms, &PASTE_GAP_MS)?;
         within("paste_wait_ms", self.paste_wait_ms, &PASTE_WAIT_MS)?;
+        within("check_ms", self.check_ms, &CHECK_MS)?;
         within("search_chars", self.search_chars, &SEARCH_CHARS)?;
         within("title_chars", self.title_chars, &TITLE_CHARS)?;
         within("preview_chars", self.preview_chars, &PREVIEW_CHARS)?;
@@ -191,6 +197,42 @@ impl ClipSettings {
         refuse_if(!apps, BAD_APP)?;
         let rule = self.join_rule.chars().count() <= JOIN_RULE_CHARS && one_line(&self.join_rule);
         refuse_if(!rule, BAD_RULE)
+    }
+}
+
+/// Shows every value but the skipped apps, whose ids tell what the user works in.
+impl fmt::Debug for ClipSettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClipSettings")
+            .field("keep_days", &self.keep_days)
+            .field("media_days", &self.media_days)
+            .field("max_entries", &self.max_entries)
+            .field("max_mb", &self.max_mb)
+            .field("min_free_mb", &self.min_free_mb)
+            .field("max_entry_mb", &self.max_entry_mb)
+            .field("clear_follow_s", &self.clear_follow_s)
+            .field("skip_apps", &Redacted::new(&self.skip_apps))
+            .field("join_breaks", &self.join_breaks)
+            .field("join_rule", &self.join_rule)
+            .field("paste_gap_ms", &self.paste_gap_ms)
+            .field("paste_wait_ms", &self.paste_wait_ms)
+            .field("check_ms", &self.check_ms)
+            .field("history_key", &self.history_key)
+            .field("search_chars", &self.search_chars)
+            .field("title_chars", &self.title_chars)
+            .field("preview_chars", &self.preview_chars)
+            .field("thumb_px", &self.thumb_px)
+            .field("preview_px", &self.preview_px)
+            .field("max_pixels", &self.max_pixels)
+            .field("media_ms", &self.media_ms)
+            .field("worker_idle_s", &self.worker_idle_s)
+            .field("worker_mb", &self.worker_mb)
+            .field("restart_ms", &self.restart_ms)
+            .field("restart_max_ms", &self.restart_max_ms)
+            .field("open_ms", &self.open_ms)
+            .field("poll_ms", &self.poll_ms)
+            .field("save_ms", &self.save_ms)
+            .finish()
     }
 }
 

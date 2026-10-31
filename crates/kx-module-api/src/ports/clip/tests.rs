@@ -1,4 +1,5 @@
-//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, and the errors.
+//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, the errors, and the paths no
+//! adapter probes.
 
 use super::*;
 use crate::REDACTED_MARKER;
@@ -98,4 +99,30 @@ fn each_error_says_something_else() {
     let errors = [ClipError::Busy, ClipError::Refused, ClipError::Io];
     let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();
     assert_eq!(texts.len(), errors.len());
+}
+
+#[test]
+fn a_share_or_a_device_path_starts_with_two_separators() {
+    let far = [
+        r"\\host\share\a.txt",
+        r"\\?\C:\a.txt",
+        r"\\?\UNC\host\share\a.txt",
+        r"\\.\PhysicalDrive0",
+        "//host/share/a.txt",
+        r"\/host/a.txt",
+    ];
+    for path in far {
+        assert!(is_share_or_device(Path::new(path)), "{path}");
+    }
+    let near = [
+        r"C:\a.txt",
+        "C:/a.txt",
+        r"\a.txt",
+        "a.txt",
+        r"docs\تقرير.pdf",
+        "",
+    ];
+    for path in near {
+        assert!(!is_share_or_device(Path::new(path)), "{path}");
+    }
 }

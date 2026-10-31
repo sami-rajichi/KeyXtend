@@ -1,5 +1,5 @@
-//! The `[clipboard]` settings: the agreed defaults, every range's ends, the checked lists and pairs, and the configs
-//! the parts take.
+//! The `[clipboard]` settings: the agreed defaults, every range's ends, the checked lists and pairs, the configs the
+//! parts take, and a `Debug` that hides the skipped apps.
 
 use super::*;
 use std::time::Duration;
@@ -47,6 +47,7 @@ fn bounds() -> Vec<(&'static str, (i64, i64))> {
         ("join_breaks", ends(&JOIN_BREAKS)),
         ("paste_gap_ms", ends(&PASTE_GAP_MS)),
         ("paste_wait_ms", ends(&PASTE_WAIT_MS)),
+        ("check_ms", ends(&CHECK_MS)),
         ("search_chars", ends(&SEARCH_CHARS)),
         ("title_chars", ends(&TITLE_CHARS)),
         ("preview_chars", ends(&PREVIEW_CHARS)),
@@ -73,8 +74,8 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
     assert_eq!(s.clear_follow_s, 120);
     assert!(s.skip_apps.is_empty() && s.join_rule.is_empty() && s.history_key);
     assert_eq!(
-        (s.join_breaks, s.paste_gap_ms, s.paste_wait_ms),
-        (2, 150, 1000)
+        (s.join_breaks, s.paste_gap_ms, s.paste_wait_ms, s.check_ms),
+        (2, 150, 1000, 5000)
     );
     assert_eq!(
         (s.search_chars, s.title_chars, s.preview_chars),
@@ -111,6 +112,7 @@ fn the_plans_ranges_and_the_safe_lower_bounds_hold() {
         (1..=7, 10..=600, 1..=3)
     );
     assert_eq!((PASTE_GAP_MS, PASTE_WAIT_MS), (20..=2000, 100..=5000));
+    assert_eq!(CHECK_MS, 1000..=30_000);
     assert!(*RESTART_MS.start() >= 100 && *WORKER_MB.start() >= 64);
     assert!(*MEDIA_MS.start() >= 500 && *WORKER_IDLE_S.start() >= 5);
 }
@@ -194,6 +196,9 @@ fn the_parts_get_the_settings_in_their_units() {
     assert_eq!(s.save(), Duration::from_millis(500));
     assert_eq!(s.paste_gap(), Duration::from_millis(150));
     assert_eq!(s.paste_wait(), Duration::from_millis(1000));
+    assert_eq!(s.check_wait(), Duration::from_millis(5000));
+    assert_eq!((s.sides().thumb, s.sides().preview), (128, 960));
+    assert_eq!(s.clear_window(), Duration::from_secs(120));
 }
 
 #[test]
@@ -209,5 +214,17 @@ fn the_unicode_line_and_paragraph_breaks_are_refused_too() {
         assert!(refused(&with("join_rule", broken.as_str()), "join_rule"));
         let app = toml::Value::Array(vec![format!("a{mark}b").into()]);
         assert!(refused(&with("skip_apps", app), "skip_apps"));
+    }
+}
+
+#[test]
+fn debug_hides_the_skipped_apps_and_shows_every_other_value() {
+    let mut s = ClipSettings::from_defaults().unwrap();
+    s.skip_apps = vec!["keepass.exe".to_owned()];
+    let shown = format!("{s:?}");
+    assert!(!shown.contains("keepass"), "{shown}");
+    assert!(shown.contains(kx_module_api::REDACTED_MARKER), "{shown}");
+    for key in defaults().keys() {
+        assert!(shown.contains(&format!("{key}: ")), "{key} is missing");
     }
 }

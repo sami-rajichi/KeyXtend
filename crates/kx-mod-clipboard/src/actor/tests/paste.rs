@@ -162,6 +162,19 @@ fn a_file_out_of_reach_is_skipped_and_kept() {
 }
 
 #[test]
+fn a_share_path_row_stays_with_no_size_and_pastes_at_insert() {
+    let share = r"\\host\share\plan.pdf";
+    let mut rig = Rig::new();
+    rig.copy(vec![files(&[share])], None);
+    rig.open();
+    let rows = rig.page().rows;
+    assert_eq!(rows.len(), 1, "never probed, so never gone");
+    assert_eq!(rows[0].bytes, None, "its size reads as unknown");
+    insert(&mut rig, &[0]);
+    assert_eq!(rig.fakes.writer.writes(), [vec![files(&[share])]]);
+}
+
+#[test]
 fn closing_the_panel_stops_the_insert() {
     let mut rig = opened(&["a", "b"]);
     insert(&mut rig, &[0, 1]);

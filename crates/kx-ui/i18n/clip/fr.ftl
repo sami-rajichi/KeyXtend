@@ -53,6 +53,7 @@ clip =
     .size = { $mb } Mo
     .size-gb = { $gb } Go
     .size-small = < { $mb } Mo
+    .size-unknown = Taille inconnue
     .storage = Historique : { $used } sur { $cap } · { $free } libres sur { $drive }
     .open-folder = Ouvrir le dossier
     .meta = { $app } · { $when } · { $size }

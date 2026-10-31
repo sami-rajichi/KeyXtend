@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 14:18 — P8: save debounce, insert deadline, gated panel, no network probes
+A repeated copy or a pasted step now waits for the debounced save, and an insert whose file check passes `check_ms` (new setting, 5 s) stops with a note and drops the late answer; a property test drives the insert's state machine. `ClipPanel` needs `ReadClipboard` (ADR-0035), and a paste request heard after the keyboard stops sends nothing. A path starting `\\host\`, `\\?\` or `\\.\` is never probed: its row stays, shows "Size unknown" and pastes at Insert. The review's smaller points are fixed too: a `Debug` that hides skipped apps, no-content `Debug` tests, fixtures built from the defaults, and `StoreError` on `thiserror`.
+
 ## 2026-10-31 13:40 — P8: a restricted worker token, one copy of the worker's words, opt-in live clipboard tests
 The picture worker now starts from a restricted copy of our token: every privilege but change-notify is dropped and Administrators is deny-only, so a keyboard run as administrator never lends the decoder admin rights, and a worker whose token still holds either is refused before it runs. The worker's command words and exit codes live once in `kx-ipc`, read by both the host and the worker, and the integrity label is built with its SID inside it. The live clipboard tests run only when `KX_LIVE_CLIPBOARD=1`, which CI's Windows job sets, so a local `cargo test` leaves the clipboard alone. A clipboard format whose size cannot be read is now skipped, never read nor counted, and the rest of the copy is kept.
 

@@ -28,7 +28,7 @@ mod sound;
 mod tray;
 mod ui;
 
-pub use calendar::FakeCalendar;
+pub use calendar::{FakeCalendar, PARIS};
 pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
 pub use field::FakeFieldWatch;

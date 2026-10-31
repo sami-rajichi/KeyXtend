@@ -100,7 +100,7 @@ fn clip_row(n: usize) -> ClipRow {
             hour: 16,
             minute: 32,
         },
-        bytes: 12,
+        bytes: Some(12),
         tick: Some(1),
         pinned: true,
         expires: false,
@@ -151,12 +151,12 @@ fn events_have_their_names() {
 }
 
 #[test]
-fn content_needs_read_clipboard_and_the_paste_write_clipboard() {
-    let want = [None, None, READ, READ, READ, WRITE, WRITE, None, None];
+fn the_panel_and_content_need_read_clipboard_and_the_paste_write_clipboard() {
+    let want = [None, READ, READ, READ, READ, WRITE, WRITE, None, None];
     assert_eq!(
         clips().map(|r| r.1),
         want,
-        "toggles and the chord request carry nothing"
+        "the open toggle and the chord flags carry nothing"
     );
 }
 

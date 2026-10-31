@@ -1,5 +1,7 @@
 //! Inserts that stop with a note, the panel left open: a refused or failed write, nothing left to paste, a files
-//! thread gone, and damaged content at Insert or Preview.
+//! thread gone or past `check_ms`, and damaged content at Insert or Preview.
+
+use std::time::Duration;
 
 use kx_module_api::keys;
 use kx_module_api::ports::{ClipAct, ClipError, FileFact, PanelNote, SealedError};
@@ -71,6 +73,29 @@ fn a_files_thread_gone_stops_the_insert_with_a_note() {
     rig.tick_row(0);
     insert(&mut rig);
     stopped(&rig, PanelNote::PasteFailed);
+}
+
+#[test]
+fn a_file_check_past_check_ms_stops_the_insert_and_its_late_answer_is_dropped() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_file("C:\\a.txt", FileFact::Size(9));
+    rig.copy(vec![files(&["C:\\a.txt"])], None);
+    rig.open();
+    rig.hold_looks(true);
+    rig.tick_row(0);
+    insert(&mut rig);
+    let wait = rig.settings.check_wait();
+    rig.advance(wait.checked_sub(Duration::from_millis(1)).unwrap());
+    assert_eq!(rig.page().note, None, "still checking");
+    rig.advance(Duration::from_millis(1));
+    stopped(&rig, PanelNote::PasteFailed);
+    rig.hold_looks(false);
+    assert_eq!(
+        rig.fakes.writer.tries(),
+        0,
+        "the late answer pastes nothing"
+    );
+    assert!(rig.pastes().is_empty());
 }
 
 #[test]

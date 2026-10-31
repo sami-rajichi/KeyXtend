@@ -15,11 +15,16 @@ use crate::order::History;
 
 impl Store {
     /// Follows the move of `id` in `history` from `from`, then saves: its blobs are copied, the new folder's list
-    /// saved before the old one's, then the old blobs removed. False when its content is gone, as by hand.
+    /// saved before the old one's, then the old blobs removed. False when its content is gone, as by hand. A raise
+    /// within its folder with no move pending moves nothing, so the debounced save writes its order.
     ///
     /// # Errors
     /// The shelf's error; the move stays pending, and reads find the blobs where they are.
     pub fn moved(&mut self, history: &History, id: u64, from: Place) -> Result<bool, SealedError> {
+        let stays = history.get(id).is_some_and(|e| e.place == from);
+        if stays && !self.moves.contains_key(&id) {
+            return Ok(true);
+        }
         let kept = match history.get(id) {
             Some(entry) => {
                 if from != entry.place {

@@ -17,6 +17,8 @@ kx-module-api = { path = "../kx-module-api" }
 # The settings and the compiled-in media table.
 serde.workspace = true
 toml.workspace = true
+# The store's error type.
+thiserror.workspace = true
 # Error kinds and counts only, never clipboard content.
 tracing.workspace = true
 

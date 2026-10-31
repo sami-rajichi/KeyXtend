@@ -103,7 +103,8 @@ impl Module for KeyboardModule {
         Ok(())
     }
 
-    /// The face stops typing picked words, as a handler may still run on the sender's thread; the UI keeps it.
+    /// The face stops typing picked words and pasting, as a handler may still run on the sender's thread; the UI
+    /// keeps it.
     fn stop(&mut self) {
         if let Some(face) = &self.face {
             face.set_running(false);

@@ -4,32 +4,18 @@
 use std::sync::mpsc;
 use std::time::Duration;
 
-use kx_module_api::ports::{FileFact, PictureConfig, PictureError, Pictures};
+use kx_module_api::ports::{FileFact, PictureError, Pictures};
 use kx_platform_fake::{FakeClipboard, FakePictures};
 
 use super::*;
-use crate::fixture::{files, text};
+use crate::fixture::{DEFAULTS, files, text};
 
 /// The longest a threaded test waits; it never sleeps.
 const WAIT: Duration = Duration::from_secs(10);
-/// The plan's sides.
-const SIDES: Sides = Sides {
-    thumb: 128,
-    preview: 960,
-};
-/// The plan's worker.
-const PICS: PictureConfig = PictureConfig {
-    deadline_ms: 3000,
-    idle_s: 30,
-    memory_mb: 512,
-    max_pixels: 100_000_000,
-    restart_ms: 1000,
-    restart_max_ms: 30_000,
-};
 
 /// A 2 by 1 picture.
 fn pixels() -> Pixels {
-    Pixels::new(2, 1, vec![0; 8], SIDES.thumb).unwrap()
+    Pixels::new(2, 1, vec![0; 8], DEFAULTS.sides().thumb).unwrap()
 }
 
 /// An image part of `bytes`.
@@ -55,34 +41,40 @@ fn a_job_takes_the_image_part_or_none() {
 fn a_thumb_draws_at_its_side_and_a_preview_at_its_own() {
     let pics = FakePictures::new();
     pics.queue(Ok(pixels()));
-    let mut run = pics.open(PICS);
+    let mut run = pics.open(DEFAULTS.picture_config());
     let drawn = draw(
         &mut *run,
         job_of(3, Size::Thumb, &[image(&[9])]).unwrap(),
-        SIDES,
+        DEFAULTS.sides(),
     );
     assert_eq!(
         (drawn.id, drawn.size, drawn.pixels),
         (3, Size::Thumb, Ok(pixels()))
     );
-    assert_eq!(pics.last_ask().map(|a| a.side), Some(SIDES.thumb));
+    assert_eq!(
+        pics.last_ask().map(|a| a.side),
+        Some(DEFAULTS.sides().thumb)
+    );
     draw(
         &mut *run,
         job_of(3, Size::Preview, &[image(&[9])]).unwrap(),
-        SIDES,
+        DEFAULTS.sides(),
     );
-    assert_eq!(pics.last_ask().map(|a| a.side), Some(SIDES.preview));
+    assert_eq!(
+        pics.last_ask().map(|a| a.side),
+        Some(DEFAULTS.sides().preview)
+    );
 }
 
 #[test]
 fn a_failed_draw_is_told_as_it_is() {
     let pics = FakePictures::new();
     pics.queue(Err(PictureError::Timeout));
-    let mut run = pics.open(PICS);
+    let mut run = pics.open(DEFAULTS.picture_config());
     let drawn = draw(
         &mut *run,
         job_of(1, Size::Thumb, &[image(&[1])]).unwrap(),
-        SIDES,
+        DEFAULTS.sides(),
     );
     assert_eq!(drawn.pixels, Err(PictureError::Timeout));
 }
@@ -115,9 +107,14 @@ fn the_media_thread_draws_each_job_and_ends_with_its_inbox_and_the_session() {
     pics.queue(Ok(pixels()));
     let (jobs, inbox) = mpsc::channel();
     let (tell, heard) = mpsc::channel();
-    let thread = spawn_media(pics.open(PICS), SIDES, inbox, move |d| {
-        let _ = tell.send(d);
-    })
+    let thread = spawn_media(
+        pics.open(DEFAULTS.picture_config()),
+        DEFAULTS.sides(),
+        inbox,
+        move |d| {
+            let _ = tell.send(d);
+        },
+    )
     .unwrap();
     jobs.send(job_of(5, Size::Thumb, &[image(&[1])]).unwrap())
         .unwrap();

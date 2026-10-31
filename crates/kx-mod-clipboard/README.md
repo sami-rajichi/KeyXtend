@@ -6,8 +6,8 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - **Limits** (`keep`, `follow`): days, entry and byte caps, the free-space floor, and follow-the-clear, which drops what an app clears unless pinned.
 - **Store** (`store`): day folders and a pinned folder on the `SealedShelf`, each with a versioned list; blobs, thumbnails, moves and a damaged list set aside.
 - **Panel** (`panel`, `view`): keys and clicks to `Do`, ticks in order, paged rows, the preview and the Delete-all question; `view` builds the `ClipPage` the ui draws.
-- **Insert** (`insert`): the ticked entries in tick order, a join between texts pasted as text (never Enter), files still there, and those out of reach skipped.
-- **Media** (`media`): thumbnails and previews drawn by the `Pictures` worker on `kx-clip-media`; file checks on `kx-clip-files`, as a share out of reach can block.
+- **Insert** (`insert`): the ticked entries in tick order, a join between texts pasted as text (never Enter), files still there or on a share never probed, and those out of reach skipped.
+- **Media** (`media`): thumbnails and previews drawn by the `Pictures` worker on `kx-clip-media`; file checks on `kx-clip-files`, as a drive out of reach can block; a share or device path is never probed, so its row shows no size.
 
 ## The module
 
@@ -15,7 +15,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 
 - keeps each copy within the limits, moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
-- inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a failed write, a paste that never comes or nothing left to paste stops with a note, and the panel closes when all went in;
+- inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).
 
 ## Services and capabilities
@@ -30,7 +30,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 
 | Capability | Why |
 |---|---|
-| `ReadClipboard` | It gates `Clipboard` and the panel events (`ClipKey`, `ClipView`, `ClipAct`). |
+| `ReadClipboard` | It gates `Clipboard` and the panel events (`ClipPanel`, `ClipKey`, `ClipView`, `ClipAct`; ADR-0035). |
 | `WriteClipboard` | It gates `ClipboardWriter`, `PasteAsk` and `Pasted`. |
 | `SecretStore` | It gates the `SealedShelf`. |
 
@@ -44,7 +44,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning; the r
 |---|---|
 | Limits | `keep_days`, `media_days`, `max_entries`, `max_mb`, `min_free_mb`, `max_entry_mb` |
 | Follow and skip | `clear_follow_s`, `skip_apps` |
-| Insert | `join_breaks`, `join_rule`, `paste_gap_ms`, `paste_wait_ms`, `history_key` |
+| Insert | `join_breaks`, `join_rule`, `paste_gap_ms`, `paste_wait_ms`, `check_ms`, `history_key` |
 | Text | `search_chars`, `title_chars`, `preview_chars` |
 | Pictures | `thumb_px`, `preview_px`, `max_pixels`, `media_ms`, `worker_idle_s`, `worker_mb`, `restart_ms`, `restart_max_ms` |
 | Platform | `open_ms`, `poll_ms`, `save_ms` |

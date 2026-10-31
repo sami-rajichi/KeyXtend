@@ -23,6 +23,20 @@ fn ids(h: &History, titles: &[&str]) -> Vec<u64> {
 }
 
 #[test]
+fn debug_prints_no_search_or_preview_content() {
+    let secret = "zebra-quartz";
+    let h = history(&["alpha", secret]);
+    let mut p = opened();
+    p.key(&chars("zebra"), &h);
+    assert_eq!(p.act(ClipAct::Preview, &h), Do::Preview(id(&h, secret)));
+    let text = Redacted::new(secret.to_owned());
+    p.show(id(&h, secret), Preview::Text { text, chars: 12 });
+    assert!(p.preview().is_some());
+    let shown = format!("{p:?}");
+    assert!(!shown.contains("zebra"), "{shown}");
+}
+
+#[test]
 fn esc_clears_the_search_then_closes_the_panel() {
     let h = history(&["alpha", "beta"]);
     let mut p = opened();
@@ -137,7 +151,7 @@ fn the_search_keeps_at_most_query_chars_characters() {
     let h = history(&["a"]);
     let mut p = opened_with(PanelConfig {
         query_chars: 3,
-        ..PANEL
+        ..*PANEL
     });
     assert_eq!(p.key(&chars("éàüö"), &h), Do::Show);
     assert_eq!(p.query().expose(), "éàü");
@@ -149,7 +163,7 @@ fn what_is_typed_joins_the_search_on_one_line() {
     let h = history(&["a b"]);
     let mut p = opened_with(PanelConfig {
         query_chars: 3,
-        ..PANEL
+        ..*PANEL
     });
     p.key(&chars("a "), &h);
     assert_eq!(p.key(&chars(" b"), &h), Do::Show);
@@ -171,7 +185,7 @@ fn the_highlight_stays_on_its_entry_when_a_copy_arrives() {
 #[test]
 fn a_closed_panel_takes_nothing_and_opens_fresh() {
     let h = history(&["a", "b"]);
-    let mut p = Panel::new(PANEL);
+    let mut p = Panel::new(*PANEL);
     assert!(!p.is_open());
     assert_eq!(p.key(&PanelKey::Down, &h), Do::Stay);
     assert_eq!(p.act(ClipAct::Insert, &h), Do::Stay);

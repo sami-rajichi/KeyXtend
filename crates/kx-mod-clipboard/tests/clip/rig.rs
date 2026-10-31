@@ -18,11 +18,11 @@ use kx_module_api::{
     Bus, Capability, Clock, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted,
     ServiceKey, Subscription,
 };
-use kx_platform_fake::{FakeCalendar, FakeClipboard, FakeClipboardWriter, FakePictures, FakeShelf};
+use kx_platform_fake::{
+    FakeCalendar, FakeClipboard, FakeClipboardWriter, FakePictures, FakeShelf, PARIS,
+};
 use kx_test_support::host::{FakeHost, Stored};
 
-/// Paris in winter, in minutes east of UTC.
-const PARIS: i16 = 60;
 /// The longest a test waits for the module's thread; a pass takes milliseconds.
 pub const WAIT: Duration = Duration::from_secs(10);
 /// The fakes' day, as its folder is named.

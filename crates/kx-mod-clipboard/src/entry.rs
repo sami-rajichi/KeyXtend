@@ -84,8 +84,8 @@ pub struct Entry {
     pub app: Option<AppRef>,
     /// Bytes the history keeps for it: its parts' bytes.
     pub stored: u64,
-    /// Bytes its row shows: what is kept, or the files' size for a file row.
-    pub shown: u64,
+    /// Bytes its row shows: what is kept, or the files' size for a file row; `None` when a path was left unchecked.
+    pub shown: Option<u64>,
     /// Its file names, else the start of its text, on one line.
     pub title: Redacted<String>,
     /// The folded file names or text, then the app name, that search matches; a line break parts them.
@@ -128,7 +128,7 @@ impl Entry {
             at: Stamp::of(now),
             app,
             stored,
-            shown: stored,
+            shown: Some(stored),
             title: Redacted::new(title(head, cfg.title_chars)),
             search: Redacted::new(search),
             hash: hash::of(parts),
@@ -144,13 +144,15 @@ impl Entry {
         self.place == Place::Pinned
     }
 
-    /// Shows on a file row the size of the files still there, `facts` being what the platform found at its paths.
+    /// Shows on a file row the size of the files still there, `facts` being what the platform found at its paths; one
+    /// unchecked path leaves the size unknown, as a part would mislead.
     pub fn size_files(&mut self, facts: &[FileFact]) {
-        let sizes = facts.iter().map(|f| match f {
-            FileFact::Size(n) => *n,
-            FileFact::Gone | FileFact::Away => 0,
+        let mut sizes = facts.iter().map(|f| match f {
+            FileFact::Size(n) => Some(*n),
+            FileFact::Gone | FileFact::Away => Some(0),
+            FileFact::Unchecked => None,
         });
-        self.shown = sizes.fold(0, u64::saturating_add);
+        self.shown = sizes.try_fold(0, |all: u64, n| Some(all.saturating_add(n?)));
     }
 }
 

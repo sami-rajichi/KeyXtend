@@ -81,8 +81,8 @@ pub struct ClipRow {
     pub app: Option<Redacted<String>>,
     /// When it was copied.
     pub when: When,
-    /// Its size in bytes: what is kept, or the file's size for a file row.
-    pub bytes: u64,
+    /// Its size in bytes: what is kept, or the files' size for a file row; `None` when a path was left unchecked.
+    pub bytes: Option<u64>,
     /// Its place in the tick order, from 1, while ticked.
     pub tick: Option<u16>,
     /// It is pinned.

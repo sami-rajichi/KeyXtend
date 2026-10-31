@@ -34,6 +34,8 @@ const IMAGE: u8 = 3;
 const FILE: u8 = 4;
 /// The media kind's tag.
 const MEDIA: u8 = 5;
+/// The shown size a row of unknown size saves as, so the form keeps its version.
+pub(crate) const UNSIZED: u64 = u64::MAX;
 
 /// A list as read: its round, the counter and the entries of its folder.
 #[derive(Debug)]
@@ -160,7 +162,7 @@ fn record(w: &mut Writer, e: &Entry) {
         w.text(&app.name);
     }
     w.u64(e.stored);
-    w.u64(e.shown);
+    w.u64(e.shown.unwrap_or(UNSIZED));
     w.text(e.title.expose());
     w.text(e.search.expose());
     w.u64(e.hash);
@@ -200,7 +202,7 @@ fn entry(r: &mut Reader<'_>, place: Place) -> Result<Entry, Bad> {
         at,
         app,
         stored,
-        shown,
+        shown: (shown != UNSIZED).then_some(shown),
         title,
         search,
         hash,

@@ -69,13 +69,13 @@ fn media_on_its_last_day_shows_the_expiry_chip() {
     assert_eq!(flags(&LIMITS), all, "pinned, text, yesterday, today");
     let two = Limits {
         media_days: 2,
-        ..LIMITS
+        ..*LIMITS
     };
     assert_eq!(flags(&two), [false, false, true, false]);
     let short = Limits {
         keep_days: 1,
         media_days: 7,
-        ..LIMITS
+        ..*LIMITS
     };
     assert_eq!(flags(&short), all);
 }
@@ -111,12 +111,13 @@ fn rows_carry_the_app_kind_size_and_pin() {
     );
     let mut h = kept(vec![link]);
     let link_id = h.entries()[0].id;
-    h.update(link_id, |e| e.shown = 3 * MB);
+    h.update(link_id, |e| e.shown = Some(3 * MB));
     h.pin(link_id);
     let v = page(&mut opened(), &h);
     let r = row(&v, link_id);
     assert_eq!(r.app.as_ref().map(|a| a.expose().as_str()), Some("Edge"));
-    assert_eq!((r.kind, r.bytes, r.pinned), (ClipKind::Link, 3 * MB, true));
+    let want = (ClipKind::Link, Some(3 * MB), true);
+    assert_eq!((r.kind, r.bytes, r.pinned), want);
     assert_eq!(r.title.expose(), "https://example.com");
 }
 

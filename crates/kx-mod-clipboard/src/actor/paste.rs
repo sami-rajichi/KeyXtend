@@ -1,6 +1,6 @@
-//! Inserting (spec §7 "Insert", ADR-0034 decision 2): the files are looked at first, then each step is written to
-//! the clipboard and the keyboard is asked to paste it once, waiting for `Pasted` up to `paste_wait_ms`, then
-//! `paste_gap_ms`. A missed paste or a files thread gone stops with a note, and the panel stays open.
+//! Inserting (spec §7 "Insert", ADR-0034 decision 2): the files are looked at first, up to `check_ms`, then each step
+//! is written to the clipboard and the keyboard is asked to paste it once, waiting for `Pasted` up to `paste_wait_ms`,
+//! then `paste_gap_ms`. A missed paste, a slow check or a files thread gone stops with a note; the panel stays open.
 
 mod step;
 
@@ -20,12 +20,14 @@ pub(super) enum Paste {
     /// None under way.
     #[default]
     Idle,
-    /// Insert `n` waits for its files to be looked at.
+    /// Insert `n` waits for its files to be looked at, up to `check_ms`.
     Checking {
         /// The insert's number.
         n: u32,
         /// Its entries, in tick order.
         ids: Vec<u64>,
+        /// When the look was asked.
+        since: Mono,
     },
     /// A step was written and the keyboard asked to paste it.
     Asked {
@@ -74,7 +76,8 @@ impl Actor {
         if self.ports.files.send(Look { why, items }).is_err() {
             return self.finish(Some(PanelNote::PasteFailed));
         }
-        self.paste.state = Paste::Checking { n, ids };
+        let since = self.ports.clock.now();
+        self.paste.state = Paste::Checking { n, ids, since };
     }
 
     /// The files of insert `n` were looked at: entries whose files are all gone leave, those out of reach wait.
@@ -113,15 +116,17 @@ impl Actor {
         self.paste.state = Paste::Gap { run, until };
     }
 
-    /// At `now`: a paste waited for too long stops the insert, and a gap that ended takes the next step.
+    /// At `now`: a paste or a file check waited too long stops the insert, and a gap that ended takes the next step.
     pub(super) fn paste_tick(&mut self, now: Mono) {
         if self.paste_due().is_none_or(|due| now < due) {
             return;
         }
         match mem::take(&mut self.paste.state) {
-            Paste::Asked { .. } => self.finish(Some(PanelNote::PasteFailed)),
+            Paste::Asked { .. } | Paste::Checking { .. } => {
+                self.finish(Some(PanelNote::PasteFailed));
+            }
             Paste::Gap { run, .. } => self.step(run),
-            other => self.paste.state = other,
+            Paste::Idle => {}
         }
     }
 
@@ -129,8 +134,9 @@ impl Actor {
     pub(super) fn paste_due(&self) -> Option<Mono> {
         match &self.paste.state {
             Paste::Asked { since, .. } => Some(since.saturating_add(self.settings.paste_wait())),
+            Paste::Checking { since, .. } => Some(since.saturating_add(self.settings.check_wait())),
             Paste::Gap { until, .. } => Some(*until),
-            Paste::Idle | Paste::Checking { .. } => None,
+            Paste::Idle => None,
         }
     }
 

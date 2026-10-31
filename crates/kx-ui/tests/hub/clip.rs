@@ -1,8 +1,9 @@
 //! The clipboard panel through the hub: a view wakes QML once per read and a closed panel drops it, the ui's rows go
 //! out as the panel opens and as the settings change, a pad page turns the open panel, pictures serve only the kept
-//! round, and Open folder shows the folder the app handed over.
+//! round, Open folder shows the folder the app handed over, and a row of unknown size says so.
 
 mod acts;
+mod size;
 mod view;
 
 use crate::Rig;
@@ -80,7 +81,7 @@ pub fn row(id: u64, title: &str) -> ClipRow {
             hour: 16,
             minute: 32,
         },
-        bytes: 12,
+        bytes: Some(12),
         tick: None,
         pinned: false,
         expires: false,

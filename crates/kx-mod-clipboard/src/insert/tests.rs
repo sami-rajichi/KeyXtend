@@ -164,6 +164,17 @@ fn file_facts_sort_into_kept_gone_and_away() {
 }
 
 #[test]
+fn an_unchecked_share_path_is_kept_and_pasted() {
+    let mut h = History::default();
+    let paths = [r"\\host\share\a.txt", "C:\\b"];
+    let id = add(&mut h, &[files(&paths)]);
+    let facts = vec![(id, vec![FileFact::Unchecked, FileFact::Gone])];
+    let sorted = sort(&facts, &h);
+    assert_eq!(sorted.keep.get(&id), Some(&kept(&[r"\\host\share\a.txt"])));
+    assert!(sorted.gone.is_empty() && sorted.away.is_empty());
+}
+
+#[test]
 fn an_insert_pastes_the_files_still_there_and_skips_gone_and_away_entries() {
     let mut hist = History::default();
     let words = add(&mut hist, &[text("a")]);

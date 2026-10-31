@@ -149,7 +149,7 @@ fn stored_counts_every_part_and_shown_starts_the_same() {
     let rtf = ClipPart::Rtf(Redacted::new(vec![0; 7]));
     let e = entry(&[text("abc"), html(b"<b>x</b>"), rtf, png(b"12345")]);
     assert_eq!(e.stored, 3 + 8 + 7 + 5);
-    assert_eq!(e.shown, e.stored);
+    assert_eq!(e.shown, Some(e.stored));
 }
 
 #[test]
@@ -157,7 +157,14 @@ fn a_file_row_shows_the_size_of_the_files_still_there() {
     let mut e = entry(&[files(&["a.txt", "bb.txt", "c.txt"])]);
     assert_eq!(e.stored, 5 + 6 + 5, "the history keeps only the paths");
     e.size_files(&[FileFact::Size(10 * 1024), FileFact::Gone, FileFact::Size(5)]);
-    assert_eq!(e.shown, 10 * 1024 + 5);
+    assert_eq!(e.shown, Some(10 * 1024 + 5));
+}
+
+#[test]
+fn a_file_row_with_an_unchecked_path_shows_no_size() {
+    let mut e = entry(&[files(&["a.txt", "b.txt"])]);
+    e.size_files(&[FileFact::Size(5), FileFact::Unchecked]);
+    assert_eq!(e.shown, None, "a part would mislead");
 }
 
 #[test]

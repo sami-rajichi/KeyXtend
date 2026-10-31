@@ -2,7 +2,8 @@
 //! break the caps, the order or the places; a sweep leaves nothing past its days, and a pin leaves only by Delete or
 //! Unpin.
 
-use kx_module_api::ports::{ClipKind, LocalTime};
+use kx_module_api::MS_PER_S;
+use kx_module_api::ports::{ClipKind, HOURS_PER_DAY, LocalTime, MIN_PER_HOUR, S_PER_MIN};
 use proptest::prelude::*;
 
 use super::*;
@@ -35,9 +36,9 @@ const ROOM: u64 = 10_000;
 /// Free space under the floor.
 const TIGHT: u64 = 50;
 /// Minutes in a day.
-const DAY_MIN: i64 = 24 * 60;
+const DAY_MIN: i64 = HOURS_PER_DAY * MIN_PER_HOUR;
 /// Milliseconds in a minute.
-const MIN_MS: i64 = 60_000;
+const MIN_MS: i64 = S_PER_MIN * MS_PER_S as i64;
 
 /// One thing that can happen to the history.
 #[derive(Debug, Clone)]

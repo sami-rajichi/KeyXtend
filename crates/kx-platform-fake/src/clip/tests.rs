@@ -1,5 +1,5 @@
 //! The fake clipboard, held to the port: notes reach the live watch at once, the watch and its config are recorded, a
-//! refusal on cue, and files answer as scripted.
+//! refusal on cue, and files answer as scripted, a share or device path unchecked.
 
 use super::*;
 use kx_module_api::ports::{AppRef, ClipPart, ClipWait};
@@ -149,6 +149,16 @@ fn files_answer_as_scripted_in_order_and_unknown_paths_are_gone() {
     clip.set_file("C:/docs/تقرير.pdf", FileFact::Gone);
     assert_eq!(clip.files(&paths), [FileFact::Gone; 3], "deleted since");
     assert_eq!(clip.checks(), 2);
+}
+
+#[test]
+fn a_share_or_a_device_path_is_unchecked_even_when_scripted() {
+    let clip = FakeClipboard::new();
+    clip.set_file(r"\\host\share\a.txt", FileFact::Size(SIZE));
+    let paths = [r"\\host\share\a.txt", r"\\?\C:\b.txt", "C:/c.txt"];
+    let paths = Redacted::new(paths.map(PathBuf::from).to_vec());
+    let unchecked = FileFact::Unchecked;
+    assert_eq!(clip.files(&paths), [unchecked, unchecked, FileFact::Gone]);
 }
 
 #[test]

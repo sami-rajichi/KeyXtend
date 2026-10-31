@@ -10,6 +10,7 @@
 
 #[cfg(windows)]
 mod app;
+mod facts;
 mod gather;
 mod hdrop;
 mod marks;
@@ -23,16 +24,13 @@ mod watch;
 #[cfg(windows)]
 mod write;
 
-use std::collections::HashMap;
-use std::io::ErrorKind;
-use std::path::{Component, Path, PathBuf};
 use std::sync::LazyLock;
 
-use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipError, FileFact};
+use kx_module_api::ports::ClipError;
 use serde::Deserialize;
 use thiserror::Error;
 
+pub(crate) use facts::facts;
 pub(crate) use marks::Marks;
 #[cfg(windows)]
 pub use marks::{marked, markers};
@@ -137,37 +135,6 @@ impl Table {
     pub(crate) fn marks(&self) -> Marks {
         Marks::new(self.skip.clone(), self.skip_zero.clone())
     }
-}
-
-/// What is at each of `paths` now, in order: away when its drive or share does not answer, else a file's size, 0 for
-/// a folder or a path Windows cannot read, or gone. Each drive or share is asked once, so one out of reach waits once.
-pub(crate) fn facts(paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
-    let mut roots: HashMap<PathBuf, bool> = HashMap::new();
-    let mut fact_of = |path: &PathBuf| {
-        let near = *roots.entry(root(path)).or_insert_with_key(|r| reachable(r));
-        if near { fact(path) } else { FileFact::Away }
-    };
-    paths.expose().iter().map(&mut fact_of).collect()
-}
-
-/// What is at `path` now, on a drive or share that answers.
-fn fact(path: &Path) -> FileFact {
-    match std::fs::metadata(path) {
-        Ok(m) if m.is_file() => FileFact::Size(m.len()),
-        Err(e) if e.kind() == ErrorKind::NotFound => FileFact::Gone,
-        Ok(_) | Err(_) => FileFact::Size(0),
-    }
-}
-
-/// The drive or share `path` starts with, such as `C:\` or `\\server\share\`; empty for a relative path.
-fn root(path: &Path) -> PathBuf {
-    let top = |c: &Component<'_>| matches!(c, Component::Prefix(_) | Component::RootDir);
-    path.components().take_while(top).collect()
-}
-
-/// Whether the drive or share `root` answers now; a relative path's does.
-fn reachable(root: &Path) -> bool {
-    root.as_os_str().is_empty() || std::fs::metadata(root).is_ok()
 }
 
 #[cfg(test)]

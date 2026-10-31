@@ -16,7 +16,7 @@ use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleEr
 
 use crate::MANIFEST;
 use crate::actor::{Actor, Msg, Ports, notice};
-use crate::media::{Job, Look, Sides, spawn_files, spawn_media};
+use crate::media::{Job, Look, spawn_files, spawn_media};
 use crate::settings::ClipSettings;
 use crate::store::{Store, StoreError};
 
@@ -166,14 +166,10 @@ fn helpers(
     settings: &ClipSettings,
     tx: &Sender<Msg>,
 ) -> Result<Helpers, ModuleError> {
-    let sides = Sides {
-        thumb: settings.thumb_px,
-        preview: settings.preview_px,
-    };
     let (media, jobs) = mpsc::channel();
     let run = pictures.open(settings.picture_config());
-    let drawing =
-        spawn_media(run, sides, jobs, sender(tx, Msg::Drawn)).map_err(|e| no_thread(&e))?;
+    let drawing = spawn_media(run, settings.sides(), jobs, sender(tx, Msg::Drawn))
+        .map_err(|e| no_thread(&e))?;
     let (files, looks) = mpsc::channel();
     // Never joined: a share out of reach may hold it, and it ends once the actor lets go.
     drop(spawn_files(Arc::clone(clip), looks, sender(tx, Msg::Facts)).map_err(|e| no_thread(&e))?);

@@ -3,7 +3,7 @@
 
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 /// How an image's bytes are coded.
@@ -110,8 +110,21 @@ pub enum FileFact {
     Size(u64),
     /// Nothing is there any more.
     Gone,
-    /// Its drive or share is out of reach now, so the row stays and an insert skips it.
+    /// Its drive is out of reach now, so the row stays and an insert skips it.
     Away,
+    /// A share or device path (`is_share_or_device`), never probed; the row stays with no size and an insert pastes it.
+    Unchecked,
+}
+
+/// The separators a copied path may use.
+const SEPARATORS: &[u8] = br"\/";
+
+/// True when `path` starts with two separators, so it names a share or a device (`\\host\`, `\\?\`, `\\.\`). No
+/// adapter probes it, as reaching it could call out to another machine.
+#[must_use]
+pub fn is_share_or_device(path: &Path) -> bool {
+    let sep = |b: &u8| SEPARATORS.contains(b);
+    matches!(path.as_os_str().as_encoded_bytes(), [a, b, ..] if sep(a) && sep(b))
 }
 
 /// Why the clipboard could not be watched or set.
@@ -134,8 +147,8 @@ pub trait ClipRun: Send {}
 
 /// Watches the system clipboard; the platform provides it.
 pub trait Clipboard: Send + Sync {
-    /// Starts a watch as `cfg` says; `tell` hears each copy, skip and clear, on any thread, and never hears our own
-    /// writes, which carry the marker.
+    /// Starts a watch as `cfg` says; `tell` hears each copy, skip and clear, on any thread. Our own writes carry the
+    /// marker, so they come back as `Marked`, unread.
     ///
     /// # Errors
     /// `Refused` when the OS refuses to watch.

@@ -13,7 +13,7 @@ pub const ID: ModuleId = ModuleId::new("keyboard");
 
 /// The module's manifest: `InjectInput` gates all four services it needs, `KeyboardUi` the face it provides,
 /// `ReadFocusedText` the typed pieces, the typing mode and the picked words, and `ReadClipboard` and `WriteClipboard`
-/// the panel's keys and the paste requests; it needs no clipboard service.
+/// the panel's state and keys and the paste requests; it needs no clipboard service.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -39,8 +39,8 @@ mod tests {
     use super::*;
     use kx_module_api::Event;
     use kx_module_api::ports::{
-        ClipKey, ClipboardKey, ClipboardWriterKey, PasteAsk, Pasted, TypeWord, Typed, TypingMode,
-        TypingModeAsk,
+        ClipKey, ClipPanel, ClipboardKey, ClipboardWriterKey, PasteAsk, Pasted, TypeWord, Typed,
+        TypingMode, TypingModeAsk,
     };
 
     #[test]
@@ -91,8 +91,9 @@ mod tests {
     }
 
     #[test]
-    fn the_clipboard_gates_cover_the_panel_keys_and_the_paste_and_no_clipboard_service() {
-        assert_eq!(ClipKey::CAPABILITY, Some(Capability::ReadClipboard));
+    fn the_clipboard_gates_cover_the_panel_and_its_keys_and_the_paste_and_no_clipboard_service() {
+        let panel = [ClipPanel::CAPABILITY, ClipKey::CAPABILITY];
+        assert_eq!(panel, [Some(Capability::ReadClipboard); 2]);
         let paste = [PasteAsk::CAPABILITY, Pasted::CAPABILITY];
         assert_eq!(paste, [Some(Capability::WriteClipboard); 2]);
         let clipboard = [ClipboardKey::ID, ClipboardWriterKey::ID];

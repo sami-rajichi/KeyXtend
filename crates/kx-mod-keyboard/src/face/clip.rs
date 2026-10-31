@@ -21,7 +21,7 @@ impl Face {
         match took {
             ToPanel::Pass => return None,
             ToPanel::Key(key) => {
-                // Without `ReadClipboard` the bus refuses `ClipKey`, so the panel hears nothing and the key goes nowhere.
+                // The module holds `ReadClipboard`, which the key needs, or its start would have failed.
                 let _ = bus.publish(&ClipKey(key));
             }
             ToPanel::Nothing => {}
@@ -37,15 +37,21 @@ impl Face {
     }
 
     /// The clipboard module set the clipboard for paste `round`: every latch lets go, one plain paste goes to the app
-    /// in front, and the module hears whether all of it went; then the bus hears the latches and the piece.
+    /// in front, and the module hears whether all of it went; then the bus hears the latches and the piece. After the
+    /// stop nothing is sent and the answer is no.
     pub(super) fn paste(&self, round: u32) {
-        let (ok, bus) = {
+        let (sent, bus) = {
             let mut inner = self.lock();
             (inner.paste(), inner.bus())
         };
         // The module holds `WriteClipboard`, which the answer needs, or its start would have failed.
-        let _ = bus.publish(&Pasted { round, ok });
-        self.pour();
-        self.tell(false);
+        let _ = bus.publish(&Pasted {
+            round,
+            ok: sent == Some(true),
+        });
+        if sent.is_some() {
+            self.pour();
+            self.tell(false);
+        }
     }
 }

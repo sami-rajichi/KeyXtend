@@ -1,17 +1,19 @@
 //! What the panel and view tests share: the page size, a history of text copies and an open panel.
 
+use std::sync::LazyLock;
+
 use kx_module_api::Redacted;
 use kx_module_api::ports::{LocalTime, PanelKey};
 
 use super::{Panel, PanelConfig};
-use crate::fixture::{CFG, at, copied, date};
+use crate::fixture::{DEFAULTS, at, copied, date};
 use crate::order::History;
 
-/// The ui's `page_rows` and the plan's `search_chars`.
-pub(crate) const PANEL: PanelConfig = PanelConfig {
+/// The plan's page of 5 rows, and the defaults' search length.
+pub(crate) static PANEL: LazyLock<PanelConfig> = LazyLock::new(|| PanelConfig {
     rows: 5,
-    query_chars: CFG.search_chars,
-};
+    ..DEFAULTS.panel_config()
+});
 
 /// 2026-10-31 at 16:32 in Paris.
 pub(crate) fn now() -> LocalTime {
@@ -42,7 +44,7 @@ pub(crate) fn opened_with(cfg: PanelConfig) -> Panel {
 
 /// A panel opened with the plan's page.
 pub(crate) fn opened() -> Panel {
-    opened_with(PANEL)
+    opened_with(*PANEL)
 }
 
 /// The key that types `s` into the search.

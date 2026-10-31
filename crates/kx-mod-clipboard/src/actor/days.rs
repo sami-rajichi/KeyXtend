@@ -3,17 +3,16 @@
 
 use std::time::Duration;
 
-use kx_module_api::ports::LocalTime;
+use kx_module_api::MS_PER_S;
+use kx_module_api::ports::{HOURS_PER_DAY, LocalTime, MIN_PER_HOUR, S_PER_MIN};
 
 use super::Actor;
 use crate::keep::sweep;
 
 /// Milliseconds in a minute.
-const MIN_MS: i64 = 60_000;
-/// Minutes in an hour.
-const HOUR_MIN: i64 = 60;
+const MIN_MS: i64 = S_PER_MIN * MS_PER_S as i64;
 /// Minutes in a day.
-const DAY_MIN: i64 = 24 * HOUR_MIN;
+const DAY_MIN: i64 = HOURS_PER_DAY * MIN_PER_HOUR;
 
 impl Actor {
     /// Sweeps when the calendar shows another day than the last sweep's, forward or back.
@@ -41,7 +40,7 @@ impl Actor {
 
 /// How long from `now` until the next local midnight; a summer-time change moves it, and each wake checks the day.
 pub(super) fn until_midnight(now: &LocalTime) -> Duration {
-    let minutes = i64::from(now.hour) * HOUR_MIN + i64::from(now.minute);
+    let minutes = i64::from(now.hour) * MIN_PER_HOUR + i64::from(now.minute);
     let into_day = minutes * MIN_MS + now.unix_ms.rem_euclid(MIN_MS);
     let left = (DAY_MIN * MIN_MS - into_day).max(0);
     Duration::from_millis(u64::try_from(left).unwrap_or_default())

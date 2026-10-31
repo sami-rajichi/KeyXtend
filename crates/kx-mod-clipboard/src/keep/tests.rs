@@ -44,7 +44,7 @@ fn a_copy_over_max_entry_bytes_is_too_big() {
     assert_eq!(admit(&h, &sized(32 * MB, &nine()), ROOMY, &LIMITS), Ok(()));
     let small = Limits {
         max_bytes: MB,
-        ..LIMITS
+        ..*LIMITS
     };
     let past_cap = admit(&h, &sized(MB + 1, &nine()), ROOMY, &small);
     assert_eq!(past_cap, Err(PanelNote::TooBig), "past the whole cap too");
@@ -68,7 +68,7 @@ fn under_the_free_floor_nothing_new_is_kept_until_there_is_room() {
 fn pins_filling_the_count_refuse_a_copy() {
     let few = Limits {
         max_entries: 2,
-        ..LIMITS
+        ..*LIMITS
     };
     let mut h = History::default();
     let (a, b) = (h.add(copied("a", &nine())), h.add(copied("b", &nine())));
@@ -102,7 +102,7 @@ fn pins_filling_the_bytes_refuse_a_copy() {
 fn past_max_entries_the_oldest_unpinned_leaves() {
     let few = Limits {
         max_entries: 3,
-        ..LIMITS
+        ..*LIMITS
     };
     let mut h = History::default();
     let id: Vec<u64> = ["a", "b", "c", "d"]
@@ -138,7 +138,7 @@ fn trim_never_takes_a_pin_even_past_a_lowered_cap() {
     h.pin(b);
     let one = Limits {
         max_entries: 1,
-        ..LIMITS
+        ..*LIMITS
     };
     assert_eq!(ids(&trim(&mut h, &one)), [c]);
     assert_eq!(ids(h.entries()), [b, a]);
@@ -177,7 +177,7 @@ fn media_leaves_after_media_days_and_a_pin_stays() {
 fn midnight_sweeps_by_the_calendar_while_the_clear_window_runs_on() {
     let cal = FakeCalendar::new(date(2026, 10, 25), 10, 0, PARIS);
     let clock = FakeClock::new(Mono::default());
-    let (mut h, mut follow) = (History::default(), Follow::new(FOLLOW, Vec::new()));
+    let (mut h, mut follow) = (History::default(), Follow::new(*FOLLOW, Vec::new()));
     let week = h.add(copied("week", &cal.now()));
     cal.set(date(2026, 10, 31), 23, 59);
     let clip = h.add(video(&cal.now()));

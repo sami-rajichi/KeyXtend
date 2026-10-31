@@ -95,7 +95,7 @@ fn a_list_that_will_not_read_is_kept_aside_once() {
 fn a_split_list_that_will_not_read_is_kept_whole_in_pieces() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (
-        Store::new(Arc::new(shelf.clone()), SMALL),
+        Store::new(Arc::new(shelf.clone()), *SMALL),
         History::default(),
     );
     keep(&mut h, &mut s, "a", &noon(1));
@@ -107,7 +107,7 @@ fn a_split_list_that_will_not_read_is_kept_whole_in_pieces() {
     shelf.plant(&day1, &head, bad.clone());
     let chunk = |n| shelf.blob(&day1, &list::chunk_name(0, n).unwrap());
     let whole: Vec<u8> = (1..).map_while(chunk).fold(bad, |w, c| [w, c].concat());
-    let loaded = Store::new(Arc::new(shelf.clone()), SMALL).load().unwrap();
+    let loaded = Store::new(Arc::new(shelf.clone()), *SMALL).load().unwrap();
     assert_eq!(loaded.aside, [on(1)]);
     let piece = |k| shelf.blob(&day1, &blob(&format!("aside-1-{k}")));
     let kept: Vec<Vec<u8>> = (0..).map_while(piece).collect();

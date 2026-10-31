@@ -21,6 +21,29 @@ fn opened(texts: &[&str]) -> Rig {
     rig
 }
 
+/// The shelf's saves so far; after the first list save, each one is a list written again.
+fn saves(rig: &Rig) -> usize {
+    rig.fakes.shelf.calls(ShelfCall::Save)
+}
+
+#[test]
+fn a_duplicate_copy_or_a_pasted_step_saves_its_list_only_after_save_ms() {
+    let mut rig = opened(&["a", "b"]);
+    rig.advance(rig.settings.save());
+    let before = saves(&rig);
+    rig.text("a");
+    assert_eq!(saves(&rig), before, "the twin waits the debounce");
+    rig.advance(rig.settings.save());
+    let after = saves(&rig);
+    assert!(after > before, "then the new order saves");
+    rig.tick_row(1);
+    rig.send(Msg::Act(ClipAct::Insert));
+    rig.answer(true);
+    assert_eq!(saves(&rig), after, "the pasted step waits too");
+    rig.advance(rig.settings.save());
+    assert!(saves(&rig) > after);
+}
+
 #[test]
 fn a_pin_whose_content_is_gone_deletes_the_entry() {
     let mut rig = opened(&["a", "b"]);

@@ -7,18 +7,19 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, Clipboard, PasteAsk, Pasted,
-    PictureRun, Pictures, SealedShelf,
+    AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, Clipboard, PanelNote,
+    PasteAsk, Pasted, PictureRun, Pictures, SealedShelf,
 };
 use kx_module_api::{Bus, ModuleCx, Subscription};
 use kx_test_support::host::FakeHost;
 
+use super::super::paste::Paste;
 use super::super::{Actor, Msg, Ports};
 use super::ears::{Heard, listen};
 use super::fakes::Fakes;
 use crate::MANIFEST;
 use crate::fixture::text;
-use crate::media::{self, Job, Look, Sides};
+use crate::media::{self, Job, Look};
 use crate::settings::ClipSettings;
 use crate::store::Store;
 
@@ -36,6 +37,8 @@ pub(super) struct Rig {
     run: Box<dyn PictureRun>,
     /// Pictures wait undrawn while set, as if the worker were busy.
     holding: bool,
+    /// File looks wait unanswered while set, as if a share stalled.
+    stalled: bool,
     heard: Arc<Mutex<Vec<Heard>>>,
     _ears: Vec<Subscription>,
 }
@@ -71,17 +74,17 @@ impl Rig {
         };
         let heard = Arc::default();
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);
-        let run = fakes.pics.open(settings.picture_config());
         let actor = Actor::new(ports, &settings, store, loaded);
         let mut rig = Self {
+            run: fakes.pics.open(settings.picture_config()),
             fakes,
             settings,
             actor,
             notes,
             jobs,
             looks,
-            run,
             holding: false,
+            stalled: false,
             heard,
             _ears: ears,
         };
@@ -100,15 +103,15 @@ impl Rig {
     /// Runs each note the watch told, each picture asked and each look asked, handing the answers back, until none.
     fn pump(&mut self) {
         loop {
-            let sides = Sides {
-                thumb: self.settings.thumb_px,
-                preview: self.settings.preview_px,
-            };
+            let sides = self.settings.sides();
             let msg = if let Ok(note) = self.notes.try_recv() {
                 note
             } else if let Some(job) = (!self.holding).then(|| self.jobs.try_recv().ok()).flatten() {
                 Msg::Drawn(media::draw(&mut *self.run, job, sides))
-            } else if let Ok(look) = self.looks.try_recv() {
+            } else if let Some(look) = (!self.stalled)
+                .then(|| self.looks.try_recv().ok())
+                .flatten()
+            {
                 Msg::Facts(media::look(&self.fakes.clip, &look))
             } else {
                 return;
@@ -121,6 +124,12 @@ impl Rig {
     /// Holds the pictures asked from now on undrawn, or draws those held and goes on drawing.
     pub fn hold_draws(&mut self, on: bool) {
         self.holding = on;
+        self.pump();
+    }
+
+    /// Holds the file looks asked from now on, or answers those held and goes on answering.
+    pub fn hold_looks(&mut self, on: bool) {
+        self.stalled = on;
         self.pump();
     }
 
@@ -177,6 +186,16 @@ impl Rig {
         self.actor.wait()
     }
 
+    /// Where the insert is.
+    pub fn pasting(&self) -> &Paste {
+        &self.actor.paste.state
+    }
+
+    /// The note the panel shows now.
+    pub fn note(&self) -> Option<PanelNote> {
+        self.actor.note
+    }
+
     /// The module stops.
     pub fn stop(&mut self) {
         self.send(Msg::Quit);
@@ -194,12 +213,9 @@ impl Rig {
 
     /// Every view published.
     pub fn views(&self) -> Vec<ClipView> {
-        self.picked(|h| {
-            if let Heard::View(v) = h {
-                Some(v)
-            } else {
-                None
-            }
+        self.picked(|h| match h {
+            Heard::View(v) => Some(v),
+            _ => None,
         })
     }
 
@@ -216,45 +232,33 @@ impl Rig {
 
     /// Every `ClipPanel` published, as its flag.
     pub fn panels(&self) -> Vec<bool> {
-        self.picked(|h| {
-            if let Heard::Panel(p) = h {
-                Some(p.open)
-            } else {
-                None
-            }
+        self.picked(|h| match h {
+            Heard::Panel(p) => Some(p.open),
+            _ => None,
         })
     }
 
     /// Every `HistoryWanted` published, as its flag.
     pub fn wanted(&self) -> Vec<bool> {
-        self.picked(|h| {
-            if let Heard::Wanted(w) = h {
-                Some(w.on)
-            } else {
-                None
-            }
+        self.picked(|h| match h {
+            Heard::Wanted(w) => Some(w.on),
+            _ => None,
         })
     }
 
     /// Every paste request.
     pub fn pastes(&self) -> Vec<PasteAsk> {
-        self.picked(|h| {
-            if let Heard::Paste(p) = h {
-                Some(p)
-            } else {
-                None
-            }
+        self.picked(|h| match h {
+            Heard::Paste(p) => Some(p),
+            _ => None,
         })
     }
 
     /// Every notice key published.
     pub fn notices(&self) -> Vec<&'static str> {
-        self.picked(|h| {
-            if let Heard::Notice(n) = h {
-                Some(n.key)
-            } else {
-                None
-            }
+        self.picked(|h| match h {
+            Heard::Notice(n) => Some(n.key),
+            _ => None,
         })
     }
 

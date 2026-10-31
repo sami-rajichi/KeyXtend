@@ -9,6 +9,8 @@ use std::time::Duration;
 
 /// What a test hears when it asks for a wall time `LocalTime` cannot hold.
 const NO_SUCH: &str = "no such wall time";
+/// Paris in winter, in minutes east of UTC: the offset the tests give the calendar.
+pub const PARIS: i16 = 60;
 
 /// A calendar shared by its clones; its wall time moves only when the test says so, apart from `FakeClock`, so a
 /// midnight test advances both.

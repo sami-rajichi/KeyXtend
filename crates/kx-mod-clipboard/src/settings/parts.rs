@@ -9,6 +9,7 @@ use crate::entry::EntryConfig;
 use crate::follow::Follow;
 use crate::insert::JoinConfig;
 use crate::keep::Limits;
+use crate::media::Sides;
 use crate::panel::PanelConfig;
 use crate::store::StoreConfig;
 
@@ -93,11 +94,25 @@ impl ClipSettings {
         }
     }
 
+    /// The sides pictures are drawn at.
+    #[must_use]
+    pub fn sides(&self) -> Sides {
+        Sides {
+            thumb: self.thumb_px,
+            preview: self.preview_px,
+        }
+    }
+
     /// Follow-the-clear and the skipped apps.
     #[must_use]
     pub fn follow(&self) -> Follow {
-        let window = Duration::from_secs(self.clear_follow_s.into());
-        Follow::new(window, self.skip_apps.clone())
+        Follow::new(self.clear_window(), self.skip_apps.clone())
+    }
+
+    /// How long a clear follows a copy.
+    #[must_use]
+    pub fn clear_window(&self) -> Duration {
+        Duration::from_secs(self.clear_follow_s.into())
     }
 
     /// The save's wait after a first change.
@@ -116,6 +131,12 @@ impl ClipSettings {
     #[must_use]
     pub fn paste_wait(&self) -> Duration {
         Duration::from_millis(self.paste_wait_ms.into())
+    }
+
+    /// The wait for an insert's file check.
+    #[must_use]
+    pub fn check_wait(&self) -> Duration {
+        Duration::from_millis(self.check_ms.into())
     }
 }
 

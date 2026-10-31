@@ -11,7 +11,7 @@ use crate::fixture::{app, at, copied, date};
 fn full() -> Entry {
     let mut e = copied("École أرسلت", &at(date(2026, 10, 31), 9, 5));
     (e.id, e.seq, e.kind, e.app) = (7, 9, ClipKind::Media, Some(app("vlc.exe")));
-    (e.stored, e.shown, e.hash, e.parts, e.thumb) = (11, 12, 13, 2, true);
+    (e.stored, e.shown, e.hash, e.parts, e.thumb) = (11, Some(12), 13, 2, true);
     e.files = Redacted::new(vec![PathBuf::from("C:\\v\\film.mkv")]);
     e
 }
@@ -38,6 +38,14 @@ fn every_field_round_trips_in_the_folder_place() {
             .entries
             .is_empty()
     );
+}
+
+#[test]
+fn a_row_whose_size_is_unknown_stays_unknown() {
+    let mut e = full();
+    e.shown = None;
+    let list = decode(&bytes(1, 8, &[&e]), Place::Pinned).unwrap();
+    assert_eq!(list.entries[0].shown, None);
 }
 
 #[test]

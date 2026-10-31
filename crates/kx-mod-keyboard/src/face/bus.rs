@@ -140,7 +140,8 @@ impl Face {
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, `ReadFocusedText`, which
-/// picked words and the mode ask need, or `WriteClipboard`, which paste requests need.
+/// picked words and the mode ask need, `ReadClipboard`, which the panel's state needs, or `WriteClipboard`, which paste
+/// requests need.
 pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;

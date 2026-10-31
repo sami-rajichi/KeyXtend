@@ -130,7 +130,7 @@ fn a_move_whose_content_is_damaged_says_it_is_gone() {
 fn a_move_found_gone_leaves_no_blob_of_it_behind() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (
-        Store::new(Arc::new(shelf.clone()), SMALL),
+        Store::new(Arc::new(shelf.clone()), *SMALL),
         History::default(),
     );
     let a = keep(&mut h, &mut s, "a text that takes several blobs", &noon(1));

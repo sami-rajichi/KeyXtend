@@ -9,7 +9,7 @@ use super::*;
 fn stuck() -> (FakeShelf, Store, History, u64, u64) {
     let shelf = FakeShelf::new();
     let cut = Cut::idle(&shelf);
-    let (mut s, mut h) = (Store::new(cut.clone(), STORE), History::default());
+    let (mut s, mut h) = (Store::new(cut.clone(), *STORE), History::default());
     let x = keep(&mut h, &mut s, "x", &noon(1));
     let y = keep(&mut h, &mut s, "y", &noon(1));
     s.save(&h).unwrap();

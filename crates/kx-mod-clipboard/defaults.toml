@@ -22,6 +22,8 @@ join_rule = ""
 paste_gap_ms = 150
 # How long an insert waits for the keyboard to paste, in ms.
 paste_wait_ms = 1000
+# How long an insert waits for its files to be checked, in ms; past it the insert stops.
+check_ms = 5000
 # The system's clipboard-history shortcut clicked on our keyboard opens our panel.
 history_key = true
 # The characters of each text that search reads.

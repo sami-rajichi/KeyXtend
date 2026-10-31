@@ -1,46 +1,38 @@
-//! What the tests share: the plan's `[clipboard]` defaults, dates and wall times from the fake calendar, and copies.
+//! What the tests share: configs built from the `[clipboard]` defaults, dates and wall times from the fake calendar,
+//! and copies.
 
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{
-    AppRef, Calendar, ClipPart, Date, ImageCodec, LocalTime, MAX_BLOB_BYTES,
-};
+use kx_module_api::ports::{AppRef, Calendar, ClipPart, Date, ImageCodec, LocalTime};
 use kx_platform_fake::FakeCalendar;
 
 use crate::entry::{Entry, EntryConfig};
 use crate::keep::Limits;
+use crate::settings::ClipSettings;
 use crate::store::StoreConfig;
 
 /// Bytes in a megabyte, the port's one unit.
 pub(crate) use kx_module_api::ports::MB;
 
-/// Paris in winter, in minutes east of UTC.
-pub(crate) const PARIS: i16 = 60;
-/// The plan's `title_chars` and `search_chars`.
-pub(crate) const CFG: EntryConfig = EntryConfig {
-    title_chars: 300,
-    search_chars: 1000,
-};
-/// The plan's limits: 7 days, media 1 day, 1,000 entries, 1 GB, 2 GB free, 32 MB an entry.
-pub(crate) const LIMITS: Limits = Limits {
-    keep_days: 7,
-    media_days: 1,
-    max_entries: 1000,
-    max_bytes: 1024 * MB,
-    min_free_bytes: 2048 * MB,
-    max_entry_bytes: 32 * MB,
-};
-/// The plan's `clear_follow_s`.
-pub(crate) const FOLLOW: Duration = Duration::from_secs(120);
+/// Paris in winter, the fake calendar's offset.
+pub(crate) use kx_platform_fake::PARIS;
+
+/// The `[clipboard]` defaults, read once.
+pub(crate) static DEFAULTS: LazyLock<ClipSettings> =
+    LazyLock::new(|| ClipSettings::from_defaults().unwrap());
+/// The defaults' `title_chars` and `search_chars`.
+pub(crate) static CFG: LazyLock<EntryConfig> = LazyLock::new(|| DEFAULTS.entry_config());
+/// The defaults' limits, in bytes and days.
+pub(crate) static LIMITS: LazyLock<Limits> = LazyLock::new(|| DEFAULTS.limits());
+/// The defaults' `clear_follow_s`.
+pub(crate) static FOLLOW: LazyLock<Duration> = LazyLock::new(|| DEFAULTS.clear_window());
+/// The defaults' `thumb_px`, and the port's blob size.
+pub(crate) static STORE: LazyLock<StoreConfig> = LazyLock::new(|| DEFAULTS.store_config());
 /// Free space well over the floor.
 pub(crate) const ROOMY: u64 = 400 * 1024 * MB;
-/// The plan's `thumb_px`, and the port's blob size.
-pub(crate) const STORE: StoreConfig = StoreConfig {
-    thumb_px: 128,
-    blob_bytes: MAX_BLOB_BYTES,
-};
 
 /// A date the test knows is real.
 pub(crate) fn date(year: u16, month: u8, day: u8) -> Date {

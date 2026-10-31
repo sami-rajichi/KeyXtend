@@ -144,7 +144,7 @@ fn a_file_row_shows_its_size_and_leaves_at_the_next_look_once_gone() {
         .set_file("C:\\report.pdf", FileFact::Size(2_527_068));
     rig.copy(vec![files(&["C:\\report.pdf"])], None);
     rig.open();
-    assert_eq!(rig.page().rows[0].bytes, 2_527_068);
+    assert_eq!(rig.page().rows[0].bytes, Some(2_527_068));
     rig.fakes.clip.set_file("C:\\report.pdf", FileFact::Gone);
     rig.send(Msg::Open);
     rig.send(Msg::Open);

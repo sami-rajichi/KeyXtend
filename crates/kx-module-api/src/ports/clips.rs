@@ -1,5 +1,6 @@
-//! The clipboard history's bus events (ADR-0034 decisions 1 and 2): what carries copied content or search text needs
-//! `ReadClipboard`, the paste request needs `WriteClipboard`, and the toggles and the chord request carry nothing.
+//! The clipboard history's bus events (ADR-0034 decision 2, ADR-0035): the panel's state and what carries copied
+//! content or search text need `ReadClipboard`, the paste request needs `WriteClipboard`, and the open toggle and the
+//! chord flags carry nothing.
 
 mod view;
 
@@ -8,7 +9,7 @@ pub use view::{ClipKind, ClipPage, ClipRow, Filter, Pages, PanelNote, Preview, W
 use crate::{Capability, Event, Redacted};
 use std::sync::Arc;
 
-/// The gate of the events that carry content or search text.
+/// The gate of the panel's state and of the events that carry content or search text.
 const READ: Option<Capability> = Some(Capability::ReadClipboard);
 /// The gate of the paste request and its answer.
 const WRITE: Option<Capability> = Some(Capability::WriteClipboard);
@@ -24,7 +25,8 @@ impl Event for ClipOpen {
     const NAME: &'static str = "clip-open";
 }
 
-/// From the clipboard module: whether its panel is open, so the keyboard lights the key and sends panel keys.
+/// From the clipboard module: whether its panel is open, so the keyboard lights the key and sends panel keys. It turns
+/// every key into `ClipKey`, so it needs `ReadClipboard` (ADR-0035).
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClipPanel {
     /// The panel is open.
@@ -33,6 +35,7 @@ pub struct ClipPanel {
 
 impl Event for ClipPanel {
     const NAME: &'static str = "clip-panel";
+    const CAPABILITY: Option<Capability> = READ;
 }
 
 /// A key the panel takes from our keyboard while it is open.

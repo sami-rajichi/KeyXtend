@@ -13,7 +13,7 @@ const X: &str = "x takes several small blobs";
 
 /// A small-blob store over `shelf`.
 fn small(shelf: &FakeShelf) -> Store {
-    Store::new(Arc::new(shelf.clone()), SMALL)
+    Store::new(Arc::new(shelf.clone()), *SMALL)
 }
 
 /// A shelf holding two day-1 entries in small blobs: `x`, in several parts with a thumbnail, and `y`.
@@ -30,7 +30,7 @@ fn two() -> (FakeShelf, u64, u64) {
 
 /// A small-blob store over `cut`, and the history it loads.
 fn cut_open(cut: &Arc<Cut>) -> (Store, History) {
-    let mut s = Store::new(cut.clone(), SMALL);
+    let mut s = Store::new(cut.clone(), *SMALL);
     let h = s.load().unwrap().history;
     (s, h)
 }
@@ -159,7 +159,7 @@ fn a_failed_write_anywhere_in_a_pin_finishes_at_the_next_save() {
 #[test]
 fn a_failed_put_removes_the_blobs_it_saved() {
     let shelf = FakeShelf::new();
-    let mut s = Store::new(Cut::once(&shelf, 1), SMALL);
+    let mut s = Store::new(Cut::once(&shelf, 1), *SMALL);
     let mut h = History::default();
     let id = h.add(copied(X, &noon(1)));
     assert_eq!(s.put(h.get(id).unwrap(), &[text(X)]), Err(SealedError::Io));
@@ -220,7 +220,7 @@ fn a_damaged_extra_blob_sets_the_list_read_so_far_aside() {
     let head = shelf.blob(&day1, &list::head_name().unwrap());
     let cut = Cut::idle(&shelf);
     cut.spoil(&day1, &list::chunk_name(0, 1).unwrap());
-    let loaded = Store::new(cut, SMALL).load().unwrap();
+    let loaded = Store::new(cut, *SMALL).load().unwrap();
     assert_eq!(loaded.aside, [on(1)]);
     assert!(loaded.history.is_empty());
     let aside = shelf.blob(&day1, &BlobName::new("aside-1-0").unwrap());

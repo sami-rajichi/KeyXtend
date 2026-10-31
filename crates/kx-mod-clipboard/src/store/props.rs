@@ -56,7 +56,7 @@ fn entry() -> impl Strategy<Value = Entry> {
     );
     let sizes = (
         any::<u64>(),
-        any::<u64>(),
+        option::of(0..list::UNSIZED),
         any::<u64>(),
         any::<u16>(),
         any::<bool>(),
@@ -69,7 +69,7 @@ type Ids = (u64, u64, usize, i64, i16);
 /// A random entry's app, title, search text and paths.
 type Texts = (Option<(String, String)>, String, String, Vec<String>);
 /// A random entry's sizes, hash, blob count and thumbnail flag.
-type Sizes = (u64, u64, u64, u16, bool);
+type Sizes = (u64, Option<u64>, u64, u16, bool);
 
 /// The pinned entry these random fields make.
 fn built((ids, texts, sizes): (Ids, Texts, Sizes)) -> Entry {
@@ -168,7 +168,7 @@ proptest! {
         shelf.plant(&day, &list::head_name().unwrap(), head.to_vec());
         shelf.plant(&day, &name(1), rest.to_vec());
         let newer = head.first().is_some_and(|v| *v > list::VERSION);
-        let loaded = Store::new(Arc::new(shelf.clone()), STORE).load();
+        let loaded = Store::new(Arc::new(shelf.clone()), *STORE).load();
         let loaded = loaded.map(|l| (l.history.is_empty(), l.aside.len() <= 1));
         let want = if newer { Err(StoreError::Newer) } else { Ok((true, true)) };
         prop_assert_eq!(loaded, want);

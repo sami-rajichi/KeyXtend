@@ -59,6 +59,7 @@ clip =
     .size = { $mb } ميغابايت
     .size-gb = { $gb } غيغابايت
     .size-small = أقل من { $mb } ميغابايت
+    .size-unknown = الحجم غير معروف
     .storage = المحفوظات: { $used } من { $cap } · { $free } متوفرة على { $drive }
     .open-folder = فتح المجلد
     .meta = { $when } · { $size } · { $app }

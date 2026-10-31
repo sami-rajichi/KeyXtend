@@ -3,7 +3,9 @@
 
 use crate::lock;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipConfig, ClipError, ClipNote, ClipRun, Clipboard, FileFact};
+use kx_module_api::ports::{
+    ClipConfig, ClipError, ClipNote, ClipRun, Clipboard, FileFact, is_share_or_device,
+};
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
@@ -74,7 +76,7 @@ impl FakeClipboard {
         lock(&self.shared.log).watch_fail = Some(error);
     }
 
-    /// Makes `files` find `fact` at `path` from now on.
+    /// Makes `files` find `fact` at `path` from now on; a share or device path still answers unchecked.
     pub fn set_file(&self, path: impl Into<PathBuf>, fact: FileFact) {
         lock(&self.shared.log).files.insert(path.into(), fact);
     }
@@ -145,10 +147,18 @@ impl Clipboard for FakeClipboard {
         Ok(Box::new(FakeClipRun { shared, id }))
     }
 
+    /// Answers as scripted, an unknown path as gone, and a share or device path as unchecked, as the port's rule says.
     fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
         let mut log = lock(&self.shared.log);
         log.checks += 1;
-        let fact = |p: &PathBuf| log.files.get(p).copied().unwrap_or(FileFact::Gone);
+        let scripted = |p: &PathBuf| log.files.get(p).copied().unwrap_or(FileFact::Gone);
+        let fact = |p: &PathBuf| {
+            if is_share_or_device(p) {
+                FileFact::Unchecked
+            } else {
+                scripted(p)
+            }
+        };
         paths.expose().iter().map(fact).collect()
     }
 }

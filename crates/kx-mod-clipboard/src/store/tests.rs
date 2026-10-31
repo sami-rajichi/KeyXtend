@@ -8,7 +8,7 @@ mod fault;
 mod held;
 mod moves;
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use kx_module_api::ports::{LocalTime, Pixels, RGBA_BYTES};
 use kx_platform_fake::{FakeShelf, ShelfCall};
@@ -18,10 +18,10 @@ use crate::entry::Stamp;
 use crate::fixture::{STORE, app, at, copied, date, text};
 
 /// A blob size so small that a short text takes several blobs, and a list more.
-const SMALL: StoreConfig = StoreConfig {
+static SMALL: LazyLock<StoreConfig> = LazyLock::new(|| StoreConfig {
     blob_bytes: 24,
-    ..STORE
-};
+    ..*STORE
+});
 
 /// Test day `n`: Monday 2026-10-26 is day 1.
 fn day(n: u8) -> Date {
@@ -41,7 +41,7 @@ fn noon(n: u8) -> LocalTime {
 
 /// A store over `shelf`.
 fn open(shelf: &FakeShelf) -> Store {
-    Store::new(Arc::new(shelf.clone()), STORE)
+    Store::new(Arc::new(shelf.clone()), *STORE)
 }
 
 /// What a fresh store finds on `shelf`.
@@ -139,7 +139,7 @@ fn a_locked_or_unlisted_shelf_fails_the_load() {
 fn deletes_remove_every_part_and_the_thumbnail() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (
-        Store::new(Arc::new(shelf.clone()), SMALL),
+        Store::new(Arc::new(shelf.clone()), *SMALL),
         History::default(),
     );
     let id = keep(
@@ -206,7 +206,7 @@ fn thumbnails_round_trip_within_their_side() {
     assert_eq!(s.thumb(&entry), Ok(Some(grey(STORE.thumb_px))));
     let smaller = StoreConfig {
         thumb_px: STORE.thumb_px - 1,
-        ..STORE
+        ..*STORE
     };
     let s = Store::new(Arc::new(shelf.clone()), smaller);
     assert_eq!(s.thumb(&entry), Err(SealedError::Damaged), "drawn again");
@@ -234,7 +234,7 @@ fn a_load_removes_blobs_no_list_names_and_keeps_others() {
 fn an_entry_missing_a_blob_leaves_and_a_lost_thumbnail_is_redrawn() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (
-        Store::new(Arc::new(shelf.clone()), SMALL),
+        Store::new(Arc::new(shelf.clone()), *SMALL),
         History::default(),
     );
     let a = keep(&mut h, &mut s, "a text that takes two blobs", &noon(1));

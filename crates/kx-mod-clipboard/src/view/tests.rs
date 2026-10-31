@@ -63,10 +63,10 @@ fn a_page_holds_five_rows_and_the_last_one_the_rest() {
 #[test]
 fn the_page_size_comes_from_the_config() {
     let h = twelve();
-    let three = PanelConfig { rows: 3, ..PANEL };
+    let three = PanelConfig { rows: 3, ..*PANEL };
     let v = page(&mut opened_with(three), &h);
     assert_eq!((v.rows.len(), v.pages.count), (3, 4));
-    let zero = PanelConfig { rows: 0, ..PANEL };
+    let zero = PanelConfig { rows: 0, ..*PANEL };
     let v = page(&mut opened_with(zero), &h);
     assert_eq!((v.rows.len(), v.pages.count), (1, 12), "0 counts as 1");
     let none = page(&mut opened(), &History::default());

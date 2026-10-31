@@ -51,7 +51,7 @@ pub struct Step {
 /// What the file checks before an insert found.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Sorted {
-    /// The files still there of each file entry that has one.
+    /// The files still there, or left unchecked, of each file entry that has one.
     pub keep: BTreeMap<u64, Redacted<Vec<PathBuf>>>,
     /// The file entries whose every file is gone, which leave the history.
     pub gone: Vec<u64>,
@@ -126,7 +126,7 @@ pub fn sort(facts: &[(u64, Vec<FileFact>)], history: &History) -> Sorted {
         };
         let paths = entry.files.expose().iter().zip(found);
         let there: Vec<PathBuf> = paths
-            .filter(|(_, f)| matches!(f, FileFact::Size(_)))
+            .filter(|(_, f)| matches!(f, FileFact::Size(_) | FileFact::Unchecked))
             .map(|(p, _)| p.clone())
             .collect();
         if !there.is_empty() {

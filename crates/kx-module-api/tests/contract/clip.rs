@@ -1,5 +1,6 @@
-//! The clipboard history's events and ports (ADR-0034): content and search travel only with `ReadClipboard`, the
-//! paste only with `WriteClipboard`, the shelf needs `SecretStore`, and the toggles, pictures and calendar are open.
+//! The clipboard history's events and ports (ADR-0034, ADR-0035): the panel's state, content and search travel only
+//! with `ReadClipboard`, the paste only with `WriteClipboard`, the shelf needs `SecretStore`, and the open toggle, the
+//! chord flags, pictures and calendar are open.
 
 use kx_module_api::Capability::{InjectInput, ReadClipboard, SecretStore, WriteClipboard};
 use kx_module_api::ports::{
@@ -135,13 +136,15 @@ fn host(granted: &[Capability]) -> FakeHost {
 }
 
 /// Sends each gated event but the view, subscribes to each, then sends the open `ClipOpen`.
-fn gated(bus: &Bus) -> [Result<(), EventError>; 10] {
+fn gated(bus: &Bus) -> [Result<(), EventError>; 12] {
     let key = ClipKey(PanelKey::Text(Redacted::default()));
     [
+        bus.publish(&ClipPanel { open: true }),
         bus.publish(&key),
         bus.publish(&ClipAct::Filter(Filter::Images)),
         bus.publish(&PasteAsk { round: 1 }),
         bus.publish(&Pasted { round: 1, ok: true }),
+        bus.subscribe(|_: &ClipPanel| {}).map(drop),
         bus.subscribe(|_: &ClipKey| {}).map(drop),
         bus.subscribe(|_: &ClipView| {}).map(drop),
         bus.subscribe(|_: &ClipAct| {}).map(drop),
@@ -190,10 +193,12 @@ fn without_the_clipboard_gates_no_content_or_paste_travels() {
     let bus = host(&[InjectInput, SecretStore]).bus();
     let (read, write) = (ReadClipboard, WriteClipboard);
     let want = [
+        refused::<ClipPanel>(read),
         refused::<ClipKey>(read),
         refused::<ClipAct>(read),
         refused::<PasteAsk>(write),
         refused::<Pasted>(write),
+        refused::<ClipPanel>(read),
         refused::<ClipKey>(read),
         refused::<ClipView>(read),
         refused::<ClipAct>(read),
@@ -210,8 +215,10 @@ fn read_clipboard_alone_opens_content_but_not_the_paste() {
     let want = [
         Ok(()),
         Ok(()),
+        Ok(()),
         refused::<PasteAsk>(WriteClipboard),
         refused::<Pasted>(WriteClipboard),
+        Ok(()),
         Ok(()),
         Ok(()),
         Ok(()),
@@ -242,10 +249,9 @@ fn a_view_reaches_its_listener_only_with_read_clipboard() {
 }
 
 #[test]
-fn the_toggles_and_the_chord_request_pass_with_no_grants() {
+fn the_open_toggle_and_the_chord_flags_pass_with_no_grants() {
     let bus = host(&[]).bus();
     assert_eq!(bus.publish(&ClipOpen), Ok(()));
-    assert_eq!(bus.publish(&ClipPanel { open: true }), Ok(()));
     assert_eq!(bus.publish(&HistoryWanted { on: true }), Ok(()));
     assert_eq!(bus.publish(&HistoryAsk), Ok(()));
 }

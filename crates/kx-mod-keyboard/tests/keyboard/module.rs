@@ -110,18 +110,17 @@ fn panel_keys(granted: Vec<Capability>) -> (usize, Vec<Stroke>) {
 }
 
 #[test]
-fn without_read_clipboard_it_starts_but_the_panel_hears_no_keys() {
-    assert_eq!(
-        panel_keys(all()),
-        (1, Vec::new()),
-        "granted, the panel hears it"
-    );
-    let refused = panel_keys(all_but(ReadClipboard));
-    assert_eq!(
-        refused,
-        (0, Vec::new()),
-        "the bus refused the key, which never reached the app"
-    );
+fn with_read_clipboard_the_open_panel_hears_a_key_the_app_never_gets() {
+    assert_eq!(panel_keys(all()), (1, Vec::new()));
+}
+
+#[test]
+fn without_read_clipboard_it_cannot_hear_the_panel() {
+    let mut host = fake(None);
+    store(&mut host, None);
+    host.granted = all_but(ReadClipboard);
+    let refused = EventError::NotGranted(ClipPanel::NAME, ReadClipboard);
+    assert_eq!(start(&mut host), Err(ModuleError::Event(refused)));
 }
 
 #[test]

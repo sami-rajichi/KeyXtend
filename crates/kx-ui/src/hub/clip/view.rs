@@ -10,7 +10,8 @@ use crate::i18n::keys::{
     CLIP_BACK, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DELETE, CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES,
     CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KIND, CLIP_KINDS,
     CLIP_NO, CLIP_NOTE, CLIP_NOTES, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW,
-    CLIP_SEARCH, CLIP_TICKED, CLIP_TITLE, CLIP_UNPIN, CLIP_YES, PAGE_BACK, PAGE_ON, WINDOW_CLIP,
+    CLIP_SEARCH, CLIP_SIZE_UNKNOWN, CLIP_TICKED, CLIP_TITLE, CLIP_UNPIN, CLIP_YES, PAGE_BACK,
+    PAGE_ON, WINDOW_CLIP,
 };
 use kx_module_api::ports::{ClipPage, ClipRow};
 use kx_module_api::{is_arabic, is_rtl};
@@ -181,7 +182,10 @@ fn row(r: &ClipRow, round: u32, t: &I18n) -> Row {
     };
     let app = r.app.as_ref().map(|a| clean(a.expose()));
     let app = app.filter(|a| !a.is_empty());
-    let (when, size) = (t.clip_when(&r.when), t.clip_size(r.bytes));
+    let size = r
+        .bytes
+        .map_or_else(|| t.text(CLIP_SIZE_UNKNOWN), |b| t.clip_size(b));
+    let when = t.clip_when(&r.when);
     let id = r.id.to_string();
     Row {
         kind: id_of(&CLIP_KINDS, &r.kind),

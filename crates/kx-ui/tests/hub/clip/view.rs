@@ -28,7 +28,7 @@ fn read(iso: &str, page: ClipPage) -> Value {
 /// A 2.41 MB row and a 12-byte row of no known app, copied yesterday, on 1.5 GB of a 2 GB cap with 412 GB free.
 fn sized() -> ClipPage {
     let mut big = row(7, "rapport");
-    big.bytes = SIZE;
+    big.bytes = Some(SIZE);
     let mut small = row(8, "mot");
     small.app = None;
     small.when.days_ago = 1;

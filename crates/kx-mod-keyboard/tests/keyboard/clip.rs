@@ -161,6 +161,8 @@ fn with_the_panel_open_space_ticks_backspace_erases_and_the_moves_drive_it() {
     ];
     assert_eq!(c.heard(), keys.map(Heard::Key));
     assert!(c.strokes().is_empty(), "nothing reaches the app");
+    let sent = c.b.rig.fakes.shortcuts.sent();
+    assert!(sent.is_empty(), "the keyboard pastes only on PasteAsk");
 }
 
 #[test]
@@ -171,6 +173,7 @@ fn with_the_panel_open_a_letter_goes_to_the_search_and_not_to_the_app() {
     c.b.rig.tap("c-0x0011").unwrap();
     assert_eq!(c.heard(), [text("q"), text("w")]);
     assert!(c.strokes().is_empty());
+    assert!(c.b.rig.fakes.shortcuts.sent().is_empty());
 }
 
 #[test]

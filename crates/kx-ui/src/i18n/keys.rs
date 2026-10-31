@@ -196,6 +196,8 @@ pub const CLIP_SIZE: &str = "clip.size";
 pub const CLIP_SIZE_GB: &str = "clip.size-gb";
 /// A size below `$mb`, the smallest two decimals show.
 pub const CLIP_SIZE_SMALL: &str = "clip.size-small";
+/// A row's size left unknown, as a share path never probed.
+pub const CLIP_SIZE_UNKNOWN: &str = "clip.size-unknown";
 /// The storage line: `$used` of `$cap`, and `$free` on `$drive`.
 pub const CLIP_STORAGE: &str = "clip.storage";
 /// The storage line's Open folder.

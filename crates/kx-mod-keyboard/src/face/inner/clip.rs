@@ -43,14 +43,17 @@ impl Inner {
         }
     }
 
-    /// Drops a held key and lets every latch go, then sends one plain paste; true when all of it went. The next
-    /// relabel redraws the latches.
-    pub(in crate::face) fn paste(&mut self) -> bool {
+    /// Drops a held key and lets every latch go, then sends one plain paste; true when all of it went. `None` while
+    /// the module is stopped, which touches nothing. The next relabel redraws the latches.
+    pub(in crate::face) fn paste(&mut self) -> Option<bool> {
+        if !self.running {
+            return None;
+        }
         self.repeat.leave();
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();
         let went = self.typing.paste(&self.ports.io(&table, &cells));
         self.unshown = true;
-        went.is_ok()
+        Some(went.is_ok())
     }
 }

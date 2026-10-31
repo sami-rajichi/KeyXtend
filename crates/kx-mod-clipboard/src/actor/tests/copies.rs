@@ -1,5 +1,5 @@
-//! Copies: the top row and the debounced save, skipped and marked copies, follow-the-clear, duplicates, the notes for
-//! a refused copy, the caps, and a locked shelf.
+//! Copies: the top row and the debounced save, skipped, marked and missed copies, follow-the-clear, duplicates, the
+//! notes for a refused copy, the caps, and a locked shelf.
 
 use std::time::Duration;
 
@@ -81,7 +81,7 @@ fn a_clear_by_the_copying_app_within_the_window_deletes_the_copy_for_good() {
 fn a_clear_after_the_window_keeps_the_copy() {
     let mut rig = Rig::new();
     rig.copy(vec![text("note")], Some(app("editor.exe")));
-    rig.advance(FOLLOW + Duration::from_secs(1));
+    rig.advance(*FOLLOW + Duration::from_secs(1));
     rig.push(ClipNote::Cleared {
         app: Some(app("editor.exe")),
     });
@@ -114,6 +114,33 @@ fn a_copy_over_the_entry_cap_writes_nothing_and_shows_a_note() {
     });
     rig.open();
     assert_eq!(rig.page().note, Some(PanelNote::TooBig));
+    assert!(rig.page().empty);
+    assert_eq!(rig.fakes.shelf.calls(ShelfCall::Save), 0);
+}
+
+#[test]
+fn a_skipped_apps_copy_over_the_cap_shows_no_note() {
+    let skip = Value::Array(vec!["KeePass.exe".into()]);
+    let mut rig = Rig::build(|_, host| host.put("skip_apps", skip));
+    rig.push(ClipNote::TooBig {
+        app: Some(app("keepass.exe")),
+        bytes: 200 * MB,
+    });
+    rig.open();
+    assert_eq!(rig.page().note, None, "a skipped app's copy is never told");
+    assert!(rig.page().empty);
+}
+
+#[test]
+fn a_copy_missed_while_the_clipboard_was_busy_keeps_nothing_and_shows_no_note() {
+    let mut rig = Rig::new();
+    rig.push(ClipNote::Busy);
+    rig.open();
+    assert_eq!(
+        rig.page().note,
+        None,
+        "edge 17: the missed copy is not told"
+    );
     assert!(rig.page().empty);
     assert_eq!(rig.fakes.shelf.calls(ShelfCall::Save), 0);
 }

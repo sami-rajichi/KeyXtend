@@ -6,8 +6,6 @@ use kx_module_api::ports::Weekday;
 use std::sync::Arc;
 use std::thread;
 
-/// Paris in winter, in minutes east of UTC.
-const PARIS: i16 = 60;
 /// Paris in summer.
 const PARIS_SUMMER: i16 = 120;
 /// A minute.

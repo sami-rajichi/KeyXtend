@@ -16,7 +16,7 @@ const ONE_MS: Duration = Duration::from_millis(1);
 /// A follow with no skipped app, and its clock at zero.
 fn follow() -> (Follow, FakeClock) {
     (
-        Follow::new(FOLLOW, Vec::new()),
+        Follow::new(*FOLLOW, Vec::new()),
         FakeClock::new(Mono::default()),
     )
 }
@@ -59,7 +59,7 @@ fn an_old_pin_raised_by_its_apps_copy_survives_that_apps_clear() {
 fn a_clear_by_the_same_app_within_the_window_deletes_once() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
-    clock.advance(FOLLOW);
+    clock.advance(*FOLLOW);
     assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), Some(7));
     assert_eq!(
         clear(&mut f, Some(&app("vault.exe")), clock.now()),
@@ -72,7 +72,7 @@ fn a_clear_by_the_same_app_within_the_window_deletes_once() {
 fn a_clear_after_the_window_deletes_nothing() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
-    clock.advance(FOLLOW + ONE_MS);
+    clock.advance(*FOLLOW + ONE_MS);
     assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), None);
 }
 
@@ -121,7 +121,7 @@ fn a_newer_kept_entry_replaces_the_followed_one() {
 
 #[test]
 fn skipped_apps_match_the_id_ignoring_case() {
-    let f = Follow::new(FOLLOW, vec!["KeePassXC.exe".to_owned()]);
+    let f = Follow::new(*FOLLOW, vec!["KeePassXC.exe".to_owned()]);
     assert!(f.skips(Some(&app("keepassxc.EXE"))));
     assert!(!f.skips(Some(&app("notepad.exe"))));
     assert!(!f.skips(None), "an unknown app is not skipped");
@@ -138,7 +138,7 @@ fn skipped_apps_match_the_id_ignoring_case() {
 
 #[test]
 fn debug_hides_the_app_ids() {
-    let mut f = Follow::new(FOLLOW, vec!["skipme.exe".to_owned()]);
+    let mut f = Follow::new(*FOLLOW, vec!["skipme.exe".to_owned()]);
     f.kept(1, Some(&app("vault.exe")), Mono::default());
     let shown = format!("{f:?}");
     assert!(

@@ -5,6 +5,7 @@ use super::{Clip, Heard};
 use crate::assist::Said;
 use crate::known::sid;
 use crate::rig::{HELD, STATE};
+use kx_module_api::Module;
 use kx_module_api::ports::{
     FaceAction, FaceReply, PASTE_ID, PasteAsk, Pasted, Scan, ShortcutError, ShortcutId,
 };
@@ -54,6 +55,24 @@ fn a_refused_or_failed_paste_answers_not_ok_with_its_round() {
         c.b.send(&PasteAsk { round });
         assert_eq!(c.heard(), [Heard::Pasted(Pasted { round, ok: false })]);
     }
+}
+
+#[test]
+fn a_paste_ask_heard_after_the_stop_sends_nothing_and_answers_not_ok() {
+    let mut c = Clip::quiet(None);
+    c.b.rig.tap("ctrl").unwrap();
+    // The kernel drops the handlers before the stop, but one may still be running on the sender's thread.
+    c.b.rig.module.stop();
+    c.b.send(&PasteAsk { round: 5 });
+    assert!(c.b.rig.fakes.shortcuts.sent().is_empty(), "no paste");
+    assert_eq!(
+        c.heard(),
+        [Heard::Pasted(Pasted {
+            round: 5,
+            ok: false
+        })]
+    );
+    assert!(c.on("ctrl"), "the latches stay as they were");
 }
 
 #[test]

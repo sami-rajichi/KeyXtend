@@ -734,6 +734,7 @@ dependencies = [
  "kx-test-support",
  "proptest",
  "serde",
+ "thiserror 2.0.21",
  "toml",
  "tracing",
 ]

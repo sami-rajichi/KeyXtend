@@ -124,7 +124,7 @@ impl Run {
         for &n in words {
             history.add(copied(WORDS[n % WORDS.len()], &now()));
         }
-        let mut panel = Panel::new(PanelConfig { rows, ..PANEL });
+        let mut panel = Panel::new(PanelConfig { rows, ..*PANEL });
         panel.open();
         Self {
             history,

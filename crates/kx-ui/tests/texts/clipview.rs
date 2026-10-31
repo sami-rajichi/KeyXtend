@@ -51,7 +51,7 @@ fn row(id: u64, kind: ClipKind, title: &str, app: &str, days_ago: u8) -> ClipRow
             hour: 15,
             minute: 10,
         },
-        bytes: 96,
+        bytes: Some(96),
         tick: None,
         pinned: false,
         expires: false,
@@ -73,7 +73,7 @@ fn rows() -> Vec<ClipRow> {
         0,
     );
     image.thumb = Some(picture());
-    image.bytes = 2_527_068;
+    image.bytes = Some(2_527_068);
     let mut arabic = row(
         13,
         ClipKind::Text,
@@ -89,7 +89,7 @@ fn rows() -> Vec<ClipRow> {
         "File Explorer",
         1,
     );
-    (media.bytes, media.expires, media.tick) = (52 * MB, true, Some(3));
+    (media.bytes, media.expires, media.tick) = (Some(52 * MB), true, Some(3));
     let mut link = row(
         15,
         ClipKind::Link,

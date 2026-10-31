@@ -19,7 +19,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `InjectInput` | It gates all four services typing needs, and the latch and toggle events of mouse assist; the module sends input only through `InputInjector` and `Shortcuts`. |
 | `KeyboardUi` | It gates the `KeyboardFace` the module provides, so only the UI draws the board and forwards its clicks. |
 | `ReadFocusedText` | It gates `Typed`, `TypingMode`, `TypingModeAsk` and `TypeWord` (ADR-0033), so only a module that may read typed text hears what was typed or asks for a word. |
-| `ReadClipboard` | It gates `ClipKey` (ADR-0034), so only a module that may read the clipboard hears the panel's search letters. |
+| `ReadClipboard` | It gates `ClipPanel` and `ClipKey` (ADR-0034, ADR-0035), so only a module that may read the clipboard opens the panel's keys and hears its search letters; without it the module does not start. |
 | `WriteClipboard` | It gates `PasteAsk` and `Pasted`, so only a module that may write the clipboard makes the keyboard paste. The keyboard needs no clipboard service. |
 
 ## The board
