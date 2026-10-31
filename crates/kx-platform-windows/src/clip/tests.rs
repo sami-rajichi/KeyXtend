@@ -3,7 +3,9 @@
 use std::path::PathBuf;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipPart, FileFact, ImageCodec};
+#[cfg(windows)]
+use kx_module_api::ports::FileFact;
+use kx_module_api::ports::{ClipPart, ImageCodec};
 
 use super::parts::{Formats, Kind, blank, crlf, text_of};
 use super::*;
@@ -196,6 +198,7 @@ fn text_past_the_cap_is_refused() {
     assert_eq!(text_of(&units("abcdefgh\0"), 2), None);
 }
 
+#[cfg(windows)]
 #[test]
 fn file_facts_see_a_file_and_then_its_deletion() {
     let path = std::env::temp_dir().join(format!("kx-clip-facts-{}.txt", std::process::id()));

@@ -53,10 +53,10 @@ fn an_insert_whose_entries_are_all_gone_or_away_stays_open_with_a_note() {
     insert(&mut rig);
     stopped(&rig, PanelNote::PasteFailed);
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("E:\\song.mp3", FileFact::Size(9));
-    rig.copy(vec![files(&["E:\\song.mp3"])], None);
+    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Size(9));
+    rig.copy(vec![files(&["E:/song.mp3"])], None);
     rig.open();
-    rig.fakes.clip.set_file("E:\\song.mp3", FileFact::Away);
+    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Away);
     rig.tick_row(0);
     insert(&mut rig);
     stopped(&rig, PanelNote::PasteFailed);

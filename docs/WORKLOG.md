@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 23:30 — P8: Linux CI, tests that read Windows paths
+Three clipboard tests wrote `C:\a`, whose file name Linux cannot split off, so they now write `C:/a`, a drive path whose name every system reads. The adapter's real-file check made a `/tmp` file on Linux, which the adapter rightly leaves unchecked, so it now runs on Windows only, like its neighbour. The P8 tests that never reached Linux in CI were read for the same trap; none other was found.
+
 ## 2026-10-31 22:40 — P8: Linux CI, two imports used only on Windows or with Qt
 The PR's Linux check failed on two unused imports: the clipboard's file facts, used only by the Windows watch and the tests, and the picture host's name, used only by the Qt bridge. Each now carries the gate its users have (`windows` or `test`, and the `qt` feature). Both Linux clippy commands of CI pass on this PC for the Linux target, and so do the Windows ones.
 

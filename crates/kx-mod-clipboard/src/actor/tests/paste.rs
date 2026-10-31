@@ -128,16 +128,16 @@ fn a_paste_that_failed_or_never_came_stops_with_a_note() {
 #[test]
 fn a_file_entry_pastes_its_files_still_there_and_leaves_when_all_are_gone() {
     let mut rig = Rig::new();
-    for path in ["C:\\a", "C:\\b", "C:\\c"] {
+    for path in ["C:/a", "C:/b", "C:/c"] {
         rig.fakes.clip.set_file(path, FileFact::Size(1));
     }
-    rig.copy(vec![files(&["C:\\c"])], None);
-    rig.copy(vec![files(&["C:\\a", "C:\\b"])], None);
+    rig.copy(vec![files(&["C:/c"])], None);
+    rig.copy(vec![files(&["C:/a", "C:/b"])], None);
     rig.open();
-    rig.fakes.clip.set_file("C:\\b", FileFact::Gone);
-    rig.fakes.clip.set_file("C:\\c", FileFact::Gone);
+    rig.fakes.clip.set_file("C:/b", FileFact::Gone);
+    rig.fakes.clip.set_file("C:/c", FileFact::Gone);
     insert(&mut rig, &[1, 0]);
-    let kept = ClipPart::Files(Redacted::new(vec![PathBuf::from("C:\\a")]));
+    let kept = ClipPart::Files(Redacted::new(vec![PathBuf::from("C:/a")]));
     assert_eq!(rig.fakes.writer.writes(), [vec![kept]]);
     assert_eq!(
         rig.titles(),
@@ -149,11 +149,11 @@ fn a_file_entry_pastes_its_files_still_there_and_leaves_when_all_are_gone() {
 #[test]
 fn a_file_out_of_reach_is_skipped_and_kept() {
     let mut rig = Rig::new();
-    rig.fakes.clip.set_file("E:\\song.mp3", FileFact::Size(9));
-    rig.copy(vec![files(&["E:\\song.mp3"])], None);
+    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Size(9));
+    rig.copy(vec![files(&["E:/song.mp3"])], None);
     rig.text("words");
     rig.open();
-    rig.fakes.clip.set_file("E:\\song.mp3", FileFact::Away);
+    rig.fakes.clip.set_file("E:/song.mp3", FileFact::Away);
     insert(&mut rig, &[1, 0]);
     assert_eq!(rig.fakes.writer.writes(), [vec![text("words")]]);
     pasted(&mut rig);
