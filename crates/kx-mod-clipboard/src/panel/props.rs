@@ -171,7 +171,8 @@ impl Run {
         }
     }
 
-    /// Does what the module would for `done`: the acts name kept entries once, and Yes deletes every unpinned one.
+    /// Does what the module would for `done`: the acts name kept entries once, and Yes deletes what the question
+    /// counted.
     fn follow(&mut self, done: Do, asked: Option<&[u64]>) -> Result<(), TestCaseError> {
         if let Do::Insert(ids) | Do::Pin(ids) | Do::Unpin(ids) | Do::Delete(ids) = &done {
             let mut seen = ids.clone();
@@ -188,7 +189,7 @@ impl Run {
             Do::Delete(mut ids) => {
                 if let Some(all) = asked {
                     ids.sort_unstable();
-                    prop_assert_eq!(&ids, all, "Yes deletes every unpinned entry");
+                    prop_assert_eq!(&ids, all, "Yes deletes what the question counted");
                 }
                 h.take_where(|e| ids.contains(&e.id));
             }
@@ -217,8 +218,11 @@ impl Run {
         self.round = view.0.round;
         self.pages(&view.0)?;
         self.ticks(&view.0, before)?;
-        let asked = self.panel.asking().then(|| unpinned(&self.history).len());
-        prop_assert_eq!(view.0.confirm.map(usize::from), asked);
+        let free = unpinned(&self.history);
+        prop_assert_eq!(usize::from(view.0.unpinned), free.len());
+        let asked = self.panel.asked();
+        prop_assert_eq!(view.0.confirm.map(usize::from), asked.map(<[u64]>::len));
+        prop_assert!(asked.is_none_or(|ids| ids.iter().all(|id| free.contains(id))));
         let previewed = self.panel.preview().map(|(id, _)| id);
         prop_assert!(previewed.is_none_or(|id| self.history.get(id).is_some()));
         prop_assert_eq!(view.0.preview.is_some(), previewed.is_some());
@@ -282,8 +286,8 @@ proptest! {
         run.check(&[])?;
         for step in &steps {
             let before = run.panel.ticks().to_vec();
-            let asked = run.panel.asking().then(|| {
-                let mut all = unpinned(&run.history);
+            let asked = run.panel.asked().map(|ids| {
+                let mut all = ids.to_vec();
                 all.sort_unstable();
                 all
             });

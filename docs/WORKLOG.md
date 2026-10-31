@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 04:07 — P8: the clipboard panel's review fixes
+The Delete-all question now deletes only on a click on Yes (Enter does nothing there, Esc says No), and only the entries it counted when asked, never a copy kept since; one gone or pinned meanwhile leaves the count. `ClipPage` gains `unpinned`, so the ui greys Delete all when nothing unpinned is left, and an empty row title is documented as the ui's cue for the kind's name. After Pin, Unpin or Delete the highlight keeps its place in the list, so the page does not jump, and typed text joins the search line before it is flattened, so "a " then " b" reads "a b".
+
 ## 2026-10-31 03:53 — P8: the clipboard store's review fixes
 A list from a newer version now fails the load with its own error before anything on the shelf changes, and a list that will not read, or whose head the shelf found damaged, is kept as aside blobs in its folder with its content left as orphans, told once, spared by later loads and saves, and dropped only with its day past `keep_days`; the counter starts past every orphan's id. A folder a move left keeps naming the entry until the list it moved to saves, such folders are written last, and the blobs a move left go only after every list, so a stuck removal followed by a crash anywhere no longer loses the entry. A failed folder or copy is now skipped while the rest save, and a move found gone or a copy left in a middle folder queues its blobs, so a delete or the next save removes them. The midnight sweep spares a folder still holding blobs to remove, and the byte reader and writer print only their lengths.
 

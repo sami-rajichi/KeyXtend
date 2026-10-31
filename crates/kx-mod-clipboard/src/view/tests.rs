@@ -104,10 +104,51 @@ fn the_question_names_every_unpinned_entry_whatever_the_view() {
     h.pin(id(&h, "d4"));
     let mut p = opened();
     p.key(&chars("b2"), &h);
-    assert_eq!(page(&mut p, &h).confirm, None);
+    let v = page(&mut p, &h);
+    assert_eq!((v.confirm, v.unpinned), (None, 3));
     p.act(ClipAct::DeleteAll, &h);
     let v = page(&mut p, &h);
     assert_eq!((v.confirm, v.rows.len()), (Some(3), 1));
+    for e in ["a1", "b2", "c3"] {
+        h.pin(id(&h, e));
+    }
+    let v = page(&mut p, &h);
+    assert_eq!(
+        (v.confirm, v.unpinned),
+        (None, 0),
+        "the ui greys Delete all"
+    );
+}
+
+#[test]
+fn pinning_unpinning_or_deleting_a_row_keeps_its_page() {
+    let mut h = twelve();
+    let mut p = opened();
+    for _ in 0..10 {
+        p.key(&PanelKey::Down, &h);
+    }
+    p.key(&PanelKey::Tick, &h);
+    let Do::Pin(ids) = p.act(ClipAct::Pin, &h) else {
+        panic!("Pin pins");
+    };
+    h.pin(ids[0]);
+    let v = page(&mut p, &h);
+    assert_eq!((v.pages.at, v.highlight), (2, Some(0)), "page 3 stays");
+    let Do::Unpin(ids) = p.act(ClipAct::Pin, &h) else {
+        panic!("Pin unpins");
+    };
+    h.unpin(ids[0], &now());
+    assert_eq!(page(&mut p, &h).pages.at, 2);
+    let Do::Delete(ids) = p.act(ClipAct::Delete, &h) else {
+        panic!("Delete deletes");
+    };
+    h.remove(ids[0]);
+    let v = page(&mut p, &h);
+    assert_eq!(
+        (v.pages.at, v.highlight),
+        (2, Some(0)),
+        "clamped to the list"
+    );
 }
 
 #[test]

@@ -121,6 +121,7 @@ fn page(preview: Preview) -> ClipPage {
         unpin: true,
         preview: Some(preview),
         confirm: None,
+        unpinned: 1,
         room: Room {
             used: 1,
             free: 2,

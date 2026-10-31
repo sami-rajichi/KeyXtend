@@ -9,14 +9,13 @@ use crate::entry::{Entry, flat};
 use crate::order::History;
 
 impl Panel {
-    /// Takes `key` from our keyboard. The question takes only Enter (yes) and Esc (no), the preview Enter (insert)
-    /// and Esc (back), and the list every key.
+    /// Takes `key` from our keyboard. The question takes only Esc (no), as only a click on Yes deletes; the preview
+    /// takes Enter (insert) and Esc (back), and the list every key.
     pub fn key(&mut self, key: &PanelKey, history: &History) -> Do {
         self.sync(history);
-        if self.asking {
+        if self.asking() {
             return match key {
                 PanelKey::Esc => self.answer(false, history),
-                PanelKey::Enter => self.answer(true, history),
                 _ => Do::Stay,
             };
         }
@@ -42,10 +41,10 @@ impl Panel {
         match act {
             ClipAct::Close => self.shut(),
             ClipAct::Confirm(yes) => self.answer(yes, history),
-            _ if self.asking => Do::Stay,
+            _ if self.asking() => Do::Stay,
             ClipAct::DeleteAll => self.ask(history),
             ClipAct::Insert => acted(self.targets(), Do::Insert),
-            ClipAct::Delete => acted(self.targets(), Do::Delete),
+            ClipAct::Delete => self.held(acted(self.targets(), Do::Delete), history),
             ClipAct::Pin => self.pin(history),
             ClipAct::Back => self.back(),
             _ if previewing => Do::Stay,
@@ -87,36 +86,45 @@ impl Panel {
         Do::Show
     }
 
-    /// Shows the Delete-all question while an unpinned entry is there to delete.
+    /// Shows the Delete-all question, counting every unpinned entry, whatever the view; nothing when there is none.
     fn ask(&mut self, history: &History) -> Do {
-        if history.entries().iter().all(Entry::pinned) {
+        let free = unpinned(history);
+        if free.is_empty() {
             return Do::Stay;
         }
-        self.asking = true;
+        self.asked = Some(free);
         Do::Show
     }
 
-    /// Answers the question shown: yes deletes every unpinned entry, whatever the view.
+    /// Answers the question shown: yes deletes the entries it counted, never a copy kept since.
     fn answer(&mut self, yes: bool, history: &History) -> Do {
-        if !std::mem::take(&mut self.asking) {
+        let Some(counted) = self.asked.take() else {
             return Do::Stay;
+        };
+        if !yes || counted.is_empty() {
+            return Do::Show;
         }
-        let gone = if yes { unpinned(history) } else { Vec::new() };
-        if gone.is_empty() {
-            Do::Show
-        } else {
-            Do::Delete(gone)
-        }
+        self.hold(history);
+        Do::Delete(counted)
     }
 
     /// Pins the targets, or unpins them when every one is pinned.
-    fn pin(&self, history: &History) -> Do {
+    fn pin(&mut self, history: &History) -> Do {
         let targets = self.targets();
-        if self.unpins(history) {
+        let done = if self.unpins(history) {
             Do::Unpin(targets)
         } else {
             acted(targets, Do::Pin)
+        };
+        self.held(done, history)
+    }
+
+    /// Gives `done`, keeping the highlight on its place when `done` moves or deletes rows.
+    fn held(&mut self, done: Do, history: &History) -> Do {
+        if done != Do::Stay {
+            self.hold(history);
         }
+        done
     }
 
     /// Asks for the preview of the last ticked entry, else of the highlighted one.
@@ -242,11 +250,10 @@ impl Panel {
         Do::Show
     }
 
-    /// Adds `text` to the search on one line, up to `query_chars` characters.
+    /// Adds `text` to the search, the whole line flattened, up to `query_chars` characters.
     fn write(&mut self, text: &str) -> Do {
-        let mut query = self.query.expose().clone();
-        let room = self.cfg.query_chars.saturating_sub(query.chars().count());
-        query.extend(flat(text).take(room));
+        let joined = format!("{}{text}", self.query.expose());
+        let query = flat(&joined).take(self.cfg.query_chars).collect();
         self.search(query)
     }
 

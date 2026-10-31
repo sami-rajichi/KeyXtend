@@ -97,7 +97,27 @@ fn no_keeps_everything_and_a_history_of_pins_asks_nothing() {
 }
 
 #[test]
-fn the_question_takes_only_its_answer_esc_and_close() {
+fn yes_deletes_only_what_the_question_counted() {
+    let mut h = history(&["a", "b", "c"]);
+    let mut p = opened();
+    p.act(ClipAct::DeleteAll, &h);
+    assert_eq!(p.asked().map(<[u64]>::len), Some(3));
+    h.add(copied("late", &at(date(2026, 10, 31), 16, 40)));
+    h.remove(id(&h, "a"));
+    h.pin(id(&h, "b"));
+    p.sync(&h);
+    let left = ids(&h, &["c"]);
+    assert_eq!(p.asked(), Some(&left[..]), "gone and pinned leave it");
+    assert_eq!(p.act(ClipAct::Confirm(true), &h), Do::Delete(left));
+    p.act(ClipAct::DeleteAll, &h);
+    h.remove(id(&h, "c"));
+    h.remove(id(&h, "late"));
+    p.sync(&h);
+    assert!(!p.asking(), "nothing it counted is left");
+}
+
+#[test]
+fn the_question_takes_only_a_click_on_its_answer_esc_and_close() {
     let h = history(&["a", "b"]);
     let mut p = opened();
     p.act(ClipAct::DeleteAll, &h);
@@ -107,7 +127,12 @@ fn the_question_takes_only_its_answer_esc_and_close() {
     assert_eq!(p.key(&PanelKey::Down, &h), Do::Stay);
     assert_eq!(p.key(&chars("x"), &h), Do::Stay);
     assert!(p.query().expose().is_empty() && p.ticks().is_empty());
-    assert!(matches!(p.key(&PanelKey::Enter, &h), Do::Delete(ids) if ids.len() == 2));
+    assert_eq!(p.key(&PanelKey::Enter, &h), Do::Stay, "a click says yes");
+    assert!(p.asking());
+    assert!(matches!(p.act(ClipAct::Confirm(true), &h), Do::Delete(ids) if ids.len() == 2));
+    p.act(ClipAct::DeleteAll, &h);
+    assert_eq!(p.key(&PanelKey::Esc, &h), Do::Show, "Esc says no");
+    assert!(!p.asking());
     p.act(ClipAct::DeleteAll, &h);
     assert_eq!(p.act(ClipAct::Close, &h), Do::Close);
     assert!(!p.is_open() && !p.asking());

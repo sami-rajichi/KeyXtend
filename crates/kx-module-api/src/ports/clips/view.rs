@@ -71,6 +71,7 @@ pub struct ClipRow {
     /// What the entry holds.
     pub kind: ClipKind,
     /// The start of its text, or its file names.
+    /// An empty title means the ui shows the kind's name.
     pub title: Redacted<String>,
     /// The title reads right to left.
     pub rtl: bool,
@@ -155,6 +156,8 @@ pub struct ClipPage {
     pub preview: Option<Preview>,
     /// The Delete-all question while it shows, with how many entries it deletes.
     pub confirm: Option<u16>,
+    /// The number of unpinned entries, so the ui disables Delete all at 0.
+    pub unpinned: u16,
     /// What the history takes and its drive has free.
     pub room: Room,
     /// The history's size limit, in bytes.

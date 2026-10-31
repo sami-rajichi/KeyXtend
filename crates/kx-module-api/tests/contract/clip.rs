@@ -167,6 +167,7 @@ fn page() -> ClipPage {
         unpin: false,
         preview: None,
         confirm: None,
+        unpinned: 0,
         room: Room {
             used: 0,
             free: 1,

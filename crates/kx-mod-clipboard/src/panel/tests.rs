@@ -145,6 +145,19 @@ fn the_search_keeps_at_most_query_chars_characters() {
 }
 
 #[test]
+fn what_is_typed_joins_the_search_on_one_line() {
+    let h = history(&["a b"]);
+    let mut p = opened_with(PanelConfig {
+        query_chars: 3,
+        ..PANEL
+    });
+    p.key(&chars("a "), &h);
+    assert_eq!(p.key(&chars(" b"), &h), Do::Show);
+    assert_eq!(p.query().expose(), "a b", "one space, three characters");
+    assert_eq!(p.key(&chars("\n"), &h), Do::Stay, "full");
+}
+
+#[test]
 fn the_highlight_stays_on_its_entry_when_a_copy_arrives() {
     let mut h = history(&["a", "b", "c"]);
     let mut p = opened();

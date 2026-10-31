@@ -68,8 +68,8 @@ pub struct Panel {
     hi_id: Option<u64>,
     /// The ticked entries, in tick order.
     ticks: Vec<u64>,
-    /// The Delete-all question shows.
-    asking: bool,
+    /// The entries the Delete-all question counted, while it shows.
+    asked: Option<Vec<u64>>,
     /// The round of the last view built.
     round: u32,
     /// The entries that view showed, by row.
@@ -88,7 +88,7 @@ impl Panel {
             hi: 0,
             hi_id: None,
             ticks: Vec::new(),
-            asking: false,
+            asked: None,
             round: 0,
             shown: Vec::new(),
         }
@@ -140,7 +140,13 @@ impl Panel {
     /// True while the Delete-all question shows.
     #[must_use]
     pub fn asking(&self) -> bool {
-        self.asking
+        self.asked.is_some()
+    }
+
+    /// The entries the Delete-all question counted and Yes deletes, while it shows.
+    #[must_use]
+    pub fn asked(&self) -> Option<&[u64]> {
+        self.asked.as_deref()
     }
 
     /// Rows a page shows, at least one.
@@ -198,7 +204,8 @@ impl Panel {
         shows
     }
 
-    /// Drops the ticks of entries `history` no longer holds, and the preview page of one.
+    /// Drops the ticks of entries `history` no longer holds and the preview page of one; the question forgets those
+    /// gone or pinned since, and closes when none is left.
     pub fn sync(&mut self, history: &History) {
         self.ticks.retain(|id| history.get(*id).is_some());
         if self
@@ -206,6 +213,12 @@ impl Panel {
             .is_some_and(|(id, _)| history.get(id).is_none())
         {
             self.mode = Mode::List;
+        }
+        if let Some(ids) = &mut self.asked {
+            ids.retain(|id| history.get(*id).is_some_and(|e| !e.pinned()));
+        }
+        if self.asked.as_ref().is_some_and(Vec::is_empty) {
+            self.asked = None;
         }
     }
 
@@ -235,6 +248,14 @@ impl Panel {
     /// Highlights the top row, as a new filter or search does.
     fn top(&mut self) {
         (self.hi, self.hi_id) = (0, None);
+    }
+
+    /// Keeps the highlight on its place in the list, not on its entry, as a pin or a delete moves rows; the page
+    /// stays.
+    fn hold(&mut self, history: &History) {
+        let list = self.list(history);
+        self.highlight(&list);
+        self.hi_id = None;
     }
 }
 
