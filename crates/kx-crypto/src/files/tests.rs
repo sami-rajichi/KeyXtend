@@ -1,5 +1,6 @@
 use super::*;
-use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
+use crate::consts::{DAMAGED_EXT, KEY_LEN, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
+use crate::seal::{open, seal};
 use crate::testing::{Mirror, listing};
 use kx_test_support::tempdir::TempDir;
 use std::fs;
@@ -61,6 +62,23 @@ fn save_then_load_gives_the_bytes() {
     assert_eq!(got.as_deref(), Some(&b"hello world"[..]));
     let file = fs::read(c.file("predict-en", SEALED_EXT)).unwrap();
     assert!(!file.windows(5).any(|w| w == b"hello"));
+}
+
+/// P7's files, built by hand under a known key, so a change to the store's file names, AAD or key path fails here.
+#[test]
+fn p7_files_still_open_and_saves_keep_their_form() {
+    // The literals pin P7's format on purpose: `sealed.key`, `<name>.sealed`, and the bare name as AAD.
+    let c = case();
+    let key = [7; KEY_LEN];
+    fs::create_dir_all(&c.dir).unwrap();
+    fs::write(c.dir.join("sealed.key"), c.guard.wrap(&key).unwrap()).unwrap();
+    let blob = seal(&key, b"predict-en", b"learned").unwrap();
+    fs::write(c.dir.join("predict-en.sealed"), blob).unwrap();
+    let got = c.store.load(&name("predict-en")).unwrap();
+    assert_eq!(got.as_deref(), Some(&b"learned"[..]));
+    c.store.save(&name("emails"), b"a@b.c").unwrap();
+    let saved = fs::read(c.dir.join("emails.sealed")).unwrap();
+    assert_eq!(open(&key, b"emails", &saved).unwrap().as_slice(), b"a@b.c");
 }
 
 #[test]

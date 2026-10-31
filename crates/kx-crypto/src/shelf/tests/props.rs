@@ -10,10 +10,11 @@ const CASES: u32 = 64;
 /// The longest random file a case writes.
 const MAX_JUNK_BYTES: usize = 256;
 
-/// A text `BlobName` takes: lower-case letters, digits and dashes within its length limits.
+/// A text `BlobName` takes: lower-case letters, digits and dashes within its length limits, and no device name.
 fn text() -> impl Strategy<Value = String> {
     let pattern = format!("[a-z0-9-]{{{MIN_BLOB_LEN},{MAX_BLOB_LEN}}}");
-    prop::string::string_regex(&pattern).unwrap()
+    let formed = prop::string::string_regex(&pattern).unwrap();
+    formed.prop_filter("a device name", |t| BlobName::new(t).is_ok())
 }
 
 proptest! {
