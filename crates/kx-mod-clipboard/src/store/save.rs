@@ -1,97 +1,90 @@
-//! Saving: first the blobs of each move, then each folder's list when its records changed, the folders a move left
-//! last, then the blobs the move left. A crash leaves at most a duplicate, which the next load merges; a move that
-//! fails stays pending, and each save tries it again before any list.
+//! Saving: first the blobs of each pending move, then each folder's list when its records changed, the folders a move
+//! left last, and only after every list the blobs the moves left. A folder that fails is skipped and the rest go on;
+//! a crash leaves at most a duplicate, which the next load merges.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use kx_module_api::ports::{BlobName, SealedError};
 
-use super::parts::{self, Blob};
-use super::{Saved, Store, blob_names, folder_of, group, list};
-use crate::entry::{Entry, Place};
+use super::{Saved, Store, blob_names, folder_of, list};
+use crate::entry::Entry;
 use crate::hash::fnv;
 use crate::order::History;
 
+/// The entries of each folder.
+type Groups<'h> = BTreeMap<BlobName, Vec<&'h Entry>>;
+
+/// A folder whose list saved, with the blob names its list uses and those its held copies use.
+type Written = (BlobName, BTreeSet<BlobName>, BTreeSet<BlobName>);
+
 impl Store {
     /// Saves the moves left pending, then the list of each folder whose entries changed in `history`, and drops a
-    /// folder left with none.
+    /// folder left with none; a move or folder that fails is skipped.
     ///
     /// # Errors
-    /// The shelf's error; what is left saves at the next call.
+    /// The first shelf error; what is left saves at the next call.
     pub fn save(&mut self, history: &History) -> Result<(), SealedError> {
-        let moving: Vec<u64> = self.moves.keys().copied().collect();
-        for id in moving {
-            match history.get(id) {
-                Some(entry) => {
-                    self.carry(entry)?;
-                }
-                None => {
-                    self.moves.remove(&id);
-                }
+        let mut first = self.carry_all(history);
+        let groups = self.groups(history)?;
+        let mut written = Vec::new();
+        for folder in self.order(&groups) {
+            match self.write_one(history, &groups, &folder) {
+                Ok(done) => written.push(done),
+                Err(e) => first = first.and(Err(e)),
             }
         }
-        let groups = group(history)?;
+        for (folder, used, held) in written {
+            first = first.and(self.flush(&folder, &used, &held));
+        }
+        first
+    }
+
+    /// The entries of `history` by folder, but those whose move is pending, which the folder they left holds.
+    fn groups<'h>(&self, history: &'h History) -> Result<Groups<'h>, SealedError> {
+        let mut groups = Groups::new();
+        let settled = history.entries().iter();
+        for entry in settled.filter(|e| !self.moves.contains_key(&e.id)) {
+            groups
+                .entry(folder_of(entry.place)?)
+                .or_default()
+                .push(entry);
+        }
+        Ok(groups)
+    }
+
+    /// Every folder to write, those no move left first, so a list a move reaches saves before the one it left.
+    fn order(&self, groups: &Groups<'_>) -> Vec<BlobName> {
         let mut folders: BTreeSet<BlobName> = groups.keys().cloned().collect();
         folders.extend(self.lists.keys().cloned());
         folders.extend(self.pending.keys().cloned());
-        let (left, rest): (Vec<_>, Vec<_>) = folders
-            .into_iter()
-            .partition(|f| self.pending.contains_key(f));
-        for folder in rest.into_iter().chain(left) {
-            let entries = groups.get(&folder).map_or(&[][..], Vec::as_slice);
-            self.write(&folder, entries, history.next())?;
-        }
-        Ok(())
+        folders.extend(self.left.values().cloned());
+        let sources: BTreeSet<&BlobName> = self.left.values().collect();
+        let (last, mut order): (Vec<_>, Vec<_>) =
+            folders.into_iter().partition(|f| sources.contains(f));
+        order.extend(last);
+        order
     }
 
-    /// Follows the move of `id` in `history` from `from`, then saves: its blobs are copied, the new folder's list
-    /// saved before the old one's, then the old blobs removed. False when its content is gone, as by hand.
-    ///
-    /// # Errors
-    /// The shelf's error; the move stays pending, and reads find the blobs where they are.
-    pub fn moved(&mut self, history: &History, id: u64, from: Place) -> Result<bool, SealedError> {
-        self.moves.entry(id).or_insert(from);
-        let kept = if let Some(entry) = history.get(id) {
-            self.carry(entry)?
-        } else {
-            self.moves.remove(&id);
-            false
-        };
-        self.save(history)?;
-        Ok(kept)
+    /// Writes `folder`'s list of its group and held copies, then ends the holds it fulfils; gives what its flush needs.
+    fn write_one(
+        &mut self,
+        history: &History,
+        groups: &Groups<'_>,
+        folder: &BlobName,
+    ) -> Result<Written, SealedError> {
+        let held = self.held(history, folder);
+        let mut entries = groups.get(folder).cloned().unwrap_or_default();
+        entries.extend(&held);
+        self.write(folder, &entries, history.next())?;
+        self.confirm(history, folder);
+        if !self.pending.contains_key(folder) {
+            return Ok((folder.clone(), BTreeSet::new(), BTreeSet::new()));
+        }
+        let used = names_of(entries.iter().copied())?;
+        Ok((folder.clone(), used, names_of(&held)?))
     }
 
-    /// Copies `entry`'s blobs from where a pending move left them into its folder, and marks the old ones to remove;
-    /// false when they are gone, which ends the move.
-    fn carry(&mut self, entry: &Entry) -> Result<bool, SealedError> {
-        let from = self.home(entry);
-        if from == entry.place {
-            self.moves.remove(&entry.id);
-            return Ok(true);
-        }
-        let (old, new) = (folder_of(from)?, folder_of(entry.place)?);
-        let names = blob_names(entry, entry.thumb)?;
-        for name in &names {
-            let thumb = parts::owner(name).is_some_and(|(_, b)| b == Blob::Thumb);
-            // A copy left by a failed try holds the same bytes, so the next try writes over it.
-            match self.shelf.load(&old, name) {
-                Ok(Some(bytes)) => self.shelf.save(&new, name, &bytes)?,
-                Ok(None) | Err(SealedError::Damaged) if thumb => continue,
-                Ok(None) | Err(SealedError::Damaged) => {
-                    self.moves.remove(&entry.id);
-                    return Ok(false);
-                }
-                Err(e) => return Err(e),
-            }
-            self.cancel(&new, name);
-        }
-        self.moves.remove(&entry.id);
-        self.pending.entry(old).or_default().extend(names);
-        Ok(true)
-    }
-
-    /// Saves `folder`'s list of `entries` when they changed, or drops the folder when none is left; then removes
-    /// the blobs a move left there.
+    /// Saves `folder`'s list of `entries` when they changed, or drops the folder when none is left.
     fn write(
         &mut self,
         folder: &BlobName,
@@ -104,17 +97,18 @@ impl Store {
         let records = list::records(entries);
         let sum = fnv(&records);
         let saved = self.lists.get(folder).copied();
-        if saved.and_then(|s| s.sum) != Some(sum) {
-            let round = saved.map_or(0, |s| list::turn(s.round));
-            let chunks = self.save_list(folder, round, &list::frame(round, next, &records))?;
-            let sum = Some(sum);
-            self.lists
-                .insert(folder.clone(), Saved { round, chunks, sum });
-            if let Some(old) = saved {
-                self.drop_chunks(folder, old);
-            }
+        if saved.and_then(|s| s.sum) == Some(sum) {
+            return Ok(());
         }
-        self.flush(folder, entries)
+        let round = saved.map_or(0, |s| list::turn(s.round));
+        let chunks = self.save_list(folder, round, &list::frame(round, next, &records))?;
+        let sum = Some(sum);
+        self.lists
+            .insert(folder.clone(), Saved { round, chunks, sum });
+        if let Some(old) = saved {
+            self.drop_chunks(folder, old);
+        }
+        Ok(())
     }
 
     /// Saves `bytes` as round `round`'s extra blobs, then the head that names them; gives how many blobs hold them.
@@ -138,34 +132,58 @@ impl Store {
         }
     }
 
-    /// Drops `folder`, left with no entry, when it holds a list or blobs of ours.
+    /// Drops `folder`, left with no entry, when it holds a list or blobs of ours; an aside folder loses only its list.
     fn drop_empty(&mut self, folder: &BlobName) -> Result<(), SealedError> {
-        if self.lists.contains_key(folder) || self.pending.contains_key(folder) {
+        let saved = self.lists.get(folder).copied();
+        if self.kept.contains(folder) {
+            if let Some(old) = saved {
+                self.shelf.remove(folder, &list::head_name()?)?;
+                self.lists.remove(folder);
+                self.drop_chunks(folder, old);
+            }
+            return Ok(());
+        }
+        if saved.is_some() || self.pending.contains_key(folder) {
             self.shelf.drop_folder(folder)?;
         }
-        self.lists.remove(folder);
-        self.pending.remove(folder);
+        self.forget_folder(folder);
         Ok(())
     }
 
-    /// Removes the blobs a move left in `folder`, except those `entries` name; one that fails is tried again.
-    fn flush(&mut self, folder: &BlobName, entries: &[&Entry]) -> Result<(), SealedError> {
-        if !self.pending.contains_key(folder) {
+    /// Removes the blobs a move left in `folder` that its saved list does not name: those `used` names stay, and
+    /// those `held` names stay queued. One that fails is tried again.
+    fn flush(
+        &mut self,
+        folder: &BlobName,
+        used: &BTreeSet<BlobName>,
+        held: &BTreeSet<BlobName>,
+    ) -> Result<(), SealedError> {
+        let Some(left) = self.pending.remove(folder) else {
             return Ok(());
+        };
+        let (mut stay, mut failed) = (BTreeSet::new(), false);
+        for name in left {
+            if held.contains(&name) {
+                stay.insert(name);
+            } else if !used.contains(&name) && self.shelf.remove(folder, &name).is_err() {
+                failed = true;
+                stay.insert(name);
+            }
         }
-        let mut used = BTreeSet::new();
-        for e in entries {
-            used.extend(blob_names(e, true)?);
+        if !stay.is_empty() {
+            self.pending.insert(folder.clone(), stay);
         }
-        let left = self.pending.remove(folder).unwrap_or_default();
-        let stuck: BTreeSet<BlobName> = left
-            .into_iter()
-            .filter(|n| !used.contains(n) && self.shelf.remove(folder, n).is_err())
-            .collect();
-        if stuck.is_empty() {
-            return Ok(());
-        }
-        self.pending.insert(folder.clone(), stuck);
-        Err(SealedError::Io)
+        if failed { Err(SealedError::Io) } else { Ok(()) }
     }
+}
+
+/// The names of every blob of `entries`, thumbnails too.
+fn names_of<'e>(
+    entries: impl IntoIterator<Item = &'e Entry>,
+) -> Result<BTreeSet<BlobName>, SealedError> {
+    let mut names = BTreeSet::new();
+    for e in entries {
+        names.extend(blob_names(e, true)?);
+    }
+    Ok(names)
 }

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{AppRef, ClipKind};
+use kx_module_api::ports::{AppRef, ClipKind, Pixels, RGBA_BYTES};
 use kx_platform_fake::FakeShelf;
 use proptest::collection::vec;
 use proptest::option;
@@ -97,6 +97,12 @@ fn built((ids, texts, sizes): (Ids, Texts, Sizes)) -> Entry {
     }
 }
 
+/// A grey thumbnail at the readers' longest side, one pixel high.
+fn grey() -> Pixels {
+    let n = usize::try_from(SIDE).unwrap() * RGBA_BYTES;
+    Pixels::new(SIDE, 1, vec![u8::MAX / 2; n], SIDE).unwrap()
+}
+
 /// `bytes` with each edit's byte written at its index, then cut at `cut`.
 fn damage(mut bytes: Vec<u8>, edits: &[(Index, u8)], cut: Index) -> Vec<u8> {
     for (at, to) in edits {
@@ -131,6 +137,8 @@ proptest! {
         let _ = list::decode(&list, Place::Pinned);
         let content = parts::encode(&[text("a"), files(&["b", "c"])]);
         let _ = parts::decode(&damage(content, &edits, cut));
+        let thumb = parts::encode_thumb(&grey());
+        let _ = parts::decode_thumb(&damage(thumb, &edits, cut), SIDE);
     }
 
     #[test]
@@ -159,8 +167,10 @@ proptest! {
         let name = |n| list::chunk_name(round, n).unwrap();
         shelf.plant(&day, &list::head_name().unwrap(), head.to_vec());
         shelf.plant(&day, &name(1), rest.to_vec());
+        let newer = head.first().is_some_and(|v| *v > list::VERSION);
         let loaded = Store::new(Arc::new(shelf.clone()), STORE).load();
         let loaded = loaded.map(|l| (l.history.is_empty(), l.aside.len() <= 1));
-        prop_assert_eq!(loaded, Ok((true, true)));
+        let want = if newer { Err(StoreError::Newer) } else { Ok((true, true)) };
+        prop_assert_eq!(loaded, want);
     }
 }

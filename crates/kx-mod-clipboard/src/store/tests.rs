@@ -1,8 +1,10 @@
 //! The store over a fake shelf: lists round-trip, hand deletions and damage are survived, deletes leave nothing, blobs
 //! no list names are cleaned, and only changed lists save.
 
+mod aside;
 mod big;
 mod cut;
+mod fault;
 mod moves;
 
 use std::sync::Arc;
@@ -114,49 +116,21 @@ fn a_hand_deleted_day_leaves_the_list() {
 }
 
 #[test]
-fn a_damaged_list_sets_aside_one_day_and_tells_once() {
-    let shelf = FakeShelf::new();
-    let (mut s, mut h) = (open(&shelf), History::default());
-    keep(&mut h, &mut s, "a", &noon(1));
-    let b = keep(&mut h, &mut s, "b", &noon(2));
-    let c = keep(&mut h, &mut s, "c", &noon(3));
-    s.save(&h).unwrap();
-    // Folders load in order, so the first load is day 1's list.
-    shelf.fail(ShelfCall::Load, SealedError::Damaged);
-    let first = reload(&shelf);
-    assert_eq!(first.aside, [on(1)]);
-    assert_eq!(ids(&first.history), [c, b], "the other days stay");
-    assert!(names(&shelf, on(1)).is_empty(), "its blobs went with it");
-    let second = reload(&shelf);
-    assert!(second.aside.is_empty(), "told once");
-    assert_eq!(ids(&second.history), [c, b]);
-}
-
-#[test]
-fn a_list_that_will_not_read_sets_its_day_aside_once() {
-    let shelf = FakeShelf::new();
-    let (mut s, mut h) = (open(&shelf), History::default());
-    keep(&mut h, &mut s, "a", &noon(1));
-    let b = keep(&mut h, &mut s, "b", &noon(2));
-    s.save(&h).unwrap();
-    let head = list::head_name().unwrap();
-    shelf.plant(&folder(on(1)), &head, b"not a list".to_vec());
-    let first = reload(&shelf);
-    assert_eq!((first.aside, ids(&first.history)), (vec![on(1)], vec![b]));
-    assert!(names(&shelf, on(1)).is_empty());
-    assert!(reload(&shelf).aside.is_empty(), "told once");
-}
-
-#[test]
 fn a_locked_or_unlisted_shelf_fails_the_load() {
     let shelf = FakeShelf::new();
     let (mut s, mut h) = (open(&shelf), History::default());
     keep(&mut h, &mut s, "a", &noon(1));
     s.save(&h).unwrap();
     shelf.fail(ShelfCall::Load, SealedError::Locked);
-    assert_eq!(open(&shelf).load().map(|_| ()), Err(SealedError::Locked));
+    assert_eq!(
+        open(&shelf).load().map(|_| ()),
+        Err(StoreError::Shelf(SealedError::Locked))
+    );
     shelf.fail(ShelfCall::Folders, SealedError::Io);
-    assert_eq!(open(&shelf).load().map(|_| ()), Err(SealedError::Io));
+    assert_eq!(
+        open(&shelf).load().map(|_| ()),
+        Err(StoreError::Shelf(SealedError::Io))
+    );
     assert_eq!(ids(&reload(&shelf).history), ids(&h), "nothing was lost");
 }
 
@@ -285,4 +259,28 @@ fn an_entry_missing_a_blob_leaves_and_a_lost_thumbnail_is_redrawn() {
         loaded.history,
         "the list saved again"
     );
+}
+
+#[test]
+fn a_failed_list_skips_only_its_folder() {
+    let shelf = FakeShelf::new();
+    let (mut s, mut h) = (open(&shelf), History::default());
+    keep(&mut h, &mut s, "a", &noon(1));
+    keep(&mut h, &mut s, "b", &noon(2));
+    shelf.fail(ShelfCall::Save, SealedError::Io);
+    assert_eq!(s.save(&h), Err(SealedError::Io), "day 1's list failed");
+    let day2 = names(&shelf, on(2));
+    assert!(day2.iter().any(|n| n == "list"), "day 2 saved: {day2:?}");
+    s.save(&h).unwrap();
+    assert_eq!(reload(&shelf).history, h);
+}
+
+#[test]
+fn a_damaged_content_blob_reads_as_damaged_once() {
+    let shelf = FakeShelf::new();
+    let (mut s, mut h) = (open(&shelf), History::default());
+    let a = keep(&mut h, &mut s, "a", &noon(1));
+    shelf.fail(ShelfCall::Load, SealedError::Damaged);
+    assert_eq!(s.parts(h.get(a).unwrap()), Err(SealedError::Damaged));
+    assert_eq!(s.parts(h.get(a).unwrap()), Ok(None), "set aside, so gone");
 }

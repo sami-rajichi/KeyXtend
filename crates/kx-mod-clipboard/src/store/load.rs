@@ -1,5 +1,6 @@
-//! Loading: each day and pinned folder's list, less the entries whose blobs are gone; a damaged list sets its folder
-//! aside, and blobs of ours no list names are removed. An id two lists hold after a crash keeps its newer copy, and
+//! Loading: a read pass over every folder first, so a newer version's list fails the load before anything changes;
+//! then each list less the entries whose blobs are gone, a list that will not read kept aside, and blobs of ours no
+//! list names removed, but in an aside folder. An id two lists hold after a crash keeps its better copy, and
 //! `missing` finds blobs gone by hand while running.
 
 use std::cmp::Ordering;
@@ -9,36 +10,77 @@ use kx_module_api::ports::{BlobName, SealedError};
 
 use super::list::{self, List};
 use super::parts::{self, thumb_name};
-use super::{Loaded, Saved, Store, blob_names, complete, folder_of, place_of};
+use super::{Loaded, Saved, Store, StoreError, blob_names, complete, folder_of, place_of};
 use crate::entry::{Entry, Place};
 use crate::hash::fnv;
 use crate::order::{History, newer};
+
+/// What a folder's list blobs held at the read pass.
+enum Read {
+    /// A list that read, and how many blobs hold it.
+    Sound(List, usize),
+    /// No list.
+    Missing,
+    /// A list that would not read at this version: its bytes, joined as far as they went.
+    Bad(Vec<u8>),
+    /// A head the shelf found damaged and set aside.
+    Damaged,
+}
+
+/// A folder as the read pass found it, before anything changed.
+struct Found {
+    /// The folder.
+    folder: BlobName,
+    /// The place it keeps.
+    place: Place,
+    /// Its blob names.
+    names: BTreeSet<BlobName>,
+    /// Its list.
+    read: Read,
+}
+
+impl Found {
+    /// The counter past this folder's: its list's, and past every id its blobs are named after.
+    fn next(&self) -> u64 {
+        let listed = match &self.read {
+            Read::Sound(list, _) => list.next,
+            _ => 0,
+        };
+        let ids = self.names.iter().filter_map(parts::owner);
+        let past = ids.map(|(id, _)| id.saturating_add(1)).max();
+        listed.max(past.unwrap_or(0))
+    }
+}
 
 impl Store {
     /// Loads the history from the shelf, forgetting what this store knew before.
     ///
     /// # Errors
-    /// `Locked` without the OS key, `Io` when the shelf cannot be read; the module then fails to start.
-    pub fn load(&mut self) -> Result<Loaded, SealedError> {
-        self.lists.clear();
-        self.pending.clear();
-        self.moves.clear();
-        let (mut all, mut aside, mut next) = (Vec::new(), Vec::new(), 0);
-        for folder in self.shelf.folders()? {
-            let Some(place) = place_of(&folder) else {
-                continue;
-            };
-            let read = match self.read_list(&folder, place) {
-                Err(SealedError::Damaged) => {
-                    aside.push(place);
-                    None
-                }
-                other => other?,
-            };
-            if let Some((list, _)) = &read {
-                next = next.max(list.next);
+    /// `Newer` when a list was saved by a newer version, before any change; else the shelf's, such as `Locked`
+    /// without the OS key. The module then fails to start.
+    pub fn load(&mut self) -> Result<Loaded, StoreError> {
+        self.forget();
+        let found = self.scan()?;
+        let next = found.iter().map(Found::next).max().unwrap_or(0);
+        let (mut all, mut aside) = (Vec::new(), Vec::new());
+        for f in found {
+            if f.names.iter().any(|n| list::aside_of(n).is_some()) {
+                self.kept.insert(f.folder.clone());
             }
-            all.extend(self.check(&folder, read)?);
+            let bytes = match f.read {
+                Read::Sound(list, chunks) => {
+                    all.extend(self.check(&f.folder, &f.names, list, chunks)?);
+                    continue;
+                }
+                Read::Missing => {
+                    self.clean(&f.folder, &f.names, &BTreeSet::new());
+                    continue;
+                }
+                Read::Bad(bytes) => bytes,
+                Read::Damaged => Vec::new(),
+            };
+            self.set_aside(&f.folder, &f.names, &bytes)?;
+            aside.push(f.place);
         }
         let entries = self.merge(all)?;
         Ok(Loaded {
@@ -76,47 +118,71 @@ impl Store {
         Ok(gone)
     }
 
-    /// `folder`'s list and how many blobs hold it, or `None` when it has none.
+    /// Reads every day and pinned folder's list and names, changing nothing.
+    fn scan(&self) -> Result<Vec<Found>, StoreError> {
+        let mut found = Vec::new();
+        for folder in self.shelf.folders()? {
+            let Some(place) = place_of(&folder) else {
+                continue;
+            };
+            let read = self.read_list(&folder, place)?;
+            let names = self.shelf.names(&folder)?.into_iter().collect();
+            found.push(Found {
+                folder,
+                place,
+                names,
+                read,
+            });
+        }
+        Ok(found)
+    }
+
+    /// `folder`'s list as read; a missing or damaged extra blob makes it one that would not read.
     ///
     /// # Errors
-    /// `Damaged` when a blob of it would not open or is missing, or the list would not read.
-    fn read_list(
-        &self,
-        folder: &BlobName,
-        place: Place,
-    ) -> Result<Option<(List, usize)>, SealedError> {
-        let Some(mut bytes) = self.shelf.load(folder, &list::head_name()?)? else {
-            return Ok(None);
+    /// `Newer` when its head is a newer version's, else the shelf's error but `Damaged`.
+    fn read_list(&self, folder: &BlobName, place: Place) -> Result<Read, StoreError> {
+        let mut bytes = match self.shelf.load(folder, &list::head_name()?) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => return Ok(Read::Missing),
+            Err(SealedError::Damaged) => return Ok(Read::Damaged),
+            Err(e) => return Err(e.into()),
         };
-        let (round, total) = list::head(&bytes).map_err(|_| SealedError::Damaged)?;
+        if list::newer(&bytes) {
+            return Err(StoreError::Newer);
+        }
+        let Ok((round, total)) = list::head(&bytes) else {
+            return Ok(Read::Bad(bytes));
+        };
         let mut chunks = 1;
         while bytes.len() < total {
-            match self.shelf.load(folder, &list::chunk_name(round, chunks)?)? {
-                Some(chunk) if !chunk.is_empty() => bytes.extend(chunk),
-                _ => return Err(SealedError::Damaged),
+            match self.shelf.load(folder, &list::chunk_name(round, chunks)?) {
+                Ok(Some(chunk)) if !chunk.is_empty() => bytes.extend(chunk),
+                Ok(_) | Err(SealedError::Damaged) => return Ok(Read::Bad(bytes)),
+                Err(e) => return Err(e.into()),
             }
             chunks += 1;
         }
-        let list = list::decode(&bytes, place).map_err(|_| SealedError::Damaged)?;
-        Ok(Some((list, chunks)))
+        Ok(match list::decode(&bytes, place) {
+            Ok(list) => Read::Sound(list, chunks),
+            Err(_) => Read::Bad(bytes),
+        })
     }
 
-    /// The entries of `folder`'s list whose blobs are all there, in order; removes each blob of ours none names.
+    /// The entries of `folder`'s `list` whose blobs are all among `names`, in order; removes each blob of ours none
+    /// names.
     fn check(
         &mut self,
         folder: &BlobName,
-        read: Option<(List, usize)>,
+        names: &BTreeSet<BlobName>,
+        list: List,
+        chunks: usize,
     ) -> Result<Vec<Entry>, SealedError> {
-        let names: BTreeSet<BlobName> = self.shelf.names(folder)?.into_iter().collect();
-        let Some((list, chunks)) = read else {
-            self.clean(folder, &names, &BTreeSet::new());
-            return Ok(Vec::new());
-        };
         let saved = list.entries.len();
         let mut entries: Vec<Entry> = list
             .entries
             .into_iter()
-            .filter(|e| complete(e, &names))
+            .filter(|e| complete(e, names))
             .collect();
         let mut changed = entries.len() != saved;
         for e in &mut entries {
@@ -133,7 +199,7 @@ impl Store {
         for e in &entries {
             keep.extend(blob_names(e, e.thumb)?);
         }
-        self.clean(folder, &names, &keep);
+        self.clean(folder, names, &keep);
         let refs: Vec<&Entry> = entries.iter().collect();
         let sum = (!changed).then(|| fnv(&list::records(&refs)));
         let round = list.round;
@@ -142,8 +208,12 @@ impl Store {
         Ok(entries)
     }
 
-    /// Removes from `folder` each blob of ours in `names` that `keep` leaves out; one that stays goes next load.
+    /// Removes from `folder` each blob of ours in `names` that `keep` leaves out, but in an aside folder; one that
+    /// stays goes next load.
     fn clean(&self, folder: &BlobName, names: &BTreeSet<BlobName>, keep: &BTreeSet<BlobName>) {
+        if self.kept.contains(folder) {
+            return;
+        }
         let ours = |n: &&BlobName| list::is_list(n) || parts::owner(n).is_some();
         for name in names.iter().filter(ours).filter(|n| !keep.contains(*n)) {
             let _ = self.shelf.remove(folder, name);

@@ -1,100 +1,15 @@
 //! Cut writes: a shelf that stops writing at a chosen point, as a crash or a failing disk would. At every point an
 //! entry is whole or gone, never half, a list is old or new, never mixed, and a failed write finishes later.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-
 use kx_module_api::Redacted;
-use kx_module_api::ports::Room;
 
+use super::fault::Cut;
 use super::*;
 
 /// The most write points a test walks; each test's work takes fewer.
 const MAX_POINTS: usize = 80;
 /// The text of the entry the tests move or delete: several small blobs.
 const X: &str = "x takes several small blobs";
-
-/// A fake shelf whose writes stop after `left` of them: every later one, as after a crash, or only the next one.
-struct Cut {
-    /// The shelf written to.
-    inner: FakeShelf,
-    /// The writes that go through before the cut.
-    left: usize,
-    /// Every write after the cut fails too.
-    crash: bool,
-    /// The writes asked so far.
-    asked: AtomicUsize,
-}
-
-impl Cut {
-    /// A shelf over `inner` that fails every write after the first `left`.
-    fn crash(inner: &FakeShelf, left: usize) -> Arc<Self> {
-        let asked = AtomicUsize::new(0);
-        let inner = inner.clone();
-        Arc::new(Self {
-            inner,
-            left,
-            crash: true,
-            asked,
-        })
-    }
-
-    /// A shelf over `inner` that fails only the write after the first `left`.
-    fn once(inner: &FakeShelf, left: usize) -> Arc<Self> {
-        let asked = AtomicUsize::new(0);
-        let inner = inner.clone();
-        Arc::new(Self {
-            inner,
-            left,
-            crash: false,
-            asked,
-        })
-    }
-
-    /// Counts a write and says whether it goes through.
-    fn pass(&self) -> Result<(), SealedError> {
-        let n = self.asked.fetch_add(1, Ordering::SeqCst);
-        let cut = n == self.left || (self.crash && n > self.left);
-        if cut { Err(SealedError::Io) } else { Ok(()) }
-    }
-
-    /// True when a write was cut.
-    fn hit(&self) -> bool {
-        self.asked.load(Ordering::SeqCst) > self.left
-    }
-}
-
-impl SealedShelf for Cut {
-    fn load(&self, folder: &BlobName, name: &BlobName) -> Result<Option<Vec<u8>>, SealedError> {
-        self.inner.load(folder, name)
-    }
-
-    fn save(&self, folder: &BlobName, name: &BlobName, bytes: &[u8]) -> Result<(), SealedError> {
-        self.pass()?;
-        self.inner.save(folder, name, bytes)
-    }
-
-    fn remove(&self, folder: &BlobName, name: &BlobName) -> Result<(), SealedError> {
-        self.pass()?;
-        self.inner.remove(folder, name)
-    }
-
-    fn drop_folder(&self, folder: &BlobName) -> Result<(), SealedError> {
-        self.pass()?;
-        self.inner.drop_folder(folder)
-    }
-
-    fn folders(&self) -> Result<Vec<BlobName>, SealedError> {
-        self.inner.folders()
-    }
-
-    fn names(&self, folder: &BlobName) -> Result<Vec<BlobName>, SealedError> {
-        self.inner.names(folder)
-    }
-
-    fn room(&self) -> Result<Room, SealedError> {
-        self.inner.room()
-    }
-}
 
 /// A small-blob store over `shelf`.
 fn small(shelf: &FakeShelf) -> Store {
@@ -249,4 +164,90 @@ fn a_failed_put_removes_the_blobs_it_saved() {
     let id = h.add(copied(X, &noon(1)));
     assert_eq!(s.put(h.get(id).unwrap(), &[text(X)]), Err(SealedError::Io));
     assert!(names(&shelf, on(1)).is_empty());
+}
+
+#[test]
+fn a_stuck_removal_then_a_crash_anywhere_in_a_pin_keeps_the_entry_once() {
+    for left in 0..MAX_POINTS {
+        let (shelf, x, y) = two();
+        let cut = Cut::idle(&shelf);
+        let (mut s, mut h) = cut_open(&cut);
+        let third = keep(&mut h, &mut s, "z", &noon(1));
+        for id in [x, y] {
+            h.pin(id);
+            s.moved(&h, id, on(1)).unwrap();
+        }
+        cut.snag(&folder(Place::Pinned), &part_name(x, 0).unwrap());
+        let from = h.unpin(x, &noon(1)).unwrap();
+        assert_eq!(s.moved(&h, x, from), Err(SealedError::Io), "stuck");
+        cut.arm(left, true);
+        h.pin(third);
+        let _ = s.moved(&h, third, on(1));
+        let (s, after) = settle(&shelf);
+        assert_eq!(after.entries().len(), 3, "cut at {left}");
+        let whole = after.get(third).map(|e| s.parts(e));
+        assert_eq!(whole, Some(Ok(Some(vec![text("z")]))), "cut at {left}");
+        if !cut.hit() {
+            assert!(after.get(third).unwrap().pinned());
+            return;
+        }
+    }
+    panic!("a pin took over {MAX_POINTS} writes");
+}
+
+#[test]
+fn copies_a_failed_pin_left_go_when_the_entry_moves_on() {
+    let (shelf, x, y) = two();
+    let cut = Cut::idle(&shelf);
+    let (mut s, mut h) = cut_open(&cut);
+    h.pin(y);
+    s.moved(&h, y, on(1)).unwrap();
+    cut.arm(1, false);
+    h.pin(x);
+    assert_eq!(s.moved(&h, x, on(1)), Err(SealedError::Io), "copy 2 failed");
+    let from = h.unpin(x, &noon(3)).unwrap();
+    assert_eq!(s.moved(&h, x, from), Ok(true));
+    let mine = format!("{x:x}-");
+    let pinned = names(&shelf, Place::Pinned);
+    assert!(pinned.iter().all(|n| !n.starts_with(&mine)), "{pinned:?}");
+    assert_eq!(small(&shelf).load().unwrap().history, h);
+}
+
+#[test]
+fn a_damaged_extra_blob_sets_the_list_read_so_far_aside() {
+    let (shelf, x, y) = two();
+    let day1 = folder(on(1));
+    let head = shelf.blob(&day1, &list::head_name().unwrap());
+    let cut = Cut::idle(&shelf);
+    cut.spoil(&day1, &list::chunk_name(0, 1).unwrap());
+    let loaded = Store::new(cut, SMALL).load().unwrap();
+    assert_eq!(loaded.aside, [on(1)]);
+    assert!(loaded.history.is_empty());
+    let aside = shelf.blob(&day1, &BlobName::new("aside-1-0").unwrap());
+    assert_eq!(aside, head, "the head, all that read");
+    let left = names(&shelf, on(1));
+    assert!(!left.iter().any(|n| n.starts_with("list")), "{left:?}");
+    for id in [x, y] {
+        let mine = format!("{id:x}-");
+        assert!(left.iter().any(|n| n.starts_with(&mine)), "content stays");
+    }
+}
+
+#[test]
+fn a_failed_write_anywhere_in_a_pin_then_a_quit_keeps_the_entry_once() {
+    for left in 0..MAX_POINTS {
+        let (shelf, x, y) = two();
+        let cut = Cut::once(&shelf, left);
+        let (mut s, mut h) = cut_open(&cut);
+        h.pin(x);
+        let _ = s.moved(&h, x, on(1));
+        let (s, after) = settle(&shelf);
+        assert!(after.get(y).is_some(), "cut at {left}");
+        let whole = after.get(x).map(|e| s.parts(e));
+        assert_eq!(whole, Some(Ok(Some(vec![text(X)]))), "cut at {left}");
+        if !cut.hit() {
+            return;
+        }
+    }
+    panic!("a pin took over {MAX_POINTS} writes");
 }

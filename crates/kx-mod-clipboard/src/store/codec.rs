@@ -1,6 +1,7 @@
 //! The store's byte primitives: little-endian numbers, flags, and texts and byte runs after a u64 length. Every read
 //! checks what is left before it slices, so random bytes give `Bad`, never a panic or a large allocation.
 
+use std::fmt;
 use std::path::PathBuf;
 use std::str;
 
@@ -9,7 +10,7 @@ use std::str;
 pub(crate) struct Bad;
 
 /// Writes a byte form front to back.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub(crate) struct Writer(Vec<u8>);
 
 impl Writer {
@@ -79,8 +80,25 @@ impl Writer {
 }
 
 /// Reads a byte form front to back.
-#[derive(Debug)]
 pub(crate) struct Reader<'b>(&'b [u8]);
+
+/// Tells the length written, never the bytes.
+impl fmt::Debug for Writer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Writer")
+            .field("len", &self.0.len())
+            .finish()
+    }
+}
+
+/// Tells the length left, never the bytes.
+impl fmt::Debug for Reader<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Reader")
+            .field("left", &self.0.len())
+            .finish()
+    }
+}
 
 impl<'b> Reader<'b> {
     /// A reader at the start of `bytes`.
@@ -208,5 +226,13 @@ mod tests {
         let mut r = Reader::new(&[9]);
         assert_eq!(r.take(2), Err(Bad));
         assert_eq!(r.take(1), Ok(&[9][..]), "a refused read takes nothing");
+    }
+
+    #[test]
+    fn debug_tells_lengths_never_bytes() {
+        let mut w = Writer::default();
+        w.text("pw");
+        assert_eq!(format!("{w:?}"), "Writer { len: 10 }");
+        assert_eq!(format!("{:?}", Reader::new(b"pw")), "Reader { left: 2 }");
     }
 }

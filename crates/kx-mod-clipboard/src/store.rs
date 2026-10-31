@@ -1,8 +1,12 @@
 //! The store (spec §7 "Store", ADR-0034 decision 4): the history sealed on the shelf, one folder per calendar day and
-//! a `pinned` one, each with its list and its entries' blobs. A load drops what vanished by hand, sets a damaged
-//! list's folder aside and cleans what a crash left; moves and deletes leave each entry whole or gone, never half.
+//! a `pinned` one, each with its list and its entries' blobs. A load refuses a newer version's list, drops what
+//! vanished by hand, keeps a list that will not read aside with its folder's content, and cleans what a crash left;
+//! moves and deletes leave each entry whole or gone, never half.
 
+mod aside;
+mod carry;
 mod codec;
+mod error;
 mod list;
 mod load;
 mod parts;
@@ -19,6 +23,7 @@ use kx_module_api::ports::{
 use crate::entry::{Entry, Place};
 use crate::keep::past;
 use crate::order::History;
+pub use error::StoreError;
 use parts::{part_name, thumb_name};
 
 /// The pinned folder's name; day folders are named `yyyy-mm-dd`.
@@ -38,7 +43,7 @@ pub struct StoreConfig {
 pub struct Loaded {
     /// The entries and the counter.
     pub history: History,
-    /// The places whose list was damaged, so set aside with its entries; the module tells it once.
+    /// The places whose list would not read, so it was kept aside in its folder; the module tells it once.
     pub aside: Vec<Place>,
 }
 
@@ -67,6 +72,10 @@ pub struct Store {
     pending: BTreeMap<BlobName, BTreeSet<BlobName>>,
     /// Entries whose blobs still sit where a move found them, until a save copies them.
     moves: BTreeMap<u64, Place>,
+    /// Moved entries the folder they left still names, until the list they moved to saves.
+    left: BTreeMap<u64, BlobName>,
+    /// Folders holding a list kept aside, whose orphans no load cleans.
+    kept: BTreeSet<BlobName>,
 }
 
 impl Store {
@@ -80,6 +89,8 @@ impl Store {
             lists: BTreeMap::new(),
             pending: BTreeMap::new(),
             moves: BTreeMap::new(),
+            left: BTreeMap::new(),
+            kept: BTreeSet::new(),
         }
     }
 
@@ -124,29 +135,6 @@ impl Store {
             .map_err(|_| SealedError::Damaged)
     }
 
-    /// Removes every blob of `entry` at once, in its folder and where a move left one; its list follows at the next
-    /// save.
-    ///
-    /// # Errors
-    /// `Io` when a blob could not be removed; the others are gone.
-    pub fn delete(&mut self, entry: &Entry) -> Result<(), SealedError> {
-        let mut failed = false;
-        let home = self.moves.remove(&entry.id);
-        for place in [Some(entry.place), home].into_iter().flatten() {
-            let folder = folder_of(place)?;
-            for name in blob_names(entry, true)? {
-                failed |= self.shelf.remove(&folder, &name).is_err();
-            }
-        }
-        let disk = &self.shelf;
-        let mine = |n: &BlobName| parts::owner(n).is_some_and(|(id, _)| id == entry.id);
-        for (f, left) in &mut self.pending {
-            left.retain(|n| !mine(n) || disk.remove(f, n).is_err());
-            failed |= left.iter().any(mine);
-        }
-        if failed { Err(SealedError::Io) } else { Ok(()) }
-    }
-
     /// Saves `thumb` as `entry`'s thumbnail.
     ///
     /// # Errors
@@ -174,22 +162,26 @@ impl Store {
             .map_err(|_| SealedError::Damaged)
     }
 
-    /// Drops whole each day folder `keep_days` or more days before `today`, but one a pending move's blobs wait in.
+    /// Drops whole each day folder `keep_days` or more days before `today`, an aside one too, but one a move still
+    /// needs; a folder that fails is skipped.
     ///
     /// # Errors
-    /// The shelf's error; the folders left drop at the next call.
+    /// The first shelf error; the folders left drop at the next call.
     pub fn drop_past(&mut self, today: Date, keep_days: u8) -> Result<(), SealedError> {
+        let mut first = Ok(());
         for folder in self.shelf.folders()? {
             let Some(Place::Day(day)) = place_of(&folder) else {
                 continue;
             };
-            if past(day, today, keep_days) && !self.waiting(&folder) {
-                self.shelf.drop_folder(&folder)?;
-                self.lists.remove(&folder);
-                self.pending.remove(&folder);
+            if !past(day, today, keep_days) || self.busy(&folder) {
+                continue;
+            }
+            match self.shelf.drop_folder(&folder) {
+                Ok(()) => self.forget_folder(&folder),
+                Err(e) => first = first.and(Err(e)),
             }
         }
-        Ok(())
+        first
     }
 
     /// Where `entry`'s blobs are: where a pending move found them, else its place.
@@ -197,16 +189,37 @@ impl Store {
         self.moves.get(&entry.id).copied().unwrap_or(entry.place)
     }
 
-    /// True when a pending move's blobs wait in `folder`.
-    fn waiting(&self, folder: &BlobName) -> bool {
+    /// True when a move still needs `folder`: its blobs wait for a copy or a removal, or its list holds a moved entry.
+    fn busy(&self, folder: &BlobName) -> bool {
         let here = |p: &Place| folder_of(*p).is_ok_and(|f| f == *folder);
         self.moves.values().any(here)
+            || self.pending.contains_key(folder)
+            || self.left.values().any(|f| f == folder)
+    }
+
+    /// Forgets what this store knew of every folder, before a load.
+    fn forget(&mut self) {
+        self.lists.clear();
+        self.pending.clear();
+        self.moves.clear();
+        self.left.clear();
+        self.kept.clear();
+    }
+
+    /// Forgets what this store knew of `folder`, once it is dropped.
+    fn forget_folder(&mut self, folder: &BlobName) {
+        self.lists.remove(folder);
+        self.pending.remove(folder);
+        self.kept.remove(folder);
     }
 
     /// Keeps `name` in `folder` from being removed by a move that left it there earlier.
     fn cancel(&mut self, folder: &BlobName, name: &BlobName) {
         if let Some(left) = self.pending.get_mut(folder) {
             left.remove(name);
+            if left.is_empty() {
+                self.pending.remove(folder);
+            }
         }
     }
 
@@ -225,6 +238,8 @@ impl fmt::Debug for Store {
             .field("lists", &self.lists.len())
             .field("pending", &self.pending.len())
             .field("moves", &self.moves.len())
+            .field("left", &self.left.len())
+            .field("kept", &self.kept.len())
             .finish_non_exhaustive()
     }
 }
@@ -260,18 +275,6 @@ fn blob_names(entry: &Entry, thumb: bool) -> Result<Vec<BlobName>, SealedError> 
 fn complete(entry: &Entry, names: &BTreeSet<BlobName>) -> bool {
     let there = |n| part_name(entry.id, n).is_ok_and(|b| names.contains(&b));
     entry.parts > 0 && (0..usize::from(entry.parts)).all(there)
-}
-
-/// The entries of `history` by folder, each in order.
-fn group(history: &History) -> Result<BTreeMap<BlobName, Vec<&Entry>>, SealedError> {
-    let mut groups: BTreeMap<BlobName, Vec<&Entry>> = BTreeMap::new();
-    for entry in history.entries() {
-        groups
-            .entry(folder_of(entry.place)?)
-            .or_default()
-            .push(entry);
-    }
-    Ok(groups)
 }
 
 #[cfg(test)]

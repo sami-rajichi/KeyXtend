@@ -1,6 +1,7 @@
 //! A folder's list in one versioned byte form: the version byte, the round, the total length and the counter,
 //! then the count and each entry's record. The store splits it into the head blob `list` and, past the blob size,
-//! the blobs `list-<round>-<n>`; the rounds take turns, so a save never writes over the blobs the head names.
+//! the blobs `list-<round>-<n>`, whose rounds take turns so a save never writes over the blobs the head names; a list
+//! that would not read is kept as the blobs `aside-<n>-<k>`.
 
 use std::mem::size_of;
 
@@ -11,13 +12,15 @@ use super::codec::{Bad, Reader, Writer};
 use crate::entry::{Entry, Place, Stamp};
 
 /// The list form's version, its first byte.
-const VERSION: u8 = 1;
+pub(crate) const VERSION: u8 = 1;
 /// How many rounds the extra blobs take turns in.
 const ROUNDS: u8 = 2;
 /// The head blob's name, which also starts every extra blob's name.
 const HEAD: &str = "list";
 /// What stands between the parts of an extra blob's name.
 const SEP: char = '-';
+/// What starts the name of each blob a list that would not read is kept in.
+const ASIDE: &str = "aside";
 /// The bytes the head blob always holds: the version, the round and the total length.
 pub(crate) const HEAD_LEN: usize = 2 * size_of::<u8>() + size_of::<u64>();
 
@@ -124,6 +127,24 @@ pub(crate) fn chunk_name(round: u8, n: usize) -> Result<BlobName, SealedError> {
 pub(crate) fn is_list(name: &BlobName) -> bool {
     let name = name.as_str();
     name == HEAD || name.strip_prefix(HEAD).is_some_and(|r| r.starts_with(SEP))
+}
+
+/// True when `head`, a list head blob, was written by a newer version of the form.
+pub(crate) fn newer(head: &[u8]) -> bool {
+    head.first().is_some_and(|v| *v > VERSION)
+}
+
+/// The name of piece `k`, from 0, of aside `n`: the bytes of a list that would not read.
+pub(crate) fn aside_name(n: usize, k: usize) -> Result<BlobName, SealedError> {
+    BlobName::new(&format!("{ASIDE}{SEP}{n}{SEP}{k}"))
+}
+
+/// The aside number of `name` when it names a piece of one.
+pub(crate) fn aside_of(name: &BlobName) -> Option<usize> {
+    let rest = name.as_str().strip_prefix(ASIDE)?.strip_prefix(SEP)?;
+    let (n, k) = rest.split_once(SEP)?;
+    k.parse::<usize>().ok()?;
+    n.parse().ok()
 }
 
 /// Writes one entry's record; the folder gives its place.

@@ -7,7 +7,7 @@ use kx_module_api::ports::{ClipPart, ImageCodec, MAX_BLOB_BYTES};
 use super::*;
 use crate::fixture::{CFG, LIMITS};
 
-/// The top of `max_entries`' range in the plan's settings.
+/// The top of `max_entries`' range in the plan's settings; Task 14 replaces it with the settings range's top.
 const MOST_ENTRIES: u64 = 5000;
 /// The longest character in UTF-8, 4 bytes.
 const WIDE: char = '😀';

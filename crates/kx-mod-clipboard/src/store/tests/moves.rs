@@ -114,3 +114,56 @@ fn two_copies_after_a_crash_keep_the_newer_and_lose_the_other() {
     s.save(&loaded.history).unwrap();
     assert_eq!(names(&shelf, on(1)), [format!("{b:x}-0"), "list".into()]);
 }
+
+#[test]
+fn a_move_whose_content_is_damaged_says_it_is_gone() {
+    let shelf = FakeShelf::new();
+    let (mut s, mut h) = (open(&shelf), History::default());
+    let a = keep(&mut h, &mut s, "a", &noon(1));
+    s.save(&h).unwrap();
+    h.pin(a);
+    shelf.fail(ShelfCall::Load, SealedError::Damaged);
+    assert_eq!(s.moved(&h, a, on(1)), Ok(false));
+}
+
+#[test]
+fn a_move_found_gone_leaves_no_blob_of_it_behind() {
+    let shelf = FakeShelf::new();
+    let (mut s, mut h) = (
+        Store::new(Arc::new(shelf.clone()), SMALL),
+        History::default(),
+    );
+    let a = keep(&mut h, &mut s, "a text that takes several blobs", &noon(1));
+    keep(&mut h, &mut s, "b", &noon(1));
+    s.put_thumb(h.get(a).unwrap(), &grey(1)).unwrap();
+    h.update(a, |e| e.thumb = true);
+    s.save(&h).unwrap();
+    shelf
+        .remove(&folder(on(1)), &part_name(a, 1).unwrap())
+        .unwrap();
+    h.pin(a);
+    assert_eq!(s.moved(&h, a, on(1)), Ok(false));
+    s.delete(h.get(a).unwrap()).unwrap();
+    let mine = format!("{a:x}-");
+    for place in [on(1), Place::Pinned] {
+        let left = names(&shelf, place);
+        assert!(left.iter().all(|n| !n.starts_with(&mine)), "{left:?}");
+    }
+}
+
+#[test]
+fn a_day_holding_blobs_to_remove_waits_for_them_before_it_drops() {
+    let shelf = FakeShelf::new();
+    let (mut s, mut h) = (open(&shelf), History::default());
+    let a = keep(&mut h, &mut s, "a", &noon(1));
+    keep(&mut h, &mut s, "b", &noon(1));
+    s.save(&h).unwrap();
+    h.pin(a);
+    shelf.fail(ShelfCall::Remove, SealedError::Io);
+    assert_eq!(s.moved(&h, a, on(1)), Err(SealedError::Io), "stuck");
+    s.drop_past(day(8), 7).unwrap();
+    assert!(shelf.folders().unwrap().contains(&folder(on(1))));
+    s.save(&h).unwrap();
+    s.drop_past(day(8), 7).unwrap();
+    assert_eq!(shelf.folders(), Ok(vec![folder(Place::Pinned)]));
+}

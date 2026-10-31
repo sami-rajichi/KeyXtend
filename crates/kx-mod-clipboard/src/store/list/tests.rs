@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 
+use super::super::parts::owner;
 use super::*;
 use crate::fixture::{app, at, copied, date};
 
@@ -81,4 +82,21 @@ fn list_names_are_told_apart_from_entry_names() {
     for other in ["lists", "ab-1", "ab-t", "listx-1"] {
         assert!(!is_list(&BlobName::new(other).unwrap()), "{other}");
     }
+}
+
+#[test]
+fn aside_names_are_neither_list_nor_entry_names() {
+    let aside = aside_name(3, 12).unwrap();
+    assert_eq!(aside.as_str(), "aside-3-12");
+    assert_eq!(aside_of(&aside), Some(3));
+    assert!(!is_list(&aside) && owner(&aside).is_none());
+    for other in ["aside", "aside-1", "aside-x-0", "list", "a-0"] {
+        assert_eq!(aside_of(&BlobName::new(other).unwrap()), None, "{other}");
+    }
+}
+
+#[test]
+fn only_a_higher_first_byte_is_newer() {
+    assert!(newer(&[VERSION + 1]));
+    assert!(!newer(&[VERSION]) && !newer(&[0]) && !newer(&[]));
 }
