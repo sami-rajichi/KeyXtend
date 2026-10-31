@@ -30,7 +30,7 @@ pub use calendar::{
 };
 pub use clip::{
     AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, is_share_or_device,
+    ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, probe_ok,
 };
 pub use clips::{
     ClipAct, ClipKey, ClipKind, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipView, Filter,

@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 use std::time::Duration;
 
-use kx_module_api::ports::{ClipAct, ClipError, ClipPart, FileFact, Pasted};
+use kx_module_api::ports::{ClipAct, ClipError, ClipPart, Pasted};
 use proptest::prelude::*;
 
 use super::super::Msg;
@@ -20,7 +20,7 @@ const CASES: u32 = 256;
 const MAX_STEPS: usize = 40;
 /// The share of answers that say the paste went out.
 const OK_SHARE: f64 = 0.8;
-/// The file copied first, so it shows last; a relative name reads the same on every platform.
+/// The file copied first, so it shows last; a relative name is its own title, and the fake leaves it unchecked.
 const FILE: &str = "f.txt";
 /// The texts copied after it, the last at the top.
 const TEXTS: [&str; 3] = ["a", "b", "c"];
@@ -125,7 +125,6 @@ impl Run {
     /// The file, then the texts, copied, with the panel open.
     fn new() -> Self {
         let mut rig = Rig::new();
-        rig.fakes.clip.set_file(FILE, FileFact::Size(1));
         rig.copy(vec![files(&[FILE])], None);
         for t in TEXTS {
             rig.copy(vec![text(t)], None);

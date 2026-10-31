@@ -112,19 +112,20 @@ pub enum FileFact {
     Gone,
     /// Its drive is out of reach now, so the row stays and an insert skips it.
     Away,
-    /// A share or device path (`is_share_or_device`), never probed; the row stays with no size and an insert pastes it.
+    /// A path `probe_ok` refuses, or a link, never followed; the row stays with no size and an insert pastes it.
     Unchecked,
 }
 
 /// The separators a copied path may use.
 const SEPARATORS: &[u8] = br"\/";
 
-/// True when `path` starts with two separators, so it names a share or a device (`\\host\`, `\\?\`, `\\.\`). No
-/// adapter probes it, as reaching it could call out to another machine.
+/// True only for an absolute drive path such as `C:\…`, which Windows parses as `Prefix::Disk` then `RootDir`. Every
+/// other form (a share, a device, an NT path, a relative path or a bare `C:foo`) could reach another machine, so no
+/// adapter probes it.
 #[must_use]
-pub fn is_share_or_device(path: &Path) -> bool {
+pub fn probe_ok(path: &Path) -> bool {
     let sep = |b: &u8| SEPARATORS.contains(b);
-    matches!(path.as_os_str().as_encoded_bytes(), [a, b, ..] if sep(a) && sep(b))
+    matches!(path.as_os_str().as_encoded_bytes(), [drive, b':', s, ..] if drive.is_ascii_alphabetic() && sep(s))
 }
 
 /// Why the clipboard could not be watched or set.

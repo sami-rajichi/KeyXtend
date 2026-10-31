@@ -1,5 +1,5 @@
-//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, the errors, and the paths no
-//! adapter probes.
+//! The clipboard ports: their gates, `Debug` that never shows a copied part or the app, the errors, and the one path
+//! form an adapter may probe.
 
 use super::*;
 use crate::REDACTED_MARKER;
@@ -9,6 +9,25 @@ use std::collections::HashSet;
 const SECRETS: [&str; 2] = ["zebra-quartz", "مرحبا"];
 /// The app the copies come from, by id and by name.
 const APP: [&str; 2] = ["keepass.exe", "KeePass"];
+/// Paths no adapter may probe: shares, devices, NT paths, relative paths and a drive with no root.
+const FAR: [&str; 14] = [
+    r"\\host\share\a.txt",
+    r"\\?\C:\a.txt",
+    r"\\?\UNC\host\share\a.txt",
+    r"\\.\PhysicalDrive0",
+    r"\??\UNC\host\share\a.txt",
+    r"\??\C:\a.txt",
+    "//host/share/a.txt",
+    r"\a.txt",
+    "a.txt",
+    r"docs\تقرير.pdf",
+    "C:a.txt",
+    "C:",
+    r"1:\a.txt",
+    "",
+];
+/// Absolute drive paths, the one form an adapter may probe.
+const NEAR: [&str; 4] = [r"C:\a.txt", "c:/a.txt", r"Z:\docs\تقرير.pdf", r"C:\"];
 
 /// Secret `n` as text.
 fn text(n: usize) -> String {
@@ -102,27 +121,23 @@ fn each_error_says_something_else() {
 }
 
 #[test]
-fn a_share_or_a_device_path_starts_with_two_separators() {
-    let far = [
-        r"\\host\share\a.txt",
-        r"\\?\C:\a.txt",
-        r"\\?\UNC\host\share\a.txt",
-        r"\\.\PhysicalDrive0",
-        "//host/share/a.txt",
-        r"\/host/a.txt",
-    ];
-    for path in far {
-        assert!(is_share_or_device(Path::new(path)), "{path}");
+fn only_an_absolute_drive_path_may_be_probed() {
+    for path in FAR {
+        assert!(!probe_ok(Path::new(path)), "{path}");
     }
-    let near = [
-        r"C:\a.txt",
-        "C:/a.txt",
-        r"\a.txt",
-        "a.txt",
-        r"docs\تقرير.pdf",
-        "",
-    ];
-    for path in near {
-        assert!(!is_share_or_device(Path::new(path)), "{path}");
+    for path in NEAR {
+        assert!(probe_ok(Path::new(path)), "{path}");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn the_rule_matches_a_drive_prefix_then_a_root_as_windows_parses_them() {
+    use std::path::{Component, Prefix};
+    for path in FAR.iter().chain(&NEAR) {
+        let mut parts = Path::new(path).components();
+        let disk = matches!(parts.next(), Some(Component::Prefix(p)) if matches!(p.kind(), Prefix::Disk(_)));
+        let rooted = parts.next() == Some(Component::RootDir);
+        assert_eq!(probe_ok(Path::new(path)), disk && rooted, "{path}");
     }
 }

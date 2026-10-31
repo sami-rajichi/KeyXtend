@@ -6,8 +6,8 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - **Limits** (`keep`, `follow`): days, entry and byte caps, the free-space floor, and follow-the-clear, which drops what an app clears unless pinned.
 - **Store** (`store`): day folders and a pinned folder on the `SealedShelf`, each with a versioned list; blobs, thumbnails, moves and a damaged list set aside.
 - **Panel** (`panel`, `view`): keys and clicks to `Do`, ticks in order, paged rows, the preview and the Delete-all question; `view` builds the `ClipPage` the ui draws.
-- **Insert** (`insert`): the ticked entries in tick order, a join between texts pasted as text (never Enter), files still there or on a share never probed, and those out of reach skipped.
-- **Media** (`media`): thumbnails and previews drawn by the `Pictures` worker on `kx-clip-media`; file checks on `kx-clip-files`, as a drive out of reach can block; a share or device path is never probed, so its row shows no size.
+- **Insert** (`insert`): the ticked entries in tick order, a join between texts pasted as text (never Enter), files still there or never probed, and those out of reach skipped.
+- **Media** (`media`): thumbnails and previews drawn by the `Pictures` worker on `kx-clip-media`; file checks on `kx-clip-files`, as a drive out of reach can block; only a drive path is probed, never through a link, so a share or a link shows no size.
 
 ## The module
 

@@ -1,5 +1,5 @@
 //! The fake clipboard, held to the port: notes reach the live watch at once, the watch and its config are recorded, a
-//! refusal on cue, and files answer as scripted, a share or device path unchecked.
+//! refusal on cue, and files answer as scripted, a path off a drive unchecked.
 
 use super::*;
 use kx_module_api::ports::{AppRef, ClipPart, ClipWait};
@@ -152,13 +152,21 @@ fn files_answer_as_scripted_in_order_and_unknown_paths_are_gone() {
 }
 
 #[test]
-fn a_share_or_a_device_path_is_unchecked_even_when_scripted() {
+fn a_path_off_a_drive_is_unchecked_even_when_scripted() {
     let clip = FakeClipboard::new();
-    clip.set_file(r"\\host\share\a.txt", FileFact::Size(SIZE));
-    let paths = [r"\\host\share\a.txt", r"\\?\C:\b.txt", "C:/c.txt"];
-    let paths = Redacted::new(paths.map(PathBuf::from).to_vec());
-    let unchecked = FileFact::Unchecked;
-    assert_eq!(clip.files(&paths), [unchecked, unchecked, FileFact::Gone]);
+    let far = [
+        r"\\host\share\a.txt",
+        r"\??\UNC\host\share\a.txt",
+        "a.txt",
+        "C:a.txt",
+    ];
+    for path in far {
+        clip.set_file(path, FileFact::Size(SIZE));
+    }
+    let paths = Redacted::new(far.iter().chain(&["C:/c.txt"]).map(PathBuf::from).collect());
+    let mut want = vec![FileFact::Unchecked; far.len()];
+    want.push(FileFact::Gone);
+    assert_eq!(clip.files(&paths), want);
 }
 
 #[test]

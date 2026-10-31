@@ -34,7 +34,7 @@ pub const JOIN_RULE_CHARS: usize = 80;
 pub const PASTE_GAP_MS: RangeInclusive<u32> = 20..=2_000;
 /// The wait for the keyboard's paste, in ms.
 pub const PASTE_WAIT_MS: RangeInclusive<u32> = 100..=5_000;
-/// The wait for an insert.s file check, in ms.
+/// The wait for an insert's file check, in ms.
 pub const CHECK_MS: RangeInclusive<u32> = 1_000..=30_000;
 /// The characters search reads.
 pub const SEARCH_CHARS: RangeInclusive<usize> = 100..=2_000;
