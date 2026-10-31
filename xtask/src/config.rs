@@ -75,6 +75,7 @@ impl TidyConfig {
             return Err(ConfigError::WarnExceedsMax);
         }
         self.check_lists()?;
+        self.check_maps()?;
         let texts = [
             ("tool_dir", &self.tool_dir),
             ("build_tool", &self.build_tool),
@@ -119,6 +120,23 @@ impl TidyConfig {
             return Err(ConfigError::NotRelative("build_scripts"));
         }
         Ok(())
+    }
+
+    /// Rejects a blank crate name, a crate with no feature, or a blank feature in a feature map, which would ban
+    /// nothing.
+    fn check_maps(&self) -> Result<(), ConfigError> {
+        let maps = [
+            ("banned_features", &self.banned_features),
+            ("build_only_features", &self.build_only_features),
+        ];
+        let blank = |(name, features): (&String, &Vec<String>)| {
+            let none = features.is_empty() || features.iter().any(|f| f.trim().is_empty());
+            name.trim().is_empty() || none
+        };
+        match maps.iter().find(|(_, m)| m.iter().any(blank)) {
+            Some((name, _)) => Err(ConfigError::BlankEntry(name)),
+            None => Ok(()),
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 //! Tests of the tidy and DCO config.
 
+use std::collections::BTreeMap;
+
 use super::*;
 use crate::test_support::tidy_config as tidy;
 
@@ -62,6 +64,34 @@ fn a_blank_entry_in_any_list_is_rejected() {
         let (name, list) = lists(&mut config).into_iter().nth(i).expect("a list");
         list.push(blank.to_string());
         assert_eq!(config.validate(), Err(ConfigError::BlankEntry(name)));
+    }
+}
+
+/// Each feature map of the tidy config, by name.
+fn maps(c: &mut TidyConfig) -> [(&'static str, &mut BTreeMap<String, Vec<String>>); 2] {
+    [
+        ("banned_features", &mut c.banned_features),
+        ("build_only_features", &mut c.build_only_features),
+    ]
+}
+
+#[test]
+fn a_blank_crate_or_feature_in_a_feature_map_is_rejected() {
+    let blanks: [(&str, &[&str]); 4] = [
+        ("", &["x"]),
+        (" ", &["x"]),
+        ("kx-lib", &[" "]),
+        ("kx-lib", &[]),
+    ];
+    for i in 0..maps(&mut tidy()).len() {
+        for (n, (krate, features)) in blanks.iter().enumerate() {
+            let mut config = tidy();
+            let (name, map) = maps(&mut config).into_iter().nth(i).expect("a map");
+            let features = features.iter().map(ToString::to_string).collect();
+            map.insert((*krate).to_string(), features);
+            let want = Err(ConfigError::BlankEntry(name));
+            assert_eq!(config.validate(), want, "{name}, case {n}");
+        }
     }
 }
 
