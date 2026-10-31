@@ -105,12 +105,12 @@ impl Actor {
     /// Asks for a new image's thumbnail, or a new file row's size.
     fn look_new(&mut self, id: u64, kind: ClipKind, parts: &[ClipPart]) {
         match kind {
-            ClipKind::Image if self.asked.insert(id) => {
+            ClipKind::Image if self.draws.free(Size::Thumb) && self.asked.insert(id) => {
                 if let Some(job) = job_of(id, Size::Thumb, parts) {
                     self.send_job(job);
                 }
             }
-            ClipKind::File | ClipKind::Media => self.look_rows(&[id]),
+            ClipKind::File | ClipKind::Media => self.look_rows(),
             _ => {}
         }
     }

@@ -161,3 +161,17 @@ fn a_day_folder_deleted_by_hand_leaves_at_the_next_look() {
     rig.open();
     assert!(rig.page().empty);
 }
+
+#[test]
+fn delete_all_answered_no_deletes_nothing() {
+    let mut rig = Rig::new();
+    rig.text("a");
+    rig.text("b");
+    rig.open();
+    rig.send(Msg::Act(ClipAct::DeleteAll));
+    rig.send(Msg::Act(ClipAct::Confirm(false)));
+    assert_eq!(
+        (rig.titles(), rig.page().confirm),
+        (vec!["b".to_owned(), "a".to_owned()], None)
+    );
+}

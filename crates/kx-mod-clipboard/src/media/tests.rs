@@ -173,3 +173,53 @@ fn no_debug_shows_an_image_or_a_path() {
         );
     }
 }
+
+#[test]
+fn the_files_thread_serves_inserts_first_and_only_the_newest_row_look() {
+    let ClipPart::Files(paths) = files(&["C:\\x"]) else {
+        unreachable!()
+    };
+    let (looks, inbox) = mpsc::channel();
+    let ask = |why, id| Look {
+        why,
+        items: vec![(id, paths.clone())],
+    };
+    let asked = [
+        ask(Why::Rows, 1),
+        ask(Why::Insert(1), 2),
+        ask(Why::Rows, 3),
+        ask(Why::Insert(2), 4),
+    ];
+    for look in asked {
+        looks.send(look).unwrap();
+    }
+    drop(looks);
+    let (tell, heard) = mpsc::channel();
+    let clip = Arc::new(FakeClipboard::new());
+    let thread = spawn_files(clip, inbox, move |f| drop(tell.send(f))).unwrap();
+    thread.join().unwrap();
+    let order: Vec<(Why, u64)> = heard.try_iter().map(|f| (f.why, f.items[0].0)).collect();
+    let want = [(Why::Insert(1), 2), (Why::Insert(2), 4), (Why::Rows, 3)];
+    assert_eq!(order, want, "the older row look is dropped");
+}
+
+#[test]
+fn one_thumbnail_draws_at_a_time_and_only_the_newest_preview_waits() {
+    let job = |id| job_of(id, Size::Preview, &[image(b"x")]).unwrap();
+    let mut draws = Draws::default();
+    draws.went(Size::Thumb);
+    assert!(!draws.free(Size::Thumb) && draws.free(Size::Preview));
+    draws.went(Size::Preview);
+    draws.hold(job(1));
+    draws.hold(job(2));
+    assert!(draws.done(Size::Thumb).is_none());
+    assert!(draws.free(Size::Thumb));
+    let next = draws.done(Size::Preview).map(|j| j.id);
+    assert_eq!(next, Some(2), "the older preview was dropped");
+    assert!(
+        !draws.free(Size::Preview),
+        "the one handed back goes at once"
+    );
+    assert!(draws.done(Size::Preview).is_none());
+    assert!(draws.free(Size::Preview));
+}

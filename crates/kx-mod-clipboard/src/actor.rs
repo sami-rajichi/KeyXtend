@@ -23,7 +23,7 @@ use kx_module_api::{Bus, Clock, Event, Mono, Notice, NoticeArg, args, keys};
 use crate::ID;
 use crate::follow::Follow;
 use crate::keep::Limits;
-use crate::media::{Drawn, Facts, Job, Look};
+use crate::media::{Drawn, Draws, Facts, Job, Look};
 use crate::order::History;
 use crate::panel::Panel;
 use crate::settings::ClipSettings;
@@ -103,6 +103,9 @@ pub(crate) struct Actor {
     paste: Pasting,
     /// The entries whose thumbnail was asked this run.
     asked: BTreeSet<u64>,
+    /// The pictures with the media thread, and the image rows the last view showed bare.
+    draws: Draws,
+    bare: Vec<u64>,
     /// The notices told this run.
     told: BTreeSet<&'static str>,
     /// The load set a list aside.
@@ -131,6 +134,8 @@ impl Actor {
             redraw: false,
             paste: Pasting::default(),
             asked: BTreeSet::new(),
+            draws: Draws::default(),
+            bare: Vec::new(),
             told: BTreeSet::new(),
             aside: !loaded.aside.is_empty(),
             stopped: false,

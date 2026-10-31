@@ -1,5 +1,6 @@
 //! The helpers' answers (edges 4 and 9): file facts size the rows and drop an entry whose files are all gone, and a
-//! drawn thumbnail is saved for its row; a picture the worker could not draw leaves the type icon.
+//! drawn thumbnail is saved for its row; a picture the worker could not draw leaves the type icon. One thumbnail
+//! draws at a time, and only the newest preview waits.
 
 use kx_module_api::ports::{ClipKind, FileFact, Preview};
 
@@ -8,19 +9,16 @@ use crate::insert::files_of;
 use crate::media::{Drawn, Facts, Job, Look, Size, Why, job_of};
 
 impl Actor {
-    /// The file and media entries, which an open looks at.
-    pub(super) fn file_ids(&self) -> Vec<u64> {
+    /// Asks the files thread what is at the paths of every file row, to size them; each look asks for all, so the
+    /// thread keeps only the newest.
+    pub(super) fn look_rows(&self) {
         let filed = self.history.entries().iter();
         let filed = filed.filter(|e| matches!(e.kind, ClipKind::File | ClipKind::Media));
-        filed.map(|e| e.id).collect()
-    }
-
-    /// Asks the files thread what is at the paths of `ids`, to size their rows.
-    pub(super) fn look_rows(&self, ids: &[u64]) {
-        let items = files_of(ids, &self.history);
+        let ids: Vec<u64> = filed.map(|e| e.id).collect();
+        let items = files_of(&ids, &self.history);
         if !items.is_empty() {
             let why = Why::Rows;
-            // Only a stopped files thread refuses, and it stops with the actor.
+            // Only a stopped files thread refuses; a row look then waits for the next open.
             let _ = self.ports.files.send(Look { why, items });
         }
     }
@@ -33,8 +31,15 @@ impl Actor {
         }
     }
 
-    /// Takes a picture the media thread drew: a thumbnail is saved, a preview shows while its page does.
+    /// Takes a picture the media thread drew: a thumbnail is saved and the next bare row asked, a preview shows while
+    /// its page does and the one waiting goes.
     pub(super) fn drawn(&mut self, drawn: Drawn) {
+        if let Some(job) = self.draws.done(drawn.size) {
+            self.send_job(job);
+        }
+        if drawn.size == Size::Thumb {
+            self.want_thumbs(&self.bare.clone());
+        }
         let Ok(pixels) = drawn.pixels else {
             return;
         };
@@ -55,9 +60,12 @@ impl Actor {
         }
     }
 
-    /// Asks once per run for the thumbnails of `ids`, image rows shown without one.
+    /// Asks once per run for the thumbnails of `ids`, image rows without one, while no other is drawing.
     pub(super) fn want_thumbs(&mut self, ids: &[u64]) {
         for &id in ids {
+            if !self.draws.free(Size::Thumb) {
+                return;
+            }
             if !self.asked.insert(id) {
                 continue;
             }
@@ -71,8 +79,15 @@ impl Actor {
         }
     }
 
-    /// Hands `job` to the media thread.
-    pub(super) fn send_job(&self, job: Job) {
+    /// Hands `job` to the media thread now, or keeps it while one of its size draws; a thumbnail kept is asked again.
+    pub(super) fn send_job(&mut self, job: Job) {
+        if !self.draws.free(job.size) {
+            if job.size == Size::Preview {
+                self.draws.hold(job);
+            }
+            return;
+        }
+        self.draws.went(job.size);
         // Only a stopped media thread refuses, and it stops with the actor.
         let _ = self.ports.media.send(job);
     }

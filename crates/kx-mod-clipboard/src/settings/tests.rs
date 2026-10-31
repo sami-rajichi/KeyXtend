@@ -4,7 +4,7 @@
 use super::*;
 use std::time::Duration;
 
-use kx_module_api::ports::MAX_BLOB_BYTES;
+use kx_module_api::ports::{MAX_BLOB_BYTES, MB};
 
 /// The defaults as a table.
 fn defaults() -> toml::Table {
@@ -200,4 +200,14 @@ fn the_parts_get_the_settings_in_their_units() {
 fn the_rows_wait_for_the_ui() {
     let s = ClipSettings::from_defaults().unwrap();
     assert_eq!(s.panel_config().rows, 0, "no page size of its own");
+}
+
+#[test]
+fn the_unicode_line_and_paragraph_breaks_are_refused_too() {
+    for mark in ['\u{2028}', '\u{2029}'] {
+        let broken = format!("--{mark}--");
+        assert!(refused(&with("join_rule", broken.as_str()), "join_rule"));
+        let app = toml::Value::Array(vec![format!("a{mark}b").into()]);
+        assert!(refused(&with("skip_apps", app), "skip_apps"));
+    }
 }

@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
-use kx_module_api::ports::{ClipConfig, ClipWait, MAX_BLOB_BYTES, PictureConfig};
+use kx_module_api::ports::{ClipConfig, ClipWait, MAX_BLOB_BYTES, MB, PictureConfig};
 
-use super::{ClipSettings, MB};
+use super::ClipSettings;
 use crate::entry::EntryConfig;
 use crate::follow::Follow;
 use crate::insert::JoinConfig;

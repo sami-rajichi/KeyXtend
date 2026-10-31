@@ -10,49 +10,20 @@ use kx_module_api::ports::{
     AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, Clipboard, PasteAsk, Pasted,
     PictureRun, Pictures, SealedShelf,
 };
-use kx_module_api::{Bus, ModuleCx, Mono, Subscription};
-use kx_platform_fake::{
-    FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock, FakePictures, FakeShelf,
-};
+use kx_module_api::{Bus, ModuleCx, Subscription};
 use kx_test_support::host::FakeHost;
 
 use super::super::{Actor, Msg, Ports};
 use super::ears::{Heard, listen};
+use super::fakes::Fakes;
 use crate::MANIFEST;
-use crate::fixture::{PARIS, date, text};
+use crate::fixture::text;
 use crate::media::{self, Job, Look, Sides};
 use crate::settings::ClipSettings;
 use crate::store::Store;
 
-/// When each test starts.
-pub(super) const T0: Mono = Mono::from_us(1_000_000);
 /// The rows the tests' ui shows.
 pub(super) const ROWS: u8 = 5;
-
-/// The fakes behind the actor's ports.
-#[derive(Clone)]
-pub(super) struct Fakes {
-    pub clip: FakeClipboard,
-    pub writer: FakeClipboardWriter,
-    pub shelf: FakeShelf,
-    pub pics: FakePictures,
-    pub clock: FakeClock,
-    pub calendar: FakeCalendar,
-}
-
-impl Fakes {
-    /// Fresh fakes at `T0`, on 31 October 2026 at 16:32 in Paris.
-    fn new() -> Self {
-        Self {
-            clip: FakeClipboard::new(),
-            writer: FakeClipboardWriter::new(),
-            shelf: FakeShelf::new(),
-            pics: FakePictures::new(),
-            clock: FakeClock::new(T0),
-            calendar: FakeCalendar::new(date(2026, 10, 31), 16, 32, PARIS),
-        }
-    }
-}
 
 /// The actor on a fake host, its fakes, and what it published.
 pub(super) struct Rig {
@@ -283,6 +254,18 @@ impl Rig {
         let folder = BlobName::new(folder).unwrap();
         let names = self.fakes.shelf.names(&folder).unwrap();
         names.into_iter().map(|n| n.as_str().to_owned()).collect()
+    }
+
+    /// Deletes the blobs of the entry titled `title` behind the actor's back, so its content is gone.
+    pub fn lose(&mut self, title: &str) {
+        let entries = self.actor.history.entries();
+        let entry = entries.iter().find(|e| e.title.expose() == title).unwrap();
+        self.actor.store.delete(&entry.clone()).unwrap();
+    }
+
+    /// Ends the files thread, as if it had died.
+    pub fn lose_files(&mut self) {
+        self.looks = mpsc::channel().1;
     }
 }
 

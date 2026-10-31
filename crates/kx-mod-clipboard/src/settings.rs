@@ -8,9 +8,6 @@ use std::ops::RangeInclusive;
 use kx_module_api::{Settings, SettingsError, SettingsSpec, validate_as, within};
 use serde::{Deserialize, Serialize};
 
-/// Bytes in a megabyte, as the settings count them.
-pub const MB: u64 = 1024 * 1024;
-
 /// Calendar days an entry, or a media entry, is kept.
 pub const KEEP_DAYS: RangeInclusive<u8> = 1..=7;
 /// The most entries.
@@ -63,6 +60,9 @@ pub const OPEN_MS: RangeInclusive<u32> = 10..=2_000;
 pub const POLL_MS: RangeInclusive<u32> = 1..=100;
 /// The save's wait after a first change, in ms.
 pub const SAVE_MS: RangeInclusive<u32> = 100..=60_000;
+
+/// The line and paragraph separators, which `char::is_control` lets through.
+const BREAKS: [char; 2] = ['\u{2028}', '\u{2029}'];
 
 /// Why a list or a pair was refused.
 const BAD_APP: &str = "skip_apps must each be an app id on one line";
@@ -202,9 +202,9 @@ impl Settings for ClipSettings {
     }
 }
 
-/// True when `text` holds no line break or other control character.
+/// True when `text` holds no line break, Unicode's separators included, or other control character.
 fn one_line(text: &str) -> bool {
-    !text.chars().any(char::is_control)
+    !text.chars().any(|c| c.is_control() || BREAKS.contains(&c))
 }
 
 /// Refuses with `why` when `bad`.

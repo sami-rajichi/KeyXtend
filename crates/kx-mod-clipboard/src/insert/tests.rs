@@ -1,14 +1,14 @@
-//! The insert plan: tick order, the join only between two texts, links as text, entries gone meanwhile, file facts
+//! The insert plan: tick order, the join only after a written text, links as text, entries gone meanwhile, file facts
 //! sorted into kept, gone and away, and the parts a file entry writes.
 
 use std::path::PathBuf;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipPart, FileFact, ImageCodec};
+use kx_module_api::ports::{ClipPart, FileFact};
 
 use super::*;
 use crate::entry::Entry;
-use crate::fixture::{CFG, at, date, files, text};
+use crate::fixture::{CFG, at, date, files, image, text};
 use crate::order::History;
 
 /// 31 October 2026 at noon in Paris.
@@ -16,28 +16,25 @@ fn noon() -> kx_module_api::ports::LocalTime {
     at(date(2026, 10, 31), 12, 0)
 }
 
-/// An image part.
-fn image() -> ClipPart {
-    ClipPart::Image {
-        codec: ImageCodec::Png,
-        bytes: Redacted::new(vec![1, 2, 3]),
-    }
-}
-
 /// Adds a copy of `parts` to `h`; gives its id.
 fn add(h: &mut History, parts: &[ClipPart]) -> u64 {
     h.add(Entry::new(parts, None, &noon(), &CFG))
 }
 
-/// Every step of an insert of `ids`, nothing sorted out.
+/// Every step of an insert of `ids`, each written as it comes, nothing sorted out.
 fn steps(ids: &[u64], h: &History) -> Vec<Step> {
     let mut insert = Insert::new(ids.to_vec(), Sorted::default());
-    std::iter::from_fn(|| insert.next(h)).collect()
+    let mut all = Vec::new();
+    while let Some(step) = insert.next(h) {
+        insert.written(&step);
+        all.push(step);
+    }
+    all
 }
 
-/// The step that pastes `id` whole.
-fn whole(id: u64) -> Step {
-    Step::Entry { id, files: None }
+/// Whether each step asks for the join first.
+fn joins(steps: &[Step]) -> Vec<bool> {
+    steps.iter().map(|s| s.join).collect()
 }
 
 /// `paths` as the insert keeps them.
@@ -60,15 +57,16 @@ fn the_join_is_the_breaks_then_the_rule_and_the_breaks_again() {
 }
 
 #[test]
-fn texts_go_in_tick_order_with_a_join_between_each_two() {
+fn texts_go_in_tick_order_and_each_after_a_written_text_asks_the_join() {
     let mut h = History::default();
     let (a, b, c) = (
         add(&mut h, &[text("a")]),
         add(&mut h, &[text("b")]),
         add(&mut h, &[text("c")]),
     );
-    let want = vec![whole(c), Step::Join, whole(a), Step::Join, whole(b)];
-    assert_eq!(steps(&[c, a, b], &h), want);
+    let all = steps(&[c, a, b], &h);
+    let ids: Vec<u64> = all.iter().map(|s| s.id).collect();
+    assert_eq!((ids, joins(&all)), (vec![c, a, b], vec![false, true, true]));
 }
 
 #[test]
@@ -78,22 +76,32 @@ fn images_and_files_get_no_join_and_links_count_as_text() {
     let pic = add(&mut hist, &[image()]);
     let doc = add(&mut hist, &[files(&["C:\\a.txt"])]);
     let link = add(&mut hist, &[text("https://example.com")]);
-    assert_eq!(
-        steps(&[words, pic, words], &hist),
-        [whole(words), whole(pic), whole(words)]
-    );
-    assert_eq!(
-        steps(&[words, doc, link], &hist),
-        [whole(words), whole(doc), whole(link)]
-    );
-    assert_eq!(
-        steps(&[link, words], &hist),
-        [whole(link), Step::Join, whole(words)]
-    );
+    assert_eq!(joins(&steps(&[words, pic, words], &hist)), [false; 3]);
+    assert_eq!(joins(&steps(&[words, doc, link], &hist)), [false; 3]);
+    assert_eq!(joins(&steps(&[link, words], &hist)), [false, true]);
 }
 
 #[test]
-fn an_entry_gone_meanwhile_is_skipped_and_the_join_follows_what_is_pasted() {
+fn only_a_written_entry_counts_for_the_join() {
+    let mut h = History::default();
+    let (a, b, c) = (
+        add(&mut h, &[text("a")]),
+        add(&mut h, &[text("b")]),
+        add(&mut h, &[text("c")]),
+    );
+    let mut insert = Insert::new(vec![a, b, c], Sorted::default());
+    let first = insert.next(&h).unwrap();
+    insert.written(&first);
+    assert!(
+        insert.next(&h).unwrap().join,
+        "b, found gone, is never written"
+    );
+    assert!(insert.next(&h).unwrap().join, "one join before c, after a");
+    assert_eq!(insert.next(&h), None);
+}
+
+#[test]
+fn an_entry_gone_from_the_history_is_skipped() {
     let mut h = History::default();
     let (a, b, c) = (
         add(&mut h, &[text("a")]),
@@ -101,15 +109,34 @@ fn an_entry_gone_meanwhile_is_skipped_and_the_join_follows_what_is_pasted() {
         add(&mut h, &[text("c")]),
     );
     let mut insert = Insert::new(vec![a, b, c], Sorted::default());
-    assert_eq!(insert.next(&h), Some(whole(a)));
+    let first = insert.next(&h).unwrap();
+    insert.written(&first);
     h.remove(b);
+    let next = insert.next(&h).unwrap();
     assert_eq!(
-        insert.next(&h),
-        Some(Step::Join),
+        (next.id, next.join),
+        (c, true),
         "a and c are now side by side"
     );
-    assert_eq!(insert.next(&h), Some(whole(c)));
     assert_eq!(insert.next(&h), None);
+}
+
+#[test]
+fn a_written_text_deleted_meanwhile_still_gives_no_join_before_an_image() {
+    let mut h = History::default();
+    let (a, b, c) = (
+        add(&mut h, &[text("a")]),
+        add(&mut h, &[text("b")]),
+        add(&mut h, &[image()]),
+    );
+    let mut insert = Insert::new(vec![a, b, c], Sorted::default());
+    let first = insert.next(&h).unwrap();
+    insert.written(&first);
+    let second = insert.next(&h).unwrap();
+    insert.written(&second);
+    h.remove(b);
+    let third = insert.next(&h).unwrap();
+    assert_eq!((third.id, third.join), (c, false));
 }
 
 #[test]
@@ -151,15 +178,10 @@ fn an_insert_pastes_the_files_still_there_and_skips_gone_and_away_entries() {
         (away, vec![FileFact::Away]),
     ];
     let mut insert = Insert::new(vec![gone, doc, away, words], sort(&facts, &hist));
-    let keep = Some(kept(&["C:\\b"]));
-    assert_eq!(
-        insert.next(&hist),
-        Some(Step::Entry {
-            id: doc,
-            files: keep
-        })
-    );
-    assert_eq!(insert.next(&hist), Some(whole(words)));
+    let first = insert.next(&hist).unwrap();
+    assert_eq!((first.id, first.files), (doc, Some(kept(&["C:\\b"]))));
+    let second = insert.next(&hist).map(|s| (s.id, s.files));
+    assert_eq!(second, Some((words, None)));
     assert_eq!(insert.next(&hist), None);
 }
 
@@ -185,9 +207,11 @@ fn a_file_entry_writes_only_its_kept_paths_and_its_other_parts() {
 
 #[test]
 fn no_debug_shows_a_path() {
-    let step = Step::Entry {
+    let step = Step {
         id: 1,
         files: Some(kept(&["C:\\secret.txt"])),
+        join: false,
+        text: false,
     };
     let sorted = Sorted {
         keep: [(1, kept(&["C:\\secret.txt"]))].into(),

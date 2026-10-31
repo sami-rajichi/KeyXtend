@@ -6,7 +6,7 @@ use kx_module_api::ports::{
     BlobName, CalendarKey, ClipError, ClipboardKey, ClipboardWriterKey, PicturesKey, SealedError,
     SealedShelfKey,
 };
-use kx_module_api::{Module, ModuleError, ServiceError, ServiceId, ServiceKey, keys};
+use kx_module_api::{Module, ModuleError, ServiceError, ServiceId, ServiceKey};
 use kx_platform_fake::ShelfCall;
 
 use crate::rig::{Fakes, Heard, LIST, TODAY, start};
@@ -63,7 +63,7 @@ fn each_missing_gate_fails_the_start_and_watches_nothing() {
 }
 
 #[test]
-fn a_locked_shelf_fails_the_start_tells_the_user_and_a_try_again_starts() {
+fn a_locked_shelf_fails_the_start_with_no_notice_of_its_own_and_a_try_again_starts() {
     let (fakes, mut module) = (Fakes::new(), ClipboardModule::default());
     fakes.saved("kept");
     fakes.shelf.fail(ShelfCall::Load, SealedError::Locked);
@@ -73,7 +73,10 @@ fn a_locked_shelf_fails_the_start_tells_the_user_and_a_try_again_starts() {
         start(&mut module, &mut host),
         Err(ModuleError::Start(_))
     ));
-    assert_eq!(heard.notices(), [keys::CLIP_LOCKED]);
+    assert!(
+        heard.notices().is_empty(),
+        "the kernel tells a failed start (Ruling 40)"
+    );
     assert_eq!(fakes.clip.watches(), 0, "nothing ran");
     start(&mut module, &mut host).unwrap();
     assert!(fakes.clip.watching());

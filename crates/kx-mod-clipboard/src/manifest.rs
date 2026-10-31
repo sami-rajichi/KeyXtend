@@ -55,7 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn it_holds_the_three_gates_and_never_inject_input() {
+    fn it_holds_the_three_gates_and_never_injects_input() {
         let want = [
             Capability::ReadClipboard,
             Capability::WriteClipboard,

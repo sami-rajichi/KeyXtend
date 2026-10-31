@@ -62,7 +62,7 @@ impl Module for ClipboardModule {
         let pictures = cx.service::<PicturesKey>()?;
         let calendar = cx.service::<CalendarKey>()?;
         let mut store = Store::new(Arc::clone(&sealed), settings.store_config());
-        let loaded = store.load().map_err(|e| refuse(&cx.bus(), e))?;
+        let loaded = store.load().map_err(refuse)?;
         let (tx, inbox) = mpsc::channel();
         let watch = clip.watch(settings.clip_config(), Box::new(sender(&tx, Msg::Note)));
         let watch = watch.map_err(no_watch)?;
@@ -134,15 +134,12 @@ fn run_actor(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     }
 }
 
-/// Why a load failed, as the start's error; a locked shelf also tells the user.
-fn refuse(bus: &Bus, error: StoreError) -> ModuleError {
+/// Why a load failed, as the start's error; the kernel tells the user and offers Try again (Ruling 40).
+fn refuse(error: StoreError) -> ModuleError {
     tracing::warn!(%error, "the clipboard history did not load");
     match error {
         StoreError::Newer => ModuleError::Start(NEWER),
-        StoreError::Shelf(SealedError::Locked) => {
-            let _ = bus.publish(&notice(keys::CLIP_LOCKED));
-            ModuleError::Start(LOCKED)
-        }
+        StoreError::Shelf(SealedError::Locked) => ModuleError::Start(LOCKED),
         StoreError::Shelf(_) => ModuleError::Start(NO_LOAD),
     }
 }

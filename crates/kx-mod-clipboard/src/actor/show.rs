@@ -19,7 +19,7 @@ impl Actor {
         }
         self.panel.open();
         self.drop_missing();
-        self.look_rows(&self.file_ids());
+        self.look_rows();
         self.room_stale = true;
         self.redraw = true;
         self.publish(&ClipPanel { open: true });
@@ -100,9 +100,9 @@ impl Actor {
             .rows
             .iter()
             .filter(|r| r.kind == ClipKind::Image && r.thumb.is_none());
-        let bare: Vec<u64> = bare.map(|r| r.id).collect();
+        self.bare = bare.map(|r| r.id).collect();
         self.publish(&view);
-        self.want_thumbs(&bare);
+        self.want_thumbs(&self.bare.clone());
     }
 
     /// Opens the preview of `id` with its content; an image is then drawn large, and gone content deletes the entry.

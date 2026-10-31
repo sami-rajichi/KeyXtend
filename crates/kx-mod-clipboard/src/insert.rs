@@ -35,18 +35,17 @@ impl JoinConfig {
     }
 }
 
-/// One pasted step of an insert.
+/// One entry an insert pastes next.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Step {
-    /// The join between two texts.
-    Join,
-    /// Entry `id`; a file entry pastes only `files`, those still there.
-    Entry {
-        /// The entry.
-        id: u64,
-        /// The files a file entry pastes, or `None` for its parts as kept.
-        files: Option<Redacted<Vec<PathBuf>>>,
-    },
+pub struct Step {
+    /// The entry.
+    pub id: u64,
+    /// The files a file entry pastes, or `None` for its parts as kept.
+    pub files: Option<Redacted<Vec<PathBuf>>>,
+    /// The join goes first: the entry and the last one written are both texts.
+    pub join: bool,
+    /// The entry is a text, so a text written after it takes the join.
+    pub text: bool,
 }
 
 /// What the file checks before an insert found.
@@ -67,10 +66,8 @@ pub struct Insert {
     queue: VecDeque<u64>,
     /// The files each file entry pastes.
     keep: BTreeMap<u64, Redacted<Vec<PathBuf>>>,
-    /// The last pasted entry was text, so the next text takes a join first.
+    /// The last entry written was text, so the next text takes a join first.
     after_text: bool,
-    /// The join before the next entry is pasted.
-    joined: bool,
 }
 
 impl Insert {
@@ -82,28 +79,32 @@ impl Insert {
             queue: ids.into_iter().filter(|id| !out(id)).collect(),
             keep: sorted.keep,
             after_text: false,
-            joined: false,
         }
     }
 
-    /// The next step over `history`: an entry gone meanwhile is skipped, and two texts in a row get the join between.
+    /// The next entry still in `history`; its `join` says whether the join goes before it. An entry whose content
+    /// turns out gone is simply not written, which leaves the join to the next.
     pub fn next(&mut self, history: &History) -> Option<Step> {
-        loop {
-            let id = *self.queue.front()?;
+        while let Some(id) = self.queue.pop_front() {
             let Some(entry) = history.get(id) else {
-                self.queue.pop_front();
                 continue;
             };
             let text = is_text(entry.kind);
-            if text && self.after_text && !self.joined {
-                self.joined = true;
-                return Some(Step::Join);
-            }
-            self.queue.pop_front();
-            (self.after_text, self.joined) = (text, false);
             let files = self.keep.remove(&id);
-            return Some(Step::Entry { id, files });
+            let join = text && self.after_text;
+            return Some(Step {
+                id,
+                files,
+                join,
+                text,
+            });
         }
+        None
+    }
+
+    /// `step`'s parts were written, so a text after it takes the join.
+    pub fn written(&mut self, step: &Step) {
+        self.after_text = step.text;
     }
 }
 

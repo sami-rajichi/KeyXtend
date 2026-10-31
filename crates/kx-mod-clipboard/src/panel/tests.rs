@@ -227,3 +227,33 @@ fn a_key_or_click_for_a_preview_its_entry_left_is_swallowed() {
     );
     assert_eq!(p.act(ClipAct::Insert, &h), Do::Insert(ids(&h, &["c"])));
 }
+
+#[test]
+fn a_pin_or_delete_click_for_a_preview_its_entry_left_is_swallowed() {
+    let mut h = history(&["a", "b", "c"]);
+    let mut p = opened();
+    let round = p.shown(ids(&h, &["c"]));
+    p.act(ClipAct::Tick { round, row: 0 }, &h);
+    for act in [ClipAct::Pin, ClipAct::Delete] {
+        let gone = if act == ClipAct::Pin { "a" } else { "b" };
+        p.show(id(&h, gone), content());
+        h.remove(id(&h, gone));
+        assert_eq!(p.act(act, &h), Do::Show, "never acts on the ticked rows");
+    }
+    assert_eq!(p.act(ClipAct::Delete, &h), Do::Delete(ids(&h, &["c"])));
+}
+
+#[test]
+fn a_click_for_a_question_its_entries_left_is_swallowed() {
+    for act in [ClipAct::Insert, ClipAct::Pin, ClipAct::Delete] {
+        let mut h = history(&["a", "b"]);
+        let mut p = opened();
+        let round = p.shown(ids(&h, &["b", "a"]));
+        p.act(ClipAct::Tick { round, row: 0 }, &h);
+        assert_eq!(p.act(ClipAct::DeleteAll, &h), Do::Show);
+        h.remove(id(&h, "a"));
+        h.pin(id(&h, "b"));
+        assert_eq!(p.act(act, &h), Do::Show, "{act:?} waits for the next click");
+        assert!(p.is_open() && !p.asking());
+    }
+}

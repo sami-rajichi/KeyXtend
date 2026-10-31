@@ -13,6 +13,11 @@ use kx_module_api::ports::{
     ClipPart, Clipboard, FileFact, ImageCodec, PictureAsk, PictureError, PictureRun, Pixels,
 };
 
+mod queue;
+
+pub use queue::Draws;
+use queue::Looks;
+
 /// The drawing thread's name, as a debugger shows it.
 const MEDIA_THREAD: &str = "kx-clip-media";
 /// The file thread's name.
@@ -150,7 +155,8 @@ pub fn spawn_media(
         .spawn(serve)
 }
 
-/// Starts `kx-clip-files`: it answers each look from `looks` through `tell`, until `looks` closes.
+/// Starts `kx-clip-files`: it answers the looks from `looks` through `tell`, insert checks first and only the newest
+/// row look, until `looks` closes.
 ///
 /// # Errors
 /// The OS's error when the thread does not start.
@@ -160,7 +166,8 @@ pub fn spawn_files(
     tell: impl Fn(Facts) + Send + 'static,
 ) -> io::Result<JoinHandle<()>> {
     let serve = move || {
-        for asked in looks {
+        let mut waiting = Looks::default();
+        while let Some(asked) = waiting.next(&looks) {
             tell(look(&*clip, &asked));
         }
     };

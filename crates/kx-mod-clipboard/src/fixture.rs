@@ -4,15 +4,18 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{AppRef, Calendar, ClipPart, Date, LocalTime, MAX_BLOB_BYTES};
+use kx_module_api::ports::{
+    AppRef, Calendar, ClipPart, Date, ImageCodec, LocalTime, MAX_BLOB_BYTES,
+};
 use kx_platform_fake::FakeCalendar;
 
 use crate::entry::{Entry, EntryConfig};
 use crate::keep::Limits;
 use crate::store::StoreConfig;
 
-/// Bytes in a megabyte, as the settings count them.
-pub(crate) const MB: u64 = 1024 * 1024;
+/// Bytes in a megabyte, the port's one unit.
+pub(crate) use kx_module_api::ports::MB;
+
 /// Paris in winter, in minutes east of UTC.
 pub(crate) const PARIS: i16 = 60;
 /// The plan's `title_chars` and `search_chars`.
@@ -52,6 +55,14 @@ pub(crate) fn at(day: Date, hour: u8, minute: u8) -> LocalTime {
 /// A plain text part.
 pub(crate) fn text(s: &str) -> ClipPart {
     ClipPart::Text(Redacted::new(s.to_owned()))
+}
+
+/// A small PNG image part.
+pub(crate) fn image() -> ClipPart {
+    ClipPart::Image {
+        codec: ImageCodec::Png,
+        bytes: Redacted::new(vec![1, 2, 3]),
+    }
 }
 
 /// A file list part.

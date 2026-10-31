@@ -1,5 +1,5 @@
-//! The actor over the fakes: copies and their limits (`copies`), the panel (`panel`), inserting (`paste`), the days
-//! (`days`) and pictures (`pictures`); `rig` drives it without a thread and `ears` keeps what it published.
+//! The actor over the fakes: copies and their limits (`copies`), the panel (`panel`), inserting (`paste`, `joins`,
+//! `stops`), saves (`saves`), the days (`days`) and pictures (`pictures`); `rig` drives it without a thread.
 
 #![allow(
     clippy::unwrap_used,
@@ -9,10 +9,15 @@
 mod copies;
 mod days;
 mod ears;
+mod fakes;
+mod joins;
+mod logs;
 mod panel;
 mod paste;
 mod pictures;
 mod rig;
+mod saves;
+mod stops;
 
 use kx_module_api::keys;
 use kx_module_api::ports::BlobName;

@@ -1,9 +1,9 @@
-//! Pictures: a new image's thumbnail queues to `Pictures` at `thumb_px` and shows on its row, a preview is drawn at
-//! `preview_px`, and a worker that fails leaves the type icon, asked once per run.
+//! Pictures: a new image's thumbnail queues to `Pictures` at `thumb_px` and shows on its row, one thumbnail draws at
+//! a time, a preview is drawn at `preview_px`, and a worker that fails leaves the type icon, asked once per run.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipAct, ClipKind, ClipPart, ImageCodec, PictureError, Pixels, Preview,
+    ClipAct, ClipKind, ClipNote, ClipPart, ImageCodec, PictureError, Pixels, Preview,
 };
 
 use super::super::Msg;
@@ -62,4 +62,24 @@ fn a_worker_that_fails_leaves_the_type_icon_and_is_asked_once() {
     let row = rig.page().rows[0].clone();
     assert_eq!((row.kind, row.thumb), (ClipKind::Image, None));
     assert_eq!(rig.fakes.pics.asks(), 1);
+}
+
+#[test]
+fn thumbnails_draw_one_at_a_time_and_every_row_gets_its_own() {
+    let mut rig = Rig::new();
+    for n in 1..=3 {
+        rig.fakes.pics.queue(Ok(pixels()));
+        let parts = vec![ClipPart::Image {
+            codec: ImageCodec::Png,
+            bytes: Redacted::new(vec![n]),
+        }];
+        rig.fakes.clip.push(ClipNote::Copied { parts, app: None });
+    }
+    rig.open();
+    assert_eq!(
+        rig.fakes.pics.asks(),
+        3,
+        "the copies after the first wait for the view"
+    );
+    assert!(rig.page().rows.iter().all(|r| r.thumb.is_some()));
 }
