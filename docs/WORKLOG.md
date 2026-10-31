@@ -4,6 +4,12 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 21:45 — P8: Open folder's failure came from the test launch, not the code
+In the hands-on check, Open folder showed Explorer's "cannot find", and an `explorer.exe` route then opened Documents. The cause was the launch: KeyXtend started from a packaged (MSIX) app's shell wrote into that app's private copy of AppData (`Packages\<app>\LocalCache`), which Explorer cannot see. The `explorer.exe` change is reverted, and Open folder is checked on the test build, whose portable data folder sits on D:.
+
+## 2026-10-31 20:15 — P8: G20 and G25 skip Windows' clipboard panel without uiAccess
+An injected Win+V reaches Windows only from a uiAccess app, so on the test build G20's history-off copy and G25's Win and V part could never pass. Both now read the product's token and report the part as skipped with one shared reason, neither failing nor passing, while a uiAccess product runs it as before. A gate passes only when at least one part was checked and every checked part passed (`winpanel.rs`).
+
 ## 2026-10-31 18:56 — P8: final fix 2, an inserted PNG goes with the worker's DIB
 A copied picture keeps one format again, PNG first, and Insert asks the media worker to make a 32-bit `CF_DIB` from it within `media_ms` and `max_entry_mb`, then sets both; a worker down, late or refusing leaves the PNG alone with one log line. `kx-ipc` carries the new ask and reply, the worker refuses a DIB past its cap from the PNG header alone, and the keyboard only checks the DIB's length. The settings check now takes the worker's decode budget and read peak from `kx-ipc` and counts the DIB beside the PNG. A tick with no view is a quiet late click, the `clipAct` note names its round, and the share-path test uses real share paths.
 
