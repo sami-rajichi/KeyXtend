@@ -92,15 +92,16 @@ pub struct Facts {
     pub items: Vec<(u64, Vec<FileFact>)>,
 }
 
-/// The job drawing `size` of entry `id` from the image part of `parts`; `None` when they hold none.
+/// The job drawing `size` of entry `id` from the image part of `parts`, whose bytes move in uncopied; `None` when
+/// they hold none.
 #[must_use]
-pub fn job_of(id: u64, size: Size, parts: &[ClipPart]) -> Option<Job> {
-    parts.iter().find_map(|p| match p {
+pub fn job_of(id: u64, size: Size, parts: Vec<ClipPart>) -> Option<Job> {
+    parts.into_iter().find_map(|p| match p {
         ClipPart::Image { codec, bytes } => Some(Job {
             id,
             size,
-            codec: *codec,
-            bytes: bytes.clone(),
+            codec,
+            bytes,
         }),
         _ => None,
     })
@@ -120,7 +121,7 @@ pub fn draw(run: &mut dyn PictureRun, job: Job, sides: Sides) -> Drawn {
     Drawn {
         id: job.id,
         size: job.size,
-        pixels: run.draw(&ask),
+        pixels: run.draw(ask),
     }
 }
 

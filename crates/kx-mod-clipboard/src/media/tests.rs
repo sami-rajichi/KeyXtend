@@ -28,13 +28,24 @@ fn image(bytes: &[u8]) -> ClipPart {
 
 #[test]
 fn a_job_takes_the_image_part_or_none() {
-    let job = job_of(7, Size::Thumb, &[text("x"), image(&[1, 2])]).unwrap();
+    let job = job_of(7, Size::Thumb, vec![text("x"), image(&[1, 2])]).unwrap();
     assert_eq!(
         (job.id, job.size, job.codec),
         (7, Size::Thumb, ImageCodec::Dib)
     );
     assert_eq!(job.bytes.expose(), &[1, 2]);
-    assert!(job_of(7, Size::Preview, &[text("only words")]).is_none());
+    assert!(job_of(7, Size::Preview, vec![text("only words")]).is_none());
+}
+
+#[test]
+fn a_job_moves_the_image_bytes_and_never_copies_them() {
+    let part = image(&[1, 2]);
+    let ClipPart::Image { bytes, .. } = &part else {
+        unreachable!()
+    };
+    let at = bytes.expose().as_ptr();
+    let job = job_of(7, Size::Thumb, vec![text("x"), part]).unwrap();
+    assert_eq!(job.bytes.expose().as_ptr(), at, "one copy of up to 64 MiB");
 }
 
 #[test]
@@ -44,7 +55,7 @@ fn a_thumb_draws_at_its_side_and_a_preview_at_its_own() {
     let mut run = pics.open(DEFAULTS.picture_config());
     let drawn = draw(
         &mut *run,
-        job_of(3, Size::Thumb, &[image(&[9])]).unwrap(),
+        job_of(3, Size::Thumb, vec![image(&[9])]).unwrap(),
         DEFAULTS.sides(),
     );
     assert_eq!(
@@ -57,7 +68,7 @@ fn a_thumb_draws_at_its_side_and_a_preview_at_its_own() {
     );
     draw(
         &mut *run,
-        job_of(3, Size::Preview, &[image(&[9])]).unwrap(),
+        job_of(3, Size::Preview, vec![image(&[9])]).unwrap(),
         DEFAULTS.sides(),
     );
     assert_eq!(
@@ -73,7 +84,7 @@ fn a_failed_draw_is_told_as_it_is() {
     let mut run = pics.open(DEFAULTS.picture_config());
     let drawn = draw(
         &mut *run,
-        job_of(1, Size::Thumb, &[image(&[1])]).unwrap(),
+        job_of(1, Size::Thumb, vec![image(&[1])]).unwrap(),
         DEFAULTS.sides(),
     );
     assert_eq!(drawn.pixels, Err(PictureError::Timeout));
@@ -116,7 +127,7 @@ fn the_media_thread_draws_each_job_and_ends_with_its_inbox_and_the_session() {
         },
     )
     .unwrap();
-    jobs.send(job_of(5, Size::Thumb, &[image(&[1])]).unwrap())
+    jobs.send(job_of(5, Size::Thumb, vec![image(&[1])]).unwrap())
         .unwrap();
     let drawn = heard.recv_timeout(WAIT).unwrap();
     assert_eq!((drawn.id, drawn.pixels), (5, Ok(pixels())));
@@ -155,7 +166,7 @@ fn the_files_thread_looks_and_ends_with_its_inbox() {
 
 #[test]
 fn no_debug_shows_an_image_or_a_path() {
-    let job = job_of(1, Size::Thumb, &[image(b"SECRETBYTES")]).unwrap();
+    let job = job_of(1, Size::Thumb, vec![image(b"SECRETBYTES")]).unwrap();
     let ClipPart::Files(paths) = files(&["C:\\secret.txt"]) else {
         unreachable!()
     };
@@ -202,7 +213,7 @@ fn the_files_thread_serves_inserts_first_and_only_the_newest_row_look() {
 
 #[test]
 fn one_thumbnail_draws_at_a_time_and_only_the_newest_preview_waits() {
-    let job = |id| job_of(id, Size::Preview, &[image(b"x")]).unwrap();
+    let job = |id| job_of(id, Size::Preview, vec![image(b"x")]).unwrap();
     let mut draws = Draws::default();
     draws.went(Size::Thumb);
     assert!(!draws.free(Size::Thumb) && draws.free(Size::Preview));

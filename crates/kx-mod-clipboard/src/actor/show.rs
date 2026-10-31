@@ -110,7 +110,7 @@ impl Actor {
             Ok(Some(parts)) => {
                 let shown = view::preview(&entry, &parts, self.settings.preview_chars);
                 self.panel.show(id, shown);
-                if let Some(job) = job_of(id, Size::Preview, &parts) {
+                if let Some(job) = job_of(id, Size::Preview, parts) {
                     self.send_job(job);
                 }
                 self.redraw = true;

@@ -135,12 +135,13 @@ struct FakePictureRun {
 }
 
 impl PictureRun for FakePictureRun {
-    fn draw(&mut self, ask: &PictureAsk) -> Result<Pixels, PictureError> {
+    fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
         let mut log = lock(&self.shared.log);
         log.asks += 1;
-        log.last_ask = Some(ask.clone());
+        let side = ask.side;
+        log.last_ask = Some(ask);
         self.shared.asked.notify_all();
-        log.answer(ask.side)
+        log.answer(side)
     }
 }
 

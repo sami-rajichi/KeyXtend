@@ -60,16 +60,16 @@ fn scripted_answers_come_in_turn_and_the_latest_repeats() {
     pictures.queue(Ok(wide.clone()));
     pictures.queue(Err(PictureError::Refused));
     pictures.queue(Ok(tall.clone()));
-    assert_eq!(run.draw(&ask(b"a", SIDE)), Ok(wide));
-    assert_eq!(run.draw(&ask(b"b", SIDE)), Err(PictureError::Refused));
-    assert_eq!(run.draw(&ask(b"c", SIDE)), Ok(tall.clone()));
-    assert_eq!(run.draw(&ask(b"d", SIDE)), Ok(tall), "the latest repeats");
+    assert_eq!(run.draw(ask(b"a", SIDE)), Ok(wide));
+    assert_eq!(run.draw(ask(b"b", SIDE)), Err(PictureError::Refused));
+    assert_eq!(run.draw(ask(b"c", SIDE)), Ok(tall.clone()));
+    assert_eq!(run.draw(ask(b"d", SIDE)), Ok(tall), "the latest repeats");
 }
 
 #[test]
 fn before_any_script_the_worker_is_gone() {
     let mut run = FakePictures::new().open(CFG);
-    assert_eq!(run.draw(&ask(b"a", SIDE)), Err(PictureError::Gone));
+    assert_eq!(run.draw(ask(b"a", SIDE)), Err(PictureError::Gone));
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn a_hang_is_a_scripted_timeout_that_never_sleeps_and_every_error_comes_back() {
     ];
     for error in errors {
         pictures.queue(Err(error));
-        assert_eq!(run.draw(&ask(b"a", SIDE)), Err(error));
+        assert_eq!(run.draw(ask(b"a", SIDE)), Err(error));
     }
 }
 
@@ -96,8 +96,8 @@ fn pixels_past_the_asks_side_come_back_gone_as_bad_pixels_do() {
     let pictures = FakePictures::new();
     let mut run = pictures.open(CFG);
     pictures.queue(Ok(red(SIDE, SIDE, SIDE)));
-    assert_eq!(run.draw(&ask(b"a", SIDE - 1)), Err(PictureError::Gone));
-    assert!(run.draw(&ask(b"a", SIDE)).is_ok(), "within the side");
+    assert_eq!(run.draw(ask(b"a", SIDE - 1)), Err(PictureError::Gone));
+    assert!(run.draw(ask(b"a", SIDE)).is_ok(), "within the side");
 }
 
 #[test]
@@ -105,9 +105,9 @@ fn asks_are_counted_and_the_latest_kept_failed_ones_too() {
     let pictures = FakePictures::new();
     let mut run = pictures.open(CFG);
     assert_eq!((pictures.asks(), pictures.last_ask()), (0, None));
-    let _ = run.draw(&ask(b"first", SIDE));
+    let _ = run.draw(ask(b"first", SIDE));
     pictures.queue(Ok(red(1, 1, SIDE)));
-    let _ = run.draw(&ask(b"second", SIDE));
+    let _ = run.draw(ask(b"second", SIDE));
     assert_eq!(pictures.asks(), 2);
     assert_eq!(pictures.last_ask(), Some(ask(b"second", SIDE)));
 }
@@ -117,7 +117,7 @@ fn a_draw_on_another_thread_wakes_a_waiting_test() {
     let pictures = FakePictures::new();
     assert!(!pictures.wait_asks(1, Duration::ZERO), "no ask yet");
     let port: Arc<dyn Pictures> = Arc::new(pictures.clone());
-    let media = thread::spawn(move || port.open(CFG).draw(&ask(b"a", SIDE)));
+    let media = thread::spawn(move || port.open(CFG).draw(ask(b"a", SIDE)));
     assert!(pictures.wait_asks(1, WITHIN));
     assert_eq!(media.join().unwrap(), Err(PictureError::Gone));
 }
@@ -125,7 +125,7 @@ fn a_draw_on_another_thread_wakes_a_waiting_test() {
 #[test]
 fn debug_never_prints_the_bytes() {
     let pictures = FakePictures::new();
-    let _ = pictures.open(CFG).draw(&ask(b"secret", SIDE));
+    let _ = pictures.open(CFG).draw(ask(b"secret", SIDE));
     let text = format!("{pictures:?}");
     assert!(text.contains("FakePictures"));
     // The ask's bytes as text, as a first decimal byte, and as hex.

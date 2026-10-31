@@ -53,7 +53,7 @@ impl Actor {
         let id = self.history.add(entry);
         if self.put(id, &parts) {
             self.kept(id, app);
-            self.look_new(id, kind, &parts);
+            self.look_new(id, kind, parts);
             for gone in trim(&mut self.history, &self.limits) {
                 self.forget(&gone);
             }
@@ -110,7 +110,7 @@ impl Actor {
     }
 
     /// Asks for a new image's thumbnail unless the worker is down, or a new file row's size.
-    fn look_new(&mut self, id: u64, kind: ClipKind, parts: &[ClipPart]) {
+    fn look_new(&mut self, id: u64, kind: ClipKind, parts: Vec<ClipPart>) {
         let free = self.draws.free(Size::Thumb) && self.thumbs_at.is_none();
         match kind {
             ClipKind::Image if free && self.asked.insert(id) => {

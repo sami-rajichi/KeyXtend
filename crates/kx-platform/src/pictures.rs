@@ -145,14 +145,12 @@ struct Session {
 }
 
 impl PictureRun for Session {
-    fn draw(&mut self, ask: &PictureAsk) -> Result<Pixels, PictureError> {
+    fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError> {
         let jobs = self.jobs.as_ref().ok_or(PictureError::Gone)?;
         let (answer, heard) = mpsc::channel();
-        let job = Job {
-            ask: ask.clone(),
-            answer,
-        };
-        jobs.send(job).map_err(|_| PictureError::Gone)?;
+        // The ask moves on to the session thread, so its bytes are never copied here.
+        jobs.send(Job { ask, answer })
+            .map_err(|_| PictureError::Gone)?;
         heard.recv().unwrap_or(Err(PictureError::Gone))
     }
 }

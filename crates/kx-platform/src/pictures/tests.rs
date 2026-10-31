@@ -58,7 +58,7 @@ fn a_session_draws_on_its_thread_and_its_drop_stops_the_worker() {
     let (pictures, told) = pictures(&script);
     let mut run = pictures.open(CFG);
     script.act(Act::Draw(3, 2));
-    let drawn = run.draw(&ask()).unwrap();
+    let drawn = run.draw(ask()).unwrap();
     assert_eq!((drawn.width(), drawn.height()), (3, 2));
     drop(run);
     ended(&told);
@@ -70,10 +70,10 @@ fn a_session_stops_an_idle_worker_by_itself() {
     let script = Script::default();
     let (pictures, told) = pictures(&script);
     let mut run = pictures.open(PictureConfig { idle_s: 0, ..CFG });
-    run.draw(&ask()).unwrap();
+    run.draw(ask()).unwrap();
     ended(&told);
     assert!(script.calls().contains(&Call::Bye));
-    run.draw(&ask()).unwrap();
+    run.draw(ask()).unwrap();
     assert_eq!(script.spawns(), 2);
 }
 
@@ -84,7 +84,7 @@ fn a_draw_whose_worker_never_starts_is_down_until_its_backoff_ends() {
     let (pictures, _told) = pictures(&script);
     let mut run = pictures.open(CFG);
     let retry_in = Duration::from_millis(u64::from(CFG.restart_ms));
-    assert_eq!(run.draw(&ask()), Err(PictureError::Down { retry_in }));
+    assert_eq!(run.draw(ask()), Err(PictureError::Down { retry_in }));
 }
 
 #[test]

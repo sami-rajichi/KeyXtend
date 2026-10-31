@@ -115,7 +115,7 @@ pub trait PictureRun: Send {
     /// # Errors
     /// `Refused` for bytes that are no image, `TooBig` past `max_pixels`, `Timeout` past the deadline, `Gone` when the
     /// worker ends or answers badly on it, and `Down` when the worker rests or cannot start, so it was not tried.
-    fn draw(&mut self, ask: &PictureAsk) -> Result<Pixels, PictureError>;
+    fn draw(&mut self, ask: PictureAsk) -> Result<Pixels, PictureError>;
 }
 
 /// Draws images outside our process; the platform provides it.

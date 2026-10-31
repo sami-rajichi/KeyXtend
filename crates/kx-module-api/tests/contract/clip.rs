@@ -94,7 +94,7 @@ impl SealedShelf for Stuck {
 }
 
 impl PictureRun for Stuck {
-    fn draw(&mut self, _: &PictureAsk) -> Result<Pixels, PictureError> {
+    fn draw(&mut self, _: PictureAsk) -> Result<Pixels, PictureError> {
         Err(PictureError::Gone)
     }
 }

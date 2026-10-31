@@ -80,7 +80,7 @@ impl Actor {
                 continue;
             };
             let parts = self.store.parts(entry).ok().flatten();
-            if let Some(job) = parts.and_then(|p| job_of(id, Size::Thumb, &p)) {
+            if let Some(job) = parts.and_then(|p| job_of(id, Size::Thumb, p)) {
                 self.send_job(job);
             }
         }

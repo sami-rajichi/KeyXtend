@@ -135,12 +135,12 @@ fn the_real_worker_draws_through_the_host() {
     let pictures = WorkerPictures::new(spawner(), Arc::new(Still));
     let mut run = pictures.open(CFG);
     let dib = ask(ImageCodec::Dib, tiny_dib());
-    let drawn = run.draw(&dib).unwrap();
+    let drawn = run.draw(dib.clone()).unwrap();
     assert_eq!((drawn.width(), drawn.height()), (1, 1));
     assert_eq!(drawn.rgba().expose().as_ref(), [1, 2, 3, 255]);
     let junk = ask(ImageCodec::Png, b"junk".to_vec());
-    assert_eq!(run.draw(&junk), Err(PictureError::Refused));
-    assert!(run.draw(&dib).is_ok(), "a refused image keeps the worker");
+    assert_eq!(run.draw(junk), Err(PictureError::Refused));
+    assert!(run.draw(dib).is_ok(), "a refused image keeps the worker");
 }
 
 #[test]
