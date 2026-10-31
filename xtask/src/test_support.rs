@@ -101,6 +101,12 @@ pub(crate) fn tidy_config() -> TidyConfig {
         bridge_crate: "kx-ui".to_string(),
         bridge_dir: "src/bridges".to_string(),
         safety_tag: "// SAFETY:".to_string(),
+        spawn_dirs: ["apps", "crates"].map(String::from).to_vec(),
+        spawn_extensions: ["rs", "h"].map(String::from).to_vec(),
+        banned_spawns: ["std::process::Command", "QProcess"]
+            .map(String::from)
+            .to_vec(),
+        build_scripts: ["build.rs", "qtbuild.rs"].map(String::from).to_vec(),
     }
 }
 

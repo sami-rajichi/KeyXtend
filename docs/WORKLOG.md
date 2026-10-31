@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 03:13 — P8: the worker host's review fixes and tidy F4
+A worker that quit between draws is now replaced before the next draw with no backoff, and the host tests check the waits it gives. The worker's job also bars it from shared UI: other windows, the clipboard, atoms, desktops, display and system settings, and signing out. New tidy rule F4 bans `std::process::Command` and `QProcess` in product code under `apps/` and `crates/`, so no plain start can inherit a starting worker's pipes; tests, test modules and build scripts may still use them, and no product use turned up. The worker tests now build the worker with the target folder, triple and profile of their own path.
+
 ## 2026-10-31 03:07 — P8: the clipboard history's sealed store
 `kx-mod-clipboard`'s new `Store` keeps the history on the sealed shelf in one folder per calendar day plus `pinned`: each folder's list in a small versioned byte form, and each entry's content and thumbnail in blobs under the 16 MiB cap; a list past the cap splits too, so 5,000 entries at the longest title and search text fit. A load drops entries whose folder or blobs went by hand, sets a damaged list's folder aside once for the notice, removes blobs no list names, and merges an entry that two lists hold after a crash. A move copies the blobs, saves the new folder's list before the old one's, then removes the old blobs, and a split list's extra blobs take turns in two rounds, so tests that cut the writes at every point find each entry whole or gone and each list old or new. Deletes remove every blob at once, and only lists whose entries changed are written again.
 

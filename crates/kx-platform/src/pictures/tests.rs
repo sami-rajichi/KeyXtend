@@ -41,6 +41,12 @@ fn pictures(script: &Script) -> (WorkerPictures<Script>, Receiver<Call>) {
     )
 }
 
+/// A wait for the exit code, as long as the deadline.
+fn code() -> Call {
+    let within = Duration::from_millis(CFG.deadline_ms.into());
+    Call::Code { within }
+}
+
 /// Waits until the session's worker is ended.
 fn ended(told: &Receiver<Call>) {
     while told.recv_timeout(WAIT).expect("the worker is ended") != Call::End {}
@@ -56,11 +62,7 @@ fn a_session_draws_on_its_thread_and_its_drop_stops_the_worker() {
     assert_eq!((drawn.width(), drawn.height()), (3, 2));
     drop(run);
     ended(&told);
-    assert!(
-        script
-            .calls()
-            .ends_with(&[Call::Bye, Call::Code, Call::End])
-    );
+    assert!(script.calls().ends_with(&[Call::Bye, code(), Call::End]));
 }
 
 #[test]

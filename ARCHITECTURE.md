@@ -221,6 +221,7 @@ pub trait Module: Send + 'static {
 11. Only tools, dev-dependencies and test-only crates may use `kx-test-support` and `kx-platform-fake` (tidy D5). No shipped crate depends on them.
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
 13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5), and kx-mod-predict's `build` (the pack writer), which only xtask turns on.
+14. Product code in `apps/` and `crates/` starts no process with `std::process::Command` or `QProcess` (tidy F4, `banned_spawns`). A worker starts through the platform's spawner (`WinSpawner`), which lowers its rights and lets it inherit only its pipes; tests, test modules, build scripts and `tools/` may start processes.
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.

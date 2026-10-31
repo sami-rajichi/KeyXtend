@@ -1,4 +1,4 @@
-//! F1-F2: the file-size and unsafe-attribute rules from `ARCHITECTURE.md`, and the file walk F3 shares.
+//! F1-F2: the file-size and unsafe-attribute rules from `ARCHITECTURE.md`, and the file walk F3 and F4 share.
 
 use std::fs::{self, FileType};
 use std::path::{Path, PathBuf};
@@ -76,17 +76,34 @@ fn f1_violation(place: String, message: String, severity: Severity) -> Violation
 fn walk_source_files(root: &Path, tidy: &TidyConfig) -> (Vec<PathBuf>, Vec<Violation>) {
     let mut files = Vec::new();
     let mut violations = Vec::new();
+    let pick = Pick::sources(tidy);
     for dir in &tidy.scan_dirs {
-        walk_dir(&root.join(dir), root, tidy, &mut files, &mut violations);
+        walk_dir(&root.join(dir), root, &pick, &mut files, &mut violations);
     }
     (files, violations)
 }
 
-/// Recursive step of [`walk_source_files`], also used by F3; never panics on an unreadable directory.
+/// What a walk lists: files with one of `exts`, outside folders named in `skip`.
+pub(super) struct Pick<'a> {
+    pub exts: &'a [String],
+    pub skip: &'a [String],
+}
+
+impl<'a> Pick<'a> {
+    /// The source files the size rule reads.
+    pub(super) fn sources(tidy: &'a TidyConfig) -> Self {
+        Self {
+            exts: &tidy.extensions,
+            skip: &tidy.skip_dirs,
+        }
+    }
+}
+
+/// Recursive step of [`walk_source_files`], also used by F3 and F4; never panics on an unreadable directory.
 pub(super) fn walk_dir(
     dir: &Path,
     root: &Path,
-    tidy: &TidyConfig,
+    pick: &Pick<'_>,
     files: &mut Vec<PathBuf>,
     violations: &mut Vec<Violation>,
 ) {
@@ -100,7 +117,7 @@ pub(super) fn walk_dir(
     };
     for entry in entries {
         match entry.and_then(|e| e.file_type().map(|kind| (e.path(), kind))) {
-            Ok((path, kind)) => visit_entry(&path, kind, root, tidy, files, violations),
+            Ok((path, kind)) => visit_entry(&path, kind, root, pick, files, violations),
             Err(err) => violations.push(read_dir_violation(dir, root, &err)),
         }
     }
@@ -112,7 +129,7 @@ fn visit_entry(
     path: &Path,
     kind: FileType,
     root: &Path,
-    tidy: &TidyConfig,
+    pick: &Pick<'_>,
     files: &mut Vec<PathBuf>,
     violations: &mut Vec<Violation>,
 ) {
@@ -120,10 +137,10 @@ fn visit_entry(
         return;
     }
     if kind.is_dir() {
-        if !is_skipped(path, tidy) {
-            walk_dir(path, root, tidy, files, violations);
+        if !is_skipped(path, pick.skip) {
+            walk_dir(path, root, pick, files, violations);
         }
-    } else if has_scanned_extension(path, tidy) {
+    } else if has_scanned_extension(path, pick.exts) {
         files.push(path.to_path_buf());
     }
 }
@@ -133,18 +150,18 @@ fn read_dir_violation(dir: &Path, root: &Path, err: &std::io::Error) -> Violatio
     f1_violation(relative_place(dir, root), err.to_string(), Severity::Error)
 }
 
-/// True if `dir`'s folder name is in `tidy.skip_dirs`.
-fn is_skipped(dir: &Path, tidy: &TidyConfig) -> bool {
+/// True if `dir`'s folder name is in `skip`.
+fn is_skipped(dir: &Path, skip: &[String]) -> bool {
     dir.file_name()
         .and_then(|n| n.to_str())
-        .is_some_and(|name| tidy.skip_dirs.iter().any(|s| s == name))
+        .is_some_and(|name| skip.iter().any(|s| s == name))
 }
 
-/// True if `path`'s extension is in `tidy.extensions`.
-fn has_scanned_extension(path: &Path, tidy: &TidyConfig) -> bool {
+/// True if `path`'s extension is in `exts`.
+fn has_scanned_extension(path: &Path, exts: &[String]) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
-        .is_some_and(|ext| tidy.extensions.iter().any(|e| e == ext))
+        .is_some_and(|ext| exts.iter().any(|e| e == ext))
 }
 
 /// F2: every non-platform crate root must carry `unsafe_attr`; a tool or the bridge crate may carry `deny_attr`.

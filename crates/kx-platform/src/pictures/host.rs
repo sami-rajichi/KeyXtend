@@ -89,8 +89,9 @@ impl<S: Spawner> Host<S> {
         }
     }
 
-    /// The live worker, started now unless the backoff still runs.
+    /// The live worker, started now unless the backoff still runs; one that quit since the last draw is replaced.
     fn start(&mut self) -> Result<&mut S::Worker, PictureError> {
+        self.clear_quit();
         if self.worker.is_none() {
             let now = self.clock.now();
             if now < self.calm {
@@ -105,6 +106,19 @@ impl<S: Spawner> Host<S> {
             }
         }
         self.worker.as_mut().ok_or(PictureError::Gone)
+    }
+
+    /// Ends a worker that quit since the last draw, with no backoff, since no draw of ours failed.
+    fn clear_quit(&mut self) {
+        let Some(worker) = self.worker.as_mut() else {
+            return;
+        };
+        if let Some(code) = worker.code(Duration::ZERO) {
+            worker.end();
+            self.worker = None;
+            let note = exit_note(Some(code));
+            tracing::warn!(note, "the picture worker quit between draws");
+        }
     }
 
     /// Checks the reply to draw `id` of longest side `side`; a worker that lies or is late is ended.

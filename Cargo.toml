@@ -102,6 +102,15 @@ bridge_crate = "kx-ui"
 bridge_dir = "src/bridges"
 # The comment that must stand above each unsafe use in that folder.
 safety_tag = "// SAFETY:"
+# Folders whose packages' product code starts no process itself (tidy F4): a worker starts through the platform's
+# spawner, which lowers its rights and lets it inherit only its pipes.
+spawn_dirs = ["apps", "crates"]
+# File extensions F4 reads.
+spawn_extensions = ["rs", "h", "cpp"]
+# Process-start APIs F4 bans there; it looks for the last name in a file that also names the one before it.
+banned_spawns = ["std::process::Command", "QProcess"]
+# Build scripts, as paths inside their package; like tests and the test tools, they may start processes.
+build_scripts = ["build.rs", "qtbuild.rs"]
 
 [workspace.metadata.dco]
 # Commit trailer that counts as a sign-off.

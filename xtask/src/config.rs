@@ -55,6 +55,14 @@ pub(crate) struct TidyConfig {
     pub bridge_dir: String,
     /// The comment that must stand above each `unsafe` in the bridge folder.
     pub safety_tag: String,
+    /// Folders whose packages' product code starts no process itself (tidy F4).
+    pub spawn_dirs: Vec<String>,
+    /// File extensions F4 reads.
+    pub spawn_extensions: Vec<String>,
+    /// Process-start APIs F4 bans, as paths: it looks for the last name in a file that also names the one before it.
+    pub banned_spawns: Vec<String>,
+    /// Build scripts, as paths inside their package, which may start processes.
+    pub build_scripts: Vec<String>,
 }
 
 impl TidyConfig {
@@ -266,7 +274,8 @@ mod tests {
             "banned_network": [], "banned_media": [], "banned_features": {},
             "build_only_features": {}, "unsafe_attr": "x",
             "deny_attr": "y", "root_kinds": [], "test_only": [], "bridge_crate": "b",
-            "bridge_dir": "d", "safety_tag": "t", "bogus": 1
+            "bridge_dir": "d", "safety_tag": "t", "spawn_dirs": [], "spawn_extensions": [],
+            "banned_spawns": [], "build_scripts": [], "bogus": 1
         }"#;
         assert!(serde_json::from_str::<TidyConfig>(json).is_err());
         let known = json.replace(r#", "bogus": 1"#, "");

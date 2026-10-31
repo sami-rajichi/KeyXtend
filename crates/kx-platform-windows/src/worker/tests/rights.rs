@@ -1,5 +1,5 @@
 //! The worker's reduced rights, read from outside: its token has no uiAccess and Medium integrity, it holds none of
-//! our inheritable handles, and its job caps it, ends it on demand and ends it when the host lets go.
+//! our inheritable handles, and its job caps it, bars it from shared UI, ends it on demand and when the host lets go.
 
 use super::*;
 use crate::worker::job::{ALONE, ENDED, LIMITS, MIB};
@@ -9,8 +9,12 @@ use std::process::Stdio;
 use windows::Win32::Foundation::{CompareObjectHandles, DUPLICATE_SAME_ACCESS, DuplicateHandle};
 use windows::Win32::Security::SECURITY_ATTRIBUTES;
 use windows::Win32::System::JobObjects::{
-    IsProcessInJob, JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
-    QueryInformationJobObject,
+    IsProcessInJob, JOB_OBJECT_UILIMIT_DESKTOP, JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
+    JOB_OBJECT_UILIMIT_EXITWINDOWS, JOB_OBJECT_UILIMIT_GLOBALATOMS, JOB_OBJECT_UILIMIT_HANDLES,
+    JOB_OBJECT_UILIMIT_READCLIPBOARD, JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS,
+    JOB_OBJECT_UILIMIT_WRITECLIPBOARD, JOBOBJECT_BASIC_UI_RESTRICTIONS,
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectBasicUIRestrictions,
+    JobObjectExtendedLimitInformation, QueryInformationJobObject,
 };
 use windows::Win32::System::SystemServices::SECURITY_MANDATORY_HIGH_RID;
 use windows::Win32::System::Threading::{CreateEventW, GetCurrentProcess};
@@ -138,6 +142,33 @@ fn the_job_caps_the_worker_alone_in_it() {
     assert_eq!(basic.ActiveProcessLimit, ALONE);
     let mb = usize::try_from(CFG.memory_mb).unwrap();
     assert_eq!(limits.ProcessMemoryLimit, mb * MIB);
+}
+
+#[test]
+#[allow(unsafe_code, reason = "Reads the UI limits of our own job.")]
+fn the_job_bars_the_worker_from_shared_ui() {
+    let worker = spawn();
+    let mut ui = JOBOBJECT_BASIC_UI_RESTRICTIONS::default();
+    let size = size32::<JOBOBJECT_BASIC_UI_RESTRICTIONS>();
+    // SAFETY: our live job handle and a local of the size passed.
+    unsafe {
+        let info = (&raw mut ui).cast();
+        let job = Some(worker.child().job.handle());
+        QueryInformationJobObject(job, JobObjectBasicUIRestrictions, info, size, None).unwrap();
+    }
+    let barred = [
+        JOB_OBJECT_UILIMIT_HANDLES,
+        JOB_OBJECT_UILIMIT_READCLIPBOARD,
+        JOB_OBJECT_UILIMIT_WRITECLIPBOARD,
+        JOB_OBJECT_UILIMIT_GLOBALATOMS,
+        JOB_OBJECT_UILIMIT_DESKTOP,
+        JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
+        JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS,
+        JOB_OBJECT_UILIMIT_EXITWINDOWS,
+    ];
+    for limit in barred {
+        assert!(ui.UIRestrictionsClass.contains(limit), "{:#x}", limit.0);
+    }
 }
 
 #[test]

@@ -1,7 +1,7 @@
 # Security note: kx-platform
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 9: the media worker's host)
+- **Last review:** 2026-10-31 (P8 task 9: the media worker's host and its review fixes)
 - **Status:** Draft
 - **Scope:** `crates/kx-platform`'s worker host (`pictures`), which serves the `Pictures` port over an adapter's `Spawner` (ADR-0004, ADR-0034 decision 5). The folder rule, the pack and field-watch halves and the UI ports are covered with their adapter in `kx-platform-windows.md`.
 
@@ -32,6 +32,7 @@ The host logs only why a worker failed or stopped and a fixed note for its exit 
 - **Denial of service:**
   - A late worker costs one `deadline_ms` and is ended (`a_late_worker_is_ended_and_starts_again_only_after_its_backoff`). Asks go through a writer thread, so a worker that stops reading cannot block the host.
   - Failures in a row double the wait before the next start, from `restart_ms` up to `restart_max_ms`, and a good answer resets it; draws within the wait are `Gone` at once (`the_backoff_doubles_up_to_its_cap_and_a_good_draw_resets_it`).
+  - A worker that quit between draws is replaced before the next draw with no backoff, since no draw of ours failed (`a_worker_that_quit_between_draws_is_replaced_with_no_backoff`).
   - An idle worker says goodbye and stops after `idle_s`; dropping the session stops it too.
 - **Elevation:** the host has no `unsafe` and no OS call; the adapter starts the worker with reduced rights (`kx-platform-windows.md`, Elevation (worker)).
 

@@ -1,7 +1,7 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 9: the media worker's start; P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
+- **Last review:** 2026-10-31 (P8 task 9: the media worker's start and its review fixes; P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-platform-windows`, inside the uiAccess `keyxtend` process:
   - basics: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check and where libraries load from (`dll`);
@@ -25,7 +25,7 @@
 | Clock readings | Public | Memory only | N/A | Not kept |
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
 | The worker's token: a copy of ours with uiAccess cleared and Medium integrity (`worker::token`) | Public | A handle, closed once the worker has started | N/A | One start |
-| Image bytes and pixels between the host and the worker (`worker`) | Sensitive (copied by the user) | Two anonymous pipes that only our process and the worker hold | No | Until each frame is read |
+| Image bytes and pixels between the host and the worker (`worker`) | Sensitive (copied by the user) | Two anonymous pipes that only our process and the worker hold (see Accepted) | No | Until each frame is read |
 | Typed text and the keys it becomes | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted` text and key events for one send; not zeroised (see Accepted) | N/A | Dropped after the send |
 | A shortcut's key events: each step's keys from the table, with the latched scans held around each step (`shortcut`) | Public alone (fixed by the table); the latches are Sensitive together with the clicks around them | Memory only, for one send | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
@@ -188,6 +188,7 @@
   - Its token is a copy of ours with `TokenUIAccess` cleared and the integrity level set to Medium (S-1-16-8192), as a child of a uiAccess process otherwise keeps uiAccess. It starts suspended, and the start reads its token back and ends it before its first instruction if it kept uiAccess or runs above Medium (`the_worker_runs_without_ui_access_at_medium_integrity`).
   - It inherits only its stdin's read end and its stdout's write end (`PROC_THREAD_ATTRIBUTE_HANDLE_LIST`) and gets no stderr (`the_worker_inherits_only_its_pipes`, which first proves its check sees a handle a plain child inherits).
   - Its job caps its memory at `memory_mb`, takes no second process, ends it on a crash without an error box, and ends it when our last handle closes, so it dies with us (`the_job_caps_the_worker_alone_in_it`, `the_job_ends_the_worker_when_its_host_lets_go`).
+  - Its job also bars it from shared UI: other programs' windows, the clipboard, global atoms, desktops, display and system settings, and signing out, none of which a decoder needs (`the_job_bars_the_worker_from_shared_ui`).
 - **Denial of service (worker):** a hung, crashed or lying worker costs one draw's `deadline_ms`, is ended, and starts again only after a growing backoff (`kx_platform::pictures`). Asks are written on a thread of their own, so a worker that stops reading cannot hold the host past the deadline.
 - **Information disclosure (box watch):** it reads only when a module that holds `ReadFocusedText` asks, at most the words asked and `read_chars` characters before the caret.
   - It never reads a password box (UI Automation's `IsPassword`, or an edit class with the style bit `field.toml` names). It never reads an unknown box either: a fact it cannot read, a class `field.toml` lists as opaque (remote desktops, virtual machines, terminals, game engines), or a read-only box.
@@ -272,7 +273,7 @@ A hook thread that misses its stop wait is left running after its hooks are remo
 
 A speaker thread that misses its stop wait is left running; once its audio call returns, it finishes that one ask, serves no more, drops its voices and engine and ends.
 
-A starting worker's two pipe ends are inheritable until `CreateProcessAsUserW` returns. Our own starts name their handles, but a plain `std::process::Command` started on another thread at that moment inherits every inheritable handle and could hold the worker's pipe open; the app starts no process that way.
+A starting worker's two pipe ends are inheritable until `CreateProcessAsUserW` returns. Our own starts name their handles, but a plain `std::process::Command` started on another thread at that moment inherits every inheritable handle and could hold the worker's pipe open. Tidy F4 bans `std::process::Command` and `QProcess` in product code, so the app starts no process that way.
 
 A UI Automation call to a stuck app holds every UI Automation call in the process until its timeout, `read_ms`, so the scroll pad's end check reads unknown that long. Windows marks an app hung only after 5 s, so the run pings the target at each aim, turn and reach instead: from the last ping it answered until the next goes unanswered, one turn's interval plus `read_ms` at most, a few turns may still queue for a busy app.
 

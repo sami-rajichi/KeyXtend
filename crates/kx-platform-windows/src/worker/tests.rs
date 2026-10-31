@@ -22,8 +22,12 @@ mod rights;
 const WAIT: Duration = Duration::from_secs(10);
 /// The worker's package, which Cargo builds beside this test program.
 const PACKAGE: &str = "keyxtend-worker";
-/// The profile folder of an optimised build.
-const RELEASE: &str = "release";
+/// The folder Cargo's dev profile builds into, under a name of its own.
+const DEBUG_DIR: &str = "debug";
+/// Cargo's dev profile.
+const DEV: &str = "dev";
+/// A file Cargo keeps only at the top of its target folder, never in a target triple's folder.
+const TOP_MARK: &str = ".rustc_info.json";
 
 /// Test values; the real ones come from the clipboard module's settings.
 const CFG: PictureConfig = PictureConfig {
@@ -50,16 +54,31 @@ fn worker() -> PathBuf {
     BUILT.get_or_init(build).clone()
 }
 
-/// Builds the worker into this test program's profile folder.
+/// Builds the worker beside this test program, with the target folder, triple and profile its path shows.
 fn build() -> PathBuf {
     let exe = env::current_exe().unwrap();
     let dir = exe.parent().and_then(Path::parent).unwrap().to_path_buf();
+    let name = dir.file_name().unwrap();
+    let profile = if name == DEBUG_DIR {
+        OsStr::new(DEV)
+    } else {
+        name
+    };
+    let up = dir.parent().unwrap();
+    let (top, triple) = if up.join(TOP_MARK).is_file() {
+        (up, None)
+    } else {
+        (up.parent().unwrap(), up.file_name())
+    };
     let cargo = env::var_os("CARGO").unwrap_or_else(|| env!("CARGO").into());
     let mut cmd = Command::new(cargo);
-    cmd.args(["build", "--quiet", "-p", PACKAGE])
+    cmd.args(["build", "--quiet", "-p", PACKAGE, "--profile"])
+        .arg(profile)
+        .arg("--target-dir")
+        .arg(top)
         .current_dir(env!("CARGO_MANIFEST_DIR"));
-    if dir.ends_with(RELEASE) {
-        cmd.arg("--release");
+    if let Some(triple) = triple {
+        cmd.arg("--target").arg(triple);
     }
     assert!(
         cmd.status().unwrap().success(),

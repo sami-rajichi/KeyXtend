@@ -22,6 +22,8 @@ const CFG: PictureConfig = PictureConfig {
 const SIDE: u32 = 4;
 /// The smallest step of the clock.
 const TICK: Duration = Duration::from_micros(1);
+/// The exit code of a worker that died.
+const DIED: u32 = 3;
 
 fn ms(n: u32) -> Duration {
     Duration::from_millis(u64::from(n))
@@ -43,6 +45,27 @@ fn draw(id: u32) -> Call {
     Call::Draw { id, side: SIDE }
 }
 
+/// A wait for a reply, as long as the deadline.
+fn reply() -> Call {
+    Call::Reply {
+        within: ms(CFG.deadline_ms),
+    }
+}
+
+/// A wait for the exit code, as long as the deadline.
+fn code() -> Call {
+    Call::Code {
+        within: ms(CFG.deadline_ms),
+    }
+}
+
+/// A look at the exit code with no wait, before each later draw.
+fn peek() -> Call {
+    Call::Code {
+        within: Duration::ZERO,
+    }
+}
+
 #[test]
 fn nothing_starts_before_the_first_draw_and_one_worker_draws_each_in_turn() {
     let (script, clock) = (Script::default(), Hands::default());
@@ -55,7 +78,7 @@ fn nothing_starts_before_the_first_draw_and_one_worker_draws_each_in_turn() {
     let second = host.draw(ask(SIDE)).unwrap();
     assert_eq!((second.width(), second.height()), (1, 2));
     assert_eq!(script.spawns(), 1);
-    assert_eq!(script.calls(), [draw(1), Call::Reply, draw(2), Call::Reply]);
+    assert_eq!(script.calls(), [draw(1), reply(), peek(), draw(2), reply()]);
 }
 
 #[test]
@@ -80,7 +103,7 @@ fn a_late_worker_is_ended_and_starts_again_only_after_its_backoff() {
     let mut host = host(&script, &clock);
     script.act(Act::Silent);
     assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Timeout));
-    assert!(script.calls().ends_with(&[Call::Reply, Call::End]));
+    assert!(script.calls().ends_with(&[reply(), Call::End]));
     clock.advance(ms(CFG.restart_ms).saturating_sub(TICK));
     assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone));
     assert_eq!(script.tries(), 1, "no start within the backoff");
@@ -132,6 +155,12 @@ fn bad_replies_are_refused_and_end_the_worker() {
         script.act(act.clone());
         assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone), "{act:?}");
         assert!(script.calls().ends_with(&[Call::End]), "{act:?}");
+        let closed = matches!(act, Act::Broken(IpcError::Closed));
+        assert_eq!(
+            script.calls().contains(&code()),
+            closed,
+            "{act:?} reads the code"
+        );
         assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone), "{act:?}");
         assert_eq!(script.tries(), 1, "{act:?} backs off");
     }
@@ -201,11 +230,7 @@ fn an_idle_worker_says_bye_and_stops_with_no_backoff() {
     assert!(!script.calls().contains(&Call::Bye));
     clock.advance(TICK);
     host.idle();
-    assert!(
-        script
-            .calls()
-            .ends_with(&[Call::Bye, Call::Code, Call::End])
-    );
+    assert!(script.calls().ends_with(&[Call::Bye, code(), Call::End]));
     assert_eq!(host.wake_in(), None);
     host.draw(ask(SIDE)).unwrap();
     assert_eq!(script.spawns(), 2, "a fresh start at once");
@@ -220,6 +245,21 @@ fn a_draw_past_the_idle_time_starts_a_fresh_worker() {
     host.draw(ask(SIDE)).unwrap();
     assert_eq!(script.spawns(), 2);
     assert!(script.calls().contains(&Call::Bye));
+}
+
+#[test]
+fn a_worker_that_quit_between_draws_is_replaced_with_no_backoff() {
+    let (script, clock) = (Script::default(), Hands::default());
+    let mut host = host(&script, &clock);
+    host.draw(ask(SIDE)).unwrap();
+    script.quit(DIED);
+    assert!(
+        host.draw(ask(SIDE)).is_ok(),
+        "no blame for a death between draws"
+    );
+    assert_eq!(script.spawns(), 2);
+    let calls = [draw(1), reply(), peek(), Call::End, draw(2), reply()];
+    assert_eq!(script.calls(), calls);
 }
 
 #[test]
@@ -246,9 +286,5 @@ fn dropping_the_host_stops_its_worker() {
     let mut host = host(&script, &clock);
     host.draw(ask(SIDE)).unwrap();
     drop(host);
-    assert!(
-        script
-            .calls()
-            .ends_with(&[Call::Bye, Call::Code, Call::End])
-    );
+    assert!(script.calls().ends_with(&[Call::Bye, code(), Call::End]));
 }

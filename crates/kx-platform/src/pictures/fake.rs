@@ -25,14 +25,14 @@ pub enum Act {
     Broken(IpcError),
 }
 
-/// What the host did to a worker, in order.
+/// What the host did to a worker, in order, with the waits it gave.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
     Bye,
-    Reply,
+    Reply { within: Duration },
     End,
-    Code,
+    Code { within: Duration },
 }
 
 /// What the script holds and saw.
@@ -45,6 +45,8 @@ struct Log {
     tries: usize,
     launches: Vec<Launch>,
     calls: Vec<Call>,
+    /// How the live worker quit, if it did; a worker that quit reads as closed.
+    exit: Option<u32>,
     /// The id of the draw that waits for its reply.
     asked: Option<u32>,
     /// Hears each call, for a test on another thread.
@@ -63,6 +65,11 @@ impl Script {
     /// Queues what a later draw does.
     pub fn act(&self, act: Act) {
         self.log().acts.push_back(act);
+    }
+
+    /// Makes the live worker quit with `code`, as if it died between draws.
+    pub fn quit(&self, code: u32) {
+        self.log().exit = Some(code);
     }
 
     /// Refuses the next `n` starts.
@@ -115,6 +122,7 @@ impl Spawner for Script {
             return Err(SpawnError::Missing);
         }
         log.launches.push(launch.clone());
+        log.exit = None;
         Ok(FakeWorker(self.clone()))
     }
 }
@@ -129,14 +137,20 @@ impl Worker for FakeWorker {
                 self.0.log().asked = Some(id);
                 self.0.record(Call::Draw { id, side });
             }
-            Ask::Bye => self.0.record(Call::Bye),
+            Ask::Bye => {
+                self.0.log().exit = Some(CLEAN_EXIT);
+                self.0.record(Call::Bye);
+            }
         }
     }
 
-    fn reply(&mut self, _: Duration) -> Heard {
-        self.0.record(Call::Reply);
+    fn reply(&mut self, within: Duration) -> Heard {
+        self.0.record(Call::Reply { within });
         let mut log = self.0.log();
         let id = log.asked.take().unwrap_or_default();
+        if log.exit.is_some() {
+            return Heard::Frame(Err(IpcError::Closed));
+        }
         match log.acts.pop_front().unwrap_or(Act::Draw(1, 1)) {
             Act::Draw(width, height) => {
                 let len = usize::try_from(width * height).unwrap_or_default() * RGBA_BYTES;
@@ -159,9 +173,9 @@ impl Worker for FakeWorker {
         self.0.record(Call::End);
     }
 
-    fn code(&mut self, _: Duration) -> Option<u32> {
-        self.0.record(Call::Code);
-        Some(CLEAN_EXIT)
+    fn code(&mut self, within: Duration) -> Option<u32> {
+        self.0.record(Call::Code { within });
+        self.0.log().exit
     }
 }
 
