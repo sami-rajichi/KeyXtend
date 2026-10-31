@@ -209,11 +209,11 @@ impl Icons {
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
-        let words = self.words.named().into_iter().chain(self.clip.named());
+        let panels = self.words.named().into_iter().chain(self.clip.named());
         let keys = by_id("keys", &self.keys);
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)
-            .chain(words.map(|(at, v)| (at.to_string(), v)))
+            .chain(panels.map(|(at, v)| (at.to_string(), v)))
             .collect()
     }
 

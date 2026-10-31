@@ -56,6 +56,13 @@ fn a_move_with_an_unknown_curve_is_refused_by_name() {
     let typo = text().replacen("curve = \"spring\"", "curve = \"sprung\"", 1);
     let e = parse(&typo).expect_err("no such curve");
     assert!(e.contains("stop") && e.contains("sprung"), "{e}");
+    let clip = text().replacen(
+        "turn = { ms = 180, curve = \"swift\" }",
+        "turn = { ms = 180, curve = \"swoft\" }",
+        1,
+    );
+    let e = parse(&clip).expect_err("no such clip curve");
+    assert!(e.starts_with("clip.turn:") && e.contains("swoft"), "{e}");
 }
 
 #[test]

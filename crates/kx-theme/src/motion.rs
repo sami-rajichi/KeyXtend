@@ -14,6 +14,9 @@ pub const MOVES: [&str; 19] = [
 ];
 /// Every animation the clipboard panel plays, by what it moves.
 pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];
+/// The tables in the file that hold the faces' moves and the clipboard panel's, as errors name them.
+const MOVES_TABLE: &str = "moves";
+const CLIP_TABLE: &str = "clip";
 
 /// The file as written.
 #[derive(Deserialize)]
@@ -98,16 +101,16 @@ impl Motions {
 /// The checked animations in `text`, full and reduced.
 pub(crate) fn parse(text: &str) -> Result<Motions, String> {
     let f: MotionFile = toml::from_str(text).map_err(|e| e.to_string())?;
-    check_names("moves", &f.moves, &MOVES)?;
-    check_names("clip", &f.clip, &CLIP_MOVES)?;
+    check_names(MOVES_TABLE, &f.moves, &MOVES)?;
+    check_names(CLIP_TABLE, &f.clip, &CLIP_MOVES)?;
     for (name, c) in &f.curves {
         check_curve(name, c)?;
     }
     f.amount.check()?;
     let ring = f.ring.ready(&f.curves)?;
     let (moves, clip) = (
-        all_timed(&f.moves, &f.curves)?,
-        all_timed(&f.clip, &f.curves)?,
+        all_timed(MOVES_TABLE, &f.moves, &f.curves)?,
+        all_timed(CLIP_TABLE, &f.clip, &f.curves)?,
     );
     let reduced = Motion {
         moves: still(&moves),
@@ -124,12 +127,13 @@ pub(crate) fn parse(text: &str) -> Result<Motions, String> {
     Ok(Motions { full, reduced })
 }
 
-/// Each of `moves` with its curve from `curves`.
+/// Each of `moves`, from table `table`, with its curve from `curves`.
 fn all_timed(
+    table: &str,
     moves: &BTreeMap<String, Move>,
     curves: &BTreeMap<String, [f32; 4]>,
 ) -> Result<BTreeMap<String, Timed>, String> {
-    let ready = |(name, m): (&String, &Move)| Ok((name.clone(), timed(name, m, curves)?));
+    let ready = |(name, m): (&String, &Move)| Ok((name.clone(), timed(table, name, m, curves)?));
     moves.iter().map(ready).collect()
 }
 
@@ -162,9 +166,14 @@ fn check_curve(name: &str, [x1, y1, x2, y2]: &[f32; 4]) -> Result<(), String> {
     Ok(())
 }
 
-/// Move `m` with its curve from `curves`.
-fn timed(name: &str, m: &Move, curves: &BTreeMap<String, [f32; 4]>) -> Result<Timed, String> {
-    let no_curve = || format!("moves.{name}: no curve {:?}", m.curve);
+/// Move `m`, named `table.name`, with its curve from `curves`.
+fn timed(
+    table: &str,
+    name: &str,
+    m: &Move,
+    curves: &BTreeMap<String, [f32; 4]>,
+) -> Result<Timed, String> {
+    let no_curve = || format!("{table}.{name}: no curve {:?}", m.curve);
     Ok(Timed {
         ms: m.ms,
         bez: bez(curves, &m.curve).ok_or_else(no_curve)?,

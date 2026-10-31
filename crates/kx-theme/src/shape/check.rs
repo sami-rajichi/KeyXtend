@@ -8,10 +8,9 @@ use crate::theme::{FONT_WEIGHTS, outside_unit};
 const INSET_BELOW: f32 = 0.5;
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark, dot
-    /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit dot
-    /// no larger than the others, a D-pad hub or Stop inset of half the pad or more and a Stop wider than the hub,
-    /// naming the size.
+    /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (the
+    /// clipboard's caret and underline, `panel.min_fit` and the others in `check_sizes`), a gap or place below 0, a lit
+    /// dot no larger than the others, and a D-pad hub or Stop inset of half the pad or more or a Stop wider than the hub.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;

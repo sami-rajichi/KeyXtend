@@ -6,6 +6,25 @@ use crate::contrast::{WCAG_AA, WCAG_SHAPES};
 use crate::rgba::Rgba;
 use crate::view::LookView;
 
+/// A ticked row's text.
+pub(super) const TICKED_TEXT: &str = "clip text on a ticked row";
+/// A ticked row's marks.
+pub(super) const TICKED_MARK: &str = "clip mark on a ticked row";
+/// The tick number on its badge.
+pub(super) const TICK_NUMBER: &str = "clip tick number";
+/// The kind icon on its tile.
+pub(super) const KIND_ICON: &str = "clip kind icon";
+/// The kind icon on its tile in a row under the pointer or ticked.
+pub(super) const LIT_KIND_ICON: &str = "clip kind icon on a lit row";
+/// The chip on media that goes tonight.
+pub(super) const EXPIRES_CHIP: &str = "clip expires chip";
+/// A filter chip under the pointer.
+pub(super) const HOVER_CHIP: &str = "clip chip under the pointer";
+/// The Delete button in the danger keys' colours.
+pub(super) const DELETE_BUTTON: &str = "clip delete button";
+/// The Insert button in Enter's colours.
+pub(super) const INSERT_BUTTON: &str = "clip insert button";
+
 /// One pair: its name, the ink, the backgrounds it sits on and the least contrast it needs.
 type Pair = (&'static str, Rgba, Vec<Rgba>, f32);
 
@@ -30,17 +49,12 @@ fn rows(v: &LookView) -> [Pair; 5] {
         (p.ring, p.pop_muted)
     };
     [
+        (TICKED_TEXT, v.sel_ink, vec![ticked, both], WCAG_AA),
+        (TICKED_MARK, mark, vec![ticked], WCAG_SHAPES),
+        (TICK_NUMBER, p.badge_ink, vec![p.badge_bg], WCAG_AA),
+        (KIND_ICON, kind, vec![tile(bg)], WCAG_SHAPES),
         (
-            "clip text on a ticked row",
-            v.sel_ink,
-            vec![ticked, both],
-            WCAG_AA,
-        ),
-        ("clip mark on a ticked row", mark, vec![ticked], WCAG_SHAPES),
-        ("clip tick number", p.badge_ink, vec![p.badge_bg], WCAG_AA),
-        ("clip kind icon", kind, vec![tile(bg)], WCAG_SHAPES),
-        (
-            "clip kind icon on a lit row",
+            LIT_KIND_ICON,
             v.sel_ink,
             vec![tile(hot), tile(ticked), tile(both)],
             WCAG_SHAPES,
@@ -52,21 +66,16 @@ fn rows(v: &LookView) -> [Pair; 5] {
 fn controls(v: &LookView) -> [Pair; 4] {
     let p = &v.palette;
     [
-        ("clip expires chip", p.danger_ink, vec![p.danger], WCAG_AA),
+        (EXPIRES_CHIP, p.danger_ink, vec![p.danger], WCAG_AA),
+        (HOVER_CHIP, p.pop_ink, vec![p.hover.on(p.pop_bg)], WCAG_AA),
         (
-            "clip chip under the pointer",
-            p.pop_ink,
-            vec![p.hover.on(p.pop_bg)],
-            WCAG_AA,
-        ),
-        (
-            "clip delete button",
+            DELETE_BUTTON,
             p.danger_ink,
             vec![p.danger, p.hover.on(p.danger)],
             WCAG_AA,
         ),
         (
-            "clip insert button",
+            INSERT_BUTTON,
             p.enter_ink,
             vec![p.enter, p.hover.on(p.enter)],
             WCAG_AA,
