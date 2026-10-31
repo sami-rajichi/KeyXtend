@@ -1,5 +1,5 @@
-//! The reveal port: the running Explorer opens the folder itself, so no program starts as our child and Explorer keeps
-//! its own rights, never our uiAccess (ADR-0034). The rule is pure over `Os`; only `win` calls Windows.
+//! The reveal port: the running Explorer starts `explorer.exe` on the folder, so no program starts as our child and
+//! Explorer keeps its own rights, never our uiAccess (ADR-0034). The rule is pure over `Os`; only `win` calls Windows.
 #![cfg_attr(
     not(windows),
     allow(
@@ -9,7 +9,14 @@
 )]
 
 use kx_platform::ui::RevealError;
-use std::path::Path;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
+
+/// The file manager the shell starts on the folder, from the Windows folder; Explorer refuses a plain open of some
+/// folders under the hidden `AppData` as "not found", while this program opens them.
+pub(crate) const EXPLORER: &str = "explorer.exe";
+/// The mark that holds the folder together as one argument; a name holding it cannot be passed.
+const QUOTE: char = '"';
 
 #[cfg(windows)]
 mod win;
@@ -39,6 +46,18 @@ pub(crate) fn show<O: Os>(os: &O, folder: &Path) -> Result<(), RevealError> {
     }
     let shell = os.shell().map_err(RevealError::Refused)?;
     os.open(&shell, folder).map_err(RevealError::Refused)
+}
+
+/// The program in `windows` and its one argument, `folder` in quotes; none for a folder whose name holds a quote.
+pub(crate) fn command(windows: &Path, folder: &Path) -> Option<(PathBuf, OsString)> {
+    let text = folder.as_os_str();
+    if text.to_string_lossy().contains(QUOTE) {
+        return None;
+    }
+    let mut args = OsString::from(QUOTE.to_string());
+    args.push(text);
+    args.push(QUOTE.to_string());
+    Some((windows.join(EXPLORER), args))
 }
 
 #[cfg(test)]
@@ -82,6 +101,22 @@ mod tests {
         let fake = Fake::default();
         assert_eq!(show(&fake, Path::new("history")), Ok(()));
         assert_eq!(*fake.opened.borrow(), [PathBuf::from("history")]);
+    }
+
+    #[test]
+    fn explorer_from_the_windows_folder_opens_the_folder_as_one_quoted_argument() {
+        let windows = Path::new("root").join("Windows");
+        let folder = Path::new("root").join("Doe, J").join("history");
+        let (program, args) = command(&windows, &folder).unwrap();
+        assert_eq!(program, windows.join(EXPLORER));
+        let quoted = format!("\"{}\"", folder.display());
+        assert_eq!(args, OsString::from(quoted));
+    }
+
+    #[test]
+    fn a_folder_with_a_quote_is_never_handed_on() {
+        let windows = Path::new("Windows");
+        assert_eq!(command(windows, Path::new("a\"b")), None);
     }
 
     #[test]

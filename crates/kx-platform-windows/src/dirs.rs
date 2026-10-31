@@ -7,7 +7,7 @@ use kx_platform::{APP_DIR_NAME, AppDirs};
 use crate::PlatformError;
 
 #[cfg(windows)]
-pub use os::{current, local_data};
+pub use os::{current, local_data, windows_dir};
 
 /// The folders for a program at `exe`: its own folder, and the app folder inside the per-user folder `local`.
 ///
@@ -32,7 +32,10 @@ mod os {
 
     use kx_platform::AppDirs;
     use windows::Win32::System::Com::CoTaskMemFree;
-    use windows::Win32::UI::Shell::{FOLDERID_LocalAppData, KF_FLAG_DEFAULT, SHGetKnownFolderPath};
+    use windows::Win32::UI::Shell::{
+        FOLDERID_LocalAppData, FOLDERID_Windows, KF_FLAG_DEFAULT, SHGetKnownFolderPath,
+    };
+    use windows::core::GUID;
 
     use super::from_paths;
     use crate::PlatformError;
@@ -41,11 +44,23 @@ mod os {
     ///
     /// # Errors
     /// `PlatformError::LocalData` when Windows does not name it.
-    #[allow(unsafe_code, reason = "SHGetKnownFolderPath, then frees its string.")]
     pub fn local_data() -> Result<PathBuf, PlatformError> {
+        known(&FOLDERID_LocalAppData).map_err(|e| PlatformError::LocalData(e.into()))
+    }
+
+    /// The Windows folder, asked of Windows rather than read from the environment.
+    ///
+    /// # Errors
+    /// Windows' error when it does not name it.
+    pub fn windows_dir() -> windows::core::Result<PathBuf> {
+        known(&FOLDERID_Windows)
+    }
+
+    /// The known folder `id`, as Windows names it.
+    #[allow(unsafe_code, reason = "SHGetKnownFolderPath, then frees its string.")]
+    fn known(id: &GUID) -> windows::core::Result<PathBuf> {
         // SAFETY: a plain query with a known-folder id; Windows allocates the string it returns.
-        let p = unsafe { SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_DEFAULT, None) }
-            .map_err(|e| PlatformError::LocalData(e.into()))?;
+        let p = unsafe { SHGetKnownFolderPath(id, KF_FLAG_DEFAULT, None) }?;
         // SAFETY: `p` is the NUL-terminated string Windows just returned, still unfreed.
         let path = OsString::from_wide(unsafe { p.as_wide() });
         // SAFETY: frees the string Windows allocated, once; `path` is a copy and `p` is not used again.
@@ -96,6 +111,17 @@ mod tests {
     fn local_data_is_an_existing_absolute_folder() {
         let dir = local_data().expect("Windows knows the folder");
         assert!(dir.is_absolute() && dir.is_dir(), "{}", dir.display());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn the_windows_folder_holds_explorer() {
+        let dir = windows_dir().expect("Windows knows the folder");
+        assert!(
+            dir.join(crate::reveal::EXPLORER).is_file(),
+            "{}",
+            dir.display()
+        );
     }
 
     #[cfg(windows)]
