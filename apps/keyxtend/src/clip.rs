@@ -4,8 +4,7 @@
 use kx_platform::AppDirs;
 use std::path::PathBuf;
 
-/// The folder under the data folder that holds the sealed clipboard history.
-pub const CLIP_DIR: &str = "clipboard";
+pub use kx_platform::CLIP_DIR;
 
 /// The history's folder for the app's `dirs`.
 #[must_use]

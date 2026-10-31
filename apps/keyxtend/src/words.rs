@@ -4,8 +4,7 @@
 use kx_module_api::ports::PACK_DIR;
 use std::path::{Path, PathBuf};
 
-/// The folder under the data folder that holds the sealed learned words and emails.
-pub const SEALED_DIR: &str = "words";
+pub use kx_platform::SEALED_DIR;
 
 /// The workspace root, from this crate's folder; only a debug build reads under it.
 #[cfg(debug_assertions)]

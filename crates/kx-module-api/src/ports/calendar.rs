@@ -5,11 +5,11 @@ use crate::{Capability, MS_PER_S, ServiceId, ServiceKey};
 use std::fmt;
 
 /// Seconds in a minute.
-const S_PER_MIN: i64 = 60;
+pub const S_PER_MIN: i64 = 60;
 /// Minutes in an hour.
-const MIN_PER_HOUR: i64 = 60;
+pub const MIN_PER_HOUR: i64 = 60;
 /// Hours in a day.
-const HOURS_PER_DAY: i64 = 24;
+pub const HOURS_PER_DAY: i64 = 24;
 /// The fewest digits a year takes in text.
 const YEAR_DIGITS: usize = 4;
 /// The digits a month and a day take in text.

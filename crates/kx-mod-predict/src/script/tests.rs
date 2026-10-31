@@ -1,5 +1,5 @@
-//! The script table: marks join any script, words of one script are single, and each script's row gives its
-//! direction and the gap between its words.
+//! The script table: marks join any script, words of one script are single, each script's row gives the gap between
+//! its words, and the api's right-to-left ranges give its direction.
 
 use super::*;
 
@@ -155,4 +155,17 @@ fn a_tie_goes_to_the_script_holding_more_then_to_the_first_row() {
             "{words:?}"
         );
     }
+}
+
+#[test]
+fn only_the_scripts_of_the_right_to_left_blocks_read_right_to_left() {
+    let rtl: Vec<Script> = ALL.into_iter().filter(|s| s.rtl()).collect();
+    let want = [
+        Script::Hebrew,
+        Script::Syriac,
+        Script::Arabic,
+        Script::Thaana,
+        Script::Nko,
+    ];
+    assert_eq!(rtl, want);
 }

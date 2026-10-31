@@ -10,7 +10,7 @@ pub mod packs;
 pub mod pictures;
 pub mod ui;
 
-pub use dirs::{APP_DIR_NAME, AppDirs, DataDir, PORTABLE_DIR, pick_data_dir};
+pub use dirs::{APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, pick_data_dir};
 
 use kx_module_api::Clock;
 use std::sync::Arc;

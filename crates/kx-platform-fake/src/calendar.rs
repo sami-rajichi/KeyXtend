@@ -3,16 +3,10 @@
 
 use crate::lock;
 use kx_module_api::MS_PER_S;
-use kx_module_api::ports::{Calendar, Date, LocalTime};
+use kx_module_api::ports::{Calendar, Date, HOURS_PER_DAY, LocalTime, MIN_PER_HOUR, S_PER_MIN};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-/// Seconds in a minute.
-const S_PER_MIN: i64 = 60;
-/// Minutes in an hour.
-const MIN_PER_HOUR: i64 = 60;
-/// Hours in a day.
-const HOURS_PER_DAY: i64 = 24;
 /// What a test hears when it asks for a wall time `LocalTime` cannot hold.
 const NO_SUCH: &str = "no such wall time";
 

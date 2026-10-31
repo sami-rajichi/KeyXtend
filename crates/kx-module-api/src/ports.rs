@@ -25,7 +25,9 @@ pub use assist::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, GrabState, LatchesAsk, LatchesChanged,
     LatchesUsed, PointerMoved, PointerPressed, Toggle,
 };
-pub use calendar::{Calendar, CalendarKey, Date, LocalTime, Weekday};
+pub use calendar::{
+    Calendar, CalendarKey, Date, HOURS_PER_DAY, LocalTime, MIN_PER_HOUR, S_PER_MIN, Weekday,
+};
 pub use clip::{
     AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipRun, ClipWait, Clipboard, ClipboardKey,
     ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec,

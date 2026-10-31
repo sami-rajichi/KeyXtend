@@ -13,7 +13,7 @@ const LIST_QML: &str = include_str!("../../../../../crates/kx-ui/qml/ClipList.qm
 const BOX_QML: &str = include_str!("../../../../../crates/kx-ui/qml/ClipBox.qml");
 /// The footer, which gives Insert its id.
 const FOOT_QML: &str = include_str!("../../../../../crates/kx-ui/qml/ClipFoot.qml");
-/// The app's history folder, under its data folder.
+/// The app's history folder, under its data folder, which takes kx-platform's name.
 const APP_CLIP: &str = include_str!("../../../../../apps/keyxtend/src/clip.rs");
 
 #[test]
@@ -55,8 +55,8 @@ fn the_panel_ids_are_the_ones_kx_ui_gives_its_parts() {
 #[test]
 fn the_history_folder_is_the_apps_own() {
     let g = load().expect("loads").g20_product;
-    let line = format!("pub const CLIP_DIR: &str = \"{}\";", g.history);
-    assert!(APP_CLIP.contains(&line), "{line}");
+    assert_eq!(g.history, kx_platform::CLIP_DIR);
+    assert!(APP_CLIP.contains("pub use kx_platform::CLIP_DIR;"));
 }
 
 #[test]

@@ -6,7 +6,7 @@
 [g20_product]
 # The file in kx-gates' out folder that keeps the test build's settings bytes while G20 or g8 clip writes its own.
 backup = "clip-settings-backup.json"
-# The history's folder in the data folder (apps/keyxtend clip.rs CLIP_DIR), emptied before and after each run.
+# The history's folder in the data folder (kx-platform CLIP_DIR, which the app uses), emptied before and after each run.
 history = "clipboard"
 # The file the gate writes in a data folder it made, so a leftover of a hard stop is known as its own and removed.
 marker = "made-by-kx-gates"

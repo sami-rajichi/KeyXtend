@@ -6,7 +6,7 @@ use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-use kx_platform::PORTABLE_DIR;
+use kx_platform::{CLIP_DIR, PORTABLE_DIR, SEALED_DIR};
 use kx_settings::Files;
 
 use crate::product;
@@ -19,12 +19,13 @@ pub(crate) fn remove(dir: &Path) -> Result<(), String> {
     }
 }
 
-/// True when `name` is, in any case, the `history` folder or a name the product's settings layer writes in its data
-/// folder, so a marker by that name would mark a folder the gate never made.
+/// True when `name` is, in any case, the `history` folder, one of the app's own folders or a name the product's
+/// settings layer writes in its data folder, so a marker by that name would mark a folder the gate never made.
 pub(crate) fn taken(name: &str, history: &str) -> bool {
     let f = Files::new(Path::new(""));
     let product = [&f.settings, &f.previous, &f.broken, &f.temp, &f.logs];
-    let mut names = product.iter().filter_map(|p| p.to_str()).chain([history]);
+    let app = [history, CLIP_DIR, SEALED_DIR];
+    let mut names = product.iter().filter_map(|p| p.to_str()).chain(app);
     names.any(|n| n.eq_ignore_ascii_case(name))
 }
 
@@ -158,6 +159,11 @@ mod tests {
             assert!(taken(name, HISTORY), "{name}");
         }
         assert!(taken("Clipboard", HISTORY));
+        assert!(taken("Words", "elsewhere"), "the learned words' folder");
+        assert!(
+            taken("clipboard", "elsewhere"),
+            "the app's own history folder"
+        );
         assert!(!taken(MARK, HISTORY));
         assert!(!taken("settings", HISTORY), "only whole names");
     }
