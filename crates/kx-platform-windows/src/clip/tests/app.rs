@@ -41,3 +41,18 @@ fn the_name_is_the_description_cut_to_the_cap_else_the_stem() {
     assert_eq!(app::name(None, "notepad", 80), "notepad");
     assert_eq!(app::name(None, "notepad", 3), "not");
 }
+
+#[test]
+fn a_program_off_a_drive_is_named_by_its_stem_and_its_file_is_never_read() {
+    for path in [r"\server\share\Tool.exe", r"\?\UNC\server\share\Tool.exe"] {
+        let read = std::cell::Cell::new(false);
+        let got = app::named(path, 80, |_| {
+            read.set(true);
+            Some("Tool Pro".into())
+        });
+        assert_eq!(got.unwrap().name, "Tool", "{path}");
+        assert!(!read.get(), "{path} would be read over the network");
+    }
+    let local = app::named(r"C:\Tools\Tool.exe", 80, |_| Some("Tool Pro".into()));
+    assert_eq!(local.unwrap().name, "Tool Pro", "a drive path is read");
+}

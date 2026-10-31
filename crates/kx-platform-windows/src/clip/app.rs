@@ -1,9 +1,10 @@
-//! The app behind a copy: the clipboard owner's process, named by its file's version information.
+//! The app behind a copy: the clipboard owner's process, named by its file's version information when it runs from a
+//! drive, else by its file stem.
 
 use std::path::Path;
 use std::ptr::null_mut;
 
-use kx_module_api::ports::AppRef;
+use kx_module_api::ports::{AppRef, probe_ok};
 use windows::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
 };
@@ -39,10 +40,20 @@ pub(crate) fn owner() -> Option<u32> {
 /// The app of process `pid`: its exe name in lower case as the id, its description or file stem as the name.
 pub(crate) fn of(pid: Option<u32>) -> Option<AppRef> {
     let path = path_of(pid?)?;
-    let id = app_name(&path)?.to_lowercase();
-    let stem = Path::new(&path).file_stem()?.to_string_lossy().into_owned();
     let t = &table().ok()?.app;
-    let name = name(describe(&path, t.version_bytes), &stem, t.name_chars);
+    named(&path, t.name_chars, |p| describe(p, t.version_bytes))
+}
+
+/// The app whose file is at `path`; `read` gives its description only for a drive path, so a share is never read.
+pub(crate) fn named(
+    path: &str,
+    max_chars: usize,
+    read: impl FnOnce(&str) -> Option<String>,
+) -> Option<AppRef> {
+    let id = app_name(path)?.to_lowercase();
+    let stem = Path::new(path).file_stem()?.to_string_lossy().into_owned();
+    let described = probe_ok(Path::new(path)).then(|| read(path)).flatten();
+    let name = name(described, &stem, max_chars);
     Some(AppRef { id, name })
 }
 
