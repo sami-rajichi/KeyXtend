@@ -1,5 +1,5 @@
 //! The file facts over fake filesystem calls: a path off a drive is left unchecked with no call at all, a drive path
-//! is looked at once its root answers, and a link on the way or at the end is never followed.
+//! is looked at once its root answers, and a link on the way or at the end, a real junction too, is never followed.
 
 use std::cell::RefCell;
 use std::io::ErrorKind;
@@ -104,4 +104,27 @@ fn a_real_symlink_is_seen_as_a_link_and_not_followed() {
     let link = dir.path().join("link.txt");
     std::os::unix::fs::symlink(&file, &link).unwrap();
     assert_eq!(seen(&link).unwrap(), Found::Link);
+}
+
+#[cfg(windows)]
+#[test]
+fn a_real_junction_on_the_way_is_unchecked_and_never_followed() {
+    use super::facts;
+    use kx_module_api::Redacted;
+    let dir = TempDir::new("clip-junction").unwrap();
+    let real = dir.path().join("real");
+    std::fs::create_dir(&real).unwrap();
+    std::fs::write(real.join("a.txt"), b"abc").unwrap();
+    let link = dir.path().join("link");
+    let made = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&link)
+        .arg(&real)
+        .output()
+        .unwrap();
+    assert!(made.status.success(), "mklink /J failed: {made:?}");
+    assert_eq!(seen(&link).unwrap(), Found::Link, "the junction itself");
+    let paths = Redacted::new(vec![link.join("a.txt"), real.join("a.txt")]);
+    let want = [FileFact::Unchecked, FileFact::Size(3)];
+    assert_eq!(facts(&paths), want, "through it, then the real file");
 }
