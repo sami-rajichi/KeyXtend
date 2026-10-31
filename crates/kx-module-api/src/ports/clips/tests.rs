@@ -210,22 +210,14 @@ fn the_filters_step_from_all_through_each_kind_once() {
 }
 
 #[test]
-fn every_kind_and_note_is_listed_once() {
-    // Exhaustive matches: a new variant stops this build until `ALL` lists it too.
-    let kind = |k: ClipKind| match k {
-        ClipKind::Text | ClipKind::Link | ClipKind::Image | ClipKind::File | ClipKind::Media => k,
-    };
-    let note = |n: PanelNote| match n {
-        PanelNote::TooBig
-        | PanelNote::Disk
-        | PanelNote::PinnedFull
-        | PanelNote::Busy
-        | PanelNote::PasteFailed => n,
-    };
-    let kinds: HashSet<_> = ClipKind::ALL.map(kind).into_iter().collect();
-    let notes: HashSet<_> = PanelNote::ALL.map(note).into_iter().collect();
-    let lens = (ClipKind::ALL.len(), PanelNote::ALL.len());
-    assert_eq!((kinds.len(), notes.len()), lens, "each once");
+fn every_kind_and_note_is_listed_once_in_declaration_order() {
+    // `listed!` declares each enum with its `ALL`, so a new variant is listed by being declared.
+    for (at, kind) in ClipKind::ALL.into_iter().enumerate() {
+        assert_eq!(kind as usize, at, "{kind:?}");
+    }
+    for (at, note) in PanelNote::ALL.into_iter().enumerate() {
+        assert_eq!(note as usize, at, "{note:?}");
+    }
 }
 
 #[test]

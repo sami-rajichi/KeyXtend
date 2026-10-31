@@ -5,24 +5,36 @@ use crate::Redacted;
 use crate::ports::{Date, Pixels, Room};
 use std::path::PathBuf;
 
-/// What an entry holds, for its icon.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ClipKind {
-    /// Text.
-    Text,
-    /// A link.
-    Link,
-    /// An image.
-    Image,
-    /// Files or folders.
-    File,
-    /// Video or audio files.
-    Media,
+/// Declares a plain enum with `ALL`, every variant in declaration order, so a variant is listed by being declared.
+macro_rules! listed {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident ($all:literal) { $($(#[$doc:meta])* $variant:ident,)+ }) => {
+        $(#[$meta])*
+        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+        $vis enum $name {
+            $($(#[$doc])* $variant,)+
+        }
+
+        impl $name {
+            #[doc = $all]
+            pub const ALL: [Self; [$(stringify!($variant)),+].len()] = [$(Self::$variant),+];
+        }
+    };
 }
 
-impl ClipKind {
-    /// Every kind.
-    pub const ALL: [Self; 5] = [Self::Text, Self::Link, Self::Image, Self::File, Self::Media];
+listed! {
+    /// What an entry holds, for its icon.
+    pub enum ClipKind ("Every kind.") {
+        /// Text.
+        Text,
+        /// A link.
+        Link,
+        /// An image.
+        Image,
+        /// Files or folders.
+        File,
+        /// Video or audio files.
+        Media,
+    }
 }
 
 /// Which entries the list shows.
@@ -114,30 +126,20 @@ pub enum Preview {
     Files(Redacted<Vec<PathBuf>>),
 }
 
-/// A note on why a copy was not kept, or why an insert stopped; a damaged store is a notice, not a note.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum PanelNote {
-    /// An entry over the size limit was not kept.
-    TooBig,
-    /// The drive is under the free-space floor, so nothing new is kept.
-    Disk,
-    /// Pinned entries alone fill a limit, so nothing new is kept.
-    PinnedFull,
-    /// Setting the clipboard failed, so Insert stopped.
-    Busy,
-    /// The keyboard did not paste, so Insert stopped.
-    PasteFailed,
-}
-
-impl PanelNote {
-    /// Every note.
-    pub const ALL: [Self; 5] = [
-        Self::TooBig,
-        Self::Disk,
-        Self::PinnedFull,
-        Self::Busy,
-        Self::PasteFailed,
-    ];
+listed! {
+    /// A note on why a copy was not kept, or why an insert stopped; a damaged store is a notice, not a note.
+    pub enum PanelNote ("Every note.") {
+        /// An entry over the size limit was not kept.
+        TooBig,
+        /// The drive is under the free-space floor, so nothing new is kept.
+        Disk,
+        /// Pinned entries alone fill a limit, so nothing new is kept.
+        PinnedFull,
+        /// Setting the clipboard failed, so Insert stopped.
+        Busy,
+        /// The keyboard did not paste, so Insert stopped.
+        PasteFailed,
+    }
 }
 
 /// Where the shown page is in the list.
