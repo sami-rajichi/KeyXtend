@@ -135,13 +135,17 @@ fn a_picture_without_text_keeps_its_place_among_the_parts() {
     assert_eq!(parts(last.gather(100)).0, [html(), image()]);
 }
 
+/// A large screenshot's DIB nearly fills the cap alone, so only the stored PNG counts (N1).
 #[test]
-fn every_image_format_is_fetched_and_counted_toward_the_cap() {
+fn a_png_that_fits_is_kept_alone_whatever_its_dib_weighs() {
     let png = ClipPart::Image {
         codec: ImageCodec::Png,
         bytes: Redacted::new(vec![9]),
     };
     let clip = Fake::new(vec![(F.dib, 6, image()), (F.png, 5, png.clone())]);
-    assert_eq!(parts(clip.gather(11)).0, [png, image()], "PNG first");
-    assert_eq!(clip.gather(10).err(), Some(11), "both count");
+    assert_eq!(parts(clip.gather(10)).0, [png], "PNG only");
+    assert!(
+        !clip.fetched(F.dib) && !clip.fetched(F.dib_v5),
+        "the DIB is never sized"
+    );
 }

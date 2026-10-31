@@ -131,29 +131,27 @@ fn the_parts_follow_the_clipboards_order_with_each_kind_once() {
 }
 
 #[test]
-fn the_images_are_png_and_the_richest_dib_each_once() {
+fn the_one_image_is_png_before_dibv5_before_dib() {
     let images = |held: &[u32]| -> Vec<(Kind, u32)> {
         F.pick(held).iter().map(|w| (w.kind, w.format)).collect()
     };
     let png = (Kind::Image(ImageCodec::Png), F.png);
     let dib = |format| (Kind::Image(ImageCodec::Dib), format);
-    assert_eq!(images(&[F.dib, F.dib_v5, F.png]), [png, dib(F.dib_v5)]);
-    assert_eq!(images(&[F.png, F.dib]), [png, dib(F.dib)]);
+    assert_eq!(images(&[F.dib, F.dib_v5, F.png]), [png]);
+    assert_eq!(images(&[F.png, F.dib]), [png]);
     assert_eq!(images(&[F.dib, F.dib_v5]), [dib(F.dib_v5)]);
     assert_eq!(images(&[F.dib]), [dib(F.dib)]);
-    assert_eq!(images(&[F.png]), [png]);
 }
 
 #[test]
-fn the_images_take_the_place_of_the_first_image_format_png_first() {
+fn the_image_takes_the_place_of_the_first_image_format() {
     let kinds: Vec<Kind> = F
         .pick(&[F.html, F.dib, F.text, F.png])
         .iter()
         .map(|w| w.kind)
         .collect();
-    let (png, dib) = (ImageCodec::Png, ImageCodec::Dib);
-    let images = [Kind::Image(png), Kind::Image(dib)];
-    assert_eq!(kinds, [Kind::Html, images[0], images[1], Kind::Text]);
+    let png = Kind::Image(ImageCodec::Png);
+    assert_eq!(kinds, [Kind::Html, png, Kind::Text]);
 }
 
 #[test]

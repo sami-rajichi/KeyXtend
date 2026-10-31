@@ -54,36 +54,28 @@ pub(crate) struct Want {
 }
 
 impl Formats {
-    /// The parts to read from a clipboard holding `held`, in its order (the richest first), each kind once. The images
-    /// are PNG and the richest DIB (DIBV5, else DIB), both in the place of the first image format, so an insert sets
-    /// every format apps read.
+    /// The parts to read from a clipboard holding `held`, in its order (the richest first), each kind once. The one
+    /// image is PNG when there is one, else DIBV5, else DIB, in the place of the first image format; an insert of a PNG
+    /// adds the worker's DIB.
     pub(crate) fn pick(&self, held: &[u32]) -> Vec<Want> {
+        let best = [self.png, self.dib_v5, self.dib]
+            .into_iter()
+            .find(|f| held.contains(f));
         let mut out: Vec<Want> = Vec::new();
         for &format in held {
-            let formats = if self.is_image(format) {
-                self.images(held)
+            let format = if self.is_image(format) {
+                best.unwrap_or(format)
             } else {
-                vec![format]
+                format
             };
-            for format in formats {
-                let Some(kind) = self.kind(format) else {
-                    continue;
-                };
-                if !out.iter().any(|w| w.kind == kind) {
-                    out.push(Want { kind, format });
-                }
+            let Some(kind) = self.kind(format) else {
+                continue;
+            };
+            if !out.iter().any(|w| w.kind == kind) {
+                out.push(Want { kind, format });
             }
         }
         out
-    }
-
-    /// The image formats to read from `held`: PNG when held, then DIBV5 when held, else DIB.
-    fn images(&self, held: &[u32]) -> Vec<u32> {
-        let dib = [self.dib_v5, self.dib]
-            .into_iter()
-            .find(|f| held.contains(f));
-        let png = held.contains(&self.png).then_some(self.png);
-        png.into_iter().chain(dib).collect()
     }
 
     /// The formats and bytes that set every one of `parts`, in order, as a write sets them.

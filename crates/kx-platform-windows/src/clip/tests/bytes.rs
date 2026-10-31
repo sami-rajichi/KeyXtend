@@ -58,22 +58,22 @@ fn a_dib_with_a_v4_or_v5_header_goes_as_dibv5_and_a_smaller_one_as_dib() {
     }
 }
 
-/// Windows makes `CF_DIB` and `CF_BITMAP` from a set DIB, never from PNG, so classic apps need the DIB set too.
+/// The worker's DIB has a `BITMAPINFOHEADER`, so it goes as `CF_DIB`; Windows makes `CF_DIBV5` and `CF_BITMAP` from it.
 #[test]
-fn an_insert_of_png_and_dib_sets_both_formats() {
+fn an_insert_of_png_and_the_workers_dib_sets_png_and_cf_dib() {
     let png = ClipPart::Image {
         codec: ImageCodec::Png,
         bytes: Redacted::new(vec![1, 2, 3]),
     };
-    let v5: Vec<u8> = 124u32.to_le_bytes().into_iter().chain([0; 8]).collect();
+    let info: Vec<u8> = 40u32.to_le_bytes().into_iter().chain([0; 8]).collect();
     let dib = ClipPart::Image {
         codec: ImageCodec::Dib,
-        bytes: Redacted::new(v5.clone()),
+        bytes: Redacted::new(info.clone()),
     };
     let parts = [png, dib];
     let set = F.encode_all(&parts);
     let set: Vec<(u32, &[u8])> = set.iter().map(|(f, b)| (*f, &**b)).collect();
-    assert_eq!(set, [(F.png, &[1u8, 2, 3][..]), (F.dib_v5, &v5[..])]);
+    assert_eq!(set, [(F.png, &[1u8, 2, 3][..]), (F.dib, &info[..])]);
 }
 
 #[test]
