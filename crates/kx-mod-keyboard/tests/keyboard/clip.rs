@@ -221,6 +221,23 @@ fn a_language_list_opened_over_the_panel_takes_its_moves_and_leaves_it_the_rest(
     assert_eq!(c.b.rig.tap("up"), Ok(FaceReply::default()));
     c.b.rig.press("space").unwrap();
     assert_eq!(c.heard(), [Heard::Key(PanelKey::Tick)]);
+    assert_eq!(
+        c.b.rig.press("esc"),
+        Ok(FaceReply::default()),
+        "Esc waits for the list"
+    );
+    c.b.rig.panel("esc", ROWS).unwrap();
+    assert!(
+        c.b.rig.state()["list"].is_null(),
+        "Esc closed the list first"
+    );
+    assert!(c.heard().is_empty() && c.on("clip"), "the panel stays open");
+    c.b.rig.tap("esc").unwrap();
+    assert_eq!(
+        c.heard(),
+        [Heard::Key(PanelKey::Esc)],
+        "then Esc is the panel's"
+    );
     assert!(c.strokes().is_empty());
 }
 

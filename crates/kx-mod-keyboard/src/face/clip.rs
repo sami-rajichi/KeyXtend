@@ -21,7 +21,7 @@ impl Face {
         match took {
             ToPanel::Pass => return None,
             ToPanel::Key(key) => {
-                // The module holds `ReadClipboard`, which the key needs, or its start would have failed.
+                // Without `ReadClipboard` the bus refuses `ClipKey`, so the panel hears nothing and the key goes nowhere.
                 let _ = bus.publish(&ClipKey(key));
             }
             ToPanel::Nothing => {}

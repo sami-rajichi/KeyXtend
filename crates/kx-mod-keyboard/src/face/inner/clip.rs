@@ -22,17 +22,20 @@ impl Inner {
         self.typing.want_history(on);
     }
 
-    /// Key `id` from the clipboard panel's key list `keys`: a move, or what a character key gives the search; `Pass`
-    /// while the panel is shut or for a key it does not take.
+    /// Key `id` from the clipboard panel's key list `keys`: a move, or what a character key gives the search, after a
+    /// burst left open ends as before a tap; `Pass` while the panel is shut or for a key it does not take.
     pub(in crate::face) fn clip_key(
         &mut self,
         id: &str,
         keys: &HashMap<String, ClipUse>,
     ) -> ToPanel {
-        match keys.get(id).filter(|_| self.clip) {
-            None => ToPanel::Pass,
-            Some(&ClipUse::Nav(nav)) => ToPanel::Key(nav.into()),
-            Some(&ClipUse::Char(sc)) => {
+        let Some(&used) = keys.get(id).filter(|_| self.clip) else {
+            return ToPanel::Pass;
+        };
+        self.ended();
+        match used {
+            ClipUse::Nav(nav) => ToPanel::Key(nav.into()),
+            ClipUse::Char(sc) => {
                 let table = self.ports.layouts.current();
                 let cells = self.layer.cells();
                 self.typing.search(&self.ports.io(&table, &cells), sc)

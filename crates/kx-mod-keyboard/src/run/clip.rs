@@ -25,8 +25,8 @@ impl Typing {
     }
 
     /// Character key `sc` while the clipboard panel is open: the text it would type now in the layout shown, with
-    /// Shift, `AltGr` and Caps Lock, after which the latches let go as after typing. A dead key gives nothing and ends
-    /// a dead key's wait; with Ctrl, Alt or Win latched the key is not the panel's (`Pass`).
+    /// Shift, `AltGr` and Caps Lock, after which the latches let go as after typing. A dead key gives nothing and keeps
+    /// the wait for the accent the app may hold; with Ctrl, Alt or Win latched the key is not the panel's (`Pass`).
     pub fn search(&mut self, io: &Io<'_>, sc: Scan) -> ToPanel {
         let keys = &io.table.keys;
         let m = LegendMods::of(&self.latches, io.source.caps_on(), keys);
@@ -37,7 +37,6 @@ impl Typing {
             return ToPanel::Nothing;
         };
         if k.is_dead(s) {
-            self.dead = false;
             self.spent();
             return ToPanel::Nothing;
         }

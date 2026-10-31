@@ -33,7 +33,7 @@
 | A search letter for the clipboard panel (`ClipKey`) | Sensitive (it may be part of a secret) | Memory only, as `Redacted<String>`, then one bus event heard only by modules granted `ReadClipboard`; never sent to the app | No | One click |
 | The clipboard panel open, and the history chord wanted, as the bus last told | Public (the key lights) | Memory only; forgotten at each start | No | Until the next change |
 
-Typed text never leaves the click or picked word that makes it: it is not stored or logged, and goes only to the injector and, as `Typed` pieces, to modules granted `ReadFocusedText`. Debug output hides scan codes, text, legends, shortcut ids and key names (`Route`, `Plan`, `Legend`, `Layer`, and the port's `ShortcutId` and `KeyName`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
+Typed text never leaves the click or picked word that makes it: it is not stored or logged, and goes only to the injector, as `Typed` pieces to modules granted `ReadFocusedText`, and as `ClipKey` search letters to modules granted `ReadClipboard`. Debug output hides scan codes, text, legends, shortcut ids and key names (`Route`, `Plan`, `Legend`, `Layer`, and the port's `ShortcutId` and `KeyName`) and the typing state (`Typing`, `Latches`, `LegendMods`, `KeyState`, `StateView`, and `Repeat`, which shows only its phase), since a run of clicks would show what was typed (ae6f192, d3b925e).
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |

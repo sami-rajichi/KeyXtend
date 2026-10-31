@@ -2,20 +2,24 @@
 //! Shift, Caps Lock and `AltGr`; nothing for a dead or empty key; and with Ctrl, Alt or Win (or `AltGr` as Right Alt)
 //! it types as usual.
 
-use super::{Clip, text, unicode};
+use super::{Clip, text};
 use crate::host::GOLDEN;
+use crate::rig::HELD;
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{BoardSpec, Io, KeyboardSettings, LegendMods, ToPanel, Typing};
 use kx_module_api::ports::{LayoutTable, PanelKey, Scan, TextRoute};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeShortcuts, LayoutFile, Stroke};
 
-/// The latches clicked and whether Caps Lock is on: none, Shift, Caps Lock, `AltGr`, then Shift with `AltGr`.
-const STATES: [(&[&str], bool); 5] = [
+/// The latches clicked and whether Caps Lock is on: none, Shift, Caps Lock, `AltGr`, Shift with `AltGr`, then Shift and
+/// `AltGr` each with Caps Lock.
+const STATES: [(&[&str], bool); 7] = [
     (&[], false),
     (&["shift"], false),
     (&[], true),
     (&["altgr"], false),
     (&["shift", "altgr"], false),
+    (&["shift"], true),
+    (&["altgr"], true),
 ];
 
 /// One golden layout's fakes, shared by fresh typing states.
@@ -124,20 +128,43 @@ fn a_search_letter_lets_one_shot_latches_go_as_after_typing() {
 }
 
 #[test]
-fn a_dead_key_in_the_search_sends_nothing_and_ends_its_wait() {
+fn a_search_letter_ends_a_burst_left_open_so_its_latches_let_go_first() {
+    let c = Clip::quiet(None);
+    c.b.rig.tap("shift").unwrap();
+    assert_eq!(
+        c.b.rig.press("c-0x0010"),
+        Ok(HELD),
+        "Shift stays down while Q repeats"
+    );
+    c.open(true);
+    c.b.rig.press("c-0x0011").unwrap();
+    assert_eq!(
+        c.heard(),
+        [text("w")],
+        "the burst ended before the search letter"
+    );
+    assert!(!c.on("shift"), "Shift let go");
+    assert!(!c.b.rig.tick_in(1_000).holding, "Q no longer repeats");
+}
+
+#[test]
+fn a_dead_key_in_the_search_sends_nothing_and_keeps_the_wait_the_app_holds() {
     let c = Clip::quiet(None);
     c.b.rig.switch("fr-fr");
     c.b.rig.press("c-0x001A").unwrap();
     assert_eq!(c.strokes(), [Stroke::Tap(Scan::new(0x1A))], "a wait starts");
     c.open(true);
+    c.b.rig.tap("shift").unwrap();
     c.b.rig.press("c-0x001A").unwrap();
     assert!(c.heard().is_empty() && c.strokes().is_empty());
+    assert!(!c.on("shift"), "it spends the latches");
     c.open(false);
     c.b.rig.press("c-0x0012").unwrap();
+    let composes = [Stroke::Tap(Scan::new(0x12))];
     assert_eq!(
         c.strokes(),
-        [unicode("e")],
-        "no wait left: text, not a key press"
+        composes,
+        "the wait stays: a key press the app composes"
     );
 }
 
