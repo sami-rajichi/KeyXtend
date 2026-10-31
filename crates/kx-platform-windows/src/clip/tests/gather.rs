@@ -135,7 +135,7 @@ fn a_picture_without_text_keeps_its_place_among_the_parts() {
     assert_eq!(parts(last.gather(100)).0, [html(), image()]);
 }
 
-/// A large screenshot's DIB nearly fills the cap alone, so only the stored PNG counts (N1).
+/// A large screenshot's DIB nearly fills the cap alone, so only the stored PNG counts.
 #[test]
 fn a_png_that_fits_is_kept_alone_whatever_its_dib_weighs() {
     let png = ClipPart::Image {

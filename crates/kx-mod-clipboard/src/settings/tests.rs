@@ -256,7 +256,7 @@ fn the_worker_holds_two_of_the_largest_entry_a_preview_and_itself() {
     assert!(taken(&t));
 }
 
-/// A DIB made from the largest entry at insert can pass a small preview, so it counts instead (N1).
+/// A DIB made from the largest entry at insert can pass a small preview, so it counts instead.
 #[test]
 fn the_worker_holds_the_dib_it_makes_beside_the_png_it_reads() {
     let mut t = with("max_entry_mb", 64);
@@ -267,7 +267,7 @@ fn the_worker_holds_the_dib_it_makes_beside_the_png_it_reads() {
     assert!(taken(&t));
 }
 
-/// The worker's base and a read's peak come from its frames' crate, so a change there needs no edit here (M3).
+/// The worker's base and a read's peak come from its frames' crate, so a change there needs no edit here.
 #[test]
 fn the_workers_base_and_read_follow_its_frames_crate() {
     let decode = u64::try_from(WORKER_DECODE_BYTES).unwrap();

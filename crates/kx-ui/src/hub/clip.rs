@@ -91,7 +91,7 @@ impl Hub {
         match act_of(kind, arg, round, shown) {
             Ok(act) => self.send_clip(act),
             Err(Dropped::Stale) => {
-                tracing::debug!(kind, "a click on an older clipboard view was dropped");
+                tracing::debug!(kind, "a late clipboard click was dropped");
             }
             Err(Dropped::Bad) => tracing::warn!(
                 kind,

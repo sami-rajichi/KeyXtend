@@ -6,7 +6,7 @@
 ## Context
 
 - The clipboard's settings check sizes `worker_mb` from two facts the worker's protocol owns: how much a payload read holds as it grows (`READ_TIMES`), and what the PNG decoder may allocate (`DECODE_BYTES`).
-- A `kx-mod-*` crate may depend only on `kx-module-api`, so the check could not read them, and copies of them drifted from the worker.
+- A `kx-mod-*` crate may depend only on `kx-module-api`, so the check could not read them, and copies of them could drift from the worker.
 - `kx-ipc` is a leaf crate: it depends only on `thiserror` and holds no `unsafe`, network or decoding code.
 
 ## Decision

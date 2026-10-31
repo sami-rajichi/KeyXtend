@@ -83,9 +83,9 @@ impl<S: Spawner> Host<S> {
             max_bytes,
             bytes: Cow::Owned(ask.png.into_inner()),
         })?;
-        let fits = |bytes: &[u8]| u32::try_from(bytes.len()).is_ok_and(|n| n <= max_bytes);
+        let in_cap = |bytes: &[u8]| u32::try_from(bytes.len()).is_ok_and(|n| n <= max_bytes);
         self.judge(id, heard, |reply| match reply {
-            Reply::Dib { bytes, .. } if fits(&bytes) => Some(Redacted::new(bytes)),
+            Reply::Dib { bytes, .. } if in_cap(&bytes) => Some(Redacted::new(bytes)),
             _ => None,
         })
     }
