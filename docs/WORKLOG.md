@@ -4,11 +4,17 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 17:11 — P8: final fix after the whole-branch review
+A tick now carries the round of the view it was drawn from, copies wait in a bounded queue of `queue_copies`, thumbnails wait out the picture worker's restart instead of failing for good, and an inserted image carries PNG and the richest DIB. The storage line waits until the room is read, a program run from a share is named without reading its file, a copy asks only the drive's free bytes, an image's bytes reach the worker uncopied, and the settings check ties `worker_mb` to the largest entry and preview. The files preview keeps its page across redraws, the text preview shows its page total once laid out, `ClipKind` and `PanelNote` list each variant by declaring it, and a real junction test guards the file check. File rows now show Lucide's plain file icon, and the review's three deferred minors are recorded in P8's notes.
+
 ## 2026-10-31 15:25 — P8: screen-reader names, lean clip JSON, lazy preview pages, security notes after review
 Screen readers now hear the clipboard panel's empty line, a preview's character count and its picture, and a panel note is announced as an alert. The clip JSON holds only what QML reads, with kind and note ids from exhaustive matches, and a long preview text lays out the shown page and the next, then one page per frame. The P8 security notes now describe the worker's restricted token, the file check that probes only drive paths, the gated `ClipPanel`, the `check_ms` deadline and the gates' junction refusal, and the clipboard surfaces are marked Reviewed. The spec's "As built" list and ARCHITECTURE.md match the code again, and the worker's sandbox is a P14 item.
 
 ## 2026-10-31 14:55 — P8: only drive paths are probed, and no link is followed
 The clipboard's file check now probes only an absolute drive path such as `C:\…`. A share, a device, an NT path such as `\??\UNC\…`, a relative path or a bare `C:foo` stays unchecked and still pastes. Each path and every folder on its way is read without following links, so a symlink or junction to a share shows "Size unknown" and is never reached.
+
+## 2026-10-31 14:50 — P8: the clipboard gates refuse links and stay off the real clipboard under test
+The clipboard gates refuse a junction or link in their data folder, their clipboard writers and history cleanup refuse to run under test, and tidy refuses blank list and feature entries. The history folder now comes from kx-platform's `CLIP_DIR`, so the gates' config no longer repeats it. G20's worker check skips a worker that ended before its token was read, and tidy's F4 also flags a glob import of `std::process`.
 
 ## 2026-10-31 14:18 — P8: save debounce, insert deadline, gated panel, no network probes
 A repeated copy or a pasted step now waits for the debounced save, and an insert whose file check passes `check_ms` (new setting, 5 s) stops with a note and drops the late answer; a property test drives the insert's state machine. `ClipPanel` needs `ReadClipboard` (ADR-0035), and a paste request heard after the keyboard stops sends nothing. A path starting `\\host\`, `\\?\` or `\\.\` is never probed: its row stays, shows "Size unknown" and pastes at Insert. The review's smaller points are fixed too: a `Debug` that hides skipped apps, no-content `Debug` tests, fixtures built from the defaults, and `StoreError` on `thiserror`.
