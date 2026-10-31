@@ -73,16 +73,19 @@ impl Watch {
         Self::start(table().unwrap().marks().without(HISTORY), max_bytes)
     }
 
-    /// The first note that `wants`, within `HEAR`; other notes, maybe another app's copies, are dropped unshown.
+    /// The first note that `wants`, within `HEAR`; other notes, maybe another app's copies, are dropped, and listed with
+    /// their content redacted only when none fits, so a failure shows what came instead.
     fn hear(&self, wants: impl Fn(&ClipNote) -> bool) -> Option<ClipNote> {
         let end = Instant::now() + HEAR;
+        let mut other = Vec::new();
         while let Some(left) = end.checked_duration_since(Instant::now()) {
             match self.rx.recv_timeout(left) {
                 Ok(n) if wants(&n) => return Some(n),
-                Ok(_) => {}
-                Err(_) => return None,
+                Ok(n) => other.push(n),
+                Err(_) => break,
             }
         }
+        eprintln!("heard instead: {other:?}");
         None
     }
 

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-01 00:55 — P8: a live clipboard test that failed once now says what it heard
+On CI, the live test that copies past a 10-byte cap heard no too-big note in one run and passed in the run before, on the same code. The live tests now list the notes they heard instead, with content redacted, so the next failure shows whether the clipboard was busy, another copy came, or nothing did.
+
 ## 2026-11-01 00:20 — P8: the picture worker starts with no console
 On CI's Windows runner (administrator, UAC off) the worker died at start with `0xC0000142`, a DLL that failed to start. `CREATE_NO_WINDOW` still gave it a hidden console, whose `conhost.exe` runs under the worker's reduced token and loads `user32`, which needs a desktop that token cannot reach there. The worker now starts with `DETACHED_PROCESS`, so it has no console at all; a new test proves it starts no other process.
 
