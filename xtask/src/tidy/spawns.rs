@@ -25,6 +25,8 @@ const PATH_SEP: &str = "::";
 const AS: &str = "as";
 /// The import of a module itself, inside its braces.
 const SELF: &str = "self";
+/// The import of all a module's items.
+const GLOB: char = '*';
 
 /// One file F4 reads: its path, code lines and test-only modules.
 struct Source {
@@ -126,7 +128,7 @@ fn report(source: &Source, ws: &Workspace) -> Vec<Violation> {
 
 /// F4's findings in a file's code lines, as (line from 1, entry); lines in `spans` are test code.
 /// An entry is found where its last name stands in a file whose live code also names the one before it, and wherever
-/// that one is renamed, which would hide the last name in other files.
+/// that one is renamed or glob-imported, which would hide the last name in other files.
 fn findings(
     code: &[String],
     spans: &[RangeInclusive<usize>],
@@ -152,7 +154,7 @@ fn findings(
         if module.is_some_and(|m| lines(&|c| names_word(c, m)).is_empty()) {
             at.clear();
         }
-        at.extend(module.map_or_else(Vec::new, |m| lines(&|c| renames(c, m))));
+        at.extend(module.map_or_else(Vec::new, |m| lines(&|c| hides(c, m))));
         found.extend(at.into_iter().map(|at| (at + 1, entry.clone())));
     }
     found.sort();
@@ -166,14 +168,26 @@ fn names_word(line: &str, word: &str) -> bool {
         .any(|(at, _)| whole(line, at, word.len()))
 }
 
-/// True when code line `line` renames module `module`: `module as x`, or `self as x` in the braces after it.
-fn renames(line: &str, module: &str) -> bool {
+/// True when code line `line` renames module `module` (`module as x`, or `self as x` in the braces after it) or
+/// imports all its items (`module::*`, or `*` in the braces after it).
+fn hides(line: &str, module: &str) -> bool {
     line.match_indices(module).any(|(at, _)| {
-        let rest = line[at + module.len()..].split(|c: char| !part(c));
+        let tail = &line[at + module.len()..];
+        let rest = tail.split(|c: char| !part(c));
         let words: Vec<&str> = rest.filter(|w| !w.is_empty()).collect();
         let renamed = words.first() == Some(&AS) || words.windows(2).any(|w| w == [SELF, AS]);
-        whole(line, at, module.len()) && renamed
+        whole(line, at, module.len()) && (renamed || globbed(tail))
     })
+}
+
+/// True when `tail`, the code after a module's name, imports all its items: `::*`, or `*` in the braces after `::`.
+fn globbed(tail: &str) -> bool {
+    let Some(after) = tail.trim_start().strip_prefix(PATH_SEP) else {
+        return false;
+    };
+    let after = after.trim_start();
+    let braces = after.strip_prefix('{').and_then(|b| b.split('}').next());
+    after.starts_with(GLOB) || braces.is_some_and(|b| b.contains(GLOB))
 }
 
 /// The file and folder that a test module `name`, declared in `file`, may live in.

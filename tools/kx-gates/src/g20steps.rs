@@ -49,7 +49,7 @@ impl<'a> Steps<'a> {
         let (g, t) = (self.g(), &self.ctx.cfg.timing);
         let wait = clipkeep::wait(t);
         let write = |text: &str, zero: &[&str]| {
-            clip::write_text(Some(text), zero, wait).map_err(|e| e.to_string())
+            clipkeep::write_text(Some(text), zero, wait).map_err(|e| e.to_string())
         };
         for text in g.texts() {
             write(text, &[])?;

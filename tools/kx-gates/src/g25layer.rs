@@ -60,14 +60,14 @@ fn turns(from: usize, to: usize, count: usize) -> usize {
 }
 
 /// The layer as G25 drives it: Notepad, each page's key ids as the product draws them, and the page shown now.
-struct Desk<'a> {
+struct Layer<'a> {
     ctx: &'a Ctx<'a>,
     app: &'a Opened,
     pages: Vec<Vec<String>>,
     at: Cell<usize>,
 }
 
-impl Desk<'_> {
+impl Layer<'_> {
     /// Reads the keyboard until `read` takes it, up to G25's switch wait; else the error `why`.
     fn read<T>(&self, why: &str, read: impl Fn(Keyboard) -> Option<T>) -> Result<T, String> {
         let (wait, poll) = (self.ctx.cfg.g25.switch_wait_ms, self.ctx.cfg.timing.poll_ms);
@@ -168,16 +168,16 @@ impl Desk<'_> {
 /// whatever happened: the `shortcuts` and `switch_app` results.
 pub fn run(ctx: &Ctx, app: &Opened) -> Result<(Value, Value), String> {
     let pages = board::layer_pages(&product::keyboard()?.shortcut_pages)?;
-    let (layer, wait) = (ModeKey::of(Role::Layer)?, g25::wait(ctx));
-    let was = layer.on()?;
-    let desk = Desk {
+    let (mode, wait) = (ModeKey::of(Role::Layer)?, g25::wait(ctx));
+    let was = mode.on()?;
+    let layer = Layer {
         ctx,
         app,
         pages,
         at: Cell::new(0),
     };
-    let driven = layer.set(true, wait).and_then(|()| desk.drive());
-    let back = layer.put_back(was, wait);
+    let driven = mode.set(true, wait).and_then(|()| layer.drive());
+    let back = mode.put_back(was, wait);
     let (mut shortcuts, switch) = driven.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
     shortcuts["layer_as_found"] = json!(back.is_ok());
     shortcuts["ok"] = json!(shortcuts["ok"] == true && back.is_ok());

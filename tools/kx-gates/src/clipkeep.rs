@@ -1,8 +1,8 @@
 //! Keeps the owner's clipboard around a test: every format saved raw first, and put back after.
-//! The clipboard calls are the product's (`kx_platform_windows::clip`).
+//! The clipboard calls are the product's (`kx_platform_windows::clip`), and every gate write is refused in tests.
 #![cfg(windows)]
 
-use kx_module_api::ports::ClipWait;
+use kx_module_api::ports::{ClipError, ClipWait};
 use kx_platform_windows::clip::{self, open, open::FIRST_NAMED};
 use windows::Win32::System::Ole::{
     CF_HDROP, CF_LOCALE, CF_OEMTEXT, CF_TEXT, CF_UNICODETEXT, CLIPBOARD_FORMAT,
@@ -16,6 +16,44 @@ const RAW_STANDARD: [CLIPBOARD_FORMAT; 5] =
 
 /// Every format of a clipboard content, saved as raw bytes to put back later.
 pub struct Saved(Vec<(u32, Vec<u8>)>);
+
+/// What a test build says when a gate test reaches a clipboard writer.
+#[cfg(test)]
+const REFUSED: &str =
+    "a gate test reached a real clipboard writer; the owner's clipboard stays as it is";
+/// A wait that never waits, for tests that stop before the clipboard.
+#[cfg(test)]
+pub(crate) const NOW: ClipWait = ClipWait {
+    open_ms: 0,
+    poll_ms: 0,
+};
+
+/// Refuses a clipboard write in a test build, as `keys` refuses real input, so `cargo test` never overwrites the
+/// owner's clipboard; every gate clipboard writer calls it first.
+pub(crate) fn live() {
+    #[cfg(test)]
+    panic!("{REFUSED}");
+}
+
+/// True when `write` stops at `live`'s refusal, so nothing reached the clipboard.
+#[cfg(test)]
+pub(crate) fn refused(write: impl FnOnce() + std::panic::UnwindSafe) -> bool {
+    let Err(why) = std::panic::catch_unwind(write) else {
+        return false;
+    };
+    let text = why.downcast_ref::<String>().map(String::as_str);
+    text.or_else(|| why.downcast_ref::<&str>().copied()) == Some(REFUSED)
+}
+
+/// The product's text write (`clip::write_text`), refused in a test build.
+pub(crate) fn write_text(
+    text: Option<&str>,
+    zero: &[&str],
+    wait: ClipWait,
+) -> Result<(), ClipError> {
+    live();
+    clip::write_text(text, zero, wait)
+}
 
 /// The product's clipboard wait from the gates' timing: open within `read_wait_ms`, trying every `poll_ms`.
 pub fn wait(t: &Timing) -> ClipWait {
@@ -67,6 +105,7 @@ pub fn save(wait: ClipWait, max_bytes: usize) -> Result<Saved, String> {
 
 /// Puts back what `save` kept, as one clipboard change.
 pub fn restore(saved: &Saved, wait: ClipWait) -> Result<(), String> {
+    live();
     let put = || {
         let open = open::open(wait)?;
         open::empty(&open)?;
@@ -128,5 +167,20 @@ mod tests {
     fn a_wait_past_what_the_product_holds_is_capped() {
         assert_eq!(ms(250), 250);
         assert_eq!(ms(u64::MAX), u32::MAX);
+    }
+
+    #[test]
+    fn a_test_that_reaches_a_clipboard_writer_panics_before_anything_is_written() {
+        assert!(refused(live), "the guard");
+        assert!(
+            refused(|| drop(restore(&Saved(Vec::new()), NOW))),
+            "restore"
+        );
+        assert!(
+            refused(|| _ = write_text(Some("x"), &[], NOW)),
+            "write_text"
+        );
+        assert!(refused(|| _ = write_text(None, &[], NOW)), "an empty write");
+        assert!(!refused(|| ()), "only the guard's refusal counts");
     }
 }

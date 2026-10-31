@@ -5,7 +5,6 @@
 
 use std::path::Path;
 
-use kx_platform_windows::clip;
 use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -63,7 +62,7 @@ pub(crate) fn copy_line(got: Result<Value, String>, ended: Option<&Ended>) -> Va
 
 /// Empties the clipboard, so a copy starts on none of the owner's.
 fn empty(ctx: &Ctx) -> Result<(), String> {
-    clip::write_text(None, &[], clipkeep::wait(&ctx.cfg.timing)).map_err(|e| e.to_string())
+    clipkeep::write_text(None, &[], clipkeep::wait(&ctx.cfg.timing)).map_err(|e| e.to_string())
 }
 
 /// Both copies on `app`, the second only once the first ended: each one's part.

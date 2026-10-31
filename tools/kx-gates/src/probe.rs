@@ -164,7 +164,7 @@ pub fn run_on<T>(
 fn copy(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let t = &ctx.cfg.timing;
     keys_ours(app)?;
-    clip::write_text(None, &[], clipkeep::wait(t)).map_err(|e| e.to_string())?;
+    clipkeep::write_text(None, &[], clipkeep::wait(t)).map_err(|e| e.to_string())?;
     let before = open::sequence();
     ownkeys::send(&Real, app, &ctx.cfg.keys.copy)?;
     if !open::wait_change(before, clipkeep::wait(t)) {

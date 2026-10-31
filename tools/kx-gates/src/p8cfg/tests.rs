@@ -167,10 +167,6 @@ fn g20_ids_names_and_waits_out_of_range_are_refused() {
         (|c| c.g20_product.row.clear(), "g20_product.row"),
         (|c| c.g20_product.insert.clear(), "g20_product.insert"),
         (
-            |c| c.g20_product.history = "a/b".into(),
-            "g20_product.history",
-        ),
-        (
             |c| c.g20_product.insert_name = "clip.nowhere".into(),
             "g20_product.insert_name",
         ),
@@ -200,7 +196,7 @@ fn a_backup_a_gate_deletes_the_owners_backup_or_a_bad_marker_is_refused() {
             "g20_product.marker",
         ),
         (
-            |c| c.g20_product.marker.clone_from(&c.g20_product.history),
+            |c| c.g20_product.marker = kx_platform::CLIP_DIR.into(),
             "g20_product.marker",
         ),
         (|c| c.g20_product.backup.clear(), "g20_product.backup"),

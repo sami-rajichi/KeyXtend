@@ -18,6 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{PCWSTR, w};
 
 use crate::clipfill::{self, OFF};
+use crate::clipkeep;
 use crate::config::Timing;
 use crate::win::{self, sleep_ms};
 
@@ -87,6 +88,7 @@ impl Owner {
     /// Puts `text` on the clipboard as this owner, with the cloud switch off, or empties it for none.
     #[allow(unsafe_code, reason = "Opens and closes the clipboard for our window.")]
     pub fn write(&self, text: Option<&str>, t: &Timing) -> Result<(), String> {
+        clipkeep::live();
         let cloud = format_id(&clipfill::cloud_off()?).map_err(|e| e.to_string())?;
         // SAFETY: our own live window; the open is closed below whatever the fill gave.
         let open = || unsafe { OpenClipboard(Some(self.0)) }.is_ok().then_some(());
@@ -135,7 +137,22 @@ impl Drop for Owner {
 
 #[cfg(test)]
 mod tests {
+    use std::panic::AssertUnwindSafe;
+
     use super::*;
+    use crate::clipkeep::refused;
+
+    #[test]
+    fn a_test_that_reaches_the_owners_write_panics_before_anything_is_written() {
+        let (owner, t) = (
+            Owner::new().expect("an owner window"),
+            crate::config::load().expect("loads").timing,
+        );
+        for text in [Some("x"), None] {
+            let write = AssertUnwindSafe(|| drop(owner.write(text, &t)));
+            assert!(refused(write), "{text:?}");
+        }
+    }
 
     #[test]
     fn unicode_text_is_utf16_with_a_closing_zero() {

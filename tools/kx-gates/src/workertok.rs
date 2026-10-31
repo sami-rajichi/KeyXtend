@@ -166,6 +166,24 @@ fn rights(pid: u32) -> Result<Rights, String> {
     })
 }
 
+/// The rights of each worker in `pids` as `read` gives them. One `read` fails on is skipped once `runs` says it ended,
+/// as an idle worker stops; while it still runs, its error fails the check.
+fn read_each(
+    pids: Vec<u32>,
+    read: impl Fn(u32) -> Result<Rights, String>,
+    runs: impl Fn(u32) -> bool,
+) -> Result<Vec<Rights>, String> {
+    let mut found = Vec::new();
+    for pid in pids {
+        match read(pid) {
+            Ok(r) => found.push(r),
+            Err(_) if !runs(pid) => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(found)
+}
+
 /// Every running process's id and program path, as far as Windows names it.
 #[allow(unsafe_code, reason = "Windows fills our own buffer of process ids.")]
 fn processes() -> Vec<(u32, String)> {
@@ -194,11 +212,9 @@ fn processes() -> Vec<(u32, String)> {
 pub fn check(pid: u32, exe: &Path) -> Value {
     let read = || -> Result<(Rights, Vec<Rights>), String> {
         let dir = exe.parent().ok_or("the product's program has no folder")?;
-        let workers = beside(&processes(), dir);
-        Ok((
-            rights(pid)?,
-            workers.into_iter().map(rights).collect::<Result<_, _>>()?,
-        ))
+        let product = rights(pid)?;
+        let runs = |w: u32| beside(&processes(), dir).contains(&w);
+        Ok((product, read_each(beside(&processes(), dir), rights, runs)?))
     };
     match read() {
         Ok((product, workers)) => {
@@ -219,82 +235,4 @@ pub fn run(_ctx: &Ctx) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use windows::Win32::System::SystemServices::{
-        SECURITY_MANDATORY_HIGH_RID, SECURITY_MANDATORY_LOW_RID, SECURITY_MANDATORY_SYSTEM_RID,
-    };
-
-    use super::*;
-
-    const HIGH: u32 = SECURITY_MANDATORY_HIGH_RID.cast_unsigned();
-    const LOW: u32 = SECURITY_MANDATORY_LOW_RID.cast_unsigned();
-    const SYSTEM: u32 = SECURITY_MANDATORY_SYSTEM_RID.cast_unsigned();
-
-    fn rights(ui_access: bool, level: u32) -> Rights {
-        Rights { ui_access, level }
-    }
-
-    #[test]
-    fn a_product_without_ui_access_skips_the_check() {
-        let worker = [rights(true, HIGH)];
-        assert_eq!(verdict(rights(false, MEDIUM), &worker), Verdict::Skipped);
-        assert_eq!(verdict(rights(false, MEDIUM), &[]), Verdict::Skipped);
-    }
-
-    #[test]
-    fn with_ui_access_every_worker_drops_it_and_stays_at_most_medium() {
-        let ours = rights(true, MEDIUM);
-        assert_eq!(verdict(ours, &[rights(false, MEDIUM)]), Verdict::Reduced);
-        assert_eq!(verdict(ours, &[rights(false, LOW)]), Verdict::Reduced);
-        assert_eq!(verdict(ours, &[rights(true, MEDIUM)]), Verdict::Broad);
-        assert_eq!(verdict(ours, &[rights(false, HIGH)]), Verdict::Broad);
-        assert_eq!(
-            verdict(ours, &[rights(false, SYSTEM)]),
-            Verdict::Broad,
-            "System fails"
-        );
-        let mixed = [rights(false, MEDIUM), rights(true, MEDIUM)];
-        assert_eq!(verdict(ours, &mixed), Verdict::Broad, "one is enough");
-        assert_eq!(verdict(ours, &[]), Verdict::NoWorker);
-    }
-
-    #[test]
-    fn only_a_passing_verdict_passes_only_a_broad_one_fails_and_each_says_why() {
-        assert!(Verdict::Reduced.ok() && !Verdict::Reduced.fails());
-        assert!(Verdict::Broad.fails());
-        for v in [Verdict::Skipped, Verdict::Broad, Verdict::NoWorker] {
-            assert!(!v.ok(), "{v:?}");
-            assert_eq!(v.fails(), v == Verdict::Broad, "{v:?}");
-            assert!(!v.why().is_empty());
-        }
-        assert!(Verdict::Skipped.why().contains("uiAccess"));
-    }
-
-    #[test]
-    fn workers_are_the_ones_beside_the_product_in_any_letter_case() {
-        let dir = Path::new(r"C:\Program Files\KeyXtend-dev\keyxtend");
-        let found = [
-            (
-                4,
-                r"C:\Program Files\KeyXtend-dev\keyxtend\keyxtend-worker.exe".to_string(),
-            ),
-            (
-                5,
-                r"c:\program files\keyxtend-dev\KEYXTEND\Keyxtend-Worker.EXE".to_string(),
-            ),
-            (6, r"D:\elsewhere\keyxtend-worker.exe".to_string()),
-            (
-                7,
-                r"C:\Program Files\KeyXtend-dev\keyxtend\keyxtend.exe".to_string(),
-            ),
-        ];
-        assert_eq!(beside(&found, dir), [4, 5]);
-    }
-
-    #[test]
-    fn each_workers_rights_are_logged_as_level_and_ui_access() {
-        let line = json!({ "workers": [rights(false, MEDIUM)] });
-        assert_eq!(line["workers"][0]["level"], MEDIUM);
-        assert_eq!(line["workers"][0]["ui_access"], false);
-    }
-}
+mod tests;

@@ -52,16 +52,26 @@ fn the_panel_ids_are_the_ones_kx_ui_gives_its_parts() {
     assert_eq!(g.row_id(4), "clip.row-4");
 }
 
+/// The key that once named the history folder, which kx-platform's `CLIP_DIR` names now.
+const HISTORY: &str = "history";
+
 #[test]
-fn the_history_folder_is_the_apps_own() {
-    let g = load().expect("loads").g20_product;
-    assert_eq!(g.history, kx_platform::CLIP_DIR);
+fn the_history_folder_is_the_apps_own_never_a_setting() {
     assert!(APP_CLIP.contains("pub use kx_platform::CLIP_DIR;"));
+    let file: toml::Table = super::SHIPPED.parse().expect("parses");
+    let mut g = file["g20_product"].as_table().expect("a section").clone();
+    assert!(
+        !g.contains_key(HISTORY),
+        "the gate takes kx-platform's name"
+    );
+    g.insert(HISTORY.into(), kx_platform::CLIP_DIR.into());
+    let e = super::read_section("g20_product", g.into()).expect_err("no such key");
+    assert!(e.contains(HISTORY), "{e}");
 }
 
 #[test]
 fn a_marker_that_names_a_file_the_product_writes_is_refused() {
-    let good = load().expect("loads");
+    let (good, history) = (load().expect("loads"), kx_platform::CLIP_DIR.to_uppercase());
     let taken = [
         "settings.toml",
         "Settings.TOML",
@@ -69,7 +79,7 @@ fn a_marker_that_names_a_file_the_product_writes_is_refused() {
         "settings.broken.toml",
         "settings.toml.tmp",
         "logs",
-        "CLIPBOARD",
+        history.as_str(),
     ];
     for name in taken {
         let mut c = good.clone();

@@ -136,6 +136,24 @@ fn a_renamed_process_module_is_found_where_it_is_renamed() {
 }
 
 #[test]
+fn a_glob_of_the_process_module_is_found_where_it_is_globbed() {
+    let text = concat!(
+        "pub use std::process::*;\n",
+        "use std::process :: { Stdio, * };\n",
+        "use std::process::{Stdio, ExitCode};\n",
+        "fn f(a: u32) -> u32 { a * 2 }\n",
+    );
+    let found = f4_with(&[
+        ("src/glob.rs", text),
+        (
+            "src/use.rs",
+            "fn f() { crate::glob::Command::new(\"x\"); }\n",
+        ),
+    ]);
+    assert_eq!(places(&found), at("src/glob.rs", &[1, 2]));
+}
+
+#[test]
 fn an_inline_test_module_may_spawn_but_code_after_it_may_not() {
     let text = concat!(
         "#[cfg(test)]\n",

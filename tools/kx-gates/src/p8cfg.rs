@@ -26,8 +26,6 @@ const OWN_APP: &str = env!("CARGO_PKG_NAME");
 pub struct G20Product {
     /// The out folder's file that keeps the test build's settings bytes during a run.
     pub backup: String,
-    /// The history's folder in the data folder.
-    pub history: String,
     /// The file that marks a data folder the gate made.
     pub marker: String,
     /// One plain copy per language, oldest first.
@@ -175,8 +173,8 @@ impl G20Product {
         Ok(())
     }
 
-    /// Refuses an empty or dotted group, an empty id, a history folder or marker that is no plain name, a marker the
-    /// product uses, and a text kx-ui lacks.
+    /// Refuses an empty or dotted group, an empty id, a marker that is no plain name or that the product uses, and a
+    /// text kx-ui lacks.
     fn check_ids(&self) -> Result<(), String> {
         if self.group.is_empty() || self.group.contains(SEP) {
             return Err(format!("g20_product.group must be a name without {SEP}"));
@@ -191,10 +189,7 @@ impl G20Product {
         if let Some((key, _)) = ids.iter().find(|(_, id)| id.is_empty()) {
             return Err(format!("g20_product.{key} must not be empty"));
         }
-        if !plain_name(&self.history) {
-            return Err("g20_product.history must be a plain folder name".to_string());
-        }
-        if !plain_name(&self.marker) || clipdata::taken(&self.marker, &self.history) {
+        if !plain_name(&self.marker) || clipdata::taken(&self.marker) {
             return Err(
                 "g20_product.marker must be a plain file name the product never writes in its data folder"
                     .to_string(),

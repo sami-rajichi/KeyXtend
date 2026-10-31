@@ -5,6 +5,8 @@ use std::fmt;
 
 use serde::Deserialize;
 
+use crate::devtools::paths::is_relative_plain;
+
 /// Tidy check settings from `[workspace.metadata.tidy]`.
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -60,7 +62,7 @@ pub(crate) struct TidyConfig {
     /// File extensions F4 reads.
     pub spawn_extensions: Vec<String>,
     /// Process-start APIs F4 bans, as paths: it looks for the last name in a file that also names the one before it,
-    /// and for a rename of the one before it.
+    /// and for a rename or glob import of the one before it.
     pub banned_spawns: Vec<String>,
     /// Build scripts, as paths inside their package, which may start processes.
     pub build_scripts: Vec<String>,
@@ -72,17 +74,7 @@ impl TidyConfig {
         if self.warn_file_lines > self.max_file_lines {
             return Err(ConfigError::WarnExceedsMax);
         }
-        // An empty list would make its check pass while reading nothing.
-        let lists = [
-            ("extensions", &self.extensions),
-            ("scan_dirs", &self.scan_dirs),
-            ("spawn_dirs", &self.spawn_dirs),
-            ("spawn_extensions", &self.spawn_extensions),
-            ("banned_spawns", &self.banned_spawns),
-        ];
-        if let Some((name, _)) = lists.iter().find(|(_, l)| l.is_empty()) {
-            return Err(ConfigError::EmptyList(name));
-        }
+        self.check_lists()?;
         let texts = [
             ("tool_dir", &self.tool_dir),
             ("build_tool", &self.build_tool),
@@ -93,6 +85,38 @@ impl TidyConfig {
         ];
         if let Some((name, _)) = texts.iter().find(|(_, v)| v.trim().is_empty()) {
             return Err(ConfigError::EmptyValue(name));
+        }
+        Ok(())
+    }
+
+    /// Rejects an empty required list, a blank entry in any list, and a build script outside its package.
+    fn check_lists(&self) -> Result<(), ConfigError> {
+        // An empty list, or a blank entry, would make its check pass while reading nothing.
+        let required = [
+            ("extensions", &self.extensions),
+            ("scan_dirs", &self.scan_dirs),
+            ("spawn_dirs", &self.spawn_dirs),
+            ("spawn_extensions", &self.spawn_extensions),
+            ("banned_spawns", &self.banned_spawns),
+        ];
+        if let Some((name, _)) = required.iter().find(|(_, l)| l.is_empty()) {
+            return Err(ConfigError::EmptyList(name));
+        }
+        let others = [
+            ("skip_dirs", &self.skip_dirs),
+            ("module_allowed", &self.module_allowed),
+            ("banned_network", &self.banned_network),
+            ("banned_media", &self.banned_media),
+            ("root_kinds", &self.root_kinds),
+            ("test_only", &self.test_only),
+            ("build_scripts", &self.build_scripts),
+        ];
+        let blank = |l: &Vec<String>| l.iter().any(|v| v.trim().is_empty());
+        if let Some((name, _)) = required.iter().chain(&others).find(|(_, l)| blank(l)) {
+            return Err(ConfigError::BlankEntry(name));
+        }
+        if !self.build_scripts.iter().all(|s| is_relative_plain(s)) {
+            return Err(ConfigError::NotRelative("build_scripts"));
         }
         Ok(())
     }
@@ -135,6 +159,8 @@ pub(crate) enum ConfigError {
     NotListed(&'static str, &'static str),
     /// A list must hold only files with the given extension.
     NotType(&'static str, &'static str),
+    /// A list holds an empty or blank entry.
+    BlankEntry(&'static str),
 }
 
 impl fmt::Display for ConfigError {
@@ -151,147 +177,10 @@ impl fmt::Display for ConfigError {
             Self::NotRelative(name) => write!(f, "{name} must be a relative path of plain names"),
             Self::NotListed(name, list) => write!(f, "{name} must name only entries of {list}"),
             Self::NotType(name, ext) => write!(f, "{name} must hold only .{ext} files"),
+            Self::BlankEntry(name) => write!(f, "{name} must hold no blank entry"),
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_support::tidy_config as tidy;
-
-    #[test]
-    fn valid_config_passes_validation() {
-        assert_eq!(tidy().validate(), Ok(()));
-    }
-
-    #[test]
-    fn warn_greater_than_max_is_rejected() {
-        let mut config = tidy();
-        config.warn_file_lines = config.max_file_lines + 1;
-        assert_eq!(config.validate(), Err(ConfigError::WarnExceedsMax));
-    }
-
-    #[test]
-    fn warn_equal_to_max_is_allowed() {
-        let mut config = tidy();
-        config.warn_file_lines = config.max_file_lines;
-        assert_eq!(config.validate(), Ok(()));
-    }
-
-    #[test]
-    fn each_required_list_must_not_be_empty() {
-        let emptied = |name: &'static str, clear: fn(&mut TidyConfig)| {
-            let mut config = tidy();
-            clear(&mut config);
-            assert_eq!(config.validate(), Err(ConfigError::EmptyList(name)));
-        };
-        emptied("extensions", |c| c.extensions.clear());
-        emptied("scan_dirs", |c| c.scan_dirs.clear());
-        emptied("spawn_dirs", |c| c.spawn_dirs.clear());
-        emptied("spawn_extensions", |c| c.spawn_extensions.clear());
-        emptied("banned_spawns", |c| c.banned_spawns.clear());
-    }
-
-    #[test]
-    fn empty_tool_dir_is_rejected() {
-        let mut config = tidy();
-        config.tool_dir = String::new();
-        assert_eq!(config.validate(), Err(ConfigError::EmptyValue("tool_dir")));
-    }
-
-    #[test]
-    fn blank_deny_attr_is_rejected() {
-        let mut config = tidy();
-        config.deny_attr = "  ".to_string();
-        assert_eq!(config.validate(), Err(ConfigError::EmptyValue("deny_attr")));
-    }
-
-    #[test]
-    fn blank_bridge_values_are_rejected() {
-        let mut config = tidy();
-        config.bridge_dir = String::new();
-        assert_eq!(
-            config.validate(),
-            Err(ConfigError::EmptyValue("bridge_dir"))
-        );
-        let mut config = tidy();
-        config.safety_tag = " ".to_string();
-        assert_eq!(
-            config.validate(),
-            Err(ConfigError::EmptyValue("safety_tag"))
-        );
-        let mut config = tidy();
-        config.bridge_crate = String::new();
-        let want = Err(ConfigError::EmptyValue("bridge_crate"));
-        assert_eq!(config.validate(), want);
-    }
-
-    #[test]
-    fn blank_build_tool_is_rejected() {
-        let mut config = tidy();
-        config.build_tool = " ".to_string();
-        let want = Err(ConfigError::EmptyValue("build_tool"));
-        assert_eq!(config.validate(), want);
-    }
-
-    #[test]
-    fn error_messages_name_their_values() {
-        assert_eq!(
-            ConfigError::ZeroValue("x").to_string(),
-            "x must not be zero"
-        );
-        assert_eq!(
-            ConfigError::NotPositive("x").to_string(),
-            "x must be at least 1"
-        );
-        assert_eq!(
-            ConfigError::NotQuotable("x").to_string(),
-            "x must not contain \" or end with \\"
-        );
-        assert_eq!(
-            ConfigError::NotBelow("a", "b").to_string(),
-            "a must be smaller than b"
-        );
-        assert_eq!(
-            ConfigError::Same("a", "b").to_string(),
-            "a and b must differ"
-        );
-        assert_eq!(
-            ConfigError::NotListed("a", "b").to_string(),
-            "a must name only entries of b"
-        );
-        assert_eq!(
-            ConfigError::NotType("a", "dll").to_string(),
-            "a must hold only .dll files"
-        );
-    }
-
-    #[test]
-    fn tidy_config_rejects_unknown_field() {
-        let json = r#"{
-            "max_file_lines": 400, "warn_file_lines": 300,
-            "extensions": [], "scan_dirs": [], "skip_dirs": [],
-            "app_dir": "apps", "tool_dir": "tools", "build_tool": "xtask",
-            "module_prefix": "kx-mod-", "platform_prefix": "kx-platform-",
-            "module_allowed": [], "app": "keyxtend",
-            "banned_network": [], "banned_media": [], "banned_features": {},
-            "build_only_features": {}, "unsafe_attr": "x",
-            "deny_attr": "y", "root_kinds": [], "test_only": [], "bridge_crate": "b",
-            "bridge_dir": "d", "safety_tag": "t", "spawn_dirs": [], "spawn_extensions": [],
-            "banned_spawns": [], "build_scripts": [], "bogus": 1
-        }"#;
-        assert!(serde_json::from_str::<TidyConfig>(json).is_err());
-        let known = json.replace(r#", "bogus": 1"#, "");
-        assert!(
-            serde_json::from_str::<TidyConfig>(&known).is_ok(),
-            "only the unknown field fails"
-        );
-    }
-
-    #[test]
-    fn dco_config_rejects_unknown_field() {
-        let json = r#"{"trailer": "Signed-off-by", "exempt_authors": [], "bogus": 1}"#;
-        assert!(serde_json::from_str::<DcoConfig>(json).is_err());
-    }
-}
+mod tests;

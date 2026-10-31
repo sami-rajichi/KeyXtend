@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use kx_mod_clipboard::{ClipSettings, ID, SPEC};
+use kx_platform::CLIP_DIR;
 use kx_platform_windows::uiaccess;
 use kx_platform_windows::worker::WORKER_EXE;
 use kx_settings::VERSION_KEY;
@@ -109,7 +110,7 @@ impl<'a> ClipSession<'a> {
         let side = ctx.out.join(&g.backup);
         let taken = product::files(&program).and_then(|f| Kept::take_as(&f, &side, LATER));
         let (kept, recovered) = taken.map_err(|e| clipdata::undone(&data, &g.marker, e))?;
-        if let Err(e) = clipdata::remove(&data.join(&g.history)) {
+        if let Err(e) = clipdata::remove(&data.join(CLIP_DIR)) {
             let back = kept.put_back(false).err().map(|b| format!("; {b}"));
             let e = format!("{e}{}", back.unwrap_or_default());
             return Err(clipdata::undone(&data, &g.marker, e));
@@ -170,7 +171,7 @@ impl<'a> ClipSession<'a> {
     pub fn close(self) -> Result<(), String> {
         let g = &self.ctx.cfg.g20_product;
         self.kept.put_back(self.stray.get())?;
-        clipdata::finish(&self.data, &g.marker, &g.history)
+        clipdata::finish(&self.data, &g.marker)
     }
 }
 

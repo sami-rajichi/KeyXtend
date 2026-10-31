@@ -3,11 +3,12 @@
 #![cfg(windows)]
 
 use kx_module_api::ports::{ClipError, ClipWait};
-use kx_platform_windows::clip::{self, open};
+use kx_platform_windows::clip::open;
 use serde::Deserialize;
 use windows::Win32::Graphics::Gdi::{BI_RGB, BITMAPINFOHEADER};
 use windows::Win32::System::Ole::CF_DIB;
 
+use crate::clipkeep;
 use crate::p8cfg::G8Clip;
 
 /// The product's clipboard table (kx-platform-windows), for the cloud switch every gate copy turns off.
@@ -126,6 +127,7 @@ pub fn dib(side: u32, n: usize) -> Vec<u8> {
 
 /// Puts picture `bytes` on the clipboard as one change, with the cloud switch off.
 fn write_image(bytes: &[u8], wait: ClipWait) -> Result<(), String> {
+    clipkeep::live();
     let cloud = cloud_off()?;
     let put = || -> Result<(), ClipError> {
         let open = open::open(wait)?;
@@ -140,8 +142,10 @@ fn write_image(bytes: &[u8], wait: ClipWait) -> Result<(), String> {
 pub fn copy(g: &G8Clip, n: usize, fill: Fill, wait: ClipWait) -> Result<(), String> {
     let written = match fill {
         Fill::Image(px) => return write_image(&dib(px, n), wait),
-        Fill::Text(chars) => clip::write_text(Some(&text(&g.prefix, n, Some(chars))), &[], wait),
-        Fill::Short => clip::write_text(Some(&text(&g.prefix, n, None)), &[], wait),
+        Fill::Text(chars) => {
+            clipkeep::write_text(Some(&text(&g.prefix, n, Some(chars))), &[], wait)
+        }
+        Fill::Short => clipkeep::write_text(Some(&text(&g.prefix, n, None)), &[], wait),
     };
     written.map_err(|e| e.to_string())
 }
@@ -149,6 +153,7 @@ pub fn copy(g: &G8Clip, n: usize, fill: Fill, wait: ClipWait) -> Result<(), Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::clipkeep::{NOW, refused};
 
     /// A small fill: 20 copies, a picture every 4th, the last 5 short.
     fn small() -> G8Clip {
@@ -232,6 +237,18 @@ mod tests {
         assert_eq!(u32::from_le_bytes(le(&bytes, 20)), 8 * 8 * 4, "image size");
         assert_eq!(dib(8, 3), bytes, "the same number makes the same picture");
         assert_ne!(dib(8, 4), bytes, "another number makes another");
+    }
+
+    #[test]
+    fn a_test_that_reaches_a_fill_copy_panics_before_anything_is_written() {
+        assert!(
+            refused(|| drop(write_image(&dib(8, 1), NOW))),
+            "write_image"
+        );
+        for fill in [Fill::Text(30), Fill::Short, Fill::Image(8)] {
+            let g = small();
+            assert!(refused(move || drop(copy(&g, 1, fill, NOW))), "{fill:?}");
+        }
     }
 
     #[test]

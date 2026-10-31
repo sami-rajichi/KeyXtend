@@ -85,7 +85,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
     let (g, t) = (&ctx.cfg.g20, &ctx.cfg.timing);
     for i in 1..=g.burst {
         let quick = text(&g.prefix, g.copies + i);
-        clip::write_text(Some(&quick), &[], clipkeep::wait(t))
+        clipkeep::write_text(Some(&quick), &[], clipkeep::wait(t))
             .map_err(|e| format!("burst {i}: {e}"))?;
     }
     let mut b = Tally::default();
@@ -98,7 +98,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
 /// Puts the chosen older entry back on the clipboard, pastes it at the end, and checks the saved file.
 fn paste_back(ctx: &Ctx, doc: &Doc, entry: &str) -> Result<bool, String> {
     let (t, ek) = (&ctx.cfg.timing, &ctx.cfg.edit_keys);
-    clip::write_text(Some(entry), &[], clipkeep::wait(t))
+    clipkeep::write_text(Some(entry), &[], clipkeep::wait(t))
         .map_err(|e| format!("paste back: {e}"))?;
     probe::front(ctx, &doc.app)?;
     ownkeys::each(
@@ -119,7 +119,7 @@ fn listen(ctx: &Ctx, doc: &Doc) -> Result<(Tally, usize, Vec<String>), String> {
     let marks = clip::markers();
     let (mut tally, mut notes) = (Tally::default(), Vec::new());
     for i in halves(g).0 {
-        clip::write_text(Some(&text(&g.prefix, i)), &[], wait)
+        clipkeep::write_text(Some(&text(&g.prefix, i)), &[], wait)
             .map_err(|e| format!("copy {i}: {e}"))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }
@@ -128,7 +128,7 @@ fn listen(ctx: &Ctx, doc: &Doc) -> Result<(Tally, usize, Vec<String>), String> {
         let mark = marks
             .get(i % marks.len().max(1))
             .ok_or("the product has no markers")?;
-        clip::write_text(Some(&text(&g.hidden_prefix, i + 1)), &[mark.as_str()], wait)
+        clipkeep::write_text(Some(&text(&g.hidden_prefix, i + 1)), &[mark.as_str()], wait)
             .map_err(|e| format!("marked copy {}: {e}", i + 1))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }
