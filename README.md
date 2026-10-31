@@ -65,6 +65,8 @@ Early development. Done so far:
 - P4: mouse assist, which right-clicks and drags with clicks only.
 - P5: the scroll pad, which scrolls the window last pointed at with clicks only.
 - P6: the shortcuts layer and the Power key: one click sends a common shortcut, such as Copy all or Switch app, or opens the system's power dialog.
+- P7: word prediction, which suggests and learns words and emails on this PC.
+- P8: clipboard history, which keeps what you copy, sealed on this PC, and pastes several copies together.
 
 The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
@@ -93,6 +95,11 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
   - They learn your words and emails on this PC only, and never show or learn in a password box.
   - After `@`, chips finish the address with common domains; typing `@@` lists the emails you typed before.
   - The menu button at their end forgets a word, pauses learning or turns suggestions off.
+- **Clipboard history** (the clip key): your copies, newest first, with a thumbnail for each picture.
+  - Search ignores accents and harakat. A click ticks a row, and Insert (n) pastes the ticked rows into the app in front, texts joined by a blank line.
+  - Pin keeps a row. Delete and Delete all, which asks first, spare pinned rows. A row's preview pages long texts and shows pictures large.
+  - Win, then V, on the keyboard opens it too; `[clipboard] history_key = false` gives Win+V back to Windows.
+  - Copies an app marks as private, as password managers do, are never kept.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
 - **Starting KeyXtend again** shows the running keyboard, and `keyxtend --quit` ends it.
@@ -106,6 +113,7 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 - **Comments you type into the file are not kept.** The program writes the whole file again each time it saves.
 - **The log keeps two runs**, this one and the one before, in a `logs` folder inside that settings folder. It is small and never holds what you type, your clipboard or your passwords.
 - **Learned words and emails** are sealed in a `words` folder there, under a key the system keeps for your account.
+- **The clipboard history** is sealed in a `clipboard` folder there, one folder per day. By default it keeps 7 days, at most 1,000 entries and 1 GB; Open folder in the panel shows it.
 - **Nothing is sent anywhere.** The settings and the log stay on your PC.
 
 ## Documents

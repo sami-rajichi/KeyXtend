@@ -231,7 +231,7 @@ The power dialog's COM class (P14): each Power click makes `Shell.Application` i
 
 The reveal's COM classes (P14): Open folder activates `ShellWindows` as a local server, and its calls load proxy and stub classes into the uiAccess process, where COM reads per-user `HKCU` registrations first. P14's check must click Open folder and also plant an out-of-process override (`LocalServer32`, `TreatAs`), not only in-process ones (`docs/items/P14.md`).
 
-The worker's token under a uiAccess or elevated host (P8 task 19): tests run without uiAccess and unelevated, so clearing `TokenUIAccess` and `CreateRestrictedToken` are proven only on such a token, and the Administrators refusal only from made-up readings. Task 19's gate reads the installed worker's uiAccess and level under the signed uiAccess build, not its groups or privileges (`dev-tools.md`).
+Done (P8, hands-on check, 2026-10-31): on the signed dev install, running at High with uiAccess, `g20 worker` read a running worker at Medium without uiAccess. The start's own read-back of groups and privileges, which ends a worker that keeps any right, let it run.
 
 Done (P3, ed424ef): the tray's class reader sliced its buffer by Windows' count inside a callback, where a panic would abort the uiAccess process. It now reads with `get`, as the other readers do.
 

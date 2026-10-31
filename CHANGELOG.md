@@ -23,6 +23,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - The scroll pad (P5): arrows and Stop that glide the window last pointed at, slow then fast, with its outline, a badge, stops at the end, a press or a limit, our open list paged, and a lone second click on Win that opens Start (ADR-0029).
 - The shortcuts layer and Power key (P6): 37 shortcuts on pages the user arranges, named by meaning and sent by each platform's table, tips that name their keys, and the system's own power dialog (ADR-0031).
 - Word prediction and emails (P7): five chips in the language in front from shipped word packs, learned words and emails sealed on this PC, `@@` for known emails, a lock in password boxes, and a menu to forget, pause or turn suggestions off (ADR-0032, ADR-0033).
+- Clipboard history (P8): text, links, pictures and files copied in any app, newest first and sealed on this PC by day, with search that ignores accents and harakat, ticks across searches, Insert (n) to paste several copies together, pins, previews, Win+V from the keyboard, and pictures drawn by a separate low-rights helper (ADR-0034 to ADR-0036).
 
 ### Changed
 - The licence: KeyXtend is now view only, all rights reserved, and the app is sold under its own user licence (ADR-0030). Versions published before keep the GPL-3.0-or-later.

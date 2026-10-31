@@ -48,7 +48,7 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 ### Must fix (blocks Definition of Done)
 - None.
 ### Should fix (tracked issue)
-- Moved to P8's hands-on check (`docs/items/P8.md`): copy real images from Paint, a browser and Snip and look at their thumbnails, above all V4 and V5 DIBs with bit masks.
+- Done for Paint, a browser and Snip (P8 hands-on check, 2026-10-31): their copies showed real thumbnails and previews, and a Snip pasted whole into Paint. A copy that offers only a V4 or V5 DIB with bit masks is still to be seen, in P14's check (`docs/items/P14.md`).
 - Done (task 9): the host and the worker read the command words and exit codes from one copy in `kx-ipc` (`MEDIA_JOB`, `MAX_PIXELS_FLAG`, `CLEAN_EXIT`, `REFUSED_EXIT`); `the_real_worker_draws_through_the_host` and `the_workers_words_and_exit_codes_match_the_host` in `kx-platform-windows` start the real worker.
 ### Accepted (with reason)
 - Interlaced PNGs are refused: their seven passes cover the whole image, so drawing one needs a full-size buffer, which the row-by-row decoders never hold. Apps rarely copy interlaced PNGs; the history row keeps its type icon.
