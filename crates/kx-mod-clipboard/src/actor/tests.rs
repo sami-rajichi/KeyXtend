@@ -12,6 +12,7 @@ mod days;
 mod ears;
 mod fakes;
 mod flood;
+mod images;
 mod joins;
 mod logs;
 mod panel;

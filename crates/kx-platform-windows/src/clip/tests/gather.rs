@@ -134,3 +134,14 @@ fn a_picture_without_text_keeps_its_place_among_the_parts() {
     let last = Fake::new(vec![(F.html, 5, html()), (F.dib, 3, image())]);
     assert_eq!(parts(last.gather(100)).0, [html(), image()]);
 }
+
+#[test]
+fn every_image_format_is_fetched_and_counted_toward_the_cap() {
+    let png = ClipPart::Image {
+        codec: ImageCodec::Png,
+        bytes: Redacted::new(vec![9]),
+    };
+    let clip = Fake::new(vec![(F.dib, 6, image()), (F.png, 5, png.clone())]);
+    assert_eq!(parts(clip.gather(11)).0, [png, image()], "PNG first");
+    assert_eq!(clip.gather(10).err(), Some(11), "both count");
+}
