@@ -983,7 +983,7 @@ var lk = {
       "kind_text": "file-text",
       "kind_link": "link",
       "kind_image": "image",
-      "kind_file": "file-text",
+      "kind_file": "file",
       "kind_media": "film",
       "pin": "pin",
       "unpin": "pin-off",

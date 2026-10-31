@@ -149,7 +149,7 @@ fn a_misspelt_or_missing_button_is_refused() {
 fn the_clipboard_panel_shows_its_icons_by_role() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "title=clipboard-clock search=search close=x kind_text=file-text kind_link=link \
-                kind_image=image kind_file=file-text kind_media=film pin=pin unpin=pin-off preview=eye \
+                kind_image=image kind_file=file kind_media=film pin=pin unpin=pin-off preview=eye \
                 delete=trash-2 insert=clipboard-paste cancel=x shown=check room=hard-drive \
                 folder=folder-open back=arrow-left";
     let named = i.clip.named();
