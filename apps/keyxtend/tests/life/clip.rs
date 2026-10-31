@@ -79,12 +79,12 @@ fn a_copy_shows_in_the_panel_and_insert_pastes_it_through_the_keyboard() {
         back: false,
     });
     assert_eq!(views.recv_timeout(WAIT).unwrap().0.rows.len(), 1);
-    assert!(
-        boot.hub.clip_json().contains(HELLO),
-        "the hub keeps the view"
-    );
-    boot.hub.clip_act(clip_acts::TICK, 0);
-    boot.hub.clip_act(clip_acts::INSERT, 0);
+    let kept = boot.hub.clip_json();
+    assert!(kept.contains(HELLO), "the hub keeps the view");
+    let kept: serde_json::Value = serde_json::from_str(&kept).unwrap();
+    let round = kept["round"].as_i64().expect("the view's round");
+    boot.hub.clip_act(clip_acts::TICK, 0, round);
+    boot.hub.clip_act(clip_acts::INSERT, 0, round);
     let ask = asks.recv_timeout(WAIT).unwrap();
     let answer = answers.recv_timeout(WAIT).unwrap();
     assert_eq!(
