@@ -39,5 +39,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0033 | [Typed text travels only to modules that may read it](0033-typed-text-travels-only-to-modules-that-may-read-it.md) | Accepted (2026-10-24). Gates the face and the pointer notes, and replaces ARCHITECTURE.md's password intercept example with a field service. |
 | 0034 | [The clipboard history seals day folders and decodes images in a worker](0034-the-clipboard-history-seals-day-folders-and-decodes-images-in-a-worker.md) | Accepted (2026-10-30). Adds `WriteClipboard`, the shelf, picture and reveal ports, the `media` worker's rights, and moves §6's folding to `kx-module-api`. Partly superseded by ADR-0035 (decision 1's gate list). |
 | 0035 | [The clipboard panel's state needs ReadClipboard, and services follow their gates](0035-the-clipboard-panel-state-needs-read-clipboard.md) | Accepted (2026-10-31). Supersedes ADR-0034 decision 1's gate list. |
+| 0036 | [The module API shares the worker's limits from kx-ipc](0036-the-module-api-shares-the-worker-limits-from-kx-ipc.md) | Accepted (2026-10-31). `kx-module-api` depends on the leaf crate `kx-ipc` for `READ_TIMES` and `DECODE_BYTES` only. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

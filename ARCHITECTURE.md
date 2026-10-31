@@ -56,7 +56,7 @@ crates/
                          any other being `FileFact::Unchecked`: P8), events, Clock and Mono, settings contract,
                          notices, Redacted<T>, and `text`: folding and casing, which prediction and the
                          clipboard search share (P8); it re-exports the worker's memory figures from `kx-ipc`
-                         (`READ_TIMES`, `DECODE_BYTES`), so the clipboard's settings check follows the worker (P8)
+                         (`READ_TIMES`, `DECODE_BYTES`), so the clipboard's settings check follows the worker (P8, ADR-0036)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
