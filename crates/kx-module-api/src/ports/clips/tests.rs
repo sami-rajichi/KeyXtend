@@ -208,3 +208,8 @@ fn the_filters_step_from_all_through_each_kind_once() {
     let each: HashSet<_> = Filter::ORDER.into_iter().collect();
     assert_eq!(each.len(), Filter::ORDER.len());
 }
+
+#[test]
+fn a_megabyte_is_the_binary_one_windows_counts_sizes_in() {
+    assert_eq!(MB, 1024 * 1024);
+}

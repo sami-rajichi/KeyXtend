@@ -76,8 +76,8 @@ const FR_POINT: [&str; 2] = ["pointez", "pointez sur"];
 /// A French word for a tap that Windows never uses; it says "appuyez sur".
 const FR_NOT_TAP: &str = "touchez";
 
-/// Lines that hold a number or time format, not prose, so their marks are not punctuation: `num.decimal`, `clip.time`.
-const FORMATS: [&str; 2] = [".decimal =", ".time ="];
+/// Lines that hold a number or time format, not prose, so their marks are not punctuation: `num.*`, `clip.time`.
+const FORMATS: [&str; 3] = [".decimal =", ".group =", ".time ="];
 
 /// The lines of `ftl` that hold text, not comments.
 fn text_lines(ftl: &str) -> impl Iterator<Item = &str> {

@@ -3,6 +3,7 @@
 
 use super::super::words::tests::hub;
 use super::{act_of, acts};
+use crate::i18n::keys::CLIP_FILTERS;
 use kx_module_api::ports::{ClipAct, PasteAsk};
 use kx_module_api::{Bus, Capability, Event, EventError};
 use kx_test_support::host::FakeCore;
@@ -30,4 +31,14 @@ fn only_a_tick_needs_the_kept_view() {
     let tick = ClipAct::Tick { round: 4, row: 2 };
     assert_eq!(act_of(acts::TICK, 2, Some((4, 3))), Some(tick));
     assert_eq!(act_of(acts::TICK, 3, Some((4, 3))), None, "past the page");
+}
+
+#[test]
+fn a_filter_click_names_the_filter_at_its_place_in_the_json_list() {
+    for (at, &(filter, _)) in (0..).zip(&CLIP_FILTERS) {
+        let want = Some(ClipAct::Filter(filter));
+        assert_eq!(act_of(acts::FILTER, at, None), want);
+    }
+    let past = i32::try_from(CLIP_FILTERS.len()).expect("a few filters");
+    assert_eq!(act_of(acts::FILTER, past, None), None);
 }

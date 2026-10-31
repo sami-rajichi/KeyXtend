@@ -28,6 +28,7 @@ clip =
     .delete = Supprimer
     .delete-all = Tout supprimer
     .insert = Insérer ({ $count })
+    .insert-one = Insérer
     .back = Retour
     .confirm = { $form ->
         [0] Aucun élément non épinglé à supprimer.
@@ -52,7 +53,7 @@ clip =
     .size = { $mb } Mo
     .size-gb = { $gb } Go
     .size-small = < { $mb } Mo
-    .storage = Historique { $used } sur { $cap } · { $free } libres sur { $drive }
+    .storage = Historique : { $used } sur { $cap } · { $free } libres sur { $drive }
     .open-folder = Ouvrir le dossier
     .meta = { $app } · { $when } · { $size }
     .meta-bare = { $when } · { $size }
@@ -70,6 +71,7 @@ clip =
     .pinned = Épinglé
     .join = {", "}
 
-## Les nombres : la marque entre la partie entière et les décimales.
+## Les nombres : la marque entre la partie entière et les décimales, et l’espace fine insécable entre chaque groupe de trois chiffres (CLDR).
 num =
     .decimal = {","}
+    .group = {"\u202F"}

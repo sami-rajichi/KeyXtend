@@ -7,11 +7,13 @@ mod view;
 
 use super::unread::Unread;
 use super::{Hub, NULL, Wake, json};
+use crate::i18n::keys::CLIP_FILTERS;
 use crate::ui_module::MANIFEST;
-use kx_module_api::ports::{ClipAct, ClipPanel, ClipView, Filter, Pixels, Preview};
+use kx_module_api::ports::{ClipAct, ClipPanel, ClipView, Pixels, Preview};
 use kx_module_api::{Bus, EventError, Subscription};
 use std::cmp::Ordering;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 /// The picture provider's name: QML draws `image://clip/<round>/<id>` and `image://clip/<round>/preview`.
@@ -27,7 +29,7 @@ const REVEAL_THREAD: &str = "kx-reveal";
 pub mod acts {
     /// Tick or untick the row at the argument's place on the page.
     pub const TICK: &str = "tick";
-    /// Show the filter at the argument's place in `Filter::ORDER`, the order the panel's JSON lists them.
+    /// Show the filter at the argument's place in `CLIP_FILTERS`, the list the panel's JSON gives.
     pub const FILTER: &str = "filter";
     /// Turn a page: back when the argument is below 0, on when above.
     pub const PAGE: &str = "page";
@@ -58,6 +60,17 @@ pub(super) struct Clip {
     unread: Unread,
     /// The history's folder, which the app hands over once.
     folder: OnceLock<PathBuf>,
+    /// A reveal is in flight.
+    revealing: Arc<AtomicBool>,
+}
+
+/// Ends the reveal in flight as it drops, even when the reveal's thread panics or never starts.
+struct Revealing(Arc<AtomicBool>);
+
+impl Drop for Revealing {
+    fn drop(&mut self) {
+        self.0.store(false, AtomicOrdering::SeqCst);
+    }
 }
 
 /// What the panel shows, and the handle that sends its clicks.
@@ -121,25 +134,32 @@ impl Hub {
         }
     }
 
-    /// Shows the history's folder in the file manager on a thread of its own, and sounds as a key does; a failure is
-    /// one warning. Call it on the Qt thread.
-    pub fn open_folder(&self) {
+    /// Shows the history's folder in the file manager on a thread of its own, and sounds as a key does; a tap while
+    /// one shows is ignored, so a double tap opens one window. True when a reveal started; call it on the Qt thread.
+    pub fn open_folder(&self) -> bool {
         self.tapped();
         let Some(folder) = self.clip.folder.get().cloned() else {
             tracing::warn!("the clipboard folder is not known yet, so it cannot open");
-            return;
+            return false;
         };
-        let reveal = Arc::clone(&self.ports.reveal);
+        if self.clip.revealing.swap(true, AtomicOrdering::SeqCst) {
+            return false;
+        }
+        let (reveal, done) = (
+            Arc::clone(&self.ports.reveal),
+            Revealing(Arc::clone(&self.clip.revealing)),
+        );
         let shown = std::thread::Builder::new()
             .name(REVEAL_THREAD.to_owned())
             .spawn(move || {
+                let _done = done;
                 if let Err(e) = reveal.show(&folder) {
                     tracing::warn!(error = %e, "the clipboard folder did not open");
                 }
             });
-        if let Err(e) = shown {
-            tracing::warn!(error = %e, "the clipboard folder did not open, as no thread started");
-        }
+        shown
+            .map_err(|e| tracing::warn!(error = %e, "the clipboard folder did not open, as no thread started"))
+            .is_ok()
     }
 
     /// The picture `id` names, `<round>/<row id>` or `<round>/preview`, from the kept view of that round only.
@@ -249,7 +269,7 @@ fn act_of(kind: &str, arg: i32, shown: Option<(u32, usize)>) -> Option<ClipAct> 
         }
         acts::FILTER => {
             let at = usize::try_from(arg).ok()?;
-            ClipAct::Filter(*Filter::ORDER.get(at)?)
+            ClipAct::Filter(CLIP_FILTERS.get(at)?.0)
         }
         acts::PAGE => match arg.cmp(&0) {
             Ordering::Less => ClipAct::Page { back: true },

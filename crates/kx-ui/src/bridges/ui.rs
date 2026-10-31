@@ -1,6 +1,6 @@
 //! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go, the
-//! overlay and scroll states, the chip lane, the clipboard panel and the app's commands. It follows the system look and hears the hub's
-//! wakes on the Qt thread, so make one per app, in the root file.
+//! overlay and scroll states, the chip lane, the clipboard panel and the app's commands. It follows the system look
+//! and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
 
 mod app;
 mod clip;

@@ -1,7 +1,8 @@
 //! The icon provider fills an icon's ink with its tint and keeps every pixel's alpha, serves each icon the tokens name
 //! from the compiled-in resources, refuses any other file with one warning and a clear image, gives a zero size one
 //! clear pixel, and keeps no texture per step of a fade; the clipboard panel's picture provider serves only the kept
-//! round. Qt wants its app object on the main thread, so this binary runs without the test harness. It reads probes only debug builds have, so a release build of it checks nothing.
+//! round. Qt wants its app object on the main thread, so this binary runs without the test harness. It reads probes
+//! only debug builds have, so a release build of it checks nothing.
 
 #[cfg(debug_assertions)]
 mod clips;

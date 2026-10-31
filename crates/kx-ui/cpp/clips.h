@@ -25,7 +25,7 @@ namespace kxui {
 
 // What copies picture `id`'s RGBA8 bytes, row by row from the top, and sets its width and height; empty for none.
 using Fetch = rust::Fn<rust::Vec<std::uint8_t>(rust::Str, std::uint32_t &, std::uint32_t &)>;
-// Bytes in one RGBA8 pixel.
+// Bytes in one RGBA8 pixel; it mirrors `RGBA_BYTES` in kx-module-api's pictures port, which checks every `Pixels`.
 constexpr std::size_t clip_pixel_bytes = 4;
 
 // A picture's own texture, outside Qt's shared atlas, so a dropped view's pictures leave with their images.

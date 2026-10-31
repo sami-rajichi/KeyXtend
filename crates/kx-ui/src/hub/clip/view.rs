@@ -1,26 +1,22 @@
 //! The clipboard panel as QML reads it (spec §7): every text worded in the keyboard's language, sizes and times
 //! formatted, user strings without hidden marks (ADR-0022), and pictures as URLs of the kept round, never pixels.
 
-use super::{PART, PICTURES, PREVIEW};
+mod preview;
+
+use super::{PART, PICTURES};
 use crate::I18n;
 use crate::i18n::clean;
 use crate::i18n::keys::{
-    CLIP_BACK, CLIP_CHARS, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DELETE, CLIP_DELETE_ALL, CLIP_EMPTY,
-    CLIP_EXPIRES, CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_JOIN, CLIP_KIND, CLIP_KINDS,
+    CLIP_BACK, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DELETE, CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES,
+    CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KIND, CLIP_KINDS,
     CLIP_NO, CLIP_NOTE, CLIP_NOTES, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW,
     CLIP_SEARCH, CLIP_TICKED, CLIP_TITLE, CLIP_UNPIN, CLIP_YES, PAGE_BACK, PAGE_ON, WINDOW_CLIP,
 };
-use kx_module_api::ports::{ClipPage, ClipRow, Preview};
+use kx_module_api::ports::{ClipPage, ClipRow};
 use kx_module_api::{is_arabic, is_rtl};
 use kx_theme::assets::IMAGE_SCHEME;
+use preview::{Shown, preview};
 use serde::Serialize;
-
-/// What ends a line of the preview's text.
-const BREAK: char = '\n';
-/// A tab, which the preview shows as a space.
-const TAB: char = '\t';
-/// What the preview shows in place of a tab.
-const SPACE: &str = " ";
 
 /// The panel, as JSON.
 #[derive(Serialize)]
@@ -113,24 +109,6 @@ struct Words {
     expires: String,
     page_back: String,
     page_on: String,
-}
-
-/// The preview page's content, by kind.
-#[derive(Serialize)]
-#[serde(tag = "kind", rename_all = "lowercase")]
-enum Shown {
-    Text {
-        text: String,
-        chars: String,
-        arabic: bool,
-        rtl: bool,
-    },
-    Image {
-        url: Option<String>,
-    },
-    Files {
-        paths: Vec<String>,
-    },
 }
 
 /// The Delete-all question and how many entries it deletes.
@@ -231,7 +209,8 @@ fn reader_name(title: &str, r: &ClipRow, t: &I18n) -> String {
     parts.join(&t.text(CLIP_JOIN))
 }
 
-/// The buttons' labels for `page`: Pin or Unpin as it says, and Insert with the ticked count.
+/// The buttons' labels for `page`: Pin or Unpin as it says, and Insert with the ticked count, or plain on the
+/// preview page, where it acts on the previewed entry alone.
 fn words(page: &ClipPage, t: &I18n) -> Words {
     Words {
         window: t.text(WINDOW_CLIP),
@@ -240,7 +219,11 @@ fn words(page: &ClipPage, t: &I18n) -> Words {
         pin: t.text(if page.unpin { CLIP_UNPIN } else { CLIP_PIN }),
         delete: t.text(CLIP_DELETE),
         delete_all: t.text(CLIP_DELETE_ALL),
-        insert: t.counted(CLIP_INSERT, usize::from(page.ticked)),
+        insert: if page.preview.is_some() {
+            t.text(CLIP_INSERT_ONE)
+        } else {
+            t.counted(CLIP_INSERT, usize::from(page.ticked))
+        },
         back: t.text(CLIP_BACK),
         yes: t.text(CLIP_YES),
         no: t.text(CLIP_NO),
@@ -249,41 +232,6 @@ fn words(page: &ClipPage, t: &I18n) -> Words {
         page_back: t.text(PAGE_BACK),
         page_on: t.text(PAGE_ON),
     }
-}
-
-/// Preview `p` of view `round`: text with its lines kept, the image's URL, or the files' paths.
-fn preview(p: &Preview, round: u32, t: &I18n) -> Shown {
-    match p {
-        Preview::Text { text, chars } => {
-            let text = lines(text.expose());
-            let chars = usize::try_from(*chars).unwrap_or(usize::MAX);
-            Shown::Text {
-                chars: t.counted(CLIP_CHARS, chars),
-                arabic: is_arabic(&text),
-                rtl: is_rtl(&text),
-                text,
-            }
-        }
-        Preview::Image(image) => Shown::Image {
-            url: image.as_ref().map(|_| url(round, PREVIEW)),
-        },
-        Preview::Files(paths) => Shown::Files {
-            paths: paths
-                .expose()
-                .iter()
-                .map(|p| clean(&p.to_string_lossy()))
-                .collect(),
-        },
-    }
-}
-
-/// `text` with its line breaks kept, each line without hidden marks and its tabs as spaces.
-fn lines(text: &str) -> String {
-    let each: Vec<String> = text
-        .split(BREAK)
-        .map(|l| clean(&l.replace(TAB, SPACE)))
-        .collect();
-    each.join(&BREAK.to_string())
 }
 
 /// `key`'s id in `table`, such as a kind's in `CLIP_KINDS`, which also names its icon.

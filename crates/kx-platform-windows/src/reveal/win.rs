@@ -1,5 +1,5 @@
-//! The Win32 side of the reveal: the desktop window's shell object lives in the running Explorer, and its `ShellExecute`
-//! opens the folder there, under an apartment-threaded COM on the calling thread.
+//! The Win32 side of the reveal: the desktop window's shell object lives in the running Explorer, and its
+//! `ShellExecute` opens the folder there, under an apartment-threaded COM on the calling thread.
 
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
@@ -18,10 +18,13 @@ use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{BSTR, Interface};
 
 use super::{Os, show};
+use crate::PlatformError;
 use crate::com::Com;
 
 /// The shell verb that opens a folder in Explorer.
 const OPEN: &str = "open";
+/// No arguments and no working folder: the empty strings the recipe passes, not empty variants.
+const NONE: &str = "";
 
 /// Shows a folder in Explorer: the running Explorer opens it itself (Raymond Chen's "launch from the shell" route), so
 /// the window belongs to Explorer and nothing starts with our token.
@@ -52,7 +55,7 @@ impl Os for Win32 {
     }
 
     fn shell(&self) -> Result<Explorer, i32> {
-        let com = Com::start_apartment().map_err(|_| E_FAIL.0)?;
+        let com = Com::start_apartment().map_err(|e| com_code(&e))?;
         let shell = desktop_shell().map_err(|e| code(&e))?;
         Ok(Explorer { shell, _com: com })
     }
@@ -61,8 +64,8 @@ impl Os for Win32 {
     fn open(&self, explorer: &Explorer, folder: &Path) -> Result<(), i32> {
         let wide: Vec<u16> = folder.as_os_str().encode_wide().collect();
         let file = BSTR::from_wide(&wide);
-        let (none, verb, show) = (
-            VARIANT::default(),
+        let (empty, verb, show) = (
+            VARIANT::from(NONE),
             VARIANT::from(OPEN),
             VARIANT::from(SW_SHOWNORMAL.0),
         );
@@ -70,7 +73,7 @@ impl Os for Win32 {
         let opened = unsafe {
             explorer
                 .shell
-                .ShellExecute(&file, &none, &none, &verb, &show)
+                .ShellExecute(&file, &empty, &empty, &verb, &show)
         };
         opened.map_err(|e| code(&e))
     }
@@ -107,6 +110,15 @@ fn desktop_shell() -> windows::core::Result<IShellDispatch2> {
     }
 }
 
+/// The code a failed COM start gave, or Windows' generic failure; the error names no path.
+fn com_code(e: &PlatformError) -> i32 {
+    let raw = match e {
+        PlatformError::Com(io) => io.raw_os_error(),
+        _ => None,
+    };
+    raw.filter(|&c| c != 0).unwrap_or(E_FAIL.0)
+}
+
 /// The error's code, or Windows' generic failure for an error that holds none.
 fn code(e: &windows::core::Error) -> i32 {
     let hr = e.code();
@@ -116,6 +128,7 @@ fn code(e: &windows::core::Error) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use windows::Win32::Foundation::E_OUTOFMEMORY;
 
     #[test]
     fn a_missing_or_partial_folder_is_missing_and_opens_nothing() {
@@ -123,6 +136,15 @@ mod tests {
         let missing = std::env::temp_dir().join("kx-reveal-no-such-folder");
         assert_eq!(WinReveal.show(&missing), Err(RevealError::Missing));
         assert_eq!(WinReveal.show(Path::new(".")), Err(RevealError::Missing));
+    }
+
+    #[test]
+    fn a_failed_com_start_keeps_its_own_code() {
+        let refused = std::io::Error::from_raw_os_error(E_OUTOFMEMORY.0);
+        assert_eq!(com_code(&PlatformError::Com(refused)), E_OUTOFMEMORY.0);
+        assert_eq!(com_code(&PlatformError::NoExeDir), E_FAIL.0);
+        let none = std::io::Error::from_raw_os_error(0);
+        assert_eq!(com_code(&PlatformError::Com(none)), E_FAIL.0);
     }
 
     #[test]

@@ -32,7 +32,7 @@ pub use clip::{
 };
 pub use clips::{
     ClipAct, ClipKey, ClipKind, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipView, Filter,
-    HistoryAsk, HistoryWanted, Pages, PanelKey, PanelNote, PasteAsk, Pasted, Preview, When,
+    HistoryAsk, HistoryWanted, MB, Pages, PanelKey, PanelNote, PasteAsk, Pasted, Preview, When,
 };
 pub use code::CodeError;
 pub use face::{

@@ -28,6 +28,7 @@ clip =
     .delete = Delete
     .delete-all = Delete all
     .insert = Insert ({ $count })
+    .insert-one = Insert
     .back = Back
     .confirm = { $form ->
         [0] No unpinned entries to delete.
@@ -52,7 +53,7 @@ clip =
     .size = { $mb } MB
     .size-gb = { $gb } GB
     .size-small = < { $mb } MB
-    .storage = History { $used } of { $cap } · { $free } free on { $drive }
+    .storage = History: { $used } of { $cap } · { $free } free on { $drive }
     .open-folder = Open folder
     .meta = { $app } · { $when } · { $size }
     .meta-bare = { $when } · { $size }
@@ -70,6 +71,7 @@ clip =
     .pinned = Pinned
     .join = {", "}
 
-## Numbers: the mark between the whole part and the decimals.
+## Numbers: the mark between the whole part and the decimals, and the one between each three digits (CLDR).
 num =
     .decimal = {"."}
+    .group = {","}

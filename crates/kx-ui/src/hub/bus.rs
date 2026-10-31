@@ -1,7 +1,7 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
 //! state, outline and page turns, the chip lane and the clipboard panel, each through a handler that holds the hub
-//! weakly, then asks the scroll and prediction modules for their state. The keyboard's wake, power changes included, is heard only while a
-//! face is attached, after the face's own handlers.
+//! weakly, then asks the scroll and prediction modules for their state. The keyboard's wake, power changes included,
+//! is heard only while a face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use kx_module_api::ports::{

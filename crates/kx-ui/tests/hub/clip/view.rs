@@ -62,7 +62,7 @@ fn french_reads_sizes_in_mo_and_go_with_its_comma() {
     assert_eq!(rows[0]["meta"], "Notepad · Aujourd’hui 16:32 · 2,41 Mo");
     assert_eq!(rows[1]["meta"], "Hier 16:32 · < 0,01 Mo", "no app known");
     assert_eq!(rows[1]["app"], Value::Null);
-    let room = "Historique 1,50 Go sur 2,00 Go · 412,00 Go libres sur D:";
+    let room = "Historique\u{a0}: 1,50 Go sur 2,00 Go · 412,00 Go libres sur D:";
     assert_eq!(v["room"], room);
     assert_eq!(v["words"]["insert"], "Insérer (3)");
     assert_eq!(v["kept"], "Conservés 7 jours");
@@ -73,7 +73,7 @@ fn arabic_reads_sizes_in_its_units_and_the_question_in_every_plural_form() {
     let v = read("ar", sized());
     assert_eq!(v["rows"][0]["size"], "2,41 ميغابايت");
     assert_eq!(v["rows"][1]["size"], "أقل من 0,01 ميغابايت");
-    let room = "المحفوظات 1,50 غيغابايت من 2,00 غيغابايت · 412,00 غيغابايت متوفرة على D:";
+    let room = "المحفوظات: 1,50 غيغابايت من 2,00 غيغابايت · 412,00 غيغابايت متوفرة على D:";
     assert_eq!(v["room"], room);
     let stay = "تبقى العناصر المثبّتة.";
     let forms = [
@@ -216,6 +216,27 @@ fn pictures_are_urls_of_the_kept_round() {
     assert_eq!(
         read("en", p)["preview"],
         json!({"kind": "image", "url": null})
+    );
+}
+
+#[test]
+fn on_the_preview_page_insert_is_plain_whatever_is_ticked() {
+    for (tag, ticked, want) in [
+        ("en", 3, "Insert"),
+        ("en", 0, "Insert"),
+        ("fr", 3, "Insérer"),
+    ] {
+        let mut p = page(1, vec![row(7, "a")]);
+        p.ticked = ticked;
+        p.preview = Some(Preview::Image(None));
+        assert_eq!(read(tag, p)["words"]["insert"], want, "{tag} {ticked}");
+    }
+    let mut list = page(1, vec![row(7, "a")]);
+    list.ticked = 3;
+    assert_eq!(
+        read("en", list)["words"]["insert"],
+        "Insert (3)",
+        "the list counts"
     );
 }
 

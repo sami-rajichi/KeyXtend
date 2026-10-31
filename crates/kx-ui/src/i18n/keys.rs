@@ -124,6 +124,8 @@ pub const WORDS_ON_SHORT: &str = "words.on-short";
 pub const WINDOW_CLIP: &str = "window.clip";
 /// The mark between a number's whole part and its decimals.
 pub const NUM_DECIMAL: &str = "num.decimal";
+/// The mark between each three digits of a number's whole part.
+pub const NUM_GROUP: &str = "num.group";
 /// The clipboard panel's title.
 pub const CLIP_TITLE: &str = "clip.title";
 /// How long entries are kept: `$days`, plural by `$form`.
@@ -164,6 +166,8 @@ pub const CLIP_DELETE: &str = "clip.delete";
 pub const CLIP_DELETE_ALL: &str = "clip.delete-all";
 /// The footer's Insert with how many are ticked: `$count`.
 pub const CLIP_INSERT: &str = "clip.insert";
+/// The preview page's Insert, which acts on the previewed entry alone.
+pub const CLIP_INSERT_ONE: &str = "clip.insert-one";
 /// The preview page's Back.
 pub const CLIP_BACK: &str = "clip.back";
 /// Delete all's question: `$count` entries, plural by `$form`.

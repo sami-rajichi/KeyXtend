@@ -16,6 +16,6 @@ impl qobject::Ui {
     }
 
     pub(super) fn open_folder(&self) {
-        self.with((), Hub::open_folder);
+        self.with(false, Hub::open_folder);
     }
 }

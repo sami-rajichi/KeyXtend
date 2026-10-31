@@ -13,6 +13,9 @@ const READ: Option<Capability> = Some(Capability::ReadClipboard);
 /// The gate of the paste request and its answer.
 const WRITE: Option<Capability> = Some(Capability::WriteClipboard);
 
+/// Bytes in a megabyte, as Windows counts sizes: the one unit the history's limits and the panel's sizes use.
+pub const MB: u64 = 1 << 20;
+
 /// From the keyboard: the side key or the history chord toggles the panel.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClipOpen;

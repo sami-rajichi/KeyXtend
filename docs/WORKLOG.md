@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 05:23 — P8: the clipboard panel hub's review fixes
+On the preview page Insert now reads plain "Insert", as it acts on the previewed entry alone, and the storage line takes a colon after "History" in each language. Counts and sizes group their thousands with the language's mark (`num.group`: a comma in English, a narrow no-break space in French, a dot in Arabic), a size just under 1 GB reads "1.00 GB", and `MB` is now defined once in the clips port. Open folder ignores taps while a reveal is in flight, so a double tap opens one window, and the Windows adapter passes empty strings for the arguments and folder and keeps COM's own error code. A filter click now names the filter at its place in the list the JSON gives, and two Arabic notes read more naturally.
+
 ## 2026-10-31 05:15 — P8: the clipboard module
 `ClipboardModule` now reads `[clipboard]`, loads the sealed history, watches copies and runs the `kx-clip` actor, which keeps each copy within the limits, draws the panel once the ui tells its rows, saves after `save_ms` and sweeps at local midnight. Insert pastes the ticked entries in tick order with one `PasteAsk` per step, a join between texts pasted as text, files still there, and `paste_gap_ms` between steps; a busy clipboard or a missing answer stops it with a note. Pictures draw in the worker on `kx-clip-media`, and file checks run on `kx-clip-files`, so a share out of reach never blocks the panel. A locked shelf or a newer list fails the start with nothing changed, every stop closes the panel and frees the chord, and a key whose question or preview just went is swallowed.
 

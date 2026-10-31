@@ -4,21 +4,21 @@
 mod when;
 
 use crate::{CONTROLS, all, lang};
-use kx_module_api::ports::{Room, Weekday};
+use kx_module_api::ports::{MB, Room, Weekday};
 use kx_ui::I18n;
 use kx_ui::i18n::keys::{
     CLIP_BACK, CLIP_CHARS, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DATE, CLIP_DAY, CLIP_DELETE,
-    CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES, CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_JOIN,
-    CLIP_KEPT, CLIP_KIND, CLIP_KINDS, CLIP_META, CLIP_META_BARE, CLIP_NO, CLIP_NOTE, CLIP_NOTES,
-    CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW, CLIP_SEARCH, CLIP_SIZE, CLIP_SIZE_GB,
-    CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TICKED, CLIP_TIME, CLIP_TITLE, CLIP_TODAY, CLIP_UNPIN,
-    CLIP_WHEN, CLIP_YES, CLIP_YESTERDAY, MODULE, NUM_DECIMAL, WINDOW_CLIP,
+    CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES, CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT,
+    CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KEPT, CLIP_KIND, CLIP_KINDS, CLIP_META, CLIP_META_BARE,
+    CLIP_NO, CLIP_NOTE, CLIP_NOTES, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW,
+    CLIP_SEARCH, CLIP_SIZE, CLIP_SIZE_GB, CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TICKED, CLIP_TIME,
+    CLIP_TITLE, CLIP_TODAY, CLIP_UNPIN, CLIP_WHEN, CLIP_YES, CLIP_YESTERDAY, MODULE, NUM_DECIMAL,
+    NUM_GROUP, WINDOW_CLIP,
 };
 use std::ops::RangeInclusive;
 use when::when;
 
-/// Bytes in a megabyte and a gigabyte, as Windows counts sizes.
-const MB: u64 = 1 << 20;
+/// Bytes in a gigabyte, as Windows counts sizes.
 const GB: u64 = MB << 10;
 /// 2.41 MB.
 const SIZE: u64 = 2_527_068;
@@ -36,9 +36,10 @@ const COUNTS: [usize; 7] = [0, 1, 2, 3, 11, 100, 103];
 const NBSP: char = '\u{a0}';
 
 /// The clipboard keys the code names one by one.
-const FIXED: [&str; 34] = [
+const FIXED: [&str; 36] = [
     WINDOW_CLIP,
     NUM_DECIMAL,
+    NUM_GROUP,
     CLIP_TITLE,
     CLIP_KEPT,
     CLIP_SEARCH,
@@ -49,6 +50,7 @@ const FIXED: [&str; 34] = [
     CLIP_DELETE,
     CLIP_DELETE_ALL,
     CLIP_INSERT,
+    CLIP_INSERT_ONE,
     CLIP_BACK,
     CLIP_CONFIRM,
     CLIP_YES,
@@ -111,13 +113,13 @@ fn every_clip_key_has_its_text_in_every_language() {
 #[test]
 fn a_rows_size_is_megabytes_with_two_decimals_and_the_languages_mark() {
     let cases = [
-        ("en", "2.41 MB", "< 0.01 MB", "1024.00 MB"),
-        ("fr", "2,41 Mo", "< 0,01 Mo", "1024,00 Mo"),
+        ("en", "2.41 MB", "< 0.01 MB", "1,024.00 MB"),
+        ("fr", "2,41 Mo", "< 0,01 Mo", "1\u{202f}024,00 Mo"),
         (
             "ar",
             "2,41 ميغابايت",
             "أقل من 0,01 ميغابايت",
-            "1024,00 ميغابايت",
+            "1.024,00 ميغابايت",
         ),
     ];
     for (tag, size, small, big) in cases {
@@ -128,7 +130,12 @@ fn a_rows_size_is_megabytes_with_two_decimals_and_the_languages_mark() {
         assert_eq!(t.clip_size(GB), big, "{tag}: a row stays in MB");
     }
     assert_eq!(lang("fr").clip_size(MB / 100 + 1), "0,01 Mo");
-    assert_eq!(lang("en").clip_size(u64::MAX), "17592186044416.00 MB");
+    let most = "17,592,186,044,416.00 MB";
+    assert_eq!(
+        lang("en").clip_size(u64::MAX),
+        most,
+        "every three digits grouped"
+    );
 }
 
 #[test]
@@ -136,17 +143,23 @@ fn the_storage_line_writes_megabytes_below_one_gigabyte_and_gigabytes_from_it() 
     let line = |tag: &str, used, free| lang(tag).clip_room(&room(used, free), GB);
     assert_eq!(
         line("en", 182 * MB, 412 * GB),
-        "History 182.00 MB of 1.00 GB · 412.00 GB free on D:"
+        "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:"
     );
     assert_eq!(
         line("fr", GB + GB / 2, 412 * GB),
-        "Historique 1,50 Go sur 1,00 Go · 412,00 Go libres sur D:"
+        "Historique\u{a0}: 1,50 Go sur 1,00 Go · 412,00 Go libres sur D:"
     );
     assert_eq!(
         line("ar", 182 * MB, GB + GB / 2),
-        "المحفوظات 182,00 ميغابايت من 1,00 غيغابايت · 1,50 غيغابايت متوفرة على D:"
+        "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 1,50 غيغابايت متوفرة على D:"
     );
-    assert!(line("en", 0, 0).starts_with("History 0.00 MB of"));
+    assert!(line("en", 0, 0).starts_with("History: 0.00 MB of"));
+    let under = lang("en").clip_room(&room(GB - 1, 1_863 * GB), GB);
+    assert!(
+        under.starts_with("History: 1.00 GB of"),
+        "rounded, then in GB: {under}"
+    );
+    assert!(under.ends_with("1,863.00 GB free on D:"), "{under}");
 }
 #[test]
 fn arabic_counts_the_question_and_the_characters_in_its_cldr_forms() {
@@ -202,11 +215,20 @@ fn english_and_french_count_with_one_and_other_and_say_when_nothing_is_left() {
         fr.counted(CLIP_CONFIRM, 0),
         "Aucun élément non épinglé à supprimer."
     );
-    assert_eq!(fr.counted(CLIP_CHARS, 1234), "1234 caractères");
     assert_eq!(
         (en.clip_kept(1), en.clip_kept(7)),
         ("Kept for 1 day".to_owned(), "Kept for 7 days".to_owned())
     );
+}
+
+#[test]
+fn counts_group_their_thousands_and_insert_reads_its_count_or_plain() {
+    assert_eq!(
+        lang("fr").counted(CLIP_CHARS, 1234),
+        "1\u{202f}234 caractères"
+    );
+    assert_eq!(lang("en").counted(CLIP_CHARS, 1234), "1,234 characters");
+    assert_eq!(lang("ar").counted(CLIP_CHARS, 1234), "1.234 حرفًا");
     let insert = [
         ("en", "Insert (3)"),
         ("fr", "Insérer (3)"),
@@ -215,14 +237,27 @@ fn english_and_french_count_with_one_and_other_and_say_when_nothing_is_left() {
     for (tag, want) in insert {
         assert_eq!(lang(tag).counted(CLIP_INSERT, 3), want, "{tag}");
     }
+    let one = [("en", "Insert"), ("fr", "Insérer"), ("ar", "إدراج")];
+    for (tag, want) in one {
+        assert_eq!(
+            lang(tag).text(CLIP_INSERT_ONE),
+            want,
+            "{tag}: the preview's own"
+        );
+    }
 }
 
 #[test]
 fn every_language_writes_western_digits_and_its_own_decimal_mark() {
-    let marks = [("en", "."), ("fr", ","), ("ar", ",")];
-    for (tag, mark) in marks {
+    let marks = [("en", ".", ","), ("fr", ",", "\u{202f}"), ("ar", ",", ".")];
+    for (tag, mark, group) in marks {
         let t = lang(tag);
         assert_eq!(t.text(NUM_DECIMAL), mark, "{tag}");
+        assert_eq!(
+            t.text(NUM_GROUP),
+            group,
+            "{tag}: CLDR's mark with Western digits"
+        );
         let texts = [
             t.clip_size(SIZE),
             t.clip_room(&room(182 * MB, 412 * GB), GB),

@@ -1,23 +1,24 @@
-//! The clipboard panel's worded numbers (spec §7): sizes with two decimals and the language's decimal mark, the storage
-//! line, a row's time and meta line, and counted texts. Digits stay Western (ADR-0017).
+//! The clipboard panel's worded numbers (spec §7): sizes with two decimals and the language's marks, the storage
+//! line, a row's time and meta line, and counted texts. Digits stay Western (ADR-0017), grouped by threes.
 
 use super::I18n;
 use super::compose::{clean, count, form};
 use super::keys::{
     CLIP_DATE, CLIP_DAY, CLIP_KEPT, CLIP_META, CLIP_META_BARE, CLIP_SIZE, CLIP_SIZE_GB,
     CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TIME, CLIP_TODAY, CLIP_WHEN, CLIP_YESTERDAY, NUM_DECIMAL,
+    NUM_GROUP,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
-use kx_module_api::ports::{Date, Room, Weekday, When};
+use kx_module_api::ports::{Date, MB, Room, Weekday, When};
 
-/// Bytes in a megabyte, as Windows counts sizes.
-const MB: u64 = 1 << 20;
 /// Megabytes in a gigabyte.
 const MB_PER_GB: u64 = 1 << 10;
 /// Hundredths in one: sizes show two decimals.
 const HUNDRED: u128 = 100;
 /// Digits a size's decimals, a time's hour and minute and a date's day and month take.
 const PAIR: usize = 2;
+/// Digits between two group marks.
+const GROUP: usize = 3;
 /// Days in a week: within one a weekday names the day, past it the date does.
 const WEEK: usize = Weekday::ALL.len();
 /// The variables the clipboard's texts take.
@@ -91,11 +92,12 @@ impl I18n {
         }
     }
 
-    /// The text of `key` with `$count` at `n`, in the plural form `n` takes.
+    /// The text of `key` with `$count` at `n`, grouped by threes, in the plural form `n` takes.
     #[must_use]
     pub fn counted(&self, key: &str, n: usize) -> String {
         let mut values = FluentArgs::new();
-        values.set(COUNT_VAR, count(n));
+        let wide = u64::try_from(n).map_or(u128::MAX, u128::from);
+        values.set(COUNT_VAR, self.grouped(wide));
         values.set(FORM_VAR, form(n));
         self.format(key, Some(&values))
     }
@@ -119,11 +121,11 @@ impl I18n {
         self.with(CLIP_DATE, args)
     }
 
-    /// A storage-line size: megabytes below a gigabyte, gigabytes from one.
+    /// A storage-line size: megabytes below a gigabyte, gigabytes from one, chosen after rounding.
     fn big(&self, bytes: u64) -> String {
-        let gb = MB * MB_PER_GB;
-        if bytes < gb {
-            self.with(CLIP_SIZE, [(MB_VAR, self.decimal(hundredths(bytes, MB)))])
+        let (gb, mb) = (MB * MB_PER_GB, hundredths(bytes, MB));
+        if mb < u128::from(MB_PER_GB) * HUNDRED {
+            self.with(CLIP_SIZE, [(MB_VAR, self.decimal(mb))])
         } else {
             self.with(
                 CLIP_SIZE_GB,
@@ -132,10 +134,25 @@ impl I18n {
         }
     }
 
-    /// `hundredths` / 100 with two decimals after the language's decimal mark.
+    /// `hundredths` / 100, its whole part grouped, with two decimals after the language's decimal mark.
     fn decimal(&self, hundredths: u128) -> String {
         let (whole, part) = (hundredths / HUNDRED, hundredths % HUNDRED);
+        let whole = self.grouped(whole);
         format!("{whole}{}{part:0PAIR$}", self.text(NUM_DECIMAL))
+    }
+
+    /// `n` with the language's group mark before each three digits from the right.
+    fn grouped(&self, n: u128) -> String {
+        let digits = n.to_string();
+        let mark = self.text(NUM_GROUP);
+        let mut out = String::new();
+        for (at, digit) in digits.chars().enumerate() {
+            if at > 0 && (digits.len() - at).is_multiple_of(GROUP) {
+                out.push_str(&mark);
+            }
+            out.push(digit);
+        }
+        out
     }
 
     /// The text of `key` with text arguments `args`.

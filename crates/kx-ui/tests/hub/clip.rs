@@ -21,6 +21,8 @@ use std::time::Duration;
 
 /// The longest a test waits for the file manager's thread.
 const WAIT: Duration = Duration::from_secs(5);
+/// The history folder the app hands over in these tests.
+const FOLDER: &str = r"D:\data\KeyXtend\clipboard";
 /// A picture's side in these tests.
 const SIDE: u32 = 2;
 
@@ -247,12 +249,9 @@ fn pictures_come_from_the_kept_round_only() {
 #[test]
 fn open_folder_shows_the_folder_the_app_handed_over() {
     let rig = Rig::new();
-    let folder = PathBuf::from(r"D:\data\KeyXtend\clipboard");
-    rig.hub.open_folder();
-    assert!(
-        !rig.reveal.wait_shown(1, Duration::ZERO),
-        "none handed over"
-    );
+    let folder = PathBuf::from(FOLDER);
+    assert!(!rig.hub.open_folder(), "none handed over");
+    assert!(rig.reveal.shown().is_empty());
     rig.hub.set_clip_folder(folder.clone());
     rig.hub.set_clip_folder(PathBuf::from(r"C:\other"));
     rig.hub.open_folder();
@@ -260,13 +259,31 @@ fn open_folder_shows_the_folder_the_app_handed_over() {
     assert_eq!(rig.reveal.shown(), [folder], "the first one stays");
 }
 
+/// The refusal's warning is logged on the reveal's own thread, which the log capture does not hear.
 #[test]
-fn a_refused_folder_is_one_warning_and_no_panic() {
+fn a_refused_folder_ends_its_reveal_without_a_panic() {
     let rig = Rig::new();
     rig.reveal.set_error(Some(RevealError::Refused(5)));
-    rig.hub
-        .set_clip_folder(PathBuf::from(r"D:\data\KeyXtend\clipboard"));
+    rig.hub.set_clip_folder(PathBuf::from(FOLDER));
     rig.hub.open_folder();
-    rig.hub.open_folder();
-    assert!(rig.reveal.wait_shown(2, WAIT), "each click asks again");
+    assert!(rig.reveal.wait_left(1, WAIT));
+    assert_eq!(rig.reveal.shown(), [PathBuf::from(FOLDER)]);
+}
+
+#[test]
+fn a_double_tap_opens_one_window() {
+    let rig = Rig::new();
+    rig.hub.set_clip_folder(PathBuf::from(FOLDER));
+    rig.reveal.hold(true);
+    assert!(rig.hub.open_folder(), "the first tap starts a reveal");
+    assert!(rig.reveal.wait_shown(1, WAIT));
+    assert!(!rig.hub.open_folder(), "one is in flight");
+    assert!(!rig.hub.open_folder());
+    rig.reveal.hold(false);
+    assert!(rig.reveal.wait_left(1, WAIT));
+    assert_eq!(
+        rig.reveal.shown().len(),
+        1,
+        "the taps meanwhile were ignored"
+    );
 }
