@@ -16,7 +16,7 @@ use crate::g20steps::Steps;
 use crate::out::say;
 use crate::product::NAME;
 use crate::winclip::{self, line};
-use crate::workertok::{PRODUCT, Rights};
+use crate::winpanel::{SKIPPED, history_off, judged_ok, skipped};
 use crate::{clipkeep, g20keys, g25, probe, typebox, workertok};
 
 /// The copies G20 reports: the history key on, then off, which starts only on a uiAccess product.
@@ -24,11 +24,6 @@ pub const COPIES: usize = 2;
 /// Why the second copy was not started.
 const STILL_RUNS: &str =
     "the first copy could not be ended, so the copy with the history key off was not started";
-/// Why the history-off part is skipped: Windows refuses an injected Win+V from a process without uiAccess.
-const NO_UI_ACCESS: &str = "Windows' own panel needs a uiAccess product, so Win and V with the history key off is \
-                            checked by hand on the dev install";
-/// The key, and the console word, of a part that was skipped.
-const SKIPPED: &str = "skipped";
 
 /// The first copy's steps: its rows, searches, Insert, Win and V, and the worker check, which fails only on a worker
 /// with too many rights.
@@ -100,20 +95,6 @@ fn both(ctx: &Ctx, session: &ClipSession, app: &Opened) -> [Value; COPIES] {
     [one, two]
 }
 
-/// The history-off part: skipped with its reason when the first copy's worker part read a `product` without
-/// uiAccess, else what `run` gives; a token it could not read runs it.
-pub(crate) fn history_off(product: Option<Rights>, run: impl FnOnce() -> Value) -> Value {
-    match product {
-        Some(p) if !p.ui_access => json!({ SKIPPED: true, "why": NO_UI_ACCESS, PRODUCT: p }),
-        _ => run(),
-    }
-}
-
-/// True when the copy's `part` was skipped.
-fn skipped(part: &Value) -> bool {
-    part[SKIPPED] == true
-}
-
 /// A part's word on the console: whether it passed, or that it was skipped.
 fn said(part: &Value) -> String {
     if skipped(part) {
@@ -126,8 +107,7 @@ fn said(part: &Value) -> String {
 /// True when at least one copy's part was judged, every judged one passed and the test build's settings came back;
 /// a skipped part neither fails nor passes the gate.
 pub(crate) fn passed(parts: &[Value], back: bool) -> bool {
-    let mut judged = parts.iter().filter(|p| !skipped(p)).peekable();
-    judged.peek().is_some() && judged.all(|p| p["ok"] == true) && back
+    judged_ok(parts) && back
 }
 
 /// Runs G20 on the product, refused under uiAccess or while a product copy runs. Windows' history then forgets the
@@ -162,6 +142,8 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
 mod tests {
     use super::*;
     use crate::copyend::Gone;
+    use crate::winpanel::NO_UI_ACCESS;
+    use crate::workertok::{PRODUCT, Rights};
 
     fn ended(gone: Gone) -> Ended {
         Ended {

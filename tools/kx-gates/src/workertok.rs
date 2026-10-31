@@ -160,8 +160,8 @@ fn level(pid: u32) -> Result<u32, String> {
     }
 }
 
-/// What the token of process `pid` allows.
-fn rights(pid: u32) -> Result<Rights, String> {
+/// What the token of process `pid` allows; G25 reads its own copy's rights with it too.
+pub fn rights(pid: u32) -> Result<Rights, String> {
     Ok(Rights {
         ui_access: ui_access(pid)?,
         level: level(pid)?,

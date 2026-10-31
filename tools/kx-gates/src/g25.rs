@@ -1,6 +1,6 @@
 //! G25 on its own copy of the test build in Notepad, the history key off, as G20 checks ours: its language key cycles
-//! Notepad's layouts, its shortcuts layer's keys work, its Win and V keys open Windows' clipboard panel, and its Power
-//! key opens the power dialog, which G25 only ever cancels.
+//! Notepad's layouts, its shortcuts layer's keys work, its Win and V keys open Windows' clipboard panel on a uiAccess
+//! product only, and its Power key opens the power dialog, which G25 only ever cancels.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{KeyboardSettings, LangKey, Role};
@@ -19,10 +19,14 @@ use crate::ownkeys::{self, Real};
 use crate::probe::Doc;
 use crate::product::Keyboard;
 use crate::win::{self, sleep_ms};
+use crate::winpanel::{history_off, judged_ok};
+use crate::workertok::{self, Rights};
 use crate::{board, clipkeep, g25layer, g25wins, langs, probe, product, winclip};
 
 /// The app G25 drives.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
+/// The parts G25 judges: layouts, shortcuts, Switch app, Win and V, and Power.
+const PARTS: usize = 5;
 /// Why the language part is skipped with the List design.
 const LIST_SKIP: &str = "the List design opens a list on a click";
 
@@ -160,21 +164,30 @@ fn layouts(ctx: &Ctx, app: &Opened) -> Value {
     })
 }
 
+/// G25's result from its `parts` on `app`, in `PARTS` order: it passes when every judged part passed, so Win and V
+/// skipped on a product without uiAccess neither fails nor passes it.
+fn summed(app: &str, parts: [Value; PARTS]) -> Value {
+    let pass = judged_ok(&parts);
+    let [layouts, shortcuts, switch_app, window, power] = parts;
+    json!({
+        "gate": "G25", "app": app, "pass": pass, "layouts": layouts, "shortcuts": shortcuts,
+        "switch_app": switch_app, "clipboard_window": window, "power": power,
+    })
+}
+
 /// Every part in turn on Notepad, which comes back to the front before each, else the part is skipped; a part's error
-/// fails that part only. Power goes last, alone on screen.
-fn drive(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
+/// fails that part only. Win and V runs only when the copy's `product` token has uiAccess; Power goes last, alone.
+fn drive(ctx: &Ctx, app: &Opened, product: Option<Rights>) -> Result<Value, String> {
     front(ctx, app)?;
     let layouts = layouts(ctx, app);
     let layer = front(ctx, app).and_then(|()| clipkeep::keep(ctx.cfg, || g25layer::run(ctx, app)));
     let (shortcuts, switch_app) = layer.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
-    let window = fronted(ctx, app, || g25wins::clip_window(ctx, app));
+    let window = history_off(product, || {
+        fronted(ctx, app, || g25wins::clip_window(ctx, app))
+    });
     let power = fronted(ctx, app, || g25wins::power(ctx, app));
-    let parts = [&layouts, &shortcuts, &switch_app, &window, &power];
-    let pass = parts.iter().all(|p| p["ok"] == true);
-    Ok(json!({
-        "gate": "G25", "app": app.kind.name(), "pass": pass, "layouts": layouts, "shortcuts": shortcuts,
-        "switch_app": switch_app, "clipboard_window": window, "power": power,
-    }))
+    let parts = [layouts, shortcuts, switch_app, window, power];
+    Ok(summed(app.kind.name(), parts))
 }
 
 /// The result of the parts `got` on G25's own copy: it passes only when they did, the copy quit by itself and the test
@@ -201,8 +214,11 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     g25wins::no_dialog(ctx)?;
     let session = ClipSession::open(ctx)?;
     let (g, since) = (&ctx.cfg.g25, winclip::now());
-    let copy =
-        |doc: &Doc| Ok(session.with_copy(g.history_key, g.ready_ms, |_| drive(ctx, &doc.app)));
+    let copy = |doc: &Doc| {
+        Ok(session.with_copy(g.history_key, g.ready_ms, |s| {
+            drive(ctx, &doc.app, workertok::rights(s.process.pid()).ok())
+        }))
+    };
     let result = probe::open_text(ctx, kind, &g.text).and_then(|doc| probe::run_on(ctx, doc, copy));
     let history = probe::forget_copies(ctx, since, &|t| winclip::has_prefix(t, &[&g.text]));
     let recovered = session.recovered;
@@ -216,85 +232,4 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use kx_mod_clipboard::{ClipSettings, ID, SPEC};
-    use kx_settings::peek_section;
-    use toml::Table;
-
-    use super::*;
-    use crate::clipcopy::clip_table;
-    use crate::copyend::Gone;
-
-    #[test]
-    fn the_click_lands_in_the_middle_of_the_part_that_steps_on() {
-        let key = RECT {
-            left: 100,
-            top: 10,
-            right: 400,
-            bottom: 40,
-        };
-        let share = 0.3333;
-        let p = forward(&key, share);
-        assert_eq!((p.x, p.y), (300, 25));
-        assert!(
-            f64::from(p.x) > 100.0 + 300.0 * f64::from(share),
-            "past the back part"
-        );
-        assert_eq!(forward(&key, 0.0).x, 250, "no back part: the middle");
-    }
-
-    #[test]
-    fn only_the_list_design_is_skipped_since_a_click_opens_the_list() {
-        assert_eq!(skip_reason(LangKey::Carousel), None);
-        assert_eq!(skip_reason(LangKey::Cycle), None);
-        assert!(skip_reason(LangKey::List).is_some());
-    }
-
-    #[test]
-    fn g25s_own_copy_runs_with_the_history_key_off() {
-        let c = crate::config::load().expect("loads");
-        let t = clip_table(&Table::new(), c.g25.history_key, &c.g20_product.skip_app);
-        let s: ClipSettings =
-            peek_section(Some(&t.expect("built")), ID, &SPEC).expect("reads back");
-        assert!(!s.history_key, "Win and V reach Windows' own history");
-        assert!(c.g25.ready_ms > 0);
-    }
-
-    #[test]
-    fn g25_passes_only_when_its_parts_its_copy_and_the_settings_did() {
-        let quit = Ended {
-            gone: Gone::Quit,
-            note: None,
-            released: Vec::new(),
-        };
-        let good = || Ok(json!({ "pass": true }));
-        assert_eq!(on_copy(good(), Some(&quit), &Ok(()))["pass"], true);
-        assert_eq!(on_copy(good(), None, &Ok(()))["pass"], false, "no copy");
-        let back = on_copy(good(), Some(&quit), &Err("locked".into()));
-        assert_eq!(
-            (back["pass"].as_bool(), back["settings_error"].as_str()),
-            (Some(false), Some("locked"))
-        );
-        let failed = on_copy(Err("no keyboard".into()), Some(&quit), &Ok(()));
-        assert_eq!(
-            (failed["pass"].as_bool(), failed["error"].as_str()),
-            (Some(false), Some("no keyboard"))
-        );
-        let crashed = Ended {
-            gone: Gone::Crashed(Some(1)),
-            ..quit
-        };
-        assert_eq!(on_copy(good(), Some(&crashed), &Ok(()))["pass"], false);
-    }
-
-    #[test]
-    fn lang_is_the_low_word_in_hex() {
-        assert_eq!(lang(0x0409_0409), "0409");
-        assert_eq!(
-            lang(isize::try_from(0xF002_1C01_u32).expect("fits")),
-            "1C01"
-        );
-        let extended = isize::try_from(0xFFFF_FFFF_F029_1C01_u64.cast_signed()).expect("64-bit");
-        assert_eq!(lang(extended), "1C01", "a sign-extended handle");
-    }
-}
+mod tests;

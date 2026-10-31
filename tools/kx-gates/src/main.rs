@@ -158,6 +158,7 @@ mod wer;
 mod win;
 mod winclip;
 mod winfind;
+mod winpanel;
 mod workertok;
 
 use std::process::ExitCode;
