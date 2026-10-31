@@ -10,7 +10,7 @@ mod paint;
 mod power;
 
 pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP};
-pub use board::board_view;
+pub use board::{CYCLE_ICON, LIST_ICON, board_view};
 pub use layer::{
     LayerState, NEXT_ICON, NO_SHORTCUTS_TIP, SHORTCUT_ICON_PREFIX, SHORTCUT_NAME_PREFIX, with_layer,
 };
@@ -47,10 +47,6 @@ pub const LONE_TIP: &str = "tip.one-lang";
 pub const DPAD_NAME: &str = "key.dpad";
 /// The name of a character key that types nothing with the latched Shift or `AltGr`: "Empty key".
 pub const EMPTY_NAME: &str = "key.empty";
-/// The Cycle design's globe, by its `icons.toml` key.
-pub const CYCLE_ICON: &str = "lang.cycle";
-/// The List design's chevron, by its `icons.toml` key.
-pub const LIST_ICON: &str = "lang.list";
 
 /// One key as the board draws it; it changes only with the size or the settings, such as the language key's design.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -222,6 +218,8 @@ pub struct StateInput<'a> {
     pub layer: &'a Layer,
     /// The power module's state, as the bus last told it.
     pub power: PowerChanged,
+    /// The clipboard panel is open, as the bus last told it.
+    pub clip: bool,
 }
 
 /// Every key's state, the language key, the list, the place, the pad and the layer.
@@ -269,6 +267,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
     let on = match k.role {
         Role::Latch(r) => i.latches.is_on(r.latch),
         Role::Caps => i.caps,
+        Role::Clip => i.clip,
         _ => false,
     };
     let still = k.role == Role::Lang && lone(i.list.len());

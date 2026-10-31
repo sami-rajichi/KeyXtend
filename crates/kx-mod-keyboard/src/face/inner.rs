@@ -1,7 +1,8 @@
 //! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list, the
-//! shortcuts layer and the mouse, scroll and power modules' states.
+//! shortcuts layer, and the mouse, scroll, power and clipboard modules' states.
 
 mod assist;
+mod clip;
 mod fit;
 mod held;
 mod layer;
@@ -33,6 +34,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Everything a click can change.
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact the pointer, a redraw or another module tells apart; they change separately."
+)]
 pub(super) struct Inner {
     ports: Ports,
     settings: KeyboardSettings,
@@ -65,6 +70,8 @@ pub(super) struct Inner {
     known: Vec<ShortcutInfo>,
     /// The power module's state, as the bus last told it.
     power: PowerChanged,
+    /// The clipboard panel is open, as the bus last told it.
+    clip: bool,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
     /// The module runs, so a picked word may type.
@@ -113,6 +120,7 @@ impl Inner {
             layer,
             known,
             power: PowerChanged::OFF,
+            clip: false,
             unshown: false,
             running: false,
         }
@@ -269,6 +277,7 @@ impl Inner {
             scroll: self.scroll,
             layer: &self.layer,
             power: self.power,
+            clip: self.clip,
         })
     }
 }

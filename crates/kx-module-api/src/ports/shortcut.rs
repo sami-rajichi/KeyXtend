@@ -10,6 +10,9 @@ use thiserror::Error;
 /// The longest shortcut id or key name, in bytes.
 pub const MAX_ID_LEN: usize = 32;
 
+/// The paste shortcut every platform's table holds; the keyboard sends it when the clipboard module asks (ADR-0034).
+pub const PASTE_ID: &str = "paste";
+
 /// What a refused id or name hears; it never repeats the text, which may be a key.
 const BAD_FORM: &str = "not lower-case letters, digits and inner dashes within the length limit";
 
@@ -116,6 +119,10 @@ pub trait Shortcuts: Send + Sync {
     /// # Errors
     /// `Unknown` for an id not in `known`, `Refused` when the OS drops events, `Failed` when an OS call fails.
     fn send(&self, id: &ShortcutId, held: &[Scan]) -> Result<(), ShortcutError>;
+
+    /// True when `key` with exactly the `held` keys, in any order, is the platform's clipboard-history chord in the
+    /// layout of the app in front (ADR-0034 decision 7); false on a platform without one.
+    fn is_history(&self, held: &[Scan], key: Scan) -> bool;
 }
 
 /// The shortcuts service; it needs `InjectInput`.

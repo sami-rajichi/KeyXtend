@@ -8,6 +8,7 @@ use super::*;
 use crate::inject::tests::fake::Fake;
 use crate::strokes::Key;
 
+mod history;
 mod props;
 
 const CTRL: Scan = Scan::new(0x1D);

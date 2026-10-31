@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 03:30 — P8: the keyboard's clipboard key, panel keys and paste
+The side key `clip` now asks the clipboard module to open or close its panel and lights while the module says it is open. While the panel is open, the moves, Space (tick), Backspace (erase) and character keys go to it instead of the app, each letter as exactly what the key would type now, kept `Redacted`; with Ctrl, Alt or Win latched a letter still goes to the app. On `PasteAsk` the keyboard lets every latch go and sends one plain `paste` shortcut, answering `Pasted` with whether it went. Win plus the key that gives V in the layout in front (the new `history` entry in `shortcuts.toml`) opens the panel only while the module wants the chord, and otherwise reaches Windows.
+
 ## 2026-10-31 03:13 — P8: the worker host's review fixes and tidy F4
 A worker that quit between draws is now replaced before the next draw with no backoff, and the host tests check the waits it gives. The worker's job also bars it from shared UI: other windows, the clipboard, atoms, desktops, display and system settings, and signing out. New tidy rule F4 bans `std::process::Command` and `QProcess` in product code under `apps/` and `crates/`, so no plain start can inherit a starting worker's pipes; tests, test modules and build scripts may still use them, and no product use turned up. The worker tests now build the worker with the target folder, triple and profile of their own path.
 

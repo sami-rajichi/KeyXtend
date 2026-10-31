@@ -2,14 +2,18 @@
 //! keys are dimmed or repeat, and the rules and times the UI reads with it.
 
 use super::{
-    BoardView, CYCLE_ICON, DPAD_NAME, DpadView, ICON_PREFIX, KeyView, LABEL_PREFIX, LATER_TIP,
-    LIST_ICON, NAME_PREFIX,
+    BoardView, DPAD_NAME, DpadView, ICON_PREFIX, KeyView, LABEL_PREFIX, LATER_TIP, NAME_PREFIX,
 };
 use crate::geom::{KeyBox, board};
 use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Limits;
 use crate::spec::{BoardSpec, KeyKind, Role};
 use std::collections::HashSet;
+
+/// The Cycle design's globe, by its `icons.toml` key.
+pub const CYCLE_ICON: &str = "lang.cycle";
+/// The List design's chevron, by its `icons.toml` key.
+pub const LIST_ICON: &str = "lang.list";
 
 /// The board of `spec` at `size`, with the rules and design of `settings`; with repeat off, no key repeats.
 #[must_use]
@@ -65,7 +69,7 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
         dots: false,
         checkable: matches!(
             k.role,
-            Role::Latch(_) | Role::Caps | Role::Assist(_) | Role::Layer
+            Role::Latch(_) | Role::Caps | Role::Assist(_) | Role::Layer | Role::Clip
         ),
         dim,
         tip: dim.then_some(LATER_TIP),

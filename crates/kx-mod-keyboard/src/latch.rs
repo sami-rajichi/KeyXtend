@@ -88,6 +88,13 @@ impl Latches {
         go
     }
 
+    /// Lets every latch go whatever the mode, as before a paste the clipboard module asked for. True when any let go.
+    pub fn clear(&mut self) -> bool {
+        let any = !self.on.is_empty();
+        self.on.clear();
+        any
+    }
+
     /// Something went out that keeps the latches, such as Caps Lock: each stays on, used.
     pub fn spend(&mut self) {
         for on in self.on.values_mut() {

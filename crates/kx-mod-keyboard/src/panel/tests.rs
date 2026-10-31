@@ -1,5 +1,6 @@
 use super::*;
-use kx_module_api::ports::{LangLabel, LayoutId};
+use crate::spec::char_id;
+use kx_module_api::ports::{LangLabel, LayoutId, PanelKey, Scan};
 use proptest::prelude::*;
 
 const ALL: [Nav; 6] = [
@@ -145,13 +146,62 @@ fn a_huge_page_size_from_the_ui_never_overflows() {
 }
 
 #[test]
-fn the_board_names_one_key_for_each_panel_move() {
+fn the_language_list_takes_one_key_per_move_so_space_and_backspace_keep_typing() {
     let navs = navs(&BoardSpec::shipped().unwrap());
     let ids: Vec<&str> = navs.iter().map(|(id, _)| id.as_str()).collect();
     assert_eq!(ids, ["esc", "enter", "up", "left", "down", "right"]);
     for nav in ALL {
         assert_eq!(navs.iter().filter(|(_, n)| *n == nav).count(), 1, "{nav:?}");
     }
+}
+
+#[test]
+fn the_clipboard_panel_takes_every_nav_key_and_every_character_key() {
+    let s = BoardSpec::shipped().unwrap();
+    let keys = clip_keys(&s);
+    assert_eq!(keys.get("space"), Some(&ClipUse::Nav(Nav::Tick)));
+    assert_eq!(keys.get("bksp"), Some(&ClipUse::Nav(Nav::Erase)));
+    for (id, nav) in navs(&s) {
+        assert_eq!(keys.get(&id), Some(&ClipUse::Nav(nav)), "{id}");
+    }
+    for sc in s.char_scans() {
+        assert_eq!(keys.get(&char_id(sc)), Some(&ClipUse::Char(sc)));
+    }
+    assert_eq!(keys.len(), ALL.len() + 2 + s.char_scans().len());
+    for id in ["tab", "del", "menu", "shift", "caps", "win", "lang", "clip"] {
+        assert!(!keys.contains_key(id), "{id} acts as usual");
+    }
+}
+
+#[test]
+fn each_nav_names_its_clipboard_panel_key_and_tick_and_erase_leave_the_list() {
+    let pairs = [
+        (Nav::Up, PanelKey::Up),
+        (Nav::Down, PanelKey::Down),
+        (Nav::Left, PanelKey::Left),
+        (Nav::Right, PanelKey::Right),
+        (Nav::Enter, PanelKey::Enter),
+        (Nav::Esc, PanelKey::Esc),
+        (Nav::Tick, PanelKey::Tick),
+        (Nav::Erase, PanelKey::Erase),
+    ];
+    for (nav, key) in pairs {
+        assert_eq!(PanelKey::from(nav), key);
+    }
+    let (mut l, len) = seven(3);
+    for nav in [Nav::Tick, Nav::Erase] {
+        assert_eq!(l.key(nav, ROWS, len), Moved::Stay, "{nav:?}");
+    }
+    assert_eq!(l.hi(len), 3);
+}
+
+#[test]
+fn a_character_use_never_shows_its_scan_code() {
+    let shown = format!(
+        "{:?}",
+        [ClipUse::Char(Scan::new(0x2C)), ClipUse::Nav(Nav::Tick)]
+    );
+    assert_eq!(shown, "[Char(..), Nav(Tick)]");
 }
 
 fn label(n: u64, short: &str, rtl: bool) -> LangLabel {

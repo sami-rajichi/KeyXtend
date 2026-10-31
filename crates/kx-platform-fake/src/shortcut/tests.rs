@@ -100,3 +100,19 @@ fn debug_shows_counts_and_no_id_or_key() {
     let shown = format!("{fake:?}");
     assert_eq!(shown, "FakeShortcuts { known: 2, sent: 1, .. }");
 }
+
+#[test]
+fn the_history_chord_is_what_the_test_scripted_in_any_order() {
+    let fake = fake();
+    let (win, v) = (Scan::new(0xE05B), Scan::new(0x2F));
+    assert!(!fake.is_history(&[win], v), "none until scripted");
+    fake.set_history(Some((vec![win, CTRL], v)));
+    assert!(fake.is_history(&[win, CTRL], v));
+    assert!(fake.is_history(&[CTRL, win], v), "in any order");
+    assert!(!fake.is_history(&[win], v), "a held key missing");
+    assert!(!fake.is_history(&[win, CTRL, SHIFT], v), "one more held");
+    assert!(!fake.is_history(&[win, CTRL], SHIFT), "another key");
+    fake.set_history(None);
+    assert!(!fake.is_history(&[win, CTRL], v));
+    assert!(fake.sent().is_empty(), "an ask sends nothing");
+}

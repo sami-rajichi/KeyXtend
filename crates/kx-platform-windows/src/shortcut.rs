@@ -1,5 +1,5 @@
-//! Shortcuts by id: the compiled-in tables, and each send planned as key events in the app's layout or an OS call.
-//! The plan is pure over the injector's `Os`; only `win` calls Windows.
+//! Shortcuts by id: the compiled-in tables, each send planned as key events in the app's layout or an OS call, and the
+//! clipboard-history chord. The plan and the chord are pure over the injector's `Os`; only `win` calls Windows.
 #![cfg_attr(
     not(windows),
     allow(
@@ -8,7 +8,7 @@
     )
 )]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::LazyLock;
 
 use kx_module_api::ports::{
@@ -79,6 +79,7 @@ pub(crate) enum Plan {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawTable {
+    history: Option<Vec<KeyName>>,
     shortcuts: Vec<RawEntry>,
 }
 
@@ -106,9 +107,8 @@ impl Entry {
         }
         let (mut steps, mut vks) = (Vec::new(), Vec::new());
         for keys in raw.steps {
+            vks.push(mapped(&keys, names)?);
             let (key, held) = keys.split_last().ok_or(TableError::Empty)?;
-            let vk = |n: &KeyName| names.get(n).copied().ok_or(TableError::UnknownName);
-            vks.push(keys.iter().map(vk).collect::<Result<_, _>>()?);
             steps.push(Step {
                 held: held.to_vec(),
                 key: key.clone(),
@@ -123,10 +123,20 @@ impl Entry {
     }
 }
 
-/// The parsed tables: each shortcut in table order.
+/// The virtual keys of `keys`, refused when empty or when a name has none in `names`.
+fn mapped(keys: &[KeyName], names: &BTreeMap<KeyName, u16>) -> Result<Vec<u16>, TableError> {
+    if keys.is_empty() {
+        return Err(TableError::Empty);
+    }
+    let vk = |n: &KeyName| names.get(n).copied().ok_or(TableError::UnknownName);
+    keys.iter().map(vk).collect()
+}
+
+/// The parsed tables: each shortcut in table order, and the history chord's virtual keys, the key last.
 #[derive(Default)]
 pub(crate) struct Table {
     entries: Vec<Entry>,
+    history: Option<Vec<u16>>,
 }
 
 impl Table {
@@ -141,7 +151,8 @@ impl Table {
             }
             entries.push(Entry::new(entry, &names)?);
         }
-        Ok(Self { entries })
+        let history = raw.history.map(|h| mapped(&h, &names)).transpose()?;
+        Ok(Self { entries, history })
     }
 
     /// Every shortcut with its steps, in table order.
@@ -189,6 +200,30 @@ pub(crate) fn plan_in<O: Os>(
         strokes::combo(&once_each(latched.iter().copied().chain(keys)))
     };
     Ok(Plan::Keys(entry.vks.iter().flat_map(step).collect()))
+}
+
+/// True when `key` with exactly the `held` scans is the history chord, its keys read in the layout of the app in front,
+/// else the keyboard's own.
+pub(crate) fn history<O: Os>(os: &O, table: &Table, held: &[Scan], key: Scan) -> bool {
+    let layout = os.layout().unwrap_or_else(|| os.own_layout());
+    history_in(os, layout, table, held, key)
+}
+
+/// True when `key` with exactly the `held` scans, in any order, is the history chord, its keys read in `layout`.
+pub(crate) fn history_in<O: Os>(
+    os: &O,
+    layout: LayoutId,
+    table: &Table,
+    held: &[Scan],
+    key: Scan,
+) -> bool {
+    let Some((last, mods)) = table.history.as_deref().and_then(<[u16]>::split_last) else {
+        return false;
+    };
+    let at = |vk: u16| place(Key::vk(vk, os.scan_of(vk, layout)));
+    let want: BTreeSet<Option<u16>> = mods.iter().map(|&vk| at(vk)).collect();
+    let have: BTreeSet<Option<u16>> = held.iter().map(|s| Some(s.code())).collect();
+    at(*last) == Some(key.code()) && want == have
 }
 
 /// `keys` in order, each left out when a key already in place presses the same key, so a latch is pressed once.

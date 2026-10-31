@@ -194,8 +194,15 @@ fn a_mouse_assist_key_is_pressed_twice_so_its_mode_comes_back_and_must_send_noth
 }
 
 #[test]
-fn only_the_mouse_assist_and_shortcuts_keys_put_their_mode_back_even_after_the_guard_stops() {
-    for id in ["rclick", "grab", "shortcuts"] {
+fn the_clipboard_key_opens_the_panel_and_closes_it_again_sending_nothing() {
+    let s = step_of(false, "clip");
+    let want = (ids(&["clip", "clip"]), Expect::Nothing, false);
+    assert_eq!((s.presses, s.expect, s.toggles), want);
+}
+
+#[test]
+fn only_the_keys_pressed_twice_put_their_mode_back_even_after_the_guard_stops() {
+    for id in ["rclick", "grab", "shortcuts", "clip"] {
         assert!(step_of(false, id).puts_back, "{id}");
     }
     for id in ["esc", "caps", "shift", "mic"] {

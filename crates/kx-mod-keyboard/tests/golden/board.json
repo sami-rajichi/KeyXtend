@@ -1435,8 +1435,8 @@
       "y": 65.0
     },
     {
-      "checkable": false,
-      "dim": true,
+      "checkable": true,
+      "dim": false,
       "dots": false,
       "h": 31.0,
       "icon": "keys.clip",
@@ -1449,7 +1449,7 @@
       "row": 2,
       "side": true,
       "steps": [],
-      "tip": "tip.later",
+      "tip": null,
       "w": 40.26,
       "x": 623.52,
       "y": 96.0

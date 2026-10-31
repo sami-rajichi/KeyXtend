@@ -191,6 +191,12 @@ fn a_role_must_fit_its_key() {
         role("lang", |k| k.sc = Some(Scan::new(0x01))),
         refused("lang")
     );
+    let clip = |k: &mut KeySpec| (k.role, k.sc) = (Role::Clip, None);
+    assert_eq!(
+        role("menu", clip),
+        refused("menu"),
+        "the clip key is a side key"
+    );
     let mut s = spec();
     s.side[4].role = Role::Send;
     assert_eq!(
@@ -222,6 +228,15 @@ fn the_shipped_board_gives_each_named_key_its_role() {
     assert_eq!(named(&s, "space").role, Role::Send);
     let del = named(&s, "del").sc.unwrap();
     assert!(del.is_extended() && del.code() == 0xE053);
+}
+
+#[test]
+fn space_ticks_backspace_erases_and_the_clip_key_opens_the_clipboard_panel() {
+    let s = spec();
+    assert_eq!(named(&s, "space").nav, Some(Nav::Tick));
+    assert_eq!(named(&s, "bksp").nav, Some(Nav::Erase));
+    let clip = s.side.iter().find(|k| k.id == "clip").unwrap();
+    assert_eq!(clip.role, Role::Clip);
 }
 
 #[test]

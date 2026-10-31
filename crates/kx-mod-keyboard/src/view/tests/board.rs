@@ -42,7 +42,7 @@ fn later_side_keys_are_dimmed_and_say_they_come_later() {
 }
 
 #[test]
-fn only_modifiers_caps_lock_the_mouse_assist_keys_and_the_shortcuts_key_are_checkable() {
+fn only_latches_caps_lock_and_the_side_keys_that_turn_a_mode_on_are_checkable() {
     let v = board_view(&spec(), &settings(), 1.0);
     let checkable: Vec<&str> = v
         .keys
@@ -51,7 +51,7 @@ fn only_modifiers_caps_lock_the_mouse_assist_keys_and_the_shortcuts_key_are_chec
         .map(|k| k.id.as_str())
         .collect();
     let want = ["caps", "shift", "rshift", "ctrl", "win", "alt", "altgr"];
-    let side = ["rclick", "grab", "shortcuts"];
+    let side = ["rclick", "grab", "shortcuts", "clip"];
     assert_eq!(checkable, [want.as_slice(), &side].concat());
 }
 
@@ -64,7 +64,7 @@ fn the_hidden_layer_leaves_the_board_as_it_is_and_no_key_names_steps() {
             .iter()
             .all(|k| !k.icon_only && !k.dots && k.steps.is_empty())
     );
-    for id in ["shortcuts", "power"] {
+    for id in ["shortcuts", "power", "clip"] {
         let k = key(&v, id);
         assert!(
             !k.dim && k.tip.is_none() && !k.repeat,

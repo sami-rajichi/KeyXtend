@@ -65,6 +65,8 @@ pub enum Plan {
     Layer,
     /// The Power key: the face asks the power module for the dialog; nothing goes to the app.
     Power,
+    /// The clipboard key: the face asks the clipboard module to open or close its panel; nothing goes to the app.
+    Clip,
     /// A layer cell: the platform sends the shortcut with every latch held; then the latches let go as after any key,
     /// and a dead key's wait ends.
     Shortcut(ShortcutId),
@@ -91,6 +93,7 @@ impl fmt::Debug for Plan {
             Self::Assist(t) => write!(f, "Assist({t:?})"),
             Self::Layer => f.write_str("Layer"),
             Self::Power => f.write_str("Power"),
+            Self::Clip => f.write_str("Clip"),
             Self::Shortcut(_) => f.write_str("Shortcut"),
             Self::Next => f.write_str("Next"),
             Self::Later => f.write_str("Later"),
@@ -128,6 +131,7 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Assist(a), _) => Plan::Assist(a.into()),
         (Role::Layer, _) => Plan::Layer,
         (Role::Power, _) => Plan::Power,
+        (Role::Clip, _) => Plan::Clip,
         _ => Plan::Later,
     }
 }
