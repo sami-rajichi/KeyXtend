@@ -84,3 +84,7 @@ windows-core.workspace = true
 kx-ipc = { path = "../kx-ipc" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
+
+[target.'cfg(windows)'.dev-dependencies]
+# The worker tests list every process, so a worker is seen to start none, not even a console host.
+windows = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp"] }

@@ -1,5 +1,6 @@
 //! The worker's reduced rights, read from outside: its token is restricted, with no uiAccess and Medium integrity, it
-//! holds none of our inheritable handles, and its job caps it, bars it from shared UI and ends it when asked or let go.
+//! holds none of our inheritable handles and has no console host, and its job caps it, bars it from shared UI and ends
+//! it when asked or let go.
 
 use super::*;
 use crate::worker::access::{self, Rights};
@@ -12,6 +13,9 @@ use windows::Win32::Foundation::{CompareObjectHandles, DUPLICATE_SAME_ACCESS, Du
 use windows::Win32::Security::{
     SECURITY_ATTRIBUTES, TOKEN_QUERY, WinBuiltinAdministratorsSid, WinWorldSid,
 };
+use windows::Win32::System::Diagnostics::ToolHelp::{
+    CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
+};
 use windows::Win32::System::JobObjects::{
     IsProcessInJob, JOB_OBJECT_UILIMIT_DESKTOP, JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
     JOB_OBJECT_UILIMIT_EXITWINDOWS, JOB_OBJECT_UILIMIT_GLOBALATOMS, JOB_OBJECT_UILIMIT_HANDLES,
@@ -20,7 +24,7 @@ use windows::Win32::System::JobObjects::{
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectBasicUIRestrictions,
     JobObjectExtendedLimitInformation, QueryInformationJobObject,
 };
-use windows::Win32::System::Threading::{CreateEventW, GetCurrentProcess};
+use windows::Win32::System::Threading::{CreateEventW, GetCurrentProcess, GetProcessId};
 use windows::core::PCWSTR;
 
 /// An event of ours that every child started with inheritance may inherit.
@@ -84,6 +88,31 @@ fn watch(process: HANDLE) -> OwnedHandle {
     }
 }
 
+/// The ids of the running processes whose parent is `process`, from a snapshot of them all.
+#[allow(unsafe_code, reason = "Walks a process snapshot we own.")]
+fn children(process: HANDLE) -> Vec<u32> {
+    // SAFETY: our live process handle, and a new snapshot that goes straight to an owner.
+    let (pid, snap) = unsafe {
+        let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0).unwrap();
+        (GetProcessId(process), OwnedHandle::from_raw_handle(snap.0))
+    };
+    let mut entry = PROCESSENTRY32W {
+        dwSize: size32::<PROCESSENTRY32W>(),
+        ..Default::default()
+    };
+    let mut found = Vec::new();
+    // SAFETY: our live snapshot, and a local entry whose size it states.
+    let mut more = unsafe { Process32FirstW(raw(&snap), &raw mut entry) }.is_ok();
+    while more {
+        if entry.th32ParentProcessID == pid {
+            found.push(entry.th32ProcessID);
+        }
+        // SAFETY: as above.
+        more = unsafe { Process32NextW(raw(&snap), &raw mut entry) }.is_ok();
+    }
+    found
+}
+
 /// The rights the worker runs with.
 const RESTRICTED: Rights = Rights {
     ui_access: false,
@@ -144,6 +173,16 @@ fn the_worker_inherits_only_its_pipes() {
     assert!(seen, "a plain child inherits it, so the check can see it");
     let worker = spawn();
     assert!(!holds(raw(&worker.child().process), &canary));
+}
+
+#[test]
+fn the_worker_starts_no_console_host() {
+    let worker = spawn();
+    let started = children(raw(&worker.child().process));
+    assert!(
+        started.is_empty(),
+        "a console host would need a desktop the worker may not reach: {started:?}"
+    );
 }
 
 #[test]

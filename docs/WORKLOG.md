@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-01 00:20 — P8: the picture worker starts with no console
+On CI's Windows runner (administrator, UAC off) the worker died at start with `0xC0000142`, a DLL that failed to start. `CREATE_NO_WINDOW` still gave it a hidden console, whose `conhost.exe` runs under the worker's reduced token and loads `user32`, which needs a desktop that token cannot reach there. The worker now starts with `DETACHED_PROCESS`, so it has no console at all; a new test proves it starts no other process.
+
 ## 2026-10-31 23:30 — P8: Linux CI, tests that read Windows paths
 Three clipboard tests wrote `C:\a`, whose file name Linux cannot split off, so they now write `C:/a`, a drive path whose name every system reads. The adapter's real-file check made a `/tmp` file on Linux, which the adapter rightly leaves unchecked, so it now runs on Windows only, like its neighbour. The P8 tests that never reached Linux in CI were read for the same trap; none other was found.
 

@@ -13,7 +13,7 @@ use windows::Win32::Foundation::{
 };
 use windows::Win32::System::Pipes::CreatePipe;
 use windows::Win32::System::Threading::{
-    CREATE_NO_WINDOW, CREATE_SUSPENDED, CreateProcessAsUserW, DeleteProcThreadAttributeList,
+    CREATE_SUSPENDED, CreateProcessAsUserW, DETACHED_PROCESS, DeleteProcThreadAttributeList,
     EXTENDED_STARTUPINFO_PRESENT, InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
     PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROCESS_INFORMATION, ResumeThread, STARTF_USESTDHANDLES,
     STARTUPINFOEXW, STARTUPINFOW, TerminateProcess, UpdateProcThreadAttribute,
@@ -89,7 +89,8 @@ fn inherit(end: &OwnedHandle) -> Result<HANDLE, SpawnError> {
     Ok(raw(end))
 }
 
-/// Makes the worker's process suspended, with stdin and stdout from `std` and no stderr.
+/// Makes the worker's process suspended, with stdin and stdout from `std`, no stderr and no console, whose host would
+/// load `user32` under the worker's token and fail where that token reaches no desktop.
 #[allow(unsafe_code, reason = "Starts a process with our reduced token.")]
 fn create(
     exe: &Path,
@@ -106,7 +107,7 @@ fn create(
     info.lpAttributeList = list.at();
     let app: Vec<u16> = exe.as_os_str().encode_wide().chain([0]).collect();
     let mut line = line::command_line(exe.as_os_str(), &launch.args);
-    let flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_SUSPENDED;
+    let flags = EXTENDED_STARTUPINFO_PRESENT | DETACHED_PROCESS | CREATE_SUSPENDED;
     let mut made = PROCESS_INFORMATION::default();
     let startup = (&raw const info).cast::<STARTUPINFOW>();
     // SAFETY: every pointer is to a live local or to `list`, which outlive the call; `app` and `line` end with a null
