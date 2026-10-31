@@ -1,8 +1,8 @@
 # Security note: keyxtend-worker
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 8: the `media` job)
-- **Status:** Draft
+- **Last review:** 2026-10-31 (P8 security check: the restricted token and what a compromised worker can reach; P8 task 8: the `media` job)
+- **Status:** Reviewed
 - **Scope:** `apps/keyxtend-worker`, the program `keyxtend-worker media --max-pixels <n>`. It decodes copied PNG and DIB images into small RGBA thumbnails outside the uiAccess keyboard (ADR-0004, ADR-0034 decision 5). The host in `kx_platform::pictures` starts it on demand, through the adapter's spawner with lowered rights (`kx-platform.md`); the voice, OCR and update jobs come in later phases.
 
 ## Capabilities
@@ -47,7 +47,7 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 ### Must fix (blocks Definition of Done)
 - None.
 ### Should fix (tracked issue)
-- Task 19's gate should copy real images from several apps (Paint, a browser, Office, a Qt app, a screenshot) and check their thumbnails, above all V4 and V5 DIBs with bit masks, whose masks some writers repeat after the header.
+- Moved to P8's hands-on check (`docs/items/P8.md`): copy real images from Paint, a browser and Snip and look at their thumbnails, above all V4 and V5 DIBs with bit masks.
 - Done (task 9): the host and the worker read the command words and exit codes from one copy in `kx-ipc` (`MEDIA_JOB`, `MAX_PIXELS_FLAG`, `CLEAN_EXIT`, `REFUSED_EXIT`); `the_real_worker_draws_through_the_host` and `the_workers_words_and_exit_codes_match_the_host` in `kx-platform-windows` start the real worker.
 ### Accepted (with reason)
 - Interlaced PNGs are refused: their seven passes cover the whole image, so drawing one needs a full-size buffer, which the row-by-row decoders never hold. Apps rarely copy interlaced PNGs; the history row keeps its type icon.
@@ -55,5 +55,6 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 - 32-bit DIB alpha is taken as straight, not premultiplied; an all-zero alpha means opaque.
 - An animated PNG shows its default image only.
 - The `png` crate's memory limit is best effort: its raw-row buffers are not counted. They are bounded by the counted row, and the job object caps the whole process.
-- Image bytes and pixels are not wiped, as in `kx-ipc`.
+- Image bytes and pixels are not wiped, as in `kx-ipc`: the worker runs as the user, who can read their own memory anyway.
+- The worker keeps the user's SID and logon session, so at Medium it could still read the user's own files, the history folder among them. ADR-0004 asks for less privilege, not a sandbox; an AppContainer or a separate low-rights account is a later hardening item (`docs/items/P14.md`).
 - No `cargo fuzz` target: property tests stand in until the owner allows the nightly toolchain, as in `kx-kernel.md`.

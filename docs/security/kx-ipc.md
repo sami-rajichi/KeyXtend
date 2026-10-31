@@ -1,9 +1,9 @@
 # Security note: kx-ipc
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 6: the frame format and its limits)
-- **Status:** Draft
-- **Scope:** `crates/kx-ipc`, a library with no module of its own. The worker host (P8 task 9) writes asks and reads replies; `keyxtend-worker media` (task 8) reads asks and writes replies (ADR-0004, ADR-0034 decision 5).
+- **Last review:** 2026-10-31 (P8 security check: a dripped reply's buffer and the worker's command words; P8 task 6: the frame format and its limits)
+- **Status:** Reviewed
+- **Scope:** `crates/kx-ipc`, a library with no module of its own. The worker host (P8 task 9) writes asks and reads replies; `keyxtend-worker media` (task 8) reads asks and writes replies (ADR-0004, ADR-0034 decision 5). It also holds the worker's command words and exit codes (`MEDIA_JOB`, `MAX_PIXELS_FLAG`, `CLEAN_EXIT`, `REFUSED_EXIT`), so the host and the worker read one copy.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -38,7 +38,7 @@ The crate sets no time limit: the host's deadline (`media_ms`) and kill on timeo
   - A lying length within the cap costs only what arrives, and never more than the cap (`a_read_buffer_grows_past_neither_its_length_nor_twice_what_arrived`, `a_lying_pixel_length_is_refused_before_the_pixels`).
   - A reader never reads past its frame, so a refused frame cannot swallow the next one (`*_round_trip_and_end_at_their_frame`).
   - Random and cut input never panics (`random_bytes_never_panic`, `a_cut_frame_fails_cleanly`). A worker that stops mid-frame blocks the read until the host's deadline ends it (task 9).
-- **Elevation:** `#![forbid(unsafe_code)]`, no dependency beyond `thiserror`, and no media parsing. Decoding stays in the worker, which runs without uiAccess at normal integrity (ADR-0034 decision 5).
+- **Elevation:** `#![forbid(unsafe_code)]`, no dependency beyond `thiserror`, and no media parsing. Decoding stays in the worker, which runs from a restricted token without uiAccess at Medium integrity (ADR-0034 decision 5, `kx-platform-windows.md`).
 
 ## Findings
 ### Must fix (blocks Definition of Done)
@@ -46,7 +46,7 @@ The crate sets no time limit: the host's deadline (`media_ms`) and kill on timeo
 ### Should fix (tracked issue)
 - Done (task 16): the settings stay inside these limits, `max_entry_mb` at most 64 and `preview_px` and `thumb_px` at most `MAX_SIDE`; the app's agree test pins both (`apps/keyxtend/tests/agree/clip.rs`).
 ### Accepted (with reason)
-- The host may hold up to `MAX_REPLY_LEN` for one reply; it sends one draw at a time, which bounds it.
+- The host may hold up to `MAX_REPLY_LEN` for one reply: a worker that declares a near-cap `Pixels` length and drips its bytes makes `read_tail` double the buffer (`grow`) to about 64 MiB. The host sends one draw at a time, which bounds it.
 - No authentication or encryption on frames: the pipe is anonymous and inherited only by our child. A named pipe would need the checks in ARCHITECTURE.md's IPC section.
 - Image bytes and pixels are not wiped on drop; the clipboard module holds the same content unwiped in `Redacted`.
 - No rate limit in the crate: one draw at a time within the host's deadline bounds the rate ADR-0004 asks for (task 9).

@@ -13,7 +13,7 @@
 ## Decision
 
 1. `ClipPanel` needs `ReadClipboard`, beside `ClipKey`, `ClipView` and `ClipAct`. `ClipOpen`, `HistoryWanted` and `HistoryAsk` stay open, as they turn no key and carry nothing.
-2. A module reaches each service its capabilities allow. The keyboard and the ui hold `ReadClipboard`, so they may reach `Clipboard`; the keyboard holds `WriteClipboard`, so it may reach `ClipboardWriter`. Neither asks for one today.
+2. A module reaches each service its capabilities allow. So the keyboard and the ui, which hold `ReadClipboard`, may reach `Clipboard`, and the keyboard, which holds `WriteClipboard`, may reach `ClipboardWriter`, though neither asks for one today.
 3. The keyboard needs `ReadClipboard` to start, as it already needs `WriteClipboard`: the bus refuses its `ClipPanel` listener without it.
 
 ## Consequences

@@ -1,19 +1,19 @@
 # Security note: kx-mod-clipboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues)
-- **Status:** Draft
+- **Last review:** 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues)
+- **Status:** Reviewed
 - **Scope:** `crates/kx-mod-clipboard`: the manifest, the `[clipboard]` settings, the `kx-clip` actor (`actor.rs`, `actor/`), insert, the media and files threads (`media.rs`), the store, the panel and the view. It runs inside the uiAccess `keyxtend` process; pictures decode in `keyxtend-worker` (ADR-0004).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| `ReadClipboard` | It gates `ClipboardKey` (the watch and the file checks) and the panel events `ClipKey`, `ClipView` and `ClipAct`. | The module does not start (`each_missing_gate_fails_the_start_and_watches_nothing`). |
+| `ReadClipboard` | It gates `ClipboardKey` (the watch and the file checks) and the panel events `ClipPanel` (ADR-0035), `ClipKey`, `ClipView` and `ClipAct`. | The module does not start (`each_missing_gate_fails_the_start_and_watches_nothing`). |
 | `WriteClipboard` | It gates `ClipboardWriterKey`, which sets the clipboard for each insert step, and `PasteAsk` and `Pasted`. | The module does not start (same test). |
 | `SecretStore` | It gates `SealedShelfKey`, which keeps the history sealed (ADR-0034). | The module does not start (same test). |
 
 - It has no `InjectInput`: each insert step asks the keyboard with one `PasteAsk`, and the keyboard sends the paste (ADR-0033).
-- `PicturesKey` and `CalendarKey` are ungated; `ClipOpen`, `ClipPanel`, `HistoryWanted`, `HistoryAsk` and `Notice` are ungated too.
+- `PicturesKey` and `CalendarKey` are ungated; `ClipOpen`, `HistoryWanted`, `HistoryAsk` and `Notice` are ungated too, as they turn no key and carry nothing.
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -32,7 +32,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
 | Watch notes (`ClipNote`) | `keep_parts` keeps only known parts; a copy with none makes no row; notes after the stop are dropped | The adapter refuses copies past `max_entry_mb`, which show a note | No; `actor/tests/copies.rs` |
-| File facts (`Clipboard::files`) | Asked on `kx-clip-files`, never on the actor, insert checks before the newest row look (older row looks dropped); `Away` keeps the row and skips it at insert, all `Gone` deletes the entry; a files thread gone stops Insert with a note | A share out of reach holds only that thread, which is never joined | No; `actor/tests/panel.rs`, `paste.rs`, `stops.rs`, `media/tests.rs` |
+| File facts (`Clipboard::files`) | Asked on `kx-clip-files`, never on the actor, for every file copy and panel open (`look_rows`) and at Insert, whose check comes before the newest row look (older row looks dropped). Only an absolute drive path (`C:\…`) is probed, through `probe_ok`; every other form, including `\\host\`, `\\?\`, `\??\` and relative paths, is `FileFact::Unchecked`, and so is a path through a symlink or junction, never followed. `Unchecked` shows "Size unknown" and pastes at Insert; `Away` keeps the row and skips it; all `Gone` deletes the entry; a files thread gone stops Insert with a note | Insert's check stops after `check_ms` with `PasteFailed`, and its late answer is dropped; a slow drive holds only that thread, which is never joined | No; `actor/tests/panel.rs`, `paste.rs`, `stops.rs`, `media/tests.rs` |
 | Panel events (`ClipKey`, `ClipAct`, gated) | A tick on an old round does nothing; rows and pages are clamped to the shown page; a key whose question or preview went is swallowed | One message each | Property tests in `panel/props.rs` |
 | `Pasted` (gated) | Only the round asked is taken; a failed or missing answer stops the insert | `paste_wait_ms` | No; `actor/tests/paste.rs` |
 | Pictures from the worker | Drawn in the worker within `max_pixels`, `media_ms` and `worker_mb`; a failure leaves the type icon | Thumbnail and preview sides from settings | No; `actor/tests/pictures.rs` |
@@ -40,7 +40,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 | `[clipboard]` settings | `deny_unknown_fields`, each value within its named range, pairs ordered; a bad value resets alone | Checked at load | No; `settings/tests.rs`, `tests/clip/settings.rs` |
 
 ## Threats (STRIDE-lite)
-- **Spoofing:** only modules holding `ReadClipboard` can drive the panel, and only those holding `WriteClipboard` can answer a paste; a forged `ClipOpen` only toggles the panel.
+- **Spoofing:** only modules holding `ReadClipboard` can drive the panel or turn the keyboard's keys into panel keys (`ClipPanel`), and only those holding `WriteClipboard` can answer a paste; a forged `ClipOpen` only toggles the panel.
 - **Tampering:** a blob changed outside fails its AEAD; a damaged list is set aside once and copies go on. Programs running as this user can unwrap the key, so the decoders treat every blob as untrusted.
 - **Logging / repudiation:** log lines hold fixed texts and error kinds only, never copied content, paths or app names.
 - **Information disclosure:**
@@ -48,6 +48,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
   - Each insert step puts its content on the system clipboard, where any app can read it, and the last entry stays there.
   - Each paste goes to whichever app has focus at that step; the keyboard sends it, never this module.
   - Follow-the-clear drops what an app clears within `clear_follow_s`, unless pinned.
+  - Copied file paths are looked at before the user acts, on each file copy and panel open. So only absolute drive paths are probed: a copied share, device or NT path, or a link to one, never makes our process reach another machine.
 - **Denial of service:** entries, bytes and days are capped, and the free-space floor refuses copies; the file checks run off the actor; pictures decode in the worker with its own limits, and the actor hands it at most three image copies at once; saves wait `save_ms`.
 - **Elevation:** the crate forbids `unsafe`. A panic in the actor closes the panel, frees the chord and shows `notice.module-failed`.
 
@@ -61,4 +62,5 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - Content in memory is not wiped after use; the process runs as the user, who can read it anyway.
 - The actor's inbox has no bound; its senders are this module's own threads and gated events.
 - One `SecretStore` gates both this shelf and predict's word store, so either module could require the other's service. Each store keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
-- The keyboard and the ui could require the clipboard services their gates allow, not only the events ADR-0034 names; neither does, and the keyboard already sends input. A service-only gate would need a new ADR (builder's call).
+- The keyboard and the ui may reach the clipboard services their gates allow, not only the events (ADR-0035 decision 2). Neither asks for one, and the keyboard already sends input.
+- The module cannot tell a local path from a remote one: `probe_ok` and the platform's file facts decide what is looked at. A drive letter mapped to a share is still probed (builder's call; `kx-platform-windows.md`).

@@ -108,7 +108,8 @@ spawn_dirs = ["apps", "crates"]
 # File extensions F4 reads.
 spawn_extensions = ["rs", "h", "hpp", "cpp", "cc", "cxx"]
 # Process-start APIs F4 bans there; it looks for the last name in a file that also names the one before it, and for a
-# rename of the one before it (`use std::process as sp`), which would hide the last name in other files.
+# rename or glob import of the one before it (`use std::process as sp`, `use std::process::*`), which would hide the
+# last name in other files.
 banned_spawns = ["std::process::Command", "QProcess"]
 # Build scripts, as paths inside their package; like tests and the test tools, they may start processes.
 build_scripts = ["build.rs", "qtbuild.rs"]

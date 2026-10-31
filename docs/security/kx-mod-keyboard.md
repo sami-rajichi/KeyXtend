@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 15: the clipboard key, the panel keys, paste on request and the history chord; P7 security review: hidden marks in picked words, and what guards the erase; the paced erase, stopped by a click away; P7 DoD review: stopped by a board key too)
+- **Last review:** 2026-10-31 (P8 security check: the gated `ClipPanel` and a paste asked after the stop; P8 task 15: the clipboard key, the panel keys, paste on request and the history chord; P7 security review: hidden marks in picked words, and what guards the erase; the paced erase, stopped by a click away; P7 DoD review: stopped by a board key too)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 
@@ -11,7 +11,7 @@
 | `InjectInput` | It gates the four services typing needs: `InputInjector` (send keys and text, name the app in front), `LayoutSource` (Caps Lock, whether a key types), `Layouts` (the table shown) and `Shortcuts` (the layer's shortcuts, with the latches held). It also gates the bus events `AssistToggle`, `LatchesChanged`, `LatchesUsed` and `LatchesAsk`. | The module does not start. |
 | `KeyboardUi` | It gates the `KeyboardFace` service the module provides, which the ui draws and clicks through, and a provider must hold its service's gate (ADR-0033). | The module does not start (`without_keyboard_ui_it_cannot_offer_the_face`). |
 | `ReadFocusedText` | It gates `Typed` and `TypingMode`, which the module tells, and `TypingModeAsk` and `TypeWord`, which it hears (ADR-0033). | The module does not start (`without_read_focused_text_it_cannot_hear_picked_words`). |
-| `ReadClipboard` | It gates `ClipKey`, which carries the clipboard panel's search letters (ADR-0034). | The panel never hears its keys: the bus refuses `ClipKey`. |
+| `ReadClipboard` | It gates `ClipKey`, which carries the clipboard panel's search letters (ADR-0034), and `ClipPanel`, whose open state turns the keys into panel keys (ADR-0035). | The module does not start: the bus refuses its `ClipPanel` listener (`module::without_read_clipboard_it_cannot_hear_the_panel`). |
 | `WriteClipboard` | It gates `PasteAsk`, which it hears, and `Pasted`, which it tells (ADR-0034); it needs no clipboard service. | The module does not start, as it cannot hear paste requests. |
 
 - Besides its settings, the module writes only its own `size`, `x`, `y` and `placed`.
@@ -71,7 +71,8 @@ Typed text never leaves the click or picked word that makes it: it is not stored
   - The Next key keeps one cell, and the Shortcuts key its own, so a double click on either never lands on a shortcut such as Lock PC.
   - Power publishes `PowerAsked` only while the power module says it is live (`face/bus.rs`, `power`); it sends nothing to the app and keeps the latches.
   - The paste goes only on `PasteAsk`, which needs `WriteClipboard`: once, through the `Shortcuts` port's compiled-in `paste`, with every latch let go first and no window named, so it lands in the app in front (ADR-0034 decision 2, plan edge cases 5 and 13).
-  - While the clipboard panel is open its keys never reach the app, and the history chord publishes only `ClipOpen`, and only while `HistoryWanted` says so (plan edge case 14).
+  - While the clipboard panel is open its keys never reach the app, and the history chord publishes only `ClipOpen`, and only while `HistoryWanted` says so (plan edge case 14). Only a module that may read the clipboard can say the panel is open, so no other module can mute the keyboard (ADR-0035).
+  - A paste request heard after the module stops sends nothing and answers not pasted (`a_paste_ask_heard_after_the_stop_sends_nothing_and_answers_not_ok`).
 - **Stuck repeat:** a burst ends on let-go wherever the pointer is, when Qt takes the press away or the keyboard hides or stops (the UI sends `leave`), when the list opens, when a repeat is stale, empty or fails, on the next click (a burst left open, as after a window rebuilt for a lost graphics device), and on a restart. A face property run shows that no tick types and no latch stays down after a let-go or leave, and the UI's hold timer runs only while the face says it holds a key, on a shown keyboard with no list open.
 - **Lone press:** a `lone` latch (Win) sends its key alone only on the user's own second click with nothing used since the first; refused whole it stays latched, and taken in part it lets go, so it never goes twice. It holds no other latch, and they then let go as after any key, so in `release` none rides into Start.
 - **Stuck modifiers:** latches are the module's state, never held keys; each chord presses and releases its modifiers in one batch, and the platform sends a shortcut's keys, every step, in one batch too (`kx-platform-windows.md`). A send refused whole changes no state; one taken in part uses the latches, so a retry never repeats a modifier. During a burst the latches stay latched, not pressed, and let go when it ends.

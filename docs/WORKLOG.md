@@ -4,6 +4,12 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 15:25 — P8: screen-reader names, lean clip JSON, lazy preview pages, security notes after review
+Screen readers now hear the clipboard panel's empty line, a preview's character count and its picture, and a panel note is announced as an alert. The clip JSON holds only what QML reads, with kind and note ids from exhaustive matches, and a long preview text lays out the shown page and the next, then one page per frame. The P8 security notes now describe the worker's restricted token, the file check that probes only drive paths, the gated `ClipPanel`, the `check_ms` deadline and the gates' junction refusal, and the clipboard surfaces are marked Reviewed. The spec's "As built" list and ARCHITECTURE.md match the code again, and the worker's sandbox is a P14 item.
+
+## 2026-10-31 14:55 — P8: only drive paths are probed, and no link is followed
+The clipboard's file check now probes only an absolute drive path such as `C:\…`. A share, a device, an NT path such as `\??\UNC\…`, a relative path or a bare `C:foo` stays unchecked and still pastes. Each path and every folder on its way is read without following links, so a symlink or junction to a share shows "Size unknown" and is never reached.
+
 ## 2026-10-31 14:18 — P8: save debounce, insert deadline, gated panel, no network probes
 A repeated copy or a pasted step now waits for the debounced save, and an insert whose file check passes `check_ms` (new setting, 5 s) stops with a note and drops the late answer; a property test drives the insert's state machine. `ClipPanel` needs `ReadClipboard` (ADR-0035), and a paste request heard after the keyboard stops sends nothing. A path starting `\\host\`, `\\?\` or `\\.\` is never probed: its row stays, shows "Size unknown" and pastes at Insert. The review's smaller points are fixed too: a `Debug` that hides skipped apps, no-content `Debug` tests, fixtures built from the defaults, and `StoreError` on `thiserror`.
 

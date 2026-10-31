@@ -1,8 +1,8 @@
 # Security note: kx-platform
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 9: the media worker's host and its review fixes)
-- **Status:** Draft
+- **Last review:** 2026-10-31 (P8 security check: the host's checks on a worker treated as compromised, and its command words from `kx-ipc`; P8 task 9: the media worker's host and its review fixes)
+- **Status:** Reviewed
 - **Scope:** `crates/kx-platform`'s worker host (`pictures`), which serves the `Pictures` port over an adapter's `Spawner` (ADR-0004, ADR-0034 decision 5). The folder rule, the pack and field-watch halves and the UI ports, P8's `Reveal` included, are covered with their adapter in `kx-platform-windows.md`.
 
 ## Capabilities
@@ -34,7 +34,7 @@ The host logs only why a worker failed or stopped and a fixed note for its exit 
   - Failures in a row double the wait before the next start, from `restart_ms` up to `restart_max_ms`, and a good answer resets it; draws within the wait are `Gone` at once (`the_backoff_doubles_up_to_its_cap_and_a_good_draw_resets_it`).
   - A worker that quit between draws is replaced before the next draw with no backoff, since no draw of ours failed (`a_worker_that_quit_between_draws_is_replaced_with_no_backoff`).
   - An idle worker says goodbye and stops after `idle_s`; dropping the session stops it too.
-- **Elevation:** the host has no `unsafe` and no OS call; the adapter starts the worker with reduced rights (`kx-platform-windows.md`, Elevation (worker)).
+- **Elevation:** the host has no `unsafe` and no OS call; the adapter starts the worker from a restricted token, with no admin group, uiAccess or privilege but change-notify, at Medium (`kx-platform-windows.md`, Elevation (worker)). The worker's command words and exit codes come from `kx-ipc`, the one copy the worker reads too.
 
 ## Findings
 ### Must fix (blocks Definition of Done)

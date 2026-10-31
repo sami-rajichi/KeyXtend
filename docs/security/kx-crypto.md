@@ -1,8 +1,8 @@
 # Security note: kx-crypto
 
 - **Owner:** product owner
-- **Last review:** 2026-10-26 (P7 security review: what the tag defeats, rollback and a lost key file); the shelf (P8, 2026-10-31) waits for P8's security check
-- **Status:** Reviewed (the shelf: draft)
+- **Last review:** 2026-10-31 (P8 security check: the shelf, its paths, deletes and set-aside files); 2026-10-26 (P7 security review: what the tag defeats, rollback and a lost key file)
+- **Status:** Reviewed
 - **Scope:** `crates/kx-crypto`, a library with no module of its own. The Windows adapter implements its `KeyGuard` with DPAPI (`kx-platform-windows.md`), and the app serves one `SealedFiles` as the `SealedStore` port (`keyxtend.md`). `SealedShelfFiles` backs the `SealedShelf` port (P8, ADR-0034 decision 4), with a `DiskRoom` the platform fills for the drive's free space and name.
 - Both stores share one `Sealer`: the key file, the guard, the seal and the file steps, so they cannot drift apart.
 
@@ -27,7 +27,7 @@
 | Sealed files | Size, magic and version byte, then Poly1305 authentication over the magic, version and name as AAD; anything else is refused and set aside | `MAX_BLOB_BYTES` plus the header and tag; never reads more than that and one byte | Property tests (proptest): any bytes, bytes after a good header, a random flipped bit; plus every bit and every truncation of one file; the shelf's `load` over random file bytes. No `cargo fuzz` target (see Accepted) |
 | The key file | The guard unwraps it; anything that is not a `KEY_LEN`-byte key is `Locked`, and the file is never deleted or replaced | `MAX_KEY_FILE_BYTES`; a larger file is `Locked` unread | No; tests cover a refused, a short and an oversized key file |
 | Blob names | `BlobName` (a-z, 0-9, `-`, `MIN_BLOB_LEN` to `MAX_BLOB_LEN` bytes, and no device name from the port's `RESERVED_NAMES`) before any file is touched; `SealedFiles` and the fake store take only a `BlobName`, so both refuse the same names | `MAX_BLOB_LEN` bytes | Property test of the name form (`kx-module-api`); a test that the fake and the real store keep the same names |
-| Shelf folder names and listings (P8) | Folders are `BlobName`s too, so no `..`, separator or drive reaches a path. `folders` and `names` list only folders and `.sealed` files named by a `BlobName`, never following links, and leave anything else out | None (see Accepted) | Tests of stray, upper-case, dotted and over-long entries; a test that the fake and the real shelf agree |
+| Shelf folder names and listings (P8) | Folders are `BlobName`s too, so no `..`, separator or drive reaches a path; `blob_file`, and so `remove` and the set-aside rename, build every path from a `BlobName` folder and name under the root, so neither leaves it. `folders` and `names` list only folders and `.sealed` files named by a `BlobName`, never following links, and leave anything else out | None (see Accepted) | Tests of stray, upper-case, dotted and over-long entries; a test that the fake and the real shelf agree |
 | The drive's free space and name (P8) | From the platform's `DiskRoom`, asked about the nearest existing folder of the root; only shown, never used as a path | N/A | A scripted test drive, failing too |
 
 ## Threats (STRIDE-lite)

@@ -164,10 +164,16 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 - **Panel** (the mock-up's layout plus a preview page, owner):
   - The side block's clipboard key opens and closes it with one click, on every platform; the history shortcut below is a second way. It opens above the keyboard (§3.4).
   - Header: icon, title, "kept N days", Delete all and close.
-  - **Search line:** while the panel is open, letters clicked on our keyboard go into it instead of the app. It matches the first `search_chars` characters of each text (1,000; builder's call), file names and app names, ignoring case, accents, harakat, tatweel and the forms of alif (as §6 matches). Backspace erases, and Esc clears it first, then closes the panel. No AI.
+  - **Search line:** while the panel is open, letters clicked on our keyboard go into it instead of the app.
+    - It matches the first `search_chars` characters of each text (1,000; builder's call), file names and app names, ignoring case, accents, harakat, tatweel and the forms of alif (as §6 matches).
+    - Backspace erases, and Esc clears it first, then closes the panel.
+    - No AI.
   - Filters: All, Text (with links), Images, Files, Media.
   - One list, 5 rows per page (§3.3), with ▲/▼ and "n of m".
-  - Each row: a tick box showing its tick number, a thumbnail or type icon, the first two lines of text (… when longer), and "app · time · size". Time reads "Today 16:32", "Yesterday 18:21", "Tue 14:12", then a date. Size is always in MB with two decimals, and "< 0.01 MB" below that. A pin marks pinned rows, and a chip marks media that expire today.
+  - Each row: a tick box showing its tick number, a thumbnail or type icon, the first two lines of text (… when longer), and "app · time · size".
+    - Time reads "Today 16:32", "Yesterday 18:21", "Tue 14:12", then a date.
+    - Size is always in MB with two decimals, and "< 0.01 MB" below that.
+    - A pin marks pinned rows, and a chip marks media that expire today.
   - **Tick, then act (owner):** a click on a row only ticks or unticks it. The footer acts on the ticked rows: Preview, Pin (Unpin when all are pinned), Delete and **Insert (n)**, n being the ticked count. Delete acts at once; Delete all asks once, with Yes and No, and keeps pinned entries.
   - **Ticks and views (owner):** ticks survive a new search or filter, so the user can search, tick, search again, tick, then Insert (2). Delete all always means every unpinned entry, whatever the view, and its question names the count.
   - **Preview page:** the whole entry: long text paged, never scrolled, with its character count; an image large; files with their paths. It has Back, Pin, Delete and Insert.
@@ -181,7 +187,10 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - The breaks are pasted, never typed: Enter sends the message in chat apps. Each step waits `paste_gap_ms`, so slow apps keep up.
   - Insert goes to the app the keyboard types into at that moment. The panel then closes, and the last inserted entry stays on the clipboard.
   - A file that is gone leaves its entry; an entry whose files are all gone leaves the list by itself (owner).
-- **History shortcut (owner, 2026-10-23 and 2026-10-30):** with `history_key` on (the default), the platform's clipboard-history shortcut clicked on our keyboard opens our panel instead of the system's: Win+V on Windows and Super+V on Linux. macOS has none of its own, so P15 picks its keys. The keys come from the adapter's shortcut table (ADR-0031). A physical keyboard's shortcut still opens the system's history, and with the module off ours goes to the system too.
+- **History shortcut (owner, 2026-10-23 and 2026-10-30):** with `history_key` on (the default), the platform's clipboard-history shortcut clicked on our keyboard opens our panel instead of the system's:
+  - Win+V on Windows and Super+V on Linux. macOS has none of its own, so P15 picks its keys.
+  - The keys come from the adapter's shortcut table (ADR-0031).
+  - A physical keyboard's shortcut still opens the system's history, and with the module off ours goes to the system too.
 - **Security**
   - The store is encrypted at rest (§9.1), and clipboard content is never logged (`Redacted<T>`).
   - Image thumbnails and previews are decoded in the `media` worker (§11, ADR-0004): a process with normal rights and no uiAccess, which gets the bytes over a size-limited pipe and returns small plain pixels the panel draws. The uiAccess process never decodes an image: it only stores the bytes it read and sets them back.
@@ -189,7 +198,12 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - An Arabic row flips its text only; the tick box, thumbnail, pin and chip keep their places (ADR-0020; owner).
   - Delete all stays in the header, as above. It dims while no entry is unpinned, so a click never does nothing silently, and in its question Esc is No and only a click on Yes deletes, as destructive actions default to safe (builder's call).
   - The panel stays open while Insert runs and closes when it ends; a failed step stops the insert and keeps the panel open with a note (builder's call).
-  - A file found gone is left out of the paste, and the entry goes only when every file is gone (owner). A file whose drive or share does not answer keeps its row and is skipped, so an unplugged stick loses no rows (builder's call).
+  - A file found gone is left out of the paste, and the entry goes only when every file is gone (owner). A file whose drive does not answer keeps its row and is skipped, so an unplugged stick loses no rows (builder's call).
+  - Only a path on a drive, such as `C:\…`, is looked at, a drive letter mapped to a share included. A share, device or relative path, or one through a link, is never looked at: its row says "Size unknown" and Insert pastes it, so a copy never makes KeyXtend reach another machine (builder's call).
+  - Insert's file check gives up after `check_ms` (5 s by default, 1–30 s), and the insert stops with a note, as after a failed step (builder's call).
+  - A clipboard format whose size cannot be read is skipped, and the rest of the copy is kept (builder's call).
+  - `ClipPanel`, the panel's open state, needs `ReadClipboard`, and the keyboard needs it to start (ADR-0035).
+  - The worker starts from a restricted token: no admin group, no privilege but change-notify, no uiAccess, Medium integrity. A worker that keeps any of these is ended before it runs (builder's call).
   - Follow-the-clear spares pinned entries, as a pin is a deliberate keep (builder's call).
   - A clipboard watch the system refuses fails the module's start, with Try again, as a history that silently records nothing is worse (builder's call).
   - Sizes use each language's thousands grouping and decimal mark (CLDR).

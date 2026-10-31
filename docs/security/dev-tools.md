@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
+- **Last review:** 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -120,7 +120,13 @@
   - G27, G21's product half and `g8 predict` take no screenshot and save no file of their own beyond G21's page and the sidecar. They type only the config's prefixes and the chips' words, into target-window or G21's page.
     - target-window logs every character it receives to its `log` setting, so the chip words land there. The gates do not delete it, as other gates read it too.
   - Each of these gates' run lengths is checked against the mouse guard's limit from config: each copy's start, wait and end, each typed word at its longest and `g8 predict`'s settle before each reading of both churns (`p7cfg/runs.rs`). With the guard off, none is refused for its length (`fit::held_fits`).
-  - `kx-gates g20 keyxtend` and `g8 clip` (P8) overwrite the clipboard and run the test build on its portable data folder, emptying its history before and after; a folder the gate made carries its marker, and only a marked one is ever removed. G20 also reads each started worker's token read-only (`TOKEN_QUERY`).
+  - `kx-gates g20 keyxtend` and `g8 clip` (P8) overwrite the clipboard and run the test build on its portable data folder, emptying its history before and after.
+    - A folder the gate made carries its marker, and only a marked one is ever removed. The config check refuses a marker named like one of the app's folders or a file its settings write (`clipdata::taken`), so no marker can match a folder the gate never made.
+    - The gate refuses a data folder that is, or sits under, any reparse point such as a junction or link, before it makes or deletes anything there (`clipdata::own`), so it never reaches another folder through one.
+    - Every gate clipboard write, and the delete of its own entries from Windows' history, first calls `clipkeep::live`, which panics in a test build, so no unit test touches the owner's clipboard.
+    - `clipown.rs` writes the clipboard with its own `GlobalAlloc` and `SetClipboardData`, as the gate's hidden owner window must own its copy; it repeats the product's writer on purpose, behind the same guard.
+  - G20 also reads each started worker's token read-only (`TOKEN_QUERY`) and checks only its uiAccess and integrity level; it skips a worker that ended before the read, and fails on one still running that it cannot read (`workertok.rs`).
+    - It reads no group or privilege, so a pass does not prove the worker unprivileged; the product's own start refuses a worker that can use Administrators or holds a privilege (`kx-platform-windows.md`, Elevation (worker)).
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing. It asks first, then reports a refused sidecar name. After a hard stop, the same kx-gates that ran the gate restores the owner's files from the sidecar in its own out folder, once its Quit ended the copy and no copy runs, by window or by session claim, and deletes the sidecar only after a verified put-back.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds, and ends that copy as `copyend.rs` says. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap is ended as `copyend.rs` says.

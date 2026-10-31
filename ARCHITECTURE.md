@@ -50,8 +50,10 @@ crates/
                          ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and
                          `PowerDialog`, by `Capability::Power`: ADR-0031; the box watch, packs, sealed store and
                          word events: ADR-0033; `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures` and
-                         the clipboard panel's events: ADR-0034; `Calendar`: P8), events, Clock and Mono, settings
-                         contract, notices, Redacted<T>, and `text`: folding and casing, which prediction and the
+                         the clipboard panel's events: ADR-0034, `ClipPanel` gated by `ReadClipboard`: ADR-0035;
+                         `Calendar` and `probe_ok`, the one rule that only an absolute drive path is looked at,
+                         any other being `FileFact::Unchecked`: P8), events, Clock and Mono, settings contract,
+                         notices, Redacted<T>, and `text`: folding and casing, which prediction and the
                          clipboard search share (P8)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
@@ -72,11 +74,13 @@ crates/
                          sound, the scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the
                          `shortcuts.toml` and `keynames.toml` tables), the power dialog (`WinPower`), the box
                          watch (`WinFieldWatch`, kinds from `field.toml`), the packs' maps (`WinWordPacks`) and
-                         the DPAPI key guard (`WinKeyGuard`, P7); the worker's start (`WinSpawner`: uiAccess
-                         cleared, Medium integrity, only its pipes inherited, in a job; P8), the clipboard watch
-                         and writer (`WinClipboard`, `WinClipboardWriter`, formats and markers from `clip.toml`),
-                         the local time (`WinCalendar`), the drive's free space (`WinDiskRoom`) and the reveal
-                         through the running Explorer (`WinReveal`, P8)
+                         the DPAPI key guard (`WinKeyGuard`, P7); the worker's start (`WinSpawner`: a restricted
+                         token with no admin group or privilege but change-notify, uiAccess cleared, Medium
+                         integrity, all read back before it runs, only its pipes inherited, in a job; P8), the
+                         clipboard watch and writer (`WinClipboard`, `WinClipboardWriter`, formats and markers
+                         from `clip.toml`; its file facts follow no link), the local time (`WinCalendar`), the
+                         drive's free space (`WinDiskRoom`) and the reveal through the running Explorer
+                         (`WinReveal`, P8)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock, golden layout tables,
@@ -249,6 +253,7 @@ pub trait Module: Send + 'static {
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
+- Windows sets `KX_LIVE_CLIPBOARD=1`, so the adapter's live clipboard tests run there; elsewhere they are ignored, as they overwrite the real clipboard (`ci_opts_in_to_these_tests` pins the line).
 - Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
 - Windows also lints the app with the scroll module's feature off, so the scroll module stays optional.
 - Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
