@@ -98,7 +98,8 @@ impl FakeShelf {
         Self::default()
     }
 
-    /// Refuses the next `call` with `error`, once; a debug build stops on an error the port never returns there.
+    /// Refuses the next `call` with `error`, once, replacing one set for that call and not yet used; a debug build
+    /// stops on an error the port never returns there.
     pub fn fail(&self, call: ShelfCall, error: SealedError) {
         debug_assert!(
             call.returns(error),

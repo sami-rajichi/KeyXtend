@@ -1,5 +1,5 @@
 //! A fake calendar: a wall time the test sets and moves, always the one `LocalTime::at` gives for its moment and
-//! offset, so it agrees with the port's day sums.
+//! offset, so it agrees with the port's day sums. It moves apart from `FakeClock`, so a midnight test advances both.
 
 use crate::lock;
 use kx_module_api::MS_PER_S;
@@ -16,7 +16,8 @@ const HOURS_PER_DAY: i64 = 24;
 /// What a test hears when it asks for a wall time `LocalTime` cannot hold.
 const NO_SUCH: &str = "no such wall time";
 
-/// A calendar shared by its clones; its wall time moves only when the test says so.
+/// A calendar shared by its clones; its wall time moves only when the test says so, apart from `FakeClock`, so a
+/// midnight test advances both.
 #[derive(Clone, Debug)]
 pub struct FakeCalendar {
     now: Arc<Mutex<LocalTime>>,

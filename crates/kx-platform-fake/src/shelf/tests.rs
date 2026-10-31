@@ -134,6 +134,16 @@ fn a_scripted_locked_load_comes_back_once() {
 }
 
 #[test]
+fn a_second_failure_for_a_call_replaces_the_unused_first() {
+    let shelf = planted("2026-10-31");
+    let (day, list) = (name("2026-10-31"), name("list"));
+    shelf.fail(ShelfCall::Load, SealedError::Locked);
+    shelf.fail(ShelfCall::Load, SealedError::Io);
+    assert_eq!(shelf.load(&day, &list), Err(SealedError::Io));
+    assert_eq!(shelf.load(&day, &list), Ok(Some(OLD.to_vec())));
+}
+
+#[test]
 fn a_scripted_damaged_load_comes_back_once_and_sets_the_blob_aside() {
     let shelf = planted("2026-10-31");
     let (day, list) = (name("2026-10-31"), name("list"));

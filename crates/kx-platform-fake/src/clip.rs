@@ -22,6 +22,8 @@ struct Log {
     watch_fail: Option<ClipError>,
     files: HashMap<PathBuf, FileFact>,
     watches: usize,
+    /// The number of the watch whose tell is live: the latest started.
+    current: usize,
     stops: usize,
     checks: usize,
 }
@@ -45,7 +47,7 @@ struct Shared {
 /// with no watch; a path nobody scripted is `Gone`.
 ///
 /// A `tell` runs under the fake's lock, so it must not call the fake or drop its run; a second watch replaces the
-/// first's tell.
+/// first's tell, and only the latest watch's drop ends the tells.
 #[derive(Clone, Default)]
 pub struct FakeClipboard {
     shared: Arc<Shared>,
@@ -136,9 +138,11 @@ impl Clipboard for FakeClipboard {
         *lock(&self.shared.tell) = Some(tell);
         log.config = Some(cfg);
         log.watches += 1;
+        log.current = log.watches;
         self.shared.watched.notify_all();
         let shared = Arc::clone(&self.shared);
-        Ok(Box::new(FakeClipRun { shared }))
+        let id = log.current;
+        Ok(Box::new(FakeClipRun { shared, id }))
     }
 
     fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
@@ -149,9 +153,11 @@ impl Clipboard for FakeClipboard {
     }
 }
 
-/// A live fake watch; dropping it stops the watch, and the last one's drop ends the tells.
+/// A live fake watch; dropping it stops the watch, and ends the tells when it is the latest.
 struct FakeClipRun {
     shared: Arc<Shared>,
+    /// The watch's number, counted from 1 in start order.
+    id: usize,
 }
 
 impl ClipRun for FakeClipRun {}
@@ -160,7 +166,7 @@ impl Drop for FakeClipRun {
     fn drop(&mut self) {
         let mut log = lock(&self.shared.log);
         log.stops += 1;
-        let gone = (!log.watching()).then(|| lock(&self.shared.tell).take());
+        let gone = (log.current == self.id).then(|| lock(&self.shared.tell).take());
         drop(log);
         drop(gone);
     }

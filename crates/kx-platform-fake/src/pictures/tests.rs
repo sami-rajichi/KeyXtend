@@ -123,5 +123,8 @@ fn debug_never_prints_the_bytes() {
     let _ = pictures.open(CFG).draw(&ask(b"secret", SIDE));
     let text = format!("{pictures:?}");
     assert!(text.contains("FakePictures"));
-    assert!(!text.contains("115"), "no byte of the ask");
+    // The ask's bytes as text, as a first decimal byte, and as hex.
+    for shown in ["secret", "115", "736563726574"] {
+        assert!(!text.contains(shown), "the ask's bytes as {shown:?}");
+    }
 }

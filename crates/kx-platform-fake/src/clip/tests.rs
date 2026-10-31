@@ -115,6 +115,17 @@ fn a_second_watch_replaces_the_firsts_tell() {
 }
 
 #[test]
+fn dropping_the_newer_watch_first_ends_its_tell() {
+    let clip = FakeClipboard::new();
+    let (_first, _old) = watch(&clip);
+    let (second, new) = watch(&clip);
+    drop(second);
+    assert!(clip.watching(), "the first watch still holds");
+    clip.push(copied("x"));
+    assert_eq!(new.try_recv(), Err(TryRecvError::Disconnected));
+}
+
+#[test]
 fn a_scripted_refusal_comes_back_once_and_records_no_watch() {
     let clip = FakeClipboard::new();
     clip.fail_watch(ClipError::Refused);
