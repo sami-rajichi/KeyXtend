@@ -34,6 +34,15 @@ fn ends<T: Copy + TryInto<i64>>(range: &RangeInclusive<T>) -> (i64, i64) {
     (wide(*range.start()), wide(*range.end()))
 }
 
+/// The defaults with `key` at the end `value`; a small worker is given the smallest entries, so only its range is tried.
+fn at_end(key: &str, value: i64) -> toml::Table {
+    let mut t = with(key, value);
+    if key == "worker_mb" {
+        t.insert("max_entry_mb".to_owned(), ends(&MAX_ENTRY_MB).0.into());
+    }
+    t
+}
+
 /// Each whole-number key and its range's ends.
 fn bounds() -> Vec<(&'static str, (i64, i64))> {
     vec![
@@ -95,9 +104,9 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
 #[test]
 fn each_range_takes_its_ends_and_refuses_past_them() {
     for (key, (lo, hi)) in bounds() {
-        assert!(taken(&with(key, lo)), "{key} = {lo}");
-        assert!(taken(&with(key, hi)), "{key} = {hi}");
-        assert!(refused(&with(key, lo - 1), key), "{key} = {}", lo - 1);
+        assert!(taken(&at_end(key, lo)), "{key} = {lo}");
+        assert!(taken(&at_end(key, hi)), "{key} = {hi}");
+        assert!(refused(&at_end(key, lo - 1), key), "{key} = {}", lo - 1);
         assert!(refused(&with(key, hi + 1), key), "{key} = {}", hi + 1);
     }
 }
@@ -230,4 +239,18 @@ fn debug_hides_the_skipped_apps_and_shows_every_other_value() {
     for key in defaults().keys() {
         assert!(shown.contains(&format!("{key}: ")), "{key} is missing");
     }
+}
+
+#[test]
+fn the_worker_holds_two_of_the_largest_entry_a_preview_and_itself() {
+    assert!(
+        refused(&with("worker_mb", 64), "worker_mb"),
+        "32 MB entries"
+    );
+    let mut t = with("max_entry_mb", 64);
+    t.insert("preview_px".to_owned(), 4096.into());
+    t.insert("worker_mb".to_owned(), 223.into());
+    assert!(refused(&t, "worker_mb"), "2 × 64 + 64 + 32 is 224");
+    t.insert("worker_mb".to_owned(), 224.into());
+    assert!(taken(&t));
 }
