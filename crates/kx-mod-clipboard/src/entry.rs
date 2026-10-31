@@ -4,6 +4,7 @@
 mod kind;
 
 use std::borrow::Cow;
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use kx_module_api::Redacted;
@@ -61,12 +62,13 @@ impl Stamp {
 pub struct EntryConfig {
     /// The most characters a title keeps (`title_chars`).
     pub title_chars: usize,
-    /// The most characters of the text, and of the file names, that search reads (`search_chars`).
+    /// The most characters of the file names or the text that search reads (`search_chars`).
     pub search_chars: usize,
 }
 
-/// One kept copy as the list holds it; its content lives in the store. Its `Debug` hides every text, path and app.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// One kept copy as the list holds it; its content lives in the store. Its `Debug` hides every text, path and app,
+/// and the hash.
+#[derive(Clone, PartialEq, Eq)]
 pub struct Entry {
     /// Names it in the store and the panel; `History::add` numbers it.
     pub id: u64,
@@ -84,11 +86,11 @@ pub struct Entry {
     pub stored: u64,
     /// Bytes its row shows: what is kept, or the files' size for a file row.
     pub shown: u64,
-    /// The start of its text, or its file names, on one line.
+    /// Its file names, else the start of its text, on one line.
     pub title: Redacted<String>,
-    /// The folded text, file names and app name that search matches; a line break parts them.
+    /// The folded file names or text, then the app name, that search matches; a line break parts them.
     pub search: Redacted<String>,
-    /// The content hash, as `hash::of` gives it.
+    /// The content hash, as `hash::of` gives it; it could give away a short secret, so `Debug` hides it.
     pub hash: u64,
     /// How many blobs hold its content; the store sets it when it saves them.
     pub parts: u16,
@@ -111,9 +113,12 @@ impl Entry {
         let kind = kind_of(parts);
         let files = files_of(parts).to_vec();
         let names = names(&files);
-        let text = text_of(parts).unwrap_or_default();
-        let head = if text.trim().is_empty() { &names } else { text };
-        let search = search(text, &names, app.as_ref(), cfg.search_chars);
+        let head = if files.is_empty() {
+            text_of(parts).unwrap_or_default()
+        } else {
+            &names
+        };
+        let search = search(head, app.as_ref(), cfg.search_chars);
         let stored = parts.iter().map(bytes_of).fold(0, u64::saturating_add);
         Self {
             id: 0,
@@ -126,7 +131,7 @@ impl Entry {
             shown: stored,
             title: Redacted::new(title(head, cfg.title_chars)),
             search: Redacted::new(search),
-            hash: hash::of(kind, parts),
+            hash: hash::of(parts),
             parts: 0,
             thumb: false,
             files: Redacted::new(files),
@@ -146,6 +151,43 @@ impl Entry {
             FileFact::Gone => 0,
         });
         self.shown = sizes.fold(0, u64::saturating_add);
+    }
+}
+
+/// Shows every field but the hash; the pattern names them all, so a new field cannot be left out by mistake.
+impl fmt::Debug for Entry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            id,
+            seq,
+            kind,
+            place,
+            at,
+            app,
+            stored,
+            shown,
+            title,
+            search,
+            hash: _,
+            parts,
+            thumb,
+            files,
+        } = self;
+        f.debug_struct("Entry")
+            .field("id", id)
+            .field("seq", seq)
+            .field("kind", kind)
+            .field("place", place)
+            .field("at", at)
+            .field("app", app)
+            .field("stored", stored)
+            .field("shown", shown)
+            .field("title", title)
+            .field("search", search)
+            .field("parts", parts)
+            .field("thumb", thumb)
+            .field("files", files)
+            .finish_non_exhaustive()
     }
 }
 
@@ -208,18 +250,18 @@ fn title(text: &str, chars: usize) -> String {
     line.trim_end().to_owned()
 }
 
-/// The search text: the first `chars` characters of `text` and of `names`, and the app's name, each on one line and
-/// folded, the empty ones left out.
-fn search(text: &str, names: &str, app: Option<&AppRef>, chars: usize) -> String {
+/// The search text: the first `chars` characters of `head`, then the app's name, each on one line and folded, the
+/// empty ones left out.
+fn search(head: &str, app: Option<&AppRef>, chars: usize) -> String {
     let cut = |s: &str, n: usize| fold_any(&flat(s).take(n).collect::<String>());
     let app = app.map(|a| cut(&a.name, usize::MAX)).unwrap_or_default();
-    let pieces = [cut(text, chars), cut(names, chars), app];
-    let held: Vec<&str> = pieces
+    let pieces = [cut(head, chars), app];
+    let full: Vec<&str> = pieces
         .iter()
         .map(String::as_str)
         .filter(|p| !p.is_empty())
         .collect();
-    held.join(PIECE_SEP)
+    full.join(PIECE_SEP)
 }
 
 /// Bytes a part keeps: its text or bytes, or its paths.

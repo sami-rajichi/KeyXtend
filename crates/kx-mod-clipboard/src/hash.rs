@@ -1,18 +1,18 @@
-//! The content hash: a stable 64-bit FNV-1a over an entry's kind and its parts' bytes, so a copy of the same content
-//! finds its entry. Lists keep it, so it never changes; equal hashes are confirmed by comparing the content.
+//! The content hash: a stable 64-bit FNV-1a over a copy's parts alone, so a copy of the same content finds its entry,
+//! whatever the kind rules or the media table say. Lists keep it, so it never changes; equal hashes are confirmed by
+//! comparing the content.
 
-use kx_module_api::ports::{ClipKind, ClipPart, ImageCodec};
+use kx_module_api::ports::{ClipPart, ImageCodec};
 
 /// FNV-1a's 64-bit offset basis (Fowler, Noll and Vo; IETF draft-eastlake-fnv).
 const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 /// FNV-1a's 64-bit prime.
 const PRIME: u64 = 0x0000_0100_0000_01b3;
 
-/// The hash of a copy of `parts` of `kind`: the kind's tag, then each part's tag and its length-prefixed bytes.
+/// The hash of a copy of `parts`: each part's tag and its length-prefixed bytes.
 #[must_use]
-pub fn of(kind: ClipKind, parts: &[ClipPart]) -> u64 {
+pub fn of(parts: &[ClipPart]) -> u64 {
     let mut h = Fnv(OFFSET);
-    h.eat(&[kind_tag(kind)]);
     for part in parts {
         h.part(part);
     }
@@ -80,17 +80,6 @@ fn part_tag(part: &ClipPart) -> u8 {
     }
 }
 
-/// The kind's tag; saved hashes hold it, so it never changes.
-fn kind_tag(kind: ClipKind) -> u8 {
-    match kind {
-        ClipKind::Text => 1,
-        ClipKind::Link => 2,
-        ClipKind::Image => 3,
-        ClipKind::File => 4,
-        ClipKind::Media => 5,
-    }
-}
-
 /// The codec's tag; saved hashes hold it, so it never changes.
 fn codec_tag(codec: ImageCodec) -> u8 {
     match codec {
@@ -128,48 +117,31 @@ mod tests {
     }
 
     #[test]
-    fn the_same_content_gives_the_same_pinned_hash() {
+    fn the_same_parts_give_the_same_pinned_hash() {
         let parts = [text("École"), html("<b>É</b>")];
-        assert_eq!(
-            of(ClipKind::Text, &parts),
-            of(ClipKind::Text, &parts.clone())
-        );
-        assert_eq!(
-            of(ClipKind::Text, &parts),
-            PINNED,
-            "saved hashes must keep matching"
-        );
-    }
-
-    #[test]
-    fn the_kind_counts() {
-        let parts = [text("https://x.y")];
-        assert_ne!(of(ClipKind::Text, &parts), of(ClipKind::Link, &parts));
+        assert_eq!(of(&parts), of(&parts.clone()));
+        assert_eq!(of(&parts), PINNED, "saved hashes must keep matching");
     }
 
     #[test]
     fn part_bounds_and_part_kinds_count() {
-        let split = |a: ClipPart, b: ClipPart| of(ClipKind::Text, &[a, b]);
+        let split = |a: ClipPart, b: ClipPart| of(&[a, b]);
         assert_ne!(split(text("ab"), html("c")), split(text("a"), html("bc")));
         let rtf = ClipPart::Rtf(Redacted::new(b"x".to_vec()));
-        assert_ne!(of(ClipKind::Text, &[html("x")]), of(ClipKind::Text, &[rtf]));
-        assert_ne!(
-            of(ClipKind::Text, &[text("x")]),
-            of(ClipKind::Text, &[html("x")])
-        );
+        assert_ne!(of(&[html("x")]), of(&[rtf]));
+        assert_ne!(of(&[text("x")]), of(&[html("x")]));
     }
 
     #[test]
     fn the_image_codec_and_the_path_bounds_count() {
-        let png = of(ClipKind::Image, &[image(ImageCodec::Png, b"px")]);
-        assert_ne!(png, of(ClipKind::Image, &[image(ImageCodec::Dib, b"px")]));
-        let ab_c = of(ClipKind::File, &[files(&["ab", "c"])]);
-        assert_ne!(ab_c, of(ClipKind::File, &[files(&["a", "bc"])]));
+        let png = of(&[image(ImageCodec::Png, b"px")]);
+        assert_ne!(png, of(&[image(ImageCodec::Dib, b"px")]));
+        assert_ne!(of(&[files(&["ab", "c"])]), of(&[files(&["a", "bc"])]));
         let none = ClipPart::Files(Redacted::new(Vec::<PathBuf>::new()));
-        assert_ne!(of(ClipKind::File, &[none]), of(ClipKind::File, &[]));
+        assert_ne!(of(&[none]), of(&[]));
     }
 
-    /// The hash of `the_same_content_gives_the_same_pinned_hash`'s parts, as the first build saved it and a separate
-    /// FNV-1a script gave it.
-    const PINNED: u64 = 7_148_482_525_418_062_580;
+    /// The hash of `the_same_parts_give_the_same_pinned_hash`'s parts, as the build gives it and a separate FNV-1a
+    /// script gave it.
+    const PINNED: u64 = 2_096_625_033_897_716_263;
 }

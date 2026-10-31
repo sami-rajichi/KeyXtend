@@ -1,11 +1,12 @@
 //! Follow-the-clear and skipped apps: a clear by the same app within the window deletes the last kept entry once;
-//! another app, an unknown app or a late clear deletes nothing; skipped apps match by id, ignoring case.
+//! another app, an unknown app, a late clear or a pin keeps it; skipped apps match by id, ignoring case.
 
 use kx_module_api::Clock;
 use kx_platform_fake::FakeClock;
 
 use super::*;
-use crate::fixture::{FOLLOW, app};
+use crate::entry::Entry;
+use crate::fixture::{FOLLOW, app, at, copied, date};
 
 /// Ten seconds.
 const TEN_S: Duration = Duration::from_secs(10);
@@ -20,14 +21,48 @@ fn follow() -> (Follow, FakeClock) {
     )
 }
 
+/// `f`'s answer to a clear by `app` at `at`, with no entry pinned.
+fn clear(f: &mut Follow, app: Option<&AppRef>, at: Mono) -> Option<u64> {
+    f.cleared(app, at, &History::default())
+}
+
+#[test]
+fn a_clear_never_deletes_an_entry_pinned_meanwhile() {
+    let (mut f, clock) = follow();
+    let mut h = History::default();
+    let id = h.add(copied("pw", &at(date(2026, 10, 31), 9, 0)));
+    f.kept(id, Some(&app("vault.exe")), clock.now());
+    h.pin(id);
+    clock.advance(TEN_S);
+    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now(), &h), None);
+    assert!(h.get(id).is_some_and(Entry::pinned));
+}
+
+#[test]
+fn an_old_pin_raised_by_its_apps_copy_survives_that_apps_clear() {
+    let (mut f, clock) = follow();
+    let mut h = History::default();
+    let pin = h.add(copied("pw", &at(date(2026, 1, 5), 9, 0)));
+    h.pin(pin);
+    let now = at(date(2026, 10, 31), 9, 0);
+    let again = copied("pw", &now);
+    let twin = h.twin(again.hash, |old| old.title == again.title);
+    assert_eq!(twin, Some(pin));
+    h.raise(pin, &now);
+    f.kept(pin, Some(&app("vault.exe")), clock.now());
+    clock.advance(TEN_S);
+    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now(), &h), None);
+    assert!(h.get(pin).is_some_and(Entry::pinned));
+}
+
 #[test]
 fn a_clear_by_the_same_app_within_the_window_deletes_once() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
     clock.advance(FOLLOW);
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), Some(7));
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), Some(7));
     assert_eq!(
-        f.cleared(Some(&app("vault.exe")), clock.now()),
+        clear(&mut f, Some(&app("vault.exe")), clock.now()),
         None,
         "followed once"
     );
@@ -38,7 +73,7 @@ fn a_clear_after_the_window_deletes_nothing() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
     clock.advance(FOLLOW + ONE_MS);
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), None);
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), None);
 }
 
 #[test]
@@ -46,27 +81,30 @@ fn a_clear_by_another_app_deletes_nothing_and_the_follow_goes_on() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
     clock.advance(TEN_S);
-    assert_eq!(f.cleared(Some(&app("notepad.exe")), clock.now()), None);
+    assert_eq!(clear(&mut f, Some(&app("notepad.exe")), clock.now()), None);
     clock.advance(TEN_S);
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), Some(7));
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), Some(7));
 }
 
 #[test]
 fn an_unknown_app_is_never_followed() {
     let (mut f, clock) = follow();
     f.kept(7, None, clock.now());
-    assert_eq!(f.cleared(None, clock.now()), None);
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), None);
+    assert_eq!(clear(&mut f, None, clock.now()), None);
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), None);
     f.kept(8, Some(&app("vault.exe")), clock.now());
-    assert_eq!(f.cleared(None, clock.now()), None);
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), Some(8));
+    assert_eq!(clear(&mut f, None, clock.now()), None);
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), Some(8));
 }
 
 #[test]
 fn app_ids_match_ignoring_case() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("KeePass.EXE")), clock.now());
-    assert_eq!(f.cleared(Some(&app("keepass.exe")), clock.now()), Some(7));
+    assert_eq!(
+        clear(&mut f, Some(&app("keepass.exe")), clock.now()),
+        Some(7)
+    );
 }
 
 #[test]
@@ -74,8 +112,11 @@ fn a_newer_kept_entry_replaces_the_followed_one() {
     let (mut f, clock) = follow();
     f.kept(7, Some(&app("vault.exe")), clock.now());
     f.kept(8, Some(&app("notepad.exe")), clock.now());
-    assert_eq!(f.cleared(Some(&app("vault.exe")), clock.now()), None);
-    assert_eq!(f.cleared(Some(&app("notepad.exe")), clock.now()), Some(8));
+    assert_eq!(clear(&mut f, Some(&app("vault.exe")), clock.now()), None);
+    assert_eq!(
+        clear(&mut f, Some(&app("notepad.exe")), clock.now()),
+        Some(8)
+    );
 }
 
 #[test]

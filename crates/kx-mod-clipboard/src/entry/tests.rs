@@ -19,9 +19,14 @@ fn png(bytes: &[u8]) -> ClipPart {
     }
 }
 
-/// The entry for `parts`, copied by no known app on 2026-10-31 at 16:32.
+/// 2026-10-31 at 16:32 in Paris.
+fn now() -> LocalTime {
+    at(date(2026, 10, 31), 16, 32)
+}
+
+/// The entry for `parts`, copied by no known app at `now`.
 fn entry(parts: &[ClipPart]) -> Entry {
-    Entry::new(parts, None, &at(date(2026, 10, 31), 16, 32), &CFG)
+    Entry::new(parts, None, &now(), &CFG)
 }
 
 #[test]
@@ -165,7 +170,7 @@ fn a_new_entry_sits_in_its_copy_day_unnumbered() {
     assert_eq!(Stamp::of(&now), e.at);
     assert!(!e.pinned());
     assert_eq!((e.id, e.seq, e.parts, e.thumb), (0, 0, 0, false));
-    assert_eq!(e.hash, hash::of(ClipKind::Text, &[text("x")]));
+    assert_eq!(e.hash, hash::of(&[text("x")]));
 }
 
 #[test]
@@ -176,16 +181,38 @@ fn a_pinned_entry_says_so() {
 }
 
 #[test]
-fn debug_hides_the_text_the_paths_and_the_app() {
+fn debug_hides_the_text_the_paths_the_app_and_the_hash() {
     let parts = [text("hunter2"), files(&["C:/secret/plan.txt"])];
-    let e = Entry::new(
-        &parts,
-        Some(app("vault.exe")),
-        &at(date(2026, 1, 2), 3, 4),
-        &CFG,
-    );
+    let e = Entry::new(&parts, Some(app("vault.exe")), &now(), &CFG);
     let shown = format!("{e:?}");
-    for hidden in ["hunter2", "secret", "plan", "vault"] {
+    let hash = hash::of(&parts).to_string();
+    for hidden in ["hunter2", "secret", "plan", "vault", hash.as_str()] {
         assert!(!shown.contains(hidden), "{hidden} leaked");
     }
+    assert!(shown.contains("stored"), "the other fields still show");
+}
+
+#[test]
+fn files_give_the_title_and_search_even_beside_text() {
+    let e = entry(&[text("private words"), files(&["C:/x/a.txt", "C:/x/b.txt"])]);
+    assert_eq!(e.title.expose(), "a.txt b.txt");
+    assert_eq!(e.search.expose(), "a.txt b.txt");
+}
+
+#[test]
+fn formatted_text_takes_its_title_from_its_plain_text() {
+    let rtf = ClipPart::Rtf(Redacted::new(b"{\\rtf1 Bonjour}".to_vec()));
+    let e = entry(&[html(b"<p>Bonjour</p>"), rtf.clone(), text("Bonjour")]);
+    assert_eq!(
+        (e.title.expose().as_str(), e.search.expose().as_str()),
+        ("Bonjour", "bonjour")
+    );
+    let bare = Entry::new(&[html(b"<p>x</p>"), rtf], Some(app("Writer")), &now(), &CFG);
+    assert_eq!(bare.kind, ClipKind::Text);
+    assert_eq!(
+        bare.title.expose(),
+        "",
+        "the view shows the kind's name instead"
+    );
+    assert_eq!(bare.search.expose(), "writer");
 }

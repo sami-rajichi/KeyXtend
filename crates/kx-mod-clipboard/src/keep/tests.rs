@@ -197,7 +197,7 @@ fn midnight_sweeps_by_the_calendar_while_the_clear_window_runs_on() {
     clock.advance(MINUTE);
     assert_eq!(cal.now().date, date(2026, 11, 1));
     assert_eq!(ids(&sweep(&mut h, cal.now().date, &LIMITS)), [clip, week]);
-    assert_eq!(follow.cleared(Some(&vault), clock.now()), Some(secret));
+    assert_eq!(follow.cleared(Some(&vault), clock.now(), &h), Some(secret));
 }
 
 #[test]

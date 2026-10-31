@@ -1,5 +1,6 @@
 //! Property test: random copies, pins, unpins, inserts, deletes, disk changes and day changes, forward or back, never
-//! break the caps, the order or the places, and a sweep leaves nothing past its days.
+//! break the caps, the order or the places; a sweep leaves nothing past its days, and a pin leaves only by Delete or
+//! Unpin.
 
 use kx_module_api::ports::{ClipKind, LocalTime};
 use proptest::prelude::*;
@@ -187,18 +188,41 @@ fn swept(run: &Run) -> Result<(), TestCaseError> {
     Ok(())
 }
 
+/// The id `step` deletes or unpins: the only ways a pin may leave.
+fn freed(run: &Run, step: &Step) -> Option<u64> {
+    match *step {
+        Step::Delete(n) | Step::Unpin(n) => run.pick(n),
+        _ => None,
+    }
+}
+
+/// Every pin in `before` is still kept and pinned, but the one `freed`.
+fn pins_stay(history: &History, before: &[u64], freed: Option<u64>) -> Result<(), TestCaseError> {
+    for &id in before.iter().filter(|&&id| Some(id) != freed) {
+        prop_assert!(
+            history.get(id).is_some_and(Entry::pinned),
+            "pin {} left",
+            id
+        );
+    }
+    Ok(())
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
     #[test]
-    fn random_steps_keep_the_caps_the_order_and_the_days(
+    fn random_steps_keep_the_caps_the_order_the_days_and_the_pins(
         steps in prop::collection::vec(step(), 0..MAX_STEPS),
     ) {
         let mut run = Run::new();
         for (minute, step) in (0..).zip(&steps) {
             run.minute = minute;
+            let pins: Vec<u64> = run.history.entries().iter().filter(|e| e.pinned()).map(|e| e.id).collect();
+            let freed = freed(&run, step);
             run.apply(step);
             check(&run.history)?;
+            pins_stay(&run.history, &pins, freed)?;
             if matches!(step, Step::Day(_)) {
                 swept(&run)?;
             }

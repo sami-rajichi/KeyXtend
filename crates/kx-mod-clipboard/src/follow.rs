@@ -1,11 +1,14 @@
 //! Follow-the-clear and skipped apps (spec §7 "Skipped copies"): a clear by the app that made the last kept copy,
-//! within `clear_follow_s`, deletes that entry for good, as password managers intend; copies from `skip_apps` are
-//! never kept.
+//! within `clear_follow_s`, deletes that entry for good, as password managers intend, unless it is pinned (Ruling 22);
+//! copies from `skip_apps` are never kept.
 
 use std::time::Duration;
 
 use kx_module_api::ports::AppRef;
 use kx_module_api::{Mono, Redacted};
+
+use crate::entry::Entry;
+use crate::order::History;
 
 /// The last kept entry and who copied it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,17 +61,17 @@ impl Follow {
     }
 
     /// The entry to delete for good when `app` clears the clipboard at `at`: the last kept one, when the same known
-    /// app copied it no more than the window before.
-    pub fn cleared(&mut self, app: Option<&AppRef>, at: Mono) -> Option<u64> {
+    /// app copied it no more than the window before and it is not pinned in `history`.
+    pub fn cleared(&mut self, app: Option<&AppRef>, at: Mono, history: &History) -> Option<u64> {
         let last = self.last.as_ref()?;
         let same = app.is_some_and(|a| same_id(last.app.expose(), &a.id));
-        let id = last.id;
-        if same && at.saturating_since(last.at) <= self.window {
-            self.last = None;
-            Some(id)
-        } else {
-            None
+        if !same || at.saturating_since(last.at) > self.window {
+            return None;
         }
+        let id = last.id;
+        self.last = None;
+        let pinned = history.get(id).is_some_and(Entry::pinned);
+        (!pinned).then_some(id)
     }
 }
 
