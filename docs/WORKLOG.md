@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 18:56 — P8: final fix 2, an inserted PNG goes with the worker's DIB
+A copied picture keeps one format again, PNG first, and Insert asks the media worker to make a 32-bit `CF_DIB` from it within `media_ms` and `max_entry_mb`, then sets both; a worker down, late or refusing leaves the PNG alone with one log line. `kx-ipc` carries the new ask and reply, the worker refuses a DIB past its cap from the PNG header alone, and the keyboard only checks the DIB's length. The settings check now takes the worker's decode budget and read peak from `kx-ipc` and counts the DIB beside the PNG. A tick with no view is a quiet late click, the `clipAct` note names its round, and the share-path test uses real share paths.
+
 ## 2026-10-31 17:11 — P8: final fix after the whole-branch review
 A tick now carries the round of the view it was drawn from, copies wait in a bounded queue of `queue_copies`, thumbnails wait out the picture worker's restart instead of failing for good, and an inserted image carries PNG and the richest DIB. The storage line waits until the room is read, a program run from a share is named without reading its file, a copy asks only the drive's free bytes, an image's bytes reach the worker uncopied, and the settings check ties `worker_mb` to the largest entry and preview. The files preview keeps its page across redraws, the text preview shows its page total once laid out, `ClipKind` and `PanelNote` list each variant by declaring it, and a real junction test guards the file check. File rows now show Lucide's plain file icon, and the review's three deferred minors are recorded in P8's notes.
 

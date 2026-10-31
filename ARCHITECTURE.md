@@ -43,8 +43,9 @@ apps/
                          the clipboard history's folder, made at boot (`clip.rs`, P8);
                          `gate-input` makes the gate-only test build (`--sim-input`, no uiAccess, refused by the
                          stage and `dev-install`; ADR-0027)
-  keyxtend-worker/       worker binary: the `media` job decodes PNG and DIB images into small RGBA pixels, one
-                         request at a time over its stdin and stdout (P8, ADR-0034); voice, OCR and update come later
+  keyxtend-worker/       worker binary: the `media` job decodes PNG and DIB images into small RGBA pixels, and makes
+                         the `CF_DIB` an inserted PNG goes with, one request at a time over its stdin and stdout
+                         (P8, ADR-0034); voice, OCR and update come later
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer hook's too:
                          ADR-0027, the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and
@@ -54,7 +55,8 @@ crates/
                          `Calendar` and `probe_ok`, the one rule that only an absolute drive path is looked at,
                          any other being `FileFact::Unchecked`: P8), events, Clock and Mono, settings contract,
                          notices, Redacted<T>, and `text`: folding and casing, which prediction and the
-                         clipboard search share (P8)
+                         clipboard search share (P8); it re-exports the worker's memory figures from `kx-ipc`
+                         (`READ_TIMES`, `DECODE_BYTES`), so the clipboard's settings check follows the worker (P8)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)

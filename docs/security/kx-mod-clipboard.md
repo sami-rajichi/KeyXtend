@@ -1,7 +1,7 @@
 # Security note: kx-mod-clipboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues)
+- **Last review:** 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues; final fix: the DIB an inserted PNG goes with)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-clipboard`: the manifest, the `[clipboard]` settings, the `kx-clip` actor (`actor.rs`, `actor/`), insert, the media and files threads (`media.rs`), the store, the panel and the view. It runs inside the uiAccess `keyxtend` process; pictures decode in `keyxtend-worker` (ADR-0004).
 
@@ -21,7 +21,7 @@
 | Copied text, links, pictures and file paths | Sensitive, and Secret when the user copies a password | Sealed blobs on the `SealedShelf` (kx-crypto); memory in `Redacted` | Yes on disk | `keep_days` (media `media_days`), `max_entries`, `max_mb`; pinned until unpinned |
 | Thumbnails | Sensitive | Sealed blobs beside their entry | Yes | As their entry |
 | Previews and the shown page | Sensitive | Memory only, in `Redacted` | No | Until the panel changes or closes |
-| Picture jobs for the worker | Sensitive | Memory only: one thumbnail drawing, one preview drawing and the newest waiting, each at most `max_entry_mb` | No | Until drawn |
+| Picture jobs for the worker | Sensitive | Memory only: one thumbnail drawing, one preview drawing and the newest waiting, and an insert's PNG for its DIB, each at most `max_entry_mb` | No | Until drawn or made |
 | Each inserted step | Sensitive | The system clipboard, readable by any app | No | Until the next copy; the last entry stays there |
 | The folder lists (titles, search text, app names, sizes) | Sensitive | Sealed list blob per folder | Yes | As their entries |
 | `[clipboard]` settings, including `skip_apps` | Public | `settings.toml` | No | Until the user changes them |
@@ -36,6 +36,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 | Panel events (`ClipKey`, `ClipAct`, gated) | A tick on an old round does nothing; rows and pages are clamped to the shown page; a key whose question or preview went is swallowed | One message each | Property tests in `panel/props.rs` |
 | `Pasted` (gated) | Only the round asked is taken; a failed or missing answer stops the insert | `paste_wait_ms` | No; `actor/tests/paste.rs` |
 | Pictures from the worker | Drawn in the worker within `max_pixels`, `media_ms` and `worker_mb`; a failure on the image leaves the type icon, and a row refused while the worker is down is asked again once it may start | Thumbnail and preview sides from settings | No; `actor/tests/pictures.rs` |
+| DIBs from the worker (`Made`) | Only the answer to the DIB ask waited for is taken, within `media_ms`; a DIB past `max_entry_mb`, a failure or no answer sets the PNG alone, with one warning naming only the reason. The bytes are never parsed in this process: the writer sets them beside the PNG | `media_ms`, `max_entry_mb` | No; `actor/tests/dib.rs`, `actor/tests/props.rs` |
 | Sealed lists and blobs | AEAD first, then the list's version and every length; a damaged list is set aside with `notice.clip-damaged`; a newer version fails the start untouched | The shelf's `MAX_BLOB_BYTES` | Property tests in `store/` |
 | `[clipboard]` settings | `deny_unknown_fields`, each value within its named range, pairs ordered; a bad value resets alone | Checked at load | No; `settings/tests.rs`, `tests/clip/settings.rs` |
 
@@ -49,7 +50,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
   - Each paste goes to whichever app has focus at that step; the keyboard sends it, never this module.
   - Follow-the-clear drops what an app clears within `clear_follow_s`, unless pinned.
   - Copied file paths are looked at before the user acts, on each file copy and panel open. So only absolute drive paths are probed: a copied share, device or NT path, or a link to one, never makes our process reach another machine.
-- **Denial of service:** entries, bytes and days are capped, and the free-space floor refuses copies; at most `queue_copies` copies wait for the actor, and a flood past it is dropped with one warning; the file checks run off the actor; pictures decode in the worker with its own limits, and the actor hands it at most three image copies at once; saves wait `save_ms`.
+- **Denial of service:** entries, bytes and days are capped, and the free-space floor refuses copies; at most `queue_copies` copies wait for the actor, and a flood past it is dropped with one warning; the file checks run off the actor; pictures decode in the worker with its own limits, and the actor hands it at most three image copies at once, plus one PNG while an insert waits for its DIB; saves wait `save_ms`.
 - **Elevation:** the crate forbids `unsafe`. A panic in the actor closes the panel, frees the chord and shows `notice.module-failed`.
 
 ## Findings
@@ -59,7 +60,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - None open.
 ### Accepted (with reason)
 - The watch thread can be held by an app that renders its data late; its drop is bounded, and a late note after the stop is dropped.
-- Content in memory is not wiped after use; the process runs as the user, who can read it anyway. An image's bytes move from the store to the worker's frame uncopied, so a draw holds at most the read and its frame.
+- Content in memory is not wiped after use; the process runs as the user, who can read it anyway. An image's bytes move from the store to the worker's frame uncopied, so a draw holds at most the read and its frame; an insert's DIB ask copies its PNG, which the step also writes.
 - The actor's inbox has no bound; its senders are this module's own threads and gated events.
 - One `SecretStore` gates both this shelf and predict's word store, so either module could require the other's service. Each store keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
 - The keyboard and the ui may reach the clipboard services their gates allow, not only the events (ADR-0035 decision 2). Neither asks for one, and the keyboard already sends input.

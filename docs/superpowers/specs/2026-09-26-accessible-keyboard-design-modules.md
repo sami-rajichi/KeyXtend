@@ -209,6 +209,8 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - Sizes use each language's thousands grouping and decimal mark (CLDR).
   - The worker decodes PNG and DIB only, and an interlaced PNG keeps its type icon, as its passes would need a full-size buffer (builder's call).
   - A copy with text keeps no picture beside it, as Office copies carry one (builder's call).
+  - A copied picture keeps one format: PNG, else DIBV5, else DIB (builder's call).
+  - Insert sets a PNG beside a `CF_DIB` the worker makes of it within `media_ms` and `max_entry_mb`, so apps that read only `CF_DIB` get the picture. A worker down, late or refusing leaves the PNG alone, and the keyboard sets the worker's DIB without parsing it (builder's call).
   - A copy is refused when keeping it would leave less than `min_free_mb` free (builder's call).
   - The panel opens above the keyboard, else below, else shrinks to fit, never below 0.80 of its size (§3.4).
   - The history's folder is made at boot, so Open folder always opens, and a note takes only the storage line's text, with Open folder beside it as the way out when the disk is low (builder's call).
