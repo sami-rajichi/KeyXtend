@@ -3,7 +3,9 @@
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
-use kx_ipc::{Ask, Codec, IpcError, Reply, Why};
+use kx_ipc::{
+    Ask, CLEAN_EXIT, Codec, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, Reply, Why,
+};
 use std::borrow::Cow;
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
@@ -11,7 +13,7 @@ use std::process::{Command, Output, Stdio};
 /// The worker program Cargo built for these tests.
 const WORKER: &str = env!("CARGO_BIN_EXE_keyxtend-worker");
 /// The media job's command line.
-const MEDIA: [&str; 3] = ["media", "--max-pixels", "100"];
+const MEDIA: [&str; 3] = [MEDIA_JOB, MAX_PIXELS_FLAG, "100"];
 
 fn run(args: &[&str], input: &[u8]) -> Output {
     let mut child = Command::new(WORKER)
@@ -50,6 +52,11 @@ fn one_line(stderr: &[u8]) -> bool {
     text.lines().count() == 1 && text.ends_with('\n')
 }
 
+/// Whether the program ended with `code`, as the host reads it.
+fn exited(out: &Output, code: u8) -> bool {
+    out.status.code() == Some(i32::from(code))
+}
+
 #[test]
 fn a_refused_command_line_fails_with_one_line() {
     let cases = [
@@ -57,12 +64,12 @@ fn a_refused_command_line_fails_with_one_line() {
         &["voice"],
         &["ocr"],
         &["update"],
-        &["media"],
-        &["media", "--max-pixels", "0"],
+        &[MEDIA_JOB],
+        &[MEDIA_JOB, MAX_PIXELS_FLAG, "0"],
     ];
     for args in cases {
         let out = run(args, b"");
-        assert!(!out.status.success(), "{args:?}");
+        assert!(exited(&out, REFUSED_EXIT), "{args:?}: {:?}", out.status);
         assert!(out.stdout.is_empty(), "{args:?}");
         assert!(one_line(&out.stderr), "{args:?}: {:?}", out.stderr);
     }
@@ -80,7 +87,7 @@ fn the_media_job_answers_until_bye() {
         ask.write(&mut input).unwrap();
     }
     let out = run(&MEDIA, &input);
-    assert!(out.status.success(), "{:?}", out.stderr);
+    assert!(exited(&out, CLEAN_EXIT), "{:?}", out.stderr);
     assert!(out.stderr.is_empty());
     let mut stdout = &out.stdout[..];
     let pixels = Reply::Pixels {
@@ -103,14 +110,14 @@ fn the_media_job_answers_until_bye() {
 #[test]
 fn the_end_of_input_ends_the_job_cleanly() {
     let out = run(&MEDIA, b"");
-    assert!(out.status.success());
+    assert!(exited(&out, CLEAN_EXIT));
     assert!(out.stdout.is_empty() && out.stderr.is_empty());
 }
 
 #[test]
 fn a_broken_frame_fails_the_job_with_one_line() {
     let out = run(&MEDIA, b"not a frame at all");
-    assert!(!out.status.success());
+    assert!(exited(&out, REFUSED_EXIT));
     assert!(out.stdout.is_empty());
     assert!(one_line(&out.stderr), "{:?}", out.stderr);
 }

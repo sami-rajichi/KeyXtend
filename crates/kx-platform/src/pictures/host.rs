@@ -1,7 +1,7 @@
 //! A session's state: its worker, when it last answered, and the backoff before the next start.
 
-use super::{CLEAN_EXIT, Heard, Launch, Spawner, Worker, exit_note};
-use kx_ipc::{Ask, Codec, IpcError, MAX_SIDE, Reply, Why};
+use super::{Heard, Launch, Spawner, Worker, exit_note};
+use kx_ipc::{Ask, CLEAN_EXIT, Codec, IpcError, MAX_SIDE, Reply, Why};
 use kx_module_api::ports::{ImageCodec, PictureAsk, PictureConfig, PictureError, Pixels};
 use kx_module_api::{Clock, Mono};
 use std::borrow::Cow;
@@ -184,7 +184,7 @@ impl<S: Spawner> Host<S> {
         worker.send(Ask::Bye);
         let code = worker.code(ms(self.cfg.deadline_ms));
         worker.end();
-        if code != Some(CLEAN_EXIT) {
+        if code != Some(u32::from(CLEAN_EXIT)) {
             let note = exit_note(code);
             tracing::warn!(note, "the picture worker did not quit cleanly");
         }

@@ -7,7 +7,7 @@ mod piped;
 pub use piped::{Child, Piped};
 
 use host::Host;
-use kx_ipc::{Ask, IpcError, Reply};
+use kx_ipc::{Ask, CLEAN_EXIT, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, Reply};
 use kx_module_api::Clock;
 use kx_module_api::ports::{PictureAsk, PictureConfig, PictureError, PictureRun, Pictures, Pixels};
 use std::sync::Arc;
@@ -18,14 +18,6 @@ use thiserror::Error;
 
 /// The session thread's name.
 const THREAD: &str = "kx-pictures";
-/// The worker's job that draws pictures; the worker's own `args::MEDIA`, pinned by the Windows test.
-pub const MEDIA_JOB: &str = "media";
-/// The flag before the most pixels an image may hold; the worker's own `args::MAX_PIXELS`.
-pub const MAX_PIXELS_FLAG: &str = "--max-pixels";
-/// The worker's exit code after goodbye or the end of its input.
-pub const CLEAN_EXIT: u32 = 0;
-/// The worker's exit code after a refused command line or a broken frame.
-pub const REFUSED_EXIT: u32 = 1;
 
 /// How to start the worker: its command line after the program, and the most memory it may take.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,9 +177,9 @@ fn serve<S: Spawner>(mut host: Host<S>, inbox: &Receiver<Job>) {
 /// What a worker's exit code says, for the log.
 #[must_use]
 pub fn exit_note(code: Option<u32>) -> &'static str {
-    match code {
-        Some(CLEAN_EXIT) => "it quit",
-        Some(REFUSED_EXIT) => "it refused its command line or a frame",
+    match code.map(u8::try_from) {
+        Some(Ok(CLEAN_EXIT)) => "it quit",
+        Some(Ok(REFUSED_EXIT)) => "it refused its command line or a frame",
         Some(_) => "it died",
         None => "it still runs",
     }

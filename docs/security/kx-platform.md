@@ -43,4 +43,3 @@ The host logs only why a worker failed or stopped and a fixed note for its exit 
 - None.
 ### Accepted (with reason)
 - A draw can take more than `deadline_ms` in rare paths: an idle stop just before it, or a worker that closed its output but has not yet ended, each wait `deadline_ms` at most for the worker to quit.
-- The worker's own words (`media`, `--max-pixels`) and exit codes live in the worker and again in the host, as the host cannot depend on a program; the Windows test against the real worker pins both.

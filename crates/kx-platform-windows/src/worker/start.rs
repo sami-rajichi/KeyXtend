@@ -21,7 +21,7 @@ use windows::Win32::System::Threading::{
 use windows::core::{PCWSTR, PWSTR};
 
 use super::job::{ENDED, Job};
-use super::{WinChild, line, raw, refused, size32, token};
+use super::{WinChild, access, line, raw, refused, size32, token};
 
 /// What `ResumeThread` returns when it fails.
 const RESUME_FAILED: u32 = u32::MAX;
@@ -57,7 +57,7 @@ pub(super) fn start(
         return Err(e);
     }
     // A worker in its job ends with `child` from here on.
-    if !token::rights(raw(&child.process))?.reduced() {
+    if !access::rights(raw(&child.process))?.reduced() {
         return Err(SpawnError::Rights);
     }
     resume(&made.thread)?;

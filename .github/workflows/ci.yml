@@ -29,6 +29,8 @@ jobs:
     env:
       # The Qt Quick tests' log, which the step after them shows even when they hang.
       QML_LOG: target/qmltest.txt
+      # Runs kx-platform-windows' live clipboard tests (its build script's `LIVE_VAR`) on the runner's own clipboard.
+      KX_LIVE_CLIPBOARD: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

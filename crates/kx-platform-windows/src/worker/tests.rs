@@ -2,13 +2,10 @@
 //! host's, a missing or relative program is missing, and the command line reads back as written.
 
 use super::*;
-use kx_ipc::Ask;
+use kx_ipc::{Ask, CLEAN_EXIT, MAX_PIXELS_FLAG as MAX_PIXELS, MEDIA_JOB as MEDIA, REFUSED_EXIT};
 use kx_module_api::ports::{ImageCodec, PictureAsk, PictureConfig, PictureError, Pictures};
 use kx_module_api::{Clock, Mono, Redacted};
-use kx_platform::pictures::{
-    CLEAN_EXIT, MAX_PIXELS_FLAG as MAX_PIXELS, MEDIA_JOB as MEDIA, REFUSED_EXIT, Worker,
-    WorkerPictures,
-};
+use kx_platform::pictures::{Worker, WorkerPictures};
 use std::env;
 use std::ffi::OsStr;
 use std::io::Write;
@@ -17,6 +14,7 @@ use std::process::Command;
 use std::sync::{Arc, OnceLock};
 
 mod rights;
+mod verdict;
 
 /// How long a test waits for the worker; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(10);
@@ -147,17 +145,18 @@ fn the_real_worker_draws_through_the_host() {
 
 #[test]
 fn the_workers_words_and_exit_codes_match_the_host() {
+    let exit = |c: u8| Some(u32::from(c));
     let mut worker = spawn();
     worker.send(Ask::Bye);
-    assert_eq!(worker.code(WAIT), Some(CLEAN_EXIT), "goodbye");
+    assert_eq!(worker.code(WAIT), exit(CLEAN_EXIT), "goodbye");
     let media = media();
     let words: Vec<&str> = media.iter().map(String::as_str).collect();
     let (input, _output, mut child) = start(&words);
     drop(input);
-    assert_eq!(child.code(WAIT), Some(CLEAN_EXIT), "the end of input");
+    assert_eq!(child.code(WAIT), exit(CLEAN_EXIT), "the end of input");
     let (mut input, _output, mut child) = start(&words);
     input.write_all(b"not a frame at all").unwrap();
-    assert_eq!(child.code(WAIT), Some(REFUSED_EXIT), "a broken frame");
+    assert_eq!(child.code(WAIT), exit(REFUSED_EXIT), "a broken frame");
     let changed = [
         ["medium", MAX_PIXELS, "5"],
         [MEDIA, "--max-pixel", "5"],
@@ -165,7 +164,7 @@ fn the_workers_words_and_exit_codes_match_the_host() {
     ];
     for args in changed {
         let (_input, _output, mut child) = start(&args);
-        assert_eq!(child.code(WAIT), Some(REFUSED_EXIT), "{args:?}");
+        assert_eq!(child.code(WAIT), exit(REFUSED_EXIT), "{args:?}");
     }
 }
 
@@ -179,6 +178,16 @@ fn a_missing_or_relative_worker_is_missing() {
     ));
     let relative = WinSpawner::at(PathBuf::from(WORKER_EXE));
     assert!(matches!(relative.spawn(&launch), Err(SpawnError::Missing)));
+}
+
+#[test]
+fn a_wait_always_ends_however_long_it_is() {
+    assert_eq!(wait_ms(Duration::from_millis(5)), 5);
+    let longest = [u64::from(INFINITE), u64::MAX].map(Duration::from_millis);
+    for within in longest.into_iter().chain([Duration::MAX]) {
+        assert_eq!(wait_ms(within), LONGEST_WAIT_MS, "{within:?}");
+    }
+    assert_ne!(wait_ms(Duration::MAX), INFINITE, "never a wait without end");
 }
 
 #[test]

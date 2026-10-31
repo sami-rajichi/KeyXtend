@@ -1,4 +1,5 @@
-//! Each kind of part written as the product writes it, then heard by a watch that reads the tests' own writes.
+//! Each kind of part written as the product writes it, then heard by a watch that reads the tests' own writes; opt-in
+//! like every live test.
 
 use windows::Win32::System::Ole::DROPEFFECT_COPY;
 
@@ -43,6 +44,7 @@ fn image(codec: ImageCodec, bytes: Vec<u8>) -> ClipPart {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn html_rtf_and_text_come_back_in_the_order_written() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -56,6 +58,7 @@ fn html_rtf_and_text_come_back_in_the_order_written() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn files_come_back_as_paths_and_say_copy() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -73,6 +76,7 @@ fn files_come_back_as_paths_and_say_copy() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_dib_comes_back_as_one_dib_image() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -90,6 +94,7 @@ fn a_dib_comes_back_as_one_dib_image() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn png_is_the_one_image_kept_beside_a_dib() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -99,6 +104,7 @@ fn png_is_the_one_image_kept_beside_a_dib() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_big_picture_beside_short_text_is_never_fetched() {
     let _real = hold();
     let watch = Watch::own(PICTURE_CAP);
@@ -107,6 +113,7 @@ fn a_big_picture_beside_short_text_is_never_fetched() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_copy_of_formats_nobody_keeps_has_no_parts() {
     let _real = hold();
     let watch = Watch::own(ROOMY);

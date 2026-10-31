@@ -1,8 +1,11 @@
-//! The media worker's start on Windows (ADR-0004, ADR-0034 decision 5): `keyxtend-worker.exe` beside us, from our own
-//! token with uiAccess cleared and Medium integrity, inheriting only its two pipe ends, in a job that caps its memory
-//! and ends it with us. The neutral host in `kx_platform::pictures` drives it.
+//! The media worker's start on Windows (ADR-0004, ADR-0034 decision 5): `keyxtend-worker.exe` beside us, from a
+//! restricted copy of our token (no privilege, Administrators deny-only, no uiAccess, Medium integrity), inheriting
+//! only its two pipe ends, in a job that caps its memory and ends it with us. The neutral host in
+//! `kx_platform::pictures` drives it.
 
+mod access;
 mod job;
+mod label;
 mod line;
 mod start;
 mod token;
@@ -14,12 +17,14 @@ use std::time::Duration;
 
 use kx_platform::pictures::{Child, Launch, Piped, SpawnError, Spawner};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
-use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
+use windows::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
 
 use job::Job;
 
 /// The worker program's file, beside ours.
 pub const WORKER_EXE: &str = "keyxtend-worker.exe";
+/// The longest wait that ends: 1 ms under `INFINITE`, which never would.
+const LONGEST_WAIT_MS: u32 = INFINITE - 1;
 
 /// Starts the worker program with reduced rights. It has no `Debug`, as its path may hold the user's name.
 #[derive(Clone)]
@@ -71,7 +76,7 @@ impl Child for WinChild {
 
     #[allow(unsafe_code, reason = "Waits on and reads our own process handle.")]
     fn code(&mut self, within: Duration) -> Option<u32> {
-        let ms = u32::try_from(within.as_millis()).unwrap_or(u32::MAX - 1);
+        let ms = wait_ms(within);
         // SAFETY: our live process handle; the wait ends by `ms` at the latest.
         let ended = unsafe { WaitForSingleObject(raw(&self.process), ms) } == WAIT_OBJECT_0;
         let mut code = 0;
@@ -80,6 +85,11 @@ impl Child for WinChild {
             ended && unsafe { GetExitCodeProcess(raw(&self.process), &raw mut code) }.is_ok();
         read.then_some(code)
     }
+}
+
+/// `within` in ms for a wait, at most `LONGEST_WAIT_MS`, so it always ends.
+fn wait_ms(within: Duration) -> u32 {
+    u32::try_from(within.as_millis()).map_or(LONGEST_WAIT_MS, |ms| ms.min(LONGEST_WAIT_MS))
 }
 
 /// The raw handle of `owned`, which stays open while it is used.

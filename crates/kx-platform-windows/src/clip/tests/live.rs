@@ -1,5 +1,7 @@
-//! The real clipboard, which these tests own briefly, one at a time. They write only test text, each write kept out of
-//! Windows' history and cloud, and never show another note; a copy made in another app meanwhile can race them.
+//! The real clipboard, owned briefly by one test at a time, which writes only test text kept out of Windows' history
+//! and cloud, shows no other note, and can race a copy made in another app meanwhile. These tests run only when the
+//! build saw `KX_LIVE_CLIPBOARD=1` (the build script's `LIVE_VAR`), as in CI's Windows job; otherwise each reports
+//! as ignored, so a local `cargo test` leaves the clipboard alone.
 
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -28,6 +30,10 @@ const ROOMY: u64 = 1 << 20;
 const HISTORY: &str = "CanIncludeInClipboardHistory";
 /// The test text.
 const TEXT: &str = "kx-test-clip-text";
+/// The CI workflow, whose Windows job opts in to these tests.
+const CI: &str = include_str!("../../../../../.github/workflows/ci.yml");
+/// The opt-in as the build script hands it over: the variable, `=`, then its value.
+const OPT_IN: &str = env!("KX_LIVE_OPT_IN");
 
 /// Keeps the tests that use the real clipboard apart.
 static REAL: Mutex<()> = Mutex::new(());
@@ -101,6 +107,14 @@ fn write(parts: &[ClipPart]) {
 }
 
 #[test]
+fn ci_opts_in_to_these_tests() {
+    let (name, on) = OPT_IN.split_once('=').unwrap();
+    let line = format!("{name}: \"{on}\"");
+    assert!(CI.lines().any(|l| l.trim() == line), "ci.yml sets {line}");
+}
+
+#[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_written_text_comes_back_with_windows_line_breaks() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -109,6 +123,7 @@ fn a_written_text_comes_back_with_windows_line_breaks() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_write_carries_our_marker_first_so_our_own_watch_skips_it() {
     let _real = hold();
     let watch = Watch::shipped(ROOMY);
@@ -125,6 +140,7 @@ fn a_write_carries_our_marker_first_so_our_own_watch_skips_it() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_write_that_fails_part_way_still_carries_our_marker() {
     let _real = hold();
     let watch = Watch::shipped(ROOMY);
@@ -138,6 +154,7 @@ fn a_write_that_fails_part_way_still_carries_our_marker() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn each_marker_alone_skips_a_copy_before_its_size_is_looked_at() {
     let _real = hold();
     let shipped = table().unwrap().marks();
@@ -151,6 +168,7 @@ fn each_marker_alone_skips_a_copy_before_its_size_is_looked_at() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn an_emptied_clipboard_is_cleared_with_the_app_that_emptied_it() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -168,6 +186,7 @@ fn an_emptied_clipboard_is_cleared_with_the_app_that_emptied_it() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_blank_text_is_cleared() {
     let _real = hold();
     let watch = Watch::own(ROOMY);
@@ -180,6 +199,7 @@ fn a_blank_text_is_cleared() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_copy_over_the_cap_is_too_big_and_says_its_size() {
     let _real = hold();
     let watch = Watch::own(10);
@@ -189,6 +209,7 @@ fn a_copy_over_the_cap_is_too_big_and_says_its_size() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn the_tell_runs_on_the_watch_thread() {
     let _real = hold();
     let (tx, rx) = mpsc::channel();
@@ -208,6 +229,7 @@ fn the_tell_runs_on_the_watch_thread() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_dropped_watch_lets_its_tell_go() {
     let _real = hold();
     let held = std::sync::Arc::new(());
@@ -231,6 +253,7 @@ fn a_dropped_watch_lets_its_tell_go() {
 }
 
 #[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
 fn a_write_while_another_window_holds_the_clipboard_is_busy() {
     let _real = hold();
     let (held_tx, held_rx) = mpsc::channel();

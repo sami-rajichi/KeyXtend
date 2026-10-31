@@ -1,5 +1,6 @@
 //! Round trips, the wire layout and clean truncation; refusals and properties have their own files.
 
+mod command;
 mod props;
 mod refuse;
 

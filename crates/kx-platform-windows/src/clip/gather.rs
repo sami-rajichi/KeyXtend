@@ -5,6 +5,9 @@ use kx_module_api::ports::ClipPart;
 
 use super::parts::{Kind, Want, blank};
 
+/// The count a format that cannot be sized gives: the largest, past any cap, so no block nobody counted is read.
+const UNSIZED: u64 = u64::MAX;
+
 /// What a look found: the parts in the clipboard's order, and whether a blank text was dropped from them.
 #[derive(Debug)]
 pub(crate) struct Found {
@@ -15,7 +18,7 @@ pub(crate) struct Found {
 }
 
 /// Gathers the parts of `wants`, each sized before any is read. `Err` gives the bytes counted once they pass
-/// `max_bytes`, and no format after that point is fetched.
+/// `max_bytes`, or `UNSIZED` at a format that cannot be sized, and no format after that point is fetched.
 pub(crate) fn gather(
     wants: &[Want],
     max_bytes: u64,
@@ -62,8 +65,12 @@ impl<S: Fn(u32) -> Option<u64>, R: Fn(Want) -> Option<ClipPart>> Look<S, R> {
         let max = self.max_bytes;
         let size = &self.size;
         let add = |sum: u64, w: &Want| {
-            let sum = sum.saturating_add(size(w.format).unwrap_or(0));
-            if sum > max { Err(sum) } else { Ok(sum) }
+            let sum = size(w.format).map_or(UNSIZED, |n| sum.saturating_add(n));
+            if sum > max || sum == UNSIZED {
+                Err(sum)
+            } else {
+                Ok(sum)
+            }
         };
         self.used = wants.iter().filter(|w| pick(w)).try_fold(self.used, add)?;
         let chosen = wants.iter().zip(slots.iter_mut()).filter(|(w, _)| pick(w));

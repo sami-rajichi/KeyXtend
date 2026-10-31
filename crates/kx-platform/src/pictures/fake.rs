@@ -1,8 +1,8 @@
 //! A scripted spawner and worker for the host's tests: each draw takes the next act, and every call is kept in order.
 //! It never sleeps: a silent worker is late at once, and the clock moves only when a test moves it.
 
-use super::{CLEAN_EXIT, Heard, Launch, SpawnError, Spawner, Worker};
-use kx_ipc::{Ask, IpcError, RGBA_BYTES, Reply, Why};
+use super::{Heard, Launch, SpawnError, Spawner, Worker};
+use kx_ipc::{Ask, CLEAN_EXIT, IpcError, RGBA_BYTES, Reply, Why};
 use kx_module_api::{Clock, Mono};
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -138,7 +138,7 @@ impl Worker for FakeWorker {
                 self.0.record(Call::Draw { id, side });
             }
             Ask::Bye => {
-                self.0.log().exit = Some(CLEAN_EXIT);
+                self.0.log().exit = Some(u32::from(CLEAN_EXIT));
                 self.0.record(Call::Bye);
             }
         }

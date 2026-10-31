@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 13:40 — P8: a restricted worker token, one copy of the worker's words, opt-in live clipboard tests
+The picture worker now starts from a restricted copy of our token: every privilege but change-notify is dropped and Administrators is deny-only, so a keyboard run as administrator never lends the decoder admin rights, and a worker whose token still holds either is refused before it runs. The worker's command words and exit codes live once in `kx-ipc`, read by both the host and the worker, and the integrity label is built with its SID inside it. The live clipboard tests run only when `KX_LIVE_CLIPBOARD=1`, which CI's Windows job sets, so a local `cargo test` leaves the clipboard alone. A clipboard format whose size cannot be read now counts as too big and is never read.
+
 ## 2026-10-31 11:47 — P8: the deferred review minors
 Prediction takes each script's direction from the api's right-to-left ranges, the fake calendar uses the api's clock constants, and the clipboard and words folder names live once in kx-platform, where the gates' marker check also finds them. The clipboard panel keeps a smaller fit centred, French sizes take no-break spaces, the watch warns only after a real wait, and the worker's panic hush is tested through the job's own entry. Tidy F4 reads more C++ extensions, refuses empty lists and catches a renamed process module and a module shared by `main.rs` and `lib.rs`; the gates' real senders refuse under test, and every Notepad key passes the own-tab check one key at a time. Tracked files now state decisions in words instead of the ledger's ruling numbers.
 

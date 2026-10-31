@@ -87,6 +87,19 @@ fn the_size_sum_stops_once_past_the_cap_and_nothing_more_is_fetched() {
 }
 
 #[test]
+fn a_format_that_cannot_be_sized_is_past_the_cap_and_nothing_is_read() {
+    let wants = F.pick(&[F.text, F.html]);
+    let read = RefCell::new(Vec::new());
+    let size = |f| (f != F.html).then_some(5);
+    let found = gather(&wants, 100, size, |w| {
+        read.borrow_mut().push(w.format);
+        Some(text("kx"))
+    });
+    assert!(found.is_err(), "it counts as past the cap");
+    assert!(read.borrow().is_empty(), "nothing is read");
+}
+
+#[test]
 fn a_picture_alone_over_the_cap_is_too_big() {
     let clip = Fake::new(vec![(F.dib, 100, image())]);
     assert_eq!(clip.gather(10).err(), Some(100));

@@ -9,6 +9,7 @@ mod media;
 mod serve;
 
 use args::Job;
+use kx_ipc::{CLEAN_EXIT, REFUSED_EXIT};
 use std::fmt::Display;
 use std::io;
 use std::process::ExitCode;
@@ -27,7 +28,7 @@ fn main() -> ExitCode {
 fn media_job(max_pixels: u64) -> ExitCode {
     let draw = |codec, bytes: &[u8], side| media::draw(codec, bytes, side, max_pixels);
     match serve::answer(&mut io::stdin().lock(), &mut io::stdout().lock(), draw) {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => ExitCode::from(CLEAN_EXIT),
         Err(e) => fail(&e),
     }
 }
@@ -35,5 +36,5 @@ fn media_job(max_pixels: u64) -> ExitCode {
 /// Says why on one line of stderr, then fails.
 fn fail(why: &dyn Display) -> ExitCode {
     eprintln!("{NAME}: {why}");
-    ExitCode::FAILURE
+    ExitCode::from(REFUSED_EXIT)
 }

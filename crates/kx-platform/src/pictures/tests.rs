@@ -88,7 +88,8 @@ fn a_draw_whose_worker_never_starts_is_gone() {
 
 #[test]
 fn exit_codes_read_as_notes() {
-    let codes = [Some(CLEAN_EXIT), Some(REFUSED_EXIT), Some(101), None];
+    let code = |c: u8| Some(u32::from(c));
+    let codes = [code(CLEAN_EXIT), code(REFUSED_EXIT), Some(101), None];
     let notes: HashSet<_> = codes.into_iter().map(exit_note).collect();
     assert_eq!(notes.len(), codes.len());
     assert_eq!(exit_note(Some(u32::MAX)), exit_note(Some(101)));

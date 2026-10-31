@@ -1,13 +1,17 @@
-//! The worker's reduced rights, read from outside: its token has no uiAccess and Medium integrity, it holds none of
-//! our inheritable handles, and its job caps it, bars it from shared UI, ends it on demand and when the host lets go.
+//! The worker's reduced rights, read from outside: its token is restricted, with no uiAccess and Medium integrity, it
+//! holds none of our inheritable handles, and its job caps it, bars it from shared UI and ends it when asked or let go.
 
 use super::*;
+use crate::worker::access::{self, Rights};
 use crate::worker::job::{ALONE, ENDED, LIMITS, MIB};
-use crate::worker::token::{self, MEDIUM, Rights};
+use crate::worker::label::MEDIUM;
+use crate::worker::token;
 use std::os::windows::io::FromRawHandle;
 use std::process::Stdio;
 use windows::Win32::Foundation::{CompareObjectHandles, DUPLICATE_SAME_ACCESS, DuplicateHandle};
-use windows::Win32::Security::SECURITY_ATTRIBUTES;
+use windows::Win32::Security::{
+    SECURITY_ATTRIBUTES, TOKEN_QUERY, WinBuiltinAdministratorsSid, WinWorldSid,
+};
 use windows::Win32::System::JobObjects::{
     IsProcessInJob, JOB_OBJECT_UILIMIT_DESKTOP, JOB_OBJECT_UILIMIT_DISPLAYSETTINGS,
     JOB_OBJECT_UILIMIT_EXITWINDOWS, JOB_OBJECT_UILIMIT_GLOBALATOMS, JOB_OBJECT_UILIMIT_HANDLES,
@@ -16,7 +20,6 @@ use windows::Win32::System::JobObjects::{
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectBasicUIRestrictions,
     JobObjectExtendedLimitInformation, QueryInformationJobObject,
 };
-use windows::Win32::System::SystemServices::SECURITY_MANDATORY_HIGH_RID;
 use windows::Win32::System::Threading::{CreateEventW, GetCurrentProcess};
 use windows::core::PCWSTR;
 
@@ -81,21 +84,48 @@ fn watch(process: HANDLE) -> OwnedHandle {
     }
 }
 
+/// The rights the worker runs with.
+const RESTRICTED: Rights = Rights {
+    ui_access: false,
+    level: MEDIUM,
+    admin: false,
+    privileged: false,
+};
+
 #[test]
-fn the_worker_runs_without_ui_access_at_medium_integrity() {
+fn the_worker_runs_restricted_without_ui_access_at_medium_integrity() {
     let worker = spawn();
-    let rights = token::rights(raw(&worker.child().process)).unwrap();
-    assert!(!rights.ui_access);
-    assert_eq!(rights.level, MEDIUM);
-    assert!(rights.reduced());
-    let high = SECURITY_MANDATORY_HIGH_RID.cast_unsigned();
-    let kept = [(true, MEDIUM), (false, high)];
-    for (ui_access, level) in kept {
-        assert!(
-            !Rights { ui_access, level }.reduced(),
-            "{ui_access} {level}"
-        );
-    }
+    let rights = access::rights(raw(&worker.child().process)).unwrap();
+    assert_eq!(rights, RESTRICTED);
+}
+
+#[test]
+fn the_token_made_for_the_worker_reads_back_restricted() {
+    let made = token::reduced().unwrap();
+    assert_eq!(access::of(&made).unwrap(), RESTRICTED);
+}
+
+#[test]
+fn the_worker_token_denies_administrators_alone() {
+    let made = token::reduced().unwrap();
+    let admins = access::can_use(&made, WinBuiltinAdministratorsSid);
+    assert_eq!(admins, Ok(false));
+    assert_eq!(
+        access::can_use(&made, WinWorldSid),
+        Ok(true),
+        "Everyone stays"
+    );
+}
+
+#[test]
+#[allow(unsafe_code, reason = "Takes our own process's pseudo handle.")]
+fn our_own_token_holds_privileges_the_worker_drops() {
+    // SAFETY: the pseudo handle of our own process needs no closing.
+    let ours = token::open(unsafe { GetCurrentProcess() }, TOKEN_QUERY).unwrap();
+    assert!(
+        access::of(&ours).unwrap().privileged,
+        "so the check sees them"
+    );
 }
 
 #[test]
