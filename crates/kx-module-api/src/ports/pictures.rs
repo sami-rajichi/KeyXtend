@@ -4,6 +4,7 @@
 use super::ImageCodec;
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
 
 /// Bytes in one RGBA8 pixel.
@@ -93,9 +94,15 @@ pub enum PictureError {
     /// The worker gave no answer within `PictureConfig::deadline_ms`.
     #[error("the picture took too long")]
     Timeout,
-    /// The worker could not start, ended, or answered with bad pixels.
-    #[error("the picture worker is not running")]
+    /// The worker ended or answered badly on this image, so it is not asked again.
+    #[error("the picture worker failed on this image")]
     Gone,
+    /// The worker rests after a failure or could not start, so this image was not tried.
+    #[error("the picture worker is down")]
+    Down {
+        /// How long until the worker may start again.
+        retry_in: Duration,
+    },
     /// The image holds more than `PictureConfig::max_pixels` pixels.
     #[error("the image holds too many pixels")]
     TooBig,
@@ -107,7 +114,7 @@ pub trait PictureRun: Send {
     ///
     /// # Errors
     /// `Refused` for bytes that are no image, `TooBig` past `max_pixels`, `Timeout` past the deadline, `Gone` when the
-    /// worker cannot start, ends or answers badly.
+    /// worker ends or answers badly on it, and `Down` when the worker rests or cannot start, so it was not tried.
     fn draw(&mut self, ask: &PictureAsk) -> Result<Pixels, PictureError>;
 }
 

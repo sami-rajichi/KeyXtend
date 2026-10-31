@@ -58,7 +58,7 @@ impl FakePictures {
         Self::default()
     }
 
-    /// Queues `drawn` for a later draw, after those already queued: pixels, or `Refused`, `Timeout`, `Gone`, `TooBig`.
+    /// Queues `drawn` for a later draw, after those already queued: pixels, or any `PictureError`.
     pub fn queue(&self, drawn: Result<Pixels, PictureError>) {
         lock(&self.shared.log).queued.push_back(drawn);
     }

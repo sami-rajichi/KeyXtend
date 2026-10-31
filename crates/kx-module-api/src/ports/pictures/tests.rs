@@ -70,6 +70,9 @@ fn each_error_says_something_else() {
         PictureError::Refused,
         PictureError::Timeout,
         PictureError::Gone,
+        PictureError::Down {
+            retry_in: std::time::Duration::ZERO,
+        },
         PictureError::TooBig,
     ];
     let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();

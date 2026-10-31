@@ -90,12 +90,13 @@ impl<S: Spawner> Host<S> {
     }
 
     /// The live worker, started now unless the backoff still runs; one that quit since the last draw is replaced.
+    /// `Down` while it rests or when it cannot start, as no image was tried.
     fn start(&mut self) -> Result<&mut S::Worker, PictureError> {
         self.clear_quit();
+        let now = self.clock.now();
         if self.worker.is_none() {
-            let now = self.clock.now();
             if now < self.calm {
-                return Err(PictureError::Gone);
+                return Err(self.down(now));
             }
             match self.spawner.spawn(&Launch::media(&self.cfg)) {
                 Ok(worker) => self.worker = Some(worker),
@@ -105,7 +106,15 @@ impl<S: Spawner> Host<S> {
                 }
             }
         }
-        self.worker.as_mut().ok_or(PictureError::Gone)
+        let down = self.down(now);
+        self.worker.as_mut().ok_or(down)
+    }
+
+    /// The refusal of a draw while no worker runs: how long until one may start again.
+    fn down(&self, now: Mono) -> PictureError {
+        PictureError::Down {
+            retry_in: self.calm.saturating_since(now),
+        }
     }
 
     /// Ends a worker that quit since the last draw, with no backoff, since no draw of ours failed.

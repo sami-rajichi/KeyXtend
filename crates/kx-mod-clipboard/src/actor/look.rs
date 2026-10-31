@@ -1,8 +1,11 @@
 //! The helpers' answers (edges 4 and 9): file facts size the rows and drop an entry whose files are all gone, and a
-//! drawn thumbnail is saved for its row; a picture the worker could not draw leaves the type icon. One thumbnail
-//! draws at a time, and only the newest preview waits.
+//! drawn thumbnail is saved for its row; a picture the worker could not draw leaves the type icon, and one it never
+//! tried, as it was down, is asked again once it may start. One thumbnail draws at a time; the newest preview waits.
 
-use kx_module_api::ports::{ClipKind, FileFact, Preview};
+use std::time::Duration;
+
+use kx_module_api::Mono;
+use kx_module_api::ports::{ClipKind, FileFact, PictureError, Preview};
 
 use super::Actor;
 use crate::insert::files_of;
@@ -32,10 +35,13 @@ impl Actor {
     }
 
     /// Takes a picture the media thread drew: a thumbnail is saved and the next bare row asked, a preview shows while
-    /// its page does and the one waiting goes.
+    /// its page does and the one waiting goes. A worker that was down asks again once it may start.
     pub(super) fn drawn(&mut self, drawn: Drawn) {
         if let Some(job) = self.draws.done(drawn.size) {
             self.send_job(job);
+        }
+        if let Err(PictureError::Down { retry_in }) = drawn.pixels {
+            return self.rest(drawn.id, drawn.size, retry_in);
         }
         if drawn.size == Size::Thumb {
             self.want_thumbs(&self.bare.clone());
@@ -60,10 +66,11 @@ impl Actor {
         }
     }
 
-    /// Asks once per run for the thumbnails of `ids`, image rows without one, while no other is drawing.
+    /// Asks once per run for the thumbnails of `ids`, image rows without one, while no other is drawing and the worker
+    /// is not down.
     pub(super) fn want_thumbs(&mut self, ids: &[u64]) {
         for &id in ids {
-            if !self.draws.free(Size::Thumb) {
+            if !self.draws.free(Size::Thumb) || self.thumbs_at.is_some() {
                 return;
             }
             if !self.asked.insert(id) {
@@ -76,6 +83,23 @@ impl Actor {
             if let Some(job) = parts.and_then(|p| job_of(id, Size::Thumb, &p)) {
                 self.send_job(job);
             }
+        }
+    }
+
+    /// The worker is down for `retry_in`: a thumbnail of `id` it never tried is asked again then, with the other bare
+    /// rows, and none is asked before.
+    fn rest(&mut self, id: u64, size: Size, retry_in: Duration) {
+        if size == Size::Thumb {
+            self.asked.remove(&id);
+        }
+        self.thumbs_at = Some(self.ports.clock.now().saturating_add(retry_in));
+    }
+
+    /// Asks again for the bare rows' thumbnails once the worker may start.
+    pub(super) fn thumbs_tick(&mut self, now: Mono) {
+        if self.thumbs_at.is_some_and(|t| now >= t) {
+            self.thumbs_at = None;
+            self.want_thumbs(&self.bare.clone());
         }
     }
 

@@ -1,5 +1,5 @@
 //! Sessions on their own threads over a scripted worker: a draw goes through and a dropped session stops its worker,
-//! an idle worker stops by itself, a worker that never starts is gone, and exit codes read as notes.
+//! an idle worker stops by itself, a worker that never starts is down, and exit codes read as notes.
 
 use super::*;
 use fake::{Act, Call, Hands, Script};
@@ -78,12 +78,13 @@ fn a_session_stops_an_idle_worker_by_itself() {
 }
 
 #[test]
-fn a_draw_whose_worker_never_starts_is_gone() {
+fn a_draw_whose_worker_never_starts_is_down_until_its_backoff_ends() {
     let script = Script::default();
     script.refuse(1);
     let (pictures, _told) = pictures(&script);
     let mut run = pictures.open(CFG);
-    assert_eq!(run.draw(&ask()), Err(PictureError::Gone));
+    let retry_in = Duration::from_millis(u64::from(CFG.restart_ms));
+    assert_eq!(run.draw(&ask()), Err(PictureError::Down { retry_in }));
 }
 
 #[test]

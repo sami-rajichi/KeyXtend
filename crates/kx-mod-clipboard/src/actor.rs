@@ -109,6 +109,8 @@ pub(crate) struct Actor {
     paste: Pasting,
     /// The entries whose thumbnail was asked this run.
     asked: BTreeSet<u64>,
+    /// The worker is down until then, so no thumbnail is asked before.
+    thumbs_at: Option<Mono>,
     /// The pictures with the media thread, and the image rows the last view showed bare.
     draws: Draws,
     bare: Vec<u64>,
@@ -140,6 +142,7 @@ impl Actor {
             redraw: false,
             paste: Pasting::default(),
             asked: BTreeSet::new(),
+            thumbs_at: None,
             draws: Draws::default(),
             bare: Vec::new(),
             told: BTreeSet::new(),
@@ -211,14 +214,18 @@ impl Actor {
             self.save();
         }
         self.paste_tick(now);
+        self.thumbs_tick(now);
         self.flush();
     }
 
-    /// How long the loop waits for a message: until the save, the paste's next step or wait, or local midnight.
+    /// How long the loop waits for a message: until the save, the paste's next step or wait, the worker's restart, or
+    /// local midnight.
     pub(crate) fn wait(&self) -> Duration {
         let now = self.ports.clock.now();
         let save = (self.dirty).map(|t| t.saturating_add(self.settings.save()));
-        let due = [save, self.paste_due()].into_iter().flatten();
+        let due = [save, self.paste_due(), self.thumbs_at]
+            .into_iter()
+            .flatten();
         let midnight = days::until_midnight(&self.ports.calendar.now());
         due.map(|t| t.saturating_since(now))
             .fold(midnight, Duration::min)

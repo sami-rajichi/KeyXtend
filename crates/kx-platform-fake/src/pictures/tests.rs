@@ -79,6 +79,9 @@ fn a_hang_is_a_scripted_timeout_that_never_sleeps_and_every_error_comes_back() {
     let errors = [
         PictureError::Timeout,
         PictureError::Gone,
+        PictureError::Down {
+            retry_in: Duration::from_secs(1),
+        },
         PictureError::TooBig,
         PictureError::Refused,
     ];

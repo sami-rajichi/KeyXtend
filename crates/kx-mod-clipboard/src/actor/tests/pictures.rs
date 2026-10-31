@@ -1,5 +1,8 @@
 //! Pictures: a new image's thumbnail queues to `Pictures` at `thumb_px` and shows on its row, one thumbnail draws at
-//! a time, a preview is drawn at `preview_px`, and a worker that fails leaves the type icon, asked once per run.
+//! a time, a preview is drawn at `preview_px`, and a worker that fails on an image leaves its type icon, asked once
+//! per run. A row the worker never tried, as it was down, is asked again once it may start.
+
+use std::time::Duration;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -119,4 +122,50 @@ fn a_preview_asked_while_another_draws_is_drawn_after_it_and_later_ones_too() {
         "a later preview is drawn too"
     );
     assert_eq!(rig.page().preview, large);
+}
+
+/// An image whose bytes are `n`.
+fn image_of(n: u8) -> Vec<ClipPart> {
+    vec![ClipPart::Image {
+        codec: ImageCodec::Png,
+        bytes: Redacted::new(vec![n]),
+    }]
+}
+
+/// The worker down for `retry_in`, as the host says during its backoff.
+fn down(retry_in: Duration) -> Result<Pixels, PictureError> {
+    Err(PictureError::Down { retry_in })
+}
+
+#[test]
+fn rows_refused_while_the_worker_is_down_are_asked_again_once_it_may_start() {
+    let mut rig = Rig::new();
+    let save = rig.settings.save();
+    let retry_in = 4 * save;
+    rig.fakes.pics.queue(down(retry_in));
+    (1..=3).for_each(|n| rig.copy(image_of(n), None));
+    rig.open();
+    assert_eq!(rig.fakes.pics.asks(), 1, "none asked while it rests");
+    rig.advance(save);
+    assert_eq!(rig.wait(), 3 * save, "the thread wakes for it");
+    rig.fakes.pics.queue(Ok(pixels()));
+    rig.advance(rig.wait());
+    assert_eq!(rig.fakes.pics.asks(), 4, "each row once more");
+    assert!(rig.page().rows.iter().all(|r| r.thumb.is_some()));
+}
+
+#[test]
+fn an_image_refused_for_its_own_bytes_is_never_asked_again() {
+    let mut rig = Rig::new();
+    let retry_in = rig.settings.save();
+    rig.fakes.pics.queue(Err(PictureError::Refused));
+    rig.copy(image_of(1), None);
+    rig.fakes.pics.queue(down(retry_in));
+    rig.copy(image_of(2), None);
+    rig.fakes.pics.queue(Ok(pixels()));
+    rig.open();
+    rig.advance(retry_in);
+    assert_eq!(rig.fakes.pics.asks(), 3, "the bad image once only");
+    let thumbs: Vec<bool> = rig.page().rows.iter().map(|r| r.thumb.is_some()).collect();
+    assert_eq!(thumbs, [true, false]);
 }

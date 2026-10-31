@@ -1,4 +1,4 @@
-//! The host over a scripted worker: it starts on demand, draws one at a time, ends a late or lying worker and waits a
+//! The host over a scripted worker: it starts on demand, draws one at a time, ends a late or lying worker and is down a
 //! growing backoff before the next start, refuses asks the worker would refuse, and stops when idle; nothing sleeps.
 
 use super::*;
@@ -43,6 +43,11 @@ fn ask(side: u32) -> PictureAsk {
 
 fn draw(id: u32) -> Call {
     Call::Draw { id, side: SIDE }
+}
+
+/// A draw refused as the worker rests, `retry_in` before it may start again.
+fn down(retry_in: Duration) -> PictureError {
+    PictureError::Down { retry_in }
 }
 
 /// A wait for a reply, as long as the deadline.
@@ -98,14 +103,14 @@ fn the_worker_starts_as_the_config_says() {
 }
 
 #[test]
-fn a_late_worker_is_ended_and_starts_again_only_after_its_backoff() {
+fn a_late_worker_is_ended_and_is_down_until_its_backoff_ends() {
     let (script, clock) = (Script::default(), Hands::default());
     let mut host = host(&script, &clock);
     script.act(Act::Silent);
     assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Timeout));
     assert!(script.calls().ends_with(&[reply(), Call::End]));
     clock.advance(ms(CFG.restart_ms).saturating_sub(TICK));
-    assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone));
+    assert_eq!(host.draw(ask(SIDE)), Err(down(TICK)), "the wait left");
     assert_eq!(script.tries(), 1, "no start within the backoff");
     clock.advance(TICK);
     assert!(host.draw(ask(SIDE)).is_ok());
@@ -120,7 +125,7 @@ fn the_backoff_doubles_up_to_its_cap_and_a_good_draw_resets_it() {
         script.act(Act::Silent);
         assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Timeout));
         clock.advance(ms(wait).saturating_sub(TICK));
-        assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone), "{wait}");
+        assert_eq!(host.draw(ask(SIDE)), Err(down(TICK)), "{wait}");
         clock.advance(TICK);
     }
     assert!(host.draw(ask(SIDE)).is_ok());
@@ -161,7 +166,8 @@ fn bad_replies_are_refused_and_end_the_worker() {
             closed,
             "{act:?} reads the code"
         );
-        assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone), "{act:?}");
+        let rest = Err(down(ms(CFG.restart_ms)));
+        assert_eq!(host.draw(ask(SIDE)), rest, "{act:?} is down");
         assert_eq!(script.tries(), 1, "{act:?} backs off");
     }
 }
@@ -263,15 +269,16 @@ fn a_worker_that_quit_between_draws_is_replaced_with_no_backoff() {
 }
 
 #[test]
-fn a_worker_that_does_not_start_backs_off() {
+fn a_worker_that_does_not_start_is_down_and_backs_off() {
     let (script, clock) = (Script::default(), Hands::default());
     let mut host = host(&script, &clock);
     script.refuse(2);
-    assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone));
-    assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone));
+    let first = down(ms(CFG.restart_ms));
+    assert_eq!(host.draw(ask(SIDE)), Err(first), "no image was tried");
+    assert_eq!(host.draw(ask(SIDE)), Err(first));
     assert_eq!(script.tries(), 1);
     clock.advance(ms(CFG.restart_ms));
-    assert_eq!(host.draw(ask(SIDE)), Err(PictureError::Gone));
+    assert_eq!(host.draw(ask(SIDE)), Err(down(ms(CFG.restart_ms * 2))));
     assert_eq!(script.tries(), 2);
     clock.advance(ms(CFG.restart_ms * 2));
     assert!(host.draw(ask(SIDE)).is_ok());
