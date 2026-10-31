@@ -13,7 +13,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 
 `ClipboardModule` loads the history, watches the clipboard and runs the `kx-clip` actor. A locked shelf, or a list from a newer version, fails the start with nothing changed; the kernel tells it and offers Try again. The actor:
 
-- takes copies from a queue of `queue_copies`, dropping the newest in a flood, keeps each within the limits, moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
+- takes copies from a queue of `queue_copies`, dropping the newest in a flood, keeps each within the limits (asking the shelf only its drive's free bytes, never a walk of its files), moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
 - inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).

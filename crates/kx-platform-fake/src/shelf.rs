@@ -1,5 +1,5 @@
 //! A fake sealed shelf: folders of blobs kept in memory up to the port's `MAX_BLOB_BYTES`, one failure on cue per
-//! call, a room the test sets, and folders a test deletes by hand.
+//! call, a room and free bytes the test sets, and folders a test deletes by hand.
 
 use crate::lock;
 use kx_module_api::ports::{BlobName, MAX_BLOB_BYTES, Room, SealedError, SealedShelf};
@@ -29,6 +29,8 @@ pub enum ShelfCall {
     Names,
     /// `room`.
     Room,
+    /// `free`.
+    Free,
 }
 
 impl ShelfCall {
@@ -223,6 +225,12 @@ impl SealedShelf for FakeShelf {
             free,
             drive,
         })
+    }
+
+    fn free(&self) -> Result<u64, SealedError> {
+        let mut log = lock(&self.log);
+        log.enter(ShelfCall::Free)?;
+        Ok(log.free)
     }
 }
 

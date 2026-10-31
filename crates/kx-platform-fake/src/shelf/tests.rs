@@ -108,6 +108,7 @@ fn each_scripted_failure_hits_its_own_call_once() {
         ShelfCall::Folders,
         ShelfCall::Names,
         ShelfCall::Room,
+        ShelfCall::Free,
     ] {
         shelf.fail(call, io);
     }
@@ -116,6 +117,7 @@ fn each_scripted_failure_hits_its_own_call_once() {
     assert_eq!(shelf.folders(), Err(io));
     assert_eq!(shelf.names(&day), Err(io));
     assert_eq!(shelf.room(), Err(io));
+    assert_eq!(shelf.free(), Err(io));
     assert_eq!(
         shelf.blob(&day, &list),
         Some(NEW.to_vec()),
@@ -170,6 +172,7 @@ fn the_room_tells_the_bytes_held_and_the_free_bytes_set() {
         drive: "E:".to_owned(),
     };
     assert_eq!(shelf.room(), Ok(room));
+    assert_eq!(shelf.free(), Ok(FREE), "the free bytes alone");
 }
 
 #[test]

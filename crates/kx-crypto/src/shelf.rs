@@ -97,6 +97,12 @@ impl SealedShelf for SealedShelfFiles {
         let drive = self.disk.drive(at).map_err(|_| SealedError::Io)?;
         Ok(Room { used, free, drive })
     }
+
+    /// The drive alone, outside the sealer's lock, so a copy never waits on a walk of every file.
+    fn free(&self) -> Result<u64, SealedError> {
+        let at = room::nearest(&self.root);
+        self.disk.free(at).map_err(|_| SealedError::Io)
+    }
 }
 
 impl fmt::Debug for SealedShelfFiles {

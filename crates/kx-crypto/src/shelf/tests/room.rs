@@ -45,3 +45,15 @@ fn a_drive_that_cannot_be_read_is_io() {
     let shelf = SealedShelfFiles::new(c.root.clone(), guard, Box::new(disk));
     assert_eq!(shelf.room(), Err(SealedError::Io));
 }
+
+#[test]
+fn free_asks_only_the_drive_and_lists_no_folder() {
+    let c = case();
+    c.shelf.save(&name(DAY), &name("e1"), b"words").unwrap();
+    assert_eq!(c.shelf.free(), Ok(FREE));
+    assert_eq!(
+        c.disk.asked(),
+        std::slice::from_ref(&c.root),
+        "no drive name, no walk"
+    );
+}

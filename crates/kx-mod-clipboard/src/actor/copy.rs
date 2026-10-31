@@ -46,9 +46,7 @@ impl Actor {
             }
             return self.kept(id, app);
         }
-        self.refresh_room();
-        let free = self.room.as_ref().map_or(u64::MAX, |r| r.free);
-        if let Err(note) = admit(&self.history, &entry, free, &self.limits) {
+        if let Err(note) = admit(&self.history, &entry, self.free(), &self.limits) {
             return self.say_note(note);
         }
         let kind = entry.kind;
@@ -60,6 +58,15 @@ impl Actor {
                 self.forget(&gone);
             }
         }
+    }
+
+    /// Bytes free on the history's drive, asked alone so a copy never walks every file; a failed read keeps the last.
+    fn free(&self) -> u64 {
+        let last = self.room.as_ref().map_or(u64::MAX, |r| r.free);
+        self.ports.shelf.free().unwrap_or_else(|error| {
+            tracing::warn!(%error, "the clipboard drive's free space could not be read");
+            last
+        })
     }
 
     /// The entry holding the same content as `entry`, a new copy of `parts`: same hash, and the stored parts equal.

@@ -60,6 +60,14 @@ pub trait SealedShelf: Send + Sync {
     /// # Errors
     /// `Io` when the drive cannot be read.
     fn room(&self) -> Result<Room, SealedError>;
+
+    /// Bytes free on the shelf's drive, for each new copy; a shelf whose `room` walks its files reads this alone.
+    ///
+    /// # Errors
+    /// `Io` when the drive cannot be read.
+    fn free(&self) -> Result<u64, SealedError> {
+        self.room().map(|room| room.free)
+    }
 }
 
 /// The sealed shelf service; it needs `SecretStore`.

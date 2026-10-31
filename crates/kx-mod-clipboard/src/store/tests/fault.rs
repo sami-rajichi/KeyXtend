@@ -142,4 +142,8 @@ impl SealedShelf for Cut {
     fn room(&self) -> Result<Room, SealedError> {
         self.inner.room()
     }
+
+    fn free(&self) -> Result<u64, SealedError> {
+        self.inner.free()
+    }
 }
