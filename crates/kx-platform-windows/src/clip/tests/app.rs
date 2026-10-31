@@ -44,7 +44,7 @@ fn the_name_is_the_description_cut_to_the_cap_else_the_stem() {
 
 #[test]
 fn a_program_off_a_drive_is_named_by_its_stem_and_its_file_is_never_read() {
-    for path in [r"\server\share\Tool.exe", r"\?\UNC\server\share\Tool.exe"] {
+    for path in [r"\\server\share\Tool.exe", r"\\?\UNC\server\share\Tool.exe"] {
         let read = std::cell::Cell::new(false);
         let got = app::named(path, 80, |_| {
             read.set(true);
