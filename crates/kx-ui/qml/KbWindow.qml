@@ -49,6 +49,8 @@ Window {
     readonly property alias presses: frame
     // The language list with its shadow while it shows, else null.
     readonly property alias panel: lists.item
+    // The clipboard panel with its shadow while it shows, else null.
+    readonly property alias clips: clipLoader.item
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -136,6 +138,11 @@ Window {
         sourceComponent: LangPanel {
             win: win
         }
+    }
+    // The clipboard panel, while the hub holds an open view.
+    KbClip {
+        id: clipLoader
+        win: win
     }
 
     // Reads everything again: the settings or face changed.

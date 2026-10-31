@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 08:27 — P8: the clipboard panel's views and tokens
+The clipboard panel now draws in QML from the hub's view: a header with Delete all and Close, the search line, filter chips, five padded rows with tick numbers, thumbnails and the highlight ring, the pager, the footer with Insert (n), the storage line, the Delete-all question and the preview page, which pages long text and files without scrolling. kx-theme gains `[clip]` icons, sizes and moves (tick pop, highlight glide, row swap, page turn; reduced motion stops them) and nine contrast pairs that pass in every theme, light, dark and high contrast. The keyboard window opens it at the `clipChanged` wake, the guard marks it for the scroll pad, and 25 new Quick tests pass at both scalings.
+
 ## 2026-10-31 08:14 — P8: the app wires the clipboard history and the media worker
 The app now ships the clipboard module by default (`mod-clipboard`) with the Windows clipboard watch and writer, the calendar, pictures drawn by `keyxtend-worker.exe` beside the program, and a sealed shelf over `<data>/clipboard` whose drive the new `WinDiskRoom` reads; the hub gets that folder at boot for Open folder. Life tests pin each clipboard gate's holders and the services that reach them, carry a copy from the panel back into the app through the keyboard's paste, and check that nothing the app builds with reaches `png`, `fdeflate` or the worker. `cargo xtask stage` builds the worker on its own, stages it beside the app, walks its imports and refuses a missing worker or one whose manifest asks for uiAccess, as `dev-install`'s check does; the worker now embeds an asInvoker manifest. CI's Linux list names the three new crates and its scroll-off lint takes `mod-clipboard`.
 

@@ -144,3 +144,23 @@ fn a_misspelt_or_missing_button_is_refused() {
     let typo = text().replacen("theme = \"palette\"", "theem = \"palette\"", 1);
     assert!(parse(&typo).expect_err("a typo").contains("theem"));
 }
+
+#[test]
+fn the_clipboard_panel_shows_its_icons_by_role() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "title=clipboard-clock search=search close=x kind_text=file-text kind_link=link \
+                kind_image=image kind_file=file-text kind_media=film pin=pin unpin=pin-off preview=eye \
+                delete=trash-2 insert=clipboard-paste cancel=x shown=check room=hard-drive \
+                folder=folder-open back=arrow-left";
+    let named = i.clip.named();
+    let got = named.map(|(role, name)| format!("{}={name}", role.trim_start_matches("clip.")));
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(
+        got.as_slice(),
+        want.as_slice(),
+        "mock-up buildClip and TYPEICON"
+    );
+    assert!(i.named().contains(&("clip.kind_media".into(), "film")));
+    let t = text().replacen("unpin = \"pin-off\"", "unpin = \"Pin-off\"", 1);
+    assert!(parse(&t).expect_err("a capital").contains("clip.unpin"));
+}

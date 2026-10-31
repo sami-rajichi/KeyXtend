@@ -50,11 +50,14 @@ QtObject {
     // The keyboard's language and texts as the calls read them, copied on each change where no binding sees it, as the
     // real object's calls are not tracked: QML must read them again on `textsChanged`.
     readonly property var said: ({ lang: En.lang, texts: En.texts })
+    // The clipboard panel's view as the hub writes it, null while closed; setting it sends `clipChanged`.
+    property var clipView: null
 
     onLangChanged: said.lang = lang
     onTextsChanged: said.texts = texts
     onAssistChanged: newest = assist
     onLaneChanged: wordsChanged()
+    onClipViewChanged: clipChanged()
     Component.onCompleted: {
         said.lang = lang;
         said.texts = texts;
@@ -83,6 +86,8 @@ QtObject {
     signal keysChanged
     // A new chip lane: read `words` again.
     signal wordsChanged
+    // The clipboard panel shows a new view or closes: read `clip` again.
+    signal clipChanged
 
     function note(call) {
         calls = calls.concat([call]);
@@ -250,5 +255,15 @@ QtObject {
     }
     function tapped() {
         note("tapped");
+    }
+    // The clipboard panel's view, a click on it, noted as `clipAct kind arg`, and Open folder.
+    function clip() {
+        return JSON.stringify(clipView);
+    }
+    function clipAct(kind, arg) {
+        note("clipAct " + kind + " " + arg);
+    }
+    function openFolder() {
+        note("openFolder");
     }
 }

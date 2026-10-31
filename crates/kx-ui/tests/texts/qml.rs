@@ -31,7 +31,7 @@ const STATES: [&str; 9] = [
 /// The shortcuts layer's boards the tests draw, on its first and last pages, by golden file name after `board-`.
 const LAYERS: [&str; 2] = ["layer-1", "layer-3"];
 /// The UI languages the tests draw.
-const LANGS: [&str; 3] = ["en", "fr", "ar"];
+pub const LANGS: [&str; 3] = ["en", "fr", "ar"];
 /// Where the bundled files and the icon plugin are laid out, from this crate; the Qt Quick tests read them from there.
 pub const MIRROR: &str = "../../target/tmp/qmltest-assets";
 /// The repo's `assets/` folder, from this crate.
@@ -41,7 +41,7 @@ const TRAY_PX: u32 = 16;
 /// The banner's counts the tests read, from none up to this many.
 const MORE_UP_TO: usize = 12;
 /// What starts each fixture, so QML imports it as a JavaScript library.
-const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
+pub const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
 
 /// The fixtures folder.
 fn dir() -> PathBuf {
@@ -49,7 +49,7 @@ fn dir() -> PathBuf {
 }
 
 /// `name = value;` as JavaScript, spread over lines when `pretty`, else on one line.
-fn var(name: &str, value: &Value, pretty: bool) -> String {
+pub fn var(name: &str, value: &Value, pretty: bool) -> String {
     let json = if pretty {
         serde_json::to_string_pretty(value)
     } else {
@@ -84,7 +84,7 @@ impl KeyboardFace for Speaks {
 }
 
 /// A hub whose system shows language `tag`, with a layout in `tag` in front, and the host behind its settings.
-fn hub(tag: &str) -> (Arc<Hub>, FakeHost) {
+pub fn hub(tag: &str) -> (Arc<Hub>, FakeHost) {
     let hub = system(tag);
     let mut host = FakeHost::new(&MANIFEST);
     let settings = UiSettings::from_defaults().expect("the [ui] defaults");
@@ -230,7 +230,7 @@ fn crate_path(rel: &str) -> PathBuf {
 }
 
 /// Checks fixture `name` against `text`, or writes it when blessing; returns the name.
-fn fixture(name: String, text: &str) -> String {
+pub fn fixture(name: String, text: &str) -> String {
     assert_golden(dir().join(&name), text);
     name
 }
@@ -246,6 +246,8 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
     written.push(fixture("words.js".into(), &words()));
     let order = var("texts", &crate::filled::order(), true);
     written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
+    // The clipboard views are checked by their own test, so blessing them touches no other fixture.
+    written.push(crate::clipview::FILE.into());
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()

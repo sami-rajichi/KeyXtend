@@ -65,6 +65,8 @@ impl Shape {
             ("notice.button_weight", self.notice.button_weight),
             ("list.badge_weight", self.list.badge_weight),
             ("badge.weight", self.badge.weight),
+            ("clip.tick_weight", self.clip.tick_weight),
+            ("clip.button_weight", self.clip.button_weight),
         ];
         match weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
             Some((n, w)) => {
@@ -75,8 +77,8 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outlines, the smallest label, the mark's, the dots' and the D-pad's icon sizes must be
-    /// above 0, and the panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the
+    /// The shimmer span, the outlines, the clipboard's caret and underline, the smallest label, the mark's, the dots' and
+    /// the D-pad's icon sizes must be above 0, and the panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the
     /// D-pad's gaps 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
@@ -91,6 +93,8 @@ impl Shape {
             ("dpad.stop_icon_px", self.dpad.stop_icon_px),
             ("badge.sep_px", self.badge.sep_px),
             ("outline.px", self.outline.px),
+            ("clip.caret_px", self.clip.caret_px),
+            ("clip.underline_px", self.clip.underline_px),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));

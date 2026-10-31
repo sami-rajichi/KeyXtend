@@ -271,6 +271,8 @@ fn an_odd_tray_share_or_label_size_is_refused() {
     ]);
 }
 
+/// The clipboard panel's rows, pills and buttons.
+mod clip;
 /// The dots the language key's Cycle design and the Next key share.
 mod dots;
 /// The scroll pad's arrows, Stop's speed dots and the target's outline.

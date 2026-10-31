@@ -8,8 +8,10 @@ use crate::extras::{
 };
 
 mod check;
+mod clip;
 mod whole;
 
+pub use clip::ClipShape;
 pub use whole::{BackdropShape, DimShape, DotsShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
@@ -265,6 +267,8 @@ pub struct Shape {
     pub list: ListShape,
     /// The tray icon's drawing.
     pub tray: TrayShape,
+    /// The clipboard panel.
+    pub clip: ClipShape,
 }
 
 /// The checked sizes in `text`.

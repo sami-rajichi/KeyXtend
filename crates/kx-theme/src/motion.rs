@@ -12,6 +12,8 @@ pub const MOVES: [&str; 19] = [
     "press", "colour", "plate", "led", "glow", "dot", "carousel", "legends", "stop", "pill",
     "caption", "panel", "shimmer", "burst", "notice", "menu", "badge", "outline", "layer",
 ];
+/// Every animation the clipboard panel plays, by what it moves.
+pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];
 
 /// The file as written.
 #[derive(Deserialize)]
@@ -19,6 +21,7 @@ pub const MOVES: [&str; 19] = [
 struct MotionFile {
     curves: BTreeMap<String, [f32; 4]>,
     moves: BTreeMap<String, Move>,
+    clip: BTreeMap<String, Move>,
     amount: Amounts,
     ring: RingFile,
 }
@@ -49,6 +52,8 @@ pub struct Amounts {
     pub pop_scale: f32,
     /// The tray menu's starting scale.
     pub menu_scale: f32,
+    /// A clipboard tick's starting scale.
+    pub tick_scale: f32,
 }
 
 /// One animation ready to play: its length and its curve as Qt bezier points (two controls, then the end).
@@ -65,6 +70,8 @@ pub struct Timed {
 pub struct Motion {
     /// Each animation by its name in `MOVES`.
     pub moves: BTreeMap<String, Timed>,
+    /// The clipboard panel's, by name in `CLIP_MOVES`.
+    pub clip: BTreeMap<String, Timed>,
     /// How far they go.
     pub amount: Amounts,
     /// The hold ring, the same with reduced motion since its waves show the hold's time.
@@ -91,39 +98,54 @@ impl Motions {
 /// The checked animations in `text`, full and reduced.
 pub(crate) fn parse(text: &str) -> Result<Motions, String> {
     let f: MotionFile = toml::from_str(text).map_err(|e| e.to_string())?;
-    check_names(&f.moves)?;
+    check_names("moves", &f.moves, &MOVES)?;
+    check_names("clip", &f.clip, &CLIP_MOVES)?;
     for (name, c) in &f.curves {
         check_curve(name, c)?;
     }
     f.amount.check()?;
     let ring = f.ring.ready(&f.curves)?;
-    let ready = |(name, m): (&String, &Move)| Ok((name.clone(), timed(name, m, &f.curves)?));
-    let moves = f
-        .moves
-        .iter()
-        .map(ready)
-        .collect::<Result<BTreeMap<_, _>, String>>()?;
-    let still = |(n, t): (&String, &Timed)| (n.clone(), Timed { ms: 0, ..*t });
+    let (moves, clip) = (
+        all_timed(&f.moves, &f.curves)?,
+        all_timed(&f.clip, &f.curves)?,
+    );
     let reduced = Motion {
-        moves: moves.iter().map(still).collect(),
+        moves: still(&moves),
+        clip: still(&clip),
         amount: f.amount,
         ring,
     };
     let full = Motion {
         moves,
+        clip,
         amount: f.amount,
         ring,
     };
     Ok(Motions { full, reduced })
 }
 
-/// Refuses a missing move, and one no face plays.
-fn check_names(moves: &BTreeMap<String, Move>) -> Result<(), String> {
-    if let Some(n) = MOVES.iter().find(|n| !moves.contains_key(**n)) {
-        return Err(format!("moves.{n} is missing"));
+/// Each of `moves` with its curve from `curves`.
+fn all_timed(
+    moves: &BTreeMap<String, Move>,
+    curves: &BTreeMap<String, [f32; 4]>,
+) -> Result<BTreeMap<String, Timed>, String> {
+    let ready = |(name, m): (&String, &Move)| Ok((name.clone(), timed(name, m, curves)?));
+    moves.iter().map(ready).collect()
+}
+
+/// `moves` with every length 0, the curves kept.
+fn still(moves: &BTreeMap<String, Timed>) -> BTreeMap<String, Timed> {
+    let none = |(n, t): (&String, &Timed)| (n.clone(), Timed { ms: 0, ..*t });
+    moves.iter().map(none).collect()
+}
+
+/// Refuses a move of table `table` missing from `names`, and one not in it.
+fn check_names(table: &str, moves: &BTreeMap<String, Move>, names: &[&str]) -> Result<(), String> {
+    if let Some(n) = names.iter().find(|n| !moves.contains_key(**n)) {
+        return Err(format!("{table}.{n} is missing"));
     }
-    match moves.keys().find(|n| !MOVES.contains(&n.as_str())) {
-        Some(n) => Err(format!("moves.{n} is not an animation the faces play")),
+    match moves.keys().find(|n| !names.contains(&n.as_str())) {
+        Some(n) => Err(format!("{table}.{n} is not an animation the faces play")),
         None => Ok(()),
     }
 }
@@ -158,6 +180,7 @@ impl Amounts {
             ("rise", self.rise),
             ("pop_scale", self.pop_scale),
             ("menu_scale", self.menu_scale),
+            ("tick_scale", self.tick_scale),
         ];
         if let Some((n, _)) = outside_unit(&shares) {
             return Err(format!("amount.{n} must be 0 to 1"));

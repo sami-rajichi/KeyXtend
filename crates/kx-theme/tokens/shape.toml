@@ -293,3 +293,42 @@ sep_share = 0.4
 corner_px = [20.0, 12.0]
 bubble_px = [46.0, 20.0, 12.0]
 strip_px = [28.0, 6.0, 8.0, 12.0]
+
+[clip]
+# The clipboard panel (spec §7; mock-up .clip and buildClip, lines 312-341 and 1563-1577) on [panel]'s frame, header,
+# rows, pager, footer padding and search field: the kept line's size (.sm) and the empty line's icon (.locked-box .i).
+kept_px = 11.0
+empty_px = 30.0
+# The search line, not in the mock-up: its icon, the caret's width, and the ring-coloured line under it that shows where
+# letters go, as WinUI's focused TextBox draws its 2 px accent line.
+search_icon_px = 15.0
+caret_px = 2.0
+underline_px = 2.0
+# The filters (.filters: padding top, sides, bottom; gap) and a chip (.fl): height, side padding, the shown one's check
+# icon and its gap; its text is [chip]'s. 28 px high, over the mock-up's 21, so each is a big target (WCAG 2.5.8).
+filters_pad_px = [8.0, 10.0, 4.0]
+filter_gap_px = 4.0
+filter_px = [28.0, 12.0, 12.0, 5.0]
+# A row (.lrow): the gap between its parts and its least padding top and bottom; the tick box (.ck: side, radius, border,
+# number size) and its number's weight; the thumbnail tile (.th2: width, height, radius, icon) and the picture's inset;
+# the meta line (.tt .m: size, gap above); the pin (.pin .i); the expires chip (.exp: text size, padding top and bottom,
+# sides), 11 px over the mock-up's 10 so it reads.
+row_gap_px = 9.0
+row_pad_px = 4.0
+tick_px = [22.0, 6.0, 1.5, 11.0]
+tick_weight = 600
+thumb_px = [46.0, 34.0, 6.0, 17.0]
+thumb_inset_px = 2.0
+meta_px = [10.5, 1.0]
+pin_px = 13.0
+expires_px = [11.0, 2.0, 8.0]
+# Buttons (.btn): height, radius, side padding, text size, icon, icon gap, and the text's weight; 32 px high so each is a
+# big target. The gap between the footer's buttons (.lfoot).
+button_px = [32.0, 7.0, 11.0, 12.0, 14.0, 6.0]
+button_weight = 600
+foot_gap_px = 8.0
+# The note band under the header (padding, radius, text size), the storage line (padding top and bottom, text size, icon)
+# and the preview's text size (Latin, Arabic).
+note_px = [7.0, 8.0, 12.0]
+room_px = [6.0, 11.0, 13.0]
+preview_px = [13.0, 14.5]
