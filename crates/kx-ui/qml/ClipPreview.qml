@@ -119,6 +119,8 @@ Item {
         anchors.verticalCenter: box.verticalCenter
         page: pre.paged ? pre.paged.at : 0
         pages: pre.paged ? pre.paged.count : 0
+        // The text's total shows once its last page is laid out.
+        counted: pre.paged !== prose || prose.done
         canBack: page > 0
         canOn: page < pages - 1
         ui: pre.ui

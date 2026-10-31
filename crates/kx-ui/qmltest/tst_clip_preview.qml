@@ -1,6 +1,6 @@
 // The clipboard panel's preview page over the hub's views: long text paged on demand with no scrolling, each page
-// fitting its box and the pages joining back to the whole text, Arabic in its font from the right, an image with the
-// kind's icon to fall back on, each named for readers, files paged, and Back, Pin, Delete and Insert sent to the hub.
+// fitting its box, the pages joining back to the whole text and the total shown once known, Arabic in its font from
+// the right, an image with its icon to fall back on, files paged across redraws, and the footer sent to the hub.
 import QtQuick
 import QtTest
 import "../qml"
@@ -106,6 +106,35 @@ Item {
             compare(t.ends.length, 3, "a turn lays out the page after it");
             tryVerify(() => t.done, 5000, "the rest comes a page per frame");
             compare(t.ends[t.count - 1], box.view.preview.text.length, "to the end");
+            box.visible = false;
+        }
+
+        // The total shows only once every page is laid out, so a reader never hears a count that still grows.
+        function test_the_page_total_waits_for_the_last_page() {
+            const box = open("text");
+            const t = pager(box);
+            t.cut();
+            verify(!t.done, "pages still to lay out");
+            compare(Kit.texts(box.contentItem, box.ui.pageText(1, t.count)).length, 0, "no partial total");
+            tryVerify(() => t.done, 5000, "the rest comes a page per frame");
+            compare(Kit.texts(box.contentItem, box.ui.pageText(1, t.count)).length, 1, "the whole total");
+            box.visible = false;
+        }
+
+        // A new view of the same files, as each thumbnail or copy brings, keeps the page; other files start on page 1.
+        function test_the_files_page_stays_across_views_of_the_same_entry() {
+            const box = open("files");
+            mouseClick(one(box.contentItem, "clip.text-on"));
+            verify(waitForPolish(box));
+            compare(pager(box).at, 1);
+            box.view = Kit.view("en", "files");
+            verify(waitForPolish(box));
+            compare(pager(box).at, 1, "a redraw keeps the page");
+            const other = Kit.view("en", "files");
+            other.preview.paths = other.preview.paths.slice(1);
+            box.view = other;
+            verify(waitForPolish(box));
+            compare(pager(box).at, 0, "other files start on page 1");
             box.visible = false;
         }
 

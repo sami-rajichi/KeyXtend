@@ -23,8 +23,10 @@ Item {
     // The paths on the shown page.
     readonly property var shown: paths.slice(at * per, ends[at])
     readonly property var pn: lk.shape.panel
+    // The paths as text, which changes only with what they hold, so a redraw of the same entry keeps the page.
+    readonly property string key: JSON.stringify(paths)
 
-    onPathsChanged: at = 0
+    onKeyChanged: at = 0
 
     Column {
         width: parent.width

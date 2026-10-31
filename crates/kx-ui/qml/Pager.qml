@@ -18,6 +18,8 @@ Column {
     // The buttons' UI Automation ids, when gates know them.
     property string backId: ""
     property string onId: ""
+    // The page count is final; until then no number shows, so a reader never hears a total that still grows.
+    property bool counted: true
 
     // Back (by -1) or Next (by 1) was clicked.
     signal turn(int by)
@@ -39,7 +41,7 @@ Column {
     }
     Label {
         width: pager.pn.page_px[0] * pager.s
-        text: pager.pages > 1 && pager.ui ? pager.ui.pageText(pager.page + 1, pager.pages) : ""
+        text: pager.pages > 1 && pager.counted && pager.ui ? pager.ui.pageText(pager.page + 1, pager.pages) : ""
         font.family: pager.res.fam.ui
         font.pixelSize: pager.pn.count_px * pager.s
         font.weight: pager.pn.count_weight
