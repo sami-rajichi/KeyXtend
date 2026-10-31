@@ -90,17 +90,6 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
-/// The kind of `paste`.
-fn kind(paste: &Paste) -> Kind {
-    match paste {
-        Paste::Idle => Kind::Idle,
-        Paste::Checking { .. } => Kind::Checking,
-        Paste::Making { .. } => Kind::Making,
-        Paste::Asked { .. } => Kind::Asked,
-        Paste::Gap { .. } => Kind::Gap,
-    }
-}
-
 /// What a write held: its text, or its paths.
 fn label(parts: &[ClipPart]) -> String {
     match parts.first() {
@@ -153,7 +142,13 @@ impl Run {
 
     /// Where the insert is now.
     fn kind(&self) -> Kind {
-        kind(self.rig.pasting())
+        match self.rig.pasting() {
+            Paste::Idle => Kind::Idle,
+            Paste::Checking { .. } => Kind::Checking,
+            Paste::Making { .. } => Kind::Making,
+            Paste::Asked { .. } => Kind::Asked,
+            Paste::Gap { .. } => Kind::Gap,
+        }
     }
 
     /// True while the panel shows.
