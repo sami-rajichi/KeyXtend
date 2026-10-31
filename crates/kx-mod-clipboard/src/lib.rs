@@ -6,11 +6,14 @@
 #![warn(missing_docs)]
 
 pub mod entry;
+pub mod find;
 pub mod follow;
 pub mod hash;
 pub mod keep;
 pub mod order;
+pub mod panel;
 pub mod store;
+pub mod view;
 
 #[cfg(test)]
 mod fixture;

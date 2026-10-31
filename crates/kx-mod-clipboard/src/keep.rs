@@ -68,13 +68,17 @@ pub fn trim(history: &mut History, limits: &Limits) -> Vec<Entry> {
 
 /// Takes out the unpinned entries whose day is past `keep_days` on `today`, and media past `media_days`; gives them.
 pub fn sweep(history: &mut History, today: Date, limits: &Limits) -> Vec<Entry> {
-    history.take_where(|e| {
-        let Place::Day(day) = e.place else {
-            return false;
-        };
-        let media = e.kind == ClipKind::Media && past(day, today, limits.media_days);
-        media || past(day, today, limits.keep_days)
-    })
+    history.take_where(|e| leaves(e, today, limits))
+}
+
+/// True when the sweep on `today` takes `entry` out: unpinned, and past `keep_days`, or media past `media_days`.
+#[must_use]
+pub fn leaves(entry: &Entry, today: Date, limits: &Limits) -> bool {
+    let Place::Day(day) = entry.place else {
+        return false;
+    };
+    let media = entry.kind == ClipKind::Media && past(day, today, limits.media_days);
+    media || past(day, today, limits.keep_days)
 }
 
 /// True when `day` is `days` or more calendar days before `today`, so a folder of that day leaves; a later day,

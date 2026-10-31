@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 03:49 — P8: the keyboard's clipboard panel review fixes
+A dead key pressed while the clipboard panel takes keys now only spends the latches and keeps the keyboard's wait, so it stays in step with an accent the app may still hold. A panel key now first ends a burst left open by a held key, as a tap does, so its latches never ride on the search letter. Tests now show that without `WriteClipboard` the keyboard does not start and without `ReadClipboard` the panel hears no keys, and the search oracle covers Shift and `AltGr` with Caps Lock. The README says the language list takes Esc first when it opens over the panel.
+
 ## 2026-10-31 03:30 — P8: the keyboard's clipboard key, panel keys and paste
 The side key `clip` now asks the clipboard module to open or close its panel and lights while the module says it is open. While the panel is open, the moves, Space (tick), Backspace (erase) and character keys go to it instead of the app, each letter as exactly what the key would type now, kept `Redacted`; with Ctrl, Alt or Win latched a letter still goes to the app. On `PasteAsk` the keyboard lets every latch go and sends one plain `paste` shortcut, answering `Pasted` with whether it went. Win plus the key that gives V in the layout in front (the new `history` entry in `shortcuts.toml`) opens the panel only while the module wants the chord, and otherwise reaches Windows.
 

@@ -192,7 +192,7 @@ impl fmt::Debug for Entry {
 }
 
 /// The plain text part's text.
-fn text_of(parts: &[ClipPart]) -> Option<&str> {
+pub(crate) fn text_of(parts: &[ClipPart]) -> Option<&str> {
     parts.iter().find_map(|p| match p {
         ClipPart::Text(text) => Some(text.expose().as_str()),
         _ => None,
@@ -227,8 +227,9 @@ fn name(path: &Path) -> Cow<'_, str> {
         .to_string_lossy()
 }
 
-/// `text` on one line: each run of blanks, line breaks and control characters as one space.
-fn flat(text: &str) -> impl Iterator<Item = char> + '_ {
+/// `text` on one line: each run of blanks, line breaks and control characters as one space; search folds a query
+/// the same way.
+pub(crate) fn flat(text: &str) -> impl Iterator<Item = char> + '_ {
     let mut gap = false;
     text.chars().filter_map(move |c| {
         let blank = c.is_whitespace() || c.is_control();
