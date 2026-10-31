@@ -1,6 +1,6 @@
 // The clipboard panel's window (spec §7; mock-up .clip): head, search line, filters and paged list, or the Delete-all
-// question or preview in their place, then the footer and the storage line, which a note takes over while it shows.
-// It keeps its size as views change, sends each click to the hub as `Ui.clipAct` and never takes focus (ADR-0013).
+// question or preview in their place, then the footer and the storage line, whose text a note can take over. It keeps
+// its size as views change, sends each click to the hub as `Ui.clipAct` and never takes focus (ADR-0013).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -178,30 +178,17 @@ Window {
                 s: box.s
                 onAct: (kind, arg) => box.act(kind, arg)
             }
-            // The storage line, or the note in its place while one shows, so the note adds no height.
-            Item {
+            // The storage line, with a note in its text's place, so the note adds little height.
+            ClipRoom {
                 width: col.width
-                height: Math.max(room.height, note.visible ? note.height : 0)
-                ClipRoom {
-                    id: room
-                    width: col.width
-                    visible: !note.visible
-                    text: box.view.room
-                    folder: box.view.words.openFolder
-                    names: names
-                    lk: box.lk
-                    res: box.res
-                    s: box.s
-                    onOpen: box.ui.openFolder()
-                }
-                ClipNote {
-                    id: note
-                    width: col.width
-                    text: box.view.note
-                    lk: box.lk
-                    res: box.res
-                    s: box.s
-                }
+                text: box.view.room
+                note: box.view.note
+                folder: box.view.words.openFolder
+                names: names
+                lk: box.lk
+                res: box.res
+                s: box.s
+                onOpen: box.ui.openFolder()
             }
         }
         PressWatch {

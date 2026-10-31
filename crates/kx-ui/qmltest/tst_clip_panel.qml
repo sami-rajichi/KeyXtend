@@ -140,18 +140,24 @@ Item {
             box.visible = false;
         }
 
-        // The note takes the storage line's place, under the footer, so it adds little height.
-        function test_the_note_takes_the_storage_lines_place_while_it_shows() {
+        // The note takes the storage text's place under the footer, so it adds little height; Ruling 58: Open folder
+        // keeps its place beside it, as the way out when the disk is low.
+        function test_the_note_takes_the_storage_texts_place_beside_open_folder() {
             const box = open("confirm");
             const plain = open("list");
             const note = Kit.texts(box.contentItem, box.view.note)[0];
             verify(note, "the note shows");
-            compare(Kit.texts(box.contentItem, box.view.room).length, 0, "the storage line gives way");
-            verify(!one(box.contentItem, "clip.open-folder"), "with its button");
+            compare(Kit.texts(box.contentItem, box.view.room).length, 0, "the storage text gives way");
+            const folder = button(box, "clip.open-folder");
+            verify(folder.enabled, "Open folder stays usable");
+            const x = o => o.mapToItem(box.contentItem, 0, 0).x;
+            verify(x(note) + note.width <= x(folder), "the note ends before Open folder");
             const y = o => o.mapToItem(box.contentItem, 0, 0).y;
             verify(y(note) > y(button(box, "clip.insert")), "under the footer");
             verify(box.height < plain.height + note.height, "no band of its own: " + box.height + " vs " + plain.height);
-            compare(Kit.texts(plain.contentItem, plain.view.room).length, 1, "without a note the storage line shows");
+            compare(Kit.texts(plain.contentItem, plain.view.room).length, 1, "without a note the storage text shows");
+            mouseClick(folder);
+            compare(acts(box), ["openFolder"]);
             box.visible = plain.visible = false;
         }
 

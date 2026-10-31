@@ -1,5 +1,5 @@
-// The clipboard panel's note band (spec §7): why a copy was not kept, or an insert failed. It takes the storage line's
-// place while it shows and rises in with each new note.
+// The clipboard panel's note band (spec §7): why a copy was not kept, or an insert failed. It takes the storage text's
+// place beside Open folder while it shows (Ruling 58) and rises in with each new note.
 import QtQuick
 
 Item {
@@ -12,10 +12,9 @@ Item {
     required property real s
 
     readonly property var sh: lk.shape.clip.note_px
-    readonly property real side: lk.shape.panel.foot_pad_px[1] * s
 
     visible: !!text
-    height: band.height + 2 * lk.shape.clip.room_px[0] * s
+    height: band.height
     onTextChanged: if (text) rise.play()
     Accessible.role: Accessible.StaticText
     Accessible.name: text || ""
@@ -23,9 +22,7 @@ Item {
 
     Rise {
         id: rise
-        x: note.side
-        y: note.lk.shape.clip.room_px[0] * note.s
-        width: note.width - 2 * note.side
+        width: note.width
         height: band.height
         move: note.lk.motion.clip.swap
         from: note.lk.motion.amount.pop_rise_px * note.s

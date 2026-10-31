@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 09:45 — P8: Open folder stays beside a clipboard note
+A note now replaces only the storage text, and Open folder keeps its place beside it, as the way out when the disk is low (Ruling 58). The panel still fits above the keyboard on a 1366×768 screen in every look, at a fit of 0.86 or more.
+
 ## 2026-10-31 09:37 — P8: the clipboard panel fits above the keyboard, pictures keep their size
 The panel now shrinks to the room when it fits neither above nor below the keyboard, never below `[panel] min_fit` (0.80), with the fit worked out by the hub's `pop_fit` beside `geom::beside`. The note takes the storage line's place and paddings were trimmed, so on a 1366×768 screen the panel fits above the keys at a fit of 0.89 or more in every look. A preview picture keeps its own size and only shrinks to the box, and a path in an Arabic folder takes the Arabic font. The unused `file-audio` icon is gone.
 
