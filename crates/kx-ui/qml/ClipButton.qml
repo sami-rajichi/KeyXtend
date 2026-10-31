@@ -1,6 +1,5 @@
-// A clipboard panel button (mock-up .btn): an icon and a label on its fill, or the icon alone, square. Ghost buttons
-// sit on pop_hover, Delete on the danger keys' colours and Insert on Enter's; flat ones show their fill only under the
-// pointer. A button with nothing to act on shows dimmed, never hidden, so nothing moves. It acts at let-go (ADR-0024).
+// A clipboard panel button (mock-up .btn): an icon and a label, or the icon alone, on a ghost, danger, Enter-coloured
+// or flat fill. One with nothing to act on shows dimmed, never hidden, and it acts at let-go (ADR-0024).
 import QtQuick
 
 Item {

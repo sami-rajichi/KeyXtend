@@ -341,7 +341,8 @@ var lk = {
       "gap_px": [
         10.0,
         8.0
-      ]
+      ],
+      "min_fit": 0.8
     },
     "ring": {
       "box_px": 76.0,
@@ -457,11 +458,12 @@ var lk = {
       "empty_px": 30.0,
       "search_icon_px": 15.0,
       "caret_px": 2.0,
+      "caret_gap_px": 2.0,
       "underline_px": 2.0,
       "filters_pad_px": [
-        8.0,
+        6.0,
         10.0,
-        4.0
+        2.0
       ],
       "filter_gap_px": 4.0,
       "filter_px": [
@@ -471,7 +473,7 @@ var lk = {
         5.0
       ],
       "row_gap_px": 9.0,
-      "row_pad_px": 4.0,
+      "row_pad_px": 2.0,
       "tick_px": [
         22.0,
         6.0,
@@ -506,13 +508,14 @@ var lk = {
       ],
       "button_weight": 600,
       "foot_gap_px": 8.0,
+      "question_gap_px": 12.0,
       "note_px": [
         7.0,
         8.0,
         12.0
       ],
       "room_px": [
-        6.0,
+        4.0,
         11.0,
         13.0
       ],

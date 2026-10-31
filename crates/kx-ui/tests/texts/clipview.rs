@@ -24,6 +24,8 @@ const RED: [u8; 4] = [220, 40, 40, 255];
 /// How many lines of each long preview text, and how many paths the files preview holds.
 const LINES: u32 = 60;
 const PATHS: usize = 12;
+/// A path in an Arabic folder, which takes the Arabic font.
+const ARABIC_PATH: &str = r"C:\Users\Public\Documents\تقارير\تقرير-سنوي.pdf";
 
 /// Each click kind by the name QML holds it under.
 fn acts() -> Value {
@@ -175,7 +177,7 @@ fn lists() -> [(&'static str, ClipPage); 5] {
     ]
 }
 
-/// The preview pages: long Latin and Arabic text, an image, one the worker could not draw, and many files.
+/// The preview pages: long Latin and Arabic text, an image, one the worker could not draw, and many files, one Arabic.
 fn previews() -> [(&'static str, Preview); 5] {
     let latin = long("The panel pages long text one box at a time, so nothing ever scrolls.");
     let arabic = long("تعرض اللوحة النص الطويل صفحةً بعد صفحة، فلا شيء يحتاج إلى التمرير.");
@@ -188,6 +190,7 @@ fn previews() -> [(&'static str, Preview); 5] {
             r"C:\Users\Public\Documents\Reports\report-{n:02}.pdf"
         ))
     });
+    let paths = paths.chain([PathBuf::from(ARABIC_PATH)]);
     [
         ("text", text(latin)),
         ("arabic", text(arabic)),

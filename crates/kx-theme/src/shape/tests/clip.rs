@@ -14,7 +14,11 @@ fn the_clipboard_panel_takes_the_mock_up_sizes() {
         ".lrow, .tt .m"
     );
     assert_eq!((c.pin_px, c.kept_px), (13.0, 11.0), ".pin .i, .sm");
-    assert_eq!(c.filters_pad_px, [8.0, 10.0, 4.0], ".filters");
+    assert_eq!(
+        c.filters_pad_px,
+        [6.0, 10.0, 2.0],
+        ".filters, trimmed so the panel fits above the keyboard"
+    );
     assert_eq!(c.empty_px, 30.0, ".locked-box .i");
     assert_eq!(c.tick_weight, 600, ".ck");
 }
@@ -54,5 +58,21 @@ fn an_odd_clipboard_size_is_refused_by_name() {
             "clip.underline_px",
         ),
         ("clip", "\nkept_px", "\nhue = 1.0\nkept_px", "hue"),
+    ]);
+}
+
+#[test]
+fn the_clipboard_panel_is_trimmed_to_fit_above_the_keyboard() {
+    let c = load().expect("shape.toml loads").clip;
+    assert_eq!(c.row_pad_px, 2.0, "rows keep their two title lines");
+    assert_eq!(c.room_px[0], 4.0, "the storage line's padding");
+    assert_eq!((c.caret_gap_px, c.question_gap_px), (2.0, 12.0));
+}
+
+#[test]
+fn a_panel_that_shrinks_stops_at_its_least_share() {
+    refused_in(&[
+        ("panel", "min_fit = 0.8", "min_fit = 1.5", "panel.min_fit"),
+        ("panel", "min_fit = 0.8", "min_fit = 0.0", "panel.min_fit"),
     ]);
 }

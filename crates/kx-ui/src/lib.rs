@@ -51,7 +51,7 @@ pub use bridges::{
 };
 #[cfg(all(feature = "qt", debug_assertions))]
 pub use churn::{caps_flipped, flip_caps};
-pub use geom::Area;
+pub use geom::{Area, Fitted};
 pub use hub::{
     FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker, asks,
     clip_acts,

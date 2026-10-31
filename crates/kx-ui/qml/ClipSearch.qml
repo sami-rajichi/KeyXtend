@@ -21,7 +21,7 @@ Rectangle {
     readonly property bool typed: search.text.length > 0
     readonly property real pad: f[2] * s
     // The hint keeps clear of the caret, which waits on its language's start side.
-    readonly property real clear: 2 * c.caret_px * s
+    readonly property real clear: (c.caret_px + c.caret_gap_px) * s
 
     height: f[0] * s
     radius: f[1] * s

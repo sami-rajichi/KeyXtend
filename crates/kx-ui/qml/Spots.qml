@@ -11,12 +11,22 @@ QtObject {
     // Where a `w` by `h` pop-up goes, in Qt units: above the shown keyboard with its left edge at Qt x `left`, or
     // centred when `left` is NaN; with the keyboard hidden, at the bottom centre of the main screen. Null with no screen.
     function popSpot(w, h, left) {
+        const p = JSON.parse(win.ui.popAt(...beside(left), w, h));
+        return p ? logical(p.x, p.y) : null;
+    }
+    // The same for a pop-up panel, with the share of its size it takes there (`{x, y, fit}`): one too tall for the
+    // room above or below the keyboard shrinks, never below the theme's least fit (spec §3.4).
+    function popFit(w, h, left) {
+        const p = JSON.parse(win.ui.popFit(...beside(left), w, h));
+        return p ? Object.assign(logical(p.x, p.y), { fit: p.fit }) : null;
+    }
+    // The shown keyboard's box in physical pixels (JSON, null while hidden), the pop-up's left edge and whether it is
+    // centred, as `popAt` and `popFit` take them.
+    function beside(left) {
         const a = physical(win.at.x, win.at.y);
         const over = win.visible ? { x: a.x, y: a.y, w: win.drawn.width * a.dpr, h: win.drawn.height * a.dpr } : null;
         const centred = isNaN(left);
-        const l = centred ? 0 : physical(left, win.at.y).x;
-        const p = JSON.parse(win.ui.popAt(JSON.stringify(over), l, centred, w, h));
-        return p ? logical(p.x, p.y) : null;
+        return [JSON.stringify(over), centred ? 0 : physical(left, win.at.y).x, centred];
     }
 
     // Qt units for physical pixel (px, py), using the scale of the screen that holds it; Qt keeps each screen's corner unscaled.

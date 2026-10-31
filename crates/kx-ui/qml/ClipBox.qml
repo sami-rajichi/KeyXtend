@@ -1,7 +1,6 @@
-// The clipboard panel's window (spec §7; mock-up .clip): the header, a note when one comes, the search line, the
-// filters and the paged list, or in their place the Delete-all question or the preview page, then the footer and the
-// storage line. Its size stays as views change, so nothing jumps. Each click goes to the hub as `Ui.clipAct`; the
-// board's keys drive it through the module, the scroll pad pages it, and it never takes focus (ADR-0013).
+// The clipboard panel's window (spec §7; mock-up .clip): head, search line, filters and paged list, or the Delete-all
+// question or preview in their place, then the footer and the storage line, which a note takes over while it shows.
+// It keeps its size as views change, sends each click to the hub as `Ui.clipAct` and never takes focus (ADR-0013).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -39,6 +38,8 @@ Window {
 
     // The panel holds the page mark, so the scroll pad pages it while it shows (ADR-0029); the mark goes with the window.
     property bool paged: false
+    // Its height per unit of size as last laid out, from which a fit to the room beside the keyboard starts.
+    property real unit: 0
 
     // Shows the panel, popping in (mock-up popIn), and asks for the page mark at once.
     function open() {
@@ -84,6 +85,7 @@ Window {
 
         Column {
             id: col
+            onPositioningComplete: box.unit = height / box.s
             width: parent.width
             ClipHead {
                 width: col.width
@@ -94,13 +96,6 @@ Window {
                 res: box.res
                 s: box.s
                 onAct: (kind, arg) => box.act(kind, arg)
-            }
-            ClipNote {
-                width: col.width
-                text: box.view.note
-                lk: box.lk
-                res: box.res
-                s: box.s
             }
             Item {
                 width: col.width
@@ -183,15 +178,30 @@ Window {
                 s: box.s
                 onAct: (kind, arg) => box.act(kind, arg)
             }
-            ClipRoom {
+            // The storage line, or the note in its place while one shows, so the note adds no height.
+            Item {
                 width: col.width
-                text: box.view.room
-                folder: box.view.words.openFolder
-                names: names
-                lk: box.lk
-                res: box.res
-                s: box.s
-                onOpen: box.ui.openFolder()
+                height: Math.max(room.height, note.visible ? note.height : 0)
+                ClipRoom {
+                    id: room
+                    width: col.width
+                    visible: !note.visible
+                    text: box.view.room
+                    folder: box.view.words.openFolder
+                    names: names
+                    lk: box.lk
+                    res: box.res
+                    s: box.s
+                    onOpen: box.ui.openFolder()
+                }
+                ClipNote {
+                    id: note
+                    width: col.width
+                    text: box.view.note
+                    lk: box.lk
+                    res: box.res
+                    s: box.s
+                }
             }
         }
         PressWatch {

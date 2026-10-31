@@ -96,29 +96,45 @@ Item {
             box.visible = false;
         }
 
-        function test_an_image_shows_large_and_the_kind_icon_waits_for_it() {
+        // An image keeps its own size at the keyboard's scale, centred; a larger one shrinks to fit the box.
+        function test_an_image_keeps_its_size_and_the_kind_icon_waits_for_it() {
             const box = open("image");
             const picture = () => Board.all(box.contentItem, o => o.visible && o.status !== undefined && o.cache !== undefined && o.icon === undefined)[0];
             const kind = () => Board.all(box.contentItem, o => o.visible && o.icon === NL.lk.icons.clip.kind_image);
             tryVerify(() => picture() && picture().status === Image.Ready, 2000, "the picture loads");
             verify(!picture().cache, "never cached");
-            verify(picture().width > NL.lk.shape.clip.thumb_px[0], "larger than a thumbnail");
+            const p = picture();
+            verify(p.width <= p.sourceSize.width * box.s + 0.5 && p.height <= p.sourceSize.height * box.s + 0.5, "a small picture is never blown up");
+            verify(Math.abs(p.x + p.width / 2 - p.parent.width / 2) <= 1, "centred");
             compare(kind().length, 0);
+            const v = Kit.view("en", "image");
+            v.preview.url = Kit.large;
+            box.view = v;
+            tryVerify(() => picture() && picture().status === Image.Ready && picture().sourceSize.width > p.parent.width, 2000, "the large one loads");
+            const big = picture();
+            verify(Math.abs(big.paintedWidth - big.parent.width) < 1 || Math.abs(big.paintedHeight - big.parent.height) < 1, "a large picture fills the box");
+            verify(big.paintedWidth <= big.parent.width + 0.5 && big.paintedHeight <= big.parent.height + 0.5, "and stays in it");
             const drawing = open("drawing");
             const icon = Board.all(drawing.contentItem, o => o.visible && o.icon === NL.lk.icons.clip.kind_image);
             compare(icon.length, 1, "the kind's icon while the provider has none");
             box.visible = drawing.visible = false;
         }
 
-        function test_many_files_are_paged_and_each_shows_once() {
+        // Many paths take pages and each shows once; a path in an Arabic folder takes the Arabic font, a Latin one not.
+        function test_many_files_are_paged_and_each_shows_once_in_its_font() {
             const box = open("files");
             const paths = box.view.preview.paths;
             const shown = walk(box, f => f.shown.slice());
-            verify(shown.length > 1, "twelve paths take pages");
+            verify(shown.length > 1, "the paths take pages");
             verify(shown.every(p => p.length <= shown[0].length && p.length > 0));
-            compare([].concat(...shown), paths);
-            for (const p of shown[shown.length - 1])
-                verify(Board.all(box.contentItem, o => o.visible && o.text === p).length === 1, p);
+            compare([].concat(...shown).map(p => p.path), paths.map(p => p.path));
+            const last = shown[shown.length - 1];
+            verify(last.some(p => p.arabic) && last.some(p => !p.arabic), "the last page holds both kinds");
+            for (const p of last) {
+                const label = Kit.texts(box.contentItem, p.path);
+                compare(label.length, 1, p.path);
+                compare(label[0].font.family, p.arabic ? box.res.fam.arabic : box.res.fam.latin, p.path);
+            }
             box.visible = false;
         }
 

@@ -1,6 +1,6 @@
 // The clipboard panel's filters (spec §7; mock-up .filters and .fl): All, Text, Images, Files and Media as pill chips,
-// the shown one filled and checked, so it reads by more than its colour. Each chip stays put as views change, so its
-// fill fades to the new state; each one is a big target for one finger (WCAG 2.5.8).
+// the shown one filled and checked so it reads by more than colour. The chips stay put as views change, their fills
+// fade, and each is a big target for one finger (WCAG 2.5.8).
 pragma ComponentBehavior: Bound
 import QtQuick
 

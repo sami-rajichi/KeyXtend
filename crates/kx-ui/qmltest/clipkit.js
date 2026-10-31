@@ -4,8 +4,9 @@
 // What the clipboard panel's tests share: the hub's views with their pictures drawn from data URLs, since
 // qmltestrunner has no `clip` provider, and the panel's parts by what they say.
 
-// A 2 by 2 picture, and the one clear pixel the provider gives when it has no picture.
+// A 2 by 2 picture, a 1000 by 800 one larger than any panel, and the clear pixel the provider gives when it has none.
 var picture = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGO4o6HxH4QZYAwATUwIraFLCzAAAAAASUVORK5CYII=";
+var large = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+gAAAMgAQAAAACYY3WQAAAAeUlEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgzwCJzwABXJCwkwAAAABJRU5ErkJggg==";
 var clear = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";
 
 // A copy of view `name` in language `tag`, each `image://clip/` URL drawn as `picture`.

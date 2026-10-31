@@ -1,12 +1,12 @@
-// The preview page's files: their paths as a list, rows per page as every list has (ADR-0008), each with the file icon
-// and the path shortened in its middle, so its drive and name both show.
+// The preview page's files as a list, rows per page as every list has (ADR-0008), each path shortened in its middle beside
+// the file icon, an Arabic one in the Arabic font.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
     id: files
 
-    // The paths, rows per page and a row's height, the look, fonts, icons and size.
+    // The paths (`{path, arabic}`), rows per page and a row's height, the look, fonts, icons and size.
     required property var paths
     required property int rows
     required property real rowH
@@ -33,11 +33,11 @@ Item {
             model: files.shown
             delegate: Item {
                 id: line
-                required property string modelData
+                required property var modelData
                 width: parent.width
                 height: files.rowH
                 Accessible.role: Accessible.ListItem
-                Accessible.name: modelData
+                Accessible.name: modelData.path
 
                 Icon {
                     id: glyph
@@ -54,10 +54,10 @@ Item {
                     anchors.leftMargin: files.lk.shape.clip.row_gap_px * files.s
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    text: line.modelData
+                    text: line.modelData.path
                     elide: Text.ElideMiddle
-                    font.family: files.res.fam.latin
-                    font.pixelSize: files.pn.row_text_px[0] * files.s
+                    font.family: line.modelData.arabic ? files.res.fam.arabic : files.res.fam.latin
+                    font.pixelSize: files.pn.row_text_px[line.modelData.arabic ? 1 : 0] * files.s
                     color: files.lk.palette.pop_ink
                 }
             }

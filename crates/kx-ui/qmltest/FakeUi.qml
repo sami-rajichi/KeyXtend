@@ -41,6 +41,8 @@ QtObject {
     property int trayPixels: 16
     // Where `popAt` puts every pop-up, in physical pixels.
     property point popSpot: Qt.point(40, 30)
+    // The room above the keyboard, in Qt units, that `popFit` shrinks a pop-up panel into; endless by default.
+    property real fitRoom: Infinity
     // The keyboard's mode the hub keeps, as `keepMode` last set it.
     property var mode: ({ away: false, minimised: false })
     // The chip lane as the hub writes it, the start's until a test sets one; setting it sends `wordsChanged`. How many
@@ -225,6 +227,12 @@ QtObject {
     function popAt(over, left, centred, w, h) {
         note("popAt " + (JSON.parse(over) ? "over" : "home") + " " + (centred ? "centred" : "left"));
         return JSON.stringify({ x: popSpot.x, y: popSpot.y });
+    }
+    // A pop-up panel goes where `popAt` puts pop-ups, shrunk to the room as the hub does, never below the least fit.
+    function popFit(over, left, centred, w, h) {
+        note("popFit " + (JSON.parse(over) ? "over" : "home") + " " + (centred ? "centred" : "left"));
+        const fit = Math.min(1, Math.max(look.shape.panel.min_fit, fitRoom / h));
+        return JSON.stringify({ x: popSpot.x, y: popSpot.y, fit: fit });
     }
     // A menu goes up from the click, as the hub puts it.
     function menuAt(x, y, w, h) {

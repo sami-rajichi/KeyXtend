@@ -1,6 +1,8 @@
 use super::*;
 use kx_module_api::ports::BASE_DPI;
 
+mod fit;
+
 fn rect(x: i32, y: i32, w: i32, h: i32) -> Rect {
     Rect { x, y, w, h }
 }

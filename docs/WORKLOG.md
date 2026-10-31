@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 09:37 — P8: the clipboard panel fits above the keyboard, pictures keep their size
+The panel now shrinks to the room when it fits neither above nor below the keyboard, never below `[panel] min_fit` (0.80), with the fit worked out by the hub's `pop_fit` beside `geom::beside`. The note takes the storage line's place and paddings were trimmed, so on a 1366×768 screen the panel fits above the keys at a fit of 0.89 or more in every look. A preview picture keeps its own size and only shrinks to the box, and a path in an Arabic folder takes the Arabic font. The unused `file-audio` icon is gone.
+
 ## 2026-10-31 09:32 — P8: G20 on the product and G8's clipboard part
 `g20 keyxtend` starts the test build on its own data folder with the clipboard defaults, makes plain, marked, cleared and skipped-app copies, reads the panel's rows by gate id, searches and ticks on the product's keys, and checks Insert (2) in its own Notepad tab, then Win and V with the history key on and off. `g20 worker` reads the running product's worker tokens (no uiAccess, at most Medium), and `g8 clip` fills 1,000 copies with pictures made in memory and judges memory and growth over panel rounds against `[g8]`. Their settings are in `kx-gates-p8.toml`, and the pure parts (rows, search folding, the pasted text, tick and Insert names, the token verdict, the config refusals) have tests. The gates were written and unit-tested only; the controller runs them.
 

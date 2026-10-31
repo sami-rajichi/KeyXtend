@@ -1,5 +1,5 @@
 //! The preview page as QML reads it: text with its lines kept and no hidden marks, the image's URL of the kept round,
-//! or the files' paths.
+//! or the files' paths, each marked when it holds Arabic.
 
 use super::url;
 use crate::I18n;
@@ -31,8 +31,15 @@ pub(super) enum Shown {
         url: Option<String>,
     },
     Files {
-        paths: Vec<String>,
+        paths: Vec<FilePath>,
     },
+}
+
+/// A file's path without hidden marks, and whether it holds Arabic, so it takes the Arabic font as a row title does.
+#[derive(Serialize)]
+pub(super) struct FilePath {
+    path: String,
+    arabic: bool,
 }
 
 /// Preview `p` of view `round`: text with its lines kept, the image's URL, or the files' paths.
@@ -55,9 +62,18 @@ pub(super) fn preview(p: &Preview, round: u32, t: &I18n) -> Shown {
             paths: paths
                 .expose()
                 .iter()
-                .map(|p| clean(&p.to_string_lossy()))
+                .map(|p| path(&p.to_string_lossy()))
                 .collect(),
         },
+    }
+}
+
+/// `p` without hidden marks, marked when it holds Arabic.
+fn path(p: &str) -> FilePath {
+    let path = clean(p);
+    FilePath {
+        arabic: is_arabic(&path),
+        path,
     }
 }
 

@@ -493,18 +493,58 @@ var views = {
       "preview": {
         "kind": "files",
         "paths": [
-          "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          },
+          {
+            "arabic": true,
+            "path": "C:\\Users\\Public\\Documents\\تقارير\\تقرير-سنوي.pdf"
+          }
         ]
       },
       "room": "المحفوظات: 182,00 ميغابايت من 1,00 غيغابايت · 412,00 غيغابايت متوفرة على D:",
@@ -1599,18 +1639,58 @@ var views = {
       "preview": {
         "kind": "files",
         "paths": [
-          "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          },
+          {
+            "arabic": true,
+            "path": "C:\\Users\\Public\\Documents\\تقارير\\تقرير-سنوي.pdf"
+          }
         ]
       },
       "room": "History: 182.00 MB of 1.00 GB · 412.00 GB free on D:",
@@ -2705,18 +2785,58 @@ var views = {
       "preview": {
         "kind": "files",
         "paths": [
-          "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf",
-          "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-01.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-02.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-03.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-04.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-05.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-06.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-07.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-08.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-09.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-10.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-11.pdf"
+          },
+          {
+            "arabic": false,
+            "path": "C:\\Users\\Public\\Documents\\Reports\\report-12.pdf"
+          },
+          {
+            "arabic": true,
+            "path": "C:\\Users\\Public\\Documents\\تقارير\\تقرير-سنوي.pdf"
+          }
         ]
       },
       "room": "Historique : 182,00 Mo sur 1,00 Go · 412,00 Go libres sur D:",

@@ -45,6 +45,7 @@ fn the_extra_windows_take_the_mock_up_sizes() {
     assert_eq!(s.panel.off_share, 0.35, ".pg[disabled]");
     assert_eq!(s.panel.page_px[..2], [38.0, 46.0], ".pg");
     assert_eq!(s.panel.gap_px, [10.0, 8.0], "placePop");
+    assert_eq!(s.panel.min_fit, 0.8, "spec §3.4: never below 0.80×");
     let heavy = text().replacen("status_weight = 600", "status_weight = 950", 1);
     assert!(
         parse(&heavy)

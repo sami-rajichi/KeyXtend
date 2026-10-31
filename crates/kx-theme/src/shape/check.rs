@@ -77,9 +77,9 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outlines, the clipboard's caret and underline, the smallest label, the mark's, the dots' and
-    /// the D-pad's icon sizes must be above 0, and the panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the
-    /// D-pad's gaps 0 or more, all finite.
+    /// The shimmer span, the outlines, the clipboard's caret and underline, the panels' least fit, the smallest label,
+    /// the mark's, the dots' and the D-pad's icon sizes must be above 0. The panel gaps, the label padding, the language
+    /// icon's gap, the mark's and the badge's place and the D-pad's gaps must be 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -95,6 +95,7 @@ impl Shape {
             ("outline.px", self.outline.px),
             ("clip.caret_px", self.clip.caret_px),
             ("clip.underline_px", self.clip.underline_px),
+            ("panel.min_fit", self.panel.min_fit),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
@@ -131,6 +132,7 @@ impl Shape {
             ("press.scale", self.press.scale),
             ("panel.radius_share", self.panel.radius_share),
             ("panel.off_share", self.panel.off_share),
+            ("panel.min_fit", self.panel.min_fit),
             ("ring.core_share", self.ring.core_share),
             ("lang.cycle.icon_share", self.lang.cycle.icon_share),
             ("dots.off", self.dots.off),

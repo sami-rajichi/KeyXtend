@@ -1,7 +1,6 @@
-// One clipboard row (spec §7; mock-up .lrow): the tick box, the thumbnail or kind icon, two lines of title over "time ·
-// size · app", the pin and the expires chip. A click only ticks or unticks it. Arabic flips text only (ADR-0020): an
-// Arabic title reads from the right in the Arabic font while every part keeps its place. A padding slot is blank and
-// takes no clicks. A new row rises in, a page turn slides the rows the way it went, and a new tick pops.
+// One clipboard row (spec §7; mock-up .lrow): tick box, thumbnail or kind icon, two title lines over "time · size ·
+// app", pin and expires chip; a click only ticks it, and a padding slot stays blank. An Arabic title reads from the
+// right in its font while each part keeps its place (ADR-0020); new rows rise in, page turns slide and ticks pop.
 import QtQuick
 
 Item {
@@ -31,7 +30,7 @@ Item {
     readonly property var c: lk.shape.clip
     readonly property var p: lk.palette
     // The ring's and the empty tick box's colour; lit rows sit on pop_hover or pop_sel, Highlight in high contrast.
-    readonly property color mark: hot || on && lk.contrast ? lk.sel_ink : p.ring
+    readonly property color mark: (hot || (on && lk.contrast)) ? lk.sel_ink : p.ring
     readonly property real gap: c.row_gap_px * s
 
     // What the slot showed last, so a new view knows what moved.

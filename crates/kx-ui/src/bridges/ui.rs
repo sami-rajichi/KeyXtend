@@ -105,6 +105,10 @@ pub mod qobject {
         #[qinvokable]
         fn pop_at(&self, over: &QString, left: f64, centred: bool, w: f64, h: f64) -> QString;
 
+        /// `pop_at` for a pop-up panel, with the share of its size it takes there: JSON `{x, y, fit}`, or null.
+        #[qinvokable]
+        fn pop_fit(&self, over: &QString, left: f64, centred: bool, w: f64, h: f64) -> QString;
+
         /// Where a `w` by `h` tray menu goes for a click at (`x`, `y`); a JSON point in physical pixels, or null.
         #[qinvokable]
         fn menu_at(&self, x: i32, y: i32, w: f64, h: f64) -> QString;

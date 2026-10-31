@@ -255,17 +255,21 @@ fn a_text_preview_keeps_its_lines_and_drops_hidden_marks() {
 }
 
 #[test]
-fn a_files_preview_lists_its_paths_without_hidden_marks() {
+fn a_files_preview_lists_its_paths_without_hidden_marks_and_marks_arabic_ones() {
     let mut p = page(1, vec![row(7, "a")]);
     let paths = vec![
         PathBuf::from("C:\\a\u{202e}\\b.txt"),
-        PathBuf::from("D:\\c"),
+        PathBuf::from("D:\\تقارير\\c"),
     ];
     p.preview = Some(Preview::Files(Redacted::new(paths)));
     let v = read("en", p);
+    let want = json!({"kind": "files", "paths": [
+        {"path": "C:\\a\\b.txt", "arabic": false},
+        {"path": "D:\\تقارير\\c", "arabic": true}
+    ]});
     assert_eq!(
-        v["preview"],
-        json!({"kind": "files", "paths": ["C:\\a\\b.txt", "D:\\c"]})
+        v["preview"], want,
+        "an Arabic path takes the Arabic font, as a row title does"
     );
 }
 

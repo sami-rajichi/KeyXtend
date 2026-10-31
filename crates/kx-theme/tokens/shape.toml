@@ -203,9 +203,11 @@ count_px = 11.0
 count_weight = 600
 foot_pad_px = [7.0, 12.0]
 # The text field is not in the mock-up: height, radius (.btn), side padding, text size (.field). The panel sits gap_px[0] above
-# the keyboard, or below it when there is no room, and at least gap_px[1] inside the screen (placePop).
+# the keyboard, or below it when there is no room, and at least gap_px[1] inside the screen (placePop). A panel that fits
+# neither shrinks to the room, but never below min_fit of its size (spec §3.4).
 field_px = [34.0, 7.0, 10.0, 14.5]
 gap_px = [10.0, 8.0]
+min_fit = 0.8
 
 [notice]
 # The notice banner, which grows with the keyboard and sits panel.gap_px[0] above it (mock-up .toast, lines 398-400):
@@ -299,22 +301,23 @@ strip_px = [28.0, 6.0, 8.0, 12.0]
 # rows, pager, footer padding and search field: the kept line's size (.sm) and the empty line's icon (.locked-box .i).
 kept_px = 11.0
 empty_px = 30.0
-# The search line, not in the mock-up: its icon, the caret's width, and the ring-coloured line under it that shows where
-# letters go, as WinUI's focused TextBox draws its 2 px accent line.
+# The search line, not in the mock-up: its icon, the caret's width and its gap to the hint, and the ring-coloured line
+# under it that shows where letters go, as WinUI's focused TextBox draws its 2 px accent line.
 search_icon_px = 15.0
 caret_px = 2.0
+caret_gap_px = 2.0
 underline_px = 2.0
 # The filters (.filters: padding top, sides, bottom; gap) and a chip (.fl): height, side padding, the shown one's check
 # icon and its gap; its text is [chip]'s. 28 px high, over the mock-up's 21, so each is a big target (WCAG 2.5.8).
-filters_pad_px = [8.0, 10.0, 4.0]
+filters_pad_px = [6.0, 10.0, 2.0]
 filter_gap_px = 4.0
 filter_px = [28.0, 12.0, 12.0, 5.0]
-# A row (.lrow): the gap between its parts and its least padding top and bottom; the tick box (.ck: side, radius, border,
-# number size) and its number's weight; the thumbnail tile (.th2: width, height, radius, icon) and the picture's inset;
-# the meta line (.tt .m: size, gap above); the pin (.pin .i); the expires chip (.exp: text size, padding top and bottom,
-# sides), 11 px over the mock-up's 10 so it reads.
+# A row (.lrow): the gap between its parts and its least padding top and bottom, trimmed so the panel fits above the
+# keyboard; the tick box (.ck: side, radius, border, number size) and its number's weight; the thumbnail tile (.th2:
+# width, height, radius, icon) and the picture's inset; the meta line (.tt .m: size, gap above); the pin (.pin .i); the
+# expires chip (.exp: text size, padding top and bottom, sides), 11 px over the mock-up's 10 so it reads.
 row_gap_px = 9.0
-row_pad_px = 4.0
+row_pad_px = 2.0
 tick_px = [22.0, 6.0, 1.5, 11.0]
 tick_weight = 600
 thumb_px = [46.0, 34.0, 6.0, 17.0]
@@ -323,12 +326,13 @@ meta_px = [10.5, 1.0]
 pin_px = 13.0
 expires_px = [11.0, 2.0, 8.0]
 # Buttons (.btn): height, radius, side padding, text size, icon, icon gap, and the text's weight; 32 px high so each is a
-# big target. The gap between the footer's buttons (.lfoot).
+# big target. The gap between the footer's buttons (.lfoot), and between the Delete-all question's parts.
 button_px = [32.0, 7.0, 11.0, 12.0, 14.0, 6.0]
 button_weight = 600
 foot_gap_px = 8.0
-# The note band under the header (padding, radius, text size), the storage line (padding top and bottom, text size, icon)
-# and the preview's text size (Latin, Arabic).
+question_gap_px = 12.0
+# The note band, which takes the storage line's place while it shows (padding, radius, text size), the storage line
+# (padding top and bottom, text size, icon) and the preview's text size (Latin, Arabic).
 note_px = [7.0, 8.0, 12.0]
-room_px = [6.0, 11.0, 13.0]
+room_px = [4.0, 11.0, 13.0]
 preview_px = [13.0, 14.5]

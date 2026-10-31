@@ -14,6 +14,8 @@ pub struct ClipShape {
     pub search_icon_px: f32,
     /// The search line's caret width.
     pub caret_px: f32,
+    /// The gap between the caret and the search hint.
+    pub caret_gap_px: f32,
     /// The ring-coloured line under the search line.
     pub underline_px: f32,
     /// Padding around the filters: top, sides, bottom (`.filters`).
@@ -46,6 +48,8 @@ pub struct ClipShape {
     pub button_weight: u16,
     /// Gap between the footer's buttons (`.lfoot`).
     pub foot_gap_px: f32,
+    /// Gap between the Delete-all question's icon, text and buttons.
+    pub question_gap_px: f32,
     /// The note band: padding, radius, text size.
     pub note_px: [f32; 3],
     /// The storage line: padding top and bottom, text size, icon.

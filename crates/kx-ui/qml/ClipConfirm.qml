@@ -17,7 +17,6 @@ Item {
     // A click: its `Ui.clipAct` kind and number.
     signal act(string kind, int arg)
 
-    readonly property real gap: lk.shape.panel.body_gap_px * s
     readonly property real side: lk.shape.panel.foot_pad_px[1] * s
 
     visible: !!confirm
@@ -39,7 +38,7 @@ Item {
         Column {
             anchors.centerIn: parent
             width: parent.width - 2 * ask.side
-            spacing: 2 * ask.gap
+            spacing: ask.lk.shape.clip.question_gap_px * ask.s
             Icon {
                 anchors.horizontalCenter: parent.horizontalCenter
                 icon: ask.lk.icons.clip.delete

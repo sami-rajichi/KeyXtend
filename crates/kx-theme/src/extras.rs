@@ -117,6 +117,9 @@ pub struct PanelShape {
     pub field_px: [f32; 4],
     /// Gap to the keyboard, and the least gap to the screen edge (mock-up `placePop`).
     pub gap_px: [f32; 2],
+    /// The least share of its size a pop-up panel shrinks to when it fits neither above nor below the keyboard
+    /// (spec §3.4).
+    pub min_fit: f32,
 }
 
 /// The hold ring around the pointer and its burst (mock-up `.ring`, `.burst`); it does not grow with the keyboard.

@@ -1,7 +1,7 @@
 //! Window maths the UI does itself: boxes QML sends, the screen a window is on, and where the bubble and the pop-ups go.
 
 use kx_module_api::ports::{Corner, Point, Rect, Screen};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A box QML sends, in its own units from the window's top-left corner.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize)]
@@ -110,7 +110,7 @@ pub struct Size {
 }
 
 /// `v` kept from `lo` to `hi`; `lo` wins when there is no room between them.
-fn fit(v: i64, lo: i64, hi: i64) -> i32 {
+fn fit_in(v: i64, lo: i64, hi: i64) -> i32 {
     clamp(v.min(hi).max(lo))
 }
 
@@ -149,8 +149,77 @@ pub fn beside(size: Size, left: i32, over: Rect, work: Rect, gap: [i32; 2]) -> P
         e.top
     };
     Point {
-        x: fit(i64::from(left), e.left, e.right - w),
-        y: fit(top, e.top, e.bottom - h),
+        x: fit_in(i64::from(left), e.left, e.right - w),
+        y: fit_in(top, e.top, e.bottom - h),
+    }
+}
+
+/// A pop-up panel's top-left corner, and the share of its full size it is drawn at.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize)]
+pub struct Fitted {
+    /// Left edge.
+    pub x: i32,
+    /// Top edge.
+    pub y: i32,
+    /// The share of its size, from the least share to 1.
+    pub fit: f64,
+}
+
+/// `v` times `share`, rounded to a whole pixel.
+fn scaled(v: i64, share: f64) -> i64 {
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        reason = "pop-up sizes are far inside f64's exact range, and `as` saturates"
+    )]
+    let s = (v as f64 * share).round() as i64;
+    s
+}
+
+/// Where a `size` pop-up panel goes beside `over` and how much it shrinks (spec §3.4): whole `gap[0]` above `over`,
+/// else below it, else shrunk to the larger room but never below `least`, covering the keys only then. It stays
+/// `gap[1]` inside `work`, its left edge at `left`, or centred on `over` when `None`.
+#[must_use]
+pub fn fitted(
+    size: Size,
+    left: Option<i32>,
+    over: Rect,
+    work: Rect,
+    gap: [i32; 2],
+    least: f64,
+) -> Fitted {
+    let inner = inside(work, gap[1]);
+    let (top, space) = (i64::from(over.y), i64::from(gap[0]));
+    let bottom = top + i64::from(over.h);
+    let rooms = [top - space - inner.top, inner.bottom - bottom - space];
+    let (w, h) = (i64::from(size.w).max(0), i64::from(size.h).max(1));
+    #[allow(
+        clippy::cast_precision_loss,
+        reason = "room and size are far inside f64's exact range"
+    )]
+    let fit = if rooms.iter().any(|&r| r >= h) {
+        1.0
+    } else {
+        (rooms[0].max(rooms[1]) as f64 / h as f64).clamp(least, 1.0)
+    };
+    let (w, h) = (scaled(w, fit), scaled(h, fit));
+    let top_y = if rooms[0] >= h {
+        top - space - h
+    } else if rooms[1] >= h {
+        bottom + space
+    } else if rooms[0] >= rooms[1] {
+        inner.top
+    } else {
+        inner.bottom - h
+    };
+    let x = left.map_or_else(
+        || i64::from(over.x) + (i64::from(over.w) - w) / 2,
+        i64::from,
+    );
+    Fitted {
+        x: fit_in(x, inner.left, inner.right - w),
+        y: fit_in(top_y, inner.top, inner.bottom - h),
+        fit,
     }
 }
 
@@ -161,8 +230,8 @@ pub fn home(size: Size, work: Rect, edge: i32) -> Point {
     let (w, h) = (i64::from(size.w), i64::from(size.h));
     let x = i64::from(work.x) + (i64::from(work.w) - w) / 2;
     Point {
-        x: fit(x, e.left, e.right - w),
-        y: fit(e.bottom - h, e.top, e.bottom - h),
+        x: fit_in(x, e.left, e.right - w),
+        y: fit_in(e.bottom - h, e.top, e.bottom - h),
     }
 }
 
@@ -172,8 +241,8 @@ pub fn menu(size: Size, at: Point, work: Rect, edge: i32) -> Point {
     let e = inside(work, edge);
     let (w, h) = (i64::from(size.w), i64::from(size.h));
     Point {
-        x: fit(i64::from(at.x), e.left, e.right - w),
-        y: fit(i64::from(at.y) - h, e.top, e.bottom - h),
+        x: fit_in(i64::from(at.x), e.left, e.right - w),
+        y: fit_in(i64::from(at.y) - h, e.top, e.bottom - h),
     }
 }
 

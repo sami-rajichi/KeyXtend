@@ -51,10 +51,8 @@ outline = { ms = 167, curve = "ease_out" }
 notice = { ms = 200, curve = "ease_out" }
 menu = { ms = 140, curve = "ease_out" }
 
-# The clipboard panel, which the mock-up redraws at once: a tick's number pops in with the Stop's small overshoot,
-# the highlight ring glides to its row, a row new to its slot fades and rises in as another leaves it, and a turned
-# page's rows rise in from the way it turned. The small moves take WinUI's ControlFastAnimationDuration, the others a
-# panel's pop-in (.pop popIn .18s).
+# The clipboard panel: a tick pops with the Stop's overshoot, the highlight glides, and a new or turned row rises in.
+# The small moves take WinUI's ControlFastAnimationDuration, the others a panel's pop-in (.pop popIn .18s).
 [clip]
 tick = { ms = 167, curve = "spring" }
 highlight = { ms = 167, curve = "swift" }

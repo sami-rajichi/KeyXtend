@@ -12,6 +12,8 @@ import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
 import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as NL
+import "../../kx-theme/fixtures/look-et66-light.js" as EL
+import "../../kx-theme/fixtures/look-dolch-light.js" as DL
 
 Item {
     id: root
@@ -37,10 +39,11 @@ Item {
         function one(item, id) {
             return Kit.only(Board.all(item, o => o.visible && o.Accessible.id === id));
         }
-        // The panel showing view `name` in language `tag` (English by default), open and laid out.
-        function open(name, tag) {
+        // The panel showing view `name` in language `tag` (English by default) and `look` (Native by default), laid out.
+        function open(name, tag, look) {
             const ui = langs[tag || "en"];
-            const props = { ui: createTemporaryObject(uiC, root), lk: NL.lk, res: Board.resOf(NL.lk, ui), s: 1, view: Kit.view(tag || "en", name), rows: En.settings.pageRows, rtl: ui.lang.rtl };
+            const lk = (look || NL).lk;
+            const props = { ui: createTemporaryObject(uiC, root), lk: lk, res: Board.resOf(lk, ui), s: 1, view: Kit.view(tag || "en", name), rows: En.settings.pageRows, rtl: ui.lang.rtl };
             const box = createTemporaryObject(boxC, root, props);
             Pointer.through([box]);
             box.open();
@@ -123,24 +126,33 @@ Item {
         // Ruling 33: only a click on Yes deletes; the question covers the list until it is answered.
         function test_delete_all_asks_with_the_count_and_yes_or_no_answers() {
             const box = open("confirm");
-            compare(Kit.texts(box.contentItem, box.view.confirm.text).length, 1);
+            const question = Kit.texts(box.contentItem, box.view.confirm.text)[0];
+            verify(question, "the question names the count");
             verify(!button(box, "clip.insert").enabled, "the footer waits for the answer");
             compare(Board.all(box.contentItem, o => o.visible && o.place !== undefined && o.hi !== undefined && !o.Accessible.ignored).length, 0, "the list is covered");
+            mouseClick(question);
+            const card = Kit.only(Board.all(box.contentItem, o => o.visible && o.confirm !== undefined && o.yes !== undefined));
+            mouseClick(card, 2, 2);
+            compare(acts(box), [], "a click on the question's body answers nothing");
             mouseClick(button(box, "clip.no"));
             mouseClick(button(box, "clip.yes"));
             compare(acts(box), ["clipAct no 0", "clipAct yes 0"]);
             box.visible = false;
         }
 
-        function test_the_note_shows_under_the_head_and_the_storage_line_at_the_foot() {
+        // The note takes the storage line's place, under the footer, so it adds little height.
+        function test_the_note_takes_the_storage_lines_place_while_it_shows() {
             const box = open("confirm");
+            const plain = open("list");
             const note = Kit.texts(box.contentItem, box.view.note)[0];
-            const room = Kit.texts(box.contentItem, box.view.room)[0];
-            const title = Kit.texts(box.contentItem, box.view.title)[0];
+            verify(note, "the note shows");
+            compare(Kit.texts(box.contentItem, box.view.room).length, 0, "the storage line gives way");
+            verify(!one(box.contentItem, "clip.open-folder"), "with its button");
             const y = o => o.mapToItem(box.contentItem, 0, 0).y;
-            verify(y(title) < y(note), "under the head");
-            verify(y(room) > y(button(box, "clip.insert")), "the storage line closes the panel");
-            box.visible = false;
+            verify(y(note) > y(button(box, "clip.insert")), "under the footer");
+            verify(box.height < plain.height + note.height, "no band of its own: " + box.height + " vs " + plain.height);
+            compare(Kit.texts(plain.contentItem, plain.view.room).length, 1, "without a note the storage line shows");
+            box.visible = plain.visible = false;
         }
 
         function test_a_press_on_the_panel_is_seen_and_still_acts() {
@@ -152,26 +164,34 @@ Item {
             box.visible = false;
         }
 
-        // Every text the hub words fits: none is cut, and each stays inside the panel; row titles may end in an
-        // ellipsis by design.
-        function test_no_text_is_cut_in_english_french_or_arabic() {
+        // Every text the hub words fits in each look: none is cut, each stays inside the panel and the footer's buttons
+        // never meet; row titles may end in an ellipsis by design.
+        function test_no_text_is_cut_in_any_look_in_english_french_or_arabic() {
             const fonts = Board.loadFonts(root);
             tryVerify(() => Board.loaded(fonts), 5000, "the bundled fonts load");
-            for (const tag of ["en", "fr", "ar"]) {
-                for (const name of ["list", "confirm", "pinned", "empty", "text"]) {
-                    const box = open(name, tag);
-                    const titles = box.view.rows.map(r => r.title);
-                    const shown = Board.all(box.contentItem, o => o.visible && o.font !== undefined && o.text && titles.indexOf(o.text) < 0);
-                    for (const t of shown) {
-                        const at = t.mapToItem(box.contentItem, 0, 0);
-                        const where = tag + " " + name + ": " + t.text;
-                        verify(!t.truncated, where + " is cut");
-                        verify(at.x >= 0 && at.x + t.width <= box.width + 0.5, where + " leaves the panel");
-                        verify(t.implicitWidth <= t.width + 0.5 || t.wrapMode !== Text.NoWrap, where + " runs past its box");
-                    }
-                    box.visible = false;
+            for (const look of [NL, EL, DL]) {
+                for (const tag of ["en", "fr", "ar"]) {
+                    for (const name of ["list", "confirm", "pinned", "empty", "text"])
+                        fits(open(name, tag, look), look.lk.look.id + " " + tag + " " + name);
                 }
             }
+        }
+        // The panel `box` cuts no text and its footer's buttons stand apart, named `where` in a failure.
+        function fits(box, where) {
+            const titles = box.view.rows.map(r => r.title);
+            const shown = Board.all(box.contentItem, o => o.visible && o.font !== undefined && o.text && titles.indexOf(o.text) < 0);
+            for (const t of shown) {
+                const at = t.mapToItem(box.contentItem, 0, 0);
+                const said = where + ": " + t.text;
+                verify(!t.truncated, said + " is cut");
+                verify(at.x >= 0 && at.x + t.width <= box.width + 0.5, said + " leaves the panel");
+                verify(t.implicitWidth <= t.width + 0.5 || t.wrapMode !== Text.NoWrap, said + " runs past its box");
+            }
+            const foot = ["clip.preview", "clip.pin", "clip.delete", "clip.insert"].map(id => button(box, id));
+            const at = foot.map(o => ({ o: o, x: o.mapToItem(box.contentItem, 0, 0).x })).sort((a, b) => a.x - b.x);
+            for (let i = 1; i < at.length; i++)
+                verify(at[i - 1].x + at[i - 1].o.width <= at[i].x + 0.5, where + ": " + at[i - 1].o.label + " meets " + at[i].o.label);
+            box.visible = false;
         }
     }
 }

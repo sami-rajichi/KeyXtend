@@ -82,11 +82,14 @@ Item {
             res: pre.res
             s: pre.s
         }
-        // Never cached, so an old round's texture goes as the next view comes.
+        // Its own size at the keyboard's scale, centred, or shrunk to the box; never cached, so an old round's texture
+        // goes as the next view comes.
         Image {
             id: picture
-            anchors.fill: parent
-            visible: pre.kind === "image" && status === Image.Ready && implicitWidth > 1
+            anchors.centerIn: parent
+            width: Math.min(parent.width, sourceSize.width * pre.s)
+            height: Math.min(parent.height, sourceSize.height * pre.s)
+            visible: pre.kind === "image" && status === Image.Ready && sourceSize.width > 1
             source: pre.kind === "image" && pre.shown.url ? pre.shown.url : ""
             cache: false
             fillMode: Image.PreserveAspectFit
