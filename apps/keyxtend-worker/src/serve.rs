@@ -32,6 +32,11 @@ where
     }
 }
 
+/// Keeps a draw's panic off stderr: its reply says `Internal`, and its message and place are never written.
+pub fn hush() {
+    panic::set_hook(Box::new(|_| {}));
+}
+
 /// Runs `draw`, taking a panic as an internal failure.
 fn guard(draw: impl FnOnce() -> Result<Picture, Why>) -> Result<Picture, Why> {
     panic::catch_unwind(AssertUnwindSafe(draw)).unwrap_or(Err(Why::Internal))

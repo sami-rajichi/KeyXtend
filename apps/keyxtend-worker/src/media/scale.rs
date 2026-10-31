@@ -2,17 +2,18 @@
 //! ever held (ledger Ruling 12). Colours are averaged by alpha, so clear pixels do not darken their neighbours.
 
 use super::Picture;
-use kx_ipc::{RGBA_BYTES, Why};
+use kx_ipc::{MAX_SIDE, RGBA_BYTES, Why};
 
 /// One pixel: red, green, blue and alpha.
 pub type Rgba = [u8; RGBA_BYTES];
 /// One output pixel's sums: red, green and blue each times alpha, then alpha.
 type Sums = [u64; RGBA_BYTES];
 
-/// The size `width` by `height` shrinks to so its longest side is at most `side`; a smaller image keeps its size.
+/// The size `width` by `height` shrinks to so its longest side is at most `side`, and never past `MAX_SIDE`; a
+/// smaller image keeps its size.
 pub fn fit(width: u32, height: u32, side: u32) -> (u32, u32) {
     let long = u64::from(width.max(height));
-    let side = u64::from(side.max(1));
+    let side = u64::from(side.clamp(1, MAX_SIDE));
     if long <= side {
         return (width, height);
     }

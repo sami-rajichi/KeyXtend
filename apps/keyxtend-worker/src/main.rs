@@ -25,6 +25,7 @@ fn main() -> ExitCode {
 
 /// Answers draws on stdin and stdout until goodbye or the end of input.
 fn media_job(max_pixels: u64) -> ExitCode {
+    serve::hush();
     let draw = |codec, bytes: &[u8], side| media::draw(codec, bytes, side, max_pixels);
     match serve::serve(&mut io::stdin().lock(), &mut io::stdout().lock(), draw) {
         Ok(()) => ExitCode::SUCCESS,

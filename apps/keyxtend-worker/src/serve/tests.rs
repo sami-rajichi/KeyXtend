@@ -6,7 +6,8 @@ use crate::fixture::{Dib, rgba};
 use crate::media;
 use kx_ipc::{Ask, Reply};
 use std::borrow::Cow;
-use std::io;
+use std::process::Command;
+use std::{env, io};
 
 /// The side the tests ask for.
 const SIDE: u32 = 8;
@@ -14,6 +15,12 @@ const SIDE: u32 = 8;
 const MAX_PIXELS: u64 = 1_000;
 /// Bytes the test draw panics on.
 const BOOM: &[u8] = b"boom";
+/// Set only in the child process `a_hushed_panic_writes_nothing_on_stderr` starts.
+const CHILD: &str = "KX_WORKER_HUSH_CHILD";
+/// The child test that panics with the hook installed, by its full name.
+const CHILD_TEST: &str = "serve::tests::hushed_child";
+/// What the child writes on stdout once its panicking draw is answered.
+const ANSWERED: &str = "hushed draw answered";
 
 fn drawing(codec: Codec, bytes: &[u8], side: u32) -> Result<Picture, Why> {
     media::draw(codec, bytes, side, MAX_PIXELS)
@@ -112,6 +119,40 @@ fn a_panic_is_an_internal_failure_and_the_loop_goes_on() {
         }
     );
     assert!(matches!(replies[1], Reply::Pixels { id: 2, .. }));
+}
+
+/// The panic hook is global, so the check runs in a child copy of this test program, filtered to `hushed_child`.
+#[test]
+fn a_hushed_panic_writes_nothing_on_stderr() {
+    let out = Command::new(env::current_exe().unwrap())
+        .args([CHILD_TEST, "--exact", "--nocapture", "--test-threads=1"])
+        .env(CHILD, "1")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{stdout}");
+    assert!(stdout.contains(ANSWERED), "{stdout}");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.is_empty(), "{stderr}");
+}
+
+/// Does nothing unless it is that child: then it hushes panics as the media job does and answers a panicking draw.
+#[test]
+fn hushed_child() {
+    if env::var_os(CHILD).is_none() {
+        return;
+    }
+    hush();
+    let (outcome, replies) = run(&frames(&[draw_ask(1, Codec::Dib, BOOM)]));
+    assert_eq!(outcome, Ok(()));
+    assert_eq!(
+        replies,
+        [Reply::Failed {
+            id: 1,
+            why: Why::Internal
+        }]
+    );
+    io::stdout().write_all(ANSWERED.as_bytes()).unwrap();
 }
 
 #[test]

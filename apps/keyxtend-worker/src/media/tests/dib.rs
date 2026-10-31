@@ -228,7 +228,9 @@ fn huge_fields_never_overflow() {
     let mut colours = Dib::new(1, 1, 24, vec![0; 4]);
     colours.colours = u32::MAX;
     assert_eq!(pixels(&colours), Err(Why::Refused));
-    let huge = Dib::new(i32::MAX, i32::MIN, 32, vec![0; 64]);
+    // The rows' end, about 2^64 bytes, plus 16 GiB of colours passes u64.
+    let mut huge = Dib::new(i32::MAX, i32::MIN, 32, vec![0; 64]);
+    huge.colours = u32::MAX;
     assert_eq!(draw(&huge.bytes(), SIDE, u64::MAX), Err(Why::Refused));
 }
 

@@ -30,6 +30,16 @@ fn the_longest_side_becomes_the_side_and_the_other_keeps_its_ratio() {
 }
 
 #[test]
+fn no_side_is_ever_past_the_protocol_s_largest() {
+    let max = kx_ipc::MAX_SIDE;
+    assert_eq!(fit(5000, 2500, max + 1), (max, max / 2));
+    assert_eq!(fit(u32::MAX, u32::MAX, u32::MAX), (max, max));
+    assert_eq!(fit(max, 1, u32::MAX), (max, 1));
+    let scaler = Scaler::new(10_000, 1, u32::MAX).unwrap();
+    assert!(scaler.held() <= max as usize * (RGBA_BYTES + RGBA_BYTES * size_of::<u64>()));
+}
+
+#[test]
 fn a_small_image_is_never_scaled_up() {
     assert_eq!(fit(100, 50, 128), (100, 50));
     assert_eq!(fit(128, 128, 128), (128, 128));
