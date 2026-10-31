@@ -9,7 +9,7 @@ use kx_module_api::ports::{Piece, TypingMode};
 use std::sync::Arc;
 
 impl Inner {
-    /// Notes whether the module runs; a picked word types only while it does.
+    /// Notes whether the module runs; a picked word types and a paste goes only while it does.
     pub(in crate::face) fn set_running(&mut self, on: bool) {
         self.running = on;
     }

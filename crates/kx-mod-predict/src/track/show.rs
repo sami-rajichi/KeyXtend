@@ -3,11 +3,11 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypeWord;
+use kx_module_api::text::is_apostrophe;
 
 use super::token::{Token, apostrophe, learnable, parts};
 use super::{TrackConfig, push_capped};
 use crate::email;
-use crate::fold::is_apostrophe;
 use crate::script::{self, Script};
 use crate::split::normalise;
 

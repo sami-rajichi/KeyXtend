@@ -1,5 +1,9 @@
 # Each shortcut id with its steps, sent in order; a step names keys from `keynames.toml`, the last tapped and the
 # others held in order. `call = "lock"` means Windows does it with an OS call; its steps still name the keys for the tip.
+#
+# The clipboard-history chord by the same names, the key last (spec §7). While the clipboard module wants it, the
+# keyboard opens its own panel for this chord, its key read in the app's layout.
+history = ["win", "v"]
 shortcuts = [
     { id = "copy", steps = [["ctrl", "c"]] },
     { id = "paste", steps = [["ctrl", "v"]] },

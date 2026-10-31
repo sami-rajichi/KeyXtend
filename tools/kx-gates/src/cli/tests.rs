@@ -87,6 +87,9 @@ const NAME_ONLY: &[&str] = &[
     "g21 keyxtend",
     "g27 keyxtend",
     "g8 predict",
+    "g8 clip",
+    "g20 keyxtend",
+    "g20 worker",
 ];
 
 #[test]

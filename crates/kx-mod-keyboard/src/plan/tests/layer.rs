@@ -1,14 +1,15 @@
-//! The plans of the Shortcuts key, the Power key and the layer's own keys, which never show a shortcut id.
+//! The plans of the Shortcuts, Power and clipboard keys and the layer's own keys, which never show a shortcut id.
 
 use super::*;
 use crate::layer::LayerKey;
 use kx_module_api::ports::ShortcutId;
 
 #[test]
-fn the_shortcuts_and_power_keys_ask_the_face() {
+fn the_shortcuts_power_and_clip_keys_ask_the_face() {
     let g = Given::new(false).latch(Latch::Ctrl, CTRL);
     assert_eq!(g.plan(Role::Layer, None), Plan::Layer);
     assert_eq!(g.plan(Role::Power, None), Plan::Power);
+    assert_eq!(g.plan(Role::Clip, None), Plan::Clip);
 }
 
 #[test]
@@ -33,8 +34,14 @@ fn a_layer_cell_sends_its_shortcut_or_turns_the_page() {
 #[test]
 fn a_shortcut_plan_never_shows_its_id() {
     let id = ShortcutId::new("select-all").unwrap();
-    let plans = [Plan::Shortcut(id), Plan::Next, Plan::Layer, Plan::Power];
+    let plans = [
+        Plan::Shortcut(id),
+        Plan::Next,
+        Plan::Layer,
+        Plan::Power,
+        Plan::Clip,
+    ];
     let shown = format!("{plans:?}");
     assert!(!shown.contains("select"), "{shown}");
-    assert_eq!(shown, "[Shortcut, Next, Layer, Power]");
+    assert_eq!(shown, "[Shortcut, Next, Layer, Power, Clip]");
 }

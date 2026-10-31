@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::{Casing, fold};
+use kx_module_api::text::{Casing, fold};
 
 use super::cands::{Cand, Fate};
 use super::text::{KeyCounts, TextCounts};

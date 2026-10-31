@@ -4,8 +4,8 @@
 use std::fmt;
 
 use kx_module_api::ports::fits_iso;
+use kx_module_api::text::Casing;
 
-use crate::casing::Casing;
 use crate::pack::Pack;
 use crate::pack::layout::{MAX_CHAIN, MIN_CHAIN};
 

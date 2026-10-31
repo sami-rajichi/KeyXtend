@@ -1,6 +1,7 @@
 //! Which script a letter belongs to, one table for the pack builder and the tracker: a word mixing scripts is never a
-//! word, and each script's row says which way it reads and what parts its words.
+//! word, and each script's row says what parts its words. Which way it reads comes from the api's `RTL_BLOCKS`.
 
+use kx_module_api::RTL_BLOCKS;
 use std::cmp::Reverse;
 
 /// A writing system, as far as the words need to tell them apart.
@@ -53,60 +54,56 @@ pub enum Script {
 /// What a script's words need from the chips.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Facts {
-    /// Written right to left, after the bidirectional classes of its letters (R and AL).
-    rtl: bool,
     /// The text between two words, after UAX #14's line-break classes: nothing for ID and SA scripts.
     gap: &'static str,
     /// The other scripts its writing system holds, after ISO 15924's composite codes.
     mixes: &'static [Script],
 }
 
-/// A script that spaces its words and reads left to right.
-const LTR: Facts = Facts {
-    rtl: false,
+/// A script that spaces its words.
+const SPACED: Facts = Facts {
     gap: " ",
     mixes: &[],
 };
-/// A script that spaces its words and reads right to left.
-const RTL: Facts = Facts { rtl: true, ..LTR };
 /// A script whose lines break between words without spaces (UAX #14 classes ID and SA).
-const UNSPACED: Facts = Facts { gap: "", ..LTR };
+const UNSPACED: Facts = Facts { gap: "", ..SPACED };
 /// Korean: ISO 15924's Kore writes Hangul with Han (Hanja).
 const KORE: Facts = Facts {
     mixes: &[Script::Han],
-    ..LTR
+    ..SPACED
 };
 
 /// Each script's facts; a test checks every script has one row.
 const FACTS: &[(Script, Facts)] = &[
-    (Script::Common, LTR),
-    (Script::Latin, LTR),
-    (Script::Greek, LTR),
-    (Script::Cyrillic, LTR),
-    (Script::Armenian, LTR),
-    (Script::Hebrew, RTL),
-    (Script::Syriac, RTL),
-    (Script::Arabic, RTL),
-    (Script::Thaana, RTL),
-    (Script::Nko, RTL),
-    (Script::Devanagari, LTR),
-    (Script::Bengali, LTR),
-    (Script::Tamil, LTR),
+    (Script::Common, SPACED),
+    (Script::Latin, SPACED),
+    (Script::Greek, SPACED),
+    (Script::Cyrillic, SPACED),
+    (Script::Armenian, SPACED),
+    (Script::Hebrew, SPACED),
+    (Script::Syriac, SPACED),
+    (Script::Arabic, SPACED),
+    (Script::Thaana, SPACED),
+    (Script::Nko, SPACED),
+    (Script::Devanagari, SPACED),
+    (Script::Bengali, SPACED),
+    (Script::Tamil, SPACED),
     (Script::Thai, UNSPACED),
     (Script::Lao, UNSPACED),
     (Script::Myanmar, UNSPACED),
     (Script::Khmer, UNSPACED),
-    (Script::Georgian, LTR),
+    (Script::Georgian, SPACED),
     (Script::Han, UNSPACED),
     (Script::Hangul, KORE),
-    (Script::Other, LTR),
+    (Script::Other, SPACED),
 ];
 
 impl Script {
-    /// True for a script written right to left.
+    /// True for a script written right to left: its letters lie in the api's right-to-left ranges.
     #[must_use]
     pub fn rtl(self) -> bool {
-        self.facts().rtl
+        let rtl = |c: &char| RTL_BLOCKS.iter().any(|r| r.contains(c));
+        BLOCKS.iter().any(|(first, _, s)| *s == self && rtl(first))
     }
 
     /// The text a word chip types after a word of this script: a space, or nothing where words are not spaced.
@@ -130,7 +127,7 @@ impl Script {
     /// This script's row; an unlisted script, which a test rules out, takes `Other`'s.
     fn facts(self) -> Facts {
         let row = |s: Self| FACTS.iter().find(|(script, _)| *script == s).map(|r| r.1);
-        row(self).or_else(|| row(Self::Other)).unwrap_or(LTR)
+        row(self).or_else(|| row(Self::Other)).unwrap_or(SPACED)
     }
 }
 

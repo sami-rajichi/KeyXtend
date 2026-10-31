@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation and the focused box."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation, the focused box, the clipboard, the local calendar, the media worker's start and the free space of a drive."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -21,7 +21,7 @@ sim-input = []
 kx-crypto = { path = "../kx-crypto" }
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
-# The compiled-in shortcut and key-name tables.
+# The compiled-in shortcut, key-name, field and clipboard tables.
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
@@ -35,7 +35,11 @@ tracing.workspace = true
 # `System_SystemServices`), the mouse hook reads the tick count (`System_SystemInformation`) and tests the input
 # desktop (`System_StationsAndDesktops`), the speaker plays through XAudio2, the Lock PC shortcut locks the session
 # (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), packs open with read sharing only
-# (`Storage_FileSystem`), and UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`).
+# (`Storage_FileSystem`), UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`), the
+# clipboard watch and writer use `System_DataExchange` and read app names from version information
+# (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), the media worker starts on anonymous pipes
+# (`System_Pipes`) in a job object (`System_JobObjects`), and the disk room reads a drive's free space and root
+# (`Storage_FileSystem`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -50,16 +54,20 @@ windows = { workspace = true, features = [
     "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Console",
+    "Win32_System_DataExchange",
+    "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
     "Win32_System_Ole",
     "Win32_System_Performance",
+    "Win32_System_Pipes",
     "Win32_System_Registry",
     "Win32_System_Shutdown",
     "Win32_System_SystemInformation",
     "Win32_System_StationsAndDesktops",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
+    "Win32_System_Time",
     "Win32_System_Variant",
     "Win32_UI_Accessibility",
     "Win32_UI_Controls",
@@ -72,5 +80,11 @@ windows = { workspace = true, features = [
 windows-core.workspace = true
 
 [dev-dependencies]
+# The worker tests write raw asks and goodbyes to the real media worker.
+kx-ipc = { path = "../kx-ipc" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
+
+[target.'cfg(windows)'.dev-dependencies]
+# The worker tests list every process, so a worker is seen to start none, not even a console host.
+windows = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp"] }

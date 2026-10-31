@@ -1,6 +1,6 @@
 //! The spelling-swap rule: a rejected word gives its frequency to its most frequent fold twin; prefixes never do.
 
-use kx_mod_predict::Casing;
+use kx_module_api::text::Casing;
 
 use super::super::fixture::{AFF, AFF_AL, AFF_ANA};
 use super::{build, build_with, dict, spellings, word};

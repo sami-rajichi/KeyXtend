@@ -1,6 +1,7 @@
 //! The UI's texts: Fluent files compiled in, the language choice, and lookups that fall back to English (ADR-0017).
 //! A key `group.name` in code is message `group`, attribute `name`, since Fluent ids cannot hold dots.
 
+mod clip;
 mod combo;
 mod compose;
 pub mod keys;
@@ -12,15 +13,25 @@ use fluent_bundle::{FluentArgs, FluentResource};
 use fluent_langneg::{NegotiationStrategy, negotiate_languages};
 use unic_langid::LanguageIdentifier;
 
-/// One language the UI speaks, with its Fluent file.
+/// One language the UI speaks, with its Fluent files.
 #[derive(Debug)]
 pub struct Lang {
     /// Its BCP-47 tag, the value the `[ui] language` setting names.
     pub tag: &'static str,
     /// It is written right to left: its texts read that way, in the theme's Arabic font, and nothing mirrors.
     pub rtl: bool,
-    /// Its Fluent file, compiled in.
+    /// Its main Fluent file, compiled in.
     pub ftl: &'static str,
+    /// Its feature files, such as the clipboard panel's, compiled in and loaded into the same texts.
+    pub extra: &'static [&'static str],
+}
+
+impl Lang {
+    /// Its Fluent files, the main one first.
+    pub fn files(&self) -> impl Iterator<Item = &'static str> + use<> {
+        let extra: &'static [&'static str] = self.extra;
+        std::iter::once(self.ftl).chain(extra.iter().copied())
+    }
 }
 
 /// Every language, the fallback first.
@@ -29,16 +40,19 @@ pub static LANGS: [Lang; 3] = [
         tag: "en",
         rtl: false,
         ftl: include_str!("../i18n/en.ftl"),
+        extra: &[include_str!("../i18n/clip/en.ftl")],
     },
     Lang {
         tag: "fr",
         rtl: false,
         ftl: include_str!("../i18n/fr.ftl"),
+        extra: &[include_str!("../i18n/clip/fr.ftl")],
     },
     Lang {
         tag: "ar",
         rtl: true,
         ftl: include_str!("../i18n/ar.ftl"),
+        extra: &[include_str!("../i18n/clip/ar.ftl")],
     },
 ];
 
@@ -107,15 +121,17 @@ fn join(group: &str, id: &str) -> String {
     format!("{group}{DOT}{id}")
 }
 
-/// `lang`'s texts; a broken entry is left out and the rest load, so a bad line never stops the UI.
+/// `lang`'s texts from all its files; a broken entry is left out and the rest load, so a bad line never stops the UI.
 fn bundle(lang: &Lang) -> Bundle {
-    let res = FluentResource::try_new(lang.ftl.to_owned()).unwrap_or_else(|(res, _)| res);
     let mut b = Bundle::new_concurrent(vec![langid(lang.tag).unwrap_or_default()]);
     // No bidi isolation marks: Qt searches every system font for their glyph, and they turned Arabic lines around
     // (ADR-0022).
     b.set_use_isolating(false);
-    // A key written twice keeps its first text; the file tests refuse that.
-    let _ = b.add_resource(res);
+    for ftl in lang.files() {
+        let res = FluentResource::try_new(ftl.to_owned()).unwrap_or_else(|(res, _)| res);
+        // A key written twice keeps its first text; the file tests refuse that.
+        let _ = b.add_resource(res);
+    }
     b
 }
 

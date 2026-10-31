@@ -4,7 +4,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use kx_mod_predict::{Casing, script};
+use kx_mod_predict::script;
+use kx_module_api::text::Casing;
 
 use super::dict::Dict;
 use super::manifest::{Plan, Rules};

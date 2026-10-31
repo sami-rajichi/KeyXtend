@@ -2,11 +2,12 @@
 //! holds its key, else the word as typed, else the entry it differs from in capitals only. An entry stored as typed
 //! that the pack spells otherwise is a stray, merged into the pack's spelling by the next learn of it or a reconcile.
 
+use kx_module_api::text::fold;
+
 use super::Learner;
 use super::clean::too_high;
 use super::forget::Use;
 use super::table::Id;
-use crate::fold::fold;
 use crate::pack::Pack;
 
 impl Learner {

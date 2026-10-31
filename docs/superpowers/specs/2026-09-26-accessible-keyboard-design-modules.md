@@ -138,21 +138,83 @@ Decided with the owner on 2026-10-24, from the research report on keyboard predi
 
 ## 7. Clipboard history
 
-- Watches the clipboard. Windows: `AddClipboardFormatListener`.
-- **Respects the exclusion formats** that password managers set: `ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory = 0`, `Clipboard Viewer Ignore`.
-- **Stores:** text, links, images, files (as **references**, never copies of big files), and video/audio (as references).
-- **Retention:** 1 week by default, configurable. Video and audio: 1 day. Pinned items never expire.
-- **Panel**
-  - One vertical list, **newest first**, 5 per page (§3.3).
-  - Each row: tick box, thumbnail or type icon, title, "source app · time · size", an expiry chip, and a pin marker.
-  - Filters: All, Text, Images, Files, Media.
-  - Click a row to paste it. Tick several rows (the tick order is shown as numbers), then **Paste together**.
-  - Keys: ↑↓ move, Enter pastes, Space ticks, ▲▼ page, Esc closes.
-- **Paste:** text is pasted as text. Images and files go into the target the same way Explorer or a browser would receive them: we set clipboard formats, then send Ctrl+V.
-- **Win+V** from our keyboard opens our history instead of the Windows one (Windows only; setting). It is built with the history in P8 (owner, 2026-10-23).
+Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every number below is a `[clipboard]` setting, shown later in the Settings window (P13). One design serves Windows, macOS and Linux; only the adapters differ.
+
+- **Watching:** the history hears every copy through the platform's clipboard port. Windows: `AddClipboardFormatListener`. macOS polls `NSPasteboard`'s change count, and Linux uses XFixes on X11 and the data-control protocol on Wayland where the compositor has it (P15).
+- **Skipped copies:** a copy carrying a "leave me out of history" marker is never read. The markers live in each adapter's table:
+  - Windows: `ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory = 0`, `Clipboard Viewer Ignore`;
+  - macOS: `org.nspasteboard.ConcealedType` and `org.nspasteboard.TransientType`; KDE: `x-kde-passwordManagerHint = secret`.
+  - Our own clipboard writes carry the marker too, so an insert never adds a row.
+  - **Follow the clear (owner):** when the app that made a copy clears or blanks the clipboard within `clear_follow_s`, the entry is deleted for good, as password managers intend.
+  - **Skipped apps (owner):** `skip_apps` lists apps whose copies are never kept. It starts empty and is edited in the Settings window (P13).
+- **What is kept:** text with its formatting (HTML and RTF beside the plain text), links, images, and files as references (paths, never copies). Video and audio are files whose extension the module's media table lists.
+- **Limits (owner):**
+  - entries are kept `keep_days` days (7 by default, 1–7), video and audio `media_days` (1 by default), and pinned entries never expire;
+  - at most `max_entries` entries (1,000 by default, 1–5,000), and the whole history under `max_mb` (1 GB by default); past either, the oldest unpinned entry goes first;
+  - nothing new is kept while the history's drive has less than `min_free_mb` free (2 GB by default), and an entry over `max_entry_mb` (32 MB by default) is not kept;
+  - each such skip shows a short note in the panel.
+  - Days are calendar days (owner): 7 means today and the 6 days before, and 1 means today only.
+  - The limits count what the history stores; a file row shows the size of the file it points to, so a large file is still kept as a reference (builder's call).
+  - Pinned entries count toward the limits. When they alone fill one, new copies are not kept, and the panel says so (builder's call).
+- **Order (owner):** pinned entries first, then the rest, each group newest first. Copying the same content again, or inserting an entry, moves it to the top with the new time. An unpinned entry counts as copied now, so it never vanishes at the next sweep (builder's call).
+- **Store (§9.1):**
+  - Each entry is sealed under the OS-protected key in a folder per day, `clipboard/<yyyy-mm-dd>/`, and pinned entries in `clipboard/pinned/`. So at most 7 day folders exist: a new day removes the folders past `keep_days` whole.
+  - The list of entries (titles, times, sizes) is sealed too. Outside the panel the files are unreadable, by design.
+  - Deleting is permanent: the files leave the disk at once, with no recycle bin. A day folder deleted by hand is safe; its entries leave the list.
+- **Panel** (the mock-up's layout plus a preview page, owner):
+  - The side block's clipboard key opens and closes it with one click, on every platform; the history shortcut below is a second way. It opens above the keyboard (§3.4).
+  - Header: icon, title, "kept N days", Delete all and close.
+  - **Search line:** while the panel is open, letters clicked on our keyboard go into it instead of the app.
+    - It matches the first `search_chars` characters of each text (1,000; builder's call), file names and app names, ignoring case, accents, harakat, tatweel and the forms of alif (as §6 matches).
+    - Backspace erases, and Esc clears it first, then closes the panel.
+    - No AI.
+  - Filters: All, Text (with links), Images, Files, Media.
+  - One list, 5 rows per page (§3.3), with ▲/▼ and "n of m".
+  - Each row: a tick box showing its tick number, a thumbnail or type icon, the first two lines of text (… when longer), and "app · time · size".
+    - Time reads "Today 16:32", "Yesterday 18:21", "Tue 14:12", then a date.
+    - Size is always in MB with two decimals, and "< 0.01 MB" below that.
+    - A pin marks pinned rows, and a chip marks media that expire today.
+  - **Tick, then act (owner):** a click on a row only ticks or unticks it. The footer acts on the ticked rows: Preview, Pin (Unpin when all are pinned), Delete and **Insert (n)**, n being the ticked count. Delete acts at once; Delete all asks once, with Yes and No, and keeps pinned entries.
+  - **Ticks and views (owner):** ticks survive a new search or filter, so the user can search, tick, search again, tick, then Insert (2). Delete all always means every unpinned entry, whatever the view, and its question names the count.
+  - **Preview page:** the whole entry: long text paged, never scrolled, with its character count; an image large; files with their paths. It has Back, Pin, Delete and Insert.
+  - A storage line, "History 182 MB of 1 GB · 412 GB free on D:", and Open folder, which shows the history's folder in the system's file manager.
+  - An empty history asks the user to copy something.
+  - Keys, from a key list per panel in the keyboard (§3.3): ↑↓ move the highlight, ←→ switch filters, Space ticks, Enter inserts the ticked rows (the highlighted one when none is ticked), Esc as above. The scroll pad turns pages.
+  - Its look follows the keyboard's theme in light, dark and high contrast, and every text passes the theme's contrast check (§3.5).
+- **Insert:**
+  - Text goes in as copied, with its formatting. Images and files go in as Explorer or a browser would hand them: the module sets the clipboard formats, then the keyboard sends the platform's paste shortcut. Files are always pasted as a copy, even when they were cut.
+  - Several ticked entries go in tick order. Between two texts go `join_breaks` line breaks (2 by default, a blank line; 1–3) and an optional separator line, `join_rule` (empty by default). Images and files get no separator.
+  - The breaks are pasted, never typed: Enter sends the message in chat apps. Each step waits `paste_gap_ms`, so slow apps keep up.
+  - Insert goes to the app the keyboard types into at that moment. The panel then closes, and the last inserted entry stays on the clipboard.
+  - A file that is gone leaves its entry; an entry whose files are all gone leaves the list by itself (owner).
+- **History shortcut (owner, 2026-10-23 and 2026-10-30):** with `history_key` on (the default), the platform's clipboard-history shortcut clicked on our keyboard opens our panel instead of the system's:
+  - Win+V on Windows and Super+V on Linux. macOS has none of its own, so P15 picks its keys.
+  - The keys come from the adapter's shortcut table (ADR-0031).
+  - A physical keyboard's shortcut still opens the system's history, and with the module off ours goes to the system too.
 - **Security**
-  - The database is encrypted at rest (§9.1).
-  - Thumbnails of untrusted images are decoded in a **worker process** (§11), never in the uiAccess process.
+  - The store is encrypted at rest (§9.1), and clipboard content is never logged (`Redacted<T>`).
+  - Image thumbnails and previews are decoded in the `media` worker (§11, ADR-0004): a process with normal rights and no uiAccess, which gets the bytes over a size-limited pipe and returns small plain pixels the panel draws. The uiAccess process never decodes an image: it only stores the bytes it read and sets them back.
+- **As built (P8, 2026-10-31):** where the build settles or differs from the text above.
+  - An Arabic row flips its text only; the tick box, thumbnail, pin and chip keep their places (ADR-0020; owner).
+  - Delete all stays in the header, as above. It dims while no entry is unpinned, so a click never does nothing silently, and in its question Esc is No and only a click on Yes deletes, as destructive actions default to safe (builder's call).
+  - The panel stays open while Insert runs and closes when it ends; a failed step stops the insert and keeps the panel open with a note (builder's call).
+  - A file found gone is left out of the paste, and the entry goes only when every file is gone (owner). A file whose drive does not answer keeps its row and is skipped, so an unplugged stick loses no rows (builder's call).
+  - Only a path on a drive, such as `C:\…`, is looked at, a drive letter mapped to a share included. A share, device or relative path, or one through a link, is never looked at: its row says "Size unknown" and Insert pastes it, so a copied share, device or link path never makes KeyXtend reach another machine (builder's call).
+  - Insert's file check gives up after `check_ms` (5 s by default, 1–30 s), and the insert stops with a note, as after a failed step (builder's call).
+  - A clipboard format whose size cannot be read is skipped, and the rest of the copy is kept (builder's call).
+  - `ClipPanel`, the panel's open state, needs `ReadClipboard`, and the keyboard needs it to start (ADR-0035).
+  - The worker starts from a restricted token: no admin group, no privilege but change-notify, no uiAccess, Medium integrity. A worker that keeps any of these is ended before it runs (builder's call).
+  - Follow-the-clear spares pinned entries, as a pin is a deliberate keep (builder's call).
+  - A clipboard watch the system refuses fails the module's start, with Try again, as a history that silently records nothing is worse (builder's call).
+  - Sizes use each language's thousands grouping and decimal mark (CLDR).
+  - The worker decodes PNG and DIB only, and an interlaced PNG keeps its type icon, as its passes would need a full-size buffer (builder's call).
+  - A copy with text keeps no picture beside it, as Office copies carry one (builder's call).
+  - A copied picture keeps one format: PNG, else DIBV5, else DIB (builder's call).
+  - Insert sets a PNG beside a `CF_DIB` the worker makes of it within `media_ms` and `max_entry_mb`, so apps that read only `CF_DIB` get the picture. A worker down, late or refusing leaves the PNG alone, and the keyboard sets the worker's DIB without parsing it (builder's call).
+  - A copy is refused when keeping it would leave less than `min_free_mb` free (builder's call).
+  - The panel opens above the keyboard, else below, else shrinks to fit, never below 0.80 of its size (§3.4).
+  - The history's folder is made at boot, so Open folder always opens, and a note takes only the storage line's text, with Open folder beside it as the way out when the disk is low (builder's call).
+  - The scroll pad turns the list's pages; the preview's long text pages by its own buttons only (builder's call, `docs/items/P8.md`).
 
 ---
 

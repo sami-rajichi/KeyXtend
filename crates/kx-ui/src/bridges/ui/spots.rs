@@ -1,4 +1,5 @@
-//! `Ui`'s pop-up spots: QML's keyboard box and sizes become the banner's, the list's and the tray menu's spots.
+//! `Ui`'s pop-up spots: QML's keyboard box and sizes become the banner's, the lists' and the tray menu's spots, and the
+//! clipboard panel's spot with its fit.
 
 use super::qobject;
 use crate::bridges::qs;
@@ -16,12 +17,25 @@ impl qobject::Ui {
         w: f64,
         h: f64,
     ) -> QString {
-        let Ok(over) = keyboard_box(&over.to_string()) else {
-            tracing::warn!("QML sent a keyboard box that does not read");
+        let Some((over, left)) = beside(over, left, centred) else {
             return qs(NULL);
         };
-        let left = (!centred).then(|| whole(left));
         let spot = self.with(None, |hub| hub.pop_at(over, left, w, h));
+        qs(&json(&spot))
+    }
+
+    pub(super) fn pop_fit(
+        &self,
+        over: &QString,
+        left: f64,
+        centred: bool,
+        w: f64,
+        h: f64,
+    ) -> QString {
+        let Some((over, left)) = beside(over, left, centred) else {
+            return qs(NULL);
+        };
+        let spot = self.with(None, |hub| hub.pop_fit(over, left, w, h));
         qs(&json(&spot))
     }
 
@@ -29,6 +43,16 @@ impl qobject::Ui {
         let spot = self.with(None, |hub| hub.menu_at(Point { x, y }, w, h));
         qs(&json(&spot))
     }
+}
+
+/// The keyboard box QML sent and the pop-up's left edge, `None` for a centred one; `None` with a warning when the box
+/// does not read.
+fn beside(over: &QString, left: f64, centred: bool) -> Option<(Option<Rect>, Option<i32>)> {
+    let Ok(over) = keyboard_box(&over.to_string()) else {
+        tracing::warn!("QML sent a keyboard box that does not read");
+        return None;
+    };
+    Some((over, (!centred).then(|| whole(left))))
 }
 
 /// The shown keyboard's box in physical pixels, `null` while it is hidden.

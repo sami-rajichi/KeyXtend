@@ -29,6 +29,8 @@ jobs:
     env:
       # The Qt Quick tests' log, which the step after them shows even when they hang.
       QML_LOG: target/qmltest.txt
+      # Runs kx-platform-windows' live clipboard tests (its build script's `LIVE_VAR`) on the runner's own clipboard.
+      KX_LIVE_CLIPBOARD: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,7 +55,7 @@ jobs:
       # checks that this list is the default features without `mod-scroll`.
       - run: >-
           cargo clippy -p keyxtend --all-targets --no-default-features
-          --features mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict --locked -- -D warnings
+          --features mod-clipboard,mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict --locked -- -D warnings
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
       - run: cargo test -p kx-ui --test texts --locked
@@ -87,9 +89,10 @@ jobs:
     env:
       # Every workspace package sits in exactly one list; the first step fails when a package is missing or extra.
       PACKAGES: >-
-        -p kx-crypto -p kx-gates -p kx-kernel -p kx-mod-keyboard -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power
-        -p kx-mod-predict -p kx-mod-scroll -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows
-        -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme -p xtask
+        -p keyxtend-worker -p kx-crypto -p kx-gates -p kx-ipc -p kx-kernel -p kx-mod-clipboard -p kx-mod-keyboard
+        -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power -p kx-mod-predict -p kx-mod-scroll -p kx-module-api
+        -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window -p kx-test-support
+        -p kx-theme -p xtask
       NO_QT: -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:

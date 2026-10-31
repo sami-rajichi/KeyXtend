@@ -33,6 +33,8 @@ pub(crate) const SEALED_EXT: &str = "sealed";
 pub(crate) const DAMAGED_EXT: &str = "damaged";
 /// The extension a save writes first, before the file takes the old one's place.
 pub(crate) const TEMP_EXT: &str = "tmp";
+/// The byte between a shelf blob's folder and name in its AAD; no `BlobName` holds it.
+pub(crate) const AAD_SEP: u8 = b'/';
 
 /// Builds `MARK` from `MAGIC` and `VERSION`, so neither is written twice.
 const fn mark() -> [u8; MAGIC.len() + 1] {

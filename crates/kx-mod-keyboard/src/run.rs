@@ -3,13 +3,17 @@
 //! what reached the app waits to be told.
 
 mod checks;
+mod clip;
 mod held;
 mod layer;
 mod ports;
+mod tapped;
 mod told;
 mod word;
 
+pub use clip::ToPanel;
 pub use ports::{Io, Pause, Ports, Sleep};
+pub use tapped::{TapError, Tapped};
 pub use word::{Part, Word, drive};
 
 use crate::latch::Latches;
@@ -17,52 +21,10 @@ use crate::plan::{Now, Plan, Route, Wait, plan};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, LatchRole, Role, Tell};
 use checks::{keyed, reached, stale, types};
-use kx_module_api::ports::{InjectError, Piece, Scan, ShortcutError, Toggle};
+use kx_module_api::ports::{Piece, Scan};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::time::Duration;
-use thiserror::Error;
-
-/// Why a tap sent nothing, or not all of it.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
-pub enum TapError {
-    /// The board has no such key, and the layer draws none now.
-    #[error("the board has no such key")]
-    UnknownKey,
-    /// The keys or text did not all reach the app.
-    #[error(transparent)]
-    Inject(#[from] InjectError),
-    /// The shortcut did not all reach the app.
-    #[error(transparent)]
-    Shortcut(#[from] ShortcutError),
-}
-
-/// What a tap did, for the face to follow up.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Tapped {
-    /// Keys or text went out, Caps Lock was tapped or a latch changed: the state needs a redraw.
-    Done,
-    /// The language key was clicked; the face steps or opens the list.
-    Lang {
-        /// The click landed on the key's back part.
-        back: bool,
-    },
-    /// A mouse-assist side key: nothing was sent and the latches stay; the face asks the mouse module to flip this.
-    Assist(Toggle),
-    /// The Shortcuts key: nothing was sent and the latches stay; the face shows or hides the layer.
-    Layer,
-    /// The Power key: nothing was sent and the latches stay; the face asks the power module for the dialog.
-    Power,
-    /// The layer's Next key: nothing was sent and the latches stay; the face turns the page.
-    Next,
-    /// A key from a later version: nothing happened.
-    Later,
-    /// A character key that types nothing with the latched Shift or `AltGr`: nothing happened.
-    Empty,
-    /// The app in front has another layout than the one shown, and this key's result depends on it: nothing
-    /// was sent. The face refreshes the layouts, which read the same layout source, and redraws.
-    Stale,
-}
 
 /// The typing state: the latched modifiers and a dead key's wait, over the board's keys and `key_apps`.
 pub struct Typing {
@@ -88,6 +50,8 @@ pub struct Typing {
     caps_sent: bool,
     /// How many board keys reached the app, so a picked word stops when one goes out during it.
     sent: u64,
+    /// The clipboard module wants the platform's history chord, as the bus last told.
+    history: bool,
 }
 
 /// Prints no field: the latches and a dead key's wait tell what the user is typing.
@@ -116,6 +80,7 @@ impl Typing {
             pieces: Vec::new(),
             caps_sent: false,
             sent: 0,
+            history: false,
         }
     }
 
@@ -159,13 +124,16 @@ impl Typing {
 
     /// A click on key `id`, a board key or a layer key drawn now, on the language key's back part when `back`: sends
     /// its plan through `io`. A character key sent as a scan code sends nothing while the app in front has another
-    /// layout (`Stale`).
+    /// layout (`Stale`), and the history chord sends nothing while the clipboard module wants it (`Clip`).
     ///
     /// # Errors
     /// `UnknownKey` for an id on neither, `Inject` when the keys or text did not all reach the app, or `Shortcut` when
     /// the shortcut did not. A send refused whole changes nothing; one taken in part moves the state as if it all went,
     /// never retried.
     pub fn tap(&mut self, io: &Io<'_>, id: &str, back: bool) -> Result<Tapped, TapError> {
+        if self.chord(io, id) {
+            return Ok(Tapped::Clip);
+        }
         let planned = match self.keys.get(id) {
             Some(&(role, sc)) => {
                 let app = || io.injector.target_app();
@@ -189,6 +157,7 @@ impl Typing {
             Plan::Assist(which) => return Ok(Tapped::Assist(which)),
             Plan::Layer => return Ok(Tapped::Layer),
             Plan::Power => return Ok(Tapped::Power),
+            Plan::Clip => return Ok(Tapped::Clip),
             Plan::Next => return Ok(Tapped::Next),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),
@@ -269,8 +238,7 @@ impl Typing {
     /// picked word going out stops.
     fn used(&mut self) {
         self.sent = self.sent.wrapping_add(1);
-        let now = self.latches.clone();
-        self.used_of(&now);
+        self.spent();
     }
 
     /// A key or picked word that started under `then` went out: those latches let go as their mode says, or when the

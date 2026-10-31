@@ -56,6 +56,13 @@ fn a_move_with_an_unknown_curve_is_refused_by_name() {
     let typo = text().replacen("curve = \"spring\"", "curve = \"sprung\"", 1);
     let e = parse(&typo).expect_err("no such curve");
     assert!(e.contains("stop") && e.contains("sprung"), "{e}");
+    let clip = text().replacen(
+        "turn = { ms = 180, curve = \"swift\" }",
+        "turn = { ms = 180, curve = \"swoft\" }",
+        1,
+    );
+    let e = parse(&clip).expect_err("no such clip curve");
+    assert!(e.starts_with("clip.turn:") && e.contains("swoft"), "{e}");
 }
 
 #[test]
@@ -182,4 +189,34 @@ fn the_scroll_outline_fades_briefly_and_must_be_in_the_file() {
     let gone = text().replacen("outline = {", "outlines = {", 1);
     let e = parse(&gone).expect_err("outline is missing");
     assert!(e.contains("moves.outline"), "{e}");
+}
+
+#[test]
+fn the_clipboard_moves_load_and_stop_with_reduced_motion() {
+    let m = load().expect("motion.toml loads");
+    let (spring, swift) = (
+        [0.3, 1.5, 0.5, 1.0, 1.0, 1.0],
+        [0.2, 0.8, 0.2, 1.0, 1.0, 1.0],
+    );
+    let want = [
+        ("tick", 167, spring),
+        ("highlight", 167, swift),
+        ("swap", 180, swift),
+        ("turn", 180, swift),
+    ];
+    for (name, ms, bez) in want {
+        assert!(CLIP_MOVES.contains(&name), "{name} is a clip move");
+        assert_eq!(m.full.clip[name], Timed { ms, bez }, "{name}");
+        assert_eq!(
+            m.reduced.clip[name].ms, 0,
+            "{name} stops with reduced motion"
+        );
+    }
+    assert_eq!(m.full.clip.len(), CLIP_MOVES.len());
+    assert_eq!(m.full.amount.tick_scale, 0.6, "a tick pops in from 60 %");
+    let gone = text().replacen("swap = {", "swop = {", 1);
+    let e = parse(&gone).expect_err("swap is missing");
+    assert!(e.contains("clip.swap"), "{e}");
+    let bad = text().replacen("tick_scale = 0.6", "tick_scale = 1.5", 1);
+    assert!(parse(&bad).expect_err("above 1").contains("tick_scale"));
 }

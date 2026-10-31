@@ -10,6 +10,7 @@ use windows::Win32::Foundation::HWND;
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::diff::{self, Diff};
 use crate::out::say;
+use crate::ownkeys::{self, Desk, Real};
 use crate::rng::Rng;
 use crate::win::{self, sleep_ms};
 use crate::{launch, out, readback, shot, text};
@@ -50,24 +51,11 @@ fn focus_ok(inside: bool, class: &str, want: Option<&str>) -> bool {
     inside && want.is_none_or(|w| w.eq_ignore_ascii_case(class))
 }
 
-/// True when the window title shows the test file, if the app has one.
-fn title_ok(title: &str, has: Option<&str>) -> bool {
-    has.is_none_or(|h| title.contains(h))
-}
-
-/// `Err` names what holds the keyboard when the app, its test file or its text box does not.
-fn ready(app: &Opened, want: Option<&str>) -> Result<(), String> {
-    let (hwnd, front) = (app.hwnd, foreground());
-    if front != hwnd {
-        return Err(format!("{} is in front", win::describe(front)));
-    }
-    if !title_ok(&win::title(hwnd), app.title_has.as_deref()) {
-        return Err(format!(
-            "the test file left the front: {}",
-            win::describe(hwnd)
-        ));
-    }
-    let focus = win::focus(hwnd);
+/// `Err` names what holds the keyboard when the app, its test file or its text box does not; `ownkeys` judges the
+/// window in front and the tab on `desk`.
+fn ready(desk: &dyn Desk, app: &Opened, want: Option<&str>) -> Result<(), String> {
+    ownkeys::ours(desk, app)?;
+    let (hwnd, focus) = (app.hwnd, win::focus(app.hwnd));
     if focus_ok(win::contains(hwnd, focus), &win::class(focus), want) {
         Ok(())
     } else {
@@ -85,7 +73,7 @@ pub fn wait_ready(ctx: &Ctx, app: &Opened, want: Option<&str>) -> Result<(), Str
         ));
     }
     let mut last = String::new();
-    let state = || match ready(app, want) {
+    let state = || match ready(&Real, app, want) {
         Ok(()) => Some(()),
         Err(e) => {
             last = e;
@@ -106,7 +94,7 @@ fn type_text(
     let chars: Vec<char> = text.chars().collect();
     let mut typed = 0;
     for chunk in chars.chunks(ctx.cfg.g1.chunk_chars.max(1)) {
-        if let Err(e) = ready(app, want) {
+        if let Err(e) = ready(&Real, app, want) {
             return (typed, Some(format!("blocked: {e}")));
         }
         if let Err(e) = crate::keys::text(&chunk.iter().collect::<String>()) {
@@ -266,6 +254,18 @@ fn report(t: &Typing, count: usize, read_error: Option<&str>, d: &Diff, left_ope
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ownkeys::fake::{Fake, OUR_TAB, OWNER_TAB, hwnd, notepad};
+
+    #[test]
+    fn g1_types_only_while_our_window_is_in_front_with_our_tab() {
+        let app = notepad(None);
+        let front = Fake::new(hwnd(2), &[OUR_TAB]);
+        let e = ready(&front, &app, None).expect_err("another window in front");
+        assert!(e.contains("keys held back"), "{e}");
+        let tab = Fake::new(app.hwnd, &[OWNER_TAB]);
+        let e = ready(&tab, &app, None).expect_err("the owner's tab");
+        assert!(e.contains("our tab is not shown"), "{e}");
+    }
 
     #[test]
     fn focus_ok_needs_the_app_window_and_the_wanted_class() {
@@ -287,13 +287,5 @@ mod tests {
             !passed(true, None, Some("no clipboard")),
             "nothing read back"
         );
-    }
-
-    #[test]
-    fn title_ok_needs_the_test_file_name_when_one_is_set() {
-        let ours = "g1-notepad-1.txt";
-        assert!(title_ok("g1-notepad-1.txt - Notepad", Some(ours)));
-        assert!(!title_ok("*Some other updates - Notepad", Some(ours)));
-        assert!(title_ok("Document1 - Word", None));
     }
 }

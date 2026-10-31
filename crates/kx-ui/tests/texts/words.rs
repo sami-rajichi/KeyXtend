@@ -3,12 +3,12 @@
 use crate::files::keys_of;
 use crate::{all, lang};
 use kx_module_api::keys::{SCROLL_FAILED, SCROLL_POINT, WORDS_DAMAGED, WORDS_LOCKED};
-use kx_ui::find;
 use kx_ui::i18n::keys::{
     CHIP_LOCKED, CHIP_MORE, CHIP_NONE, CHIP_UNDO, MODULE, THEME, WORDS_CANCEL, WORDS_FORGET,
     WORDS_FORGET_SHORT, WORDS_MENU, WORDS_OFF, WORDS_OFF_SHORT, WORDS_ON, WORDS_ON_SHORT,
     WORDS_PAUSE, WORDS_PAUSE_SHORT, WORDS_RESUME, WORDS_RESUME_SHORT,
 };
+use kx_ui::{Lang, find};
 
 /// Arabic names of keys that print a Latin word: "مفتاح" and that word (owner, 2026-09-30).
 const AR_LATIN_NAMES: [(&str, &str); 8] = [
@@ -76,9 +76,20 @@ const FR_POINT: [&str; 2] = ["pointez", "pointez sur"];
 /// A French word for a tap that Windows never uses; it says "appuyez sur".
 const FR_NOT_TAP: &str = "touchez";
 
+/// Lines that hold a number or time format, not prose, so their marks are not punctuation: `num.*`, `clip.time`.
+const FORMATS: [&str; 3] = [".decimal =", ".group =", ".time ="];
+
 /// The lines of `ftl` that hold text, not comments.
 fn text_lines(ftl: &str) -> impl Iterator<Item = &str> {
     ftl.lines().filter(|l| !l.trim_start().starts_with('#'))
+}
+
+/// The prose lines of every file of language `l`: no comments and no formats.
+fn prose(l: &Lang) -> impl Iterator<Item = &'static str> {
+    let format = |line: &&str| FORMATS.iter().any(|f| line.trim_start().starts_with(f));
+    l.files()
+        .flat_map(text_lines)
+        .filter(move |line| !format(line))
 }
 
 #[test]
@@ -163,7 +174,7 @@ fn a_key_that_types_nothing_is_named_empty_in_each_language() {
 #[test]
 fn french_spaces_high_punctuation_and_guillemets_with_no_break_spaces() {
     let fr = find("fr").expect("French");
-    for line in text_lines(fr.ftl) {
+    for line in prose(fr) {
         let chars: Vec<char> = line.chars().collect();
         for (i, c) in chars.iter().enumerate() {
             let before = i.checked_sub(1).map(|b| chars[b]);
@@ -182,7 +193,7 @@ fn french_points_sur_a_thing_and_taps_with_appuyez_sur() {
     let point = "Pointez sur ce que vous voulez faire défiler, puis appuyez sur une flèche.";
     assert_eq!(fr.text(SCROLL_POINT), point);
     assert!(fr.text(SCROLL_FAILED).contains("Appuyez sur une flèche"));
-    for line in text_lines(fr.lang().ftl).map(str::to_lowercase) {
+    for line in prose(fr.lang()).map(str::to_lowercase) {
         assert!(!line.contains(FR_NOT_TAP), "{line}");
         let [bare, with_sur] = FR_POINT.map(|w| line.matches(w).count());
         assert_eq!(bare, with_sur, "{line}");
@@ -198,7 +209,7 @@ fn french_names_switch_app_with_windows_own_term() {
 #[test]
 fn arabic_uses_arabic_punctuation() {
     let ar = find("ar").expect("Arabic");
-    for line in text_lines(ar.ftl) {
+    for line in prose(ar) {
         assert!(!line.contains(LATIN_ONLY), "{line}");
     }
 }

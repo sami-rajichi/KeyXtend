@@ -13,6 +13,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 
 use crate::apps::{Ctx, Opened};
+use crate::ownkeys::{self, Real, tab_ours};
 use crate::product::Keyboard;
 use crate::simin::{self, Act};
 use crate::win::{self, sleep_ms};
@@ -23,9 +24,7 @@ const KEY_DOWN: i16 = i16::MIN;
 
 /// Fails unless our tab is the one shown and every point lands on our window.
 pub fn guard(app: &Opened, pts: &[Pt]) -> Result<(), String> {
-    if let Some(t) = &app.title_has
-        && !win::title(app.hwnd).contains(t.as_str())
-    {
+    if !tab_ours(&win::title(app.hwnd), app.title_has.as_deref()) {
         return Err(format!("our tab is not shown: {}", win::describe(app.hwnd)));
     }
     for p in pts {
@@ -37,10 +36,9 @@ pub fn guard(app: &Opened, pts: &[Pt]) -> Result<(), String> {
     Ok(())
 }
 
-/// Fails unless our window is in front with our tab shown, so keys reach only us.
+/// Fails unless our window is in front with our tab shown, so keys reach only us (`ownkeys::ours`).
 pub fn keys_ours(app: &Opened) -> Result<(), String> {
-    in_front(app.hwnd)?;
-    guard(app, &[])
+    ownkeys::ours(&Real, app)
 }
 
 /// Fails unless `hwnd` is the window in front, so keys reach only it.

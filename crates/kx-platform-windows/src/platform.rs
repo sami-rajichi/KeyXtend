@@ -3,22 +3,25 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use kx_crypto::KeyGuard;
+use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    FieldWatch, InputInjector, LayoutSource, PointerHook, PowerDialog, ScrollTarget, Shortcuts,
-    WordPacks,
+    Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource, Pictures,
+    PointerHook, PowerDialog, ScrollTarget, Shortcuts, WordPacks,
 };
+use kx_platform::pictures::WorkerPictures;
 use kx_platform::ui::{
-    Backdrop, Instance, Memory, Screens, Speaker, SystemLook, Tray, WindowGuard,
+    Backdrop, Instance, Memory, Reveal, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
+use crate::disk::WinDiskRoom;
 use crate::hook::Source;
 use crate::{
-    PlatformError, QpcClock, WinBackdrop, WinFieldWatch, WinGuard, WinInjector, WinInstance,
-    WinKeyGuard, WinLayouts, WinLook, WinMemory, WinPackDisk, WinPointerHook, WinPower, WinScreens,
-    WinScroll, WinShortcuts, WinSpeaker, WinTray, WinWordPacks, dirs,
+    PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
+    WinFieldWatch, WinGuard, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook, WinMemory,
+    WinPackDisk, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll, WinShortcuts,
+    WinSpawner, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -78,6 +81,37 @@ impl WindowsPlatform {
         Box::new(WinKeyGuard)
     }
 
+    /// The free space and name of a sealed shelf's drive.
+    #[must_use]
+    pub fn disk_room(&self) -> Box<dyn DiskRoom> {
+        Box::new(WinDiskRoom)
+    }
+
+    /// The clipboard watch, for the app to register under `ClipboardKey`.
+    #[must_use]
+    pub fn clipboard(&self) -> Arc<dyn Clipboard> {
+        Arc::new(WinClipboard::new())
+    }
+
+    /// The clipboard writer, for the app to register under `ClipboardWriterKey`.
+    #[must_use]
+    pub fn clipboard_writer(&self) -> Arc<dyn ClipboardWriter> {
+        Arc::new(WinClipboardWriter)
+    }
+
+    /// The local calendar, for the app to register under `CalendarKey`.
+    #[must_use]
+    pub fn calendar(&self) -> Arc<dyn Calendar> {
+        Arc::new(WinCalendar)
+    }
+
+    /// Pictures drawn by the media worker beside the program, for the app to register under `PicturesKey`.
+    #[must_use]
+    pub fn pictures(&self) -> Arc<dyn Pictures> {
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
+        Arc::new(WorkerPictures::new(worker, Arc::new(self.clock)))
+    }
+
     /// The word packs in `dirs`, the first folder first, for the app to register under `WordPacksKey`.
     #[must_use]
     pub fn word_packs(&self, dirs: Vec<PathBuf>) -> Arc<dyn WordPacks> {
@@ -130,6 +164,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn memory(&self) -> Arc<dyn Memory> {
         Arc::new(WinMemory)
+    }
+
+    /// The reveal that shows a folder in Explorer, opened by the running Explorer itself.
+    #[must_use]
+    pub fn reveal(&self) -> Arc<dyn Reveal> {
+        Arc::new(WinReveal)
     }
 
     /// The speaker: `XAudio2` on a thread of its own, which makes the engine at the first play.

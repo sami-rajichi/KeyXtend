@@ -117,3 +117,11 @@ fn each_error_says_something_else_and_a_refusal_counts() {
     let refused = errors[1].to_string();
     assert!(refused.contains('3') && refused.contains('8'), "{refused}");
 }
+
+#[test]
+fn the_paste_the_keyboard_sends_on_request_is_a_well_formed_id() {
+    assert_eq!(
+        ShortcutId::new(PASTE_ID).map(|id| id.as_str().to_owned()),
+        Some(PASTE_ID.to_owned())
+    );
+}

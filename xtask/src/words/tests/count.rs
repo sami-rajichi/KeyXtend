@@ -5,7 +5,7 @@
     reason = "The chain counts here are sums of whole numbers and halves, exact in an f32."
 )]
 
-use kx_mod_predict::Casing;
+use kx_module_api::text::Casing;
 
 use super::super::count::{ChainKey, Chains, Counted, Counter, NONE, Repeats, key as key_of};
 use super::super::fixture::text::{cand, tatoeba, wiki};

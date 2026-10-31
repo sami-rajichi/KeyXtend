@@ -1,7 +1,7 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
-//! state, outline and page turns, and the chip lane, each through a handler that holds the hub weakly, then asks the
-//! scroll and prediction modules for their state. The keyboard's wake, power changes included, is heard only while a
-//! face is attached, after the face's own handlers.
+//! state, outline and page turns, the chip lane and the clipboard panel, each through a handler that holds the hub
+//! weakly, then asks the scroll and prediction modules for their state. The keyboard's wake, power changes included,
+//! is heard only while a face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use kx_module_api::ports::{
@@ -19,7 +19,8 @@ pub(super) struct Heard {
 }
 
 impl Hub {
-    /// Hears every notice, mouse-assist and scroll event and the chip lane on `bus` until the subscriptions drop, keeps
+    /// Hears every notice, mouse-assist and scroll event, the chip lane and the clipboard panel on `bus` until the
+    /// subscriptions drop; a pad page turns the open panel, else our open list. It keeps
     /// `bus` for the keyboard's wake, and asks the scroll and prediction modules for their state, so any start order
     /// works; the app calls it before the kernel loads.
     ///
@@ -34,11 +35,10 @@ impl Hub {
             self.hear(bus, |hub, moved: &PointerMoved| hub.pointer_moved(moved.at))?,
             self.hear(bus, |hub, now: &ScrollChanged| hub.scroll_changed(*now))?,
             self.hear(bus, |hub, aimed: &ScrollAimed| hub.scroll_aimed(*aimed))?,
-            self.hear(bus, |hub, page: &ScrollPage| {
-                hub.wake(Wake::Page { back: page.back });
-            })?,
+            self.hear(bus, |hub, page: &ScrollPage| hub.pad_page(page.back))?,
         ];
         heard.push(self.hear_words(bus)?);
+        heard.extend(self.hear_clip(bus)?);
         bus.publish(&ScrollAsk)?;
         Ok(heard)
     }

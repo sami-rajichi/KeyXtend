@@ -4,15 +4,15 @@
 use std::borrow::Cow;
 
 use kx_module_api::Redacted;
+use kx_module_api::text;
 
 use crate::email;
-use crate::fold;
 use crate::script::{self, Script};
 use crate::split::{normalise, spans};
 
 /// The packs' apostrophe; a broken fold table, which its tests rule out, leaves NUL, which no word holds.
 pub(super) fn apostrophe() -> char {
-    fold::apostrophe().unwrap_or_default()
+    text::apostrophe().unwrap_or_default()
 }
 
 /// An email a token tells: its address, and the one the same token told before, which it replaces.

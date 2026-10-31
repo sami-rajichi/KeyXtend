@@ -7,23 +7,23 @@ fn character_ids_name_their_scan_code() {
     assert_eq!(char_id(Scan::new(0x2C)), "c-0x002C");
     assert_eq!(char_id(Scan::new(0xE035)), "c-0xE035");
     assert!(Role::Char.sends() && Role::Latch(LatchRole::of(Latch::Win)).sends());
-    assert!(!Role::Lang.sends() && !Role::Later.sends());
+    assert!(!Role::Lang.sends() && !Role::Later.sends() && !Role::Clip.sends());
     assert!(!Role::Assist(Assist::RClick).sends());
 }
 
 #[test]
-fn side_keys_flip_mouse_assist_show_the_layer_ask_for_power_or_come_later() {
+fn each_live_side_key_has_its_role_and_the_rest_come_later() {
     let s = BoardSpec::shipped().unwrap();
     let role = |id: &str| s.side.iter().find(|k| k.id == id).unwrap().role;
     assert_eq!(role("rclick"), Role::Assist(Assist::RClick));
     assert_eq!(role("grab"), Role::Assist(Assist::Grab));
     assert_eq!(
-        (role("shortcuts"), role("power")),
-        (Role::Layer, Role::Power)
+        (role("shortcuts"), role("clip"), role("power")),
+        (Role::Layer, Role::Clip, Role::Power)
     );
-    let now = |r: Role| matches!(r, Role::Assist(_) | Role::Layer | Role::Power);
+    let now = |r: Role| matches!(r, Role::Assist(_) | Role::Layer | Role::Clip | Role::Power);
     let rest: Vec<_> = s.side.iter().filter(|k| !now(k.role)).collect();
-    assert_eq!(rest.len(), 5);
+    assert_eq!(rest.len(), 4);
     assert!(rest.iter().all(|k| k.role == Role::Later));
     assert_eq!(Toggle::from(Assist::RClick), Toggle::RightClick);
     assert_eq!(Toggle::from(Assist::Grab), Toggle::Grab);

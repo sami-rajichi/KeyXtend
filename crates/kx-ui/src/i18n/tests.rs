@@ -7,6 +7,7 @@ static EN: Lang = Lang {
     tag: "en",
     rtl: false,
     ftl: "plain = Plain\ngroup =\n    .name = Named\n    .only-en = English only\nhello = Hello { $who }\n",
+    extra: &[PART],
 };
 
 /// A small French file that lacks `group.only-en` and has a broken line before its last entry.
@@ -14,7 +15,11 @@ static FR: Lang = Lang {
     tag: "fr",
     rtl: false,
     ftl: "plain = Simple\ngroup =\n    .name = Nommé\nbroken line\nafter = Après\n",
+    extra: &[],
 };
+
+/// A feature file of `EN`: a key of its own, and `plain` again, which the main file's text keeps.
+const PART: &str = "part =\n    .own = Its own\nplain = Again\n";
 
 /// The system language of this PC, which only the tray speaks.
 const OS: &str = "fr-FR";
@@ -123,4 +128,15 @@ fn a_missing_argument_never_panics() {
 fn texts_can_move_between_threads() {
     fn shared<T: Send + Sync>() {}
     shared::<I18n>();
+}
+
+#[test]
+fn a_feature_file_shares_the_texts_and_never_overrides_the_main_file() {
+    let t = I18n::of(&EN, &EN);
+    assert_eq!(t.text("part.own"), "Its own");
+    assert!(t.has("part.own"));
+    assert_eq!(t.text("plain"), "Plain", "the main file's text");
+    let files: Vec<&str> = EN.files().collect();
+    assert_eq!(files, [EN.ftl, PART]);
+    assert_eq!(FR.files().count(), 1);
 }

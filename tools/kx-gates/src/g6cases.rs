@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use crate::g6judge::{self, Look, Pair};
 use crate::g6scene::{Phase, Scene, between};
 use crate::g6spot::Tried;
-use crate::keys;
+use crate::ownkeys::{self, Real};
 use crate::p5cfg::G6;
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
@@ -254,7 +254,7 @@ pub fn end(s: &Scene) -> Result<(Case, Pair), String> {
     if !s.focus_list()? {
         return Ok((Case::unjudged("end", NO_FOCUS), None));
     }
-    keys::combo(&s.ctx.cfg.edit_keys.doc_end)?;
+    ownkeys::send(&Real, s.app, &s.ctx.cfg.edit_keys.doc_end)?;
     sleep_ms(s.ctx.cfg.probes.settle_ms);
     let bottom = s.snap()?;
     s.arrow(Dir::Up)?;

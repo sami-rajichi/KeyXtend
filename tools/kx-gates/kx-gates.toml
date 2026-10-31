@@ -301,6 +301,10 @@ switcher_classes = ["XamlExplorerHostIslandWindow", "MultitaskingViewFrame", "Ta
 power_class = "#32770"
 # The program that shows that dialog: the shell, as `Shell.Application` asks its taskbar for it.
 power_program = "explorer.exe"
+# G25 starts its own copy of the test build with the history key off: Windows' own history is its job, G20 checks ours.
+history_key = false
+# Wait after that copy's keyboard shows before G25's first part, in ms.
+ready_ms = 3000
 
 [capture]
 # `capture-layouts` writes one golden table per language, from the first installed layout of each. The keys it reads

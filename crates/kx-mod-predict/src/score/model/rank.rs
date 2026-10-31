@@ -4,8 +4,9 @@
 
 use std::ops::Range;
 
+use kx_module_api::text::fold;
+
 use super::Model;
-use crate::fold::fold;
 use crate::pack::{Pack, WordId};
 use crate::score::sink::Sink;
 

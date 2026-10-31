@@ -2,13 +2,15 @@
 //! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, the
 //! language shown always matches the legends, the pointer hook, the scroll target, the power dialog, the box watch and
 //! the sealed store reach only the modules holding their gate, the shortcuts reach the keyboard's layer, the pad
-//! scrolls, the Power key opens the dialog, and prediction opens the language in front.
+//! scrolls, the Power key opens the dialog, prediction opens the language in front, and a copy goes from the
+//! clipboard history's panel back into the app through the keyboard.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod clip;
 #[path = "../common/fakes.rs"]
 mod fakes;
 mod lang;
@@ -33,13 +35,14 @@ use rig::{Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 7] = [
+const SHIPPED: [ModuleId; 8] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
     kx_mod_scroll::ID,
     kx_mod_power::ID,
     kx_mod_predict::ID,
+    kx_mod_clipboard::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -48,7 +51,7 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_the_layouts_keyboard_mouse_scroll_power_predict_and_ui_modules() {
+fn the_app_ships_the_layouts_keyboard_mouse_scroll_power_predict_clipboard_and_ui_modules() {
     let boot = Rig::new().load();
     let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);
@@ -81,6 +84,7 @@ fn every_module_starts_types_and_stops_when_the_user_quits() {
         hub,
         requests,
         heard,
+        ..
     } = boot;
     let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
     assert!(hub.quit(), "the tray's Quit reaches the kernel's thread");

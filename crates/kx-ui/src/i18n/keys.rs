@@ -1,6 +1,6 @@
 //! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`.
 
-use kx_module_api::ports::MAX_PRESETS;
+use kx_module_api::ports::{ClipKind, Filter, MAX_PRESETS, PanelNote};
 
 /// Module names, by module id.
 pub const MODULE: &str = "module";
@@ -120,3 +120,117 @@ pub const WORDS_OFF_SHORT: &str = "words.off-short";
 pub const WORDS_ON: &str = "words.on";
 /// The on row's short label.
 pub const WORDS_ON_SHORT: &str = "words.on-short";
+/// The clipboard panel's window title.
+pub const WINDOW_CLIP: &str = "window.clip";
+/// The mark between a number's whole part and its decimals.
+pub const NUM_DECIMAL: &str = "num.decimal";
+/// The mark between each three digits of a number's whole part.
+pub const NUM_GROUP: &str = "num.group";
+/// The clipboard panel's title.
+pub const CLIP_TITLE: &str = "clip.title";
+/// How long entries are kept: `$days`, plural by `$form`.
+pub const CLIP_KEPT: &str = "clip.kept";
+/// The search line's hint while it is empty.
+pub const CLIP_SEARCH: &str = "clip.search";
+/// The panel's Close button.
+pub const CLIP_CLOSE: &str = "clip.close";
+/// A filter's label: this, then its id in `CLIP_FILTERS`.
+pub const CLIP_FILTER: &str = "clip.filter-";
+/// Each filter's id, in `Filter::ORDER`.
+pub const CLIP_FILTERS: [(Filter, &str); Filter::ORDER.len()] = [
+    (Filter::All, "all"),
+    (Filter::Text, "text"),
+    (Filter::Images, "images"),
+    (Filter::Files, "files"),
+    (Filter::Media, "media"),
+];
+/// A kind's name, which a row with no text of its own shows: this, then its `kind_id`.
+pub const CLIP_KIND: &str = "clip.kind-";
+/// The footer's Preview.
+pub const CLIP_PREVIEW: &str = "clip.preview";
+/// The footer's Pin.
+pub const CLIP_PIN: &str = "clip.pin";
+/// The footer's Pin while every target is pinned.
+pub const CLIP_UNPIN: &str = "clip.unpin";
+/// The footer's Delete.
+pub const CLIP_DELETE: &str = "clip.delete";
+/// The header's Delete all.
+pub const CLIP_DELETE_ALL: &str = "clip.delete-all";
+/// The footer's Insert with how many are ticked: `$count`.
+pub const CLIP_INSERT: &str = "clip.insert";
+/// The preview page's Insert, which acts on the previewed entry alone.
+pub const CLIP_INSERT_ONE: &str = "clip.insert-one";
+/// The preview page's Back.
+pub const CLIP_BACK: &str = "clip.back";
+/// Delete all's question: `$count` entries, plural by `$form`.
+pub const CLIP_CONFIRM: &str = "clip.confirm";
+/// The question's Yes.
+pub const CLIP_YES: &str = "clip.yes";
+/// The question's No.
+pub const CLIP_NO: &str = "clip.no";
+/// What an empty history shows.
+pub const CLIP_EMPTY: &str = "clip.empty";
+/// A row copied today.
+pub const CLIP_TODAY: &str = "clip.today";
+/// A row copied yesterday.
+pub const CLIP_YESTERDAY: &str = "clip.yesterday";
+/// A weekday's short name: this, then its ISO number, Monday 1.
+pub const CLIP_DAY: &str = "clip.day-";
+/// A day `$word` and its `$time`.
+pub const CLIP_WHEN: &str = "clip.when";
+/// A 24-hour time: `$hour` and `$minute`, two digits each.
+pub const CLIP_TIME: &str = "clip.time";
+/// A date: `$day`, `$month` and `$year`.
+pub const CLIP_DATE: &str = "clip.date";
+/// A size in MB: `$mb`.
+pub const CLIP_SIZE: &str = "clip.size";
+/// A size in GB: `$gb`.
+pub const CLIP_SIZE_GB: &str = "clip.size-gb";
+/// A size below `$mb`, the smallest two decimals show.
+pub const CLIP_SIZE_SMALL: &str = "clip.size-small";
+/// A row's size left unknown, as a share path never probed.
+pub const CLIP_SIZE_UNKNOWN: &str = "clip.size-unknown";
+/// The storage line: `$used` of `$cap`, and `$free` on `$drive`.
+pub const CLIP_STORAGE: &str = "clip.storage";
+/// The storage line's Open folder.
+pub const CLIP_OPEN_FOLDER: &str = "clip.open-folder";
+/// A row's meta line: `$app`, `$when` and `$size`.
+pub const CLIP_META: &str = "clip.meta";
+/// A row's meta line with no app: `$when` and `$size`.
+pub const CLIP_META_BARE: &str = "clip.meta-bare";
+/// The preview's length: `$count` characters, plural by `$form`.
+pub const CLIP_CHARS: &str = "clip.chars";
+/// The chip on media that goes tonight.
+pub const CLIP_EXPIRES: &str = "clip.expires";
+/// A note: this, then its `note_id`.
+pub const CLIP_NOTE: &str = "clip.note-";
+/// What readers hear for a ticked row: its place in the tick order, `$count`.
+pub const CLIP_TICKED: &str = "clip.ticked";
+/// What readers hear for a pinned row.
+pub const CLIP_PINNED: &str = "clip.pinned";
+/// What joins the parts of a row's name for readers.
+pub const CLIP_JOIN: &str = "clip.join";
+
+/// A kind's id, which QML also picks the row's icon by; the match makes every new kind name one.
+#[must_use]
+pub const fn kind_id(kind: ClipKind) -> &'static str {
+    match kind {
+        ClipKind::Text => "text",
+        ClipKind::Link => "link",
+        ClipKind::Image => "image",
+        ClipKind::File => "file",
+        ClipKind::Media => "media",
+    }
+}
+
+/// A note's id; the match makes every new note name one.
+#[must_use]
+pub const fn note_id(note: PanelNote) -> &'static str {
+    match note {
+        PanelNote::TooBig => "too-big",
+        PanelNote::Disk => "disk",
+        PanelNote::PinnedFull => "pinned-full",
+        PanelNote::Busy => "busy",
+        PanelNote::PasteFailed => "paste-failed",
+    }
+}

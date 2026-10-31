@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 use kx_module_api::ports::{MAX_ISO_LEN, MIN_ISO_LEN, fits_iso};
+use kx_module_api::text::{Casing, fold};
 use thiserror::Error;
 
 use super::layout::{
@@ -12,8 +13,6 @@ use super::layout::{
     fits_spelling,
 };
 use super::{Flags, WordId};
-use crate::casing::Casing;
-use crate::fold::fold;
 
 mod encode;
 

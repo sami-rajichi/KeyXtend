@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use super::files::{relative_place, walk_dir};
+use super::files::{Pick, relative_place, walk_dir};
 use super::{F3, Severity, Violation};
 use crate::config::TidyConfig;
 use crate::workspace::Workspace;
@@ -35,7 +35,13 @@ pub(crate) fn f3_bridge_unsafe(ws: &Workspace) -> Vec<Violation> {
         return Vec::new();
     };
     let (mut files, mut ignored) = (Vec::new(), Vec::new());
-    walk_dir(dir, &ws.root_dir, &ws.tidy, &mut files, &mut ignored);
+    walk_dir(
+        dir,
+        &ws.root_dir,
+        &Pick::sources(&ws.tidy),
+        &mut files,
+        &mut ignored,
+    );
     let bridges = dir.join(&ws.tidy.bridge_dir);
     files
         .iter()
@@ -132,14 +138,14 @@ fn last_word(text: &str) -> &str {
 }
 
 /// True when `code[at..at + len]` is a whole word, not part of a longer name.
-fn whole(code: &str, at: usize, len: usize) -> bool {
+pub(super) fn whole(code: &str, at: usize, len: usize) -> bool {
     let before = code[..at].chars().next_back().is_none_or(|c| !part(c));
     let after = code[at + len..].chars().next().is_none_or(|c| !part(c));
     before && after
 }
 
 /// True for a character a name may hold.
-fn part(c: char) -> bool {
+pub(super) fn part(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
@@ -157,14 +163,14 @@ enum Text {
 
 /// Where the scan is between lines: inside block comments, which nest, or a string.
 #[derive(Debug, Default)]
-struct Scan {
+pub(super) struct Scan {
     depth: usize,
     text: Text,
 }
 
 impl Scan {
     /// `line` without comments, with literals blanked; it never panics.
-    fn code(&mut self, line: &str) -> String {
+    pub(super) fn code(&mut self, line: &str) -> String {
         let chars: Vec<char> = line.chars().collect();
         let mut out = String::new();
         let mut i = 0;

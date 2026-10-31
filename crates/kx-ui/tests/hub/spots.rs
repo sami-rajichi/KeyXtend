@@ -1,5 +1,10 @@
 //! Where the pop-ups go: beside the keyboard, at home with no keyboard, the tray menu by its icon, and the bubble.
 
+#![allow(
+    clippy::float_cmp,
+    reason = "a panel that fits keeps exactly 1, and one clamped exactly the least share"
+)]
+
 use crate::{DPI, Rig, main_screen};
 use kx_module_api::ports::{Corner, Point, Rect, Screen, physical};
 use kx_theme::Themes;
@@ -146,4 +151,73 @@ fn the_bubble_takes_the_theme_size_at_the_screen_dpi() {
     );
     rig.screens.set_areas(Vec::new());
     assert_eq!(rig.hub.bubble_at(Point::default(), Corner::Left), None);
+}
+
+/// Windows' 125 % DPI.
+const DPI_125: u32 = 120;
+
+/// A work area `w` by `h` at `dpi`, and a keyboard `kb_h` Qt units high docked at its bottom edge, in its pixels.
+fn docked(rig: &Rig, w: i32, h: i32, dpi: u32, kb_h: f64) -> Rect {
+    let area = Screen {
+        rect: rect(0, 0, w, h),
+        dpi,
+        primary: true,
+    };
+    rig.screens.set_areas(vec![area]);
+    let kb = physical(kb_h, dpi);
+    rect(w / 4, h - gaps(dpi)[1] - kb, w / 2, kb)
+}
+
+#[test]
+fn a_panel_too_tall_beside_the_keyboard_shrinks_to_the_room_above_it() {
+    let rig = Rig::new();
+    let kb = docked(&rig, 1366, 720, DPI, 196.0);
+    let [near, edge] = gaps(DPI);
+    let room = kb.y - near - edge;
+    let f = rig
+        .hub
+        .pop_fit(Some(kb), None, 480.0, 600.0)
+        .expect("a spot");
+    assert!((f.fit - f64::from(room) / 600.0).abs() < 1e-9, "{}", f.fit);
+    assert_eq!(f.y, edge, "its bottom the gap above the keys");
+    let small = rig
+        .hub
+        .pop_fit(Some(kb), None, 480.0, 300.0)
+        .expect("a spot");
+    assert_eq!(
+        (small.fit, small.y),
+        (1.0, kb.y - near - 300),
+        "one that fits keeps its size"
+    );
+}
+
+#[test]
+fn a_panel_shrinks_at_the_scale_of_its_screen_but_never_below_the_least_share() {
+    let rig = Rig::new();
+    let kb = docked(&rig, 1920, 1020, DPI_125, 196.0);
+    let [near, edge] = gaps(DPI_125);
+    let tall = physical(600.0, DPI_125);
+    let f = rig
+        .hub
+        .pop_fit(Some(kb), None, 480.0, 600.0)
+        .expect("a spot");
+    let room = f64::from(kb.y - near - edge);
+    assert!(
+        (f.fit - (room / f64::from(tall)).min(1.0)).abs() < 1e-9,
+        "{}",
+        f.fit
+    );
+    let least = Themes::shipped()
+        .expect("the shipped themes")
+        .shape
+        .panel
+        .min_fit;
+    let huge = rig
+        .hub
+        .pop_fit(Some(kb), None, 480.0, 5000.0)
+        .expect("a spot");
+    assert_eq!(huge.fit, f64::from(least));
+    assert_eq!(huge.y, edge, "over the keys, inside the work area");
+    let home = rig.hub.pop_fit(None, None, 480.0, 600.0).expect("a spot");
+    assert_eq!(home.fit, 1.0, "with no keyboard nothing shrinks");
 }

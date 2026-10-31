@@ -2,6 +2,7 @@
 
 mod assist;
 mod bursts;
+mod clip;
 mod edges;
 mod face;
 mod fit;

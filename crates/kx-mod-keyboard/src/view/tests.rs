@@ -81,6 +81,7 @@ struct Others<'a> {
     scroll: ScrollChanged,
     layer: &'a Layer,
     power: PowerChanged,
+    clip: bool,
 }
 
 /// The state with the mouse module in state `assist` and the scroll module in state `scroll`.
@@ -98,6 +99,7 @@ fn state_of(
         scroll,
         layer: &layer,
         power,
+        clip: false,
     };
     state_with(latches, caps, open, &others)
 }
@@ -128,6 +130,7 @@ fn state_with(
         scroll: others.scroll,
         layer: others.layer,
         power: others.power,
+        clip: others.clip,
     })
 }
 
@@ -231,6 +234,7 @@ fn key_and_state_debug_hide_legends_lights_and_caps() {
 
 mod assist;
 mod board;
+mod clip;
 mod layer;
 mod pad;
 mod power;

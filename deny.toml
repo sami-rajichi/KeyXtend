@@ -51,7 +51,7 @@ multiple-versions = "warn"
 wildcards = "deny"
 # ...except our own workspace path dependencies, which are always fine.
 allow-wildcard-paths = true
-# Older copies some dependencies still use beside the newer ones: cxx-qt 0.10.0's (ADR-0013) and a few proc-macros'.
+# Older copies some dependencies still use beside the newer ones: cxx-qt 0.10.0's (ADR-0013), a few proc-macros' and png's.
 # Review them at each upgrade of the crates the reasons name, which may drop them.
 skip = [
     { crate = "codespan-reporting@0.11.1", reason = "cxx-qt-build uses it; cxx-gen uses 0.13" },
@@ -59,6 +59,7 @@ skip = [
     { crate = "syn@2.0.119", reason = "windows-implement, windows-interface and zerocopy-derive used it before cxx-qt; cxx-qt-gen and cxx-qt-macro use it too; serde and cxx-gen use 3" },
     { crate = "thiserror@1.0.69", reason = "cxx-qt uses it at run time, so it ships in the binary; qt-build-utils and clang-format use it at build time; our crates use 2" },
     { crate = "thiserror-impl@1.0.69", reason = "thiserror 1 uses it" },
+    { crate = "miniz_oxide@0.8.9", reason = "png 0.18, in the media worker only, needs 0.8; flate2 uses 0.9" },
 ]
 
 [sources]

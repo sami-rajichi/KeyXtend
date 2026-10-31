@@ -68,6 +68,7 @@ fn quit(boot: Boot) {
         hub,
         requests,
         heard,
+        ..
     } = boot;
     let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
     assert!(hub.quit());

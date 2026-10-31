@@ -8,6 +8,12 @@ pub const PORTABLE_DIR: &str = "data";
 /// Name of the program's folder inside the OS per-user data folder.
 pub const APP_DIR_NAME: &str = "KeyXtend";
 
+/// The folder under the data folder that holds the sealed clipboard history.
+pub const CLIP_DIR: &str = "clipboard";
+
+/// The folder under the data folder that holds the sealed learned words and emails.
+pub const SEALED_DIR: &str = "words";
+
 /// The folders an OS adapter reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppDirs {

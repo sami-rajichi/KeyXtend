@@ -41,7 +41,11 @@
       "test_only": ["kx-test-support", "kx-platform-fake"],
       "bridge_crate": "kx-ui",
       "bridge_dir": "src/bridges",
-      "safety_tag": "// SAFETY:"
+      "safety_tag": "// SAFETY:",
+      "spawn_dirs": ["apps", "crates"],
+      "spawn_extensions": ["rs", "h", "cpp"],
+      "banned_spawns": ["std::process::Command", "QProcess"],
+      "build_scripts": ["build.rs", "qtbuild.rs"]
     }
   }
 }

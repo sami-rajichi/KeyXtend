@@ -171,7 +171,7 @@ fn held(instance: &dyn Instance) -> bool {
 
 /// True while a product copy runs: one with a window, or one exiting windowless that still holds its session claim
 /// and may yet save; true when the platform cannot be asked.
-fn runs() -> bool {
+pub(crate) fn runs() -> bool {
     product::running().is_some() || WindowsPlatform::new().map_or(true, |p| held(&*p.instance()))
 }
 

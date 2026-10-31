@@ -13,7 +13,7 @@ use crate::g22cfg::plain_name;
 /// Refuses probe settings that could pick the wrong copy, clean up the owner's copies or pass with nothing checked.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
     check_g7(&c.g7)?;
-    check_g25(&c.g25)?;
+    check_g25(&c.g25, c.mouse_guard.limit_ms)?;
     let g = &c.g20;
     if !(1..=g.copies).contains(&g.paste_back) {
         return Err(format!("g20.paste_back must be 1 to {}", g.copies));
@@ -56,8 +56,9 @@ fn check_g7(g: &G7) -> Result<(), String> {
 }
 
 /// Refuses a G25 run that could miss a window or press another key: an empty class or program, an `esc` other than
-/// the lone Esc key, which the power dialog gets, or a V that is no character key of the product's board.
-fn check_g25(g: &G25) -> Result<(), String> {
+/// the lone Esc key, which the power dialog gets, a V that is no character key of the product's board, the history key
+/// on in its copy (G25 checks Windows' own history; G20 checks ours), or a ready wait outside 1 ms to `most_ms`.
+fn check_g25(g: &G25, most_ms: u64) -> Result<(), String> {
     let empty = |list: &[String]| list.is_empty() || list.iter().any(String::is_empty);
     let names = [&g.power_class, &g.power_program];
     if empty(&g.panel_classes) || empty(&g.switcher_classes) || names.iter().any(|n| n.is_empty()) {
@@ -68,6 +69,12 @@ fn check_g25(g: &G25) -> Result<(), String> {
     if g.esc != [VK_ESCAPE.0] {
         return Err("g25.esc must be the Esc key alone, as the power dialog gets it".into());
     }
+    if g.history_key {
+        return Err(
+            "g25.history_key must be false: Win and V must reach Windows' own history".into(),
+        );
+    }
+    crate::p8cfg::wait("g25.ready_ms", g.ready_ms, most_ms)?;
     board::char_key(g.v_scan)
         .map(drop)
         .map_err(|e| format!("g25.v_scan: {e}"))
@@ -211,6 +218,10 @@ pub struct G25 {
     pub power_class: String,
     /// Program that shows the power dialog (adapter table).
     pub power_program: String,
+    /// The history key in G25's own copy of the test build; always off, so Win and V reach Windows.
+    pub history_key: bool,
+    /// Wait after that copy's keyboard shows before G25's first part, in ms.
+    pub ready_ms: u64,
 }
 
 #[cfg(test)]
@@ -255,7 +266,10 @@ mod tests {
     #[test]
     fn check_refuses_a_g25_that_could_miss_its_window_or_close_another() {
         let good = crate::config::load().expect("kx-gates.toml loads");
-        let bad: [fn(&mut G25); 12] = [
+        let bad: [fn(&mut G25); 15] = [
+            |g| g.history_key = true,
+            |g| g.ready_ms = 0,
+            |g| g.ready_ms = u64::MAX,
             |g| g.switcher_classes.clear(),
             |g| g.switcher_classes.push(String::new()),
             |g| g.panel_classes.clear(),

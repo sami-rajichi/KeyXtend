@@ -3,6 +3,7 @@
 //! that could not start drawing, are made again over the same hub (ADR-0018), on a new device on the lowest-power
 //! adapter found anew, one try per turn of Qt's loop.
 
+use crate::bridges::clip::serve_clips;
 use crate::bridges::device::{Device, Watch, flush_deletes};
 use crate::bridges::fonts::QtFontBook;
 use crate::bridges::harden::{drawing_pinned, pin_adapter, pin_imports, unpin_adapter};
@@ -192,6 +193,7 @@ impl Shell {
             pin_imports(engine.as_mut(), dir);
         }
         serve_icons(engine.as_mut());
+        serve_clips(engine.as_mut());
         serve_shadows(engine.as_mut());
         let loaded = root(engine);
         if !loaded {

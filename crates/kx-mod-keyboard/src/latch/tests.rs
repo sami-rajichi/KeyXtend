@@ -236,3 +236,16 @@ proptest! {
         run(Modifiers::Stay, steps)?;
     }
 }
+
+#[test]
+fn clear_lets_every_latch_go_whatever_the_mode() {
+    for mode in [Modifiers::Release, Modifiers::Stay] {
+        let mut m = Latches::new(mode);
+        m.toggle(Latch::Ctrl, CTRL);
+        m.toggle(Latch::Shift, SHIFT);
+        assert!(m.clear(), "{mode:?}");
+        assert!(m.held(&[]).is_empty(), "{mode:?}");
+        assert_eq!(m.mode(), mode, "the mode stays");
+        assert!(!m.clear(), "{mode:?}: nothing left to let go");
+    }
+}

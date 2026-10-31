@@ -38,6 +38,10 @@ pub(crate) enum StageError {
         /// The flag it holds.
         flag: String,
     },
+    /// The media worker's program is not beside the app's.
+    NoWorker(String),
+    /// The media worker's manifest asks for uiAccess.
+    WorkerUiAccess(String),
     /// The packs folder lacks its index, a pack the index lists, or a credit file.
     NoWords(String),
     /// The pack index is empty or does not read.
@@ -87,6 +91,8 @@ impl fmt::Display for StageError {
                     "{exe} holds {flag}: a gate-only build, which never ships"
                 )
             }
+            Self::NoWorker(exe) => write!(f, "{exe} is missing; the worker ships beside the app"),
+            Self::WorkerUiAccess(exe) => write!(f, "{exe} asks for uiAccess; the worker never may"),
             Self::NoWords(path) => {
                 write!(
                     f,

@@ -234,9 +234,9 @@ fn err(e: windows::core::Error) -> String {
     format!("UI Automation: {e}")
 }
 
-/// What one button tells a screen reader.
+/// What one button, or one list row, tells a screen reader.
 #[allow(unsafe_code, reason = "UI Automation calls on a live element.")]
-fn read_one(el: &IUIAutomationElement) -> Result<KeyRead, String> {
+pub(crate) fn read_one(el: &IUIAutomationElement) -> Result<KeyRead, String> {
     // SAFETY: plain property reads on a live element; a missing pattern reads as an error, so as not invokable.
     unsafe {
         Ok(KeyRead {

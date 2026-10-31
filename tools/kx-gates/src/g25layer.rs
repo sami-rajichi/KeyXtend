@@ -7,6 +7,7 @@ use std::cell::Cell;
 use kx_mod_keyboard::Role;
 use kx_mod_keyboard::spec::{NEXT_ID, shortcut_key_id};
 use kx_module_api::ports::ShortcutId;
+use kx_platform_windows::clip::{self, open};
 use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
@@ -14,10 +15,10 @@ use crate::g25::{self, part};
 use crate::g25watch::Watch;
 use crate::g25wins::{self, EscTo};
 use crate::modekey::ModeKey;
+use crate::ownkeys::{self, Real};
 use crate::product::{self, Keyboard};
-use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clip, cliptext, keys, readback};
+use crate::{board, clipkeep, readback};
 
 /// Selects all of Notepad's text.
 const SELECT_ALL: &str = "select-all";
@@ -59,14 +60,14 @@ fn turns(from: usize, to: usize, count: usize) -> usize {
 }
 
 /// The layer as G25 drives it: Notepad, each page's key ids as the product draws them, and the page shown now.
-struct Desk<'a> {
+struct Layer<'a> {
     ctx: &'a Ctx<'a>,
     app: &'a Opened,
     pages: Vec<Vec<String>>,
     at: Cell<usize>,
 }
 
-impl Desk<'_> {
+impl Layer<'_> {
     /// Reads the keyboard until `read` takes it, up to G25's switch wait; else the error `why`.
     fn read<T>(&self, why: &str, read: impl Fn(Keyboard) -> Option<T>) -> Result<T, String> {
         let (wait, poll) = (self.ctx.cfg.g25.switch_wait_ms, self.ctx.cfg.timing.poll_ms);
@@ -102,22 +103,22 @@ impl Desk<'_> {
         Ok(kb)
     }
 
-    /// Clicks shortcut `name` on its page, with Notepad in front so its keys reach Notepad alone.
+    /// Clicks shortcut `name` on its page, only while Notepad is in front with our tab, so its keys reach it alone.
     fn press(&self, name: &str) -> Result<(), String> {
         let id = key(name)?;
         let page = page_with(&self.pages, &id).ok_or_else(|| format!("{id} is on no page"))?;
         let kb = self.turn_to(page)?;
-        keys_ours(self.app)?;
-        kb.click(&id)
+        ownkeys::click(&Real, self.app, &|| kb.click(&id))
     }
 
     /// Clicks shortcut `name`, then reads the clipboard once it changed: true when it holds G25's text.
     fn copies(&self, name: &str) -> Result<bool, String> {
         let t = &self.ctx.cfg.timing;
-        let before = clip::sequence();
+        let before = open::sequence();
         self.press(name)?;
-        let changed = clip::wait_change(before, t.read_wait_ms, t.poll_ms);
-        let text = cliptext::read_text(t.read_wait_ms, t.poll_ms, self.ctx.cfg.g1.max_read_chars)?;
+        let changed = open::wait_change(before, clipkeep::wait(t));
+        let text = clip::read_text(clipkeep::wait(t), self.ctx.cfg.g1.max_read_chars)
+            .map_err(|e| e.to_string())?;
         Ok(changed && text.as_deref() == Some(self.ctx.cfg.g25.text.as_str()))
     }
 
@@ -135,8 +136,7 @@ impl Desk<'_> {
         self.press(SELECT_ALL)?;
         sleep_ms(self.ctx.cfg.timing.key_settle_ms);
         let copy = self.copies(COPY)?;
-        keys_ours(self.app)?;
-        keys::combo(&self.ctx.cfg.edit_keys.doc_end)?;
+        ownkeys::send(&Real, self.app, &self.ctx.cfg.edit_keys.doc_end)?;
         let paste = self.edits(PASTE, &text.repeat(2))?;
         let undo = self.edits(UNDO, text)?;
         let copy_all = self.copies(COPY_ALL)?;
@@ -168,16 +168,16 @@ impl Desk<'_> {
 /// whatever happened: the `shortcuts` and `switch_app` results.
 pub fn run(ctx: &Ctx, app: &Opened) -> Result<(Value, Value), String> {
     let pages = board::layer_pages(&product::keyboard()?.shortcut_pages)?;
-    let (layer, wait) = (ModeKey::of(Role::Layer)?, g25::wait(ctx));
-    let was = layer.on()?;
-    let desk = Desk {
+    let (mode, wait) = (ModeKey::of(Role::Layer)?, g25::wait(ctx));
+    let was = mode.on()?;
+    let layer = Layer {
         ctx,
         app,
         pages,
         at: Cell::new(0),
     };
-    let driven = layer.set(true, wait).and_then(|()| desk.drive());
-    let back = layer.put_back(was, wait);
+    let driven = mode.set(true, wait).and_then(|()| layer.drive());
+    let back = mode.put_back(was, wait);
     let (mut shortcuts, switch) = driven.unwrap_or_else(|e| (part(Err(e.clone())), part(Err(e))));
     shortcuts["layer_as_found"] = json!(back.is_ok());
     shortcuts["ok"] = json!(shortcuts["ok"] == true && back.is_ok());

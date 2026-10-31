@@ -123,3 +123,26 @@ pause = "eye-off"
 resume = "eye"
 power = "power"
 cancel = "x"
+
+# The clipboard panel (spec §7; mock-up buildClip and TYPEICON, lines 877 and 1563): its title, which the empty line
+# shares, the search line and Close; each row kind's icon by the hub's kind id (a file shows the plain file);
+# the pin, the footer's actions, No's cancel, the shown filter's check, the storage line, Open folder and Back.
+[clip]
+title = "clipboard-clock"
+search = "search"
+close = "x"
+kind_text = "file-text"
+kind_link = "link"
+kind_image = "image"
+kind_file = "file"
+kind_media = "film"
+pin = "pin"
+unpin = "pin-off"
+preview = "eye"
+delete = "trash-2"
+insert = "clipboard-paste"
+cancel = "x"
+shown = "check"
+room = "hard-drive"
+folder = "folder-open"
+back = "arrow-left"

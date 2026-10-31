@@ -7,8 +7,8 @@ mod text;
 
 use std::collections::BTreeMap;
 
-use kx_mod_predict::fold;
 use kx_module_api::ports::fits_iso;
+use kx_module_api::text::apostrophe;
 use serde::Deserialize;
 
 pub(crate) use self::origin::Origin;
@@ -177,7 +177,7 @@ impl Manifest {
     pub(crate) fn parse(text: &str) -> Result<Self, WordsError> {
         let mut manifest: Self = toml::from_str(text).map_err(|e| bad(&e.to_string()))?;
         manifest.rules.apostrophe =
-            fold::apostrophe().ok_or_else(|| bad("the fold table names no apostrophe"))?;
+            apostrophe().ok_or_else(|| bad("the fold table names no apostrophe"))?;
         check::rules(&manifest.rules)?;
         check::fetch(&manifest.fetch)?;
         check::text(&manifest.text)?;

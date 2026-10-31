@@ -86,9 +86,13 @@ pub mod keys {
     pub const WORDS_MISSING: &str = "notice.words-missing";
     /// The learned words could not be unlocked, so nothing learned is saved this run.
     pub const WORDS_LOCKED: &str = "notice.words-locked";
+    /// Part of the clipboard history was damaged, so those entries were left out.
+    pub const CLIP_DAMAGED: &str = "notice.clip-damaged";
+    /// The clipboard history could not be unlocked, so copies are not kept this run.
+    pub const CLIP_LOCKED: &str = "notice.clip-locked";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 22] = [
+    pub const ALL_KEYS: [&str; 24] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -111,6 +115,8 @@ pub mod keys {
         WORDS_DAMAGED,
         WORDS_MISSING,
         WORDS_LOCKED,
+        CLIP_DAMAGED,
+        CLIP_LOCKED,
     ];
 }
 
@@ -192,6 +198,14 @@ mod tests {
         assert_eq!(keys::WORDS_LOCKED, "notice.words-locked");
         let words = [keys::WORDS_DAMAGED, keys::WORDS_MISSING, keys::WORDS_LOCKED];
         assert!(words.iter().all(|k| ALL_KEYS.contains(k)));
+    }
+
+    #[test]
+    fn the_clipboard_notices_keep_their_keys_and_are_listed() {
+        assert_eq!(keys::CLIP_DAMAGED, "notice.clip-damaged");
+        assert_eq!(keys::CLIP_LOCKED, "notice.clip-locked");
+        let clip = [keys::CLIP_DAMAGED, keys::CLIP_LOCKED];
+        assert!(clip.iter().all(|k| ALL_KEYS.contains(k)));
     }
 
     #[test]

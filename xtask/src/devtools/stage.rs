@@ -1,5 +1,5 @@
-//! `cargo xtask stage`: builds the app in release and stages it with only the Qt files it loads and the word packs,
-//! then checks the stage.
+//! `cargo xtask stage`: builds the app and the media worker in release and stages them with only the Qt files the app
+//! loads and the word packs, then checks the stage.
 
 mod check;
 mod config;
@@ -7,6 +7,7 @@ mod error;
 mod pe;
 mod qt;
 mod words;
+mod worker;
 
 pub(crate) use self::check::refuse_gate_exe;
 pub(crate) use self::config::{Network, StageConfig};
@@ -38,14 +39,15 @@ pub(crate) struct Copy {
     pub to: PathBuf,
 }
 
-/// Every file the stage holds: the program `exe`, then Qt's libraries, plugins and QML files.
-pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, exe: &Path) -> Vec<Copy> {
+/// Every file the stage holds: the program and the worker from the `release` folder, then Qt's libraries, plugins and
+/// QML files.
+pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, release: &Path) -> Vec<Copy> {
     let at = |base: &Path, rel: &str| paths::join_rel(base.to_path_buf(), rel);
     let qml_to = PathBuf::from(&config.qml_dir);
-    let program = Copy {
-        from: exe.to_path_buf(),
-        to: PathBuf::from(config.program()),
-    };
+    let built = [config.program(), config.worker_program()].map(|exe| Copy {
+        from: release.join(&exe),
+        to: PathBuf::from(exe),
+    });
     let libs = config.libs.iter().map(|l| Copy {
         from: qt.bins.join(l),
         to: PathBuf::from(l),
@@ -58,7 +60,8 @@ pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, exe: &Path) -> Vec<Copy> {
         from: at(&qt.qml, q),
         to: at(&qml_to, q),
     });
-    std::iter::once(program)
+    built
+        .into_iter()
         .chain(libs)
         .chain(plugins)
         .chain(qml)
@@ -111,7 +114,8 @@ fn discard(stage: &Path, err: DevError) -> DevError {
 }
 
 /// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder and measuring the
-/// download at the words build's level, then holds its installed size to the install's limit and checks its packs.
+/// download at the words build's level, checks the worker's manifest, then holds its installed size to the install's
+/// limit and checks its packs.
 pub(crate) fn verify(
     setup: &DevSetup,
     config: &StageConfig,
@@ -121,6 +125,7 @@ pub(crate) fn verify(
     let system = paths::join_rel(setup.windows(env)?, &config.system_dir);
     let in_system = |lib: &str| system.join(lib).is_file();
     let summary = check::check(folder, config, level()?, pe::read, in_system)?;
+    worker::check(folder, config, &setup.config)?;
     paths::fits(summary.size.bytes, setup.config.install_max_mb)?;
     words::check(folder, &Words::load(&setup.root)?.credits)?;
     Ok(summary)
@@ -138,12 +143,12 @@ pub(crate) fn load(json: &str) -> Result<StageConfig, LoadError> {
     Ok(config)
 }
 
-/// Builds the app in release with cargo, showing cargo's own progress.
-fn build(config: &StageConfig) -> Result<(), DevError> {
-    let step = BUILD.join(" ");
+/// Builds `package` in release with cargo, alone so no other package changes its features, showing cargo's progress.
+fn build(package: &str) -> Result<(), DevError> {
+    let step = format!("{} {package}", BUILD.join(" "));
     let status = crate::cargo::command()
         .args(BUILD)
-        .arg(&config.app)
+        .arg(package)
         .status()
         .map_err(|e| DevError::Spawn {
             program: step.clone(),
@@ -159,19 +164,19 @@ fn build(config: &StageConfig) -> Result<(), DevError> {
     }
 }
 
-/// Runs `cargo xtask stage`: builds the app, stages it in `<out_dir>/<app>`, checks the stage and reports its size.
+/// Runs `cargo xtask stage`: builds the app and the worker, stages them in `<out_dir>/<app>`, checks the stage and
+/// reports its size.
 pub(crate) fn run() -> Result<(), DevError> {
     let json = workspace::metadata_json()?;
     let (setup, config) = (super::config::load(&json)?, load(&json)?);
     let env = |key: &str| std::env::var(key).ok();
     let qt = qt::find(&config, env)?;
     let words = words::plan(&Words::load(&setup.root)?)?;
-    build(&config)?;
-    let exe = workspace::target_dir(&json)?
-        .join(RELEASE_DIR)
-        .join(config.program());
+    build(&config.app)?;
+    build(&config.worker)?;
+    let release = workspace::target_dir(&json)?.join(RELEASE_DIR);
     let stage = setup.path(&config.out_dir).join(&config.app);
-    let mut files = plan(&config, &qt, &exe);
+    let mut files = plan(&config, &qt, &release);
     files.extend(words);
     let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);

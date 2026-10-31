@@ -3,9 +3,8 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
+use kx_module_api::text::{Casing, fold, is_apostrophe};
 
-use crate::casing::Casing;
-use crate::fold::{fold, is_apostrophe};
 use crate::pack::Pack;
 use crate::script::Script;
 use crate::track::{Query, Reading};

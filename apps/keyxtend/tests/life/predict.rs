@@ -78,6 +78,7 @@ fn predict_starts_with_the_box_watch_and_the_sealed_store_and_quit_ends_its_watc
         hub,
         requests,
         heard,
+        ..
     } = boot;
     let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
     assert!(hub.quit());

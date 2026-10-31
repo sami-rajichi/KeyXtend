@@ -1,6 +1,7 @@
 //! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
 #![cfg(windows)]
 
+use kx_platform_windows::clip::open;
 use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::uia::{self, Sel, Uia};
 use serde_json::{Value, json};
@@ -8,10 +9,11 @@ use spike_core::geom;
 use spike_core::selwatch::PillPx;
 
 use crate::apps::{AppKind, Ctx, Opened};
+use crate::ownkeys::{self, Real};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{clip, keys, launch, out, simuser};
+use crate::{launch, out, simuser};
 
 /// G19's run name: detection only, before the pill exists.
 pub const CORE: &str = "core";
@@ -20,16 +22,13 @@ const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
 /// The apps the roadmap names for G19; Word waits for P10, as its sign-in dialog blocked it.
 const ROADMAP_APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Word, AppKind::Chrome];
 
-/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End.
+/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
     let ek = &ctx.cfg.edit_keys;
-    simuser::keys_ours(app)?;
-    keys::combo(&ek.doc_start)?;
-    for _ in 0..i {
-        keys::combo(&ek.next_line)?;
-    }
-    keys::combo(&ek.line_start)?;
-    keys::combo(&ek.select_line)?;
+    let mut run: Vec<&[u16]> = vec![&ek.doc_start];
+    run.extend(std::iter::repeat_n(ek.next_line.as_slice(), i));
+    run.extend([ek.line_start.as_slice(), ek.select_line.as_slice()]);
+    ownkeys::each(&Real, app, &run)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     Ok(())
 }
@@ -93,11 +92,11 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
 /// Checks every line in `app`, and that the clipboard never changed.
 fn check_all(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     let uia = Uia::new().map_err(|e| e.to_string())?;
-    let seq = clip::sequence();
+    let seq = open::sequence();
     let lines: Vec<Value> = (ctx.cfg.g19.lines.iter().enumerate())
         .map(|(i, want)| check_line(ctx, &uia, app, i, want))
         .collect();
-    let untouched = clip::sequence() == seq;
+    let untouched = open::sequence() == seq;
     let ok = untouched && lines.iter().all(|l| l["ok"] == true);
     Ok(
         json!({ "app": app.kind.name(), "ok": ok, "lines": lines, "clipboard_untouched": untouched }),

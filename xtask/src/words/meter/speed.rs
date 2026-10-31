@@ -10,9 +10,10 @@ use kx_mod_predict::pack::layout::MAX_CHAIN;
 use kx_mod_predict::score::{Learned, ScoreConfig, guesses};
 use kx_mod_predict::script::Script;
 use kx_mod_predict::track::{Query, Reading};
-use kx_mod_predict::{Pack, PredictSettings, WordId, fold};
+use kx_mod_predict::{Pack, PredictSettings, WordId};
 use kx_module_api::Redacted;
 use kx_module_api::ports::TypingMode;
+use kx_module_api::text::fold;
 
 use super::tally::{percentile, times_text};
 use super::{DAY, Paths, RELEASE_RUN, UNOPTIMISED, each_pack, new_learner, slow_note, timed_us};

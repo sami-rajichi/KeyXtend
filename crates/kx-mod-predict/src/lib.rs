@@ -1,15 +1,13 @@
 //! Word prediction (spec §6, ADR-0032): the module that shows word chips, types picks through the keyboard and learns
-//! on the device, over pure parts: folding and casing, the word splitting the pack builder shares, the word-pack
-//! format, the tracker, the scorer, the learner and email suggestions.
+//! on the device, over pure parts: the word splitting the pack builder shares, the word-pack format, the tracker, the
+//! scorer, the learner and email suggestions. Folding and casing live in `kx_module_api::text`, shared with search.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod actor;
-pub mod casing;
 mod days;
 pub mod email;
-pub mod fold;
 mod lane;
 pub mod learn;
 mod manifest;
@@ -26,9 +24,7 @@ pub use actor::{
     ASIDE_SUFFIX, Actor, EMAILS_BLOB, Flow, Msg, OTHER_LANGUAGE, Ports, STOPPED_LINE, aside_blob,
     emails_blob, learned_blob, watch,
 };
-pub use casing::Casing;
 pub use days::{Days, SystemDays};
-pub use fold::fold;
 pub use manifest::{ID, MANIFEST};
 pub use pack::{Flags, Pack, PackFormatError, WordId};
 #[cfg(feature = "build")]

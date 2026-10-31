@@ -5,8 +5,8 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use kx_mod_predict::Casing;
 use kx_module_api::ports::pack_file;
+use kx_module_api::text::Casing;
 
 use super::cands::Candidates;
 use super::chains::{self, Picked};

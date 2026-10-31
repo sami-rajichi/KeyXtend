@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use kx_mod_predict::Casing;
 use kx_mod_predict::split::Splitter;
+use kx_module_api::text::Casing;
 
 use super::super::WordsError;
 use super::super::cands::candidates;

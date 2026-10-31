@@ -13,7 +13,8 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
+default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
+mod-clipboard = ["dep:kx-mod-clipboard"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
 mod-mouse = ["dep:kx-mod-mouse"]
@@ -25,9 +26,11 @@ mod-scroll = ["dep:kx-mod-scroll"]
 gate-input = ["kx-platform-windows/sim-input"]
 
 [dependencies]
-# The sealed files that keep the learned words, under the data key the platform's guard wraps (ADR-0010).
+# The sealed files that keep the learned words and the clipboard history, under data keys the platform's guard wraps
+# (ADR-0010, ADR-0034).
 kx-crypto = { path = "../../crates/kx-crypto" }
 kx-kernel = { path = "../../crates/kx-kernel" }
+kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard", optional = true }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard", optional = true }
 kx-mod-layouts = { path = "../../crates/kx-mod-layouts", optional = true }
 kx-mod-mouse = { path = "../../crates/kx-mod-mouse", optional = true }
@@ -50,6 +53,8 @@ cxx-qt-lib.workspace = true
 embed-manifest.workspace = true
 
 [dev-dependencies]
+# The worker's frame limits, which the clipboard's settings must fit (the agree test).
+kx-ipc = { path = "../../crates/kx-ipc" }
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-test-support = { path = "../../crates/kx-test-support" }
 kx-theme = { path = "../../crates/kx-theme" }
@@ -64,4 +69,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
+required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]

@@ -1,0 +1,58 @@
+# Calendar days an entry is kept: 7 is today and the 6 days before.
+keep_days = 7
+# Calendar days a video or audio entry is kept.
+media_days = 1
+# The most entries kept; past it the oldest unpinned entry goes.
+max_entries = 1000
+# The most the whole history keeps, in MB; past it the oldest unpinned entry goes.
+max_mb = 1024
+# The free space the drive keeps, in MB; under it nothing new is kept.
+min_free_mb = 2048
+# The most one entry keeps, in MB; a larger copy is not kept.
+max_entry_mb = 32
+# Seconds after a copy within which its app's clear deletes it for good.
+clear_follow_s = 120
+# The ids of apps whose copies are never kept, such as their exe names.
+skip_apps = []
+# Line breaks pasted between two inserted texts.
+join_breaks = 2
+# A separator line pasted between two inserted texts, after the breaks; empty for none.
+join_rule = ""
+# The wait after each pasted step of an insert, in ms, so slow apps keep up.
+paste_gap_ms = 150
+# How long an insert waits for the keyboard to paste, in ms.
+paste_wait_ms = 1000
+# How long an insert waits for its files to be checked, in ms; past it the insert stops.
+check_ms = 5000
+# The system's clipboard-history shortcut clicked on our keyboard opens our panel.
+history_key = true
+# The characters of each text that search reads.
+search_chars = 1000
+# The characters of each text a row's title keeps.
+title_chars = 300
+# The characters of a text the preview page shows.
+preview_chars = 20000
+# The longest side of a row's thumbnail, in pixels.
+thumb_px = 128
+# The longest side of the preview page's image, in pixels.
+preview_px = 960
+# The most pixels an image may hold to be drawn.
+max_pixels = 100000000
+# The longest one picture or DIB may take in the media worker, in ms.
+media_ms = 3000
+# Seconds the media worker may sit idle before it stops.
+worker_idle_s = 30
+# The most memory the media worker may take, in MB.
+worker_mb = 512
+# The wait before a failed media worker starts again, in ms; it doubles with each failure.
+restart_ms = 1000
+# The longest wait before a failed media worker starts again, in ms.
+restart_max_ms = 30000
+# The longest wait for another app to let go of the clipboard, in ms.
+open_ms = 250
+# How often to try the clipboard again within that wait, in ms.
+poll_ms = 10
+# The most copies that wait for the history to keep them; past it a new copy is dropped.
+queue_copies = 8
+# A change is saved this many ms after the first unsaved one, and at stop.
+save_ms = 500

@@ -1,0 +1,7 @@
+# The file extensions that make a copied file video or audio (spec §7 "What is kept"), which leave after `media_days`.
+# `src/entry/kind.rs` reads them, lower case without the dot; a shared one, such as `ts` (also TypeScript), stays out.
+
+# Video files.
+video = ["3g2", "3gp", "asf", "avi", "f4v", "flv", "m2ts", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "mts", "ogv", "vob", "webm", "wmv"]
+# Audio files.
+audio = ["aac", "aif", "aiff", "amr", "ape", "flac", "m4a", "m4b", "mka", "mp3", "oga", "ogg", "opus", "wav", "weba", "wma", "wv"]

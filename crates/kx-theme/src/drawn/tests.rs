@@ -10,6 +10,7 @@ use crate::look::Cap;
 use crate::mode::{Mode, ModeChoice};
 use crate::view::{LookChoice, look_view};
 mod chips;
+mod clip;
 mod layer;
 mod pad;
 

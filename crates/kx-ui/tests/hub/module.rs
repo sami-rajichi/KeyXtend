@@ -1,7 +1,7 @@
 //! The `ui` module: its manifest, and a start that hands its settings and the face to the hub.
 
 use crate::{FakeFace, Rig, provide};
-use kx_module_api::Capability::{KeyboardUi, ReadFocusedText};
+use kx_module_api::Capability::{KeyboardUi, ReadClipboard, ReadFocusedText};
 use kx_module_api::ports::KeyboardFaceKey;
 use kx_module_api::{Module, ModuleCx, ModuleError, ServiceError, ServiceKey, SettingsError};
 use kx_test_support::host::FakeHost;
@@ -9,11 +9,14 @@ use kx_ui::{ID, MANIFEST, UiModule, Wake};
 use std::sync::Arc;
 
 #[test]
-fn it_needs_the_face_behind_keyboard_ui_reads_the_chip_lane_and_owns_the_ui_section() {
+fn it_needs_the_face_reads_the_lane_and_clipboard_and_owns_ui() {
     assert_eq!(ID.as_str(), "ui");
     assert_eq!(MANIFEST.requires, [KeyboardFaceKey::ID]);
     assert!(MANIFEST.provides.is_empty());
-    assert_eq!(MANIFEST.capabilities, [KeyboardUi, ReadFocusedText]);
+    assert_eq!(
+        MANIFEST.capabilities,
+        [KeyboardUi, ReadFocusedText, ReadClipboard]
+    );
     assert_eq!(KeyboardFaceKey::CAPABILITY, Some(KeyboardUi));
     assert!(MANIFEST.settings.is_some_and(|s| s.version == 1));
 }

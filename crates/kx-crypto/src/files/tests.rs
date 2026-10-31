@@ -1,51 +1,13 @@
 use super::*;
-use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD};
-use crate::guard::GuardError;
+use crate::consts::{DAMAGED_EXT, KEY_LEN, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
+use crate::seal::{open, seal};
+use crate::testing::{Mirror, listing};
 use kx_test_support::tempdir::TempDir;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
-use zeroize::Zeroizing;
+use std::fs;
+use std::sync::atomic::Ordering::SeqCst;
 
 mod agree;
 mod keys;
-
-/// A test guard that wraps by reversing the bytes, refuses on cue and counts its calls.
-#[derive(Clone, Default)]
-struct Mirror {
-    refuse: Arc<AtomicBool>,
-    calls: Arc<AtomicUsize>,
-}
-
-impl Mirror {
-    fn refusing() -> Self {
-        let guard = Self::default();
-        guard.refuse.store(true, SeqCst);
-        guard
-    }
-
-    fn calls(&self) -> usize {
-        self.calls.load(SeqCst)
-    }
-
-    fn answer(&self, error: GuardError, bytes: &[u8]) -> Result<Vec<u8>, GuardError> {
-        self.calls.fetch_add(1, SeqCst);
-        if self.refuse.load(SeqCst) {
-            return Err(error);
-        }
-        Ok(bytes.iter().rev().copied().collect())
-    }
-}
-
-impl KeyGuard for Mirror {
-    fn wrap(&self, key: &[u8]) -> Result<Vec<u8>, GuardError> {
-        self.answer(GuardError::Unavailable, key)
-    }
-
-    fn unwrap(&self, wrapped: &[u8]) -> Result<Zeroizing<Vec<u8>>, GuardError> {
-        self.answer(GuardError::Refused, wrapped)
-            .map(Zeroizing::new)
-    }
-}
 
 /// A store over a data folder that does not exist yet, inside a temp folder removed at the end.
 struct Case {
@@ -84,12 +46,7 @@ impl Case {
 
     /// The file names in the data folder, sorted.
     fn names(&self) -> Vec<String> {
-        let mut names: Vec<_> = fs::read_dir(&self.dir)
-            .unwrap()
-            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
+        listing(&self.dir)
     }
 }
 
@@ -105,6 +62,23 @@ fn save_then_load_gives_the_bytes() {
     assert_eq!(got.as_deref(), Some(&b"hello world"[..]));
     let file = fs::read(c.file("predict-en", SEALED_EXT)).unwrap();
     assert!(!file.windows(5).any(|w| w == b"hello"));
+}
+
+/// P7's files, built by hand under a known key, so a change to the store's file names, AAD or key path fails here.
+#[test]
+fn p7_files_still_open_and_saves_keep_their_form() {
+    // The literals pin P7's format on purpose: `sealed.key`, `<name>.sealed`, and the bare name as AAD.
+    let c = case();
+    let key = [7; KEY_LEN];
+    fs::create_dir_all(&c.dir).unwrap();
+    fs::write(c.dir.join("sealed.key"), c.guard.wrap(&key).unwrap()).unwrap();
+    let blob = seal(&key, b"predict-en", b"learned").unwrap();
+    fs::write(c.dir.join("predict-en.sealed"), blob).unwrap();
+    let got = c.store.load(&name("predict-en")).unwrap();
+    assert_eq!(got.as_deref(), Some(&b"learned"[..]));
+    c.store.save(&name("emails"), b"a@b.c").unwrap();
+    let saved = fs::read(c.dir.join("emails.sealed")).unwrap();
+    assert_eq!(open(&key, b"emails", &saved).unwrap().as_slice(), b"a@b.c");
 }
 
 #[test]

@@ -8,10 +8,9 @@ use crate::theme::{FONT_WEIGHTS, outside_unit};
 const INSET_BELOW: f32 = 0.5;
 
 impl Shape {
-    /// Refuses a weight outside 100 to 900, a share outside 0 to 1, a shimmer span, outline, smallest label, mark, dot
-    /// or D-pad icon of 0 or less, a panel gap, label padding, mark, dot or D-pad gap or badge place below 0, a lit dot
-    /// no larger than the others, a D-pad hub or Stop inset of half the pad or more and a Stop wider than the hub,
-    /// naming the size.
+    /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (the
+    /// clipboard's caret and underline, `panel.min_fit` and the others in `check_sizes`), a gap or place below 0, a lit
+    /// dot no larger than the others, and a D-pad hub or Stop inset of half the pad or more or a Stop wider than the hub.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -65,6 +64,8 @@ impl Shape {
             ("notice.button_weight", self.notice.button_weight),
             ("list.badge_weight", self.list.badge_weight),
             ("badge.weight", self.badge.weight),
+            ("clip.tick_weight", self.clip.tick_weight),
+            ("clip.button_weight", self.clip.button_weight),
         ];
         match weights.iter().find(|(_, w)| !FONT_WEIGHTS.contains(w)) {
             Some((n, w)) => {
@@ -75,9 +76,9 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outlines, the smallest label, the mark's, the dots' and the D-pad's icon sizes must be
-    /// above 0, and the panel gaps, the label padding, the language icon's gap, the mark's and the badge's place and the
-    /// D-pad's gaps 0 or more, all finite.
+    /// The shimmer span, the outlines, the clipboard's caret and underline, the panels' least fit, the smallest label,
+    /// the mark's, the dots' and the D-pad's icon sizes must be above 0. The panel gaps, the label padding, the language
+    /// icon's gap, the mark's and the badge's place and the D-pad's gaps must be 0 or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -91,6 +92,9 @@ impl Shape {
             ("dpad.stop_icon_px", self.dpad.stop_icon_px),
             ("badge.sep_px", self.badge.sep_px),
             ("outline.px", self.outline.px),
+            ("clip.caret_px", self.clip.caret_px),
+            ("clip.underline_px", self.clip.underline_px),
+            ("panel.min_fit", self.panel.min_fit),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
@@ -127,6 +131,7 @@ impl Shape {
             ("press.scale", self.press.scale),
             ("panel.radius_share", self.panel.radius_share),
             ("panel.off_share", self.panel.off_share),
+            ("panel.min_fit", self.panel.min_fit),
             ("ring.core_share", self.ring.core_share),
             ("lang.cycle.icon_share", self.lang.cycle.icon_share),
             ("dots.off", self.dots.off),

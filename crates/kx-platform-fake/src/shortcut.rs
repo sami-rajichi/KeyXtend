@@ -1,4 +1,5 @@
-//! A fake shortcuts service: the test sets the ids it knows, and the fake records each send with its held keys.
+//! A fake shortcuts service: the test sets the ids it knows and the history chord, and the fake records each send
+//! with its held keys.
 
 use crate::lock;
 use kx_module_api::ports::{Scan, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts};
@@ -11,6 +12,16 @@ struct Log {
     known: Vec<ShortcutInfo>,
     sent: Vec<(ShortcutId, Vec<Scan>)>,
     error: Option<ShortcutError>,
+    /// The history chord's held keys, sorted, and its key.
+    history: Option<(Vec<Scan>, Scan)>,
+}
+
+/// `keys` sorted with repeats dropped, so two held sets compare in any order.
+fn set(keys: &[Scan]) -> Vec<Scan> {
+    let mut keys = keys.to_vec();
+    keys.sort_unstable();
+    keys.dedup();
+    keys
 }
 
 /// Shortcuts the test scripts, shared by its clones: an id not in `known` is `Unknown` and records nothing, and while
@@ -47,6 +58,11 @@ impl FakeShortcuts {
     pub fn set_error(&self, error: Option<ShortcutError>) {
         lock(&self.log).error = error;
     }
+
+    /// Sets the history chord: its held keys, in any order, and its key; `None` for a platform without one.
+    pub fn set_history(&self, chord: Option<(Vec<Scan>, Scan)>) {
+        lock(&self.log).history = chord.map(|(held, key)| (set(&held), key));
+    }
 }
 
 /// Shows only how many ids are known and how many sends were taken, as ids and keys stay out of logs.
@@ -75,6 +91,13 @@ impl Shortcuts for FakeShortcuts {
         }
         log.sent.push((id.clone(), held.to_vec()));
         Ok(())
+    }
+
+    fn is_history(&self, held: &[Scan], key: Scan) -> bool {
+        let log = lock(&self.log);
+        log.history
+            .as_ref()
+            .is_some_and(|(want, k)| *k == key && *want == set(held))
     }
 }
 

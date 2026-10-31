@@ -1,10 +1,11 @@
-//! A deterministic fake platform for tests: a clock that moves only when told, given folders, recording
-//! fakes of the input, layout and UI ports (the tray, the memory port and the speaker too), of the mouse hook, of the
-//! scroll target, of the shortcuts, of the power dialog, of the layouts service, of the field watch, of the word packs
-//! and of the sealed store. Only tests, tools and test-only crates use it.
+//! A deterministic fake platform for tests: a clock that moves only when told, given folders, and recording fakes
+//! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures and the
+//! calendar. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
+mod calendar;
+mod clip;
 mod clock;
 mod field;
 mod input;
@@ -15,15 +16,20 @@ mod layouts;
 mod look;
 mod memory;
 mod packs;
+mod pictures;
 mod pointer;
 mod power;
+mod reveal;
 mod scroll;
 mod sealed;
+mod shelf;
 mod shortcut;
 mod sound;
 mod tray;
 mod ui;
 
+pub use calendar::{FakeCalendar, PARIS};
+pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
 pub use field::FakeFieldWatch;
 pub use input::{FakeInjector, Stroke};
@@ -34,10 +40,13 @@ pub use layouts::{Ask, FakeLayouts};
 pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use memory::FakeMemory;
 pub use packs::FakeWordPacks;
+pub use pictures::FakePictures;
 pub use pointer::FakePointerHook;
 pub use power::FakePowerDialog;
+pub use reveal::FakeReveal;
 pub use scroll::{FakeScrollTarget, Turn};
 pub use sealed::FakeSealedStore;
+pub use shelf::{FakeShelf, ShelfCall};
 pub use shortcut::FakeShortcuts;
 pub use sound::{FakeSpeaker, Prepared};
 pub use tray::FakeTray;

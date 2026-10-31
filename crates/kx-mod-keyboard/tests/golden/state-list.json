@@ -1156,7 +1156,7 @@
     },
     "clip": {
       "blank": null,
-      "dim": true,
+      "dim": false,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1164,9 +1164,9 @@
       "name": "",
       "on": false,
       "paint": {
-        "fill": "dim",
-        "ink": "dim_ink",
-        "skirt": "dim"
+        "fill": "key_act",
+        "ink": "legend_act",
+        "skirt": "key_mod"
       },
       "second": "",
       "second_ar": false,

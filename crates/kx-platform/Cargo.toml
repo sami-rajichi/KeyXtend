@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform"
-description = "The platform ports: what an OS adapter hands the kernel and the UI, the data folder rule, and the neutral pack and field-watch rules."
+description = "The platform ports: what an OS adapter hands the kernel and the UI, the data folder rule, and the neutral pack, field-watch and worker-host rules."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,9 +12,11 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+# The frames the worker host writes and checks (ADR-0004).
+kx-ipc = { path = "../kx-ipc" }
 kx-module-api = { path = "../kx-module-api" }
 thiserror.workspace = true
-# The field watch logs why it stopped, never what it read.
+# The field watch and the worker host log why they stopped, never what they read.
 tracing.workspace = true
 
 [dev-dependencies]

@@ -5,10 +5,13 @@
 #![deny(unsafe_code)]
 
 pub mod backdrop;
+pub mod calendar;
+pub mod clip;
 pub mod clock;
 #[cfg(windows)]
 pub mod com;
 pub mod dirs;
+pub mod disk;
 #[cfg(windows)]
 pub mod dll;
 pub mod field;
@@ -31,6 +34,7 @@ pub mod packs;
 #[cfg(windows)]
 mod platform;
 pub mod power;
+pub mod reveal;
 pub mod screen;
 pub mod scroll;
 pub mod shortcut;
@@ -44,12 +48,20 @@ pub mod uia;
 pub mod uiaccess;
 pub mod watch;
 pub mod window;
+#[cfg(windows)]
+pub mod worker;
 
 #[cfg(windows)]
 pub use backdrop::WinBackdrop;
 #[cfg(windows)]
+pub use calendar::WinCalendar;
+#[cfg(windows)]
+pub use clip::{WinClipboard, WinClipboardWriter};
+#[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
+#[cfg(windows)]
+pub use disk::WinDiskRoom;
 #[cfg(windows)]
 pub use field::WinFieldWatch;
 #[cfg(windows)]
@@ -71,6 +83,8 @@ pub use platform::WindowsPlatform;
 #[cfg(windows)]
 pub use power::WinPower;
 #[cfg(windows)]
+pub use reveal::WinReveal;
+#[cfg(windows)]
 pub use screen::WinScreens;
 #[cfg(windows)]
 pub use scroll::WinScroll;
@@ -84,6 +98,8 @@ pub use sysui::WinLook;
 pub use tray::WinTray;
 #[cfg(windows)]
 pub use window::WinGuard;
+#[cfg(windows)]
+pub use worker::{WinChild, WinSpawner};
 
 use std::io;
 use thiserror::Error;

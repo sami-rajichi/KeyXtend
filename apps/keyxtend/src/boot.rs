@@ -1,17 +1,20 @@
-//! The app before Qt: the hub first, then the kernel with the platform's services and every shipped module. The hub
-//! hears the kernel's bus before the settings load, so no notice is missed; the app opens its log between load and
-//! start.
+//! The app before Qt: the hub first, with the clipboard history's folder, then the kernel with the platform's services
+//! and every shipped module. The hub hears the kernel's bus before the settings load, so no notice is missed; the app
+//! opens its log between load and start.
 
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
+    Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter, ClipboardWriterKey,
     FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey,
-    PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, ScrollTarget, ScrollTargetKey,
-    SealedStore, SealedStoreKey, Shortcuts, ShortcutsKey, WordPacks, WordPacksKey,
+    Pictures, PicturesKey, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, ScrollTarget,
+    ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore, SealedStoreKey, Shortcuts,
+    ShortcutsKey, WordPacks, WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
 use kx_ui::{Hub, Request, UiModule, UiPorts};
 use std::error::Error;
+use std::io::ErrorKind;
 use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 
@@ -38,6 +41,16 @@ pub struct Services {
     pub packs: Arc<dyn WordPacks>,
     /// Keeps the learned words sealed, for prediction.
     pub sealed: Arc<dyn SealedStore>,
+    /// Watches copies and checks copied files, for the clipboard history.
+    pub clipboard: Arc<dyn Clipboard>,
+    /// Sets the clipboard for each paste, for the clipboard history.
+    pub writer: Arc<dyn ClipboardWriter>,
+    /// Keeps the clipboard history sealed in day folders.
+    pub shelf: Arc<dyn SealedShelf>,
+    /// Draws the history's thumbnails and previews in the media worker.
+    pub pictures: Arc<dyn Pictures>,
+    /// The local day, for the history's day folders.
+    pub calendar: Arc<dyn Calendar>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -68,6 +81,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_power::PowerModule::default()));
     #[cfg(feature = "mod-predict")]
     list.push(Box::new(kx_mod_predict::PredictModule::default()));
+    #[cfg(feature = "mod-clipboard")]
+    list.push(Box::new(kx_mod_clipboard::ClipboardModule::default()));
     list
 }
 
@@ -85,6 +100,24 @@ pub fn policy(modules: &[Box<dyn Module>]) -> Policy {
     manifests.fold(Policy::new(), |p, m| p.allow(m.id, m.capabilities))
 }
 
+/// Registers each of `services` with `kernel` under its key.
+fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
+    kernel.provide_platform::<InputInjectorKey>(services.injector)?;
+    kernel.provide_platform::<LayoutSourceKey>(layout_source(services.layouts))?;
+    kernel.provide_platform::<PointerHookKey>(services.pointer)?;
+    kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
+    kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;
+    kernel.provide_platform::<PowerDialogKey>(services.power)?;
+    kernel.provide_platform::<FieldWatchKey>(services.field)?;
+    kernel.provide_platform::<WordPacksKey>(services.packs)?;
+    kernel.provide_platform::<SealedStoreKey>(services.sealed)?;
+    kernel.provide_platform::<ClipboardKey>(services.clipboard)?;
+    kernel.provide_platform::<ClipboardWriterKey>(services.writer)?;
+    kernel.provide_platform::<SealedShelfKey>(services.shelf)?;
+    kernel.provide_platform::<PicturesKey>(services.pictures)?;
+    kernel.provide_platform::<CalendarKey>(services.calendar)
+}
+
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.
 pub struct Boot {
     /// Starts, stops and contains the modules.
@@ -95,10 +128,13 @@ pub struct Boot {
     pub requests: Receiver<Request>,
     /// The hub hears the kernel's notices, mouse-assist and scroll events while these live.
     pub heard: Vec<Subscription>,
+    /// Why the history's folder could not be made; the run says so once its log is open.
+    pub no_clip_dir: Option<ErrorKind>,
 }
 
 impl Boot {
-    /// Makes the hub before any window, adds `services` and every module, and loads the settings; nothing starts.
+    /// Makes the hub before any window, makes the history's folder under `platform`'s data folder and hands it to the
+    /// hub, adds `services` and every module, and loads the settings; nothing starts.
     ///
     /// # Errors
     /// When the hub's compiled-in data is broken, or the kernel or its bus refuses a step.
@@ -108,17 +144,12 @@ impl Boot {
         ports: UiPorts,
     ) -> Result<Self, BootError> {
         let (hub, requests) = Hub::new(ports)?;
+        let folder = crate::clip::folder(platform.dirs());
+        let no_clip_dir = std::fs::create_dir_all(&folder).err().map(|e| e.kind());
+        hub.set_clip_folder(folder);
         let modules = modules(&hub);
         let mut kernel = Kernel::new(platform, policy(&modules));
-        kernel.provide_platform::<InputInjectorKey>(services.injector)?;
-        kernel.provide_platform::<LayoutSourceKey>(layout_source(services.layouts))?;
-        kernel.provide_platform::<PointerHookKey>(services.pointer)?;
-        kernel.provide_platform::<ScrollTargetKey>(services.scroll)?;
-        kernel.provide_platform::<ShortcutsKey>(services.shortcuts)?;
-        kernel.provide_platform::<PowerDialogKey>(services.power)?;
-        kernel.provide_platform::<FieldWatchKey>(services.field)?;
-        kernel.provide_platform::<WordPacksKey>(services.packs)?;
-        kernel.provide_platform::<SealedStoreKey>(services.sealed)?;
+        provide(&mut kernel, services)?;
         for module in modules {
             kernel.add(module)?;
         }
@@ -129,6 +160,7 @@ impl Boot {
             hub,
             requests,
             heard,
+            no_clip_dir,
         })
     }
 

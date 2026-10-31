@@ -1,17 +1,19 @@
 //! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power dialog, box watch, word packs
-//! and sealed store, and the shared fake UI ports; a waker keeps every wake.
+//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power dialog, box watch, word packs,
+//! sealed store, clipboard, shelf, pictures and calendar, and the shared fake UI ports with a reveal the rig keeps; a
+//! waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
-use kx_module_api::ports::{Scan, TypingMode, TypingModeAsk};
+use kx_module_api::ports::{Date, Scan, TypingMode, TypingModeAsk};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeFieldWatch, FakeInjector, FakeLayoutSource, FakePlatform, FakePointerHook, FakePowerDialog,
-    FakeScrollTarget, FakeSealedStore, FakeShortcuts, FakeTray, FakeWordPacks,
+    FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeFieldWatch, FakeInjector,
+    FakeLayoutSource, FakePictures, FakePlatform, FakePointerHook, FakePowerDialog, FakeReveal,
+    FakeScrollTarget, FakeSealedStore, FakeShelf, FakeShortcuts, FakeTray, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -25,6 +27,9 @@ use std::time::Duration;
 const GOLDEN: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
 /// The longest a test waits for a module's thread; it never sleeps.
 pub const WAIT: Duration = Duration::from_secs(10);
+/// The calendar's day, hour, minute and offset east of UTC: Paris on 31 October 2026 at 16:32.
+const TODAY: (u16, u8, u8) = (2026, 10, 31);
+const NOW: (u8, u8, i16) = (16, 32, 60);
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {
@@ -52,6 +57,18 @@ pub struct Rig {
     pub sealed: Arc<FakeSealedStore>,
     /// Behind the tray icon.
     pub tray: Arc<FakeTray>,
+    /// Behind the clipboard watch, which hears no copy until a test pushes one.
+    pub clip: FakeClipboard,
+    /// Behind the clipboard writer, which records each write.
+    pub writer: FakeClipboardWriter,
+    /// Behind the sealed shelf, empty.
+    pub shelf: FakeShelf,
+    /// Behind the pictures, which draw nothing until a test queues one.
+    pub pics: FakePictures,
+    /// Behind the calendar, on a fixed day.
+    pub calendar: FakeCalendar,
+    /// Behind the reveal, which records each folder it shows.
+    pub reveal: Arc<FakeReveal>,
 }
 
 impl Rig {
@@ -72,6 +89,12 @@ impl Rig {
             packs: Arc::new(FakeWordPacks::new()),
             sealed: Arc::new(FakeSealedStore::new()),
             tray: tray(),
+            clip: FakeClipboard::new(),
+            writer: FakeClipboardWriter::new(),
+            shelf: FakeShelf::new(),
+            pics: FakePictures::new(),
+            calendar: calendar(),
+            reveal: Arc::new(FakeReveal::new()),
         }
     }
 
@@ -101,8 +124,14 @@ impl Rig {
             field: self.field.clone(),
             packs: self.packs.clone(),
             sealed: self.sealed.clone(),
+            clipboard: Arc::new(self.clip.clone()),
+            writer: Arc::new(self.writer.clone()),
+            shelf: Arc::new(self.shelf.clone()),
+            pictures: Arc::new(self.pics.clone()),
+            calendar: Arc::new(self.calendar.clone()),
         };
-        let ports = ports(self.tray.clone());
+        let mut ports = ports(self.tray.clone());
+        ports.reveal = self.reveal.clone();
         Boot::load(self.platform(), services, ports).unwrap()
     }
 
@@ -118,6 +147,12 @@ impl Rig {
         bus.publish(&TypingModeAsk).unwrap();
         modes.recv_timeout(WAIT).is_ok()
     }
+}
+
+/// The fake calendar at `TODAY` and `NOW`.
+fn calendar() -> FakeCalendar {
+    let ((year, month, day), (hour, minute, offset)) = (TODAY, NOW);
+    FakeCalendar::new(Date::new(year, month, day).unwrap(), hour, minute, offset)
 }
 
 /// Sends every `E` published on `bus` to the returned channel.

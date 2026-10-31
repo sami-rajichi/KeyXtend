@@ -5,8 +5,8 @@
 use std::borrow::Cow;
 
 use kx_module_api::is_hidden;
+use kx_module_api::text::is_apostrophe;
 
-use crate::fold::is_apostrophe;
 use crate::script;
 
 #[cfg(feature = "build")]

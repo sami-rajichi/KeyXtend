@@ -1,8 +1,11 @@
-//! Where the pop-ups go: the banner and the language list beside the keyboard, and the tray menu by its icon.
+//! Where the pop-ups go: the banner, the language list and the clipboard panel beside the keyboard, and the tray menu
+//! by its icon.
 //! Sizes come in Qt units and spots go out in physical pixels, at the scale of the screen they land on.
 
 use super::Hub;
-use crate::geom::{Size, beside, centre, clamp, home, main_screen, menu, screen_at, screen_near};
+use crate::geom::{
+    Fitted, Size, beside, centre, clamp, fitted, home, main_screen, menu, screen_at, screen_near,
+};
 use kx_module_api::ports::{Point, Rect, Screen, physical};
 
 impl Hub {
@@ -21,6 +24,32 @@ impl Hub {
         let size = size(screen, w, h);
         let left = left.unwrap_or_else(|| clamp(i64::from(mid.x) - i64::from(size.w) / 2));
         Some(beside(size, left, over, screen.rect, self.gaps(screen)))
+    }
+
+    /// Where a `w` by `h` pop-up panel goes beside the keyboard `over`, as `pop_at` places it, and the share of its size
+    /// it takes there: it shrinks when it fits neither above nor below, never below `[panel] min_fit` (spec §3.4).
+    #[must_use]
+    pub fn pop_fit(&self, over: Option<Rect>, left: Option<i32>, w: f64, h: f64) -> Option<Fitted> {
+        let Some(over) = over else {
+            let at = self.pop_at(None, left, w, h)?;
+            return Some(Fitted {
+                x: at.x,
+                y: at.y,
+                fit: 1.0,
+            });
+        };
+        let screens = self.ports.screens.work_areas();
+        let screen = screen_near(centre(over), &screens)?;
+        let least = f64::from(self.themes.shape.panel.min_fit);
+        let size = size(screen, w, h);
+        Some(fitted(
+            size,
+            left,
+            over,
+            screen.rect,
+            self.gaps(screen),
+            least,
+        ))
     }
 
     /// Where a `w` by `h` menu goes for a tray click at `at` (physical pixels): above and right of it, inside the work

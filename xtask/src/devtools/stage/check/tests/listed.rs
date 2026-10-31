@@ -1,4 +1,5 @@
-//! The stage's list: a file off it is refused, whatever it is, and a listed one matches in any letter case.
+//! The stage's list: a file off it is refused, whatever it is, a listed one matches in any letter case, and the worker
+//! beside the program is listed and has its imports walked.
 
 use super::*;
 
@@ -29,4 +30,35 @@ fn listed_files_match_in_any_letter_case() {
         ("QML/QtQuick/QMLDIR", &[]),
     ]);
     assert!(stage.check().is_ok());
+}
+
+#[test]
+fn the_worker_beside_the_program_is_on_the_list() {
+    let stage = Fake::new(&[(PROGRAM, &[]), (WORKER, &["KERNEL32.dll"])]);
+    assert!(stage.check().is_ok());
+}
+
+#[test]
+fn the_workers_imports_must_resolve_too() {
+    let stage = Fake::new(&[(PROGRAM, &[]), (WORKER, &["missing.dll"])]);
+    let err = StageError::Unresolved {
+        by: WORKER.to_string(),
+        lib: "missing.dll".to_string(),
+    };
+    assert_eq!(refusal(stage.check()), Some(err));
+}
+
+#[test]
+fn the_worker_importing_the_network_library_is_refused() {
+    let stage = Fake::new(&[
+        (PROGRAM, &["Qt6Qml.dll"]),
+        ("Qt6Qml.dll", &["Qt6Network.dll"]),
+        ("Qt6Network.dll", &[]),
+        (WORKER, &["Qt6Network.dll"]),
+    ]);
+    let err = StageError::NetworkImport {
+        by: WORKER.to_string(),
+        lib: "Qt6Network.dll".to_string(),
+    };
+    assert_eq!(refusal(stage.check()), Some(err));
 }

@@ -1,7 +1,8 @@
 //! What the app ships: every module's feature is on by default, CI lints the defaults without the scroll module, the
 //! pointer hook, the scroll target, the power dialog, the box watch and the sealed store each reach only the modules
 //! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
-//! to the modules that read typed text, and the shortcuts reach the keyboard's layer.
+//! to the modules that read typed text, and the shortcuts reach the keyboard's layer. `clip` pins the clipboard's
+//! gates and services, and `tree` keeps the media decoders out of the app.
 
 use crate::rig::Rig;
 use keyxtend::boot::{modules, policy};
@@ -22,6 +23,8 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 mod ci;
+mod clip;
+mod tree;
 
 /// The app's manifest, whose features pick the modules.
 const CARGO: &str = include_str!("../../Cargo.toml");
@@ -169,10 +172,10 @@ fn the_box_watch_reaches_only_the_modules_that_read_typed_text() {
 }
 
 #[test]
-fn the_sealed_store_reaches_only_the_predict_module() {
+fn the_sealed_store_reaches_only_the_secret_store_holders() {
     let store: Arc<dyn SealedStore> = Arc::new(FakeSealedStore::new());
     let got = reached::<SealedStoreKey>(&Rig::new(), &store);
-    assert_eq!(got, BTreeSet::from([kx_mod_predict::ID]), "ADR-0033");
+    assert_eq!(got, holders(Capability::SecretStore), "ADR-0033, ADR-0034");
 }
 
 #[test]

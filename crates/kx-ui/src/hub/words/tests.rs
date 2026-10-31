@@ -5,7 +5,8 @@ use crate::ui_module::MANIFEST;
 use kx_module_api::ports::{BASE_DPI, ChipPicked, Point, Rect, Screen};
 use kx_module_api::{Bus, Capability, Event, EventError};
 use kx_platform_fake::{
-    FakeBackdrop, FakeMemory, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray, FakeWindowGuard,
+    FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
+    FakeWindowGuard,
 };
 use kx_test_support::host::FakeCore;
 use std::sync::Arc;
@@ -21,8 +22,8 @@ impl Event for Outside {
     const CAPABILITY: Option<Capability> = Some(OUTSIDE);
 }
 
-/// A hub over fake ports on one plain screen.
-fn hub() -> Arc<Hub> {
+/// A hub over fake ports on one plain screen; the clipboard panel's tests share it.
+pub(in crate::hub) fn hub() -> Arc<Hub> {
     let rect = Rect {
         x: 0,
         y: 0,
@@ -42,6 +43,7 @@ fn hub() -> Arc<Hub> {
         tray: Arc::new(FakeTray::new(1)),
         memory: Arc::new(FakeMemory::new()),
         speaker: Arc::new(FakeSpeaker::new()),
+        reveal: Arc::new(FakeReveal::new()),
     };
     Hub::new(ports).expect("the hub starts").0
 }

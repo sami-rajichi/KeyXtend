@@ -10,6 +10,7 @@ fn with(power: PowerChanged) -> StateView {
         scroll: ScrollChanged::OFF,
         layer: &layer,
         power,
+        clip: false,
     };
     state_with(&none(), false, None, &others)
 }

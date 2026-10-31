@@ -217,6 +217,7 @@ window =
     .tip = Info-bulle de { -app }
     .pointer = Aide au pointeur
     .outline = Contour de défilement
+    .clip = Historique du Presse-papiers { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -276,10 +277,13 @@ notice =
     .words-damaged = Le fichier des mots appris était endommagé : l’apprentissage repart de zéro.
     .words-missing = La liste de mots pour { $lang } est introuvable : les suggestions viennent seulement des mots que vous tapez.
     .words-locked = Les mots appris n’ont pas pu être déverrouillés : rien de ce qui est appris n’est enregistré cette fois.
+    .clip-damaged = Une partie de l’historique du Presse-papiers était endommagée ; ces éléments ont été supprimés.
+    .clip-locked = L’historique du Presse-papiers n’a pas pu être déverrouillé : les copies ne sont pas conservées cette fois.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
     .kernel = { -app }
+    .clipboard = Historique du Presse-papiers
     .keyboard = Clavier
     .layouts = Dispositions de clavier
     .mouse = Aide à la souris

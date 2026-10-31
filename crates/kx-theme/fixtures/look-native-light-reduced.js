@@ -375,7 +375,8 @@ var lk = {
       "gap_px": [
         10.0,
         8.0
-      ]
+      ],
+      "min_fit": 0.8
     },
     "ring": {
       "box_px": 76.0,
@@ -485,6 +486,77 @@ var lk = {
     "tray": {
       "radius_share": 0.22,
       "glyph_share": 0.75
+    },
+    "clip": {
+      "kept_px": 11.0,
+      "empty_px": 30.0,
+      "search_icon_px": 15.0,
+      "caret_px": 2.0,
+      "caret_gap_px": 2.0,
+      "underline_px": 2.0,
+      "filters_pad_px": [
+        6.0,
+        10.0,
+        2.0
+      ],
+      "filter_gap_px": 4.0,
+      "filter_px": [
+        28.0,
+        12.0,
+        12.0,
+        5.0
+      ],
+      "row_gap_px": 9.0,
+      "row_pad_px": 2.0,
+      "tick_px": [
+        22.0,
+        6.0,
+        1.5,
+        11.0
+      ],
+      "tick_weight": 600,
+      "thumb_px": [
+        46.0,
+        34.0,
+        6.0,
+        17.0
+      ],
+      "thumb_inset_px": 2.0,
+      "meta_px": [
+        10.5,
+        1.0
+      ],
+      "pin_px": 13.0,
+      "expires_px": [
+        11.0,
+        2.0,
+        8.0
+      ],
+      "button_px": [
+        32.0,
+        7.0,
+        11.0,
+        12.0,
+        14.0,
+        6.0
+      ],
+      "button_weight": 600,
+      "foot_gap_px": 8.0,
+      "question_gap_px": 12.0,
+      "note_px": [
+        7.0,
+        8.0,
+        12.0
+      ],
+      "room_px": [
+        4.0,
+        11.0,
+        13.0
+      ],
+      "preview_px": [
+        13.0,
+        14.5
+      ]
     }
   },
   "motion": {
@@ -699,6 +771,52 @@ var lk = {
         ]
       }
     },
+    "clip": {
+      "highlight": {
+        "ms": 0,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "swap": {
+        "ms": 0,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "tick": {
+        "ms": 0,
+        "bez": [
+          0.3,
+          1.5,
+          0.5,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "turn": {
+        "ms": 0,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
     "amount": {
       "pulse_low": 0.35,
       "glow_lift": 1.12,
@@ -706,7 +824,8 @@ var lk = {
       "rise": 0.6,
       "pop_rise_px": 6.0,
       "pop_scale": 0.98,
-      "menu_scale": 0.96
+      "menu_scale": 0.96,
+      "tick_scale": 0.6
     },
     "ring": {
       "wave": [
@@ -845,6 +964,26 @@ var lk = {
       "resume": "eye",
       "power": "power",
       "cancel": "x"
+    },
+    "clip": {
+      "title": "clipboard-clock",
+      "search": "search",
+      "close": "x",
+      "kind_text": "file-text",
+      "kind_link": "link",
+      "kind_image": "image",
+      "kind_file": "file",
+      "kind_media": "film",
+      "pin": "pin",
+      "unpin": "pin-off",
+      "preview": "eye",
+      "delete": "trash-2",
+      "insert": "clipboard-paste",
+      "cancel": "x",
+      "shown": "check",
+      "room": "hard-drive",
+      "folder": "folder-open",
+      "back": "arrow-left"
     }
   },
   "dpad": {

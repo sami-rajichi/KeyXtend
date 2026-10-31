@@ -6,10 +6,9 @@ use std::sync::LazyLock;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Chip, ChipKind, ListPage};
+use kx_module_api::text::{Casing, fold};
 use serde::Deserialize;
 
-use crate::casing::Casing;
-use crate::fold::fold;
 use crate::menu::pages;
 use crate::split::is_word_char;
 

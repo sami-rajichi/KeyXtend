@@ -4,6 +4,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+mod clip;
+
+pub use clip::ClipIcons;
+
 /// The top bar's buttons, the resize corner and the bubble.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -167,6 +171,8 @@ pub struct Icons {
     pub tray: TrayIcons,
     /// The chip lane and its menu.
     pub words: WordsIcons,
+    /// The clipboard panel.
+    pub clip: ClipIcons,
 }
 
 impl Icons {
@@ -203,11 +209,11 @@ impl Icons {
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
-        let words = self.words.named().into_iter();
+        let panels = self.words.named().into_iter().chain(self.clip.named());
         let keys = by_id("keys", &self.keys);
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)
-            .chain(words.map(|(at, v)| (at.to_string(), v)))
+            .chain(panels.map(|(at, v)| (at.to_string(), v)))
             .collect()
     }
 

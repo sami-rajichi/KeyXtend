@@ -33,6 +33,8 @@ kx-mod-mouse = { path = "../../crates/kx-mod-mouse" }
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll" }
 # Word prediction's settings, folding and scripts: G27's expected text takes the gap the word's script takes.
 kx-mod-predict = { path = "../../crates/kx-mod-predict" }
+# The clipboard history's settings and its insert join: G20's expected Notepad text and the copy's settings.
+kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard" }
 # The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.
@@ -50,6 +52,7 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Gdi",
     "Win32_Security",
+    "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_DataExchange",
@@ -60,6 +63,7 @@ windows = { workspace = true, features = [
     "Win32_System_ProcessStatus",
     "Win32_System_Registry",
     "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_System_Variant",
     "Win32_UI_Accessibility",

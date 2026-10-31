@@ -1,9 +1,10 @@
-//! The Win32 side of shortcuts: the table's keys through the injector's `SendInput`, and the session lock.
+//! The Win32 side of shortcuts: the table's keys through the injector's `SendInput`, the session lock, and the history
+//! chord read in the layout of the app in front.
 
 use kx_module_api::ports::{Scan, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts};
 use windows::Win32::System::Shutdown::LockWorkStation;
 
-use super::{Call, Plan, deliver_keys, plan, table};
+use super::{Call, Plan, deliver_keys, history, plan, table};
 use crate::inject::Win32;
 
 /// The shortcuts service on Windows: the compiled-in table, sent to the app in front.
@@ -20,6 +21,10 @@ impl Shortcuts for WinShortcuts {
             Plan::Keys(events) => deliver_keys(&Win32, &events),
             Plan::Call(call) => run(call),
         }
+    }
+
+    fn is_history(&self, held: &[Scan], key: Scan) -> bool {
+        history(&Win32, table(), held, key)
     }
 }
 
@@ -39,11 +44,14 @@ mod tests {
     use super::*;
     use crate::WinLayouts;
     use crate::inject::Os;
-    use crate::shortcut::plan_in;
+    use crate::shortcut::{history_in, plan_in};
     use crate::strokes::Key;
 
-    /// `VK_A`, as `keynames.toml` maps `a`.
+    /// `VK_A` and `VK_V`, as `keynames.toml` maps `a` and `v`.
     const VK_A: u16 = 0x41;
+    const VK_V: u16 = 0x56;
+    /// The keyboard's Win latch: left Win, an extended key.
+    const WIN: Scan = Scan::new(0xE05B);
     /// French (France) AZERTY, whose A sits at the QWERTY Q place.
     const FRENCH: LayoutId = LayoutId::new(0x040C_040C);
     /// The primary-language bits of a layout id's language word.
@@ -104,6 +112,17 @@ mod tests {
                     "{layout}: {id} on the number pad"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn the_history_chord_is_win_and_the_key_each_installed_layout_maps_v_to() {
+        for layout in WinLayouts.installed() {
+            let v = Win32.scan_of(VK_V, layout);
+            let key = Scan::new(u16::try_from(v).unwrap());
+            assert_ne!(v, 0, "{layout}: V is on the layout");
+            assert!(history_in(&Win32, layout, table(), &[WIN], key), "{layout}");
+            assert!(!history_in(&Win32, layout, table(), &[], key), "{layout}");
         }
     }
 

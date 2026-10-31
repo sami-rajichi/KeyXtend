@@ -4,8 +4,8 @@
 
 use std::fmt;
 
-use kx_mod_predict::{Casing, fold};
 use kx_module_api::Redacted;
+use kx_module_api::text::{Casing, fold};
 use windows::Win32::Foundation::{HWND, RECT};
 
 use crate::keymap::{KeyRead, Reader};

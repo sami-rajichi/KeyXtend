@@ -15,8 +15,9 @@ mod script;
 mod text;
 mod wordfreq;
 
+use kx_mod_predict::Pack;
 use kx_mod_predict::pack::layout::MAX_SPELLING;
-use kx_mod_predict::{Casing, Pack};
+use kx_module_api::text::Casing;
 
 use super::cands::candidates;
 use super::chains::Picked;

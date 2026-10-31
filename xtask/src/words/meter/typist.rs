@@ -5,9 +5,10 @@ use kx_mod_predict::learn::Learner;
 use kx_mod_predict::score::{Guess, Learned, NoLearned, ScoreConfig, guesses, knows};
 use kx_mod_predict::split::{is_word_char, normalise, spans};
 use kx_mod_predict::track::{Plan, Query, Told, Tracker};
-use kx_mod_predict::{Pack, PredictSettings, fold};
+use kx_mod_predict::{Pack, PredictSettings};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Piece, TypingMode};
+use kx_module_api::text::apostrophe;
 
 use super::tally::Tally;
 use super::{DAY, new_learner, timed_us};
@@ -44,7 +45,7 @@ impl<'p> Typist<'p> {
         learn: bool,
     ) -> Result<Self, WordsError> {
         let learner = learn.then(|| learner(iso, seed, settings)).transpose()?;
-        let apostrophe = fold::apostrophe()
+        let apostrophe = apostrophe()
             .ok_or_else(|| WordsError::Meter("the fold table names no apostrophe".to_owned()))?;
         Ok(Self {
             iso: iso.to_owned(),

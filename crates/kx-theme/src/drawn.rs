@@ -1,6 +1,7 @@
 //! What the keyboard draws: each text, icon and mark on the colour it really sits on, blended as QML blends it, with
 //! the least contrast WCAG asks of it.
 
+mod clip;
 mod place;
 mod plate;
 
@@ -69,7 +70,7 @@ impl Drawn {
 }
 
 /// Every pair view `v` draws on a keyboard whose rows are `row_px` high at size 1: legends on caps, the language
-/// key's and the shortcuts layer's marks, the D-pad, the plate and the panels.
+/// key's and the shortcuts layer's marks, the D-pad, the plate, the panels and the clipboard panel.
 #[must_use]
 pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     let (mut out, h) = (Vec::new(), height(v, row_px));
@@ -78,6 +79,7 @@ pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     dpad(v, &mut out);
     plate::plate(v, &mut out);
     plate::panels(v, &mut out);
+    clip::clip(v, &mut out);
     out
 }
 

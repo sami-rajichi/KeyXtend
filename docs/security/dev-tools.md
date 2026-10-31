@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-23 (P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
+- **Last review:** 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -54,10 +54,11 @@
   - A download over budget. Mitigation: the stage check holds the staged files, packs included, to `max_mb` measured deflated, a conservative stand-in for the installer's LZMA2, and the installed size to `install_max_mb`; `dev-install` runs the same check.
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - A gate-only build (the app's `gate-input`, which acts on another program's tagged input) getting signed and uiAccess. Mitigation: the stage check refuses a program holding `[workspace.metadata.stage] gate_flag`, and `dev-install` refuses to sign any exe that holds it.
-  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml`, `kx-gates-p5.toml` and `kx-gates-p7.toml` from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
+  - A media worker that asks for uiAccess, or none at all, in the stage (P8). Mitigation: the stage builds `[workspace.metadata.stage] worker` in release beside the app, and its check refuses a missing worker or one whose manifest asks for uiAccess, in UTF-8 or UTF-16.
+  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml`, `kx-gates-p5.toml`, `kx-gates-p7.toml` and `kx-gates-p8.toml` (`[g20_product]`, `[g8_clip]`) from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
     - They name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its token. It reads none when Windows will not say whether it has uiAccess.
-    - With uiAccess it reads all seven of its settings files (those five, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
-    - `dev-install` copies every file of the build folder, so put the seven files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+    - With uiAccess it reads all eight of its settings files (those six, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
+    - `dev-install` copies every file of the build folder, so put the eight files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
   - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input.
     - It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself or Windows will not say, so only the plain kx-gates starts it.
     - kx-gates starts only a program whose bytes hold the gate flag, with a `data` folder beside it, so it never reads or writes the owner's settings or log. It quits the test build at once when its log lacks the gate warning.
@@ -87,7 +88,8 @@
     - G8 reads memory once after a scroll and scrolls once per churn round, unless `[g8_scroll] churn` is false, a control run that leaves the scroll out and so is partial at best. Its result logs the machine's free RAM and its VMs' working sets (`[host] vm`, by PDH counter name, no process handle).
     - G9 reads the outline's edge windows' flags while hovered and while scrolling, found by their title in the keyboard's language, with target-window still in front. When the edges are not under the keyboard it records the windows between by class and program only, never a title.
     - G10 presses each arrow and Stop, puts Stop back after a failed step, and asks UI Automation which element is at each arrow's icon without moving the pointer.
-  - `kx-gates g25` clicks the product's keys in its own Notepad file: the language key, the shortcuts layer's Select all, Copy, Paste, Undo, Copy all and Switch app, then Win and V, then Power, each only while the keyboard is on top there.
+  - `kx-gates g25` runs its own copy of the test build with `[g25] history_key` off, through the clipboard gates' session, and clicks that copy's keys in its own Notepad file: the language key, the shortcuts layer's Select all, Copy, Paste, Undo, Copy all and Switch app, then Win and V, then Power, each only while the keyboard is on top there.
+    - Win and V runs only when the copy's token has uiAccess (`workertok::rights`, read-only); on the test build it shows as skipped, as in G20, for the hand check on the dev install.
     - Its own keys are Ctrl+End, Ctrl+S, Esc, and the Alt tap of `probe::front`, which brings Notepad back before each part, after Power and once the switcher closes. `[g25] esc` must be the Esc key alone, or the config check refuses it.
     - Esc goes out only while the window it closes is in front, or Notepad for the panel, and for Switch app only once the switcher's own wait ran out; so it never reaches another app.
     - It puts the layer back on the page it showed first, shown or hidden as it found it, hides it around Power, whose key it covers, then puts it back the same way, and lets Win go without a lone press, as G10 does, so Start never opens.
@@ -119,6 +121,14 @@
   - G27, G21's product half and `g8 predict` take no screenshot and save no file of their own beyond G21's page and the sidecar. They type only the config's prefixes and the chips' words, into target-window or G21's page.
     - target-window logs every character it receives to its `log` setting, so the chip words land there. The gates do not delete it, as other gates read it too.
   - Each of these gates' run lengths is checked against the mouse guard's limit from config: each copy's start, wait and end, each typed word at its longest and `g8 predict`'s settle before each reading of both churns (`p7cfg/runs.rs`). With the guard off, none is refused for its length (`fit::held_fits`).
+  - `kx-gates g20 keyxtend` and `g8 clip` (P8) overwrite the clipboard and run the test build on its portable data folder, emptying its history before and after.
+    - A folder the gate made carries its marker, and only a marked one is ever removed. The config check refuses a marker named like one of the app's folders or a file its settings write (`clipdata::taken`), so no marker can match a folder the gate never made.
+    - The gate refuses a data folder that is, or sits under, any reparse point such as a junction or link, before it makes or deletes anything there (`clipdata::own`), so it never reaches another folder through one.
+    - Every gate clipboard write, and the delete of its own entries from Windows' history, first calls `clipkeep::live`, which panics in a test build, so no unit test touches the owner's clipboard.
+    - `clipown.rs` writes the clipboard with its own `GlobalAlloc` and `SetClipboardData`, as the gate's hidden owner window must own its copy; it repeats the product's writer on purpose, behind the same guard.
+  - G20 also reads each started worker's token read-only (`TOKEN_QUERY`) and checks only its uiAccess and integrity level; it skips a worker that ended before the read, and fails on one still running that it cannot read (`workertok.rs`).
+    - It reads no group or privilege, so a pass does not prove the worker unprivileged; the product's own start refuses a worker that can use Administrators or holds a privilege (`kx-platform-windows.md`, Elevation (worker)).
+    - The same read decides G20's second copy: Windows refuses an injected Win+V from a product without uiAccess, so on the test build that copy is never started and its part shows as skipped, for the hand check on the dev install.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing. It asks first, then reports a refused sidecar name. After a hard stop, the same kx-gates that ran the gate restores the owner's files from the sidecar in its own out folder, once its Quit ended the copy and no copy runs, by window or by session claim, and deletes the sidecar only after a verified put-back.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds, and ends that copy as `copyend.rs` says. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap is ended as `copyend.rs` says.
@@ -168,6 +178,6 @@ G25 opens the real power dialog on the owner's PC, as the product must be checke
 
 A copy G21, G27 or `g8 predict` had to end may be cut mid-write. Its learning is paused, so it writes no learned words, and the owner's settings file is put back after it ended.
 
-G25 reads the owner's own `shortcut_pages` to find each key's page. A page the owner arranged changes only where the keys sit, as G25 still clicks each one by its id.
+G25 reads its copy's `shortcut_pages`, from the test build's settings, to find each key's page. A page arranged there changes only where the keys sit, as G25 still clicks each one by its id.
 
 The mouse guard's lost-hook check misses a hook lost within the last `alive_ms` before a gate ends, and a late count of an earlier batch can hide one lost batch until the next. Waiting at every gate's end, or sending input only to check, would slow every run or move the owner's pointer.

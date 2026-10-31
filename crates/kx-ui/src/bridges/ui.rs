@@ -1,7 +1,9 @@
 //! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go, the
-//! overlay and scroll states, the chip lane and the app's commands. It follows the system look and hears the hub's
-//! wakes on the Qt thread, so make one per app, in the root file.
+//! overlay and scroll states, the chip lane, the clipboard panel and the app's commands. It follows the system look
+//! and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
 
+mod app;
+mod clip;
 mod look;
 mod notices;
 mod scroll;
@@ -11,10 +13,9 @@ mod tray;
 mod wake;
 mod words;
 
-use super::{hub, qs};
-use crate::hub::{Hub, Mode, NULL};
+use super::hub;
+use crate::hub::Hub;
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::QString;
 use kx_platform::ui::WatchGuard;
 use std::sync::Arc;
 #[cfg(debug_assertions)]
@@ -103,6 +104,10 @@ pub mod qobject {
         /// edge at `left` unless `centred`; a JSON point in physical pixels, or null.
         #[qinvokable]
         fn pop_at(&self, over: &QString, left: f64, centred: bool, w: f64, h: f64) -> QString;
+
+        /// `pop_at` for a pop-up panel, with the share of its size it takes there: JSON `{x, y, fit}`, or null.
+        #[qinvokable]
+        fn pop_fit(&self, over: &QString, left: f64, centred: bool, w: f64, h: f64) -> QString;
 
         /// Where a `w` by `h` tray menu goes for a click at (`x`, `y`); a JSON point in physical pixels, or null.
         #[qinvokable]
@@ -193,6 +198,18 @@ pub mod qobject {
         #[qinvokable]
         fn tapped(&self);
 
+        /// The clipboard panel as JSON, every text worded, or null while closed; reading it lets the next change wake.
+        #[qinvokable]
+        fn clip(&self) -> QString;
+
+        /// A click on the clipboard panel drawn from view `round`: `kind` names it, `arg` its row, filter or page way.
+        #[qinvokable]
+        fn clip_act(&self, kind: &QString, arg: i32, round: i64);
+
+        /// Shows the clipboard history's folder in the file manager.
+        #[qinvokable]
+        fn open_folder(&self);
+
         /// The settings or face changed: read everything again.
         #[qsignal]
         fn settings_changed(self: Pin<&mut Self>);
@@ -244,6 +261,10 @@ pub mod qobject {
         /// A new chip lane: read `words`.
         #[qsignal]
         fn words_changed(self: Pin<&mut Self>);
+
+        /// The clipboard panel shows a new view or closes: read `clip`.
+        #[qsignal]
+        fn clip_changed(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}
@@ -275,26 +296,5 @@ impl qobject::Ui {
     /// `f` over the hub, or `none` before the app installed one.
     fn with<T>(&self, none: T, f: impl FnOnce(&Hub) -> T) -> T {
         self.rust().hub.as_deref().map_or(none, f)
-    }
-
-    fn settings_json(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), Hub::settings_json))
-    }
-
-    fn mode_json(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), Hub::mode_json))
-    }
-
-    fn keep_mode(&self, away: bool, minimised: bool) {
-        self.with((), |h| h.keep_mode(Mode::of(away, minimised)));
-    }
-
-    fn quit(&self) -> bool {
-        self.with(false, Hub::quit)
-    }
-
-    #[allow(clippy::unused_self, reason = "cxx-qt invokables take the object")]
-    fn assets(&self) -> QString {
-        qs(crate::ASSETS)
     }
 }

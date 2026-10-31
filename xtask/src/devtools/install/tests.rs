@@ -84,16 +84,43 @@ fn dev_install_holds_an_app_folder_to_the_download_budget() {
     assert_eq!(vet(dir.path(), &setup, &stage, windows), Err(over.into()));
 }
 
-/// A folder holding only the program, a bare image importing nothing, with settings rooted there.
+/// A bare image importing nothing, with a manifest that asks for uiAccess as `ui_access` says.
+fn worker(ui_access: &str) -> Vec<u8> {
+    let level = format!(r#"<requestedExecutionLevel level="asInvoker" uiAccess="{ui_access}"/>"#);
+    [stage::bare_image(), level.into_bytes()].concat()
+}
+
+/// A folder holding only the program and the worker, bare images importing nothing, with settings rooted there.
 fn bare_app(label: &str) -> (TempDir, DevSetup) {
     let dir = TempDir::new(label);
-    let program = dir.path().join(stage_config().program());
-    std::fs::write(program, stage::bare_image()).unwrap();
+    let (program, helper) = (stage_config().program(), stage_config().worker_program());
+    std::fs::write(dir.path().join(program), stage::bare_image()).unwrap();
+    std::fs::write(dir.path().join(helper), worker("false")).unwrap();
     let setup = DevSetup {
         root: dir.path().to_path_buf(),
         config: devtools_config(),
     };
     (dir, setup)
+}
+
+#[test]
+fn dev_install_refuses_an_app_folder_without_the_worker() {
+    let (dir, setup) = bare_app("vet-no-worker");
+    let name = stage_config().worker_program();
+    std::fs::remove_file(dir.path().join(&name)).unwrap();
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let result = vet(dir.path(), &setup, &stage_config(), windows);
+    assert_eq!(result, Err(StageError::NoWorker(name).into()));
+}
+
+#[test]
+fn dev_install_refuses_a_worker_that_asks_for_ui_access() {
+    let (dir, setup) = bare_app("vet-worker-ui");
+    let name = stage_config().worker_program();
+    std::fs::write(dir.path().join(&name), worker("true")).unwrap();
+    let windows = |_: &str| Some(paths::text(dir.path()));
+    let result = vet(dir.path(), &setup, &stage_config(), windows);
+    assert_eq!(result, Err(StageError::WorkerUiAccess(name).into()));
 }
 
 #[test]

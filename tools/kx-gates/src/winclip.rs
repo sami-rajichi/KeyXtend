@@ -8,6 +8,8 @@ use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUn
 use windows::Win32::System::SystemInformation::GetSystemTimeAsFileTime;
 use windows::core::HSTRING;
 
+use crate::clipkeep;
+
 /// What `forget` may delete: entries made since `since`, no longer than `max_chars`, whose text `is_ours`.
 pub struct Scope<'a> {
     /// Start of the run, from `now`; older entries are the owner's.
@@ -36,9 +38,23 @@ pub fn line(text: &str) -> &str {
     text.trim_end_matches(['\r', '\n'])
 }
 
-/// Deletes the entries in `scope`, on a single-threaded COM thread as Windows requires; returns how many went.
-#[allow(unsafe_code, reason = "COM start-up on this thread, undone after.")]
+/// Deletes the entries in `scope` from Windows' history; returns how many went.
 pub fn forget(scope: &Scope) -> Result<usize, String> {
+    guarded(scope, forget_com)
+}
+
+/// Runs `delete` on `scope` once `clipkeep::live` allows it, so a test never touches Windows' history.
+fn guarded(
+    scope: &Scope,
+    delete: impl FnOnce(&Scope) -> Result<usize, String>,
+) -> Result<usize, String> {
+    clipkeep::live();
+    delete(scope)
+}
+
+/// `forget` on a single-threaded COM thread, as Windows requires.
+#[allow(unsafe_code, reason = "COM start-up on this thread, undone after.")]
+fn forget_com(scope: &Scope) -> Result<usize, String> {
     std::thread::scope(|s| {
         s.spawn(|| {
             // SAFETY: COM start-up on this fresh thread, undone below when it succeeded.
@@ -111,7 +127,28 @@ pub fn has_prefix(text: &str, prefixes: &[&str]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::panic::AssertUnwindSafe;
+
     use super::*;
+    use crate::clipkeep::refused;
+
+    #[test]
+    fn a_test_that_reaches_forget_panics_before_windows_history_is_touched() {
+        let none = |_: &str| false;
+        let scope = Scope {
+            since: i64::MAX,
+            max_chars: 0,
+            is_ours: &none,
+        };
+        let reached =
+            |_: &Scope| -> Result<usize, String> { panic!("Windows' history was reached") };
+        // The fake comes first: while the guard is missing it fails here, before `forget` could reach the history.
+        assert!(
+            refused(AssertUnwindSafe(|| _ = guarded(&scope, reached))),
+            "the guard comes first"
+        );
+        assert!(refused(AssertUnwindSafe(|| _ = forget(&scope))), "forget");
+    }
 
     #[test]
     fn only_texts_with_a_test_prefix_are_ours() {

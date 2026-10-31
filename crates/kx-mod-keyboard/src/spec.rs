@@ -112,6 +112,8 @@ pub enum Role {
     Layer,
     /// The Power key: a click asks for the system's power dialog.
     Power,
+    /// The clipboard key: a click asks the clipboard module to open or close its panel.
+    Clip,
     /// A shortcut on the layer; only the layer's generated cells have it.
     Shortcut,
     /// The layer's Next page key; only the layer's generated cell has it.
@@ -145,6 +147,10 @@ pub enum Nav {
     Enter,
     /// Closes the panel.
     Esc,
+    /// Ticks the highlighted row; only the clipboard panel takes it.
+    Tick,
+    /// Erases the search's last character; only the clipboard panel takes it.
+    Erase,
 }
 
 /// A named key in a main row.

@@ -147,8 +147,14 @@ pub fn order() -> Value {
 fn no_text_the_hub_gives_holds_a_bidi_control() {
     for l in &LANGS {
         let t = I18n::new(l);
-        let keys = keys_of(l.ftl).into_iter().map(|k| t.text(&k));
-        let filled = [counted(&t), notices(&t), os_texts(&t)].concat();
+        let keys = l.files().flat_map(keys_of).map(|k| t.text(&k));
+        let filled = [
+            counted(&t),
+            notices(&t),
+            os_texts(&t),
+            crate::clip::filled(&t),
+        ]
+        .concat();
         for text in keys.chain(filled) {
             let found = text.chars().find(|c| CONTROLS.contains(c));
             assert_eq!(found, None, "{}: {text:?}", l.tag);

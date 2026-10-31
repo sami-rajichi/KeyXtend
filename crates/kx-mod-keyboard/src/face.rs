@@ -3,6 +3,8 @@
 //! handlers take the lock briefly from the sender's thread.
 
 mod bus;
+mod clip;
+mod hold;
 mod inner;
 mod layer;
 mod outbox;
@@ -12,7 +14,7 @@ mod words;
 pub(crate) use bus::listen;
 
 use crate::geom::{KeyBox, board};
-use crate::panel::navs;
+use crate::panel::{ClipUse, clip_keys, navs};
 use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
@@ -46,10 +48,12 @@ pub struct Face {
     spec: BoardSpec,
     /// Every key at size 1, for the state and the key checks.
     keys: Vec<KeyBox>,
-    /// The board keys that drive an open panel.
+    /// The board keys that drive the open language list.
     navs: HashMap<String, Nav>,
     /// The same keys in board order, which the state lists.
     nav_keys: Vec<(String, Nav)>,
+    /// The board keys the clipboard panel takes while it is open.
+    clips: HashMap<String, ClipUse>,
     inner: Mutex<Inner>,
     /// The latched set and typing mode the bus last heard.
     told: Told,
@@ -84,6 +88,7 @@ impl Face {
             keys: b.keys,
             navs: navs.iter().cloned().collect(),
             nav_keys: navs,
+            clips: clip_keys(&spec),
             spec,
             inner: Mutex::new(inner),
             told: Told::default(),
@@ -103,9 +108,12 @@ impl Face {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// A click on key `id`; while the list is open, a key that drives it does nothing here, as the UI sends it
-    /// as `panel_key`, so it never reaches the app. A side key the layer hides is no key.
+    /// A click on key `id`: a key that drives the open list does nothing here, as the UI sends it as `panel_key`, and
+    /// the open clipboard panel takes its other keys. A side key the layer hides is no key.
     fn tap(&self, id: &str, back: bool) -> Result<FaceReply, FaceError> {
+        if let Some(reply) = self.to_clip(id) {
+            return Ok(reply);
+        }
         let went = {
             let mut inner = self.lock();
             if self.hides(&inner, id) {
@@ -120,9 +128,13 @@ impl Face {
     }
 
     /// The pointer went down on key `id` (spec §4.6): it types now, answering as a tap does and saying whether it
-    /// holds; while the list is open, a key that drives it waits for `panel_key`, as in `tap`.
+    /// holds; while the list is open, a key that drives it waits for `panel_key`, and the open clipboard panel takes its
+    /// keys at once, never holding, as in `tap`.
     fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
+        if let Some(reply) = self.to_clip(id) {
+            return Ok(reply);
+        }
         let (went, holding) = {
             let mut inner = self.lock();
             if inner.listing() && self.navs.contains_key(id) {
@@ -135,40 +147,6 @@ impl Face {
             holding,
             ..self.reply(went)?
         })
-    }
-
-    /// The hold timer: a repeat that went out redraws only when its burst ended, as the latches stay latched until
-    /// then; any other due repeat answers as a tap does. Each reply says whether the key is still held.
-    fn tick(&self) -> Result<FaceReply, FaceError> {
-        let (went, holding) = {
-            let mut inner = self.lock();
-            let went = inner.tick();
-            (went, inner.holding())
-        };
-        let Some(went) = went else {
-            return Ok(FaceReply {
-                holding,
-                ..FaceReply::default()
-            });
-        };
-        if matches!(went.tapped, Ok(Tapped::Done)) {
-            return Ok(FaceReply {
-                state: went.ended,
-                holding,
-                ..FaceReply::default()
-            });
-        }
-        Ok(FaceReply {
-            holding,
-            ..self.reply(went)?
-        })
-    }
-
-    /// The pointer let go of key `id`, wherever it is: it typed at the press, so only its burst ends, and only when
-    /// `id` is the key held.
-    fn let_go(&self, id: &str) -> Result<FaceReply, FaceError> {
-        self.known(id)?;
-        Ok(self.lock().let_go(id))
     }
 
     /// Refuses a key that is neither on the board nor drawn by the layer now, or that the layer hides, changing
@@ -204,6 +182,10 @@ impl Face {
             Ok(Tapped::Power) => {
                 self.power();
                 Ok(FaceReply::default())
+            }
+            Ok(Tapped::Clip) => {
+                self.clip_open();
+                Ok(STATE)
             }
             Ok(Tapped::Layer) => Ok(self.flip()),
             Ok(Tapped::Next) => Ok(self.lock().next_page()),

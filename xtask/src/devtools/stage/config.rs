@@ -15,6 +15,8 @@ use crate::devtools::paths;
 pub(crate) struct StageConfig {
     /// The app package built in release; its program has the same name.
     pub app: String,
+    /// The media worker package built in release and staged beside the app; its program has the same name.
+    pub worker: String,
     /// Folder, under the workspace root, holding the stage.
     pub out_dir: String,
     /// The download budget, in MB: the staged files deflated.
@@ -67,6 +69,7 @@ impl StageConfig {
         first_failing(&texts, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
         let names = [
             ("app", &self.app),
+            ("worker", &self.worker),
             ("qml_dir", &self.qml_dir),
             ("network", &self.network.lib),
         ];
@@ -118,8 +121,18 @@ impl StageConfig {
 
     /// The app's program file name.
     pub(crate) fn program(&self) -> String {
-        format!("{}{}", self.app, std::env::consts::EXE_SUFFIX)
+        exe(&self.app)
     }
+
+    /// The media worker's program file name.
+    pub(crate) fn worker_program(&self) -> String {
+        exe(&self.worker)
+    }
+}
+
+/// The program file name of package `name`.
+fn exe(name: &str) -> String {
+    format!("{name}{}", std::env::consts::EXE_SUFFIX)
 }
 
 /// Fails on an empty `list`, or with `error` on its first value that fails `ok`.

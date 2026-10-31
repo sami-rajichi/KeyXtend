@@ -51,6 +51,14 @@ outline = { ms = 167, curve = "ease_out" }
 notice = { ms = 200, curve = "ease_out" }
 menu = { ms = 140, curve = "ease_out" }
 
+# The clipboard panel: a tick pops with the Stop's overshoot, the highlight glides, and a new or turned row rises in.
+# The small moves take WinUI's ControlFastAnimationDuration, the others a panel's pop-in (.pop popIn .18s).
+[clip]
+tick = { ms = 167, curve = "spring" }
+highlight = { ms = 167, curve = "swift" }
+swap = { ms = 180, curve = "swift" }
+turn = { ms = 180, curve = "swift" }
+
 [amount]
 # A pulse dims to this opacity halfway; a recording cap brightens by this factor halfway (.key.rec).
 pulse_low = 0.35
@@ -63,6 +71,8 @@ pop_rise_px = 6.0
 pop_scale = 0.98
 # The tray menu opens from this scale (@keyframes ctxIn, line 361).
 menu_scale = 0.96
+# A tick's number in the clipboard panel pops in from this scale (not in the mock-up).
+tick_scale = 0.6
 
 [ring]
 # The hold ring (mock-up .ring): its waves shrink on wave_curve over the hold less [mouse] ring_after_ms, even with
