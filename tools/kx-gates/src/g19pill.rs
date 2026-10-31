@@ -3,6 +3,7 @@
 
 use std::time::Instant;
 
+use kx_platform_windows::clip::{self, open};
 use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::window::foreground;
@@ -16,7 +17,7 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
 use crate::win::{self, sleep_ms};
 use crate::winclip::{self, line};
-use crate::{clip, clipkeep, cliptext, g19, probe, simuser};
+use crate::{clipkeep, g19, probe, simuser};
 
 /// Where kx-gates expects the pill for the current selection, from its own UI Automation read.
 fn expected(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Pt, String> {
@@ -72,12 +73,13 @@ fn select_quietly(uia: &Uia, app: &Opened, i: usize) -> Result<(), String> {
 /// Clicks the pill's Copy and reads the clipboard; true when it holds the selected line.
 fn copy_via(ctx: &Ctx, pill: HWND, at: &RECT, want: &str) -> Result<bool, String> {
     let t = &ctx.cfg.timing;
-    let before = clip::sequence();
+    let before = open::sequence();
     facetools::click_on(pill, facetools::at(geom::centre(at)))?;
-    if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
+    if !open::wait_change(before, clipkeep::wait(t)) {
         return Ok(false);
     }
-    let got = cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g19.max_chars)?;
+    let got =
+        clip::read_text(clipkeep::wait(t), ctx.cfg.g19.max_chars).map_err(|e| e.to_string())?;
     Ok(got.as_deref().map(line) == Some(want))
 }
 

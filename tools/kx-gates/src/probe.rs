@@ -10,7 +10,8 @@ use windows::Win32::UI::Accessibility::IUIAutomationElement;
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::simuser::{self, guard, keys_ours};
 use crate::win::{self, sleep_ms};
-use crate::{clip, cliptext, keys, launch, out, probetext, winclip};
+use crate::{clipkeep, keys, launch, out, probetext, winclip};
+use kx_platform_windows::clip::{self, open};
 use kx_platform_windows::uia::{self, Uia};
 use spike_core::geom;
 
@@ -161,14 +162,15 @@ pub fn run_on<T>(
 fn copy(ctx: &Ctx, app: &Opened) -> Result<String, String> {
     let t = &ctx.cfg.timing;
     keys_ours(app)?;
-    cliptext::write_text(None, t.read_wait_ms, t.poll_ms)?;
-    let before = clip::sequence();
+    clip::write_text(None, &[], clipkeep::wait(t)).map_err(|e| e.to_string())?;
+    let before = open::sequence();
     keys::combo(&ctx.cfg.keys.copy)?;
-    if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
+    if !open::wait_change(before, clipkeep::wait(t)) {
         return Err("nothing was copied".to_string());
     }
     Ok(
-        cliptext::read_text(t.read_wait_ms, t.poll_ms, ctx.cfg.g1.max_read_chars)?
+        clip::read_text(clipkeep::wait(t), ctx.cfg.g1.max_read_chars)
+            .map_err(|e| e.to_string())?
             .unwrap_or_default(),
     )
 }

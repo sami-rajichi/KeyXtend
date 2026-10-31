@@ -45,6 +45,7 @@ fn a_date_is_checked() {
 #[test]
 fn the_epoch_is_day_zero_and_a_thursday() {
     let epoch = date(1970, 1, 1);
+    assert_eq!(Date::EPOCH, epoch);
     assert_eq!(epoch.day_number(), 0);
     assert_eq!(epoch.weekday(), Weekday::Thursday);
     assert_eq!(date(1969, 12, 31).day_number(), -1);

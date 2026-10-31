@@ -1,6 +1,7 @@
 //! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
 #![cfg(windows)]
 
+use kx_platform_windows::clip::open;
 use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::uia::{self, Sel, Uia};
 use serde_json::{Value, json};
@@ -11,7 +12,7 @@ use crate::apps::{AppKind, Ctx, Opened};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{clip, keys, launch, out, simuser};
+use crate::{keys, launch, out, simuser};
 
 /// G19's run name: detection only, before the pill exists.
 pub const CORE: &str = "core";
@@ -93,11 +94,11 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
 /// Checks every line in `app`, and that the clipboard never changed.
 fn check_all(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     let uia = Uia::new().map_err(|e| e.to_string())?;
-    let seq = clip::sequence();
+    let seq = open::sequence();
     let lines: Vec<Value> = (ctx.cfg.g19.lines.iter().enumerate())
         .map(|(i, want)| check_line(ctx, &uia, app, i, want))
         .collect();
-    let untouched = clip::sequence() == seq;
+    let untouched = open::sequence() == seq;
     let ok = untouched && lines.iter().all(|l| l["ok"] == true);
     Ok(
         json!({ "app": app.kind.name(), "ok": ok, "lines": lines, "clipboard_untouched": untouched }),

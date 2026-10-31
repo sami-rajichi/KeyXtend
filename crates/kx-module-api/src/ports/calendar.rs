@@ -90,6 +90,9 @@ pub struct Date {
 }
 
 impl Date {
+    /// 1970-01-01, the day the day numbers count from.
+    pub const EPOCH: Self = EPOCH;
+
     /// The date `year`-`month`-`day`; `None` when no such day exists.
     #[must_use]
     pub fn new(year: u16, month: u8, day: u8) -> Option<Self> {

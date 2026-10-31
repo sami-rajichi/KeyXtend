@@ -1,12 +1,13 @@
 //! G1 read-back: the text an app holds, from its saved file, its log or the clipboard.
 #![cfg(windows)]
 
+use kx_platform_windows::clip::{self, open};
 use kx_platform_windows::window::foreground;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::config::GatesConfig;
 use crate::win::{self, sleep_ms};
-use crate::{clip, clipkeep, cliptext, keys, out, tlog};
+use crate::{clipkeep, keys, out, tlog};
 
 /// Byte-order mark some editors put first.
 const BOM: char = '\u{FEFF}';
@@ -14,14 +15,15 @@ const BOM: char = '\u{FEFF}';
 /// Ctrl+A, Ctrl+C, then the clipboard text.
 fn copy(cfg: &GatesConfig) -> Result<String, String> {
     let t = &cfg.timing;
-    let before = clip::sequence();
+    let before = open::sequence();
     keys::combo(&cfg.keys.select_all)?;
     sleep_ms(t.key_settle_ms);
     keys::combo(&cfg.keys.copy)?;
-    if !clip::wait_change(before, t.read_wait_ms, t.poll_ms) {
+    if !open::wait_change(before, clipkeep::wait(t)) {
         return Err("the clipboard did not change after Ctrl+C".to_string());
     }
-    cliptext::read_text(t.read_wait_ms, t.poll_ms, cfg.g1.max_read_chars)?
+    clip::read_text(clipkeep::wait(t), cfg.g1.max_read_chars)
+        .map_err(|e| e.to_string())?
         .ok_or_else(|| "no text on the clipboard after Ctrl+C".to_string())
 }
 

@@ -5,6 +5,8 @@
 #![deny(unsafe_code)]
 
 pub mod backdrop;
+pub mod calendar;
+pub mod clip;
 pub mod clock;
 #[cfg(windows)]
 pub mod com;
@@ -47,6 +49,10 @@ pub mod window;
 
 #[cfg(windows)]
 pub use backdrop::WinBackdrop;
+#[cfg(windows)]
+pub use calendar::WinCalendar;
+#[cfg(windows)]
+pub use clip::{WinClipboard, WinClipboardWriter};
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;

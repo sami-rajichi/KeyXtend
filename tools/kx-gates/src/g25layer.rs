@@ -7,6 +7,7 @@ use std::cell::Cell;
 use kx_mod_keyboard::Role;
 use kx_mod_keyboard::spec::{NEXT_ID, shortcut_key_id};
 use kx_module_api::ports::ShortcutId;
+use kx_platform_windows::clip::{self, open};
 use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
@@ -17,7 +18,7 @@ use crate::modekey::ModeKey;
 use crate::product::{self, Keyboard};
 use crate::simuser::keys_ours;
 use crate::win::{self, sleep_ms};
-use crate::{board, clip, cliptext, keys, readback};
+use crate::{board, clipkeep, keys, readback};
 
 /// Selects all of Notepad's text.
 const SELECT_ALL: &str = "select-all";
@@ -114,10 +115,11 @@ impl Desk<'_> {
     /// Clicks shortcut `name`, then reads the clipboard once it changed: true when it holds G25's text.
     fn copies(&self, name: &str) -> Result<bool, String> {
         let t = &self.ctx.cfg.timing;
-        let before = clip::sequence();
+        let before = open::sequence();
         self.press(name)?;
-        let changed = clip::wait_change(before, t.read_wait_ms, t.poll_ms);
-        let text = cliptext::read_text(t.read_wait_ms, t.poll_ms, self.ctx.cfg.g1.max_read_chars)?;
+        let changed = open::wait_change(before, clipkeep::wait(t));
+        let text = clip::read_text(clipkeep::wait(t), self.ctx.cfg.g1.max_read_chars)
+            .map_err(|e| e.to_string())?;
         Ok(changed && text.as_deref() == Some(self.ctx.cfg.g25.text.as_str()))
     }
 

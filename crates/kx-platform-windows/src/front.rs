@@ -1,8 +1,8 @@
-//! The app in front: the window that has its keyboard, that window's layout, and its program's file name.
+//! The app in front: the window that has its keyboard, that window's layout, and its program's file name or path.
 //! The layout of the app in front comes from `WinLayouts::foreground`, the one reader of it.
 
 #[cfg(windows)]
-pub use os::{app, app_of, focus, focus_of, thread_layout};
+pub use os::{app, app_of, focus, focus_of, path_of, thread_layout};
 
 /// The separators in a Windows program path.
 const PATH_SEPARATORS: [char; 2] = ['\\', '/'];
@@ -87,11 +87,17 @@ mod os {
 
     /// The program file name of process `pid`, or `None` when Windows refuses.
     #[must_use]
+    pub fn app_of(pid: u32) -> Option<String> {
+        app_name(&path_of(pid)?)
+    }
+
+    /// The program path of process `pid`, or `None` when Windows refuses.
+    #[must_use]
     #[allow(
         unsafe_code,
-        reason = "Opens a process for a name query, then closes it."
+        reason = "Opens a process for a path query, then closes it."
     )]
-    pub fn app_of(pid: u32) -> Option<String> {
+    pub fn path_of(pid: u32) -> Option<String> {
         let mut buf = vec![0u16; PATH_CAP];
         let mut len = u32::try_from(buf.len()).ok()?;
         // SAFETY: asks only for the right to read the name; the handle is closed below.
@@ -103,8 +109,7 @@ mod os {
         // SAFETY: closes the handle opened above, once.
         let _ = unsafe { CloseHandle(process) };
         read.ok()?;
-        let path = String::from_utf16(buf.get(..usize::try_from(len).ok()?)?).ok()?;
-        app_name(&path)
+        String::from_utf16(buf.get(..usize::try_from(len).ok()?)?).ok()
     }
 }
 

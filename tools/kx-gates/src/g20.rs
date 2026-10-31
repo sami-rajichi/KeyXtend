@@ -4,16 +4,18 @@
 use std::ops::RangeInclusive;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use kx_module_api::ports::{ClipConfig, ClipNote};
+use kx_platform_windows::clip;
 use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx};
-use crate::cliplisten::{Listener, MARKS, Reads, Tally};
 use crate::featcfg::G20;
+use crate::g20hear::{Listener, Tally, max_bytes};
 use crate::probe::{self, Doc};
 use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
 use crate::winclip::{self, line};
-use crate::{clipkeep, cliptext, keys, readback};
+use crate::{clipkeep, keys, readback};
 
 /// The app G20 copies in and pastes into.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -51,8 +53,8 @@ fn first_break(entries: &[String], want: &[String]) -> Option<Value> {
 /// Waits for the listener's report of one change and counts it; notes a miss.
 fn hear(ctx: &Ctx, l: &Listener, tally: &mut Tally, notes: &mut Vec<String>) {
     match l.next(ctx.cfg.g20.event_wait_ms) {
-        Some(Ok(u)) => tally.add(u),
-        Some(Err(e)) => notes.push(e),
+        Some(ClipNote::Busy) => notes.push("the clipboard stayed busy".to_string()),
+        Some(n) => tally.add(n),
         None => notes.push("the listener heard nothing".to_string()),
     }
 }
@@ -88,7 +90,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
     let (g, t) = (&ctx.cfg.g20, &ctx.cfg.timing);
     for i in 1..=g.burst {
         let quick = text(&g.prefix, g.copies + i);
-        cliptext::write_text(Some(&quick), t.read_wait_ms, t.poll_ms)
+        clip::write_text(Some(&quick), &[], clipkeep::wait(t))
             .map_err(|e| format!("burst {i}: {e}"))?;
     }
     let mut b = Tally::default();
@@ -101,7 +103,7 @@ fn burst(ctx: &Ctx, l: &Listener, notes: &mut Vec<String>) -> Result<usize, Stri
 /// Puts the chosen older entry back on the clipboard, pastes it at the end, and checks the saved file.
 fn paste_back(ctx: &Ctx, doc: &Doc, entry: &str) -> Result<bool, String> {
     let (t, ek) = (&ctx.cfg.timing, &ctx.cfg.edit_keys);
-    cliptext::write_text(Some(entry), t.read_wait_ms, t.poll_ms)
+    clip::write_text(Some(entry), &[], clipkeep::wait(t))
         .map_err(|e| format!("paste back: {e}"))?;
     probe::front(ctx, &doc.app)?;
     keys_ours(&doc.app)?;
@@ -115,22 +117,22 @@ fn paste_back(ctx: &Ctx, doc: &Doc, entry: &str) -> Result<bool, String> {
 /// What the listener hears: kx-gates' copies, Notepad's copies, the marked copies, then a burst.
 fn listen(ctx: &Ctx, doc: &Doc) -> Result<(Tally, usize, Vec<String>), String> {
     let (g, t) = (&ctx.cfg.g20, &ctx.cfg.timing);
-    let reads = Reads {
-        max_chars: g.max_chars,
-        open_ms: t.read_wait_ms,
-        poll_ms: t.poll_ms,
-    };
-    let l = Listener::start(reads)?;
+    let wait = clipkeep::wait(t);
+    let max_bytes = max_bytes(g.max_chars);
+    let l = Listener::start(ClipConfig { max_bytes, wait })?;
+    let marks = clip::markers();
     let (mut tally, mut notes) = (Tally::default(), Vec::new());
     for i in halves(g).0 {
-        cliptext::write_text(Some(&text(&g.prefix, i)), t.read_wait_ms, t.poll_ms)
+        clip::write_text(Some(&text(&g.prefix, i)), &[], wait)
             .map_err(|e| format!("copy {i}: {e}"))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }
     copy_lines(ctx, doc, &l, &mut tally, &mut notes)?;
     for i in 0..g.excluded {
-        let (hidden, mark) = (text(&g.hidden_prefix, i + 1), [MARKS[i % MARKS.len()]]);
-        cliptext::write_marked(Some(&hidden), &mark, t.read_wait_ms, t.poll_ms)
+        let mark = marks
+            .get(i % marks.len().max(1))
+            .ok_or("the product has no markers")?;
+        clip::write_text(Some(&text(&g.hidden_prefix, i + 1)), &[mark.as_str()], wait)
             .map_err(|e| format!("marked copy {}: {e}", i + 1))?;
         hear(ctx, &l, &mut tally, &mut notes);
     }

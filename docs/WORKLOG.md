@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 02:40 — P8: the Windows clipboard watch, writer and calendar
+`kx-platform-windows` now hears every copy through a message-only window on its own thread, checks the "leave me out of history" markers of `clip.toml` before reading anything, and reports marked, cleared, too-big and busy copies without their content. Text, HTML, RTF, one image and file lists are read only under the size cap, and the copying app is named by its exe and its file's description. The writer sets parts with our marker, Windows line breaks and files as a copy, so an Insert never adds a row here or in Windows' history; the calendar gives the local time with summer time. The spike's clipboard code moved here from the gate tool, which now uses it.
+
 ## 2026-10-31 01:30 — P8: the media worker draws PNG and DIB thumbnails
 The new program `keyxtend-worker media --max-pixels <n>` reads draws from its stdin as `kx-ipc` frames and answers each with RGBA pixels or a fixed reason, outside the uiAccess keyboard (ADR-0004, ADR-0034). PNG goes through the `png` crate with its memory capped, and DIBs (`CF_DIB`, `CF_DIBV5`, 24 and 32 bits, either way up, with masks) through our own reader, which checks every size before it reads a pixel. Both feed rows one at a time into a box filter that averages by alpha, so even a 100-megapixel image never needs a full-size copy, and too many pixels are refused from the header alone. Random, changed and cut images fail cleanly, a panic becomes a failure reply, and tidy bans `png` from the app.
 

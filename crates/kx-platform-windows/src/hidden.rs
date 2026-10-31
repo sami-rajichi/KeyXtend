@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::thread::JoinHandle;
+use std::thread::{Builder, JoinHandle};
 
 use kx_platform::ui::UiError;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
@@ -47,10 +47,41 @@ impl Hidden {
         proc: WNDPROC,
         setup: impl FnOnce() + Send + 'static,
     ) -> Result<Self, UiError> {
+        Self::spawn(Builder::new(), class, kind, proc, setup)
+    }
+
+    /// Like `start`, on a thread named `name`.
+    ///
+    /// # Errors
+    /// `Refused` when Windows will not make the window or the thread.
+    pub(crate) fn named(
+        name: &str,
+        class: Vec<u16>,
+        kind: Kind,
+        proc: WNDPROC,
+        setup: impl FnOnce() + Send + 'static,
+    ) -> Result<Self, UiError> {
+        Self::spawn(
+            Builder::new().name(name.to_owned()),
+            class,
+            kind,
+            proc,
+            setup,
+        )
+    }
+
+    /// Starts the window's thread from `builder`.
+    fn spawn(
+        builder: Builder,
+        class: Vec<u16>,
+        kind: Kind,
+        proc: WNDPROC,
+        setup: impl FnOnce() + Send + 'static,
+    ) -> Result<Self, UiError> {
         let (tx, rx) = mpsc::channel();
         let stopping = Arc::new(AtomicBool::new(false));
         let asked = Arc::clone(&stopping);
-        let join = std::thread::spawn(move || {
+        let spawned = builder.spawn(move || {
             setup();
             match window(PCWSTR(class.as_ptr()), kind, proc) {
                 Ok(hwnd) => {
@@ -61,6 +92,7 @@ impl Hidden {
                 Err(e) => drop(tx.send(Err(e))),
             }
         });
+        let join = spawned.map_err(|_| failed())?;
         let thread = rx.recv().map_err(|_| failed())??;
         Ok(Self {
             thread,
