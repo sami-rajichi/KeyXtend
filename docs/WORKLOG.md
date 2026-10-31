@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 08:14 — P8: the app wires the clipboard history and the media worker
+The app now ships the clipboard module by default (`mod-clipboard`) with the Windows clipboard watch and writer, the calendar, pictures drawn by `keyxtend-worker.exe` beside the program, and a sealed shelf over `<data>/clipboard` whose drive the new `WinDiskRoom` reads; the hub gets that folder at boot for Open folder. Life tests pin each clipboard gate's holders and the services that reach them, carry a copy from the panel back into the app through the keyboard's paste, and check that nothing the app builds with reaches `png`, `fdeflate` or the worker. `cargo xtask stage` builds the worker on its own, stages it beside the app, walks its imports and refuses a missing worker or one whose manifest asks for uiAccess, as `dev-install`'s check does; the worker now embeds an asInvoker manifest. CI's Linux list names the three new crates and its scroll-off lint takes `mod-clipboard`.
+
 ## 2026-10-31 05:23 — P8: the clipboard panel hub's review fixes
 On the preview page Insert now reads plain "Insert", as it acts on the previewed entry alone, and the storage line takes a colon after "History" in each language. Counts and sizes group their thousands with the language's mark (`num.group`: a comma in English, a narrow no-break space in French, a dot in Arabic), a size just under 1 GB reads "1.00 GB", and `MB` is now defined once in the clips port. Open folder ignores taps while a reveal is in flight, so a double tap opens one window, and the Windows adapter passes empty strings for the arguments and folder and keeps COM's own error code. A filter click now names the filter at its place in the list the JSON gives, and two Arabic notes read more naturally.
 

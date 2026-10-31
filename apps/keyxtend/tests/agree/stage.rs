@@ -1,6 +1,6 @@
-//! The stage settings in the root `Cargo.toml` name this app, its gate-only flag and the QML folder kx-ui pins, and list
-//! each QML module the app imports with every plugin Qt loads for it, so `cargo xtask stage` ships what the uiAccess
-//! build loads.
+//! The stage settings in the root `Cargo.toml` name this app, the worker the platform starts, the gate-only flag and
+//! the QML folder kx-ui pins, and list each QML module the app imports with every plugin Qt loads for it, so `cargo
+//! xtask stage` ships what the uiAccess build loads.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 
@@ -23,6 +23,14 @@ fn the_stage_puts_qml_modules_where_the_app_pins_them() {
 #[test]
 fn the_stage_builds_this_app() {
     assert_eq!(stage()["app"].as_str(), Some(env!("CARGO_PKG_NAME")));
+}
+
+#[cfg(windows)]
+#[test]
+fn the_stage_puts_the_worker_where_the_platform_starts_it() {
+    let worker = stage()["worker"].as_str().unwrap().to_owned();
+    let exe = format!("{worker}{}", std::env::consts::EXE_SUFFIX);
+    assert_eq!(exe, kx_platform_windows::worker::WORKER_EXE);
 }
 
 #[test]

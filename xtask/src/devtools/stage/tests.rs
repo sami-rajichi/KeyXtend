@@ -40,6 +40,10 @@ fn names_must_be_plain() {
         Err(ConfigError::NotPlain("app"))
     );
     assert_eq!(
+        invalid(|c| c.worker = "bin/w".to_string()),
+        Err(ConfigError::NotPlain("worker"))
+    );
+    assert_eq!(
         invalid(|c| c.libs = vec!["bin/Qt6Core.dll".to_string()]),
         Err(ConfigError::NotPlain("libs"))
     );
@@ -173,45 +177,38 @@ fn the_program_is_named_after_the_app() {
 }
 
 #[test]
-fn the_plan_puts_the_program_libraries_plugins_and_qml_in_place() {
-    let exe = std::env::temp_dir().join("out").join("keyxtend.exe");
+fn the_worker_program_is_named_after_its_package() {
+    let expected = format!("keyxtend-worker{}", std::env::consts::EXE_SUFFIX);
+    assert_eq!(config().worker_program(), expected);
+}
+
+#[test]
+fn the_plan_puts_the_program_worker_libraries_plugins_and_qml_in_place() {
+    let release = std::env::temp_dir().join("out");
     let (q, c) = (qt(), config());
     let rel = |p: &str| paths::join_rel(PathBuf::new(), p);
+    let copy = |from: PathBuf, to: &str| Copy { from, to: rel(to) };
+    let built = |exe: &str| copy(release.join(exe), exe);
+    let lib = |l: &str| copy(q.bins.join(l), l);
+    let qml = |q_rel: &str, to: &str| copy(paths::join_rel(q.qml.clone(), q_rel), to);
     let expected = vec![
-        Copy {
-            from: exe.clone(),
-            to: PathBuf::from(c.program()),
-        },
-        Copy {
-            from: q.bins.join("Qt6Core.dll"),
-            to: rel("Qt6Core.dll"),
-        },
-        Copy {
-            from: q.bins.join("Qt6Qml.dll"),
-            to: rel("Qt6Qml.dll"),
-        },
-        Copy {
-            from: q.bins.join("Qt6Quick.dll"),
-            to: rel("Qt6Quick.dll"),
-        },
-        Copy {
-            from: q.bins.join("Qt6Network.dll"),
-            to: rel("Qt6Network.dll"),
-        },
-        Copy {
-            from: paths::join_rel(q.plugins.clone(), "platforms/qwindows.dll"),
-            to: rel("platforms/qwindows.dll"),
-        },
-        Copy {
-            from: paths::join_rel(q.qml.clone(), "QtQuick/qmldir"),
-            to: rel("qml/QtQuick/qmldir"),
-        },
-        Copy {
-            from: paths::join_rel(q.qml.clone(), "QtQuick/qtquick2plugin.dll"),
-            to: rel("qml/QtQuick/qtquick2plugin.dll"),
-        },
+        built(&c.program()),
+        built(&c.worker_program()),
+        lib("Qt6Core.dll"),
+        lib("Qt6Qml.dll"),
+        lib("Qt6Quick.dll"),
+        lib("Qt6Network.dll"),
+        copy(
+            paths::join_rel(q.plugins.clone(), "platforms/qwindows.dll"),
+            "platforms/qwindows.dll",
+        ),
+        qml("QtQuick/qmldir", "qml/QtQuick/qmldir"),
+        qml(
+            "QtQuick/qtquick2plugin.dll",
+            "qml/QtQuick/qtquick2plugin.dll",
+        ),
     ];
-    assert_eq!(plan(&c, &q, &exe), expected);
+    assert_eq!(plan(&c, &q, &release), expected);
 }
 
 #[test]

@@ -13,17 +13,20 @@ use crate::test_support::{TempDir, make_dir_link, stage_config};
 const SYSTEM: [&str; 2] = ["kernel32.dll", "vcruntime140.dll"];
 /// The app's program in the fake stages.
 const PROGRAM: &str = "keyxtend.exe";
+/// The media worker's program in the fake stages.
+const WORKER: &str = "keyxtend-worker.exe";
 
 /// The deflate level the stage's download is measured at, from the words manifest.
 fn level() -> u32 {
     crate::words::download_level().unwrap()
 }
 
-/// The test settings, with the app named so its program is [`PROGRAM`] on every system.
+/// The test settings, with the programs named [`PROGRAM`] and [`WORKER`] on every system.
 fn settings() -> StageConfig {
     let mut config = stage_config();
-    let app = PROGRAM.strip_suffix(std::env::consts::EXE_SUFFIX).unwrap();
-    config.app = app.to_string();
+    let package = |exe: &'static str| exe.strip_suffix(std::env::consts::EXE_SUFFIX).unwrap();
+    config.app = package(PROGRAM).to_string();
+    config.worker = package(WORKER).to_string();
     config
 }
 

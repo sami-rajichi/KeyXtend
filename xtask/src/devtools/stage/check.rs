@@ -1,7 +1,8 @@
-//! The stage check: no banned plugin, no gate-only build, every import found in the stage or the system folder, the
-//! network library imported only by the listed Qt libraries, no library that nothing imports, no file off the list,
-//! and the download budget: the files deflated, a conservative stand-in for the installer's LZMA2, within `max_mb`.
-//! The packs folder is the words check's (`words::check`).
+//! The stage check: no banned plugin, no gate-only build, every import of the program, the worker and the plugins
+//! found in the stage or the system folder, the network library imported only by the listed Qt libraries, no library
+//! that nothing imports, no file off the list, and the download budget: the files deflated, a conservative stand-in
+//! for the installer's LZMA2, within `max_mb`. The packs folder is the words check's (`words::check`), and the worker's
+//! manifest the worker check's (`worker::check`).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -178,11 +179,15 @@ fn libraries(files: &[PathBuf]) -> BTreeMap<String, PathBuf> {
         .collect()
 }
 
-/// Where the walk starts: the program, and every library in a subfolder, which Qt loads as a plugin.
+/// Where the walk starts: the program, the worker when staged, and every library in a subfolder, which Qt loads as a
+/// plugin.
 fn roots(files: &[PathBuf], config: &StageConfig) -> Vec<PathBuf> {
     let plugin = |f: &&PathBuf| f.parent() != Some(Path::new("")) && is_lib(f);
     let plugins = files.iter().filter(plugin).cloned();
+    let worker = path_key(Path::new(&config.worker_program()));
+    let worker = files.iter().find(|f| path_key(f) == worker).cloned();
     std::iter::once(PathBuf::from(config.program()))
+        .chain(worker)
         .chain(plugins)
         .collect()
 }

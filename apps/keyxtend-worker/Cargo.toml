@@ -16,5 +16,9 @@ kx-ipc = { path = "../../crates/kx-ipc" }
 png.workspace = true
 thiserror.workspace = true
 
+# The manifest that runs the worker as its caller, never with uiAccess.
+[build-dependencies]
+embed-manifest.workspace = true
+
 [dev-dependencies]
 proptest.workspace = true

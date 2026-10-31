@@ -158,6 +158,7 @@ pub(crate) fn devtools_config() -> DevToolsConfig {
 pub(crate) fn stage_json() -> serde_json::Value {
     serde_json::json!({
         "app": "keyxtend",
+        "worker": "keyxtend-worker",
         "out_dir": "target/stage",
         "max_mb": 80,
         "qmake_env": "QMAKE",

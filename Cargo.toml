@@ -189,6 +189,10 @@ profile_env = "USERPROFILE"
 [workspace.metadata.stage]
 # The app package `cargo xtask stage` builds in release; its program has the same name.
 app = "keyxtend"
+# The media worker package, built in release on its own and staged beside the app (ADR-0034); its program has the same
+# name, which kx-platform-windows starts (`WORKER_EXE`, the app's agree test), and the stage refuses its manifest if it
+# asks for uiAccess.
+worker = "keyxtend-worker"
 # Folder, under the workspace root, holding the stage; the app's own folder in it is emptied first.
 out_dir = "target/stage"
 # The download budget (ADR-0012), in MB of 10⁶ bytes: the staged files deflated at words.toml's `[packs] level`, a

@@ -171,3 +171,48 @@ fn the_field_watch_starts_on_another_thread_and_drops() {
     let started = std::thread::spawn(move || watch.watch(config, Box::new(|_| {})).map(drop));
     assert_eq!(started.join().ok(), Some(Ok(())));
 }
+
+#[test]
+fn the_clipboard_ports_move_to_another_thread_without_a_watch_or_a_write() {
+    // Never a watch or a write: the clipboard belongs to whoever runs the tests.
+    let platform = WindowsPlatform::new().unwrap();
+    let (clip, writer) = (platform.clipboard(), platform.clipboard_writer());
+    assert!(
+        std::thread::spawn(move || drop((clip, writer)))
+            .join()
+            .is_ok()
+    );
+}
+
+#[test]
+fn the_calendar_port_reads_today_on_another_thread() {
+    let calendar = WindowsPlatform::new().unwrap().calendar();
+    let now = std::thread::spawn(move || calendar.now()).join().unwrap();
+    assert!(now.unix_ms > 0);
+}
+
+#[test]
+fn the_pictures_port_opens_a_session_on_another_thread_and_drops_it() {
+    use kx_module_api::ports::PictureConfig;
+    let pictures = WindowsPlatform::new().unwrap().pictures();
+    let config = PictureConfig {
+        deadline_ms: 1,
+        idle_s: 1,
+        memory_mb: 1,
+        max_pixels: 1,
+        restart_ms: 1,
+        restart_max_ms: 1,
+    };
+    // Never a draw: the worker starts only on the first one.
+    let opened = std::thread::spawn(move || drop(pictures.open(config))).join();
+    assert!(opened.is_ok());
+}
+
+#[test]
+fn the_disk_room_reads_a_folders_drive_on_another_thread() {
+    let room = WindowsPlatform::new().unwrap().disk_room();
+    let dir = kx_test_support::tempdir::TempDir::new("platform-disk").unwrap();
+    let path = dir.path().to_path_buf();
+    let read = std::thread::spawn(move || (room.free(&path).is_ok(), room.drive(&path).is_ok()));
+    assert_eq!(read.join().unwrap(), (true, true));
+}

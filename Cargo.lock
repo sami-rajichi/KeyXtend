@@ -624,7 +624,9 @@ dependencies = [
  "cxx-qt-lib",
  "embed-manifest",
  "kx-crypto",
+ "kx-ipc",
  "kx-kernel",
+ "kx-mod-clipboard",
  "kx-mod-keyboard",
  "kx-mod-layouts",
  "kx-mod-mouse",
@@ -649,6 +651,7 @@ dependencies = [
 name = "keyxtend-worker"
 version = "0.0.0"
 dependencies = [
+ "embed-manifest",
  "kx-ipc",
  "png",
  "proptest",

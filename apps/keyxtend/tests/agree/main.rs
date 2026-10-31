@@ -2,14 +2,17 @@
 //! language key's designs have their texts in every language, the shortcuts agree with the Windows table, the board's
 //! icons resolve, every paint names tokens each theme has, the Next key holds the most pages' dots, every character
 //! key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a rule go back to
-//! their default, the stage puts Qt's QML where the app pins it, and the longest word with chips fits the keyboard's
-//! text cap.
+//! their default, the stage puts Qt's QML where the app pins it and the worker where the platform starts it, the
+//! longest word with chips fits the keyboard's text cap, and the clipboard's settings fit the worker's frames.
 
 #![allow(
     clippy::unwrap_used,
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+// The clipboard is an optional module.
+#[cfg(feature = "mod-clipboard")]
+mod clip;
 mod dots;
 #[path = "../common/fakes.rs"]
 mod fakes;

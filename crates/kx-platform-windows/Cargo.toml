@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation, the focused box, the clipboard, the local calendar and the media worker's start."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation, the focused box, the clipboard, the local calendar, the media worker's start and the free space of a drive."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -37,8 +37,9 @@ tracing.workspace = true
 # (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), packs open with read sharing only
 # (`Storage_FileSystem`), UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`), the
 # clipboard watch and writer use `System_DataExchange` and read app names from version information
-# (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), and the media worker starts on anonymous
-# pipes (`System_Pipes`) in a job object (`System_JobObjects`).
+# (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), the media worker starts on anonymous pipes
+# (`System_Pipes`) in a job object (`System_JobObjects`), and the disk room reads a drive's free space and root
+# (`Storage_FileSystem`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",

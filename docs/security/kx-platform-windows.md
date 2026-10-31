@@ -12,6 +12,7 @@
   - P7: the UI Automation client the scroll target, the box watch and the gates share (`uia`), the focused-box watch (`field`), the data key's DPAPI guard (`guard_key`) and the word-pack file maps (`packs`);
   - P8: the clipboard watch, writer and file facts (`clip`, moved from the gate tool's spike code) and the local calendar (`calendar`).
   - P8, the media worker's start (`worker`): its token, pipes, inherited handles and job; the neutral host in `kx_platform::pictures` drives it (`kx-platform.md`).
+  - P8, the clipboard history's drive (`disk`): the free bytes and the volume root of the folder the app gives its sealed shelf.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -58,6 +59,7 @@
 | `Shell.Application` and `ShutdownWindows` (`power`) | Each open starts an apartment-threaded `Com` on its calling thread, makes the object in-process and releases it before COM stops; no shell object reads as `Unavailable` and a refused call as `Failed`, never a panic | One object and one COM start per open | Fake-OS tests of the rule; a real test only makes the object |
 | Our own process token (`TokenUIAccess`) | Reads 4 bytes (`size_of::<u32>()`) into a `u32`; any failure reads as "no uiAccess" | Fixed size | No |
 | A started worker's token, read back (`worker::token::rights`) | `TokenUIAccess` into a `u32`, and `TokenIntegrityLevel` into a buffer of the label and the largest SID, whose SID passes `IsValidSid` before its last part is read. A worker with uiAccess or above Medium is ended before it runs (`SpawnError::Rights`), and a token that cannot be read fails the start | Fixed size | Real test on the started worker |
+| A drive's free bytes and volume root (`disk`) | Read for the folder the app names, the nearest one that exists; the root is read up to its first NUL into a buffer of at least the path's length and `MAX_PATH`, and shown without its last backslash | One `u64`; the root within the buffer | No: Windows' own answer, tested on the real drive |
 | The worker's path (`worker`) | Only `keyxtend-worker.exe` beside the running program (`current_exe`), absolute and a file, else `Missing`; it goes to `CreateProcessAsUserW` as the application name, so no search path is used | N/A | Unit test |
 | The worker's replies (`worker`, read by `kx_platform::pictures`) | `kx-ipc` checks each frame; the host refuses a reply to another draw and pixels that are not the size asked (`Pixels::new`), then ends the worker (`kx-platform.md`) | One frame at a time, within `deadline_ms` | Property tests in `kx-ipc`; scripted host tests |
 | `SendInput` count | Clamped to the batch length; a batch too long for a `u32` is not sent | One batch per call | Property test of the release rule |

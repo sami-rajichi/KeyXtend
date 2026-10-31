@@ -11,6 +11,7 @@ pub mod clock;
 #[cfg(windows)]
 pub mod com;
 pub mod dirs;
+pub mod disk;
 #[cfg(windows)]
 pub mod dll;
 pub mod field;
@@ -59,6 +60,8 @@ pub use clip::{WinClipboard, WinClipboardWriter};
 #[cfg(windows)]
 pub use clock::QpcClock;
 pub use clock::ticks_to_us;
+#[cfg(windows)]
+pub use disk::WinDiskRoom;
 #[cfg(windows)]
 pub use field::WinFieldWatch;
 #[cfg(windows)]
