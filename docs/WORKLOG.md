@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 01:30 — P8: the media worker draws PNG and DIB thumbnails
+The new program `keyxtend-worker media --max-pixels <n>` reads draws from its stdin as `kx-ipc` frames and answers each with RGBA pixels or a fixed reason, outside the uiAccess keyboard (ADR-0004, ADR-0034). PNG goes through the `png` crate with its memory capped, and DIBs (`CF_DIB`, `CF_DIBV5`, 24 and 32 bits, either way up, with masks) through our own reader, which checks every size before it reads a pixel. Both feed rows one at a time into a box filter that averages by alpha, so even a 100-megapixel image never needs a full-size copy, and too many pixels are refused from the header alone. Random, changed and cut images fail cleanly, a panic becomes a failure reply, and tidy bans `png` from the app.
+
 ## 2026-10-31 00:52 — P8: the sealed shelf for the clipboard history
 `kx-crypto` now has `SealedShelfFiles`, which keeps sealed blobs in folders such as `2026-10-31` and `pinned` under one wrapped key, and deletes blobs and whole folders at once. The cipher's tag covers the folder and the name, so a file moved to another folder or renamed will not open and is set aside once. The drive's free space and name come from a small `DiskRoom` trait the platform fills, so the crate stays OS-neutral. Both stores now share one sealer, so P7's learned words open as before.
 

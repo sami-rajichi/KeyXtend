@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc a40c0f50c79e882d241087d67915e48ef603911482e85b1b7f5d62ac05665301 # shrinks to dib = [40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0], side = 1, max = 1
+cc 74e945ef47bbea152e97045b63fbf6505cd92e25a8513f6a1267b13a995fd20a # shrinks to png = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 16, 73, 68, 65, 84, 120, 1, 1, 5, 0, 250, 255, 0, 0, 0, 0, 0, 0, 5, 0, 1, 100, 120, 149, 56, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130], width = 1, height = 2
+cc c6caa6d1cb495c566272ac032ea918a415b62b1028a942194fcfc20bdfa10c89 # shrinks to codec = Png, bytes = [], side = 1, max = 1
+cc e25bf5da65870526df890438d80117c36c6ad1db2e8d27fc8f520486b0fb5852 # shrinks to png = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 5, 8, 4, 0, 0, 0, 46, 141, 78, 20, 0, 0, 0, 26, 73, 68, 65, 84, 120, 1, 1, 15, 0, 240, 255, 0, 0, 8, 0, 246, 46, 0, 67, 163, 0, 233, 107, 0, 32, 91, 26, 54, 3, 226, 100, 228, 16, 154, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130], at = Index(1224872332317714533), flip = 190, cut = Index(14312107221484157066), side = 4

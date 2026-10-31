@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -32,6 +32,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 proptest = "1"
 thiserror = "2.0.21"
+# The media worker's PNG decoder (ADR-0034 decision 5); tidy bans it from the uiAccess app.
+png = "0.18.1"
 toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }
@@ -79,8 +81,8 @@ module_allowed = ["kx-module-api"]
 app = "keyxtend"
 # Network crates banned from the app (ARCHITECTURE.md invariant 4).
 banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
-# Media-decoding crates banned from the app (ARCHITECTURE.md invariant 5).
-banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer"]
+# Media-decoding crates banned from the app (ARCHITECTURE.md invariant 5); the media worker alone decodes PNG (ADR-0034).
+banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
@@ -228,4 +230,15 @@ opt-level = 3
 
 # The stage deflates every staged file to measure the download, about 95 MB, so the deflater runs optimised too.
 [profile.dev.package.miniz_oxide]
+opt-level = 3
+
+# The media worker must draw up to `max_pixels` within the host's deadline (`media_ms`) in dev builds too, and its
+# tests scale a 48-megapixel image, so it and its PNG decoder run optimised.
+[profile.dev.package.keyxtend-worker]
+opt-level = 3
+
+[profile.dev.package.png]
+opt-level = 3
+
+[profile.dev.package.fdeflate]
 opt-level = 3
