@@ -15,6 +15,8 @@ const CFG: PictureConfig = PictureConfig {
     idle_s: 30,
     memory_mb: 256,
     max_pixels: 40_000_000,
+    restart_ms: 1_000,
+    restart_max_ms: 30_000,
 };
 
 /// The thumbnail side the tests ask for.

@@ -827,6 +827,7 @@ dependencies = [
 name = "kx-platform"
 version = "0.0.0"
 dependencies = [
+ "kx-ipc",
  "kx-module-api",
  "kx-test-support",
  "thiserror 2.0.21",
@@ -850,6 +851,7 @@ name = "kx-platform-windows"
 version = "0.0.0"
 dependencies = [
  "kx-crypto",
+ "kx-ipc",
  "kx-module-api",
  "kx-platform",
  "kx-test-support",

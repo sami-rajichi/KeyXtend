@@ -57,12 +57,16 @@ crates/
                          ADR-0019, Memory: ADR-0023, Speaker: P4); the OS-neutral halves that every adapter
                          shares (P7): `packs` (folder order, file name, size, over an adapter's `PackDisk`) and
                          `field` (the watch's run, its `kx-field` thread and read deadline, a dead watch, our
-                         own focus keeping the last box, the kind order, over an adapter's `Probe` and `Reader`)
+                         own focus keeping the last box, the kind order, over an adapter's `Probe` and `Reader`),
+                         and `pictures` (P8: the worker host, a `kx-pictures` thread per session that starts the
+                         worker on demand, one draw at a time within a deadline, checked replies, a backoff and
+                         an idle stop, over an adapter's `Spawner`)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray,
                          sound, the scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the
                          `shortcuts.toml` and `keynames.toml` tables), the power dialog (`WinPower`), the box
                          watch (`WinFieldWatch`, kinds from `field.toml`), the packs' maps (`WinWordPacks`) and
-                         the DPAPI key guard (`WinKeyGuard`, P7)
+                         the DPAPI key guard (`WinKeyGuard`, P7); the worker's start (`WinSpawner`: uiAccess
+                         cleared, Medium integrity, only its pipes inherited, in a job; P8)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock, golden layout tables,

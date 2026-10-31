@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 02:34 — P8: the media worker's host, with reduced rights
+`kx_platform::pictures` now serves the `Pictures` port: each session's own thread starts the media worker at the first draw, sends one draw at a time, ends a worker that is late or sends a bad reply, waits a doubling backoff (`restart_ms` to `restart_max_ms`, new in `PictureConfig`) before the next start, and stops it when idle. On Windows, `WinSpawner` starts `keyxtend-worker.exe` from a copy of our token with uiAccess cleared and Medium integrity, inheriting only its two pipe ends and no stderr, in a job that caps its memory and ends it with us; its token is read back before it runs. Tests start the real worker to check its token, its handles, its job, and the command line and exit codes it shares with the host.
+
 ## 2026-10-31 02:03 — P8: the clipboard history's rules
 The new `kx-mod-clipboard` crate holds the history's pure rules (spec §7): each copy becomes an entry with its kind (text, link, image, files, or media by the module's `media.toml`), a one-line title, a folded search text and a stable FNV-1a hash; an image beside text and a copy with nothing kept are dropped. Pinned entries come first and each group newest first by a counter, so a repeated copy, an insert or an unpin moves up, and a clock set back keeps the order. A copy too big, under the free-space floor or past a cap the pins fill is refused with a note; past the caps the oldest unpinned leaves, and a new calendar day sweeps days past `keep_days` and media past `media_days`. A clear by the copying app within `clear_follow_s` deletes its entry, and `skip_apps` copies are never kept.
 

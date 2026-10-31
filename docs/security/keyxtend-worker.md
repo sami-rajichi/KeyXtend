@@ -46,7 +46,7 @@ The worker never logs and writes nothing to disk. Its replies give a fixed reaso
 - None.
 ### Should fix (tracked issue)
 - Task 19's gate should copy real images from several apps (Paint, a browser, Office, a Qt app, a screenshot) and check their thumbnails, above all V4 and V5 DIBs with bit masks, whose masks some writers repeat after the header.
-- The host's command line must match `args::MEDIA` and `args::MAX_PIXELS`; task 9's test that starts the real worker pins it.
+- Done (task 9): the host's command line matches `args::MEDIA` and `args::MAX_PIXELS`, and its exit codes 0 and 1; `the_real_worker_draws_through_the_host` and `the_workers_words_and_exit_codes_match_the_host` in `kx-platform-windows` start the real worker.
 ### Accepted (with reason)
 - Interlaced PNGs are refused: their seven passes cover the whole image, so drawing one needs a full-size buffer (Ruling 12). Apps rarely copy interlaced PNGs; the history row keeps its type icon.
 - Colour profiles, gamma and DIB colour spaces are ignored; pixels are taken as sRGB, which suits a thumbnail.

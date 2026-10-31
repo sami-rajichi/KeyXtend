@@ -1,7 +1,7 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-26 (P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
+- **Last review:** 2026-10-31 (P8 task 9: the media worker's start; P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-platform-windows`, inside the uiAccess `keyxtend` process:
   - basics: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check and where libraries load from (`dll`);
@@ -11,6 +11,7 @@
   - system: the look and its watcher (`sysui`, `watch`), the one running copy with its command window (`instance`, `hidden`), the tray icon with its window and front-window hook (`tray`), the heaps' free pages after a look change (`memory`) and the speaker on `XAudio2` (`sound`);
   - P7: the UI Automation client the scroll target, the box watch and the gates share (`uia`), the focused-box watch (`field`), the data key's DPAPI guard (`guard_key`) and the word-pack file maps (`packs`);
   - P8: the clipboard watch, writer and file facts (`clip`, moved from the gate tool's spike code) and the local calendar (`calendar`).
+  - P8, the media worker's start (`worker`): its token, pipes, inherited handles and job; the neutral host in `kx_platform::pictures` drives it (`kx-platform.md`).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -23,6 +24,8 @@
 | Program folder and per-user folder paths | Sensitive (the per-user path holds the account name) | Memory only | N/A | For the run |
 | Clock readings | Public | Memory only | N/A | Not kept |
 | uiAccess flag of our own token | Public | Memory only | N/A | Not kept |
+| The worker's token: a copy of ours with uiAccess cleared and Medium integrity (`worker::token`) | Public | A handle, closed once the worker has started | N/A | One start |
+| Image bytes and pixels between the host and the worker (`worker`) | Sensitive (copied by the user) | Two anonymous pipes that only our process and the worker hold | No | Until each frame is read |
 | Typed text and the keys it becomes | Sensitive (typed text; may be part of a password) | Memory only, as `Redacted` text and key events for one send; not zeroised (see Accepted) | N/A | Dropped after the send |
 | A shortcut's key events: each step's keys from the table, with the latched scans held around each step (`shortcut`) | Public alone (fixed by the table); the latches are Sensitive together with the clicks around them | Memory only, for one send | N/A | Dropped after the send |
 | File name of the app in front | Sensitive (shows what the user runs) | Memory only; returned to the caller | N/A | Not kept |
@@ -54,6 +57,9 @@
 | `CoInitializeEx` result | Success pairs one `CoUninitialize` on the same thread (`Com` is not `Send`); another thread mode is accepted and never undone | N/A | No |
 | `Shell.Application` and `ShutdownWindows` (`power`) | Each open starts an apartment-threaded `Com` on its calling thread, makes the object in-process and releases it before COM stops; no shell object reads as `Unavailable` and a refused call as `Failed`, never a panic | One object and one COM start per open | Fake-OS tests of the rule; a real test only makes the object |
 | Our own process token (`TokenUIAccess`) | Reads 4 bytes (`size_of::<u32>()`) into a `u32`; any failure reads as "no uiAccess" | Fixed size | No |
+| A started worker's token, read back (`worker::token::rights`) | `TokenUIAccess` into a `u32`, and `TokenIntegrityLevel` into a buffer of the label and the largest SID, whose SID passes `IsValidSid` before its last part is read. A worker with uiAccess or above Medium is ended before it runs (`SpawnError::Rights`), and a token that cannot be read fails the start | Fixed size | Real test on the started worker |
+| The worker's path (`worker`) | Only `keyxtend-worker.exe` beside the running program (`current_exe`), absolute and a file, else `Missing`; it goes to `CreateProcessAsUserW` as the application name, so no search path is used | N/A | Unit test |
+| The worker's replies (`worker`, read by `kx_platform::pictures`) | `kx-ipc` checks each frame; the host refuses a reply to another draw and pixels that are not the size asked (`Pixels::new`), then ends the worker (`kx-platform.md`) | One frame at a time, within `deadline_ms` | Property tests in `kx-ipc`; scripted host tests |
 | `SendInput` count | Clamped to the batch length; a batch too long for a `u32` is not sent | One batch per call | Property test of the release rule |
 | `VkKeyScanExW` answer | Only no modifier, Shift, Ctrl+Alt (`AltGr`) or Shift+Ctrl+Alt is typed, and anything else is `Unmappable` before a key is sent; `AltGr` goes as a physical one does, left Ctrl then right Alt with the extended flag. `ToUnicodeEx` (the layout source's reader, no state change) must confirm the key types the character under the current Caps Lock, in that Shift state or the other; a dead key must give the character as its own, and Space follows it | Fixed size | Unit tests of every bit; fake-layout tests; a real AZERTY test |
 | `MapVirtualKeyExW` scan code | Only its low byte and prefix byte are read | Fixed size | Unit tests |
@@ -178,6 +184,11 @@
   - Lock PC calls `LockWorkStation`, never an injected Win+L, which Windows ignores. Tests only plan events, never send them or lock the session.
 - **Elevation (power):** the `Power`-gated port only asks `ShutdownWindows` to show Windows' own Shut Down Windows dialog, where the user picks or cancels; no code confirms it, and no test opens it.
   - The shell object (`Shell.Application`) is made in-process (`CLSCTX_INPROC_SERVER`) on the open's own apartment thread and released before COM stops there (`power/win.rs:21-25`), so its class registration loads code into the uiAccess process (see Should fix).
+- **Elevation (worker):** the media worker decodes images copied from any app, so it starts with less than we have (ADR-0004, ADR-0034 decision 5).
+  - Its token is a copy of ours with `TokenUIAccess` cleared and the integrity level set to Medium (S-1-16-8192), as a child of a uiAccess process otherwise keeps uiAccess. It starts suspended, and the start reads its token back and ends it before its first instruction if it kept uiAccess or runs above Medium (`the_worker_runs_without_ui_access_at_medium_integrity`).
+  - It inherits only its stdin's read end and its stdout's write end (`PROC_THREAD_ATTRIBUTE_HANDLE_LIST`) and gets no stderr (`the_worker_inherits_only_its_pipes`, which first proves its check sees a handle a plain child inherits).
+  - Its job caps its memory at `memory_mb`, takes no second process, ends it on a crash without an error box, and ends it when our last handle closes, so it dies with us (`the_job_caps_the_worker_alone_in_it`, `the_job_ends_the_worker_when_its_host_lets_go`).
+- **Denial of service (worker):** a hung, crashed or lying worker costs one draw's `deadline_ms`, is ended, and starts again only after a growing backoff (`kx_platform::pictures`). Asks are written on a thread of their own, so a worker that stops reading cannot hold the host past the deadline.
 - **Information disclosure (box watch):** it reads only when a module that holds `ReadFocusedText` asks, at most the words asked and `read_chars` characters before the caret.
   - It never reads a password box (UI Automation's `IsPassword`, or an edit class with the style bit `field.toml` names). It never reads an unknown box either: a fact it cannot read, a class `field.toml` lists as opaque (remote desktops, virtual machines, terminals, game engines), or a read-only box.
   - A watch whose COM, client or handler fails tells Unknown once, and its reads answer `Unavailable`. Dropping the run takes the module's callback away under its lock, so nothing is told after the drop.
@@ -207,6 +218,8 @@ A stale focus token (P13): `give_back` checks only that the noted window lives, 
 Done (P7, Task 13): `InputInjector::text` builds two inputs per UTF-16 unit in one batch, whatever the length. The port still takes any length, but its one caller, the keyboard, sends one key's text or a picked word within `[keyboard] text_cap` characters (`kx-mod-keyboard.md`).
 
 The power dialog's COM class (P14): each Power click makes `Shell.Application` in-process in the uiAccess process, so P14's check that no per-user `HKCU` class registration loads there must cover it too (`keyxtend.md`, `docs/items/P14.md`).
+
+The worker's cleared uiAccess under a uiAccess host (P8 task 19): tests run without uiAccess, so clearing `TokenUIAccess` is proven only on a token that never had it. Task 19's gate reads the installed worker's token under the signed uiAccess build.
 
 Done (P3, ed424ef): the tray's class reader sliced its buffer by Windows' count inside a callback, where a panic would abort the uiAccess process. It now reads with `get`, as the other readers do.
 
@@ -258,6 +271,8 @@ A panic inside a hook callback runs the app's panic hook there, which lets go fi
 A hook thread that misses its stop wait is left running after its hooks are removed; it holds only the engine until the process ends, and a later start reads `Busy`.
 
 A speaker thread that misses its stop wait is left running; once its audio call returns, it finishes that one ask, serves no more, drops its voices and engine and ends.
+
+A starting worker's two pipe ends are inheritable until `CreateProcessAsUserW` returns. Our own starts name their handles, but a plain `std::process::Command` started on another thread at that moment inherits every inheritable handle and could hold the worker's pipe open; the app starts no process that way.
 
 A UI Automation call to a stuck app holds every UI Automation call in the process until its timeout, `read_ms`, so the scroll pad's end check reads unknown that long. Windows marks an app hung only after 5 s, so the run pings the target at each aim, turn and reach instead: from the last ping it answered until the next goes unanswered, one turn's interval plus `read_ms` at most, a few turns may still queue for a busy app.
 

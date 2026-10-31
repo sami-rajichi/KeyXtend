@@ -20,6 +20,10 @@ pub struct PictureConfig {
     pub memory_mb: u32,
     /// The most pixels an image may hold; a larger one is refused before it is decoded.
     pub max_pixels: u64,
+    /// The wait before a failed worker starts again, in ms; it doubles with each failure in a row.
+    pub restart_ms: u32,
+    /// The longest wait before a failed worker starts again, in ms.
+    pub restart_max_ms: u32,
 }
 
 /// One picture to draw.

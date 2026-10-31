@@ -46,6 +46,8 @@ pub mod uia;
 pub mod uiaccess;
 pub mod watch;
 pub mod window;
+#[cfg(windows)]
+pub mod worker;
 
 #[cfg(windows)]
 pub use backdrop::WinBackdrop;
@@ -90,6 +92,8 @@ pub use sysui::WinLook;
 pub use tray::WinTray;
 #[cfg(windows)]
 pub use window::WinGuard;
+#[cfg(windows)]
+pub use worker::{WinChild, WinSpawner};
 
 use std::io;
 use thiserror::Error;
