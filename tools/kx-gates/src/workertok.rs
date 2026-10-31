@@ -7,7 +7,7 @@ use std::path::Path;
 
 use kx_platform_windows::front::path_of;
 use kx_platform_windows::worker::WORKER_EXE;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::Security::{
@@ -27,6 +27,8 @@ use crate::win::size32;
 
 /// The name that runs the worker check alone, on the running product.
 pub const WORKER: &str = "worker";
+/// The check's key for the product's own rights.
+pub const PRODUCT: &str = "product";
 /// The integrity level's last SID part a worker may run at, at most: Medium, S-1-16-8192.
 pub const MEDIUM: u32 = SECURITY_MANDATORY_MEDIUM_RID.cast_unsigned();
 /// The process ids the first look reads; it doubles until every running process fits.
@@ -35,7 +37,7 @@ const FIRST_PIDS: usize = 1024;
 const SID_WORDS: usize = SECURITY_MAX_SID_SIZE as usize / size_of::<u32>();
 
 /// What a process's token allows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rights {
     /// It has uiAccess.
     pub ui_access: bool,
@@ -219,11 +221,16 @@ pub fn check(pid: u32, exe: &Path) -> Value {
     match read() {
         Ok((product, workers)) => {
             let v = verdict(product, &workers);
-            json!({ "product": product, "workers": workers, "ok": v.ok(),
+            json!({ PRODUCT: product, "workers": workers, "ok": v.ok(),
                 "fails": v.fails(), "why": v.why() })
         }
         Err(e) => json!({ "error": e, "ok": false, "fails": true }),
     }
+}
+
+/// The product's rights as the check's `part` read them; none when it could not read them.
+pub fn product_of(part: &Value) -> Option<Rights> {
+    Rights::deserialize(&part[PRODUCT]).ok()
 }
 
 /// Runs `g20 worker` on the running product, which only reads tokens: it passes once every worker checked passed.

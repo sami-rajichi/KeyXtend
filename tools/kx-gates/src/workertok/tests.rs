@@ -103,3 +103,14 @@ fn a_running_worker_that_cannot_be_read_fails_the_check() {
     let got = read_each(vec![4, 5], fails_on_five("OpenProcess 5: denied"), runs);
     assert_eq!(got, Err("OpenProcess 5: denied".to_string()));
 }
+
+#[test]
+fn the_products_rights_are_read_back_from_the_worker_part() {
+    let part =
+        json!({ "product": { "level": 8192, "ui_access": false }, "workers": [], "ok": false });
+    assert_eq!(product_of(&part), Some(rights(false, MEDIUM)));
+    let ours = json!({ PRODUCT: rights(true, MEDIUM), "ok": true });
+    assert_eq!(product_of(&ours), Some(rights(true, MEDIUM)));
+    let unread = json!({ "error": "OpenProcess 4: denied", "ok": false, "fails": true });
+    assert_eq!(product_of(&unread), None, "an unread token");
+}

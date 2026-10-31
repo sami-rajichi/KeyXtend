@@ -79,6 +79,7 @@ pub fn ours(ctx: &Ctx, app: &Opened, panel: &Panel) -> Result<Value, String> {
 }
 
 /// The product's Win and V keys with the history key off: Windows' own history opens and Esc closes it, as in G25.
+/// Windows opens it only for a uiAccess product, so G20 skips this part on the test build.
 pub fn theirs(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
     g25wins::clip_window(ctx, app)
 }
