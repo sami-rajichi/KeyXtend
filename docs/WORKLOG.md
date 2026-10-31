@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 22:40 — P8: Linux CI, two imports used only on Windows or with Qt
+The PR's Linux check failed on two unused imports: the clipboard's file facts, used only by the Windows watch and the tests, and the picture host's name, used only by the Qt bridge. Each now carries the gate its users have (`windows` or `test`, and the `qt` feature). Both Linux clippy commands of CI pass on this PC for the Linux target, and so do the Windows ones.
+
 ## 2026-10-31 21:45 — P8: Open folder's failure came from the test launch, not the code
 In the hands-on check, Open folder showed Explorer's "cannot find", and an `explorer.exe` route then opened Documents. The cause was the launch: KeyXtend started from a packaged (MSIX) app's shell wrote into that app's private copy of AppData (`Packages\<app>\LocalCache`), which Explorer cannot see. The `explorer.exe` change is reverted, and Open folder is checked on the test build, whose portable data folder sits on D:.
 

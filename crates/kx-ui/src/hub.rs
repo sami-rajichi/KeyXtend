@@ -21,6 +21,7 @@ mod unread;
 mod words;
 
 pub use app::Mode;
+#[cfg(feature = "qt")]
 pub(crate) use clip::PICTURES;
 pub use clip::acts as clip_acts;
 pub use face::{Redraw, Resize};

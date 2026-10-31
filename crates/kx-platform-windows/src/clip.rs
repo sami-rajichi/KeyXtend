@@ -30,6 +30,7 @@ use kx_module_api::ports::ClipError;
 use serde::Deserialize;
 use thiserror::Error;
 
+#[cfg(any(windows, test))]
 pub(crate) use facts::facts;
 pub(crate) use marks::Marks;
 #[cfg(windows)]
