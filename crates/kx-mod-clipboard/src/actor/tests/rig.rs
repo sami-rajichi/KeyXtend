@@ -19,7 +19,7 @@ use super::ears::{Heard, listen};
 use super::fakes::Fakes;
 use crate::MANIFEST;
 use crate::fixture::text;
-use crate::media::{self, Job, Look};
+use crate::media::{self, Look, Task};
 use crate::settings::ClipSettings;
 use crate::store::Store;
 
@@ -32,10 +32,10 @@ pub(super) struct Rig {
     pub settings: ClipSettings,
     actor: Actor,
     notes: Receiver<Msg>,
-    jobs: Receiver<Job>,
+    tasks: Receiver<Task>,
     looks: Receiver<Look>,
     run: Box<dyn PictureRun>,
-    /// Pictures wait undrawn while set, as if the worker were busy.
+    /// Pictures and DIBs wait while set, as if the worker were busy.
     holding: bool,
     /// File looks wait unanswered while set, as if a share stalled.
     stalled: bool,
@@ -60,7 +60,7 @@ impl Rig {
         let loaded = store.load().unwrap();
         let (tx, notes) = mpsc::channel();
         let (watch, copies) = Watched::start(&fakes.clip, &settings, &tx).unwrap();
-        let ((media, jobs), (files, looks)) = (mpsc::channel(), mpsc::channel());
+        let ((media, tasks), (files, looks)) = (mpsc::channel(), mpsc::channel());
         let ports = Ports {
             bus: ModuleCx::new(&mut host).bus(),
             clock: Arc::new(fakes.clock.clone()),
@@ -81,7 +81,7 @@ impl Rig {
             settings,
             actor,
             notes,
-            jobs,
+            tasks,
             looks,
             holding: false,
             stalled: false,
@@ -100,14 +100,17 @@ impl Rig {
         self.pump();
     }
 
-    /// Runs each note the watch told, each picture asked and each look asked, handing the answers back, until none.
+    /// Runs each note the watch told, each media task and each look asked, handing the answers back, until none.
     fn pump(&mut self) {
         loop {
             let sides = self.settings.sides();
             let msg = if let Ok(note) = self.notes.try_recv() {
                 note
-            } else if let Some(job) = (!self.holding).then(|| self.jobs.try_recv().ok()).flatten() {
-                Msg::Drawn(media::draw(&mut *self.run, job, sides))
+            } else if let Some(task) = (!self.holding)
+                .then(|| self.tasks.try_recv().ok())
+                .flatten()
+            {
+                Msg::from(media::work(&mut *self.run, task, sides))
             } else if let Some(look) = (!self.stalled)
                 .then(|| self.looks.try_recv().ok())
                 .flatten()
@@ -121,7 +124,7 @@ impl Rig {
         }
     }
 
-    /// Holds the pictures asked from now on undrawn, or draws those held and goes on drawing.
+    /// Holds the pictures and DIBs asked from now on, or does those held and goes on.
     pub fn hold_draws(&mut self, on: bool) {
         self.holding = on;
         self.pump();

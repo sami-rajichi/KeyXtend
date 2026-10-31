@@ -16,7 +16,7 @@ use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleEr
 
 use crate::MANIFEST;
 use crate::actor::{Actor, Msg, Ports, Watched, notice};
-use crate::media::{Job, Look, spawn_files, spawn_media};
+use crate::media::{Look, Task, spawn_files, spawn_media};
 use crate::settings::ClipSettings;
 use crate::store::{Store, StoreError};
 
@@ -38,7 +38,7 @@ struct Running {
 
 /// The helper threads' inboxes, and the media thread that `halt` joins.
 struct Helpers {
-    media: Sender<Job>,
+    media: Sender<Task>,
     files: Sender<Look>,
     drawing: JoinHandle<()>,
 }
@@ -166,9 +166,9 @@ fn helpers(
     settings: &ClipSettings,
     tx: &Sender<Msg>,
 ) -> Result<Helpers, ModuleError> {
-    let (media, jobs) = mpsc::channel();
+    let (media, tasks) = mpsc::channel();
     let run = pictures.open(settings.picture_config());
-    let drawing = spawn_media(run, settings.sides(), jobs, sender(tx, Msg::Drawn))
+    let drawing = spawn_media(run, settings.sides(), tasks, sender(tx, Msg::from))
         .map_err(|e| no_thread(&e))?;
     let (files, looks) = mpsc::channel();
     // Never joined: a share out of reach may hold it, and it ends once the actor lets go.

@@ -24,7 +24,7 @@ use kx_module_api::{Bus, Clock, Event, Mono, Notice, NoticeArg, args, keys};
 use crate::ID;
 use crate::follow::Follow;
 use crate::keep::Limits;
-use crate::media::{Drawn, Draws, Facts, Job, Look};
+use crate::media::{Done, Drawn, Draws, Facts, Look, Made, Task};
 use crate::order::History;
 use crate::panel::Panel;
 use crate::settings::ClipSettings;
@@ -51,10 +51,21 @@ pub(crate) enum Msg {
     HistoryAsk,
     /// The media thread drew a picture, or failed.
     Drawn(Drawn),
+    /// The media thread made an insert's DIB, or failed.
+    Made(Made),
     /// The files thread looked at some paths.
     Facts(Facts),
     /// The module stops.
     Quit,
+}
+
+impl From<Done> for Msg {
+    fn from(done: Done) -> Self {
+        match done {
+            Done::Drawn(drawn) => Self::Drawn(drawn),
+            Done::Made(made) => Self::Made(made),
+        }
+    }
 }
 
 /// The actor's ports, from the module's start or a test.
@@ -70,7 +81,7 @@ pub(crate) struct Ports {
     /// Sets the clipboard for an insert.
     pub writer: Arc<dyn ClipboardWriter>,
     /// The media thread's inbox.
-    pub media: Sender<Job>,
+    pub media: Sender<Task>,
     /// The files thread's inbox.
     pub files: Sender<Look>,
     /// The copies the watch queued, one for each `Msg::Copied`.
@@ -197,6 +208,7 @@ impl Actor {
             Msg::Pasted(pasted) => self.pasted(pasted),
             Msg::HistoryAsk => self.history_again(),
             Msg::Drawn(drawn) => self.drawn(drawn),
+            Msg::Made(made) => self.made(made),
             Msg::Facts(facts) => self.facts(facts),
             Msg::Quit => self.quit(),
         }

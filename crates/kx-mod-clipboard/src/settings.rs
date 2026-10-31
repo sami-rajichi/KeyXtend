@@ -137,7 +137,7 @@ pub struct ClipSettings {
     pub preview_px: u32,
     /// The most pixels an image may hold to be drawn.
     pub max_pixels: u64,
-    /// The longest one picture may take, in ms.
+    /// The longest one picture or DIB may take, in ms.
     pub media_ms: u32,
     /// Seconds the worker may sit idle.
     pub worker_idle_s: u32,

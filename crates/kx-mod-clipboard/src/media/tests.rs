@@ -1,10 +1,10 @@
-//! The media helpers: each picture at its side, failures passed on, file facts in order, and both threads ending
-//! when the actor lets go, the worker session with them.
+//! The media helpers: each picture at its side, a DIB at its cap, failures passed on, file facts in order, and both
+//! threads ending when the actor lets go, the worker session with them.
 
 use std::sync::mpsc;
 use std::time::Duration;
 
-use kx_module_api::ports::{FileFact, PictureError, Pictures};
+use kx_module_api::ports::{DibAsk, FileFact, PictureError, Pictures};
 use kx_platform_fake::{FakeClipboard, FakePictures};
 
 use super::*;
@@ -23,6 +23,14 @@ fn image(bytes: &[u8]) -> ClipPart {
     ClipPart::Image {
         codec: ImageCodec::Dib,
         bytes: Redacted::new(bytes.to_vec()),
+    }
+}
+
+/// A DIB ask of a 3-byte PNG, at most 99 bytes long.
+fn dib_ask() -> DibAsk {
+    DibAsk {
+        png: Redacted::new(vec![1, 2, 3]),
+        max_bytes: 99,
     }
 }
 
@@ -113,25 +121,48 @@ fn a_look_tells_each_entrys_facts_in_order() {
 }
 
 #[test]
-fn the_media_thread_draws_each_job_and_ends_with_its_inbox_and_the_session() {
+fn a_dib_task_asks_for_its_png_at_its_cap_and_tells_what_came() {
+    let pics = FakePictures::new();
+    pics.queue_dib(Ok(vec![4; 44]));
+    let mut run = pics.open(DEFAULTS.picture_config());
+    let ask = dib_ask();
+    let task = Task::Dib(DibJob {
+        n: 6,
+        ask: ask.clone(),
+    });
+    let done = work(&mut *run, task, DEFAULTS.sides());
+    let dib = Ok(Redacted::new(vec![4; 44]));
+    assert_eq!(done, Done::Made(Made { n: 6, dib }));
+    assert_eq!(pics.last_dib(), Some(ask));
+}
+
+#[test]
+fn the_media_thread_does_each_task_and_ends_with_its_inbox_and_the_session() {
     let pics = FakePictures::new();
     pics.queue(Ok(pixels()));
-    let (jobs, inbox) = mpsc::channel();
+    pics.queue_dib(Err(PictureError::Refused));
+    let (tasks, inbox) = mpsc::channel();
     let (tell, heard) = mpsc::channel();
-    let thread = spawn_media(
-        pics.open(DEFAULTS.picture_config()),
-        DEFAULTS.sides(),
-        inbox,
-        move |d| {
-            let _ = tell.send(d);
-        },
-    )
-    .unwrap();
-    jobs.send(job_of(5, Size::Thumb, vec![image(&[1])]).unwrap())
+    let run = pics.open(DEFAULTS.picture_config());
+    let thread = spawn_media(run, DEFAULTS.sides(), inbox, move |d| drop(tell.send(d))).unwrap();
+    let job = job_of(5, Size::Thumb, vec![image(&[1])]).unwrap();
+    tasks.send(Task::Draw(job)).unwrap();
+    tasks
+        .send(Task::Dib(DibJob {
+            n: 2,
+            ask: dib_ask(),
+        }))
         .unwrap();
-    let drawn = heard.recv_timeout(WAIT).unwrap();
+    let Done::Drawn(drawn) = heard.recv_timeout(WAIT).unwrap() else {
+        panic!("a drawn picture first");
+    };
     assert_eq!((drawn.id, drawn.pixels), (5, Ok(pixels())));
-    drop(jobs);
+    let made = Made {
+        n: 2,
+        dib: Err(PictureError::Refused),
+    };
+    assert_eq!(heard.recv_timeout(WAIT).unwrap(), Done::Made(made));
+    drop(tasks);
     thread.join().unwrap();
     assert!(!pics.running(), "the worker session went with the thread");
 }

@@ -38,7 +38,7 @@ thumb_px = 128
 preview_px = 960
 # The most pixels an image may hold to be drawn.
 max_pixels = 100000000
-# The longest one picture may take in the media worker, in ms.
+# The longest one picture or DIB may take in the media worker, in ms.
 media_ms = 3000
 # Seconds the media worker may sit idle before it stops.
 worker_idle_s = 30

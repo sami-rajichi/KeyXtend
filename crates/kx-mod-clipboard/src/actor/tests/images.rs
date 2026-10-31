@@ -1,5 +1,5 @@
-//! A copy with PNG and a DIB keeps both formats: both count toward the entry cap, a copy of the same pair moves its
-//! entry up, and Insert writes both, so an app that reads only `CF_DIB` gets the picture too.
+//! A copy brings one image format, PNG first, and counts only its bytes; an entry with PNG and a DIB still keeps both,
+//! both count toward the cap, a copy of the same pair moves its entry up, and Insert writes both as they are.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipAct, ClipKind, ClipPart, ImageCodec, PanelNote};
@@ -55,4 +55,15 @@ fn insert_writes_every_format_the_copy_had() {
     rig.tick_row(0);
     rig.send(Msg::Act(ClipAct::Insert));
     assert_eq!(rig.fakes.writer.writes(), [pair(2)]);
+}
+
+#[test]
+fn a_png_alone_counts_only_its_own_bytes_toward_the_cap() {
+    let mut rig = Rig::build(|_, host| host.put("max_entry_mb", Value::Integer(1)));
+    let size = MB * 3 / 5;
+    let png = image(ImageCodec::Png, vec![0; usize::try_from(size).unwrap()]);
+    rig.copy(vec![png], None);
+    rig.open();
+    assert_eq!(rig.page().note, None);
+    assert_eq!(rig.page().rows[0].bytes, Some(size));
 }

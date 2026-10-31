@@ -9,7 +9,7 @@ use kx_module_api::ports::{ClipKind, FileFact, PictureError, Preview};
 
 use super::Actor;
 use crate::insert::files_of;
-use crate::media::{Drawn, Facts, Job, Look, Size, Why, job_of};
+use crate::media::{Drawn, Facts, Job, Look, Size, Task, Why, job_of};
 
 impl Actor {
     /// Asks the files thread what is at the paths of every file row, to size them; each look asks for all, so the
@@ -113,7 +113,7 @@ impl Actor {
         }
         self.draws.went(job.size);
         // Only a stopped media thread refuses, and it stops with the actor.
-        let _ = self.ports.media.send(job);
+        let _ = self.ports.media.send(Task::Draw(job));
     }
 
     /// Sizes each row by its files still there; an entry whose files are all gone leaves (edge 4).

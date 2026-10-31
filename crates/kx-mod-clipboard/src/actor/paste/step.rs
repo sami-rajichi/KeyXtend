@@ -7,20 +7,21 @@ use kx_module_api::{Redacted, keys};
 
 use super::super::Actor;
 use super::Paste;
+use super::dib::wants_dib;
 use crate::insert::{Insert, Step, paste_parts};
 
-/// An entry read and written next, behind the join just written.
+/// An entry read and written next, behind the join just written or while its DIB is made.
 #[derive(Debug)]
-struct Ready {
-    step: Step,
-    parts: Vec<ClipPart>,
+pub(super) struct Ready {
+    pub(super) step: Step,
+    pub(super) parts: Vec<ClipPart>,
 }
 
-/// An insert's steps left, the entry waiting behind its join, and whether an entry went out yet.
+/// An insert's steps left, the entry waiting behind its join or its DIB, and whether an entry went out yet.
 #[derive(Debug)]
 pub(in crate::actor) struct Run {
     insert: Insert,
-    ready: Option<Ready>,
+    pub(super) ready: Option<Ready>,
     wrote: bool,
 }
 
@@ -36,14 +37,22 @@ impl Run {
 }
 
 impl Actor {
-    /// Writes the next step and asks the keyboard to paste it once; with none left, the insert ends, with a note when
-    /// nothing went out.
+    /// Writes the next step and asks the keyboard to paste it once; an entry's PNG first waits for its DIB. With none
+    /// left, the insert ends, with a note when nothing went out.
     pub(super) fn step(&mut self, mut run: Run) {
         let Some((parts, step)) = self.next_write(&mut run) else {
             let note = (!run.wrote).then_some(PanelNote::PasteFailed);
             return self.finish(note);
         };
-        if let Err(error) = self.ports.writer.write(&parts, self.settings.wait()) {
+        match step {
+            Some(step) if wants_dib(&parts) => self.make_dib(run, Ready { step, parts }),
+            step => self.write(run, &parts, step),
+        }
+    }
+
+    /// Writes `parts`, of `step`'s entry or of a join, and asks the keyboard to paste them once.
+    pub(super) fn write(&mut self, mut run: Run, parts: &[ClipPart], step: Option<Step>) {
+        if let Err(error) = self.ports.writer.write(parts, self.settings.wait()) {
             return self.finish(Some(note_of(error)));
         }
         if let Some(step) = &step {

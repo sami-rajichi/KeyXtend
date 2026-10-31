@@ -138,6 +138,12 @@ impl ClipSettings {
     pub fn check_wait(&self) -> Duration {
         Duration::from_millis(self.check_ms.into())
     }
+
+    /// The wait for the DIB an inserted PNG goes with, the worker's own deadline.
+    #[must_use]
+    pub fn media_wait(&self) -> Duration {
+        Duration::from_millis(self.media_ms.into())
+    }
 }
 
 /// `n` megabytes in bytes.

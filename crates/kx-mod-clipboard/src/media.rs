@@ -1,6 +1,6 @@
-//! The helper threads (spec §7 "Security", ADR-0034 decision 5): `kx-clip-media` draws thumbnails and previews in
-//! the media worker through the `Pictures` port, and `kx-clip-files` asks what is at copied paths, so the actor never
-//! waits on the worker or on a share out of reach. Each ends when the actor drops its sender.
+//! The helper threads (spec §7 "Security", ADR-0034 decision 5): `kx-clip-media` draws thumbnails and previews, and
+//! makes the DIB an inserted PNG goes with, in the media worker through the `Pictures` port; `kx-clip-files` asks what
+//! is at copied paths. So the actor never waits on the worker or on a share out of reach; each ends with its sender.
 
 use std::io;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use std::thread::{self, JoinHandle};
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipPart, Clipboard, FileFact, ImageCodec, PictureAsk, PictureError, PictureRun, Pixels,
+    ClipPart, Clipboard, DibAsk, FileFact, ImageCodec, PictureAsk, PictureError, PictureRun, Pixels,
 };
 
 mod queue;
@@ -63,6 +63,42 @@ pub struct Drawn {
     pub size: Size,
     /// The pixels, or the worker's error.
     pub pixels: Result<Pixels, PictureError>,
+}
+
+/// The DIB to make for an insert's PNG; the PNG prints redacted.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DibJob {
+    /// The ask's number, so a late answer is known.
+    pub n: u32,
+    /// The PNG and the DIB's cap.
+    pub ask: DibAsk,
+}
+
+/// The DIB made for ask `n`, or why it was not.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Made {
+    /// The ask's number.
+    pub n: u32,
+    /// The DIB's bytes, or the worker's error.
+    pub dib: Result<Redacted<Vec<u8>>, PictureError>,
+}
+
+/// Work for the media thread.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Task {
+    /// Draw a picture.
+    Draw(Job),
+    /// Make a DIB.
+    Dib(DibJob),
+}
+
+/// What the media thread did.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Done {
+    /// A picture drawn, or not.
+    Drawn(Drawn),
+    /// A DIB made, or not.
+    Made(Made),
 }
 
 /// Why paths are looked at.
@@ -125,6 +161,17 @@ pub fn draw(run: &mut dyn PictureRun, job: Job, sides: Sides) -> Drawn {
     }
 }
 
+/// Does `task` through `run`, drawing at its side in `sides`.
+pub fn work(run: &mut dyn PictureRun, task: Task, sides: Sides) -> Done {
+    match task {
+        Task::Draw(job) => Done::Drawn(draw(run, job, sides)),
+        Task::Dib(DibJob { n, ask }) => Done::Made(Made {
+            n,
+            dib: run.dib(ask),
+        }),
+    }
+}
+
 /// Asks `clip` what is at each entry's paths in `look`; an unreachable share can take long.
 pub fn look(clip: &dyn Clipboard, look: &Look) -> Facts {
     let items = look.items.iter();
@@ -134,7 +181,7 @@ pub fn look(clip: &dyn Clipboard, look: &Look) -> Facts {
     }
 }
 
-/// Starts `kx-clip-media`: it draws each job from `jobs` through `run` and gives `tell` the result, until `jobs`
+/// Starts `kx-clip-media`: it does each task from `tasks` through `run` and gives `tell` the result, until `tasks`
 /// closes; then the session drops, which stops the worker.
 ///
 /// # Errors
@@ -142,13 +189,13 @@ pub fn look(clip: &dyn Clipboard, look: &Look) -> Facts {
 pub fn spawn_media(
     run: Box<dyn PictureRun>,
     sides: Sides,
-    jobs: Receiver<Job>,
-    tell: impl Fn(Drawn) + Send + 'static,
+    tasks: Receiver<Task>,
+    tell: impl Fn(Done) + Send + 'static,
 ) -> io::Result<JoinHandle<()>> {
     let mut run = run;
     let serve = move || {
-        for job in jobs {
-            tell(draw(&mut *run, job, sides));
+        for task in tasks {
+            tell(work(&mut *run, task, sides));
         }
     };
     thread::Builder::new()

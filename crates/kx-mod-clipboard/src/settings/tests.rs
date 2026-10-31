@@ -209,6 +209,7 @@ fn the_parts_get_the_settings_in_their_units() {
     assert_eq!(s.paste_gap(), Duration::from_millis(150));
     assert_eq!(s.paste_wait(), Duration::from_millis(1000));
     assert_eq!(s.check_wait(), Duration::from_millis(5000));
+    assert_eq!(s.media_wait(), Duration::from_millis(3000));
     assert_eq!((s.sides().thumb, s.sides().preview), (128, 960));
     assert_eq!(s.clear_window(), Duration::from_secs(120));
 }
