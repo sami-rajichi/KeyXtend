@@ -1,12 +1,11 @@
 //! The Win32 side of the reveal: the desktop window's shell object lives in the running Explorer, and its
-//! `ShellExecute` starts `explorer.exe` on the folder there, under an apartment-threaded COM on the calling thread.
+//! `ShellExecute` opens the folder there, under an apartment-threaded COM on the calling thread.
 
-use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
 use kx_platform::ui::{Reveal, RevealError};
-use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG};
+use windows::Win32::Foundation::E_FAIL;
 use windows::Win32::System::Com::{
     CLSCTX_LOCAL_SERVER, CoCreateInstance, IDispatch, IServiceProvider,
 };
@@ -18,18 +17,17 @@ use windows::Win32::UI::Shell::{
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{BSTR, Interface};
 
-use super::{Os, command, show};
+use super::{Os, show};
 use crate::PlatformError;
 use crate::com::Com;
-use crate::dirs::windows_dir;
 
-/// The shell verb that starts a program.
+/// The shell verb that opens a folder in Explorer.
 const OPEN: &str = "open";
-/// No working folder: the empty string the recipe passes, not an empty variant.
+/// No arguments and no working folder: the empty strings the recipe passes, not empty variants.
 const NONE: &str = "";
 
-/// Shows a folder in Explorer: the running Explorer starts `explorer.exe` on it (Raymond Chen's "launch from the
-/// shell" route), so the window belongs to Explorer and nothing starts with our token.
+/// Shows a folder in Explorer: the running Explorer opens it itself (Raymond Chen's "launch from the shell" route), so
+/// the window belongs to Explorer and nothing starts with our token.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WinReveal;
 
@@ -62,16 +60,11 @@ impl Os for Win32 {
         Ok(Explorer { shell, _com: com })
     }
 
-    #[allow(
-        unsafe_code,
-        reason = "Asks Explorer's shell object to start a program."
-    )]
+    #[allow(unsafe_code, reason = "Asks Explorer's shell object to open a folder.")]
     fn open(&self, explorer: &Explorer, folder: &Path) -> Result<(), i32> {
-        let windows = windows_dir().map_err(|e| code(&e))?;
-        let (program, args) = command(&windows, folder).ok_or(E_INVALIDARG.0)?;
-        let file = bstr(program.as_os_str());
-        let (args, empty, verb, show) = (
-            VARIANT::from(bstr(&args)),
+        let wide: Vec<u16> = folder.as_os_str().encode_wide().collect();
+        let file = BSTR::from_wide(&wide);
+        let (empty, verb, show) = (
             VARIANT::from(NONE),
             VARIANT::from(OPEN),
             VARIANT::from(SW_SHOWNORMAL.0),
@@ -80,16 +73,10 @@ impl Os for Win32 {
         let opened = unsafe {
             explorer
                 .shell
-                .ShellExecute(&file, &args, &empty, &verb, &show)
+                .ShellExecute(&file, &empty, &empty, &verb, &show)
         };
         opened.map_err(|e| code(&e))
     }
-}
-
-/// `text` as a BSTR, kept whole as UTF-16.
-fn bstr(text: &OsStr) -> BSTR {
-    let wide: Vec<u16> = text.encode_wide().collect();
-    BSTR::from_wide(&wide)
 }
 
 /// The shell object of Explorer's desktop window, reached through its view; the caller has COM on.
