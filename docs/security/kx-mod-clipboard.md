@@ -49,7 +49,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
   - Each paste goes to whichever app has focus at that step; the keyboard sends it, never this module.
   - Follow-the-clear drops what an app clears within `clear_follow_s`, unless pinned.
   - Copied file paths are looked at before the user acts, on each file copy and panel open. So only absolute drive paths are probed: a copied share, device or NT path, or a link to one, never makes our process reach another machine.
-- **Denial of service:** entries, bytes and days are capped, and the free-space floor refuses copies; the file checks run off the actor; pictures decode in the worker with its own limits, and the actor hands it at most three image copies at once; saves wait `save_ms`.
+- **Denial of service:** entries, bytes and days are capped, and the free-space floor refuses copies; at most `queue_copies` copies wait for the actor, and a flood past it is dropped with one warning; the file checks run off the actor; pictures decode in the worker with its own limits, and the actor hands it at most three image copies at once; saves wait `save_ms`.
 - **Elevation:** the crate forbids `unsafe`. A panic in the actor closes the panel, frees the chord and shows `notice.module-failed`.
 
 ## Findings

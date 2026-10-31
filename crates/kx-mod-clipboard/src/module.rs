@@ -15,7 +15,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
 
 use crate::MANIFEST;
-use crate::actor::{Actor, Msg, Ports, notice};
+use crate::actor::{Actor, Msg, Ports, Watched, notice};
 use crate::media::{Job, Look, spawn_files, spawn_media};
 use crate::settings::ClipSettings;
 use crate::store::{Store, StoreError};
@@ -65,8 +65,7 @@ impl Module for ClipboardModule {
         let mut store = Store::new(Arc::clone(&sealed), settings.store_config());
         let loaded = store.load().map_err(refuse)?;
         let (tx, inbox) = mpsc::channel();
-        let watch = clip.watch(settings.clip_config(), Box::new(sender(&tx, Msg::Note)));
-        let watch = watch.map_err(no_watch)?;
+        let (watch, copies) = Watched::start(&*clip, &settings, &tx).map_err(no_watch)?;
         let Helpers {
             media,
             files,
@@ -81,6 +80,7 @@ impl Module for ClipboardModule {
             writer,
             media,
             files,
+            copies,
             watch: Some(watch),
         };
         let (actor, bus) = (Actor::new(ports, &settings, store, loaded), cx.bus());

@@ -7,14 +7,14 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, Clipboard, PanelNote,
-    PasteAsk, Pasted, PictureRun, Pictures, SealedShelf,
+    AppRef, BlobName, ClipAct, ClipNote, ClipPage, ClipPart, ClipView, PanelNote, PasteAsk, Pasted,
+    PictureRun, Pictures, SealedShelf,
 };
 use kx_module_api::{Bus, ModuleCx, Subscription};
 use kx_test_support::host::FakeHost;
 
 use super::super::paste::Paste;
-use super::super::{Actor, Msg, Ports};
+use super::super::{Actor, Msg, Ports, Watched};
 use super::ears::{Heard, listen};
 use super::fakes::Fakes;
 use crate::MANIFEST;
@@ -59,8 +59,7 @@ impl Rig {
         let mut store = Store::new(Arc::new(fakes.shelf.clone()), settings.store_config());
         let loaded = store.load().unwrap();
         let (tx, notes) = mpsc::channel();
-        let tell = Box::new(move |n| drop(tx.send(Msg::Note(n))));
-        let watch = fakes.clip.watch(settings.clip_config(), tell).unwrap();
+        let (watch, copies) = Watched::start(&fakes.clip, &settings, &tx).unwrap();
         let ((media, jobs), (files, looks)) = (mpsc::channel(), mpsc::channel());
         let ports = Ports {
             bus: ModuleCx::new(&mut host).bus(),
@@ -70,6 +69,7 @@ impl Rig {
             writer: Arc::new(fakes.writer.clone()),
             media,
             files,
+            copies,
             watch: Some(watch),
         };
         let heard = Arc::default();

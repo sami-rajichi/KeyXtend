@@ -62,6 +62,8 @@ pub const RESTART_MAX_MS: RangeInclusive<u32> = 1_000..=600_000;
 pub const OPEN_MS: RangeInclusive<u32> = 10..=2_000;
 /// How often the clipboard is tried within that wait, in ms.
 pub const POLL_MS: RangeInclusive<u32> = 1..=100;
+/// The most copies that wait for the history to keep them.
+pub const QUEUE_COPIES: RangeInclusive<usize> = 1..=64;
 /// The save's wait after a first change, in ms.
 pub const SAVE_MS: RangeInclusive<u32> = 100..=60_000;
 
@@ -140,6 +142,8 @@ pub struct ClipSettings {
     pub open_ms: u32,
     /// How often the clipboard is tried within that wait, in ms.
     pub poll_ms: u32,
+    /// The most copies that wait for the history to keep them.
+    pub queue_copies: usize,
     /// The save's wait after a first change, in ms.
     pub save_ms: u32,
 }
@@ -172,7 +176,7 @@ impl ClipSettings {
         within("save_ms", self.save_ms, &SAVE_MS)
     }
 
-    /// The media worker's and the clipboard waits' ranges, and their pairs' order.
+    /// The media worker's, the clipboard waits' and the copy queue's ranges, and their pairs' order.
     fn check_platform(&self) -> Result<(), SettingsError> {
         within("thumb_px", self.thumb_px, &THUMB_PX)?;
         within("preview_px", self.preview_px, &PREVIEW_PX)?;
@@ -184,6 +188,7 @@ impl ClipSettings {
         within("restart_max_ms", self.restart_max_ms, &RESTART_MAX_MS)?;
         within("open_ms", self.open_ms, &OPEN_MS)?;
         within("poll_ms", self.poll_ms, &POLL_MS)?;
+        within("queue_copies", self.queue_copies, &QUEUE_COPIES)?;
         refuse_if(self.poll_ms > self.open_ms, BAD_POLL)?;
         refuse_if(self.restart_ms > self.restart_max_ms, BAD_RESTART)
     }
@@ -231,6 +236,7 @@ impl fmt::Debug for ClipSettings {
             .field("restart_max_ms", &self.restart_max_ms)
             .field("open_ms", &self.open_ms)
             .field("poll_ms", &self.poll_ms)
+            .field("queue_copies", &self.queue_copies)
             .field("save_ms", &self.save_ms)
             .finish()
     }

@@ -52,5 +52,7 @@ restart_max_ms = 30000
 open_ms = 250
 # How often to try the clipboard again within that wait, in ms.
 poll_ms = 10
+# The most copies that wait for the history to keep them; past it a new copy is dropped.
+queue_copies = 8
 # A change is saved this many ms after the first unsaved one, and at stop.
 save_ms = 500

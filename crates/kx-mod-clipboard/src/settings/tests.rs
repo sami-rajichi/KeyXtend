@@ -61,6 +61,7 @@ fn bounds() -> Vec<(&'static str, (i64, i64))> {
         ("restart_max_ms", ends(&RESTART_MAX_MS)),
         ("open_ms", ends(&OPEN_MS)),
         ("poll_ms", ends(&POLL_MS)),
+        ("queue_copies", ends(&QUEUE_COPIES)),
         ("save_ms", ends(&SAVE_MS)),
     ]
 }
@@ -88,6 +89,7 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
     assert_eq!((s.media_ms, s.worker_idle_s, s.worker_mb), (3000, 30, 512));
     assert_eq!((s.restart_ms, s.restart_max_ms), (1000, 30_000));
     assert_eq!((s.open_ms, s.poll_ms, s.save_ms), (250, 10, 500));
+    assert_eq!(s.queue_copies, 8);
 }
 
 #[test]
@@ -113,6 +115,7 @@ fn the_plans_ranges_and_the_safe_lower_bounds_hold() {
     );
     assert_eq!((PASTE_GAP_MS, PASTE_WAIT_MS), (20..=2000, 100..=5000));
     assert_eq!(CHECK_MS, 1000..=30_000);
+    assert_eq!(QUEUE_COPIES, 1..=64);
     assert!(*RESTART_MS.start() >= 100 && *WORKER_MB.start() >= 64);
     assert!(*MEDIA_MS.start() >= 500 && *WORKER_IDLE_S.start() >= 5);
 }

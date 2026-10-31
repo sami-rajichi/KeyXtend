@@ -8,6 +8,7 @@ mod edit;
 mod look;
 mod paste;
 mod show;
+mod watched;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -29,12 +30,15 @@ use crate::panel::Panel;
 use crate::settings::ClipSettings;
 use crate::store::{Loaded, Store};
 use paste::Pasting;
+pub(crate) use watched::Watched;
 
 /// A message for the actor, from the watch, the bus, the helper threads or the module.
 #[derive(Debug)]
 pub(crate) enum Msg {
-    /// The watch told a copy, a skip or a clear.
+    /// A note from the watch other than a copy, or any note a test hands in.
     Note(ClipNote),
+    /// The watch queued a copy, which the actor takes from `Ports::copies`.
+    Copied,
     /// The keyboard's key or chord toggles the panel.
     Open,
     /// A key for the open panel.
@@ -69,6 +73,8 @@ pub(crate) struct Ports {
     pub media: Sender<Job>,
     /// The files thread's inbox.
     pub files: Sender<Look>,
+    /// The copies the watch queued, one for each `Msg::Copied`.
+    pub copies: Receiver<ClipNote>,
     /// The running watch, dropped at stop so no note comes after.
     pub watch: Option<Box<dyn ClipRun>>,
 }
@@ -174,6 +180,11 @@ impl Actor {
         self.new_day();
         match msg {
             Msg::Note(note) => self.note(note),
+            Msg::Copied => {
+                if let Ok(note) = self.ports.copies.try_recv() {
+                    self.note(note);
+                }
+            }
             Msg::Open => self.toggle(),
             Msg::Key(key) => {
                 let done = self.panel.key(&key, &self.history);
