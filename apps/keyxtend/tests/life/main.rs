@@ -84,6 +84,7 @@ fn every_module_starts_types_and_stops_when_the_user_quits() {
         hub,
         requests,
         heard,
+        ..
     } = boot;
     let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
     assert!(hub.quit(), "the tray's Quit reaches the kernel's thread");

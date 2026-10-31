@@ -17,7 +17,6 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::disk::WinDiskRoom;
 use crate::hook::Source;
-use crate::worker::WORKER_EXE;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
     WinFieldWatch, WinGuard, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook, WinMemory,
@@ -109,7 +108,7 @@ impl WindowsPlatform {
     /// Pictures drawn by the media worker beside the program, for the app to register under `PicturesKey`.
     #[must_use]
     pub fn pictures(&self) -> Arc<dyn Pictures> {
-        let worker = WinSpawner::at(self.dirs.exe_dir.join(WORKER_EXE));
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
         Arc::new(WorkerPictures::new(worker, Arc::new(self.clock)))
     }
 

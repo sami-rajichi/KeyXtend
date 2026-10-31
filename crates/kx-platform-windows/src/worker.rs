@@ -9,14 +9,13 @@ mod token;
 
 use std::io::{PipeReader, PipeWriter};
 use std::os::windows::io::{AsRawHandle, OwnedHandle};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use kx_platform::pictures::{Child, Launch, Piped, SpawnError, Spawner};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
 
-use crate::PlatformError;
 use job::Job;
 
 /// The worker program's file, beside ours.
@@ -29,14 +28,10 @@ pub struct WinSpawner {
 }
 
 impl WinSpawner {
-    /// The worker beside the running program.
-    ///
-    /// # Errors
-    /// `ExePath` or `NoExeDir` when the program's own path is unknown.
-    pub fn beside_us() -> Result<Self, PlatformError> {
-        let exe = std::env::current_exe().map_err(PlatformError::ExePath)?;
-        let dir = exe.parent().ok_or(PlatformError::NoExeDir)?;
-        Ok(Self::at(dir.join(WORKER_EXE)))
+    /// The worker in `dir`, the program's own folder; the only place the product looks for it.
+    #[must_use]
+    pub fn beside(dir: &Path) -> Self {
+        Self::at(dir.join(WORKER_EXE))
     }
 
     /// The worker at `exe`; a relative path is refused at each start, so no search path is ever used.

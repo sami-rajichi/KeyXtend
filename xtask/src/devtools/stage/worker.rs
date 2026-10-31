@@ -10,9 +10,11 @@ use crate::devtools::config::DevToolsConfig;
 
 /// What opens an XML element; the program's text is cut at each one, so every element is read.
 const TAG_OPEN: char = '<';
+/// The bytes in one UTF-16 code unit, the other text a manifest resource may be stored in.
+const WIDE: usize = size_of::<u16>();
 
-/// Refuses `stage` when the worker program is missing, or when any element of its manifest asks for uiAccess as
-/// `devtools` names it, in any letter case.
+/// Refuses `stage` when the worker program is missing, or when any element of its manifest, in UTF-8 or UTF-16LE,
+/// asks for uiAccess as `devtools` names it, in any letter case.
 pub(crate) fn check(
     stage: &Path,
     config: &StageConfig,
@@ -23,11 +25,27 @@ pub(crate) fn check(
     if !path.is_file() {
         return Err(StageError::NoWorker(name).into());
     }
-    let text = String::from_utf8_lossy(&std::fs::read(&path)?).into_owned();
-    if text.split(TAG_OPEN).any(|piece| asks(piece, devtools)) {
+    let texts = renderings(&std::fs::read(&path)?);
+    if texts
+        .iter()
+        .flat_map(|t| t.split(TAG_OPEN))
+        .any(|piece| asks(piece, devtools))
+    {
         return Err(StageError::WorkerUiAccess(name).into());
     }
     Ok(())
+}
+
+/// `bytes` read as UTF-8, then as UTF-16LE from each byte alignment, so a manifest in either text is seen.
+fn renderings(bytes: &[u8]) -> Vec<String> {
+    let wide = |skip: usize| {
+        let rest = bytes.get(skip..).unwrap_or_default();
+        let (pairs, _) = rest.as_chunks::<WIDE>();
+        let units: Vec<u16> = pairs.iter().copied().map(u16::from_le_bytes).collect();
+        String::from_utf16_lossy(&units)
+    };
+    let narrow = String::from_utf8_lossy(bytes).into_owned();
+    std::iter::once(narrow).chain((0..WIDE).map(wide)).collect()
 }
 
 /// True when `piece`, the text after one `<`, is a level element that turns uiAccess on; a comment around it does not
@@ -92,6 +110,29 @@ mod tests {
             let dir = stage(&format!("worker-asks-{n}"), manifest.as_bytes());
             let want = Some(StageError::WorkerUiAccess(name.clone()));
             assert_eq!(refusal(&dir), want, "{manifest}");
+        }
+    }
+
+    /// `text` in UTF-16LE, after `lead` bytes that shift its alignment.
+    fn wide(text: &str, lead: usize) -> Vec<u8> {
+        let units = text.encode_utf16().flat_map(u16::to_le_bytes);
+        std::iter::repeat_n(0, lead).chain(units).collect()
+    }
+
+    #[test]
+    fn a_utf16_manifest_is_read_at_either_alignment() {
+        for lead in [0, 1, 2, 3] {
+            let dir = stage(&format!("worker-wide-{lead}"), &wide(&level("true"), lead));
+            let got = refusal(&dir);
+            assert!(
+                matches!(got, Some(StageError::WorkerUiAccess(_))),
+                "lead {lead}"
+            );
+            let dir = stage(
+                &format!("worker-wide-off-{lead}"),
+                &wide(&level("false"), lead),
+            );
+            assert_eq!(refusal(&dir), None, "lead {lead}");
         }
     }
 

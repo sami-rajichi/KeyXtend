@@ -182,10 +182,10 @@ fn a_missing_or_relative_worker_is_missing() {
 }
 
 #[test]
-fn the_worker_is_found_beside_the_program() {
+fn the_worker_is_found_in_the_programs_folder() {
     let exe = env::current_exe().unwrap();
-    let beside = WinSpawner::beside_us().unwrap();
-    assert_eq!(beside.exe, exe.with_file_name(WORKER_EXE));
+    let dir = exe.parent().unwrap();
+    assert_eq!(WinSpawner::beside(dir).exe, exe.with_file_name(WORKER_EXE));
 }
 
 #[test]

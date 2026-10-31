@@ -49,6 +49,7 @@ fn the_clipboard_starts_with_its_services_and_quit_lets_them_go() {
         hub,
         requests,
         heard,
+        ..
     } = boot;
     let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
     assert!(hub.quit());
@@ -103,7 +104,25 @@ fn open_folder_shows_the_history_folder_under_the_data_folder() {
     assert!(boot.hub.open_folder());
     assert!(rig.reveal.wait_shown(1, WAIT));
     let want = rig.exe.path().join(PORTABLE_DIR).join(CLIP_DIR);
+    assert!(
+        want.is_dir(),
+        "the boot makes the folder, so Open folder always opens"
+    );
+    assert_eq!(boot.no_clip_dir, None);
     assert_eq!(rig.reveal.shown(), [want]);
+}
+
+#[test]
+fn a_file_in_the_history_folders_place_does_not_stop_the_boot() {
+    let rig = Rig::new();
+    std::fs::write(rig.exe.path().join(PORTABLE_DIR).join(CLIP_DIR), b"").unwrap();
+    let mut boot = rig.load();
+    assert!(
+        boot.no_clip_dir.is_some(),
+        "the boot keeps why, for the log"
+    );
+    boot.start().unwrap();
+    assert_eq!(boot.kernel.state(kx_mod_clipboard::ID), Some(Active));
 }
 
 #[test]

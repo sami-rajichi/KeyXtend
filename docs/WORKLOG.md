@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 08:36 — P8: the history folder exists from boot, one worker path
+The app now makes `<data>/clipboard` at boot, so Open folder always opens; when it cannot, the run logs only the error's kind once its log is open, and carries on. The platform finds the worker one way, `WinSpawner::beside` in the program's folder, and the unused `beside_us` is gone. The stage's worker check also reads UTF-16LE text at either byte alignment, so a wide manifest asking for uiAccess is refused, and the Windows security note names the clipboard gates, the shelf's key and the disk reader.
+
 ## 2026-10-31 08:27 — P8: the clipboard panel's views and tokens
 The clipboard panel now draws in QML from the hub's view: a header with Delete all and Close, the search line, filter chips, five padded rows with tick numbers, thumbnails and the highlight ring, the pager, the footer with Insert (n), the storage line, the Delete-all question and the preview page, which pages long text and files without scrolling. kx-theme gains `[clip]` icons, sizes and moves (tick pop, highlight glide, row swap, page turn; reduced motion stops them) and nine contrast pairs that pass in every theme, light, dark and high contrast. The keyboard window opens it at the `clipChanged` wake, the guard marks it for the scroll pad, and 25 new Quick tests pass at both scalings.
 

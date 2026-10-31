@@ -1,7 +1,7 @@
 # Security note: kx-platform-windows
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 task 9: the media worker's start and its review fixes; P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
+- **Last review:** 2026-10-31 (P8 task 16: the clipboard services' gates and the history's drive; P8 task 9: the media worker's start and its review fixes; P7 security review: what the focus handler reads, a provider's long text, forged sealed blobs and the pack index cap; P7 DoD review: the selection and the check's kind; B12 review: `TextPattern2`'s caret first, a failed `GetSelection` unsure)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-platform-windows`, inside the uiAccess `keyxtend` process:
   - basics: the QPC clock, the program and per-user folders, COM start-up, the uiAccess check and where libraries load from (`dll`);
@@ -17,7 +17,7 @@
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's, layout source's and shortcuts' service keys need `InjectInput`, the power dialog's needs `Power`, the box watch's needs `ReadFocusedText`, and the packs' needs none. The key guard is no service: `kx-crypto`'s sealed files use it behind `SealedStoreKey`, which needs `SecretStore`. | N/A |
+| None held | The adapter implements ports; the kernel grants capabilities to the modules that use them. The injector's, layout source's and shortcuts' service keys need `InjectInput`, the power dialog's needs `Power`, the box watch's needs `ReadFocusedText`, the clipboard watch's (`ClipboardKey`) needs `ReadClipboard`, the clipboard writer's (`ClipboardWriterKey`) needs `WriteClipboard`, and the packs', pictures' and calendar's need none. The key guard is no service: `kx-crypto`'s sealed files use it behind `SealedStoreKey` and its sealed shelf behind `SealedShelfKey`, both needing `SecretStore`. `WinDiskRoom` is no service either: only that shelf reads it. | N/A |
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |

@@ -14,6 +14,7 @@ use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
 use kx_ui::{Hub, Request, UiModule, UiPorts};
 use std::error::Error;
+use std::io::ErrorKind;
 use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 
@@ -127,11 +128,13 @@ pub struct Boot {
     pub requests: Receiver<Request>,
     /// The hub hears the kernel's notices, mouse-assist and scroll events while these live.
     pub heard: Vec<Subscription>,
+    /// Why the history's folder could not be made; the run says so once its log is open.
+    pub no_clip_dir: Option<ErrorKind>,
 }
 
 impl Boot {
-    /// Makes the hub before any window and hands it the history's folder under `platform`'s data folder, adds
-    /// `services` and every module, and loads the settings; nothing starts.
+    /// Makes the hub before any window, makes the history's folder under `platform`'s data folder and hands it to the
+    /// hub, adds `services` and every module, and loads the settings; nothing starts.
     ///
     /// # Errors
     /// When the hub's compiled-in data is broken, or the kernel or its bus refuses a step.
@@ -141,7 +144,9 @@ impl Boot {
         ports: UiPorts,
     ) -> Result<Self, BootError> {
         let (hub, requests) = Hub::new(ports)?;
-        hub.set_clip_folder(crate::clip::folder(platform.dirs()));
+        let folder = crate::clip::folder(platform.dirs());
+        let no_clip_dir = std::fs::create_dir_all(&folder).err().map(|e| e.kind());
+        hub.set_clip_folder(folder);
         let modules = modules(&hub);
         let mut kernel = Kernel::new(platform, policy(&modules));
         provide(&mut kernel, services)?;
@@ -155,6 +160,7 @@ impl Boot {
             hub,
             requests,
             heard,
+            no_clip_dir,
         })
     }
 

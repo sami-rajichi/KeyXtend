@@ -74,6 +74,9 @@ fn run(
     };
     let _tray = TrayGuard(Arc::clone(&boot.hub));
     start_log(boot.kernel.kernel_settings(), files);
+    if let Some(kind) = boot.no_clip_dir {
+        tracing::warn!(error = %kind, "the clipboard folder could not be made, so its history may not save");
+    }
     let ui_access = uiaccess::active();
     tracing::info!(version = VERSION, ui_access, "KeyXtend started");
     #[cfg(feature = "gate-input")]
