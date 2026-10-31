@@ -5,9 +5,6 @@ use kx_module_api::ports::ClipPart;
 
 use super::parts::{Kind, Want, blank};
 
-/// The count a format that cannot be sized gives: the largest, past any cap, so no block nobody counted is read.
-const UNSIZED: u64 = u64::MAX;
-
 /// What a look found: the parts in the clipboard's order, and whether a blank text was dropped from them.
 #[derive(Debug)]
 pub(crate) struct Found {
@@ -17,8 +14,8 @@ pub(crate) struct Found {
     pub(crate) blanked: bool,
 }
 
-/// Gathers the parts of `wants`, each sized before any is read. `Err` gives the bytes counted once they pass
-/// `max_bytes`, or `UNSIZED` at a format that cannot be sized, and no format after that point is fetched.
+/// Gathers the parts of `wants`, each sized before any is read; a format that cannot be sized is skipped, neither read
+/// nor counted. `Err` gives the bytes counted once they pass `max_bytes`, and no format after that point is fetched.
 pub(crate) fn gather(
     wants: &[Want],
     max_bytes: u64,
@@ -55,26 +52,27 @@ struct Look<S, R> {
 }
 
 impl<S: Fn(u32) -> Option<u64>, R: Fn(Want) -> Option<ClipPart>> Look<S, R> {
-    /// Sizes the `wants` that `pick` takes, then reads them into their `slots`; `Err` with the count past the cap.
+    /// Sizes the `wants` that `pick` takes, then reads those it could size into their `slots`; `Err` past the cap.
     fn fill(
         &mut self,
         wants: &[Want],
         slots: &mut [Option<ClipPart>],
         pick: impl Fn(&Want) -> bool,
     ) -> Result<(), u64> {
-        let max = self.max_bytes;
-        let size = &self.size;
-        let add = |sum: u64, w: &Want| {
-            let sum = size(w.format).map_or(UNSIZED, |n| sum.saturating_add(n));
-            if sum > max || sum == UNSIZED {
-                Err(sum)
-            } else {
-                Ok(sum)
+        let mut sized = vec![false; wants.len()];
+        for (want, known) in wants.iter().zip(sized.iter_mut()).filter(|(w, _)| pick(w)) {
+            // A format that cannot be sized is skipped: never read, so never past the cap.
+            let Some(bytes) = (self.size)(want.format) else {
+                continue;
+            };
+            self.used = self.used.saturating_add(bytes);
+            if self.used > self.max_bytes {
+                return Err(self.used);
             }
-        };
-        self.used = wants.iter().filter(|w| pick(w)).try_fold(self.used, add)?;
-        let chosen = wants.iter().zip(slots.iter_mut()).filter(|(w, _)| pick(w));
-        for (want, slot) in chosen {
+            *known = true;
+        }
+        let chosen = wants.iter().zip(slots.iter_mut()).zip(sized);
+        for ((want, slot), _) in chosen.filter(|(_, known)| *known) {
             *slot = (self.read)(*want);
         }
         Ok(())

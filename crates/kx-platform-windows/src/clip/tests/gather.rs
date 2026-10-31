@@ -35,6 +35,19 @@ impl Fake {
     }
 }
 
+/// Gathers from formats whose size may be unknown (`None`); hands back what was found and the formats read.
+fn gather_sized(held: &[(u32, Option<u64>, ClipPart)], cap: u64) -> (Result<Found, u64>, Vec<u32>) {
+    let ids: Vec<u32> = held.iter().map(|h| h.0).collect();
+    let find = |f: u32| held.iter().find(|h| h.0 == f);
+    let read = RefCell::new(Vec::new());
+    let size = |f| find(f).and_then(|h| h.1);
+    let found = gather(&F.pick(&ids), cap, size, |w| {
+        read.borrow_mut().push(w.format);
+        find(w.format).map(|h| h.2.clone())
+    });
+    (found, read.into_inner())
+}
+
 fn text(t: &str) -> ClipPart {
     ClipPart::Text(Redacted::new(t.to_owned()))
 }
@@ -87,16 +100,18 @@ fn the_size_sum_stops_once_past_the_cap_and_nothing_more_is_fetched() {
 }
 
 #[test]
-fn a_format_that_cannot_be_sized_is_past_the_cap_and_nothing_is_read() {
-    let wants = F.pick(&[F.text, F.html]);
-    let read = RefCell::new(Vec::new());
-    let size = |f| (f != F.html).then_some(5);
-    let found = gather(&wants, 100, size, |w| {
-        read.borrow_mut().push(w.format);
-        Some(text("kx"))
-    });
-    assert!(found.is_err(), "it counts as past the cap");
-    assert!(read.borrow().is_empty(), "nothing is read");
+fn an_unsized_format_is_skipped_and_the_rest_kept() {
+    let held = [(F.html, None, html()), (F.text, Some(5), text("kx"))];
+    let (found, read) = gather_sized(&held, 10);
+    assert_eq!(parts(found), (vec![text("kx")], false));
+    assert_eq!(read, [F.text], "the unsized HTML is never read");
+}
+
+#[test]
+fn an_unsized_sole_format_gives_no_part() {
+    let (found, read) = gather_sized(&[(F.html, None, html())], 10);
+    assert_eq!(parts(found), (Vec::new(), false));
+    assert!(read.is_empty(), "nothing is read");
 }
 
 #[test]
