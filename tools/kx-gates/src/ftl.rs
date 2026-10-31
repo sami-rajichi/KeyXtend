@@ -1,5 +1,5 @@
 //! kx-ui's texts as the product ships them, in English, French and Arabic, for gates that know a window by its title
-//! or read a word back out of a chip's name.
+//! or read a word or a number back out of an accessible name.
 #![cfg(windows)]
 
 /// Starts a comment line.
@@ -10,13 +10,37 @@ const ATTR: char = '.';
 const TERM: char = '-';
 /// Starts a variable's name.
 const VAR: char = '$';
+/// Opens and closes a string literal placeable.
+const QUOTE: char = '"';
+/// Starts an escape inside a string literal, which this reader never reads.
+const ESCAPE: char = '\\';
 
-/// Each language's translation file, by its tag; workspace paths from this file, all of kx-ui's (checked).
-const FILES: [(&str, &str); 3] = [
-    ("en", include_str!("../../../crates/kx-ui/i18n/en.ftl")),
-    ("fr", include_str!("../../../crates/kx-ui/i18n/fr.ftl")),
-    ("ar", include_str!("../../../crates/kx-ui/i18n/ar.ftl")),
+/// Each language's tag, main file and clipboard panel file, which kx-ui loads into one bundle; workspace paths from
+/// this file, all of kx-ui's (checked).
+const FILES: [(&str, &str, &str); 3] = [
+    (
+        "en",
+        include_str!("../../../crates/kx-ui/i18n/en.ftl"),
+        include_str!("../../../crates/kx-ui/i18n/clip/en.ftl"),
+    ),
+    (
+        "fr",
+        include_str!("../../../crates/kx-ui/i18n/fr.ftl"),
+        include_str!("../../../crates/kx-ui/i18n/clip/fr.ftl"),
+    ),
+    (
+        "ar",
+        include_str!("../../../crates/kx-ui/i18n/ar.ftl"),
+        include_str!("../../../crates/kx-ui/i18n/clip/ar.ftl"),
+    ),
 ];
+
+/// Each language's tag and its files as one text, as kx-ui's bundle holds them.
+fn bundles() -> impl Iterator<Item = (&'static str, String)> {
+    FILES
+        .iter()
+        .map(|(lang, main, clip)| (*lang, format!("{main}\n{clip}")))
+}
 
 /// The text of `key` in `ftl`, with each `{ -term }` filled in: `group.name` names a message's attribute, a plain name
 /// a message or a term; none when it is missing.
@@ -52,7 +76,14 @@ fn written<'a>(ftl: &'a str, key: &str) -> Option<&'a str> {
     None
 }
 
-/// `value` with each `{ -term }` filled from `ftl`; none for any other placeable or a term that holds one.
+/// The text of string literal `term`, quotes and all, when it holds no escape; none for anything else.
+fn literal(term: &str) -> Option<&str> {
+    let inner = term.strip_prefix(QUOTE)?.strip_suffix(QUOTE)?;
+    (!inner.contains([QUOTE, ESCAPE])).then_some(inner)
+}
+
+/// `value` with each `{ -term }` filled from `ftl` and each `{"literal"}` by its text; none for any other placeable or
+/// a term that holds one.
 fn fill(ftl: &str, value: &str) -> Option<String> {
     let mut out = String::new();
     let mut rest = value;
@@ -60,11 +91,11 @@ fn fill(ftl: &str, value: &str) -> Option<String> {
         out.push_str(&rest[..open]);
         let close = open + rest[open..].find('}')?;
         let term = rest[open + 1..close].trim();
-        let filled = term
-            .starts_with(TERM)
-            .then(|| written(ftl, term))
-            .flatten()
-            .filter(|t| !t.contains('{'))?;
+        let named = || {
+            let found = term.starts_with(TERM).then(|| written(ftl, term));
+            found.flatten().filter(|t| !t.contains('{'))
+        };
+        let filled = literal(term).or_else(named)?;
         out.push_str(filled);
         rest = &rest[close + 1..];
     }
@@ -90,19 +121,17 @@ fn split(ftl: &str, key: &str, var: &str) -> Option<(String, String)> {
 /// The text of `key` in every shipped language split around `{ $var }`, in file order; an error naming the first
 /// language that lacks it.
 pub fn around(key: &str, var: &str) -> Result<Vec<(String, String)>, String> {
-    FILES
-        .iter()
+    bundles()
         .map(|(lang, ftl)| {
-            split(ftl, key, var).ok_or_else(|| format!("kx-ui has no {key} with ${var} in {lang}"))
+            split(&ftl, key, var).ok_or_else(|| format!("kx-ui has no {key} with ${var} in {lang}"))
         })
         .collect()
 }
 
 /// The text of `key` in every shipped language, in file order; an error naming the first language that lacks it.
 pub fn every(key: &str) -> Result<Vec<String>, String> {
-    FILES
-        .iter()
-        .map(|(lang, ftl)| text(ftl, key).ok_or_else(|| format!("kx-ui has no {key} in {lang}")))
+    bundles()
+        .map(|(lang, ftl)| text(&ftl, key).ok_or_else(|| format!("kx-ui has no {key} in {lang}")))
         .collect()
 }
 
@@ -162,7 +191,7 @@ mod tests {
             .map(|e| e.file_name().to_string_lossy().into_owned())
             .collect();
         shipped.sort();
-        let mut ours: Vec<String> = FILES.iter().map(|(tag, _)| format!("{tag}.ftl")).collect();
+        let mut ours: Vec<String> = FILES.iter().map(|(tag, ..)| format!("{tag}.ftl")).collect();
         ours.sort();
         assert_eq!(shipped, ours);
     }
@@ -179,6 +208,51 @@ mod tests {
         assert!(ar.iter().all(|(before, _)| !before.is_empty()));
         let e = around("chip.name", "nothing").expect_err("no such variable");
         assert!(e.contains("$nothing") && e.contains("en"), "{e}");
+    }
+
+    #[test]
+    fn a_string_literal_placeable_is_its_text_and_an_escaped_one_gives_none() {
+        let ftl = "x =\n    .join = {\", \"}\n    .ar = {\"، \"}\n    .esc = {\"a\\u0020\"}\n";
+        assert_eq!(text(ftl, "x.join").as_deref(), Some(", "));
+        assert_eq!(text(ftl, "x.ar").as_deref(), Some("، "));
+        assert_eq!(text(ftl, "x.esc"), None, "no escapes are read");
+    }
+
+    #[test]
+    fn the_clip_panels_texts_are_read_in_every_language_beside_the_main_ones() {
+        let insert = around("clip.insert", "count").expect("in all three");
+        assert_eq!(insert[0], ("Insert (".into(), ")".into()));
+        assert!(
+            insert
+                .iter()
+                .all(|(before, after)| !before.is_empty() && after == ")")
+        );
+        assert_eq!(
+            every("clip.join").expect("in all three"),
+            [", ", ", ", "، "]
+        );
+        assert!(
+            every("window.outline").is_ok(),
+            "the main files still count"
+        );
+    }
+
+    #[test]
+    fn the_clip_folder_holds_exactly_the_languages_of_the_main_files() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/kx-ui/i18n/clip");
+        let entries = std::fs::read_dir(dir).expect("kx-ui's clip folder");
+        let mut shipped: Vec<String> = entries
+            .map(|e| {
+                e.expect("an entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect();
+        shipped.sort();
+        let mut ours: Vec<String> = FILES.iter().map(|(tag, ..)| format!("{tag}.ftl")).collect();
+        ours.sort();
+        assert_eq!(shipped, ours);
     }
 
     #[test]

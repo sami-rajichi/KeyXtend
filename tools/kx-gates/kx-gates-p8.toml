@@ -1,0 +1,80 @@
+# Settings P8 adds: G20 on the product (`g20 keyxtend`, `[g20_product]`) and G8's clipboard part (`g8 clip`,
+# `[g8_clip]`). kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
+
+# G20 on the product. The plain kx-gates starts the test build ([gate_input] program) without its gate flag, on its own
+# data folder beside it, never the owner's; it copies these texts, then searches, ticks and inserts into its Notepad tab.
+[g20_product]
+# The file in kx-gates' out folder that keeps the test build's settings bytes while G20 or g8 clip writes its own.
+backup = "clip-settings-backup.json"
+# The history's folder in the data folder (apps/keyxtend clip.rs CLIP_DIR), emptied before and after each run.
+history = "clipboard"
+# One plain copy per language, oldest first; each is one line, no hidden mark, within a row's title and the clean-up.
+copies = [
+    { lang = "en", text = "Morning coffee notes" },
+    { lang = "fr", text = "Café crème à midi" },
+    { lang = "ar", text = "قَهْوَةُ الصَّبَاحِ" },
+]
+# Copied once with each exclusion marker of the product's clipboard table; it must never show.
+marked = "Hidden copy, never shown"
+# Copied, then cleared by the gate at once; the product must follow the clear and drop it.
+cleared = "Cleared copy, gone at once"
+# The only line of the gate's Notepad tab, copied there with Ctrl+C; Notepad is the run's skipped app.
+skipped = "Copied in a skipped app"
+# The run's `skip_apps` entry, as the product names an app: Notepad's program name in lower case.
+skip_app = "notepad.exe"
+# Searches typed with the product's keys on the first installed layout of `lang`; `tick` ticks the first row found.
+# The second has its accent and the first none; the Arabic one finds a copy written with harakat.
+searches = [
+    { lang = "en", typed = "cafe", tick = true },
+    { lang = "fr", typed = "café", tick = false },
+    { lang = "ar", typed = "قهوة", tick = true },
+]
+# The panel's gate ids, as kx-ui's ClipNames.qml names them: the group, the list, a row's id before its place, the
+# search line, Insert and the page-on button.
+group = "clip"
+list = "list"
+row = "row-"
+search_line = "search"
+insert = "insert"
+page_on = "page-on"
+# kx-ui's texts: Insert's label with its count, a row's tick note, the join before that note, and the count's variable.
+insert_name = "clip.insert"
+ticked_name = "clip.ticked"
+join_name = "clip.join"
+count_var = "count"
+# Wait after the copy's keyboard shows before its first copy, so its clipboard watch runs, in ms.
+ready_ms = 3000
+# Pause after each copy the gate makes, so the product reads it before the next, in ms.
+copy_gap_ms = 500
+# Longest wait for the panel to open or close, in ms.
+panel_wait_ms = 3000
+# Pause after each panel click or search before the panel is read, in ms.
+settle_ms = 400
+
+# G8's clipboard part on the same test build and data folder: the history filled with gate copies, then panel rounds.
+# Its memory is judged by [g8] memory_mb and commit_mb, and its growth over the rounds by [g8] churn_growth_mb.
+[g8_clip]
+# Copies that fill the history: at most the product's default max_entries.
+entries = 1000
+# Every this many copies one is a picture made in memory, never among the last `forget_tail`.
+image_every = 10
+# The pictures' sides in turn, in px.
+image_px = [64, 640]
+# The texts' lengths in turn, in characters, before the last `forget_tail` copies, which hold the prefix and number.
+text_chars = [40, 2000, 20000]
+# Start of every text copy; with its number it names the gate's own copies for the clean-up.
+prefix = "kx-g8clip-"
+# Short copies at the end: Windows' own history keeps its newest 25, so it then holds only these, which the gate removes.
+forget_tail = 25
+# Pause after each copy, so the product reads it before the next, in ms.
+copy_gap_ms = 200
+# Wait after the last copy for the history to save, and before each memory reading, in ms.
+settle_ms = 3000
+# Panel rounds before the first judged reading, then the rounds measured after it.
+warm_rounds = 1
+rounds = 5
+# Pages turned in each round; each page draws its rows' thumbnails.
+pages = 10
+# Typed into the search line in each round, on the first installed layout of `search_lang`, then cleared with Esc.
+search = "99"
+search_lang = "en"

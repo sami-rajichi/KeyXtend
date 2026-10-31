@@ -678,6 +678,7 @@ version = "0.0.0"
 dependencies = [
  "embed-manifest",
  "kx-kernel",
+ "kx-mod-clipboard",
  "kx-mod-keyboard",
  "kx-mod-layouts",
  "kx-mod-mouse",

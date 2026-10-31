@@ -6,8 +6,8 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g6rec, g8, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g20, g21, g22,
-    g22bench, g22type, g25, hand,
+    capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g20, g21,
+    g22, g22bench, g22type, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -22,13 +22,13 @@ fn names(apps: &[AppKind]) -> String {
 fn product_lines() -> String {
     let (weak, arabic, lit, osk) = (g8::WEAK, g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
     let (hook, hook_weak, predict) = (g8hook::HOOK, g8hook::HOOK_WEAK, g8predict::PREDICT);
-    let (apps, records) = (names(&g6::APPS), g6rec::NAMES.join("|"));
+    let (apps, records, clip) = (names(&g6::APPS), g6rec::NAMES.join("|"), g8clip::CLIP);
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
        {PROG} g4 <{NAME}> [--clicks N] [--seed S]
        {PROG} g6 <{apps}|{records}>
-       {PROG} g8 <{NAME}|{weak}|{arabic}|{lit}|{osk}|{hook}|{hook_weak}|{predict}>
+       {PROG} g8 <{NAME}|{weak}|{arabic}|{lit}|{osk}|{hook}|{hook_weak}|{clip}|{predict}>
        {PROG} g9 <{NAME}>
        {PROG} g10 <{NAME}>
        {PROG} g11 <{NAME}>
@@ -66,6 +66,27 @@ g21 {NAME} and g27 {NAME} start their own copy with learning paused, so close th
     )
 }
 
+/// The help lines of P8's clipboard gates.
+fn clip_lines() -> String {
+    let (clip, worker) = (g8clip::CLIP, workertok::WORKER);
+    format!(
+        "g20 {NAME} and g8 {clip} start the test build on its own data folder from the plain kx-gates (cargo run -p \
+         kx-gates), so close the product first; they overwrite the clipboard and Windows' clipboard history.
+g20 {worker} only reads the tokens of the running product's workers: start the dev install first."
+    )
+}
+
+/// The help lines of G8's parts on a layout, a key light or the hook.
+fn g8_notes() -> String {
+    let (arabic, lit, osk) = (g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
+    let (hook, hook_weak) = (g8hook::HOOK, g8hook::HOOK_WEAK);
+    format!(
+        "g8 {arabic} puts an Arabic layout in front before the cold start and the owner's layout back after.
+g8 {lit} times the running product's key light only; g8 {osk} times the shown On-Screen Keyboard's, which it never starts.
+g8 {hook} and {hook_weak} judge the hook's p99 and lost echoes on the product's test build, driven with G5's cases; the second in weak mode."
+    )
+}
+
 /// Command-line help; the G1 app list comes from `AppKind::ALL`.
 pub fn usage() -> String {
     format!(
@@ -76,15 +97,14 @@ pub fn usage() -> String {
        {PROG} g17 <{}>
        {PROG} g18 <{}>
 {}
-       {PROG} g20 <{}>
+       {PROG} g20 <{}|{NAME}|{}>
        {PROG} g21 <{}>
        {PROG} g25 <{}>
        {PROG} {}
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
-g8 {} puts an Arabic layout in front before the cold start and the owner's layout back after.
-g8 {} times the running product's key light only; g8 {} times the shown On-Screen Keyboard's, which it never starts.
-g8 {} and {} judge the hook's p99 and lost echoes on the product's test build, driven with G5's cases; the second in weak mode.
+{}
+{}
 {}
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
@@ -96,16 +116,14 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         names(&g18::APPS),
         face_lines(),
         names(&g20::APPS),
+        workertok::WORKER,
         g21::NAMES.join("|"),
         names(&g25::APPS),
         capture::COMMAND,
         g8::WEAK,
-        g8lang::ARABIC,
-        g8lit::LIT,
-        g8lit::OSK,
-        g8hook::HOOK,
-        g8hook::HOOK_WEAK,
+        g8_notes(),
         typing_lines(),
+        clip_lines(),
         g5::ADMIN,
     )
 }
@@ -204,5 +222,27 @@ mod tests {
         for line in lines {
             assert!(line.contains("kx-gates "), "{line}");
         }
+    }
+
+    #[test]
+    fn p8_lists_g20_on_the_product_and_g8_clip_and_warns_of_the_clipboard() {
+        let text = usage();
+        let g20 = format!("g20 <{}|{NAME}|{}>", names(&g20::APPS), workertok::WORKER);
+        assert!(text.contains(&g20), "{text}");
+        let clip = format!("|{}|", g8clip::CLIP);
+        assert!(
+            text.lines()
+                .any(|l| l.contains("g8 <") && l.contains(&clip)),
+            "{text}"
+        );
+        let told = text.lines().find(|l| l.starts_with(&format!("g20 {NAME}")));
+        let warns = |l: &str| {
+            l.contains("overwrite the clipboard") && l.contains("close the product first")
+        };
+        assert!(told.is_some_and(warns), "{text}");
+        let worker = text
+            .lines()
+            .find(|l| l.starts_with(&format!("g20 {}", workertok::WORKER)));
+        assert!(worker.is_some_and(|l| l.contains("only reads")), "{text}");
     }
 }

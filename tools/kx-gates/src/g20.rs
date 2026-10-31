@@ -15,7 +15,7 @@ use crate::probe::{self, Doc};
 use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
 use crate::winclip::{self, line};
-use crate::{clipkeep, keys, readback};
+use crate::{clipkeep, g20prod, keys, product, readback, workertok};
 
 /// The app G20 copies in and pastes into.
 pub const APPS: [AppKind; 1] = [AppKind::Notepad];
@@ -187,8 +187,14 @@ fn forget(ctx: &Ctx, since: i64) -> Value {
     json!({ "removed": removed, "windows_kept_hidden": hidden.load(Ordering::Relaxed) })
 }
 
-/// Runs G20 on `name`, keeping the owner's clipboard; the history is cleaned even when the run fails.
+/// Runs G20 on `name`: the product (`g20prod`), its workers' tokens alone (`workertok`), or the spike's run on an app,
+/// which keeps the owner's clipboard and cleans the history even when it fails.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
+    match name {
+        product::NAME => return g20prod::run(ctx),
+        workertok::WORKER => return workertok::run(ctx),
+        _ => {}
+    }
     let kind = probe::kind_of(name, &APPS)?;
     let (g, since) = (&ctx.cfg.g20, winclip::now());
     let lines: Vec<String> = halves(g).1.map(|i| text(&g.prefix, i)).collect();

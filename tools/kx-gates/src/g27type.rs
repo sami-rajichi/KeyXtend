@@ -68,6 +68,11 @@ impl<'a> Typist<'a> {
         })
     }
 
+    /// The app it types for.
+    pub fn app(&self) -> &Opened {
+        self.app
+    }
+
     /// The G27 settings.
     fn g(&self) -> &G27 {
         &self.ctx.cfg.g27

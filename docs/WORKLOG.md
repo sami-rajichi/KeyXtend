@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-10-31 09:32 — P8: G20 on the product and G8's clipboard part
+`g20 keyxtend` starts the test build on its own data folder with the clipboard defaults, makes plain, marked, cleared and skipped-app copies, reads the panel's rows by gate id, searches and ticks on the product's keys, and checks Insert (2) in its own Notepad tab, then Win and V with the history key on and off. `g20 worker` reads the running product's worker tokens (no uiAccess, at most Medium), and `g8 clip` fills 1,000 copies with pictures made in memory and judges memory and growth over panel rounds against `[g8]`. Their settings are in `kx-gates-p8.toml`, and the pure parts (rows, search folding, the pasted text, tick and Insert names, the token verdict, the config refusals) have tests. The gates were written and unit-tested only; the controller runs them.
+
 ## 2026-10-31 08:36 — P8: the history folder exists from boot, one worker path
 The app now makes `<data>/clipboard` at boot, so Open folder always opens; when it cannot, the run logs only the error's kind once its log is open, and carries on. The platform finds the worker one way, `WinSpawner::beside` in the program's folder, and the unused `beside_us` is gone. The stage's worker check also reads UTF-16LE text at either byte alignment, so a wide manifest asking for uiAccess is refused, and the Windows security note names the clipboard gates, the shelf's key and the disk reader.
 

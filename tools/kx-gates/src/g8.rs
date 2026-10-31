@@ -29,7 +29,7 @@ use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
 use crate::win::sleep_ms;
 use crate::{copyend, g2, g2raw, g8hook, g8host, mouseguard, out};
-use crate::{g8lit, g8predict, g8size, g8type, g8ui, g8use};
+use crate::{g8clip, g8lit, g8predict, g8size, g8type, g8ui, g8use};
 
 /// The name that runs G8 in weak mode.
 pub const WEAK: &str = "weak";
@@ -190,9 +190,11 @@ fn spans(ctx: &Ctx, m: &Measured) -> Result<Vec<Span>, String> {
 
 /// Runs G8: `name` is the product, `weak` for weak mode or `arabic` with an Arabic layout in front, and the product
 /// must not be running, as G8 times a cold start; `lit` and `osk` time only the key light (`g8lit`), `hook` and
-/// `hook-weak` only the hook (`g8hook`), and `predict` only the prediction part (`g8predict`).
+/// `hook-weak` only the hook (`g8hook`), `clip` only the clipboard (`g8clip`), `predict` only prediction (`g8predict`).
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let parts = g8lit::run(ctx, name).or_else(|| g8hook::run(ctx, name));
+    let parts = g8lit::run(ctx, name)
+        .or_else(|| g8hook::run(ctx, name))
+        .or_else(|| g8clip::run(ctx, name));
     if let Some(part) = parts.or_else(|| g8predict::run(ctx, name)) {
         return part;
     }

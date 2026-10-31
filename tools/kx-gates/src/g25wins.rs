@@ -125,7 +125,7 @@ pub fn both_let_go(after: (Option<bool>, Option<bool>)) -> bool {
 
 /// Lets the Win latch go without a lone press, as G10 does: Shift latches over it first. Win's and Shift's states
 /// after, each if read.
-fn let_go(win_id: &str) -> Result<(Option<bool>, Option<bool>), String> {
+pub(crate) fn let_go(win_id: &str) -> Result<(Option<bool>, Option<bool>), String> {
     let (spare, reader, kb) = (
         board::latch_id(Latch::Shift)?,
         Reader::new()?,
