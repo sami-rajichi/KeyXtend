@@ -83,7 +83,7 @@ const BAD_RULE: &str = "join_rule must be one line within its length";
 const BAD_POLL: &str = "poll_ms must not pass open_ms";
 const BAD_RESTART: &str = "restart_ms must not pass restart_max_ms";
 const BAD_WORKER: &str =
-    "worker_mb must hold the largest entry as it is read, a preview and the worker itself";
+    "worker_mb must hold the largest entry as it is read, a preview or its DIB, and the worker";
 
 /// How the kernel reads the `[clipboard]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -206,13 +206,14 @@ impl ClipSettings {
         )
     }
 
-    /// The memory one draw may need, in MB: `READ` times the largest entry, a preview's RGBA rounded up (which
-    /// covers a thumbnail too) and `WORKER_BASE_MB`.
+    /// The memory one ask may need, in MB: `READ` times the largest entry, the larger of a preview's RGBA (which covers
+    /// a thumbnail) and the DIB an insert makes of that entry, and `WORKER_BASE_MB`.
     fn worker_need_mb(&self) -> u64 {
         let side = u64::from(self.preview_px);
         let rgba = u64::try_from(RGBA_BYTES).unwrap_or(u64::MAX);
         let preview = side.saturating_mul(side).saturating_mul(rgba).div_ceil(MB);
-        READ * u64::from(self.max_entry_mb) + preview + WORKER_BASE_MB
+        let entry = u64::from(self.max_entry_mb);
+        READ * entry + preview.max(entry) + WORKER_BASE_MB
     }
 
     /// The skipped apps and the separator line: each a line of text within its length.
