@@ -12,11 +12,10 @@ use crate::clipown::Owner;
 use crate::clippanel::Panel;
 use crate::g20plan::{found, pasted, rows_part, saved_as, shown};
 use crate::g27type::Typist;
+use crate::ownkeys::Real;
 use crate::p8cfg::{G20Product, Search};
-use crate::simuser::keys_ours;
 use crate::win::sleep_ms;
-use crate::winclip::line;
-use crate::{clipkeep, g20keys, keys, readback};
+use crate::{clipkeep, g20keys, g20tab, readback};
 
 /// The steps' panel, its names in every language, and the gate's Notepad tab.
 pub struct Steps<'a> {
@@ -72,24 +71,14 @@ impl<'a> Steps<'a> {
     /// Copies Notepad's text with Ctrl+A and Ctrl+C in the gate's own tab, then confirms the clipboard holds the
     /// skipped text, so "it never shows" judges a copy that really happened.
     fn copy_skipped(&self) -> Result<(), String> {
-        let (g, t, combos) = (self.g(), &self.ctx.cfg.timing, &self.ctx.cfg.keys);
-        let wait = clipkeep::wait(t);
+        let (g, cfg) = (self.g(), self.ctx.cfg);
+        let wait = clipkeep::wait(&cfg.timing);
         let before = open::sequence();
-        for combo in [&combos.select_all, &combos.copy] {
-            keys_ours(self.app)?;
-            keys::combo(combo)?;
-            sleep_ms(t.key_settle_ms);
-        }
-        if !open::wait_change(before, wait) {
-            return Err("Notepad's copy never reached the clipboard".to_string());
-        }
-        let got =
-            clip::read_text(wait, self.ctx.cfg.g1.max_read_chars).map_err(|e| e.to_string())?;
-        if got.as_deref().map(line) != Some(g.skipped.as_str()) {
-            return Err(
-                "the clipboard does not hold Notepad's copy of the skipped text".to_string(),
-            );
-        }
+        g20tab::copy_in_tab(&Real, self.app, cfg)?;
+        let changed = open::wait_change(before, wait);
+        let read = || clip::read_text(wait, cfg.g1.max_read_chars).map_err(|e| e.to_string());
+        let got = if changed { read()? } else { None };
+        g20tab::skipped_ok(changed, got.as_deref(), &g.skipped)?;
         sleep_ms(g.copy_gap_ms);
         Ok(())
     }
@@ -175,13 +164,9 @@ impl<'a> Steps<'a> {
             .join_config();
         let want = pasted(ticks, &join);
         let count = self.names.count(&self.panel.label(&self.g().insert)?);
-        keys_ours(self.app)?;
-        keys::combo(&self.ctx.cfg.keys.select_all)?;
-        sleep_ms(self.ctx.cfg.timing.key_settle_ms);
-        keys_ours(self.app)?;
-        self.panel.click(&self.g().insert)?;
+        let click = || self.panel.click(&self.g().insert);
+        g20tab::paste(&Real, self.app, self.ctx.cfg, &click)?;
         let closed = self.panel.wait(false).is_ok();
-        keys_ours(self.app)?;
         let saved = readback::saved_until(self.ctx, self.app, |s| saved_as(s, &want))?;
         let count_ok = count.map(usize::from) == Some(ticks.len());
         Ok(json!({

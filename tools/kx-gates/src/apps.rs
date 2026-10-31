@@ -10,9 +10,9 @@ use spike_core::config::SpikeConfig;
 use windows::Win32::Foundation::HWND;
 
 use crate::config::{AppConfig, GatesConfig};
-use crate::keys;
 use crate::win;
 use crate::winfind::{self, Match};
+use crate::{keys, ownkeys};
 
 /// Placeholder in app arguments for the prepared file or URL.
 pub const INPUT: &str = "{input}";
@@ -165,7 +165,7 @@ pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
     let mut left = Vec::new();
     match app.kind {
         AppKind::Target => left.extend(close_target(ctx, app.hwnd, &mut child)),
-        AppKind::Notepad | AppKind::Explorer => left.extend(close_tab(&app, in_front, ctx)),
+        AppKind::Notepad | AppKind::Explorer => left.extend(close_tab(&app, ctx)),
         AppKind::Word if app.file.is_some() => {
             // Word gets a file only when it opens a prepared one; we only read it, so no save prompt.
             let _ = win::close(app.hwnd);
@@ -184,13 +184,12 @@ pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
 }
 
 /// Closes our tab with Ctrl+W, only while it is the one shown, never the owner's own tab; notes one left open.
-fn close_tab(app: &Opened, in_front: bool, ctx: &Ctx) -> Option<String> {
+fn close_tab(app: &Opened, ctx: &Ctx) -> Option<String> {
     let (t, k) = (&ctx.cfg.timing, &ctx.cfg.keys);
-    let ours = app
-        .title_has
-        .as_deref()
-        .is_some_and(|t| win::title(app.hwnd).contains(t));
-    if in_front && ours {
+    let (front, title, has) = (foreground(), win::title(app.hwnd), app.title_has.as_deref());
+    // A tab with no name of ours to check is never closed.
+    let ours = has.is_some() && ownkeys::may_send(front, app.hwnd, &title, has).is_ok();
+    if ours {
         let _ = keys::restore_combo(&k.close_tab);
     }
     let m = Match {

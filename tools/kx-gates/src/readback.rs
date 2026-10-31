@@ -1,24 +1,25 @@
-//! G1 read-back: the text an app holds, from its saved file, its log or the clipboard.
+//! G1 read-back: the text an app holds, from its saved file, its log or the clipboard. Every key goes through
+//! `ownkeys`, so the owner's tabs are never saved or read.
 #![cfg(windows)]
 
 use kx_platform_windows::clip::{self, open};
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::config::GatesConfig;
-use crate::simuser::keys_ours;
-use crate::win::{self, sleep_ms};
-use crate::{clipkeep, keys, out, tlog};
+use crate::ownkeys::{self, Desk, Real};
+use crate::win;
+use crate::{clipkeep, out, tlog};
 
 /// Byte-order mark some editors put first.
 const BOM: char = '\u{FEFF}';
 
-/// Ctrl+A, Ctrl+C, then the clipboard text.
-fn copy(cfg: &GatesConfig) -> Result<String, String> {
+/// Ctrl+A, Ctrl+C in `app` on `desk`, then the clipboard text.
+fn copy(cfg: &GatesConfig, desk: &dyn Desk, app: &Opened) -> Result<String, String> {
     let t = &cfg.timing;
     let before = open::sequence();
-    keys::combo(&cfg.keys.select_all)?;
-    sleep_ms(t.key_settle_ms);
-    keys::combo(&cfg.keys.copy)?;
+    ownkeys::send(desk, app, &cfg.keys.select_all)?;
+    desk.settle(t.key_settle_ms);
+    ownkeys::send(desk, app, &cfg.keys.copy)?;
     if !open::wait_change(before, clipkeep::wait(t)) {
         return Err("the clipboard did not change after Ctrl+C".to_string());
     }
@@ -27,28 +28,27 @@ fn copy(cfg: &GatesConfig) -> Result<String, String> {
         .ok_or_else(|| "no text on the clipboard after Ctrl+C".to_string())
 }
 
-/// Copies all the app's text; the owner's clipboard is saved first and put back after.
-fn copy_all(cfg: &GatesConfig) -> Result<String, String> {
-    clipkeep::keep(cfg, || copy(cfg))
+/// Reads back what the app holds; its keys go out only while it is in front with our tab shown.
+pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
+    read_on(ctx, &Real, app)
 }
 
-/// Reads back what the app holds; checks it is still in front with our tab shown before any shortcut.
-pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
+/// `read_back` on `desk`.
+pub(crate) fn read_on(ctx: &Ctx, desk: &dyn Desk, app: &Opened) -> Result<String, String> {
     let (cfg, t) = (ctx.cfg, &ctx.cfg.timing);
     if app.kind == AppKind::Target {
         let log = &ctx.target.log;
         let text = std::fs::read_to_string(log).map_err(|e| format!("{}: {e}", log.display()))?;
         return Ok(tlog::decode(&tlog::parse(&text)));
     }
-    // Our window in front with our tab shown, or no key goes out: the owner's tabs are never saved or read.
-    keys_ours(app).map_err(|e| format!("not reading back: {e}"))?;
     let key = match app.kind {
         AppKind::Notepad => &cfg.keys.save,
         AppKind::Terminal => &cfg.keys.enter,
-        _ => return copy_all(cfg),
+        // The owner's clipboard is saved first and put back after.
+        _ => return clipkeep::keep(cfg, || copy(cfg, desk, app)),
     };
     let file = app.file.as_deref().ok_or("no file to read")?;
-    keys::combo(key)?;
+    ownkeys::send(desk, app, key)?;
     let text = out::wait_read(file, t.read_wait_ms, t.poll_ms)?;
     Ok(text
         .strip_prefix(BOM)
@@ -57,7 +57,17 @@ pub fn read_back(ctx: &Ctx, app: &Opened) -> Result<String, String> {
 
 /// Saves the app's file and waits until its text passes `want`, since the first read may catch the old save.
 pub fn saved_until(ctx: &Ctx, app: &Opened, want: impl Fn(&str) -> bool) -> Result<bool, String> {
-    if want(&read_back(ctx, app)?) {
+    saved_on(ctx, &Real, app, want)
+}
+
+/// `saved_until` on `desk`.
+pub(crate) fn saved_on(
+    ctx: &Ctx,
+    desk: &dyn Desk,
+    app: &Opened,
+    want: impl Fn(&str) -> bool,
+) -> Result<bool, String> {
+    if want(&read_on(ctx, desk, app)?) {
         return Ok(true);
     }
     let (t, file) = (
@@ -70,3 +80,6 @@ pub fn saved_until(ctx: &Ctx, app: &Opened, want: impl Fn(&str) -> bool) -> Resu
     };
     Ok(win::poll_until(t.read_wait_ms, t.poll_ms, now).is_some())
 }
+
+#[cfg(test)]
+mod tests;

@@ -13,7 +13,7 @@ use crate::fit::held_fits;
 use crate::g22cfg::plain_name;
 use crate::p5cfg::SEP;
 use crate::p7cfg::{backup_free, gate_files};
-use crate::{ftl, g20plan};
+use crate::{clipdata, ftl, g20plan};
 
 /// The least ticks G20 makes, so its insert pastes a join between two texts.
 pub const JOINED: usize = 2;
@@ -175,7 +175,8 @@ impl G20Product {
         Ok(())
     }
 
-    /// Refuses an empty or dotted group, an empty id, a history folder that is no plain name, and a text kx-ui lacks.
+    /// Refuses an empty or dotted group, an empty id, a history folder or marker that is no plain name, a marker the
+    /// product uses, and a text kx-ui lacks.
     fn check_ids(&self) -> Result<(), String> {
         if self.group.is_empty() || self.group.contains(SEP) {
             return Err(format!("g20_product.group must be a name without {SEP}"));
@@ -193,9 +194,10 @@ impl G20Product {
         if !plain_name(&self.history) {
             return Err("g20_product.history must be a plain folder name".to_string());
         }
-        if !plain_name(&self.marker) || self.marker == self.history {
+        if !plain_name(&self.marker) || clipdata::taken(&self.marker, &self.history) {
             return Err(
-                "g20_product.marker must be a plain file name, not the history's".to_string(),
+                "g20_product.marker must be a plain file name the product never writes in its data folder"
+                    .to_string(),
             );
         }
         let named = |key: &str, e: String| format!("g20_product.{key}: {e}");

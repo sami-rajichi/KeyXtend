@@ -58,3 +58,23 @@ fn the_history_folder_is_the_apps_own() {
     let line = format!("pub const CLIP_DIR: &str = \"{}\";", g.history);
     assert!(APP_CLIP.contains(&line), "{line}");
 }
+
+#[test]
+fn a_marker_that_names_a_file_the_product_writes_is_refused() {
+    let good = load().expect("loads");
+    let taken = [
+        "settings.toml",
+        "Settings.TOML",
+        "settings.previous.toml",
+        "settings.broken.toml",
+        "settings.toml.tmp",
+        "logs",
+        "CLIPBOARD",
+    ];
+    for name in taken {
+        let mut c = good.clone();
+        c.g20_product.marker = name.to_string();
+        let e = super::check(&c).expect_err(name);
+        assert!(e.contains("g20_product.marker"), "{name}: {e}");
+    }
+}

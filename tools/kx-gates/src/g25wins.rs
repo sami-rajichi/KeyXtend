@@ -1,5 +1,5 @@
 //! G25's system windows: the clipboard panel from the product's Win and V keys, the task switcher and the power dialog.
-//! Each is watched for (`g25watch`), and Esc goes out only while it, or Notepad where allowed, is in front.
+//! Each is watched for (`g25watch`), and Esc goes out only while it, or our own Notepad tab where allowed, is in front.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{Latch, Role};
@@ -11,9 +11,10 @@ use crate::apps::{Ctx, Opened};
 use crate::g25watch::{self, Watch};
 use crate::keymap::Reader;
 use crate::modekey::ModeKey;
+use crate::ownkeys::{self, Desk, Real};
 use crate::product::Keyboard;
 use crate::simuser::keys_ours;
-use crate::{board, g10keys, g25, keys, win};
+use crate::{board, g10keys, g25, win};
 
 /// The result's note when a window of the power dialog's class stays open, so the owner closes it.
 const LEFT_OPEN: &str = "a window of the power dialog's class is still open: the owner closes it";
@@ -74,6 +75,27 @@ fn fetch(ctx: &Ctx, app: &Opened, result: &mut Value) -> bool {
     back.is_ok()
 }
 
+/// Sends `esc` on `desk` while a window of `shown` is in front, or `app` when it `takes` Esc and shows our tab: true
+/// when it went out, an error when Notepad shows another tab.
+pub(crate) fn send_esc(
+    desk: &dyn Desk,
+    app: &Opened,
+    shown: &[HWND],
+    takes: bool,
+    esc: &[u16],
+) -> Result<bool, String> {
+    let front = desk.front();
+    if shown.contains(&front) {
+        desk.combo(esc)?;
+        return Ok(true);
+    }
+    if takes && front == app.hwnd {
+        ownkeys::send(desk, app, esc)?;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
 /// Waits for `watch`'s windows, sends Esc only while one of them, or Notepad as `to` allows, is in front, then waits
 /// for them to close; Notepad must then come back by itself, or G25 brings it back, as `to` says.
 pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value, String> {
@@ -87,13 +109,12 @@ pub fn closes(ctx: &Ctx, app: &Opened, watch: &Watch, to: EscTo) -> Result<Value
             esc_ok(&foreground(), &watch.shown(), takes.as_ref())
         });
     let at_esc = about(foreground());
-    if safe {
-        keys::combo(&ctx.cfg.g25.esc)?;
-    }
+    let esc = &ctx.cfg.g25.esc;
+    let sent = safe && send_esc(&Real, app, &watch.shown(), takes.is_some(), esc)?;
     let back = || !to.app_back() || foreground() == app.hwnd;
-    let closed = safe && g25::until(ctx, || watch.shown().is_empty() && back());
+    let closed = sent && g25::until(ctx, || watch.shown().is_empty() && back());
     let mut result = json!({
-        "opened": opened, "windows": found, "esc_sent": safe, "front_at_esc": at_esc, "closed": closed,
+        "opened": opened, "windows": found, "esc_sent": sent, "front_at_esc": at_esc, "closed": closed,
         "ok": opened && closed,
     });
     if first {
@@ -199,87 +220,4 @@ fn dialog(ctx: &Ctx, app: &Opened) -> Result<Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_panel_passes_only_once_win_and_its_spare_shift_both_read_let_go() {
-        assert!(both_let_go((Some(false), Some(false))));
-        assert!(
-            !both_let_go((Some(false), Some(true))),
-            "Shift still latched"
-        );
-        assert!(!both_let_go((Some(true), Some(false))), "Win still latched");
-        assert!(!both_let_go((Some(false), None)), "Shift did not read");
-        assert!(!both_let_go((None, Some(false))), "Win did not read");
-    }
-
-    #[test]
-    fn alt_goes_out_after_power_only_while_no_window_of_the_dialogs_class_shows() {
-        let (dialog, other) = (1, 2);
-        assert!(alt_ok::<i32>(&[], &[]), "all closed");
-        assert!(!alt_ok(&[dialog], &[dialog]), "the dialog still shows");
-        assert!(
-            !alt_ok(&[], &[other]),
-            "one whose program did not read may be the dialog"
-        );
-    }
-
-    #[test]
-    fn notepad_takes_esc_for_the_panel_and_for_the_switcher_only_once_its_wait_ran_out() {
-        assert!(
-            !EscTo::Watched.app_takes(false) && !EscTo::Watched.app_takes(true),
-            "the power dialog"
-        );
-        assert!(
-            EscTo::WatchedOrApp.app_takes(false),
-            "the panel never takes the front"
-        );
-        assert!(
-            !EscTo::WatchedFirst.app_takes(false),
-            "the switcher came to the front"
-        );
-        assert!(
-            EscTo::WatchedFirst.app_takes(true),
-            "it never did: today's rule"
-        );
-    }
-
-    #[test]
-    fn g25_fetches_notepad_back_after_the_switcher_and_waits_for_it_after_the_panel() {
-        let first = EscTo::WatchedFirst;
-        assert!(
-            first.fetches_app() && !first.app_back(),
-            "Windows leaves the switcher's hidden window in front"
-        );
-        let panel = EscTo::WatchedOrApp;
-        assert!(
-            panel.app_back() && !panel.fetches_app(),
-            "the panel gives the front back"
-        );
-        let power = EscTo::Watched;
-        assert!(
-            !power.app_back() && !power.fetches_app(),
-            "Power fetches it after its class check"
-        );
-    }
-
-    #[test]
-    fn esc_goes_out_only_while_a_watched_window_or_an_allowed_app_is_in_front() {
-        let (app, dialog, other) = (1, 2, 3);
-        assert!(esc_ok(&dialog, &[dialog], None));
-        assert!(
-            !esc_ok(&app, &[dialog], None),
-            "only the power dialog itself takes Esc"
-        );
-        assert!(
-            esc_ok(&app, &[dialog], Some(&app)),
-            "Notepad, under the switcher or the panel"
-        );
-        assert!(
-            !esc_ok(&other, &[dialog], Some(&app)),
-            "another app never gets Esc"
-        );
-        assert!(!esc_ok(&other, &[], None), "nothing shown");
-    }
-}
+mod tests;

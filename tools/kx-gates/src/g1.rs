@@ -10,8 +10,8 @@ use windows::Win32::Foundation::HWND;
 use crate::apps::{self, AppKind, Ctx, Opened};
 use crate::diff::{self, Diff};
 use crate::out::say;
+use crate::ownkeys::tab_ours;
 use crate::rng::Rng;
-use crate::simuser::tab_ours;
 use crate::win::{self, sleep_ms};
 use crate::{launch, out, readback, shot, text};
 
