@@ -1,7 +1,7 @@
 //! The focused box's selection (ADR-0041): its kind from UI Automation, `field.toml` and the table in `selection.toml`,
 //! whether its selection holds text, its line boxes and its caret box, with no text read but at Translate's click. The
-//! kind rules, the table and the boxes are pure; `uia`, `win` and `hear` talk to UI Automation, and the run is
-//! `kx_platform::selection`'s.
+//! kind rules, the table, the boxes and where the selection handler sits are pure; `uia`, `win` and `hear` talk to UI
+//! Automation, and the run is `kx_platform::selection`'s.
 #![cfg_attr(
     not(windows),
     allow(
@@ -10,6 +10,7 @@
     )
 )]
 
+mod follow;
 #[cfg(windows)]
 mod hear;
 mod kinds;

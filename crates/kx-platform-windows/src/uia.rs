@@ -1,9 +1,12 @@
 //! A UI Automation client, moved from the P1 spike (ADR-0014): elements by name, text documents, the focused element and
-//! patterns found up the tree. The gates and the field watch use it; it never logs an element's text.
+//! patterns found up the tree, and the one lock its watches' handlers are added and removed under. The gates and the
+//! field and selection watches use it; it never logs an element's text.
 
 mod act;
 mod read;
 mod rects;
+
+use std::sync::Mutex;
 
 use thiserror::Error;
 use windows::Win32::Foundation::{HWND, POINT, RECT};
@@ -33,6 +36,16 @@ use crate::com::Com;
 
 /// Most ancestors walked when looking for a pattern above an element.
 const MAX_DEPTH: usize = 32;
+
+/// Held around every UI Automation handler our watches add or remove: Microsoft warns against two threads doing it at
+/// once.
+static HANDLERS: Mutex<()> = Mutex::new(());
+
+/// Runs `f`, which adds or removes UI Automation handlers, while no other thread of ours does.
+pub(crate) fn alone<T>(f: impl FnOnce() -> T) -> T {
+    let _one = crate::lock(&HANDLERS);
+    f()
+}
 
 /// Why a UI Automation call failed; it names the call, never an element's text.
 #[derive(Debug, Error)]

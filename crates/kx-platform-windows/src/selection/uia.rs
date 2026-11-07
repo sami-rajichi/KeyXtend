@@ -13,10 +13,11 @@ use windows::Win32::UI::Accessibility::{
     TextPatternRangeEndpoint_Start, TextUnit_Character,
 };
 
+use super::follow::same;
 use super::kinds::{Facts, kind};
 use super::spot::{Span, assemble, whole};
 use super::table;
-use super::win::{Mine, same};
+use super::win::Mine;
 use crate::field::{self, Held, box_id, caret_of, named, range_fixed, value_fixed};
 use crate::screen::{edges, rect_of, screen_of};
 use crate::uia::{boxes, span};

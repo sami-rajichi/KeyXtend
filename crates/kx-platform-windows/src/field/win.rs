@@ -15,7 +15,7 @@ use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 use super::focus::handler;
 use super::uia::{before_cursor, box_id, ends_with, focused, kind_of};
 use crate::com::Com;
-use crate::uia::{client, pid};
+use crate::uia::{alone, client, pid};
 
 /// The focused-box watch over UI Automation, for the app to register under `FieldWatchKey`.
 #[derive(Clone, Copy, Debug, Default)]
@@ -112,7 +112,8 @@ fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, cfg: FieldConfig) {
     };
     let focus = handler(Arc::clone(shared));
     // SAFETY: registers our live handler on our own client.
-    if let Err(e) = unsafe { auto.AddFocusChangedEventHandler(None, &focus) } {
+    let added = alone(|| unsafe { auto.AddFocusChangedEventHandler(None, &focus) });
+    if let Err(e) = added {
         tracing::warn!(code = %e.code(), "UI Automation refused the field watch's focus handler");
         return shared.fail("the focus handler was refused");
     }
@@ -129,7 +130,8 @@ fn work(inbox: &Receiver<Job>, shared: &Arc<Shared>, cfg: FieldConfig) {
         serve(&reader, job);
     }
     // SAFETY: removes the handler added above, from the thread that added it.
-    if let Err(e) = unsafe { reader.auto.RemoveFocusChangedEventHandler(&focus) } {
+    let removed = alone(|| unsafe { reader.auto.RemoveFocusChangedEventHandler(&focus) });
+    if let Err(e) = removed {
         tracing::warn!(error = %e, "the field watch's focus handler was not removed");
     }
 }

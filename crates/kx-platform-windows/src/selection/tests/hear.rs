@@ -1,8 +1,7 @@
 //! The change handlers with no UI Automation client: the interfaces they answer, their last references freeing them,
-//! a change with no element being no error, and when the selection handler moves to another box.
+//! and a change with no element being no error.
 
 use super::super::hear::handlers;
-use super::super::win::same;
 use kx_module_api::ports::{SelConfig, SelRun};
 use kx_platform::selection::{Shared, spawn};
 use std::sync::Arc;
@@ -76,12 +75,4 @@ fn a_change_with_no_element_is_no_error() {
         let id = UIA_Text_TextSelectionChangedEventId;
         assert!(hear.HandleAutomationEvent(None, id).is_ok());
     }
-}
-
-#[test]
-fn the_selection_handler_stays_on_its_box_and_moves_for_any_other() {
-    assert!(same(7, 7));
-    assert!(!same(7, 8), "another box");
-    assert!(!same(0, 0), "a box with no id is never the same");
-    assert!(!same(7, 0) && !same(0, 7));
 }

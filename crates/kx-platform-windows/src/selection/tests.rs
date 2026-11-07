@@ -1,6 +1,6 @@
 //! The kind table and the kind rules: the shipped table and bad ones, and the boxes the chips meet (Notepad's edit, a
 //! read-only document, Windows Terminal, the console, a password box, our own window); the boxes are in `spot`, the
-//! rules over any facts in `props`, and the handlers in `hear`.
+//! rules over any facts in `props`, the handlers in `hear`, and where the selection handler sits in `follow`.
 
 use super::kinds::{Facts, kind};
 use super::*;
@@ -8,6 +8,7 @@ use crate::field;
 use kx_module_api::ports::SelKind;
 use std::cell::Cell;
 
+mod follow;
 #[cfg(windows)]
 mod hear;
 mod props;
