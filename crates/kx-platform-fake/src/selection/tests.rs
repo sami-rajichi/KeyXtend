@@ -44,14 +44,18 @@ const SCREEN: Screen = Screen {
 const TEXT: &str = "Hello world";
 const ARABIC: &str = "مرحبا بالعالم";
 
-/// The thread each tell of a test watch ran on.
-type Heard = Arc<Mutex<Vec<ThreadId>>>;
+/// For each tell of a test watch: the thread it ran on, and whether the fake's log was unlocked then.
+type Heard = Arc<Mutex<Vec<(ThreadId, bool)>>>;
 
-/// A started watch whose `tell` records each change.
+/// A started watch whose `tell` records each change; it only tries the fake's log, so a regression fails, never hangs.
 fn watched(fake: &FakeSelectionWatch) -> (Box<dyn SelRun>, Heard) {
     let heard = Heard::default();
     let log = Arc::clone(&heard);
-    let tell = move || log.lock().unwrap().push(thread::current().id());
+    let shared = Arc::clone(&fake.shared);
+    let tell = move || {
+        let unlocked = shared.log.try_lock().is_ok();
+        log.lock().unwrap().push((thread::current().id(), unlocked));
+    };
     let run = fake.watch(CONFIG, Box::new(tell));
     (run.ok().unwrap(), heard)
 }
@@ -115,7 +119,7 @@ fn it_starts_on_no_box_which_is_closed_and_holds_nothing() {
 }
 
 #[test]
-fn each_change_tells_at_once_on_this_thread_and_each_new_box_has_a_fresh_id() {
+fn each_change_tells_at_once_on_this_thread_with_the_log_unlocked_and_a_new_box_has_a_fresh_id() {
     let fake = FakeSelectionWatch::new();
     let (mut run, heard) = watched(&fake);
     fake.focus(selected());
@@ -130,7 +134,12 @@ fn each_change_tells_at_once_on_this_thread_and_each_new_box_has_a_fresh_id() {
     fake.focus(selected());
     let second = fake.spot().box_id;
     assert!(second != first && second != selected().box_id);
-    assert_eq!(*heard.lock().unwrap(), [thread::current().id(); 3]);
+    let told = (thread::current().id(), true);
+    assert_eq!(
+        *heard.lock().unwrap(),
+        [told; 3],
+        "each tell finds the log free"
+    );
 }
 
 #[test]

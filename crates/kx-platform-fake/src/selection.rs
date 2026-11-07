@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 /// The callback a watch tells on each change.
 type Tell = Box<dyn Fn() + Send>;
 
-/// How many calls the watch and its runs took, failed ones too.
+/// How many calls the watch and its runs took, failed looks and reads too; a refused watch and a read in a `Closed` box
+/// are not counted.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelCalls {
     /// Watches started.
