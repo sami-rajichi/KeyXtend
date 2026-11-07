@@ -44,5 +44,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0038 | [Quick-fill is a notebook sealed with the account key and backed up to a locked box](0038-quick-fill-is-a-notebook-sealed-with-the-account-key-and-backed-up-to-a-locked-box.md) | Accepted (2026-11-01). Supersedes ADR-0010's vault lines; drops Windows Hello. Partly superseded by ADR-0039 (decision 3's services). |
 | 0039 | [The vault's data services need a capability of their own](0039-the-vault-data-services-need-a-capability-of-their-own.md) | Accepted (2026-11-02). Adds `VaultData` for the notebook store, boxes and places; supersedes ADR-0038 decision 3 for the services. |
 | 0040 | [A panel's line takes the letters only while it is aimed at](0040-a-panels-line-takes-the-letters-only-while-aimed.md) | Accepted (2026-11-06). Letters follow the last click; a search line tells prediction its text, and nothing is learned. |
+| 0041 | [Selection chips read no text, and Translate opens the browser](0041-selection-chips-read-no-text-and-translate-in-the-browser.md) | Accepted (2026-11-07). Replaces spec §8.3 and the gesture fallback; adds `Selection` and `OpenLink`, the keyboard's edit route and presses per asker. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

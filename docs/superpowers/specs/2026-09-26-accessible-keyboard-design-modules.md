@@ -253,12 +253,7 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 
 ### 8.3 Selection helper
 
-- Whenever text is selected anywhere, a small pill with **Copy** (and **Search**) appears next to the selection, like PopClip or SnipDo.
-- **Detection:**
-  - Primary: UI Automation `TextPattern.GetSelection` on the focused element.
-  - Fallback: our mouse hook sees a drag-select or double-click gesture.
-- It **never probes** by sending Ctrl+C. Copy sends Ctrl+C only when the pill is clicked.
-- The pill is non-activating and disappears on the next click elsewhere.
+Replaced by [`2026-11-07-selection-chips-design.md`](2026-11-07-selection-chips-design.md) (ADR-0041): keycaps for Copy, Cut, Paste and Translate next to a selection, Paste at a caret, no text read before a click, and no gesture fallback.
 
 ### 8.4 Snip
 

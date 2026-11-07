@@ -219,7 +219,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 10 — Selection helper — v0.6
 
-- UIA TextPattern selection detection, with the gesture fallback; the non-activating pill; no Ctrl+C probing.
+- Selection chips (ADR-0041, [design](superpowers/specs/2026-11-07-selection-chips-design.md)): keycaps for Copy, Cut, Paste and Translate on a selection found by UI Automation events, with no text read and no gesture fallback; Paste at a caret just clicked into; no Ctrl+C probing.
 
 ## Phase 11 — Voice typing — v0.7
 
