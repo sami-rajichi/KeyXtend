@@ -5,7 +5,7 @@
 
 ## Context
 
-- The owner clicks with one finger, and the hand slips a few pixels while the button is down; one click lasts about 400 ms (bug H5, 2026-10-11).
+- A hand can slip a few pixels while the button is down, and one click can last about 400 ms (bug H5, 2026-10-11).
 - Qt's `MouseArea` clicks only when the release lands inside the area. A press that slipped off, even into the 3–5 px gap between keys, typed nothing, and a held repeating key stopped.
 - A physical keyboard and Windows' On-Screen Keyboard type at the press (owner, 2026-10-11).
 - WCAG 2.2 success criterion 2.5.2, Pointer Cancellation, lets a control act on the down-event only where that is essential; its understanding page counts a keyboard emulator as such a case.
@@ -33,6 +33,6 @@ Decided by the owner on 2026-10-11.
 
 ## Alternatives
 
-- **Act on a release inside the control** (Qt's default and Windows' push buttons): it loses the owner's slipped clicks, which was the bug.
+- **Act on a release inside the control** (Qt's default and Windows' push buttons): it loses slipped clicks, which was the bug.
 - **A slip margin around each key:** a longer slip still loses the click, and the margins of neighbours meet in the gaps.
 - **Keys at let-go, wherever the release lands:** a key would type late, unlike a physical keyboard, and a held key would need the press anyway to repeat.

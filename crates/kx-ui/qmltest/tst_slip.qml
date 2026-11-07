@@ -23,7 +23,7 @@ Item {
         readonly property string q: "c-0x0010"
         readonly property string w: "c-0x0011"
         readonly property string tab: "tab"
-        // The owner's press, about 0.4 s, and its slips: 1 px each, from 1 px inside the key's right edge into the gap.
+        // A slow press, about 0.4 s, and its slips: 1 px each, from 1 px inside the key's right edge into the gap.
         readonly property int pressMs: 400
         readonly property var slips: [1, 1, 1, 1]
 
@@ -157,14 +157,14 @@ Item {
             win.visible = false;
         }
 
-        // The owner's own press: held about 0.4 s, below the repeat delay, while the hand slips from 1 px inside the
-        // edge into the gap. No real time passes: the hold's first beat is checked to come after such a press.
-        function test_a_press_held_like_the_owners_with_slips_into_the_gap_types_once() {
+        // A slow press: held about 0.4 s, below the repeat delay, while the hand slips from 1 px inside the edge into
+        // the gap. No real time passes: the hold's first beat is checked to come after such a press.
+        function test_a_slow_press_with_slips_into_the_gap_types_once() {
             const win = make();
             const a = keyed(win, q);
             const at = { x: a.width - 1, y: a.height / 2 };
             press(win, a, at.x, at.y);
-            verify(win.hold.running && win.hold.interval > pressMs, "no repeat within the owner's press");
+            verify(win.hold.running && win.hold.interval > pressMs, "no repeat within a slow press");
             for (const px of slips) {
                 at.x += px;
                 mouseMove(a, at.x, at.y, -1, Qt.LeftButton);

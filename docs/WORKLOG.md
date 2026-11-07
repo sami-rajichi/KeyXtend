@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-07 20:05 — P9: the Linux check, and older public lines stay anonymous
+A test import used only on Windows stopped P9's Linux check, so it moved into that test, and CI's two Linux lint commands now pass locally against the Linux target. Older public lines about one person's clicks now speak of any press that slips, in comments, test names and docs, with no change in behaviour. ADR-0024's two background lines were reworded as one exception the owner approved, as its decision stands.
+
 ## 2026-11-07 19:10 — P9: Quick-fill, one data folder and a lift Windows ignored
 Quick-fill is in: a sealed notebook of any kind of entry, one-click fills that never press Enter, a locked backup box in the places the user picks, Bring back, and a KeePass import opened by the low-rights worker (ADR-0038, ADR-0039). A run whose saves Windows would hide in another app's package now says so and writes nothing, so the data folder is one (ADR-0037). A panel's search takes the keys after a press on the panel, with a real caret that follows Arabic and a wheel notch that turns one page (ADR-0040). A test that failed now and then found a real guard bug, a lift Windows ignores while saying yes, so the window now goes up alone; G23, the gates and the hands-on checks pass at 90bd7076 (`docs/test-reports/2026-11-07-p9-quick-fill.md`).
 

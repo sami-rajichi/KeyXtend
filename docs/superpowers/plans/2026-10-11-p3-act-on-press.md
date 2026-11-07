@@ -28,7 +28,7 @@
   - The language key takes its back or forward part from where it was pressed.
 - **Settings**
   - No new product setting; the existing `[keyboard] repeat`, `repeat_delay_ms` and `repeat_every_ms` stay.
-  - kx-gates gets `[g2] press_ms` (near the owner's 400 ms) and `slip_px`, both checked.
+  - kx-gates gets `[g2] press_ms` (near a slow click's 400 ms) and `slip_px`, both checked.
 - **Docs:** ADR-0024 (controls act on the press they got), spec §4.6, and `docs/items/P3.md`.
 
 ## Tasks

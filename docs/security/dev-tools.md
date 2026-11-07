@@ -13,7 +13,7 @@
 | Write and delete `Program Files\KeyXtend-dev\<name>` (admin, Windows prompt) | Windows grants uiAccess only from a secure folder. | Same as above. |
 | Read a program's signature and manifest | `check-uiaccess` explains why uiAccess is missing. | Only diagnosis is lost. |
 | Write and delete one shortcut in the user's own Start menu | The owner starts the installed app with one click. | The app is started from its folder instead. |
-| Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by the owner's hand. |
+| Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by a hand on the mouse. |
 | Write the `[g8] program` copy's `settings.toml` while `kx-gates g21 keyxtend`, `g27 keyxtend` or `g8 predict` runs, then put it and its last good copy back byte for byte | A copy reads its settings only at start: G8's predict part is the difference between a cold start with predict on and one with it off, and G21 and G27 pause learning and switch modules off. | G8 cannot tell predict's memory apart, and G21 and G27 would teach the owner's learner. |
 | End a copy of the product kx-gates started that did not quit in time, through the handle it opened (`TerminateProcess`) | No copy a gate started may outlive the gate or save over the owner's restored settings. | A hung copy stays running on the gate's settings. |
 

@@ -1,4 +1,4 @@
-//! The clipboard panel's sizes: the mock-up's tick box, pin and pills, with big targets for one finger.
+//! The clipboard panel's sizes: the mock-up's tick box, pin and pills, with big targets.
 
 use super::pad::refused_in;
 use super::*;
@@ -17,7 +17,7 @@ fn the_clipboard_panel_takes_the_mock_up_sizes() {
 }
 
 #[test]
-fn the_clipboard_panels_targets_are_big_for_one_finger() {
+fn the_clipboard_panels_targets_are_big() {
     let s = load().expect("shape.toml loads");
     let least = 24.0;
     assert!(s.panel.filter_px[0] >= least, "a chip, WCAG 2.5.8");
