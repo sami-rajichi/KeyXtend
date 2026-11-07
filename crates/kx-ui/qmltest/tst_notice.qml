@@ -1,6 +1,6 @@
 // The notice banner over the stand-in Ui: it queues and counts what waits, offers Try again only when the app can
-// restart what failed, answers each notice once, tells its notices again in a new keyboard language, shows again what
-// the hub still shows when made again, and never takes focus.
+// restart what failed and Yes and No when a notice asks, answers each notice once, tells its notices again in a new
+// keyboard language, shows again what the hub still shows when made again, and never takes focus.
 import QtQuick
 import QtTest
 import "../qml"
@@ -27,6 +27,8 @@ Item {
     Component { id: uiC; FakeUi {} }
     Component { id: noteC; Notice {} }
     Component { id: spyC; SignalSpy {} }
+    // Hands the keys it takes to item `to`, as a key that reaches the banner would.
+    Component { id: keysC; Item { property Item to; Keys.forwardTo: [to] } }
 
     TestCase {
         name: "notice"
@@ -46,6 +48,11 @@ Item {
         }
         function notice(id, retry) {
             return { id: id, text: "Notice " + id, retry: retry };
+        }
+        // A notice that asks, with the hub's Yes and No texts in the language of fixture `t` (English by default).
+        function asking(id, t) {
+            const texts = (t || En).texts;
+            return { id: id, text: "Ask " + id, retry: false, ask: { yes: texts["button.yes"], no: texts["button.no"] } };
         }
         // Every item under `item` for which `ok` holds.
         function all(item, ok, found) {
@@ -190,6 +197,75 @@ Item {
             mouseClick(button(note, En.texts["button.ok"]));
             compare(spy.count, 1, "seen, so the tray menu closes");
             compare(note.ui.calls, ["dismiss 1"], "and OK still answers");
+        }
+
+        function test_an_asking_notice_offers_yes_first_and_a_plain_one_ok_as_before() {
+            const note = make([asking(1), notice(2, false)]);
+            tryVerify(() => note.visible, 2000, "it shows");
+            const [yes, no] = [En.texts["button.yes"], En.texts["button.no"]];
+            compare(buttons(note), [yes, no]);
+            verify(button(note, yes).main && !button(note, no).main, "Yes is the main button");
+            waitForRendering(note.contentItem);
+            mouseClick(button(note, yes));
+            compare(note.ui.calls, ["answer 1 true"]);
+            compare(buttons(note), [En.texts["button.ok"]], "the plain notice after it");
+        }
+
+        // Only Yes and No answer a question: no OK, close or title bar beside them, so No is always a deliberate click.
+        function test_an_asking_notice_offers_its_two_answers_alone() {
+            const note = make([asking(1)]);
+            tryVerify(() => note.visible, 2000, "it shows");
+            compare(buttons(note), [En.texts["button.yes"], En.texts["button.no"]], "no OK or close");
+            const clickable = all(note.contentItem, o => o.visible && o.enabled && o.acceptedButtons !== undefined);
+            compare(clickable.length, 2, "nothing else takes a click");
+            verify(note.flags & Qt.FramelessWindowHint, "no title bar with a close button");
+        }
+
+        function test_a_double_click_on_yes_sends_one_answer() {
+            const note = make([asking(1), asking(2)]);
+            tryVerify(() => note.visible, 2000, "it shows");
+            waitForRendering(note.contentItem);
+            mouseDoubleClickSequence(button(note, En.texts["button.yes"]));
+            compare(note.ui.calls, ["answer 1 true"]);
+            compare(note.shown.id, 2, "the next question waits to be read");
+        }
+
+        function test_no_and_esc_answer_no() {
+            const note = make([asking(1), asking(2), asking(3)]);
+            const keys = createTemporaryObject(keysC, root, { to: note.body });
+            tryVerify(() => note.visible, 2000, "it shows");
+            waitForRendering(note.contentItem);
+            mouseClick(button(note, En.texts["button.no"]));
+            keys.forceActiveFocus();
+            keyClick(Qt.Key_Escape);
+            compare(note.ui.calls, ["answer 1 false", "answer 2 false"]);
+            compare(note.shown.id, 3);
+        }
+
+        // Esc answers the question shown with No once: the next Esc reaches the plain notice after it, then nothing.
+        function test_esc_on_a_question_answers_no_once() {
+            const note = make([asking(1), notice(2, false)]);
+            const keys = createTemporaryObject(keysC, root, { to: note.body });
+            tryVerify(() => note.visible, 2000, "it shows");
+            keys.forceActiveFocus();
+            keyClick(Qt.Key_Escape);
+            compare(note.ui.calls, ["answer 1 false"]);
+            compare(note.shown.id, 2, "the plain notice after it");
+            keyClick(Qt.Key_Escape);
+            keyClick(Qt.Key_Escape);
+            compare(note.ui.calls, ["answer 1 false", "dismiss 2"], "each notice is answered once");
+            verify(!note.visible, "nothing is left to answer");
+        }
+
+        // Arabic flips text only (ADR-0020): Yes stays left of No, and both carry the Arabic words.
+        function test_an_arabic_question_names_its_answers_in_arabic() {
+            const note = make([asking(1, Ar)]);
+            tryVerify(() => note.visible, 2000, "it shows");
+            const [yes, no] = [Ar.texts["button.yes"], Ar.texts["button.no"]];
+            compare(buttons(note), [yes, no]);
+            waitForRendering(note.contentItem);
+            const [y, n] = [button(note, yes), button(note, no)].map(o => o.mapToItem(note.contentItem, 0, 0).x);
+            verify(y < n, "yes " + y + ", no " + n);
         }
 
         function test_the_count_comes_in_the_keyboards_language() {

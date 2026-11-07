@@ -51,7 +51,7 @@ fn the_clipboard_starts_with_its_services_and_quit_lets_them_go() {
         heard,
         ..
     } = boot;
-    let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
+    let thread = drain::spawn(kernel, Arc::clone(&hub), requests, None).unwrap();
     assert!(hub.quit());
     thread.join().unwrap();
     assert!(!rig.clip.watching() && !rig.pics.running(), "Quit let go");

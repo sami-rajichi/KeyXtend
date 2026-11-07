@@ -1,93 +1,89 @@
-//! The worker's loop: one ask in, one reply out, until goodbye or the end of input. Every failed draw or DIB is a
-//! `Failed` reply, a panic included; a frame that cannot be read or written ends the loop.
+//! The worker's loop, one for every job: one ask in, one reply out, until goodbye or the end of input. A panicking
+//! ask, or a reply that fails its own checks, is answered as an internal failure; a frame that cannot be read or
+//! written ends the loop.
 
-use crate::media::Picture;
-use kx_ipc::{Ask, Codec, IpcError, Reply, Why};
+use kx_ipc::IpcError;
 use std::io::{Read, Write};
 use std::panic::{self, AssertUnwindSafe};
 
-/// The media job's loop: `serve` with every ask's panic kept off stderr.
+/// A job's asks, as the loop reads them.
+pub trait Asked: Sized {
+    /// The job's replies.
+    type Reply: Answer;
+
+    /// Reads one ask.
+    ///
+    /// # Errors
+    /// The frame's `IpcError`; `Closed` when the input ended between frames.
+    fn next<R: Read + ?Sized>(r: &mut R) -> Result<Self, IpcError>;
+
+    /// The ask's id, or `None` for goodbye.
+    fn id(&self) -> Option<u32>;
+}
+
+/// A job's replies, as the loop writes them.
+pub trait Answer: Sized {
+    /// The reply to ask `id` when it failed inside.
+    fn internal(id: u32) -> Self;
+
+    /// Writes this reply as one frame.
+    ///
+    /// # Errors
+    /// `Io` when the stream fails; any other `IpcError` for a reply refused before any byte is written.
+    fn send<W: Write + ?Sized>(&self, w: &mut W) -> Result<(), IpcError>;
+}
+
+/// A job's loop: `serve` with every ask's panic kept off stderr.
 ///
 /// # Errors
 /// As `serve`.
-pub fn answer<R, W, D, M>(r: &mut R, w: &mut W, draw: D, make: M) -> Result<(), IpcError>
+pub fn answer<A, R, W>(r: &mut R, w: &mut W, work: impl Fn(A) -> A::Reply) -> Result<(), IpcError>
 where
+    A: Asked,
     R: Read + ?Sized,
     W: Write + ?Sized,
-    D: Fn(Codec, &[u8], u32) -> Result<Picture, Why>,
-    M: Fn(&[u8], usize) -> Result<Vec<u8>, Why>,
 {
     hush();
-    serve(r, w, draw, make)
+    serve(r, w, work)
 }
 
-/// Answers each ask read from `r` on `w`, a draw with `draw` and a DIB with `make`, one at a time, until `Bye` or the
-/// end of input.
+/// Answers each ask read from `r` on `w` with `work`, one at a time, until goodbye or the end of input.
 ///
 /// # Errors
 /// The first frame that cannot be read or written; the stream is then out of step, so the worker exits.
-fn serve<R, W, D, M>(r: &mut R, w: &mut W, draw: D, make: M) -> Result<(), IpcError>
+pub fn serve<A, R, W>(r: &mut R, w: &mut W, work: impl Fn(A) -> A::Reply) -> Result<(), IpcError>
 where
+    A: Asked,
     R: Read + ?Sized,
     W: Write + ?Sized,
-    D: Fn(Codec, &[u8], u32) -> Result<Picture, Why>,
-    M: Fn(&[u8], usize) -> Result<Vec<u8>, Why>,
 {
     loop {
-        // The image's bytes drop with the ask in its arm, before the reply is written.
-        let reply = match Ask::read(r) {
-            Ok(Ask::Draw {
-                id,
-                codec,
-                side,
-                bytes,
-            }) => pixels(id, guard(|| draw(codec, &bytes, side))),
-            Ok(Ask::Dib {
-                id,
-                max_bytes,
-                bytes,
-            }) => made(id, guard(|| make(&bytes, cap(max_bytes)))),
-            Ok(Ask::Bye) | Err(IpcError::Closed) => return Ok(()),
+        let ask = match A::next(r) {
+            Ok(ask) => ask,
+            Err(IpcError::Closed) => return Ok(()),
             Err(e) => return Err(e),
         };
-        reply.write(w)?;
+        let Some(id) = ask.id() else {
+            return Ok(());
+        };
+        // The ask's bytes drop inside `work`, before the reply is written.
+        let reply = panic::catch_unwind(AssertUnwindSafe(|| work(ask)));
+        send(w, &reply.unwrap_or_else(|_| A::Reply::internal(id)), id)?;
     }
 }
 
-/// Keeps a draw's panic off stderr: its reply says `Internal`, and its message and place are never written.
+/// Writes `reply`, or an internal failure in its place when it fails its own checks.
+fn send<T: Answer, W: Write + ?Sized>(w: &mut W, reply: &T, id: u32) -> Result<(), IpcError> {
+    match reply.send(w) {
+        Err(IpcError::Io(kind)) => Err(IpcError::Io(kind)),
+        Err(_) => T::internal(id).send(w),
+        Ok(()) => Ok(()),
+    }
+}
+
+/// Keeps an ask's panic off stderr: its reply says it failed inside, and its message and place are never written.
 fn hush() {
     panic::set_hook(Box::new(|_| {}));
-}
-
-/// Runs `work`, taking a panic as an internal failure.
-fn guard<T>(work: impl FnOnce() -> Result<T, Why>) -> Result<T, Why> {
-    panic::catch_unwind(AssertUnwindSafe(work)).unwrap_or(Err(Why::Internal))
-}
-
-/// The most bytes a DIB may hold, as asked; the frame keeps it within `MAX_IMAGE_BYTES`.
-fn cap(max_bytes: u32) -> usize {
-    usize::try_from(max_bytes).unwrap_or(usize::MAX)
-}
-
-/// The reply to draw `id`: its pixels, or why there are none.
-fn pixels(id: u32, outcome: Result<Picture, Why>) -> Reply {
-    match outcome {
-        Ok(p) => Reply::Pixels {
-            id,
-            width: p.width,
-            height: p.height,
-            rgba: p.rgba,
-        },
-        Err(why) => Reply::Failed { id, why },
-    }
-}
-
-/// The reply to DIB ask `id`: its bytes, or why there are none.
-fn made(id: u32, outcome: Result<Vec<u8>, Why>) -> Reply {
-    match outcome {
-        Ok(bytes) => Reply::Dib { id, bytes },
-        Err(why) => Reply::Failed { id, why },
-    }
 }
 
 #[cfg(test)]

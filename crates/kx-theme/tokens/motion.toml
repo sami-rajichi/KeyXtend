@@ -59,6 +59,15 @@ highlight = { ms = 167, curve = "swift" }
 swap = { ms = 180, curve = "swift" }
 turn = { ms = 180, curve = "swift" }
 
+# Quick-fill: the highlight glides and a new or turned row rises in as the clipboard's do, a new page rises in as a panel
+# pops in (.pop popIn .18s), and a shown value fades in at WinUI's ControlFastAnimationDuration.
+[fill]
+highlight = { ms = 167, curve = "swift" }
+swap = { ms = 180, curve = "swift" }
+turn = { ms = 180, curve = "swift" }
+sheet = { ms = 180, curve = "swift" }
+reveal = { ms = 167, curve = "ease_out" }
+
 [amount]
 # A pulse dims to this opacity halfway; a recording cap brightens by this factor halfway (.key.rec).
 pulse_low = 0.35

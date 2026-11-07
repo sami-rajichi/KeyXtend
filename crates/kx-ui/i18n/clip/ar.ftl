@@ -61,6 +61,7 @@ clip =
     .size-unknown = الحجم غير معروف
     .storage = المحفوظات: { $used } من { $cap } · { $free } متوفرة على { $drive }
     .open-folder = فتح المجلد
+    .no-folder = لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.
     .meta = { $when } · { $size } · { $app }
     .meta-bare = { $when } · { $size }
     .chars = { $form ->

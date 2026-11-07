@@ -84,6 +84,9 @@ QtObject {
     function panelKey(id) {
         return note("panelKey " + id);
     }
+    function aimPanel() {
+        return note("aimPanel");
+    }
     function pad(dir) {
         return note("pad " + dir);
     }

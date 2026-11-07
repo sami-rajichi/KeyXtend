@@ -24,9 +24,9 @@ dpad = { cell = [1, 2, 2, 4], units = 2.44 }
 rows = [
     # A role says what a click does: "send" its scan code, "caps", { latch = "shift" | "ctrl" | "alt" | "altgr" | "win" },
     # "lang", { assist = "rclick" | "grab" } (flips a mouse-assist mode, spec §5.1), "layer" (shows or hides the
-    # shortcuts layer, spec §4.2), "power" (asks for the system's power dialog, spec §8.5) and "clip" (opens or closes
-    # the clipboard panel, spec §7), all side keys only, or "later" (dimmed, coming in a later version); "shortcut" and
-    # "next" are only for the layer's own keys.
+    # shortcuts layer, spec §4.2), "power" (asks for the system's power dialog, spec §8.5), "clip" (opens or closes
+    # the clipboard panel, spec §7) and "fill" (opens or closes the Quick-fill panel, spec §8.1), all side keys only, or
+    # "later" (dimmed, coming in a later version); "shortcut" and "next" are only for the layer's own keys.
     #
     # `repeat` makes a "send" key repeat while held (spec §4.6); character keys always do.
     # `lone = true` in a latch role makes a second click with nothing used since the first let go and send the key
@@ -35,8 +35,9 @@ rows = [
     # "advance" (the word ends and a new line or field starts) or { text = "..." }; any other send, or a chord, breaks.
     [
         # `nav` says what a key does while one of our panels is open (spec §3.3): "up", "down", "left", "right", "enter"
-        # or "esc"; such a click goes to the panel, never to the app. "tick" and "erase" go only to the clipboard panel,
-        # which takes the character keys too for its search (spec §7); every other key types as usual.
+        # or "esc"; such a click goes to the panel, never to the app. "tick", "erase" and "delete" go only to the clipboard
+        # and Quick-fill panels, which take the character keys too for their search or line (spec §7), and the language
+        # list does nothing with "delete"; every other key types as usual.
         { id = "esc", w = 1.0, kind = "danger", sc = 0x01, role = "send", nav = "esc" },
         { chars = [0x29, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D] },
         { id = "bksp", w = 2.0, kind = "danger", sc = 0x0E, role = "send", nav = "erase", repeat = true, tell = "erase" },
@@ -44,7 +45,7 @@ rows = [
     [
         { id = "tab", w = 1.5, kind = "mod", sc = 0x0F, role = "send", tell = "advance" },
         { chars = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x2B] },
-        { id = "del", w = 1.5, kind = "mod", sc = 0xE053, role = "send", repeat = true },
+        { id = "del", w = 1.5, kind = "mod", sc = 0xE053, role = "send", nav = "delete", repeat = true },
     ],
     [
         { id = "caps", w = 1.75, kind = "mod", sc = 0x3A, role = "caps" },
@@ -73,8 +74,8 @@ rows = [
 ]
 
 # Side keys by column and row (1-based). Right-click and Grab flip mouse assist, Shortcuts shows the layer, Clip opens the
-# clipboard panel and Power asks for the power dialog; the others come in a later version (owner, 2026-09-29), so they
-# are dimmed for now.
+# clipboard panel, Fill opens Quick-fill and Power asks for the power dialog; the others come in a later version (owner,
+# 2026-09-29), so they are dimmed for now.
 side = [
     { id = "rclick", col = 1, row = 1, role = { assist = "rclick" } },
     { id = "grab", col = 2, row = 1, role = { assist = "grab" } },
@@ -82,7 +83,7 @@ side = [
     { id = "mic", col = 3, row = 2, role = "later" },
     { id = "clip", col = 3, row = 3, role = "clip" },
     { id = "snip", col = 3, row = 4, role = "later" },
-    { id = "fill", col = 1, row = 5, role = "later" },
+    { id = "fill", col = 1, row = 5, role = "fill" },
     { id = "settings", col = 2, row = 5, role = "later" },
     { id = "power", col = 3, row = 5, role = "power" },
 ]
@@ -91,3 +92,7 @@ side = [
 # With more than one page, side cell `next` (column, row, 1-based) holds the Next key.
 [layer]
 next = [3, 5]
+
+# Quick-fill (spec §8.1): the main-row `send` key a fill's Tab part sends, alone, between a user and a password.
+[fill]
+tab = "tab"

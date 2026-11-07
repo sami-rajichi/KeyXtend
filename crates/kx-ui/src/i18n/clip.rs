@@ -2,7 +2,7 @@
 //! line, a row's time and meta line, and counted texts. Digits stay Western (ADR-0017), grouped by threes.
 
 use super::I18n;
-use super::compose::{clean, count, form};
+use super::compose::{FORM_VAR, clean, count, form};
 use super::keys::{
     CLIP_DATE, CLIP_DAY, CLIP_KEPT, CLIP_META, CLIP_META_BARE, CLIP_SIZE, CLIP_SIZE_GB,
     CLIP_SIZE_SMALL, CLIP_STORAGE, CLIP_TIME, CLIP_TODAY, CLIP_WHEN, CLIP_YESTERDAY, NUM_DECIMAL,
@@ -22,8 +22,6 @@ const GROUP: usize = 3;
 /// Days in a week: within one a weekday names the day, past it the date does.
 const WEEK: usize = Weekday::ALL.len();
 /// The variables the clipboard's texts take.
-const COUNT_VAR: &str = "count";
-const FORM_VAR: &str = "form";
 const DAYS_VAR: &str = "days";
 const MB_VAR: &str = "mb";
 const GB_VAR: &str = "gb";
@@ -74,11 +72,13 @@ impl I18n {
             n if n < WEEK => self.text(&format!("{CLIP_DAY}{}", when.date.weekday().number())),
             _ => return self.date(when.date),
         };
-        let time = self.with(
-            CLIP_TIME,
-            [(HOUR_VAR, pair(when.hour)), (MINUTE_VAR, pair(when.minute))],
-        );
-        self.with(CLIP_WHEN, [(WORD_VAR, word), (TIME_VAR, time)])
+        self.with(CLIP_WHEN, [(WORD_VAR, word), (TIME_VAR, self.time(when))])
+    }
+
+    /// The 24-hour time of `when`, as `clip.time` orders it, two digits each.
+    pub(super) fn time(&self, when: &When) -> String {
+        let args = [(HOUR_VAR, pair(when.hour)), (MINUTE_VAR, pair(when.minute))];
+        self.with(CLIP_TIME, args)
     }
 
     /// A row's line under its text: the app when known, the time and the size; an app of hidden marks alone is
@@ -95,11 +95,7 @@ impl I18n {
     /// The text of `key` with `$count` at `n`, grouped by threes, in the plural form `n` takes.
     #[must_use]
     pub fn counted(&self, key: &str, n: usize) -> String {
-        let mut values = FluentArgs::new();
-        let wide = u64::try_from(n).map_or(u128::MAX, u128::from);
-        values.set(COUNT_VAR, self.grouped(wide));
-        values.set(FORM_VAR, form(n));
-        self.format(key, Some(&values))
+        self.format(key, Some(&self.count_args(n)))
     }
 
     /// How long entries are kept: `days` calendar days.
@@ -112,7 +108,7 @@ impl I18n {
     }
 
     /// `date` as `clip.date` orders it, its day and month in two digits.
-    fn date(&self, date: Date) -> String {
+    pub(super) fn date(&self, date: Date) -> String {
         let args = [
             (DAY_VAR, pair(date.day())),
             (MONTH_VAR, pair(date.month())),
@@ -142,7 +138,7 @@ impl I18n {
     }
 
     /// `n` with the language's group mark before each three digits from the right.
-    fn grouped(&self, n: u128) -> String {
+    pub(super) fn grouped(&self, n: u128) -> String {
         let digits = n.to_string();
         let mark = self.text(NUM_GROUP);
         let mut out = String::new();
@@ -156,7 +152,11 @@ impl I18n {
     }
 
     /// The text of `key` with text arguments `args`.
-    fn with<const N: usize>(&self, key: &str, args: [(&'static str, String); N]) -> String {
+    pub(super) fn with<const N: usize>(
+        &self,
+        key: &str,
+        args: [(&'static str, String); N],
+    ) -> String {
         let mut values = FluentArgs::new();
         for (name, value) in args {
             values.set(name, FluentValue::from(value));

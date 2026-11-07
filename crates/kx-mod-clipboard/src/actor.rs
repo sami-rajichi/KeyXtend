@@ -8,6 +8,7 @@ mod edit;
 mod look;
 mod paste;
 mod show;
+mod take;
 mod watched;
 
 use std::collections::BTreeSet;
@@ -16,10 +17,10 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    Calendar, ClipAct, ClipNote, ClipPanel, ClipRun, ClipboardWriter, Date, HistoryWanted,
-    PanelKey, PanelNote, Pasted, Room, SealedShelf,
+    Calendar, ClipAct, ClipNote, ClipPanel, ClipRun, ClipTake, Clipboard, ClipboardWriter, Date,
+    HistoryWanted, PanelKey, PanelLine, PanelNote, Pasted, Room, SealedShelf,
 };
-use kx_module_api::{Bus, Clock, Event, Mono, Notice, NoticeArg, args, keys};
+use kx_module_api::{Bus, Clock, Event, Mono, Notice, Secret, keys};
 
 use crate::ID;
 use crate::follow::Follow;
@@ -49,6 +50,8 @@ pub(crate) enum Msg {
     Pasted(Pasted),
     /// A keyboard that starts later asks for the chord flag.
     HistoryAsk,
+    /// Quick-fill's Paste asks for the clipboard's text.
+    Take(ClipTake),
     /// The media thread drew a picture, or failed.
     Drawn(Drawn),
     /// The media thread made an insert's DIB, or failed.
@@ -72,6 +75,8 @@ impl From<Done> for Msg {
 pub(crate) struct Ports {
     /// The bus, limited to the module's grants.
     pub bus: Bus,
+    /// Reads the clipboard's text for a take; the watch runs on it too.
+    pub clip: Arc<dyn Clipboard>,
     /// Monotonic time, for the save, paste and midnight timers.
     pub clock: Arc<dyn Clock>,
     /// The wall time, for the days.
@@ -103,6 +108,8 @@ pub(crate) struct Actor {
     history: History,
     follow: Follow,
     panel: Panel,
+    /// The line last told, so only a change tells it again.
+    line: PanelLine,
     /// The ui told its rows per page, so views may show.
     rows_heard: bool,
     /// The calendar day the history was last swept on.
@@ -118,6 +125,8 @@ pub(crate) struct Actor {
     /// The open panel draws again after this message.
     redraw: bool,
     paste: Pasting,
+    /// The text of the last take that found no entry to forget, wiped once the next copy's note comes.
+    missed: Option<Secret>,
     /// The entries whose thumbnail was asked this run.
     asked: BTreeSet<u64>,
     /// The worker is down until then, so no thumbnail is asked before.
@@ -143,6 +152,7 @@ impl Actor {
             history: loaded.history,
             follow: settings.follow(),
             panel: Panel::new(settings.panel_config()),
+            line: PanelLine::None,
             rows_heard: false,
             today,
             room: None,
@@ -152,6 +162,7 @@ impl Actor {
             failing: false,
             redraw: false,
             paste: Pasting::default(),
+            missed: None,
             asked: BTreeSet::new(),
             thumbs_at: None,
             draws: Draws::default(),
@@ -207,6 +218,7 @@ impl Actor {
             Msg::Act(act) => self.act(act),
             Msg::Pasted(pasted) => self.pasted(pasted),
             Msg::HistoryAsk => self.history_again(),
+            Msg::Take(take) => self.take(take),
             Msg::Drawn(drawn) => self.drawn(drawn),
             Msg::Made(made) => self.made(made),
             Msg::Facts(facts) => self.facts(facts),
@@ -254,28 +266,20 @@ impl Actor {
         self.save();
         self.panel.close();
         self.publish(&ClipPanel { open: false });
+        self.tell_line(false);
         self.publish(&HistoryWanted { on: false });
     }
 
     /// Tells the user `key` once per run.
     fn say_once(&mut self, key: &'static str) {
         if self.told.insert(key) {
-            self.publish(&notice(key));
+            self.publish(&Notice::about(key, ID));
         }
     }
 
     /// Publishes `event`; a refusal is the bus's gate on a capability the module holds, so it never happens.
     fn publish<E: Event>(&self, event: &E) {
         let _ = self.ports.bus.publish(event);
-    }
-}
-
-/// The module's notice `key`, naming the module.
-pub(crate) fn notice(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
 }
 

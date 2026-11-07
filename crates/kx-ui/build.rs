@@ -6,16 +6,21 @@
 #[cfg(feature = "qt")]
 mod qtbuild;
 
+/// The QML module's file tables.
+#[cfg(feature = "qt")]
+mod qtfiles;
+
 fn main() {
     #[cfg(feature = "qt")]
     qt::build();
     println!("cargo::rerun-if-changed=build.rs");
 }
 
-/// The Qt build, with its file tables.
+/// The Qt build, over the file tables in `qtfiles`.
 #[cfg(feature = "qt")]
 mod qt {
     use super::qtbuild;
+    use super::qtfiles::{BRIDGES, DEBUG_QML, MOC, QML};
     use cxx_qt_build::{CxxQtBuilder, QResource, QResources, QmlModule};
     use kx_theme::SOUNDS_PATH;
     use kx_theme::assets::{Bundle, Bundled, ICON_EXT, SoundFile, bundle, icon_url};
@@ -24,109 +29,6 @@ mod qt {
 
     /// QML module URI; its files land under `qrc:/qt/qml/<uri as folders>/`.
     const URI: &str = "KeyXtend.Ui";
-    /// Every QML file of the module, one row each; the first is the root the app loads.
-    const QML: &[&str] = &[
-        "qml/main.qml",
-        "qml/App.qml",
-        "qml/KbWindow.qml",
-        "qml/KbRes.qml",
-        "qml/Spots.qml",
-        "qml/Rescale.qml",
-        "qml/Placing.qml",
-        "qml/Guard.qml",
-        "qml/Hold.qml",
-        "qml/Plate.qml",
-        "qml/TopBar.qml",
-        "qml/Chip.qml",
-        "qml/WordLane.qml",
-        "qml/WordNames.qml",
-        "qml/WordMenu.qml",
-        "qml/WordList.qml",
-        "qml/Key.qml",
-        "qml/KeyBlock.qml",
-        "qml/KeyText.qml",
-        "qml/CharLegends.qml",
-        "qml/SpaceText.qml",
-        "qml/NamedFace.qml",
-        "qml/LangFace.qml",
-        "qml/Legend.qml",
-        "qml/Rise.qml",
-        "qml/Swap.qml",
-        "qml/CapFace.qml",
-        "qml/Inset.qml",
-        "qml/Led.qml",
-        "qml/DPad.qml",
-        "qml/Stop.qml",
-        "qml/Corner.qml",
-        "qml/Mover.qml",
-        "qml/Catch.qml",
-        "qml/Bubble.qml",
-        "qml/Glow.qml",
-        "qml/Tip.qml",
-        "qml/Hover.qml",
-        "qml/Label.qml",
-        "qml/Icon.qml",
-        "qml/Shade.qml",
-        "qml/Soft.qml",
-        "qml/Tween.qml",
-        "qml/ColourTween.qml",
-        "qml/PopIn.qml",
-        "qml/LangCycle.qml",
-        "qml/PageDots.qml",
-        "qml/PageButton.qml",
-        "qml/Pager.qml",
-        "qml/LangList.qml",
-        "qml/LangPanel.qml",
-        "qml/LangRow.qml",
-        "qml/ClipNames.qml",
-        "qml/KbClip.qml",
-        "qml/ClipPanel.qml",
-        "qml/ClipBox.qml",
-        "qml/ClipHead.qml",
-        "qml/ClipNote.qml",
-        "qml/ClipSearch.qml",
-        "qml/ClipFilters.qml",
-        "qml/ClipList.qml",
-        "qml/ClipRow.qml",
-        "qml/ClipTick.qml",
-        "qml/ClipThumb.qml",
-        "qml/ClipButton.qml",
-        "qml/ClipFoot.qml",
-        "qml/ClipRoom.qml",
-        "qml/ClipConfirm.qml",
-        "qml/ClipPreview.qml",
-        "qml/ClipText.qml",
-        "qml/ClipFiles.qml",
-        "qml/Notice.qml",
-        "qml/TrayMenu.qml",
-        "qml/TrayPicture.qml",
-        "qml/PressWatch.qml",
-        "qml/Act.qml",
-        "qml/PressFrame.qml",
-        "qml/KbWakes.qml",
-        "qml/AssistRead.qml",
-        "qml/Overlay.qml",
-        "qml/HoldRing.qml",
-        "qml/Badge.qml",
-        "qml/Outline.qml",
-        "qml/Edge.qml",
-    ];
-    /// QML files only debug builds hold: the memory check's churn.
-    const DEBUG_QML: &[&str] = &["qml/Churn.qml"];
-    /// The Rust files holding cxx-qt bridges.
-    const BRIDGES: &[&str] = &[
-        "src/bridges/ui.rs",
-        "src/bridges/keyboard.rs",
-        "src/bridges/harden.rs",
-        "src/bridges/device.rs",
-        "src/bridges/fonts.rs",
-        "src/bridges/tint.rs",
-        "src/bridges/shadows.rs",
-        "src/bridges/frames.rs",
-        "src/bridges/clip.rs",
-    ];
-    /// The hand-written C++ `QObject` classes, which moc reads: the soft shadows' adopter.
-    const MOC: &[&str] = &["cpp/shadows.h"];
     /// Qt modules the hand-written C++ links beside those cxx-qt-lib brings: Quick, for the windows' graphics device.
     const QT_MODULES: &[&str] = &["Quick"];
     /// qmake's key for Qt's header folder: `rhi/qrhi.h` sits under `<headers>/QtGui/<version>/QtGui`.

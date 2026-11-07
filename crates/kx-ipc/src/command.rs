@@ -4,6 +4,8 @@
 pub const MEDIA_JOB: &str = "media";
 /// The flag before the most pixels an image may hold.
 pub const MAX_PIXELS_FLAG: &str = "--max-pixels";
+/// The job that makes padlocks, seals and opens boxes and reads `KeePass` files, alone on its command line.
+pub const VAULT_JOB: &str = "vault";
 /// The exit code after goodbye or the end of input; every OS reads 0 as success.
 pub const CLEAN_EXIT: u8 = 0;
 /// The exit code after a refused command line or a broken frame.

@@ -80,7 +80,7 @@ fn predict_starts_with_the_box_watch_and_the_sealed_store_and_quit_ends_its_watc
         heard,
         ..
     } = boot;
-    let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
+    let thread = drain::spawn(kernel, Arc::clone(&hub), requests, None).unwrap();
     assert!(hub.quit());
     thread.join().unwrap();
     assert!(!rig.field.watching(), "Quit ended the watch");
@@ -126,7 +126,7 @@ fn with_predict_switched_off_nothing_watches_the_box_or_opens_a_pack() {
     assert_eq!(rig.field.watches(), 0, "no box watch");
     assert_eq!(rig.packs.opens(&front(&rig).iso), 0, "no pack");
     assert_eq!(rig.sealed.loads(), 0, "no sealed file");
-    let thread = drain::spawn(boot.kernel, Arc::clone(&boot.hub), boot.requests).unwrap();
+    let thread = drain::spawn(boot.kernel, Arc::clone(&boot.hub), boot.requests, None).unwrap();
     assert!(boot.hub.quit(), "Quit still reaches the kernel's thread");
     thread.join().unwrap();
 }

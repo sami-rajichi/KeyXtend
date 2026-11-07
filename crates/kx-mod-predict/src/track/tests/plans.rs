@@ -73,12 +73,12 @@ fn email_plans_type_the_rest_and_an_at_at_is_erased() {
     let gm = EmailAsk::Domains(Redacted::new("gm".to_owned()));
     let domain = (0, "gm".to_owned(), "ail.com".to_owned());
     assert_eq!(ask(gm, "gmail.com"), Some(domain));
-    let sam = EmailAsk::Start(Redacted::new("sam".to_owned()));
-    let start = (0, "sam".to_owned(), "i@x.org".to_owned());
-    assert_eq!(ask(sam, "sami@x.org"), Some(start));
-    let cap = EmailAsk::Start(Redacted::new("Sam".to_owned()));
-    let whole = (3, "Sam".to_owned(), "sami@x.org".to_owned());
-    assert_eq!(ask(cap, "sami@x.org"), Some(whole));
+    let ale = EmailAsk::Start(Redacted::new("ale".to_owned()));
+    let start = (0, "ale".to_owned(), "x@x.org".to_owned());
+    assert_eq!(ask(ale, "alex@x.org"), Some(start));
+    let cap = EmailAsk::Start(Redacted::new("Ale".to_owned()));
+    let whole = (3, "Ale".to_owned(), "alex@x.org".to_owned());
+    assert_eq!(ask(cap, "alex@x.org"), Some(whole));
 }
 
 #[test]
@@ -87,9 +87,9 @@ fn a_plan_still_names_its_whole_chip() {
     type_text(&mut t, "hEl");
     let plan = t.show(&knows).words.unwrap().plan("help").unwrap();
     assert_eq!(plan.chip().expose(), "help ");
-    let sam = EmailAsk::Start(Redacted::new("Sam".to_owned()));
-    let whole = sam.plan("sami@x.org").unwrap().chip();
-    assert_eq!(whole.expose(), "sami@x.org");
+    let ale = EmailAsk::Start(Redacted::new("Ale".to_owned()));
+    let whole = ale.plan("alex@x.org").unwrap().chip();
+    assert_eq!(whole.expose(), "alex@x.org");
     let gm = EmailAsk::Domains(Redacted::new("gm".to_owned()));
     assert_eq!(gm.plan("gmail.com").unwrap().chip().expose(), "gmail.com");
 }
@@ -120,11 +120,11 @@ fn after_a_word_pick_the_tracker_holds_the_chip_word() {
 #[test]
 fn after_an_email_pick_the_tracker_holds_the_whole_address() {
     let mut t = tracker(2);
-    type_text(&mut t, "sami@gm");
+    type_text(&mut t, "alex@gm");
     let ask = t.show(&knows).emails.unwrap();
     apply(&mut t, &ask.plan("gmail.com").unwrap());
     let told = type_text(&mut t, " ");
-    assert_eq!(told, [mail("sami@gmail.com")]);
+    assert_eq!(told, [mail("alex@gmail.com")]);
     let mut t = tracker(2);
     type_text(&mut t, "to @@");
     let ask = t.show(&knows).emails.unwrap();

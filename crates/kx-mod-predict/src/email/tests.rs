@@ -3,21 +3,26 @@
 use super::*;
 
 /// The settings' defaults, as the module fills them.
-fn cfg() -> EmailConfig {
+pub(super) fn cfg() -> EmailConfig {
     let settings = crate::settings::PredictSettings::from_defaults().unwrap();
     settings.email_config()
 }
 
 /// Each chip's text and kind.
-fn seen(chips: &[Chip]) -> Vec<(&str, ChipKind)> {
+pub(super) fn seen(chips: &[Chip]) -> Vec<(&str, ChipKind)> {
     chips
         .iter()
         .map(|c| (c.text.expose().as_str(), c.kind))
         .collect()
 }
 
+/// The typed `emails` as the lane offers them, with no notebook.
+fn typed(emails: &Emails) -> Offer<'_> {
+    Offer::new(emails, None)
+}
+
 /// Known emails added oldest first, so the last is the most recent.
-fn known(emails: &[&str]) -> Emails {
+pub(super) fn known(emails: &[&str]) -> Emails {
     let mut known = Emails::default();
     for e in emails {
         assert!(known.add(e, cfg().max_emails), "{e}");
@@ -55,16 +60,16 @@ fn only_local_at_domain_dot_tld_looks_like_an_email() {
 
 #[test]
 fn an_arabic_address_looks_like_an_email_and_its_chip_shows_it() {
-    let email = "سامي@مثال.شبكة";
+    let email = "أليكس@مثال.شبكة";
     assert!(looks_like(email));
-    let chips = known(&[email]).all(cfg().domains.len());
+    let chips = typed(&known(&[email])).all(cfg().domains.len());
     assert!(chips.first().is_some_and(|c| c.text.expose() == email));
 }
 
 #[test]
 fn the_tail_is_the_email_like_end_of_a_token() {
-    assert_eq!(tail("mailto:sami@x.org"), "sami@x.org");
-    assert_eq!(tail("(sami.r"), "sami.r");
+    assert_eq!(tail("mailto:alex@x.org"), "alex@x.org");
+    assert_eq!(tail("(alex.r"), "alex.r");
     assert_eq!(tail("hello,"), "");
 }
 
@@ -72,23 +77,23 @@ fn the_tail_is_the_email_like_end_of_a_token() {
 fn a_capture_takes_the_run_around_the_at_sign_less_the_trailing_marks() {
     assert_eq!(capture("o'brien@x.com"), Some("o'brien@x.com"));
     let wrapped = [
-        "sami@x.org.",
-        "sami@x.org,",
-        "(sami@x.org)",
-        "<sami@x.org>",
-        "mailto:sami@x.org",
-        "sami@x.org;bob@y.org",
+        "alex@x.org.",
+        "alex@x.org,",
+        "(alex@x.org)",
+        "<alex@x.org>",
+        "mailto:alex@x.org",
+        "alex@x.org;bob@y.org",
     ];
     for token in wrapped {
-        assert_eq!(capture(token), Some("sami@x.org"), "{token}");
+        assert_eq!(capture(token), Some("alex@x.org"), "{token}");
     }
-    assert_eq!(capture("سامي@مثال.شبكة»"), Some("سامي@مثال.شبكة"));
+    assert_eq!(capture("أليكس@مثال.شبكة»"), Some("أليكس@مثال.شبكة"));
     assert_eq!(capture("a@b@c.co"), None);
     assert_eq!(capture("hello"), None);
 }
 
 #[test]
-fn sami_at_g_lists_gmail_first_and_never_the_domain_already_typed() {
+fn alex_at_g_lists_gmail_first_and_never_the_domain_already_typed() {
     let cfg = cfg();
     let lane = cfg.domains.len();
     assert_eq!(
@@ -109,26 +114,26 @@ fn sami_at_g_lists_gmail_first_and_never_the_domain_already_typed() {
 #[test]
 fn the_start_of_a_known_email_shows_it_from_two_characters_and_before_any_at() {
     let cfg = cfg();
-    let emails = known(&["sami@x.org"]);
+    let emails = known(&["alex@x.org"]);
     let lane = cfg.domains.len();
     assert_eq!(
-        seen(&emails.starting("sa", &cfg, lane)),
-        [("sami@x.org", ChipKind::Email)]
+        seen(&typed(&emails).starting("al", &cfg, lane)),
+        [("alex@x.org", ChipKind::Email)]
     );
     assert_eq!(
-        seen(&emails.starting("SA", &cfg, lane)),
-        [("sami@x.org", ChipKind::Email)]
+        seen(&typed(&emails).starting("AL", &cfg, lane)),
+        [("alex@x.org", ChipKind::Email)]
     );
-    assert!(emails.starting("s", &cfg, lane).is_empty());
-    assert!(emails.starting("sami@", &cfg, lane).is_empty());
-    assert!(emails.starting("sami@x.org", &cfg, lane).is_empty());
-    assert!(emails.starting("so", &cfg, lane).is_empty());
+    assert!(typed(&emails).starting("a", &cfg, lane).is_empty());
+    assert!(typed(&emails).starting("alex@", &cfg, lane).is_empty());
+    assert!(typed(&emails).starting("alex@x.org", &cfg, lane).is_empty());
+    assert!(typed(&emails).starting("ax", &cfg, lane).is_empty());
 }
 
 #[test]
 fn a_typed_at_at_lists_known_emails_most_recent_first_with_more_past_the_lane() {
     let emails = known(&["a@x.co", "b@x.co", "c@x.co", "d@x.co", "e@x.co", "f@x.co"]);
-    let chips = emails.all(4);
+    let chips = typed(&emails).all(4);
     let expected = [
         ("f@x.co", ChipKind::Email),
         ("e@x.co", ChipKind::Email),
@@ -136,9 +141,14 @@ fn a_typed_at_at_lists_known_emails_most_recent_first_with_more_past_the_lane() 
         ("", ChipKind::More),
     ];
     assert_eq!(seen(&chips), expected);
-    assert_eq!(emails.all(6).len(), 6);
-    assert!(emails.all(6).iter().all(|c| c.kind == ChipKind::Email));
-    assert!(emails.all(0).is_empty());
+    assert_eq!(typed(&emails).all(6).len(), 6);
+    assert!(
+        typed(&emails)
+            .all(6)
+            .iter()
+            .all(|c| c.kind == ChipKind::Email)
+    );
+    assert!(typed(&emails).all(0).is_empty());
 }
 
 #[test]
@@ -167,11 +177,14 @@ fn a_known_email_is_removed_in_any_case_and_an_unknown_one_changes_nothing() {
 fn the_first_emails_show_with_no_more_chip_and_kept_keeps_the_order() {
     let emails = known(&["a@x.co", "b@x.co", "c@x.co"]);
     assert_eq!(
-        seen(&emails.first(2)),
+        seen(&typed(&emails).first(2)),
         [("c@x.co", ChipKind::Email), ("b@x.co", ChipKind::Email)]
     );
-    let kept = emails.kept(|e| e != "b@x.co");
-    assert_eq!(kept.list(), ["c@x.co", "a@x.co"]);
+    let kept = typed(&emails).kept(|e| e != "b@x.co");
+    assert_eq!(
+        seen(&kept.all(3)),
+        [("c@x.co", ChipKind::Email), ("a@x.co", ChipKind::Email)]
+    );
 }
 
 #[test]
@@ -192,15 +205,15 @@ fn the_list_pages_by_rows_and_a_page_past_the_end_shows_the_last() {
     for i in 0..12 {
         emails.add(&format!("u{i}@x.co"), cfg().max_emails);
     }
-    let first = emails.page(0, 5);
+    let first = typed(&emails).page(0, 5);
     assert_eq!((first.page, first.pages, first.items.len()), (0, 3, 5));
     assert_eq!(
-        first.items.first().map(|e| e.expose().as_str()),
+        first.items.first().map(|e| e.text.expose().as_str()),
         Some("u11@x.co")
     );
-    let last = emails.page(9, 5);
+    let last = typed(&emails).page(9, 5);
     assert_eq!((last.page, last.items.len()), (2, 2));
-    let empty = Emails::default().page(0, 5);
+    let empty = typed(&Emails::default()).page(0, 5);
     assert_eq!((empty.page, empty.pages, empty.items.len()), (0, 1, 0));
 }
 

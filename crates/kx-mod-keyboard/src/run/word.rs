@@ -106,7 +106,7 @@ impl Typing {
     /// True when a word may go: no shortcut latch is on (Ctrl, Alt, Win, or `AltGr` as Right Alt on a layout with no
     /// `AltGr` characters), no dead key waits, the text holds no hidden mark, both parts fit `text_cap` in characters
     /// (`TypeWord::fits`), it asks for something, and the board has a key to erase with.
-    fn takes(&self, io: &Io<'_>, erase: u16, text: &str) -> bool {
+    pub fn takes(&self, io: &Io<'_>, erase: u16, text: &str) -> bool {
         let free = !LegendMods::shortcut(&self.latches, &io.table.keys) && !self.dead;
         let plain = !text.chars().any(is_hidden);
         let fits = TypeWord::fits(erase, text, self.cap);

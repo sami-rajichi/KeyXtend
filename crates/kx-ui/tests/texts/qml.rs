@@ -246,8 +246,9 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
     written.push(fixture("words.js".into(), &words()));
     let order = var("texts", &crate::filled::order(), true);
     written.push(fixture("order.js".into(), &format!("{HEAD}{order}")));
-    // The clipboard views are checked by their own test, so blessing them touches no other fixture.
+    // The clipboard and Quick-fill views are checked by their own tests, so blessing them touches no other fixture.
     written.push(crate::clipview::FILE.into());
+    written.push(crate::fillview::FILE.into());
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()

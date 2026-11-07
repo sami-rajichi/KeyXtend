@@ -1,0 +1,8 @@
+# What a KeePass import reads (design "Import"). `ext` is the file's extension, which the folder list offers; the other
+# keys name the labels in `labels.toml` that the file's User, Password, URL and Notes strings go under.
+
+ext = "kdbx"
+user = "user"
+password = "password"
+website = "website"
+text = "text"

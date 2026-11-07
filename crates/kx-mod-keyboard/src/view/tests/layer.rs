@@ -59,7 +59,8 @@ fn with(l: &Layer) -> StateView {
         scroll: ScrollChanged::OFF,
         layer: l,
         power: PowerChanged::OFF,
-        clip: false,
+        fill: FillLive::OFF,
+        panel: None,
     };
     state_with(&none(), false, None, &others)
 }

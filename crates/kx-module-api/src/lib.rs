@@ -1,10 +1,11 @@
 //! The contract between the kernel and feature modules: ids, manifests, services, events, settings, notices, time,
-//! redaction, hidden marks, the script blocks, the ports (service traits) in `ports`, and folding in `text`.
-//! Modules depend on this crate and on nothing else in the workspace.
+//! redaction, hidden marks, the script blocks, the ports (service traits) in `ports`, folding in `text` and a panel
+//! line's caret in `caret`. Modules depend on this crate and on nothing else in the workspace.
 
 #![forbid(unsafe_code)]
 
 mod capability;
+pub mod caret;
 mod clock;
 mod cx;
 mod error;
@@ -29,9 +30,14 @@ pub use event::{Bus, BusCore, Event, Flow, InterceptFn, NotifyFn, Subscription, 
 pub use handle::{SettingsHandle, SettingsSink};
 pub use ids::{ModuleId, ServiceId};
 pub use manifest::{Manifest, Module};
-pub use marks::{HIDDEN_MARKS, INVISIBLE, is_hidden};
-pub use notice::{ModuleState, ModuleStateChanged, Notice, NoticeArg, SettingsChanged, args, keys};
-pub use redacted::{REDACTED_MARKER, Redacted};
+pub use marks::{HIDDEN_MARKS, INVISIBLE, LINE_BREAKS, is_hidden};
+pub use notice::{
+    ModuleState, ModuleStateChanged, Notice, NoticeAnswered, NoticeArg, NoticeAsk, SettingsChanged,
+    args, keys,
+};
+pub use redacted::{REDACTED_MARKER, Redacted, Secret, SecretBytes};
 pub use script::{ARABIC_BLOCKS, RTL_BLOCKS, is_arabic, is_rtl};
 pub use service::ServiceKey;
-pub use settings::{Migration, Settings, SettingsSpec, parse_as, validate_as, within};
+pub use settings::{Migration, Settings, SettingsSpec, parse_as, refuse_if, validate_as, within};
+/// The wiping wrapper inside `Secret`, so a module makes one without naming `zeroize` itself.
+pub use zeroize::Zeroizing;

@@ -44,13 +44,17 @@ impl Kernel {
     /// The choice is saved in `[kernel] disabled`.
     ///
     /// # Errors
-    /// `WrongPhase` unless running, `Reserved` for the kernel, `Unknown` or the store's refusal.
+    /// `WrongPhase` unless running, `Reserved` for the kernel, `Unknown`, `KeptOff` to switch on what a fresh run keeps
+    /// off, or the store's refusal.
     pub fn set_enabled(&mut self, id: ModuleId, on: bool) -> Result<(), KernelError> {
         self.expect(Phase::Running)?;
         if id == KERNEL {
             return Err(KernelError::Reserved(id));
         }
         let at = self.find(id).ok_or(KernelError::Unknown(id))?;
+        if on && self.fresh.as_ref().is_some_and(|off| off.contains(&id)) {
+            return Err(KernelError::KeptOff(id));
+        }
         let mut list = self.disabled();
         let listed = switched_off(&list, id);
         if on {

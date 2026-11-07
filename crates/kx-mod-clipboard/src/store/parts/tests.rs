@@ -25,7 +25,7 @@ fn every_kind() -> Vec<ClipPart> {
             codec: ImageCodec::Dib,
             bytes: bytes(&[]),
         },
-        files(&["C:\\Users\\Sami\\Desktop\\تقرير.pdf", "D:\\a b"]),
+        files(&["C:\\Users\\Alex\\Desktop\\تقرير.pdf", "D:\\a b"]),
     ]
 }
 

@@ -8,17 +8,19 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
-    CalendarKey, ClipAct, ClipError, ClipKey, ClipOpen, ClipPanel, Clipboard, ClipboardKey,
-    ClipboardWriterKey, HistoryAsk, HistoryWanted, Pasted, Pictures, PicturesKey, SealedError,
-    SealedShelfKey,
+    CalendarKey, ClipAct, ClipError, ClipKey, ClipOpen, ClipPanel, ClipTake, Clipboard,
+    ClipboardKey, ClipboardWriterKey, HistoryAsk, HistoryWanted, Pasted, Pictures, PicturesKey,
+    SealedError, SealedShelfKey,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
+use kx_module_api::{
+    Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
+};
 
-use crate::MANIFEST;
-use crate::actor::{Actor, Msg, Ports, Watched, notice};
+use crate::actor::{Actor, Msg, Ports, Watched};
 use crate::media::{Look, Task, spawn_files, spawn_media};
 use crate::settings::ClipSettings;
 use crate::store::{Store, StoreError};
+use crate::{ID, MANIFEST};
 
 /// The actor thread's name, as a debugger shows it.
 const THREAD: &str = "kx-clip";
@@ -74,6 +76,7 @@ impl Module for ClipboardModule {
         relays(cx, &tx)?;
         let ports = Ports {
             bus: cx.bus(),
+            clip: Arc::clone(&clip),
             clock: cx.clock(),
             calendar,
             shelf: sealed,
@@ -130,7 +133,7 @@ fn run_actor(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
         // The module holds every gate these need, so none is refused.
         let _ = bus.publish(&ClipPanel { open: false });
         let _ = bus.publish(&HistoryWanted { on: false });
-        let _ = bus.publish(&notice(keys::MODULE_FAILED));
+        let _ = bus.publish(&Notice::about(keys::MODULE_FAILED, ID));
         resume_unwind(panic);
     }
 }
@@ -186,12 +189,13 @@ fn sender<T: 'static>(tx: &Sender<Msg>, msg: fn(T) -> Msg) -> impl Fn(T) + Send 
     move |t| drop(tx.send(msg(t)))
 }
 
-/// Hands the panel's and the keyboard's events to the actor.
+/// Hands the panel's, the keyboard's and Quick-fill's events to the actor.
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &ClipOpen| Msg::Open)?;
     relay(cx, tx, |e: &ClipKey| Msg::Key(e.0.clone()))?;
     relay(cx, tx, |e: &ClipAct| Msg::Act(*e))?;
     relay(cx, tx, |e: &Pasted| Msg::Pasted(*e))?;
+    relay(cx, tx, |e: &ClipTake| Msg::Take(*e))?;
     relay(cx, tx, |_: &HistoryAsk| Msg::HistoryAsk)
 }
 

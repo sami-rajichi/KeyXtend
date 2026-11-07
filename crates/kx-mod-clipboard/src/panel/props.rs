@@ -1,9 +1,14 @@
 //! Property test: random keys, clicks, copies, pins and deletes never panic, keep the highlight inside the list, the
-//! ticks dense and in their order, the question's count right and the page inside its bounds.
+//! ticks dense and in their order, the question's count right, the page inside its bounds and the caret inside its
+//! line, and a caret moves no list.
 
-use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipAct, ClipPage, Filter, PanelKey, Preview};
+mod steps;
+
+use kx_module_api::ports::{ClipAct, ClipPage, Filter, PanelLine, Preview};
+use kx_module_api::{Redacted, caret};
 use proptest::prelude::*;
+
+use self::steps::{Step, step};
 
 use super::rig::{PANEL, now};
 use super::*;
@@ -22,8 +27,6 @@ const MAX_ROWS: usize = 6;
 const MAX_START: usize = 14;
 /// The most entries a run keeps, so copies stop there.
 const MAX_KEPT: usize = 24;
-/// The highest row a click names, past any page.
-const MAX_ROW: u8 = 8;
 /// What the copies hold, so searches find some: accents, alef forms, a link and plain words.
 const WORDS: [&str; 8] = [
     "école",
@@ -35,73 +38,6 @@ const WORDS: [&str; 8] = [
     "https://a.example",
     "rapport",
 ];
-/// What the search line gets typed.
-const TYPED: [&str; 7] = ["e", "é", "ا", "أ", "o", " ", "x"];
-/// One thing that happens while the panel is open.
-#[derive(Debug, Clone)]
-enum Step {
-    /// A key from our keyboard.
-    Key(PanelKey),
-    /// A click other than a tick.
-    Act(ClipAct),
-    /// A tick on row `row` of the last view, or of an older one when `stale`.
-    Tick {
-        /// It names an older view.
-        stale: bool,
-        /// The row clicked.
-        row: u8,
-    },
-    /// A new copy of word `n`, wrapped.
-    Copy(usize),
-    /// The entry at this place, wrapped, leaves, as follow-the-clear or a sweep does.
-    Remove(usize),
-    /// The entry at this place, wrapped, is pinned or unpinned from elsewhere.
-    Pin(usize),
-}
-
-/// Any key.
-fn key() -> impl Strategy<Value = PanelKey> {
-    let typed = prop::sample::select(TYPED.to_vec());
-    prop_oneof![
-        2 => Just(PanelKey::Up),
-        3 => Just(PanelKey::Down),
-        1 => Just(PanelKey::Left),
-        1 => Just(PanelKey::Right),
-        1 => Just(PanelKey::Enter),
-        1 => Just(PanelKey::Esc),
-        3 => Just(PanelKey::Tick),
-        1 => Just(PanelKey::Erase),
-        2 => typed.prop_map(|t| PanelKey::Text(Redacted::new(t.to_owned()))),
-    ]
-}
-
-/// Any click but a tick.
-fn act() -> impl Strategy<Value = ClipAct> {
-    prop_oneof![
-        prop::sample::select(Filter::ORDER.to_vec()).prop_map(ClipAct::Filter),
-        any::<bool>().prop_map(|back| ClipAct::Page { back }),
-        Just(ClipAct::Insert),
-        Just(ClipAct::Pin),
-        Just(ClipAct::Delete),
-        Just(ClipAct::DeleteAll),
-        any::<bool>().prop_map(ClipAct::Confirm),
-        Just(ClipAct::Preview),
-        Just(ClipAct::Back),
-        Just(ClipAct::Close),
-    ]
-}
-
-/// Any step.
-fn step() -> impl Strategy<Value = Step> {
-    prop_oneof![
-        6 => key().prop_map(Step::Key),
-        4 => act().prop_map(Step::Act),
-        3 => (any::<bool>(), 0..MAX_ROW).prop_map(|(stale, row)| Step::Tick { stale, row }),
-        1 => any::<usize>().prop_map(Step::Copy),
-        1 => any::<usize>().prop_map(Step::Remove),
-        1 => any::<usize>().prop_map(Step::Pin),
-    ]
-}
 
 /// A run: the history, the panel, the last view's round.
 struct Run {
@@ -210,6 +146,7 @@ impl Run {
         let view = build(&mut self.panel, &self.history, &facts, &LIMITS, |_| None);
         self.round = view.0.round;
         self.pages(&view.0)?;
+        self.line(&view.0)?;
         self.ticks(&view.0, before)?;
         let free = unpinned(&self.history);
         prop_assert_eq!(usize::from(view.0.unpinned), free.len());
@@ -220,6 +157,34 @@ impl Run {
         prop_assert!(previewed.is_none_or(|id| self.history.get(id).is_some()));
         prop_assert_eq!(view.0.preview.is_some(), previewed.is_some());
         Ok(())
+    }
+
+    /// The line keeps its cap and its caret inside it, on a char boundary.
+    fn line(&self, page: &ClipPage) -> Result<(), TestCaseError> {
+        let text = page.search.expose();
+        prop_assert!(text.chars().count() <= PANEL.query_chars);
+        prop_assert!(text.is_char_boundary(*self.panel.caret.expose()));
+        prop_assert!(*page.caret.expose() <= caret::units(text, text.len()));
+        Ok(())
+    }
+
+    /// True when `step` only moves the caret: the list shows with no question and its line draws text.
+    fn moves_caret_only(&self, step: &Step) -> bool {
+        let aimed = matches!(self.panel.line(), PanelLine::Search(_));
+        aimed && step.is_caret() && !caret::empty(self.panel.query().expose())
+    }
+
+    /// What a caret must not move: the filter, the search's text, the highlight and the list.
+    fn list_of(&mut self) -> (Filter, String, Option<usize>, Vec<u64>) {
+        let list = self.panel.list(&self.history);
+        let hi = self.panel.highlight(&list);
+        let ids = list.iter().map(|e| e.id).collect();
+        (
+            self.panel.filter(),
+            self.panel.query().expose().clone(),
+            hi,
+            ids,
+        )
     }
 
     /// The page is the right slice of the list, and the highlight is on it.
@@ -284,9 +249,13 @@ proptest! {
                 all.sort_unstable();
                 all
             });
+            let held = run.moves_caret_only(step).then(|| run.list_of());
             let done = run.apply(step);
             run.follow(done, asked.as_deref())?;
             run.check(&before)?;
+            if let Some(held) = held {
+                prop_assert_eq!(run.list_of(), held, "a caret moves no list");
+            }
         }
     }
 }

@@ -1,10 +1,12 @@
 //! The keyboard module over a small host: its start, the size and place it writes back, typing, and its face.
 
+mod aim;
 mod assist;
 mod bursts;
 mod clip;
 mod edges;
 mod face;
+mod fill;
 mod fit;
 mod golden;
 mod held;

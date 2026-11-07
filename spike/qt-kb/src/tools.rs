@@ -1,4 +1,4 @@
-//! The `Tools` QObject: the tools row, the selection pill, quick-fill and the snip overlay for QML.
+//! The `Tools` QObject: the tools row, the selection pill and the snip overlay for QML.
 
 use std::pin::Pin;
 use std::sync::Arc;
@@ -7,7 +7,6 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QUrl};
 use serde_json::{Value, json};
 use spike_core::config::{SpikeConfig, ToolButton};
-use spike_core::fill;
 use spike_core::note::{self, Note};
 use spike_core::pt::Pt;
 use spike_core::selwatch::{self, PillPx, PillStep, Watch};
@@ -154,21 +153,11 @@ impl qobject::Tools {
     }
 
     fn tool(mut self: Pin<&mut Self>, i: i32) -> QString {
-        let t = self.rust().cfg.tools.clone();
         match usize::try_from(i).ok().and_then(ToolButton::at) {
-            Some(ToolButton::FillUser) => js(json!({ "note": self.fill_with(t.test_user) })),
-            Some(ToolButton::FillPassword) => {
-                js(json!({ "note": self.fill_with(t.test_password) }))
-            }
             Some(ToolButton::Snip) => js(self.as_mut().begin_snip()),
             Some(ToolButton::Mic) => js(json!({ "mic": true })),
             None => js(json!({})),
         }
-    }
-
-    /// Asks Windows Hello on its own thread, then types `value` into the app in front.
-    fn fill_with(&self, value: String) -> &'static str {
-        fill::start(&self.rust().cfg, value, &self.rust().note)
     }
 
     /// Freezes the screen and writes it for QML to show; JSON with its file URL and physical box.

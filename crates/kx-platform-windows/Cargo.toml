@@ -1,6 +1,6 @@
 [package]
 name = "kx-platform-windows"
-description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation, the focused box, the clipboard, the local calendar, the media worker's start and the free space of a drive."
+description = "The Windows adapter: the only product crate that calls Win32 for the clock, folders, COM, uiAccess, input, shortcuts, the power dialog, the mouse hook, layouts, windows, scrolling other apps, the system look, the heaps' free memory, sound, the data key's guard, the word packs, UI Automation, the focused box, the clipboard, the local calendar, the worker's start, the free space of a drive, the hidden-run probe and the backup box's places."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -21,7 +21,9 @@ sim-input = []
 kx-crypto = { path = "../kx-crypto" }
 kx-module-api = { path = "../kx-module-api" }
 kx-platform = { path = "../kx-platform" }
-# The compiled-in shortcut, key-name, field and clipboard tables.
+# The hidden-run probe's random file name (ADR-0037); the same OS randomness kx-crypto uses.
+getrandom.workspace = true
+# The compiled-in shortcut, key-name, field, clipboard and package tables.
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
@@ -37,9 +39,10 @@ tracing.workspace = true
 # (`System_Shutdown`), DPAPI guards the data key (`Security_Cryptography`), packs open with read sharing only
 # (`Storage_FileSystem`), UI Automation reads arrays and builds conditions (`System_Ole`, `System_Variant`), the
 # clipboard watch and writer use `System_DataExchange` and read app names from version information
-# (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), the media worker starts on anonymous pipes
-# (`System_Pipes`) in a job object (`System_JobObjects`), and the disk room reads a drive's free space and root
-# (`Storage_FileSystem`).
+# (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), the worker starts on anonymous pipes
+# (`System_Pipes`) in a job object (`System_JobObjects`), the disk room reads a drive's free space and root, and the
+# places list the drives with their types and labels (`Storage_FileSystem`) with Windows' disk dialogs off
+# (`System_Diagnostics_Debug`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -55,6 +58,7 @@ windows = { workspace = true, features = [
     "Win32_System_Com",
     "Win32_System_Console",
     "Win32_System_DataExchange",
+    "Win32_System_Diagnostics_Debug",
     "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
@@ -86,5 +90,9 @@ kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 
 [target.'cfg(windows)'.dev-dependencies]
-# The worker tests list every process, so a worker is seen to start none, not even a console host.
-windows = { workspace = true, features = ["Win32_System_Diagnostics_ToolHelp"] }
+# The worker tests list every process, so a worker is seen to start none, not even a console host; the places tests
+# check the drive types against Windows' own (`Win32_System_WindowsProgramming`).
+windows = { workspace = true, features = [
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_WindowsProgramming",
+] }

@@ -35,6 +35,8 @@ kx-mod-scroll = { path = "../../crates/kx-mod-scroll" }
 kx-mod-predict = { path = "../../crates/kx-mod-predict" }
 # The clipboard history's settings and its insert join: G20's expected Notepad text and the copy's settings.
 kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard" }
+# Quick-fill's tab gap range (`settings::TAB_GAP_MS`), which G23's late pause must outlast.
+kx-mod-vault = { path = "../../crates/kx-mod-vault" }
 # The product's commands: `close` posts Quit to the running copy.
 kx-platform = { path = "../../crates/kx-platform" }
 # The golden layout table format that `capture-layouts` writes.

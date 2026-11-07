@@ -1,11 +1,14 @@
 //! Sessions on their own threads over a scripted worker: draws and DIBs go through, a dropped session stops its
-//! worker, an idle worker stops by itself, a worker that never starts is down, and exit codes read as notes.
+//! worker, an idle worker stops by itself, and a worker that never starts is down.
 
 use super::*;
-use fake::{Act, Call, Hands, Script};
-use kx_module_api::Redacted;
-use kx_module_api::ports::{DibAsk, ImageCodec};
-use std::collections::HashSet;
+use crate::worker::fake::{Act, Call, Hands, Script};
+use kx_module_api::ports::ImageCodec;
+use std::sync::mpsc::{self, Receiver};
+use std::time::Duration;
+
+/// The scripted media worker the sessions start.
+type Media = Script<MediaFrames>;
 
 /// How long a test waits for the session thread; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(10);
@@ -32,7 +35,7 @@ fn ask() -> PictureAsk {
 }
 
 /// Pictures over `script`, and a channel that hears each call to its workers.
-fn pictures(script: &Script) -> (WorkerPictures<Script>, Receiver<Call>) {
+fn pictures(script: &Media) -> (WorkerPictures<Media>, Receiver<Call>) {
     let (tell, told) = mpsc::channel();
     script.tell(tell);
     (
@@ -100,13 +103,4 @@ fn a_draw_whose_worker_never_starts_is_down_until_its_backoff_ends() {
     let mut run = pictures.open(CFG);
     let retry_in = Duration::from_millis(u64::from(CFG.restart_ms));
     assert_eq!(run.draw(ask()), Err(PictureError::Down { retry_in }));
-}
-
-#[test]
-fn exit_codes_read_as_notes() {
-    let code = |c: u8| Some(u32::from(c));
-    let codes = [code(CLEAN_EXIT), code(REFUSED_EXIT), Some(101), None];
-    let notes: HashSet<_> = codes.into_iter().map(exit_note).collect();
-    assert_eq!(notes.len(), codes.len());
-    assert_eq!(exit_note(Some(u32::MAX)), exit_note(Some(101)));
 }

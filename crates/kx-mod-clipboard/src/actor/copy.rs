@@ -1,6 +1,6 @@
-//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's or a marked copy keeps
-//! nothing, a copy of kept content moves its entry up, a new one is admitted or refused with a note, and the caps then
-//! trim the oldest unpinned entries.
+//! Copies from the watch (spec §7 "Skipped copies", "Limits", "Order"): a skipped app's, a marked copy or the one a
+//! take read before its note came keeps nothing, a copy of kept content moves its entry up, a new one is admitted or
+//! refused with a note, and the caps then trim the oldest unpinned entries.
 
 use kx_module_api::keys;
 use kx_module_api::ports::{AppRef, ClipKind, ClipNote, ClipPart, PanelNote, SealedError};
@@ -15,7 +15,11 @@ impl Actor {
     /// nothing.
     pub(super) fn note(&mut self, note: ClipNote) {
         match note {
-            ClipNote::Copied { parts, app } => self.copied(parts, app.as_ref()),
+            ClipNote::Copied { parts, app } => {
+                if let Some(parts) = self.past_take(parts) {
+                    self.copied(parts, app.as_ref());
+                }
+            }
             ClipNote::Cleared { app } => self.cleared(app.as_ref()),
             ClipNote::TooBig { app, .. } if !self.follow.skips(app.as_ref()) => {
                 self.say_note(PanelNote::TooBig);

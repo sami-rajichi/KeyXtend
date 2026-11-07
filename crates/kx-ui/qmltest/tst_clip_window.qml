@@ -76,6 +76,113 @@ Item {
             win.visible = false;
         }
 
+        // The keyboard alone knows the aim (ADR-0040): the state says it, and a click on the line asks for it.
+        function test_the_state_draws_the_aim_and_a_click_on_the_line_asks_the_keyboard() {
+            const win = make();
+            win.ui.clipView = Kit.view("en", "list");
+            tryVerify(() => !!win.clips && win.clips.pane.visible, 2000);
+            const pane = win.clips.pane;
+            Pointer.through([pane]);
+            verify(waitForPolish(pane));
+            const search = one(pane.contentItem, "clip.search");
+            const carets = () => Board.all(search, o => o.visible && o.caret === true).length;
+            compare(carets(), 0, "the golden state is not aimed");
+            win.keyboard.state = Object.assign({}, win.keyboard.state, { aimed: true });
+            win.keyboard.reply = { board: false, state: true };
+            mouseClick(search);
+            compare(win.keyboard.calls.filter(c => c === "aimPanel").length, 1);
+            compare(carets(), 1, "its answer redrew the state");
+            win.keyboard.state = Object.assign({}, win.keyboard.state, { aimed: false });
+            win.restate();
+            compare(carets(), 0, "a click outside, at the next relabel");
+            win.visible = false;
+        }
+
+        // A press on a row, a button or blank space asks the keyboard for the aim and redraws at the press, so the arrows
+        // follow it; the press still acts at its let-go, and a click asks once (ADR-0040).
+        function test_a_press_anywhere_on_the_panel_asks_the_keyboard_at_the_press() {
+            const win = make();
+            win.ui.clipView = Kit.view("en", "list");
+            tryVerify(() => !!win.clips && win.clips.pane.visible, 2000);
+            const pane = win.clips.pane;
+            Pointer.through([pane]);
+            verify(waitForPolish(pane));
+            Board.apart(pane.contentItem);
+            const asked = () => win.keyboard.calls.filter(c => c === "aimPanel").length;
+            const carets = () => Board.all(pane.contentItem, o => o.visible && o.caret === true).length;
+            win.keyboard.state = Object.assign({}, win.keyboard.state, { aimed: true });
+            win.keyboard.reply = { board: false, state: true };
+            const row = Board.all(pane.contentItem, o => o.visible && o.place !== undefined && o.hi !== undefined)[0];
+            mousePress(row);
+            compare(asked(), 1, "a row, at the press");
+            compare(carets(), 1, "its answer redrew the state at once");
+            compare(win.ui.calls.filter(c => c.startsWith("clipAct")), [], "the tick waits for the let-go");
+            mouseRelease(row);
+            compare(asked(), 1, "and once");
+            compare(win.ui.calls.filter(c => c.startsWith("clipAct")), ["clipAct tick 0"]);
+            mouseClick(one(pane.contentItem, "clip.page-on"));
+            compare(asked(), 2, "a button");
+            tryVerify(() => pane.body.scale === 1, 2000, "popped in, so the panel reaches its corner");
+            mouseClick(pane.contentItem, 1, pane.height - 1);
+            compare(asked(), 3, "blank space");
+            win.visible = false;
+        }
+
+        // An insert's later "take the aim" must win, so the aim is asked at the press and never after the act.
+        function test_the_aim_comes_before_an_insert_so_the_insert_can_take_it() {
+            const win = make();
+            win.ui.clipView = Kit.view("en", "list");
+            tryVerify(() => !!win.clips && win.clips.pane.visible, 2000);
+            const pane = win.clips.pane;
+            Pointer.through([pane]);
+            verify(waitForPolish(pane));
+            const asked = () => win.keyboard.calls.filter(c => c === "aimPanel").length;
+            const insert = one(pane.contentItem, "clip.insert");
+            mousePress(insert);
+            compare(asked(), 1, "asked at the press");
+            compare(win.ui.calls.filter(c => c.startsWith("clipAct")), [], "before the insert");
+            mouseRelease(insert);
+            compare(win.ui.calls.filter(c => c.startsWith("clipAct")), ["clipAct insert 0"]);
+            compare(asked(), 1, "and not asked again after it");
+            win.visible = false;
+        }
+
+        // Shaky taps on Insert must not give the aim back: a press inside the wait asks nothing, and a later one does.
+        function test_a_press_following_another_asks_no_aim() {
+            const win = make();
+            win.ui.clipView = Kit.view("en", "list");
+            tryVerify(() => !!win.clips && win.clips.pane.visible, 2000);
+            const pane = win.clips.pane;
+            Pointer.through([pane]);
+            verify(waitForPolish(pane));
+            Board.doubled(pane.contentItem);
+            const asked = () => win.keyboard.calls.filter(c => c === "aimPanel").length;
+            const carets = () => Board.all(pane.contentItem, o => o.visible && o.caret === true).length;
+            const aim = on => win.keyboard.state = Object.assign({}, win.keyboard.state, { aimed: on });
+            win.keyboard.reply = { board: false, state: true };
+            aim(true);
+            const insert = one(pane.contentItem, "clip.insert");
+            mouseClick(insert);
+            compare(asked(), 1, "the first press");
+            compare(carets(), 1, "aimed");
+            aim(false);
+            win.restate();
+            compare(carets(), 0, "the insert gave the aim back");
+            mousePress(insert);
+            compare(asked(), 1, "the second press asks nothing");
+            compare(carets(), 0, "and the aim stays off");
+            mouseRelease(insert);
+            mouseClick(insert);
+            compare(asked(), 1, "nor does a third");
+            aim(true);
+            Board.apart(pane.contentItem);
+            mousePress(insert);
+            compare(asked(), 2, "a later press asks again");
+            compare(carets(), 1, "and takes the aim");
+            mouseRelease(insert);
+            win.visible = false;
+        }
+
         // A smaller fit the panel keeps after a layout is placed where the hub puts a panel of that size, so it stays
         // centred on the keyboard.
         function test_a_kept_smaller_fit_takes_the_spot_for_its_own_size() {

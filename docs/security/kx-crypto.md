@@ -1,10 +1,11 @@
 # Security note: kx-crypto
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 security check: the shelf, its paths, deletes and set-aside files); 2026-10-26 (P7 security review: what the tag defeats, rollback and a lost key file)
+- **Last review:** 2026-11-05 (P9 Task 23: the notebook's store, the hidden run's memory stores and `OsRandom`); 2026-10-31 (P8 security check: the shelf, its paths, deletes and set-aside files); 2026-10-26 (P7 security review: what the tag defeats, rollback and a lost key file)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-crypto`, a library with no module of its own. The Windows adapter implements its `KeyGuard` with DPAPI (`kx-platform-windows.md`), and the app serves one `SealedFiles` as the `SealedStore` port (`keyxtend.md`). `SealedShelfFiles` backs the `SealedShelf` port (P8, ADR-0034 decision 4), with a `DiskRoom` the platform fills for the drive's free space and name.
 - Both stores share one `Sealer`: the key file, the guard, the seal and the file steps, so they cannot drift apart.
+- P9 adds a third `SealedFiles`, for Quick-fill's notebook and backup blobs in `<data>/quickfill/`, under `VaultStoreKey` (ADR-0038, ADR-0039). It also adds `MemoryStore` and `MemoryShelf` for a hidden run (ADR-0037) and `OsRandom` behind the `Random` port.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -20,6 +21,9 @@
 | A blob that would not open | Sensitive (still sealed) | `<name>.damaged`, replacing an older one | Yes, as it was | Until the next damaged copy of that name |
 | The shelf's data key (P8) | Secret | `sealed.key` in the shelf's root (the clipboard history's folder), one per root, wrapped by the guard | Yes, by the guard | Until the user deletes the root |
 | Shelf blobs: clipboard entries and lists (P8) | Sensitive | `<folder>/<name>.sealed` under the root, folders such as `2026-10-31` and `pinned` | As the store's, but the tag covers the folder, `/` and the name | Until `remove` deletes the file, its damaged copy and any temp file, or `drop_folder` deletes the folder |
+| Quick-fill's blobs and their key (P9) | Secret | `sealed.key`, `notebook`, `notebook-aside`, `backup` and `backup-aside` in `<data>/quickfill/`, a key of its own | As the store's | Until the user deletes them or the data folder |
+| A hidden run's blobs (`MemoryStore`, `MemoryShelf`, P9) | As the blobs they hold | Memory only, `Zeroizing`, unsealed; nothing is written, and the shelf asks the disk only for its room | No | For the run |
+| Random bytes from `OsRandom` (P9) | Secret to whoever uses them | Memory of the caller | N/A | Handed to the caller |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -57,7 +61,9 @@
 - No `cargo fuzz` target: property tests stand in until the owner allows the nightly toolchain, as in `kx-kernel.md`.
 - One `SealedFiles` per folder: the key file is written by a replacing rename, so two stores over one folder could race on the first save and leave blobs under a lost key. The app runs one instance, which owns the folder.
   - The same holds for one `SealedShelfFiles` per root, and a store and a shelf never share a folder (`<data>/words` and the clipboard's own root).
+  - Quick-fill's `SealedFiles` has its own folder too, so no two of them ever share a key file.
 - One `SecretStore` capability gates both ports (ADR-0034), so a module holding it could require either store. Each keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
 - A shelf delete is not a secure wipe: the drive may keep the freed blocks. They hold only sealed bytes, which a program running as the user could still open with the key.
 - Listings have no count cap: only a program running as the user could fill the shelf's folders, and the history's own caps keep them small.
 - The room's `used` counts only `.sealed` blobs, not damaged copies or stray files, so it matches what the history can delete.
+- Quick-fill's values are Secret, not Sensitive, so a program running as this user who unwraps the key reads saved passwords; this is the same boundary as the browsers' saved passwords (ADR-0038 decision 2, `kx-mod-vault.md`). The vault module wraps `SealedStore::load`'s plain `Vec<u8>` in a wiped buffer at once.

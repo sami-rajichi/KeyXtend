@@ -9,6 +9,7 @@ use std::time::Instant;
 use kx_module_api::ports::{FieldChange, FieldEnds, FieldError, FieldRead};
 
 pub use kind::{BoxFacts, kind};
+pub use kx_module_api::ports::after_first;
 use run::Ask;
 pub use run::{Job, Shared, Tell, spawn};
 
@@ -101,12 +102,6 @@ pub fn late(by: Instant) -> Result<(), FieldError> {
     } else {
         Ok(())
     }
-}
-
-/// `text` after its first word, which a cut at the read cap may have split; empty when it holds one word.
-#[must_use]
-pub fn after_first(text: &str) -> &str {
-    text.find(char::is_whitespace).map_or("", |at| &text[at..])
 }
 
 #[cfg(test)]

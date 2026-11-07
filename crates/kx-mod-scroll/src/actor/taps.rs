@@ -1,11 +1,10 @@
 //! A pad tap: while still it starts slow, pages our list or says why it cannot; while scrolling it goes fast, turns
 //! or stops, settling the owed lines the old way first.
 
-use super::notes::notice;
 use super::{Actor, Scroll};
-use crate::{Change, Glide, Halt};
+use crate::{Change, Glide, Halt, ID};
 use kx_module_api::ports::{Aim, Dir, ScrollPage};
-use kx_module_api::{Mono, keys};
+use kx_module_api::{Mono, Notice, keys};
 
 impl Actor {
     /// A pad tap: it restarts the limit's count, then acts on the pad's state; a run that does not open says so.
@@ -17,7 +16,7 @@ impl Actor {
             return self.tap_on(dir, now);
         }
         let Some(found) = self.find() else {
-            return self.publish(&notice(keys::SCROLL_FAILED));
+            return self.publish(&Notice::about(keys::SCROLL_FAILED, ID));
         };
         match found {
             Ok(aim) if aim.ours => self.page(dir),

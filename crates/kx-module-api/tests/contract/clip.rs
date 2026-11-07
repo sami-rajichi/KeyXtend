@@ -6,13 +6,13 @@ use kx_module_api::Capability::{InjectInput, ReadClipboard, SecretStore, WriteCl
 use kx_module_api::ports::{
     BlobName, Calendar, CalendarKey, ClipAct, ClipConfig, ClipError, ClipKey, ClipNote, ClipOpen,
     ClipPage, ClipPanel, ClipPart, ClipRun, ClipView, ClipWait, Clipboard, ClipboardKey,
-    ClipboardWriter, ClipboardWriterKey, Date, DibAsk, FileFact, Filter, HistoryAsk, HistoryWanted,
+    ClipboardWriter, ClipboardWriterKey, DibAsk, FileFact, Filter, HistoryAsk, HistoryWanted,
     LocalTime, Pages, PanelKey, PasteAsk, Pasted, PictureAsk, PictureConfig, PictureError,
     PictureRun, Pictures, PicturesKey, Pixels, Room, SealedError, SealedShelf, SealedShelfKey,
 };
 use kx_module_api::{
-    Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
-    ServiceKey,
+    Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, Secret,
+    ServiceError, ServiceKey,
 };
 use kx_test_support::host::FakeHost;
 use std::path::PathBuf;
@@ -54,6 +54,10 @@ impl Clipboard for Stuck {
 
     fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
         paths.expose().iter().map(|_| FileFact::Gone).collect()
+    }
+
+    fn text(&self, _: ClipWait, _: usize) -> Result<Option<Secret>, ClipError> {
+        Err(ClipError::Busy)
     }
 }
 
@@ -110,15 +114,9 @@ impl Pictures for Stuck {
 }
 
 impl Calendar for Stuck {
-    #[allow(clippy::unwrap_used, reason = "day 0, the epoch, is a date")]
+    #[allow(clippy::unwrap_used, reason = "the epoch, at UTC, is a date")]
     fn now(&self) -> LocalTime {
-        LocalTime {
-            unix_ms: 0,
-            date: Date::from_day_number(0).unwrap(),
-            hour: 0,
-            minute: 0,
-            offset_min: 0,
-        }
+        LocalTime::at(0, 0).unwrap()
     }
 }
 
@@ -169,6 +167,7 @@ fn page() -> ClipPage {
         highlight: None,
         filter: Filter::All,
         search: Redacted::new(SEARCH.to_owned()),
+        caret: Redacted::new(2),
         pages: Pages::default(),
         ticked: 0,
         unpin: false,
@@ -250,6 +249,19 @@ fn a_view_reaches_its_listener_only_with_read_clipboard() {
         "the listener shares the page"
     );
     assert_eq!(heard.0.search.expose(), SEARCH);
+    assert_eq!(*heard.0.caret.expose(), 2, "where its caret is");
+}
+
+#[test]
+fn the_delete_key_and_a_placed_caret_need_read_clipboard() {
+    let closed = host(&[WriteClipboard, InjectInput]).bus();
+    let key = ClipKey(PanelKey::Delete);
+    let caret = ClipAct::Caret { at: 1.into() };
+    assert_eq!(closed.publish(&key), refused::<ClipKey>(ReadClipboard));
+    assert_eq!(closed.publish(&caret), refused::<ClipAct>(ReadClipboard));
+    let open = host(&[ReadClipboard]).bus();
+    assert_eq!(open.publish(&key), Ok(()));
+    assert_eq!(open.publish(&caret), Ok(()));
 }
 
 #[test]
@@ -290,6 +302,7 @@ fn ports_reached_through_their_gates_answer() {
     assert_eq!(rx.try_recv(), Ok(ClipNote::Busy));
     let gone = clipboard.files(&Redacted::new(vec![PathBuf::from("a.txt")]));
     assert_eq!(gone, [FileFact::Gone]);
+    assert_eq!(clipboard.text(wait, 1), Err(ClipError::Busy));
     let writer = cx.service::<ClipboardWriterKey>().unwrap();
     assert_eq!(writer.write(&[], wait), Err(ClipError::Busy));
     let shelf = cx.service::<SealedShelfKey>().unwrap();

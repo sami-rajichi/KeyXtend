@@ -91,6 +91,7 @@ impl Desk {
             round: 0,
             erase,
             text,
+            line: false,
         };
         self.bus.publish(&word).unwrap();
     }

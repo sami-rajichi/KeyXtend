@@ -36,8 +36,8 @@ pub static MANIFEST: Manifest = Manifest {
 mod tests {
     use super::*;
     use kx_module_api::ports::{
-        ClipAct, ClipKey, ClipOpen, ClipPanel, ClipView, HistoryAsk, HistoryWanted, PasteAsk,
-        Pasted,
+        ClipAct, ClipKey, ClipLine, ClipOpen, ClipPanel, ClipView, HistoryAsk, HistoryWanted,
+        PasteAsk, Pasted,
     };
     use kx_module_api::{Event, Notice};
 
@@ -83,6 +83,7 @@ mod tests {
             [
                 ClipPanel::CAPABILITY,
                 ClipKey::CAPABILITY,
+                ClipLine::CAPABILITY,
                 ClipView::CAPABILITY,
                 ClipAct::CAPABILITY
             ]

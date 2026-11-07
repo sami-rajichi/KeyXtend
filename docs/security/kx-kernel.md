@@ -1,7 +1,7 @@
 # Security note: kernel, settings and log
 
 - **Owner:** product owner
-- **Last review:** 2026-10-02 (P3)
+- **Last review:** 2026-11-05 (P9 Task 23: `Kernel::fresh`, `KeptOff` and `kept_copies`, ADR-0037); 2026-10-02 (P3)
 - **Status:** Reviewed
 - **Scope:** `kx-module-api`, `kx-kernel` (lifecycle, order, bus, registry, grants, `Kernel`, log), `kx-settings`, `kx-platform`. They run inside the uiAccess `keyxtend` process from P3 on. The test crates (`kx-platform-fake`, `kx-test-support`) and the tools never ship.
 
@@ -26,7 +26,8 @@
 |---|---|---|---|
 | `settings.toml` | TOML parse; each module section checked by its own `validate`; unknown keys reset; version checked, with migrations | Read capped at `MAX_FILE_BYTES`; repair work bounded by the defaults' size; notices name at most `MAX_NAMED_KEYS` keys of at most `MAX_KEY_CHARS` characters; nesting capped at 80 levels (toml's default) | Property tests only (see Should fix) |
 | A later copy's and the gates' read (`peek`, `peek_section`) | The same size cap; it never repairs, moves or writes the file. `peek_section` checks a section as the store does: a bad value gives its default, and a fault gives the defaults | `MAX_FILE_BYTES` | Unit tests |
-| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from `MIN_LOG_MB` to `MAX_LOG_MB`; no empty ids in `disabled` | As above | Property tests only |
+| `[kernel]` section | `KernelSettings` with `deny_unknown_fields`; `log_level` from `LOG_LEVELS`; `log_max_mb` from `MIN_LOG_MB` to `MAX_LOG_MB`; no empty ids in `disabled` or names in `kept_copies` (P9) | As above | Property tests only |
+| The app's call to `Kernel::fresh` in a hidden run (P9, ADR-0037) | The run starts from the defaults, reads and saves no settings file, and keeps the modules it names off for that run alone; switching one on is `KernelError::KeptOff` | One call at start | Unit tests |
 | Module code (validators, migrations, `start`, `stop`, bus handlers) | Each call runs inside `catch_unwind`; a panic fails that module alone | N/A | N/A |
 
 ## Threats (STRIDE-lite)

@@ -6,9 +6,9 @@ use std::fs;
 /// The kernel's settings with log level `level` and a 1 MiB cap.
 fn settings(level: &str) -> KernelSettings {
     KernelSettings {
-        disabled: Vec::new(),
         log_level: level.to_owned(),
         log_max_mb: 1,
+        ..KernelSettings::from_defaults().unwrap()
     }
 }
 

@@ -3,9 +3,9 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipKind, Filter};
-use kx_module_api::text::fold_any;
+use kx_module_api::text::{fold_any, one_line};
 
-use crate::entry::{Entry, flat};
+use crate::entry::Entry;
 
 /// What the list shows: the entries of a filter's kinds whose search text holds the folded query.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl Find {
     /// The find for `filter` and the search line `query`: on one line, folded, without the blanks around it.
     #[must_use]
     pub fn new(filter: Filter, query: &str) -> Self {
-        let line: String = flat(query).collect();
+        let line: String = one_line(query.chars()).collect();
         let query = fold_any(&line).trim().to_owned();
         Self {
             filter,

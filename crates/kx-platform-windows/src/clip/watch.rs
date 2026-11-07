@@ -7,8 +7,10 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipConfig, ClipError, ClipNote, ClipRun, Clipboard, FileFact};
+use kx_module_api::ports::{
+    ClipConfig, ClipError, ClipNote, ClipRun, ClipWait, Clipboard, FileFact,
+};
+use kx_module_api::{Redacted, Secret, Zeroizing};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::{
     AddClipboardFormatListener, RemoveClipboardFormatListener,
@@ -45,7 +47,7 @@ thread_local! {
     static HERE: OnceCell<Here> = const { OnceCell::new() };
 }
 
-/// The Windows clipboard: it watches copies and checks copied paths.
+/// The Windows clipboard: it watches copies, checks copied paths and reads the text a take asks for.
 #[derive(Debug, Default)]
 pub struct WinClipboard {
     /// The markers to skip in place of the shipped ones, for tests.
@@ -84,6 +86,12 @@ impl Clipboard for WinClipboard {
 
     fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact> {
         facts(paths)
+    }
+
+    /// Reads as `read_text` does, so the clipboard stays open no longer than one copy's read.
+    fn text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError> {
+        let text = read::read_text(wait, max_chars)?;
+        Ok(text.map(|t| Redacted::new(Zeroizing::new(t))))
     }
 }
 

@@ -1,4 +1,4 @@
-//! G2's clicks as the owner makes them (ADR-0024): the button held for `[g2] press_ms` with a slip of `slip_px` inside
+//! G2's clicks as a person makes them (ADR-0024): the button held for `[g2] press_ms` with a slip of `slip_px` inside
 //! the key while it is down, so a keyboard that drops a slipped or held click fails the gate.
 #![cfg(windows)]
 

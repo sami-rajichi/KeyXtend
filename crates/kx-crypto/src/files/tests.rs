@@ -1,7 +1,7 @@
 use super::*;
 use crate::consts::{DAMAGED_EXT, KEY_LEN, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
 use crate::seal::{open, seal};
-use crate::testing::{Mirror, listing};
+use crate::testing::{Mirror, contract, listing, name};
 use kx_test_support::tempdir::TempDir;
 use std::fs;
 use std::sync::atomic::Ordering::SeqCst;
@@ -50,16 +50,16 @@ impl Case {
     }
 }
 
-fn name(text: &str) -> BlobName {
-    BlobName::new(text).unwrap()
+#[test]
+fn the_store_keeps_the_port_contract() {
+    let c = case();
+    contract::store(&c.store);
 }
 
 #[test]
-fn save_then_load_gives_the_bytes() {
+fn a_saved_file_holds_no_plain_text() {
     let c = case();
     c.store.save(&name("predict-en"), b"hello world").unwrap();
-    let got = c.store.load(&name("predict-en")).unwrap();
-    assert_eq!(got.as_deref(), Some(&b"hello world"[..]));
     let file = fs::read(c.file("predict-en", SEALED_EXT)).unwrap();
     assert!(!file.windows(5).any(|w| w == b"hello"));
 }
@@ -103,12 +103,10 @@ fn the_first_save_makes_the_folder_and_one_key() {
 }
 
 #[test]
-fn save_twice_keeps_only_the_latest() {
+fn save_twice_leaves_one_file() {
     let c = case();
     c.store.save(&name("predict-fr"), b"first").unwrap();
     c.store.save(&name("predict-fr"), b"second").unwrap();
-    let got = c.store.load(&name("predict-fr")).unwrap();
-    assert_eq!(got.as_deref(), Some(&b"second"[..]));
     assert_eq!(c.names(), ["predict-fr.sealed", KEY_FILE]);
 }
 

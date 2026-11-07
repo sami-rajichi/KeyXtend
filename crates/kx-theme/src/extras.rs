@@ -120,6 +120,30 @@ pub struct PanelShape {
     /// The least share of its size a pop-up panel shrinks to when it fits neither above nor below the keyboard
     /// (spec §3.4).
     pub min_fit: f32,
+    /// The clipboard's and Quick-fill's empty line icon and question icon (`.locked-box .i`).
+    pub empty_px: f32,
+    /// A line that takes the letters: its icon, the caret's width and its gap to the hint, and the line under it.
+    pub line_px: [f32; 4],
+    /// Gap between the filter chips.
+    pub filter_gap_px: f32,
+    /// A filter chip (`.fl`): height, side padding, the shown one's check icon and its gap.
+    pub filter_px: [f32; 4],
+    /// Gap between a list row's parts (`.lrow`).
+    pub row_gap_px: f32,
+    /// A list row's least padding at the top and bottom.
+    pub row_pad_px: f32,
+    /// A list row's tile (`.th2`): width, height, radius, icon.
+    pub tile_px: [f32; 4],
+    /// A list row's hint line (`.tt .m`): size, gap above.
+    pub hint_px: [f32; 2],
+    /// Gap between a question's icon, text and buttons.
+    pub question_gap_px: f32,
+    /// The most lines a question laid flat on one row takes.
+    pub question_lines: u8,
+    /// One notch of the mouse wheel, in the eighths of a degree Qt counts; it turns one page.
+    pub wheel_notch: f32,
+    /// How long the wheel rests, in seconds, before steps short of a notch are dropped.
+    pub wheel_rest_s: f32,
 }
 
 /// The hold ring around the pointer and its burst (mock-up `.ring`, `.burst`); it does not grow with the keyboard.

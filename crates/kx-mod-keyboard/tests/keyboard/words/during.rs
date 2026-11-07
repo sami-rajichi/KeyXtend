@@ -1,12 +1,15 @@
-//! What a picked word's pause lets in: a click outside our windows, or a board key that goes out, stops the rest of the
-//! word, with what went told before it; a click on our windows or a latch clicked then neither stops it nor joins it.
+//! What a picked word's pause lets in: a click outside our windows, a board key that goes out, or a fill, stops the
+//! rest of the word, with what went told before it; a click on our windows or a latch clicked then neither stops it
+//! nor joins it.
 
 use super::{A, BKSP, Desk, text};
+use crate::fill::line;
 use crate::typing::{tap, unicode};
-use kx_module_api::ports::{FaceAction, KeyId, Piece, PointerPressed, Typed};
+use kx_module_api::ports::{FaceAction, FillType, KeyId, Piece, PointerPressed, Typed};
 use kx_platform_fake::Stroke;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 /// The French dead `^` and the key of virtual key E on AZERTY.
 const CIRCUMFLEX: &str = "c-0x001A";
@@ -41,6 +44,23 @@ fn act_during(d: &Desk, action: FaceAction) {
     d.rig.fakes.pause.during(move || {
         if let Some(action) = once.take() {
             face.act(action).unwrap();
+        }
+    });
+}
+
+/// Hears a fill of `t` from another thread inside the first pause only, as the vault module asks for one.
+fn fill_during(d: &Desk, t: &str) {
+    let bus = d.bus.clone();
+    let mut once = Some(FillType {
+        round: 1,
+        parts: vec![line(t)],
+        tab_gap: Duration::ZERO,
+    });
+    d.rig.fakes.pause.during(move || {
+        if let Some(ask) = once.take() {
+            let bus = bus.clone();
+            let told = thread::spawn(move || bus.publish(&ask).is_ok());
+            assert!(told.join().unwrap(), "the fill was told");
         }
     });
 }
@@ -156,6 +176,24 @@ fn a_board_key_tapped_or_pressed_during_a_pause_goes_out_and_stops_the_rest() {
         assert_eq!(d.pieces(), [Piece::Erase, text("a")], "{action:?}");
         assert_eq!(d.rig.fakes.pause.waits().len(), 1, "{action:?}");
     }
+}
+
+#[test]
+fn a_fill_during_a_pause_goes_out_and_stops_the_rest_of_the_word() {
+    let d = Desk::new(None);
+    fill_during(&d, "alex");
+    d.word(3, "hello ");
+    assert_eq!(
+        d.rig.fakes.injector.strokes(),
+        [bksp(), unicode("alex")],
+        "no Backspace lands on the filled field"
+    );
+    assert_eq!(
+        d.pieces(),
+        [Piece::Erase, Piece::Break],
+        "what went is told"
+    );
+    assert_eq!(d.rig.fakes.pause.waits().len(), 1);
 }
 
 #[test]

@@ -31,9 +31,11 @@ pub mod layouts;
 pub mod memory;
 #[cfg(windows)]
 pub mod packs;
+pub mod places;
 #[cfg(windows)]
 mod platform;
 pub mod power;
+pub mod redirect;
 pub mod reveal;
 pub mod screen;
 pub mod scroll;
@@ -41,6 +43,9 @@ pub mod shortcut;
 pub mod sound;
 pub mod strokes;
 pub mod sysui;
+#[cfg(test)]
+#[cfg(windows)]
+mod testlinks;
 pub mod tray;
 #[cfg(windows)]
 pub mod uia;
@@ -79,9 +84,12 @@ pub use memory::WinMemory;
 #[cfg(windows)]
 pub use packs::{WinPackDisk, WinWordPacks};
 #[cfg(windows)]
+pub use places::WinPlaces;
+#[cfg(windows)]
 pub use platform::WindowsPlatform;
 #[cfg(windows)]
 pub use power::WinPower;
+pub use redirect::WinHidden;
 #[cfg(windows)]
 pub use reveal::WinReveal;
 #[cfg(windows)]

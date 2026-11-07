@@ -4,3 +4,5 @@ disabled = []
 log_level = "info"
 # The largest log file, in MiB.
 log_max_mb = 10
+# Package folders whose hidden copy of our data the user chose to keep, never asked about again (ADR-0037).
+kept_copies = []

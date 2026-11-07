@@ -1,5 +1,6 @@
 //! The actor over the fakes: copies and their limits (`copies`), the panel (`panel`), inserting (`paste`, `joins`,
-//! `stops`, `props`), saves (`saves`), the days (`days`) and pictures (`pictures`); `rig` drives it without a thread.
+//! `stops`, `props`), saves (`saves`), the days (`days`), pictures (`pictures`) and
+//! Quick-fill's take (`take`); `rig` drives it without a thread.
 //! Here: a damaged list, and messages that print no content.
 
 #![allow(
@@ -15,6 +16,7 @@ mod fakes;
 mod flood;
 mod images;
 mod joins;
+mod lines;
 mod logs;
 mod panel;
 mod paste;
@@ -24,6 +26,7 @@ mod rig;
 mod room;
 mod saves;
 mod stops;
+mod take;
 
 use kx_module_api::ports::{BlobName, ClipNote, PanelKey};
 use kx_module_api::{Redacted, keys};

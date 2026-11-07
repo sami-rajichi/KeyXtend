@@ -46,14 +46,13 @@ fn notice(t: &I18n, key: &'static str, module: &str, names: &[String], more: usi
     let controls: String = CONTROLS.iter().collect();
     let lang = format!("{controls}{}{controls}", OS_NAMES[0]);
     t.notice(&Notice {
-        key,
-        module: None,
         args: vec![
             (args::MODULE, NoticeArg::Text(module.to_owned())),
             (args::KEYS, NoticeArg::List(names.to_vec())),
             (args::MORE, NoticeArg::Count(more)),
             (args::LANG, NoticeArg::Text(lang)),
         ],
+        ..Notice::plain(key)
     })
 }
 
@@ -148,11 +147,13 @@ fn no_text_the_hub_gives_holds_a_bidi_control() {
     for l in &LANGS {
         let t = I18n::new(l);
         let keys = l.files().flat_map(keys_of).map(|k| t.text(&k));
+        let fill = crate::fill::filled(&t).into_iter().map(|(_, text)| text);
         let filled = [
             counted(&t),
             notices(&t),
             os_texts(&t),
             crate::clip::filled(&t),
+            fill.collect(),
         ]
         .concat();
         for text in keys.chain(filled) {

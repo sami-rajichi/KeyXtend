@@ -15,7 +15,7 @@ pub use win::WinDiskRoom;
 const SEP: char = '\\';
 
 /// The name to show for the volume whose root is `root`: `D:\` shows as `D:`, a bare `\` stays.
-fn shown(root: &str) -> String {
+pub(crate) fn shown(root: &str) -> String {
     let trimmed = root.strip_suffix(SEP).filter(|t| !t.is_empty());
     trimmed.unwrap_or(root).to_owned()
 }

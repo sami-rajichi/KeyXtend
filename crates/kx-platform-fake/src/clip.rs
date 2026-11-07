@@ -1,11 +1,11 @@
-//! A fake clipboard: the test pushes each copy, skip and clear to the live watch, scripts what is at each copied path,
-//! and the fake records the watch and its config. Its writer records every write.
+//! A fake clipboard: the test pushes each copy, skip and clear to the live watch, scripts what is at each copied path
+//! and the text a take reads, and the fake records the watch, its config and the takes. Its writer records every write.
 
 use crate::lock;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipConfig, ClipError, ClipNote, ClipRun, Clipboard, FileFact, probe_ok,
+    ClipConfig, ClipError, ClipNote, ClipRun, ClipWait, Clipboard, FileFact, probe_ok,
 };
+use kx_module_api::{Redacted, Secret, Zeroizing};
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
@@ -28,6 +28,11 @@ struct Log {
     current: usize,
     stops: usize,
     checks: usize,
+    /// The text the clipboard holds now, the next take's failure, how many takes were asked and the last one's cap.
+    text: Option<Zeroizing<String>>,
+    take_fail: Option<ClipError>,
+    takes: usize,
+    take_cap: Option<usize>,
 }
 
 impl Log {
@@ -116,6 +121,28 @@ impl FakeClipboard {
     pub fn checks(&self) -> usize {
         lock(&self.shared.log).checks
     }
+
+    /// Makes the clipboard hold `text` from now on, or no text, whatever the pushed notes say.
+    pub fn set_text(&self, text: Option<&str>) {
+        lock(&self.shared.log).text = text.map(|t| Zeroizing::new(t.to_owned()));
+    }
+
+    /// Refuses the next take with `error`.
+    pub fn fail_text(&self, error: ClipError) {
+        lock(&self.shared.log).take_fail = Some(error);
+    }
+
+    /// How many takes were asked.
+    #[must_use]
+    pub fn takes(&self) -> usize {
+        lock(&self.shared.log).takes
+    }
+
+    /// The cap the last take asked with.
+    #[must_use]
+    pub fn take_cap(&self) -> Option<usize> {
+        lock(&self.shared.log).take_cap
+    }
 }
 
 /// Shows the counts, never a path.
@@ -160,6 +187,20 @@ impl Clipboard for FakeClipboard {
             }
         };
         paths.expose().iter().map(fact).collect()
+    }
+
+    /// Answers the set text, a copy of it, or `TooLong` past `max_chars` as the platform does; a scripted failure
+    /// first.
+    fn text(&self, _: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError> {
+        let mut log = lock(&self.shared.log);
+        (log.takes, log.take_cap) = (log.takes + 1, Some(max_chars));
+        if let Some(error) = log.take_fail.take() {
+            return Err(error);
+        }
+        match &log.text {
+            Some(t) if t.chars().count() > max_chars => Err(ClipError::TooLong),
+            held => Ok(held.clone().map(Redacted::new)),
+        }
     }
 }
 

@@ -21,13 +21,14 @@ pub enum IpcError {
     /// The frame's kind is unknown, or not one this side reads.
     #[error("the frame's kind is not one this side reads")]
     BadKind,
-    /// The payload is longer than its kind allows.
+    /// The payload is longer than its kind allows, or a length, count or total inside it is past its cap.
     #[error("the frame is over its size limit")]
     TooLong,
     /// The payload's length disagrees with its kind or its fields, or a goodbye carries an id.
     #[error("the frame's length disagrees with its fields, or a goodbye carries an id")]
     Inconsistent,
-    /// A field holds a value outside its range: a codec, a reason or a side.
+    /// A field holds a value it may not: a codec, reason, fault, side, DIB cap, work factor, yes or no, part name, or
+    /// text that is not UTF-8.
     #[error("a field of the frame is out of range")]
     BadField,
     /// The stream failed for another reason.

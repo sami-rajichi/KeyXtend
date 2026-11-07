@@ -155,16 +155,11 @@ mod tests {
     #[test]
     fn notices_are_kept_only_while_collecting() {
         let share = shared();
-        let notice = |key| Notice {
-            key,
-            module: None,
-            args: Vec::new(),
-        };
-        share.notify(notice(keys::SETTINGS_RESET));
+        share.notify(Notice::plain(keys::SETTINGS_RESET));
         share.collect();
-        share.notify(notice(keys::SETTINGS_UNSAVED));
-        assert_eq!(share.collected(), [notice(keys::SETTINGS_UNSAVED)]);
-        share.notify(notice(keys::MODULE_FAILED));
+        share.notify(Notice::plain(keys::SETTINGS_UNSAVED));
+        assert_eq!(share.collected(), [Notice::plain(keys::SETTINGS_UNSAVED)]);
+        share.notify(Notice::plain(keys::MODULE_FAILED));
         assert_eq!(share.collected(), []);
     }
 
@@ -181,11 +176,7 @@ mod tests {
         assert!(poison.is_err() && share.store.is_poisoned() && share.told.is_poisoned());
         let refused = share.write(ID, one(Value::Integer(1)));
         assert_eq!(refused, Err(WriteError::Refused(ID)));
-        let notice = || Notice {
-            key: keys::SETTINGS_UNSAVED,
-            module: None,
-            args: Vec::new(),
-        };
+        let notice = || Notice::plain(keys::SETTINGS_UNSAVED);
         share.notify(notice());
         assert_eq!(share.collected(), [notice()], "still collecting");
     }

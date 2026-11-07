@@ -6,7 +6,7 @@ use crate::host::{Held, StartHost};
 use crate::lifecycle::Step;
 use crate::order;
 use crate::registry::Registry;
-use kx_module_api::{ModuleCx, ModuleError, ModuleId, ModuleState, Notice, NoticeArg, args, keys};
+use kx_module_api::{ModuleCx, ModuleError, ModuleId, ModuleState, Notice, keys};
 use std::fmt::Display;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -78,11 +78,7 @@ impl Kernel {
         }
         let id = self.slots[at].manifest.id;
         tracing::warn!(module = %id, error = %why, "module failed");
-        self.notify(Notice {
-            key: keys::MODULE_FAILED,
-            module: Some(id),
-            args: vec![(args::MODULE, NoticeArg::Text(id.to_string()))],
-        });
+        self.notify(Notice::about(keys::MODULE_FAILED, id));
     }
 
     /// Stops module `at`: its handlers leave the bus, its `stop` runs contained, then its services go.

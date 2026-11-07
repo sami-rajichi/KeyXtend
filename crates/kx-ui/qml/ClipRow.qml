@@ -31,34 +31,31 @@ Item {
     readonly property var p: lk.palette
     // The ring's and the empty tick box's colour; lit rows sit on pop_hover or pop_sel, Highlight in high contrast.
     readonly property color mark: (hot || (on && lk.contrast)) ? lk.sel_ink : p.ring
-    readonly property real gap: c.row_gap_px * s
+    readonly property real gap: pn.row_gap_px * s
 
-    // What the slot showed last, so a new view knows what moved.
-    property string lastId: ""
-    property int lastAt: -1
+    // The tick the slot showed last, so a new view knows whether it is new.
     property var lastTick: null
 
-    // Plays what changed since the last view: a page turn, a new row in this slot, or a new tick.
+    // Plays what changed since the last view: a page turn or a new row in this slot (RowMove), or a new tick.
     function moved() {
-        const was = { id: lastId, at: lastAt, tick: lastTick };
-        lastId = filled ? entry.id : "";
-        lastAt = slot ? slot.at : -1;
+        const was = lastTick;
         lastTick = on ? entry.tick : null;
-        if (!filled || was.at < 0)
-            return;
-        if (lastAt !== was.at)
-            rise.slide(lk.motion.clip.turn, lastAt > was.at ? 1 : -1);
-        else if (lastId !== was.id)
-            rise.slide(lk.motion.clip.swap, 1);
-        else if (on && was.tick === null)
+        if (move.moved(filled ? String(entry.id) : "", slot ? slot.at : -1) && on && was === null)
             box.pop();
     }
 
     onSlotChanged: moved()
     Component.onCompleted: {
-        lastId = filled ? entry.id : "";
-        lastAt = slot ? slot.at : -1;
+        move.start(filled ? String(entry.id) : "", slot ? slot.at : -1);
         lastTick = on ? entry.tick : null;
+    }
+    RowMove {
+        id: move
+        rise: rise
+        turn: r.lk.motion.clip.turn
+        swap: r.lk.motion.clip.swap
+        lk: r.lk
+        s: r.s
     }
     Accessible.role: Accessible.ListItem
     Accessible.name: filled ? entry.name : ""
@@ -78,13 +75,6 @@ Item {
         visible: r.filled
         move: r.lk.motion.clip.swap
         from: 0
-
-        // Slides in with `how` from `by` times the pop-in's rise below its place, or above when `by` is negative.
-        function slide(how, by) {
-            move = how;
-            from = by * r.lk.motion.amount.pop_rise_px * r.s;
-            play();
-        }
 
         Rectangle {
             anchors.fill: parent
@@ -143,11 +133,11 @@ Item {
             }
             Label {
                 width: parent.width
-                topPadding: r.c.meta_px[1] * r.s
+                topPadding: r.pn.hint_px[1] * r.s
                 text: r.filled ? r.entry.meta : ""
                 elide: Text.ElideRight
                 font.family: r.res.fam.ui
-                font.pixelSize: r.c.meta_px[0] * r.s
+                font.pixelSize: r.pn.hint_px[0] * r.s
                 color: r.lit ? r.lk.sel_ink : r.p.pop_muted
             }
         }

@@ -152,13 +152,25 @@ pub(crate) fn blank(text: &str) -> bool {
     text.chars().all(|c| c.is_whitespace() || c == '\0')
 }
 
-/// The text before the first NUL of `units`; `None` past `max_chars` characters.
+/// The text before the first NUL of `units`, or `None` past `max_chars` characters. A counting pass sizes the buffer
+/// exactly, so the decode neither grows nor copies it and the caller wipes the one buffer; a text past the cap is never
+/// decoded.
 pub(crate) fn text_of(units: &[u16], max_chars: usize) -> Option<String> {
     let limit = max_chars.saturating_mul(UNITS_PER_CHAR);
     let scan = units.get(..units.len().min(limit.saturating_add(1)))?;
     let len = scan.iter().position(|&u| u == 0).unwrap_or(scan.len());
-    let text = String::from_utf16_lossy(scan.get(..len)?);
-    (len <= limit && text.chars().count() <= max_chars).then_some(text)
+    let units = scan.get(..len).filter(|_| len <= limit)?;
+    // A lone surrogate decodes to U+FFFD, three bytes, so both passes agree.
+    let chars = || {
+        char::decode_utf16(units.iter().copied()).map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER))
+    };
+    let (count, bytes) = chars().fold((0, 0), |(n, b), c| (n + 1, b + c.len_utf8()));
+    if count > max_chars {
+        return None;
+    }
+    let mut text = String::with_capacity(bytes);
+    text.extend(chars());
+    Some(text)
 }
 
 /// The most UTF-16 units one character takes.

@@ -6,9 +6,10 @@ import QtQuick
 Window {
     id: win
 
-    // The app's Ui and Keyboard objects.
+    // The app's Ui and Keyboard objects, and its QuickFill object, without which no Quick-fill shows.
     required property var ui
     required property var keyboard
+    property var fill: null
 
     // Settings, language, look, board and state as last read; each is null until it reads, the board while it stops.
     property var cfg: JSON.parse(ui.settingsJson())
@@ -22,8 +23,7 @@ Window {
     readonly property var assets: JSON.parse(ui.assets())
     // Bumped on each settings or language change, so every text is looked up again in the new language.
     property int texts: 0
-    // Where the window is, in Qt units, and the same in whole units as the window takes it; its shadow is drawn around
-    // `origin`, so both move in the same step and their edges meet.
+    // Where the window is in Qt units, and in the whole units it takes; its shadow is drawn around `origin`, so they meet.
     property point at: Qt.point(0, 0)
     readonly property point origin: Qt.point(Math.round(at.x), Math.round(at.y))
     // The plate size the shadow follows, set once the keys are laid out, so the shadow never runs ahead.
@@ -47,10 +47,10 @@ Window {
     readonly property alias hold: beat
     // When a pressed key acts against the frame that shows it pressed.
     readonly property alias presses: frame
-    // The language list with its shadow while it shows, else null.
+    // The language list, the clipboard panel and Quick-fill, each with its shadow while it shows, else null.
     readonly property alias panel: lists.item
-    // The clipboard panel with its shadow while it shows, else null.
     readonly property alias clips: clipLoader.item
+    readonly property alias fills: fillLoader.item
 
     // The minimise or close button was clicked; `putAway` leaves Window.close() unshadowed.
     signal minimise
@@ -119,17 +119,9 @@ Window {
         id: placing
         win: win
     }
-    // Owned by the keyboard, so it stays above it when the guard lifts it; the bubble owns its own.
-    Loader {
+    KbTip {
         id: tips
-        active: win.lk !== null && win.cfg !== null
-        sourceComponent: Tip {
-            transientParent: win
-            lk: win.lk
-            res: win.res
-            ms: win.cfg.tipMs
-            lift: t => win.keyboard.liftAlone(t)
-        }
+        win: win
     }
     // The List design's language list, while the state holds one; the list and its shadow stay above the keyboard.
     Loader {
@@ -139,9 +131,13 @@ Window {
             win: win
         }
     }
-    // The clipboard panel, while the hub holds an open view.
+    // The clipboard panel and Quick-fill, each while its hub holds an open view.
     KbClip {
         id: clipLoader
+        win: win
+    }
+    KbQuickFill {
+        id: fillLoader
         win: win
     }
 
@@ -152,8 +148,7 @@ Window {
         relook();
         reboard();
     }
-    // Reads the board and the state again; the new state reaches the keys drawn now first, so each key keeps a state
-    // while the shortcuts layer changes the side cells.
+    // Reads the board and state again; the drawn keys get the new state first, so each keeps one as side cells change.
     function reboard() {
         sideWas = board ? board.keys.filter(k => k.side).map(k => k.id) : null;
         const next = JSON.parse(keyboard.stateJson());
@@ -175,8 +170,7 @@ Window {
         if (visible)
             frosted = ui.backdrop(title);
     }
-    // Reads the legends, lights and place again, or takes `next`, a state just read; the window goes where the keyboard
-    // says, unless it is moving.
+    // Reads the legends, lights and place again, or takes `next`, a state just read; a moving window stays put.
     function restate(next) {
         st = next !== undefined ? next : JSON.parse(keyboard.stateJson());
         if (st && st.at && !(mover && mover.busy))
@@ -209,14 +203,12 @@ Window {
         if (visible && ready)
             keyboard.shape(title, JSON.stringify(boxes), rescale.ratio);
     }
-    // Guards our shown windows (Guard); our window `top`, if given, lands in front until the run ends. A shown tip
-    // hides first, as the guard would lift its window with it over a pop-up.
+    // Guards our shown windows (Guard), with our window `top` in front if given; a tip hides first, or it would lift too.
     function guardRun(top) {
         hint("", null);
         guard.run(top);
     }
-    // Guards our shown windows without hiding a tip or changing the window the run puts in front, for a window that draws
-    // nothing over ours, as the pointer overlay.
+    // Guards our shown windows keeping the tip and the front window, for one drawing nothing over ours (pointer overlay).
     function guardQuiet() {
         guard.run(null);
     }

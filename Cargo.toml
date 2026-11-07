@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-mod-vault", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -34,6 +34,11 @@ proptest = "1"
 thiserror = "2.0.21"
 # The media worker's PNG decoder (ADR-0034 decision 5); tidy bans it from the uiAccess app.
 png = "0.18.1"
+# The vault worker's backup box (ADR-0038 decision 6): `age` seals and opens it, and `keepass` reads KeePass files.
+# age's 0.11 line keeps the same file format without 0.12's P-256 parts, whose crypto-bigint has RUSTSEC-2026-0387.
+age = { version = "0.11.5", default-features = false }
+# keepass is pinned: the worker's KDF check walks its exact header reads, so a new version needs that walk rechecked.
+keepass = { version = "=0.17.0", default-features = false }
 toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }
@@ -48,6 +53,8 @@ unic-langid = "0.9.6"
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["zeroize"] }
 getrandom = "0.4.3"
 zeroize = "1.9.1"
+# A panel line's caret steps over whole graphemes, so a base letter and its harakat move as one.
+unicode-segmentation = "1.13.3"
 # Qt through cxx-qt, pinned: every upgrade is reviewed (ADR-0013).
 cxx = "1.0.202"
 cxx-qt = "=0.10.0"
@@ -81,8 +88,9 @@ module_allowed = ["kx-module-api"]
 app = "keyxtend"
 # Network crates banned from the app (ARCHITECTURE.md invariant 4).
 banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
-# Media-decoding crates banned from the app (ARCHITECTURE.md invariant 5); the media worker alone decodes PNG (ADR-0034).
-banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate"]
+# Media-decoding and box-format crates banned from the app (ARCHITECTURE.md invariant 5): the media worker alone decodes
+# PNG (ADR-0034), and the vault worker alone opens boxes and KeePass files (ADR-0038).
+banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate", "age", "keepass"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
@@ -191,7 +199,7 @@ profile_env = "USERPROFILE"
 [workspace.metadata.stage]
 # The app package `cargo xtask stage` builds in release; its program has the same name.
 app = "keyxtend"
-# The media worker package, built in release on its own and staged beside the app (ADR-0034); its program has the same
+# The worker package, built in release on its own and staged beside the app (ADR-0034); its program has the same
 # name, which kx-platform-windows starts (`WORKER_EXE`, the app's agree test), and the stage refuses its manifest if it
 # asks for uiAccess.
 worker = "keyxtend-worker"
@@ -256,4 +264,17 @@ opt-level = 3
 opt-level = 3
 
 [profile.dev.package.fdeflate]
+opt-level = 3
+
+# The sealed stores' contract seals and opens a blob at the 16 MiB cap; the cipher's generic code is built inside
+# kx-crypto, so that crate runs optimised in dev builds too.
+[profile.dev.package.kx-crypto]
+opt-level = 3
+
+# The vault job derives scrypt keys at work factor 16 to 20 in dev builds and tests too, so scrypt and its Salsa20
+# core run optimised.
+[profile.dev.package.scrypt]
+opt-level = 3
+
+[profile.dev.package.salsa20]
 opt-level = 3

@@ -7,7 +7,7 @@ use crate::sound::{assert_plays, rig_with, takes};
 use kx_module_api::ports::WordsAsk;
 use kx_theme::sounds::Event;
 use kx_ui::UiSettings;
-use kx_ui::asks::{AGAIN, CANCEL, FORGET, MORE, PAGE, PAUSE, PICK, POWER, UNDO};
+use kx_ui::asks::{AGAIN, CANCEL, FILL, FORGET, MORE, PAGE, PAUSE, PICK, POWER, UNDO};
 
 /// Each tap kind QML sends: a chip, every ask with the argument its tap gives, and a tap QML handled alone; gives
 /// how many taps it made.
@@ -22,6 +22,7 @@ fn tap_each(rig: &Rig) -> usize {
         (MORE, 0),
         (PAGE, 1),
         (PICK, 0),
+        (FILL, 0),
     ];
     for (kind, arg) in asks {
         rig.hub.words_ask(kind, arg);

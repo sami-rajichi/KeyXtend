@@ -5,7 +5,8 @@ use super::*;
 use kx_ipc::{Ask, CLEAN_EXIT, MAX_PIXELS_FLAG as MAX_PIXELS, MEDIA_JOB as MEDIA, REFUSED_EXIT};
 use kx_module_api::ports::{ImageCodec, PictureAsk, PictureConfig, PictureError, Pictures};
 use kx_module_api::{Clock, Mono, Redacted};
-use kx_platform::pictures::{Worker, WorkerPictures};
+use kx_platform::pictures::WorkerPictures;
+use kx_platform::worker::{MediaFrames, Worker};
 use std::env;
 use std::ffi::OsStr;
 use std::io::Write;
@@ -14,6 +15,7 @@ use std::process::Command;
 use std::sync::{Arc, OnceLock};
 
 mod rights;
+mod vault;
 mod verdict;
 
 /// How long a test waits for the worker; a wait, never a sleep.
@@ -92,7 +94,7 @@ fn spawner() -> WinSpawner {
 }
 
 /// A started worker on the media job, as the host drives it.
-fn spawn() -> Piped<WinChild> {
+fn spawn() -> Piped<WinChild, MediaFrames> {
     spawner().spawn(&Launch::media(&CFG)).unwrap()
 }
 
@@ -172,12 +174,10 @@ fn the_workers_words_and_exit_codes_match_the_host() {
 fn a_missing_or_relative_worker_is_missing() {
     let gone = worker().with_file_name("kx-no-such-worker.exe");
     let launch = Launch::media(&CFG);
-    assert!(matches!(
-        WinSpawner::at(gone).spawn(&launch),
-        Err(SpawnError::Missing)
-    ));
+    let spawn = |s: WinSpawner| Spawner::<MediaFrames>::spawn(&s, &launch).map(drop);
+    assert_eq!(spawn(WinSpawner::at(gone)), Err(SpawnError::Missing));
     let relative = WinSpawner::at(PathBuf::from(WORKER_EXE));
-    assert!(matches!(relative.spawn(&launch), Err(SpawnError::Missing)));
+    assert_eq!(spawn(relative), Err(SpawnError::Missing));
 }
 
 #[test]

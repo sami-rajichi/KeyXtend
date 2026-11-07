@@ -8,13 +8,14 @@ use kx_module_api::ports::{FieldChange, Piece};
 
 use crate::split::{Place, edges, places, spans, split_word};
 
+mod line;
 mod show;
 mod token;
 
 pub use show::{EmailAsk, Plan, Query, Reading, Show};
 pub use token::Address;
 pub(crate) use token::could_learn;
-use token::{Token, apostrophe, learnable};
+use token::{Token, apostrophe, finish_email, learnable};
 
 /// What the tracker needs from the settings; the module fills it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -148,6 +149,12 @@ impl Tracker {
         Some(address)
     }
 
+    /// Marks the open token as holding a saved email a pick typed: nothing in it is learned, whatever is typed or
+    /// erased, until it ends.
+    pub fn mark_saved(&mut self) {
+        self.token.mark_saved();
+    }
+
     /// Takes a read of the words before the cursor: they fill the context, and a last word with no space after it
     /// stays open, marked as read. Nothing read is learned; `None` (the app does not tell) changes nothing.
     pub fn read(&mut self, text: Option<&str>, knows: &dyn Fn(&str) -> bool) {
@@ -207,7 +214,8 @@ impl Tracker {
         }
     }
 
-    /// Ends the token whole, as a space or Enter does; only a token with typed characters hands anything out.
+    /// Ends the token whole, as a space or Enter does; only a token with typed characters and no saved pick hands
+    /// anything out.
     fn end(&mut self, knows: &dyn Fn(&str) -> bool, from: Source, told: &mut Vec<Told>) {
         let token = std::mem::take(&mut self.token);
         if token.is_empty() {
@@ -217,7 +225,7 @@ impl Tracker {
             State::Unknown => Vec::new(),
             State::Known(words) => words,
         };
-        let told = (from == Source::Typed && token.typed()).then_some(told);
+        let told = (from == Source::Typed && token.teaches()).then_some(told);
         self.finish(&token, &mut before, knows, told);
         self.state = State::Known(before);
     }
@@ -277,14 +285,6 @@ impl Tracker {
         }
         push_capped(before, piece.to_owned(), self.cfg.context_words);
     }
-}
-
-/// Tells the email `token` holds unless told already, over one told before, and clears the context.
-fn finish_email(token: &Token, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
-    if let (Some(told), Some(email)) = (told, token.email()) {
-        told.push(Told::Email(Address::of(email, token.told())));
-    }
-    before.clear();
 }
 
 /// Adds `word` after `words`, dropping the oldest past `cap`.

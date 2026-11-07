@@ -3,7 +3,6 @@
 
 use super::{chip, heard, lane, speaking, words};
 use crate::Rig;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{ChipKind, Lane, ListPage, Suggested};
 use kx_ui::UiSettings;
 use serde_json::{Value, json};
@@ -15,6 +14,7 @@ fn every_kind() -> Lane {
         chip("مرحبا", ChipKind::Word),
         chip("example.com", ChipKind::Domain),
         chip("sam@example.com", ChipKind::Email),
+        chip("lea@example.fr", ChipKind::Saved),
         chip("", ChipKind::More),
         chip("", ChipKind::Undo),
     ])
@@ -35,6 +35,7 @@ fn chips_show_their_text_kind_and_script_with_the_name_readers_hear() {
         { "text": "مرحبا", "kind": "word", "arabic": true, "name": "Suggestion: مرحبا" },
         { "text": "example.com", "kind": "domain", "arabic": false, "name": "Suggestion: example.com" },
         { "text": "sam@example.com", "kind": "email", "arabic": false, "name": "Suggestion: sam@example.com" },
+        { "text": "lea@example.fr", "kind": "saved", "arabic": false, "name": "Suggestion: lea@example.fr" },
         { "text": "", "kind": "more", "arabic": false, "name": "More emails" },
         { "text": "", "kind": "undo", "arabic": false, "name": "Undo" },
     ]);
@@ -50,7 +51,7 @@ fn only_arabic_script_text_is_drawn_as_arabic_whatever_its_direction() {
     let mut shown = lane(4, Lane::Chips(chips));
     shown.list = Some(ListPage {
         items: ["سارة@example.com", "sara@example.com"]
-            .map(|e| Redacted::new(e.to_owned()))
+            .map(|e| chip(e, ChipKind::Email))
             .to_vec(),
         page: 0,
         pages: 1,
@@ -84,6 +85,7 @@ fn chip_names_speak_the_keyboards_language() {
         "اقتراح: مرحبا",
         "اقتراح: example.com",
         "اقتراح: sam@example.com",
+        "اقتراح: lea@example.fr",
         "عناوين بريد أخرى",
         "تراجع",
     ];
@@ -136,12 +138,12 @@ fn the_menus_switches_and_the_email_list_pass_through() {
     shown.forgetting = true;
     shown.learn = false;
     shown.on = false;
-    let emails = ["a@example.com", "b@example.org"];
+    let emails = [
+        ("a@example.com", ChipKind::Email, "email"),
+        ("b@example.org", ChipKind::Saved, "saved"),
+    ];
     shown.list = Some(ListPage {
-        items: emails
-            .iter()
-            .map(|e| Redacted::new((*e).to_owned()))
-            .collect(),
+        items: emails.iter().map(|(e, kind, _)| chip(e, *kind)).collect(),
         page: 1,
         pages: 3,
     });
@@ -151,7 +153,7 @@ fn the_menus_switches_and_the_email_list_pass_through() {
     assert_eq!(flags, [&json!(true), &json!(false), &json!(false)]);
     let items: Vec<Value> = emails
         .iter()
-        .map(|e| json!({ "text": e, "arabic": false }))
+        .map(|(e, _, kind)| json!({ "text": e, "arabic": false, "kind": kind }))
         .collect();
     assert_eq!(v["list"], json!({ "items": items, "page": 1, "pages": 3 }));
 }
@@ -163,7 +165,7 @@ fn hidden_marks_never_reach_a_chip_or_a_row() {
     let marked = "\u{202e}ab\u{200f}c\u{2066}";
     let mut shown = lane(3, Lane::Chips(vec![chip(marked, ChipKind::Word)]));
     shown.list = Some(ListPage {
-        items: vec![Redacted::new(marked.to_owned())],
+        items: vec![chip(marked, ChipKind::Saved)],
         page: 0,
         pages: 1,
     });

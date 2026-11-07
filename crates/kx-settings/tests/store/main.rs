@@ -1,6 +1,7 @@
 //! Store tests: a sample module with three settings versions, on temp folders only.
 
 mod change;
+mod fresh;
 mod load;
 mod peeked;
 mod props;

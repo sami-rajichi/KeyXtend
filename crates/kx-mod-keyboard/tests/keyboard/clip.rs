@@ -142,16 +142,19 @@ fn the_clip_key_lights_while_the_module_last_said_its_panel_is_open() {
 }
 
 #[test]
-fn with_the_panel_open_space_ticks_backspace_erases_and_the_moves_drive_it() {
+fn with_the_panel_open_space_ticks_backspace_erases_delete_deletes_and_the_moves_drive_it() {
     let c = Clip::quiet(None);
     c.open(true);
-    for id in ["space", "bksp", "up", "down", "left", "right", "enter"] {
+    for id in [
+        "space", "bksp", "del", "up", "down", "left", "right", "enter",
+    ] {
         assert_eq!(c.b.rig.press(id), Ok(STATE), "{id} never holds");
     }
     c.b.rig.tap("esc").unwrap();
     let keys = [
         PanelKey::Tick,
         PanelKey::Erase,
+        PanelKey::Delete,
         PanelKey::Up,
         PanelKey::Down,
         PanelKey::Left,
@@ -177,16 +180,19 @@ fn with_the_panel_open_a_letter_goes_to_the_search_and_not_to_the_app() {
 }
 
 #[test]
-fn with_the_panel_shut_space_backspace_and_letters_type_as_usual() {
+fn with_the_panel_shut_space_backspace_delete_and_letters_type_as_usual() {
     let c = Clip::quiet(None);
     c.open(true);
     c.open(false);
-    for id in ["space", "bksp", "c-0x0010"] {
+    for id in ["space", "bksp", "del", "c-0x0010"] {
         c.b.rig.tap(id).unwrap();
     }
     assert!(c.heard().is_empty());
     let tap = |code| Stroke::Tap(Scan::new(code));
-    assert_eq!(c.strokes(), [tap(0x39), tap(0x0E), unicode("q")]);
+    assert_eq!(
+        c.strokes(),
+        [tap(0x39), tap(0x0E), tap(0xE053), unicode("q")]
+    );
 }
 
 #[test]
@@ -222,6 +228,11 @@ fn a_language_list_opened_over_the_panel_takes_its_moves_and_leaves_it_the_rest(
     c.b.rig.tap("lang").unwrap();
     assert_eq!(c.b.rig.panel("down", ROWS), Ok(STATE), "the list moves");
     assert_eq!(c.b.rig.tap("up"), Ok(FaceReply::default()));
+    assert_eq!(
+        c.b.rig.tap("del"),
+        Ok(FaceReply::default()),
+        "no panel hears it"
+    );
     c.b.rig.press("space").unwrap();
     assert_eq!(c.heard(), [Heard::Key(PanelKey::Tick)]);
     assert_eq!(

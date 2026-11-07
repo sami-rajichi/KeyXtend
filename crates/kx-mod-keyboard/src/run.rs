@@ -1,9 +1,10 @@
 //! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
 //! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
-//! what reached the app waits to be told.
+//! what reached the app waits to be told. Picked words, pastes and fills go out here too.
 
 mod checks;
 mod clip;
+mod fill;
 mod held;
 mod layer;
 mod ports;
@@ -12,6 +13,7 @@ mod told;
 mod word;
 
 pub use clip::ToPanel;
+pub use fill::{Fill, Filled};
 pub use ports::{Io, Pause, Ports, Sleep};
 pub use tapped::{TapError, Tapped};
 pub use word::{Part, Word, drive};
@@ -35,11 +37,15 @@ pub struct Typing {
     tells: HashMap<String, Tell>,
     /// The key a picked word erases with.
     erase: Option<Scan>,
+    /// The key a fill's Tab part sends.
+    tab: Option<Scan>,
     apps: Vec<String>,
     /// The most characters a picked word may erase or type.
     cap: u16,
     /// The pause after each Backspace of a picked word.
     gap: Duration,
+    /// How late a fill's part after a Tab may still go.
+    late: Duration,
     latches: Latches,
     dead: bool,
     /// While a held key repeats: whether a key went out, so the latches let go when the burst ends.
@@ -71,9 +77,11 @@ impl Typing {
             repeating: spec.repeating(),
             tells: spec.tells(),
             erase: spec.erase_key(),
+            tab: spec.fill_tab(),
             apps: settings.key_apps.clone(),
             cap: settings.text_cap,
             gap: gap(settings),
+            late: Duration::from_millis(settings.fill_late_ms),
             latches: Latches::new(settings.modifiers),
             dead: false,
             burst: None,
@@ -100,12 +108,13 @@ impl Typing {
         std::mem::take(&mut self.caps_sent)
     }
 
-    /// Takes a new `modifiers` mode, `key_apps` list, `text_cap` and `erase_gap_ms`, keeping the latched modifiers and
-    /// a dead key's wait.
+    /// Takes a new `modifiers` mode, `key_apps` list, `text_cap`, `erase_gap_ms` and `fill_late_ms`, keeping the
+    /// latched modifiers and a dead key's wait.
     pub fn update(&mut self, settings: &KeyboardSettings) {
         self.apps.clone_from(&settings.key_apps);
         self.cap = settings.text_cap;
         self.gap = gap(settings);
+        self.late = Duration::from_millis(settings.fill_late_ms);
         self.latches.set_mode(settings.modifiers);
     }
 
@@ -158,6 +167,7 @@ impl Typing {
             Plan::Layer => return Ok(Tapped::Layer),
             Plan::Power => return Ok(Tapped::Power),
             Plan::Clip => return Ok(Tapped::Clip),
+            Plan::Fill => return Ok(Tapped::Fill),
             Plan::Next => return Ok(Tapped::Next),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),

@@ -25,11 +25,7 @@ static LAX_SPEC: SettingsSpec = SettingsSpec {
 
 /// The notice for a failed save.
 fn unsaved() -> Notice {
-    Notice {
-        key: keys::SETTINGS_UNSAVED,
-        module: None,
-        args: Vec::new(),
-    }
+    Notice::plain(keys::SETTINGS_UNSAVED)
 }
 
 #[test]

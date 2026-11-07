@@ -1,5 +1,5 @@
 //! Spike glue over the product's window guard (`kx_platform_windows::window`, ADR-0014) for the tools and the test
-//! panel: the spared title, the guard with a top window, and quick-fill's focus request, the one Win32 call here.
+//! panel: the spared title, the guard with a top window, and the snip's focus request, the one Win32 call here.
 
 use std::sync::OnceLock;
 
@@ -25,7 +25,7 @@ pub fn guard_with_top(top: &str) -> Result<bool, String> {
 }
 
 /// Brings `target` back to the front if something else took it; true when it is in front after `settle_ms`.
-/// Spike only (quick-fill, P9): the product never asks Windows for the focus, so this call stays here.
+/// Spike only (the snip, P12): the product never asks Windows for the focus, so this call stays here.
 pub fn bring_back(target: HWND, settle_ms: u64) -> bool {
     if foreground() != target {
         // SAFETY: a plain request Windows may refuse; the check below sees the result.

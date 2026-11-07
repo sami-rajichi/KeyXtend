@@ -97,6 +97,18 @@ pub fn within<T: Copy + PartialOrd + Display>(
     )))
 }
 
+/// Refuses a broken pair of settings with `why`, which names both keys.
+///
+/// # Errors
+/// `SettingsError::Invalid` with `why` when `bad`.
+pub fn refuse_if(bad: bool, why: &str) -> Result<(), SettingsError> {
+    if bad {
+        Err(SettingsError::Invalid(why.to_owned()))
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,6 +224,16 @@ mod tests {
             Err(SettingsError::Invalid(why))
         );
         assert!(within("ratio", f32::NAN, &(0.0..=1.0)).is_err(), "NaN");
+    }
+
+    #[test]
+    fn refuse_if_names_the_broken_pair_only_when_it_is_broken() {
+        let why = "poll_ms must not pass open_ms";
+        assert_eq!(refuse_if(false, why), Ok(()));
+        assert_eq!(
+            refuse_if(true, why),
+            Err(SettingsError::Invalid(why.to_owned()))
+        );
     }
 
     #[test]

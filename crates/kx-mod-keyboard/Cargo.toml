@@ -22,3 +22,5 @@ toml.workspace = true
 kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
+# The log capture that checks a fill's values never reach a log line; the module itself never logs.
+tracing.workspace = true

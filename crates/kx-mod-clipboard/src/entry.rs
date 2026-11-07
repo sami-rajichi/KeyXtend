@@ -9,15 +9,13 @@ use std::path::{Path, PathBuf};
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{AppRef, ClipKind, ClipPart, Date, FileFact, LocalTime};
-use kx_module_api::text::fold_any;
+use kx_module_api::text::{SPACE, fold_any, one_line};
 
 pub use kind::keep_parts;
 
 use crate::hash;
 use kind::kind_of;
 
-/// What a run of blanks and line breaks reads as in a title and the search text; it also parts file names.
-const SPACE: char = ' ';
 /// What parts the search text's pieces; no query holds it, so none matches across two.
 const PIECE_SEP: &str = "\n";
 
@@ -229,19 +227,10 @@ fn name(path: &Path) -> Cow<'_, str> {
         .to_string_lossy()
 }
 
-/// `text` on one line: each run of blanks, line breaks and control characters as one space; search folds a query
-/// the same way.
+/// `text` on one line by the shared rule, each run of blanks, line breaks and control characters as one space; search
+/// reads a query the same way.
 pub(crate) fn flat(text: &str) -> impl Iterator<Item = char> + '_ {
-    let mut gap = false;
-    text.chars().filter_map(move |c| {
-        let blank = c.is_whitespace() || c.is_control();
-        let was = std::mem::replace(&mut gap, blank);
-        match (blank, was) {
-            (false, _) => Some(c),
-            (true, false) => Some(SPACE),
-            (true, true) => None,
-        }
-    })
+    one_line(text.chars())
 }
 
 /// The first `chars` characters of `text` on one line, without the blanks around them.

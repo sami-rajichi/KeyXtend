@@ -92,6 +92,7 @@ fn a_mode_built_off_the_ui_thread_keeps_the_caps_lock_the_ui_saw() {
         round: 0,
         erase: 1,
         text: Redacted::new("ab".into()),
+        line: false,
     };
     from_elsewhere(&d.bus, &word);
     d.rig.tap(A).unwrap();

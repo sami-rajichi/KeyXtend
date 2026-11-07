@@ -34,6 +34,7 @@ fn product_lines() -> String {
        {PROG} g11 <{NAME}>
        {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
+       {PROG} g23 <{NAME}>
        {PROG} g26 <{NAME}>
        {PROG} g27 <{NAME}>"
     )
@@ -45,7 +46,6 @@ fn face_lines() -> String {
         "       {PROG} g7 <{FACE}>
        {PROG} g19 <{}|{FACE}>
        {PROG} g22 <{FACE}|{}|{}|{}>
-       {PROG} g23 <{FACE}>
        {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
         g19::CORE,
@@ -72,7 +72,9 @@ fn clip_lines() -> String {
     format!(
         "g20 {NAME}, g8 {clip} and g25 start the test build on its own data folder from the plain kx-gates (cargo run -p \
          kx-gates), so close the product first; they overwrite the clipboard and Windows' clipboard history.
-g20 {worker} only reads the tokens of the running product's workers: start the dev install first."
+g20 {worker} only reads the tokens of the running product's workers: start the dev install first.
+g23 {NAME} starts the test build on a data folder it makes, saves a test login through Quick-fill and fills Chrome \
+         login pages with it, so close the product first; the folder goes at the end."
     )
 }
 
@@ -222,6 +224,18 @@ mod tests {
         for line in lines {
             assert!(line.contains("kx-gates "), "{line}");
         }
+    }
+
+    #[test]
+    fn p9_lists_g23_on_the_product_only_and_asks_to_close_it_first() {
+        let text = usage();
+        assert!(text.contains(&format!("g23 <{NAME}>")), "{text}");
+        assert!(!text.contains(&format!("g23 <{FACE}>")), "{text}");
+        let told = text.lines().find(|l| l.starts_with(&format!("g23 {NAME}")));
+        assert!(
+            told.is_some_and(|l| l.contains("close the product first")),
+            "{text}"
+        );
     }
 
     #[test]

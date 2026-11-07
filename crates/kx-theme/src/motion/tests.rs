@@ -220,3 +220,29 @@ fn the_clipboard_moves_load_and_stop_with_reduced_motion() {
     let bad = text().replacen("tick_scale = 0.6", "tick_scale = 1.5", 1);
     assert!(parse(&bad).expect_err("above 1").contains("tick_scale"));
 }
+
+#[test]
+fn the_quick_fill_moves_load_and_stop_with_reduced_motion() {
+    let m = load().expect("motion.toml loads");
+    let swift = [0.2, 0.8, 0.2, 1.0, 1.0, 1.0];
+    let ease_out = [0.0, 0.0, 0.58, 1.0, 1.0, 1.0];
+    let want = [
+        ("highlight", 167, swift),
+        ("swap", 180, swift),
+        ("turn", 180, swift),
+        ("sheet", 180, swift),
+        ("reveal", 167, ease_out),
+    ];
+    for (name, ms, bez) in want {
+        assert!(FILL_MOVES.contains(&name), "{name} is a fill move");
+        assert_eq!(m.full.fill[name], Timed { ms, bez }, "{name}");
+        assert_eq!(
+            m.reduced.fill[name].ms, 0,
+            "{name} stops with reduced motion"
+        );
+    }
+    assert_eq!(m.full.fill.len(), FILL_MOVES.len());
+    let gone = text().replacen("reveal = {", "revael = {", 1);
+    let e = parse(&gone).expect_err("reveal is missing");
+    assert!(e.contains("fill.reveal"), "{e}");
+}

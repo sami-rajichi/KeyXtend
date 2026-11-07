@@ -3,9 +3,9 @@
 
 use super::*;
 use crate::fixture::{Dib, Png, rgba};
-use crate::media;
+use crate::media::{self, Picture};
 use ::png::{BitDepth, ColorType};
-use kx_ipc::{Ask, Reply};
+use kx_ipc::{Ask, Codec, Reply, Why};
 use std::borrow::Cow;
 use std::process::Command;
 use std::{env, io};
@@ -60,6 +60,16 @@ fn test_dib(png: &[u8], max_bytes: usize) -> Result<Vec<u8>, Why> {
     making(png, max_bytes)
 }
 
+/// The tests' media job, whose draw and DIB maker panic on `BOOM`.
+fn test_work(ask: Ask<'static>) -> Reply {
+    media::reply(ask, test_draw, test_dib)
+}
+
+/// The media job without a panic.
+fn plain_work(ask: Ask<'static>) -> Reply {
+    media::reply(ask, drawing, making)
+}
+
 /// Every reply in `out`.
 fn replies(out: &[u8]) -> Vec<Reply> {
     let mut written = out;
@@ -69,7 +79,7 @@ fn replies(out: &[u8]) -> Vec<Reply> {
 /// Runs the loop over `input`, returning its outcome and every reply it wrote.
 fn run(input: &[u8]) -> (Result<(), IpcError>, Vec<Reply>) {
     let mut out = Vec::new();
-    let outcome = serve(&mut &input[..], &mut out, test_draw, test_dib);
+    let outcome = serve(&mut &input[..], &mut out, test_work);
     (outcome, replies(&out))
 }
 
@@ -192,7 +202,7 @@ fn hushed_child() {
         return;
     }
     let (input, mut out) = (frames(&[draw_ask(1, Codec::Dib, BOOM)]), Vec::new());
-    let outcome = answer(&mut &input[..], &mut out, test_draw, test_dib);
+    let outcome = answer(&mut &input[..], &mut out, test_work);
     assert_eq!(outcome, Ok(()));
     assert_eq!(
         replies(&out),
@@ -226,7 +236,7 @@ fn nothing_after_bye_is_read() {
     let input = [frames(&[Ask::Bye]), tail.clone()].concat();
     let mut rest = &input[..];
     let mut out = Vec::new();
-    assert_eq!(serve(&mut rest, &mut out, drawing, making), Ok(()));
+    assert_eq!(serve(&mut rest, &mut out, plain_work), Ok(()));
     assert_eq!((rest, out.len()), (&tail[..], 0));
 }
 
@@ -258,6 +268,31 @@ impl Write for Gone {
 fn a_stream_that_cannot_be_written_ends_the_loop() {
     let (dib, _) = tiny();
     let input = frames(&[draw_ask(1, Codec::Dib, &dib)]);
-    let outcome = serve(&mut &input[..], &mut Gone, drawing, making);
+    let outcome = serve(&mut &input[..], &mut Gone, plain_work);
     assert_eq!(outcome, Err(IpcError::Io(io::ErrorKind::BrokenPipe)));
+}
+
+/// A job whose every reply claims more pixels than it carries.
+fn lying_work(ask: &Ask<'static>) -> Reply {
+    let id = ask.id().unwrap_or_default();
+    Reply::Pixels {
+        id,
+        width: SIDE,
+        height: SIDE,
+        rgba: Vec::new(),
+    }
+}
+
+#[test]
+fn a_reply_that_fails_its_own_checks_is_an_internal_failure_and_the_loop_goes_on() {
+    let (dib, _) = tiny();
+    let input = frames(&[draw_ask(1, Codec::Dib, &dib), draw_ask(2, Codec::Dib, &dib)]);
+    let mut out = Vec::new();
+    let work = |ask: Ask<'static>| lying_work(&ask);
+    assert_eq!(serve(&mut &input[..], &mut out, work), Ok(()));
+    let failed = |id| Reply::Failed {
+        id,
+        why: Why::Internal,
+    };
+    assert_eq!(replies(&out), [failed(1), failed(2)]);
 }

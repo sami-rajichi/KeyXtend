@@ -1,16 +1,17 @@
 //! The module's thread over the bus: it asks for the layout, follows the keyboard's pieces, types a pick through the
-//! keyboard, answers an ask for presses, saves at stop and says when it fails; with the pack builder, it closes one
-//! pack before it opens the next.
+//! keyboard, answers an ask for presses, hears the notebook's emails, saves at stop and says when it fails; with the
+//! pack builder, it closes one pack before it opens the next.
 
 use crate::rig::{DAY, blob, learner, on_day};
 use kx_mod_predict::{MANIFEST, PredictModule};
 use kx_module_api::ports::{
-    ChipPicked, FieldKind, FieldWatch, FieldWatchKey, Lane, LayoutAsk, LayoutChanged, LayoutId,
-    PackError, PackView, Piece, PressesAsk, PressesWanted, SealedStore, SealedStoreKey, Suggested,
-    TypeWord, Typed, WordPacks, WordPacksKey,
+    ChipKind, ChipPicked, FieldKind, FieldWatch, FieldWatchKey, Lane, LayoutAsk, LayoutChanged,
+    LayoutId, PackError, PackView, Piece, PressesAsk, PressesWanted, SealedStore, SealedStoreKey,
+    Suggested, TypeWord, Typed, VaultEmails, WordPacks, WordPacksKey,
 };
 use kx_module_api::{
-    Bus, Event, Module, ModuleCx, Notice, NoticeArg, Redacted, ServiceKey, Subscription, args, keys,
+    Bus, Event, Module, ModuleCx, Notice, NoticeArg, Redacted, ServiceKey, Subscription, Zeroizing,
+    args, keys,
 };
 use kx_platform_fake::{FakeFieldWatch, FakeSealedStore, FakeWordPacks};
 use kx_test_support::host::{FakeHost, Stored};
@@ -187,6 +188,30 @@ fn an_ask_for_presses_gets_the_current_flag_again() {
     run.stop();
 }
 
+#[test]
+fn the_thread_hears_the_notebooks_emails_and_offers_them_after_at_at() {
+    let (field, store) = (FakeFieldWatch::new(), FakeSealedStore::new());
+    field.focus(FieldKind::Text);
+    field.set_before(Some(""));
+    let listen = |bus: &Bus| hear::<Suggested>(bus);
+    let (mut run, (_l, lanes)) =
+        Live::start(&field, Arc::new(FakeWordPacks::new()), &store, listen);
+    run.send(&lang("en"));
+    let saved = "alex@notebook.org";
+    let emails = vec![Redacted::new(Zeroizing::new(saved.to_owned()))];
+    run.send(&VaultEmails { emails });
+    run.send(&Typed {
+        piece: Piece::Text(Redacted::new("@@".to_owned())),
+    });
+    let shown = lane_of(&lanes, &[saved]);
+    let kinds = match shown.lane {
+        Lane::Chips(chips) => chips.into_iter().map(|c| c.kind).collect(),
+        _ => Vec::new(),
+    };
+    assert_eq!(kinds, [ChipKind::Saved]);
+    run.stop();
+}
+
 /// Packs that have none, and panic for French, as a bug on the actor's thread would.
 struct Broken;
 
@@ -244,4 +269,5 @@ fn a_missing_pack_is_told_by_the_name_the_layouts_gave() {
 #[cfg(feature = "build")]
 mod closes;
 
+mod line;
 mod order;

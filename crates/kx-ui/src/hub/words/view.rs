@@ -20,6 +20,10 @@ static START: Suggested = Suggested {
 
 /// The lane, as JSON.
 #[derive(Serialize)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one fact about the lane that QML reads flat from its JSON."
+)]
 pub(super) struct View {
     round: u32,
     kind: Kind,
@@ -28,6 +32,8 @@ pub(super) struct View {
     learn: bool,
     on: bool,
     list: Option<List>,
+    /// The vault runs, so a password box shows its Quick-fill chip.
+    fill: bool,
 }
 
 /// What the lane shows, as QML names it.
@@ -48,6 +54,7 @@ enum Offer {
     Word,
     Domain,
     Email,
+    Saved,
     More,
     Undo,
 }
@@ -58,6 +65,7 @@ impl From<ChipKind> for Offer {
             ChipKind::Word => Self::Word,
             ChipKind::Domain => Self::Domain,
             ChipKind::Email => Self::Email,
+            ChipKind::Saved => Self::Saved,
             ChipKind::More => Self::More,
             ChipKind::Undo => Self::Undo,
         }
@@ -73,11 +81,12 @@ struct ChipView {
     name: String,
 }
 
-/// One email list row as QML draws it.
+/// One email list row as QML draws it: a known or saved email.
 #[derive(Serialize)]
 struct Row {
     text: String,
     arabic: bool,
+    kind: Offer,
 }
 
 /// The email list's page as QML draws it.
@@ -88,8 +97,8 @@ struct List {
     pages: u16,
 }
 
-/// `lane`, or the start's while none came, with the chips' names in `t`.
-pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
+/// `lane`, or the start's while none came, with the chips' names in `t` and whether the vault runs.
+pub(super) fn of(lane: Option<&Suggested>, fill: bool, t: &I18n) -> View {
     let lane = lane.unwrap_or(&START);
     let (kind, chips) = match &lane.lane {
         Lane::Chips(chips) => {
@@ -109,6 +118,7 @@ pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
         learn: lane.learn,
         on: lane.on,
         list: lane.list.as_ref().map(page),
+        fill,
     }
 }
 
@@ -117,7 +127,9 @@ pub(super) fn of(lane: Option<&Suggested>, t: &I18n) -> View {
 fn chip(c: &Chip, t: &I18n, forget: bool) -> ChipView {
     let text = clean(c.text.expose());
     let name = match c.kind {
-        ChipKind::Word | ChipKind::Domain | ChipKind::Email => t.chip(&text, forget),
+        ChipKind::Word | ChipKind::Domain | ChipKind::Email | ChipKind::Saved => {
+            t.chip(&text, forget)
+        }
         ChipKind::More => t.text(CHIP_MORE),
         ChipKind::Undo => t.text(CHIP_UNDO),
     };
@@ -131,12 +143,16 @@ fn chip(c: &Chip, t: &I18n, forget: bool) -> ChipView {
 
 /// The email list's page `list`, each row without hidden marks.
 fn page(list: &ListPage) -> List {
-    let row = |text: String| Row {
-        arabic: is_arabic(&text),
-        text,
+    let row = |c: &Chip| {
+        let text = clean(c.text.expose());
+        Row {
+            arabic: is_arabic(&text),
+            text,
+            kind: c.kind.into(),
+        }
     };
     List {
-        items: list.items.iter().map(|i| row(clean(i.expose()))).collect(),
+        items: list.items.iter().map(row).collect(),
         page: list.page,
         pages: list.pages,
     }

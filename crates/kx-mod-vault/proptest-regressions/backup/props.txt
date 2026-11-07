@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc f7d29f3f221a33e6afb2ac3b01519b4fe17fd52ad3c5f8d0ab1f819db3074e2d # shrinks to kept = Kept { sites: [], padlock: None, left: [], offered: false, behind: false, checks: Checks { due: None, step: 0, missed: 0 } }
+cc 68fa2bd2fa9bb200bbc910c8b322ae08e5f8337f3571daba1e99f68caf918c35 # shrinks to kept = Kept { sites: [], padlock: None, left: [], offered: false, behind: false, held: true, checks: Checks { due: None, step: 0, missed: 0 } }

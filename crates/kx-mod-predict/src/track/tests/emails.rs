@@ -15,7 +15,7 @@ fn a_typed_at_at_asks_for_every_email_and_one_at_for_domains() {
         Some(EmailAsk::All(Redacted::new("@@".to_owned())))
     );
     let mut t = tracker(2);
-    type_text(&mut t, "sami@g");
+    type_text(&mut t, "alex@g");
     let show = t.show(&knows);
     assert_eq!(show.words, None);
     assert_eq!(
@@ -42,11 +42,11 @@ fn an_at_at_that_came_from_a_read_never_lists_emails() {
 #[test]
 fn the_start_of_a_token_may_start_a_known_email() {
     let mut t = tracker(2);
-    type_text(&mut t, "(sami.r");
+    type_text(&mut t, "(alex.r");
     let show = t.show(&knows);
     assert_eq!(
         show.emails,
-        Some(EmailAsk::Start(Redacted::new("sami.r".to_owned())))
+        Some(EmailAsk::Start(Redacted::new("alex.r".to_owned())))
     );
 }
 
@@ -63,10 +63,10 @@ fn a_finished_email_is_told_never_learned_and_clears_the_context() {
 fn a_finished_email_is_captured_whole_and_without_the_marks_around_it() {
     let cases = [
         ("o'brien@x.com ", "o'brien@x.com"),
-        ("sami@x.org. ", "sami@x.org"),
-        ("sami@x.org, ", "sami@x.org"),
-        ("(sami@x.org) ", "sami@x.org"),
-        ("<sami@x.org> ", "sami@x.org"),
+        ("alex@x.org. ", "alex@x.org"),
+        ("alex@x.org, ", "alex@x.org"),
+        ("(alex@x.org) ", "alex@x.org"),
+        ("<alex@x.org> ", "alex@x.org"),
     ];
     for (typed, email) in cases {
         let mut t = tracker(2);
@@ -78,8 +78,8 @@ fn a_finished_email_is_captured_whole_and_without_the_marks_around_it() {
 #[test]
 fn an_email_is_told_only_when_its_at_sign_was_typed() {
     for (read, typed) in [
-        ("sami@x.org", " "),
-        ("sami@x.or", "g "),
+        ("alex@x.org", " "),
+        ("alex@x.or", "g "),
         ("bob@x.com", ", "),
     ] {
         let mut t = tracker(2);
@@ -87,8 +87,8 @@ fn an_email_is_told_only_when_its_at_sign_was_typed() {
         assert!(type_text(&mut t, typed).is_empty(), "{read} then {typed:?}");
     }
     let mut t = tracker(2);
-    t.read(Some("sami"), &knows);
-    assert_eq!(type_text(&mut t, "@x.org "), [mail("sami@x.org")]);
+    t.read(Some("alex"), &knows);
+    assert_eq!(type_text(&mut t, "@x.org "), [mail("alex@x.org")]);
 }
 
 #[test]

@@ -1,12 +1,13 @@
 //! The clipboard history's bus events (ADR-0034 decision 2, ADR-0035): the panel's state and what carries copied
-//! content or search text need `ReadClipboard`, the paste request needs `WriteClipboard`, and the open toggle and the
-//! chord flags carry nothing.
+//! content or search text need `ReadClipboard`, Quick-fill's text hand-over too, the paste request needs
+//! `WriteClipboard`, and the open toggle and the chord flags carry nothing.
 
 mod view;
 
 pub use view::{ClipKind, ClipPage, ClipRow, Filter, Pages, PanelNote, Preview, When};
 
-use crate::{Capability, Event, Redacted};
+use super::MAX_FIELD_CHARS;
+use crate::{Capability, Event, Redacted, Secret};
 use std::sync::Arc;
 
 /// The gate of the panel's state and of the events that carry content or search text.
@@ -38,27 +39,38 @@ impl Event for ClipPanel {
     const CAPABILITY: Option<Capability> = READ;
 }
 
-/// A key the panel takes from our keyboard while it is open.
+/// A key a panel, the clipboard's or Quick-fill's, takes from our keyboard while it is open.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PanelKey {
     /// Move the highlight up.
     Up,
     /// Move the highlight down.
     Down,
-    /// The filter before.
+    /// The left arrow: it moves the caret while the line holds text; an empty search shows the filter before.
     Left,
-    /// The filter after.
+    /// The right arrow: it moves the caret while the line holds text; an empty search shows the filter after.
     Right,
-    /// Insert the ticked rows, or the highlighted one when none is ticked.
+    /// The highlighted row's act: the clipboard inserts the ticked rows or the highlighted one, Quick-fill presses the
+    /// row's first button.
     Enter,
-    /// Back out one step: close the Delete-all question, else the preview, else clear the search, else the panel.
+    /// Back out one step: the clipboard closes its question, else the preview, else clears the search, else closes.
     Esc,
-    /// Tick or untick the highlighted row: the Space key.
+    /// The Space key, sent as this while any panel is open: a line with text, or Quick-fill's lines even when empty, takes
+    /// a space at the caret; the clipboard's empty search ticks or unticks the highlighted row.
     Tick,
-    /// Erase the search's last character: the Backspace key.
+    /// The Backspace key: erase the character before the caret, in the search or Quick-fill's highlighted line.
     Erase,
-    /// Characters for the search line.
+    /// The Delete key: remove the grapheme after the caret, in the search or Quick-fill's highlighted line.
+    Delete,
+    /// Characters to insert at the caret of the search line, or of Quick-fill's highlighted line.
     Text(Redacted<String>),
+    /// A chip's whole change to a search line at its caret, as one change; a page with no search ignores it.
+    Word {
+        /// The characters to erase before the caret first, stopping at the line's start.
+        erase: u16,
+        /// The characters to insert at the caret after them.
+        text: Redacted<String>,
+    },
 }
 
 /// From the keyboard: a key clicked while the panel is open, which goes to the panel instead of the app.
@@ -67,6 +79,27 @@ pub struct ClipKey(pub PanelKey);
 
 impl Event for ClipKey {
     const NAME: &'static str = "clip-key";
+    const CAPABILITY: Option<Capability> = READ;
+}
+
+/// The line a panel's page shows, as its module tells the keyboard (ADR-0040); `Debug` never shows its text.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum PanelLine {
+    /// No line shows, as on an entry page, a preview or a question.
+    #[default]
+    None,
+    /// The search line, with its text up to the caret, as prediction reads what is before it.
+    Search(Redacted<String>),
+    /// A name, label, value or password line, whose text never leaves its module.
+    Private,
+}
+
+/// From the clipboard module: the line its panel shows now, sent as it changes and on `HistoryAsk`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClipLine(pub PanelLine);
+
+impl Event for ClipLine {
+    const NAME: &'static str = "clip-line";
     const CAPABILITY: Option<Capability> = READ;
 }
 
@@ -123,6 +156,11 @@ pub enum ClipAct {
     Close,
     /// The ui's rows per page; the module pages by the last one heard.
     Rows(u8),
+    /// A click placed the search line's caret.
+    Caret {
+        /// Where, in UTF-16 units of the text the line draws.
+        at: Redacted<u32>,
+    },
 }
 
 impl Event for ClipAct {
@@ -154,6 +192,75 @@ pub struct Pasted {
 impl Event for Pasted {
     const NAME: &'static str = "pasted";
     const CAPABILITY: Option<Capability> = WRITE;
+}
+
+/// A CR LF is two characters until Paste turns it into one space, so a take reads twice a field's characters.
+const SLACK: usize = 2;
+
+/// From Quick-fill: its Paste asks the clipboard module for the clipboard's current text, and for its history to forget
+/// that copy.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct ClipTake {
+    /// Names this request, so its answer names it too.
+    pub round: u32,
+    /// The most characters to read; a longer text is refused.
+    pub max_chars: usize,
+}
+
+impl ClipTake {
+    /// The take of round `round` for a field of `field_chars` characters, with room for each break to be two.
+    #[must_use]
+    pub const fn new(round: u32, field_chars: usize) -> Self {
+        Self {
+            round,
+            max_chars: field_chars.saturating_mul(SLACK),
+        }
+    }
+
+    /// The most characters the clipboard reads: `max_chars`, but never past the room of the longest field.
+    #[must_use]
+    pub const fn cap(&self) -> usize {
+        let most = MAX_FIELD_CHARS.saturating_mul(SLACK);
+        if self.max_chars < most {
+            self.max_chars
+        } else {
+            most
+        }
+    }
+}
+
+impl Event for ClipTake {
+    const NAME: &'static str = "clip-take";
+    const CAPABILITY: Option<Capability> = READ;
+}
+
+/// What a take found on the clipboard.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ClipText {
+    /// The clipboard's text.
+    Text(Secret),
+    /// The clipboard holds no text, such as an image.
+    Empty,
+    /// The text is past the take's cap, so it was refused.
+    TooLong,
+    /// Another app held the clipboard, the system refused it, or its text could not be read.
+    Busy,
+}
+
+/// From the clipboard module: what the take found. Its history forgets its newest entry only when the take read the
+/// text in full and that entry is this copy; it is not for a copy left out of history (as a password manager's), one
+/// refused as too big or under the disk floor, or one made while the keyboard was off.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClipTaken {
+    /// The round of the request.
+    pub round: u32,
+    /// What the take found.
+    pub text: ClipText,
+}
+
+impl Event for ClipTaken {
+    const NAME: &'static str = "clip-taken";
+    const CAPABILITY: Option<Capability> = READ;
 }
 
 /// From the clipboard module: while `on`, the keyboard turns the platform's history chord into `ClipOpen`; it carries

@@ -16,7 +16,9 @@ QtObject {
             no: "no",
             preview: "preview",
             back: "back",
-            close: "close"
+            close: "close",
+            caret: "caret",
+            wheel: "wheel"
         })
     // Each preview page's kind, as the hub's JSON names it.
     readonly property var previews: ({

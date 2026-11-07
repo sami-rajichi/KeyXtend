@@ -1,9 +1,11 @@
 //! Round trips, the wire layout and clean truncation; refusals and properties have their own files.
 
+mod boxes;
 mod command;
 mod dib;
 mod props;
 mod refuse;
+mod vault;
 
 use crate::code::{Code, Kind};
 use crate::frame::{Head, grow, read_tail};

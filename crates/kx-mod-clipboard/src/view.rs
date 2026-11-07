@@ -49,6 +49,7 @@ pub fn build(
         highlight: hi.map(|h| u8::try_from(h - at * per).unwrap_or(u8::MAX)),
         filter: panel.filter(),
         search: panel.query().clone(),
+        caret: Redacted::new(panel.caret()),
         pages: Pages {
             at: short(at),
             count: short(list.len().div_ceil(per).max(1)),

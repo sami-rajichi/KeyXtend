@@ -115,7 +115,12 @@ fn a_note_still_shows_its_kind_size_and_codec() {
 
 #[test]
 fn each_error_says_something_else() {
-    let errors = [ClipError::Busy, ClipError::Refused, ClipError::Io];
+    let errors = [
+        ClipError::Busy,
+        ClipError::Refused,
+        ClipError::Io,
+        ClipError::TooLong,
+    ];
     let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();
     assert_eq!(texts.len(), errors.len());
 }

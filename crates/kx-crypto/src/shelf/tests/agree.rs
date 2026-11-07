@@ -2,7 +2,7 @@
 //! bytes, refuse the same oversized blob, and count the same room but for the seal's overhead.
 
 use super::*;
-use crate::consts::OVERHEAD;
+use crate::testing::contract::seen;
 use kx_module_api::ports::RESERVED_NAMES;
 use kx_platform_fake::FakeShelf;
 
@@ -10,21 +10,6 @@ use kx_platform_fake::FakeShelf;
 const GOOD: [&str; 4] = [DAY, PINNED, "con-1", "lpt10"];
 /// Names of the wrong form.
 const BAD: [&str; 5] = ["", "Pinned", "a/b", "..", "CON"];
-
-/// A folder's blobs, each with its bytes.
-type Blobs = Vec<(BlobName, Vec<u8>)>;
-
-/// Every folder of `shelf` with its blobs, as it lists and loads them.
-fn seen(shelf: &dyn SealedShelf) -> Vec<(BlobName, Blobs)> {
-    let blobs = |folder: &BlobName| -> Blobs {
-        let names = shelf.names(folder).unwrap().into_iter();
-        names
-            .map(|n| (n.clone(), shelf.load(folder, &n).unwrap().unwrap()))
-            .collect()
-    };
-    let folders = shelf.folders().unwrap().into_iter();
-    folders.map(|f| (f.clone(), blobs(&f))).collect()
-}
 
 /// The calls both shelves get: every folder and name pair, an oversized save, and removes and drops, missing ones too.
 fn run(shelf: &dyn SealedShelf, names: &[BlobName]) {

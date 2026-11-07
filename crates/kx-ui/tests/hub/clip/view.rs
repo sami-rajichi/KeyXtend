@@ -144,6 +144,7 @@ fn the_page_filters_search_and_footer_are_worded() {
     let mut p = page(1, vec![row(7, "a")]);
     p.filter = Filter::Images;
     p.search = Redacted::new("\u{2068}مرحبا\u{2069}".to_owned());
+    p.caret = Redacted::new(2);
     p.pages.at = 1;
     p.pages.count = 4;
     p.unpin = true;
@@ -166,7 +167,7 @@ fn the_page_filters_search_and_footer_are_worded() {
     );
     assert_eq!(
         v["search"],
-        json!({"text": "مرحبا", "hint": "Type to search", "arabic": true, "rtl": true})
+        json!({"text": "مرحبا", "caret": 2, "hint": "Type to search", "arabic": true, "rtl": true})
     );
     assert_eq!(v["page"], json!({"at": 1, "count": 4}));
     assert_eq!(v["words"]["pin"], "Unpin");

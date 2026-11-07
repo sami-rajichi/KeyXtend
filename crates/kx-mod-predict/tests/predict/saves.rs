@@ -91,7 +91,7 @@ fn a_locked_store_starts_empty_tells_once_and_saves_nothing_that_run() {
     let mut rig = Rig::build(|f, _| f.store.fail_load(SealedError::Locked));
     rig.lang("en");
     rig.focus(FieldKind::Text);
-    rig.typed("hello sami@x.org ");
+    rig.typed("hello alex@x.org ");
     rig.advance(Duration::from_secs(rig.settings.save_s.into()));
     rig.tick();
     rig.lang("fr");
@@ -125,18 +125,18 @@ fn a_refused_save_keeps_running_and_tries_again_after_save_s() {
 #[test]
 fn prediction_off_whose_emails_save_fails_keeps_them_for_the_next_save() {
     let mut rig = english(|_| {});
-    rig.typed("sami@x.org ");
+    rig.typed("alex@x.org ");
     rig.fakes.store.fail_save(SealedError::Io);
     rig.ask(WordsAsk::Power(false));
     assert_eq!(rig.fakes.store.saves(), 1, "tried at once");
     rig.ask(WordsAsk::Power(true));
-    rig.typed("sa");
-    let chip = ("sami@x.org".to_owned(), ChipKind::Email);
+    rig.typed("al");
+    let chip = ("alex@x.org".to_owned(), ChipKind::Email);
     assert!(rig.chips().contains(&chip), "kept while unsaved");
     rig.stop();
     let bytes = rig.fakes.store.blob(&emails_blob().unwrap()).unwrap();
     let saved = Emails::from_bytes(&bytes, usize::MAX).unwrap();
-    assert_eq!(saved.list(), ["sami@x.org"], "never saved empty");
+    assert_eq!(saved.list(), ["alex@x.org"], "never saved empty");
 }
 
 #[test]

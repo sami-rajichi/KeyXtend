@@ -70,9 +70,15 @@ pub(super) fn on_this_thread(hwnd: HWND) -> bool {
     unsafe { GetWindowThreadProcessId(hwnd, None) == GetCurrentThreadId() }
 }
 
-/// Lifts our window, and the windows it owns, to the top of the topmost band.
+/// Lifts our window, and the windows it owns, to the top of the topmost band. Windows can place it after another
+/// thread's hidden IME window out of the band, move nothing and still say yes, so it then goes up alone.
 pub(super) fn lift(hwnd: HWND) -> Result<(), UiError> {
-    to_top(hwnd, SET_WINDOW_POS_FLAGS::default())
+    to_top(hwnd, SET_WINDOW_POS_FLAGS::default())?;
+    if is_top(ex_of(hwnd)) {
+        Ok(())
+    } else {
+        front(hwnd)
+    }
 }
 
 /// Lifts our window alone to the top of the topmost band, such as a tip as it shows; its owner stays where it is.

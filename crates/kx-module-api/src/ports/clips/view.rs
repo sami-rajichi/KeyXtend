@@ -5,22 +5,6 @@ use crate::Redacted;
 use crate::ports::{Date, Pixels, Room};
 use std::path::PathBuf;
 
-/// Declares a plain enum with `ALL`, every variant in declaration order, so a variant is listed by being declared.
-macro_rules! listed {
-    ($(#[$meta:meta])* $vis:vis enum $name:ident ($all:literal) { $($(#[$doc:meta])* $variant:ident,)+ }) => {
-        $(#[$meta])*
-        #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-        $vis enum $name {
-            $($(#[$doc])* $variant,)+
-        }
-
-        impl $name {
-            #[doc = $all]
-            pub const ALL: [Self; [$(stringify!($variant)),+].len()] = [$(Self::$variant),+];
-        }
-    };
-}
-
 listed! {
     /// What an entry holds, for its icon.
     pub enum ClipKind ("Every kind.") {
@@ -164,6 +148,8 @@ pub struct ClipPage {
     pub filter: Filter,
     /// The search line.
     pub search: Redacted<String>,
+    /// The search line's caret, in UTF-16 units of the text it draws.
+    pub caret: Redacted<u32>,
     /// Where the page is.
     pub pages: Pages,
     /// How many entries are ticked, in every view.

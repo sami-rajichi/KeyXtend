@@ -8,6 +8,10 @@ pub const HIDDEN_MARKS: [char; 14] = [
     '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
 ];
 
+/// Line breaks: LF, CR, NEL, and the line and paragraph separators. Each is a hidden mark, and Paste turns each into a
+/// space.
+pub const LINE_BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
+
 /// Characters that draw nothing, as first and last of each run: `Default_Ignorable` ones (the soft hyphen, the Hangul
 /// filler letters, the Mongolian vowel separator, the zero-width space, the word joiner and invisible operators, the
 /// deprecated inhibitors, the BOM, the shorthand and musical format controls, the tags) and the interlinear annotation
@@ -45,8 +49,6 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
-    /// Line breaks: LF, CR, NEL, and the line and paragraph separators.
-    const BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
     /// Controls a value may hide: BEL, ESC, DEL, RLO, the first-strong isolate and ALM.
     const CONTROLS: [char; 6] = [
         '\u{7}', '\u{1b}', '\u{7f}', '\u{202e}', '\u{2068}', '\u{61c}',
@@ -58,7 +60,7 @@ mod tests {
 
     #[test]
     fn line_breaks_and_controls_are_hidden_marks() {
-        for c in BREAKS.iter().chain(&CONTROLS) {
+        for c in LINE_BREAKS.iter().chain(&CONTROLS) {
             assert!(is_hidden(*c), "{c:?}");
         }
     }

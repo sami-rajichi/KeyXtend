@@ -22,6 +22,7 @@ pub struct FakeInjector {
     strokes: Mutex<Vec<Stroke>>,
     error: Mutex<Option<InjectError>>,
     target: Mutex<Option<String>>,
+    window: Mutex<Option<u64>>,
 }
 
 impl FakeInjector {
@@ -52,6 +53,11 @@ impl FakeInjector {
         *lock(&self.target) = app.map(str::to_owned);
     }
 
+    /// Names the window in front that `front_window` reports.
+    pub fn set_window(&self, window: Option<u64>) {
+        *lock(&self.window) = window;
+    }
+
     fn record(&self, stroke: Stroke) -> Result<(), InjectError> {
         if let Some(error) = *lock(&self.error) {
             return Err(error);
@@ -76,6 +82,10 @@ impl InputInjector for FakeInjector {
 
     fn target_app(&self) -> Option<String> {
         lock(&self.target).clone()
+    }
+
+    fn front_window(&self) -> Option<u64> {
+        *lock(&self.window)
     }
 }
 
@@ -146,6 +156,18 @@ mod tests {
         assert_eq!(fake.target_app(), None);
         fake.set_target(Some("notepad.exe"));
         assert_eq!(fake.target_app().as_deref(), Some("notepad.exe"));
+    }
+
+    #[test]
+    fn the_front_window_is_the_one_set_whatever_the_app() {
+        let fake = FakeInjector::new();
+        assert_eq!(fake.front_window(), None);
+        fake.set_target(Some("notepad.exe"));
+        assert_eq!(fake.front_window(), None);
+        fake.set_window(Some(7));
+        assert_eq!(fake.front_window(), Some(7));
+        fake.set_window(None);
+        assert_eq!(fake.front_window(), None);
     }
 
     #[test]

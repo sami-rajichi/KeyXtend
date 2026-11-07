@@ -12,11 +12,15 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-# The worker's memory facts, re-exported beside the pictures port so the settings that size its memory follow them.
+# The worker's facts, re-exported beside the pictures and boxes ports so the settings that size them follow them.
 kx-ipc = { path = "../kx-ipc" }
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
+# A panel line's caret steps over whole graphemes (`caret`).
+unicode-segmentation.workspace = true
+# Wipes saved values and passwords when dropped (`Secret`), as kx-crypto wipes its keys.
+zeroize.workspace = true
 
 [dev-dependencies]
 # The shared fake host and fake platform; both depend on this crate, which Cargo allows for tests.

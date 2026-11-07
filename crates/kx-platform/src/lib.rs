@@ -1,16 +1,21 @@
 //! The platform ports: what an OS adapter hands the kernel and the UI, the rule that picks the data folder, and the
-//! OS-neutral halves of the word packs, the field watch and the worker host. The UI ports live in `ui`; later phases add
-//! more.
+//! OS-neutral halves of the word packs, the field watch, the worker host and the hidden-run probe. The UI ports live in
+//! `ui`; later phases add more.
 
 #![forbid(unsafe_code)]
 
+pub mod boxes;
 mod dirs;
 pub mod field;
+pub mod mirror;
 pub mod packs;
 pub mod pictures;
 pub mod ui;
+pub mod worker;
 
-pub use dirs::{APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, pick_data_dir};
+pub use dirs::{
+    APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, VAULT_DIR, pick_data_dir,
+};
 
 use kx_module_api::Clock;
 use std::sync::Arc;

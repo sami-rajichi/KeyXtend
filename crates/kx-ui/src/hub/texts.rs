@@ -120,9 +120,9 @@ impl Hub {
         notices.take(texts.keyboard())
     }
 
-    /// OK on shown notice `id`: it closes.
+    /// OK on shown notice `id`: it closes, and one that asks answers No.
     pub fn dismiss(&self, id: u64) {
-        let _ = self.lock().notices.close(id);
+        let _ = self.answer(id, false);
     }
 
     /// The notices the banner shows, told again in the keyboard's language now.
@@ -132,7 +132,8 @@ impl Hub {
         live.notices.shown(&live.texts.keyboard)
     }
 
-    /// Follows the language of the layout `face` shows; a new one wakes the UI to read the keyboard's texts again.
+    /// Follows the language of the layout `face` shows; a new one wakes the UI to read the keyboard's texts again, and
+    /// Quick-fill hears the label names in it.
     pub(super) fn follow(&self, face: &dyn KeyboardFace) {
         let layout = face.lang();
         let changed = {
@@ -144,6 +145,7 @@ impl Hub {
         };
         if changed {
             self.wake(Wake::Texts);
+            self.fill_relang();
         }
     }
 }

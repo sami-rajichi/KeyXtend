@@ -1,6 +1,6 @@
 [package]
 name = "keyxtend-worker"
-description = "KeyXtend's worker program: it decodes untrusted images outside the uiAccess keyboard (ADR-0004)."
+description = "KeyXtend's worker program: it decodes untrusted images and reads backup boxes and KeePass files outside the uiAccess keyboard (ADR-0004)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,7 +14,10 @@ workspace = true
 [dependencies]
 kx-ipc = { path = "../../crates/kx-ipc" }
 png.workspace = true
+age.workspace = true
+keepass.workspace = true
 thiserror.workspace = true
+zeroize.workspace = true
 
 # The manifest that runs the worker as its caller, never with uiAccess.
 [build-dependencies]
@@ -22,3 +25,5 @@ embed-manifest.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+# KeePass test files are written at test time; the feature adds no crate.
+keepass = { workspace = true, features = ["save_kdbx4"] }

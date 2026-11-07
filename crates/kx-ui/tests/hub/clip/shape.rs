@@ -46,6 +46,7 @@ fn rows_the_pager_the_buttons_and_the_question_hold_only_what_qml_reads() {
         "expires",
         "insert",
         "no",
+        "noFolder",
         "openFolder",
         "pin",
         "preview",

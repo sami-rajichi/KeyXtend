@@ -3,13 +3,14 @@ use crate::spec::char_id;
 use kx_module_api::ports::{LangLabel, LayoutId, PanelKey, Scan};
 use proptest::prelude::*;
 
-const ALL: [Nav; 6] = [
+const ALL: [Nav; 7] = [
     Nav::Up,
     Nav::Down,
     Nav::Left,
     Nav::Right,
     Nav::Enter,
     Nav::Esc,
+    Nav::Delete,
 ];
 
 /// Five rows to a page, as `[ui] page_rows` is by default.
@@ -149,32 +150,33 @@ fn a_huge_page_size_from_the_ui_never_overflows() {
 fn the_language_list_takes_one_key_per_move_so_space_and_backspace_keep_typing() {
     let navs = navs(&BoardSpec::shipped().unwrap());
     let ids: Vec<&str> = navs.iter().map(|(id, _)| id.as_str()).collect();
-    assert_eq!(ids, ["esc", "enter", "up", "left", "down", "right"]);
+    assert_eq!(ids, ["esc", "del", "enter", "up", "left", "down", "right"]);
     for nav in ALL {
         assert_eq!(navs.iter().filter(|(_, n)| *n == nav).count(), 1, "{nav:?}");
     }
 }
 
 #[test]
-fn the_clipboard_panel_takes_every_nav_key_and_every_character_key() {
+fn our_panels_take_every_nav_key_and_every_character_key() {
     let s = BoardSpec::shipped().unwrap();
-    let keys = clip_keys(&s);
-    assert_eq!(keys.get("space"), Some(&ClipUse::Nav(Nav::Tick)));
-    assert_eq!(keys.get("bksp"), Some(&ClipUse::Nav(Nav::Erase)));
+    let keys = panel_uses(&s);
+    assert_eq!(keys.get("space"), Some(&PanelUse::Nav(Nav::Tick)));
+    assert_eq!(keys.get("bksp"), Some(&PanelUse::Nav(Nav::Erase)));
+    assert_eq!(keys.get("del"), Some(&PanelUse::Nav(Nav::Delete)));
     for (id, nav) in navs(&s) {
-        assert_eq!(keys.get(&id), Some(&ClipUse::Nav(nav)), "{id}");
+        assert_eq!(keys.get(&id), Some(&PanelUse::Nav(nav)), "{id}");
     }
     for sc in s.char_scans() {
-        assert_eq!(keys.get(&char_id(sc)), Some(&ClipUse::Char(sc)));
+        assert_eq!(keys.get(&char_id(sc)), Some(&PanelUse::Char(sc)));
     }
     assert_eq!(keys.len(), ALL.len() + 2 + s.char_scans().len());
-    for id in ["tab", "del", "menu", "shift", "caps", "win", "lang", "clip"] {
+    for id in "tab menu shift caps win lang clip fill".split_whitespace() {
         assert!(!keys.contains_key(id), "{id} acts as usual");
     }
 }
 
 #[test]
-fn each_nav_names_its_clipboard_panel_key_and_tick_and_erase_leave_the_list() {
+fn each_nav_names_its_panel_key_and_tick_erase_and_delete_leave_the_list_as_it_is() {
     let pairs = [
         (Nav::Up, PanelKey::Up),
         (Nav::Down, PanelKey::Down),
@@ -184,12 +186,13 @@ fn each_nav_names_its_clipboard_panel_key_and_tick_and_erase_leave_the_list() {
         (Nav::Esc, PanelKey::Esc),
         (Nav::Tick, PanelKey::Tick),
         (Nav::Erase, PanelKey::Erase),
+        (Nav::Delete, PanelKey::Delete),
     ];
     for (nav, key) in pairs {
         assert_eq!(PanelKey::from(nav), key);
     }
     let (mut l, len) = seven(3);
-    for nav in [Nav::Tick, Nav::Erase] {
+    for nav in [Nav::Tick, Nav::Erase, Nav::Delete] {
         assert_eq!(l.key(nav, ROWS, len), Moved::Stay, "{nav:?}");
     }
     assert_eq!(l.hi(len), 3);
@@ -199,7 +202,7 @@ fn each_nav_names_its_clipboard_panel_key_and_tick_and_erase_leave_the_list() {
 fn a_character_use_never_shows_its_scan_code() {
     let shown = format!(
         "{:?}",
-        [ClipUse::Char(Scan::new(0x2C)), ClipUse::Nav(Nav::Tick)]
+        [PanelUse::Char(Scan::new(0x2C)), PanelUse::Nav(Nav::Tick)]
     );
     assert_eq!(shown, "[Char(..), Nav(Tick)]");
 }

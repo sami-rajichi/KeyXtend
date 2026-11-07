@@ -29,6 +29,12 @@ Item {
     // The paged part shown now: the text's or the files'.
     readonly property Item paged: kind === kinds.text ? prose : kind === kinds.files ? files : null
 
+    // Turns its own pages by `by`, stopping at either end, as there are none to turn on an image.
+    function turn(by) {
+        if (paged && paged.at + by >= 0 && paged.at + by < paged.count)
+            paged.at += by;
+    }
+
     ClipButton {
         id: back
         x: pre.c.filters_pad_px[1] * pre.s
@@ -106,7 +112,7 @@ Item {
             icon: pre.lk.icons.clip.kind_image
             base: pre.res.icons
             ext: pre.res.ext
-            px: pre.c.empty_px * pre.s
+            px: pre.pn.empty_px * pre.s
             tint: pre.lk.palette.pop_muted
             Accessible.ignored: false
             Accessible.role: Accessible.Graphic
@@ -129,6 +135,6 @@ Item {
         s: pre.s
         backId: pre.res.uid(pre.names.group, pre.names.ids.textBack)
         onId: pre.res.uid(pre.names.group, pre.names.ids.textOn)
-        onTurn: by => pre.paged.at += by
+        onTurn: by => pre.turn(by)
     }
 }

@@ -1,19 +1,23 @@
 //! Taps on the words menu, the email list and the control chips: each kind QML names sends its `WordsAsk`, a list's
-//! rows come from `[ui] page_rows`, and an unknown kind or an argument out of range sends nothing. QML's copy of the
-//! kinds is checked against these consts through the `words.js` fixture (`tst_words`).
+//! rows come from `[ui] page_rows`, an unknown kind or an argument out of range sends nothing, and the Quick-fill chip
+//! sends `FillOpen`. The `words.js` fixture checks QML's copy of the kinds against these consts (`tst_words`).
 
 use super::{heard, speaking};
 use crate::Rig;
-use kx_module_api::ports::WordsAsk;
-use kx_ui::asks::{AGAIN, CANCEL, FORGET, MORE, PAGE, PAUSE, PICK, POWER, UNDO};
+use kx_module_api::ports::{FillLive, FillOpen, WordsAsk};
+use kx_ui::asks::{AGAIN, CANCEL, FILL, FORGET, MORE, PAGE, PAUSE, PICK, POWER, UNDO};
 use std::collections::BTreeSet;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Rows per page in these tests, unlike the default, so the ask shows where its rows came from.
 const ROWS: u8 = 3;
 
 #[test]
 fn each_kind_is_a_plain_name_of_its_own() {
-    let kinds = [FORGET, CANCEL, PAUSE, POWER, UNDO, MORE, PAGE, PICK, AGAIN];
+    let kinds = [
+        FORGET, CANCEL, PAUSE, POWER, UNDO, MORE, PAGE, PICK, AGAIN, FILL,
+    ];
     let unique: BTreeSet<&str> = kinds.into_iter().collect();
     assert_eq!(unique.len(), kinds.len(), "no two kinds share a name");
     let plain = |k: &str| !k.is_empty() && k.bytes().all(|b| b.is_ascii_lowercase());
@@ -77,4 +81,24 @@ fn an_unknown_kind_or_an_argument_out_of_range_sends_nothing() {
         rig.hub.words_ask(kind, arg);
     }
     assert!(sent.asks().is_empty());
+}
+
+#[test]
+fn the_quick_fill_chip_opens_the_panel_once_per_click_and_asks_prediction_nothing() {
+    let rig = Rig::new();
+    let (bus, sent, _subs) = heard(&rig);
+    sent.asks();
+    bus.publish(&FillLive { live: true }).unwrap();
+    let opens = Arc::new(AtomicUsize::new(0));
+    let count = Arc::clone(&opens);
+    let _open = bus
+        .subscribe(move |_: &FillOpen| {
+            count.fetch_add(1, Ordering::SeqCst);
+        })
+        .unwrap();
+    for clicks in 1..=2 {
+        rig.hub.words_ask(FILL, 0);
+        assert_eq!(opens.load(Ordering::SeqCst), clicks, "one per click");
+    }
+    assert!(sent.asks().is_empty(), "no words ask");
 }

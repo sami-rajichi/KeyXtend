@@ -66,13 +66,17 @@ pub fn tools(cfg: &KeyboardConfig, n: usize) -> Vec<Area> {
         .collect()
 }
 
+/// Tool button `b`'s box, at its place in the frozen face's row; none for a place past the row.
+pub fn tool_box(cfg: &SpikeConfig, b: ToolButton) -> Option<Area> {
+    let t = &cfg.tools;
+    tools(&cfg.keyboard, t.slots).get(t.slot.of(b)).copied()
+}
+
 /// Each tool button's label and box, in row order.
 pub fn tool_row(cfg: &SpikeConfig) -> Vec<(String, Area)> {
-    let boxes = tools(&cfg.keyboard, ToolButton::ALL.len());
     ToolButton::ALL
         .iter()
-        .zip(boxes)
-        .map(|(&b, p)| (cfg.tools.labels.of(b).to_string(), p))
+        .filter_map(|&b| Some((cfg.tools.labels.of(b).to_string(), tool_box(cfg, b)?)))
         .collect()
 }
 
@@ -144,13 +148,15 @@ mod tests {
     }
 
     #[test]
-    fn the_tool_row_pairs_each_label_with_its_box() {
+    fn the_tool_row_pairs_each_label_with_the_box_of_its_slot() {
         let cfg = crate::config::load().expect("spike.toml loads");
         let row = tool_row(&cfg);
-        let boxes = tools(&cfg.keyboard, ToolButton::ALL.len());
+        let boxes = tools(&cfg.keyboard, cfg.tools.slots);
         for (i, (label, at)) in row.iter().enumerate() {
             let b = ToolButton::at(i).expect("a button");
-            assert_eq!((label.as_str(), *at), (cfg.tools.labels.of(b), boxes[i]));
+            let slot = boxes[cfg.tools.slot.of(b)];
+            assert_eq!((label.as_str(), *at), (cfg.tools.labels.of(b), slot));
+            assert_eq!(tool_box(&cfg, b), Some(slot));
         }
         assert_eq!(row.len(), ToolButton::ALL.len());
     }

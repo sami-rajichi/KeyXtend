@@ -86,6 +86,7 @@ fn page() -> Result<ClipPage, String> {
         highlight: None,
         filter: Filter::All,
         search: Redacted::new(String::new()),
+        caret: Redacted::new(0),
         pages: Pages::default(),
         ticked: 0,
         unpin: false,

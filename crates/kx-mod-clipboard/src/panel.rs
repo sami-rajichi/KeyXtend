@@ -2,6 +2,7 @@
 //! and the Delete-all question. Keys and clicks change it and say what the module does next; it reads no disk.
 
 mod input;
+mod line;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Filter, Preview};
@@ -62,6 +63,8 @@ pub struct Panel {
     filter: Filter,
     /// The search line as typed.
     query: Redacted<String>,
+    /// The caret, a byte offset into the search.
+    caret: Redacted<usize>,
     /// The highlighted row's place in the list, kept inside it when read.
     hi: usize,
     /// The highlighted entry, which the highlight follows as the list moves.
@@ -85,6 +88,7 @@ impl Panel {
             mode: Mode::Closed,
             filter: Filter::All,
             query: Redacted::default(),
+            caret: Redacted::default(),
             hi: 0,
             hi_id: None,
             ticks: Vec::new(),

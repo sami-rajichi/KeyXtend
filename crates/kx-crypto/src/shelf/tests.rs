@@ -1,13 +1,11 @@
 use super::*;
 use crate::SealedFiles;
-use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, SEALED_EXT, TEMP_EXT};
-use crate::testing::{Mirror, listing};
+use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT, TEMP_EXT};
+use crate::testing::{DAY, DRIVE, FREE, Mirror, PINNED, Scripted, contract, listing, name};
 use kx_module_api::ports::SealedStore;
 use kx_test_support::tempdir::TempDir;
 use std::fs;
-use std::io;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 mod agree;
 mod damage;
@@ -15,46 +13,6 @@ mod keys;
 mod lists;
 mod props;
 mod room;
-
-/// A day folder, as the history names one.
-const DAY: &str = "2026-10-31";
-/// The pinned folder.
-const PINNED: &str = "pinned";
-/// The free bytes `Scripted` answers.
-const FREE: u64 = 7_000_000;
-/// The drive name `Scripted` answers.
-const DRIVE: &str = "D:";
-
-/// A test drive that answers `FREE` and `DRIVE`, or fails on cue, and records the folders it is asked about.
-#[derive(Clone, Default)]
-struct Scripted {
-    fail: bool,
-    asked: Arc<Mutex<Vec<PathBuf>>>,
-}
-
-impl Scripted {
-    fn answer<T>(&self, path: &Path, value: T) -> io::Result<T> {
-        self.asked.lock().unwrap().push(path.to_owned());
-        if self.fail {
-            return Err(io::ErrorKind::PermissionDenied.into());
-        }
-        Ok(value)
-    }
-
-    fn asked(&self) -> Vec<PathBuf> {
-        self.asked.lock().unwrap().clone()
-    }
-}
-
-impl DiskRoom for Scripted {
-    fn free(&self, path: &Path) -> io::Result<u64> {
-        self.answer(path, FREE)
-    }
-
-    fn drive(&self, path: &Path) -> io::Result<String> {
-        self.answer(path, DRIVE.to_owned())
-    }
-}
 
 /// A shelf over a root that does not exist yet, inside a temp folder removed at the end.
 struct Case {
@@ -104,10 +62,6 @@ impl Case {
     }
 }
 
-fn name(text: &str) -> BlobName {
-    BlobName::new(text).unwrap()
-}
-
 /// `texts`, sorted, as `listing` gives them.
 fn sorted(texts: &[&str]) -> Vec<String> {
     let mut texts: Vec<_> = texts.iter().map(|t| (*t).to_owned()).collect();
@@ -116,16 +70,17 @@ fn sorted(texts: &[&str]) -> Vec<String> {
 }
 
 #[test]
-fn save_then_load_round_trips_per_folder() {
+fn the_shelf_keeps_the_port_contract() {
+    let c = case();
+    contract::shelf(&c.shelf, OVERHEAD);
+}
+
+#[test]
+fn a_saved_file_holds_no_plain_text() {
     let c = case();
     c.shelf
         .save(&name(DAY), &name("e1"), b"copied today")
         .unwrap();
-    c.shelf.save(&name(PINNED), &name("e1"), b"kept").unwrap();
-    let day = c.shelf.load(&name(DAY), &name("e1")).unwrap();
-    assert_eq!(day.as_deref(), Some(&b"copied today"[..]));
-    let pinned = c.shelf.load(&name(PINNED), &name("e1")).unwrap();
-    assert_eq!(pinned.as_deref(), Some(&b"kept"[..]));
     let file = fs::read(c.file(DAY, "e1", SEALED_EXT)).unwrap();
     assert!(!file.windows(6).any(|w| w == b"copied"));
 }
@@ -154,12 +109,10 @@ fn a_missing_blob_or_folder_loads_as_none_without_the_guard() {
 }
 
 #[test]
-fn a_save_replaces_the_whole_blob() {
+fn save_twice_leaves_one_file() {
     let c = case();
     c.shelf.save(&name(DAY), &name("e1"), b"first").unwrap();
     c.shelf.save(&name(DAY), &name("e1"), b"second").unwrap();
-    let got = c.shelf.load(&name(DAY), &name("e1")).unwrap();
-    assert_eq!(got.as_deref(), Some(&b"second"[..]));
     assert_eq!(c.listing(DAY), ["e1.sealed"]);
 }
 

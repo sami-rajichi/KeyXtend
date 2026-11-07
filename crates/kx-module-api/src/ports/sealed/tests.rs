@@ -35,6 +35,16 @@ fn the_store_is_named_and_gated_by_secret_store() {
 }
 
 #[test]
+fn the_notebook_store_is_a_sealed_store_of_its_own_gated_by_vault_data() {
+    fn sealed<K: ServiceKey<Api = dyn SealedStore>>() -> ServiceId {
+        K::ID
+    }
+    assert_eq!(sealed::<VaultStoreKey>().as_str(), "vault-store");
+    assert_ne!(VaultStoreKey::ID, SealedStoreKey::ID);
+    assert_eq!(VaultStoreKey::CAPABILITY, Some(Capability::VaultData));
+}
+
+#[test]
 fn a_name_takes_the_good_form_and_refuses_the_bad() {
     for text in GOOD {
         assert_eq!(BlobName::new(text).unwrap().as_str(), text);

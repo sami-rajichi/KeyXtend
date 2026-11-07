@@ -24,9 +24,15 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - The shortcuts layer and Power key (P6): 37 shortcuts on pages the user arranges, named by meaning and sent by each platform's table, tips that name their keys, and the system's own power dialog (ADR-0031).
 - Word prediction and emails (P7): five chips in the language in front from shipped word packs, learned words and emails sealed on this PC, `@@` for known emails, a lock in password boxes, and a menu to forget, pause or turn suggestions off (ADR-0032, ADR-0033).
 - Clipboard history (P8): text, links, pictures and files copied in any app, newest first and sealed on this PC by day, with search that ignores accents and harakat, ticks across searches, Insert (n) to paste several copies together, pins, previews, Win+V from the keyboard, and pictures drawn by a separate low-rights helper (ADR-0034 to ADR-0036).
+- Quick-fill (P9): a sealed notebook of saved values of any kind, one-click fills that never press Enter, search by name, label and shown value, Make one, Paste, a locked backup box kept up to date in the places you pick, Bring back, and a KeePass import through a low-rights helper (ADR-0038, ADR-0039).
+- One data folder (P9): a run whose saves Windows would hide in another app's package says so and writes nothing, and a hidden copy found on a normal run can be deleted (ADR-0037).
+- A panel's search takes the keys after a press on the panel, with its own caret, in Quick-fill and Clipboard history; one wheel notch turns one page (ADR-0040).
 
 ### Changed
 - The licence: KeyXtend is now view only, all rights reserved, and the app is sold under its own user licence (ADR-0030). Versions published before keep the GPL-3.0-or-later.
 
 ### Removed
 - The Slint and Tauri prototype keyboards from the toolkit test round.
+
+### Fixed
+- The window guard: Windows can ignore a lift while saying yes, so a window still out of the topmost band now goes up alone.

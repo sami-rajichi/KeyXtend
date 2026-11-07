@@ -17,6 +17,6 @@
 | 6 | Run `cargo xtask tidy` | 0 errors | Pass | 0 errors, 0 warnings |
 | 7 | Run `cargo xtask dco main HEAD` | 0 failing commits | Pass | |
 | 8 | Compare the user PATH and the Uninstall registry keys with the snapshot taken before the installs | Unchanged | Pass | No Rustup entry, no new variables |
-| 9 | Check that no tool folder exists on C: | `C:\Users\ASUS\.rustup` and `.cargo` absent | Pass | An accidental copy (623 MB) was found and deleted with the owner's yes |
+| 9 | Check that no tool folder exists on C: | `%USERPROFILE%\.rustup` and `.cargo` absent | Pass | An accidental copy (623 MB) was found and deleted with the owner's yes |
 | 10 | Check free space | Nothing of ours on C: | Pass | C: 172.05 → 171.05 GB. The drop is outside our folders; for example, a 158 MB browser update landed in Temp. D: 762.29 → 760.86 GB |
 | 11 | Read the checks on pull request #1 on GitHub | Every check shows a green tick | Pass | All 4 jobs passed in run 36287259496 |

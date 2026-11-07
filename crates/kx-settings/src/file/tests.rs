@@ -114,7 +114,7 @@ fn bad_toml_restores_the_previous_copy_and_keeps_the_bad_bytes() {
     let got = load(&files);
     assert_eq!(got.outcome, Outcome::Restored);
     assert_eq!(got.table, table(GOOD));
-    assert_eq!(got.notices, vec![notice(keys::SETTINGS_RESTORED)]);
+    assert_eq!(got.notices, vec![Notice::plain(keys::SETTINGS_RESTORED)]);
     assert_eq!(fs::read(&files.broken).unwrap(), BAD_TOML);
     assert!(!files.settings.exists());
 }
@@ -127,7 +127,7 @@ fn a_main_and_a_previous_that_are_both_bad_give_defaults() {
     let got = load(&files);
     assert_eq!(got.outcome, Outcome::Defaults);
     assert!(got.table.is_empty());
-    assert_eq!(got.notices, vec![notice(keys::SETTINGS_DEFAULTS)]);
+    assert_eq!(got.notices, vec![Notice::plain(keys::SETTINGS_DEFAULTS)]);
     assert_eq!(fs::read(&files.broken).unwrap(), BAD_TOML);
 }
 
@@ -137,7 +137,7 @@ fn a_damaged_main_with_no_previous_gives_defaults() {
     fs::write(&files.settings, BAD_TOML).unwrap();
     let got = load(&files);
     assert_eq!(got.outcome, Outcome::Defaults);
-    assert_eq!(got.notices, vec![notice(keys::SETTINGS_DEFAULTS)]);
+    assert_eq!(got.notices, vec![Notice::plain(keys::SETTINGS_DEFAULTS)]);
     assert_eq!(fs::read(&files.broken).unwrap(), BAD_TOML);
 }
 
@@ -175,7 +175,7 @@ fn a_missing_main_with_a_good_previous_is_restored() {
     let got = load(&files);
     assert_eq!(got.outcome, Outcome::Restored);
     assert_eq!(got.table, table(GOOD));
-    assert_eq!(got.notices, vec![notice(keys::SETTINGS_RESTORED)]);
+    assert_eq!(got.notices, vec![Notice::plain(keys::SETTINGS_RESTORED)]);
     assert!(!files.broken.exists());
 }
 

@@ -1,0 +1,133 @@
+# Where the backup box may live on Windows (ADR-0038 decision 7), compiled in; each number names its constant in
+# winnt.h, WinBase.h or winerror.h. Cloud folders come from environment variables, known paths and drive labels only,
+# never from a cloud app's own files (ADR-0004).
+
+# The most entries a folder list gives.
+max_listed = 1000
+# The most subfolders a find looks in per place.
+max_subfolders = 500
+
+# Each write's own temp file: the box's file name, then the process id and a count, each after the gap.
+temp_start = "~"
+temp_gap = "-"
+temp_end = ".tmp"
+# Another process's temp file this much older than now is a crash's leftover, which a write deletes.
+temp_stale_s = 3600
+
+# A drive's name when it has a label, as Explorer shows it; `{drive}` is its letter, such as `E:`.
+labelled = "{label} ({drive})"
+
+# File attributes that keep a folder or file out of the folder list and a find.
+hidden = [
+    0x2, # FILE_ATTRIBUTE_HIDDEN
+    0x4, # FILE_ATTRIBUTE_SYSTEM
+]
+
+# `GetDriveTypeW`'s drive types: removable drives are suggested, and all three kinds lead the folder list. Network
+# drives appear there only, so a lost share never stalls a suggestion or a find.
+[drives]
+removable = [
+    2, # DRIVE_REMOVABLE
+]
+fixed = [
+    3, # DRIVE_FIXED
+    6, # DRIVE_RAMDISK
+]
+remote = [
+    4, # DRIVE_REMOTE
+]
+
+# Windows error codes by the port error they become; any other is `Io`.
+[errors]
+missing = [
+    2,    # ERROR_FILE_NOT_FOUND
+    3,    # ERROR_PATH_NOT_FOUND
+    15,   # ERROR_INVALID_DRIVE
+    21,   # ERROR_NOT_READY
+    53,   # ERROR_BAD_NETPATH
+    55,   # ERROR_DEV_NOT_EXIST
+    64,   # ERROR_NETNAME_DELETED
+    67,   # ERROR_BAD_NET_NAME
+    267,  # ERROR_DIRECTORY
+    1112, # ERROR_NO_MEDIA_IN_DRIVE
+    1167, # ERROR_DEVICE_NOT_CONNECTED
+]
+full = [
+    39,   # ERROR_HANDLE_DISK_FULL
+    112,  # ERROR_DISK_FULL
+    1295, # ERROR_DISK_QUOTA_EXCEEDED
+]
+read_only = [
+    5,    # ERROR_ACCESS_DENIED
+    19,   # ERROR_WRITE_PROTECT
+    6009, # ERROR_FILE_READ_ONLY
+]
+
+# The cloud folders in the order offered, a folder found twice shown once. `env` names an environment variable that
+# holds a folder, or `label` a drive's label; `parts` lie below it, and `name` is shown, else the folder's own name.
+[[cloud]]
+name = "OneDrive"
+env = "OneDriveConsumer"
+
+# Work or school, named by its own folder, such as `OneDrive - Contoso`.
+[[cloud]]
+env = "OneDriveCommercial"
+
+[[cloud]]
+name = "OneDrive"
+env = "OneDrive"
+
+[[cloud]]
+name = "OneDrive"
+env = "USERPROFILE"
+parts = ["OneDrive"]
+
+# Google Drive's own drive, on any letter, with its English, French and Arabic folder names; the owner confirms the
+# French and Arabic ones on a real install.
+[[cloud]]
+name = "Google Drive"
+label = "Google Drive"
+parts = ["My Drive"]
+
+[[cloud]]
+name = "Google Drive"
+label = "Google Drive"
+parts = ["Mon Drive"]
+
+[[cloud]]
+name = "Google Drive"
+label = "Google Drive"
+parts = ["ملفاتي"]
+
+# Google Drive mirroring its files, under the same three names.
+[[cloud]]
+name = "Google Drive"
+env = "USERPROFILE"
+parts = ["My Drive"]
+
+[[cloud]]
+name = "Google Drive"
+env = "USERPROFILE"
+parts = ["Mon Drive"]
+
+[[cloud]]
+name = "Google Drive"
+env = "USERPROFILE"
+parts = ["ملفاتي"]
+
+# The older Backup and Sync.
+[[cloud]]
+name = "Google Drive"
+env = "USERPROFILE"
+parts = ["Google Drive"]
+
+[[cloud]]
+name = "Dropbox"
+env = "USERPROFILE"
+parts = ["Dropbox"]
+
+# iCloud for Windows.
+[[cloud]]
+name = "iCloud Drive"
+env = "USERPROFILE"
+parts = ["iCloudDrive"]

@@ -107,14 +107,15 @@ Item {
         id: churnC
         Churn {}
     }
-    // An app over stand-ins whose keyboard plans a churn, as a debug build with the churn's variable set does.
+    // An app over stand-ins whose keyboard plans a churn, as a debug build with the churn's variable set does. It sits
+    // off every screen, so the real pointer cannot hover a key and replace the tip.
     Component {
         id: appC
         App {
             ui: FakeUi {}
             keyboard: FakeKeyboard {
                 board: Object.assign({}, Face.board, { lang_key: "list" })
-                state: Object.assign({}, Face.states.en, { at: { x: 100, y: 200 } })
+                state: Object.assign({}, Face.states.en, { at: { x: -20000, y: -20000 } })
                 bubble: ({ x: 40, y: 50 })
                 function churnPlan() {
                     return JSON.stringify({ step_ms: 1, rounds: 1, themes: 0, caps: 0, sizes: 2 });

@@ -3,7 +3,7 @@
 
 use std::os::windows::io::{FromRawHandle, OwnedHandle};
 
-use kx_platform::pictures::SpawnError;
+use kx_platform::worker::SpawnError;
 use windows::Win32::Foundation::{ERROR_PROCESS_ABORTED, HANDLE};
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT, JOB_OBJECT_LIMIT_ACTIVE_PROCESS,

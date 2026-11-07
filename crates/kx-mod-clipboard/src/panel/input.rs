@@ -1,11 +1,12 @@
 //! Keys and clicks: the question takes only its answer, the preview acts on its entry, and the list moves, ticks,
-//! filters, searches and acts on the ticked rows (spec §7 "Keys", "Tick, then act").
+//! filters, searches and acts on the ticked rows (spec §7 "Keys", "Tick, then act"); `line` holds the search's keys.
 
-use kx_module_api::Redacted;
+use kx_module_api::caret::{self, Side};
 use kx_module_api::ports::{ClipAct, Filter, PanelKey};
+use kx_module_api::text::SPACE;
 
 use super::{Do, Mode, Panel, unpinned};
-use crate::entry::{Entry, flat};
+use crate::entry::Entry;
 use crate::order::History;
 
 impl Panel {
@@ -58,6 +59,7 @@ impl Panel {
             ClipAct::Filter(filter) => self.set_filter(filter),
             ClipAct::Page { back } => self.turn(back, history),
             ClipAct::Preview => self.peek(history),
+            ClipAct::Caret { at } => self.place(at.into_inner()),
             // Taken above, whatever page shows.
             ClipAct::Rows(_) => Do::Stay,
         }
@@ -74,19 +76,22 @@ impl Panel {
         if self.is_open() { Do::Show } else { Do::Stay }
     }
 
-    /// A key on the list: the arrows move and filter, Space ticks, Enter inserts, Esc backs out, the rest search.
+    /// A key on the list: Up and Down move, Left, Right and Space work the line or else the list, Enter inserts, Esc
+    /// backs out, the rest search.
     fn list_key(&mut self, key: &PanelKey, history: &History) -> Do {
         match key {
             PanelKey::Up => self.step(false, history),
             PanelKey::Down => self.step(true, history),
-            PanelKey::Left => self.next_filter(false),
-            PanelKey::Right => self.next_filter(true),
-            PanelKey::Tick => self.tick_hi(history),
+            PanelKey::Left => self.arrow(Side::Left),
+            PanelKey::Right => self.arrow(Side::Right),
+            PanelKey::Tick => self.space(history),
             PanelKey::Enter => self.enter(history),
             PanelKey::Esc if self.query.expose().is_empty() => self.shut(),
-            PanelKey::Esc => self.search(String::new()),
-            PanelKey::Erase => self.erase(),
-            PanelKey::Text(text) => self.write(text.expose()),
+            PanelKey::Esc => self.clear(),
+            PanelKey::Erase => self.write(1, ""),
+            PanelKey::Delete => self.delete(),
+            PanelKey::Text(text) => self.write(0, text.expose()),
+            PanelKey::Word { erase, text } => self.write(*erase, text.expose()),
         }
     }
 
@@ -160,6 +165,15 @@ impl Panel {
         }
         let id = self.highlighted(history);
         id.map_or(Do::Stay, |id| Do::Insert(vec![id]))
+    }
+
+    /// Space on the list: it types at the caret while the line draws text, as the arrows move it, else it ticks.
+    fn space(&mut self, history: &History) -> Do {
+        if caret::empty(self.query.expose()) {
+            self.tick_hi(history)
+        } else {
+            self.write(0, SPACE.encode_utf8(&mut [0; char::MAX_LEN_UTF8]))
+        }
     }
 
     /// Ticks or unticks the highlighted row.
@@ -246,7 +260,7 @@ impl Panel {
     }
 
     /// Steps to the filter after or before, stopping at the ends.
-    fn next_filter(&mut self, on: bool) -> Do {
+    pub(super) fn next_filter(&mut self, on: bool) -> Do {
         let at = Filter::ORDER.iter().position(|&f| f == self.filter);
         let to = at.and_then(|i| {
             if on {
@@ -265,30 +279,6 @@ impl Panel {
             return Do::Stay;
         }
         self.filter = filter;
-        self.top();
-        Do::Show
-    }
-
-    /// Adds `text` to the search, the whole line flattened, up to `query_chars` characters.
-    fn write(&mut self, text: &str) -> Do {
-        let joined = format!("{}{text}", self.query.expose());
-        let query = flat(&joined).take(self.cfg.query_chars).collect();
-        self.search(query)
-    }
-
-    /// Erases the search's last character.
-    fn erase(&mut self) -> Do {
-        let mut query = self.query.expose().clone();
-        query.pop();
-        self.search(query)
-    }
-
-    /// Sets the search to `query`, highlighting the top row; nothing when it is the same.
-    fn search(&mut self, query: String) -> Do {
-        if query == *self.query.expose() {
-            return Do::Stay;
-        }
-        self.query = Redacted::new(query);
         self.top();
         Do::Show
     }

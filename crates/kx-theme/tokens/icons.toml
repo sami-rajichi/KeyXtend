@@ -109,14 +109,17 @@ glyph = "keyboard"
 show = "keyboard"
 quit = "power"
 
-# The chip lane (spec §6; mock-up suggHTML, line 1042): the chip kinds as the lane names them (domain, email, more,
-# undo), the password note's lock, the menu button, and the menu's items, whose forget mark each chip wears in forget mode.
+# The chip lane (spec §6; mock-up suggHTML, line 1042): the chip kinds as the lane names them (domain, email, saved,
+# more, undo), the password note's lock and its Quick-fill chip (the fill key's key-round, as a saved email), the menu
+# button, and the menu's items, whose forget mark each chip wears in forget mode.
 [words]
 domain = "at-sign"
 email = "at-sign"
+saved = "key-round"
 more = "chevron-right"
 undo = "undo-2"
 locked = "lock"
+fill = "key-round"
 menu = "square-menu"
 forget = "eraser"
 pause = "eye-off"
@@ -146,3 +149,63 @@ shown = "check"
 room = "hard-drive"
 folder = "folder-open"
 back = "arrow-left"
+
+# Quick-fill (design "The panel"; mock-up buildFill, lines 1597-1612): its title, which the empty notebook's invitation
+# shares, the search line and the header's New, Backup and Close; the pages' Back, Edit, Save, Cancel, Delete entry,
+# Add a field and Your own label, and the shown filter's check; each kind's icon by the vault's kind id and a label's
+# tag; the row buttons by id (Both types a Tab, so it wears the Tab key's icon); the field buttons, the hidden switch
+# as a tick box, and the footer's waiting line.
+[fill]
+title = "key-round"
+search = "search"
+new = "plus"
+backup = "archive"
+close = "x"
+back = "arrow-left"
+edit = "text-select"
+save = "check"
+cancel = "x"
+delete = "trash-2"
+add_field = "plus"
+own_label = "tag"
+shown = "check"
+kind_person = "user"
+kind_login = "globe"
+kind_wifi = "wifi"
+kind_card = "id-card"
+kind_note = "sticky-note"
+kind_other = "key-round"
+label = "tag"
+user = "user"
+password = "key-round"
+both = "arrow-right-to-line"
+insert = "clipboard-paste"
+open = "chevron-right"
+show = "eye"
+hide = "eye-off"
+hidden_on = "check"
+hidden_off = "square"
+paste = "clipboard-paste"
+make = "wand-sparkles"
+waiting = "archive"
+# The backup and import pages (design "The backup box" and "Import"): Remove, as the opposite of Add place, and Choose;
+# each place by its kind; the Backup page's buttons and its memory checks switch, a tick box as the hidden switch is;
+# Another folder, Use this folder and Done; and the password page's lock.
+remove = "minus"
+pick = "check"
+place_cloud = "cloud"
+place_removable = "usb"
+place_drive = "hard-drive"
+place_folder = "folder"
+place_file = "file-input"
+back_up_now = "archive"
+add_place = "plus"
+change_password = "key-round"
+checks_on = "check"
+checks_off = "square"
+bring_back = "history"
+keepass = "file-input"
+other_folder = "folder-open"
+here = "check"
+done = "check"
+lock = "lock"

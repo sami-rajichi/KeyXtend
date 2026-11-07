@@ -15,8 +15,34 @@ use crate::p8cfg::G20Product;
 use crate::{mouse, product, win};
 
 /// True when box `r` has an area on screen.
-fn has_area(r: &RECT) -> bool {
+pub(crate) fn has_area(r: &RECT) -> bool {
     r.right > r.left && r.bottom > r.top
+}
+
+/// Every element of control type `kind` in window `hwnd`, as a screen reader meets it.
+#[allow(
+    unsafe_code,
+    reason = "UI Automation calls on objects this client made."
+)]
+fn all_in(reader: &Reader, hwnd: HWND, kind: UIA_CONTROLTYPE_ID) -> Result<Vec<KeyRead>, String> {
+    let auto = reader.auto();
+    let err = |e: windows::core::Error| format!("UI Automation: {e}");
+    let mut items = Vec::new();
+    // SAFETY: plain calls on live UI Automation objects; a dead window gives an error.
+    unsafe {
+        let cond = auto
+            .CreatePropertyCondition(UIA_ControlTypePropertyId, &VARIANT::from(kind.0))
+            .map_err(err)?;
+        let found = auto
+            .ElementFromHandle(hwnd)
+            .map_err(err)?
+            .FindAll(TreeScope_Descendants, &cond)
+            .map_err(err)?;
+        for i in 0..found.Length().map_err(err)? {
+            items.push(read_one(&found.GetElement(i).map_err(err)?)?);
+        }
+    }
+    Ok(items)
 }
 
 /// The names of `items` whose id is `prefix` and a place, in place order; one without area on screen is left out.
@@ -78,29 +104,8 @@ impl<'a> Panel<'a> {
     }
 
     /// Every element of control type `kind` in the open panel, as a screen reader meets it.
-    #[allow(
-        unsafe_code,
-        reason = "UI Automation calls on objects this client made."
-    )]
     fn all(&self, kind: UIA_CONTROLTYPE_ID) -> Result<Vec<KeyRead>, String> {
-        let (hwnd, auto) = (self.open()?, self.reader.auto());
-        let err = |e: windows::core::Error| format!("UI Automation: {e}");
-        let mut items = Vec::new();
-        // SAFETY: plain calls on live UI Automation objects; a dead window gives an error.
-        unsafe {
-            let cond = auto
-                .CreatePropertyCondition(UIA_ControlTypePropertyId, &VARIANT::from(kind.0))
-                .map_err(err)?;
-            let found = auto
-                .ElementFromHandle(hwnd)
-                .map_err(err)?
-                .FindAll(TreeScope_Descendants, &cond)
-                .map_err(err)?;
-            for i in 0..found.Length().map_err(err)? {
-                items.push(read_one(&found.GetElement(i).map_err(err)?)?);
-            }
-        }
-        Ok(items)
+        all_in(&self.reader, self.open()?, kind)
     }
 
     /// The rows' accessible names on the page shown, in place order.

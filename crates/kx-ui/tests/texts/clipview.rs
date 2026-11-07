@@ -24,6 +24,8 @@ const RED: [u8; 4] = [220, 40, 40, 255];
 /// How many lines of each long preview text, and how many paths the files preview holds.
 const LINES: u32 = 60;
 const PATHS: usize = 12;
+/// The history folder the app hands over, so Open folder can act in these views.
+const FOLDER: &str = r"D:\data\KeyXtend\clipboard";
 /// A path in an Arabic folder, which takes the Arabic font.
 const ARABIC_PATH: &str = r"C:\Users\Public\Documents\تقارير\تقرير-سنوي.pdf";
 
@@ -33,6 +35,7 @@ fn acts() -> Value {
         "tick": acts::TICK, "filter": acts::FILTER, "page": acts::PAGE, "insert": acts::INSERT,
         "pin": acts::PIN, "delete": acts::DELETE, "deleteAll": acts::DELETE_ALL, "yes": acts::YES,
         "no": acts::NO, "preview": acts::PREVIEW, "back": acts::BACK, "close": acts::CLOSE,
+        "caret": acts::CARET, "wheel": acts::WHEEL,
     })
 }
 
@@ -110,6 +113,7 @@ fn page(rows: Vec<ClipRow>) -> ClipPage {
         highlight: Some(1),
         filter: Filter::All,
         search: Redacted::new(String::new()),
+        caret: Redacted::new(0),
         pages: Pages { at: 0, count: 3 },
         unpin: false,
         preview: None,
@@ -215,6 +219,7 @@ fn pages() -> Vec<(&'static str, ClipPage)> {
 /// Every view in language `tag`, by name.
 fn views(tag: &str) -> Value {
     let (hub, _host) = hub(tag);
+    hub.set_clip_folder(PathBuf::from(FOLDER));
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let _heard = hub.listen(&bus).expect("the hub listens");
     bus.publish(&ClipPanel { open: true })

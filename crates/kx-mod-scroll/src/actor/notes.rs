@@ -3,7 +3,7 @@
 use super::Actor;
 use crate::{Halt, ID};
 use kx_module_api::ports::{Aim, ScrollAimed};
-use kx_module_api::{Event, Notice, NoticeArg, args};
+use kx_module_api::{Event, Notice};
 
 impl Actor {
     /// Ends the scroll, by the user for none or by `halt`: it tells the state, keeps the outline only while the pointer
@@ -82,16 +82,7 @@ impl Actor {
     /// Tells the user why a tap could not scroll; other halts are quiet.
     fn say(&self, halt: Halt) {
         if let Some(key) = halt.key() {
-            self.publish(&notice(key));
+            self.publish(&Notice::about(key, ID));
         }
-    }
-}
-
-/// The scroll module's notice `key`, naming the module.
-pub(crate) fn notice(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
 }

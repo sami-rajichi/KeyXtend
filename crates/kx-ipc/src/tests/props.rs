@@ -69,7 +69,7 @@ fn a_len() -> impl Strategy<Value = u32> {
 
 /// Checks that a header of `kind` and `len` before `tail` is never read past its frame, and that a length past
 /// the kind's cap is refused right after the header.
-fn check_bounded(
+pub(super) fn check_bounded(
     kind: u8,
     len: u32,
     tail: &[u8],

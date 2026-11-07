@@ -6,7 +6,7 @@ use std::os::windows::ffi::OsStrExt;
 use std::os::windows::io::{FromRawHandle, OwnedHandle};
 use std::path::Path;
 
-use kx_platform::pictures::{Launch, SpawnError};
+use kx_platform::worker::{Launch, SpawnError};
 use windows::Win32::Foundation::{
     ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND, HANDLE, HANDLE_FLAG_INHERIT, SetHandleInformation,
     WIN32_ERROR,

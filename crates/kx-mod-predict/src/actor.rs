@@ -4,7 +4,9 @@
 
 mod asks;
 mod lang;
+mod line;
 mod load;
+mod notebook;
 mod notes;
 mod picks;
 mod stats;
@@ -12,7 +14,7 @@ mod store;
 mod typing;
 
 use crate::days::Days;
-use crate::email::{EmailConfig, Emails};
+use crate::email::{EmailConfig, Emails, Saved};
 use crate::lane::Chips;
 use crate::learn::{LearnConfig, Learner};
 use crate::menu::Menu;
@@ -21,10 +23,11 @@ use crate::score::ScoreConfig;
 use crate::settings::PredictSettings;
 use crate::track::{Show, Tracker};
 use kx_module_api::ports::{
-    ChipPicked, FieldChange, FieldConfig, FieldKind, FieldRun, FieldWatch, Piece, SealedStore,
-    Suggested, TypingMode, WordPacks, WordsAsk,
+    ChipPicked, FieldChange, FieldConfig, FieldKind, FieldRun, FieldWatch, PanelLine, Piece,
+    SealedStore, Suggested, TypingMode, WordPacks, WordsAsk,
 };
-use kx_module_api::{Bus, Clock, Redacted, SettingsHandle};
+use kx_module_api::{Bus, Clock, Redacted, Secret, SettingsHandle};
+use line::Line;
 use stats::Stats;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
@@ -33,7 +36,6 @@ use store::Saves;
 
 pub use load::OTHER_LANGUAGE;
 use notes::Notes;
-pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
 pub use store::{ASIDE_SUFFIX, EMAILS_BLOB, aside_blob, emails_blob, learned_blob};
 
@@ -61,6 +63,10 @@ pub enum Msg {
     PressesAsk,
     /// Focus moved.
     Focus(FieldChange),
+    /// The keyboard tells the line it aims at.
+    Line(PanelLine),
+    /// The notebook's emails, which replace the last set.
+    Saved(Vec<Secret>),
     /// The module stops.
     Quit,
 }
@@ -133,11 +139,17 @@ pub struct Actor {
     /// moves to another box.
     blind: bool,
     mode: TypingMode,
+    /// What the lane follows: the app's box, or the panel's line the keyboard tells.
+    line: Line,
     tracker: Tracker,
     learner: Option<Learner>,
     /// The known emails, and whether they are loaded: only while prediction is on, or while a refused save keeps them.
     emails: Emails,
     emails_loaded: bool,
+    /// The notebook's emails, in memory only while prediction is on, and the text a saved pick sent, until the keyboard
+    /// tells it.
+    saved: Saved,
+    noted: Option<Secret>,
     menu: Menu,
     /// The email forget mode just removed, with its place, for its Undo chip.
     lost: Option<(usize, Redacted<String>)>,
@@ -176,10 +188,13 @@ impl Actor {
             kind: FieldKind::None,
             blind: false,
             mode: TypingMode::default(),
+            line: Line::default(),
             tracker: Tracker::new(settings.track_config()),
             learner: None,
             emails: Emails::default(),
             emails_loaded: false,
+            saved: Saved::default(),
+            noted: None,
             menu: Menu::default(),
             lost: None,
             round: 0,
@@ -247,6 +262,8 @@ impl Actor {
                 false
             }
             Msg::Focus(change) => self.focus(seed, change),
+            Msg::Line(line) => self.heard_line(seed, line),
+            Msg::Saved(emails) => self.notebook(emails),
             Msg::Quit => {
                 self.quit();
                 return Flow::Quit;

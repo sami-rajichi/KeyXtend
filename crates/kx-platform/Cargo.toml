@@ -21,3 +21,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true

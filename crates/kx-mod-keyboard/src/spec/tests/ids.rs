@@ -18,12 +18,15 @@ fn each_live_side_key_has_its_role_and_the_rest_come_later() {
     assert_eq!(role("rclick"), Role::Assist(Assist::RClick));
     assert_eq!(role("grab"), Role::Assist(Assist::Grab));
     assert_eq!(
-        (role("shortcuts"), role("clip"), role("power")),
-        (Role::Layer, Role::Clip, Role::Power)
+        (role("shortcuts"), role("clip"), role("power"), role("fill")),
+        (Role::Layer, Role::Clip, Role::Power, Role::Fill)
     );
-    let now = |r: Role| matches!(r, Role::Assist(_) | Role::Layer | Role::Clip | Role::Power);
+    let now = |r: Role| {
+        let panels = matches!(r, Role::Clip | Role::Fill);
+        panels || matches!(r, Role::Assist(_) | Role::Layer | Role::Power)
+    };
     let rest: Vec<_> = s.side.iter().filter(|k| !now(k.role)).collect();
-    assert_eq!(rest.len(), 4);
+    assert_eq!(rest.len(), 3);
     assert!(rest.iter().all(|k| k.role == Role::Later));
     assert_eq!(Toggle::from(Assist::RClick), Toggle::RightClick);
     assert_eq!(Toggle::from(Assist::Grab), Toggle::Grab);

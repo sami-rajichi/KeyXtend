@@ -1,5 +1,5 @@
 //! The `[keyboard]` settings: modifiers, the language key, key repeat, size, place, the bubble corner, the
-//! shortcut pages, and the text cap and erase gap of a picked word.
+//! shortcut pages, the text cap and erase gap of a picked word, and how late a fill may go.
 
 pub use kx_module_api::ports::Corner;
 
@@ -23,6 +23,11 @@ pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
 pub const TEXT_CAP: RangeInclusive<u16> = 128..=1_024;
 /// The pause after each Backspace of a picked word, in ms: none, up to one too short to notice across a word.
 pub const ERASE_GAP_MS: RangeInclusive<u64> = 0..=50;
+/// How late a fill's part after a Tab may still go, in ms: from a slow app's hiccup to a long one. 20 s is long enough
+/// to switch apps; the app check, not this bound, keeps a fill from reaching another app.
+pub(crate) const FILL_LATE_MS: RangeInclusive<u64> = 500..=20_000;
+/// The least `fill_late_ms` over `relabel_ms`: timer slack, as a relabel call may come up to one beat late.
+pub(crate) const LATE_FACTOR: u64 = 2;
 /// The smallest `size_min` the settings take: the lowest size step where every key cell is still 24 px across
 /// (the spacing rule of WCAG 2.2 SC 2.5.8), so a hand-edited size cannot make the keys too small to click.
 pub(crate) const SIZE_FLOOR: f64 = 0.8;
@@ -117,6 +122,8 @@ pub struct KeyboardSettings {
     pub text_cap: u16,
     /// The pause after each Backspace of a picked word, in ms.
     pub erase_gap_ms: u64,
+    /// How late a fill's part after a Tab may still go, in ms.
+    pub fill_late_ms: u64,
     /// The saved left edge, in physical pixels.
     pub x: i32,
     /// The saved top edge, in physical pixels.
@@ -162,6 +169,11 @@ impl Settings for KeyboardSettings {
         within("repeat_every_ms", self.repeat_every_ms, &REPEAT_EVERY_MS)?;
         within("text_cap", self.text_cap, &TEXT_CAP)?;
         within("erase_gap_ms", self.erase_gap_ms, &ERASE_GAP_MS)?;
+        within("fill_late_ms", self.fill_late_ms, &FILL_LATE_MS)?;
+        if self.fill_late_ms < self.relabel_ms.saturating_mul(LATE_FACTOR) {
+            let why = format!("fill_late_ms must be at least {LATE_FACTOR} times relabel_ms");
+            return Err(invalid(&why));
+        }
         if self.key_apps.iter().any(|a| a.trim().is_empty()) {
             return Err(invalid(BLANK_APP));
         }

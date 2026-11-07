@@ -92,7 +92,8 @@ Item {
             compare(checkable, latches);
             verify(latches.indexOf("caps") >= 0, "Caps Lock is one");
             const side = Face.board.keys.filter(k => k.side && k.checkable).map(k => k.id).sort();
-            compare(side, ["clip", "grab", "rclick", "shortcuts"], "Clipboard, Right-click, Grab and Shortcuts are the side keys that turn on");
+            const turnOn = "Clipboard, Quick-fill, Right-click, Grab and Shortcuts are the side keys that turn on";
+            compare(side, ["clip", "fill", "grab", "rclick", "shortcuts"], turnOn);
         }
 
         function test_dimmed_keys_announce_coming_in_a_later_version_and_others_their_state_tip() {

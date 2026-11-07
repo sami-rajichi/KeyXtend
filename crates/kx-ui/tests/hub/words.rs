@@ -2,6 +2,7 @@
 //! lane as it starts listening, and no log line holds a chip's text.
 
 mod asks;
+mod chip;
 // It uses `crate::sound`'s helpers, which need `qt`'s sound table.
 #[cfg(feature = "qt")]
 mod sounds;
@@ -9,8 +10,10 @@ mod view;
 
 use crate::logs::lines_of;
 use crate::{FakeFace, Rig};
-use kx_module_api::ports::{ChipKind, ChipPicked, Lane, ListPage, Suggested, WordsAsk};
-use kx_module_api::{Bus, Capability, Event, EventError, Redacted, Subscription};
+use kx_module_api::ports::{
+    ChipKind, ChipPicked, ClipPanel, FillPanel, Lane, ListPage, Suggested, WordsAsk,
+};
+use kx_module_api::{Bus, Capability, Event, EventError, Subscription};
 use kx_test_support::host::{FakeCore, FakeHost};
 use kx_ui::{MANIFEST, UiSettings, Wake};
 use serde_json::Value;
@@ -112,6 +115,24 @@ fn before_any_lane_prediction_counts_as_stopped_with_no_menu_to_offer() {
 }
 
 #[test]
+fn with_either_panel_open_the_lane_still_shows_and_a_chip_click_still_goes_out() {
+    let panels: [&dyn Fn(&Bus); 2] = [
+        &|bus| bus.publish(&FillPanel { open: true }).unwrap(),
+        &|bus| bus.publish(&ClipPanel { open: true }).unwrap(),
+    ];
+    for open in panels {
+        let rig = Rig::new();
+        let (bus, sent, _subs) = heard(&rig);
+        open(&bus);
+        let chips = Lane::Chips(vec![chip("hello", ChipKind::Word)]);
+        bus.publish(&lane(7, chips)).unwrap();
+        assert_eq!(words(&rig)["chips"][0]["text"], "hello");
+        rig.hub.pick_chip(7, 0);
+        assert_eq!(sent.picks(), [ChipPicked { round: 7, index: 0 }]);
+    }
+}
+
+#[test]
 fn a_pick_sends_the_round_qml_drew_so_an_old_lane_reaches_the_module_as_old() {
     let rig = Rig::new();
     let (bus, sent, _subs) = heard(&rig);
@@ -191,7 +212,7 @@ fn no_log_line_or_wake_holds_a_chip_or_an_email() {
         ];
         let mut shown = lane(2, Lane::Chips(chips));
         shown.list = Some(ListPage {
-            items: vec![Redacted::new(secrets[2].to_owned())],
+            items: vec![chip(secrets[2], ChipKind::Saved)],
             page: 0,
             pages: 1,
         });

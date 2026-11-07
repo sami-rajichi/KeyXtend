@@ -14,4 +14,4 @@ mod registry;
 mod shared;
 
 pub use grants::Policy;
-pub use kernel::{KERNEL, Kernel, KernelError, KernelSettings, Phase, SPEC};
+pub use kernel::{KEPT_KEY, KERNEL, Kernel, KernelError, KernelSettings, Phase, SPEC};

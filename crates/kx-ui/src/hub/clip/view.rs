@@ -9,7 +9,7 @@ use crate::i18n::clean;
 use crate::i18n::keys::{
     CLIP_BACK, CLIP_CLOSE, CLIP_CONFIRM, CLIP_DELETE, CLIP_DELETE_ALL, CLIP_EMPTY, CLIP_EXPIRES,
     CLIP_FILTER, CLIP_FILTERS, CLIP_INSERT, CLIP_INSERT_ONE, CLIP_JOIN, CLIP_KIND, CLIP_NO,
-    CLIP_NOTE, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW, CLIP_SEARCH,
+    CLIP_NO_FOLDER, CLIP_NOTE, CLIP_OPEN_FOLDER, CLIP_PIN, CLIP_PINNED, CLIP_PREVIEW, CLIP_SEARCH,
     CLIP_SIZE_UNKNOWN, CLIP_TICKED, CLIP_TITLE, CLIP_UNPIN, CLIP_YES, WINDOW_CLIP, kind_id,
     note_id,
 };
@@ -36,6 +36,8 @@ pub(super) struct View {
     /// Some entry is unpinned, so Delete all has something to delete.
     any_unpinned: bool,
     words: Words,
+    /// Open folder can act: the app handed over the history's folder, which a run that saves nothing never does.
+    opens: bool,
     preview: Option<Shown>,
     confirm: Option<Ask>,
     /// The storage line, or null until the module read the room.
@@ -48,6 +50,8 @@ pub(super) struct View {
 #[derive(Serialize)]
 struct Search {
     text: String,
+    /// The caret, in UTF-16 units of `text`.
+    caret: u32,
     hint: String,
     arabic: bool,
     rtl: bool,
@@ -105,6 +109,7 @@ struct Words {
     yes: String,
     no: String,
     open_folder: String,
+    no_folder: String,
     expires: String,
 }
 
@@ -114,8 +119,8 @@ struct Ask {
     text: String,
 }
 
-/// `page` with every text in `t`.
-pub(super) fn of(page: &ClipPage, t: &I18n) -> View {
+/// `page` with every text in `t`, and whether Open folder `opens`.
+pub(super) fn of(page: &ClipPage, t: &I18n, opens: bool) -> View {
     View {
         round: page.round,
         title: t.text(CLIP_TITLE),
@@ -139,6 +144,7 @@ pub(super) fn of(page: &ClipPage, t: &I18n) -> View {
         unpin: page.unpin,
         any_unpinned: page.unpinned > 0,
         words: words(page, t),
+        opens,
         preview: page.preview.as_ref().map(|p| preview(p, page.round, t)),
         confirm: page.confirm.map(|count| Ask {
             text: t.counted(CLIP_CONFIRM, usize::from(count)),
@@ -158,6 +164,7 @@ fn search(page: &ClipPage, t: &I18n) -> Search {
         arabic: is_arabic(&text),
         rtl: is_rtl(&text),
         text,
+        caret: *page.caret.expose(),
         hint: t.text(CLIP_SEARCH),
     }
 }
@@ -219,6 +226,7 @@ fn words(page: &ClipPage, t: &I18n) -> Words {
         yes: t.text(CLIP_YES),
         no: t.text(CLIP_NO),
         open_folder: t.text(CLIP_OPEN_FOLDER),
+        no_folder: t.text(CLIP_NO_FOLDER),
         expires: t.text(CLIP_EXPIRES),
     }
 }

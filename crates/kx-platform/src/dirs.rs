@@ -14,6 +14,9 @@ pub const CLIP_DIR: &str = "clipboard";
 /// The folder under the data folder that holds the sealed learned words and emails.
 pub const SEALED_DIR: &str = "words";
 
+/// The folder under the data folder that holds Quick-fill's sealed notebook, with its own key (ADR-0038).
+pub const VAULT_DIR: &str = "quickfill";
+
 /// The folders an OS adapter reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppDirs {
@@ -94,6 +97,17 @@ mod tests {
             false
         });
         assert_eq!(asked.into_inner(), vec![exe.join(PORTABLE_DIR)]);
+    }
+
+    #[test]
+    fn the_sealed_folders_differ() {
+        let dirs = [CLIP_DIR, SEALED_DIR, VAULT_DIR];
+        let apart = dirs
+            .iter()
+            .enumerate()
+            .all(|(i, a)| !dirs[i + 1..].contains(a));
+        assert!(apart, "{dirs:?}");
+        assert_eq!(VAULT_DIR, "quickfill", "ADR-0038 decision 2");
     }
 
     #[test]

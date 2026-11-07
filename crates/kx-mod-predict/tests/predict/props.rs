@@ -44,7 +44,7 @@ enum Step {
 
 fn step() -> impl Strategy<Value = Step> {
     let texts = select(vec![
-        "he", "l", "lo ", " ", "@", "@@", "x.org ", "sami", "مر", "حبا ",
+        "he", "l", "lo ", " ", "@", "@@", "x.org ", "alex", "مر", "حبا ",
     ]);
     let kinds = select(vec![
         FieldKind::Text,

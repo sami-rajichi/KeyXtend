@@ -7,7 +7,7 @@ use crate::ports::{
     LayoutChanged, PointerMoved, PointerPressed, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage,
     ScrollPeek, ScrollStop, ScrollTap,
 };
-use crate::{ModuleStateChanged, Notice, SettingsChanged};
+use crate::{ModuleStateChanged, Notice, NoticeAnswered, SettingsChanged};
 use std::collections::HashSet;
 
 /// An event's name and gate.
@@ -25,9 +25,10 @@ fn power() -> [(&'static str, Option<Capability>); 3] {
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 20] {
+fn older() -> [&'static str; 21] {
     [
         Notice::NAME,
+        NoticeAnswered::NAME,
         ModuleStateChanged::NAME,
         SettingsChanged::NAME,
         LayoutChanged::NAME,

@@ -54,7 +54,7 @@ impl Reply {
                 bytes: read_tail(r, head.len)?,
             }),
             Kind::Failed => read_failed(r, head),
-            Kind::Draw | Kind::Bye | Kind::MakeDib => Err(IpcError::BadKind),
+            _ => Err(IpcError::BadKind),
         }
     }
 

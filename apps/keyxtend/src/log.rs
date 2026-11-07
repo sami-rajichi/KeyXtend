@@ -1,5 +1,6 @@
 //! The log: the kernel's redacted subscriber at `[kernel] log_level`, over this run's file in the data folder, capped
-//! at `log_max_mb`. When the file cannot open, the run logs to standard error and says so once.
+//! at `log_max_mb`. When the file cannot open, the run logs to standard error and says so once; a hidden run logs only
+//! there.
 
 use kx_kernel::KernelSettings;
 use kx_kernel::log::{LogFile, level, max_bytes, subscriber};
@@ -7,6 +8,7 @@ use kx_settings::Files;
 use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::Dispatch;
+use tracing::level_filters::LevelFilter;
 
 /// Set once the run's log is installed.
 static INSTALLED: AtomicBool = AtomicBool::new(false);
@@ -29,11 +31,26 @@ pub fn open(settings: &KernelSettings, files: &Files) -> Option<Log> {
             no_file: None,
         },
         Err(e) => Log {
-            dispatch: Dispatch::new(subscriber(level, io::stderr)),
             no_file: Some(e),
+            ..on_stderr(level)
         },
     };
     Some(log)
+}
+
+/// The log `settings` describe on standard error alone, for a run that writes no file (ADR-0037); `None` when the level
+/// names no log level.
+#[must_use]
+pub fn unfiled(settings: &KernelSettings) -> Option<Log> {
+    level(&settings.log_level).map(on_stderr)
+}
+
+/// A log at `level` on standard error.
+fn on_stderr(level: LevelFilter) -> Log {
+    Log {
+        dispatch: Dispatch::new(subscriber(level, io::stderr)),
+        no_file: None,
+    }
 }
 
 /// `loaded`, or the kernel's defaults when no settings loaded.

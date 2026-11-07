@@ -10,8 +10,7 @@ use crate::samples::Shape;
 use kx_kernel::Policy;
 use kx_kernel::{KERNEL, Kernel};
 use kx_module_api::{
-    Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, NoticeArg, Subscription, args,
-    keys,
+    Bus, Event, ModuleId, ModuleState, ModuleStateChanged, Notice, Subscription, keys,
 };
 use kx_platform::AppDirs;
 use kx_platform_fake::FakePlatform;
@@ -29,11 +28,7 @@ const DISABLED: &str = "disabled";
 
 /// The `module-failed` notice about `id`.
 pub fn failed(id: ModuleId) -> Notice {
-    Notice {
-        key: keys::MODULE_FAILED,
-        module: Some(id),
-        args: vec![(args::MODULE, NoticeArg::Text(id.to_string()))],
-    }
+    Notice::about(keys::MODULE_FAILED, id)
 }
 
 /// Every `E` a bus carried, in order.

@@ -1,9 +1,11 @@
 //! The panel's keys over a small history, with the plan's page of 5 rows; `acts` tests the ticks and the footer.
 
 mod acts;
+mod caret;
+mod search;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipAct, Filter, PanelKey, Preview};
+use kx_module_api::ports::{ClipAct, Filter, PanelKey, PanelLine, Preview};
 
 use super::rig::{PANEL, chars, history, id, opened, opened_with};
 use super::*;
@@ -34,6 +36,25 @@ fn debug_prints_no_search_or_preview_content() {
     assert!(p.preview().is_some());
     let shown = format!("{p:?}");
     assert!(!shown.contains("zebra"), "{shown}");
+}
+
+#[test]
+fn the_line_is_the_search_on_the_list_with_no_question_and_none_otherwise() {
+    let h = history(&["alpha", "beta"]);
+    let mut p = Panel::new(*PANEL);
+    assert_eq!(p.line(), PanelLine::None, "closed");
+    p.open();
+    assert_eq!(p.line(), PanelLine::Search(Redacted::default()));
+    p.key(&chars("a"), &h);
+    let found = PanelLine::Search(Redacted::new("a".to_owned()));
+    assert_eq!(p.line(), found);
+    p.act(ClipAct::DeleteAll, &h);
+    assert_eq!(p.line(), PanelLine::None, "a question over the list");
+    p.act(ClipAct::Confirm(false), &h);
+    assert_eq!(p.line(), found);
+    p.act(ClipAct::Preview, &h);
+    p.show(id(&h, "beta"), content());
+    assert_eq!(p.line(), PanelLine::None, "a preview");
 }
 
 #[test]
@@ -128,47 +149,6 @@ fn left_and_right_step_through_the_filters_and_stop_at_the_ends() {
     assert_eq!(p.key(&PanelKey::Left, &h), Do::Show);
     assert_eq!(p.filter(), Filter::Files);
     assert_eq!(p.act(ClipAct::Filter(Filter::Files), &h), Do::Stay);
-}
-
-#[test]
-fn the_search_types_erases_and_brings_the_highlight_to_the_top() {
-    let h = history(&["a b", "a bc", "z"]);
-    let mut p = opened();
-    p.key(&PanelKey::Down, &h);
-    assert_eq!(p.key(&chars("a\u{7}\r\nb"), &h), Do::Show);
-    assert_eq!(p.query().expose(), "a b", "one line");
-    assert_eq!(p.key(&PanelKey::Enter, &h), Do::Insert(ids(&h, &["a bc"])));
-    assert_eq!(p.key(&PanelKey::Erase, &h), Do::Show);
-    assert_eq!(p.query().expose(), "a ");
-    p.key(&PanelKey::Erase, &h);
-    p.key(&PanelKey::Erase, &h);
-    assert_eq!(p.key(&PanelKey::Erase, &h), Do::Stay);
-    assert_eq!(p.key(&chars(""), &h), Do::Stay);
-}
-
-#[test]
-fn the_search_keeps_at_most_query_chars_characters() {
-    let h = history(&["a"]);
-    let mut p = opened_with(PanelConfig {
-        query_chars: 3,
-        ..*PANEL
-    });
-    assert_eq!(p.key(&chars("éàüö"), &h), Do::Show);
-    assert_eq!(p.query().expose(), "éàü");
-    assert_eq!(p.key(&chars("e"), &h), Do::Stay);
-}
-
-#[test]
-fn what_is_typed_joins_the_search_on_one_line() {
-    let h = history(&["a b"]);
-    let mut p = opened_with(PanelConfig {
-        query_chars: 3,
-        ..*PANEL
-    });
-    p.key(&chars("a "), &h);
-    assert_eq!(p.key(&chars(" b"), &h), Do::Show);
-    assert_eq!(p.query().expose(), "a b", "one space, three characters");
-    assert_eq!(p.key(&chars("\n"), &h), Do::Stay, "full");
 }
 
 #[test]

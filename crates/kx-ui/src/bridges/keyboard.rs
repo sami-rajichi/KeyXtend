@@ -97,6 +97,10 @@ pub mod qobject {
         #[qinvokable]
         fn panel_key(&self, id: &QString) -> QString;
 
+        /// A press on the open panel: the letters go to the panel again.
+        #[qinvokable]
+        fn aim_panel(&self) -> QString;
+
         /// A click on the scroll pad: arrow `dir` (`up`, `down`, `left` or `right`), or Stop when empty.
         #[qinvokable]
         fn pad(&self, dir: &QString) -> QString;
@@ -254,6 +258,10 @@ impl qobject::Keyboard {
     fn panel_key(&self, id: &QString) -> QString {
         let id = id.to_string();
         self.redraw(|h| h.panel_key(&id))
+    }
+
+    fn aim_panel(&self) -> QString {
+        self.redraw(Hub::aim_panel)
     }
 
     fn placed(&self, x: f64, y: f64, w: f64, h: f64, overhang: f64) -> QString {

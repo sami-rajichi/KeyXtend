@@ -116,13 +116,7 @@ fn a_real_junction_on_the_way_is_unchecked_and_never_followed() {
     std::fs::create_dir(&real).unwrap();
     std::fs::write(real.join("a.txt"), b"abc").unwrap();
     let link = dir.path().join("link");
-    let made = std::process::Command::new("cmd")
-        .args(["/C", "mklink", "/J"])
-        .arg(&link)
-        .arg(&real)
-        .output()
-        .unwrap();
-    assert!(made.status.success(), "mklink /J failed: {made:?}");
+    crate::testlinks::junction(&link, &real);
     assert_eq!(seen(&link).unwrap(), Found::Link, "the junction itself");
     let paths = Redacted::new(vec![link.join("a.txt"), real.join("a.txt")]);
     let want = [FileFact::Unchecked, FileFact::Size(3)];

@@ -7,9 +7,9 @@ pub mod acts;
 mod view;
 
 use super::unread::Unread;
-use super::{Hub, NULL, Wake, json};
+use super::{Hub, NULL, Wake, bus, json};
 use crate::ui_module::MANIFEST;
-use acts::{Dropped, act_of};
+use acts::{CARET, Dropped, act_of, silent};
 use kx_module_api::ports::{ClipAct, ClipPanel, ClipView, Pixels, Preview};
 use kx_module_api::{Bus, EventError, Subscription};
 use std::path::PathBuf;
@@ -77,11 +77,16 @@ impl Hub {
     pub fn clip_json(&self) -> String {
         self.clip.unread.read();
         let view = self.clip().view.clone();
-        view.map_or_else(|| NULL.to_owned(), |v| json(&view::of(&v.0, &self.i18n())))
+        let opens = self.clip.folder.get().is_some();
+        view.map_or_else(
+            || NULL.to_owned(),
+            |v| json(&view::of(&v.0, &self.i18n(), opens)),
+        )
     }
 
-    /// Sends the click `kind` names (one of `acts`) with `arg` on the view of round `round`, and sounds as a key does.
-    /// A tick goes only while that view is kept; a bad click sends nothing and warns. Call it on the Qt thread.
+    /// Sends the click `kind` names (one of `acts`) with `arg` on the view of round `round`, and sounds as a key does,
+    /// but for a caret, whose line takes the aim silently, and the wheel. A tick goes only while that view is kept; a
+    /// bad click sends nothing and warns. Call it on the Qt thread.
     pub fn clip_act(&self, kind: &str, arg: i32, round: i64) {
         let shown = self
             .clip()
@@ -93,16 +98,23 @@ impl Hub {
             Err(Dropped::Stale) => {
                 tracing::debug!(kind, "a late clipboard click was dropped");
             }
+            // A caret's number is never logged, as Quick-fill's tells a hidden line's length.
+            Err(Dropped::Bad) if kind == CARET => {
+                tracing::warn!("QML sent a bad clipboard caret click");
+            }
             Err(Dropped::Bad) => tracing::warn!(
                 kind,
                 arg,
                 "QML sent an unknown clipboard click or a bad argument"
             ),
         }
-        self.tapped();
+        if !silent(kind) {
+            self.tapped();
+        }
     }
 
-    /// Takes the history's folder from the app, once; a second one is a bug, so it warns and the first stays.
+    /// Takes the history's folder from the app, once, and Open folder can act from then on; a second one is a bug, so
+    /// it warns and the first stays.
     pub fn set_clip_folder(&self, folder: PathBuf) {
         if self.clip.folder.set(folder).is_err() {
             tracing::warn!("the clipboard folder was handed over twice, so the first stays");
@@ -157,8 +169,11 @@ impl Hub {
         page.rows.iter().find(|r| r.id == id)?.thumb.clone()
     }
 
-    /// A pad page tap: it turns the open panel's page, else our open list's.
+    /// A pad page tap: it turns the open Quick-fill or clipboard panel's page, else our open list's.
     pub(super) fn pad_page(&self, back: bool) {
+        if self.fill_pad(back) {
+            return;
+        }
         if self.clip().open {
             self.send_clip(ClipAct::Page { back });
         } else {
@@ -219,10 +234,8 @@ impl Hub {
 
     /// Sends `act` through the limited handle, outside the lock; nothing goes before `listen`.
     fn send_clip(&self, act: ClipAct) {
-        let bus = self.clip().bus.clone();
-        if let Some(Err(e)) = bus.map(|b| b.publish(&act)) {
-            tracing::warn!(error = %e, "a clipboard click was not sent");
-        }
+        let handle = self.clip().bus.clone();
+        bus::send(handle, &act, "a clipboard click was not sent");
     }
 
     fn clip(&self) -> MutexGuard<'_, State> {

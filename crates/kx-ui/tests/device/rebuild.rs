@@ -169,11 +169,7 @@ pub(crate) fn once(
             "{windows} windows draw on {devices} devices after the rebuild"
         ));
     }
-    rig.hub.notice(Notice {
-        key: keys::SETTINGS_UNSAVED,
-        module: None,
-        args: Vec::new(),
-    });
+    rig.hub.notice(Notice::plain(keys::SETTINGS_UNSAVED));
     wait(app, "the rebuilt banner taking a notice", || {
         !rig.hub.shown_notices().is_empty()
     })?;

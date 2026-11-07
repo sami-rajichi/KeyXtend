@@ -1,6 +1,7 @@
 //! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
 //! shortcuts, it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`, it tells and types words behind
-//! `ReadFocusedText`, and it sends the clipboard panel's keys and pastes behind the clipboard gates.
+//! `ReadFocusedText`, it sends the clipboard panel's keys and pastes behind the clipboard gates, and Quick-fill's keys
+//! and fills behind `Vault`.
 
 use crate::settings::SPEC;
 use kx_module_api::ports::{
@@ -13,7 +14,7 @@ pub const ID: ModuleId = ModuleId::new("keyboard");
 
 /// The module's manifest: `InjectInput` gates all four services it needs, `KeyboardUi` the face it provides,
 /// `ReadFocusedText` the typed pieces, the typing mode and the picked words, and `ReadClipboard` and `WriteClipboard`
-/// the panel's state and keys and the paste requests; it needs no clipboard service.
+/// the panel's state and keys and the paste requests, and `Vault` Quick-fill's; it needs no clipboard or vault service.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -30,6 +31,8 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::ReadFocusedText,
         Capability::ReadClipboard,
         Capability::WriteClipboard,
+        // An event gate only, as `ReadClipboard` is for the clipboard: Quick-fill's state, keys and fills need it.
+        Capability::Vault,
     ],
     settings: Some(&SPEC),
 };
@@ -39,8 +42,10 @@ mod tests {
     use super::*;
     use kx_module_api::Event;
     use kx_module_api::ports::{
-        ClipKey, ClipPanel, ClipboardKey, ClipboardWriterKey, PasteAsk, Pasted, TypeWord, Typed,
-        TypingMode, TypingModeAsk,
+        AimedLine, BoxesKey, ClipKey, ClipLine, ClipPanel, ClipboardKey, ClipboardWriterKey,
+        FillAsk, FillClose, FillKey, FillLine, FillLive, FillOpen, FillPanel, FillType, FillTyped,
+        PanelPressesWanted, PasteAsk, Pasted, PlacesKey, PressesAsk, TypeWord, Typed, TypingMode,
+        TypingModeAsk, VaultStoreKey,
     };
 
     #[test]
@@ -68,6 +73,7 @@ mod tests {
             Capability::ReadFocusedText,
             Capability::ReadClipboard,
             Capability::WriteClipboard,
+            Capability::Vault,
         ];
         assert_eq!(MANIFEST.capabilities, want);
         let gates = [
@@ -82,6 +88,7 @@ mod tests {
             TypingMode::CAPABILITY,
             TypingModeAsk::CAPABILITY,
             TypeWord::CAPABILITY,
+            AimedLine::CAPABILITY,
         ];
         assert!(
             words
@@ -92,12 +99,48 @@ mod tests {
 
     #[test]
     fn the_clipboard_gates_cover_the_panel_and_its_keys_and_the_paste_and_no_clipboard_service() {
-        let panel = [ClipPanel::CAPABILITY, ClipKey::CAPABILITY];
-        assert_eq!(panel, [Some(Capability::ReadClipboard); 2]);
+        let panel = [
+            ClipPanel::CAPABILITY,
+            ClipKey::CAPABILITY,
+            ClipLine::CAPABILITY,
+        ];
+        assert_eq!(panel, [Some(Capability::ReadClipboard); 3]);
         let paste = [PasteAsk::CAPABILITY, Pasted::CAPABILITY];
         assert_eq!(paste, [Some(Capability::WriteClipboard); 2]);
         let clipboard = [ClipboardKey::ID, ClipboardWriterKey::ID];
         assert!(MANIFEST.requires.iter().all(|s| !clipboard.contains(s)));
+    }
+
+    #[test]
+    fn the_vault_gate_covers_quick_fill_s_state_keys_and_fills_and_no_vault_service() {
+        assert!(MANIFEST.capabilities.contains(&Capability::Vault));
+        let fill = [
+            FillLive::CAPABILITY,
+            FillPanel::CAPABILITY,
+            FillKey::CAPABILITY,
+            FillLine::CAPABILITY,
+            FillType::CAPABILITY,
+            FillTyped::CAPABILITY,
+        ];
+        assert_eq!(fill, [Some(Capability::Vault); 6]);
+        let free = [
+            FillOpen::CAPABILITY,
+            FillClose::CAPABILITY,
+            FillAsk::CAPABILITY,
+        ];
+        assert_eq!(free, [None; 3]);
+        let vault = [VaultStoreKey::ID, BoxesKey::ID, PlacesKey::ID];
+        assert!(MANIFEST.requires.iter().all(|s| !vault.contains(s)));
+        assert!(
+            !MANIFEST.capabilities.contains(&Capability::VaultData),
+            "ADR-0039"
+        );
+    }
+
+    #[test]
+    fn the_wish_for_presses_and_its_ask_need_no_gate() {
+        let free = [PanelPressesWanted::CAPABILITY, PressesAsk::CAPABILITY];
+        assert_eq!(free, [None; 2]);
     }
 
     #[test]

@@ -1,12 +1,14 @@
 //! UI ports: the window guard, screens, the system look, backdrops, the one running copy, the tray icon, the heaps'
-//! free memory, the speaker and the file manager's reveal. The data types are OS-neutral; adapters keep their own
-//! handles behind them.
+//! free memory, the speaker, the file manager's reveal and the hidden-run probe. The data types are OS-neutral;
+//! adapters keep their own handles behind them.
 
+mod hidden;
 mod memory;
 mod reveal;
 mod sound;
 mod tray;
 
+pub use hidden::{Hidden, HiddenCopy, HiddenError, Probe};
 pub use memory::Memory;
 pub use reveal::{Reveal, RevealError};
 pub use sound::{Clip, ClipId, Speaker, SpeakerConfig, level};

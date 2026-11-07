@@ -90,6 +90,10 @@ pub trait InputInjector: Send + Sync {
     /// The file name of the app in front, such as `Notepad.exe`, in the case the OS gives, so the
     /// `key_apps` setting matches it without case. On Windows every UWP app reports `ApplicationFrameHost.exe`.
     fn target_app(&self) -> Option<String>;
+
+    /// A number naming the window in front, only so a change can be seen, with no title or text; `None` when there is
+    /// none.
+    fn front_window(&self) -> Option<u64>;
 }
 
 /// The input injector service; it needs `InjectInput`.

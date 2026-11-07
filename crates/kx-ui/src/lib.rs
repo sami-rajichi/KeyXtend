@@ -53,8 +53,8 @@ pub use bridges::{
 pub use churn::{caps_flipped, flip_caps};
 pub use geom::{Area, Fitted};
 pub use hub::{
-    FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts, Wake, Waker, asks,
-    clip_acts,
+    Answers, FillWaker, FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts,
+    Wake, Waker, asks, clip_acts, fill_acts,
 };
 pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
 pub use settings::{Backdrop, PressFrame, SPEC, UiSettings};

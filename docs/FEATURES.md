@@ -19,8 +19,8 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P6 | Shortcuts layer and Power key | Done (v0.3) |
 | P7 | Word prediction and emails | Done (v0.4) |
 | P8 | Clipboard history | Done (v0.5) |
-| P9 | Quick-fill vault | Ready |
-| P10 | Selection helper | Waiting |
+| P9 | Quick-fill (vault) and one data folder | Done (v0.6) |
+| P10 | Selection helper | Ready |
 | P11 | Voice typing (local Whisper) | Waiting |
 | P12 | Snip + OCR | Waiting |
 | P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Waiting |

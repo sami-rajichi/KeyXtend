@@ -6,9 +6,7 @@ use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
     PointerHook, PointerMoved, PointerPressed, PressesAsk, Scan, ScrollAsk, Toggle,
 };
-use kx_module_api::{
-    Bus, Event, ModuleCx, Mono, Notice, NoticeArg, Subscription, US_PER_MS, args, parse_as,
-};
+use kx_module_api::{Bus, Event, ModuleCx, Mono, Notice, Subscription, US_PER_MS, parse_as};
 use kx_platform_fake::FakePointerHook;
 use kx_test_support::host::FakeHost;
 use std::sync::mpsc::{self, Receiver};
@@ -53,11 +51,7 @@ pub fn shown(rclick: bool, grab: GrabState) -> Heard {
 
 /// The mouse module's notice `key`.
 pub fn told(key: &'static str) -> Heard {
-    Heard::Notice(Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-    })
+    Heard::Notice(Notice::about(key, ID))
 }
 
 /// A left press outside our windows at `at`.

@@ -1,6 +1,7 @@
 //! Kernel tests: sample modules on a fake platform, each rig with its own temp data folder.
 
 mod control;
+mod fresh;
 mod gate;
 mod handle;
 mod phase;

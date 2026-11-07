@@ -9,6 +9,7 @@ mod failures;
 mod live;
 mod logs;
 mod module;
+mod panel_presses;
 mod presses;
 mod props;
 mod reset;

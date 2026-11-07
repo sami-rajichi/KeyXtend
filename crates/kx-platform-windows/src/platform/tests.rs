@@ -209,10 +209,76 @@ fn the_pictures_port_opens_a_session_on_another_thread_and_drops_it() {
 }
 
 #[test]
+fn the_boxes_port_starts_a_session_on_another_thread_and_drops_it() {
+    use kx_module_api::ports::BoxConfig;
+    let boxes = WindowsPlatform::new().unwrap().boxes();
+    let config = BoxConfig {
+        deadline_ms: 1,
+        idle_s: 1,
+        restart_ms: 1,
+        restart_max_ms: 1,
+    };
+    // Never a call: the worker starts only on the first one.
+    let started = std::thread::spawn(move || drop(boxes.start(config))).join();
+    assert!(started.is_ok());
+}
+
+#[test]
 fn the_disk_room_reads_a_folders_drive_on_another_thread() {
     let room = WindowsPlatform::new().unwrap().disk_room();
     let dir = kx_test_support::tempdir::TempDir::new("platform-disk").unwrap();
     let path = dir.path().to_path_buf();
     let read = std::thread::spawn(move || (room.free(&path).is_ok(), room.drive(&path).is_ok()));
     assert_eq!(read.join().unwrap(), (true, true));
+}
+
+#[test]
+fn the_hidden_port_answers_on_another_thread_and_finds_a_relative_folder_normal() {
+    use kx_platform::ui::Probe;
+    let hidden = WindowsPlatform::new().unwrap().hidden();
+    let outside = std::path::PathBuf::from("not-app-data");
+    let probed = std::thread::spawn(move || hidden.probe(&outside)).join();
+    assert_eq!(probed.ok(), Some(Ok(Probe::Normal)));
+}
+
+#[test]
+fn the_places_port_writes_a_box_in_a_temp_folder_on_another_thread() {
+    use kx_module_api::ports::{PlaceState, box_file};
+    // Only a temp folder: never a suggestion, a find or the data folder, which are the user's own.
+    let places = WindowsPlatform::new().unwrap().places();
+    let dir = kx_test_support::tempdir::TempDir::new("platform-places").unwrap();
+    let path = dir.path().to_path_buf();
+    let done = std::thread::spawn(move || (places.state(&path, 1), places.write(&path, b"box")));
+    assert_eq!(done.join().unwrap(), (PlaceState::Ready, Ok(())));
+    assert_eq!(std::fs::read(dir.path().join(box_file())).unwrap(), b"box");
+}
+
+/// Folders in temp dirs, portable when the program's folder holds `data`.
+fn temp_dirs(portable: bool) -> (kx_test_support::tempdir::TempDir, AppDirs) {
+    let root = kx_test_support::tempdir::TempDir::new("platform-places").unwrap();
+    let (exe_dir, user_dir) = (root.path().join("exe"), root.path().join("user"));
+    std::fs::create_dir_all(&user_dir).unwrap();
+    std::fs::create_dir_all(&exe_dir).unwrap();
+    if portable {
+        std::fs::create_dir(exe_dir.join(kx_platform::PORTABLE_DIR)).unwrap();
+    }
+    (root, AppDirs { exe_dir, user_dir })
+}
+
+#[test]
+fn the_places_refuse_the_data_folder_the_run_uses() {
+    use kx_module_api::ports::PlaceState;
+    let (_root, dirs) = temp_dirs(true);
+    let data = dirs.exe_dir.join(kx_platform::PORTABLE_DIR);
+    assert_eq!(
+        places(&dirs).state(&data, 0),
+        PlaceState::Refused,
+        "portable"
+    );
+    let (_root, dirs) = temp_dirs(false);
+    assert_eq!(
+        places(&dirs).state(&dirs.user_dir, 0),
+        PlaceState::Refused,
+        "installed"
+    );
 }

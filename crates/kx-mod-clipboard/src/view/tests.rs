@@ -185,6 +185,7 @@ fn the_facts_limits_and_search_pass_through() {
         (LIMITS.max_bytes, LIMITS.keep_days)
     );
     assert_eq!(v.0.search.expose(), "zz");
+    assert_eq!(*v.0.caret.expose(), 2);
     assert_eq!(v.0.filter, Filter::All);
     assert!(v.0.rows.is_empty() && v.0.highlight.is_none() && !v.0.empty);
     assert!(v.0.preview.is_none());

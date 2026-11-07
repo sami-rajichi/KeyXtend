@@ -8,16 +8,13 @@ mod look;
 mod notices;
 mod scroll;
 mod spots;
+mod state;
 mod texts;
 mod tray;
 mod wake;
 mod words;
 
-use super::hub;
-use crate::hub::Hub;
-use cxx_qt::CxxQtType;
-use kx_platform::ui::WatchGuard;
-use std::sync::Arc;
+pub use state::UiRust;
 #[cfg(debug_assertions)]
 pub use wake::wakes;
 
@@ -113,7 +110,7 @@ pub mod qobject {
         #[qinvokable]
         fn menu_at(&self, x: i32, y: i32, w: f64, h: f64) -> QString;
 
-        /// The notices waiting for the banner, as a JSON list of `{id, text, retry}`.
+        /// The notices waiting for the banner, as JSON `{id, text, retry, ask}` objects; `ask` is `{yes, no}` or null.
         #[qinvokable]
         fn take_notices(&self) -> QString;
 
@@ -121,13 +118,17 @@ pub mod qobject {
         #[qinvokable]
         fn shown_notices(&self) -> QString;
 
-        /// Try again on notice `id`; true when the app was asked.
+        /// Try again on notice `id`; true when its module restarts, and one that asks answers No instead.
         #[qinvokable]
         fn retry(&self, id: i64) -> bool;
 
-        /// OK on notice `id`.
+        /// OK on notice `id`; one that asks answers No.
         #[qinvokable]
         fn dismiss(&self, id: i64);
+
+        /// Yes or No on asking notice `id`; true when it asked.
+        #[qinvokable]
+        fn answer(&self, id: i64, yes: bool) -> bool;
 
         /// Shows the next theme and saves it; true when it changed.
         #[qinvokable]
@@ -269,32 +270,4 @@ pub mod qobject {
 
     impl cxx_qt::Threading for Ui {}
     impl cxx_qt::Initialize for Ui {}
-}
-
-/// Rust side of `Ui`.
-pub struct UiRust {
-    hub: Option<Arc<Hub>>,
-    /// Keeps the system look watch running while the object lives.
-    watch: Option<WatchGuard>,
-    /// The look the windows drew last, as QML reads it, so only a new one drops Qt's cached graphics.
-    drawn: String,
-}
-
-impl Default for UiRust {
-    fn default() -> Self {
-        let hub = hub();
-        let drawn = hub.as_deref().map(Hub::look_json).unwrap_or_default();
-        Self {
-            hub,
-            watch: None,
-            drawn,
-        }
-    }
-}
-
-impl qobject::Ui {
-    /// `f` over the hub, or `none` before the app installed one.
-    fn with<T>(&self, none: T, f: impl FnOnce(&Hub) -> T) -> T {
-        self.rust().hub.as_deref().map_or(none, f)
-    }
 }

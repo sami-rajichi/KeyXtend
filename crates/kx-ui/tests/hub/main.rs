@@ -1,5 +1,5 @@
 //! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
-//! sounds, the pointer overlay, the scroll pad and the chip lane.
+//! sounds, the pointer overlay, the scroll pad, the chip lane and the panels.
 
 #![allow(
     clippy::expect_used,
@@ -13,6 +13,7 @@ mod assist;
 mod board;
 mod clip;
 mod face;
+mod fill;
 mod fonts;
 mod held;
 mod lifecycle;
@@ -36,7 +37,7 @@ mod words;
 use kx_module_api::ports::{
     FaceAction, FaceError, FaceReply, KeyboardFace, KeyboardFaceKey, Point, Rect, Screen,
 };
-use kx_module_api::{ModuleId, Notice, NoticeArg, ServiceKey, args, keys};
+use kx_module_api::{ModuleId, Notice, ServiceKey, keys};
 use kx_platform_fake::{
     FakeBackdrop, FakeMemory, FakeReveal, FakeScreens, FakeSpeaker, FakeSystemLook, FakeTray,
     FakeWindowGuard,
@@ -156,11 +157,7 @@ const TRAY_PX: u32 = 20;
 
 /// The kernel's notice for a failed keyboard module, which offers Try again.
 fn failed() -> Notice {
-    Notice {
-        key: keys::MODULE_FAILED,
-        module: Some(KEYBOARD),
-        args: vec![(args::MODULE, NoticeArg::Text(KEYBOARD.to_string()))],
-    }
+    Notice::about(keys::MODULE_FAILED, KEYBOARD)
 }
 
 /// Windows' 100 % DPI, the main screen's.

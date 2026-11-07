@@ -113,15 +113,17 @@ fn the_chip_lane_and_its_menu_show_the_controllers_icons() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let w = &i.words;
     let got = [
-        &w.domain, &w.email, &w.more, &w.undo, &w.locked, &w.menu, &w.forget, &w.pause, &w.resume,
-        &w.power, &w.cancel,
+        &w.domain, &w.email, &w.saved, &w.more, &w.undo, &w.locked, &w.fill, &w.menu, &w.forget,
+        &w.pause, &w.resume, &w.power, &w.cancel,
     ];
     let want = [
         "at-sign",
         "at-sign",
+        "key-round",
         "chevron-right",
         "undo-2",
         "lock",
+        "key-round",
         "square-menu",
         "eraser",
         "eye-off",
@@ -131,6 +133,8 @@ fn the_chip_lane_and_its_menu_show_the_controllers_icons() {
     ];
     assert_eq!(got.map(String::as_str), want);
     assert!(i.named().contains(&("words.menu".into(), "square-menu")));
+    let fill = ("words.fill".into(), "key-round");
+    assert!(i.named().contains(&fill), "the Quick-fill chip");
 }
 
 #[test]
@@ -163,4 +167,29 @@ fn the_clipboard_panel_shows_its_icons_by_role() {
     assert!(i.named().contains(&("clip.kind_media".into(), "film")));
     let t = text().replacen("unpin = \"pin-off\"", "unpin = \"Pin-off\"", 1);
     assert!(parse(&t).expect_err("a capital").contains("clip.unpin"));
+}
+
+#[test]
+fn the_quick_fill_panel_shows_its_icons_by_role() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "title=key-round search=search new=plus backup=archive close=x back=arrow-left \
+                edit=text-select save=check cancel=x delete=trash-2 add_field=plus own_label=tag \
+                shown=check kind_person=user kind_login=globe kind_wifi=wifi kind_card=id-card \
+                kind_note=sticky-note kind_other=key-round label=tag user=user password=key-round \
+                both=arrow-right-to-line insert=clipboard-paste open=chevron-right show=eye \
+                hide=eye-off hidden_on=check hidden_off=square paste=clipboard-paste \
+                make=wand-sparkles waiting=archive remove=minus pick=check place_cloud=cloud \
+                place_removable=usb place_drive=hard-drive place_folder=folder place_file=file-input \
+                back_up_now=archive add_place=plus change_password=key-round checks_on=check \
+                checks_off=square bring_back=history keepass=file-input other_folder=folder-open \
+                here=check done=check lock=lock";
+    let named = i.fill.named();
+    let got: Vec<_> = named
+        .map(|(role, name)| format!("{}={name}", role.trim_start_matches("fill.")))
+        .collect();
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(got, want, "design \"The panel\"");
+    assert!(i.named().contains(&("fill.make".into(), "wand-sparkles")));
+    let t = text().replacen("make = \"wand-sparkles\"", "make = \"Wand\"", 1);
+    assert!(parse(&t).expect_err("a capital").contains("fill.make"));
 }

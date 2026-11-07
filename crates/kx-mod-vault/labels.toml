@@ -1,0 +1,58 @@
+# The labels a field takes from the table (design "The notebook"), each listed once in the order Add a field offers
+# them: `id` names it and its text `fill.label-<id>`, `hidden` starts its field hidden, `emails` shows its values in the
+# `@@` list, and `make` offers Make one on its field.
+# The ids are saved in the notebook, so changing one needs a new `VERSION` in `src/store/codec.rs`.
+
+[[label]]
+id = "full-name"
+
+[[label]]
+id = "email"
+emails = true
+
+[[label]]
+id = "phone"
+
+[[label]]
+id = "address"
+
+[[label]]
+id = "city"
+
+[[label]]
+id = "postcode"
+
+[[label]]
+id = "country"
+
+[[label]]
+id = "birthday"
+
+[[label]]
+id = "user"
+
+[[label]]
+id = "password"
+hidden = true
+make = true
+
+[[label]]
+id = "pin"
+hidden = true
+
+[[label]]
+id = "id-number"
+hidden = true
+
+[[label]]
+id = "number"
+hidden = true
+
+[[label]]
+id = "website"
+
+[[label]]
+id = "network"
+
+[[label]]
+id = "text"

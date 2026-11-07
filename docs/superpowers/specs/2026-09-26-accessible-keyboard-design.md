@@ -104,7 +104,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 
 - **Lists** (clipboard, quick-fill, settings lists) show exactly **5 rows per page**.
 - Every list has large **▲/▼ page buttons** and a "page n of m" indicator. A short last page is padded so paging lands on whole pages.
-- While a panel is open, the keyboard's own keys drive it: **↑/↓** move the highlight, **←/→** switch tabs, **Enter** activates, **Space** ticks, **Esc** closes.
+- While a panel's line is aimed at (§3.4), the keyboard's own keys drive it: **↑/↓** move the highlight, **←/→** move the line's caret while it holds text and switch tabs on an empty search line, **Enter** activates, **Space** types a space in a line with text and ticks on the clipboard's empty search, **Esc** closes. A key with Ctrl, Alt or Win latched still goes to the app (ADR-0040).
 - The scroll pad turns one page of any of our lists per tap (§5.2).
 - No sliders. Every numeric setting uses **−/+ steppers**.
 
@@ -113,6 +113,7 @@ The Windows 11 touch keyboard is built for touch screens. macOS Dwell and OptiKe
 - All panels scale with the keyboard size (one `ks` scale factor).
 - A panel opens **above** the keyboard, or **below** it if there is no room. If it still does not fit, it shrinks to fit, but never below 0.80×. It never covers the keys unless the screen is physically too small.
 - The voice caption bar sits at the bottom centre of the screen and moves up to stay clear of the keyboard and any open panel.
+- A panel can stay open during ordinary typing, as letters follow the last click (ADR-0040): opening a panel, or clicking its line, aims the keys at it. A click outside our windows, the front window changing, or a fill or paste from the panel takes the aim away, and then every key goes to the app as if no panel were open. On a form or password line only the click does, so a window that pops up never gets the rest of a secret. Only an aimed line draws the caret and the ring.
 
 ### 3.5 Themes
 
@@ -216,7 +217,7 @@ The **shortcuts layer** (owner, 2026-10-23):
 - **Win alone** (owner, 2026-10-17): clicking Win again with nothing used since it latched (no key, Caps Lock, modifier + click, or a latch latched after it) lets go and sends a lone Win press, so Start opens as with a real key; otherwise it only lets go. The lone press goes out without the other latches, which then let go or stay as after any key. A latch key opts in with `lone` in `board.toml`; never Alt, whose lone press opens the app's menu bar.
 - **Caps Lock** is a simple toggle, labelled "Caps" as in osk.exe so it never looks like Shift ("Verr. Maj" in French, §3.6).
 - **Modifier + mouse:** while a modifier is held, the next mouse click is sent with that modifier down, so Shift+click extends a selection and Ctrl+click multi-selects. This is essential for one-button users.
-- Keys pressed while one of our panels is open go to that panel (§3.3), not to the target app.
+- Keys pressed while one of our panels is aimed at go to that panel (§3.3, §3.4), not to the target app.
 
 ### 4.5 Sending input (Windows)
 
@@ -232,7 +233,7 @@ The **shortcuts layer** (owner, 2026-10-23):
 - **Repeating keys:** characters (letters, digits, symbols), which always repeat, and the named keys marked `repeat` in `board.toml`: Space, Enter, Backspace, Delete and the four arrows.
 - **Never repeating:** Shift, Ctrl, Alt, AltGr, Win, Caps Lock, Tab, Esc, Menu, the language key, accent (dead) keys, dimmed keys and the top-bar buttons.
 - Latched modifiers stay down for the whole burst and let go when it ends, so Shift with a held "a" types "AAAA". With Ctrl, Alt or Win latched (or AltGr acting as Right Alt), a held key types once, so a shortcut such as Ctrl+W never fires many times.
-- The burst stops when the pointer lets go, the keyboard hides, one of our panels opens, or a key does not reach the app; a slip anywhere while held changes nothing, and a key slipped onto never acts. While a panel is open, keys go to the panel and do not repeat.
+- The burst stops when the pointer lets go, the keyboard hides, one of our panels opens, or a key does not reach the app; a slip anywhere while held changes nothing, and a key slipped onto never acts. While a panel is aimed at, keys go to the panel and do not repeat; with a panel open but not aimed at, keys repeat in the app as usual.
 
 ---
 
@@ -248,7 +249,8 @@ Mouse assist (§5), word prediction (§6), clipboard history (§7) and the other
 
 - Clipboard DB, vault, learned words and transcripts are encrypted with **XChaCha20-Poly1305** (RustCrypto crates).
 - The data key is protected by the OS: **DPAPI** (Windows), **Keychain** (macOS), **Secret Service** (Linux).
-- The vault adds user-presence verification before it decrypts.
+- Quick-fill adds no unlock step, as browsers fill saved passwords; its backup box is locked with the user's own password (ADR-0038).
+- A run whose saves Windows would hide in another app's package saves nothing (ADR-0037).
 - We never write our own cryptographic primitives.
 
 ### 9.2 Network
@@ -339,7 +341,7 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27. They are numbere
 | D1 | Product name and crate prefix | **Decided:** KeyXtend, crates `kx-*`, binaries `keyxtend.exe` / `keyxtend-worker.exe` |
 | D2 | Licence | **Decided:** view only, all rights reserved; the app is sold under its own user licence (ADR-0030, superseding ADR-0006) |
 | D3 | Type into admin/elevated windows | **Decided:** yes, like osk.exe; gate G4 showed uiAccess is enough (ADR-0013) |
-| D4 | Vault unlock | OS verification (Windows Hello/PIN), with an optional master password |
+| D4 | Vault unlock | **Decided (2026-11-01):** no unlock step; a PIN lock may come in P13's Settings, off by default (ADR-0038) |
 | D5 | Updates | Notify only, never auto-install; the user downloads a signed release |
 | D6 | Plugins | Built-in modules only in v1 |
 | D7 | Which §13 features to schedule, and in what order | **Decided:** all, after v1.0, one by one from `docs/FEATURES.md` |

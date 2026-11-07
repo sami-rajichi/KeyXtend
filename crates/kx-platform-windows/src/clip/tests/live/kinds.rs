@@ -130,3 +130,22 @@ fn a_copy_of_formats_nobody_keeps_has_no_parts() {
     open::open(WAIT).and_then(|o| put(&o)).unwrap();
     assert!(watch.hears(&[]));
 }
+
+#[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
+fn a_take_reads_the_text_held_now_even_when_marked_and_refuses_past_its_cap() {
+    let _real = hold();
+    write(&[text(TEXT)]);
+    let taken = WinClipboard::new().text(WAIT, TEXT.len()).unwrap();
+    assert_eq!(taken.as_ref().map(|t| t.expose().as_str()), Some(TEXT));
+    let short = WinClipboard::new().text(WAIT, TEXT.len() - 1);
+    assert_eq!(short, Err(ClipError::TooLong));
+}
+
+#[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
+fn a_take_of_a_picture_alone_finds_no_text() {
+    let _real = hold();
+    write(&[image(ImageCodec::Dib, dib(INFO, 1))]);
+    assert_eq!(WinClipboard::new().text(WAIT, TEXT.len()), Ok(None));
+}

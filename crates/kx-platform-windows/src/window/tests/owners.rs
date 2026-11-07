@@ -1,20 +1,44 @@
 //! The guard's owner chains: an outside drop brings a whole family back in order, and the guard follows only owners
 //! on its own thread, as another thread would have to answer inside our window procedure.
 
+use std::cell::Cell;
 use std::sync::{PoisonError, mpsc};
 
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    DispatchMessageW, GetMessageW, HWND_NOTOPMOST, MSG, PostThreadMessageW, TranslateMessage,
-    WM_QUIT,
+    CallWindowProcW, DispatchMessageW, GWLP_WNDPROC, GetMessageW, HWND_NOTOPMOST, MSG,
+    PostThreadMessageW, SWP_NOOWNERZORDER, SWP_NOZORDER, SetWindowLongPtrW, TranslateMessage,
+    WINDOWPOS, WM_QUIT, WM_WINDOWPOSCHANGING,
 };
 
-use super::super::guard::guard;
-use super::super::top::chain;
+use super::super::guard::{Proc, guard, next};
+use super::super::top::{chain, lifting};
 use super::super::win::guard_these;
 use super::Hidden;
 use super::z_order::{Z_ORDER, above, listed, put_after, topmost};
+
+thread_local! {
+    /// The guard procedure `tied` hands messages to.
+    static TIED_BEHIND: Cell<isize> = const { Cell::new(0) };
+}
+
+/// A subclass in front of the guard that keeps its window where it is on a lift that brings the windows it owns, as
+/// Windows does when it would place the window after another thread's hidden IME window out of the band.
+unsafe extern "system" fn tied(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if msg == WM_WINDOWPOSCHANGING && lifting() {
+        let pos = std::ptr::with_exposed_provenance_mut::<WINDOWPOS>(lparam.0.cast_unsigned());
+        // SAFETY: for this message `lparam` points to a live WINDOWPOS.
+        if let Some(pos) = unsafe { pos.as_mut() }
+            && pos.flags & SWP_NOOWNERZORDER != SWP_NOOWNERZORDER
+        {
+            pos.flags |= SWP_NOZORDER;
+        }
+    }
+    let behind = TIED_BEHIND.get().cast_unsigned();
+    // SAFETY: hands every message to the guard this subclass replaced, as a subclass must.
+    unsafe { CallWindowProcW(next(behind), hwnd, msg, wparam, lparam) }
+}
 
 /// Shows a guarded owner on a thread of its own, which answers messages until it is told to quit.
 fn other_thread() -> (HWND, u32, std::thread::JoinHandle<()>) {
@@ -64,6 +88,24 @@ fn a_keyboards_tip_and_list_stay_above_it_after_an_outside_drop_in_its_family() 
             "{dropped}: and its list"
         );
     }
+}
+
+/// Windows can move nothing on a lift that brings the owned windows and still say yes: the shadow then goes up alone,
+/// and the keyboard still ends above it.
+#[test]
+fn a_lift_with_its_owned_windows_that_moves_nothing_goes_up_alone() {
+    let _z = Z_ORDER.lock().unwrap_or_else(PoisonError::into_inner);
+    let shadow = Hidden::tip("KeyXtend test: tied shadow", None);
+    let kb = Hidden::topmost("KeyXtend test: tied shadow's keyboard", Some(shadow.0));
+    guard_these(listed(&[&kb, &shadow]), None, None).unwrap();
+    let ours: Proc = tied;
+    // SAFETY: puts the test subclass in front of the guard on the test's own window; it hands every message on.
+    TIED_BEHIND
+        .set(unsafe { SetWindowLongPtrW(shadow.0, GWLP_WNDPROC, (ours as usize).cast_signed()) });
+    put_after(&shadow, HWND_NOTOPMOST);
+    assert!(topmost(&shadow), "the shadow comes back alone");
+    assert!(topmost(&kb), "the keyboard stays");
+    assert!(above(&kb, &shadow), "above its shadow");
 }
 
 #[test]

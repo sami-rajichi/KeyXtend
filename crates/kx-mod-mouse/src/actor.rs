@@ -1,6 +1,6 @@
 //! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands, the pad's
-//! scrolling and the presses prediction wants to the engine, and turns the engine's notes into bus events. A plain
-//! struct driven by messages, plus a thread loop.
+//! scrolling and the presses prediction or an open panel wants to the engine, and turns the engine's notes into bus
+//! events. A plain struct driven by messages, plus a thread loop.
 
 mod notes;
 mod quiet;
@@ -14,7 +14,7 @@ use kx_module_api::ports::{
     AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressesAsk, Scan,
     ScrollAsk, Toggle,
 };
-use kx_module_api::{Bus, Notice, NoticeArg, SettingsHandle, args, keys};
+use kx_module_api::{Bus, Notice, SettingsHandle, keys};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -31,6 +31,8 @@ pub enum Msg {
     Scroll(bool),
     /// Word prediction wants each press told, or no longer.
     Presses(bool),
+    /// The keyboard wants each press told while a panel is open, or no longer.
+    PanelPresses(bool),
     /// The engine noted something; for a move, the latest point waits in the shared move slot.
     Note(Note),
     /// The engine no longer needs the hook, after applying this many queued commands.
@@ -76,6 +78,8 @@ pub struct Actor {
     scrolling: bool,
     /// Word prediction wants presses.
     wanted: bool,
+    /// The keyboard wants presses, as a panel is open.
+    panel: bool,
     live: Option<Live>,
     /// How many engines were made; each run carries its number.
     runs: u64,
@@ -114,6 +118,7 @@ impl Actor {
             latches: Vec::new(),
             scrolling: false,
             wanted: false,
+            panel: false,
             live: None,
             runs: 0,
             failing: false,
@@ -161,6 +166,7 @@ impl Actor {
             Msg::Ask => self.tell_state(),
             Msg::Scroll(on) => self.scroll(on),
             Msg::Presses(on) => self.presses(on),
+            Msg::PanelPresses(on) => self.panel_presses(on),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),
             Msg::Lost(run) => self.lost(run),
@@ -205,7 +211,7 @@ impl Actor {
         });
         engine.set_latches(self.latches.clone());
         engine.set_scrolling(self.scrolling);
-        engine.set_wanted(self.wanted);
+        engine.set_wanted(self.pressing());
         // A mouse key or a restored Right-click is a mode the user expects on; latches, scrolling and presses start
         // quietly.
         let expected = !first.as_ref().is_some_and(Cmd::quiet);
@@ -243,7 +249,7 @@ impl Actor {
         }
         self.failing = true;
         if expected {
-            self.publish(&notice(keys::MOUSE_HOOK_FAILED));
+            self.publish(&Notice::about(keys::MOUSE_HOOK_FAILED, ID));
         }
     }
 
@@ -258,7 +264,7 @@ impl Actor {
         self.drop_run();
         // As at a failed start: the saved value waits for the next start, so Grab's end writes nothing meanwhile.
         (self.saved, self.rclick, self.grab) = (false, false, GrabState::Off);
-        let needed = self.scrolling || self.wanted || !self.latches.is_empty();
+        let needed = self.scrolling || self.pressing() || !self.latches.is_empty();
         if needed && !std::mem::replace(&mut self.restarted, true) {
             // A quiet start: the engine takes the latches, scrolling and presses as they stand.
             self.start(Some(Cmd::Latches(self.latches.clone())));
@@ -266,7 +272,7 @@ impl Actor {
         self.tell_state();
         // A mode or a latch the user aimed at the run goes dark, even one the engine had no time to note.
         if loud || !self.reset_told.swap(true, Ordering::Relaxed) {
-            self.publish(&notice(keys::MOUSE_RESET));
+            self.publish(&Notice::about(keys::MOUSE_RESET, ID));
         }
     }
 
@@ -277,14 +283,5 @@ impl Actor {
             self.drop_run();
             self.restarted = false;
         }
-    }
-}
-
-/// The mouse module's notice `key`, naming the module.
-pub(crate) fn notice(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
     }
 }

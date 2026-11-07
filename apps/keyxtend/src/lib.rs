@@ -1,6 +1,6 @@
-//! The app without Qt: the command line, the one running copy, the quiet panic hook, the log, the words' and the
-//! clipboard history's folders, and the kernel with every module over the hub the UI shares. `main.rs` adds the Windows
-//! adapter and Qt's loop.
+//! The app without Qt: the command line, the one running copy, the quiet panic hook, the log, the hidden run, the
+//! words', the clipboard history's and Quick-fill's folders, and the kernel with every module over the hub the UI
+//! shares. `main.rs` adds the Windows adapter and Qt's loop.
 
 #![forbid(unsafe_code)]
 
@@ -9,11 +9,16 @@ pub mod boot;
 pub mod clip;
 pub mod copy;
 pub mod drain;
+#[cfg(test)]
+#[path = "../tests/common/fakes.rs"]
+mod fakes;
+pub mod hidden;
 #[cfg(debug_assertions)]
 pub mod layouts_debug;
 pub mod log;
 pub mod quiet;
 pub mod relay;
+pub mod vault;
 pub mod words;
 
 /// True in the build whose manifest asks for uiAccess (`build.rs` sets `kx_ui_access`), which loads libraries only from

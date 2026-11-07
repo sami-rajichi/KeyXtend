@@ -5,7 +5,7 @@
 use std::ffi::c_void;
 use std::os::windows::io::{FromRawHandle, OwnedHandle};
 
-use kx_platform::pictures::SpawnError;
+use kx_platform::worker::SpawnError;
 use windows::Win32::Foundation::HANDLE;
 use windows::Win32::Security::{
     CreateRestrictedToken, DISABLE_MAX_PRIVILEGE, DuplicateTokenEx, GetTokenInformation,

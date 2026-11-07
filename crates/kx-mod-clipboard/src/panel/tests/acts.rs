@@ -7,10 +7,13 @@ fn ticks_keep_their_order_across_searches_and_filters() {
     let h = history(&["first note", "second idea", "third note"]);
     let mut p = opened();
     p.key(&chars("IDEA"), &h);
-    assert_eq!(p.key(&PanelKey::Tick, &h), Do::Show);
+    let round = p.shown(ids(&h, &["second idea"]));
+    let click = ClipAct::Tick { round, row: 0 };
+    assert_eq!(p.act(click, &h), Do::Show);
     p.key(&PanelKey::Esc, &h);
     p.key(&chars("first"), &h);
-    p.key(&PanelKey::Tick, &h);
+    let round = p.shown(ids(&h, &["first note"]));
+    p.act(ClipAct::Tick { round, row: 0 }, &h);
     p.act(ClipAct::Filter(Filter::Images), &h);
     p.act(ClipAct::Filter(Filter::All), &h);
     let want = ids(&h, &["second idea", "first note"]);

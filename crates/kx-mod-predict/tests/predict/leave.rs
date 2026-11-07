@@ -28,7 +28,7 @@ fn kept(rig: &mut Rig) -> Vec<String> {
 
 /// Typed starts and the rest the first domain chip types after each: after the `@` alone, which it replaces none of, or
 /// after the domain's first letter.
-const STARTS: [(&str, &str); 2] = [("sami@", "gmail.com"), ("sami@g", "mail.com")];
+const STARTS: [(&str, &str); 2] = [("alex@", "gmail.com"), ("alex@g", "mail.com")];
 
 /// Types `start`, picks the first domain chip, which types `rest`, then the keyboard tells that text when `told`.
 fn domain_picked(rig: &mut Rig, (start, rest): (&str, &str), told: bool) {
@@ -45,7 +45,7 @@ fn a_domain_chip_that_completes_the_address_learns_it_once_its_text_reaches_the_
     for start in STARTS {
         let mut rig = in_box(FieldKind::Text);
         domain_picked(&mut rig, start, true);
-        assert_eq!(kept(&mut rig), ["sami@gmail.com"], "{}", start.0);
+        assert_eq!(kept(&mut rig), ["alex@gmail.com"], "{}", start.0);
         let mut rig = in_box(FieldKind::Text);
         domain_picked(&mut rig, start, false);
         assert!(kept(&mut rig).is_empty(), "the keyboard never told it");
@@ -57,26 +57,26 @@ fn another_text_after_a_domain_chip_learns_nothing() {
     let mut rig = in_box(FieldKind::Text);
     domain_picked(&mut rig, STARTS[1], false);
     rig.send(Msg::Typed(Piece::Break));
-    rig.typed("sami@gmail.com");
+    rig.typed("alex@gmail.com");
     assert!(kept(&mut rig).is_empty(), "the break ended the wait");
 }
 
 #[test]
 fn a_click_away_after_a_typed_full_address_learns_it() {
     let mut rig = in_box(FieldKind::Text);
-    rig.typed("sami@x.org");
+    rig.typed("alex@x.org");
     rig.send(Msg::Pressed(false));
-    assert_eq!(kept(&mut rig), ["sami@x.org"]);
+    assert_eq!(kept(&mut rig), ["alex@x.org"]);
 }
 
 #[test]
 fn a_click_away_after_a_partial_address_or_on_our_window_learns_nothing() {
     let mut rig = in_box(FieldKind::Text);
-    rig.typed("sami@gm");
+    rig.typed("alex@gm");
     rig.send(Msg::Pressed(false));
     assert!(kept(&mut rig).is_empty());
     let mut rig = in_box(FieldKind::Text);
-    rig.typed("sami@x.org");
+    rig.typed("alex@x.org");
     rig.send(Msg::Pressed(true));
     assert!(kept(&mut rig).is_empty(), "the user is still on it");
 }
@@ -84,20 +84,20 @@ fn a_click_away_after_a_partial_address_or_on_our_window_learns_nothing() {
 #[test]
 fn focus_on_another_text_box_learns_the_typed_address() {
     let mut rig = in_box(FieldKind::Text);
-    rig.typed("sami@x.org");
+    rig.typed("alex@x.org");
     rig.focus(FieldKind::Text);
-    assert_eq!(kept(&mut rig), ["sami@x.org"]);
+    assert_eq!(kept(&mut rig), ["alex@x.org"]);
 }
 
 #[test]
 fn a_leave_the_watch_already_sees_as_a_password_box_or_another_kind_learns_nothing() {
     for kind in [FieldKind::Password, FieldKind::Unknown, FieldKind::None] {
         let mut rig = in_box(FieldKind::Text);
-        rig.typed("sami@x.org");
+        rig.typed("alex@x.org");
         rig.focus(kind);
         assert!(kept(&mut rig).is_empty(), "focus on {kind:?}");
         let mut rig = in_box(FieldKind::Text);
-        rig.typed("sami@x.org");
+        rig.typed("alex@x.org");
         rig.fakes.field.focus(kind);
         rig.late(Msg::Pressed(false));
         assert!(kept(&mut rig).is_empty(), "a click with {kind:?} seen");
@@ -108,7 +108,7 @@ fn a_leave_the_watch_already_sees_as_a_password_box_or_another_kind_learns_nothi
 fn a_box_that_is_no_text_box_learns_nothing_on_leave() {
     for kind in [FieldKind::Unknown, FieldKind::None] {
         let mut rig = in_box(kind);
-        rig.typed("sami@x.org");
+        rig.typed("alex@x.org");
         rig.send(Msg::Pressed(false));
         assert!(kept(&mut rig).is_empty(), "{kind:?}");
     }
@@ -119,7 +119,7 @@ fn paused_learning_or_prediction_off_learns_nothing_on_leave() {
     for ask in [WordsAsk::Pause(true), WordsAsk::Power(false)] {
         let mut rig = in_box(FieldKind::Text);
         rig.ask(ask);
-        rig.typed("sami@x.org");
+        rig.typed("alex@x.org");
         rig.send(Msg::Pressed(false));
         assert!(kept(&mut rig).is_empty(), "{ask:?}");
     }
@@ -132,7 +132,7 @@ fn paused_learning_or_prediction_off_learns_nothing_on_leave() {
 
 #[test]
 fn a_read_address_learns_nothing_on_leave() {
-    let mut rig = Rig::build(|f, _| f.field.set_before(Some("to sami@x.org")));
+    let mut rig = Rig::build(|f, _| f.field.set_before(Some("to alex@x.org")));
     rig.lang("en");
     rig.focus(FieldKind::Text);
     rig.send(Msg::Pressed(false));
@@ -142,7 +142,7 @@ fn a_read_address_learns_nothing_on_leave() {
 #[test]
 fn a_break_still_ends_a_typed_address_unlearned() {
     let mut rig = in_box(FieldKind::Text);
-    rig.typed("sami@x.org");
+    rig.typed("alex@x.org");
     rig.send(Msg::Typed(Piece::Break));
     rig.send(Msg::Pressed(false));
     assert!(kept(&mut rig).is_empty());

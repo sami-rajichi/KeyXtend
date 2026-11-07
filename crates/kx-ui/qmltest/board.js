@@ -13,6 +13,21 @@ function all(item, ok, found) {
     return found;
 }
 
+// Sets how long each press watch under `item` waits for a double click's second press, in ms.
+function waits(item, ms) {
+    all(item, o => o.doubleMs !== undefined).forEach(w => w.doubleMs = ms);
+}
+
+// Every press under `item` stands alone, however fast a test runs them.
+function apart(item) {
+    waits(item, 0);
+}
+
+// Every press under `item` falls inside the wait, however slow a test runs them.
+function doubled(item) {
+    waits(item, 2147483647);
+}
+
 // The tooltip window that window `win` owns, made by its loader.
 function tipOf(win) {
     return [...win.data].map(o => o && o.item !== undefined ? o.item : o).find(o => o && o.hint && o.ms !== undefined);

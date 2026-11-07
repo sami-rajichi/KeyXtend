@@ -114,19 +114,12 @@ pub fn defaults_with(text: &str) -> Table {
     all
 }
 
-/// The sample module as a notice argument.
-fn module() -> (&'static str, NoticeArg) {
-    (args::MODULE, NoticeArg::Text(HOLD.to_string()))
-}
-
 /// The notice for sample-module values that went back to their defaults, naming `names`.
 pub fn reset<S: AsRef<str>>(names: &[S]) -> Notice {
     let list = names.iter().map(|n| n.as_ref().to_owned()).collect();
-    Notice {
-        key: keys::SETTINGS_RESET,
-        module: Some(HOLD),
-        args: vec![module(), (args::KEYS, NoticeArg::List(list))],
-    }
+    let mut notice = Notice::about(keys::SETTINGS_RESET, HOLD);
+    notice.args.push((args::KEYS, NoticeArg::List(list)));
+    notice
 }
 
 /// The reset notice naming `named`, with the count of the `more` keys it leaves out.
@@ -143,9 +136,5 @@ pub fn reset_count(more: usize) -> Notice {
 
 /// The notice for a sample-module section from a newer version.
 pub fn newer() -> Notice {
-    Notice {
-        key: keys::SETTINGS_NEWER,
-        module: Some(HOLD),
-        args: vec![module()],
-    }
+    Notice::about(keys::SETTINGS_NEWER, HOLD)
 }

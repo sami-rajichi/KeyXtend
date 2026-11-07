@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use kx_module_api::Redacted;
 use kx_module_api::text;
 
+use super::Told;
 use crate::email;
 use crate::script::{self, Script};
 use crate::split::{normalise, spans};
@@ -43,6 +44,8 @@ pub(super) struct Token {
     read: usize,
     /// The email already told from it, so its end tells that one no more.
     told: Option<String>,
+    /// A pick typed a saved email into it, so nothing in it is ever learned.
+    saved: bool,
 }
 
 impl Token {
@@ -78,9 +81,19 @@ impl Token {
         self.read = self.units();
     }
 
-    /// True when some of it was typed.
-    pub(super) fn typed(&self) -> bool {
-        self.units() > self.read
+    /// Marks every character it holds as typed.
+    pub(super) fn mark_typed(&mut self) {
+        self.read = 0;
+    }
+
+    /// True when some of it was typed and no saved pick went into it, so its end may teach.
+    pub(super) fn teaches(&self) -> bool {
+        self.units() > self.read && !self.saved
+    }
+
+    /// Marks it as holding a saved email a pick typed, for as long as it lasts.
+    pub(super) fn mark_saved(&mut self) {
+        self.saved = true;
     }
 
     /// Its text with every apostrophe form made the packs' own, character for character.
@@ -104,10 +117,10 @@ impl Token {
         email::at().is_some_and(|a| self.text.contains(a))
     }
 
-    /// The email it holds, unless told already: the run `email::capture` takes as a full address, when its at sign was
-    /// typed, not read.
+    /// The email it holds, unless told already or a saved pick went into it: the run `email::capture` takes as a full
+    /// address, when its at sign was typed, not read.
     pub(super) fn email(&self) -> Option<&str> {
-        let email = email::capture(&self.text).filter(|_| self.typed_at())?;
+        let email = email::capture(&self.text).filter(|_| !self.saved && self.typed_at())?;
         (self.told.as_deref() != Some(email)).then_some(email)
     }
 
@@ -179,4 +192,12 @@ fn lettered(word: &str) -> bool {
         && !word.chars().any(char::is_numeric)
         && script::single(word)
         && script::of(word).is_none_or(Script::spaced)
+}
+
+/// Tells the email `token` holds unless told already, over one told before, and clears the context.
+pub(super) fn finish_email(token: &Token, before: &mut Vec<String>, told: Option<&mut Vec<Told>>) {
+    if let (Some(told), Some(email)) = (told, token.email()) {
+        told.push(Told::Email(Address::of(email, token.told())));
+    }
+    before.clear();
 }

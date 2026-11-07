@@ -74,7 +74,7 @@ fn quitting_while_scrolling_closes_the_run_hides_the_outline_and_lets_the_hook_g
         _ears,
     } = scroll_down(&rig);
     let hub = Arc::clone(&boot.hub);
-    let thread = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests).unwrap();
+    let thread = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests, None).unwrap();
     assert!(hub.quit(), "the tray's Quit reaches the kernel's thread");
     thread.join().unwrap();
     let target = &rig.scroll;

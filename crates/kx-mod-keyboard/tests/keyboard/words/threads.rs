@@ -30,6 +30,7 @@ fn word(t: &str) -> TypeWord {
         round: 0,
         erase: 1,
         text: Redacted::new(t.into()),
+        line: false,
     }
 }
 

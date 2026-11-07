@@ -3,9 +3,7 @@
 pub mod capture;
 pub mod clock;
 pub mod config;
-pub mod fill;
 pub mod geom;
-pub mod hello;
 pub mod langkey;
 pub mod layout;
 pub mod lines;

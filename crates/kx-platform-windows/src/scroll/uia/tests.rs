@@ -1,5 +1,6 @@
 //! UI Automation on hidden test windows: a read within its cap, steps that move the bars, nothing that scrolls, and a
-//! window that stopped reading its messages, which a read gives up on at its cap.
+//! window that stopped reading its messages, which a read gives up on at its cap. A read behind steps waits `WAIT`, as
+//! the steps can outlast a cap while other tests run.
 
 use super::down::{Tree, View};
 use super::work::{amounts, look, step};
@@ -89,10 +90,10 @@ fn steps_move_the_bars_and_a_read_behind_them_sees_it() {
     let uia = started(&win);
     let seek = win.seek();
     assert!(uia.steps(seek, Dir::Down, TENTH));
-    let down = uia.read(seek, Dir::Down, cap()).and_then(|r| r.pair);
+    let down = uia.read(seek, Dir::Down, WAIT).and_then(|r| r.pair);
     assert_eq!(down, Some((50.0, 60.0)));
     assert!(uia.steps(seek, Dir::Left, TENTH), "free again once read");
-    let left = uia.read(seek, Dir::Left, cap()).and_then(|r| r.pair);
+    let left = uia.read(seek, Dir::Left, WAIT).and_then(|r| r.pair);
     assert_eq!(left, Some((40.0, 60.0)));
 }
 
@@ -119,10 +120,10 @@ fn each_way_reads_and_steps_the_first_that_scrolls_along_its_axis() {
         (Some(table), Some(50.0))
     );
     assert!(uia.steps(seek, Dir::Down, TENTH));
-    let page_pct = uia.read(seek, Dir::Up, cap()).and_then(|r| r.pair);
+    let page_pct = uia.read(seek, Dir::Up, WAIT).and_then(|r| r.pair);
     assert_eq!(page_pct.map(|p| p.1), Some(60.0), "the page moved");
     assert!(uia.steps(seek, Dir::Left, TENTH));
-    let table_pct = uia.read(seek, Dir::Left, cap()).and_then(|r| r.pair);
+    let table_pct = uia.read(seek, Dir::Left, WAIT).and_then(|r| r.pair);
     assert_eq!(table_pct.map(|p| p.0), Some(40.0), "the table moved");
 }
 

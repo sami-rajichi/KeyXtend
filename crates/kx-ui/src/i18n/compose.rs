@@ -1,5 +1,5 @@
 //! Texts built from parts: a notice with its arguments, a list with "and N more", the space bar, the banner's count,
-//! a pager's or the shortcuts layer's page, and a chip's name.
+//! a pager's or the shortcuts layer's page, a chip's name, and the arguments of a counted text.
 
 use super::I18n;
 use super::keys::{
@@ -17,7 +17,7 @@ const LANG_VAR: &str = "lang";
 const LAYOUT_VAR: &str = "layout";
 /// `page.of`'s variable for the page shown.
 const AT_VAR: &str = "at";
-/// `page.of`'s variable for how many pages there are.
+/// The variable for how many a counted text has, and `page.of`'s for how many pages there are.
 const COUNT_VAR: &str = "count";
 /// `key.layer-page`'s variable for the page shown.
 const PAGE_VAR: &str = "page";
@@ -26,7 +26,7 @@ const PAGES_VAR: &str = "pages";
 /// `chip.name`'s variable for the chip's text.
 const WORD_VAR: &str = "word";
 /// The variable that plural forms select on.
-const FORM_VAR: &str = "form";
+pub(super) const FORM_VAR: &str = "form";
 /// Past this, a count takes the plural form of its last two digits.
 const HUNDRED: usize = 100;
 /// Last two digits below this keep the whole count, whose form past a hundred is the plain plural.
@@ -131,6 +131,15 @@ impl I18n {
             values.set(LAYOUT_VAR, layout);
             self.format(SPACE, Some(&values))
         })
+    }
+
+    /// `$count` at `n`, grouped by threes, and `$form`, the plural form `n` takes.
+    pub(super) fn count_args(&self, n: usize) -> FluentArgs<'static> {
+        let mut values = FluentArgs::new();
+        let wide = u64::try_from(n).map_or(u128::MAX, u128::from);
+        values.set(COUNT_VAR, self.grouped(wide));
+        values.set(FORM_VAR, form(n));
+        values
     }
 }
 

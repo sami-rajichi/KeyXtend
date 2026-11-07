@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
+- **Last review:** 2026-11-05 (P9 Task 23: G23, `kx-gates-p9.toml` and the settings files' count); 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -13,7 +13,7 @@
 | Write and delete `Program Files\KeyXtend-dev\<name>` (admin, Windows prompt) | Windows grants uiAccess only from a secure folder. | Same as above. |
 | Read a program's signature and manifest | `check-uiaccess` explains why uiAccess is missing. | Only diagnosis is lost. |
 | Write and delete one shortcut in the user's own Start menu | The owner starts the installed app with one click. | The app is started from its folder instead. |
-| Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by the owner's hand. |
+| Hold a low-level mouse hook while a gate runs (`kx-gates`, the mouse guard) | A hand resting on the mouse moves it with each breath, which shows tips and spoils clicks mid-run. | Gates that move the pointer can be disturbed by a hand on the mouse. |
 | Write the `[g8] program` copy's `settings.toml` while `kx-gates g21 keyxtend`, `g27 keyxtend` or `g8 predict` runs, then put it and its last good copy back byte for byte | A copy reads its settings only at start: G8's predict part is the difference between a cold start with predict on and one with it off, and G21 and G27 pause learning and switch modules off. | G8 cannot tell predict's memory apart, and G21 and G27 would teach the owner's learner. |
 | End a copy of the product kx-gates started that did not quit in time, through the handle it opened (`TerminateProcess`) | No copy a gate started may outlive the gate or save over the owner's restored settings. | A hung copy stays running on the gate's settings. |
 
@@ -55,10 +55,10 @@
   - A refused or half-copied stage being signed later. Mitigation: the stage removes `<out_dir>/<app>` when its copy or check fails, and `dev-install` runs the same check on a folder holding the app before it signs anything.
   - A gate-only build (the app's `gate-input`, which acts on another program's tagged input) getting signed and uiAccess. Mitigation: the stage check refuses a program holding `[workspace.metadata.stage] gate_flag`, and `dev-install` refuses to sign any exe that holds it.
   - A media worker that asks for uiAccess, or none at all, in the stage (P8). Mitigation: the stage builds `[workspace.metadata.stage] worker` in release beside the app, and its check refuses a missing worker or one whose manifest asks for uiAccess, in UTF-8 or UTF-16.
-  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml`, `kx-gates-p5.toml`, `kx-gates-p7.toml` and `kx-gates-p8.toml` (`[g20_product]`, `[g8_clip]`) from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
+  - `kx-gates` reads `kx-gates.toml`, then `kx-gates-p3.toml`, `kx-gates-p4.toml`, `kx-gates-p5.toml`, `kx-gates-p7.toml`, `kx-gates-p8.toml` (`[g20_product]`, `[g8_clip]`) and `kx-gates-p9.toml` (`[g23]`) from the same folder: beside its exe, else the repo's user-writable `tools/kx-gates`.
     - They name the programs it starts, PresentMon included, and those it starts without the admin prompt (`[apps.*]`, `[g8] program`) inherit its token. It reads none when Windows will not say whether it has uiAccess.
-    - With uiAccess it reads all eight of its settings files (those six, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
-    - `dev-install` copies every file of the build folder, so put the eight files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
+    - With uiAccess it reads all nine of its settings files (those seven, `spike.toml` and `kx-target-window.toml`) only beside its exe, and refuses to run when one is missing, so a repo edit cannot hand uiAccess to a program.
+    - `dev-install` copies every file of the build folder, so put the nine files there first. A relative path starts at its file's folder, so those copies write the repo paths in full, while `[g8] program` stays relative to reach the installed app.
   - P4's driving gates run the product's test build (`[gate_input]` in `kx-gates-p4.toml`), whose engine acts on kx-gates' tagged input.
     - It never holds uiAccess: its build script leaves uiAccess out of the gate-input build, and `kx-gates` refuses to start it while it has uiAccess itself or Windows will not say, so only the plain kx-gates starts it.
     - kx-gates starts only a program whose bytes hold the gate flag, with a `data` folder beside it, so it never reads or writes the owner's settings or log. It quits the test build at once when its log lacks the gate warning.
@@ -129,6 +129,11 @@
   - G20 also reads each started worker's token read-only (`TOKEN_QUERY`) and checks only its uiAccess and integrity level; it skips a worker that ended before the read, and fails on one still running that it cannot read (`workertok.rs`).
     - It reads no group or privilege, so a pass does not prove the worker unprivileged; the product's own start refuses a worker that can use Administrators or holds a privilege (`kx-platform-windows.md`, Elevation (worker)).
     - The same read decides G20's second copy: Windows refuses an injected Win+V from a product without uiAccess, so on the test build that copy is never started and its part shows as skipped, for the hand check on the dev install.
+  - `kx-gates g23 keyxtend` (P9) saves a test Login through Quick-fill with clicks only, then types it into fresh Chrome login pages from the no-focus keyboard.
+    - It runs only from the plain kx-gates, and refuses uiAccess, or Windows not saying, and a running product copy. The test build uses a data folder the gate made, with `[g20_product] marker` and G20's rules, so the test entry goes at the end; an unmarked folder is refused (`g23/copy.rs`).
+    - `[g23]` holds plain test values, never real ones. The gate answers the first offer Later by a real click, and a hidden-run banner ends the run with an error.
+    - Its page's title holds the password's length, the Enter key-downs and the submits, so no password is read. A fill passes only with the wanted text, the clipboard unchanged, the panel still open and no Enter or submit, and a failed UI Automation read never passes (`g23/live.rs`).
+    - `[g23] late_ms` must stay above Quick-fill's longest `tab_gap_ms` plus the default `fill_late_ms`. Its first run on a real screen is P9's hands-on check.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing. It asks first, then reports a refused sidecar name. After a hard stop, the same kx-gates that ran the gate restores the owner's files from the sidecar in its own out folder, once its Quit ended the copy and no copy runs, by window or by session claim, and deletes the sidecar only after a verified put-back.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds, and ends that copy as `copyend.rs` says. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap is ended as `copyend.rs` says.

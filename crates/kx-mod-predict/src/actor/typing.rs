@@ -1,6 +1,6 @@
 //! What the keyboard and the box tell: pieces, focus and clicks, and what the tracker hands back to learn or read. A
-//! password box, or prediction turned off, follows nothing, and the kind the watch or a read sees wins over a late
-//! focus event.
+//! password box, or prediction turned off, follows nothing, the kind the watch or a read sees wins over a late focus
+//! event, and on a panel's line the box counts for nothing.
 
 use super::Actor;
 use super::store::Blob;
@@ -10,15 +10,21 @@ use crate::track::{Address, Told};
 use kx_module_api::ports::{FieldChange, FieldKind, Piece};
 
 impl Actor {
-    /// Follows one piece the keyboard typed, learning the address a domain chip's text completes; true, as the lane
-    /// changes.
+    /// Follows one piece the keyboard typed, learning the address a domain chip's text completes and marking the token
+    /// a saved pick's text lands in; true, as the lane changes. On a line the piece went to the app, so nothing changes.
     pub(super) fn typed(&mut self, seed: Option<&Pack<'_>>, piece: &Piece) -> bool {
         self.stats.pieces += 1;
+        if !self.line.is_app() {
+            return false;
+        }
         self.menu.key();
         self.hold = false;
-        let landed = self.landed(piece);
+        let (landed, saved) = (self.landed(piece), self.echoed(piece));
         if self.following() {
             let told = self.tracker.typed(piece, &|w: &str| knows(seed, w));
+            if saved {
+                self.tracker.mark_saved();
+            }
             self.act(seed, told);
             if landed {
                 self.keep_email();
@@ -39,6 +45,10 @@ impl Actor {
     /// Focus moved: leaving the box learns its open email, unless the watch already sees another kind of box, which
     /// drops the token. A new box clears the blind mark, resets the tracker and is read when it is a text box.
     pub(super) fn focus(&mut self, seed: Option<&Pack<'_>>, change: FieldChange) -> bool {
+        if !self.line.is_app() {
+            self.note_box(change);
+            return false;
+        }
         if self.tracker.leaves(change) {
             self.keep_email();
             self.blind = false;
@@ -66,7 +76,7 @@ impl Actor {
 
     /// Learns the open token's email, told once, when learning: the user left it, or a domain chip completed it. A box
     /// the watch already sees as another kind drops the token first.
-    fn keep_email(&mut self) {
+    pub(super) fn keep_email(&mut self) {
         if !self.learning() {
             return;
         }
@@ -83,18 +93,19 @@ impl Actor {
         }
     }
 
-    /// Ends the word unlearned and drops a pick still waiting; gives what the tracker asks for.
+    /// Ends the word unlearned and drops a domain pick still waiting, while a saved one waits for its text; gives what
+    /// the tracker asks for.
     pub(super) fn drop_word(&mut self) -> Vec<Told> {
         self.hold = false;
         self.domain = None;
         self.tracker.reset()
     }
 
-    /// True when the tracker follows the box: prediction is on and the box, as the watch sees it now, is no password
+    /// True when the tracker follows: prediction is on, on a panel's line or in a box the watch sees now as no password
     /// box.
     pub(super) fn following(&mut self) -> bool {
         self.moved();
-        self.settings.on && self.kind != FieldKind::Password
+        self.settings.on && (!self.line.is_app() || self.kind != FieldKind::Password)
     }
 
     /// Learns, saves an email or reads, as the tracker asks.
@@ -111,9 +122,17 @@ impl Actor {
     }
 
     /// Reads at most `context_words` words before the cursor of a text box the watch still sees; a read with no text
-    /// counts as no context and leaves the box blind, one with text heals it, and another kind the read saw wins.
+    /// counts as no context and leaves the box blind, one with text heals it, and another kind the read saw wins. A
+    /// line is read from its own text.
     pub(super) fn read(&mut self, seed: Option<&Pack<'_>>) {
-        if !self.settings.on || self.moved() || !self.kind.reads() {
+        if !self.settings.on {
+            return;
+        }
+        if !self.line.is_app() {
+            self.read_line(seed);
+            return;
+        }
+        if self.moved() || !self.kind.reads() {
             return;
         }
         let Some(run) = self.ports.field.as_mut() else {
@@ -138,9 +157,9 @@ impl Actor {
     }
 
     /// True when finished words and emails are learned: prediction and learning are on, in a text box the watch still
-    /// sees.
+    /// sees, and on no panel's line.
     fn learning(&mut self) -> bool {
-        self.learns() && !self.moved() && self.kind == FieldKind::Text
+        self.line.is_app() && self.learns() && !self.moved() && self.kind == FieldKind::Text
     }
 
     /// True when prediction and learning are on.
@@ -149,8 +168,11 @@ impl Actor {
     }
 
     /// True when the watch already sees another kind of box, and no text box, while its focus event is still on its
-    /// way: that kind wins at once, and tracking stops.
+    /// way: that kind wins at once, and tracking stops. A panel's line never moves.
     pub(super) fn moved(&mut self) -> bool {
+        if !self.line.is_app() {
+            return false;
+        }
         let seen = self.ports.field.as_ref().map_or(self.kind, |r| r.kind());
         self.seen(seen)
     }
@@ -180,8 +202,8 @@ impl Actor {
         self.changed(Blob::Learned);
     }
 
-    /// Puts `address` first in the known emails, when learning. The one it replaces goes if the last learn added it new,
-    /// as a domain chip's landing does, and a token's address counts once.
+    /// Puts `address` first in the known emails, when learning. The one it replaces goes if the last learn added it
+    /// new, as a domain chip's landing does, and a token's address counts once.
     fn learn_email(&mut self, address: &Address) {
         if !self.learning() {
             return;

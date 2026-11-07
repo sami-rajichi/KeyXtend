@@ -38,7 +38,7 @@ pub struct G2 {
     pub failures_shown: usize,
     /// Failures that stop the run.
     pub max_failures: usize,
-    /// How long each click holds the button down, as the owner's hand does, in ms.
+    /// How long each click holds the button down, as a person's hand does, in ms.
     pub press_ms: u64,
     /// How far each click slips right and down while the button is down, in physical px.
     pub slip_px: i32,
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn g2_clicks_as_the_owner_does_held_a_while_with_a_slip() {
+    fn g2_clicks_as_a_person_does_held_a_while_with_a_slip() {
         let g = g2();
         assert_eq!(g.check(), Ok(()));
         assert!(g.press_ms > 0 && g.slip_px > 0);

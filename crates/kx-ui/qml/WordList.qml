@@ -7,9 +7,9 @@ import QtQuick
 Item {
     id: box
 
-    // The list's page (`{items, page, pages}`, the page from 0, each item `{text, arabic}`), the board whose keys
-    // and pad it covers, and the rows per page. The pager reads the page number through the app's Ui object, and the
-    // rest are the look, fonts, icons, texts and size.
+    // The list's page (`{items, page, pages}`, the page from 0, each item `{text, arabic, kind}`), the board whose
+    // keys and pad it covers, and the rows per page. The pager reads the page number through the app's Ui object, and
+    // the rest are the look, fonts, icons, texts and size.
     required property var list
     required property var board
     required property int rows
@@ -78,6 +78,7 @@ Item {
                     height: (box.height - 2 * box.pad) / box.per
                     email: modelData.text
                     arabic: modelData.arabic
+                    kind: modelData.kind || ""
                     place: index
                 }
             }
@@ -116,11 +117,13 @@ Item {
         }
     }
 
-    // One email row (mock-up .lg-it): the at-sign and the email, left to right, ringed by the hover.
+    // One email row (mock-up .lg-it): the at-sign, or the key for a saved email, and the email, left to right, ringed
+    // by the hover.
     component EmailRow: Item {
         id: r
         required property string email
         required property bool arabic
+        required property string kind
         required property int place
         readonly property bool hot: area.containsMouse
         Accessible.role: Accessible.ListItem
@@ -138,7 +141,7 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: box.sh.row_pad_px[1] * box.s
             anchors.verticalCenter: parent.verticalCenter
-            icon: box.lk.icons.words.email
+            icon: box.lk.icons.words[r.kind] || box.lk.icons.words.email
             base: box.res.icons
             ext: box.res.ext
             px: box.sh.icon_px * box.s

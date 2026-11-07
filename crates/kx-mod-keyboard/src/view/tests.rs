@@ -1,7 +1,7 @@
 use super::*;
 use crate::geom::board;
 use crate::latch::Latches;
-use crate::panel::LangList;
+use crate::panel::{LangList, Panel};
 use crate::settings::{KeyboardSettings, Modifiers};
 use crate::spec::{BoardSpec, Latch, Nav};
 use kx_module_api::ports::{
@@ -81,7 +81,8 @@ struct Others<'a> {
     scroll: ScrollChanged,
     layer: &'a Layer,
     power: PowerChanged,
-    clip: bool,
+    fill: FillLive,
+    panel: Option<Panel>,
 }
 
 /// The state with the mouse module in state `assist` and the scroll module in state `scroll`.
@@ -99,7 +100,8 @@ fn state_of(
         scroll,
         layer: &layer,
         power,
-        clip: false,
+        fill: FillLive::OFF,
+        panel: None,
     };
     state_with(latches, caps, open, &others)
 }
@@ -130,7 +132,9 @@ fn state_with(
         scroll: others.scroll,
         layer: others.layer,
         power: others.power,
-        clip: others.clip,
+        fill: others.fill,
+        panel: others.panel,
+        aimed: false,
     })
 }
 
@@ -191,10 +195,11 @@ fn with_one_layout_the_language_key_says_so_and_no_other_key_does() {
     let mouse =
         |id: &str, k: &KeyState| ["rclick", "grab"].contains(&id) && k.tip == Some(MOUSE_OFF_TIP);
     let power = |id: &str, k: &KeyState| id == "power" && k.tip == Some(POWER_OFF_TIP);
+    let fill = |id: &str, k: &KeyState| id == "fill" && k.tip == Some(FILL_OFF_TIP);
     assert!(
         others
             .into_iter()
-            .all(|(id, k)| k.tip.is_none() || mouse(id, k) || power(id, k))
+            .all(|(id, k)| k.tip.is_none() || mouse(id, k) || power(id, k) || fill(id, k))
     );
 }
 
@@ -234,7 +239,8 @@ fn key_and_state_debug_hide_legends_lights_and_caps() {
 
 mod assist;
 mod board;
-mod clip;
+mod fill;
 mod layer;
 mod pad;
+mod panels;
 mod power;

@@ -2,9 +2,11 @@
 
 use kx_mod_predict::{MANIFEST, PredictModule};
 use kx_module_api::ports::{
-    FieldWatch, FieldWatchKey, SealedStore, SealedStoreKey, WordPacks, WordPacksKey,
+    FieldWatch, FieldWatchKey, SealedStore, SealedStoreKey, VaultEmails, WordPacks, WordPacksKey,
 };
-use kx_module_api::{Capability, Module, ModuleCx, ModuleError, ServiceError, ServiceKey};
+use kx_module_api::{
+    Capability, Event, EventError, Module, ModuleCx, ModuleError, ServiceError, ServiceKey,
+};
 use kx_platform_fake::{FakeFieldWatch, FakeSealedStore, FakeWordPacks};
 use kx_test_support::host::{FakeHost, Stored};
 use std::sync::Arc;
@@ -88,4 +90,19 @@ fn a_watch_that_fails_still_starts_with_no_box_to_read() {
     let mut module = PredictModule::default();
     assert_eq!(start(&mut module, &mut host), Ok(()));
     assert!(!field.watching());
+}
+
+#[test]
+fn without_vault_it_cannot_hear_the_notebooks_emails() {
+    let field = FakeFieldWatch::new();
+    let granted: Vec<Capability> = (MANIFEST.capabilities.iter().copied())
+        .filter(|&c| c != Capability::Vault)
+        .collect();
+    let mut host = host(&granted, &field);
+    let refused = EventError::NotGranted(VaultEmails::NAME, Capability::Vault);
+    let mut module = PredictModule::default();
+    assert_eq!(
+        start(&mut module, &mut host),
+        Err(ModuleError::Event(refused))
+    );
 }

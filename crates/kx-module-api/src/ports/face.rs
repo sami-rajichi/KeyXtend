@@ -126,6 +126,8 @@ pub enum FaceAction {
         /// The pointer is on the pad.
         on: bool,
     },
+    /// A press on the open panel: the letters go to the panel again (ADR-0040).
+    AimPanel,
 }
 
 /// What the UI must do after an action.
