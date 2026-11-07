@@ -1,10 +1,12 @@
 //! The shared rules over a scripted probe: a look comes from the focused box, our own focus is never looked at or read,
-//! a late job makes no OS call, and a read is refused in a closed box and empty at a bare caret with no text call.
+//! a late job makes no OS call, a read is refused in a closed box and empty at a bare caret with no text call, and a
+//! job's token lives until `serve` returns.
 
-use super::rig::{Calls, Script, own, spot, theirs};
+use super::rig::{Calls, Script, Stop, own, spot, theirs};
 use super::*;
 use crate::deadline;
 use std::sync::mpsc;
+use std::thread;
 use std::time::Duration;
 
 /// A minute from now, which no test reaches.
@@ -131,6 +133,23 @@ fn the_clipboard_answer_is_the_probes() {
     assert!(!clip(&probe, far()));
     probe.clip(true);
     assert!(clip(&probe, far()), "even with our own focus");
+}
+
+#[test]
+fn a_jobs_token_lives_while_the_app_hangs_and_ends_when_serve_returns() {
+    let probe = Script::on(Ok(theirs(SelKind::Editable, 1)));
+    probe.shut(Stop::Spot);
+    let (reply, answer) = mpsc::channel();
+    let job = Job::new(Ask::Look { by: far(), reply });
+    let alive = job.alive();
+    let serving = probe.clone();
+    let worker = thread::spawn(move || serve(&serving, job));
+    assert!(probe.hung(), "serve is inside the app");
+    assert_eq!(alive.strong_count(), 1, "the job lives while the app hangs");
+    probe.open();
+    assert!(worker.join().is_ok());
+    assert_eq!(alive.strong_count(), 0, "it ends once serve returns");
+    assert!(answer.recv().is_ok_and(|a| a.is_ok()), "after its answer");
 }
 
 #[test]

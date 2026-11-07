@@ -61,7 +61,9 @@ pub trait SelProbe: Ours {
 /// Answers `job` on the watch's thread: one past its deadline makes no OS call, and focus in our own process is never
 /// looked at or read.
 pub fn serve<P: SelProbe>(probe: &P, job: Job) {
-    match job.ask {
+    // The token lives until the answer is sent, so a run that gave up on this job sees the thread busy until then.
+    let Job { ask, held: _held } = job;
+    match ask {
         Ask::Look { by, reply } => {
             let _ = reply.send(look(probe, by));
         }

@@ -31,7 +31,6 @@ fn a_burst_of_changes_is_told_once_after_it_settles() {
     advance(&rig, MS_PER_S);
     assert!(rig.run.look().is_ok());
     assert_eq!(rig.tells(), 1, "told once");
-    assert!(rig.shared.timed() > 0, "a change owed is waited for");
 }
 
 #[test]

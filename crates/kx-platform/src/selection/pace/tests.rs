@@ -38,18 +38,55 @@ fn tick(pace: &mut Pace, now: Mono) -> Option<Mono> {
     Some(due)
 }
 
-/// Feeds changes `gaps` ms apart, telling as the thread would between them, then runs until idle: the change points
-/// and the tell points.
-fn drive(pace: &mut Pace, gaps: &[u64]) -> (Vec<Mono>, Vec<Mono>) {
-    let (mut now, mut changes, mut tells) = (0, Vec::new(), Vec::new());
+/// What a driven pace saw, in order.
+#[derive(Copy, Clone, Debug)]
+enum Seen {
+    Change(Mono),
+    Tell(Mono),
+}
+
+/// Feeds changes `gaps` ms apart, telling as the thread would between them, then runs until idle: what it saw.
+fn drive(pace: &mut Pace, gaps: &[u64]) -> Vec<Seen> {
+    let (mut now, mut seen) = (0, Vec::new());
     for gap in gaps {
         now += gap;
-        tells.extend(tick(pace, at(now)));
+        seen.extend(tick(pace, at(now)).map(Seen::Tell));
         pace.change(at(now));
-        changes.push(at(now));
+        seen.push(Seen::Change(at(now)));
     }
-    tells.extend(tick(pace, Mono::from_us(u64::MAX)));
+    seen.extend(tick(pace, Mono::from_us(u64::MAX)).map(Seen::Tell));
+    seen
+}
+
+/// The change points and the tell points of `seen`.
+fn split(seen: &[Seen]) -> (Vec<Mono>, Vec<Mono>) {
+    let (mut changes, mut tells) = (Vec::new(), Vec::new());
+    for s in seen {
+        match *s {
+            Seen::Change(c) => changes.push(c),
+            Seen::Tell(t) => tells.push(t),
+        }
+    }
     (changes, tells)
+}
+
+/// Checks each tell falls exactly where the pacing puts it: the later of the newest change settled and one window
+/// after the tell `cap` places back.
+fn exact(seen: &[Seen], settle: Duration, cap: usize) -> Result<(), TestCaseError> {
+    let (mut newest, mut told) = (None, Vec::new());
+    for s in seen {
+        match *s {
+            Seen::Change(c) => newest = Some(c),
+            Seen::Tell(t) => {
+                let settled = newest.map(|c: Mono| c.saturating_add(settle));
+                let back = told.len().checked_sub(cap).and_then(|k| told.get(k));
+                let free = back.map(|u: &Mono| u.saturating_add(WINDOW));
+                prop_assert_eq!(Some(t), settled.max(free), "the tell at {:?}", t);
+                told.push(t);
+            }
+        }
+    }
+    Ok(())
 }
 
 #[test]
@@ -129,7 +166,7 @@ proptest! {
     ) {
         let mut pace = paced(SETTLE_MS, CAP);
         let gaps: Vec<u64> = std::iter::once(first).chain(rest).collect();
-        let (changes, tells) = drive(&mut pace, &gaps);
+        let (changes, tells) = split(&drive(&mut pace, &gaps));
         let last = changes.last().map(|c| c.saturating_add(pace.settle));
         prop_assert_eq!(tells, last.into_iter().collect::<Vec<_>>());
     }
@@ -137,7 +174,7 @@ proptest! {
     #[test]
     fn with_no_cap_each_burst_is_told_once_after_it_settles(gaps in gaps(3 * u64::from(SETTLE_MS))) {
         let mut pace = paced(SETTLE_MS, NO_CAP);
-        let (changes, tells) = drive(&mut pace, &gaps);
+        let (changes, tells) = split(&drive(&mut pace, &gaps));
         let settle = u64::from(SETTLE_MS);
         let ends = changes.iter().enumerate().filter(|&(i, _)| gaps.get(i + 1).is_none_or(|&g| g >= settle));
         let want: Vec<Mono> = ends.map(|(_, c)| c.saturating_add(pace.settle)).collect();
@@ -145,22 +182,20 @@ proptest! {
     }
 
     #[test]
-    fn no_window_holds_more_tells_than_the_cap_and_no_change_is_dropped(
+    fn each_tell_falls_where_settle_and_cap_put_it_and_no_window_holds_more(
         settle_ms in 0..=2 * SETTLE_MS,
         cap in 1..=CAP + 2,
         gaps in gaps(3 * WINDOW_MS / 2),
     ) {
         let mut pace = paced(settle_ms, cap);
-        let (changes, tells) = drive(&mut pace, &gaps);
+        let seen = drive(&mut pace, &gaps);
+        exact(&seen, pace.settle, usize::from(cap))?;
+        let (_, tells) = split(&seen);
         for &t in &tells {
             let inside = tells.iter().filter(|&&u| u <= t && t.saturating_since(u) < WINDOW).count();
             prop_assert!(inside <= usize::from(cap), "{inside} tells in the window ending {t:?}");
         }
-        for c in &changes {
-            let settled = c.saturating_add(pace.settle);
-            prop_assert!(tells.iter().any(|&t| t >= settled), "the change at {c:?} is told");
-        }
         prop_assert!(tells.is_sorted(), "told in order");
-        prop_assert_eq!(pace.due(), None, "idle at the end: no wake-up");
+        prop_assert_eq!(pace.due(), None, "every change told, then idle: no wake-up");
     }
 }

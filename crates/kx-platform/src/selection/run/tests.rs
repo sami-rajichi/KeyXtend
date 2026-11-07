@@ -2,7 +2,7 @@
 //! a dropped run tells nothing more, an ended watch is unavailable, and a panicking tell is caught.
 
 use super::*;
-use crate::selection::rig::{Script, WAIT, own, theirs};
+use crate::selection::rig::{Script, Stop, WAIT, own, theirs};
 use crate::selection::serve;
 use crate::worker::fake::Hands;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -17,7 +17,8 @@ const LONG_MS: u32 = 5000;
 const SETTLE_MS: u32 = 100;
 const LOOKS: u16 = 3;
 
-/// A run whose thread serves each job in turn on a clock the test moves, and what it told and took.
+/// A run whose thread serves each job in turn on a clock the test moves, and what it told and took. Its thread passes
+/// the probe's `Take` gate before each job, so a test can hold a job whatever its deadline.
 struct Rig {
     run: Box<dyn SelRun>,
     shared: Arc<Shared>,
@@ -70,6 +71,7 @@ fn rig_then(probe: &Script, read_ms: u32, then: fn()) -> Rig {
         let _ = give.send(Arc::clone(shared));
         for job in inbox {
             count.fetch_add(1, Ordering::SeqCst);
+            probe.pass(Stop::Take);
             serve(&probe, job);
             let _ = done.send(());
         }

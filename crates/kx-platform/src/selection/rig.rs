@@ -1,5 +1,5 @@
-//! A scripted probe for the selection tests: the test sets its focus, it counts every call, and its gate can shut so a
-//! look hangs as a busy app's does, until the test opens it again.
+//! A scripted probe for the selection tests: the test sets its focus, it counts every call, and its gate can shut at
+//! one place so the thread hangs there, as in a busy app, until the test opens it again.
 
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -25,14 +25,25 @@ pub(super) struct Calls {
     pub(super) clips: usize,
 }
 
+/// Where a shut gate holds the thread.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(super) enum Stop {
+    /// Before `serve`, as a rig's thread takes a job: it holds the job whatever its deadline.
+    Take,
+    /// Inside `spot`.
+    Spot,
+    /// Inside `read`, once it took the text.
+    Read,
+}
+
 /// What the test set, and what the probe was asked.
 struct Board {
     focus: Result<El, SelError>,
     text: String,
     clip: bool,
-    /// While true, a spot waits for the gate.
-    shut: bool,
-    /// How many spots waited at the gate.
+    /// Where the gate is shut, if it is.
+    shut: Option<Stop>,
+    /// How many calls waited at the gate.
     hung: usize,
     calls: Calls,
 }
@@ -48,7 +59,7 @@ impl Script {
             focus,
             text: String::new(),
             clip: false,
-            shut: false,
+            shut: None,
             hung: 0,
             calls: Calls::default(),
         };
@@ -75,18 +86,37 @@ impl Script {
         self.board().clip = holds;
     }
 
-    /// Shuts the gate, so the next spot hangs until `open`.
-    pub(super) fn shut(&self) {
-        self.board().shut = true;
+    /// Shuts the gate at `at`, so the next call there hangs until `open`.
+    pub(super) fn shut(&self, at: Stop) {
+        self.board().shut = Some(at);
     }
 
-    /// Opens the gate, letting a hung spot return.
+    /// Opens the gate, letting a hung call go on.
     pub(super) fn open(&self) {
-        self.board().shut = false;
+        self.board().shut = None;
         self.0.1.notify_all();
     }
 
-    /// Waits, at most `WAIT`, until a spot hangs at the gate; true once one does.
+    /// Holds the caller at `at` while the gate is shut there, at most `WAIT`.
+    pub(super) fn pass(&self, at: Stop) {
+        drop(self.held(self.board(), at));
+    }
+
+    /// Like `pass`, keeping the board locked around the wait.
+    fn held<'a>(&self, mut board: MutexGuard<'a, Board>, at: Stop) -> MutexGuard<'a, Board> {
+        if board.shut != Some(at) {
+            return board;
+        }
+        board.hung += 1;
+        self.0.1.notify_all();
+        let waited = self
+            .0
+            .1
+            .wait_timeout_while(board, WAIT, |b| b.shut == Some(at));
+        waited.map_or_else(|e| e.into_inner().0, |(board, _)| board)
+    }
+
+    /// Waits, at most `WAIT`, until a call hangs at the gate; true once one does.
     pub(super) fn hung(&self) -> bool {
         let board = self.board();
         let waited = self.0.1.wait_timeout_while(board, WAIT, |b| b.hung == 0);
@@ -117,12 +147,7 @@ impl SelProbe for Script {
     fn spot(&self, el: &El, _: Instant) -> Result<SelSpot, SelError> {
         let mut board = self.board();
         board.calls.spots += 1;
-        if board.shut {
-            board.hung += 1;
-            self.0.1.notify_all();
-            let waited = self.0.1.wait_timeout_while(board, WAIT, |b| b.shut);
-            drop(waited);
-        }
+        drop(self.held(board, Stop::Spot));
         Ok(el.1)
     }
 
@@ -135,6 +160,7 @@ impl SelProbe for Script {
         let mut board = self.board();
         board.calls.reads += 1;
         let text = board.text.chars().take(usize::from(max_chars)).collect();
+        drop(self.held(board, Stop::Read));
         Ok(Redacted::new(text))
     }
 

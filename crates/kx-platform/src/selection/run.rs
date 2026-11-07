@@ -26,7 +26,7 @@ pub(super) type Reply<T> = Sender<T>;
 pub struct Job {
     pub(super) ask: Ask,
     /// Lives as long as the job, so the run can tell when one it gave up on has ended.
-    held: Arc<()>,
+    pub(super) held: Arc<()>,
 }
 
 impl Job {
@@ -39,7 +39,7 @@ impl Job {
     }
 
     /// A handle that lives only while the job does.
-    fn alive(&self) -> Weak<()> {
+    pub(super) fn alive(&self) -> Weak<()> {
         Arc::downgrade(&self.held)
     }
 }
