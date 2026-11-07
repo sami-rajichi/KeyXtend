@@ -16,7 +16,7 @@ workspace = true
 kx-ipc = { path = "../kx-ipc" }
 kx-module-api = { path = "../kx-module-api" }
 thiserror.workspace = true
-# The field watch and the worker host log why they stopped, never what they read.
+# The field and selection watches and the worker host log why they stopped, never what they read.
 tracing.workspace = true
 
 [dev-dependencies]
