@@ -4,7 +4,10 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
-## 2026-11-07 20:05 — P9: the Linux check, and older public lines stay anonymous
+## 2026-11-07 19:52 — P9: a plain name means the same on every system
+`one_name` read a backslash or a colon as plain letters on Linux, so a table test failed there once CI's lint let its tests run, and `ab:c` passed on Windows too. It now refuses both on every system, and a new test proves it. The shipped tables hold neither, so the app behaves as before.
+
+## 2026-11-07 19:34 — P9: the Linux check, and older public lines stay anonymous
 A test import used only on Windows stopped P9's Linux check, so it moved into that test, and CI's two Linux lint commands now pass locally against the Linux target. Older public lines about one person's clicks now speak of any press that slips, in comments, test names and docs, with no change in behaviour. ADR-0024's two background lines were reworded as one exception the owner approved, as its decision stands.
 
 ## 2026-11-07 19:10 — P9: Quick-fill, one data folder and a lift Windows ignored

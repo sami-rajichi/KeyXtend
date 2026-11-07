@@ -100,10 +100,14 @@ impl Table {
     }
 }
 
+/// What Windows reads as a separator or a drive, refused everywhere so a table means the same on every system.
+const NOT_IN_A_NAME: [char; 2] = ['\\', ':'];
+
 /// Whether `name` is one plain name, with no separator, drive or `..`.
 pub(crate) fn one_name(name: &str) -> bool {
     let mut parts = Path::new(name).components();
-    matches!((parts.next(), parts.next()), (Some(Component::Normal(n)), None) if n == name)
+    !name.contains(NOT_IN_A_NAME)
+        && matches!((parts.next(), parts.next()), (Some(Component::Normal(n)), None) if n == name)
 }
 
 /// The hidden-run port on Windows: the probe and the copies in each package's private copy of the local app-data

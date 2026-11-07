@@ -104,6 +104,19 @@ fn the_shipped_table_parses_into_plain_names() {
     assert!(!t.app_end.is_empty() && t.probe_bytes > 0);
 }
 
+/// A table means the same on every system, though some read a backslash or a colon as plain letters.
+#[test]
+fn a_separator_or_a_drive_is_no_plain_name_on_any_system() {
+    for bad in [
+        "", ".", "..", "/x", "a/b", "a\\b", "\\x", "C:", "C:x", "ab:c",
+    ] {
+        assert!(!one_name(bad), "{bad}");
+    }
+    for good in ["Box", "kx-probe-", "~-1-2.tmp", "a b"] {
+        assert!(one_name(good), "{good}");
+    }
+}
+
 #[test]
 fn a_table_with_an_empty_value_or_a_path_is_refused() {
     let good = [
