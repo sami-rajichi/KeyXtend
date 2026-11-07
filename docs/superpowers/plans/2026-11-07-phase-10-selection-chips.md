@@ -42,7 +42,7 @@
 18. **Gates, manual check, done.** The controller runs G19 with a heads-up, then `kx-windows-manual-test` with the owner, then `kx-module-done` and the records.
 
 ## Edge cases
-1. An empty or whitespace-only selection shows nothing.
+1. An empty selection shows nothing; a whitespace-only one is caught at Translate's one read and opens nothing (no text is read before a click).
 2. A selection scrolled off screen has no box: no strip; scrolled back: it shows.
 3. A selection near the screen's bottom puts the strip above; one under the keyboard keeps clear of it.
 4. A selection over two screens uses the last line's screen and DPI.
