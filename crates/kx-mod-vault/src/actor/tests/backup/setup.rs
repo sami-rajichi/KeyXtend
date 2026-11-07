@@ -11,7 +11,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Redacted, Zeroizing};
 use kx_platform_fake::{BoxCall, FakeBoxes, PlaceCall};
 
-use super::super::boxes::{CLOUD, DRIVE, FOLDER, STICK};
+use super::super::boxes::{CLOUD, FOLDER, STICK};
 use super::super::logs;
 use super::super::rig::Rig;
 use super::{
@@ -261,6 +261,7 @@ fn back_from_setups_password_page_goes_to_the_places() {
 #[cfg(windows)]
 #[test]
 fn a_folder_whose_path_is_not_unicode_cannot_be_written() {
+    use super::super::boxes::DRIVE;
     use std::os::windows::ffi::OsStringExt;
     let mut rig = Rig::new();
     let odd: Vec<u16> = "Odd".encode_utf16().chain([0xD800]).collect();
