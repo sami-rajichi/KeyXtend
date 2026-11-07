@@ -82,6 +82,15 @@ fn the_strip_goes_above_when_it_would_cover_the_keyboard() {
 }
 
 #[test]
+fn with_no_room_above_it_stays_below_over_the_keyboard_never_over_the_text() {
+    let keyboard = r(0, 60, 1920, 400);
+    let line = r(100, 20, 300, 40);
+    let at = anchor(line, line, STRIP, AREA, &[keyboard]);
+    assert_eq!(at, Point { x: 160, y: 48 }, "over the keyboard's edge");
+    assert!(!covers(at, line));
+}
+
+#[test]
 fn a_panel_beside_the_spot_leaves_it_below() {
     let panel = r(1500, 0, 1920, 1080);
     let line = r(100, 100, 300, 120);
@@ -186,5 +195,18 @@ proptest! {
         let at = anchor(line, line, STRIP, AREA, &[keyboard]);
         prop_assert!(!covers(at, keyboard));
         prop_assert_eq!(at.y, line.y - STRIP.gap - STRIP.h);
+    }
+
+    #[test]
+    fn with_no_room_above_it_stays_under_the_last_line_even_over_the_keyboard(
+        (x, lw, lh) in (0..1900, 0..400, 1..40),
+        y in 0..(STRIP.gap + STRIP.h),
+        near in 0..(STRIP.gap + STRIP.h),
+    ) {
+        let line = Rect { x, y, w: lw, h: lh };
+        let keyboard = Rect { x: 0, y: y + lh + near, w: AREA.w, h: AREA.h / 2 };
+        let at = anchor(line, line, STRIP, AREA, &[keyboard]);
+        prop_assert_eq!(at.y, y + lh + STRIP.gap);
+        prop_assert!(!covers(at, line));
     }
 }

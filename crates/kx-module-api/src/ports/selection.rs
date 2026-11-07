@@ -1,6 +1,6 @@
 //! The selection port (ADR-0041): what kind of box has focus, whether its selection holds text, and where its lines and
 //! caret are, told on events and never on a timer, with no text. Only Translate's one read at a click takes text, which
-//! stays in `Redacted`. A box can show what the user looks at, so no `Debug` here prints one.
+//! stays in `Redacted`.
 
 mod events;
 

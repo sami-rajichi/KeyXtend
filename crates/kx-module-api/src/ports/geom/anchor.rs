@@ -14,14 +14,16 @@ pub struct Strip {
     pub gap: i32,
 }
 
-/// The strip's top-left: `gap` under the `last` line box, centred on it; above the `first` when there is no room below
-/// or it would cover one of `clear` (the keyboard, an open panel); always on `area`.
+/// The strip's top-left: `gap` under the `last` line box, centred on it; above the `first` when there is no room below,
+/// or when it would cover one of `clear` (the keyboard, an open panel) and there is room above; always on `area`.
 #[must_use]
 pub fn anchor(first: Rect, last: Rect, strip: Strip, area: Rect, clear: &[Rect]) -> Point {
     let below_y = bottom(last).saturating_add(strip.gap);
     let room = below_y.saturating_add(strip.h) <= bottom(area);
     let below = onto(left_of(last, strip), below_y, strip, area);
     let above_y = first.y.saturating_sub(strip.gap).saturating_sub(strip.h);
+    // Over the keyboard's edge beats over the text acted on, so a swap needs room above.
+    let room_above = above_y >= area.y;
     let above = onto(left_of(first, strip), above_y, strip, area);
     let free = |at: Point| {
         let placed = Rect {
@@ -34,7 +36,7 @@ pub fn anchor(first: Rect, last: Rect, strip: Strip, area: Rect, clear: &[Rect])
     };
     if room && free(below) {
         below
-    } else if free(above) || !room {
+    } else if !room || (room_above && free(above)) {
         above
     } else {
         below
