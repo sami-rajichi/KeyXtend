@@ -1,16 +1,17 @@
 //! Picks: a chip of the lane's round types through the keyboard with one `TypeWord`, erasing only what differs once
 //! the box confirms it; in forget mode a word or known-email chip is forgotten instead, with an Undo chip in its
-//! place, and the list's rows type their email.
+//! place, and the list's rows type their email. A saved email sent is noted, so its token is never learned.
 
 use super::Actor;
+use super::line::Line;
 use super::store::Blob;
-use crate::email::Emails;
+use crate::email::Offer;
 use crate::lane::{self, Pick, fits};
 use crate::learn::Learner;
 use crate::pack::Pack;
 use crate::track::{EmailAsk, Plan};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ChipPicked, FieldKind, TypeWord};
+use kx_module_api::ports::{ChipKind, ChipPicked, FieldKind, TypeWord};
 
 impl Actor {
     /// A chip was tapped; a tap on an older lane, or on no chip, does nothing. True when the lane changed.
@@ -30,6 +31,7 @@ impl Actor {
             Pick::Word { plan, .. } | Pick::Email(plan) => {
                 self.send(seed, &plan);
             }
+            Pick::Saved(plan) => self.send_saved(seed, &plan),
             Pick::Domain(plan) => self.domain = self.send(seed, &plan),
             Pick::More => return false,
             Pick::Undo => self.undo(),
@@ -45,15 +47,25 @@ impl Actor {
             return;
         };
         let ask = self.show.as_ref().and_then(|s| s.emails.clone());
-        let listed = self.listed();
-        let plan = match (ask, listed.list().get(at)) {
-            (Some(ask @ EmailAsk::All(_)), Some(email)) => ask.plan(email),
+        let picked = match (ask, self.listed().get(at)) {
+            (Some(ask @ EmailAsk::All(_)), Some((email, kind))) => ask.plan(email).zip(Some(kind)),
             _ => None,
         };
-        if let Some(plan) = plan {
-            self.menu.cancel();
+        let Some((plan, kind)) = picked else {
+            return;
+        };
+        self.menu.cancel();
+        if kind == ChipKind::Saved {
+            self.send_saved(seed, &plan);
+        } else {
             self.send(seed, &plan);
         }
+    }
+
+    /// Sends a saved email by `plan` and notes what went, so the token the keyboard types it into is marked.
+    fn send_saved(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) {
+        let sent = self.send(seed, plan);
+        self.note_saved(sent);
     }
 
     /// Brings back the word or email just forgotten, while its Undo chip shows.
@@ -71,29 +83,35 @@ impl Actor {
 
     /// True when the open `@@` can send a known email, so the list may open; never in forget mode.
     pub(super) fn lists_all(&self) -> bool {
-        !self.menu.forgetting && !self.listed().list().is_empty()
+        !self.menu.forgetting && !self.listed().is_empty()
     }
 
-    /// The known emails the open `@@` can send, which the list pages; none without one.
-    pub(super) fn listed(&self) -> Emails {
+    /// The offered emails the open `@@` can send, which the list pages; none without one.
+    pub(super) fn listed(&self) -> Offer<'_> {
         match self.show.as_ref().and_then(|s| s.emails.as_ref()) {
             Some(ask @ EmailAsk::All(_)) => {
-                lane::listed(&self.emails, ask, self.mode, self.confirms())
+                lane::listed(&self.offer(), ask, self.mode, self.confirms())
             }
-            _ => Emails::default(),
+            _ => Offer::default(),
         }
     }
 
-    /// True when the box confirms what a pick erases: a text box whose last read gave text and whose checks since could
-    /// tell.
+    /// True when what a pick erases is confirmed: a search knows its text, and a text box must have given text at its
+    /// last read, with its checks since able to tell.
     pub(super) fn confirms(&self) -> bool {
-        self.kind == FieldKind::Text && !self.blind
+        match self.line {
+            Line::App => self.kind == FieldKind::Text && !self.blind,
+            Line::Search(_) => true,
+            Line::Private => false,
+        }
     }
 
     /// Asks the keyboard to type by `plan` as far as the box confirms it, and gives the text asked for: all of it when
     /// the box still ends with what the chip replaces, a plan that erases nothing when the box cannot tell, nothing and
     /// a new read when it moved on. A plan past the keyboard's text cap sends nothing, as the keyboard would refuse it.
     fn send(&mut self, seed: Option<&Pack<'_>>, plan: &Plan) -> Option<Redacted<String>> {
+        // A new pick ends the wait for the last saved pick's text.
+        self.noted = None;
         if !fits(plan, self.mode) {
             self.stats.long += 1;
             return None;
@@ -116,17 +134,23 @@ impl Actor {
             round: self.round,
             erase: sent.erase,
             text: sent.text.clone(),
+            line: self.line.search().is_some(),
         };
         self.publish(&word);
         self.stats.sent += 1;
-        self.hold = true;
+        // A search's new text comes through `AimedLine`, and a refused pick must leave its lane as it was.
+        self.hold |= self.line.search().is_none();
         Some(sent.text)
     }
 
-    /// Whether the box still ends with what `plan` replaces, as a text box tells, even when the plan replaces nothing,
-    /// so the kind its check sees wins for every pick; `None` when another box, or the app, cannot tell, which leaves a
-    /// text box blind. A box that cannot confirm never confirms an erase, and a selection's no holds the lane empty.
+    /// Whether a search's text or the box still ends with what `plan` replaces, as a text box tells, even when the plan
+    /// replaces nothing, so the kind its check sees wins for every pick; `None` when another box, or the app, cannot tell,
+    /// which leaves a text box blind. A box that cannot confirm never confirms an erase, and a selection's no holds the
+    /// lane empty.
     fn ends(&mut self, plan: &Plan) -> Option<bool> {
+        if let Some(text) = self.line.search() {
+            return Some(text.ends_with(plan.gone.expose().as_str()));
+        }
         if self.moved() {
             return Some(false);
         }

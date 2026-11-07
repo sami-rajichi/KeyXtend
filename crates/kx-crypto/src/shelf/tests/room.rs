@@ -37,13 +37,8 @@ fn a_missing_root_uses_nothing_and_asks_about_its_nearest_folder() {
 #[test]
 fn a_drive_that_cannot_be_read_is_io() {
     let c = case();
-    let disk = Scripted {
-        fail: true,
-        ..Scripted::default()
-    };
-    let guard = Box::new(c.guard.clone());
-    let shelf = SealedShelfFiles::new(c.root.clone(), guard, Box::new(disk));
-    assert_eq!(shelf.room(), Err(SealedError::Io));
+    let (guard, disk) = (Box::new(c.guard.clone()), Box::new(Scripted::failing()));
+    contract::blind(&SealedShelfFiles::new(c.root.clone(), guard, disk));
 }
 
 #[test]

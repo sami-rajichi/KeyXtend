@@ -1,4 +1,4 @@
-//! Kernel notices for the user, and lifecycle events for the UI.
+//! Kernel notices for the user, the answers to those that ask, and lifecycle events for the UI.
 
 use crate::{Event, ModuleId};
 
@@ -11,6 +11,73 @@ pub struct Notice {
     pub module: Option<ModuleId>,
     /// Named values for the text, by the names in `args`.
     pub args: Vec<(&'static str, NoticeArg)>,
+    /// The question's two answers when it asks; a plain notice has none. A reference keeps notices small.
+    pub ask: Option<&'static NoticeAsk>,
+}
+
+impl Notice {
+    /// Notice `key` about no module, with no arguments and no question.
+    #[must_use]
+    pub const fn plain(key: &'static str) -> Self {
+        Self {
+            key,
+            module: None,
+            args: Vec::new(),
+            ask: None,
+        }
+    }
+
+    /// Notice `key` about `module`, which its text may name as `$module`; it asks nothing.
+    #[must_use]
+    pub fn about(key: &'static str, module: ModuleId) -> Self {
+        Self {
+            module: Some(module),
+            args: vec![(args::MODULE, NoticeArg::Text(module.to_string()))],
+            ..Self::plain(key)
+        }
+    }
+}
+
+/// The translation keys of an asking notice's two buttons.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct NoticeAsk {
+    /// The main button's text, which answers Yes.
+    pub yes: &'static str,
+    /// The other button's text, which answers No, as closing the notice does.
+    pub no: &'static str,
+}
+
+impl NoticeAsk {
+    /// The plain Yes and No buttons.
+    pub const YES_NO: Self = Self {
+        yes: "button.yes",
+        no: "button.no",
+    };
+
+    /// A memory check's Check and Later.
+    pub const CHECK_LATER: Self = Self {
+        yes: "button.check",
+        no: "button.later",
+    };
+
+    /// An offer's Yes and Later.
+    pub const YES_LATER: Self = Self {
+        yes: Self::YES_NO.yes,
+        no: Self::CHECK_LATER.no,
+    };
+}
+
+/// The user answered an asking notice; its raiser knows it by the whole notice, args included.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NoticeAnswered {
+    /// The notice answered.
+    pub notice: Notice,
+    /// The user chose Yes.
+    pub yes: bool,
+}
+
+impl Event for NoticeAnswered {
+    const NAME: &'static str = "notice-answered";
 }
 
 /// One value for a notice's text; never typed text, clipboard data or secrets.
@@ -34,13 +101,15 @@ pub mod args {
     pub const MORE: &str = "more";
     /// A language, by the name the layouts give it.
     pub const LANG: &str = "lang";
+    /// Another app's short name, such as the one a hidden run started from.
+    pub const APP: &str = "app";
 }
 
 impl Event for Notice {
     const NAME: &'static str = "notice";
 }
 
-/// Translation keys of the notices the kernel and the modules show.
+/// Translation keys of the notices the kernel, the modules and the app show.
 pub mod keys {
     /// Some settings values were bad and went back to their defaults.
     pub const SETTINGS_RESET: &str = "notice.settings-reset";
@@ -90,9 +159,23 @@ pub mod keys {
     pub const CLIP_DAMAGED: &str = "notice.clip-damaged";
     /// The clipboard history could not be unlocked, so copies are not kept this run.
     pub const CLIP_LOCKED: &str = "notice.clip-locked";
+    /// The run was started from inside another app, whose copy would hide its saves, so it saves nothing.
+    pub const HIDDEN_RUN: &str = "notice.hidden-run";
+    /// Asks whether to delete a hidden copy of our data in another app's folder.
+    pub const HIDDEN_COPY: &str = "notice.hidden-copy";
+    /// A hidden copy could not be deleted; it is asked about again next run.
+    pub const HIDDEN_COPY_FAILED: &str = "notice.hidden-copy-failed";
+    /// Quick-fill's saved entries were damaged and set aside; a backup can bring them back.
+    pub const VAULT_DAMAGED: &str = "notice.vault-damaged";
+    /// Asks whether the user still remembers the backup password, with Check and Later.
+    pub const VAULT_CHECK: &str = "notice.vault-check";
+    /// Offers a backup after the first entry is saved, with Yes and Later.
+    pub const VAULT_OFFER: &str = "notice.vault-offer";
+    /// Quick-fill's backup places and padlock were damaged and set aside, so the backup must be set up again.
+    pub const VAULT_BACKUP_DAMAGED: &str = "notice.vault-backup-damaged";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 24] = [
+    pub const ALL_KEYS: [&str; 31] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -117,6 +200,13 @@ pub mod keys {
         WORDS_LOCKED,
         CLIP_DAMAGED,
         CLIP_LOCKED,
+        HIDDEN_RUN,
+        HIDDEN_COPY,
+        HIDDEN_COPY_FAILED,
+        VAULT_DAMAGED,
+        VAULT_CHECK,
+        VAULT_OFFER,
+        VAULT_BACKUP_DAMAGED,
     ];
 }
 
@@ -163,69 +253,4 @@ impl Event for SettingsChanged {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use keys::ALL_KEYS;
-    use std::collections::HashSet;
-
-    #[test]
-    fn keys_are_unique_notice_keys() {
-        let unique: HashSet<_> = ALL_KEYS.iter().collect();
-        assert_eq!(unique.len(), ALL_KEYS.len());
-        assert!(ALL_KEYS.iter().all(|k| k.starts_with("notice.")));
-    }
-
-    #[test]
-    fn the_power_notices_are_listed() {
-        assert_eq!(keys::POWER_FAILED, "notice.power-failed");
-        assert_eq!(keys::POWER_STOPPED, "notice.power-stopped");
-        assert!(ALL_KEYS.contains(&keys::POWER_FAILED));
-        assert!(ALL_KEYS.contains(&keys::POWER_STOPPED));
-    }
-
-    #[test]
-    fn arguments_keep_the_names_translations_use() {
-        assert_eq!(
-            (args::MODULE, args::KEYS, args::MORE, args::LANG),
-            ("module", "keys", "more", "lang")
-        );
-    }
-
-    #[test]
-    fn the_words_notices_keep_their_keys_and_are_listed() {
-        assert_eq!(keys::WORDS_DAMAGED, "notice.words-damaged");
-        assert_eq!(keys::WORDS_MISSING, "notice.words-missing");
-        assert_eq!(keys::WORDS_LOCKED, "notice.words-locked");
-        let words = [keys::WORDS_DAMAGED, keys::WORDS_MISSING, keys::WORDS_LOCKED];
-        assert!(words.iter().all(|k| ALL_KEYS.contains(k)));
-    }
-
-    #[test]
-    fn the_clipboard_notices_keep_their_keys_and_are_listed() {
-        assert_eq!(keys::CLIP_DAMAGED, "notice.clip-damaged");
-        assert_eq!(keys::CLIP_LOCKED, "notice.clip-locked");
-        let clip = [keys::CLIP_DAMAGED, keys::CLIP_LOCKED];
-        assert!(clip.iter().all(|k| ALL_KEYS.contains(k)));
-    }
-
-    #[test]
-    fn event_names_are_distinct() {
-        let names = [
-            Notice::NAME,
-            ModuleStateChanged::NAME,
-            SettingsChanged::NAME,
-        ];
-        let unique: HashSet<_> = names.iter().collect();
-        assert_eq!(unique.len(), names.len());
-    }
-
-    #[test]
-    fn a_state_change_carries_module_and_state() {
-        let module = ModuleId::new("keyboard");
-        let change = ModuleStateChanged {
-            module,
-            state: ModuleState::Failed,
-        };
-        assert_eq!((change.module, change.state), (module, ModuleState::Failed));
-    }
-}
+mod tests;

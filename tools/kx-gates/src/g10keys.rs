@@ -159,9 +159,10 @@ fn step_for(
             };
             Some(step(id, presses, keys, true))
         }
-        // A mouse-assist key flips its mode and back and the clipboard key opens and closes the panel, their lights
-        // following the other module's answer, so they are not read; the Shortcuts key shows and hides the layer.
-        (Role::Assist(_) | Role::Layer | Role::Clip, _) => Some(Step {
+        // A mouse-assist key flips its mode and back and the clipboard and Quick-fill keys open and close their panel,
+        // their lights following the other module's answer, so they are not read; the Shortcuts key shows and hides
+        // the layer.
+        (Role::Assist(_) | Role::Layer | Role::Clip | Role::Fill, _) => Some(Step {
             puts_back: true,
             ..step(id, &[id, id], Expect::Nothing, false)
         }),
@@ -172,7 +173,8 @@ fn step_for(
 }
 
 /// The steps for the board's `roles`, in board order: send keys, Caps Lock, the modifiers with `probe` after each
-/// (Win with another latch), the mouse-assist, Shortcuts and clipboard keys twice, and the keys of later versions.
+/// (Win with another latch), the mouse-assist, Shortcuts, clipboard and Quick-fill keys twice, and the keys of later
+/// versions.
 /// `stay` is true when modifiers stay latched after a key.
 pub fn plan(
     roles: &[(String, Role, Option<Scan>)],

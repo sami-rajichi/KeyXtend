@@ -63,6 +63,7 @@ impl Rig {
         let ((media, tasks), (files, looks)) = (mpsc::channel(), mpsc::channel());
         let ports = Ports {
             bus: ModuleCx::new(&mut host).bus(),
+            clip: Arc::new(fakes.clip.clone()),
             clock: Arc::new(fakes.clock.clone()),
             calendar: Arc::new(fakes.calendar.clone()),
             shelf: Arc::new(fakes.shelf.clone()),
@@ -74,12 +75,11 @@ impl Rig {
         };
         let heard = Arc::default();
         let ears = listen(&Bus::new(Arc::clone(&host.core)), &heard);
-        let actor = Actor::new(ports, &settings, store, loaded);
         let mut rig = Self {
             run: fakes.pics.open(settings.picture_config()),
+            actor: Actor::new(ports, &settings, store, loaded),
             fakes,
             settings,
-            actor,
             notes,
             tasks,
             looks,
@@ -237,6 +237,14 @@ impl Rig {
     pub fn panels(&self) -> Vec<bool> {
         self.picked(|h| match h {
             Heard::Panel(p) => Some(p.open),
+            _ => None,
+        })
+    }
+
+    /// Every `ClipLine` published, as its line.
+    pub fn lines(&self) -> Vec<kx_module_api::ports::PanelLine> {
+        self.picked(|h| match h {
+            Heard::Line(l) => Some(l),
             _ => None,
         })
     }

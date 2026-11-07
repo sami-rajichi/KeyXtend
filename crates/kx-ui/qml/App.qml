@@ -7,9 +7,10 @@ import QtQuick
 QtObject {
     id: app
 
-    // The hub's Ui and Keyboard objects, or the tests' stand-ins.
+    // The hub's Ui, Keyboard and QuickFill objects, or the tests' stand-ins; without the last no Quick-fill shows.
     required property QtObject ui
     required property QtObject keyboard
+    property QtObject fill: null
     // The clock in ms for the tray menu and the overlay's reads; tests set their own.
     property var now: () => Date.now()
     // Minimise or Close put the keyboard away; it comes back from the bubble or a second copy's Show.
@@ -65,6 +66,7 @@ QtObject {
             id: face
             ui: app.ui
             keyboard: app.keyboard
+            fill: app.fill
             onMinimise: app.minimise()
             onPutAway: app.hide()
             onRunningChanged: app.follow()
@@ -155,7 +157,7 @@ QtObject {
             res: face.res
             st: app.assist
             spots: face.spots
-            ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null]
+            ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }
@@ -171,8 +173,7 @@ QtObject {
         lk: face.lk
         res: face.res
     }
-    // Debug builds only: the app churns through its windows for a memory check when the keyboard object hands it a
-    // plan; release builds hold no Churn.qml and no plan.
+    // Debug builds only: the app churns through its windows for a memory check when the keyboard object gives a plan.
     property Loader churn: Loader {
         readonly property string plan: app.keyboard.churnPlan ? app.keyboard.churnPlan() : ""
         active: face.ready && plan !== ""
@@ -241,8 +242,7 @@ QtObject {
         return true;
     }
 
-    // Puts the bubble in a bottom corner of the keyboard's screen, where it always is (owner's choice); false when
-    // there is nowhere for it.
+    // Puts the bubble in a bottom corner of the keyboard's screen (owner's choice); false when there is nowhere for it.
     function bubbleTo() {
         const at = face.bubbleSpot();
         if (!at)

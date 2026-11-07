@@ -4,6 +4,7 @@
 //! only what QML draws.
 
 mod acts;
+mod folder;
 mod shape;
 mod size;
 mod view;
@@ -14,18 +15,11 @@ use kx_module_api::ports::{
     Preview, Room, ScrollPage, When,
 };
 use kx_module_api::{Bus, Redacted, Subscription};
-use kx_platform::ui::RevealError;
 use kx_test_support::host::{FakeCore, FakeHost};
 use kx_ui::{MANIFEST, UiSettings, Wake};
 use serde_json::Value;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
-/// The longest a test waits for the file manager's thread.
-const WAIT: Duration = Duration::from_secs(5);
-/// The history folder the app hands over in these tests.
-const FOLDER: &str = r"D:\data\KeyXtend\clipboard";
 /// A picture's side in these tests.
 const SIDE: u32 = 2;
 
@@ -100,6 +94,7 @@ pub fn page(round: u32, rows: Vec<ClipRow>) -> ClipPage {
         rows,
         filter: Filter::All,
         search: Redacted::new(String::new()),
+        caret: Redacted::new(0),
         pages: Pages { at: 0, count: 1 },
         ticked: 0,
         unpin: false,
@@ -247,46 +242,4 @@ fn pictures_come_from_the_kept_round_only() {
     for gone in ["4/7", "6/7", "5/8", "5/9", "5", "", "x/7", "5/7/1", "-5/7"] {
         assert!(rig.hub.clip_picture(gone).is_none(), "{gone}");
     }
-}
-
-#[test]
-fn open_folder_shows_the_folder_the_app_handed_over() {
-    let rig = Rig::new();
-    let folder = PathBuf::from(FOLDER);
-    assert!(!rig.hub.open_folder(), "none handed over");
-    assert!(rig.reveal.shown().is_empty());
-    rig.hub.set_clip_folder(folder.clone());
-    rig.hub.set_clip_folder(PathBuf::from(r"C:\other"));
-    rig.hub.open_folder();
-    assert!(rig.reveal.wait_shown(1, WAIT));
-    assert_eq!(rig.reveal.shown(), [folder], "the first one stays");
-}
-
-/// The refusal's warning is logged on the reveal's own thread, which the log capture does not hear.
-#[test]
-fn a_refused_folder_ends_its_reveal_without_a_panic() {
-    let rig = Rig::new();
-    rig.reveal.set_error(Some(RevealError::Refused(5)));
-    rig.hub.set_clip_folder(PathBuf::from(FOLDER));
-    rig.hub.open_folder();
-    assert!(rig.reveal.wait_left(1, WAIT));
-    assert_eq!(rig.reveal.shown(), [PathBuf::from(FOLDER)]);
-}
-
-#[test]
-fn a_double_tap_opens_one_window() {
-    let rig = Rig::new();
-    rig.hub.set_clip_folder(PathBuf::from(FOLDER));
-    rig.reveal.hold(true);
-    assert!(rig.hub.open_folder(), "the first tap starts a reveal");
-    assert!(rig.reveal.wait_shown(1, WAIT));
-    assert!(!rig.hub.open_folder(), "one is in flight");
-    assert!(!rig.hub.open_folder());
-    rig.reveal.hold(false);
-    assert!(rig.reveal.wait_left(1, WAIT));
-    assert_eq!(
-        rig.reveal.shown().len(),
-        1,
-        "the taps meanwhile were ignored"
-    );
 }

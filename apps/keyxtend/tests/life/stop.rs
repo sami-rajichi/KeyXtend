@@ -20,7 +20,7 @@ fn a_running_kernel_thread_quits_and_the_icon_goes() {
     let wakes = watch(&boot.hub);
     assert!(boot.hub.tray_show(&picture()) && !rig.tray.shown().is_empty());
     let hub = Arc::clone(&boot.hub);
-    let kernel = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests).unwrap();
+    let kernel = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests, None).unwrap();
     assert!(stop(&hub, kernel), "the thread was joined");
     assert!(rig.tray.shown().is_empty(), "the icon went");
     assert!(wakes.lock().unwrap().contains(&Wake::End), "the UI ended");
@@ -33,7 +33,7 @@ fn a_quit_sent_already_still_stops_cleanly() {
     boot.start().unwrap();
     assert!(boot.hub.tray_show(&picture()));
     let hub = Arc::clone(&boot.hub);
-    let kernel = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests).unwrap();
+    let kernel = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests, None).unwrap();
     assert!(hub.quit(), "the tray's Quit came first");
     assert!(stop(&hub, kernel));
     assert!(rig.tray.shown().is_empty());

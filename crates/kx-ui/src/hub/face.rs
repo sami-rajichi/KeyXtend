@@ -71,11 +71,7 @@ impl Hub {
                     if tick {
                         tracing::warn!("a held key's repeat was not sent");
                     }
-                    self.notice(Notice {
-                        key,
-                        module: None,
-                        args: Vec::new(),
-                    });
+                    self.notice(Notice::plain(key));
                 }
                 Redraw {
                     board: reply.board,
@@ -88,6 +84,11 @@ impl Hub {
                 Redraw::default()
             }
         }
+    }
+
+    /// A press on the open panel: the letters go to the panel again (ADR-0040).
+    pub fn aim_panel(&self) -> Redraw {
+        self.act(FaceAction::AimPanel)
     }
 
     /// Key `id` goes to the open list, `[ui] page_rows` rows per page.

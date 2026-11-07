@@ -2,6 +2,7 @@
 //! both again at stop, and each notice once per run (a missing pack once per language).
 
 use super::Actor;
+use super::line::Line;
 use super::store::Blob;
 use crate::ID;
 use crate::lane::{Chips, Sources};
@@ -47,16 +48,19 @@ impl Actor {
         }
     }
 
-    /// The lane now, for the box the watch sees, keeping its chips' picks and what the tracker showed, which the open
-    /// list pages even while the lane is held empty.
+    /// The lane now, for the line or the box the watch sees, keeping its chips' picks and what the tracker showed, which
+    /// the open list pages even while the lane is held empty.
     fn lane(&mut self, seed: Option<&Pack<'_>>) -> Lane {
         self.chips = Chips::default();
         self.show = None;
         if !self.settings.on {
             return Lane::Off;
         }
+        if self.line == Line::Private {
+            return Lane::Empty;
+        }
         self.moved();
-        if self.kind == FieldKind::Password {
+        if self.line.is_app() && self.kind == FieldKind::Password {
             return Lane::Locked;
         }
         let show = self.tracker.show(&|w: &str| knows(seed, w));
@@ -71,8 +75,8 @@ impl Actor {
         }
     }
 
-    /// True while a shortcut latch, a dead key, a sent pick or a selection that refused one holds the lane empty, as
-    /// the keyboard or the box would refuse a pick.
+    /// True while a shortcut latch, a dead key, a pick sent to the box or a selection that refused one holds the lane
+    /// empty, as the keyboard or the box would refuse a pick.
     pub(super) fn held(&self) -> bool {
         self.mode.shortcut || self.mode.dead || self.hold
     }
@@ -89,6 +93,7 @@ impl Actor {
             mode: self.mode,
             score: &self.score_cfg,
             emails: &self.emails,
+            saved: &self.saved,
             email: &self.email_cfg,
             limit,
             confirms: self.confirms(),
@@ -99,9 +104,9 @@ impl Actor {
         chips
     }
 
-    /// Tells the mouse module to report presses while the tracker holds a word or its context.
+    /// Tells the mouse module to report presses while the tracker holds a box's word or its context; a line wants none.
     pub(super) fn presses(&mut self) {
-        let want = self.following() && self.tracker.holds();
+        let want = self.line.is_app() && self.following() && self.tracker.holds();
         if want != self.pressing {
             self.pressing = want;
             self.publish(&PressesWanted { on: want });
@@ -137,7 +142,7 @@ impl Actor {
     /// Tells the user `key` once per run.
     pub(super) fn say_once(&mut self, key: &'static str) {
         if self.notes.told.insert(key) {
-            self.publish(&notice(key, Vec::new()));
+            self.publish(&Notice::about(key, ID));
         }
     }
 
@@ -147,23 +152,14 @@ impl Actor {
         let shipped = self.ports.packs.pack_of(&self.iso).is_some();
         if shipped && self.notes.missing.insert(self.iso.clone()) {
             let lang = (args::LANG, NoticeArg::Text(self.lang_name.clone()));
-            self.publish(&notice(keys::WORDS_MISSING, vec![lang]));
+            let mut missing = Notice::about(keys::WORDS_MISSING, ID);
+            missing.args.push(lang);
+            self.publish(&missing);
         }
     }
 
     /// Publishes `event`; a refusal is the bus's gate on a capability the module holds, so it never happens.
     pub(super) fn publish<E: Event>(&self, event: &E) {
         let _ = self.ports.bus.publish(event);
-    }
-}
-
-/// The module's notice `key`, naming the module, with `more` arguments.
-pub(crate) fn notice(key: &'static str, more: Vec<(&'static str, NoticeArg)>) -> Notice {
-    let mut args = vec![(args::MODULE, NoticeArg::Text(ID.to_string()))];
-    args.extend(more);
-    Notice {
-        key,
-        module: Some(ID),
-        args,
     }
 }

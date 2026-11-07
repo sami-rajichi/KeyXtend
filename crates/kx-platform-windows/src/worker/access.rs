@@ -4,7 +4,7 @@
 use std::mem::offset_of;
 use std::os::windows::io::OwnedHandle;
 
-use kx_platform::pictures::SpawnError;
+use kx_platform::worker::SpawnError;
 use windows::Win32::Foundation::{HANDLE, LUID};
 use windows::Win32::Security::{
     EqualSid, GetTokenInformation, LUID_AND_ATTRIBUTES, LookupPrivilegeValueW, PSID,

@@ -1,5 +1,5 @@
-//! The sealed store: small blobs the platform keeps sealed under the user's OS key (ADR-0010), which only
-//! `SecretStore` reaches.
+//! The sealed stores: small blobs the platform keeps sealed under the user's OS key (ADR-0010). The shared store needs
+//! `SecretStore`, and Quick-fill's notebook store, in its own folder with its own key, needs `VaultData` (ADR-0039).
 
 use crate::{Capability, ServiceId, ServiceKey};
 use thiserror::Error;
@@ -83,6 +83,15 @@ impl ServiceKey for SealedStoreKey {
     type Api = dyn SealedStore;
     const ID: ServiceId = ServiceId::new("sealed-store");
     const CAPABILITY: Option<Capability> = Some(Capability::SecretStore);
+}
+
+/// Quick-fill's notebook store, a sealed store of its own; it needs `VaultData`.
+pub struct VaultStoreKey;
+
+impl ServiceKey for VaultStoreKey {
+    type Api = dyn SealedStore;
+    const ID: ServiceId = ServiceId::new("vault-store");
+    const CAPABILITY: Option<Capability> = Some(Capability::VaultData);
 }
 
 #[cfg(test)]

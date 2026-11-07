@@ -4,17 +4,19 @@
 
 mod bus;
 mod clip;
+mod fill;
 mod hold;
 mod inner;
 mod layer;
 mod outbox;
 mod pad;
+mod panels;
 mod words;
 
 pub(crate) use bus::listen;
 
 use crate::geom::{KeyBox, board};
-use crate::panel::{ClipUse, clip_keys, navs};
+use crate::panel::{PanelUse, navs, panel_uses};
 use crate::run::{Ports, TapError, Tapped};
 use crate::settings::KeyboardSettings;
 use crate::spec::{BoardSpec, Nav};
@@ -52,8 +54,8 @@ pub struct Face {
     navs: HashMap<String, Nav>,
     /// The same keys in board order, which the state lists.
     nav_keys: Vec<(String, Nav)>,
-    /// The board keys the clipboard panel takes while it is open.
-    clips: HashMap<String, ClipUse>,
+    /// The board keys our panels take while one is open.
+    uses: HashMap<String, PanelUse>,
     inner: Mutex<Inner>,
     /// The latched set and typing mode the bus last heard.
     told: Told,
@@ -61,7 +63,7 @@ pub struct Face {
     peeks: Peeks,
     /// The typed pieces' sender, one thread at a time.
     pieces: Outbox,
-    /// How many clicks outside our windows were heard, so a picked word going out stops at one.
+    /// How many clicks outside our windows were heard, so a picked word going out stops at one and the aim goes.
     clicks: AtomicU64,
 }
 
@@ -88,7 +90,7 @@ impl Face {
             keys: b.keys,
             navs: navs.iter().cloned().collect(),
             nav_keys: navs,
-            clips: clip_keys(&spec),
+            uses: panel_uses(&spec),
             spec,
             inner: Mutex::new(inner),
             told: Told::default(),
@@ -109,9 +111,10 @@ impl Face {
     }
 
     /// A click on key `id`: a key that drives the open list does nothing here, as the UI sends it as `panel_key`, and
-    /// the open clipboard panel takes its other keys. A side key the layer hides is no key.
+    /// our panel aimed at takes its other keys; while a fill waits, no other key does anything. A side key the layer
+    /// hides is no key.
     fn tap(&self, id: &str, back: bool) -> Result<FaceReply, FaceError> {
-        if let Some(reply) = self.to_clip(id) {
+        if let Some(reply) = self.to_panel(id) {
             return Ok(reply);
         }
         let went = {
@@ -119,7 +122,7 @@ impl Face {
             if self.hides(&inner, id) {
                 return Err(FaceError::UnknownKey);
             }
-            if inner.listing() && self.navs.contains_key(id) {
+            if inner.filling() || (inner.listing() && self.navs.contains_key(id)) {
                 return Ok(FaceReply::default());
             }
             inner.tap(id, back)
@@ -128,16 +131,16 @@ impl Face {
     }
 
     /// The pointer went down on key `id` (spec §4.6): it types now, answering as a tap does and saying whether it
-    /// holds; while the list is open, a key that drives it waits for `panel_key`, and the open clipboard panel takes its
-    /// keys at once, never holding, as in `tap`.
+    /// holds; while the list is open, a key that drives it waits for `panel_key`, and our panel aimed at takes its keys
+    /// at once, never holding, as in `tap`, which a waiting fill holds back too.
     fn press(&self, id: &str) -> Result<FaceReply, FaceError> {
         self.known(id)?;
-        if let Some(reply) = self.to_clip(id) {
+        if let Some(reply) = self.to_panel(id) {
             return Ok(reply);
         }
         let (went, holding) = {
             let mut inner = self.lock();
-            if inner.listing() && self.navs.contains_key(id) {
+            if inner.filling() || (inner.listing() && self.navs.contains_key(id)) {
                 return Ok(FaceReply::default());
             }
             let went = inner.press(id);
@@ -187,6 +190,10 @@ impl Face {
                 self.clip_open();
                 Ok(STATE)
             }
+            Ok(Tapped::Fill) => {
+                self.fill_open();
+                Ok(STATE)
+            }
             Ok(Tapped::Layer) => Ok(self.flip()),
             Ok(Tapped::Next) => Ok(self.lock().next_page()),
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),
@@ -211,6 +218,7 @@ impl Face {
             let mut inner = self.lock();
             // Read at every tick, so the typing mode told next holds the UI's newest Caps Lock.
             let caps = inner.caps_moved();
+            inner.settle_aim(self.outside());
             inner.seen() || caps || inner.unshown()
         };
         FaceReply {
@@ -239,6 +247,7 @@ impl Face {
             FaceAction::PanelKey { key, rows } => self.panel_key(key.as_str(), rows),
             FaceAction::Pad { dir } => self.pad(dir),
             FaceAction::PadHover { on } => Ok(self.hover(on)),
+            FaceAction::AimPanel => Ok(self.aim_panel()),
             other => self.lock().act(other),
         }
     }
@@ -250,7 +259,13 @@ impl KeyboardFace for Face {
     }
 
     fn state_json(&self, rows: usize) -> String {
-        json(&self.lock().state(&self.keys, &self.nav_keys, rows))
+        let state = {
+            let mut inner = self.lock();
+            inner.settle_aim(self.outside());
+            json(&inner.state(&self.keys, &self.nav_keys, rows))
+        };
+        self.pour();
+        state
     }
 
     fn lang(&self) -> String {
@@ -262,8 +277,10 @@ impl KeyboardFace for Face {
         self.spec.row_px
     }
 
-    /// Does `action`, then tells the bus the pieces it typed, and the latched set and typing mode if they changed.
+    /// Sends a fill's part whose gap has passed, does `action`, then tells the bus the pieces it typed, and the latched
+    /// set and typing mode if they changed. The relabel timer calls at least every `relabel_ms` while the keyboard shows.
     fn act(&self, action: FaceAction) -> Result<FaceReply, FaceError> {
+        self.fill_due();
         let reply = self.route(action);
         self.pour();
         self.tell(false);

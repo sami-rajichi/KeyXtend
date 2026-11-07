@@ -208,6 +208,30 @@ foot_pad_px = [7.0, 12.0]
 field_px = [34.0, 7.0, 10.0, 14.5]
 gap_px = [10.0, 8.0]
 min_fit = 0.8
+# The list parts the clipboard and Quick-fill share (mock-up .clip and .fill), so one edit changes both: the empty line's
+# and a question's icon (.locked-box .i); a line that takes the letters, not in the mock-up: its icon, the caret's width
+# and its gap to the hint, and the ring-coloured line under it, as WinUI's focused TextBox draws its 2 px accent line.
+empty_px = 30.0
+line_px = [15.0, 2.0, 2.0, 2.0]
+# The filters' gap and a chip (.fl): height, side padding, the shown one's check icon and its gap; its text is [chip]'s.
+# 28 px high over the mock-up's 21, so each is a big target (WCAG 2.5.8); 10 px at the sides, so Quick-fill's seven fit
+# in Arabic.
+filter_gap_px = 4.0
+filter_px = [28.0, 10.0, 12.0, 5.0]
+# A row (.lrow): the gap between its parts and its least padding top and bottom, trimmed so the panel fits above the
+# keyboard; its tile (.th2: width, height, radius, icon) and its hint line (.tt .m: size, gap above); the gap between a
+# question's icon, text and buttons; and the most lines a question flat on one row takes, so the row keeps its height.
+row_gap_px = 9.0
+row_pad_px = 2.0
+tile_px = [46.0, 34.0, 6.0, 17.0]
+hint_px = [10.5, 1.0]
+question_gap_px = 12.0
+question_lines = 2
+# One notch of the mouse wheel in Qt's angleDelta, eighths of a degree: 15 degrees, which turns one page (ADR-0040).
+wheel_notch = 120.0
+# How long the wheel rests, in seconds, before steps short of a notch are dropped: long enough for a fine wheel's slow steps
+# to add up, and Qt's WheelHandler.activeTimeout counts in seconds.
+wheel_rest_s = 1.0
 
 [notice]
 # The notice banner, which grows with the keyboard and sits panel.gap_px[0] above it (mock-up .toast, lines 398-400):
@@ -298,41 +322,43 @@ strip_px = [28.0, 6.0, 8.0, 12.0]
 
 [clip]
 # The clipboard panel (spec §7; mock-up .clip and buildClip, lines 312-341 and 1563-1577) on [panel]'s frame, header,
-# rows, pager, footer padding and search field: the kept line's size (.sm) and the empty line's icon (.locked-box .i).
+# rows, pager, footer padding, search field and list parts: the kept line's size (.sm), and the filters' padding
+# (.filters: top, sides, bottom).
 kept_px = 11.0
-empty_px = 30.0
-# The search line, not in the mock-up: its icon, the caret's width and its gap to the hint, and the ring-coloured line
-# under it that shows where letters go, as WinUI's focused TextBox draws its 2 px accent line.
-search_icon_px = 15.0
-caret_px = 2.0
-caret_gap_px = 2.0
-underline_px = 2.0
-# The filters (.filters: padding top, sides, bottom; gap) and a chip (.fl): height, side padding, the shown one's check
-# icon and its gap; its text is [chip]'s. 28 px high, over the mock-up's 21, so each is a big target (WCAG 2.5.8).
 filters_pad_px = [6.0, 10.0, 2.0]
-filter_gap_px = 4.0
-filter_px = [28.0, 12.0, 12.0, 5.0]
-# A row (.lrow): the gap between its parts and its least padding top and bottom, trimmed so the panel fits above the
-# keyboard; the tick box (.ck: side, radius, border, number size) and its number's weight; the thumbnail tile (.th2:
-# width, height, radius, icon) and the picture's inset; the meta line (.tt .m: size, gap above); the pin (.pin .i); the
-# expires chip (.exp: text size, padding top and bottom, sides), 11 px over the mock-up's 10 so it reads.
-row_gap_px = 9.0
-row_pad_px = 2.0
+# A row's tick box (.ck: side, radius, border, number size) and its number's weight; the picture's inset in its tile;
+# the pin (.pin .i); the expires chip (.exp: text size, padding top and bottom, sides), 11 px over the mock-up's 10 so
+# it reads.
 tick_px = [22.0, 6.0, 1.5, 11.0]
 tick_weight = 600
-thumb_px = [46.0, 34.0, 6.0, 17.0]
 thumb_inset_px = 2.0
-meta_px = [10.5, 1.0]
 pin_px = 13.0
 expires_px = [11.0, 2.0, 8.0]
 # Buttons (.btn): height, radius, side padding, text size, icon, icon gap, and the text's weight; 32 px high so each is a
-# big target. The gap between the footer's buttons (.lfoot), and between the Delete-all question's parts.
+# big target. The gap between the footer's buttons (.lfoot). Quick-fill takes these too.
 button_px = [32.0, 7.0, 11.0, 12.0, 14.0, 6.0]
 button_weight = 600
 foot_gap_px = 8.0
-question_gap_px = 12.0
 # The note band, which takes the storage line's place while it shows (padding, radius, text size), the storage line
 # (padding top and bottom, text size, icon) and the preview's text size (Latin, Arabic).
 note_px = [7.0, 8.0, 12.0]
 room_px = [4.0, 11.0, 13.0]
 preview_px = [13.0, 14.5]
+
+[fill]
+# Quick-fill (design "The panel"; mock-up .fill and buildFill, lines 337-346 and 1597-1611) on [panel]'s frame, header,
+# rows, page buttons, footer padding, text field and list parts, and the clipboard panel's buttons and note band. 600 px
+# wide over the mock-up's 420, so a login's User, Password and Both, or a field's four buttons, sit beside a name in any
+# language.
+width_px = 600.0
+# Two lines over the rows: the search line, or what the page shows, then the filters, or the page's buttons, a button
+# high. The gap above the first, between them and below the second (.filters padding, trimmed to fit above the keyboard).
+top_px = [6.0, 6.0, 2.0]
+# An own label takes this share of its field's line, the value the rest; the mask spaces its dots by this share of its
+# size (.masked letter-spacing .14em, line 345).
+own_share = 0.4
+mask_em = 0.14
+# New's kind chips in the rows' place (not in the mock-up): gap, radius, icon, gap to the label, and the rows they take,
+# so the six kinds sit two rows of three.
+kind_px = [8.0, 10.0, 24.0, 6.0]
+kind_rows = 2

@@ -36,6 +36,9 @@ pub enum Tapped {
     /// The clipboard key, or the history chord while it is wanted, which used the latches: nothing was sent; the face
     /// asks the clipboard module to open or close its panel.
     Clip,
+    /// The Quick-fill key: nothing was sent and the latches stay; the face asks the vault module to open or close its
+    /// panel.
+    Fill,
     /// The layer's Next key: nothing was sent and the latches stay; the face turns the page.
     Next,
     /// A key from a later version: nothing happened.

@@ -1,4 +1,4 @@
-//! The kernel's own settings section: the switched-off modules and the log limits.
+//! The kernel's own settings section: the switched-off modules, the log limits and the hidden copies kept.
 
 use super::{KERNEL, Kernel};
 use crate::log;
@@ -12,6 +12,8 @@ pub(crate) const MAX_LOG_MB: u32 = 100;
 
 /// The key of the switched-off list in the kernel's section.
 pub(super) const DISABLED_KEY: &str = "disabled";
+/// The key of the hidden copies the user kept, which the app adds to through `Kernel::set_setting`.
+pub const KEPT_KEY: &str = "kept_copies";
 
 /// How the store reads the kernel's section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {
@@ -21,7 +23,7 @@ pub static SPEC: SettingsSpec = SettingsSpec {
     validate: validate_as::<KernelSettings>,
 };
 
-/// The kernel's settings: switched-off modules and the log limits.
+/// The kernel's settings: switched-off modules, the log limits and the hidden copies kept.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KernelSettings {
@@ -31,6 +33,8 @@ pub struct KernelSettings {
     pub log_level: String,
     /// The largest log file, in MiB.
     pub log_max_mb: u32,
+    /// Package folders whose hidden copy of our data the user kept (ADR-0037); names only, never paths.
+    pub kept_copies: Vec<String>,
 }
 
 impl KernelSettings {
@@ -54,6 +58,9 @@ impl Settings for KernelSettings {
         }
         if self.disabled.iter().any(String::is_empty) {
             return invalid("disabled holds an empty id");
+        }
+        if self.kept_copies.iter().any(String::is_empty) {
+            return invalid("kept_copies holds an empty name");
         }
         Ok(())
     }

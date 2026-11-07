@@ -5,9 +5,9 @@ use kx_platform::ui::{FocusToken, UiError};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{DeleteObject, HRGN, PtInRegion};
 
+use super::super::from_raw;
 use super::super::guard::add_kept;
 use super::super::win::{gives_back, region, token_of, window_of};
-use super::super::{foreground, from_raw, is_ours};
 use super::Hidden;
 
 /// Which of `points` lie in region `all`, which is then deleted.
@@ -92,10 +92,10 @@ fn a_raw_handle_and_a_focus_token_read_back() {
     assert_eq!(token_of(window.0), token);
 }
 
+/// Holds whatever is in front: another test's hidden window can be, while UI Automation works on it.
 #[test]
-fn giving_back_is_a_no_op_while_none_of_ours_is_in_front() {
+fn giving_back_never_aims_at_our_own_window_or_at_none() {
     let window = Hidden::new("KeyXtend test: give back");
-    assert!(!is_ours(foreground()), "the test program is never in front");
-    assert!(!gives_back(window.0), "none of ours is in front");
+    assert!(!gives_back(window.0), "our own window");
     assert!(!gives_back(HWND::default()), "no window");
 }

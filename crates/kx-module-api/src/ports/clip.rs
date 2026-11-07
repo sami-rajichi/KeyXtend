@@ -1,7 +1,7 @@
 //! The clipboard ports (ADR-0034 decision 3): `Clipboard` watches copies, which only `ReadClipboard` reaches, and
 //! `ClipboardWriter` sets the clipboard, which only `WriteClipboard` reaches. Copied content always stays redacted.
 
-use crate::{Capability, Redacted, ServiceId, ServiceKey};
+use crate::{Capability, Redacted, Secret, ServiceId, ServiceKey};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -128,7 +128,7 @@ pub fn probe_ok(path: &Path) -> bool {
     matches!(path.as_os_str().as_encoded_bytes(), [drive, b':', s, ..] if drive.is_ascii_alphabetic() && sep(s))
 }
 
-/// Why the clipboard could not be watched or set.
+/// Why the clipboard could not be watched, read or set.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
 pub enum ClipError {
     /// Another app held the clipboard past `ClipWait::open_ms`.
@@ -140,6 +140,9 @@ pub enum ClipError {
     /// A part could not be read or written.
     #[error("the clipboard data could not be read or written")]
     Io,
+    /// The text Quick-fill's take read is past its cap; only `Clipboard::text` returns it.
+    #[error("the clipboard text is past the cap")]
+    TooLong,
 }
 
 /// A running watch on the platform's side. Dropping it stops the watch, but an adapter that bounds its wait may still
@@ -161,6 +164,13 @@ pub trait Clipboard: Send + Sync {
 
     /// What is at each of `paths` now, in the same order.
     fn files(&self, paths: &Redacted<Vec<PathBuf>>) -> Vec<FileFact>;
+
+    /// The clipboard's text now, read only on this call, or `None` when it holds none.
+    ///
+    /// # Errors
+    /// `Busy` past `wait.open_ms`, `Refused` when the OS refuses, `TooLong` past `max_chars` characters, and `Io` when
+    /// it cannot be read.
+    fn text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError>;
 }
 
 /// Sets the system clipboard; the platform provides it.

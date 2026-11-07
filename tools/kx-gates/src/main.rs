@@ -130,6 +130,7 @@ mod p4cfg;
 mod p5cfg;
 mod p7cfg;
 mod p8cfg;
+mod p9cfg;
 mod padgeom;
 mod padread;
 mod pin;

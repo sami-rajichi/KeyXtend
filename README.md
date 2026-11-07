@@ -34,7 +34,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Any installed language.** English, French and Arabic come first, with correct Arabic: joined letters, harakat, `لا` as one key, and Arabic text that reads right to left in a settings window that keeps its places.
 - **Private and local.**
   - Voice typing runs free on your PC.
-  - Clipboard history, the vault, learned words and transcripts are encrypted.
+  - Clipboard history, Quick-fill, learned words and transcripts are encrypted.
   - No telemetry; nothing leaves the PC unless you turn that feature on.
 - **Light.** Targets: a download of 80 MB or less (without voice models; measured deflated, a conservative stand-in for the installer's LZMA2), 80 MB of memory or less when idle, and near-zero CPU while idle.
 
@@ -44,7 +44,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Mouse:** Right-click hold, Grab and the scroll pad, with a ring and soft sounds that show when a hold fires.
 - **Voice typing:** local Whisper, click to start and click to stop. A cloud engine with your own free key is optional and off by default.
 - **Clipboard history:** text, links, images and files, newest first, with pins and "Paste together".
-- **Quick-fill vault:** saved emails, names and passwords. Passwords unlock with Windows Hello or a PIN.
+- **Quick-fill:** a notebook of saved logins, details and notes, which types any value at the caret in one click, with a locked backup that keeps itself up to date.
 - **Selection helper:** a Copy button appears next to any text you select.
 - **Snip:** capture a region without dragging, annotate it, and copy its text with OCR.
 - **Power key:** opens the system's own shut-down dialog.
@@ -67,6 +67,7 @@ Early development. Done so far:
 - P6: the shortcuts layer and the Power key: one click sends a common shortcut, such as Copy all or Switch app, or opens the system's power dialog.
 - P7: word prediction, which suggests and learns words and emails on this PC.
 - P8: clipboard history, which keeps what you copy, sealed on this PC, and pastes several copies together.
+- P9: Quick-fill, which keeps logins and other saved values sealed on this PC, fills them with one click and keeps a locked backup where you choose.
 
 The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
@@ -100,6 +101,14 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
   - Pin keeps a row. Delete and Delete all, which asks first, spare pinned rows. A row's preview pages long texts and shows pictures large.
   - Win, then V, on the keyboard opens it too; `[clipboard] history_key = false` gives Win+V back to Windows.
   - Copies an app marks as private, as password managers do, are never kept.
+- **Quick-fill** (the key icon on the keyboard's side; in a password box, a chip in the top bar too): a notebook of saved values, which types one where you are typing.
+  - **Save** a person, a login, a Wi-Fi, a card, a note or anything else with New. Letters clicked on the keyboard go into the highlighted line, and Paste brings in your clipboard's text and removes it from the history. Make one writes a strong password.
+  - **Fill** with one click: User, Password or Both, which types the user, a Tab and the password, and never Enter. A value goes where the caret is, whatever kind of box it is, and never to the clipboard. Word suggestions never learn it.
+  - **Search** ignores accents and harakat, and never looks in a hidden value. By label lists every value of one label, such as Phone. Typing `@@` lists your saved emails with a key icon.
+  - **No unlock step:** anyone using your signed-in PC can fill, as with a browser's saved passwords. The files open only for your account on this PC.
+  - **The backup** is one locked file, `KeyXtend Backup.kxbox`, in each place you pick: a cloud folder, a USB stick or any folder. It updates by itself after each change, and a place that is gone waits and catches up. Your backup password is never stored, and without it the file cannot open, so a banner checks now and then that you still know it; `[vault] memory_checks = false` stops that.
+  - **On a new computer,** an empty notebook offers the backups it finds, and Bring back also opens one from any folder. Your password brings the entries back.
+  - **Import** reads a KeePass file with its password. Custom values start hidden, and a file that also needs a key file cannot open.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
 - **Starting KeyXtend again** shows the running keyboard, and `keyxtend --quit` ends it.
@@ -114,7 +123,9 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 - **The log keeps two runs**, this one and the one before, in a `logs` folder inside that settings folder. It is small and never holds what you type, your clipboard or your passwords.
 - **Learned words and emails** are sealed in a `words` folder there, under a key the system keeps for your account.
 - **The clipboard history** is sealed in a `clipboard` folder there, one folder per day. By default it keeps 7 days, at most 1,000 entries and 1 GB; Open folder in the panel shows it.
-- **Nothing is sent anywhere.** The settings and the log stay on your PC.
+- **Quick-fill's notebook** is sealed in a `quickfill` folder there, under a key of its own. Copied to another PC or account, those files open nothing. Its backups live wherever you put them.
+- **Started from inside another app,** such as an AI assistant's tools, Windows would hide what KeyXtend saves in that app's own folder. So that run saves nothing, keeps Quick-fill off and says so on a banner; start it from the Start menu instead. A later normal run offers to delete any hidden copy an older run left.
+- **Nothing is sent anywhere.** The settings and the log stay on your PC. A backup goes only to the places you pick.
 
 ## Documents
 - Design spec: [accessible-keyboard-design.md](docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md)

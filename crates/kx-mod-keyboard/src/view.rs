@@ -8,6 +8,7 @@ mod layer;
 mod pad;
 mod paint;
 mod power;
+mod role;
 
 pub use assist::{GRAB_TIP, MOUSE_OFF_TIP, RCLICK_TIP};
 pub use board::{CYCLE_ICON, LIST_ICON, board_view};
@@ -17,17 +18,18 @@ pub use layer::{
 pub use pad::{PadState, SCROLL_OFF_TIP, pad_state};
 pub use paint::{DIM, Paint, paint};
 pub use power::POWER_OFF_TIP;
+pub use role::FILL_OFF_TIP;
 
 use crate::geom::{Area, KeyBox};
 use crate::langkey::{LangView, lang_view, lone};
 use crate::latch::Latches;
 use crate::layer::Layer;
 use crate::legend::{Legend, LegendMods, is_empty, legend, mark_names, shown, typed};
-use crate::panel::{LangList, ListView, list_view};
+use crate::panel::{LangList, ListView, Panel, list_view};
 use crate::settings::{Corner, LangKey};
 use crate::spec::{KeyKind, Nav, Role};
 use kx_module_api::ports::{
-    AssistChanged, KeyName, LangLabel, LayoutTable, Point, PowerChanged, ScrollChanged,
+    AssistChanged, FillLive, KeyName, LangLabel, LayoutTable, Point, PowerChanged, ScrollChanged,
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -143,7 +145,7 @@ pub struct KeyState {
     pub blank: Option<&'static str>,
     /// Latched, or Caps Lock while it is on.
     pub on: bool,
-    /// It does nothing now: a later key, a mouse-assist or Power key while its module is not running, or the
+    /// It does nothing now: a later key, a mouse-assist, Power or fill key while its module is not running, or the
     /// Shortcuts key with nothing to show.
     pub dim: bool,
     /// Its colours now, by palette token.
@@ -168,6 +170,8 @@ pub struct StateView {
     pub dpad: PadState,
     /// The shortcuts layer and its page.
     pub layer: LayerState,
+    /// A panel is open and its line takes the keys, so that line draws its caret and ring (ADR-0040).
+    pub aimed: bool,
 }
 
 /// Shows no field: its legends and lights tell the latches and Caps Lock, as `Latches` hides them.
@@ -218,8 +222,12 @@ pub struct StateInput<'a> {
     pub layer: &'a Layer,
     /// The power module's state, as the bus last told it.
     pub power: PowerChanged,
-    /// The clipboard panel is open, as the bus last told it.
-    pub clip: bool,
+    /// The vault module's state, as the bus last told it.
+    pub fill: FillLive,
+    /// Our panel open now, as the bus last told it.
+    pub panel: Option<Panel>,
+    /// The open panel's line takes the keys.
+    pub aimed: bool,
 }
 
 /// Every key's state, the language key, the list, the place, the pad and the layer.
@@ -241,13 +249,14 @@ pub fn state_view(i: &StateInput<'_>) -> StateView {
         at: i.at,
         dpad: pad_state(i.scroll),
         layer: layer::layer_state(i.layer),
+        aimed: i.aimed,
     }
 }
 
 /// Key `k`'s legends, light, paint and tip with the legend modifiers `mods` on a layout written right to left when
 /// `rtl`; the language key says so when one layout, or none, is installed.
 fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> KeyState {
-    if let Some(state) = role_state(i, k) {
+    if let Some(state) = role::role_state(i, k) {
         return state;
     }
     let chars = k.sc.filter(|_| k.role == Role::Char);
@@ -267,7 +276,8 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
     let on = match k.role {
         Role::Latch(r) => i.latches.is_on(r.latch),
         Role::Caps => i.caps,
-        Role::Clip => i.clip,
+        Role::Clip => i.panel == Some(Panel::Clip),
+        Role::Fill => i.panel == Some(Panel::Fill),
         _ => false,
     };
     let still = k.role == Role::Lang && lone(i.list.len());
@@ -276,21 +286,6 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
         paint: paint(k.kind, on),
         tip: still.then_some(LONE_TIP),
         ..KeyState::default()
-    }
-}
-
-/// Key `k`'s state when its role alone sets it: a later key, a mouse mode, the Shortcuts key or the Power key.
-fn role_state(i: &StateInput<'_>, k: &KeyBox) -> Option<KeyState> {
-    match k.role {
-        Role::Later => Some(KeyState {
-            dim: true,
-            paint: DIM,
-            ..KeyState::default()
-        }),
-        Role::Assist(a) => Some(assist::assist_state(i.assist, a, k.kind)),
-        Role::Layer => Some(layer::layer_key(i.layer, k.kind)),
-        Role::Power => Some(power::power_key(i.power, k.kind)),
-        _ => None,
     }
 }
 

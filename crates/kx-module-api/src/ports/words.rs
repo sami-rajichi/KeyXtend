@@ -1,9 +1,10 @@
 //! Word prediction's bus events (ADR-0033): typed text travels only to modules holding `ReadFocusedText`, and every
 //! text here prints redacted.
 
+use super::PanelLine;
 use crate::{Capability, Event, Redacted};
 
-/// The gate of every event here but `PressesWanted` and `PressesAsk`.
+/// The gate of every event here but `PressesWanted`, `PanelPressesWanted` and `PressesAsk`.
 const GATE: Option<Capability> = Some(Capability::ReadFocusedText);
 
 /// One piece of what the keyboard typed.
@@ -55,12 +56,25 @@ impl Event for TypingMode {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// To the keyboard: send `TypingMode` again, for a prediction module that starts after the keyboard.
+/// To the keyboard: send `TypingMode` and `AimedLine` again, for a prediction module that starts after the keyboard.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct TypingModeAsk;
 
 impl Event for TypingModeAsk {
     const NAME: &'static str = "typing-mode-ask";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the keyboard: the line prediction follows, the open panel's while it is aimed at, else `PanelLine::None`. It
+/// goes out in order with `Typed`, and is the one event that brings prediction a panel's text (ADR-0040).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AimedLine {
+    /// The line, with a search's text.
+    pub line: PanelLine,
+}
+
+impl Event for AimedLine {
+    const NAME: &'static str = "aimed-line";
     const CAPABILITY: Option<Capability> = GATE;
 }
 
@@ -74,6 +88,8 @@ pub struct TypeWord {
     pub erase: u16,
     /// What to type then; the keyboard types nothing when it holds a hidden mark (`is_hidden`).
     pub text: Redacted<String>,
+    /// It was offered for a panel's search line: it goes there or nowhere, never to the app (ADR-0040).
+    pub line: bool,
 }
 
 impl TypeWord {
@@ -104,6 +120,8 @@ pub enum ChipKind {
     Domain,
     /// A known email.
     Email,
+    /// An email saved in Quick-fill's notebook, which prediction never stores or learns.
+    Saved,
     /// Opens the email list.
     More,
     /// Brings back the word just forgotten.
@@ -137,8 +155,8 @@ pub enum Lane {
 /// The email list's shown page.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ListPage {
-    /// The emails on this page.
-    pub items: Vec<Redacted<String>>,
+    /// The emails on this page, each a known or saved email chip.
+    pub items: Vec<Chip>,
     /// This page's index.
     pub page: u16,
     /// How many pages the list has.
@@ -229,8 +247,20 @@ impl Event for PressesWanted {
     const NAME: &'static str = "presses-wanted";
 }
 
-/// Asks the prediction module to send `PressesWanted` again, for a mouse module that starts later; it carries nothing,
-/// so it needs no capability.
+/// From the keyboard, while a panel is open: the mouse module tells each press, as one outside our windows takes the
+/// aim away (ADR-0040); it carries nothing, so it needs no capability.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PanelPressesWanted {
+    /// Tell each press.
+    pub on: bool,
+}
+
+impl Event for PanelPressesWanted {
+    const NAME: &'static str = "panel-presses-wanted";
+}
+
+/// Asks the prediction module and the keyboard to send their wish for presses again, for a mouse module that starts
+/// later; it carries nothing, so it needs no capability.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PressesAsk;
 

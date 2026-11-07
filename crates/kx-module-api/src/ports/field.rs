@@ -157,6 +157,27 @@ pub fn last_words(text: &str, max: u8) -> &str {
     &text[from..]
 }
 
+/// `text` after its first word, which a cut at the read cap may have split; empty when it holds one word.
+#[must_use]
+pub fn after_first(text: &str) -> &str {
+    text.find(char::is_whitespace).map_or("", |at| &text[at..])
+}
+
+/// The end of `text` one read of at most `chars` characters takes: all of it when it fits, else its last `chars`
+/// characters without the first word they may split.
+#[must_use]
+pub fn read_end(text: &str, chars: usize) -> &str {
+    let skip = text.chars().count().saturating_sub(chars);
+    if skip == 0 {
+        return text;
+    }
+    let at = text
+        .char_indices()
+        .nth(skip)
+        .map_or(text.len(), |(at, _)| at);
+    after_first(&text[at..])
+}
+
 /// The field watch service; it needs `ReadFocusedText`.
 pub struct FieldWatchKey;
 

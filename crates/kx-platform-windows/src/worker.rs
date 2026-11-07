@@ -1,7 +1,7 @@
-//! The media worker's start on Windows (ADR-0004, ADR-0034 decision 5): `keyxtend-worker.exe` beside us, from a
-//! restricted copy of our token (no privilege, Administrators deny-only, no uiAccess, Medium integrity), inheriting
-//! only its two pipe ends, in a job that caps its memory and ends it with us. The neutral host in
-//! `kx_platform::pictures` drives it.
+//! The worker's start on Windows, for the media and vault jobs alike (ADR-0004, ADR-0034 decision 5, ADR-0038
+//! decision 6): `keyxtend-worker.exe` beside us, from a restricted copy of our token (no privilege, Administrators
+//! deny-only, no uiAccess, Medium integrity), inheriting only its two pipe ends, in a job that caps its memory and ends
+//! it with us. The neutral host in `kx_platform::worker` drives it.
 
 mod access;
 mod job;
@@ -15,7 +15,7 @@ use std::os::windows::io::{AsRawHandle, OwnedHandle};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use kx_platform::pictures::{Child, Launch, Piped, SpawnError, Spawner};
+use kx_platform::worker::{Child, Frames, Launch, Piped, SpawnError, Spawner};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
 
@@ -54,10 +54,10 @@ impl WinSpawner {
     }
 }
 
-impl Spawner for WinSpawner {
-    type Worker = Piped<WinChild>;
+impl<F: Frames> Spawner<F> for WinSpawner {
+    type Worker = Piped<WinChild, F>;
 
-    fn spawn(&self, launch: &Launch) -> Result<Piped<WinChild>, SpawnError> {
+    fn spawn(&self, launch: &Launch) -> Result<Piped<WinChild, F>, SpawnError> {
         let (input, output, child) = self.start(launch)?;
         Piped::new(input, output, child)
     }

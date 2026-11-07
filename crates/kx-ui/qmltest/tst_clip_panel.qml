@@ -110,9 +110,11 @@ Item {
         function test_the_search_line_shows_its_hint_then_the_typed_text_and_never_takes_focus() {
             const box = open("list");
             const search = button(box, "clip.search");
+            box.aimed = true;
             compare(Kit.texts(search, box.view.search.hint).length, 1, "the hint while empty");
+            compare(Board.all(search, o => o.visible && o.caret === true).length, 1, "beside the caret, as it alone says what the line does");
             const v = Kit.view("en", "list");
-            v.search = { text: "مرحبا", hint: v.search.hint, arabic: true, rtl: true };
+            v.search = { text: "مرحبا", hint: v.search.hint, arabic: true, rtl: true, caret: 5 };
             box.view = v;
             const typed = Kit.texts(search, "مرحبا")[0];
             verify(typed, "the typed text");
@@ -120,6 +122,22 @@ Item {
             compare(typed.effectiveHorizontalAlignment, Text.AlignRight);
             compare(Kit.texts(search, v.search.hint).length, 0);
             verify(box.flags & Qt.WindowDoesNotAcceptFocus, "letters come from our keyboard, never focus");
+            box.visible = false;
+        }
+
+        // Only an aimed line looks as if it takes the letters: caret, underline and ring together (ADR-0040).
+        function test_only_an_aimed_search_draws_its_caret_and_ring() {
+            const box = open("list");
+            const search = button(box, "clip.search");
+            const lines = () => Board.all(search, o => o.visible && o.caret === true).length;
+            compare(lines(), 0, "no caret");
+            verify(Qt.colorEqual(search.border.color, NL.lk.palette.pop_line), "no ring");
+            compare(search.border.width, NL.lk.shape.line.px);
+            compare(Kit.texts(search, box.view.search.hint).length, 1, "its hint still says what it does");
+            box.aimed = true;
+            compare(lines(), 1, "the caret");
+            verify(Qt.colorEqual(search.border.color, NL.lk.palette.ring), "the ring");
+            compare(search.border.width, NL.lk.shape.press.ring_px * box.s);
             box.visible = false;
         }
 
@@ -178,6 +196,34 @@ Item {
             verify(button(box, "clip.open-folder").enabled, "Open folder stays");
             compare(box.height, plain, "the panel keeps its size");
             box.visible = false;
+        }
+
+        // A run that saves nothing hands the hub no folder, so Open folder shows disabled and a click opens nothing.
+        function test_open_folder_shows_disabled_when_the_run_keeps_no_folder() {
+            const box = open("list");
+            verify(box.view.opens, "the hub's views have a folder");
+            const v = Kit.view("en", "list");
+            v.opens = false;
+            box.view = v;
+            const folder = button(box, "clip.open-folder");
+            verify(!folder.enabled && folder.opacity < 1, "it looks off");
+            mouseClick(folder);
+            compare(acts(box), []);
+            box.visible = false;
+        }
+
+        // Readers hear why Open folder cannot act, in the keyboard's language; one that can act needs no reason.
+        function test_a_disabled_open_folder_tells_readers_why_in_each_language() {
+            for (const tag of ["en", "fr", "ar"]) {
+                const v = Kit.view(tag, "list");
+                verify(v.words.noFolder.length > 0, tag + " words it");
+                const box = open("list", tag);
+                compare(button(box, "clip.open-folder").Accessible.description, "", tag + " can act");
+                v.opens = false;
+                box.view = v;
+                compare(button(box, "clip.open-folder").Accessible.description, v.words.noFolder, tag);
+                box.visible = false;
+            }
         }
 
         function test_a_press_on_the_panel_is_seen_and_still_acts() {

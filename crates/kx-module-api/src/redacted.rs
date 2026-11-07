@@ -1,14 +1,20 @@
-//! A wrapper that keeps sensitive values out of logs and debug output.
+//! A wrapper that keeps sensitive values out of logs and debug output, and the secrets that are also wiped.
 
 use std::fmt;
+use zeroize::Zeroizing;
 
 /// What a `Redacted` value prints in place of its content.
 pub const REDACTED_MARKER: &str = "‹redacted›";
 
+/// A secret text, such as a saved value or a password: it never prints, and it is wiped when dropped.
+pub type Secret = Redacted<Zeroizing<String>>;
+/// Secret bytes, such as a box's opened part: they never print, and they are wiped when dropped.
+pub type SecretBytes = Redacted<Zeroizing<Vec<u8>>>;
+
 /// A sensitive value (typed text, clipboard, secret, transcript) that never prints itself.
 ///
 /// It has no serde impls, so it cannot be serialized by accident.
-#[derive(Clone, PartialEq, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub struct Redacted<T>(T);
 
 impl<T> Redacted<T> {
@@ -121,6 +127,24 @@ mod tests {
     fn from_wraps_the_value() {
         let r: Redacted<u8> = 7.into();
         assert_eq!(*r.expose(), 7);
+    }
+
+    #[test]
+    fn a_secret_prints_only_the_marker_and_is_held_to_be_wiped() {
+        let secret: Secret = Redacted::new(Zeroizing::new(SECRET.to_owned()));
+        let held: &Zeroizing<String> = secret.expose();
+        assert_eq!(held.as_str(), SECRET);
+        assert_eq!(format!("{secret:?}{secret}"), REDACTED_MARKER.repeat(2));
+        let bytes: SecretBytes = Redacted::new(Zeroizing::new(SECRET.as_bytes().to_vec()));
+        assert_eq!(format!("{bytes:?}"), REDACTED_MARKER);
+    }
+
+    #[test]
+    fn a_plain_number_stays_copy_and_still_prints_only_the_marker() {
+        let caret = Redacted::new(7_u32);
+        let (first, second) = (caret, caret);
+        assert_eq!(first, second);
+        assert_eq!(format!("{first:?}"), REDACTED_MARKER);
     }
 
     #[test]

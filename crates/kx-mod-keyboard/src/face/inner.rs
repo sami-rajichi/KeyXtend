@@ -1,23 +1,29 @@
 //! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list, the
-//! shortcuts layer, and the mouse, scroll, power and clipboard modules' states.
+//! shortcuts layer, the mouse, scroll, power and vault modules' states, our open panel and a fill waiting its gap.
 
+mod aim;
 mod assist;
 mod clip;
+mod fill;
 mod fit;
 mod held;
 mod layer;
+mod lines;
 mod list;
 mod pad;
+mod panels;
 mod power;
 mod words;
 
 pub(super) use held::Went;
+pub(super) use lines::ToPredict;
+pub(super) use words::WordTo;
 
 use super::STATE;
 use crate::geom::{Area, KeyBox};
 use crate::langkey::Turn;
 use crate::layer::Layer;
-use crate::panel::LangList;
+use crate::panel::{LangList, Panel};
 use crate::place::Placer;
 use crate::repeat::Repeat;
 use crate::run::{Ports, Typing};
@@ -25,19 +31,19 @@ use crate::settings::{KeyboardSettings, LangKey};
 use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
+use aim::Aim;
+use fill::Waiting;
+use held::timed;
 use kx_module_api::ports::{
-    AssistChanged, FaceAction, FaceError, FaceReply, LayoutId, Layouts, Point, PowerChanged,
-    Screen, ScrollChanged, ShortcutInfo,
+    AssistChanged, FaceAction, FaceError, FaceReply, FillLive, LayoutId, Layouts, Point,
+    PowerChanged, Screen, ScrollChanged, ShortcutInfo,
 };
 use kx_module_api::{Mono, SettingsHandle};
+use lines::Lines;
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Everything a click can change.
-#[allow(
-    clippy::struct_excessive_bools,
-    reason = "Each flag is one fact the pointer, a redraw or another module tells apart; they change separately."
-)]
 pub(super) struct Inner {
     ports: Ports,
     settings: KeyboardSettings,
@@ -70,10 +76,18 @@ pub(super) struct Inner {
     known: Vec<ShortcutInfo>,
     /// The power module's state, as the bus last told it.
     power: PowerChanged,
-    /// The clipboard panel is open, as the bus last told it.
-    clip: bool,
+    /// The vault module's state, as the bus last told it.
+    vault: FillLive,
+    /// Our panel that takes the keys while aimed at, as the bus last told: the one opened last, so one at a time.
+    open: Option<Panel>,
+    /// Whether the open panel's line is aimed at, and which line it shows.
+    aim: Aim,
+    /// The line prediction heard last, and what waits behind a change.
+    lines: Lines,
     /// The bus changed what the state shows since the last state view, so the next relabel redraws it.
     unshown: bool,
+    /// A fill waiting its gap after a Tab; our keys reach only the open panel meanwhile.
+    fill: Option<Waiting>,
     /// The module runs, so a picked word may type.
     running: bool,
 }
@@ -120,8 +134,12 @@ impl Inner {
             layer,
             known,
             power: PowerChanged::OFF,
-            clip: false,
+            vault: FillLive::OFF,
+            open: None,
+            aim: Aim::default(),
+            lines: Lines::default(),
             unshown: false,
+            fill: None,
             running: false,
         }
     }
@@ -211,7 +229,8 @@ impl Inner {
             | FaceAction::LetGo { .. }
             | FaceAction::Leave
             | FaceAction::Pad { .. }
-            | FaceAction::PadHover { .. } => Ok(FaceReply::default()),
+            | FaceAction::PadHover { .. }
+            | FaceAction::AimPanel => Ok(FaceReply::default()),
         }
     }
 
@@ -277,7 +296,9 @@ impl Inner {
             scroll: self.scroll,
             layer: &self.layer,
             power: self.power,
-            clip: self.clip,
+            fill: self.vault,
+            panel: self.open,
+            aimed: self.aimed(),
         })
     }
 }
@@ -288,10 +309,4 @@ fn notice(key: &'static str, reply: FaceReply) -> FaceReply {
         notice: Some(key),
         ..reply
     }
-}
-
-/// A held key's repeats at the delay and pace of `settings`.
-fn timed(settings: &KeyboardSettings) -> Repeat<String> {
-    let delay = Duration::from_millis(settings.repeat_delay_ms);
-    Repeat::new(delay, Duration::from_millis(settings.repeat_every_ms))
 }

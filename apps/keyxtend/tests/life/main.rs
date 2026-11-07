@@ -2,8 +2,9 @@
 //! ends the UI, a second copy's commands reach the running one, the kernel's thread keeps going after a refusal, the
 //! language shown always matches the legends, the pointer hook, the scroll target, the power dialog, the box watch and
 //! the sealed store reach only the modules holding their gate, the shortcuts reach the keyboard's layer, the pad
-//! scrolls, the Power key opens the dialog, prediction opens the language in front, and a copy goes from the
-//! clipboard history's panel back into the app through the keyboard.
+//! scrolls, the Power key opens the dialog, prediction opens the language in front, a copy goes from the clipboard
+//! history's panel back into the app through the keyboard, Quick-fill types a saved login through the keyboard and
+//! keeps what it saved, and a hidden run writes nothing in its data folder.
 
 #![allow(
     clippy::unwrap_used,
@@ -13,6 +14,7 @@
 mod clip;
 #[path = "../common/fakes.rs"]
 mod fakes;
+mod hidden;
 mod lang;
 mod pick;
 mod power;
@@ -22,6 +24,7 @@ mod scroll;
 mod second;
 mod ships;
 mod stop;
+mod vault;
 
 use keyxtend::boot::{Boot, modules};
 use keyxtend::drain;
@@ -35,7 +38,7 @@ use rig::{Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 8] = [
+const SHIPPED: [ModuleId; 9] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
@@ -43,6 +46,7 @@ const SHIPPED: [ModuleId; 8] = [
     kx_mod_power::ID,
     kx_mod_predict::ID,
     kx_mod_clipboard::ID,
+    kx_mod_vault::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -51,7 +55,7 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_the_layouts_keyboard_mouse_scroll_power_predict_clipboard_and_ui_modules() {
+fn the_app_ships_layouts_keyboard_mouse_scroll_power_predict_clipboard_vault_and_ui() {
     let boot = Rig::new().load();
     let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);
@@ -86,7 +90,7 @@ fn every_module_starts_types_and_stops_when_the_user_quits() {
         heard,
         ..
     } = boot;
-    let thread = drain::spawn(kernel, Arc::clone(&hub), requests).unwrap();
+    let thread = drain::spawn(kernel, Arc::clone(&hub), requests, None).unwrap();
     assert!(hub.quit(), "the tray's Quit reaches the kernel's thread");
     thread.join().unwrap();
     assert!(wakes.lock().unwrap().contains(&Wake::End), "the UI ends");
@@ -116,9 +120,9 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     boot.start().unwrap();
     let wakes = watch(&boot.hub);
     let settings = KernelSettings {
-        disabled: Vec::new(),
         log_level: "warn".to_owned(),
         log_max_mb: 1,
+        ..KernelSettings::from_defaults().unwrap()
     };
     let files = rig.files();
     let log = open(&settings, &files).unwrap();
@@ -128,7 +132,7 @@ fn a_refused_try_again_is_logged_and_quit_still_ends_the_ui() {
     drop(send);
     let hub = Arc::clone(&boot.hub);
     tracing::dispatcher::with_default(&log.dispatch, || {
-        drain::drain(boot.kernel, &hub, &requests);
+        drain::drain(boot.kernel, &hub, &requests, None);
     });
     let text = std::fs::read_to_string(&files.log).unwrap();
     assert!(text.contains("try again was refused"), "{text}");

@@ -9,7 +9,7 @@ use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
 use kx_mod_keyboard::spec::NEXT_ID;
 use kx_mod_keyboard::view::{
-    EMPTY_NAME, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
+    EMPTY_NAME, FILL_OFF_TIP, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
     SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
@@ -35,6 +35,7 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
         SCROLL_OFF_TIP,
         NO_SHORTCUTS_TIP,
         POWER_OFF_TIP,
+        FILL_OFF_TIP,
         KEYS_TIP,
         COMBO_JOIN,
         COMBO_THEN,

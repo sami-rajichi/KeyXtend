@@ -1,5 +1,6 @@
-//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images for the
-//! keyboard at normal rights, one request at a time over stdin and stdout.
+//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images, and
+//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, for the keyboard at normal rights,
+//! one request at a time over stdin and stdout.
 #![forbid(unsafe_code)]
 
 mod args;
@@ -7,9 +8,10 @@ mod args;
 mod fixture;
 mod media;
 mod serve;
+mod vault;
 
 use args::Job;
-use kx_ipc::{CLEAN_EXIT, REFUSED_EXIT};
+use kx_ipc::{Ask, CLEAN_EXIT, IpcError, REFUSED_EXIT, VaultAsk};
 use std::fmt::Display;
 use std::io;
 use std::process::ExitCode;
@@ -20,6 +22,7 @@ const NAME: &str = env!("CARGO_BIN_NAME");
 fn main() -> ExitCode {
     match args::parse(std::env::args_os().skip(1)) {
         Ok(Job::Media { max_pixels }) => media_job(max_pixels),
+        Ok(Job::Vault) => vault_job(),
         Err(e) => fail(&e),
     }
 }
@@ -28,12 +31,27 @@ fn main() -> ExitCode {
 fn media_job(max_pixels: u64) -> ExitCode {
     let draw = |codec, bytes: &[u8], side| media::draw(codec, bytes, side, max_pixels);
     let make = |png: &[u8], max_bytes| media::make_dib(png, max_bytes, max_pixels);
-    match serve::answer(
+    let work = |ask: Ask<'static>| media::reply(ask, draw, make);
+    exit(serve::answer(
         &mut io::stdin().lock(),
         &mut io::stdout().lock(),
-        draw,
-        make,
-    ) {
+        work,
+    ))
+}
+
+/// Answers vault asks on stdin and stdout until goodbye or the end of input.
+fn vault_job() -> ExitCode {
+    let work = |ask: VaultAsk<'static>| vault::reply(ask);
+    exit(serve::answer(
+        &mut io::stdin().lock(),
+        &mut io::stdout().lock(),
+        work,
+    ))
+}
+
+/// The exit code after a job's loop.
+fn exit(outcome: Result<(), IpcError>) -> ExitCode {
+    match outcome {
         Ok(()) => ExitCode::from(CLEAN_EXIT),
         Err(e) => fail(&e),
     }

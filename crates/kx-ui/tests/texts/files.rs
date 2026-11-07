@@ -4,6 +4,7 @@ use crate::all;
 use crate::windows::TITLES;
 use fluent_bundle::FluentResource;
 use fluent_bundle::concurrent::FluentBundle;
+use kx_module_api::NoticeAsk;
 use kx_module_api::keys::ALL_KEYS;
 use kx_theme::ModeChoice;
 use kx_theme::Themes;
@@ -19,7 +20,7 @@ use kx_ui::i18n::keys::{
 use std::collections::BTreeSet;
 
 /// Module ids whose names the texts hold today; the app checks the real list (P3 Task 19).
-const MODULES: [&str; 9] = [
+const MODULES: [&str; 10] = [
     "clipboard",
     "kernel",
     "keyboard",
@@ -29,11 +30,12 @@ const MODULES: [&str; 9] = [
     "predict",
     "scroll",
     "ui",
+    "vault",
 ];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];
 /// Keys the keyboard view names beside its board ids.
-const VIEW_KEYS: [&str; 10] = [
+const VIEW_KEYS: [&str; 11] = [
     "key.dpad",
     "key.empty",
     "key.layer-next",
@@ -42,6 +44,7 @@ const VIEW_KEYS: [&str; 10] = [
     "tip.scroll-off",
     "tip.no-shortcuts",
     "tip.power-off",
+    "tip.fill-off",
     "tip.rclick",
     "tip.grab",
 ];
@@ -128,6 +131,10 @@ fn every_notice_and_view_key_has_its_text() {
         TRAY_QUIT,
         RETRY,
         OK,
+        NoticeAsk::YES_NO.yes,
+        NoticeAsk::YES_NO.no,
+        NoticeAsk::CHECK_LATER.yes,
+        NoticeAsk::CHECK_LATER.no,
         LIST_JOIN,
         LIST_MORE,
         LIST_COUNT,

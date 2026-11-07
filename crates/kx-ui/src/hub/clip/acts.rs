@@ -1,6 +1,7 @@
 //! The kinds of click QML names to `Hub::clip_act`, and the `ClipAct` each one sends.
 
 use crate::i18n::keys::CLIP_FILTERS;
+use kx_module_api::Redacted;
 use kx_module_api::ports::ClipAct;
 use std::cmp::Ordering;
 
@@ -28,6 +29,16 @@ pub const PREVIEW: &str = "preview";
 pub const BACK: &str = "back";
 /// Close the panel.
 pub const CLOSE: &str = "close";
+/// Put the search's caret at the argument, in UTF-16 units of its text.
+pub const CARET: &str = "caret";
+/// A notch of the mouse wheel: it turns a page as `PAGE` does, silently.
+pub const WHEEL: &str = "wheel";
+
+/// True for a click that plays no key sound: a caret, whose line takes the aim silently, and the wheel, as the scroll pad's
+/// page plays none.
+pub(super) fn silent(kind: &str) -> bool {
+    matches!(kind, CARET | WHEEL)
+}
 
 /// Why a click sends nothing.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -61,7 +72,7 @@ pub(super) fn act_of(
             let at = usize::try_from(arg).map_err(|_| Dropped::Bad)?;
             ClipAct::Filter(CLIP_FILTERS.get(at).ok_or(Dropped::Bad)?.0)
         }
-        PAGE => match arg.cmp(&0) {
+        PAGE | WHEEL => match arg.cmp(&0) {
             Ordering::Less => ClipAct::Page { back: true },
             Ordering::Greater => ClipAct::Page { back: false },
             Ordering::Equal => return Err(Dropped::Bad),
@@ -75,6 +86,9 @@ pub(super) fn act_of(
         PREVIEW => ClipAct::Preview,
         BACK => ClipAct::Back,
         CLOSE => ClipAct::Close,
+        CARET => ClipAct::Caret {
+            at: Redacted::new(u32::try_from(arg).map_err(|_| Dropped::Bad)?),
+        },
         _ => return Err(Dropped::Bad),
     })
 }

@@ -75,16 +75,18 @@ Item {
         return null;
     }
 
+    // Restarted by hand: a repeating Qt timer can keep its old pace when its interval changes as it fires.
     Timer {
         interval: churn.plan.step_ms
-        running: churn.step < churn.steps
-        repeat: true
+        running: churn.steps > 0
         onTriggered: {
             churn.act(churn.step);
             interval = churn.after(churn.step);
             churn.step++;
             if (churn.step === churn.steps)
                 churn.win.keyboard.churned();
+            else
+                restart();
         }
     }
 }

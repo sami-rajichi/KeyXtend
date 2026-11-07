@@ -14,9 +14,12 @@ pub const MOVES: [&str; 19] = [
 ];
 /// Every animation the clipboard panel plays, by what it moves.
 pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];
-/// The tables in the file that hold the faces' moves and the clipboard panel's, as errors name them.
+/// Every animation Quick-fill plays, by what it moves.
+pub const FILL_MOVES: [&str; 5] = ["highlight", "swap", "turn", "sheet", "reveal"];
+/// The tables in the file that hold the faces' moves, the clipboard panel's and Quick-fill's, as errors name them.
 const MOVES_TABLE: &str = "moves";
 const CLIP_TABLE: &str = "clip";
+const FILL_TABLE: &str = "fill";
 
 /// The file as written.
 #[derive(Deserialize)]
@@ -25,6 +28,7 @@ struct MotionFile {
     curves: BTreeMap<String, [f32; 4]>,
     moves: BTreeMap<String, Move>,
     clip: BTreeMap<String, Move>,
+    fill: BTreeMap<String, Move>,
     amount: Amounts,
     ring: RingFile,
 }
@@ -75,6 +79,8 @@ pub struct Motion {
     pub moves: BTreeMap<String, Timed>,
     /// The clipboard panel's, by name in `CLIP_MOVES`.
     pub clip: BTreeMap<String, Timed>,
+    /// Quick-fill's, by name in `FILL_MOVES`.
+    pub fill: BTreeMap<String, Timed>,
     /// How far they go.
     pub amount: Amounts,
     /// The hold ring, the same with reduced motion since its waves show the hold's time.
@@ -103,24 +109,28 @@ pub(crate) fn parse(text: &str) -> Result<Motions, String> {
     let f: MotionFile = toml::from_str(text).map_err(|e| e.to_string())?;
     check_names(MOVES_TABLE, &f.moves, &MOVES)?;
     check_names(CLIP_TABLE, &f.clip, &CLIP_MOVES)?;
+    check_names(FILL_TABLE, &f.fill, &FILL_MOVES)?;
     for (name, c) in &f.curves {
         check_curve(name, c)?;
     }
     f.amount.check()?;
     let ring = f.ring.ready(&f.curves)?;
-    let (moves, clip) = (
+    let (moves, clip, quick) = (
         all_timed(MOVES_TABLE, &f.moves, &f.curves)?,
         all_timed(CLIP_TABLE, &f.clip, &f.curves)?,
+        all_timed(FILL_TABLE, &f.fill, &f.curves)?,
     );
     let reduced = Motion {
         moves: still(&moves),
         clip: still(&clip),
+        fill: still(&quick),
         amount: f.amount,
         ring,
     };
     let full = Motion {
         moves,
         clip,
+        fill: quick,
         amount: f.amount,
         ring,
     };

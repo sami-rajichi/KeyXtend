@@ -1,12 +1,14 @@
 //! Between the app and the UI: the Qt thread's waker and the keyboard's mode, both handed over to rebuilt windows, a
-//! second copy's commands, Try again, and the one quit path.
+//! second copy's commands, Try again, the answers to asking notices, and the one quit path.
 //! Quit is the last request: every request is sent under the hub's lock, and the sender is dropped after Quit.
 
-use super::{Hub, Request, Wake, Waker, json};
+use super::notices::retry_of;
+use super::{Hub, Live, Request, Wake, Waker, json};
 use kx_module_api::ports::FaceAction;
+use kx_module_api::{Notice, NoticeAnswered};
 use kx_platform::ui::Command;
 use serde::Serialize;
-use std::sync::Arc;
+use std::sync::{Arc, MutexGuard};
 
 /// How the user left the keyboard, which windows made again keep.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -133,16 +135,43 @@ impl Hub {
         sent
     }
 
-    /// Try again on shown notice `id`: it closes, and the app restarts its module; false when it offers none.
-    /// It sends under the lock, which never blocks on an unbounded queue, so no Retry lands after Quit.
+    /// Try again on shown notice `id`: it closes and the app restarts its module, or one that asks answers No; false
+    /// when no module restarts. It sends under the lock, which never blocks on an unbounded queue, so no Retry lands
+    /// after Quit.
     pub fn retry(&self, id: u64) -> bool {
         let mut live = self.lock();
-        let Some(module) = live.notices.close(id) else {
+        let Some(notice) = live.notices.close(id) else {
             return false;
         };
-        live.requests
-            .as_ref()
-            .is_some_and(|r| r.send(Request::Retry(module)).is_ok())
+        if notice.ask.is_some() {
+            self.answered(live, notice, false);
+            return false;
+        }
+        retry_of(&notice).is_some_and(|module| {
+            let requests = live.requests.as_ref();
+            requests.is_some_and(|r| r.send(Request::Retry(module)).is_ok())
+        })
+    }
+
+    /// Yes or No on shown notice `id`: it closes, and one that asks tells its answer; false for a plain or unknown one.
+    pub fn answer(&self, id: u64, yes: bool) -> bool {
+        let mut live = self.lock();
+        let Some(notice) = live.notices.close(id).filter(|n| n.ask.is_some()) else {
+            return false;
+        };
+        self.answered(live, notice, yes);
+        true
+    }
+
+    /// Sends `notice`'s answer to the app's queue under `live`, the hub's lock, as Try again does; then, with the lock
+    /// let go, on the bus for the module that raised it.
+    fn answered(&self, live: MutexGuard<'_, Live>, notice: Notice, yes: bool) {
+        if let Some(requests) = &live.requests {
+            let notice = notice.clone();
+            let _ = requests.send(Request::Answered { notice, yes });
+        }
+        drop(live);
+        self.send_answer(&NoticeAnswered { notice, yes });
     }
 
     /// Wakes the UI with `what`, or keeps it until the waker is set; an `End` is noted under the same lock.

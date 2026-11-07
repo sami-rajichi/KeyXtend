@@ -1,4 +1,5 @@
 {
+  "aimed": false,
   "at": null,
   "dpad": {
     "dim": true,
@@ -1303,7 +1304,7 @@
       "third": "",
       "third_ar": false,
       "third_mark": false,
-      "tip": null
+      "tip": "tip.fill-off"
     },
     "grab": {
       "blank": null,

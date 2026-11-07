@@ -26,7 +26,7 @@ fn a_password_box_locks_the_lane_learns_nothing_and_is_never_read() {
     rig.typed("hel");
     assert_eq!(rig.lane().lane, Lane::Locked);
     rig.typed("lo ");
-    rig.typed("sami@x.org ");
+    rig.typed("alex@x.org ");
     rig.stop();
     assert_eq!(
         uses(&rig, "hello"),
@@ -49,7 +49,7 @@ fn an_unknown_box_or_none_suggests_but_learns_nothing_and_is_never_read() {
         rig.typed("hel");
         assert_eq!(rig.words(), ["hello", "help"], "{kind:?}");
         rig.typed("lo ");
-        rig.typed("sami@x.org ");
+        rig.typed("alex@x.org ");
         rig.stop();
         assert_eq!(
             uses(&rig, "hello"),
@@ -78,7 +78,7 @@ fn a_text_box_is_read_for_its_last_words_and_learned_from() {
     assert_eq!(rig.fakes.field.before_calls(), reads + 1, "one read");
     assert_eq!(rig.words(), ["hello", "help"], "the read word gets chips");
     rig.typed("lo ");
-    rig.typed("sami@x.org ");
+    rig.typed("alex@x.org ");
     rig.stop();
     assert_eq!(
         uses(&rig, "hello"),

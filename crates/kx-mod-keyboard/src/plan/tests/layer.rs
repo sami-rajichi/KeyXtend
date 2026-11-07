@@ -1,15 +1,18 @@
-//! The plans of the Shortcuts, Power and clipboard keys and the layer's own keys, which never show a shortcut id.
+//! The plans of the Shortcuts, Power, clipboard and Quick-fill keys and the layer's own keys, which never show a
+//! shortcut id.
 
 use super::*;
 use crate::layer::LayerKey;
 use kx_module_api::ports::ShortcutId;
 
 #[test]
-fn the_shortcuts_power_and_clip_keys_ask_the_face() {
+fn the_shortcuts_power_clip_and_fill_keys_ask_the_face() {
     let g = Given::new(false).latch(Latch::Ctrl, CTRL);
     assert_eq!(g.plan(Role::Layer, None), Plan::Layer);
     assert_eq!(g.plan(Role::Power, None), Plan::Power);
     assert_eq!(g.plan(Role::Clip, None), Plan::Clip);
+    assert_eq!(g.plan(Role::Fill, None), Plan::Fill);
+    assert_eq!(format!("{:?}", Plan::Fill), "Fill");
 }
 
 #[test]

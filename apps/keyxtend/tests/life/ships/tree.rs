@@ -1,5 +1,6 @@
-//! The uiAccess app decodes no media (ADR-0004, ADR-0034): tidy bans `png` and `fdeflate` from its tree, and no crate
-//! it builds with, its tests' included, reaches them or the media worker, which alone decodes images.
+//! The uiAccess app decodes no media and opens no box (ADR-0004, ADR-0034, ADR-0038): tidy bans `png`, `fdeflate`,
+//! `age` and `keepass` from its tree, and no crate it builds with, its tests' included, reaches them or the worker,
+//! which alone decodes images, opens boxes and reads `KeePass` files.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -11,6 +12,8 @@ const ROOT: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../Carg
 const APP: &str = env!("CARGO_PKG_NAME");
 /// The image decoders only the worker may use.
 const DECODERS: [&str; 2] = ["png", "fdeflate"];
+/// The formats of the backup box and of `KeePass`, which only the worker's vault job may use.
+const BOX_FORMATS: [&str; 2] = ["age", "keepass"];
 
 /// Each package's dependency names, its versions merged: the lock names one as `name`, `name version` or more.
 fn graph() -> BTreeMap<String, BTreeSet<String>> {
@@ -29,9 +32,8 @@ fn graph() -> BTreeMap<String, BTreeSet<String>> {
     graph
 }
 
-/// Every package the app reaches, itself included.
-fn reached() -> BTreeSet<String> {
-    let graph = graph();
+/// Every package the app reaches in `graph`, itself included.
+fn reached(graph: &BTreeMap<String, BTreeSet<String>>) -> BTreeSet<String> {
     let mut seen = BTreeSet::from([APP.to_owned()]);
     let mut queue = vec![APP.to_owned()];
     while let Some(name) = queue.pop() {
@@ -52,7 +54,7 @@ fn metadata(path: &[&str]) -> toml::Value {
 }
 
 #[test]
-fn tidy_bans_the_image_decoders_from_the_app() {
+fn tidy_bans_the_image_decoders_and_the_box_formats_from_the_app() {
     let banned = metadata(&["tidy", "banned_media"]);
     let banned: Vec<&str> = banned
         .as_array()
@@ -60,18 +62,21 @@ fn tidy_bans_the_image_decoders_from_the_app() {
         .iter()
         .filter_map(toml::Value::as_str)
         .collect();
-    assert!(DECODERS.iter().all(|d| banned.contains(d)), "{banned:?}");
+    let formats = DECODERS.iter().chain(&BOX_FORMATS);
+    assert!(formats.copied().all(|d| banned.contains(&d)), "{banned:?}");
     assert_eq!(metadata(&["tidy", "app"]).as_str(), Some(APP));
 }
 
 #[test]
-fn nothing_the_app_builds_with_reaches_a_decoder_or_the_worker() {
-    let reached = reached();
+fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_or_the_worker() {
+    let graph = graph();
+    let reached = reached(&graph);
     let worker = metadata(&["stage", "worker"]);
     let worker = worker.as_str().unwrap();
-    assert!(graph().contains_key(worker), "the lock lists {worker}");
+    assert!(graph.contains_key(worker), "the lock lists {worker}");
     assert!(!reached.contains(worker), "{APP} depends on {worker}");
-    for decoder in DECODERS {
-        assert!(!reached.contains(decoder), "{APP} reaches {decoder}");
+    for banned in DECODERS.iter().chain(&BOX_FORMATS) {
+        assert!(graph.contains_key(*banned), "the lock lists {banned}");
+        assert!(!reached.contains(*banned), "{APP} reaches {banned}");
     }
 }

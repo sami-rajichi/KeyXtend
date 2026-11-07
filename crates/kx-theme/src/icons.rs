@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 mod clip;
+mod fill;
 
 pub use clip::ClipIcons;
+pub use fill::FillIcons;
 
 /// The top bar's buttons, the resize corner and the bubble.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -108,12 +110,16 @@ pub struct WordsIcons {
     pub domain: String,
     /// A known email chip.
     pub email: String,
+    /// An email saved in Quick-fill's notebook, as a chip or a list row.
+    pub saved: String,
     /// The More chip, which opens the email list.
     pub more: String,
     /// The Undo chip, which brings back the word just forgotten.
     pub undo: String,
     /// The password box note.
     pub locked: String,
+    /// The password box's Quick-fill chip.
+    pub fill: String,
     /// The menu button.
     pub menu: String,
     /// Forget a word, and the mark on each chip in forget mode.
@@ -130,13 +136,15 @@ pub struct WordsIcons {
 
 impl WordsIcons {
     /// Every name with where it is used, such as `words.menu`.
-    fn named(&self) -> [(&'static str, &str); 11] {
+    fn named(&self) -> [(&'static str, &str); 13] {
         [
             ("words.domain", &self.domain),
             ("words.email", &self.email),
+            ("words.saved", &self.saved),
             ("words.more", &self.more),
             ("words.undo", &self.undo),
             ("words.locked", &self.locked),
+            ("words.fill", &self.fill),
             ("words.menu", &self.menu),
             ("words.forget", &self.forget),
             ("words.pause", &self.pause),
@@ -173,6 +181,8 @@ pub struct Icons {
     pub words: WordsIcons,
     /// The clipboard panel.
     pub clip: ClipIcons,
+    /// Quick-fill.
+    pub fill: FillIcons,
 }
 
 impl Icons {
@@ -210,6 +220,7 @@ impl Icons {
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
         let panels = self.words.named().into_iter().chain(self.clip.named());
+        let panels = panels.chain(self.fill.named());
         let keys = by_id("keys", &self.keys);
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)

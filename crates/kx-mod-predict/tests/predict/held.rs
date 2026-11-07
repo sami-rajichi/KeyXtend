@@ -61,7 +61,7 @@ fn a_learner_of_a_newer_format_or_another_language_is_set_aside_and_later_saves_
 
 #[test]
 fn emails_of_a_newer_format_are_set_aside_and_later_saves_resume() {
-    let known = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
+    let known = Emails::new(&["alex@x.org".to_owned()], usize::MAX).to_bytes();
     let planted = newer(known, email::MAGIC.len(), email::VERSION);
     let name = emails_blob().unwrap();
     let (at, bytes) = (name.clone(), planted.clone());
@@ -127,7 +127,7 @@ fn learned_words_whose_load_fails_with_io_are_never_written_that_run() {
 
 #[test]
 fn emails_whose_load_fails_with_io_are_never_written_that_run() {
-    let planted = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
+    let planted = Emails::new(&["alex@x.org".to_owned()], usize::MAX).to_bytes();
     let name = emails_blob().unwrap();
     let (at, bytes) = (name.clone(), planted.clone());
     let rig = typed_and_stopped(

@@ -192,6 +192,25 @@ fn text_stops_at_the_first_nul() {
 }
 
 #[test]
+fn a_read_reserves_exactly_the_bytes_its_text_takes() {
+    let units = |s: &str| s.encode_utf16().collect::<Vec<_>>();
+    let ascii = "x".repeat(1000);
+    let read = text_of(&units(&ascii), usize::MAX).unwrap();
+    assert_eq!((read.len(), read.capacity()), (1000, 1000));
+    let mut mixed = units("aب€\u{1F600}");
+    mixed.push(0xD800);
+    let read = text_of(&mixed, usize::MAX).unwrap();
+    assert_eq!(read, "aب€\u{1F600}\u{FFFD}");
+    assert_eq!(read.capacity(), read.len());
+}
+
+#[test]
+fn a_lone_surrogate_reads_as_the_replacement_character() {
+    let lone = [0xD800, u16::from(b'a')];
+    assert_eq!(text_of(&lone, 2).as_deref(), Some("\u{FFFD}a"));
+}
+
+#[test]
 fn text_past_the_cap_is_refused() {
     let units = |s: &str| s.encode_utf16().collect::<Vec<_>>();
     assert_eq!(text_of(&units("abc"), 2), None);

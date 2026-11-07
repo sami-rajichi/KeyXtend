@@ -152,13 +152,9 @@ fn reset_args(keys: &[&str]) -> Args {
 
 /// A notice about the module, with the module argument before `extra`.
 fn notice(key: &'static str, id: ModuleId, extra: Args) -> Notice {
-    let mut all = vec![(args::MODULE, NoticeArg::Text(id.to_string()))];
-    all.extend(extra);
-    Notice {
-        key,
-        module: Some(id),
-        args: all,
-    }
+    let mut notice = Notice::about(key, id);
+    notice.args.extend(extra);
+    notice
 }
 
 impl Read {

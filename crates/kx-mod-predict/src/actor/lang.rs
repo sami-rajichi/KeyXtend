@@ -81,13 +81,14 @@ impl Actor {
         self.tell(seed);
     }
 
-    /// Says the module is here: takes the box's kind and asks for the language in front and the typing mode, as the
-    /// layouts and the keyboard may have started first.
+    /// Says the module is here: takes the box's kind and asks for the language in front, the typing mode and
+    /// Quick-fill's state, as the layouts, the keyboard and the vault may have started first.
     pub fn begin(&mut self) {
         if let Some(run) = self.ports.field.as_ref() {
             self.kind = run.kind();
         }
         self.publish(&LayoutAsk);
         self.publish(&TypingModeAsk);
+        self.ask_saved();
     }
 }

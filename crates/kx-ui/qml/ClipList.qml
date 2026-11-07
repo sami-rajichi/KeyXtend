@@ -118,7 +118,7 @@ Item {
             icon: list.lk.icons.clip.title
             base: list.res.icons
             ext: list.res.ext
-            px: list.lk.shape.clip.empty_px * list.s
+            px: list.lk.shape.panel.empty_px * list.s
             tint: list.lk.palette.pop_muted
         }
         Label {

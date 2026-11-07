@@ -8,7 +8,7 @@ Window {
     id: box
 
     // The app's Ui object, the look, fonts, icons and texts, the keyboard size, the panel's view (`Ui.clip`), rows per
-    // page, and whether the keyboard's language reads right to left.
+    // page, whether the keyboard's language reads right to left, and whether its line takes the letters (ADR-0040).
     required property var ui
     required property var lk
     required property var res
@@ -16,14 +16,19 @@ Window {
     required property var view
     required property int rows
     required property bool rtl
+    property bool aimed: false
 
+    // A press on the panel, unless it follows another inside the double-click time, or a reader's on a line, aims the
+    // keys at it, which only the keyboard knows (ADR-0040).
+    signal aiming
     // A press landed on the panel, which closes the tray menu; the press still reaches the part under it.
     signal touched
     // The display scale changed, so its place, set in the old Qt units, is stale.
     signal rescaled
 
-    // The box whose fade, rise and scale the shadow follows.
+    // The box whose fade, rise and scale the shadow follows, and what counts the wheel's steps.
     readonly property alias body: body
+    readonly property alias wheel: wheel
     readonly property var pn: lk.shape.panel
     readonly property var c: lk.shape.clip
     readonly property real radius: lk.look.window_radius_px * pn.radius_share
@@ -33,8 +38,8 @@ Window {
     // page and language keeps the panel's size.
     readonly property real titleH: Math.max(latinLine.implicitHeight, arabicLine.implicitHeight)
     readonly property real metaH: Math.max(latinMeta.implicitHeight, arabicMeta.implicitHeight)
-    readonly property real lines: 2 * titleH + c.meta_px[1] * s + metaH
-    readonly property real rowH: Math.max(c.tick_px[0] * s, c.thumb_px[1] * s, lines) + 2 * c.row_pad_px * s
+    readonly property real lines: 2 * titleH + pn.hint_px[1] * s + metaH
+    readonly property real rowH: Math.max(c.tick_px[0] * s, pn.tile_px[1] * s, lines) + 2 * pn.row_pad_px * s
 
     // The panel holds the page mark, so the scroll pad pages it while it shows (ADR-0029); the mark goes with the window.
     property bool paged: false
@@ -55,6 +60,14 @@ Window {
     // Sends a click with the round of the view it was drawn from, so the hub drops a tick on rows that moved since.
     function act(kind, arg) {
         ui.clipAct(kind, arg, view.round);
+    }
+    // A notch of the wheel: what the shown page's own page buttons do but silently, and nothing past either end or on a
+    // question. A preview pages itself and tells the hub nothing, so it stays silent too.
+    function turn(by) {
+        if (previewing)
+            preview.turn(by);
+        else if (!asking && view.page.at + by >= 0 && view.page.at + by < view.page.count)
+            act(names.acts.wheel, by);
     }
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
@@ -84,6 +97,12 @@ Window {
         border.width: box.lk.contrast ? box.lk.shape.line.px : 0
         border.color: box.lk.palette.pop_line
 
+        PanelWheel {
+            id: wheel
+            notch: box.pn.wheel_notch
+            rest: box.pn.wheel_rest_s
+            onTurn: by => box.turn(by)
+        }
         Column {
             id: col
             onPositioningComplete: box.unit = height / box.s
@@ -105,17 +124,23 @@ Window {
                 Item {
                     anchors.fill: parent
                     visible: !box.asking && !box.previewing
-                    ClipSearch {
+                    PanelLine {
                         id: seek
                         x: box.c.filters_pad_px[1] * box.s
                         y: box.c.filters_pad_px[0] * box.s
                         width: col.width - 2 * x
-                        search: box.view.search
+                        said: box.view.search
+                        hint: box.view.search.hint
+                        icon: box.lk.icons.clip.search
+                        at: box.view.search.caret
+                        takes: box.aimed
+                        search: true
                         rtl: box.rtl
                         lk: box.lk
                         res: box.res
                         s: box.s
                         uid: box.res.uid(names.group, names.ids.search)
+                        onPlaced: at => box.act(names.acts.caret, at)
                     }
                     ClipFilters {
                         id: chips
@@ -156,6 +181,7 @@ Window {
                     onAct: (kind, arg) => box.act(kind, arg)
                 }
                 ClipPreview {
+                    id: preview
                     anchors.fill: parent
                     visible: box.previewing
                     shown: box.view.preview
@@ -185,6 +211,8 @@ Window {
                 text: box.view.room || ""
                 note: box.view.note
                 folder: box.view.words.openFolder
+                opens: box.view.opens
+                noFolder: box.view.words.noFolder
                 names: names
                 lk: box.lk
                 res: box.res
@@ -194,6 +222,7 @@ Window {
         }
         PressWatch {
             onTouched: box.touched()
+            onAlone: box.aiming()
         }
         // Hidden lines laid out as the rows' labels are, which round each line up, so a row always fits them.
         Label {
@@ -215,14 +244,14 @@ Window {
             visible: false
             text: " "
             font.family: box.res.fam.latin
-            font.pixelSize: box.c.meta_px[0] * box.s
+            font.pixelSize: box.pn.hint_px[0] * box.s
         }
         Label {
             id: arabicMeta
             visible: false
             text: " "
             font.family: box.res.fam.arabic
-            font.pixelSize: box.c.meta_px[0] * box.s
+            font.pixelSize: box.pn.hint_px[0] * box.s
         }
     }
 

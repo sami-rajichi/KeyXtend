@@ -1,6 +1,6 @@
-//! The worker's reduced rights, read from outside: its token is restricted, with no uiAccess and Medium integrity, it
-//! holds none of our inheritable handles and has no console host, and its job caps it, bars it from shared UI and ends
-//! it when asked or let go.
+//! The worker's reduced rights, read from outside: its token is restricted, with no uiAccess and Medium integrity, for
+//! both jobs, it holds none of our inheritable handles and has no console host, and its job caps it at each job's own
+//! memory, bars it from shared UI and ends it when asked or let go.
 
 use super::*;
 use crate::worker::access::{self, Rights};
@@ -126,6 +126,12 @@ fn the_worker_runs_restricted_without_ui_access_at_medium_integrity() {
     let worker = spawn();
     let rights = access::rights(raw(&worker.child().process)).unwrap();
     assert_eq!(rights, RESTRICTED);
+    let (_input, _output, vault) = spawner().start(&Launch::vault()).unwrap();
+    let rights = access::rights(raw(&vault.process)).unwrap();
+    assert_eq!(
+        rights, RESTRICTED,
+        "the vault job has the media job's rights"
+    );
 }
 
 #[test]
@@ -186,10 +192,17 @@ fn the_worker_starts_no_console_host() {
 }
 
 #[test]
+fn the_job_caps_each_job_alone_in_it() {
+    for launch in [Launch::media(&CFG), Launch::vault()] {
+        let (_input, _output, child) = spawner().start(&launch).unwrap();
+        let mb = usize::try_from(launch.memory_mb).unwrap();
+        capped(&child, mb * MIB);
+    }
+}
+
+/// Checks that `child` runs alone in its job, under `bytes` of memory and the job's limits.
 #[allow(unsafe_code, reason = "Reads the limits and members of our own job.")]
-fn the_job_caps_the_worker_alone_in_it() {
-    let worker = spawn();
-    let child = worker.child();
+fn capped(child: &WinChild, bytes: usize) {
     let mut limits = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
     let size = size32::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
     let mut inside = false.into();
@@ -209,8 +222,7 @@ fn the_job_caps_the_worker_alone_in_it() {
     let basic = limits.BasicLimitInformation;
     assert_eq!(basic.LimitFlags.0 & LIMITS.0, LIMITS.0);
     assert_eq!(basic.ActiveProcessLimit, ALONE);
-    let mb = usize::try_from(CFG.memory_mb).unwrap();
-    assert_eq!(limits.ProcessMemoryLimit, mb * MIB);
+    assert_eq!(limits.ProcessMemoryLimit, bytes);
 }
 
 #[test]

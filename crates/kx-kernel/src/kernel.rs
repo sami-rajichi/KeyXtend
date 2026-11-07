@@ -27,7 +27,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 use thiserror::Error;
 
-pub use settings::{KernelSettings, SPEC};
+pub use settings::{KEPT_KEY, KernelSettings, SPEC};
 
 /// The kernel's own settings section id; no module may take it.
 pub const KERNEL: ModuleId = ModuleId::new("kernel");
@@ -53,6 +53,9 @@ pub enum KernelError {
     /// The call is not allowed in the kernel's current phase, which it names.
     #[error("not allowed while the kernel is in its {0:?} phase")]
     WrongPhase(Phase),
+    /// A run that saves nothing keeps this module off until it ends (ADR-0037).
+    #[error("module {0} stays off in this run")]
+    KeptOff(ModuleId),
     /// The switched-off list changes only through `set_enabled`, so states and file agree.
     #[error("the disabled list changes only through set_enabled")]
     SwitchKey,
@@ -101,6 +104,8 @@ pub struct Kernel {
     plan: Plan,
     /// The settings, loaded by `load`, and the notice path, both shared with every settings handle.
     store: Shared,
+    /// The modules kept off in a run that reads and saves no settings file; `None` in a normal run.
+    fresh: Option<Vec<ModuleId>>,
     phase: Phase,
 }
 
@@ -118,8 +123,20 @@ impl Kernel {
             platform_ids: BTreeSet::new(),
             slots: Vec::new(),
             plan: order::plan(&[], &BTreeSet::new()),
+            fresh: None,
             phase: Phase::Setup,
         }
+    }
+
+    /// Makes this run start from the defaults, read no settings file and save none, with `off` switched off for the
+    /// run alone (ADR-0037).
+    ///
+    /// # Errors
+    /// `WrongPhase` after setup, as the settings are read once.
+    pub fn fresh(&mut self, off: &[ModuleId]) -> Result<(), KernelError> {
+        self.expect(Phase::Setup)?;
+        self.fresh = Some(off.to_vec());
+        Ok(())
     }
 
     /// Adds a module before load; it waits `Pending` for its turn.

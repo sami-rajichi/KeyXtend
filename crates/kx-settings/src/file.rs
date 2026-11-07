@@ -78,27 +78,18 @@ pub enum SaveError {
     },
 }
 
-/// A notice with only its key, about no module.
-pub(crate) fn notice(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: None,
-        args: Vec::new(),
-    }
-}
-
 /// What to use when the settings file gave nothing: the previous copy, else an empty table.
 fn fallback(files: &Files, damaged: bool) -> Loaded {
     let (table, outcome, notices) = match read_table(&files.previous) {
         Ok(table) => (
             table,
             Outcome::Restored,
-            vec![notice(keys::SETTINGS_RESTORED)],
+            vec![Notice::plain(keys::SETTINGS_RESTORED)],
         ),
         Err(_) if damaged => (
             toml::Table::new(),
             Outcome::Defaults,
-            vec![notice(keys::SETTINGS_DEFAULTS)],
+            vec![Notice::plain(keys::SETTINGS_DEFAULTS)],
         ),
         Err(_) => (toml::Table::new(), Outcome::Fresh, Vec::new()),
     };
@@ -149,7 +140,7 @@ pub fn load(files: &Files) -> Loaded {
         Err(Problem::Locked) => (
             toml::Table::new(),
             Outcome::Locked,
-            vec![notice(keys::SETTINGS_LOCKED)],
+            vec![Notice::plain(keys::SETTINGS_LOCKED)],
         ),
     };
     Loaded {

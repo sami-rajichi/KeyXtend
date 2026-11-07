@@ -24,7 +24,9 @@ use kx_module_api::ports::{
     PointerPressed, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPeek, ScrollStop, ScrollTap,
     ScrollTargetKey,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
+use kx_module_api::{
+    Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
+};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -97,7 +99,7 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
         // None of these events needs a capability, so none can be refused.
         let _ = bus.publish(&ScrollChanged::OFF);
         let _ = bus.publish(&ScrollAimed::NONE);
-        let _ = bus.publish(&actor::notice(keys::SCROLL_STOPPED));
+        let _ = bus.publish(&Notice::about(keys::SCROLL_STOPPED, ID));
         resume_unwind(panic);
     }
 }

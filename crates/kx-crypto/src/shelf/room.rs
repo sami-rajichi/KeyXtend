@@ -19,6 +19,6 @@ pub trait DiskRoom: Send + Sync {
 }
 
 /// The nearest folder at or above `path` that exists, for asking about its drive; `path` when none does.
-pub(super) fn nearest(path: &Path) -> &Path {
+pub(crate) fn nearest(path: &Path) -> &Path {
     path.ancestors().find(|p| p.is_dir()).unwrap_or(path)
 }

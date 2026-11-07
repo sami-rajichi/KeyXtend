@@ -17,6 +17,8 @@ const SHIPPED_P5: &str = include_str!("../../kx-gates-p5.toml");
 const SHIPPED_P7: &str = include_str!("../../kx-gates-p7.toml");
 /// The shipped settings P8 adds.
 const SHIPPED_P8: &str = include_str!("../../kx-gates-p8.toml");
+/// The shipped settings P9 adds.
+const SHIPPED_P9: &str = include_str!("../../kx-gates-p9.toml");
 /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
 const WORKSPACE: &str = include_str!("../../../../Cargo.toml");
 
@@ -33,6 +35,7 @@ fn each_shipped_settings_file_stays_within_the_size_rule() {
         (P5_FILE, SHIPPED_P5),
         (P7_FILE, SHIPPED_P7),
         (P8_FILE, SHIPPED_P8),
+        (P9_FILE, SHIPPED_P9),
     ] {
         let lines = i64::try_from(text.lines().count()).expect("fits");
         assert!(
@@ -192,7 +195,7 @@ fn every_relative_path_stays_inside_the_repo() {
     paths.extend(cfg.apps.values().map(|app| cfg.program(&app.exe)));
     let mut strings = Vec::new();
     for shipped in [
-        SHIPPED, SHIPPED_P3, SHIPPED_P4, SHIPPED_P5, SHIPPED_P7, SHIPPED_P8,
+        SHIPPED, SHIPPED_P3, SHIPPED_P4, SHIPPED_P5, SHIPPED_P7, SHIPPED_P8, SHIPPED_P9,
     ] {
         dotted(&toml::from_str(shipped).expect("parses"), &mut strings);
     }

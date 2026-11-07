@@ -7,13 +7,15 @@ use crate::Rig;
 use crate::logs::{lines_of, warnings_of};
 use kx_module_api::ports::{ClipAct, ClipView, Filter};
 use kx_ui::clip_acts::{
-    BACK, CLOSE, DELETE, DELETE_ALL, FILTER, INSERT, NO, PAGE, PIN, PREVIEW, TICK, YES,
+    BACK, CARET, CLOSE, DELETE, DELETE_ALL, FILTER, INSERT, NO, PAGE, PIN, PREVIEW, TICK, WHEEL,
+    YES,
 };
 use std::collections::BTreeSet;
 
 /// Every kind QML names.
-const KINDS: [&str; 12] = [
-    TICK, FILTER, PAGE, INSERT, PIN, DELETE, DELETE_ALL, YES, NO, PREVIEW, BACK, CLOSE,
+const KINDS: [&str; 14] = [
+    TICK, FILTER, PAGE, INSERT, PIN, DELETE, DELETE_ALL, YES, NO, PREVIEW, BACK, CLOSE, CARET,
+    WHEEL,
 ];
 /// A title that appears nowhere else.
 const SECRET: &str = "zebra-quartz";
@@ -40,6 +42,8 @@ fn each_kind_sends_its_act_and_a_tick_the_round_qml_drew() {
         (TICK, 0, ClipAct::Tick { round: 9, row: 0 }),
         (PAGE, -1, ClipAct::Page { back: true }),
         (PAGE, 1, ClipAct::Page { back: false }),
+        (WHEEL, -1, ClipAct::Page { back: true }),
+        (WHEEL, 1, ClipAct::Page { back: false }),
         (INSERT, 0, ClipAct::Insert),
         (PIN, 0, ClipAct::Pin),
         (DELETE, 0, ClipAct::Delete),
@@ -49,6 +53,8 @@ fn each_kind_sends_its_act_and_a_tick_the_round_qml_drew() {
         (PREVIEW, 0, ClipAct::Preview),
         (BACK, 0, ClipAct::Back),
         (CLOSE, 0, ClipAct::Close),
+        (CARET, 0, ClipAct::Caret { at: 0.into() }),
+        (CARET, 4, ClipAct::Caret { at: 4.into() }),
     ];
     for (kind, arg, want) in cases {
         rig.hub.clip_act(kind, arg, 9);
@@ -83,6 +89,8 @@ fn a_bad_click_sends_nothing_and_warns_once_without_content() {
         (FILTER, order),
         (FILTER, -1),
         (PAGE, 0),
+        (WHEEL, 0),
+        (CARET, -1),
     ];
     let mut warned = Vec::new();
     let lines = lines_of(|| {
@@ -95,6 +103,22 @@ fn a_bad_click_sends_nothing_and_warns_once_without_content() {
     assert!(acts.take().is_empty());
     assert_eq!(warned.len(), bad.len(), "{warned:?}");
     assert!(lines.iter().all(|l| !l.contains(SECRET)), "{lines:?}");
+}
+
+/// No log line holds a caret's number: a bad place warns without it, and a caret goes whatever round it names.
+#[test]
+fn a_bad_caret_click_warns_without_its_number() {
+    let rig = Rig::new();
+    let (bus, acts, _subs) = heard(&rig);
+    shown(&rig, &bus, &acts, page(9, vec![row(7, "a")]));
+    let mut warned = Vec::new();
+    let lines = lines_of(|| {
+        warned = warnings_of(|| rig.hub.clip_act(CARET, -5, 9));
+        rig.hub.clip_act(CARET, 5, -1);
+    });
+    assert_eq!(warned.len(), 1, "{warned:?}");
+    assert_eq!(acts.take(), [ClipAct::Caret { at: 5.into() }]);
+    assert!(lines.iter().all(|l| !l.contains('5')), "{lines:?}");
 }
 
 /// A tick that races the panel's close finds no view kept: a late click, dropped quietly like an older view's.
@@ -131,10 +155,11 @@ fn a_tick_from_an_older_view_is_dropped_quietly_and_other_clicks_still_go() {
     );
 }
 
-/// Each click sounds as a key does, a bad one too, and so does Open folder.
+/// Each click but a caret's and the wheel's sounds as a key does, a bad one too, and so does Open folder; a caret's aim is
+/// silent.
 #[cfg(feature = "qt")]
 #[test]
-fn each_click_plays_the_key_sound_once() {
+fn each_click_but_a_carets_or_the_wheels_plays_the_key_sound_once() {
     use crate::sound::{assert_plays, rig_with, takes};
     use kx_theme::sounds::Event;
     let (rig, _face, _host) = rig_with(|_| {});
@@ -147,6 +172,25 @@ fn each_click_plays_the_key_sound_once() {
     rig.hub.clip_act("mystery", 0, 1);
     rig.hub.open_folder();
     let volume = kx_ui::UiSettings::from_defaults().unwrap().sound_volume;
-    let want = takes(Event::Key, KINDS.len() + 2, volume);
+    let want = takes(Event::Key, KINDS.len() - 2 + 2, volume);
     assert_plays(&rig.speaker.take_plays(), &want);
+}
+
+/// The wheel turns a page silently, as the scroll pad does, and a page button still sounds.
+#[cfg(feature = "qt")]
+#[test]
+fn the_wheel_pages_silently_and_a_page_button_sounds() {
+    use crate::sound::{assert_plays, rig_with, takes};
+    use kx_theme::sounds::Event;
+    let (rig, _face, _host) = rig_with(|_| {});
+    let (bus, acts, _subs) = heard(&rig);
+    shown(&rig, &bus, &acts, page(1, vec![row(7, "a")]));
+    rig.speaker.take_plays();
+    rig.hub.clip_act(WHEEL, 1, 1);
+    assert!(rig.speaker.take_plays().is_empty(), "no sound for a notch");
+    assert_eq!(acts.take(), [ClipAct::Page { back: false }]);
+    rig.hub.clip_act(PAGE, 1, 1);
+    let volume = kx_ui::UiSettings::from_defaults().unwrap().sound_volume;
+    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 1, volume));
+    assert_eq!(acts.take(), [ClipAct::Page { back: false }]);
 }

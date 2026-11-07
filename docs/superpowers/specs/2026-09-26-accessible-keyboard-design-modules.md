@@ -125,6 +125,10 @@ Decided with the owner on 2026-10-24, from the research report on keyboard predi
   - Known emails are the ones typed with the keyboard, encrypted and removable; the vault (P9) adds its saved emails with a key icon.
   - An email is learned when the user leaves it: a space, Enter or Tab after it, a domain chip that completes it, a click outside the keyboard, or focus on another box (owner, 2026-10-26).
   - An email chip adds no space.
+- **Panel search lines** (owner, 2026-11-06; ADR-0040): chips show while typing in the clipboard's and Quick-fill's search lines, as in any web text box.
+  - While a search line is aimed at, prediction reads its text as it reads a box, whatever box waits in the app behind, and a picked chip goes into the line, never to the app.
+  - Nothing typed there is ever learned, words and emails alike. Its text stays in memory, and is never stored or logged.
+  - Name, label, value and password lines send no text, and the lane stays empty while one is aimed at.
 - **Password boxes** (UI Automation `IsPassword`, with the Win32 password style as a fallback): no chips and no learning; the chip lane shows a lock and a short note.
   - Filling passwords belongs to the vault (P9).
   - Holding a key no longer fills anything: @ and P repeat like every letter (§4.6, owner, 2026-10-24).
@@ -164,9 +168,11 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 - **Panel** (the mock-up's layout plus a preview page, owner):
   - The side block's clipboard key opens and closes it with one click, on every platform; the history shortcut below is a second way. It opens above the keyboard (§3.4).
   - Header: icon, title, "kept N days", Delete all and close.
-  - **Search line:** while the panel is open, letters clicked on our keyboard go into it instead of the app.
+  - **Search line:** while it is aimed at, letters clicked on our keyboard go into it instead of the app (§3.4, ADR-0040).
+    - Opening the panel and a click on the line aim at it; a click outside our windows, the front window changing or a paste takes the aim away, and only an aimed line draws the caret and the ring.
     - It matches the first `search_chars` characters of each text (1,000; builder's call), file names and app names, ignoring case, accents, harakat, tatweel and the forms of alif (as §6 matches).
     - Backspace erases, and Esc clears it first, then closes the panel.
+    - The top row shows word chips for it, and a chip goes into it. While it holds text, Space types a space at its caret (owner, ADR-0040). Nothing typed there is learned (§6).
     - No AI.
   - Filters: All, Text (with links), Images, Files, Media.
   - One list, 5 rows per page (§3.3), with ▲/▼ and "n of m".
@@ -179,7 +185,7 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
   - **Preview page:** the whole entry: long text paged, never scrolled, with its character count; an image large; files with their paths. It has Back, Pin, Delete and Insert.
   - A storage line, "History 182 MB of 1 GB · 412 GB free on D:", and Open folder, which shows the history's folder in the system's file manager.
   - An empty history asks the user to copy something.
-  - Keys, from a key list per panel in the keyboard (§3.3): ↑↓ move the highlight, ←→ switch filters, Space ticks, Enter inserts the ticked rows (the highlighted one when none is ticked), Esc as above. The scroll pad turns pages.
+  - Keys, from a key list per panel in the keyboard (§3.3): ↑↓ move the highlight, ←→ move the search's caret or switch filters when it is empty, Space types a space in a search with text or ticks when it is empty, Enter inserts the ticked rows (the highlighted one when none is ticked), Esc as above. The scroll pad and the mouse wheel turn pages (ADR-0040).
   - Its look follows the keyboard's theme in light, dark and high contrast, and every text passes the theme's contrast check (§3.5).
 - **Insert:**
   - Text goes in as copied, with its formatting. Images and files go in as Explorer or a browser would hand them: the module sets the clipboard formats, then the keyboard sends the platform's paste shortcut. Files are always pasted as a copy, even when they were cut.
@@ -220,17 +226,10 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 
 ## 8. Other modules
 
-### 8.1 Quick-fill vault
+### 8.1 Quick-fill
 
-- **Tabs:** Emails (with one-click domain chips), Passwords, Names. Each is a paged list.
-- Password rows have two actions: **User** fills the username, **Password** fills the password.
-- **Passwords are locked** until unlocked with **Windows Hello / PIN** (`UserConsentVerifier`), Touch ID on macOS, or the system password on Linux. The vault locks again after an idle timeout.
-- **Storage:** one encrypted file (§9.1). Filled text never goes to the clipboard, the prediction learner or the logs.
-- **Export:**
-  - an encrypted `age` file (open format);
-  - optionally a plain Bitwarden-compatible CSV, behind an explicit warning.
-- **Import:** the same two formats.
-- The settings view gets a nicer "profile" visual in a later round. The v1 layout matches mock-up v2.
+- Decided with the owner on 2026-11-01 (P9): a notebook of saved values of any kind, filled at the caret in one click, with no unlock step and a locked backup box. The whole section is [`2026-11-01-quick-fill-design.md`](2026-11-01-quick-fill-design.md) (ADR-0038), with the one-data-folder rule (ADR-0037).
+- Its search line shows word chips as §6 says, and its form and password lines send prediction nothing (ADR-0040).
 
 ### 8.2 Voice typing
 
@@ -300,7 +299,7 @@ Opens the **system's own** power dialog; it never shuts down directly.
   - key repeat: on or off, its delay and its speed, each explained in plain words (§4.6);
   - clipboard retention;
   - voice engine, model, forced language and keys;
-  - vault export and import;
+  - Quick-fill's Backup page, the same as in the panel (§8.1);
   - privacy and data deletion;
   - about and licences.
 - Settings are versioned TOML that holds only the user's changes, in the data folder (ADR-0015), with migrations (ARCHITECTURE.md). An "Open my settings folder" button shows where the file is.

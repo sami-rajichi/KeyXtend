@@ -1475,8 +1475,8 @@
       "y": 127.0
     },
     {
-      "checkable": false,
-      "dim": true,
+      "checkable": true,
+      "dim": false,
       "dots": false,
       "h": 31.0,
       "icon": "keys.fill",
@@ -1489,7 +1489,7 @@
       "row": 4,
       "side": true,
       "steps": [],
-      "tip": "tip.later",
+      "tip": null,
       "w": 40.26,
       "x": 543.0,
       "y": 158.0

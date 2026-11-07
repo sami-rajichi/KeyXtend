@@ -2,7 +2,7 @@
 //! The layout of the app in front comes from `WinLayouts::foreground`, the one reader of it.
 
 #[cfg(windows)]
-pub use os::{app, app_of, focus, focus_of, path_of, thread_layout};
+pub use os::{app, app_of, focus, focus_of, path_of, thread_layout, window};
 
 /// The separators in a Windows program path.
 const PATH_SEPARATORS: [char; 2] = ['\\', '/'];
@@ -12,6 +12,12 @@ const PATH_SEPARATORS: [char; 2] = ['\\', '/'];
 pub fn app_name(path: &str) -> Option<String> {
     let name = path.rsplit(PATH_SEPARATORS).next()?;
     (!name.is_empty()).then(|| name.to_owned())
+}
+
+/// A window handle's `address` as a number to compare, never used as a handle; a null handle has none.
+#[cfg(windows)]
+fn number(address: usize) -> Option<u64> {
+    u64::try_from(address).ok().filter(|&n| n != 0)
 }
 
 #[cfg(windows)]
@@ -28,7 +34,7 @@ mod os {
     };
     use windows::core::PWSTR;
 
-    use super::app_name;
+    use super::{app_name, number};
 
     /// Longest program path read, in UTF-16 units: Windows' own path limit.
     const PATH_CAP: usize = 32_767;
@@ -63,6 +69,14 @@ mod os {
         } else {
             window
         })
+    }
+
+    /// A number naming the window in front, only so a change can be seen; `None` with none in front.
+    #[must_use]
+    #[allow(unsafe_code, reason = "A plain window query.")]
+    pub fn window() -> Option<u64> {
+        // SAFETY: a plain query that reads no title or text; none in front gives null, which `number` refuses.
+        number(unsafe { GetForegroundWindow() }.0.addr())
     }
 
     /// The keyboard layout of `window`'s thread; `None` when the window is gone.
@@ -130,6 +144,14 @@ mod tests {
         for path in ["", r"C:\Tools\", "C:/"] {
             assert_eq!(app_name(path), None, "{path:?}");
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_window_has_a_number_and_a_null_one_has_none() {
+        assert_eq!(number(0), None);
+        assert_eq!(number(42), Some(42));
+        assert_ne!(number(42), number(43), "two windows differ");
     }
 
     #[cfg(windows)]

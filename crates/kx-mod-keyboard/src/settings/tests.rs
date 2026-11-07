@@ -201,7 +201,13 @@ fn the_relabel_time_has_a_floor_and_a_ceiling() {
     let low = i64::try_from(*RELABEL_MS.start()).unwrap();
     let top = i64::try_from(*RELABEL_MS.end()).unwrap();
     assert_eq!(low, FLOOR_MS);
-    let relabel = |ms: i64| validate_as::<KeyboardSettings>(&with("relabel_ms", ms));
+    // The fill bound has room for even the slowest relabel, so only the relabel time is checked here.
+    let late = top * i64::try_from(LATE_FACTOR).unwrap();
+    let relabel = |ms: i64| {
+        let mut t = with("relabel_ms", ms);
+        t.insert("fill_late_ms".to_owned(), late.into());
+        validate_as::<KeyboardSettings>(&t)
+    };
     assert_eq!(relabel(low), Ok(()));
     assert!(invalid(&with("relabel_ms", low - 1)));
     assert_eq!(relabel(top), Ok(()));
@@ -251,5 +257,6 @@ fn the_saved_place_holds_only_once_placed() {
 
 mod cap;
 mod gap;
+mod late;
 mod pages;
 mod repeat;

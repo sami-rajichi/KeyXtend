@@ -27,6 +27,8 @@ key_apps = ["scrcpy.exe"]
 text_cap = 256
 # The pause after each Backspace of a picked word, in ms, so apps that drop fast key bursts take every key.
 erase_gap_ms = 10
+# How late a Quick-fill part after a Tab may still go, in ms, at least twice relabel_ms; later, the fill stops.
+fill_late_ms = 2000
 # Where the user last put the keyboard, in physical pixels; used only when `placed` is true.
 x = 0
 y = 0

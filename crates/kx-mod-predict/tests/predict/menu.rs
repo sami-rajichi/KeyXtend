@@ -128,10 +128,10 @@ fn again_tells_the_same_lane_once_more() {
     assert_eq!(rig.take(), [crate::rig::Heard::Lane(before)]);
 }
 
-/// A rig in English whose learner knows `sad` and `safe` and that knows the emails `known`, in a text box.
+/// A rig in English whose learner knows `all` and `also` and that knows the emails `known`, in a text box.
 fn knowing(known: &[&str]) -> Rig {
     let mut rig = Rig::build(|f, _| {
-        plant(f, "en", &["sad", "safe"]);
+        plant(f, "en", &["all", "also"]);
         let known: Vec<String> = known.iter().map(|e| (*e).to_owned()).collect();
         let bytes = Emails::new(&known, usize::MAX).to_bytes();
         f.store.plant(&emails_blob().unwrap(), bytes);
@@ -152,15 +152,15 @@ fn saved_emails(rig: &Rig) -> Vec<String> {
 
 #[test]
 fn forget_mode_offers_word_and_email_chips_and_a_pick_forgets_the_one_shown() {
-    let mut rig = knowing(&["sami@x.org"]);
-    rig.typed("sa");
+    let mut rig = knowing(&["alex@x.org"]);
+    rig.typed("al");
     let words = rig.words();
     rig.ask(WordsAsk::Forget);
     rig.pick(0);
     let kinds: Vec<ChipKind> = rig.chips().into_iter().map(|c| c.1).collect();
     assert_eq!(kinds, [ChipKind::Undo, ChipKind::Word, ChipKind::Email]);
     rig.ask(WordsAsk::Forget);
-    let email = ("sami@x.org".to_owned(), ChipKind::Email);
+    let email = ("alex@x.org".to_owned(), ChipKind::Email);
     let kept = [(words[1].clone(), ChipKind::Word), email];
     assert_eq!(rig.chips(), kept, "no Undo");
     rig.pick(0);
@@ -169,23 +169,23 @@ fn forget_mode_offers_word_and_email_chips_and_a_pick_forgets_the_one_shown() {
 
 #[test]
 fn a_known_email_picked_in_forget_mode_is_forgotten_and_saved() {
-    let mut rig = knowing(&["sami@x.org", "sara@y.com"]);
-    rig.typed("sa");
+    let mut rig = knowing(&["alex@x.org", "alia@y.com"]);
+    rig.typed("al");
     rig.ask(WordsAsk::Forget);
-    let at = rig.chips().iter().position(|c| c.0 == "sami@x.org");
+    let at = rig.chips().iter().position(|c| c.0 == "alex@x.org");
     rig.pick(u8::try_from(at.unwrap()).unwrap());
     assert!(!rig.lane().forgetting && rig.typed_words().is_empty());
     let shown: Vec<String> = rig.chips().into_iter().map(|c| c.0).collect();
-    assert!(!shown.contains(&"sami@x.org".to_owned()), "{shown:?}");
+    assert!(!shown.contains(&"alex@x.org".to_owned()), "{shown:?}");
     rig.advance(std::time::Duration::from_secs(rig.settings.save_s.into()));
     rig.tick();
-    assert_eq!(saved_emails(&rig), ["sara@y.com"]);
+    assert_eq!(saved_emails(&rig), ["alia@y.com"]);
 }
 
 #[test]
 fn forget_mode_drops_domains_and_more_and_fills_the_lane_with_emails() {
     let mut rig = knowing(&[]);
-    rig.typed("sami@");
+    rig.typed("alex@");
     rig.ask(WordsAsk::Forget);
     assert!(rig.chips().is_empty(), "no domain");
     let seven: Vec<String> = (0..7).map(|n| format!("user{n}@mail.org")).collect();
@@ -202,21 +202,21 @@ fn forget_mode_drops_domains_and_more_and_fills_the_lane_with_emails() {
 
 #[test]
 fn forgetting_an_email_gives_an_undo_chip_that_brings_it_back() {
-    let mut rig = knowing(&["sami@x.org", "sara@y.com"]);
-    rig.typed("sa");
+    let mut rig = knowing(&["alex@x.org", "alia@y.com"]);
+    rig.typed("al");
     rig.ask(WordsAsk::Forget);
     let at = rig
         .chips()
         .iter()
-        .position(|c| c.0 == "sami@x.org")
+        .position(|c| c.0 == "alex@x.org")
         .unwrap();
     rig.pick(u8::try_from(at).unwrap());
     assert_eq!(rig.chips().get(at).map(|c| c.1), Some(ChipKind::Undo));
     rig.pick(u8::try_from(at).unwrap());
-    let email = ("sami@x.org".to_owned(), ChipKind::Email);
+    let email = ("alex@x.org".to_owned(), ChipKind::Email);
     assert_eq!(rig.chips().get(at), Some(&email), "back in its place");
     rig.stop();
-    assert_eq!(saved_emails(&rig), ["sami@x.org", "sara@y.com"]);
+    assert_eq!(saved_emails(&rig), ["alex@x.org", "alia@y.com"]);
 }
 
 #[test]

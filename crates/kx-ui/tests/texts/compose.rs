@@ -2,7 +2,7 @@
 
 use crate::{CONTROLS, all, items, lang};
 use kx_module_api::keys::{
-    ALL_KEYS, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED, WORDS_MISSING,
+    ALL_KEYS, HIDDEN_RUN, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED, WORDS_MISSING,
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
 use kx_ui::i18n::keys::{BADGE_JOIN, LIST_JOIN};
@@ -14,16 +14,14 @@ const C0: char = '\u{7}';
 
 /// A notice `key` with every argument a notice may carry.
 fn sample(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: Some(ModuleId::new("keyboard")),
-        args: vec![
-            (args::MODULE, NoticeArg::Text("keyboard".into())),
-            (args::KEYS, NoticeArg::List(items(&["size", "x"]))),
-            (args::MORE, NoticeArg::Count(3)),
-            (args::LANG, NoticeArg::Text("fr".into())),
-        ],
-    }
+    let mut notice = Notice::about(key, ModuleId::new("keyboard"));
+    notice.args.extend([
+        (args::KEYS, NoticeArg::List(items(&["size", "x"]))),
+        (args::MORE, NoticeArg::Count(3)),
+        (args::LANG, NoticeArg::Text("fr".into())),
+        (args::APP, NoticeArg::Text("Claude".into())),
+    ]);
+    notice
 }
 
 #[test]
@@ -42,6 +40,20 @@ fn a_missing_word_list_is_told_by_the_language_name_the_notice_carries() {
     assert_eq!(lang("en").notice(&notice), en);
     notice.args[3].1 = NoticeArg::Text("العربية".into());
     let ar = "قائمة كلمات العربية غير موجودة، لذا تأتي الاقتراحات من الكلمات التي تكتبها فقط.";
+    assert_eq!(lang("ar").notice(&notice), ar);
+}
+
+#[test]
+fn a_hidden_run_names_the_app_it_was_started_from() {
+    let notice = sample(HIDDEN_RUN);
+    let en = "KeyXtend was started from inside Claude, where Windows hides what KeyXtend saves, so nothing is saved \
+              this time. Quit KeyXtend, then start it from the Start menu.";
+    assert_eq!(lang("en").notice(&notice), en);
+    let fr = "KeyXtend a été lancé depuis Claude, où Windows cache ce que KeyXtend enregistre\u{a0}: rien n’est donc \
+              enregistré cette fois. Quittez KeyXtend, puis relancez-le depuis le menu Démarrer.";
+    assert_eq!(lang("fr").notice(&notice), fr);
+    let ar = "شُغِّل KeyXtend من داخل Claude، حيث يُخفي Windows ما يحفظه KeyXtend، لذا لن يُحفَظ أي شيء هذه المرة. \
+              أنهِ KeyXtend، ثم شغّله من قائمة ابدأ.";
     assert_eq!(lang("ar").notice(&notice), ar);
 }
 

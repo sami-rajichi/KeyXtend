@@ -1,8 +1,8 @@
 //! Reading one copy: the markers first, then a clear, then each part sized before it is read. The app is named after
 //! the clipboard closes, so no other app waits on our file reads.
 
-use kx_module_api::Redacted;
 use kx_module_api::ports::{AppRef, ClipConfig, ClipError, ClipNote, ClipPart, ClipWait};
+use kx_module_api::{Redacted, Zeroizing};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Ole::{CF_DIB, CF_DIBV5, CF_HDROP, CF_UNICODETEXT, DROPEFFECT_COPY};
 
@@ -100,28 +100,26 @@ fn part(open: &Open, want: Want) -> Option<ClipPart> {
 /// The text on the open clipboard, or `None` when it holds none; only the start up to `max_chars` is read.
 ///
 /// # Errors
-/// `Io` past `max_chars` characters.
+/// `TooLong` past `max_chars` characters.
 fn unicode(open: &Open, max_chars: usize) -> Result<Option<String>, ClipError> {
     let limit = max_chars.saturating_mul(UNITS_PER_CHAR).saturating_add(1);
     let text = open::with_data(open, u32::from(CF_UNICODETEXT.0), |bytes| {
         let units = bytes.as_chunks::<2>().0.iter().take(limit);
-        text_of(
-            &units.map(|b| u16::from_ne_bytes(*b)).collect::<Vec<_>>(),
-            max_chars,
-        )
+        let units = Zeroizing::new(units.map(|b| u16::from_ne_bytes(*b)).collect::<Vec<_>>());
+        text_of(&units, max_chars)
     });
     match text {
         None => Ok(None),
-        Some(None) => Err(ClipError::Io),
+        Some(None) => Err(ClipError::TooLong),
         Some(t) => Ok(t),
     }
 }
 
-/// The clipboard's text for a test tool, or `None` when it holds none; past `max_chars` characters only the start is
-/// read, and it is refused.
+/// The clipboard's text for Paste's take and the test tools, or `None` when it holds none; the caller wipes it. Past
+/// `max_chars` characters only the start is read, and it is refused.
 ///
 /// # Errors
-/// `Busy` or `Refused` as `open::open` says, and `Io` past the cap.
+/// `Busy` or `Refused` as `open::open` says, and `TooLong` past the cap.
 pub fn read_text(wait: ClipWait, max_chars: usize) -> Result<Option<String>, ClipError> {
     unicode(&open::open(wait)?, max_chars)
 }

@@ -5,9 +5,7 @@ use kx_mod_scroll::{Actor, ID, MANIFEST, Msg, ScrollSettings};
 use kx_module_api::ports::{
     Aim, Dir, Point, Rect, ScrollAimed, ScrollChanged, ScrollPage, ScrollTarget, TargetId,
 };
-use kx_module_api::{
-    Bus, Clock, Event, ModuleCx, Mono, Notice, NoticeArg, Subscription, US_PER_MS, args, parse_as,
-};
+use kx_module_api::{Bus, Clock, Event, ModuleCx, Mono, Notice, Subscription, US_PER_MS, parse_as};
 use kx_platform_fake::{FakeClock, FakeScrollTarget, Turn};
 use kx_test_support::host::FakeHost;
 use std::sync::{Arc, Mutex};
@@ -95,11 +93,7 @@ pub fn hidden() -> Heard {
 
 /// The scroll module's notice `key`.
 pub fn told(key: &'static str) -> Heard {
-    Heard::Notice(Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-    })
+    Heard::Notice(Notice::about(key, ID))
 }
 
 /// A turn of `aim` towards `dir` by `lines`.

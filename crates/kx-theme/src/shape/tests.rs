@@ -276,5 +276,7 @@ fn an_odd_tray_share_or_label_size_is_refused() {
 mod clip;
 /// The dots the language key's Cycle design and the Next key share.
 mod dots;
+/// Quick-fill's rows, chips, lines and kind chips.
+mod fill;
 /// The scroll pad's arrows, Stop's speed dots and the target's outline.
 mod pad;

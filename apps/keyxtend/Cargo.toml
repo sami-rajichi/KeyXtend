@@ -13,7 +13,7 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
+default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-vault"]
 mod-clipboard = ["dep:kx-mod-clipboard"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
@@ -21,13 +21,14 @@ mod-mouse = ["dep:kx-mod-mouse"]
 mod-power = ["dep:kx-mod-power"]
 mod-predict = ["dep:kx-mod-predict"]
 mod-scroll = ["dep:kx-mod-scroll"]
+mod-vault = ["dep:kx-mod-vault"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
 # ships, and `cargo xtask stage` refuses a program that holds the flag.
 gate-input = ["kx-platform-windows/sim-input"]
 
 [dependencies]
-# The sealed files that keep the learned words and the clipboard history, under data keys the platform's guard wraps
-# (ADR-0010, ADR-0034).
+# The sealed files that keep the learned words, the clipboard history and Quick-fill's notebook, under data keys the
+# platform's guard wraps (ADR-0010, ADR-0034, ADR-0038), and the OS's random bytes.
 kx-crypto = { path = "../../crates/kx-crypto" }
 kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard", optional = true }
@@ -37,6 +38,7 @@ kx-mod-mouse = { path = "../../crates/kx-mod-mouse", optional = true }
 kx-mod-power = { path = "../../crates/kx-mod-power", optional = true }
 kx-mod-predict = { path = "../../crates/kx-mod-predict", optional = true }
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll", optional = true }
+kx-mod-vault = { path = "../../crates/kx-mod-vault", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
 kx-platform = { path = "../../crates/kx-platform" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
@@ -69,4 +71,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll"]
+required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-vault"]

@@ -1,4 +1,4 @@
-//! `Ui`'s notices: the banner takes them and tells them again, and answers each with Try again or OK.
+//! `Ui`'s notices: the banner takes them and tells them again, and answers each with Try again, OK, Yes or No.
 
 use super::qobject;
 use crate::bridges::qs;
@@ -22,5 +22,10 @@ impl qobject::Ui {
     pub(super) fn dismiss(&self, id: i64) {
         let id = u64::try_from(id).unwrap_or_default();
         self.with((), |h| h.dismiss(id));
+    }
+
+    pub(super) fn answer(&self, id: i64, yes: bool) -> bool {
+        let id = u64::try_from(id).unwrap_or_default();
+        self.with(false, |h| h.answer(id, yes))
     }
 }

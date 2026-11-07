@@ -11,6 +11,7 @@ use crate::mode::{Mode, ModeChoice};
 use crate::view::{LookChoice, look_view};
 mod chips;
 mod clip;
+mod fill;
 mod layer;
 mod pad;
 

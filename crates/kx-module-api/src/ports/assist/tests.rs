@@ -3,7 +3,7 @@
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{LayoutChanged, PowerAsk, PowerAsked, PowerChanged};
-use crate::{ModuleStateChanged, Notice, REDACTED_MARKER, SettingsChanged};
+use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
 
 /// A point whose numbers appear nowhere else in the output.
@@ -50,6 +50,7 @@ fn hides(text: &str, secrets: &[&str]) {
 fn names_are_kebab_case_and_unique_in_the_crate() {
     let older = [
         Notice::NAME,
+        NoticeAnswered::NAME,
         ModuleStateChanged::NAME,
         SettingsChanged::NAME,
         LayoutChanged::NAME,

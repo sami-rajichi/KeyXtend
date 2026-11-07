@@ -9,6 +9,7 @@ fn sample() -> KernelSettings {
         disabled: Vec::new(),
         log_level: LOG_LEVELS[0].to_owned(),
         log_max_mb: MIN_LOG_MB,
+        kept_copies: Vec::new(),
     }
 }
 
@@ -47,8 +48,22 @@ fn the_kernel_settings_refuse_an_empty_id_in_the_disabled_list() {
 }
 
 #[test]
+fn the_kernel_settings_refuse_an_empty_name_in_the_kept_copies() {
+    let with = |names: &[&str]| KernelSettings {
+        kept_copies: names.iter().map(|n| (*n).to_owned()).collect(),
+        ..sample()
+    };
+    assert!(with(&["Pkg_x"]).check().is_ok());
+    assert!(with(&["Pkg_x", ""]).check().is_err());
+}
+
+#[test]
 fn the_defaults_read_as_kernel_settings_that_pass_the_check() {
     let defaults = KernelSettings::from_defaults().unwrap();
     assert!(defaults.check().is_ok());
     assert!(log::level(&defaults.log_level).is_some());
+    assert!(
+        defaults.kept_copies.is_empty(),
+        "no copy is kept until the user says so"
+    );
 }

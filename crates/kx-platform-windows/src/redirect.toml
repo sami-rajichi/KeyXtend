@@ -1,0 +1,13 @@
+# Where Windows keeps a packaged app's private copy of the app-data folder (ADR-0037), compiled in. A program started
+# from a packaged app, such as the Claude app's shell, writes its new app-data files there, out of other programs' sight.
+
+# The folder, inside the local app-data folder, that holds one folder per installed package.
+packages = "Packages"
+# The private copy of the local app-data folder inside each package's folder, folder by folder.
+mirror = ["LocalCache", "Local"]
+# Ends the app's name in a package folder's name, as in `Claude_pzs8sxrjxfjjc`.
+app_end = "_"
+
+# The probe file: its name's start, then this many random bytes as hex digits.
+probe = "kx-probe-"
+probe_bytes = 8

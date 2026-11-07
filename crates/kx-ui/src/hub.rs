@@ -1,13 +1,14 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
 //! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
-//! panel, the tray icon, and the requests the app drains on its own thread. No lock is held while a face call, a port
-//! call or a waker runs.
+//! panel, the Quick-fill panel, the tray icon, and the requests the app drains on its own thread. No lock is held while a
+//! face call, a port call or a waker runs.
 
 mod app;
 mod assist;
 mod bus;
 mod clip;
 mod face;
+mod fill;
 mod fonts;
 mod look;
 mod notices;
@@ -25,13 +26,14 @@ pub use app::Mode;
 pub(crate) use clip::PICTURES;
 pub use clip::acts as clip_acts;
 pub use face::{Redraw, Resize};
+pub use fill::{FillWaker, acts as fill_acts};
 pub use fonts::FontBook;
-pub use notices::Shown;
+pub use notices::{Answers, Shown};
 pub use words::asks;
 
 use crate::settings::UiSettings;
 use kx_module_api::ports::KeyboardFace;
-use kx_module_api::{ModuleId, SettingsError, SettingsHandle};
+use kx_module_api::{ModuleId, Notice, SettingsError, SettingsHandle};
 use kx_platform::ui::{
     Backdrop, FocusToken, Memory, Reveal, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
     WindowGuard,
@@ -67,10 +69,17 @@ pub struct UiPorts {
 }
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Request {
     /// Try again on a failed module.
     Retry(ModuleId),
+    /// Yes or No on an asking notice, so the app hears answers to its own; modules hear `NoticeAnswered`.
+    Answered {
+        /// The notice answered.
+        notice: Notice,
+        /// The user chose Yes.
+        yes: bool,
+    },
     /// The user or a second copy chose Quit: stop the modules, then call `Hub::end_ui`; the queue ends after it.
     Quit,
 }
@@ -169,6 +178,8 @@ pub struct Hub {
     words: Mutex<words::Words>,
     /// The clipboard panel and the history's folder.
     clip: clip::Clip,
+    /// The Quick-fill panel and its object's waker.
+    fill: fill::Fill,
 }
 
 impl Hub {
@@ -211,6 +222,7 @@ impl Hub {
             heard: Mutex::default(),
             words: Mutex::default(),
             clip: clip::Clip::default(),
+            fill: fill::Fill::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -220,8 +232,9 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows, a new `sound_idle_ms` prepares the speaker again, and an open
-    /// clipboard panel hears the rows. The keyboard's wake is heard from now on, after the face's own handlers.
+    /// follow the language of the layout the face shows, a new `sound_idle_ms` prepares the speaker again, an open
+    /// clipboard panel hears the rows, and Quick-fill hears the rows and the label names. The keyboard's wake is heard
+    /// from now on, after the face's own handlers.
     pub fn attach(
         self: &Arc<Self>,
         settings: UiSettings,
@@ -244,6 +257,7 @@ impl Hub {
         };
         self.idle_changed(before, idle);
         self.clip_rows();
+        self.fill_start();
         self.wake(Wake::Settings);
     }
 

@@ -54,9 +54,9 @@ fn a_panic_lets_the_mouse_go_then_logs_its_place_never_its_payload() {
     let dir = TempDir::new("app-quiet").unwrap();
     let files = Files::new(dir.path());
     let settings = KernelSettings {
-        disabled: Vec::new(),
         log_level: "error".to_owned(),
         log_max_mb: 1,
+        ..KernelSettings::from_defaults().unwrap()
     };
     let log = open(&settings, &files).unwrap();
     LOG.set(files.log.clone()).unwrap();

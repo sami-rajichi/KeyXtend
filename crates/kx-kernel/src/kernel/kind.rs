@@ -15,6 +15,8 @@ const NOT_FAILED: &str = "module has not failed";
 const NOT_STARTABLE: &str = "module cannot start";
 /// The log name of a `KernelError::WrongPhase`.
 const WRONG_PHASE: &str = "wrong kernel phase";
+/// The log name of a `KernelError::KeptOff`.
+const KEPT_OFF: &str = "module kept off for this run";
 /// The log name of a `KernelError::SwitchKey`.
 const SWITCH_KEY: &str = "disabled list changes only by switching";
 /// The log name of a `KernelError::Service`.
@@ -33,6 +35,7 @@ impl KernelError {
             Self::NotFailed(_) => NOT_FAILED,
             Self::NotStartable(_) => NOT_STARTABLE,
             Self::WrongPhase(_) => WRONG_PHASE,
+            Self::KeptOff(_) => KEPT_OFF,
             Self::SwitchKey => SWITCH_KEY,
             Self::Service(_) => SERVICE,
             Self::Settings(StoreError::Settings(e)) => e.kind(),
@@ -66,6 +69,7 @@ mod tests {
             KernelError::NotFailed(id),
             KernelError::NotStartable(id),
             KernelError::WrongPhase(Phase::Setup),
+            KernelError::KeptOff(id),
             KernelError::SwitchKey,
             KernelError::Service(ServiceError::Missing(ServiceId::new("s"))),
             KernelError::Settings(StoreError::Reserved),

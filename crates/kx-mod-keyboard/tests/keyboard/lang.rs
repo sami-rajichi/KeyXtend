@@ -145,7 +145,7 @@ fn the_list_opens_on_the_current_row_and_ticks_it() {
     assert_eq!(open["rows"][2]["short"], "ع");
     assert_eq!(
         open["keys"],
-        json!(["esc", "enter", "up", "left", "down", "right"])
+        json!(["esc", "del", "enter", "up", "left", "down", "right"])
     );
     assert_eq!(r.tap("lang"), Ok(STATE), "a second click closes it");
     assert!(r.state()["list"].is_null());
@@ -220,6 +220,21 @@ fn a_panel_key_clicked_as_a_tap_never_reaches_the_app() {
         "Space reaches the app"
     );
     assert!(!r.state()["list"].is_null(), "still open");
+}
+
+#[test]
+fn the_delete_key_does_nothing_while_the_list_is_open() {
+    let r = list();
+    r.tap("lang").unwrap();
+    let before = r.state()["list"].clone();
+    assert_eq!(r.panel("del", 5), Ok(FaceReply::default()));
+    assert_eq!(r.tap("del"), Ok(FaceReply::default()));
+    assert_eq!(r.press("del"), Ok(FaceReply::default()));
+    assert_eq!(r.state()["list"], before, "the list stays as it was");
+    assert!(
+        r.fakes.injector.strokes().is_empty(),
+        "never reaches the app"
+    );
 }
 
 #[test]

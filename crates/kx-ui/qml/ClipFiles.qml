@@ -48,12 +48,12 @@ Item {
                     icon: files.lk.icons.clip.kind_file
                     base: files.res.icons
                     ext: files.res.ext
-                    px: files.lk.shape.clip.thumb_px[3] * files.s
+                    px: files.pn.tile_px[3] * files.s
                     tint: files.lk.palette.pop_muted
                 }
                 Label {
                     anchors.left: glyph.right
-                    anchors.leftMargin: files.lk.shape.clip.row_gap_px * files.s
+                    anchors.leftMargin: files.pn.row_gap_px * files.s
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: line.modelData.path

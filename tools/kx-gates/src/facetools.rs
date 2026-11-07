@@ -55,10 +55,9 @@ impl FaceWin {
         FaceWin::find(ctx, name)
     }
 
-    /// The screen centre of tool button `b`.
+    /// The screen centre of tool button `b`, at its place in the frozen face's row.
     pub fn button(&self, ctx: &Ctx, b: ToolButton) -> POINT {
-        let places = place::tools(&ctx.spike.keyboard, ToolButton::ALL.len());
-        let at = places.get(b.index()).copied().unwrap_or_default();
+        let at = place::tool_box(ctx.spike, b).unwrap_or_default();
         mouse::centre(&at, self.face.origin, self.face.dpi)
     }
 

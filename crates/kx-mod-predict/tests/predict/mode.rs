@@ -8,7 +8,7 @@ use kx_module_api::ports::{ChipKind, FieldKind, TypingMode, WordsAsk};
 
 /// A long known email (19 characters) and a short one (10).
 const LONG: &str = "someone@example.org";
-const SHORT: &str = "sami@x.org";
+const SHORT: &str = "alex@x.org";
 
 /// The mode with the keyboard's text cap at `cap` characters.
 fn capped(cap: u16) -> TypingMode {
@@ -61,7 +61,11 @@ fn an_email_chip_or_list_row_past_the_cap_is_dropped() {
     assert_eq!(emails, [SHORT], "the long one does not fit");
     rig.ask(WordsAsk::More { rows: ROWS });
     let list = rig.lane().list.unwrap();
-    let rows: Vec<&str> = list.items.iter().map(|e| e.expose().as_str()).collect();
+    let rows: Vec<&str> = list
+        .items
+        .iter()
+        .map(|e| e.text.expose().as_str())
+        .collect();
     assert_eq!(
         (rows, list.pages),
         (vec![SHORT], 1),

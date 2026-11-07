@@ -69,7 +69,7 @@ const NAME_ONLY: &[&str] = &[
     "g22 bench",
     "g22 bench-cloud",
     "g22 typing",
-    "g23 qt",
+    "g23 keyxtend",
     "g24 qt",
     "g25 notepad",
     "close qt",
@@ -134,7 +134,8 @@ const BAD_INPUT: &[&str] = &[
     "g22 bench --seed 1",
     "g22 typing --pause 10",
     "g25 notepad --attach",
-    "g23 qt --seed 2",
+    "g23 keyxtend --seed 2",
+    "g23 qt",
     "g24 qt --clicks 3",
     "g7 qt --seed 1",
     "g12 keyxtend --seed 1",
@@ -181,7 +182,9 @@ fn the_help_names_every_gate_that_takes_only_a_name() {
 
 #[test]
 fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
-    for gate in ["g1", "g2", "g3", "g4", "g8", "g9", "g21", "g25", "g27"] {
+    for gate in [
+        "g1", "g2", "g3", "g4", "g8", "g9", "g21", "g23", "g25", "g27",
+    ] {
         assert_eq!(mouse(gate, "x"), Mouse::Held, "{gate}");
     }
     for gate in ["g5", "g6", "g12", "g17", "g18"] {
@@ -191,7 +194,7 @@ fn every_gate_holds_the_mouse_but_the_ones_that_need_the_owners_own_mouse() {
             "{gate} drives the test build"
         );
     }
-    for gate in ["assist", "g13", "g23", "g26", "close", "g99"] {
+    for gate in ["assist", "g13", "g26", "close", "g99"] {
         assert_eq!(mouse(gate, "x"), Mouse::Free, "{gate}");
     }
     let names: std::collections::BTreeSet<_> = GATES.iter().map(|g| g.0).collect();

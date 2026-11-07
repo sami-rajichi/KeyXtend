@@ -7,7 +7,7 @@ use crate::ports::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed,
     LayoutChanged, PointerMoved, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
 };
-use crate::{ModuleStateChanged, Notice, REDACTED_MARKER, SettingsChanged};
+use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
 
 /// A point and a box whose numbers appear nowhere else in the output.
@@ -40,9 +40,10 @@ fn scroll() -> [(&'static str, Option<Capability>); 7] {
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 16] {
+fn older() -> [&'static str; 17] {
     [
         Notice::NAME,
+        NoticeAnswered::NAME,
         ModuleStateChanged::NAME,
         SettingsChanged::NAME,
         LayoutChanged::NAME,

@@ -1,6 +1,6 @@
 //! The language list of the List design: the board's arrows, Enter and Esc move its highlight, pick and close it
-//! (spec §3.3), and it pages at the UI's page size with no scrolling (ADR-0008). The clipboard panel has its own key
-//! list, with Space, Backspace and the character keys too (spec §7).
+//! (spec §3.3), and it pages at the UI's page size with no scrolling (ADR-0008). The clipboard and Quick-fill panels
+//! share their own key list, with Space, Backspace, Delete and the character keys too (spec §7, §8.1).
 
 use crate::spec::{BoardSpec, Nav, RowItem, char_id};
 use kx_module_api::ports::{LangLabel, LayoutId, PanelKey, Scan};
@@ -95,7 +95,7 @@ impl LangList {
             PAGE_ON => (page.at + 1).min(page.count - 1) * rows,
             Nav::Enter => return Moved::Pick(hi),
             Nav::Esc => return Moved::Close,
-            Nav::Tick | Nav::Erase => return Moved::Stay,
+            Nav::Tick | Nav::Erase | Nav::Delete => return Moved::Stay,
         };
         self.hi = to;
         if to == hi { Moved::Stay } else { Moved::Hi }
@@ -110,24 +110,34 @@ fn all_navs(spec: &BoardSpec) -> impl Iterator<Item = (String, Nav)> + '_ {
     })
 }
 
-/// The board keys that drive the language list, by id, in board order; Space and Backspace keep typing while it is open.
+/// The board keys the language list takes, by id, in board order: Delete does nothing there, and Space and Backspace
+/// keep typing while it is open.
 #[must_use]
 pub fn navs(spec: &BoardSpec) -> Vec<(String, Nav)> {
     let lists = |(_, n): &(String, Nav)| !matches!(n, Nav::Tick | Nav::Erase);
     all_navs(spec).filter(lists).collect()
 }
 
-/// What a board key does while the clipboard panel is open.
+/// One of our panels that take the board's keys while open, above the keyboard; one shows at a time.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Panel {
+    /// The clipboard history (spec §7).
+    Clip,
+    /// Quick-fill (spec §8.1).
+    Fill,
+}
+
+/// What a board key does while one of our panels is open.
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ClipUse {
+pub enum PanelUse {
     /// It sends this move to the panel.
     Nav(Nav),
-    /// A character key: what it types now goes to the panel's search.
+    /// A character key: what it types now goes to the panel's search or line.
     Char(Scan),
 }
 
 /// Shows the move, never a character key's scan code.
-impl fmt::Debug for ClipUse {
+impl fmt::Debug for PanelUse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Nav(n) => write!(f, "Nav({n:?})"),
@@ -136,17 +146,16 @@ impl fmt::Debug for ClipUse {
     }
 }
 
-/// The board keys the clipboard panel takes, by id: every key with a `nav`, Space and Backspace too, and every
-/// character key.
+/// The board keys our panels take, by id: every key with a `nav`, Space and Backspace too, and every character key.
 #[must_use]
-pub fn clip_keys(spec: &BoardSpec) -> HashMap<String, ClipUse> {
-    let navs = all_navs(spec).map(|(id, n)| (id, ClipUse::Nav(n)));
+pub fn panel_uses(spec: &BoardSpec) -> HashMap<String, PanelUse> {
+    let navs = all_navs(spec).map(|(id, n)| (id, PanelUse::Nav(n)));
     let chars = spec.char_scans().into_iter();
-    navs.chain(chars.map(|sc| (char_id(sc), ClipUse::Char(sc))))
+    navs.chain(chars.map(|sc| (char_id(sc), PanelUse::Char(sc))))
         .collect()
 }
 
-/// The panel key each board move sends to the clipboard panel.
+/// The panel key each board move sends to the open panel.
 impl From<Nav> for PanelKey {
     fn from(nav: Nav) -> Self {
         match nav {
@@ -158,6 +167,7 @@ impl From<Nav> for PanelKey {
             Nav::Esc => Self::Esc,
             Nav::Tick => Self::Tick,
             Nav::Erase => Self::Erase,
+            Nav::Delete => Self::Delete,
         }
     }
 }

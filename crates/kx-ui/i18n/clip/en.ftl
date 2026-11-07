@@ -55,6 +55,7 @@ clip =
     .size-unknown = Size unknown
     .storage = History: { $used } of { $cap } · { $free } free on { $drive }
     .open-folder = Open folder
+    .no-folder = Nothing is saved this time, so there is no folder to open.
     .meta = { $app } · { $when } · { $size }
     .meta-bare = { $when } · { $size }
     .chars = { $form ->

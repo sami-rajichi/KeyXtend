@@ -1,13 +1,15 @@
-//! The board as `board.toml` writes it: grid sizes, main rows, side keys, the D-pad and the shortcuts layer,
-//! checked when read.
+//! The board as `board.toml` writes it: grid sizes, main rows, side keys, the D-pad, the shortcuts layer and the key a
+//! fill's Tab sends, checked when read.
 
 mod check;
 mod error;
+mod fill;
 mod keys;
 mod layer;
 mod tell;
 
 pub use error::BoardError;
+pub use fill::FillSpec;
 pub use keys::{RowKey, char_id};
 pub use layer::{LayerGrid, LayerSpec, NEXT_ID, SideCell, shortcut_key_id};
 pub use tell::Tell;
@@ -114,6 +116,8 @@ pub enum Role {
     Power,
     /// The clipboard key: a click asks the clipboard module to open or close its panel.
     Clip,
+    /// The Quick-fill key: a click asks the vault module to open or close its panel.
+    Fill,
     /// A shortcut on the layer; only the layer's generated cells have it.
     Shortcut,
     /// The layer's Next page key; only the layer's generated cell has it.
@@ -147,10 +151,12 @@ pub enum Nav {
     Enter,
     /// Closes the panel.
     Esc,
-    /// Ticks the highlighted row; only the clipboard panel takes it.
+    /// The Space key's panel key; only the clipboard and Quick-fill panels take it.
     Tick,
-    /// Erases the search's last character; only the clipboard panel takes it.
+    /// Erases the character before the caret of the search or line; only the clipboard and Quick-fill panels take it.
     Erase,
+    /// Removes what is after that caret; only those panels take it, and the language list does nothing with it.
+    Delete,
 }
 
 /// A named key in a main row.
@@ -253,6 +259,8 @@ pub struct BoardSpec {
     pub side: Vec<SideSpec>,
     /// The shortcuts layer.
     pub layer: LayerSpec,
+    /// Quick-fill's Tab key.
+    pub fill: FillSpec,
 }
 
 impl BoardSpec {

@@ -1,5 +1,5 @@
 //! Spike helpers over the product injector (`kx-platform-windows`) until their phases move them:
-//! Unicode text with text errors, paced typing for voice (P11) and shortcut keys for the tools row (P9).
+//! paced Unicode typing for voice (P11) and shortcut keys for the pill's Copy (P10).
 
 use std::time::Duration;
 
@@ -10,7 +10,7 @@ use kx_platform_windows::inject::{send_keys, vk_key};
 use kx_platform_windows::strokes::combo as presses;
 
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
-pub fn text(text: &str) -> Result<(), String> {
+fn text(text: &str) -> Result<(), String> {
     let text = Redacted::new(text.to_owned());
     WinInjector
         .text(&text, TextRoute::Unicode)

@@ -176,7 +176,7 @@ impl<'a> ClipSession<'a> {
 }
 
 /// Waits until `warm_ms` past the copy's keyboard showing; an error when it never showed.
-fn ready(s: &Started, warm_ms: u64) -> Result<(), String> {
+pub(crate) fn ready(s: &Started, warm_ms: u64) -> Result<(), String> {
     let shown = s.shown_at.ok_or("the keyboard did not show in time")?;
     std::thread::sleep(g8start::warm_left(shown, warm_ms, Instant::now()));
     Ok(())

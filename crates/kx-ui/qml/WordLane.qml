@@ -1,6 +1,7 @@
 // The chip lane on the top bar (spec §6 Chips): best first from the left, each chip whole or not at all, and nothing
-// animates per key. A password box shows the lock and its note, forget mode ends the row with Cancel, the words menu
-// takes the chips' place while open, and readers hear when it has nothing to offer.
+// animates per key. A password box shows the lock, its note and, while the vault runs, the Quick-fill chip, forget mode
+// ends the row with Cancel, the words menu takes the chips' place while open, and readers hear when it has nothing to
+// offer.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -29,6 +30,8 @@ Item {
     readonly property string kind: view ? view.kind : ""
     readonly property var chips: view ? view.chips : []
     readonly property bool forgetting: !!view && view.forgetting
+    // The vault runs, so a password box offers Quick-fill.
+    readonly property bool fillable: !!view && view.fill
     readonly property bool stopped: kind === names.stopped
     onStoppedChanged: if (stopped) menu.open = false
     // How many chips fit whole, best first, beside Cancel in forget mode; `made` reruns it as chips come and go.
@@ -105,10 +108,11 @@ Item {
             s: lane.s
             onClicked: lane.ask(names.asks.cancel, 0)
         }
-        // In a password box, the lock and its note in plate text, not a button (spec §6 Password boxes).
+        // In a password box, the lock and its note in plate text, not a button (spec §6 Password boxes); the note
+        // elides first, so the Quick-fill chip after it stays whole.
         Item {
             visible: lane.kind === names.locked
-            width: row.width
+            width: padlock.width + row.spacing + note.width
             height: row.height
             Accessible.role: Accessible.StaticText
             Accessible.name: note.text
@@ -127,13 +131,30 @@ Item {
                 anchors.left: padlock.right
                 anchors.leftMargin: row.spacing
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(implicitWidth, row.width - padlock.width - row.spacing)
+                readonly property real chipRoom: lane.fillable ? fill.width + row.spacing : 0
+                width: Math.max(0, Math.min(implicitWidth, row.width - padlock.width - row.spacing - chipRoom))
                 elide: Text.ElideRight
                 text: lane.res.tr("chip.locked")
                 font.family: lane.res.fam.ui
                 font.pixelSize: lane.lk.shape.chip.font_px[lane.rtl ? 1 : 0] * lane.s
                 color: lane.lk.palette.legend_2_plate
             }
+        }
+        // The password box's Quick-fill chip while the vault runs, in the keyboard's language; a click toggles it.
+        Chip {
+            id: fill
+            visible: lane.kind === names.locked && lane.fillable
+            chip: ({
+                    text: lane.res.tr("fill.title"),
+                    icon: lane.lk.icons.words.fill,
+                    ar: lane.rtl,
+                    uid: lane.res.uid(names.group, names.ids.fill)
+                })
+            radius: lane.radius
+            lk: lane.lk
+            res: lane.res
+            s: lane.s
+            onClicked: lane.ask(names.asks.fill, 0)
         }
     }
     WordMenu {

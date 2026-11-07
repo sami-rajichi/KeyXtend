@@ -77,6 +77,7 @@ tip =
     .scroll-off = The scroll pad is off
     .no-shortcuts = No shortcuts are chosen
     .power-off = The power key is off
+    .fill-off = Quick-fill is off
     .rclick = Hold still to right-click; short clicks stay normal
     .grab = Press to pick up, move, then click to drop
 
@@ -217,6 +218,7 @@ window =
     .pointer = Pointer helper
     .outline = Scroll outline
     .clip = { -app } clipboard history
+    .fill = { -app } Quick-fill
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -237,6 +239,10 @@ tray =
 button =
     .retry = Try again
     .ok = OK
+    .yes = Yes
+    .no = No
+    .check = Check
+    .later = Later
 
 ## The notice banner: how many more notices wait behind the one it shows.
 ## Plural forms select on $form, which is $more as the CLDR rules read it; $more is at least 1.
@@ -252,7 +258,7 @@ page =
     .on = Next page
     .of = { $at } of { $count }
 
-## Notices by kx-module-api key. $module is a module name, $keys a list of setting names and $lang a language name.
+## Notices by kx-module-api key. $module is a module name, $keys a list of setting names, $lang a language name and $app another app's name.
 notice =
     .settings-reset = Some { $module } settings were not valid, so they went back to their defaults: { $keys }.
     .settings-restored = The settings file was damaged, so its last good copy was restored.
@@ -278,6 +284,13 @@ notice =
     .words-locked = Learned words could not be unlocked, so nothing learned is saved this time.
     .clip-damaged = Part of the clipboard history was damaged, so those entries were removed.
     .clip-locked = Clipboard history could not be unlocked, so copies are not kept this time.
+    .hidden-run = { -app } was started from inside { $app }, where Windows hides what { -app } saves, so nothing is saved this time. Quit { -app }, then start it from the Start menu.
+    .hidden-copy = A hidden copy of { -app }'s data is in { $app }'s folder. Delete it for good?
+    .hidden-copy-failed = The hidden copy in { $app }'s folder could not be deleted. { -app } will ask again next time.
+    .vault-damaged = Quick-fill's saved entries were damaged, so they were set aside. You can bring them back from your backup.
+    .vault-check = Do you still remember your Quick-fill backup password?
+    .vault-offer = Protect your Quick-fill entries with a locked backup?
+    .vault-backup-damaged = Quick-fill's backup settings were damaged; set up the backup again.
 
 ## Module names by module id; an id not listed shows itself.
 module =
@@ -290,6 +303,7 @@ module =
     .predict = Word suggestions
     .scroll = Scroll pad
     .ui = Appearance
+    .vault = Quick-fill
 
 ## The language key's designs, by [keyboard] lang_key value.
 langkey =

@@ -26,7 +26,7 @@ fn knowing(known: &[String]) -> Rig {
 #[test]
 fn one_at_lists_the_domains_in_order() {
     let mut rig = knowing(&[]);
-    rig.typed("sami@");
+    rig.typed("alex@");
     let domains: Vec<String> = rig.chips().into_iter().map(|c| c.0).collect();
     assert_eq!(domains, rig.settings.domains);
     rig.typed("g");
@@ -150,11 +150,11 @@ fn a_tap_on_the_more_chip_waits_for_the_uis_more_and_cancel_closes_the_list() {
 
 #[test]
 fn a_known_email_shows_from_its_start_and_a_typed_one_is_learned() {
-    let mut rig = knowing(&["sami@x.org".to_owned()]);
-    rig.typed("sa");
+    let mut rig = knowing(&["alex@x.org".to_owned()]);
+    rig.typed("al");
     assert!(
         rig.chips()
-            .contains(&("sami@x.org".to_owned(), ChipKind::Email))
+            .contains(&("alex@x.org".to_owned(), ChipKind::Email))
     );
     rig.typed(" ");
     rig.typed("nour@y.com ");
@@ -165,5 +165,5 @@ fn a_known_email_shows_from_its_start_and_a_typed_one_is_learned() {
         .blob(&kx_mod_predict::emails_blob().unwrap())
         .unwrap();
     let saved = Emails::from_bytes(&bytes, usize::MAX).unwrap();
-    assert_eq!(saved.list(), ["nour@y.com", "sami@x.org"]);
+    assert_eq!(saved.list(), ["nour@y.com", "alex@x.org"]);
 }

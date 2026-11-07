@@ -72,3 +72,16 @@ proptest! {
         prop_assert!(whole, "it never starts mid-word");
     }
 }
+
+#[test]
+fn a_read_end_keeps_a_text_that_fits_and_cuts_a_long_one_to_whole_words() {
+    assert_eq!(read_end("one two", 7), "one two");
+    assert_eq!(
+        read_end("one two three", 7),
+        " three",
+        "the split word goes"
+    );
+    assert_eq!(read_end("مرحبا بك في", 5), " في");
+    assert_eq!(read_end("oneword", 3), "", "one split word leaves nothing");
+    assert_eq!(read_end("", 3), "");
+}

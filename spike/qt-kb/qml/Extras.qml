@@ -62,7 +62,7 @@ Item {
             say(tl.guard(cap.title));
     }
 
-    // Shows, moves or hides the pill, and shows any new fill note.
+    // Shows, moves or hides the pill, and shows any new note.
     function tick() {
         const r = JSON.parse(tl.tick());
         say(r.note);

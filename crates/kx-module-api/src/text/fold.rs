@@ -6,8 +6,10 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 use thiserror::Error;
+use zeroize::Zeroize;
 
 use super::Casing;
+use crate::Zeroizing;
 
 /// The fold tables, compiled in so they are never read from disk.
 const TABLE: &str = include_str!("fold.toml");
@@ -23,6 +25,12 @@ static FOLDS: LazyLock<Folds> = LazyLock::new(|| Folds::parse(TABLE).unwrap_or_d
 #[must_use]
 pub fn fold(word: &str, casing: &Casing) -> String {
     FOLDS.apply(word, casing)
+}
+
+/// `text` folded as `fold_any` folds it, into `out` in place of what it held: `out` is wiped, then sized to the folded
+/// length before the first character goes in, so it never moves and no unwiped copy is left.
+pub fn fold_any_into(text: &str, out: &mut Zeroizing<String>) {
+    FOLDS.apply_into(text, out);
 }
 
 /// The apostrophe that elided and joined words keep (`l'`, `don't`), which every other form folds to; `None` only
@@ -133,14 +141,40 @@ impl Folds {
     /// `word` lower-cased by `casing`, then each character dropped, replaced or kept.
     fn apply(&self, word: &str, casing: &Casing) -> String {
         let mut out = String::with_capacity(word.len());
+        let mut buf = [0; char::MAX_LEN_UTF8];
         for c in casing.lower(word).chars() {
-            match self.map.get(&c).filter(|_| !casing.keeps(c)) {
-                None => out.push(c),
-                Some(Some(to)) => out.push_str(to),
-                Some(None) => {}
-            }
+            out.push_str(self.piece(c, casing, &mut buf));
         }
         out
+    }
+
+    /// `text` lower-cased one character at a time, as Unicode's default casing does but for a final sigma, which the
+    /// table folds to sigma anyway; then folded into `out`, wiped and sized first.
+    fn apply_into(&self, text: &str, out: &mut String) {
+        let root = Casing::root();
+        let lowered = || text.chars().flat_map(char::to_lowercase);
+        let mut buf = [0; char::MAX_LEN_UTF8];
+        let len = lowered().map(|c| self.piece(c, root, &mut buf).len()).sum();
+        out.zeroize();
+        out.reserve_exact(len);
+        for c in lowered() {
+            out.push_str(self.piece(c, root, &mut buf));
+        }
+        buf.zeroize();
+    }
+
+    /// What `c`, already in lower case, folds to under `casing`: itself, written in `buf`, its replacement, or nothing.
+    fn piece<'a>(
+        &'a self,
+        c: char,
+        casing: &Casing,
+        buf: &'a mut [u8; char::MAX_LEN_UTF8],
+    ) -> &'a str {
+        match self.map.get(&c).filter(|_| !casing.keeps(c)) {
+            None => c.encode_utf8(buf),
+            Some(Some(to)) => to,
+            Some(None) => "",
+        }
     }
 }
 

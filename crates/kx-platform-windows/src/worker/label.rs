@@ -3,7 +3,7 @@
 
 use std::mem::offset_of;
 
-use kx_platform::pictures::SpawnError;
+use kx_platform::worker::SpawnError;
 use windows::Win32::Security::{
     CreateWellKnownSid, GetSidLengthRequired, GetSidSubAuthority, GetSidSubAuthorityCount,
     IsValidSid, PSID, SECURITY_MAX_SID_SIZE, SID_AND_ATTRIBUTES, TOKEN_MANDATORY_LABEL,

@@ -16,13 +16,14 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - takes copies from a queue of `queue_copies`, dropping the newest in a flood, keeps each within the limits (asking the shelf only its drive's free bytes, never a walk of its files), moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
 - inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a PNG goes with the DIB the worker makes within `media_ms`, or alone when none comes; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
+- answers Quick-fill's `ClipTake` with the clipboard's text, read within the take's cap, and forgets the newest entry only when it is an unpinned text of this copy, else the next copy keeps nothing if it is that text, as its note can come after the take; a text too long, a busy clipboard or no text forgets nothing;
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).
 
 ## Services and capabilities
 
 | Service | Use |
 |---|---|
-| `Clipboard` | Watches copies and checks the files of file entries. |
+| `Clipboard` | Watches copies, checks the files of file entries, and reads the text for Quick-fill's take. |
 | `ClipboardWriter` | Sets the clipboard for each insert step. |
 | `SealedShelf` | Keeps the history sealed, and tells the drive's free space. |
 | `Pictures` | Draws thumbnails and previews in the worker, and makes the DIB an inserted PNG goes with. |
@@ -30,7 +31,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 
 | Capability | Why |
 |---|---|
-| `ReadClipboard` | It gates `Clipboard` and the panel events (`ClipPanel`, `ClipKey`, `ClipView`, `ClipAct`; ADR-0035). |
+| `ReadClipboard` | It gates `Clipboard` and the panel events (`ClipPanel`, `ClipKey`, `ClipView`, `ClipAct`, `ClipTake`, `ClipTaken`; ADR-0035). |
 | `WriteClipboard` | It gates `ClipboardWriter`, `PasteAsk` and `Pasted`. |
 | `SecretStore` | It gates the `SealedShelf`. |
 

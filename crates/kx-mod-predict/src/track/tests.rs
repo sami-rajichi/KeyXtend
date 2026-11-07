@@ -11,6 +11,7 @@ mod ends;
 mod leave;
 mod plans;
 mod reads;
+mod saved;
 
 /// The words a test language knows: elisions and whole words that hold an apostrophe.
 const KNOWN: [&str; 4] = ["l'", "qu'", "quelqu'un", "aujourd'hui"];

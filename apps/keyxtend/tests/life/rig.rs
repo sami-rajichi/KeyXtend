@@ -1,19 +1,23 @@
-//! The app over the fake platform: temp folders with a portable data folder, the fake injector and layouts on the
-//! captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power dialog, box watch, word packs,
-//! sealed store, clipboard, shelf, pictures and calendar, and the shared fake UI ports with a reveal the rig keeps; a
-//! waker keeps every wake.
+//! The app over the fake platform: temp folders with a portable data folder, a clock that moves only when told, the
+//! fake injector and layouts on the captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power
+//! dialog, box watch, word packs, sealed store, clipboard, shelf, pictures and calendar, Quick-fill's notebook in
+//! memory with seeded random bytes, boxes and places, and the shared fake UI ports with a reveal the rig keeps; a waker
+//! keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
+use keyxtend::hidden::Run;
+use kx_crypto::MemoryStore;
 use kx_mod_keyboard::BoardSpec;
 use kx_mod_keyboard::spec::RowKey;
 use kx_module_api::ports::{Date, Scan, TypingMode, TypingModeAsk};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeFieldWatch, FakeInjector,
-    FakeLayoutSource, FakePictures, FakePlatform, FakePointerHook, FakePowerDialog, FakeReveal,
-    FakeScrollTarget, FakeSealedStore, FakeShelf, FakeShortcuts, FakeTray, FakeWordPacks,
+    FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock, FakeFieldWatch,
+    FakeInjector, FakeLayoutSource, FakePictures, FakePlaces, FakePlatform, FakePointerHook,
+    FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget, FakeSealedStore, FakeShelf,
+    FakeShortcuts, FakeTray, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -30,13 +34,17 @@ pub const WAIT: Duration = Duration::from_secs(10);
 /// The calendar's day, hour, minute and offset east of UTC: Paris on 31 October 2026 at 16:32.
 const TODAY: (u16, u8, u8) = (2026, 10, 31);
 const NOW: (u8, u8, i16) = (16, 32, 60);
+/// The seed of Quick-fill's random bytes, so its ids repeat from run to run.
+const SEED: u64 = 9;
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {
     /// The program's folder, holding the portable data folder.
     pub exe: TempDir,
-    /// The per-user folder, which the portable edition leaves alone.
-    pub user: TempDir,
+    /// The per-user folder, which the portable edition leaves alone; held so it lives as long as the rig.
+    _user: TempDir,
+    /// The platform on those folders, whose clock every load shares.
+    platform: Arc<FakePlatform>,
     /// Behind the input injector.
     pub injector: Arc<FakeInjector>,
     /// Behind the layout source, with the app in front on the first layout.
@@ -69,16 +77,32 @@ pub struct Rig {
     pub calendar: FakeCalendar,
     /// Behind the reveal, which records each folder it shows.
     pub reveal: Arc<FakeReveal>,
+    /// Behind Quick-fill's notebook store, in memory, so a second load reads what the first saved.
+    pub vault: Arc<MemoryStore>,
+    /// Behind Quick-fill's random bytes, seeded.
+    pub random: FakeRandom,
+    /// Behind the backup boxes, which open and seal nothing until a test asks.
+    pub boxes: FakeBoxes,
+    /// Behind the backup places, with no folder.
+    pub places: FakePlaces,
 }
 
 impl Rig {
     /// Fresh folders and fakes, with an empty portable data folder.
     pub fn new() -> Self {
-        let exe = TempDir::new("app-exe").unwrap();
+        let (exe, user) = (
+            TempDir::new("app-exe").unwrap(),
+            TempDir::new("app-user").unwrap(),
+        );
         std::fs::create_dir(exe.path().join(PORTABLE_DIR)).unwrap();
+        let dirs = AppDirs {
+            exe_dir: exe.path().to_path_buf(),
+            user_dir: user.path().to_path_buf(),
+        };
         Self {
             exe,
-            user: TempDir::new("app-user").unwrap(),
+            _user: user,
+            platform: Arc::new(FakePlatform::new(dirs)),
             injector: Arc::new(FakeInjector::new()),
             layouts: Arc::new(FakeLayoutSource::golden(&GOLDEN).unwrap()),
             pointer: Arc::new(FakePointerHook::new()),
@@ -95,6 +119,10 @@ impl Rig {
             pics: FakePictures::new(),
             calendar: calendar(),
             reveal: Arc::new(FakeReveal::new()),
+            vault: Arc::new(MemoryStore::new()),
+            random: FakeRandom::new(SEED),
+            boxes: FakeBoxes::new(),
+            places: FakePlaces::new(),
         }
     }
 
@@ -103,17 +131,23 @@ impl Rig {
         Files::new(&self.exe.path().join(PORTABLE_DIR))
     }
 
-    /// A fake platform on the rig's folders.
+    /// The fake platform on the rig's folders; every load shares its clock.
     pub fn platform(&self) -> Arc<FakePlatform> {
-        let dirs = AppDirs {
-            exe_dir: self.exe.path().to_path_buf(),
-            user_dir: self.user.path().to_path_buf(),
-        };
-        Arc::new(FakePlatform::new(dirs))
+        Arc::clone(&self.platform)
     }
 
-    /// The app loaded over the fakes, as `main` loads it over the Windows adapter.
+    /// A handle to the platform's clock, which moves only when the test moves it.
+    pub fn clock(&self) -> FakeClock {
+        self.platform.clock_handle()
+    }
+
+    /// The app loaded over the fakes in a normal run, as `main` loads it over the Windows adapter.
     pub fn load(&self) -> Boot {
+        self.load_as(&Run::Normal)
+    }
+
+    /// The app loaded over the fakes as `run` says, normal or hidden.
+    pub fn load_as(&self, run: &Run) -> Boot {
         let services = Services {
             injector: self.injector.clone(),
             layouts: self.layouts.clone(),
@@ -129,10 +163,14 @@ impl Rig {
             shelf: Arc::new(self.shelf.clone()),
             pictures: Arc::new(self.pics.clone()),
             calendar: Arc::new(self.calendar.clone()),
+            vault: self.vault.clone(),
+            random: Arc::new(self.random.clone()),
+            boxes: Arc::new(self.boxes.clone()),
+            places: Arc::new(self.places.clone()),
         };
         let mut ports = ports(self.tray.clone());
         ports.reveal = self.reveal.clone();
-        Boot::load(self.platform(), services, ports).unwrap()
+        Boot::load(self.platform(), services, ports, run).unwrap()
     }
 
     /// True once the started predict module settled in language `iso`: it opened that pack and heard the typing mode,

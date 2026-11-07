@@ -28,7 +28,8 @@ mod tests {
     use super::*;
     use kx_module_api::Event;
     use kx_module_api::ports::{
-        AssistNote, AssistToggle, LatchesChanged, PointerMoved, PointerPressed, PressesWanted,
+        AssistNote, AssistToggle, LatchesChanged, PanelPressesWanted, PointerMoved, PointerPressed,
+        PressesWanted,
     };
 
     #[test]
@@ -58,7 +59,11 @@ mod tests {
 
     #[test]
     fn presses_wanted_and_told_need_no_gate() {
-        let presses = [PressesWanted::CAPABILITY, PointerPressed::CAPABILITY];
+        let presses = [
+            PressesWanted::CAPABILITY,
+            PanelPressesWanted::CAPABILITY,
+            PointerPressed::CAPABILITY,
+        ];
         assert!(presses.iter().all(Option::is_none));
     }
 

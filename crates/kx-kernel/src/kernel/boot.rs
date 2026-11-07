@@ -1,13 +1,14 @@
-//! Boot in two steps. `load` reads the settings, plans the order and blocks what cannot start
+//! Boot in two steps. `load` reads the settings, from the file or fresh, plans the order and blocks what cannot start
 //! (quietly when it is off); `start` skips what is off and starts the rest.
 
-use super::{KERNEL, Kernel, KernelError, Phase, SPEC, switched_off};
+use super::{DISABLED_KEY, KERNEL, Kernel, KernelError, Phase, SPEC, switched_off};
 use crate::lifecycle::Step;
 use crate::order::{self, Node, Plan, Reason};
 use kx_module_api::{ModuleId, ModuleState, Notice};
 use kx_settings::{Files, Store};
 use std::collections::BTreeSet;
 use std::iter;
+use toml::Value;
 
 /// Why a module whose settings spec is broken cannot start.
 const SPEC_BROKEN: &str = "its settings spec is broken";
@@ -63,19 +64,37 @@ impl Kernel {
         Ok(self.store.collected())
     }
 
-    /// Loads the store, kernel section first, tells its notices and returns the broken specs.
+    /// Loads the store, kernel section first, tells its notices and returns the broken specs. A fresh run reads no
+    /// file and keeps its off list off.
     fn read_settings(&mut self) -> Vec<ModuleId> {
-        let files = Files::new(self.platform.dirs().data_dir().path());
         let modules = self.slots.iter();
         let specs: Vec<_> = iter::once((KERNEL, &SPEC))
             .chain(modules.filter_map(|s| Some((s.manifest.id, s.manifest.settings?))))
             .collect();
-        let (store, report) = Store::load(files, &specs);
+        let (store, report) = if self.fresh.is_some() {
+            Store::fresh(&specs)
+        } else {
+            Store::load(Files::new(self.platform.dirs().data_dir().path()), &specs)
+        };
         self.store.put(store);
+        self.keep_off();
         for notice in report.notices {
             self.notify(notice);
         }
         report.broken
+    }
+
+    /// Switches a fresh run's off list off in its store, which never saves.
+    fn keep_off(&self) {
+        let Some(off) = &self.fresh else { return };
+        let list = off.iter().map(|id| Value::from(id.as_str())).collect();
+        if let Err(e) = self.store.set(KERNEL, DISABLED_KEY, Value::Array(list)) {
+            let kind = KernelError::from(e).kind();
+            tracing::error!(
+                error = kind,
+                "the modules kept off this run could not be switched off"
+            );
+        }
     }
 
     fn plan_order(&self) -> Plan {

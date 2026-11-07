@@ -1,0 +1,47 @@
+# The kinds of entry (design "The notebook"), each listed once: `id` names it and its text `fill.kind-<id>`, `icon` its
+# token in kx-theme's `icons.toml [fill]`, `filter` the chip that lists it (`all` means All alone), `fields` its starter
+# label ids from `labels.toml`, and `pair`, if any, the labels User and Password type, with a Tab between for Both.
+# The ids are saved in the notebook, so changing one needs a new `VERSION` in `src/store/codec.rs`.
+
+# Lucide `user`.
+[[kind]]
+id = "person"
+icon = "kind_person"
+filter = "people"
+fields = ["full-name", "email", "phone", "address"]
+
+# Lucide `globe`; the website is often left empty, and an empty field is not kept.
+[[kind]]
+id = "login"
+icon = "kind_login"
+filter = "logins"
+fields = ["user", "password", "website"]
+pair = ["user", "password"]
+
+# Lucide `wifi`.
+[[kind]]
+id = "wifi"
+icon = "kind_wifi"
+filter = "wifi"
+fields = ["network", "password"]
+
+# Lucide `id-card`: an ID or membership card, its number and the name on it.
+[[kind]]
+id = "card"
+icon = "kind_card"
+filter = "cards"
+fields = ["number", "full-name"]
+
+# Lucide `sticky-note`.
+[[kind]]
+id = "note"
+icon = "kind_note"
+filter = "notes"
+fields = ["text"]
+
+# Lucide `tag`: anything else, with no starter fields.
+[[kind]]
+id = "other"
+icon = "kind_other"
+filter = "all"
+fields = []

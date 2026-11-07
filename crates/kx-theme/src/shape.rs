@@ -9,9 +9,11 @@ use crate::extras::{
 
 mod check;
 mod clip;
+mod fill;
 mod whole;
 
 pub use clip::ClipShape;
+pub use fill::FillShape;
 pub use whole::{BackdropShape, DimShape, DotsShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
@@ -269,6 +271,8 @@ pub struct Shape {
     pub tray: TrayShape,
     /// The clipboard panel.
     pub clip: ClipShape,
+    /// Quick-fill.
+    pub fill: FillShape,
 }
 
 /// The checked sizes in `text`.

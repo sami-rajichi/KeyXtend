@@ -1,0 +1,14 @@
+# The characters Make one draws from (design "Make one"): every made password holds at least one of each group, and
+# no character is in two groups. Quotes, backslashes, spaces and angle brackets stay out, as some sites refuse them.
+
+[[group]]
+name = "letters"
+chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+[[group]]
+name = "digits"
+chars = "0123456789"
+
+[[group]]
+name = "symbols"
+chars = "!#$%&*+-.=?@^_~"

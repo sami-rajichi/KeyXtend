@@ -1,5 +1,6 @@
 // The notice banner above the keyboard (mock-up .toast, with the panel's .btn buttons): one notice at a time, with Try
-// again when the app can restart what failed, and OK; it counts the notices still waiting. It never takes focus.
+// again when the app can restart what failed, and OK, or Yes and No when it asks; it counts the notices still waiting.
+// It never takes focus.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -15,7 +16,7 @@ Window {
     required property real widest
     required property var spot
 
-    // The notice shown, then those waiting: `{id, text, retry}` each.
+    // The notice shown, then those waiting: `{id, text, retry, ask}` each, `ask` being `{yes, no}` texts or null.
     property var queue: []
 
     // The banner shows (true) or hides (false); its shadow follows.
@@ -26,6 +27,7 @@ Window {
     // The box whose fade and drop the shadow follows.
     readonly property alias body: body
     readonly property var shown: queue.length > 0 ? queue[0] : null
+    readonly property var ask: shown && shown.ask ? shown.ask : null
     // Read again when the texts change, as `res` does.
     readonly property string more: queue.length > 1 && res ? ui.moreText(queue.length - 1) : ""
     readonly property var sh: lk.shape.notice
@@ -114,11 +116,14 @@ Window {
             y = at.y;
         }
     }
-    // Closes the shown notice: Try again asks the app to restart what failed, OK only closes it.
-    function answer(retry) {
+    // Closes the shown notice by its main button (`main`) or the other: Yes or No answers one that asks, Try again asks
+    // the app to restart what failed, and OK only closes it.
+    function answer(main) {
         if (!shown)
             return;
-        if (retry)
+        if (ask)
+            ui.answer(shown.id, main);
+        else if (main)
             ui.retry(shown.id);
         else
             ui.dismiss(shown.id);
@@ -155,6 +160,8 @@ Window {
         Accessible.role: Accessible.AlertMessage
         Accessible.name: note.shown ? note.shown.text : ""
         Accessible.description: note.more
+        // A key handed to the banner, which never takes focus: Esc answers No, or OK on a plain notice.
+        Keys.onEscapePressed: note.answer(false)
 
         Icon {
             id: icon
@@ -199,15 +206,17 @@ Window {
             anchors.rightMargin: note.side
             anchors.verticalCenter: parent.verticalCenter
             spacing: note.gap
+            // Yes or Try again, then No or OK.
             NoticeButton {
-                visible: !!note.shown && note.shown.retry
-                text: note.res.tr("button.retry")
+                id: first
+                visible: !!note.ask || (!!note.shown && note.shown.retry)
+                text: note.ask ? note.ask.yes : note.res.tr("button.retry")
                 main: true
                 onClicked: note.answer(true)
             }
             NoticeButton {
-                text: note.res.tr("button.ok")
-                main: !(note.shown && note.shown.retry)
+                text: note.ask ? note.ask.no : note.res.tr("button.ok")
+                main: !first.visible
                 onClicked: note.answer(false)
             }
         }

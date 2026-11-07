@@ -35,6 +35,10 @@ impl InputInjector for WinInjector {
     fn target_app(&self) -> Option<String> {
         front::app()
     }
+
+    fn front_window(&self) -> Option<u64> {
+        front::window()
+    }
 }
 
 /// The Win32 calls behind `WinInjector` and the shortcuts service.
@@ -278,6 +282,12 @@ mod tests {
         let scans = keys::ALT_WIN_VKS[1..].iter().map(|&vk| map_vk(vk, None));
         let want = keys::ALT_WIN_SCANS.map(u32::from);
         assert_eq!(scans.collect::<Vec<_>>(), want);
+    }
+
+    #[test]
+    fn the_injector_names_the_window_in_front_by_a_number() {
+        let port: Arc<dyn InputInjector> = Arc::new(WinInjector);
+        assert_ne!(port.front_window(), Some(0), "none in front gives `None`");
     }
 
     #[test]

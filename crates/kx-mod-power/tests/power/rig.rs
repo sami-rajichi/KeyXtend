@@ -3,7 +3,7 @@
 
 use kx_mod_power::{Actor, ID, Job, MANIFEST, Msg, Spawn};
 use kx_module_api::ports::{PowerChanged, PowerDialog};
-use kx_module_api::{Bus, Event, ModuleCx, Notice, NoticeArg, Subscription, args, keys};
+use kx_module_api::{Bus, Event, ModuleCx, Notice, Subscription, keys};
 use kx_platform_fake::FakePowerDialog;
 use kx_test_support::host::FakeHost;
 use std::sync::mpsc::{self, Receiver};
@@ -12,23 +12,14 @@ use std::sync::{Arc, Mutex};
 /// The module's state while it runs.
 pub const LIVE: PowerChanged = PowerChanged { live: true };
 
-/// The module's notice `key`, naming the module.
-fn notice(key: &'static str) -> Notice {
-    Notice {
-        key,
-        module: Some(ID),
-        args: vec![(args::MODULE, NoticeArg::Text(ID.to_string()))],
-    }
-}
-
 /// The notice that the dialog did not open.
 pub fn failed() -> Notice {
-    notice(keys::POWER_FAILED)
+    Notice::about(keys::POWER_FAILED, ID)
 }
 
 /// The notice that the module stopped after a panic, until the app restarts.
 pub fn stopped() -> Notice {
-    notice(keys::POWER_STOPPED)
+    Notice::about(keys::POWER_STOPPED, ID)
 }
 
 /// One event the actor published.

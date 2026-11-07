@@ -15,6 +15,7 @@ mod list;
 mod room;
 
 pub use room::DiskRoom;
+pub(crate) use room::nearest;
 
 /// The sealed shelf over the folder `root`; the guard wraps its data key and `disk` reads its drive.
 /// Its room's `used` is the sealed blobs' file sizes, seal overhead in, and leaves out the key, damaged and temp files.

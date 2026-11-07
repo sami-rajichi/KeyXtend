@@ -4,10 +4,10 @@
 
 use kx_module_api::Capability::{InjectInput, ReadFocusedText, SecretStore};
 use kx_module_api::ports::{
-    BlobName, ChipPicked, FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead,
-    FieldRun, FieldWatch, FieldWatchKey, Lane, PackError, PackView, Piece, PressesAsk,
-    PressesWanted, SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord, Typed,
-    TypingMode, TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
+    AimedLine, BlobName, ChipPicked, FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind,
+    FieldRead, FieldRun, FieldWatch, FieldWatchKey, Lane, PackError, PackView, PanelLine, Piece,
+    PressesAsk, PressesWanted, SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord,
+    Typed, TypingMode, TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -121,7 +121,7 @@ fn host(granted: &[Capability]) -> FakeHost {
 }
 
 /// Sends one of each gated event on `bus`.
-fn send_all(bus: &Bus) -> [Result<(), EventError>; 7] {
+fn send_all(bus: &Bus) -> [Result<(), EventError>; 8] {
     let lane = Suggested {
         round: 1,
         lane: Lane::Empty,
@@ -138,6 +138,10 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 7] {
         round: 1,
         erase: 0,
         text: Redacted::default(),
+        line: false,
+    };
+    let aimed = AimedLine {
+        line: PanelLine::Search(Redacted::new(TEXT.to_owned())),
     };
     [
         bus.publish(&Typed {
@@ -149,11 +153,12 @@ fn send_all(bus: &Bus) -> [Result<(), EventError>; 7] {
         bus.publish(&lane),
         bus.publish(&ChipPicked { round: 1, index: 0 }),
         bus.publish(&WordsAsk::Again),
+        bus.publish(&aimed),
     ]
 }
 
 /// Subscribes to each gated event on `bus`, in `send_all`'s order, and drops each subscription at once.
-fn hear_all(bus: &Bus) -> [Result<(), EventError>; 7] {
+fn hear_all(bus: &Bus) -> [Result<(), EventError>; 8] {
     [
         bus.subscribe(|_: &Typed| {}).map(drop),
         bus.subscribe(|_: &TypingMode| {}).map(drop),
@@ -162,6 +167,7 @@ fn hear_all(bus: &Bus) -> [Result<(), EventError>; 7] {
         bus.subscribe(|_: &Suggested| {}).map(drop),
         bus.subscribe(|_: &ChipPicked| {}).map(drop),
         bus.subscribe(|_: &WordsAsk| {}).map(drop),
+        bus.subscribe(|_: &AimedLine| {}).map(drop),
     ]
 }
 
@@ -181,6 +187,7 @@ fn without_read_focused_text_no_typed_text_travels() {
         refused::<Suggested>(),
         refused::<ChipPicked>(),
         refused::<WordsAsk>(),
+        refused::<AimedLine>(),
     ];
     assert_eq!(send_all(&bus), want);
     assert_eq!(hear_all(&bus), want, "no one may listen either");
@@ -200,9 +207,31 @@ fn with_read_focused_text_a_typed_piece_reaches_its_listener_whole() {
     })
     .unwrap();
     assert_eq!(*seen.lock().unwrap(), [piece]);
-    let all = [Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(()), Ok(())];
+    let all = [
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+        Ok(()),
+    ];
     assert_eq!(send_all(&bus), all);
     assert_eq!(hear_all(&bus), all);
+}
+
+#[test]
+fn an_aimed_line_reaches_its_listener_with_its_text() {
+    let bus = host(&[ReadFocusedText]).bus();
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = Arc::clone(&seen);
+    let _sub = bus
+        .subscribe(move |e: &AimedLine| log.lock().unwrap().push(e.line.clone()))
+        .unwrap();
+    let line = PanelLine::Search(Redacted::new(TEXT.to_owned()));
+    bus.publish(&AimedLine { line: line.clone() }).unwrap();
+    assert_eq!(*seen.lock().unwrap(), [line]);
 }
 
 #[test]

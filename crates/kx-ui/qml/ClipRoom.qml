@@ -1,15 +1,18 @@
 // The clipboard panel's storage line (spec §7): what the history takes and what the drive has free, or a note in its
-// place, beside Open folder, which shows the history's folder in the file manager and stays as the way out.
+// place, beside Open folder, which shows the history's folder in the file manager and stays as the way out; it shows
+// disabled in a run that keeps no folder.
 import QtQuick
 
 Item {
     id: room
 
-    // The storage line, empty until the room is read; the note or null, Open folder's label, the click names, the
-    // look, fonts, icons and size.
+    // The storage line, empty until the room is read; the note or null, Open folder's label, whether it can act and
+    // why not, the click names, the look, fonts, icons and size.
     required property string text
     required property var note
     required property string folder
+    required property bool opens
+    required property string noFolder
     required property var names
     required property var lk
     required property var res
@@ -75,7 +78,8 @@ Item {
         label: room.folder
         icon: room.lk.icons.clip.folder
         tone: "ghost"
-        can: true
+        can: room.opens
+        about: room.opens ? "" : room.noFolder
         lk: room.lk
         res: room.res
         s: room.s

@@ -94,7 +94,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G20 Clipboard (core) | Every copy is seen; copies marked "exclude from history" are skipped; one click pastes an older entry into Notepad and Word |
 | G21 Password fields (core) | Focus in a password box is flagged in Chrome and in a Win32 password field; normal fields are not flagged |
 | G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
-| G23 Quick-fill | Windows Hello opens from the no-focus keyboard; after Yes, test User and Password values are typed into a login page; after Cancel nothing is typed |
+| G23 Quick-fill | Quick-fill's Both types a test user, a Tab and the password into a login page from the no-focus keyboard; nothing reaches the clipboard and no Enter is sent |
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
 | G25 Language and shortcuts (core) | The language key also switches the target app's input language; the shortcuts layer's Copy, Paste, Undo, Copy all and Switch app, Win+V and the Power key's dialog (always cancelled) work from the keyboard |
 | G26 Other languages (core, GitHub Windows) | German, Russian, Hebrew and Persian labels match their layouts and their text arrives intact. The Japanese IME part (key presses produce 日本) moved to F16 |
@@ -208,12 +208,13 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 9 — Quick-fill vault — v0.6
 
-- `kx-mod-vault`: the encrypted file, Windows Hello unlock, idle lock, tabs, User/Password fill, `age` export/import, and CSV with a warning.
+- First, one data folder: a run whose saves would be hidden saves nothing, and hidden copies are offered for deletion (ADR-0037).
+- `kx-mod-vault`, shown as Quick-fill: a sealed notebook of entries with fields of any kind, one-click fill with no unlock step, a locked backup box kept up to date with memory checks, and KeePass import (ADR-0038, design `2026-11-01-quick-fill-design.md`).
 - **Edge cases:**
-  - Hello unavailable (fall back to the master password);
-  - a corrupt file;
-  - a wrong import format;
-  - a locked vault when a password box asks for a fill;
+  - a hidden run and a hidden copy;
+  - a corrupt notebook or box;
+  - a wrong import format or backup password;
+  - a backup place gone, or holding another computer's box;
   - filling while the focus changes.
 
 ## Phase 10 — Selection helper — v0.6

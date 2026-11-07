@@ -4,10 +4,11 @@ use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed,
-    LayoutAsk, LayoutChanged, PointerMoved, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
-    ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek, ScrollStop, ScrollTap,
+    LayoutAsk, LayoutChanged, PanelLine, PointerMoved, PointerPressed, PowerAsk, PowerAsked,
+    PowerChanged, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek, ScrollStop,
+    ScrollTap,
 };
-use crate::{ModuleStateChanged, Notice, REDACTED_MARKER, SettingsChanged};
+use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
 
 /// Texts that appear nowhere else in the output: a Latin one and an Arabic one ("hello").
@@ -21,7 +22,7 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The words events, in the order `events_have_their_names` checks.
-fn words() -> [(&'static str, Option<Capability>); 9] {
+fn words() -> [(&'static str, Option<Capability>); 11] {
     [
         row::<Typed>(),
         row::<TypingMode>(),
@@ -30,15 +31,18 @@ fn words() -> [(&'static str, Option<Capability>); 9] {
         row::<Suggested>(),
         row::<ChipPicked>(),
         row::<WordsAsk>(),
+        row::<AimedLine>(),
         row::<PressesWanted>(),
+        row::<PanelPressesWanted>(),
         row::<PressesAsk>(),
     ]
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 24] {
+fn older() -> [&'static str; 25] {
     [
         Notice::NAME,
+        NoticeAnswered::NAME,
         ModuleStateChanged::NAME,
         SettingsChanged::NAME,
         LayoutChanged::NAME,
@@ -70,20 +74,20 @@ fn secret(n: usize) -> Redacted<String> {
     Redacted::new(SECRETS[n].to_owned())
 }
 
-/// A lane of one chip per secret, with the email list open on both.
+/// A lane of a word chip and a saved-email chip, one per secret, with the email list open on both.
 fn suggested() -> Suggested {
-    let chip = |n| Chip {
+    let chip = |n, kind| Chip {
         text: secret(n),
-        kind: ChipKind::Word,
+        kind,
     };
     let list = ListPage {
-        items: vec![secret(0), secret(1)],
+        items: vec![chip(0, ChipKind::Email), chip(1, ChipKind::Saved)],
         page: 0,
         pages: 1,
     };
     Suggested {
         round: 7,
-        lane: Lane::Chips(vec![chip(0), chip(1)]),
+        lane: Lane::Chips(vec![chip(0, ChipKind::Word), chip(1, ChipKind::Saved)]),
         forgetting: false,
         learn: true,
         on: true,
@@ -101,7 +105,9 @@ fn events_have_their_names() {
         "suggested",
         "chip-picked",
         "words-ask",
+        "aimed-line",
         "presses-wanted",
+        "panel-presses-wanted",
         "presses-ask",
     ];
     assert_eq!(words().map(|r| r.0), want);
@@ -109,7 +115,9 @@ fn events_have_their_names() {
 
 #[test]
 fn every_event_but_the_press_events_needs_read_focused_text() {
-    let want = [READ, READ, READ, READ, READ, READ, READ, None, None];
+    let want = [
+        READ, READ, READ, READ, READ, READ, READ, READ, None, None, None,
+    ];
     assert_eq!(
         words().map(|r| r.1),
         want,
@@ -136,14 +144,19 @@ fn debug_never_shows_a_typed_or_suggested_text() {
         round: 7,
         erase: 2,
         text: secret(0),
+        line: false,
     };
     let lane = suggested();
     let list = lane.list.clone();
+    let aimed = AimedLine {
+        line: PanelLine::Search(secret(1)),
+    };
     let shown = [
         format!("{typed:?}"),
         format!("{word:?}"),
         format!("{lane:?}"),
         format!("{list:?}"),
+        format!("{aimed:?}"),
     ];
     for text in shown {
         assert!(text.contains(REDACTED_MARKER), "{text}");
@@ -151,6 +164,21 @@ fn debug_never_shows_a_typed_or_suggested_text() {
             assert!(!text.contains(secret), "{text} shows {secret}");
         }
     }
+}
+
+#[test]
+fn a_saved_email_is_a_chip_kind_of_its_own() {
+    let kinds = [
+        ChipKind::Word,
+        ChipKind::Domain,
+        ChipKind::Email,
+        ChipKind::Saved,
+        ChipKind::More,
+        ChipKind::Undo,
+    ];
+    let unique: HashSet<ChipKind> = kinds.into_iter().collect();
+    assert_eq!(unique.len(), kinds.len(), "a saved email is no typed one");
+    assert_eq!(format!("{:?}", ChipKind::Saved), "Saved");
 }
 
 #[test]
@@ -187,9 +215,19 @@ fn a_type_word_still_shows_its_round_and_erase() {
         round: 7,
         erase: 2,
         text: secret(0),
+        line: true,
     };
-    let want = format!("TypeWord {{ round: 7, erase: 2, text: {REDACTED_MARKER} }}");
+    let want = format!("TypeWord {{ round: 7, erase: 2, text: {REDACTED_MARKER}, line: true }}");
     assert_eq!(format!("{word:?}"), want);
+}
+
+#[test]
+fn no_panel_line_is_the_default_and_a_private_line_carries_no_text() {
+    assert_eq!(PanelLine::default(), PanelLine::None);
+    let private = AimedLine {
+        line: PanelLine::Private,
+    };
+    assert_eq!(format!("{private:?}"), "AimedLine { line: Private }");
 }
 
 #[test]

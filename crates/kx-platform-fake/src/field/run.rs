@@ -4,24 +4,9 @@ use super::Shared;
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, last_words,
+    FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, last_words, read_end,
 };
-use kx_platform::field::after_first;
 use std::sync::Arc;
-
-/// The end of `text` one read of at most `chars` characters takes: all of it when it fits, else its last `chars`
-/// characters without the first word they may split, as on the real adapter.
-fn capped(text: &str, chars: usize) -> &str {
-    let skip = text.chars().count().saturating_sub(chars);
-    if skip == 0 {
-        return text;
-    }
-    let at = text
-        .char_indices()
-        .nth(skip)
-        .map_or(text.len(), |(at, _)| at);
-    after_first(&text[at..])
-}
 
 /// A live fake watch; dropping it stops the watch and its tells.
 pub(super) struct FakeRun {
@@ -50,8 +35,9 @@ impl FieldRun for FakeRun {
         }
         let kind = log.seen();
         let text = log.before.as_deref().filter(|_| kind.reads());
-        let text = text
-            .map(|t| last_words(capped(t, usize::from(self.cfg.read_chars)), max_words).to_owned());
+        let text = text.map(|t| {
+            last_words(read_end(t, usize::from(self.cfg.read_chars)), max_words).to_owned()
+        });
         Ok(FieldRead {
             kind,
             text: text.map(Redacted::new),

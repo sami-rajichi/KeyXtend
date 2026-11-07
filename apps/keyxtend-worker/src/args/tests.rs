@@ -1,4 +1,4 @@
-//! The command line: the media job with its count, and every other form refused.
+//! The command line: the media job with its count, the vault job alone, and every other form refused.
 
 use super::*;
 
@@ -63,13 +63,32 @@ fn an_extra_argument_is_refused() {
 }
 
 #[test]
+fn the_vault_job_takes_nothing_after_it() {
+    assert_eq!(parse_all(&[VAULT_JOB]), Ok(Job::Vault));
+    for extra in [
+        &[VAULT_JOB, "x"][..],
+        &[VAULT_JOB, MAX_PIXELS_FLAG, "5"],
+        &[VAULT_JOB, ""],
+    ] {
+        assert_eq!(parse_all(extra), Err(ArgError::Alone), "{extra:?}");
+    }
+    let job = ArgError::Job("Vault".to_string());
+    assert_eq!(parse_all(&["Vault"]), Err(job));
+}
+
+#[test]
 fn each_refusal_is_one_short_line_naming_the_usage() {
-    for e in [ArgError::Job("voice".to_string()), ArgError::Usage] {
+    let cases = [
+        (
+            ArgError::Job("voice".to_string()),
+            &[MEDIA_JOB, MAX_PIXELS_FLAG, VAULT_JOB][..],
+        ),
+        (ArgError::Usage, &[MEDIA_JOB, MAX_PIXELS_FLAG]),
+        (ArgError::Alone, &[VAULT_JOB]),
+    ];
+    for (e, words) in cases {
         let line = e.to_string();
         assert!(!line.contains('\n'), "{line}");
-        assert!(
-            line.contains(MEDIA_JOB) && line.contains(MAX_PIXELS_FLAG),
-            "{line}"
-        );
+        assert!(words.iter().all(|w| line.contains(w)), "{line}");
     }
 }

@@ -1,14 +1,15 @@
-//! The program itself: a refused command line fails with one line on stderr, and the media job answers over real
-//! stdin and stdout until goodbye.
+//! The program itself: a refused command line fails with one line on stderr, and the media and vault jobs answer
+//! over real stdin and stdout until goodbye.
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
 use kx_ipc::{
-    Ask, CLEAN_EXIT, Codec, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, Reply, Why,
+    Ask, BoxPart, CLEAN_EXIT, Codec, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, MIN_BOX_WORK,
+    NOTEBOOK_PART, REFUSED_EXIT, Reply, VAULT_JOB, VaultAsk, VaultReply, Why, Wiped,
 };
 use std::borrow::Cow;
 use std::io::Write;
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 
 /// The worker program Cargo built for these tests.
 const WORKER: &str = env!("CARGO_BIN_EXE_keyxtend-worker");
@@ -66,6 +67,7 @@ fn a_refused_command_line_fails_with_one_line() {
         &["update"],
         &[MEDIA_JOB],
         &[MEDIA_JOB, MAX_PIXELS_FLAG, "0"],
+        &[VAULT_JOB, MEDIA_JOB],
     ];
     for args in cases {
         let out = run(args, b"");
@@ -160,4 +162,91 @@ fn a_broken_frame_fails_the_job_with_one_line() {
     assert!(exited(&out, REFUSED_EXIT));
     assert!(out.stdout.is_empty());
     assert!(one_line(&out.stderr), "{:?}", out.stderr);
+}
+
+/// The vault job, asked over pipes, its stderr kept to check.
+fn vault_job() -> Child {
+    let mut job = Command::new(WORKER);
+    job.arg(VAULT_JOB)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    job.spawn().unwrap()
+}
+
+/// Writes `ask` to the vault job and reads its answer.
+fn ask_vault(job: &mut Child, ask: &VaultAsk<'_>) -> VaultReply {
+    ask.write(job.stdin.as_mut().unwrap()).unwrap();
+    VaultReply::read(job.stdout.as_mut().unwrap()).unwrap()
+}
+
+/// The padlock the job makes under `password`: its recipient and its locked identity.
+fn padlock(job: &mut Child, password: &[u8]) -> (String, Vec<u8>) {
+    let password = Wiped::Lent(password);
+    let ask = VaultAsk::Padlock {
+        id: 1,
+        work: MIN_BOX_WORK,
+        password,
+    };
+    let VaultReply::Padlock {
+        recipient, locked, ..
+    } = ask_vault(job, &ask)
+    else {
+        panic!("a padlock for ask 1");
+    };
+    (recipient, locked)
+}
+
+/// The box the job seals `notes` into, with no password.
+fn seal(job: &mut Child, recipient: &str, locked: &[u8], notes: &[u8]) -> Vec<u8> {
+    let part = BoxPart {
+        name: Cow::Borrowed(NOTEBOOK_PART),
+        bytes: Wiped::Lent(notes),
+    };
+    let (recipient, locked) = (Cow::Borrowed(recipient), Cow::Borrowed(locked));
+    let ask = VaultAsk::Seal {
+        id: 2,
+        recipient,
+        locked,
+        parts: vec![part],
+    };
+    let VaultReply::Sealed { bytes, .. } = ask_vault(job, &ask) else {
+        panic!("a box for ask 2");
+    };
+    bytes
+}
+
+#[test]
+fn the_vault_job_seals_and_opens_a_box_one_ask_at_a_time_until_bye() {
+    let (mut job, password) = (vault_job(), b"plain words");
+    let (recipient, locked) = padlock(&mut job, password);
+    let bytes = seal(&mut job, &recipient, &locked, b"notes");
+    let password = Wiped::Lent(password);
+    let open = VaultAsk::Open {
+        id: 3,
+        password,
+        bytes: Cow::Borrowed(&bytes),
+    };
+    let VaultReply::Opened { parts, .. } = ask_vault(&mut job, &open) else {
+        panic!("an opened box for ask 3");
+    };
+    assert_eq!(&*parts[0].bytes, b"notes");
+    let password = Wiped::Lent(b"two fingers");
+    let check = VaultAsk::Check {
+        id: 4,
+        password,
+        locked: Cow::Borrowed(&locked),
+    };
+    assert_eq!(
+        ask_vault(&mut job, &check),
+        VaultReply::Checked { id: 4, yes: false }
+    );
+    VaultAsk::Bye.write(job.stdin.as_mut().unwrap()).unwrap();
+    let out = job.wait_with_output().unwrap();
+    assert!(
+        exited(&out, CLEAN_EXIT) && out.stdout.is_empty() && out.stderr.is_empty(),
+        "{:?} {:?}",
+        out.status,
+        out.stderr
+    );
 }

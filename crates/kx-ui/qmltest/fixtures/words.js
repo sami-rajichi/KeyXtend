@@ -3,6 +3,7 @@
 var asks = {
   "again": "again",
   "cancel": "cancel",
+  "fill": "fill",
   "forget": "forget",
   "more": "more",
   "page": "page",
@@ -49,8 +50,15 @@ var lanes = {
         "kind": "more",
         "name": "More emails",
         "text": ""
+      },
+      {
+        "arabic": false,
+        "kind": "saved",
+        "name": "Suggestion: lea@carnet.fr",
+        "text": "lea@carnet.fr"
       }
     ],
+    "fill": true,
     "forgetting": false,
     "kind": "chips",
     "learn": true,
@@ -60,6 +68,7 @@ var lanes = {
   },
   "empty": {
     "chips": [],
+    "fill": true,
     "forgetting": false,
     "kind": "empty",
     "learn": true,
@@ -88,6 +97,7 @@ var lanes = {
         "text": "ali@example.org"
       }
     ],
+    "fill": true,
     "forgetting": true,
     "kind": "chips",
     "learn": true,
@@ -132,8 +142,15 @@ var lanes = {
         "kind": "more",
         "name": "More emails",
         "text": ""
+      },
+      {
+        "arabic": false,
+        "kind": "saved",
+        "name": "Suggestion: lea@carnet.fr",
+        "text": "lea@carnet.fr"
       }
     ],
+    "fill": true,
     "forgetting": false,
     "kind": "chips",
     "learn": true,
@@ -141,22 +158,27 @@ var lanes = {
       "items": [
         {
           "arabic": false,
+          "kind": "email",
           "text": "ali@example.org"
         },
         {
           "arabic": false,
+          "kind": "saved",
           "text": "mona@example.net"
         },
         {
           "arabic": false,
+          "kind": "email",
           "text": "sam@example.com"
         },
         {
           "arabic": false,
+          "kind": "email",
           "text": "lea@example.fr"
         },
         {
           "arabic": false,
+          "kind": "email",
           "text": "omar@example.org"
         }
       ],
@@ -168,6 +190,7 @@ var lanes = {
   },
   "locked": {
     "chips": [],
+    "fill": true,
     "forgetting": false,
     "kind": "locked",
     "learn": true,
@@ -175,8 +198,19 @@ var lanes = {
     "on": true,
     "round": 8
   },
+  "lockedOff": {
+    "chips": [],
+    "fill": false,
+    "forgetting": false,
+    "kind": "locked",
+    "learn": true,
+    "list": null,
+    "on": true,
+    "round": 14
+  },
   "off": {
     "chips": [],
+    "fill": true,
     "forgetting": false,
     "kind": "off",
     "learn": true,
@@ -186,6 +220,7 @@ var lanes = {
   },
   "start": {
     "chips": [],
+    "fill": false,
     "forgetting": false,
     "kind": "stopped",
     "learn": true,
@@ -195,6 +230,7 @@ var lanes = {
   },
   "stopped": {
     "chips": [],
+    "fill": true,
     "forgetting": false,
     "kind": "stopped",
     "learn": true,

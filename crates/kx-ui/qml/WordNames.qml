@@ -13,7 +13,8 @@ QtObject {
             more: "more",
             page: "page",
             pick: "pick",
-            again: "again"
+            again: "again",
+            fill: "fill"
         })
     // The lane's kinds the top bar tells apart: the password note, a lane with nothing to offer, and no module running.
     readonly property string locked: "locked"
@@ -29,6 +30,7 @@ QtObject {
             chip: "chip-",
             cancel: "cancel",
             note: "locked",
+            fill: "fill",
             menu: "menu",
             item: "menu-",
             list: "list",

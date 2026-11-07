@@ -51,6 +51,10 @@ capabilities! {
     /// Reach the keyboard's face and its pointer notes: the keyboard offers the face, the ui draws it, the mouse module
     /// sends the notes.
     KeyboardUi => "keyboard-ui",
+    /// Carry Quick-fill's events that hold values; the keyboard, prediction and the ui hold it as an event gate.
+    Vault => "vault",
+    /// Reach Quick-fill's notebook store, its backup boxes and places; the vault module alone holds it (ADR-0039).
+    VaultData => "vault-data",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -113,5 +117,17 @@ mod tests {
         let others: Vec<_> = Capability::ALL.into_iter().filter(|&c| c != ui).collect();
         assert_eq!(others.len(), Capability::ALL.len() - 1, "listed once");
         assert!(others.iter().all(|c| c.name() != ui.name()), "{others:?}");
+    }
+
+    #[test]
+    fn vault_then_vault_data_follow_the_older_ones() {
+        let (vault, data) = (Capability::Vault, Capability::VaultData);
+        assert_eq!((vault.name(), data.name()), ("vault", "vault-data"));
+        let last = &Capability::ALL[Capability::ALL.len() - 2..];
+        assert_eq!(last, [vault, data], "older ones keep their places");
+        for cap in [vault, data] {
+            let others = Capability::ALL.iter().filter(|&&c| c != cap);
+            assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+        }
     }
 }

@@ -77,6 +77,7 @@ tip =
     .scroll-off = Le pavé de défilement est désactivé
     .no-shortcuts = Aucun raccourci n’est choisi
     .power-off = La touche Marche/Arrêt est désactivée
+    .fill-off = Le remplissage rapide est désactivé
     .rclick = Maintenez l’appui sans bouger pour faire un clic droit ; les clics brefs restent normaux
     .grab = Appuyez pour saisir, déplacez, puis cliquez pour déposer
 
@@ -218,6 +219,7 @@ window =
     .pointer = Aide au pointeur
     .outline = Contour de défilement
     .clip = Historique du Presse-papiers { -app }
+    .fill = Remplissage rapide de { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -238,6 +240,10 @@ tray =
 button =
     .retry = Réessayer
     .ok = OK
+    .yes = Oui
+    .no = Non
+    .check = Vérifier
+    .later = Plus tard
 
 ## Le bandeau des notifications : combien d’autres attendent derrière celle qu’il montre.
 ## Les formes du pluriel se choisissent selon $form, qui est $more lu par les règles CLDR ; $more vaut au moins 1.
@@ -253,7 +259,7 @@ page =
     .on = Page suivante
     .of = { $at } sur { $count }
 
-## Notifications, par clé de kx-module-api. $module est un nom de module, $keys une liste de paramètres et $lang un nom de langue.
+## Notifications, par clé de kx-module-api. $module est un nom de module, $keys une liste de paramètres, $lang un nom de langue et $app le nom d’une autre application.
 notice =
     .settings-reset = Certains paramètres de « { $module } » n’étaient pas valides et ont repris leur valeur par défaut : { $keys }.
     .settings-restored = Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.
@@ -279,6 +285,13 @@ notice =
     .words-locked = Les mots appris n’ont pas pu être déverrouillés : rien de ce qui est appris n’est enregistré cette fois.
     .clip-damaged = Une partie de l’historique du Presse-papiers était endommagée ; ces éléments ont été supprimés.
     .clip-locked = L’historique du Presse-papiers n’a pas pu être déverrouillé : les copies ne sont pas conservées cette fois.
+    .hidden-run = { -app } a été lancé depuis { $app }, où Windows cache ce que { -app } enregistre : rien n’est donc enregistré cette fois. Quittez { -app }, puis relancez-le depuis le menu Démarrer.
+    .hidden-copy = Une copie cachée des données de { -app } se trouve dans le dossier de { $app }. Voulez-vous la supprimer définitivement ?
+    .hidden-copy-failed = La copie cachée dans le dossier de { $app } n’a pas pu être supprimée. { -app } vous posera de nouveau la question la prochaine fois.
+    .vault-damaged = Les éléments enregistrés dans le Remplissage rapide étaient endommagés ; ils ont été mis de côté. Vous pouvez les restaurer depuis votre sauvegarde.
+    .vault-check = Vous souvenez-vous toujours du mot de passe de sauvegarde du Remplissage rapide ?
+    .vault-offer = Protéger vos éléments du Remplissage rapide par une sauvegarde verrouillée ?
+    .vault-backup-damaged = Les paramètres de sauvegarde du Remplissage rapide étaient endommagés ; configurez de nouveau la sauvegarde.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =
@@ -291,6 +304,7 @@ module =
     .predict = Suggestions de mots
     .scroll = Pavé de défilement
     .ui = Apparence
+    .vault = Remplissage rapide
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.
 langkey =

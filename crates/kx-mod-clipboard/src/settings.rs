@@ -8,7 +8,9 @@ use std::fmt;
 use std::ops::RangeInclusive;
 
 use kx_module_api::ports::{MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES};
-use kx_module_api::{Redacted, Settings, SettingsError, SettingsSpec, validate_as, within};
+use kx_module_api::{
+    Redacted, Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within,
+};
 use serde::{Deserialize, Serialize};
 
 /// Calendar days an entry, or a media entry, is kept.
@@ -277,15 +279,6 @@ impl Settings for ClipSettings {
 /// True when `text` holds no line break, Unicode's separators included, or other control character.
 fn one_line(text: &str) -> bool {
     !text.chars().any(|c| c.is_control() || BREAKS.contains(&c))
-}
-
-/// Refuses with `why` when `bad`.
-fn refuse_if(bad: bool, why: &str) -> Result<(), SettingsError> {
-    if bad {
-        Err(SettingsError::Invalid(why.to_owned()))
-    } else {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

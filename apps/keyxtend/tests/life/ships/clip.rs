@@ -1,6 +1,6 @@
 //! The clipboard history's grants (ADR-0034): its feature is a default and the build ships it, it holds the three
-//! gates, the keyboard adds both clipboard gates and the ui the read one, and the watch, the writer and the shelf each
-//! reach only the modules holding their gate.
+//! gates, the keyboard adds both clipboard gates, the ui and Quick-fill the read one, and the watch, the writer and the
+//! shelf each reach only the modules holding their gate.
 
 use super::{defaults, features, holders, reached};
 use crate::rig::Rig;
@@ -35,13 +35,13 @@ fn the_clipboard_holds_read_write_and_the_secret_store() {
 }
 
 #[test]
-fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_and_predict() {
+fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_and_predict() {
     let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
-    let read = BTreeSet::from([clip, keyboard, ui]);
+    let read = BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID]);
     assert_eq!(
         holders(Capability::ReadClipboard),
         read,
-        "the panel's events"
+        "the panel's events and Paste's take"
     );
     let write = BTreeSet::from([clip, keyboard]);
     assert_eq!(holders(Capability::WriteClipboard), write, "the paste ask");

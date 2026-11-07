@@ -1,14 +1,14 @@
 # Security note: kx-mod-clipboard
 
 - **Owner:** product owner
-- **Last review:** 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues; final fix: the DIB an inserted PNG goes with)
+- **Last review:** 2026-11-06 (P9 Task 27: the search line's text reaches prediction's memory while aimed at); 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues; final fix: the DIB an inserted PNG goes with)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-clipboard`: the manifest, the `[clipboard]` settings, the `kx-clip` actor (`actor.rs`, `actor/`), insert, the media and files threads (`media.rs`), the store, the panel and the view. It runs inside the uiAccess `keyxtend` process; pictures decode in `keyxtend-worker` (ADR-0004).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
 |---|---|---|
-| `ReadClipboard` | It gates `ClipboardKey` (the watch and the file checks) and the panel events `ClipPanel` (ADR-0035), `ClipKey`, `ClipView` and `ClipAct`. | The module does not start (`each_missing_gate_fails_the_start_and_watches_nothing`). |
+| `ReadClipboard` | It gates `ClipboardKey` (the watch, the file checks and the text read for Quick-fill's take), the panel events `ClipPanel` (ADR-0035), `ClipKey`, `ClipLine`, `ClipView` and `ClipAct`, and the take's `ClipTake` and `ClipTaken`. | The module does not start (`each_missing_gate_fails_the_start_and_watches_nothing`). |
 | `WriteClipboard` | It gates `ClipboardWriterKey`, which sets the clipboard for each insert step, and `PasteAsk` and `Pasted`. | The module does not start (same test). |
 | `SecretStore` | It gates `SealedShelfKey`, which keeps the history sealed (ADR-0034). | The module does not start (same test). |
 
@@ -24,6 +24,7 @@
 | Picture jobs for the worker | Sensitive | Memory only: one thumbnail drawing, one preview drawing and the newest waiting, and an insert's PNG for its DIB, each at most `max_entry_mb` | No | Until drawn or made |
 | Each inserted step | Sensitive | The system clipboard, readable by any app | No | Until the next copy; the last entry stays there |
 | The folder lists (titles, search text, app names, sizes) | Sensitive | Sealed list blob per folder | Yes | As their entries |
+| The search line as told (`ClipLine`, ADR-0040) | Sensitive | One event to modules granted `ReadClipboard`, its text up to the caret, as `Redacted<String>`; the actor keeps the last told. While it is aimed at, the keyboard passes its text to prediction's memory (`AimedLine`), for word chips, and it is never stored, learned or logged there (`kx-mod-predict.md`) | No | Until the search changes or the panel closes |
 | `[clipboard]` settings, including `skip_apps` | Public | `settings.toml` | No | Until the user changes them |
 
 A file entry keeps paths only, never the files. Copies an app marks as private (`ClipNote::Marked`), and copies from `skip_apps`, are never kept. `Msg`, entries and pages print no content in debug output.
@@ -35,6 +36,7 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 | File facts (`Clipboard::files`) | Asked on `kx-clip-files`, never on the actor, for every file copy and panel open (`look_rows`) and at Insert, whose check comes before the newest row look (older row looks dropped). Only an absolute drive path (`C:\…`) is probed, through `probe_ok`; every other form, including `\\host\`, `\\?\`, `\??\` and relative paths, is `FileFact::Unchecked`, and so is a path through a symlink or junction, never followed. `Unchecked` shows "Size unknown" and pastes at Insert; `Away` keeps the row and skips it; all `Gone` deletes the entry; a files thread gone stops Insert with a note | Insert's check stops after `check_ms` with `PasteFailed`, and its late answer is dropped; a slow drive holds only that thread, which is never joined | No; `actor/tests/panel.rs`, `paste.rs`, `stops.rs`, `media/tests.rs` |
 | Panel events (`ClipKey`, `ClipAct`, gated) | A tick on an old round does nothing; rows and pages are clamped to the shown page; a key whose question or preview went is swallowed | One message each | Property tests in `panel/props.rs` |
 | `Pasted` (gated) | Only the round asked is taken; a failed or missing answer stops the insert | `paste_wait_ms` | No; `actor/tests/paste.rs` |
+| `ClipTake` (gated, from Quick-fill) | The read stops at the take's cap, at most twice the longest field (`ClipTake::cap`), and the text goes back only as a wiped `Secret`. The newest entry is forgotten at once, before the vault accepts the text, and only when it is an unpinned text of this copy; a text too long, a busy clipboard or no text forgets nothing, and with no entry to forget the text waits as a wiped `Secret` until the next copy's note, which keeps nothing if it is the same text, as that note can come after the take | The cap; `open_ms` | No; `actor/tests/take.rs` |
 | Pictures from the worker | Drawn in the worker within `max_pixels`, `media_ms` and `worker_mb`; a failure on the image leaves the type icon, and a row refused while the worker is down is asked again once it may start | Thumbnail and preview sides from settings | No; `actor/tests/pictures.rs` |
 | DIBs from the worker (`Made`) | Only the answer to the DIB ask waited for is taken, within `media_ms`; a DIB past `max_entry_mb`, a failure or no answer sets the PNG alone, with one warning naming only the reason. The bytes are never parsed in this process: the writer sets them beside the PNG | `media_ms`, `max_entry_mb` | No; `actor/tests/dib.rs`, `actor/tests/props.rs` |
 | Sealed lists and blobs | AEAD first, then the list's version and every length; a damaged list is set aside with `notice.clip-damaged`; a newer version fails the start untouched | The shelf's `MAX_BLOB_BYTES` | Property tests in `store/` |

@@ -198,3 +198,34 @@ fn debug_never_prints_paths() {
 fn a_watch_error_the_port_never_returns_is_a_test_mistake() {
     FakeClipboard::new().fail_watch(ClipError::Busy);
 }
+
+#[test]
+fn a_take_reads_the_text_held_now_within_its_cap_and_counts_each_read() {
+    let clip = FakeClipboard::new();
+    assert_eq!(clip.text(CFG.wait, 5), Ok(None), "nothing held");
+    clip.set_text(Some("مرحبا"));
+    let held = clip.text(CFG.wait, 5).unwrap();
+    assert_eq!(held.as_ref().map(|t| t.expose().as_str()), Some("مرحبا"));
+    assert_eq!(
+        clip.text(CFG.wait, 4),
+        Err(ClipError::TooLong),
+        "past the cap"
+    );
+    assert_eq!((clip.takes(), clip.take_cap()), (3, Some(4)));
+}
+
+#[test]
+fn a_scripted_take_failure_comes_back_once() {
+    let clip = FakeClipboard::new();
+    clip.set_text(Some("x"));
+    clip.fail_text(ClipError::Busy);
+    assert_eq!(clip.text(CFG.wait, 1), Err(ClipError::Busy));
+    assert!(clip.text(CFG.wait, 1).is_ok_and(|t| t.is_some()));
+}
+
+#[test]
+fn debug_never_prints_the_held_text() {
+    let clip = FakeClipboard::new();
+    clip.set_text(Some("zebra-quartz"));
+    assert!(!format!("{clip:?}").contains("zebra"));
+}

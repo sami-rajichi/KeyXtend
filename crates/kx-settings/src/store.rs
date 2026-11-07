@@ -1,6 +1,6 @@
 //! The `Store`: every module's settings, read with repair, changed with checks, saved as changes only.
 
-use crate::file::{self, Outcome, SaveError};
+use crate::file::{self, Loaded, Outcome, SaveError};
 use crate::names::{Files, VERSION_KEY};
 use crate::section::{self, Section};
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsSpec, keys};
@@ -63,8 +63,8 @@ pub struct Unsaved {
 /// Every registered module's settings, plus the file entries no module owns.
 #[derive(Debug)]
 pub struct Store {
-    /// Where the settings file lives.
-    files: Files,
+    /// Where the settings file lives; `None` for a fresh store, which reads and writes no file.
+    files: Option<Files>,
     /// The registered modules with a sound spec.
     sections: BTreeMap<ModuleId, Section>,
     /// Unknown sections, top-level keys and broken modules' sections, written back as they were.
@@ -106,6 +106,27 @@ impl Store {
     #[must_use]
     pub fn load(files: Files, specs: &[(ModuleId, &'static SettingsSpec)]) -> (Self, LoadReport) {
         let loaded = file::load(&files);
+        Self::read(Some(files), loaded, specs)
+    }
+
+    /// Each registered module's defaults, read from no file; its saves write nothing, for a run that keeps nothing
+    /// (ADR-0037).
+    #[must_use]
+    pub fn fresh(specs: &[(ModuleId, &'static SettingsSpec)]) -> (Self, LoadReport) {
+        let empty = Loaded {
+            table: Table::new(),
+            outcome: Outcome::Fresh,
+            notices: Vec::new(),
+        };
+        Self::read(None, empty, specs)
+    }
+
+    /// The store over `loaded`, the file's table, reading each section in registration order.
+    fn read(
+        files: Option<Files>,
+        loaded: Loaded,
+        specs: &[(ModuleId, &'static SettingsSpec)],
+    ) -> (Self, LoadReport) {
         let mut store = Self {
             files,
             sections: BTreeMap::new(),
@@ -176,10 +197,10 @@ impl Store {
     }
 
     /// True when the file does not match the store yet, after a repair at load or a change.
-    /// Never true while the file was locked at load, since this run must not write it.
+    /// Never true while the file was locked at load, since this run must not write it, nor for a fresh store.
     #[must_use]
     pub fn needs_save(&self) -> bool {
-        self.unsaved && !self.locked
+        self.unsaved && !self.locked && self.files.is_some()
     }
 
     /// The file text: each module's changes after its version, and every kept entry as it was.
@@ -203,7 +224,7 @@ impl Store {
         Ok(toml::to_string(&doc)?)
     }
 
-    /// Writes `to_text` to the settings file safely.
+    /// Writes `to_text` to the settings file safely; a fresh store writes nothing and succeeds.
     ///
     /// # Errors
     /// `Unsaved` with the cause, and a notice the first time since the last success.
@@ -216,9 +237,12 @@ impl Store {
                 notice: None,
             });
         }
+        let Some(files) = &self.files else {
+            return Ok(());
+        };
         let saved = self
             .to_text()
-            .and_then(|text| Ok(file::save(&self.files, &text)?));
+            .and_then(|text| Ok(file::save(files, &text)?));
         match saved {
             Ok(()) => {
                 self.unsaved = false;
@@ -226,7 +250,7 @@ impl Store {
                 Ok(())
             }
             Err(error) => {
-                let notice = (!self.warned).then(|| file::notice(keys::SETTINGS_UNSAVED));
+                let notice = (!self.warned).then(|| Notice::plain(keys::SETTINGS_UNSAVED));
                 self.warned = true;
                 Err(Unsaved { error, notice })
             }

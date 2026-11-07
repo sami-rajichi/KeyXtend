@@ -16,10 +16,12 @@ pub use manifest::{ID, MANIFEST};
 pub use settings::{MouseSettings, SPEC};
 
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesChanged, PointerHookKey,
-    PointerMoved, PressesWanted, ScrollChanged,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesChanged, PanelPressesWanted,
+    PointerHookKey, PointerMoved, PressesWanted, ScrollChanged,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
+use kx_module_api::{
+    Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
+};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -62,6 +64,8 @@ impl Module for MouseModule {
         })?;
         // Word prediction publishes this from its own thread; the handler only forwards it.
         relay(cx, &tx, |e: &PressesWanted| Msg::Presses(e.on))?;
+        // The keyboard's wish while a panel is open: a second source, kept apart in the actor.
+        relay(cx, &tx, |e: &PanelPressesWanted| Msg::PanelPresses(e.on))?;
         let bus = cx.bus();
         let actor = Actor::new(
             hook,
@@ -109,7 +113,7 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
         // Neither event needs a capability, so neither can be refused.
         let _ = bus.publish(&AssistChanged::OFF);
-        let _ = bus.publish(&actor::notice(keys::MOUSE_STOPPED));
+        let _ = bus.publish(&Notice::about(keys::MOUSE_STOPPED, ID));
         resume_unwind(panic);
     }
 }

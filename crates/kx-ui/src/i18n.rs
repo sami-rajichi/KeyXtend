@@ -4,6 +4,7 @@
 mod clip;
 mod combo;
 mod compose;
+mod fill;
 pub mod keys;
 
 pub(crate) use compose::clean;
@@ -22,7 +23,7 @@ pub struct Lang {
     pub rtl: bool,
     /// Its main Fluent file, compiled in.
     pub ftl: &'static str,
-    /// Its feature files, such as the clipboard panel's, compiled in and loaded into the same texts.
+    /// Its feature files, the clipboard panel's and Quick-fill's, compiled in and loaded into the same texts.
     pub extra: &'static [&'static str],
 }
 
@@ -40,19 +41,28 @@ pub static LANGS: [Lang; 3] = [
         tag: "en",
         rtl: false,
         ftl: include_str!("../i18n/en.ftl"),
-        extra: &[include_str!("../i18n/clip/en.ftl")],
+        extra: &[
+            include_str!("../i18n/clip/en.ftl"),
+            include_str!("../i18n/fill/en.ftl"),
+        ],
     },
     Lang {
         tag: "fr",
         rtl: false,
         ftl: include_str!("../i18n/fr.ftl"),
-        extra: &[include_str!("../i18n/clip/fr.ftl")],
+        extra: &[
+            include_str!("../i18n/clip/fr.ftl"),
+            include_str!("../i18n/fill/fr.ftl"),
+        ],
     },
     Lang {
         tag: "ar",
         rtl: true,
         ftl: include_str!("../i18n/ar.ftl"),
-        extra: &[include_str!("../i18n/clip/ar.ftl")],
+        extra: &[
+            include_str!("../i18n/clip/ar.ftl"),
+            include_str!("../i18n/fill/ar.ftl"),
+        ],
     },
 ];
 

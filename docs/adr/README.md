@@ -13,12 +13,12 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0007 | [AI features are local-first and free](0007-local-first-free-ai.md) | Accepted |
 | 0008 | [Every UI works without scrolling, dragging or right-click](0008-paged-no-scroll-ui.md) | Accepted |
 | 0009 | [Characters as Unicode, shortcuts as virtual keys](0009-input-injection-strategy.md) | Accepted. Verified by gate G1 (ADR-0013). |
-| 0010 | [Sensitive data is encrypted at rest with an OS-protected key](0010-encryption-at-rest.md) | Accepted |
+| 0010 | [Sensitive data is encrypted at rest with an OS-protected key](0010-encryption-at-rest.md) | Accepted. Its vault lines (user presence, master password, `age` and CSV export) are superseded by ADR-0038. |
 | 0011 | [Choose the UI toolkit by a measured test round](0011-toolkit-test-round.md) | Accepted (process). Result in ADR-0013; its "No leftovers" rule for code is superseded by ADR-0014. |
 | 0012 | [Installer: Inno Setup 7](0012-installer-inno-setup.md) | Accepted |
 | 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Partly superseded by ADR-0016 (theme loader in `kx-theme`). |
 | 0014 | [Keep the tested spike code and move it into the product](0014-keep-and-move-the-spike-code.md) | Accepted (2026-09-29). Its build rule for `qt-kb` is superseded by ADR-0016. |
-| 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29) |
+| 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29). ADR-0037 adds the hidden run, which saves nothing. |
 | 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. Its UI ports gain `Tray` in ADR-0019. Its CI line as built: Linux leaves out the app and builds `kx-ui` without Qt. |
 | 0017 | [Translations: Fluent files compiled in](0017-translations-fluent-compiled-in.md) | Accepted (2026-09-30). Its language choice for the keyboard's text is superseded by ADR-0020, and its bidi rule and Arabic list join by ADR-0022. |
 | 0018 | [One set-once hub for the QML objects](0018-set-once-hub-for-qml-objects.md) | Accepted (2026-09-30) |
@@ -40,5 +40,9 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0034 | [The clipboard history seals day folders and decodes images in a worker](0034-the-clipboard-history-seals-day-folders-and-decodes-images-in-a-worker.md) | Accepted (2026-10-30). Adds `WriteClipboard`, the shelf, picture and reveal ports, the `media` worker's rights, and moves §6's folding to `kx-module-api`. Partly superseded by ADR-0035 (decision 1's gate list). |
 | 0035 | [The clipboard panel's state needs ReadClipboard, and services follow their gates](0035-the-clipboard-panel-state-needs-read-clipboard.md) | Accepted (2026-10-31). Supersedes ADR-0034 decision 1's gate list. |
 | 0036 | [The module API shares the worker's limits from kx-ipc](0036-the-module-api-shares-the-worker-limits-from-kx-ipc.md) | Accepted (2026-10-31). `kx-module-api` depends on the leaf crate `kx-ipc` for `READ_TIMES` and `DECODE_BYTES` only. |
+| 0037 | [A run whose saves would be hidden saves nothing](0037-a-run-whose-saves-would-be-hidden-saves-nothing.md) | Accepted (2026-11-01). Adds to ADR-0015: the probe, the hidden run and the hidden-copy cleanup. The table it calls `hidden.toml` is `redirect.toml`, as built. |
+| 0038 | [Quick-fill is a notebook sealed with the account key and backed up to a locked box](0038-quick-fill-is-a-notebook-sealed-with-the-account-key-and-backed-up-to-a-locked-box.md) | Accepted (2026-11-01). Supersedes ADR-0010's vault lines; drops Windows Hello. Partly superseded by ADR-0039 (decision 3's services). |
+| 0039 | [The vault's data services need a capability of their own](0039-the-vault-data-services-need-a-capability-of-their-own.md) | Accepted (2026-11-02). Adds `VaultData` for the notebook store, boxes and places; supersedes ADR-0038 decision 3 for the services. |
+| 0040 | [A panel's line takes the letters only while it is aimed at](0040-a-panels-line-takes-the-letters-only-while-aimed.md) | Accepted (2026-11-06). Letters follow the last click; a search line tells prediction its text, and nothing is learned. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

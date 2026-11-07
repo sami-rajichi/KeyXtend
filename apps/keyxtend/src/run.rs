@@ -1,19 +1,21 @@
-//! The app on Windows starts in order: pinned folders, command line, hook, one copy, hub and kernel, log, modules,
-//! kernel thread, then hardened Qt on the lowest-power graphics adapter. It stops as Quit stops the modules and ends
-//! the UI, then `drain::stop` hides the tray icon and joins the kernel's thread.
+//! The app on Windows starts in order: pinned folders, command line, hook, the data folder's probe, one copy, hub and
+//! kernel, log, modules, the hidden copies' questions, kernel thread, then hardened Qt on the lowest-power graphics
+//! adapter. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the tray icon and joins the
+//! kernel's thread, and `drain::release` frees the session before it waits for the deletes still running.
 
 use keyxtend::args::{self, Input};
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
+use keyxtend::hidden::{Asked, Deletes, Probed, Run};
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, clip, drain, log, quiet, words};
-use kx_crypto::{SealedFiles, SealedShelfFiles};
+use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, words};
+use kx_crypto::OsRandom;
 use kx_kernel::KernelSettings;
 use kx_module_api::ports::PointerHook;
 use kx_platform::Platform;
 use kx_platform::ui::UiError;
 use kx_platform_windows::{WindowsPlatform, dll, gpu, release_now, uiaccess};
-use kx_settings::{Files, peek};
+use kx_settings::Files;
 use kx_ui::{Hub, UiPorts};
 use std::env;
 use std::process::ExitCode;
@@ -37,8 +39,10 @@ pub fn main() -> ExitCode {
         Ok(platform) => Arc::new(platform),
         Err(e) => return fail(&e),
     };
-    let files = Files::new(platform.dirs().data_dir().path());
-    let reach = match Reach::from_file(peek(&files).as_ref()) {
+    let data = platform.dirs().data_dir();
+    let probed = Run::probe(&*platform.hidden(), data.path());
+    let files = Files::new(data.path());
+    let reach = match Reach::from_file(probed.run.peek(&files).as_ref()) {
         Ok(reach) => reach,
         Err(e) => return fail(&e),
     };
@@ -50,71 +54,75 @@ pub fn main() -> ExitCode {
     let relay = Arc::new(Relay::default());
     let heard = Arc::clone(&relay);
     let listened = claim.listen(Box::new(move |c| heard.hear(c)));
-    let code = run(&platform, &files, &relay, listened, input);
-    drop(claim);
+    let (code, deletes) = run(&platform, &files, &relay, listened, input, &probed);
+    drain::release(claim, &deletes);
     tracing::info!("KeyXtend ended");
     code
 }
 
-/// Boots the kernel and the hub over `platform`, the mouse engine on `input`, logging into `files`, then runs Qt until
-/// the UI ends.
+/// Boots the kernel and the hub over `platform` for the `probed` run, the mouse engine on `input`, logging into
+/// `files` unless hidden, then runs Qt until the UI ends; it gives the deletes still running.
 fn run(
     platform: &Arc<WindowsPlatform>,
     files: &Files,
     relay: &Relay,
     listened: Result<(), UiError>,
     input: Input,
-) -> ExitCode {
-    let mut boot = match boot(platform, input) {
+    probed: &Probed,
+) -> (ExitCode, Deletes) {
+    let mut boot = match boot(platform, input, &probed.run) {
         Ok(boot) => boot,
         Err(e) => {
-            start_log(None, files);
-            return fail(&e);
+            start_log(probed, None, files);
+            return (fail(&e), Deletes::default());
         }
     };
     let _tray = TrayGuard(Arc::clone(&boot.hub));
-    start_log(boot.kernel.kernel_settings(), files);
-    if let Some(kind) = boot.no_clip_dir {
-        tracing::warn!(error = %kind, "the clipboard folder could not be made, so its history may not save");
-    }
-    let ui_access = uiaccess::active();
-    tracing::info!(version = VERSION, ui_access, "KeyXtend started");
+    tell_booted(&boot, probed, files, listened);
     #[cfg(feature = "gate-input")]
     warn_gate(input);
-    if let Err(e) = listened {
-        tracing::warn!(error = %e, "a second copy cannot reach this one");
-    }
     relay.attach(&boot.hub);
     kx_ui::install(Arc::clone(&boot.hub));
     if let Err(e) = boot.start() {
         tracing::error!(error = e.kind(), "the modules did not start");
     }
-    let Boot {
-        kernel,
-        hub,
-        requests,
-        ..
-    } = boot;
-    let kernel_thread = match drain::spawn(kernel, Arc::clone(&hub), requests) {
+    let asked = probed.run.ask(platform.hidden(), &boot.kernel, &boot.hub);
+    let deletes = asked.as_ref().map(Asked::deletes).unwrap_or_default();
+    let (kernel, hub) = (boot.kernel, boot.hub);
+    let kernel_thread = match drain::spawn(kernel, Arc::clone(&hub), boot.requests, asked) {
         Ok(handle) => handle,
-        Err(e) => return fail(&e),
+        Err(e) => return (fail(&e), deletes),
     };
     let pinned = UI_ACCESS.then(|| platform.dirs().exe_dir.as_path());
-    crate::qt::run(pinned, gpu::low_power_adapter, &hub.settings(), || {
+    let code = crate::qt::run(pinned, gpu::low_power_adapter, &hub.settings(), || {
         let _ = drain::stop(&hub, kernel_thread);
-    })
+    });
+    (code, deletes)
 }
 
-/// The hub and the kernel over `platform`, with every module added and the settings loaded; the learned words and the
-/// clipboard history each keep their own sealed folder and key.
-fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError> {
+/// Opens the `probed` run's log from `boot`'s settings, then logs a clipboard folder that could not be made, the
+/// version, and a second copy that cannot reach this one, as `listened` says.
+fn tell_booted(boot: &Boot, probed: &Probed, files: &Files, listened: Result<(), UiError>) {
+    start_log(probed, boot.kernel.kernel_settings(), files);
+    if let Some(kind) = boot.no_clip_dir {
+        tracing::warn!(error = %kind, "the clipboard folder could not be made, so its history may not save");
+    }
+    let ui_access = uiaccess::active();
+    tracing::info!(version = VERSION, ui_access, "KeyXtend started");
+    if let Err(e) = listened {
+        tracing::warn!(error = %e, "a second copy cannot reach this one");
+    }
+}
+
+/// The hub and the kernel over `platform` for `run`, with every module added and the settings loaded; the learned
+/// words, the clipboard history and Quick-fill's notebook each keep their own sealed folder and key, or memory alone in
+/// a hidden run.
+fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot, BootError> {
     let dirs = platform.dirs();
     let sealed = dirs.data_dir().path().join(words::SEALED_DIR);
-    let shelf = SealedShelfFiles::new(
-        clip::folder(dirs),
-        platform.key_guard(),
-        platform.disk_room(),
-    );
+    let guard = || platform.key_guard();
+    let shelf = run.shelf(clip::folder(dirs), guard, platform.disk_room());
+    let vault = run.store(vault::folder(dirs), guard);
     let services = Services {
         injector: platform.injector(),
         layouts: platform.layouts(),
@@ -124,14 +132,18 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input) -> Result<Boot, BootError
         power: platform.power_dialog(),
         field: platform.field_watch(),
         packs: platform.word_packs(words::pack_dirs(&dirs.exe_dir)),
-        sealed: Arc::new(SealedFiles::new(sealed, platform.key_guard())),
+        sealed: run.store(sealed, guard),
         clipboard: platform.clipboard(),
         writer: platform.clipboard_writer(),
-        shelf: Arc::new(shelf),
+        shelf,
         pictures: platform.pictures(),
         calendar: platform.calendar(),
+        vault,
+        random: Arc::new(OsRandom),
+        boxes: platform.boxes(),
+        places: platform.places(),
     };
-    Boot::load(platform.clone(), services, ports(platform))
+    Boot::load(platform.clone(), services, ports(platform), run)
 }
 
 /// The mouse hook on `input`: the hand's, or in the gate-only build the gate tool's.
@@ -170,14 +182,16 @@ fn ports(platform: &WindowsPlatform) -> UiPorts {
     }
 }
 
-/// Opens the log in `files` from the kernel's `loaded` settings, or from its defaults when none loaded.
-fn start_log(loaded: Option<KernelSettings>, files: &Files) {
-    match log::or_defaults(loaded).and_then(|s| log::open(&s, files)) {
+/// Opens the `probed` run's log, in `files` unless hidden, from the kernel's `loaded` settings or its defaults, then
+/// logs how the probe went.
+fn start_log(probed: &Probed, loaded: Option<KernelSettings>, files: &Files) {
+    match probed.run.log(loaded, files) {
         Some(opened) => {
             let _ = log::install(opened);
         }
         None => eprintln!("no log this run: the kernel's settings did not read"),
     }
+    probed.tell();
 }
 
 /// Removes the tray icon when this thread unwinds or returns early; the hub itself never drops.

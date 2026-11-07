@@ -1,6 +1,6 @@
 //! A hidden test window with scroll bars on a thread of its own: it answers line steps, logs the wheel turns it gets,
 //! and can stop reading messages, as a hung app does; or one whose bars split, as a wide table in a long page. It is
-//! never shown and never takes the focus.
+//! never shown, though a split one can land in front while UI Automation works on it.
 #![allow(
     unsafe_code,
     reason = "The tests make, scroll and destroy their own hidden windows."

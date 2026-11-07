@@ -1,14 +1,16 @@
 //! The app before Qt: the hub first, with the clipboard history's folder, then the kernel with the platform's services
-//! and every shipped module. The hub hears the kernel's bus before the settings load, so no notice is missed; the app
-//! opens its log between load and start.
+//! and every shipped module, readied for a normal or a hidden run. The hub hears the kernel's bus before the settings
+//! load, so no notice is missed; the app opens its log between load and start.
 
+use crate::hidden::Run;
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
-    Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter, ClipboardWriterKey,
-    FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource, LayoutSourceKey,
-    Pictures, PicturesKey, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, ScrollTarget,
-    ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore, SealedStoreKey, Shortcuts,
-    ShortcutsKey, WordPacks, WordPacksKey,
+    Boxes, BoxesKey, Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter,
+    ClipboardWriterKey, FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource,
+    LayoutSourceKey, Pictures, PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey,
+    PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf,
+    SealedShelfKey, SealedStore, SealedStoreKey, Shortcuts, ShortcutsKey, VaultStoreKey, WordPacks,
+    WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -49,8 +51,16 @@ pub struct Services {
     pub shelf: Arc<dyn SealedShelf>,
     /// Draws the history's thumbnails and previews in the media worker.
     pub pictures: Arc<dyn Pictures>,
-    /// The local day, for the history's day folders.
+    /// The local day, for the history's day folders and Quick-fill's stamps.
     pub calendar: Arc<dyn Calendar>,
+    /// Keeps Quick-fill's notebook sealed in its own folder, under its own key.
+    pub vault: Arc<dyn SealedStore>,
+    /// The OS's random bytes, for Quick-fill's ids and made passwords.
+    pub random: Arc<dyn Random>,
+    /// Seals and opens Quick-fill's backup boxes in the vault worker.
+    pub boxes: Arc<dyn Boxes>,
+    /// The folders and drives Quick-fill's backup boxes go to.
+    pub places: Arc<dyn Places>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`.
@@ -83,6 +93,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_predict::PredictModule::default()));
     #[cfg(feature = "mod-clipboard")]
     list.push(Box::new(kx_mod_clipboard::ClipboardModule::default()));
+    #[cfg(feature = "mod-vault")]
+    list.push(Box::new(kx_mod_vault::VaultModule::default()));
     list
 }
 
@@ -115,7 +127,11 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<ClipboardWriterKey>(services.writer)?;
     kernel.provide_platform::<SealedShelfKey>(services.shelf)?;
     kernel.provide_platform::<PicturesKey>(services.pictures)?;
-    kernel.provide_platform::<CalendarKey>(services.calendar)
+    kernel.provide_platform::<CalendarKey>(services.calendar)?;
+    kernel.provide_platform::<VaultStoreKey>(services.vault)?;
+    kernel.provide_platform::<RandomKey>(services.random)?;
+    kernel.provide_platform::<BoxesKey>(services.boxes)?;
+    kernel.provide_platform::<PlacesKey>(services.places)
 }
 
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.
@@ -124,7 +140,7 @@ pub struct Boot {
     pub kernel: Kernel,
     /// What the UI and the modules share.
     pub hub: Arc<Hub>,
-    /// Try again and Quit, which the kernel's thread drains.
+    /// Try again, answers and Quit, which the kernel's thread drains.
     pub requests: Receiver<Request>,
     /// The hub hears the kernel's notices, mouse-assist and scroll events while these live.
     pub heard: Vec<Subscription>,
@@ -134,7 +150,8 @@ pub struct Boot {
 
 impl Boot {
     /// Makes the hub before any window, makes the history's folder under `platform`'s data folder and hands it to the
-    /// hub, adds `services` and every module, and loads the settings; nothing starts.
+    /// hub unless `run` is hidden, readies the kernel for `run`, adds `services` and every module, and loads the
+    /// settings; nothing starts.
     ///
     /// # Errors
     /// When the hub's compiled-in data is broken, or the kernel or its bus refuses a step.
@@ -142,13 +159,17 @@ impl Boot {
         platform: Arc<dyn Platform>,
         services: Services,
         ports: UiPorts,
+        run: &Run,
     ) -> Result<Self, BootError> {
         let (hub, requests) = Hub::new(ports)?;
         let folder = crate::clip::folder(platform.dirs());
-        let no_clip_dir = std::fs::create_dir_all(&folder).err().map(|e| e.kind());
-        hub.set_clip_folder(folder);
+        let no_clip_dir = run.make_dir(&folder);
+        if !run.is_hidden() {
+            hub.set_clip_folder(folder);
+        }
         let modules = modules(&hub);
         let mut kernel = Kernel::new(platform, policy(&modules));
+        run.ready(&mut kernel, &hub)?;
         provide(&mut kernel, services)?;
         for module in modules {
             kernel.add(module)?;

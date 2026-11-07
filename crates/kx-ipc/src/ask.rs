@@ -50,7 +50,7 @@ impl Ask<'_> {
             Kind::MakeDib => read_make(r, head),
             Kind::Bye if head.id == 0 => Ok(Ask::Bye),
             Kind::Bye => Err(IpcError::Inconsistent),
-            Kind::Pixels | Kind::Failed | Kind::Dib => Err(IpcError::BadKind),
+            _ => Err(IpcError::BadKind),
         }
     }
 

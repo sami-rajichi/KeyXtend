@@ -4,7 +4,7 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::{Chip, ChipKind, TypeWord, TypingMode};
 
-use crate::email::{self, EmailConfig, Emails};
+use crate::email::{self, EmailConfig, Emails, Offer, Saved};
 use crate::menu::Menu;
 use crate::pack::Pack;
 use crate::score::{Guess, Learned, ScoreConfig, guesses};
@@ -22,6 +22,8 @@ pub(crate) enum Pick {
     },
     /// Types a known email by its plan; a forget removes the email it types.
     Email(Plan),
+    /// Types a saved email by its plan; it is never learned.
+    Saved(Plan),
     /// Types a domain by its plan.
     Domain(Plan),
     /// The list's chip: the UI answers it with `WordsAsk::More`.
@@ -53,6 +55,8 @@ pub(crate) struct Sources<'a> {
     pub(crate) score: &'a ScoreConfig,
     /// The known emails.
     pub(crate) emails: &'a Emails,
+    /// The notebook's emails, which forget mode leaves out.
+    pub(crate) saved: &'a Saved,
     /// The email chips' settings.
     pub(crate) email: &'a EmailConfig,
     /// The most chips.
@@ -63,11 +67,16 @@ pub(crate) struct Sources<'a> {
     pub(crate) forgetting: bool,
 }
 
-impl Sources<'_> {
+impl<'a> Sources<'a> {
     /// True when a tap on `plan`'s chip does something: in forget mode always, as forgetting types nothing, else when
     /// `sendable` says so for this lane's mode and box.
     fn can_send(&self, plan: &Plan) -> bool {
         self.forgetting || sendable(plan, self.mode, self.confirms)
+    }
+
+    /// The emails offered, by forget mode's one rule.
+    fn offer(&self) -> Offer<'a> {
+        Offer::shown(self.emails, self.saved, self.forgetting)
     }
 }
 
@@ -106,6 +115,7 @@ impl Chips {
             let pick = match chip.kind {
                 ChipKind::More => Some(Pick::More),
                 ChipKind::Domain => plan().map(Pick::Domain),
+                ChipKind::Saved => plan().map(Pick::Saved),
                 _ => plan().map(Pick::Email),
             };
             self.push_opt(chip, pick);
@@ -178,21 +188,26 @@ pub(crate) fn sendable(plan: &Plan, mode: TypingMode, confirms: bool) -> bool {
     fits(plan, mode) && (confirms || plan.rest().is_some())
 }
 
-/// The known emails the `@@` of `ask` can send in `mode`, in a box that `confirms` erases or not.
-pub(crate) fn listed(emails: &Emails, ask: &EmailAsk, mode: TypingMode, confirms: bool) -> Emails {
-    kept_by(emails, ask, |p| sendable(p, mode, confirms))
+/// The offered emails the `@@` of `ask` can send in `mode`, in a box that `confirms` erases or not.
+pub(crate) fn listed<'a>(
+    offer: &Offer<'a>,
+    ask: &EmailAsk,
+    mode: TypingMode,
+    confirms: bool,
+) -> Offer<'a> {
+    kept_by(offer, ask, |p| sendable(p, mode, confirms))
 }
 
-/// The known emails whose plan for the `@@` of `ask` passes `can`.
-fn kept_by(emails: &Emails, ask: &EmailAsk, can: impl Fn(&Plan) -> bool) -> Emails {
-    emails.kept(|e| ask.plan(e).is_some_and(|p| can(&p)))
+/// The offered emails whose plan for the `@@` of `ask` passes `can`.
+fn kept_by<'a>(offer: &Offer<'a>, ask: &EmailAsk, can: impl Fn(&Plan) -> bool) -> Offer<'a> {
+    offer.kept(|e| ask.plan(e).is_some_and(|p| can(&p)))
 }
 
 /// The email chips `ask` offers that a tap acts on, at most the lane's size; forget mode lists no More.
 fn email_chips(ask: &EmailAsk, src: &Sources<'_>) -> Vec<Chip> {
     let found = match ask {
         EmailAsk::All(_) => {
-            let sent = kept_by(src.emails, ask, |p| src.can_send(p));
+            let sent = kept_by(&src.offer(), ask, |p| src.can_send(p));
             return if src.forgetting {
                 sent.first(src.limit)
             } else {
@@ -200,7 +215,7 @@ fn email_chips(ask: &EmailAsk, src: &Sources<'_>) -> Vec<Chip> {
             };
         }
         EmailAsk::Domains(partial) => email::domains(partial.expose(), src.email, usize::MAX),
-        EmailAsk::Start(tail) => src.emails.starting(tail.expose(), src.email, usize::MAX),
+        EmailAsk::Start(tail) => (src.offer()).starting(tail.expose(), src.email, usize::MAX),
     };
     let can = |c: &Chip| ask.plan(c.text.expose()).is_some_and(|p| src.can_send(&p));
     found.into_iter().filter(can).take(src.limit).collect()

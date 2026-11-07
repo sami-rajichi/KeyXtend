@@ -1,24 +1,20 @@
 use super::*;
 use crate::LANGS;
-use kx_module_api::{NoticeArg, args};
+use kx_module_api::NoticeAsk;
 use proptest::prelude::*;
 use std::collections::BTreeSet;
 
 const KEYBOARD: ModuleId = ModuleId::new("keyboard");
 
 fn failed() -> Notice {
-    Notice {
-        key: keys::MODULE_FAILED,
-        module: Some(KEYBOARD),
-        args: vec![(args::MODULE, NoticeArg::Text(KEYBOARD.to_string()))],
-    }
+    Notice::about(keys::MODULE_FAILED, KEYBOARD)
 }
 
-fn plain(key: &'static str) -> Notice {
+/// A notice about no module that asks Yes or No.
+fn asking() -> Notice {
     Notice {
-        key,
-        module: None,
-        args: Vec::new(),
+        ask: Some(&NoticeAsk::YES_NO),
+        ..Notice::plain(keys::KEYS_NOT_SENT)
     }
 }
 
@@ -26,7 +22,7 @@ fn plain(key: &'static str) -> Notice {
 fn notices_show_once_in_order_with_their_text() {
     let mut n = Notices::default();
     assert!(n.push(failed()));
-    assert!(n.push(plain(keys::KEYS_NOT_SENT)));
+    assert!(n.push(Notice::plain(keys::KEYS_NOT_SENT)));
     let shown = n.take(&I18n::new(&LANGS[0]));
     assert_eq!(shown.len(), 2);
     assert!(shown[0].text.contains("Keyboard") && shown[0].retry);
@@ -42,20 +38,28 @@ fn the_same_notice_waits_or_shows_only_once() {
     assert!(!n.push(failed()), "already waiting");
     let id = n.take(&I18n::new(&LANGS[0]))[0].id;
     assert!(!n.push(failed()), "already shown");
-    assert_eq!(n.close(id), Some(KEYBOARD));
+    assert_eq!(n.close(id).as_ref().and_then(retry_of), Some(KEYBOARD));
     assert!(n.push(failed()), "closed, so it may show again");
 }
 
 #[test]
 fn only_a_failed_module_offers_try_again() {
     let mut n = Notices::default();
-    let mut settings = plain(keys::SETTINGS_RESET);
+    let mut settings = Notice::plain(keys::SETTINGS_RESET);
     settings.module = Some(KEYBOARD);
     n.push(settings);
-    n.push(plain(keys::KEYS_NOT_SENT));
+    n.push(Notice::plain(keys::KEYS_NOT_SENT));
     let ids: Vec<u64> = n.take(&I18n::new(&LANGS[0])).iter().map(|s| s.id).collect();
-    assert_eq!(n.close(ids[0]), None);
-    assert_eq!(n.close(ids[1]), None);
+    assert_eq!(
+        n.close(ids[0]).as_ref().and_then(retry_of),
+        None,
+        "a settings notice"
+    );
+    assert_eq!(
+        n.close(ids[1]).as_ref().and_then(retry_of),
+        None,
+        "a plain notice"
+    );
     assert_eq!(n.close(ids[1]), None, "closed already");
     assert_eq!(n.close(u64::MAX), None, "never shown");
 }
@@ -70,12 +74,39 @@ fn texts_follow_the_language_when_taken() {
 }
 
 #[test]
+fn an_asking_notice_shows_its_answers_in_the_keyboards_language() {
+    let mut n = Notices::default();
+    n.push(asking());
+    n.push(Notice::plain(keys::KEYS_NOT_SENT));
+    let answers = |yes: &str, no: &str| {
+        Some(Answers {
+            yes: yes.to_owned(),
+            no: no.to_owned(),
+        })
+    };
+    let shown = n.take(&I18n::new(&LANGS[0]));
+    assert_eq!(shown[0].ask, answers("Yes", "No"));
+    assert_eq!(shown[1].ask, None, "a plain notice asks nothing");
+    let ar = I18n::new(crate::find("ar").unwrap());
+    assert_eq!(n.shown(&ar)[0].ask, answers("نعم", "لا"), "told again");
+}
+
+#[test]
+fn a_closed_notice_comes_back_once_with_its_ask() {
+    let mut n = Notices::default();
+    n.push(asking());
+    let id = n.take(&I18n::new(&LANGS[0]))[0].id;
+    assert_eq!(n.close(id), Some(asking()), "so the hub can answer it");
+    assert_eq!(n.close(id), None, "closed already");
+}
+
+#[test]
 fn the_shown_notices_are_told_again_in_a_new_language_until_closed() {
     let mut n = Notices::default();
     n.push(failed());
-    n.push(plain(keys::KEYS_NOT_SENT));
+    n.push(Notice::plain(keys::KEYS_NOT_SENT));
     let en = n.take(&I18n::new(&LANGS[0]));
-    n.push(plain(keys::SETTINGS_LOCKED));
+    n.push(Notice::plain(keys::SETTINGS_LOCKED));
     let fr = I18n::new(crate::find("fr").unwrap());
     let again = n.shown(&fr);
     let ids: Vec<u64> = again.iter().map(|s| s.id).collect();
@@ -94,9 +125,10 @@ enum Op {
     Close(usize),
 }
 
-/// The samples the steps push: failed modules, a module notice without Try again, and plain notices.
+/// The samples the steps push: failed modules, a module notice without Try again, plain notices and one that asks.
 fn sample(n: usize) -> Notice {
     let samples = [
+        asking(),
         failed(),
         Notice {
             module: Some(ModuleId::new("layouts")),
@@ -104,10 +136,10 @@ fn sample(n: usize) -> Notice {
         },
         Notice {
             module: Some(KEYBOARD),
-            ..plain(keys::SETTINGS_RESET)
+            ..Notice::plain(keys::SETTINGS_RESET)
         },
-        plain(keys::KEYS_NOT_SENT),
-        plain(keys::SETTINGS_LOCKED),
+        Notice::plain(keys::KEYS_NOT_SENT),
+        Notice::plain(keys::SETTINGS_LOCKED),
     ];
     samples[n % samples.len()].clone()
 }

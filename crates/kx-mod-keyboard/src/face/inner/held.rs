@@ -3,8 +3,11 @@
 //! it.
 
 use super::{Inner, STATE};
+use crate::repeat::Repeat;
 use crate::run::{TapError, Tapped};
+use crate::settings::KeyboardSettings;
 use kx_module_api::ports::FaceReply;
+use std::time::Duration;
 
 /// What a click, a press or a due repeat did.
 #[derive(Clone, Copy)]
@@ -83,4 +86,10 @@ impl Inner {
             FaceReply::default()
         }
     }
+}
+
+/// A held key's repeats at the delay and pace of `settings`.
+pub(super) fn timed(settings: &KeyboardSettings) -> Repeat<String> {
+    let delay = Duration::from_millis(settings.repeat_delay_ms);
+    Repeat::new(delay, Duration::from_millis(settings.repeat_every_ms))
 }

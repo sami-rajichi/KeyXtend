@@ -5,8 +5,8 @@ use std::collections::HashSet;
 
 impl BoardSpec {
     /// Refuses sizes that are not numbers above 0, rows that do not span the main block, a D-pad off the side grid,
-    /// side keys off the grid, on the D-pad or sharing a cell, an id used twice, a role that does not fit its key,
-    /// and a shortcuts layer that does not fit the side grid.
+    /// side keys off the grid, on the D-pad or sharing a cell, an id used twice, a role that does not fit its key, a
+    /// shortcuts layer that does not fit the side grid, and a fill's Tab that names no `send` key.
     ///
     /// # Errors
     /// The first broken rule.
@@ -17,7 +17,8 @@ impl BoardSpec {
         self.check_side()?;
         self.check_ids()?;
         self.check_roles()?;
-        self.check_layer()
+        self.check_layer()?;
+        self.check_fill()
     }
 
     /// Refuses a length that is not a number above 0 (a gap or pad may be 0), and empty grid counts.
@@ -113,8 +114,8 @@ impl BoardSpec {
     }
 
     /// Refuses a named or side key whose role is `char` or one only the layer generates, a main-row key that shows the
-    /// layer, asks for the power dialog or opens the clipboard panel, a key that sends a scan code when its role sends
-    /// none, or the reverse, and a key that repeats or tells but is not `send`.
+    /// layer, asks for the power dialog or opens a panel, a key that sends a scan code when its role sends none, or the
+    /// reverse, and a key that repeats or tells but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
         let named = self.named().map(|k| {
             let send_only = k.repeat || k.tell.is_some();
@@ -127,7 +128,8 @@ impl BoardSpec {
         for (id, role, has_code, send_only, on_side) in named.chain(side) {
             let stray = send_only && role != Role::Send;
             let made = matches!(role, Role::Char | Role::Shortcut | Role::Next);
-            let side_only = !on_side && matches!(role, Role::Layer | Role::Power | Role::Clip);
+            let side_only =
+                !on_side && matches!(role, Role::Layer | Role::Power | Role::Clip | Role::Fill);
             if made || side_only || role.sends() != has_code || stray {
                 return Err(BoardError::Role(id.clone()));
             }

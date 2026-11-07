@@ -61,29 +61,29 @@ fn learned_chains_guess_the_next_word() {
     let learned = Fake::default()
         .uses(100)
         .word("in", 20)
-        .word("Sami", 10)
-        .chain(&["in"], "Sami", 10);
+        .word("Alex", 10)
+        .chain(&["in"], "Alex", 10);
     let next = run(&en, &learned, &ask(&["in"], ""), TypingMode::default());
-    assert!(next.contains(&"Sami".to_owned()), "{next:?}");
+    assert!(next.contains(&"Alex".to_owned()), "{next:?}");
 }
 
 #[test]
 fn without_a_pack_the_learned_words_still_guess() {
     let learned = Fake::default()
         .uses(10)
-        .word("sami", 3)
-        .word("salut", 2)
-        .word("sa", 1);
+        .word("alex", 3)
+        .word("alors", 2)
+        .word("al", 1);
     let found = texts(&guesses(
         "en",
         None,
         &learned,
-        &ask(&[], "sa"),
+        &ask(&[], "al"),
         TypingMode::default(),
         LIMIT,
         &CFG,
     ));
-    assert_eq!(found, ["sami", "salut"]);
+    assert_eq!(found, ["alex", "alors"]);
 }
 
 #[test]

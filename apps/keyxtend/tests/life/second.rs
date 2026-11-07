@@ -73,7 +73,7 @@ fn a_second_copys_quit_stops_the_running_app() {
     let wakes = watch(&boot.hub);
     relay.attach(&boot.hub);
     let hub = Arc::clone(&boot.hub);
-    let thread = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests).unwrap();
+    let thread = drain::spawn(boot.kernel, Arc::clone(&hub), boot.requests, None).unwrap();
     assert!(later(&session, Command::Quit));
     thread.join().unwrap();
     assert_eq!(wakes.lock().unwrap().last(), Some(&Wake::End));

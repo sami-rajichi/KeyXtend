@@ -1,0 +1,28 @@
+[package]
+name = "kx-mod-vault"
+description = "Quick-fill: a notebook of saved values, sealed with the account's key, filled at the caret in one click."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The notebook store, randomness, the panel's types, the hidden marks and the shared search folding.
+kx-module-api = { path = "../kx-module-api" }
+# The settings and the compiled-in kinds, labels and Make one tables.
+serde.workspace = true
+toml.workspace = true
+# The rules' and the store's error types.
+thiserror.workspace = true
+# Error kinds only, never a value, a name or a label.
+tracing.workspace = true
+
+[dev-dependencies]
+kx-platform-fake = { path = "../kx-platform-fake" }
+kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true

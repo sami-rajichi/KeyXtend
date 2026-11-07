@@ -18,7 +18,6 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
 
-pub(crate) use notes::notice;
 pub use stats::STOPPED_LINE;
 
 /// A message for the actor, from the bus or the module; it carries no point.

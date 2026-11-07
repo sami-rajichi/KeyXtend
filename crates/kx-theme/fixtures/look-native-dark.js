@@ -376,7 +376,37 @@ var lk = {
         10.0,
         8.0
       ],
-      "min_fit": 0.8
+      "min_fit": 0.8,
+      "empty_px": 30.0,
+      "line_px": [
+        15.0,
+        2.0,
+        2.0,
+        2.0
+      ],
+      "filter_gap_px": 4.0,
+      "filter_px": [
+        28.0,
+        10.0,
+        12.0,
+        5.0
+      ],
+      "row_gap_px": 9.0,
+      "row_pad_px": 2.0,
+      "tile_px": [
+        46.0,
+        34.0,
+        6.0,
+        17.0
+      ],
+      "hint_px": [
+        10.5,
+        1.0
+      ],
+      "question_gap_px": 12.0,
+      "question_lines": 2,
+      "wheel_notch": 120.0,
+      "wheel_rest_s": 1.0
     },
     "ring": {
       "box_px": 76.0,
@@ -489,25 +519,11 @@ var lk = {
     },
     "clip": {
       "kept_px": 11.0,
-      "empty_px": 30.0,
-      "search_icon_px": 15.0,
-      "caret_px": 2.0,
-      "caret_gap_px": 2.0,
-      "underline_px": 2.0,
       "filters_pad_px": [
         6.0,
         10.0,
         2.0
       ],
-      "filter_gap_px": 4.0,
-      "filter_px": [
-        28.0,
-        12.0,
-        12.0,
-        5.0
-      ],
-      "row_gap_px": 9.0,
-      "row_pad_px": 2.0,
       "tick_px": [
         22.0,
         6.0,
@@ -515,17 +531,7 @@ var lk = {
         11.0
       ],
       "tick_weight": 600,
-      "thumb_px": [
-        46.0,
-        34.0,
-        6.0,
-        17.0
-      ],
       "thumb_inset_px": 2.0,
-      "meta_px": [
-        10.5,
-        1.0
-      ],
       "pin_px": 13.0,
       "expires_px": [
         11.0,
@@ -542,7 +548,6 @@ var lk = {
       ],
       "button_weight": 600,
       "foot_gap_px": 8.0,
-      "question_gap_px": 12.0,
       "note_px": [
         7.0,
         8.0,
@@ -557,6 +562,23 @@ var lk = {
         13.0,
         14.5
       ]
+    },
+    "fill": {
+      "width_px": 600.0,
+      "top_px": [
+        6.0,
+        6.0,
+        2.0
+      ],
+      "own_share": 0.4,
+      "mask_em": 0.14,
+      "kind_px": [
+        8.0,
+        10.0,
+        24.0,
+        6.0
+      ],
+      "kind_rows": 2
     }
   },
   "motion": {
@@ -817,6 +839,63 @@ var lk = {
         ]
       }
     },
+    "fill": {
+      "highlight": {
+        "ms": 167,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "reveal": {
+        "ms": 167,
+        "bez": [
+          0.0,
+          0.0,
+          0.58,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "sheet": {
+        "ms": 180,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "swap": {
+        "ms": 180,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "turn": {
+        "ms": 180,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
     "amount": {
       "pulse_low": 0.35,
       "glow_lift": 1.12,
@@ -955,9 +1034,11 @@ var lk = {
     "words": {
       "domain": "at-sign",
       "email": "at-sign",
+      "saved": "key-round",
       "more": "chevron-right",
       "undo": "undo-2",
       "locked": "lock",
+      "fill": "key-round",
       "menu": "square-menu",
       "forget": "eraser",
       "pause": "eye-off",
@@ -984,6 +1065,58 @@ var lk = {
       "room": "hard-drive",
       "folder": "folder-open",
       "back": "arrow-left"
+    },
+    "fill": {
+      "title": "key-round",
+      "search": "search",
+      "new": "plus",
+      "backup": "archive",
+      "close": "x",
+      "back": "arrow-left",
+      "edit": "text-select",
+      "save": "check",
+      "cancel": "x",
+      "delete": "trash-2",
+      "add_field": "plus",
+      "own_label": "tag",
+      "shown": "check",
+      "kind_person": "user",
+      "kind_login": "globe",
+      "kind_wifi": "wifi",
+      "kind_card": "id-card",
+      "kind_note": "sticky-note",
+      "kind_other": "key-round",
+      "label": "tag",
+      "user": "user",
+      "password": "key-round",
+      "both": "arrow-right-to-line",
+      "insert": "clipboard-paste",
+      "open": "chevron-right",
+      "show": "eye",
+      "hide": "eye-off",
+      "hidden_on": "check",
+      "hidden_off": "square",
+      "paste": "clipboard-paste",
+      "make": "wand-sparkles",
+      "waiting": "archive",
+      "remove": "minus",
+      "pick": "check",
+      "place_cloud": "cloud",
+      "place_removable": "usb",
+      "place_drive": "hard-drive",
+      "place_folder": "folder",
+      "place_file": "file-input",
+      "back_up_now": "archive",
+      "add_place": "plus",
+      "change_password": "key-round",
+      "checks_on": "check",
+      "checks_off": "square",
+      "bring_back": "history",
+      "keepass": "file-input",
+      "other_folder": "folder-open",
+      "here": "check",
+      "done": "check",
+      "lock": "lock"
     }
   },
   "dpad": {

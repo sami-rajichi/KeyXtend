@@ -2,7 +2,7 @@
 //! once per message while it is open, held until the ui tells its rows per page (`ClipAct::Rows`).
 
 use kx_module_api::keys;
-use kx_module_api::ports::{ClipAct, ClipKind, ClipPanel, HistoryWanted, SealedError};
+use kx_module_api::ports::{ClipAct, ClipKind, ClipLine, ClipPanel, HistoryWanted, SealedError};
 
 use super::Actor;
 use super::paste::Paste;
@@ -57,13 +57,23 @@ impl Actor {
         }
     }
 
-    /// Answers `HistoryAsk` with the chord flag and the panel's state, for a keyboard that started later.
-    pub(super) fn history_again(&self) {
+    /// Answers `HistoryAsk` with the chord flag, the panel's state and its line, for a keyboard that started later.
+    pub(super) fn history_again(&mut self) {
         let on = self.settings.history_key;
         self.publish(&HistoryWanted { on });
         self.publish(&ClipPanel {
             open: self.panel.is_open(),
         });
+        self.tell_line(true);
+    }
+
+    /// Tells the line the page shows when `always`, or when it changed since last told, whatever the rows.
+    pub(super) fn tell_line(&mut self, always: bool) {
+        let line = self.panel.line();
+        if always || line != self.line {
+            self.publish(&ClipLine(line.clone()));
+            self.line = line;
+        }
     }
 
     /// Reads the shelf's room again; a failure keeps the last.
@@ -74,8 +84,10 @@ impl Actor {
         }
     }
 
-    /// Draws the open panel once, when this message changed it and the ui's rows are known.
+    /// Tells a line that changed, and draws the open panel once, when this message changed it and the ui's rows are
+    /// known.
     pub(super) fn flush(&mut self) {
+        self.tell_line(false);
         let redraw = std::mem::take(&mut self.redraw);
         if !redraw || !self.panel.is_open() || !self.rows_heard {
             return;

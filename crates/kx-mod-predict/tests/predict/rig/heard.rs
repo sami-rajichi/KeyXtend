@@ -1,6 +1,6 @@
 //! What the rig hears: every event the actor publishes, kept in order.
 
-use kx_module_api::ports::{LayoutAsk, PressesWanted, Suggested, TypeWord, TypingModeAsk};
+use kx_module_api::ports::{FillAsk, LayoutAsk, PressesWanted, Suggested, TypeWord, TypingModeAsk};
 use kx_module_api::{Bus, Event, Notice, Subscription};
 use std::sync::{Arc, Mutex};
 
@@ -19,6 +19,8 @@ pub enum Heard {
     Ask,
     /// An ask for the typing mode.
     ModeAsk,
+    /// An ask for Quick-fill's state, the notebook's emails among it.
+    FillAsk,
 }
 
 /// Hears every event the actor publishes.
@@ -30,6 +32,7 @@ pub fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
         ear(bus, heard, |e: &PressesWanted| Heard::Presses(e.on)),
         ear(bus, heard, |_: &LayoutAsk| Heard::Ask),
         ear(bus, heard, |_: &TypingModeAsk| Heard::ModeAsk),
+        ear(bus, heard, |_: &FillAsk| Heard::FillAsk),
     ]
 }
 

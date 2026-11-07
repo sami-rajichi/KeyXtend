@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p8.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p9.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::capture::Capture;
 use crate::cfgfile::{self, FILE, OWN};
 use crate::cfgload;
-use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G23, G24, G25};
+use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
@@ -22,6 +22,7 @@ use crate::p4cfg::{G5, G8Hook, G12, GateInput, Hand};
 use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
 use crate::p7cfg::{self, G8Predict, G21Product, G27, OwnerSettings};
 use crate::p8cfg::{self, G8Clip, G20Product};
+use crate::p9cfg::{self, G23};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 
@@ -78,7 +79,7 @@ pub struct GatesConfig {
     pub g21: G21,
     /// G22 settings.
     pub g22: G22,
-    /// G23 settings.
+    /// G23 on the product.
     pub g23: G23,
     /// G24 settings.
     pub g24: G24,
@@ -242,6 +243,7 @@ pub fn load() -> Result<GatesConfig, String> {
     p5cfg::check(&config)?;
     p7cfg::check(&config)?;
     p8cfg::check(&config)?;
+    p9cfg::check(&config)?;
     Ok(config)
 }
 

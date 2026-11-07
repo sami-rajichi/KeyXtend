@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 48f543f6a4921b6a56e383a733aef2d719c2a8d544b0c07f53243e0db8dd1c96 # shrinks to notes = 1, steps = [Use(15169892070401737979), Key(Esc), Key(Enter), Click { stale: false, click: Field { field: 1, button: Show } }, Remove(3848847372881827046), Replace(8190145079332764716)]
+cc bfae6b74a83fc4ee61d6f56e47877ebc7153cad4eb0a060b6424547d54acceaf # shrinks to notes = 0, steps = [Click { stale: false, click: Filter(Labels) }, Click { stale: false, click: Button(Backup) }]

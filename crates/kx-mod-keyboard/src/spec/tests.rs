@@ -231,10 +231,11 @@ fn the_shipped_board_gives_each_named_key_its_role() {
 }
 
 #[test]
-fn space_ticks_backspace_erases_and_the_clip_key_opens_the_clipboard_panel() {
+fn space_ticks_backspace_erases_delete_deletes_and_the_clip_key_opens_the_clipboard_panel() {
     let s = spec();
     assert_eq!(named(&s, "space").nav, Some(Nav::Tick));
     assert_eq!(named(&s, "bksp").nav, Some(Nav::Erase));
+    assert_eq!(named(&s, "del").nav, Some(Nav::Delete));
     let clip = s.side.iter().find(|k| k.id == "clip").unwrap();
     assert_eq!(clip.role, Role::Clip);
 }
@@ -272,6 +273,7 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
         BoardError::Role(String::new()),
         BoardError::Next,
         BoardError::Reserved(String::new()),
+        BoardError::Fill(String::new()),
     ];
     let kinds: std::collections::HashSet<&str> = all.iter().map(BoardError::kind).collect();
     assert_eq!(kinds.len(), all.len(), "each kind names its rule");
@@ -282,6 +284,7 @@ fn a_board_error_keeps_its_kind_when_it_stops_the_start() {
     );
 }
 
+mod fill;
 mod ids;
 mod layer;
 mod lone;

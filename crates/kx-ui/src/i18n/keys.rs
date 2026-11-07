@@ -1,4 +1,9 @@
-//! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`.
+//! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`. Quick-fill's
+//! are in `fill`.
+
+mod fill;
+
+pub use fill::*;
 
 use kx_module_api::ports::{ClipKind, Filter, MAX_PRESETS, PanelNote};
 
@@ -122,6 +127,8 @@ pub const WORDS_ON: &str = "words.on";
 pub const WORDS_ON_SHORT: &str = "words.on-short";
 /// The clipboard panel's window title.
 pub const WINDOW_CLIP: &str = "window.clip";
+/// The Quick-fill panel's window title.
+pub const WINDOW_FILL: &str = "window.fill";
 /// The mark between a number's whole part and its decimals.
 pub const NUM_DECIMAL: &str = "num.decimal";
 /// The mark between each three digits of a number's whole part.
@@ -194,6 +201,8 @@ pub const CLIP_SIZE_UNKNOWN: &str = "clip.size-unknown";
 pub const CLIP_STORAGE: &str = "clip.storage";
 /// The storage line's Open folder.
 pub const CLIP_OPEN_FOLDER: &str = "clip.open-folder";
+/// What readers hear on Open folder in a run that saves nothing, so it cannot act.
+pub const CLIP_NO_FOLDER: &str = "clip.no-folder";
 /// A row's meta line: `$app`, `$when` and `$size`.
 pub const CLIP_META: &str = "clip.meta";
 /// A row's meta line with no app: `$when` and `$size`.

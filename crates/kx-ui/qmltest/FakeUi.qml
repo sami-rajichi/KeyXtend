@@ -195,6 +195,10 @@ QtObject {
     function dismiss(id) {
         note("dismiss " + id);
     }
+    function answer(id, yes) {
+        note("answer " + id + " " + yes);
+        return true;
+    }
     function moreText(n) {
         return more[n] !== undefined ? more[n] : String(n);
     }

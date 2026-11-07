@@ -264,16 +264,6 @@ user_name = "kx-user"
 pass_name = "kx-pass"
 field_css = "font:20px sans-serif;margin:24px;display:block"
 
-[g23]
-# Longest wait for the owner to confirm or cancel Windows Hello, in ms.
-hello_wait_ms = 120000
-# Programs that show the Hello prompt (adapter table).
-prompt_programs = ["CredentialUIBroker.exe"]
-# Without Hello set up, Fill gets this long to (wrongly) type or prompt before the fields are checked, in ms.
-refuse_wait_ms = 5000
-# The test page adds this and the password length to its title, since a password box is never read.
-length_mark = " #"
-
 [g24]
 # Typed into target-window so the snip holds a known pattern; the caret ends up right of the region.
 text = "KeyXtend snip 0123456789 ABCDEFGHIJ abcdefghij KeyXtend snip"

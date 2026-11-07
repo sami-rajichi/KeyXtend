@@ -1,0 +1,57 @@
+# Settings P9 adds: G23 on the product (`g23 keyxtend`, `[g23]`). kx-gates reads them with kx-gates.toml, from its
+# folder; a section sits in one file only.
+
+# G23 on the product. The plain kx-gates starts the test build ([gate_input] program) on a data folder it makes beside
+# it, marked with [g20_product] marker so each P8 and P9 gate knows the other's leftover, and removes it at the end.
+# It saves a test Login through Quick-fill with clicks only, then types it into fresh Chrome pages ([g21] fields).
+[g23]
+# The test entry: plain test values, never real ones. Lowercase letters and digits only, so the keys of the first
+# installed layout of `lang` type each one at once. Each has a length of its own, as the password shows only its length.
+name = "gatelogin"
+user = "kxgateuser"
+password = "kxgatepass42"
+lang = "en"
+# The Login kind's id, and its user and password fields' places on the New page (kx-mod-vault kinds.toml).
+kind = "login"
+user_field = 0
+password_field = 1
+# The panel's gate ids, as kx-ui's QuickFillNames.qml names them: the group, the header's close, which every page
+# shows and so tells the panel's window, a row's, a field's and a kind chip's id before its place or kind, and the part
+# between a place and a button's id.
+group = "fill"
+close = "close"
+row = "row-"
+field = "field-"
+kind_chip = "kind-"
+part = "-"
+# Panel buttons by id: the header's New, the name line, a field's value line and Save (kx-ui FillButton ids).
+new = "new"
+name_line = "name"
+value_line = "value"
+save = "save"
+# Row buttons by id: Both types the user, a Tab and the password; User and Password type one each (kx-ui RowButton ids).
+both = "both"
+user_button = "user"
+password_button = "password"
+# kx-ui's title of the notice banner's window. The notices' own keys and buttons come from kx-module-api.
+notice_title = "window.notice"
+# The login page keeps these in its title, each before its count: the password's length, the Enter key-downs and the
+# submits. A password box is never read, so its length is the only proof it filled.
+length_mark = " #"
+enter_mark = " ~"
+submit_mark = " ^"
+# The DOM key name the page counts as Enter (adapter table).
+enter_key = "Enter"
+# Wait after the copy's keyboard shows before the first click, so Quick-fill has opened its notebook, in ms.
+ready_ms = 5000
+# Longest wait for the panel, or one of its parts, to show or go, in ms.
+panel_wait_ms = 3000
+# Pause after each panel click and each typed line, in ms.
+settle_ms = 400
+# Pause after a fill's text arrived and before it is judged, so a part sent after a Tab still counts, in ms. It must
+# be longer than Quick-fill's longest allowed tab_gap_ms plus the keyboard's default fill_late_ms.
+late_ms = 4500
+# Longest wait for a fill's text to arrive in the page, in ms.
+fill_wait_ms = 5000
+# Longest wait for a notice to show, and for it to go once answered, in ms.
+notice_wait_ms = 3000

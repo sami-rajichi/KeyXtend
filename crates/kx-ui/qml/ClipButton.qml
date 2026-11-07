@@ -1,12 +1,14 @@
-// A clipboard panel button (mock-up .btn): an icon and a label, or the icon alone, on a ghost, danger, Enter-coloured
-// or flat fill. One with nothing to act on shows dimmed, never hidden, and it acts at let-go (ADR-0024).
+// A panel button (mock-up .btn), as the clipboard and Quick-fill draw it: an icon and a label, the icon alone or the
+// label alone, on a ghost, danger, Enter-coloured, shown or flat fill. One with nothing to act on shows dimmed, never
+// hidden, and it acts at let-go (ADR-0024); a switch reads as on or off.
 import QtQuick
 
 Item {
     id: b
 
-    // Its label (empty for the icon alone), icon, look (`ghost`, `danger`, `enter` or `flat`), whether it can act, the
-    // look, fonts, icons and size, and its gate id.
+    // Its label (empty for the icon alone), icon (empty for the label alone), look (`ghost`, `danger`, `enter`, `shown`
+    // or `flat`), whether it can act, the look, fonts, icons and size, its gate id, what readers hear about it, and
+    // whether a switch is on (null for a plain button).
     required property string label
     required property string icon
     required property string tone
@@ -15,6 +17,8 @@ Item {
     required property var res
     required property real s
     property string uid: ""
+    property string about: ""
+    property var checked: null
 
     signal clicked
 
@@ -22,11 +26,12 @@ Item {
     readonly property var p: lk.palette
     readonly property bool hot: can && area.containsMouse
     readonly property bool flat: tone === "flat"
-    // Each look's fill and ink; kx-theme checks each pair, under the pointer too (drawn/clip.rs, plate.rs panels).
+    // Each look's fill and ink; kx-theme checks each pair, under the pointer too (drawn/clip.rs, fill.rs, plate.rs).
     readonly property var looks: ({
             danger: [p.danger, p.danger_ink],
             enter: [p.enter, p.enter_ink],
             ghost: [p.pop_hover, lk.sel_ink],
+            shown: [p.pop_sel, lk.sel_ink],
             flat: ["transparent", hot ? lk.sel_ink : p.pop_ink]
         })
     readonly property color fill: looks[tone][0]
@@ -36,10 +41,14 @@ Item {
     height: sh[0] * s
     enabled: can
     opacity: can ? 1 : lk.shape.panel.off_share
-    Accessible.role: Accessible.Button
+    Accessible.role: checked === null ? Accessible.Button : Accessible.CheckBox
     Accessible.name: label
     Accessible.id: uid
+    Accessible.description: about
+    Accessible.checkable: checked !== null
+    Accessible.checked: checked === true
     Accessible.onPressAction: if (b.can) b.clicked()
+    Accessible.onToggleAction: if (b.can && b.checked !== null) b.clicked()
 
     // Outlined as the page buttons are, so a fill near the panel's colour still shows its edge.
     Rectangle {
@@ -61,6 +70,7 @@ Item {
         anchors.centerIn: parent
         spacing: b.sh[5] * b.s
         Icon {
+            visible: !!b.icon
             anchors.verticalCenter: parent.verticalCenter
             icon: b.icon
             base: b.res.icons

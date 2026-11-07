@@ -4,6 +4,7 @@ use crate::code::{Code, Kind};
 use crate::error::IpcError;
 use crate::limits::{HEADER_LEN, MAGIC, MAX_IMAGE_BYTES, MAX_SIDE, READ_CHUNK, VERSION};
 use std::io::{ErrorKind, Read, Write};
+use zeroize::Zeroizing;
 
 /// A checked header: a kind the reader takes, and a length within that kind's range.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -64,7 +65,7 @@ pub(crate) fn write_head<W: Write + ?Sized>(
 }
 
 /// Refuses a payload length outside `kind`'s range: `TooLong` above it, `Inconsistent` below.
-fn check_len(kind: Kind, len: usize) -> Result<(), IpcError> {
+pub(crate) fn check_len(kind: Kind, len: usize) -> Result<(), IpcError> {
     let lens = kind.lens();
     if len > *lens.end() {
         Err(IpcError::TooLong)
@@ -93,8 +94,32 @@ pub(crate) fn check_cap(n: u32) -> Result<u32, IpcError> {
 /// Reads exactly `N` payload bytes.
 pub(crate) fn read_array<const N: usize, R: Read + ?Sized>(r: &mut R) -> Result<[u8; N], IpcError> {
     let mut buf = [0; N];
-    if fill(r, &mut buf)? < N {
+    read_exact(r, &mut buf)?;
+    Ok(buf)
+}
+
+/// Fills `buf` from the payload, `Short` when the stream ends first.
+pub(crate) fn read_exact<R: Read + ?Sized>(r: &mut R, buf: &mut [u8]) -> Result<(), IpcError> {
+    if fill(r, buf)? < buf.len() {
         return Err(IpcError::Short);
+    }
+    Ok(())
+}
+
+/// Reads `len` secret bytes as `read_tail` does, wiping each smaller buffer once its bytes have moved on.
+pub(crate) fn read_wiped<R: Read + ?Sized>(
+    r: &mut R,
+    len: usize,
+) -> Result<Zeroizing<Vec<u8>>, IpcError> {
+    let mut buf = Zeroizing::new(Vec::new());
+    while buf.len() < len {
+        let have = buf.len();
+        let next = grow(have, len);
+        let mut more = Zeroizing::new(Vec::with_capacity(next));
+        more.extend_from_slice(&buf);
+        more.resize(next, 0);
+        read_exact(r, &mut more[have..])?;
+        buf = more;
     }
     Ok(buf)
 }

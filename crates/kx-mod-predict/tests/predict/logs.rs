@@ -1,9 +1,10 @@
-//! The actor's logs carry counts and error kinds only: never a typed word, a learned word or an email.
+//! The actor's logs carry counts and error kinds only: never a typed word, a learned word, an email or a saved one.
 
 use crate::rig::{Rig, plant};
 use kx_mod_predict::learn::{LearnFormatError, Learner};
-use kx_mod_predict::{OTHER_LANGUAGE, PredictSettings, STOPPED_LINE};
-use kx_module_api::ports::{FieldKind, SealedError, WordsAsk};
+use kx_mod_predict::{Msg, OTHER_LANGUAGE, PredictSettings, STOPPED_LINE};
+use kx_module_api::ports::{FieldKind, PanelLine, SealedError, WordsAsk};
+use kx_module_api::{Redacted, Zeroizing};
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
 use std::sync::Once;
@@ -12,7 +13,7 @@ use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
 /// The texts the test types, none of which may reach a log.
-const SECRETS: [&str; 3] = ["hello", "sami@x.org", "مرحبا"];
+const SECRETS: [&str; 3] = ["hello", "alex@x.org", "مرحبا"];
 
 thread_local! {
     /// Every field of every line logged on this thread while `lines_of` runs here.
@@ -79,7 +80,7 @@ fn no_log_line_shows_a_typed_word_a_learned_word_or_an_email() {
         rig.typed("hel");
         rig.ask(WordsAsk::Forget);
         rig.pick(0);
-        rig.typed("lo مرحبا sami@x.org ");
+        rig.typed("lo مرحبا alex@x.org ");
         rig.fakes.store.fail_save(SealedError::Io);
         rig.lang("ar");
         rig.stop();
@@ -114,7 +115,7 @@ fn a_domain_chip_then_a_space_counts_one_email() {
         let mut rig = Rig::new();
         rig.lang("en");
         rig.focus(FieldKind::Text);
-        rig.typed("sami@g");
+        rig.typed("alex@g");
         rig.pick(0);
         rig.typed("mail.com");
         rig.typed(" ");
@@ -161,4 +162,49 @@ fn a_learner_that_does_not_read_logs_why() {
         other.iter().any(|l| l.contains(OTHER_LANGUAGE)),
         "{other:?}"
     );
+}
+
+#[test]
+fn no_log_line_shows_a_search_lines_text() {
+    let search = |text: &str| PanelLine::Search(Redacted::new(text.to_owned()));
+    let lines = lines_of(|| {
+        let mut rig = Rig::build(|f, _| plant(f, "en", &["hello"]));
+        rig.lang("en");
+        rig.line(search("hel"));
+        rig.pick(0);
+        rig.line(search("hello "));
+        rig.line(search("alex@x.org مرحبا"));
+        rig.send(Msg::Pressed(false));
+        rig.line(PanelLine::Private);
+        rig.line(PanelLine::None);
+        rig.stop();
+    });
+    assert!(lines.iter().any(|l| l.contains(STOPPED_LINE)), "{lines:?}");
+    for line in &lines {
+        for secret in SECRETS {
+            assert!(!line.contains(secret), "{line}");
+        }
+    }
+}
+
+#[test]
+fn no_log_line_shows_a_saved_email() {
+    let saved = "alex@notebook.org";
+    let lines = lines_of(|| {
+        let mut rig = Rig::new();
+        rig.lang("en");
+        rig.focus(FieldKind::Text);
+        let emails = vec![Redacted::new(Zeroizing::new(saved.to_owned()))];
+        rig.send(Msg::Saved(emails));
+        rig.typed("@@");
+        rig.pick(0);
+        rig.typed(saved);
+        rig.typed(" sa");
+        rig.pick(0);
+        rig.fakes.store.fail_save(SealedError::Io);
+        rig.typed(&format!("mi@notebook.org {saved} "));
+        rig.stop();
+    });
+    assert!(lines.iter().any(|l| l.contains(STOPPED_LINE)), "{lines:?}");
+    assert!(lines.iter().all(|l| !l.contains(saved)), "{lines:?}");
 }

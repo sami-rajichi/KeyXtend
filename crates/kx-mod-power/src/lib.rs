@@ -11,7 +11,9 @@ pub use actor::{Actor, Job, Msg, Spawn};
 pub use manifest::{ID, MANIFEST};
 
 use kx_module_api::ports::{PowerAsk, PowerAsked, PowerChanged, PowerDialogKey};
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
+use kx_module_api::{
+    Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
+};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -81,7 +83,7 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
     if let Err(panic) = catch_unwind(AssertUnwindSafe(|| actor.run(inbox))) {
         // Neither event needs a capability, so neither can be refused.
         let _ = bus.publish(&PowerChanged::OFF);
-        let _ = bus.publish(&actor::notice(keys::POWER_STOPPED));
+        let _ = bus.publish(&Notice::about(keys::POWER_STOPPED, ID));
         resume_unwind(panic);
     }
 }

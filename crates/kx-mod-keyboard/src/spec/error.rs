@@ -43,6 +43,9 @@ pub enum BoardError {
     /// A board id takes the form of an id the layer generates.
     #[error("key id {0} is kept for the shortcuts layer")]
     Reserved(String),
+    /// The fill's Tab names no main-row `send` key.
+    #[error("the fill's Tab key {0} is not a send key of the main rows")]
+    Fill(String),
 }
 
 impl BoardError {
@@ -60,6 +63,7 @@ impl BoardError {
             Self::Role(_) => "a board key's role does not fit it",
             Self::Next => "the layer's Next cell is off the side grid or on the Shortcuts key",
             Self::Reserved(_) => "a board key id is kept for the shortcuts layer",
+            Self::Fill(_) => "the fill's Tab key is not a send key of the main rows",
         }
     }
 }

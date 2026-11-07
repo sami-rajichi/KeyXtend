@@ -11,8 +11,8 @@ fn email(text: &str) -> Address {
 #[test]
 fn an_open_typed_full_address_is_told_once() {
     let mut t = tracker(2);
-    type_text(&mut t, "mail sami@x.org");
-    assert_eq!(t.email(), Some(email("sami@x.org")));
+    type_text(&mut t, "mail alex@x.org");
+    assert_eq!(t.email(), Some(email("alex@x.org")));
     assert_eq!(t.email(), None, "told once");
     assert!(
         type_text(&mut t, " ").is_empty(),
@@ -23,26 +23,26 @@ fn an_open_typed_full_address_is_told_once() {
 #[test]
 fn an_address_changed_after_it_was_told_is_told_at_its_end_over_the_one_told() {
     let mut t = tracker(2);
-    type_text(&mut t, "sami@x.org");
-    assert_eq!(t.email(), Some(email("sami@x.org")));
+    type_text(&mut t, "alex@x.org");
+    assert_eq!(t.email(), Some(email("alex@x.org")));
     let told = type_text(&mut t, ".tn ");
-    let longer = Address::of("sami@x.org.tn", Some("sami@x.org"));
+    let longer = Address::of("alex@x.org.tn", Some("alex@x.org"));
     assert_eq!(told, [Told::Email(longer)]);
     let mut t = tracker(2);
-    type_text(&mut t, "sami@x.org");
+    type_text(&mut t, "alex@x.org");
     t.email();
     type_text(&mut t, ".tn");
-    let left = Address::of("sami@x.org.tn", Some("sami@x.org"));
+    let left = Address::of("alex@x.org.tn", Some("alex@x.org"));
     assert_eq!(t.email(), Some(left), "left, not ended");
 }
 
 #[test]
 fn a_partial_or_read_address_or_a_word_is_never_told() {
     let mut t = tracker(2);
-    type_text(&mut t, "sami@gm");
+    type_text(&mut t, "alex@gm");
     assert_eq!(t.email(), None, "no domain yet");
     let mut t = tracker(2);
-    t.read(Some("sami@x.org"), &knows);
+    t.read(Some("alex@x.org"), &knows);
     assert_eq!(t.email(), None, "a read token");
     for typed in [",", "m"] {
         let mut t = tracker(2);

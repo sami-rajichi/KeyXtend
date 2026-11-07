@@ -119,7 +119,7 @@ fn with_prediction_off_no_pack_or_learner_opens_and_nothing_is_told_until_it_tur
 
 #[test]
 fn with_prediction_off_the_known_emails_load_only_once_it_turns_on() {
-    let bytes = Emails::new(&["sami@x.org".to_owned()], usize::MAX).to_bytes();
+    let bytes = Emails::new(&["alex@x.org".to_owned()], usize::MAX).to_bytes();
     let mut rig = Rig::build(|f, host| {
         f.store.plant(&emails_blob().unwrap(), bytes);
         host.put(ON_KEY, Value::Boolean(false));
@@ -130,9 +130,9 @@ fn with_prediction_off_the_known_emails_load_only_once_it_turns_on() {
     rig.focus(FieldKind::Text);
     rig.typed("nour@y.com ");
     rig.lang("fr");
-    rig.typed("sa");
+    rig.typed("al");
     let email = |text: &str| (text.to_owned(), ChipKind::Email);
-    assert!(rig.chips().contains(&email("sami@x.org")), "loaded once on");
+    assert!(rig.chips().contains(&email("alex@x.org")), "loaded once on");
     rig.typed(" no");
     assert!(
         rig.chips().contains(&email("nour@y.com")),

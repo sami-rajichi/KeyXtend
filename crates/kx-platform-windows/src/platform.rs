@@ -6,12 +6,13 @@ use std::sync::Arc;
 use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource, Pictures,
-    PointerHook, PowerDialog, ScrollTarget, Shortcuts, WordPacks,
+    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource, Pictures,
+    Places, PointerHook, PowerDialog, ScrollTarget, Shortcuts, WordPacks,
 };
+use kx_platform::boxes::WorkerBoxes;
 use kx_platform::pictures::WorkerPictures;
 use kx_platform::ui::{
-    Backdrop, Instance, Memory, Reveal, Screens, Speaker, SystemLook, Tray, WindowGuard,
+    Backdrop, Hidden, Instance, Memory, Reveal, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
 use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
@@ -19,9 +20,9 @@ use crate::disk::WinDiskRoom;
 use crate::hook::Source;
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
-    WinFieldWatch, WinGuard, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook, WinMemory,
-    WinPackDisk, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll, WinShortcuts,
-    WinSpawner, WinSpeaker, WinTray, WinWordPacks, dirs,
+    WinFieldWatch, WinGuard, WinHidden, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook,
+    WinMemory, WinPackDisk, WinPlaces, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll,
+    WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -112,6 +113,19 @@ impl WindowsPlatform {
         Arc::new(WorkerPictures::new(worker, Arc::new(self.clock)))
     }
 
+    /// Boxes sealed and opened by the vault worker beside the program, for the app to register under `BoxesKey`.
+    #[must_use]
+    pub fn boxes(&self) -> Arc<dyn Boxes> {
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
+        Arc::new(WorkerBoxes::new(worker, Arc::new(self.clock)))
+    }
+
+    /// The backup box's places, for the app to register under `PlacesKey`; the data folder is refused as one.
+    #[must_use]
+    pub fn places(&self) -> Arc<dyn Places> {
+        Arc::new(places(&self.dirs))
+    }
+
     /// The word packs in `dirs`, the first folder first, for the app to register under `WordPacksKey`.
     #[must_use]
     pub fn word_packs(&self, dirs: Vec<PathBuf>) -> Arc<dyn WordPacks> {
@@ -172,6 +186,12 @@ impl WindowsPlatform {
         Arc::new(WinReveal)
     }
 
+    /// The hidden-run probe and the hidden copies in each package's private copy of the app-data folder (ADR-0037).
+    #[must_use]
+    pub fn hidden(&self) -> Arc<dyn Hidden> {
+        Arc::new(WinHidden::new())
+    }
+
     /// The speaker: `XAudio2` on a thread of its own, which makes the engine at the first play.
     #[must_use]
     pub fn speaker(&self) -> Arc<dyn Speaker> {
@@ -207,6 +227,11 @@ impl Platform for WindowsPlatform {
     fn dirs(&self) -> &AppDirs {
         &self.dirs
     }
+}
+
+/// The places for `dirs`, refusing the data folder this run uses: `data` beside the program when portable.
+fn places(dirs: &AppDirs) -> WinPlaces {
+    WinPlaces::new(dirs.data_dir().path().to_path_buf())
 }
 
 #[cfg(test)]

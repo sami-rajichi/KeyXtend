@@ -1,229 +1,139 @@
-//! G23: Fill asks Windows Hello from the no-focus face; it types after Verified, and nothing after Cancel.
-//! Without Hello only the refusal runs, so the verdict is at most partial.
+//! G23 on the product (`g23 keyxtend`): the test build on a data folder the gate makes, a test Login saved through
+//! Quick-fill with clicks only, then Both, Password and User, each typed from the no-focus keyboard into a fresh Chrome
+//! login page with the panel left open, until its close button shuts it. Only the wanted text may arrive; nothing may
+//! reach the clipboard, and no Enter or submit may happen.
 #![cfg(windows)]
 
-use std::time::Instant;
+mod copy;
+mod fills;
+mod live;
+mod notice;
+mod page;
+mod panel;
+mod seed;
 
-use kx_platform_windows::uia::{self, Uia};
-use kx_platform_windows::window::foreground;
+pub(crate) use notice::OFFER_ASK;
+
+use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
-use spike_core::config::ToolButton;
-use spike_core::hello;
 
 use crate::apps::{Ctx, Opened};
-use crate::facetools::FaceWin;
-use crate::out::{self, say};
-use crate::win::{self, sleep_ms};
-use crate::{g21, probe};
+use crate::g20prod::copy_line;
+use crate::g23::fills::Fill;
+use crate::g23::panel::Panel;
+use crate::out::say;
+use crate::product::NAME;
+use crate::{g25, probe, typebox};
 
-/// What the owner answers at each Hello prompt, in order.
-const ORDER: &str =
-    "Hello asks three times: confirm (user name), cancel (password), then confirm (password).";
+/// The seed's part in the result line.
+const SEED: &str = "seed";
+/// Whether the layout in front came back after the seed's typing, in the result line.
+const LAYOUT_BACK: &str = "layout_back";
+/// The panel's close button after the last fill, in the result line.
+const SHUT: &str = "shut";
+/// The fills, in order: Both on the seed's page, then each one-part fill on a fresh page of its own.
+const FILLS: [Fill; 3] = [Fill::Both, Fill::Password, Fill::User];
 
-/// The login page: a user field, and a password field whose length the page keeps in its title, from 0 at load.
-fn page(ctx: &Ctx) -> String {
-    let (g, mark) = (&ctx.cfg.g21, &ctx.cfg.g23.length_mark);
-    let len = format!(
-        "oninput=\"document.title=document.title.split('{mark}')[0]+'{mark}'+this.value.length\""
-    );
-    let user = g21::input(ctx, &g.user_name, "text", "");
-    let pass = g21::input(ctx, &g.pass_name, "password", &len);
-    format!("{user}{pass}<script>document.title+='{mark}0'</script>")
-}
+/// A login page's run: what `drive` gave on the page in front, and what closing the page left.
+type OnPage<T> = Result<(T, Vec<String>), String>;
 
-/// The password length from the window title, which Chrome ends with its own name; `None` without the mark.
-fn length_in(title: &str, mark: &str) -> Option<usize> {
-    let (_, rest) = title.rsplit_once(mark)?;
-    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
-    digits.parse().ok()
-}
-
-/// True while a window of a Hello prompt program shows.
-fn prompt_up(ctx: &Ctx) -> bool {
-    let progs = &ctx.cfg.g23.prompt_programs;
-    win::seen_windows()
-        .into_iter()
-        .filter_map(win::program_name)
-        .any(|p| progs.iter().any(|q| q.eq_ignore_ascii_case(&p)))
-}
-
-/// Waits up to the Hello wait for `f`; returns the seconds it took.
-fn within(ctx: &Ctx, f: impl Fn() -> bool) -> Option<f64> {
-    let t0 = Instant::now();
-    let wait = ctx.cfg.g23.hello_wait_ms;
-    win::poll_until(wait, ctx.cfg.timing.poll_ms, || {
-        f().then(|| t0.elapsed().as_secs_f64())
+/// Runs `drive` on a fresh login page in front, then closes the page.
+fn on_page<T>(ctx: &Ctx, drive: impl FnOnce(&Opened) -> Result<T, String>) -> OnPage<T> {
+    let doc = probe::open_page(ctx, &page::page(ctx))?;
+    probe::run_on(ctx, doc, |doc| {
+        probe::front(ctx, &doc.app)?;
+        drive(&doc.app)
     })
 }
 
-/// Clicks the web field called `name`, then the face's `button`.
-fn ask(
-    ctx: &Ctx,
-    uia: &Uia,
-    fw: &FaceWin,
-    app: &Opened,
-    name: &str,
-    button: ToolButton,
-) -> Result<(), String> {
-    g21::click_field(ctx, uia, app, name)?;
-    fw.press(ctx, button)
+/// Saves the test entry on the first page, then runs Both there: the seed's part, Both's, and whether the layout in
+/// front came back after the typing.
+fn first(ctx: &Ctx, panel: &Panel, uia: &Uia, app: &Opened) -> Result<Value, String> {
+    let (seeded, back) = typebox::typed_in(ctx, app, |t| seed::seed(ctx, panel, t));
+    let seed = seeded?;
+    let both = FILLS[0];
+    let part = g25::part(fills::run(ctx, panel, uia, app, both));
+    Ok(json!({ SEED: seed, both.name(): part, LAYOUT_BACK: back }))
 }
 
-/// The owner confirms: the test user name must arrive in the field in front.
-fn confirmed(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let (g, want) = (&ctx.cfg.g21, &ctx.spike.tools.test_user);
-    ask(ctx, uia, fw, app, &g.user_name, ToolButton::FillUser)?;
-    let prompt = within(ctx, || prompt_up(ctx));
-    let typed = within(ctx, || {
-        let el = uia.named(app.hwnd, &g.user_name);
-        el.and_then(|e| uia::value(&e, want.encode_utf16().count()))
-            .as_deref()
-            == Some(want.as_str())
-    });
-    let back = foreground() == app.hwnd;
-    let ok = prompt.is_some() && typed.is_some() && back;
-    Ok(json!({ "ok": ok, "prompt_secs": prompt, "typed_secs": typed, "front_back": back }))
-}
-
-/// The owner cancels: the password field must stay empty.
-fn cancelled(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let mark = &ctx.cfg.g23.length_mark;
-    ask(
-        ctx,
-        uia,
-        fw,
-        app,
-        &ctx.cfg.g21.pass_name,
-        ToolButton::FillPassword,
-    )?;
-    let prompt = within(ctx, || prompt_up(ctx));
-    let closed = prompt.and_then(|_| within(ctx, || !prompt_up(ctx)));
-    sleep_ms(
-        ctx.spike
-            .tools
-            .fill_settle_ms
-            .saturating_add(ctx.cfg.probes.settle_ms),
-    );
-    let len = length_in(&win::title(app.hwnd), mark);
-    let ok = prompt.is_some() && closed.is_some() && len == Some(0);
-    Ok(json!({ "ok": ok, "prompt_secs": prompt, "closed_secs": closed, "password_length": len }))
-}
-
-/// The owner confirms again: the test password must arrive, seen by its length in the page title.
-fn filled(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let mark = &ctx.cfg.g23.length_mark;
-    // The page counts UTF-16 units, as JavaScript does.
-    let want = ctx.spike.tools.test_password.encode_utf16().count();
-    ask(
-        ctx,
-        uia,
-        fw,
-        app,
-        &ctx.cfg.g21.pass_name,
-        ToolButton::FillPassword,
-    )?;
-    let prompt = within(ctx, || prompt_up(ctx));
-    let typed = within(ctx, || length_in(&win::title(app.hwnd), mark) == Some(want));
-    let back = foreground() == app.hwnd;
-    let ok = prompt.is_some() && typed.is_some() && back;
-    Ok(json!({ "ok": ok, "prompt_secs": prompt, "typed_secs": typed, "front_back": back }))
-}
-
-/// G23's `pass`: without Hello only the refusal ran, so it is at most partial.
-fn verdict(hello: bool, ok: bool) -> Value {
-    out::pass(ok, hello)
-}
-
-/// True if a Hello prompt shows within the refuse wait.
-fn prompt_within_refuse(ctx: &Ctx) -> bool {
-    let (wait, poll) = (ctx.cfg.g23.refuse_wait_ms, ctx.cfg.timing.poll_ms);
-    win::poll_until(wait, poll, || prompt_up(ctx).then_some(())).is_some()
-}
-
-/// Hello is not set up: neither Fill may type anything, and no prompt may show.
-fn refused(ctx: &Ctx, uia: &Uia, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
-    let g = &ctx.cfg.g21;
-    ask(ctx, uia, fw, app, &g.user_name, ToolButton::FillUser)?;
-    let prompt_user = prompt_within_refuse(ctx);
-    // Read up to `[g1] max_read_chars`, so the count shows what any wrong fill left.
-    let user = uia
-        .named(app.hwnd, &g.user_name)
-        .and_then(|e| uia::value(&e, ctx.cfg.g1.max_read_chars));
-    ask(ctx, uia, fw, app, &g.pass_name, ToolButton::FillPassword)?;
-    let prompt_pass = prompt_within_refuse(ctx);
-    let len = length_in(&win::title(app.hwnd), &ctx.cfg.g23.length_mark);
-    let user_chars = user.map(|u| u.chars().count());
-    let ok = !prompt_user && !prompt_pass && user_chars == Some(0) && len == Some(0);
-    Ok(json!({
-        "ok": ok, "prompt_seen": prompt_user || prompt_pass,
-        "user_chars": user_chars, "password_length": len,
-    }))
-}
-
-/// With Hello: the owner confirms, cancels, then confirms again, as `ORDER` says. Without it: nothing may be typed.
-fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
+/// The run on a ready copy: a normal run, the seed and Both, then each one-part fill with the panel still open, and its
+/// close button last; `left` gathers the clean-up.
+fn drive(ctx: &Ctx, left: &mut Vec<String>) -> Result<Value, String> {
+    let panel = Panel::new(ctx)?;
+    notice::check_normal(ctx, panel.reader())?;
     let uia = Uia::new().map_err(|e| e.to_string())?;
-    probe::front(ctx, app)?;
-    if !hello::available()? {
-        let r = refused(ctx, &uia, fw, app)?;
-        let pass = verdict(false, r["ok"] == true);
-        return Ok(json!({ "hello": "unavailable", "pass": pass, "refused": r }));
+    let (mut v, notes) = on_page(ctx, |app| first(ctx, &panel, &uia, app))?;
+    left.extend(notes);
+    for &fill in &FILLS[1..] {
+        let got = on_page(ctx, |app| fills::run(ctx, &panel, &uia, app, fill));
+        let part = got.map(|(part, notes)| {
+            left.extend(notes);
+            part
+        });
+        v[fill.name()] = g25::part(part);
     }
-    say!("{ORDER}");
-    let yes = confirmed(ctx, &uia, fw, app)?;
-    let no = cancelled(ctx, &uia, fw, app)?;
-    let filled = filled(ctx, &uia, fw, app)?;
-    let pass = verdict(true, [&yes, &no, &filled].iter().all(|v| v["ok"] == true));
-    Ok(json!({
-        "hello": "available", "pass": pass, "confirmed": yes, "cancelled": no, "filled": filled,
-    }))
+    v[SHUT] = g25::part(panel.close().map(|went| json!({ "ok": went })));
+    v["ok"] = json!(passed(&v));
+    Ok(v)
 }
 
-/// Runs G23 with face `name` on a local Chrome login page.
+/// True when the seed, every fill, the panel's close button and the layout's return passed.
+fn passed(v: &Value) -> bool {
+    let mut parts = [SEED, SHUT]
+        .into_iter()
+        .chain(FILLS.iter().map(|f| f.name()));
+    parts.all(|p| v[p]["ok"] == true) && v[LAYOUT_BACK] == true
+}
+
+/// Runs G23 on the product, refused under uiAccess or while a product copy runs; the data folder goes at the end.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let fw = FaceWin::parked(ctx, name)?;
-    let doc = probe::open_page(ctx, &page(ctx))?;
-    let (mut v, notes) = probe::run_on(ctx, doc, |doc| drive(ctx, &fw, &doc.app))?;
-    v["gate"] = json!("G23");
-    v["face"] = json!(name);
-    v["clean_up"] = json!(notes);
-    Ok(v)
+    if name != NAME {
+        return Err(format!("G23 runs on {NAME}, not {name}"));
+    }
+    let fresh = copy::Fresh::open(ctx)?;
+    let program = fresh.program.display().to_string();
+    let mut left = Vec::new();
+    let (got, ended) = fresh.with_copy(|| drive(ctx, &mut left));
+    let removed = fresh.close(ended.as_ref());
+    let run = copy_line(got, ended.as_ref());
+    let pass = run["ok"] == true && removed.is_ok();
+    say!("G23 {NAME}: {}", run["ok"]);
+    Ok(json!({
+        "gate": "G23", "name": NAME, "program": program, "run": run, "clean_up": left,
+        "data_removed": removed.is_ok(), "data_error": removed.err(), "pass": pass,
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn without_hello_g23_is_at_most_partial() {
-        assert_eq!(verdict(true, true), json!(true));
-        assert_eq!(
-            verdict(false, true),
-            json!(crate::out::PARTIAL),
-            "only the refusal ran"
-        );
-        assert_eq!(verdict(false, false), json!(false));
-        assert_eq!(verdict(true, false), json!(false));
+    /// A run whose every part passed.
+    fn good() -> Value {
+        let yes = || json!({ "ok": true });
+        json!({ "seed": yes(), "both": yes(), "password": yes(), "user": yes(), "shut": yes(), "layout_back": true })
     }
 
     #[test]
-    fn the_owner_is_told_the_three_answers_in_order() {
-        let (yes, no) = (ORDER.find("confirm"), ORDER.find("cancel"));
-        assert!(yes < no && ORDER.rfind("confirm") > no, "{ORDER}");
+    fn the_run_passes_when_every_part_did() {
+        assert!(passed(&good()));
+        assert_eq!(FILLS.len(), crate::p9cfg::FILLS, "the run-length count");
     }
 
     #[test]
-    fn the_password_length_comes_from_the_title() {
-        assert_eq!(length_in("KeyXtend probe 1 #15", " #"), Some(15));
-        assert_eq!(
-            length_in("KeyXtend probe 1 #0 - Google Chrome", " #"),
-            Some(0)
-        );
-        assert_eq!(
-            length_in("KeyXtend probe 1 - Google Chrome", " #"),
-            None,
-            "no mark means the page's counter never ran"
-        );
-        assert_eq!(length_in("KeyXtend probe 1 #x", " #"), None);
+    fn the_run_fails_when_any_part_failed_or_is_missing() {
+        for part in ["seed", "both", "password", "user", "shut"] {
+            let mut v = good();
+            v[part] = json!({ "ok": false });
+            assert!(!passed(&v), "{part} failed");
+            v[part] = json!({ "error": "no panel", "ok": false });
+            assert!(!passed(&v), "{part} broke off");
+            let mut gone = good();
+            gone.as_object_mut().expect("an object").remove(part);
+            assert!(!passed(&gone), "{part} missing");
+        }
+        let mut v = good();
+        v["layout_back"] = json!(false);
+        assert!(!passed(&v), "the layout stayed");
     }
 }

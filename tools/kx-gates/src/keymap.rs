@@ -235,14 +235,19 @@ fn err(e: windows::core::Error) -> String {
 }
 
 /// What one button, or one list row, tells a screen reader.
-#[allow(unsafe_code, reason = "UI Automation calls on a live element.")]
 pub(crate) fn read_one(el: &IUIAutomationElement) -> Result<KeyRead, String> {
+    read_raw(el).map_err(err)
+}
+
+/// `read_one` with UI Automation's own error, for a reader that tells its codes apart.
+#[allow(unsafe_code, reason = "UI Automation calls on a live element.")]
+pub(crate) fn read_raw(el: &IUIAutomationElement) -> windows::core::Result<KeyRead> {
     // SAFETY: plain property reads on a live element; a missing pattern reads as an error, so as not invokable.
     unsafe {
         Ok(KeyRead {
-            id: el.CurrentAutomationId().map_err(err)?.to_string(),
-            name: el.CurrentName().map_err(err)?.to_string(),
-            rect: el.CurrentBoundingRectangle().map_err(err)?,
+            id: el.CurrentAutomationId()?.to_string(),
+            name: el.CurrentName()?.to_string(),
+            rect: el.CurrentBoundingRectangle()?,
             invokable: el
                 .GetCurrentPattern(UIA_InvokePatternId)
                 .is_ok_and(|p| !p.as_raw().is_null()),

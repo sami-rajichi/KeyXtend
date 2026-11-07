@@ -1,5 +1,5 @@
-//! Settings of the probes G7, G19 to G21 and G23 to G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]`
-//! and `[g23]` to `[g25]`. `check` also validates G22, whose settings live in `g22cfg`.
+//! Settings of the probes G7, G19 to G21, G24 and G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]`, `[g24]` and
+//! `[g25]`. `check` also validates G22, whose settings live in `g22cfg`; G23's are in `p9cfg`.
 #![cfg(windows)]
 
 use kx_mod_keyboard::legend::is_mark;
@@ -21,17 +21,14 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     if c.probes.forget_min_chars == 0 {
         return Err("probes.forget_min_chars must be above 0".to_string());
     }
-    if [&g.prefix, &g.hidden_prefix, &c.g25.text, &c.g23.length_mark]
+    if [&g.prefix, &g.hidden_prefix, &c.g25.text]
         .iter()
         .any(|p| p.is_empty())
     {
-        return Err("g20 prefixes, g23.length_mark and g25.text must not be empty".to_string());
+        return Err("g20 prefixes and g25.text must not be empty".to_string());
     }
     if c.g19.lines.is_empty() || c.g19.lines.iter().any(String::is_empty) {
         return Err("g19.lines must hold at least one line, none empty".to_string());
-    }
-    if c.g23.prompt_programs.is_empty() {
-        return Err("g23.prompt_programs must name the Hello prompt".to_string());
     }
     let g = &c.g22;
     let bad_layout = g
@@ -173,19 +170,6 @@ pub struct G7 {
     pub open_ms: u64,
 }
 
-/// Windows Hello quick-fill probe.
-#[derive(Debug, Clone, Deserialize)]
-pub struct G23 {
-    /// Longest wait for the owner to answer Windows Hello, in ms.
-    pub hello_wait_ms: u64,
-    /// Programs that show the Hello prompt (adapter table).
-    pub prompt_programs: Vec<String>,
-    /// Without Hello, how long Fill gets to (wrongly) type or prompt before the fields are checked, in ms.
-    pub refuse_wait_ms: u64,
-    /// Put before the password length that the test page adds to its title.
-    pub length_mark: String,
-}
-
 /// Snip probe.
 #[derive(Debug, Clone, Deserialize)]
 pub struct G24 {
@@ -234,7 +218,7 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("kx-gates.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut GatesConfig); 20] = [
+        let bad: [fn(&mut GatesConfig); 18] = [
             |c| c.g7.word.clear(),
             |c| c.g7.keys.clear(),
             |c| c.g7.opener.clear(),
@@ -247,8 +231,6 @@ mod tests {
             |c| c.probes.forget_min_chars = 0,
             |c| c.g20.prefix.clear(),
             |c| c.g25.text.clear(),
-            |c| c.g23.prompt_programs.clear(),
-            |c| c.g23.length_mark.clear(),
             |c| c.g22.sentences.clear(),
             |c| c.g22.sentences[0].layout = "EN".into(),
             |c| c.g22.clips.clear(),

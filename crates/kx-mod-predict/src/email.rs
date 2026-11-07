@@ -1,20 +1,23 @@
-//! Emails (spec §6 "Emails"): the emails typed with the keyboard, most recent first, and the chips after one `@`, a
-//! typed `@@` or the start of a known email. Which characters an email holds comes from `email.toml`.
+//! Emails (spec §6 "Emails"): the emails typed with the keyboard, most recent first, the notebook's saved ones,
+//! and the chips after one `@`, a typed `@@` or the start of a known email; `email.toml` names an email's marks.
 
 use std::fmt;
 use std::sync::LazyLock;
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{Chip, ChipKind, ListPage};
+use kx_module_api::ports::{Chip, ChipKind};
 use kx_module_api::text::{Casing, fold};
 use serde::Deserialize;
 
-use crate::menu::pages;
 use crate::split::is_word_char;
 
 mod bytes;
+mod offer;
+mod saved;
 
 pub use bytes::{EmailFormatError, MAGIC, VERSION};
+pub use offer::Offer;
+pub use saved::Saved;
 
 /// The email marks, compiled in so they are never read from disk.
 const TABLE: &str = include_str!("email.toml");
@@ -137,7 +140,8 @@ pub fn is_domain(text: &str) -> bool {
 /// settings' order, never the one it already spells, at most `lane`.
 #[must_use]
 pub fn domains(partial: &str, cfg: &EmailConfig, lane: usize) -> Vec<Chip> {
-    completing(&cfg.domains, partial, lane, ChipKind::Domain)
+    let all = cfg.domains.iter().map(|d| (d.as_str(), ChipKind::Domain));
+    completing(all, partial, lane)
 }
 
 /// The emails typed with the keyboard, most recent first.
@@ -207,71 +211,22 @@ impl Emails {
     pub fn put(&mut self, at: usize, email: String) {
         self.list.insert(at.min(self.list.len()), email);
     }
-
-    /// The known emails `keep` takes, in the same order.
-    #[must_use]
-    pub fn kept(&self, keep: impl Fn(&str) -> bool) -> Self {
-        let list = self.list.iter().filter(|e| keep(e)).cloned().collect();
-        Self { list }
-    }
-
-    /// The known emails that start with `typed` once folded, at most `lane`: only from `min_start` typed
-    /// characters and before any at sign.
-    #[must_use]
-    pub fn starting(&self, typed: &str, cfg: &EmailConfig, lane: usize) -> Vec<Chip> {
-        let has_at = at().is_some_and(|a| typed.contains(a));
-        if has_at || typed.chars().count() < cfg.min_start {
-            return Vec::new();
-        }
-        completing(&self.list, typed, lane, ChipKind::Email)
-    }
-
-    /// Every known email, most recent first, as chips; past `lane`, the last chip is `More`, which opens the list.
-    #[must_use]
-    pub fn all(&self, lane: usize) -> Vec<Chip> {
-        if self.list.len() <= lane {
-            return self.first(lane);
-        }
-        let mut chips = self.first(lane.saturating_sub(1));
-        if lane > 0 {
-            chips.push(chip("", ChipKind::More));
-        }
-        chips
-    }
-
-    /// The first `lane` known emails, most recent first, as chips.
-    #[must_use]
-    pub fn first(&self, lane: usize) -> Vec<Chip> {
-        let shown = self.list.iter().take(lane);
-        shown.map(|e| chip(e, ChipKind::Email)).collect()
-    }
-
-    /// Page `page` of the list, `rows` per page (`[ui] page_rows`); a page past the end shows the last one.
-    #[must_use]
-    pub fn page(&self, page: u16, rows: usize) -> ListPage {
-        let rows = rows.max(1);
-        let pages = pages(self.list.len(), rows);
-        let at = usize::from(page).min(pages - 1);
-        let items = self.list.iter().skip(at * rows).take(rows);
-        ListPage {
-            items: items.map(|e| Redacted::new(e.clone())).collect(),
-            page: u16::try_from(at).unwrap_or(u16::MAX),
-            pages: u16::try_from(pages).unwrap_or(u16::MAX),
-        }
-    }
 }
 
-/// The texts of `all` that start with `typed` once folded and are not `typed` itself, at most `lane`, as `kind`.
-fn completing(all: &[String], typed: &str, lane: usize, kind: ChipKind) -> Vec<Chip> {
+/// The texts of `all` that start with `typed` once folded and are not `typed` itself, at most `lane`, each as its kind.
+fn completing<'a>(
+    all: impl Iterator<Item = (&'a str, ChipKind)>,
+    typed: &str,
+    lane: usize,
+) -> Vec<Chip> {
     let key = fold(typed, Casing::root());
-    let fits = |text: &&String| {
+    let fits = |(text, _): &(&str, ChipKind)| {
         let folded = fold(text, Casing::root());
         folded.starts_with(&key) && folded != key
     };
-    all.iter()
-        .filter(fits)
+    all.filter(fits)
         .take(lane)
-        .map(|t| chip(t, kind))
+        .map(|(t, kind)| chip(t, kind))
         .collect()
 }
 

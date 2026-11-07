@@ -15,7 +15,7 @@ pub const FACE: &str = "qt";
 pub struct SpikeConfig {
     /// The face's title and stage-1 geometry, which the gates and the tools row aim with.
     pub keyboard: KeyboardConfig,
-    /// The tools row, the selection pill, quick-fill and snip.
+    /// The tools row, the selection pill and snip.
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
     pub voice: crate::voicecfg::VoiceConfig,
@@ -44,12 +44,16 @@ pub struct KeyboardConfig {
 /// Bytes in one MiB.
 pub const MIB: usize = 1 << 20;
 
-/// The tools row, the selection pill, quick-fill and snip (stage 1b).
+/// The tools row, the selection pill and snip (stage 1b).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolsConfig {
     /// Button labels.
     pub labels: ToolLabels,
+    /// How many buttons share the frozen face's tools row.
+    pub slots: usize,
+    /// Each button's place in that row.
+    pub slot: ToolSlots,
     /// Title of the pill window, so kx-gates can find it.
     pub pill_title: String,
     /// Title of the snip overlay.
@@ -62,14 +66,6 @@ pub struct ToolsConfig {
     pub pill_icon: String,
     /// Virtual keys the pill's Copy button presses, in order.
     pub copy_keys: Vec<u16>,
-    /// Text of the Windows Hello prompt.
-    pub hello_message: String,
-    /// Fake user name that Fill types after Hello says yes.
-    pub test_user: String,
-    /// Fake password that Fill types after Hello says yes.
-    pub test_password: String,
-    /// Wait after giving the app in front its focus back, before typing, in ms.
-    pub fill_settle_ms: u64,
     /// Folder under TEMP for snips and the frozen screen.
     pub snip_folder: String,
     /// Largest screen copy we make or read, in MiB.
@@ -86,10 +82,6 @@ pub struct ToolsConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolLabels {
-    /// Types the test user name.
-    pub fill_user: String,
-    /// Types the test password.
-    pub fill_password: String,
     /// Starts a snip.
     pub snip: String,
     /// Starts and stops recording.
@@ -98,13 +90,19 @@ pub struct ToolLabels {
     pub copy: String,
 }
 
+/// Each tool button's place in the frozen face's row, 0 on the left.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolSlots {
+    /// The snip button's place.
+    pub snip: usize,
+    /// The mic button's place.
+    pub mic: usize,
+}
+
 /// The tool buttons, in row order; the faces and kx-gates share this order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolButton {
-    /// Types the test user name after Hello.
-    FillUser,
-    /// Types the test password after Hello.
-    FillPassword,
     /// Starts a snip.
     Snip,
     /// Starts and stops recording.
@@ -113,19 +111,11 @@ pub enum ToolButton {
 
 impl ToolButton {
     /// Every button, in row order.
-    pub const ALL: [ToolButton; 4] = [Self::FillUser, Self::FillPassword, Self::Snip, Self::Mic];
+    pub const ALL: [ToolButton; 2] = [Self::Snip, Self::Mic];
 
     /// The button at row position `i`.
     pub fn at(i: usize) -> Option<ToolButton> {
         Self::ALL.get(i).copied()
-    }
-
-    /// Its row position.
-    pub fn index(self) -> usize {
-        Self::ALL
-            .iter()
-            .position(|&b| b == self)
-            .unwrap_or_default()
     }
 }
 
@@ -133,15 +123,38 @@ impl ToolLabels {
     /// The label of button `b`.
     pub fn of(&self, b: ToolButton) -> &str {
         match b {
-            ToolButton::FillUser => &self.fill_user,
-            ToolButton::FillPassword => &self.fill_password,
             ToolButton::Snip => &self.snip,
             ToolButton::Mic => &self.mic,
         }
     }
 }
 
+impl ToolSlots {
+    /// The place of button `b`.
+    pub fn of(&self, b: ToolButton) -> usize {
+        match b {
+            ToolButton::Snip => self.snip,
+            ToolButton::Mic => self.mic,
+        }
+    }
+}
+
 impl ToolsConfig {
+    /// Refuses a button outside the row, or two buttons in one place.
+    pub fn check(&self) -> Result<(), String> {
+        let mut used: Vec<usize> = ToolButton::ALL.iter().map(|&b| self.slot.of(b)).collect();
+        let inside = used.iter().all(|&s| s < self.slots);
+        used.sort_unstable();
+        used.dedup();
+        if inside && used.len() == ToolButton::ALL.len() {
+            return Ok(());
+        }
+        Err(format!(
+            "tools.slot: each button needs its own place below tools.slots ({})",
+            self.slots
+        ))
+    }
+
     /// The folder snips go to, under TEMP.
     pub fn snip_dir(&self) -> PathBuf {
         std::env::temp_dir().join(&self.snip_folder)
@@ -170,6 +183,7 @@ pub fn load() -> Result<SpikeConfig, String> {
     let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let at = |e: String| format!("{}: {e}", file.display());
     let config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
+    config.tools.check().map_err(at)?;
     config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
     crate::panelcfg::check_titles(&config).map_err(at)?;
@@ -184,9 +198,32 @@ mod tests {
     fn tool_buttons_keep_their_row_order() {
         for (i, b) in ToolButton::ALL.iter().enumerate() {
             assert_eq!(ToolButton::at(i), Some(*b));
-            assert_eq!(b.index(), i);
         }
         assert_eq!(ToolButton::at(ToolButton::ALL.len()), None);
+    }
+
+    #[test]
+    fn snip_and_mic_keep_the_frozen_faces_last_two_slots() {
+        let t = load().expect("spike.toml loads").tools;
+        let slots = (t.slot.of(ToolButton::Snip), t.slot.of(ToolButton::Mic));
+        assert_eq!((slots, t.slots), ((2, 3), 4), "quick-fill's two came first");
+    }
+
+    #[test]
+    fn a_slot_past_the_row_or_shared_by_two_buttons_is_refused() {
+        let good = load().expect("spike.toml loads").tools;
+        assert_eq!(good.check(), Ok(()));
+        let spoils: [fn(&mut ToolsConfig); 3] = [
+            |t| t.slot.mic = t.slots,
+            |t| t.slot.snip = t.slot.mic,
+            |t| t.slots = 0,
+        ];
+        for (i, spoil) in spoils.iter().enumerate() {
+            let mut t = good.clone();
+            spoil(&mut t);
+            let e = t.check().expect_err(&format!("case {i} passed"));
+            assert!(e.contains("tools.slot"), "case {i}: {e}");
+        }
     }
 
     #[test]
@@ -195,8 +232,8 @@ mod tests {
         assert_eq!(cfg.tools.labels.of(ToolButton::Snip), cfg.tools.labels.snip);
         assert_eq!(cfg.tools.labels.of(ToolButton::Mic), cfg.tools.labels.mic);
         assert_eq!(
-            ToolButton::Mic.index(),
-            ToolButton::ALL.len() - 1,
+            ToolButton::ALL.last(),
+            Some(&ToolButton::Mic),
             "Mic is last"
         );
         assert!(cfg.tools.selection_poll_ms > 0 && !cfg.tools.copy_keys.is_empty());

@@ -84,6 +84,13 @@ fn a_panel_key_carries_the_page_rows_setting() {
 }
 
 #[test]
+fn a_click_on_a_line_sends_the_aim_and_answers_its_redraw() {
+    let (rig, face, _host) = Rig::with_face();
+    rig.hub.aim_panel();
+    assert_eq!(face.acts(), [FaceAction::AimPanel]);
+}
+
+#[test]
 fn a_placed_window_carries_the_screens_the_port_reports_and_its_corners_overhang() {
     let (rig, face, _host) = Rig::with_face();
     let rect = Rect {
@@ -264,11 +271,7 @@ impl kx_module_api::ports::KeyboardFace for Echo {
 
     fn act(&self, _: FaceAction) -> Result<FaceReply, FaceError> {
         let key = keys::SETTINGS_UNSAVED;
-        self.0.notice(kx_module_api::Notice {
-            key,
-            module: None,
-            args: Vec::new(),
-        });
+        self.0.notice(kx_module_api::Notice::plain(key));
         Ok(FaceReply {
             state: true,
             ..FaceReply::default()

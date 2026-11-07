@@ -14,7 +14,7 @@ Rectangle {
     required property var res
     required property real s
 
-    readonly property var sh: lk.shape.clip.thumb_px
+    readonly property var sh: lk.shape.panel.tile_px
 
     width: sh[0] * s
     height: sh[1] * s

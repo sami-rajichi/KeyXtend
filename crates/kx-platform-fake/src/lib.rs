@@ -1,13 +1,15 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, and recording fakes
-//! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures and the
-//! calendar. Only tests, tools and test-only crates use it.
+//! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures, the
+//! calendar, the backup box and its places, and seeded randomness. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
+mod boxes;
 mod calendar;
 mod clip;
 mod clock;
 mod field;
+mod hidden;
 mod input;
 mod instance;
 mod layout;
@@ -17,8 +19,10 @@ mod look;
 mod memory;
 mod packs;
 mod pictures;
+mod places;
 mod pointer;
 mod power;
+mod random;
 mod reveal;
 mod scroll;
 mod sealed;
@@ -28,10 +32,12 @@ mod sound;
 mod tray;
 mod ui;
 
+pub use boxes::{BoxCall, FakeBoxes};
 pub use calendar::{FakeCalendar, PARIS};
 pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
 pub use field::FakeFieldWatch;
+pub use hidden::FakeHidden;
 pub use input::{FakeInjector, Stroke};
 pub use instance::FakeInstance;
 pub use layout::FakeLayoutSource;
@@ -41,8 +47,10 @@ pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use memory::FakeMemory;
 pub use packs::FakeWordPacks;
 pub use pictures::FakePictures;
+pub use places::{FakePlaces, PlaceCall};
 pub use pointer::FakePointerHook;
 pub use power::FakePowerDialog;
+pub use random::FakeRandom;
 pub use reveal::FakeReveal;
 pub use scroll::{FakeScrollTarget, Turn};
 pub use sealed::FakeSealedStore;

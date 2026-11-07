@@ -32,10 +32,13 @@ pub use pack::{PackWriter, WriteError};
 pub use settings::{LEARN_KEY, MAX_WORD, ON_KEY, PredictSettings, SPEC};
 
 use kx_module_api::ports::{
-    ChipPicked, FieldWatchKey, Lane, LayoutChanged, PointerPressed, PressesAsk, PressesWanted,
-    SealedStoreKey, Suggested, Typed, TypingMode, WordPacksKey, WordsAsk,
+    AimedLine, ChipPicked, FieldWatchKey, Lane, LayoutChanged, PointerPressed, PressesAsk,
+    PressesWanted, SealedStoreKey, Suggested, Typed, TypingMode, VaultEmails, WordPacksKey,
+    WordsAsk,
 };
-use kx_module_api::{Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, keys};
+use kx_module_api::{
+    Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
+};
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -75,6 +78,7 @@ impl Module for PredictModule {
         let (tx, inbox) = mpsc::channel();
         relay(cx, &tx, |e: &Typed| Msg::Typed(e.piece.clone()))?;
         relay(cx, &tx, |e: &TypingMode| Msg::Mode(*e))?;
+        relay(cx, &tx, |e: &AimedLine| Msg::Line(e.line.clone()))?;
         relay(cx, &tx, |e: &LayoutChanged| Msg::Lang {
             iso: e.iso.clone(),
             name: e.name.clone(),
@@ -83,6 +87,7 @@ impl Module for PredictModule {
         relay(cx, &tx, |e: &ChipPicked| Msg::Picked(*e))?;
         relay(cx, &tx, |e: &WordsAsk| Msg::Ask(*e))?;
         relay(cx, &tx, |_: &PressesAsk| Msg::PressesAsk)?;
+        relay(cx, &tx, |e: &VaultEmails| Msg::Saved(e.emails.clone()))?;
         let ports = Ports {
             bus: cx.bus(),
             clock: cx.clock(),
@@ -146,7 +151,7 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
         // The module holds every gate these need, so none is refused.
         let _ = bus.publish(&stopped);
         let _ = bus.publish(&PressesWanted { on: false });
-        let _ = bus.publish(&actor::notice(keys::MODULE_FAILED, Vec::new()));
+        let _ = bus.publish(&Notice::about(keys::MODULE_FAILED, ID));
         resume_unwind(panic);
     }
 }

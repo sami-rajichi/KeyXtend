@@ -135,9 +135,9 @@ fn one_use_is_not_offered_and_two_are() {
 #[test]
 fn a_name_keeps_its_capital_and_a_sentence_start_does_not_split_a_word() {
     let mut l = learner("en");
-    teach(&mut l, None, "Zork zork Sami Sami", DAY);
+    teach(&mut l, None, "Zork zork Alex Alex", DAY);
     assert_eq!(listed(&l, "zo"), ["zork"]);
-    assert_eq!(listed(&l, "sa"), ["Sami"]);
+    assert_eq!(listed(&l, "al"), ["Alex"]);
     let view = l.view(None);
     assert_eq!((view.count("zork"), view.count("Zork")), (2, 2));
     let mut lower_first = learner("en");

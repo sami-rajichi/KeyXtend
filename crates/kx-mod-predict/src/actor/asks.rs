@@ -30,7 +30,7 @@ impl Actor {
                 }
             }
             WordsAsk::Page { page, rows } => {
-                let count = self.listed().list().len();
+                let count = self.listed().len();
                 self.menu.turn(page, rows, count);
             }
             WordsAsk::ListPick(row) => self.list_pick(seed, row),
@@ -39,9 +39,9 @@ impl Actor {
         Flow::Go
     }
 
-    /// Turns prediction on or off: the menu closes and the word ends. A change saves and drops the learner and the known
-    /// emails, and the loop opens the language again, so prediction off holds no pack or live learner; a learner or
-    /// emails whose save was refused stay, the learner as bytes, until a later save.
+    /// Turns prediction on or off: the menu closes and the word ends. A change saves and drops the learner, every email
+    /// and the line, asking for the notebook's and the line again when on, and the loop opens the language again, so
+    /// prediction off holds none of them; a refused save keeps its learner, as bytes, or emails until a later save.
     fn power(&mut self, seed: Option<&Pack<'_>>, on: bool) -> Flow {
         let flip = on != self.settings.on;
         self.settings.on = on;
@@ -52,6 +52,9 @@ impl Actor {
             self.save(Blob::Learned);
             self.leave();
             self.drop_emails();
+            self.drop_saved();
+            self.ask_saved();
+            self.turned(on);
             return Flow::Switch;
         }
         self.end_word(seed);

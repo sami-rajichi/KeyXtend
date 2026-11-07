@@ -1,11 +1,13 @@
 //! Text folding and casing by language (ADR-0034 decision 6): word prediction and clipboard search fold with one
-//! table, so `ecole` finds `école` and `ان` finds `أن` in both.
+//! table, so `ecole` finds `école` and `ان` finds `أن` in both, and read a search line as one line.
 
 mod casing;
 mod fold;
+mod line;
 
 pub use casing::Casing;
-pub use fold::{apostrophe, fold, is_apostrophe};
+pub use fold::{apostrophe, fold, fold_any_into, is_apostrophe};
+pub use line::{SPACE, one_line};
 
 /// `text` folded for search in any language: Unicode's default lower case, then the shared table, so accents,
 /// harakat, tatweel and the alef forms go and ى reads as ي.

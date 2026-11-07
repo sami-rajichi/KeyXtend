@@ -1,7 +1,7 @@
 //! The keyboard module: the board and its geometry, the keyboard's size and place, typing with sticky modifiers, the
 //! language key, the shortcuts layer, the `KeyboardFace` the UI draws, the pieces it typed and the words it types for
-//! word prediction (ADR-0033), and the clipboard panel's keys and pastes (ADR-0034). It talks to the OS only through
-//! ports.
+//! word prediction (ADR-0033), the clipboard panel's keys and pastes (ADR-0034), and Quick-fill's keys and fills
+//! (ADR-0038). It talks to the OS only through ports.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -30,11 +30,13 @@ pub use latch::Latches;
 pub use layer::{Layer, LayerCell, LayerKey};
 pub use legend::{Legend, LegendMods};
 pub use manifest::{ID, MANIFEST};
-pub use panel::{ClipUse, LangList, LangRow, ListView, Moved};
+pub use panel::{LangList, LangRow, ListView, Moved, Panel, PanelUse};
 pub use place::Placer;
 pub use plan::{Plan, Route};
 pub use repeat::Repeat;
-pub use run::{Io, Part, Pause, Ports, Sleep, TapError, Tapped, ToPanel, Typing, Word, drive};
+pub use run::{
+    Fill, Filled, Io, Part, Pause, Ports, Sleep, TapError, Tapped, ToPanel, Typing, Word, drive,
+};
 pub use settings::{
     Corner, ERASE_GAP_MS, KeyboardSettings, LangKey, MAX_PAGES, Modifiers, SPEC, TEXT_CAP,
 };
@@ -103,8 +105,8 @@ impl Module for KeyboardModule {
         Ok(())
     }
 
-    /// The face stops typing picked words and pasting, as a handler may still run on the sender's thread; the UI
-    /// keeps it.
+    /// The face stops typing picked words, pasting and filling, as a handler may still run on the sender's thread; the
+    /// UI keeps it.
     fn stop(&mut self) {
         if let Some(face) = &self.face {
             face.set_running(false);

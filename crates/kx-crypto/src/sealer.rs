@@ -3,13 +3,14 @@
 
 use crate::consts::{DAMAGED_EXT, MAX_BLOB_BYTES, OVERHEAD, SEALED_EXT};
 use crate::guard::KeyGuard;
+use crate::lock;
 use crate::seal::{open, seal};
 use disk::Read;
 use key::DataKey;
 use kx_module_api::ports::{BlobName, SealedError};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::Mutex;
 
 mod disk;
 mod key;
@@ -45,11 +46,6 @@ fn set_aside(path: &Path) -> SealedError {
         Ok(()) => SealedError::Damaged,
         Err(_) => SealedError::Io,
     }
-}
-
-/// Locks `m`; a panic elsewhere leaves the key valid, so a poisoned lock is still used.
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl Sealer {

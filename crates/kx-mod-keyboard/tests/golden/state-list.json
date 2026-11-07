@@ -1,4 +1,5 @@
 {
+  "aimed": false,
   "at": {
     "x": 624,
     "y": 844
@@ -1306,7 +1307,7 @@
       "third": "",
       "third_ar": false,
       "third_mark": false,
-      "tip": null
+      "tip": "tip.fill-off"
     },
     "grab": {
       "blank": null,
@@ -1716,6 +1717,7 @@
     "hi": 2,
     "keys": [
       "esc",
+      "del",
       "enter",
       "up",
       "left",

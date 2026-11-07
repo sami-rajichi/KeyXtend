@@ -2,6 +2,7 @@
 // Written by kx-ui's texts test; do not edit.
 var acts = {
   "back": "back",
+  "caret": "caret",
   "close": "close",
   "delete": "delete",
   "deleteAll": "delete-all",
@@ -12,6 +13,7 @@ var acts = {
   "pin": "pin",
   "preview": "preview",
   "tick": "tick",
+  "wheel": "wheel",
   "yes": "yes"
 };
 var views = {
@@ -50,6 +52,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -93,6 +96,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -108,6 +112,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -151,6 +156,7 @@ var views = {
       "highlight": 1,
       "kept": "تُحفَظ 7 أيام",
       "note": "العناصر المثبّتة تملأ المحفوظات، لذا لا تُحفَظ النسخ الجديدة. ألغِ تثبيت بعضها لإفساح المجال.",
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -227,6 +233,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -242,6 +249,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج (3)",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -283,6 +291,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -324,6 +333,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -339,6 +349,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -380,6 +391,7 @@ var views = {
       "highlight": null,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 0
@@ -390,6 +402,7 @@ var views = {
       "rows": [],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -405,6 +418,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج (0)",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -446,6 +460,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -539,6 +554,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -554,6 +570,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -595,6 +612,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -636,6 +654,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -651,6 +670,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -692,6 +712,7 @@ var views = {
       "highlight": 1,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -768,6 +789,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -783,6 +805,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج (3)",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -824,6 +847,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -848,6 +872,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -863,6 +888,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج (1)",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "إلغاء التثبيت",
         "preview": "معاينة",
@@ -904,6 +930,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -941,6 +968,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -956,6 +984,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج (0)",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -997,6 +1026,7 @@ var views = {
       "highlight": 0,
       "kept": "تُحفَظ 7 أيام",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1040,6 +1070,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "اكتب للبحث",
         "rtl": false,
         "text": ""
@@ -1055,6 +1086,7 @@ var views = {
         "expires": "يُحذف الليلة",
         "insert": "إدراج",
         "no": "لا",
+        "noFolder": "لا يُحفَظ أي شيء هذه المرة، لذا لا يوجد مجلد لفتحه.",
         "openFolder": "فتح المجلد",
         "pin": "تثبيت",
         "preview": "معاينة",
@@ -1098,6 +1130,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1141,6 +1174,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1156,6 +1190,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1199,6 +1234,7 @@ var views = {
       "highlight": 1,
       "kept": "Kept for 7 days",
       "note": "Pinned entries fill the history, so new copies are not kept. Unpin some to make room.",
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -1275,6 +1311,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1290,6 +1327,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert (3)",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1331,6 +1369,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1372,6 +1411,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1387,6 +1427,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1428,6 +1469,7 @@ var views = {
       "highlight": null,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 0
@@ -1438,6 +1480,7 @@ var views = {
       "rows": [],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1453,6 +1496,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert (0)",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1494,6 +1538,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1587,6 +1632,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1602,6 +1648,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1643,6 +1690,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1684,6 +1732,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1699,6 +1748,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1740,6 +1790,7 @@ var views = {
       "highlight": 1,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -1816,6 +1867,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1831,6 +1883,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert (3)",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -1872,6 +1925,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1896,6 +1950,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -1911,6 +1966,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert (1)",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Unpin",
         "preview": "Preview",
@@ -1952,6 +2008,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -1989,6 +2046,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -2004,6 +2062,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert (0)",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -2045,6 +2104,7 @@ var views = {
       "highlight": 0,
       "kept": "Kept for 7 days",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2088,6 +2148,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Type to search",
         "rtl": false,
         "text": ""
@@ -2103,6 +2164,7 @@ var views = {
         "expires": "Goes tonight",
         "insert": "Insert",
         "no": "No",
+        "noFolder": "Nothing is saved this time, so there is no folder to open.",
         "openFolder": "Open folder",
         "pin": "Pin",
         "preview": "Preview",
@@ -2146,6 +2208,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2189,6 +2252,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2204,6 +2268,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2247,6 +2312,7 @@ var views = {
       "highlight": 1,
       "kept": "Conservés 7 jours",
       "note": "Les éléments épinglés remplissent l’historique ; les nouvelles copies ne sont pas conservées. Désépinglez-en pour faire de la place.",
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -2323,6 +2389,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2338,6 +2405,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer (3)",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2379,6 +2447,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2420,6 +2489,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2435,6 +2505,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2476,6 +2547,7 @@ var views = {
       "highlight": null,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 0
@@ -2486,6 +2558,7 @@ var views = {
       "rows": [],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2501,6 +2574,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer (0)",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2542,6 +2616,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2635,6 +2710,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2650,6 +2726,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2691,6 +2768,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2732,6 +2810,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2747,6 +2826,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2788,6 +2868,7 @@ var views = {
       "highlight": 1,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 3
@@ -2864,6 +2945,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2879,6 +2961,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer (3)",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -2920,6 +3003,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -2944,6 +3028,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -2959,6 +3044,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer (1)",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Désépingler",
         "preview": "Aperçu",
@@ -3000,6 +3086,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -3037,6 +3124,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -3052,6 +3140,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer (0)",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",
@@ -3093,6 +3182,7 @@ var views = {
       "highlight": 0,
       "kept": "Conservés 7 jours",
       "note": null,
+      "opens": true,
       "page": {
         "at": 0,
         "count": 1
@@ -3136,6 +3226,7 @@ var views = {
       ],
       "search": {
         "arabic": false,
+        "caret": 0,
         "hint": "Tapez pour rechercher",
         "rtl": false,
         "text": ""
@@ -3151,6 +3242,7 @@ var views = {
         "expires": "Expire ce soir",
         "insert": "Insérer",
         "no": "Non",
+        "noFolder": "Rien n’est enregistré cette fois, il n’y a donc aucun dossier à ouvrir.",
         "openFolder": "Ouvrir le dossier",
         "pin": "Épingler",
         "preview": "Aperçu",

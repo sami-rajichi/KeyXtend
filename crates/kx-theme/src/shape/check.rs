@@ -8,13 +8,15 @@ use crate::theme::{FONT_WEIGHTS, outside_unit};
 const INSET_BELOW: f32 = 0.5;
 
 impl Shape {
-    /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (the
-    /// clipboard's caret and underline, `panel.min_fit` and the others in `check_sizes`), a gap or place below 0, a lit
-    /// dot no larger than the others, and a D-pad hub or Stop inset of half the pad or more or a Stop wider than the hub.
+    /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (a list
+    /// line's caret and underline, Quick-fill's width, `panel.min_fit`, `panel.wheel_notch`, `panel.wheel_rest_s` and the
+    /// others in `check_sizes`), no kind row, a gap or place below 0, a lit dot no larger than the others, and a D-pad
+    /// hub or Stop inset of half the pad or more or a Stop wider than the hub.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
         self.check_dots()?;
+        self.check_counts()?;
         self.check_shares()?;
         self.check_insets()
     }
@@ -35,6 +37,18 @@ impl Shape {
             ));
         }
         Ok(())
+    }
+
+    /// New's kind chips take at least one row, and a question on a row at least one line.
+    fn check_counts(&self) -> Result<(), String> {
+        let counts = [
+            ("fill.kind_rows", self.fill.kind_rows),
+            ("panel.question_lines", self.panel.question_lines),
+        ];
+        match counts.iter().find(|(_, n)| *n == 0) {
+            Some((at, n)) => Err(format!("shape: {at} {n} must be 1 or more")),
+            None => Ok(()),
+        }
     }
 
     /// The lit dot must be larger than an unlit one, which is how it stands out.
@@ -76,9 +90,10 @@ impl Shape {
         }
     }
 
-    /// The shimmer span, the outlines, the clipboard's caret and underline, the panels' least fit, the smallest label,
-    /// the mark's, the dots' and the D-pad's icon sizes must be above 0. The panel gaps, the label padding, the language
-    /// icon's gap, the mark's and the badge's place and the D-pad's gaps must be 0 or more, all finite.
+    /// The shimmer span, the outlines, a list line's caret and underline, Quick-fill's width, the panels' least fit,
+    /// wheel notch and rest, the smallest label, the mark's, the dots' and the D-pad's icon sizes must be above 0. The panel
+    /// gaps, the label padding, the language icon's gap, the mark's and the badge's place and the D-pad's gaps must be 0
+    /// or more, all finite.
     fn check_sizes(&self) -> Result<(), String> {
         let above = [
             ("caption.shimmer_span", self.caption.shimmer_span),
@@ -92,9 +107,12 @@ impl Shape {
             ("dpad.stop_icon_px", self.dpad.stop_icon_px),
             ("badge.sep_px", self.badge.sep_px),
             ("outline.px", self.outline.px),
-            ("clip.caret_px", self.clip.caret_px),
-            ("clip.underline_px", self.clip.underline_px),
+            ("panel.line_px", self.panel.line_px[1]),
+            ("panel.line_px", self.panel.line_px[3]),
+            ("fill.width_px", self.fill.width_px),
             ("panel.min_fit", self.panel.min_fit),
+            ("panel.wheel_notch", self.panel.wheel_notch),
+            ("panel.wheel_rest_s", self.panel.wheel_rest_s),
         ];
         if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
@@ -144,6 +162,8 @@ impl Shape {
             ("tray.glyph_share", self.tray.glyph_share),
             ("backdrop.plate", self.backdrop.plate),
             ("badge.sep_share", self.badge.sep_share),
+            ("fill.own_share", self.fill.own_share),
+            ("fill.mask_em", self.fill.mask_em),
         ];
         match outside_unit(&shares) {
             Some((n, v)) => Err(format!("shape: {n} {v} is not 0 to 1")),
