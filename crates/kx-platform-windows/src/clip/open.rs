@@ -1,5 +1,5 @@
-//! The open clipboard: its formats with their sizes and bytes, put and empty, and the change counter. The watch, the
-//! writer and the gate tool's tests share it.
+//! The open clipboard: its formats with their sizes and bytes, put and empty, the change counter, and whether it holds
+//! anything without opening it. The watch, the writer, the selection watch and the gate tool's tests share it.
 
 use std::marker::PhantomData;
 use std::time::{Duration, Instant};
@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use kx_module_api::ports::{ClipError, ClipWait};
 use windows::Win32::Foundation::{GlobalFree, HANDLE, HGLOBAL, HWND};
 use windows::Win32::System::DataExchange::{
-    CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
+    CloseClipboard, CountClipboardFormats, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
     GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
     RegisterClipboardFormatW, SetClipboardData,
 };
@@ -51,6 +51,15 @@ impl Drop for Open {
 pub fn sequence() -> u32 {
     // SAFETY: plain query.
     unsafe { GetClipboardSequenceNumber() }
+}
+
+/// Whether the clipboard holds any format; it neither opens the clipboard nor reads a format, so no owner is waited on.
+#[must_use]
+#[allow(unsafe_code, reason = "Plain query.")]
+pub fn holds() -> bool {
+    // SAFETY: a plain count; the clipboard is never opened.
+    let formats = unsafe { CountClipboardFormats() };
+    formats > 0
 }
 
 /// Waits up to `wait.open_ms` for the clipboard to change from `before`; true if it did.

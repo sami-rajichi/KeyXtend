@@ -97,6 +97,12 @@ pub fn work_area(r: &RECT) -> Result<RECT, UiError> {
     info(nearest(r)).map(|i| i.rcWork).ok_or_else(failed)
 }
 
+/// The screen nearest to box `r`: its work area and DPI; `None` when Windows will not describe it.
+#[must_use]
+pub fn screen_of(r: &RECT) -> Option<Screen> {
+    area(nearest(r))
+}
+
 /// The DPI of the screen nearest to box `r`, or the default when Windows cannot say.
 #[must_use]
 pub fn dpi_of(r: &RECT) -> u32 {
@@ -148,6 +154,14 @@ mod tests {
         let rect = rect_of([work.left, work.top, work.right, work.bottom]);
         assert!(WinScreens.work_areas().iter().any(|a| a.rect == rect));
         assert!(dpi_of(&origin) >= DEFAULT_DPI / 2, "a real DPI");
+    }
+
+    #[test]
+    fn the_nearest_screen_is_one_of_the_screens_with_its_dpi() {
+        let origin = RECT::default();
+        let near = screen_of(&origin).unwrap();
+        assert!(WinScreens.work_areas().contains(&near), "{near:?}");
+        assert_eq!(near.dpi, dpi_of(&origin));
     }
 
     #[test]

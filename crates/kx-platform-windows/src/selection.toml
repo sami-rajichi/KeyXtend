@@ -1,0 +1,18 @@
+# How the focused box's kind is told for the selection chips on Windows: UI Automation's control types and window
+# classes. Each number names its constant in UIAutomationClient.h; class names compare without case. Password boxes,
+# and the windows that hide their boxes, come from `field.toml`.
+
+# Control types whose text may be edited: Editable when their value pattern or the selection's range says it is
+# writable, else ReadOnly, such as a web page.
+edit_controls = [
+    50004, # UIA_EditControlTypeId
+    50030, # UIA_DocumentControlTypeId
+]
+
+# Control types whose text is only ever read, such as a label.
+read_controls = [
+    50020, # UIA_TextControlTypeId
+]
+
+# Window classes of terminals, checked on the box's window and its top-level window: Windows Terminal and the console.
+terminal_classes = ["CASCADIA_HOSTING_WINDOW_CLASS", "ConsoleWindowClass"]

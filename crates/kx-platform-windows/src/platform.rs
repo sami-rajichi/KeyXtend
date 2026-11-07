@@ -7,7 +7,7 @@ use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
     Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource, Pictures,
-    Places, PointerHook, PowerDialog, ScrollTarget, Shortcuts, WordPacks,
+    Places, PointerHook, PowerDialog, ScrollTarget, SelectionWatch, Shortcuts, WordPacks,
 };
 use kx_platform::boxes::WorkerBoxes;
 use kx_platform::pictures::WorkerPictures;
@@ -22,7 +22,7 @@ use crate::{
     PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
     WinFieldWatch, WinGuard, WinHidden, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook,
     WinMemory, WinPackDisk, WinPlaces, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll,
-    WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWordPacks, dirs,
+    WinSelectionWatch, WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -136,6 +136,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn field_watch(&self) -> Arc<dyn FieldWatch> {
         Arc::new(WinFieldWatch)
+    }
+
+    /// The selection watch over UI Automation, for the app to register under `SelectionWatchKey`.
+    #[must_use]
+    pub fn selection_watch(&self) -> Arc<dyn SelectionWatch> {
+        Arc::new(WinSelectionWatch)
     }
 
     /// The window guard, for the UI to call on the thread that owns our windows.

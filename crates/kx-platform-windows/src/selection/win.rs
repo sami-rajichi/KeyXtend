@@ -1,0 +1,185 @@
+//! The Windows selection watch: a thread with COM in the multithreaded apartment, a UI Automation client whose calls
+//! end at `read_ms`, a focus handler, and a selection handler on the box last looked at, moved on this thread at each
+//! look, never in a callback (UI Automation forbids it there). The run and its rules are `kx_platform::selection`'s.
+
+use std::cell::RefCell;
+use std::process;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use kx_module_api::Redacted;
+use kx_module_api::ports::{SelConfig, SelError, SelRun, SelSpot, SelectionWatch};
+use kx_platform::deadline;
+use kx_platform::selection::{Inbox, Ours, SelProbe, Shared, Tell, late, serve, spawn};
+use windows::Win32::UI::Accessibility::{
+    IUIAutomation, IUIAutomationElement, IUIAutomationEventHandler, TreeScope_Element,
+    UIA_Text_TextSelectionChangedEventId,
+};
+
+use super::hear::handlers;
+use super::uia::{read, sel, spot, still};
+use crate::clip::open::holds;
+use crate::com::Com;
+use crate::field::{box_id, focused};
+use crate::uia::{client, pid};
+
+/// The focused box's selection over UI Automation, for the app to register under `SelectionWatchKey`.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WinSelectionWatch;
+
+impl SelectionWatch for WinSelectionWatch {
+    fn watch(&self, cfg: SelConfig, tell: Tell) -> Result<Box<dyn SelRun>, SelError> {
+        spawn(cfg, tell, work)
+    }
+}
+
+/// Whose an element is: ours when it shows in process `me`; the handlers ask it on any thread.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Mine {
+    me: u32,
+}
+
+impl Mine {
+    /// Ours: this process.
+    pub(super) fn new() -> Self {
+        Self { me: process::id() }
+    }
+}
+
+impl Ours for Mine {
+    type El = IUIAutomationElement;
+
+    fn ours(&self, el: &IUIAutomationElement) -> bool {
+        pid(el) == self.me
+    }
+}
+
+/// Whether box ids `a` and `b` name the same box; a box with no id (0) is never the same.
+pub(super) fn same(a: u64, b: u64) -> bool {
+    a != 0 && a == b
+}
+
+/// The watch thread's probe: the client, and the selection handler with the box it hears.
+struct WinSel {
+    auto: IUIAutomation,
+    mine: Mine,
+    hear: IUIAutomationEventHandler,
+    /// The box the selection handler hears: its id, and the element it was added on, when UI Automation took it.
+    heard: RefCell<(u64, Option<IUIAutomationElement>)>,
+}
+
+impl WinSel {
+    /// Moves the selection handler to `el`, box `id`, unless it hears that box already.
+    fn follow(&self, el: &IUIAutomationElement, id: u64) {
+        let mut heard = self.heard.borrow_mut();
+        if same(heard.0, id) {
+            return;
+        }
+        if let Some(old) = heard.1.take() {
+            self.unhear(&old);
+        }
+        *heard = (id, self.hear_on(el).then(|| el.clone()));
+    }
+
+    /// Adds the selection handler on `el` alone, not on the tree below it; true when UI Automation took it.
+    #[allow(unsafe_code, reason = "Adds a UI Automation event handler.")]
+    fn hear_on(&self, el: &IUIAutomationElement) -> bool {
+        let event = UIA_Text_TextSelectionChangedEventId;
+        // SAFETY: adds our live handler on a live element, from the thread that owns the client.
+        let added = unsafe {
+            self.auto
+                .AddAutomationEventHandler(event, el, TreeScope_Element, None, &self.hear)
+        };
+        if let Err(e) = &added {
+            tracing::debug!(code = %e.code(), "a box refused the selection handler");
+        }
+        added.is_ok()
+    }
+
+    /// Removes the selection handler from `el`, where `hear_on` added it.
+    #[allow(unsafe_code, reason = "Removes a UI Automation event handler.")]
+    fn unhear(&self, el: &IUIAutomationElement) {
+        let event = UIA_Text_TextSelectionChangedEventId;
+        // SAFETY: removes the handler added on `el`, from the thread that added it.
+        let removed = unsafe {
+            self.auto
+                .RemoveAutomationEventHandler(event, el, &self.hear)
+        };
+        if let Err(e) = removed {
+            tracing::debug!(code = %e.code(), "the selection handler was not removed from a box");
+        }
+    }
+}
+
+impl Ours for WinSel {
+    type El = IUIAutomationElement;
+
+    fn ours(&self, el: &IUIAutomationElement) -> bool {
+        self.mine.ours(el)
+    }
+}
+
+impl SelProbe for WinSel {
+    fn focused(&self, _: Instant) -> Result<IUIAutomationElement, SelError> {
+        focused(&self.auto).map_err(sel)
+    }
+
+    fn spot(&self, el: &IUIAutomationElement, by: Instant) -> Result<SelSpot, SelError> {
+        late(by)?;
+        let id = box_id(el);
+        self.follow(el, id);
+        spot(el, id, self.mine, by)
+    }
+
+    fn still(&self, el: &IUIAutomationElement, box_id: u64, by: Instant) -> bool {
+        still(el, box_id, by)
+    }
+
+    fn read(
+        &self,
+        el: &IUIAutomationElement,
+        max_chars: u16,
+        by: Instant,
+    ) -> Result<Redacted<String>, SelError> {
+        read(el, max_chars, by)
+    }
+
+    fn clip_holds(&self) -> bool {
+        holds()
+    }
+}
+
+/// The watch thread's body: the client and the focus handler, a first change for the box in front, then each job in
+/// turn until the run drops; every handler goes at the end.
+#[allow(unsafe_code, reason = "Adds and removes the UI Automation handlers.")]
+fn work(inbox: Inbox, shared: &Arc<Shared>, cfg: SelConfig) {
+    let Ok(_com) = Com::start() else {
+        return shared.fail("COM did not start");
+    };
+    let Some(auto) = client(cfg.read_ms) else {
+        return shared.fail("UI Automation did not start");
+    };
+    let (focus, hear) = handlers(shared);
+    // SAFETY: registers our live handler on our own client.
+    if let Err(e) = unsafe { auto.AddFocusChangedEventHandler(None, &focus) } {
+        tracing::warn!(code = %e.code(), "UI Automation refused the selection watch's focus handler");
+        return shared.fail("the focus handler was refused");
+    }
+    let probe = WinSel {
+        auto,
+        mine: Mine::new(),
+        hear,
+        heard: RefCell::default(),
+    };
+    let first = probe.focused(deadline(Duration::from_millis(u64::from(cfg.read_ms))));
+    if let Ok(el) = first {
+        shared.moved(&probe, &el);
+    }
+    for job in inbox {
+        serve(&probe, job);
+    }
+    // SAFETY: removes every handler this client added, from the thread that added them.
+    if let Err(e) = unsafe { probe.auto.RemoveAllEventHandlers() } {
+        tracing::warn!(code = %e.code(), "the selection watch's handlers were not removed");
+    }
+}

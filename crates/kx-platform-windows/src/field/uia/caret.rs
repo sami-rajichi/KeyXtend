@@ -13,7 +13,7 @@ use super::{failed, text_call};
 
 /// Whether a box's selection holds text, as `GetSelection` told.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(super) enum Held {
+pub(crate) enum Held {
     /// Nothing is selected.
     No,
     /// The selection holds text, so no end before the caret can be confirmed.
@@ -24,11 +24,11 @@ pub(super) enum Held {
 
 /// A text box's caret: the range whose start a read stops at, and whether a selection holds text.
 #[derive(Debug, PartialEq, Eq)]
-pub(super) struct Caret<R = IUIAutomationTextRange> {
+pub(crate) struct Caret<R = IUIAutomationTextRange> {
     /// The selection when it holds text, else `TextPattern2`'s caret, else the empty selection.
-    pub(super) range: R,
+    pub(crate) range: R,
     /// Whether a selection holds text.
-    pub(super) held: Held,
+    pub(crate) held: Held,
 }
 
 /// A caret lookup's answer: the caret, none, or why it failed.
@@ -46,7 +46,7 @@ pub(super) enum Sel<R> {
 }
 
 /// The caret of `el`, from `TextPattern2`'s caret and its selection; `None` when it has neither.
-pub(super) fn caret_of(el: &IUIAutomationElement) -> Found {
+pub(crate) fn caret_of(el: &IUIAutomationElement) -> Found {
     text_call();
     let caret = active(el);
     chosen(caret, selection(el))

@@ -39,6 +39,7 @@ pub mod redirect;
 pub mod reveal;
 pub mod screen;
 pub mod scroll;
+pub mod selection;
 pub mod shortcut;
 pub mod sound;
 pub mod strokes;
@@ -96,6 +97,8 @@ pub use reveal::WinReveal;
 pub use screen::WinScreens;
 #[cfg(windows)]
 pub use scroll::WinScroll;
+#[cfg(windows)]
+pub use selection::WinSelectionWatch;
 #[cfg(windows)]
 pub use shortcut::WinShortcuts;
 #[cfg(windows)]
