@@ -11,5 +11,6 @@ mod lines;
 mod pointer;
 mod power;
 mod scroll;
+mod selection;
 mod shortcut;
 mod words;

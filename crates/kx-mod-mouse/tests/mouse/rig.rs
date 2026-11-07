@@ -4,7 +4,8 @@
 use kx_mod_mouse::{Actor, ID, MANIFEST, MouseSettings, Msg};
 use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
-    PointerHook, PointerMoved, PointerPressed, PressesAsk, Scan, ScrollAsk, Toggle,
+    PointerHook, PointerMoved, PointerPressed, PressAsker, PressesAsk, PressesWanted, Scan,
+    ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Event, ModuleCx, Mono, Notice, Subscription, US_PER_MS, parse_as};
 use kx_platform_fake::FakePointerHook;
@@ -85,6 +86,14 @@ pub fn up(at: Point) -> PointerEvent {
 /// A move to `at`.
 pub fn moved(at: Point) -> PointerEvent {
     PointerEvent::Move { at }
+}
+
+/// Prediction's wish for presses, as it sends it.
+pub fn predicting(on: bool) -> PressesWanted {
+    PressesWanted {
+        asker: PressAsker::Predict,
+        on,
+    }
 }
 
 /// When a hold pressed at `t0` fires, by `settings`.

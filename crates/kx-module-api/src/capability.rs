@@ -55,6 +55,11 @@ capabilities! {
     Vault => "vault",
     /// Reach Quick-fill's notebook store, its backup boxes and places; the vault module alone holds it (ADR-0039).
     VaultData => "vault-data",
+    /// Carry the selection chips' events; the selection module, the keyboard and the ui hold it as an event gate
+    /// (ADR-0041).
+    Selection => "selection",
+    /// Hand a link to the user's browser through the desktop shell; the selection module alone holds it (ADR-0041).
+    OpenLink => "open-link",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -123,9 +128,29 @@ mod tests {
     fn vault_then_vault_data_follow_the_older_ones() {
         let (vault, data) = (Capability::Vault, Capability::VaultData);
         assert_eq!((vault.name(), data.name()), ("vault", "vault-data"));
-        let last = &Capability::ALL[Capability::ALL.len() - 2..];
-        assert_eq!(last, [vault, data], "older ones keep their places");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let ui = at(Capability::KeyboardUi);
+        assert_eq!(
+            (at(vault), at(data)),
+            (ui.map(|i| i + 1), ui.map(|i| i + 2))
+        );
         for cap in [vault, data] {
+            let others = Capability::ALL.iter().filter(|&&c| c != cap);
+            assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+        }
+    }
+
+    #[test]
+    fn selection_then_open_link_follow_vault_data() {
+        let (sel, link) = (Capability::Selection, Capability::OpenLink);
+        assert_eq!((sel.name(), link.name()), ("selection", "open-link"));
+        let last = &Capability::ALL[Capability::ALL.len() - 3..];
+        assert_eq!(
+            last,
+            [Capability::VaultData, sel, link],
+            "older ones keep their places"
+        );
+        for cap in [sel, link] {
             let others = Capability::ALL.iter().filter(|&&c| c != cap);
             assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
         }

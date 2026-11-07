@@ -6,6 +6,7 @@ use super::line::Line;
 use super::store::Blob;
 use crate::ID;
 use crate::lane::{Chips, Sources};
+use crate::manifest::ASKER;
 use crate::pack::Pack;
 use crate::score::{Learned, NoLearned, knows};
 use crate::track::Show;
@@ -109,13 +110,19 @@ impl Actor {
         let want = self.line.is_app() && self.following() && self.tracker.holds();
         if want != self.pressing {
             self.pressing = want;
-            self.publish(&PressesWanted { on: want });
+            self.publish(&PressesWanted {
+                asker: ASKER,
+                on: want,
+            });
         }
     }
 
     /// Tells whether presses are wanted again, for a mouse module that starts later.
     pub(super) fn presses_again(&self) {
-        self.publish(&PressesWanted { on: self.pressing });
+        self.publish(&PressesWanted {
+            asker: ASKER,
+            on: self.pressing,
+        });
     }
 
     /// Saves what changed, tells the lane stopped and presses unwanted, and logs the counts.
@@ -135,7 +142,10 @@ impl Actor {
         };
         self.publish(&lane);
         self.pressing = false;
-        self.publish(&PressesWanted { on: false });
+        self.publish(&PressesWanted {
+            asker: ASKER,
+            on: false,
+        });
         self.stats.log();
     }
 

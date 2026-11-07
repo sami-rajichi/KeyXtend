@@ -235,10 +235,22 @@ impl Event for WordsAsk {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the prediction module: the mouse module tells each press (`PointerPressed`) while `on`; it carries nothing, so
-/// it needs no capability.
+listed! {
+    /// Who asks the mouse module to tell presses (ADR-0041 decision 6).
+    pub enum PressAsker ("Every asker.") {
+        /// Word prediction, which lets a word go at a click.
+        Predict,
+        /// The selection chips, which look again when a button comes up.
+        Selection,
+    }
+}
+
+/// From an asker: the mouse module tells each press (`PointerPressed`) and release (`PointerReleased`) while any asker
+/// is `on`; it carries no text or point, so it needs no capability.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PressesWanted {
+    /// Who asks.
+    pub asker: PressAsker,
     /// Tell each press.
     pub on: bool,
 }

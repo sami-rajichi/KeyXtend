@@ -159,6 +159,18 @@ impl Event for PointerPressed {
     const NAME: &'static str = "pointer-pressed";
 }
 
+/// A button came up while presses are wanted, so the selection module looks at what the mouse selected; it carries no
+/// point, so it needs no capability.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PointerReleased {
+    /// The release landed on one of our own windows.
+    pub ours: bool,
+}
+
+impl Event for PointerReleased {
+    const NAME: &'static str = "pointer-released";
+}
+
 /// The keyboard's latched modifiers changed; its `Debug` shows only how many are held.
 #[derive(Clone, PartialEq, Eq)]
 pub struct LatchesChanged {

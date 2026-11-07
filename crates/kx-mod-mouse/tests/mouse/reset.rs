@@ -4,12 +4,12 @@
 //! needs held it.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
+use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, predicting, shown, told, up};
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::Button::Left;
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::PointerAct::{Down, KeyDown, KeyUp, Up};
-use kx_module_api::ports::{AssistChanged, HookError, PressesWanted, Toggle};
+use kx_module_api::ports::{AssistChanged, HookError, Toggle};
 use kx_module_api::{Bus, Notice, keys};
 
 /// A rig whose hook runs only for a latched Shift, with what it said so far taken.
@@ -169,7 +169,7 @@ fn a_quiet_fault_tells_once_per_program_run_even_across_module_restarts() {
     let (mut live, ((_e1, states), (_e2, notices))) = Live::start(|_| {}, listen);
     for round in 0..2 {
         assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "live");
-        live.bus.publish(&PressesWanted { on: true }).unwrap();
+        live.bus.publish(&predicting(true)).unwrap();
         synced(&live, &states);
         live.hook.give_up();
         assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "the fault");

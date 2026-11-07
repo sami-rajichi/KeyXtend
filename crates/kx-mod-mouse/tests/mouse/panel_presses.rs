@@ -2,12 +2,10 @@
 //! while either wants them, and one going off never silences the other.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, Heard, Rig, T0, T1, T2, down, up};
+use crate::rig::{A, Heard, Rig, T0, T1, T2, down, predicting, up};
 use kx_mod_mouse::Msg;
 use kx_module_api::Bus;
-use kx_module_api::ports::{
-    AssistChanged, PanelPressesWanted, PointerPressed, PressesAsk, PressesWanted,
-};
+use kx_module_api::ports::{AssistChanged, PanelPressesWanted, PointerPressed, PressesAsk};
 
 /// A press outside our windows, as told on the bus.
 const AWAY: Heard = Heard::Pressed(PointerPressed { ours: false });
@@ -130,13 +128,13 @@ fn both_sources_are_heard_on_the_bus_at_a_late_start() {
     live.bus.publish(&PanelPressesWanted { on: true }).unwrap();
     synced(&live, &states);
     assert!(live.hook.running(), "the panel's answer starts the hook");
-    live.bus.publish(&PressesWanted { on: true }).unwrap();
+    live.bus.publish(&predicting(true)).unwrap();
     live.bus.publish(&PanelPressesWanted { on: false }).unwrap();
     synced(&live, &states);
     live.hook.settle(T0);
     synced(&live, &states);
     assert!(live.hook.running(), "prediction still wants them");
-    live.bus.publish(&PressesWanted { on: false }).unwrap();
+    live.bus.publish(&predicting(false)).unwrap();
     synced(&live, &states);
     live.hook.settle(T1);
     synced(&live, &states);

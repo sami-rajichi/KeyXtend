@@ -4,12 +4,12 @@
 
 use crate::live::{Live, WAIT, hear, on, synced};
 use crate::logs::{MESSAGE, lines_of};
-use crate::rig::{A, B, CODE, Heard, Rig, SHIFT, T0, T1, T2, down, moved, ours, shown, told, up};
+use crate::rig::{
+    A, B, CODE, Heard, Rig, SHIFT, T0, T1, T2, down, moved, ours, predicting, shown, told, up,
+};
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{
-    AssistChanged, HookError, Point, PointerPressed, PressesAsk, PressesWanted, Toggle,
-};
+use kx_module_api::ports::{AssistChanged, HookError, Point, PointerPressed, PressesAsk, Toggle};
 use kx_module_api::{Bus, Mono, keys};
 use std::sync::mpsc::Receiver;
 use tracing::Level;
@@ -255,7 +255,7 @@ fn a_stop_while_presses_are_wanted_lets_the_hook_go() {
 /// Plays word prediction holding a word: it hears the mouse's ask and answers with its flag.
 fn answer(live: &Live, asks: &Receiver<PressesAsk>, states: &Receiver<AssistChanged>) {
     assert_eq!(asks.recv_timeout(WAIT), Ok(PressesAsk));
-    live.bus.publish(&PressesWanted { on: true }).unwrap();
+    live.bus.publish(&predicting(true)).unwrap();
     synced(live, states);
 }
 
@@ -284,7 +284,7 @@ fn each_start_asks_for_presses_so_a_restart_mid_word_gets_the_hook_back() {
         live.hook.running(),
         "the answer brings it back with no new word"
     );
-    live.bus.publish(&PressesWanted { on: false }).unwrap();
+    live.bus.publish(&predicting(false)).unwrap();
     synced(&live, &states);
     live.hook.settle(T0);
     synced(&live, &states);

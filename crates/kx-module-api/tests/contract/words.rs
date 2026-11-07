@@ -6,8 +6,8 @@ use kx_module_api::Capability::{InjectInput, ReadFocusedText, SecretStore};
 use kx_module_api::ports::{
     AimedLine, BlobName, ChipPicked, FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind,
     FieldRead, FieldRun, FieldWatch, FieldWatchKey, Lane, PackError, PackView, PanelLine, Piece,
-    PressesAsk, PressesWanted, SealedError, SealedStore, SealedStoreKey, Suggested, TypeWord,
-    Typed, TypingMode, TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
+    PressAsker, PressesAsk, PressesWanted, SealedError, SealedStore, SealedStoreKey, Suggested,
+    TypeWord, Typed, TypingMode, TypingModeAsk, WordPacks, WordPacksKey, WordsAsk,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -237,7 +237,11 @@ fn an_aimed_line_reaches_its_listener_with_its_text() {
 #[test]
 fn a_press_request_and_its_ask_pass_on_a_bus_with_no_grants() {
     let bus = host(&[]).bus();
-    assert_eq!(bus.publish(&PressesWanted { on: true }), Ok(()));
+    let wanted = PressesWanted {
+        asker: PressAsker::Predict,
+        on: true,
+    };
+    assert_eq!(bus.publish(&wanted), Ok(()));
     assert_eq!(bus.publish(&PressesAsk), Ok(()));
 }
 

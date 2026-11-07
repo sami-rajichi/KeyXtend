@@ -29,6 +29,7 @@ mod geom;
 mod input;
 mod layout;
 mod layouts;
+mod link;
 mod packs;
 mod pictures;
 mod places;
@@ -37,13 +38,14 @@ mod power;
 mod random;
 mod scroll;
 mod sealed;
+mod selection;
 mod shelf;
 mod shortcut;
 mod words;
 
 pub use assist::{
     AssistAsk, AssistChanged, AssistNote, AssistToggle, GrabState, LatchesAsk, LatchesChanged,
-    LatchesUsed, PointerMoved, PointerPressed, Toggle,
+    LatchesUsed, PointerMoved, PointerPressed, PointerReleased, Toggle,
 };
 pub use boxes::{
     BOX_EXT, BOX_MARK, BOX_NAME, BOX_PARTS, BOX_VERSION, BoxConfig, BoxError, BoxPart, BoxRun,
@@ -79,10 +81,11 @@ pub use fill::{
     NoteCounts, PageNote, PasswordAsk, PasswordSheet, Pick, PlaceRow, RowButton, Sheet, Spot,
     Typing, VaultEmails,
 };
-pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, physical};
+pub use geom::{BASE_DPI, Corner, Point, Rect, Screen, Strip, anchor, physical};
 pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
+pub use link::{LINK_SCHEME, Link, LinkError, MAX_LINK_BYTES, WebLink, WebLinkKey};
 pub use packs::{
     IndexError, MAX_INDEX_BYTES, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_DIR, PACK_EXT,
     PACK_INDEX, PackError, PackIndex, PackView, WordPacks, WordPacksKey, fits_iso, pack_file,
@@ -109,14 +112,18 @@ pub use sealed::{
     BlobName, MAX_BLOB_BYTES, MAX_BLOB_LEN, MIN_BLOB_LEN, RESERVED_NAMES, SealedError, SealedStore,
     SealedStoreKey, VaultStoreKey,
 };
+pub use selection::{
+    ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip, SelConfig, SelError, SelKind, SelRun,
+    SelSpot, SelectionWatch, SelectionWatchKey, StripSpot,
+};
 pub use shelf::{Room, SealedShelf, SealedShelfKey};
 pub use shortcut::{
     KeyName, MAX_ID_LEN, PASTE_ID, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts,
     ShortcutsKey, Step,
 };
 pub use words::{
-    AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressesAsk,
-    PressesWanted, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
+    AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,
+    PressesAsk, PressesWanted, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
 };
 
 use crate::Redacted;

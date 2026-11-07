@@ -6,9 +6,9 @@ use crate::capability::is_kebab;
 use crate::ports::{
     AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, ChipPicked, Date, LatchesAsk,
     LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged, MAX_FIELD_CHARS, PanelPressesWanted,
-    Pixels, PointerMoved, PointerPressed, PowerAsk, PowerAsked, PowerChanged, PressesAsk,
-    PressesWanted, Room, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek, ScrollStop,
-    ScrollTap, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
+    Pixels, PointerMoved, PointerPressed, PointerReleased, PowerAsk, PowerAsked, PowerChanged,
+    PressesAsk, PressesWanted, Room, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek,
+    ScrollStop, ScrollTap, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
 };
 use crate::{
     ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, Secret, SettingsChanged, Zeroizing,
@@ -49,7 +49,7 @@ fn clips() -> [(&'static str, Option<Capability>); 12] {
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 36] {
+fn older() -> [&'static str; 37] {
     [
         Notice::NAME,
         NoticeAnswered::NAME,
@@ -63,6 +63,7 @@ fn older() -> [&'static str; 36] {
         AssistNote::NAME,
         PointerMoved::NAME,
         PointerPressed::NAME,
+        PointerReleased::NAME,
         LatchesChanged::NAME,
         LatchesUsed::NAME,
         LatchesAsk::NAME,
