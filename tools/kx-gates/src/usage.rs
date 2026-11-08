@@ -78,11 +78,12 @@ g23 {NAME} starts the test build on a data folder it makes, saves a test login t
 
 /// The help lines of P10's selection strip gate.
 fn sel_lines() -> String {
-    let (read, beside) = (g19chips::READ, g19chips::BESIDE);
+    let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
     format!(
         "g19 {NAME} starts the test build on a data folder it makes and drives the selection strip in its own Notepad, \
          Chrome page, target-window and terminals, so close the product first; the folder goes at the end. It \
          overwrites the clipboard and Windows' clipboard history, then puts the clipboard back and forgets its copies.
+g19 {terms} does the same in the terminals alone, in about a minute, so close the product first.
 g19 {read} starts the test build the same way and selects the long Arabic line: click Translate, then Yes; the gate \
          only reads the page that opens.
 g19 {beside} starts nothing: it does the same beside the keyboard you started, such as the uiAccess dev install."
@@ -241,20 +242,20 @@ mod tests {
     }
 
     #[test]
-    fn g19_lists_its_four_runs_and_asks_to_close_the_product_first() {
+    fn g19_lists_its_five_runs_and_asks_to_close_the_product_first() {
         let text = usage();
-        let (read, beside) = (g19chips::READ, g19chips::BESIDE);
-        let runs = format!("g19 <{}|{NAME}|{read}|{beside}>", g19::CORE);
+        let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
+        let runs = format!("g19 <{}|{NAME}|{read}|{beside}|{terms}>", g19::CORE);
         assert!(text.contains(&runs), "{text}");
-        let told = text
-            .lines()
-            .find(|l| l.starts_with(&format!("g19 {beside}")));
-        assert!(told.is_some_and(|l| l.contains("starts nothing")), "{text}");
-        let told = text.lines().find(|l| l.starts_with(&format!("g19 {NAME}")));
+        let told = |run: &str| text.lines().find(|l| l.starts_with(&format!("g19 {run} ")));
         assert!(
-            told.is_some_and(|l| l.contains("close the product first")),
+            told(beside).is_some_and(|l| l.contains("starts nothing")),
             "{text}"
         );
+        for run in [NAME, terms] {
+            let asks = told(run).is_some_and(|l| l.contains("close the product first"));
+            assert!(asks, "{run}: {text}");
+        }
     }
 
     #[test]

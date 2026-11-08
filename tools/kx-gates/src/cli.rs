@@ -115,10 +115,11 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 26] = [
 ];
 
 /// A gate's names that drive the test build, though the gate itself holds the mouse.
-const DRIVEN: [(&str, &str); 3] = [
+const DRIVEN: [(&str, &str); 4] = [
     ("g8", g8hook::HOOK),
     ("g8", g8hook::HOOK_WEAK),
     ("g19", product::NAME),
+    ("g19", g19chips::TERMINALS),
 ];
 /// A gate's names that wait on the owner's own mouse, though the gate itself holds it.
 const FREED: [(&str, &str); 2] = [("g19", g19chips::READ), ("g19", g19chips::BESIDE)];

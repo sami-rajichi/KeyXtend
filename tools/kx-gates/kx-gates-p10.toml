@@ -99,8 +99,9 @@ caret_slack_ms = 1000
 # translate-read: longest wait for the owner's Yes to bring the translate page to the front, in ms.
 owner_wait_ms = 120000
 
-# The classic console: PowerShell in conhost on the gate's own script ({input}). conhost's -ForceNoHandoff keeps it
-# there whatever the default terminal is, so the owner's setting never changes; with no window, the case did not run.
+# The classic console: PowerShell in conhost on the gate's own script ({input}), started with no standard handles, as
+# conhost runs given ones as a windowless pseudo console. -ForceNoHandoff keeps it there whatever the default
+# terminal is, so the owner's setting never changes; with no window, the case did not run.
 [g19_product.console]
 exe = "conhost.exe"
 args = ["-ForceNoHandoff", "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]

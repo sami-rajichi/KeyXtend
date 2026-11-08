@@ -1,10 +1,10 @@
 //! The gate's own terminals: Windows Terminal as `[apps.terminal]` starts it, and the classic console as
-//! `[g19_product.console]` names it, each on a script of the gate's in its out folder; closing one ends what it started
-//! and deletes its files.
+//! `[g19_product.console]` names it with no standard handles (`conhost`), each on a script of the gate's in its out
+//! folder; closing one ends what it started and deletes its files.
 #![cfg(windows)]
 
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::Child;
 
 use kx_platform_windows::window::foreground;
 use windows::Win32::Foundation::HWND;
@@ -12,7 +12,9 @@ use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_NUMLOCK};
 
 use crate::apps::{AppKind, Ctx, INPUT, Opened};
+use crate::g19chips::conhost;
 use crate::launch::launch;
+use crate::proc::Process;
 use crate::winfind::{self, Match};
 use crate::{out, win};
 
@@ -38,13 +40,31 @@ impl Kind {
     }
 }
 
+/// The program the gate started for a terminal, which its close ends.
+enum Prog {
+    /// Windows Terminal's, as `launch` starts it.
+    Child(Child),
+    /// The classic console's conhost, started with no standard handles.
+    Console(Process),
+}
+
+impl Prog {
+    /// Ends the program if it still runs.
+    fn end(&mut self) {
+        let _ = match self {
+            Self::Child(c) => c.kill().map_err(|e| e.to_string()),
+            Self::Console(p) => p.end(),
+        };
+    }
+}
+
 /// A terminal the gate started: its window, its program, its script's files, and what its ready file says.
 pub struct Term {
     /// Its window.
     pub hwnd: HWND,
     /// What the script wrote to mark itself ready.
     pub mark: String,
-    child: Child,
+    child: Prog,
     files: [PathBuf; 3],
 }
 
@@ -74,9 +94,9 @@ fn files(ctx: &Ctx, kind: Kind, tag: &str) -> [PathBuf; 3] {
 }
 
 /// What starting a terminal gave: its window and program, or why no window showed, so its case did not run.
-type Started = Result<(HWND, Child), String>;
+type Started = Result<(HWND, Prog), String>;
 
-/// The classic console on `script`, and its window once it shows; else why none showed, its program ended.
+/// The classic console on `script`, and its window once it shows; else why none showed and how conhost ended.
 fn console(ctx: &Ctx, script: &str) -> Result<Started, String> {
     let (c, wait) = (
         &ctx.cfg.g19_product.console,
@@ -87,18 +107,14 @@ fn console(ctx: &Ctx, script: &str) -> Result<Started, String> {
         skip: win::snapshot(),
         ..Match::default()
     };
-    let args = c.args.iter().map(|a| a.replace(INPUT, script));
-    let mut child = (Command::new(&c.exe).args(args))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| format!("{}: {e}", c.exe))?;
+    let args: Vec<String> = c.args.iter().map(|a| a.replace(INPUT, script)).collect();
+    let host = conhost::start(&c.exe, &args)?;
     let Some(hwnd) = winfind::wait_for(&m, wait, ctx.cfg.timing.poll_ms) else {
-        let _ = child.kill();
-        return Ok(Err(format!("no {} window after {wait} ms", c.class)));
+        let how = conhost::ended(host.exit_code());
+        let _ = host.end();
+        return Ok(Err(format!("no {} window after {wait} ms; {how}", c.class)));
     };
-    Ok(Ok((hwnd, child)))
+    Ok(Ok((hwnd, Prog::Console(host))))
 }
 
 /// Terminal `kind` on the script `text` writes for its ready and out files, which the gate names `tag`, once the
@@ -114,12 +130,16 @@ pub fn open(
     out::write(&files[0], &text(&files[1], &files[2]))?;
     let script = files[0].to_string_lossy().into_owned();
     let started = match kind {
-        Kind::Terminal => launch(ctx, AppKind::Terminal.name(), &script, None).map(Ok),
+        Kind::Terminal => launch(ctx, AppKind::Terminal.name(), &script, None)
+            .map(|(hwnd, child)| Ok((hwnd, Prog::Child(child)))),
         Kind::Console => console(ctx, &script),
     };
     let (hwnd, child) = match started {
         Ok(Ok(s)) => s,
-        Ok(Err(why)) => return unshown(why, &remove(&files)),
+        Ok(Err(why)) => {
+            let why = format!("{why}; script ready: {}", files[1].exists());
+            return unshown(why, &remove(&files));
+        }
         Err(e) => return Err(format!("{e}; clean-up: {:?}", remove(&files))),
     };
     let mut term = Term {
@@ -158,7 +178,7 @@ pub fn close(ctx: &Ctx, mut term: Term) -> Vec<String> {
     if !winfind::wait_gone(term.hwnd, t.close_wait_ms, t.poll_ms) {
         left.push(format!("left open: {}", win::describe(term.hwnd)));
     }
-    let _ = term.child.kill();
+    term.child.end();
     left.extend(remove(&term.files));
     left
 }

@@ -219,6 +219,7 @@ fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
 #[test]
 fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate_page() {
     assert_eq!(mouse("g19", crate::product::NAME), Mouse::Drives);
+    assert_eq!(mouse("g19", crate::g19chips::TERMINALS), Mouse::Drives);
     assert_eq!(
         mouse("g19", crate::g19chips::READ),
         Mouse::Free,

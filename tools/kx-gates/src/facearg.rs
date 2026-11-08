@@ -36,7 +36,12 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g8predict::PREDICT,
             g8clip::CLIP,
         ],
-        "g19" => &[g19::CORE, g19chips::READ, g19chips::BESIDE],
+        "g19" => &[
+            g19::CORE,
+            g19chips::READ,
+            g19chips::BESIDE,
+            g19chips::TERMINALS,
+        ],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
     }

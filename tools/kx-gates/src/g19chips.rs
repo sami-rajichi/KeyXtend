@@ -1,12 +1,14 @@
 //! G19 on the product (`g19 keyxtend`): the selection strip on the test build, in the gate's own Notepad document,
-//! Chrome page, target-window and terminals; and `g19 translate-read` and `g19 translate-beside`, which only read the
-//! translate page the owner opened.
+//! Chrome page, target-window and terminals, or in the terminals alone (`g19 terminals`); and `g19 translate-read` and
+//! `g19 translate-beside`, which only read the translate page the owner opened.
 #![cfg(windows)]
 
 mod act;
 mod addr;
+mod calls;
 mod caret;
 mod clear;
+mod conhost;
 mod consent;
 mod docs;
 mod gate;
@@ -33,6 +35,7 @@ mod terms;
 mod watch;
 
 pub use link::{site_key, text_of};
+pub use plan::TERMINALS;
 pub use read::{BESIDE, READ};
 
 use std::path::Path;
@@ -134,6 +137,27 @@ fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Res
     Ok(v)
 }
 
+/// The terminals step alone on a ready copy at `program` with process id `pid`, once the start's notices are
+/// answered; `left` gathers the clean-up.
+fn terminals(
+    ctx: &Ctx,
+    (pid, program): (u32, &Path),
+    left: &mut Vec<String>,
+) -> Result<Value, String> {
+    let gate = Gate::new(ctx, (pid, program))?;
+    notice::check_normal(ctx, &gate.reader)?;
+    let mut cases = Vec::new();
+    let mut v = json!({ TERMINALS: part(terms::run(&gate, &mut cases, left)) });
+    v["cases"] = plan::groups(&cases);
+    v["each"] = json!(cases);
+    v["unexercised"] = json!(plan::unrun_parts(&v));
+    v["ok"] = json!(plan::step_passed(&v, TERMINALS));
+    Ok(v)
+}
+
+/// A run on a ready copy: its process id and program, and where the clean-up gathers.
+type Drive = fn(&Ctx, (u32, &Path), &mut Vec<String>) -> Result<Value, String>;
+
 /// True for a copy the run made: one of its test lines, or a reply of its ping.
 fn is_test(ctx: &Ctx, text: &str) -> bool {
     let g = &ctx.cfg.g19_product;
@@ -144,19 +168,21 @@ fn is_test(ctx: &Ctx, text: &str) -> bool {
         || t.contains(&g.ping_host)
 }
 
-/// Runs `g19 keyxtend`, `translate-read` or `translate-beside`: the first two are refused under uiAccess or while a
-/// product copy runs, and their data folder and the run's copies in Windows' clipboard history go at the end.
+/// Runs `g19 keyxtend`, `terminals`, `translate-read` or `translate-beside`: all but the last are refused under
+/// uiAccess or while a product copy runs, and the first three's data folder and copies in Windows' clipboard history go
+/// at the end.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    match name {
+    let (name, drive): (&str, Drive) = match name {
         READ => return read::run(ctx),
         BESIDE => return read::beside(ctx),
-        NAME => {}
+        NAME => (NAME, drive),
+        TERMINALS => (TERMINALS, terminals),
         _ => {
             return Err(format!(
-                "G19 runs on {NAME}, {READ} or {BESIDE}, not {name}"
+                "G19 runs on {NAME}, {TERMINALS}, {READ} or {BESIDE}, not {name}"
             ));
         }
-    }
+    };
     let fresh = Fresh::open(ctx, GATE)?;
     let (program, since, mut left) = (
         fresh.program.display().to_string(),
@@ -171,12 +197,12 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let run = copy_line(got, ended.as_ref());
     let pass = passed(run["ok"] == true, removed.is_ok(), &left);
     say!(
-        "{GATE} {NAME}: {}, not exercised: {}",
+        "{GATE} {name}: {}, not exercised: {}",
         run["ok"],
         run["unexercised"]
     );
     Ok(json!({
-        "gate": GATE, "name": NAME, "program": program, "run": run, "clean_up": left, "forgot": forgot,
+        "gate": GATE, "name": name, "program": program, "run": run, "clean_up": left, "forgot": forgot,
         "data_removed": removed.is_ok(), "data_error": removed.err(), "pass": pass,
     }))
 }

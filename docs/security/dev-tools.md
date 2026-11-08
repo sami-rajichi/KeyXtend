@@ -31,7 +31,7 @@
 | Exported certificate, launchers, admin error file | Public | `target/dev-tools/` | No | Until `target/` is cleaned |
 | Extracted manifest | Public | `target/dev-tools/` | No | Deleted after each check |
 | The owner's settings bytes while G21's product half, G27 or `g8 predict` runs | Sensitive | The sidecar `[owner_settings] backup` in kx-gates' out folder | No | Deleted after a verified put-back; it stays while a copy may run or after a stopped run, and the next run or the same kx-gates' `close keyxtend` restores from it |
-| The owner's clipboard while `g19 keyxtend`, `translate-read` or `translate-beside` runs | Sensitive | Memory only, saved raw and never decoded (`clipkeep`) | No | Put back at the end, also on a panic; `translate-read` and `translate-beside` put it back only when its sequence number moved |
+| The owner's clipboard while `g19 keyxtend`, `terminals`, `translate-read` or `translate-beside` runs | Sensitive | Memory only, saved raw and never decoded (`clipkeep`) | No | Put back at the end, also on a panic; `translate-read` and `translate-beside` put it back only when its sequence number moved |
 | G19's own Notepad text, browser control names and the opened page's address | Sensitive | Memory only | No | Dropped after each compare; only names, numbers and verdicts print |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
@@ -153,6 +153,7 @@
     - It overwrites the clipboard and Windows' clipboard history through the copy's Copy and Cut. It puts the owner's clipboard back at the end, also on a panic, and forgets its own copies from the history.
     - It ends, after `ping_exit_ms`, only a `ping.exe` whose parent is the shell its own script named in its ready file (`$PID`), new since the run began (`procs::ours`). A script that names none fails the run, and nothing is ended.
     - It reads and taps Num Lock only through its own terminal while that terminal is in front, and puts it back to the state the run found first, also on a panic, without bringing the terminal forward, so no Alt tap reaches another window (`numlock.rs`). Num Lock left changed fails the run and names the state to restore with the on-screen keyboard, in the result's `clean_up` list, or printed on a panic.
+  - `kx-gates g19 terminals` (P10) runs only the terminals step of `g19 keyxtend`, with the same copy, mouse guard (`DRIVEN` in `cli.rs`), clipboard keep, forgotten copies and data-folder removal.
   - `kx-gates g19 translate-read` and `translate-beside` run free of the mouse guard (`FREED` in `cli.rs`), as the owner clicks Translate and Yes, and are bounded by `owner_wait_ms`.
     - They read only the browser window that opened after Yes: its parent, its token's uiAccess and integrity, and its address bar, an Edit control a `[[g19_product.bars]]` row names, found without entering the page or the tabs.
     - The address is compared in memory and dropped, and only names, numbers and verdicts print. `translate-beside` starts nothing and puts the clipboard back only when its sequence number moved.
@@ -177,7 +178,7 @@
   - The hook lives on a thread of `kx-gates`, and Windows removes a low-level hook when its thread or process ends, so it never outlives a run; it changes no Windows setting.
   - A release whose press came before the guard passes, so no button sticks. After a stop the gate's own releases still go out without their move, except one away from a key the gate pressed, so no click lands.
   - Gates that need the owner's own mouse, run on the CI runner or move nothing are marked free in the gate table in `tools/kx-gates/src/cli.rs`, or by name in its `FREED` list (G19's `translate-read` and `translate-beside`), so they are never guarded.
-  - The test build's hook sits ahead of the guard's and replays a held press tagged `REPLAY` (with the act's id in its low 16 bits, read by `keys::is_replay`), so the guard passes `REPLAY` input only for the gates the table marks as driving it (G5, G6, G12, G17, G18, and by name in `DRIVEN` G8's `hook` and `hook-weak` and `g19 keyxtend`). For every other gate a `REPLAY` press is the hand's: it drops and gives the mouse back. A `REPLAY` value on input that was not injected is always the hand's.
+  - The test build's hook sits ahead of the guard's and replays a held press tagged `REPLAY` (with the act's id in its low 16 bits, read by `keys::is_replay`), so the guard passes `REPLAY` input only for the gates the table marks as driving it (G5, G6, G12, G17, G18, and by name in `DRIVEN` G8's `hook` and `hook-weak`, `g19 keyxtend` and `g19 terminals`). For every other gate a `REPLAY` press is the hand's: it drops and gives the mouse back. A `REPLAY` value on input that was not injected is always the hand's.
 - **Elevation:**
   - A root-trusted key could, in theory, vouch for other certificates. Mitigation: key usage is digital signature only, the only purpose is code signing, and the certificate is marked "not a CA".
   - An elevated folder delete could hit the wrong folder. Mitigation: `dev-admin.ps1` checks every argument before the Windows prompt, and only touches a direct child of `Program Files\<install dir>`; `install_dir` must be a plain name.
@@ -215,7 +216,11 @@ G19 starts `conhost.exe`, `powershell.exe` and `ping.exe` by bare name, so they 
 
 G19 opens its console with conhost's own `-ForceNoHandoff`, so the owner's default-terminal setting is never read or changed. Its line script ends once its own file is gone, so a console handed to another terminal anyway stops when the gate deletes its files.
 
+G19 starts conhost through `CreateProcessW` with no standard handles and none inherited (`g19chips/conhost.rs`), because conhost runs given handles as a windowless pseudo console. It keeps only conhost's process handle, to end it at the close.
+
 Around each terminal case, G19 runs the product's own selection watch inside the gate. It records kinds, flags, counts and times only, and never asks for text.
+
+Before and after that case, G19 also makes each call of the product's caret lookup on the focused box, one by one, through two UI Automation clients of its own (`g19chips/calls.rs`). Each answer is ok, a count, a comparison or Windows' error code, and no call reads text.
 
 G19's hung case clicks into its own sleeping target-window. The click waits in that window's queue and lands after the hang, in the gate's own box.
 

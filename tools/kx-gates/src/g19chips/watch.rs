@@ -1,6 +1,6 @@
 //! The product's own selection watch, run in the gate with the module's defaults around a terminal case: what one look
-//! finds before and after the gate's drag, the changes heard between, and the gate's own read of the selection's boxes.
-//! Numbers and kinds only, never text, so a missed strip says whether the selection, its event or the look failed.
+//! finds before and after the gate's drag, the changes heard between, the gate's own read of the selection's boxes and
+//! each call of the look's caret lookup. Numbers and kinds only, never text, so a missed strip names what failed.
 #![cfg(windows)]
 
 use std::sync::Arc;
@@ -12,6 +12,7 @@ use kx_module_api::ports::{SelError, SelRun, SelSpot, SelectionWatch};
 use kx_platform_windows::WinSelectionWatch;
 use serde_json::{Value, json};
 
+use crate::g19chips::calls;
 use crate::g19chips::gate::Gate;
 use crate::win::{self, ms_since};
 
@@ -75,19 +76,20 @@ fn boxes(gate: &Gate) -> Value {
 }
 
 /// `act` with the watch around it: a look once the watch is ready, the changes heard during `act`, a look after and
-/// the gate's read.
+/// the gate's read; the caret lookup's calls, one by one, before and after `act`.
 pub fn around<T>(
     gate: &Gate,
     act: impl FnOnce() -> Result<T, String>,
 ) -> Result<(T, Value), String> {
-    let t = &gate.ctx.cfg.timing;
+    let (t, read_ms) = (&gate.ctx.cfg.timing, gate.sel.sel_config().read_ms);
     let watch = Watch::start(&gate.sel).map(|mut w| {
         let ready = w.ready(t.read_wait_ms, t.poll_ms);
         let before = (ready, w.look(), w.told());
         (w, before)
     });
+    let calls_before = calls::of(read_ms);
     let got = act()?;
-    let seen = match watch {
+    let mut seen = match watch {
         Ok((mut w, (ready, look, told))) => {
             let heard = w.told().saturating_sub(told);
             let after = w.look();
@@ -95,6 +97,7 @@ pub fn around<T>(
         }
         Err(e) => json!({ "error": e, "read": boxes(gate) }),
     };
+    seen["calls"] = json!({ "before": calls_before, "after": calls::of(read_ms) });
     Ok((got, seen))
 }
 
