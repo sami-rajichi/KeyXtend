@@ -7,7 +7,7 @@ use kx_module_api::ports::{Link, SelChip, SelKind};
 use kx_module_api::{Mono, Notice, NoticeArg, NoticeAsk, Redacted, Secret, Zeroizing, args, keys};
 use toml::Value;
 
-use super::{Actor, Asking, Busy, Job, Msg};
+use super::{Actor, Asking, Job, Msg};
 use crate::manifest::ID;
 use crate::settings::{SelSettings, TRANSLATE_OK_KEY};
 use crate::strip::{Input, Pick};
@@ -90,8 +90,7 @@ impl Actor {
     /// the user in any case.
     pub(super) fn opened(&mut self, round: u32, ok: bool) {
         let chip = SelChip::Translate;
-        let ours = |b: &mut Busy| b.round == round && b.chip == chip;
-        let busy = self.busy.take_if(ours);
+        let busy = self.land(|b| b.round == round && b.chip == chip);
         if !ok {
             self.fail(round);
         } else if busy.is_some() {

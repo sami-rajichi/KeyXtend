@@ -4,9 +4,10 @@
 use std::time::Duration;
 
 use kx_module_api::keys;
-use kx_module_api::ports::{ChipsView, SelChip, SelKind};
+use kx_module_api::ports::{ChipsView, EditDone, SelChip, SelKind};
 use toml::Value;
 
+use super::super::Msg;
 use super::rig::Rig;
 use super::spots::sel;
 use crate::settings::TRANSLATE_OK_KEY;
@@ -84,4 +85,30 @@ fn a_deadline_past_hides_only_its_own_strip() {
     rig.advance(edit());
     assert_eq!(rig.keys(), [keys::KEYS_NOT_SENT]);
     assert_eq!(rig.shown().0, round, "the new strip stays");
+}
+
+/// An older edit's yes, while a newer round's edit flies, still swallows its own break, and the newer stays in flight.
+#[test]
+fn an_older_edits_yes_swallows_its_break_while_a_newer_edit_flies() {
+    let mut rig = rig(|_| {});
+    rig.focus(sel(SelKind::Editable, 40));
+    let old = rig.round();
+    rig.act(SelChip::Copy);
+    rig.advance(edit() / 2);
+    rig.focus(sel(SelKind::Editable, 60));
+    let new = rig.round();
+    rig.act(SelChip::Copy);
+    rig.send(Msg::Done(EditDone {
+        round: old,
+        ok: true,
+    }));
+    rig.broke();
+    let shows = matches!(rig.view(), ChipsView::Shown { round, acted: None, .. } if round == new);
+    assert!(shows, "the old edit's break is no key: {:?}", rig.heard());
+    rig.advance(edit() / 2);
+    assert!(rig.notices().is_empty(), "the old edit is done");
+    assert_eq!(rig.wait(), Some(edit() / 2), "the loop wakes for the newer");
+    rig.answer(true);
+    let ticked = matches!(rig.view(), ChipsView::Shown { round, acted: Some(SelChip::Copy), .. } if round == new);
+    assert!(ticked, "{:?}", rig.heard());
 }

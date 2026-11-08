@@ -91,7 +91,7 @@ pub(crate) struct Ports {
     /// Starts each open off the actor.
     pub spawn: Spawn,
 }
-
+/// An act in flight: an edit asked of the keyboard, or a link opening.
 /// The act in flight: an edit asked of the keyboard, or a link opening.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Busy {
@@ -131,7 +131,8 @@ pub(crate) struct Actor {
     carrying: bool,
     /// The keyboard's one break after our own edit is still to come.
     swallow: bool,
-    busy: Option<Busy>,
+    /// The acts still unanswered, one per round at most; each leaves at its answer or its deadline.
+    busy: Vec<Busy>,
     asking: Option<Asking>,
     stopped: bool,
 }
@@ -153,7 +154,7 @@ impl Actor {
             press: None,
             carrying: false,
             swallow: false,
-            busy: None,
+            busy: Vec::new(),
             asking: None,
             stopped: false,
         }
@@ -216,16 +217,17 @@ impl Actor {
         if self.strip.ends().is_some_and(|end| now >= end) {
             self.step(Input::Tick);
         }
-        if let Some(late) = self.busy.take_if(|b| now >= b.until) {
+        while let Some(late) = self.land(|b| now >= b.until) {
             self.expire(late);
         }
     }
 
-    /// How long the loop waits for a message: until the caret's Paste ends or the act in flight is late, else no limit.
+    /// How long the loop waits for a message: until the caret's Paste ends or an act in flight is late, else no limit.
     pub(crate) fn wait(&self) -> Option<Duration> {
         let now = self.ports.clock.now();
-        let due = [self.strip.ends(), self.busy.map(|b| b.until)];
-        due.into_iter()
+        let late = self.busy.iter().map(|b| b.until).min();
+        [self.strip.ends(), late]
+            .into_iter()
             .flatten()
             .min()
             .map(|end| end.saturating_since(now))
