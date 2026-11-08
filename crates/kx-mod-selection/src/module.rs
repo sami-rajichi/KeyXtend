@@ -69,12 +69,15 @@ impl Module for SelectionModule {
         }
         let watch = cx.service::<SelectionWatchKey>()?;
         let web = cx.service::<WebLinkKey>()?;
+        // The relays' own gate, so a missing one watches nothing; `ReadFocusedText` was checked with the watch.
+        cx.bus().check::<ChipAct>()?;
         let (tx, inbox) = mpsc::channel();
-        relays(cx, &tx)?;
+        // The watch starts first, so a refused one leaves no relay; the actor asks every state again anyway.
         let Some(run) = watched(&*watch, &settings, &tx) else {
             idle(cx);
             return Ok(());
         };
+        relays(cx, &tx)?;
         let ports = Ports {
             bus: cx.bus(),
             clock: cx.clock(),

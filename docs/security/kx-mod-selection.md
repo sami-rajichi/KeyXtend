@@ -14,7 +14,7 @@
 
 - The module holds no `InjectInput`: the keyboard sends every edit's keys (`it_holds_the_three_gates_and_never_injects_input`).
 - The events it hears (`PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace`, `PressesAsk`, `NoticeAnswered`) and sends (`PressesWanted`, `BoardPlaceAsk`, `AssistAsk`, `Notice`) need no capability (`the_events_it_uses_need_only_the_gates_it_holds`). Their fields are flags, a place, Grab's state, an asker or a notice, so none carries text.
-- `Typed` carries the user's text, so its relay keeps only whether a piece was a break (`module.rs:154`; `a_typed_piece_reaches_the_inbox_only_as_whether_it_was_a_break`).
+- `Typed` carries the user's text, so its relay keeps only whether a piece was a break (`module.rs:157`; `a_typed_piece_reaches_the_inbox_only_as_whether_it_was_a_break`).
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -30,7 +30,7 @@ The module keeps no history, writes no other file and logs no text, link or box.
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
 |---|---|---|---|
-| The watch's tell | It only sends `Wake`; the look runs on the actor's thread (`module.rs:115-126`) | The platform paces looks by `settle_ms` and `looks_per_s` | `the_watchs_tell_only_wakes_and_the_look_runs_on_the_actors_turn` |
+| The watch's tell | It only sends `Wake`; the look runs on the actor's thread (`module.rs:118-129`) | The platform paces looks by `settle_ms` and `looks_per_s` | `the_watchs_tell_only_wakes_and_the_look_runs_on_the_actors_turn` |
 | `look`, `still`, `read`, `clip_holds` answers | Typed results; a failed look is `Lost` (hidden), a failed read is `translate-failed`; a `Closed` box shows no chip and is never asked for a clip or read | Each call within `read_ms` on the platform; a read capped at the smaller of `translate_chars` and the site's limit, plus one character (`actor/translate.rs:121`) | Strip property tests (`strip/props.rs`); actor tests below |
 | The selected text | `Site::link` drops hidden marks, turns breaks into spaces, cuts at a whole word within `translate_chars`, the site's limit and `link_max`, and percent-encodes every byte outside the unreserved set; a read that hit its cap goes through `Site::cut_link`, which also ends at a whole word when cleaning made it shorter. `Link::new` checks https, characters and length | `translate_chars` (50–5000) and `MAX_LINK_BYTES` | `each_link_fits_its_caps_and_ends_at_a_whole_word`, `a_capped_reads_link_never_keeps_a_word_the_read_cut` (proptest), `link/tests/cut.rs` |
 | `sites.toml` | Compiled in and checked at first use; a bad table turns Translate off and never panics | Fixed at build time | `link/sites/tests.rs` |
@@ -46,7 +46,7 @@ The module keeps no history, writes no other file and logs no text, link or box.
   - The read names the box `still` just confirmed, and the platform answers `Closed` in the same job when another box has focus, so a focus move between the check and the read sends nothing (`a_read_for_a_box_focus_left_is_closed_with_no_text_call_in_the_same_job`).
   - Copy and Cut check `still` before the keyboard sends a key; Paste needs a fresh look of the same editable or terminal box (`a_cut_whose_selection_went_hides_and_sends_nothing`, `a_terminal_takes_its_own_keys_and_one_whose_selection_cleared_gets_none`, `paste_looks_again_and_needs_the_same_editable_or_terminal_box`, `paste_on_a_box_focus_left_sends_nothing`).
   - `sites.toml` is compiled in; the settings are validated, and a bad value goes back to its default (`tests/selection/settings.rs`).
-- **Logging / repudiation:** the module logs fixed texts and error kinds only: a refused watch (`module.rs:124`), an unsaved consent, a failed read, a failed open and a panicked open (`actor/translate.rs:80`, `:140`, `:155`, `:159`), and a panicked actor (`module.rs:52`). `SelError` and `LinkError` print fixed texts with no box or link; `WriteError` logs its kind.
+- **Logging / repudiation:** the module logs fixed texts and error kinds only: a refused watch (`module.rs:127`), an unsaved consent, a failed read, a failed open and a panicked open (`actor/translate.rs:80`, `:140`, `:155`, `:159`), and a panicked actor (`module.rs:52`). `SelError` and `LinkError` print fixed texts with no box or link; `WriteError` logs its kind.
   - Test: `a_failed_read_open_or_save_logs_no_text_link_or_box` captures every line and finds no text, link scheme or box row. The inbox never holds typed text (`a_typed_piece_reaches_the_inbox_only_as_whether_it_was_a_break`).
 - **Information disclosure:** no text is read before a click, and only Translate reads, after the user's one yes; Copy, Cut and Paste read nothing, and the caret Paste asks only the clipboard's formats (`a_click_at_a_bare_caret_shows_paste_when_the_clipboard_holds_anything`).
   - A `Closed` box (a password box, our own windows) shows no strip and is never read (`a_terminal_never_shows_cut_and_a_closed_box_shows_nothing_and_is_never_read`).

@@ -54,6 +54,7 @@ fn with_the_helper_off_nothing_is_watched_and_no_presses_are_wanted() {
     );
 }
 
+/// The watch starts before the relays, so a refused one leaves no handler on the bus.
 #[test]
 fn a_refused_watch_leaves_the_module_idle() {
     let (fakes, mut module) = (Fakes::new(), module());
@@ -63,6 +64,7 @@ fn a_refused_watch_leaves_the_module_idle() {
     start(&mut module, &mut host).unwrap();
     assert_eq!(heard.drain(), [Said::View(ChipsView::Hidden)]);
     assert!(!fakes.watch.watching());
+    assert!(host.held.is_empty(), "{} handlers", host.held.len());
     stop(&mut module, &mut host);
 }
 
