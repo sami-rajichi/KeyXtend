@@ -198,7 +198,8 @@ tools/
                          `--layout` switches the session to an installed layout and puts the previous one back
                          when the window closes while it holds the keyboard (gates bring it to the front first);
                          a failed restore logs `# layout-kept`, and a killed window leaves the session switched;
-                         `--fill` gives it lines to scroll both ways, and `--dpi-unaware` makes it an unaware app (P5)
+                         `--fill` gives it lines to scroll both ways, and `--dpi-unaware` makes it an unaware app (P5);
+                         `--rich` makes its box a rich-edit box that serves UI Automation's text (P10)
   kx-test-icons/         the Qt Quick tests' QML plugin: kx-ui's icon provider over the icons the
                          texts test lays out, and the soft shadows' adopter, so the tests draw as
                          the app does
