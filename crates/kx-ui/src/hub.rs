@@ -238,9 +238,8 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows, a new `sound_idle_ms` prepares the speaker again, an open
-    /// clipboard panel hears the rows, and Quick-fill hears the rows and the label names. The keyboard's wake is heard
-    /// from now on, after the face's own handlers.
+    /// follow the layout's language, a new `sound_idle_ms` prepares the speaker again, the clipboard panel and Quick-fill
+    /// hear their rows, and a shown strip is worded again. The keyboard's wake is heard from now on, after the face's.
     pub fn attach(
         self: &Arc<Self>,
         settings: UiSettings,
@@ -261,6 +260,7 @@ impl Hub {
         self.idle_changed(before, idle);
         self.clip_rows();
         self.fill_start();
+        self.sel_reword();
         self.wake(Wake::Settings);
     }
 

@@ -73,18 +73,17 @@ impl Kept {
 }
 
 impl Hub {
-    /// Hears the strip's views and the place's ask through a handle limited to the `ui` module's capabilities, and keeps
-    /// that handle for the clicks and the place.
+    /// Keeps a handle limited to the `ui` module's capabilities for the clicks and the place, then hears the strip's
+    /// views and the place's ask through it, so an ask heard at once is answered.
     pub(super) fn hear_sel(self: &Arc<Self>, bus: &Bus) -> Result<Vec<Subscription>, EventError> {
         let gated = bus.restricted(MANIFEST.capabilities);
-        let heard = vec![
-            self.hear(&gated, |hub, v: &ChipsView| hub.sel_view(v.clone()))?,
-            self.hear(&gated, |hub, _: &BoardPlaceAsk| hub.tell_board())?,
-        ];
         gated.check::<ChipAct>()?;
         gated.check::<BoardPlace>()?;
-        self.sel().bus = Some(gated);
-        Ok(heard)
+        self.sel().bus = Some(gated.clone());
+        Ok(vec![
+            self.hear(&gated, |hub, v: &ChipsView| hub.sel_view(v.clone()))?,
+            self.hear(&gated, |hub, _: &BoardPlaceAsk| hub.tell_board())?,
+        ])
     }
 
     /// The strip as JSON for QML, worded in the keyboard's language, or `null` while none shows; reading it lets the
@@ -97,8 +96,8 @@ impl Hub {
     }
 
     /// The top-left, in physical pixels, of the strip of round `round` that QML measured `w` by `h` physical pixels: the
-    /// theme's `[chips]` gap from its line, clear of `clear` (our keyboard's and open panels' boxes) when there is room, and on its
-    /// screen's work area. `None` for another round, no strip, or a size that does not fit that work area.
+    /// theme's `[chips]` gap from its line, clear of `clear` (our windows' boxes) when there is room, on its work area.
+    /// `None` for another round, no strip, or a size that does not fit that work area.
     #[must_use]
     pub fn sel_at(&self, round: i64, w: i32, h: i32, clear: &[Rect]) -> Option<Point> {
         let spot = self.sel().strip.as_ref().filter(|k| k.is(round))?.spot;
@@ -107,9 +106,9 @@ impl Hub {
         place::at(&spot, w, h, gap, clear)
     }
 
-    /// A click on keycap `chip`, an id from `sel_json`, of the strip of round `round`: it sounds as a key does and sends
-    /// `ChipAct` while that strip shows the keycap with no tick. A click on another round or a ticked strip goes
-    /// quietly; an unknown id warns. Call it on the Qt thread.
+    /// A click on keycap `chip`, an id from `sel_json`, of the strip of round `round`, on the Qt thread: it sounds as a
+    /// key does and sends `ChipAct` while that strip shows the keycap with no tick. Any other click goes quietly, and an
+    /// unknown id warns.
     pub fn sel_act(&self, round: i64, chip: &str) {
         self.tapped();
         let Some(chip) = SelChip::ALL.into_iter().find(|&c| sel_chip_id(c) == chip) else {
