@@ -1,7 +1,9 @@
 //! Where the selection handler sits, over a fake hook: added on an open box and kept there, moved to another box,
-//! taken off a closed one, tried again after a failed add, and never on more than one element (property).
+//! taken off a closed one, tried again after a failed add, left alone by a failed or late look, and never on more than
+//! one element (property).
 
-use super::super::follow::{Heard, Hook, same};
+use super::super::follow::{Heard, Hook, Seen, same};
+use kx_module_api::ports::{Screen, SelError, SelKind, SelSpot};
 use proptest::prelude::*;
 use std::cell::{Cell, RefCell};
 
@@ -57,43 +59,43 @@ fn remove(el: u8) -> Call {
 #[test]
 fn an_open_box_gets_the_handler_once_and_keeps_it() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
     assert_eq!(hook.take(), [add(1)]);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
     assert_eq!(hook.take(), [], "the same box keeps it");
 }
 
 #[test]
 fn another_box_takes_it_from_the_last() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, true);
-    heard.look(&hook, &2, 20, true);
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &2, 20, Seen::Open);
     assert_eq!(hook.take(), [add(1), remove(1), add(2)]);
 }
 
 #[test]
 fn a_closed_box_only_loses_the_last_one() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, true);
-    heard.look(&hook, &2, 20, false);
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &2, 20, Seen::Closed);
     assert_eq!(
         hook.take(),
         [add(1), remove(1)],
         "no handler on a closed box"
     );
-    heard.look(&hook, &3, 30, false);
+    heard.look(&hook, &3, 30, Seen::Closed);
     assert_eq!(hook.take(), []);
-    heard.look(&hook, &1, 10, false);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Closed);
+    heard.look(&hook, &1, 10, Seen::Open);
     assert_eq!(hook.take(), [add(1)], "the box opens again");
 }
 
 #[test]
 fn a_box_turning_closed_loses_it_and_gets_it_back_when_open() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, true);
-    heard.look(&hook, &1, 10, false);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &1, 10, Seen::Closed);
+    heard.look(&hook, &1, 10, Seen::Open);
     assert_eq!(hook.take(), [add(1), remove(1), add(1)]);
 }
 
@@ -101,10 +103,10 @@ fn a_box_turning_closed_loses_it_and_gets_it_back_when_open() {
 fn a_failed_add_is_tried_again_at_the_next_look() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
     hook.refuse.set(true);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
     hook.refuse.set(false);
-    heard.look(&hook, &1, 10, true);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &1, 10, Seen::Open);
     assert_eq!(
         hook.take(),
         [add(1), add(1)],
@@ -117,8 +119,8 @@ fn a_failed_add_is_tried_again_at_the_next_look() {
 #[test]
 fn a_box_with_no_id_gets_it_afresh_at_each_look() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 0, true);
-    heard.look(&hook, &1, 0, true);
+    heard.look(&hook, &1, 0, Seen::Open);
+    heard.look(&hook, &1, 0, Seen::Open);
     assert_eq!(hook.take(), [add(1), remove(1), add(1)]);
 }
 
@@ -126,7 +128,7 @@ fn a_box_with_no_id_gets_it_afresh_at_each_look() {
 fn leaving_removes_it_once() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
     heard.leave(&hook);
-    heard.look(&hook, &1, 10, true);
+    heard.look(&hook, &1, 10, Seen::Open);
     heard.leave(&hook);
     heard.leave(&hook);
     assert_eq!(hook.take(), [add(1), remove(1)]);
@@ -140,25 +142,72 @@ fn only_two_equal_ids_name_the_same_box() {
     assert!(!same(7, 0) && !same(0, 7));
 }
 
-/// One look: an element (its box id follows it, 0 for the last), whether it is open, and whether its add fails.
-fn any_look() -> impl Strategy<Value = (u8, bool, bool)> {
-    (0..4u8, any::<bool>(), any::<bool>())
+#[test]
+fn an_unsure_look_touches_nothing() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 10, Seen::Unsure);
+    assert_eq!(hook.take(), [], "nothing is added after a failed look");
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &2, 20, Seen::Unsure);
+    assert_eq!(
+        hook.take(),
+        [add(1)],
+        "nothing is removed from a hung app past the deadline"
+    );
+    heard.look(&hook, &1, 10, Seen::Open);
+    assert_eq!(hook.take(), [], "it is still on the last box");
+    heard.look(&hook, &2, 20, Seen::Open);
+    assert_eq!(hook.take(), [remove(1), add(2)]);
+}
+
+/// The spot of a box of `kind`.
+fn spot(kind: SelKind) -> SelSpot {
+    SelSpot {
+        box_id: 10,
+        kind,
+        selected: true,
+        first: None,
+        last: None,
+        caret: None,
+        screen: Screen::default(),
+    }
+}
+
+#[test]
+fn a_look_is_unsure_when_it_failed_or_came_late() {
+    let seen = |kind, late| Seen::of(&Ok(spot(kind)), late);
+    assert_eq!(seen(SelKind::Editable, false), Seen::Open);
+    assert_eq!(seen(SelKind::Terminal, false), Seen::Open);
+    assert_eq!(seen(SelKind::Closed, false), Seen::Closed);
+    for kind in [SelKind::ReadOnly, SelKind::Closed] {
+        assert_eq!(seen(kind, true), Seen::Unsure, "late: {kind:?}");
+    }
+    for error in [SelError::TimedOut, SelError::Refused, SelError::Unavailable] {
+        assert_eq!(Seen::of(&Err(error), false), Seen::Unsure, "{error:?}");
+    }
+}
+
+/// One look: an element (its box id follows it, 0 for the last), what it saw, and whether its add fails.
+fn any_look() -> impl Strategy<Value = (u8, Seen, bool)> {
+    let seen = prop::sample::select(vec![Seen::Open, Seen::Closed, Seen::Unsure]);
+    (0..4u8, seen, any::<bool>())
 }
 
 proptest! {
     #[test]
     fn the_handler_is_on_at_most_the_last_open_box(looks in prop::collection::vec(any_look(), 0..24)) {
         let (hook, mut heard) = (Fake::default(), Heard::default());
-        for (el, open, refuse) in looks {
+        for (el, seen, refuse) in looks {
             hook.refuse.set(refuse);
-            heard.look(&hook, &el, u64::from(el), open);
+            let before = hook.held.borrow().clone();
+            heard.look(&hook, &el, u64::from(el), seen);
             let held = hook.held.borrow().clone();
             prop_assert!(held.len() <= 1, "{held:?}");
-            if !open {
-                prop_assert!(held.is_empty());
-            }
-            if open && !refuse {
-                prop_assert_eq!(held, vec![el]);
+            match seen {
+                Seen::Unsure => prop_assert_eq!(held, before, "an unsure look touches nothing"),
+                Seen::Closed => prop_assert!(held.is_empty()),
+                Seen::Open if !refuse => prop_assert_eq!(held, vec![el]),
+                Seen::Open => {}
             }
         }
         heard.leave(&hook);

@@ -1,5 +1,5 @@
 //! The UI Automation client's pure parts, moved from the spike with it: the selection budget, the password flag, the
-//! arrays Windows hands back and the line boxes made from them; the handlers' rules are in `handlers`.
+//! arrays Windows hands back and the line boxes made from them; the source scan for handler calls is in `scan`.
 
 use super::read::spend;
 use super::*;
@@ -9,7 +9,7 @@ use windows::Win32::System::Ole::{
 use windows::Win32::System::Variant::{VARENUM, VT_I4, VT_R8};
 use windows::Win32::UI::WindowsAndMessaging::ES_PASSWORD;
 
-mod handlers;
+mod scan;
 
 /// The password style bit as a style word.
 #[allow(
