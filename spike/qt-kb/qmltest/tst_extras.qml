@@ -1,4 +1,5 @@
-// The caption's motion checks, kept as source for P11 when tst_motion moved to kx-ui (P3); the pill's went to kx-ui in P10.
+// The caption's motion checks, kept as source for P11 when tst_motion moved to kx-ui (P3); the pill's went to kx-ui's
+// tst_selchips_app.qml in P10.
 // The shared parts (Glow, Icon, the tweens) and the look fixtures now live in the product.
 import QtQuick
 import QtTest
