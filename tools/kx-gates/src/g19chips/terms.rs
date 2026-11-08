@@ -16,8 +16,7 @@ use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::{act, rows};
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
-use crate::g19chips::{place, procs, script};
-use crate::ownkeys::{self, Desk, Real};
+use crate::g19chips::{numlock, place, procs, script};
 use crate::probe;
 use crate::proc::Process;
 use crate::win::{self, sleep_ms};
@@ -104,52 +103,27 @@ fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Va
     Ok(json!({ "copy": copy, "pastes": pastes, "ok": ok }))
 }
 
-/// Num Lock put back to `was` on the gate's own terminal `app`, read by `on` and tapped by `tap` only while `app` is
-/// in front on `desk`, then `settle_ms` given; an error says why it is not back.
-pub fn back_on(
-    desk: &dyn Desk,
-    app: &Opened,
-    (was, settle_ms): (bool, u64),
-    on: &dyn Fn() -> Result<bool, String>,
-    tap: &dyn Fn() -> Result<(), String>,
-) -> Result<(), String> {
-    let not = |e: String| format!("Num Lock not put back: {e}");
-    if on().map_err(not)? != was {
-        ownkeys::click(desk, app, tap).map_err(not)?;
-        desk.settle(settle_ms);
-    }
-    if on().map_err(not)? != was {
-        return Err(not("it stayed changed".into()));
-    }
-    Ok(())
-}
-
-/// Num Lock put back to `was` in terminal `t`, never brought forward, as that would tap into the window in front.
-fn put_back(gate: &Gate, t: &Term, was: bool) -> Result<(), String> {
-    let g = gate.g();
-    let tap = || crate::keys::restore_combo(&g.numlock);
-    let on = || numlock_on(t.hwnd);
-    back_on(&Real, &t.app(), (was, g.settle_ms), &on, &tap)
-}
-
-/// Terminal `kind` on the line script, read for Num Lock once in front, driven, then closed; Num Lock goes back as
-/// it was, whatever happened.
+/// Terminal `kind` on the line script, driven once in front, then closed. Num Lock goes back, whatever happened, to
+/// its state before the run: the one `carried` from the first terminal, else read now; the state used comes back.
 fn one(
     gate: &Gate,
-    kind: Kind,
+    (kind, carried): (Kind, Option<bool>),
     cases: &mut Vec<Value>,
     left: &mut Vec<String>,
-) -> Result<Value, String> {
+) -> Result<(Value, bool), String> {
     let g = gate.g();
     let t = term::open(gate.ctx, kind, LINES, |ready, out| {
         script::lines(&g.term_line, ready, out)
     })?;
-    let was = probe::front(gate.ctx, &t.app()).and_then(|()| numlock_on(t.hwnd));
+    let front = probe::front(gate.ctx, &t.app());
+    let was = front.and_then(|()| numlock::first(carried, || numlock_on(t.hwnd)));
     let got = was.and_then(|was| {
-        let v = drive(gate, kind, &t, cases);
-        let back = put_back(gate, &t, was);
+        let (v, back) = numlock::then_back(
+            || drive(gate, kind, &t, cases),
+            || numlock::put_back(gate, &t, was),
+        );
         match v {
-            Ok(v) => Ok(finished(v, back)),
+            Ok(v) => Ok((numlock::finished(v, back), was)),
             Err(e) => {
                 left.extend(back.err());
                 Err(e)
@@ -158,16 +132,6 @@ fn one(
     });
     left.extend(term::close(gate.ctx, t));
     got
-}
-
-/// One terminal's result with Num Lock put back as `back` says: it fails, naming why, when Num Lock is not back.
-pub fn finished(mut v: Value, back: Result<(), String>) -> Value {
-    v["ok"] = json!(v["ok"] == true && back.is_ok());
-    v["numlock_back"] = json!(back.is_ok());
-    if let Err(e) = back {
-        v["numlock_error"] = json!(e);
-    }
-    v
 }
 
 /// The ping's reply row copied: the clipboard takes it, and the ping writes on for `ping_ms`.
@@ -228,71 +192,11 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
 
 /// Both terminals, then the ping; `cases` gathers each case, `left` what stayed open.
 pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
-    let terminal = one(gate, Kind::Terminal, cases, left)?;
-    let console = one(gate, Kind::Console, cases, left)?;
+    let (terminal, was) = one(gate, (Kind::Terminal, None), cases, left)?;
+    let (console, _) = one(gate, (Kind::Console, Some(was)), cases, left)?;
     let ping = ping(gate, cases, left)?;
     let ok = [&terminal, &console, &ping].iter().all(|v| v["ok"] == true);
     Ok(
         json!({ Kind::Terminal.name(): terminal, Kind::Console.name(): console, PING: ping, "ok": ok }),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::cell::RefCell;
-
-    use crate::apps::AppKind;
-    use crate::ownkeys::fake::{Fake, hwnd};
-
-    /// The gate's terminal as the tests open it: window `hwnd(1)`, no tab to check.
-    fn terminal() -> Opened {
-        Opened {
-            kind: AppKind::Terminal,
-            hwnd: hwnd(1),
-            child: None,
-            file: None,
-            title_has: None,
-        }
-    }
-
-    /// Num Lock put back to on, from `reads` in turn, on a desk with window `front` in front; the result and clicks.
-    fn back(front: usize, reads: &[Result<bool, String>]) -> (Result<(), String>, usize) {
-        let desk = Fake::new(hwnd(front), &["Windows PowerShell"]);
-        let reads = RefCell::new(reads.to_vec());
-        let on = || reads.borrow_mut().remove(0);
-        let got = back_on(&desk, &terminal(), (true, 0), &on, &|| Ok(()));
-        (got, desk.clicks.get())
-    }
-
-    #[test]
-    fn num_lock_is_tapped_back_only_into_our_own_terminal_in_front() {
-        assert_eq!(back(1, &[Ok(false), Ok(true)]), (Ok(()), 1));
-        assert_eq!(back(1, &[Ok(true), Ok(true)]), (Ok(()), 0), "already back");
-        let (got, clicks) = back(2, &[Ok(false), Ok(false)]);
-        assert!(
-            clicks == 0 && got.is_err_and(|e| e.contains("Num Lock not put back")),
-            "another window in front"
-        );
-        let (got, clicks) = back(1, &[Err("unread".into())]);
-        assert!(clicks == 0 && got.is_err(), "Num Lock unread");
-        let (got, _) = back(1, &[Ok(false), Ok(false)]);
-        assert!(got.is_err_and(|e| e.contains("stayed changed")));
-    }
-
-    #[test]
-    fn a_terminal_that_left_num_lock_changed_fails() {
-        let v = finished(json!({ "ok": true }), Ok(()));
-        assert_eq!(
-            (v["ok"].as_bool(), v["numlock_back"].as_bool()),
-            (Some(true), Some(true))
-        );
-        let v = finished(json!({ "ok": true }), Err("why".into()));
-        assert_eq!(
-            (&v["ok"], &v["numlock_error"]),
-            (&json!(false), &json!("why"))
-        );
-        assert_eq!(finished(json!({ "ok": false }), Ok(()))["ok"], false);
-    }
 }

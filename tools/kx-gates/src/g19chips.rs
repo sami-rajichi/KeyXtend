@@ -14,6 +14,7 @@ mod hides;
 mod hung;
 mod link;
 mod notepad;
+mod numlock;
 mod ours;
 mod page;
 mod place;
