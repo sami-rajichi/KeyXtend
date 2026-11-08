@@ -14,6 +14,8 @@ pub mod dirs;
 pub mod disk;
 #[cfg(windows)]
 pub mod dll;
+#[cfg(windows)]
+mod explorer;
 pub mod field;
 pub mod front;
 pub mod gpu;
@@ -27,6 +29,7 @@ pub mod instance;
 pub mod keys;
 pub mod langinfo;
 pub mod layouts;
+pub mod link;
 #[cfg(windows)]
 pub mod memory;
 #[cfg(windows)]
@@ -80,6 +83,8 @@ pub use inject::WinInjector;
 pub use instance::WinInstance;
 #[cfg(windows)]
 pub use layouts::WinLayouts;
+#[cfg(windows)]
+pub use link::WinWebLink;
 #[cfg(windows)]
 pub use memory::WinMemory;
 #[cfg(windows)]
