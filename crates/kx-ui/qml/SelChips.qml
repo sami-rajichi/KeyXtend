@@ -83,7 +83,8 @@ Window {
             open();
         else
             follow();
-        if (next.acted !== null && !done.running && !fade.running)
+        // A ticked strip with no room has already ended its round.
+        if (view && view.acted !== null && !done.running && !fade.running)
             done.restart();
     }
     // Places the strip by its text and pops it in; nothing shows where the hub finds no room.
@@ -91,7 +92,7 @@ Window {
         fade.stop();
         done.stop();
         if (row <= 0 || !place())
-            return shut();
+            return drop();
         body.opacity = 1;
         body.y = 0;
         body.scale = 1;
@@ -110,7 +111,14 @@ Window {
             return;
         }
         if (!place())
+            drop();
+    }
+    // No room: a live strip hides until there is room again, and a ticked one ends its round with the hub.
+    function drop() {
+        if (live)
             shut();
+        else
+            gone();
     }
     // Asks the hub where the strip goes for its size in physical pixels, scaled once by its screen's scale.
     function place() {

@@ -1,6 +1,7 @@
 // The selection strip over the stand-in Ui (design 4, "Keycaps"): the keyboard's own caps in each theme, light and dark,
 // one key row tall at each size, icons or words alone, Arabic words in the Arabic font in the same order, a click sent
-// with its round and chip at the press, sizes measured in physical pixels once and again after a reword, and no focus.
+// with its round and chip at the press, sizes measured in physical pixels once and again after a reword, a ticked
+// strip that loses its room still ending its round, and no focus.
 import QtQuick
 import QtTest
 import "../qml"
@@ -191,6 +192,25 @@ Item {
             verify(strip.ui.selAsks.length > asks, "measured again");
             compare(strip.ui.selAsks[strip.ui.selAsks.length - 1].w, strip.width, "at its new width");
             compare(word(keys(strip)[0]).text, view("fr", "both").chips[0].word);
+        }
+
+        // A ticked strip that loses its room, in its tick or its fade, still ends its round, so a wake never shows it again.
+        function test_a_ticked_strip_with_no_room_still_ends_its_round() {
+            for (const fading of [false, true]) {
+                const strip = make(view("en", "both", { round: 7 }));
+                strip.ui.selView = view("en", "ticked", { round: 7 });
+                verify(strip.done.running, "the tick shows");
+                if (fading)
+                    strip.fadeOut();
+                strip.ui.selSpot = null;
+                strip.follow();
+                verify(!strip.visible, fading + ": hidden");
+                compare(strip.ui.selCalls, ["selFaded 7"], fading + ": the hub hears it once");
+                verify(!strip.done.running, fading + ": no fade after");
+                strip.ui.selSpot = { x: 30, y: 40 };
+                strip.ui.settings = Object.assign({}, strip.ui.settings);
+                verify(!strip.visible, fading + ": a wake shows nothing");
+            }
         }
 
         // With no room the hub answers null and nothing shows; a hidden view hides the strip.
