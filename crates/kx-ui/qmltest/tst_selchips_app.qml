@@ -1,12 +1,15 @@
 // The selection strip in the app: it pops in with its shadow, a click's tick shows for its time, then the strip and its
 // shadow fade and rise and the hub forgets the round; reduced motion skips the pop and the fade, not the tick. It shows
-// while the keyboard is minimised, keeps clear of our windows, places itself again as the keyboard moves and reads the
-// hub again on new settings (the pill's checks from the spike, P10 Ruling D).
+// while the keyboard is minimised, keeps clear of our windows, places itself again as the keyboard or an open panel moves
+// and reads the hub again on new settings (the pill's checks from the spike, P10 Ruling D). On a large Arabic keyboard
+// its keycaps are one character key tall with Arabic words in the theme's Arabic font.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
+import "fixtures/face.js" as Face
 import "fixtures/sel.js" as Sel
+import "fixtures/ui-ar.js" as Ar
 import "../../kx-theme/fixtures/look-native-light.js" as N
 import "../../kx-theme/fixtures/look-native-light-reduced.js" as R
 
@@ -59,8 +62,22 @@ Item {
             const p = a.face.spots.physical(x, y);
             return { x: Math.round(p.x), y: Math.round(p.y), w: Math.round(w * p.dpr), h: Math.round(h * p.dpr) };
         }
+        // The strip's keycaps, and the one for chip `id`.
+        function keys(strip) {
+            return Board.all(strip.contentItem, o => o.chip !== undefined && o.hit !== undefined);
+        }
         function key(strip, id) {
-            return Board.all(strip.contentItem, o => o.chip !== undefined && o.hit !== undefined && o.chip.id === id)[0];
+            return keys(strip).find(k => k.chip.id === id);
+        }
+        // The face's board at `size`, off preset: the module scales every box by the size (kx-mod-keyboard geom.rs).
+        function scaled(size) {
+            const box = b => Object.assign({}, b, { x: b.x * size, y: b.y * size, w: b.w * size, h: b.h * size });
+            const b = Face.board;
+            return Object.assign({}, b, { size: size, preset: null, plate: box(b.plate), bar: box(b.bar), dpad: box(b.dpad), keys: b.keys.map(box) });
+        }
+        // A character key's height on `board`.
+        function charOf(board) {
+            return board.keys.find(k => !k.side && k.kind === "char").h;
         }
         // The shadow copies the plate's fade, rise and scale, at the look's margin.
         function follows(a) {
@@ -142,6 +159,50 @@ Item {
             const reads = a.ui.selReads;
             a.ui.settings = Object.assign({}, a.ui.settings);
             verify(a.ui.selReads > reads, "a new [ui] language wakes the settings, so it reads again");
+        }
+
+        // An open panel that moves places the strip again, clear of the panel's new box.
+        function test_it_places_itself_again_as_an_open_panel_moves() {
+            const a = make();
+            show(a, view("both"));
+            a.keyboard.board = Object.assign({}, Face.board, { lang_key: "list" });
+            a.keyboard.state = Face.states.list;
+            a.face.redraw(JSON.stringify({ board: true, state: true }));
+            tryVerify(() => !!a.face.panel && a.face.panel.list.visible, 2000, "the list shows");
+            const list = a.face.panel.list;
+            const box = () => JSON.stringify(physical(a, list.x, list.y, list.width, list.height));
+            const asks = a.ui.selAsks.length;
+            list.x = list.x + 30;
+            // Windows moves the window, then tells Qt its new place.
+            tryVerify(() => a.ui.selAsks.length > asks, 2000, "placed again");
+            const clear = a.ui.selAsks[a.ui.selAsks.length - 1].clear;
+            verify(clear.some(c => JSON.stringify(c) === box()), "clear of the list's new place: " + JSON.stringify(clear));
+        }
+
+        // At size 1.5 in Arabic a keycap is one character key tall, as `SelStrip.rowOf` reads it, and its word takes the
+        // theme's Arabic font.
+        function test_a_large_arabic_keyboard_draws_keycaps_one_key_row_tall() {
+            const a = make();
+            a.keyboard.board = scaled(1.5);
+            a.face.redraw(JSON.stringify({ board: true, state: false }));
+            a.ui.lang = Ar.lang;
+            a.ui.texts = Ar.texts;
+            compare(a.face.s, 1.5, "the keyboard's size");
+            const row = charOf(a.face.board);
+            compare(row, charOf(Face.board) * 1.5, "its character keys grew");
+            compare(a.strip.rowOf(a.face.board), row, "the strip reads that row");
+            const v = JSON.parse(JSON.stringify(Sel.views.ar.both));
+            const strip = show(a, v);
+            verify(strip.ar, "the keyboard speaks Arabic");
+            const caps = keys(strip);
+            compare(caps.length, v.chips.length, "every chip");
+            for (const k of caps) {
+                compare(k.height, row, k.chip.id + ": one key row");
+                const w = Board.all(k, o => o.font !== undefined && o.renderType !== undefined)[0];
+                compare(w.text, v.chips.find(c => c.id === k.chip.id).word, k.chip.id);
+                compare(w.font.family, a.face.res.fam.arabic, k.chip.id + ": the theme's Arabic font");
+            }
+            compare(a.ui.selAsks[a.ui.selAsks.length - 1].size, 1.5, "the gap grows with it");
         }
     }
 }
