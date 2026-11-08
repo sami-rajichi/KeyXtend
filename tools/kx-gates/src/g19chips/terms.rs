@@ -7,13 +7,15 @@
 use kx_module_api::ports::{Rect, SelChip};
 use kx_platform_windows::clip::open;
 use kx_platform_windows::uia;
+use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::POINT;
+use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::Opened;
 use crate::clipkeep;
 use crate::g19chips::gate::Gate;
-use crate::g19chips::notepad::{act, rows};
+use crate::g19chips::notepad::{act, usable};
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
 use crate::g19chips::{numlock, place, procs, script};
@@ -31,17 +33,48 @@ const LINES: &str = "lines";
 /// The tag of the ping script's files.
 const PING: &str = "ping";
 
-/// The first text row of the terminal's window, once UI Automation shows one.
-fn row(gate: &Gate, app: &Opened) -> Result<Rect, String> {
-    let t = &gate.ctx.cfg.timing;
+/// One look at a text box: its line parts, or none when no box was found.
+type Look = Option<Result<Vec<Rect>, String>>;
+
+/// The top text row of the first of `looks` that shows one; else each named look's failed step.
+pub fn first_row(looks: &[(&str, &dyn Fn() -> Look)]) -> Result<Rect, String> {
+    let mut why = Vec::new();
+    for (name, look) in looks {
+        match usable(look(), 1) {
+            Ok(rows) => return rows.first().copied().ok_or_else(|| "no row".into()),
+            Err(e) => why.push(format!("{name}: {e}")),
+        }
+    }
+    Err(why.join("; "))
+}
+
+/// The line parts of text box `el`.
+fn parts(el: &IUIAutomationElement) -> Result<Vec<Rect>, String> {
+    let boxes = uia::lines(el).map_err(|e| e.to_string())?;
+    Ok(boxes.iter().map(place::rect).collect())
+}
+
+/// The top text row of terminal `kind`'s window `app`, once UI Automation shows one: in the focused element while the
+/// window is in front, as a terminal's text area is no document, else in a text document of the window.
+fn row(gate: &Gate, kind: Kind, app: &Opened) -> Result<Rect, String> {
+    let (t, u) = (&gate.ctx.cfg.timing, gate.uia());
+    let front = || win::key(foreground()) == win::key(app.hwnd);
+    let focus = || u.focused().ok().filter(|_| front()).map(|f| parts(&f));
+    let doc = || u.text(app.hwnd).map(|d| parts(&d));
+    let mut last = String::new();
     let read = || {
-        let parts = uia::lines(&gate.uia().text(app.hwnd)?).ok()?;
-        rows(&parts.iter().map(place::rect).collect::<Vec<_>>())
-            .into_iter()
-            .next()
+        first_row(&[("focus", &focus), ("document", &doc)])
+            .map_err(|e| last = e)
+            .ok()
     };
-    win::poll_until(t.read_wait_ms, t.poll_ms, read)
-        .ok_or_else(|| "the terminal shows no text row".to_string())
+    let got = win::poll_until(t.read_wait_ms, t.poll_ms, read);
+    got.ok_or_else(|| {
+        let focused = gate.kind();
+        format!(
+            "{} shows no text row: {last}; focus on {focused}",
+            kind.name()
+        )
+    })
 }
 
 /// Row `r` dragged from its start to its end, as case `name`.
@@ -89,7 +122,7 @@ fn paste(
 /// One terminal's case, Copy and both Pastes; `cases` gathers its case.
 fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String> {
     let (g, app) = (gate.g(), t.app());
-    let r = row(gate, &app)?;
+    let r = row(gate, kind, &app)?;
     let (case, shown) = select(gate, &app, r, kind.name())?;
     cases.push(case);
     let copy = act(gate, &app, shown, SelChip::Copy, |seq| {
@@ -131,7 +164,7 @@ fn one(
 /// The ping's reply row copied: the clipboard takes it, and the ping writes on for `ping_ms`.
 fn pinged(gate: &Gate, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String> {
     let app = t.app();
-    let r = row(gate, &app)?;
+    let r = row(gate, Kind::Terminal, &app)?;
     let (case, shown) = select(gate, &app, r, PING)?;
     cases.push(case);
     let wait = clipkeep::wait(&gate.ctx.cfg.timing);
@@ -226,5 +259,32 @@ mod tests {
             failed.is_err() && runs == 1,
             "a failed terminal stops the step"
         );
+    }
+
+    #[test]
+    fn the_first_look_that_shows_a_row_wins_else_each_says_its_step() {
+        let r = |y| Rect {
+            x: 0,
+            y,
+            w: 50,
+            h: 20,
+        };
+        let none = || -> Look { None };
+        let empty = || -> Look { Some(Ok(Vec::new())) };
+        let two = || -> Look { Some(Ok(vec![r(40), r(10)])) };
+        assert_eq!(
+            first_row(&[("focus", &two), ("document", &none)]),
+            Ok(r(10))
+        );
+        assert_eq!(
+            first_row(&[("focus", &none), ("document", &two)]),
+            Ok(r(10))
+        );
+        let e = first_row(&[("focus", &empty), ("document", &none)]).expect_err("no row");
+        assert!(
+            e.starts_with("focus: ") && e.contains("; document: "),
+            "{e}"
+        );
+        assert!(e.contains("0 of 1") && e.contains("not found"), "{e}");
     }
 }
