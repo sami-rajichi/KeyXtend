@@ -1,5 +1,6 @@
-//! What hides the strip and what brings it back: a press, Esc, a lost look, an aimed panel line, the tray, the
-//! bubble by `minimised`, and the settings (plan edge cases 7 and 13).
+//! What hides the strip and what brings it back: a press, our Esc as the actor feeds it, an act's put-away, a lost look,
+//! an aimed panel line, the tray, the bubble by `minimised`, and the switches the module starts with (plan edge cases 7
+//! and 13).
 
 use super::*;
 
@@ -13,30 +14,31 @@ fn a_press_hides_until_the_next_look_decides() {
     assert!(again > first, "the same text selected again");
 }
 
+/// Our Esc comes as a break, which the actor feeds as a key, then a lost look (Ruling O).
 #[test]
-fn a_press_after_esc_lets_the_same_selection_show_again() {
+fn our_esc_as_a_key_and_a_lost_look_hides_until_the_next_look() {
     let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    rig.step(Input::Esc);
-    assert_eq!(rig.step(look(sel(1, SelKind::Editable, 40))), None);
-    rig.step(Input::Press);
-    rig.show(click(sel(1, SelKind::Editable, 40)));
+    let first = rig.show(look(sel(1, SelKind::ReadOnly, 40)));
+    assert_eq!(rig.step(Input::Key), None, "the next look decides");
+    assert_eq!(rig.step(Input::Lost), Some(ChipsView::Hidden));
+    let again = rig.show(look(sel(1, SelKind::ReadOnly, 40)));
+    assert!(again > first, "the app's own event brings it back");
 }
 
 #[test]
-fn a_dismissed_selection_shows_again_once_it_went_and_came_back() {
+fn an_acted_selection_shows_again_once_it_went_and_came_back() {
     let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    rig.step(Input::Esc);
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Copy });
     assert_eq!(rig.step(look(caret(1, 50))), None);
     rig.show(look(sel(1, SelKind::Editable, 40)));
 }
 
 #[test]
-fn esc_puts_the_selection_away_while_its_box_holds_one() {
+fn an_act_puts_the_selection_away_while_its_box_holds_one() {
     let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    rig.step(Input::Esc);
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Copy });
     assert_eq!(
         rig.step(look(sel(1, SelKind::Editable, 90))),
         None,
@@ -58,23 +60,12 @@ fn esc_puts_the_selection_away_while_its_box_holds_one() {
 }
 
 #[test]
-fn a_key_or_another_box_ends_escs_put_away() {
+fn another_box_ends_an_acts_put_away() {
     let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    rig.step(Input::Esc);
-    assert_eq!(rig.step(Input::Key), None, "the next look decides");
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    rig.step(Input::Esc);
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Cut });
     rig.show(look(sel(2, SelKind::Editable, 40)));
     rig.show(look(sel(1, SelKind::Editable, 40)));
-}
-
-#[test]
-fn esc_hides_the_strip() {
-    let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::ReadOnly, 40)));
-    assert_eq!(rig.step(Input::Esc), Some(ChipsView::Hidden));
-    assert_eq!(rig.step(look(sel(1, SelKind::ReadOnly, 40))), None);
 }
 
 #[test]
@@ -123,8 +114,9 @@ fn minimised_follows_its_setting() {
     rig.show(Input::Board(Board::Open));
 }
 
+/// A settings change restarts the module, so the strip only ever follows the switches it started with.
 #[test]
-fn the_helper_off_shows_nothing_and_turning_it_off_hides() {
+fn the_helper_off_shows_nothing() {
     let off = StripConfig {
         rules: Rules { on: false, ..RULES },
         ..cfg()
@@ -132,17 +124,10 @@ fn the_helper_off_shows_nothing_and_turning_it_off_hides() {
     let mut rig = Rig::with(off);
     assert_eq!(rig.step(look(sel(1, SelKind::Editable, 40))), None);
     assert_eq!(rig.step(click(caret(1, 50))), None);
-    let mut rig = Rig::new();
-    rig.show(look(sel(1, SelKind::Editable, 40)));
-    assert_eq!(rig.strip.configure(off, rig.now), Some(ChipsView::Hidden));
-    let back = rig.strip.configure(cfg(), rig.now);
-    assert_eq!(shown(back).2, on_line(40));
 }
 
 #[test]
-fn a_new_setting_redraws_the_keycaps() {
-    let mut rig = Rig::new();
-    let first = rig.show(look(sel(1, SelKind::Editable, 40)));
+fn a_keycap_switched_off_leaves_the_strip() {
     let no_cut = StripConfig {
         rules: Rules {
             cut: false,
@@ -150,7 +135,7 @@ fn a_new_setting_redraws_the_keycaps() {
         },
         ..cfg()
     };
-    let (round, chips, _) = shown(rig.strip.configure(no_cut, rig.now));
-    assert!(round > first);
+    let mut rig = Rig::with(no_cut);
+    let (_, chips, _) = shown(rig.step(look(sel(1, SelKind::Editable, 40))));
     assert_eq!(chips, [Copy, Paste, Translate]);
 }

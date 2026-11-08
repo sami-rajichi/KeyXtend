@@ -85,8 +85,8 @@ pub struct Strip {
     last: Option<SelSpot>,
     /// The caret's Paste while it lasts.
     caret: Option<Caret>,
-    /// The box whose selection Esc or an act put away; it stays hidden, even when scrolled or moved, until a press, a
-    /// key, a look with no selection or a look of another box.
+    /// The box whose selection an act put away; it stays hidden, even when scrolled or moved, until a press, a key, a
+    /// look with no selection or a look of another box.
     dismissed: Option<u64>,
     /// The strip shown.
     live: Option<Live>,
@@ -112,18 +112,11 @@ impl Strip {
             Input::Key => self.key(),
             // A press starts a new choice: the next look decides, even for the same text.
             Input::Press => (self.last, self.caret, self.dismissed) = (None, None, None),
-            Input::Esc => (self.dismissed, self.caret) = (self.put_away(), None),
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
             Input::Acted { round, chip } => return self.acted(round, chip),
             Input::Tick => {}
         }
-        self.settle(now)
-    }
-
-    /// Follows `cfg` from `now`; the view to send when it changed.
-    pub fn configure(&mut self, cfg: StripConfig, now: Mono) -> Option<ChipsView> {
-        self.cfg = cfg;
         self.settle(now)
     }
 
@@ -160,7 +153,7 @@ impl Strip {
         self.caret = None;
     }
 
-    /// The box of the last look's selection, for Esc or an act to put away.
+    /// The box of the last look's selection, for an act to put away.
     fn put_away(&self) -> Option<u64> {
         self.last.filter(|s| s.selected).map(|s| s.box_id)
     }
@@ -194,8 +187,8 @@ impl Strip {
     }
 
     /// Shows the tick of `chip` on the live strip of `round` and ends that strip, sending no `Hidden`, as the ui fades
-    /// a ticked strip itself; the selection is put away as by Esc, so the app's own event for the act never brings it
-    /// straight back.
+    /// a ticked strip itself; the selection is put away, so the app's own event for the act never brings it straight
+    /// back.
     fn acted(&mut self, round: u32, chip: SelChip) -> Option<ChipsView> {
         let live = self.live.take_if(|l| l.shows(round, chip))?;
         (self.dismissed, self.caret) = (self.put_away(), None);

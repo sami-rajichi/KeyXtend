@@ -1,4 +1,4 @@
-//! What the strip hears and takes: the keyboard's place, its settings, its inputs, and a click on it.
+//! What the strip hears and takes: the keyboard's place, its settings at the start, its inputs, and a click on it.
 
 use std::time::Duration;
 
@@ -34,12 +34,11 @@ pub enum Input {
     },
     /// A look failed, or the box no longer holds its selection: what was seen is gone.
     Lost,
-    /// A key the user sent to the app, other than Esc; a chip's own keys are not one, or an act's put-away would end.
+    /// A key the user sent to the app, our Esc too (Ruling O); a chip's own keys are not one, or an act's put-away would
+    /// end.
     Key,
     /// A press in another app's window.
     Press,
-    /// Esc, from our keyboard or the user's.
-    Esc,
     /// One of our panels' lines is aimed at (true) or let go (false).
     Aimed(bool),
     /// The keyboard moved to this place.

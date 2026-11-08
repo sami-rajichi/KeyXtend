@@ -20,4 +20,3 @@ pub use settings::{
     CARET_S, CONSENT_S, EDIT_MS, LOOKS_PER_S, READ_MS, SETTLE_MS, SPEC, SelSettings,
     TRANSLATE_CHARS, TRANSLATE_OK_KEY,
 };
-pub use strip::{Board, Input, Pick, Strip, StripConfig};

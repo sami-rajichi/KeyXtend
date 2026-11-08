@@ -1,6 +1,6 @@
-//! Properties over any run of looks, keys, presses, aims, keyboard moves, acts, new settings and waits: a closed box
-//! never shows chips, nothing shows while a panel line is aimed at, the keyboard is in the tray or a selection is put
-//! away, rounds only grow, and the view sent always matches the strip's own.
+//! Properties over any run of looks, keys, presses, aims, keyboard moves, acts and waits: a closed box never shows
+//! chips, nothing shows while a panel line is aimed at, the keyboard is in the tray or a selection is put away, rounds
+//! only grow, and the view sent always matches the strip's own.
 
 use super::*;
 use crate::chips::Rules;
@@ -35,8 +35,6 @@ enum Step {
     ActLive(SelChip),
     /// The last look again, with the box now of this kind, as when a box turns into a password box.
     Turn(SelKind),
-    /// New settings.
-    Configure(StripConfig),
     /// Time passes, in µs, then a tick.
     Wait(u64),
 }
@@ -99,7 +97,6 @@ fn input() -> impl Strategy<Value = Input> {
         1 => Just(Input::Lost),
         1 => Just(Input::Key),
         1 => Just(Input::Press),
-        1 => Just(Input::Esc),
         2 => any::<bool>().prop_map(Input::Aimed),
         2 => board.prop_map(Input::Board),
         1 => acted,
@@ -113,7 +110,6 @@ fn step() -> impl Strategy<Value = Step> {
         12 => input().prop_map(Step::In),
         2 => select(SelChip::ALL.to_vec()).prop_map(Step::ActLive),
         2 => select(SelKind::ALL.to_vec()).prop_map(Step::Turn),
-        1 => config().prop_map(Step::Configure),
         2 => (0..=2 * longest).prop_map(Step::Wait),
     ]
 }
@@ -135,9 +131,9 @@ struct Told {
     ticked: bool,
     /// The look the strip keeps; `None` after a lost look, a press, or a key that ended a put-away.
     last: Option<SelSpot>,
-    /// The box whose selection Esc or an act put away, so no new strip may show.
+    /// The box whose selection an act put away, so no new strip may show.
     away: Option<u64>,
-    /// The legend the settings give, which every strip shows.
+    /// The legend the starting settings give, which every strip shows.
     look: Legend,
 }
 
@@ -162,7 +158,6 @@ impl Told {
                 }
             }
             Input::Press => (self.last, self.away) = (None, None),
-            Input::Esc => self.put_away(),
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
             _ => {}
@@ -193,10 +188,6 @@ fn feed(strip: &mut Strip, told: &mut Told, step: Step, now: &mut Mono) -> Optio
             click: false,
             clip: true,
         }),
-        Step::Configure(cfg) => {
-            told.look = cfg.look;
-            return strip.configure(cfg, *now);
-        }
         Step::Wait(us) => {
             *now = now.saturating_add(Duration::from_micros(us));
             Input::Tick

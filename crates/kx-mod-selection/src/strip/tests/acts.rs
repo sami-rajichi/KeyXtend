@@ -19,7 +19,7 @@ fn a_pick_names_the_box_and_its_kind_on_the_live_round() {
         "not on a terminal's strip"
     );
     assert_eq!(rig.strip.pick(round.wrapping_sub(1), Copy), None);
-    rig.step(Input::Esc);
+    rig.step(Input::Press);
     assert_eq!(rig.strip.pick(round, Copy), None, "hidden");
 }
 
@@ -71,7 +71,6 @@ fn after_an_act_nothing_is_sent_until_a_press_or_another_selection() {
     for input in quiet {
         assert_eq!(rig.step(input), None, "{input:?}");
     }
-    assert_eq!(rig.strip.configure(cfg(), rig.now), None);
     let echo = rig.step(look(sel(1, SelKind::Editable, 40)));
     assert_eq!(echo, None, "the app's own event for Ctrl+C");
     assert_eq!(rig.step(look(sel(1, SelKind::Editable, 90))), None, "moved");
