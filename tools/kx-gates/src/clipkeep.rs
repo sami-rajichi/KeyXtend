@@ -161,6 +161,28 @@ pub fn keep<T>(cfg: &GatesConfig, f: impl FnOnce() -> Result<T, String>) -> Resu
     kept(saved, |s| restore(s, wait), f)
 }
 
+/// Runs `put` only when the clipboard's sequence number moved from `seq` to `now`, so an untouched clipboard is never
+/// written again.
+fn put_if(seq: u32, now: u32, put: impl FnOnce() -> Result<(), String>) -> Result<(), String> {
+    if now == seq { Ok(()) } else { put() }
+}
+
+/// `keep` for a run that writes nothing: the clipboard goes back only when something changed it meanwhile.
+pub fn keep_changed<T>(
+    cfg: &GatesConfig,
+    f: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let wait = wait(&cfg.timing);
+    let saved = save(wait, cfg.probes.keep_max_bytes)
+        .map_err(|e| format!("could not save the clipboard first: {e}"))?;
+    let seq = open::sequence();
+    kept(
+        saved,
+        |s| put_if(seq, open::sequence(), || restore(s, wait)),
+        f,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,6 +214,20 @@ mod tests {
             !raw_ok(0x0200) && !raw_ok(0x0300),
             "private and GDI object ranges"
         );
+    }
+
+    #[test]
+    fn an_untouched_clipboard_is_never_written_back() {
+        use std::cell::Cell;
+        let puts = Cell::new(0);
+        let put = || {
+            puts.set(puts.get() + 1);
+            Ok(())
+        };
+        assert_eq!(put_if(7, 7, put), Ok(()));
+        assert_eq!(puts.get(), 0, "the same sequence number");
+        assert_eq!(put_if(7, 8, put), Ok(()));
+        assert_eq!(puts.get(), 1, "something wrote it");
     }
 
     #[test]

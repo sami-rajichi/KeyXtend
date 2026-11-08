@@ -89,6 +89,13 @@ pub fn ours(desk: &dyn Desk, app: &Opened) -> Result<(), String> {
     })
 }
 
+/// Runs `f` on `app` once `ours` allows it on `desk`, as a read of its text or a move of its window must reach only
+/// the gate's own tab; else nothing runs.
+pub fn on_ours<T>(desk: &dyn Desk, app: &Opened, f: impl FnOnce() -> T) -> Result<T, String> {
+    ours(desk, app)?;
+    Ok(f())
+}
+
 /// Sends `vks` to `app` on `desk` once `ours` allows it; else no key goes out.
 pub fn send(desk: &dyn Desk, app: &Opened, vks: &[u16]) -> Result<(), String> {
     ours(desk, app)?;

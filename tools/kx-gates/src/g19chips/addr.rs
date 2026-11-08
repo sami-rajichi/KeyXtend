@@ -1,7 +1,6 @@
 //! The translate page the owner opened: the one browser window that is new, or newly in front, once Translate's
-//! question has gone, and only its address bar, the control a row of `[[g19_product.bars]]` names, found by walking
-//! its window's controls without ever entering the page's Document. No other control's value is read, and the
-//! address is compared, never kept.
+//! question has gone, and only its address bar, the Edit a row of `[[g19_product.bars]]` names. The walk never enters
+//! the page's Document or the tabs, and the address is compared, never kept.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -9,7 +8,8 @@ use std::collections::HashSet;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::{
     IUIAutomationElement, IUIAutomationTreeWalker, IUIAutomationValuePattern, UIA_CONTROLTYPE_ID,
-    UIA_DocumentControlTypeId, UIA_ValuePatternId,
+    UIA_DocumentControlTypeId, UIA_EditControlTypeId, UIA_TabControlTypeId,
+    UIA_TabItemControlTypeId, UIA_ValuePatternId,
 };
 use windows::Win32::UI::WindowsAndMessaging::{WS_EX_APPWINDOW, WS_EX_TOOLWINDOW};
 use windows::core::BSTR;
@@ -66,10 +66,41 @@ pub fn row<'a>(bars: &'a [Bar], exe: &str) -> Option<&'a Bar> {
     bars.iter().find(|b| browser(exe, &b.browsers))
 }
 
-/// True when a control with `id`, `class` and `name` is `bar`'s address bar; an empty value never matches.
-pub fn fits(bar: &Bar, id: &str, class: &str, name: &str) -> bool {
+/// What the walk does at a control of one type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step {
+    /// A Document, Tab or `TabItem`: never entered, nothing in it read.
+    Skip,
+    /// An Edit: matched against the row, never entered.
+    Edit,
+    /// Any other control: entered.
+    Enter,
+}
+
+/// The walk's step at a control of type `kind`, so the page and the owner's tab titles are never read.
+pub fn step(kind: UIA_CONTROLTYPE_ID) -> Step {
+    match kind {
+        k if [
+            UIA_DocumentControlTypeId,
+            UIA_TabControlTypeId,
+            UIA_TabItemControlTypeId,
+        ]
+        .contains(&k) =>
+        {
+            Step::Skip
+        }
+        k if k == UIA_EditControlTypeId => Step::Edit,
+        _ => Step::Enter,
+    }
+}
+
+/// True when an Edit with `id` and `class` is `bar`'s address bar, else by its name, which `name` reads only when the
+/// row lists names; an empty value never matches.
+pub fn fits(bar: &Bar, id: &str, class: &str, name: impl FnOnce() -> String) -> bool {
     let has = |list: &[String], v: &str| !v.is_empty() && list.iter().any(|x| x == v);
-    has(&bar.ids, id) || has(&bar.classes, class) || has(&bar.names, name)
+    has(&bar.ids, id)
+        || has(&bar.classes, class)
+        || (!bar.names.is_empty() && has(&bar.names, &name()))
 }
 
 /// The value of control `el`, when it has one.
@@ -82,22 +113,21 @@ fn value(el: &IUIAutomationElement) -> Option<String> {
     }
 }
 
-/// What a control is matched by: its type, then its id, class and name; never its value.
-#[allow(unsafe_code, reason = "Plain property reads on a live element.")]
-fn facts(el: &IUIAutomationElement) -> (UIA_CONTROLTYPE_ID, [String; 3]) {
-    let text = |r: windows::core::Result<BSTR>| r.map(|b| b.to_string()).unwrap_or_default();
-    // SAFETY: plain property reads on a live element; a failed read gives an empty value.
-    unsafe {
-        let kind = el.CurrentControlType().unwrap_or_default();
-        let id = text(el.CurrentAutomationId());
-        (
-            kind,
-            [id, text(el.CurrentClassName()), text(el.CurrentName())],
-        )
-    }
+/// A text property of `el` from `read`; empty when it does not read.
+fn text(read: windows::core::Result<BSTR>) -> String {
+    read.map(|b| b.to_string()).unwrap_or_default()
 }
 
-/// The first control under `el` that `bar` fits, `depth` levels down at most, never inside a Document.
+/// True when Edit `el` is `bar`'s address bar: its id and class read first, its name only when the row needs it.
+#[allow(unsafe_code, reason = "Plain property reads on a live element.")]
+fn is_bar(el: &IUIAutomationElement, bar: &Bar) -> bool {
+    // SAFETY: plain property reads on a live element; a failed read gives an empty value.
+    let (id, class) = unsafe { (text(el.CurrentAutomationId()), text(el.CurrentClassName())) };
+    // SAFETY: as above.
+    fits(bar, &id, &class, || text(unsafe { el.CurrentName() }))
+}
+
+/// The first Edit under `el` that `bar` fits, `depth` levels down at most, never inside a Document, Tab or `TabItem`.
 #[allow(unsafe_code, reason = "Plain tree-walker calls on live elements.")]
 fn find(
     walker: &IUIAutomationTreeWalker,
@@ -108,13 +138,16 @@ fn find(
     // SAFETY: plain walker calls on live elements; the end of a level gives an error, read as none.
     let mut child = unsafe { walker.GetFirstChildElement(el) }.ok();
     while let Some(c) = child {
-        let (kind, [id, class, name]) = facts(&c);
-        if fits(bar, &id, &class, &name) {
-            return Some(c);
-        }
-        let deeper = kind != UIA_DocumentControlTypeId && depth > 1;
-        if let Some(found) = deeper.then(|| find(walker, &c, bar, depth - 1)).flatten() {
-            return Some(found);
+        // SAFETY: a plain property read on a live element.
+        let kind = unsafe { c.CurrentControlType() }.unwrap_or_default();
+        match step(kind) {
+            Step::Edit if is_bar(&c, bar) => return Some(c),
+            Step::Enter if depth > 1 => {
+                if let Some(found) = find(walker, &c, bar, depth - 1) {
+                    return Some(found);
+                }
+            }
+            _ => {}
         }
         // SAFETY: as above.
         child = unsafe { walker.GetNextSiblingElement(&c) }.ok();
@@ -241,20 +274,44 @@ mod tests {
         );
     }
 
+    /// A name read that fails the test when it is called.
+    fn unread() -> String {
+        panic!("the name was read")
+    }
+
     #[test]
     fn only_the_control_a_row_names_is_the_address_bar() {
         let table = bars();
         let chrome = row(&table, "Chrome.EXE").expect("a row for Chrome");
         let class = chrome.classes.first().expect("a class");
-        assert!(fits(chrome, "", class, ""));
-        let name = chrome.names.first().expect("a name");
-        assert!(fits(chrome, "", "", name));
-        assert!(!fits(chrome, "", "Edit", "Find"), "another edit");
-        assert!(!fits(chrome, "", "", ""), "an empty value");
+        assert!(fits(chrome, "", class, unread), "the class matched first");
+        let name = chrome.names.first().expect("a name").clone();
+        assert!(fits(chrome, "", "", || name.clone()));
+        assert!(!fits(chrome, "", "Edit", || "Find".into()), "another edit");
+        assert!(!fits(chrome, "", "", String::new), "an empty value");
         let firefox = row(&table, "firefox.exe").expect("a row for Firefox");
         let id = firefox.ids.first().expect("an id");
-        assert!(fits(firefox, id, "", "") && !fits(firefox, "", class, ""));
+        assert!(fits(firefox, id, "", unread));
+        assert!(
+            !fits(firefox, "", class, unread),
+            "a row with no names reads none"
+        );
         assert!(row(&table, "notepad.exe").is_none());
+    }
+
+    #[test]
+    fn the_walk_matches_only_edits_and_never_enters_the_page_or_the_tabs() {
+        use windows::Win32::UI::Accessibility::{UIA_ComboBoxControlTypeId, UIA_PaneControlTypeId};
+        for kind in [
+            UIA_DocumentControlTypeId,
+            UIA_TabControlTypeId,
+            UIA_TabItemControlTypeId,
+        ] {
+            assert_eq!(step(kind), Step::Skip, "{kind:?}");
+        }
+        assert_eq!(step(UIA_EditControlTypeId), Step::Edit);
+        let (pane, combo) = (step(UIA_PaneControlTypeId), step(UIA_ComboBoxControlTypeId));
+        assert_eq!((pane, combo), (Step::Enter, Step::Enter));
     }
 
     #[test]

@@ -213,7 +213,7 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
     let fresh = Fresh::open(ctx)?;
     let program = fresh.program.clone();
     let (got, ended) = fresh.with_copy(false, |pid| {
-        clipkeep::keep(ctx.cfg, || read(ctx, pid, &program))
+        clipkeep::keep_changed(ctx.cfg, || read(ctx, pid, &program))
     });
     let removed = fresh.close(ended.as_ref());
     Ok(line(READ, &copy_line(got, ended.as_ref()), removed))
@@ -223,7 +223,7 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
 pub fn beside(ctx: &Ctx) -> Result<Value, String> {
     let kb = Keyboard::find()?;
     let (pid, program) = (win::owner(kb.hwnd).0, win::program(kb.hwnd)?);
-    let got = clipkeep::keep(ctx.cfg, || read(ctx, pid, Path::new(&program)));
+    let got = clipkeep::keep_changed(ctx.cfg, || read(ctx, pid, Path::new(&program)));
     let run = got.unwrap_or_else(|e| json!({ "ok": false, "error": e }));
     Ok(line(BESIDE, &run, Ok(())))
 }

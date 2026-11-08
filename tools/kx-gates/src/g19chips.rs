@@ -31,6 +31,8 @@ mod terms;
 pub use link::{site_key, text_of};
 pub use read::{BESIDE, READ};
 
+use std::path::Path;
+
 use serde_json::{Map, Value, json};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -107,10 +109,10 @@ fn steps(
     Ok(v)
 }
 
-/// The run on a ready copy with process id `pid`: the start's notices answered, then every step on the gate's own
+/// The run on a ready copy at `program` with process id `pid`: the start's notices answered, then every step on the gate's own
 /// Notepad document, which closes after; `left` gathers the clean-up.
-fn drive(ctx: &Ctx, pid: u32, left: &mut Vec<String>) -> Result<Value, String> {
-    let gate = Gate::new(ctx, pid)?;
+fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Result<Value, String> {
+    let gate = Gate::new(ctx, (pid, program))?;
     notice::check_normal(ctx, &gate.reader)?;
     let mut cases = Vec::new();
     let doc = probe::open_text(ctx, AppKind::Notepad, &docs::doc(gate.g()))?;
@@ -156,7 +158,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         Vec::new(),
     );
     let (got, ended) = fresh.with_copy(true, |pid| {
-        clipkeep::keep(ctx.cfg, || drive(ctx, pid, &mut left))
+        clipkeep::keep(ctx.cfg, || drive(ctx, (pid, &fresh.program), &mut left))
     });
     let removed = fresh.close(ended.as_ref());
     let forgot = probe::forget_copies(ctx, since, &|t| is_test(ctx, t));

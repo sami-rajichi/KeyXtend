@@ -3,6 +3,7 @@
 //! keycaps of the box's kind. The selected text is never kept: only its boxes are read.
 #![cfg(windows)]
 
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use kx_mod_keyboard::KeyboardSettings;
@@ -57,6 +58,8 @@ fn hung_json(name: &str, quiet: bool, front: HWND, target: HWND) -> Value {
 pub struct Gate<'a> {
     /// The run's settings.
     pub ctx: &'a Ctx<'a>,
+    /// The test build's program, whose own files hold its settings.
+    pub program: PathBuf,
     /// The strip of the test build's process.
     pub strip: Strip<'a>,
     /// The gate's acts.
@@ -73,14 +76,15 @@ pub struct Gate<'a> {
 }
 
 impl<'a> Gate<'a> {
-    /// The readers of the copy with process id `pid`.
-    pub fn new(ctx: &'a Ctx<'a>, pid: u32) -> Result<Self, String> {
+    /// The readers of the copy at `program` with process id `pid`.
+    pub fn new(ctx: &'a Ctx<'a>, (pid, program): (u32, &Path)) -> Result<Self, String> {
         let themes = Themes::shipped().map_err(|e| format!("theme {e}"))?;
         let keyboard = KeyboardSettings::from_defaults()
             .map_err(|e| format!("the keyboard's defaults: {e}"))?;
         let corner_px = themes.shape.extra.corner_px[0];
         Ok(Self {
             ctx,
+            program: program.to_path_buf(),
             strip: Strip::new(ctx, pid)?,
             acts: Acts::new(ctx),
             reader: Reader::new()?,

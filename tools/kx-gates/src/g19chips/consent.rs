@@ -6,13 +6,14 @@
 #![cfg(windows)]
 
 use std::collections::HashSet;
+use std::path::Path;
 use std::time::Instant;
 
 use kx_mod_selection::{ID, SPEC, SelSettings};
 use kx_module_api::ports::SelChip;
 use kx_module_api::{NoticeAsk, keys};
 use kx_platform_windows::window::foreground;
-use kx_settings::peek_section;
+use kx_settings::{peek, peek_section};
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::UIA_ButtonControlTypeId;
@@ -110,12 +111,23 @@ pub fn may_click(translate_ok: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// The running copy's consent, as its settings file holds it.
-fn consent_now() -> Result<bool, String> {
-    let file = product::running_file()?;
-    let s: SelSettings = peek_section(file.as_ref(), ID, &SPEC)
-        .map_err(|e| format!("the selection settings: {e}"))?;
+/// The consent in settings file `file`, which `exists` on disk: the saved one, the default while no file exists yet,
+/// and an error when a file exists but does not read, so the gate stops.
+pub fn consent_in(exists: bool, file: Option<&toml::Table>) -> Result<bool, String> {
+    if exists && file.is_none() {
+        return Err(
+            "the copy's settings file does not read, so the gate stops before Translate".into(),
+        );
+    }
+    let s: SelSettings =
+        peek_section(file, ID, &SPEC).map_err(|e| format!("the selection settings: {e}"))?;
     Ok(s.translate_ok)
+}
+
+/// The consent of the copy at `program`, from its own settings file.
+fn consent_of(program: &Path) -> Result<bool, String> {
+    let files = product::files(program)?;
+    consent_in(files.settings.exists(), peek(&files).as_ref())
 }
 
 /// Answers the question on banner `w` Not now with a real click once past the double-click time, and waits up to
@@ -181,7 +193,7 @@ fn round(
     let Some(s) = shown else {
         return Ok(json!({ "ok": false, "error": "no strip" }));
     };
-    may_click(consent_now()?)?;
+    may_click(consent_of(&gate.program)?)?;
     let browsers = &gate.g().browsers;
     let (running, windows): (_, HashSet<isize>) = (
         procs::now(),
@@ -218,6 +230,21 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_settings_file_that_shows_but_does_not_read_stops_the_gate() {
+        let e = consent_in(true, None).expect_err("unread");
+        assert!(e.contains("stops"), "{e}");
+        assert_eq!(
+            consent_in(false, None),
+            Ok(false),
+            "no file yet: the default"
+        );
+        let given: toml::Table = format!("[{}]\ntranslate_ok = true\n", ID.as_str())
+            .parse()
+            .expect("TOML");
+        assert_eq!(consent_in(true, Some(&given)), Ok(true));
+    }
 
     #[test]
     fn a_click_is_refused_while_the_consent_is_given() {

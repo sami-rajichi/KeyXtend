@@ -1,6 +1,6 @@
-//! Where the strip goes when the selection sits low or on another screen: the gate's own Notepad window moves so its
-//! copy line sits `near_px` above the plate or the screen's bottom, and the strip must go above it (judged); on a
-//! second screen, where one exists, the strip's place is recorded (a note). The window always moves back.
+//! Where the strip goes when the selection sits low or on another screen: the gate's own Notepad window, never a
+//! maximised one or the owner's tab, moves so its copy line sits `near_px` above the plate or the screen's bottom.
+//! The strip must then go above it (judged), its place on a second screen is a note, and the window always moves back.
 #![cfg(windows)]
 
 use kx_mod_keyboard::Nav;
@@ -9,7 +9,7 @@ use kx_platform::ui::Screens;
 use kx_platform_windows::screen::{WinScreens, contains, edges};
 use serde_json::{Value, json};
 use windows::Win32::UI::WindowsAndMessaging::{
-    SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
+    IsZoomed, SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
 };
 
 use crate::apps::Opened;
@@ -18,6 +18,7 @@ use crate::g19chips::docs::Line;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::{Lines, by_keys};
 use crate::g19chips::place;
+use crate::ownkeys::{self, Desk, Real};
 use crate::win::{self, sleep_ms};
 
 /// The acts the step takes at the least: the near-bottom case's selection by keys and our Esc; a second screen adds
@@ -49,6 +50,22 @@ pub fn other_screen(areas: &[Rect], at: Point) -> Option<Rect> {
     areas.iter().copied().find(|a| !contains(*a, at))
 }
 
+/// Fails unless `app`'s window may move: not `zoomed` (maximised), and in front on `desk` with our tab, so the
+/// owner's window and its other tabs never move.
+pub fn movable(desk: &dyn Desk, app: &Opened, zoomed: bool) -> Result<(), String> {
+    if zoomed {
+        return Err("Notepad is maximised, so the gate does not move it".into());
+    }
+    ownkeys::ours(desk, app)
+}
+
+/// True while window `app` is maximised.
+#[allow(unsafe_code, reason = "A plain window state query.")]
+fn zoomed(app: &Opened) -> bool {
+    // SAFETY: a plain query; a dead window reads as not maximised.
+    unsafe { IsZoomed(app.hwnd) }.as_bool()
+}
+
 /// Moves `app`'s window so its top-left is `to`.
 #[allow(unsafe_code, reason = "A plain move of the gate's own window.")]
 fn move_to(app: &Opened, to: Point) -> Result<(), String> {
@@ -58,7 +75,8 @@ fn move_to(app: &Opened, to: Point) -> Result<(), String> {
         .map_err(|e| format!("moving Notepad: {e}"))
 }
 
-/// `drive` run on `lines` with `app`'s window moved to `to`, then the window moved back whatever happened.
+/// `drive` run on `lines` with `app`'s window moved to `to`, once `movable` allows it, then the window moved back
+/// whatever happened.
 fn moved<T>(
     gate: &Gate,
     app: &Opened,
@@ -67,6 +85,7 @@ fn moved<T>(
     drive: impl FnOnce(&Lines) -> Result<T, String>,
 ) -> Result<T, String> {
     let was = win::rect(app.hwnd)?;
+    movable(&Real, app, zoomed(app))?;
     move_to(app, to)?;
     sleep_ms(gate.g().settle_ms);
     let now = win::rect(app.hwnd);
@@ -165,6 +184,20 @@ mod tests {
         let line = r(100, 200, 400, 24);
         assert_eq!(lift(line, 700, 4), 700 - 4 - 224);
         assert_eq!(lift(line, 210, 4), -18, "up when it sits too low");
+    }
+
+    #[test]
+    fn only_our_own_tab_in_front_and_not_maximised_moves() {
+        use crate::ownkeys::fake::{Fake, OUR_TAB, OWNER_TAB, hwnd, notepad};
+        let app = notepad(None);
+        assert_eq!(
+            movable(&Fake::new(app.hwnd, &[OUR_TAB]), &app, false),
+            Ok(())
+        );
+        let e = movable(&Fake::new(app.hwnd, &[OUR_TAB]), &app, true).expect_err("maximised");
+        assert!(e.contains("maximised"), "{e}");
+        assert!(movable(&Fake::new(app.hwnd, &[OWNER_TAB]), &app, false).is_err());
+        assert!(movable(&Fake::new(hwnd(9), &[OUR_TAB]), &app, false).is_err());
     }
 
     #[test]
