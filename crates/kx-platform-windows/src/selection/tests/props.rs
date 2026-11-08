@@ -1,7 +1,8 @@
-//! The rules over any input: a box is never Editable unless every fact allows it and never shown when closed; a line
-//! box holds its part and every part on its line, and never panics on any numbers; a read cut by a cap never makes a
-//! character that was not there.
+//! The rules over any input: a box is never Editable unless every fact allows it and never shown when closed, and a
+//! box that never climbs is closed or a terminal; a line box holds its part and every part on its line, and never
+//! panics on any numbers; a read cut by a cap never makes a character that was not there.
 
+use super::super::kinds::shut;
 use super::super::spot::{line, whole};
 use super::*;
 use crate::screen::edges;
@@ -65,6 +66,16 @@ proptest! {
         }
         prop_assert!(asks <= 1);
         prop_assert!(asks == 0 || facts.fixed != Some(false), "a writable value is never probed");
+    }
+
+    #[test]
+    fn a_box_that_never_climbs_is_closed_or_a_terminal(facts in any_facts()) {
+        let closes = facts.ours || facts.password != Some(false) || facts.control.is_none();
+        let shuts = shut(&facts, field::table(), &small());
+        prop_assert!(!closes || shuts, "{:?}", facts);
+        let got = asked(&facts, &small(), Some(false)).0;
+        let kept = matches!(got, SelKind::Closed | SelKind::Terminal);
+        prop_assert!(!shuts || kept, "{:?}: {:?}", facts, got);
     }
 
     #[test]

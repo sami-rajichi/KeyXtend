@@ -1,5 +1,6 @@
 //! The kind of the focused box for the chips: what UI Automation and Win32 tell about it, read through the field
-//! watch's table (password boxes, hiding windows) and the selection table (control types, terminals).
+//! watch's table (password boxes, hiding windows) and the selection table (control types, terminals), and the walk up
+//! from a focused element with no text to the one that holds its selection.
 
 use kx_module_api::ports::SelKind;
 
@@ -66,4 +67,45 @@ fn closed(facts: &Facts, boxes: &field::Table, table: &Table) -> bool {
     let hides = boxes.hides(&facts.class, facts.style);
     let blind = boxes.is_closed() || table.is_closed();
     facts.ours || hides || blind || facts.password != Some(false)
+}
+
+/// Whether `facts` keep a look on the focused element itself, so no ancestor is read: an unread control type, a
+/// closed box, or a window that hides its boxes.
+pub(crate) fn shut(facts: &Facts, boxes: &field::Table, table: &Table) -> bool {
+    let opaque = boxes.opaque(&facts.class) || boxes.opaque(&facts.top);
+    facts.control.is_none() || closed(facts, boxes, table) || opaque
+}
+
+/// What the walk up from the focused element asks of the elements it meets.
+pub(crate) trait Tree {
+    /// One element, as the OS hands it over.
+    type El;
+
+    /// Whether `el` has a text pattern.
+    fn texts(&self, el: &Self::El) -> bool;
+
+    /// Whether `el`'s facts keep a look on it, by `shut`.
+    fn shut(&self, el: &Self::El) -> bool;
+
+    /// The parent of `el`; `None` at the top, past the look's deadline, or when the app does not answer.
+    fn parent(&self, el: &Self::El) -> Option<Self::El>;
+}
+
+/// The element a look reads for the focused `el`: `el` when it has a text pattern or is shut, else its nearest
+/// ancestor within `cap` levels that has one, else `el`, whose own kind then tells.
+pub(crate) fn climb<T: Tree>(tree: &T, el: T::El, cap: u8) -> T::El {
+    if tree.texts(&el) || tree.shut(&el) {
+        return el;
+    }
+    let mut up: Option<T::El> = None;
+    for _ in 0..cap {
+        let Some(next) = tree.parent(up.as_ref().unwrap_or(&el)) else {
+            break;
+        };
+        if tree.texts(&next) {
+            return next;
+        }
+        up = Some(next);
+    }
+    el
 }

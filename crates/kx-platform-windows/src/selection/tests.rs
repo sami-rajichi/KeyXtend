@@ -1,7 +1,7 @@
 //! The kind table and the kind rules: the shipped table and bad ones, and the boxes the chips meet (Notepad's edit, a
-//! read-only document, Windows Terminal, the console, a password box, our own window); the boxes are in `spot`, the
-//! rules over any facts in `props`, the handlers in `hear`, where the selection handler sits in `follow`, and the readers
-//! on hidden edit boxes in `uia`.
+//! read-only document, Windows Terminal, the console, a password box, our own window); the walk up to the text is in
+//! `climb`, the boxes in `spot`, the rules over any facts in `props`, the handlers in `hear`, where the selection
+//! handler sits in `follow`, and the readers on hidden edit boxes in `uia`.
 
 use super::kinds::{Facts, kind};
 use super::*;
@@ -9,6 +9,7 @@ use crate::field;
 use kx_module_api::ports::SelKind;
 use std::cell::Cell;
 
+mod climb;
 mod follow;
 #[cfg(windows)]
 mod hear;
@@ -30,6 +31,7 @@ const SMALL: &str = r#"
 edit_controls = [50004, 50030]
 read_controls = [50020]
 terminal_classes = ["CASCADIA_HOSTING_WINDOW_CLASS", "ConsoleWindowClass"]
+walk_up = 15
 "#;
 
 /// The small table, parsed.

@@ -21,7 +21,7 @@ use windows::Win32::UI::WindowsAndMessaging::IsHungAppWindow;
 
 use super::follow::{Heard, Hook, Seen};
 use super::hear::handlers;
-use super::uia::{read, sel, spot, still};
+use super::uia::{read, sel, spot, still, text_of};
 use crate::clip::open::holds;
 use crate::com::Com;
 use crate::field::{box_id, focused, top};
@@ -122,9 +122,12 @@ impl Ours for WinSel {
     }
 }
 
+/// Every job looks at the element that holds the focused box's text, so a spot, its box id, `still` and a read all
+/// name that same element.
 impl SelProbe for WinSel {
-    fn focused(&self, _: Instant) -> Result<IUIAutomationElement, SelError> {
-        focused(&self.auto).map_err(sel)
+    fn focused(&self, by: Instant) -> Result<IUIAutomationElement, SelError> {
+        let el = focused(&self.auto).map_err(sel)?;
+        Ok(text_of(el, &self.auto, self.mine, by))
     }
 
     fn spot(&self, el: &IUIAutomationElement, by: Instant) -> Result<SelSpot, SelError> {

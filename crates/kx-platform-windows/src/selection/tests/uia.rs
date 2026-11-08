@@ -1,14 +1,15 @@
 //! The selection watch's readers on hidden edit boxes, through a `Mine` that is not this process: a selection's line
 //! box and a caret's box with no text call, a password box or our own asked nothing, `still` once the selection
-//! clears, and a read cut at its cap in Latin and Arabic.
+//! clears, a read cut at its cap in Latin and Arabic, and a look from a child with no text up to its box.
 
-use super::super::uia::{READS, read, spot, still};
+use super::super::uia::{READS, read, spot, still, text_of};
 use super::super::win::Mine;
-use crate::field::testedit::{TestEdit, far, started};
+use crate::field::testedit::{LONG_MS, TestEdit, far, started};
 use crate::field::{TEXT_CALLS, box_id};
 use crate::scroll::testwin::one_client;
 use kx_module_api::ports::SelKind;
 use std::cell::Cell;
+use std::time::{Duration, Instant};
 use windows::Win32::UI::WindowsAndMessaging::ES_PASSWORD;
 
 /// Latin words.
@@ -90,6 +91,41 @@ fn still_holds_only_while_the_same_box_holds_a_selection() {
     assert!(!still(&el, 0, far()), "a box with no id");
     edit.select(end(LATIN), end(LATIN));
     assert!(!still(&el, id, far()), "the selection cleared");
+}
+
+#[test]
+fn a_look_from_a_child_with_no_text_reads_its_box_and_a_box_with_text_stays() {
+    let _one = one_client();
+    let (_com, auto) = started();
+    let edit = TestEdit::holding(LATIN, 0);
+    let (el, mine) = (edit.element(&auto), Mine::of(NOT_US));
+    let id = box_id(&el);
+    let up = text_of(edit.child(&auto), &auto, mine, far());
+    assert_eq!(box_id(&up), id, "the box above");
+    assert_eq!(box_id(&text_of(el, &auto, mine, far())), id, "its own text");
+    edit.select(0, ALPHA);
+    let sel = spot(&up, id, mine, far()).unwrap();
+    assert_eq!((sel.kind, sel.selected), (SelKind::Editable, true));
+    assert!(still(&up, id, far()));
+    let own = text_of(edit.child(&auto), &auto, Mine::new(), far());
+    assert_ne!(box_id(&own), id, "our own never climbs");
+    let ago = Duration::from_millis(u64::from(LONG_MS));
+    let past = Instant::now().checked_sub(ago).unwrap();
+    let late = text_of(edit.child(&auto), &auto, mine, past);
+    assert_ne!(box_id(&late), id, "past the deadline it never climbs");
+}
+
+#[test]
+fn a_child_of_a_password_box_is_closed_and_asks_no_caret() {
+    let _one = one_client();
+    let (_com, auto) = started();
+    let secret = TestEdit::holding(LATIN, ES_PASSWORD);
+    secret.select(0, ALPHA);
+    let up = text_of(secret.child(&auto), &auto, Mine::of(NOT_US), far());
+    let calls = TEXT_CALLS.with(Cell::get);
+    let got = spot(&up, box_id(&up), Mine::of(NOT_US), far()).unwrap();
+    assert_eq!((got.kind, got.selected), (SelKind::Closed, false));
+    assert_eq!(TEXT_CALLS.with(Cell::get), calls, "no caret call");
 }
 
 #[test]

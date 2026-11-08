@@ -1,5 +1,5 @@
-//! A hidden test edit box on a thread of its own, holding a text with the caret at its end, and a UI Automation client
-//! to read it. It is never shown and never takes the focus.
+//! A hidden test edit box on a thread of its own, holding a text with the caret at its end and a child button when
+//! asked, and a UI Automation client to read it. It is never shown and never takes the focus.
 #![allow(
     unsafe_code,
     reason = "The tests make, fill and destroy their own hidden edit boxes."
@@ -15,7 +15,7 @@ use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 use windows::Win32::UI::Controls::EM_SETSEL;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DestroyWindow, DispatchMessageW, ES_AUTOHSCROLL, GetMessageW, MSG,
-    PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_POPUP,
+    PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_CHILD, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
@@ -37,9 +37,10 @@ pub(crate) const CONFIG: FieldConfig = FieldConfig {
     read_chars: CHARS,
 };
 
-/// A hidden edit box on a thread of its own; dropping it destroys both.
+/// A hidden edit box on a thread of its own, with a child button when asked; dropping it destroys them.
 pub(crate) struct TestEdit {
     hwnd: isize,
+    child: isize,
     thread: u32,
     join: Option<JoinHandle<()>>,
 }
@@ -47,13 +48,25 @@ pub(crate) struct TestEdit {
 impl TestEdit {
     /// A box holding `text`, its caret at the end, with the edit style bits `style` (`ES_PASSWORD`, `ES_READONLY`).
     pub(crate) fn start(text: &str, style: i32) -> Self {
+        Self::made(text, style, false)
+    }
+
+    /// Like `start`, with a child button inside the box, which has no text of its own.
+    pub(crate) fn holding(text: &str, style: i32) -> Self {
+        Self::made(text, style, true)
+    }
+
+    /// The box, with its child button when `child`.
+    fn made(text: &str, style: i32, child: bool) -> Self {
         let (made, ready) = mpsc::channel();
         let text = crate::wide(text);
         let join = thread::spawn(move || {
             let hwnd = make(&text, style);
+            let kid = if child { button(hwnd) } else { HWND::default() };
             // SAFETY: a plain query of this thread's id.
             let thread = unsafe { GetCurrentThreadId() };
-            made.send((hwnd.0.addr().cast_signed(), thread)).unwrap();
+            let raw = |h: HWND| h.0.addr().cast_signed();
+            made.send((raw(hwnd), raw(kid), thread)).unwrap();
             let mut msg = MSG::default();
             // SAFETY: reads this thread's messages until the test posts the quit message.
             while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0 > 0 {
@@ -63,9 +76,10 @@ impl TestEdit {
             // SAFETY: destroys the box this thread made.
             let _ = unsafe { DestroyWindow(hwnd) };
         });
-        let (hwnd, thread) = ready.recv_timeout(WAIT).unwrap();
+        let (hwnd, child, thread) = ready.recv_timeout(WAIT).unwrap();
         Self {
             hwnd,
+            child,
             thread,
             join: Some(join),
         }
@@ -74,6 +88,11 @@ impl TestEdit {
     /// The box's element in `auto`.
     pub(crate) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
         element(auto, self.hwnd)
+    }
+
+    /// The child button's element in `auto`, for a box made by `holding`.
+    pub(crate) fn child(&self, auto: &IUIAutomation) -> IUIAutomationElement {
+        element(auto, self.child)
     }
 
     /// The box's raw handle, for a thread that makes its own client.
@@ -132,6 +151,29 @@ fn make(text: &[u16], style: i32) -> HWND {
     let end = text.len() - 1;
     set_sel(hwnd, end, end);
     hwnd
+}
+
+/// Makes a hidden button the size of test box `parent` inside it, on the box's own thread.
+fn button(parent: HWND) -> HWND {
+    let (_, _, cx, cy) = BOX;
+    // SAFETY: makes a child window of the system's button class inside our own box.
+    unsafe {
+        CreateWindowExW(
+            WINDOW_EX_STYLE::default(),
+            w!("BUTTON"),
+            PCWSTR::null(),
+            WS_CHILD,
+            0,
+            0,
+            cx,
+            cy,
+            Some(parent),
+            None,
+            None,
+            None,
+        )
+    }
+    .unwrap()
 }
 
 /// Sets the selection of test box `hwnd` from unit `from` to `to`, where the caret goes.

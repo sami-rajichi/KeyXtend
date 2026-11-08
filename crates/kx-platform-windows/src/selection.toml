@@ -16,3 +16,7 @@ read_controls = [
 
 # Window classes of terminals, checked on the box's window and its top-level window: Windows Terminal and the console.
 terminal_classes = ["CASCADIA_HOSTING_WINDOW_CLASS", "ConsoleWindowClass"]
+
+# How many control-view levels a look climbs from a focused element with no text pattern, such as a web page's group
+# or label, to the nearest one that has one and holds the selection. Pages in Zen held it 9 and 11 levels up.
+walk_up = 15

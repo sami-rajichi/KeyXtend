@@ -1,7 +1,7 @@
 //! The focused box's selection (ADR-0041): its kind from UI Automation, `field.toml` and the table in `selection.toml`,
 //! whether its selection holds text, its line boxes and its caret box, with no text read but at Translate's click. The
-//! kind rules, the table, the boxes and where the selection handler sits are pure; `uia`, `win` and `hear` talk to UI
-//! Automation, and the run is `kx_platform::selection`'s.
+//! kind rules, the walk up to the text, the table, the boxes and where the selection handler sits are pure; `uia`,
+//! `win` and `hear` talk to UI Automation, and the run is `kx_platform::selection`'s.
 #![cfg_attr(
     not(windows),
     allow(
@@ -73,6 +73,8 @@ pub(crate) struct Table {
     read_controls: Vec<i32>,
     /// Window classes of terminals.
     terminal_classes: Vec<String>,
+    /// How many levels a look climbs for a text pattern above a focused element that has none.
+    walk_up: u8,
     /// Set only on the fallback for a table that does not parse.
     #[serde(skip)]
     closed: bool,
@@ -85,6 +87,7 @@ impl Table {
             edit_controls: Vec::new(),
             read_controls: Vec::new(),
             terminal_classes: Vec::new(),
+            walk_up: 0,
             closed: true,
         }
     }
@@ -122,6 +125,11 @@ impl Table {
     /// Whether windows of class `class` are terminals.
     pub(crate) fn terminal(&self, class: &str) -> bool {
         listed(&self.terminal_classes, class)
+    }
+
+    /// How many levels a look climbs for a text pattern above a focused element that has none.
+    pub(crate) fn walk_up(&self) -> u8 {
+        self.walk_up
     }
 
     /// The editable and the read-only control types.

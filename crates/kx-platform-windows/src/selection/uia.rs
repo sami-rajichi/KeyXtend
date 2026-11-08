@@ -1,6 +1,6 @@
-//! What the selection watch asks UI Automation, through the field watch's readers: an element's facts and kind, its
-//! selection or caret as the field watch finds it, their boxes, and the selection's text at Translate's read only.
-//! Nothing here logs what it reads.
+//! What the selection watch asks UI Automation, through the field watch's readers: the element that holds the focused
+//! box's text, its facts and kind, its selection or caret as the field watch finds it, their boxes, and the selection's
+//! text at Translate's read only. Nothing here logs what it reads.
 
 use std::time::Instant;
 
@@ -9,12 +9,13 @@ use kx_module_api::ports::{FieldError, Rect, Screen, SelError, SelKind, SelSpot}
 use kx_platform::selection::{Ours, late};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::Accessibility::{
-    IUIAutomationElement, IUIAutomationTextRange, TextPatternRangeEndpoint_End,
-    TextPatternRangeEndpoint_Start, TextUnit_Character,
+    IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern, IUIAutomationTextRange,
+    IUIAutomationTreeWalker, TextPatternRangeEndpoint_End, TextPatternRangeEndpoint_Start,
+    TextUnit_Character, UIA_TextPatternId,
 };
 
 use super::follow::same;
-use super::kinds::{Facts, kind};
+use super::kinds::{Facts, Tree, climb, kind, shut};
 use super::spot::{Span, assemble, whole};
 use super::table;
 use super::win::Mine;
@@ -72,18 +73,75 @@ impl Span for IUIAutomationTextRange {
     }
 }
 
-/// What UI Automation and Win32 tell about `el`, through the field watch's readers; never its text.
-fn facts(el: &IUIAutomationElement, mine: Mine) -> Facts {
-    let base = named(el);
+/// What UI Automation and Win32 tell about `el` but its value pattern, through the field watch's readers; never its
+/// text.
+fn base(el: &IUIAutomationElement, mine: Mine) -> Facts {
+    let named = named(el);
     Facts {
-        control: base.control,
-        password: base.password,
-        class: base.class,
-        style: base.style,
-        top: base.top,
-        fixed: value_fixed(el),
+        control: named.control,
+        password: named.password,
+        class: named.class,
+        style: named.style,
+        top: named.top,
+        fixed: None,
         ours: mine.ours(el),
     }
+}
+
+/// What UI Automation and Win32 tell about `el`, its value pattern too; never its text.
+fn facts(el: &IUIAutomationElement, mine: Mine) -> Facts {
+    Facts {
+        fixed: value_fixed(el),
+        ..base(el, mine)
+    }
+}
+
+/// The walk up from a focused element: the client's control-view walker, what counts as ours, and the look's deadline.
+struct Up<'a> {
+    walker: Option<&'a IUIAutomationTreeWalker>,
+    mine: Mine,
+    by: Instant,
+}
+
+impl Tree for Up<'_> {
+    type El = IUIAutomationElement;
+
+    #[allow(unsafe_code, reason = "A plain UI Automation pattern read.")]
+    fn texts(&self, el: &IUIAutomationElement) -> bool {
+        // SAFETY: a plain pattern read on a live element; a failure reads as none.
+        unsafe { el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId) }.is_ok()
+    }
+
+    /// Shut past the deadline too, so an app that stopped answering is asked nothing more.
+    fn shut(&self, el: &IUIAutomationElement) -> bool {
+        late(self.by).is_err() || shut(&base(el, self.mine), field::table(), table())
+    }
+
+    #[allow(unsafe_code, reason = "A plain UI Automation tree step.")]
+    fn parent(&self, el: &IUIAutomationElement) -> Option<IUIAutomationElement> {
+        late(self.by).ok()?;
+        // SAFETY: a plain call on a live element; the root, a gone element or a timeout gives an error.
+        unsafe { self.walker?.GetParentElement(el) }.ok()
+    }
+}
+
+/// The element a look at focused `el` reads: `el`, or its nearest control-view ancestor with a text pattern within the
+/// table's cap, as a web page's group or label holds none; a password box, an opaque window or our own never climbs.
+#[allow(unsafe_code, reason = "Asks our client for its walker.")]
+pub(super) fn text_of(
+    el: IUIAutomationElement,
+    auto: &IUIAutomation,
+    mine: Mine,
+    by: Instant,
+) -> IUIAutomationElement {
+    // SAFETY: a plain call on our live client; without a walker the focused element stands.
+    let walker = unsafe { auto.ControlViewWalker() }.ok();
+    let up = Up {
+        walker: walker.as_ref(),
+        mine,
+        by,
+    };
+    climb(&up, el, table().walk_up())
 }
 
 /// The kind of `el`, and its selection or caret when it is not closed; a closed box is asked nothing more.
