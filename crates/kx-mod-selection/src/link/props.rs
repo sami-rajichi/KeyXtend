@@ -52,4 +52,25 @@ proptest! {
         let whole = next.is_none_or(char::is_whitespace) || !kept.contains(char::is_whitespace);
         prop_assert!(whole, "cut inside a word: {:?}", next);
     }
+
+    /// A read that hit its cap gives a start of the clean text ended at a whole word, and never keeps the read's last
+    /// word unless a space ended it.
+    #[test]
+    fn a_capped_reads_link_never_keeps_a_word_the_read_cut(
+        text in text(),
+        chars in TRANSLATE_CHARS,
+    ) {
+        let site = sites().unwrap().first().unwrap();
+        let clean = clean(&text);
+        let Some(link) = site.cut_link(&text, "ar", chars) else {
+            return Ok(());
+        };
+        prop_assert!(link.expose().len() <= site.link_max);
+        let kept = sent(link.expose());
+        prop_assert!(kept.chars().count() <= usize::from(chars) && clean.starts_with(&kept));
+        let next = clean[kept.len()..].chars().next();
+        let whole = next.is_none_or(char::is_whitespace) || !kept.contains(char::is_whitespace);
+        prop_assert!(whole, "cut inside a word: {:?}", next);
+        prop_assert!(spaced(&text) || next.is_some(), "the read's last word kept");
+    }
 }

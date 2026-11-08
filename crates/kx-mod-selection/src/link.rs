@@ -66,16 +66,28 @@ impl Site {
         whole.or_else(alias).cloned()
     }
 
-    /// This site's page translating `text` into `code`, cut to `chars` characters and the site's limits; `None` when
-    /// no text is left.
+    /// This site's page translating the whole `text` into `code`, cut to `chars` characters and the site's limits;
+    /// `None` when no text is left.
     #[must_use]
     pub fn link(&self, text: &str, code: &str, chars: u16) -> Option<Link> {
+        self.page(text, code, chars, false)
+    }
+
+    /// As `link`, for a read that hit its cap: the selection goes on past `text`, so its end is a cut too, unless the
+    /// read ended on a space.
+    #[must_use]
+    pub fn cut_link(&self, text: &str, code: &str, chars: u16) -> Option<Link> {
+        self.page(text, code, chars, !spaced(text))
+    }
+
+    /// The page for `text`, whose end is a cut inside a word when `open`.
+    fn page(&self, text: &str, code: &str, chars: u16, open: bool) -> Option<Link> {
         let clean = clean(text);
         let to = encode(code);
         let room = (self.link_max)
             .saturating_sub(self.bare().len())
             .saturating_sub(to.len());
-        let kept = cut(&clean, usize::from(chars.min(self.limit)), room);
+        let kept = cut(&clean, usize::from(chars.min(self.limit)), room, open);
         if kept.is_empty() {
             return None;
         }
@@ -110,8 +122,18 @@ fn clean(text: &str) -> String {
     kept.collect::<String>().trim().to_owned()
 }
 
-/// The longest start of `text` within `chars` characters and `room` encoded bytes, ended at a whole word.
-fn cut(text: &str, chars: usize, room: usize) -> &str {
+/// True when the last character `clean` keeps of `text` is a space, so the word before it is whole.
+fn spaced(text: &str) -> bool {
+    let kept = text
+        .chars()
+        .rev()
+        .find(|&c| !is_hidden(c) || c.is_whitespace());
+    kept.is_some_and(char::is_whitespace)
+}
+
+/// The longest start of `text` within `chars` characters and `room` encoded bytes, ended at a whole word; when `open`,
+/// the text goes on past its end, which is then a cut too.
+fn cut(text: &str, chars: usize, room: usize, open: bool) -> &str {
     let mut bytes = 0_usize;
     for (count, (at, c)) in text.char_indices().enumerate() {
         bytes = bytes.saturating_add(encoded_len(c));
@@ -119,7 +141,18 @@ fn cut(text: &str, chars: usize, room: usize) -> &str {
             return whole(text, at);
         }
     }
-    text
+    if open { ended(text) } else { text }
+}
+
+/// `text` cut at its end inside a word it does not hold whole: back to the last space, or inside a single long word
+/// before its last letter, whose marks may lie past the end.
+fn ended(text: &str) -> &str {
+    match text.rfind(char::is_whitespace) {
+        Some(space) => text.get(..space).unwrap_or_default().trim_end(),
+        None => text
+            .get(..caret::back(text, text.len()))
+            .unwrap_or_default(),
+    }
 }
 
 /// `text` cut before byte `at`, back to the last space; inside a single long word, at the last whole character.

@@ -81,6 +81,19 @@ fn a_long_selection_is_cut_within_translate_chars_at_a_whole_word() {
 }
 
 #[test]
+fn a_capped_read_that_cleaning_shortened_still_ends_at_a_whole_word() {
+    let mut rig = agreed(|h| h.put("translate_chars", Value::Integer(50)));
+    let long = " alpha bravo charlie delta echo foxtrot golf hotelier india";
+    let links = translate(&mut rig, long);
+    let kept = "alpha%20bravo%20charlie%20delta%20echo%20foxtrot%20golf";
+    assert_eq!(
+        links,
+        [page("fr", kept)],
+        "the leading space went, so the read ended in hotelier"
+    );
+}
+
+#[test]
 fn a_blank_selection_opens_nothing_and_tells_nothing() {
     let mut rig = agreed(|_| {});
     assert!(translate(&mut rig, " \n\t\u{200b} ").is_empty());

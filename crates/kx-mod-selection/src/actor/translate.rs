@@ -122,8 +122,14 @@ impl Actor {
         match run.read(pick.box_id, cap) {
             Ok(text) => {
                 let text = Zeroizing::new(text.into_inner());
-                site.link(&text, &self.code, chars)
-                    .map_or(Fetch::Blank, Fetch::Page)
+                // A read that hit its cap may end inside a word, even once cleaning made it shorter.
+                let capped = text.chars().count() >= usize::from(cap);
+                let link = if capped {
+                    site.cut_link(&text, &self.code, chars)
+                } else {
+                    site.link(&text, &self.code, chars)
+                };
+                link.map_or(Fetch::Blank, Fetch::Page)
             }
             Err(error) => {
                 tracing::warn!(%error, "the selection could not be read");

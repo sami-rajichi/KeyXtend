@@ -275,3 +275,5 @@ fn a_language_tag_is_letters_and_hyphens_and_short() {
         assert!(!tag_ok(bad), "{bad}");
     }
 }
+
+mod cut;
