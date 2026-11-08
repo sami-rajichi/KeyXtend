@@ -4,7 +4,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use kx_module_api::ports::{Link, SelChip, SelKind};
-use kx_module_api::{Mono, Notice, NoticeArg, NoticeAsk, Zeroizing, args, keys};
+use kx_module_api::{Mono, Notice, NoticeArg, NoticeAsk, Redacted, Secret, Zeroizing, args, keys};
 use toml::Value;
 
 use super::{Actor, Asking, Busy, Job, Msg};
@@ -120,14 +120,16 @@ impl Actor {
             return Fetch::Failed;
         };
         match run.read(pick.box_id, cap) {
-            Ok(text) => {
-                let text = Zeroizing::new(text.into_inner());
+            Ok(read) => {
+                // Wrapped while the link is made, so no format shows it, and wiped after.
+                let held: Secret = Redacted::new(Zeroizing::new(read.into_inner()));
+                let text = held.expose().as_str();
                 // A read that hit its cap may end inside a word, even once cleaning made it shorter.
                 let capped = text.chars().count() >= usize::from(cap);
                 let link = if capped {
-                    site.cut_link(&text, &self.code, chars)
+                    site.cut_link(text, &self.code, chars)
                 } else {
-                    site.link(&text, &self.code, chars)
+                    site.link(text, &self.code, chars)
                 };
                 link.map_or(Fetch::Blank, Fetch::Page)
             }

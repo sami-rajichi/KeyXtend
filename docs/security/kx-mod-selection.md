@@ -20,7 +20,7 @@
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
 |---|---|---|---|---|
 | A look's `SelSpot` (box id, kind, line boxes, screen) | Sensitive (where the user works) | Memory only, in the strip machine; `ChipsView` carries the boxes to the ui; `Debug` hides them | No | Until the next look, press or failure |
-| The selected text, read once at a Translate click after the yes | Sensitive | Memory only: `Redacted` from the port, then a `Zeroizing` copy while the link is made (`actor/translate.rs:124`) | No | Wiped when the link is made |
+| The selected text, read once at a Translate click after the yes | Sensitive | Memory only: `Redacted` from the port, then a `Secret` (`Redacted<Zeroizing<String>>`) while the link is made, so no format shows it (`actor/translate.rs`, `fetch`); the link builder's cleaned and encoded copies are plain strings | No | The `Secret` is wiped when `fetch` returns; the working copies are freed, not wiped (see Accepted) |
 | The Translate link, which holds the encoded text | Sensitive | Memory only: a `Redacted` `Link`, moved to the open's thread | No | Until the shell returns; then the browser holds it, by the user's consent |
 | `translate_ok` and the other `[selection]` values | Public | The settings file, through the module's `SettingsHandle` | No | Until the user changes them |
 | The question `notice.translate-ask` with the site's name, and `notice.translate-failed` / `notice.keys-not-sent` | Public | Memory only, bus events | No | Not kept |
