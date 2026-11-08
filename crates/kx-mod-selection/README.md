@@ -21,7 +21,9 @@ It provides no service.
 | `Selection` | It gates the chips' events: `ChipsView`, `ChipAct`, `EditAsk` and `EditDone`. |
 | `OpenLink` | It gates the browser link; only this module holds it. |
 
-It holds no `InjectInput`. It also hears the ungated `PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace` and `NoticeAnswered`, and wants presses (`PressesWanted`) while it runs.
+It holds no `InjectInput`. It also hears the ungated `PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace`, `PressesAsk` and `NoticeAnswered`, and wants presses (`PressesWanted`) while it runs. At start it asks for the keyboard's place (`BoardPlaceAsk`), Grab's state (`AssistAsk`) and the aimed line (`TypingModeAsk`), so any start order works.
+
+The strip machine owns every show rule, the minimised and tray ones too (from `BoardPlace`), and each `ChipsView` carries the keycaps' `Legend` from `look`, so the ui reads none of these settings.
 
 ## Settings (`[selection]`)
 
