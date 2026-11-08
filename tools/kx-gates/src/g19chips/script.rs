@@ -1,13 +1,13 @@
 //! The gate's own PowerShell scripts for the terminals: one prints the test line and keeps each pasted line, one keeps
-//! `ping -t` writing to a log; and how many Num Lock taps turn the lock as a step wants it.
+//! the configured ping writing to a log; and how many Num Lock taps turn the lock as a step wants it.
 #![cfg(windows)]
 
 use std::path::Path;
 
+use crate::p10cfg::G19Product;
+
 /// Marks the script as UTF-8, so PowerShell reads it whole.
 const BOM: char = '\u{FEFF}';
-/// The program the ping script runs until its window closes.
-const PING: &str = "ping.exe -t";
 
 /// `s` made safe inside a single-quoted PowerShell string.
 fn quoted(s: &str) -> String {
@@ -35,10 +35,17 @@ pub fn lines(line: &str, ready: &Path, result: &Path) -> String {
     )
 }
 
-/// The script that marks itself ready in `ready`, then pings `host` until closed, each reply shown and kept in `log`.
-pub fn ping(host: &str, ready: &Path, log: &Path) -> String {
+/// The script that marks itself ready in `ready`, then runs `g`'s ping until closed, each reply shown and kept in
+/// `log`.
+pub fn ping(g: &G19Product, ready: &Path, log: &Path) -> String {
+    let command = [g.ping_exe.as_str()]
+        .into_iter()
+        .chain(g.ping_args.iter().map(String::as_str))
+        .chain([g.ping_host.as_str()])
+        .collect::<Vec<_>>()
+        .join(" ");
     format!(
-        "{BOM}{}\r\n{PING} {host} | ForEach-Object {{ $_; [IO.File]::AppendAllText({}, \"$_`n\") }}\r\n",
+        "{BOM}{}\r\n{command} | ForEach-Object {{ $_; [IO.File]::AppendAllText({}, \"$_`n\") }}\r\n",
         mark(ready),
         path(log)
     )
@@ -71,13 +78,11 @@ mod tests {
 
     #[test]
     fn the_ping_script_marks_ready_before_it_pings_and_keeps_each_reply() {
-        let s = ping(
-            "127.0.0.1",
-            Path::new(r"D:\o\r.txt"),
-            Path::new(r"D:\o\p.log"),
-        );
-        assert!(s.contains("ping.exe -t 127.0.0.1"), "{s}");
-        assert!(s.find(r"D:\o\r.txt") < s.find("ping.exe"), "{s}");
+        let g = crate::config::load().expect("loads").g19_product;
+        let s = ping(&g, Path::new(r"D:\o\r.txt"), Path::new(r"D:\o\p.log"));
+        let command = format!("{} {} {}", g.ping_exe, g.ping_args.join(" "), g.ping_host);
+        assert!(s.contains(&command), "{s}");
+        assert!(s.find(r"D:\o\r.txt") < s.find(&g.ping_exe), "{s}");
         assert!(s.contains(r"'D:\o\p.log'"), "{s}");
     }
 

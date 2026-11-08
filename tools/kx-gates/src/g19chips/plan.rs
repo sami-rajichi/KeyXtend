@@ -15,11 +15,12 @@ pub const PLACE: &str = "place";
 /// The groups judged over the cases, in order.
 pub const GROUPS: [&str; 4] = [SEEN, FOCUS, PLACE, CHIPS];
 /// The parts each run step gives, in order.
-pub const STEPS: [&str; 7] = [
+pub const STEPS: [&str; 8] = [
     "edits",
     "caret",
     "hides",
     "ours",
+    "near_bottom",
     "terminals",
     "hung",
     "translate",

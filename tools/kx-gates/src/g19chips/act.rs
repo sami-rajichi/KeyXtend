@@ -3,6 +3,9 @@
 //! on our keyboard's keys.
 #![cfg(windows)]
 
+use std::cell::Cell;
+use std::time::Instant;
+
 use kx_platform_windows::keys::SIM_TAG;
 use spike_core::pt::Pt;
 use windows::Win32::Foundation::POINT;
@@ -34,16 +37,26 @@ fn strokes(vks: &[u16]) -> Vec<INPUT> {
 /// The gate's acts in one run.
 pub struct Acts<'a> {
     ctx: &'a Ctx<'a>,
+    sent: Cell<Instant>,
 }
 
 impl<'a> Acts<'a> {
     /// The acts of a run.
     pub fn new(ctx: &'a Ctx<'a>) -> Self {
-        Self { ctx }
+        Self {
+            ctx,
+            sent: Cell::new(Instant::now()),
+        }
     }
 
-    /// The pause after each act.
+    /// When the last act's input ended, before its pause.
+    pub fn sent(&self) -> Instant {
+        self.sent.get()
+    }
+
+    /// The pause after each act, timed from the input's end.
     fn settle(&self) {
+        self.sent.set(Instant::now());
         sleep_ms(self.ctx.cfg.g19_product.settle_ms);
     }
 

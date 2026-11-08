@@ -64,6 +64,7 @@ const NAME_ONLY: &[&str] = &[
     "g19 core",
     "g19 keyxtend",
     "g19 translate-read",
+    "g19 translate-beside",
     "g20 notepad",
     "g21 win32",
     "g22 qt",
@@ -222,6 +223,11 @@ fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate
         mouse("g19", crate::g19chips::READ),
         Mouse::Free,
         "the owner clicks Yes"
+    );
+    assert_eq!(
+        mouse("g19", crate::g19chips::BESIDE),
+        Mouse::Free,
+        "beside the owner's own keyboard"
     );
     assert_eq!(mouse("g19", crate::g19::CORE), Mouse::Held);
     assert_eq!(

@@ -1,10 +1,18 @@
 //! Translate up to its consent (Ruling S): the first click on the Arabic line's Translate asks with
-//! `notice.translate-ask`, its Not now opens nothing, as no browser starts, and a second click asks again. The real
-//! open sends text to the site, so only the owner's Yes in `translate-read` makes it.
+//! `notice.translate-ask`, its Not now opens nothing, and a second click asks again. "Nothing" is watched through
+//! `quiet_ms`: no browser starts, no browser window appears, the window in front stays, and the question never asks
+//! again on its own. The gate stops before a click if the copy's consent is already given, as the click would open
+//! the site; the real open is only the owner's Yes in `translate-read`.
 #![cfg(windows)]
 
+use std::collections::HashSet;
+use std::time::Instant;
+
+use kx_mod_selection::{ID, SPEC, SelSettings};
 use kx_module_api::ports::SelChip;
 use kx_module_api::{NoticeAsk, keys};
+use kx_platform_windows::window::foreground;
+use kx_settings::peek_section;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::UIA_ButtonControlTypeId;
@@ -15,27 +23,93 @@ use crate::ftl::{self, Piece};
 use crate::g19chips::docs::Line;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::Lines;
-use crate::g19chips::procs;
+use crate::g19chips::{addr, procs};
 use crate::g23::live::{self, poll_read};
 use crate::g23::notice::{banner, click_in, double_click_ms, fits, names_kept, past_double};
-use crate::win::sleep_ms;
+use crate::product;
+use crate::win::{self, ms_since, sleep_ms};
 
 /// The rounds: the first click asks, and so does the next after Not now.
 pub const ROUNDS: usize = 2;
 /// The acts the step takes: each round's drag and Translate.
 pub const ACTS: usize = 2 * ROUNDS;
-/// The waits with no browser started: one per Not now.
+/// The waits with nothing opened: one per Not now.
 pub const QUIET: usize = ROUNDS;
 
-/// The banner's window once it asks Translate's question within `strip_wait_ms`.
-fn asked(gate: &Gate, titles: &[String], shapes: &[Vec<Piece>]) -> Result<Option<HWND>, String> {
-    let found = || asked_now(gate, titles, shapes);
-    poll_read(gate.g().strip_wait_ms, gate.ctx.cfg.timing.poll_ms, found)
+/// The question's titles and the shapes of its text in every shipped language.
+struct Ask {
+    titles: Vec<String>,
+    shapes: Vec<Vec<Piece>>,
+}
+
+/// What the quiet wait after Not now saw, poll by poll.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct Calm {
+    /// Browsers started anew, at the most seen in one poll.
+    launched: usize,
+    /// Browser windows that were not there before the click.
+    windows: usize,
+    /// Another window came in front.
+    front_moved: bool,
+    /// The question showed again with no click.
+    asked: bool,
+}
+
+impl Calm {
+    /// One poll's sight, kept with the polls before it.
+    pub fn note(&mut self, launched: usize, windows: usize, front_same: bool, asked: bool) {
+        self.launched = self.launched.max(launched);
+        self.windows = self.windows.max(windows);
+        self.front_moved |= !front_same;
+        self.asked |= asked;
+    }
+
+    /// True when nothing opened and the question asked once.
+    pub fn ok(&self) -> bool {
+        self.launched == 0 && self.windows == 0 && !self.front_moved && !self.asked
+    }
+
+    /// The result line's part.
+    fn json(self) -> Value {
+        json!({
+            "browsers_started": self.launched, "browser_windows": self.windows, "front_moved": self.front_moved,
+            "asked_again": self.asked, "ok": self.ok(),
+        })
+    }
+}
+
+/// Refuses a click on Translate while the consent is given, as it would open the site at once.
+pub fn may_click(translate_ok: bool) -> Result<(), String> {
+    if translate_ok {
+        return Err(
+            "Translate's consent is given on this copy, so the gate stops before a click opens the site"
+                .into(),
+        );
+    }
+    Ok(())
+}
+
+/// The running copy's consent, as its settings file holds it.
+fn consent_now() -> Result<bool, String> {
+    let file = product::running_file()?;
+    let s: SelSettings = peek_section(file.as_ref(), ID, &SPEC)
+        .map_err(|e| format!("the selection settings: {e}"))?;
+    Ok(s.translate_ok)
+}
+
+/// The banner's window while it asks Translate's question now.
+fn asked_now(gate: &Gate, ask: &Ask) -> Result<Option<HWND>, String> {
+    let Some(w) = banner(&ask.titles) else {
+        return Ok(None);
+    };
+    let names = names_kept(&gate.reader, w)?.unwrap_or_default();
+    let fit = names.iter().any(|n| ask.shapes.iter().any(|s| fits(s, n)));
+    Ok(fit.then_some(w))
 }
 
 /// Answers the question on banner `w` Not now with a real click once past the double-click time, and waits up to
 /// `gone_wait_ms` for it to go.
-fn not_now(gate: &Gate, w: HWND, titles: &[String], shapes: &[Vec<Piece>]) -> Result<bool, String> {
+fn not_now(gate: &Gate, w: HWND, ask: &Ask) -> Result<bool, String> {
     let poll = gate.ctx.cfg.timing.poll_ms;
     sleep_ms(past_double(double_click_ms(), poll));
     let laters = ftl::every(NoticeAsk::YES_LATER.no)?;
@@ -44,27 +118,42 @@ fn not_now(gate: &Gate, w: HWND, titles: &[String], shapes: &[Vec<Piece>]) -> Re
         .find(|k| laters.contains(&k.name) && has_area(&k.rect))
         .ok_or("Translate's question shows no Not now button")?;
     click_in(w, &later.rect, "Not now")?;
-    let gone = || Ok(asked_now(gate, titles, shapes)?.is_none().then_some(()));
+    let gone = || Ok(asked_now(gate, ask)?.is_none().then_some(()));
     Ok(poll_read(gate.g().gone_wait_ms, poll, gone)?.is_some())
 }
 
-/// The banner's window while it asks Translate's question now.
-fn asked_now(
+/// Watches through `quiet_ms` after Not now: browsers started since `running`, browser windows not in `windows`,
+/// the window in front against `front`, and the question showing again.
+fn calm(
     gate: &Gate,
-    titles: &[String],
-    shapes: &[Vec<Piece>],
-) -> Result<Option<HWND>, String> {
-    let Some(w) = banner(titles) else {
-        return Ok(None);
-    };
-    let names = names_kept(&gate.reader, w)?.unwrap_or_default();
-    Ok(names
-        .iter()
-        .any(|n| shapes.iter().any(|s| fits(s, n)))
-        .then_some(w))
+    running: &[procs::Proc],
+    windows: &HashSet<isize>,
+    front: HWND,
+    ask: &Ask,
+) -> Result<Calm, String> {
+    let (g, poll) = (gate.g(), gate.ctx.cfg.timing.poll_ms);
+    let (mut calm, from) = (Calm::default(), Instant::now());
+    loop {
+        let launched = procs::launches(running, &procs::now(), &g.browsers).len();
+        let now: Vec<isize> = addr::windows(&g.browsers)
+            .into_iter()
+            .map(win::key)
+            .collect();
+        let asked = asked_now(gate, ask)?.is_some();
+        calm.note(
+            launched,
+            procs::fresh(windows, &now),
+            foreground() == front,
+            asked,
+        );
+        if ms_since(from) >= g.quiet_ms {
+            return Ok(calm);
+        }
+        sleep_ms(poll);
+    }
 }
 
-/// One round: the Arabic line dragged, Translate clicked, the question answered Not now, and no browser started.
+/// One round: the Arabic line dragged, Translate clicked, the question answered Not now, and nothing opened.
 fn round(
     gate: &Gate,
     app: &Opened,
@@ -72,10 +161,10 @@ fn round(
     at: usize,
     cases: &mut Vec<Value>,
 ) -> Result<Value, String> {
-    let (titles, shapes) = (
-        ftl::every(&gate.ctx.cfg.g23.notice_title)?,
-        ftl::shapes(keys::TRANSLATE_ASK)?,
-    );
+    let ask = Ask {
+        titles: ftl::every(&gate.ctx.cfg.g23.notice_title)?,
+        shapes: ftl::shapes(keys::TRANSLATE_ASK)?,
+    };
     let before = Gate::before();
     gate.acts
         .drag(app, lines.start(Line::Arabic), lines.end(Line::Arabic))?;
@@ -84,15 +173,22 @@ fn round(
     let Some(s) = shown else {
         return Ok(json!({ "ok": false, "error": "no strip" }));
     };
-    let running = procs::now();
-    let (focus, _) = gate.tap(&s, SelChip::Translate)?;
-    let ask = asked(gate, &titles, &shapes)?;
-    let later = ask.map_or(Ok(false), |w| not_now(gate, w, &titles, &shapes))?;
-    sleep_ms(gate.g().quiet_ms);
-    let started = procs::launches(&running, &procs::now(), &gate.g().browsers).len();
-    let ok = focus && ask.is_some() && later && started == 0;
+    may_click(consent_now()?)?;
+    let browsers = &gate.g().browsers;
+    let (running, windows): (_, HashSet<isize>) = (
+        procs::now(),
+        addr::windows(browsers).into_iter().map(win::key).collect(),
+    );
+    let (focus, _) = gate.tap(app, &s, SelChip::Translate)?;
+    let front = foreground();
+    let asked = poll_read(gate.g().strip_wait_ms, gate.ctx.cfg.timing.poll_ms, || {
+        asked_now(gate, &ask)
+    })?;
+    let later = asked.map_or(Ok(false), |w| not_now(gate, w, &ask))?;
+    let calm = calm(gate, &running, &windows, front, &ask)?;
+    let ok = focus && asked.is_some() && later && calm.ok();
     Ok(
-        json!({ "asked": ask.is_some(), "not_now": later, "browsers_started": started, "focus": focus, "ok": ok }),
+        json!({ "asked": asked.is_some(), "not_now": later, "calm": calm.json(), "focus": focus, "ok": ok }),
     )
 }
 
@@ -107,6 +203,39 @@ pub fn run(
     for at in 0..ROUNDS {
         rounds.push(round(gate, app, lines, at, cases)?);
     }
-    let ok = !gate.sel.translate_ok && rounds.iter().all(|r| r["ok"] == true);
-    Ok(json!({ "rounds": rounds, "consent_at_start": gate.sel.translate_ok, "ok": ok }))
+    let ok = rounds.iter().all(|r| r["ok"] == true);
+    Ok(json!({ "rounds": rounds, "ok": ok }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_click_is_refused_while_the_consent_is_given() {
+        assert_eq!(may_click(false), Ok(()));
+        let e = may_click(true).expect_err("given");
+        assert!(e.contains("stops"), "{e}");
+    }
+
+    #[test]
+    fn not_now_passes_only_when_nothing_opened_in_any_poll_and_the_question_asked_once() {
+        let mut calm = Calm::default();
+        calm.note(0, 0, true, false);
+        assert!(calm.ok());
+        for (launched, windows, same, asked) in [
+            (1, 0, true, false),
+            (0, 1, true, false),
+            (0, 0, false, false),
+            (0, 0, true, true),
+        ] {
+            let mut c = calm;
+            c.note(launched, windows, same, asked);
+            c.note(0, 0, true, false);
+            assert!(
+                !c.ok(),
+                "{launched} {windows} {same} {asked}: a later quiet poll never hides it"
+            );
+        }
+    }
 }

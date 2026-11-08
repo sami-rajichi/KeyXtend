@@ -6,6 +6,7 @@
 mod act;
 mod addr;
 mod caret;
+mod clear;
 mod consent;
 mod copy;
 mod docs;
@@ -21,15 +22,15 @@ mod plan;
 mod procs;
 mod read;
 mod script;
+mod select;
+mod spots;
 mod strip;
 mod term;
 mod terms;
 
 pub use link::{site_key, text_of};
-pub use read::READ;
+pub use read::{BESIDE, READ};
 
-use kx_platform::ui::Screens;
-use kx_platform_windows::screen::WinScreens;
 use serde_json::{Map, Value, json};
 
 use crate::apps::{AppKind, Ctx, Opened};
@@ -43,20 +44,21 @@ use crate::out::say;
 use crate::product::NAME;
 use crate::{clipkeep, probe, winclip};
 
-/// The cases that must show no strip for `quiet_ms`.
-pub const QUIET: usize = page::QUIET + hides::QUIET + hung::QUIET + consent::QUIET;
+/// The cases that must show no strip for `quiet_ms`; the hung app's waits fall within its hang.
+pub const QUIET: usize = page::QUIET + hides::QUIET + consent::QUIET;
 /// The gate's clicks, keys and drags at the least, each followed by `settle_ms`.
 pub const ACTS: usize = notepad::ACTS
     + page::ACTS
     + caret::ACTS
     + ours::ACTS
+    + spots::ACTS
     + consent::ACTS
     + terms::ACTS
     + hung::ACTS
     + hides::ACTS;
 
-/// The notes: each case's box kind, the Arabic line's boxes, and the screens.
-fn notes(cases: &[Value]) -> Value {
+/// The notes: each case's box kind, the Arabic line's boxes, and the strip on a second screen.
+fn notes(cases: &[Value], second: &Value) -> Value {
     let kinds: Map<String, Value> = (cases.iter())
         .filter_map(|c| Some((c["case"].as_str()?.to_string(), c["kind"].clone())))
         .collect();
@@ -64,8 +66,12 @@ fn notes(cases: &[Value]) -> Value {
         .iter()
         .find(|c| c["case"] == "arabic_0")
         .map(|c| c["placed"].clone());
-    let screens = WinScreens.work_areas().len();
-    json!({ "kinds": kinds, "arabic_line": arabic, "screens": screens, "ok": true })
+    json!({ "kinds": kinds, "arabic_line": arabic, "second_screen": second, "ok": true })
+}
+
+/// True when the run passed, its data folder went, and nothing it opened or wrote was left behind.
+fn passed(run_ok: bool, removed: bool, left: &[String]) -> bool {
+    run_ok && removed && left.is_empty()
 }
 
 /// Each step on the gate's Notepad document and beside it, the tray last; `cases` gathers every selection case.
@@ -86,6 +92,9 @@ fn steps(
     let mut v = json!({ "edits": { "notepad": notepad, "page": page, "ok": edits_ok } });
     v["caret"] = on(cases, &|_| caret::run(gate, app, &lines));
     v["ours"] = on(cases, &|c| ours::run(gate, app, &lines, c));
+    v["near_bottom"] = on(cases, &|c| spots::near_bottom(gate, app, &lines, c));
+    let second = probe::front(gate.ctx, app).map(|()| spots::second_screen(gate, app, &lines));
+    v["second"] = second.unwrap_or_else(|e| json!({ "error": e }));
     v["translate"] = on(cases, &|c| consent::run(gate, app, &lines, c));
     v["terminals"] = part(terms::run(gate, cases, left));
     let hung = probe::front(gate.ctx, app).and_then(|()| hung::run(gate, app, &lines, cases, left));
@@ -111,7 +120,8 @@ fn drive(ctx: &Ctx, pid: u32, left: &mut Vec<String>) -> Result<Value, String> {
     left.extend(later.into_iter().chain(notes_left));
     v["cases"] = plan::groups(&cases);
     v["each"] = json!(cases);
-    v[plan::NOTES] = notes(&cases);
+    let second = v["second"].take();
+    v[plan::NOTES] = notes(&cases, &second);
     v["ok"] = json!(plan::passed(&v));
     Ok(v)
 }
@@ -126,14 +136,18 @@ fn is_test(ctx: &Ctx, text: &str) -> bool {
         || t.contains(&g.ping_host)
 }
 
-/// Runs `g19 keyxtend` or `g19 translate-read`: refused under uiAccess or while a product copy runs; the data folder
-/// and the run's copies in Windows' clipboard history go at the end.
+/// Runs `g19 keyxtend`, `translate-read` or `translate-beside`: the first two are refused under uiAccess or while a
+/// product copy runs, and their data folder and the run's copies in Windows' clipboard history go at the end.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if name == READ {
-        return read::run(ctx);
-    }
-    if name != NAME {
-        return Err(format!("G19 runs on {NAME} or {READ}, not {name}"));
+    match name {
+        READ => return read::run(ctx),
+        BESIDE => return read::beside(ctx),
+        NAME => {}
+        _ => {
+            return Err(format!(
+                "G19 runs on {NAME}, {READ} or {BESIDE}, not {name}"
+            ));
+        }
     }
     let fresh = Fresh::open(ctx)?;
     let (program, since, mut left) = (
@@ -147,7 +161,7 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let removed = fresh.close(ended.as_ref());
     let forgot = probe::forget_copies(ctx, since, &|t| is_test(ctx, t));
     let run = copy_line(got, ended.as_ref());
-    let pass = run["ok"] == true && removed.is_ok();
+    let pass = passed(run["ok"] == true, removed.is_ok(), &left);
     say!("G19 {NAME}: {}", run["ok"]);
     Ok(json!({
         "gate": "G19", "name": NAME, "program": program, "run": run, "clean_up": left, "forgot": forgot,
@@ -162,20 +176,32 @@ mod tests {
     #[test]
     fn the_run_length_counts_every_quiet_case() {
         assert_eq!(
-            QUIET, 7,
-            "the password and unknown boxes, the aimed panel, the tray, the hung app, two Not nows"
+            QUIET, 6,
+            "the password and unknown boxes, the aimed panel, the tray, two Not nows; the hung app's is in its hang"
         );
     }
 
     #[test]
-    fn the_notes_name_each_cases_box_kind_and_the_arabic_lines_boxes() {
+    fn the_notes_name_each_cases_box_kind_the_arabic_lines_boxes_and_the_second_screen() {
         let cases = [
             json!({ "case": "notepad_keys", "kind": "RichEditD2DPT / type 50030" }),
             json!({ "case": "arabic_0", "kind": "x", "placed": { "boxes": 2, "one_line": true } }),
         ];
-        let n = notes(&cases);
+        let n = notes(&cases, &json!({ "screens": 2, "placed": { "ok": true } }));
         assert_eq!(n["kinds"]["notepad_keys"], "RichEditD2DPT / type 50030");
         assert_eq!(n["arabic_line"]["one_line"], true);
-        assert!(n["screens"].as_u64().is_some_and(|s| s >= 1), "{n}");
+        assert_eq!(n["second_screen"]["placed"]["ok"], true);
+    }
+
+    #[test]
+    fn anything_left_behind_fails_the_run() {
+        assert!(passed(true, true, &[]));
+        assert!(!passed(
+            true,
+            true,
+            &["left open: [Notepad] of notepad.exe".into()]
+        ));
+        assert!(!passed(true, false, &[]), "the data folder stayed");
+        assert!(!passed(false, true, &[]));
     }
 }

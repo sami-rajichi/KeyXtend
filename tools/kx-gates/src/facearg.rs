@@ -36,7 +36,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g8predict::PREDICT,
             g8clip::CLIP,
         ],
-        "g19" => &[g19::CORE, g19chips::READ],
+        "g19" => &[g19::CORE, g19chips::READ, g19chips::BESIDE],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
     }
@@ -118,6 +118,7 @@ mod tests {
         }
         assert!(check("g7", g19::CORE).is_err());
         assert!(check("g7", g19chips::READ).is_err());
+        assert!(check("g7", g19chips::BESIDE).is_err());
         for name in [
             g8::WEAK,
             g8lang::ARABIC,

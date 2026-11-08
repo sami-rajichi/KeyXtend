@@ -73,6 +73,22 @@ fn the_long_arabic_line_is_long_enough_and_travels_whole() {
 }
 
 #[test]
+fn the_arabic_block_is_unicodes_and_holds_the_shipped_line() {
+    assert_eq!(
+        (*ARABIC.start(), *ARABIC.end()),
+        ('\u{0600}', '\u{06FF}'),
+        "Unicode's Arabic block"
+    );
+    let g = load().expect("loads").g19_product;
+    let letters = g.arabic.chars().filter(|c| c.is_alphabetic());
+    assert!(letters.clone().count() > 0);
+    for c in letters {
+        assert!(ARABIC.contains(&c), "{c}");
+    }
+    assert!(!ARABIC.contains(&'a') && ARABIC.contains(&'ض'));
+}
+
+#[test]
 fn an_empty_or_shared_test_line_is_refused() {
     refused(&[
         (|g| g.copy_line.clear(), "g19_product.copy_line"),
@@ -167,9 +183,52 @@ fn a_wait_or_slack_past_its_range_is_refused() {
         (|g| g.hang_ms = u64::MAX, "g19_product.hang_ms"),
         (|g| g.hang_ms = 1, "g19_product.hang_ms"),
         (|g| g.hang_lead_ms = 0, "g19_product.hang_lead_ms"),
-        (|g| g.hang_lead_ms = g.hang_ms, "g19_product.hang_lead_ms"),
+        (|g| g.hang_lead_ms = g.hang_ms, "g19_product.hang_ms"),
         (|g| g.place_slack_px = -1, "g19_product.place_slack_px"),
         (|g| g.caret_slack_ms = 0, "g19_product.caret_slack_ms"),
+        (|g| g.hung_wait_ms = 0, "g19_product.hung_wait_ms"),
+        (|g| g.hung_quiet_ms = 1, "g19_product.hung_quiet_ms"),
+        (|g| g.bar_depth = 0, "g19_product.bar_depth"),
+        (|g| g.box_size = 0, "g19_product.box_size"),
+    ]);
+}
+
+#[test]
+fn the_hung_cases_must_all_fall_within_the_hang() {
+    let c = load().expect("loads");
+    let g = &c.g19_product;
+    let acts = g.hang_lead_ms + g.hung_quiet_ms + 2 * g.settle_ms + g.hung_wait_ms;
+    assert!(g.hang_ms > acts, "the shipped hang holds every act");
+    refused(&[
+        (
+            |g| g.hang_ms = g.hang_lead_ms + g.hung_quiet_ms + 2 * g.settle_ms + g.hung_wait_ms,
+            "g19_product.hang_ms",
+        ),
+        (|g| g.hung_wait_ms += g.hang_ms, "g19_product.hang_ms"),
+    ]);
+    let cap = kx_target_window::config::load()
+        .expect("target config loads")
+        .hang_max_ms;
+    let mut past = c.clone();
+    past.g19_product.hang_ms = cap + 1;
+    let e = check(&past).expect_err("past the cap");
+    assert!(e.contains("hang_max_ms"), "{e}");
+}
+
+#[test]
+fn a_ping_that_could_run_another_program_is_refused() {
+    refused(&[
+        (|g| g.ping_exe.clear(), "g19_product.ping_exe"),
+        (
+            |g| g.ping_exe = r"C:\x\ping.exe".into(),
+            "g19_product.ping_exe",
+        ),
+        (|g| g.ping_args.clear(), "g19_product.ping_args"),
+        (
+            |g| g.ping_args = vec!["-t;calc".into()],
+            "g19_product.ping_args",
+        ),
+        (|g| g.corner = "corner".into(), "g19_product.corner"),
     ]);
 }
 
@@ -183,6 +242,11 @@ fn todays_g19_fits_the_mouse_guard_and_its_waits_count() {
         g19_ms(&s) - g19_ms(&c)
     };
     assert_eq!(more(|s| s.g19_product.quiet_ms += 1), times(QUIET, 1));
+    assert_eq!(
+        more(|s| s.g19_product.hung_quiet_ms += 1),
+        0,
+        "within the hang"
+    );
     assert_eq!(more(|s| s.g19_product.hang_ms += 1), 1);
     assert_eq!(more(|s| s.g19_product.ping_ms += 1), 1);
     assert_eq!(more(|s| s.g19_product.ready_ms += 1), 1);

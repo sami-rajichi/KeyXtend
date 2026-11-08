@@ -117,17 +117,48 @@ pub fn restore(saved: &Saved, wait: ClipWait) -> Result<(), String> {
     put().map_err(|e| e.to_string())
 }
 
-/// Runs `f` with the owner's clipboard saved first and put back after; a failed put-back is an error too.
-pub fn keep<T>(cfg: &GatesConfig, f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    let wait = wait(&cfg.timing);
-    let saved = save(wait, cfg.probes.keep_max_bytes)
-        .map_err(|e| format!("could not save the clipboard first: {e}"))?;
+/// Puts `saved` back with `put` when dropped before `done`, as when the test panics.
+struct Back<S, P: Fn(&S) -> Result<(), String>> {
+    saved: S,
+    put: P,
+    done: bool,
+}
+
+impl<S, P: Fn(&S) -> Result<(), String>> Drop for Back<S, P> {
+    fn drop(&mut self) {
+        if !self.done {
+            let _ = (self.put)(&self.saved);
+        }
+    }
+}
+
+/// Runs `f`, then puts `saved` back with `put`, even when `f` panics; a failed put-back is an error too.
+fn kept<S, T>(
+    saved: S,
+    put: impl Fn(&S) -> Result<(), String>,
+    f: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let mut back = Back {
+        saved,
+        put,
+        done: false,
+    };
     let got = f();
-    match (got, restore(&saved, wait)) {
+    back.done = true;
+    match (got, (back.put)(&back.saved)) {
         (got, Ok(())) => got,
         (Ok(_), Err(r)) => Err(format!("the clipboard was not put back: {r}")),
         (Err(e), Err(r)) => Err(format!("{e}; the clipboard was not put back: {r}")),
     }
+}
+
+/// Runs `f` with the owner's clipboard saved first and put back after, even on a panic; a failed put-back is an
+/// error too.
+pub fn keep<T>(cfg: &GatesConfig, f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    let wait = wait(&cfg.timing);
+    let saved = save(wait, cfg.probes.keep_max_bytes)
+        .map_err(|e| format!("could not save the clipboard first: {e}"))?;
+    kept(saved, |s| restore(s, wait), f)
 }
 
 #[cfg(test)]
@@ -161,6 +192,32 @@ mod tests {
             !raw_ok(0x0200) && !raw_ok(0x0300),
             "private and GDI object ranges"
         );
+    }
+
+    #[test]
+    fn the_clipboard_goes_back_once_after_the_test_even_when_it_panics() {
+        use std::cell::Cell;
+        use std::panic::{AssertUnwindSafe, catch_unwind};
+        let puts = Cell::new(0);
+        let put = |(): &()| {
+            puts.set(puts.get() + 1);
+            Ok(())
+        };
+        assert_eq!(kept((), put, || Ok(7)), Ok(7));
+        assert_eq!(puts.get(), 1, "once after a run");
+        let panicked = catch_unwind(AssertUnwindSafe(|| {
+            kept((), put, || -> Result<(), String> { panic!("a test broke") })
+        }));
+        assert!(panicked.is_err());
+        assert_eq!(puts.get(), 2, "once after a panic");
+        let failed = kept((), |(): &()| Err("busy".into()), || Ok(1));
+        assert!(failed.expect_err("not put back").contains("busy"));
+        let both = kept(
+            (),
+            |(): &()| Err("busy".into()),
+            || -> Result<(), String> { Err("no strip".into()) },
+        );
+        assert!(both.expect_err("both").starts_with("no strip"));
     }
 
     #[test]

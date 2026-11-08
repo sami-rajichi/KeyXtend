@@ -2,6 +2,8 @@
 //! language, its keycaps by UI Automation id, left to right, and a real click on one once it shows on top.
 #![cfg(windows)]
 
+use std::time::Instant;
+
 use kx_module_api::ports::SelChip;
 use windows::Win32::Foundation::{HWND, RECT};
 
@@ -23,9 +25,12 @@ pub fn keycaps(reads: &[KeyRead], g: &G19Product) -> Vec<(SelChip, RECT)> {
     caps
 }
 
-/// `chips` by their ids in `g`, for the result line.
+/// `chips` by their own ids in `g`, as the lists of each box kind name them.
 pub fn ids(chips: &[SelChip], g: &G19Product) -> Vec<String> {
-    chips.iter().filter_map(|&c| g.chip_id(c)).collect()
+    chips
+        .iter()
+        .filter_map(|&c| g.chip_name(c).map(String::from))
+        .collect()
 }
 
 /// A strip on screen: its window, its box and its keycaps.
@@ -88,19 +93,21 @@ impl<'a> Strip<'a> {
         Ok((!caps.is_empty()).then_some(Shown { hwnd, rect, caps }))
     }
 
-    /// The strip once it shows within `wait_ms`, read again after `settle_ms` so its pop-in has ended.
-    pub fn within(&self, wait_ms: u64) -> Result<Option<Shown>, String> {
+    /// The strip once it shows within `wait_ms`, read again after `settle_ms` so its pop-in has ended, and when it
+    /// was first seen.
+    pub fn within_at(&self, wait_ms: u64) -> Result<Option<(Shown, Instant)>, String> {
         let poll = self.ctx.cfg.timing.poll_ms;
         if poll_read(wait_ms, poll, || self.now())?.is_none() {
             return Ok(None);
         }
+        let seen = Instant::now();
         sleep_ms(self.g().settle_ms);
-        self.now()
+        Ok(self.now()?.map(|s| (s, seen)))
     }
 
     /// The strip once it shows within `strip_wait_ms`.
     pub fn shows(&self) -> Result<Option<Shown>, String> {
-        self.within(self.g().strip_wait_ms)
+        Ok(self.within_at(self.g().strip_wait_ms)?.map(|(s, _)| s))
     }
 
     /// True once no strip `like` shows within `gone_wait_ms`.
@@ -110,10 +117,10 @@ impl<'a> Strip<'a> {
         Ok(poll_read(self.g().gone_wait_ms, poll, gone)?.is_some())
     }
 
-    /// True when no strip showed for `quiet_ms`.
-    pub fn quiet(&self) -> Result<bool, String> {
+    /// True when no strip showed for `ms`.
+    pub fn quiet(&self, ms: u64) -> Result<bool, String> {
         let poll = self.ctx.cfg.timing.poll_ms;
-        Ok(poll_read(self.g().quiet_ms, poll, || self.now())?.is_none())
+        Ok(poll_read(ms, poll, || self.now())?.is_none())
     }
 
     /// The chips of each strip seen within `wait_ms`, in order, each change once.
@@ -164,6 +171,16 @@ mod tests {
         ];
         let chips: Vec<SelChip> = keycaps(&reads, &g).into_iter().map(|(c, _)| c).collect();
         assert_eq!(chips, [SelChip::Copy, SelChip::Paste, SelChip::Translate]);
-        assert_eq!(ids(&chips, &g), ["sel.copy", "sel.paste", "sel.translate"]);
+        assert_eq!(ids(&chips, &g), ["copy", "paste", "translate"]);
+    }
+
+    #[test]
+    fn shown_keycaps_compare_with_the_lists_each_box_kind_names() {
+        use SelChip::{Copy, Paste, Translate};
+        let g = load().expect("loads").g19_product;
+        assert_eq!(ids(&[Copy, Translate], &g), g.page_chips);
+        assert_eq!(ids(&SelChip::ALL, &g), g.editable_chips);
+        assert_eq!(ids(&[Copy, Paste, Translate], &g), g.terminal_chips);
+        assert_eq!(ids(&[Paste], &g), g.caret_chips);
     }
 }

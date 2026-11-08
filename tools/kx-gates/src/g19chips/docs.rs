@@ -90,12 +90,13 @@ pub fn page(g: &G19Product) -> String {
         format!("aria-label=\"{}\"", html_text(n))
     });
     format!(
-        "<div style=\"{}\"><p>{}</p>\n<p><input {} value=\"{}\" size=\"60\"></p>\n<p><input type=\"password\" {} \
+        "<div style=\"{}\"><p>{}</p>\n<p><input {} value=\"{}\" size=\"{}\"></p>\n<p><input type=\"password\" {} \
          value=\"{}\"></p>\n<div role=\"{}\" {} tabindex=\"0\" contenteditable=\"true\">{}</div></div>\n{}",
         h(&g.css),
         h(&g.page_text),
         name(&g.box_name),
         h(&g.box_text),
+        g.box_size,
         name(&g.pass_name),
         h(&g.pass_value),
         h(&g.unknown_role),
@@ -156,6 +157,7 @@ mod tests {
         }
         assert!(body.contains("type=\"password\"") && body.contains(&g.page_text));
         assert!(body.contains(&format!("role=\"{}\"", g.unknown_role)));
+        assert!(body.contains(&format!("size=\"{}\"", g.box_size)));
         assert!(body.contains(&g.copy_code) && body.contains(&g.shift_mark));
         let title = format!(
             "KeyXtend probe 1{}3{}0 - Google Chrome",

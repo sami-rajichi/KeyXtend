@@ -55,8 +55,14 @@ pub struct G19Product {
     pub shift_mark: String,
     /// The terminals' line.
     pub term_line: String,
-    /// The host `ping -t` pings.
+    /// The host the ping pings.
     pub ping_host: String,
+    /// The ping's program.
+    pub ping_exe: String,
+    /// The ping's switches, before the host.
+    pub ping_args: Vec<String>,
+    /// The page's text box width, in characters.
+    pub box_size: u16,
     /// The strip window title's text key.
     pub strip_title: String,
     /// The keycaps' UI Automation group.
@@ -73,11 +79,17 @@ pub struct G19Product {
     pub caret_chips: Vec<String>,
     /// The keyboard's close-to-tray button, by UI Automation id.
     pub tray: String,
+    /// The keyboard's resize corner, by UI Automation id.
+    pub corner: String,
+    /// How deep the address bar is looked for in the browser's window, outside its page.
+    pub bar_depth: u8,
+    /// How far above the keyboard or the screen's bottom the near-bottom line sits, in px.
+    pub near_px: u16,
     /// Browser programs.
     pub browsers: Vec<String>,
     /// Shift+Home.
     pub select_home: Vec<u16>,
-    /// One caret step left.
+    /// One caret step left, while our panel is aimed.
     pub caret_left: Vec<u16>,
     /// Num Lock.
     pub numlock: Vec<u16>,
@@ -97,6 +109,10 @@ pub struct G19Product {
     pub hang_ms: u64,
     /// How long after the hang message the gate acts.
     pub hang_lead_ms: u64,
+    /// How long the hung app must show no strip.
+    pub hung_quiet_ms: u64,
+    /// Longest wait for the strip beside the hung app.
+    pub hung_wait_ms: u64,
     /// How long the ping must keep writing.
     pub ping_ms: u64,
     /// The caret Paste's slack against `caret_s`.

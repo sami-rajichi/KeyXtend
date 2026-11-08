@@ -57,8 +57,23 @@ impl Lines {
         })
     }
 
+    /// The same lines once their window moved by `dx`, `dy`.
+    pub fn shifted(&self, dx: i32, dy: i32) -> Self {
+        let rows = (self.rows.iter())
+            .map(|r| Rect {
+                x: r.x.saturating_add(dx),
+                y: r.y.saturating_add(dy),
+                ..*r
+            })
+            .collect();
+        Self {
+            rows,
+            inset: self.inset,
+        }
+    }
+
     /// The box of `line`; the empty caret line sits one line under the Arabic one.
-    fn of(&self, line: Line) -> Rect {
+    pub fn of(&self, line: Line) -> Rect {
         let at = |l: Line| self.rows.get(l.at()).copied().unwrap_or_default();
         match line {
             Line::Caret => {
@@ -114,10 +129,11 @@ pub fn by_keys(
     gate.case(name, &before, &gate.g().editable_chips)
 }
 
-/// Clicks `chip` on `shown`: the window in front stays, `done` holds for the clipboard's number before the click, and
-/// the strip goes once its tick has shown.
+/// Clicks `chip` on `shown` while `app`'s tab is in front: the window in front stays, `done` holds for the clipboard's
+/// number before the click, and the strip goes once its tick has shown.
 pub fn act(
     gate: &Gate,
+    app: &Opened,
     shown: Option<Shown>,
     chip: SelChip,
     done: impl FnOnce(u32) -> bool,
@@ -125,7 +141,7 @@ pub fn act(
     let Some(s) = shown else {
         return Ok(json!({ "ok": false, "error": "no strip" }));
     };
-    let (focus, seq) = gate.tap(&s, chip)?;
+    let (focus, seq) = gate.tap(app, &s, chip)?;
     let done = done(seq);
     let went = gate.strip.goes(|_| true)?;
     Ok(json!({ "focus": focus, "done": done, "went": went, "ok": focus && done && went }))
@@ -141,7 +157,7 @@ pub fn edits(
     let g = gate.g();
     let (case, shown) = by_keys(gate, app, lines, Line::Copy, "notepad_keys")?;
     cases.push(case);
-    let copy = act(gate, shown, SelChip::Copy, |seq| {
+    let copy = act(gate, app, shown, SelChip::Copy, |seq| {
         gate.clip_holds(seq, &g.copy_line)
     })?;
     let before = Gate::before();
@@ -149,14 +165,14 @@ pub fn edits(
         .drag(app, lines.start(Line::Cut), lines.end(Line::Cut))?;
     let (case, shown) = gate.case("notepad_drag", &before, &g.editable_chips)?;
     cases.push(case);
-    let cut = act(gate, shown, SelChip::Cut, |seq| {
+    let cut = act(gate, app, shown, SelChip::Cut, |seq| {
         gate.clip_holds(seq, &g.cut_line)
     })?;
     let (case, shown) = by_keys(gate, app, lines, Line::Paste, "notepad_paste")?;
     cases.push(case);
     let shift = board::latch_id(Latch::Shift)?;
     gate.acts.key(&shift)?;
-    let paste = act(gate, shown, SelChip::Paste, |_| true)?;
+    let paste = act(gate, app, shown, SelChip::Paste, |_| true)?;
     let latched = ModeKey::by_id(shift.clone())?.on()?;
     if latched {
         gate.acts.key(&shift)?;
@@ -199,5 +215,8 @@ mod tests {
         };
         assert_eq!(lines.end(Line::Copy), POINT { x: 94, y: 20 });
         assert_eq!(lines.start(Line::Cut), POINT { x: 10, y: 50 });
+        let moved = lines.shifted(5, -7);
+        assert_eq!(moved.end(Line::Copy), POINT { x: 99, y: 13 });
+        assert_eq!(moved.of(Line::Cut), r(15, 33, 80, 20));
     }
 }

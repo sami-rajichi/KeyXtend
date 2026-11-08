@@ -163,7 +163,7 @@ pub fn program(hwnd: HWND) -> Result<String, String> {
 }
 
 #[allow(unsafe_code, reason = "`info` is a local with `cbSize` set.")]
-fn thread_info(thread: u32) -> GUITHREADINFO {
+pub(crate) fn thread_info(thread: u32) -> GUITHREADINFO {
     let mut info = GUITHREADINFO {
         cbSize: size32::<GUITHREADINFO>(),
         ..Default::default()

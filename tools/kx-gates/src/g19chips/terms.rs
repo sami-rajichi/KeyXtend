@@ -15,7 +15,7 @@ use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::{act, rows};
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
-use crate::g19chips::{place, script};
+use crate::g19chips::{place, procs, script};
 use crate::win::{self, sleep_ms};
 
 /// The acts the step takes at the least: in each terminal a drag and Copy, then a drag, Paste and Enter with Num Lock
@@ -75,7 +75,7 @@ fn paste(
         gate.acts.keys(app, &g.numlock)?;
     }
     let (_, shown) = select(gate, app, r, "paste")?;
-    let pasted = act(gate, shown, SelChip::Paste, |_| true)?;
+    let pasted = act(gate, app, shown, SelChip::Paste, |_| true)?;
     gate.acts.keys(app, &gate.ctx.cfg.keys.enter)?;
     let poll = gate.ctx.cfg.timing.poll_ms;
     let arrived = win::poll_until(g.strip_wait_ms, poll, || t.lines().get(at).cloned());
@@ -89,7 +89,7 @@ fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Va
     let r = row(gate, &app)?;
     let (case, shown) = select(gate, &app, r, kind.name())?;
     cases.push(case);
-    let copy = act(gate, shown, SelChip::Copy, |seq| {
+    let copy = act(gate, &app, shown, SelChip::Copy, |seq| {
         gate.clip_holds(seq, &g.term_line)
     })?;
     let mut pastes = Vec::new();
@@ -114,11 +114,18 @@ fn one(
     let got = drive(gate, kind, &t, cases);
     if numlock_on() != was {
         let _ = crate::keys::restore_combo(&g.numlock);
+        sleep_ms(g.settle_ms);
     }
+    let back = numlock_on() == was;
     left.extend(term::close(gate.ctx, t));
-    let mut v = got?;
-    v["numlock_back"] = json!(numlock_on() == was);
-    Ok(v)
+    Ok(finished(got?, back))
+}
+
+/// One terminal's result with Num Lock put back as `back` says: it fails when Num Lock stayed changed.
+pub fn finished(mut v: Value, back: bool) -> Value {
+    v["ok"] = json!(v["ok"] == true && back);
+    v["numlock_back"] = json!(back);
+    v
 }
 
 /// The ping's reply row copied: the clipboard takes it, and the ping writes on for `ping_ms`.
@@ -128,7 +135,7 @@ fn pinged(gate: &Gate, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String
     let (case, shown) = select(gate, &app, r, PING)?;
     cases.push(case);
     let wait = clipkeep::wait(&gate.ctx.cfg.timing);
-    let copy = act(gate, shown, SelChip::Copy, |seq| {
+    let copy = act(gate, &app, shown, SelChip::Copy, |seq| {
         open::wait_change(seq, wait)
     })?;
     let before = t.lines().len();
@@ -138,14 +145,21 @@ fn pinged(gate: &Gate, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String
     Ok(json!({ "copy": copy, "replies_before": before, "replies_after": after, "ok": ok }))
 }
 
-/// Copy during the gate's own `ping -t` in Windows Terminal, which then closes.
+/// Copy during the gate's own ping in Windows Terminal, which then closes; a ping still running after is left.
 fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
     let g = gate.g();
+    let before = procs::now();
     let t = term::open(gate.ctx, Kind::Terminal, PING, |ready, out| {
-        script::ping(&g.ping_host, ready, out)
+        script::ping(g, ready, out)
     })?;
     let got = pinged(gate, &t, cases);
     left.extend(term::close(gate.ctx, t));
+    let stayed = procs::stayed(&before, &procs::now(), &g.ping_exe);
+    left.extend(
+        stayed
+            .iter()
+            .map(|p| format!("still running: {} {}", p.exe, p.pid)),
+    );
     got
 }
 
@@ -158,4 +172,20 @@ pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Resul
     Ok(
         json!({ Kind::Terminal.name(): terminal, Kind::Console.name(): console, PING: ping, "ok": ok }),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_terminal_that_left_num_lock_changed_fails() {
+        let v = finished(json!({ "ok": true }), true);
+        assert_eq!(
+            (v["ok"].as_bool(), v["numlock_back"].as_bool()),
+            (Some(true), Some(true))
+        );
+        assert_eq!(finished(json!({ "ok": true }), false)["ok"], false);
+        assert_eq!(finished(json!({ "ok": false }), true)["ok"], false);
+    }
 }

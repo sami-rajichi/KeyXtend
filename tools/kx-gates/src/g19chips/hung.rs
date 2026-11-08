@@ -1,6 +1,7 @@
 //! A hung app (P10 plan's edge cases): target-window asleep in its hang mode takes the focus, so the module's look at
-//! it times out and no strip shows; the gate's Notepad then shows the strip while the target still sleeps, and the
-//! time it took is the lock's wait; after the hang, a new selection still shows it.
+//! it times out and no strip shows, and the gate never asks the hung window anything; the gate's Notepad then shows
+//! the strip while the target still sleeps, and the time from the last key to the strip is the lock's wait. After the
+//! hang, a new selection still shows the strip, and the field watch still hears focus: a password box locks the lane.
 #![cfg(windows)]
 
 use std::time::Instant;
@@ -11,17 +12,30 @@ use serde_json::{Value, json};
 use crate::apps::{self, Opened};
 use crate::g5play::hang_target;
 use crate::g19chips::docs::Line;
-use crate::g19chips::gate::Gate;
+use crate::g19chips::gate::{Gate, wait_ms};
 use crate::g19chips::notepad::{Lines, by_keys};
 use crate::win::{self, ms_since, sleep_ms};
-use crate::{board, launch, probe};
+use crate::{board, launch, probe, typebox};
 
-/// The acts the step takes: a selection by keys during the hang, our Esc, and one after it.
-pub const ACTS: usize = 5;
-/// The case that must show no strip: the hung target's.
-pub const QUIET: usize = 1;
+/// The acts the step takes: a selection by keys during the hang and one after it, each ended with our Esc.
+pub const ACTS: usize = 6;
 
-/// The hung target in front, then Notepad's selection while it sleeps; whether that came within the hang.
+/// True when the strip, first seen `lock_ms` after the act that ended at `sent`, came before the hang from `at` ended.
+pub fn in_hang(at: Instant, sent: Instant, lock_ms: Option<u64>, hang_ms: u64) -> bool {
+    lock_ms.is_some_and(|ms| wait_ms(at, sent).saturating_add(ms) < hang_ms)
+}
+
+/// The parts of the step's verdict that did not hold, by name: no strip on the hung app, one beside it within the
+/// hang, one after it, and the field watch.
+fn failed<'a>(parts: &[(&'a str, bool)]) -> Vec<&'a str> {
+    parts
+        .iter()
+        .filter(|(_, held)| !held)
+        .map(|(name, _)| *name)
+        .collect()
+}
+
+/// The hung target in front, then Notepad's selection while it sleeps; whether the strip came within the hang.
 fn during(
     gate: &Gate,
     app: &Opened,
@@ -38,17 +52,31 @@ fn during(
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring the hung target-window to the front".into());
     }
-    cases.push(gate.quiet("hung", &before)?);
+    cases.push(gate.quiet_hung("hung", &before)?);
     probe::front(ctx, app)?;
-    let (mut case, _) = by_keys(gate, app, lines, Line::Copy, "beside_hung")?;
-    let within = ms_since(at) < g.hang_ms;
+    let before = Gate::before();
+    gate.acts.click(app, lines.end(Line::Copy))?;
+    gate.acts.keys(app, &g.select_home)?;
+    let (mut case, _) =
+        gate.case_within("beside_hung", &before, &g.editable_chips, g.hung_wait_ms)?;
+    let within = in_hang(at, gate.acts.sent(), case["ms"].as_u64(), g.hang_ms);
     case["during_hang"] = json!(within);
     cases.push(case);
     sleep_ms(g.hang_ms.saturating_sub(ms_since(at)));
     Ok(within)
 }
 
-/// The hung target's look, Notepad beside it and after it; the target is closed before the last selection.
+/// A password box in a fresh target-window: the lane shows the lock, so the field watch heard its focus.
+fn heard(gate: &Gate, left: &mut Vec<String>) -> Value {
+    let ctx = gate.ctx;
+    let args = typebox::password_args(ctx, true);
+    let b = typebox::in_target(ctx, args, |t| Ok(t.lane_until(|l| l.locked).is_some()));
+    left.extend(b.left);
+    let locked = b.got.as_ref().is_ok_and(|l| *l);
+    json!({ "locked": locked, "layout_back": b.back, "error": b.got.err(), "ok": locked && b.back })
+}
+
+/// The hung target's look, Notepad beside it and after it, then the field watch; the target closes first.
 pub fn run(
     gate: &Gate,
     app: &Opened,
@@ -56,6 +84,12 @@ pub fn run(
     cases: &mut Vec<Value>,
     left: &mut Vec<String>,
 ) -> Result<Value, String> {
+    let cap = gate.ctx.target.hang_max_ms;
+    if gate.g().hang_ms > cap {
+        return Err(format!(
+            "g19_product.hang_ms passes target-window's hang_max_ms ({cap} ms)"
+        ));
+    }
     let target = launch::start_target(gate.ctx)?;
     let got = during(gate, app, lines, &target, cases);
     left.extend(apps::clean_up(gate.ctx, target));
@@ -65,13 +99,64 @@ pub fn run(
     let (after, _) = by_keys(gate, app, lines, Line::Copy, "after_hung")?;
     let told = |name: &str, key: &str| cases.iter().any(|c| c["case"] == name && c[key] == true);
     let (quiet, beside) = (told("hung", "chips"), told("beside_hung", "chips"));
-    let ok = quiet && beside && after["chips"] == true;
     let lock_ms = cases
         .iter()
         .find(|c| c["case"] == "beside_hung")
         .map(|c| c["ms"].clone());
+    let shown = after["chips"] == true;
     cases.push(after);
-    Ok(
-        json!({ "quiet": quiet, "beside": beside, "lock_ms": lock_ms, "during_hang": within, "ok": ok }),
-    )
+    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    let field = heard(gate, left);
+    let parts = [
+        ("quiet", quiet),
+        ("beside", beside),
+        ("during_hang", within),
+        ("after", shown),
+        ("field_watch", field["ok"] == true),
+    ];
+    let failed = failed(&parts);
+    Ok(json!({
+        "lock_ms": lock_ms, "field_watch": field, "failed": failed, "ok": failed.is_empty(),
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn the_strip_counts_as_within_the_hang_only_when_first_seen_before_it_ends() {
+        let at = Instant::now();
+        let sent = at + Duration::from_millis(2_000);
+        assert!(in_hang(at, sent, Some(400), 3_000));
+        assert!(!in_hang(at, sent, Some(1_000), 3_000), "at its end");
+        assert!(!in_hang(at, sent, None, 3_000), "no strip");
+    }
+
+    #[test]
+    fn the_step_fails_on_a_strip_after_the_hang_or_a_deaf_field_watch() {
+        let all = [
+            ("quiet", true),
+            ("during_hang", true),
+            ("field_watch", true),
+        ];
+        assert!(failed(&all).is_empty());
+        let late = [
+            ("quiet", true),
+            ("during_hang", false),
+            ("field_watch", true),
+        ];
+        assert_eq!(
+            failed(&late),
+            ["during_hang"],
+            "the strip came after the hang"
+        );
+        let deaf = [
+            ("quiet", true),
+            ("during_hang", true),
+            ("field_watch", false),
+        ];
+        assert_eq!(failed(&deaf), ["field_watch"]);
+    }
 }

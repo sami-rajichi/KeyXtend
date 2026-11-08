@@ -1,6 +1,6 @@
-//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard; `keyxtend` and
-//! `translate-read` check the selection strip on the test build (`g19chips`). The owner never uses Word, so core runs
-//! in Notepad and Chrome alone and can pass in full.
+//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard; `keyxtend`,
+//! `translate-read` and `translate-beside` check the selection strip (`g19chips`). The owner never uses Word, so core
+//! runs in Notepad and Chrome alone and can pass in full.
 #![cfg(windows)]
 
 use kx_platform_windows::clip::open;
@@ -17,8 +17,9 @@ use crate::{g19chips, launch, product, simuser};
 
 /// G19's detection run, each line read back through UI Automation.
 pub const CORE: &str = "core";
-/// G19's run names: detection, the strip on the test build, and the reads of the owner's translate page.
-pub const NAMES: [&str; 3] = [CORE, product::NAME, g19chips::READ];
+/// G19's run names: detection, the strip on the test build, and the reads of the owner's translate page, on the
+/// test build or beside the owner's own keyboard.
+pub const NAMES: [&str; 4] = [CORE, product::NAME, g19chips::READ, g19chips::BESIDE];
 /// The apps G19 core selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
 

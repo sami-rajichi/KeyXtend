@@ -1,6 +1,6 @@
 //! Our own inputs make selections that show the strip (P10 design "On a selection"): Shift latched and an arrow on our
 //! keyboard, a Grab carry, and a drag in Right-click mode, whose selection comes late, on the app's event. The scroll
-//! pad is left to the owner's check, as it needs a long document laid under the keyboard.
+//! pad goes to Task 18's manual check (Ruling Z), as only the owner's own clicks on the pad show it.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{Assist, Latch, Nav, Role};
@@ -13,10 +13,12 @@ use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::Lines;
 use crate::modekey::{ModeKey, Wait};
 
-/// The acts the step takes: Shift and an arrow after a click, a Grab's pick-up, glide and drop, a drag, and Esc thrice.
-pub const ACTS: usize = 10;
-/// What the result says of the scroll pad.
-const SCROLL_PAD: &str = "the owner's check: the strip waits for the app's event after a scroll";
+/// The acts the step takes: Shift and an arrow after a click, a Grab's pick-up, glide and drop, a click on the caret
+/// line and a drag, and Esc thrice.
+pub const ACTS: usize = 11;
+/// What the result says of the scroll pad (Ruling Z).
+const SCROLL_PAD: &str =
+    "Task 18's manual check: the strip waits for the app's event after a scroll";
 
 /// The wait for a mode key to read on or off.
 fn lit(gate: &Gate) -> Wait {
@@ -60,8 +62,10 @@ fn grab(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     Ok(case)
 }
 
-/// Right-click mode on: a drag over the copy line, whose selection the engine lets through late.
+/// Right-click mode on: a drag over the copy line, whose selection the engine lets through late. A click on the
+/// empty caret line first drops any selection, so the press never starts a drag of the gate's own text.
 fn rclick(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
+    gate.acts.click(app, lines.caret())?;
     let key = ModeKey::of(Role::Assist(Assist::RClick))?;
     key.set(true, lit(gate))?;
     let before = Gate::before();

@@ -11,6 +11,29 @@ const NAMES_QML: &str = include_str!("../../../../../crates/kx-ui/qml/SelNames.q
 const KEY_QML: &str = include_str!("../../../../../crates/kx-ui/qml/SelKey.qml");
 /// kx-ui's selection keys: the strip's name and each chip's id.
 const KEYS: &str = include_str!("../../../../../crates/kx-ui/src/i18n/keys/sel.rs");
+/// The keyboard's top bar, whose buttons take their ids from the bar group and their part.
+const TOP_BAR: &str = include_str!("../../../../../crates/kx-ui/qml/TopBar.qml");
+/// The keyboard's resize corner.
+const CORNER: &str = include_str!("../../../../../crates/kx-ui/qml/Corner.qml");
+
+#[test]
+fn the_tray_and_corner_ids_are_the_ones_kx_ui_gives_those_buttons() {
+    let g = load().expect("loads").g19_product;
+    let (group, part) = g.tray.split_once('.').expect("a group and a part");
+    assert!(
+        TOP_BAR.contains(&format!("bar.res.uid(\"{group}\", part)")),
+        "bar group"
+    );
+    let close = format!("part: \"{part}\"\n            onClicked: bar.close()");
+    assert!(TOP_BAR.contains(&close), "{close}");
+    let (group, part) = g.corner.split_once('.').expect("a group and a part");
+    let id = format!("Accessible.id: res.uid(\"{group}\", \"{part}\")");
+    assert!(CORNER.contains(&id), "{id}");
+    assert!(
+        CORNER.contains("width: px[0] * s") && CORNER.contains("px: lk.shape.extra.corner_px"),
+        "its width is the token at the keyboard's size"
+    );
+}
 
 #[test]
 fn the_group_and_the_chip_ids_are_the_ones_kx_ui_gives_its_keycaps() {

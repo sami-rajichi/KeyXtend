@@ -8,6 +8,7 @@ mod limits;
 
 pub use fields::G19Product;
 
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use kx_mod_selection::{SelSettings, sites};
@@ -25,10 +26,14 @@ use crate::{ftl, g19chips};
 pub const QUIET: usize = g19chips::QUIET;
 /// The gate's clicks, keys and drags, each followed by `settle_ms`.
 pub const ACTS: usize = g19chips::ACTS;
+/// The target-windows the run starts: the hung one, and the password box the field watch hears.
+const TARGETS: usize = 2;
 /// What a page text, name or mark may not hold: quotes and markup, which would end the page's tags or script.
 const NOT_IN_PAGE: &str = "'\"\\<>&";
 /// What a test line may not hold besides that: a line break, which would split it.
 const BREAKS: [char; 2] = ['\n', '\r'];
+/// Unicode's Arabic block, which every letter of the Arabic line comes from.
+pub const ARABIC: RangeInclusive<char> = '\u{0600}'..='\u{06FF}';
 
 /// The selection module's defaults, as a fresh data folder holds them.
 pub fn selection_defaults() -> Result<SelSettings, String> {
@@ -40,8 +45,15 @@ pub fn caret_ms(s: &SelSettings) -> u64 {
     u64::try_from(Duration::from_secs(u64::from(s.caret_s)).as_millis()).unwrap_or(u64::MAX)
 }
 
-/// The least time `g19 keyxtend` holds the mouse: its copy, its Notepad and Chrome windows, every quiet wait, the hang,
-/// the ping, the caret's Paste timing out, and the settle after each act.
+/// The ms one window takes to be brought forward when it is not yet.
+pub fn front_ms(c: &GatesConfig) -> u64 {
+    c.timing
+        .alt_settle_ms
+        .saturating_add(c.timing.front_wait_ms)
+}
+
+/// The least time `g19 keyxtend` holds the mouse: its copy, its Notepad, Chrome and two target-windows, every quiet
+/// wait, the hang, the ping, the caret's Paste timing out, and the settle after each act.
 pub fn g19_ms(c: &GatesConfig) -> u64 {
     let g = &c.g19_product;
     let ready = |app: AppKind| c.apps.get(app.name()).map_or(0, |a| a.ready_ms);
@@ -52,6 +64,7 @@ pub fn g19_ms(c: &GatesConfig) -> u64 {
         end_ms(c),
         ready(AppKind::Notepad),
         ready(AppKind::Chrome),
+        times(TARGETS, ready(AppKind::Target)),
         times(QUIET, g.quiet_ms),
         g.hang_ms,
         g.ping_ms,
@@ -67,7 +80,8 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     g.check_page()?;
     g.check_strip()?;
     g.check_keys()?;
-    g.check_waits(c.mouse_guard.limit_ms)?;
+    g.check_ping()?;
+    g.check_waits(c.mouse_guard.limit_ms, front_ms(c))?;
     held_fits(c, "g19_product: G19 on the product", g19_ms(c))
 }
 
@@ -82,10 +96,16 @@ impl G19Product {
         vec![self.arabic.as_str(); self.arabic_repeat].join(" ")
     }
 
-    /// The UI Automation id of `chip`'s keycap.
-    pub fn chip_id(&self, chip: SelChip) -> Option<String> {
+    /// `chip`'s own id, as the lists of each box kind name it.
+    pub fn chip_name(&self, chip: SelChip) -> Option<&str> {
         let at = SelChip::ALL.iter().position(|c| *c == chip)?;
-        Some(format!("{}{SEP}{}", self.group, self.chips.get(at)?))
+        self.chips.get(at).map(String::as_str)
+    }
+
+    /// The UI Automation id of `chip`'s keycap, which the tests pin to kx-ui's.
+    #[cfg(test)]
+    pub fn chip_id(&self, chip: SelChip) -> Option<String> {
+        Some(format!("{}{SEP}{}", self.group, self.chip_name(chip)?))
     }
 
     /// The chip whose keycap has UI Automation id `id`.
@@ -113,7 +133,7 @@ impl G19Product {
                 ));
             }
         }
-        let arabic = |c: char| ('\u{0600}'..='\u{06FF}').contains(&c);
+        let arabic = |c: char| ARABIC.contains(&c);
         let plain = |c: char| arabic(c) || c == ' ' || c.is_ascii_punctuation();
         let a = &self.arabic;
         if !a.chars().any(arabic) || !a.chars().all(plain) || marked(a) {

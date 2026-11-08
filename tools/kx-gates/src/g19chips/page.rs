@@ -52,7 +52,7 @@ fn paragraph(gate: &Gate, app: &Opened, cases: &mut Vec<Value>) -> Result<Value,
     cases.push(case);
     let shift = board::latch_id(Latch::Shift)?;
     gate.acts.key(&shift)?;
-    let copy = act(gate, shown, SelChip::Copy, |seq| {
+    let copy = act(gate, app, shown, SelChip::Copy, |seq| {
         gate.clip_holds(seq, &g.page_text)
     })?;
     let latched = ModeKey::by_id(shift.clone())?.on()?;

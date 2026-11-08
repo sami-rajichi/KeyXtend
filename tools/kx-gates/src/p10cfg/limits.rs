@@ -6,9 +6,43 @@ use windows::Win32::UI::Input::KeyboardAndMouse::VK_NUMLOCK;
 use crate::apps::INPUT;
 use crate::p5cfg::SEP;
 use crate::p8cfg::wait;
-use crate::p10cfg::{G19Product, caret_ms, selection_defaults};
+use crate::p10cfg::{G19Product, caret_ms, marked, selection_defaults};
+
+/// True for a kx-ui id: a group, `SEP`, then a name.
+fn id_like(id: &str) -> bool {
+    id.split_once(SEP)
+        .is_some_and(|(a, b)| !a.is_empty() && !b.is_empty())
+}
 
 impl G19Product {
+    /// Refuses a ping that names a path or holds a quote or separator, a resize corner that is no kx-ui id, and a
+    /// text box or address-bar walk of no size.
+    pub(super) fn check_ping(&self) -> Result<(), String> {
+        let plain = |b: &String| !b.is_empty() && !b.contains(['\\', '/', ':']);
+        if !plain(&self.ping_exe) || marked(&self.ping_exe) {
+            return Err("g19_product.ping_exe must name a plain program file".into());
+        }
+        let word =
+            |a: &String| !a.is_empty() && a.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+        if self.ping_args.is_empty() || !self.ping_args.iter().all(word) {
+            return Err(
+                "g19_product.ping_args must be plain switches, letters, digits and dashes".into(),
+            );
+        }
+        if !id_like(&self.corner) {
+            return Err(format!(
+                "g19_product.corner must be a kx-ui id: a group, {SEP}, a name"
+            ));
+        }
+        if self.bar_depth == 0 {
+            return Err("g19_product.bar_depth must be 1 or more".into());
+        }
+        if self.box_size == 0 {
+            return Err("g19_product.box_size must be 1 or more".into());
+        }
+        Ok(())
+    }
+
     /// Refuses a Num Lock that is another key, no Shift+Home or caret key, a browser that is a path, and a console
     /// that would run no script of the gate's.
     pub(super) fn check_keys(&self) -> Result<(), String> {
@@ -21,11 +55,7 @@ impl G19Product {
         if self.caret_left.is_empty() {
             return Err("g19_product.caret_left must hold a key".into());
         }
-        let named = self
-            .tray
-            .split_once(SEP)
-            .is_some_and(|(a, b)| !a.is_empty() && !b.is_empty());
-        if !named {
+        if !id_like(&self.tray) {
             return Err(format!(
                 "g19_product.tray must be a kx-ui id: a group, {SEP}, a name"
             ));
@@ -43,9 +73,9 @@ impl G19Product {
         Ok(())
     }
 
-    /// Refuses a wait outside 1 ms to `most_ms`, a hang the module's look outlasts or that leads into nothing, a
-    /// negative slack, and a caret slack as long as the caret's Paste stays.
-    pub(super) fn check_waits(&self, most_ms: u64) -> Result<(), String> {
+    /// Refuses a wait outside 1 ms to `most_ms`, a negative slack, and a caret slack as long as the caret's Paste
+    /// stays; then the hang's own rules.
+    pub(super) fn check_waits(&self, most_ms: u64, front_ms: u64) -> Result<(), String> {
         let waits = [
             ("ready_ms", self.ready_ms),
             ("strip_wait_ms", self.strip_wait_ms),
@@ -54,6 +84,8 @@ impl G19Product {
             ("settle_ms", self.settle_ms),
             ("hang_ms", self.hang_ms),
             ("hang_lead_ms", self.hang_lead_ms),
+            ("hung_quiet_ms", self.hung_quiet_ms),
+            ("hung_wait_ms", self.hung_wait_ms),
             ("ping_ms", self.ping_ms),
             ("caret_slack_ms", self.caret_slack_ms),
             ("owner_wait_ms", self.owner_wait_ms),
@@ -63,15 +95,7 @@ impl G19Product {
             .iter()
             .try_for_each(|(k, ms)| wait(&key(k), *ms, most_ms))?;
         let s = selection_defaults()?;
-        let look = u64::from(s.settle_ms).saturating_add(u64::from(s.read_ms));
-        if self.hang_ms <= look {
-            return Err(format!(
-                "g19_product.hang_ms must outlast the module's look, {look} ms"
-            ));
-        }
-        if self.hang_lead_ms >= self.hang_ms {
-            return Err("g19_product.hang_lead_ms must be shorter than hang_ms".into());
-        }
+        self.check_hang(front_ms)?;
         if self.place_slack_px < 0 {
             return Err("g19_product.place_slack_px must not be negative".into());
         }
@@ -79,6 +103,42 @@ impl G19Product {
             return Err(
                 "g19_product.caret_slack_ms must be shorter than the module's caret_s".into(),
             );
+        }
+        Ok(())
+    }
+
+    /// The least time the hung step acts within the hang: its lead, two windows brought forward (`front_ms` each),
+    /// the quiet wait, two acts and the strip's wait.
+    pub fn hung_acts_ms(&self, front_ms: u64) -> u64 {
+        let fronts = front_ms.saturating_mul(2);
+        let acts = self.settle_ms.saturating_mul(2);
+        [self.hung_quiet_ms, fronts, acts, self.hung_wait_ms]
+            .iter()
+            .fold(self.hang_lead_ms, |sum, ms| sum.saturating_add(*ms))
+    }
+
+    /// Refuses a hung app's quiet wait the module's look outlasts, and a hang that ends before every act in it, or
+    /// past target-window's `hang_max_ms`.
+    fn check_hang(&self, front_ms: u64) -> Result<(), String> {
+        let s = selection_defaults()?;
+        let look = u64::from(s.settle_ms).saturating_add(u64::from(s.read_ms));
+        if self.hung_quiet_ms <= look {
+            return Err(format!(
+                "g19_product.hung_quiet_ms must outlast the module's look, {look} ms"
+            ));
+        }
+        let acts = self.hung_acts_ms(front_ms);
+        if self.hang_ms <= acts {
+            return Err(format!(
+                "g19_product.hang_ms must outlast the acts during the hang, {acts} ms"
+            ));
+        }
+        let target = kx_target_window::config::load().map_err(|e| e.to_string())?;
+        if self.hang_ms > target.hang_max_ms {
+            return Err(format!(
+                "g19_product.hang_ms must stay within kx-target-window.toml's hang_max_ms ({} ms)",
+                target.hang_max_ms
+            ));
         }
         Ok(())
     }

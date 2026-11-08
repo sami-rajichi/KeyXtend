@@ -6,13 +6,18 @@
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 
+use kx_platform_windows::window::foreground;
 use windows::Win32::Foundation::HWND;
+use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_NUMLOCK};
 
 use crate::apps::{AppKind, Ctx, INPUT, Opened};
 use crate::launch::launch;
 use crate::winfind::{self, Match};
 use crate::{out, win};
+
+/// The toggle bit of a key state.
+const TOGGLED: i16 = 1;
 
 /// Which terminal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,10 +107,14 @@ pub fn open(
     let files = files(ctx, kind, tag);
     out::write(&files[0], &text(&files[1], &files[2]))?;
     let script = files[0].to_string_lossy().into_owned();
-    let (hwnd, child) = match kind {
+    let started = match kind {
         Kind::Terminal => launch(ctx, AppKind::Terminal.name(), &script, None),
         Kind::Console => console(ctx, &script),
-    }?;
+    };
+    let (hwnd, child) = match started {
+        Ok(s) => s,
+        Err(e) => return Err(format!("{e}; clean-up: {:?}", remove(&files))),
+    };
     let term = Term { hwnd, child, files };
     let wait = ctx.cfg.app(AppKind::Terminal.name())?.wait_ms;
     match out::wait_read(&term.files[1], wait, ctx.cfg.timing.poll_ms) {
@@ -127,18 +136,53 @@ pub fn close(ctx: &Ctx, mut term: Term) -> Vec<String> {
         left.push(format!("left open: {}", win::describe(term.hwnd)));
     }
     let _ = term.child.kill();
-    for f in term.files.iter().filter(|f| f.exists()) {
-        if let Err(e) = std::fs::remove_file(f) {
-            left.push(format!("{}: {e}", f.display()));
-        }
-    }
+    left.extend(remove(&term.files));
     left
 }
 
-/// True while Num Lock is on.
-#[allow(unsafe_code, reason = "A plain key-state query.")]
+/// Deletes those of `files` that exist; what could not go.
+fn remove(files: &[PathBuf]) -> Vec<String> {
+    let gone = |f: &PathBuf| {
+        std::fs::remove_file(f)
+            .err()
+            .map(|e| format!("{}: {e}", f.display()))
+    };
+    files
+        .iter()
+        .filter(|f| f.exists())
+        .filter_map(gone)
+        .collect()
+}
+
+/// True when key state `state` holds its toggle bit.
+pub fn toggled(state: i16) -> bool {
+    state & TOGGLED != 0
+}
+
+/// True while Num Lock is on, read through the input state of the window in front, which has taken every key sent;
+/// the gate's own thread reads no keys, so its own state would be stale.
+#[allow(unsafe_code, reason = "Plain thread and key-state queries.")]
 pub fn numlock_on() -> bool {
-    // SAFETY: a plain key-state query; the low bit is the toggle.
-    let state = unsafe { GetKeyState(i32::from(VK_NUMLOCK.0)) };
-    state & 1 == 1
+    let front = win::owner(foreground()).1;
+    // SAFETY: plain queries; the shared input state is let go before returning.
+    unsafe {
+        let me = GetCurrentThreadId();
+        let joined = front != 0 && front != me && AttachThreadInput(me, front, true).as_bool();
+        let state = GetKeyState(i32::from(VK_NUMLOCK.0));
+        if joined {
+            let _ = AttachThreadInput(me, front, false);
+        }
+        toggled(state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_low_bit_is_the_toggle() {
+        assert!(toggled(1) && toggled(i16::MIN | 1));
+        assert!(!toggled(0) && !toggled(i16::MIN), "held down, not on");
+    }
 }

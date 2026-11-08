@@ -1,6 +1,9 @@
-//! The processes running now, each with its parent and program name, from one system snapshot; and which of them are
-//! browsers newly started, not children of a browser already running, as a page that opened would start one.
+//! The processes running now, each with its parent and program name, from one system snapshot; which of them are
+//! browsers newly started, not children of a browser already running, as a page that opened would start one; which
+//! a closed terminal left running; and how many windows are new.
 #![cfg(windows)]
+
+use std::collections::HashSet;
 
 use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::System::Diagnostics::ToolHelp::{
@@ -38,6 +41,18 @@ pub fn launches(before: &[Proc], after: &[Proc], browsers: &[String]) -> Vec<Pro
 /// The process `pid` in `all`.
 pub fn find(all: &[Proc], pid: u32) -> Option<&Proc> {
     all.iter().find(|p| p.pid == pid)
+}
+
+/// The processes of program `exe` in `after` that were not in `before`: what a closed terminal left running.
+pub fn stayed(before: &[Proc], after: &[Proc], exe: &str) -> Vec<Proc> {
+    let new = |p: &&Proc| find(before, p.pid).is_none();
+    let named = |p: &&Proc| same_name(&p.exe, exe);
+    after.iter().filter(new).filter(named).cloned().collect()
+}
+
+/// How many of the windows `now` were not among `before`.
+pub fn fresh(before: &HashSet<isize>, now: &[isize]) -> usize {
+    now.iter().filter(|w| !before.contains(w)).count()
 }
 
 /// Every process running now; empty when the system gives no snapshot.
@@ -110,5 +125,26 @@ mod tests {
             find(&after, 12).map(|q| q.exe.as_str()),
             Some("notepad.exe")
         );
+    }
+
+    #[test]
+    fn a_ping_left_after_its_terminal_closed_is_found_and_an_older_one_is_not() {
+        let before = [p(4, 0, "explorer.exe"), p(20, 4, "PING.EXE")];
+        let mut after = before.to_vec();
+        assert!(
+            stayed(&before, &after, "ping.exe").is_empty(),
+            "the owner's own"
+        );
+        after.push(p(21, 30, "PING.EXE"));
+        after.push(p(22, 30, "conhost.exe"));
+        assert_eq!(stayed(&before, &after, "ping.exe"), [p(21, 30, "PING.EXE")]);
+    }
+
+    #[test]
+    fn only_windows_not_there_before_count_as_new() {
+        let before: HashSet<isize> = [1, 2].into_iter().collect();
+        assert_eq!(fresh(&before, &[1, 2]), 0);
+        assert_eq!(fresh(&before, &[2, 3, 4]), 2);
+        assert_eq!(fresh(&before, &[]), 0, "a window closed");
     }
 }

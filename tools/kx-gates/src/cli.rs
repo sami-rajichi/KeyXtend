@@ -121,7 +121,7 @@ const DRIVEN: [(&str, &str); 3] = [
     ("g19", product::NAME),
 ];
 /// A gate's names that wait on the owner's own mouse, though the gate itself holds it.
-const FREED: [(&str, &str); 1] = [("g19", g19chips::READ)];
+const FREED: [(&str, &str); 2] = [("g19", g19chips::READ), ("g19", g19chips::BESIDE)];
 
 /// Every gate's name.
 pub(crate) fn gates() -> impl Iterator<Item = &'static str> {
