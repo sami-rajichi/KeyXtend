@@ -175,6 +175,10 @@ Item {
             compare(caps.map(k => k.Accessible.name), v.chips.map(c => c.word), "each named by its word");
             compare(caps.map(k => k.Accessible.id), Sel.ids, "each its word's text key, the same in every language");
             compare(createTemporaryObject(namesC, root).group, Sel.group, "the group the gates find");
+            strip.ui.selView = view("en", "ticked", { acted: "copy" });
+            const said = v.chips.map(c => c.id === "copy" ? c.done : c.word);
+            compare(caps.map(k => k.Accessible.name), said, "a ticked keycap reads its done word");
+            compare(caps.map(k => k.Accessible.id), Sel.ids, "and keeps its id");
         }
 
         // `selAt` takes physical pixels: the size times the selection screen's scale, once, with the keyboard's size for

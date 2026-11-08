@@ -40,7 +40,8 @@ Item {
     height: row
 
     Accessible.role: Accessible.Button
-    Accessible.name: chip.word
+    // Readers hear what the cap shows: its done word while ticked.
+    Accessible.name: acted ? chip.done : chip.word
     Accessible.id: res.uid(names.group, chip.id)
     Accessible.onPressAction: if (sk.live) sk.hit()
 

@@ -22,7 +22,7 @@ pub(super) struct View {
     scale: f64,
 }
 
-/// One keycap: its id, its word, which readers hear too, and its word once it acted.
+/// One keycap: its id, its word and its word once it acted, which readers hear as each shows.
 #[derive(Serialize)]
 struct Cap {
     id: &'static str,
