@@ -38,7 +38,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 - **Size (owner):** each keycap is one key row tall at the keyboard's current size (31, 39 or 47 px at the presets 1.0, 1.25, 1.5) and grows with it. Paddings, the word and icon sizes and the gap from the text come from `shape.toml [chips]`, which replaced the old `[pill]` tokens; the keycaps' gap, legend weight and plate corner are each theme's own, as in the mock-up.
 - Each keycap is as wide as its label needs; the strip's place is worked out from its real size, never from a fixed width (P10 item note).
 - **Motion:** the strip pops in as the mock-up's `.selpill` did (`motion.toml` `chips`). A clicked keycap presses like a key, shows a tick and a past-tense word (Copied, Cut, Pasted, Opening; Copié, Coupé, Collé, Ouverture; تم النسخ، تم القص، تم اللصق، جارٍ الفتح), then the strip fades. Reduced motion skips the pop and the fade but keeps the tick's time. Timings are motion tokens: `chips`, `chips_fade` and `[shows] chips_done`.
-- **Sound:** a click plays the key click sound when key sounds are on.
+- **Sound:** a click that acts plays the key click sound when key sounds are on; a late click is silent.
 - **Readers:** each keycap is a button named by its word, and a ticked keycap by its done word (Copied, Copié, تم النسخ); the strip never takes focus.
 
 ### Where it sits

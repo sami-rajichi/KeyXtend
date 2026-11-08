@@ -1,5 +1,5 @@
 //! Clicks on the strip: a keycap of the live strip sends `ChipAct` with the round QML drew; an old round, a ticked strip
-//! or a chip not shown sends nothing quietly, an unknown chip warns once, and every click sounds as a key does.
+//! or a chip not shown sends nothing quietly, an unknown chip warns once, and only a sent click sounds as a key does.
 
 use super::{heard, strip, ticked, usual, view};
 use crate::Rig;
@@ -76,21 +76,25 @@ fn a_strip_redrawn_takes_clicks_on_its_new_round_only() {
     assert_eq!(sent.acts(), [want]);
 }
 
-/// Each click plays the key sound once, a dropped or unknown one too, as the user pressed a keycap all the same.
+/// Only a click that sends `ChipAct` sounds as a key does; a late or unknown click is silent, as nothing was pressed.
 #[cfg(feature = "qt")]
 #[test]
-fn each_click_plays_the_key_sound_once_and_none_with_key_sounds_off() {
+fn only_a_sent_click_plays_the_key_sound_and_none_with_key_sounds_off() {
     use crate::sound::{assert_plays, rig_with, takes};
     use kx_theme::sounds::Event;
     let (rig, _face, _host) = rig_with(|_| {});
     let (bus, _sent, _subs) = heard(&rig);
     bus.publish(&view(1)).unwrap();
     rig.speaker.take_plays();
-    rig.hub.sel_act(1, sel_chip_id(SelChip::Copy));
     rig.hub.sel_act(0, sel_chip_id(SelChip::Copy));
     rig.hub.sel_act(1, "mystery");
+    assert!(
+        rig.speaker.take_plays().is_empty(),
+        "a late click is silent"
+    );
+    rig.hub.sel_act(1, sel_chip_id(SelChip::Copy));
     let volume = kx_ui::UiSettings::from_defaults().unwrap().sound_volume;
-    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 3, volume));
+    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 1, volume));
     let (quiet, _face, _host) = rig_with(|s| s.sound_key = false);
     let (bus, _sent, _subs) = heard(&quiet);
     bus.publish(&view(1)).unwrap();

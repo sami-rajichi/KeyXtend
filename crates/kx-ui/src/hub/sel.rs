@@ -112,11 +112,10 @@ impl Hub {
         place::at(&spot, w, h, gap, clear)
     }
 
-    /// A click on keycap `chip`, an id from `sel_json`, of the strip of round `round`, on the Qt thread: it sounds as a
-    /// key does and sends `ChipAct` while that strip shows the keycap with no tick. Any other click goes quietly, and an
+    /// A click on keycap `chip`, an id from `sel_json`, of the strip of round `round`, on the Qt thread: while that strip
+    /// shows the keycap with no tick, it sends `ChipAct` and sounds as a key does. Any other click is silent, and an
     /// unknown id warns.
     pub fn sel_act(&self, round: i64, chip: &str) {
-        self.tapped();
         let Some(chip) = SelChip::ALL.into_iter().find(|&c| sel_chip_id(c) == chip) else {
             tracing::warn!("QML sent an unknown selection keycap, so nothing was sent");
             return;
@@ -127,7 +126,10 @@ impl Hub {
             .as_ref()
             .is_some_and(|k| k.is(round) && k.acted.is_none() && k.chips.contains(&chip));
         match u32::try_from(round) {
-            Ok(round) if live => self.send_sel(&ChipAct { round, chip }),
+            Ok(round) if live => {
+                self.tapped();
+                self.send_sel(&ChipAct { round, chip });
+            }
             _ => tracing::debug!("a late selection click was dropped"),
         }
     }
