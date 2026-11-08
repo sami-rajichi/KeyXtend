@@ -42,8 +42,8 @@ pub trait SelProbe: Ours {
     /// Whether `el` is box `box_id` and its selection still holds text; false on any doubt.
     fn still(&self, el: &Self::El, box_id: u64, by: Instant) -> bool;
 
-    /// At most `max_chars` characters of `el`'s selection from its start; the watch asks only a box that may be read
-    /// and holds a selection.
+    /// At most `max_chars` characters of `el`'s selection from its start; the watch asks only the box the read named,
+    /// when it may be read and holds a selection.
     ///
     /// # Errors
     /// `TimedOut` past `by`, `Refused` when the app refuses.
@@ -71,11 +71,12 @@ pub fn serve<P: SelProbe>(probe: &P, job: Job) {
             let _ = reply.send(still(probe, box_id, by));
         }
         Ask::Read {
+            box_id,
             max_chars,
             by,
             reply,
         } => {
-            let _ = reply.send(read(probe, max_chars, by));
+            let _ = reply.send(read(probe, box_id, max_chars, by));
         }
         Ask::Clip { by, reply } => {
             let _ = reply.send(late(by).is_ok() && probe.clip_holds());
@@ -103,12 +104,17 @@ fn still<P: SelProbe>(probe: &P, box_id: u64, by: Instant) -> bool {
     matches!(theirs(probe, by), Ok(Some(el)) if probe.still(&el, box_id, by))
 }
 
-/// The selection's text, its box checked afresh: refused in a `Closed` box or our own process, and empty at a bare
-/// caret, with no text call either way.
-fn read<P: SelProbe>(probe: &P, max_chars: u16, by: Instant) -> Result<Redacted<String>, SelError> {
+/// Box `box_id`'s selected text, its box checked afresh in the same job: refused in a `Closed` box, another box or our
+/// own process, and empty at a bare caret, with no text call either way.
+fn read<P: SelProbe>(
+    probe: &P,
+    box_id: u64,
+    max_chars: u16,
+    by: Instant,
+) -> Result<Redacted<String>, SelError> {
     let el = theirs(probe, by)?.ok_or(SelError::Closed)?;
     let spot = probe.spot(&el, by)?;
-    if spot.kind == SelKind::Closed {
+    if spot.kind == SelKind::Closed || spot.box_id != box_id {
         return Err(SelError::Closed);
     }
     if !spot.selected {

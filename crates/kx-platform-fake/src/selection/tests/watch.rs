@@ -56,7 +56,7 @@ fn clones_share_the_script_and_serve_as_the_port_from_another_thread() {
     fake.focus(selected());
     fake.set_text(TEXT);
     assert_eq!(run.look().map(|s| s.kind), Ok(SelKind::Editable));
-    assert_eq!(read(run.as_mut(), 5), Ok("Hello".to_owned()));
+    assert_eq!(read(&fake, run.as_mut(), 5), Ok("Hello".to_owned()));
 }
 
 #[test]

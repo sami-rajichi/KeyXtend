@@ -25,9 +25,9 @@ impl SelRun for FakeSelRun {
         log.still.unwrap_or(held)
     }
 
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError> {
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
         let mut log = lock(&self.shared.log);
-        if log.spot.kind == SelKind::Closed {
+        if log.spot.kind == SelKind::Closed || log.spot.box_id != box_id {
             return Err(SelError::Closed);
         }
         log.calls.reads += 1;

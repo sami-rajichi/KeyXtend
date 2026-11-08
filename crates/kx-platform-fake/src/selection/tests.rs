@@ -93,9 +93,14 @@ fn under(box_id: u64, spot: SelSpot) -> SelSpot {
     SelSpot { box_id, ..spot }
 }
 
-/// The text a run reads, unwrapped.
-fn read(run: &mut dyn SelRun, max_chars: u16) -> Result<String, SelError> {
-    run.read(max_chars).map(Redacted::into_inner)
+/// The text a run reads from the box ake has focused, unwrapped.
+fn read(
+    fake: &FakeSelectionWatch,
+    run: &mut dyn SelRun,
+    max_chars: u16,
+) -> Result<String, SelError> {
+    let id = fake.spot().box_id;
+    run.read(id, max_chars).map(Redacted::into_inner)
 }
 
 #[test]
@@ -113,7 +118,7 @@ fn it_starts_on_no_box_which_is_closed_and_holds_nothing() {
     };
     assert_eq!(run.look(), Ok(none));
     assert!(!run.still(0), "no selection");
-    assert_eq!(read(run.as_mut(), 9), Err(SelError::Closed));
+    assert_eq!(read(&fake, run.as_mut(), 9), Err(SelError::Closed));
     assert!(!run.clip_holds(), "an empty clipboard");
     assert!(heard.lock().unwrap().is_empty());
 }
@@ -179,18 +184,22 @@ fn a_read_gives_the_selection_from_its_start_cut_in_whole_characters() {
     let (mut run, _) = watched(&fake);
     fake.focus(selected());
     fake.set_text(TEXT);
-    assert_eq!(read(run.as_mut(), 5), Ok("Hello".to_owned()));
-    assert_eq!(read(run.as_mut(), u16::MAX), Ok(TEXT.to_owned()));
-    assert_eq!(read(run.as_mut(), 0), Ok(String::new()));
+    assert_eq!(read(&fake, run.as_mut(), 5), Ok("Hello".to_owned()));
+    assert_eq!(read(&fake, run.as_mut(), u16::MAX), Ok(TEXT.to_owned()));
+    assert_eq!(read(&fake, run.as_mut(), 0), Ok(String::new()));
     fake.set_text(ARABIC);
     let word = Ok("مرحبا".to_owned());
     assert_eq!(
-        read(run.as_mut(), 5),
+        read(&fake, run.as_mut(), 5),
         word,
         "five letters of two bytes each"
     );
     fake.change(caret());
-    assert_eq!(read(run.as_mut(), 5), Ok(String::new()), "a bare caret");
+    assert_eq!(
+        read(&fake, run.as_mut(), 5),
+        Ok(String::new()),
+        "a bare caret"
+    );
 }
 
 #[test]
@@ -199,10 +208,10 @@ fn a_closed_box_is_never_read_and_its_read_is_not_counted() {
     let (mut run, _) = watched(&fake);
     fake.set_text(TEXT);
     fake.focus(of(SelKind::Closed));
-    assert_eq!(read(run.as_mut(), 9), Err(SelError::Closed));
+    assert_eq!(read(&fake, run.as_mut(), 9), Err(SelError::Closed));
     fake.fail_reads(SelError::TimedOut);
     assert_eq!(
-        read(run.as_mut(), 9),
+        read(&fake, run.as_mut(), 9),
         Err(SelError::Closed),
         "never reached"
     );
@@ -210,9 +219,33 @@ fn a_closed_box_is_never_read_and_its_read_is_not_counted() {
     fake.heal();
     for kind in [SelKind::Editable, SelKind::ReadOnly, SelKind::Terminal] {
         fake.focus(of(kind));
-        assert_eq!(read(run.as_mut(), 5), Ok("Hello".to_owned()), "{kind:?}");
+        assert_eq!(
+            read(&fake, run.as_mut(), 5),
+            Ok("Hello".to_owned()),
+            "{kind:?}"
+        );
     }
     assert_eq!(fake.calls().reads, 3);
+}
+
+#[test]
+fn a_read_for_a_box_focus_left_is_closed_and_not_counted() {
+    let fake = FakeSelectionWatch::new();
+    let (mut run, _) = watched(&fake);
+    fake.set_text(ARABIC);
+    fake.focus(selected());
+    let old = fake.spot().box_id;
+    fake.focus(selected());
+    assert_eq!(
+        run.read(old, 5).map(Redacted::into_inner),
+        Err(SelError::Closed)
+    );
+    assert_eq!(fake.calls().reads, 0, "never reached");
+    assert_eq!(
+        read(&fake, run.as_mut(), 5),
+        Ok("مرحبا".to_owned()),
+        "the box in focus"
+    );
 }
 
 #[test]
@@ -226,12 +259,12 @@ fn failed_looks_and_reads_last_across_boxes_until_healed_and_are_counted() {
     assert_eq!(run.look(), Err(SelError::TimedOut));
     fake.focus(selected());
     assert_eq!(run.look(), Err(SelError::TimedOut), "a new box too");
-    assert_eq!(read(run.as_mut(), 5), Err(SelError::Refused));
+    assert_eq!(read(&fake, run.as_mut(), 5), Err(SelError::Refused));
     let calls = fake.calls();
     assert_eq!((calls.looks, calls.reads), (2, 1), "failed calls count too");
     fake.heal();
     assert_eq!(run.look(), Ok(under(fake.spot().box_id, selected())));
-    assert_eq!(read(run.as_mut(), 5), Ok("Hello".to_owned()));
+    assert_eq!(read(&fake, run.as_mut(), 5), Ok("Hello".to_owned()));
 }
 
 #[test]

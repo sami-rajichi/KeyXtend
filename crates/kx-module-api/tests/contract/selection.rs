@@ -85,7 +85,10 @@ impl SelRun for OneRun {
         box_id == BOX
     }
 
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError> {
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
+        if box_id != BOX {
+            return Err(SelError::Closed);
+        }
         let text: String = TEXT.chars().take(usize::from(max_chars)).collect();
         Ok(Redacted::new(text))
     }
@@ -236,7 +239,12 @@ fn a_watch_reached_through_its_gate_tells_looks_checks_and_reads() {
         (BOX, SelKind::Editable, Some(LINE))
     );
     assert!(run.still(BOX) && !run.still(BOX + 1));
-    assert_eq!(run.read(2).unwrap().expose(), "مر");
+    assert_eq!(run.read(BOX, 2).unwrap().expose(), "مر");
+    assert_eq!(
+        run.read(BOX + 1, 2).err(),
+        Some(SelError::Closed),
+        "another box"
+    );
     assert!(run.clip_holds());
 }
 

@@ -47,10 +47,10 @@ pub(super) enum Heard {
     Ask(&'static str),
 }
 
-/// The fake's run, keeping the cap of every read asked, even one the fake refuses at once in a `Closed` box.
+/// The fake's run, keeping the box and cap of every read asked, even one the fake refuses at once in a `Closed` box.
 pub(super) struct Counted {
     pub run: Box<dyn SelRun>,
-    pub asked: Arc<Mutex<Vec<u16>>>,
+    pub asked: Arc<Mutex<Vec<(u64, u16)>>>,
 }
 
 impl SelRun for Counted {
@@ -62,9 +62,9 @@ impl SelRun for Counted {
         self.run.still(box_id)
     }
 
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError> {
-        self.asked.lock().unwrap().push(max_chars);
-        self.run.read(max_chars)
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
+        self.asked.lock().unwrap().push((box_id, max_chars));
+        self.run.read(box_id, max_chars)
     }
 
     fn clip_holds(&self) -> bool {

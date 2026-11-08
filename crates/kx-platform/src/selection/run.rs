@@ -57,8 +57,9 @@ pub(super) enum Ask {
         by: Instant,
         reply: Reply<bool>,
     },
-    /// At most `max_chars` characters of the selection.
+    /// At most `max_chars` characters of box `box_id`'s selection.
     Read {
+        box_id: u64,
         max_chars: u16,
         by: Instant,
         reply: Reply<Result<Redacted<String>, SelError>>,
@@ -191,11 +192,12 @@ impl SelRun for Run {
             .unwrap_or(false)
     }
 
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError> {
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
         if !self.readable {
             return Err(SelError::Closed);
         }
         self.ask(|reply, by| Ask::Read {
+            box_id,
             max_chars,
             by,
             reply,

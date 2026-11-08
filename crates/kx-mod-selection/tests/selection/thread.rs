@@ -127,8 +127,8 @@ impl SelRun for ArmedRun {
         self.real.still(box_id)
     }
 
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError> {
-        self.real.read(max_chars)
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
+        self.real.read(box_id, max_chars)
     }
 
     fn clip_holds(&self) -> bool {

@@ -100,12 +100,13 @@ pub trait SelRun: Send {
     /// True when box `box_id` still has focus and its selection still holds text; false on any doubt, so nothing is sent.
     fn still(&mut self, box_id: u64) -> bool;
 
-    /// The selection's text from its start, at most `max_chars` characters, read once within `SelConfig::read_ms`; only
-    /// Translate's click asks.
+    /// Box `box_id`'s selected text from its start, at most `max_chars` characters, read once within
+    /// `SelConfig::read_ms`; only Translate's click asks, for the box its `still` just confirmed.
     ///
     /// # Errors
-    /// `Closed` in a `Closed` box; `TimedOut`, `Refused` or `Unavailable` as for `look`.
-    fn read(&mut self, max_chars: u16) -> Result<Redacted<String>, SelError>;
+    /// `Closed` in a `Closed` box or when the focused box is not `box_id`; `TimedOut`, `Refused` or `Unavailable` as for
+    /// `look`.
+    fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError>;
 
     /// True when the clipboard holds any format; it reads none of them.
     fn clip_holds(&self) -> bool;

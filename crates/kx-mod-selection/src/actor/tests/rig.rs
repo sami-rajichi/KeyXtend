@@ -31,7 +31,7 @@ pub(super) struct Rig {
     pub host: FakeHost,
     actor: Actor,
     inbox: Receiver<Msg>,
-    asked: Arc<Mutex<Vec<u16>>>,
+    asked: Arc<Mutex<Vec<(u64, u16)>>>,
     heard: Arc<Mutex<Vec<Heard>>>,
     _ears: Vec<Subscription>,
 }
@@ -179,7 +179,22 @@ impl Rig {
 
     /// The cap of every read the actor asked, in order, refused ones too.
     pub fn reads(&self) -> Vec<u16> {
-        self.asked.lock().unwrap().clone()
+        self.asked
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|&(_, cap)| cap)
+            .collect()
+    }
+
+    /// The box of every read the actor asked, in order.
+    pub fn read_boxes(&self) -> Vec<u64> {
+        self.asked
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|&(id, _)| id)
+            .collect()
     }
 
     /// The settings as the module's own writes left them.

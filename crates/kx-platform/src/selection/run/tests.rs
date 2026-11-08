@@ -124,7 +124,7 @@ fn each_answer_comes_back_from_the_thread() {
     assert_eq!(rig.run.look(), Ok(theirs(SelKind::Editable, 7).1));
     assert!(rig.run.still(7));
     assert_eq!(
-        rig.run.read(4).map(Redacted::into_inner),
+        rig.run.read(7, 4).map(Redacted::into_inner),
         Ok("hell".to_owned())
     );
     assert!(rig.run.clip_holds());
@@ -137,12 +137,12 @@ fn a_closed_box_sends_no_read() {
     probe.text("secret");
     let mut rig = rig(&probe, LONG_MS);
     assert_eq!(
-        rig.run.read(4),
+        rig.run.read(2, 4),
         Err(SelError::Closed),
         "no box before a look"
     );
     assert_eq!(rig.run.look().map(|s| s.kind), Ok(SelKind::Closed));
-    assert_eq!(rig.run.read(4), Err(SelError::Closed));
+    assert_eq!(rig.run.read(2, 4), Err(SelError::Closed));
     assert_eq!(rig.taken(), 1, "only the look");
     assert_eq!(probe.calls().reads, 0);
 }
@@ -156,7 +156,7 @@ fn our_own_focus_keeps_the_last_box_and_is_never_read() {
     assert_eq!(rig.run.look(), Ok(theirs), "the last box");
     assert!(!rig.run.still(5));
     assert_eq!(
-        rig.run.read(4),
+        rig.run.read(5, 4),
         Err(SelError::Closed),
         "our own text is never read"
     );
@@ -217,7 +217,11 @@ fn a_watch_that_failed_to_start_or_whose_thread_ended_is_unavailable() {
     for run in [&mut failed, &mut ended] {
         assert_eq!(run.look(), Err(SelError::Unavailable));
         assert!(!run.still(1));
-        assert_eq!(run.read(4), Err(SelError::Closed), "no box was looked at");
+        assert_eq!(
+            run.read(1, 4),
+            Err(SelError::Closed),
+            "no box was looked at"
+        );
         assert!(!run.clip_holds());
     }
 }

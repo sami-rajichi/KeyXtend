@@ -18,7 +18,7 @@ fn a_job_past_read_ms_times_out_and_the_thread_is_skipped_until_it_returns() {
     assert!(probe.hung(), "the thread holds the job");
     assert_eq!(rig.run.look(), Err(SelError::TimedOut), "busy");
     assert!(!rig.run.still(3));
-    assert_eq!(rig.run.read(4), Err(SelError::TimedOut));
+    assert_eq!(rig.run.read(3, 4), Err(SelError::TimedOut));
     assert!(!rig.run.clip_holds());
     assert_eq!(rig.taken(), 2, "nothing queued behind the hung look");
     probe.open();
@@ -51,7 +51,7 @@ fn a_timed_out_reads_text_never_reaches_a_later_ask() {
     assert!(rig.run.look().is_ok());
     assert_eq!(rig.served.recv_timeout(WAIT), Ok(()));
     probe.shut(Stop::Read);
-    assert_eq!(rig.run.read(9), Err(SelError::TimedOut));
+    assert_eq!(rig.run.read(3, 9), Err(SelError::TimedOut));
     probe.text("new");
     probe.open();
     assert_eq!(
@@ -59,6 +59,6 @@ fn a_timed_out_reads_text_never_reaches_a_later_ask() {
         Ok(()),
         "the stuck read ended"
     );
-    let fresh = rig.run.read(9).map(Redacted::into_inner);
+    let fresh = rig.run.read(3, 9).map(Redacted::into_inner);
     assert_eq!(fresh, Ok("new".to_owned()), "never the late answer");
 }

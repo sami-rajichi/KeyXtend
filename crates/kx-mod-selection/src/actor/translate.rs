@@ -119,7 +119,7 @@ impl Actor {
         let Some(run) = self.ports.run.as_mut() else {
             return Fetch::Failed;
         };
-        match run.read(cap) {
+        match run.read(pick.box_id, cap) {
             Ok(text) => {
                 let text = Zeroizing::new(text.into_inner());
                 site.link(&text, &self.code, chars)

@@ -34,10 +34,11 @@ fn still(probe: &Script, box_id: u64, by: Instant) -> bool {
     answer.recv().unwrap_or(false)
 }
 
-/// What `serve` answers to a read of at most `max_chars` characters, by `by`, unwrapped.
-fn read(probe: &Script, max_chars: u16, by: Instant) -> Result<String, SelError> {
+/// What `serve` answers to a read of at most `max_chars` characters of box `box_id`, by `by`, unwrapped.
+fn read_of(probe: &Script, box_id: u64, max_chars: u16, by: Instant) -> Result<String, SelError> {
     let (reply, answer) = mpsc::channel();
     let ask = Ask::Read {
+        box_id,
         max_chars,
         by,
         reply,
@@ -76,15 +77,23 @@ fn still_asks_the_probe_about_the_focused_box() {
 fn a_read_gives_the_selection_cut_at_its_cap() {
     let probe = Script::on(Ok(theirs(SelKind::ReadOnly, 3)));
     probe.text("مرحبا بالعالم");
-    assert_eq!(read(&probe, 5, far()), Ok("مرحبا".to_owned()));
+    assert_eq!(read_of(&probe, 3, 5, far()), Ok("مرحبا".to_owned()));
     assert_eq!(probe.calls().reads, 1);
+}
+
+#[test]
+fn a_read_for_a_box_focus_left_is_closed_with_no_text_call_in_the_same_job() {
+    let probe = Script::on(Ok(theirs(SelKind::Editable, 9)));
+    probe.text("مرحبا بالعالم");
+    assert_eq!(read_of(&probe, 3, 5, far()), Err(SelError::Closed));
+    assert_eq!(probe.calls().reads, 0);
 }
 
 #[test]
 fn a_closed_box_is_refused_with_no_text_call() {
     let probe = Script::on(Ok(theirs(SelKind::Closed, 3)));
     probe.text("secret");
-    assert_eq!(read(&probe, 5, far()), Err(SelError::Closed));
+    assert_eq!(read_of(&probe, 3, 5, far()), Err(SelError::Closed));
     assert_eq!(probe.calls().reads, 0);
 }
 
@@ -92,7 +101,7 @@ fn a_closed_box_is_refused_with_no_text_call() {
 fn a_bare_caret_reads_as_empty_with_no_text_call() {
     let probe = Script::on(Ok((false, spot(SelKind::Editable, 3, false))));
     probe.text("words");
-    assert_eq!(read(&probe, 5, far()), Ok(String::new()));
+    assert_eq!(read_of(&probe, 3, 5, far()), Ok(String::new()));
     assert_eq!(probe.calls().reads, 0);
 }
 
@@ -102,7 +111,7 @@ fn focus_in_our_own_process_is_never_looked_at_or_read() {
     probe.text("ours");
     assert_eq!(look(&probe, far()), Ok(None), "the run keeps the last box");
     assert!(!still(&probe, 4, far()));
-    assert_eq!(read(&probe, 5, far()), Err(SelError::Closed));
+    assert_eq!(read_of(&probe, 4, 5, far()), Err(SelError::Closed));
     let calls = probe.calls();
     assert_eq!((calls.spots, calls.stills, calls.reads), (0, 0, 0));
 }
@@ -113,7 +122,7 @@ fn a_late_job_makes_no_os_call() {
     probe.clip(true);
     assert_eq!(look(&probe, past()), Err(SelError::TimedOut));
     assert!(!still(&probe, 1, past()));
-    assert_eq!(read(&probe, 5, past()), Err(SelError::TimedOut));
+    assert_eq!(read_of(&probe, 1, 5, past()), Err(SelError::TimedOut));
     assert!(!clip(&probe, past()));
     assert_eq!(probe.calls(), Calls::default());
 }
@@ -123,7 +132,7 @@ fn a_refused_focus_passes_its_error_on() {
     let probe = Script::on(Err(SelError::Refused));
     assert_eq!(look(&probe, far()), Err(SelError::Refused));
     assert!(!still(&probe, 1, far()));
-    assert_eq!(read(&probe, 5, far()), Err(SelError::Refused));
+    assert_eq!(read_of(&probe, 1, 5, far()), Err(SelError::Refused));
     assert_eq!(probe.calls().spots, 0);
 }
 

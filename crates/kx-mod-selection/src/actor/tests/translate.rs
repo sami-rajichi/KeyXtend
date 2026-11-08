@@ -48,6 +48,8 @@ fn translate_reads_once_at_the_click_and_opens_the_sites_page_in_the_system_lang
     let tick = matches!(rig.view(), ChipsView::Shown { round: r, acted: Some(SelChip::Translate), .. } if r == round);
     assert!(tick, "{:?}", rig.heard());
     assert!(rig.notices().is_empty(), "no question once agreed");
+    let checked = rig.watch.spot().box_id;
+    assert_eq!(rig.read_boxes(), [checked], "the box its still confirmed");
 }
 
 #[test]
