@@ -80,12 +80,6 @@ pub fn tool_row(cfg: &SpikeConfig) -> Vec<(String, Area)> {
         .collect()
 }
 
-/// Width and height of the keys plus the tools row, without the status line.
-pub fn face_size(cfg: &KeyboardConfig) -> (f64, f64) {
-    let (w, h) = block_size(cfg);
-    (w, h + f64::from(cfg.key_px) + f64::from(cfg.gap_px))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,7 +137,6 @@ mod tests {
             close(last.x + last.w + 4.0, 381.0),
             "the row fills the block"
         );
-        assert_eq!(face_size(&kb()), (381.0, 212.0));
         assert!(tools(&kb(), 0).is_empty());
     }
 

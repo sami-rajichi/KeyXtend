@@ -1,8 +1,6 @@
-// Stage-1 extras: the Copy pill, the voice caption and the snip overlay, with the tools and voice worker behind them.
-// They take the keyboard's theme, light or dark, like the mock-up's .selpill, .capbar and .snip-*.
+// Stage-1 extras: the voice caption and the snip overlay, with the tools and voice worker behind them.
+// They take the keyboard's theme, light or dark, like the mock-up's .capbar and .snip-*; the pill left in P10.
 import QtQuick
-// The shared parts (Icon, Glow, the tweens) moved to the product in P3 Task 17.
-import "../../../crates/kx-ui/qml"
 import KeyXtend.Spike
 
 Item {
@@ -62,44 +60,6 @@ Item {
             say(tl.guard(cap.title));
     }
 
-    // Shows, moves or hides the pill, and shows any new note.
-    function tick() {
-        const r = JSON.parse(tl.tick());
-        say(r.note);
-        const at = r.show || r.move;
-        if (at)
-            pill.place(logical(at[0], at[1]));
-        if (r.show) {
-            // The shadow owns the pill, so it is shown first.
-            pillGlow.visible = true;
-            pill.visible = true;
-            say(tl.guard(tl.pillTitle));
-        }
-        if (r.hide) {
-            pill.visible = false;
-            pillGlow.visible = false;
-        }
-    }
-
-    Glow {
-        id: pillGlow
-        lk: ex.lk
-        box: Qt.rect(pill.x, pill.y, pill.width, pill.height)
-        radius: pill.height / 2
-        follow: pill.popped
-
-        Pill {
-            id: pill
-            title: tl.pillTitle
-            least: tl.pillWidth
-            height: tl.pillHeight
-            label: tl.pillLabel
-            icon: tl.pillIcon
-            lk: ex.lk
-            res: ex.res
-            onCopyClicked: ex.say(tl.copy())
-        }
-    }
     Caption {
         id: cap
         title: vc.barTitle
@@ -125,11 +85,5 @@ Item {
                 ex.say(n);
             }
         }
-    }
-    Timer {
-        interval: tl.pollMs
-        running: true
-        repeat: true
-        onTriggered: ex.tick()
     }
 }

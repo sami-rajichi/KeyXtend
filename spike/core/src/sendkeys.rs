@@ -1,13 +1,11 @@
-//! Spike helpers over the product injector (`kx-platform-windows`) until their phases move them:
-//! paced Unicode typing for voice (P11) and shortcut keys for the pill's Copy (P10).
+//! Spike helper over the product injector (`kx-platform-windows`) until its phase moves it: paced Unicode typing
+//! for voice (P11).
 
 use std::time::Duration;
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{InputInjector, TextRoute};
 use kx_platform_windows::WinInjector;
-use kx_platform_windows::inject::{send_keys, vk_key};
-use kx_platform_windows::strokes::combo as presses;
 
 /// Types `text` as Unicode characters in one batch, whatever the target's layout.
 fn text(text: &str) -> Result<(), String> {
@@ -33,12 +31,6 @@ pub fn text_paced(text: &str, gap_ms: u64) -> Result<(), String> {
 /// Each character of `text` on its own, so a surrogate pair is never split.
 fn chars(text: &str) -> Vec<String> {
     text.chars().map(String::from).collect()
-}
-
-/// Sends the shortcut `vks` in one batch, such as Ctrl+C; virtual keys work whatever the app's layout.
-pub fn combo(vks: &[u16]) -> Result<(), String> {
-    let keys: Vec<_> = vks.iter().map(|&vk| vk_key(vk)).collect();
-    send_keys(&presses(&keys)).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

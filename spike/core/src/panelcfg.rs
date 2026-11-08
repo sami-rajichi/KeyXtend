@@ -76,11 +76,9 @@ impl PanelConfig {
 
 /// Every window title the spike opens, the keyboard's first.
 pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
-    let tools = &cfg.tools;
     let named = [
         &cfg.panel.title,
-        &tools.pill_title,
-        &tools.overlay_title,
+        &cfg.tools.overlay_title,
         &cfg.voice.caption.title,
     ];
     std::iter::once(&cfg.keyboard.title).chain(named).collect()
@@ -148,8 +146,8 @@ mod tests {
             f(&mut c);
             super::check_titles(&c)
         };
-        let pill = with(&|c| c.panel.title = c.tools.pill_title.clone());
-        assert!(pill.expect_err("pill").contains("title"));
+        let snip = with(&|c| c.panel.title = c.tools.overlay_title.clone());
+        assert!(snip.expect_err("snip").contains("title"));
         assert!(
             with(&|c| c.panel.title = c.keyboard.title.clone()).is_err(),
             "the keyboard's"

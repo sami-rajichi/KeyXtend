@@ -1,4 +1,4 @@
-// The caption's and the pill's motion checks, kept as source for P10 and P11 when tst_motion moved to kx-ui (P3).
+// The caption's motion checks, kept as source for P11 when tst_motion moved to kx-ui (P3); the pill's went to kx-ui in P10.
 // The shared parts (Glow, Icon, the tweens) and the look fixtures now live in the product.
 import QtQuick
 import QtTest
@@ -27,8 +27,6 @@ Item {
     }
 
     Component { id: capC; Caption {} }
-    Component { id: pillC; Pill {} }
-    Component { id: glowC; Glow {} }
 
     TestCase {
         name: "extras"
@@ -51,22 +49,6 @@ Item {
             verify(!rs.sliding, "no loop at 0 ms");
             compare(rs.phase, 0, "a still shimmer");
             r.visible = false;
-        }
-
-        function test_pill_and_its_shadow_pop_in() {
-            const p = createTemporaryObject(pillC, root, { lk: F.lk, res: root.res, label: "Copy", icon: "copy", least: 76, height: 28 });
-            const g = createTemporaryObject(glowC, root, { lk: F.lk, box: Qt.rect(20, 120, 72, 28), radius: 14, follow: p.popped });
-            p.place({ x: 20, y: 120 });
-            g.visible = true;
-            p.visible = true;
-            const shade = g.contentItem.children[0];
-            verify(p.popped.opacity < 1 && p.popped.y > 0, "fading in and rising");
-            compare(shade.opacity, p.popped.opacity, "the shadow fades with it");
-            compare(shade.y, F.lk.margin + p.popped.y, "and rises with it");
-            tryCompare(p.popped, "opacity", 1, 1000);
-            compare(shade.scale, 1);
-            p.visible = false;
-            g.visible = false;
         }
     }
 }

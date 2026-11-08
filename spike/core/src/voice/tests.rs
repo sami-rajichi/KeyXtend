@@ -163,3 +163,9 @@ fn only_the_wait_for_the_words_is_busy() {
     assert!(busy(b.on_event(&Event::Transcribing { audio_ms: 9 }, &v)));
     assert!(!busy(b.on_event(&text("x"), &v)));
 }
+
+#[test]
+fn the_bar_size_follows_the_monitor_dpi() {
+    assert_eq!(BarPx([72.0, 32.0, 8.0]).at(120), [90, 40, 10]);
+    assert_eq!(BarPx([72.0, 32.0, 8.0]).at(96), [72, 32, 8]);
+}

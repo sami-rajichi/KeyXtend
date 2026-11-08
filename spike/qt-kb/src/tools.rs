@@ -1,19 +1,13 @@
-//! The `Tools` QObject: the tools row, the selection pill and the snip overlay for QML.
+//! The `Tools` QObject: the tools row and the snip overlay for QML.
 
 use std::pin::Pin;
-use std::sync::Arc;
 
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QString, QUrl};
 use serde_json::{Value, json};
 use spike_core::config::{SpikeConfig, ToolButton};
-use spike_core::note::{self, Note};
-use spike_core::pt::Pt;
-use spike_core::selwatch::{self, PillPx, PillStep, Watch};
 use spike_core::snip::{self, Snip};
-use spike_core::{place, sendkeys, window};
-
-use crate::bridge::ms;
+use spike_core::{place, window};
 
 /// The cxx-qt bridge that makes `Tools` a QML type.
 #[cxx_qt::bridge]
@@ -29,16 +23,10 @@ pub mod qobject {
     extern "RustQt" {
         #[qobject]
         #[qml_element]
-        #[qproperty(QString, pill_title, READ, CONSTANT)]
-        #[qproperty(QString, pill_label, READ, CONSTANT)]
-        #[qproperty(QString, pill_icon, READ, CONSTANT)]
         #[qproperty(QString, overlay_title, READ, CONSTANT)]
         #[qproperty(QString, snip_hint, READ, CONSTANT)]
         #[qproperty(QString, snip_size, READ, CONSTANT)]
         #[qproperty(f32, snip_edge, READ, CONSTANT)]
-        #[qproperty(f32, pill_width, READ, CONSTANT)]
-        #[qproperty(f32, pill_height, READ, CONSTANT)]
-        #[qproperty(i32, poll_ms, READ, CONSTANT)]
         type Tools = super::ToolsRust;
 
         /// The tool buttons as JSON: a label and a box each.
@@ -48,14 +36,6 @@ pub mod qobject {
         /// Runs tool button `i`: JSON with a status `note`, the `snip` to show, or `mic` for QML's Voice.
         #[qinvokable]
         fn tool(self: Pin<&mut Self>, i: i32) -> QString;
-
-        /// JSON: the pill step (`show` or `move` with a physical point, or `hide`) and any new `note`.
-        #[qinvokable]
-        fn tick(self: Pin<&mut Self>) -> QString;
-
-        /// The pill's Copy: sends Ctrl+C to the app in front; returns a note or empty.
-        #[qinvokable]
-        fn copy(&self) -> QString;
 
         /// One click on the overlay: empty while the snip goes on, else its note.
         #[qinvokable]
@@ -73,21 +53,11 @@ pub mod qobject {
 
 /// Rust side of `Tools`.
 pub struct ToolsRust {
-    pill_title: QString,
-    pill_label: QString,
-    pill_icon: QString,
     overlay_title: QString,
     snip_hint: QString,
     snip_size: QString,
     snip_edge: f32,
-    pill_width: f32,
-    pill_height: f32,
-    poll_ms: i32,
     cfg: SpikeConfig,
-    watch: Result<Watch, String>,
-    /// Where the pill is now, or `None` while it is hidden.
-    shown: Option<Pt>,
-    note: Note,
     /// The snip in progress and the window that was in front when it began.
     snip: Option<(Snip, isize)>,
 }
@@ -96,27 +66,11 @@ impl Default for ToolsRust {
     fn default() -> Self {
         let cfg = crate::bridge::config().clone();
         let t = &cfg.tools;
-        let note: Note = Arc::default();
-        let watch = Watch::start(t.selection_poll_ms, PillPx(t.pill_px));
-        if let Err(e) = &watch
-            && let Ok(mut n) = note.lock()
-        {
-            *n = Some(e.clone());
-        }
         Self {
-            pill_title: QString::from(&t.pill_title),
-            pill_label: QString::from(&t.labels.copy),
-            pill_icon: QString::from(&t.pill_icon),
             overlay_title: QString::from(&t.overlay_title),
             snip_hint: QString::from(&t.snip_hint),
             snip_size: QString::from(&t.snip_size),
             snip_edge: t.snip_edge_px,
-            pill_width: t.pill_px[0],
-            pill_height: t.pill_px[1],
-            poll_ms: ms(t.selection_poll_ms),
-            watch,
-            shown: None,
-            note,
             snip: None,
             cfg,
         }
@@ -131,16 +85,6 @@ fn js(v: Value) -> QString {
 /// An error as a QML note; empty when all went well.
 fn note_of(r: Result<(), String>) -> QString {
     r.err().map(|e| QString::from(&e)).unwrap_or_default()
-}
-
-/// A pill step as JSON for QML.
-fn step_json(s: PillStep) -> Value {
-    match s {
-        PillStep::Show(p) => json!({ "show": [p.x, p.y] }),
-        PillStep::Move(p) => json!({ "move": [p.x, p.y] }),
-        PillStep::Hide => json!({ "hide": true }),
-        PillStep::Stay => json!({}),
-    }
 }
 
 impl qobject::Tools {
@@ -180,18 +124,6 @@ impl qobject::Tools {
         v
     }
 
-    fn tick(mut self: Pin<&mut Self>) -> QString {
-        let now = self.rust().watch.as_ref().ok().and_then(Watch::spot);
-        let before = std::mem::replace(&mut self.as_mut().rust_mut().shown, now);
-        let mut v = step_json(selwatch::step(before, now));
-        v["note"] = json!(note::take(&self.rust().note));
-        js(v)
-    }
-
-    fn copy(&self) -> QString {
-        note_of(sendkeys::combo(&self.rust().cfg.tools.copy_keys))
-    }
-
     fn pick(mut self: Pin<&mut Self>) -> QString {
         let dir = self.rust().cfg.tools.snip_dir();
         let mut me = self.as_mut().rust_mut();
@@ -213,19 +145,5 @@ impl qobject::Tools {
 
     fn forget_frozen(&self) -> QString {
         note_of(snip::forget_frozen(&self.rust().cfg.tools.snip_dir()))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn pill_steps_reach_qml_as_small_json() {
-        let p = Pt { x: 5, y: 7 };
-        assert_eq!(step_json(PillStep::Show(p)), json!({ "show": [5, 7] }));
-        assert_eq!(step_json(PillStep::Move(p)), json!({ "move": [5, 7] }));
-        assert_eq!(step_json(PillStep::Hide), json!({ "hide": true }));
-        assert_eq!(step_json(PillStep::Stay), json!({}));
     }
 }
