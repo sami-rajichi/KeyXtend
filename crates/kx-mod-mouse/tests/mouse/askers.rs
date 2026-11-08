@@ -2,10 +2,10 @@
 //! every asker and the panel stop, and each release is told with `ours` and no point.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, Heard, Rig, T0, T1, T2, down, ours, up, up_ours, wants};
+use crate::rig::{A, Heard, Rig, SHIFT, T0, T1, T2, down, ours, up, up_ours, wants};
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::PressAsker::{self, Predict, Selection};
-use kx_module_api::ports::{AssistChanged, PointerPressed, PointerReleased};
+use kx_module_api::ports::{AssistChanged, PointerPressed, PointerReleased, Toggle};
 use kx_module_api::{Bus, Mono};
 
 /// A press told on the bus.
@@ -107,6 +107,28 @@ fn the_pad_alone_tells_no_release_and_the_panels_wish_tells_both() {
         told(&mut rig, T2),
         "the panel wants presses, so releases are told"
     );
+}
+
+#[test]
+fn no_press_or_release_is_told_while_only_a_mode_or_a_latch_keeps_the_hook() {
+    let keeps = [
+        ("Right-click", Msg::Toggle(Toggle::RightClick)),
+        ("a latch", Msg::Latches(vec![SHIFT])),
+    ];
+    for (name, keep) in keeps {
+        let mut rig = started();
+        rig.send(wish(Selection, true));
+        rig.send(keep);
+        rig.send(wish(Selection, false));
+        rig.settle(T0);
+        assert!(rig.hook.running(), "{name} keeps the hook");
+        rig.take();
+        let _ = rig.feed(down(A), T1);
+        let _ = rig.feed(up(A), T1);
+        let heard = rig.take();
+        let click = |h: &Heard| matches!(h, Heard::Pressed(_) | Heard::Released(_));
+        assert!(!heard.iter().any(click), "{name}: {heard:?}");
+    }
 }
 
 /// The real relay: each asker's wish reaches the actor on its own, and a release reaches the bus.

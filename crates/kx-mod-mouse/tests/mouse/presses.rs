@@ -1,6 +1,6 @@
-//! The actor while word prediction wants presses (spec §6): the hook stays on and each press is told with `ours`, so a
-//! click outside our windows ends the word; every press still reaches the app as the modes say. Each start asks for
-//! the flag, so any start order works.
+//! The actor while an asker wants presses, here prediction (spec §6): the hook stays on and each press and release is
+//! told with `ours`, and every event still reaches the app as the modes say. Each start asks every asker for its wish,
+//! so any start order works.
 
 use crate::live::{Live, WAIT, hear, on, synced};
 use crate::logs::{MESSAGE, lines_of};
