@@ -193,6 +193,7 @@ fn a_wait_or_slack_past_its_range_is_refused() {
         (|g| g.hung_quiet_ms = 1, "g19_product.hung_quiet_ms"),
         (|g| g.bar_depth = 0, "g19_product.bar_depth"),
         (|g| g.box_size = 0, "g19_product.box_size"),
+        (|g| g.look_s = 0, "g19_product.look_s"),
         (|g| g.ping_exit_ms = 0, "g19_product.ping_exit_ms"),
         (|g| g.ping_exit_ms = u64::MAX, "g19_product.ping_exit_ms"),
     ]);

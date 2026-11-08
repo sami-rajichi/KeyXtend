@@ -121,8 +121,12 @@ const DRIVEN: [(&str, &str); 4] = [
     ("g19", product::NAME),
     ("g19", g19chips::TERMINALS),
 ];
-/// A gate's names that wait on the owner's own mouse, though the gate itself holds it.
-const FREED: [(&str, &str); 2] = [("g19", g19chips::READ), ("g19", g19chips::BESIDE)];
+/// A gate's names that wait on the owner's own mouse or move nothing, though the gate itself holds it.
+const FREED: [(&str, &str); 3] = [
+    ("g19", g19chips::READ),
+    ("g19", g19chips::BESIDE),
+    ("g19", g19chips::LOOK),
+];
 
 /// Every gate's name.
 pub(crate) fn gates() -> impl Iterator<Item = &'static str> {

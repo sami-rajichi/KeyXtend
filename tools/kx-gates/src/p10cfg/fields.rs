@@ -144,6 +144,8 @@ pub struct G19Product {
     pub caret_slack_ms: u64,
     /// Longest wait for the owner's translate page.
     pub owner_wait_ms: u64,
+    /// How long `g19 look` looks, in seconds.
+    pub look_s: u64,
     /// The classic console.
     pub console: Console,
 }

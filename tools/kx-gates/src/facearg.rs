@@ -41,6 +41,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g19chips::READ,
             g19chips::BESIDE,
             g19chips::TERMINALS,
+            g19chips::LOOK,
         ],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],

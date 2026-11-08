@@ -32,8 +32,8 @@ fn id_like(id: &str) -> bool {
 }
 
 impl G19Product {
-    /// Refuses a ping that names a path or holds a quote or separator, a resize corner that is no kx-ui id, and a
-    /// text box or address-bar walk of no size.
+    /// Refuses a ping that names a path or holds a quote or separator, a resize corner that is no kx-ui id, a text box
+    /// or address-bar walk of no size, and a look of no length.
     pub(super) fn check_ping(&self) -> Result<(), String> {
         let file = |c: char| c.is_ascii_alphanumeric() || ".-_".contains(c);
         let exe = &self.ping_exe;
@@ -60,6 +60,9 @@ impl G19Product {
         }
         if self.box_size == 0 {
             return Err("g19_product.box_size must be 1 or more".into());
+        }
+        if self.look_s == 0 {
+            return Err("g19_product.look_s must be 1 or more".into());
         }
         Ok(())
     }

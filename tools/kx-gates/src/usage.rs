@@ -79,6 +79,7 @@ g23 {NAME} starts the test build on a data folder it makes, saves a test login t
 /// The help lines of P10's selection strip gate.
 fn sel_lines() -> String {
     let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
+    let look = g19chips::LOOK;
     format!(
         "g19 {NAME} starts the test build on a data folder it makes and drives the selection strip in its own Notepad, \
          Chrome page, target-window and terminals, so close the product first; the folder goes at the end. It \
@@ -87,7 +88,9 @@ g19 {terms} does the same in the terminals alone, in about a minute, so close th
 g19 {read} starts the test build the same way and selects the long Arabic line: click Translate, then Yes; the gate \
          only reads the page that opens.
 g19 {beside} starts nothing: it does the same beside the uiAccess dev install, and runs only from the installed \
-         uiAccess kx-gates, as Windows hides that keyboard from a plain one."
+         uiAccess kx-gates, as Windows hides that keyboard from a plain one.
+g19 {look} starts nothing and moves nothing: it runs the product's selection look on the focused box and prints each \
+         change, never text."
     )
 }
 
@@ -243,16 +246,17 @@ mod tests {
     }
 
     #[test]
-    fn g19_lists_its_five_runs_and_asks_to_close_the_product_first() {
+    fn g19_lists_its_six_runs_and_asks_to_close_the_product_first() {
         let text = usage();
         let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
-        let runs = format!("g19 <{}|{NAME}|{read}|{beside}|{terms}>", g19::CORE);
+        let look = g19chips::LOOK;
+        let runs = format!("g19 <{}|{NAME}|{read}|{beside}|{terms}|{look}>", g19::CORE);
         assert!(text.contains(&runs), "{text}");
         let told = |run: &str| text.lines().find(|l| l.starts_with(&format!("g19 {run} ")));
-        assert!(
-            told(beside).is_some_and(|l| l.contains("starts nothing")),
-            "{text}"
-        );
+        for run in [beside, look] {
+            let free = told(run).is_some_and(|l| l.contains("starts nothing"));
+            assert!(free, "{run}: {text}");
+        }
         for run in [NAME, terms] {
             let asks = told(run).is_some_and(|l| l.contains("close the product first"));
             assert!(asks, "{run}: {text}");

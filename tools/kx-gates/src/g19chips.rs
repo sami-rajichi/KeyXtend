@@ -1,6 +1,6 @@
 //! G19 on the product (`g19 keyxtend`): the selection strip on the test build, in the gate's own Notepad document,
-//! Chrome page, target-window and terminals, or in the terminals alone (`g19 terminals`); and `g19 translate-read` and
-//! `g19 translate-beside`, which only read the translate page the owner opened.
+//! Chrome page, target-window and terminals, or in the terminals alone (`g19 terminals`); `g19 translate-read` and
+//! `g19 translate-beside`, which only read the translate page the owner opened; and `g19 look`, the product's look.
 #![cfg(windows)]
 
 mod act;
@@ -18,6 +18,7 @@ mod hides;
 mod hung;
 mod kept;
 mod link;
+mod look;
 mod notepad;
 mod numlock;
 mod ontop;
@@ -37,6 +38,7 @@ mod terms;
 mod watch;
 
 pub use link::{site_key, text_of};
+pub use look::LOOK;
 pub use plan::TERMINALS;
 pub use read::{BESIDE, READ};
 
@@ -170,18 +172,18 @@ fn is_test(ctx: &Ctx, text: &str) -> bool {
         || t.contains(&g.ping_host)
 }
 
-/// Runs `g19 keyxtend`, `terminals`, `translate-read` or `translate-beside`: all but the last are refused under
-/// uiAccess or while a product copy runs, and the first three's data folder and copies in Windows' clipboard history go
-/// at the end.
+/// Runs `g19 keyxtend`, `terminals`, `translate-read`, `translate-beside` or `look`: the first three are refused under
+/// uiAccess or while a product copy runs, and their data folder and copies in Windows' clipboard history go at the end.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let (name, drive): (&str, Drive) = match name {
         READ => return read::run(ctx),
         BESIDE => return beside::run(ctx),
+        LOOK => return look::run(ctx),
         NAME => (NAME, drive),
         TERMINALS => (TERMINALS, terminals),
         _ => {
             return Err(format!(
-                "G19 runs on {NAME}, {TERMINALS}, {READ} or {BESIDE}, not {name}"
+                "G19 runs on {NAME}, {TERMINALS}, {READ}, {BESIDE} or {LOOK}, not {name}"
             ));
         }
     };

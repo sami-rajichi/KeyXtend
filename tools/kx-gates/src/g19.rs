@@ -18,13 +18,14 @@ use crate::{g19chips, launch, product, simuser};
 /// G19's detection run, each line read back through UI Automation.
 pub const CORE: &str = "core";
 /// G19's run names: detection, the strip on the test build, the reads of the owner's translate page (on the test
-/// build or beside the owner's own keyboard), and the strip in the terminals alone.
-pub const NAMES: [&str; 5] = [
+/// build or beside the owner's own keyboard), the strip in the terminals alone, and the product's look.
+pub const NAMES: [&str; 6] = [
     CORE,
     product::NAME,
     g19chips::READ,
     g19chips::BESIDE,
     g19chips::TERMINALS,
+    g19chips::LOOK,
 ];
 /// The apps G19 core selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];

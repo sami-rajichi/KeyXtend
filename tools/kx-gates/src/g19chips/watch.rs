@@ -1,6 +1,6 @@
-//! The product's own selection watch, run in the gate with the module's defaults around a terminal case: what one look
-//! finds before and after the gate's drag, the changes heard between, the gate's own read of the selection's boxes and
-//! each call of the look's caret lookup. Numbers and kinds only, never text, so a missed strip names what failed.
+//! The product's own selection watch, run in the gate with the module's defaults around a terminal case and by the
+//! look run: what one look finds before and after the gate's drag, the changes heard between, the gate's own read of
+//! the selection's boxes and each call of the look's caret lookup. Numbers and kinds only, never text.
 #![cfg(windows)]
 
 use std::sync::Arc;
@@ -17,14 +17,14 @@ use crate::g19chips::gate::Gate;
 use crate::win::{self, ms_since};
 
 /// A running watch, and how many settled changes it told.
-struct Watch {
+pub(super) struct Watch {
     run: Box<dyn SelRun>,
     told: Arc<AtomicUsize>,
 }
 
 impl Watch {
     /// A watch with the module's settings `sel`, counting each change it tells.
-    fn start(sel: &SelSettings) -> Result<Self, String> {
+    pub(super) fn start(sel: &SelSettings) -> Result<Self, String> {
         let told = Arc::new(AtomicUsize::new(0));
         let count = Arc::clone(&told);
         let tell = Box::new(move || {
@@ -35,7 +35,7 @@ impl Watch {
     }
 
     /// The changes told so far.
-    fn told(&self) -> usize {
+    pub(super) fn told(&self) -> usize {
         self.told.load(Ordering::Relaxed)
     }
 
@@ -45,11 +45,17 @@ impl Watch {
         win::poll_until(wait_ms, poll_ms, || (self.told() > 0).then_some(())).is_some()
     }
 
-    /// One look now, and the ms it took.
-    fn look(&mut self) -> Value {
+    /// One look now, as the module's own, and the ms it took.
+    pub(super) fn spot(&mut self) -> (Result<SelSpot, SelError>, u64) {
         let t = Instant::now();
         let got = self.run.look();
-        spot_json(got, ms_since(t))
+        (got, ms_since(t))
+    }
+
+    /// One look now, and the ms it took.
+    fn look(&mut self) -> Value {
+        let (got, ms) = self.spot();
+        spot_json(got, ms)
     }
 }
 
