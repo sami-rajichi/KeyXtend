@@ -6,6 +6,7 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod aim;
 mod order;
 
 use crate::assist::latches::stay;
@@ -13,14 +14,14 @@ use crate::assist::{Bench, Said, ear};
 use crate::fill::{GAP, login};
 use crate::held::A;
 use crate::known::sid;
-use crate::rig::{HELD, STATE};
+use crate::rig::HELD;
 use crate::told::BKSP;
 use crate::typing::{tap, unicode};
 use crate::words::Desk;
 use kx_module_api::Module;
 use kx_module_api::ports::{
-    COPY_ID, COPY_TERM_ID, CUT_ID, ClipPanel, Edit, EditAsk, EditDone, FaceAction, FaceReply,
-    FillType, PASTE_ID, PASTE_TERM_ID, Piece, Scan, ShortcutError, ShortcutId, Typed,
+    COPY_ID, COPY_TERM_ID, CUT_ID, Edit, EditAsk, EditDone, FaceAction, FaceReply, FillType,
+    PASTE_ID, PASTE_TERM_ID, Piece, Scan, ShortcutError, ShortcutId, Typed,
 };
 use kx_platform_fake::Stroke;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -248,16 +249,6 @@ fn an_edit_ask_ends_a_held_key_as_its_let_go_would() {
         "the A it typed spent Shift, as at a let-go"
     );
     assert!(!c.on("shift"));
-}
-
-#[test]
-fn an_edit_takes_the_aim_from_an_open_panel_as_its_keys_went_to_the_app() {
-    let c = Chips::quiet();
-    c.b.send(&ClipPanel { open: true });
-    assert_eq!(c.b.rig.state()["aimed"], true);
-    c.ask(1, Edit::Paste, false);
-    assert_eq!(c.b.rig.act(FaceAction::Relabel), Ok(STATE));
-    assert_eq!(c.b.rig.state()["aimed"], false);
 }
 
 #[test]

@@ -198,7 +198,7 @@ An open panel takes the keys only while its line is aimed at (ADR-0040); the key
 
 The keyboard never depends on the selection module; they talk only through `kx_module_api::ports` selection events (ADR-0041), and the keyboard stays the only typist.
 - `EditAsk { round, edit, terminal }` ends a held key and takes the aim, as a paste does. It then sends the edit's id once through `Shortcuts` with nothing held: `COPY_ID`, `CUT_ID` or `PASTE_ID`, or in a terminal `COPY_TERM_ID` or `PASTE_TERM_ID`, while a Cut there sends nothing.
-- Every latch stays as it was, and prediction hears one `Break` once any of it reached the app.
+- Every latch stays as it was, apart from a held key's own let-go, and prediction hears one `Break` once any of it reached the app.
 - `EditDone { round, ok }` always answers; while the module is stopped or a fill waits, nothing is sent and the answer is no.
 - The answer leaves through the pieces' outbox, so the bus hears every piece typed before the edit, then `EditDone`, then the edit's own `Break`, from any thread.
 
