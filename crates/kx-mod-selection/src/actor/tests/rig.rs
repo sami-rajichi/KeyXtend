@@ -13,8 +13,8 @@ use kx_module_api::{Bus, ModuleCx, Mono, Notice, Redacted, Subscription, keys};
 use kx_platform_fake::{FakeClock, FakeSelectionWatch, FakeWebLink};
 use kx_test_support::host::FakeHost;
 
-use super::super::{Actor, Job, Msg, Ports};
-use super::taps::{Counted, Heard, listen};
+use super::super::{Actor, Msg, Ports};
+use super::taps::{Counted, Heard, held, in_place, listen, release};
 use crate::MANIFEST;
 use crate::settings::SelSettings;
 
@@ -34,12 +34,6 @@ pub(super) struct Rig {
     asked: Arc<Mutex<Vec<u16>>>,
     heard: Arc<Mutex<Vec<Heard>>>,
     _ears: Vec<Subscription>,
-}
-
-/// Runs an open in place, as a test has no thread to spare.
-fn in_place(job: Job) -> bool {
-    job();
-    true
 }
 
 impl Rig {
@@ -126,14 +120,15 @@ impl Rig {
         self.send(Msg::Released(false));
     }
 
-    /// The keyboard told `piece`.
-    pub fn typed(&mut self, piece: Piece) {
-        self.send(Msg::Typed(piece));
+    /// The keyboard typed a break, as our Esc or an arrow.
+    pub fn broke(&mut self) {
+        self.send(Msg::typed(&Piece::Break));
     }
 
     /// The keyboard typed a letter.
     pub fn letter(&mut self) {
-        self.typed(Piece::Text(Redacted::new("a".to_owned())));
+        let text = Piece::Text(Redacted::new("a".to_owned()));
+        self.send(Msg::typed(&text));
     }
 
     /// A click on `chip` of the strip shown last.
@@ -164,6 +159,17 @@ impl Rig {
     /// No open's thread starts from now on.
     pub fn no_threads(&mut self) {
         self.actor.ports.spawn = |_| false;
+    }
+
+    /// Every open waits from now on, until `release_opens`.
+    pub fn hold_opens(&mut self) {
+        self.actor.ports.spawn = held;
+    }
+
+    /// Ends every open held so far, then what they led to.
+    pub fn release_opens(&mut self) {
+        release();
+        self.pump();
     }
 
     /// How long the thread would wait now.
@@ -207,11 +213,16 @@ impl Rig {
         self.views().pop().unwrap_or(ChipsView::Hidden)
     }
 
-    /// The round and keycaps of the strip shown last; it fails the test when none shows.
+    /// The round and keycaps of the strip shown last; it fails the test when none shows or the last one is a tick.
     pub fn shown(&self) -> (u32, Vec<SelChip>) {
         match self.view() {
-            ChipsView::Shown { round, chips, .. } => (round, chips),
-            ChipsView::Hidden => panic!("no strip shows: {:?}", self.heard()),
+            ChipsView::Shown {
+                round,
+                chips,
+                acted: None,
+                ..
+            } => (round, chips),
+            _ => panic!("no live strip shows: {:?}", self.heard()),
         }
     }
 

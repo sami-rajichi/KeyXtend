@@ -3,7 +3,7 @@
 
 use kx_module_api::keys;
 use kx_module_api::ports::{
-    ChipAct, ChipsView, Edit, EditAsk, EditDone, Piece, SelChip, SelKind, SelSpot,
+    ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip, SelKind, SelSpot,
 };
 
 use super::super::Msg;
@@ -128,11 +128,43 @@ fn an_act_or_an_answer_for_another_round_does_nothing() {
     assert_eq!(rig.edits().len(), 1, "one edit while it is in flight");
     rig.send(Msg::Done(EditDone {
         round: other,
-        ok: false,
+        ok: true,
     }));
     assert!(rig.notices().is_empty() && !ticked(&rig, round, Copy));
     rig.answer(true);
     assert!(ticked(&rig, round, Copy));
+}
+
+#[test]
+fn a_failed_edit_for_an_older_strip_still_tells_the_user() {
+    let mut rig = Rig::new();
+    rig.focus(sel(SelKind::Editable, 40));
+    let old = rig.round();
+    rig.act(Copy);
+    rig.focus(sel(SelKind::Editable, 60));
+    rig.act(Copy);
+    rig.send(Msg::Done(EditDone {
+        round: old,
+        ok: false,
+    }));
+    assert_eq!(rig.keys(), [keys::KEYS_NOT_SENT]);
+    let shows = matches!(rig.view(), ChipsView::Shown { acted: None, .. });
+    assert!(shows, "the new strip stays: {:?}", rig.heard());
+    rig.answer(true);
+    assert!(ticked(&rig, rig.round(), Copy));
+}
+
+#[test]
+fn any_press_ends_the_edits_swallow() {
+    let mut rig = Rig::new();
+    rig.focus(sel(SelKind::Editable, 40));
+    rig.act(Copy);
+    rig.answer(true);
+    rig.send(Msg::Pressed(true));
+    rig.send(Msg::Released(true));
+    rig.broke();
+    rig.change(sel(SelKind::Editable, 40));
+    rig.shown();
 }
 
 #[test]
@@ -142,14 +174,14 @@ fn the_edits_own_break_leaves_the_act_put_away() {
     rig.act(Copy);
     rig.answer(true);
     let told = rig.count();
-    rig.typed(Piece::Break);
+    rig.broke();
     rig.change(sel(SelKind::Editable, 40));
     assert_eq!(
         rig.count(),
         told,
         "the app's own event for Ctrl+C brings nothing back"
     );
-    rig.typed(Piece::Break);
+    rig.broke();
     rig.change(sel(SelKind::Editable, 40));
     rig.shown();
 }
@@ -164,7 +196,7 @@ fn another_input_before_the_break_ends_the_swallow() {
     rig.watch.change_unheard(caret(50));
     rig.click();
     assert_eq!(rig.shown().1, [Paste]);
-    rig.typed(Piece::Break);
+    rig.broke();
     assert_eq!(
         rig.view(),
         ChipsView::Hidden,

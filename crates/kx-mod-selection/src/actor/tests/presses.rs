@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use kx_module_api::ports::{ChipsView, Piece, SelChip, SelKind};
+use kx_module_api::ports::{ChipsView, SelChip, SelKind};
 
 use super::super::Msg;
 use super::rig::Rig;
@@ -106,8 +106,21 @@ fn the_caret_paste_ends_on_a_key_or_our_esc_as_a_break() {
     rig.letter();
     assert_eq!(rig.view(), ChipsView::Hidden);
     let mut rig = pasting(50);
-    rig.typed(Piece::Break);
+    rig.broke();
     assert_eq!(rig.view(), ChipsView::Hidden, "Esc comes as a break");
+}
+
+#[test]
+fn our_esc_as_a_break_hides_a_selection_strip() {
+    let mut rig = Rig::new();
+    rig.focus(sel(SelKind::Editable, 40));
+    rig.letter();
+    rig.shown();
+    rig.broke();
+    let why = "Notepad and Chrome tell nothing on Esc";
+    assert_eq!(rig.view(), ChipsView::Hidden, "{why}");
+    rig.change(sel(SelKind::Editable, 40));
+    rig.shown();
 }
 
 #[test]

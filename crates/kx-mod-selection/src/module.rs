@@ -151,7 +151,7 @@ fn detached(job: Job) -> bool {
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |e: &ChipAct| Msg::Act(*e))?;
     relay(cx, tx, |e: &EditDone| Msg::Done(*e))?;
-    relay(cx, tx, |e: &Typed| Msg::Typed(e.piece.clone()))?;
+    relay(cx, tx, |e: &Typed| Msg::typed(&e.piece))?;
     relay(cx, tx, |e: &AimedLine| {
         Msg::Aimed(e.line != PanelLine::None)
     })?;

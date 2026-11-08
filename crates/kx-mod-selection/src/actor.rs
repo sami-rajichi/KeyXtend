@@ -35,8 +35,8 @@ pub(crate) enum Msg {
     Pressed(bool),
     /// A button came up on our windows (true) or in another app.
     Released(bool),
-    /// The keyboard told a piece it typed.
-    Typed(Piece),
+    /// The keyboard typed a piece: a break (true), such as our Esc, or another; its text never comes here.
+    Typed(bool),
     /// One of our panels' lines is aimed at (true) or let go.
     Aimed(bool),
     /// Grab carries a press (true), or not.
@@ -65,6 +65,13 @@ pub(crate) enum Msg {
     },
     /// The module stops.
     Quit,
+}
+
+impl Msg {
+    /// The message for a typed `piece`, which keeps only whether it was a break.
+    pub(crate) fn typed(piece: &Piece) -> Self {
+        Self::Typed(matches!(piece, Piece::Break))
+    }
 }
 
 /// The actor's ports, from the module's start or a test.
@@ -192,7 +199,7 @@ impl Actor {
             Msg::Wake => self.look(),
             Msg::Pressed(ours) => self.pressed(ours),
             Msg::Released(ours) => self.released(ours),
-            Msg::Typed(piece) => self.typed(&piece),
+            Msg::Typed(broke) => self.typed(broke),
             Msg::Aimed(on) => self.step(Input::Aimed(on)),
             Msg::Carrying(on) => self.carrying = on,
             Msg::Board(board) => self.step(Input::Board(board)),

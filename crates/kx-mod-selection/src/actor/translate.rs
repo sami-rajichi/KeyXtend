@@ -59,7 +59,8 @@ impl Actor {
         });
     }
 
-    /// The user answered `notice`: only the question's own Yes within `consent_s` is saved and opens the page.
+    /// The user answered `notice`: only the question's own Yes within `consent_s` is saved, and it opens the page only
+    /// while the strip asked about still shows, as a moved or new selection gets a new round.
     pub(super) fn answered(&mut self, notice: &Notice, yes: bool) {
         let Some(asking) = self.asking.take_if(|a| a.notice == *notice) else {
             return;
@@ -76,20 +77,22 @@ impl Actor {
             tracing::warn!(kind = error.kind(), "the translate consent was not saved");
         }
         self.settings.translate_ok = true;
-        self.go(asking.round, asking.pick);
+        // The strip asked about has already gone otherwise, so nothing is left to hide.
+        if self.strip.pick(asking.round, SelChip::Translate).is_some() {
+            self.go(asking.round, asking.pick);
+        }
     }
 
-    /// The open for the strip of `round` ended: its yes ticks Translate, its no tells the user.
+    /// The open for the strip of `round` ended: its yes ticks Translate while that open is in flight, and its no tells
+    /// the user in any case.
     pub(super) fn opened(&mut self, round: u32, ok: bool) {
-        let ours = |b: &mut Busy| b.round == round && b.chip == SelChip::Translate;
-        if self.busy.take_if(ours).is_none() {
-            return;
-        }
-        if ok {
-            let chip = SelChip::Translate;
-            self.step(Input::Acted { round, chip });
-        } else {
+        let chip = SelChip::Translate;
+        let ours = |b: &mut Busy| b.round == round && b.chip == chip;
+        let busy = self.busy.take_if(ours);
+        if !ok {
             self.fail(round);
+        } else if busy.is_some() {
+            self.step(Input::Acted { round, chip });
         }
     }
 

@@ -1,5 +1,7 @@
-//! What the rig taps: the cap of every read the actor asks, and every event it publishes.
+//! What the rig taps: the cap of every read the actor asks, every event it publishes, and its opens, run in place or
+//! held.
 
+use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 use kx_module_api::ports::{
@@ -7,6 +9,32 @@ use kx_module_api::ports::{
     TypingModeAsk,
 };
 use kx_module_api::{Bus, Event, Notice, Redacted, Subscription};
+
+use super::super::Job;
+
+thread_local! {
+    /// The opens `held` keeps on this test's thread until `release`.
+    static HELD: RefCell<Vec<Job>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Runs an open in place, as a test has no thread to spare.
+pub(super) fn in_place(job: Job) -> bool {
+    job();
+    true
+}
+
+/// Keeps an open for later, as a shell that holds the call.
+pub(super) fn held(job: Job) -> bool {
+    HELD.with(|h| h.borrow_mut().push(job));
+    true
+}
+
+/// Ends every open `held` kept on this thread.
+pub(super) fn release() {
+    for job in HELD.with(|h| std::mem::take(&mut *h.borrow_mut())) {
+        job();
+    }
+}
 
 /// One event the actor published, as a test hears it.
 #[derive(Clone, Debug, PartialEq, Eq)]

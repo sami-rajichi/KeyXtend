@@ -1,6 +1,6 @@
 //! The actor over the fakes: looks and what hides them (`looks`, `presses`), the keycaps' edits (`acts`), Translate
 //! (`translate`) and its consent (`consent`), and its logs (`logs`); `rig` drives it without a thread on the boxes of
-//! `spots`, hearing it through `taps`. Here: the start, the stop, and messages that print no text.
+//! `spots`, hearing it through `taps`. Here: the start, the stop, and an inbox that never holds typed text.
 
 #![allow(
     clippy::unwrap_used,
@@ -60,9 +60,9 @@ fn the_stop_drops_the_watch_hides_and_lets_presses_go() {
 }
 
 #[test]
-fn a_message_prints_no_typed_text() {
-    let secret = "zebra-quartz";
-    let msg = Msg::Typed(Piece::Text(Redacted::new(secret.to_owned())));
-    let shown = format!("{msg:?}");
-    assert!(!shown.contains(secret), "{shown}");
+fn a_typed_piece_reaches_the_inbox_only_as_whether_it_was_a_break() {
+    let text = Piece::Text(Redacted::new("zebra-quartz".to_owned()));
+    let pieces = [text, Piece::Erase, Piece::Advance, Piece::Break];
+    let broke = pieces.map(|p| matches!(Msg::typed(&p), Msg::Typed(true)));
+    assert_eq!(broke, [false, false, false, true]);
 }

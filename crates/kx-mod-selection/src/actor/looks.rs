@@ -1,7 +1,7 @@
 //! What the actor hears from the watch, the mouse and the keyboard: each look feeds the strip, a press outside hides
 //! it, a release looks again, and a typed key ends the caret's Paste.
 
-use kx_module_api::ports::{Piece, SelKind, SelSpot};
+use kx_module_api::ports::{SelKind, SelSpot};
 
 use super::Actor;
 use crate::strip::Input;
@@ -24,11 +24,11 @@ impl Actor {
         self.step(input);
     }
 
-    /// A press on our windows (true) or in another app, which hides the strip.
+    /// A press on our windows (true) or in another app, which hides the strip; any press ends the edit's swallow.
     pub(super) fn pressed(&mut self, ours: bool) {
         self.press = Some(ours);
+        self.swallow = false;
         if !ours {
-            self.swallow = false;
             self.step(Input::Press);
         }
     }
@@ -44,11 +44,15 @@ impl Actor {
         self.look();
     }
 
-    /// A piece the keyboard typed; the one break right after our own edit is no key, so the act stays put away.
-    pub(super) fn typed(&mut self, piece: &Piece) {
-        let own = std::mem::take(&mut self.swallow) && matches!(piece, Piece::Break);
-        if !own {
-            self.step(Input::Key);
+    /// A piece the keyboard typed is a key; a break, such as our Esc, also hides a selection until the next look, as
+    /// the app may tell nothing. The one break right after our own edit is neither, so the act stays put away.
+    pub(super) fn typed(&mut self, broke: bool) {
+        if std::mem::take(&mut self.swallow) && broke {
+            return;
+        }
+        self.step(Input::Key);
+        if broke {
+            self.step(Input::Lost);
         }
     }
 }

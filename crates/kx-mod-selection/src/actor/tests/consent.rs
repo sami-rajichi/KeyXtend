@@ -77,6 +77,19 @@ fn a_click_while_the_question_waits_points_its_yes_at_the_latest_strip() {
 }
 
 #[test]
+fn a_yes_after_the_selection_moved_saves_and_opens_nothing() {
+    let mut rig = asked();
+    rig.change(sel(SelKind::ReadOnly, 60));
+    rig.reply(true);
+    assert!(untouched(&rig));
+    assert!(rig.saved().translate_ok);
+    assert_eq!(rig.keys(), [keys::TRANSLATE_ASK], "nothing failed");
+    rig.act(SelChip::Translate);
+    let why = "the next click goes straight through";
+    assert_eq!(rig.web.opened().len(), 1, "{why}");
+}
+
+#[test]
 fn later_opens_nothing_and_the_next_click_asks_again() {
     let mut rig = asked();
     rig.reply(false);

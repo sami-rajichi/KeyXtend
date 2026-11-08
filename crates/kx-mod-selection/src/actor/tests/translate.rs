@@ -119,6 +119,20 @@ fn an_open_whose_thread_did_not_start_says_the_page_did_not_open() {
 }
 
 #[test]
+fn a_failed_open_for_an_older_strip_still_tells_the_user() {
+    let mut rig = agreed(|_| {});
+    rig.hold_opens();
+    rig.web.set_error(Some(LinkError::Unavailable));
+    translate(&mut rig, "hello");
+    rig.focus(sel(SelKind::Editable, 60));
+    rig.act(SelChip::Copy);
+    rig.release_opens();
+    assert_eq!(rig.keys(), [keys::TRANSLATE_FAILED]);
+    let shows = matches!(rig.view(), ChipsView::Shown { acted: None, .. });
+    assert!(shows, "the new strip stays: {:?}", rig.heard());
+}
+
+#[test]
 fn a_selection_gone_by_the_click_is_never_read() {
     let mut rig = agreed(|_| {});
     rig.watch.set_still(Some(false));
