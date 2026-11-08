@@ -179,22 +179,17 @@ impl Rig {
 
     /// The cap of every read the actor asked, in order, refused ones too.
     pub fn reads(&self) -> Vec<u16> {
-        self.asked
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|&(_, cap)| cap)
-            .collect()
+        self.asked().map(|(_, cap)| cap).collect()
     }
 
     /// The box of every read the actor asked, in order.
     pub fn read_boxes(&self) -> Vec<u64> {
-        self.asked
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|&(id, _)| id)
-            .collect()
+        self.asked().map(|(id, _)| id).collect()
+    }
+
+    /// The box and cap of every read the actor asked, in order.
+    fn asked(&self) -> std::vec::IntoIter<(u64, u16)> {
+        self.asked.lock().unwrap().clone().into_iter()
     }
 
     /// The settings as the module's own writes left them.
