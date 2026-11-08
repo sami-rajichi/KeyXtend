@@ -60,13 +60,16 @@ impl Actor {
     }
 
     /// The user answered `notice`: only the question's own Yes within `consent_s` is saved, and it opens the page only
-    /// while the strip asked about still shows, as a moved or new selection gets a new round.
+    /// while the strip asked about still shows, as a moved or new selection gets a new round. A late Yes is told.
     pub(super) fn answered(&mut self, notice: &Notice, yes: bool) {
         let Some(asking) = self.asking.take_if(|a| a.notice == *notice) else {
             return;
         };
-        if !yes || late(&asking, self.ports.clock.now(), &self.settings) {
+        if !yes {
             return;
+        }
+        if late(&asking, self.ports.clock.now(), &self.settings) {
+            return self.say(keys::TRANSLATE_FAILED);
         }
         let saved = self
             .ports

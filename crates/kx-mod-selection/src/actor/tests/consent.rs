@@ -112,10 +112,23 @@ fn a_yes_within_consent_s_opens_and_a_later_one_does_not() {
     assert!(!rig.saved().translate_ok);
     rig.act(SelChip::Translate);
     assert_eq!(
-        rig.keys().len(),
-        2,
+        rig.keys().last(),
+        Some(&keys::TRANSLATE_ASK),
         "a late answer leaves the next click to ask"
     );
+}
+
+/// The banner can stay past `consent_s`, so a late Yes is told rather than lost; a late Later needs no word.
+#[test]
+fn a_late_yes_says_the_page_did_not_open_and_a_late_later_says_nothing() {
+    let mut rig = asked();
+    rig.advance(limit().saturating_add(TICK));
+    rig.reply(true);
+    assert_eq!(rig.keys(), [keys::TRANSLATE_ASK, keys::TRANSLATE_FAILED]);
+    let mut rig = asked();
+    rig.advance(limit().saturating_add(TICK));
+    rig.reply(false);
+    assert_eq!(rig.keys(), [keys::TRANSLATE_ASK]);
 }
 
 /// Notices that differ from `ask` in one part each: the key, the answers, the module, the site's name.
