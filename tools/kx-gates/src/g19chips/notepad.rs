@@ -8,6 +8,7 @@ use kx_platform_windows::screen::edges;
 use kx_platform_windows::uia;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::POINT;
+use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::Opened;
 use crate::board;
@@ -43,16 +44,21 @@ pub struct Lines {
 impl Lines {
     /// The lines of `app`'s document once UI Automation shows every text line.
     pub fn read(gate: &Gate, app: &Opened) -> Result<Self, String> {
+        Self::read_in(gate, || gate.uia().text(app.hwnd))
+            .ok_or_else(|| "Notepad's lines did not show through UI Automation".into())
+    }
+
+    /// The lines of the text box `find` gives, once UI Automation shows as many as Notepad's document holds.
+    pub fn read_in(gate: &Gate, find: impl Fn() -> Option<IUIAutomationElement>) -> Option<Self> {
         let t = &gate.ctx.cfg.timing;
         let want = Line::Caret.at();
         let read = || {
-            let parts = uia::lines(&gate.uia().text(app.hwnd)?).ok()?;
+            let parts = uia::lines(&find()?).ok()?;
             let rows = rows(&parts.iter().map(place::rect).collect::<Vec<_>>());
             (rows.len() >= want).then_some(rows)
         };
-        let rows = win::poll_until(t.read_wait_ms, t.poll_ms, read)
-            .ok_or("Notepad's lines did not show through UI Automation")?;
-        Ok(Self {
+        let rows = win::poll_until(t.read_wait_ms, t.poll_ms, read)?;
+        Some(Self {
             rows,
             inset: gate.ctx.cfg.probes.inset_px,
         })

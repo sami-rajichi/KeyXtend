@@ -27,6 +27,10 @@ pub const STEPS: [&str; 8] = [
 ];
 /// What is recorded beside them, never judged.
 pub const NOTES: &str = "notes";
+/// A place case's mark of whether it ran: one that did not is never a pass.
+pub const EXERCISED: &str = "exercised";
+/// The place cases, by their key in the run, that may not run when their window cannot move.
+pub const PLACES: [&str; 2] = ["near_bottom", "second"];
 
 /// One group's verdict over `cases`: every case that holds `key` holds it true, and at least one does.
 fn group(cases: &[Value], key: &str) -> Value {
@@ -41,10 +45,21 @@ pub fn groups(cases: &[Value]) -> Value {
     Value::Object(all.collect())
 }
 
-/// True when every group and every step in `run` passed; a missing one fails, and the notes count for nothing.
+/// True when place case `key` of `run` says it did not run.
+fn unrun(run: &Value, key: &str) -> bool {
+    PLACES.contains(&key) && run[key][EXERCISED] == false
+}
+
+/// The place cases of `run` that did not run, by name, which go to the manual check.
+pub fn unexercised(run: &Value) -> Vec<&'static str> {
+    PLACES.into_iter().filter(|k| unrun(run, k)).collect()
+}
+
+/// True when every group and every step in `run` that ran passed; a missing one fails, and a place case that did not
+/// run and the notes count for nothing.
 pub fn passed(run: &Value) -> bool {
     let grouped = GROUPS.iter().all(|k| run["cases"][k]["ok"] == true);
-    grouped && STEPS.iter().all(|s| run[s]["ok"] == true)
+    grouped && STEPS.iter().all(|s| run[s]["ok"] == true || unrun(run, s))
 }
 
 /// True when a timer that went after `after_ms` kept `due_ms` within `slack_ms` either way.
@@ -99,6 +114,22 @@ mod tests {
         let mut v = run();
         v["cases"][CHIPS]["ok"] = json!(false);
         assert!(!passed(&v));
+    }
+
+    #[test]
+    fn a_place_case_that_did_not_run_is_listed_and_never_a_pass() {
+        let mut v = run();
+        v["near_bottom"] = json!({ EXERCISED: false, "reason": "not moved" });
+        v["second"] = json!({ EXERCISED: false, "reason": "one screen" });
+        assert_eq!(unexercised(&v), ["near_bottom", "second"]);
+        assert!(passed(&v), "the cases that ran passed");
+        v["near_bottom"] = json!({ EXERCISED: true, "ok": false });
+        assert!(!passed(&v) && unexercised(&v) == ["second"]);
+        v["near_bottom"] = json!({ EXERCISED: true, "ok": true });
+        assert!(passed(&v));
+        v["caret"] = json!({ EXERCISED: false });
+        assert!(!passed(&v), "only a place case may skip");
+        assert!(unexercised(&run()).is_empty());
     }
 
     #[test]

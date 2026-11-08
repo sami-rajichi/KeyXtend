@@ -161,6 +161,7 @@ fn keys_browsers_and_the_console_that_could_reach_another_program_are_refused() 
     refused(&[
         (|g| g.numlock = vec![0x91], "g19_product.numlock"),
         (|g| g.select_home.clear(), "g19_product.select_home"),
+        (|g| g.select_end.clear(), "g19_product.select_end"),
         (|g| g.caret_left.clear(), "g19_product.caret_left"),
         (|g| g.tray.clear(), "g19_product.tray"),
         (|g| g.tray = "bar".into(), "g19_product.tray"),

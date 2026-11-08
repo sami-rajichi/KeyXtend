@@ -108,6 +108,8 @@ pub struct G19Product {
     pub bars: Vec<Bar>,
     /// Shift+Home.
     pub select_home: Vec<u16>,
+    /// Shift+End.
+    pub select_end: Vec<u16>,
     /// One caret step left, while our panel is aimed.
     pub caret_left: Vec<u16>,
     /// Num Lock.

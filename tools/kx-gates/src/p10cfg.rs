@@ -26,8 +26,9 @@ use crate::{ftl, g19chips};
 pub const QUIET: usize = g19chips::QUIET;
 /// The gate's clicks, keys and drags, each followed by `settle_ms`.
 pub const ACTS: usize = g19chips::ACTS;
-/// The target-windows the run starts: the hung one, and the password box the field watch hears.
-const TARGETS: usize = 2;
+/// The target-windows the run starts: the place cases' filled one, the hung one, and the password box the field watch
+/// hears.
+const TARGETS: usize = 3;
 /// What a page text, name or mark may not hold: quotes and markup, which would end the page's tags or script.
 const NOT_IN_PAGE: &str = "'\"\\<>&";
 /// What a test line may not hold besides that: a line break, which would split it.

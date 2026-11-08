@@ -56,15 +56,15 @@ corner = "bar.corner"
 # How many levels down the browser's window the address bar is looked for; only Edit controls match, and the page's
 # Document and the tabs are never entered.
 bar_depth = 12
-# The near-bottom case: the gate's Notepad window, when it opened a new one, moves so its line sits this many px
-# above the keyboard or the screen's bottom, so the strip has no room below; 1 px or more, below the theme's gap
-# (checked).
+# The near-bottom case: the target-window the gate starts moves so its first line sits this many px above the
+# keyboard or the screen's bottom, so the strip has no room below; 1 px or more, below the theme's gap (checked).
 near_px = 4
 # Browser programs, for "Not now opens nothing" and for the page the owner opened (adapter table).
 browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
-# Keys the gate presses in its own windows: Shift+Home, one caret step left while our panel is aimed, and Num Lock,
-# which it puts back only while its own terminal is in front.
+# Keys the gate presses in its own windows: Shift+Home, Shift+End (the target-window's long first line), one caret
+# step left while our panel is aimed, and Num Lock, which it puts back only while its own terminal is in front.
 select_home = [0x10, 0x24]
+select_end = [0x10, 0x23]
 caret_left = [0x25]
 numlock = [0x90]
 # A strip sits within this many physical px of where geom::anchor puts it, below the theme's gap (checked).
