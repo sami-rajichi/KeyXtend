@@ -5,8 +5,8 @@ use super::Inner;
 use kx_module_api::ports::{Edit, EditAsk, EditDone};
 
 impl Inner {
-    /// Sends the edit `ask` names and queues its answer after the pieces typed before it, `ok` only when all of it
-    /// went; true when it was sent at all. While the module is stopped or a fill waits, nothing is sent.
+    /// Sends the edit `ask` names and queues its answer after the pieces typed before it, sent or not, `ok` only when
+    /// all of it went; true when it was sent at all. While the module is stopped or a fill waits, nothing is sent.
     pub(in crate::face) fn edit(&mut self, ask: EditAsk) -> bool {
         let sent = self.send_edit(ask.edit, ask.terminal);
         let ok = sent == Some(true);
@@ -19,9 +19,11 @@ impl Inner {
 
     /// Ends a held key as its let-go does and takes the aim, which the next relabel redraws, even when the send is then
     /// refused, as a paste does; then sends `edit` with nothing held, true when all of it went. `None` while the module
-    /// is stopped or a fill waits, which touches nothing.
+    /// is stopped or a fill waits, which sends nothing and leaves every latch. Either way the pieces typed so far are
+    /// queued first.
     fn send_edit(&mut self, edit: Edit, terminal: bool) -> Option<bool> {
         if !self.running || self.filling() {
+            self.flush();
             return None;
         }
         self.unshown |= self.ended().state;

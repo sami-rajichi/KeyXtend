@@ -1,12 +1,13 @@
 //! The edit's answer keeps the pieces' order (Ruling AG), which the selection module's one swallowed break needs: the
-//! bus hears every earlier piece, then `EditDone`, then the edit's own `Break`, whichever thread sends them.
+//! bus hears every earlier piece, then `EditDone`, then the edit's own `Break`, whichever thread sends them, and a
+//! no for an edit not sent comes after the earlier pieces too.
 
 use super::{ask, done};
 use crate::assist::{Bench, ear};
 use crate::held::A;
 use crate::told::text;
 use kx_module_api::ports::{Edit, EditDone, FaceAction, KeyId, Piece, Typed};
-use kx_module_api::{Bus, Subscription};
+use kx_module_api::{Bus, Module, Subscription};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -77,11 +78,12 @@ fn the_edits_answer_comes_after_the_keys_before_it_and_before_its_own_break() {
     assert_eq!(heard(&seen), want);
 }
 
-#[test]
-fn a_key_waiting_in_another_threads_outbox_still_goes_out_before_the_edits_answer() {
+/// Holds another thread's key in the outbox, taps Esc, runs `edit` on the bench, finds nothing heard yet, then lets
+/// the key go; everything heard, in order.
+fn behind_a_held_key(edit: impl FnOnce(&mut Bench)) -> Vec<Heard> {
     let armed = Arc::new(AtomicBool::new(false));
     let ((inside, entered), (go, gated)) = (mpsc::channel(), mpsc::channel());
-    let (b, seen) = bench(gate(Arc::clone(&armed), inside, gated));
+    let (mut b, seen) = bench(gate(Arc::clone(&armed), inside, gated));
     let face = Arc::clone(&b.rig.face);
     thread::scope(|s| {
         armed.store(true, SeqCst);
@@ -93,7 +95,7 @@ fn a_key_waiting_in_another_threads_outbox_still_goes_out_before_the_edits_answe
         entered.recv_timeout(WAIT).unwrap();
         // The typer keeps the outbox, so Esc's break waits there while the edit runs.
         b.rig.tap("esc").unwrap();
-        b.send(&ask(4, Edit::Copy, false));
+        edit(&mut b);
         assert!(
             heard(&seen).is_empty(),
             "the answer waits behind Esc's break"
@@ -101,11 +103,32 @@ fn a_key_waiting_in_another_threads_outbox_still_goes_out_before_the_edits_answe
         go.send(()).unwrap();
         assert!(typer.join().unwrap().is_ok());
     });
+    heard(&seen)
+}
+
+#[test]
+fn a_key_waiting_in_another_threads_outbox_still_goes_out_before_the_edits_answer() {
+    let got = behind_a_held_key(|b| b.send(&ask(4, Edit::Copy, false)));
     let want = [
         Heard::Piece(text("a")),
         Heard::Piece(Piece::Break),
         Heard::Done(done(4, true)),
         Heard::Piece(Piece::Break),
     ];
-    assert_eq!(heard(&seen), want, "the selection module's order");
+    assert_eq!(got, want, "the selection module's order");
+}
+
+/// A stopped module, like a waiting fill, sends nothing, and its no still comes after the keys typed before it.
+#[test]
+fn an_edit_not_sent_still_answers_after_the_keys_waiting_before_it() {
+    let got = behind_a_held_key(|b| {
+        b.rig.module.stop();
+        b.send(&ask(5, Edit::Copy, false));
+    });
+    let want = [
+        Heard::Piece(text("a")),
+        Heard::Piece(Piece::Break),
+        Heard::Done(done(5, false)),
+    ];
+    assert_eq!(got, want, "the selection module's order");
 }
