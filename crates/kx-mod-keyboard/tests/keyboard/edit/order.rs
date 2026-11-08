@@ -1,4 +1,4 @@
-//! The edit's answer keeps the pieces' order (Ruling AG), which the selection module's one swallowed break needs: the
+//! The edit's answer keeps the pieces' order, which the selection module's one swallowed break needs: the
 //! bus hears every earlier piece, then `EditDone`, then the edit's own `Break`, whichever thread sends them, and a
 //! no for an edit not sent comes after the earlier pieces too.
 

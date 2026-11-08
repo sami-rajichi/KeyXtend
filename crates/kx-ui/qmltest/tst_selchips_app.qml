@@ -1,7 +1,7 @@
-// The selection strip in the app: it pops in with its shadow, shows a click's tick for its time, then fades and rises
-// with its shadow as the hub forgets the round, and reduced motion skips only the pop and the fade. It shows while the
+// The selection strip in the app: it pops in with its shadow, shows a click's tick for its time, fades and rises with
+// its shadow, then the hub forgets the round, and reduced motion skips only the pop and the fade. It shows while the
 // keyboard is minimised, keeps clear of our windows, places itself again as the keyboard or an open panel moves, reads
-// the hub again on new settings (the pill's checks from the spike, P10 Ruling D), and on a large Arabic keyboard draws
+// the hub again on new settings (the pill's checks from the spike), and on a large Arabic keyboard draws
 // keycaps one character key tall in the theme's Arabic font.
 import QtQuick
 import QtTest

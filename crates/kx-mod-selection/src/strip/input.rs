@@ -34,7 +34,7 @@ pub enum Input {
     },
     /// A look failed, or the box no longer holds its selection: what was seen is gone.
     Lost,
-    /// A key the user sent to the app, our Esc too (Ruling O); a chip's own keys are not one, or an act's put-away would
+    /// A key the user sent to the app, our Esc too; a chip's own keys are not one, or an act's put-away would
     /// end.
     Key,
     /// A press in another app's window.

@@ -79,7 +79,7 @@ fn each_range_takes_its_ends_and_refuses_past_them() {
 fn the_plans_ranges_hold() {
     assert_eq!((CARET_S, CONSENT_S), (2..=30, 5..=120));
     assert_eq!(TRANSLATE_CHARS, 50..=5000);
-    assert_eq!(EDIT_MS, 1000..=30_000, "Ruling AA");
+    assert_eq!(EDIT_MS, 1000..=30_000, "the design's edit_ms range");
     assert_eq!(
         (SETTLE_MS, READ_MS, LOOKS_PER_S),
         (30..=1000, 50..=2000, 1..=30)

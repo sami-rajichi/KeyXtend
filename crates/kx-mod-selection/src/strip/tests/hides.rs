@@ -14,7 +14,7 @@ fn a_press_hides_until_the_next_look_decides() {
     assert!(again > first, "the same text selected again");
 }
 
-/// Our Esc comes as a break, which the actor feeds as a key, then a lost look (Ruling O).
+/// Our Esc comes as a break, which the actor feeds as a key, then a lost look.
 #[test]
 fn our_esc_as_a_key_and_a_lost_look_hides_until_the_next_look() {
     let mut rig = Rig::new();

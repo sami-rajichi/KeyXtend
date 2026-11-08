@@ -1,4 +1,4 @@
-//! An act in flight has a deadline on the injected clock (Ruling AA): an edit the keyboard never answers, or an open the
+//! An act in flight has a deadline on the injected clock: an edit the keyboard never answers, or an open the
 //! shell holds, hides its strip past `edit_ms` and tells the user, and the loop wakes for it.
 
 use std::time::Duration;

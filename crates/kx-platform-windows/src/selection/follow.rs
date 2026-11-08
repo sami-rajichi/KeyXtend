@@ -1,7 +1,7 @@
 //! Where the selection handler sits: on the box last looked at while it may show chips, added again where an add
 //! failed, gone from a closed box, and left as it is after a look that failed or came late. A box whose window hangs
-//! gets no add, and keeps a handler it has until a later look finds that window answering, or the watch stops (Ruling
-//! AC). Pure over a `Hook`, so a fake proves each move.
+//! gets no add, and keeps a handler it has until a later look finds that window answering, or the watch stops. Pure
+//! over a `Hook`, so a fake proves each move.
 
 use kx_module_api::ports::{SelError, SelKind, SelSpot};
 
@@ -101,7 +101,7 @@ impl<O> Heard<O> {
         (!hook.hung(&on) && hook.add(&on)).then_some(on)
     }
 
-    /// Removes the handler from everywhere it is, at the watch's stop, hung or not (Ruling AC).
+    /// Removes the handler from everywhere it is, at the watch's stop, hung or not, so none is left for good.
     pub(crate) fn leave<H: Hook<On = O>>(&mut self, hook: &H) {
         let left = self.left.drain(..).map(|(_, on)| on);
         for on in self.on.take().into_iter().chain(left) {

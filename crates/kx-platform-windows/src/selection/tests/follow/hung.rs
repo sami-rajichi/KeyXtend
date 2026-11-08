@@ -1,6 +1,6 @@
 //! A box whose window Windows reports hung, over the fake hook: its handler waits to leave until a sure look finds the
 //! window answering, it takes that handler back when looked at again, the stop removes it, and it gets no add while
-//! hung, with no id too (Ruling AC).
+//! hung, with no id too.
 
 use super::*;
 
