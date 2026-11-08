@@ -1,5 +1,5 @@
-//! Where the strip goes when the selection sits low or on another screen, on a filled target-window the gate starts and
-//! closes, never on Notepad: its window moves so its first line sits `near_px` above the plate or the screen's bottom,
+//! Where the strip goes when the selection sits low or on another screen, on a filled rich-edit target-window the gate
+//! starts and closes, never on Notepad: its window moves so its first line sits `near_px` above the plate or the screen's bottom,
 //! then back. The strip must then go above it (judged), its place on a second screen is a note, and a case whose
 //! window cannot move says it was not exercised.
 #![cfg(windows)]
@@ -10,6 +10,7 @@ use kx_mod_keyboard::Nav;
 use kx_module_api::ports::{Point, Rect};
 use kx_platform::ui::Screens;
 use kx_platform_windows::screen::{WinScreens, contains, edges};
+use kx_target_window::config::TargetConfig;
 use serde_json::{Value, json};
 use windows::Win32::UI::WindowsAndMessaging::IsZoomed;
 
@@ -84,6 +85,12 @@ pub fn movable(
         return Ok(Some(why));
     }
     ownkeys::ours(desk, app).map(|()| None)
+}
+
+/// The target's switches: filled, so its first line runs past its box, with a rich-edit box, whose text and line boxes
+/// UI Automation reads.
+pub fn switches(t: &TargetConfig) -> [String; 2] {
+    [t.fill_arg.clone(), t.rich_arg.clone()]
 }
 
 /// A case that did not run, and `why`: no verdict, so it is never a pass.
@@ -210,12 +217,17 @@ pub fn on_rows<L>(
     rows.map_or_else(neither, run)
 }
 
-/// Both place cases on the `kept` target, in front, which is the gate's `own` when new; its rows read once.
+/// Both place cases on the `kept` target, in front, which is the gate's `own` when new; its rows read once from its
+/// text document, else from the box by its name.
 fn on_target(gate: &Gate, (kept, own): (&Mine, bool), cases: &mut Vec<Value>) -> (Value, Value) {
     let app = &kept.get().app;
     let name = &gate.ctx.target.edit_name;
+    let find = || {
+        let u = gate.uia();
+        u.text(app.hwnd).or_else(|| u.named(app.hwnd, name))
+    };
     let rows = probe::front(gate.ctx, app).and_then(|()| {
-        Lines::read_in(gate, || gate.uia().named(app.hwnd, name)).map_err(|e| {
+        Lines::read_in(gate, find).map_err(|e| {
             format!("the target-window's box shows no text rows through UI Automation: {e}")
         })
     });
@@ -234,7 +246,7 @@ fn on_target(gate: &Gate, (kept, own): (&Mine, bool), cases: &mut Vec<Value>) ->
 pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> (Value, Value) {
     let ctx = gate.ctx;
     let before = win::snapshot();
-    let target = match launch::start_target_with(ctx, std::slice::from_ref(&ctx.target.fill_arg)) {
+    let target = match launch::start_target_with(ctx, &switches(ctx.target)) {
         Ok(t) => Kept::new(Target::new(ctx, t)),
         Err(e) => return neither(e),
     };

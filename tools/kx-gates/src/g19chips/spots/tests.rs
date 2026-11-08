@@ -85,6 +85,16 @@ fn only_our_own_new_window_with_our_tab_in_front_moves() {
 }
 
 #[test]
+fn the_place_cases_start_the_target_filled_with_a_rich_edit_box() {
+    let t = kx_target_window::config::load().expect("target settings");
+    let args = switches(&t);
+    assert!(
+        args.contains(&t.fill_arg) && args.contains(&t.rich_arg),
+        "{args:?}"
+    );
+}
+
+#[test]
 fn the_second_screen_is_the_first_area_away_from_the_window() {
     let one = [r(0, 0, 1920, 1032)];
     assert_eq!(other_screen(&one, Point { x: 10, y: 10 }), None);
