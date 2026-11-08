@@ -32,6 +32,7 @@ Item {
 
     Component { id: uiC; FakeUi {} }
     Component { id: stripC; SelChips {} }
+    Component { id: namesC; SelNames {} }
 
     TestCase {
         name: "selchips"
@@ -171,7 +172,8 @@ Item {
             const caps = keys(strip);
             compare(caps.map(k => k.Accessible.role), caps.map(() => Accessible.Button));
             compare(caps.map(k => k.Accessible.name), v.chips.map(c => c.word), "each named by its word");
-            compare(caps.map(k => k.Accessible.id), v.chips.map(c => "sel." + c.id), "the same in every language");
+            compare(caps.map(k => k.Accessible.id), Sel.ids, "each its word's text key, the same in every language");
+            compare(createTemporaryObject(namesC, root).group, Sel.group, "the group the gates find");
         }
 
         // `selAt` takes physical pixels: the size times the selection screen's scale, once; its answer comes back to Qt.

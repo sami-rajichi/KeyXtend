@@ -42,9 +42,12 @@ Item {
 
     Accessible.role: Accessible.Button
     Accessible.name: chip.word
-    // UI Automation's id is the chip's, the same in every language.
-    Accessible.id: res.uid("sel", chip.id)
+    Accessible.id: res.uid(names.group, chip.id)
     Accessible.onPressAction: if (sk.live) sk.hit()
+
+    SelNames {
+        id: names
+    }
 
     // A press sinks the cap at once; only the rise back eases, as a key's.
     Behavior on sink {

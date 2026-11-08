@@ -1,5 +1,7 @@
 .pragma library
 // Written by kx-ui's texts test; do not edit.
+var group = "sel";
+var ids = ["sel.copy","sel.cut","sel.paste","sel.translate"];
 var views = {
   "ar": {
     "both": {

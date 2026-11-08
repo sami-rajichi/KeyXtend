@@ -1,10 +1,12 @@
 //! The selection strip's views the Qt Quick tests draw (`qmltest/fixtures/sel.js`), as the hub writes them in each
-//! language: every keycap with both legends, icons only, words only, and Copy ticked.
+//! language: every keycap with both legends, icons only, words only, and Copy ticked; and the gate-id group QML holds
+//! (SelNames.qml) with each keycap's id, its word's text key.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::Bus;
 use kx_module_api::ports::{BASE_DPI, ChipsView, Legend, Rect, Screen, SelChip, StripSpot};
 use kx_test_support::host::FakeCore;
+use kx_ui::i18n::keys::{SEL_WORD, sel_chip_id};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 
@@ -32,6 +34,17 @@ const KINDS: [(&str, Option<SelChip>, Legend); 4] = [
     ("words", None, Legend::Words),
     ("ticked", Some(SelChip::Copy), Legend::Both),
 ];
+
+/// The strip's gate-id group: its words' key group, so a keycap's id is its word's text key.
+fn group() -> Value {
+    SEL_WORD.strip_suffix('.').expect("a key group").into()
+}
+
+/// Each keycap's UI Automation id, left to right: its word's text key.
+fn ids() -> Value {
+    let ids = SelChip::ALL.map(|c| format!("{SEL_WORD}{}", sel_chip_id(c)));
+    ids.to_vec().into()
+}
 
 /// Every view in language `tag`, by name, each its own round from 1.
 fn views(tag: &str) -> Value {
@@ -67,6 +80,11 @@ fn views(tag: &str) -> Value {
 #[test]
 fn the_sel_fixture_matches_the_hub() {
     let all: Map<String, Value> = LANGS.iter().map(|t| ((*t).to_owned(), views(t))).collect();
-    let text = format!("{HEAD}{}", var("views", &Value::Object(all), true));
+    let text = format!(
+        "{HEAD}{}{}{}",
+        var("group", &group(), false),
+        var("ids", &ids(), false),
+        var("views", &Value::Object(all), true)
+    );
     fixture(FILE.to_owned(), &text);
 }

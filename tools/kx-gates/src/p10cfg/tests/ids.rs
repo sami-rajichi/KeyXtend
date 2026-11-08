@@ -5,6 +5,8 @@ use kx_module_api::ports::SelChip;
 use crate::config::load;
 
 // Workspace paths from `tools/kx-gates/src/p10cfg/tests`; a moved file breaks the build here, never silently.
+/// The strip's names, its gate-id group among them.
+const NAMES_QML: &str = include_str!("../../../../../crates/kx-ui/qml/SelNames.qml");
 /// One keycap, which gives itself its UI Automation id from the group and its chip's id.
 const KEY_QML: &str = include_str!("../../../../../crates/kx-ui/qml/SelKey.qml");
 /// kx-ui's selection keys: the strip's name and each chip's id.
@@ -14,9 +16,10 @@ const KEYS: &str = include_str!("../../../../../crates/kx-ui/src/i18n/keys/sel.r
 fn the_group_and_the_chip_ids_are_the_ones_kx_ui_gives_its_keycaps() {
     let g = load().expect("loads").g19_product;
     assert!(
-        KEY_QML.contains(&format!("res.uid(\"{}\", chip.id)", g.group)),
+        NAMES_QML.contains(&format!("group: \"{}\"", g.group)),
         "group"
     );
+    assert!(KEY_QML.contains("res.uid(names.group, chip.id)"), "keycaps");
     assert_eq!(g.chips.len(), SelChip::ALL.len());
     for (chip, id) in SelChip::ALL.iter().zip(&g.chips) {
         let arm = format!("SelChip::{chip:?} => \"{id}\"");

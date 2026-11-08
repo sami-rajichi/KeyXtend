@@ -116,6 +116,7 @@ pub const QML: &[&str] = &[
     "qml/SelStrip.qml",
     "qml/SelChips.qml",
     "qml/SelKey.qml",
+    "qml/SelNames.qml",
     "qml/TrayMenu.qml",
     "qml/TrayPicture.qml",
     "qml/PressWatch.qml",
