@@ -231,7 +231,8 @@ pub trait SystemLook: Send + Sync {
     /// `Refused` when the OS will not report changes.
     fn watch(&self, on_change: Box<dyn Fn(SysLook) + Send>) -> Result<WatchGuard, UiError>;
 
-    /// The system's display language, which only the tray speaks, as a BCP-47 tag such as `fr-FR`; empty when unknown.
+    /// The system's display language as a BCP-47 tag such as `fr-FR`, empty when unknown: the tray speaks it, and the
+    /// selection module's Translate targets it when `translate_to` is empty.
     fn ui_language(&self) -> String;
 }
 

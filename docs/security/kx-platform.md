@@ -3,7 +3,7 @@
 - **Owner:** product owner
 - **Last review:** 2026-11-05 (P9 `kx-security-check`: the host's checks on vault replies, nothing new; P9 Task 23: the neutral worker host, its vault job and the hidden-run rules); 2026-10-31 (P8 security check: the host's checks on a worker treated as compromised, and its command words from `kx-ipc`; P8 task 9: the media worker's host and its review fixes; P8 final fix: the DIB ask)
 - **Status:** Reviewed
-- **Scope:** `crates/kx-platform`'s neutral worker host (`worker`) and the two ports it serves over an adapter's `Spawner` (ADR-0004): `Pictures` through `pictures` (ADR-0034 decision 5), and `Boxes` through `boxes` (P9, ADR-0038 decision 6). It also holds the hidden-run rules (`mirror`, ADR-0037). The folder rule, the pack and field-watch halves and the UI ports, P8's `Reveal` included, are covered with their adapter in `kx-platform-windows.md`.
+- **Scope:** `crates/kx-platform`'s neutral worker host (`worker`) and the two ports it serves over an adapter's `Spawner` (ADR-0004): `Pictures` through `pictures` (ADR-0034 decision 5), and `Boxes` through `boxes` (P9, ADR-0038 decision 6). It also holds the hidden-run rules (`mirror`, ADR-0037). The folder rule, the pack, field-watch and selection-watch halves (`selection`, P10) and the UI ports, P8's `Reveal` included, are covered with their adapter in `kx-platform-windows.md`.
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
