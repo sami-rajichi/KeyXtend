@@ -1,19 +1,25 @@
 //! Where the selection handler sits: on the box last looked at while it may show chips, added again where an add
-//! failed, gone from a closed box, and left as it is after a look that failed or came late. Pure over a `Hook`, so a
-//! fake proves each move.
+//! failed, gone from a closed box, and left as it is after a look that failed or came late. A box whose window hangs
+//! keeps its handler until a later look finds that window answering, or the watch stops (Ruling AC). Pure over a
+//! `Hook`, so a fake proves each move.
 
 use kx_module_api::ports::{SelError, SelKind, SelSpot};
 
 /// Adds and removes the selection handler on an element.
 pub(crate) trait Hook {
     /// One element, as the OS hands it over.
-    type El: Clone;
+    type El;
+    /// Where the handler was added, with what its removal and the hung check need.
+    type On;
 
-    /// Adds the handler on `el` alone; true when the OS took it.
-    fn add(&self, el: &Self::El) -> bool;
+    /// Adds the handler on `el` alone; `None` when the OS refused it.
+    fn add(&self, el: &Self::El) -> Option<Self::On>;
 
-    /// Removes the handler from `el`, where it was added.
-    fn remove(&self, el: &Self::El);
+    /// Removes the handler from `on`, where it was added.
+    fn remove(&self, on: &Self::On);
+
+    /// True while the app holding `on` does not answer, so a removal would wait on it.
+    fn hung(&self, on: &Self::On) -> bool;
 }
 
 /// What a look found of its box.
@@ -44,43 +50,77 @@ pub(crate) fn same(a: u64, b: u64) -> bool {
     a != 0 && a == b
 }
 
-/// Where the selection handler is: the box last looked at, and the element it was added on while it is.
-pub(crate) struct Heard<E> {
+/// Where the selection handler is: the box last looked at, where it was added on that box, and the boxes it waits to
+/// leave while their windows hang.
+pub(crate) struct Heard<O> {
     id: u64,
-    on: Option<E>,
+    on: Option<O>,
+    left: Vec<(u64, O)>,
 }
 
-impl<E> Default for Heard<E> {
+impl<O> Default for Heard<O> {
     fn default() -> Self {
-        Self { id: 0, on: None }
+        Self {
+            id: 0,
+            on: None,
+            left: Vec::new(),
+        }
     }
 }
 
-impl<E: Clone> Heard<E> {
+impl<O> Heard<O> {
     /// Moves the handler after a look at box `id` in `el` that saw `seen`: it stays on the same open box, is added
     /// again where it failed, moves to another open box, leaves a closed one unheard, and an unsure look touches nothing.
-    pub(crate) fn look<H: Hook<El = E>>(&mut self, hook: &H, el: &E, id: u64, seen: Seen) {
+    pub(crate) fn look<H: Hook<On = O>>(&mut self, hook: &H, el: &H::El, id: u64, seen: Seen) {
         if seen == Seen::Unsure {
             return;
         }
+        self.sweep(hook);
         let open = seen == Seen::Open;
         let here = open && same(self.id, id);
         if here && self.on.is_some() {
             return;
         }
         if !here {
-            self.leave(hook);
+            self.away(hook);
         }
         self.id = id;
-        if open && hook.add(el) {
-            self.on = Some(el.clone());
+        if open {
+            self.on = match self.left.iter().position(|(at, _)| same(*at, id)) {
+                // The box whose removal waited takes its handler back, with no second add.
+                Some(at) => Some(self.left.swap_remove(at).1),
+                None => hook.add(el),
+            };
         }
     }
 
-    /// Removes the handler from where it is, if it is anywhere.
-    pub(crate) fn leave<H: Hook<El = E>>(&mut self, hook: &H) {
-        if let Some(old) = self.on.take() {
-            hook.remove(&old);
+    /// Removes the handler from everywhere it is, at the watch's stop, hung or not (Ruling AC).
+    pub(crate) fn leave<H: Hook<On = O>>(&mut self, hook: &H) {
+        let left = self.left.drain(..).map(|(_, on)| on);
+        for on in self.on.take().into_iter().chain(left) {
+            hook.remove(&on);
         }
+    }
+
+    /// Takes the handler off the box last looked at, or keeps it there for later while that box's window hangs.
+    fn away<H: Hook<On = O>>(&mut self, hook: &H) {
+        if let Some(on) = self.on.take() {
+            if hook.hung(&on) {
+                self.left.push((self.id, on));
+            } else {
+                hook.remove(&on);
+            }
+        }
+    }
+
+    /// Removes the handlers kept on boxes whose windows answer again.
+    fn sweep<H: Hook<On = O>>(&mut self, hook: &H) {
+        self.left.retain(|(_, on)| {
+            let wait = hook.hung(on);
+            if !wait {
+                hook.remove(on);
+            }
+            wait
+        });
     }
 }

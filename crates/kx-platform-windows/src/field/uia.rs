@@ -48,11 +48,7 @@ pub(crate) fn named(el: &IUIAutomationElement) -> Facts {
             el.CurrentNativeWindowHandle().unwrap_or_default(),
         )
     };
-    let top = if hwnd.is_invalid() {
-        foreground()
-    } else {
-        root(hwnd)
-    };
+    let top = top_of(hwnd);
     Facts {
         control,
         password,
@@ -79,6 +75,23 @@ fn probed(el: &IUIAutomationElement) -> (FieldKind, Option<Found>) {
         fixed
     });
     (kind, caret)
+}
+
+/// The top-level window of an element whose own window is `hwnd`; the window in front when it has none.
+fn top_of(hwnd: HWND) -> HWND {
+    if hwnd.is_invalid() {
+        foreground()
+    } else {
+        root(hwnd)
+    }
+}
+
+/// The top-level window `el` sits in.
+#[allow(unsafe_code, reason = "A plain UI Automation property read.")]
+pub(crate) fn top(el: &IUIAutomationElement) -> HWND {
+    // SAFETY: a plain property read on a live element; a failure reads as no window of its own.
+    let hwnd = unsafe { el.CurrentNativeWindowHandle() }.unwrap_or_default();
+    top_of(hwnd)
 }
 
 /// The top-level window `hwnd` sits in.

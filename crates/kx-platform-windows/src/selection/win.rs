@@ -1,7 +1,7 @@
 //! The Windows selection watch over `kx_platform::selection`'s run: a thread with COM in the multithreaded apartment,
 //! a UI Automation client whose calls end at `read_ms`, a focus handler, and a selection handler on the open box last
-//! looked at. That handler moves on this thread after each look in time, never in a callback, and only our own
-//! handlers are added and removed, through `uia`'s locked helpers.
+//! looked at. That handler moves on this thread after each look in time, never in a callback and never off a hung
+//! app's box, and only our own handlers are added and removed, through `uia`'s locked helpers.
 
 use std::cell::RefCell;
 use std::process;
@@ -12,17 +12,19 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{SelConfig, SelError, SelRun, SelSpot, SelectionWatch};
 use kx_platform::deadline;
 use kx_platform::selection::{Inbox, Ours, SelProbe, Shared, Tell, late, serve, spawn};
+use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::{
     IUIAutomation, IUIAutomationElement, IUIAutomationEventHandler, TreeScope_Element,
     UIA_Text_TextSelectionChangedEventId,
 };
+use windows::Win32::UI::WindowsAndMessaging::IsHungAppWindow;
 
 use super::follow::{Heard, Hook, Seen};
 use super::hear::handlers;
 use super::uia::{read, sel, spot, still};
 use crate::clip::open::holds;
 use crate::com::Com;
-use crate::field::{box_id, focused};
+use crate::field::{box_id, focused, top};
 use crate::uia::{add_event, add_focus, client, pid, remove_event, remove_focus};
 
 /// The focused box's selection over UI Automation, for the app to register under `SelectionWatchKey`.
@@ -61,27 +63,44 @@ struct WinSel {
     auto: IUIAutomation,
     mine: Mine,
     hear: IUIAutomationEventHandler,
-    heard: RefCell<Heard<IUIAutomationElement>>,
+    heard: RefCell<Heard<Added>>,
 }
 
-/// The selection handler added on one element alone, not on the tree below it, and removed from it.
+/// Where the selection handler was added: the element, and its top-level window, read while its app answered.
+struct Added {
+    el: IUIAutomationElement,
+    top: HWND,
+}
+
+/// The selection handler added on one element alone, not on the tree below it, and removed from it, except while
+/// Windows reports its app hung.
 impl Hook for WinSel {
     type El = IUIAutomationElement;
+    type On = Added;
 
-    fn add(&self, el: &IUIAutomationElement) -> bool {
+    fn add(&self, el: &IUIAutomationElement) -> Option<Added> {
         let event = UIA_Text_TextSelectionChangedEventId;
         let added = add_event(&self.auto, event, el, TreeScope_Element, &self.hear);
         if let Err(e) = &added {
             tracing::debug!(code = %e.code(), "a box refused the selection handler");
         }
-        added.is_ok()
+        added.ok().map(|()| Added {
+            el: el.clone(),
+            top: top(el),
+        })
     }
 
-    fn remove(&self, el: &IUIAutomationElement) {
+    fn remove(&self, on: &Added) {
         let event = UIA_Text_TextSelectionChangedEventId;
-        if let Err(e) = remove_event(&self.auto, event, el, &self.hear) {
+        if let Err(e) = remove_event(&self.auto, event, &on.el, &self.hear) {
             tracing::debug!(code = %e.code(), "the selection handler was not removed from a box");
         }
+    }
+
+    #[allow(unsafe_code, reason = "A plain window query.")]
+    fn hung(&self, on: &Added) -> bool {
+        // SAFETY: a plain query that reads Windows' own record, sending the window nothing.
+        unsafe { IsHungAppWindow(on.top) }.as_bool()
     }
 }
 

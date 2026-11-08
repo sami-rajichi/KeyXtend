@@ -1,6 +1,6 @@
 //! Where the selection handler sits, over a fake hook: added on an open box and kept there, moved to another box,
-//! taken off a closed one, tried again after a failed add, left alone by a failed or late look, and never on more than
-//! one element (property).
+//! taken off a closed one, tried again after a failed add, left alone by a failed or late look, kept on a hung box
+//! until it answers or the watch stops, and never on more than one answering element (property).
 
 use super::super::follow::{Heard, Hook, Seen, same};
 use kx_module_api::ports::{Screen, SelError, SelKind, SelSpot};
@@ -10,12 +10,14 @@ use std::cell::{Cell, RefCell};
 /// A hook call: `true` for an add, with the element it named.
 type Call = (bool, u8);
 
-/// A scripted hook: it logs each call, keeps the elements that hold the handler, and refuses adds while `refuse`.
+/// A scripted hook: it logs each call, keeps the elements that hold the handler, refuses adds while `refuse`, and
+/// calls the elements in `hung` hung.
 #[derive(Default)]
 struct Fake {
     calls: RefCell<Vec<Call>>,
     held: RefCell<Vec<u8>>,
     refuse: Cell<bool>,
+    hung: RefCell<Vec<u8>>,
 }
 
 impl Fake {
@@ -23,18 +25,24 @@ impl Fake {
     fn take(&self) -> Vec<Call> {
         self.calls.take()
     }
+
+    /// Marks the elements in `els` hung, and every other one answering.
+    fn hang(&self, els: &[u8]) {
+        *self.hung.borrow_mut() = els.to_vec();
+    }
 }
 
 impl Hook for Fake {
     type El = u8;
+    type On = u8;
 
-    fn add(&self, el: &u8) -> bool {
+    fn add(&self, el: &u8) -> Option<u8> {
         self.calls.borrow_mut().push((true, *el));
         let took = !self.refuse.get();
         if took {
             self.held.borrow_mut().push(*el);
         }
-        took
+        took.then_some(*el)
     }
 
     fn remove(&self, el: &u8) {
@@ -42,7 +50,13 @@ impl Hook for Fake {
         let mut held = self.held.borrow_mut();
         let at = held.iter().position(|h| h == el);
         assert!(at.is_some(), "removed from {el}, where it was never added");
-        held.retain(|h| h != el);
+        if let Some(at) = at {
+            held.remove(at);
+        }
+    }
+
+    fn hung(&self, el: &u8) -> bool {
+        self.hung.borrow().contains(el)
     }
 }
 
@@ -160,6 +174,58 @@ fn an_unsure_look_touches_nothing() {
     assert_eq!(hook.take(), [remove(1), add(2)]);
 }
 
+#[test]
+fn a_hung_boxs_handler_waits_until_its_window_answers() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 10, Seen::Open);
+    hook.hang(&[1]);
+    heard.look(&hook, &2, 20, Seen::Open);
+    assert_eq!(hook.take(), [add(1), add(2)], "no removal from a hung app");
+    heard.look(&hook, &2, 20, Seen::Open);
+    assert_eq!(hook.take(), [], "still hung");
+    hook.hang(&[]);
+    heard.look(&hook, &2, 20, Seen::Open);
+    assert_eq!(hook.take(), [remove(1)], "it answers again");
+}
+
+#[test]
+fn only_a_sure_look_takes_a_waiting_handler_off() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 10, Seen::Open);
+    hook.hang(&[1]);
+    heard.look(&hook, &2, 20, Seen::Closed);
+    assert_eq!(hook.take(), [add(1)]);
+    hook.hang(&[]);
+    heard.look(&hook, &3, 30, Seen::Unsure);
+    assert_eq!(hook.take(), [], "no OS call after an unsure look");
+    heard.look(&hook, &2, 20, Seen::Closed);
+    assert_eq!(hook.take(), [remove(1)]);
+}
+
+#[test]
+fn a_hung_box_looked_at_again_takes_its_handler_back() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 10, Seen::Open);
+    hook.hang(&[1]);
+    heard.look(&hook, &2, 20, Seen::Open);
+    heard.look(&hook, &1, 10, Seen::Open);
+    assert_eq!(hook.take(), [add(1), add(2), remove(2)], "no second add");
+    hook.hang(&[]);
+    heard.leave(&hook);
+    assert_eq!(hook.take(), [remove(1)]);
+}
+
+#[test]
+fn the_stop_removes_a_handler_left_on_a_hung_window() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 10, Seen::Open);
+    hook.hang(&[1]);
+    heard.look(&hook, &2, 20, Seen::Open);
+    heard.leave(&hook);
+    assert_eq!(hook.take(), [add(1), add(2), remove(2), remove(1)]);
+    assert!(hook.held.borrow().is_empty(), "never left for good");
+}
+
 /// The spot of a box of `kind`.
 fn spot(kind: SelKind) -> SelSpot {
     SelSpot {
@@ -187,27 +253,37 @@ fn a_look_is_unsure_when_it_failed_or_came_late() {
     }
 }
 
-/// One look: an element (its box id follows it, 0 for the last), what it saw, and whether its add fails.
-fn any_look() -> impl Strategy<Value = (u8, Seen, bool)> {
+/// Elements tried; the box id follows the element, 0 for the first, which has none.
+const ELS: u8 = 4;
+
+/// One look: an element, what it saw, whether its add fails, and which elements hang then.
+fn any_look() -> impl Strategy<Value = (u8, Seen, bool, Vec<u8>)> {
     let seen = prop::sample::select(vec![Seen::Open, Seen::Closed, Seen::Unsure]);
-    (0..4u8, seen, any::<bool>())
+    let hung = prop::collection::vec(0..ELS, 0..=2);
+    (0..ELS, seen, any::<bool>(), hung)
 }
 
 proptest! {
+    /// After a sure look, every answering element that holds the handler is the open box just looked at, so only hung
+    /// windows keep an old one; the stop takes every one off.
     #[test]
     fn the_handler_is_on_at_most_the_last_open_box(looks in prop::collection::vec(any_look(), 0..24)) {
         let (hook, mut heard) = (Fake::default(), Heard::default());
-        for (el, seen, refuse) in looks {
+        for (el, seen, refuse, hung) in looks {
             hook.refuse.set(refuse);
+            hook.hang(&hung);
             let before = hook.held.borrow().clone();
             heard.look(&hook, &el, u64::from(el), seen);
             let held = hook.held.borrow().clone();
-            prop_assert!(held.len() <= 1, "{held:?}");
-            match seen {
-                Seen::Unsure => prop_assert_eq!(held, before, "an unsure look touches nothing"),
-                Seen::Closed => prop_assert!(held.is_empty()),
-                Seen::Open if !refuse => prop_assert_eq!(held, vec![el]),
-                Seen::Open => {}
+            if seen == Seen::Unsure {
+                prop_assert_eq!(held, before, "an unsure look touches nothing");
+                continue;
+            }
+            let awake: Vec<_> = held.iter().filter(|h| !hung.contains(h)).collect();
+            prop_assert!(awake.len() <= 1, "{held:?}");
+            prop_assert!(awake.iter().all(|h| seen == Seen::Open && **h == el), "{held:?}");
+            if seen == Seen::Open && !refuse {
+                prop_assert!(held.contains(&el), "{held:?}");
             }
         }
         heard.leave(&hook);
