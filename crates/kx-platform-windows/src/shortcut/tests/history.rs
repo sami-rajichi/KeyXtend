@@ -1,8 +1,8 @@
-//! The clipboard-history chord over the injector's fake OS (ADR-0034 decision 7), and the paste the keyboard sends
-//! when the clipboard module asks.
+//! The clipboard-history chord over the injector's fake OS (ADR-0034 decision 7), and the paste and edit keys the
+//! keyboard sends when the clipboard or selection module asks.
 
 use super::*;
-use kx_module_api::ports::PASTE_ID;
+use kx_module_api::ports::{COPY_ID, COPY_TERM_ID, CUT_ID, PASTE_ID, PASTE_TERM_ID};
 
 /// The keyboard's Win latch and V, which the fake's AZERTY keeps at the QWERTY place.
 const WIN: Scan = Scan::new(0xE05B);
@@ -50,6 +50,8 @@ fn a_table_without_a_history_chord_never_takes_one_and_a_broken_one_is_refused()
 }
 
 #[test]
-fn the_table_holds_the_paste_the_keyboard_sends_on_request() {
-    assert!(table().find(&id(PASTE_ID)).is_some());
+fn the_table_holds_every_id_the_keyboard_sends_on_request() {
+    for sent in [PASTE_ID, COPY_ID, CUT_ID, COPY_TERM_ID, PASTE_TERM_ID] {
+        assert!(table().find(&id(sent)).is_some(), "{sent}");
+    }
 }

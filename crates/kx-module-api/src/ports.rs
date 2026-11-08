@@ -118,8 +118,8 @@ pub use selection::{
 };
 pub use shelf::{Room, SealedShelf, SealedShelfKey};
 pub use shortcut::{
-    KeyName, MAX_ID_LEN, PASTE_ID, ShortcutError, ShortcutId, ShortcutInfo, Shortcuts,
-    ShortcutsKey, Step,
+    COPY_ID, COPY_TERM_ID, CUT_ID, KeyName, MAX_ID_LEN, PASTE_ID, PASTE_TERM_ID, ShortcutError,
+    ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,
