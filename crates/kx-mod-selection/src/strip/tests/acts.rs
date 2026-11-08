@@ -50,17 +50,43 @@ fn acting_shows_the_tick_on_the_same_round_then_ends_the_strip() {
     assert_eq!(ticked, Some(want));
     assert_eq!(rig.strip.view(), ChipsView::Hidden);
     assert_eq!(rig.strip.pick(round, Copy), None);
+    assert_eq!(rig.step(look(caret(1, 50))), None, "the ui fades the tick");
+}
+
+/// The ui fades a ticked strip itself, so nothing is sent for it; only the next look decides what shows.
+#[test]
+fn after_an_act_nothing_is_sent_until_the_next_look_even_for_the_same_spot() {
+    let mut rig = Rig::new();
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Copy });
+    let quiet = [
+        Input::Tick,
+        Input::Key,
+        Input::Aimed(true),
+        Input::Aimed(false),
+        Input::Board(Board::Minimised),
+        Input::Board(Board::Open),
+    ];
+    for input in quiet {
+        assert_eq!(rig.step(input), None, "{input:?}");
+    }
+    assert_eq!(rig.strip.configure(cfg(), rig.now), None);
+    let (again, chips, spot) = shown(rig.step(look(sel(1, SelKind::Editable, 40))));
+    assert!(again > round, "a new round");
     assert_eq!(
-        rig.step(look(sel(1, SelKind::Editable, 40))),
-        None,
-        "the same selection"
+        (chips, spot),
+        (vec![Copy, Cut, Paste, Translate], on_line(40))
     );
-    assert_eq!(
-        rig.step(look(caret(1, 50))),
-        None,
-        "the tick fades by itself"
-    );
-    assert!(rig.show(look(sel(1, SelKind::Editable, 40))) > round);
+}
+
+#[test]
+fn reselecting_the_same_text_after_copy_brings_the_chips_back() {
+    let mut rig = Rig::new();
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Copy });
+    assert_eq!(rig.step(Input::Press), None, "already gone");
+    let again = rig.show(click(sel(1, SelKind::Editable, 40)));
+    assert!(again > round);
 }
 
 #[test]

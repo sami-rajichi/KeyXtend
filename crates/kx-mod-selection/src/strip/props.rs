@@ -128,13 +128,17 @@ struct Told {
     spot: Option<SelSpot>,
     /// The round of the newest strip sent.
     top: u32,
+    /// A tick was sent and no look came since, so no new strip may show.
+    ticked: bool,
 }
 
 impl Told {
     /// Notes `input`.
     fn hear(&mut self, input: Input) {
         match input {
-            Input::Look { spot, .. } => (self.kind, self.spot) = (Some(spot.kind), Some(spot)),
+            Input::Look { spot, .. } => {
+                (self.kind, self.spot, self.ticked) = (Some(spot.kind), Some(spot), false);
+            }
             Input::Lost => self.kind = None,
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
@@ -184,7 +188,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
     /// No strip for a closed box or while blocked; each new strip's round passes every earlier one, a tick keeps the
-    /// live round, and the view kept is the one sent.
+    /// live round and no new strip follows it before a look, and the view kept is the one sent.
     #[test]
     fn closed_boxes_and_blocks_show_nothing_and_rounds_only_grow(
         cfg in config(),
@@ -203,12 +207,14 @@ proptest! {
                 match acted {
                     None => {
                         prop_assert!(*round > told.top, "{} after {}", round, told.top);
+                        prop_assert!(!told.ticked, "a new strip after a tick needs a look");
                         told.top = *round;
                     }
                     Some(chip) => {
                         let live = matches!(before, ChipsView::Shown { round: r, .. } if r == *round);
                         prop_assert!(live, "a tick keeps the live round");
                         prop_assert!(chips.contains(chip));
+                        told.ticked = true;
                     }
                 }
             }

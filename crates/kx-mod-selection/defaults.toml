@@ -12,10 +12,8 @@ translate = true
 caret_paste = true
 # Seconds the caret's Paste stays when nothing ends it first.
 caret_s = 5
-# Each keycap shows its icon.
-icons = true
-# Each keycap shows its word; never off together with icons.
-words = true
+# What each keycap shows: "both" its icon and word, "icons" the icon alone or "words" the word alone.
+look = "both"
 # The chips still show while the keyboard is minimised to its bubble.
 minimised = true
 # The language Translate asks for, as a tag such as "fr"; empty follows the system's display language.

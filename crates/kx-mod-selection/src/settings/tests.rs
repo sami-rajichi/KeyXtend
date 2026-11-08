@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::link::TAG_CHARS;
+use kx_module_api::parse_as;
 use std::time::Duration;
 
 /// The defaults as a table.
@@ -37,7 +38,7 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
     assert!(SPEC.is_consistent());
     let s = SelSettings::from_defaults().unwrap();
     assert!(s.on && s.copy && s.cut && s.paste && s.translate && s.caret_paste);
-    assert!(s.icons && s.words && s.minimised && !s.translate_ok);
+    assert!(s.look == Look::Both && s.minimised && !s.translate_ok);
     assert_eq!(s.caret_s, 5);
     assert_eq!(
         (s.translate_to.as_str(), s.translate_site.as_str()),
@@ -78,11 +79,42 @@ fn the_plans_ranges_hold() {
 }
 
 #[test]
-fn icons_and_words_are_never_both_off() {
-    let mut both = with("icons", false);
-    both.insert("words".to_owned(), false.into());
-    assert!(refused(&both, "icons") && refused(&both, "words"));
-    assert!(taken(&with("icons", false)) && taken(&with("words", false)));
+fn look_is_one_of_its_three_choices() {
+    for (name, look) in [
+        ("both", Look::Both),
+        ("icons", Look::Icons),
+        ("words", Look::Words),
+    ] {
+        let t = with("look", name);
+        assert_eq!(
+            parse_as::<SelSettings>(&t).map(|s| s.look),
+            Ok(look),
+            "{name}"
+        );
+    }
+    let unread =
+        |t: &toml::Table| matches!(validate_as::<SelSettings>(t), Err(SettingsError::Parse(_)));
+    for bad in ["none", "", "Both", "icons words", "مزيج"] {
+        assert!(unread(&with("look", bad)), "{bad}");
+    }
+    assert!(unread(&with("look", false)) && unread(&with("look", 2)));
+}
+
+#[test]
+fn each_look_shows_an_icon_a_word_or_both_never_neither() {
+    let shows = |look: Look| (look.icons(), look.words());
+    assert_eq!(shows(Look::Both), (true, true));
+    assert_eq!(shows(Look::Icons), (true, false));
+    assert_eq!(shows(Look::Words), (false, true));
+}
+
+#[test]
+fn the_old_icons_and_words_keys_are_not_settings() {
+    for key in ["icons", "words"] {
+        let t = with(key, true);
+        let unread = matches!(validate_as::<SelSettings>(&t), Err(SettingsError::Parse(_)));
+        assert!(unread, "{key}");
+    }
 }
 
 #[test]

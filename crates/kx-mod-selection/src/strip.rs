@@ -11,7 +11,7 @@ use kx_module_api::ports::{ChipsView, SelChip, SelKind, SelSpot, StripSpot};
 
 use crate::chips::{At, chips};
 
-/// A selection by its box and its lines, as the user put it away.
+/// A selection by its box and its lines, as Esc put it away.
 type Mark = (u64, StripSpot);
 
 /// A strip to show, before it has a round.
@@ -25,8 +25,6 @@ struct Draft {
     box_id: u64,
     /// That box's kind.
     kind: SelKind,
-    /// It is the caret's Paste, not a selection's strip.
-    caret: bool,
 }
 
 /// The strip shown.
@@ -87,7 +85,7 @@ pub struct Strip {
     last: Option<SelSpot>,
     /// The caret's Paste while it lasts.
     caret: Option<Caret>,
-    /// The selection a press, Esc or an act put away; it stays hidden until a look sees another.
+    /// The selection Esc put away; it stays hidden until a look sees another or a press comes.
     dismissed: Option<Mark>,
     /// The strip shown.
     live: Option<Live>,
@@ -111,10 +109,9 @@ impl Strip {
             Input::Look { spot, click, clip } => self.look(spot, click, clip, now),
             Input::Lost => (self.last, self.caret) = (None, None),
             Input::Key => self.caret = None,
-            Input::Press | Input::Esc => {
-                self.dismissed = self.last.and_then(mark);
-                self.caret = None;
-            }
+            // A press starts a new choice: the next look decides, even for the same text.
+            Input::Press => (self.last, self.caret, self.dismissed) = (None, None, None),
+            Input::Esc => (self.dismissed, self.caret) = (self.last.and_then(mark), None),
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
             Input::Acted { round, chip } => return self.acted(round, chip),
@@ -179,14 +176,11 @@ impl Strip {
         self.last = Some(spot);
     }
 
-    /// Shows the tick of `chip` on the live strip of `round`, then ends that strip and puts its selection away.
+    /// Shows the tick of `chip` on the live strip of `round` and ends that strip, sending no `Hidden`, as the ui fades
+    /// a ticked strip itself; the next look decides what shows, even the same selection.
     fn acted(&mut self, round: u32, chip: SelChip) -> Option<ChipsView> {
         let live = self.live.take_if(|l| l.shows(round, chip))?;
-        if live.draft.caret {
-            self.caret = None;
-        } else {
-            self.dismissed = Some((live.draft.box_id, live.draft.spot));
-        }
+        (self.last, self.caret) = (None, None);
         Some(live.view(Some(chip)))
     }
 
@@ -234,7 +228,6 @@ impl Strip {
                 spot: line.1,
                 box_id: spot.box_id,
                 kind: spot.kind,
-                caret: false,
             };
             (!draft.chips.is_empty()).then_some(draft)
         });
@@ -246,7 +239,6 @@ impl Strip {
                 spot: caret.spot,
                 box_id: caret.box_id,
                 kind: SelKind::Editable,
-                caret: true,
             })
         })
     }

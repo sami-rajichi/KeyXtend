@@ -4,13 +4,23 @@
 use super::*;
 
 #[test]
-fn a_press_hides_and_the_same_selection_stays_hidden() {
+fn a_press_hides_until_the_next_look_decides() {
     let mut rig = Rig::new();
     let first = rig.show(look(sel(1, SelKind::Editable, 40)));
     assert_eq!(rig.step(Input::Press), Some(ChipsView::Hidden));
-    assert_eq!(rig.step(click(sel(1, SelKind::Editable, 40))), None);
-    let new = rig.show(look(sel(1, SelKind::Editable, 60)));
-    assert!(new > first, "a new selection shows");
+    assert_eq!(rig.step(Input::Tick), None, "no look yet");
+    let again = rig.show(click(sel(1, SelKind::Editable, 40)));
+    assert!(again > first, "the same text selected again");
+}
+
+#[test]
+fn a_press_after_esc_lets_the_same_selection_show_again() {
+    let mut rig = Rig::new();
+    rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Esc);
+    assert_eq!(rig.step(look(sel(1, SelKind::Editable, 40))), None);
+    rig.step(Input::Press);
+    rig.show(click(sel(1, SelKind::Editable, 40)));
 }
 
 #[test]

@@ -24,7 +24,6 @@ pub const LOOKS_PER_S: RangeInclusive<u16> = 1..=30;
 pub const CONSENT_S: RangeInclusive<u32> = 5..=120;
 
 /// Why a value or a pair was refused.
-const BAD_LOOK: &str = "icons and words must not both be off";
 const BAD_TO: &str = "translate_to must be empty or a short language tag of letters and hyphens";
 const BAD_SITE: &str = "translate_site must name a site in sites.toml";
 const BAD_CHARS: &str = "translate_chars must not pass translate_site's limit";
@@ -36,6 +35,32 @@ pub static SPEC: SettingsSpec = SettingsSpec {
     migrations: &[],
     validate: validate_as::<SelSettings>,
 };
+
+/// What each keycap shows, so it never shows nothing; any other value goes back to `both`.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Look {
+    /// Its icon and its word.
+    Both,
+    /// Its icon alone.
+    Icons,
+    /// Its word alone.
+    Words,
+}
+
+impl Look {
+    /// The keycap shows its icon.
+    #[must_use]
+    pub fn icons(self) -> bool {
+        self != Self::Words
+    }
+
+    /// The keycap shows its word.
+    #[must_use]
+    pub fn words(self) -> bool {
+        self != Self::Icons
+    }
+}
 
 /// The module's settings; every value comes from `defaults.toml` or the user's file.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,10 +84,8 @@ pub struct SelSettings {
     pub caret_paste: bool,
     /// Seconds the caret's Paste stays.
     pub caret_s: u32,
-    /// Each keycap shows its icon.
-    pub icons: bool,
-    /// Each keycap shows its word.
-    pub words: bool,
+    /// What each keycap shows: its icon and word, or one of them.
+    pub look: Look,
     /// The chips show while the keyboard is minimised.
     pub minimised: bool,
     /// The language Translate asks for; empty follows the system's display language.
@@ -114,11 +137,9 @@ impl SelSettings {
 }
 
 impl Settings for SelSettings {
-    /// The ranges, the keycaps' look and the target; the site only when the table loads, as a bad one turns Translate
-    /// off.
+    /// The ranges and the target; the site only when the table loads, as a bad one turns Translate off.
     fn check(&self) -> Result<(), SettingsError> {
         self.check_ranges()?;
-        refuse_if(!self.icons && !self.words, BAD_LOOK)?;
         let to = &self.translate_to;
         refuse_if(!to.is_empty() && !tag_ok(to), BAD_TO)?;
         sites().map_or(Ok(()), |table| self.check_site(table))

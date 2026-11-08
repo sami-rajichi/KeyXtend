@@ -31,7 +31,7 @@ It holds no `InjectInput`.
 | `copy`, `cut`, `paste`, `translate` | true | | Each keycap. |
 | `caret_paste` | true | | Paste by a caret just clicked into. |
 | `caret_s` | 5 | 2–30 | Seconds the caret's Paste stays. |
-| `icons`, `words` | true | never both off | Each keycap's icon and word. |
+| `look` | "both" | "both", "icons" or "words" | What each keycap shows (`Look`): its icon and word, or one of them. |
 | `minimised` | true | | The chips show while the keyboard is minimised. |
 | `translate_to` | "" | a short tag of letters and hyphens | Translate's language; empty follows the system's display language. |
 | `translate_site` | "google" | an id in `sites.toml` | The translate site. |

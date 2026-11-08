@@ -14,6 +14,6 @@ pub use chips::{At, Rules, chips};
 pub use link::{Site, SiteError, Sites, TAG_CHARS, sites, tag_ok};
 pub use manifest::{ID, MANIFEST};
 pub use settings::{
-    CARET_S, CONSENT_S, LOOKS_PER_S, READ_MS, SETTLE_MS, SPEC, SelSettings, TRANSLATE_CHARS,
+    CARET_S, CONSENT_S, LOOKS_PER_S, Look, READ_MS, SETTLE_MS, SPEC, SelSettings, TRANSLATE_CHARS,
 };
 pub use strip::{Board, Input, Pick, Strip, StripConfig};

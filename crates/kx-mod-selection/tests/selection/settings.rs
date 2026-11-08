@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use kx_mod_selection::{ID, SPEC, SelSettings, sites};
+use kx_mod_selection::{ID, Look, SPEC, SelSettings, sites};
 use kx_module_api::{keys, parse_as};
 use kx_settings::{Files, Store};
 use kx_test_support::tempdir::TempDir;
@@ -39,22 +39,19 @@ fn an_unknown_site_comes_back_as_the_first_with_the_notice() {
     );
 }
 
-/// The kernel resets the first key, in table order, whose default makes the section good; today that is `icons`,
-/// while the design asks for `words` (task 9 report).
 #[test]
-fn icons_and_words_both_off_come_back_with_one_on_and_the_notice() {
-    let (s, notices) = load("icons = false\nwords = false\nminimised = false\n");
-    assert_eq!(notices, [keys::SETTINGS_RESET]);
-    assert!(s.icons || s.words, "never both off");
-    assert!(!s.minimised, "the other values stay");
+fn a_bad_look_comes_back_as_both_with_the_notice() {
+    for bad in ["\"none\"", "false", "\"Words\""] {
+        let (s, notices) = load(&format!("look = {bad}\nminimised = false\n"));
+        assert_eq!(notices, [keys::SETTINGS_RESET], "{bad}");
+        assert_eq!(s.look, Look::Both, "{bad}");
+        assert!(!s.minimised, "the other values stay");
+    }
 }
 
 #[test]
 fn a_good_section_raises_no_notice() {
-    let (s, notices) = load("translate_to = \"ar\"\nwords = false\n");
+    let (s, notices) = load("translate_to = \"ar\"\nlook = \"words\"\n");
     assert!(notices.is_empty(), "{notices:?}");
-    assert_eq!(
-        (s.translate_to.as_str(), s.words, s.icons),
-        ("ar", false, true)
-    );
+    assert_eq!((s.translate_to.as_str(), s.look), ("ar", Look::Words));
 }
