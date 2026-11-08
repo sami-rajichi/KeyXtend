@@ -23,6 +23,7 @@ impl Engine {
             PointerEvent::Up {
                 button: Button::Left,
                 at,
+                ..
             } if self.mods_down => {
                 self.click_up(at, acts);
                 true

@@ -21,7 +21,7 @@ pub(crate) enum Cmd {
     Latches(Vec<Scan>),
     /// The pad starts or stops scrolling.
     Scroll(bool),
-    /// Word prediction wants presses, or no longer.
+    /// An asker or the panel wants presses, or no longer.
     Presses(bool),
 }
 

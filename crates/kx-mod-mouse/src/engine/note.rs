@@ -51,6 +51,11 @@ pub enum Note {
         /// It landed on one of our own windows.
         ours: bool,
     },
+    /// A button came up while presses are wanted, which may end a selection.
+    Released {
+        /// It landed on one of our own windows.
+        ours: bool,
+    },
 }
 
 /// Hides each point, as a click's point can show what was clicked.
@@ -70,6 +75,9 @@ impl fmt::Debug for Note {
             Self::Pressed { ours } => {
                 return f.debug_struct("Pressed").field("ours", &ours).finish();
             }
+            Self::Released { ours } => {
+                return f.debug_struct("Released").field("ours", &ours).finish();
+            }
             Self::HoldStart { at } => ("HoldStart", at),
             Self::Fired { at } => ("Fired", at),
             Self::Picked { at } => ("Picked", at),
@@ -83,8 +91,8 @@ impl fmt::Debug for Note {
 }
 
 impl Engine {
-    /// Keeps the last point. While a mode is on or the pad scrolls a move is noted, and while it scrolls or presses
-    /// are wanted a press is.
+    /// Keeps the last point. While a mode is on or the pad scrolls a move is noted, while it scrolls or presses are
+    /// wanted a press is, and while presses are wanted a release is.
     pub(super) fn track(&mut self, event: PointerEvent) {
         match event {
             PointerEvent::Down { at, ours, .. } => {
@@ -93,7 +101,12 @@ impl Engine {
                     self.note(Note::Pressed { ours });
                 }
             }
-            PointerEvent::Up { at, .. } => self.last = at,
+            PointerEvent::Up { at, ours, .. } => {
+                self.last = at;
+                if self.wanted {
+                    self.note(Note::Released { ours });
+                }
+            }
             PointerEvent::Move { at } => {
                 self.last = at;
                 if self.mode != Mode::Off || self.scrolling {

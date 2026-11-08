@@ -1,5 +1,5 @@
 //! The module's actor: it starts the hook only while the engine needs it, hands the keyboard's commands, the pad's
-//! scrolling and the presses prediction or an open panel wants to the engine, and turns the engine's notes into bus
+//! scrolling and the presses an asker or an open panel wants to the engine, and turns the engine's notes into bus
 //! events. A plain struct driven by messages, plus a thread loop.
 
 mod notes;
@@ -11,10 +11,11 @@ pub use stopped::STOPPED_LINE;
 use crate::hook_engine::{Cmd, HookEngine, Moves, aimed};
 use crate::{Engine, EngineCfg, ID, MouseSettings, Note};
 use kx_module_api::ports::{
-    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressesAsk, Scan,
-    ScrollAsk, Toggle,
+    AssistChanged, GrabState, HookError, HookRun, LatchesAsk, PointerHook, PressAsker, PressesAsk,
+    PressesWanted, Scan, ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Notice, SettingsHandle, keys};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -29,8 +30,8 @@ pub enum Msg {
     Ask,
     /// The pad started or stopped scrolling.
     Scroll(bool),
-    /// Word prediction wants each press told, or no longer.
-    Presses(bool),
+    /// An asker wants each press and release told, or no longer.
+    Presses(PressesWanted),
     /// The keyboard wants each press told while a panel is open, or no longer.
     PanelPresses(bool),
     /// The engine noted something; for a move, the latest point waits in the shared move slot.
@@ -57,7 +58,7 @@ struct Live {
 /// The mouse module's runtime: one per start, on its own thread.
 #[allow(
     clippy::struct_excessive_bools,
-    reason = "Each flag is one fact kept between messages: Right-click saved and shown, the pad scrolling, presses wanted, a failing start, a spent restart."
+    reason = "Each flag is one fact kept between messages: Right-click saved and shown, the pad scrolling, the panel's presses, a failing start, a spent restart."
 )]
 pub struct Actor {
     hook: Arc<dyn PointerHook>,
@@ -76,8 +77,8 @@ pub struct Actor {
     latches: Vec<Scan>,
     /// The scroll pad scrolls.
     scrolling: bool,
-    /// Word prediction wants presses.
-    wanted: bool,
+    /// The askers that want presses told.
+    askers: HashSet<PressAsker>,
     /// The keyboard wants presses, as a panel is open.
     panel: bool,
     live: Option<Live>,
@@ -86,7 +87,7 @@ pub struct Actor {
     /// The last start failed; until one works, a quiet start (latches, scrolling or presses) fails without a word.
     failing: bool,
     /// A give-up already restarted; until a run ends well, a mode tap or a change of latches or scrolling, the next one
-    /// starts nothing and presses alone start no run, as prediction flips them by itself.
+    /// starts nothing and presses alone start no run, as their askers flip them by themselves.
     restarted: bool,
     /// The notice for a fault of quiet needs alone was shown this program run; the module keeps it across its starts.
     reset_told: Arc<AtomicBool>,
@@ -117,7 +118,7 @@ impl Actor {
             grab: GrabState::Off,
             latches: Vec::new(),
             scrolling: false,
-            wanted: false,
+            askers: HashSet::new(),
             panel: false,
             live: None,
             runs: 0,
@@ -165,7 +166,7 @@ impl Actor {
             }
             Msg::Ask => self.tell_state(),
             Msg::Scroll(on) => self.scroll(on),
-            Msg::Presses(on) => self.presses(on),
+            Msg::Presses(wish) => self.presses(wish),
             Msg::PanelPresses(on) => self.panel_presses(on),
             Msg::Note(note) => self.note(note),
             Msg::Idle(applied) => self.idle(applied),

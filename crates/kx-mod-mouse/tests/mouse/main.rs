@@ -5,6 +5,7 @@
     reason = "these helpers run only in tests, where a failed setup should fail the test"
 )]
 
+mod askers;
 mod failures;
 mod live;
 mod logs;

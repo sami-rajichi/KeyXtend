@@ -9,7 +9,8 @@ use crate::hook::Os;
 use crate::hook::accept::{Kind, act};
 
 impl<O: Os> Host<O> {
-    /// The event for `kind` at `at`; a press says whether it landed on our window, and its screen's DPI.
+    /// The event for `kind` at `at`; a press or a release says whether it landed on our window, and a press its
+    /// screen's DPI.
     pub(super) fn event(&self, kind: Kind, at: Point) -> PointerEvent {
         match kind {
             Kind::Down(button) => PointerEvent::Down {
@@ -18,7 +19,11 @@ impl<O: Os> Host<O> {
                 ours: self.os.ours(at),
                 dpi: self.os.dpi(at),
             },
-            Kind::Up(button) => PointerEvent::Up { button, at },
+            Kind::Up(button) => PointerEvent::Up {
+                button,
+                at,
+                ours: self.os.ours(at),
+            },
             Kind::Move => PointerEvent::Move { at },
         }
     }

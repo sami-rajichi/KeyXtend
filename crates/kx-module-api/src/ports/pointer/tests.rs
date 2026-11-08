@@ -29,6 +29,7 @@ fn a_passed_event_is_sent_again_as_its_own_act_and_esc_has_none() {
     let up = PointerEvent::Up {
         button: Button::Middle,
         at,
+        ours: true,
     };
     assert_eq!(up.act(), Some(PointerAct::Up(Button::Middle, at)));
     assert_eq!(PointerEvent::Move { at }.act(), Some(PointerAct::Move(at)));
@@ -52,7 +53,11 @@ fn events_and_acts_hide_every_point_and_key() {
             ours: false,
             dpi: 96,
         },
-        PointerEvent::Up { button, at: AT },
+        PointerEvent::Up {
+            button,
+            at: AT,
+            ours: false,
+        },
         PointerEvent::Move { at: AT },
     ];
     let acts = [
@@ -81,6 +86,13 @@ fn events_and_acts_still_show_their_button_and_flags() {
     };
     let want = format!("Down {{ button: Middle, at: {REDACTED_MARKER}, ours: true, dpi: 144 }}");
     assert_eq!(format!("{down:?}"), want);
+    let lift = PointerEvent::Up {
+        button: Button::Left,
+        at: AT,
+        ours: true,
+    };
+    let want = format!("Up {{ button: Left, at: {REDACTED_MARKER}, ours: true }}");
+    assert_eq!(format!("{lift:?}"), want);
     let up = PointerAct::Up(Button::Right, AT);
     assert_eq!(format!("{up:?}"), format!("Up(Right, {REDACTED_MARKER})"));
     assert_eq!(format!("{:?}", PointerEvent::Esc), "Esc");

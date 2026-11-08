@@ -29,7 +29,7 @@ fn told(rig: &mut Rig, now: kx_module_api::Mono) -> bool {
 fn presses_are_told_while_either_source_wants_them() {
     for (prediction, panel) in [(false, false), (true, false), (false, true), (true, true)] {
         let mut rig = started();
-        rig.send(Msg::Presses(prediction));
+        rig.send(Msg::Presses(predicting(prediction)));
         rig.send(Msg::PanelPresses(panel));
         rig.settle(T0);
         let want = prediction || panel;
@@ -43,13 +43,13 @@ fn presses_are_told_while_either_source_wants_them() {
 #[test]
 fn the_panel_going_off_leaves_prediction_heard() {
     let mut rig = started();
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.send(Msg::PanelPresses(true));
     rig.send(Msg::PanelPresses(false));
     rig.settle(T0);
     assert!(rig.hook.running());
     assert!(told(&mut rig, T1));
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T2);
     assert!(!rig.hook.running(), "nothing wants them now");
 }
@@ -58,8 +58,8 @@ fn the_panel_going_off_leaves_prediction_heard() {
 fn prediction_going_off_leaves_the_panel_heard() {
     let mut rig = started();
     rig.send(Msg::PanelPresses(true));
-    rig.send(Msg::Presses(true));
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(true)));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T0);
     assert!(rig.hook.running());
     assert!(told(&mut rig, T1));
@@ -74,7 +74,7 @@ fn a_repeated_word_from_one_source_changes_nothing() {
     rig.send(Msg::PanelPresses(true));
     rig.send(Msg::PanelPresses(true));
     assert_eq!(rig.hook.starts(), 1);
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T0);
     assert!(
         told(&mut rig, T1),

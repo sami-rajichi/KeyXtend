@@ -9,7 +9,9 @@ use crate::rig::{
 };
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::GrabState::Off;
-use kx_module_api::ports::{AssistChanged, HookError, Point, PointerPressed, PressesAsk, Toggle};
+use kx_module_api::ports::{
+    AssistChanged, HookError, Point, PointerPressed, PointerReleased, PressesAsk, Toggle,
+};
 use kx_module_api::{Bus, Mono, keys};
 use std::sync::mpsc::Receiver;
 use tracing::Level;
@@ -30,7 +32,7 @@ fn pressed(ours: bool) -> Heard {
 fn wanted(rig: Rig) -> Rig {
     let mut rig = rig;
     rig.begin();
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.settle(T0);
     rig.take();
     rig
@@ -41,7 +43,7 @@ fn wanted_alone_starts_the_hook_and_tells_each_press_which_reaches_the_app() {
     let mut rig = Rig::new();
     rig.begin();
     rig.take();
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     assert!(rig.hook.running(), "presses need the hook");
     assert!(rig.take().is_empty(), "no state change and no notice");
     assert!(!rig.feed(moved(A), T0));
@@ -49,13 +51,18 @@ fn wanted_alone_starts_the_hook_and_tells_each_press_which_reaches_the_app() {
     assert!(!rig.feed(up(B), T1));
     assert!(!rig.feed(ours(A), T2));
     assert!(rig.hook.take_sent().is_empty(), "nothing of ours is sent");
-    assert_eq!(rig.take(), [pressed(false), pressed(true)], "no badge");
+    let lift = Heard::Released(PointerReleased { ours: false });
+    assert_eq!(
+        rig.take(),
+        [pressed(false), lift, pressed(true)],
+        "no badge"
+    );
 }
 
 #[test]
 fn unwanted_lets_the_hook_go_once_idle() {
     let mut rig = wanted(Rig::new());
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T1);
     assert!(!rig.hook.running(), "nothing else needs it");
     assert_eq!(rig.hook.starts(), 1);
@@ -65,7 +72,7 @@ fn unwanted_lets_the_hook_go_once_idle() {
 #[test]
 fn unwanted_with_a_mode_on_keeps_the_hook() {
     let mut rig = wanted(Rig::saved_rclick());
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T1);
     assert!(rig.hook.running(), "Right-click still needs it");
     assert!(rig.feed(down(A), T2), "the press is held back as before");
@@ -77,18 +84,18 @@ fn unwanted_with_a_mode_on_keeps_the_hook() {
 fn scrolling_and_wanted_keep_presses_told_while_either_holds() {
     let mut rig = wanted(Rig::new());
     rig.send(Msg::Scroll(true));
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T0);
     assert!(!rig.feed(down(A), T0), "the press passes");
     assert!(!rig.feed(up(A), T0));
     assert_eq!(rig.take(), [pressed(false)], "scrolling holds");
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.send(Msg::Scroll(false));
     rig.settle(T1);
     assert!(rig.hook.running(), "presses hold the hook");
     assert!(!rig.feed(ours(B), T1), "the press passes");
     assert_eq!(rig.take(), [pressed(true)], "wanted holds");
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T2);
     assert!(!rig.hook.running());
     assert_eq!(rig.hook.starts(), 1);
@@ -102,12 +109,12 @@ fn a_hook_refused_for_presses_tells_no_one_and_the_next_change_tries_again() {
         rig.take();
         for _ in 0..2 {
             rig.hook.fail_next(HookError::Refused(CODE));
-            rig.send(Msg::Presses(true));
+            rig.send(Msg::Presses(predicting(true)));
             assert!(!rig.hook.running());
-            rig.send(Msg::Presses(false));
+            rig.send(Msg::Presses(predicting(false)));
         }
         assert!(rig.take().is_empty(), "the user pressed no mouse key");
-        rig.send(Msg::Presses(true));
+        rig.send(Msg::Presses(predicting(true)));
         assert!(rig.hook.running(), "the next change tries again");
     });
     let warned = lines.iter().filter(|(l, _)| *l == Level::WARN).count();
@@ -122,9 +129,9 @@ fn fault(rig: &mut Rig) {
 
 /// The word ends, the hook settles at `now`, and the next word starts.
 fn next_word(rig: &mut Rig, now: Mono) {
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(now);
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
 }
 
 /// How many reset notices `heard` holds.
@@ -226,10 +233,10 @@ fn only_the_flag_s_changes_are_logged_with_no_point() {
     let lines = lines_of(|| {
         let mut rig = Rig::new();
         rig.begin();
-        rig.send(Msg::Presses(true));
+        rig.send(Msg::Presses(predicting(true)));
         assert!(!rig.feed(down(SPOT), T0));
-        rig.send(Msg::Presses(true));
-        rig.send(Msg::Presses(false));
+        rig.send(Msg::Presses(predicting(true)));
+        rig.send(Msg::Presses(predicting(false)));
         rig.settle(T1);
     });
     let flags: Vec<_> = lines.iter().filter(|(_, f)| f.contains_key(ON)).collect();
