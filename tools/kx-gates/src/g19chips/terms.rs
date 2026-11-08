@@ -184,13 +184,47 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
     got
 }
 
+/// Windows Terminal, then the console, through `one`; the console gets the Num Lock state the first found, so both
+/// put back the run's first state.
+fn both<V>(
+    mut one: impl FnMut(Kind, Option<bool>) -> Result<(V, bool), String>,
+) -> Result<(V, V), String> {
+    let (terminal, was) = one(Kind::Terminal, None)?;
+    let (console, _) = one(Kind::Console, Some(was))?;
+    Ok((terminal, console))
+}
+
 /// Both terminals, then the ping; `cases` gathers each case, `left` what stayed open.
 pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
-    let (terminal, was) = one(gate, (Kind::Terminal, None), cases, left)?;
-    let (console, _) = one(gate, (Kind::Console, Some(was)), cases, left)?;
+    let (terminal, console) = both(|kind, carried| one(gate, (kind, carried), cases, left))?;
     let ping = ping(gate, cases, left)?;
     let ok = [&terminal, &console, &ping].iter().all(|v| v["ok"] == true);
     Ok(
         json!({ Kind::Terminal.name(): terminal, Kind::Console.name(): console, PING: ping, "ok": ok }),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_console_puts_back_the_num_lock_state_the_first_terminal_found() {
+        let mut seen = Vec::new();
+        let got = both(|kind, carried| {
+            seen.push((kind, carried));
+            Ok((kind.name(), kind == Kind::Terminal))
+        });
+        assert_eq!(got, Ok((Kind::Terminal.name(), Kind::Console.name())));
+        assert_eq!(seen, [(Kind::Terminal, None), (Kind::Console, Some(true))]);
+        let mut runs = 0;
+        let failed = both(|_, _| -> Result<((), bool), String> {
+            runs += 1;
+            Err("no row".into())
+        });
+        assert!(
+            failed.is_err() && runs == 1,
+            "a failed terminal stops the step"
+        );
+    }
 }
