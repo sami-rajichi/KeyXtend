@@ -1,7 +1,7 @@
 # Security note: keyxtend (the app)
 
 - **Owner:** product owner
-- **Last review:** 2026-11-05 (P9 `kx-security-check`: crash dumps of the uiAccess process; P9 Task 23: Quick-fill's services and the hidden run); 2026-10-31 (P8 security check: the clipboard services, gates, shelf and worker the app provides; P7 security review: what the sealed tag defeats, the set-aside rule and the crates P7 ships)
+- **Last review:** 2026-11-08 (P10 Task 16: the selection chips' services, gates and pins, against the code; `kx-security-check` comes with the phase's review); 2026-11-05 (P9 `kx-security-check`: crash dumps of the uiAccess process; P9 Task 23: Quick-fill's services and the hidden run); 2026-10-31 (P8 security check: the clipboard services, gates, shelf and worker the app provides; P7 security review: what the sealed tag defeats, the set-aside rule and the crates P7 ships)
 - **Status:** Reviewed
 - **Scope:** `apps/keyxtend`: the command line, the one running copy as the app uses it, the start and stop order, the log subscriber, the panic hook, the mouse hook it hands the mouse module, the scroll target it hands the scroll module, the shortcuts it hands the keyboard, the power dialog it hands the power module, the box watch, word packs and sealed store it provides for word prediction (`words.rs`), the clipboard services, sealed shelf and history folder it provides for the clipboard history (`clip.rs`, P8), the notebook's store, the boxes and the places it provides for Quick-fill (`vault.rs`, P9), the selection watch and the web link it provides for the selection chips (P10), the hidden-run probe and its run (`hidden.rs`, ADR-0037), the gate-only build, the manifest and Qt's start. The release build is the uiAccess process; the adapters, the kernel and the modules have their own notes.
 
@@ -74,6 +74,7 @@ Qt Quick keeps no shader pipeline cache on disk (`AA_DisableShaderDiskCache`), s
   - The app makes one `SealedFiles` for its data folder, as two stores over one folder could race on the key file (`kx-crypto.md`).
   - P8 adds `kx-mod-clipboard` and `kx-ipc`, both ours. The worker's `png` and the crates under it stay out of the app's tree (`nothing_the_app_builds_with_reaches_a_decoder_a_box_format_or_the_worker`), and tidy D4 bans `png` and `fdeflate` there.
   - P9 adds `kx-mod-vault`, ours, and leaves the worker's `age` and `keepass` out of the app's tree too (`tidy_bans_the_image_decoders_and_the_box_formats_from_the_app`). A hidden run opens no notebook, and the module stays off (`KEPT_OFF`).
+  - P10 adds `kx-mod-selection`, ours, and no outside crate. The app still sends nothing itself: Translate's text leaves only in the link the desktop shell hands the user's browser, after the user's yes (`kx-mod-selection.md`).
   - The app makes one `SealedShelfFiles` for `<data>/clipboard`, apart from the words' folder, and hands the ui that folder for Open folder (`open_folder_shows_the_history_folder_under_the_data_folder`).
   - Qt's network library loads only because Qt Qml and Qt Quick import it: the stage check refuses any other importer and every TLS plugin, and a `kx-ui` test keeps network addresses and `XMLHttpRequest` out of the app's QML.
 - **Denial of service:**
@@ -118,6 +119,8 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
   - The speaker adds such classes from P4 on: `XAudio2` opens the audio device by COM class activation (the device enumerator) in the uiAccess process at its first sound, and the key sound is on by default.
   - The Power key adds one from P6 on: each click makes `Shell.Application` in-process (`CLSCTX_INPROC_SERVER`) on a short apartment thread of the uiAccess process, so the trace clicks Power too (`kx-platform-windows.md`).
   - Open folder adds one from P8 on: it activates `ShellWindows` as a local server, whose calls load proxy and stub classes in-process, so the trace clicks it and also plants an out-of-process override (`LocalServer32`, `TreatAs`).
+  - Translate takes the same route from P10 on (`explorer.rs`), so the trace clicks it too.
+- Open (P10 manual check): after the owner's Yes, `g19 translate-read` reads that the browser runs with no uiAccess, at most Medium integrity and not as our child; no gate opens the page itself.
 - Open (P14): pin the QML disk cache off in the uiAccess build, with Qt's own cache option in `harden_qt` and a stage check that refuses `.qml`, `.js` and `.mjs` files (`docs/items/P14.md`).
 - Open (P14, `kx-release`): a panic inside a dependency logs that dependency's source path as the build machine saw it, which the binary also holds and which can name the builder's account. Release builds trim or remap those paths (`docs/items/P14.md`).
 - Open (P14): a native crash reaches Windows Error Reporting, and a report's heap or an opted-in `LocalDumps` full dump holds what the notebook and the ui's plain copies held. Nothing in the repo sets `WerSetFlags` or `WerAddExcludedApplication`; set one through the adapter at start, and check on the staged build that a forced crash writes no heap (`docs/items/P14.md`).
@@ -132,4 +135,4 @@ Only the staged uiAccess build runs the pinned paths. Task 20 checked its stage 
 - Any program of the session can start `keyxtend.exe --show` or `--quit`, since a uiAccess program starts without a prompt. Show only shows the keyboard, and Quit only ends it.
 - One `SecretStore` gates both the word store and the clipboard's shelf, so predict and the clipboard could each require the other's service. Each keeps its own folder and key file, and a gate per store would need a new ADR (builder's call).
 - The keyboard and the ui may reach the clipboard services their gates allow, not only the events (ADR-0035 decision 2). Neither asks for one, and the keyboard already sends input.
-- The keyboard, predict and the ui may reach the selection watch, as its gate `ReadFocusedText` is theirs too (ADR-0041 decision 3). None asks for it, and the watch reads text only at Translate's click.
+- The keyboard, predict and the ui may reach the selection watch, as its gate `ReadFocusedText` is theirs too (ADR-0041 decision 3). None asks for it; only the selection module reads, and only at Translate's click.
