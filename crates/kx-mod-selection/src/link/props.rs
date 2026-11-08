@@ -1,5 +1,6 @@
 //! Properties over any text of Latin, French, Arabic with harakat, Chinese, emoji, marks, spaces, breaks and hidden
 //! marks: each link passes the strict check and both caps, and carries a start of the clean text, cut at a whole word.
+//! Any tag the system gives turns into a language tag.
 
 use super::tests::sent;
 use super::*;
@@ -72,5 +73,36 @@ proptest! {
         let whole = next.is_none_or(char::is_whitespace) || !kept.contains(char::is_whitespace);
         prop_assert!(whole, "cut inside a word: {:?}", next);
         prop_assert!(spaced(&text) || next.is_some(), "the read's last word kept");
+    }
+}
+
+/// The characters system tags are made of: letters, both joins, and what a broken tag may hold.
+const TAG_ALPHABET: [char; 14] = [
+    'a', 'Z', 'f', 'r', 'h', 'n', 't', '-', '_', '1', ' ', 'é', 'م', '😀',
+];
+/// The longest tag tried, past `TAG_CHARS`.
+const MAX_TAG: usize = 24;
+
+fn tag() -> impl Strategy<Value = String> {
+    let formed = vec(select(TAG_ALPHABET.to_vec()), 0..=MAX_TAG);
+    prop_oneof![
+        formed.prop_map(|cs| cs.into_iter().collect()),
+        any::<String>(),
+    ]
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(CASES))]
+
+    /// The system's tag is outside input: any `translate_to` and tag give a language tag, which is the site's own code,
+    /// its fallback, or one language part in lower case.
+    #[test]
+    fn any_tag_gives_a_language_tag_and_never_panics(set in tag(), os in tag()) {
+        let site = sites().unwrap().first().unwrap();
+        let code = site.target(&set, &os);
+        prop_assert!(tag_ok(&code), "{:?}", code);
+        let own = site.whole.contains(&code) || site.alias.values().any(|v| *v == code);
+        let lower = code.bytes().all(|b| b.is_ascii_lowercase());
+        prop_assert!(own || code == site.fallback || lower, "{:?}", code);
     }
 }
