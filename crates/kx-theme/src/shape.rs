@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::extras::{
-    BadgeShape, CaptionShape, ListShape, MenuShape, NoticeShape, PanelShape, PillShape, RingShape,
+    BadgeShape, CaptionShape, ChipsShape, ListShape, MenuShape, NoticeShape, PanelShape, RingShape,
     SnipShape, TrayShape,
 };
 
@@ -241,8 +241,8 @@ pub struct Shape {
     pub extra: ExtraShape,
     /// Hairline borders: panel and tooltip edges, the corner's rim and dividers.
     pub line: WidthShape,
-    /// The Copy pill.
-    pub pill: PillShape,
+    /// The selection strip's keycaps.
+    pub chips: ChipsShape,
     /// The caption bar.
     pub caption: CaptionShape,
     /// The snip overlay.

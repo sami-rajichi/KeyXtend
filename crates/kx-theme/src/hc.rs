@@ -122,7 +122,6 @@ pub fn contrast_common(s: &SysColors, common: &Common) -> Common {
     Common {
         press: clear,
         rec_dot: highlight,
-        pill_hover: clear,
         snip_dim: Rgba {
             a: common.snip_dim.a,
             ..window

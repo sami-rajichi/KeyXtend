@@ -11,10 +11,11 @@ impl Shape {
     /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (a list
     /// line's caret and underline, Quick-fill's width, `panel.min_fit`, `panel.wheel_notch`, `panel.wheel_rest_s` and the
     /// others in `check_sizes`), no kind row, a gap or place below 0, a lit dot no larger than the others, and a D-pad
-    /// hub or Stop inset of half the pad or more or a Stop wider than the hub.
+    /// hub or Stop inset of half the pad or more or a Stop wider than the hub, and an odd selection keycap size.
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
+        self.check_chips()?;
         self.check_dots()?;
         self.check_counts()?;
         self.check_shares()?;
@@ -51,6 +52,25 @@ impl Shape {
         }
     }
 
+    /// A selection keycap's word and icon must have a size, and its paddings and gaps be 0 or more, all finite.
+    fn check_chips(&self) -> Result<(), String> {
+        let c = &self.chips;
+        let above = [("chips.font_px", c.font_px), ("chips.icon_px", c.icon_px)];
+        if let Some((n, v)) = above.iter().find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
+            return Err(format!("shape: {n} {v} must be above 0"));
+        }
+        let zero_up = [
+            ("chips.pad_px", c.pad_px),
+            ("chips.cap_pad_px", c.cap_pad_px),
+            ("chips.icon_gap_px", c.icon_gap_px),
+            ("chips.gap_px", c.gap_px),
+        ];
+        match zero_up.iter().find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
+            Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),
+            None => Ok(()),
+        }
+    }
+
     /// The lit dot must be larger than an unlit one, which is how it stands out.
     fn check_dots(&self) -> Result<(), String> {
         let (on, px) = (self.dots.on_px, self.dots.px);
@@ -70,7 +90,6 @@ impl Shape {
             ("lang.weight", self.lang.weight),
             ("lang.side_weight", self.lang.side_weight),
             ("tip.weight", self.tip.weight),
-            ("pill.weight", self.pill.weight),
             ("caption.status_weight", self.caption.status_weight),
             ("snip.tag_weight", self.snip.tag_weight),
             ("panel.title_weight", self.panel.title_weight),

@@ -1,12 +1,15 @@
 //! The board's icons: each one it draws, the shortcuts layer's cells on every page among them, resolves in `icons.toml`
-//! or its key shows a text label instead; every named-key icon names a real board key, and every shortcut icon a
-//! shortcut on the owner's pages (moved from `kx-theme`, which cannot see the board).
+//! or its key shows a text label instead; every named-key icon names a real board key, every shortcut icon a
+//! shortcut on the owner's pages, and every selection keycap the module offers has its icon (moved from `kx-theme`,
+//! which cannot see the board).
 
 use crate::{designs, pages, views};
 use kx_mod_keyboard::panel::CURRENT_ICON;
 use kx_mod_keyboard::view::{NEXT_ICON, SHORTCUT_ICON_PREFIX};
 use kx_mod_keyboard::{BoardSpec, board as boxes};
+use kx_module_api::ports::SelChip;
 use kx_theme::Themes;
+use kx_ui::i18n::keys::sel_chip_id;
 use std::collections::BTreeSet;
 
 /// `icons.toml` as a table of groups, such as `keys` or `lang`.
@@ -54,6 +57,26 @@ fn every_named_key_icon_names_a_board_key() {
     for id in icons.keys.keys() {
         assert!(known.contains(id), "icons.toml [keys] {id} is no board key");
     }
+}
+
+/// The strip's QML takes each keycap's icon by the chip id the hub writes, and the tick once it acted.
+#[test]
+fn every_selection_keycap_and_its_tick_has_an_icon() {
+    let icons = icons();
+    let named: BTreeSet<String> = SelChip::ALL
+        .map(|c| format!("chips.{}", sel_chip_id(c)))
+        .into_iter()
+        .chain(["chips.tick".to_owned()])
+        .collect();
+    for id in &named {
+        assert!(resolves(&icons, id), "{id} shows nothing");
+    }
+    let listed = icons["chips"].as_table().map_or(0, toml::Table::len);
+    assert_eq!(
+        listed,
+        named.len(),
+        "no icon for a chip the module never offers"
+    );
 }
 
 #[test]

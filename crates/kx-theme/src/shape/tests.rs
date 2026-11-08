@@ -28,12 +28,6 @@ fn the_shared_sizes_load() {
 #[test]
 fn the_extra_windows_take_the_mock_up_sizes() {
     let s = load().expect("shape.toml loads");
-    assert_eq!(s.pill.button_side_px, 11.0, ".selpill button");
-    assert_eq!(
-        (s.pill.icon_px, s.pill.gap_px),
-        (13.0, 5.0),
-        ".selpill .i and gap"
-    );
     assert_eq!(s.caption.icon_px, 15.0, ".capbar .i");
     assert_eq!(s.caption.gap_px, 6.0, ".capbar .st gap");
     assert_eq!(s.caption.bar_px, 38.0, ".capbar with its 26 px wave");
@@ -272,6 +266,8 @@ fn an_odd_tray_share_or_label_size_is_refused() {
     ]);
 }
 
+/// The selection strip's keycaps.
+mod chips;
 /// The clipboard panel's rows, pills and buttons.
 mod clip;
 /// The dots the language key's Cycle design and the Next key share.

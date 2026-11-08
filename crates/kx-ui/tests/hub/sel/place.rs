@@ -19,7 +19,7 @@ const MAX_CLEAR: usize = 3;
 
 /// The theme's gap between the text and the strip at `dpi`, in physical pixels.
 fn gap(dpi: u32) -> i32 {
-    let px = Themes::shipped().unwrap().shape.pill.gap_px;
+    let px = Themes::shipped().unwrap().shape.chips.gap_px;
     physical(f64::from(px), dpi)
 }
 

@@ -1,6 +1,6 @@
 # How the keyboard moves: each animation's length (ms) and curve, from the mock-up's transitions and keyframes.
 # Curves are CSS cubic-bezier points [x1, y1, x2, y2]; reduced motion, or Windows' animation effects off, makes every length 0
-# except the hold ring's waves, which show the hold's time.
+# except the hold ring's waves, which show the hold's time, and [shows], which is time to read.
 
 [curves]
 ease = [0.25, 0.1, 0.25, 1.0]
@@ -31,8 +31,10 @@ carousel = { ms = 300, curve = "swift" }
 legends = { ms = 280, curve = "swift" }
 # The D-pad's Stop popping in and out (.dp-stop).
 stop = { ms = 220, curve = "spring" }
-# The Copy pill, the caption bar and a panel popping in (.selpill, .capbar, .pop).
-pill = { ms = 180, curve = "ease_out" }
+# The selection strip popping in and fading out with its shadow (design/selection-chips.html .chips popIn, .chips.go),
+# the caption bar and a panel popping in (.capbar, .pop). A clicked keycap presses as a key does (press).
+chips = { ms = 180, curve = "swift" }
+chips_fade = { ms = 160, curve = "ease" }
 caption = { ms = 200, curve = "ease_out" }
 panel = { ms = 180, curve = "swift" }
 # The side block's swap to or from the shortcuts layer: each new cell fades in and rises amount.pop_rise_px into place, as
@@ -82,6 +84,13 @@ pop_scale = 0.98
 menu_scale = 0.96
 # A tick's number in the clipboard panel pops in from this scale (not in the mock-up).
 tick_scale = 0.6
+# The selection strip rises this far (px) as it fades (.chips.go translateY(-3px)).
+fade_rise_px = 3.0
+
+# How long a state shows before what comes next, in ms: reduced motion keeps it, as it is time to read, not a move.
+[shows]
+# A clicked keycap's tick and done word, before the strip fades (the mock-up's click handler, 650 ms).
+chips_done = 650
 
 [ring]
 # The hold ring (mock-up .ring): its waves shrink on wave_curve over the hold less [mouse] ring_after_ms, even with

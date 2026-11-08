@@ -97,12 +97,12 @@ impl Hub {
     }
 
     /// The top-left, in physical pixels, of the strip of round `round` that QML measured `w` by `h` physical pixels: the
-    /// theme's gap from its line, clear of `clear` (our keyboard's and open panels' boxes) when there is room, and on its
+    /// theme's `[chips]` gap from its line, clear of `clear` (our keyboard's and open panels' boxes) when there is room, and on its
     /// screen's work area. `None` for another round, no strip, or a size that does not fit that work area.
     #[must_use]
     pub fn sel_at(&self, round: i64, w: i32, h: i32, clear: &[Rect]) -> Option<Point> {
         let spot = self.sel().strip.as_ref().filter(|k| k.is(round))?.spot;
-        let gap = self.themes.shape.pill.gap_px;
+        let gap = self.themes.shape.chips.gap_px;
         let gap = physical(f64::from(gap), spot.screen.dpi);
         place::at(&spot, w, h, gap, clear)
     }

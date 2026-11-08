@@ -8,18 +8,40 @@ use crate::ringmove::{RingFile, RingMotion};
 use crate::theme::{bez, outside_unit};
 
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 19] = [
-    "press", "colour", "plate", "led", "glow", "dot", "carousel", "legends", "stop", "pill",
-    "caption", "panel", "shimmer", "burst", "notice", "menu", "badge", "outline", "layer",
+pub const MOVES: [&str; 20] = [
+    "press",
+    "colour",
+    "plate",
+    "led",
+    "glow",
+    "dot",
+    "carousel",
+    "legends",
+    "stop",
+    "chips",
+    "chips_fade",
+    "caption",
+    "panel",
+    "shimmer",
+    "burst",
+    "notice",
+    "menu",
+    "badge",
+    "outline",
+    "layer",
 ];
 /// Every animation the clipboard panel plays, by what it moves.
 pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];
 /// Every animation Quick-fill plays, by what it moves.
 pub const FILL_MOVES: [&str; 5] = ["highlight", "swap", "turn", "sheet", "reveal"];
-/// The tables in the file that hold the faces' moves, the clipboard panel's and Quick-fill's, as errors name them.
+/// Every state that shows for a set time before what comes next, by what it shows.
+pub const SHOWS: [&str; 1] = ["chips_done"];
+/// The tables in the file that hold the faces' moves, the clipboard panel's, Quick-fill's and the shown times, as
+/// errors name them.
 const MOVES_TABLE: &str = "moves";
 const CLIP_TABLE: &str = "clip";
 const FILL_TABLE: &str = "fill";
+const SHOWS_TABLE: &str = "shows";
 
 /// The file as written.
 #[derive(Deserialize)]
@@ -30,6 +52,7 @@ struct MotionFile {
     clip: BTreeMap<String, Move>,
     fill: BTreeMap<String, Move>,
     amount: Amounts,
+    shows: BTreeMap<String, u32>,
     ring: RingFile,
 }
 
@@ -61,6 +84,8 @@ pub struct Amounts {
     pub menu_scale: f32,
     /// A clipboard tick's starting scale.
     pub tick_scale: f32,
+    /// How far the selection strip rises as it fades, in pixels.
+    pub fade_rise_px: f32,
 }
 
 /// One animation ready to play: its length and its curve as Qt bezier points (two controls, then the end).
@@ -83,6 +108,8 @@ pub struct Motion {
     pub fill: BTreeMap<String, Timed>,
     /// How far they go.
     pub amount: Amounts,
+    /// How long each state in `SHOWS` shows, in ms, the same with reduced motion.
+    pub shows: BTreeMap<String, u32>,
     /// The hold ring, the same with reduced motion since its waves show the hold's time.
     pub ring: RingMotion,
 }
@@ -110,10 +137,12 @@ pub(crate) fn parse(text: &str) -> Result<Motions, String> {
     check_names(MOVES_TABLE, &f.moves, &MOVES)?;
     check_names(CLIP_TABLE, &f.clip, &CLIP_MOVES)?;
     check_names(FILL_TABLE, &f.fill, &FILL_MOVES)?;
+    check_names(SHOWS_TABLE, &f.shows, &SHOWS)?;
     for (name, c) in &f.curves {
         check_curve(name, c)?;
     }
     f.amount.check()?;
+    check_shows(&f.shows)?;
     let ring = f.ring.ready(&f.curves)?;
     let (moves, clip, quick) = (
         all_timed(MOVES_TABLE, &f.moves, &f.curves)?,
@@ -125,6 +154,7 @@ pub(crate) fn parse(text: &str) -> Result<Motions, String> {
         clip: still(&clip),
         fill: still(&quick),
         amount: f.amount,
+        shows: f.shows.clone(),
         ring,
     };
     let full = Motion {
@@ -132,9 +162,20 @@ pub(crate) fn parse(text: &str) -> Result<Motions, String> {
         clip,
         fill: quick,
         amount: f.amount,
+        shows: f.shows,
         ring,
     };
     Ok(Motions { full, reduced })
+}
+
+/// Refuses a shown time of 0, as the state would never show.
+fn check_shows(shows: &BTreeMap<String, u32>) -> Result<(), String> {
+    match shows.iter().find(|(_, ms)| **ms == 0) {
+        Some((n, _)) => Err(format!(
+            "{SHOWS_TABLE}.{n} must be above 0 ms, or it never shows"
+        )),
+        None => Ok(()),
+    }
 }
 
 /// Each of `moves`, from table `table`, with its curve from `curves`.
@@ -153,13 +194,13 @@ fn still(moves: &BTreeMap<String, Timed>) -> BTreeMap<String, Timed> {
     moves.iter().map(none).collect()
 }
 
-/// Refuses a move of table `table` missing from `names`, and one not in it.
-fn check_names(table: &str, moves: &BTreeMap<String, Move>, names: &[&str]) -> Result<(), String> {
+/// Refuses an entry of table `table` missing from `names`, and one not in it.
+fn check_names<V>(table: &str, moves: &BTreeMap<String, V>, names: &[&str]) -> Result<(), String> {
     if let Some(n) = names.iter().find(|n| !moves.contains_key(**n)) {
         return Err(format!("{table}.{n} is missing"));
     }
     match moves.keys().find(|n| !names.contains(&n.as_str())) {
-        Some(n) => Err(format!("{table}.{n} is not an animation the faces play")),
+        Some(n) => Err(format!("{table}.{n} is not one the faces use")),
         None => Ok(()),
     }
 }
@@ -207,8 +248,12 @@ impl Amounts {
         if !(self.glow_lift.is_finite() && self.glow_lift >= 1.0) {
             return Err("amount.glow_lift must be 1 or more".into());
         }
-        if !(self.pop_rise_px.is_finite() && self.pop_rise_px >= 0.0) {
-            return Err("amount.pop_rise_px must be 0 or more".into());
+        let rises = [
+            ("pop_rise_px", self.pop_rise_px),
+            ("fade_rise_px", self.fade_rise_px),
+        ];
+        if let Some((n, _)) = rises.iter().find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
+            return Err(format!("amount.{n} must be 0 or more"));
         }
         Ok(())
     }

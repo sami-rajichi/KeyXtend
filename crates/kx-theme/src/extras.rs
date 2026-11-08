@@ -1,23 +1,28 @@
-//! Sizes of the small windows beside the keyboard: the Copy pill, the caption bar, the snip overlay, the Arabic panel,
-//! the hold ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
+//! Sizes of the small windows beside the keyboard: the selection strip, the caption bar, the snip overlay, the Arabic
+//! panel, the hold ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
 
 use serde::{Deserialize, Serialize};
 
-/// The Copy pill (mock-up `.selpill`).
+/// The selection strip's keycaps (mock-up design 4, `.d-keys`): each is one key row tall at the keyboard's size and as
+/// wide as its legend; the caps' gap and the legend's weight are the theme's own.
+#[allow(
+    clippy::struct_field_names,
+    reason = "every shape size names its unit, pixels here"
+)]
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct PillShape {
-    /// Room between the pill's edge and its button.
+pub struct ChipsShape {
+    /// Room between the plate's edge and its caps.
     pub pad_px: f32,
-    /// Button padding at the sides; the height is `tools.pill_px` in spike.toml.
-    pub button_side_px: f32,
-    /// Text size.
+    /// Room inside a cap on each side of its legend.
+    pub cap_pad_px: f32,
+    /// The word's size; Arabic takes the theme's `arabic_scale` of it.
     pub font_px: f32,
-    /// Text weight.
-    pub weight: u16,
-    /// The Copy icon's size.
+    /// Icon size.
     pub icon_px: f32,
-    /// Gap between the icon and the text.
+    /// Gap between the icon and the word.
+    pub icon_gap_px: f32,
+    /// Gap between the selected line and the strip, scaled to that screen's DPI.
     pub gap_px: f32,
 }
 

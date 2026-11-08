@@ -27,12 +27,12 @@ pub use accent::{accent_fill, with_accent};
 pub use common::Common;
 pub use hc::{contrast_common, contrast_palette, hover_line};
 pub use icons::{
-    BarIcons, ClipIcons, DpadIcons, FillIcons, Icons, LangIcons, LayerIcons, NoticeIcons,
-    PageIcons, TrayIcons,
+    BarIcons, ChipsIcons, ClipIcons, DpadIcons, FillIcons, Icons, LangIcons, LayerIcons,
+    NoticeIcons, PageIcons, TrayIcons,
 };
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use mode::{Mode, ModeChoice, mode_for};
-pub use motion::{Amounts, CLIP_MOVES, FILL_MOVES, MOVES, Motion, Motions, Timed};
+pub use motion::{Amounts, CLIP_MOVES, FILL_MOVES, MOVES, Motion, Motions, SHOWS, Timed};
 pub use palette::{Palette, Shadow, Skirt};
 pub use rgba::Rgba;
 pub use ringmove::{RingAmounts, RingMotion};

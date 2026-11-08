@@ -12,12 +12,11 @@
 # A colour marked "owner 2026-09-30", "2026-10-02" or "2026-10-11" was nudged just enough to pass it.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), which light
-# palettes lay over their hover, the caption's recording dot (.rec-dot), the Copy pill's hover (.selpill button:hover),
-# the snip overlay (.snip-dim, .snip-rect, .dims) and the mode badge's shadow (.badge box-shadow).
+# palettes lay over their hover, the caption's recording dot (.rec-dot), the snip overlay (.snip-dim, .snip-rect, .dims)
+# and the mode badge's shadow (.badge box-shadow).
 [common]
 press = "#0000000F"
 rec_dot = "#E5484D"
-pill_hover = "#7F7F7F38"
 snip_dim = "#0000006B"
 snip_edge = "#FFFFFF"
 snip_tag = "#00000099"
