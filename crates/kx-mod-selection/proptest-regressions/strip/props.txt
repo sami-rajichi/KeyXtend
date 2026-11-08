@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c08e9e2708ca786b06d2a76d3d4cd4de3e9c4aa67a66e6729d1b0ed63ef79416 # shrinks to cfg = StripConfig { rules: Rules { on: true, copy: true, cut: false, paste: false, translate: false, caret_paste: false }, minimised: true, caret: 2s }, steps = [In(Aimed(true)), In(Look { spot: SelSpot { box_id: 0, kind: Editable, selected: true, first: None, last: Some(‹redacted›), caret: None, screen: Screen { rect: Rect { x: 0, y: 0, w: 0, h: 0 }, dpi: 0, primary: false } }, click: false, clip: false })]
+cc 928cf6b26ac8f836f6c547df08a8ef186ea3a2dd532fc09d9c59d52149290afd # shrinks to cfg = StripConfig { rules: Rules { on: false, copy: false, cut: false, paste: false, translate: false, caret_paste: false }, minimised: false, caret: 2s }, steps = [Configure(StripConfig { rules: Rules { on: true, copy: false, cut: false, paste: true, translate: false, caret_paste: true }, minimised: false, caret: 2s }), In(Look { spot: SelSpot { box_id: 0, kind: Editable, selected: false, first: None, last: None, caret: Some(‹redacted›), screen: Screen { rect: Rect { x: 0, y: 0, w: 0, h: 0 }, dpi: 0, primary: false } }, click: true, clip: true }), Turn(Closed)]

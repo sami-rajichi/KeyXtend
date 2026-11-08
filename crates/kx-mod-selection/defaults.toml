@@ -1,0 +1,36 @@
+# The whole helper: chips by selected text and Paste at a caret.
+on = true
+# The Copy keycap.
+copy = true
+# The Cut keycap; never in a terminal.
+cut = true
+# The Paste keycap.
+paste = true
+# The Translate keycap, which opens the site's page in the browser.
+translate = true
+# A click into an editable box shows Paste by the caret when the clipboard holds anything.
+caret_paste = true
+# Seconds the caret's Paste stays when nothing ends it first.
+caret_s = 5
+# Each keycap shows its icon.
+icons = true
+# Each keycap shows its word; never off together with icons.
+words = true
+# The chips still show while the keyboard is minimised to its bubble.
+minimised = true
+# The language Translate asks for, as a tag such as "fr"; empty follows the system's display language.
+translate_to = ""
+# The translate site, by its id in sites.toml.
+translate_site = "google"
+# The most characters of the selection Translate sends, cut at a whole word.
+translate_chars = 1000
+# The user said yes to sending selected text to the site; the first Yes sets it.
+translate_ok = false
+# The wait after a focus or selection change before a look, in ms, so a burst looks once.
+settle_ms = 120
+# The longest one look or read may take, in ms.
+read_ms = 250
+# The most looks in one second.
+looks_per_s = 10
+# Seconds a Translate question waits for its answer; a later Yes opens nothing.
+consent_s = 30
