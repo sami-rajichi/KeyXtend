@@ -64,8 +64,8 @@ impl G19Product {
         Ok(())
     }
 
-    /// Refuses a Num Lock that is another key, no Shift+Home, Shift+End or caret key, a browser that is a path, and a console
-    /// that would run no script of the gate's.
+    /// Refuses a Num Lock that is another key, no Shift+Home, Shift+End or caret key, a browser that is a path, and a
+    /// console that would run no script of the gate's.
     pub(super) fn check_keys(&self) -> Result<(), String> {
         if self.numlock != [VK_NUMLOCK.0] {
             return Err("g19_product.numlock must be the Num Lock key alone".into());
