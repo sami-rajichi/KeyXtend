@@ -78,10 +78,10 @@ gone_wait_ms = 3000
 quiet_ms = 1500
 # Pause after each click, key or drag, in ms.
 settle_ms = 400
-# How long target-window hangs, within its hang_max_ms; it outlasts the selection module's look. The gate acts
-# hang_lead_ms after asking, brings the target forward, checks no strip shows for hung_quiet_ms, brings Notepad back,
-# selects there with no pause after the keys and waits up to hung_wait_ms for the strip, all within the hang and
-# hang_margin_ms to spare (checked).
+# How long target-window hangs, within its hang_max_ms; it outlasts the selection module's look. The gate brings the
+# target forward first, as a sleeping window cannot take the front, then asks it to hang. hang_lead_ms after asking,
+# it checks no strip shows for hung_quiet_ms, brings Notepad back, selects there with no pause after the keys and
+# waits up to hung_wait_ms for the strip, all within the hang and hang_margin_ms to spare (checked).
 hang_ms = 3000
 hang_lead_ms = 200
 hung_quiet_ms = 600

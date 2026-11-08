@@ -1,7 +1,7 @@
-//! A hung app (P10 plan's edge cases): target-window asleep in its hang mode takes the focus, so the module's look at
-//! it times out and no strip shows, and the gate never asks the hung window anything; the gate's Notepad then shows
-//! the strip while the target still sleeps, and the time from the last key to the strip is the lock's wait. After the
-//! hang, a new selection still shows the strip, and the field watch still hears focus: a password box locks the lane.
+//! A hung app (P10 plan's edge cases): target-window takes the front, then sleeps in its hang mode, so no strip shows
+//! on it, and the gate never asks the hung window anything; the gate's Notepad then shows the strip while the target
+//! still sleeps, and the time from the last key to the strip is the lock's wait. After the hang, a new selection still
+//! shows the strip, and the field watch still hears focus: a password box locks the lane.
 #![cfg(windows)]
 
 use std::time::Instant;
@@ -46,8 +46,8 @@ fn failed<'a>(parts: &[(&'a str, bool)]) -> Vec<&'a str> {
         .collect()
 }
 
-/// The hung target in front and kept there, then Notepad's selection while it sleeps; whether the strip came within
-/// the hang.
+/// The target brought forward and then hung, as a sleeping window cannot take the front, then Notepad's selection
+/// while it sleeps; whether the strip came within the hang.
 fn during(
     gate: &Gate,
     app: &Opened,
@@ -56,13 +56,12 @@ fn during(
     cases: &mut Vec<Value>,
 ) -> Result<bool, String> {
     let (ctx, g) = (gate.ctx, gate.g());
-    probe::front(ctx, app)?;
+    if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
+        return Err("could not bring target-window to the front before its hang".into());
+    }
     hang_target(target.hwnd, g.hang_ms)?;
     let at = Instant::now();
     sleep_ms(g.hang_lead_ms);
-    if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
-        return Err("could not bring the hung target-window to the front".into());
-    }
     cases.push(gate.quiet_hung(HUNG, target.hwnd)?);
     probe::front(ctx, app)?;
     let before = Gate::before();
