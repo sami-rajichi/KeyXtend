@@ -5,11 +5,13 @@
 
 mod act;
 mod addr;
+mod beside;
 mod calls;
 mod caret;
 mod clear;
 mod conhost;
 mod consent;
+mod cover;
 mod docs;
 mod gate;
 mod hides;
@@ -174,7 +176,7 @@ fn is_test(ctx: &Ctx, text: &str) -> bool {
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let (name, drive): (&str, Drive) = match name {
         READ => return read::run(ctx),
-        BESIDE => return read::beside(ctx),
+        BESIDE => return beside::run(ctx),
         NAME => (NAME, drive),
         TERMINALS => (TERMINALS, terminals),
         _ => {

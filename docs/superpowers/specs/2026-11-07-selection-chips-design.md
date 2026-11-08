@@ -130,7 +130,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 ## Moving the spike (move map, P10 row)
 
 - `core/src/selwatch.rs` and `geom.rs`: the show rules into `kx-mod-selection`, the UIA part into `kx-platform-windows`, and the pure placement (`anchor`) into `kx_module_api::ports::geom`, with which the ui's hub places the strip; `qt-kb/qml/Pill.qml` becomes kx-ui's keycap strip; the pill case of `tst_extras.qml` moves into kx-ui's `tst_selchips_app.qml`, where the shadow plugin loads (P10 item note); `sendkeys` `combo`, the pill part of `tools.rs` and the `[tools]` pill lines are deleted.
-- Gate `g19pill` is gone. `g19 core` is detection only, in Notepad and Chrome; `g19 keyxtend` drives the strip on the test build's own data folder, in Notepad, Chrome, Windows Terminal and the console, never Word (owner, 2026-10-16); `g19 translate-read` and `g19 translate-beside` only read the page the owner opens.
+- Gate `g19pill` is gone. `g19 core` is detection only, in Notepad and Chrome; `g19 keyxtend` drives the strip on the test build's own data folder, in Notepad, Chrome, Windows Terminal and the console, never Word (owner, 2026-10-16); `g19 translate-read` and `g19 translate-beside` only read the page the owner opens, the latter from the installed uiAccess kx-gates, as Windows hides the uiAccess keyboard from a plain one.
 
 ## Left to the builder
 

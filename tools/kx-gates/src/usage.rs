@@ -86,7 +86,8 @@ fn sel_lines() -> String {
 g19 {terms} does the same in the terminals alone, in about a minute, so close the product first.
 g19 {read} starts the test build the same way and selects the long Arabic line: click Translate, then Yes; the gate \
          only reads the page that opens.
-g19 {beside} starts nothing: it does the same beside the keyboard you started, such as the uiAccess dev install."
+g19 {beside} starts nothing: it does the same beside the uiAccess dev install, and runs only from the installed \
+         uiAccess kx-gates, as Windows hides that keyboard from a plain one."
     )
 }
 

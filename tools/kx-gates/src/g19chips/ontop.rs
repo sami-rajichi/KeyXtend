@@ -1,12 +1,14 @@
 //! Our keyboard on top at a key before the gate clicks it, right after the window in front changed by itself: how long
-//! the key stayed covered, and on a timeout where the key and the keyboard were and what lay over the key.
+//! the key stayed covered, and on a timeout where the key and the keyboard were, what lay over the key and why.
 #![cfg(windows)]
 
 use std::time::Instant;
 
+use serde_json::{Value, json};
 use windows::Win32::UI::WindowsAndMessaging::WS_EX_TOPMOST;
 
 use crate::g9win::ex_of;
+use crate::g19chips::cover;
 use crate::product::{self, Keyboard};
 use crate::win::{self, ms_since};
 
@@ -44,15 +46,21 @@ fn spot(kb: &Keyboard, id: &str) -> String {
 }
 
 /// The ms our keyboard's key `id` stayed covered, within one follow period of the keyboard, as the app in front just
-/// changed; asked every `poll_ms`.
+/// changed; asked every `poll_ms`. A key still covered then gets the cover note, read once more.
 pub fn wait(poll_ms: u64, id: &str) -> Result<u64, String> {
     let follow = product::follow_ms(poll_ms)?;
-    covered_ms(follow, poll_ms, || {
+    let got = covered_ms(follow, poll_ms, || {
         let kb = Keyboard::find()?;
         kb.top_at(id)
             .map(drop)
             .map_err(|e| format!("{e}; {}", spot(&kb, id)))
-    })
+    });
+    got.map_err(|e| format!("{e}; cover {}", why(id)))
+}
+
+/// Why key `id` stayed covered, on the keyboard found afresh.
+fn why(id: &str) -> Value {
+    Keyboard::find().map_or_else(|e| json!({ "error": e }), |kb| cover::note(&kb, id))
 }
 
 #[cfg(test)]

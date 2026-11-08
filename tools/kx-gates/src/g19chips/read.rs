@@ -24,13 +24,12 @@ use crate::g20prod::copy_line;
 use crate::keymap::Reader;
 use crate::out::say;
 use crate::p10cfg::selection_defaults;
-use crate::product::Keyboard;
 use crate::workertok::{self, MEDIUM};
 use crate::{clipkeep, probe, win};
 
 /// The step on the test build it starts, which has no uiAccess.
 pub const READ: &str = "translate-read";
-/// The step beside the keyboard the owner started, the uiAccess dev install for the manual check.
+/// The step beside the keyboard the owner started, the uiAccess dev install, from the installed uiAccess kx-gates.
 pub const BESIDE: &str = "translate-beside";
 /// What the owner does while the gate waits.
 const ASK: &str = "click Translate on the strip, then Yes if it asks";
@@ -166,7 +165,7 @@ fn turn(t: &Turn, app: &Opened) -> Result<Value, String> {
 
 /// The gate's document with the long line, the owner's turn beside launcher `launcher`, and the reads; the document
 /// closes after, and the page the owner opened stays, as it is the owner's browser.
-fn read(ctx: &Ctx, launcher: u32, program: &Path) -> Result<Value, String> {
+pub(super) fn read(ctx: &Ctx, launcher: u32, program: &Path) -> Result<Value, String> {
     let g = &ctx.cfg.g19_product;
     let key =
         site_key(&selection_defaults()?).ok_or("the site's link names no key for its text")?;
@@ -198,7 +197,7 @@ pub fn pass_of(run: &Value, removed: bool) -> bool {
 }
 
 /// The result line of step `name`.
-fn line(name: &str, run: &Value, removed: Result<(), String>) -> Value {
+pub(super) fn line(name: &str, run: &Value, removed: Result<(), String>) -> Value {
     let pass = pass_of(run, removed.is_ok());
     say!("{GATE} {name}: {}", run["ok"]);
     json!({
@@ -217,15 +216,6 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
     });
     let removed = fresh.close(ended.as_ref());
     Ok(line(READ, &copy_line(got, ended.as_ref()), removed))
-}
-
-/// Runs `translate-beside` next to the keyboard the owner started, starting nothing.
-pub fn beside(ctx: &Ctx) -> Result<Value, String> {
-    let kb = Keyboard::find()?;
-    let (pid, program) = (win::owner(kb.hwnd).0, win::program(kb.hwnd)?);
-    let got = clipkeep::keep_changed(ctx.cfg, || read(ctx, pid, Path::new(&program)));
-    let run = got.unwrap_or_else(|e| json!({ "ok": false, "error": e }));
-    Ok(line(BESIDE, &run, Ok(())))
 }
 
 #[cfg(test)]

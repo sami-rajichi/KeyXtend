@@ -155,6 +155,7 @@
     - It reads and taps Num Lock only through its own terminal while that terminal is in front, and puts it back to the state the run found first, also on a panic, without bringing the terminal forward, so no Alt tap reaches another window (`numlock.rs`). Num Lock left changed fails the run and names the state to restore with the on-screen keyboard, in the result's `clean_up` list, or printed on a panic.
   - `kx-gates g19 terminals` (P10) runs only the terminals step of `g19 keyxtend`, with the same copy, mouse guard (`DRIVEN` in `cli.rs`), clipboard keep, forgotten copies and data-folder removal.
   - `kx-gates g19 translate-read` and `translate-beside` run free of the mouse guard (`FREED` in `cli.rs`), as the owner clicks Translate and Yes, and are bounded by `owner_wait_ms`.
+    - `translate-beside` runs only from the installed uiAccess kx-gates, never `cargo run`: Windows hides the uiAccess keyboard from a plain UI Automation client, so a plain kx-gates refuses it at once (`g19chips/beside.rs`).
     - They read only the browser window that opened after Yes: its parent, its token's uiAccess and integrity, and its address bar, an Edit control a `[[g19_product.bars]]` row names, found without entering the page or the tabs.
     - The address is compared in memory and dropped, and only names, numbers and verdicts print. `translate-beside` starts nothing and puts the clipboard back only when its sequence number moved.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
@@ -223,6 +224,8 @@ Around each terminal case, G19 runs the product's own selection watch inside the
 Before and after that case, G19 also makes each call of the product's caret lookup on the focused box, one by one, through two UI Automation clients of its own (`g19chips/calls.rs`). Each answer is ok, a count, a comparison or Windows' error code, and no call reads text.
 
 G19's hung case clicks into its own sleeping target-window. The click waits in that window's queue and lands after the hang, in the gate's own box.
+
+When a key of our keyboard stays covered, G19 notes the windows above the keyboard in the z-order, and the keyboard's own styles, cut and layering (`g19chips/cover.rs`). It reads class names, flags and numbers only, never a title or any text.
 
 `g19 translate-read` and `translate-beside` read the opened browser window's address bar in memory, compare it and drop it. The owner is present, and the check needs that read.
 
