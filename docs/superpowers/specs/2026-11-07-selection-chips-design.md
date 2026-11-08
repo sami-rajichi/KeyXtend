@@ -113,6 +113,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 ## How the selection is found (Windows first)
 
 - **UI Automation only,** on the focused element: its kind, whether its selection holds text, the selection's line boxes, whether it is editable, and its caret's box. No text is read, except Translate's one read at a click.
+- **A refused end check:** Windows Terminal refuses to compare a selection's start with its end, so then the selection's line boxes tell whether it holds text; no box leaves it unsure.
 - **Driven by events, never a timer:** a focus change, a text-selection change, our presses and releases while the module wants them (`PressesWanted`), Grab's drop and our keys. A short wait after an event lets the app settle, and reads are capped per second. Idle CPU stays near 0 % (spec §10).
 - **No gesture fallback (owner):** an app that does not tell its selection gets no chips. This replaces the spec's "Fallback: our mouse hook sees a drag-select or double-click gesture".
 - **Reads** run on the adapter's own COM thread with a deadline, never on Qt's thread or the hook's, and a hung app gets no look until it answers.

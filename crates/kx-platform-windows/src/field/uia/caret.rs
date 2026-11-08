@@ -10,6 +10,7 @@ use windows::Win32::UI::Accessibility::{
 use windows::core::BOOL;
 
 use super::{failed, text_call};
+use crate::uia::boxes;
 
 /// Whether a box's selection holds text, as `GetSelection` told.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -42,7 +43,7 @@ pub(super) enum Sel<R> {
     /// No range: nothing is selected.
     Empty,
     /// The first range, and whether the selection holds text.
-    Range(R, bool),
+    Range(R, Held),
 }
 
 /// The caret of `el`, from `TextPattern2`'s caret and its selection; `None` when it has neither.
@@ -53,17 +54,36 @@ pub(crate) fn caret_of(el: &IUIAutomationElement) -> Found {
 }
 
 /// The caret from `TextPattern2`'s `caret` and what `GetSelection` told: a selection that holds text wins, and a
-/// failed or missing one keeps that caret, unsure; with no caret the selection serves.
+/// failed, missing or unsure one keeps that caret, unsure; with no caret the selection serves.
 pub(super) fn chosen<R>(caret: Option<R>, sel: Result<Sel<R>, FieldError>) -> Found<R> {
     let found = |range, held| Ok(Some(Caret { range, held }));
     match (caret, sel) {
-        (_, Ok(Sel::Range(range, true))) => found(range, Held::Yes),
-        (Some(range), Ok(Sel::Range(..) | Sel::Empty)) | (None, Ok(Sel::Range(range, false))) => {
-            found(range, Held::No)
+        (_, Ok(Sel::Range(range, Held::Yes))) => found(range, Held::Yes),
+        (Some(range), Ok(Sel::Range(_, Held::No) | Sel::Empty)) => found(range, Held::No),
+        (Some(range), Ok(Sel::Range(_, Held::Unknown) | Sel::Missing) | Err(_)) => {
+            found(range, Held::Unknown)
         }
-        (Some(range), Ok(Sel::Missing) | Err(_)) => found(range, Held::Unknown),
+        (None, Ok(Sel::Range(range, held))) => found(range, held),
         (None, Ok(Sel::Missing | Sel::Empty)) => Ok(None),
         (None, Err(error)) => Err(error),
+    }
+}
+
+/// Whether a lone range holds text: its end check `span` when that answered, else, when the app refused it as
+/// Windows Terminal does, its line boxes, counted by `boxes` only then. No box leaves it unsure, never empty.
+pub(super) fn held_by(
+    span: Result<i32, FieldError>,
+    boxes: impl FnOnce() -> Option<usize>,
+) -> Result<Held, FieldError> {
+    match span {
+        Ok(0) => Ok(Held::No),
+        Ok(_) => Ok(Held::Yes),
+        Err(FieldError::Refused) => match boxes() {
+            Some(0) => Ok(Held::Unknown),
+            Some(_) => Ok(Held::Yes),
+            None => Err(FieldError::Refused),
+        },
+        Err(e) => Err(e),
     }
 }
 
@@ -81,9 +101,13 @@ fn selection(el: &IUIAutomationElement) -> Result<Sel<IUIAutomationTextRange>, F
             return Ok(Sel::Empty);
         }
         let range = ranges.GetElement(0).map_err(failed)?;
+        if count > 1 {
+            return Ok(Sel::Range(range, Held::Yes));
+        }
         let (start, end) = (TextPatternRangeEndpoint_Start, TextPatternRangeEndpoint_End);
-        let span = range.CompareEndpoints(start, &range, end).map_err(failed)?;
-        Ok(Sel::Range(range, count > 1 || span != 0))
+        let span = range.CompareEndpoints(start, &range, end).map_err(failed);
+        let held = held_by(span, || boxes(&range).ok().map(|b| b.len()))?;
+        Ok(Sel::Range(range, held))
     }
 }
 
