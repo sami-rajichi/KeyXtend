@@ -54,4 +54,10 @@ impl SelSettings {
     pub fn consent(&self) -> Duration {
         Duration::from_secs(self.consent_s.into())
     }
+
+    /// How long an edit or a Translate open may go unanswered.
+    #[must_use]
+    pub fn edit(&self) -> Duration {
+        Duration::from_millis(self.edit_ms.into())
+    }
 }

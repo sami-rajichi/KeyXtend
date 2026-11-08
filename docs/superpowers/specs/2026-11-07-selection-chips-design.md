@@ -108,6 +108,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 - `minimised` (true): show while the keyboard is minimised.
 - `translate_to` (""), `translate_site` ("google"), `translate_chars` (1,000, at most the site's limit), `translate_ok` (false, set by the first Yes).
 - The builder adds the timing and limit settings the detection needs, each with bounds: `settle_ms`, `read_ms`, `looks_per_s` and `consent_s` (`crates/kx-mod-selection/README.md`).
+- `edit_ms` (5,000, from 1,000 to 30,000): the longest an edit or a Translate open may go unanswered; then its strip hides and the user is told (Ruling AA).
 
 ## How the selection is found (Windows first)
 

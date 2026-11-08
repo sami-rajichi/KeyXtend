@@ -142,8 +142,7 @@ impl Actor {
 
     /// Opens `link` off the actor, as a shell can hold the call; its end comes back as `Msg::Opened`.
     fn open(&mut self, round: u32, link: Link) {
-        let chip = SelChip::Translate;
-        self.busy = Some(Busy { round, chip });
+        self.fly(round, SelChip::Translate);
         let (web, back) = (Arc::clone(&self.ports.web), self.ports.back.clone());
         let job: Job = Box::new(move || {
             let opened = catch_unwind(AssertUnwindSafe(|| web.open(&link)));

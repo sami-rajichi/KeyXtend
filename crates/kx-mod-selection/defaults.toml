@@ -32,3 +32,5 @@ read_ms = 250
 looks_per_s = 10
 # Seconds a Translate question waits for its answer; a later Yes opens nothing.
 consent_s = 30
+# The longest an edit or a Translate open may go unanswered, in ms; then its strip hides and the user is told.
+edit_ms = 5000

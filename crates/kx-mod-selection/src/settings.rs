@@ -23,6 +23,8 @@ pub const READ_MS: RangeInclusive<u32> = 50..=2_000;
 pub const LOOKS_PER_S: RangeInclusive<u16> = 1..=30;
 /// Seconds a Translate question waits for its answer.
 pub const CONSENT_S: RangeInclusive<u32> = 5..=120;
+/// The longest an edit or a Translate open may go unanswered, in ms.
+pub const EDIT_MS: RangeInclusive<u32> = 1_000..=30_000;
 /// The key the module sets itself when the user says yes to Translate.
 pub const TRANSLATE_OK_KEY: &str = "translate_ok";
 
@@ -81,6 +83,8 @@ pub struct SelSettings {
     pub looks_per_s: u16,
     /// Seconds a Translate question waits for its answer.
     pub consent_s: u32,
+    /// The longest an edit or a Translate open may go unanswered before its strip hides and the user is told, in ms.
+    pub edit_ms: u32,
 }
 
 impl SelSettings {
@@ -99,7 +103,8 @@ impl SelSettings {
         within("settle_ms", self.settle_ms, &SETTLE_MS)?;
         within("read_ms", self.read_ms, &READ_MS)?;
         within("looks_per_s", self.looks_per_s, &LOOKS_PER_S)?;
-        within("consent_s", self.consent_s, &CONSENT_S)
+        within("consent_s", self.consent_s, &CONSENT_S)?;
+        within("edit_ms", self.edit_ms, &EDIT_MS)
     }
 
     /// The site is one of `sites`, and `translate_chars` stays within its limit.

@@ -99,6 +99,8 @@ struct Busy {
     round: u32,
     /// The keycap clicked.
     chip: SelChip,
+    /// When it is late, `edit_ms` after it began.
+    until: Mono,
 }
 
 /// Translate's question, raised and not yet answered.
@@ -212,18 +214,28 @@ impl Actor {
         }
     }
 
-    /// Ends the caret's Paste once its time is up.
+    /// Ends the caret's Paste once its time is up, and an act in flight once it is late.
     pub(crate) fn tick(&mut self) {
         let now = self.ports.clock.now();
-        if !self.stopped && self.strip.ends().is_some_and(|end| now >= end) {
+        if self.stopped {
+            return;
+        }
+        if self.strip.ends().is_some_and(|end| now >= end) {
             self.step(Input::Tick);
+        }
+        if let Some(late) = self.busy.take_if(|b| now >= b.until) {
+            self.expire(late);
         }
     }
 
-    /// How long the loop waits for a message: until the caret's Paste ends, else no limit.
+    /// How long the loop waits for a message: until the caret's Paste ends or the act in flight is late, else no limit.
     pub(crate) fn wait(&self) -> Option<Duration> {
         let now = self.ports.clock.now();
-        self.strip.ends().map(|end| end.saturating_since(now))
+        let due = [self.strip.ends(), self.busy.map(|b| b.until)];
+        due.into_iter()
+            .flatten()
+            .min()
+            .map(|end| end.saturating_since(now))
     }
 
     /// Stops: the watch goes first, then the strip hides and presses are no longer wanted.

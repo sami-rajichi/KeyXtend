@@ -39,7 +39,7 @@ impl Actor {
         if !done.ok {
             self.refuse(done.round);
             self.say(keys::KEYS_NOT_SENT);
-        } else if let Some(Busy { round, chip }) = busy {
+        } else if let Some(Busy { round, chip, .. }) = busy {
             // The keyboard tells one break for the edit's keys, which is no key of the user's.
             self.swallow = true;
             self.step(Input::Acted { round, chip });
@@ -64,14 +64,29 @@ impl Actor {
 
     /// Asks the keyboard for `edit` on the box of `pick`, from the strip of `round`.
     fn edit(&mut self, round: u32, pick: &Pick, edit: Edit) {
-        // The keyboard answers from inside its handler, so the act is in flight before the ask.
-        let chip = pick.chip;
-        self.busy = Some(Busy { round, chip });
+        // The keyboard may answer from inside its handler, so the act is in flight before the ask.
+        self.fly(round, pick.chip);
         let terminal = pick.kind == SelKind::Terminal;
         self.publish(&EditAsk {
             round,
             edit,
             terminal,
+        });
+    }
+
+    /// Puts `chip`'s act on the strip of `round` in flight, late once `edit_ms` has passed.
+    pub(super) fn fly(&mut self, round: u32, chip: SelChip) {
+        let until = self.ports.clock.now().saturating_add(self.settings.edit());
+        self.busy = Some(Busy { round, chip, until });
+    }
+
+    /// An act that went unanswered past `edit_ms`: its strip hides, if it still shows, and the user hears it did not go.
+    pub(super) fn expire(&mut self, late: Busy) {
+        self.refuse(late.round);
+        self.say(if late.chip == SelChip::Translate {
+            keys::TRANSLATE_FAILED
+        } else {
+            keys::KEYS_NOT_SENT
         });
     }
 }

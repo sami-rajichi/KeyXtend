@@ -43,6 +43,7 @@ The strip machine owns every show rule, the minimised and tray ones too (from `B
 | `read_ms` | 250 | 50–2000 | The longest one look or read may take. |
 | `looks_per_s` | 10 | 1–30 | The most looks in one second. |
 | `consent_s` | 30 | 5–120 | Seconds a Translate question waits for its answer. |
+| `edit_ms` | 5000 | 1000–30000 | The longest an edit or a Translate open may go unanswered; then its strip hides and the user is told. |
 
 A bad value goes back to its default with the settings notice.
 

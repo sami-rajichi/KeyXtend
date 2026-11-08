@@ -46,8 +46,14 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
     );
     assert_eq!(s.translate_chars, 1000);
     assert_eq!(
-        (s.settle_ms, s.read_ms, s.looks_per_s, s.consent_s),
-        (120, 250, 10, 30)
+        (
+            s.settle_ms,
+            s.read_ms,
+            s.looks_per_s,
+            s.consent_s,
+            s.edit_ms
+        ),
+        (120, 250, 10, 30, 5000)
     );
 }
 
@@ -60,6 +66,7 @@ fn each_range_takes_its_ends_and_refuses_past_them() {
         ("read_ms", ends(&READ_MS)),
         ("looks_per_s", ends(&LOOKS_PER_S)),
         ("consent_s", ends(&CONSENT_S)),
+        ("edit_ms", ends(&EDIT_MS)),
     ];
     for (key, (lo, hi)) in bounds {
         assert!(taken(&with(key, lo)) && taken(&with(key, hi)), "{key}");
@@ -72,6 +79,7 @@ fn each_range_takes_its_ends_and_refuses_past_them() {
 fn the_plans_ranges_hold() {
     assert_eq!((CARET_S, CONSENT_S), (2..=30, 5..=120));
     assert_eq!(TRANSLATE_CHARS, 50..=5000);
+    assert_eq!(EDIT_MS, 1000..=30_000, "Ruling AA");
     assert_eq!(
         (SETTLE_MS, READ_MS, LOOKS_PER_S),
         (30..=1000, 50..=2000, 1..=30)
@@ -198,8 +206,12 @@ fn the_parts_get_the_settings_in_their_units() {
     assert_eq!(strip.caret, Duration::from_secs(5));
     assert!(!s.strip_config(false).rules.translate);
     assert_eq!(
-        (s.caret(), s.consent()),
-        (Duration::from_secs(5), Duration::from_secs(30))
+        (s.caret(), s.consent(), s.edit()),
+        (
+            Duration::from_secs(5),
+            Duration::from_secs(30),
+            Duration::from_secs(5)
+        )
     );
 }
 
