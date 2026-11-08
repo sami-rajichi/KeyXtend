@@ -171,11 +171,11 @@ pub fn edits(
     let (case, shown) = by_keys(gate, app, lines, Line::Paste, "notepad_paste")?;
     cases.push(case);
     let shift = board::latch_id(Latch::Shift)?;
-    gate.acts.key(&shift)?;
+    gate.acts.key(app, &shift)?;
     let paste = act(gate, app, shown, SelChip::Paste, |_| true)?;
     let latched = ModeKey::by_id(shift.clone())?.on()?;
     if latched {
-        gate.acts.key(&shift)?;
+        gate.acts.key(app, &shift)?;
     }
     let max = i32::try_from(gate.ctx.cfg.g1.max_read_chars).unwrap_or(i32::MAX);
     let doc = gate

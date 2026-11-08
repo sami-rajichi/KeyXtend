@@ -1,6 +1,6 @@
 //! G19's acts, each as the simulated user (`SIM_TAG`), whom the test build's engine hears as the hand, then a pause of
-//! `settle_ms` unless a wait timed from the input follows: clicks and drags only where the gate's own window is on top,
-//! keys only while it is in front, and clicks on our keyboard's keys.
+//! `settle_ms` unless a wait timed from the input follows. Clicks and drags go only where the gate's own window is on
+//! top, and keys, ours included, only while it is in front.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -12,6 +12,7 @@ use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::INPUT;
 
 use crate::apps::{Ctx, Opened};
+use crate::ownkeys::{self, Desk, Real};
 use crate::product::Keyboard;
 use crate::simin::{self, Act};
 use crate::simuser::{self, guard, keys_ours};
@@ -32,6 +33,15 @@ fn strokes(vks: &[u16]) -> Vec<INPUT> {
         .rev()
         .map(|&vk| crate::keys::tagged(vk, true, SIM_TAG));
     downs.chain(ups).collect()
+}
+
+/// Runs `press`, a click on our keyboard's key, once `desk` shows `app` in front with our tab, as the key types there.
+fn typed(
+    desk: &dyn Desk,
+    app: &Opened,
+    press: &dyn Fn() -> Result<(), String>,
+) -> Result<(), String> {
+    ownkeys::click(desk, app, press)
 }
 
 /// What follows an act.
@@ -154,10 +164,14 @@ impl<'a> Acts<'a> {
         Ok(())
     }
 
-    /// A short click on our keyboard's key `id`, once the keyboard is on top there.
-    pub fn key(&self, id: &str) -> Result<(), String> {
-        let at = Keyboard::find()?.top_at(id)?;
-        simuser::press(self.ctx, pt(at))?;
+    /// A short click on our keyboard's key `id`, which types into `app`: only while `app` is in front with our tab,
+    /// once the keyboard is on top there.
+    pub fn key(&self, app: &Opened, id: &str) -> Result<(), String> {
+        let press = || {
+            let at = Keyboard::find()?.top_at(id)?;
+            simuser::press(self.ctx, pt(at))
+        };
+        typed(&Real, app, &press)?;
         self.settle();
         Ok(())
     }
@@ -174,5 +188,28 @@ impl<'a> Acts<'a> {
         simuser::press(self.ctx, pt(p))?;
         self.settle();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ownkeys::fake::{Fake, OUR_TAB, OWNER_TAB, hwnd, notepad};
+
+    #[test]
+    fn our_keyboards_keys_type_only_while_the_gates_window_shows_our_tab_in_front() {
+        let app = notepad(None);
+        let press = || Ok(());
+        let ours = Fake::new(app.hwnd, &[OUR_TAB]);
+        assert_eq!(typed(&ours, &app, &press), Ok(()));
+        assert_eq!(ours.clicks.get(), 1);
+        let away = Fake::new(hwnd(9), &[OUR_TAB]);
+        let e = typed(&away, &app, &press).expect_err("another window in front");
+        assert!(e.contains("held back") && away.quiet(), "{e}");
+        let tab = Fake::new(app.hwnd, &[OWNER_TAB]);
+        assert!(
+            typed(&tab, &app, &press).is_err() && tab.quiet(),
+            "the owner's tab"
+        );
     }
 }

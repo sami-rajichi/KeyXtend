@@ -85,7 +85,7 @@ fn moved<T>(
 /// One case on the copy line of `lines`, cleared with our Esc after.
 fn one(gate: &Gate, app: &Opened, lines: &Lines, name: &str) -> Result<Value, String> {
     let (case, _) = by_keys(gate, app, lines, Line::Copy, name)?;
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     Ok(case)
 }
 

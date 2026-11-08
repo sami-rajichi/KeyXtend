@@ -121,7 +121,7 @@ fn double(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     let seen = gate.strip.seen(g.strip_wait_ms)?;
     let named: Vec<Vec<String>> = seen.iter().map(|c| ids(c, g)).collect();
     let brief = named.contains(&g.caret_chips);
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     Ok(json!({ "seen": named, "brief_paste": brief }))
 }
 
@@ -130,7 +130,7 @@ pub fn run(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     let key = match shows(gate, app, lines)? {
         Some(_) => gate
             .acts
-            .key(&board::nav_key(Nav::Right)?)
+            .key(app, &board::nav_key(Nav::Right)?)
             .and_then(|()| goes(gate))?,
         None => false,
     };

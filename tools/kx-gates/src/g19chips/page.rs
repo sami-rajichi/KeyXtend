@@ -51,13 +51,13 @@ fn paragraph(gate: &Gate, app: &Opened, cases: &mut Vec<Value>) -> Result<Value,
     let (case, shown) = gate.case("page_drag", &before, &g.page_chips)?;
     cases.push(case);
     let shift = board::latch_id(Latch::Shift)?;
-    gate.acts.key(&shift)?;
+    gate.acts.key(app, &shift)?;
     let copy = act(gate, app, shown, SelChip::Copy, |seq| {
         gate.clip_holds(seq, &g.page_text)
     })?;
     let latched = ModeKey::by_id(shift.clone())?.on()?;
     if latched {
-        gate.acts.key(&shift)?;
+        gate.acts.key(app, &shift)?;
     }
     let (ctrl_c, ctrl_shift_c) = counts(&win::title(app.hwnd), g).unwrap_or_default();
     let ok = copy["ok"] == true && latched && ctrl_c > 0 && ctrl_shift_c == 0;
@@ -85,7 +85,7 @@ fn drive(gate: &Gate, app: &Opened, cases: &mut Vec<Value>) -> Result<Value, Str
     probe::front(gate.ctx, app)?;
     let copy = paragraph(gate, app, cases)?;
     cases.push(boxed(gate, app, &g.box_name, Some(&g.editable_chips))?);
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     cases.push(boxed(gate, app, &g.pass_name, None)?);
     cases.push(boxed(gate, app, &g.unknown_name, None)?);
     Ok(copy)

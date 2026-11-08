@@ -37,8 +37,8 @@ fn shown(v: &Value) -> bool {
 fn keys(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     let before = Gate::before();
     gate.acts.click(app, lines.end(Line::Copy))?;
-    gate.acts.key(&board::latch_id(Latch::Shift)?)?;
-    gate.acts.key(&board::nav_key(Nav::Left)?)?;
+    gate.acts.key(app, &board::latch_id(Latch::Shift)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Left)?)?;
     Ok(gate
         .case("keyboard_keys", &before, &gate.g().editable_chips)?
         .0)
@@ -92,7 +92,7 @@ pub fn run(
         let case = step(gate, app, lines)?;
         ok &= shown(&case);
         cases.push(case);
-        gate.acts.key(&esc)?;
+        gate.acts.key(app, &esc)?;
     }
     Ok(json!({ "scroll_pad": SCROLL_PAD, "ok": ok }))
 }

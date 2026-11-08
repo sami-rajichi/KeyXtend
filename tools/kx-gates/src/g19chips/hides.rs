@@ -48,16 +48,16 @@ fn panel(
         Panel::new(gate.ctx, g.gone_wait_ms)?,
     );
     let shown = select(gate, app, lines, "panel_before")?.is_some();
-    gate.acts.key(&clip)?;
+    gate.acts.key(app, &clip)?;
     let opened = panel.wait(true);
     let hid = shown && gate.strip.goes(|_| true)?;
     let before = Gate::before();
     gate.acts.keys(app, &g.caret_left)?;
     gate.acts.keys(app, &g.select_home)?;
     cases.push(gate.quiet("panel_aimed", &before)?);
-    gate.acts.key(&clip)?;
+    gate.acts.key(app, &clip)?;
     let shut = panel.wait(false);
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     let ok = hid && opened.is_ok() && shut.is_ok();
     Ok(json!({ "hid": hid, "opened": opened.is_ok(), "shut": shut.is_ok(), "ok": ok }))
 }
@@ -70,7 +70,7 @@ fn minimised(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> 
     press(gate, &g9.bring_back)?;
     let poll = gate.ctx.cfg.timing.poll_ms;
     let back = win::poll_until(g.strip_wait_ms, poll, || Keyboard::find().ok()).is_some();
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     let ok = shows == gate.sel.minimised && back;
     Ok(json!({ "shows": shows, "minimised": gate.sel.minimised, "back": back, "ok": ok }))
 }
@@ -95,7 +95,7 @@ pub fn run(
     let esc = match select(gate, app, lines, "esc")? {
         Some(_) => gate
             .acts
-            .key(&board::nav_key(Nav::Esc)?)
+            .key(app, &board::nav_key(Nav::Esc)?)
             .and_then(|()| gate.strip.goes(|_| true))?,
         None => false,
     };

@@ -98,8 +98,8 @@ pub fn run(
     let got = during(gate, app, lines, &target, cases);
     left.extend(apps::clean_up(gate.ctx, target));
     let within = got?;
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
     probe::front(gate.ctx, app)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     let (after, _) = by_keys(gate, app, lines, Line::Copy, "after_hung")?;
     let told = |name: &str, key: &str| cases.iter().any(|c| c["case"] == name && c[key] == true);
     let (quiet, beside) = (told("hung", "chips"), told("beside_hung", "chips"));
@@ -109,7 +109,7 @@ pub fn run(
         .map(|c| c["ms"].clone());
     let shown = after["chips"] == true;
     cases.push(after);
-    gate.acts.key(&board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     let field = heard(gate, left);
     let parts = [
         ("quiet", quiet),
