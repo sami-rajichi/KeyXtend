@@ -122,13 +122,7 @@ fn one(
             || drive(gate, kind, &t, cases),
             || numlock::put_back(gate, &t, was),
         );
-        match v {
-            Ok(v) => Ok((numlock::finished(v, back), was)),
-            Err(e) => {
-                left.extend(back.err());
-                Err(e)
-            }
-        }
+        numlock::settled(v, back, left).map(|v| (v, was))
     });
     left.extend(term::close(gate.ctx, t));
     got

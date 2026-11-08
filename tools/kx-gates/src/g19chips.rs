@@ -118,9 +118,10 @@ fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Res
     let mut cases = Vec::new();
     let doc = probe::open_text(ctx, AppKind::Notepad, &docs::doc(gate.g()))?;
     let mut later = Vec::new();
-    let (mut v, notes_left) =
-        probe::run_on(ctx, doc, |d| steps(&gate, &d.app, &mut cases, &mut later))?;
-    left.extend(later.into_iter().chain(notes_left));
+    let got = probe::run_on(ctx, doc, |d| steps(&gate, &d.app, &mut cases, &mut later));
+    left.extend(later);
+    let (mut v, notes_left) = got?;
+    left.extend(notes_left);
     v["cases"] = plan::groups(&cases);
     v["each"] = json!(cases);
     v["unexercised"] = json!(plan::unexercised(&v));

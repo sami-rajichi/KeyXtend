@@ -5,8 +5,10 @@
 use serde_json::{Value, json};
 
 use crate::apps::Opened;
+use crate::g19chips::GATE;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::term::{Term, numlock_on};
+use crate::out::say;
 use crate::ownkeys::{self, Desk, Real};
 
 /// What the owner does when Num Lock may stay changed: set it back to `was`, its state before the run.
@@ -23,22 +25,28 @@ pub fn first(
     carried.map_or_else(read, Ok)
 }
 
-/// Runs `back` when dropped while armed, as when the drive panics.
-struct Guard<B, F: Fn() -> B> {
+/// Runs `back` when dropped while armed, as when the drive panics, and prints its error, since no result is left.
+struct Guard<F: Fn() -> Result<(), String>> {
     back: F,
     armed: bool,
 }
 
-impl<B, F: Fn() -> B> Drop for Guard<B, F> {
+impl<F: Fn() -> Result<(), String>> Drop for Guard<F> {
     fn drop(&mut self) {
-        if self.armed {
-            let _ = (self.back)();
+        if !self.armed {
+            return;
+        }
+        if let Err(e) = (self.back)() {
+            say!("{GATE}: {e}");
         }
     }
 }
 
 /// Runs `drive`, then `back` once, even when `drive` panics: what each gave.
-pub fn then_back<T, B>(drive: impl FnOnce() -> T, back: impl Fn() -> B) -> (T, B) {
+pub fn then_back<T>(
+    drive: impl FnOnce() -> T,
+    back: impl Fn() -> Result<(), String>,
+) -> (T, Result<(), String>) {
     let mut guard = Guard { back, armed: true };
     let got = drive();
     guard.armed = false;
@@ -81,6 +89,19 @@ pub fn finished(mut v: Value, back: Result<(), String>) -> Value {
         v["numlock_error"] = json!(e);
     }
     v
+}
+
+/// One terminal's outcome: the drive's `got` with Num Lock's `back`, whose error also goes into `left`, so a later
+/// failed step cannot drop it.
+pub fn settled(
+    got: Result<Value, String>,
+    back: Result<(), String>,
+    left: &mut Vec<String>,
+) -> Result<Value, String> {
+    if let Err(e) = &back {
+        left.push(e.clone());
+    }
+    got.map(|v| finished(v, back))
 }
 
 #[cfg(test)]

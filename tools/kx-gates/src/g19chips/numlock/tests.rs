@@ -77,8 +77,14 @@ fn the_second_terminal_keeps_the_state_the_first_found() {
 #[test]
 fn num_lock_goes_back_once_after_the_drive_even_when_it_panics() {
     let backs = Cell::new(0);
-    let back = || backs.set(backs.get() + 1);
-    assert_eq!(then_back(|| 7, back), (7, ()));
+    let back = || {
+        backs.set(backs.get() + 1);
+        Err("Num Lock not put back".to_string())
+    };
+    assert_eq!(
+        then_back(|| 7, back),
+        (7, Err("Num Lock not put back".into()))
+    );
     assert_eq!(backs.get(), 1, "once after a drive");
     let panicked = catch_unwind(AssertUnwindSafe(|| {
         then_back(|| -> u8 { panic!("a step broke") }, back)
@@ -100,4 +106,22 @@ fn a_terminal_that_left_num_lock_changed_fails() {
         (&json!(false), &json!("why"))
     );
     assert_eq!(finished(json!({ "ok": false }), Ok(()))["ok"], false);
+}
+
+#[test]
+fn a_put_back_error_reaches_the_clean_up_even_when_a_later_step_fails() {
+    let mut left = Vec::new();
+    let run = |left: &mut Vec<String>| -> Result<Value, String> {
+        let v = settled(Ok(json!({ "ok": true })), Err("not back".into()), left)?;
+        assert_eq!(v["numlock_error"], "not back");
+        Err("the console failed".into())
+    };
+    assert!(run(&mut left).is_err());
+    assert_eq!(left, ["not back"], "kept past the failed step");
+    let mut left = Vec::new();
+    assert!(settled(Err("drive".into()), Err("not back".into()), &mut left).is_err());
+    assert_eq!(left, ["not back"]);
+    let mut left = Vec::new();
+    let v = settled(Ok(json!({ "ok": true })), Ok(()), &mut left);
+    assert!(v.is_ok_and(|v| v["ok"] == true) && left.is_empty());
 }
