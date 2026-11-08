@@ -158,16 +158,21 @@ proptest! {
         prop_assert!(at.x >= area.x && at.y >= area.y);
     }
 
+    /// Any work area, left of or above the primary screen too, as on a second screen there (plan edge case 4).
     #[test]
     fn a_strip_that_fits_the_area_stays_wholly_on_it(
         first in near_rect(),
         last in near_rect(),
         (w, h, gap) in (1..400, 1..80, 0..40),
         clear in prop::collection::vec(near_rect(), 0..3),
+        (ax, ay, more_w, more_h) in (-4000..4000, -4000..4000, 0..3000, 0..2000),
     ) {
-        let at = anchor(first, last, Strip { w, h, gap }, AREA, &clear);
-        prop_assert!(at.x >= AREA.x && at.x + w <= AREA.x + AREA.w);
-        prop_assert!(at.y >= AREA.y && at.y + h <= AREA.y + AREA.h);
+        let area = Rect { x: ax, y: ay, w: w + more_w, h: h + more_h };
+        let near = |b: Rect| Rect { x: b.x + ax, y: b.y + ay, ..b };
+        let clear: Vec<Rect> = clear.into_iter().map(near).collect();
+        let at = anchor(near(first), near(last), Strip { w, h, gap }, area, &clear);
+        prop_assert!(at.x >= area.x && at.x + w <= area.x + area.w);
+        prop_assert!(at.y >= area.y && at.y + h <= area.y + area.h);
     }
 
     #[test]
