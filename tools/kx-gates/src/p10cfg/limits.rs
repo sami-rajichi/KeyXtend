@@ -1,12 +1,29 @@
 //! The key and wait checks of `[g19_product]`.
 #![cfg(windows)]
 
+use kx_mod_keyboard::KeyboardSettings;
+use kx_mod_selection::SelSettings;
+use kx_module_api::ports::{BASE_DPI, physical};
+use kx_theme::Themes;
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_NUMLOCK;
 
 use crate::apps::{INPUT, same_name};
 use crate::p5cfg::SEP;
 use crate::p8cfg::wait;
-use crate::p10cfg::{Bar, G19Product, caret_ms, marked, selection_defaults};
+use crate::p10cfg::{Bar, G19Product, caret_ms, selection_defaults};
+
+/// The selection module's look at a box: its settle, then its read, in ms.
+fn look_ms(s: &SelSettings) -> u64 {
+    u64::from(s.settle_ms).saturating_add(u64::from(s.read_ms))
+}
+
+/// The theme's gap between the strip and its text at the keyboard's default size, in physical px at the base DPI.
+pub fn default_gap() -> Result<i32, String> {
+    let themes = Themes::shipped().map_err(|e| format!("theme {e}"))?;
+    let keyboard =
+        KeyboardSettings::from_defaults().map_err(|e| format!("the keyboard's defaults: {e}"))?;
+    Ok(physical(themes.shape.chips.gap(keyboard.size), BASE_DPI))
+}
 
 /// True for a kx-ui id: a group, `SEP`, then a name.
 fn id_like(id: &str) -> bool {
@@ -18,9 +35,13 @@ impl G19Product {
     /// Refuses a ping that names a path or holds a quote or separator, a resize corner that is no kx-ui id, and a
     /// text box or address-bar walk of no size.
     pub(super) fn check_ping(&self) -> Result<(), String> {
-        let plain = |b: &String| !b.is_empty() && !b.contains(['\\', '/', ':']);
-        if !plain(&self.ping_exe) || marked(&self.ping_exe) {
-            return Err("g19_product.ping_exe must name a plain program file".into());
+        let file = |c: char| c.is_ascii_alphanumeric() || ".-_".contains(c);
+        let exe = &self.ping_exe;
+        if exe.is_empty() || !exe.chars().all(file) {
+            return Err(
+                "g19_product.ping_exe must name a plain program file: letters, digits, dots, dashes and underscores"
+                    .into(),
+            );
         }
         let word =
             |a: &String| !a.is_empty() && a.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
@@ -121,15 +142,51 @@ impl G19Product {
         waits
             .iter()
             .try_for_each(|(k, ms)| wait(&key(k), *ms, most_ms))?;
+        self.check_module()?;
+        self.check_place()?;
+        self.check_hang(front_ms, press_ms)
+    }
+
+    /// Refuses a quiet wait the module's look outlasts, a wait for the strip to go as long as an edit's deadline, and
+    /// a caret slack as long as the caret's Paste stays.
+    fn check_module(&self) -> Result<(), String> {
         let s = selection_defaults()?;
-        self.check_hang(front_ms, press_ms)?;
-        if self.place_slack_px < 0 {
-            return Err("g19_product.place_slack_px must not be negative".into());
+        let look = look_ms(&s);
+        if self.quiet_ms <= look {
+            return Err(format!(
+                "g19_product.quiet_ms must outlast the module's look, {look} ms"
+            ));
+        }
+        let edit = u64::from(s.edit_ms);
+        if self.gone_wait_ms >= edit {
+            return Err(format!(
+                "g19_product.gone_wait_ms must be shorter than the module's edit_ms, {edit} ms, so a strip an edit's \
+                 deadline hid never counts as gone"
+            ));
         }
         if self.caret_slack_ms >= caret_ms(&s) {
             return Err(
                 "g19_product.caret_slack_ms must be shorter than the module's caret_s".into(),
             );
+        }
+        Ok(())
+    }
+
+    /// Refuses a place slack, or a near-bottom distance, that is not below the theme's gap at the keyboard's default
+    /// size; the distance must be 1 px at least, so the strip has no room below the line.
+    fn check_place(&self) -> Result<(), String> {
+        let gap = default_gap()?;
+        if !(0..gap).contains(&self.place_slack_px) {
+            return Err(format!(
+                "g19_product.place_slack_px must be 0 to {} px, below the theme's gap",
+                gap.saturating_sub(1)
+            ));
+        }
+        if !(1..gap).contains(&i32::from(self.near_px)) {
+            return Err(format!(
+                "g19_product.near_px must be 1 to {} px, below the theme's gap",
+                gap.saturating_sub(1)
+            ));
         }
         Ok(())
     }
@@ -153,8 +210,7 @@ impl G19Product {
     /// Refuses a hung app's quiet wait the module's look outlasts, a hang that does not outlast every act in it by
     /// `hang_margin_ms`, and one past target-window's `hang_max_ms`.
     fn check_hang(&self, front_ms: u64, press_ms: u64) -> Result<(), String> {
-        let s = selection_defaults()?;
-        let look = u64::from(s.settle_ms).saturating_add(u64::from(s.read_ms));
+        let look = look_ms(&selection_defaults()?);
         if self.hung_quiet_ms <= look {
             return Err(format!(
                 "g19_product.hung_quiet_ms must outlast the module's look, {look} ms"

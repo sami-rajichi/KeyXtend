@@ -102,6 +102,12 @@ impl G19Product {
         vec![self.arabic.as_str(); self.arabic_repeat].join(" ")
     }
 
+    /// The long line's length in characters, counted without building it, so a huge repeat is refused first.
+    pub fn long_chars(&self) -> usize {
+        let (one, n) = (self.arabic.chars().count(), self.arabic_repeat);
+        one.saturating_mul(n).saturating_add(n.saturating_sub(1))
+    }
+
     /// `chip`'s own id, as the lists of each box kind name it.
     pub fn chip_name(&self, chip: SelChip) -> Option<&str> {
         let at = SelChip::ALL.iter().position(|c| *c == chip)?;
@@ -151,22 +157,28 @@ impl G19Product {
     /// Refuses a long line shorter than `long_min_chars`, past the module's `translate_chars`, or cut by the site.
     fn check_long(&self) -> Result<(), String> {
         let s = selection_defaults()?;
-        let (long, most) = (self.long_line(), usize::from(s.translate_chars));
-        let chars = long.chars().count();
+        let (chars, most) = (self.long_chars(), usize::from(s.translate_chars));
         if self.long_min_chars == 0 || self.long_min_chars > most {
             return Err(format!("g19_product.long_min_chars must be 1 to {most}"));
         }
+        let wrong = || {
+            let min = self.long_min_chars;
+            format!(
+                "g19_product.arabic_repeat makes a line of {chars} characters: it must be {min} to {most}, and the \
+                 site's link must take it whole"
+            )
+        };
+        if !(self.long_min_chars..=most).contains(&chars) {
+            return Err(wrong());
+        }
+        let long = self.long_line();
         let site = sites().ok().and_then(|t| t.get(&s.translate_site));
         let site = site.ok_or("the selection module's translate_site names no site")?;
         let key = g19chips::site_key(&s).ok_or("the site's link names no key for its text")?;
         let sent = site.link(&long, &site.target(&s.translate_to, ""), s.translate_chars);
         let whole = sent.and_then(|l| text_of(l.expose(), &key));
-        if !(self.long_min_chars..=most).contains(&chars) || whole.as_deref() != Some(&long) {
-            return Err(format!(
-                "g19_product.arabic_repeat makes a line of {chars} characters: it must be {} to {most}, and the \
-                 site's link must take it whole",
-                self.long_min_chars
-            ));
+        if whole.as_deref() != Some(&long) {
+            return Err(wrong());
         }
         Ok(())
     }

@@ -2,6 +2,7 @@
 
 mod bars;
 mod ids;
+mod module;
 
 use super::*;
 use crate::config::load;
