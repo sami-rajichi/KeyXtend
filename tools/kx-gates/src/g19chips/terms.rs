@@ -1,7 +1,7 @@
 //! G19 in terminals (P10 design "In a terminal"): Windows Terminal and the classic console show Copy, Paste and
 //! Translate on the gate's printed line; Copy copies it, and Paste types it back at the prompt with Num Lock on and
-//! off, which the gate reads only through its own terminal and puts back as it found it. Copy during the gate's own
-//! `ping -t` leaves the ping running.
+//! off, which the gate reads and puts back only through its own terminal in front. Copy during the gate's own `ping -t`
+//! leaves the ping running.
 #![cfg(windows)]
 
 use kx_module_api::ports::{Rect, SelChip};
@@ -17,7 +17,9 @@ use crate::g19chips::notepad::{act, rows};
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
 use crate::g19chips::{place, procs, script};
+use crate::ownkeys::{self, Desk, Real};
 use crate::probe;
+use crate::proc::Process;
 use crate::win::{self, sleep_ms};
 
 /// The acts the step takes at the least: in each terminal a drag and Copy, then a drag, Paste and Enter with Num Lock
@@ -102,17 +104,32 @@ fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Va
     Ok(json!({ "copy": copy, "pastes": pastes, "ok": ok }))
 }
 
-/// Num Lock put back to `was` with terminal `t` in front; false when it stayed changed or could not be read.
-fn put_back(gate: &Gate, t: &Term, was: bool) -> bool {
-    let (cfg, g) = (gate.ctx.cfg, gate.g());
-    if !win::front_back(t.hwnd, &cfg.timing, &cfg.keys) {
-        return false;
+/// Num Lock put back to `was` on the gate's own terminal `app`, read by `on` and tapped by `tap` only while `app` is
+/// in front on `desk`, then `settle_ms` given; an error says why it is not back.
+pub fn back_on(
+    desk: &dyn Desk,
+    app: &Opened,
+    (was, settle_ms): (bool, u64),
+    on: &dyn Fn() -> Result<bool, String>,
+    tap: &dyn Fn() -> Result<(), String>,
+) -> Result<(), String> {
+    let not = |e: String| format!("Num Lock not put back: {e}");
+    if on().map_err(not)? != was {
+        ownkeys::click(desk, app, tap).map_err(not)?;
+        desk.settle(settle_ms);
     }
-    if numlock_on(t.hwnd).is_ok_and(|on| on != was) {
-        let _ = crate::keys::restore_combo(&g.numlock);
-        sleep_ms(g.settle_ms);
+    if on().map_err(not)? != was {
+        return Err(not("it stayed changed".into()));
     }
-    numlock_on(t.hwnd).is_ok_and(|on| on == was)
+    Ok(())
+}
+
+/// Num Lock put back to `was` in terminal `t`, never brought forward, as that would tap into the window in front.
+fn put_back(gate: &Gate, t: &Term, was: bool) -> Result<(), String> {
+    let g = gate.g();
+    let tap = || crate::keys::restore_combo(&g.numlock);
+    let on = || numlock_on(t.hwnd);
+    back_on(&Real, &t.app(), (was, g.settle_ms), &on, &tap)
 }
 
 /// Terminal `kind` on the line script, read for Num Lock once in front, driven, then closed; Num Lock goes back as
@@ -131,16 +148,25 @@ fn one(
     let got = was.and_then(|was| {
         let v = drive(gate, kind, &t, cases);
         let back = put_back(gate, &t, was);
-        v.map(|v| finished(v, back))
+        match v {
+            Ok(v) => Ok(finished(v, back)),
+            Err(e) => {
+                left.extend(back.err());
+                Err(e)
+            }
+        }
     });
     left.extend(term::close(gate.ctx, t));
     got
 }
 
-/// One terminal's result with Num Lock put back as `back` says: it fails when Num Lock stayed changed.
-pub fn finished(mut v: Value, back: bool) -> Value {
-    v["ok"] = json!(v["ok"] == true && back);
-    v["numlock_back"] = json!(back);
+/// One terminal's result with Num Lock put back as `back` says: it fails, naming why, when Num Lock is not back.
+pub fn finished(mut v: Value, back: Result<(), String>) -> Value {
+    v["ok"] = json!(v["ok"] == true && back.is_ok());
+    v["numlock_back"] = json!(back.is_ok());
+    if let Err(e) = back {
+        v["numlock_error"] = json!(e);
+    }
     v
 }
 
@@ -161,6 +187,26 @@ fn pinged(gate: &Gate, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String
     Ok(json!({ "copy": copy, "replies_before": before, "replies_after": after, "ok": ok }))
 }
 
+/// The pings the gate's own script `t` started since `before`, held; none, and a note in `left`, when its ready file
+/// names no process.
+fn held(
+    gate: &Gate,
+    t: &Term,
+    before: &[procs::Proc],
+    left: &mut Vec<String>,
+) -> Vec<(procs::Proc, Option<Process>)> {
+    let Some(shell) = script::shell_of(&t.mark) else {
+        left.push("the ping script named no process, so no ping of it is ended".into());
+        return Vec::new();
+    };
+    procs::hold(procs::ours(
+        before,
+        &procs::now(),
+        &gate.g().ping_exe,
+        shell,
+    ))
+}
+
 /// Copy during the gate's own ping in Windows Terminal, which then closes; the ping gets `ping_exit_ms` to end, and
 /// one still running then is ended and reported.
 fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
@@ -170,7 +216,7 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
         script::ping(g, ready, out)
     })?;
     let got = pinged(gate, &t, cases);
-    let held = procs::hold(procs::ours(&before, &procs::now(), &g.ping_exe));
+    let held = held(gate, &t, &before, left);
     left.extend(term::close(gate.ctx, t));
     left.extend(procs::let_end(
         &held,
@@ -195,14 +241,58 @@ pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Resul
 mod tests {
     use super::*;
 
+    use std::cell::RefCell;
+
+    use crate::apps::AppKind;
+    use crate::ownkeys::fake::{Fake, hwnd};
+
+    /// The gate's terminal as the tests open it: window `hwnd(1)`, no tab to check.
+    fn terminal() -> Opened {
+        Opened {
+            kind: AppKind::Terminal,
+            hwnd: hwnd(1),
+            child: None,
+            file: None,
+            title_has: None,
+        }
+    }
+
+    /// Num Lock put back to on, from `reads` in turn, on a desk with window `front` in front; the result and clicks.
+    fn back(front: usize, reads: &[Result<bool, String>]) -> (Result<(), String>, usize) {
+        let desk = Fake::new(hwnd(front), &["Windows PowerShell"]);
+        let reads = RefCell::new(reads.to_vec());
+        let on = || reads.borrow_mut().remove(0);
+        let got = back_on(&desk, &terminal(), (true, 0), &on, &|| Ok(()));
+        (got, desk.clicks.get())
+    }
+
+    #[test]
+    fn num_lock_is_tapped_back_only_into_our_own_terminal_in_front() {
+        assert_eq!(back(1, &[Ok(false), Ok(true)]), (Ok(()), 1));
+        assert_eq!(back(1, &[Ok(true), Ok(true)]), (Ok(()), 0), "already back");
+        let (got, clicks) = back(2, &[Ok(false), Ok(false)]);
+        assert!(
+            clicks == 0 && got.is_err_and(|e| e.contains("Num Lock not put back")),
+            "another window in front"
+        );
+        let (got, clicks) = back(1, &[Err("unread".into())]);
+        assert!(clicks == 0 && got.is_err(), "Num Lock unread");
+        let (got, _) = back(1, &[Ok(false), Ok(false)]);
+        assert!(got.is_err_and(|e| e.contains("stayed changed")));
+    }
+
     #[test]
     fn a_terminal_that_left_num_lock_changed_fails() {
-        let v = finished(json!({ "ok": true }), true);
+        let v = finished(json!({ "ok": true }), Ok(()));
         assert_eq!(
             (v["ok"].as_bool(), v["numlock_back"].as_bool()),
             (Some(true), Some(true))
         );
-        assert_eq!(finished(json!({ "ok": true }), false)["ok"], false);
-        assert_eq!(finished(json!({ "ok": false }), true)["ok"], false);
+        let v = finished(json!({ "ok": true }), Err("why".into()));
+        assert_eq!(
+            (&v["ok"], &v["numlock_error"]),
+            (&json!(false), &json!("why"))
+        );
+        assert_eq!(finished(json!({ "ok": false }), Ok(()))["ok"], false);
     }
 }

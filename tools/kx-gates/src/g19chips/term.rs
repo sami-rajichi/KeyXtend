@@ -38,10 +38,12 @@ impl Kind {
     }
 }
 
-/// A terminal the gate started: its window, its program, and its script's files.
+/// A terminal the gate started: its window, its program, its script's files, and what its ready file says.
 pub struct Term {
     /// Its window.
     pub hwnd: HWND,
+    /// What the script wrote to mark itself ready.
+    pub mark: String,
     child: Child,
     files: [PathBuf; 3],
 }
@@ -104,6 +106,7 @@ pub fn open(
     tag: &str,
     text: impl FnOnce(&Path, &Path) -> String,
 ) -> Result<Term, String> {
+    let wait = ctx.cfg.app(AppKind::Terminal.name())?.wait_ms;
     let files = files(ctx, kind, tag);
     out::write(&files[0], &text(&files[1], &files[2]))?;
     let script = files[0].to_string_lossy().into_owned();
@@ -115,10 +118,17 @@ pub fn open(
         Ok(s) => s,
         Err(e) => return Err(format!("{e}; clean-up: {:?}", remove(&files))),
     };
-    let term = Term { hwnd, child, files };
-    let wait = ctx.cfg.app(AppKind::Terminal.name())?.wait_ms;
+    let mut term = Term {
+        hwnd,
+        mark: String::new(),
+        child,
+        files,
+    };
     match out::wait_read(&term.files[1], wait, ctx.cfg.timing.poll_ms) {
-        Ok(_) => Ok(term),
+        Ok(mark) => {
+            term.mark = mark;
+            Ok(term)
+        }
         Err(e) => Err(format!(
             "{} not ready: {e}; clean-up: {:?}",
             kind.name(),

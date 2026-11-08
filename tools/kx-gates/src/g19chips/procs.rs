@@ -51,14 +51,12 @@ pub fn stayed(before: &[Proc], after: &[Proc], exe: &str) -> Vec<Proc> {
     after.iter().filter(new).filter(named).cloned().collect()
 }
 
-/// The processes of program `exe` in `now`, not in `before`, whose parent is new too: what the gate's own script
-/// started, never a program the owner ran from a shell already open.
-pub fn ours(before: &[Proc], now: &[Proc], exe: &str) -> Vec<Proc> {
-    let parent_new = |p: &Proc| find(before, p.parent).is_none() && find(now, p.parent).is_some();
-    stayed(before, now, exe)
-        .into_iter()
-        .filter(parent_new)
-        .collect()
+/// The processes of program `exe` in `now`, not in `before`, whose parent is `shell`, the gate's own script, new
+/// too: never a program the owner ran from another shell.
+pub fn ours(before: &[Proc], now: &[Proc], exe: &str, shell: u32) -> Vec<Proc> {
+    let shell_new = find(before, shell).is_none() && find(now, shell).is_some();
+    let child = |p: &Proc| shell_new && p.parent == shell;
+    stayed(before, now, exe).into_iter().filter(child).collect()
 }
 
 /// Each of `procs` with a handle that keeps it known while it runs; none for one that could not be opened.
@@ -197,16 +195,21 @@ mod tests {
         now.push(p(31, 30, "PING.EXE"));
         now.push(p(40, 4, "powershell.exe"));
         now.push(p(41, 40, "ping.exe"));
+        now.push(p(50, 4, "powershell.exe"));
+        now.push(p(51, 50, "ping.exe"));
+        now.push(p(52, 99, "ping.exe"));
         assert_eq!(
-            ours(&before, &now, "ping.exe"),
+            ours(&before, &now, "ping.exe", 40),
             [p(41, 40, "ping.exe")],
-            "the owner's shell was open before"
+            "the owner's new shell is not ours"
         );
-        now.push(p(51, 99, "ping.exe"));
-        assert_eq!(
-            ours(&before, &now, "ping.exe").len(),
-            1,
-            "a parent already gone"
+        assert!(
+            ours(&before, &now, "ping.exe", 30).is_empty(),
+            "a shell open before"
+        );
+        assert!(
+            ours(&before, &now, "ping.exe", 99).is_empty(),
+            "a shell already gone"
         );
     }
 

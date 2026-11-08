@@ -1,5 +1,5 @@
-//! The gate's own PowerShell scripts for the terminals: one prints the test line and keeps each pasted line, one keeps
-//! the configured ping writing to a log; and how many Num Lock taps turn the lock as a step wants it.
+//! The gate's own PowerShell scripts for the terminals: one prints the test line and keeps each pasted line, one names
+//! its own process and keeps the configured ping writing to a log; and how many Num Lock taps turn the lock as wanted.
 #![cfg(windows)]
 
 use std::path::Path;
@@ -35,8 +35,18 @@ pub fn lines(line: &str, ready: &Path, result: &Path) -> String {
     )
 }
 
-/// The script that marks itself ready in `ready`, then runs `g`'s ping until closed, each reply shown and kept in
-/// `log`.
+/// The line that writes the script's own process id into `ready`, which marks it ready too.
+fn own_id(ready: &Path) -> String {
+    format!("[IO.File]::WriteAllText({}, \"$PID\")", path(ready))
+}
+
+/// The process id a script's ready file holds, `mark`; none when it holds none.
+pub fn shell_of(mark: &str) -> Option<u32> {
+    mark.trim().parse().ok().filter(|p| *p != 0)
+}
+
+/// The script that writes its own process id into `ready`, then runs `g`'s ping until closed, each reply shown and
+/// kept in `log`.
 pub fn ping(g: &G19Product, ready: &Path, log: &Path) -> String {
     let command = [g.ping_exe.as_str()]
         .into_iter()
@@ -46,7 +56,7 @@ pub fn ping(g: &G19Product, ready: &Path, log: &Path) -> String {
         .join(" ");
     format!(
         "{BOM}{}\r\n{command} | ForEach-Object {{ $_; [IO.File]::AppendAllText({}, \"$_`n\") }}\r\n",
-        mark(ready),
+        own_id(ready),
         path(log)
     )
 }
@@ -83,7 +93,18 @@ mod tests {
         let command = format!("{} {} {}", g.ping_exe, g.ping_args.join(" "), g.ping_host);
         assert!(s.contains(&command), "{s}");
         assert!(s.find(r"D:\o\r.txt") < s.find(&g.ping_exe), "{s}");
+        assert!(
+            s.contains(r#"WriteAllText('D:\o\r.txt', "$PID")"#),
+            "its own id: {s}"
+        );
         assert!(s.contains(r"'D:\o\p.log'"), "{s}");
+    }
+
+    #[test]
+    fn the_ready_file_names_the_scripts_shell_or_nothing() {
+        assert_eq!(shell_of("4242\r\n"), Some(4242));
+        assert_eq!(shell_of("ready"), None, "the line script's mark");
+        assert_eq!((shell_of(""), shell_of("0")), (None, None));
     }
 
     #[test]
