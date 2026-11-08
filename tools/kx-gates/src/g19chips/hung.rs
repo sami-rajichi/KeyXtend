@@ -17,6 +17,7 @@ use crate::g19chips::docs::Line;
 use crate::g19chips::gate::{Gate, wait_ms};
 use crate::g19chips::kept::{Kept, Target};
 use crate::g19chips::notepad::{Lines, by_keys};
+use crate::g19chips::ontop;
 use crate::keymap::centre;
 use crate::win::{self, ms_since, sleep_ms};
 use crate::{board, launch, probe, typebox};
@@ -115,7 +116,9 @@ fn verdict(cases: &[Value], (within, after): (bool, bool), field: &Value) -> Val
     json!({ "lock_ms": lock_ms, "field_watch": field, "failed": failed, "ok": failed.is_empty() })
 }
 
-/// The hung target's look, Notepad beside it and after it, then the field watch; the target closes first.
+/// The hung target's look, Notepad beside it and after it, then the field watch; the target closes first. Its close
+/// hands the front to Notepad at once, so our Esc first waits for the keyboard on top at its key, and the ms the key
+/// stayed covered is a note.
 pub fn run(
     gate: &Gate,
     app: &Opened,
@@ -135,13 +138,17 @@ pub fn run(
     left.extend(target.close());
     let within = got?;
     probe::front(gate.ctx, app)?;
-    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
+    let esc = board::nav_key(Nav::Esc)?;
+    let covered = ontop::wait(gate.ctx.cfg.timing.poll_ms, &esc)?;
+    gate.acts.key(app, &esc)?;
     let (after, _) = by_keys(gate, app, lines, Line::Copy, AFTER_HUNG)?;
     let shown = after["chips"] == true;
     cases.push(after);
-    gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
+    gate.acts.key(app, &esc)?;
     let field = heard(gate, left);
-    Ok(verdict(cases, (within, shown), &field))
+    let mut v = verdict(cases, (within, shown), &field);
+    v["esc_covered_ms"] = json!(covered);
+    Ok(v)
 }
 
 #[cfg(test)]
