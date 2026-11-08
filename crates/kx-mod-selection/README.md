@@ -1,6 +1,6 @@
 # kx-mod-selection
 
-The selection chips (P10, ADR-0041): selected text in another app shows a strip of keycaps, Copy, Cut, Paste and Translate, by its last line; a click into an editable box shows Paste by the caret. The module reads no text before a click: only Translate reads the selection, once, and opens the chosen site's page in the user's browser after one consent. It never types; the keyboard sends the edit keys for it.
+The selection chips (P10, ADR-0041): selected text in another app shows Copy, Cut, Paste and Translate keycaps by its last line, and a click into an editable box shows Paste by the caret. Only Translate reads the text, once at a click after one consent, to open the chosen site's page in the user's browser; the keyboard sends every edit's keys.
 
 The crate holds the module's pure rules: which keycaps show (`chips`), the strip's show and hide state machine on `Mono` time (`Strip`), the Translate link (`Site::link`, `Site::target`) and the compiled-in site table (`sites.toml`). `SelectionModule::new(os)` runs them on the `kx-selection` thread: it looks when the watch tells a change or a click ends outside, asks the keyboard for each edit, and opens Translate's page on a short `kx-selection-open` thread.
 
@@ -21,7 +21,7 @@ It provides no service.
 | `Selection` | It gates the chips' events: `ChipsView`, `ChipAct`, `EditAsk` and `EditDone`. |
 | `OpenLink` | It gates the browser link; only this module holds it. |
 
-It holds no `InjectInput`. It also hears the ungated `PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace`, `PressesAsk` and `NoticeAnswered`, and wants presses (`PressesWanted`) while it runs. At start it asks for the keyboard's place (`BoardPlaceAsk`), Grab's state (`AssistAsk`) and the aimed line (`TypingModeAsk`), so any start order works.
+It holds no `InjectInput`; it hears the ungated `PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace`, `PressesAsk` and `NoticeAnswered`, and wants presses (`PressesWanted`) while it runs. At start it asks for the keyboard's place (`BoardPlaceAsk`), Grab's state (`AssistAsk`) and the aimed line (`TypingModeAsk`), so any start order works.
 
 The strip machine owns every show rule, the minimised and tray ones too (from `BoardPlace`), and each `ChipsView` carries the keycaps' `Legend` from `look`, so the ui reads none of these settings.
 
