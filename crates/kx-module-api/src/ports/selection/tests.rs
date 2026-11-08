@@ -99,3 +99,11 @@ fn each_error_says_something_else() {
     let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();
     assert_eq!(texts.len(), errors.len());
 }
+
+#[test]
+fn only_two_equal_ids_name_the_same_box() {
+    assert!(same_box(7, 7));
+    assert!(!same_box(7, 8), "another box");
+    assert!(!same_box(0, 0), "a box with no id is never the same");
+    assert!(!same_box(7, 0) && !same_box(0, 7));
+}

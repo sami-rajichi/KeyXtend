@@ -1,7 +1,7 @@
 //! A keycap's click: Copy and Cut check the box again, Paste looks again, then the keyboard sends the edit.
 
 use kx_module_api::keys;
-use kx_module_api::ports::{ChipAct, Edit, EditAsk, EditDone, SelChip, SelKind};
+use kx_module_api::ports::{ChipAct, Edit, EditAsk, EditDone, SelChip, SelKind, same_box};
 
 use super::{Actor, Busy};
 use crate::strip::{Input, Pick};
@@ -58,7 +58,7 @@ impl Actor {
         };
         run.look().is_ok_and(|spot| {
             let kind = spot.kind;
-            spot.box_id == pick.box_id && kind == pick.kind && kinds.contains(&kind)
+            same_box(spot.box_id, pick.box_id) && kind == pick.kind && kinds.contains(&kind)
         })
     }
 

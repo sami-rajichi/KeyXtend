@@ -38,6 +38,12 @@ pub struct SelConfig {
     pub looks_per_s: u16,
 }
 
+/// Whether box ids `a` and `b` name the same box; a box with no id (0) is never the same, as two cannot be told apart.
+#[must_use]
+pub fn same_box(a: u64, b: u64) -> bool {
+    a != 0 && a == b
+}
+
 /// What one look at the focused box found, with no text; its `Debug` hides the boxes.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct SelSpot {

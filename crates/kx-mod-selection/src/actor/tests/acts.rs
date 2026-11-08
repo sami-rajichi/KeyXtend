@@ -75,6 +75,18 @@ fn paste_looks_again_and_needs_the_same_editable_or_terminal_box() {
     assert_eq!(rig.view(), ChipsView::Hidden);
 }
 
+/// A box with no id (0) cannot be told from another, so its fresh look never confirms it.
+#[test]
+fn paste_on_a_box_with_no_id_sends_nothing() {
+    let mut rig = Rig::new();
+    rig.change(sel(SelKind::Editable, 40));
+    assert_eq!(rig.watch.spot().box_id, 0, "no focus gave it an id");
+    assert_ne!(rig.view(), ChipsView::Hidden, "its strip shows");
+    rig.act(Paste);
+    assert!(rig.edits().is_empty());
+    assert_eq!(rig.view(), ChipsView::Hidden);
+}
+
 #[test]
 fn paste_on_a_box_focus_left_sends_nothing() {
     let mut rig = Rig::new();

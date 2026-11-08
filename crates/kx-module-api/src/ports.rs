@@ -115,6 +115,7 @@ pub use sealed::{
 pub use selection::{
     Board, BoardPlace, BoardPlaceAsk, ChipAct, ChipsView, Edit, EditAsk, EditDone, Legend, SelChip,
     SelConfig, SelError, SelKind, SelRun, SelSpot, SelectionWatch, SelectionWatchKey, StripSpot,
+    same_box,
 };
 pub use shelf::{Room, SealedShelf, SealedShelfKey};
 pub use shortcut::{

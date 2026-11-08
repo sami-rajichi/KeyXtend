@@ -5,8 +5,8 @@
 
 use kx_module_api::ports::{SelError, SelKind, SelSpot};
 
-/// The one rule for whether two box ids name the same box, which the neutral read shares.
-pub(crate) use kx_platform::selection::same;
+/// The one rule for whether two box ids name the same box, from the port.
+pub(crate) use kx_module_api::ports::same_box as same;
 
 /// Adds and removes the selection handler on an element.
 pub(crate) trait Hook {
