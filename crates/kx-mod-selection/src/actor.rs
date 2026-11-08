@@ -117,10 +117,6 @@ struct Asking {
 }
 
 /// The selection module's runtime: one per start, on its own thread.
-#[allow(
-    clippy::struct_excessive_bools,
-    reason = "Each flag is one fact kept between messages: a click, a carry, the edit's own break, a stop."
-)]
 pub(crate) struct Actor {
     ports: Ports,
     settings: SelSettings,
@@ -131,8 +127,6 @@ pub(crate) struct Actor {
     code: String,
     /// Where the last press landed (true on our windows), until its release.
     press: Option<bool>,
-    /// The next look comes just after a press and release that began in another app.
-    click: bool,
     /// Grab carries a press, so a release is no look.
     carrying: bool,
     /// The keyboard's one break after our own edit is still to come.
@@ -157,7 +151,6 @@ impl Actor {
             site,
             code: code.unwrap_or_default(),
             press: None,
-            click: false,
             carrying: false,
             swallow: false,
             busy: None,
@@ -198,7 +191,7 @@ impl Actor {
             return;
         }
         match msg {
-            Msg::Wake => self.look(),
+            Msg::Wake => self.look(false),
             Msg::Pressed(ours) => self.pressed(ours),
             Msg::Released(ours) => self.released(ours),
             Msg::Typed(broke) => self.typed(broke),

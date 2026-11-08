@@ -7,9 +7,9 @@ use super::Actor;
 use crate::strip::Input;
 
 impl Actor {
-    /// Looks at the focused box and feeds what it shows; a failed look, as from a hung app, hides the strip.
-    pub(super) fn look(&mut self) {
-        let click = std::mem::take(&mut self.click);
+    /// Looks at the focused box and feeds what it shows, `click` when a press and release that began in another app
+    /// just came; a failed look, as from a hung app, hides the strip.
+    pub(super) fn look(&mut self, click: bool) {
         let Some(run) = self.ports.run.as_mut() else {
             return;
         };
@@ -40,8 +40,7 @@ impl Actor {
         if self.carrying || !began_out {
             return;
         }
-        self.click = true;
-        self.look();
+        self.look(true);
     }
 
     /// A piece the keyboard typed is a key; a break, such as our Esc, also hides a selection until the next look, as
