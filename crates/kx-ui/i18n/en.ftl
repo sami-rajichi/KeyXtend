@@ -86,6 +86,8 @@ shortcut =
     .copy = Copy
     .paste = Paste
     .cut = Cut
+    .copy-term = Copy (terminal)
+    .paste-term = Paste (terminal)
     .select-all = Select all
     .undo = Undo
     .redo = Redo
@@ -126,6 +128,7 @@ keyname =
     .period = .
     .numplus = Num +
     .numminus = Num -
+    .insert = Ins
 
 ## A shortcut's tip: what joins the keys pressed together, then what joins its steps.
 combo =

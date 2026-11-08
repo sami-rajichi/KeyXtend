@@ -6,6 +6,7 @@ win = 0x5B # VK_LWIN
 tab = 0x09 # VK_TAB
 esc = 0x1B # VK_ESCAPE
 del = 0x2E # VK_DELETE
+insert = 0x2D # VK_INSERT
 period = 0xBE # VK_OEM_PERIOD
 numplus = 0x6B # VK_ADD
 numminus = 0x6D # VK_SUBTRACT

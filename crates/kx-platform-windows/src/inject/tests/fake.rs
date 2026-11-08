@@ -54,8 +54,9 @@ const TYPES: [(u16, bool, bool, bool, char, bool); 10] = [
 ];
 
 /// `MapVirtualKeyExW` scan codes: Shift, left Ctrl, right Alt (prefixed), A (the Q place), 0, 1, 7, Enter, the dead
-/// key and Space; then the shortcut keys, AZERTY's Z and W swapped with A and Q, and Delete as its number pad code.
-const SCANS: [(u16, u32); 44] = [
+/// key and Space; then the shortcut keys, AZERTY's Z and W swapped with A and Q, and Delete and Insert as their number
+/// pad codes.
+const SCANS: [(u16, u32); 45] = [
     (VK_SHIFT, 0x2A),
     (VK_LCONTROL, 0x1D),
     (VK_RMENU, 0xE038),
@@ -72,6 +73,7 @@ const SCANS: [(u16, u32); 44] = [
     (0x09, 0x0F),   // VK_TAB
     (0x1B, 0x01),   // VK_ESCAPE
     (0x2E, 0x53),   // VK_DELETE
+    (0x2D, 0x52),   // VK_INSERT
     (0xBE, 0x33),   // VK_OEM_PERIOD
     (0x6B, 0x4E),   // VK_ADD
     (0x6D, 0x4A),   // VK_SUBTRACT

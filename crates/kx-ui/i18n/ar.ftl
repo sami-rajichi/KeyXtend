@@ -87,6 +87,8 @@ shortcut =
     .copy = نسخ
     .paste = لصق
     .cut = قص
+    .copy-term = نسخ في الطرفية
+    .paste-term = لصق في الطرفية
     .select-all = تحديد الكل
     .undo = تراجع
     .redo = إعادة
@@ -127,6 +129,7 @@ keyname =
     .period = .
     .numplus = Num +
     .numminus = Num -
+    .insert = Ins
 
 ## تلميح الاختصار: ما يصل بين المفاتيح المضغوطة معًا، ثم ما يصل بين خطواته.
 combo =

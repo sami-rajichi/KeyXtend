@@ -86,6 +86,8 @@ shortcut =
     .copy = Copier
     .paste = Coller
     .cut = Couper
+    .copy-term = Copier (terminal)
+    .paste-term = Coller (terminal)
     .select-all = Sélectionner tout
     .undo = Annuler
     .redo = Rétablir
@@ -126,6 +128,7 @@ keyname =
     .period = .
     .numplus = Num +
     .numminus = Num -
+    .insert = Inser
 
 ## L’info-bulle d’un raccourci, ce qui relie les touches pressées ensemble, puis ce qui relie ses étapes.
 combo =

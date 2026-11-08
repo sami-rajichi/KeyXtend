@@ -20,10 +20,12 @@ const A: u16 = 0x10;
 const C: u16 = 0x2E;
 const T: u16 = 0x14;
 const DEL: u16 = 0xE053;
+/// Insert as it goes, extended; plain, the same scan code is the number pad's 0.
+const INS: u16 = 0xE052;
 /// A in the keyboard's own US QWERTY.
 const OWN_A: u16 = 0x1E;
 /// Shortcuts the shipped table holds.
-const ENTRIES: usize = 37;
+const ENTRIES: usize = 39;
 
 fn id(text: &str) -> ShortcutId {
     ShortcutId::new(text).unwrap()
@@ -194,6 +196,16 @@ fn delete_alls_delete_goes_as_an_extended_key() {
         [down_up(&[CTRL_KEY, A]), down_up(&[DEL])].concat()
     );
     assert!(got[4..].iter().all(|e| e.key.extended()));
+}
+
+#[test]
+fn the_terminal_ids_hold_ctrl_or_shift_around_an_extended_insert() {
+    let fake = Fake::default();
+    for (text, held) in [("copy-term", CTRL_KEY), ("paste-term", SHIFT_KEY)] {
+        let got = keys(&fake, text, &[]);
+        assert_eq!(shown(&got), down_up(&[held, INS]), "{text}");
+        assert!(got[1..3].iter().all(|e| e.key.extended()), "{text}");
+    }
 }
 
 #[test]

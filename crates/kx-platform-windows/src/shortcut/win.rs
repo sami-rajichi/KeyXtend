@@ -68,6 +68,9 @@ mod tests {
     /// The number pad's + and − scan codes, the same on every layout.
     const NUM_PLUS: u32 = 0x4E;
     const NUM_MINUS: u32 = 0x4A;
+    /// `VK_INSERT`, as `keynames.toml` maps `insert`, and its scan code without the prefix, the number pad 0's too.
+    const VK_INSERT: u16 = 0x2D;
+    const INSERT_SCAN: u8 = 0x52;
 
     /// The key shortcut `id` sends for virtual key `vk` in `layout`, and the scan code `layout` maps `vk` to.
     fn sent(layout: LayoutId, id: &str, vk: u16) -> (Option<Key>, u32) {
@@ -111,6 +114,18 @@ mod tests {
                     pad.is_none_or(|p| p == mapped),
                     "{layout}: {id} on the number pad"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn the_terminal_ids_send_insert_extended_in_each_installed_layout() {
+        for layout in WinLayouts.installed() {
+            for id in ["copy-term", "paste-term"] {
+                let (key, mapped) = sent(layout, id, VK_INSERT);
+                assert_eq!(key, Some(Key::vk(VK_INSERT, mapped)), "{layout}: {id}");
+                assert_eq!(mapped.to_le_bytes()[0], INSERT_SCAN, "{layout}: {id}");
+                assert!(key.is_some_and(Key::extended), "{layout}: {id}");
             }
         }
     }
