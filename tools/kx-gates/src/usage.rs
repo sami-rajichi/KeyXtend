@@ -6,8 +6,8 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g20, g21,
-    g22, g22bench, g22type, g25, hand, workertok,
+    capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
+    g20, g21, g22, g22bench, g22type, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -76,6 +76,17 @@ g23 {NAME} starts the test build on a data folder it makes, saves a test login t
     )
 }
 
+/// The help lines of P10's selection strip gate.
+fn sel_lines() -> String {
+    let read = g19chips::READ;
+    format!(
+        "g19 {NAME} starts the test build on a data folder it makes and drives the selection strip in its own Notepad, \
+         Chrome page, target-window and terminals, so close the product first; the folder goes at the end.
+g19 {read} starts the test build the same way and opens the long Arabic line: select it, click Translate, then Yes; \
+         the gate only reads the page that opens."
+    )
+}
+
 /// The help lines of G8's parts on a layout, a key light or the hook.
 fn g8_notes() -> String {
     let (arabic, lit, osk) = (g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
@@ -105,8 +116,6 @@ pub fn usage() -> String {
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
 {}
-{}
-{}
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
         product_lines(),
@@ -115,7 +124,7 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         hand::GRAB,
         names(&g17::APPS),
         names(&g18::APPS),
-        g19::CORE,
+        g19::NAMES.join("|"),
         face_lines(),
         names(&g20::APPS),
         workertok::WORKER,
@@ -123,11 +132,14 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         names(&g25::APPS),
         capture::COMMAND,
         g8::WEAK,
-        g8_notes(),
-        typing_lines(),
-        clip_lines(),
+        notes(),
         g5::ADMIN,
     )
+}
+
+/// The help's notes on each phase's gates, in order.
+fn notes() -> String {
+    [g8_notes(), typing_lines(), clip_lines(), sel_lines()].join("\n")
 }
 
 #[cfg(test)]
@@ -227,9 +239,15 @@ mod tests {
     }
 
     #[test]
-    fn g19_lists_its_detection_run_only() {
+    fn g19_lists_its_three_runs_and_asks_to_close_the_product_first() {
         let text = usage();
-        assert!(text.contains(&format!("g19 <{}>", g19::CORE)), "{text}");
+        let runs = format!("g19 <{}|{NAME}|{}>", g19::CORE, g19chips::READ);
+        assert!(text.contains(&runs), "{text}");
+        let told = text.lines().find(|l| l.starts_with(&format!("g19 {NAME}")));
+        assert!(
+            told.is_some_and(|l| l.contains("close the product first")),
+            "{text}"
+        );
     }
 
     #[test]

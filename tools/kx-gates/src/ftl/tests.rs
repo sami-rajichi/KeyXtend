@@ -99,6 +99,23 @@ fn the_clip_panels_texts_are_read_in_every_language_beside_the_main_ones() {
 }
 
 #[test]
+fn the_selection_strips_texts_are_read_in_every_language() {
+    let names = every("sel.name").expect("in all three");
+    assert_eq!(
+        names,
+        [
+            "Selection actions",
+            "Actions sur la sélection",
+            "إجراءات التحديد"
+        ]
+    );
+    assert_eq!(
+        every("sel.paste").expect("in all three"),
+        ["Paste", "Coller", "لصق"]
+    );
+}
+
+#[test]
 fn the_clip_folder_holds_exactly_the_languages_of_the_main_files() {
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/kx-ui/i18n/clip");
     let entries = std::fs::read_dir(dir).expect("kx-ui's clip folder");

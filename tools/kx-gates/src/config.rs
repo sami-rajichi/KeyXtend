@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p9.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p10.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -23,6 +23,7 @@ use crate::p5cfg::{self, G6, G8Scroll, Host, Outline, Pad};
 use crate::p7cfg::{self, G8Predict, G21Product, G27, OwnerSettings};
 use crate::p8cfg::{self, G8Clip, G20Product};
 use crate::p9cfg::{self, G23};
+use crate::p10cfg::{self, G19Product};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
 
@@ -81,6 +82,8 @@ pub struct GatesConfig {
     pub g22: G22,
     /// G23 on the product.
     pub g23: G23,
+    /// G19 on the product.
+    pub g19_product: G19Product,
     /// G24 settings.
     pub g24: G24,
     /// G25 settings.
@@ -244,6 +247,7 @@ pub fn load() -> Result<GatesConfig, String> {
     p7cfg::check(&config)?;
     p8cfg::check(&config)?;
     p9cfg::check(&config)?;
+    p10cfg::check(&config)?;
     Ok(config)
 }
 

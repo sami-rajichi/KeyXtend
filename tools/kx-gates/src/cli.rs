@@ -9,7 +9,8 @@ use crate::mouseguard::Mouse;
 use crate::usage::usage;
 use crate::{
     close, config, facearg, fit, g1, g2, g3, g4, g5, g6, g7, g8, g8hook, g9, g10, g11, g12, g13,
-    g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, g27, hand, mouseguard, out,
+    g17, g18, g19, g19chips, g20, g21, g22, g23, g24, g25, g26, g27, hand, mouseguard, out,
+    product,
 };
 
 /// Gates whose runs take a random seed.
@@ -114,7 +115,13 @@ const GATES: [(&str, Mouse, Option<NamedRun>); 26] = [
 ];
 
 /// A gate's names that drive the test build, though the gate itself holds the mouse.
-const DRIVEN: [(&str, &str); 2] = [("g8", g8hook::HOOK), ("g8", g8hook::HOOK_WEAK)];
+const DRIVEN: [(&str, &str); 3] = [
+    ("g8", g8hook::HOOK),
+    ("g8", g8hook::HOOK_WEAK),
+    ("g19", product::NAME),
+];
+/// A gate's names that wait on the owner's own mouse, though the gate itself holds it.
+const FREED: [(&str, &str); 1] = [("g19", g19chips::READ)];
 
 /// Every gate's name.
 pub(crate) fn gates() -> impl Iterator<Item = &'static str> {
@@ -130,6 +137,9 @@ fn named(gate: &str) -> Option<NamedRun> {
 fn mouse(gate: &str, name: &str) -> Mouse {
     if DRIVEN.contains(&(gate, name)) {
         return Mouse::Drives;
+    }
+    if FREED.contains(&(gate, name)) {
+        return Mouse::Free;
     }
     GATES
         .iter()

@@ -5,11 +5,13 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g22, g22bench, g22type, product};
+use crate::{
+    g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, g22bench, g22type, product,
+};
 
 /// Gates aimed at the product, which take its name.
-pub(crate) const PRODUCT_GATES: [&str; 13] = [
-    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g23", "g26", "g27", "close",
+pub(crate) const PRODUCT_GATES: [&str; 14] = [
+    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g19", "g23", "g26", "g27", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
 pub(crate) const FACE_GATES: [&str; 4] = ["g7", "g22", "g24", "close"];
@@ -34,7 +36,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g8predict::PREDICT,
             g8clip::CLIP,
         ],
-        "g19" => &[g19::CORE],
+        "g19" => &[g19::CORE, g19chips::READ],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
     }
@@ -97,22 +99,25 @@ mod tests {
     }
 
     #[test]
-    fn g19_takes_only_core_now_that_the_faces_pill_is_gone() {
-        assert!(check("g19", g19::CORE).is_ok());
+    fn g19_takes_only_its_own_names() {
+        for name in g19::NAMES {
+            assert!(check("g19", name).is_ok(), "g19 {name}");
+        }
         for name in [FACE, "notepad"] {
             let e = check("g19", name).expect_err(name);
             assert!(e.contains("unknown keyboard"), "g19 {name}: {e}");
+            assert!(e.contains(&usage()), "g19 {name}: {e}");
         }
     }
 
     #[test]
     fn a_gates_own_names_stay_valid_for_that_gate_only() {
-        assert!(check("g19", g19::CORE).is_ok());
         for name in [g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING] {
             assert!(check("g22", name).is_ok(), "g22 {name}");
             assert!(check("g2", name).is_err(), "g2 {name}");
         }
         assert!(check("g7", g19::CORE).is_err());
+        assert!(check("g7", g19chips::READ).is_err());
         for name in [
             g8::WEAK,
             g8lang::ARABIC,

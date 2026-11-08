@@ -79,7 +79,7 @@ fn wade(
 }
 
 /// The names in window `w` while it shows; none once it went.
-fn names_kept(reader: &Reader, w: HWND) -> Result<Option<Vec<String>>, String> {
+pub(crate) fn names_kept(reader: &Reader, w: HWND) -> Result<Option<Vec<String>>, String> {
     kept(live::names(reader, w), || live::shown(w))
 }
 
@@ -89,7 +89,7 @@ fn banner_of<W: Copy>(windows: &[(W, String)], titles: &[String]) -> Option<W> {
 }
 
 /// The notice banner's window while it shows a notice. Only it is read, as the keyboard redraws under other reads.
-fn banner(titles: &[String]) -> Option<HWND> {
+pub(crate) fn banner(titles: &[String]) -> Option<HWND> {
     let named: Vec<(HWND, String)> = product::shown()
         .into_iter()
         .map(|w| (w, win::title(w)))
@@ -106,19 +106,19 @@ fn banner_names(reader: &Reader, titles: &[String]) -> Result<Vec<String>, Strin
 
 /// How long to wait before a click on the banner, which answers nothing as the second click of a double click: the
 /// system's double-click time and one poll more.
-fn past_double(double_ms: u32, poll_ms: u64) -> u64 {
+pub(crate) fn past_double(double_ms: u32, poll_ms: u64) -> u64 {
     u64::from(double_ms).saturating_add(poll_ms)
 }
 
 /// The system's double-click time, in ms.
 #[allow(unsafe_code, reason = "A plain system call with no arguments.")]
-fn double_click_ms() -> u32 {
+pub(crate) fn double_click_ms() -> u32 {
     // SAFETY: it takes nothing and only reads a system setting.
     unsafe { GetDoubleClickTime() }
 }
 
 /// Clicks the middle of box `r` of window `w` with the real pointer, unless something covers it there.
-fn click_in(w: HWND, r: &RECT, what: &str) -> Result<(), String> {
+pub(crate) fn click_in(w: HWND, r: &RECT, what: &str) -> Result<(), String> {
     let at = centre(r);
     if win::root_at(at) != w {
         return Err(format!("something covers the notice's {what} button"));

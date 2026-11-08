@@ -1355,6 +1355,7 @@ dependencies = [
  "kx-mod-mouse",
  "kx-mod-predict",
  "kx-mod-scroll",
+ "kx-mod-selection",
  "kx-mod-vault",
  "kx-module-api",
  "kx-platform",

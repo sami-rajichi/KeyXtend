@@ -1,4 +1,6 @@
-//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
+//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard; `keyxtend` and
+//! `translate-read` check the selection strip on the test build (`g19chips`). The owner never uses Word, so core runs
+//! in Notepad and Chrome alone and can pass in full.
 #![cfg(windows)]
 
 use kx_platform_windows::clip::open;
@@ -11,14 +13,14 @@ use crate::ownkeys::{self, Real};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{launch, out, simuser};
+use crate::{g19chips, launch, product, simuser};
 
-/// G19's run name: detection only, each line read back through UI Automation.
+/// G19's detection run, each line read back through UI Automation.
 pub const CORE: &str = "core";
-/// The apps G19 selects in.
+/// G19's run names: detection, the strip on the test build, and the reads of the owner's translate page.
+pub const NAMES: [&str; 3] = [CORE, product::NAME, g19chips::READ];
+/// The apps G19 core selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
-/// The apps the roadmap names for G19; Word waits for P10, as its sign-in dialog blocked it.
-const ROADMAP_APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Word, AppKind::Chrome];
 
 /// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
@@ -148,35 +150,23 @@ fn one(ctx: &Ctx, kind: AppKind) -> Value {
     }
 }
 
-/// The roadmap's apps G19 does not run yet.
-fn left_out() -> Vec<AppKind> {
-    ROADMAP_APPS
-        .into_iter()
-        .filter(|k| !APPS.contains(k))
-        .collect()
-}
-
-/// G19 core's `pass`: false if an app failed, only partial while `left` apps are not run, else true.
-fn verdict(all_ok: bool, left: &[AppKind]) -> Value {
-    out::pass(all_ok, left.is_empty())
-}
-
-/// Refuses any run name but `CORE`; `facearg` refuses it first, so this guards a direct call.
-fn only_core(name: &str) -> Result<(), String> {
-    if name == CORE {
+/// Refuses any run name but G19's own; `facearg` refuses it first, so this guards a direct call.
+fn only_ours(name: &str) -> Result<(), String> {
+    if NAMES.contains(&name) {
         return Ok(());
     }
-    Err(format!("G19 runs {CORE} only, not {name}"))
+    Err(format!("G19 runs {}, not {name}", NAMES.join(", ")))
 }
 
-/// Runs G19 detection in Notepad, then Chrome.
+/// Runs G19: detection in Notepad, then Chrome, or the strip on the test build.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    only_core(name)?;
+    only_ours(name)?;
+    if name != CORE {
+        return g19chips::run(ctx, name);
+    }
     let apps: Vec<Value> = APPS.iter().map(|&k| one(ctx, k)).collect();
-    let left = left_out();
-    let pass = verdict(apps.iter().all(|a| a["ok"] == true), &left);
-    let not_run: Vec<&str> = left.iter().map(|k| k.name()).collect();
-    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps, "not_run": not_run }))
+    let pass = apps.iter().all(|a| a["ok"] == true);
+    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps }))
 }
 
 #[cfg(test)]
@@ -184,22 +174,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn g19_runs_its_detection_only() {
-        assert_eq!(only_core(CORE), Ok(()));
-        let e = only_core(spike_core::config::FACE).expect_err("the face's pill is gone");
-        assert!(e.contains(CORE), "{e}");
+    fn g19_runs_its_own_names_only() {
+        for name in NAMES {
+            assert_eq!(only_ours(name), Ok(()), "{name}");
+        }
+        let e = only_ours(spike_core::config::FACE).expect_err("the face's pill is gone");
+        assert!(NAMES.iter().all(|n| e.contains(n)), "{e}");
     }
 
     #[test]
-    fn g19_core_is_at_most_partial_while_a_roadmap_app_is_not_run() {
-        let left = left_out();
-        assert_eq!(
-            left,
-            vec![AppKind::Word],
-            "the roadmap names Notepad, Word and Chrome"
+    fn g19_core_never_waits_for_word() {
+        assert_eq!(APPS, [AppKind::Notepad, AppKind::Chrome]);
+        assert!(
+            !APPS.contains(&AppKind::Word),
+            "owner, 2026-10-16: never Word"
         );
-        assert_eq!(verdict(true, &left), json!(out::PARTIAL));
-        assert_eq!(verdict(false, &left), json!(false));
-        assert_eq!(verdict(true, &[]), json!(true));
     }
 }

@@ -6,8 +6,8 @@
 
 mod copy;
 mod fills;
-mod live;
-mod notice;
+pub(crate) mod live;
+pub(crate) mod notice;
 mod page;
 mod panel;
 mod seed;

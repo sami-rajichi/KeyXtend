@@ -20,10 +20,14 @@ pub const P7_FILE: &str = "kx-gates-p7.toml";
 pub const P8_FILE: &str = "kx-gates-p8.toml";
 /// File name of the settings P9 adds; it is read only from the folder of `FILE`.
 pub const P9_FILE: &str = "kx-gates-p9.toml";
+/// File name of the settings P10 adds; it is read only from the folder of `FILE`.
+pub const P10_FILE: &str = "kx-gates-p10.toml";
 /// kx-gates' own settings files, in the order they are read.
-pub const OWN: [&str; 7] = [FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE, P8_FILE, P9_FILE];
+pub const OWN: [&str; 8] = [
+    FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE, P8_FILE, P9_FILE, P10_FILE,
+];
 /// Every settings file kx-gates reads: its own, the spike's and target-window's.
-pub const ALL: [&str; 9] = [
+pub const ALL: [&str; 10] = [
     FILE,
     P3_FILE,
     P4_FILE,
@@ -31,6 +35,7 @@ pub const ALL: [&str; 9] = [
     P7_FILE,
     P8_FILE,
     P9_FILE,
+    P10_FILE,
     spike_core::config::FILE,
     kx_target_window::config::FILE,
 ];

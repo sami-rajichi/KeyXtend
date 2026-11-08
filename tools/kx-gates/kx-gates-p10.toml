@@ -1,0 +1,82 @@
+# Settings P10 adds: G19 on the product (`g19 keyxtend` and `g19 translate-read`, `[g19_product]`). kx-gates reads
+# them with kx-gates.toml, from its folder; a section sits in one file only.
+
+# G19 on the product. The plain kx-gates starts the test build ([gate_input] program, with its flag, so Grab and
+# Right-click hear only the gate's input) on a data folder it makes, marked with [g20_product] marker, and removes it at
+# the end. The owner's clipboard is kept and put back, and only the gate's own test lines are ever printed.
+[g19_product]
+# The gate's Notepad document, one line each: copied, cut, pasted over, an Arabic line, then an empty line for the
+# caret's Paste. Plain test text, never the owner's.
+copy_line = "Copy this line with the strip."
+cut_line = "Coupez cette ligne avec le bandeau."
+paste_line = "Paste over this line."
+arabic = "حدد هذا السطر ثم اضغط زر الترجمة."
+# The long Translate line: `arabic` this many times, joined by a space. It holds at least long_min_chars and at most
+# the selection module's default translate_chars, and the site's link takes it whole (checked).
+arabic_repeat = 28
+long_min_chars = 900
+# The gate's Chrome page: a read-only paragraph, a text box, a password box, a box of a role no table knows, and their
+# accessible names (aria-label); the password box's value is a plain test value the gate never reads.
+page_text = "Select this paragraph on the page."
+box_text = "Select this line in the text box."
+box_name = "kx-sel-box"
+pass_name = "kx-sel-pass"
+pass_value = "kxgatepass"
+unknown_name = "kx-sel-unknown"
+unknown_role = "slider"
+css = "font:20px monospace;margin:24px;width:80%"
+# The page counts Copy's key-downs in its title: the DOM code of C, and the marks before the counts of Ctrl+C and of
+# Ctrl+Shift+C, which must stay 0.
+copy_code = "KeyC"
+copy_mark = " #"
+shift_mark = " ~"
+# The terminals' line, printed by the gate's own script, and the host its `ping -t` pings while Copy goes out.
+term_line = "Copy this terminal line."
+ping_host = "127.0.0.1"
+# The strip as kx-ui names it: its window title's text key, its UI Automation group, and the keycaps' ids in the
+# strip's order (kx-ui sel_chip_id; a test pins them).
+strip_title = "sel.name"
+group = "sel"
+chips = ["copy", "cut", "paste", "translate"]
+# The keycaps each box shows, by id: an editable box, a page, a terminal and a bare caret. A password box, a box of
+# unknown kind and our own panel lines show none.
+editable_chips = ["copy", "cut", "paste", "translate"]
+page_chips = ["copy", "translate"]
+terminal_chips = ["copy", "paste", "translate"]
+caret_chips = ["paste"]
+# The keyboard's close button, which closes it to the tray (kx-ui's top bar id); the gate presses it last.
+tray = "bar.close"
+# Browser programs, for "Not now opens nothing" and for the page the owner opened (adapter table).
+browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
+# Keys the gate presses in its own windows: Shift+Home, one caret step left, which moves the caret without our
+# keyboard, and NumLock, which it puts back.
+select_home = [0x10, 0x24]
+caret_left = [0x25]
+numlock = [0x90]
+# A strip sits within this many physical px of where geom::anchor puts it.
+place_slack_px = 1
+# Wait after the copy's keyboard shows before the first step, in ms.
+ready_ms = 3000
+# Longest wait for the strip to show, and for it to go, in ms.
+strip_wait_ms = 3000
+gone_wait_ms = 3000
+# How long no strip must show before a box counts as showing none, in ms.
+quiet_ms = 1500
+# Pause after each click, key or drag, in ms.
+settle_ms = 400
+# How long target-window hangs; it outlasts the selection module's settle_ms and read_ms, within hang_max_ms. The gate
+# acts hang_lead_ms after asking, so the window is asleep by then.
+hang_ms = 2500
+hang_lead_ms = 200
+# How long the ping must keep writing after Copy, in ms.
+ping_ms = 3000
+# The caret's Paste may go this early or late against the module's caret_s, in ms.
+caret_slack_ms = 1000
+# translate-read: longest wait for the owner's Yes to bring the translate page to the front, in ms.
+owner_wait_ms = 120000
+
+# The classic console: PowerShell in conhost, never in Windows Terminal, on the gate's own script ({input}).
+[g19_product.console]
+exe = "conhost.exe"
+args = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]
+class = "ConsoleWindowClass"
