@@ -213,6 +213,12 @@ G19 ends a `ping.exe` whose parent is the shell its own script named, new since 
 
 G19 starts `conhost.exe`, `powershell.exe` and `ping.exe` by bare name, so they resolve through the exe folder and PATH. This is the same-user rule above.
 
+G19 opens its console with conhost's own `-ForceNoHandoff`, so the owner's default-terminal setting is never read or changed. Its line script ends once its own file is gone, so a console handed to another terminal anyway stops when the gate deletes its files.
+
+Around each terminal case, G19 runs the product's own selection watch inside the gate. It records kinds, flags, counts and times only, and never asks for text.
+
+G19's hung case clicks into its own sleeping target-window. The click waits in that window's queue and lands after the hang, in the gate's own box.
+
 `g19 translate-read` and `translate-beside` read the opened browser window's address bar in memory, compare it and drop it. The owner is present, and the check needs that read.
 
 G19 changes Num Lock only while its own terminal is in front, and puts it back only there. A terminal that left the front keeps Num Lock changed, and the result names why, as bringing it forward would tap into the window in front.
