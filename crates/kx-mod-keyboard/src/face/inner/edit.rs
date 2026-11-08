@@ -4,8 +4,9 @@ use super::Inner;
 use kx_module_api::ports::Edit;
 
 impl Inner {
-    /// Ends a held key as its let-go does and takes the aim, which the next relabel redraws, then sends `edit` with
-    /// nothing held; true when all of it went. `None` while the module is stopped or a fill waits, which touches nothing.
+    /// Ends a held key as its let-go does and takes the aim, which the next relabel redraws, even when the send is then
+    /// refused, as a paste does; then sends `edit` with nothing held, true when all of it went. `None` while the module
+    /// is stopped or a fill waits, which touches nothing.
     pub(in crate::face) fn edit(&mut self, edit: Edit, terminal: bool) -> Option<bool> {
         if !self.running || self.filling() {
             return None;

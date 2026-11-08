@@ -6,6 +6,7 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+use crate::assist::latches::stay;
 use crate::assist::{Bench, Said, ear};
 use crate::fill::{GAP, login};
 use crate::held::A;
@@ -19,11 +20,14 @@ use kx_module_api::ports::{
     COPY_ID, COPY_TERM_ID, CUT_ID, ClipPanel, Edit, EditAsk, EditDone, FaceAction, FaceReply,
     FillType, PASTE_ID, PASTE_TERM_ID, Piece, Scan, ShortcutError, ShortcutId, Typed,
 };
+use kx_platform_fake::Stroke;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
 
 /// The French dead `^`.
 const CIRCUMFLEX: &str = "c-0x001A";
+/// The Win key's scan code.
+const WIN: u16 = 0xE05B;
 
 /// The keyboard on a bus the test listens to, with its answers to the selection module and the pieces it told.
 struct Chips {
@@ -130,6 +134,21 @@ fn a_one_shot_shift_latched_before_an_edit_still_shifts_the_next_letter() {
     c.b.rig.tap(A).unwrap();
     assert_eq!(c.b.rig.fakes.injector.strokes(), [unicode("A")]);
     assert!(!c.on("shift"), "the letter spent it");
+}
+
+#[test]
+fn in_stay_mode_an_edit_keeps_ctrl_on_and_leaves_a_lone_win_unused() {
+    let b = stay();
+    b.rig.tap("ctrl").unwrap();
+    b.rig.tap("win").unwrap();
+    b.said();
+    b.send(&ask(1, Edit::Copy, false));
+    assert_eq!(b.rig.fakes.shortcuts.sent(), [alone(COPY_ID)]);
+    assert!(b.said().is_empty(), "nothing else was told");
+    assert_eq!(b.key("ctrl")["on"], true);
+    b.rig.tap("win").unwrap();
+    let start = [Stroke::Tap(Scan::new(WIN))];
+    assert_eq!(b.rig.fakes.injector.strokes(), start, "Start opens");
 }
 
 #[test]
