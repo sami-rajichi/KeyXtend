@@ -1,7 +1,7 @@
 //! G19 in terminals (P10 design "In a terminal"): Windows Terminal and the classic console show Copy, Paste and
 //! Translate on the gate's printed line; Copy copies it, and Paste types it back at the prompt with Num Lock on and
 //! off, which the gate reads and puts back only through its own terminal in front. Copy during the gate's own `ping -t`
-//! leaves the ping running.
+//! leaves the ping running. A console whose window never shows did not run, and goes to the manual check.
 #![cfg(windows)]
 
 use kx_module_api::ports::{Rect, SelChip};
@@ -13,6 +13,8 @@ use crate::apps::Opened;
 use crate::clipkeep;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::act;
+use crate::g19chips::plan::EXERCISED;
+use crate::g19chips::spots::unrun;
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
 use crate::g19chips::termrow::row;
@@ -91,17 +93,23 @@ fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Va
 }
 
 /// Terminal `kind` on the line script, driven once in front, then closed. Num Lock goes back, whatever happened, to
-/// its state before the run: the one `carried` from the first terminal, else read now; the state used comes back.
+/// its state before the run: the one `carried` from the first terminal, else read now; the state used comes back. A
+/// console whose window never showed did not run, and Num Lock stays as `carried`.
 fn one(
     gate: &Gate,
     (kind, carried): (Kind, Option<bool>),
     cases: &mut Vec<Value>,
     left: &mut Vec<String>,
-) -> Result<(Value, bool), String> {
+) -> Result<(Value, Option<bool>), String> {
     let g = gate.g();
-    let t = term::open(gate.ctx, kind, LINES, |ready, out| {
-        script::lines(&g.term_line, ready, out)
+    let poll = gate.ctx.cfg.timing.poll_ms;
+    let opened = term::open(gate.ctx, kind, LINES, |ready, out| {
+        script::lines(&g.term_line, ready, out, poll)
     })?;
+    let t = match opened {
+        Ok(t) => t,
+        Err(why) => return Ok((unrun(&why), carried)),
+    };
     let front = probe::front(gate.ctx, &t.app());
     let was = front.and_then(|()| numlock::first(carried, || numlock_on(t.hwnd)));
     let got = was.and_then(|was| {
@@ -109,7 +117,7 @@ fn one(
             || drive(gate, kind, &t, cases),
             || numlock::put_back(gate, &t, was),
         );
-        numlock::settled(v, back, left).map(|v| (v, was))
+        numlock::settled(v, back, left).map(|v| (v, Some(was)))
     });
     left.extend(term::close(gate.ctx, t));
     got
@@ -159,7 +167,7 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
     let before = procs::now();
     let t = term::open(gate.ctx, Kind::Terminal, PING, |ready, out| {
         script::ping(g, ready, out)
-    })?;
+    })??;
     let got = pinged(gate, &t, cases);
     let held = held(gate, &t, &before, left);
     left.extend(term::close(gate.ctx, t));
@@ -174,18 +182,24 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
 /// Windows Terminal, then the console, through `one`; the console gets the Num Lock state the first found, so both
 /// put back the run's first state.
 fn both<V>(
-    mut one: impl FnMut(Kind, Option<bool>) -> Result<(V, bool), String>,
+    mut one: impl FnMut(Kind, Option<bool>) -> Result<(V, Option<bool>), String>,
 ) -> Result<(V, V), String> {
     let (terminal, was) = one(Kind::Terminal, None)?;
-    let (console, _) = one(Kind::Console, Some(was))?;
+    let (console, _) = one(Kind::Console, was)?;
     Ok((terminal, console))
+}
+
+/// The step's verdict: Windows Terminal and the ping passed, and the console too unless it says it did not run.
+fn judged(terminal: &Value, console: &Value, ping: &Value) -> bool {
+    let ran = |v: &Value| v["ok"] == true;
+    ran(terminal) && ran(ping) && (ran(console) || console[EXERCISED] == false)
 }
 
 /// Both terminals, then the ping; `cases` gathers each case, `left` what stayed open.
 pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
     let (terminal, console) = both(|kind, carried| one(gate, (kind, carried), cases, left))?;
     let ping = ping(gate, cases, left)?;
-    let ok = [&terminal, &console, &ping].iter().all(|v| v["ok"] == true);
+    let ok = judged(&terminal, &console, &ping);
     Ok(
         json!({ Kind::Terminal.name(): terminal, Kind::Console.name(): console, PING: ping, "ok": ok }),
     )
@@ -196,16 +210,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_console_that_could_not_open_gives_no_verdict_and_the_rest_still_judge() {
+        let (good, bad) = (json!({ "ok": true }), json!({ "ok": false }));
+        let unrun = json!({ EXERCISED: false, "reason": "no console window" });
+        assert!(judged(&good, &good, &good));
+        assert!(judged(&good, &unrun, &good), "no console, no verdict");
+        assert!(!judged(&bad, &unrun, &good) && !judged(&good, &unrun, &bad));
+        assert!(!judged(&good, &bad, &good), "a console that ran and failed");
+        assert!(!judged(&unrun, &good, &good), "Windows Terminal must run");
+    }
+
+    #[test]
     fn the_console_puts_back_the_num_lock_state_the_first_terminal_found() {
         let mut seen = Vec::new();
         let got = both(|kind, carried| {
             seen.push((kind, carried));
-            Ok((kind.name(), kind == Kind::Terminal))
+            Ok((kind.name(), Some(kind == Kind::Terminal)))
         });
         assert_eq!(got, Ok((Kind::Terminal.name(), Kind::Console.name())));
         assert_eq!(seen, [(Kind::Terminal, None), (Kind::Console, Some(true))]);
         let mut runs = 0;
-        let failed = both(|_, _| -> Result<((), bool), String> {
+        let failed = both(|_, _| -> Result<((), Option<bool>), String> {
             runs += 1;
             Err("no row".into())
         });

@@ -24,11 +24,13 @@ fn mark(ready: &Path) -> String {
     format!("[IO.File]::WriteAllText({}, 'ready')", path(ready))
 }
 
-/// The script that prints `line`, marks itself ready in `ready`, then appends each line typed to `result`.
-pub fn lines(line: &str, ready: &Path, result: &Path) -> String {
+/// The script that prints `line`, marks itself ready in `ready`, then appends each line typed to `result`. It reads a
+/// line only once keys wait, looking every `poll_ms`, and ends once its own file is gone, so it never runs on alone.
+pub fn lines(line: &str, ready: &Path, result: &Path, poll_ms: u64) -> String {
     format!(
-        "{BOM}Write-Host {}\r\n{}\r\nwhile ($true) {{ $t = Read-Host; [IO.File]::AppendAllText({}, \"$t`n\", \
-         [Text.UTF8Encoding]::new($false)) }}\r\n",
+        "{BOM}Write-Host {}\r\n{}\r\nwhile (Test-Path -LiteralPath $PSCommandPath) {{ if ([Console]::KeyAvailable) {{ \
+         $t = Read-Host; [IO.File]::AppendAllText({}, \"$t`n\", [Text.UTF8Encoding]::new($false)) }} else {{ \
+         Start-Sleep -Milliseconds {poll_ms} }} }}\r\n",
         quoted(line),
         mark(ready),
         path(result)
@@ -71,18 +73,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_line_script_ends_once_its_own_file_is_gone_and_reads_a_line_only_when_keys_wait() {
+        let s = lines("x", Path::new(r"D:\o\r.txt"), Path::new(r"D:\o\o.txt"), 40);
+        assert!(
+            s.contains("while (Test-Path -LiteralPath $PSCommandPath)"),
+            "{s}"
+        );
+        assert!(s.contains("[Console]::KeyAvailable"), "{s}");
+        assert!(s.contains("Start-Sleep -Milliseconds 40"), "{s}");
+        assert!(!s.contains("while ($true)"), "never runs on alone: {s}");
+    }
+
+    #[test]
     fn the_line_script_prints_its_line_marks_ready_and_keeps_each_typed_line() {
         let s = lines(
             "It's here.",
             Path::new(r"D:\o\r.txt"),
             Path::new(r"D:\o\it's.txt"),
+            50,
         );
         assert!(s.contains("Write-Host 'It''s here.'"), "{s}");
         assert!(
             s.contains(r"'D:\o\r.txt'") && s.contains(r"'D:\o\it''s.txt'"),
             "{s}"
         );
-        assert!(s.contains("Read-Host") && s.contains("while"), "{s}");
+        assert!(
+            s.contains("Read-Host") && s.contains("AppendAllText"),
+            "{s}"
+        );
         assert!(s.find("Write-Host") < s.find("Read-Host"), "printed first");
     }
 

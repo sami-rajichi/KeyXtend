@@ -73,8 +73,11 @@ fn files(ctx: &Ctx, kind: Kind, tag: &str) -> [PathBuf; 3] {
     [named(".ps1"), named("-ready.txt"), named("-out.txt")]
 }
 
-/// The classic console on `script`, and its window once it shows.
-fn console(ctx: &Ctx, script: &str) -> Result<(HWND, Child), String> {
+/// What starting a terminal gave: its window and program, or why no window showed, so its case did not run.
+type Started = Result<(HWND, Child), String>;
+
+/// The classic console on `script`, and its window once it shows; else why none showed, its program ended.
+fn console(ctx: &Ctx, script: &str) -> Result<Started, String> {
     let (c, wait) = (
         &ctx.cfg.g19_product.console,
         ctx.cfg.app(AppKind::Terminal.name())?.wait_ms,
@@ -93,29 +96,30 @@ fn console(ctx: &Ctx, script: &str) -> Result<(HWND, Child), String> {
         .map_err(|e| format!("{}: {e}", c.exe))?;
     let Some(hwnd) = winfind::wait_for(&m, wait, ctx.cfg.timing.poll_ms) else {
         let _ = child.kill();
-        return Err(format!("no console window after {wait} ms"));
+        return Ok(Err(format!("no {} window after {wait} ms", c.class)));
     };
-    Ok((hwnd, child))
+    Ok(Ok((hwnd, child)))
 }
 
 /// Terminal `kind` on the script `text` writes for its ready and out files, which the gate names `tag`, once the
-/// script marked itself ready.
+/// script marked itself ready; else why the console showed no window, its files gone, so the script ends too.
 pub fn open(
     ctx: &Ctx,
     kind: Kind,
     tag: &str,
     text: impl FnOnce(&Path, &Path) -> String,
-) -> Result<Term, String> {
+) -> Result<Result<Term, String>, String> {
     let wait = ctx.cfg.app(AppKind::Terminal.name())?.wait_ms;
     let files = files(ctx, kind, tag);
     out::write(&files[0], &text(&files[1], &files[2]))?;
     let script = files[0].to_string_lossy().into_owned();
     let started = match kind {
-        Kind::Terminal => launch(ctx, AppKind::Terminal.name(), &script, None),
+        Kind::Terminal => launch(ctx, AppKind::Terminal.name(), &script, None).map(Ok),
         Kind::Console => console(ctx, &script),
     };
     let (hwnd, child) = match started {
-        Ok(s) => s,
+        Ok(Ok(s)) => s,
+        Ok(Err(why)) => return unshown(why, &remove(&files)),
         Err(e) => return Err(format!("{e}; clean-up: {:?}", remove(&files))),
     };
     let mut term = Term {
@@ -127,13 +131,22 @@ pub fn open(
     match out::wait_read(&term.files[1], wait, ctx.cfg.timing.poll_ms) {
         Ok(mark) => {
             term.mark = mark;
-            Ok(term)
+            Ok(Ok(term))
         }
         Err(e) => Err(format!(
             "{} not ready: {e}; clean-up: {:?}",
             kind.name(),
             close(ctx, term)
         )),
+    }
+}
+
+/// A terminal that showed no window, for `why`: it did not run once its files are gone, else what `left` says fails.
+fn unshown<T>(why: String, left: &[String]) -> Result<Result<T, String>, String> {
+    if left.is_empty() {
+        Ok(Err(why))
+    } else {
+        Err(format!("{why}; clean-up: {left:?}"))
     }
 }
 
@@ -213,6 +226,25 @@ mod tests {
         );
         assert_eq!(attach_to(ours, ours, 0, me), None, "a closed terminal");
         assert_eq!(attach_to(ours, ours, me, me), None, "the gate's own thread");
+    }
+
+    #[test]
+    fn the_shipped_console_stays_in_conhost_and_runs_the_gates_script() {
+        let c = crate::config::load().expect("loads").g19_product.console;
+        let first = c.args.first().map(String::as_str);
+        assert_eq!(first, Some("-ForceNoHandoff"), "never the default terminal");
+        assert!(c.args.last().is_some_and(|a| a == INPUT), "{:?}", c.args);
+    }
+
+    #[test]
+    fn a_console_with_no_window_did_not_run_only_once_its_files_went() {
+        let why = || "no ConsoleWindowClass window after 9 ms".to_string();
+        assert_eq!(unshown::<()>(why(), &[]), Ok(Err(why())));
+        let kept = unshown::<()>(why(), &["a.ps1: in use".into()]).expect_err("a file stayed");
+        assert!(
+            kept.contains("a.ps1: in use") && kept.contains("9 ms"),
+            "{kept}"
+        );
     }
 
     #[test]

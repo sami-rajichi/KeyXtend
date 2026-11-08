@@ -31,6 +31,8 @@ pub const NOTES: &str = "notes";
 pub const EXERCISED: &str = "exercised";
 /// The place cases, by their key in the run, that may not run when their window cannot move.
 pub const PLACES: [&str; 2] = ["near_bottom", "second"];
+/// The parts of a step, by step and key, that may not run: the console when its window never shows.
+pub const PARTS: [(&str, &str); 1] = [("terminals", "console")];
 
 /// One group's verdict over `cases`: every case that holds `key` holds it true, and at least one does.
 fn group(cases: &[Value], key: &str) -> Value {
@@ -50,12 +52,14 @@ fn unrun(run: &Value, key: &str) -> bool {
     PLACES.contains(&key) && run[key][EXERCISED] == false
 }
 
-/// The place cases of `run` that did not run or ended in an error, by name, which go to the manual check.
+/// The place cases of `run` that did not run or ended in an error, then the parts that did not run, by name, which go
+/// to the manual check.
 pub fn unexercised(run: &Value) -> Vec<&'static str> {
-    PLACES
+    let places = PLACES.into_iter().filter(|k| run[k][EXERCISED] != true);
+    let parts = PARTS
         .into_iter()
-        .filter(|k| run[k][EXERCISED] != true)
-        .collect()
+        .filter(|(s, k)| run[s][k][EXERCISED] == false);
+    places.chain(parts.map(|(_, k)| k)).collect()
 }
 
 /// True when every group and every step in `run` that ran passed; a missing one fails, and a place case that did not
@@ -144,6 +148,19 @@ mod tests {
         v["near_bottom"] = json!({ EXERCISED: true, "ok": true });
         v["second"] = json!({ EXERCISED: true, "screens": 2 });
         assert!(unexercised(&v).is_empty() && passed(&v));
+    }
+
+    #[test]
+    fn a_console_that_did_not_run_goes_to_the_manual_check() {
+        let mut v = run();
+        v["near_bottom"] = json!({ EXERCISED: true, "ok": true });
+        v["second"] = json!({ EXERCISED: true });
+        v["terminals"] =
+            json!({ "console": { EXERCISED: false, "reason": "no window" }, "ok": true });
+        assert_eq!(unexercised(&v), ["console"]);
+        assert!(passed(&v), "the terminals step judged it already");
+        v["terminals"]["console"] = json!({ "ok": true });
+        assert!(unexercised(&v).is_empty(), "a console that ran");
     }
 
     #[test]
