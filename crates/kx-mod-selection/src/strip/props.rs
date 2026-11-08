@@ -1,6 +1,6 @@
 //! Properties over any run of looks, keys, presses, aims, keyboard moves, acts, new settings and waits: a closed box
-//! never shows chips, nothing shows while a panel line is aimed at or the keyboard is in the tray, rounds only grow,
-//! and the view sent always matches the strip's own.
+//! never shows chips, nothing shows while a panel line is aimed at, the keyboard is in the tray or a selection is put
+//! away, rounds only grow, and the view sent always matches the strip's own.
 
 use super::*;
 use crate::chips::Rules;
@@ -130,6 +130,10 @@ struct Told {
     top: u32,
     /// A tick was sent and no look came since, so no new strip may show.
     ticked: bool,
+    /// The look the strip keeps; `None` after a lost look, a press, or a key that ended a put-away.
+    last: Option<SelSpot>,
+    /// The box whose selection Esc or an act put away, so no new strip may show.
+    away: Option<u64>,
 }
 
 impl Told {
@@ -138,12 +142,31 @@ impl Told {
         match input {
             Input::Look { spot, .. } => {
                 (self.kind, self.spot, self.ticked) = (Some(spot.kind), Some(spot), false);
+                if self
+                    .away
+                    .is_some_and(|b| b != spot.box_id || !spot.selected)
+                {
+                    self.away = None;
+                }
+                self.last = Some(spot);
             }
-            Input::Lost => self.kind = None,
+            Input::Lost => (self.kind, self.last) = (None, None),
+            Input::Key => {
+                if self.away.take().is_some() {
+                    self.last = None;
+                }
+            }
+            Input::Press => (self.last, self.away) = (None, None),
+            Input::Esc => self.put_away(),
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
             _ => {}
         }
+    }
+
+    /// Notes that the last look's selection, if any, is put away.
+    fn put_away(&mut self) {
+        self.away = self.last.filter(|s| s.selected).map(|s| s.box_id);
     }
 
     /// Nothing may show.
@@ -187,8 +210,9 @@ fn after(before: ChipsView, sent: Option<&ChipsView>) -> ChipsView {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(CASES))]
 
-    /// No strip for a closed box or while blocked; each new strip's round passes every earlier one, a tick keeps the
-    /// live round and no new strip follows it before a look, and the view kept is the one sent.
+    /// No strip for a closed box, while blocked or while a selection is put away; each new strip's round passes every
+    /// earlier one, a tick keeps the live round and no new strip follows it before a look, and the view kept is the
+    /// one sent.
     #[test]
     fn closed_boxes_and_blocks_show_nothing_and_rounds_only_grow(
         cfg in config(),
@@ -208,6 +232,7 @@ proptest! {
                     None => {
                         prop_assert!(*round > told.top, "{} after {}", round, told.top);
                         prop_assert!(!told.ticked, "a new strip after a tick needs a look");
+                        prop_assert!(told.away.is_none(), "a selection put away stays away");
                         told.top = *round;
                     }
                     Some(chip) => {
@@ -215,6 +240,7 @@ proptest! {
                         prop_assert!(live, "a tick keeps the live round");
                         prop_assert!(chips.contains(chip));
                         told.ticked = true;
+                        told.put_away();
                     }
                 }
             }

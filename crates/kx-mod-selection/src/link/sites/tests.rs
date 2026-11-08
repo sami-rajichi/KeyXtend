@@ -12,6 +12,7 @@ fn row(key: &str, value: &str) -> String {
         ("whole", r#"["pt-BR"]"#),
         ("fallback", r#""en""#),
         ("link_max", "500"),
+        ("alias", r#"{ nb = "no" }"#),
     ];
     if let Some(slot) = keys.iter_mut().find(|(k, _)| *k == key) {
         slot.1 = value;
@@ -35,6 +36,40 @@ fn the_shipped_table_holds_google_as_agreed() {
     assert_eq!((google.fallback.as_str(), google.link_max), ("en", 8000));
     assert!(google.link_max <= MAX_LINK_BYTES);
     assert_eq!(table.get("google"), Some(google));
+    let aliases: Vec<(&str, &str)> = (google.alias.iter())
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
+    let want = [
+        ("fil", "tl"),
+        ("nb", "no"),
+        ("nn", "no"),
+        ("zh-HK", "zh-TW"),
+        ("zh-Hans", "zh-CN"),
+        ("zh-Hant", "zh-TW"),
+        ("zh-MO", "zh-TW"),
+        ("zh-SG", "zh-CN"),
+    ];
+    assert_eq!(aliases, want);
+}
+
+#[test]
+fn each_alias_maps_a_language_tag_to_a_language_tag() {
+    for alias in [
+        r#"{ "zh_HK" = "zh-TW" }"#,
+        r#"{ nb = "" }"#,
+        r#"{ "" = "no" }"#,
+        r#"{ fil = "t l" }"#,
+    ] {
+        assert_eq!(
+            Sites::parse(&row("alias", alias)),
+            Err(SiteError::Tag),
+            "{alias}"
+        );
+    }
+    assert!(
+        Sites::parse(&row("alias", "{}")).is_ok(),
+        "no alias is fine"
+    );
 }
 
 #[test]

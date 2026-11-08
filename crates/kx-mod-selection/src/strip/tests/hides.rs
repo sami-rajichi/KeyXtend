@@ -33,6 +33,43 @@ fn a_dismissed_selection_shows_again_once_it_went_and_came_back() {
 }
 
 #[test]
+fn esc_puts_the_selection_away_while_its_box_holds_one() {
+    let mut rig = Rig::new();
+    rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Esc);
+    assert_eq!(
+        rig.step(look(sel(1, SelKind::Editable, 90))),
+        None,
+        "scrolled"
+    );
+    let off = SelSpot {
+        first: None,
+        last: None,
+        ..sel(1, SelKind::Editable, 40)
+    };
+    assert_eq!(rig.step(look(off)), None, "scrolled off");
+    assert_eq!(
+        rig.step(look(sel(1, SelKind::Editable, 60))),
+        None,
+        "and back"
+    );
+    assert_eq!(rig.step(Input::Press), None);
+    rig.show(click(sel(1, SelKind::Editable, 60)));
+}
+
+#[test]
+fn a_key_or_another_box_ends_escs_put_away() {
+    let mut rig = Rig::new();
+    rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Esc);
+    assert_eq!(rig.step(Input::Key), None, "the next look decides");
+    rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Esc);
+    rig.show(look(sel(2, SelKind::Editable, 40)));
+    rig.show(look(sel(1, SelKind::Editable, 40)));
+}
+
+#[test]
 fn esc_hides_the_strip() {
     let mut rig = Rig::new();
     rig.show(look(sel(1, SelKind::ReadOnly, 40)));

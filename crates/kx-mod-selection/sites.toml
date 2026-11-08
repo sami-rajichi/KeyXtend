@@ -10,9 +10,24 @@ name = "Google Translate"
 pattern = "https://translate.google.com/?sl=auto&tl={to}&text={text}&op=translate"
 # The most characters the site takes; `translate_chars` stays within it.
 limit = 5000
-# Tags the site takes whole; any other tag gives its first part, such as "fr" for "fr-FR".
+# Tags the site takes whole; a tag neither here nor in `alias` gives its first part, such as "fr" for "fr-FR".
 whole = ["zh-CN", "zh-TW"]
 # The target when no language is set or usable, as "auto" is no target here.
 fallback = "en"
 # The most bytes of the whole encoded link; provisional until G19 measures what the shell hands over whole.
 link_max = 8000
+
+# Tags the site knows by another code, tried for the whole tag, then its language and script, then its language.
+[sites.alias]
+# Norwegian Bokmål and Nynorsk: the site has one Norwegian.
+nb = "no"
+nn = "no"
+# Filipino: the site names it Tagalog.
+fil = "tl"
+# Traditional Chinese, by its script or by where it is written.
+zh-Hant = "zh-TW"
+zh-HK = "zh-TW"
+zh-MO = "zh-TW"
+# Simplified Chinese, likewise.
+zh-Hans = "zh-CN"
+zh-SG = "zh-CN"

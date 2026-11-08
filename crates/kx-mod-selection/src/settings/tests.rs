@@ -38,7 +38,7 @@ fn the_defaults_validate_and_hold_the_agreed_values() {
     assert!(SPEC.is_consistent());
     let s = SelSettings::from_defaults().unwrap();
     assert!(s.on && s.copy && s.cut && s.paste && s.translate && s.caret_paste);
-    assert!(s.look == Look::Both && s.minimised && !s.translate_ok);
+    assert!(s.look == Legend::Both && s.minimised && !s.translate_ok);
     assert_eq!(s.caret_s, 5);
     assert_eq!(
         (s.translate_to.as_str(), s.translate_site.as_str()),
@@ -81,9 +81,9 @@ fn the_plans_ranges_hold() {
 #[test]
 fn look_is_one_of_its_three_choices() {
     for (name, look) in [
-        ("both", Look::Both),
-        ("icons", Look::Icons),
-        ("words", Look::Words),
+        ("both", Legend::Both),
+        ("icons", Legend::Icons),
+        ("words", Legend::Words),
     ] {
         let t = with("look", name);
         assert_eq!(
@@ -101,11 +101,11 @@ fn look_is_one_of_its_three_choices() {
 }
 
 #[test]
-fn each_look_shows_an_icon_a_word_or_both_never_neither() {
-    let shows = |look: Look| (look.icons(), look.words());
-    assert_eq!(shows(Look::Both), (true, true));
-    assert_eq!(shows(Look::Icons), (true, false));
-    assert_eq!(shows(Look::Words), (false, true));
+fn each_legend_shows_an_icon_a_word_or_both_never_neither() {
+    let shows = |legend: Legend| (legend.icons(), legend.words());
+    assert_eq!(shows(Legend::Both), (true, true));
+    assert_eq!(shows(Legend::Icons), (true, false));
+    assert_eq!(shows(Legend::Words), (false, true));
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn translate_chars_stays_within_the_sites_limit() {
     let table = Sites::parse(
         "[[sites]]\nid = \"google\"\nname = \"Small\"\n\
          pattern = \"https://small.example/?tl={to}&text={text}\"\n\
-         limit = 1000\nwhole = []\nfallback = \"en\"\nlink_max = 4000\n",
+         limit = 1000\nwhole = []\nfallback = \"en\"\nlink_max = 4000\nalias = {}\n",
     )
     .unwrap();
     let mut s = SelSettings::from_defaults().unwrap();

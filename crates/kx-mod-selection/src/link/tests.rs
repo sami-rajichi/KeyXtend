@@ -190,7 +190,7 @@ fn the_sites_limit_caps_translate_chars() {
     let table = Sites::parse(
         "[[sites]]\nid = \"small\"\nname = \"Small\"\n\
          pattern = \"https://small.example/?tl={to}&text={text}\"\n\
-         limit = 60\nwhole = []\nfallback = \"en\"\nlink_max = 4000\n",
+         limit = 60\nwhole = []\nfallback = \"en\"\nlink_max = 4000\nalias = {}\n",
     )
     .unwrap();
     let site = table.first().unwrap();
@@ -216,7 +216,26 @@ fn the_target_follows_translate_to_else_the_os_language() {
 fn whole_tags_keep_the_sites_spelling() {
     assert_eq!(google().target("", "zh-CN"), "zh-CN");
     assert_eq!(google().target("zh-tw", "fr"), "zh-TW");
-    assert_eq!(google().target("", "zh-HK"), "zh");
+    assert_eq!(google().target("", "zh"), "zh");
+}
+
+#[test]
+fn aliases_map_the_whole_tag_then_language_and_script_then_language() {
+    let to = |os: &str| google().target("", os);
+    assert_eq!(to("zh-HK"), "zh-TW", "the whole tag");
+    assert_eq!(to("zh-MO"), "zh-TW");
+    assert_eq!(to("zh-SG"), "zh-CN");
+    assert_eq!(to("zh-Hant-TW"), "zh-TW", "language and script");
+    assert_eq!(to("zh-Hant-HK"), "zh-TW");
+    assert_eq!(to("zh-Hans-SG"), "zh-CN");
+    assert_eq!(to("zh-Hant"), "zh-TW");
+    assert_eq!(to("nb-NO"), "no", "the language");
+    assert_eq!(to("nn-NO"), "no");
+    assert_eq!(to("fil-PH"), "tl");
+    assert_eq!(to("NB"), "no", "any case");
+    assert_eq!(to("zh_HK"), "zh-TW", "an OS tag with an underscore");
+    assert_eq!(google().target("fil", "fr-FR"), "tl", "translate_to too");
+    assert_eq!(to("sr-Latn-RS"), "sr", "no alias: the language");
 }
 
 #[test]

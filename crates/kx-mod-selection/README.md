@@ -31,7 +31,7 @@ It holds no `InjectInput`.
 | `copy`, `cut`, `paste`, `translate` | true | | Each keycap. |
 | `caret_paste` | true | | Paste by a caret just clicked into. |
 | `caret_s` | 5 | 2–30 | Seconds the caret's Paste stays. |
-| `look` | "both" | "both", "icons" or "words" | What each keycap shows (`Look`): its icon and word, or one of them. |
+| `look` | "both" | "both", "icons" or "words" | What each keycap shows (`Legend`): its icon and word, or one of them. |
 | `minimised` | true | | The chips show while the keyboard is minimised. |
 | `translate_to` | "" | a short tag of letters and hyphens | Translate's language; empty follows the system's display language. |
 | `translate_site` | "google" | an id in `sites.toml` | The translate site. |
@@ -46,4 +46,4 @@ A bad value goes back to its default with the settings notice.
 
 ## Sites (`sites.toml`)
 
-Each row has an id, a name, a link pattern with `{to}` and `{text}` once each, a character limit, the tags it takes whole, a fallback target and `link_max`, the most bytes of the whole encoded link. The table is checked at its first use; a bad table turns Translate off and never panics.
+Each row has an id, a name, a link pattern with `{to}` and `{text}` once each, a character limit, the tags it takes whole, a fallback target, `link_max`, the most bytes of the whole encoded link, and `alias`, the tags it knows by another code (such as `nb` for `no`), tried for the whole tag, then its language and script, then its language. The table is checked at its first use; a bad table turns Translate off and never panics.

@@ -43,7 +43,7 @@ pub enum Input {
     },
     /// A look failed, or the box no longer holds its selection: what was seen is gone.
     Lost,
-    /// A key went to the app.
+    /// A key the user sent to the app, other than Esc; a chip's own keys are not one, or an act's put-away would end.
     Key,
     /// A press in another app's window.
     Press,

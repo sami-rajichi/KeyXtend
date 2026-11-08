@@ -39,7 +39,7 @@ pub static SPEC: SettingsSpec = SettingsSpec {
 /// What each keycap shows, so it never shows nothing; any other value goes back to `both`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Look {
+pub enum Legend {
     /// Its icon and its word.
     Both,
     /// Its icon alone.
@@ -48,7 +48,7 @@ pub enum Look {
     Words,
 }
 
-impl Look {
+impl Legend {
     /// The keycap shows its icon.
     #[must_use]
     pub fn icons(self) -> bool {
@@ -85,7 +85,7 @@ pub struct SelSettings {
     /// Seconds the caret's Paste stays.
     pub caret_s: u32,
     /// What each keycap shows: its icon and word, or one of them.
-    pub look: Look,
+    pub look: Legend,
     /// The chips show while the keyboard is minimised.
     pub minimised: bool,
     /// The language Translate asks for; empty follows the system's display language.

@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use kx_mod_selection::{ID, Look, SPEC, SelSettings, sites};
+use kx_mod_selection::{ID, Legend, SPEC, SelSettings, sites};
 use kx_module_api::{keys, parse_as};
 use kx_settings::{Files, Store};
 use kx_test_support::tempdir::TempDir;
@@ -44,7 +44,7 @@ fn a_bad_look_comes_back_as_both_with_the_notice() {
     for bad in ["\"none\"", "false", "\"Words\""] {
         let (s, notices) = load(&format!("look = {bad}\nminimised = false\n"));
         assert_eq!(notices, [keys::SETTINGS_RESET], "{bad}");
-        assert_eq!(s.look, Look::Both, "{bad}");
+        assert_eq!(s.look, Legend::Both, "{bad}");
         assert!(!s.minimised, "the other values stay");
     }
 }
@@ -53,5 +53,5 @@ fn a_bad_look_comes_back_as_both_with_the_notice() {
 fn a_good_section_raises_no_notice() {
     let (s, notices) = load("translate_to = \"ar\"\nlook = \"words\"\n");
     assert!(notices.is_empty(), "{notices:?}");
-    assert_eq!((s.translate_to.as_str(), s.look), ("ar", Look::Words));
+    assert_eq!((s.translate_to.as_str(), s.look), ("ar", Legend::Words));
 }

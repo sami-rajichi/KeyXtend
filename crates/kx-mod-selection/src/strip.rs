@@ -11,9 +11,6 @@ use kx_module_api::ports::{ChipsView, SelChip, SelKind, SelSpot, StripSpot};
 
 use crate::chips::{At, chips};
 
-/// A selection by its box and its lines, as Esc put it away.
-type Mark = (u64, StripSpot);
-
 /// A strip to show, before it has a round.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Draft {
@@ -85,8 +82,9 @@ pub struct Strip {
     last: Option<SelSpot>,
     /// The caret's Paste while it lasts.
     caret: Option<Caret>,
-    /// The selection Esc put away; it stays hidden until a look sees another or a press comes.
-    dismissed: Option<Mark>,
+    /// The box whose selection Esc or an act put away; it stays hidden, even when scrolled or moved, until a press, a
+    /// key, a look with no selection or a look of another box.
+    dismissed: Option<u64>,
     /// The strip shown.
     live: Option<Live>,
     /// The last round given.
@@ -108,10 +106,10 @@ impl Strip {
         match input {
             Input::Look { spot, click, clip } => self.look(spot, click, clip, now),
             Input::Lost => (self.last, self.caret) = (None, None),
-            Input::Key => self.caret = None,
+            Input::Key => self.key(),
             // A press starts a new choice: the next look decides, even for the same text.
             Input::Press => (self.last, self.caret, self.dismissed) = (None, None, None),
-            Input::Esc => (self.dismissed, self.caret) = (self.last.and_then(mark), None),
+            Input::Esc => (self.dismissed, self.caret) = (self.put_away(), None),
             Input::Aimed(on) => self.aimed = on,
             Input::Board(board) => self.board = board,
             Input::Acted { round, chip } => return self.acted(round, chip),
@@ -151,10 +149,26 @@ impl Strip {
             .map_or(ChipsView::Hidden, |l| l.view(None))
     }
 
-    /// Notes a look: a new selection forgets the one put away, a moved caret ends its Paste, and a click into an
-    /// editable box with something to paste starts one.
+    /// Ends the caret's Paste, and what was put away with the look that saw it, so the next look decides.
+    fn key(&mut self) {
+        if self.dismissed.take().is_some() {
+            self.last = None;
+        }
+        self.caret = None;
+    }
+
+    /// The box of the last look's selection, for Esc or an act to put away.
+    fn put_away(&self) -> Option<u64> {
+        self.last.filter(|s| s.selected).map(|s| s.box_id)
+    }
+
+    /// Notes a look: one with no selection or of another box ends what was put away, a moved caret ends its Paste,
+    /// and a click into an editable box with something to paste starts one.
     fn look(&mut self, spot: SelSpot, click: bool, clip: bool, now: Mono) {
-        if self.dismissed != mark(spot) {
+        if self
+            .dismissed
+            .is_some_and(|id| id != spot.box_id || !spot.selected)
+        {
             self.dismissed = None;
         }
         if self.caret.is_some_and(|c| !c.holds(&spot)) {
@@ -177,10 +191,11 @@ impl Strip {
     }
 
     /// Shows the tick of `chip` on the live strip of `round` and ends that strip, sending no `Hidden`, as the ui fades
-    /// a ticked strip itself; the next look decides what shows, even the same selection.
+    /// a ticked strip itself; the selection is put away as by Esc, so the app's own event for the act never brings it
+    /// straight back.
     fn acted(&mut self, round: u32, chip: SelChip) -> Option<ChipsView> {
         let live = self.live.take_if(|l| l.shows(round, chip))?;
-        (self.last, self.caret) = (None, None);
+        (self.dismissed, self.caret) = (self.put_away(), None);
         Some(live.view(Some(chip)))
     }
 
@@ -220,12 +235,12 @@ impl Strip {
     /// The strip due: the last look's selection unless put away, else the caret's Paste.
     fn due(&self) -> Option<Draft> {
         let rules = &self.cfg.rules;
-        let selection = self.last.and_then(|spot| {
-            let line = mark(spot).filter(|m| self.dismissed != Some(*m))?;
+        let shown = self.last.filter(|s| self.dismissed != Some(s.box_id));
+        let selection = shown.and_then(|spot| {
             let chips = chips(rules, spot.kind, At::Selection);
             let draft = Draft {
                 chips,
-                spot: line.1,
+                spot: lines(spot)?,
                 box_id: spot.box_id,
                 kind: spot.kind,
             };
@@ -244,8 +259,8 @@ impl Strip {
     }
 }
 
-/// The selection `spot` shows, by its box and lines; `None` with no text or no line box. One box told serves as both.
-fn mark(spot: SelSpot) -> Option<Mark> {
+/// Where the strip of `spot`'s selection goes; `None` with no text or no line box. One box told serves as both.
+fn lines(spot: SelSpot) -> Option<StripSpot> {
     let first = spot.first.or(spot.last)?;
     let last = spot.last.or(spot.first)?;
     let line = StripSpot {
@@ -253,7 +268,7 @@ fn mark(spot: SelSpot) -> Option<Mark> {
         last,
         screen: spot.screen,
     };
-    spot.selected.then_some((spot.box_id, line))
+    spot.selected.then_some(line)
 }
 
 #[cfg(test)]

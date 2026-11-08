@@ -19,6 +19,8 @@ pub const TAG_CHARS: usize = 16;
 const TAG_JOIN: char = '-';
 /// What may join the parts of a tag from the system, which may write `fr_FR`.
 const OS_JOINS: [char; 2] = [TAG_JOIN, '_'];
+/// The letters of a script part, such as `Hant` in `zh-Hant-TW` (BCP 47).
+const SCRIPT_CHARS: usize = 4;
 /// The marks RFC 3986 keeps as they are, beside ASCII letters and digits; every other byte is encoded.
 const UNRESERVED: &[u8] = b"-._~";
 /// The bytes one encoded byte takes: `%` and two hex digits.
@@ -32,20 +34,36 @@ pub fn tag_ok(tag: &str) -> bool {
 }
 
 impl Site {
-    /// The code this site takes for `set`, or for the system's display language `os` when `set` is empty: a tag it
-    /// lists whole, else the tag's first part in lower case, else its fallback.
+    /// The code this site takes for `set`, or for the system's display language `os` when `set` is empty: its code
+    /// for the whole tag, then for its language and script, then for its language, else the language in lower case,
+    /// else its fallback.
     #[must_use]
     pub fn target(&self, set: &str, os: &str) -> String {
         let tag = if set.is_empty() { os } else { set };
-        if let Some(whole) = self.whole.iter().find(|w| w.eq_ignore_ascii_case(tag)) {
-            return whole.clone();
+        let tag: String = (tag.chars())
+            .map(|c| if OS_JOINS.contains(&c) { TAG_JOIN } else { c })
+            .collect();
+        let levels = levels(&tag);
+        if let Some(code) = levels.iter().flatten().find_map(|t| self.code(t)) {
+            return code;
         }
-        let first = tag.split(OS_JOINS).next().unwrap_or_default();
-        if tag_ok(first) {
-            first.to_ascii_lowercase()
+        let [.., lang] = levels;
+        let lang = lang.unwrap_or_default();
+        if tag_ok(lang) {
+            lang.to_ascii_lowercase()
         } else {
             self.fallback.clone()
         }
+    }
+
+    /// The site's own code for `tag`, in any case: a tag it takes whole, else its alias.
+    fn code(&self, tag: &str) -> Option<String> {
+        let whole = self.whole.iter().find(|w| w.eq_ignore_ascii_case(tag));
+        let alias = || {
+            let mut aliases = self.alias.iter();
+            aliases.find_map(|(from, to)| from.eq_ignore_ascii_case(tag).then_some(to))
+        };
+        whole.or_else(alias).cloned()
     }
 
     /// This site's page translating `text` into `code`, cut to `chars` characters and the site's limits; `None` when
@@ -66,6 +84,17 @@ impl Site {
             .replacen(TEXT, &encode(kept), 1);
         Link::new(link).ok()
     }
+}
+
+/// The parts of `tag` to look up, longest first: the whole tag, its language and script when it has one, its language.
+fn levels(tag: &str) -> [Option<&str>; 3] {
+    let mut parts = tag.split(TAG_JOIN);
+    let lang = parts.next().unwrap_or_default();
+    let script = parts
+        .next()
+        .filter(|p| p.len() == SCRIPT_CHARS && tag_ok(p));
+    let with_script = script.and_then(|s| tag.get(..lang.len() + TAG_JOIN.len_utf8() + s.len()));
+    [Some(tag), with_script, Some(lang)]
 }
 
 /// `text` with each hidden space or break made a space, so words stay apart, every other hidden mark dropped, and

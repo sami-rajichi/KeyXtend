@@ -1,6 +1,7 @@
 //! The compiled-in translate sites (`sites.toml`): each one's id, name, link pattern, limits and language codes,
 //! checked once. A bad table turns Translate off; it never panics.
 
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use kx_module_api::ports::{Link, MAX_LINK_BYTES};
@@ -41,8 +42,8 @@ pub enum SiteError {
     /// A pattern is not an https link holding `{to}` and `{text}` once each.
     #[error("a site's pattern is not an https link with its two places once each")]
     Pattern,
-    /// A whole tag or the fallback is not a language tag.
-    #[error("a site's whole tag or fallback is not a language tag")]
+    /// A whole tag, the fallback or an alias is not a language tag.
+    #[error("a site's whole tag, fallback or alias is not a language tag")]
     Tag,
     /// A site takes no character.
     #[error("a site's limit is zero")]
@@ -70,6 +71,8 @@ pub struct Site {
     pub(super) fallback: String,
     /// The most bytes of the whole encoded link.
     pub(super) link_max: usize,
+    /// Tags the site knows by another code, such as `nb` for `no`.
+    pub(super) alias: BTreeMap<String, String>,
 }
 
 /// The table's rows, in order.
@@ -130,7 +133,8 @@ impl Site {
         if !once(TO) || !once(TEXT) || Link::new(bare.clone()).is_err() {
             return Err(SiteError::Pattern);
         }
-        let mut tags = self.whole.iter().chain([&self.fallback]);
+        let aliases = self.alias.iter().flat_map(|(from, to)| [from, to]);
+        let mut tags = self.whole.iter().chain([&self.fallback]).chain(aliases);
         if !tags.all(|t| tag_ok(t)) {
             return Err(SiteError::Tag);
         }

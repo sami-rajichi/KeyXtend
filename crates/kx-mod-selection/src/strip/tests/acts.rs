@@ -53,15 +53,15 @@ fn acting_shows_the_tick_on_the_same_round_then_ends_the_strip() {
     assert_eq!(rig.step(look(caret(1, 50))), None, "the ui fades the tick");
 }
 
-/// The ui fades a ticked strip itself, so nothing is sent for it; only the next look decides what shows.
+/// The ui fades a ticked strip itself, so nothing is sent for it, and the selection stays put away, so an app's own
+/// event for Ctrl+C never brings the strip straight back.
 #[test]
-fn after_an_act_nothing_is_sent_until_the_next_look_even_for_the_same_spot() {
+fn after_an_act_nothing_is_sent_until_a_press_or_another_selection() {
     let mut rig = Rig::new();
     let round = rig.show(look(sel(1, SelKind::Editable, 40)));
     rig.step(Input::Acted { round, chip: Copy });
     let quiet = [
         Input::Tick,
-        Input::Key,
         Input::Aimed(true),
         Input::Aimed(false),
         Input::Board(Board::Minimised),
@@ -71,12 +71,21 @@ fn after_an_act_nothing_is_sent_until_the_next_look_even_for_the_same_spot() {
         assert_eq!(rig.step(input), None, "{input:?}");
     }
     assert_eq!(rig.strip.configure(cfg(), rig.now), None);
-    let (again, chips, spot) = shown(rig.step(look(sel(1, SelKind::Editable, 40))));
-    assert!(again > round, "a new round");
-    assert_eq!(
-        (chips, spot),
-        (vec![Copy, Cut, Paste, Translate], on_line(40))
-    );
+    let echo = rig.step(look(sel(1, SelKind::Editable, 40)));
+    assert_eq!(echo, None, "the app's own event for Ctrl+C");
+    assert_eq!(rig.step(look(sel(1, SelKind::Editable, 90))), None, "moved");
+    let (again, chips, spot) = shown(rig.step(look(sel(2, SelKind::ReadOnly, 40))));
+    assert!(again > round, "another box's selection, a new round");
+    assert_eq!((chips, spot), (vec![Copy, Translate], on_line(40)));
+}
+
+#[test]
+fn a_key_after_an_act_lets_the_next_look_decide() {
+    let mut rig = Rig::new();
+    let round = rig.show(look(sel(1, SelKind::Editable, 40)));
+    rig.step(Input::Acted { round, chip: Copy });
+    assert_eq!(rig.step(Input::Key), None, "no look yet");
+    assert!(rig.show(look(sel(1, SelKind::Editable, 40))) > round);
 }
 
 #[test]
