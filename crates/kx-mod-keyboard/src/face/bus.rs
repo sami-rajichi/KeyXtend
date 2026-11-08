@@ -184,6 +184,21 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &PointerPressed| f.pressed(*e))?;
     on(cx, face, |f, _: &TypingModeAsk| f.tell_mode())?;
     on(cx, face, |f, _: &PressesAsk| f.tell_presses())?;
+    panels(cx, face)?;
+    face.tell_all();
+    face.forget();
+    cx.bus().publish(&AssistAsk)?;
+    cx.bus().publish(&ScrollAsk)?;
+    cx.bus().publish(&PowerAsk)?;
+    cx.bus().publish(&HistoryAsk)?;
+    cx.bus().publish(&FillAsk)
+}
+
+/// Hears our panels' states and lines, the history chord's wish, and the paste, edit and fill requests for `face`.
+///
+/// # Errors
+/// `EventError::NotGranted` as for `listen`.
+fn panels(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &ClipPanel| {
         f.heard_panel(Panel::Clip, e.open);
     })?;
@@ -206,14 +221,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &FillLine| {
         f.heard_line(Panel::Fill, &e.0);
     })?;
-    on(cx, face, |f, e: &FillType| f.fill(e))?;
-    face.tell_all();
-    face.forget();
-    cx.bus().publish(&AssistAsk)?;
-    cx.bus().publish(&ScrollAsk)?;
-    cx.bus().publish(&PowerAsk)?;
-    cx.bus().publish(&HistoryAsk)?;
-    cx.bus().publish(&FillAsk)
+    on(cx, face, |f, e: &FillType| f.fill(e))
 }
 
 /// Calls `then` with the face for each `E` on the bus, while the face lives.
