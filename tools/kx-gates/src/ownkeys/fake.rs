@@ -40,6 +40,8 @@ pub struct Fake {
     pub sent: RefCell<Vec<Vec<u16>>>,
     /// How many clicks went out.
     pub clicks: Cell<usize>,
+    /// Every pause asked, in ms, in order.
+    pub settled: RefCell<Vec<u64>>,
 }
 
 impl Fake {
@@ -50,6 +52,7 @@ impl Fake {
             titles: RefCell::new(titles.iter().map(ToString::to_string).collect()),
             sent: RefCell::default(),
             clicks: Cell::default(),
+            settled: RefCell::default(),
         }
     }
 
@@ -86,5 +89,7 @@ impl Desk for Fake {
         Ok(())
     }
 
-    fn settle(&self, _ms: u64) {}
+    fn settle(&self, ms: u64) {
+        self.settled.borrow_mut().push(ms);
+    }
 }

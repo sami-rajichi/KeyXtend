@@ -23,13 +23,14 @@ pub const NAMES: [&str; 4] = [CORE, product::NAME, g19chips::READ, g19chips::BES
 /// The apps G19 core selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
 
-/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows.
+/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows and each
+/// followed by `key_settle_ms`, as Notepad can take a key late and lose the selection.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
     let ek = &ctx.cfg.edit_keys;
     let mut run: Vec<&[u16]> = vec![&ek.doc_start];
     run.extend(std::iter::repeat_n(ek.next_line.as_slice(), i));
     run.extend([ek.line_start.as_slice(), ek.select_line.as_slice()]);
-    ownkeys::each(&Real, app, &run)?;
+    ownkeys::paced(&Real, app, &run, ctx.cfg.timing.key_settle_ms)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     Ok(())
 }

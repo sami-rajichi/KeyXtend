@@ -71,6 +71,19 @@ fn each_key_of_a_run_is_checked_so_a_tab_that_changes_stops_the_rest() {
 }
 
 #[test]
+fn paced_keys_pause_after_each_and_stop_when_the_tab_changes() {
+    let app = notepad(None);
+    let (a, b): (&[u16], &[u16]) = (&[0x41], &[0x42]);
+    let ours = Fake::new(app.hwnd, &[OUR_TAB]);
+    assert_eq!(paced(&ours, &app, &[a, b], 300), Ok(()));
+    assert_eq!(*ours.sent.borrow(), [a.to_vec(), b.to_vec()]);
+    assert_eq!(*ours.settled.borrow(), [300, 300], "a pause after each key");
+    let changed = Fake::new(app.hwnd, &[OUR_TAB, OWNER_TAB]);
+    assert!(paced(&changed, &app, &[a, b], 300).is_err());
+    assert_eq!(changed.sent.borrow().len(), 1, "the second held back");
+}
+
+#[test]
 fn a_read_or_a_move_runs_only_on_our_tab_in_front() {
     let app = notepad(None);
     let ran = std::cell::Cell::new(0);

@@ -107,6 +107,15 @@ pub fn each(desk: &dyn Desk, app: &Opened, combos: &[&[u16]]) -> Result<(), Stri
     combos.iter().try_for_each(|vks| send(desk, app, vks))
 }
 
+/// Like `each`, with `gap_ms` after every combo, so an app that handles a key late takes them in turn.
+pub fn paced(desk: &dyn Desk, app: &Opened, combos: &[&[u16]], gap_ms: u64) -> Result<(), String> {
+    combos.iter().try_for_each(|vks| {
+        send(desk, app, vks)?;
+        desk.settle(gap_ms);
+        Ok(())
+    })
+}
+
 /// Runs `act`, a click that pastes into `app`, on `desk` once `ours` allows it; else nothing is clicked.
 pub fn click(
     desk: &dyn Desk,
