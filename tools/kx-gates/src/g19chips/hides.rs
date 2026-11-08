@@ -4,7 +4,10 @@
 #![cfg(windows)]
 
 use kx_mod_keyboard::{Nav, Role};
+use kx_module_api::ports::{Point, Rect};
+use kx_platform_windows::screen::contains;
 use serde_json::{Value, json};
+use windows::Win32::Foundation::POINT;
 
 use crate::apps::Opened;
 use crate::board;
@@ -12,6 +15,7 @@ use crate::clippanel::Panel;
 use crate::g19chips::docs::Line;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::{Lines, by_keys};
+use crate::g19chips::place;
 use crate::g19chips::strip::Shown;
 use crate::product::{self, Keyboard};
 use crate::win::{self, sleep_ms};
@@ -21,6 +25,51 @@ use crate::win::{self, sleep_ms};
 pub const ACTS: usize = 24;
 /// The cases that must show no strip: the aimed panel's and the tray's.
 pub const QUIET: usize = 2;
+
+/// The first of `points` under none of `ours`, our windows by name and box; else each point with the window over it.
+pub fn clear_of(points: &[POINT], ours: &[(&str, Rect)]) -> Result<POINT, String> {
+    let over = |p: &POINT| {
+        let at = Point { x: p.x, y: p.y };
+        ours.iter()
+            .find(|(_, r)| contains(*r, at))
+            .map(|(name, _)| *name)
+    };
+    if let Some(p) = points.iter().find(|p| over(p).is_none()) {
+        return Ok(*p);
+    }
+    let each: Vec<String> = (points.iter())
+        .map(|p| {
+            format!(
+                "({}, {}) under the {}",
+                p.x,
+                p.y,
+                over(p).unwrap_or_default()
+            )
+        })
+        .collect();
+    Err(format!(
+        "no test point is clear of our windows: {}",
+        each.join(", ")
+    ))
+}
+
+/// Our windows a press outside the strip `s` must miss: the strip, and the keyboard's plate or bubble.
+fn ours(gate: &Gate, s: &Shown) -> Vec<(&'static str, Rect)> {
+    let boxes = gate.clear().boxes.into_iter().map(|b| ("keyboard", b));
+    std::iter::once(("strip", place::rect(&s.rect)))
+        .chain(boxes)
+        .collect()
+}
+
+/// The lines' points a press outside the strip may use, the Arabic line's end first.
+fn outside_points(lines: &Lines) -> [POINT; 4] {
+    [
+        lines.end(Line::Arabic),
+        lines.caret(),
+        lines.end(Line::Paste),
+        lines.end(Line::Cut),
+    ]
+}
 
 /// The copy line selected by keys, as case `name`; the strip, if it showed.
 fn select(gate: &Gate, app: &Opened, lines: &Lines, name: &str) -> Result<Option<Shown>, String> {
@@ -83,8 +132,8 @@ pub fn run(
     cases: &mut Vec<Value>,
 ) -> Result<Value, String> {
     let outside = match select(gate, app, lines, "outside")? {
-        Some(_) => {
-            let at = lines.end(Line::Arabic);
+        Some(s) => {
+            let at = clear_of(&outside_points(lines), &ours(gate, &s))?;
             gate.acts.down(app, at)?;
             let went = gate.strip.goes(|_| true);
             gate.acts.up(at)?;
@@ -123,4 +172,31 @@ pub fn tray(
     let ok = hid && quiet["chips"] == true;
     cases.push(quiet);
     Ok(json!({ "hid": hid, "ok": ok }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn r(x: i32, y: i32, w: i32, h: i32) -> Rect {
+        Rect { x, y, w, h }
+    }
+
+    #[test]
+    fn the_press_outside_goes_to_the_first_point_clear_of_our_windows() {
+        let strip = ("strip", r(393, 271, 320, 46));
+        let board = ("keyboard", r(541, 763, 838, 244));
+        let under = POINT { x: 500, y: 316 };
+        let below = POINT { x: 430, y: 338 };
+        assert_eq!(clear_of(&[under, below], &[strip, board]), Ok(below));
+        assert_eq!(clear_of(&[below], &[strip, board]), Ok(below));
+        let e = clear_of(&[under], &[board, strip]).expect_err("none clear");
+        assert!(e.contains("(500, 316) under the strip"), "{e}");
+        let edge = POINT { x: 500, y: 317 };
+        assert_eq!(
+            clear_of(&[edge], &[strip]),
+            Ok(edge),
+            "the far edge is outside"
+        );
+    }
 }
