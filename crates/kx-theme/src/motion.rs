@@ -119,7 +119,7 @@ pub struct Motion {
 pub struct Motions {
     /// As the mock-up times them.
     pub full: Motion,
-    /// Every length 0, the curves kept.
+    /// Every length 0, the curves kept; the ring's waves and `[shows]` keep their times.
     pub reduced: Motion,
 }
 
