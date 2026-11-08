@@ -200,6 +200,7 @@ The keyboard never depends on the selection module; they talk only through `kx_m
 - `EditAsk { round, edit, terminal }` ends a held key and takes the aim, as a paste does. It then sends the edit's id once through `Shortcuts` with nothing held: `COPY_ID`, `CUT_ID` or `PASTE_ID`, or in a terminal `COPY_TERM_ID` or `PASTE_TERM_ID`, while a Cut there sends nothing.
 - Every latch stays as it was, and prediction hears one `Break` once any of it reached the app.
 - `EditDone { round, ok }` always answers; while the module is stopped or a fill waits, nothing is sent and the answer is no.
+- The answer leaves through the pieces' outbox, so the bus hears every piece typed before the edit, then `EditDone`, then the edit's own `Break`, from any thread.
 
 ## Word prediction on the bus
 

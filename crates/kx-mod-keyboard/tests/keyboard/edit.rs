@@ -6,6 +6,8 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
+mod order;
+
 use crate::assist::latches::stay;
 use crate::assist::{Bench, Said, ear};
 use crate::fill::{GAP, login};
