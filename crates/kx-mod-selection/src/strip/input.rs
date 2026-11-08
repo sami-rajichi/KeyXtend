@@ -2,21 +2,10 @@
 
 use std::time::Duration;
 
+pub use kx_module_api::ports::Board;
 use kx_module_api::ports::{SelChip, SelKind, SelSpot};
 
 use crate::chips::Rules;
-
-/// Where the keyboard is.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub enum Board {
-    /// On screen.
-    #[default]
-    Open,
-    /// Minimised to its bubble.
-    Minimised,
-    /// Closed to the tray.
-    Tray,
-}
 
 /// What the strip's rules take from `[selection]`.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]

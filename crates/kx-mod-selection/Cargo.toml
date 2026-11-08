@@ -19,8 +19,12 @@ serde.workspace = true
 toml.workspace = true
 # The site table's error type.
 thiserror.workspace = true
+# Error kinds only, never text, a link or a box.
+tracing.workspace = true
 
 [dev-dependencies]
+# The selection watch, the web link and the clock the tests script.
+kx-platform-fake = { path = "../kx-platform-fake" }
 # The kernel's settings repair, for the bad-value tests.
 kx-settings = { path = "../kx-settings" }
 kx-test-support = { path = "../kx-test-support" }

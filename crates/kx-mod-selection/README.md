@@ -2,7 +2,7 @@
 
 The selection chips (P10, ADR-0041): selected text in another app shows a strip of keycaps, Copy, Cut, Paste and Translate, by its last line; a click into an editable box shows Paste by the caret. The module reads no text before a click: only Translate reads the selection, once, and opens the chosen site's page in the user's browser after one consent. It never types; the keyboard sends the edit keys for it.
 
-This crate holds the module's pure rules so far: which keycaps show (`chips`), the strip's show and hide state machine on `Mono` time (`Strip`), the Translate link (`Site::link`, `Site::target`) and the compiled-in site table (`sites.toml`). The actor that runs them on the bus comes next (P10 plan, task 10).
+The crate holds the module's pure rules: which keycaps show (`chips`), the strip's show and hide state machine on `Mono` time (`Strip`), the Translate link (`Site::link`, `Site::target`) and the compiled-in site table (`sites.toml`). `SelectionModule::new(os)` runs them on the `kx-selection` thread: it looks when the watch tells a change or a click ends outside, asks the keyboard for each edit, and opens Translate's page on a short `kx-selection-open` thread.
 
 ## Services
 
@@ -17,11 +17,11 @@ It provides no service.
 
 | Capability | Why |
 |---|---|
-| `ReadFocusedText` | It gates the selection watch, Translate's one read and `AimedLine`. |
+| `ReadFocusedText` | It gates the selection watch, Translate's one read, and the keyboard's `Typed`, `TypingModeAsk` and `AimedLine`. |
 | `Selection` | It gates the chips' events: `ChipsView`, `ChipAct`, `EditAsk` and `EditDone`. |
 | `OpenLink` | It gates the browser link; only this module holds it. |
 
-It holds no `InjectInput`.
+It holds no `InjectInput`. It also hears the ungated `PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace` and `NoticeAnswered`, and wants presses (`PressesWanted`) while it runs.
 
 ## Settings (`[selection]`)
 

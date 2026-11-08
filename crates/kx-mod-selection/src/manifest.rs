@@ -1,13 +1,15 @@
 //! What the selection module declares (ADR-0041 decision 3): it watches the focused box's selection and hands links
 //! to the browser; it never types, as the keyboard sends the edit keys for it.
 
-use kx_module_api::ports::{SelectionWatchKey, WebLinkKey};
+use kx_module_api::ports::{PressAsker, SelectionWatchKey, WebLinkKey};
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
 use crate::settings::SPEC;
 
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("selection");
+/// Who the module is when it asks the mouse module for presses.
+pub(crate) const ASKER: PressAsker = PressAsker::Selection;
 
 /// The module's manifest: `ReadFocusedText` gates the watch, `Selection` the chips' events, `OpenLink` the link.
 pub static MANIFEST: Manifest = Manifest {
@@ -26,8 +28,12 @@ pub static MANIFEST: Manifest = Manifest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kx_module_api::ports::{AimedLine, ChipAct, ChipsView, EditAsk, EditDone};
-    use kx_module_api::{Event, Notice};
+    use kx_module_api::ports::{
+        AimedLine, AssistAsk, AssistChanged, BoardPlace, BoardPlaceAsk, ChipAct, ChipsView,
+        EditAsk, EditDone, PointerPressed, PointerReleased, PressesAsk, PressesWanted, Typed,
+        TypingModeAsk,
+    };
+    use kx_module_api::{Event, Notice, NoticeAnswered};
 
     #[test]
     fn it_needs_the_watch_and_the_link_and_provides_nothing() {
@@ -58,8 +64,26 @@ mod tests {
             EditDone::CAPABILITY,
         ];
         assert_eq!(events, [sel; 4]);
-        assert_eq!(AimedLine::CAPABILITY, Some(Capability::ReadFocusedText));
-        assert_eq!(Notice::CAPABILITY, None);
+        let read = Some(Capability::ReadFocusedText);
+        let typing = [
+            AimedLine::CAPABILITY,
+            Typed::CAPABILITY,
+            TypingModeAsk::CAPABILITY,
+        ];
+        assert_eq!(typing, [read; 3]);
+        let open = [
+            Notice::CAPABILITY,
+            NoticeAnswered::CAPABILITY,
+            BoardPlace::CAPABILITY,
+            BoardPlaceAsk::CAPABILITY,
+            PressesWanted::CAPABILITY,
+            PressesAsk::CAPABILITY,
+            PointerPressed::CAPABILITY,
+            PointerReleased::CAPABILITY,
+            AssistChanged::CAPABILITY,
+            AssistAsk::CAPABILITY,
+        ];
+        assert_eq!(open, [None; 10]);
     }
 
     #[test]

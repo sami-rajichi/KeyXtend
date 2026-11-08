@@ -22,6 +22,8 @@ pub const READ_MS: RangeInclusive<u32> = 50..=2_000;
 pub const LOOKS_PER_S: RangeInclusive<u16> = 1..=30;
 /// Seconds a Translate question waits for its answer.
 pub const CONSENT_S: RangeInclusive<u32> = 5..=120;
+/// The key the module sets itself when the user says yes to Translate.
+pub const TRANSLATE_OK_KEY: &str = "translate_ok";
 
 /// Why a value or a pair was refused.
 const BAD_TO: &str = "translate_to must be empty or a short language tag of letters and hyphens";
