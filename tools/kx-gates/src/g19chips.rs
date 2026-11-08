@@ -1,6 +1,6 @@
 //! G19 on the product (`g19 keyxtend`): the selection strip on the test build, in the gate's own Notepad document,
-//! Chrome page, target-window and terminals; and `g19 translate-read`, which only reads the translate page the owner
-//! opened.
+//! Chrome page, target-window and terminals; and `g19 translate-read` and `g19 translate-beside`, which only read the
+//! translate page the owner opened.
 #![cfg(windows)]
 
 mod act;
@@ -110,8 +110,8 @@ fn steps(
     Ok(v)
 }
 
-/// The run on a ready copy at `program` with process id `pid`: the start's notices answered, then every step on the gate's own
-/// Notepad document, which closes after; `left` gathers the clean-up.
+/// The run on a ready copy at `program` with process id `pid`: the start's notices answered, then every step on the
+/// gate's own Notepad document, which closes after; `left` gathers the clean-up.
 fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Result<Value, String> {
     let gate = Gate::new(ctx, (pid, program))?;
     notice::check_normal(ctx, &gate.reader)?;

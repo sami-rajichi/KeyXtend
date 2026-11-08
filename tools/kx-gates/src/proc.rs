@@ -104,7 +104,7 @@ impl Process {
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
     }
 
-    /// Ends the process through our handle, opened `to_measure` or given by the shell, for a copy that would not quit.
+    /// Ends the process through our handle, opened `to_end` or `to_measure` or given by the shell, if it will not quit.
     #[allow(unsafe_code, reason = "Ends the process our own handle names.")]
     pub fn end(&self) -> Result<(), String> {
         // SAFETY: our live handle; a handle without the right to end the process makes the call fail, never misbehave.

@@ -1,6 +1,6 @@
 //! Our own inputs make selections that show the strip (P10 design "On a selection"): Shift latched and an arrow on our
 //! keyboard, a Grab carry, and a drag in Right-click mode, whose selection comes late, on the app's event. The scroll
-//! pad goes to Task 18's manual check (Ruling Z), as only the owner's own clicks on the pad show it.
+//! pad goes to the owner's manual check, as only the owner's own clicks on the pad show it.
 #![cfg(windows)]
 
 use kx_mod_keyboard::{Assist, Latch, Nav, Role};
@@ -16,9 +16,9 @@ use crate::modekey::{ModeKey, Wait};
 /// The acts the step takes: Shift and an arrow after a click, a Grab's pick-up, glide and drop, a click on the caret
 /// line and a drag, and Esc thrice.
 pub const ACTS: usize = 11;
-/// What the result says of the scroll pad (Ruling Z).
+/// What the result says of the scroll pad.
 const SCROLL_PAD: &str =
-    "Task 18's manual check: the strip waits for the app's event after a scroll";
+    "the owner's manual check: the strip waits for the app's event after a scroll";
 
 /// The wait for a mode key to read on or off.
 fn lit(gate: &Gate) -> Wait {

@@ -1,8 +1,7 @@
-//! `g19 translate-read` and `g19 translate-beside` (Rulings S and Y): the gate's Notepad document with the long Arabic
-//! line, which the gate selects itself; the owner clicks Translate, then Yes. Once the question has gone, the gate
-//! reads only the browser window that opened: its parent, its rights against the launching keyboard's, and whether
-//! its address bar holds the line whole. A verdict the launcher could not exercise says so. Only names, numbers and
-//! verdicts print.
+//! `g19 translate-read` and `g19 translate-beside`: the gate selects the long Arabic line in its Notepad document, and
+//! the owner clicks Translate, then Yes. Once the question has gone, the gate reads only the opened browser window's
+//! parent, rights and address bar, and prints only names, numbers and verdicts, saying when the launcher could not
+//! exercise one.
 #![cfg(windows)]
 
 use std::collections::HashSet;

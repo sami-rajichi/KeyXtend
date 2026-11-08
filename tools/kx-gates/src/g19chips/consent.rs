@@ -1,8 +1,7 @@
-//! Translate up to its consent (Ruling S): the first click on the Arabic line's Translate asks with
-//! `notice.translate-ask`, its Not now opens nothing, and a second click asks again. "Nothing" is watched through
-//! `quiet_ms`: no browser starts, no browser window appears, the window in front stays, and the question never asks
-//! again on its own. The gate stops before a click if the copy's consent is already given, as the click would open
-//! the site; the real open is only the owner's Yes in `translate-read`.
+//! Translate up to its consent: the first click on the Arabic line's Translate asks with `notice.translate-ask`, its
+//! Not now opens nothing for `quiet_ms` (no browser, no new window, the same window in front, no second ask), and a
+//! second click asks again. The gate stops before a click while the copy's consent is given or unreadable, as the real
+//! open is the owner's manual check.
 #![cfg(windows)]
 
 use std::collections::HashSet;

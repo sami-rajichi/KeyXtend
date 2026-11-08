@@ -81,7 +81,8 @@ fn sel_lines() -> String {
     let (read, beside) = (g19chips::READ, g19chips::BESIDE);
     format!(
         "g19 {NAME} starts the test build on a data folder it makes and drives the selection strip in its own Notepad, \
-         Chrome page, target-window and terminals, so close the product first; the folder goes at the end.
+         Chrome page, target-window and terminals, so close the product first; the folder goes at the end. It \
+         overwrites the clipboard and Windows' clipboard history, then puts the clipboard back and forgets its copies.
 g19 {read} starts the test build the same way and selects the long Arabic line: click Translate, then Yes; the gate \
          only reads the page that opens.
 g19 {beside} starts nothing: it does the same beside the keyboard you started, such as the uiAccess dev install."
