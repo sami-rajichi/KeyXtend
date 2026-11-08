@@ -35,6 +35,6 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
    - Arabic legends are about 1.1× larger than Latin ones.
 5. **Icons:** Lucide (ISC) only, platform-specific where it matters (Windows logo vs ⌘ vs Super). No emoji as icons.
 6. **Scale:** every size is multiplied by the keyboard's scale. Panels use the panel scale, which never goes below 0.8.
-7. **Motion:** reduced motion comes from the keyboard setting or the OS switch. Every length drops to 0, except the hold ring's waves, which carry the hold time.
+7. **Motion:** reduced motion comes from the keyboard setting or the OS switch. Every length drops to 0, except the hold ring's waves, which carry the hold time, and `[shows]`, such as the selection strip's `chips_done`, which carries the tick and done word.
 8. **Character:** panels, pills and the Settings window carry the theme as strongly as the keyboard (gold, shadows, insets), not a plain default look.
 9. **Review:** pictures of all 6 variants (3 themes × light/dark) at S and L, including the Arabic layout, attached to the PR.
