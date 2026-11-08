@@ -262,7 +262,7 @@ page =
     .on = Page suivante
     .of = { $at } sur { $count }
 
-## Notifications, par clé de kx-module-api. $module est un nom de module, $keys une liste de paramètres, $lang un nom de langue et $app le nom d’une autre application.
+## Notifications, par clé de kx-module-api. $module est un nom de module, $keys une liste de paramètres, $lang un nom de langue, $app le nom d’une autre application et $site le nom d’un site de traduction.
 notice =
     .settings-reset = Certains paramètres de « { $module } » n’étaient pas valides et ont repris leur valeur par défaut : { $keys }.
     .settings-restored = Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.
@@ -295,6 +295,8 @@ notice =
     .vault-check = Vous souvenez-vous toujours du mot de passe de sauvegarde du Remplissage rapide ?
     .vault-offer = Protéger vos éléments du Remplissage rapide par une sauvegarde verrouillée ?
     .vault-backup-damaged = Les paramètres de sauvegarde du Remplissage rapide étaient endommagés ; configurez de nouveau la sauvegarde.
+    .translate-ask = Traduire ouvre { $site } dans votre navigateur et lui envoie le texte sélectionné.
+    .translate-failed = La page de traduction ne s’est pas ouverte.
 
 ## Noms des modules, par identifiant ; un identifiant absent s’affiche tel quel.
 module =

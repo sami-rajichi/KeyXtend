@@ -186,6 +186,8 @@ var texts = {
   "notice.settings-reset": "Some {$module} settings were not valid, so they went back to their defaults: {$keys}.",
   "notice.settings-restored": "The settings file was damaged, so its last good copy was restored.",
   "notice.settings-unsaved": "Settings could not be saved, so changes last only until the keyboard closes.",
+  "notice.translate-ask": "Translate opens {$site} in your browser and sends it the text you selected.",
+  "notice.translate-failed": "The translate page did not open.",
   "notice.vault-backup-damaged": "Quick-fill's backup settings were damaged; set up the backup again.",
   "notice.vault-check": "Do you still remember your Quick-fill backup password?",
   "notice.vault-damaged": "Quick-fill's saved entries were damaged, so they were set aside. You can bring them back from your backup.",

@@ -113,8 +113,8 @@ pub use sealed::{
     SealedStoreKey, VaultStoreKey,
 };
 pub use selection::{
-    ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip, SelConfig, SelError, SelKind, SelRun,
-    SelSpot, SelectionWatch, SelectionWatchKey, StripSpot,
+    Board, BoardPlace, BoardPlaceAsk, ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip,
+    SelConfig, SelError, SelKind, SelRun, SelSpot, SelectionWatch, SelectionWatchKey, StripSpot,
 };
 pub use shelf::{Room, SealedShelf, SealedShelfKey};
 pub use shortcut::{

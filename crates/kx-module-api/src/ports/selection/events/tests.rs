@@ -1,16 +1,17 @@
-//! The selection chips' events: their names and gates, the chips' order, and `Debug` that hides the strip's boxes.
+//! The selection chips' events: their names and gates, the chips' order, and `Debug` that hides the strip's boxes; the
+//! keyboard's place events too.
 
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
-    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, ChipPicked, ClipAct, ClipKey,
-    ClipLine, ClipOpen, ClipPanel, ClipTake, ClipTaken, ClipView, FillAct, FillAsk, FillClose,
-    FillKey, FillLine, FillLive, FillNames, FillOpen, FillPanel, FillType, FillTyped, FillView,
-    HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged,
-    PanelPressesWanted, PasteAsk, Pasted, PointerMoved, PointerPressed, PointerReleased, PowerAsk,
-    PowerAsked, PowerChanged, PressesAsk, PressesWanted, ScrollAimed, ScrollAsk, ScrollChanged,
-    ScrollPage, ScrollPeek, ScrollStop, ScrollTap, Suggested, TypeWord, Typed, TypingMode,
-    TypingModeAsk, VaultEmails, WordsAsk,
+    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, Board, BoardPlace,
+    BoardPlaceAsk, ChipPicked, ClipAct, ClipKey, ClipLine, ClipOpen, ClipPanel, ClipTake,
+    ClipTaken, ClipView, FillAct, FillAsk, FillClose, FillKey, FillLine, FillLive, FillNames,
+    FillOpen, FillPanel, FillType, FillTyped, FillView, HistoryAsk, HistoryWanted, LatchesAsk,
+    LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged, PanelPressesWanted, PasteAsk, Pasted,
+    PointerMoved, PointerPressed, PointerReleased, PowerAsk, PowerAsked, PowerChanged, PressesAsk,
+    PressesWanted, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek, ScrollStop,
+    ScrollTap, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, VaultEmails, WordsAsk,
 };
 use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
@@ -40,6 +41,11 @@ fn chips() -> [(&'static str, Option<Capability>); 4] {
         row::<EditAsk>(),
         row::<EditDone>(),
     ]
+}
+
+/// The keyboard's place events, which carry no point, so they need no gate.
+fn places() -> [(&'static str, Option<Capability>); 2] {
+    [row::<BoardPlace>(), row::<BoardPlaceAsk>()]
 }
 
 /// Every other event name in the crate: the earlier ones, then the clipboard's and Quick-fill's.
@@ -158,8 +164,18 @@ fn every_event_needs_selection() {
 }
 
 #[test]
+fn the_place_events_have_their_names_and_no_gate() {
+    assert_eq!(places(), [("board-place", None), ("board-place-ask", None)]);
+    assert_eq!(Board::default(), Board::Open, "taken as open until told");
+    let told = BoardPlace {
+        place: Board::Minimised,
+    };
+    assert_eq!(format!("{told:?}"), "BoardPlace { place: Minimised }");
+}
+
+#[test]
 fn names_are_kebab_case_and_unique_in_the_crate() {
-    let ours = chips().map(|r| r.0);
+    let ours: Vec<_> = chips().iter().chain(&places()).map(|r| r.0).collect();
     assert!(ours.iter().all(|n| is_kebab(n)), "{ours:?}");
     let others: HashSet<_> = older().collect();
     assert_eq!(

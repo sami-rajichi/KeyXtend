@@ -2,8 +2,10 @@
 //! caret are, told on events and never on a timer, with no text. Only Translate's one read at a click takes text, which
 //! stays in `Redacted`.
 
+mod board;
 mod events;
 
+pub use board::{Board, BoardPlace, BoardPlaceAsk};
 pub use events::{ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip, StripSpot};
 
 use super::{Rect, Screen};

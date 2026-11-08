@@ -2,7 +2,8 @@
 
 use crate::{CONTROLS, all, items, lang};
 use kx_module_api::keys::{
-    ALL_KEYS, HIDDEN_RUN, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED, WORDS_MISSING,
+    ALL_KEYS, HIDDEN_RUN, MODULE_FAILED, SETTINGS_RESET, SETTINGS_UNSAVED, TRANSLATE_ASK,
+    TRANSLATE_FAILED, WORDS_MISSING,
 };
 use kx_module_api::{ModuleId, Notice, NoticeArg, args};
 use kx_ui::i18n::keys::{BADGE_JOIN, LIST_JOIN};
@@ -11,6 +12,8 @@ use kx_ui::i18n::keys::{BADGE_JOIN, LIST_JOIN};
 const BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
 /// A C0 control character (BEL).
 const C0: char = '\u{7}';
+/// A translate site's name, as the selection module's site table gives it.
+const SITE: &str = "Google Translate";
 
 /// A notice `key` with every argument a notice may carry.
 fn sample(key: &'static str) -> Notice {
@@ -20,6 +23,7 @@ fn sample(key: &'static str) -> Notice {
         (args::MORE, NoticeArg::Count(3)),
         (args::LANG, NoticeArg::Text("fr".into())),
         (args::APP, NoticeArg::Text("Claude".into())),
+        (args::SITE, NoticeArg::Text(SITE.into())),
     ]);
     notice
 }
@@ -55,6 +59,26 @@ fn a_hidden_run_names_the_app_it_was_started_from() {
     let ar = "شُغِّل KeyXtend من داخل Claude، حيث يُخفي Windows ما يحفظه KeyXtend، لذا لن يُحفَظ أي شيء هذه المرة. \
               أنهِ KeyXtend، ثم شغّله من قائمة ابدأ.";
     assert_eq!(lang("ar").notice(&notice), ar);
+}
+
+#[test]
+fn translate_asks_by_the_sites_name_and_says_when_its_page_did_not_open() {
+    let ask = sample(TRANSLATE_ASK);
+    let en = "Translate opens Google Translate in your browser and sends it the text you selected.";
+    assert_eq!(lang("en").notice(&ask), en);
+    let fr =
+        "Traduire ouvre Google Translate dans votre navigateur et lui envoie le texte sélectionné.";
+    assert_eq!(lang("fr").notice(&ask), fr);
+    let ar = "زر الترجمة يفتح Google Translate في متصفحك ويرسل إليه النص الذي حددته.";
+    assert_eq!(lang("ar").notice(&ask), ar);
+    let failed = sample(TRANSLATE_FAILED);
+    let texts = ["en", "fr", "ar"].map(|tag| lang(tag).notice(&failed));
+    let want = [
+        "The translate page did not open.",
+        "La page de traduction ne s’est pas ouverte.",
+        "لم تُفتح صفحة الترجمة.",
+    ];
+    assert_eq!(texts, want);
 }
 
 #[test]

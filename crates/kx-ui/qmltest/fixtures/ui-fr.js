@@ -186,6 +186,8 @@ var texts = {
   "notice.settings-reset": "Certains paramètres de « {$module} » n’étaient pas valides et ont repris leur valeur par défaut : {$keys}.",
   "notice.settings-restored": "Le fichier de paramètres était endommagé ; sa dernière copie valide a été restaurée.",
   "notice.settings-unsaved": "Impossible d’enregistrer les paramètres ; les modifications ne dureront que jusqu’à la fermeture du clavier.",
+  "notice.translate-ask": "Traduire ouvre {$site} dans votre navigateur et lui envoie le texte sélectionné.",
+  "notice.translate-failed": "La page de traduction ne s’est pas ouverte.",
   "notice.vault-backup-damaged": "Les paramètres de sauvegarde du Remplissage rapide étaient endommagés ; configurez de nouveau la sauvegarde.",
   "notice.vault-check": "Vous souvenez-vous toujours du mot de passe de sauvegarde du Remplissage rapide ?",
   "notice.vault-damaged": "Les éléments enregistrés dans le Remplissage rapide étaient endommagés ; ils ont été mis de côté. Vous pouvez les restaurer depuis votre sauvegarde.",

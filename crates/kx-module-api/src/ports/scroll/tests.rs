@@ -4,9 +4,9 @@
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
-    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed,
-    LayoutChanged, PointerMoved, PointerPressed, PointerReleased, PowerAsk, PowerAsked,
-    PowerChanged,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, BoardPlace, BoardPlaceAsk, LatchesAsk,
+    LatchesChanged, LatchesUsed, LayoutChanged, PointerMoved, PointerPressed, PointerReleased,
+    PowerAsk, PowerAsked, PowerChanged,
 };
 use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
@@ -41,8 +41,10 @@ fn scroll() -> [(&'static str, Option<Capability>); 7] {
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 18] {
+fn older() -> [&'static str; 20] {
     [
+        BoardPlace::NAME,
+        BoardPlaceAsk::NAME,
         Notice::NAME,
         NoticeAnswered::NAME,
         ModuleStateChanged::NAME,

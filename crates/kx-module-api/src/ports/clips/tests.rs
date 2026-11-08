@@ -4,11 +4,12 @@
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
-    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, ChipPicked, Date, LatchesAsk,
-    LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged, MAX_FIELD_CHARS, PanelPressesWanted,
-    Pixels, PointerMoved, PointerPressed, PointerReleased, PowerAsk, PowerAsked, PowerChanged,
-    PressesAsk, PressesWanted, Room, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek,
-    ScrollStop, ScrollTap, Suggested, TypeWord, Typed, TypingMode, TypingModeAsk, WordsAsk,
+    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, BoardPlace, BoardPlaceAsk,
+    ChipPicked, Date, LatchesAsk, LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged,
+    MAX_FIELD_CHARS, PanelPressesWanted, Pixels, PointerMoved, PointerPressed, PointerReleased,
+    PowerAsk, PowerAsked, PowerChanged, PressesAsk, PressesWanted, Room, ScrollAimed, ScrollAsk,
+    ScrollChanged, ScrollPage, ScrollPeek, ScrollStop, ScrollTap, Suggested, TypeWord, Typed,
+    TypingMode, TypingModeAsk, WordsAsk,
 };
 use crate::{
     ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, Secret, SettingsChanged, Zeroizing,
@@ -48,8 +49,14 @@ fn clips() -> [(&'static str, Option<Capability>); 12] {
     ]
 }
 
-/// Every other event name in the crate.
-fn older() -> [&'static str; 37] {
+/// Every other event name in the crate: the keyboard's place events, then the earlier ones.
+fn older() -> impl Iterator<Item = &'static str> {
+    let places = [BoardPlace::NAME, BoardPlaceAsk::NAME];
+    places.into_iter().chain(earlier())
+}
+
+/// The event names from before the keyboard's place events.
+fn earlier() -> [&'static str; 37] {
     [
         Notice::NAME,
         NoticeAnswered::NAME,
@@ -181,7 +188,7 @@ fn the_panel_and_content_need_read_clipboard_and_the_paste_write_clipboard() {
 fn names_are_kebab_case_and_unique_in_the_crate() {
     let ours = clips().map(|r| r.0);
     assert!(ours.iter().all(|n| is_kebab(n)), "{ours:?}");
-    let others: HashSet<_> = older().into_iter().collect();
+    let others: HashSet<_> = older().collect();
     let mine: HashSet<_> = ours.iter().copied().collect();
     assert_eq!(mine.len(), ours.len(), "{ours:?}");
     assert!(mine.is_disjoint(&others), "{ours:?}");

@@ -8,13 +8,13 @@ mod text;
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
-    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, ChipPicked, ClipAct, ClipKey,
-    ClipLine, ClipOpen, ClipPanel, ClipTake, ClipTaken, ClipView, HistoryAsk, HistoryWanted,
-    LatchesAsk, LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged, PanelLine,
-    PanelPressesWanted, PasteAsk, Pasted, PointerMoved, PointerPressed, PointerReleased, PowerAsk,
-    PowerAsked, PowerChanged, PressesAsk, PressesWanted, ScrollAimed, ScrollAsk, ScrollChanged,
-    ScrollPage, ScrollPeek, ScrollStop, ScrollTap, Suggested, TypeWord, Typed, TypingMode,
-    TypingModeAsk, WordsAsk,
+    AimedLine, AssistAsk, AssistChanged, AssistNote, AssistToggle, BoardPlace, BoardPlaceAsk,
+    ChipPicked, ClipAct, ClipKey, ClipLine, ClipOpen, ClipPanel, ClipTake, ClipTaken, ClipView,
+    HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged,
+    PanelLine, PanelPressesWanted, PasteAsk, Pasted, PointerMoved, PointerPressed, PointerReleased,
+    PowerAsk, PowerAsked, PowerChanged, PressesAsk, PressesWanted, ScrollAimed, ScrollAsk,
+    ScrollChanged, ScrollPage, ScrollPeek, ScrollStop, ScrollTap, Suggested, TypeWord, Typed,
+    TypingMode, TypingModeAsk, WordsAsk,
 };
 use crate::{
     ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, Redacted, SettingsChanged,
@@ -63,9 +63,10 @@ fn fills() -> [(&'static str, Option<Capability>); 13] {
     ]
 }
 
-/// Every other event name in the crate: the earlier ones, then the clipboard's.
+/// Every other event name in the crate: the earlier ones, the clipboard's, then the keyboard's place events.
 fn older() -> impl Iterator<Item = &'static str> {
-    earlier().into_iter().chain(clips())
+    let places = [BoardPlace::NAME, BoardPlaceAsk::NAME];
+    earlier().into_iter().chain(clips()).chain(places)
 }
 
 /// The event names from before the clipboard history.

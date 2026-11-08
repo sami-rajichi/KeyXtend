@@ -261,7 +261,7 @@ page =
     .on = Next page
     .of = { $at } of { $count }
 
-## Notices by kx-module-api key. $module is a module name, $keys a list of setting names, $lang a language name and $app another app's name.
+## Notices by kx-module-api key. $module is a module name, $keys a list of setting names, $lang a language name, $app another app's name and $site a translate site's name.
 notice =
     .settings-reset = Some { $module } settings were not valid, so they went back to their defaults: { $keys }.
     .settings-restored = The settings file was damaged, so its last good copy was restored.
@@ -294,6 +294,8 @@ notice =
     .vault-check = Do you still remember your Quick-fill backup password?
     .vault-offer = Protect your Quick-fill entries with a locked backup?
     .vault-backup-damaged = Quick-fill's backup settings were damaged; set up the backup again.
+    .translate-ask = Translate opens { $site } in your browser and sends it the text you selected.
+    .translate-failed = The translate page did not open.
 
 ## Module names by module id; an id not listed shows itself.
 module =
