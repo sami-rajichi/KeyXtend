@@ -9,11 +9,12 @@ use std::time::Instant;
 use kx_mod_keyboard::Nav;
 use serde_json::{Value, json};
 
-use crate::apps::{self, Opened};
+use crate::apps::Opened;
 use crate::g5play::hang_target;
 use crate::g19chips::act::Then;
 use crate::g19chips::docs::Line;
 use crate::g19chips::gate::{Gate, wait_ms};
+use crate::g19chips::kept::{Kept, Target};
 use crate::g19chips::notepad::{Lines, by_keys};
 use crate::win::{self, ms_since, sleep_ms};
 use crate::{board, launch, probe, typebox};
@@ -122,9 +123,9 @@ pub fn run(
             "g19_product.hang_ms passes target-window's hang_max_ms ({cap} ms)"
         ));
     }
-    let target = launch::start_target(gate.ctx)?;
-    let got = during(gate, app, lines, &target, cases);
-    left.extend(apps::clean_up(gate.ctx, target));
+    let target = Kept::new(Target::new(gate.ctx, launch::start_target(gate.ctx)?));
+    let got = during(gate, app, lines, &target.get().app, cases);
+    left.extend(target.close());
     let within = got?;
     probe::front(gate.ctx, app)?;
     gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;

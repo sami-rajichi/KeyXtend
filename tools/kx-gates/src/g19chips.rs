@@ -12,6 +12,7 @@ mod docs;
 mod gate;
 mod hides;
 mod hung;
+mod kept;
 mod link;
 mod notepad;
 mod numlock;

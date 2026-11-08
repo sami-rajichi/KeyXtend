@@ -11,13 +11,12 @@ use kx_module_api::ports::{Point, Rect};
 use kx_platform::ui::Screens;
 use kx_platform_windows::screen::{WinScreens, contains, edges};
 use serde_json::{Value, json};
-use windows::Win32::UI::WindowsAndMessaging::{
-    IsZoomed, SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SetWindowPos,
-};
+use windows::Win32::UI::WindowsAndMessaging::IsZoomed;
 
-use crate::apps::{self, Opened};
+use crate::apps::Opened;
 use crate::g19chips::docs::Line;
 use crate::g19chips::gate::Gate;
+use crate::g19chips::kept::{Kept, Target};
 use crate::g19chips::notepad::Lines;
 use crate::g19chips::place;
 use crate::g19chips::plan::EXERCISED;
@@ -31,6 +30,9 @@ use crate::{board, launch, probe};
 pub const ACTS: usize = 3;
 /// The target's first line, which its rows hold where Notepad's hold the copy line.
 const FIRST: Line = Line::Copy;
+
+/// The gate's started target-window, kept so it goes back and closes also on a panic.
+type Mine<'c> = Kept<Target<'c>>;
 
 /// The lowest a line may reach on `work` before the strip has no room below: the screen's bottom, or the top of a
 /// box of ours under the line's span.
@@ -96,39 +98,29 @@ fn zoomed(app: &Opened) -> bool {
     unsafe { IsZoomed(app.hwnd) }.as_bool()
 }
 
-/// Moves `app`'s window so its top-left is `to`.
-#[allow(unsafe_code, reason = "A plain move of the gate's own window.")]
-fn move_to(app: &Opened, to: Point) -> Result<(), String> {
-    let flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE;
-    // SAFETY: a plain call on the gate's own window; a dead window gives an error.
-    unsafe { SetWindowPos(app.hwnd, None, to.x, to.y, 0, 0, flags) }
-        .map_err(|e| format!("moving {}: {e}", win::describe(app.hwnd)))
-}
-
-/// `drive` run on `lines` with `app`'s window moved to `to`, once `movable` allows it for a window that is the gate's
-/// `own`, then moved back whatever happened; why it stayed, when it did.
+/// `drive` run on `lines` with the `kept` window moved to `to`, once `movable` allows it for a window that is the
+/// gate's `own`, then moved back whatever happened, also on a panic; why it stayed, when it did.
 fn moved<T>(
     gate: &Gate,
-    (app, own): (&Opened, bool),
+    (kept, own): (&Mine, bool),
     lines: &Lines,
     to: Point,
     drive: impl FnOnce(&Lines) -> Result<T, String>,
 ) -> Result<Result<T, &'static str>, String> {
+    let app = &kept.get().app;
     let was = win::rect(app.hwnd)?;
     if let Some(why) = movable(&Real, app, (own, zoomed(app)))? {
         return Ok(Err(why));
     }
-    move_to(app, to)?;
+    let from = Point {
+        x: was.left,
+        y: was.top,
+    };
+    kept.go(to, from)?;
     sleep_ms(gate.g().settle_ms);
     let now = win::rect(app.hwnd);
     let got = now.and_then(|r| drive(&lines.shifted(r.left - was.left, r.top - was.top)));
-    let back = move_to(
-        app,
-        Point {
-            x: was.left,
-            y: was.top,
-        },
-    );
+    let back = kept.back();
     let v = got?;
     back.map(|()| Ok(v))
 }
@@ -145,12 +137,13 @@ fn one(gate: &Gate, app: &Opened, lines: &Lines, name: &str) -> Result<Value, St
 }
 
 /// The first line moved down to `near_px` above the plate or the screen's bottom: the strip must sit above it.
-pub fn near_bottom(
+fn near_bottom(
     gate: &Gate,
-    (app, own): (&Opened, bool),
+    (kept, own): (&Mine, bool),
     lines: &Lines,
     cases: &mut Vec<Value>,
 ) -> Result<Value, String> {
+    let app = &kept.get().app;
     let line = lines.of(FIRST);
     let work =
         kx_platform_windows::screen::work_area(&win::rect(app.hwnd)?).map_err(|e| e.to_string())?;
@@ -161,7 +154,7 @@ pub fn near_bottom(
         x: r.left,
         y: r.top.saturating_add(dy),
     };
-    let got = moved(gate, (app, own), lines, to, |l| {
+    let got = moved(gate, (kept, own), lines, to, |l| {
         one(gate, app, l, "near_bottom")
     })?;
     let mut case = match got {
@@ -176,7 +169,8 @@ pub fn near_bottom(
 }
 
 /// The strip's place on a second screen, when one exists; a note, never a verdict.
-pub fn second_screen(gate: &Gate, (app, own): (&Opened, bool), lines: &Lines) -> Value {
+fn second_screen(gate: &Gate, (kept, own): (&Mine, bool), lines: &Lines) -> Value {
+    let app = &kept.get().app;
     let areas: Vec<Rect> = WinScreens.work_areas().iter().map(|s| s.rect).collect();
     let r = place::rect(&win::rect(app.hwnd).unwrap_or_default());
     let middle = Point {
@@ -191,7 +185,7 @@ pub fn second_screen(gate: &Gate, (app, own): (&Opened, bool), lines: &Lines) ->
         x: area.x.saturating_add(inset),
         y: area.y.saturating_add(inset),
     };
-    let got = moved(gate, (app, own), lines, to, |l| {
+    let got = moved(gate, (kept, own), lines, to, |l| {
         one(gate, app, l, "second_screen")
     });
     match got {
@@ -201,8 +195,9 @@ pub fn second_screen(gate: &Gate, (app, own): (&Opened, bool), lines: &Lines) ->
     }
 }
 
-/// Both place cases on the target `app`, in front, which is the gate's `own` when new; its rows read once.
-fn on_target(gate: &Gate, (app, own): (&Opened, bool), cases: &mut Vec<Value>) -> (Value, Value) {
+/// Both place cases on the `kept` target, in front, which is the gate's `own` when new; its rows read once.
+fn on_target(gate: &Gate, (kept, own): (&Mine, bool), cases: &mut Vec<Value>) -> (Value, Value) {
+    let app = &kept.get().app;
     let name = &gate.ctx.target.edit_name;
     let rows = probe::front(gate.ctx, app).and_then(|()| {
         Lines::read_in(gate, || gate.uia().named(app.hwnd, name)).ok_or_else(|| {
@@ -213,27 +208,27 @@ fn on_target(gate: &Gate, (app, own): (&Opened, bool), cases: &mut Vec<Value>) -
         Ok(l) => l,
         Err(e) => return (part(Err(e.clone())), json!({ "error": e })),
     };
-    let near = part(near_bottom(gate, (app, own), &lines, cases));
+    let near = part(near_bottom(gate, (kept, own), &lines, cases));
     let front = probe::front(gate.ctx, app);
     let second = front.map_or_else(
         |e| json!({ "error": e }),
-        |()| second_screen(gate, (app, own), &lines),
+        |()| second_screen(gate, (kept, own), &lines),
     );
     (near, second)
 }
 
 /// The near-bottom case and the second screen on a target-window filled with its numbered lines, which the gate starts
-/// and closes after, also on an error.
+/// and closes after, also on an error or a panic.
 pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> (Value, Value) {
     let ctx = gate.ctx;
     let before = win::snapshot();
     let target = match launch::start_target_with(ctx, std::slice::from_ref(&ctx.target.fill_arg)) {
-        Ok(t) => t,
+        Ok(t) => Kept::new(Target::new(ctx, t)),
         Err(e) => return (part(Err(e.clone())), json!({ "error": e })),
     };
-    let mine = own(&before, win::key(target.hwnd));
+    let mine = own(&before, win::key(target.get().app.hwnd));
     let got = on_target(gate, (&target, mine), cases);
-    left.extend(apps::clean_up(ctx, target));
+    left.extend(target.close());
     got
 }
 
