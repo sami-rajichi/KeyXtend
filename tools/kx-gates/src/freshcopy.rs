@@ -48,6 +48,24 @@ fn ours(gate: &str, data: &Path, marked: bool) -> Result<(), String> {
     ))
 }
 
+/// Refuses a `flagged` copy whose log, read by `log` only then, holds no `line` stamped since `at_us`; an unflagged
+/// copy reads nothing.
+fn heard(
+    flagged: bool,
+    log: impl FnOnce() -> Result<String, String>,
+    (at_us, line): (i64, &str),
+) -> Result<(), String> {
+    if !flagged {
+        return Ok(());
+    }
+    if !warned(&log()?, at_us, line) {
+        return Err(
+            "the test build logged no gate warning, so its engine might hear the hand".into(),
+        );
+    }
+    Ok(())
+}
+
 /// The data folder's marker, which the gates share with G20.
 fn marker<'c>(ctx: &'c Ctx) -> &'c str {
     &ctx.cfg.g20_product.marker
@@ -67,15 +85,11 @@ impl<'a> Fresh<'a> {
 
     /// Refuses a copy started with `[gate_input] flag` that logged no gate warning, so its engine might hear the hand.
     fn warns(&self, s: &Started, flagged: bool) -> Result<(), String> {
-        let g = &self.ctx.cfg.gate_input;
-        let log = product::files(&self.program)?.log;
-        let text = std::fs::read_to_string(&log).unwrap_or_default();
-        if flagged && !warned(&text, s.at_us, &g.warn_line) {
-            return Err(
-                "the test build logged no gate warning, so its engine might hear the hand".into(),
-            );
-        }
-        Ok(())
+        let log = || {
+            let file = product::files(&self.program)?.log;
+            Ok(std::fs::read_to_string(file).unwrap_or_default())
+        };
+        heard(flagged, log, (s.at_us, &self.ctx.cfg.gate_input.warn_line))
     }
 
     /// A copy, with `[gate_input] flag` when `flagged`, ready `ready_ms` after its keyboard shows, `drive` run on it
@@ -128,6 +142,16 @@ mod tests {
         );
         let e = refuse("G19", Err("no token".into()), false).expect_err("unknown");
         assert!(e.contains("no token"), "{e}");
+    }
+
+    #[test]
+    fn only_a_flagged_copy_has_its_log_read_and_it_must_hold_the_warning() {
+        let unread = || -> Result<String, String> { panic!("the log was read") };
+        assert_eq!(heard(false, unread, (0, "gate input")), Ok(()));
+        let quiet = heard(true, || Ok(String::new()), (0, "gate input"));
+        assert!(quiet.is_err_and(|e| e.contains("no gate warning")));
+        let gone = heard(true, || Err("no folder".into()), (0, "gate input"));
+        assert_eq!(gone, Err("no folder".into()));
     }
 
     #[test]
