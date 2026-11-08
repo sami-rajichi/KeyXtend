@@ -7,32 +7,21 @@ use kx_platform_windows::{PlatformError, QpcClock};
 use kx_target_window::config::{self, ConfigError, TargetConfig};
 use kx_target_window::layout::{self, LayoutError};
 use thiserror::Error;
-use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, WPARAM};
-use windows::Win32::Graphics::Gdi::{
-    CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, CreateFontW, DEFAULT_CHARSET, FW_NORMAL,
-    OUT_DEFAULT_PRECIS,
-};
+use windows::Win32::Foundation::{HINSTANCE, HWND};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::HiDpi::{DPI_AWARENESS_CONTEXT_UNAWARE, SetThreadDpiAwarenessContext};
-use windows::Win32::UI::Shell::SetWindowSubclass;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CW_USEDEFAULT, CreateWindowExW, DispatchMessageW, ES_AUTOHSCROLL, ES_AUTOVSCROLL, ES_MULTILINE,
-    ES_PASSWORD, ES_WANTRETURN, GetMessageW, IDC_IBEAM, LoadCursorW, MSG, RegisterClassW,
-    SendMessageW, SetWindowTextW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_SETFONT,
-    WNDCLASSW, WS_CHILD, WS_EX_CLIENTEDGE, WS_HSCROLL, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
+    CW_USEDEFAULT, CreateWindowExW, DispatchMessageW, GetMessageW, IDC_IBEAM, LoadCursorW, MSG,
+    RegisterClassW, TranslateMessage, WINDOW_EX_STYLE, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
 use crate::{name, procs, switch};
 
+mod edit;
+
 /// Window class of the main window; the gate runner finds the window by its title.
 const CLASS: PCWSTR = w!("KxsTargetWindow");
-/// Window class of the system edit box.
-const EDIT_CLASS: PCWSTR = w!("EDIT");
-/// Id of our subclass on the edit box.
-const SUBCLASS_ID: usize = 1;
-/// `WM_SETFONT` flag: redraw with the new font now.
-const REDRAW: LPARAM = LPARAM(1);
 
 /// Why the window could not start.
 #[derive(Debug, Error)]
@@ -65,8 +54,8 @@ pub enum StartError {
     Layout(#[from] LayoutError),
 }
 
-/// Loads the settings and shows the window until it is closed, in the `--layout` layout when one is given, filled or
-/// DPI-unaware when the switches ask.
+/// Loads the settings and shows the window until it is closed, in the `--layout` layout when one is given, filled,
+/// rich or DPI-unaware when the switches ask.
 pub fn run() -> Result<(), StartError> {
     let cfg = config::load()?;
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -78,15 +67,16 @@ pub fn run() -> Result<(), StartError> {
     procs::set_password(password);
     procs::set_hang_max(cfg.hang_max_ms);
     let filled = !password && args.contains(&cfg.fill_arg);
+    let rich = !password && args.contains(&cfg.rich_arg);
     if args.contains(&cfg.unaware_arg) {
         unaware()?;
     }
     let inst = module()?;
     let main = create_main(&cfg, inst)?;
-    let edit = create_edit(main, inst, password, filled)?;
-    set_font(edit, &cfg);
+    let edit = edit::create(main, inst, (password, filled, rich))?;
+    edit::set_font(edit, &cfg);
     if filled {
-        fill(edit, &cfg)?;
+        edit::fill(edit, &cfg)?;
     }
     name::set(edit, &cfg.edit_name).map_err(StartError::Name)?;
     procs::focus(edit);
@@ -160,23 +150,6 @@ fn create_main(cfg: &TargetConfig, inst: HINSTANCE) -> Result<HWND, StartError> 
     Ok(main)
 }
 
-/// The edit box style: multi-line, unwrapped when `fill`ed, or a single-line password box (Windows ignores
-/// `ES_PASSWORD` on multi-line boxes).
-fn edit_style(password: bool, fill: bool) -> WINDOW_STYLE {
-    if password {
-        return WS_CHILD
-            | WS_VISIBLE
-            | WINDOW_STYLE((ES_PASSWORD | ES_AUTOHSCROLL).cast_unsigned());
-    }
-    let own = ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN;
-    let style = WS_CHILD | WS_VISIBLE | WS_VSCROLL | WINDOW_STYLE(own.cast_unsigned());
-    if fill {
-        style | WS_HSCROLL | WINDOW_STYLE(ES_AUTOHSCROLL.cast_unsigned())
-    } else {
-        style
-    }
-}
-
 /// Makes this thread's windows DPI-unaware, as an old app's are, so Windows scales them and their points.
 #[allow(
     unsafe_code,
@@ -189,88 +162,6 @@ fn unaware() -> Result<(), StartError> {
         return Err(StartError::Windows(windows::core::Error::from_thread()));
     }
     Ok(())
-}
-
-/// Fills `edit` with the fill switch's numbered lines; they are never logged.
-#[allow(unsafe_code, reason = "Sets the text of our own edit box.")]
-fn fill(edit: HWND, cfg: &TargetConfig) -> Result<(), StartError> {
-    let text = HSTRING::from(kx_target_window::fill::text(
-        cfg.fill_lines as usize,
-        cfg.fill_cols as usize,
-    ));
-    // SAFETY: plain call on our own edit box; the text outlives it.
-    unsafe { SetWindowTextW(edit, &text) }?;
-    Ok(())
-}
-
-/// Creates the logging edit box inside `main`, sized to its client area.
-#[allow(
-    unsafe_code,
-    reason = "Win32 window creation and subclassing on the UI thread."
-)]
-fn create_edit(
-    main: HWND,
-    inst: HINSTANCE,
-    password: bool,
-    fill: bool,
-) -> Result<HWND, StartError> {
-    let style = edit_style(password, fill);
-    // SAFETY: called on the UI thread; `main` is our live window.
-    let edit = unsafe {
-        CreateWindowExW(
-            WS_EX_CLIENTEDGE,
-            EDIT_CLASS,
-            w!(""),
-            style,
-            0,
-            0,
-            0,
-            0,
-            Some(main),
-            None,
-            Some(inst),
-            None,
-        )
-    }?;
-    procs::set_edit(edit);
-    // SAFETY: `edit` is our live window and `edit_proc` has the callback's signature.
-    if !unsafe { SetWindowSubclass(edit, Some(procs::edit_proc), SUBCLASS_ID, 0) }.as_bool() {
-        return Err(StartError::Subclass);
-    }
-    procs::fit_edit(main);
-    Ok(edit)
-}
-
-/// Gives `edit` the configured font.
-#[allow(
-    unsafe_code,
-    reason = "GDI font creation and a message to our own edit box."
-)]
-fn set_font(edit: HWND, cfg: &TargetConfig) {
-    let face = HSTRING::from(cfg.font.as_str());
-    let weight = FW_NORMAL.0.cast_signed();
-    // SAFETY: plain GDI call; the font stays alive with the process.
-    let font = unsafe {
-        CreateFontW(
-            cfg.font_px,
-            0,
-            0,
-            0,
-            weight,
-            0,
-            0,
-            0,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS,
-            CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY,
-            0,
-            &face,
-        )
-    };
-    let font_handle = Some(WPARAM(font.0 as usize));
-    // SAFETY: plain message send to our own edit box.
-    unsafe { SendMessageW(edit, WM_SETFONT, font_handle, Some(REDRAW)) };
 }
 
 /// Runs the thread's message loop until the window closes.

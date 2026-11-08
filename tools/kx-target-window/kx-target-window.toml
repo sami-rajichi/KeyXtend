@@ -27,3 +27,6 @@ fill_lines = 100
 fill_cols = 120
 # Switch that makes the window DPI-unaware, as an old app is, so Windows scales it and the points it gets (G6's record).
 unaware_arg = "--dpi-unaware"
+# Switch that makes the box a rich-edit box (msftedit.dll's RICHEDIT50W, from System32), which serves UI Automation's
+# text and line boxes itself, as the plain box does not (G19's place cases); a password box stays plain.
+rich_arg = "--rich"

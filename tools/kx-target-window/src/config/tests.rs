@@ -73,6 +73,7 @@ fn an_empty_text_value_fails() {
         "layout_arg",
         "fill_arg",
         "unaware_arg",
+        "rich_arg",
     ] {
         let err = parse(&with(key, "\"\""), file()).expect_err(key);
         assert!(
@@ -96,6 +97,8 @@ fn every_switch_must_differ_from_the_others() {
         ("fill_arg", "\"--password\""),
         ("unaware_arg", "\"--layout\""),
         ("unaware_arg", "\"--fill\""),
+        ("rich_arg", "\"--fill\""),
+        ("rich_arg", "\"--password\""),
     ];
     for (key, value) in same {
         let err = parse(&with(key, value), file()).expect_err(key);
