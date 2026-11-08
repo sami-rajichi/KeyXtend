@@ -101,7 +101,8 @@ Window {
         if (mv.chips.ms > 0)
             pop.restart();
     }
-    // Places the strip again, as its size, the keyboard or a panel changed; one that found no room tries again.
+    // Places the strip again, as its size, the keyboard or a panel changed; one that found no room tries again, and
+    // one whose key row went, as the keyboard module stopped, goes as with no room.
     function follow() {
         if (!view)
             return;
@@ -110,7 +111,7 @@ Window {
                 open();
             return;
         }
-        if (!place())
+        if (row <= 0 || !place())
             drop();
     }
     // No room: a live strip hides until there is room again, and a ticked one ends its round with the hub.

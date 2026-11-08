@@ -1,7 +1,7 @@
 // The selection strip over the stand-in Ui (design 4, "Keycaps"): the keyboard's own caps in each theme, light and dark,
 // one key row tall at each size, icons or words alone, Arabic words in the Arabic font in the same order, a click sent
 // with its round and chip at the press, sizes measured in physical pixels once and again after a reword, a ticked
-// strip that loses its room still ending its round, and no focus.
+// strip that loses its room or its key row still ending its round, and no focus.
 import QtQuick
 import QtTest
 import "../qml"
@@ -215,6 +215,22 @@ Item {
                 strip.ui.settings = Object.assign({}, strip.ui.settings);
                 verify(!strip.visible, fading + ": a wake shows nothing");
             }
+        }
+
+        // A key row that goes, as when the keyboard module stops, hides the strip as no room does: a live one shows
+        // again with the row, and a ticked one ends its round.
+        function test_a_strip_whose_key_row_goes_hides() {
+            const live = make(view("en", "both", { round: 4 }));
+            live.row = 0;
+            tryVerify(() => !live.visible, 1000, "no key row, so it hides");
+            compare(live.ui.selCalls, [], "a live strip ends no round");
+            live.row = root.row;
+            tryVerify(() => live.visible, 1000, "the row came back");
+            const ticked = make(view("en", "both", { round: 8 }));
+            ticked.ui.selView = view("en", "ticked", { round: 8 });
+            ticked.row = 0;
+            tryVerify(() => !ticked.visible, 1000, "a ticked strip hides too");
+            compare(ticked.ui.selCalls, ["selFaded 8"], "and ends its round");
         }
 
         // With no room the hub answers null and nothing shows; a hidden view hides the strip.
