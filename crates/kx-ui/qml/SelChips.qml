@@ -120,11 +120,12 @@ Window {
         else
             gone();
     }
-    // Asks the hub where the strip goes for its size in physical pixels, scaled once by its screen's scale.
+    // Asks the hub where the strip goes for its size in physical pixels, scaled once by its screen's scale, and the
+    // keyboard's size, which the gap from the text grows with.
     function place() {
         caps.forceLayout();
         const sc = view.scale;
-        const p = JSON.parse(ui.selAt(view.round, width * sc, height * sc, JSON.stringify(clear())));
+        const p = JSON.parse(ui.selAt(view.round, width * sc, height * sc, s, JSON.stringify(clear())));
         if (!p)
             return false;
         const at = logical(p.x, p.y);

@@ -5,13 +5,14 @@
 
 use std::time::Instant;
 
+use kx_mod_keyboard::KeyboardSettings;
 use kx_mod_selection::SelSettings;
-use kx_module_api::ports::{Rect, SelChip, physical};
+use kx_module_api::ports::{Rect, SelChip};
 use kx_platform_windows::clip::{self, open};
 use kx_platform_windows::screen;
 use kx_platform_windows::uia::{self, Uia};
 use kx_platform_windows::window::foreground;
-use kx_theme::Themes;
+use kx_theme::{Shape, Themes};
 use serde_json::{Value, json};
 use windows::Win32::Foundation::{HWND, RECT};
 
@@ -44,13 +45,18 @@ pub struct Gate<'a> {
     /// The selection module's defaults, as the fresh data folder holds them.
     pub sel: SelSettings,
     uia: Uia,
-    gap_px: f32,
+    /// The shared sizes, whose `[chips]` gap sets where the strip should sit.
+    shape: Shape,
+    /// The keyboard's size, as the fresh data folder holds it.
+    size: f64,
 }
 
 impl<'a> Gate<'a> {
     /// The readers of the copy with process id `pid`.
     pub fn new(ctx: &'a Ctx<'a>, pid: u32) -> Result<Self, String> {
         let themes = Themes::shipped().map_err(|e| format!("theme {e}"))?;
+        let keyboard = KeyboardSettings::from_defaults()
+            .map_err(|e| format!("the keyboard's defaults: {e}"))?;
         Ok(Self {
             ctx,
             strip: Strip::new(ctx, pid)?,
@@ -58,7 +64,8 @@ impl<'a> Gate<'a> {
             reader: Reader::new()?,
             sel: selection_defaults()?,
             uia: Uia::new().map_err(|e| e.to_string())?,
-            gap_px: themes.shape.chips.gap_px,
+            shape: themes.shape,
+            size: keyboard.size,
         })
     }
 
@@ -104,7 +111,7 @@ impl<'a> Gate<'a> {
         let boxes = self.boxes()?;
         let last = boxes.last().ok_or("the selection has no box")?;
         let area = place::rect(&screen::work_area(last).map_err(|e| e.to_string())?);
-        let gap = physical(f64::from(self.gap_px), screen::dpi_of(last));
+        let gap = place::gap(&self.shape, self.size, screen::dpi_of(last));
         let kb = Keyboard::find().ok().and_then(|k| win::rect(k.hwnd).ok());
         let kb = kb.as_ref().map(place::rect);
         let (rects, got) = (

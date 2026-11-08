@@ -13,12 +13,14 @@ impl qobject::Ui {
         qs(&self.with(NULL.to_owned(), Hub::sel_json))
     }
 
-    pub(super) fn sel_at(&self, round: i64, w: f64, h: f64, clear: &QString) -> QString {
+    pub(super) fn sel_at(&self, round: i64, w: f64, h: f64, size: f64, clear: &QString) -> QString {
         let Ok(clear) = boxes(&clear.to_string()) else {
             tracing::warn!("QML sent boxes to keep the strip clear of that do not read");
             return qs(NULL);
         };
-        let at = self.with(None, |hub| hub.sel_at(round, whole(w), whole(h), &clear));
+        let at = self.with(None, |hub| {
+            hub.sel_at(round, whole(w), whole(h), size, &clear)
+        });
         qs(&json(&at))
     }
 

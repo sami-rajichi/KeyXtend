@@ -7,7 +7,8 @@ QtObject {
     property var selView: null
     // Where `selAt` puts the strip's top-left, in physical pixels, or null for nowhere.
     property var selSpot: ({ x: 300, y: 400 })
-    // Each `selAt` ask as `{round, w, h, clear}`, and each click and fade as `selAct round chip` and `selFaded round`.
+    // Each `selAt` ask as `{round, w, h, size, clear}`, and each click and fade as `selAct round chip` and
+    // `selFaded round`.
     property var selAsks: []
     property var selCalls: []
     // The round whose fade ended, which the hub then forgets without a wake, and how often QML read the strip.
@@ -24,8 +25,8 @@ QtObject {
         const v = selView && selView.round !== selGone ? selView : null;
         return JSON.stringify(v);
     }
-    function selAt(round, w, h, clear) {
-        selAsks = selAsks.concat([{ round: round, w: w, h: h, clear: JSON.parse(clear) }]);
+    function selAt(round, w, h, size, clear) {
+        selAsks = selAsks.concat([{ round: round, w: w, h: h, size: size, clear: JSON.parse(clear) }]);
         return JSON.stringify(selSpot);
     }
     function selAct(round, chip) {

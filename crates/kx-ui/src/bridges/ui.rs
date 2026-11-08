@@ -216,10 +216,10 @@ pub mod qobject {
         #[qinvokable]
         fn sel(&self) -> QString;
 
-        /// Where strip `round`, measured `w` by `h` physical pixels, goes clear of `clear` (a JSON list of our windows'
-        /// boxes in physical pixels, or null): a JSON point in physical pixels, or null to show nothing.
+        /// Where strip `round`, measured `w` by `h` physical pixels for a keyboard at `size`, goes clear of `clear` (a
+        /// JSON list of our windows' boxes in physical pixels, or null): a JSON point in physical pixels, or null.
         #[qinvokable]
-        fn sel_at(&self, round: i64, w: f64, h: f64, clear: &QString) -> QString;
+        fn sel_at(&self, round: i64, w: f64, h: f64, size: f64, clear: &QString) -> QString;
 
         /// A click on keycap `chip`, an id from `sel`, of the strip of round `round`.
         #[qinvokable]

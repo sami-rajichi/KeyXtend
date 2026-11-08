@@ -139,11 +139,9 @@ px = 2.0
 plate = 0.88
 
 [chips]
-# The selection strip's keycaps (design/selection-chips.html design 4, .d-keys): one key row tall at the keyboard's size,
-# each as wide as its legend. The plate's padding around the caps, each cap's padding beside its legend, the word's size
-# (Arabic takes the theme's arabic_scale), the icon and the icon-to-word gap; then the gap between the selected line and
-# the strip (place()), scaled to that screen's DPI. The caps' gap, the legend's weight and the plate's corner and edge are
-# the theme's own, as on the keyboard (.key padding var(--gp)/2, font-weight var(--fw), border-radius var(--r-win)).
+# The selection strip's keycaps (design/selection-chips.html design 4, .d-keys), one key row tall and as wide as their
+# legend: plate and cap padding, word size (Arabic takes arabic_scale), icon, icon-to-word gap, and the gap from the
+# selected line (place(), 8 * S.size), all at size 1. The caps' gap, legend weight and plate corner are the theme's own.
 pad_px = 3.0
 cap_pad_px = 10.0
 font_px = 11.5

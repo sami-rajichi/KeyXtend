@@ -22,8 +22,17 @@ pub struct ChipsShape {
     pub icon_px: f32,
     /// Gap between the icon and the word.
     pub icon_gap_px: f32,
-    /// Gap between the selected line and the strip, scaled to that screen's DPI.
+    /// Gap between the selected line and the strip at size 1; `gap` grows it with the keyboard.
     pub gap_px: f32,
+}
+
+impl ChipsShape {
+    /// The gap between the selected line and the strip for a keyboard at `size`, in logical pixels, as the mock-up's
+    /// `place()` grows it; the hub and the gates scale it to that screen's DPI.
+    #[must_use]
+    pub fn gap(&self, size: f64) -> f64 {
+        f64::from(self.gap_px) * size
+    }
 }
 
 /// The caption bar (mock-up `.capbar`).

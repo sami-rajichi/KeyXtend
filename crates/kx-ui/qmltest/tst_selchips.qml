@@ -176,11 +176,13 @@ Item {
             compare(createTemporaryObject(namesC, root).group, Sel.group, "the group the gates find");
         }
 
-        // `selAt` takes physical pixels: the size times the selection screen's scale, once; its answer comes back to Qt.
+        // `selAt` takes physical pixels: the size times the selection screen's scale, once, with the keyboard's size for
+        // the gap; its answer comes back to Qt.
         function test_the_size_goes_to_the_hub_in_physical_pixels_once() {
-            const strip = make(view("en", "both", { round: 3, scale: 1.5 }), { logical: (x, y) => ({ x: x / 2, y: y / 2 }) });
+            const half = (x, y) => ({ x: x / 2, y: y / 2 });
+            const strip = make(view("en", "both", { round: 3, scale: 1.5 }), { s: 1.25, logical: half });
             const ask = strip.ui.selAsks[strip.ui.selAsks.length - 1];
-            compare([ask.round, ask.w, ask.h], [3, strip.width * 1.5, strip.height * 1.5]);
+            compare([ask.round, ask.w, ask.h, ask.size], [3, strip.width * 1.5, strip.height * 1.5, 1.25]);
             compare(JSON.stringify(ask.clear), JSON.stringify(root.boxes), "clear of our windows");
             compare([strip.x, strip.y], [strip.ui.selSpot.x / 2, strip.ui.selSpot.y / 2], "back in Qt units");
         }

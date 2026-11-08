@@ -1,11 +1,18 @@
 //! Where the strip should sit (P10 design "Where it sits"): the selection's line boxes joined as the platform joins
-//! them, then `geom::anchor` on that screen's work area with the theme's gap, clear of the keyboard; and its verdict.
+//! them, then `geom::anchor` on that screen's work area with the theme's gap for the keyboard's size, clear of the
+//! keyboard; and its verdict.
 #![cfg(windows)]
 
-use kx_module_api::ports::{Point, Rect, Strip, anchor};
+use kx_module_api::ports::{Point, Rect, Strip, anchor, physical};
 use kx_platform_windows::screen::{edges, rect_of};
+use kx_theme::Shape;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::RECT;
+
+/// The theme's gap from the text for a keyboard at `size` on a screen of `dpi`, in physical pixels, as the hub sets it.
+pub fn gap(shape: &Shape, size: f64, dpi: u32) -> i32 {
+    physical(shape.chips.gap(size), dpi)
+}
 
 /// `r` as the ports hold a box; an upside-down box gets no size.
 pub fn rect(r: &RECT) -> Rect {
@@ -85,6 +92,22 @@ mod tests {
         w: 1920,
         h: 1032,
     };
+
+    /// The mock-up's `place()` sets the strip `8 * S.size` from the text, at the screen's DPI.
+    #[test]
+    fn the_gap_grows_with_the_keyboards_size_and_the_screens_dpi() {
+        use kx_module_api::ports::BASE_DPI;
+        let shape = kx_theme::Themes::shipped().expect("themes").shape;
+        let token = f64::from(shape.chips.gap_px);
+        for (size, dpi) in [(1.0, BASE_DPI), (1.5, BASE_DPI), (1.5, BASE_DPI * 5 / 4)] {
+            assert_eq!(
+                gap(&shape, size, dpi),
+                physical(token * size, dpi),
+                "{size} at {dpi}"
+            );
+        }
+        assert!(gap(&shape, 1.5, BASE_DPI) > gap(&shape, 1.0, BASE_DPI));
+    }
 
     #[test]
     fn a_windows_box_becomes_a_ports_box_and_an_upside_down_one_has_no_size() {

@@ -95,14 +95,15 @@ impl Hub {
         kept.map_or_else(|| NULL.to_owned(), |k| json(&view::of(&k, &self.i18n())))
     }
 
-    /// The top-left, in physical pixels, of the strip of round `round` that QML measured `w` by `h` physical pixels: the
-    /// theme's `[chips]` gap from its line, clear of `clear` (our windows' boxes) when there is room, on its work area.
-    /// `None` for another round, no strip, or a size that does not fit that work area.
+    /// The top-left, in physical pixels, of the strip of round `round` that QML measured `w` by `h` physical pixels for
+    /// a keyboard at `size`: the theme's `[chips]` gap for that size from its line, clear of `clear` (our windows'
+    /// boxes) when there is room, on its work area. `None` for another round, no strip, a size that is not above 0 or
+    /// a strip that does not fit that work area.
     #[must_use]
-    pub fn sel_at(&self, round: i64, w: i32, h: i32, clear: &[Rect]) -> Option<Point> {
+    pub fn sel_at(&self, round: i64, w: i32, h: i32, size: f64, clear: &[Rect]) -> Option<Point> {
         let spot = self.sel().strip.as_ref().filter(|k| k.is(round))?.spot;
-        let gap = self.themes.shape.chips.gap_px;
-        let gap = physical(f64::from(gap), spot.screen.dpi);
+        let gap = (size > 0.0).then(|| self.themes.shape.chips.gap(size))?;
+        let gap = physical(gap, spot.screen.dpi);
         place::at(&spot, w, h, gap, clear)
     }
 
