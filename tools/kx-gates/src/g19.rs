@@ -2,11 +2,9 @@
 #![cfg(windows)]
 
 use kx_platform_windows::clip::open;
-use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::uia::{self, Sel, Uia};
 use serde_json::{Value, json};
 use spike_core::geom;
-use spike_core::selwatch::PillPx;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::ownkeys::{self, Real};
@@ -15,7 +13,7 @@ use crate::win::{self, sleep_ms};
 use crate::winclip::line;
 use crate::{launch, out, simuser};
 
-/// G19's run name: detection only, before the pill exists.
+/// G19's run name: detection only, each line read back through UI Automation.
 pub const CORE: &str = "core";
 /// The apps G19 selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
@@ -33,8 +31,8 @@ fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
     Ok(())
 }
 
-/// The selection of the focused element in `app`'s program, once UI Automation shows its text and a box for the pill.
-pub(crate) fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
+/// The selection of the focused element in `app`'s program, once UI Automation shows its text and a box.
+fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
     let (t, max, (pid, _)) = (&ctx.cfg.timing, ctx.cfg.g19.max_chars, win::owner(app.hwnd));
     win::poll_until(t.read_wait_ms, t.poll_ms, || {
         let f = uia
@@ -75,18 +73,13 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
         Err(e) => return json!({ "line": i, "ok": false, "error": e }),
     };
     let text = line(&sel.text);
-    let first = sel.boxes.first().copied().unwrap_or_default();
-    let pill = PillPx(ctx.spike.tools.pill_px).at(screen::dpi_of(&first));
-    let pill = work_area(&first)
-        .ok()
-        .and_then(|screen| geom::anchor(&sel.boxes, &screen, pill));
-    let ok = text == want && pill.is_some();
-    let shown = if text == want {
+    let ok = text == want;
+    let shown = if ok {
         json!(text)
     } else {
         json!({ "chars": text.chars().count() })
     };
-    json!({ "line": i, "ok": ok, "text": shown, "boxes": sel.boxes.len(), "pill": pill.map(|p| [p.x, p.y]) })
+    json!({ "line": i, "ok": ok, "text": shown, "boxes": sel.boxes.len() })
 }
 
 /// Checks every line in `app`, and that the clipboard never changed.
@@ -168,11 +161,17 @@ fn verdict(all_ok: bool, left: &[AppKind]) -> Value {
     out::pass(all_ok, left.is_empty())
 }
 
-/// Runs G19 detection in Notepad, then Chrome; any other name is a face whose pill is checked.
-pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    if name != CORE {
-        return crate::g19pill::run(ctx, name);
+/// Refuses any run name but `CORE`; `facearg` refuses it first, so this guards a direct call.
+fn only_core(name: &str) -> Result<(), String> {
+    if name == CORE {
+        return Ok(());
     }
+    Err(format!("G19 runs {CORE} only, not {name}"))
+}
+
+/// Runs G19 detection in Notepad, then Chrome.
+pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
+    only_core(name)?;
     let apps: Vec<Value> = APPS.iter().map(|&k| one(ctx, k)).collect();
     let left = left_out();
     let pass = verdict(apps.iter().all(|a| a["ok"] == true), &left);
@@ -183,6 +182,13 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn g19_runs_its_detection_only() {
+        assert_eq!(only_core(CORE), Ok(()));
+        let e = only_core(spike_core::config::FACE).expect_err("the face's pill is gone");
+        assert!(e.contains(CORE), "{e}");
+    }
 
     #[test]
     fn g19_core_is_at_most_partial_while_a_roadmap_app_is_not_run() {

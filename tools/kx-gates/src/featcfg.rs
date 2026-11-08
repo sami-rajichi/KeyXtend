@@ -105,10 +105,6 @@ pub struct G19 {
     pub box_name: String,
     /// Style of Chrome's text box.
     pub box_css: String,
-    /// Longest wait for the face's pill to show or hide, in ms.
-    pub pill_wait_ms: u64,
-    /// How far the pill may sit from where kx-gates expects it, in physical px.
-    pub pill_slack_px: i32,
 }
 
 /// Clipboard history probe.

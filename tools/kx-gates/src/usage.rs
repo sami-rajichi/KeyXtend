@@ -44,11 +44,9 @@ fn product_lines() -> String {
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g19 <{}|{FACE}>
        {PROG} g22 <{FACE}|{}|{}|{}>
        {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
-        g19::CORE,
         g22::BENCH,
         g22bench::WITH_CLOUD,
         g22type::TYPING,
@@ -98,6 +96,7 @@ pub fn usage() -> String {
        {PROG} assist <{}|{}> [--secs N]
        {PROG} g17 <{}>
        {PROG} g18 <{}>
+       {PROG} g19 <{}>
 {}
        {PROG} g20 <{}|{NAME}|{}>
        {PROG} g21 <{}>
@@ -116,6 +115,7 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         hand::GRAB,
         names(&g17::APPS),
         names(&g18::APPS),
+        g19::CORE,
         face_lines(),
         names(&g20::APPS),
         workertok::WORKER,
@@ -224,6 +224,12 @@ mod tests {
         for line in lines {
             assert!(line.contains("kx-gates "), "{line}");
         }
+    }
+
+    #[test]
+    fn g19_lists_its_detection_run_only() {
+        let text = usage();
+        assert!(text.contains(&format!("g19 <{}>", g19::CORE)), "{text}");
     }
 
     #[test]

@@ -1,5 +1,5 @@
 //! The keyboard argument: gates aimed at the product take its name, gates that still drive the frozen spike face take
-//! the face's, and `close` takes either; a gate's own names stay valid.
+//! the face's, and `close` takes either; a gate's own names stay valid, and a gate with only those takes nothing else.
 #![cfg(windows)]
 
 use spike_core::config::FACE;
@@ -12,7 +12,7 @@ pub(crate) const PRODUCT_GATES: [&str; 13] = [
     "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g23", "g26", "g27", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
-pub(crate) const FACE_GATES: [&str; 5] = ["g7", "g19", "g22", "g24", "close"];
+pub(crate) const FACE_GATES: [&str; 4] = ["g7", "g22", "g24", "close"];
 
 /// The keyboards `gate` takes: the product, the frozen face, both or none.
 fn keyboards(gate: &str) -> Vec<&'static str> {
@@ -40,11 +40,12 @@ fn own_names(gate: &str) -> &'static [&'static str] {
     }
 }
 
-/// Refuses a keyboard gate's name that is neither a keyboard it takes nor one of the gate's own names.
+/// Refuses a name that is neither a keyboard `gate` takes nor one of its own names; a gate with neither takes any.
 pub fn check(gate: &str, name: &str) -> Result<(), String> {
-    let keyboards = keyboards(gate);
-    let known = keyboards.contains(&name) || own_names(gate).contains(&name);
-    if !keyboards.is_empty() && !known {
+    let (keyboards, own) = (keyboards(gate), own_names(gate));
+    let known = keyboards.contains(&name) || own.contains(&name);
+    let open = keyboards.is_empty() && own.is_empty();
+    if !open && !known {
         return Err(format!("unknown keyboard {name}\n{}", usage()));
     }
     Ok(())
@@ -92,6 +93,15 @@ mod tests {
                 assert!(e.contains("unknown keyboard"), "{gate} {gone}: {e}");
                 assert!(e.contains(&usage()), "{gate} {gone}: {e}");
             }
+        }
+    }
+
+    #[test]
+    fn g19_takes_only_core_now_that_the_faces_pill_is_gone() {
+        assert!(check("g19", g19::CORE).is_ok());
+        for name in [FACE, "notepad"] {
+            let e = check("g19", name).expect_err(name);
+            assert!(e.contains("unknown keyboard"), "g19 {name}: {e}");
         }
     }
 
