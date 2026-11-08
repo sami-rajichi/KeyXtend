@@ -1,10 +1,10 @@
-//! The strip's JSON: each keycap's id, word and done word in the keyboard's language, worded again when that language
-//! or the `[ui] language` setting changes, the legend as two flags, the strip's reader name and the selection screen's
-//! scale.
+//! The strip's JSON: each keycap once, in one order, with its id, word and done word in the keyboard's language, worded
+//! again when that language or the `[ui] language` setting changes, the legend as two flags, the strip's reader name
+//! and the selection screen's scale.
 
 use super::{heard, sel, spot, strip, ticked, usual, view};
 use crate::Rig;
-use kx_module_api::ports::{BASE_DPI, KeyboardFace, Legend, SelChip};
+use kx_module_api::ports::{BASE_DPI, ChipsView, KeyboardFace, Legend, SelChip};
 use kx_ui::i18n::keys::{SEL_NAME, SEL_WORD, sel_chip_id};
 use kx_ui::{AUTO, I18n, UiSettings, Wake, find};
 use serde_json::Value;
@@ -34,6 +34,26 @@ fn the_json_names_each_chip_with_its_word_and_done_word_the_legend_and_the_scale
     let scaled = strip(2, spot(100, 300, BASE_DPI * 5 / 4), None, Legend::Both);
     bus.publish(&scaled).unwrap();
     assert_eq!(sel(&rig)["scale"], 1.25, "the selection screen's scale");
+}
+
+/// QML draws one keycap per chip, so the hub keeps them in `SelChip::ALL`'s order (ADR-0020), at most one each.
+#[test]
+fn the_keycaps_keep_their_order_once_each_whatever_the_view_sends() {
+    let rig = Rig::new();
+    let (bus, _sent, _subs) = heard(&rig);
+    let (copy, cut, translate) = (SelChip::Copy, SelChip::Cut, SelChip::Translate);
+    let mixed = ChipsView::Shown {
+        round: 1,
+        chips: vec![translate, copy, translate, cut, copy],
+        spot: usual(),
+        acted: None,
+        legend: Legend::Both,
+    };
+    bus.publish(&mixed).unwrap();
+    let shown = sel(&rig);
+    let chips = shown["chips"].as_array().unwrap();
+    let ids: Vec<&str> = chips.iter().map(|c| c["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, [copy, cut, translate].map(sel_chip_id));
 }
 
 #[test]

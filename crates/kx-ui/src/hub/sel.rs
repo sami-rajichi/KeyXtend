@@ -44,7 +44,8 @@ struct Kept {
 }
 
 impl Kept {
-    /// The strip `view` shows; none for `Hidden`, no chips, an unknown screen or boxes that make no sense.
+    /// The strip `view` shows, its keycaps in `SelChip::ALL`'s order and once each (ADR-0020); none for `Hidden`, no
+    /// chips, an unknown screen or boxes that make no sense.
     fn of(view: ChipsView) -> Option<Self> {
         let ChipsView::Shown {
             round,
@@ -56,6 +57,10 @@ impl Kept {
         else {
             return None;
         };
+        let chips: Vec<SelChip> = SelChip::ALL
+            .into_iter()
+            .filter(|c| chips.contains(c))
+            .collect();
         let shows = !chips.is_empty() && place::sane(&spot);
         shows.then_some(Self {
             round,
