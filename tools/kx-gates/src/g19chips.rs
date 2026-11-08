@@ -27,6 +27,7 @@ mod select;
 mod spots;
 mod strip;
 mod term;
+mod termrow;
 mod terms;
 
 pub use link::{site_key, text_of};
