@@ -1,7 +1,7 @@
 //! Where the selection handler sits: on the box last looked at while it may show chips, added again where an add
 //! failed, gone from a closed box, and left as it is after a look that failed or came late. A box whose window hangs
-//! keeps its handler until a later look finds that window answering, or the watch stops (Ruling AC). Pure over a
-//! `Hook`, so a fake proves each move.
+//! gets no add, and keeps a handler it has until a later look finds that window answering, or the watch stops (Ruling
+//! AC). Pure over a `Hook`, so a fake proves each move.
 
 use kx_module_api::ports::{SelError, SelKind, SelSpot};
 
@@ -9,16 +9,19 @@ use kx_module_api::ports::{SelError, SelKind, SelSpot};
 pub(crate) trait Hook {
     /// One element, as the OS hands it over.
     type El;
-    /// Where the handler was added, with what its removal and the hung check need.
+    /// Where the handler goes on an element, with what its add, its removal and the hung check need.
     type On;
 
-    /// Adds the handler on `el` alone; `None` when the OS refused it.
-    fn add(&self, el: &Self::El) -> Option<Self::On>;
+    /// Where an add on `el` would go, read now.
+    fn at(&self, el: &Self::El) -> Self::On;
+
+    /// Adds the handler on `on` alone; false when the OS refused it.
+    fn add(&self, on: &Self::On) -> bool;
 
     /// Removes the handler from `on`, where it was added.
     fn remove(&self, on: &Self::On);
 
-    /// True while the app holding `on` does not answer, so a removal would wait on it.
+    /// True while the app holding `on` does not answer, so an add or a removal would wait on it.
     fn hung(&self, on: &Self::On) -> bool;
 }
 
@@ -89,9 +92,15 @@ impl<O> Heard<O> {
             self.on = match self.left.iter().position(|(at, _)| same(*at, id)) {
                 // The box whose removal waited takes its handler back, with no second add.
                 Some(at) => Some(self.left.swap_remove(at).1),
-                None => hook.add(el),
+                None => Self::add(hook, el),
             };
         }
+    }
+
+    /// Adds the handler on `el`, unless its window reads hung, when a later look adds it once that window answers.
+    fn add<H: Hook<On = O>>(hook: &H, el: &H::El) -> Option<O> {
+        let on = hook.at(el);
+        (!hook.hung(&on) && hook.add(&on)).then_some(on)
     }
 
     /// Removes the handler from everywhere it is, at the watch's stop, hung or not (Ruling AC).

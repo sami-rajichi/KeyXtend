@@ -72,28 +72,32 @@ struct WinSel {
     heard: RefCell<Heard<Added>>,
 }
 
-/// Where the selection handler was added: the element, and its top-level window, read while its app answered.
+/// Where the selection handler goes: the element, and its top-level window, read before the add.
 struct Added {
     el: IUIAutomationElement,
     top: HWND,
 }
 
-/// The selection handler added on one element alone, not on the tree below it, and removed from it, except while
-/// Windows reports its app hung.
+/// The selection handler added on one element alone, not on the tree below it, and removed from it; `Heard` sends
+/// neither call to an app Windows reports hung, but for the stop's removal.
 impl Hook for WinSel {
     type El = IUIAutomationElement;
     type On = Added;
 
-    fn add(&self, el: &IUIAutomationElement) -> Option<Added> {
+    fn at(&self, el: &IUIAutomationElement) -> Added {
+        Added {
+            el: el.clone(),
+            top: top(el),
+        }
+    }
+
+    fn add(&self, on: &Added) -> bool {
         let event = UIA_Text_TextSelectionChangedEventId;
-        let added = add_event(&self.auto, event, el, TreeScope_Element, &self.hear);
+        let added = add_event(&self.auto, event, &on.el, TreeScope_Element, &self.hear);
         if let Err(e) = &added {
             tracing::debug!(code = %e.code(), "a box refused the selection handler");
         }
-        added.ok().map(|()| Added {
-            el: el.clone(),
-            top: top(el),
-        })
+        added.is_ok()
     }
 
     fn remove(&self, on: &Added) {

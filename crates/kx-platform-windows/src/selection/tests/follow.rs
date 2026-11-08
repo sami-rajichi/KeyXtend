@@ -1,6 +1,7 @@
 //! Where the selection handler sits, over a fake hook: added on an open box and kept there, moved to another box,
 //! taken off a closed one, tried again after a failed add, left alone by a failed or late look, kept on a hung box
-//! until it answers or the watch stops, and never on more than one answering element (property).
+//! until it answers or the watch stops, never added on a hung one, and never on more than one answering element
+//! (property).
 
 use super::super::follow::{Heard, Hook, Seen, same};
 use kx_module_api::ports::{Screen, SelError, SelKind, SelSpot};
@@ -36,13 +37,17 @@ impl Hook for Fake {
     type El = u8;
     type On = u8;
 
-    fn add(&self, el: &u8) -> Option<u8> {
+    fn at(&self, el: &u8) -> u8 {
+        *el
+    }
+
+    fn add(&self, el: &u8) -> bool {
         self.calls.borrow_mut().push((true, *el));
         let took = !self.refuse.get();
         if took {
             self.held.borrow_mut().push(*el);
         }
-        took.then_some(*el)
+        took
     }
 
     fn remove(&self, el: &u8) {
@@ -226,6 +231,37 @@ fn the_stop_removes_a_handler_left_on_a_hung_window() {
     assert!(hook.held.borrow().is_empty(), "never left for good");
 }
 
+#[test]
+fn a_hung_box_gets_no_handler_until_its_window_answers() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    hook.hang(&[1]);
+    heard.look(&hook, &1, 10, Seen::Open);
+    heard.look(&hook, &1, 10, Seen::Open);
+    assert_eq!(hook.take(), [], "no add on a hung app");
+    hook.hang(&[]);
+    heard.look(&hook, &1, 10, Seen::Open);
+    assert_eq!(hook.take(), [add(1)], "it answers again");
+}
+
+#[test]
+fn a_hung_box_with_no_id_gets_no_extra_handler_at_each_look() {
+    let (hook, mut heard) = (Fake::default(), Heard::default());
+    heard.look(&hook, &1, 0, Seen::Open);
+    hook.hang(&[1]);
+    for _ in 0..3 {
+        heard.look(&hook, &1, 0, Seen::Open);
+    }
+    assert_eq!(
+        hook.take(),
+        [add(1)],
+        "its handler waits, and none is added"
+    );
+    hook.hang(&[]);
+    heard.look(&hook, &1, 0, Seen::Open);
+    assert_eq!(hook.take(), [remove(1), add(1)]);
+    assert_eq!(*hook.held.borrow(), [1]);
+}
+
 /// The spot of a box of `kind`.
 fn spot(kind: SelKind) -> SelSpot {
     SelSpot {
@@ -265,7 +301,7 @@ fn any_look() -> impl Strategy<Value = (u8, Seen, bool, Vec<u8>)> {
 
 proptest! {
     /// After a sure look, every answering element that holds the handler is the open box just looked at, so only hung
-    /// windows keep an old one; the stop takes every one off.
+    /// windows keep an old one; no add goes to a hung app, no element holds two, and the stop takes every one off.
     #[test]
     fn the_handler_is_on_at_most_the_last_open_box(looks in prop::collection::vec(any_look(), 0..24)) {
         let (hook, mut heard) = (Fake::default(), Heard::default());
@@ -274,15 +310,21 @@ proptest! {
             hook.hang(&hung);
             let before = hook.held.borrow().clone();
             heard.look(&hook, &el, u64::from(el), seen);
-            let held = hook.held.borrow().clone();
+            let (held, calls) = (hook.held.borrow().clone(), hook.take());
             if seen == Seen::Unsure {
                 prop_assert_eq!(held, before, "an unsure look touches nothing");
                 continue;
             }
+            let hung_add = calls.iter().any(|&(add, at)| add && hung.contains(&at));
+            prop_assert!(!hung_add, "an add on a hung app: {calls:?}");
+            let mut once = held.clone();
+            once.sort_unstable();
+            once.dedup();
+            prop_assert_eq!(once.len(), held.len(), "one handler per element");
             let awake: Vec<_> = held.iter().filter(|h| !hung.contains(h)).collect();
             prop_assert!(awake.len() <= 1, "{held:?}");
             prop_assert!(awake.iter().all(|h| seen == Seen::Open && **h == el), "{held:?}");
-            if seen == Seen::Open && !refuse {
+            if seen == Seen::Open && !refuse && !hung.contains(&el) {
                 prop_assert!(held.contains(&el), "{held:?}");
             }
         }
