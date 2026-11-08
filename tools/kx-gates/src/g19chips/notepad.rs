@@ -134,8 +134,8 @@ impl Lines {
         }
     }
 
-    /// A drag over `line` from past its end back to its start: the press leaves the caret before the line's break, which
-    /// a drag that ends past the end selects too.
+    /// A drag over `line` from past its end back to its start: the press leaves the caret before the line's break,
+    /// which a drag that ends past the end selects too.
     pub fn back_over(&self, line: Line) -> (POINT, POINT) {
         (self.end(line), self.start(line))
     }

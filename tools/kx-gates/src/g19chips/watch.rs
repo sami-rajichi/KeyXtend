@@ -1,6 +1,6 @@
 //! The product's own selection watch, run in the gate with the module's defaults around a terminal case: what one look
 //! finds before and after the gate's drag, the changes heard between, and the gate's own read of the selection's boxes.
-//! Numbers and kinds only, never text, so a missed strip says whether the app's selection, its event or the look failed.
+//! Numbers and kinds only, never text, so a missed strip says whether the selection, its event or the look failed.
 #![cfg(windows)]
 
 use std::sync::Arc;
