@@ -1,7 +1,7 @@
 //! What the keyboard module declares: typing needs the injector, the layout source, the layouts service and the
 //! shortcuts, it provides the `KeyboardFace` the UI draws, behind `KeyboardUi`, it tells and types words behind
-//! `ReadFocusedText`, it sends the clipboard panel's keys and pastes behind the clipboard gates, and Quick-fill's keys
-//! and fills behind `Vault`.
+//! `ReadFocusedText`, it sends the clipboard panel's keys and pastes behind the clipboard gates, Quick-fill's keys
+//! and fills behind `Vault`, and the selection chips' edit keys behind `Selection`.
 
 use crate::settings::SPEC;
 use kx_module_api::ports::{
@@ -14,7 +14,8 @@ pub const ID: ModuleId = ModuleId::new("keyboard");
 
 /// The module's manifest: `InjectInput` gates all four services it needs, `KeyboardUi` the face it provides,
 /// `ReadFocusedText` the typed pieces, the typing mode and the picked words, and `ReadClipboard` and `WriteClipboard`
-/// the panel's state and keys and the paste requests, and `Vault` Quick-fill's; it needs no clipboard or vault service.
+/// the panel's state and keys and the paste requests, `Vault` Quick-fill's and `Selection` the chips' edit requests; it
+/// needs no clipboard, vault or selection service.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -33,6 +34,8 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::WriteClipboard,
         // An event gate only, as `ReadClipboard` is for the clipboard: Quick-fill's state, keys and fills need it.
         Capability::Vault,
+        // An event gate only too: the chips' edit requests and their answers need it (ADR-0041 decision 3).
+        Capability::Selection,
     ],
     settings: Some(&SPEC),
 };
@@ -43,9 +46,9 @@ mod tests {
     use kx_module_api::Event;
     use kx_module_api::ports::{
         AimedLine, BoxesKey, ClipKey, ClipLine, ClipPanel, ClipboardKey, ClipboardWriterKey,
-        FillAsk, FillClose, FillKey, FillLine, FillLive, FillOpen, FillPanel, FillType, FillTyped,
-        PanelPressesWanted, PasteAsk, Pasted, PlacesKey, PressesAsk, TypeWord, Typed, TypingMode,
-        TypingModeAsk, VaultStoreKey,
+        EditAsk, EditDone, FillAsk, FillClose, FillKey, FillLine, FillLive, FillOpen, FillPanel,
+        FillType, FillTyped, PanelPressesWanted, PasteAsk, Pasted, PlacesKey, PressesAsk, TypeWord,
+        Typed, TypingMode, TypingModeAsk, VaultStoreKey,
     };
 
     #[test]
@@ -74,6 +77,7 @@ mod tests {
             Capability::ReadClipboard,
             Capability::WriteClipboard,
             Capability::Vault,
+            Capability::Selection,
         ];
         assert_eq!(MANIFEST.capabilities, want);
         let gates = [
@@ -135,6 +139,13 @@ mod tests {
             !MANIFEST.capabilities.contains(&Capability::VaultData),
             "ADR-0039"
         );
+    }
+
+    #[test]
+    fn the_selection_gate_covers_the_edit_asks_and_their_answers() {
+        assert!(MANIFEST.capabilities.contains(&Capability::Selection));
+        let edits = [EditAsk::CAPABILITY, EditDone::CAPABILITY];
+        assert_eq!(edits, [Some(Capability::Selection); 2]);
     }
 
     #[test]

@@ -4,6 +4,7 @@
 mod aim;
 mod assist;
 mod clip;
+mod edit;
 mod fill;
 mod fit;
 mod held;
