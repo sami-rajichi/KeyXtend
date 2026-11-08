@@ -33,18 +33,18 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 ### The keycaps (owner: design 4)
 
 - One strip of real keycaps on the keyboard's plate, in the theme in front: flat caps in Native, convex caps in ET66, sculpted caps in Dolch, light or dark as the keyboard is.
-- Each keycap shows an icon and a word: Copy (`copy`), Cut (`scissors`), Paste (`clipboard-paste`) and Translate (Lucide `languages`, added after `kx-licence-check`). `icons` and `words` can turn either off, never both.
+- Each keycap shows an icon and a word: Copy (`copy`), Cut (`scissors`), Paste (`clipboard-paste`) and Translate (Lucide `languages`, added after `kx-licence-check`). One setting, `look`, shows both (the default), the icons alone or the words alone, so a keycap never shows nothing.
 - Words are in the keyboard's language (EN, FR, AR) and come from the translations: Copy, Cut, Paste and Translate; Copier, Couper, Coller et Traduire; نسخ، قص، لصق، ترجمة. Arabic flips text only: the order stays Copy, Cut, Paste, Translate from left to right (ADR-0020).
-- **Size (owner):** each keycap is one key row tall at the keyboard's current size (31, 39 or 47 px at the presets 1.0, 1.25, 1.5) and grows with it. Paddings, gaps and the plate's edge come from theme tokens (`shape.toml`), which replace the old `[pill]` tokens.
+- **Size (owner):** each keycap is one key row tall at the keyboard's current size (31, 39 or 47 px at the presets 1.0, 1.25, 1.5) and grows with it. Paddings, the word and icon sizes and the gap from the text come from `shape.toml [chips]`, which replaced the old `[pill]` tokens; the keycaps' gap, legend weight and plate corner are each theme's own, as in the mock-up.
 - Each keycap is as wide as its label needs; the strip's place is worked out from its real size, never from a fixed width (P10 item note).
-- **Motion:** the strip pops in as the mock-up's `.selpill` did (`motion.toml` `pill`). A clicked keycap presses like a key, shows a tick and a past-tense word (Copied, Cut, Pasted, Opening; Copié, Coupé, Collé, Ouverture; تم النسخ، تم القص، تم اللصق، جارٍ الفتح), then the strip fades. Reduced motion skips the pop and the fade. Timings are motion tokens.
+- **Motion:** the strip pops in as the mock-up's `.selpill` did (`motion.toml` `chips`). A clicked keycap presses like a key, shows a tick and a past-tense word (Copied, Cut, Pasted, Opening; Copié, Coupé, Collé, Ouverture; تم النسخ، تم القص، تم اللصق، جارٍ الفتح), then the strip fades. Reduced motion skips the pop and the fade but keeps the tick's time. Timings are motion tokens: `chips`, `chips_fade` and `[shows] chips_done`.
 - **Sound:** a click plays the key click sound when key sounds are on.
 - **Readers:** each keycap is a button named by its word; the strip never takes focus.
 
 ### Where it sits
 
-- Just under the selection's last line, centred on that line (the spike's rule, which G19 placed within 1 px), `gap` theme pixels below it.
-- Above the first line when there is no room below, or when the strip would cover the keyboard or one of our panels.
+- Just under the selection's last line, centred on that line (the spike's rule, which G19 placed within 1 px), the theme's gap below it, which grows with the keyboard's size as the mock-up's does.
+- Above the first line when there is no room below, or when the strip would cover the keyboard or one of our panels and there is room above; covering the keyboard's edge beats covering the text.
 - Always inside the work area of the screen that holds the selection, sized for that screen's DPI.
 - It moves when the selection moves (a scroll, a typed key that changes the line) at the next look.
 
@@ -59,7 +59,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
   - a terminal: Copy, Paste, Translate; never Cut;
   - a password box, a box of unknown kind, or our own windows: nothing.
 - A selection made with our keyboard (Shift with the arrows, Select all from the Shortcuts layer) shows the chips too.
-- A selection Grab made (spec §5.1) shows them at once: Grab's drop asks for a look (`AssistNote` dropped).
+- A selection Grab made (spec §5.1) shows them too. As built, the module follows Grab's state (`AssistChanged`), not `AssistNote`, which needs `KeyboardUi`: a release is no look while Grab carries, and after the drop the next release or the app's own selection event looks.
 
 ### At a caret (owner)
 
@@ -71,6 +71,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 - Minimised to its bubble: the chips still show (owner, `minimised` = on).
 - Closed to the tray, or the module switched off: no chips.
 - While one of our panels' lines is aimed at (ADR-0040), no chips: the letters go to the panel, not the app.
+- As built: the ui only tells the keyboard's place (`BoardPlace`: open, minimised or tray), and the selection module applies these rules and puts the keycaps' legend in each view, so the ui reads none of its settings.
 
 ## When the chips hide
 
@@ -92,9 +93,9 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 
 - **Why the browser page:** extensions translate for free through private addresses of Google or Microsoft that have no published terms for other apps. Free official services need an account and a key for each user. Zen and Firefox translate on the PC with small local models ([Zen](https://docs.zen-browser.app/user-manual/translate)), which needs an engine and model downloads that P11 builds for voice. The owner chose the page now and the in-app box later.
 - **The click:** the selected text is read once, at most `translate_chars` characters (1,000, cut at a whole word), and goes into the chosen site's link, which opens in the user's default browser. The link was tested on 2026-11-07: Google detected English and gave correct Arabic.
-- **Consent:** the first click asks once, in a banner, because the text leaves the PC: "Translate opens Google Translate in your browser and sends it the selected text." Yes opens it and saves `translate_ok`; Not now opens nothing and asks again next time (builder's call). Settings can turn it off again.
+- **Consent:** the first click asks once, in a banner, because the text leaves the PC: "Translate opens Google Translate in your browser and sends it the selected text." Yes saves `translate_ok` and opens the page, but only while the strip it asked about still shows: a selection changed during the wait was not the one the user chose, so it opens nothing. Not now opens nothing and asks again next time (builder's call). Settings can turn it off again.
 - **Target:** `translate_to`, empty by default, which means Windows' display language (the OS's on other platforms); otherwise a language code. The page itself lets the user change it.
-- **Sites:** a table in the module (`sites.toml`): an id, a name, a link pattern with the text and target, and its own length limit. P10 ships `google`; `translate_site` picks one.
+- **Sites:** a table in the module (`sites.toml`): an id, a name, a link pattern with the text and target, its own length limit, and the most bytes of the whole encoded link (`link_max`, provisional until G19 measures it). P10 ships `google`; `translate_site` picks one.
 - **Never:** the text in a log, the link in a log, a read before the click, a read in a password box, or a link opened by our own process with its rights: the platform hands the link to the desktop shell, as the Reveal port opens folders (P8).
 - **Later (F8):** a `translate_with` choice of "browser page" or "on this PC"; the same keycap then shows the translation in a box, with Mozilla's models (about 24 MB per direction, Arabic both ways, MPL-2.0; `kx-licence-check` first).
 
@@ -103,10 +104,10 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 - `on` (true): the whole helper.
 - `copy`, `cut`, `paste`, `translate` (true): each keycap.
 - `caret_paste` (true) and `caret_s` (5, from 2 to 30).
-- `icons`, `words` (true): never both off; the repair turns words back on.
+- `look` (`both`): `both`, `icons` or `words`; a bad value goes back to `both` with the settings notice.
 - `minimised` (true): show while the keyboard is minimised.
 - `translate_to` (""), `translate_site` ("google"), `translate_chars` (1,000, at most the site's limit), `translate_ok` (false, set by the first Yes).
-- The builder adds the timing and limit settings the detection needs (how long a look waits after an event, how long one read may take), each with bounds.
+- The builder adds the timing and limit settings the detection needs, each with bounds: `settle_ms`, `read_ms`, `looks_per_s` and `consent_s` (`crates/kx-mod-selection/README.md`).
 
 ## How the selection is found (Windows first)
 
@@ -126,8 +127,8 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 
 ## Moving the spike (move map, P10 row)
 
-- `core/src/selwatch.rs` and `geom.rs`: the pure placement into `kx-mod-selection`, the UIA part into `kx-platform-windows`; `qt-kb/qml/Pill.qml` becomes kx-ui's keycap strip; the pill case of `tst_extras.qml` moves into kx-ui's Qt Quick tests, where the shadow plugin loads (P10 item note); `sendkeys` `combo`, the pill part of `tools.rs` and the `[tools]` pill lines are deleted.
-- Gates `g19` and `g19pill` aim at the product: Notepad and Chrome, never Word (owner, 2026-10-16), on the test build's own data folder.
+- `core/src/selwatch.rs` and `geom.rs`: the show rules into `kx-mod-selection`, the UIA part into `kx-platform-windows`, and the pure placement (`anchor`) into `kx_module_api::ports::geom`, with which the ui's hub places the strip; `qt-kb/qml/Pill.qml` becomes kx-ui's keycap strip; the pill case of `tst_extras.qml` moves into kx-ui's `tst_selchips_app.qml`, where the shadow plugin loads (P10 item note); `sendkeys` `combo`, the pill part of `tools.rs` and the `[tools]` pill lines are deleted.
+- Gate `g19pill` is gone. `g19 core` is detection only, in Notepad and Chrome; `g19 keyxtend` drives the strip on the test build's own data folder, in Notepad, Chrome, Windows Terminal and the console, never Word (owner, 2026-10-16); `g19 translate-read` and `g19 translate-beside` only read the page the owner opens.
 
 ## Left to the builder
 
@@ -139,6 +140,6 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 ## Tests and checks
 
 - Unit and property tests for placement, the show and hide rules, the kind table and the link builder (EN, FR, AR text, the cap, hidden characters), all on the fake clock.
-- Qt Quick tests for the strip in each theme, light and dark, each language, each size, icons and words on or off.
-- G19 on the product: a selection in Notepad and Chrome is noticed without copying; the strip shows without taking focus; Copy copies; Cut and Paste work in Notepad; a page in Chrome shows no Cut; the caret Paste shows after a click; Translate opens the page after the first Yes.
+- Qt Quick tests for the strip in each theme, light and dark, each language, each size, and each `look`.
+- G19 on the product: a selection in Notepad and Chrome is noticed without copying; the strip shows without taking focus; Copy copies; Cut and Paste work in Notepad; a page in Chrome shows no Cut; the caret Paste shows after a click; Windows Terminal and the console take the terminal keys; Translate asks once, and Not now opens nothing. Translate's real open, which sends text to Google, is in the owner's manual check.
 - Edge cases: an empty or whitespace selection, a selection scrolled off screen, a selection over two screens, a box closed while the strip shows, Arabic text, a very long selection, a terminal whose selection clears before the click, a password box, a hung app.

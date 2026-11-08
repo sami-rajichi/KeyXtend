@@ -90,7 +90,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G16 Linux, hands-on | In the Linux virtual PC (GNOME and KDE, Wayland and X11): stays on top without focus, types, and scales at 125/150 % |
 | G17 Grab (core) | Click, move, click drags a file in Explorer and selects text in Notepad, Word and Chrome. Esc cancels, and the button is never left pressed |
 | G18 Modifier + click (core) | Shift+click extends a selection in Notepad and Chrome; Ctrl+click selects several files in Explorer |
-| G19 Selection helper | A selection in Notepad, Word and Chrome is noticed without copying it (core). The pill appears without taking focus, and its Copy button copies |
+| G19 Selection helper | A selection in Notepad and Chrome is noticed without copying it (core). On the product, the selection strip shows without taking focus in Notepad, Chrome, Windows Terminal and the console: Copy, Cut and Paste work, a page shows no Cut, a terminal takes keys that never stop its program, a caret shows Paste, and Translate asks once. Translate's real open is in the owner's manual check |
 | G20 Clipboard (core) | Every copy is seen; copies marked "exclude from history" are skipped; one click pastes an older entry into Notepad and Word |
 | G21 Password fields (core) | Focus in a password box is flagged in Chrome and in a Win32 password field; normal fields are not flagged |
 | G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
