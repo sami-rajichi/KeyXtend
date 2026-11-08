@@ -1,7 +1,9 @@
-//! Where the strip goes when the selection sits low or on another screen: the gate's own Notepad window, never a
-//! maximised one or the owner's tab, moves so its copy line sits `near_px` above the plate or the screen's bottom.
+//! Where the strip goes when the selection sits low or on another screen: the gate's own Notepad window, new since it
+//! opened its file and not maximised, moves so its copy line sits `near_px` above the plate or the screen's bottom.
 //! The strip must then go above it (judged), its place on a second screen is a note, and the window always moves back.
 #![cfg(windows)]
+
+use std::collections::HashSet;
 
 use kx_mod_keyboard::Nav;
 use kx_module_api::ports::{Point, Rect};
@@ -50,13 +52,31 @@ pub fn other_screen(areas: &[Rect], at: Point) -> Option<Rect> {
     areas.iter().copied().find(|a| !contains(*a, at))
 }
 
-/// Fails unless `app`'s window may move: not `zoomed` (maximised), and in front on `desk` with our tab, so the
-/// owner's window and its other tabs never move.
-pub fn movable(desk: &dyn Desk, app: &Opened, zoomed: bool) -> Result<(), String> {
-    if zoomed {
-        return Err("Notepad is maximised, so the gate does not move it".into());
+/// True when window `w` is the gate's own: it was not among the windows `before` that the gate took before it opened
+/// its file, so it is no owner's window holding the gate's tab.
+pub fn own(before: &HashSet<isize>, w: isize) -> bool {
+    !before.contains(&w)
+}
+
+/// Why the gate leaves Notepad's window where it is: not its `own`, or `zoomed` (maximised); none when it may move.
+pub fn stays(own: bool, zoomed: bool) -> Option<&'static str> {
+    if !own {
+        return Some("not moved: the window is not the gate's own");
     }
-    ownkeys::ours(desk, app)
+    zoomed.then_some("not moved: Notepad is maximised")
+}
+
+/// Whether `app`'s window moves: none once `ours` allows it on `desk`, else why it stays; an error while our tab is
+/// not in front, so the owner's window and its other tabs never move.
+pub fn movable(
+    desk: &dyn Desk,
+    app: &Opened,
+    (own, zoomed): (bool, bool),
+) -> Result<Option<&'static str>, String> {
+    if let Some(why) = stays(own, zoomed) {
+        return Ok(Some(why));
+    }
+    ownkeys::ours(desk, app).map(|()| None)
 }
 
 /// True while window `app` is maximised.
@@ -75,17 +95,19 @@ fn move_to(app: &Opened, to: Point) -> Result<(), String> {
         .map_err(|e| format!("moving Notepad: {e}"))
 }
 
-/// `drive` run on `lines` with `app`'s window moved to `to`, once `movable` allows it, then the window moved back
-/// whatever happened.
+/// `drive` run on `lines` with `app`'s window moved to `to`, once `movable` allows it for a window that is the gate's
+/// `own`, then moved back whatever happened; why it stayed, when it did.
 fn moved<T>(
     gate: &Gate,
-    app: &Opened,
+    (app, own): (&Opened, bool),
     lines: &Lines,
     to: Point,
     drive: impl FnOnce(&Lines) -> Result<T, String>,
-) -> Result<T, String> {
+) -> Result<Result<T, &'static str>, String> {
     let was = win::rect(app.hwnd)?;
-    movable(&Real, app, zoomed(app))?;
+    if let Some(why) = movable(&Real, app, (own, zoomed(app)))? {
+        return Ok(Err(why));
+    }
     move_to(app, to)?;
     sleep_ms(gate.g().settle_ms);
     let now = win::rect(app.hwnd);
@@ -98,7 +120,7 @@ fn moved<T>(
         },
     );
     let v = got?;
-    back.map(|()| v)
+    back.map(|()| Ok(v))
 }
 
 /// One case on the copy line of `lines`, cleared with our Esc after.
@@ -108,10 +130,11 @@ fn one(gate: &Gate, app: &Opened, lines: &Lines, name: &str) -> Result<Value, St
     Ok(case)
 }
 
-/// The copy line moved down to `near_px` above the plate or the screen's bottom: the strip must sit above it.
+/// The copy line moved down to `near_px` above the plate or the screen's bottom: the strip must sit above it. A window
+/// the gate may not move is a note, never a fail.
 pub fn near_bottom(
     gate: &Gate,
-    app: &Opened,
+    (app, own): (&Opened, bool),
     lines: &Lines,
     cases: &mut Vec<Value>,
 ) -> Result<Value, String> {
@@ -121,9 +144,9 @@ pub fn near_bottom(
     let low = floor(place::rect(&work), &gate.clear().boxes, line);
     let dy = lift(line, low, i32::from(gate.g().near_px));
     let r = win::rect(app.hwnd)?;
-    let mut case = moved(
+    let got = moved(
         gate,
-        app,
+        (app, own),
         lines,
         Point {
             x: r.left,
@@ -131,6 +154,10 @@ pub fn near_bottom(
         },
         |l| one(gate, app, l, "near_bottom"),
     )?;
+    let mut case = match got {
+        Ok(case) => case,
+        Err(why) => return Ok(json!({ "moved": false, "note": why, "ok": true })),
+    };
     let above = case["placed"]["above"] == true;
     case["place"] = json!(case["place"] == true && above);
     let ok = case["seen"] == true && above;
@@ -139,7 +166,7 @@ pub fn near_bottom(
 }
 
 /// The strip's place on a second screen, when one exists; a note, never a verdict.
-pub fn second_screen(gate: &Gate, app: &Opened, lines: &Lines) -> Value {
+pub fn second_screen(gate: &Gate, (app, own): (&Opened, bool), lines: &Lines) -> Value {
     let areas: Vec<Rect> = WinScreens.work_areas().iter().map(|s| s.rect).collect();
     let r = place::rect(&win::rect(app.hwnd).unwrap_or_default());
     let middle = Point {
@@ -154,8 +181,14 @@ pub fn second_screen(gate: &Gate, app: &Opened, lines: &Lines) -> Value {
         x: area.x.saturating_add(inset),
         y: area.y.saturating_add(inset),
     };
-    let got = moved(gate, app, lines, to, |l| one(gate, app, l, "second_screen"));
-    let placed = got.map_or_else(|e| json!({ "error": e }), |c| c["placed"].clone());
+    let got = moved(gate, (app, own), lines, to, |l| {
+        one(gate, app, l, "second_screen")
+    });
+    let placed = match got {
+        Ok(Ok(c)) => c["placed"].clone(),
+        Ok(Err(why)) => json!({ "note": why }),
+        Err(e) => json!({ "error": e }),
+    };
     json!({ "screens": areas.len(), "placed": placed })
 }
 
@@ -187,17 +220,40 @@ mod tests {
     }
 
     #[test]
-    fn only_our_own_tab_in_front_and_not_maximised_moves() {
+    fn only_a_window_new_since_the_gate_opened_its_file_is_its_own() {
+        let before: HashSet<isize> = [7, 9].into_iter().collect();
+        assert!(own(&before, 12), "a new window");
+        assert!(
+            !own(&before, 9),
+            "the owner's window, holding the gate's tab"
+        );
+    }
+
+    #[test]
+    fn a_window_not_the_gates_own_or_maximised_stays_and_says_why() {
+        assert_eq!(stays(true, false), None);
+        let not_ours = stays(false, false).expect("stays");
+        assert!(not_ours.contains("not the gate's own"), "{not_ours}");
+        assert_eq!(stays(false, true), Some(not_ours), "not ours comes first");
+        assert!(stays(true, true).is_some_and(|w| w.contains("maximised")));
+    }
+
+    #[test]
+    fn only_our_own_new_window_with_our_tab_in_front_moves() {
         use crate::ownkeys::fake::{Fake, OUR_TAB, OWNER_TAB, hwnd, notepad};
         let app = notepad(None);
-        assert_eq!(
-            movable(&Fake::new(app.hwnd, &[OUR_TAB]), &app, false),
-            Ok(())
+        let ours = Fake::new(app.hwnd, &[OUR_TAB]);
+        assert_eq!(movable(&ours, &app, (true, false)), Ok(None));
+        let theirs = movable(&ours, &app, (false, false)).expect("a reason");
+        assert!(theirs.is_some_and(|w| w.contains("not the gate's own")));
+        assert!(movable(&ours, &app, (true, true)).is_ok_and(|w| w.is_some()));
+        let tab = Fake::new(app.hwnd, &[OWNER_TAB]);
+        assert!(
+            movable(&tab, &app, (true, false)).is_err(),
+            "the owner's tab"
         );
-        let e = movable(&Fake::new(app.hwnd, &[OUR_TAB]), &app, true).expect_err("maximised");
-        assert!(e.contains("maximised"), "{e}");
-        assert!(movable(&Fake::new(app.hwnd, &[OWNER_TAB]), &app, false).is_err());
-        assert!(movable(&Fake::new(hwnd(9), &[OUR_TAB]), &app, false).is_err());
+        let away = Fake::new(hwnd(9), &[OUR_TAB]);
+        assert!(movable(&away, &app, (true, false)).is_err(), "not in front");
     }
 
     #[test]

@@ -43,7 +43,7 @@ use crate::g23::notice;
 use crate::g25::part;
 use crate::out::say;
 use crate::product::NAME;
-use crate::{clipkeep, probe, winclip};
+use crate::{clipkeep, probe, win, winclip};
 
 /// The gate's name in its result lines.
 pub const GATE: &str = "G19";
@@ -77,10 +77,11 @@ fn passed(run_ok: bool, removed: bool, left: &[String]) -> bool {
     run_ok && removed && left.is_empty()
 }
 
-/// Each step on the gate's Notepad document and beside it, the tray last; `cases` gathers every selection case.
+/// Each step on the gate's Notepad document and beside it, the tray last, its window moved only when `own`; `cases`
+/// gathers every selection case.
 fn steps(
     gate: &Gate,
-    app: &Opened,
+    (app, own): (&Opened, bool),
     cases: &mut Vec<Value>,
     left: &mut Vec<String>,
 ) -> Result<Value, String> {
@@ -95,8 +96,9 @@ fn steps(
     let mut v = json!({ "edits": { "notepad": notepad, "page": page, "ok": edits_ok } });
     v["caret"] = on(cases, &|_| caret::run(gate, app, &lines));
     v["ours"] = on(cases, &|c| ours::run(gate, app, &lines, c));
-    v["near_bottom"] = on(cases, &|c| spots::near_bottom(gate, app, &lines, c));
-    let second = probe::front(gate.ctx, app).map(|()| spots::second_screen(gate, app, &lines));
+    v["near_bottom"] = on(cases, &|c| spots::near_bottom(gate, (app, own), &lines, c));
+    let second =
+        probe::front(gate.ctx, app).map(|()| spots::second_screen(gate, (app, own), &lines));
     v["second"] = second.unwrap_or_else(|e| json!({ "error": e }));
     v["translate"] = on(cases, &|c| consent::run(gate, app, &lines, c));
     v["terminals"] = part(terms::run(gate, cases, left));
@@ -116,10 +118,13 @@ fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Res
     let gate = Gate::new(ctx, (pid, program))?;
     notice::check_normal(ctx, &gate.reader)?;
     let mut cases = Vec::new();
+    let before = win::snapshot();
     let doc = probe::open_text(ctx, AppKind::Notepad, &docs::doc(gate.g()))?;
+    let own = spots::own(&before, win::key(doc.app.hwnd));
     let mut later = Vec::new();
-    let (mut v, notes_left) =
-        probe::run_on(ctx, doc, |d| steps(&gate, &d.app, &mut cases, &mut later))?;
+    let (mut v, notes_left) = probe::run_on(ctx, doc, |d| {
+        steps(&gate, (&d.app, own), &mut cases, &mut later)
+    })?;
     left.extend(later.into_iter().chain(notes_left));
     v["cases"] = plan::groups(&cases);
     v["each"] = json!(cases);
