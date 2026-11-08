@@ -31,7 +31,6 @@ Item {
     // What the legend takes: the icon, the gap and the word, as each shows.
     readonly property real need: (icons ? glyph.width : 0) + gap + (words ? word.implicitWidth : 0)
     readonly property bool down: area.pressed && live
-    property real sink: down ? 1 : 0
     // Dolch's sculpted caps lift the legend to their lighter top's middle, as a key's.
     readonly property real lift: look.cap.kind === "skirt" ? look.cap.legend_lift_px * s : 0
     // A pressed cap's ink in high contrast, else the legend's.
@@ -49,14 +48,7 @@ Item {
         id: names
     }
 
-    // A press sinks the cap at once; only the rise back eases, as a key's.
-    Behavior on sink {
-        enabled: targetValue < sk.sink
-        Tween {
-            move: sk.lk.motion.moves.press
-        }
-    }
-
+    // The keyboard's own cap, which sinks at the press and eases back as a key's.
     KeyCap {
         x: sk.inset
         y: sk.inset
@@ -68,7 +60,6 @@ Item {
         skirt: sk.p.skirt ? sk.p.skirt.key : sk.p.key
         pressed: sk.down
         hovered: sk.live && area.containsMouse
-        sink: sk.sink
 
         // Left to right in every language: Arabic flips the text only (ADR-0020).
         Item {

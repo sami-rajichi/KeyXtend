@@ -152,6 +152,7 @@ Item {
             waitForRendering(strip.contentItem);
             mousePress(key(strip, "cut"));
             compare(strip.ui.selCalls, ["selAct 9 cut"], "at the press");
+            compare(inside(key(strip, "cut"), o => o.hovered !== undefined && o.sink !== undefined).sink, 1, "its cap sinks at once");
             mouseRelease(key(strip, "cut"));
             compare(strip.ui.selCalls.length, 1, "the let-go adds nothing");
             strip.ui.selView = view("en", "ticked", { round: 9, acted: "cut" });

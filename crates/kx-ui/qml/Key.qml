@@ -49,8 +49,8 @@ Item {
     property color skirt: p.skirt ? p.skirt[paint.skirt] : p[paint.fill]
     // Legends and icons on a pressed key: high contrast's press text at once, else each keeps its colour.
     readonly property var pressInk: down ? p.press_ink : null
-    // How far the cap has sunk, 0 to 1, and how far a recording cap has brightened, 0 to 1.
-    property real sink: down ? 1 : 0
+    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1.
+    readonly property alias sink: cap.sink
     property real lift: 0
     readonly property real glowBy: 1 + (lk.motion.amount.glow_lift - 1) * lift
     readonly property color capColour: lift > 0 ? Qt.lighter(fillColour, glowBy) : fillColour
@@ -144,14 +144,6 @@ Item {
             move: key.mv.colour
         }
     }
-    // A press sinks the cap at once, so the next frame shows it (spec §10); only the rise back eases. It reads the
-    // target, since `down` and `sink` change in no set order.
-    Behavior on sink {
-        enabled: targetValue < key.sink
-        Tween {
-            move: key.mv.press
-        }
-    }
     Behavior on lockLit {
         Tween {
             move: key.mv.colour
@@ -208,7 +200,6 @@ Item {
         skirt: key.capSkirt
         pressed: key.down
         hovered: !key.dim && area.containsMouse
-        sink: key.sink
 
         KeyText {
             anchors.fill: parent
