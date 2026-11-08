@@ -138,7 +138,7 @@ pub(crate) fn range_fixed(range: &IUIAutomationTextRange) -> Option<bool> {
 #[cfg(test)]
 thread_local! {
     /// How many calls this thread made into a box's caret or words, for the tests that prove a closed box gets none.
-    pub(super) static TEXT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    pub(crate) static TEXT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Counts one call into a box's caret or words, in tests.

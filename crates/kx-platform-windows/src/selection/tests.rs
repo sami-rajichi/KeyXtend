@@ -1,6 +1,7 @@
 //! The kind table and the kind rules: the shipped table and bad ones, and the boxes the chips meet (Notepad's edit, a
 //! read-only document, Windows Terminal, the console, a password box, our own window); the boxes are in `spot`, the
-//! rules over any facts in `props`, the handlers in `hear`, and where the selection handler sits in `follow`.
+//! rules over any facts in `props`, the handlers in `hear`, where the selection handler sits in `follow`, and the readers
+//! on hidden edit boxes in `uia`.
 
 use super::kinds::{Facts, kind};
 use super::*;
@@ -13,6 +14,8 @@ mod follow;
 mod hear;
 mod props;
 mod spot;
+#[cfg(windows)]
+mod uia;
 
 /// UI Automation's Edit, Document, Text and Button control types.
 const EDIT: i32 = 50004;

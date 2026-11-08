@@ -48,6 +48,12 @@ impl Mine {
     pub(super) fn new() -> Self {
         Self { me: process::id() }
     }
+
+    /// Ours: process `me`, which a test sets to another than this one.
+    #[cfg(test)]
+    pub(super) fn of(me: u32) -> Self {
+        Self { me }
+    }
 }
 
 impl Ours for Mine {

@@ -25,6 +25,12 @@ use crate::uia::{boxes, span};
 /// The step a caret's empty range grows by: one character.
 const STEP: i32 = 1;
 
+#[cfg(test)]
+thread_local! {
+    /// How many selection texts this thread asked for, for the tests that prove a look asks none.
+    pub(super) static READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// A text range as a look asks it: its checked boxes, growing by one character, and its text at a read.
 impl Span for IUIAutomationTextRange {
     fn rects(&self) -> Vec<Rect> {
@@ -57,6 +63,8 @@ impl Span for IUIAutomationTextRange {
         reason = "Reads the selection's text at Translate's click."
     )]
     fn text(&self, max_chars: u16) -> Result<String, SelError> {
+        #[cfg(test)]
+        READS.with(|n| n.set(n.get() + 1));
         let units = usize::from(max_chars).saturating_mul(char::MAX_LEN_UTF16);
         // SAFETY: a plain call on a live range; the text is ours, kept in `Redacted` and never logged.
         let text = unsafe { self.GetText(span(units)) }.map_err(failed)?;

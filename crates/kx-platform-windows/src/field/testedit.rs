@@ -28,17 +28,17 @@ use crate::uia::client;
 /// The test box's place and size; it is never shown.
 const BOX: (i32, i32, i32, i32) = (40, 40, 600, 40);
 /// A `read_ms` no test read reaches.
-pub(super) const LONG_MS: u32 = 5000;
+pub(crate) const LONG_MS: u32 = 5000;
 /// A `read_chars` that holds every test box's text.
-pub(super) const CHARS: u16 = 256;
+pub(crate) const CHARS: u16 = 256;
 /// A watch config no test read reaches.
-pub(super) const CONFIG: FieldConfig = FieldConfig {
+pub(crate) const CONFIG: FieldConfig = FieldConfig {
     read_ms: LONG_MS,
     read_chars: CHARS,
 };
 
 /// A hidden edit box on a thread of its own; dropping it destroys both.
-pub(super) struct TestEdit {
+pub(crate) struct TestEdit {
     hwnd: isize,
     thread: u32,
     join: Option<JoinHandle<()>>,
@@ -46,7 +46,7 @@ pub(super) struct TestEdit {
 
 impl TestEdit {
     /// A box holding `text`, its caret at the end, with the edit style bits `style` (`ES_PASSWORD`, `ES_READONLY`).
-    pub(super) fn start(text: &str, style: i32) -> Self {
+    pub(crate) fn start(text: &str, style: i32) -> Self {
         let (made, ready) = mpsc::channel();
         let text = crate::wide(text);
         let join = thread::spawn(move || {
@@ -72,17 +72,17 @@ impl TestEdit {
     }
 
     /// The box's element in `auto`.
-    pub(super) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
+    pub(crate) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
         element(auto, self.hwnd)
     }
 
     /// The box's raw handle, for a thread that makes its own client.
-    pub(super) fn raw(&self) -> isize {
+    pub(crate) fn raw(&self) -> isize {
         self.hwnd
     }
 
     /// Selects from UTF-16 unit `from` to `to`, the caret at `to`; a `to` before `from` selects backwards.
-    pub(super) fn select(&self, from: usize, to: usize) {
+    pub(crate) fn select(&self, from: usize, to: usize) {
         set_sel(crate::window::from_raw(self.hwnd), from, to);
     }
 }
@@ -98,7 +98,7 @@ impl Drop for TestEdit {
 }
 
 /// The element of the test box with raw handle `raw` in `auto`.
-pub(super) fn element(auto: &IUIAutomation, raw: isize) -> IUIAutomationElement {
+pub(crate) fn element(auto: &IUIAutomation, raw: isize) -> IUIAutomationElement {
     let hwnd = crate::window::from_raw(raw);
     // SAFETY: a plain lookup on a live client, for the test's own window.
     unsafe { auto.ElementFromHandle(hwnd) }.unwrap()
@@ -142,12 +142,12 @@ fn set_sel(hwnd: HWND, from: usize, to: usize) {
 }
 
 /// A client for the tests, with COM on this thread while the guard lives.
-pub(super) fn started() -> (Com, IUIAutomation) {
+pub(crate) fn started() -> (Com, IUIAutomation) {
     let com = Com::start().unwrap();
     (com, client(LONG_MS).unwrap())
 }
 
 /// A deadline no test read reaches.
-pub(super) fn far() -> Instant {
+pub(crate) fn far() -> Instant {
     Instant::now() + Duration::from_millis(u64::from(LONG_MS))
 }
