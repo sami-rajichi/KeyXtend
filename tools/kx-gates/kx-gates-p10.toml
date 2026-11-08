@@ -61,7 +61,7 @@ bar_depth = 12
 # or more, below the theme's gap (checked).
 near_px = 4
 # Browser programs, for "Not now opens nothing" and for the page the owner opened (adapter table).
-browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
+browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "zen.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
 # Keys the gate presses in its own windows: Shift+Home, Shift+End (the target-window's long first line), one caret
 # step left while our panel is aimed, and Num Lock, which it puts back only while its own terminal is in front.
 select_home = [0x10, 0x24]
@@ -116,5 +116,6 @@ classes = ["OmniboxViewViews"]
 names = ["Address and search bar"]
 
 [[g19_product.bars]]
-browsers = ["firefox.exe"]
+# Zen is built on Firefox and keeps its address bar's id.
+browsers = ["firefox.exe", "zen.exe"]
 ids = ["urlbar-input"]
