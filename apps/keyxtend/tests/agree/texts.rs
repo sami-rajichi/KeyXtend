@@ -1,6 +1,7 @@
 //! Every name, label and tip the face draws, with the shortcuts layer hidden or on any page, every text a shortcut's
-//! tip is made of, every mark it names, every module the app ships and the kernel, and every language-key design has
-//! its text in English, French and Arabic; every mark it names is one the theme's mark fonts are checked to draw.
+//! tip is made of, every mark it names, every module the app ships and the kernel, every language-key design and every
+//! selection keycap has its text in English, French and Arabic; every mark it names is one the theme's mark fonts are
+//! checked to draw.
 
 use crate::fakes::{ports, tray};
 use crate::{designs, pages, views};
@@ -91,6 +92,31 @@ fn every_shipped_module_and_the_kernel_have_a_name() {
         .map(|m| m.manifest().id)
         .chain([KERNEL]);
     let wanted: BTreeSet<String> = ids.map(|id| format!("{MODULE}.{id}")).collect();
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
+/// Every keycap the selection module's shipped settings can show has its word and done word, and the strip its reader
+/// name (P10).
+#[cfg(feature = "mod-selection")]
+#[test]
+fn every_keycap_the_selection_module_shows_has_its_texts() {
+    use kx_mod_selection::{At, SelSettings, chips};
+    use kx_module_api::ports::SelKind;
+    use kx_ui::i18n::keys::{SEL_DONE, SEL_NAME, SEL_WORD, sel_chip_id};
+    let rules = SelSettings::from_defaults().unwrap().rules(true);
+    let places = [At::Selection, At::Caret { clip: true }];
+    let shown = SelKind::ALL.into_iter().flat_map(|kind| {
+        places
+            .into_iter()
+            .flat_map(move |at| chips(&rules, kind, at))
+    });
+    let named = shown.flat_map(|c| [SEL_WORD, SEL_DONE].map(|p| format!("{p}{}", sel_chip_id(c))));
+    let wanted: BTreeSet<String> = named.chain([SEL_NAME.to_owned()]).collect();
+    assert_eq!(
+        wanted.len(),
+        2 * kx_module_api::ports::SelChip::ALL.len() + 1,
+        "every keycap shows"
+    );
     assert_eq!(missing(&wanted), Vec::new());
 }
 

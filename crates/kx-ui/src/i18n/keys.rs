@@ -1,9 +1,11 @@
 //! Translation keys and groups the UI names; a group's key takes an id from elsewhere, as in `theme.native`. Quick-fill's
-//! are in `fill`.
+//! are in `fill`, the selection strip's in `sel`.
 
 mod fill;
+mod sel;
 
 pub use fill::*;
+pub use sel::*;
 
 use kx_module_api::ports::{ClipKind, Filter, MAX_PRESETS, PanelNote};
 

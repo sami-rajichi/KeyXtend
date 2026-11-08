@@ -1,5 +1,5 @@
 //! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
-//! sounds, the pointer overlay, the scroll pad, the chip lane and the panels.
+//! sounds, the pointer overlay, the scroll pad, the chip lane, the panels and the selection strip.
 
 #![allow(
     clippy::expect_used,
@@ -24,6 +24,7 @@ mod memory;
 mod module;
 mod notices;
 mod scroll;
+mod sel;
 // Without `qt` the sound table is empty, so these tests would check no play.
 #[cfg(feature = "qt")]
 mod sound;

@@ -1,7 +1,7 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
 //! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
-//! panel, the Quick-fill panel, the tray icon, and the requests the app drains on its own thread. No lock is held while a
-//! face call, a port call or a waker runs.
+//! panel, the Quick-fill panel, the selection strip, the tray icon, and the requests the app drains on its own thread.
+//! No lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod assist;
@@ -13,6 +13,7 @@ mod fonts;
 mod look;
 mod notices;
 mod scroll;
+mod sel;
 mod sound;
 mod spots;
 mod texts;
@@ -116,6 +117,8 @@ pub enum Wake {
     },
     /// The clipboard panel shows a new view or closes; no other comes until QML reads `clip_json`.
     Clip,
+    /// The selection strip shows a new view or hides; no other comes until QML reads `sel_json`.
+    Sel,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -180,6 +183,8 @@ pub struct Hub {
     clip: clip::Clip,
     /// The Quick-fill panel and its object's waker.
     fill: fill::Fill,
+    /// The selection strip.
+    sel: sel::Sel,
 }
 
 impl Hub {
@@ -223,6 +228,7 @@ impl Hub {
             words: Mutex::default(),
             clip: clip::Clip::default(),
             fill: fill::Fill::default(),
+            sel: sel::Sel::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -242,11 +248,8 @@ impl Hub {
         store: SettingsHandle,
     ) {
         self.hear_keys();
-        let texts = Texts::new(
-            &settings.language,
-            &face.lang(),
-            &self.ports.look.ui_language(),
-        );
+        let system = self.ports.look.ui_language();
+        let texts = Texts::new(&settings.language, &face.lang(), &system);
         let idle = settings.sound_idle_ms;
         let before = {
             let mut live = self.lock();

@@ -23,6 +23,7 @@ mod pictures;
 mod plugin;
 mod plural;
 mod qml;
+mod sel;
 #[path = "../shared/suggest.rs"]
 mod suggest;
 mod sync;

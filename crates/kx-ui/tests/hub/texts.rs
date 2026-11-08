@@ -29,7 +29,7 @@ fn word(tag: &str, key: &str) -> String {
 }
 
 /// A rig on a system in `os`, whose face shows a layout in `layout`, attached with `[ui] language` `setting`.
-fn rig(os: &str, layout: &str, setting: &str) -> (Rig, Arc<FakeFace>, FakeHost) {
+pub fn rig(os: &str, layout: &str, setting: &str) -> (Rig, Arc<FakeFace>, FakeHost) {
     let rig = Rig::new();
     rig.look.set_language(os);
     let face = Arc::new(FakeFace::default());
@@ -45,7 +45,7 @@ fn rig(os: &str, layout: &str, setting: &str) -> (Rig, Arc<FakeFace>, FakeHost) 
 }
 
 /// The app in front switched to a layout in `iso`, and the relabel timer ran.
-fn switch(rig: &Rig, face: &FakeFace, iso: &str) {
+pub fn switch(rig: &Rig, face: &FakeFace, iso: &str) {
     face.set_lang(iso);
     let _ = rig.hub.act(FaceAction::Relabel);
 }

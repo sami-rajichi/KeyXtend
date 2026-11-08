@@ -1,12 +1,13 @@
 //! The `Ui` object: the look, the keyboard's and the tray's texts, the notices, the tray icon, where pop-ups go, the
-//! overlay and scroll states, the chip lane, the clipboard panel and the app's commands. It follows the system look
-//! and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
+//! overlay and scroll states, the chip lane, the clipboard panel, the selection strip and the app's commands. It follows
+//! the system look and hears the hub's wakes on the Qt thread, so make one per app, in the root file.
 
 mod app;
 mod clip;
 mod look;
 mod notices;
 mod scroll;
+mod sel;
 mod spots;
 mod state;
 mod texts;
@@ -211,6 +212,23 @@ pub mod qobject {
         #[qinvokable]
         fn open_folder(&self);
 
+        /// The selection strip as JSON, worded, or null while none shows; reading it lets the next change wake.
+        #[qinvokable]
+        fn sel(&self) -> QString;
+
+        /// Where strip `round`, measured `w` by `h` physical pixels, goes clear of `clear` (a JSON list of our windows'
+        /// boxes in physical pixels, or null): a JSON point in physical pixels, or null to show nothing.
+        #[qinvokable]
+        fn sel_at(&self, round: i64, w: f64, h: f64, clear: &QString) -> QString;
+
+        /// A click on keycap `chip`, an id from `sel`, of the strip of round `round`.
+        #[qinvokable]
+        fn sel_act(&self, round: i64, chip: &QString);
+
+        /// The ticked strip of round `round` has faded out, so the hub forgets it.
+        #[qinvokable]
+        fn sel_faded(&self, round: i64);
+
         /// The settings or face changed: read everything again.
         #[qsignal]
         fn settings_changed(self: Pin<&mut Self>);
@@ -266,6 +284,10 @@ pub mod qobject {
         /// The clipboard panel shows a new view or closes: read `clip`.
         #[qsignal]
         fn clip_changed(self: Pin<&mut Self>);
+
+        /// The selection strip shows a new view or hides: read `sel`.
+        #[qsignal]
+        fn sel_changed(self: Pin<&mut Self>);
     }
 
     impl cxx_qt::Threading for Ui {}

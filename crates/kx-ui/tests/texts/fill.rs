@@ -117,13 +117,16 @@ fn keys() -> BTreeSet<String> {
     fixed.chain(buttons).chain(groups).chain(labels).collect()
 }
 
-/// Each language's Quick-fill file, the one after the clipboard's.
+/// Each language's Quick-fill file, the one that holds its title.
 pub fn fill_file(tag: &str) -> &'static str {
     let l = LANGS
         .iter()
         .find(|l| l.tag == tag)
         .expect("a shipped language");
-    l.files().last().expect("the Quick-fill file")
+    let mut files = l.files();
+    files
+        .find(|f| keys_of(f).contains(FILL_TITLE))
+        .expect("the Quick-fill file")
 }
 
 /// The variables each key of `ftl` shows, leaving out those that only pick a plural form.
