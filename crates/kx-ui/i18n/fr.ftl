@@ -308,6 +308,7 @@ module =
     .power = Touche Marche/Arrêt
     .predict = Suggestions de mots
     .scroll = Pavé de défilement
+    .selection = Aide à la sélection
     .ui = Apparence
     .vault = Remplissage rapide
 

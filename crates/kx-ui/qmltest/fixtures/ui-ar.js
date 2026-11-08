@@ -160,6 +160,7 @@ var texts = {
   "module.power": "مفتاح الطاقة",
   "module.predict": "اقتراح الكلمات",
   "module.scroll": "لوحة التمرير",
+  "module.selection": "مساعد التحديد",
   "module.ui": "المظهر",
   "module.vault": "التعبئة السريعة",
   "notice.clip-damaged": "كان جزء من محفوظات الحافظة تالفًا، فحُذفت تلك العناصر.",

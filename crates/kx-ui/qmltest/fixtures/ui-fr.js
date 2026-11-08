@@ -160,6 +160,7 @@ var texts = {
   "module.power": "Touche Marche/Arrêt",
   "module.predict": "Suggestions de mots",
   "module.scroll": "Pavé de défilement",
+  "module.selection": "Aide à la sélection",
   "module.ui": "Apparence",
   "module.vault": "Remplissage rapide",
   "notice.clip-damaged": "Une partie de l’historique du Presse-papiers était endommagée ; ces éléments ont été supprimés.",

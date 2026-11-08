@@ -307,6 +307,7 @@ module =
     .power = Power key
     .predict = Word suggestions
     .scroll = Scroll pad
+    .selection = Selection helper
     .ui = Appearance
     .vault = Quick-fill
 

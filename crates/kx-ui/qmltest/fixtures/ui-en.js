@@ -160,6 +160,7 @@ var texts = {
   "module.power": "Power key",
   "module.predict": "Word suggestions",
   "module.scroll": "Scroll pad",
+  "module.selection": "Selection helper",
   "module.ui": "Appearance",
   "module.vault": "Quick-fill",
   "notice.clip-damaged": "Part of the clipboard history was damaged, so those entries were removed.",
