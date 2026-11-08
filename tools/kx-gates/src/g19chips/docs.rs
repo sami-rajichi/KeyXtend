@@ -2,6 +2,8 @@
 //! and the Chrome page whose script counts Copy's key-downs in its title.
 #![cfg(windows)]
 
+use serde_json::{Value, json};
+
 use crate::launch::html_text;
 use crate::p10cfg::G19Product;
 
@@ -73,6 +75,17 @@ pub fn edited(g: &G19Product) -> Vec<String> {
 pub fn lines_of(t: &str) -> Vec<String> {
     let t = t.replace("\r\n", BREAK).replace('\r', BREAK);
     t.split(BREAK).map(String::from).collect()
+}
+
+/// How `got` differs from `want`, in numbers only, never text: both line counts, the first line that differs, and
+/// both lengths there in characters.
+pub fn differ(got: &[String], want: &[String]) -> Value {
+    let most = got.len().max(want.len());
+    let first = (0..most).find(|&i| got.get(i) != want.get(i));
+    let chars = |v: &[String]| first.and_then(|i| v.get(i)).map(|l| l.chars().count());
+    json!({
+        "lines": got.len(), "want_lines": want.len(), "first": first, "chars": chars(got), "want_chars": chars(want),
+    })
 }
 
 /// The page script: each Ctrl+C key-down counted in the title after the copy mark, each with Shift after the other.
@@ -150,6 +163,24 @@ mod tests {
         assert_eq!(after[Line::Cut.at()], "");
         assert_eq!(after[Line::Paste.at()], g.cut_line);
         assert_eq!(after[Line::Arabic.at()], g.arabic);
+    }
+
+    #[test]
+    fn a_document_that_differs_is_told_in_numbers_only() {
+        let s = |v: &[&str]| v.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let want = s(&["Copy", "", "Coupez", "حدد", ""]);
+        let extra = differ(&s(&["Copy", "", "Coupez", "حدد", "", ""]), &want);
+        assert_eq!(
+            extra,
+            json!({ "lines": 6, "want_lines": 5, "first": 5, "chars": 0, "want_chars": null })
+        );
+        let short = differ(&s(&["Copy", "", "Paste", "حدد", ""]), &want);
+        assert_eq!(
+            (&short["first"], &short["chars"], &short["want_chars"]),
+            (&json!(2), &json!(5), &json!(6))
+        );
+        assert_eq!(differ(&want, &want)["first"], json!(null), "the same");
+        assert!(!extra.to_string().contains("Copy"), "no text");
     }
 
     #[test]

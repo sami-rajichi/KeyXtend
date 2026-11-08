@@ -12,7 +12,7 @@ use windows::Win32::UI::Accessibility::IUIAutomationElement;
 
 use crate::apps::Opened;
 use crate::board;
-use crate::g19chips::docs::{Line, edited, lines_of};
+use crate::g19chips::docs::{Line, differ, edited, lines_of};
 use crate::g19chips::gate::Gate;
 use crate::g19chips::place;
 use crate::g19chips::strip::Shown;
@@ -208,11 +208,13 @@ pub fn edits(
     }
     let max = i32::try_from(gate.ctx.cfg.g1.max_read_chars).unwrap_or(i32::MAX);
     let text = ownkeys::on_ours(&Real, app, || gate.uia().doc_text(app.hwnd, max))?;
-    let doc = text.is_some_and(|t| lines_of(&t) == edited(g));
+    let got = text.map(|t| lines_of(&t));
+    let doc = got.as_ref().is_some_and(|l| *l == edited(g));
+    let diff = got.map_or(json!("not read"), |l| differ(&l, &edited(g)));
     let ok = [&copy, &cut, &paste].iter().all(|v| v["ok"] == true) && doc && latched;
-    Ok(
-        json!({ "copy": copy, "cut": cut, "paste": paste, "doc": doc, "shift_latched": latched, "ok": ok }),
-    )
+    Ok(json!({
+        "copy": copy, "cut": cut, "paste": paste, "doc": doc, "doc_diff": diff, "shift_latched": latched, "ok": ok,
+    }))
 }
 
 #[cfg(test)]
