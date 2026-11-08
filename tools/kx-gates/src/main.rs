@@ -28,6 +28,7 @@ mod facearg;
 mod facetools;
 mod featcfg;
 mod fit;
+mod freshcopy;
 mod ftl;
 mod g1;
 mod g10;

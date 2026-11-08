@@ -8,7 +8,6 @@ mod addr;
 mod caret;
 mod clear;
 mod consent;
-mod copy;
 mod docs;
 mod gate;
 mod hides;
@@ -36,7 +35,7 @@ use std::path::Path;
 use serde_json::{Map, Value, json};
 
 use crate::apps::{AppKind, Ctx, Opened};
-use crate::g19chips::copy::Fresh;
+use crate::freshcopy::Fresh;
 use crate::g19chips::gate::Gate;
 use crate::g19chips::notepad::Lines;
 use crate::g20prod::copy_line;
@@ -46,6 +45,8 @@ use crate::out::say;
 use crate::product::NAME;
 use crate::{clipkeep, probe, winclip};
 
+/// The gate's name in its result lines.
+pub const GATE: &str = "G19";
 /// The cases that must show no strip for `quiet_ms`; the hung app's waits fall within its hang.
 pub const QUIET: usize = page::QUIET + hides::QUIET + consent::QUIET;
 /// The gate's clicks, keys and drags at the least, each followed by `settle_ms`.
@@ -66,7 +67,7 @@ fn notes(cases: &[Value], second: &Value) -> Value {
         .collect();
     let arabic = cases
         .iter()
-        .find(|c| c["case"] == "arabic_0")
+        .find(|c| c["case"] == consent::arabic_case(0))
         .map(|c| c["placed"].clone());
     json!({ "kinds": kinds, "arabic_line": arabic, "second_screen": second, "ok": true })
 }
@@ -151,22 +152,22 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
             ));
         }
     }
-    let fresh = Fresh::open(ctx)?;
+    let fresh = Fresh::open(ctx, GATE)?;
     let (program, since, mut left) = (
         fresh.program.display().to_string(),
         winclip::now(),
         Vec::new(),
     );
-    let (got, ended) = fresh.with_copy(true, |pid| {
+    let (got, ended) = fresh.with_copy((true, ctx.cfg.g19_product.ready_ms), |pid| {
         clipkeep::keep(ctx.cfg, || drive(ctx, (pid, &fresh.program), &mut left))
     });
     let removed = fresh.close(ended.as_ref());
     let forgot = probe::forget_copies(ctx, since, &|t| is_test(ctx, t));
     let run = copy_line(got, ended.as_ref());
     let pass = passed(run["ok"] == true, removed.is_ok(), &left);
-    say!("G19 {NAME}: {}", run["ok"]);
+    say!("{GATE} {NAME}: {}", run["ok"]);
     Ok(json!({
-        "gate": "G19", "name": NAME, "program": program, "run": run, "clean_up": left, "forgot": forgot,
+        "gate": GATE, "name": NAME, "program": program, "run": run, "clean_up": left, "forgot": forgot,
         "data_removed": removed.is_ok(), "data_error": removed.err(), "pass": pass,
     }))
 }
@@ -187,7 +188,7 @@ mod tests {
     fn the_notes_name_each_cases_box_kind_the_arabic_lines_boxes_and_the_second_screen() {
         let cases = [
             json!({ "case": "notepad_keys", "kind": "RichEditD2DPT / type 50030" }),
-            json!({ "case": "arabic_0", "kind": "x", "placed": { "boxes": 2, "one_line": true } }),
+            json!({ "case": consent::arabic_case(0), "kind": "x", "placed": { "boxes": 2, "one_line": true } }),
         ];
         let n = notes(&cases, &json!({ "screens": 2, "placed": { "ok": true } }));
         assert_eq!(n["kinds"]["notepad_keys"], "RichEditD2DPT / type 50030");

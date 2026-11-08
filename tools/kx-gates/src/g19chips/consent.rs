@@ -176,6 +176,11 @@ fn calm(
     }
 }
 
+/// The name of the Arabic line's case in round `at`.
+pub fn arabic_case(at: usize) -> String {
+    format!("arabic_{at}")
+}
+
 /// One round: the Arabic line dragged, Translate clicked, the question answered Not now, and nothing opened.
 fn round(
     gate: &Gate,
@@ -188,7 +193,7 @@ fn round(
     let before = Gate::before();
     gate.acts
         .drag(app, lines.start(Line::Arabic), lines.end(Line::Arabic))?;
-    let (case, shown) = gate.case(&format!("arabic_{at}"), &before, &gate.g().editable_chips)?;
+    let (case, shown) = gate.case(&arabic_case(at), &before, &gate.g().editable_chips)?;
     cases.push(case);
     let Some(s) = shown else {
         return Ok(json!({ "ok": false, "error": "no strip" }));

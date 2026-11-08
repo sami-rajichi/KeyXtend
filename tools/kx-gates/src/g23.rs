@@ -4,7 +4,6 @@
 //! reach the clipboard, and no Enter or submit may happen.
 #![cfg(windows)]
 
-mod copy;
 mod fills;
 pub(crate) mod live;
 pub(crate) mod notice;
@@ -18,6 +17,7 @@ use kx_platform_windows::uia::Uia;
 use serde_json::{Value, json};
 
 use crate::apps::{Ctx, Opened};
+use crate::freshcopy::Fresh;
 use crate::g20prod::copy_line;
 use crate::g23::fills::Fill;
 use crate::g23::panel::Panel;
@@ -25,6 +25,8 @@ use crate::out::say;
 use crate::product::NAME;
 use crate::{g25, probe, typebox};
 
+/// The gate's name in its result lines.
+const GATE: &str = "G23";
 /// The seed's part in the result line.
 const SEED: &str = "seed";
 /// Whether the layout in front came back after the seed's typing, in the result line.
@@ -90,16 +92,16 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name != NAME {
         return Err(format!("G23 runs on {NAME}, not {name}"));
     }
-    let fresh = copy::Fresh::open(ctx)?;
+    let fresh = Fresh::open(ctx, GATE)?;
     let program = fresh.program.display().to_string();
     let mut left = Vec::new();
-    let (got, ended) = fresh.with_copy(|| drive(ctx, &mut left));
+    let (got, ended) = fresh.with_copy((false, ctx.cfg.g23.ready_ms), |_| drive(ctx, &mut left));
     let removed = fresh.close(ended.as_ref());
     let run = copy_line(got, ended.as_ref());
     let pass = run["ok"] == true && removed.is_ok();
-    say!("G23 {NAME}: {}", run["ok"]);
+    say!("{GATE} {NAME}: {}", run["ok"]);
     Ok(json!({
-        "gate": "G23", "name": NAME, "program": program, "run": run, "clean_up": left,
+        "gate": GATE, "name": NAME, "program": program, "run": run, "clean_up": left,
         "data_removed": removed.is_ok(), "data_error": removed.err(), "pass": pass,
     }))
 }

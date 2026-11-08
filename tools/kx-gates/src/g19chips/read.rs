@@ -13,9 +13,10 @@ use kx_platform_windows::window::foreground;
 use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx, Opened, same_name};
+use crate::freshcopy::Fresh;
+use crate::g19chips::GATE;
 use crate::g19chips::addr::{self, Look, Shown};
 use crate::g19chips::consent::Ask;
-use crate::g19chips::copy::Fresh;
 use crate::g19chips::link::site_key;
 use crate::g19chips::procs::{self, Proc};
 use crate::g19chips::select;
@@ -200,9 +201,9 @@ pub fn pass_of(run: &Value, removed: bool) -> bool {
 /// The result line of step `name`.
 fn line(name: &str, run: &Value, removed: Result<(), String>) -> Value {
     let pass = pass_of(run, removed.is_ok());
-    say!("G19 {name}: {}", run["ok"]);
+    say!("{GATE} {name}: {}", run["ok"]);
     json!({
-        "gate": "G19", "name": name, "run": run, "data_removed": removed.is_ok(), "data_error": removed.err(),
+        "gate": GATE, "name": name, "run": run, "data_removed": removed.is_ok(), "data_error": removed.err(),
         "pass": pass,
     })
 }
@@ -210,9 +211,9 @@ fn line(name: &str, run: &Value, removed: Result<(), String>) -> Value {
 /// Runs `translate-read` on the test build it starts, refused under uiAccess or while a product copy runs; the data
 /// folder goes at the end.
 pub fn run(ctx: &Ctx) -> Result<Value, String> {
-    let fresh = Fresh::open(ctx)?;
+    let fresh = Fresh::open(ctx, GATE)?;
     let program = fresh.program.clone();
-    let (got, ended) = fresh.with_copy(false, |pid| {
+    let (got, ended) = fresh.with_copy((false, ctx.cfg.g19_product.ready_ms), |pid| {
         clipkeep::keep_changed(ctx.cfg, || read(ctx, pid, &program))
     });
     let removed = fresh.close(ended.as_ref());
