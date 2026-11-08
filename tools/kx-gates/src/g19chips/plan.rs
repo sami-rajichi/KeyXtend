@@ -50,9 +50,12 @@ fn unrun(run: &Value, key: &str) -> bool {
     PLACES.contains(&key) && run[key][EXERCISED] == false
 }
 
-/// The place cases of `run` that did not run, by name, which go to the manual check.
+/// The place cases of `run` that did not run or ended in an error, by name, which go to the manual check.
 pub fn unexercised(run: &Value) -> Vec<&'static str> {
-    PLACES.into_iter().filter(|k| unrun(run, k)).collect()
+    PLACES
+        .into_iter()
+        .filter(|k| run[k][EXERCISED] != true)
+        .collect()
 }
 
 /// True when every group and every step in `run` that ran passed; a missing one fails, and a place case that did not
@@ -129,7 +132,18 @@ mod tests {
         assert!(passed(&v));
         v["caret"] = json!({ EXERCISED: false });
         assert!(!passed(&v), "only a place case may skip");
-        assert!(unexercised(&run()).is_empty());
+        let mut v = run();
+        v["near_bottom"] = json!({ "ok": false, "error": "no rows" });
+        v["second"] = json!({ "screens": 2, "error": "not in front" });
+        assert_eq!(
+            unexercised(&v),
+            PLACES,
+            "an errored case goes to the manual check"
+        );
+        assert!(!passed(&v), "and still fails");
+        v["near_bottom"] = json!({ EXERCISED: true, "ok": true });
+        v["second"] = json!({ EXERCISED: true, "screens": 2 });
+        assert!(unexercised(&v).is_empty() && passed(&v));
     }
 
     #[test]

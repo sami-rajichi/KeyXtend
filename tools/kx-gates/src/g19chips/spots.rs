@@ -195,26 +195,38 @@ fn second_screen(gate: &Gate, (kept, own): (&Mine, bool), lines: &Lines) -> Valu
     }
 }
 
+/// Both place cases when the target cannot be used: the near-bottom case fails with `e`, and the second screen says it.
+pub fn neither(e: String) -> (Value, Value) {
+    let second = json!({ "error": e });
+    (part(Err(e)), second)
+}
+
+/// Both place cases, `run` on the target's `rows` once read; with none, both report why, as there is no other window
+/// to fall back on.
+pub fn on_rows<L>(
+    rows: Result<L, String>,
+    run: impl FnOnce(L) -> (Value, Value),
+) -> (Value, Value) {
+    rows.map_or_else(neither, run)
+}
+
 /// Both place cases on the `kept` target, in front, which is the gate's `own` when new; its rows read once.
 fn on_target(gate: &Gate, (kept, own): (&Mine, bool), cases: &mut Vec<Value>) -> (Value, Value) {
     let app = &kept.get().app;
     let name = &gate.ctx.target.edit_name;
     let rows = probe::front(gate.ctx, app).and_then(|()| {
-        Lines::read_in(gate, || gate.uia().named(app.hwnd, name)).ok_or_else(|| {
-            "the target-window's box shows no text rows through UI Automation".into()
+        Lines::read_in(gate, || gate.uia().named(app.hwnd, name)).map_err(|e| {
+            format!("the target-window's box shows no text rows through UI Automation: {e}")
         })
     });
-    let lines = match rows {
-        Ok(l) => l,
-        Err(e) => return (part(Err(e.clone())), json!({ "error": e })),
-    };
-    let near = part(near_bottom(gate, (kept, own), &lines, cases));
-    let front = probe::front(gate.ctx, app);
-    let second = front.map_or_else(
-        |e| json!({ "error": e }),
-        |()| second_screen(gate, (kept, own), &lines),
-    );
-    (near, second)
+    on_rows(rows, |lines| {
+        let near = part(near_bottom(gate, (kept, own), &lines, cases));
+        let second = probe::front(gate.ctx, app).map_or_else(
+            |e| json!({ "error": e }),
+            |()| second_screen(gate, (kept, own), &lines),
+        );
+        (near, second)
+    })
 }
 
 /// The near-bottom case and the second screen on a target-window filled with its numbered lines, which the gate starts
@@ -224,7 +236,7 @@ pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> (Valu
     let before = win::snapshot();
     let target = match launch::start_target_with(ctx, std::slice::from_ref(&ctx.target.fill_arg)) {
         Ok(t) => Kept::new(Target::new(ctx, t)),
-        Err(e) => return (part(Err(e.clone())), json!({ "error": e })),
+        Err(e) => return neither(e),
     };
     let mine = own(&before, win::key(target.get().app.hwnd));
     let got = on_target(gate, (&target, mine), cases);

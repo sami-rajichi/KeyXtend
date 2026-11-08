@@ -35,6 +35,20 @@ pub fn rows(parts: &[Rect]) -> Vec<Rect> {
     out
 }
 
+/// The rows of one look at a text box, `found` as its line parts: an error names the failed step, a missing box, no
+/// text lines, or fewer rows than `want`.
+pub fn usable(found: Option<Result<Vec<Rect>, String>>, want: usize) -> Result<Vec<Rect>, String> {
+    let parts = found.ok_or_else(|| "the text box was not found".to_string())?;
+    let rows = rows(&parts.map_err(|e| format!("the text box gives no text lines: {e}"))?);
+    if rows.len() < want {
+        return Err(format!(
+            "the text box shows {} of {want} text rows",
+            rows.len()
+        ));
+    }
+    Ok(rows)
+}
+
 /// The document's text lines on screen, and how far past a line's end a click lands.
 pub struct Lines {
     rows: Vec<Rect>,
@@ -45,20 +59,28 @@ impl Lines {
     /// The lines of `app`'s document once UI Automation shows every text line.
     pub fn read(gate: &Gate, app: &Opened) -> Result<Self, String> {
         Self::read_in(gate, || gate.uia().text(app.hwnd))
-            .ok_or_else(|| "Notepad's lines did not show through UI Automation".into())
+            .map_err(|e| format!("Notepad's lines did not show through UI Automation: {e}"))
     }
 
-    /// The lines of the text box `find` gives, once UI Automation shows as many as Notepad's document holds.
-    pub fn read_in(gate: &Gate, find: impl Fn() -> Option<IUIAutomationElement>) -> Option<Self> {
+    /// The lines of the text box `find` gives, once UI Automation shows as many as Notepad's document holds; else the
+    /// last look's failed step.
+    pub fn read_in(
+        gate: &Gate,
+        find: impl Fn() -> Option<IUIAutomationElement>,
+    ) -> Result<Self, String> {
         let t = &gate.ctx.cfg.timing;
-        let want = Line::Caret.at();
+        let mut last = String::new();
         let read = || {
-            let parts = uia::lines(&find()?).ok()?;
-            let rows = rows(&parts.iter().map(place::rect).collect::<Vec<_>>());
-            (rows.len() >= want).then_some(rows)
+            let parts = |el: IUIAutomationElement| {
+                let boxes = uia::lines(&el).map_err(|e| e.to_string())?;
+                Ok(boxes.iter().map(place::rect).collect())
+            };
+            usable(find().map(parts), Line::Caret.at())
+                .map_err(|e| last = e)
+                .ok()
         };
-        let rows = win::poll_until(t.read_wait_ms, t.poll_ms, read)?;
-        Some(Self {
+        let rows = win::poll_until(t.read_wait_ms, t.poll_ms, read).ok_or(last)?;
+        Ok(Self {
             rows,
             inset: gate.ctx.cfg.probes.inset_px,
         })
@@ -223,6 +245,20 @@ mod tests {
         let moved = lines.shifted(5, -7);
         assert_eq!(moved.end(Line::Copy), POINT { x: 99, y: 13 });
         assert_eq!(moved.of(Line::Cut), r(15, 33, 80, 20));
+    }
+
+    #[test]
+    fn a_box_that_cannot_be_read_says_which_step_failed_and_how_many_rows_showed() {
+        let missing = usable(None, 1).expect_err("no box");
+        assert!(missing.contains("not found"), "{missing}");
+        let flat = usable(Some(Err("text: no pattern".into())), 1).expect_err("no lines");
+        assert!(flat.contains("no text lines: text: no pattern"), "{flat}");
+        let two = vec![r(10, 10, 80, 20), r(10, 40, 80, 20)];
+        assert_eq!(
+            usable(Some(Ok(two.clone())), 3),
+            Err("the text box shows 2 of 3 text rows".into())
+        );
+        assert_eq!(usable(Some(Ok(two.clone())), 2), Ok(two));
     }
 
     #[test]

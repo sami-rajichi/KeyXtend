@@ -43,6 +43,21 @@ fn a_case_that_did_not_run_says_why_and_holds_no_verdict() {
 }
 
 #[test]
+fn unread_rows_fail_the_near_bottom_case_and_never_fall_back_to_another_window() {
+    let (near, second) = on_rows(Err::<(), _>("no box".into()), |()| -> (Value, Value) {
+        panic!("no rows to run on")
+    });
+    assert_eq!(
+        (&near["ok"], &near["error"]),
+        (&json!(false), &json!("no box"))
+    );
+    assert_eq!(second["error"], "no box");
+    assert!(near.get(EXERCISED).is_none() && second.get(EXERCISED).is_none());
+    let ran = on_rows(Ok(3), |n| (json!({ "rows": n }), json!({})));
+    assert_eq!(ran.0["rows"], 3, "read rows run the cases");
+}
+
+#[test]
 fn a_window_not_the_gates_own_or_maximised_stays_and_says_why() {
     assert_eq!(stays(true, false), None);
     let not_ours = stays(false, false).expect("stays");
