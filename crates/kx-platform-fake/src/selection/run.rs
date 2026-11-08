@@ -4,6 +4,7 @@ use super::Shared;
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{SelError, SelKind, SelRun, SelSpot};
+use kx_platform::selection::same;
 use std::sync::Arc;
 
 /// A live fake watch; dropping it stops the watch and its tells.
@@ -21,13 +22,13 @@ impl SelRun for FakeSelRun {
     fn still(&mut self, box_id: u64) -> bool {
         let mut log = lock(&self.shared.log);
         log.calls.stills += 1;
-        let held = box_id == log.spot.box_id && log.spot.selected;
+        let held = same(box_id, log.spot.box_id) && log.spot.selected;
         log.still.unwrap_or(held)
     }
 
     fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
         let mut log = lock(&self.shared.log);
-        if log.spot.kind == SelKind::Closed || log.spot.box_id != box_id {
+        if log.spot.kind == SelKind::Closed || !same(log.spot.box_id, box_id) {
             return Err(SelError::Closed);
         }
         log.calls.reads += 1;

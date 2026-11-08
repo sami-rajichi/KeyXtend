@@ -89,6 +89,23 @@ fn a_read_for_a_box_focus_left_is_closed_with_no_text_call_in_the_same_job() {
     assert_eq!(probe.calls().reads, 0);
 }
 
+/// A box with no id (0) is never the box `still` confirmed, as two such boxes cannot be told apart.
+#[test]
+fn a_read_for_a_box_with_no_id_is_closed_with_no_text_call() {
+    let probe = Script::on(Ok(theirs(SelKind::Editable, 0)));
+    probe.text("مرحبا بالعالم");
+    assert_eq!(read_of(&probe, 0, 5, far()), Err(SelError::Closed));
+    assert_eq!(probe.calls().reads, 0);
+}
+
+#[test]
+fn only_two_equal_ids_name_the_same_box() {
+    assert!(same(7, 7));
+    assert!(!same(7, 8), "another box");
+    assert!(!same(0, 0), "a box with no id is never the same");
+    assert!(!same(7, 0) && !same(0, 7));
+}
+
 #[test]
 fn a_closed_box_is_refused_with_no_text_call() {
     let probe = Script::on(Ok(theirs(SelKind::Closed, 3)));

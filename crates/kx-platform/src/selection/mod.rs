@@ -114,7 +114,7 @@ fn read<P: SelProbe>(
 ) -> Result<Redacted<String>, SelError> {
     let el = theirs(probe, by)?.ok_or(SelError::Closed)?;
     let spot = probe.spot(&el, by)?;
-    if spot.kind == SelKind::Closed || spot.box_id != box_id {
+    if spot.kind == SelKind::Closed || !same(spot.box_id, box_id) {
         return Err(SelError::Closed);
     }
     if !spot.selected {
@@ -122,6 +122,12 @@ fn read<P: SelProbe>(
     }
     late(by)?;
     probe.read(&el, max_chars, by)
+}
+
+/// Whether box ids `a` and `b` name the same box; a box with no id (0) is never the same.
+#[must_use]
+pub fn same(a: u64, b: u64) -> bool {
+    a != 0 && a == b
 }
 
 /// `TimedOut` once `by` has passed.

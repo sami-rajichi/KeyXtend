@@ -5,6 +5,9 @@
 
 use kx_module_api::ports::{SelError, SelKind, SelSpot};
 
+/// The one rule for whether two box ids name the same box, which the neutral read shares.
+pub(crate) use kx_platform::selection::same;
+
 /// Adds and removes the selection handler on an element.
 pub(crate) trait Hook {
     /// One element, as the OS hands it over.
@@ -46,11 +49,6 @@ impl Seen {
             Ok(_) => Self::Open,
         }
     }
-}
-
-/// Whether box ids `a` and `b` name the same box; a box with no id (0) is never the same.
-pub(crate) fn same(a: u64, b: u64) -> bool {
-    a != 0 && a == b
 }
 
 /// Where the selection handler is: the box last looked at, where it was added on that box, and the boxes it waits to

@@ -6,6 +6,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::Rect;
 use std::thread::{self, ThreadId};
 
+mod ids;
 mod watch;
 
 /// Test values; the real ones come from the selection module's settings.
@@ -93,7 +94,7 @@ fn under(box_id: u64, spot: SelSpot) -> SelSpot {
     SelSpot { box_id, ..spot }
 }
 
-/// The text a run reads from the box ake has focused, unwrapped.
+/// The text a run reads from the box the fake has focused, unwrapped.
 fn read(
     fake: &FakeSelectionWatch,
     run: &mut dyn SelRun,
@@ -226,26 +227,6 @@ fn a_closed_box_is_never_read_and_its_read_is_not_counted() {
         );
     }
     assert_eq!(fake.calls().reads, 3);
-}
-
-#[test]
-fn a_read_for_a_box_focus_left_is_closed_and_not_counted() {
-    let fake = FakeSelectionWatch::new();
-    let (mut run, _) = watched(&fake);
-    fake.set_text(ARABIC);
-    fake.focus(selected());
-    let old = fake.spot().box_id;
-    fake.focus(selected());
-    assert_eq!(
-        run.read(old, 5).map(Redacted::into_inner),
-        Err(SelError::Closed)
-    );
-    assert_eq!(fake.calls().reads, 0, "never reached");
-    assert_eq!(
-        read(&fake, run.as_mut(), 5),
-        Ok("مرحبا".to_owned()),
-        "the box in focus"
-    );
 }
 
 #[test]
