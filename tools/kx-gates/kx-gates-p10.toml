@@ -56,8 +56,9 @@ corner = "bar.corner"
 # How many levels down the browser's window the address bar is looked for; only Edit controls match, and the page's
 # Document and the tabs are never entered.
 bar_depth = 12
-# The near-bottom case: the gate's Notepad moves so its line sits this many px above the keyboard or the screen's
-# bottom, so the strip has no room below; 1 px or more, below the theme's gap (checked).
+# The near-bottom case: the gate's Notepad window, when it opened a new one, moves so its line sits this many px
+# above the keyboard or the screen's bottom, so the strip has no room below; 1 px or more, below the theme's gap
+# (checked).
 near_px = 4
 # Browser programs, for "Not now opens nothing" and for the page the owner opened (adapter table).
 browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
