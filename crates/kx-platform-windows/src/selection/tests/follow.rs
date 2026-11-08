@@ -1,12 +1,13 @@
 //! Where the selection handler sits, over a fake hook: added on an open box and kept there, moved to another box,
-//! taken off a closed one, tried again after a failed add, left alone by a failed or late look, kept on a hung box
-//! until it answers or the watch stops, never added on a hung one, and never on more than one answering element
-//! (property).
+//! taken off a closed one, tried again after a failed add, left alone by a failed or late look, and never on more than
+//! one answering element (property); a hung box is in `hung`.
 
-use super::super::follow::{Heard, Hook, Seen, same};
+use super::super::follow::{Heard, Hook, Seen};
 use kx_module_api::ports::{Screen, SelError, SelKind, SelSpot};
 use proptest::prelude::*;
 use std::cell::{Cell, RefCell};
+
+mod hung;
 
 /// A hook call: `true` for an add, with the element it named.
 type Call = (bool, u8);
@@ -154,14 +155,6 @@ fn leaving_removes_it_once() {
 }
 
 #[test]
-fn only_two_equal_ids_name_the_same_box() {
-    assert!(same(7, 7));
-    assert!(!same(7, 8), "another box");
-    assert!(!same(0, 0), "a box with no id is never the same");
-    assert!(!same(7, 0) && !same(0, 7));
-}
-
-#[test]
 fn an_unsure_look_touches_nothing() {
     let (hook, mut heard) = (Fake::default(), Heard::default());
     heard.look(&hook, &1, 10, Seen::Unsure);
@@ -177,89 +170,6 @@ fn an_unsure_look_touches_nothing() {
     assert_eq!(hook.take(), [], "it is still on the last box");
     heard.look(&hook, &2, 20, Seen::Open);
     assert_eq!(hook.take(), [remove(1), add(2)]);
-}
-
-#[test]
-fn a_hung_boxs_handler_waits_until_its_window_answers() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, Seen::Open);
-    hook.hang(&[1]);
-    heard.look(&hook, &2, 20, Seen::Open);
-    assert_eq!(hook.take(), [add(1), add(2)], "no removal from a hung app");
-    heard.look(&hook, &2, 20, Seen::Open);
-    assert_eq!(hook.take(), [], "still hung");
-    hook.hang(&[]);
-    heard.look(&hook, &2, 20, Seen::Open);
-    assert_eq!(hook.take(), [remove(1)], "it answers again");
-}
-
-#[test]
-fn only_a_sure_look_takes_a_waiting_handler_off() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, Seen::Open);
-    hook.hang(&[1]);
-    heard.look(&hook, &2, 20, Seen::Closed);
-    assert_eq!(hook.take(), [add(1)]);
-    hook.hang(&[]);
-    heard.look(&hook, &3, 30, Seen::Unsure);
-    assert_eq!(hook.take(), [], "no OS call after an unsure look");
-    heard.look(&hook, &2, 20, Seen::Closed);
-    assert_eq!(hook.take(), [remove(1)]);
-}
-
-#[test]
-fn a_hung_box_looked_at_again_takes_its_handler_back() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, Seen::Open);
-    hook.hang(&[1]);
-    heard.look(&hook, &2, 20, Seen::Open);
-    heard.look(&hook, &1, 10, Seen::Open);
-    assert_eq!(hook.take(), [add(1), add(2), remove(2)], "no second add");
-    hook.hang(&[]);
-    heard.leave(&hook);
-    assert_eq!(hook.take(), [remove(1)]);
-}
-
-#[test]
-fn the_stop_removes_a_handler_left_on_a_hung_window() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 10, Seen::Open);
-    hook.hang(&[1]);
-    heard.look(&hook, &2, 20, Seen::Open);
-    heard.leave(&hook);
-    assert_eq!(hook.take(), [add(1), add(2), remove(2), remove(1)]);
-    assert!(hook.held.borrow().is_empty(), "never left for good");
-}
-
-#[test]
-fn a_hung_box_gets_no_handler_until_its_window_answers() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    hook.hang(&[1]);
-    heard.look(&hook, &1, 10, Seen::Open);
-    heard.look(&hook, &1, 10, Seen::Open);
-    assert_eq!(hook.take(), [], "no add on a hung app");
-    hook.hang(&[]);
-    heard.look(&hook, &1, 10, Seen::Open);
-    assert_eq!(hook.take(), [add(1)], "it answers again");
-}
-
-#[test]
-fn a_hung_box_with_no_id_gets_no_extra_handler_at_each_look() {
-    let (hook, mut heard) = (Fake::default(), Heard::default());
-    heard.look(&hook, &1, 0, Seen::Open);
-    hook.hang(&[1]);
-    for _ in 0..3 {
-        heard.look(&hook, &1, 0, Seen::Open);
-    }
-    assert_eq!(
-        hook.take(),
-        [add(1)],
-        "its handler waits, and none is added"
-    );
-    hook.hang(&[]);
-    heard.look(&hook, &1, 0, Seen::Open);
-    assert_eq!(hook.take(), [remove(1), add(1)]);
-    assert_eq!(*hook.held.borrow(), [1]);
 }
 
 /// The spot of a box of `kind`.
