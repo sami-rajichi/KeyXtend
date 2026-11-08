@@ -189,6 +189,9 @@ pub struct AppConfig {
     /// Class of the text box that must hold the keyboard before and while typing.
     #[serde(default)]
     pub focus_class: Option<String>,
+    /// UI Automation id of the Don't save button in the question an edited tab asks when the gate closes it.
+    #[serde(default)]
+    pub dont_save_id: Option<String>,
     /// Only a window that did not exist before counts.
     pub new_window: bool,
     /// Longest wait for the window.

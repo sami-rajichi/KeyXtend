@@ -74,6 +74,9 @@ done_ms = 500  # Pause before reading back, in ms.
 exe = "notepad.exe"
 args = ["{input}"]
 focus_class = "RichEditD2DPT"
+# UI Automation id of Don't save in the question an edited tab asks when the gate closes its own tab (the
+# dialog's second button); pressed only while that tab is in front.
+dont_save_id = "SecondaryButton"
 new_window = false
 wait_ms = 15000
 ready_ms = 1500
