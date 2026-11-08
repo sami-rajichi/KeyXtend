@@ -134,6 +134,12 @@ impl Lines {
         }
     }
 
+    /// A drag over `line` from past its end back to its start: the press leaves the caret before the line's break, which
+    /// a drag that ends past the end selects too.
+    pub fn back_over(&self, line: Line) -> (POINT, POINT) {
+        (self.end(line), self.start(line))
+    }
+
     /// The point inside the caret line, where a click leaves a bare caret.
     pub fn caret(&self) -> POINT {
         let r = self.of(Line::Caret);
@@ -190,8 +196,8 @@ pub fn edits(
         gate.clip_holds(seq, &g.copy_line)
     })?;
     let before = Gate::before();
-    gate.acts
-        .drag(app, lines.start(Line::Cut), lines.end(Line::Cut))?;
+    let (from, to) = lines.back_over(Line::Cut);
+    gate.acts.drag(app, from, to)?;
     let (case, shown) = gate.case("notepad_drag", &before, &g.editable_chips)?;
     cases.push(case);
     let cut = act(gate, app, shown, SelChip::Cut, |seq| {
@@ -244,6 +250,11 @@ mod tests {
         };
         assert_eq!(lines.end(Line::Copy), POINT { x: 94, y: 20 });
         assert_eq!(lines.start(Line::Cut), POINT { x: 10, y: 50 });
+        let ((from, to), cut) = (lines.back_over(Line::Cut), lines.of(Line::Cut));
+        assert!(
+            from.x > cut.x + cut.w && to.x == cut.x,
+            "pressed past the end, let go at the start"
+        );
         let moved = lines.shifted(5, -7);
         assert_eq!(moved.end(Line::Copy), POINT { x: 99, y: 13 });
         assert_eq!(moved.of(Line::Cut), r(15, 33, 80, 20));
