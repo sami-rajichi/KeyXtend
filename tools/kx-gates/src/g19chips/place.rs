@@ -1,10 +1,11 @@
-//! Where the strip should sit (P10 design "Where it sits"): the selection's line boxes joined as the platform joins
-//! them, then `geom::anchor` on that screen's work area with the theme's gap for the keyboard's size, clear of the
+//! Where the strip should sit (P10 design "Where it sits"): the selection's line boxes joined by the platform's own
+//! join, then `geom::anchor` on that screen's work area with the theme's gap for the keyboard's size, clear of the
 //! plate, landed where Qt puts a window; and its verdict.
 #![cfg(windows)]
 
 use kx_module_api::ports::{BASE_DPI, Point, Rect, Strip, anchor, physical};
-use kx_platform_windows::screen::{edges, rect_of};
+use kx_platform_windows::screen::edges;
+pub use kx_platform_windows::selection::line;
 use kx_theme::Shape;
 use serde_json::{Value, json};
 use windows::Win32::Foundation::RECT;
@@ -65,27 +66,6 @@ pub fn rect(r: &RECT) -> Rect {
         w: side(r.left, r.right),
         h: side(r.top, r.bottom),
     }
-}
-
-/// The height at the middle of `r`.
-fn middle(r: Rect) -> i32 {
-    r.y.saturating_add(r.h / 2)
-}
-
-/// The smallest box that holds `a` and `b`.
-fn join(a: Rect, b: Rect) -> Rect {
-    let ([al, at, ar, ab], [bl, bt, br, bb]) = (edges(a), edges(b));
-    rect_of([al.min(bl), at.min(bt), ar.max(br), ab.max(bb)])
-}
-
-/// The box of the line that holds `rects[at]`: it and every part whose middle lies within its height, joined.
-pub fn line(rects: &[Rect], at: usize) -> Option<Rect> {
-    let line = *rects.get(at)?;
-    let [_, top, _, bottom] = edges(line);
-    let on = rects
-        .iter()
-        .filter(|r| (top..bottom).contains(&middle(**r)));
-    Some(on.fold(line, |joined, part| join(joined, *part)))
 }
 
 /// Where a `size` strip goes for a selection of `boxes`, `gap` from its line on `area`, clear of `clear`; none with
@@ -149,25 +129,6 @@ mod tests {
             );
         }
         assert!(gap(&shape, 1.5, BASE_DPI) > gap(&shape, 1.0, BASE_DPI));
-    }
-
-    /// The platform's own selection spot, whose line join the gate copies.
-    const SPOT: &str = include_str!("../../../../crates/kx-platform-windows/src/selection/spot.rs");
-    /// This file.
-    const OWN: &str = include_str!("place.rs");
-
-    /// The text of `f` in `src`, from its name to its closing brace.
-    fn body<'a>(src: &'a str, f: &str) -> &'a str {
-        let from = src.find(f).expect(f);
-        let len = src[from..].find("\n}\n").expect("an end");
-        &src[from..from + len]
-    }
-
-    #[test]
-    fn the_line_join_is_the_platforms_own() {
-        for f in ["fn line(", "fn middle(", "fn join("] {
-            assert_eq!(body(OWN, f), body(SPOT, f), "{f}");
-        }
     }
 
     #[test]

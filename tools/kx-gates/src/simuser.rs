@@ -65,7 +65,7 @@ pub fn path(from: Pt, to: Pt, steps: i32) -> Vec<Pt> {
 }
 
 /// The pointer glides from `from` to `to`.
-fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
+pub fn glide(ctx: &Ctx, from: Pt, to: Pt) -> Result<(), String> {
     for at in path(from, to, ctx.cfg.probes.move_steps) {
         simin::as_user(&[Act::Move(at)])?;
         sleep_ms(ctx.cfg.sim.step_ms);

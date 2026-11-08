@@ -126,11 +126,7 @@ impl<'a> Acts<'a> {
 
     /// The pointer's moves from just after `from` to `to`.
     fn moves(&self, from: POINT, to: POINT) -> Result<(), String> {
-        for at in simuser::path(pt(from), pt(to), self.ctx.cfg.probes.move_steps) {
-            simin::as_user(&[Act::Move(at)])?;
-            sleep_ms(self.ctx.cfg.sim.step_ms);
-        }
-        Ok(())
+        simuser::glide(self.ctx, pt(from), pt(to))
     }
 
     /// A drag from `from` to `to` on `app`'s window, the pointer gliding between.

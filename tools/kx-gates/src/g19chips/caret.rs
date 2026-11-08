@@ -60,10 +60,16 @@ fn caret_like(gate: &Gate, s: &Shown) -> bool {
     ids(&s.chips(), gate.g()) == gate.g().caret_chips
 }
 
+/// The caret's Paste once a click on the empty line shows it, and when it was first seen.
+fn shows_at(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Option<(Shown, Instant)>, String> {
+    gate.acts.click(app, lines.caret())?;
+    let shown = gate.strip.within_at(gate.g().strip_wait_ms)?;
+    Ok(shown.filter(|(s, _)| caret_like(gate, s)))
+}
+
 /// The caret's Paste once a click on the empty line shows it.
 fn shows(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Option<Shown>, String> {
-    gate.acts.click(app, lines.caret())?;
-    Ok(gate.strip.shows()?.filter(|s| caret_like(gate, s)))
+    Ok(shows_at(gate, app, lines)?.map(|(s, _)| s))
 }
 
 /// True once the caret's Paste went within `gone_wait_ms`.
@@ -71,14 +77,14 @@ fn goes(gate: &Gate) -> Result<bool, String> {
     gate.strip.goes(|s| caret_like(gate, s))
 }
 
-/// The Paste times out: it goes `caret_s` after it showed, within `caret_slack_ms`.
+/// The Paste times out: it goes `caret_s` after it was first seen, within `caret_slack_ms`.
 fn timer(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     let g = gate.g();
-    let Some(s) = shows(gate, app, lines)? else {
+    let Some((s, shown_at)) = shows_at(gate, app, lines)? else {
         return Ok(json!({ "ok": false, "error": "no Paste" }));
     };
     let (r, p, caret) = (s.rect, lines.caret(), caret_box(app.hwnd));
-    let (shown_at, stays_ms) = (Instant::now(), caret_ms(&gate.sel));
+    let stays_ms = caret_ms(&gate.sel);
     let longest = stays_ms
         .saturating_add(g.caret_slack_ms)
         .saturating_add(g.gone_wait_ms);

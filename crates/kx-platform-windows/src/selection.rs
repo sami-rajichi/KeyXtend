@@ -26,6 +26,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::field::listed;
+pub use spot::{join, line, middle};
 #[cfg(windows)]
 pub use win::WinSelectionWatch;
 

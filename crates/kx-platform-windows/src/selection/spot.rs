@@ -64,7 +64,8 @@ fn caret<S: Span>(range: &S) -> Option<Rect> {
 }
 
 /// The box of the line that holds `rects[at]`: it and every part whose middle lies within its height, joined.
-pub(crate) fn line(rects: &[Rect], at: usize) -> Option<Rect> {
+#[must_use]
+pub fn line(rects: &[Rect], at: usize) -> Option<Rect> {
     let line = *rects.get(at)?;
     let [_, top, _, bottom] = edges(line);
     let on = rects
@@ -74,12 +75,14 @@ pub(crate) fn line(rects: &[Rect], at: usize) -> Option<Rect> {
 }
 
 /// The height at the middle of `r`.
-fn middle(r: Rect) -> i32 {
+#[must_use]
+pub fn middle(r: Rect) -> i32 {
     r.y.saturating_add(r.h / 2)
 }
 
 /// The smallest box that holds `a` and `b`; a box past the range of `i32` stops at its end.
-fn join(a: Rect, b: Rect) -> Rect {
+#[must_use]
+pub fn join(a: Rect, b: Rect) -> Rect {
     let ([al, at, ar, ab], [bl, bt, br, bb]) = (edges(a), edges(b));
     rect_of([al.min(bl), at.min(bt), ar.max(br), ab.max(bb)])
 }

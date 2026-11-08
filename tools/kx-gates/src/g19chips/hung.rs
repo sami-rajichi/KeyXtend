@@ -23,6 +23,12 @@ use crate::{board, launch, probe, typebox};
 pub const ACTS: usize = 5;
 /// What follows the keys during the hang: no pause, so the lock's wait runs from their input.
 const LAST: Then = Then::Watch;
+/// The hung app's own case, which must show no strip.
+const HUNG: &str = "hung";
+/// Notepad's case while the target sleeps.
+const BESIDE_HUNG: &str = "beside_hung";
+/// Notepad's case after the hang.
+const AFTER_HUNG: &str = "after_hung";
 
 /// True when the strip, first seen `lock_ms` after the act that ended at `sent`, came before the hang from `at` ended.
 pub fn in_hang(at: Instant, sent: Instant, lock_ms: Option<u64>, hang_ms: u64) -> bool {
@@ -56,13 +62,13 @@ fn during(
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring the hung target-window to the front".into());
     }
-    cases.push(gate.quiet_hung("hung", target.hwnd)?);
+    cases.push(gate.quiet_hung(HUNG, target.hwnd)?);
     probe::front(ctx, app)?;
     let before = Gate::before();
     gate.acts.click(app, lines.end(Line::Copy))?;
     gate.acts.keys_then(app, &g.select_home, LAST)?;
     let (mut case, _) =
-        gate.case_within("beside_hung", &before, &g.editable_chips, g.hung_wait_ms)?;
+        gate.case_within(BESIDE_HUNG, &before, &g.editable_chips, g.hung_wait_ms)?;
     let within = in_hang(at, gate.acts.sent(), case["ms"].as_u64(), g.hang_ms);
     case["during_hang"] = json!(within);
     cases.push(case);
@@ -78,6 +84,28 @@ fn heard(gate: &Gate, left: &mut Vec<String>) -> Value {
     left.extend(b.left);
     let locked = b.got.as_ref().is_ok_and(|l| *l);
     json!({ "locked": locked, "layout_back": b.back, "error": b.got.err(), "ok": locked && b.back })
+}
+
+/// The step's verdict over `cases`, with the strip seen within the hang and after it, and the field watch `field`.
+fn verdict(cases: &[Value], (within, after): (bool, bool), field: &Value) -> Value {
+    let told = |name: &str| {
+        cases
+            .iter()
+            .any(|c| c["case"] == name && c["chips"] == true)
+    };
+    let lock_ms = cases
+        .iter()
+        .find(|c| c["case"] == BESIDE_HUNG)
+        .map(|c| c["ms"].clone());
+    let parts = [
+        ("quiet", told(HUNG)),
+        ("beside", told(BESIDE_HUNG)),
+        ("during_hang", within),
+        ("after", after),
+        ("field_watch", field["ok"] == true),
+    ];
+    let failed = failed(&parts);
+    json!({ "lock_ms": lock_ms, "field_watch": field, "failed": failed, "ok": failed.is_empty() })
 }
 
 /// The hung target's look, Notepad beside it and after it, then the field watch; the target closes first.
@@ -100,28 +128,12 @@ pub fn run(
     let within = got?;
     probe::front(gate.ctx, app)?;
     gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
-    let (after, _) = by_keys(gate, app, lines, Line::Copy, "after_hung")?;
-    let told = |name: &str, key: &str| cases.iter().any(|c| c["case"] == name && c[key] == true);
-    let (quiet, beside) = (told("hung", "chips"), told("beside_hung", "chips"));
-    let lock_ms = cases
-        .iter()
-        .find(|c| c["case"] == "beside_hung")
-        .map(|c| c["ms"].clone());
+    let (after, _) = by_keys(gate, app, lines, Line::Copy, AFTER_HUNG)?;
     let shown = after["chips"] == true;
     cases.push(after);
     gate.acts.key(app, &board::nav_key(Nav::Esc)?)?;
     let field = heard(gate, left);
-    let parts = [
-        ("quiet", quiet),
-        ("beside", beside),
-        ("during_hang", within),
-        ("after", shown),
-        ("field_watch", field["ok"] == true),
-    ];
-    let failed = failed(&parts);
-    Ok(json!({
-        "lock_ms": lock_ms, "field_watch": field, "failed": failed, "ok": failed.is_empty(),
-    }))
+    Ok(verdict(cases, (within, shown), &field))
 }
 
 #[cfg(test)]
@@ -170,5 +182,20 @@ mod tests {
             ("field_watch", false),
         ];
         assert_eq!(failed(&deaf), ["field_watch"]);
+    }
+
+    #[test]
+    fn the_verdict_reads_the_hung_and_beside_cases_by_name() {
+        let cases = [
+            json!({ "case": HUNG, "chips": true }),
+            json!({ "case": BESIDE_HUNG, "chips": true, "ms": 400 }),
+        ];
+        let field = json!({ "ok": true });
+        let v = verdict(&cases, (true, true), &field);
+        assert_eq!((&v["ok"], &v["lock_ms"]), (&json!(true), &json!(400)));
+        let v = verdict(&cases[..1], (true, true), &field);
+        assert_eq!(v["failed"], json!(["beside"]), "no case beside the hang");
+        let v = verdict(&cases[1..], (true, false), &field);
+        assert_eq!(v["failed"], json!(["quiet", "after"]));
     }
 }
