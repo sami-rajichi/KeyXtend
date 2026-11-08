@@ -1,7 +1,8 @@
-//! A hung app (P10 plan's edge cases): target-window takes the front, then sleeps in its hang mode, so no strip shows
-//! on it, and the gate never asks the hung window anything; the gate's Notepad then shows the strip while the target
-//! still sleeps, and the time from the last key to the strip is the lock's wait. After the hang, a new selection still
-//! shows the strip, and the field watch still hears focus: a password box locks the lane.
+//! A hung app (P10 plan's edge cases): target-window takes the front, then sleeps in its hang mode. A click in its box
+//! makes the product look at it, which must end at the look's deadline with no strip; the gate never asks the hung
+//! window anything. The gate's Notepad then shows the strip while the target still sleeps, and the time from the last
+//! key to the strip is the lock's wait. After the hang, a new selection still shows the strip, and the field watch
+//! still hears focus: a password box locks the lane.
 #![cfg(windows)]
 
 use std::time::Instant;
@@ -16,14 +17,17 @@ use crate::g19chips::docs::Line;
 use crate::g19chips::gate::{Gate, wait_ms};
 use crate::g19chips::kept::{Kept, Target};
 use crate::g19chips::notepad::{Lines, by_keys};
+use crate::keymap::centre;
 use crate::win::{self, ms_since, sleep_ms};
 use crate::{board, launch, probe, typebox};
 
 /// The acts the step pauses after: a selection by keys during the hang and one after it, each ended with our Esc;
-/// the keys during the hang take no pause.
+/// the click on the hung target and the keys during the hang take no pause.
 pub const ACTS: usize = 5;
 /// What follows the keys during the hang: no pause, so the lock's wait runs from their input.
 const LAST: Then = Then::Watch;
+/// What follows the click on the hung target: no pause, so the quiet wait covers the product's look at once.
+const POKE: Then = Then::Watch;
 /// The hung app's own case, which must show no strip.
 const HUNG: &str = "hung";
 /// Notepad's case while the target sleeps.
@@ -46,8 +50,9 @@ fn failed<'a>(parts: &[(&'a str, bool)]) -> Vec<&'a str> {
         .collect()
 }
 
-/// The target brought forward and then hung, as a sleeping window cannot take the front, then Notepad's selection
-/// while it sleeps; whether the strip came within the hang.
+/// The target brought forward and then hung, as a sleeping window cannot take the front, and clicked in its box with no
+/// pause, so the product looks at the hung app as a release in another app makes it; then Notepad's selection while
+/// the target sleeps. Whether the strip came within the hang.
 fn during(
     gate: &Gate,
     app: &Opened,
@@ -59,9 +64,11 @@ fn during(
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring target-window to the front before its hang".into());
     }
+    let inside = centre(&win::rect(target.hwnd)?);
     hang_target(target.hwnd, g.hang_ms)?;
     let at = Instant::now();
     sleep_ms(g.hang_lead_ms);
+    gate.acts.click_then(target, inside, POKE)?;
     cases.push(gate.quiet_hung(HUNG, target.hwnd)?);
     probe::front(ctx, app)?;
     let before = Gate::before();
@@ -123,7 +130,8 @@ pub fn run(
         ));
     }
     let target = Kept::new(Target::new(gate.ctx, launch::start_target(gate.ctx)?));
-    let got = during(gate, app, lines, &target.get().app, cases);
+    let got = launch::park_target(target.get().app.hwnd)
+        .and_then(|()| during(gate, app, lines, &target.get().app, cases));
     left.extend(target.close());
     let within = got?;
     probe::front(gate.ctx, app)?;

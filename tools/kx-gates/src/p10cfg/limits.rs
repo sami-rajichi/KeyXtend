@@ -194,11 +194,12 @@ impl G19Product {
         Ok(())
     }
 
-    /// The least time the hung step acts within the hang: its lead, the quiet wait, Notepad brought forward
-    /// (`front_ms`), the click on its line (`press_ms`) and its pause, the keys with none, and the strip's wait. The
-    /// target comes forward before its hang, as a sleeping window cannot take the front.
+    /// The least time the hung step acts within the hang: its lead, the click on the hung target (`press_ms`) with no
+    /// pause, the quiet wait, Notepad brought forward (`front_ms`), the click on its line and its pause, the keys with
+    /// none, and the strip's wait. The target comes forward before its hang, as a sleeping window cannot take it.
     pub fn hung_acts_ms(&self, front_ms: u64, press_ms: u64) -> u64 {
         [
+            press_ms,
             self.hung_quiet_ms,
             front_ms,
             press_ms,

@@ -81,8 +81,9 @@ quiet_ms = 1500
 settle_ms = 400
 # How long target-window hangs, within its hang_max_ms; it outlasts the selection module's look. The gate brings the
 # target forward first, as a sleeping window cannot take the front, then asks it to hang. hang_lead_ms after asking,
-# it checks no strip shows for hung_quiet_ms, brings Notepad back, selects there with no pause after the keys and
-# waits up to hung_wait_ms for the strip, all within the hang and hang_margin_ms to spare (checked).
+# it clicks in the target's box, so the product looks at the hung app, and checks no strip shows for hung_quiet_ms.
+# It then brings Notepad back, selects there with no pause after the keys and waits up to hung_wait_ms for the strip,
+# all within the hang and hang_margin_ms to spare (checked).
 hang_ms = 3000
 hang_lead_ms = 200
 hung_quiet_ms = 600

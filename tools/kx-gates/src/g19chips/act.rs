@@ -94,9 +94,14 @@ impl<'a> Acts<'a> {
 
     /// A short click at `p` on `app`'s window.
     pub fn click(&self, app: &Opened, p: POINT) -> Result<(), String> {
+        self.click_then(app, p, Then::Settle)
+    }
+
+    /// A short click at `p` on `app`'s window, then what `then` says.
+    pub fn click_then(&self, app: &Opened, p: POINT, then: Then) -> Result<(), String> {
         guard(app, &[pt(p)])?;
         simuser::press(self.ctx, pt(p))?;
-        self.settle();
+        self.after(then);
         Ok(())
     }
 

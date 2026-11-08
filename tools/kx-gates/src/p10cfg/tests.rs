@@ -204,11 +204,11 @@ fn the_hung_cases_must_all_fall_within_the_hang() {
     let g = &c.g19_product;
     let press = c.sim.step_ms + c.sim.click_ms;
     let acts =
-        g.hang_lead_ms + front_ms(&c) + g.hung_quiet_ms + press + g.settle_ms + g.hung_wait_ms;
+        g.hang_lead_ms + front_ms(&c) + 2 * press + g.hung_quiet_ms + g.settle_ms + g.hung_wait_ms;
     assert_eq!(
         g.hung_acts_ms(front_ms(&c), press_ms(&c)),
         acts,
-        "the target comes forward before its hang, Notepad within it; one click, then keys with no pause"
+        "the target comes forward before its hang and takes a click with no pause, then Notepad a click and keys"
     );
     assert!(
         g.hang_ms > acts + g.hang_margin_ms,
