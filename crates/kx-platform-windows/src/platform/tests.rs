@@ -180,6 +180,13 @@ fn the_selection_watch_moves_to_another_thread_without_a_watch() {
 }
 
 #[test]
+fn the_web_link_moves_to_another_thread_without_an_open() {
+    // Never an open: it would start the owner's browser.
+    let link = WindowsPlatform::new().unwrap().web_link();
+    assert!(std::thread::spawn(move || drop(link)).join().is_ok());
+}
+
+#[test]
 fn the_clipboard_ports_move_to_another_thread_without_a_watch_or_a_write() {
     // Never a watch or a write: the clipboard belongs to whoever runs the tests.
     let platform = WindowsPlatform::new().unwrap();
