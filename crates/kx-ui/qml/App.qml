@@ -235,9 +235,7 @@ QtObject {
             face.place();
         if (!bubbleTo())
             return false;
-        hide();
-        minimised = true;
-        keep();
+        hide(true);
         bubbleGlow.visible = true;
         bubble.visible = true;
         face.guardRun();
@@ -257,11 +255,12 @@ QtObject {
         if (bubble.visible)
             bubbleTo();
     }
-    // Hides the keyboard until the bubble or a second copy's Show brings it back.
-    function hide() {
+    // Hides the keyboard until a second copy's Show, or the bubble when `behind` (Minimise), brings it back; the hub
+    // hears the mode once.
+    function hide(behind) {
         face.finish();
         away = true;
-        minimised = false;
+        minimised = !!behind;
         keep();
         face.visible = false;
         kbGlow.visible = false;
