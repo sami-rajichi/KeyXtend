@@ -3,10 +3,10 @@
 
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_NUMLOCK;
 
-use crate::apps::INPUT;
+use crate::apps::{INPUT, same_name};
 use crate::p5cfg::SEP;
 use crate::p8cfg::wait;
-use crate::p10cfg::{G19Product, caret_ms, marked, selection_defaults};
+use crate::p10cfg::{Bar, G19Product, caret_ms, marked, selection_defaults};
 
 /// True for a kx-ui id: a group, `SEP`, then a name.
 fn id_like(id: &str) -> bool {
@@ -73,9 +73,34 @@ impl G19Product {
         Ok(())
     }
 
+    /// Refuses an empty address-bar table, a row for a browser not in `browsers` or named twice, and a row that
+    /// matches by nothing or by an empty value.
+    pub(super) fn check_bars(&self) -> Result<(), String> {
+        let known = |b: &String| self.browsers.iter().any(|k| same_name(k, b));
+        let all: Vec<&String> = self.bars.iter().flat_map(|r| &r.browsers).collect();
+        let twice = |i: usize| all[..i].iter().any(|b| same_name(b, all[i]));
+        let row_ok = |r: &Bar| {
+            let by: Vec<&String> = r.ids.iter().chain(&r.classes).chain(&r.names).collect();
+            !r.browsers.is_empty() && !by.is_empty() && by.iter().all(|v| !v.trim().is_empty())
+        };
+        let ok = self.bars.iter().all(row_ok) && all.iter().all(|b| known(b));
+        if self.bars.is_empty() || !ok || (0..all.len()).any(twice) {
+            return Err(
+                "g19_product.bars: each row names browsers of g19_product.browsers, each once, and an id, class or \
+                 name"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+
     /// Refuses a wait outside 1 ms to `most_ms`, a negative slack, and a caret slack as long as the caret's Paste
-    /// stays; then the hang's own rules.
-    pub(super) fn check_waits(&self, most_ms: u64, front_ms: u64) -> Result<(), String> {
+    /// stays; then the hang's own rules, with `(front_ms, press_ms)` per window brought forward and per click.
+    pub(super) fn check_waits(
+        &self,
+        most_ms: u64,
+        (front_ms, press_ms): (u64, u64),
+    ) -> Result<(), String> {
         let waits = [
             ("ready_ms", self.ready_ms),
             ("strip_wait_ms", self.strip_wait_ms),
@@ -86,7 +111,9 @@ impl G19Product {
             ("hang_lead_ms", self.hang_lead_ms),
             ("hung_quiet_ms", self.hung_quiet_ms),
             ("hung_wait_ms", self.hung_wait_ms),
+            ("hang_margin_ms", self.hang_margin_ms),
             ("ping_ms", self.ping_ms),
+            ("ping_exit_ms", self.ping_exit_ms),
             ("caret_slack_ms", self.caret_slack_ms),
             ("owner_wait_ms", self.owner_wait_ms),
         ];
@@ -95,7 +122,7 @@ impl G19Product {
             .iter()
             .try_for_each(|(k, ms)| wait(&key(k), *ms, most_ms))?;
         let s = selection_defaults()?;
-        self.check_hang(front_ms)?;
+        self.check_hang(front_ms, press_ms)?;
         if self.place_slack_px < 0 {
             return Err("g19_product.place_slack_px must not be negative".into());
         }
@@ -108,18 +135,24 @@ impl G19Product {
     }
 
     /// The least time the hung step acts within the hang: its lead, two windows brought forward (`front_ms` each),
-    /// the quiet wait, two acts and the strip's wait.
-    pub fn hung_acts_ms(&self, front_ms: u64) -> u64 {
+    /// the quiet wait, the click on Notepad's line (`press_ms`) and its pause, the keys with none, and the strip's
+    /// wait.
+    pub fn hung_acts_ms(&self, front_ms: u64, press_ms: u64) -> u64 {
         let fronts = front_ms.saturating_mul(2);
-        let acts = self.settle_ms.saturating_mul(2);
-        [self.hung_quiet_ms, fronts, acts, self.hung_wait_ms]
-            .iter()
-            .fold(self.hang_lead_ms, |sum, ms| sum.saturating_add(*ms))
+        [
+            self.hung_quiet_ms,
+            fronts,
+            press_ms,
+            self.settle_ms,
+            self.hung_wait_ms,
+        ]
+        .iter()
+        .fold(self.hang_lead_ms, |sum, ms| sum.saturating_add(*ms))
     }
 
-    /// Refuses a hung app's quiet wait the module's look outlasts, and a hang that ends before every act in it, or
-    /// past target-window's `hang_max_ms`.
-    fn check_hang(&self, front_ms: u64) -> Result<(), String> {
+    /// Refuses a hung app's quiet wait the module's look outlasts, a hang that does not outlast every act in it by
+    /// `hang_margin_ms`, and one past target-window's `hang_max_ms`.
+    fn check_hang(&self, front_ms: u64, press_ms: u64) -> Result<(), String> {
         let s = selection_defaults()?;
         let look = u64::from(s.settle_ms).saturating_add(u64::from(s.read_ms));
         if self.hung_quiet_ms <= look {
@@ -127,10 +160,10 @@ impl G19Product {
                 "g19_product.hung_quiet_ms must outlast the module's look, {look} ms"
             ));
         }
-        let acts = self.hung_acts_ms(front_ms);
-        if self.hang_ms <= acts {
+        let acts = self.hung_acts_ms(front_ms, press_ms);
+        if self.hang_ms <= acts.saturating_add(self.hang_margin_ms) {
             return Err(format!(
-                "g19_product.hang_ms must outlast the acts during the hang, {acts} ms"
+                "g19_product.hang_ms must outlast the acts during the hang, {acts} ms, by hang_margin_ms"
             ));
         }
         let target = kx_target_window::config::load().map_err(|e| e.to_string())?;

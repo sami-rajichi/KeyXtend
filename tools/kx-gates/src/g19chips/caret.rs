@@ -102,7 +102,7 @@ fn moved(gate: &Gate, app: &Opened, lines: &Lines) -> Result<Value, String> {
     }
     let max = gate.ctx.cfg.g1.max_read_chars;
     let from = select::caret(gate.uia(), app.hwnd, max)?;
-    select::back(gate.uia(), app.hwnd)?;
+    select::back(gate.uia(), app)?;
     let to = select::caret(gate.uia(), app.hwnd, max)?;
     let went = goes(gate)?;
     let ok = select::stepped(from, to) && went;

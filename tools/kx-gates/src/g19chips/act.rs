@@ -1,6 +1,6 @@
 //! G19's acts, each as the simulated user (`SIM_TAG`), whom the test build's engine hears as the hand, then a pause of
-//! `settle_ms`: clicks and drags only where the gate's own window is on top, keys only while it is in front, and clicks
-//! on our keyboard's keys.
+//! `settle_ms` unless a wait timed from the input follows: clicks and drags only where the gate's own window is on top,
+//! keys only while it is in front, and clicks on our keyboard's keys.
 #![cfg(windows)]
 
 use std::cell::Cell;
@@ -34,6 +34,23 @@ fn strokes(vks: &[u16]) -> Vec<INPUT> {
     downs.chain(ups).collect()
 }
 
+/// What follows an act.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Then {
+    /// A pause of `settle_ms`, so the app takes the act.
+    Settle,
+    /// No pause, so a wait timed from the input starts at once.
+    Watch,
+}
+
+/// The ms to pause after an act followed by `then`, at `settle_ms`.
+pub fn pause_ms(then: Then, settle_ms: u64) -> u64 {
+    match then {
+        Then::Settle => settle_ms,
+        Then::Watch => 0,
+    }
+}
+
 /// The gate's acts in one run.
 pub struct Acts<'a> {
     ctx: &'a Ctx<'a>,
@@ -56,8 +73,13 @@ impl<'a> Acts<'a> {
 
     /// The pause after each act, timed from the input's end.
     fn settle(&self) {
+        self.after(Then::Settle);
+    }
+
+    /// Marks the input's end, then pauses as `then` says.
+    fn after(&self, then: Then) {
         self.sent.set(Instant::now());
-        sleep_ms(self.ctx.cfg.g19_product.settle_ms);
+        sleep_ms(pause_ms(then, self.ctx.cfg.g19_product.settle_ms));
     }
 
     /// A short click at `p` on `app`'s window.
@@ -121,9 +143,14 @@ impl<'a> Acts<'a> {
 
     /// Keys `vks` pressed together while `app` is in front.
     pub fn keys(&self, app: &Opened, vks: &[u16]) -> Result<(), String> {
+        self.keys_then(app, vks, Then::Settle)
+    }
+
+    /// Keys `vks` pressed together while `app` is in front, then what `then` says.
+    pub fn keys_then(&self, app: &Opened, vks: &[u16], then: Then) -> Result<(), String> {
         keys_ours(app)?;
         crate::keys::send(&strokes(vks))?;
-        self.settle();
+        self.after(then);
         Ok(())
     }
 

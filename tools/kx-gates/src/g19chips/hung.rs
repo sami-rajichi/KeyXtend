@@ -11,14 +11,18 @@ use serde_json::{Value, json};
 
 use crate::apps::{self, Opened};
 use crate::g5play::hang_target;
+use crate::g19chips::act::Then;
 use crate::g19chips::docs::Line;
 use crate::g19chips::gate::{Gate, wait_ms};
 use crate::g19chips::notepad::{Lines, by_keys};
 use crate::win::{self, ms_since, sleep_ms};
 use crate::{board, launch, probe, typebox};
 
-/// The acts the step takes: a selection by keys during the hang and one after it, each ended with our Esc.
-pub const ACTS: usize = 6;
+/// The acts the step pauses after: a selection by keys during the hang and one after it, each ended with our Esc;
+/// the keys during the hang take no pause.
+pub const ACTS: usize = 5;
+/// What follows the keys during the hang: no pause, so the lock's wait runs from their input.
+const LAST: Then = Then::Watch;
 
 /// True when the strip, first seen `lock_ms` after the act that ended at `sent`, came before the hang from `at` ended.
 pub fn in_hang(at: Instant, sent: Instant, lock_ms: Option<u64>, hang_ms: u64) -> bool {
@@ -35,7 +39,8 @@ fn failed<'a>(parts: &[(&'a str, bool)]) -> Vec<&'a str> {
         .collect()
 }
 
-/// The hung target in front, then Notepad's selection while it sleeps; whether the strip came within the hang.
+/// The hung target in front and kept there, then Notepad's selection while it sleeps; whether the strip came within
+/// the hang.
 fn during(
     gate: &Gate,
     app: &Opened,
@@ -48,15 +53,14 @@ fn during(
     hang_target(target.hwnd, g.hang_ms)?;
     let at = Instant::now();
     sleep_ms(g.hang_lead_ms);
-    let before = Gate::before();
     if !win::front(target.hwnd, &ctx.cfg.timing, &ctx.cfg.keys) {
         return Err("could not bring the hung target-window to the front".into());
     }
-    cases.push(gate.quiet_hung("hung", &before)?);
+    cases.push(gate.quiet_hung("hung", target.hwnd)?);
     probe::front(ctx, app)?;
     let before = Gate::before();
     gate.acts.click(app, lines.end(Line::Copy))?;
-    gate.acts.keys(app, &g.select_home)?;
+    gate.acts.keys_then(app, &g.select_home, LAST)?;
     let (mut case, _) =
         gate.case_within("beside_hung", &before, &g.editable_chips, g.hung_wait_ms)?;
     let within = in_hang(at, gate.acts.sent(), case["ms"].as_u64(), g.hang_ms);
@@ -132,6 +136,14 @@ mod tests {
         assert!(in_hang(at, sent, Some(400), 3_000));
         assert!(!in_hang(at, sent, Some(1_000), 3_000), "at its end");
         assert!(!in_hang(at, sent, None, 3_000), "no strip");
+    }
+
+    #[test]
+    fn the_locks_wait_starts_at_the_last_keys_input() {
+        use crate::g19chips::act::pause_ms;
+        let settle = crate::config::load().expect("loads").g19_product.settle_ms;
+        assert_eq!(pause_ms(LAST, settle), 0, "no settle before the watch");
+        assert_eq!(pause_ms(Then::Settle, settle), settle);
     }
 
     #[test]

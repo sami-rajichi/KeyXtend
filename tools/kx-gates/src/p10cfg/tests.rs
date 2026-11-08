@@ -1,5 +1,6 @@
 //! Tests of `p10cfg`.
 
+mod bars;
 mod ids;
 
 use super::*;
@@ -190,6 +191,8 @@ fn a_wait_or_slack_past_its_range_is_refused() {
         (|g| g.hung_quiet_ms = 1, "g19_product.hung_quiet_ms"),
         (|g| g.bar_depth = 0, "g19_product.bar_depth"),
         (|g| g.box_size = 0, "g19_product.box_size"),
+        (|g| g.ping_exit_ms = 0, "g19_product.ping_exit_ms"),
+        (|g| g.ping_exit_ms = u64::MAX, "g19_product.ping_exit_ms"),
     ]);
 }
 
@@ -197,14 +200,29 @@ fn a_wait_or_slack_past_its_range_is_refused() {
 fn the_hung_cases_must_all_fall_within_the_hang() {
     let c = load().expect("loads");
     let g = &c.g19_product;
-    let acts = g.hang_lead_ms + g.hung_quiet_ms + 2 * g.settle_ms + g.hung_wait_ms;
-    assert!(g.hang_ms > acts, "the shipped hang holds every act");
+    let press = c.sim.step_ms + c.sim.click_ms;
+    let acts =
+        g.hang_lead_ms + 2 * front_ms(&c) + g.hung_quiet_ms + press + g.settle_ms + g.hung_wait_ms;
+    assert_eq!(
+        g.hung_acts_ms(front_ms(&c), press_ms(&c)),
+        acts,
+        "one click, then keys with no pause"
+    );
+    assert!(
+        g.hang_ms > acts + g.hang_margin_ms,
+        "the shipped hang holds every act and its margin"
+    );
+    let mut tight = c.clone();
+    tight.g19_product.hang_ms = acts + g.hang_margin_ms;
+    let e = check(&tight).expect_err("no margin");
+    assert!(
+        e.contains("g19_product.hang_ms") && e.contains("hang_margin_ms"),
+        "{e}"
+    );
     refused(&[
-        (
-            |g| g.hang_ms = g.hang_lead_ms + g.hung_quiet_ms + 2 * g.settle_ms + g.hung_wait_ms,
-            "g19_product.hang_ms",
-        ),
         (|g| g.hung_wait_ms += g.hang_ms, "g19_product.hang_ms"),
+        (|g| g.hang_margin_ms = g.hang_ms, "g19_product.hang_ms"),
+        (|g| g.hang_margin_ms = 0, "g19_product.hang_margin_ms"),
     ]);
     let cap = kx_target_window::config::load()
         .expect("target config loads")
@@ -248,6 +266,11 @@ fn todays_g19_fits_the_mouse_guard_and_its_waits_count() {
         "within the hang"
     );
     assert_eq!(more(|s| s.g19_product.hang_ms += 1), 1);
+    assert_eq!(
+        more(|s| s.g19_product.ping_exit_ms += 1),
+        0,
+        "a longest wait"
+    );
     assert_eq!(more(|s| s.g19_product.ping_ms += 1), 1);
     assert_eq!(more(|s| s.g19_product.ready_ms += 1), 1);
     assert_eq!(more(|s| s.g19_product.settle_ms += 1), times(ACTS, 1));

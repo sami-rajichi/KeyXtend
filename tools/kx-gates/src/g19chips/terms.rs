@@ -1,6 +1,7 @@
 //! G19 in terminals (P10 design "In a terminal"): Windows Terminal and the classic console show Copy, Paste and
 //! Translate on the gate's printed line; Copy copies it, and Paste types it back at the prompt with Num Lock on and
-//! off, which the gate puts back as it found it. Copy during the gate's own `ping -t` leaves the ping running.
+//! off, which the gate reads only through its own terminal and puts back as it found it. Copy during the gate's own
+//! `ping -t` leaves the ping running.
 #![cfg(windows)]
 
 use kx_module_api::ports::{Rect, SelChip};
@@ -16,6 +17,7 @@ use crate::g19chips::notepad::{act, rows};
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
 use crate::g19chips::{place, procs, script};
+use crate::probe;
 use crate::win::{self, sleep_ms};
 
 /// The acts the step takes at the least: in each terminal a drag and Copy, then a drag, Paste and Enter with Num Lock
@@ -71,7 +73,7 @@ fn paste(
     (at, on): (usize, bool),
 ) -> Result<Value, String> {
     let g = gate.g();
-    for _ in 0..script::taps(numlock_on(), on) {
+    for _ in 0..script::taps(numlock_on(t.hwnd)?, on) {
         gate.acts.keys(app, &g.numlock)?;
     }
     let (_, shown) = select(gate, app, r, "paste")?;
@@ -100,25 +102,39 @@ fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Va
     Ok(json!({ "copy": copy, "pastes": pastes, "ok": ok }))
 }
 
-/// Terminal `kind` on the line script, driven, then closed; Num Lock goes back as it was, whatever happened.
+/// Num Lock put back to `was` with terminal `t` in front; false when it stayed changed or could not be read.
+fn put_back(gate: &Gate, t: &Term, was: bool) -> bool {
+    let (cfg, g) = (gate.ctx.cfg, gate.g());
+    if !win::front_back(t.hwnd, &cfg.timing, &cfg.keys) {
+        return false;
+    }
+    if numlock_on(t.hwnd).is_ok_and(|on| on != was) {
+        let _ = crate::keys::restore_combo(&g.numlock);
+        sleep_ms(g.settle_ms);
+    }
+    numlock_on(t.hwnd).is_ok_and(|on| on == was)
+}
+
+/// Terminal `kind` on the line script, read for Num Lock once in front, driven, then closed; Num Lock goes back as
+/// it was, whatever happened.
 fn one(
     gate: &Gate,
     kind: Kind,
     cases: &mut Vec<Value>,
     left: &mut Vec<String>,
 ) -> Result<Value, String> {
-    let (g, was) = (gate.g(), numlock_on());
+    let g = gate.g();
     let t = term::open(gate.ctx, kind, LINES, |ready, out| {
         script::lines(&g.term_line, ready, out)
     })?;
-    let got = drive(gate, kind, &t, cases);
-    if numlock_on() != was {
-        let _ = crate::keys::restore_combo(&g.numlock);
-        sleep_ms(g.settle_ms);
-    }
-    let back = numlock_on() == was;
+    let was = probe::front(gate.ctx, &t.app()).and_then(|()| numlock_on(t.hwnd));
+    let got = was.and_then(|was| {
+        let v = drive(gate, kind, &t, cases);
+        let back = put_back(gate, &t, was);
+        v.map(|v| finished(v, back))
+    });
     left.extend(term::close(gate.ctx, t));
-    Ok(finished(got?, back))
+    got
 }
 
 /// One terminal's result with Num Lock put back as `back` says: it fails when Num Lock stayed changed.
@@ -145,7 +161,8 @@ fn pinged(gate: &Gate, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String
     Ok(json!({ "copy": copy, "replies_before": before, "replies_after": after, "ok": ok }))
 }
 
-/// Copy during the gate's own ping in Windows Terminal, which then closes; a ping still running after is left.
+/// Copy during the gate's own ping in Windows Terminal, which then closes; the ping gets `ping_exit_ms` to end, and
+/// one still running then is ended and reported.
 fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<Value, String> {
     let g = gate.g();
     let before = procs::now();
@@ -153,13 +170,13 @@ fn ping(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Result<V
         script::ping(g, ready, out)
     })?;
     let got = pinged(gate, &t, cases);
+    let held = procs::hold(procs::ours(&before, &procs::now(), &g.ping_exe));
     left.extend(term::close(gate.ctx, t));
-    let stayed = procs::stayed(&before, &procs::now(), &g.ping_exe);
-    left.extend(
-        stayed
-            .iter()
-            .map(|p| format!("still running: {} {}", p.exe, p.pid)),
-    );
+    left.extend(procs::let_end(
+        &held,
+        g.ping_exit_ms,
+        gate.ctx.cfg.timing.poll_ms,
+    ));
     got
 }
 

@@ -159,26 +159,51 @@ pub fn toggled(state: i16) -> bool {
     state & TOGGLED != 0
 }
 
-/// True while Num Lock is on, read through the input state of the window in front, which has taken every key sent;
-/// the gate's own thread reads no keys, so its own state would be stale.
+/// The thread whose input a Num Lock read shares: `own`'s `thread`, only while window `own` is the one in `front`
+/// and runs on another thread than `me`.
+pub fn attach_to(front: isize, own: isize, thread: u32, me: u32) -> Option<u32> {
+    (front == own && thread != 0 && thread != me).then_some(thread)
+}
+
+/// True while Num Lock is on, read through the input state of the gate's own terminal `own` while it is in front, as
+/// it has taken every key sent; an error, with nothing shared, while another window is in front.
 #[allow(unsafe_code, reason = "Plain thread and key-state queries.")]
-pub fn numlock_on() -> bool {
-    let front = win::owner(foreground()).1;
-    // SAFETY: plain queries; the shared input state is let go before returning.
+pub fn numlock_on(own: HWND) -> Result<bool, String> {
+    let thread = win::owner(own).1;
+    // SAFETY: a plain query of this thread's id.
+    let me = unsafe { GetCurrentThreadId() };
+    let front = foreground();
+    let Some(to) = attach_to(win::key(front), win::key(own), thread, me) else {
+        let e = format!("Num Lock not read: {} is in front", win::describe(front));
+        return Err(e);
+    };
+    // SAFETY: plain queries on the terminal's thread; the shared input state is let go before returning.
     unsafe {
-        let me = GetCurrentThreadId();
-        let joined = front != 0 && front != me && AttachThreadInput(me, front, true).as_bool();
-        let state = GetKeyState(i32::from(VK_NUMLOCK.0));
-        if joined {
-            let _ = AttachThreadInput(me, front, false);
+        if !AttachThreadInput(me, to, true).as_bool() {
+            return Err("Num Lock not read: the terminal's input could not be shared".into());
         }
-        toggled(state)
+        let state = GetKeyState(i32::from(VK_NUMLOCK.0));
+        let _ = AttachThreadInput(me, to, false);
+        Ok(toggled(state))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn num_lock_is_read_only_through_our_own_terminal_in_front() {
+        let (ours, other, me) = (7, 9, 40);
+        assert_eq!(attach_to(ours, ours, 41, me), Some(41));
+        assert_eq!(
+            attach_to(other, ours, 41, me),
+            None,
+            "another window in front"
+        );
+        assert_eq!(attach_to(ours, ours, 0, me), None, "a closed terminal");
+        assert_eq!(attach_to(ours, ours, me, me), None, "the gate's own thread");
+    }
 
     #[test]
     fn only_the_low_bit_is_the_toggle() {

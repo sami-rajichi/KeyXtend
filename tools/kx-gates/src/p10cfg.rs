@@ -6,7 +6,7 @@
 mod fields;
 mod limits;
 
-pub use fields::G19Product;
+pub use fields::{Bar, G19Product};
 
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -52,6 +52,11 @@ pub fn front_ms(c: &GatesConfig) -> u64 {
         .saturating_add(c.timing.front_wait_ms)
 }
 
+/// The ms one click takes: the pointer's step onto its point, then the button held.
+pub fn press_ms(c: &GatesConfig) -> u64 {
+    c.sim.step_ms.saturating_add(c.sim.click_ms)
+}
+
 /// The least time `g19 keyxtend` holds the mouse: its copy, its Notepad, Chrome and two target-windows, every quiet
 /// wait, the hang, the ping, the caret's Paste timing out, and the settle after each act.
 pub fn g19_ms(c: &GatesConfig) -> u64 {
@@ -81,7 +86,8 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     g.check_strip()?;
     g.check_keys()?;
     g.check_ping()?;
-    g.check_waits(c.mouse_guard.limit_ms, front_ms(c))?;
+    g.check_bars()?;
+    g.check_waits(c.mouse_guard.limit_ms, (front_ms(c), press_ms(c)))?;
     held_fits(c, "g19_product: G19 on the product", g19_ms(c))
 }
 

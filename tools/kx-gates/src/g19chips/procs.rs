@@ -1,6 +1,6 @@
 //! The processes running now, each with its parent and program name, from one system snapshot; which of them are
 //! browsers newly started, not children of a browser already running, as a page that opened would start one; which
-//! a closed terminal left running; and how many windows are new.
+//! the gate's own script started, and which of those stay after their terminal closed; and how many windows are new.
 #![cfg(windows)]
 
 use std::collections::HashSet;
@@ -11,7 +11,8 @@ use windows::Win32::System::Diagnostics::ToolHelp::{
 };
 
 use crate::apps::same_name;
-use crate::win::size32;
+use crate::proc::Process;
+use crate::win::{self, size32};
 
 /// One process.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +49,55 @@ pub fn stayed(before: &[Proc], after: &[Proc], exe: &str) -> Vec<Proc> {
     let new = |p: &&Proc| find(before, p.pid).is_none();
     let named = |p: &&Proc| same_name(&p.exe, exe);
     after.iter().filter(new).filter(named).cloned().collect()
+}
+
+/// The processes of program `exe` in `now`, not in `before`, whose parent is new too: what the gate's own script
+/// started, never a program the owner ran from a shell already open.
+pub fn ours(before: &[Proc], now: &[Proc], exe: &str) -> Vec<Proc> {
+    let parent_new = |p: &Proc| find(before, p.parent).is_none() && find(now, p.parent).is_some();
+    stayed(before, now, exe)
+        .into_iter()
+        .filter(parent_new)
+        .collect()
+}
+
+/// Each of `procs` with a handle that keeps it known while it runs; none for one that could not be opened.
+pub fn hold(procs: Vec<Proc>) -> Vec<(Proc, Option<Process>)> {
+    let held = |p: Proc| {
+        let h = Process::to_end(p.pid).ok();
+        (p, h)
+    };
+    procs.into_iter().map(held).collect()
+}
+
+/// True while `p` still runs: by its handle `h`, or else by its id and program in `all`.
+fn alive(p: &Proc, h: Option<&Process>, all: &[Proc]) -> bool {
+    let listed = || find(all, p.pid).is_some_and(|q| same_name(&q.exe, &p.exe));
+    h.map_or_else(listed, |h| !h.ended())
+}
+
+/// Waits up to `wait_ms` for each of `held` to end, then ends those still running; a line for each.
+pub fn let_end(held: &[(Proc, Option<Process>)], wait_ms: u64, poll_ms: u64) -> Vec<String> {
+    let still = || {
+        let all = now();
+        let on = |(p, h): &&(Proc, Option<Process>)| alive(p, h.as_ref(), &all);
+        held.iter().filter(on).collect::<Vec<_>>()
+    };
+    let _ = win::poll_until(wait_ms, poll_ms, || still().is_empty().then_some(()));
+    let line = |(p, h): &(Proc, Option<Process>)| {
+        let how = h.as_ref().map_or_else(
+            || "not held, so not ended".to_string(),
+            |h| {
+                h.end()
+                    .map_or_else(|e| format!("could not end it: {e}"), |()| "ended".into())
+            },
+        );
+        format!(
+            "still running after its terminal closed: {} {}, {how}",
+            p.exe, p.pid
+        )
+    };
+    still().into_iter().map(line).collect()
 }
 
 /// How many of the windows `now` were not among `before`.
@@ -138,6 +188,37 @@ mod tests {
         after.push(p(21, 30, "PING.EXE"));
         after.push(p(22, 30, "conhost.exe"));
         assert_eq!(stayed(&before, &after, "ping.exe"), [p(21, 30, "PING.EXE")]);
+    }
+
+    #[test]
+    fn only_a_ping_our_own_script_started_is_held() {
+        let before = [p(4, 0, "explorer.exe"), p(30, 4, "pwsh.exe")];
+        let mut now = before.to_vec();
+        now.push(p(31, 30, "PING.EXE"));
+        now.push(p(40, 4, "powershell.exe"));
+        now.push(p(41, 40, "ping.exe"));
+        assert_eq!(
+            ours(&before, &now, "ping.exe"),
+            [p(41, 40, "ping.exe")],
+            "the owner's shell was open before"
+        );
+        now.push(p(51, 99, "ping.exe"));
+        assert_eq!(
+            ours(&before, &now, "ping.exe").len(),
+            1,
+            "a parent already gone"
+        );
+    }
+
+    #[test]
+    fn a_ping_not_held_counts_as_running_only_while_listed_with_its_program() {
+        let ping = p(41, 40, "ping.exe");
+        assert!(alive(&ping, None, std::slice::from_ref(&ping)));
+        assert!(!alive(&ping, None, &[]), "it ended");
+        assert!(
+            !alive(&ping, None, &[p(41, 4, "notepad.exe")]),
+            "its id reused"
+        );
     }
 
     #[test]

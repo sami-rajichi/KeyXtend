@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Accessibility::UIA_ButtonControlTypeId;
 
-use crate::apps::Opened;
+use crate::apps::{Ctx, Opened};
 use crate::clippanel::has_area;
 use crate::ftl::{self, Piece};
 use crate::g19chips::docs::Line;
@@ -26,6 +26,7 @@ use crate::g19chips::notepad::Lines;
 use crate::g19chips::{addr, procs};
 use crate::g23::live::{self, poll_read};
 use crate::g23::notice::{banner, click_in, double_click_ms, fits, names_kept, past_double};
+use crate::keymap::Reader;
 use crate::product;
 use crate::win::{self, ms_since, sleep_ms};
 
@@ -37,9 +38,29 @@ pub const ACTS: usize = 2 * ROUNDS;
 pub const QUIET: usize = ROUNDS;
 
 /// The question's titles and the shapes of its text in every shipped language.
-struct Ask {
+pub struct Ask {
     titles: Vec<String>,
     shapes: Vec<Vec<Piece>>,
+}
+
+impl Ask {
+    /// Translate's question, as `ctx`'s banner title and the shipped texts name it.
+    pub fn new(ctx: &Ctx) -> Result<Self, String> {
+        Ok(Self {
+            titles: ftl::every(&ctx.cfg.g23.notice_title)?,
+            shapes: ftl::shapes(keys::TRANSLATE_ASK)?,
+        })
+    }
+
+    /// The banner's window while it asks the question now.
+    pub fn shows(&self, reader: &Reader) -> Result<Option<HWND>, String> {
+        let Some(w) = banner(&self.titles) else {
+            return Ok(None);
+        };
+        let names = names_kept(reader, w)?.unwrap_or_default();
+        let fit = names.iter().any(|n| self.shapes.iter().any(|s| fits(s, n)));
+        Ok(fit.then_some(w))
+    }
 }
 
 /// What the quiet wait after Not now saw, poll by poll.
@@ -97,16 +118,6 @@ fn consent_now() -> Result<bool, String> {
     Ok(s.translate_ok)
 }
 
-/// The banner's window while it asks Translate's question now.
-fn asked_now(gate: &Gate, ask: &Ask) -> Result<Option<HWND>, String> {
-    let Some(w) = banner(&ask.titles) else {
-        return Ok(None);
-    };
-    let names = names_kept(&gate.reader, w)?.unwrap_or_default();
-    let fit = names.iter().any(|n| ask.shapes.iter().any(|s| fits(s, n)));
-    Ok(fit.then_some(w))
-}
-
 /// Answers the question on banner `w` Not now with a real click once past the double-click time, and waits up to
 /// `gone_wait_ms` for it to go.
 fn not_now(gate: &Gate, w: HWND, ask: &Ask) -> Result<bool, String> {
@@ -118,7 +129,7 @@ fn not_now(gate: &Gate, w: HWND, ask: &Ask) -> Result<bool, String> {
         .find(|k| laters.contains(&k.name) && has_area(&k.rect))
         .ok_or("Translate's question shows no Not now button")?;
     click_in(w, &later.rect, "Not now")?;
-    let gone = || Ok(asked_now(gate, ask)?.is_none().then_some(()));
+    let gone = || Ok(ask.shows(&gate.reader)?.is_none().then_some(()));
     Ok(poll_read(gate.g().gone_wait_ms, poll, gone)?.is_some())
 }
 
@@ -139,7 +150,7 @@ fn calm(
             .into_iter()
             .map(win::key)
             .collect();
-        let asked = asked_now(gate, ask)?.is_some();
+        let asked = ask.shows(&gate.reader)?.is_some();
         calm.note(
             launched,
             procs::fresh(windows, &now),
@@ -161,10 +172,7 @@ fn round(
     at: usize,
     cases: &mut Vec<Value>,
 ) -> Result<Value, String> {
-    let ask = Ask {
-        titles: ftl::every(&gate.ctx.cfg.g23.notice_title)?,
-        shapes: ftl::shapes(keys::TRANSLATE_ASK)?,
-    };
+    let ask = Ask::new(gate.ctx)?;
     let before = Gate::before();
     gate.acts
         .drag(app, lines.start(Line::Arabic), lines.end(Line::Arabic))?;
@@ -182,7 +190,7 @@ fn round(
     let (focus, _) = gate.tap(app, &s, SelChip::Translate)?;
     let front = foreground();
     let asked = poll_read(gate.g().strip_wait_ms, gate.ctx.cfg.timing.poll_ms, || {
-        asked_now(gate, &ask)
+        ask.shows(&gate.reader)
     })?;
     let later = asked.map_or(Ok(false), |w| not_now(gate, w, &ask))?;
     let calm = calm(gate, &running, &windows, front, &ask)?;

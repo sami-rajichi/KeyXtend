@@ -48,6 +48,11 @@ fn quiet_json(name: &str, quiet: bool, focus: bool, kind: Option<String>) -> Val
     json!({ "case": name, "chips": quiet, "focus": focus, "kind": kind })
 }
 
+/// A hung app's case: `quiet` when no strip showed, and its focus held when the hung `target` stayed in front.
+fn hung_json(name: &str, quiet: bool, front: HWND, target: HWND) -> Value {
+    quiet_json(name, quiet, front == target, None)
+}
+
 /// The run's readers and acts.
 pub struct Gate<'a> {
     /// The run's settings.
@@ -198,10 +203,11 @@ impl<'a> Gate<'a> {
         Ok(quiet_json(name, quiet, focus, Some(self.kind())))
     }
 
-    /// Case `name` on a hung app: no strip shows for `hung_quiet_ms`, and its box is never asked.
-    pub fn quiet_hung(&self, name: &str, before: &Before) -> Result<Value, String> {
+    /// Case `name` on the hung app `target`, in front: no strip shows for `hung_quiet_ms`, it stays in front, and its
+    /// box is never asked.
+    pub fn quiet_hung(&self, name: &str, target: HWND) -> Result<Value, String> {
         let quiet = self.strip.quiet(self.g().hung_quiet_ms)?;
-        Ok(quiet_json(name, quiet, foreground() == before.front, None))
+        Ok(hung_json(name, quiet, foreground(), target))
     }
 
     /// Clicks keycap `chip` on `s` while `app`'s tab is in front: whether the window in front stayed, and the
@@ -251,6 +257,24 @@ mod tests {
         assert_eq!(
             (read["kind"].as_str(), read["chips"].as_bool()),
             (Some("Edit"), Some(false))
+        );
+    }
+
+    #[test]
+    fn a_hung_case_whose_target_stayed_in_front_passes_the_focus_group() {
+        use crate::g19chips::plan::{FOCUS, groups};
+        let (target, notepad) = (
+            HWND(std::ptr::without_provenance_mut(1)),
+            HWND(std::ptr::without_provenance_mut(2)),
+        );
+        let good = json!({ "seen": true, "focus": true, "place": true, "chips": true });
+        let stayed = hung_json("hung", true, target, target);
+        assert_eq!(groups(&[good.clone(), stayed])[FOCUS]["ok"], true);
+        let lost = hung_json("hung", true, notepad, target);
+        assert_eq!(
+            groups(&[good, lost])[FOCUS]["ok"],
+            false,
+            "Notepad came in front"
         );
     }
 

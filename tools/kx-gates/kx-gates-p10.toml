@@ -78,13 +78,17 @@ quiet_ms = 1500
 settle_ms = 400
 # How long target-window hangs, within its hang_max_ms; it outlasts the selection module's look. The gate acts
 # hang_lead_ms after asking, brings the target forward, checks no strip shows for hung_quiet_ms, brings Notepad back,
-# selects there (two acts) and waits up to hung_wait_ms for the strip, all within the hang (checked).
+# clicks and selects there with no pause after the keys, and waits up to hung_wait_ms for the strip. All of it fits
+# in the hang with hang_margin_ms to spare (checked).
 hang_ms = 3000
 hang_lead_ms = 200
 hung_quiet_ms = 600
 hung_wait_ms = 700
+hang_margin_ms = 300
 # How long the ping must keep writing after Copy, in ms.
 ping_ms = 3000
+# Longest wait for the ping to end after its terminal closed, in ms; one still running then is ended and reported.
+ping_exit_ms = 5000
 # The caret's Paste may go this early or late against the module's caret_s, in ms.
 caret_slack_ms = 1000
 # translate-read: longest wait for the owner's Yes to bring the translate page to the front, in ms.
@@ -95,3 +99,15 @@ owner_wait_ms = 120000
 exe = "conhost.exe"
 args = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]
 class = "ConsoleWindowClass"
+
+# The address bar of each browser (adapter table): its UI Automation id, class or name, the name per browser
+# language. translate-read reads only a control a row matches; a browser with no row, or a bar no row matches, is
+# reported as "no address bar" and nothing is read.
+[[g19_product.bars]]
+browsers = ["chrome.exe", "msedge.exe", "brave.exe"]
+classes = ["OmniboxViewViews"]
+names = ["Address and search bar"]
+
+[[g19_product.bars]]
+browsers = ["firefox.exe"]
+ids = ["urlbar-input"]

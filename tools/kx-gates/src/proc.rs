@@ -53,6 +53,14 @@ impl Process {
         Self::open(pid, PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE)
     }
 
+    /// Opens process `pid` to wait for it and end it, for a program a gate's own script started.
+    pub fn to_end(pid: u32) -> Result<Self, String> {
+        Self::open(
+            pid,
+            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE,
+        )
+    }
+
     /// Opens process `pid` to wait for it, read its memory and CPU time, and put it in a job.
     pub fn to_measure(pid: u32) -> Result<Self, String> {
         let job = PROCESS_SET_QUOTA | PROCESS_TERMINATE;

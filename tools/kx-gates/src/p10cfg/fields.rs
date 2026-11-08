@@ -15,6 +15,23 @@ pub struct Console {
     pub class: String,
 }
 
+/// One row of the address-bar table: the browsers it holds for, and how UI Automation tells their address bar.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Bar {
+    /// The browser programs.
+    pub browsers: Vec<String>,
+    /// The bar's automation ids.
+    #[serde(default)]
+    pub ids: Vec<String>,
+    /// The bar's class names.
+    #[serde(default)]
+    pub classes: Vec<String>,
+    /// The bar's names, one per browser language.
+    #[serde(default)]
+    pub names: Vec<String>,
+}
+
 /// `[g19_product]`: the gate's own texts, the strip's names, the keys and the waits; times in ms.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -87,6 +104,8 @@ pub struct G19Product {
     pub near_px: u16,
     /// Browser programs.
     pub browsers: Vec<String>,
+    /// The address bar of each browser (adapter table).
+    pub bars: Vec<Bar>,
     /// Shift+Home.
     pub select_home: Vec<u16>,
     /// One caret step left, while our panel is aimed.
@@ -113,8 +132,12 @@ pub struct G19Product {
     pub hung_quiet_ms: u64,
     /// Longest wait for the strip beside the hung app.
     pub hung_wait_ms: u64,
+    /// The least time the hang outlasts the acts in it.
+    pub hang_margin_ms: u64,
     /// How long the ping must keep writing.
     pub ping_ms: u64,
+    /// Longest wait for the ping to end after its terminal closed.
+    pub ping_exit_ms: u64,
     /// The caret Paste's slack against `caret_s`.
     pub caret_slack_ms: u64,
     /// Longest wait for the owner's translate page.
