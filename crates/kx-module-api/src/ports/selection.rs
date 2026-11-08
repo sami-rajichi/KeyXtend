@@ -6,7 +6,7 @@ mod board;
 mod events;
 
 pub use board::{Board, BoardPlace, BoardPlaceAsk};
-pub use events::{ChipAct, ChipsView, Edit, EditAsk, EditDone, SelChip, StripSpot};
+pub use events::{ChipAct, ChipsView, Edit, EditAsk, EditDone, Legend, SelChip, StripSpot};
 
 use super::{Rect, Screen};
 use crate::{Capability, Redacted, ServiceId, ServiceKey};

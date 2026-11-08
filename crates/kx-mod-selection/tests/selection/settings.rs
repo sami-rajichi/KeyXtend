@@ -2,7 +2,8 @@
 
 use std::fs;
 
-use kx_mod_selection::{ID, Legend, SPEC, SelSettings, sites};
+use kx_mod_selection::{ID, SPEC, SelSettings, sites};
+use kx_module_api::ports::Legend;
 use kx_module_api::{keys, parse_as};
 use kx_settings::{Files, Store};
 use kx_test_support::tempdir::TempDir;

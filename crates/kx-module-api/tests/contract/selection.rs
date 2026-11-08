@@ -3,9 +3,9 @@
 
 use kx_module_api::Capability::{InjectInput, OpenLink, ReadFocusedText, Selection};
 use kx_module_api::ports::{
-    ChipAct, ChipsView, Edit, EditAsk, EditDone, Link, LinkError, PointerReleased, PressAsker,
-    PressesWanted, Rect, Screen, SelChip, SelConfig, SelError, SelKind, SelRun, SelSpot,
-    SelectionWatch, SelectionWatchKey, StripSpot, WebLink, WebLinkKey,
+    ChipAct, ChipsView, Edit, EditAsk, EditDone, Legend, Link, LinkError, PointerReleased,
+    PressAsker, PressesWanted, Rect, Screen, SelChip, SelConfig, SelError, SelKind, SelRun,
+    SelSpot, SelectionWatch, SelectionWatchKey, StripSpot, WebLink, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -129,6 +129,7 @@ fn shown() -> ChipsView {
             screen: SCREEN,
         },
         acted: None,
+        legend: Legend::Icons,
     }
 }
 

@@ -17,7 +17,7 @@ pub use link::{Site, SiteError, Sites, TAG_CHARS, sites, tag_ok};
 pub use manifest::{ID, MANIFEST};
 pub use module::SelectionModule;
 pub use settings::{
-    CARET_S, CONSENT_S, LOOKS_PER_S, Legend, READ_MS, SETTLE_MS, SPEC, SelSettings,
-    TRANSLATE_CHARS, TRANSLATE_OK_KEY,
+    CARET_S, CONSENT_S, LOOKS_PER_S, READ_MS, SETTLE_MS, SPEC, SelSettings, TRANSLATE_CHARS,
+    TRANSLATE_OK_KEY,
 };
 pub use strip::{Board, Input, Pick, Strip, StripConfig};

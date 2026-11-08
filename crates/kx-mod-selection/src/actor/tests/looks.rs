@@ -1,7 +1,7 @@
 //! Looks: a selection tells the strip, the watch's tell only wakes the actor, a failed look hides, a closed box shows
 //! nothing, and an aimed line, the tray or the bubble block the strip while the looks go on (plan edge cases 7, 8, 13).
 
-use kx_module_api::ports::{Board, ChipsView, SelChip, SelError, SelKind};
+use kx_module_api::ports::{Board, ChipsView, Legend, SelChip, SelError, SelKind};
 use toml::Value;
 
 use super::super::Msg;
@@ -96,4 +96,18 @@ fn a_keycap_switched_off_does_not_show() {
     let mut rig = Rig::build(|h| h.put("cut", Value::Boolean(false)));
     rig.focus(sel(SelKind::Editable, 40));
     assert_eq!(rig.shown().1, [Copy, Paste, Translate]);
+}
+
+#[test]
+fn the_view_carries_the_look_the_settings_give() {
+    let legend = |rig: &Rig| match rig.view() {
+        ChipsView::Shown { legend, .. } => Some(legend),
+        ChipsView::Hidden => None,
+    };
+    let mut rig = Rig::new();
+    rig.focus(sel(SelKind::Editable, 40));
+    assert_eq!(legend(&rig), Some(Legend::Both));
+    let mut rig = Rig::build(|h| h.put("look", Value::String("words".into())));
+    rig.focus(sel(SelKind::Editable, 40));
+    assert_eq!(legend(&rig), Some(Legend::Words));
 }

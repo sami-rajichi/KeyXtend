@@ -46,6 +46,7 @@ fn acting_shows_the_tick_on_the_same_round_then_ends_the_strip() {
         chips: vec![Copy, Cut, Paste, Translate],
         spot: on_line(40),
         acted: Some(Cut),
+        legend: Legend::Both,
     };
     assert_eq!(ticked, Some(want));
     assert_eq!(rig.strip.view(), ChipsView::Hidden);

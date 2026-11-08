@@ -101,14 +101,6 @@ fn look_is_one_of_its_three_choices() {
 }
 
 #[test]
-fn each_legend_shows_an_icon_a_word_or_both_never_neither() {
-    let shows = |legend: Legend| (legend.icons(), legend.words());
-    assert_eq!(shows(Legend::Both), (true, true));
-    assert_eq!(shows(Legend::Icons), (true, false));
-    assert_eq!(shows(Legend::Words), (false, true));
-}
-
-#[test]
 fn the_old_icons_and_words_keys_are_not_settings() {
     for key in ["icons", "words"] {
         let t = with(key, true);
@@ -199,7 +191,10 @@ fn the_parts_get_the_settings_in_their_units() {
         "a bad site table turns Translate off"
     );
     let strip = s.strip_config(true);
-    assert_eq!((strip.rules, strip.minimised), (rules, true));
+    assert_eq!(
+        (strip.rules, strip.minimised, strip.look),
+        (rules, true, Legend::Both)
+    );
     assert_eq!(strip.caret, Duration::from_secs(5));
     assert!(!s.strip_config(false).rules.translate);
     assert_eq!(
@@ -224,5 +219,8 @@ fn each_switch_reaches_its_rule() {
     assert!(!off(|s| s.caret_paste = false).caret_paste);
     let mut s = base;
     s.minimised = false;
-    assert!(!s.strip_config(true).minimised);
+    s.look = Legend::Icons;
+    let strip = s.strip_config(true);
+    assert!(!strip.minimised);
+    assert_eq!(strip.look, Legend::Icons, "the look reaches the strip");
 }

@@ -32,13 +32,14 @@ impl SelSettings {
         }
     }
 
-    /// What the strip's rules take; Translate only when `link_ok`.
+    /// What the strip's rules and its view take; Translate only when `link_ok`.
     #[must_use]
     pub fn strip_config(&self, link_ok: bool) -> StripConfig {
         StripConfig {
             rules: self.rules(link_ok),
             minimised: self.minimised,
             caret: self.caret(),
+            look: self.look,
         }
     }
 

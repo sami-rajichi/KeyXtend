@@ -3,11 +3,11 @@
 use std::time::Duration;
 
 pub use kx_module_api::ports::Board;
-use kx_module_api::ports::{SelChip, SelKind, SelSpot};
+use kx_module_api::ports::{Legend, SelChip, SelKind, SelSpot};
 
 use crate::chips::Rules;
 
-/// What the strip's rules take from `[selection]`.
+/// What the strip's rules and its view take from `[selection]`.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct StripConfig {
     /// Which keycaps may show.
@@ -16,6 +16,8 @@ pub struct StripConfig {
     pub minimised: bool,
     /// How long the caret's Paste stays.
     pub caret: Duration,
+    /// What each keycap shows, which every view carries.
+    pub look: Legend,
 }
 
 /// One thing the strip hears.

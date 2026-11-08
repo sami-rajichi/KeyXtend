@@ -7,7 +7,7 @@ mod input;
 pub use input::{Board, Input, Pick, StripConfig};
 
 use kx_module_api::Mono;
-use kx_module_api::ports::{ChipsView, SelChip, SelKind, SelSpot, StripSpot};
+use kx_module_api::ports::{ChipsView, Legend, SelChip, SelKind, SelSpot, StripSpot};
 
 use crate::chips::{At, chips};
 
@@ -22,6 +22,8 @@ struct Draft {
     box_id: u64,
     /// That box's kind.
     kind: SelKind,
+    /// What each keycap shows, so a new look setting draws a new strip.
+    legend: Legend,
 }
 
 /// The strip shown.
@@ -41,6 +43,7 @@ impl Live {
             chips: self.draft.chips.clone(),
             spot: self.draft.spot,
             acted,
+            legend: self.draft.legend,
         }
     }
 
@@ -234,7 +237,7 @@ impl Strip {
 
     /// The strip due: the last look's selection unless put away, else the caret's Paste.
     fn due(&self) -> Option<Draft> {
-        let rules = &self.cfg.rules;
+        let (rules, legend) = (&self.cfg.rules, self.cfg.look);
         let shown = self.last.filter(|s| self.dismissed != Some(s.box_id));
         let selection = shown.and_then(|spot| {
             let chips = chips(rules, spot.kind, At::Selection);
@@ -243,6 +246,7 @@ impl Strip {
                 spot: lines(spot)?,
                 box_id: spot.box_id,
                 kind: spot.kind,
+                legend,
             };
             (!draft.chips.is_empty()).then_some(draft)
         });
@@ -254,6 +258,7 @@ impl Strip {
                 spot: caret.spot,
                 box_id: caret.box_id,
                 kind: SelKind::Editable,
+                legend,
             })
         })
     }

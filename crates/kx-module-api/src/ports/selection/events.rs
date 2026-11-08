@@ -3,6 +3,7 @@
 
 use crate::ports::{Rect, Screen};
 use crate::{Capability, Event, Redacted};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// The gate of every event here.
@@ -19,6 +20,35 @@ listed! {
         Paste,
         /// Open a translation of the selection in the browser.
         Translate,
+    }
+}
+
+listed! {
+    /// What each keycap shows, so it never shows nothing; the selection module's `look` setting names one.
+    #[derive(Default, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum Legend ("Every legend.") {
+        /// Its icon and its word; a view takes this until its settings say.
+        #[default]
+        Both,
+        /// Its icon alone.
+        Icons,
+        /// Its word alone.
+        Words,
+    }
+}
+
+impl Legend {
+    /// The keycap shows its icon.
+    #[must_use]
+    pub fn icons(self) -> bool {
+        self != Self::Words
+    }
+
+    /// The keycap shows its word.
+    #[must_use]
+    pub fn words(self) -> bool {
+        self != Self::Icons
     }
 }
 
@@ -70,6 +100,8 @@ pub enum ChipsView {
         spot: StripSpot,
         /// The chip just clicked, which shows its tick before the strip fades.
         acted: Option<SelChip>,
+        /// What each keycap shows, from the module's settings.
+        legend: Legend,
     },
     /// No strip, as before the module speaks and after it stops.
     Hidden,

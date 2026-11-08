@@ -149,6 +149,7 @@ fn shown() -> ChipsView {
             screen,
         },
         acted: Some(SelChip::Copy),
+        legend: Legend::Words,
     }
 }
 
@@ -201,13 +202,39 @@ fn the_chips_keep_their_order_in_every_language() {
 }
 
 #[test]
+fn each_legend_shows_an_icon_a_word_or_both_never_neither() {
+    let shows = |legend: Legend| (legend.icons(), legend.words());
+    let all = Legend::ALL.map(shows);
+    assert_eq!(all, [(true, true), (true, false), (false, true)]);
+    assert_eq!(Legend::default(), Legend::Both, "both until told");
+}
+
+#[test]
+fn a_legend_reads_and_writes_as_its_lowercase_name() {
+    let names = ["both", "icons", "words"].map(serde_json::Value::from);
+    for (legend, name) in Legend::ALL.into_iter().zip(names) {
+        assert_eq!(serde_json::to_value(legend).ok(), Some(name.clone()));
+        assert_eq!(serde_json::from_value::<Legend>(name).ok(), Some(legend));
+    }
+    let bad = serde_json::from_value::<Legend>(serde_json::Value::from("Both"));
+    assert!(bad.is_err(), "lowercase only");
+}
+
+#[test]
 fn a_view_hides_the_strips_boxes_and_shows_the_rest() {
     let text = format!("{:?}", shown());
     for number in HIDDEN {
         assert!(!text.contains(number), "{text} shows {number}");
     }
     assert!(text.contains(REDACTED_MARKER), "{text}");
-    for part in ["round: 7", "Translate", "acted: Some(Copy)", "dpi: 120"] {
+    let parts = [
+        "round: 7",
+        "Translate",
+        "acted: Some(Copy)",
+        "dpi: 120",
+        "legend: Words",
+    ];
+    for part in parts {
         assert!(text.contains(part), "{text} lacks {part}");
     }
     assert_eq!(format!("{:?}", ChipsView::Hidden), "Hidden");

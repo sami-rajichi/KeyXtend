@@ -5,6 +5,7 @@ mod parts;
 
 use std::ops::RangeInclusive;
 
+use kx_module_api::ports::Legend;
 use kx_module_api::{Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within};
 use serde::{Deserialize, Serialize};
 
@@ -38,32 +39,6 @@ pub static SPEC: SettingsSpec = SettingsSpec {
     validate: validate_as::<SelSettings>,
 };
 
-/// What each keycap shows, so it never shows nothing; any other value goes back to `both`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Legend {
-    /// Its icon and its word.
-    Both,
-    /// Its icon alone.
-    Icons,
-    /// Its word alone.
-    Words,
-}
-
-impl Legend {
-    /// The keycap shows its icon.
-    #[must_use]
-    pub fn icons(self) -> bool {
-        self != Self::Words
-    }
-
-    /// The keycap shows its word.
-    #[must_use]
-    pub fn words(self) -> bool {
-        self != Self::Icons
-    }
-}
-
 /// The module's settings; every value comes from `defaults.toml` or the user's file.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -86,7 +61,7 @@ pub struct SelSettings {
     pub caret_paste: bool,
     /// Seconds the caret's Paste stays.
     pub caret_s: u32,
-    /// What each keycap shows: its icon and word, or one of them.
+    /// What each keycap shows: its icon and word, or one of them; any other value goes back to `both`.
     pub look: Legend,
     /// The chips show while the keyboard is minimised.
     pub minimised: bool,

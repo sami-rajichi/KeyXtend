@@ -6,7 +6,7 @@ use super::*;
 use crate::chips::Rules;
 use crate::settings::CARET_S;
 use kx_module_api::US_PER_S;
-use kx_module_api::ports::{Rect, Screen};
+use kx_module_api::ports::{Legend, Rect, Screen};
 use proptest::collection::vec;
 use proptest::option;
 use proptest::prelude::*;
@@ -68,7 +68,9 @@ fn spot() -> impl Strategy<Value = SelSpot> {
 
 fn config() -> impl Strategy<Value = StripConfig> {
     let switch = proptest::bool::weighted(ON);
-    (proptest::array::uniform7(switch), CARET_S).prop_map(|(b, caret_s)| StripConfig {
+    let look = select(Legend::ALL.to_vec());
+    let parts = (proptest::array::uniform7(switch), CARET_S, look);
+    parts.prop_map(|(b, caret_s, look)| StripConfig {
         rules: Rules {
             on: b[0],
             copy: b[1],
@@ -79,6 +81,7 @@ fn config() -> impl Strategy<Value = StripConfig> {
         },
         minimised: b[6],
         caret: Duration::from_secs(caret_s.into()),
+        look,
     })
 }
 
@@ -134,6 +137,8 @@ struct Told {
     last: Option<SelSpot>,
     /// The box whose selection Esc or an act put away, so no new strip may show.
     away: Option<u64>,
+    /// The legend the settings give, which every strip shows.
+    look: Legend,
 }
 
 impl Told {
@@ -188,7 +193,10 @@ fn feed(strip: &mut Strip, told: &mut Told, step: Step, now: &mut Mono) -> Optio
             click: false,
             clip: true,
         }),
-        Step::Configure(cfg) => return strip.configure(cfg, *now),
+        Step::Configure(cfg) => {
+            told.look = cfg.look;
+            return strip.configure(cfg, *now);
+        }
         Step::Wait(us) => {
             *now = now.saturating_add(Duration::from_micros(us));
             Input::Tick
@@ -218,11 +226,13 @@ proptest! {
         cfg in config(),
         steps in vec(step(), 0..=MAX_STEPS),
     ) {
-        let (mut strip, mut told, mut now) = (Strip::new(cfg), Told::default(), Mono::default());
+        let (mut strip, mut now) = (Strip::new(cfg), Mono::default());
+        let mut told = Told { look: cfg.look, ..Told::default() };
         for step in steps {
             let before = strip.view();
             let sent = feed(&mut strip, &mut told, step, &mut now);
-            if let Some(ChipsView::Shown { round, chips, acted, .. }) = &sent {
+            if let Some(ChipsView::Shown { round, chips, acted, legend, .. }) = &sent {
+                prop_assert_eq!(*legend, told.look, "the settings' legend");
                 prop_assert!(!told.blocked(), "{:?}", step);
                 prop_assert!(told.kind.is_some(), "a strip needs a look");
                 prop_assert!(!chips.is_empty());
