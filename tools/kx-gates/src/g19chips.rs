@@ -29,6 +29,7 @@ mod strip;
 mod term;
 mod termrow;
 mod terms;
+mod watch;
 
 pub use link::{site_key, text_of};
 pub use read::{BESIDE, READ};

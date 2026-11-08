@@ -18,7 +18,7 @@ use crate::g19chips::spots::unrun;
 use crate::g19chips::strip::Shown;
 use crate::g19chips::term::{self, Kind, Term, numlock_on};
 use crate::g19chips::termrow::row;
-use crate::g19chips::{numlock, procs, script};
+use crate::g19chips::{numlock, procs, script, watch};
 use crate::probe;
 use crate::proc::Process;
 use crate::win::{self, sleep_ms};
@@ -75,11 +75,13 @@ fn paste(
     Ok(json!({ "numlock": on, "pasted": pasted, "line": line, "ok": pasted["ok"] == true && line }))
 }
 
-/// One terminal's case, Copy and both Pastes; `cases` gathers its case.
+/// One terminal's case, with the product's own watch around it as a note, Copy and both Pastes; `cases` gathers its
+/// case.
 fn drive(gate: &Gate, kind: Kind, t: &Term, cases: &mut Vec<Value>) -> Result<Value, String> {
     let (g, app) = (gate.g(), t.app());
     let r = row(gate, kind, &app)?;
-    let (case, shown) = select(gate, &app, r, kind.name())?;
+    let ((mut case, shown), seen) = watch::around(gate, || select(gate, &app, r, kind.name()))?;
+    case["watch"] = seen;
     cases.push(case);
     let copy = act(gate, &app, shown, SelChip::Copy, |seq| {
         gate.clip_holds(seq, &g.term_line)
