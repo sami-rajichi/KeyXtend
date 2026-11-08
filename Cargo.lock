@@ -1299,6 +1299,7 @@ dependencies = [
  "kx-mod-power",
  "kx-mod-predict",
  "kx-mod-scroll",
+ "kx-mod-selection",
  "kx-mod-vault",
  "kx-module-api",
  "kx-platform",

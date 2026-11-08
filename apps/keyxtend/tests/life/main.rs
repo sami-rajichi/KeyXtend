@@ -4,7 +4,8 @@
 //! the sealed store reach only the modules holding their gate, the shortcuts reach the keyboard's layer, the pad
 //! scrolls, the Power key opens the dialog, prediction opens the language in front, a copy goes from the clipboard
 //! history's panel back into the app through the keyboard, Quick-fill types a saved login through the keyboard and
-//! keeps what it saved, and a hidden run writes nothing in its data folder.
+//! keeps what it saved, the selection chips watch and Translate follows the system's language, and a hidden run writes
+//! nothing in its data folder.
 
 #![allow(
     clippy::unwrap_used,
@@ -22,6 +23,7 @@ mod predict;
 mod rig;
 mod scroll;
 mod second;
+mod sel;
 mod ships;
 mod stop;
 mod vault;
@@ -34,11 +36,11 @@ use kx_module_api::ModuleId;
 use kx_module_api::ModuleState::{Active, Pending};
 use kx_module_api::ports::{FaceAction, KeyId};
 use kx_ui::{Request, Wake};
-use rig::{Rig, char_key, watch};
+use rig::{OS, Rig, char_key, watch};
 use std::sync::{Arc, mpsc};
 
 /// The modules the app ships, in the order it adds them.
-const SHIPPED: [ModuleId; 9] = [
+const SHIPPED: [ModuleId; 10] = [
     kx_mod_layouts::ID,
     kx_mod_keyboard::ID,
     kx_mod_mouse::ID,
@@ -47,6 +49,7 @@ const SHIPPED: [ModuleId; 9] = [
     kx_mod_predict::ID,
     kx_mod_clipboard::ID,
     kx_mod_vault::ID,
+    kx_mod_selection::ID,
     kx_ui::ID,
 ];
 /// The home row's first letter key: `a` in English, `q` in French.
@@ -55,9 +58,10 @@ const A_KEY: u16 = 0x1E;
 const NULL: &str = "null";
 
 #[test]
-fn the_app_ships_layouts_keyboard_mouse_scroll_power_predict_clipboard_vault_and_ui() {
+fn the_app_ships_layouts_keyboard_mouse_scroll_power_predict_clipboard_vault_selection_and_ui() {
     let boot = Rig::new().load();
-    let ids: Vec<ModuleId> = modules(&boot.hub).iter().map(|m| m.manifest().id).collect();
+    let shipped = modules(&boot.hub, OS);
+    let ids: Vec<ModuleId> = shipped.iter().map(|m| m.manifest().id).collect();
     assert_eq!(ids, SHIPPED);
 }
 

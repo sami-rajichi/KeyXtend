@@ -2,9 +2,10 @@
 //! pointer hook, the scroll target, the power dialog, the box watch and the sealed store each reach only the modules
 //! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
 //! to the modules that read typed text, and the shortcuts reach the keyboard's layer. `clip` pins the clipboard's
-//! gates and services, `vault` Quick-fill's, and `tree` keeps the media decoders and the box formats out of the app.
+//! gates and services, `vault` Quick-fill's, `sel` the selection chips', and `tree` keeps the media decoders and the
+//! box formats out of the app.
 
-use crate::rig::Rig;
+use crate::rig::{OS, Rig};
 use keyxtend::boot::{modules, policy};
 use kx_kernel::Kernel;
 use kx_module_api::ports::{
@@ -13,7 +14,8 @@ use kx_module_api::ports::{
     ShortcutId, ShortcutInfo, Step,
 };
 use kx_module_api::{
-    Capability, Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceKey,
+    Capability, Manifest, Module, ModuleCx, ModuleError, ModuleId, ModuleState, ServiceId,
+    ServiceKey,
 };
 use kx_platform_fake::{
     FakeFieldWatch, FakePointerHook, FakePowerDialog, FakeScrollTarget, FakeSealedStore,
@@ -24,6 +26,7 @@ use std::sync::Arc;
 
 mod ci;
 mod clip;
+mod sel;
 mod tree;
 mod vault;
 
@@ -82,7 +85,7 @@ impl<K: ServiceKey> Module for Probe<K> {
 
 /// The shipped modules under whose id a probe gets `service` from the platform, with the app's grants.
 fn reached<K: ServiceKey>(rig: &Rig, service: &Arc<K::Api>) -> BTreeSet<ModuleId> {
-    let shipped = modules(&rig.load().hub);
+    let shipped = modules(&rig.load().hub, OS);
     let grants = policy(&shipped);
     let gets = |id: ModuleId| {
         let mut kernel = Kernel::new(rig.platform(), grants.clone());
@@ -127,7 +130,7 @@ fn every_module_feature_is_on_by_default_the_scroll_and_power_ones_too() {
 #[test]
 fn mod_predict_is_a_default_feature_and_the_default_build_ships_predict() {
     assert!(defaults(&features()).contains(&PREDICT_FEATURE));
-    let shipped = modules(&Rig::new().load().hub);
+    let shipped = modules(&Rig::new().load().hub, OS);
     assert!(
         shipped
             .iter()
@@ -197,23 +200,35 @@ fn keyboard_ui_goes_only_to_the_ui_the_keyboard_and_the_mouse_module() {
 }
 
 #[test]
-fn read_focused_text_goes_only_to_the_keyboard_predict_and_the_ui() {
-    let want = BTreeSet::from([kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID]);
+fn read_focused_text_goes_only_to_the_keyboard_predict_selection_and_the_ui() {
+    let (keyboard, predict) = (kx_mod_keyboard::ID, kx_mod_predict::ID);
+    let want = BTreeSet::from([keyboard, predict, kx_mod_selection::ID, kx_ui::ID]);
     assert_eq!(
         holders(Capability::ReadFocusedText),
         want,
-        "ADR-0033: the typist, prediction and the chip lane's drawer"
+        "ADR-0033, ADR-0041: the typist, prediction, the chips' watch and the chip lane's drawer"
     );
 }
 
 /// The shipped modules whose manifest declares `cap`, in any order.
 fn holders(cap: Capability) -> BTreeSet<ModuleId> {
-    let shipped = modules(&Rig::new().load().hub);
+    let shipped = modules(&Rig::new().load().hub, OS);
     let declares = |m: &&Manifest| m.capabilities.contains(&cap);
     shipped
         .iter()
         .map(|m| m.manifest())
         .filter(declares)
+        .map(|m| m.id)
+        .collect()
+}
+
+/// The shipped modules whose manifest asks for any of `keys`.
+fn asking(keys: &[ServiceId]) -> BTreeSet<ModuleId> {
+    let shipped = modules(&Rig::new().load().hub, OS);
+    let asks = |id: &ServiceId| keys.contains(id);
+    let manifests = shipped.iter().map(|m| m.manifest());
+    manifests
+        .filter(|m| m.requires.iter().any(asks))
         .map(|m| m.id)
         .collect()
 }

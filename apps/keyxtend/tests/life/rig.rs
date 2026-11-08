@@ -1,8 +1,8 @@
 //! The app over the fake platform: temp folders with a portable data folder, a clock that moves only when told, the
 //! fake injector and layouts on the captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power
 //! dialog, box watch, word packs, sealed store, clipboard, shelf, pictures and calendar, Quick-fill's notebook in
-//! memory with seeded random bytes, boxes and places, and the shared fake UI ports with a reveal the rig keeps; a waker
-//! keeps every wake.
+//! memory with seeded random bytes, boxes and places, the selection watch and web link, and the shared fake UI ports
+//! with a reveal and a look the rig keeps; a waker keeps every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -14,10 +14,11 @@ use kx_module_api::ports::{Date, Scan, TypingMode, TypingModeAsk};
 use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
-    FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock, FakeFieldWatch,
-    FakeInjector, FakeLayoutSource, FakePictures, FakePlaces, FakePlatform, FakePointerHook,
-    FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget, FakeSealedStore, FakeShelf,
-    FakeShortcuts, FakeTray, FakeWordPacks,
+    DEFAULT_LANGUAGE, FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock,
+    FakeFieldWatch, FakeInjector, FakeLayoutSource, FakePictures, FakePlaces, FakePlatform,
+    FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget, FakeSealedStore,
+    FakeSelectionWatch, FakeShelf, FakeShortcuts, FakeSystemLook, FakeTray, FakeWebLink,
+    FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -36,6 +37,8 @@ const TODAY: (u16, u8, u8) = (2026, 10, 31);
 const NOW: (u8, u8, i16) = (16, 32, 60);
 /// The seed of Quick-fill's random bytes, so its ids repeat from run to run.
 const SEED: u64 = 9;
+/// The system's display language the tests build the modules with: the fake look's own.
+pub const OS: &str = DEFAULT_LANGUAGE;
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {
@@ -85,6 +88,12 @@ pub struct Rig {
     pub boxes: FakeBoxes,
     /// Behind the backup places, with no folder.
     pub places: FakePlaces,
+    /// Behind the selection watch, with focus on no box.
+    pub sel: FakeSelectionWatch,
+    /// Behind the web link, which records each link and opens none.
+    pub web: Arc<FakeWebLink>,
+    /// Behind the system look, in `OS` until a test sets another language.
+    pub look: Arc<FakeSystemLook>,
 }
 
 impl Rig {
@@ -123,6 +132,9 @@ impl Rig {
             random: FakeRandom::new(SEED),
             boxes: FakeBoxes::new(),
             places: FakePlaces::new(),
+            sel: FakeSelectionWatch::new(),
+            web: Arc::new(FakeWebLink::new()),
+            look: Arc::new(FakeSystemLook::new()),
         }
     }
 
@@ -167,9 +179,12 @@ impl Rig {
             random: Arc::new(self.random.clone()),
             boxes: Arc::new(self.boxes.clone()),
             places: Arc::new(self.places.clone()),
+            selection: Arc::new(self.sel.clone()),
+            link: self.web.clone(),
         };
         let mut ports = ports(self.tray.clone());
         ports.reveal = self.reveal.clone();
+        ports.look = self.look.clone();
         Boot::load(self.platform(), services, ports, run).unwrap()
     }
 

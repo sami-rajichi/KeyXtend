@@ -9,8 +9,8 @@ use kx_module_api::ports::{
     ClipboardWriterKey, FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource,
     LayoutSourceKey, Pictures, PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey,
     PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf,
-    SealedShelfKey, SealedStore, SealedStoreKey, Shortcuts, ShortcutsKey, VaultStoreKey, WordPacks,
-    WordPacksKey,
+    SealedShelfKey, SealedStore, SealedStoreKey, SelectionWatch, SelectionWatchKey, Shortcuts,
+    ShortcutsKey, VaultStoreKey, WebLink, WebLinkKey, WordPacks, WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -61,23 +61,29 @@ pub struct Services {
     pub boxes: Arc<dyn Boxes>,
     /// The folders and drives Quick-fill's backup boxes go to.
     pub places: Arc<dyn Places>,
+    /// Watches the focused box's selection, for the selection chips.
+    pub selection: Arc<dyn SelectionWatch>,
+    /// Opens Translate's page in the user's browser.
+    pub link: Arc<dyn WebLink>,
 }
 
-/// The modules this build ships; the `ui` module feeds `hub`.
+/// The modules this build ships; the `ui` module feeds `hub`, and `os`, the system's display language, is the one
+/// Translate follows.
 #[must_use]
-pub fn modules(hub: &Arc<Hub>) -> Vec<Box<dyn Module>> {
-    let mut list = picked();
+pub fn modules(hub: &Arc<Hub>, os: &str) -> Vec<Box<dyn Module>> {
+    let mut list = picked(os);
     list.push(Box::new(UiModule::new(Arc::clone(hub))));
     list
 }
 
-/// The modules the build's features pick (one feature per module).
+/// The modules the build's features pick (one feature per module), with the system's display language `os`.
 #[allow(
     unused_mut,
+    unused_variables,
     clippy::vec_init_then_push,
     reason = "each push sits behind its module's feature, and a build may turn them all off"
 )]
-fn picked() -> Vec<Box<dyn Module>> {
+fn picked(os: &str) -> Vec<Box<dyn Module>> {
     let mut list: Vec<Box<dyn Module>> = Vec::new();
     #[cfg(feature = "mod-layouts")]
     list.push(Box::new(kx_mod_layouts::LayoutsModule));
@@ -95,6 +101,8 @@ fn picked() -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_clipboard::ClipboardModule::default()));
     #[cfg(feature = "mod-vault")]
     list.push(Box::new(kx_mod_vault::VaultModule::default()));
+    #[cfg(feature = "mod-selection")]
+    list.push(Box::new(kx_mod_selection::SelectionModule::new(os)));
     list
 }
 
@@ -131,7 +139,9 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<VaultStoreKey>(services.vault)?;
     kernel.provide_platform::<RandomKey>(services.random)?;
     kernel.provide_platform::<BoxesKey>(services.boxes)?;
-    kernel.provide_platform::<PlacesKey>(services.places)
+    kernel.provide_platform::<PlacesKey>(services.places)?;
+    kernel.provide_platform::<SelectionWatchKey>(services.selection)?;
+    kernel.provide_platform::<WebLinkKey>(services.link)
 }
 
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.
@@ -151,7 +161,7 @@ pub struct Boot {
 impl Boot {
     /// Makes the hub before any window, makes the history's folder under `platform`'s data folder and hands it to the
     /// hub unless `run` is hidden, readies the kernel for `run`, adds `services` and every module, and loads the
-    /// settings; nothing starts.
+    /// settings; nothing starts. The system's display language is read once here, from `ports`' look.
     ///
     /// # Errors
     /// When the hub's compiled-in data is broken, or the kernel or its bus refuses a step.
@@ -161,13 +171,14 @@ impl Boot {
         ports: UiPorts,
         run: &Run,
     ) -> Result<Self, BootError> {
+        let os = ports.look.ui_language();
         let (hub, requests) = Hub::new(ports)?;
         let folder = crate::clip::folder(platform.dirs());
         let no_clip_dir = run.make_dir(&folder);
         if !run.is_hidden() {
             hub.set_clip_folder(folder);
         }
-        let modules = modules(&hub);
+        let modules = modules(&hub, &os);
         let mut kernel = Kernel::new(platform, policy(&modules));
         run.ready(&mut kernel, &hub)?;
         provide(&mut kernel, services)?;

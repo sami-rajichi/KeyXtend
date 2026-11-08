@@ -12,6 +12,7 @@ use kx_mod_keyboard::view::{
     EMPTY_NAME, FILL_OFF_TIP, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
     SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
+use kx_platform_fake::DEFAULT_LANGUAGE;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, LAYER_PAGE, MODULE};
 use kx_ui::{Hub, I18n, LANGS};
@@ -85,7 +86,7 @@ fn every_mark_the_face_names_is_one_the_mark_fonts_are_checked_for_on_their_circ
 #[test]
 fn every_shipped_module_and_the_kernel_have_a_name() {
     let (hub, _requests) = Hub::new(ports(tray())).unwrap();
-    let ids = modules(&hub)
+    let ids = modules(&hub, DEFAULT_LANGUAGE)
         .into_iter()
         .map(|m| m.manifest().id)
         .chain([KERNEL]);

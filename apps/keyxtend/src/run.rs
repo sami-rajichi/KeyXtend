@@ -142,6 +142,8 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot
         random: Arc::new(OsRandom),
         boxes: platform.boxes(),
         places: platform.places(),
+        selection: platform.selection_watch(),
+        link: platform.web_link(),
     };
     Boot::load(platform.clone(), services, ports(platform), run)
 }
