@@ -1,7 +1,7 @@
 //! Where the strip goes when the selection sits low or on another screen, on a filled rich-edit target-window the gate
-//! starts and closes, never on Notepad: its window moves so its first line sits `near_px` above the plate or the screen's bottom,
-//! then back. The strip must then go above it (judged), its place on a second screen is a note, and a case whose
-//! window cannot move says it was not exercised.
+//! starts and closes, never on Notepad: its window moves so its first line sits `near_px` above the plate or the
+//! screen's bottom, then back. The strip must then go above it (judged), its place on a second screen is a note, and a
+//! case whose window cannot move says it was not exercised.
 #![cfg(windows)]
 
 use std::collections::HashSet;
