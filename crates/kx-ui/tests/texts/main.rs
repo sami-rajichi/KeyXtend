@@ -24,6 +24,7 @@ mod plugin;
 mod plural;
 mod qml;
 mod sel;
+mod selview;
 #[path = "../shared/suggest.rs"]
 mod suggest;
 mod sync;

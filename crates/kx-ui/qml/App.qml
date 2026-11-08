@@ -1,6 +1,6 @@
-// The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner and the tray
-// menu, each over a click-through shadow window, the pointer overlay, the scroll outline and the tray icon's picture. A
-// shadow window owns its window, so Windows keeps the window just above it; owners show first.
+// The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner, the tray menu
+// and the selection strip, each over a click-through shadow window, the pointer overlay, the scroll outline and the tray
+// icon's picture. A shadow window owns its window, so Windows keeps the window just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -22,7 +22,6 @@ QtObject {
 
     // The UI ended and the tray icon is gone, so the root quits.
     signal done
-
     // The windows, for the tests.
     readonly property alias face: face
     readonly property alias bubble: bubble
@@ -95,7 +94,6 @@ QtObject {
             }
         }
     }
-
     // Notices show above the keyboard, or at the bottom of the main screen while it is away.
     property Glow noticeGlow: Glow {
         transientParent: null
@@ -139,6 +137,10 @@ QtObject {
             onQuitApp: app.ui.quit()
         }
     }
+    // The selection strip by the selected text, over its own shadow, which shows while the keyboard is minimised too.
+    property SelStrip strip: SelStrip {
+        app: app
+    }
     // The pointer overlay's state as last read: a wake reads it on the event loop's next pass, never on a frame, at
     // most once per `poll_ms`. Only a read lets the next change wake, so the reader stays here, outside the Loader.
     readonly property alias assist: reader.state
@@ -157,7 +159,7 @@ QtObject {
             res: face.res
             st: app.assist
             spots: face.spots
-            ours: [face, bubble, notice, trayMenu, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
+            ours: [face, bubble, notice, trayMenu, app.strip.chips, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }
@@ -241,7 +243,6 @@ QtObject {
         face.guardRun();
         return true;
     }
-
     // Puts the bubble in a bottom corner of the keyboard's screen (owner's choice); false when there is nowhere for it.
     function bubbleTo() {
         const at = face.bubbleSpot();
@@ -256,7 +257,6 @@ QtObject {
         if (bubble.visible)
             bubbleTo();
     }
-
     // Hides the keyboard until the bubble or a second copy's Show brings it back.
     function hide() {
         face.finish();

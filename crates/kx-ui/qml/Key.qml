@@ -30,7 +30,6 @@ Item {
 
     readonly property var p: lk.palette
     readonly property var look: lk.look
-    readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
     // Dimmed by the board, as a later key, or by its state, as a mouse key while mouse assist is off: it does nothing.
     readonly property bool dim: !!kv.dim || !!(ks && ks.dim)
@@ -199,58 +198,18 @@ Item {
         }
     }
 
-    Item {
+    KeyCap {
         id: cap
         width: key.width
         height: key.height
-        transform: [
-            Scale {
-                id: shrink
-                origin.x: cap.width / 2
-                origin.y: cap.height / 2
-                xScale: 1 - (1 - key.press.scale) * key.sink
-                yScale: shrink.xScale
-            },
-            Translate {
-                y: key.press.sink_px * key.s * key.sink
-            }
-        ]
+        lk: key.lk
+        s: key.s
+        topColour: key.capColour
+        skirt: key.capSkirt
+        pressed: key.down
+        hovered: !key.dim && area.containsMouse
+        sink: key.sink
 
-        Repeater {
-            model: key.p.key_shadow.filter(l => !l.inset)
-            delegate: Shade {
-                required property var modelData
-                shadow: modelData
-                radius: key.radius
-            }
-        }
-        CapFace {
-            anchors.fill: parent
-            cap: key.look.cap
-            topColour: key.capColour
-            skirt: key.capSkirt
-            radius: key.radius
-            s: key.s
-            pressed: key.down
-            sink: key.sink
-        }
-        Inset {
-            anchors.fill: parent
-            layers: key.p.key_shadow.filter(l => l.inset)
-            cap: key.look.cap
-            topColour: key.capColour
-            skirt: key.capSkirt
-            radius: key.radius
-            s: key.s
-            pressed: key.down
-            sink: key.sink
-        }
-        Hover {
-            lk: key.lk
-            radius: key.radius
-            visible: !key.dim && (area.containsMouse || key.down)
-            tint: key.down ? key.p.press : key.p.hover
-        }
         KeyText {
             anchors.fill: parent
             kv: key.kv
