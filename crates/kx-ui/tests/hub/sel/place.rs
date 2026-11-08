@@ -1,10 +1,13 @@
 //! Where the strip goes: the theme's gap under the last line and centred on it, above when there is no room or it would
 //! cover the keyboard or a panel, at the selection screen's scale and the keyboard's size, from the strip's measured
-//! size; a stale round or an absurd size places nothing, and any numbers land on the work area or nowhere.
+//! size, a caret's zero-wide box too; a stale round or an absurd size places nothing, and any numbers land on the work
+//! area or nowhere.
 
-use super::{AREA, heard, line, spot, strip, ticked, usual, view};
+use super::{AREA, heard, line, sel, spot, strip, ticked, usual, view};
 use crate::Rig;
-use kx_module_api::ports::{BASE_DPI, Legend, Point, Rect, Screen, SelChip, StripSpot, physical};
+use kx_module_api::ports::{
+    BASE_DPI, ChipsView, Legend, Point, Rect, Screen, SelChip, StripSpot, physical,
+};
 use kx_theme::Themes;
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -124,6 +127,44 @@ fn with_no_room_below_the_strip_goes_above() {
     bus.publish(&strip(1, low, None, Legend::Both)).unwrap();
     let at = rig.hub.sel_at(1, W, H, S, &[]).unwrap();
     assert_eq!(at.y, AREA.h - 20 - gap(BASE_DPI, S) - H);
+}
+
+/// A caret's box is zero wide (plan edge case 14), yet its Paste strip shows, centred on it, and at the work area's
+/// left edge it stays on the area.
+#[test]
+fn a_carets_zero_wide_box_shows_and_places_at_the_left_edge_too() {
+    let rig = Rig::new();
+    let (bus, _sent, _subs) = heard(&rig);
+    for (round, x) in [(1, 500), (2, AREA.x)] {
+        let caret = Rect {
+            x,
+            y: 300,
+            w: 0,
+            h: 20,
+        };
+        let paste = ChipsView::Shown {
+            round,
+            chips: vec![SelChip::Paste],
+            spot: StripSpot {
+                first: caret,
+                last: caret,
+                screen: super::screen(BASE_DPI),
+            },
+            acted: None,
+            legend: Legend::Both,
+        };
+        bus.publish(&paste).unwrap();
+        assert_eq!(sel(&rig)["round"], round, "at {x}: it shows");
+        let want = Point {
+            x: (x - W / 2).max(AREA.x),
+            y: 300 + 20 + gap(BASE_DPI, S),
+        };
+        assert_eq!(
+            rig.hub.sel_at(i64::from(round), W, H, S, &[]),
+            Some(want),
+            "at {x}"
+        );
+    }
 }
 
 #[test]
