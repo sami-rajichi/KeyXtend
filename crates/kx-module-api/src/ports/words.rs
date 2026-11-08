@@ -271,8 +271,8 @@ impl Event for PanelPressesWanted {
     const NAME: &'static str = "panel-presses-wanted";
 }
 
-/// Asks the prediction module and the keyboard to send their wish for presses again, for a mouse module that starts
-/// later; it carries nothing, so it needs no capability.
+/// Asks every asker (the prediction and selection modules) and the keyboard to send their wish for presses again, for a
+/// mouse module that starts later; it carries nothing, so it needs no capability.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PressesAsk;
 

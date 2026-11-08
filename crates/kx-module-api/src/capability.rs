@@ -34,7 +34,7 @@ capabilities! {
     ReadClipboard => "read-clipboard",
     /// Set the clipboard and ask the keyboard for a paste.
     WriteClipboard => "write-clipboard",
-    /// Read what is typed into the focused box, and the words before its cursor.
+    /// Read what is typed into the focused box, the words before its cursor, and its selection.
     ReadFocusedText => "read-focused-text",
     /// Record from the microphone.
     Microphone => "microphone",
