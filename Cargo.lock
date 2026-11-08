@@ -1365,6 +1365,7 @@ dependencies = [
  "kx-target-window",
  "kx-test-support",
  "kx-theme",
+ "proptest",
  "serde",
  "serde_json",
  "spike-core",

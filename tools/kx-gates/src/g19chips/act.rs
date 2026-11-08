@@ -208,4 +208,37 @@ mod tests {
             "the owner's tab"
         );
     }
+
+    /// Each key input of `inputs` as its key, whether it is a release, and its tag.
+    #[allow(unsafe_code, reason = "Reads the keyboard member of key inputs.")]
+    fn keys_of(inputs: &[INPUT]) -> Vec<(u16, bool, usize)> {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{INPUT_KEYBOARD, KEYEVENTF_KEYUP};
+        let one = |i: &INPUT| {
+            assert_eq!(i.r#type, INPUT_KEYBOARD);
+            // SAFETY: the type, just checked, says the keyboard member is set.
+            let ki = unsafe { i.Anonymous.ki };
+            (
+                ki.wVk.0,
+                ki.dwFlags.contains(KEYEVENTF_KEYUP),
+                ki.dwExtraInfo,
+            )
+        };
+        inputs.iter().map(one).collect()
+    }
+
+    #[test]
+    fn keys_go_down_in_order_and_up_in_reverse_all_tagged_as_the_simulated_user() {
+        let (shift, home) = (0x10, 0x24);
+        let tag = SIM_TAG;
+        assert_eq!(
+            keys_of(&strokes(&[shift, home])),
+            [
+                (shift, false, tag),
+                (home, false, tag),
+                (home, true, tag),
+                (shift, true, tag)
+            ]
+        );
+        assert!(strokes(&[]).is_empty());
+    }
 }

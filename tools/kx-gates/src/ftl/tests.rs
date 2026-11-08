@@ -115,10 +115,13 @@ fn the_selection_strips_texts_are_read_in_every_language() {
     );
 }
 
-#[test]
-fn the_clip_folder_holds_exactly_the_languages_of_the_main_files() {
-    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/kx-ui/i18n/clip");
-    let entries = std::fs::read_dir(dir).expect("kx-ui's clip folder");
+/// The file names in kx-ui's feature folder `folder`, sorted.
+fn folder_files(folder: &str) -> Vec<String> {
+    let dir = format!(
+        "{}/../../crates/kx-ui/i18n/{folder}",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let entries = std::fs::read_dir(&dir).expect("kx-ui's feature folder");
     let mut shipped: Vec<String> = entries
         .map(|e| {
             e.expect("an entry")
@@ -128,9 +131,16 @@ fn the_clip_folder_holds_exactly_the_languages_of_the_main_files() {
         })
         .collect();
     shipped.sort();
+    shipped
+}
+
+#[test]
+fn the_clip_and_sel_folders_hold_exactly_the_languages_of_the_main_files() {
     let mut ours: Vec<String> = FILES.iter().map(|(tag, ..)| format!("{tag}.ftl")).collect();
     ours.sort();
-    assert_eq!(shipped, ours);
+    for folder in ["clip", "sel"] {
+        assert_eq!(folder_files(folder), ours, "{folder}");
+    }
 }
 
 #[test]

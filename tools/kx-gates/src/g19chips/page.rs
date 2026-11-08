@@ -98,3 +98,20 @@ pub fn run(gate: &Gate, cases: &mut Vec<Value>, left: &mut Vec<String>) -> Resul
     left.extend(notes);
     Ok(v)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_point_inside_sits_at_the_middle_height_inset_from_the_chosen_edge() {
+        let r = RECT {
+            left: 100,
+            top: 40,
+            right: 300,
+            bottom: 61,
+        };
+        assert_eq!(inside(&r, 6, false), POINT { x: 106, y: 50 });
+        assert_eq!(inside(&r, 6, true), POINT { x: 294, y: 50 });
+    }
+}

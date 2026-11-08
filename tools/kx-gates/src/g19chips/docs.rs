@@ -122,6 +122,10 @@ pub fn counts(title: &str, g: &G19Product) -> Option<(usize, usize)> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::LazyLock;
+
+    use proptest::prelude::*;
+
     use super::*;
     use crate::config::load;
 
@@ -170,5 +174,24 @@ mod tests {
             g.copy_mark, g.shift_mark, g.copy_mark, g.shift_mark
         );
         assert_eq!(counts(&late, &g), Some((4, 0)), "the last mark counts");
+    }
+
+    /// The shipped settings, read once for the property test.
+    static G: LazyLock<G19Product> = LazyLock::new(|| load().expect("loads").g19_product);
+
+    proptest! {
+        #[test]
+        fn the_last_marks_counts_read_back_and_any_title_reads_without_a_panic(
+            copies in 0usize..100_000,
+            shifted in 0usize..100_000,
+            lead in "\\PC{0,20}",
+            tail in "[A-Za-z -]{0,20}",
+            junk in "\\PC{0,40}",
+        ) {
+            let g = &*G;
+            let title = format!("{lead}{}{copies}{}{shifted}{tail}", g.copy_mark, g.shift_mark);
+            prop_assert_eq!(counts(&title, g), Some((copies, shifted)));
+            let _ = counts(&junk, g);
+        }
     }
 }

@@ -218,4 +218,20 @@ mod tests {
         assert_eq!(moved.end(Line::Copy), POINT { x: 99, y: 13 });
         assert_eq!(moved.of(Line::Cut), r(15, 33, 80, 20));
     }
+
+    #[test]
+    fn the_caret_line_sits_one_line_under_the_arabic_one_and_its_click_lands_inside() {
+        let lines = Lines {
+            rows: (0..4).map(|i| r(10, 10 + 30 * i, 80, 20)).collect(),
+            inset: 4,
+        };
+        assert_eq!(lines.of(Line::Arabic), r(10, 100, 80, 20));
+        assert_eq!(lines.of(Line::Caret), r(10, 120, 80, 20));
+        assert_eq!(lines.caret(), POINT { x: 14, y: 130 });
+        let short = Lines {
+            rows: Vec::new(),
+            inset: 4,
+        };
+        assert_eq!(short.of(Line::Caret), Rect::default(), "no rows read");
+    }
 }

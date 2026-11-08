@@ -72,6 +72,8 @@ pub fn site_key(s: &SelSettings) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::*;
 
     /// A marker that encodes as itself.
@@ -124,5 +126,38 @@ mod tests {
         assert_eq!(value("https://x.test/?text=", "text"), Some(""));
         assert_eq!(key_of("https://x.test/?a=1&b=kxmark", MARK), Some("b"));
         assert_eq!(key_of("https://x.test/?b=1", MARK), None);
+    }
+
+    /// `s` with every byte escaped as `%XX`, as a browser may show it.
+    fn escaped(s: &str) -> String {
+        use std::fmt::Write;
+        s.bytes().fold(String::new(), |mut out, b| {
+            let _ = write!(out, "%{b:02X}");
+            out
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn any_text_escaped_or_with_form_spaces_decodes_back(s in "\\PC{0,40}", plain in "[^%+]{0,40}") {
+            prop_assert_eq!(decode(&escaped(&s)), Some(s.clone()));
+            prop_assert_eq!(decode(&plain.replace(' ', "+")), Some(plain.clone()));
+        }
+
+        #[test]
+        fn any_address_reads_without_a_panic(junk in "\\PC{0,60}", key in "\\PC{0,8}") {
+            let _ = decode(&junk);
+            let _ = (value(&junk, &key), key_of(&junk, &key));
+        }
+
+        #[test]
+        fn a_keys_value_comes_back_whole_wherever_it_sits(
+            key in "[a-z]{1,8}",
+            v in "[A-Za-z0-9%+]{0,20}",
+            lead in "[a-z]{0,8}",
+        ) {
+            let link = format!("https://x.test/p?0{lead}=1&{key}={v}&z=2#{key}=no");
+            prop_assert_eq!(value(&link, &key), Some(v.as_str()));
+        }
     }
 }

@@ -78,5 +78,9 @@ windows = { workspace = true, features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
+[dev-dependencies]
+# Property tests for the parsers of what the browser shows.
+proptest.workspace = true
+
 [build-dependencies]
 embed-manifest.workspace = true
