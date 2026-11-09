@@ -8,7 +8,9 @@ use crate::typing::Rig;
 use kx_mod_keyboard::legend::is_empty;
 use kx_mod_keyboard::spec::char_id;
 use kx_mod_keyboard::{Latch, LegendMods, Modifiers};
-use kx_module_api::ports::{LayoutSource, Scan};
+use kx_module_api::ports::{
+    COPY_ID, COPY_TERM_ID, CUT_ID, Edit, LayoutSource, PASTE_ID, PASTE_TERM_ID, Scan,
+};
 use kx_platform_fake::Stroke;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
@@ -41,6 +43,8 @@ enum Kind {
     Click,
     /// The layer's shortcut cell: the platform sends it with every latch held, which uses them.
     Shortcut,
+    /// An edit ask of the selection chips, in a terminal when true: the platform sends its own shortcut alone.
+    Edit(Edit, bool),
 }
 
 /// The keys a run clicks, and the mouse, with what each does.
@@ -62,6 +66,14 @@ fn keys() -> Vec<(String, Kind)> {
         ("mouse".to_owned(), Kind::Click),
         (SHORTCUT.to_owned(), Kind::Shortcut),
     ];
+    for (edit, name) in [
+        (Edit::Copy, "copy"),
+        (Edit::Cut, "cut"),
+        (Edit::Paste, "paste"),
+    ] {
+        all.push((format!("edit-{name}"), Kind::Edit(edit, false)));
+        all.push((format!("edit-{name}-term"), Kind::Edit(edit, true)));
+    }
     all.extend(chars);
     all.extend(named);
     all
@@ -140,6 +152,16 @@ fn click(r: &mut Rig, id: &str, kind: Kind) -> Result<(Vec<Stroke>, Option<bool>
             r.shortcut(&sid(id)).map_err(failed)?;
             None
         }
+        Kind::Edit(edit, terminal) => {
+            let refused = r.edit(edit, terminal).is_err();
+            prop_assert_eq!(
+                refused,
+                edit == Edit::Cut && terminal,
+                "{}: no terminal key cuts",
+                id
+            );
+            None
+        }
         _ => {
             r.tap(id).map_err(failed)?;
             None
@@ -163,7 +185,14 @@ fn run(layout: &str, mode: Modifiers, picks: &[usize]) -> Result<(), TestCaseErr
     let keys = keys();
     let release = mode == Modifiers::Release;
     let mut r = Rig::new(layout, |s| s.modifiers = mode);
-    r.shortcuts.set_known(only(&[SHORTCUT]));
+    r.shortcuts.set_known(only(&[
+        SHORTCUT,
+        COPY_ID,
+        CUT_ID,
+        PASTE_ID,
+        COPY_TERM_ID,
+        PASTE_TERM_ID,
+    ]));
     let mut model = Model::new();
     for &i in picks {
         let (id, kind) = &keys[i % keys.len()];
@@ -209,9 +238,44 @@ fn check(
             prop_assert_eq!(shortcut_held(r)?, latched, "every latch held, once");
             used(model, release);
         }
+        Kind::Edit(edit, terminal) => {
+            prop_assert!(
+                sent.is_empty(),
+                "the platform sends the edit, not the injector"
+            );
+            edit_sent(r, id, edit, terminal)?;
+        }
         Kind::Quiet => prop_assert!(sent.is_empty()),
     }
     Ok(())
+}
+
+/// Checks that edit ask `id` sent its own shortcut with nothing held, and nothing else; the latches it leaves alone.
+fn edit_sent(r: &Rig, id: &str, edit: Edit, terminal: bool) -> Result<(), TestCaseError> {
+    let want: Vec<_> = edit_id(edit, terminal)
+        .map(|e| (sid(e), Vec::new()))
+        .into_iter()
+        .collect();
+    prop_assert_eq!(
+        r.shortcuts.sent(),
+        want,
+        "{}: its own shortcut, nothing held",
+        id
+    );
+    r.shortcuts.clear();
+    Ok(())
+}
+
+/// The shortcut an edit ask sends, a terminal's own when `terminal`; none for a Cut there.
+fn edit_id(edit: Edit, terminal: bool) -> Option<&'static str> {
+    match (edit, terminal) {
+        (Edit::Copy, false) => Some(COPY_ID),
+        (Edit::Copy, true) => Some(COPY_TERM_ID),
+        (Edit::Cut, false) => Some(CUT_ID),
+        (Edit::Cut, true) => None,
+        (Edit::Paste, false) => Some(PASTE_ID),
+        (Edit::Paste, true) => Some(PASTE_TERM_ID),
+    }
 }
 
 fn picks() -> impl Strategy<Value = Vec<usize>> {

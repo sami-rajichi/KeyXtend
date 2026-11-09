@@ -12,7 +12,7 @@ use kx_mod_keyboard::{
     Typing,
 };
 use kx_module_api::Redacted;
-use kx_module_api::ports::{InjectError, LayoutTable, Scan, ShortcutId, TextRoute, Toggle};
+use kx_module_api::ports::{Edit, InjectError, LayoutTable, Scan, ShortcutId, TextRoute, Toggle};
 use kx_platform_fake::{FakeInjector, FakeLayoutSource, FakeShortcuts, LayoutFile, Stroke};
 
 /// The side cell of a lone shortcut: typing reads only its key.
@@ -63,6 +63,18 @@ impl Rig {
             layer,
         };
         self.typing.tap(&io, id, false)
+    }
+
+    /// The selection chips ask for `edit`, by a terminal's keys when `terminal`.
+    pub fn edit(&mut self, edit: Edit, terminal: bool) -> Result<(), TapError> {
+        let io = Io {
+            injector: &self.injector,
+            source: &self.source,
+            table: &self.table,
+            shortcuts: &self.shortcuts,
+            layer: &[],
+        };
+        self.typing.edit(&io, edit, terminal)
     }
 
     /// A click on the character key that sends `code`.
