@@ -13,15 +13,16 @@ use windows::Win32::UI::Accessibility::{
     IUIAutomationTreeWalker, TextPatternRangeEndpoint_End, TextPatternRangeEndpoint_Start,
     TextUnit_Character, UIA_TextPatternId,
 };
+use windows::core::BOOL;
 
 use super::follow::same;
-use super::kinds::{Facts, Tree, capped, climb, kind, shut};
+use super::kinds::{Facts, Tree, capped, climb, fence, kind, shut};
 use super::spot::{Span, assemble, whole};
 use super::table;
 use super::win::Mine;
 use crate::field::{self, Held, box_id, caret_of, named, range_fixed, value_fixed};
 use crate::screen::{edges, rect_of, screen_of};
-use crate::uia::{boxes, span};
+use crate::uia::{boxes, class_of, span, style_of};
 
 /// The step a caret's empty range grows by: one character.
 const STEP: i32 = 1;
@@ -96,6 +97,26 @@ fn facts(el: &IUIAutomationElement, mine: Mine) -> Facts {
     }
 }
 
+/// What the walk's fence reads of ancestor `el`, and nothing more: its password flag, its own window's class and
+/// style, and whether it is ours.
+#[allow(unsafe_code, reason = "Plain UI Automation reads.")]
+fn ward(el: &IUIAutomationElement, mine: Mine) -> Facts {
+    // SAFETY: plain property reads on a live element; a failure reads as unknown or as no window of its own.
+    let (password, hwnd) = unsafe {
+        (
+            el.CurrentIsPassword().ok().map(BOOL::as_bool),
+            el.CurrentNativeWindowHandle().unwrap_or_default(),
+        )
+    };
+    Facts {
+        password,
+        class: class_of(hwnd),
+        style: style_of(hwnd),
+        ours: mine.ours(el),
+        ..Facts::default()
+    }
+}
+
 /// The walk up from a focused element: the client's control-view walker, what counts as ours, and the look's deadline.
 struct Up<'a> {
     walker: Option<&'a IUIAutomationTreeWalker>,
@@ -117,6 +138,11 @@ impl Tree for Up<'_> {
         late(self.by).is_err() || shut(&base(el, self.mine), field::table(), table())
     }
 
+    /// Fenced past the deadline too; only the facts the fence needs are read.
+    fn fenced(&self, el: &IUIAutomationElement) -> bool {
+        late(self.by).is_err() || fence(&ward(el, self.mine), field::table())
+    }
+
     #[allow(unsafe_code, reason = "A plain UI Automation tree step.")]
     fn parent(&self, el: &IUIAutomationElement) -> Option<IUIAutomationElement> {
         late(self.by).ok()?;
@@ -126,7 +152,8 @@ impl Tree for Up<'_> {
 }
 
 /// The element a look at focused `el` reads, and whether it climbed: `el`, or its nearest control-view ancestor with a
-/// text pattern within the table's cap, as a web page's group or label holds none; a shut element ends the walk.
+/// text pattern within the table's cap, as a web page's group or label holds none; a shut focus or a fenced ancestor
+/// ends the walk.
 #[allow(unsafe_code, reason = "Asks our client for its walker.")]
 pub(super) fn text_of(
     el: IUIAutomationElement,

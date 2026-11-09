@@ -76,6 +76,14 @@ pub(crate) fn shut(facts: &Facts, boxes: &field::Table, table: &Table) -> bool {
     facts.control.is_none() || closed(facts, boxes, table) || opaque
 }
 
+/// Whether an ancestor's `facts` end the walk up, on evidence only: a password box, a window that hides what is typed
+/// or hides its boxes, or our own. An unread fact never does, as the box reached still goes through `kind`.
+pub(crate) fn fence(facts: &Facts, boxes: &field::Table) -> bool {
+    let opaque = !facts.class.is_empty() && boxes.opaque(&facts.class);
+    let hides = boxes.hides(&facts.class, facts.style);
+    facts.password == Some(true) || hides || opaque || facts.ours
+}
+
 /// What the walk up from the focused element asks of the elements it meets.
 pub(crate) trait Tree {
     /// One element, as the OS hands it over.
@@ -84,16 +92,19 @@ pub(crate) trait Tree {
     /// Whether `el` has a text pattern.
     fn texts(&self, el: &Self::El) -> bool;
 
-    /// Whether `el`'s facts keep a look on it, by `shut`.
+    /// Whether the focused `el`'s facts keep a look on it, by `shut`.
     fn shut(&self, el: &Self::El) -> bool;
+
+    /// Whether ancestor `el` ends the walk, by `fence`.
+    fn fenced(&self, el: &Self::El) -> bool;
 
     /// The parent of `el`; `None` at the top, past the look's deadline, or when the app does not answer.
     fn parent(&self, el: &Self::El) -> Option<Self::El>;
 }
 
 /// The element a look reads for the focused `el`, and whether it climbed: `el` when it has a text pattern or is shut,
-/// else its nearest ancestor within `cap` levels that has one, else `el`. A shut ancestor ends the walk at `el`, so no
-/// password box or opaque window is passed.
+/// else its nearest ancestor within `cap` levels that has one, else `el`. A fenced ancestor ends the walk at `el`, so
+/// no password box, hiding or opaque window, or our own is passed.
 pub(crate) fn climb<T: Tree>(tree: &T, el: T::El, cap: u8) -> (T::El, bool) {
     if tree.texts(&el) || tree.shut(&el) {
         return (el, false);
@@ -103,7 +114,7 @@ pub(crate) fn climb<T: Tree>(tree: &T, el: T::El, cap: u8) -> (T::El, bool) {
         let Some(next) = tree.parent(up.as_ref().unwrap_or(&el)) else {
             break;
         };
-        if tree.shut(&next) {
+        if tree.fenced(&next) {
             break;
         }
         if tree.texts(&next) {

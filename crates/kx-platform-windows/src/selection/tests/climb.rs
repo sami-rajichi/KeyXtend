@@ -1,20 +1,23 @@
 //! The walk up from the focused element to the text that holds its selection: the focused element's own pattern
-//! wins, the nearest ancestor within the cap serves, none within it keeps the focused element, and a password box, an
-//! opaque window or our own, focused or on the way up, stops the walk; a climbed box offers Copy and Translate only.
+//! wins, the nearest ancestor within the cap serves, none within it keeps the focused element, a shut focus never
+//! climbs, and on the way up only a password box, a hiding or opaque window or our own stops the walk, never an unread
+//! fact; a climbed box offers Copy and Translate only.
 
-use super::super::kinds::{Tree, capped, climb, shut};
+use super::super::kinds::{Tree, capped, climb, fence, shut};
 use super::*;
 
 /// UI Automation's Group control type, which a web page's block has and the kind table does not list.
 const GROUP: i32 = 50026;
 /// The depth the shipped table must reach: Zen's pages held the selection 9 and 11 levels above the focus.
 const SEEN: u8 = 11;
+/// A window class `field.toml` lists as hiding its boxes from UI Automation.
+const OPAQUE: &str = "TscShellContainerClass";
 
-/// A chain from the focused element (0) up: which levels have a text pattern, which are shut, and how many parents
-/// were asked.
+/// A chain from the focused element (0) up of the facts each level tells, by the real rules: which levels have a
+/// text pattern, and how many parents were asked.
 struct Chain {
     texts: Vec<bool>,
-    shut: Vec<bool>,
+    facts: Vec<Facts>,
     asked: Cell<usize>,
 }
 
@@ -26,7 +29,11 @@ impl Tree for Chain {
     }
 
     fn shut(&self, el: &usize) -> bool {
-        self.shut.get(*el).copied().unwrap_or_default()
+        shuts(&self.facts[*el])
+    }
+
+    fn fenced(&self, el: &usize) -> bool {
+        fence(&self.facts[*el], field::table())
     }
 
     fn parent(&self, el: &usize) -> Option<usize> {
@@ -36,12 +43,25 @@ impl Tree for Chain {
     }
 }
 
-/// A chain of `levels` above the focus whose only text pattern is at level `at`, with the focus `shut` or not.
+/// A chain of `levels` groups above the focus whose only text pattern is at level `at`, with the focus shut by an
+/// unread control type or not.
 fn chain(at: usize, levels: usize, shut: bool) -> Chain {
+    let mut facts = vec![group(); levels + 1];
+    if shut {
+        facts[0].control = None;
+    }
     Chain {
         texts: (0..=levels).map(|i| i == at).collect(),
-        shut: (0..=levels).map(|i| i == 0 && shut).collect(),
+        facts,
         asked: Cell::new(0),
+    }
+}
+
+/// A web page's group that UI Automation calls a password box.
+fn secret() -> Facts {
+    Facts {
+        password: Some(true),
+        ..group()
     }
 }
 
@@ -86,29 +106,78 @@ fn a_shut_focused_element_never_climbs() {
 }
 
 #[test]
-fn a_shut_ancestor_under_a_text_one_stops_the_walk_at_the_focus() {
+fn a_password_ancestor_under_a_text_one_or_with_text_stops_the_walk_at_the_focus() {
     let mut under = chain(5, 20, false);
-    under.shut[2] = true;
+    under.facts[2] = secret();
     assert_eq!(walked(&under, table().walk_up()), (0, 2));
-    let mut shut_text = chain(5, 20, false);
-    shut_text.shut[5] = true;
+    let mut with_text = chain(5, 20, false);
+    with_text.facts[5] = secret();
     assert_eq!(
-        walked(&shut_text, table().walk_up()),
+        walked(&with_text, table().walk_up()),
         (0, 5),
-        "a shut text ancestor"
+        "a password text ancestor"
     );
 }
 
 #[test]
-fn a_shut_ancestor_at_the_caps_edge_stops_the_walk_and_one_past_it_is_never_met() {
+fn a_password_ancestor_at_the_caps_edge_stops_the_walk_and_one_past_it_is_never_met() {
     let cap = table().walk_up();
     let edge = usize::from(cap);
     let mut at_edge = chain(edge, 20, false);
-    at_edge.shut[edge] = true;
+    at_edge.facts[edge] = secret();
     assert_eq!(walked(&at_edge, cap), (0, edge));
     let mut past = chain(edge, 20, false);
-    past.shut[edge + 1] = true;
+    past.facts[edge + 1] = secret();
     assert_eq!(walked(&past, cap), (edge, edge));
+}
+
+#[test]
+fn an_unread_fact_on_an_ancestor_never_stops_the_walk_and_the_box_reached_is_still_closed() {
+    let mut unread = chain(5, 20, false);
+    unread.facts[2].password = None;
+    unread.facts[3].control = None;
+    unread.facts[5].password = None;
+    assert_eq!(walked(&unread, table().walk_up()), (5, 5));
+    assert_eq!(
+        kind_of(&unread.facts[5]),
+        SelKind::Closed,
+        "the box reached"
+    );
+}
+
+#[test]
+fn a_hiding_or_opaque_ancestor_window_or_our_own_stops_the_walk_and_one_with_no_window_does_not() {
+    let fences = [
+        Facts {
+            class: String::from(OPAQUE),
+            ..group()
+        },
+        Facts {
+            class: String::from("Edit"),
+            style: PW,
+            ..group()
+        },
+        Facts {
+            ours: true,
+            ..group()
+        },
+    ];
+    for facts in fences {
+        let mut stopped = chain(5, 20, false);
+        stopped.facts[2] = facts.clone();
+        assert_eq!(walked(&stopped, table().walk_up()), (0, 2), "{facts:?}");
+    }
+    let mut windowless = chain(5, 20, false);
+    windowless.facts[2] = Facts {
+        class: String::new(),
+        top: String::from(OPAQUE),
+        ..group()
+    };
+    assert_eq!(
+        walked(&windowless, table().walk_up()),
+        (5, 5),
+        "no window of its own"
+    );
 }
 
 #[test]
@@ -167,7 +236,7 @@ fn a_password_box_an_opaque_window_or_our_own_shuts_the_focus_and_a_password_anc
             ..group()
         },
         Facts {
-            top: String::from("TscShellContainerClass"),
+            top: String::from(OPAQUE),
             ..group()
         },
         Facts {

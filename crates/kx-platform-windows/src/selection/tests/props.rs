@@ -1,8 +1,9 @@
-//! The rules over any input: a box is never Editable unless every fact allows it and never shown when closed, and a
-//! box that never climbs is closed or a terminal; a line box holds its part and every part on its line, and never
-//! panics on any numbers; a read cut by a cap never makes a character that was not there.
+//! The rules over any input: a box is never Editable unless every fact allows it and never shown when closed, a box
+//! that never climbs is closed or a terminal, and a fence on the way up shuts a focus too, never by an unread fact; a
+//! line box holds its part and every part on its line, and never panics on any numbers; a read cut by a cap never
+//! makes a character that was not there.
 
-use super::super::kinds::shut;
+use super::super::kinds::{fence, shut};
 use super::super::spot::{line, whole};
 use super::*;
 use crate::screen::edges;
@@ -76,6 +77,16 @@ proptest! {
         let got = asked(&facts, &small(), Some(false)).0;
         let kept = matches!(got, SelKind::Closed | SelKind::Terminal);
         prop_assert!(!shuts || kept, "{:?}: {:?}", facts, got);
+    }
+
+    #[test]
+    fn a_fence_is_never_wider_than_the_focus_check_and_an_unread_fact_never_moves_it(facts in any_facts()) {
+        let boxes = field::table();
+        let fenced = fence(&facts, boxes);
+        prop_assert!(!fenced || shut(&facts, boxes, &small()), "wider than the focus's own check: {:?}", facts);
+        let password = facts.password.filter(|&p| p);
+        let blind = Facts { control: None, password, fixed: None, top: String::new(), ..facts.clone() };
+        prop_assert_eq!(fence(&blind, boxes), fenced, "an unread fact moved the fence: {:?}", facts);
     }
 
     #[test]
