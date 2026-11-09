@@ -1,6 +1,7 @@
-//! A scripted probe for the selection tests: the test sets its focus, it counts every call, and its gate can shut at
-//! one place so the thread hangs there, as in a busy app, until the test opens it again.
+//! A scripted probe for the selection tests: the test sets its focus, it counts every call and notes each step after a
+//! look, and its gate can shut at one place so the thread hangs there, as in a busy app, until the test opens it again.
 
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
@@ -11,6 +12,9 @@ use super::{Ours, SelProbe, lock};
 
 /// How long a test waits for a thread or a gate; a bounded wait, never a sleep.
 pub(super) const WAIT: Duration = Duration::from_secs(5);
+
+/// What a look answers.
+pub(super) type Answer = Result<Option<SelSpot>, SelError>;
 
 /// A scripted element: whether it is ours, and the spot its box shows.
 pub(super) type El = (bool, SelSpot);
@@ -23,6 +27,8 @@ pub(super) struct Calls {
     pub(super) stills: usize,
     pub(super) reads: usize,
     pub(super) clips: usize,
+    /// Steps after a look.
+    pub(super) steps: usize,
 }
 
 /// Where a shut gate holds the thread.
@@ -46,6 +52,10 @@ struct Board {
     /// How many calls waited at the gate.
     hung: usize,
     calls: Calls,
+    /// Where a look's answer arrives, which each step after a look tries.
+    ear: Option<Receiver<Answer>>,
+    /// Each step after a look: the box it looked at, whether it came late, and whether its answer had already gone.
+    stepped: Vec<(u64, bool, bool)>,
 }
 
 /// The scripted probe; clones share it.
@@ -62,6 +72,8 @@ impl Script {
             shut: None,
             hung: 0,
             calls: Calls::default(),
+            ear: None,
+            stepped: Vec::new(),
         };
         Self(Arc::new((Mutex::new(board), Condvar::new())))
     }
@@ -123,6 +135,16 @@ impl Script {
         waited.is_ok_and(|(b, _)| b.hung > 0)
     }
 
+    /// Makes each step after a look try `ear` for that look's answer.
+    pub(super) fn hear(&self, ear: Receiver<Answer>) {
+        self.board().ear = Some(ear);
+    }
+
+    /// Each step after a look so far: its box, whether it came late, and whether its answer had already gone.
+    pub(super) fn stepped(&self) -> Vec<(u64, bool, bool)> {
+        self.board().stepped.clone()
+    }
+
     /// What the probe was asked so far.
     pub(super) fn calls(&self) -> Calls {
         self.board().calls
@@ -168,6 +190,13 @@ impl SelProbe for Script {
         let mut board = self.board();
         board.calls.clips += 1;
         board.clip
+    }
+
+    fn looked(&self, _: &El, spot: &SelSpot, late: bool) {
+        let mut board = self.board();
+        board.calls.steps += 1;
+        let gone = board.ear.as_ref().is_some_and(|ear| ear.try_recv().is_ok());
+        board.stepped.push((spot.box_id, late, gone));
     }
 }
 

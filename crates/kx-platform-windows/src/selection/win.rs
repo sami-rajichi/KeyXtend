@@ -1,7 +1,7 @@
 //! The Windows selection watch over `kx_platform::selection`'s run: a thread with COM in the multithreaded apartment,
 //! a UI Automation client whose calls end at `read_ms`, a focus handler, and a selection handler on the open box last
-//! looked at. That handler moves on this thread after each look in time, never in a callback and never off a hung
-//! app's box, and only our own handlers are added and removed, through `uia`'s locked helpers.
+//! looked at. That handler moves on this thread once each look in time has answered, never in a callback and never off
+//! a hung app's box, and only our own handlers are added and removed, through `uia`'s locked helpers.
 
 use std::cell::RefCell;
 use std::process;
@@ -139,11 +139,7 @@ impl SelProbe for WinSel {
 
     fn spot(&self, at: &Focus, by: Instant) -> Result<SelSpot, SelError> {
         late(by)?;
-        let id = box_id(&at.el);
-        let spot = spot(&at.el, id, self.mine, by, at.climbed);
-        let seen = Seen::of(&spot, late(by).is_err());
-        self.heard.borrow_mut().look(self, &at.el, id, seen);
-        spot
+        spot(&at.el, box_id(&at.el), self.mine, by, at.climbed)
     }
 
     fn still(&self, at: &Focus, box_id: u64, by: Instant) -> bool {
@@ -156,6 +152,14 @@ impl SelProbe for WinSel {
 
     fn clip_holds(&self) -> bool {
         holds()
+    }
+
+    /// The selection handler moves only once the look answered, so its adds and removals never count against it.
+    fn looked(&self, at: &Focus, spot: &SelSpot, late: bool) {
+        let seen = Seen::of(&Ok(*spot), late);
+        self.heard
+            .borrow_mut()
+            .look(self, &at.el, spot.box_id, seen);
     }
 }
 

@@ -13,7 +13,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{SelError, SelKind, SelSpot, same_box};
 
 pub use inbox::{Inbox, Shared};
-use run::Ask;
+use run::{Ask, Reply};
 pub use run::{Job, Tell, spawn};
 
 /// Whose an element is, which the change handlers ask on any thread.
@@ -56,17 +56,19 @@ pub trait SelProbe: Ours {
 
     /// Whether the clipboard holds any format, reading none; it never waits on another app.
     fn clip_holds(&self) -> bool;
+
+    /// The adapter's own step after a look at `el` found `spot`, `late` when that came past its deadline; it runs once
+    /// the answer went, so its cost never counts against the look.
+    fn looked(&self, el: &Self::El, spot: &SelSpot, late: bool);
 }
 
 /// Answers `job` on the watch's thread: one past its deadline makes no OS call, and focus in our own process is never
 /// looked at or read.
 pub fn serve<P: SelProbe>(probe: &P, job: Job) {
-    // The token lives until the answer is sent, so a run that gave up on this job sees the thread busy until then.
+    // The token lives until this returns, so a run that gave up on this job sees the thread busy until then.
     let Job { ask, held: _held } = job;
     match ask {
-        Ask::Look { by, reply } => {
-            let _ = reply.send(look(probe, by));
-        }
+        Ask::Look { by, reply } => answer(probe, by, &reply),
         Ask::Still { box_id, by, reply } => {
             let _ = reply.send(still(probe, box_id, by));
         }
@@ -91,12 +93,28 @@ fn theirs<P: SelProbe>(probe: &P, by: Instant) -> Result<Option<P::El>, SelError
     Ok((!probe.ours(&el)).then_some(el))
 }
 
-/// The focused box's spot; `None` in our own process, whose focus keeps the last box.
-fn look<P: SelProbe>(probe: &P, by: Instant) -> Result<Option<SelSpot>, SelError> {
-    match theirs(probe, by)? {
-        Some(el) => probe.spot(&el, by).map(Some),
-        None => Ok(None),
+/// Answers a look by `by` on `reply`, then hands the adapter what it found for its own step.
+fn answer<P: SelProbe>(probe: &P, by: Instant, reply: &Reply<Result<Option<SelSpot>, SelError>>) {
+    let found = look(probe, by);
+    let late = late(by).is_err();
+    let _ = reply.send(
+        found
+            .as_ref()
+            .map(|f| f.as_ref().map(|(_, spot)| *spot))
+            .map_err(|e| *e),
+    );
+    if let Ok(Some((el, spot))) = &found {
+        probe.looked(el, spot, late);
     }
+}
+
+/// The focused element and its box's spot; `None` in our own process, whose focus keeps the last box.
+fn look<P: SelProbe>(probe: &P, by: Instant) -> Result<Option<(P::El, SelSpot)>, SelError> {
+    let Some(el) = theirs(probe, by)? else {
+        return Ok(None);
+    };
+    let spot = probe.spot(&el, by)?;
+    Ok(Some((el, spot)))
 }
 
 /// Whether box `box_id` still has focus and its selection holds text; never in our own process.
