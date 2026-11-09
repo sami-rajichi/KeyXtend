@@ -1,7 +1,8 @@
 // The selection strip over the stand-in Ui (design 4, "Keycaps"): the keyboard's own caps in each theme, light and dark,
 // one key row tall at each size, icons or words alone, Arabic words in the Arabic font in the same order, a click sent
 // with its round and chip at the press, sizes measured in physical pixels once and again after a reword, a ticked
-// strip that loses its room or its key row still ending its round, and no focus.
+// strip that loses its room or its key row still ending its round, no focus, and each keycap found and pressed by its
+// accessible id and name.
 import QtQuick
 import QtTest
 import "../qml"
@@ -57,9 +58,17 @@ Item {
             tryVerify(() => strip.visible, 2000, "it shows");
             return strip;
         }
-        // The strip's keycaps, left to right.
+        // The strip's keycaps as a reader finds them, its buttons, left to right.
         function keys(strip) {
-            return Board.all(strip.contentItem, o => o.chip !== undefined && o.hit !== undefined).sort((a, b) => a.x - b.x);
+            return Board.all(strip.contentItem, o => o.Accessible.role === Accessible.Button).sort((a, b) => a.x - b.x);
+        }
+        // The keycap a reader or a gate finds by accessible id `uid`, the same in every language.
+        function withId(strip, uid) {
+            return keys(strip).find(k => k.Accessible.id === uid);
+        }
+        // The keycap a reader finds by its name, its word or its done word.
+        function named(strip, name) {
+            return keys(strip).find(k => k.Accessible.name === name);
         }
         // The first item under keycap `k` for which `ok` holds.
         function inside(k, ok) {
@@ -74,8 +83,9 @@ Item {
         function word(k) {
             return inside(k, o => o.font !== undefined && o.renderType !== undefined);
         }
+        // The keycap of chip `id`, found by its accessible id.
         function key(strip, id) {
-            return keys(strip).find(k => k.chip.id === id);
+            return withId(strip, Sel.ids[view("en", "both").chips.findIndex(c => c.id === id)]);
         }
 
         function test_each_theme_draws_the_keyboards_own_caps_on_its_plate() {
@@ -134,7 +144,7 @@ Item {
             for (const lk of [N.lk, E.lk, D.lk]) {
                 const strip = make(v, { lk: lk, ar: true, texts: Ar });
                 const caps = keys(strip);
-                compare(caps.map(k => k.chip.id), ["copy", "cut", "paste", "translate"], lk.look.id + ": the order kept");
+                compare(caps.map(k => k.Accessible.id), Sel.ids, lk.look.id + ": the order kept");
                 compare(caps.map(k => word(k).text), v.chips.map(c => c.word), lk.look.id);
                 verify(caps.every((k, i) => i === 0 || k.x > caps[i - 1].x), lk.look.id + ": left to right");
                 for (const k of caps) {
@@ -161,6 +171,26 @@ Item {
             compare(glyph(key(strip, "copy")).icon, N.lk.icons.chips.copy, "the others stay");
             mouseClick(key(strip, "copy"));
             compare(strip.ui.selCalls.length, 1, "a ticked strip takes no click");
+        }
+
+        // A reader or a gate finds each keycap by its id, the same in every language, and by its name, in English and
+        // Arabic; a press on the keycap found either way asks the hub for that chip in that round.
+        function test_each_keycap_found_by_its_id_or_its_name_asks_for_its_chip() {
+            for (const [tag, texts] of [["en", En], ["ar", Ar]]) {
+                const v = view(tag, "both", { round: 6 });
+                const strip = make(v, { ar: tag === "ar", texts: texts });
+                waitForRendering(strip.contentItem);
+                const asked = [];
+                v.chips.forEach((c, i) => {
+                    const [byId, byName] = [withId(strip, Sel.ids[i]), named(strip, c.word)];
+                    verify(byId !== undefined && byId === byName, tag + " " + c.id + ": one keycap by its id and name");
+                    const k = i % 2 ? byName : byId;
+                    mousePress(k);
+                    mouseRelease(k);
+                    asked.push("selAct 6 " + c.id);
+                    compare(strip.ui.selCalls, asked, tag + " " + c.id + ": its own ask");
+                });
+            }
         }
 
         function test_it_takes_no_focus_and_readers_find_it() {
