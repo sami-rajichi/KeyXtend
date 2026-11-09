@@ -43,18 +43,26 @@ impl Rig {
 
     /// A click on key `id`.
     pub fn tap(&mut self, id: &str) -> Result<Tapped, TapError> {
-        self.tap_on(&[], id)
+        self.on(&[], |typing, io| typing.tap(io, id, false))
     }
 
     /// A click on the layer's cell for shortcut `id`, as if the layer drew it alone.
     pub fn shortcut(&mut self, id: &ShortcutId) -> Result<Tapped, TapError> {
         let key = LayerKey::Shortcut(id.clone());
         let cell = LayerCell { cell: CELL, key };
-        self.tap_on(std::slice::from_ref(&cell), &cell.key.id())
+        let id = cell.key.id();
+        self.on(std::slice::from_ref(&cell), |typing, io| {
+            typing.tap(io, &id, false)
+        })
     }
 
-    /// A click on key `id` while the layer draws `layer`.
-    fn tap_on(&mut self, layer: &[LayerCell], id: &str) -> Result<Tapped, TapError> {
+    /// The selection chips ask for `edit`, by a terminal's keys when `terminal`.
+    pub fn edit(&mut self, edit: Edit, terminal: bool) -> Result<(), TapError> {
+        self.on(&[], |typing, io| typing.edit(io, edit, terminal))
+    }
+
+    /// Runs `act` on the typing state over the fakes, while the layer draws `layer`.
+    fn on<T>(&mut self, layer: &[LayerCell], act: impl FnOnce(&mut Typing, &Io<'_>) -> T) -> T {
         let io = Io {
             injector: &self.injector,
             source: &self.source,
@@ -62,19 +70,7 @@ impl Rig {
             shortcuts: &self.shortcuts,
             layer,
         };
-        self.typing.tap(&io, id, false)
-    }
-
-    /// The selection chips ask for `edit`, by a terminal's keys when `terminal`.
-    pub fn edit(&mut self, edit: Edit, terminal: bool) -> Result<(), TapError> {
-        let io = Io {
-            injector: &self.injector,
-            source: &self.source,
-            table: &self.table,
-            shortcuts: &self.shortcuts,
-            layer: &[],
-        };
-        self.typing.edit(&io, edit, terminal)
+        act(&mut self.typing, &io)
     }
 
     /// A click on the character key that sends `code`.
