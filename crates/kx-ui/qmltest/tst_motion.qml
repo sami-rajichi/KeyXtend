@@ -60,6 +60,7 @@ Item {
     }
 
     Component { id: keyC; Key {} }
+    Component { id: capC; KeyCap {} }
     Component { id: textC; KeyText {} }
     Component { id: padC; DPad {} }
 
@@ -143,6 +144,26 @@ Item {
             mousePress(r);
             mouseRelease(r);
             compare(r.sink, 0, "reduced motion lets go at once");
+        }
+
+        // The cap a key and a selection keycap share sinks at once at a press and eases back on its own, or jumps back
+        // with reduced motion.
+        function test_the_shared_cap_sinks_at_once_and_eases_back_alone() {
+            for (const [lk, eases] of [[F.lk, true], [R.lk, false]]) {
+                const p = lk.palette;
+                const c = createTemporaryObject(capC, root, { lk: lk, s: 1, topColour: p.key, skirt: p.key, pressed: false, hovered: false, width: 60, height: 56 });
+                verify(c, "a cap with no sink handed in");
+                compare(c.sink, 0, "at rest");
+                c.pressed = true;
+                compare(c.sink, 1, "the press shows at once");
+                c.pressed = false;
+                if (eases) {
+                    verify(c.sink > 0, "the let-go eases back: " + c.sink);
+                    tryCompare(c, "sink", 0, 1000);
+                } else {
+                    compare(c.sink, 0, "reduced motion lets go at once");
+                }
+            }
         }
 
         function test_dolch_top_inset_follows_the_sink() {

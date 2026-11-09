@@ -183,25 +183,33 @@ pub fn clean_up(ctx: &Ctx, mut app: Opened) -> Vec<String> {
     left
 }
 
-/// Closes our tab with Ctrl+W, only while it is the one shown, never the owner's own tab; notes one left open.
+/// Closes our tab with Ctrl+W, only while it is the one shown, never the owner's own tab, and answers its save
+/// question with Don't save while it is still shown; notes one left open.
 fn close_tab(app: &Opened, ctx: &Ctx) -> Option<String> {
-    let (t, k) = (&ctx.cfg.timing, &ctx.cfg.keys);
-    let (front, title, has) = (foreground(), win::title(app.hwnd), app.title_has.as_deref());
+    let (t, k, has) = (&ctx.cfg.timing, &ctx.cfg.keys, app.title_has.as_deref());
     // A tab with no name of ours to check is never closed.
-    let ours = has.is_some() && ownkeys::may_send(front, app.hwnd, &title, has).is_ok();
-    if ours {
+    let ours = || {
+        let title = win::title(app.hwnd);
+        has.is_some() && ownkeys::may_send(foreground(), app.hwnd, &title, has).is_ok()
+    };
+    let sent = ours();
+    if sent {
         let _ = keys::restore_combo(&k.close_tab);
     }
     let m = Match {
         title_has: app.title_has.clone(),
         ..Default::default()
     };
-    let w = winfind::wait_no_match(&m, t.close_wait_ms, t.poll_ms)?;
-    Some(format!(
-        "{} left open: {}",
-        app.kind.name(),
-        win::describe(w)
-    ))
+    let open = || winfind::wait_no_match(&m, t.close_wait_ms, t.poll_ms);
+    let mut w = open()?;
+    let id = ctx.cfg.app(app.kind.name()).ok();
+    let id = id.and_then(|a| a.dont_save_id.as_deref());
+    let tried = unsaved::answer(sent, ours(), id).map(|id| unsaved::dont_save(app, id));
+    if matches!(tried, Some(Ok(()))) {
+        w = open()?;
+    }
+    let w = win::describe(w);
+    Some(unsaved::note(app.kind.name(), &w, tried.as_ref()))
 }
 
 /// True when a window title starts with one of our test page titles; an empty one never counts.
@@ -261,6 +269,8 @@ fn wait_exit(child: &mut Child, timeout_ms: u64, poll_ms: u64) -> bool {
     let ended = || matches!(child.try_wait(), Ok(Some(_))).then_some(());
     win::poll_until(timeout_ms, poll_ms, ended).is_some()
 }
+
+mod unsaved;
 
 #[cfg(test)]
 mod tests;

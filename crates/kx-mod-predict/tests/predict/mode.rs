@@ -1,10 +1,11 @@
-//! The keyboard's typing mode: asked for at each start, as the keyboard may have started first, and its text cap
-//! drops every chip the keyboard would refuse, emails included.
+//! The keyboard's typing mode: asked for at each start, as the keyboard may have started first, a change tells a new
+//! lane while the same mode again keeps the shown one, and its text cap drops every chip the keyboard would refuse,
+//! emails included.
 
 use crate::rig::{Heard, ROWS, Rig, plant};
 use kx_mod_predict::Msg;
 use kx_mod_predict::email::Emails;
-use kx_module_api::ports::{ChipKind, FieldKind, TypingMode, WordsAsk};
+use kx_module_api::ports::{ChipKind, ChipPicked, FieldKind, TypingMode, WordsAsk};
 
 /// A long known email (19 characters) and a short one (10).
 const LONG: &str = "someone@example.org";
@@ -36,6 +37,35 @@ fn it_asks_for_the_typing_mode_once_at_start() {
     let rig = Rig::new();
     let asks = rig.all().into_iter().filter(|h| *h == Heard::ModeAsk);
     assert_eq!(asks.count(), 1);
+}
+
+#[test]
+fn an_unchanged_mode_tells_no_new_lane_and_a_pick_of_the_shown_round_still_types() {
+    let mut rig = ready();
+    rig.typed("hel");
+    let shown = rig.lane().round;
+    rig.take();
+    rig.send(Msg::Mode(TypingMode::default()));
+    let lanes = rig
+        .take()
+        .into_iter()
+        .filter(|h| matches!(h, Heard::Lane(_)));
+    assert_eq!(lanes.count(), 0, "the same mode again");
+    rig.send(Msg::Picked(ChipPicked {
+        round: shown,
+        index: 0,
+    }));
+    assert_eq!(rig.typed_words(), [(0, "lo ".to_owned())]);
+}
+
+#[test]
+fn a_changed_mode_tells_a_new_lane() {
+    let mut rig = ready();
+    rig.typed("hel");
+    let shown = rig.lane().round;
+    rig.send(Msg::Mode(capped(2)));
+    assert_ne!(rig.lane().round, shown, "a new round");
+    assert_eq!(rig.words(), ["help"]);
 }
 
 #[test]

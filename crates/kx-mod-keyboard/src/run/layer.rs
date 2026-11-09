@@ -27,7 +27,7 @@ pub(super) fn planned(io: &Io<'_>, id: &str) -> Option<Plan> {
 }
 
 /// True when any of a shortcut reached the app: all of it, or the events the system took before refusing the rest.
-fn reached(went: Result<(), ShortcutError>) -> bool {
+pub(super) fn reached(went: Result<(), ShortcutError>) -> bool {
     match went {
         Ok(()) => true,
         Err(ShortcutError::Refused { sent, .. }) => sent > 0,

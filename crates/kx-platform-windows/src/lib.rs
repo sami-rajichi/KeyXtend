@@ -14,6 +14,8 @@ pub mod dirs;
 pub mod disk;
 #[cfg(windows)]
 pub mod dll;
+#[cfg(windows)]
+mod explorer;
 pub mod field;
 pub mod front;
 pub mod gpu;
@@ -27,6 +29,7 @@ pub mod instance;
 pub mod keys;
 pub mod langinfo;
 pub mod layouts;
+pub mod link;
 #[cfg(windows)]
 pub mod memory;
 #[cfg(windows)]
@@ -39,6 +42,7 @@ pub mod redirect;
 pub mod reveal;
 pub mod screen;
 pub mod scroll;
+pub mod selection;
 pub mod shortcut;
 pub mod sound;
 pub mod strokes;
@@ -80,6 +84,8 @@ pub use instance::WinInstance;
 #[cfg(windows)]
 pub use layouts::WinLayouts;
 #[cfg(windows)]
+pub use link::WinWebLink;
+#[cfg(windows)]
 pub use memory::WinMemory;
 #[cfg(windows)]
 pub use packs::{WinPackDisk, WinWordPacks};
@@ -97,6 +103,8 @@ pub use screen::WinScreens;
 #[cfg(windows)]
 pub use scroll::WinScroll;
 #[cfg(windows)]
+pub use selection::WinSelectionWatch;
+#[cfg(windows)]
 pub use shortcut::WinShortcuts;
 #[cfg(windows)]
 pub use sound::WinSpeaker;
@@ -111,6 +119,9 @@ pub use worker::{WinChild, WinSpawner};
 
 use std::io;
 use thiserror::Error;
+
+/// Most ancestors a UI Automation walk climbs above an element, for a pattern or for a selection's text.
+pub(crate) const MAX_DEPTH: usize = 32;
 
 /// A Windows error as a refused UI request, keeping its code.
 #[cfg(windows)]

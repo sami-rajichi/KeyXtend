@@ -11,11 +11,13 @@ use kx_module_api::ports::{KeyName, ShortcutId, ShortcutInfo, Step};
 /// One shortcut: its id and its steps.
 type Entry = (&'static str, &'static [&'static [&'static str]]);
 
-/// Every shortcut of the owner's three pages, with the steps Windows sends.
-const TABLE: [Entry; 37] = [
+/// Every shortcut the Windows table lists, with the steps Windows sends.
+const TABLE: [Entry; 39] = [
     ("copy", &[&["ctrl", "c"]]),
     ("paste", &[&["ctrl", "v"]]),
     ("cut", &[&["ctrl", "x"]]),
+    ("copy-term", &[&["ctrl", "insert"]]),
+    ("paste-term", &[&["shift", "insert"]]),
     ("select-all", &[&["ctrl", "a"]]),
     ("undo", &[&["ctrl", "z"]]),
     ("redo", &[&["ctrl", "y"]]),

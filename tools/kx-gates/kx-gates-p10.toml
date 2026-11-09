@@ -1,0 +1,123 @@
+# Settings P10 adds: G19 on the product (`g19 keyxtend`, `terminals`, `translate-read`, `translate-beside` and `look`,
+# `[g19_product]`). kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
+
+# G19 on the product: the plain kx-gates starts the test build ([gate_input] program, with its flag, so Grab and
+# Right-click hear only the gate's input) on a data folder it makes, marks with [g20_product] marker and removes at the
+# end. The owner's clipboard is kept and put back, and only the gate's own test lines are ever printed.
+[g19_product]
+# The gate's Notepad document, one line each: copied, cut, pasted over, an Arabic line, then an empty line for the
+# caret's Paste. Plain test text, never the owner's.
+copy_line = "Copy this line with the strip."
+cut_line = "Coupez cette ligne avec le bandeau."
+paste_line = "Paste over this line."
+arabic = "حدد هذا السطر ثم اضغط زر الترجمة."
+# The long Translate line: `arabic` this many times, joined by a space. It holds at least long_min_chars and at most
+# the selection module's default translate_chars, and the site's link takes it whole (checked).
+arabic_repeat = 28
+long_min_chars = 900
+# The gate's Chrome page: a read-only paragraph, a text box, a password box, a box of a role no table knows, and their
+# accessible names (aria-label); the password box's value is a plain test value the gate never reads.
+page_text = "Select this paragraph on the page."
+box_text = "Select this line in the text box."
+box_name = "kx-sel-box"
+pass_name = "kx-sel-pass"
+pass_value = "kxgatepass"
+unknown_name = "kx-sel-unknown"
+unknown_role = "slider"
+css = "font:20px monospace;margin:24px;width:80%"
+# The page counts Copy's key-downs in its title: the DOM code of C, and the marks before the counts of Ctrl+C and of
+# Ctrl+Shift+C, which must stay 0.
+copy_code = "KeyC"
+copy_mark = " #"
+shift_mark = " ~"
+# The text box's width, in characters.
+box_size = 60
+# The terminals' line, printed by the gate's own script, and the ping it runs while Copy goes out: its program, its
+# switches (-t pings until closed) and its host; the program is a plain file name (checked).
+term_line = "Copy this terminal line."
+ping_exe = "ping.exe"
+ping_args = ["-t"]
+ping_host = "127.0.0.1"
+# The strip as kx-ui names it: its window title's text key, its UI Automation group, and the keycaps' ids in the
+# strip's order (kx-ui sel_chip_id; a test pins them).
+strip_title = "sel.name"
+group = "sel"
+chips = ["copy", "cut", "paste", "translate"]
+# The keycaps each box shows, by id: an editable box, a page, a terminal and a bare caret. A password box, a box of
+# unknown kind and our own panel lines show none.
+editable_chips = ["copy", "cut", "paste", "translate"]
+page_chips = ["copy", "translate"]
+terminal_chips = ["copy", "paste", "translate"]
+caret_chips = ["paste"]
+# The keyboard's close button, which closes it to the tray (kx-ui's top bar id); the gate presses it last. The resize
+# corner, whose middle is the plate's corner and whose width tells the keyboard's size (a test pins both).
+tray = "bar.close"
+corner = "bar.corner"
+# How many levels down the browser's window the address bar is looked for; only Edit controls match, and the page's
+# Document and the tabs are never entered.
+bar_depth = 12
+# The near-bottom case: the target-window the gate starts, filled and with a rich-edit box UI Automation reads, moves
+# so its first line sits this many px above the keyboard or the screen's bottom, so the strip has no room below; 1 px
+# or more, below the theme's gap (checked).
+near_px = 4
+# Browser programs, for "Not now opens nothing" and for the page the owner opened (adapter table).
+browsers = ["chrome.exe", "msedge.exe", "firefox.exe", "zen.exe", "brave.exe", "opera.exe", "vivaldi.exe"]
+# Keys the gate presses in its own windows: Shift+Home, Shift+End (the target-window's long first line), one caret
+# step left while our panel is aimed, and Num Lock, which it puts back only while its own terminal is in front.
+select_home = [0x10, 0x24]
+select_end = [0x10, 0x23]
+caret_left = [0x25]
+numlock = [0x90]
+# A strip sits within this many physical px of where geom::anchor puts it, below the theme's gap (checked).
+place_slack_px = 1
+# Wait after the copy's keyboard shows before the first step, in ms.
+ready_ms = 3000
+# Longest wait for the strip to show, and for it to go, in ms; the second stays below the module's edit_ms (checked).
+strip_wait_ms = 3000
+gone_wait_ms = 3000
+# How long no strip must show before a box counts as showing none, in ms; it outlasts the module's look (checked).
+quiet_ms = 1500
+# Pause after each click, key or drag, in ms.
+settle_ms = 400
+# How long target-window hangs, within its hang_max_ms; it outlasts the selection module's look. The gate brings the
+# target forward first, as a sleeping window cannot take the front, then asks it to hang. hang_lead_ms after asking,
+# it clicks in the target's box, so the product looks at the hung app, and checks no strip shows for hung_quiet_ms.
+# It then brings Notepad back, selects there with no pause after the keys and waits up to hung_wait_ms for the strip,
+# all within the hang and hang_margin_ms to spare (checked).
+hang_ms = 3000
+hang_lead_ms = 200
+hung_quiet_ms = 600
+hung_wait_ms = 700
+hang_margin_ms = 300
+# How long the ping must keep writing after Copy, in ms.
+ping_ms = 3000
+# Longest wait for the ping to end after its terminal closed, in ms; one the script started still running then is
+# ended and reported.
+ping_exit_ms = 5000
+# The caret's Paste may go this early or late against the module's caret_s, in ms.
+caret_slack_ms = 1000
+# translate-read: longest wait for the owner's Yes to bring the translate page to the front, in ms.
+owner_wait_ms = 120000
+# g19 look: how long it runs the product's look on the focused box, about every [timing] poll_ms, in seconds.
+look_s = 120
+
+# The classic console: PowerShell in conhost on the gate's own script ({input}), started with no standard handles, as
+# conhost runs given ones as a windowless pseudo console. -ForceNoHandoff keeps it there whatever the default
+# terminal is, so the owner's setting never changes; with no window, the case did not run.
+[g19_product.console]
+exe = "conhost.exe"
+args = ["-ForceNoHandoff", "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{input}"]
+class = "ConsoleWindowClass"
+
+# The address bar of each browser (adapter table): its UI Automation id, class or name, the name per browser
+# language. translate-read reads only a control a row matches; a browser with no row, or a bar no row matches, is
+# reported as "no address bar" and nothing is read.
+[[g19_product.bars]]
+browsers = ["chrome.exe", "msedge.exe", "brave.exe"]
+classes = ["OmniboxViewViews"]
+names = ["Address and search bar"]
+
+[[g19_product.bars]]
+# Zen is built on Firefox and keeps its address bar's id.
+browsers = ["firefox.exe", "zen.exe"]
+ids = ["urlbar-input"]

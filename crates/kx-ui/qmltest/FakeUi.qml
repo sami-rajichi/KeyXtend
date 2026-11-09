@@ -1,5 +1,5 @@
-// Stands in for the hub's Ui object: it answers from the hub's fixtures and records the calls QML makes.
-// qmltestrunner cannot load KeyXtend.Ui, which is linked into Rust binaries.
+// Stands in for the hub's Ui object: it answers from the hub's fixtures and records the calls QML makes; the selection
+// strip's part is FakeSelUi's. qmltestrunner cannot load KeyXtend.Ui, which is linked into Rust binaries.
 import QtQuick
 import QtQml.Models
 import "fixtures/ui-en.js" as En
@@ -7,7 +7,7 @@ import "fixtures/assets.js" as Assets
 import "fixtures/words.js" as Words
 import "../../kx-theme/fixtures/look-native-light.js" as Look
 
-QtObject {
+FakeSelUi {
     id: stub
 
     // What the hub gives: settings, the keyboard's language and texts, the tray's texts, the look and the pointer

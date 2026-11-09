@@ -4,12 +4,13 @@
 //! needs held it.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, shown, told, up};
+use crate::rig::{A, CODE, Heard, Rig, SHIFT, T0, T1, down, predicting, shown, told, up, wants};
 use kx_mod_mouse::Msg;
 use kx_module_api::ports::Button::Left;
 use kx_module_api::ports::GrabState::{Armed, Off};
 use kx_module_api::ports::PointerAct::{Down, KeyDown, KeyUp, Up};
-use kx_module_api::ports::{AssistChanged, HookError, PressesWanted, Toggle};
+use kx_module_api::ports::PressAsker::Selection;
+use kx_module_api::ports::{AssistChanged, HookError, PointerReleased, Toggle};
 use kx_module_api::{Bus, Notice, keys};
 
 /// A rig whose hook runs only for a latched Shift, with what it said so far taken.
@@ -119,7 +120,7 @@ fn a_fault_that_turns_a_latch_dark_leaves_the_quiet_allowance_unused() {
     rig.send(Msg::Latches(Vec::new()));
     rig.settle(T0);
     assert!(!rig.hook.running(), "the fresh run ended well");
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.take();
     rig.hook.give_up();
     rig.pump();
@@ -131,7 +132,7 @@ fn a_fault_that_turns_a_latch_dark_leaves_the_quiet_allowance_unused() {
 fn a_fault_after_a_mode_tap_the_engine_never_noted_still_tells() {
     let mut rig = Rig::new();
     rig.begin();
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.hook.give_up();
     rig.pump();
     rig.take();
@@ -144,6 +145,43 @@ fn a_fault_after_a_mode_tap_the_engine_never_noted_still_tells() {
         rig.take(),
         reset,
         "the quiet allowance is spent, yet the tap hears why"
+    );
+}
+
+#[test]
+fn a_fresh_run_after_a_fault_takes_every_askers_wish() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.send(Msg::Presses(predicting(true)));
+    rig.send(Msg::Presses(wants(Selection, true)));
+    rig.hook.give_up();
+    rig.pump();
+    rig.take();
+    assert_eq!(rig.hook.starts(), 2, "one fresh run");
+    rig.send(Msg::Presses(predicting(false)));
+    rig.settle(T0);
+    assert!(rig.hook.running(), "the selection still wants presses");
+    assert!(!rig.feed(up(A), T1));
+    let away = Heard::Released(PointerReleased { ours: false });
+    assert_eq!(rig.take(), [away]);
+}
+
+#[test]
+fn no_askers_wish_re_arms_a_spent_restart() {
+    let mut rig = Rig::new();
+    rig.begin();
+    rig.send(Msg::Presses(predicting(true)));
+    for _ in 0..2 {
+        rig.hook.give_up();
+        rig.pump();
+    }
+    assert!(!rig.hook.running(), "the second fault started nothing");
+    rig.send(Msg::Presses(predicting(false)));
+    rig.send(Msg::Presses(wants(Selection, true)));
+    assert_eq!(
+        rig.hook.starts(),
+        2,
+        "another asker's wish flips by itself too"
     );
 }
 
@@ -169,7 +207,7 @@ fn a_quiet_fault_tells_once_per_program_run_even_across_module_restarts() {
     let (mut live, ((_e1, states), (_e2, notices))) = Live::start(|_| {}, listen);
     for round in 0..2 {
         assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "live");
-        live.bus.publish(&PressesWanted { on: true }).unwrap();
+        live.bus.publish(&predicting(true)).unwrap();
         synced(&live, &states);
         live.hook.give_up();
         assert_eq!(states.recv_timeout(WAIT), Ok(on(false)), "the fault");

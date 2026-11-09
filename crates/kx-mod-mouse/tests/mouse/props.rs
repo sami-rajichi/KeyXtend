@@ -1,12 +1,14 @@
-//! Properties over random toggles, latches, scrolling, wanted presses, asks and physical input: the hook runs only
+//! Properties over random toggles, latches, scrolling, wishes for presses, asks and physical input: the hook runs only
 //! while a mode, a latch, scrolling, wanted presses or a press needs it, the keys show off whenever it does not run,
-//! and a stop leaves no key or button down the hand let go.
+//! and a stop leaves no key or button down the hand let go. Presses and releases are told exactly while an asker or
+//! the panel wants them.
 
-use crate::rig::{DPI, Heard, Rig, T0};
+use crate::rig::{DPI, Heard, Rig, T0, down, up, wants};
 use kx_mod_mouse::{MAX_LATCHES, Msg};
 use kx_module_api::Mono;
 use kx_module_api::ports::{
-    AssistChanged, Button, GrabState, Point, PointerAct, PointerEvent, Scan, Toggle,
+    AssistChanged, Button, GrabState, Point, PointerAct, PointerEvent, PointerPressed,
+    PointerReleased, PressAsker, Scan, Toggle,
 };
 use proptest::collection::vec;
 use proptest::prelude::*;
@@ -25,6 +27,11 @@ const REACH: i32 = 30;
 const MOD_BASE: u16 = 0x70;
 /// Where the pointer starts.
 const START: Point = Point { x: 500, y: 500 };
+/// A click outside our windows as told on the bus: its press, then its release.
+const CLICK: [Heard; 2] = [
+    Heard::Pressed(PointerPressed { ours: false }),
+    Heard::Released(PointerReleased { ours: false }),
+];
 
 /// One random step.
 #[derive(Clone, Debug)]
@@ -41,12 +48,17 @@ enum Step {
     Latch(Vec<Scan>),
     /// The pad starts or stops scrolling.
     Scroll(bool),
-    /// Prediction wants presses told, or no longer.
-    Presses(bool),
+    /// An asker wants presses told, or no longer.
+    Presses(PressAsker, bool),
     /// An open panel wants presses told, or no longer.
     Panel(bool),
     /// The keyboard asks for the state.
     Ask,
+}
+
+/// Any asker.
+fn asker() -> impl Strategy<Value = PressAsker> {
+    select(PressAsker::ALL.to_vec())
 }
 
 fn step() -> impl Strategy<Value = Step> {
@@ -59,10 +71,35 @@ fn step() -> impl Strategy<Value = Step> {
         3 => select(vec![Toggle::RightClick, Toggle::Grab]).prop_map(Step::Toggle),
         1 => subsequence(mods.clone(), 0..=mods.len()).prop_map(Step::Latch),
         1 => any::<bool>().prop_map(Step::Scroll),
-        1 => any::<bool>().prop_map(Step::Presses),
+        1 => (asker(), any::<bool>()).prop_map(|(asker, on)| Step::Presses(asker, on)),
         1 => any::<bool>().prop_map(Step::Panel),
         1 => Just(Step::Ask),
     ]
+}
+
+/// One wish for presses, on or off.
+#[derive(Copy, Clone, Debug)]
+enum Wish {
+    /// An asker's.
+    Asker(PressAsker, bool),
+    /// The open panel's.
+    Panel(bool),
+}
+
+fn wish() -> impl Strategy<Value = Wish> {
+    prop_oneof![
+        (asker(), any::<bool>()).prop_map(|(asker, on)| Wish::Asker(asker, on)),
+        any::<bool>().prop_map(Wish::Panel),
+    ]
+}
+
+/// Keeps `asker`'s wish in the model's set: on adds it, off takes it out, and each is idempotent.
+fn keep(askers: &mut HashSet<PressAsker>, asker: PressAsker, on: bool) {
+    if on {
+        askers.insert(asker);
+    } else {
+        askers.remove(&asker);
+    }
 }
 
 /// The physical mouse: where it is and whether the left button is down.
@@ -86,9 +123,9 @@ impl Hand {
                     dpi: DPI,
                 }
             }
-            Step::Left { .. } => {
+            Step::Left { ours } => {
                 self.down = false;
-                PointerEvent::Up { button, at }
+                PointerEvent::Up { button, at, ours }
             }
             Step::Move(dx, dy) => {
                 self.at = Point {
@@ -109,7 +146,7 @@ fn message(step: &Step) -> Option<Msg> {
         Step::Toggle(which) => Some(Msg::Toggle(*which)),
         Step::Latch(held) => Some(Msg::Latches(held.clone())),
         Step::Scroll(on) => Some(Msg::Scroll(*on)),
-        Step::Presses(on) => Some(Msg::Presses(*on)),
+        Step::Presses(asker, on) => Some(Msg::Presses(wants(*asker, *on))),
         Step::Panel(on) => Some(Msg::PanelPresses(*on)),
         Step::Ask => Some(Msg::Ask),
         _ => None,
@@ -189,14 +226,15 @@ proptest! {
         let mut rig = Rig::new();
         rig.begin();
         let (mut hand, mut os) = (Hand { at: START, down: false }, Os::default());
-        let (mut now, mut held, mut scrolling, mut presses, mut panel) = (T0, false, false, false, false);
+        let (mut now, mut held, mut scrolling, mut panel) = (T0, false, false, false);
+        let mut askers = HashSet::new();
         let mut state = AssistChanged { live: true, rclick: false, grab: GrabState::Off };
         for (gap, step) in &steps {
             now = Mono::from_us(now.as_us() + gap);
             match step {
                 Step::Latch(keys) => held = !keys.is_empty(),
                 Step::Scroll(on) => scrolling = *on,
-                Step::Presses(on) => presses = *on,
+                Step::Presses(asker, on) => keep(&mut askers, *asker, *on),
                 Step::Panel(on) => panel = *on,
                 _ => {}
             }
@@ -207,7 +245,7 @@ proptest! {
                 }
             }
             let on = state.rclick || state.grab != GrabState::Off;
-            let wanted = on || held || scrolling || presses || panel;
+            let wanted = on || held || scrolling || !askers.is_empty() || panel;
             prop_assert!(!wanted || rig.hook.running(), "a mode, a latch, scrolling or presses need the hook");
             prop_assert!(rig.hook.running() || !on, "the keys show off while no hook runs");
             let needed = wanted || hand.down;
@@ -220,5 +258,37 @@ proptest! {
         prop_assert_eq!(&os.keys, &HashMap::new(), "a key stays down");
         let held = |b: &Button| *b == Button::Left && hand.down;
         prop_assert!(os.buttons.iter().all(held), "a button stays down: {:?}", os.buttons);
+    }
+
+    /// For any interleaving of wishes, the hook runs, and each click's press and release is told, exactly while the
+    /// set of askers is not empty or the panel wants presses.
+    #[test]
+    fn presses_and_releases_are_told_exactly_while_an_asker_or_the_panel_wants_them(
+        wishes in vec(wish(), 0..=MAX_STEPS),
+    ) {
+        let mut rig = Rig::new();
+        rig.begin();
+        let (mut askers, mut panel) = (HashSet::new(), false);
+        for &wish in &wishes {
+            rig.send(match wish {
+                Wish::Asker(asker, on) => {
+                    keep(&mut askers, asker, on);
+                    Msg::Presses(wants(asker, on))
+                }
+                Wish::Panel(on) => {
+                    panel = on;
+                    Msg::PanelPresses(on)
+                }
+            });
+            rig.settle(T0);
+            let want = !askers.is_empty() || panel;
+            prop_assert_eq!(rig.hook.running(), want, "{:?} {}", askers, panel);
+            rig.take();
+            if want {
+                prop_assert!(!rig.feed(down(START), T0));
+                prop_assert!(!rig.feed(up(START), T0));
+                prop_assert_eq!(rig.take(), CLICK.to_vec());
+            }
+        }
     }
 }

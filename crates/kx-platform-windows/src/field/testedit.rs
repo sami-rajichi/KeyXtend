@@ -1,5 +1,5 @@
-//! A hidden test edit box on a thread of its own, holding a text with the caret at its end, and a UI Automation client
-//! to read it. It is never shown and never takes the focus.
+//! A hidden test edit box on a thread of its own, holding a text with the caret at its end and a child button when
+//! asked, and a UI Automation client to read it. It is never shown and never takes the focus.
 #![allow(
     unsafe_code,
     reason = "The tests make, fill and destroy their own hidden edit boxes."
@@ -15,7 +15,7 @@ use windows::Win32::UI::Accessibility::{IUIAutomation, IUIAutomationElement};
 use windows::Win32::UI::Controls::EM_SETSEL;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DestroyWindow, DispatchMessageW, ES_AUTOHSCROLL, GetMessageW, MSG,
-    PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_POPUP,
+    PostThreadMessageW, SendMessageW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_QUIT, WS_CHILD, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
@@ -28,32 +28,45 @@ use crate::uia::client;
 /// The test box's place and size; it is never shown.
 const BOX: (i32, i32, i32, i32) = (40, 40, 600, 40);
 /// A `read_ms` no test read reaches.
-pub(super) const LONG_MS: u32 = 5000;
+pub(crate) const LONG_MS: u32 = 5000;
 /// A `read_chars` that holds every test box's text.
-pub(super) const CHARS: u16 = 256;
+pub(crate) const CHARS: u16 = 256;
 /// A watch config no test read reaches.
-pub(super) const CONFIG: FieldConfig = FieldConfig {
+pub(crate) const CONFIG: FieldConfig = FieldConfig {
     read_ms: LONG_MS,
     read_chars: CHARS,
 };
 
-/// A hidden edit box on a thread of its own; dropping it destroys both.
-pub(super) struct TestEdit {
+/// A hidden edit box on a thread of its own, with a child button when asked; dropping it destroys them.
+pub(crate) struct TestEdit {
     hwnd: isize,
+    child: isize,
     thread: u32,
     join: Option<JoinHandle<()>>,
 }
 
 impl TestEdit {
     /// A box holding `text`, its caret at the end, with the edit style bits `style` (`ES_PASSWORD`, `ES_READONLY`).
-    pub(super) fn start(text: &str, style: i32) -> Self {
+    pub(crate) fn start(text: &str, style: i32) -> Self {
+        Self::made(text, style, false)
+    }
+
+    /// Like `start`, with a child button inside the box, which has no text of its own.
+    pub(crate) fn holding(text: &str, style: i32) -> Self {
+        Self::made(text, style, true)
+    }
+
+    /// The box, with its child button when `child`.
+    fn made(text: &str, style: i32, child: bool) -> Self {
         let (made, ready) = mpsc::channel();
         let text = crate::wide(text);
         let join = thread::spawn(move || {
             let hwnd = make(&text, style);
+            let kid = if child { button(hwnd) } else { HWND::default() };
             // SAFETY: a plain query of this thread's id.
             let thread = unsafe { GetCurrentThreadId() };
-            made.send((hwnd.0.addr().cast_signed(), thread)).unwrap();
+            let raw = |h: HWND| h.0.addr().cast_signed();
+            made.send((raw(hwnd), raw(kid), thread)).unwrap();
             let mut msg = MSG::default();
             // SAFETY: reads this thread's messages until the test posts the quit message.
             while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.0 > 0 {
@@ -63,26 +76,32 @@ impl TestEdit {
             // SAFETY: destroys the box this thread made.
             let _ = unsafe { DestroyWindow(hwnd) };
         });
-        let (hwnd, thread) = ready.recv_timeout(WAIT).unwrap();
+        let (hwnd, child, thread) = ready.recv_timeout(WAIT).unwrap();
         Self {
             hwnd,
+            child,
             thread,
             join: Some(join),
         }
     }
 
     /// The box's element in `auto`.
-    pub(super) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
+    pub(crate) fn element(&self, auto: &IUIAutomation) -> IUIAutomationElement {
         element(auto, self.hwnd)
     }
 
+    /// The child button's element in `auto`, for a box made by `holding`.
+    pub(crate) fn child(&self, auto: &IUIAutomation) -> IUIAutomationElement {
+        element(auto, self.child)
+    }
+
     /// The box's raw handle, for a thread that makes its own client.
-    pub(super) fn raw(&self) -> isize {
+    pub(crate) fn raw(&self) -> isize {
         self.hwnd
     }
 
     /// Selects from UTF-16 unit `from` to `to`, the caret at `to`; a `to` before `from` selects backwards.
-    pub(super) fn select(&self, from: usize, to: usize) {
+    pub(crate) fn select(&self, from: usize, to: usize) {
         set_sel(crate::window::from_raw(self.hwnd), from, to);
     }
 }
@@ -98,7 +117,7 @@ impl Drop for TestEdit {
 }
 
 /// The element of the test box with raw handle `raw` in `auto`.
-pub(super) fn element(auto: &IUIAutomation, raw: isize) -> IUIAutomationElement {
+pub(crate) fn element(auto: &IUIAutomation, raw: isize) -> IUIAutomationElement {
     let hwnd = crate::window::from_raw(raw);
     // SAFETY: a plain lookup on a live client, for the test's own window.
     unsafe { auto.ElementFromHandle(hwnd) }.unwrap()
@@ -134,6 +153,29 @@ fn make(text: &[u16], style: i32) -> HWND {
     hwnd
 }
 
+/// Makes a hidden button the size of test box `parent` inside it, on the box's own thread.
+fn button(parent: HWND) -> HWND {
+    let (_, _, cx, cy) = BOX;
+    // SAFETY: makes a child window of the system's button class inside our own box.
+    unsafe {
+        CreateWindowExW(
+            WINDOW_EX_STYLE::default(),
+            w!("BUTTON"),
+            PCWSTR::null(),
+            WS_CHILD,
+            0,
+            0,
+            cx,
+            cy,
+            Some(parent),
+            None,
+            None,
+            None,
+        )
+    }
+    .unwrap()
+}
+
 /// Sets the selection of test box `hwnd` from unit `from` to `to`, where the caret goes.
 fn set_sel(hwnd: HWND, from: usize, to: usize) {
     let at = (Some(WPARAM(from)), Some(LPARAM(to.cast_signed())));
@@ -142,12 +184,12 @@ fn set_sel(hwnd: HWND, from: usize, to: usize) {
 }
 
 /// A client for the tests, with COM on this thread while the guard lives.
-pub(super) fn started() -> (Com, IUIAutomation) {
+pub(crate) fn started() -> (Com, IUIAutomation) {
     let com = Com::start().unwrap();
     (com, client(LONG_MS).unwrap())
 }
 
 /// A deadline no test read reaches.
-pub(super) fn far() -> Instant {
+pub(crate) fn far() -> Instant {
     Instant::now() + Duration::from_millis(u64::from(LONG_MS))
 }

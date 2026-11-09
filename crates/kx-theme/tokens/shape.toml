@@ -138,15 +138,16 @@ px = 2.0
 # through (the P1 test build's plate_alpha).
 plate = 0.88
 
-[pill]
-# The Copy pill (mock-up .selpill): padding, button side padding, text size and weight, icon size and icon-to-text gap;
-# its height is tools.pill_px.
+[chips]
+# The selection strip's keycaps (design/selection-chips.html design 4, .d-keys), one key row tall and as wide as their
+# legend: plate and cap padding, word size (Arabic takes arabic_scale), icon, icon-to-word gap, and the gap from the
+# selected line (place(), 8 * S.size), all at size 1. The caps' gap, legend weight and plate corner are the theme's own.
 pad_px = 3.0
-button_side_px = 11.0
-font_px = 12.0
-weight = 600
+cap_pad_px = 10.0
+font_px = 11.5
 icon_px = 13.0
-gap_px = 5.0
+icon_gap_px = 5.0
+gap_px = 8.0
 
 [caption]
 # The caption bar (mock-up .capbar): status padding (top and bottom, left, right), padding around words (.done),

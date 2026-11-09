@@ -1,9 +1,9 @@
 //! The needs that start the hook quietly, telling no one when it refuses: held latches, a scrolling pad and presses
-//! word prediction or an open panel wants told.
+//! an asker or an open panel wants told.
 
 use super::Actor;
 use crate::hook_engine::Cmd;
-use kx_module_api::ports::Scan;
+use kx_module_api::ports::{PressesWanted, Scan};
 
 impl Actor {
     /// Keeps the keyboard's latches; they start the hook when they hold a key.
@@ -21,23 +21,28 @@ impl Actor {
         self.need(changed, on, Cmd::Scroll(on));
     }
 
-    /// Keeps whether word prediction wants presses; the panel's wish stands apart.
-    pub(super) fn presses(&mut self, on: bool) {
+    /// Keeps one asker's wish for presses: each on or off is idempotent, and it never cancels another asker's wish or
+    /// the panel's.
+    pub(super) fn presses(&mut self, wish: PressesWanted) {
         let was = self.pressing();
-        self.wanted = on;
+        if wish.on {
+            self.askers.insert(wish.asker);
+        } else {
+            self.askers.remove(&wish.asker);
+        }
         self.presses_moved(was);
     }
 
-    /// Keeps whether the keyboard wants presses for its open panel; prediction's wish stands apart.
+    /// Keeps whether the keyboard wants presses for its open panel; the askers' wishes stand apart.
     pub(super) fn panel_presses(&mut self, on: bool) {
         let was = self.pressing();
         self.panel = on;
         self.presses_moved(was);
     }
 
-    /// True while prediction or the panel wants presses: two sources, one result.
+    /// True while any asker or the panel wants presses: several sources, one result.
     pub(super) fn pressing(&self) -> bool {
-        self.wanted || self.panel
+        !self.askers.is_empty() || self.panel
     }
 
     /// The wishes may have moved from `was`: logs a change, never a point. They flip by themselves, so they never

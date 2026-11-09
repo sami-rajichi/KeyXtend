@@ -71,7 +71,7 @@ fn gather<T>(reads: impl IntoIterator<Item = windows::core::Result<T>>) -> Resul
     unsafe_code,
     reason = "UI Automation calls on objects this client made."
 )]
-fn each<T>(
+pub(crate) fn each<T>(
     reader: &Reader,
     hwnd: HWND,
     scope: TreeScope,

@@ -195,17 +195,24 @@ fn the_hand_reaches_the_engine_at_its_own_time() {
 }
 
 #[test]
-fn a_press_says_whether_it_landed_on_our_window_and_its_screens_dpi() {
+fn a_press_and_a_release_say_whether_they_landed_on_our_window_and_a_press_its_dpi() {
     let mut rig = rig(Source::Physical);
     rig.world.ours.set(true);
     rig.hand(LEFT_DOWN, A);
+    rig.hand(LEFT_UP, A);
+    let (button, now) = (Button::Left, rig.now());
     let down = PointerEvent::Down {
-        button: Button::Left,
+        button,
         at: A,
         ours: true,
         dpi: DPI,
     };
-    assert_eq!(rig.heard(), [Heard::On(down, rig.now())]);
+    let up = PointerEvent::Up {
+        button,
+        at: A,
+        ours: true,
+    };
+    assert_eq!(rig.heard(), [Heard::On(down, now), Heard::On(up, now)]);
 }
 
 #[test]

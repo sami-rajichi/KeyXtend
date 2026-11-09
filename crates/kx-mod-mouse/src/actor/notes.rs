@@ -6,6 +6,7 @@ use crate::settings::RCLICK_KEY;
 use kx_module_api::Event;
 use kx_module_api::ports::{
     AssistChanged, AssistNote, GrabState, LatchesUsed, PointerMoved, PointerPressed,
+    PointerReleased,
 };
 
 impl Actor {
@@ -17,6 +18,7 @@ impl Actor {
             Note::Moved { .. } => return self.moved(),
             Note::LatchesUsed => return self.publish(&LatchesUsed),
             Note::Pressed { ours } => return self.publish(&PointerPressed { ours }),
+            Note::Released { ours } => return self.publish(&PointerReleased { ours }),
             Note::HoldStart { at } => AssistNote::HoldStart {
                 at,
                 ring_after_ms: s.ring_after_ms,

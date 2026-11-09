@@ -47,6 +47,8 @@ pub struct TargetConfig {
     pub fill_cols: u32,
     /// Command-line switch that makes the window DPI-unaware, as an old app is.
     pub unaware_arg: String,
+    /// Command-line switch that makes the box a rich-edit box, which serves UI Automation's text itself.
+    pub rich_arg: String,
 }
 
 /// Why the settings could not be loaded; each message names the file.
@@ -78,7 +80,7 @@ pub enum ConfigError {
     },
     /// Two switches are the same text, so one would always turn on the other, such as every `--layout` run being a
     /// password box.
-    #[error("{}: password_arg, layout_arg, fill_arg and unaware_arg must all differ", .file.display())]
+    #[error("{}: password_arg, layout_arg, fill_arg, unaware_arg and rich_arg must all differ", .file.display())]
     SameSwitch {
         /// The settings file.
         file: PathBuf,
@@ -133,6 +135,7 @@ fn check(cfg: &TargetConfig, file: &Path) -> Result<(), ConfigError> {
         &cfg.layout_arg,
         &cfg.fill_arg,
         &cfg.unaware_arg,
+        &cfg.rich_arg,
     ];
     let twice = switches
         .iter()
@@ -172,6 +175,7 @@ fn empty_key(cfg: &TargetConfig) -> Option<&'static str> {
         ("layout_arg", cfg.layout_arg.is_empty()),
         ("fill_arg", cfg.fill_arg.is_empty()),
         ("unaware_arg", cfg.unaware_arg.is_empty()),
+        ("rich_arg", cfg.rich_arg.is_empty()),
     ];
     texts.iter().find(|(_, empty)| *empty).map(|(key, _)| *key)
 }

@@ -1,40 +1,49 @@
-//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard.
+//! G19 core: a line selected with the keyboard is read back through UI Automation, never the clipboard; `keyxtend`,
+//! `translate-read` and `translate-beside` check the selection strip (`g19chips`). The owner never uses Word, so core
+//! runs in Notepad and Chrome alone and can pass in full.
 #![cfg(windows)]
 
 use kx_platform_windows::clip::open;
-use kx_platform_windows::screen::{self, work_area};
 use kx_platform_windows::uia::{self, Sel, Uia};
 use serde_json::{Value, json};
 use spike_core::geom;
-use spike_core::selwatch::PillPx;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::ownkeys::{self, Real};
 use crate::probe::{self, Doc};
 use crate::win::{self, sleep_ms};
 use crate::winclip::line;
-use crate::{launch, out, simuser};
+use crate::{g19chips, launch, product, simuser};
 
-/// G19's run name: detection only, before the pill exists.
+/// G19's detection run, each line read back through UI Automation.
 pub const CORE: &str = "core";
-/// The apps G19 selects in.
+/// G19's run names: detection, the strip on the test build, the reads of the owner's translate page (on the test
+/// build or beside the owner's own keyboard), the strip in the terminals alone, and the product's look.
+pub const NAMES: [&str; 6] = [
+    CORE,
+    product::NAME,
+    g19chips::READ,
+    g19chips::BESIDE,
+    g19chips::TERMINALS,
+    g19chips::LOOK,
+];
+/// The apps G19 core selects in.
 const APPS: [AppKind; 2] = [AppKind::Notepad, AppKind::Chrome];
-/// The apps the roadmap names for G19; Word waits for P10, as its sign-in dialog blocked it.
-const ROADMAP_APPS: [AppKind; 3] = [AppKind::Notepad, AppKind::Word, AppKind::Chrome];
 
-/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows.
+/// Selects line `i` with Ctrl+Home, Down `i` times, Home and Shift+End, each only while our tab shows and each
+/// followed by `key_settle_ms`, as Notepad can take a key late and lose the selection.
 fn select_line(ctx: &Ctx, app: &Opened, i: usize) -> Result<(), String> {
     let ek = &ctx.cfg.edit_keys;
     let mut run: Vec<&[u16]> = vec![&ek.doc_start];
     run.extend(std::iter::repeat_n(ek.next_line.as_slice(), i));
     run.extend([ek.line_start.as_slice(), ek.select_line.as_slice()]);
-    ownkeys::each(&Real, app, &run)?;
+    ownkeys::paced(&Real, app, &run, ctx.cfg.timing.key_settle_ms)?;
     sleep_ms(ctx.cfg.probes.settle_ms);
     Ok(())
 }
 
-/// The selection of the focused element in `app`'s program, once UI Automation shows its text and a box for the pill.
-pub(crate) fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
+/// The selection of the focused element in `app`'s program, once UI Automation shows its text and a box.
+fn read_sel(ctx: &Ctx, uia: &Uia, app: &Opened) -> Result<Sel, String> {
     let (t, max, (pid, _)) = (&ctx.cfg.timing, ctx.cfg.g19.max_chars, win::owner(app.hwnd));
     win::poll_until(t.read_wait_ms, t.poll_ms, || {
         let f = uia
@@ -75,18 +84,13 @@ fn check_line(ctx: &Ctx, uia: &Uia, app: &Opened, i: usize, want: &str) -> Value
         Err(e) => return json!({ "line": i, "ok": false, "error": e }),
     };
     let text = line(&sel.text);
-    let first = sel.boxes.first().copied().unwrap_or_default();
-    let pill = PillPx(ctx.spike.tools.pill_px).at(screen::dpi_of(&first));
-    let pill = work_area(&first)
-        .ok()
-        .and_then(|screen| geom::anchor(&sel.boxes, &screen, pill));
-    let ok = text == want && pill.is_some();
-    let shown = if text == want {
+    let ok = text == want;
+    let shown = if ok {
         json!(text)
     } else {
         json!({ "chars": text.chars().count() })
     };
-    json!({ "line": i, "ok": ok, "text": shown, "boxes": sel.boxes.len(), "pill": pill.map(|p| [p.x, p.y]) })
+    json!({ "line": i, "ok": ok, "text": shown, "boxes": sel.boxes.len() })
 }
 
 /// Checks every line in `app`, and that the clipboard never changed.
@@ -155,29 +159,23 @@ fn one(ctx: &Ctx, kind: AppKind) -> Value {
     }
 }
 
-/// The roadmap's apps G19 does not run yet.
-fn left_out() -> Vec<AppKind> {
-    ROADMAP_APPS
-        .into_iter()
-        .filter(|k| !APPS.contains(k))
-        .collect()
+/// Refuses any run name but G19's own; `facearg` refuses it first, so this guards a direct call.
+fn only_ours(name: &str) -> Result<(), String> {
+    if NAMES.contains(&name) {
+        return Ok(());
+    }
+    Err(format!("G19 runs {}, not {name}", NAMES.join(", ")))
 }
 
-/// G19 core's `pass`: false if an app failed, only partial while `left` apps are not run, else true.
-fn verdict(all_ok: bool, left: &[AppKind]) -> Value {
-    out::pass(all_ok, left.is_empty())
-}
-
-/// Runs G19 detection in Notepad, then Chrome; any other name is a face whose pill is checked.
+/// Runs G19: detection in Notepad, then Chrome, or the strip on the test build.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
+    only_ours(name)?;
     if name != CORE {
-        return crate::g19pill::run(ctx, name);
+        return g19chips::run(ctx, name);
     }
     let apps: Vec<Value> = APPS.iter().map(|&k| one(ctx, k)).collect();
-    let left = left_out();
-    let pass = verdict(apps.iter().all(|a| a["ok"] == true), &left);
-    let not_run: Vec<&str> = left.iter().map(|k| k.name()).collect();
-    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps, "not_run": not_run }))
+    let pass = apps.iter().all(|a| a["ok"] == true);
+    Ok(json!({ "gate": "G19", "name": CORE, "pass": pass, "apps": apps }))
 }
 
 #[cfg(test)]
@@ -185,15 +183,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn g19_core_is_at_most_partial_while_a_roadmap_app_is_not_run() {
-        let left = left_out();
-        assert_eq!(
-            left,
-            vec![AppKind::Word],
-            "the roadmap names Notepad, Word and Chrome"
+    fn g19_runs_its_own_names_only() {
+        for name in NAMES {
+            assert_eq!(only_ours(name), Ok(()), "{name}");
+        }
+        let e = only_ours(spike_core::config::FACE).expect_err("the face's pill is gone");
+        assert!(NAMES.iter().all(|n| e.contains(n)), "{e}");
+    }
+
+    #[test]
+    fn g19_core_never_waits_for_word() {
+        assert_eq!(APPS, [AppKind::Notepad, AppKind::Chrome]);
+        assert!(
+            !APPS.contains(&AppKind::Word),
+            "owner, 2026-10-16: never Word"
         );
-        assert_eq!(verdict(true, &left), json!(out::PARTIAL));
-        assert_eq!(verdict(false, &left), json!(false));
-        assert_eq!(verdict(true, &[]), json!(true));
     }
 }

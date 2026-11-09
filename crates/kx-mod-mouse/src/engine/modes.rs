@@ -48,8 +48,8 @@ impl Engine {
         self.scrolling = on;
     }
 
-    /// Word prediction wants presses, or no longer; while it does the hook stays on and each press is noted, so a
-    /// click outside our windows ends the word. Every event still passes as the modes and latches say.
+    /// An asker or the panel wants presses, or no longer; while one does the hook stays on and each press and release
+    /// is noted. Every event still passes as the modes and latches say.
     pub fn set_wanted(&mut self, on: bool) {
         self.wanted = on;
     }

@@ -12,7 +12,7 @@ use std::thread;
 const Q: &str = "c-0x0010";
 
 /// The bench in `stay` mode.
-fn stay() -> Bench {
+pub fn stay() -> Bench {
     Bench::quiet(Some(("modifiers", "stay".into())))
 }
 

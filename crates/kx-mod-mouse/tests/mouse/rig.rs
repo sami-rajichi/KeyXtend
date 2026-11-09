@@ -4,7 +4,8 @@
 use kx_mod_mouse::{Actor, ID, MANIFEST, MouseSettings, Msg};
 use kx_module_api::ports::{
     AssistChanged, AssistNote, Button, GrabState, LatchesAsk, LatchesUsed, Point, PointerEvent,
-    PointerHook, PointerMoved, PointerPressed, PressesAsk, Scan, ScrollAsk, Toggle,
+    PointerHook, PointerMoved, PointerPressed, PointerReleased, PressAsker, PressesAsk,
+    PressesWanted, Scan, ScrollAsk, Toggle,
 };
 use kx_module_api::{Bus, Event, ModuleCx, Mono, Notice, Subscription, US_PER_MS, parse_as};
 use kx_platform_fake::FakePointerHook;
@@ -36,6 +37,7 @@ pub enum Heard {
     Note(AssistNote),
     Moved(PointerMoved),
     Pressed(PointerPressed),
+    Released(PointerReleased),
     Used,
     AskLatches,
     AskScroll,
@@ -76,15 +78,33 @@ pub fn ours(at: Point) -> PointerEvent {
     }
 }
 
-/// A left release at `at`.
+/// A left release outside our windows at `at`.
 pub fn up(at: Point) -> PointerEvent {
     let button = Button::Left;
-    PointerEvent::Up { button, at }
+    let ours = false;
+    PointerEvent::Up { button, at, ours }
+}
+
+/// A left release on one of our windows at `at`.
+pub fn up_ours(at: Point) -> PointerEvent {
+    let button = Button::Left;
+    let ours = true;
+    PointerEvent::Up { button, at, ours }
 }
 
 /// A move to `at`.
 pub fn moved(at: Point) -> PointerEvent {
     PointerEvent::Move { at }
+}
+
+/// `asker`'s wish for presses, as it sends it.
+pub fn wants(asker: PressAsker, on: bool) -> PressesWanted {
+    PressesWanted { asker, on }
+}
+
+/// Prediction's wish for presses, as it sends it.
+pub fn predicting(on: bool) -> PressesWanted {
+    wants(PressAsker::Predict, on)
 }
 
 /// When a hold pressed at `t0` fires, by `settings`.
@@ -198,6 +218,7 @@ fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
         ear(bus, heard, |_: &LatchesUsed| Heard::Used),
         ear(bus, heard, |_: &LatchesAsk| Heard::AskLatches),
         ear(bus, heard, |e: &PointerPressed| Heard::Pressed(*e)),
+        ear(bus, heard, |e: &PointerReleased| Heard::Released(*e)),
         ear(bus, heard, |_: &ScrollAsk| Heard::AskScroll),
         ear(bus, heard, |_: &PressesAsk| Heard::AskPresses),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.clone())),

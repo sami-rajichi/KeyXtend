@@ -6,8 +6,8 @@ use crate::rig::{DAY, blob, learner, on_day};
 use kx_mod_predict::{MANIFEST, PredictModule};
 use kx_module_api::ports::{
     ChipKind, ChipPicked, FieldKind, FieldWatch, FieldWatchKey, Lane, LayoutAsk, LayoutChanged,
-    LayoutId, PackError, PackView, Piece, PressesAsk, PressesWanted, SealedStore, SealedStoreKey,
-    Suggested, TypeWord, Typed, VaultEmails, WordPacks, WordPacksKey,
+    LayoutId, PackError, PackView, Piece, PressAsker, PressesAsk, PressesWanted, SealedStore,
+    SealedStoreKey, Suggested, TypeWord, Typed, VaultEmails, WordPacks, WordPacksKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, Notice, NoticeArg, Redacted, ServiceKey, Subscription, Zeroizing,
@@ -140,9 +140,10 @@ fn the_thread_asks_the_layout_follows_typing_types_a_pick_and_saves_at_stop() {
     run.send(&Typed {
         piece: Piece::Text(Redacted::new("lo ".to_owned())),
     });
-    assert_eq!(presses.recv_timeout(WAIT).map(|p| p.on), Ok(true));
+    let named = |p: PressesWanted| (p.asker == PressAsker::Predict).then_some(p.on);
+    assert_eq!(presses.recv_timeout(WAIT).ok().and_then(named), Some(true));
     run.stop();
-    let last = presses.try_iter().last().map(|p| p.on);
+    let last = presses.try_iter().last().and_then(named);
     assert_eq!(last, Some(false), "the stop joined and let presses go");
     assert_eq!(store.saves(), 1, "the learned word saved at stop");
 }
@@ -169,19 +170,23 @@ fn an_ask_for_presses_gets_the_current_flag_again() {
     let listen = |bus: &Bus| (hear::<PressesWanted>(bus), hear::<Suggested>(bus));
     let (mut run, ((_p, presses), (_l, lanes))) =
         Live::start(&field, Arc::new(FakeWordPacks::new()), &store, listen);
-    let on = |rx: &Receiver<PressesWanted>| rx.recv_timeout(WAIT).map(|p| p.on);
+    // A flag that names another asker reads as `None`.
+    let on = |rx: &Receiver<PressesWanted>| {
+        let named = |p: PressesWanted| (p.asker == PressAsker::Predict).then_some(p.on);
+        rx.recv_timeout(WAIT).map(named)
+    };
     run.send(&PressesAsk);
-    assert_eq!(on(&presses), Ok(false), "no word yet");
+    assert_eq!(on(&presses), Ok(Some(false)), "no word yet");
     run.send(&lang("en"));
     run.send(&Typed {
         piece: Piece::Text(Redacted::new("hel".to_owned())),
     });
-    assert_eq!(on(&presses), Ok(true), "a word is held");
+    assert_eq!(on(&presses), Ok(Some(true)), "a word is held");
     // The word's lane went out just before its flag, so the lanes so far are all in.
     let _ = lanes.try_iter().count();
     for _ in 0..2 {
         run.send(&PressesAsk);
-        assert_eq!(on(&presses), Ok(true), "told again, with no new word");
+        assert_eq!(on(&presses), Ok(Some(true)), "told again, with no new word");
     }
     // The second answer comes after the first ask was fully handled.
     assert!(lanes.try_recv().is_err(), "an ask tells no new lane");
@@ -244,8 +249,8 @@ fn a_panic_on_the_thread_stops_the_lane_lets_presses_go_and_tells_the_user() {
     while !matches!(lanes.recv_timeout(WAIT).unwrap().lane, Lane::Chips(_)) {}
     run.send(&lang("fr"));
     while notices.recv_timeout(WAIT).unwrap().key != keys::MODULE_FAILED {}
-    let wanted: Vec<bool> = presses.try_iter().map(|p| p.on).collect();
-    assert_eq!(wanted, [false], "presses let go");
+    let wanted: Vec<_> = presses.try_iter().map(|p| (p.asker, p.on)).collect();
+    assert_eq!(wanted, [(PressAsker::Predict, false)], "presses let go");
     let last = lanes.try_iter().last().map(|l| l.lane);
     assert_eq!(last, Some(Lane::Stopped), "the chips and the menu went");
     run.stop();

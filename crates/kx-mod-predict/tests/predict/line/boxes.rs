@@ -34,7 +34,17 @@ fn a_password_box_behind_a_search_never_locks_its_lane() {
 fn a_password_box_the_watch_sees_changes_nothing_on_a_search_until_the_aim_leaves() {
     let mut rig = aimed("hell");
     rig.fakes.field.focus(FieldKind::Password);
-    rig.late(Msg::Mode(TypingMode::default()));
+    let roomy = TypingMode {
+        cap: Some(u16::MAX),
+        ..TypingMode::default()
+    };
+    let shown = rig.lane().round;
+    rig.late(Msg::Mode(roomy));
+    assert_ne!(
+        rig.lane().round,
+        shown,
+        "a mode change tells the lane again"
+    );
     assert_eq!(rig.words(), ["hello"], "the watch's kind does not matter");
     rig.pick(0);
     assert_eq!(rig.typed_words(), [(0, "o ".to_owned())]);

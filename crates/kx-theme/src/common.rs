@@ -13,8 +13,6 @@ pub struct Common {
     pub press: Rgba,
     /// The recording dot in the caption bar.
     pub rec_dot: Rgba,
-    /// The Copy pill's button under the pointer.
-    pub pill_hover: Rgba,
     /// Laid over the frozen screen outside the snip region.
     pub snip_dim: Rgba,
     /// The snip region's edge and its size text.
@@ -30,11 +28,10 @@ pub struct Common {
 impl Common {
     /// Every shared colour with its name in `themes.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 6] {
+    pub fn named(&self) -> [(&'static str, Rgba); 5] {
         [
             ("press", self.press),
             ("rec_dot", self.rec_dot),
-            ("pill_hover", self.pill_hover),
             ("snip_dim", self.snip_dim),
             ("snip_edge", self.snip_edge),
             ("snip_tag", self.snip_tag),

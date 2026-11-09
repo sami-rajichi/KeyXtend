@@ -1299,6 +1299,7 @@ dependencies = [
  "kx-mod-power",
  "kx-mod-predict",
  "kx-mod-scroll",
+ "kx-mod-selection",
  "kx-mod-vault",
  "kx-module-api",
  "kx-platform",
@@ -1354,6 +1355,7 @@ dependencies = [
  "kx-mod-mouse",
  "kx-mod-predict",
  "kx-mod-scroll",
+ "kx-mod-selection",
  "kx-mod-vault",
  "kx-module-api",
  "kx-platform",
@@ -1363,6 +1365,7 @@ dependencies = [
  "kx-target-window",
  "kx-test-support",
  "kx-theme",
+ "proptest",
  "serde",
  "serde_json",
  "spike-core",
@@ -1487,6 +1490,21 @@ dependencies = [
  "kx-test-support",
  "proptest",
  "serde",
+ "toml 1.1.6+spec-1.1.0",
+ "tracing",
+]
+
+[[package]]
+name = "kx-mod-selection"
+version = "0.0.0"
+dependencies = [
+ "kx-module-api",
+ "kx-platform-fake",
+ "kx-settings",
+ "kx-test-support",
+ "proptest",
+ "serde",
+ "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "tracing",
 ]

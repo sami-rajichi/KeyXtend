@@ -13,6 +13,18 @@ pub const MAX_ID_LEN: usize = 32;
 /// The paste shortcut every platform's table holds; the keyboard sends it when the clipboard module asks (ADR-0034).
 pub const PASTE_ID: &str = "paste";
 
+/// The copy shortcut, which the keyboard sends for the Copy chip (ADR-0041 decision 4).
+pub const COPY_ID: &str = "copy";
+
+/// The cut shortcut, which the keyboard sends for the Cut chip.
+pub const CUT_ID: &str = "cut";
+
+/// A terminal's copy, which never stops a program; the keyboard sends it for the Copy chip in a terminal.
+pub const COPY_TERM_ID: &str = "copy-term";
+
+/// A terminal's paste; the keyboard sends it for the Paste chip in a terminal.
+pub const PASTE_TERM_ID: &str = "paste-term";
+
 /// What a refused id or name hears; it never repeats the text, which may be a key.
 const BAD_FORM: &str = "not lower-case letters, digits and inner dashes within the length limit";
 

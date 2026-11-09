@@ -125,3 +125,13 @@ fn the_paste_the_keyboard_sends_on_request_is_a_well_formed_id() {
         Some(PASTE_ID.to_owned())
     );
 }
+
+#[test]
+fn the_edit_ids_the_keyboard_sends_for_the_chips_are_well_formed_and_distinct() {
+    let ids = [PASTE_ID, COPY_ID, CUT_ID, COPY_TERM_ID, PASTE_TERM_ID];
+    assert!(
+        ids.iter().all(|id| ShortcutId::new(id).is_some()),
+        "{ids:?}"
+    );
+    assert_eq!(ids.iter().collect::<HashSet<_>>().len(), ids.len());
+}

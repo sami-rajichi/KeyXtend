@@ -8,6 +8,7 @@ fn app(args: &[&str], class: Option<&str>) -> AppConfig {
         args: args.iter().map(ToString::to_string).collect(),
         class: class.map(String::from),
         focus_class: None,
+        dont_save_id: None,
         new_window: true,
         wait_ms: 0,
         ready_ms: 0,
@@ -35,6 +36,18 @@ fn only_word_can_be_attached_with_the_shipped_file() {
         .filter(|&n| attach_class(n, cfg.app(n).expect("app")).is_ok())
         .collect();
     assert_eq!(ok, [AppKind::Word.name()]);
+}
+
+#[test]
+fn only_notepad_names_a_dont_save_button_in_the_shipped_file() {
+    let cfg = crate::config::load().expect("kx-gates.toml loads");
+    let id = |n: &str| cfg.app(n).expect("app").dont_save_id.clone();
+    assert!(id(AppKind::Notepad.name()).is_some_and(|i| !i.is_empty()));
+    assert_eq!(
+        id(AppKind::Explorer.name()),
+        None,
+        "Explorer asks no save question"
+    );
 }
 
 #[test]

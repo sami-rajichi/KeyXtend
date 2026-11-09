@@ -8,35 +8,6 @@ use std::io::Write;
 const LOG_DIR: &str = "logs";
 const LOG_FILE: &str = "target.log";
 
-/// True when style `s` holds the edit style `bits`.
-fn has(s: WINDOW_STYLE, bits: i32) -> bool {
-    s.0 & bits.cast_unsigned() != 0
-}
-
-#[test]
-fn the_password_box_is_single_line_with_the_password_style() {
-    assert!(has(edit_style(true, false), ES_PASSWORD));
-    assert!(!has(edit_style(true, false), ES_MULTILINE));
-    assert!(has(edit_style(false, false), ES_MULTILINE));
-    assert!(!has(edit_style(false, false), ES_PASSWORD));
-}
-
-#[test]
-fn a_filled_box_keeps_its_long_lines_and_scrolls_both_ways() {
-    let filled = edit_style(false, true);
-    assert!(has(filled, ES_MULTILINE) && has(filled, ES_AUTOHSCROLL));
-    assert!(filled.contains(WS_HSCROLL | WS_VSCROLL));
-    let plain = edit_style(false, false);
-    assert!(
-        !has(plain, ES_AUTOHSCROLL) && !plain.contains(WS_HSCROLL),
-        "a plain box wraps"
-    );
-    assert!(
-        !has(edit_style(true, true), ES_MULTILINE),
-        "a password box takes no fill"
-    );
-}
-
 #[test]
 fn the_log_makes_its_folder_and_keeps_what_earlier_opens_wrote() {
     let dir = TempDir::new("tw-log").unwrap();

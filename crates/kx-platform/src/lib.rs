@@ -1,6 +1,6 @@
 //! The platform ports: what an OS adapter hands the kernel and the UI, the rule that picks the data folder, and the
-//! OS-neutral halves of the word packs, the field watch, the worker host and the hidden-run probe. The UI ports live in
-//! `ui`; later phases add more.
+//! OS-neutral halves of the word packs, the field and selection watches, the worker host and the hidden-run probe. The
+//! UI ports live in `ui`; later phases add more.
 
 #![forbid(unsafe_code)]
 
@@ -10,6 +10,7 @@ pub mod field;
 pub mod mirror;
 pub mod packs;
 pub mod pictures;
+pub mod selection;
 pub mod ui;
 pub mod worker;
 

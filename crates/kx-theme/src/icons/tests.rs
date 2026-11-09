@@ -170,6 +170,27 @@ fn the_clipboard_panel_shows_its_icons_by_role() {
 }
 
 #[test]
+fn the_selection_keycaps_show_the_owners_icons_by_chip() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let got = i.chips.named().map(|(role, name)| format!("{role}={name}"));
+    let want = [
+        "chips.copy=copy",
+        "chips.cut=scissors",
+        "chips.paste=clipboard-paste",
+        "chips.translate=languages",
+        "chips.tick=check",
+    ];
+    assert_eq!(got, want, "design \"The keycaps\"");
+    assert!(i.named().contains(&("chips.translate".into(), "languages")));
+    let t = text().replacen("translate = \"languages\"", "translate = \"Languages\"", 1);
+    assert!(
+        parse(&t)
+            .expect_err("a capital")
+            .contains("chips.translate")
+    );
+}
+
+#[test]
 fn the_quick_fill_panel_shows_its_icons_by_role() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "title=key-round search=search new=plus backup=archive close=x back=arrow-left \

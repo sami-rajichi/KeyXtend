@@ -74,6 +74,9 @@ done_ms = 500  # Pause before reading back, in ms.
 exe = "notepad.exe"
 args = ["{input}"]
 focus_class = "RichEditD2DPT"
+# UI Automation id of Don't save in the question an edited tab asks when the gate closes its own tab (the
+# dialog's second button); pressed only while that tab is in front.
+dont_save_id = "SecondaryButton"
 new_window = false
 wait_ms = 15000
 ready_ms = 1500
@@ -237,10 +240,6 @@ max_chars = 200
 # Chrome's text box: its name (aria-label) and style.
 box_name = "kx-select"
 box_css = "font:20px monospace;margin:24px;width:80%"
-# The face's pill must show within this many ms of a selection, and hide as fast once it goes.
-pill_wait_ms = 1000
-# How far the pill may sit from where kx-gates expects it, in physical px.
-pill_slack_px = 4
 
 [g20]
 # Kept copies (half written by kx-gates, half copied in Notepad) and copies with an exclusion marker.

@@ -46,6 +46,15 @@ fn arguments_keep_the_names_translations_use() {
         (args::MODULE, args::KEYS, args::MORE, args::LANG, args::APP),
         ("module", "keys", "more", "lang", "app")
     );
+    assert_eq!(args::SITE, "site");
+}
+
+#[test]
+fn the_translate_notices_keep_their_keys_and_are_listed() {
+    assert_eq!(keys::TRANSLATE_ASK, "notice.translate-ask");
+    assert_eq!(keys::TRANSLATE_FAILED, "notice.translate-failed");
+    let translate = [keys::TRANSLATE_ASK, keys::TRANSLATE_FAILED];
+    assert!(translate.iter().all(|k| ALL_KEYS.contains(k)));
 }
 
 #[test]

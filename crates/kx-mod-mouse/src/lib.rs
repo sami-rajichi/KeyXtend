@@ -62,9 +62,9 @@ impl Module for MouseModule {
         relay(cx, &tx, |e: &ScrollChanged| {
             Msg::Scroll(e.live && e.dir.is_some())
         })?;
-        // Word prediction publishes this from its own thread; the handler only forwards it.
-        relay(cx, &tx, |e: &PressesWanted| Msg::Presses(e.on))?;
-        // The keyboard's wish while a panel is open: a second source, kept apart in the actor.
+        // Each asker publishes this from its own thread; the handler only forwards it.
+        relay(cx, &tx, |e: &PressesWanted| Msg::Presses(*e))?;
+        // The keyboard's wish while a panel is open: one more source, kept apart from the askers in the actor.
         relay(cx, &tx, |e: &PanelPressesWanted| Msg::PanelPresses(e.on))?;
         let bus = cx.bus();
         let actor = Actor::new(

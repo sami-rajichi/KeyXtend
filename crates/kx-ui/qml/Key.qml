@@ -30,7 +30,6 @@ Item {
 
     readonly property var p: lk.palette
     readonly property var look: lk.look
-    readonly property var press: lk.shape.press
     readonly property var mv: lk.motion.moves
     // Dimmed by the board, as a later key, or by its state, as a mouse key while mouse assist is off: it does nothing.
     readonly property bool dim: !!kv.dim || !!(ks && ks.dim)
@@ -50,8 +49,8 @@ Item {
     property color skirt: p.skirt ? p.skirt[paint.skirt] : p[paint.fill]
     // Legends and icons on a pressed key: high contrast's press text at once, else each keeps its colour.
     readonly property var pressInk: down ? p.press_ink : null
-    // How far the cap has sunk, 0 to 1, and how far a recording cap has brightened, 0 to 1.
-    property real sink: down ? 1 : 0
+    // How far the cap has sunk, 0 to 1, as the cap eases it, and how far a recording cap has brightened, 0 to 1.
+    readonly property alias sink: cap.sink
     property real lift: 0
     readonly property real glowBy: 1 + (lk.motion.amount.glow_lift - 1) * lift
     readonly property color capColour: lift > 0 ? Qt.lighter(fillColour, glowBy) : fillColour
@@ -145,14 +144,6 @@ Item {
             move: key.mv.colour
         }
     }
-    // A press sinks the cap at once, so the next frame shows it (spec §10); only the rise back eases. It reads the
-    // target, since `down` and `sink` change in no set order.
-    Behavior on sink {
-        enabled: targetValue < key.sink
-        Tween {
-            move: key.mv.press
-        }
-    }
     Behavior on lockLit {
         Tween {
             move: key.mv.colour
@@ -199,58 +190,17 @@ Item {
         }
     }
 
-    Item {
+    KeyCap {
         id: cap
         width: key.width
         height: key.height
-        transform: [
-            Scale {
-                id: shrink
-                origin.x: cap.width / 2
-                origin.y: cap.height / 2
-                xScale: 1 - (1 - key.press.scale) * key.sink
-                yScale: shrink.xScale
-            },
-            Translate {
-                y: key.press.sink_px * key.s * key.sink
-            }
-        ]
+        lk: key.lk
+        s: key.s
+        topColour: key.capColour
+        skirt: key.capSkirt
+        pressed: key.down
+        hovered: !key.dim && area.containsMouse
 
-        Repeater {
-            model: key.p.key_shadow.filter(l => !l.inset)
-            delegate: Shade {
-                required property var modelData
-                shadow: modelData
-                radius: key.radius
-            }
-        }
-        CapFace {
-            anchors.fill: parent
-            cap: key.look.cap
-            topColour: key.capColour
-            skirt: key.capSkirt
-            radius: key.radius
-            s: key.s
-            pressed: key.down
-            sink: key.sink
-        }
-        Inset {
-            anchors.fill: parent
-            layers: key.p.key_shadow.filter(l => l.inset)
-            cap: key.look.cap
-            topColour: key.capColour
-            skirt: key.capSkirt
-            radius: key.radius
-            s: key.s
-            pressed: key.down
-            sink: key.sink
-        }
-        Hover {
-            lk: key.lk
-            radius: key.radius
-            visible: !key.dim && (area.containsMouse || key.down)
-            tint: key.down ? key.p.press : key.p.hover
-        }
         KeyText {
             anchors.fill: parent
             kv: key.kv

@@ -53,6 +53,14 @@ impl Process {
         Self::open(pid, PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE)
     }
 
+    /// Opens process `pid` to wait for it and end it, for a program a gate's own script started.
+    pub fn to_end(pid: u32) -> Result<Self, String> {
+        Self::open(
+            pid,
+            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE | PROCESS_TERMINATE,
+        )
+    }
+
     /// Opens process `pid` to wait for it, read its memory and CPU time, and put it in a job.
     pub fn to_measure(pid: u32) -> Result<Self, String> {
         let job = PROCESS_SET_QUOTA | PROCESS_TERMINATE;
@@ -96,7 +104,7 @@ impl Process {
         unsafe { WaitForSingleObject(self.handle, 0) == WAIT_OBJECT_0 }
     }
 
-    /// Ends the process through our handle, opened `to_measure` or given by the shell, for a copy that would not quit.
+    /// Ends the process through our handle, opened `to_end` or `to_measure` or given by the shell, if it will not quit.
     #[allow(unsafe_code, reason = "Ends the process our own handle names.")]
     pub fn end(&self) -> Result<(), String> {
         // SAFETY: our live handle; a handle without the right to end the process makes the call fail, never misbehave.

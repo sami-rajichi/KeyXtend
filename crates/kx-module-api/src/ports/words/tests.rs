@@ -3,10 +3,10 @@
 use super::*;
 use crate::capability::is_kebab;
 use crate::ports::{
-    AssistAsk, AssistChanged, AssistNote, AssistToggle, LatchesAsk, LatchesChanged, LatchesUsed,
-    LayoutAsk, LayoutChanged, PanelLine, PointerMoved, PointerPressed, PowerAsk, PowerAsked,
-    PowerChanged, ScrollAimed, ScrollAsk, ScrollChanged, ScrollPage, ScrollPeek, ScrollStop,
-    ScrollTap,
+    AssistAsk, AssistChanged, AssistNote, AssistToggle, BoardPlace, BoardPlaceAsk, LatchesAsk,
+    LatchesChanged, LatchesUsed, LayoutAsk, LayoutChanged, PanelLine, PointerMoved, PointerPressed,
+    PointerReleased, PowerAsk, PowerAsked, PowerChanged, ScrollAimed, ScrollAsk, ScrollChanged,
+    ScrollPage, ScrollPeek, ScrollStop, ScrollTap,
 };
 use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
@@ -39,8 +39,10 @@ fn words() -> [(&'static str, Option<Capability>); 11] {
 }
 
 /// Every other event name in the crate.
-fn older() -> [&'static str; 25] {
+fn older() -> [&'static str; 28] {
     [
+        BoardPlace::NAME,
+        BoardPlaceAsk::NAME,
         Notice::NAME,
         NoticeAnswered::NAME,
         ModuleStateChanged::NAME,
@@ -53,6 +55,7 @@ fn older() -> [&'static str; 25] {
         AssistNote::NAME,
         PointerMoved::NAME,
         PointerPressed::NAME,
+        PointerReleased::NAME,
         LatchesChanged::NAME,
         LatchesUsed::NAME,
         LatchesAsk::NAME,
@@ -242,6 +245,22 @@ fn a_word_fits_the_cap_when_its_erase_and_its_characters_each_stay_within() {
     assert!(
         TypeWord::fits(0, "\u{1F600}\u{1F600}", 2),
         "a surrogate pair counts once"
+    );
+}
+
+#[test]
+fn a_press_request_names_its_asker() {
+    assert_eq!(
+        PressAsker::ALL,
+        [PressAsker::Predict, PressAsker::Selection]
+    );
+    let wanted = PressesWanted {
+        asker: PressAsker::Selection,
+        on: true,
+    };
+    assert_eq!(
+        format!("{wanted:?}"),
+        "PressesWanted { asker: Selection, on: true }"
     );
 }
 

@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::capability::is_kebab;
-use crate::ports::{LayoutChanged, PowerAsk, PowerAsked, PowerChanged};
+use crate::ports::{BoardPlace, BoardPlaceAsk, LayoutChanged, PowerAsk, PowerAsked, PowerChanged};
 use crate::{ModuleStateChanged, Notice, NoticeAnswered, REDACTED_MARKER, SettingsChanged};
 use std::collections::HashSet;
 
@@ -25,7 +25,7 @@ fn row<E: Event>() -> (&'static str, Option<Capability>) {
 }
 
 /// The assist events, in the order `gates_are_inject_input_for_toggles_and_latches_and_keyboard_ui_for_notes` checks.
-fn assist() -> [(&'static str, Option<Capability>); 9] {
+fn assist() -> [(&'static str, Option<Capability>); 10] {
     [
         row::<AssistToggle>(),
         row::<AssistChanged>(),
@@ -33,6 +33,7 @@ fn assist() -> [(&'static str, Option<Capability>); 9] {
         row::<AssistNote>(),
         row::<PointerMoved>(),
         row::<PointerPressed>(),
+        row::<PointerReleased>(),
         row::<LatchesChanged>(),
         row::<LatchesUsed>(),
         row::<LatchesAsk>(),
@@ -57,6 +58,8 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
         PowerAsked::NAME,
         PowerChanged::NAME,
         PowerAsk::NAME,
+        BoardPlace::NAME,
+        BoardPlaceAsk::NAME,
     ];
     let names: Vec<_> = assist().iter().map(|r| r.0).chain(older).collect();
     assert!(names.iter().all(|n| is_kebab(n)), "{names:?}");
@@ -67,7 +70,9 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
 #[test]
 fn gates_are_inject_input_for_toggles_and_latches_and_keyboard_ui_for_notes() {
     let gates = assist().map(|r| r.1);
-    let want = [INJECT, None, None, UI, UI, None, INJECT, INJECT, INJECT];
+    let want = [
+        INJECT, None, None, UI, UI, None, None, INJECT, INJECT, INJECT,
+    ];
     assert_eq!(gates, want);
 }
 
@@ -116,6 +121,13 @@ fn a_press_is_named_and_shows_only_whether_it_was_ours() {
     assert_eq!(PointerPressed::NAME, "pointer-pressed");
     let text = format!("{:?}", PointerPressed { ours: true });
     assert_eq!(text, "PointerPressed { ours: true }");
+}
+
+#[test]
+fn a_release_is_named_and_shows_only_whether_it_was_ours() {
+    assert_eq!(PointerReleased::NAME, "pointer-released");
+    let text = format!("{:?}", PointerReleased { ours: false });
+    assert_eq!(text, "PointerReleased { ours: false }");
 }
 
 #[test]

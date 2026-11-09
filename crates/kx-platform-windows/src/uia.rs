@@ -1,7 +1,9 @@
 //! A UI Automation client, moved from the P1 spike (ADR-0014): elements by name, text documents, the focused element and
-//! patterns found up the tree. The gates and the field watch use it; it never logs an element's text.
+//! patterns found up the tree, and the watches' handlers, added and removed under one lock. The gates and the field and
+//! selection watches use it; it never logs an element's text.
 
 mod act;
+mod handlers;
 mod read;
 mod rects;
 
@@ -25,14 +27,12 @@ pub use read::{
 };
 pub use rects::rects_of;
 
+pub(crate) use handlers::{add_event, add_focus, remove_event, remove_focus};
 pub(crate) use read::{class_of, style_of};
 pub(crate) use rects::vector;
 
-use crate::PlatformError;
 use crate::com::Com;
-
-/// Most ancestors walked when looking for a pattern above an element.
-const MAX_DEPTH: usize = 32;
+use crate::{MAX_DEPTH, PlatformError};
 
 /// Why a UI Automation call failed; it names the call, never an element's text.
 #[derive(Debug, Error)]

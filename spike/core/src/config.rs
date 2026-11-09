@@ -15,7 +15,7 @@ pub const FACE: &str = "qt";
 pub struct SpikeConfig {
     /// The face's title and stage-1 geometry, which the gates and the tools row aim with.
     pub keyboard: KeyboardConfig,
-    /// The tools row, the selection pill and snip.
+    /// The tools row and snip.
     pub tools: ToolsConfig,
     /// Voice: the worker, its engines and the caption bar.
     pub voice: crate::voicecfg::VoiceConfig,
@@ -44,7 +44,7 @@ pub struct KeyboardConfig {
 /// Bytes in one MiB.
 pub const MIB: usize = 1 << 20;
 
-/// The tools row, the selection pill and snip (stage 1b).
+/// The tools row and snip (stage 1b).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolsConfig {
@@ -54,18 +54,8 @@ pub struct ToolsConfig {
     pub slots: usize,
     /// Each button's place in that row.
     pub slot: ToolSlots,
-    /// Title of the pill window, so kx-gates can find it.
-    pub pill_title: String,
     /// Title of the snip overlay.
     pub overlay_title: String,
-    /// How often the selection watcher looks at the focused text, in ms.
-    pub selection_poll_ms: u64,
-    /// Pill width, height and gap from the text, in logical pixels.
-    pub pill_px: [f32; 3],
-    /// The pill's Copy icon.
-    pub pill_icon: String,
-    /// Virtual keys the pill's Copy button presses, in order.
-    pub copy_keys: Vec<u16>,
     /// Folder under TEMP for snips and the frozen screen.
     pub snip_folder: String,
     /// Largest screen copy we make or read, in MiB.
@@ -78,7 +68,7 @@ pub struct ToolsConfig {
     pub snip_size: String,
 }
 
-/// Labels of the tool buttons and the pill.
+/// Labels of the tool buttons.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolLabels {
@@ -86,8 +76,6 @@ pub struct ToolLabels {
     pub snip: String,
     /// Starts and stops recording.
     pub mic: String,
-    /// The pill's copy button.
-    pub copy: String,
 }
 
 /// Each tool button's place in the frozen face's row, 0 on the left.
@@ -236,17 +224,15 @@ mod tests {
             Some(&ToolButton::Mic),
             "Mic is last"
         );
-        assert!(cfg.tools.selection_poll_ms > 0 && !cfg.tools.copy_keys.is_empty());
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
         let size = &cfg.tools.snip_size;
         assert!(size.contains("{w}") && size.contains("{h}"), "{size}");
     }
 
     #[test]
-    fn the_pill_and_caption_use_the_mock_ups_icons() {
+    fn the_caption_uses_the_mock_ups_icons() {
         let cfg = load().expect("spike.toml loads");
         let c = &cfg.voice.caption;
-        assert_eq!(cfg.tools.pill_icon, "copy", ".selpill");
         assert_eq!(
             (c.busy_icon.as_str(), c.words_icon.as_str()),
             ("audio-lines", "captions")

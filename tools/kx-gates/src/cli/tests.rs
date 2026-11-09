@@ -62,9 +62,12 @@ const NAME_ONLY: &[&str] = &[
     "g17 explorer",
     "g18 notepad",
     "g19 core",
+    "g19 keyxtend",
+    "g19 translate-read",
+    "g19 translate-beside",
+    "g19 look",
     "g20 notepad",
     "g21 win32",
-    "g19 qt",
     "g22 qt",
     "g22 bench",
     "g22 bench-cloud",
@@ -128,6 +131,7 @@ const BAD_INPUT: &[&str] = &[
     "g18 chrome --clicks 5",
     "g6 word --count 2",
     "g19 core --seed 1",
+    "g19 qt",
     "g20 notepad --count 3",
     "g21 chrome --clicks 2",
     "g22",
@@ -211,4 +215,31 @@ fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
     assert_eq!(mouse("g8", crate::g8::WEAK), Mouse::Held);
     assert_eq!(mouse("g8", crate::g8lang::ARABIC), Mouse::Held);
     assert_eq!(mouse("g8", crate::g8predict::PREDICT), Mouse::Held);
+}
+
+#[test]
+fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate_page() {
+    assert_eq!(mouse("g19", crate::product::NAME), Mouse::Drives);
+    assert_eq!(mouse("g19", crate::g19chips::TERMINALS), Mouse::Drives);
+    assert_eq!(
+        mouse("g19", crate::g19chips::READ),
+        Mouse::Free,
+        "the owner clicks Yes"
+    );
+    assert_eq!(
+        mouse("g19", crate::g19chips::BESIDE),
+        Mouse::Free,
+        "beside the owner's own keyboard"
+    );
+    assert_eq!(
+        mouse("g19", crate::g19chips::LOOK),
+        Mouse::Free,
+        "it moves nothing"
+    );
+    assert_eq!(mouse("g19", crate::g19::CORE), Mouse::Held);
+    assert_eq!(
+        mouse("g23", crate::g19chips::READ),
+        Mouse::Held,
+        "only G19's"
+    );
 }

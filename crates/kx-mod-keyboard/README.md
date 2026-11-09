@@ -9,7 +9,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `InputInjector` | needs | Sends each click's keys or text to the app in front, names that app for `key_apps`, and names the window in front for the aim. |
 | `LayoutSource` | needs | Says whether Caps Lock is on, and whether a key typed anything while a dead key waits. |
 | `Layouts` | needs | Its current table says what each key types in the layout shown. |
-| `Shortcuts` | needs | Names the shortcuts the platform knows, with their steps, sends the layer's shortcuts with the latched modifiers held and the clipboard module's paste, and says whether a click is the platform's clipboard-history chord. |
+| `Shortcuts` | needs | Names the shortcuts the platform knows, with their steps, sends the layer's shortcuts with the latched modifiers held, the clipboard module's paste and the selection chips' edit keys, and says whether a click is the platform's clipboard-history chord. |
 | `KeyboardFace` | provides | Behind `KeyboardUi`: the board and state JSON the UI draws, the board's row the theme's drawn check measures caps by, and each click it forwards; see "The face". |
 
 ## Capabilities
@@ -22,6 +22,7 @@ The keyboard module: the board the user clicks, its size and its place on the sc
 | `ReadClipboard` | It gates `ClipPanel`, `ClipKey` and `ClipLine` (ADR-0034, ADR-0035, ADR-0040), so only a module that may read the clipboard opens the panel's keys and hears its search letters; without it the module does not start. |
 | `WriteClipboard` | It gates `PasteAsk` and `Pasted`, so only a module that may write the clipboard makes the keyboard paste. The keyboard needs no clipboard service. |
 | `Vault` | An event gate only (ADR-0038): it gates `FillLive`, `FillPanel`, `FillKey`, `FillLine`, `FillType` and `FillTyped`, so only a module that may hold the vault hears Quick-fill's search letters or makes the keyboard type a fill. The keyboard needs no vault service. |
+| `Selection` | An event gate only (ADR-0041): it gates `EditAsk` and `EditDone`, so only a module that holds it asks the keyboard for the chips' edit keys. |
 
 ## The board
 
@@ -193,6 +194,14 @@ An open panel takes the keys only while its line is aimed at (ADR-0040); the key
 - **The line told:** `AimedLine` says the open panel's line while aimed at, else `PanelLine::None`: when that changes, and again on `TypingModeAsk`, in order with `Typed` and never under the lock. Panel keys never publish `Typed`.
 - **Picks:** a word offered for a line (`TypeWord::line`) goes to the open panel as one `PanelKey::Word`, so one redraw and one line, only while that panel's search is the line aimed at, and injects nothing; else it is dropped. A word for the app is dropped while a line is aimed at, so a late pick never lands in the wrong place; a panel page with no line lets it go to the app.
 
+## The selection chips on the bus
+
+The keyboard never depends on the selection module; they talk only through `kx_module_api::ports` selection events (ADR-0041), and the keyboard stays the only typist.
+- `EditAsk { round, edit, terminal }` ends a held key and takes the aim, as a paste does. It then sends the edit's id once through `Shortcuts` with nothing held: `COPY_ID`, `CUT_ID` or `PASTE_ID`, or in a terminal `COPY_TERM_ID` or `PASTE_TERM_ID`, while a Cut there sends nothing.
+- Every latch stays as it was, apart from a held key's own let-go, and prediction hears one `Break` once any of it reached the app.
+- `EditDone { round, ok }` always answers; while the module is stopped or a fill waits, nothing is sent and the answer is no.
+- The answer leaves through the pieces' outbox, so the bus hears every piece typed before the edit, then `EditDone`, then the edit's own `Break`, from any thread.
+
 ## Word prediction on the bus
 
 The keyboard never depends on the prediction module; they talk only through `kx_module_api::ports::words` events (ADR-0033), and the keyboard stays the only typist.
@@ -240,7 +249,7 @@ Every size is a finite number. The defaults live only in `defaults.toml`. The mo
 - `legend`: `Legend`, `LegendMods` (`of`, `shortcut`), `legend`, `typed`, `slot`, `is_empty`, `shown`, `is_haraka`, `is_mark`, `mark_names`, `MARK_PREFIX`, `HARAKA_NAMES`; a legend takes the Arabic font by `kx_module_api::is_arabic`, the rule the layouts module names languages by.
 - `plan`: `plan`, `layer_plan`, `Plan`, `Route` (its debug output hides keys and text), `Wait`, `Now`, `text_route`.
 - `repeat`: `Repeat` (`new`, `press`, `tick`, `leave`, `held`), the hold of one key, timed by the kernel's clock (`Ports::clock`); its debug output shows only its phase.
-- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `take_pieces`, `type_word` (or one part at a time: `word`, `part`, `end`) and `took_caps`, and for a held key `repeats`, `hold`, `release`, for either panel `search` and `moved`, for the clipboard panel `paste` and `want_history`, and for Quick-fill `fill`, `fill_on` and `overdue`), `Fill`, `Filled`, `Tapped`, `TapError`, `ToPanel`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`, and the `pause`), `Pause` with its real `Sleep`, and a picked word in parts: `Word`, `Part`, `drive`.
+- `run`: `Typing` (`new`, `update`, `tap`, `latches`, `clicked`, `waiting`, for word prediction `take_pieces`, `type_word` (or one part at a time: `word`, `part`, `end`) and `took_caps`, and for a held key `repeats`, `hold`, `release`, for either panel `search` and `moved`, for the clipboard panel `paste` and `want_history`, for Quick-fill `fill`, `fill_on` and `overdue`, and for the selection chips `edit`), `Fill`, `Filled`, `Tapped`, `TapError`, `ToPanel`, `Io` (with the layer's cells drawn now), `Ports` (`from_cx`, `io`, with the kernel's `clock` and `bus`, and the `pause`), `Pause` with its real `Sleep`, and a picked word in parts: `Word`, `Part`, `drive`.
 - `geom`: `board`, `side_area`, `Board`, `KeyBox`, `Area`.
 - `sizer`: `Limits`, `Resize`, `Sizer` (with `fit`), `SizeError`.
 - `place`: `Placer` (with `keep`), `inside`, `bottom_centre`, `home`, `screen_of`, `landing`, `room`, `fit`, `start`; the bubble's spot is `kx-ui`'s, as it needs theme sizes.

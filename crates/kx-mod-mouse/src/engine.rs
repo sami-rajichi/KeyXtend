@@ -115,7 +115,7 @@ pub struct Engine {
     mods_down: bool,
     /// The scroll pad scrolls, so moves and presses are noted.
     scrolling: bool,
-    /// Word prediction wants presses, so they are noted.
+    /// An asker or the panel wants presses, so presses and releases are noted.
     wanted: bool,
     /// Notes for the module, drained by `take_notes`.
     notes: Vec<Note>,

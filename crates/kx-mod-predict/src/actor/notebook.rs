@@ -8,12 +8,17 @@ use kx_module_api::{Redacted, Secret, Zeroizing};
 
 impl Actor {
     /// Takes the notebook's `emails` in place of the last set, which is wiped as it goes, and none while prediction is
-    /// off; true when the lane shows emails, so it is told again.
+    /// off; true when a new set meets a lane that shows emails, so it is told again.
     pub(super) fn notebook(&mut self, emails: Vec<Secret>) -> bool {
         if !self.settings.on {
             return false;
         }
-        self.saved = Saved::new(emails);
+        let saved = Saved::new(emails);
+        // Quick-fill tells its state at its start and at each ask, so the same set again changes nothing.
+        if saved == self.saved {
+            return false;
+        }
+        self.saved = saved;
         self.relist();
         self.show.as_ref().is_some_and(|s| s.emails.is_some())
     }

@@ -1,5 +1,6 @@
 //! The whole word loop over the app: keys typed in a text box bring a chip from the shipped pack, its pick keeps what
-//! was typed and types the rest of the word through the keyboard, and the word is learned and sealed at Quit.
+//! was typed and types the rest of the word through the keyboard, even after the keyboard's mode and Quick-fill's
+//! emails were told again unchanged, and the word is learned and sealed at Quit.
 
 use crate::rig::{Rig, WAIT, char_key, hear, words_out};
 use keyxtend::boot::Boot;
@@ -9,8 +10,10 @@ use kx_mod_predict::learn::Learner;
 use kx_mod_predict::score::Learned;
 use kx_mod_predict::script::{self, Script};
 use kx_mod_predict::{PredictSettings, learned_blob};
+use kx_module_api::Bus;
 use kx_module_api::ports::{
-    FaceAction, FieldKind, KeyId, Lane, Piece, Suggested, Typed, pack_file,
+    FaceAction, FieldKind, FillAsk, KeyId, Lane, Piece, Suggested, Typed, TypingMode,
+    TypingModeAsk, VaultEmails, pack_file,
 };
 use kx_platform_fake::Stroke;
 use std::sync::Arc;
@@ -76,6 +79,23 @@ fn quit(boot: Boot) {
     drop(heard);
 }
 
+/// Asks the keyboard for its typing mode and Quick-fill for its emails again, as other modules' starts do, and waits
+/// for both answers; handlers run in subscription order, so predict heard each first.
+fn told_again(bus: &Bus) {
+    let (_modes, modes) = hear::<TypingMode>(bus);
+    let (_emails, emails) = hear::<VaultEmails>(bus);
+    bus.publish(&TypingModeAsk).unwrap();
+    bus.publish(&FillAsk).unwrap();
+    assert!(
+        modes.recv_timeout(WAIT).is_ok(),
+        "the keyboard told its mode"
+    );
+    assert!(
+        emails.recv_timeout(WAIT).is_ok(),
+        "Quick-fill told its emails"
+    );
+}
+
 /// Taps the keys of `TYPED` on the keyboard.
 fn type_start(boot: &Boot) {
     for sc in TYPED {
@@ -115,6 +135,7 @@ fn a_typed_start_brings_a_chip_whose_pick_types_the_word_which_is_learned_and_se
     let typed = WORD.get(..TYPED.len()).unwrap();
     let (round, at) = offered(&lanes, typed, WORD).expect("a chip completes the typed start");
     assert_eq!(at, PLACE, "the word's place on the lane");
+    told_again(&bus);
     let before = rig.injector.strokes().len();
     let (_pieces, pieces) = hear::<Typed>(&bus);
     boot.hub

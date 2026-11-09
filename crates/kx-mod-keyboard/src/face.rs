@@ -4,6 +4,7 @@
 
 mod bus;
 mod clip;
+mod edit;
 mod fill;
 mod hold;
 mod inner;

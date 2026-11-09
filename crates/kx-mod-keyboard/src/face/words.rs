@@ -3,14 +3,14 @@
 //! part's pieces and waits its pauses outside the lock, and stops at a click outside our windows or a board key sent.
 
 use super::Face;
-use super::inner::{ToPredict, WordTo};
+use super::inner::{Queued, WordTo};
 use crate::run::{Word, drive};
 use kx_module_api::ports::{AimedLine, PanelKey, PointerPressed, TypeWord, Typed};
 use std::sync::atomic::Ordering::SeqCst;
 
 impl Face {
-    /// Tells the bus every piece typed and line change not yet told, through the outbox, so none goes out twice or out
-    /// of order.
+    /// Tells the bus every piece typed, line change and edit answer not yet told, through the outbox, so none goes out
+    /// twice or out of order.
     pub(super) fn pour(&self) {
         self.pieces.post(|| self.send_pieces());
     }
@@ -26,10 +26,12 @@ impl Face {
                 return;
             }
             for item in told {
-                // The module holds `ReadFocusedText`, which these events need, or its start would have failed.
+                // The module holds `ReadFocusedText` and `Selection`, which these events need, or its start would have
+                // failed.
                 let _ = match item {
-                    ToPredict::Piece(piece) => bus.publish(&Typed { piece }),
-                    ToPredict::Line(line) => bus.publish(&AimedLine { line }),
+                    Queued::Piece(piece) => bus.publish(&Typed { piece }),
+                    Queued::Line(line) => bus.publish(&AimedLine { line }),
+                    Queued::Done(done) => bus.publish(&done),
                 };
             }
         }

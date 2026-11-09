@@ -4,9 +4,11 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+mod chips;
 mod clip;
 mod fill;
 
+pub use chips::ChipsIcons;
 pub use clip::ClipIcons;
 pub use fill::FillIcons;
 
@@ -179,6 +181,8 @@ pub struct Icons {
     pub tray: TrayIcons,
     /// The chip lane and its menu.
     pub words: WordsIcons,
+    /// The selection strip's keycaps.
+    pub chips: ChipsIcons,
     /// The clipboard panel.
     pub clip: ClipIcons,
     /// Quick-fill.
@@ -219,8 +223,8 @@ impl Icons {
         let fixed = fixed
             .into_iter()
             .map(|(at, v)| (at.to_string(), v.as_str()));
-        let panels = self.words.named().into_iter().chain(self.clip.named());
-        let panels = panels.chain(self.fill.named());
+        let panels = self.words.named().into_iter().chain(self.chips.named());
+        let panels = panels.chain(self.clip.named()).chain(self.fill.named());
         let keys = by_id("keys", &self.keys);
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)

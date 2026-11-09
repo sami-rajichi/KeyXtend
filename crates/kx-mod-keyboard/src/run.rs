@@ -1,9 +1,10 @@
 //! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
 //! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
-//! what reached the app waits to be told. Picked words, pastes and fills go out here too.
+//! what reached the app waits to be told. Picked words, pastes, the chips' edit keys and fills go out here too.
 
 mod checks;
 mod clip;
+mod edit;
 mod fill;
 mod held;
 mod layer;

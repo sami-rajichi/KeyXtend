@@ -87,7 +87,7 @@ fn shared_colours_turn_to_system_colours_and_keep_their_see_through_share() {
     for (n, v) in c.named() {
         assert!(allowed.iter().any(|&a| rgb(a) == rgb(v)), "{n}");
     }
-    assert_eq!((c.press.a, c.pill_hover.a), (0, 0), "no tints");
+    assert_eq!(c.press.a, 0, "no tint");
     assert_eq!(
         (c.snip_dim.a, c.snip_tag.a),
         (base.snip_dim.a, base.snip_tag.a)

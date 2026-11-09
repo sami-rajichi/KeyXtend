@@ -1,7 +1,7 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
 //! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
-//! panel, the Quick-fill panel, the tray icon, and the requests the app drains on its own thread. No lock is held while a
-//! face call, a port call or a waker runs.
+//! panel, the Quick-fill panel, the selection strip, the tray icon, and the requests the app drains on its own thread.
+//! No lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod assist;
@@ -13,6 +13,7 @@ mod fonts;
 mod look;
 mod notices;
 mod scroll;
+mod sel;
 mod sound;
 mod spots;
 mod texts;
@@ -116,6 +117,8 @@ pub enum Wake {
     },
     /// The clipboard panel shows a new view or closes; no other comes until QML reads `clip_json`.
     Clip,
+    /// The selection strip shows a new view or hides; no other comes until QML reads `sel_json`.
+    Sel,
 }
 
 /// Hands a `Wake` to the Qt thread; it must not block.
@@ -180,6 +183,8 @@ pub struct Hub {
     clip: clip::Clip,
     /// The Quick-fill panel and its object's waker.
     fill: fill::Fill,
+    /// The selection strip.
+    sel: sel::Sel,
 }
 
 impl Hub {
@@ -223,6 +228,7 @@ impl Hub {
             words: Mutex::default(),
             clip: clip::Clip::default(),
             fill: fill::Fill::default(),
+            sel: sel::Sel::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -232,9 +238,8 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the language of the layout the face shows, a new `sound_idle_ms` prepares the speaker again, an open
-    /// clipboard panel hears the rows, and Quick-fill hears the rows and the label names. The keyboard's wake is heard
-    /// from now on, after the face's own handlers.
+    /// follow the layout's language, a new `sound_idle_ms` prepares the speaker again, the clipboard panel and Quick-fill
+    /// hear their rows, and a shown strip is worded again. The keyboard's wake is heard from now on, after the face's.
     pub fn attach(
         self: &Arc<Self>,
         settings: UiSettings,
@@ -242,11 +247,8 @@ impl Hub {
         store: SettingsHandle,
     ) {
         self.hear_keys();
-        let texts = Texts::new(
-            &settings.language,
-            &face.lang(),
-            &self.ports.look.ui_language(),
-        );
+        let system = self.ports.look.ui_language();
+        let texts = Texts::new(&settings.language, &face.lang(), &system);
         let idle = settings.sound_idle_ms;
         let before = {
             let mut live = self.lock();
@@ -258,6 +260,7 @@ impl Hub {
         self.idle_changed(before, idle);
         self.clip_rows();
         self.fill_start();
+        self.sel_reword();
         self.wake(Wake::Settings);
     }
 

@@ -109,6 +109,15 @@ glyph = "keyboard"
 show = "keyboard"
 quit = "power"
 
+# The selection strip's keycaps (design/selection-chips.html design 4, I): Copy, Cut and Paste as on the shortcuts
+# layer, Translate, and the tick a clicked keycap shows with its done word.
+[chips]
+copy = "copy"
+cut = "scissors"
+paste = "clipboard-paste"
+translate = "languages"
+tick = "check"
+
 # The chip lane (spec §6; mock-up suggHTML, line 1042): the chip kinds as the lane names them (domain, email, saved,
 # more, undo), the password note's lock and its Quick-fill chip (the fill key's key-round, as a saved email), the menu
 # button, and the menu's items, whose forget mark each chip wears in forget mode.

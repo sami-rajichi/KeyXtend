@@ -2,15 +2,15 @@
 //! `VaultData` and `ReadClipboard`, the keyboard, prediction and the ui hold `Vault` as an event gate only, the notebook
 //! store, the boxes and the places reach the vault alone, and random bytes and the calendar need no gate.
 
-use super::{defaults, features, holders, reached};
-use crate::rig::Rig;
+use super::{asking, defaults, features, holders, reached};
+use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
 use kx_crypto::MemoryStore;
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Places, PlacesKey, Random, RandomKey, SealedStore,
     VaultStoreKey,
 };
-use kx_module_api::{Capability, ModuleId, ServiceId, ServiceKey};
+use kx_module_api::{Capability, ModuleId, ServiceKey};
 use kx_platform_fake::{FakeBoxes, FakePlaces, FakeRandom};
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -24,19 +24,8 @@ const GATES: [ModuleId; 3] = [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID
 
 /// Every shipped module's id.
 fn shipped() -> BTreeSet<ModuleId> {
-    let shipped = modules(&Rig::new().load().hub);
+    let shipped = modules(&Rig::new().load().hub, OS);
     shipped.iter().map(|m| m.manifest().id).collect()
-}
-
-/// The shipped modules whose manifest asks for any of `keys`.
-fn asking(keys: &[ServiceId]) -> BTreeSet<ModuleId> {
-    let shipped = modules(&Rig::new().load().hub);
-    let asks = |id: &ServiceId| keys.contains(id);
-    let manifests = shipped.iter().map(|m| m.manifest());
-    manifests
-        .filter(|m| m.requires.iter().any(asks))
-        .map(|m| m.id)
-        .collect()
 }
 
 #[test]

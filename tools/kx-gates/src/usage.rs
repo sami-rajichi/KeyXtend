@@ -6,8 +6,8 @@ use spike_core::config::FACE;
 use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
-    capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g20, g21,
-    g22, g22bench, g22type, g25, hand, workertok,
+    capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
+    g20, g21, g22, g22bench, g22type, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -44,11 +44,9 @@ fn product_lines() -> String {
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g19 <{}|{FACE}>
        {PROG} g22 <{FACE}|{}|{}|{}>
        {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
-        g19::CORE,
         g22::BENCH,
         g22bench::WITH_CLOUD,
         g22type::TYPING,
@@ -78,6 +76,24 @@ g23 {NAME} starts the test build on a data folder it makes, saves a test login t
     )
 }
 
+/// The help lines of P10's selection strip gate.
+fn sel_lines() -> String {
+    let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
+    let look = g19chips::LOOK;
+    format!(
+        "g19 {NAME} starts the test build on a data folder it makes and drives the selection strip in its own Notepad, \
+         Chrome page, target-window and terminals, so close the product first; the folder goes at the end. It \
+         overwrites the clipboard and Windows' clipboard history, then puts the clipboard back and forgets its copies.
+g19 {terms} does the same in the terminals alone, in about a minute, so close the product first.
+g19 {read} starts the test build the same way and selects the long Arabic line: click Translate, then Yes; the gate \
+         only reads the page that opens.
+g19 {beside} starts nothing: it does the same beside the uiAccess dev install, and runs only from the installed \
+         uiAccess kx-gates, as Windows hides that keyboard from a plain one.
+g19 {look} starts nothing and moves nothing: it runs the product's selection look on the focused box and prints each \
+         change, never text."
+    )
+}
+
 /// The help lines of G8's parts on a layout, a key light or the hook.
 fn g8_notes() -> String {
     let (arabic, lit, osk) = (g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
@@ -98,6 +114,7 @@ pub fn usage() -> String {
        {PROG} assist <{}|{}> [--secs N]
        {PROG} g17 <{}>
        {PROG} g18 <{}>
+       {PROG} g19 <{}>
 {}
        {PROG} g20 <{}|{NAME}|{}>
        {PROG} g21 <{}>
@@ -105,8 +122,6 @@ pub fn usage() -> String {
        {PROG} {}
 --attach types into the app's window already open; --pause sets the gap between characters.
 {NAME} is the product keyboard; {FACE} is the frozen spike face; g8 {} starts the product capped like a weak PC.
-{}
-{}
 {}
 g5 {} is the owner's manual check on the installed product, as the test build cannot reach admin windows.",
         names(&AppKind::ALL),
@@ -116,6 +131,7 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         hand::GRAB,
         names(&g17::APPS),
         names(&g18::APPS),
+        g19::NAMES.join("|"),
         face_lines(),
         names(&g20::APPS),
         workertok::WORKER,
@@ -123,11 +139,14 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
         names(&g25::APPS),
         capture::COMMAND,
         g8::WEAK,
-        g8_notes(),
-        typing_lines(),
-        clip_lines(),
+        notes(),
         g5::ADMIN,
     )
+}
+
+/// The help's notes on each phase's gates, in order.
+fn notes() -> String {
+    [g8_notes(), typing_lines(), clip_lines(), sel_lines()].join("\n")
 }
 
 #[cfg(test)]
@@ -223,6 +242,24 @@ mod tests {
         assert!(lines.clone().count() > 1);
         for line in lines {
             assert!(line.contains("kx-gates "), "{line}");
+        }
+    }
+
+    #[test]
+    fn g19_lists_its_six_runs_and_asks_to_close_the_product_first() {
+        let text = usage();
+        let (read, beside, terms) = (g19chips::READ, g19chips::BESIDE, g19chips::TERMINALS);
+        let look = g19chips::LOOK;
+        let runs = format!("g19 <{}|{NAME}|{read}|{beside}|{terms}|{look}>", g19::CORE);
+        assert!(text.contains(&runs), "{text}");
+        let told = |run: &str| text.lines().find(|l| l.starts_with(&format!("g19 {run} ")));
+        for run in [beside, look] {
+            let free = told(run).is_some_and(|l| l.contains("starts nothing"));
+            assert!(free, "{run}: {text}");
+        }
+        for run in [NAME, terms] {
+            let asks = told(run).is_some_and(|l| l.contains("close the product first"));
+            assert!(asks, "{run}: {text}");
         }
     }
 

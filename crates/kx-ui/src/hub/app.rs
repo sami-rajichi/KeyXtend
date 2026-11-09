@@ -4,7 +4,7 @@
 
 use super::notices::retry_of;
 use super::{Hub, Live, Request, Wake, Waker, json};
-use kx_module_api::ports::FaceAction;
+use kx_module_api::ports::{Board, FaceAction};
 use kx_module_api::{Notice, NoticeAnswered};
 use kx_platform::ui::Command;
 use serde::Serialize;
@@ -39,15 +39,28 @@ impl Mode {
             (false, false) => Self::Shown,
         }
     }
+
+    /// The keyboard's place in this mode, as the modules hear it (ADR-0041).
+    #[must_use]
+    pub fn board(self) -> Board {
+        match self {
+            Self::Shown => Board::Open,
+            Self::Minimised => Board::Minimised,
+            Self::Away => Board::Tray,
+        }
+    }
 }
 
 impl Hub {
-    /// Keeps how the user left the keyboard, for windows made again. Hiding it mid-glide takes Stop off the screen, so
-    /// the keyboard stops the glide as Stop does; call it on the Qt thread.
+    /// Keeps how the user left the keyboard, for windows made again, and tells the modules its new place. Hiding it
+    /// mid-glide takes Stop off the screen, so the keyboard stops the glide as Stop does; call it on the Qt thread.
     pub fn keep_mode(&self, mode: Mode) {
         let before = std::mem::replace(&mut self.lock().mode, mode);
         if before == Mode::Shown && mode != Mode::Shown && self.scrolling() {
             let _ = self.act(FaceAction::Pad { dir: None });
+        }
+        if before != mode {
+            self.tell_board();
         }
     }
 
@@ -67,9 +80,9 @@ impl Hub {
         })
     }
 
-    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, and an overlay, scroll
-    /// or clipboard wake QML has not read. A second waker replaces the first, which then hears nothing; that is a bug,
-    /// so it warns.
+    /// Registers the Qt thread's waker and hands it the `Show` and `End` wakes that came first, and an overlay, scroll,
+    /// clipboard or selection wake QML has not read. A second waker replaces the first, which then hears nothing; that
+    /// is a bug, so it warns.
     pub fn set_waker(&self, waker: Waker) {
         let (pending, replaced) = {
             let mut live = self.lock();
@@ -85,6 +98,7 @@ impl Hub {
         self.rewake_assist();
         self.rewake_scroll();
         self.rewake_clip();
+        self.rewake_sel();
     }
 
     /// Lets the waker go before the windows are made again: `Show` and `End` wait for the next `Ui` object, and an `End`

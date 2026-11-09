@@ -37,6 +37,8 @@ pub enum PointerEvent {
         button: Button,
         /// Where it went up.
         at: Point,
+        /// The release landed on one of our own windows.
+        ours: bool,
     },
     /// The pointer moved.
     Move {
@@ -53,7 +55,7 @@ impl PointerEvent {
     pub const fn act(self) -> Option<PointerAct> {
         match self {
             Self::Down { button, at, .. } => Some(PointerAct::Down(button, at)),
-            Self::Up { button, at } => Some(PointerAct::Up(button, at)),
+            Self::Up { button, at, .. } => Some(PointerAct::Up(button, at)),
             Self::Move { at } => Some(PointerAct::Move(at)),
             Self::Esc => None,
         }
@@ -91,10 +93,11 @@ impl fmt::Debug for PointerEvent {
                 .field("ours", &ours)
                 .field("dpi", &dpi)
                 .finish(),
-            Self::Up { button, at } => f
+            Self::Up { button, at, ours } => f
                 .debug_struct("Up")
                 .field("button", &button)
                 .field("at", &Redacted::new(at))
+                .field("ours", &ours)
                 .finish(),
             Self::Move { at } => hide_at(f, "Move", at),
             Self::Esc => f.write_str("Esc"),

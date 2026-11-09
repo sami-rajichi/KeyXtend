@@ -2,11 +2,13 @@
 //! sealed, and never types itself (ADR-0033).
 
 use crate::settings::SPEC;
-use kx_module_api::ports::{FieldWatchKey, SealedStoreKey, WordPacksKey};
+use kx_module_api::ports::{FieldWatchKey, PressAsker, SealedStoreKey, WordPacksKey};
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
 /// The module's id, which also names its settings section.
 pub const ID: ModuleId = ModuleId::new("predict");
+/// Who the module is when it asks for presses (ADR-0041 decision 6).
+pub(crate) const ASKER: PressAsker = PressAsker::Predict;
 
 /// The module's manifest: `ReadFocusedText` gates the box and the typed-text events, `SecretStore` the sealed store,
 /// and `Vault` only the notebook's emails for the `@@` list, as an event gate (ADR-0038, the ADR-0035 pattern).

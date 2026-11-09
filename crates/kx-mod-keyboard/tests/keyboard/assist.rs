@@ -6,7 +6,7 @@
     reason = "these fixtures run only in tests, where a failed setup should fail the test"
 )]
 
-mod latches;
+pub mod latches;
 
 use crate::host::{Fakes, GOLDEN};
 use crate::rig::{Rig, STATE};

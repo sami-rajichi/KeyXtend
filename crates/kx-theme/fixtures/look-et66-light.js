@@ -89,7 +89,6 @@ var lk = {
   "common": {
     "press": "#0F000000",
     "rec_dot": "#FFE5484D",
-    "pill_hover": "#387F7F7F",
     "snip_dim": "#6B000000",
     "snip_edge": "#FFFFFFFF",
     "snip_tag": "#99000000"
@@ -281,13 +280,13 @@ var lk = {
     "line": {
       "px": 1.0
     },
-    "pill": {
+    "chips": {
       "pad_px": 3.0,
-      "button_side_px": 11.0,
-      "font_px": 12.0,
-      "weight": 600,
+      "cap_pad_px": 10.0,
+      "font_px": 11.5,
       "icon_px": 13.0,
-      "gap_px": 5.0
+      "icon_gap_px": 5.0,
+      "gap_px": 8.0
     },
     "caption": {
       "pad_px": [
@@ -638,6 +637,28 @@ var lk = {
           1.0
         ]
       },
+      "chips": {
+        "ms": 180,
+        "bez": [
+          0.2,
+          0.8,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "chips_fade": {
+        "ms": 160,
+        "bez": [
+          0.25,
+          0.1,
+          0.25,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
       "colour": {
         "ms": 150,
         "bez": [
@@ -743,17 +764,6 @@ var lk = {
           0.2,
           0.8,
           0.2,
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "pill": {
-        "ms": 180,
-        "bez": [
-          0.0,
-          0.0,
-          0.58,
           1.0,
           1.0,
           1.0
@@ -915,7 +925,11 @@ var lk = {
       "pop_rise_px": 6.0,
       "pop_scale": 0.98,
       "menu_scale": 0.96,
-      "tick_scale": 0.6
+      "tick_scale": 0.6,
+      "fade_rise_px": 3.0
+    },
+    "shows": {
+      "chips_done": 650
     },
     "ring": {
       "wave": [
@@ -1056,6 +1070,13 @@ var lk = {
       "resume": "eye",
       "power": "power",
       "cancel": "x"
+    },
+    "chips": {
+      "copy": "copy",
+      "cut": "scissors",
+      "paste": "clipboard-paste",
+      "translate": "languages",
+      "tick": "check"
     },
     "clip": {
       "title": "clipboard-clock",

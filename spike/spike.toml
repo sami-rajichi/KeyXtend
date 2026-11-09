@@ -24,25 +24,15 @@ widths = [
     [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
 ]
 
-# Stage 1b: the tools row under the keys, the selection pill and snip.
+# Stage 1b: the tools row under the keys and snip; the selection pill left the source in P10 (kx-mod-selection).
 [tools]
-labels = { snip = "Snip", mic = "Mic", copy = "Copy" }
+labels = { snip = "Snip", mic = "Mic" }
 # The frozen face's tools row holds four buttons; quick-fill's two came first and left the source in P9 (ADR-0038).
 slots = 4
 # Each button's place in that row, 0 on the left.
 slot = { snip = 2, mic = 3 }
-# Window titles, so kx-gates can find them.
-pill_title = "KeyXtend spike - pill"
+# The snip overlay's window title, so kx-gates can find it.
 overlay_title = "KeyXtend spike - snip"
-# How often the selection watcher looks at the focused text, in ms.
-selection_poll_ms = 300
-# Pill width (mock-up .selpill: 3 + 11 + 13 icon + 5 + Copy + 11 + 3; it grows for a longer label), height (3 + 5 + 12 + 5 + 3)
-# and gap from the selected text, in logical pixels.
-pill_px = [76.0, 28.0, 8.0]
-# The Copy button's Lucide icon (mock-up .selpill).
-pill_icon = "copy"
-# The pill's Copy button presses Ctrl+C (virtual keys).
-copy_keys = [0x11, 0x43]
 # Folder under TEMP for snips and the frozen screen; kx-gates deletes what it reads.
 snip_folder = "kx-spike-snips"
 # Largest screen copy made or read, in MiB; three 4K screens need about 100.

@@ -1,5 +1,9 @@
-//! Rectangles and points in physical pixels, shared by the face and the UI ports.
+//! Rectangles and points in physical pixels, shared by the face and the UI ports, and where the selection strip goes.
 //! The UI sends reals, so a fraction rounds to the nearest pixel when read.
+
+mod anchor;
+
+pub use anchor::{Strip, anchor};
 
 use serde::de::{self, Deserializer, Unexpected, Visitor};
 use serde::{Deserialize, Serialize};

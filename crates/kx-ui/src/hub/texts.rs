@@ -132,8 +132,8 @@ impl Hub {
         live.notices.shown(&live.texts.keyboard)
     }
 
-    /// Follows the language of the layout `face` shows; a new one wakes the UI to read the keyboard's texts again, and
-    /// Quick-fill hears the label names in it.
+    /// Follows the language of the layout `face` shows; a new one wakes the UI to read the keyboard's texts again,
+    /// Quick-fill hears the label names in it, and a shown selection strip is worded again.
     pub(super) fn follow(&self, face: &dyn KeyboardFace) {
         let layout = face.lang();
         let changed = {
@@ -146,6 +146,7 @@ impl Hub {
         if changed {
             self.wake(Wake::Texts);
             self.fill_relang();
+            self.sel_reword();
         }
     }
 }

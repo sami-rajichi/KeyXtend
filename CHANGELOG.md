@@ -27,6 +27,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - Quick-fill (P9): a sealed notebook of saved values of any kind, one-click fills that never press Enter, search by name, label and shown value, Make one, Paste, a locked backup box kept up to date in the places you pick, Bring back, and a KeePass import through a low-rights helper (ADR-0038, ADR-0039).
 - One data folder (P9): a run whose saves Windows would hide in another app's package says so and writes nothing, and a hidden copy found on a normal run can be deleted (ADR-0037).
 - A panel's search takes the keys after a press on the panel, with its own caret, in Quick-fill and Clipboard history; one wheel notch turns one page (ADR-0040).
+- The selection helper (P10): a strip of keys beside text selected in any app that tells its selection, with Copy, Cut, Paste and Translate by the kind of box, Paste after a click at a caret, and Translate that opens the site in the browser after a yes; no text is read before a click (ADR-0041).
 
 ### Changed
 - The licence: KeyXtend is now view only, all rights reserved, and the app is sold under its own user licence (ADR-0030). Versions published before keep the GPL-3.0-or-later.
@@ -36,3 +37,4 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Fixed
 - The window guard: Windows can ignore a lift while saying yes, so a window still out of the topmost band now goes up alone.
+- A word chip tapped just as the keyboard repeated its typing mode, or Quick-fill repeated its emails, was dropped; an unchanged answer now keeps the chips' round.

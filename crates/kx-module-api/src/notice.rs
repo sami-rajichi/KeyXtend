@@ -103,6 +103,8 @@ pub mod args {
     pub const LANG: &str = "lang";
     /// Another app's short name, such as the one a hidden run started from.
     pub const APP: &str = "app";
+    /// A translate site's name, as the module's site table gives it.
+    pub const SITE: &str = "site";
 }
 
 impl Event for Notice {
@@ -173,9 +175,13 @@ pub mod keys {
     pub const VAULT_OFFER: &str = "notice.vault-offer";
     /// Quick-fill's backup places and padlock were damaged and set aside, so the backup must be set up again.
     pub const VAULT_BACKUP_DAMAGED: &str = "notice.vault-backup-damaged";
+    /// Asks once whether Translate may send the selected text to the site, with Yes and Later.
+    pub const TRANSLATE_ASK: &str = "notice.translate-ask";
+    /// The translate page did not open.
+    pub const TRANSLATE_FAILED: &str = "notice.translate-failed";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 31] = [
+    pub const ALL_KEYS: [&str; 33] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -207,6 +213,8 @@ pub mod keys {
         VAULT_CHECK,
         VAULT_OFFER,
         VAULT_BACKUP_DAMAGED,
+        TRANSLATE_ASK,
+        TRANSLATE_FAILED,
     ];
 }
 

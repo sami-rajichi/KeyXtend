@@ -55,8 +55,8 @@ jobs:
       # checks that this list is the default features without `mod-scroll`.
       - run: >-
           cargo clippy -p keyxtend --all-targets --no-default-features
-          --features mod-clipboard,mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict,mod-vault --locked
-          -- -D warnings
+          --features mod-clipboard,mod-keyboard,mod-layouts,mod-mouse,mod-power,mod-predict,mod-selection,mod-vault
+          --locked -- -D warnings
       - run: cargo xtask tidy
       # Lays out the bundled fonts and icons where the Qt Quick tests load them (target/tmp/qmltest-assets).
       - run: cargo test -p kx-ui --test texts --locked
@@ -91,9 +91,9 @@ jobs:
       # Every workspace package sits in exactly one list; the first step fails when a package is missing or extra.
       PACKAGES: >-
         -p keyxtend-worker -p kx-crypto -p kx-gates -p kx-ipc -p kx-kernel -p kx-mod-clipboard -p kx-mod-keyboard
-        -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power -p kx-mod-predict -p kx-mod-scroll -p kx-mod-vault
-        -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings -p kx-target-window
-        -p kx-test-support -p kx-theme -p xtask
+        -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power -p kx-mod-predict -p kx-mod-scroll -p kx-mod-selection
+        -p kx-mod-vault -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings
+        -p kx-target-window -p kx-test-support -p kx-theme -p xtask
       NO_QT: -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:

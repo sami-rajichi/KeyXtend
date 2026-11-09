@@ -4,6 +4,7 @@
 mod aim;
 mod assist;
 mod clip;
+mod edit;
 mod fill;
 mod fit;
 mod held;
@@ -16,7 +17,7 @@ mod power;
 mod words;
 
 pub(super) use held::Went;
-pub(super) use lines::ToPredict;
+pub(super) use lines::Queued;
 pub(super) use words::WordTo;
 
 use super::STATE;

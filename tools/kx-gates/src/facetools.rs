@@ -1,7 +1,6 @@
-//! The running face's tool buttons, pill and overlay: found by title, clicked only where they are on top.
+//! The running face's tool buttons and windows: found by title, clicked only where they are on top.
 #![cfg(windows)]
 
-use kx_mod_keyboard::Area;
 use kx_platform_windows::screen;
 use spike_core::config::ToolButton;
 use spike_core::place;
@@ -59,19 +58,6 @@ impl FaceWin {
     pub fn button(&self, ctx: &Ctx, b: ToolButton) -> POINT {
         let at = place::tool_box(ctx.spike, b).unwrap_or_default();
         mouse::centre(&at, self.face.origin, self.face.dpi)
-    }
-
-    /// A spot on the status line, which types nothing; a click there gives the face the last input, as a user's click would.
-    pub fn quiet_spot(&self, ctx: &Ctx) -> POINT {
-        let kb = &ctx.spike.keyboard;
-        let (_, top) = place::face_size(kb);
-        let line = Area {
-            x: f64::from(kb.gap_px),
-            y: top,
-            w: f64::from(kb.key_px),
-            h: f64::from(kb.font_px),
-        };
-        mouse::centre(&line, self.face.origin, self.face.dpi)
     }
 
     /// Clicks tool button `b`.

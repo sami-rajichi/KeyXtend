@@ -69,7 +69,11 @@ fn up(at: Point) -> PointerEvent {
 }
 
 fn lift(button: Button, at: Point) -> PointerEvent {
-    PointerEvent::Up { button, at }
+    PointerEvent::Up {
+        button,
+        at,
+        ours: false,
+    }
 }
 
 fn mv(at: Point) -> PointerEvent {

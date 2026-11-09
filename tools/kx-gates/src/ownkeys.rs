@@ -89,6 +89,13 @@ pub fn ours(desk: &dyn Desk, app: &Opened) -> Result<(), String> {
     })
 }
 
+/// Runs `f` on `app` once `ours` allows it on `desk`, as a read of its text or a move of its window must reach only
+/// the gate's own tab; else nothing runs.
+pub fn on_ours<T>(desk: &dyn Desk, app: &Opened, f: impl FnOnce() -> T) -> Result<T, String> {
+    ours(desk, app)?;
+    Ok(f())
+}
+
 /// Sends `vks` to `app` on `desk` once `ours` allows it; else no key goes out.
 pub fn send(desk: &dyn Desk, app: &Opened, vks: &[u16]) -> Result<(), String> {
     ours(desk, app)?;
@@ -98,6 +105,15 @@ pub fn send(desk: &dyn Desk, app: &Opened, vks: &[u16]) -> Result<(), String> {
 /// Sends each of `combos` to `app` on `desk` in turn, checking `ours` before each, so a tab that changes stops the rest.
 pub fn each(desk: &dyn Desk, app: &Opened, combos: &[&[u16]]) -> Result<(), String> {
     combos.iter().try_for_each(|vks| send(desk, app, vks))
+}
+
+/// Like `each`, with `gap_ms` after every combo, so an app that handles a key late takes them in turn.
+pub fn paced(desk: &dyn Desk, app: &Opened, combos: &[&[u16]], gap_ms: u64) -> Result<(), String> {
+    combos.iter().try_for_each(|vks| {
+        send(desk, app, vks)?;
+        desk.settle(gap_ms);
+        Ok(())
+    })
 }
 
 /// Runs `act`, a click that pastes into `app`, on `desk` once `ours` allows it; else nothing is clicked.

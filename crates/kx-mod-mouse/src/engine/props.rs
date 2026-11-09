@@ -119,9 +119,17 @@ fn presses(notes: &[Note]) -> usize {
         .count()
 }
 
-/// `notes` with every press note left out.
+/// How many releases `notes` tell.
+fn releases(notes: &[Note]) -> usize {
+    notes
+        .iter()
+        .filter(|n| matches!(n, Note::Released { .. }))
+        .count()
+}
+
+/// `notes` with every press and release note left out.
 fn unpressed(notes: &[Note]) -> Vec<Note> {
-    let kept = |n: &&Note| !matches!(n, Note::Pressed { .. });
+    let kept = |n: &&Note| !matches!(n, Note::Pressed { .. } | Note::Released { .. });
     notes.iter().filter(kept).copied().collect()
 }
 
@@ -222,22 +230,23 @@ proptest! {
     }
 
     /// While presses are wanted with no mode, latch or scroll, every event passes, nothing is sent, and only presses
-    /// are noted, each once.
+    /// and releases are noted, each once.
     #[test]
-    fn wanted_alone_passes_everything_and_notes_each_press_once(steps in run(physical())) {
+    fn wanted_alone_passes_everything_and_notes_each_press_and_release_once(steps in run(physical())) {
         let mut rig = Rig::play(&[(0, Step::Wanted(true))], false, Model::Strict);
         rig.more(&steps);
         prop_assert_eq!((rig.dropped, rig.sent.len()), (0, 0));
         prop_assert!(rig.e.needs_hook());
         prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
-        prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
-        prop_assert!(rig.notes.iter().all(|n| matches!(n, Note::Pressed { .. })), "{:?}", rig.notes);
+        prop_assert_eq!((presses(&rig.notes), releases(&rig.notes)), (rig.pressed, rig.released));
+        let told = |n: &Note| matches!(n, Note::Pressed { .. } | Note::Released { .. });
+        prop_assert!(rig.notes.iter().all(told), "{:?}", rig.notes);
     }
 
-    /// Each physical press is noted once, at its own event, while scrolling or wanted and never otherwise, whatever the
-    /// modes do with it; while presses are wanted the engine always needs the hook.
+    /// Each physical press is noted once, at its own event, while scrolling or wanted, and each release once while
+    /// wanted, never otherwise and whatever the modes do with them; while wanted the engine always needs the hook.
     #[test]
-    fn presses_are_noted_once_and_only_while_scrolling_or_wanted(
+    fn presses_and_releases_are_noted_once_each_and_never_otherwise(
         rclick in any::<bool>(),
         steps in mixed(),
     ) {
@@ -246,6 +255,7 @@ proptest! {
         rig.finish();
         prop_assert_eq!(rig.misnoted, 0, "{:?}", rig.notes);
         prop_assert_eq!(presses(&rig.notes), rig.pressed, "{:?}", rig.notes);
+        prop_assert_eq!(releases(&rig.notes), rig.released, "{:?}", rig.notes);
     }
 
     /// Wanting presses never changes what happens to an event: the same input in order, drops, OS state and other

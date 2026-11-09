@@ -14,7 +14,7 @@ mod focus;
 mod kinds;
 #[cfg(test)]
 #[cfg(windows)]
-mod testedit;
+pub(crate) mod testedit;
 #[cfg(windows)]
 mod uia;
 #[cfg(windows)]
@@ -27,6 +27,12 @@ use thiserror::Error;
 
 #[cfg(any(windows, test))]
 pub(crate) use kinds::{Facts, kind};
+#[cfg(all(test, windows))]
+pub(crate) use uia::TEXT_CALLS;
+#[cfg(windows)]
+pub(crate) use uia::{
+    Caret, Held, box_id, caret_of, failed, focused, named, range_fixed, top, value_fixed,
+};
 #[cfg(windows)]
 pub use win::WinFieldWatch;
 
@@ -136,7 +142,7 @@ impl Table {
 }
 
 /// Whether `class` is in `names`, ignoring case as Windows does; an empty class never is.
-fn listed(names: &[String], class: &str) -> bool {
+pub(crate) fn listed(names: &[String], class: &str) -> bool {
     !class.is_empty() && names.iter().any(|n| n.eq_ignore_ascii_case(class))
 }
 

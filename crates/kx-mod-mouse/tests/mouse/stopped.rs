@@ -2,7 +2,7 @@
 //! debug for one only scrolling or presses held.
 
 use crate::logs::{Fields, MESSAGE, lines_of};
-use crate::rig::{A, B, Rig, SHIFT, T0, T1, T2, down, moved, up};
+use crate::rig::{A, B, Rig, SHIFT, T0, T1, T2, down, moved, predicting, up};
 use kx_mod_mouse::{Msg, STOPPED_LINE};
 use kx_module_api::ports::{HookStats, Toggle};
 use tracing::Level;
@@ -93,10 +93,10 @@ fn a_run_a_mode_or_a_latch_held_logs_at_info() {
         assert!(!rig.hook.running(), "the drop ended it");
     });
     let toggled = stop_levels(|rig| {
-        rig.send(Msg::Presses(true));
+        rig.send(Msg::Presses(predicting(true)));
         rig.toggle(Toggle::Grab);
         rig.toggle(Toggle::Grab);
-        rig.send(Msg::Presses(false));
+        rig.send(Msg::Presses(predicting(false)));
         rig.settle(T0);
     });
     let latched = stop_levels(|rig| {
@@ -116,7 +116,7 @@ fn a_run_a_mode_or_a_latch_held_logs_at_info() {
 #[test]
 fn a_run_only_scrolling_or_presses_held_logs_at_debug() {
     let scrolled = stop_levels(quiet(Msg::Scroll));
-    let pressed = stop_levels(quiet(Msg::Presses));
+    let pressed = stop_levels(quiet(|on| Msg::Presses(predicting(on))));
     let debug = vec![Level::DEBUG];
     assert_eq!(
         [scrolled, pressed],

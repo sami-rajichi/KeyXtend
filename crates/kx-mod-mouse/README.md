@@ -1,6 +1,6 @@
 # kx-mod-mouse
 
-The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS. While the scroll pad scrolls it keeps the hook on, so the badge follows the pointer and a press can stop the scroll (ADR-0029). While word prediction wants presses it keeps the hook on too, so a click outside our windows ends the word (ADR-0033).
+The mouse module: Right-click by holding still, Grab, and modifier + click (spec §5.1). Its hold engine runs on the platform's pointer hook, which decides each mouse event on the hook's thread (ADR-0027), so the module never talks to the OS. While the scroll pad scrolls it keeps the hook on, so the badge follows the pointer and a press can stop the scroll (ADR-0029). While word prediction wants presses it keeps the hook on too, so a click outside our windows ends the word (ADR-0033). Each asker (word prediction, the selection chips) asks on its own, and while any asker wants them each press and release is told (ADR-0041 decision 6).
 
 ## Services
 
@@ -8,7 +8,7 @@ The mouse module: Right-click by holding still, Grab, and modifier + click (spec
 |---|---|---|
 | `PointerHook` (`PointerHookKey`) | needs | Runs the hold engine on a system-wide pointer hook, only while a mode, a latched modifier, scrolling, wanted presses or a carry needs it. |
 
-It provides no service; it talks to the keyboard, the scroll module, word prediction and the UI over the bus (`kx_module_api::ports` assist, scroll and words events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged`, `PressesWanted` from word prediction, `PanelPressesWanted` from the keyboard while a panel is open (ADR-0040), and `ScrollChanged`, where the pad scrolls while the module is live and has a way. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, and `PointerPressed` for each press while the pad scrolls or either source wants presses, so one going off never silences the other; at start it asks for the latches (`LatchesAsk`), the pad's state (`ScrollAsk`) and whether presses are wanted (`PressesAsk`), so any start order works.
+It provides no service; it talks to the keyboard, the scroll module, word prediction, the selection chips and the UI over the bus (`kx_module_api::ports` assist, scroll, words and pointer events). It hears `AssistToggle`, `AssistAsk`, `LatchesChanged`, `PressesWanted` from each asker (kept as a set of askers), `PanelPressesWanted` from the keyboard while a panel is open (ADR-0040), and `ScrollChanged`, where the pad scrolls while the module is live and has a way. It tells `AssistChanged`, `AssistNote`, `LatchesUsed`, `PointerMoved` while a mode is on or the pad scrolls, `PointerPressed` for each press while the pad scrolls or an asker or the panel wants presses, and `PointerReleased`, with no point, for each release while an asker or the panel wants them, so one going off never silences another; at start it asks for the latches (`LatchesAsk`), the pad's state (`ScrollAsk`) and whether presses are wanted (`PressesAsk`), so any start order works.
 
 ## Capabilities
 

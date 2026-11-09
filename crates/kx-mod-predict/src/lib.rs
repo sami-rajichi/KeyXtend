@@ -150,7 +150,10 @@ fn run(actor: Actor, inbox: &Receiver<Msg>, bus: &Bus) {
         };
         // The module holds every gate these need, so none is refused.
         let _ = bus.publish(&stopped);
-        let _ = bus.publish(&PressesWanted { on: false });
+        let _ = bus.publish(&PressesWanted {
+            asker: manifest::ASKER,
+            on: false,
+        });
         let _ = bus.publish(&Notice::about(keys::MODULE_FAILED, ID));
         resume_unwind(panic);
     }

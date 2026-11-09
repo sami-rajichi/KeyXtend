@@ -2,12 +2,10 @@
 //! while either wants them, and one going off never silences the other.
 
 use crate::live::{Live, WAIT, hear, on, synced};
-use crate::rig::{A, Heard, Rig, T0, T1, T2, down, up};
+use crate::rig::{A, Heard, Rig, T0, T1, T2, down, predicting, up};
 use kx_mod_mouse::Msg;
 use kx_module_api::Bus;
-use kx_module_api::ports::{
-    AssistChanged, PanelPressesWanted, PointerPressed, PressesAsk, PressesWanted,
-};
+use kx_module_api::ports::{AssistChanged, PanelPressesWanted, PointerPressed, PressesAsk};
 
 /// A press outside our windows, as told on the bus.
 const AWAY: Heard = Heard::Pressed(PointerPressed { ours: false });
@@ -31,7 +29,7 @@ fn told(rig: &mut Rig, now: kx_module_api::Mono) -> bool {
 fn presses_are_told_while_either_source_wants_them() {
     for (prediction, panel) in [(false, false), (true, false), (false, true), (true, true)] {
         let mut rig = started();
-        rig.send(Msg::Presses(prediction));
+        rig.send(Msg::Presses(predicting(prediction)));
         rig.send(Msg::PanelPresses(panel));
         rig.settle(T0);
         let want = prediction || panel;
@@ -45,13 +43,13 @@ fn presses_are_told_while_either_source_wants_them() {
 #[test]
 fn the_panel_going_off_leaves_prediction_heard() {
     let mut rig = started();
-    rig.send(Msg::Presses(true));
+    rig.send(Msg::Presses(predicting(true)));
     rig.send(Msg::PanelPresses(true));
     rig.send(Msg::PanelPresses(false));
     rig.settle(T0);
     assert!(rig.hook.running());
     assert!(told(&mut rig, T1));
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T2);
     assert!(!rig.hook.running(), "nothing wants them now");
 }
@@ -60,8 +58,8 @@ fn the_panel_going_off_leaves_prediction_heard() {
 fn prediction_going_off_leaves_the_panel_heard() {
     let mut rig = started();
     rig.send(Msg::PanelPresses(true));
-    rig.send(Msg::Presses(true));
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(true)));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T0);
     assert!(rig.hook.running());
     assert!(told(&mut rig, T1));
@@ -76,7 +74,7 @@ fn a_repeated_word_from_one_source_changes_nothing() {
     rig.send(Msg::PanelPresses(true));
     rig.send(Msg::PanelPresses(true));
     assert_eq!(rig.hook.starts(), 1);
-    rig.send(Msg::Presses(false));
+    rig.send(Msg::Presses(predicting(false)));
     rig.settle(T0);
     assert!(
         told(&mut rig, T1),
@@ -130,13 +128,13 @@ fn both_sources_are_heard_on_the_bus_at_a_late_start() {
     live.bus.publish(&PanelPressesWanted { on: true }).unwrap();
     synced(&live, &states);
     assert!(live.hook.running(), "the panel's answer starts the hook");
-    live.bus.publish(&PressesWanted { on: true }).unwrap();
+    live.bus.publish(&predicting(true)).unwrap();
     live.bus.publish(&PanelPressesWanted { on: false }).unwrap();
     synced(&live, &states);
     live.hook.settle(T0);
     synced(&live, &states);
     assert!(live.hook.running(), "prediction still wants them");
-    live.bus.publish(&PressesWanted { on: false }).unwrap();
+    live.bus.publish(&predicting(false)).unwrap();
     synced(&live, &states);
     live.hook.settle(T1);
     synced(&live, &states);

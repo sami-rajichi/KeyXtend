@@ -1,13 +1,12 @@
 //! The face's side of voice: the Mic button, what the caption bar shows, and one session per face.
 
-use kx_platform_windows::screen::{dpi_of, work_area};
+use kx_platform_windows::screen::{dpi_of, physical, work_area};
 use kx_platform_windows::{langinfo, layouts};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowRect};
 
 use crate::config::SpikeConfig;
 use crate::pt::Pt;
-use crate::selwatch::PillPx;
 use crate::typer::Typer;
 use crate::voicecfg::VoiceConfig;
 pub use crate::voiceproto::{Cmd, Event};
@@ -227,16 +226,27 @@ pub fn front_lang(v: &VoiceConfig) -> String {
     v.language(langinfo::lang_id(layout)).to_string()
 }
 
+/// The caption bar's width, height and bottom gap, in logical pixels.
+#[derive(Clone, Copy, Debug)]
+struct BarPx([f32; 3]);
+
+impl BarPx {
+    /// The same width, height and gap in physical pixels at `dpi`.
+    fn at(self, dpi: u32) -> [i32; 3] {
+        self.0.map(|v| physical(v, dpi))
+    }
+}
+
 /// Where the caption bar goes and its size, in physical pixels, on the screen of the app in front.
-/// `px` is the width, height and bottom gap in logical pixels, converted like the pill's.
+/// `px` is the width, height and bottom gap in logical pixels (`BarPx`).
 pub fn bar_place(px: [f32; 3]) -> Result<(Pt, (i32, i32)), String> {
     let mut r = RECT::default();
     // SAFETY: plain query; on failure `r` stays empty and the nearest screen is used.
     let _ = unsafe { GetWindowRect(GetForegroundWindow(), &mut r) };
     let work = work_area(&r).map_err(|e| e.to_string())?;
-    let size = PillPx(px).at(dpi_of(&r));
-    let at = screen::bottom_centre(&work, (size.w, size.h), size.gap);
-    Ok((at, (size.w, size.h)))
+    let [w, h, gap] = BarPx(px).at(dpi_of(&r));
+    let at = screen::bottom_centre(&work, (w, h), gap);
+    Ok((at, (w, h)))
 }
 
 #[cfg(test)]

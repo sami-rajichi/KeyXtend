@@ -8,6 +8,9 @@ shortcuts = [
     { id = "copy", steps = [["ctrl", "c"]] },
     { id = "paste", steps = [["ctrl", "v"]] },
     { id = "cut", steps = [["ctrl", "x"]] },
+    # A terminal's copy and paste, which never stop a program as Ctrl+C can; only the keyboard's edit route sends them.
+    { id = "copy-term", steps = [["ctrl", "insert"]] },
+    { id = "paste-term", steps = [["shift", "insert"]] },
     { id = "select-all", steps = [["ctrl", "a"]] },
     { id = "undo", steps = [["ctrl", "z"]] },
     { id = "redo", steps = [["ctrl", "y"]] },

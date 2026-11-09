@@ -1,6 +1,6 @@
 [package]
 name = "spike-core"
-description = "P1 spike core: pill, snip, voice and the gates' face facts."
+description = "P1 spike core: snip, voice and the gates' face facts."
 version.workspace = true
 edition.workspace = true
 publish.workspace = true

@@ -11,11 +11,11 @@ use kx_mod_keyboard::{
     BoardSpec, ID, KeyboardModule, KeyboardSettings, MANIFEST, Ports, Tapped, Typing,
 };
 use kx_module_api::Capability::{
-    InjectInput, KeyboardUi, ReadClipboard, ReadFocusedText, WriteClipboard,
+    InjectInput, KeyboardUi, ReadClipboard, ReadFocusedText, Selection, WriteClipboard,
 };
 use kx_module_api::ports::{
-    ClipKey, ClipPanel, FaceAction, InputInjectorKey, KeyId, KeyboardFace, KeyboardFaceKey,
-    LayoutsKey, PasteAsk, Scan, ShortcutsKey, TextRoute, TypeWord,
+    ClipKey, ClipPanel, EditAsk, FaceAction, InputInjectorKey, KeyId, KeyboardFace,
+    KeyboardFaceKey, LayoutsKey, PasteAsk, Scan, ShortcutsKey, TextRoute, TypeWord,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Module, ModuleCx, ModuleError, Redacted, ServiceError,
@@ -84,6 +84,15 @@ fn without_write_clipboard_it_cannot_hear_paste_requests() {
     store(&mut host, None);
     host.granted = all_but(WriteClipboard);
     let refused = EventError::NotGranted(PasteAsk::NAME, WriteClipboard);
+    assert_eq!(start(&mut host), Err(ModuleError::Event(refused)));
+}
+
+#[test]
+fn without_selection_it_cannot_hear_edit_requests() {
+    let mut host = fake(None);
+    store(&mut host, None);
+    host.granted = all_but(Selection);
+    let refused = EventError::NotGranted(EditAsk::NAME, Selection);
     assert_eq!(start(&mut host), Err(ModuleError::Event(refused)));
 }
 

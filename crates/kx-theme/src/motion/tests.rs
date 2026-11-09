@@ -49,6 +49,39 @@ fn reduced_motion_keeps_the_curves_but_takes_no_time() {
         assert_eq!(t.bez, m.full.moves[name].bez, "{name}");
     }
     assert_eq!(m.reduced.amount, m.full.amount);
+    assert_eq!(m.reduced.shows, m.full.shows, "time to read, not a move");
+}
+
+#[test]
+fn the_strip_pops_in_shows_its_tick_and_fades_as_the_mock_up_does() {
+    let m = load().expect("motion.toml loads");
+    let (swift, ease) = (
+        [0.2, 0.8, 0.2, 1.0, 1.0, 1.0],
+        [0.25, 0.1, 0.25, 1.0, 1.0, 1.0],
+    );
+    let pop = Timed {
+        ms: 180,
+        bez: swift,
+    };
+    assert_eq!(m.full.moves["chips"], pop, ".chips popIn .18s");
+    let fade = Timed { ms: 160, bez: ease };
+    assert_eq!(m.full.moves["chips_fade"], fade, ".chips.go .16s");
+    assert_eq!(m.full.shows["chips_done"], 650, "the tick shows 650 ms");
+    assert_eq!(
+        m.full.amount.fade_rise_px, 3.0,
+        ".chips.go translateY(-3px)"
+    );
+    let reduced = &m.reduced;
+    let gone = (reduced.moves["chips"].ms, reduced.moves["chips_fade"].ms);
+    assert_eq!(gone, (0, 0), "no pop and no fade");
+    assert_eq!(reduced.shows["chips_done"], 650, "the tick still shows");
+    let e = parse(&text().replacen("chips_done = 650", "chips_done = 0", 1)).expect_err("0");
+    assert!(e.contains("shows.chips_done"), "{e}");
+    let e = parse(&text().replacen("chips_done =", "chip_done =", 1)).expect_err("typo");
+    assert!(e.contains("shows.chips_done"), "{e}");
+    let e =
+        parse(&text().replacen("fade_rise_px = 3.0", "fade_rise_px = -1.0", 1)).expect_err("<0");
+    assert!(e.contains("fade_rise_px"), "{e}");
 }
 
 #[test]

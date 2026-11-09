@@ -14,7 +14,6 @@ pub mod place;
 pub mod popspot;
 pub mod pt;
 pub mod screen;
-pub mod selwatch;
 pub mod sendkeys;
 pub mod snip;
 pub mod typer;

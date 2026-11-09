@@ -21,13 +21,25 @@ use windows::core::BOOL;
 use super::{Facts, kind, table};
 use crate::uia::{class_of, span, style_of, vector};
 use crate::window::foreground;
-use caret::{Caret, Found, Held, caret_of};
+use caret::Found;
+pub(crate) use caret::{Caret, Held, caret_of};
 
 mod caret;
 
 /// What UI Automation and Win32 tell about `el`; a part that cannot be read reads as unknown. Never its text.
-#[allow(unsafe_code, reason = "Plain UI Automation reads.")]
 pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
+    let (editable, read_only) = patterns(el);
+    Facts {
+        editable,
+        read_only,
+        ..named(el)
+    }
+}
+
+/// Like `facts`, with its patterns left unread as no: its control type, password flag, classes and style, which the
+/// selection watch reads too.
+#[allow(unsafe_code, reason = "Plain UI Automation reads.")]
+pub(crate) fn named(el: &IUIAutomationElement) -> Facts {
     // SAFETY: plain property reads on a live element; a failure reads as unknown.
     let (control, password, hwnd) = unsafe {
         (
@@ -36,20 +48,14 @@ pub(super) fn facts(el: &IUIAutomationElement) -> Facts {
             el.CurrentNativeWindowHandle().unwrap_or_default(),
         )
     };
-    let (editable, read_only) = patterns(el);
-    let top = if hwnd.is_invalid() {
-        foreground()
-    } else {
-        root(hwnd)
-    };
+    let top = top_of(hwnd);
     Facts {
         control,
         password,
         class: class_of(hwnd),
         style: style_of(hwnd),
         top: class_of(top),
-        editable,
-        read_only,
+        ..Facts::default()
     }
 }
 
@@ -71,6 +77,23 @@ fn probed(el: &IUIAutomationElement) -> (FieldKind, Option<Found>) {
     (kind, caret)
 }
 
+/// The top-level window of an element whose own window is `hwnd`; the window in front when it has none.
+fn top_of(hwnd: HWND) -> HWND {
+    if hwnd.is_invalid() {
+        foreground()
+    } else {
+        root(hwnd)
+    }
+}
+
+/// The top-level window `el` sits in.
+#[allow(unsafe_code, reason = "A plain UI Automation property read.")]
+pub(crate) fn top(el: &IUIAutomationElement) -> HWND {
+    // SAFETY: a plain property read on a live element; a failure reads as no window of its own.
+    let hwnd = unsafe { el.CurrentNativeWindowHandle() }.unwrap_or_default();
+    top_of(hwnd)
+}
+
 /// The top-level window `hwnd` sits in.
 #[allow(unsafe_code, reason = "A plain window query.")]
 fn root(hwnd: HWND) -> HWND {
@@ -80,30 +103,42 @@ fn root(hwnd: HWND) -> HWND {
 
 /// Whether `el` is editable (a writable value pattern or a text pattern answers) and whether its value pattern says
 /// it is read-only.
-#[allow(unsafe_code, reason = "Plain UI Automation pattern reads.")]
+#[allow(unsafe_code, reason = "A plain UI Automation pattern read.")]
 fn patterns(el: &IUIAutomationElement) -> (bool, bool) {
-    // SAFETY: plain pattern and property reads on a live element; a failure reads as no.
-    let (fixed, text) = unsafe {
+    let fixed = value_fixed(el);
+    // SAFETY: a plain pattern read on a live element; a failure reads as no.
+    let text = unsafe { el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId) };
+    (fixed == Some(false) || text.is_ok(), fixed == Some(true))
+}
+
+/// Whether `el`'s value pattern says it is read-only; `None` without one, or when it cannot say.
+#[allow(unsafe_code, reason = "Plain UI Automation pattern reads.")]
+pub(crate) fn value_fixed(el: &IUIAutomationElement) -> Option<bool> {
+    // SAFETY: plain pattern and property reads on a live element; a failure reads as `None`.
+    let fixed = unsafe {
         let value = el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId);
-        let fixed = value.and_then(|v| v.CurrentIsReadOnly()).ok();
-        let text = el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId);
-        (fixed.map(BOOL::as_bool), text.is_ok())
+        value.and_then(|v| v.CurrentIsReadOnly())
     };
-    (fixed == Some(false) || text, fixed == Some(true))
+    fixed.ok().map(BOOL::as_bool)
 }
 
 /// Whether the text of `range` says it is read-only; a mixed or missing answer says no.
-#[allow(unsafe_code, reason = "A UI Automation text attribute read.")]
 fn read_only_range(range: &IUIAutomationTextRange) -> bool {
+    range_fixed(range) == Some(true)
+}
+
+/// Whether the text of `range` says it is read-only; `None` for a mixed or missing answer. No text is read.
+#[allow(unsafe_code, reason = "A UI Automation text attribute read.")]
+pub(crate) fn range_fixed(range: &IUIAutomationTextRange) -> Option<bool> {
     // SAFETY: a plain call on a live range; no text is read.
-    let attr = unsafe { range.GetAttributeValue(UIA_IsReadOnlyAttributeId) };
-    attr.is_ok_and(|v| v.vt() == VT_BOOL && bool::try_from(&v).unwrap_or(false))
+    let attr = unsafe { range.GetAttributeValue(UIA_IsReadOnlyAttributeId) }.ok()?;
+    (attr.vt() == VT_BOOL).then(|| bool::try_from(&attr).ok())?
 }
 
 #[cfg(test)]
 thread_local! {
     /// How many calls this thread made into a box's caret or words, for the tests that prove a closed box gets none.
-    pub(super) static TEXT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    pub(crate) static TEXT_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Counts one call into a box's caret or words, in tests.
@@ -114,7 +149,7 @@ fn text_call() {
 
 /// A hash of `el`'s runtime id, which names it while it lives; 0 when UI Automation gives none.
 #[allow(unsafe_code, reason = "Reads an element's runtime id array.")]
-pub(super) fn box_id(el: &IUIAutomationElement) -> u64 {
+pub(crate) fn box_id(el: &IUIAutomationElement) -> u64 {
     // SAFETY: a plain call on a live element.
     let Ok(array) = (unsafe { el.GetRuntimeId() }) else {
         return 0;
@@ -132,7 +167,7 @@ pub(super) fn box_id(el: &IUIAutomationElement) -> u64 {
 
 /// The element with the keyboard focus, in any app.
 #[allow(unsafe_code, reason = "A UI Automation lookup.")]
-pub(super) fn focused(auto: &IUIAutomation) -> Result<IUIAutomationElement, FieldError> {
+pub(crate) fn focused(auto: &IUIAutomation) -> Result<IUIAutomationElement, FieldError> {
     // SAFETY: a plain call on our live client.
     unsafe { auto.GetFocusedElement() }.map_err(failed)
 }
@@ -243,7 +278,7 @@ fn units(chars: usize) -> usize {
     clippy::needless_pass_by_value,
     reason = "It takes what `map_err` hands over."
 )]
-fn failed(e: windows::core::Error) -> FieldError {
+pub(crate) fn failed(e: windows::core::Error) -> FieldError {
     if e.code().0.cast_unsigned() == UIA_E_TIMEOUT {
         FieldError::TimedOut
     } else {

@@ -5,6 +5,7 @@ mod assist;
 mod bursts;
 mod clip;
 mod edges;
+mod edit;
 mod face;
 mod fill;
 mod fit;

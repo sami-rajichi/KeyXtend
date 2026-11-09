@@ -15,10 +15,8 @@ use kx_platform_windows::uiaccess;
 use kx_settings::{peek, peek_section};
 use spike_core::weak::Job;
 
-pub use parts::{Closed, holds};
-use parts::{
-    SLOW, START_MENU, ended_at_start, gone, not_asked, not_back, plain, to_restore, warned,
-};
+pub use parts::{Closed, holds, warned};
+use parts::{SLOW, START_MENU, ended_at_start, gone, not_asked, not_back, plain, to_restore};
 
 use crate::apps::Ctx;
 use crate::cfgfile::P4_FILE;

@@ -3,7 +3,7 @@
 //! shelf each reach only the modules holding their gate.
 
 use super::{defaults, features, holders, reached};
-use crate::rig::Rig;
+use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
 use kx_module_api::ports::{
     Clipboard, ClipboardKey, ClipboardWriter, ClipboardWriterKey, SealedShelf, SealedShelfKey,
@@ -19,7 +19,7 @@ const CLIP_FEATURE: &str = "mod-clipboard";
 #[test]
 fn mod_clipboard_is_a_default_feature_and_the_default_build_ships_it() {
     assert!(defaults(&features()).contains(&CLIP_FEATURE));
-    let shipped = modules(&Rig::new().load().hub);
+    let shipped = modules(&Rig::new().load().hub, OS);
     let ids: Vec<ModuleId> = shipped.iter().map(|m| m.manifest().id).collect();
     assert!(ids.contains(&kx_mod_clipboard::ID), "{ids:?}");
 }

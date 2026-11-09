@@ -1,17 +1,17 @@
 //! The face on the kernel's bus (spec §4.4, §5.1, §5.2, §6, §7, §8.1, §8.5): the side keys ask the mouse module to flip
 //! a mode and the power module for its dialog, the mouse, scroll, power, clipboard and vault modules' states come back,
 //! the latched set goes out for modifier + click, the typing mode for word prediction, the wish for presses for the
-//! panels' aim, picked words come in, which a press outside our windows stops, and so do paste and fill requests.
-//! Handlers run on the sender's thread, so nothing is sent while the face's lock is held.
+//! panels' aim, picked words come in, which a press outside our windows stops, and so do paste, edit and fill
+//! requests. Handlers run on the sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
 use super::outbox::Outbox;
 use crate::panel::Panel;
 use kx_module_api::ports::{
-    AssistAsk, AssistChanged, AssistToggle, ClipLine, ClipPanel, FillAsk, FillLine, FillLive,
-    FillPanel, FillType, HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged, LatchesUsed,
-    PanelPressesWanted, PasteAsk, PointerPressed, PowerAsk, PowerAsked, PowerChanged, PressesAsk,
-    Scan, ScrollAsk, ScrollChanged, Toggle, TypeWord, TypingMode, TypingModeAsk,
+    AssistAsk, AssistChanged, AssistToggle, ClipLine, ClipPanel, EditAsk, FillAsk, FillLine,
+    FillLive, FillPanel, FillType, HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged,
+    LatchesUsed, PanelPressesWanted, PasteAsk, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
+    PressesAsk, Scan, ScrollAsk, ScrollChanged, Toggle, TypeWord, TypingMode, TypingModeAsk,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -166,14 +166,14 @@ impl Face {
 }
 
 /// Hears the mouse, scroll, power, clipboard and vault modules' states, the latch events, the mode and presses asks,
-/// picked words, pointer presses, panel lines, paste requests and fills for `face` until the module stops, then tells
-/// the latched set and typing mode, forgets the five modules' states and asks for them, as each may have missed the
-/// others while it was down.
+/// picked words, pointer presses, panel lines, paste and edit requests and fills for `face` until the module stops,
+/// then tells the latched set and typing mode, forgets the five modules' states and asks for them, as each may have
+/// missed the others while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, `ReadFocusedText`, which
 /// picked words and the mode ask need, `ReadClipboard`, which the panel's state needs, `WriteClipboard`, which paste
-/// requests need, or `Vault`, which Quick-fill's state and fills need.
+/// requests need, `Vault`, which Quick-fill's state and fills need, or `Selection`, which edit requests need.
 pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
@@ -184,6 +184,21 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &PointerPressed| f.pressed(*e))?;
     on(cx, face, |f, _: &TypingModeAsk| f.tell_mode())?;
     on(cx, face, |f, _: &PressesAsk| f.tell_presses())?;
+    panels(cx, face)?;
+    face.tell_all();
+    face.forget();
+    cx.bus().publish(&AssistAsk)?;
+    cx.bus().publish(&ScrollAsk)?;
+    cx.bus().publish(&PowerAsk)?;
+    cx.bus().publish(&HistoryAsk)?;
+    cx.bus().publish(&FillAsk)
+}
+
+/// Hears our panels' states and lines, the history chord's wish, and the paste, edit and fill requests for `face`.
+///
+/// # Errors
+/// `EventError::NotGranted` as for `listen`.
+fn panels(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &ClipPanel| {
         f.heard_panel(Panel::Clip, e.open);
     })?;
@@ -194,6 +209,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
         f.lock().heard_history(e.on);
     })?;
     on(cx, face, |f, e: &PasteAsk| f.paste(e.round))?;
+    on(cx, face, |f, e: &EditAsk| f.edit(*e))?;
     on(cx, face, |f, e: &FillLive| {
         f.lock().heard_fill(*e);
         f.pour();
@@ -205,14 +221,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &FillLine| {
         f.heard_line(Panel::Fill, &e.0);
     })?;
-    on(cx, face, |f, e: &FillType| f.fill(e))?;
-    face.tell_all();
-    face.forget();
-    cx.bus().publish(&AssistAsk)?;
-    cx.bus().publish(&ScrollAsk)?;
-    cx.bus().publish(&PowerAsk)?;
-    cx.bus().publish(&HistoryAsk)?;
-    cx.bus().publish(&FillAsk)
+    on(cx, face, |f, e: &FillType| f.fill(e))
 }
 
 /// Calls `then` with the face for each `E` on the bus, while the face lives.

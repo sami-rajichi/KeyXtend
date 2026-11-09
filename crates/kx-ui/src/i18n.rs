@@ -23,7 +23,8 @@ pub struct Lang {
     pub rtl: bool,
     /// Its main Fluent file, compiled in.
     pub ftl: &'static str,
-    /// Its feature files, the clipboard panel's and Quick-fill's, compiled in and loaded into the same texts.
+    /// Its feature files, the clipboard panel's, Quick-fill's and the selection strip's, compiled in and loaded into the
+    /// same texts.
     pub extra: &'static [&'static str],
 }
 
@@ -44,6 +45,7 @@ pub static LANGS: [Lang; 3] = [
         extra: &[
             include_str!("../i18n/clip/en.ftl"),
             include_str!("../i18n/fill/en.ftl"),
+            include_str!("../i18n/sel/en.ftl"),
         ],
     },
     Lang {
@@ -53,6 +55,7 @@ pub static LANGS: [Lang; 3] = [
         extra: &[
             include_str!("../i18n/clip/fr.ftl"),
             include_str!("../i18n/fill/fr.ftl"),
+            include_str!("../i18n/sel/fr.ftl"),
         ],
     },
     Lang {
@@ -62,6 +65,7 @@ pub static LANGS: [Lang; 3] = [
         extra: &[
             include_str!("../i18n/clip/ar.ftl"),
             include_str!("../i18n/fill/ar.ftl"),
+            include_str!("../i18n/sel/ar.ftl"),
         ],
     },
 ];

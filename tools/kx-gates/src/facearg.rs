@@ -1,18 +1,20 @@
 //! The keyboard argument: gates aimed at the product take its name, gates that still drive the frozen spike face take
-//! the face's, and `close` takes either; a gate's own names stay valid.
+//! the face's, and `close` takes either; a gate's own names stay valid, and a gate with only those takes nothing else.
 #![cfg(windows)]
 
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g22, g22bench, g22type, product};
+use crate::{
+    g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, g22bench, g22type, product,
+};
 
 /// Gates aimed at the product, which take its name.
-pub(crate) const PRODUCT_GATES: [&str; 13] = [
-    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g23", "g26", "g27", "close",
+pub(crate) const PRODUCT_GATES: [&str; 14] = [
+    "g2", "g3", "g4", "g8", "g9", "g10", "g11", "g12", "g13", "g19", "g23", "g26", "g27", "close",
 ];
 /// Gates that still drive the frozen spike face until their phase, which take its name.
-pub(crate) const FACE_GATES: [&str; 5] = ["g7", "g19", "g22", "g24", "close"];
+pub(crate) const FACE_GATES: [&str; 4] = ["g7", "g22", "g24", "close"];
 
 /// The keyboards `gate` takes: the product, the frozen face, both or none.
 fn keyboards(gate: &str) -> Vec<&'static str> {
@@ -34,17 +36,24 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g8predict::PREDICT,
             g8clip::CLIP,
         ],
-        "g19" => &[g19::CORE],
+        "g19" => &[
+            g19::CORE,
+            g19chips::READ,
+            g19chips::BESIDE,
+            g19chips::TERMINALS,
+            g19chips::LOOK,
+        ],
         "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
         _ => &[],
     }
 }
 
-/// Refuses a keyboard gate's name that is neither a keyboard it takes nor one of the gate's own names.
+/// Refuses a name that is neither a keyboard `gate` takes nor one of its own names; a gate with neither takes any.
 pub fn check(gate: &str, name: &str) -> Result<(), String> {
-    let keyboards = keyboards(gate);
-    let known = keyboards.contains(&name) || own_names(gate).contains(&name);
-    if !keyboards.is_empty() && !known {
+    let (keyboards, own) = (keyboards(gate), own_names(gate));
+    let known = keyboards.contains(&name) || own.contains(&name);
+    let open = keyboards.is_empty() && own.is_empty();
+    if !open && !known {
         return Err(format!("unknown keyboard {name}\n{}", usage()));
     }
     Ok(())
@@ -96,13 +105,26 @@ mod tests {
     }
 
     #[test]
+    fn g19_takes_only_its_own_names() {
+        for name in g19::NAMES {
+            assert!(check("g19", name).is_ok(), "g19 {name}");
+        }
+        for name in [FACE, "notepad"] {
+            let e = check("g19", name).expect_err(name);
+            assert!(e.contains("unknown keyboard"), "g19 {name}: {e}");
+            assert!(e.contains(&usage()), "g19 {name}: {e}");
+        }
+    }
+
+    #[test]
     fn a_gates_own_names_stay_valid_for_that_gate_only() {
-        assert!(check("g19", g19::CORE).is_ok());
         for name in [g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING] {
             assert!(check("g22", name).is_ok(), "g22 {name}");
             assert!(check("g2", name).is_err(), "g2 {name}");
         }
         assert!(check("g7", g19::CORE).is_err());
+        assert!(check("g7", g19chips::READ).is_err());
+        assert!(check("g7", g19chips::BESIDE).is_err());
         for name in [
             g8::WEAK,
             g8lang::ARABIC,

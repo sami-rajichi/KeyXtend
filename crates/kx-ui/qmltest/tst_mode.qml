@@ -67,6 +67,15 @@ Item {
             same(app.ui.mode, shown, "the bubble or Show");
         }
 
+        // Minimise tells the hub its mode once, so the selection module hears Minimised alone, never Away first.
+        function test_minimise_tells_the_hub_once() {
+            const app = make(shown);
+            const told = [];
+            app.ui.modeChanged.connect(() => told.push(JSON.stringify(app.ui.mode)));
+            verify(app.minimise(), "minimised");
+            compare(told, [JSON.stringify(minimised)]);
+        }
+
         function test_a_keyboard_made_again_while_away_stays_away() {
             const app = make(away);
             verify(app.away && !app.minimised);
