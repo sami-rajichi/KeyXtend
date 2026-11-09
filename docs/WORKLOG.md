@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-09 11:31 — P10: a chip pick is no longer dropped when the keyboard tells its mode again
+PR #22's Windows check failed on the word-pick life test. The selection module asks the keyboard's typing mode at start, and prediction began a new chip round at every answer, so a pick of the round just shown was dropped as stale. Prediction now starts a new round only when the mode really changes; the life test asks the mode again before its pick, failed 6 of 6 before the fix and passed 200 of 200 after.
+
 ## 2026-11-09 09:53 — P10: the selection strip
 Selected text in any app that tells its selection now shows a strip of keycaps beside it, as tall as a key: Copy, Cut, Paste and Translate by the kind of box, and Paste alone after a click at a caret, with no text read before a click (ADR-0041). Translate opens the site's page in the browser after one yes, cut at a whole word within `translate_chars`. Live checks found two product bugs, both fixed: Windows Terminal refuses the selection's end check, so its line boxes now decide, and many pages and Electron apps focus a plain item below the text, so the look walks up to it. G19, the uiAccess check and all 18 hands-on steps pass at 2d690636 (`docs/test-reports/2026-11-08-p10-selection-chips.md`).
 
