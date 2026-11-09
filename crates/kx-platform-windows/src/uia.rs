@@ -31,11 +31,8 @@ pub(crate) use handlers::{add_event, add_focus, remove_event, remove_focus};
 pub(crate) use read::{class_of, style_of};
 pub(crate) use rects::vector;
 
-use crate::PlatformError;
 use crate::com::Com;
-
-/// Most ancestors walked when looking for a pattern above an element.
-const MAX_DEPTH: usize = 32;
+use crate::{MAX_DEPTH, PlatformError};
 
 /// Why a UI Automation call failed; it names the call, never an element's text.
 #[derive(Debug, Error)]

@@ -25,6 +25,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::MAX_DEPTH;
 use crate::field::listed;
 pub use spot::{join, line, middle};
 #[cfg(windows)]
@@ -61,6 +62,9 @@ pub(crate) enum TableError {
     /// A control type is both editable and read-only.
     #[error("the selection table lists a control type twice")]
     Twice,
+    /// The walk up is 0, which turns it off, or deeper than any UI Automation walk.
+    #[error("the selection table's walk_up is not 1 to {max}", max = MAX_DEPTH)]
+    Depth,
 }
 
 /// The kind table: Windows' control types and window classes for telling a box's kind.
@@ -108,6 +112,9 @@ impl Table {
         }
         if table.edit_controls.iter().any(|c| table.reads(*c)) {
             return Err(TableError::Twice);
+        }
+        if !(1..=MAX_DEPTH).contains(&usize::from(table.walk_up)) {
+            return Err(TableError::Depth);
         }
         Ok(table)
     }

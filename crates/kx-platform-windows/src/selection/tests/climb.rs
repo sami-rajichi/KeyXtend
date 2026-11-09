@@ -194,3 +194,20 @@ fn the_shipped_cap_reaches_the_pages_seen_and_a_closed_table_climbs_nowhere() {
     assert!(table().walk_up() >= SEEN, "{}", table().walk_up());
     assert_eq!(Table::closed().walk_up(), 0);
 }
+
+#[test]
+fn a_walk_up_of_0_or_past_the_deepest_walk_is_refused_and_the_cap_itself_parses() {
+    let with = |n: usize| Table::parse(&SMALL.replace("walk_up = 15", &format!("walk_up = {n}")));
+    assert_eq!(
+        with(0).err(),
+        Some(TableError::Depth),
+        "0 turns the climb off"
+    );
+    let cap = with(MAX_DEPTH).map(|t| usize::from(t.walk_up()));
+    assert_eq!(cap, Ok(MAX_DEPTH), "the cap");
+    assert_eq!(
+        with(MAX_DEPTH + 1).err(),
+        Some(TableError::Depth),
+        "one past it"
+    );
+}

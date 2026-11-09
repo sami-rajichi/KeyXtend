@@ -120,6 +120,9 @@ pub use worker::{WinChild, WinSpawner};
 use std::io;
 use thiserror::Error;
 
+/// Most ancestors a UI Automation walk climbs above an element, for a pattern or for a selection's text.
+pub(crate) const MAX_DEPTH: usize = 32;
+
 /// A Windows error as a refused UI request, keeping its code.
 #[cfg(windows)]
 fn refused(e: &windows::core::Error) -> kx_platform::ui::UiError {
