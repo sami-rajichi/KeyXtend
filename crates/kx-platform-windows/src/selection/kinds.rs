@@ -91,21 +91,35 @@ pub(crate) trait Tree {
     fn parent(&self, el: &Self::El) -> Option<Self::El>;
 }
 
-/// The element a look reads for the focused `el`: `el` when it has a text pattern or is shut, else its nearest
-/// ancestor within `cap` levels that has one, else `el`, whose own kind then tells.
-pub(crate) fn climb<T: Tree>(tree: &T, el: T::El, cap: u8) -> T::El {
+/// The element a look reads for the focused `el`, and whether it climbed: `el` when it has a text pattern or is shut,
+/// else its nearest ancestor within `cap` levels that has one, else `el`. A shut ancestor ends the walk at `el`, so no
+/// password box or opaque window is passed.
+pub(crate) fn climb<T: Tree>(tree: &T, el: T::El, cap: u8) -> (T::El, bool) {
     if tree.texts(&el) || tree.shut(&el) {
-        return el;
+        return (el, false);
     }
     let mut up: Option<T::El> = None;
     for _ in 0..cap {
         let Some(next) = tree.parent(up.as_ref().unwrap_or(&el)) else {
             break;
         };
+        if tree.shut(&next) {
+            break;
+        }
         if tree.texts(&next) {
-            return next;
+            return (next, true);
         }
         up = Some(next);
     }
-    el
+    (el, false)
+}
+
+/// The kind of a box a look reached by `climbed` or not: keys go to the focused child, not to the ancestor checked,
+/// so a climbed box offers only Copy and Translate, and a climbed terminal none, as a Ctrl+C there could interrupt it.
+pub(crate) fn capped(kind: SelKind, climbed: bool) -> SelKind {
+    match kind {
+        SelKind::Editable if climbed => SelKind::ReadOnly,
+        SelKind::Terminal if climbed => SelKind::Closed,
+        _ => kind,
+    }
 }

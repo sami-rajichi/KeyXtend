@@ -1,6 +1,6 @@
 //! The selection watch's readers on hidden edit boxes, through a `Mine` that is not this process: a selection's line
 //! box and a caret's box with no text call, a password box or our own asked nothing, `still` once the selection
-//! clears, a read cut at its cap in Latin and Arabic, and a look from a child with no text up to its box.
+//! clears, a read cut at its cap in Latin and Arabic, and a look from a child with no text up to its box, read-only.
 
 use super::super::uia::{READS, read, spot, still, text_of};
 use super::super::win::Mine;
@@ -39,7 +39,7 @@ fn a_selection_gives_its_line_box_and_a_caret_its_box_with_no_text_call() {
     let el = edit.element(&auto);
     let (id, mine, before) = (box_id(&el), Mine::of(NOT_US), reads());
     edit.select(0, ALPHA);
-    let sel = spot(&el, id, mine, far()).unwrap();
+    let sel = spot(&el, id, mine, far(), false).unwrap();
     assert_eq!(
         (sel.box_id, sel.kind, sel.selected),
         (id, SelKind::Editable, true)
@@ -47,7 +47,7 @@ fn a_selection_gives_its_line_box_and_a_caret_its_box_with_no_text_call() {
     assert!(sel.first.is_some() && sel.first == sel.last, "one line");
     assert_eq!(sel.caret, None);
     edit.select(end(LATIN), end(LATIN));
-    let caret = spot(&el, id, mine, far()).unwrap();
+    let caret = spot(&el, id, mine, far(), false).unwrap();
     assert!(!caret.selected && caret.first.is_none() && caret.last.is_none());
     assert!(caret.caret.is_some(), "the caret's box");
     assert_eq!(reads(), before, "no text call");
@@ -69,7 +69,7 @@ fn a_password_box_or_our_own_is_closed_and_asked_no_caret() {
     plain.select(0, ALPHA);
     for (el, mine) in looks {
         let calls = TEXT_CALLS.with(Cell::get);
-        let got = spot(&el, box_id(&el), mine, far()).unwrap();
+        let got = spot(&el, box_id(&el), mine, far(), false).unwrap();
         assert_eq!(
             (got.kind, got.selected, got.caret),
             (SelKind::Closed, false, None)
@@ -94,36 +94,42 @@ fn still_holds_only_while_the_same_box_holds_a_selection() {
 }
 
 #[test]
-fn a_look_from_a_child_with_no_text_reads_its_box_and_a_box_with_text_stays() {
+fn a_look_from_a_child_with_no_text_reads_its_box_as_read_only_and_a_box_with_text_stays() {
     let _one = one_client();
     let (_com, auto) = started();
     let edit = TestEdit::holding(LATIN, 0);
     let (el, mine) = (edit.element(&auto), Mine::of(NOT_US));
     let id = box_id(&el);
-    let up = text_of(edit.child(&auto), &auto, mine, far());
-    assert_eq!(box_id(&up), id, "the box above");
-    assert_eq!(box_id(&text_of(el, &auto, mine, far())), id, "its own text");
+    let (up, climbed) = text_of(edit.child(&auto), &auto, mine, far());
+    assert_eq!((box_id(&up), climbed), (id, true), "the box above");
+    let (own_text, stayed) = text_of(el, &auto, mine, far());
+    assert_eq!((box_id(&own_text), stayed), (id, false), "its own text");
     edit.select(0, ALPHA);
-    let sel = spot(&up, id, mine, far()).unwrap();
-    assert_eq!((sel.kind, sel.selected), (SelKind::Editable, true));
+    let sel = spot(&up, id, mine, far(), climbed).unwrap();
+    assert_eq!(
+        (sel.kind, sel.selected),
+        (SelKind::ReadOnly, true),
+        "keys would go to the child"
+    );
     assert!(still(&up, id, far()));
-    let own = text_of(edit.child(&auto), &auto, Mine::new(), far());
+    let (own, _) = text_of(edit.child(&auto), &auto, Mine::new(), far());
     assert_ne!(box_id(&own), id, "our own never climbs");
     let ago = Duration::from_millis(u64::from(LONG_MS));
     let past = Instant::now().checked_sub(ago).unwrap();
-    let late = text_of(edit.child(&auto), &auto, mine, past);
+    let (late, _) = text_of(edit.child(&auto), &auto, mine, past);
     assert_ne!(box_id(&late), id, "past the deadline it never climbs");
 }
 
 #[test]
-fn a_child_of_a_password_box_is_closed_and_asks_no_caret() {
+fn a_child_of_a_password_box_never_climbs_and_asks_no_caret() {
     let _one = one_client();
     let (_com, auto) = started();
     let secret = TestEdit::holding(LATIN, ES_PASSWORD);
     secret.select(0, ALPHA);
-    let up = text_of(secret.child(&auto), &auto, Mine::of(NOT_US), far());
+    let (up, climbed) = text_of(secret.child(&auto), &auto, Mine::of(NOT_US), far());
+    assert!(!climbed, "the password box stops the walk");
     let calls = TEXT_CALLS.with(Cell::get);
-    let got = spot(&up, box_id(&up), Mine::of(NOT_US), far()).unwrap();
+    let got = spot(&up, box_id(&up), Mine::of(NOT_US), far(), climbed).unwrap();
     assert_eq!((got.kind, got.selected), (SelKind::Closed, false));
     assert_eq!(TEXT_CALLS.with(Cell::get), calls, "no caret call");
 }

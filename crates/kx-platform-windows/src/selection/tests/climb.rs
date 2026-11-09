@@ -1,8 +1,8 @@
 //! The walk up from the focused element to the text that holds its selection: the focused element's own pattern
 //! wins, the nearest ancestor within the cap serves, none within it keeps the focused element, and a password box, an
-//! opaque window or our own never climbs.
+//! opaque window or our own, focused or on the way up, stops the walk; a climbed box offers Copy and Translate only.
 
-use super::super::kinds::{Tree, climb, shut};
+use super::super::kinds::{Tree, capped, climb, shut};
 use super::*;
 
 /// UI Automation's Group control type, which a web page's block has and the kind table does not list.
@@ -10,11 +10,11 @@ const GROUP: i32 = 50026;
 /// The depth the shipped table must reach: Zen's pages held the selection 9 and 11 levels above the focus.
 const SEEN: u8 = 11;
 
-/// A chain from the focused element (0) up: which levels have a text pattern, whether the focused one is shut, and
-/// how many parents were asked.
+/// A chain from the focused element (0) up: which levels have a text pattern, which are shut, and how many parents
+/// were asked.
 struct Chain {
     texts: Vec<bool>,
-    shut: bool,
+    shut: Vec<bool>,
     asked: Cell<usize>,
 }
 
@@ -26,7 +26,7 @@ impl Tree for Chain {
     }
 
     fn shut(&self, el: &usize) -> bool {
-        *el == 0 && self.shut
+        self.shut.get(*el).copied().unwrap_or_default()
     }
 
     fn parent(&self, el: &usize) -> Option<usize> {
@@ -40,23 +40,22 @@ impl Tree for Chain {
 fn chain(at: usize, levels: usize, shut: bool) -> Chain {
     Chain {
         texts: (0..=levels).map(|i| i == at).collect(),
-        shut,
+        shut: (0..=levels).map(|i| i == 0 && shut).collect(),
         asked: Cell::new(0),
     }
 }
 
-/// Where a walk on `chain` under `cap` ends, and how many parents it asked.
+/// Where a walk on `chain` under `cap` ends, and how many parents it asked; it says it climbed only off the focus.
 fn walked(chain: &Chain, cap: u8) -> (usize, usize) {
-    (climb(chain, 0, cap), chain.asked.get())
+    let (el, up) = climb(chain, 0, cap);
+    assert_eq!(up, el != 0, "climbed to {el}");
+    (el, chain.asked.get())
 }
 
 #[test]
 fn the_focused_elements_own_text_pattern_wins_and_asks_no_parent() {
-    let both = Chain {
-        texts: vec![true, true],
-        shut: false,
-        asked: Cell::new(0),
-    };
+    let mut both = chain(0, 1, false);
+    both.texts[1] = true;
     assert_eq!(walked(&both, table().walk_up()), (0, 0));
 }
 
@@ -84,6 +83,47 @@ fn none_within_the_cap_keeps_the_focused_element_and_asks_no_more() {
 #[test]
 fn a_shut_focused_element_never_climbs() {
     assert_eq!(walked(&chain(1, 2, true), table().walk_up()), (0, 0));
+}
+
+#[test]
+fn a_shut_ancestor_under_a_text_one_stops_the_walk_at_the_focus() {
+    let mut under = chain(5, 20, false);
+    under.shut[2] = true;
+    assert_eq!(walked(&under, table().walk_up()), (0, 2));
+    let mut shut_text = chain(5, 20, false);
+    shut_text.shut[5] = true;
+    assert_eq!(
+        walked(&shut_text, table().walk_up()),
+        (0, 5),
+        "a shut text ancestor"
+    );
+}
+
+#[test]
+fn a_shut_ancestor_at_the_caps_edge_stops_the_walk_and_one_past_it_is_never_met() {
+    let cap = table().walk_up();
+    let edge = usize::from(cap);
+    let mut at_edge = chain(edge, 20, false);
+    at_edge.shut[edge] = true;
+    assert_eq!(walked(&at_edge, cap), (0, edge));
+    let mut past = chain(edge, 20, false);
+    past.shut[edge + 1] = true;
+    assert_eq!(walked(&past, cap), (edge, edge));
+}
+
+#[test]
+fn a_climbed_box_offers_copy_and_translate_only_and_the_focused_one_keeps_its_kind() {
+    use SelKind::{Closed, Editable, ReadOnly, Terminal};
+    let climbed = [
+        (Editable, ReadOnly),
+        (Terminal, Closed),
+        (ReadOnly, ReadOnly),
+        (Closed, Closed),
+    ];
+    for (kind, cap) in climbed {
+        assert_eq!(capped(kind, true), cap, "{kind:?} climbed");
+        assert_eq!(capped(kind, false), kind, "{kind:?} focused");
+    }
 }
 
 /// A web page's group in another app, with no value pattern.

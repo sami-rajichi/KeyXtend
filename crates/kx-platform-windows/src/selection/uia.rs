@@ -15,7 +15,7 @@ use windows::Win32::UI::Accessibility::{
 };
 
 use super::follow::same;
-use super::kinds::{Facts, Tree, climb, kind, shut};
+use super::kinds::{Facts, Tree, capped, climb, kind, shut};
 use super::spot::{Span, assemble, whole};
 use super::table;
 use super::win::Mine;
@@ -125,15 +125,15 @@ impl Tree for Up<'_> {
     }
 }
 
-/// The element a look at focused `el` reads: `el`, or its nearest control-view ancestor with a text pattern within the
-/// table's cap, as a web page's group or label holds none; a password box, an opaque window or our own never climbs.
+/// The element a look at focused `el` reads, and whether it climbed: `el`, or its nearest control-view ancestor with a
+/// text pattern within the table's cap, as a web page's group or label holds none; a shut element ends the walk.
 #[allow(unsafe_code, reason = "Asks our client for its walker.")]
 pub(super) fn text_of(
     el: IUIAutomationElement,
     auto: &IUIAutomation,
     mine: Mine,
     by: Instant,
-) -> IUIAutomationElement {
+) -> (IUIAutomationElement, bool) {
     // SAFETY: a plain call on our live client; without a walker the focused element stands.
     let walker = unsafe { auto.ControlViewWalker() }.ok();
     let up = Up {
@@ -144,11 +144,13 @@ pub(super) fn text_of(
     climb(&up, el, table().walk_up())
 }
 
-/// The kind of `el`, and its selection or caret when it is not closed; a closed box is asked nothing more.
+/// The kind of `el`, capped when the look `climbed` to it, and its selection or caret when it is not closed; a closed
+/// box is asked nothing more.
 fn probed(
     el: &IUIAutomationElement,
     mine: Mine,
     by: Instant,
+    climbed: bool,
 ) -> Result<(SelKind, Option<field::Caret>), SelError> {
     let mut found = None;
     let kind = kind(&facts(el, mine), field::table(), table(), || {
@@ -158,6 +160,7 @@ fn probed(
         found = Some(got);
         fixed
     });
+    let kind = capped(kind, climbed);
     if kind == SelKind::Closed {
         return Ok((kind, None));
     }
@@ -166,14 +169,16 @@ fn probed(
     Ok((kind, caret))
 }
 
-/// What box `el` (whose id is `id`) shows: its kind, whether its selection holds text, and its boxes; no text call.
+/// What box `el` (whose id is `id`, reached by a climb when `climbed`) shows: its kind, whether its selection holds
+/// text, and its boxes; no text call.
 pub(super) fn spot(
     el: &IUIAutomationElement,
     id: u64,
     mine: Mine,
     by: Instant,
+    climbed: bool,
 ) -> Result<SelSpot, SelError> {
-    let (kind, caret) = probed(el, mine, by)?;
+    let (kind, caret) = probed(el, mine, by, climbed)?;
     late(by)?;
     let range = caret.map(|caret| (caret.held == Held::Yes, caret.range));
     Ok(assemble(id, kind, range, screen))

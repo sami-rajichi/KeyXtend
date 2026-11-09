@@ -72,6 +72,12 @@ struct WinSel {
     heard: RefCell<Heard<Added>>,
 }
 
+/// The element a job looks at, and whether the walk up reached it from the focused one.
+struct Focus {
+    el: IUIAutomationElement,
+    climbed: bool,
+}
+
 /// Where the selection handler goes: the element, and its top-level window, read before the add.
 struct Added {
     el: IUIAutomationElement,
@@ -115,41 +121,37 @@ impl Hook for WinSel {
 }
 
 impl Ours for WinSel {
-    type El = IUIAutomationElement;
+    type El = Focus;
 
-    fn ours(&self, el: &IUIAutomationElement) -> bool {
-        self.mine.ours(el)
+    fn ours(&self, at: &Focus) -> bool {
+        self.mine.ours(&at.el)
     }
 }
 
 /// Every job looks at the element that holds the focused box's text, so a spot, its box id, `still` and a read all
 /// name that same element.
 impl SelProbe for WinSel {
-    fn focused(&self, by: Instant) -> Result<IUIAutomationElement, SelError> {
+    fn focused(&self, by: Instant) -> Result<Focus, SelError> {
         let el = focused(&self.auto).map_err(sel)?;
-        Ok(text_of(el, &self.auto, self.mine, by))
+        let (el, climbed) = text_of(el, &self.auto, self.mine, by);
+        Ok(Focus { el, climbed })
     }
 
-    fn spot(&self, el: &IUIAutomationElement, by: Instant) -> Result<SelSpot, SelError> {
+    fn spot(&self, at: &Focus, by: Instant) -> Result<SelSpot, SelError> {
         late(by)?;
-        let id = box_id(el);
-        let spot = spot(el, id, self.mine, by);
+        let id = box_id(&at.el);
+        let spot = spot(&at.el, id, self.mine, by, at.climbed);
         let seen = Seen::of(&spot, late(by).is_err());
-        self.heard.borrow_mut().look(self, el, id, seen);
+        self.heard.borrow_mut().look(self, &at.el, id, seen);
         spot
     }
 
-    fn still(&self, el: &IUIAutomationElement, box_id: u64, by: Instant) -> bool {
-        still(el, box_id, by)
+    fn still(&self, at: &Focus, box_id: u64, by: Instant) -> bool {
+        still(&at.el, box_id, by)
     }
 
-    fn read(
-        &self,
-        el: &IUIAutomationElement,
-        max_chars: u16,
-        by: Instant,
-    ) -> Result<Redacted<String>, SelError> {
-        read(el, max_chars, by)
+    fn read(&self, at: &Focus, max_chars: u16, by: Instant) -> Result<Redacted<String>, SelError> {
+        read(&at.el, max_chars, by)
     }
 
     fn clip_holds(&self) -> bool {
