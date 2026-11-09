@@ -1,8 +1,9 @@
 //! The shared rules over a scripted probe: a look comes from the focused box, our own focus is never looked at or read,
 //! a late job makes no OS call, a read is refused in a closed box and empty at a bare caret with no text call, a
-//! job's token lives until `serve` returns, and a look answers before the adapter's own step.
+//! job's token lives until `serve` returns, and a look answers before the adapter's own step, which a look with no
+//! spot never gets.
 
-use super::rig::{Calls, Script, Stop, own, spot, theirs};
+use super::rig::{Answer, Calls, El, Script, Stop, own, spot, theirs};
 use super::*;
 use crate::deadline;
 use std::sync::mpsc;
@@ -177,15 +178,31 @@ fn a_deadline_is_late_only_once_it_passed() {
 }
 
 #[test]
-fn a_looks_answer_goes_before_the_adapters_step_which_our_own_focus_never_gets() {
+fn a_looks_answer_goes_before_the_adapters_step() {
     let probe = Script::on(Ok(theirs(SelKind::Editable, 7)));
     let (reply, answer) = mpsc::channel();
     probe.hear(answer);
     serve(&probe, Job::new(Ask::Look { by: far(), reply }));
     assert_eq!(probe.stepped(), [(7, false, true)], "the answer went first");
-    probe.focus(Ok(own(8)));
-    assert_eq!(look(&probe, far()), Ok(None));
-    probe.focus(Err(SelError::Refused));
-    assert!(look(&probe, far()).is_err());
-    assert_eq!(probe.calls().steps, 1, "no step without a spot");
+}
+
+#[test]
+fn our_own_focus_a_failed_look_and_a_late_one_are_answered_with_no_step() {
+    let probe = Script::on(Ok(own(8)));
+    let cases: [(Result<El, SelError>, Instant, Answer); 3] = [
+        (Ok(own(8)), far(), Ok(None)),
+        (Err(SelError::Refused), far(), Err(SelError::Refused)),
+        (
+            Ok(theirs(SelKind::Editable, 7)),
+            past(),
+            Err(SelError::TimedOut),
+        ),
+    ];
+    for (focus, by, want) in cases {
+        probe.focus(focus);
+        let (reply, got) = mpsc::channel();
+        answer(&probe, by, &reply);
+        assert_eq!(got.recv(), Ok(want));
+    }
+    assert_eq!(probe.calls().steps, 0, "no step without a spot");
 }
