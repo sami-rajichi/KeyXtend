@@ -31,17 +31,20 @@ impl Actor {
         }
     }
 
-    /// The keyboard's answer to an edit: its yes ticks the keycap of that round's edit in flight, and its no, for any
-    /// strip, hides that strip and tells the user.
+    /// The keyboard's answer to an edit in flight: its yes ticks that keycap, and its no hides that strip and tells the
+    /// user, an older strip's too. An answer past `edit_ms` comes after its end was told, so it does nothing.
     pub(super) fn done(&mut self, done: EditDone) {
         let busy = self.land(|b| b.round == done.round && b.chip != SelChip::Translate);
-        if !done.ok {
-            self.refuse(done.round);
-            self.say(keys::KEYS_NOT_SENT);
-        } else if let Some(Busy { round, chip, .. }) = busy {
+        let Some(Busy { round, chip, .. }) = busy else {
+            return;
+        };
+        if done.ok {
             // The keyboard tells one break for the edit's keys, which is no key of the user's.
             self.swallow = true;
             self.step(Input::Acted { round, chip });
+        } else {
+            self.refuse(round);
+            self.say(keys::KEYS_NOT_SENT);
         }
     }
 

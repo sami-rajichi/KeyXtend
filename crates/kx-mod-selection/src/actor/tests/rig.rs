@@ -29,7 +29,7 @@ pub(super) struct Rig {
     pub web: Arc<FakeWebLink>,
     pub clock: FakeClock,
     pub host: FakeHost,
-    actor: Actor,
+    pub actor: Actor,
     inbox: Receiver<Msg>,
     asked: Arc<Mutex<Vec<(u64, u16)>>>,
     heard: Arc<Mutex<Vec<Heard>>>,

@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use kx_module_api::keys;
-use kx_module_api::ports::{ChipsView, EditDone, SelChip, SelKind};
+use kx_module_api::ports::{ChipsView, EditDone, LinkError, SelChip, SelKind};
 use toml::Value;
 
 use super::super::Msg;
@@ -46,6 +46,8 @@ fn an_edit_the_keyboard_never_answers_hides_its_strip_and_says_so_past_edit_ms()
     let told = rig.count();
     rig.answer(true);
     assert_eq!(rig.count(), told, "a late yes ticks nothing");
+    rig.answer(false);
+    assert_eq!(rig.count(), told, "nor does a late no tell it again");
 }
 
 #[test]
@@ -60,8 +62,13 @@ fn an_open_the_shell_holds_hides_its_strip_and_says_the_page_did_not_open() {
     assert_eq!(rig.view(), ChipsView::Hidden);
     assert_eq!(rig.keys(), [keys::TRANSLATE_FAILED]);
     let told = rig.count();
+    rig.web.set_error(Some(LinkError::Unavailable));
     rig.release_opens();
-    assert_eq!(rig.count(), told, "the late open ticks nothing");
+    assert_eq!(
+        rig.count(),
+        told,
+        "the late open, failed too, tells nothing more"
+    );
 }
 
 #[test]

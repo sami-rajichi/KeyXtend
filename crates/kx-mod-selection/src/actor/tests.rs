@@ -1,6 +1,7 @@
 //! The actor over the fakes: looks and what hides them (`looks`, `presses`), the keycaps' edits (`acts`), Translate
-//! (`translate`) and its consent (`consent`), and its logs (`logs`); `rig` drives it without a thread on the boxes of
-//! `spots`, hearing it through `taps`. Here: the start, the stop, and an inbox that never holds typed text.
+//! (`translate`) and its consent (`consent`), its logs (`logs`), and properties over any run (`props`); `rig` drives
+//! it without a thread on the boxes of `spots`, hearing it through `taps`. Here: the start, the stop, and an inbox that
+//! never holds typed text.
 
 #![allow(
     clippy::unwrap_used,
@@ -13,6 +14,7 @@ mod deadline;
 mod logs;
 mod looks;
 mod presses;
+mod props;
 mod rig;
 mod spots;
 mod taps;

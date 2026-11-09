@@ -80,21 +80,24 @@ impl Actor {
             tracing::warn!(kind = error.kind(), "the translate consent was not saved");
         }
         self.settings.translate_ok = true;
-        // The strip asked about has already gone otherwise, so nothing is left to hide.
-        if self.strip.pick(asking.round, SelChip::Translate).is_some() {
+        // Otherwise the strip asked about has gone, or another of its keycaps acts and ends it, so nothing opens.
+        let free = !self.busy.iter().any(|b| b.round == asking.round);
+        if free && self.strip.pick(asking.round, SelChip::Translate).is_some() {
             self.go(asking.round, asking.pick);
         }
     }
 
-    /// The open for the strip of `round` ended: its yes ticks Translate while that open is in flight, and its no tells
-    /// the user in any case.
+    /// The open for the strip of `round` ended while in flight: its yes ticks Translate, and its no tells the user. An
+    /// end past `edit_ms` comes after its failure was told, so it does nothing.
     pub(super) fn opened(&mut self, round: u32, ok: bool) {
         let chip = SelChip::Translate;
-        let busy = self.land(|b| b.round == round && b.chip == chip);
-        if !ok {
-            self.fail(round);
-        } else if busy.is_some() {
+        if self.land(|b| b.round == round && b.chip == chip).is_none() {
+            return;
+        }
+        if ok {
             self.step(Input::Acted { round, chip });
+        } else {
+            self.fail(round);
         }
     }
 

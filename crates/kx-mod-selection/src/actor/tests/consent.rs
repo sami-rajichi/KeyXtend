@@ -199,3 +199,16 @@ fn a_box_that_turned_closed_during_the_wait_is_never_read() {
     assert!(untouched(&rig), "{:?}", rig.reads());
     assert_eq!(rig.keys(), [keys::TRANSLATE_ASK, keys::TRANSLATE_FAILED]);
 }
+
+/// One act per strip is in flight, so a Yes while that strip's Copy flies is kept but opens nothing.
+#[test]
+fn a_yes_while_another_keycap_of_its_strip_acts_is_saved_and_opens_nothing() {
+    let mut rig = Rig::new();
+    rig.watch.set_text("bonjour");
+    rig.focus(sel(SelKind::Editable, 40));
+    rig.act(SelChip::Translate);
+    rig.act(SelChip::Copy);
+    rig.reply(true);
+    assert!(untouched(&rig), "the Copy acts on this strip");
+    assert!(rig.saved().translate_ok, "the yes is kept");
+}
