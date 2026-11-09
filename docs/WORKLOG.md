@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-09 13:32 — P10: Quick-fill's repeated emails no longer drop a chip pick
+The Windows check failed again on the same pick test, which here failed 3 of 30 runs of the whole binary with 4 test threads. A failing run's event log showed the cause: Quick-fill tells its email list at its start and at each ask, and two unchanged copies started new chip rounds between the lane and the pick. Prediction now ignores the same set again, and the life test asks for it before its pick, so it hits the race every time; the whole binary then passed 60 of 60 runs at 4 threads and 20 of 20 at default threads.
+
 ## 2026-11-09 11:31 — P10: a chip pick is no longer dropped when the keyboard tells its mode again
 PR #22's Windows check failed on the word-pick life test. The selection module asks the keyboard's typing mode at start, and prediction began a new chip round at every answer, so a pick of the round just shown was dropped as stale. Prediction now starts a new round only when the mode really changes; the life test asks the mode again before its pick, failed 6 of 6 before the fix and passed 200 of 200 after.
 

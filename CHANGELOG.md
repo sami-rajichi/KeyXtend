@@ -37,4 +37,4 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 
 ### Fixed
 - The window guard: Windows can ignore a lift while saying yes, so a window still out of the topmost band now goes up alone.
-- A word chip tapped just as another module asked the keyboard's typing mode was dropped; an unchanged mode now keeps the chips' round.
+- A word chip tapped just as the keyboard repeated its typing mode, or Quick-fill repeated its emails, was dropped; an unchanged answer now keeps the chips' round.
