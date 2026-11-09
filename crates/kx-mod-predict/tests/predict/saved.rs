@@ -1,14 +1,14 @@
 //! The notebook's emails (Quick-fill's `VaultEmails`): saved chips after `@@` and the start of one, a new set in place
-//! of the old, one both typed and saved shown once, and a saved email picked as a chip or from the list never learned
-//! or stored, while one typed by hand is.
+//! of the old while the same set again keeps the shown lane, one both typed and saved shown once, and a saved email
+//! picked as a chip or from the list never learned or stored, while one typed by hand is.
 
 mod asks;
 mod marks;
 
-use crate::rig::{ROWS, Rig, blob};
+use crate::rig::{ROWS, Rig, blob, plant};
 use kx_mod_predict::Msg;
 use kx_mod_predict::email::Emails;
-use kx_module_api::ports::{ChipKind, FieldKind, Lane, Piece, WordsAsk};
+use kx_module_api::ports::{ChipKind, ChipPicked, FieldKind, Lane, Piece, WordsAsk};
 use kx_module_api::{Redacted, Zeroizing};
 
 /// Emails saved in the notebook.
@@ -81,6 +81,37 @@ fn a_new_set_replaces_the_old_and_an_empty_one_removes_them() {
     );
     rig.send(notebook(&[]));
     assert_eq!(rig.lane().lane, Lane::Empty);
+}
+
+#[test]
+fn the_same_emails_again_tell_no_new_lane_and_a_pick_of_the_shown_round_still_types() {
+    let mut rig = knowing(&[], &SAVED);
+    rig.typed("le");
+    let shown = rig.lane().round;
+    rig.send(notebook(&SAVED));
+    assert_eq!(rig.lane().round, shown, "the same emails again");
+    rig.send(Msg::Picked(ChipPicked {
+        round: shown,
+        index: 0,
+    }));
+    assert_eq!(rig.typed_words().len(), 1, "the saved chip typed");
+}
+
+#[test]
+fn an_empty_notebook_told_again_leaves_a_word_lane_and_its_pick_alone() {
+    let mut rig = Rig::build(|f, _| plant(f, "en", &["hello", "help"]));
+    rig.lang("en");
+    rig.focus(FieldKind::Text);
+    rig.send(notebook(&[]));
+    rig.typed("hel");
+    let shown = rig.lane().round;
+    rig.send(notebook(&[]));
+    assert_eq!(rig.lane().round, shown, "no emails before or after");
+    rig.send(Msg::Picked(ChipPicked {
+        round: shown,
+        index: 0,
+    }));
+    assert_eq!(rig.typed_words(), [(0, "lo ".to_owned())]);
 }
 
 #[test]
