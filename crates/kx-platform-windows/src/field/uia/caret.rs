@@ -2,6 +2,7 @@
 //! holds text, which a read stops before and a check never confirms.
 
 use kx_module_api::ports::FieldError;
+use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::Accessibility::{
     IUIAutomationElement, IUIAutomationTextPattern, IUIAutomationTextPattern2,
     IUIAutomationTextRange, TextPatternRangeEndpoint_End, TextPatternRangeEndpoint_Start,
@@ -70,17 +71,19 @@ pub(super) fn chosen<R>(caret: Option<R>, sel: Result<Sel<R>, FieldError>) -> Fo
 }
 
 /// Whether a lone range holds text: its end check `span` when that answered, else, when the app refused it as
-/// Windows Terminal does, its line boxes, counted by `boxes` only then. No box leaves it unsure, never empty.
+/// Windows Terminal does, its line boxes with a width and a height, read by `boxes` only then. A collapsed range gives
+/// none or a flat one, so no such box leaves it unsure, never empty.
 pub(super) fn held_by(
     span: Result<i32, FieldError>,
-    boxes: impl FnOnce() -> Option<usize>,
+    boxes: impl FnOnce() -> Option<Vec<RECT>>,
 ) -> Result<Held, FieldError> {
+    let real = |r: &RECT| r.right > r.left && r.bottom > r.top;
     match span {
         Ok(0) => Ok(Held::No),
         Ok(_) => Ok(Held::Yes),
         Err(FieldError::Refused) => match boxes() {
-            Some(0) => Ok(Held::Unknown),
-            Some(_) => Ok(Held::Yes),
+            Some(b) if b.iter().any(real) => Ok(Held::Yes),
+            Some(_) => Ok(Held::Unknown),
             None => Err(FieldError::Refused),
         },
         Err(e) => Err(e),
@@ -106,7 +109,7 @@ fn selection(el: &IUIAutomationElement) -> Result<Sel<IUIAutomationTextRange>, F
         }
         let (start, end) = (TextPatternRangeEndpoint_Start, TextPatternRangeEndpoint_End);
         let span = range.CompareEndpoints(start, &range, end).map_err(failed);
-        let held = held_by(span, || boxes(&range).ok().map(|b| b.len()))?;
+        let held = held_by(span, || boxes(&range).ok())?;
         Ok(Sel::Range(range, held))
     }
 }
