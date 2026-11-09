@@ -1,10 +1,12 @@
-//! The selection strip through the hub: a view wakes QML once per read and `Hidden` drops it, a ticked view stays until
-//! QML's fade ends or the next view comes, and a view with an unknown screen or absurd boxes shows nothing.
+//! The selection strip through the hub: a view wakes QML once per read and `Hidden` drops it, a ticked view stays
+//! until QML's fade ends or the next view comes, and a view with an unknown screen or absurd boxes shows nothing;
+//! `props` runs them in any order.
 
 mod acts;
 mod board;
 mod gate;
 mod place;
+mod props;
 mod view;
 
 use crate::Rig;
@@ -45,7 +47,8 @@ impl Sent {
     }
 }
 
-/// A bus the hub of `rig` hears, what it sends there, and the subscriptions that keep both; wakes and sends are cleared.
+/// A bus the hub of `rig` hears, what it sends there, and the subscriptions that keep both; wakes and sends are
+/// cleared.
 pub fn heard(rig: &Rig) -> (Bus, Arc<Sent>, Vec<Subscription>) {
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let sent = Arc::new(Sent::default());
