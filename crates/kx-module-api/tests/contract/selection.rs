@@ -81,6 +81,10 @@ impl SelRun for OneRun {
         })
     }
 
+    fn ours(&self) -> bool {
+        false
+    }
+
     fn still(&mut self, box_id: u64) -> bool {
         box_id == BOX
     }

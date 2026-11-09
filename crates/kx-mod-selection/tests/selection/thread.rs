@@ -123,6 +123,10 @@ impl SelRun for ArmedRun {
         self.real.look()
     }
 
+    fn ours(&self) -> bool {
+        self.real.ours()
+    }
+
     fn still(&mut self, box_id: u64) -> bool {
         self.real.still(box_id)
     }

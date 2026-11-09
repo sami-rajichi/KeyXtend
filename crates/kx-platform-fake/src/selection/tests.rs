@@ -1,5 +1,5 @@
 //! The fake selection watch, held to the port: told changes with fresh boxes, scripted answers, reads cut in whole
-//! characters, closed boxes never read, failures on cue, and every call counted.
+//! characters, closed boxes never read, our own focus refused, failures on cue, and every call counted.
 
 use super::*;
 use kx_module_api::Redacted;
@@ -7,6 +7,7 @@ use kx_module_api::ports::Rect;
 use std::thread::{self, ThreadId};
 
 mod ids;
+mod ours;
 mod watch;
 
 /// Test values; the real ones come from the selection module's settings.

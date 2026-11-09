@@ -121,6 +121,8 @@ struct Run {
     last: SelSpot,
     /// The last answered look found a box that may be read: not `Closed`, and not in our own process.
     readable: bool,
+    /// The last answered look found focus in our own process, so it gave `last`.
+    ours: bool,
     /// The job given up last at its cap, which lives while the thread is stuck in it.
     stuck: Mutex<Option<Weak<()>>>,
 }
@@ -142,6 +144,7 @@ impl Run {
             cap: Duration::from_millis(u64::from(cfg.read_ms)),
             last,
             readable: false,
+            ours: false,
             stuck: Mutex::new(None),
         }
     }
@@ -181,10 +184,15 @@ impl SelRun for Run {
     fn look(&mut self) -> Result<SelSpot, SelError> {
         let seen = self.ask(|reply, by| Ask::Look { by, reply })??;
         self.readable = seen.is_some_and(|spot| spot.kind != SelKind::Closed);
+        self.ours = seen.is_none();
         if let Some(spot) = seen {
             self.last = spot;
         }
         Ok(self.last)
+    }
+
+    fn ours(&self) -> bool {
+        self.ours
     }
 
     fn still(&mut self, box_id: u64) -> bool {

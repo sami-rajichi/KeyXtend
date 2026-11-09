@@ -50,15 +50,18 @@ impl Actor {
         (self.ports.run.as_mut()).is_some_and(|run| run.still(pick.box_id))
     }
 
-    /// True when a fresh look finds the box of `pick` focused, of the same kind, and one of `kinds`.
+    /// True when a fresh look finds the box of `pick` focused in another app, of the same kind, and one of `kinds`; a
+    /// look that kept it while our own window has focus never confirms it.
     pub(super) fn same(&mut self, pick: &Pick, kinds: &[SelKind]) -> bool {
         let Some(run) = self.ports.run.as_mut() else {
             return false;
         };
-        run.look().is_ok_and(|spot| {
-            let kind = spot.kind;
-            same_box(spot.box_id, pick.box_id) && kind == pick.kind && kinds.contains(&kind)
-        })
+        let Ok(spot) = run.look() else {
+            return false;
+        };
+        let kind = spot.kind;
+        let alike = same_box(spot.box_id, pick.box_id) && kind == pick.kind;
+        !run.ours() && alike && kinds.contains(&kind)
     }
 
     /// Asks the keyboard for `edit` on the box of `pick`, from the strip of `round`.

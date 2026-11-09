@@ -103,6 +103,10 @@ pub trait SelRun: Send {
     /// `TimedOut` when the app takes too long, `Refused` when it refuses, `Unavailable` when nothing can look.
     fn look(&mut self) -> Result<SelSpot, SelError>;
 
+    /// True when the last answered look found focus in one of our own windows, so it gave the box kept from before;
+    /// no key may go there.
+    fn ours(&self) -> bool;
+
     /// True when box `box_id` still has focus and its selection still holds text; false on any doubt, so nothing is sent.
     fn still(&mut self, box_id: u64) -> bool;
 

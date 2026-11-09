@@ -152,8 +152,10 @@ fn our_own_focus_keeps_the_last_box_and_is_never_read() {
     let probe = Script::on(Ok(theirs(SelKind::Editable, 5)));
     let mut rig = rig(&probe, LONG_MS);
     let theirs = rig.run.look().unwrap();
+    assert!(!rig.run.ours(), "another app's box");
     probe.focus(Ok(own(6)));
     assert_eq!(rig.run.look(), Ok(theirs), "the last box");
+    assert!(rig.run.ours(), "a look that kept it says so");
     assert!(!rig.run.still(5));
     assert_eq!(
         rig.run.read(5, 4),

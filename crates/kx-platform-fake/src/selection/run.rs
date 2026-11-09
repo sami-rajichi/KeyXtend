@@ -19,16 +19,23 @@ impl SelRun for FakeSelRun {
         log.look_fail.map_or(Ok(log.spot), Err)
     }
 
+    fn ours(&self) -> bool {
+        lock(&self.shared.log).ours
+    }
+
     fn still(&mut self, box_id: u64) -> bool {
         let mut log = lock(&self.shared.log);
         log.calls.stills += 1;
+        if log.ours {
+            return false;
+        }
         let held = same_box(box_id, log.spot.box_id) && log.spot.selected;
         log.still.unwrap_or(held)
     }
 
     fn read(&mut self, box_id: u64, max_chars: u16) -> Result<Redacted<String>, SelError> {
         let mut log = lock(&self.shared.log);
-        if log.spot.kind == SelKind::Closed || !same_box(log.spot.box_id, box_id) {
+        if log.ours || log.spot.kind == SelKind::Closed || !same_box(log.spot.box_id, box_id) {
             return Err(SelError::Closed);
         }
         log.calls.reads += 1;

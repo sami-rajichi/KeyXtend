@@ -58,6 +58,10 @@ impl SelRun for Counted {
         self.run.look()
     }
 
+    fn ours(&self) -> bool {
+        self.run.ours()
+    }
+
     fn still(&mut self, box_id: u64) -> bool {
         self.run.still(box_id)
     }

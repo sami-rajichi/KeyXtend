@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 /// The callback a watch tells on each change.
 type Tell = Box<dyn Fn() + Send>;
 
-/// How many calls the watch and its runs took, failed looks and reads too; a refused watch and a read of a `Closed` box
-/// or of a box focus left are not counted.
+/// How many calls the watch and its runs took, failed looks and reads too; a refused watch and a read of a `Closed` box,
+/// of our own window or of a box focus left are not counted.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelCalls {
     /// Watches started.
@@ -22,8 +22,8 @@ pub struct SelCalls {
     pub looks: usize,
     /// `still` calls.
     pub stills: usize,
-    /// `read` calls that reached the focused box, which may be read; one in a `Closed` box or for another box is
-    /// answered at once and not counted.
+    /// `read` calls that reached the focused box, which may be read; one in a `Closed` box, in our own window or for
+    /// another box is answered at once and not counted.
     pub reads: usize,
     /// `clip_holds` calls.
     pub clips: usize,
@@ -38,6 +38,8 @@ struct Log {
     still: Option<bool>,
     clip: bool,
     watch_fail: Option<SelError>,
+    /// Focus is in one of our own windows.
+    ours: bool,
     /// Fails every look until healed.
     look_fail: Option<SelError>,
     /// Fails every read of a box that may be read until healed.
@@ -61,6 +63,7 @@ impl Default for Log {
             spot,
             text: String::new(),
             still: None,
+            ours: false,
             clip: false,
             watch_fail: None,
             look_fail: None,
@@ -101,8 +104,15 @@ impl FakeSelectionWatch {
         let mut log = lock(&self.shared.log);
         let box_id = log.spot.box_id + 1;
         log.spot = SelSpot { box_id, ..spot };
+        log.ours = false;
         drop(log);
         self.tell();
+    }
+
+    /// Moves focus into one of our own windows, telling nothing as the real watch does: looks keep the last box and
+    /// say it is ours, and `still` and reads refuse it, until the next `focus`.
+    pub fn focus_ours(&self) {
+        lock(&self.shared.log).ours = true;
     }
 
     /// Makes the focused box look as `spot` says, keeping its id in place of `spot.box_id`, and tells at once.

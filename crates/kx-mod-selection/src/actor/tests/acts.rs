@@ -215,3 +215,17 @@ fn another_input_before_the_break_ends_the_swallow() {
         "the break counts as a key now"
     );
 }
+
+/// The look keeps the last box while focus is in our own window, so Paste needs a box in another app.
+#[test]
+fn paste_never_goes_into_our_own_window() {
+    let mut rig = Rig::new();
+    rig.watch.set_clip(true);
+    rig.focus(caret(50));
+    rig.click();
+    assert_eq!(rig.shown().1, [Paste]);
+    rig.watch.focus_ours();
+    rig.act(Paste);
+    assert!(rig.edits().is_empty(), "no Ctrl+V reaches our window");
+    assert_eq!(rig.view(), ChipsView::Hidden);
+}
