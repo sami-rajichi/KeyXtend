@@ -91,8 +91,8 @@ pub(crate) struct Ports {
     /// Starts each open off the actor.
     pub spawn: Spawn,
 }
+
 /// An act in flight: an edit asked of the keyboard, or a link opening.
-/// The act in flight: an edit asked of the keyboard, or a link opening.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Busy {
     /// The round of the strip clicked.
