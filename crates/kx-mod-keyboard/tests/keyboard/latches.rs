@@ -238,30 +238,27 @@ fn check(
             prop_assert_eq!(shortcut_held(r)?, latched, "every latch held, once");
             used(model, release);
         }
-        Kind::Edit(edit, terminal) => {
-            prop_assert!(
-                sent.is_empty(),
-                "the platform sends the edit, not the injector"
-            );
-            edit_sent(r, id, edit, terminal)?;
-        }
+        Kind::Edit(edit, terminal) => edit_sent(r, id, &sent, edit, terminal)?,
         Kind::Quiet => prop_assert!(sent.is_empty()),
     }
     Ok(())
 }
 
-/// Checks that edit ask `id` sent its own shortcut with nothing held, and nothing else; the latches it leaves alone.
-fn edit_sent(r: &Rig, id: &str, edit: Edit, terminal: bool) -> Result<(), TestCaseError> {
+/// Checks that edit ask `id` sent its own shortcut with nothing held, and nothing through the injector (`sent`); the
+/// latches it leaves alone.
+fn edit_sent(
+    r: &Rig,
+    id: &str,
+    sent: &[Stroke],
+    edit: Edit,
+    terminal: bool,
+) -> Result<(), TestCaseError> {
+    prop_assert!(sent.is_empty(), "{}: no injected key", id);
     let want: Vec<_> = edit_id(edit, terminal)
         .map(|e| (sid(e), Vec::new()))
         .into_iter()
         .collect();
-    prop_assert_eq!(
-        r.shortcuts.sent(),
-        want,
-        "{}: its own shortcut, nothing held",
-        id
-    );
+    prop_assert_eq!(r.shortcuts.sent(), want, "{}: its own shortcut alone", id);
     r.shortcuts.clear();
     Ok(())
 }
