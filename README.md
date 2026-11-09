@@ -45,7 +45,7 @@ KeyXtend is in early development; this is what it is being built to do.
 - **Voice typing:** local Whisper, click to start and click to stop. A cloud engine with your own free key is optional and off by default.
 - **Clipboard history:** text, links, images and files, newest first, with pins and "Paste together".
 - **Quick-fill:** a notebook of saved logins, details and notes, which types any value at the caret in one click, with a locked backup that keeps itself up to date.
-- **Selection helper:** a Copy button appears next to any text you select.
+- **Selection helper:** select text and a strip of keys beside it copies, cuts, pastes or translates it.
 - **Snip:** capture a region without dragging, annotate it, and copy its text with OCR.
 - **Power key:** opens the system's own shut-down dialog.
 - **Themes:** Native Adaptive, ET66 and Modern Dolch, each in light and soft dark, in sizes from small to large.
@@ -68,6 +68,7 @@ Early development. Done so far:
 - P7: word prediction, which suggests and learns words and emails on this PC.
 - P8: clipboard history, which keeps what you copy, sealed on this PC, and pastes several copies together.
 - P9: Quick-fill, which keeps logins and other saved values sealed on this PC, fills them with one click and keeps a locked backup where you choose.
+- P10: the selection helper, a strip of keys beside the text you select, which copies, cuts, pastes or translates it.
 
 The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLOG.md](docs/WORKLOG.md).
 
@@ -109,6 +110,11 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
   - **The backup** is one locked file, `KeyXtend Backup.kxbox`, in each place you pick: a cloud folder, a USB stick or any folder. It updates by itself after each change, and a place that is gone waits and catches up. Your backup password is never stored, and without it the file cannot open, so a banner checks now and then that you still know it; `[vault] memory_checks = false` stops that.
   - **On a new computer,** an empty notebook offers the backups it finds, and Bring back also opens one from any folder. Your password brings the entries back.
   - **Import** reads a KeePass file with its password. Custom values start hidden, and a file that also needs a key file cannot open.
+- **The selection strip:** select text in an app that tells its selection, and a strip of keys, as tall as a key, shows beside it without taking the focus.
+  - A text box offers Copy, Cut, Paste and Translate, a page or other read-only text Copy and Translate, and a terminal Copy, Paste and Translate. A password box shows none.
+  - A click in a text box, with something copied, shows Paste alone by the caret; it goes after 5 seconds, at a key or at a click.
+  - **Translate** opens the translate site in your browser with the selected text, up to 1,000 characters cut at a whole word. The first time, it asks before any text goes to the site (Google Translate by default), and nothing is read before you click.
+  - Its settings are in the `[selection]` section: each key on or off, `caret_paste`, `caret_s = 5`, `look` (`both`, `icons` or `words`), `minimised`, `translate_to` and `translate_site`.
 - **The top bar:** the sun or moon switches light and dark, the palette changes the theme, and the lens buttons and S, M, L change the size. Click the grip, move, then click to place the keyboard; the corner resizes it the same way.
 - **− and ×:** − shrinks the keyboard to a bubble, and × hides it. The tray icon's menu shows it again or quits; Windows 11 may keep a new tray icon under the ^ arrow until you pin it.
 - **Starting KeyXtend again** shows the running keyboard, and `keyxtend --quit` ends it.
@@ -125,7 +131,7 @@ The build list is in [FEATURES.md](docs/FEATURES.md), and progress is in [WORKLO
 - **The clipboard history** is sealed in a `clipboard` folder there, one folder per day. By default it keeps 7 days, at most 1,000 entries and 1 GB; Open folder in the panel shows it.
 - **Quick-fill's notebook** is sealed in a `quickfill` folder there, under a key of its own. Copied to another PC or account, those files open nothing. Its backups live wherever you put them.
 - **Started from inside another app,** such as an AI assistant's tools, Windows would hide what KeyXtend saves in that app's own folder. So that run saves nothing, keeps Quick-fill off and says so on a banner; start it from the Start menu instead. A later normal run offers to delete any hidden copy an older run left.
-- **Nothing is sent anywhere.** The settings and the log stay on your PC. A backup goes only to the places you pick.
+- **Nothing is sent anywhere.** The settings and the log stay on your PC. A backup goes only to the places you pick, and Translate hands selected text to your browser only after your yes.
 
 ## Documents
 - Design spec: [accessible-keyboard-design.md](docs/superpowers/specs/2026-09-26-accessible-keyboard-design.md)

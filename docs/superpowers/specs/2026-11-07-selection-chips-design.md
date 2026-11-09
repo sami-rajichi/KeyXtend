@@ -4,7 +4,7 @@ Decided with the owner on 2026-11-07, from five mock-ups shown in the session; t
 
 ## Why
 
-- Copy, Cut and Paste need Ctrl and a letter, or a trip to the Shortcuts layer. With one finger, that is three or four clicks for the most common edit.
+- Copy, Cut and Paste need Ctrl and a letter, or a trip to the Shortcuts layer. With one pointer button, that is three or four clicks for the most common edit.
 - Phones solved this with a small edit bar on selected text and a Paste offer at the caret ([Android's text selection toolbar](https://material.io/design/platform-guidance/android-text-selection-toolbar); [PopClip](https://www.popclip.app/guide/basics) on the Mac, SnipDo on Windows).
 - The owner's idea (P9, 2026-11-01): selected text shows Copy, Cut and Paste, a caret shows Paste, and the user picks the action.
 
