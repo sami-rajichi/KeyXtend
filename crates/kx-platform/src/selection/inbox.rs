@@ -183,3 +183,6 @@ impl Drop for Inbox {
         self.0.close(lock(&self.0.desk));
     }
 }
+
+#[cfg(test)]
+mod props;

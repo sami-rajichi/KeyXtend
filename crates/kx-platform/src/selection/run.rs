@@ -112,6 +112,26 @@ impl Clock for Since {
     }
 }
 
+/// The job given up last at its cap: the thread is skipped while it runs that job, and used again once it returns.
+#[derive(Debug, Default)]
+struct Stuck(Option<Weak<()>>);
+
+impl Stuck {
+    /// Whether the thread still runs the job given up; once it returned, that job is forgotten.
+    fn busy(&mut self) -> bool {
+        let busy = self.0.as_ref().is_some_and(|job| job.strong_count() > 0);
+        if !busy {
+            self.0 = None;
+        }
+        busy
+    }
+
+    /// Notes `job`, the one given up at its cap.
+    fn gave_up(&mut self, job: Weak<()>) {
+        self.0 = Some(job);
+    }
+}
+
 /// A running watch; dropping it stops its tells, and its thread ends once the running job returns.
 struct Run {
     shared: Arc<Shared>,
@@ -123,8 +143,8 @@ struct Run {
     readable: bool,
     /// The last answered look found focus in our own process, so it gave `last`.
     ours: bool,
-    /// The job given up last at its cap, which lives while the thread is stuck in it.
-    stuck: Mutex<Option<Weak<()>>>,
+    /// The job given up last at its cap, while the thread is stuck in it.
+    stuck: Mutex<Stuck>,
 }
 
 impl Run {
@@ -145,24 +165,14 @@ impl Run {
             last,
             readable: false,
             ours: false,
-            stuck: Mutex::new(None),
+            stuck: Mutex::default(),
         }
-    }
-
-    /// Whether the thread still runs a job given up at its cap; once it returns, jobs go through again.
-    fn busy(&self) -> bool {
-        let mut stuck = lock(&self.stuck);
-        let busy = stuck.as_ref().is_some_and(|job| job.strong_count() > 0);
-        if !busy {
-            *stuck = None;
-        }
-        busy
     }
 
     /// Hands the job `make` builds to the thread and waits for its answer for the cap at most; a busy thread gets no
     /// job, and the asker hears `TimedOut` at once. A late answer is dropped unread.
     fn ask<T>(&self, make: impl FnOnce(Reply<T>, Instant) -> Ask) -> Result<T, SelError> {
-        if self.busy() {
+        if lock(&self.stuck).busy() {
             return Err(SelError::TimedOut);
         }
         let (reply, answer) = mpsc::channel();
@@ -173,7 +183,7 @@ impl Run {
             Ok(got) => Ok(got),
             Err(RecvTimeoutError::Disconnected) => Err(SelError::Unavailable),
             Err(RecvTimeoutError::Timeout) => {
-                *lock(&self.stuck) = Some(alive);
+                lock(&self.stuck).gave_up(alive);
                 Err(SelError::TimedOut)
             }
         }

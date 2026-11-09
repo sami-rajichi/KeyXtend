@@ -1,5 +1,6 @@
 //! The run over scripted thread bodies: answers come back from the thread, a closed box or our own focus sends no read,
-//! a dropped run tells nothing more, an ended watch is unavailable, and a panicking tell is caught.
+//! a dropped run tells nothing more, an ended watch is unavailable, and a panicking tell is caught; the hung app is in
+//! `hung`, the pacing in `paced`, and the skip state over any run in `stuck`.
 
 use super::*;
 use crate::selection::rig::{Script, Stop, WAIT, own, theirs};
@@ -10,6 +11,7 @@ use std::sync::mpsc::Receiver;
 
 mod hung;
 mod paced;
+mod stuck;
 
 /// A `read_ms` no answered job reaches.
 const LONG_MS: u32 = 5000;

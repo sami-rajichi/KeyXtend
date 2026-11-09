@@ -4,7 +4,9 @@
 
 use super::*;
 
-/// A `read_ms` an answered look meets even beside other test runs, short enough to wait out for a timeout.
+/// A `read_ms` an answered look meets even beside other test runs, short enough to wait out for a timeout. These
+/// tests wait on this real job deadline by design and never sleep; the skip state itself is checked with no wait in
+/// `stuck`.
 const HANG_MS: u32 = 1000;
 
 #[test]
