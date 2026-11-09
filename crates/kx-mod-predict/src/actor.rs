@@ -249,10 +249,8 @@ impl Actor {
     pub fn handle(&mut self, seed: Option<&Pack<'_>>, msg: Msg) -> Flow {
         let told = match msg {
             Msg::Typed(piece) => self.typed(seed, &piece),
-            Msg::Mode(mode) => {
-                self.mode = mode;
-                true
-            }
+            // The keyboard tells its mode again at each ask, so only a change starts a new round.
+            Msg::Mode(mode) => std::mem::replace(&mut self.mode, mode) != mode,
             Msg::Lang { iso, name } => return self.lang(seed, iso, name),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
