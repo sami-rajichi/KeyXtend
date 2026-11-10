@@ -39,7 +39,7 @@ Decided with the owner on 2026-11-09 and 2026-11-10, from two research rounds re
 
 ## How a cloud dictation runs
 
-1. Listening is unchanged: the `voice` job records, sends levels and cuts pieces at pauses. It still has no network.
+1. Listening is unchanged: the `voice` job records, sends levels and cuts pieces at pauses, within the service's limits. It still has no network, and for a cloud pick it loads no model.
 2. **Nothing leaves before Stop (owner).** Cancel therefore sends nothing, and the field in front is checked once, at Stop, when the text is about to be typed (and at Start, to show the note early).
 3. At Stop each piece goes from the `voice` job to the app, and from the app to a third job, `speech-net`, which has the network and no microphone (designer). The pieces travel as secret bytes in wiped buffers; they are not encrypted between the jobs, and the app passes them on without reading sound.
 4. `speech-net` sends the pieces to the service in the request shape its row names, with the language the keyboard shows, several at a time within the service's limits (requests a minute, seconds and megabytes, from its row), and returns the texts.
@@ -57,7 +57,7 @@ A connection is one request shape, written once as a small adapter. A service is
 | DeepInfra form | DeepInfra | the model sits in the address and the file field is `audio` |
 | Azure fast transcription | Azure AI Speech (classic) and MAI-Transcribe-2 | one upload with a small settings part; the user types their resource's address; the model is one line of that part |
 | ElevenLabs form | ElevenLabs Scribe | its own field names and key header |
-| Gemini | Google Gemini 3.5 Transcribe | three requests per clip as documented; built last, after a test with a real key |
+| Gemini | Google Gemini 3.5 Transcribe | three requests per clip as documented; built last, and offered only after a test with a real key |
 
 - **Why direct ElevenLabs and Gemini (owner):** both are also on OpenRouter, but OpenRouter is pay-as-you-go only, and it cannot use an ElevenLabs plan's monthly allowance or Google's free tier and plan credit.
 - **Custom row (designer):** the user types an HTTPS address, a model name and a key for any service that speaks the upload form, such as a server of their own.
@@ -105,6 +105,7 @@ Facts read on 2026-11-09 and 2026-11-10 (light use is 15 hours a month, heavy is
 - `speech-net` runs under the worker's restricted token and job limits, talks only to the address in the row or the Custom row, over HTTPS, and follows no redirect to another host. Replies are size-capped and parsed by small, property-tested readers.
 - The app relays the pieces as secret bytes and never parses sound. The `voice` job never gets the network.
 - The module's Network capability, used in part 1 for downloads only, now also covers the services the user switched on.
+- The card's link opens through `OpenLink`, and Paste on a typed line uses the clipboard route Quick-fill uses (`ReadClipboard`); the new ADR adds the voice module as a holder of both (designer).
 - `docs/security/kx-mod-voice.md` gains the cloud threats: a stolen key, a hostile reply, a look-alike address in the Custom row, and a service that changes its terms.
 
 ## Edge cases for the plan
@@ -115,7 +116,9 @@ Facts read on 2026-11-09 and 2026-11-10 (light use is 15 hours a month, heavy is
 - The language is not one the service's model knows; a regional code the service refuses.
 - A piece over the service's limit; a very long dictation; Cancel while uploading (the request is dropped).
 - The key is removed, or the service switched off, while a dictation runs.
-- A password box while a cloud model is picked; a hidden run; no local model as a fallback.
+- A password box while a cloud model is picked, or one that comes in front before Stop (nothing is uploaded); a hidden run.
+- No local model as a fallback: "Use the local model" is dimmed and offers Download (designer).
+- The `cloud` switch turned off: no service is offered, nothing is sent, and cloud picks fall back to the local default (designer).
 - An Azure address typed wrong; a Custom address that is not HTTPS.
 - A card always shows the date its facts were read; older than `facts_days`, the date takes a warning tone (designer).
 - A service's terms number changed by an update; the user declines the new confirmation (the service goes back to Off).
@@ -126,7 +129,7 @@ The research could not settle these. The builder makes no account, so each waits
 
 - OVHcloud: its language field. Until its terms are read as allowing use without a key in a shipped app, its row asks for a key (designer).
 - MAI-Transcribe-2: its price from 2027-01-01, and whether its sound is used for training.
-- Gemini: a one-request path, the free tier's limits, and a report of empty replies left unanswered. Its test passes when the trial's six clips (English, French, Arabic) each come back as non-empty text in the set language; if it fails, the row is left out and the reason is noted in the item file (designer).
+- Gemini: a one-request path, the free tier's limits, and a report of empty replies left unanswered. Its connection is built but its row is not offered. The test is six dictations by the owner at the hands-on check (English, French and Arabic, a short and a long one each); it passes when each comes back as non-empty text in the set language. If it fails, the row stays out and the reason is noted in the item file (designer).
 - OpenRouter: whether regional codes pass through.
 - Mistral: whether the plan's credit covers speech. ElevenLabs: how its plan allowance and its API price fit together.
 - DeepInfra: its sign-up credit, and its OpenAI-style address.
@@ -138,7 +141,7 @@ The research could not settle these. The builder makes no account, so each waits
 3. Azure, classic and MAI.
 4. DeepInfra.
 5. ElevenLabs.
-6. Gemini, only if the real-key test passes.
+6. Gemini: built, and offered only once the real-key test passes.
 
 Each step is usable on its own and ends with its tests and a commit.
 
@@ -174,5 +177,7 @@ Picks stay in part 1's `picks`: a pick may now name a service and model.
 ## The designer's calls
 
 For the owner to check while reading: the third worker job and the relay through the app; the Custom row; OpenRouter's keep-nothing switch; short model lists; Compare models with ticked cloud models; warnings shown twice for Gemini and ElevenLabs; the Test call; password boxes forced to a local model, other unreadable fields treated as text; "Use the local model" after a failed upload; facts read again at each release and shown as old after 180 days; asking again when a service's terms change; OVHcloud with a key; Gemini's pass rule.
+
+Added after the plan's check: Gemini built but not offered until six dictations pass; the card's link and Paste as two more capabilities; "Use the local model" dimmed when none is ready; what the `cloud` switch does when turned off.
 
 The owner approved this design on 2026-11-10, and settled that nothing is sent before Stop.

@@ -109,11 +109,14 @@ Engines, models and services are plug-in parts (owner): the feature's code names
 | Network | new `kx-platform-net` | the spike's WinHTTP part, reachable from the worker only |
 | Windows | `kx-ui` | the bar window, the Voice panel, hub state and one bridge |
 | Keyboard | `kx-mod-keyboard` | the `voice` role for the key, the `rec` flag, typing on request |
+| Session | `kx-module-api`, new session port | tells a lock or a sleep, so a dictation stops and wipes (designer) |
 
 - The tables live in `kx-mod-voice` and nowhere else. The worker holds no table: every ask carries the fields it needs (file, language code, device, threads), so a value is never written twice.
 - A new model that an existing runner reads is one row. A new runner is one adapter file and its name in the `runner` column.
 - **One model per job (designer):** a `voice` job loads one model, and its memory cap comes from that model's row. Changing the model (another language's model, Try again, Compare's next model) ends the job and starts a new one, so no job's cap ever changes and a model always leaves memory whole.
 - A recording still needed by the new job crosses through the app as secret bytes in wiped buffers, in pieces under the frame limit. The app passes it on and never reads sound.
+- **Listening without a model (designer):** the `voice` job can also record, cut and hand over its sound at Stop with no model loaded. Part 2's cloud dictation uses this.
+- **Caps (designer):** a job without a model has a small cap of its own (`job_mb`); a model adds its row's need, and an unchecked file counts as its size.
 
 ### The models table
 
@@ -143,6 +146,7 @@ Engines, models and services are plug-in parts (owner): the feature's code names
 
 - Models live in one visible folder the user picks (owner), asked at the first download; the offer is a `KeyXtend\models` folder on the drive with the most room, never a hidden cache (designer). A model file already there is recognised by its fingerprint and reused, not downloaded again.
 - A download runs in the `fetch` job: HTTPS only, the address from the table, into a `.part` file, with progress, Pause and Cancel on the row. Size and SHA-256 are checked before the file gets its name; a wrong fingerprint deletes the part and says so. Room on the drive is checked first (`min_free_mb`).
+- The Models page shows the folder, with Change and Open; after a change the panel reads the new folder, and files are never moved (designer).
 - Clicking Download is the user asking for that network use; nothing else in part 1 touches the network.
 
 ### Device
@@ -162,7 +166,7 @@ Engines, models and services are plug-in parts (owner): the feature's code names
 - The model loads at the first dictation and stays for `idle_min` minutes after the last one (owner); then the `voice` job ends, and the system takes back all its memory, normal and graphics.
 - Each dictation's working memory is freed as soon as its text is delivered (owner). Its sound is wiped when its bar closes, by Close, after `done_ms` or at the next dictation; that short stay is what lets Try again and "Transcribe anyway" work (owner). The job's end wipes any sound still held.
 - One model is in memory at a time (designer).
-- The job's memory cap comes from the model's row. A model whose need passes the PC's memory is marked Not for this PC, with the reason; with no usable model the panel says so (owner).
+- The job's memory cap comes from the model's row, plus `job_mb`. A model whose need passes the PC's memory is marked Not for this PC, with the reason; with no usable model the panel says so (owner).
 
 ## Compare models
 
@@ -202,6 +206,7 @@ Engines, models and services are plug-in parts (owner): the feature's code names
 | `keep_voice`, `voice_max_mb` | false, 1024 | kept recordings |
 | `card_margin_mb`, `card_gain`, `card_diff` | 512, 1.5, 1 | room left on a card; how much faster it must be; words its text may differ by |
 | `min_free_mb` | 2048 | room left on the models drive |
+| `job_mb` | 512 | memory cap of a job without a model; a model adds its row's need |
 
 Worker times (deadline, restart, load and warm-up waits) follow the pattern of `[clipboard]`'s worker keys. Each range is a named constant checked by the settings contract.
 
@@ -210,6 +215,7 @@ Worker times (deadline, restart, load and warm-up waits) follow the pattern of `
 - The microphone opens only in the `voice` job, which has no network; `fetch` has the network and no microphone. Both run under the worker's restricted token and job limits.
 - A recording lives in the worker's memory and is wiped when its bar closes, unless Keep recordings is on. It passes through the app only as unread secret bytes, to be sealed or handed to a new job. Text and sound cross the pipe as secrets and are never logged (`Redacted`).
 - Model files are data, read only inside the sandboxed worker; no code is ever downloaded. Addresses come from the table.
+- The engine's parts are loaded from the worker's own folder only, never from the models folder. One program holds both jobs, so a check keeps the `voice` job's code from the network part and the `fetch` job's code from the microphone part.
 - The module asks for Microphone, Network (downloads only), SecretStore, ReadFocusedText and WriteClipboard (for Copy). `cargo xtask tidy` gains the engine and audio crates in the lists the app may not reach.
 - `docs/security/kx-mod-voice.md` is new; the worker's, `kx-ipc`'s and the platform notes gain the voice parts.
 
@@ -278,5 +284,7 @@ The plan starts with these, before any screen is built:
 For the owner to check while reading: the bar's place; pieces cut at pauses; Undo insert's limit; Cancel's "Transcribe anyway"; Try again; the text kept on the bar when no field takes it; the two worker jobs; other files in the folder; the folder offer; Automatic's rule; one model in memory; what Compare keeps; pins in History; the recordings limit; the tray row opening the panel, not a dictation; the reduced-motion wave.
 
 Added after the builder's check: the bar's size and the mock-up step before any QML; the bar staying while the panel is open; Try again replacing the first text; each piece's text sent at once; no Copy for a password box; one model per job; the models' source at a fixed revision; the card self-test and its three shipped clips; a failed proof stops the plan.
+
+Added after the plan's check: the session port for lock and sleep; listening without a model; `job_mb` and the cap of an unchecked file; the folder line on the Models page; parts loaded from the worker's folder only.
 
 The owner approved this design on 2026-11-10, and settled two of the check's questions: a recording stays until its bar closes, and dictation works in other keyboard languages, marked untested.
