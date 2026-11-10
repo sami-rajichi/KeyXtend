@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Mock-up of the dictation bar and the Voice panel's first page (P11, spec 2026-11-10-voice-typing-design.md), as the owner saw it on 2026-11-10. The owner chose a gear on the bar plus a tray row. Only the Listening state is drawn; the plan draws the other states and pages here first. Row icons are stand-ins. Reference only, never shipped. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KeyXtend Dictation Bar</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Colours and sizes are those of the session's picture; the product takes them from theme tokens. */
+body{margin:0; padding:24px 16px; background:#E9E6DF; font:12px/1.3 "IBM Plex Sans","Segoe UI",sans-serif;
+  --ink:#1D1B18; --mu:#6B655C; --pop:#FBFAF7; --ln:rgba(29,27,24,.2); --ring:#C29D00; --rec:#E5484D}
+.stage{max-width:720px; margin:0 auto; display:flex; gap:14px; align-items:flex-start}
+.col{flex:1; min-width:0}
+.i{width:17px; height:17px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.bar{background:var(--pop); color:var(--ink); border:1px solid var(--ln); border-radius:999px; display:flex; align-items:center; gap:8px; padding:5px 6px}
+.ib{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; flex:none; color:var(--mu)}
+.stop{background:var(--ink); color:var(--pop)}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--rec); flex:none}
+.st{font-weight:500}
+.chip{border:1px solid var(--ln); border-radius:999px; padding:2px 8px; font-size:11px; white-space:nowrap}
+.wv{flex:1; min-width:48px; height:26px; display:flex; align-items:center; justify-content:center; gap:3px}
+.wv b{width:4px; height:3px; border-radius:2px; background:var(--ring)}
+.tm{font:11px ui-monospace,Consolas,monospace; color:var(--mu)}
+.say{margin:10px 6px 0; color:var(--mu)}
+.pan{width:200px; flex:none; background:var(--pop); color:var(--ink); border:1px solid var(--ln); border-radius:12px; overflow:hidden}
+.pan .i{width:15px; height:15px}
+.ph{display:flex; align-items:center; gap:6px; padding:7px 10px; border-bottom:1px solid var(--ln); font-weight:500}
+.ph .i:last-child{margin-left:auto; color:var(--mu)}
+.pr{display:flex; align-items:center; gap:7px; padding:5px 10px; font-size:11px}
+.pr span{margin-left:auto; color:var(--mu)}
+</style>
+</head>
+<body>
+<!-- Lucide icons (ISC), copied from assets/icons/lucide. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></symbol>
+  <symbol id="i-lines" viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+  <symbol id="i-lang" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+</svg>
+<div class="stage">
+  <div class="col">
+    <div class="bar">
+      <span class="ib" aria-label="Cancel"><svg class="i"><use href="#i-x"/></svg></span>
+      <span class="dot"></span><span class="st">Listening</span>
+      <span class="chip">Français</span>
+      <span class="wv"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span>
+      <span class="tm">0:07</span>
+      <span class="ib" aria-label="Voice settings"><svg class="i"><use href="#i-gear"/></svg></span>
+      <span class="ib stop" aria-label="Stop and type"><svg class="i"><use href="#i-stop"/></svg></span>
+    </div>
+    <p class="say">The bar while you speak: cancel, language, live wave, time, gear, stop</p>
+  </div>
+  <div class="pan">
+    <div class="ph"><svg class="i"><use href="#i-mic"/></svg>Dictation<svg class="i"><use href="#i-x"/></svg></div>
+    <div class="pr"><svg class="i"><use href="#i-lines"/></svg>On this PC<span>Parakeet</span></div>
+    <div class="pr"><svg class="i"><use href="#i-cloud"/></svg>Cloud<span>Off</span></div>
+    <div class="pr"><svg class="i"><use href="#i-lang"/></svg>Language<span>Keyboard</span></div>
+    <div class="pr"><svg class="i"><use href="#i-history"/></svg>History<span>12</span></div>
+  </div>
+</div>
+<script>
+// The wave rises with speech and lies flat in a pause, as the real level will drive it.
+(function(){
+  var bars = [].slice.call(document.querySelectorAll('.wv b')), h = bars.map(function(){ return 3; });
+  var tm = document.querySelector('.tm'), t0 = performance.now();
+  function frame(t){
+    var s = (t - t0) / 1000, speaking = (s % 5) < 3.4 ? 1 : 0;
+    var env = speaking * (.3 + .7 * Math.abs(Math.sin(s * 2.3)) * Math.abs(Math.sin(s * .9 + 1)));
+    bars.forEach(function(b, n){
+      var target = 3 + 21 * env * (.4 + .6 * Math.abs(Math.sin(n * .9 + s * 7)));
+      h[n] += (target - h[n]) * .22; b.style.height = h[n].toFixed(1) + 'px';
+    });
+    tm.textContent = '0:' + String(Math.floor(s) % 60).padStart(2, '0');
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
