@@ -28,7 +28,8 @@ pub enum IpcError {
     #[error("the frame's length disagrees with its fields, or a goodbye carries an id")]
     Inconsistent,
     /// A field holds a value it may not: a codec, reason, fault, side, DIB cap, work factor, yes or no, part name, or
-    /// text that is not UTF-8.
+    /// text that is not UTF-8. So is a number out of its range, a bad short or shown name, a NUL in a path, an address
+    /// that is not HTTPS, a bad host, or sound that is not whole samples.
     #[error("a field of the frame is out of range")]
     BadField,
     /// The stream failed for another reason.

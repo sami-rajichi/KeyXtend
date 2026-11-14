@@ -6,6 +6,10 @@ pub const MEDIA_JOB: &str = "media";
 pub const MAX_PIXELS_FLAG: &str = "--max-pixels";
 /// The job that makes padlocks, seals and opens boxes and reads `KeePass` files, alone on its command line.
 pub const VAULT_JOB: &str = "vault";
+/// The job that opens the microphone and runs the detector and the engine, with no network (ADR-0042).
+pub const VOICE_JOB: &str = "voice";
+/// The job that downloads model files, with no microphone (ADR-0042).
+pub const FETCH_JOB: &str = "fetch";
 /// The exit code after goodbye or the end of input; every OS reads 0 as success.
 pub const CLEAN_EXIT: u8 = 0;
 /// The exit code after a refused command line or a broken frame.

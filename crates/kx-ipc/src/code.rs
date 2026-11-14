@@ -1,11 +1,7 @@
-//! One-byte wire codes for the frame kinds, image codecs and failure reasons; code 0 is never used.
+//! One-byte wire codes for the frame kinds, image codecs and failure reasons; code 0 is never used. The voice and
+//! fetch jobs keep their own codes beside their frames.
 
-use crate::limits::{
-    DRAW_HEAD, FAILED_LEN, MAKE_HEAD, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, MIN_IMAGE_BYTES,
-    PIXELS_HEAD, RGBA_BYTES,
-};
-use crate::vault::wire;
-use std::ops::RangeInclusive;
+mod lens;
 
 /// A small enum sent as one byte.
 pub(crate) trait Code: Copy + PartialEq + 'static {
@@ -61,6 +57,66 @@ pub(crate) enum Kind {
     Entries = 17,
     /// The vault job made nothing.
     VaultFailed = 18,
+    /// The host starts a dictation.
+    VoiceStart = 19,
+    /// The host stops listening; the rest is transcribed.
+    VoiceStop = 20,
+    /// The host drops the run; the recording stays until closed.
+    VoiceCancel = 21,
+    /// The host asks for the held recording transcribed again.
+    VoiceAgain = 22,
+    /// The host asks for the held recording back, in pieces.
+    VoiceKeep = 23,
+    /// The host closes the run; its recording is wiped.
+    VoiceClose = 24,
+    /// The host asks for the devices.
+    VoiceDevices = 25,
+    /// The host asks for a model file's facts.
+    VoiceFacts = 26,
+    /// The host asks for a card's check.
+    VoiceCheck = 27,
+    /// The host hands a piece of a recording to the voice job.
+    SoundIn = 28,
+    /// The host tells the voice job to end.
+    VoiceBye = 29,
+    /// The voice job sends a sound level.
+    Level = 30,
+    /// The voice job heard speech start or stop.
+    Heard = 31,
+    /// The voice job reached a stage.
+    Stage = 32,
+    /// The voice job sends a card's warm-up progress.
+    Warm = 33,
+    /// The voice job sends a piece's text.
+    Piece = 34,
+    /// The voice job finished a run.
+    Done = 35,
+    /// The voice job hit a fault.
+    VoiceFailed = 36,
+    /// The voice job sends the devices.
+    DeviceList = 37,
+    /// The voice job sends a model file's facts.
+    FileFacts = 38,
+    /// The voice job sends a card's check result.
+    CardChecked = 39,
+    /// The voice job hands a piece of its recording to the host.
+    SoundOut = 40,
+    /// The host asks for a model file downloaded.
+    Fetch = 41,
+    /// The host pauses the download.
+    FetchPause = 42,
+    /// The host resumes the download.
+    FetchResume = 43,
+    /// The host cancels the download.
+    FetchCancel = 44,
+    /// The host tells the fetch job to end.
+    FetchBye = 45,
+    /// The fetch job sends its progress.
+    Progress = 46,
+    /// The fetch job checked and named the file.
+    Fetched = 47,
+    /// The fetch job stopped, for a fixed reason.
+    FetchFailed = 48,
 }
 
 impl Code for Kind {
@@ -83,33 +139,40 @@ impl Code for Kind {
         Self::Checked,
         Self::Entries,
         Self::VaultFailed,
+        Self::VoiceStart,
+        Self::VoiceStop,
+        Self::VoiceCancel,
+        Self::VoiceAgain,
+        Self::VoiceKeep,
+        Self::VoiceClose,
+        Self::VoiceDevices,
+        Self::VoiceFacts,
+        Self::VoiceCheck,
+        Self::SoundIn,
+        Self::VoiceBye,
+        Self::Level,
+        Self::Heard,
+        Self::Stage,
+        Self::Warm,
+        Self::Piece,
+        Self::Done,
+        Self::VoiceFailed,
+        Self::DeviceList,
+        Self::FileFacts,
+        Self::CardChecked,
+        Self::SoundOut,
+        Self::Fetch,
+        Self::FetchPause,
+        Self::FetchResume,
+        Self::FetchCancel,
+        Self::FetchBye,
+        Self::Progress,
+        Self::Fetched,
+        Self::FetchFailed,
     ];
 
     fn code(self) -> u8 {
         self as u8
-    }
-}
-
-impl Kind {
-    /// The payload lengths this kind may take: a longer one is `TooLong`, a shorter one `Inconsistent`.
-    pub(crate) const fn lens(self) -> RangeInclusive<usize> {
-        match self {
-            Self::Draw => DRAW_HEAD + MIN_IMAGE_BYTES..=MAX_ASK_LEN,
-            Self::Bye | Self::VaultBye => 0..=0,
-            Self::Pixels => PIXELS_HEAD + RGBA_BYTES..=MAX_REPLY_LEN,
-            Self::Failed | Self::VaultFailed => FAILED_LEN..=FAILED_LEN,
-            Self::Checked => wire::ONE..=wire::ONE,
-            Self::MakeDib => MAKE_HEAD + MIN_IMAGE_BYTES..=MAKE_HEAD + MAX_IMAGE_BYTES,
-            Self::Dib => MIN_IMAGE_BYTES..=MAX_IMAGE_BYTES,
-            Self::MakePadlock => wire::MAKE_LEAST..=wire::MAKE_MOST,
-            Self::Seal | Self::Opened => wire::SEAL_LEAST..=wire::SEAL_MOST,
-            Self::OpenBox => wire::OPEN_LEAST..=wire::OPEN_MOST,
-            Self::ReadKeepass => wire::KEEPASS_LEAST..=wire::KEEPASS_MOST,
-            Self::CheckPassword => wire::CHECK_LEAST..=wire::CHECK_MOST,
-            Self::Padlock => wire::PADLOCK_LEAST..=wire::PADLOCK_MOST,
-            Self::Sealed => wire::BYTES.least()..=wire::BYTES.most(),
-            Self::Entries => wire::ENTRIES_LEAST..=wire::ENTRIES_MOST,
-        }
     }
 }
 

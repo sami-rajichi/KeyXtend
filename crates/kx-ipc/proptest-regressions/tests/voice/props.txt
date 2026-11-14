@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 7ca097f7f26757bb8a26db1fc52186aa83d7a38483ead8942b73ec73b6ece5aa # shrinks to note = Devices { id: 0, list: [Device { kind: Cpu, id: "A", name: "\u{200b}", total_mb: 0, free_mb: 0, driver: "" }] }
+cc 3acb68d9f8f7f76d03ba31fc417c91c2f0aaa69639b95d003e4e5ab47e1515ca # shrinks to note = Devices { id: 0, list: [Device { kind: Cpu, id: "_", name: "\u{feff}", total_mb: 0, free_mb: 0, driver: "" }] }, pick = Index(0), flip = 1
+cc 1b34aa51b4ad07dae1db4f4201f601cbf4fd48b23bc276054cef0d05a66a4d21 # shrinks to ask = Start { id: 0, setup: Setup { model: None, pad_ms: 0, piece_s: 10, record_max_s: 10, level_hz: 5, silence_stop_s: None, .. } }, note = Devices { id: 0, list: [Device { kind: Cpu, id: "a", name: "\u{200b}", total_mb: 0, free_mb: 0, driver: "" }] }, pick = Index(0)

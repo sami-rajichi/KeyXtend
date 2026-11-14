@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 17:45 — P11: the voice and fetch frames
+The worker pipe gains the `voice` job's asks and notes (kinds 19 to 40) and the `fetch` job's (41 to 48), each kind with its own size range, and the `[voice]` value ranges now live once in `kx-ipc`. Text, sound and paths are wiped secrets that never print, and a device name with a hidden direction mark is refused. Round-trip, refusal and property tests cover every frame, and the vault frames are unchanged.
+
 ## 2026-11-09 13:32 — P10: Quick-fill's repeated emails no longer drop a chip pick
 The Windows check failed again on the same pick test, which here failed 3 of 30 runs of the whole binary with 4 test threads. A failing run's event log showed the cause: Quick-fill tells its email list at its start and at each ask, and two unchanged copies started new chip rounds between the lane and the pick. Prediction now ignores the same set again, and the life test asks for it before its pick, so it hits the race every time; the whole binary then passed 60 of 60 runs at 4 threads and 20 of 20 at default threads.
 
