@@ -69,6 +69,8 @@ pub enum Plan {
     Clip,
     /// The Quick-fill key: the face asks the vault module to open or close its panel; nothing goes to the app.
     Fill,
+    /// The Dictation key: the face asks the voice module to start or stop; nothing goes to the app.
+    Voice,
     /// A layer cell: the platform sends the shortcut with every latch held; then the latches let go as after any key,
     /// and a dead key's wait ends.
     Shortcut(ShortcutId),
@@ -97,6 +99,7 @@ impl fmt::Debug for Plan {
             Self::Power => f.write_str("Power"),
             Self::Clip => f.write_str("Clip"),
             Self::Fill => f.write_str("Fill"),
+            Self::Voice => f.write_str("Voice"),
             Self::Shortcut(_) => f.write_str("Shortcut"),
             Self::Next => f.write_str("Next"),
             Self::Later => f.write_str("Later"),
@@ -136,6 +139,7 @@ pub fn plan(role: Role, sc: Option<Scan>, now: &Now<'_>) -> Plan {
         (Role::Power, _) => Plan::Power,
         (Role::Clip, _) => Plan::Clip,
         (Role::Fill, _) => Plan::Fill,
+        (Role::Voice, _) => Plan::Voice,
         _ => Plan::Later,
     }
 }

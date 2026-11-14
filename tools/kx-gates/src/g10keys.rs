@@ -168,6 +168,7 @@ fn step_for(
         }),
         (Role::Later, _) => Some(step(id, &[id], Expect::Nothing, false)),
         // The Power key is never pressed: with the power module running, it opens the system's shut-down dialog.
+        // Nor is the Dictation key, which would open the microphone.
         _ => None,
     }
 }

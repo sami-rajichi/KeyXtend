@@ -135,6 +135,7 @@ fn state_with(
         fill: others.fill,
         panel: others.panel,
         aimed: false,
+        rec: false,
     })
 }
 
@@ -180,8 +181,8 @@ fn a_key_that_types_nothing_with_altgr_shows_nothing_and_is_named_empty() {
 #[test]
 fn dimmed_keys_paint_dim_and_named_keys_have_no_legend() {
     let s = state(&none(), false, None);
-    assert_eq!(s.keys["mic"].paint, DIM);
-    assert!(!s.keys["mic"].on);
+    assert_eq!(s.keys["snip"].paint, DIM);
+    assert!(!s.keys["snip"].on);
     assert_eq!(s.keys["esc"].legend, Legend::default());
     assert_eq!(s.keys["esc"].paint.fill, "danger");
 }

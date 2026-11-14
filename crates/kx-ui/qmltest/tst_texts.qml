@@ -103,10 +103,10 @@ Item {
             verify(button(app, t.texts["key.esc"]), where + "readers hear the keys in it");
             compare(sizeButtons(app).map(b => b.text), t.lang.sizes.map(z => z.label), where + "the size letters");
             compare(Board.tipOf(app.face).name, "", where + "a tip in the last language closes");
-            const mic = button(app, t.texts["key.mic"]);
+            const snip = button(app, t.texts["key.snip"]);
             mouseMove(app.face.contentItem, 1, 1);
-            mouseMove(mic, mic.width / 2, mic.height / 2);
-            compare(Board.tipOf(app.face).name, t.texts["key.mic"] + "\n" + t.texts["tip.later"], where + "the tip");
+            mouseMove(snip, snip.width / 2, snip.height / 2);
+            compare(Board.tipOf(app.face).name, t.texts["key.snip"] + "\n" + t.texts["tip.later"], where + "the tip");
             compare(app.notice.shown.text, t.texts[noticeKey], where + "the banner");
             verify(named(app.notice.contentItem, Accessible.Button, t.texts["button.ok"]), where + "its button");
             compare(app.face.title, t.texts["window.keyboard"], where + "the window's name");

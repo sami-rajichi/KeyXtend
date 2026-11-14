@@ -28,6 +28,7 @@ mod stops;
 mod told;
 mod typing;
 mod views;
+mod voice;
 mod waits;
 mod window;
 mod words;

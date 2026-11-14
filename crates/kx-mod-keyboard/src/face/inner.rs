@@ -1,8 +1,9 @@
 //! The face's state behind its lock: typing, a held key, size and place, the language key's turn, the open list, the
-//! shortcuts layer, the mouse, scroll, power and vault modules' states, our open panel and a fill waiting its gap.
+//! shortcuts layer, the other modules' states, our open panel and a fill waiting its gap.
 
 mod aim;
 mod assist;
+mod caps;
 mod clip;
 mod edit;
 mod fill;
@@ -14,6 +15,7 @@ mod list;
 mod pad;
 mod panels;
 mod power;
+mod voice;
 mod words;
 
 pub(super) use held::Went;
@@ -33,16 +35,16 @@ use crate::sizer::Sizer;
 use crate::spec::{BoardSpec, Nav};
 use crate::view::{StateInput, StateView, state_view};
 use aim::Aim;
+use caps::CapsLook;
 use fill::Waiting;
 use held::timed;
+use kx_module_api::SettingsHandle;
 use kx_module_api::ports::{
     AssistChanged, FaceAction, FaceError, FaceReply, FillLive, LayoutId, Layouts, Point,
-    PowerChanged, Screen, ScrollChanged, ShortcutInfo,
+    PowerChanged, Screen, ScrollChanged, ShortcutInfo, VoiceLit,
 };
-use kx_module_api::{Mono, SettingsHandle};
 use lines::Lines;
 use std::sync::Arc;
-use std::time::Duration;
 
 /// Everything a click can change.
 pub(super) struct Inner {
@@ -62,6 +64,7 @@ pub(super) struct Inner {
     turn: Turn,
     /// The language list, while open.
     list: Option<LangList>,
+    /// Caps Lock as the UI's thread saw it, since Windows reads it per thread.
     caps: CapsLook,
     /// The mouse module's state, as the bus last told it.
     assist: AssistChanged,
@@ -89,20 +92,10 @@ pub(super) struct Inner {
     unshown: bool,
     /// A fill waiting its gap after a Tab; our keys reach only the open panel meanwhile.
     fill: Option<Waiting>,
+    /// The voice module's light, as the bus last told it, so the Dictation key glows while the microphone is open.
+    voice: VoiceLit,
     /// The module runs, so a picked word may type.
     running: bool,
-}
-
-/// Caps Lock as the UI's thread saw it, since Windows reads it per thread.
-#[derive(Default)]
-struct CapsLook {
-    /// What the last state view showed, so a press outside the keyboard redraws it.
-    shown: Option<bool>,
-    /// The last read, which the typing mode tells from any thread.
-    seen: bool,
-    /// When our Caps click flipped `seen`; the UI thread's refresh replaces the flip, and any read a relabel period
-    /// later does too, as when the window hid before its tick.
-    flipped: Option<Mono>,
 }
 
 impl Inner {
@@ -141,6 +134,7 @@ impl Inner {
             lines: Lines::default(),
             unshown: false,
             fill: None,
+            voice: VoiceLit::OFF,
             running: false,
         }
     }
@@ -235,39 +229,6 @@ impl Inner {
         }
     }
 
-    /// True when Caps Lock changed since the last state view showed it, as after a press on a real keyboard. The UI
-    /// thread's refresh calls it, at the relabel tick or after a stale tap, and its read replaces our flip.
-    pub(super) fn caps_moved(&mut self) -> bool {
-        self.caps.flipped = None;
-        let now = self.look_caps();
-        self.caps.shown.is_some_and(|shown| shown != now)
-    }
-
-    /// Whether Caps Lock shows lit, as the layout source says on the UI's thread, kept for the typing mode. Within one
-    /// `relabel_ms` of our flip the kept view stands, as the system may not have it yet.
-    fn look_caps(&mut self) -> bool {
-        let period = Duration::from_millis(self.settings.relabel_ms);
-        let now = self.ports.clock.now();
-        if self
-            .caps
-            .flipped
-            .is_none_or(|at| now >= at.saturating_add(period))
-        {
-            self.caps.flipped = None;
-            self.caps.seen = self.ports.source.caps_on();
-        }
-        self.caps.seen
-    }
-
-    /// After our Caps Lock tap went out, the kept view flips at once. The next tick's read, or a state read one
-    /// `relabel_ms` after the tap, replaces it, whichever comes first.
-    fn follow_caps(&mut self) {
-        if self.typing.took_caps() {
-            self.caps.seen = !self.caps.seen;
-            self.caps.flipped = Some(self.ports.clock.now());
-        }
-    }
-
     /// The state of `keys`, with `panel_keys` driving an open list shown `rows` to a page; a new layout is noted
     /// first, so a reader in its change event already sees the names' turn.
     pub(super) fn state(
@@ -300,6 +261,7 @@ impl Inner {
             fill: self.vault,
             panel: self.open,
             aimed: self.aimed(),
+            rec: self.voice.rec,
         })
     }
 }

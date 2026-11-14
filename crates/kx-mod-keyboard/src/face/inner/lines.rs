@@ -1,8 +1,8 @@
 //! The line prediction follows (ADR-0040 decisions 6 and 7): the open panel's while aimed at, else none. A change waits
-//! after the pieces typed before it, and so does an edit's answer, so each reaches the bus in the order it happened.
+//! after the pieces typed before it, and so does an edit's or a text's answer, so each reaches the bus in order.
 
 use super::Inner;
-use kx_module_api::ports::{EditDone, PanelLine, Piece};
+use kx_module_api::ports::{EditDone, PanelLine, Piece, TextDone};
 
 /// One thing the bus hears from the pieces' sender, in the order it happened.
 pub(in crate::face) enum Queued {
@@ -12,6 +12,8 @@ pub(in crate::face) enum Queued {
     Line(PanelLine),
     /// An edit's answer to the selection module, after the pieces before it and before its own break.
     Done(EditDone),
+    /// A text's answer to the voice module, after its own break.
+    Text(TextDone),
 }
 
 /// The line prediction heard last, and what waits behind a change.
@@ -52,6 +54,12 @@ impl Inner {
     /// Puts `done` behind what was flushed, ahead of the pieces typed since, such as the edit's own break.
     pub(super) fn queue_done(&mut self, done: EditDone) {
         self.lines.waiting.push(Queued::Done(done));
+    }
+
+    /// Puts a text's answer behind the pieces typed so far, its own break among them.
+    pub(in crate::face) fn text_done(&mut self, done: TextDone) {
+        self.flush();
+        self.lines.waiting.push(Queued::Text(done));
     }
 
     /// Puts the line in effect behind the pieces typed so far.

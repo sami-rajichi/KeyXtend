@@ -1415,8 +1415,8 @@
       "y": 34.0
     },
     {
-      "checkable": false,
-      "dim": true,
+      "checkable": true,
+      "dim": false,
       "dots": false,
       "h": 31.0,
       "icon": "keys.mic",
@@ -1429,7 +1429,7 @@
       "row": 1,
       "side": true,
       "steps": [],
-      "tip": "tip.later",
+      "tip": null,
       "w": 40.26,
       "x": 623.52,
       "y": 65.0

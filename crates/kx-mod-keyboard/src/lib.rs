@@ -1,7 +1,7 @@
 //! The keyboard module: the board and its geometry, the keyboard's size and place, typing with sticky modifiers, the
 //! language key, the shortcuts layer, the `KeyboardFace` the UI draws, the pieces it typed and the words it types for
-//! word prediction (ADR-0033), the clipboard panel's keys and pastes (ADR-0034), and Quick-fill's keys and fills
-//! (ADR-0038). It talks to the OS only through ports.
+//! word prediction (ADR-0033), the clipboard panel's keys and pastes (ADR-0034), Quick-fill's keys and fills
+//! (ADR-0038), and the Dictation key and its texts (ADR-0042). It talks to the OS only through ports.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -35,7 +35,8 @@ pub use place::Placer;
 pub use plan::{Plan, Route};
 pub use repeat::Repeat;
 pub use run::{
-    Fill, Filled, Io, Part, Pause, Ports, Sleep, TapError, Tapped, ToPanel, Typing, Word, drive,
+    Fill, Filled, Io, Part, Pause, Ports, Sleep, TapError, Tapped, Text, ToPanel, Typing, Word,
+    drive,
 };
 pub use settings::{
     Corner, ERASE_GAP_MS, KeyboardSettings, LangKey, MAX_PAGES, Modifiers, SPEC, TEXT_CAP,
@@ -53,19 +54,19 @@ use std::sync::Arc;
 /// It keeps its face across a restart, so the latches survive a settings change.
 pub struct KeyboardModule {
     face: Option<Arc<Face>>,
-    /// The pause after each Backspace of a picked word.
+    /// The pause after each Backspace of a picked word, and between a dictated text's pieces.
     pause: Arc<dyn Pause>,
 }
 
 impl KeyboardModule {
-    /// A module whose picked words wait through `pause`, such as a test's fake that never sleeps.
+    /// A module whose picked words and dictated texts wait through `pause`, such as a test's fake that never sleeps.
     #[must_use]
     pub fn with_pause(pause: Arc<dyn Pause>) -> Self {
         Self { face: None, pause }
     }
 }
 
-/// A module whose picked words wait by sleeping.
+/// A module whose picked words and dictated texts wait by sleeping.
 impl Default for KeyboardModule {
     fn default() -> Self {
         Self::with_pause(Arc::new(Sleep))
@@ -105,8 +106,8 @@ impl Module for KeyboardModule {
         Ok(())
     }
 
-    /// The face stops typing picked words, pasting and filling, as a handler may still run on the sender's thread; the
-    /// UI keeps it.
+    /// The face stops typing picked words and texts, pasting and filling, as a handler may still run on the sender's
+    /// thread; the UI keeps it.
     fn stop(&mut self) {
         if let Some(face) = &self.face {
             face.set_running(false);

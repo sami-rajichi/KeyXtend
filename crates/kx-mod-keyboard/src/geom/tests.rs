@@ -63,7 +63,7 @@ fn character_keys_carry_their_row_code_and_role() {
     let mic = b.keys.iter().find(|k| k.id == "mic").unwrap();
     assert_eq!(
         (mic.kind, mic.role, mic.sc, mic.row),
-        (KeyKind::Act, Role::Later, None, 1)
+        (KeyKind::Act, Role::Voice, None, 1)
     );
 }
 

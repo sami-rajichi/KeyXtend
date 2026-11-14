@@ -218,7 +218,7 @@ Item {
 
         function test_the_language_key_named_keys_and_dimmed_keys_keep_their_click() {
             const win = make();
-            for (const id of ["lang", "esc", "mic"])
+            for (const id of ["lang", "esc", "snip"])
                 click(win, keyed(win, id));
             compare(sent(win), ["tap lang false", "tap esc false"], "the dimmed key sends nothing");
             win.visible = false;

@@ -1,6 +1,7 @@
 //! Running a tap: the key's plan from the board or the shortcuts layer, the layout shown, Caps Lock and the app in
 //! front, sent through the injector or the shortcuts; the latches and a dead key's wait follow what went out, and
-//! what reached the app waits to be told. Picked words, pastes, the chips' edit keys and fills go out here too.
+//! what reached the app waits to be told. Picked words, pastes, the chips' edit keys, fills and dictated texts go out
+//! here too.
 
 mod checks;
 mod clip;
@@ -11,12 +12,14 @@ mod layer;
 mod ports;
 mod tapped;
 mod told;
+mod voice;
 mod word;
 
 pub use clip::ToPanel;
 pub use fill::{Fill, Filled};
 pub use ports::{Io, Pause, Ports, Sleep};
 pub use tapped::{TapError, Tapped};
+pub use voice::Text;
 pub use word::{Part, Word, drive};
 
 use crate::latch::Latches;
@@ -36,14 +39,14 @@ pub struct Typing {
     repeating: HashSet<String>,
     /// What the keys that tell more than a break tell, by id.
     tells: HashMap<String, Tell>,
-    /// The key a picked word erases with.
+    /// The key a picked word or text erases with.
     erase: Option<Scan>,
     /// The key a fill's Tab part sends.
     tab: Option<Scan>,
     apps: Vec<String>,
     /// The most characters a picked word may erase or type.
     cap: u16,
-    /// The pause after each Backspace of a picked word.
+    /// The pause after each Backspace of a picked word or text.
     gap: Duration,
     /// How late a fill's part after a Tab may still go.
     late: Duration,
@@ -55,7 +58,7 @@ pub struct Typing {
     pieces: Vec<Piece>,
     /// Our Caps Lock tap reached the app since the face last asked.
     caps_sent: bool,
-    /// How many board keys reached the app, so a picked word stops when one goes out during it.
+    /// How many keys and pieces reached the app, so a picked word or text stops when another goes out during it.
     sent: u64,
     /// The clipboard module wants the platform's history chord, as the bus last told.
     history: bool,
@@ -119,7 +122,7 @@ impl Typing {
         self.latches.set_mode(settings.modifiers);
     }
 
-    /// The most characters a picked word may erase or type (`text_cap`).
+    /// The most characters a picked word may erase or type, and a dictated text's piece (`text_cap`).
     #[must_use]
     pub fn cap(&self) -> u16 {
         self.cap
@@ -169,6 +172,7 @@ impl Typing {
             Plan::Power => return Ok(Tapped::Power),
             Plan::Clip => return Ok(Tapped::Clip),
             Plan::Fill => return Ok(Tapped::Fill),
+            Plan::Voice => return Ok(Tapped::Voice),
             Plan::Next => return Ok(Tapped::Next),
             Plan::Later => return Ok(Tapped::Later),
             Plan::Empty => return Ok(Tapped::Empty),
@@ -246,10 +250,17 @@ impl Typing {
     }
 
     /// A key went out: the latches let go as their mode says, or when the burst ends while a held key repeats, and a
-    /// picked word going out stops.
+    /// picked word or text going out stops.
     fn used(&mut self) {
-        self.sent = self.sent.wrapping_add(1);
+        self.count_key();
         self.spent();
+    }
+
+    /// Counts one more key or piece that reached the app, so a picked word or text going out stops; the new count,
+    /// which a word or text keeps for its own piece.
+    fn count_key(&mut self) -> u64 {
+        self.sent = self.sent.wrapping_add(1);
+        self.sent
     }
 
     /// A key or picked word that started under `then` went out: those latches let go as their mode says, or when the
@@ -267,7 +278,7 @@ impl Typing {
     }
 }
 
-/// The pause after each Backspace of a picked word, from `erase_gap_ms`.
+/// The pause after each Backspace of a picked word or text, from `erase_gap_ms`.
 fn gap(settings: &KeyboardSettings) -> Duration {
     Duration::from_millis(settings.erase_gap_ms)
 }

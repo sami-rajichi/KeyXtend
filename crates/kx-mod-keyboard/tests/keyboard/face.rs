@@ -22,9 +22,9 @@ fn a_click_types_and_redraws_the_state() {
 #[test]
 fn a_key_from_a_later_version_does_nothing() {
     let r = Rig::new(&GOLDEN, None);
-    assert_eq!(r.tap("mic"), Ok(FaceReply::default()));
+    assert_eq!(r.tap("snip"), Ok(FaceReply::default()));
     assert!(r.fakes.injector.strokes().is_empty());
-    assert_eq!(r.state()["keys"]["mic"]["paint"]["fill"], "dim");
+    assert_eq!(r.state()["keys"]["snip"]["paint"]["fill"], "dim");
 }
 
 #[test]

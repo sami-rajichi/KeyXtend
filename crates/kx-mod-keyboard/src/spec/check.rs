@@ -113,9 +113,9 @@ impl BoardSpec {
         Ok(())
     }
 
-    /// Refuses a named or side key whose role is `char` or one only the layer generates, a main-row key that shows the
-    /// layer, asks for the power dialog or opens a panel, a key that sends a scan code when its role sends none, or the
-    /// reverse, and a key that repeats or tells but is not `send`.
+    /// Refuses a named or side key whose role is `char` or one only the layer generates, a main-row key with a side-only
+    /// role (`Role::side_only`), a key that sends a scan code when its role sends none, or the reverse, and a key that
+    /// repeats or tells but is not `send`.
     fn check_roles(&self) -> Result<(), BoardError> {
         let named = self.named().map(|k| {
             let send_only = k.repeat || k.tell.is_some();
@@ -128,8 +128,7 @@ impl BoardSpec {
         for (id, role, has_code, send_only, on_side) in named.chain(side) {
             let stray = send_only && role != Role::Send;
             let made = matches!(role, Role::Char | Role::Shortcut | Role::Next);
-            let side_only =
-                !on_side && matches!(role, Role::Layer | Role::Power | Role::Clip | Role::Fill);
+            let side_only = !on_side && role.side_only();
             if made || side_only || role.sends() != has_code || stray {
                 return Err(BoardError::Role(id.clone()));
             }

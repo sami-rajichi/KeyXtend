@@ -1,8 +1,8 @@
-//! The face on the kernel's bus (spec §4.4, §5.1, §5.2, §6, §7, §8.1, §8.5): the side keys ask the mouse module to flip
-//! a mode and the power module for its dialog, the mouse, scroll, power, clipboard and vault modules' states come back,
-//! the latched set goes out for modifier + click, the typing mode for word prediction, the wish for presses for the
-//! panels' aim, picked words come in, which a press outside our windows stops, and so do paste, edit and fill
-//! requests. Handlers run on the sender's thread, so nothing is sent while the face's lock is held.
+//! The face on the kernel's bus (spec §4.4, §5.1, §5.2, §6, §7, §8.1, §8.2, §8.5): the side keys ask the mouse module
+//! to flip a mode and the power module for its dialog, the other modules' states come back, the latched set goes out
+//! for modifier + click, the typing mode for word prediction, the wish for presses for the panels' aim, picked words
+//! come in, which a press outside our windows stops, and so do paste, edit, fill and text requests. Handlers run on the
+//! sender's thread, so nothing is sent while the face's lock is held.
 
 use super::Face;
 use super::outbox::Outbox;
@@ -11,7 +11,8 @@ use kx_module_api::ports::{
     AssistAsk, AssistChanged, AssistToggle, ClipLine, ClipPanel, EditAsk, FillAsk, FillLine,
     FillLive, FillPanel, FillType, HistoryAsk, HistoryWanted, LatchesAsk, LatchesChanged,
     LatchesUsed, PanelPressesWanted, PasteAsk, PointerPressed, PowerAsk, PowerAsked, PowerChanged,
-    PressesAsk, Scan, ScrollAsk, ScrollChanged, Toggle, TypeWord, TypingMode, TypingModeAsk,
+    PressesAsk, Scan, ScrollAsk, ScrollChanged, TextAsk, Toggle, TypeWord, TypingMode,
+    TypingModeAsk, VoiceAsk, VoiceLit,
 };
 use kx_module_api::{Event, EventError, ModuleCx};
 use std::sync::atomic::AtomicBool;
@@ -147,9 +148,9 @@ impl Face {
         self.tell(false);
     }
 
-    /// Forgets the mouse, scroll, power, clipboard and vault modules' states, as each may have changed unheard while the
-    /// keyboard was down: their keys and the pad dim, both panels count as shut and the history chord as unwanted until
-    /// told again; the next live peek also tells a pointer that left.
+    /// Forgets the mouse, scroll, power, clipboard, vault and voice modules' states, as each may have changed unheard
+    /// while the keyboard was down: their keys and the pad dim, both panels count as shut, the history chord as
+    /// unwanted and the Dictation key as unlit until told again; the next live peek also tells a pointer that left.
     fn forget(&self) {
         {
             let mut inner = self.lock();
@@ -159,21 +160,23 @@ impl Face {
             inner.panel_shut(Panel::Clip);
             inner.heard_fill(FillLive::OFF);
             inner.heard_history(false);
+            inner.heard_voice(VoiceLit::OFF);
         }
         self.pour();
         self.peek_again();
     }
 }
 
-/// Hears the mouse, scroll, power, clipboard and vault modules' states, the latch events, the mode and presses asks,
-/// picked words, pointer presses, panel lines, paste and edit requests and fills for `face` until the module stops,
-/// then tells the latched set and typing mode, forgets the five modules' states and asks for them, as each may have
-/// missed the others while it was down.
+/// Hears the mouse, scroll, power, clipboard, vault and voice modules' states, the latch events, the mode and presses
+/// asks, picked words, pointer presses, panel lines, paste and edit requests, fills and texts for `face` until the
+/// module stops, then tells the latched set and typing mode, forgets the six modules' states and asks for them, as each
+/// may have missed the others while it was down.
 ///
 /// # Errors
 /// `EventError::NotGranted` when the module lacks `InjectInput`, which the latch events need, `ReadFocusedText`, which
 /// picked words and the mode ask need, `ReadClipboard`, which the panel's state needs, `WriteClipboard`, which paste
-/// requests need, `Vault`, which Quick-fill's state and fills need, or `Selection`, which edit requests need.
+/// requests need, `Vault`, which Quick-fill's state and fills need, `Selection`, which edit requests need, or `Voice`,
+/// which the Dictation key's light and texts need.
 pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), EventError> {
     on(cx, face, |f, e: &AssistChanged| f.lock().heard(*e))?;
     on(cx, face, |f, _: &LatchesUsed| f.used())?;
@@ -184,6 +187,8 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     on(cx, face, |f, e: &PointerPressed| f.pressed(*e))?;
     on(cx, face, |f, _: &TypingModeAsk| f.tell_mode())?;
     on(cx, face, |f, _: &PressesAsk| f.tell_presses())?;
+    on(cx, face, |f, e: &VoiceLit| f.heard_lit(*e))?;
+    on(cx, face, |f, e: &TextAsk| f.type_text(e))?;
     panels(cx, face)?;
     face.tell_all();
     face.forget();
@@ -191,6 +196,7 @@ pub(crate) fn listen(cx: &mut ModuleCx<'_>, face: &Arc<Face>) -> Result<(), Even
     cx.bus().publish(&ScrollAsk)?;
     cx.bus().publish(&PowerAsk)?;
     cx.bus().publish(&HistoryAsk)?;
+    cx.bus().publish(&VoiceAsk)?;
     cx.bus().publish(&FillAsk)
 }
 

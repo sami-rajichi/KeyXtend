@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 22:38 — P11: the keyboard's Dictation key and dictated typing
+The `mic` key now has the `voice` role: a click publishes `VoiceKey` and keeps every latch, and `VoiceLit` lights it red through a `rec` flag and paint. A `TextAsk` erases at the keyboard's `erase_gap_ms`, types at its `gap_ms` by the route a letter takes, splits anything past `text_cap` without cutting a character, leaves latches as they were, and answers `TextDone` with its count after one prediction `Break`. The user's own key, a clicked word or a click elsewhere stops it; a waiting dead key refuses it whole, and the UI fixtures, QML tests and G10 now treat Dictation as a live key that gates never press.
+
 ## 2026-11-14 22:11 — P11: the worker's speech engine, voice detector and graphics cards
 The worker's `voice` job now writes text through `transcribe.cpp` on one engine thread while listening goes on, with Silero marking speech so pieces are cut at pauses, and lists the processor, cards and built-in graphics. A card short of room, failing to load or failing mid-run never ends a dictation: the same piece runs on the processor, and the self-test reads one clip on the card and the processor for the module to score. The engine loads its parts only from the worker's folder and refuses to start beside an engine path variable; text copies are wiped, and Try again cuts a long recording in steps so Cancel answers at once.
 

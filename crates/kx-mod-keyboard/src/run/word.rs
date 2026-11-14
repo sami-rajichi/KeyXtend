@@ -21,7 +21,8 @@ pub struct Word {
     then: Latches,
     /// Some of it reached the app.
     any: bool,
-    /// The board keys sent before it started: one more stops it, as that key may have moved the caret.
+    /// The keys sent so far, its own parts included: one more sent by anyone else stops it, as that key may have moved
+    /// the caret.
     keys: u64,
 }
 
@@ -79,7 +80,8 @@ impl Typing {
     }
 
     /// Sends `word`'s next part: one Backspace while any is left, then the gap; else its text. Each part is told once
-    /// it reached the app; a Backspace not taken whole, or a board key sent since the word started, ends it.
+    /// it reached the app, and counts as a key sent, so a text going out stops; a Backspace not taken whole, or a key
+    /// sent by anyone else since the word started, ends it.
     pub fn part(&mut self, io: &Io<'_>, word: &mut Word) -> Part {
         if self.sent != word.keys {
             return self.end(word);
@@ -87,8 +89,11 @@ impl Typing {
         if word.erase > 0 {
             return self.erase_one(io, word);
         }
-        if let Some(text) = word.text.take().filter(|t| !t.expose().is_empty()) {
-            word.any |= self.type_text(io, &text);
+        if let Some(text) = word.text.take().filter(|t| !t.expose().is_empty())
+            && self.type_text(io, &text)
+        {
+            word.any = true;
+            word.keys = self.count_key();
         }
         self.end(word)
     }
@@ -125,6 +130,7 @@ impl Typing {
         if reached(went) {
             self.pieces.push(Piece::Erase);
             word.any = true;
+            word.keys = self.count_key();
         }
         if went.is_err() {
             return self.end(word);

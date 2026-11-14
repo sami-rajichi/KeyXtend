@@ -34,9 +34,9 @@ fn named_keys_carry_translation_and_icon_keys_and_character_keys_none() {
 #[test]
 fn later_side_keys_are_dimmed_and_say_they_come_later() {
     let v = board_view(&spec(), &settings(), 1.0);
-    let mic = key(&v, "mic");
-    assert!(mic.dim && mic.side);
-    assert_eq!(mic.tip, Some(LATER_TIP));
+    let snip = key(&v, "snip");
+    assert!(snip.dim && snip.side);
+    assert_eq!(snip.tip, Some(LATER_TIP));
     let esc = key(&v, "esc");
     assert!(!esc.dim && esc.tip.is_none());
 }
@@ -51,7 +51,7 @@ fn only_latches_caps_lock_and_the_side_keys_that_turn_a_mode_on_are_checkable() 
         .map(|k| k.id.as_str())
         .collect();
     let want = ["caps", "shift", "rshift", "ctrl", "win", "alt", "altgr"];
-    let side = ["rclick", "grab", "shortcuts", "clip", "fill"];
+    let side = ["rclick", "grab", "shortcuts", "mic", "clip", "fill"];
     assert_eq!(checkable, [want.as_slice(), &side].concat());
 }
 

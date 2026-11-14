@@ -10,7 +10,8 @@ use kx_module_api::{Bus, Clock, ModuleCx, ServiceError};
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Waits between a picked word's keys, on the thread that types the word; tests use a fake that never sleeps.
+/// Waits between a picked word's keys or a dictated text's pieces, on the thread that types them; tests use a fake that
+/// never sleeps.
 pub trait Pause: Send + Sync {
     /// Blocks the calling thread for `gap`.
     fn wait(&self, gap: Duration);
@@ -56,7 +57,7 @@ pub struct Ports {
     pub clock: Arc<dyn Clock>,
     /// The kernel's bus, limited to the module's grants, which carries the other modules' events.
     pub bus: Bus,
-    /// The pause after each Backspace of a picked word.
+    /// The pause after each Backspace of a picked word, and between a dictated text's pieces.
     pub pause: Arc<dyn Pause>,
 }
 

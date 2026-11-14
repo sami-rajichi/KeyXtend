@@ -16,7 +16,7 @@ pub use layer::{
     LayerState, NEXT_ICON, NO_SHORTCUTS_TIP, SHORTCUT_ICON_PREFIX, SHORTCUT_NAME_PREFIX, with_layer,
 };
 pub use pad::{PadState, SCROLL_OFF_TIP, pad_state};
-pub use paint::{DIM, Paint, paint};
+pub use paint::{DIM, Paint, REC, paint};
 pub use power::POWER_OFF_TIP;
 pub use role::FILL_OFF_TIP;
 
@@ -148,6 +148,8 @@ pub struct KeyState {
     /// It does nothing now: a later key, a mouse-assist, Power or fill key while its module is not running, or the
     /// Shortcuts key with nothing to show.
     pub dim: bool,
+    /// The Dictation key while the microphone is open, so it glows in the recording paint.
+    pub rec: bool,
     /// Its colours now, by palette token.
     pub paint: Paint,
     /// What it says after its name now, by translation key, shown in its tip: the language key's `LONE_TIP`, or a
@@ -228,6 +230,8 @@ pub struct StateInput<'a> {
     pub panel: Option<Panel>,
     /// The open panel's line takes the keys.
     pub aimed: bool,
+    /// The microphone is open, as the voice module last told.
+    pub rec: bool,
 }
 
 /// Every key's state, the language key, the list, the place, the pad and the layer.
@@ -269,6 +273,7 @@ fn key_state(i: &StateInput<'_>, k: &KeyBox, mods: LegendMods, rtl: bool) -> Key
             blank: is_empty(c, mods).then_some(EMPTY_NAME),
             on: false,
             dim: false,
+            rec: false,
             paint: paint(k.kind, false),
             tip: None,
         };
