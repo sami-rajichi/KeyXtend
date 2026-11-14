@@ -45,8 +45,12 @@ impl WinSpawner {
         Self { exe }
     }
 
-    /// Starts the worker and hands back its stdin, its stdout and its process.
-    fn start(&self, launch: &Launch) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
+    /// Starts the worker and hands back its stdin, its stdout and its process; the gate tool also starts its probes
+    /// this way, so they run under the very same limits.
+    ///
+    /// # Errors
+    /// `Missing` when the program is not an absolute path to a file; any refused step of the start, as for a worker.
+    pub fn start(&self, launch: &Launch) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
         if !self.exe.is_absolute() || !self.exe.is_file() {
             return Err(SpawnError::Missing);
         }

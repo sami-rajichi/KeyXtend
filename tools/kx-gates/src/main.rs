@@ -6,6 +6,7 @@ mod admin;
 mod aim;
 mod apps;
 mod board;
+mod boxed;
 mod budget;
 mod busbench;
 mod capture;
@@ -195,6 +196,7 @@ fn main() -> ExitCode {
     keep_stdio_private();
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let result = match raw.as_slice() {
+        [command, rest @ ..] if command == boxed::COMMAND => boxed::run(rest),
         [command] if command == capture::COMMAND => {
             config::load().and_then(|cfg| capture::run(&cfg.capture))
         }
