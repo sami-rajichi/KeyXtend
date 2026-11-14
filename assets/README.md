@@ -28,6 +28,7 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 ## Voice
 
 - `voice/silero-vad-v6.2-F32.gguf`: the voice detector, Silero VAD 6.2 converted to GGUF by handy-computer, unmodified; MIT, with its `LICENSE` and `NOTICE` beside it. `cargo xtask stage` puts it beside the worker (P11); `voice/README.md` gives its source and fingerprint.
+- `voice/check-{en,fr,ar}.wav`: the graphics card's self-test clips, one FLEURS sentence each, unmodified; CC-BY-4.0, with `LICENSE-CLIPS.txt` beside them. They are staged beside the worker too.
 
 ## Word packs
 
