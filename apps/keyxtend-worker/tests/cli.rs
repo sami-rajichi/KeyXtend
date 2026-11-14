@@ -1,11 +1,12 @@
-//! The program itself: a refused command line fails with one line on stderr, and the media and vault jobs answer
-//! over real stdin and stdout until goodbye.
+//! The program itself: a refused command line fails with one line on stderr, and the media, vault and voice jobs
+//! answer over real stdin and stdout until goodbye. No test starts a dictation, so no microphone opens.
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
 use kx_ipc::{
-    Ask, BoxPart, CLEAN_EXIT, Codec, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, MIN_BOX_WORK,
-    NOTEBOOK_PART, REFUSED_EXIT, Reply, VAULT_JOB, VaultAsk, VaultReply, Why, Wiped,
+    Ask, BoxPart, CLEAN_EXIT, Codec, FETCH_JOB, IpcError, MAX_PIXELS_FLAG, MEDIA_JOB, MIN_BOX_WORK,
+    NOTEBOOK_PART, REFUSED_EXIT, Reply, Stage, VAULT_JOB, VOICE_JOB, VaultAsk, VaultReply,
+    VoiceAsk, VoiceFault, VoiceNote, Why, Wiped,
 };
 use std::borrow::Cow;
 use std::io::Write;
@@ -62,12 +63,13 @@ fn exited(out: &Output, code: u8) -> bool {
 fn a_refused_command_line_fails_with_one_line() {
     let cases = [
         &[][..],
-        &["voice"],
+        &[FETCH_JOB],
         &["ocr"],
         &["update"],
         &[MEDIA_JOB],
         &[MEDIA_JOB, MAX_PIXELS_FLAG, "0"],
         &[VAULT_JOB, MEDIA_JOB],
+        &[VOICE_JOB, VAULT_JOB],
     ];
     for args in cases {
         let out = run(args, b"");
@@ -249,4 +251,44 @@ fn the_vault_job_seals_and_opens_a_box_one_ask_at_a_time_until_bye() {
         out.status,
         out.stderr
     );
+}
+
+#[test]
+fn the_voice_job_answers_without_a_dictation_until_bye() {
+    let mut input = Vec::new();
+    for ask in [
+        VoiceAsk::Keep { id: 1 },
+        VoiceAsk::Devices { id: 2 },
+        VoiceAsk::Close { id: 1 },
+        VoiceAsk::Bye,
+    ] {
+        ask.write(&mut input).unwrap();
+    }
+    let out = run(&[VOICE_JOB], &input);
+    assert!(exited(&out, CLEAN_EXIT), "{:?}", out.stderr);
+    assert!(out.stderr.is_empty());
+    let mut stdout = &out.stdout[..];
+    let fault = |id, fault| VoiceNote::Fault { id, fault };
+    assert_eq!(
+        VoiceNote::read(&mut stdout),
+        Ok(fault(1, VoiceFault::NoSound))
+    );
+    assert_eq!(
+        VoiceNote::read(&mut stdout),
+        Ok(fault(2, VoiceFault::Runner))
+    );
+    let shut = VoiceNote::Stage {
+        id: 1,
+        stage: Stage::Shut,
+    };
+    assert_eq!(VoiceNote::read(&mut stdout), Ok(shut));
+    assert_eq!(VoiceNote::read(&mut stdout), Err(IpcError::Closed));
+}
+
+#[test]
+fn the_voice_job_fails_a_broken_frame_with_one_line() {
+    let out = run(&[VOICE_JOB], b"not a frame at all");
+    assert!(exited(&out, REFUSED_EXIT));
+    assert!(out.stdout.is_empty());
+    assert!(one_line(&out.stderr), "{:?}", out.stderr);
 }

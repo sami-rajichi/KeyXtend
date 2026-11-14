@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 22:20 — P11: the worker's voice job records, cuts and hands over sound
+The worker gains the `voice` job's capture side: the microphone through `cpal` behind a `Source` trait, resampling to 16 kHz mono, levels at `level_hz`, and a cutter that cuts only at a pause after `piece_s`, keeps `pad_ms` and loses no sample. With no model it records and hands its sound over at Stop; Cancel keeps the recording until Close, so "Transcribe anyway" works, and every sound buffer is wiped. The microphone closes on every ending, a panic included, and the queue from the microphone is bounded by `record_max_s`.
+
 ## 2026-11-14 21:30 — P11: fakes for speech, model files and the session
 `FakeSpeech`, `FakeModelFiles` and `FakeSessionWatch` script levels, pieces, faults, a worker death, devices, card checks, download steps, and lock and sleep, and record every ask for the module's tests. Each checks asks with the port's own rules, and no note reaches a run after it closed, died or was dropped. They start no threads and never sleep, so the module's flow tests stay exact.
 

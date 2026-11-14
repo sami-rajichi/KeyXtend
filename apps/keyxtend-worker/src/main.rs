@@ -1,6 +1,6 @@
-//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images, and
-//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, for the keyboard at normal rights,
-//! one request at a time over stdin and stdout.
+//! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images,
+//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, and `keyxtend-worker voice` records
+//! the microphone with no network (ADR-0042), for the keyboard at normal rights, over stdin and stdout.
 #![forbid(unsafe_code)]
 
 mod args;
@@ -9,6 +9,7 @@ mod fixture;
 mod media;
 mod serve;
 mod vault;
+mod voice;
 
 use args::Job;
 use kx_ipc::{Ask, CLEAN_EXIT, IpcError, REFUSED_EXIT, VaultAsk};
@@ -23,6 +24,7 @@ fn main() -> ExitCode {
     match args::parse(std::env::args_os().skip(1)) {
         Ok(Job::Media { max_pixels }) => media_job(max_pixels),
         Ok(Job::Vault) => vault_job(),
+        Ok(Job::Voice) => voice_job(),
         Err(e) => fail(&e),
     }
 }
@@ -47,6 +49,12 @@ fn vault_job() -> ExitCode {
         &mut io::stdout().lock(),
         work,
     ))
+}
+
+/// Runs dictations from the asks on stdin, telling notes on stdout, until goodbye or the end of input.
+fn voice_job() -> ExitCode {
+    let parts = voice::Parts::live();
+    exit(voice::serve(io::stdin(), &mut io::stdout().lock(), parts))
 }
 
 /// The exit code after a job's loop.

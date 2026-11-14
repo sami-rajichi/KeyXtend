@@ -1,6 +1,7 @@
-//! The command line: the media job with its count, the vault job alone, and every other form refused.
+//! The command line: the media job with its count, the vault and voice jobs alone, and every other form refused.
 
 use super::*;
+use kx_ipc::FETCH_JOB;
 
 fn parse_all(args: &[&str]) -> Result<Job, ArgError> {
     parse(args.iter().map(OsString::from))
@@ -24,7 +25,7 @@ fn no_job_is_refused() {
 
 #[test]
 fn the_later_jobs_and_unknown_ones_are_refused() {
-    for job in ["voice", "ocr", "update", "Media", MAX_PIXELS_FLAG] {
+    for job in [FETCH_JOB, "ocr", "update", "Media", MAX_PIXELS_FLAG] {
         assert_eq!(
             parse_all(&[job, MAX_PIXELS_FLAG, "5"]),
             Err(ArgError::Job(job.to_string())),
@@ -63,28 +64,29 @@ fn an_extra_argument_is_refused() {
 }
 
 #[test]
-fn the_vault_job_takes_nothing_after_it() {
-    assert_eq!(parse_all(&[VAULT_JOB]), Ok(Job::Vault));
-    for extra in [
-        &[VAULT_JOB, "x"][..],
-        &[VAULT_JOB, MAX_PIXELS_FLAG, "5"],
-        &[VAULT_JOB, ""],
-    ] {
-        assert_eq!(parse_all(extra), Err(ArgError::Alone), "{extra:?}");
+fn the_vault_and_voice_jobs_take_nothing_after_them() {
+    for (word, job) in [(VAULT_JOB, Job::Vault), (VOICE_JOB, Job::Voice)] {
+        assert_eq!(parse_all(&[word]), Ok(job));
+        for extra in [&[word, "x"][..], &[word, MAX_PIXELS_FLAG, "5"], &[word, ""]] {
+            assert_eq!(parse_all(extra), Err(ArgError::Alone(word)), "{extra:?}");
+        }
     }
-    let job = ArgError::Job("Vault".to_string());
-    assert_eq!(parse_all(&["Vault"]), Err(job));
+    for word in ["Vault", "Voice", "voices"] {
+        let job = ArgError::Job(word.to_string());
+        assert_eq!(parse_all(&[word]), Err(job));
+    }
 }
 
 #[test]
 fn each_refusal_is_one_short_line_naming_the_usage() {
     let cases = [
         (
-            ArgError::Job("voice".to_string()),
-            &[MEDIA_JOB, MAX_PIXELS_FLAG, VAULT_JOB][..],
+            ArgError::Job("ocr".to_string()),
+            &[MEDIA_JOB, MAX_PIXELS_FLAG, VAULT_JOB, VOICE_JOB][..],
         ),
         (ArgError::Usage, &[MEDIA_JOB, MAX_PIXELS_FLAG]),
-        (ArgError::Alone, &[VAULT_JOB]),
+        (ArgError::Alone(VAULT_JOB), &[VAULT_JOB]),
+        (ArgError::Alone(VOICE_JOB), &[VOICE_JOB]),
     ];
     for (e, words) in cases {
         let line = e.to_string();
