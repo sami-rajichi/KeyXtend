@@ -1,8 +1,8 @@
-//! The command line: `media --max-pixels <n>` runs the media job, and `vault` and `voice` their jobs, alone. The host
-//! passes trusted arguments; the fetch, OCR and update jobs come in later tasks and phases, so any other job is refused.
-//! Only a gate build takes `voice --sound <file.wav>`.
+//! The command line: `media --max-pixels <n>` runs the media job, and `vault`, `voice` and `fetch` their jobs, alone.
+//! The host passes trusted arguments and only a gate build takes `voice --sound <file.wav>`; the OCR and update jobs
+//! come in later phases, so any other job is refused.
 
-use kx_ipc::{MAX_PIXELS_FLAG, MEDIA_JOB, VAULT_JOB, VOICE_JOB};
+use kx_ipc::{FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, VAULT_JOB, VOICE_JOB};
 use std::ffi::OsString;
 #[cfg(feature = "gate")]
 use std::path::PathBuf;
@@ -24,6 +24,8 @@ pub enum Job {
     Vault,
     /// Record the microphone, cut it into pieces and hand its sound over, with no network (ADR-0042).
     Voice,
+    /// Download model files over HTTPS, with no microphone (ADR-0042).
+    Fetch,
     /// Gate builds only: the voice job with this WAV file in place of the microphone.
     #[cfg(feature = "gate")]
     Played(PathBuf),
@@ -34,7 +36,7 @@ pub enum Job {
 pub enum ArgError {
     /// No job, or one this worker does not run, as written.
     #[error(
-        "unknown job {0:?}; use: {MEDIA_JOB} {MAX_PIXELS_FLAG} <n>, {VAULT_JOB} or {VOICE_JOB}"
+        "unknown job {0:?}; use: {MEDIA_JOB} {MAX_PIXELS_FLAG} <n>, {VAULT_JOB}, {VOICE_JOB} or {FETCH_JOB}"
     )]
     Job(String),
     /// The media job's arguments are missing, extra or not a count above 0.
@@ -53,7 +55,7 @@ pub enum ArgError {
 ///
 /// # Errors
 /// `Job` for no job or an unknown one; `Usage` for a media job without `--max-pixels` and a count above 0 after it;
-/// `Alone` for a vault or voice job with anything after it.
+/// `Alone` for a vault, voice or fetch job with anything after it.
 pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Job, ArgError> {
     let mut args = args.into_iter();
     let job = args.next().unwrap_or_default();
@@ -61,6 +63,8 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Job, ArgError> 
         Some((VAULT_JOB, Job::Vault))
     } else if job == VOICE_JOB {
         Some((VOICE_JOB, Job::Voice))
+    } else if job == FETCH_JOB {
+        Some((FETCH_JOB, Job::Fetch))
     } else {
         None
     };

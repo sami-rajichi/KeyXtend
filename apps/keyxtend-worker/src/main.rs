@@ -1,9 +1,11 @@
 //! The worker program (ADR-0004): `keyxtend-worker media --max-pixels <n>` decodes untrusted images,
-//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, and `keyxtend-worker voice` records
-//! the microphone with no network (ADR-0042), for the keyboard at normal rights, over stdin and stdout.
+//! `keyxtend-worker vault` seals and opens backup boxes and reads `KeePass` files, `keyxtend-worker voice` records
+//! the microphone with no network, and `keyxtend-worker fetch` downloads model files with no microphone (ADR-0042), for
+//! the keyboard at normal rights, over stdin and stdout.
 #![forbid(unsafe_code)]
 
 mod args;
+mod fetch;
 #[cfg(test)]
 mod fixture;
 mod media;
@@ -25,6 +27,11 @@ fn main() -> ExitCode {
         Ok(Job::Media { max_pixels }) => media_job(max_pixels),
         Ok(Job::Vault) => vault_job(),
         Ok(Job::Voice) => voice_job(voice::Parts::live()),
+        Ok(Job::Fetch) => exit(fetch::serve(
+            io::stdin(),
+            &mut io::stdout().lock(),
+            fetch::live(),
+        )),
         #[cfg(feature = "gate")]
         Ok(Job::Played(path)) => match voice::played(&path) {
             Ok(parts) => voice_job(parts),

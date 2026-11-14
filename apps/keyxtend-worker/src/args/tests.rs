@@ -1,7 +1,6 @@
-//! The command line: the media job with its count, the vault and voice jobs alone, and every other form refused.
+//! The command line: the media job with its count, the vault, voice and fetch jobs alone, and every other form refused.
 
 use super::*;
-use kx_ipc::FETCH_JOB;
 
 fn parse_all(args: &[&str]) -> Result<Job, ArgError> {
     parse(args.iter().map(OsString::from))
@@ -25,7 +24,7 @@ fn no_job_is_refused() {
 
 #[test]
 fn the_later_jobs_and_unknown_ones_are_refused() {
-    for job in [FETCH_JOB, "ocr", "update", "Media", MAX_PIXELS_FLAG] {
+    for job in ["ocr", "update", "Media", "Fetch", MAX_PIXELS_FLAG] {
         assert_eq!(
             parse_all(&[job, MAX_PIXELS_FLAG, "5"]),
             Err(ArgError::Job(job.to_string())),
@@ -64,8 +63,13 @@ fn an_extra_argument_is_refused() {
 }
 
 #[test]
-fn the_vault_and_voice_jobs_take_nothing_after_them() {
-    for (word, job) in [(VAULT_JOB, Job::Vault), (VOICE_JOB, Job::Voice)] {
+fn the_vault_voice_and_fetch_jobs_take_nothing_after_them() {
+    let jobs = [
+        (VAULT_JOB, Job::Vault),
+        (VOICE_JOB, Job::Voice),
+        (FETCH_JOB, Job::Fetch),
+    ];
+    for (word, job) in jobs {
         assert_eq!(parse_all(&[word]), Ok(job));
         for extra in [&[word, "x"][..], &[word, MAX_PIXELS_FLAG, "5"], &[word, ""]] {
             assert_eq!(parse_all(extra), Err(ArgError::Alone(word)), "{extra:?}");
@@ -82,11 +86,12 @@ fn each_refusal_is_one_short_line_naming_the_usage() {
     let cases = [
         (
             ArgError::Job("ocr".to_string()),
-            &[MEDIA_JOB, MAX_PIXELS_FLAG, VAULT_JOB, VOICE_JOB][..],
+            &[MEDIA_JOB, MAX_PIXELS_FLAG, VAULT_JOB, VOICE_JOB, FETCH_JOB][..],
         ),
         (ArgError::Usage, &[MEDIA_JOB, MAX_PIXELS_FLAG]),
         (ArgError::Alone(VAULT_JOB), &[VAULT_JOB]),
         (ArgError::Alone(VOICE_JOB), &[VOICE_JOB]),
+        (ArgError::Alone(FETCH_JOB), &[FETCH_JOB]),
     ];
     for (e, words) in cases {
         let line = e.to_string();

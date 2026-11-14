@@ -63,7 +63,7 @@ fn exited(out: &Output, code: u8) -> bool {
 fn a_refused_command_line_fails_with_one_line() {
     let cases = [
         &[][..],
-        &[FETCH_JOB],
+        &[FETCH_JOB, VAULT_JOB],
         &["ocr"],
         &["update"],
         &[MEDIA_JOB],

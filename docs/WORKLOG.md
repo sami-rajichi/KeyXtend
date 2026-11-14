@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 23:10 — P11: the worker's fetch job
+The worker's `fetch` job downloads a model file through `kx-platform-net` into `<file>.part`, resumes from the part's length, stops reading at the row's size, and names the file only after its size and SHA-256 pass and the part is flushed. Pause keeps the part, Cancel or a bad size or fingerprint deletes it, a stall past `stall_s` is a fault, and addresses are tried in table order, the next one taking over from the part's length. A review made it refuse a name already taken, a link at the part's name and a path that climbs out of the folder, and tell the first fault when no address serves.
+
 ## 2026-11-14 22:54 — P11: the voice history, kept recordings and counts
 The voice module keeps a history of texts with pins, a limit that never drops a pin and a Delete all that always asks first, plus kept recordings in blobs under `voice_max_mb`, counts per day, model and card, card check results per card, driver and file, and Compare's numbers, never texts. Each is a versioned sealed blob that refuses a damaged or newer file without a panic, and history off, a password box or a hidden run keeps nothing. A review stopped the sound being asked for when it would not be kept, kept one recording per take, made Undo dim after the user stops a dictated text, and made a failed card drop only that model's check.
 

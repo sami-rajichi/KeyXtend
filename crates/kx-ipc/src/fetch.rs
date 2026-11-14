@@ -29,7 +29,7 @@ pub enum FetchFault {
     Disk = 7,
     /// No connection: the name, the connection or TLS failed.
     Net = 8,
-    /// Every address answered an error status.
+    /// No address served, and the first fault was an error status.
     Server = 9,
     /// Cancelled as asked; the part is deleted.
     Cancelled = 10,
