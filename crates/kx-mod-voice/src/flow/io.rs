@@ -2,8 +2,9 @@
 //! gets, which the actor answers from the models table, the device rule and the folder.
 
 use kx_module_api::ports::{
-    CardId, CardUse, FieldChange, LayoutChanged, SessionNote, SpeechAsk, SpeechDone, SpeechModel,
-    SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit, VoicePanel, VoiceView,
+    CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, SessionNote, SpeechAsk, SpeechDone,
+    SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit, VoicePanel,
+    VoiceView,
 };
 use kx_module_api::{Redacted, Secret};
 
@@ -78,7 +79,9 @@ pub struct Kept {
 pub struct Count {
     /// The model that wrote it.
     pub model: Redacted<String>,
-    /// Its times, memory and device.
+    /// The card that wrote it to the end; `None` for the processor.
+    pub card: Option<CardId>,
+    /// Its times and memory.
     pub done: SpeechDone,
 }
 
@@ -109,7 +112,7 @@ pub enum Out {
     Type(TextAsk),
     /// Put this text on the clipboard (Copy).
     Copy(Secret),
-    /// Keep this text in History; the store drops it while `history` is off.
+    /// Keep this text in History, whose `Rules` drop it while `history` is off.
     Keep(Kept),
     /// Count a written dictation.
     Count(Count),
@@ -117,8 +120,13 @@ pub enum Out {
     Download(String),
     /// The model's file was not found: read the folder again, so its row offers Download.
     Lost,
-    /// The card failed mid-run: drop its check result, so the check runs again.
-    Fell(CardId),
+    /// The card failed mid-run: drop its check result for this model file, so that check runs again.
+    Fell {
+        /// The card.
+        card: CardId,
+        /// The model file's fingerprint.
+        model: Fingerprint,
+    },
 }
 
 /// The model and device that serve a language now.
@@ -130,6 +138,8 @@ pub struct Ready {
     pub card: Option<CardUse>,
     /// Its row's id or its file's name, for History and the counts.
     pub name: Redacted<String>,
+    /// Its file's fingerprint, which a card's check goes by.
+    pub print: Fingerprint,
     /// The size Download fetches for the language, in bytes, should the file be gone.
     pub bytes: u64,
 }

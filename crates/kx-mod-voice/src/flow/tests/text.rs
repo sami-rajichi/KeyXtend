@@ -38,6 +38,7 @@ fn stop_types_the_text_at_once_and_keeps_it() {
     assert_eq!(kept(&out), [entry]);
     let count = Count {
         model: Redacted::new("parakeet".into()),
+        card: None,
         done: done(1),
     };
     assert!(out.contains(&Out::Count(count)));
@@ -89,6 +90,15 @@ fn keep_recordings_asks_the_run_for_its_sound_once() {
     let mut rig = Rig::with(keeping(), false);
     let out = rig.dictate("bonjour");
     assert_eq!(calls(&out), [RunCall::Keep]);
+}
+
+#[test]
+fn history_off_never_asks_for_the_sound() {
+    let mut settings = keeping();
+    settings.history = false;
+    let mut rig = Rig::with(settings, false);
+    let out = rig.dictate("bonjour");
+    assert!(!calls(&out).contains(&RunCall::Keep));
 }
 
 #[test]

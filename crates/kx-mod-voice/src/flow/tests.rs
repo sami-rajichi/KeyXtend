@@ -6,7 +6,7 @@ use kx_module_api::ports::{
     SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct, VoiceBar, VoiceClick, VoiceLang,
     VoicePage, VoiceText,
 };
-use kx_module_api::ports::{SpeechAsk, SpeechDone, SpeechModel};
+use kx_module_api::ports::{Fingerprint, SpeechAsk, SpeechDone, SpeechModel};
 use kx_module_api::{Redacted, Secret, Zeroizing};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -30,6 +30,8 @@ mod undo;
 const BYTES: u64 = 739_508_576;
 /// The box the tests type into.
 const BOX: u64 = 7;
+/// The model file's fingerprint in the tests.
+const PRINT: Fingerprint = Fingerprint::new([7; Fingerprint::BYTES]);
 
 /// A clock the test moves; it never sleeps.
 #[derive(Default)]
@@ -70,6 +72,7 @@ fn ready(name: &str, code: &str) -> Ready {
         model,
         card: None,
         name: Redacted::new(name.into()),
+        print: PRINT,
         bytes: BYTES,
     }
 }

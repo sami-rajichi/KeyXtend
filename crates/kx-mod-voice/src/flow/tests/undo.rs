@@ -68,6 +68,44 @@ fn the_keyboards_own_typing_does_not_dim_undo() {
     assert!(undo_lit(&rig));
 }
 
+/// The keyboard stopped `ask` after `count` characters, as the user's own key, a prediction word or a click does.
+fn stopped(rig: &mut Rig, ask: &TextAsk, count: u32) {
+    let (round, ok) = (ask.round, false);
+    rig.on(In::Typed(TextDone { round, count, ok }));
+}
+
+#[test]
+fn a_text_the_user_stopped_part_way_dims_undo_and_try_again_types_nothing() {
+    let mut rig = Rig::new();
+    let out = rig.dictate("bonjour");
+    stopped(&mut rig, &ask(&out).unwrap(), 3);
+    assert!(!undo_lit(&rig));
+    assert!(ask(&rig.bar(BarButton::Undo)).is_none());
+    rig.again();
+    let out = rig.write(&["bonsoir"]);
+    assert!(ask(&out).is_none(), "the user's own characters stay");
+    assert_eq!(text(&rig.shown()).as_deref(), Some("bonsoir"));
+    assert!(
+        rig.bar(BarButton::Copy)
+            .contains(&Out::Copy(secret("bonsoir")))
+    );
+}
+
+#[test]
+fn a_refused_text_stays_on_the_bar_with_copy_and_no_undo() {
+    let mut rig = Rig::new();
+    let out = rig.dictate("bonjour");
+    stopped(&mut rig, &ask(&out).unwrap(), 0);
+    let VoiceBar::Text(shown) = rig.shown() else {
+        panic!("no Text bar");
+    };
+    assert_eq!((shown.hint, shown.undo), (Some(BarHint::NoField), false));
+    assert!(
+        rig.bar(BarButton::Copy)
+            .contains(&Out::Copy(secret("bonjour")))
+    );
+}
+
 #[test]
 fn try_again_replaces_the_text_while_undo_can_act() {
     let mut rig = Rig::new();

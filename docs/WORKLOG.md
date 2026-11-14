@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 22:54 — P11: the voice history, kept recordings and counts
+The voice module keeps a history of texts with pins, a limit that never drops a pin and a Delete all that always asks first, plus kept recordings in blobs under `voice_max_mb`, counts per day, model and card, card check results per card, driver and file, and Compare's numbers, never texts. Each is a versioned sealed blob that refuses a damaged or newer file without a panic, and history off, a password box or a hidden run keeps nothing. A review stopped the sound being asked for when it would not be kept, kept one recording per take, made Undo dim after the user stops a dictated text, and made a failed card drop only that model's check.
+
 ## 2026-11-14 22:38 — P11: the keyboard's Dictation key and dictated typing
 The `mic` key now has the `voice` role: a click publishes `VoiceKey` and keeps every latch, and `VoiceLit` lights it red through a `rec` flag and paint. A `TextAsk` erases at the keyboard's `erase_gap_ms`, types at its `gap_ms` by the route a letter takes, splits anything past `text_cap` without cutting a character, leaves latches as they were, and answers `TextDone` with its count after one prediction `Break`. The user's own key, a clicked word or a click elsewhere stops it; a waiting dead key refuses it whole, and the UI fixtures, QML tests and G10 now treat Dictation as a live key that gates never press.
 

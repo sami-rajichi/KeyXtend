@@ -84,11 +84,12 @@ impl Flow {
     }
 
     /// Keeps `text` in History and, with Keep recordings, its sound; never a password box's, never in a hidden run.
+    /// With `history` off the sound is never asked for, so it stays in the worker.
     fn keep(&mut self, text: &str, kind: FieldKind, out: &mut Vec<Out>) {
         if self.hidden || kind == FieldKind::Password {
             return;
         }
-        let voice = self.settings.keep_voice;
+        let voice = self.settings.keep_voice && self.settings.history;
         let Some(take) = self.take.as_mut() else {
             return;
         };
@@ -143,8 +144,8 @@ impl Flow {
         }));
     }
 
-    /// The keyboard's answer: what it typed is what Undo erases, while the box kept focus; a text it could not type
-    /// stays on the bar with Copy.
+    /// The keyboard's answer: a text typed in full is what Undo erases, while the box kept focus. One it could not
+    /// type, or that the user's own key or click stopped, dims Undo and stays on the bar with Copy (edge 8).
     pub(super) fn typed(&mut self, done: TextDone) {
         let box_id = self.field.box_id;
         let Some(take) = self.take.as_mut() else {
@@ -157,7 +158,7 @@ impl Flow {
         if asking.undo {
             return;
         }
-        if done.count > 0 && asking.box_id == box_id {
+        if done.ok && done.count > 0 && asking.box_id == box_id {
             take.typed = Some(Typed { count: done.count });
         }
         let shown = matches!(

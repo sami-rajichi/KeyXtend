@@ -1,6 +1,6 @@
 # kx-mod-voice
 
-Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, and the `[voice]` settings. The module itself is a skeleton that reads its settings, drops a bad pick, and waits; the recording, the bar and the downloads come in plan tasks 17 to 20.
+Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. The module itself is a skeleton that reads its settings, drops a bad pick, and waits; the downloads and the panel come in plan task 19, and the actor that wires it all in task 20.
 
 - **Models table** (`models`, `models.toml`): one row per local model with its file, size, SHA-256, a download address pinned to a commit on an allowed host, its licence and credit, its memory on the processor and on a card, and its languages with each model's own code. A bad table turns local models off; it never panics.
 - **Orders** (`models::order`): each tested language has a list, best first, with the day of its tests; its first is the default. The English, French and Arabic orders were ranked on the 2026-11-14 trial numbers (the owner's six clips, the voice detector at pad 300 ms). A language without a list takes the general order of the models that know it, marked untested. A model that never leads (`lead = false`, Nemotron) is first in no list.
@@ -8,6 +8,9 @@ Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text
 - **Other files** (`models::other`): a model file not in the table gets its memory from its size and its language code from its own facts.
 - **Device** (`device`): the processor until a card passes its check; Automatic then takes the passed card with room and the best gain, a picked card serves only when present, checked and with room, and every fallback says why.
 - **Score** (`score`, `score.toml`): words apart between two texts, per language. Case, punctuation and the apostrophe's forms are no difference, and digits 0 to 10 count as their number word in either gender. Arabic is strict: only the harakat, the superscript alef and tatweel go (the shared fold table's drops in the Arabic block), Arabic-Indic digits read as digits, and a hamza written apart joins its letter; ه for ة, a lost hamza or ي for ى is a word wrong, as the user would fix it.
+- **History** (`history`): the texts dictated, pinned first then newest first, each with its time, language, model and recording; a later text of the run's last take replaces it (Try again), and an unpin counts as new, as in the clipboard's History. Pins sit outside `history_max`, recordings share `voice_max_mb` oldest unpinned first, a take keeps one recording, Delete all needs the `Asked` from `ask_all`, and history off, a hidden run or a password box keeps nothing. Turning a switch off keeps what is stored; Delete all removes it.
+- **Counts** (`counts`): per local day, model and device (the processor or a card by its id), the dictations, the time heard and the time waited, never content; a file the table does not name counts as `Other`. Beside them, each card's check by card, driver and file fingerprint, of which a card failing mid-run drops that file's alone, and Compare's last numbers per ISO language.
+- **Store** (`store`): `<data>/voice/` on a sealed shelf with its own key: `texts` (a blob per text), `sounds` (recordings in blobs `<id>-<n>`) and `numbers`. A newer file stops the open before any change, damage and a crash's leftovers are removed, and a failed write is tried again with the next change.
 
 ## Services and capabilities
 
@@ -24,7 +27,7 @@ Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text
 | `Voice` | It gates the voice key, its light, the bar and the text to type (ADR-0042 decision 8). |
 | `Microphone` | It gates `SpeechKey`. |
 | `Network` | It gates `ModelFilesKey`, for the model downloads the user asks for, and nothing else. |
-| `SecretStore` | It seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers (task 18). |
+| `SecretStore` | It seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers. |
 | `ReadFocusedText` | It gates `FieldWatchKey`. |
 | `WriteClipboard` | It gates `ClipboardWriterKey`. |
 
@@ -44,7 +47,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 
 ## Public API
 
-`VoiceModule`, `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device` and `score` modules for the bar, the worker and tests.
+`VoiceModule`, `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts` and `store` modules for the actor, the panel and tests.
 
 ## Tests
 

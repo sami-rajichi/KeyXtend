@@ -189,8 +189,8 @@ fn checked_rows(raw: Vec<row::RawRow>, rules: &Rules<'_>) -> Result<Vec<Row>, Ta
     Ok(rows)
 }
 
-/// True for a row id: lower-case ASCII letters, digits, `-` and `.`.
-fn id_ok(id: &str) -> bool {
+/// True for a row id: lower-case ASCII letters, digits, `-` and `.`; the store reads counts by it too.
+pub(crate) fn id_ok(id: &str) -> bool {
     let plain = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b"-.".contains(&b);
     !id.is_empty() && id.bytes().all(plain)
 }

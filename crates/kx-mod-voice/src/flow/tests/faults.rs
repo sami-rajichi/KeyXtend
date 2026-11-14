@@ -133,27 +133,62 @@ fn notes_of_a_closed_dictation_are_dropped() {
     assert_eq!(rig.shown(), VoiceBar::Hidden);
 }
 
-#[test]
-fn a_failed_card_lets_the_processor_write_with_a_note() {
+/// A rig whose French model runs on card `Vulkan1`, as on a PC with two graphics chips.
+fn on_card() -> (Rig, CardId) {
     let mut rig = Rig::new();
+    let id = CardId::new("Vulkan1").unwrap();
     let card = CardUse {
-        id: CardId::new("Vulkan0").unwrap(),
+        id: id.clone(),
         need_mb: 960,
         margin_mb: 512,
     };
-    let mut on_card = ready("parakeet", "fr");
-    on_card.card = Some(card.clone());
-    rig.book.0.insert("fr".into(), Ok(on_card));
+    let mut ready = ready("parakeet", "fr");
+    ready.card = Some(card);
+    rig.book.0.insert("fr".into(), Ok(ready));
+    (rig, id)
+}
+
+/// The counts among `out`.
+fn counts(out: &[Out]) -> Vec<Count> {
+    let one = |o: &Out| match o {
+        Out::Count(count) => Some(count.clone()),
+        _ => None,
+    };
+    out.iter().filter_map(one).collect()
+}
+
+#[test]
+fn a_failed_card_lets_the_processor_write_with_a_note() {
+    let (mut rig, card) = on_card();
     rig.key();
     rig.speak();
     rig.bar(BarButton::Stop);
     let out = rig.tell(SpeechNote::Fault(SpeechError::CardFailed));
-    assert!(out.contains(&Out::Fell(card.id)));
+    let model = PRINT;
+    assert!(out.contains(&Out::Fell { card, model }));
     assert_eq!(rig.shown(), VoiceBar::Transcribing);
     let out = rig.write(&["bonjour"]);
     assert!(ask(&out).is_some());
+    assert_eq!(counts(&out)[0].card, None, "the processor wrote it");
     let VoiceBar::Text(BarText { hint, .. }) = rig.shown() else {
         panic!("no Text bar");
     };
     assert_eq!(hint, Some(BarHint::Fell));
+}
+
+#[test]
+fn a_dictation_a_card_wrote_to_the_end_counts_that_card() {
+    let (mut rig, card) = on_card();
+    rig.key();
+    rig.speak();
+    rig.bar(BarButton::Stop);
+    rig.tell(SpeechNote::Piece {
+        index: 0,
+        text: secret("bonjour"),
+    });
+    let out = rig.tell(SpeechNote::Done(SpeechDone {
+        card: true,
+        ..done(1)
+    }));
+    assert_eq!(counts(&out)[0].card, Some(card));
 }

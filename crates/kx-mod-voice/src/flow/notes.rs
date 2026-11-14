@@ -83,7 +83,9 @@ impl Flow {
         };
         if !self.hidden {
             let model = take.ready.name.clone();
-            out.push(Out::Count(Count { model, done }));
+            let card = take.ask.card.as_ref().filter(|_| done.card);
+            let card = card.map(|c| c.id.clone());
+            out.push(Out::Count(Count { model, card, done }));
         }
         let before = take.before.take();
         let text = take.joined();
@@ -123,15 +125,16 @@ impl Flow {
         }
     }
 
-    /// A card's fault: the processor writes the same recording, and a failed card's check is dropped.
+    /// A card's fault: the processor writes the same recording, and the failed card's check of this model is dropped.
     fn fell(&mut self, error: SpeechError, out: &mut Vec<Out>) {
         let Some(take) = self.take.as_mut() else {
             return;
         };
         take.fell = true;
         let card = take.ask.card.as_ref().map(|c| c.id.clone());
-        if let (SpeechError::CardFailed, Some(id)) = (error, card) {
-            out.push(Out::Fell(id));
+        if let (SpeechError::CardFailed, Some(card)) = (error, card) {
+            let model = take.ready.print;
+            out.push(Out::Fell { card, model });
         }
     }
 
