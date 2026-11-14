@@ -1,0 +1,72 @@
+# The whole feature: the Dictation key, the bar, the Voice panel and the worker's voice jobs.
+on = true
+# The models folder, an absolute drive path; empty until the first download asks for it.
+models_dir = ""
+# The user's model per keyboard language, by row id or file name; a language left out, or a bad pick, takes the table's default.
+picks = {}
+# Where models run: "auto", "cpu" or a card's id; Automatic uses the processor until a card passes its check.
+device = "auto"
+# Processor threads; 0 means the real cores, and more are capped at them.
+threads = 0
+# Minutes a model stays loaded after the last dictation; then its job ends.
+idle_min = 5
+# The longest dictation, in seconds; then it stops by itself and is written, with a note.
+record_max_s = 600
+# A piece longer than this, in seconds, is cut at the next pause and written while listening goes on.
+piece_s = 30
+# The silence kept around speech when a piece is cut, in ms.
+pad_ms = 300
+# Seconds without speech before the bar hints that nothing is heard.
+nothing_s = 5
+# Silence after speech stops listening.
+silence_stop = false
+# The seconds of silence after speech that stop listening, when silence_stop is on.
+silence_stop_s = 3
+# A second click on the Dictation key this soon, in ms, is ignored.
+debounce_ms = 400
+# What follows the typed text, at most 8 characters.
+type_suffix = " "
+# The wait between typed pieces, in ms.
+type_gap_ms = 10
+# How long the bar shows the text, in ms, before it fades.
+done_ms = 9000
+# The wave's smoothing, in ms; 0 draws each level as it comes.
+wave_ms = 300
+# Sound levels told per second while listening.
+level_hz = 30
+# Where the bar sits: "above" the keyboard, at the "bottom" or the "top" of the screen.
+place = "above"
+# The start and stop sounds.
+sounds = true
+# The history of dictated texts, sealed on disk.
+history = true
+# The most texts the history keeps; pinned texts do not count.
+history_max = 50
+# Each dictation's recording is kept with its text, sealed on disk.
+keep_voice = false
+# The most the kept recordings take, in MB; past it the oldest unpinned one goes.
+voice_max_mb = 1024
+# The room a card keeps free beside a model, in MB.
+card_margin_mb = 512
+# How many times faster than the processor a card must be in its check.
+card_gain = 1.5
+# The most words a card's text may differ from the processor's in its check.
+card_diff = 1
+# The room the models drive keeps free beside a download, in MB.
+min_free_mb = 2048
+# A voice or fetch job's memory cap without a model, in MB; a model adds its row's need.
+job_mb = 512
+# The longest wait for the worker's answer to an ask, in ms.
+ask_ms = 3000
+# The longest a model may take to load, or the devices or a file's facts to be read, in seconds.
+load_s = 60
+# The longest a card may take to warm up, in seconds.
+warm_s = 180
+# The longest one piece may take to be written, in seconds.
+piece_wait_s = 120
+# A download with no byte for this many seconds fails.
+stall_s = 30
+# The wait before a failed worker starts again, in ms; it doubles with each failure in a row.
+restart_ms = 1000
+# The longest wait before a failed worker starts again, in ms.
+restart_max_ms = 30000

@@ -174,7 +174,7 @@ Engines, models and services are plug-in parts (owner): the feature's code names
 - It shows a set text in the keyboard's language (from the translations), records the user once, then runs each ready model that knows the language on the chosen device, one after another, with "model 3 of 6" and Cancel. Each model runs in a fresh job, so its memory figure is its own and one model's fault does not stop the others.
 - Set texts exist for English, French and Arabic. For another language Compare shows each model's text, waiting time and memory, with no count (designer).
 - The result is a paged table: model, words wrong out of the total, waiting time, memory. Tick a row, then "Use for this language".
-- Scoring ignores case, punctuation and Arabic marks, and treats Arabic letter forms alike; the rules are a small table per language. The numbers are kept, with their date, for the panel and P13; the recording and the texts are not (designer).
+- Scoring ignores case, punctuation and Arabic marks, but keeps Arabic letter forms apart (ة is not ه, أ is not ا), so a wrong letter counts as a wrong word; the rules are a small table per language. The numbers are kept, with their date, for the panel and P13; the recording and the texts are not (designer).
 
 ## History, recordings and counts
 

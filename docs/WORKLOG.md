@@ -4,16 +4,19 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
-## 2026-11-14 22:20 — P11: the worker's voice job records, cuts and hands over sound
+## 2026-11-14 20:45 — P11: the voice module's models table, device rule, scorer and settings
+`kx-mod-voice` holds the ten-row models table with fixed-revision links, sizes, fingerprints, memory and language codes, and an order per tested language from the 2026-11-14 trial, with a general order for the rest marked untested. Automatic keeps the processor until a card passes its check, then takes the passed card with room and the best gain, and says why on every fallback. The scorer counts words wrong per language and keeps Arabic letter forms apart; `[voice]` settings repair a bad key alone, and a bad pick resets only its language with a notice.
+
+## 2026-11-14 20:12 — P11: the worker's voice job records, cuts and hands over sound
 The worker gains the `voice` job's capture side: the microphone through `cpal` behind a `Source` trait, resampling to 16 kHz mono, levels at `level_hz`, and a cutter that cuts only at a pause after `piece_s`, keeps `pad_ms` and loses no sample. With no model it records and hands its sound over at Stop; Cancel keeps the recording until Close, so "Transcribe anyway" works, and every sound buffer is wiped. The microphone closes on every ending, a panic included, and the queue from the microphone is bounded by `record_max_s`.
 
-## 2026-11-14 21:30 — P11: fakes for speech, model files and the session
+## 2026-11-14 19:49 — P11: fakes for speech, model files and the session
 `FakeSpeech`, `FakeModelFiles` and `FakeSessionWatch` script levels, pieces, faults, a worker death, devices, card checks, download steps, and lock and sleep, and record every ask for the module's tests. Each checks asks with the port's own rules, and no note reaches a run after it closed, died or was dropped. They start no threads and never sleep, so the module's flow tests stay exact.
 
-## 2026-11-14 20:40 — P11: the worker's streaming session
+## 2026-11-14 19:21 — P11: the worker's streaming session
 Beside one ask and one reply, the worker host now keeps a streaming session: asks with deadlines, plus notes the worker sends on its own, told in order on one thread. A late note, a bad or stray frame, or a quit ends the worker and holds the next start back from `restart_ms` doubling to `restart_max_ms`, and a worker holds at most two unread frames, so a flooding worker cannot grow the app's memory. A property test checks one worker at most, no note after a loss and none left running after drop.
 
-## 2026-11-14 20:10 — P11: the voice module's API
+## 2026-11-14 19:16 — P11: the voice module's API
 The module API gains the `Voice` capability, the `Speech` port (gated `Microphone`), the `ModelFiles` port (gated `Network`), the ungated `SessionWatch` port and the voice events, with every value range taken from the frames. The view types draw each bar state and Voice panel page of the approved mock-up, and a password box can never offer Copy. Paths refuse control characters and device names such as `NUL.gguf`, and texts, sounds, paths and the user's own model file names never print.
 
 ## 2026-11-14 17:50 — P11: `kx-gates boxed`, and G19's hung step alone with z-order snapshots

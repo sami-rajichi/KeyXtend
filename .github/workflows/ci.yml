@@ -92,8 +92,8 @@ jobs:
       PACKAGES: >-
         -p keyxtend-worker -p kx-crypto -p kx-gates -p kx-ipc -p kx-kernel -p kx-mod-clipboard -p kx-mod-keyboard
         -p kx-mod-layouts -p kx-mod-mouse -p kx-mod-power -p kx-mod-predict -p kx-mod-scroll -p kx-mod-selection
-        -p kx-mod-vault -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows -p kx-settings
-        -p kx-target-window -p kx-test-support -p kx-theme -p xtask
+        -p kx-mod-vault -p kx-mod-voice -p kx-module-api -p kx-platform -p kx-platform-fake -p kx-platform-windows
+        -p kx-settings -p kx-target-window -p kx-test-support -p kx-theme -p xtask
       NO_QT: -p kx-ui
       QT_ONLY: -p keyxtend -p kx-test-icons
     steps:
