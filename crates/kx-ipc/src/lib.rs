@@ -12,7 +12,7 @@ mod fetch;
 mod frame;
 mod limits;
 mod reply;
-mod rules;
+pub mod rules;
 mod vault;
 mod voice;
 mod wiped;

@@ -1,5 +1,6 @@
 //! What a field's content may hold, checked by both sides after its length: a number within its range, a short ASCII
-//! name, a path without a NUL and a name without control characters or hidden format marks.
+//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag and
+//! host rules are public, so the ports refuse what the frames refuse.
 
 use crate::error::IpcError;
 use std::ops::RangeInclusive;
@@ -25,8 +26,20 @@ pub(crate) fn within<T: PartialOrd>(n: T, range: &RangeInclusive<T>) -> Result<T
 }
 
 /// Refuses anything but visible ASCII, for a language code, a runner or a card's id.
-pub(crate) fn tag(text: &str) -> Result<(), IpcError> {
+///
+/// # Errors
+/// `BadField` for any other byte.
+pub fn tag(text: &str) -> Result<(), IpcError> {
     ok_if(text.bytes().all(|b| b.is_ascii_graphic()))
+}
+
+/// Refuses a host that is not lower-case letters, digits, dots and hyphens.
+///
+/// # Errors
+/// `BadField` for any other byte.
+pub fn host(text: &str) -> Result<(), IpcError> {
+    let plain = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-';
+    ok_if(text.bytes().all(plain))
 }
 
 /// Refuses a path holding a NUL, which ends a path early for the OS.

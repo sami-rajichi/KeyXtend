@@ -1,5 +1,6 @@
 //! Each fetch refusal, reading and writing: a length past its kind, an address that is not HTTPS, a host that is not a
-//! plain lower-case name, an empty or long list, a size, stall or progress out of range, and a bad path.
+//! plain lower-case name, an empty or long list, a size, stall or progress out of range, and a bad path. The host and
+//! tag rules are public, so the ports check the same way.
 
 use super::*;
 use crate::{MAX_MODEL_BYTES, STALL_S};
@@ -116,6 +117,23 @@ fn a_host_that_is_not_a_plain_lower_case_name_is_refused_both_ways() {
     let mut bytes = good.clone();
     bytes[at] = b'/';
     assert_eq!(read_fetch_ask(&mut &bytes[..]), Err(BadField));
+}
+
+#[test]
+fn the_public_host_and_tag_rules_are_the_frames_own() {
+    use crate::rules::{host, tag};
+    for good in ["huggingface.co", "cdn-lfs.hf.co", "a1"] {
+        assert_eq!(host(good), Ok(()), "{good}");
+    }
+    for bad in ["A.example", "a/b", "a b", "a:443", "é.example", "a_b"] {
+        assert_eq!(host(bad), Err(BadField), "{bad}");
+    }
+    for good in ["fr-FR", "whisper", "Vulkan0"] {
+        assert_eq!(tag(good), Ok(()), "{good}");
+    }
+    for bad in ["fr FR", "مر", "a\tb", "a\0"] {
+        assert_eq!(tag(bad), Err(BadField), "{bad}");
+    }
 }
 
 #[test]

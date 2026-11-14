@@ -16,6 +16,16 @@ macro_rules! listed {
     };
 }
 
+/// The name of the first of `$value`'s fields outside its range, if any, so a field and the name it is refused by are
+/// written once.
+macro_rules! first_bad {
+    ($value:expr, $($field:ident: $range:expr),+ $(,)?) => {
+        [$(($range.contains(&$value.$field), stringify!($field))),+]
+            .into_iter()
+            .find_map(|(fits, name)| (!fits).then_some(name))
+    };
+}
+
 mod assist;
 mod boxes;
 mod calendar;
@@ -30,6 +40,7 @@ mod input;
 mod layout;
 mod layouts;
 mod link;
+mod models;
 mod packs;
 mod pictures;
 mod places;
@@ -39,8 +50,11 @@ mod random;
 mod scroll;
 mod sealed;
 mod selection;
+mod session;
 mod shelf;
 mod shortcut;
+mod speech;
+mod voice;
 mod words;
 
 pub use assist::{
@@ -86,6 +100,10 @@ pub use input::{InjectError, InputInjector, InputInjectorKey, Scan, TextRoute};
 pub use layout::{KeyChars, LangFacts, LayoutId, LayoutSource, LayoutSourceKey, Slot, SwitchError};
 pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, LayoutsKey, step_to};
 pub use link::{LINK_SCHEME, Link, LinkError, MAX_LINK_BYTES, WebLink, WebLinkKey};
+pub use models::{
+    Drive, FetchAsk, FetchNote, FetchRun, Fingerprint, FolderScan, ModelError, ModelFile,
+    ModelFiles, ModelFilesKey, PART_EXT, path_ok,
+};
 pub use packs::{
     IndexError, MAX_INDEX_BYTES, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_DIR, PACK_EXT,
     PACK_INDEX, PackError, PackIndex, PackView, WordPacks, WordPacksKey, fits_iso, pack_file,
@@ -117,10 +135,24 @@ pub use selection::{
     SelConfig, SelError, SelKind, SelRun, SelSpot, SelectionWatch, SelectionWatchKey, StripSpot,
     same_box,
 };
+pub use session::{SessionError, SessionNote, SessionRun, SessionWatch, SessionWatchKey};
 pub use shelf::{Room, SealedShelf, SealedShelfKey};
 pub use shortcut::{
     COPY_ID, COPY_TERM_ID, CUT_ID, KeyName, MAX_ID_LEN, PASTE_ID, PASTE_TERM_ID, ShortcutError,
     ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
+};
+pub use speech::{
+    CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, FactsAsk, Hundredths,
+    JobLimits, LEVEL_FULL, MAX_PERCENT, Memory, ModelFacts, Speech, SpeechAsk, SpeechDone,
+    SpeechError, SpeechKey, SpeechModel, SpeechNote, SpeechRun, SpeechStage, TAG_LEN, Verdict,
+};
+pub use voice::{
+    BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CompareRow, CompareRun,
+    CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, FailedCheck,
+    FetchButton, FetchState, FolderLine, FolderList, HistoryRow, HistorySheet, Listening, ModelRow,
+    ModelState, ModelsSheet, OptionRow, OptionValue, PanelButton, RunStep, TextAsk, TextDone,
+    VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLit,
+    VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

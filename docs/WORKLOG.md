@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 20:10 — P11: the voice module's API
+The module API gains the `Voice` capability, the `Speech` port (gated `Microphone`), the `ModelFiles` port (gated `Network`), the ungated `SessionWatch` port and the voice events, with every value range taken from the frames. The view types draw each bar state and Voice panel page of the approved mock-up, and a password box can never offer Copy. Paths refuse control characters and device names such as `NUL.gguf`, and texts, sounds, paths and the user's own model file names never print.
+
 ## 2026-11-14 17:50 — P11: `kx-gates boxed`, and G19's hung step alone with z-order snapshots
 `kx-gates boxed` starts a probe under the worker's own token and job; it proved that the microphone and the graphics card work inside the box. `g19 hung` runs G19's hung step alone and snapshots the whole z-order after the hang, after the close and at a cover timeout, then lifts the keyboard from outside to test the fix path. Both read classes and numbers only, never a title or text.
 

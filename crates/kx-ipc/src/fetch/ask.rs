@@ -5,7 +5,7 @@ use crate::code::Kind;
 use crate::error::IpcError;
 use crate::frame::{Head, write_head};
 use crate::limits::{HTTPS, SHA256_BYTES, STALL_S};
-use crate::rules::{self, ok_if, within};
+use crate::rules::{self, host, ok_if, within};
 use crate::wire::{Payload, Put, Sink, Size, Spec};
 use std::borrow::Cow;
 use std::fmt;
@@ -145,12 +145,6 @@ impl FetchAsk<'_> {
 /// Refuses an address that is not visible ASCII starting with `HTTPS`.
 fn url(text: &str) -> Result<(), IpcError> {
     ok_if(text.starts_with(HTTPS) && text.bytes().all(|b| b.is_ascii_graphic()))
-}
-
-/// Refuses a host that is not lower-case letters, digits, dots and hyphens.
-fn host(text: &str) -> Result<(), IpcError> {
-    let plain = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-';
-    ok_if(text.bytes().all(plain))
 }
 
 /// Sends an address.

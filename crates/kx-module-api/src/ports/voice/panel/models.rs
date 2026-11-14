@@ -1,0 +1,76 @@
+//! The Models page: each model that knows the language in front with its size and state, a download's progress, the
+//! best model's note and the models folder with its drive's room.
+
+use crate::Redacted;
+
+/// Where a model's file stands on this PC.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ModelState {
+    /// Its file is in the folder, with the fingerprint its row names.
+    Ready,
+    /// Its file is not there: Download.
+    Missing,
+    /// It needs more memory than this PC has: Not for this PC, with the reason.
+    NotHere {
+        /// What it needs, in MB.
+        need_mb: u32,
+        /// What this PC has, in MB.
+        have_mb: u32,
+    },
+    /// A file no row names: Other file, not checked.
+    Other,
+}
+
+/// A download in progress on a model's row, with Pause or Resume and Cancel.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct FetchState {
+    /// Bytes written so far.
+    pub done: u64,
+    /// The file's size.
+    pub total: u64,
+    /// It is paused, keeping its part.
+    pub paused: bool,
+}
+
+/// One model's row on the Models page.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ModelRow {
+    /// Its shown name, or the user's own file name for an other file.
+    pub name: Redacted<String>,
+    /// Its file's size in bytes, from its row or, for an other file, from the folder.
+    pub bytes: u64,
+    /// It is the language's default, the first of its tested order.
+    pub default: bool,
+    /// Where its file stands.
+    pub state: ModelState,
+    /// It is used for the language: the user's pick, else the default.
+    pub used: bool,
+    /// It is ticked.
+    pub tick: bool,
+    /// Its download, while one runs or waits paused.
+    pub fetch: Option<FetchState>,
+}
+
+/// A folder line: the folder and its drive's free room, as in Models folder: D:\KeyXtend\models · 212 GB free.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FolderLine {
+    /// The folder.
+    pub path: Redacted<String>,
+    /// Bytes free on its drive.
+    pub free: u64,
+}
+
+/// The Models page.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ModelsSheet {
+    /// The shown page's rows.
+    pub rows: Vec<ModelRow>,
+    /// The best model for the language, which the note names; `None` for no note.
+    pub best: Option<String>,
+    /// The language has no tested order of its own, so the general order is used.
+    pub untested: bool,
+    /// The models folder, with Change and Open; `None` until the first download asks for it.
+    pub folder: Option<FolderLine>,
+    /// The folder offered at the first download, while that question shows.
+    pub offer: Option<FolderLine>,
+}

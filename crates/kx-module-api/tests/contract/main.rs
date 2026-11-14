@@ -13,4 +13,5 @@ mod power;
 mod scroll;
 mod selection;
 mod shortcut;
+mod voice;
 mod words;
