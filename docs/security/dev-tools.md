@@ -1,7 +1,7 @@
 # Security note: dev tools
 
 - **Owner:** product owner
-- **Last review:** 2026-11-08 (P10 Tasks 17 and 18: G19 on the product, its rich-edit target-window and Don't save in its own Notepad tab, `kx-gates-p10.toml` and the settings files' count); 2026-11-05 (P9 Task 23: G23, `kx-gates-p9.toml` and the settings files' count); 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
+- **Last review:** 2026-11-14 (P11 Task 4: `g19 hung`, its z-order snapshots and outside lift; `kx-gates boxed`); 2026-11-08 (P10 Tasks 17 and 18: G19 on the product, its rich-edit target-window and Don't save in its own Notepad tab, `kx-gates-p10.toml` and the settings files' count); 2026-11-05 (P9 Task 23: G23, `kx-gates-p9.toml` and the settings files' count); 2026-10-31 (P8 security check: the clipboard gates' data folder, their guarded writers and G20's worker token read; P6 security check: G25 on the product, its shortcuts layer and the power dialog it only cancels)
 - **Status:** Reviewed
 - **Scope:** `cargo xtask stage`, `dev-cert`, `dev-install` with its Start-menu shortcut, `check-uiaccess`, `xtask/scripts/dev-cert.ps1`, `dev-admin.ps1` and `dev-shortcut.ps1`, `cargo xtask sounds`, and `kx-gates` with its settings files, the test build it starts and its mouse guard. Developer tools only; never shipped.
 
@@ -20,6 +20,7 @@
 | End a `ping.exe` whose parent is the gate's own script, after `ping_exit_ms` (G19, `PROCESS_TERMINATE`) | No ping the gate's `ping -t` script started may outlive the run. | A `ping -t` keeps running after its terminal closed. |
 | Share input with the gate's own terminal's thread while it is in front (`AttachThreadInput`), and tap Num Lock there (G19) | Paste in a terminal runs with Num Lock on and off, read as that terminal sees it, then put back. | The Num Lock cases are lost, or Num Lock stays changed. |
 | Move a target-window G19 started and move it back (`SetWindowPos`) | The near-bottom and second-screen placements. | Those placements cannot be checked, and are reported as not exercised. |
+| Lift the test build's keyboard into the topmost band from outside when a key stays covered (`SetWindowPos`, G19's hung step) | It tells whether a lift alone fixes the cover, the window guard's open finding (P11). | That finding cannot be told apart. |
 | Write the clipboard through the test build's Copy and Cut, put it back, and forget the gate's copies in Windows' clipboard history (G19) | Copy, Cut and Paste must really run. | The edits cannot be checked. |
 | Walk a browser window's controls and read its address bar, with the mouse guard off (`g19 translate-read` and `translate-beside`) | They measure the long Arabic link the owner opened. | Whether the link holds the line whole cannot be measured. |
 | Read the browser's and the launching keyboard's tokens (`workertok::rights`, read-only; G19) | The browser must inherit no uiAccess and no higher integrity. | That check is lost. |
@@ -31,7 +32,7 @@
 | Exported certificate, launchers, admin error file | Public | `target/dev-tools/` | No | Until `target/` is cleaned |
 | Extracted manifest | Public | `target/dev-tools/` | No | Deleted after each check |
 | The owner's settings bytes while G21's product half, G27 or `g8 predict` runs | Sensitive | The sidecar `[owner_settings] backup` in kx-gates' out folder | No | Deleted after a verified put-back; it stays while a copy may run or after a stopped run, and the next run or the same kx-gates' `close keyxtend` restores from it |
-| The owner's clipboard while `g19 keyxtend`, `terminals`, `translate-read` or `translate-beside` runs | Sensitive | Memory only, saved raw and never decoded (`clipkeep`) | No | Put back at the end, also on a panic; `translate-read` and `translate-beside` put it back only when its sequence number moved |
+| The owner's clipboard while `g19 keyxtend`, `terminals`, `hung`, `translate-read` or `translate-beside` runs | Sensitive | Memory only, saved raw and never decoded (`clipkeep`) | No | Put back at the end, also on a panic; `translate-read` and `translate-beside` put it back only when its sequence number moved |
 | G19's own Notepad text, browser control names and the opened page's address | Sensitive | Memory only | No | Dropped after each compare; only names, numbers and verdicts print |
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
@@ -153,12 +154,13 @@
     - It overwrites the clipboard and Windows' clipboard history through the copy's Copy and Cut. It puts the owner's clipboard back at the end, also on a panic, and forgets its own copies from the history.
     - It ends, after `ping_exit_ms`, only a `ping.exe` whose parent is the shell its own script named in its ready file (`$PID`), new since the run began (`procs::ours`). A script that names none fails the run, and nothing is ended.
     - It reads and taps Num Lock only through its own terminal while that terminal is in front, and puts it back to the state the run found first, also on a panic, without bringing the terminal forward, so no Alt tap reaches another window (`numlock.rs`). Num Lock left changed fails the run and names the state to restore with the on-screen keyboard, in the result's `clean_up` list, or printed on a panic.
-  - `kx-gates g19 terminals` (P10) runs only the terminals step of `g19 keyxtend`, with the same copy, mouse guard (`DRIVEN` in `cli.rs`), clipboard keep, forgotten copies and data-folder removal.
+  - `kx-gates g19 terminals` (P10) runs only the terminals step of `g19 keyxtend`, with the same copy, mouse guard (`DRIVEN` in `cli.rs`), clipboard keep, forgotten copies and data-folder removal; `g19 hung` (P11) runs only its hung step the same way.
   - `kx-gates g19 translate-read` and `translate-beside` run free of the mouse guard (`FREED` in `cli.rs`), as the owner clicks Translate and Yes, and are bounded by `owner_wait_ms`.
     - `translate-beside` runs only from the installed uiAccess kx-gates, never `cargo run`: Windows hides the uiAccess keyboard from a plain UI Automation client, so a plain kx-gates refuses it at once (`g19chips/beside.rs`).
     - They read only the browser window that opened after Yes: its parent, its token's uiAccess and integrity, and its address bar, an Edit control a `[[g19_product.bars]]` row names, found without entering the page or the tabs.
     - The address is compared in memory and dropped, and only names, numbers and verdicts print. `translate-beside` starts nothing and puts the clipboard back only when its sequence number moved.
   - `kx-gates g19 look` (P10) starts, moves and types nothing, so it runs free of the mouse guard (`FREED` in `cli.rs`). For `look_s` seconds it runs the product's own selection watch with the module's defaults, as the strip does, and prints each change of the focused box's look: the front program's file name, the kind, whether text is selected, its line count, the watch's tells and the ms, or the error; never text, a name or a box (`g19chips/look.rs`).
+  - `kx-gates boxed --mb <n> <program>` (P11) starts one given program under the worker's own restricted token and job (`WinSpawner::start`) and prints its exit code and output; it moves nothing. The controller runs it only on the gate's own probes, such as the voice trial.
   - The hand try (`kx-gates assist`) starts nothing: it refuses a running test build and only reads the owner's copy's stats lines.
   - `kx-gates close keyxtend` posts Quit to the running copy's command window, as `--quit` does; it starts nothing. It asks first, then reports a refused sidecar name. After a hard stop, the same kx-gates that ran the gate restores the owner's files from the sidecar in its own out folder, once its Quit ended the copy and no copy runs, by window or by session claim, and deletes the sidecar only after a verified put-back.
   - `kx-gates g8` starts the program `[g8] program` names through the shell, so the same rule holds, and ends that copy as `copyend.rs` says. With `weak`, it caps that program and kx-gates itself in one job object (cores, CPU time, memory) until kx-gates exits; a copy it cannot open or cap is ended as `copyend.rs` says.
@@ -227,6 +229,8 @@ Before and after that case, G19 also makes each call of the product's caret look
 G19's hung case clicks into its own sleeping target-window. The click waits in that window's queue and lands after the hang, in the gate's own box.
 
 When a key of our keyboard stays covered, G19 notes the windows above the keyboard in the z-order, and the keyboard's own styles, cut and layering (`g19chips/cover.rs`). It reads class names, flags and numbers only, never a title or any text.
+
+The hung step also snapshots the whole z-order three times (`g19chips/zread.rs`): each window's class, process kind, thread, owner, styles and band, the band through the undocumented `GetWindowBand`. It sends no message to any window.
 
 `g19 translate-read` and `translate-beside` read the opened browser window's address bar in memory, compare it and drop it. The owner is present, and the check needs that read.
 

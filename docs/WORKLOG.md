@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 17:50 — P11: `kx-gates boxed`, and G19's hung step alone with z-order snapshots
+`kx-gates boxed` starts a probe under the worker's own token and job; it proved that the microphone and the graphics card work inside the box. `g19 hung` runs G19's hung step alone and snapshots the whole z-order after the hang, after the close and at a cover timeout, then lifts the keyboard from outside to test the fix path. Both read classes and numbers only, never a title or text.
+
 ## 2026-11-14 17:45 — P11: the voice and fetch frames
 The worker pipe gains the `voice` job's asks and notes (kinds 19 to 40) and the `fetch` job's (41 to 48), each kind with its own size range, and the `[voice]` value ranges now live once in `kx-ipc`. Text, sound and paths are wiped secrets that never print, and a device name with a hidden direction mark is refused. Round-trip, refusal and property tests cover every frame, and the vault frames are unchanged.
 

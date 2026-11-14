@@ -146,6 +146,8 @@ pub struct G19Product {
     pub owner_wait_ms: u64,
     /// How long `g19 look` looks, in seconds.
     pub look_s: u64,
+    /// How many rows below the keyboard the hung step's z-order note lists.
+    pub z_below: usize,
     /// The classic console.
     pub console: Console,
 }

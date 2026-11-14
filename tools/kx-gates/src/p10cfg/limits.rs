@@ -67,6 +67,14 @@ impl G19Product {
         Ok(())
     }
 
+    /// Refuses a z-order note with no row below the keyboard.
+    pub(super) fn check_z(&self) -> Result<(), String> {
+        if self.z_below == 0 {
+            return Err("g19_product.z_below must be 1 or more".into());
+        }
+        Ok(())
+    }
+
     /// Refuses a Num Lock that is another key, no Shift+Home, Shift+End or caret key, a browser that is a path, and a
     /// console that would run no script of the gate's.
     pub(super) fn check_keys(&self) -> Result<(), String> {
