@@ -123,6 +123,7 @@ fn a_bad_name_target_or_path_in_a_model_is_refused_when_read() {
         (4, b" "),
         (4, b"\xc3"),
         (8, b"\0"),
+        // Built-in graphics is a device kind, aimed at as a card by its id, never a target's kind.
         (8, b"\x03"),
         (16, b"\x41"),
         (19, b"\0"),

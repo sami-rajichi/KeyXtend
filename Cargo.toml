@@ -41,6 +41,8 @@ age = { version = "0.11.5", default-features = false }
 keepass = { version = "=0.17.0", default-features = false }
 # The voice worker's microphone (ADR-0042): WASAPI on Windows; only the `voice` job opens it.
 cpal = "0.18.2"
+# The voice worker's speech engine (ADR-0043, ADR-0044), pinned: its loadable parts and their loading are reviewed.
+transcribe-cpp = { version = "=0.4.1", default-features = false }
 toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }

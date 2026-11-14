@@ -1,16 +1,19 @@
 //! The job's state: at most one run listening, one engine writing, one recording held until Close and one hand-in
-//! under way. It takes each event in turn on one thread: asks, the source's chunks, and the engine's notes.
+//! under way. It takes each event in turn on one thread: asks, the source's chunks, the engine's notes and Again's
+//! next stretch to cut.
 
 mod asks;
+mod notes;
 
-use super::cut::{Cutter, Detectors, NoDetectors};
-use super::engine::{Engine, NoEngine, Writer};
+use super::cut::{Cutter, Detectors};
+use super::engine::{self, Engine, Writer};
 use super::hand::{self, HandIn, Held};
-use super::listen::Run;
+use super::listen::{Replay, Run};
 use super::mic::{Mic, Source};
 use super::{Event, Feed, Notes, Tell, span};
 use asks::{answer, stage};
 use kx_ipc::{IpcError, Setup, Stage, VoiceAsk, VoiceFault, VoiceNote};
+use notes::listened;
 use std::sync::mpsc::Sender;
 
 /// The job's parts: the sound source, the voice detector and the engine.
@@ -24,12 +27,17 @@ pub struct Parts {
 }
 
 impl Parts {
-    /// The shipped parts: the microphone, with no detector or engine until P11 task 12.
+    /// The shipped parts: the microphone, and this build's detector and engine.
     pub fn live() -> Self {
+        Self::over(Box::new(Mic))
+    }
+
+    /// This build's detector and engine over `source`.
+    pub fn over(source: Box<dyn Source>) -> Self {
         Self {
-            source: Box::new(Mic),
-            detectors: Box::new(NoDetectors),
-            engine: Box::new(NoEngine),
+            source,
+            detectors: engine::detectors(),
+            engine: engine::live(),
         }
     }
 }
@@ -66,7 +74,9 @@ impl From<VoiceFault> for Fail {
 /// An engine still writing a run's pieces after its source closed; dropping it stops the writing.
 struct Writing {
     id: u32,
-    _writer: Box<dyn Writer>,
+    writer: Box<dyn Writer>,
+    /// Again's cutting of the held recording, while pieces are left to give.
+    replay: Option<Replay>,
 }
 
 /// The voice job's state.
@@ -79,6 +89,8 @@ pub struct Job {
     writing: Option<Writing>,
     held: Option<Held>,
     hand: Option<HandIn>,
+    /// The engine asks whose answer has not come yet.
+    asks: Vec<u32>,
 }
 
 impl Job {
@@ -92,6 +104,7 @@ impl Job {
             writing: None,
             held: None,
             hand: None,
+            asks: Vec::new(),
         }
     }
 
@@ -108,6 +121,7 @@ impl Job {
             Event::Lost { epoch, fault } if self.live(epoch) => self.fail_run(fault, out)?,
             Event::Lost { .. } => {}
             Event::Note(note) => self.engine_note(note, out)?,
+            Event::Replay(id) => self.replay(id, out)?,
         }
         Ok(Flow::Go)
     }
@@ -164,7 +178,8 @@ impl Job {
             writer.end(heard);
             self.writing = Some(Writing {
                 id,
-                _writer: writer,
+                writer,
+                replay: None,
             });
         } else {
             hand::over(id, &sound, out)?;
@@ -188,30 +203,6 @@ impl Job {
         }
         out.tell(stage(id, Stage::Shut))?;
         out.tell(VoiceNote::Fault { id, fault })
-    }
-
-    /// Passes on a note of the engine's writing run; a fault that ends a listening run closes its source first, and a
-    /// dropped writer's late note is dropped.
-    fn engine_note(&mut self, note: VoiceNote, out: &mut dyn Notes) -> Result<(), IpcError> {
-        let id = note.id();
-        if self.run.as_ref().is_some_and(|r| r.id == id && r.writes()) {
-            return match note {
-                VoiceNote::Fault { fault, .. } if ends(fault) => self.fail_run(fault, out),
-                note => out.tell(note),
-            };
-        }
-        if self.writing.as_ref().is_none_or(|w| w.id != id) {
-            return Ok(());
-        }
-        let last = match &note {
-            VoiceNote::Done { .. } => true,
-            VoiceNote::Fault { fault, .. } => ends(*fault),
-            _ => false,
-        };
-        if last {
-            self.writing = None;
-        }
-        out.tell(note)
     }
 
     /// Opens run `id` as `setup` says: its detector, its engine's writer, then its source.
@@ -247,27 +238,6 @@ impl Job {
         }
         let tell = Tell::new(self.tx.clone());
         self.parts.engine.load(id, model, tell).map(Some)
-    }
-}
-
-/// False for a card's fault, after which the processor goes on with the same run.
-fn ends(fault: VoiceFault) -> bool {
-    !matches!(
-        fault,
-        VoiceFault::NoCard | VoiceFault::CardRoom | VoiceFault::CardFailed
-    )
-}
-
-/// The end of a listen-only run: no text, `sound_ms` heard; the memory figure is the engine's to measure (task 12).
-fn listened(id: u32, sound_ms: u32) -> VoiceNote {
-    VoiceNote::Done {
-        id,
-        pieces: 0,
-        sound_ms,
-        wait_ms: 0,
-        load_ms: 0,
-        memory_mb: 0,
-        card: false,
     }
 }
 

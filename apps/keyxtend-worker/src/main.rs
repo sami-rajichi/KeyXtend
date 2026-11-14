@@ -24,7 +24,12 @@ fn main() -> ExitCode {
     match args::parse(std::env::args_os().skip(1)) {
         Ok(Job::Media { max_pixels }) => media_job(max_pixels),
         Ok(Job::Vault) => vault_job(),
-        Ok(Job::Voice) => voice_job(),
+        Ok(Job::Voice) => voice_job(voice::Parts::live()),
+        #[cfg(feature = "gate")]
+        Ok(Job::Played(path)) => match voice::played(&path) {
+            Ok(parts) => voice_job(parts),
+            Err(fault) => fail(&format!("{fault:?}")),
+        },
         Err(e) => fail(&e),
     }
 }
@@ -51,9 +56,8 @@ fn vault_job() -> ExitCode {
     ))
 }
 
-/// Runs dictations from the asks on stdin, telling notes on stdout, until goodbye or the end of input.
-fn voice_job() -> ExitCode {
-    let parts = voice::Parts::live();
+/// Runs dictations over `parts` from the asks on stdin, telling notes on stdout, until goodbye or the end of input.
+fn voice_job(parts: voice::Parts) -> ExitCode {
     exit(voice::serve(io::stdin(), &mut io::stdout().lock(), parts))
 }
 

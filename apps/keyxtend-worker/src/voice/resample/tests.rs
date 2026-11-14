@@ -116,6 +116,22 @@ fn pcm16_rounds_and_clamps() {
     assert_eq!(&*out, &[0, 16384, 32767, -32767, 0]);
 }
 
+#[test]
+fn floats_are_the_way_back_from_pcm16() {
+    let pcm = [0, 1, -1, i16::MAX, -i16::MAX, i16::MIN, 1234];
+    let back = floats(&pcm).unwrap();
+    assert_eq!(&back[..4], [0.0, 1.0 / 32767.0, -1.0 / 32767.0, 1.0]);
+    assert_eq!(
+        (back[4], back[5]),
+        (-1.0, -1.0),
+        "the lowest sample is clamped"
+    );
+    assert_eq!(
+        &pcm16(&back).unwrap()[..],
+        [0, 1, -1, i16::MAX, -i16::MAX, -i16::MAX, 1234]
+    );
+}
+
 proptest! {
     #[test]
     fn any_chunking_gives_the_whole_buffers_samples(

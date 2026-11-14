@@ -217,23 +217,3 @@ fn a_model_without_a_detector_is_runner_and_opens_nothing() {
     assert_eq!(rig.ask(ask), [fault(1, VoiceFault::Runner)]);
     assert_eq!(rig.mic.borrow().opens, 0);
 }
-
-#[test]
-fn the_shipped_parts_have_no_engine_yet() {
-    let (tx, _rx) = mpsc::channel();
-    let mut job = Job::new(Parts::live(), tx);
-    let mut notes = Vec::new();
-    for ask in [
-        VoiceAsk::Start {
-            id: 1,
-            setup: setup(true),
-        },
-        VoiceAsk::Devices { id: 2 },
-    ] {
-        job.take(Event::Ask(ask), &mut notes).unwrap();
-    }
-    assert_eq!(
-        notes,
-        [fault(1, VoiceFault::Runner), fault(2, VoiceFault::Runner)]
-    );
-}

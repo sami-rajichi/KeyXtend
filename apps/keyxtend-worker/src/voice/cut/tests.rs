@@ -149,3 +149,59 @@ proptest! {
         prop_assert_eq!(at, x.len());
     }
 }
+
+/// Hears loud frames but tells speech only from the `need`-th loud frame in a row, holding the earlier ones pending.
+struct Late {
+    loud: Loud,
+    need: usize,
+    run: usize,
+}
+
+impl Late {
+    fn boxed(need: usize) -> Box<dyn Detector> {
+        let loud = Loud(FRAME);
+        Box::new(Self { loud, need, run: 0 })
+    }
+}
+
+impl Detector for Late {
+    fn frame(&self) -> usize {
+        self.loud.0
+    }
+
+    fn speech(&mut self, frame: &[i16]) -> bool {
+        self.run = if self.loud.speech(frame) {
+            self.run + 1
+        } else {
+            0
+        };
+        self.run >= self.need
+    }
+
+    fn pending(&self) -> usize {
+        if self.run < self.need { self.run } else { 0 }
+    }
+}
+
+/// The cuts a `Late` detector finds in `x`, fed whole.
+fn late_cuts(x: &[i16], need: usize, piece: usize, pad: usize) -> Vec<Cut> {
+    let mut cut = Cutter::new(Late::boxed(need), piece, pad);
+    let mut cuts = Vec::new();
+    cut.take(x, &mut cuts).unwrap();
+    cut.finish(&mut cuts);
+    cuts
+}
+
+#[test]
+fn speech_told_late_starts_where_the_detector_first_held_it() {
+    let x = sound(&[(false, 50), (true, 60), (false, 200)]);
+    let want = [piece(0, 130, Some(50..110)), piece(130, 310, None)];
+    assert_eq!(pieces(&late_cuts(&x, 3, 10, 20)), want);
+}
+
+#[test]
+fn no_cut_falls_inside_frames_the_detector_holds_pending() {
+    let x = sound(&[(true, 100), (false, 40), (true, 50), (false, 100)]);
+    let want = [piece(0, 210, Some(0..190)), piece(210, 290, None)];
+    assert_eq!(pieces(&late_cuts(&x, 3, 150, 20)), want);
+}

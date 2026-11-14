@@ -1,9 +1,16 @@
 //! The command line: `media --max-pixels <n>` runs the media job, and `vault` and `voice` their jobs, alone. The host
 //! passes trusted arguments; the fetch, OCR and update jobs come in later tasks and phases, so any other job is refused.
+//! Only a gate build takes `voice --sound <file.wav>`.
 
 use kx_ipc::{MAX_PIXELS_FLAG, MEDIA_JOB, VAULT_JOB, VOICE_JOB};
 use std::ffi::OsString;
+#[cfg(feature = "gate")]
+use std::path::PathBuf;
 use thiserror::Error;
+
+/// Gate builds only: the flag after `voice` that names a WAV file to play in place of the microphone.
+#[cfg(feature = "gate")]
+pub const SOUND_FLAG: &str = "--sound";
 
 /// What the worker was started to do.
 #[derive(Debug, PartialEq, Eq)]
@@ -17,6 +24,9 @@ pub enum Job {
     Vault,
     /// Record the microphone, cut it into pieces and hand its sound over, with no network (ADR-0042).
     Voice,
+    /// Gate builds only: the voice job with this WAV file in place of the microphone.
+    #[cfg(feature = "gate")]
+    Played(PathBuf),
 }
 
 /// Why the command line was refused.
@@ -33,6 +43,10 @@ pub enum ArgError {
     /// A job that takes no argument came with some; it names that job.
     #[error("use: {0}, with nothing after it")]
     Alone(&'static str),
+    /// Gate builds only: the sound flag without exactly one file after it.
+    #[cfg(feature = "gate")]
+    #[error("use: {VOICE_JOB} {SOUND_FLAG} <file.wav>")]
+    Sound,
 }
 
 /// The job `args` ask for, without the program's own name.
@@ -53,6 +67,8 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Job, ArgError> 
     if let Some((word, job)) = alone {
         return match args.next() {
             None => Ok(job),
+            #[cfg(feature = "gate")]
+            Some(flag) if job == Job::Voice && flag == SOUND_FLAG => played(args),
             Some(_) => Err(ArgError::Alone(word)),
         };
     }
@@ -68,6 +84,15 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Job, ArgError> 
             Ok(Job::Media { max_pixels })
         }
         _ => Err(ArgError::Usage),
+    }
+}
+
+/// The voice job playing the one file left in `args`.
+#[cfg(feature = "gate")]
+fn played(mut args: impl Iterator<Item = OsString>) -> Result<Job, ArgError> {
+    match (args.next(), args.next()) {
+        (Some(file), None) => Ok(Job::Played(PathBuf::from(file))),
+        _ => Err(ArgError::Sound),
     }
 }
 

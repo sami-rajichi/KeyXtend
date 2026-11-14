@@ -113,7 +113,8 @@ fn a_bad_device_list_is_refused_both_ways() {
     refused_note(&VoiceNote::Devices { id: 1, list: many }, TooLong);
     let one = vec![devices().remove(1)];
     let good = voice_note_bytes(&VoiceNote::Devices { id: 1, list: one });
-    let bytes = patch(good.clone(), 1, &[3]);
+    let past = u8::try_from(DeviceKind::ALL.len() + 1).unwrap();
+    let bytes = patch(good.clone(), 1, &[past]);
     assert_eq!(read_voice_note(&mut &bytes[..]), Err(BadField));
     let none = frame(Kind::DeviceList, 1, &[0]);
     assert_eq!(read_voice_note(&mut &none[..]), Err(Inconsistent));

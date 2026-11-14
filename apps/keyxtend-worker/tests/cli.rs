@@ -255,15 +255,23 @@ fn the_vault_job_seals_and_opens_a_box_one_ask_at_a_time_until_bye() {
 
 #[test]
 fn the_voice_job_answers_without_a_dictation_until_bye() {
+    let missing = std::env::temp_dir().join("kx-no-such-model.gguf");
+    let path = Cow::Owned(missing.to_string_lossy().into_owned());
     let mut input = Vec::new();
     for ask in [
         VoiceAsk::Keep { id: 1 },
-        VoiceAsk::Devices { id: 2 },
+        VoiceAsk::Facts { id: 2, path },
         VoiceAsk::Close { id: 1 },
         VoiceAsk::Bye,
     ] {
         ask.write(&mut input).unwrap();
     }
+    // A missing file is told at once by the engine, and every engine ask is `Runner` without it.
+    let facts = if cfg!(feature = "engine") {
+        VoiceFault::NoFile
+    } else {
+        VoiceFault::Runner
+    };
     let out = run(&[VOICE_JOB], &input);
     assert!(exited(&out, CLEAN_EXIT), "{:?}", out.stderr);
     assert!(out.stderr.is_empty());
@@ -273,10 +281,7 @@ fn the_voice_job_answers_without_a_dictation_until_bye() {
         VoiceNote::read(&mut stdout),
         Ok(fault(1, VoiceFault::NoSound))
     );
-    assert_eq!(
-        VoiceNote::read(&mut stdout),
-        Ok(fault(2, VoiceFault::Runner))
-    );
+    assert_eq!(VoiceNote::read(&mut stdout), Ok(fault(2, facts)));
     let shut = VoiceNote::Stage {
         id: 1,
         stage: Stage::Shut,

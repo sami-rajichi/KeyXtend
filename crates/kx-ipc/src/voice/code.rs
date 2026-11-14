@@ -8,12 +8,14 @@ use crate::code::Code;
 pub enum DeviceKind {
     /// The processor.
     Cpu = 1,
-    /// A graphics card.
+    /// A graphics card with its own memory.
     Card = 2,
+    /// Graphics built into the processor, sharing its memory; a model targets it as a card.
+    BuiltIn = 3,
 }
 
 impl Code for DeviceKind {
-    const ALL: &'static [Self] = &[Self::Cpu, Self::Card];
+    const ALL: &'static [Self] = &[Self::Cpu, Self::Card, Self::BuiltIn];
 
     fn code(self) -> u8 {
         self as u8

@@ -94,3 +94,23 @@ fn each_refusal_is_one_short_line_naming_the_usage() {
         assert!(words.iter().all(|w| line.contains(w)), "{line}");
     }
 }
+
+#[cfg(feature = "gate")]
+#[test]
+fn a_gate_build_takes_one_sound_file_after_the_voice_job() {
+    let job = parse_all(&[VOICE_JOB, SOUND_FLAG, "clip.wav"]);
+    assert_eq!(job, Ok(Job::Played(std::path::PathBuf::from("clip.wav"))));
+    for args in [
+        &[VOICE_JOB, SOUND_FLAG][..],
+        &[VOICE_JOB, SOUND_FLAG, "a.wav", "b.wav"],
+    ] {
+        assert_eq!(parse_all(args), Err(ArgError::Sound), "{args:?}");
+    }
+}
+
+#[cfg(not(feature = "gate"))]
+#[test]
+fn a_build_without_the_gate_refuses_a_sound_file() {
+    let job = parse_all(&[VOICE_JOB, "--sound", "clip.wav"]);
+    assert_eq!(job, Err(ArgError::Alone(VOICE_JOB)));
+}

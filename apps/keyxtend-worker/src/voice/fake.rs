@@ -8,6 +8,8 @@ use super::job::Parts;
 use super::mic::{Format, Opened, Source};
 use super::wipe::Buf;
 use crate::voice::Feed;
+
+pub mod lib;
 use kx_ipc::{Model, SOUND_HZ, VoiceFault, VoiceNote};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -113,6 +115,18 @@ impl Engine for FakeEngine {
             tell,
             log,
         }))
+    }
+
+    fn devices(&mut self, _: u32, _: Tell) -> Result<(), VoiceFault> {
+        Err(VoiceFault::Runner)
+    }
+
+    fn facts(&mut self, _: u32, _: &str, _: Tell) -> Result<(), VoiceFault> {
+        Err(VoiceFault::Runner)
+    }
+
+    fn check(&mut self, _: u32, _: &Model<'_>, _: &str, _: Tell) -> Result<(), VoiceFault> {
+        Err(VoiceFault::Runner)
     }
 }
 

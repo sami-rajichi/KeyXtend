@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 22:11 — P11: the worker's speech engine, voice detector and graphics cards
+The worker's `voice` job now writes text through `transcribe.cpp` on one engine thread while listening goes on, with Silero marking speech so pieces are cut at pauses, and lists the processor, cards and built-in graphics. A card short of room, failing to load or failing mid-run never ends a dictation: the same piece runs on the processor, and the self-test reads one clip on the card and the processor for the module to score. The engine loads its parts only from the worker's folder and refuses to start beside an engine path variable; text copies are wiped, and Try again cuts a long recording in steps so Cancel answers at once.
+
 ## 2026-11-14 21:41 — P11: the dictation flow
 The voice module's flow is a pure state machine (Idle, Listening, Transcribing, Text, Note) that takes clicks, speech notes, the box's kind, lock and sleep, layout changes and clock ticks, and gives back runs to open, stop or close, the bar's view, the key's light, text to type and history to keep. The language is fixed at Start, every timing comes from `[voice]`, a click on an older bar is dropped, and every close wipes the recording. A review fixed seven bugs, among them a password re-read by Try again showing in plain, and pieces lost when the microphone was unplugged; a property test checks the light, the closes and the dots.
 

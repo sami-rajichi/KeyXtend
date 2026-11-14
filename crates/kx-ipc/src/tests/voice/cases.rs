@@ -137,7 +137,7 @@ pub(super) fn every_voice_ask() -> Vec<VoiceAsk<'static>> {
     asks
 }
 
-/// The processor and one card.
+/// The processor, one card and built-in graphics.
 pub(super) fn devices() -> Vec<Device> {
     let cpu = Device {
         kind: DeviceKind::Cpu,
@@ -155,7 +155,15 @@ pub(super) fn devices() -> Vec<Device> {
         free_mb: 8_192,
         driver: "32.0.15.6094".into(),
     };
-    vec![cpu, card]
+    let built_in = Device {
+        kind: DeviceKind::BuiltIn,
+        id: "vulkan1".into(),
+        name: "Integrated graphics".into(),
+        total_mb: 16_000,
+        free_mb: 7_000,
+        driver: "31.0.101.5186".into(),
+    };
+    vec![cpu, card, built_in]
 }
 
 /// The notes a dictation tells, in order.

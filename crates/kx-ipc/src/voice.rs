@@ -53,7 +53,7 @@ pub struct Model<'a> {
 pub enum Target<'a> {
     /// The processor.
     Cpu,
-    /// A card, refused before loading unless `need_mb` is free on it then.
+    /// A card or built-in graphics, refused before loading unless `need_mb` is free on it then.
     Card {
         /// The card's id, as the device list gives it.
         id: Cow<'a, str>,
@@ -76,7 +76,7 @@ pub struct SoundPiece<'a> {
 /// One device the engine found.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Device {
-    /// The processor or a card.
+    /// The processor, a card or built-in graphics.
     pub kind: DeviceKind,
     /// Its id, which a `Target::Card` names.
     pub id: String,

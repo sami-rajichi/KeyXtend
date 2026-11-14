@@ -88,7 +88,7 @@ pub(crate) fn read_model<R: Read + ?Sized>(
                 need_mb: p.u32()?,
             }
         }
-        None => return Err(IpcError::BadField),
+        Some(DeviceKind::BuiltIn) | None => return Err(IpcError::BadField),
     };
     let threads = within(p.byte()?, &THREADS)?;
     Ok(Model {

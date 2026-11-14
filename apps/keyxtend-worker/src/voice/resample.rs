@@ -165,6 +165,16 @@ pub fn pcm16(x: &[f32]) -> Result<Buf<i16>, VoiceFault> {
     Ok(out)
 }
 
+/// 16-bit samples as floats in -1 to 1, the way back from `pcm16`, for the detector and the engine.
+///
+/// # Errors
+/// `Memory` when the buffer cannot be had.
+#[cfg(any(test, feature = "engine"))]
+pub fn floats(x: &[i16]) -> Result<Buf<f32>, VoiceFault> {
+    let full = f32::from(i16::MAX);
+    Buf::collect(x.iter().map(|&s| (f32::from(s) / full).max(-1.0)))
+}
+
 /// One float as a 16-bit sample, full scale being the largest one.
 #[allow(
     clippy::cast_possible_truncation,

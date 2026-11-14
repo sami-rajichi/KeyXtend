@@ -13,9 +13,15 @@ pub trait Detector {
 
     /// True when `frame`, exactly `frame()` samples, holds speech.
     fn speech(&mut self, frame: &[i16]) -> bool;
+
+    /// The frames, ending with the last one judged, told as silence that may still turn out to be speech; once a frame
+    /// is told as speech, the ones pending before it were speech too.
+    fn pending(&self) -> usize {
+        0
+    }
 }
 
-/// Opens the voice detector a setup names; P11 task 12 adds the shipped one.
+/// Opens the voice detector a setup names: the shipped Silero file through the engine.
 pub trait Detectors {
     /// The detector in the file at `path`, or `None` when this build has none.
     ///
@@ -24,9 +30,11 @@ pub trait Detectors {
     fn open(&mut self, path: &str) -> Result<Option<Box<dyn Detector>>, VoiceFault>;
 }
 
-/// This build's detectors: none yet, so a run listens without cutting.
+/// The detectors of a build without the engine: none, so a run listens without cutting.
+#[cfg(any(test, not(feature = "engine")))]
 pub struct NoDetectors;
 
+#[cfg(any(test, not(feature = "engine")))]
 impl Detectors for NoDetectors {
     fn open(&mut self, _: &str) -> Result<Option<Box<dyn Detector>>, VoiceFault> {
         Ok(None)
@@ -144,12 +152,15 @@ impl Cutter {
         self.spoke.map(|end| self.pos - end)
     }
 
-    /// Asks the detector about one frame, tells a change of kind, and cuts after a silent one when it may.
+    /// Asks the detector about one frame, tells a change of kind, and cuts after a silent one when it may. Speech told
+    /// late starts at the first frame the detector held pending, within the piece.
     fn judge(&mut self, frame: &[i16], cuts: &mut Vec<Cut>) {
+        let back = self.det.pending() * self.frame;
         let speech = self.det.speech(frame);
         let end = self.pos + self.frame;
         if speech {
-            self.first.get_or_insert(self.pos);
+            let onset = self.pos.saturating_sub(back).max(self.start);
+            self.first.get_or_insert(onset);
             (self.last, self.spoke) = (Some(end), Some(end));
         }
         if speech != self.speaking {
@@ -162,13 +173,15 @@ impl Cutter {
         }
     }
 
-    /// Cuts once the piece holds speech, is `piece` long and its speech is followed by `pad` of silence.
+    /// Cuts once the piece holds speech, is `piece` long and its speech is followed by `pad` of silence, never inside
+    /// frames the detector still holds pending.
     fn try_cut(&mut self, cuts: &mut Vec<Cut>) {
         let Some(last) = self.last else {
             return;
         };
         let at = (last + self.pad).max(self.start + self.piece);
-        if at > self.pos {
+        let ready = self.pos.saturating_sub(self.det.pending() * self.frame);
+        if at > ready {
             return;
         }
         cuts.push(Cut::Piece(self.piece_to(at)));

@@ -1,6 +1,6 @@
 //! A listening run: the source's chunks become 16 kHz mono samples, recorded up to `record_max_s`, measured into
 //! levels at `level_hz` and cut at pauses into pieces for the engine's writer. It stops itself at the limit, or after
-//! `silence_stop_s` of silence once speech was heard.
+//! `silence_stop_s` of silence once speech was heard. Again cuts a held recording the same way, a stretch at a time.
 
 use super::Notes;
 use super::cut::{Cut, Cutter, Piece};
@@ -16,6 +16,9 @@ use std::any::Any;
 
 /// What an ended run leaves: its recording, and its writer when the engine still writes.
 pub type Ended = (Buf<i16>, Option<Box<dyn Writer>>);
+
+/// The held sound Again cuts in one turn of the job's loop: the detector judges it in tens of milliseconds.
+const REPLAY_S: u16 = 5;
 
 /// One run while its source is open.
 pub struct Run {
@@ -142,11 +145,10 @@ impl Run {
 
     /// Gives the writer a copy of `piece` trimmed to its speech and pad; a silent piece is skipped.
     fn give(&mut self, piece: &Piece) -> Result<(), VoiceFault> {
-        let (Some(writer), Some(span)) = (self.writer.as_mut(), piece.trim(self.pad)) else {
-            return Ok(());
-        };
-        writer.piece(copy(&self.sound[span])?);
-        Ok(())
+        match self.writer.as_mut() {
+            Some(writer) => give(writer.as_mut(), &self.sound, piece, self.pad),
+            None => Ok(()),
+        }
     }
 
     /// Why the run stops itself now, if it does.
@@ -169,26 +171,55 @@ pub fn copy(sound: &[i16]) -> Result<Buf<i16>, VoiceFault> {
     Ok(buf)
 }
 
-/// Cuts a whole held recording with `cut` and gives each piece with speech to `writer`, then ends it.
-///
-/// # Errors
-/// `Memory` when a buffer cannot be had.
-pub fn write_all(
-    sound: &[i16],
-    mut cut: Cutter,
-    pad: usize,
+/// Gives `writer` a copy of `piece` of `sound` trimmed to its speech and `pad`; a silent piece is skipped.
+fn give(
     writer: &mut dyn Writer,
+    sound: &[i16],
+    piece: &Piece,
+    pad: usize,
 ) -> Result<(), VoiceFault> {
-    let mut cuts = Vec::new();
-    cut.take(sound, &mut cuts)?;
-    cut.finish(&mut cuts);
-    for cut in cuts {
-        if let Cut::Piece(piece) = cut
-            && let Some(span) = piece.trim(pad)
-        {
-            writer.piece(copy(&sound[span])?);
-        }
+    if let Some(span) = piece.trim(pad) {
+        writer.piece(copy(&sound[span])?);
     }
-    writer.end(span::heard_ms(sound.len()));
     Ok(())
+}
+
+/// Again cutting a held recording, one stretch a turn of the job's loop, so an ask waits for one stretch at most.
+pub struct Replay {
+    cut: Cutter,
+    pad: usize,
+    /// The samples cut so far.
+    at: usize,
+}
+
+impl Replay {
+    /// Cuts with `cut`, giving the engine each piece's speech with `pad` samples around it.
+    pub fn new(cut: Cutter, pad: usize) -> Self {
+        Self { cut, pad, at: 0 }
+    }
+
+    /// Cuts the next `REPLAY_S` of `sound`, giving `writer` each piece with speech, and ends it after the last; true
+    /// once all is given.
+    ///
+    /// # Errors
+    /// `Memory` when a buffer cannot be had.
+    pub fn step(&mut self, sound: &[i16], writer: &mut dyn Writer) -> Result<bool, VoiceFault> {
+        let from = self.at.min(sound.len());
+        self.at = from.saturating_add(span::secs(REPLAY_S)).min(sound.len());
+        let mut cuts = Vec::new();
+        self.cut.take(&sound[from..self.at], &mut cuts)?;
+        let done = self.at == sound.len();
+        if done {
+            self.cut.finish(&mut cuts);
+        }
+        for cut in cuts {
+            if let Cut::Piece(piece) = cut {
+                give(writer, sound, &piece, self.pad)?;
+            }
+        }
+        if done {
+            writer.end(span::heard_ms(sound.len()));
+        }
+        Ok(done)
+    }
 }

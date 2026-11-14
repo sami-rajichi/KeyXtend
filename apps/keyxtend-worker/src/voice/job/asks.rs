@@ -1,10 +1,11 @@
 //! Each ask and the notes that answer it. Start tells `Open`; Stop, Cancel and Close tell `Shut`; Keep hands the
-//! recording over; a fault answers the rest, and a hand-in piece is answered only by a fault.
+//! recording over; the engine answers devices, facts and checks by notes; a fault answers the rest, and a hand-in piece
+//! is answered only by a fault.
 
-use super::super::Notes;
 use super::super::hand::{self, HandIn, Held};
-use super::super::listen;
+use super::super::listen::Replay;
 use super::super::span;
+use super::super::{Event, Notes};
 use super::{Fail, Job, Writing};
 use kx_ipc::{IpcError, Setup, SoundPiece, Stage, VoiceAsk, VoiceFault, VoiceNote};
 
@@ -24,9 +25,10 @@ impl Job {
             VoiceAsk::Keep { .. } => self.keep(id, out),
             VoiceAsk::Close { .. } => self.close(id, out),
             VoiceAsk::Sound { piece, .. } => self.hand_in(id, &piece),
-            // Devices, facts and checks need the engine, which P11 task 12 adds.
-            VoiceAsk::Devices { .. } | VoiceAsk::Facts { .. } | VoiceAsk::Check { .. } => {
-                Err(VoiceFault::Runner.into())
+            VoiceAsk::Devices { .. } => self.engine_ask(id, |e, tell| e.devices(id, tell)),
+            VoiceAsk::Facts { path, .. } => self.engine_ask(id, |e, tell| e.facts(id, &path, tell)),
+            VoiceAsk::Check { model, clip, .. } => {
+                self.engine_ask(id, |e, tell| e.check(id, &model, &clip, tell))
             }
             VoiceAsk::Bye => Ok(()),
         };
@@ -69,7 +71,8 @@ impl Job {
         self.shut_again(id, out)
     }
 
-    /// Writes the held recording again as run `id`, with the setup's model; the job then holds it for `id` too.
+    /// Writes the held recording again as run `id`, with the setup's model; the job then holds it for `id` too. Its
+    /// cutting goes a stretch per turn of the loop, so asks and notes never wait for a long recording.
     fn again(&mut self, id: u32, setup: &Setup<'_>) -> Result<(), Fail> {
         if self.run.is_some() || self.writing.is_some() || setup.model.is_none() {
             return Err(VoiceFault::OutOfStep.into());
@@ -78,19 +81,34 @@ impl Job {
             return Err(VoiceFault::NoSound.into());
         }
         let cut = self.cutter(setup)?.ok_or(VoiceFault::Runner)?;
-        let mut writer = self.writer(id, setup, true)?.ok_or(VoiceFault::Internal)?;
-        let held = self.held.as_mut().ok_or(VoiceFault::NoSound)?;
-        held.serve(id);
-        listen::write_all(
-            held.sound(),
-            cut,
-            span::millis(setup.pad_ms),
-            writer.as_mut(),
-        )?;
-        self.writing = Some(Writing {
-            id,
-            _writer: writer,
-        });
+        let writer = self.writer(id, setup, true)?.ok_or(VoiceFault::Internal)?;
+        self.held.as_mut().ok_or(VoiceFault::NoSound)?.serve(id);
+        let replay = Some(Replay::new(cut, span::millis(setup.pad_ms)));
+        self.writing = Some(Writing { id, writer, replay });
+        let _ = self.tx.send(Event::Replay(id));
+        Ok(())
+    }
+
+    /// Cuts the next stretch of the recording Again writes as run `id`, and asks for another turn until all is given.
+    pub(super) fn replay(&mut self, id: u32, out: &mut dyn Notes) -> Result<(), IpcError> {
+        let Some(writing) = self.writing.as_mut().filter(|w| w.id == id) else {
+            return Ok(());
+        };
+        let Some(replay) = writing.replay.as_mut() else {
+            return Ok(());
+        };
+        let step = match self.held.as_ref().filter(|h| h.owns(id)) {
+            Some(held) => replay.step(held.sound(), writing.writer.as_mut()),
+            None => Err(VoiceFault::NoSound),
+        };
+        match step {
+            Ok(true) => writing.replay = None,
+            Ok(false) => drop(self.tx.send(Event::Replay(id))),
+            Err(fault) => {
+                self.writing = None;
+                return out.tell(VoiceNote::Fault { id, fault });
+            }
+        }
         Ok(())
     }
 
@@ -113,9 +131,11 @@ impl Job {
         Ok(())
     }
 
-    /// Takes a piece of a recording handed in for run `id`; piece 0 starts it and wipes the one held before.
+    /// Takes a piece of a recording handed in for run `id`; piece 0 starts it and wipes the one held before. Refused
+    /// while a run listens or Again still cuts the held recording.
     fn hand_in(&mut self, id: u32, piece: &SoundPiece<'_>) -> Result<(), Fail> {
-        if self.run.is_some() {
+        let cutting = self.writing.as_ref().is_some_and(|w| w.replay.is_some());
+        if self.run.is_some() || cutting {
             return Err(VoiceFault::OutOfStep.into());
         }
         if piece.index == 0 {

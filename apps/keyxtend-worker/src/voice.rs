@@ -2,17 +2,33 @@
 //! and speech, cuts pieces at pauses for the engine and hands its recording over, with no network. Asks come on stdin
 //! and notes go on stdout in order; sound is held only in wiped buffers and is never written anywhere else.
 
+#[cfg(any(test, feature = "engine"))]
+mod cards;
+#[cfg(any(test, feature = "engine"))]
+mod check;
 mod cut;
+#[cfg(any(test, feature = "engine"))]
+mod detect;
 mod engine;
 #[cfg(test)]
 mod fake;
 mod hand;
 mod job;
 mod level;
+#[cfg(any(test, feature = "engine"))]
+mod library;
 mod listen;
 mod mic;
+#[cfg(feature = "gate")]
+mod played;
 mod resample;
+#[cfg(any(test, feature = "engine"))]
+mod run;
 mod span;
+#[cfg(any(test, feature = "engine"))]
+mod split;
+#[cfg(any(test, feature = "engine", feature = "gate"))]
+mod wav;
 mod wipe;
 
 pub use job::Parts;
@@ -30,6 +46,15 @@ use wipe::Buf;
 
 /// The name of the thread that reads the asks.
 const READER: &str = "voice-asks";
+
+/// Gate builds only: the parts with the WAV file at `path` played in place of the microphone.
+///
+/// # Errors
+/// `NoFile` or `BadFile` when the file cannot be read.
+#[cfg(feature = "gate")]
+pub fn played(path: &std::path::Path) -> Result<Parts, VoiceFault> {
+    Ok(Parts::over(Box::new(played::Played::read(path)?)))
+}
 
 /// What wakes the job.
 pub enum Event {
@@ -51,10 +76,12 @@ pub enum Event {
     },
     /// A note the engine tells.
     #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "P11 task 12's engine tells its notes")
+        not(any(test, feature = "engine")),
+        expect(dead_code, reason = "only the engine tells notes")
     )]
     Note(VoiceNote),
+    /// Again's next stretch of the held recording to cut, for this run.
+    Replay(u32),
     /// The input ended cleanly, or with the frame that could not be read.
     End(Result<(), IpcError>),
 }
@@ -106,8 +133,8 @@ impl Feed {
 #[derive(Clone)]
 pub struct Tell {
     #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "P11 task 12's engine tells its notes")
+        not(any(test, feature = "engine")),
+        expect(dead_code, reason = "only the engine tells notes")
     )]
     tx: Sender<Event>,
 }
@@ -120,8 +147,8 @@ impl Tell {
 
     /// Tells `note` after the notes already told.
     #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "P11 task 12's engine tells its notes")
+        not(any(test, feature = "engine")),
+        expect(dead_code, reason = "only the engine tells notes")
     )]
     pub fn note(&self, note: VoiceNote) {
         let _ = self.tx.send(Event::Note(note));

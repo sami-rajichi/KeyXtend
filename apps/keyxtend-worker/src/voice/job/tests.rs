@@ -1,7 +1,9 @@
 //! The job driven by hand: a fake source the test feeds, a detector that hears loud frames and an engine that logs
 //! its pieces. Events are pumped on the test's thread, so nothing sleeps and no microphone opens.
 
+mod again;
 mod asks;
+mod engine;
 mod hand;
 mod listen;
 
@@ -45,9 +47,15 @@ struct Rig {
 impl Rig {
     /// A job whose source gives `rate` frames of `channels`, with a detector when `detector`.
     fn new(rate: u32, channels: u16, detector: bool) -> Self {
-        let (tx, rx) = mpsc::channel();
         let (mic, log) = (fake::mic(rate, channels), Rc::default());
-        let job = Job::new(fake::parts(&mic, detector, &log), tx.clone());
+        let parts = fake::parts(&mic, detector, &log);
+        Self::over(mic, log, parts)
+    }
+
+    /// A job over `parts`, whose source is `mic` and whose fake engine, if any, logs to `log`.
+    fn over(mic: Rc<RefCell<Mic>>, log: Rc<RefCell<Vec<Got>>>, parts: Parts) -> Self {
+        let (tx, rx) = mpsc::channel();
+        let job = Job::new(parts, tx.clone());
         let notes = Vec::new();
         Self {
             job,
