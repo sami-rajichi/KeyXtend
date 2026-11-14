@@ -233,6 +233,8 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 
 ### 8.2 Voice typing
 
+Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](2026-11-10-voice-typing-design.md) on this PC (ADR-0042 to ADR-0045) and [`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md) for the cloud; the lines below are the first plan, kept as written.
+
 - **Mic key:** click to start, click to stop. There is no voice-activity auto-stop, so users who speak slowly or pause are never cut off.
 - Distinct start and stop sounds, and a live waveform in a **caption bar at the bottom centre**, never over the keyboard.
 - **Flow:** Listening, then Transcribing (shimmer), then the text is inserted into the focused field and shown in the caption with **Copy** and **Undo insert**.

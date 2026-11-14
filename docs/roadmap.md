@@ -223,8 +223,9 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 11 — Voice typing — v0.7
 
-- `kx-mod-voice` plus the `voice` worker.
-- Recording, local whisper.cpp, model download with SHA-256 check, benchmark button, forced language, caption bar, cloud with the user's own key, transcript history.
+- `kx-mod-voice` plus the worker's `voice` and `fetch` jobs (ADR-0042 to ADR-0045, [design](superpowers/specs/2026-11-10-voice-typing-design.md)).
+- Part 1, on this PC: the Dictation key and its bar with the live wave, ten local models through one engine with a default per language, the models folder and checked downloads, the processor or a checked graphics card, Compare models, history and optional recordings.
+- Part 2, after part 1 is merged: cloud services with the user's own key ([design](superpowers/specs/2026-11-10-voice-cloud-design.md)).
 - **Edge cases:**
   - no microphone;
   - the microphone is in use;

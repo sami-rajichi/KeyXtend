@@ -213,6 +213,7 @@ xtask/                   cargo xtask: tidy (architecture rules), dco (sign-off c
                          writer, the index, the meter), sign, sbom (P14)
 docs/
   adr/                   architecture decision records (never rewrite; supersede instead)
+  architecture/          this file's detail sections, one topic each
   superpowers/specs/     design specs
   superpowers/plans/     implementation plans (one per phase or module)
   test-reports/          manual Windows test results
@@ -222,44 +223,7 @@ design/                  HTML mock-ups (reference only, never shipped)
 
 ## The kernel contract
 
-```rust
-pub struct Manifest {
-    pub id: ModuleId,                        // "keyboard", "clipboard", …
-    pub version: &'static str,               // the crate version
-    pub requires: &'static [ServiceId],      // services it consumes
-    pub provides: &'static [ServiceId],      // services it registers
-    pub capabilities: &'static [Capability], // what it may do (InjectInput, ReadClipboard, …)
-    pub settings: Option<&'static SettingsSpec>, // version, defaults.toml, migrations, validator
-}
-
-pub trait Module: Send + 'static {
-    fn manifest(&self) -> &'static Manifest;
-    fn start(&mut self, cx: &mut ModuleCx<'_>) -> Result<(), ModuleError>; // handlers leave the bus before `stop` runs, services after it
-    fn stop(&mut self) {}
-}
-```
-
-- **Lifecycle** of each module: `Pending → Starting → Active | Failed`, then `Active → Stopping → Stopped`. The table `MOVES` in `crates/kx-kernel/src/lifecycle.rs` is the one source.
-  - A failure puts the module in `Failed`. It never crashes the app.
-  - Containing a panic needs unwinding, so no build profile may set `panic = "abort"`.
-  - Dependents stop before their providers do.
-  - `Kernel::retry` (Try again) moves `Failed → Starting`, and restarts the features that wait on it.
-  - Switching a module off stops the active modules that need it, then the module itself, which ends `Stopped`. From `Pending` or `Failed` the module is skipped, with no failure notice.
-  - Switching it on moves `Stopped → Starting`. A module that waits for a switched-off module stays `Stopped`, with no notice.
-- **Services** are traits in `kx-module-api` (ports). Examples: `InputInjector`, `LayoutSource`, `Layouts`, `KeyboardFace`, `FieldWatch`, `WordPacks`, `SealedStore`, `Clipboard`, `ClipboardWriter`, `SealedShelf`, `Pictures`, `Boxes`, `Places`, `Random`, `SelectionWatch`, `WebLink`, `SpeechToText`, `OcrEngine`, `ScrollTarget`, `PointerHook`, `Shortcuts` and `PowerDialog` (ADR-0031).
-  - `cx.service::<K>()` returns the service only if the manifest `requires` it **and** the requester holds the capability stored by the service's provider. A request for another capability is refused, and only the kernel builds a module's `Grants`.
-  - A provider must itself hold the capability that gates its service.
-- **Time:** `Clock` and `Mono` live in `kx-module-api`, because modules may use only that crate. The real clock comes from the platform adapter; tests use `kx-platform-fake`.
-- **Platform:** `kx-platform` holds `Platform` and `AppDirs`, which carry the data folder rule (ADR-0015).
-- **Events** are typed, and an event may name a capability (`Event::CAPABILITY`) that a module needs to subscribe, intercept or publish it:
-  - *notify* events are broadcast (`KeyActivated`, `LayoutChanged`, `ModeChanged`, `ModuleStateChanged`);
-  - *intercept* events are an ordered chain that can stop propagation. No module intercepts today: a password box is the field watch's `Password` kind, which each module asks for itself (ADR-0033).
-- **Settings** (ADR-0015):
-  - one `settings.toml` in the data folder holds one flat section per module, each with its own `version`. Only the user's changes are stored, and the defaults live in the module's `defaults.toml`;
-  - migrations are pure functions tested with golden files;
-  - a bad value resets alone, a damaged file is set aside and the last good copy comes back, and each repair shows a notice. A file locked by another program is not damage: defaults run in memory and nothing is saved that run;
-  - a Settings-window change restarts the module and the modules that need it, or tries a failed module again unless it waits for a provider. A module saves values it sets itself (size, position) through its `SettingsHandle`, with no restart; `set_all` saves values that belong together (x, y, placed) in one checked write;
-  - `Kernel::load` reads the settings before any module starts, so the app opens its log first; `Kernel::start` then starts the modules, and `boot` does both.
+The module trait, its lifecycle, services, events and settings: [docs/architecture/kernel.md](docs/architecture/kernel.md).
 
 ## Invariants (enforced by `cargo xtask tidy` in CI)
 
@@ -310,90 +274,12 @@ pub trait Module: Send + 'static {
 
 ## Qt window rules (ADR-0013)
 
-- Pin Qt 6.11.2 and cxx-qt 0.10.0; review every upgrade.
-- QML, fonts and icons are compiled into the binary as Qt resources; they are never loaded from disk.
-- Keyboard windows are `Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus`; click-through windows add `Qt.WindowTransparentForInput`.
-- The Windows adapter guards every window we create except Settings:
-  - In `WM_STYLECHANGING`, it puts back `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST`, and refuses click-through on a window that took clicks when first guarded.
-  - In `WM_WINDOWPOSCHANGED`, it lifts a window that left the topmost band straight back, as `HWND_NOTOPMOST` never reaches `WM_STYLECHANGING`. After such a drop by another program, the keyboard comes back above a shown banner or list until a guard run names that pop-up as `top`.
-  - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
-  - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
-- Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
-- Owned windows (shadows, bubble, tips, caption, ring) are declared inside their owner, so Qt keeps them above it. The selection strip sits inside its own shadow, which has no owner (`transientParent: null`), so it also shows by the bubble.
-- The scroll outline's four edge windows have no owner (`transientParent: null`) and join the guard's quiet run, so `lay_under` can put them just under the keyboard each time a set shows or the keyboard shows again. They exist only while there is a box.
-- A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner. A shown tip hides as a guard run starts, or the guard would lift its owner with it.
-- A hidden window shows again at its old place, so a pop-up's guard run names it as `top` to land in front.
-- Arabic flips text only: no window or control mirrors, and Arabic text reads right to left in the theme's Arabic font (ADR-0020).
-- Every window draws on one shared graphics device, on the GUI thread (Qt's basic render loop) and without a depth buffer; a lost device, or a window that cannot draw, brings the windows back over the same hub, with the keyboard shown, closed or minimised as the user left it, up to `[ui] device_rebuilds` times, and Qt's loop runs between tries (ADR-0021).
-- Only the shown theme's bundled fonts stay in Qt's font list: the hub loads them from the resources before the QML and again on each theme switch (ADR-0021).
+Window flags, the window guard, owners and drawing: [docs/architecture/qt-windows.md](docs/architecture/qt-windows.md).
 
-## The scroll pad (P5, ADR-0029)
+## Modules and platforms
 
-- **Module.** `kx-mod-scroll` holds every rule on the injected clock: the tap machine (`Pad`), the glide (`Glide`, lines owed per tick, a gap capped at `check_ms`) and the stop rules (`Stops`: the end, a press outside our windows, `limit_s` after the last tap, the target gone).
-  - Its actor, on the `kx-scroll` thread, ticks every `tick_ms` only while scrolling, aims and reads the reach every `check_ms`, and logs one line of counts when it quits.
-- **Port.** `ScrollTarget::open(ScrollConfig)` gives a `ScrollRun`: `aim` (the point, whether the pointer is on it, the box, ours or not, an id), `turn(aim, dir, lines)`, `reach` (more, end or unknown) and `alive`; dropping the run closes it.
-  - `ScrollTargetKey` needs `Scroll`, which only the scroll module declares. The actor opens the run at the first peek or tap and keeps it until the module stops.
-- **Events.** The keyboard sends `ScrollTap`, `ScrollStop` and `ScrollPeek` (the pointer on the pad); the module sends `ScrollChanged` (live, way, speed), `ScrollAimed` (the box, or none, and whether it is ours) and `ScrollPage` (our open list); `ScrollAsk` asks for the state and box again.
-  - None of them names a capability, nor does the mouse module's `PointerPressed`, which carries no point; steps still go only where the user pointed.
-- **Windows (`kx-platform-windows::scroll`).** A turn is a small wheel delta worked out from the user's wheel settings, posted to the window at the target while the pointer is elsewhere. It is sent by `SendInput` only while the pointer is on the target and Windows routes wheels to the pointer.
-  - UI Automation runs on the run's own COM thread (`kx-scroll-uia`), each read capped by `read_ms`: from the target point, or, when ours covers that point, from the deepest element at it inside the target's own window, never going into one of ours, it finds the first element up that scrolls along the latest way's axis, its box and percents. It takes `ScrollPattern` line steps when the wheel setting is 0 or a page, or when wheel deltas move nothing (`Course`, spec §5.2).
-  - A ping thread (`kx-scroll-ping`) asks the target for a `WM_NULL` answer; a window that leaves one unanswered, or that Windows calls hung, gets no step.
-  - The guard's entry watch (`WindowGuard::watch_entries`) reads `GetMouseMovePointsEx` once as the pointer enters the keyboard and keeps the newest point outside it on a work area. A miss pushes the entry point `edge_px` past a keyboard edge, nearest first, onto the first work area it lands on.
-  - It watches only while the scroll module runs; it passes over points on our windows that do not page, such as the banner, keeps the last entry when only they lie outside, and `unwatch_entries` drops the kept point when the module stops.
-  - The open list asks `WindowGuard::mark_pages` as it opens and at each guard try until it holds, and a marked window that shows wins the aim, whatever point was kept, so a tap turns its page and a peek outlines it. A kept point that our other windows now cover aims at the first other app's window behind them (`scroll::win::behind`).
-  - With no app behind, or with the pointer on our banner, there is no target: a check mid-scroll keeps the last target, and a tap asks the user to point first. A target that closed before a check stops the scroll, though another window lies at its point now.
-- **UI (`kx-ui`).** The hub keeps the scroll state and the box (`scroll_json`, one wake per read), adds the badge's scroll part to `assist_json`, wakes the keys on `ScrollChanged`, and turns `ScrollPage` into the open list's page key on the Qt thread with `[ui] page_rows`.
-  - `Outline.qml` makes four click-through edge windows (`Edge.qml`) only while there is a box, inside it, or just outside our own list's, which would cover them, and `WindowGuard::lay_under` puts them just under the keyboard.
-- **Other platforms (P15).** macOS fills the same port with `CGEvent` scroll events and Accessibility for boxes, and Linux with XTest or the portal and AT-SPI. Wayland has no global pointer history or posted event, so there it scrolls only what is under the pointer.
-
-## Word prediction (P7, ADR-0032, ADR-0033)
-
-- **The keyboard stays the only typist.** `kx-mod-predict` holds no `InjectInput`: a pick sends `TypeWord`, and the keyboard types it through its own route, latches and dead-key rule, within `[keyboard] text_cap`, or types nothing; one offered for a panel's line goes to that line or nowhere. It refuses a word holding a hidden character (`kx_module_api::is_hidden`: controls, `HIDDEN_MARKS`, `INVISIBLE`), and `TEXT_CAP`'s floor fits the longest word chip.
-- **Events.** `Typed`, `TypingMode` and `AimedLine` (keyboard to predict; the last says the panel's line while aimed at, ADR-0040), `TypingModeAsk` (predict to the keyboard, at each start and turn-on), `Suggested` (predict to the ui; `Lane::Stopped` hides the menu), `ChipPicked` and `WordsAsk` (ui to predict) and `TypeWord` (predict to the keyboard) all name `ReadFocusedText`. `PressesWanted` and `PanelPressesWanted` (flags, from each asker, predict or the selection module, and from the keyboard while a panel is open) and `PressesAsk` (nothing) carry no typed data and name none: they keep the mouse module's hook telling presses (`PointerPressed`) while any wants them, in any start order.
-- **Ports.** `FieldWatch` (`ReadFocusedText`) tells the focused box's kind and reads at most `[predict] context_words` words before the cursor as a `FieldRead`, with the kind the read saw, never in a password or unknown box. `WordPacks` (no gate: public data) maps one language's pack, and `SealedStore` (`SecretStore`) keeps sealed blobs up to `MAX_BLOB_BYTES`.
-- **Who holds what.** `ReadFocusedText`: the keyboard, predict, the selection module and the ui. `SecretStore`: predict, and the clipboard from P8. `KeyboardUi`, which gates `KeyboardFaceKey`, `AssistNote` and `PointerMoved`: the ui, and their sources, the keyboard and the mouse module. `Vault`, the gate of Quick-fill's events: the vault, the keyboard, predict and the ui. `VaultData`, which gates its notebook store, boxes and places: the vault alone (ADR-0039). The app's `tests/life/ships.rs` pins each list.
-- **Files.** The packs (`<iso>.kxw`), the index `PACK_INDEX` (`PackIndex`: each pack, then the layout codes it also serves, capped by `MAX_INDEX_BYTES`), their licence and credits sit in `PACK_DIR` beside the program, and a debug build also reads where `cargo xtask words` writes them; only the packs and the index are read through read-only maps. The learned words and emails are sealed in `SEALED_DIR` under the data folder (ADR-0015), by one `SealedFiles` per data folder.
-- **Adapters.** Each OS fills only `Probe`, `Reader`, `PackDisk`, `KeyGuard` and the watch thread's body (its OS start-up, client and focus handler); the shared rules live in `kx-platform` and `kx-crypto` (code map), and the OS calls are in Platform notes below.
-
-## Quick-fill (P9, ADR-0037, ADR-0038, ADR-0039)
-
-- **The keyboard stays the only typist.** `kx-mod-vault` holds no `InjectInput`: a click sends `FillType`, and the keyboard types each text part by a letter's route and each Tab as its own key. After a Tab the rest waits `[vault] tab_gap_ms`, but never goes more than `[keyboard] fill_late_ms` past due, or to another app. Nothing reaches the clipboard, and prediction hears one `Break`.
-- **Events.**
-  - Ungated: `FillOpen` and `FillClose` (keyboard to vault), and `FillAsk` (any module asks the vault to say its state again), as they carry no value.
-  - Named `Vault`: `FillLive` (is it running, which lights or dims the fill key) and `FillPanel` (vault to keyboard and ui), `FillView` (vault to ui), `FillKey` (keyboard to vault), `FillLine` (vault to keyboard: the line that shows, ADR-0040), `FillAct` and `FillNames` (ui to vault), `FillType` and `FillTyped` (vault and keyboard), and `VaultEmails` (vault to predict).
-  - Paste uses `ClipTake` and `ClipTaken`, which name `ReadClipboard`.
-- **Ports.** `Boxes` starts a `BoxRun` on the vault job, and `Places` lists, reads, writes, finds and dates boxes in folders (`Places::modified`). Each call can block, so all run on the module's `kx-vault-box` thread. `Calendar` and `Random` have no gate.
-- **Who holds what.** See the list under Word prediction: `Vault` gates events alone, and `VaultData`, which only the vault holds, gates the store, the boxes and the places (ADR-0039). `ReadClipboard` also goes to the vault, for Paste; it never reads a copy.
-- **Files.**
-  - `<data>/quickfill/` (`VAULT_DIR`) holds its key file and the sealed blobs `notebook` and `backup`, with their `-aside` copies when one opened but did not read.
-  - Each place holds one `KeyXtend Backup.kxbox`: mark, version, the password-locked identity, then one `age` stream. A box another computer wrote, in a place the user picks, asks before any write.
-  - The data folder, above or below it, is never a place, as a format would wipe it (`PlaceState::Refused`).
-- **The hold.** A notebook that did not read writes no box until Bring back, or Back up now and its Yes, even after a restart, as a hold kept only in memory would lose the box one restart later. Import still adds to it and writes no box.
-- **The hidden run (ADR-0037).** A copy started from inside a packaged app, whose writes Windows redirects to that package's private folder, reads and writes nothing in the data folder. The kernel starts fresh with Quick-fill off, the stores are in memory, the log goes to standard error and a banner says so. The next normal run asks about each copy left behind.
-- **The worker.** The vault job is the same program as the media job, under its own memory cap (`VAULT_MEMORY_MB`), on the same host, spawner and restricted token (code map). A crafted file meets only the worker.
-
-## Selection chips (P10, ADR-0041)
-
-- **The keyboard stays the only typist.** `kx-mod-selection` holds no `InjectInput`: Copy, Cut and Paste send `EditAsk`, and the keyboard sends that shortcut id (`copy`, `cut`, `paste`, or a terminal's `copy-term` and `paste-term`) with nothing held and every latch as it was, then answers `EditDone`. Only Translate reads text, once, after the user's one yes.
-- **Events.** Named `Selection`: `ChipsView` (module to ui: the round, keycaps, spot, tick and `Legend`, or hidden), `ChipAct` (ui to module), `EditAsk` and `EditDone` (module and keyboard). Ungated, as they carry no point or text: `BoardPlace` (ui to module: open, minimised or tray, at each change) and its ask `BoardPlaceAsk`, `PointerReleased { ours }` from the mouse module, and `PressesWanted`, which names its asker (`PressAsker`).
-- **Ports.** `SelectionWatch` (`ReadFocusedText`) starts a `SelRun` that tells each focus or selection change and gives a `SelSpot` per look (kind, whether text is selected, first and last line boxes, caret box, screen) with no text; `still` checks a selection again, `ours` says the last look kept a box while our own window had focus, `read` is Translate's one read and `clip_holds` counts the clipboard's formats. `WebLink` (`OpenLink`) opens a checked https `Link`, and the hub places the strip with `geom::anchor`: under the last line, else above the first, clear of our windows when there is room, always on the work area.
-- **Who holds what.** `Selection`: the module, the keyboard and the ui, as an event gate; `OpenLink`: the module alone; `ReadFocusedText` gains the module, the only one that asks for the watch (ADR-0041 decision 3). The module owns every show rule, the minimised and tray ones too, and fills the legend from `[selection] look`, so the hub reads no other module's settings; `tests/life/ships.rs` pins each list.
-- **Adapters.** `kx-platform`'s `selection` run paces the looks over an adapter's `SelProbe`; Windows reads UI Automation on its thread (`WinSelectionWatch`, kinds from `selection.toml` and `field.toml`; a focus with no text takes its nearest text ancestor within `walk_up`, stops at a password box, a hiding or opaque window, or our own, and offers no Paste there), and every UI Automation handler of the process is added and removed under one lock (`uia/handlers.rs`). `WinWebLink` hands the link to the running Explorer's desktop shell (`explorer.rs`, shared with the reveal), so the browser starts with Explorer's token, never ours.
-
-## Platform notes
-
-| Concern | Windows (v1) | macOS (later) | Linux (later) |
-|---|---|---|---|
-| Top-most, no focus | uiAccess + `WS_EX_NOACTIVATE/TOPMOST/TOOLWINDOW` (guarded) | Qt `Tool` windows are non-activating `NSPanel`s | X11: `_NET_WM_STATE_ABOVE`; Wayland: LayerShellQt on KDE/wlroots; **not possible on GNOME Wayland** |
-| Type | `SendInput` Unicode + VK | `CGEventPost` (Accessibility permission) | X11 XTest; Wayland RemoteDesktop portal / libei (asks the user once) |
-| Mouse hook | `WH_MOUSE_LL` | `CGEventTap` | X11 XInput2; GNOME Wayland has no global hook, so we switch on GNOME's own "simulated secondary click" |
-| Scroll | Wheel deltas posted, or `SendInput` while the pointer is on the target; UIA reads the box and end, and steps as the fallback (ADR-0029) | `CGEventCreateScrollWheelEvent`; Accessibility for boxes | XTest buttons 4–7 / portal; AT-SPI for boxes; Wayland only under the pointer |
-| Secrets | DPAPI, tied to the signed-in account; no prompt (ADR-0010, ADR-0038) | Keychain | Secret Service |
-| Focused box (P7) | UI Automation focus handler, called on UI Automation's threads; reads on the watch's COM thread; kinds from `field.toml` | Accessibility (`AXUIElement`) | AT-SPI |
-| Word packs (P7) | A read-shared file, mapped `PAGE_READONLY` | A read-only `mmap` from a folder only the system writes, else a copy | The same as macOS |
-| Clipboard (P8) | `AddClipboardFormatListener` on a message-only window, markers from `clip.toml`; Open folder through the running Explorer | `NSPasteboard`'s change count, polled; Finder | XFixes on X11, data-control on Wayland where the compositor has it; the desktop's file manager |
-| Backup places (P9) | Cloud folders from `places.toml`, `DRIVE_REMOVABLE` drives and the folder list; a temp file, then a rename | (P15) | (P15) |
-| Selection (P10) | UI Automation focus and text-selection events, line boxes with no text; the link through the running Explorer's `ShellExecute` | Accessibility (`AXSelectedTextRange`, `AXBoundsForRange`) (P15) | AT-SPI (`Text.GetSelection`, `GetRangeExtents`) (P15) |
-| Hidden run (P9) | A probe file looked for in each package's `LocalCache\Local`, from `redirect.toml` | None known; P15 checks the App Sandbox | None known |
-| Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
-| Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |
+- [The scroll pad (P5, ADR-0029)](docs/architecture/scroll-pad.md)
+- [Word prediction (P7, ADR-0032, ADR-0033)](docs/architecture/prediction.md)
+- [Quick-fill (P9, ADR-0037, ADR-0038, ADR-0039)](docs/architecture/quick-fill.md)
+- [Selection chips (P10, ADR-0041)](docs/architecture/selection.md)
+- [Platform notes](docs/architecture/platforms.md): each concern on Windows, macOS and Linux.

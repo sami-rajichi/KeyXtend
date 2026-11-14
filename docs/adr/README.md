@@ -7,16 +7,16 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0001 | [Record architecture decisions](0001-record-architecture-decisions.md) | Accepted |
 | 0002 | [Rust for all code, Slint for all windows](0002-rust-and-slint.md) | Superseded by ADR-0013 |
 | 0003 | [The keyboard process itself holds uiAccess](0003-uiaccess-keyboard-process.md) | Accepted. Its free-signing line (SignPath) is superseded by ADR-0030. |
-| 0004 | [Untrusted data and network access live in worker processes](0004-worker-processes.md) | Accepted |
+| 0004 | [Untrusted data and network access live in worker processes](0004-worker-processes.md) | Accepted. Its line letting the voice worker open network connections is superseded by ADR-0042: the `fetch` job downloads, and `voice` has no network. |
 | 0005 | [Micro-kernel with independent "Lego" modules](0005-micro-kernel-modules.md) | Accepted |
 | 0006 | [Licence: GPL-3.0-or-later for the app](0006-licence-gpl3.md) | Superseded by ADR-0030 (2026-10-17). Its Slint notes were superseded by ADR-0013. |
-| 0007 | [AI features are local-first and free](0007-local-first-free-ai.md) | Accepted |
+| 0007 | [AI features are local-first and free](0007-local-first-free-ai.md) | Accepted. Its engine lines (whisper.cpp through whisper-rs, its two models, Parakeet and Canary rejected) and its benchmark button are superseded by ADR-0043. |
 | 0008 | [Every UI works without scrolling, dragging or right-click](0008-paged-no-scroll-ui.md) | Accepted |
 | 0009 | [Characters as Unicode, shortcuts as virtual keys](0009-input-injection-strategy.md) | Accepted. Verified by gate G1 (ADR-0013). |
 | 0010 | [Sensitive data is encrypted at rest with an OS-protected key](0010-encryption-at-rest.md) | Accepted. Its vault lines (user presence, master password, `age` and CSV export) are superseded by ADR-0038. |
 | 0011 | [Choose the UI toolkit by a measured test round](0011-toolkit-test-round.md) | Accepted (process). Result in ADR-0013; its "No leftovers" rule for code is superseded by ADR-0014. |
 | 0012 | [Installer: Inno Setup 7](0012-installer-inno-setup.md) | Accepted |
-| 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Partly superseded by ADR-0016 (theme loader in `kx-theme`). |
+| 0013 | [Qt 6 Quick with a Rust core for every window](0013-qt-quick-for-every-window.md) | Accepted (2026-09-29). Supersedes ADR-0002 and ADR-0006's Slint notes. Partly superseded by ADR-0016 (theme loader in `kx-theme`) and ADR-0045 (the caption bar takes clicks). |
 | 0014 | [Keep the tested spike code and move it into the product](0014-keep-and-move-the-spike-code.md) | Accepted (2026-09-29). Its build rule for `qt-kb` is superseded by ADR-0016. |
 | 0015 | [Settings and logs live in one data folder](0015-settings-and-logs-in-one-data-folder.md) | Accepted (2026-09-29). ADR-0037 adds the hidden run, which saves nothing. |
 | 0016 | [The product app replaces the spike face](0016-product-app-replaces-the-spike-face.md) | Accepted (2026-09-29). Supersedes ADR-0014's build rule for `qt-kb` and ADR-0013's rule that `kx-ui` holds the theme loader. Its UI ports gain `Tray` in ADR-0019. Its CI line as built: Linux leaves out the app and builds `kx-ui` without Qt. |
@@ -45,5 +45,9 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0039 | [The vault's data services need a capability of their own](0039-the-vault-data-services-need-a-capability-of-their-own.md) | Accepted (2026-11-02). Adds `VaultData` for the notebook store, boxes and places; supersedes ADR-0038 decision 3 for the services. |
 | 0040 | [A panel's line takes the letters only while it is aimed at](0040-a-panels-line-takes-the-letters-only-while-aimed.md) | Accepted (2026-11-06). Letters follow the last click; a search line tells prediction its text, and nothing is learned. |
 | 0041 | [Selection chips read no text, and Translate opens the browser](0041-selection-chips-read-no-text-and-translate-in-the-browser.md) | Accepted (2026-11-07). Replaces spec §8.3 and the gesture fallback; adds `Selection` and `OpenLink`, the keyboard's edit route and presses per asker. |
+| 0042 | [Voice runs in two worker jobs over a streaming session](0042-voice-runs-in-two-worker-jobs-over-a-streaming-session.md) | Accepted (2026-11-14). Adds the streaming session, one model per job, the sound hand-over, `Voice` and `SessionWatch`; supersedes ADR-0004's network line for voice. |
+| 0043 | [One engine runner and a compiled-in models table serve every model](0043-one-engine-runner-and-a-models-table-serve-every-model.md) | Accepted (2026-11-14). Defaults per language, the models folder and checked downloads; supersedes ADR-0007's engine lines and benchmark button. |
+| 0044 | [The engine loads its card and processor parts from the worker's folder only](0044-the-engine-loads-its-card-and-processor-parts-from-the-worker-folder.md) | Accepted (2026-11-14). No `GGML_*` or `TRANSCRIBE_*` variable reaches the worker; the card's checks, Automatic and the fallback. |
+| 0045 | [The dictation bar takes clicks but never focus](0045-the-dictation-bar-takes-clicks-but-never-focus.md) | Accepted (2026-11-14). An ownerless, guarded window; supersedes ADR-0013's click-through line for the caption bar. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
