@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 21:41 — P11: the dictation flow
+The voice module's flow is a pure state machine (Idle, Listening, Transcribing, Text, Note) that takes clicks, speech notes, the box's kind, lock and sleep, layout changes and clock ticks, and gives back runs to open, stop or close, the bar's view, the key's light, text to type and history to keep. The language is fixed at Start, every timing comes from `[voice]`, a click on an older bar is dropped, and every close wipes the recording. A review fixed seven bugs, among them a password re-read by Try again showing in plain, and pieces lost when the microphone was unplugged; a property test checks the light, the closes and the dots.
+
 ## 2026-11-14 21:04 — P11: the worker-only download crate `kx-platform-net`
 `kx-platform-net` gives the worker's coming `fetch` job its `Http` port and a WinHTTP adapter: HTTPS only, every host and every redirect checked against the row's list before it is asked, at most five redirects, and resume by byte range with a 206 that must start where asked. Every wait is held within `stall_s`, cookies and WinHTTP's own redirects are off, TLS is 1.2 or 1.3, and errors carry fixed reasons, never an address. A review added length caps on joined addresses, dot-folder and fragment rules, and a sweep of tricky addresses; the crate joins CI's Linux list.
 
