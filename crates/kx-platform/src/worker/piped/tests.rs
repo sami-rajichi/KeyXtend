@@ -8,6 +8,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io::{self, Cursor};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::thread;
 
 /// How long a test waits for a thread; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(10);
@@ -96,6 +97,21 @@ fn replies_come_in_turn_and_the_end_reads_closed() {
     let closed = Heard::Frame(Err(IpcError::Closed));
     assert_eq!(worker.reply(WAIT), closed);
     assert_eq!(worker.reply(WAIT), closed, "and it stays closed");
+}
+
+#[test]
+fn notes_hand_the_replies_to_another_thread_and_reply_then_reads_closed() {
+    let out = Cursor::new(frames(&[pixels(1)]));
+    let mut worker = media(io::sink(), out, Kid::default()).unwrap();
+    let notes = worker.notes();
+    assert_eq!(worker.reply(WAIT), Heard::Frame(Err(IpcError::Closed)));
+    let reader = thread::spawn(move || [notes.recv_timeout(WAIT), notes.recv_timeout(WAIT)]);
+    let read = reader.join().unwrap();
+    assert_eq!(
+        read,
+        [Ok(Ok(pixels(1))), Ok(Err(IpcError::Closed))],
+        "in turn, then closed"
+    );
 }
 
 #[test]

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 20:40 — P11: the worker's streaming session
+Beside one ask and one reply, the worker host now keeps a streaming session: asks with deadlines, plus notes the worker sends on its own, told in order on one thread. A late note, a bad or stray frame, or a quit ends the worker and holds the next start back from `restart_ms` doubling to `restart_max_ms`, and a worker holds at most two unread frames, so a flooding worker cannot grow the app's memory. A property test checks one worker at most, no note after a loss and none left running after drop.
+
 ## 2026-11-14 20:10 — P11: the voice module's API
 The module API gains the `Voice` capability, the `Speech` port (gated `Microphone`), the `ModelFiles` port (gated `Network`), the ungated `SessionWatch` port and the voice events, with every value range taken from the frames. The view types draw each bar state and Voice panel page of the approved mock-up, and a password box can never offer Copy. Paths refuse control characters and device names such as `NUL.gguf`, and texts, sounds, paths and the user's own model file names never print.
 
