@@ -61,6 +61,10 @@ pub enum Event {
     /// An ask from the host.
     Ask(VoiceAsk<'static>),
     /// A chunk from the source.
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate send sound")
+    )]
     Sound {
         /// The opening it came from.
         epoch: u64,
@@ -68,6 +72,10 @@ pub enum Event {
         chunk: Buf<f32>,
     },
     /// The source stopped by itself.
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate stop alone")
+    )]
     Lost {
         /// The opening that stopped.
         epoch: u64,
@@ -90,7 +98,15 @@ pub enum Event {
 /// over all its run can record, so a stalled job's queue stays bounded.
 #[derive(Clone)]
 pub struct Feed {
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate feed the job")
+    )]
     tx: Sender<Event>,
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate feed the job")
+    )]
     epoch: u64,
     /// Source samples it may still hand over; a chunk goes while any are left.
     room: Arc<AtomicU64>,
@@ -109,6 +125,10 @@ impl Feed {
     }
 
     /// Hands over one chunk of interleaved samples as the source gave them; past the limit it is dropped and wiped.
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate feed the job")
+    )]
     pub fn sound(&self, chunk: Buf<f32>) {
         let n = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
         let take = |room: u64| (room > 0).then(|| room.saturating_sub(n));
@@ -123,6 +143,10 @@ impl Feed {
     }
 
     /// Says the source stopped by itself, and why.
+    #[cfg_attr(
+        not(any(test, windows, feature = "gate")),
+        expect(dead_code, reason = "only the microphone and the gate feed the job")
+    )]
     pub fn lost(&self, fault: VoiceFault) {
         let epoch = self.epoch;
         let _ = self.tx.send(Event::Lost { epoch, fault });

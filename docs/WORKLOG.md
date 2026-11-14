@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 23:17 — P11: the worker's Linux lint without the engine
+The worker's Linux lint without the engine failed on sound parts that only the Windows microphone and the gate's sound file reach. They now carry the same scoped `expect(dead_code)` as the engine-only parts, and all six lint builds pass on Windows and Linux.
+
 ## 2026-11-14 23:10 — P11: the worker's fetch job
 The worker's `fetch` job downloads a model file through `kx-platform-net` into `<file>.part`, resumes from the part's length, stops reading at the row's size, and names the file only after its size and SHA-256 pass and the part is flushed. Pause keeps the part, Cancel or a bad size or fingerprint deletes it, a stall past `stall_s` is a fault, and addresses are tried in table order, the next one taking over from the part's length. A review made it refuse a name already taken, a link at the part's name and a path that climbs out of the folder, and tell the first fault when no address serves.
 

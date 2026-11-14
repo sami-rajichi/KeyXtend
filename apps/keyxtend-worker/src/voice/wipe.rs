@@ -30,6 +30,10 @@ impl<T: Copy + Zeroize> Buf<T> {
     ///
     /// # Errors
     /// `Memory` when the room cannot be had.
+    #[cfg_attr(
+        not(any(test, windows, feature = "engine", feature = "gate")),
+        expect(dead_code, reason = "only the microphone, engine and gate collect")
+    )]
     pub fn collect(items: impl ExactSizeIterator<Item = T>) -> Result<Self, VoiceFault> {
         let mut buf = Self::new();
         buf.reserve(items.len())?;
