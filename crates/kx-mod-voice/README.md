@@ -1,6 +1,6 @@
 # kx-mod-voice
 
-Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. The module itself is a skeleton that reads its settings, drops a bad pick, and waits; the downloads and the panel come in plan task 19, and the actor that wires it all in task 20.
+Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module itself is a skeleton that reads its settings, drops a bad pick, and waits; the actor that wires it all comes in plan task 20.
 
 - **Models table** (`models`, `models.toml`): one row per local model with its file, size, SHA-256, a download address pinned to a commit on an allowed host, its licence and credit, its memory on the processor and on a card, and its languages with each model's own code. A bad table turns local models off; it never panics.
 - **Orders** (`models::order`): each tested language has a list, best first, with the day of its tests; its first is the default. The English, French and Arabic orders were ranked on the 2026-11-14 trial numbers (the owner's six clips, the voice detector at pad 300 ms). A language without a list takes the general order of the models that know it, marked untested. A model that never leads (`lead = false`, Nemotron) is first in no list.
@@ -11,6 +11,10 @@ Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text
 - **History** (`history`): the texts dictated, pinned first then newest first, each with its time, language, model and recording; a later text of the run's last take replaces it (Try again), and an unpin counts as new, as in the clipboard's History. Pins sit outside `history_max`, recordings share `voice_max_mb` oldest unpinned first, a take keeps one recording, Delete all needs the `Asked` from `ask_all`, and history off, a hidden run or a password box keeps nothing. Turning a switch off keeps what is stored; Delete all removes it.
 - **Counts** (`counts`): per local day, model and device (the processor or a card by its id), the dictations, the time heard and the time waited, never content; a file the table does not name counts as `Other`. Beside them, each card's check by card, driver and file fingerprint, of which a card failing mid-run drops that file's alone, and Compare's last numbers per ISO language.
 - **Store** (`store`): `<data>/voice/` on a sealed shelf with its own key: `texts` (a blob per text), `sounds` (recordings in blobs `<id>-<n>`) and `numbers`. A newer file stops the open before any change, damage and a crash's leftovers are removed, and a failed write is tried again with the next change.
+- **Folder** (`folder`): the models folder as scanned, each file known by its fingerprint; a file named and sized as a row's serves on the processor while its fingerprint is read. A new folder forgets the old one's files, and a late fingerprint for a file no longer held is dropped. `Stock` is the flow's `Supply`. The first download offers `KeyXtend\models` on the drive with the most room; a path `path_ok` refuses is never used.
+- **Downloads** (`fetch`): one at a time, only with room for the file and `min_free_mb`, and never over a file holding the row's name; each fault becomes the bar's note. A download asked while the folder is read waits for the read, so a copy under another name is not fetched again.
+- **Compare** (`compare`): the set text is recorded once, then each ready model writes it in a fresh job; only numbers are kept, and a text shows only for a language with no set text. While it records, the flow shows its Listening bar and light (`In::Lend`), and no dictation starts until it ends.
+- **Panel** (`panel`, `view`, `options.toml`): the Voice panel's pages, 5 rows a page by default, ticked then acted on; each click gives the actor its next steps as `Do`s. A row click on rows that moved since is dropped (`told`), and `recheck` checks a picked card, or with Automatic a card checked under an older driver.
 
 ## Services and capabilities
 
@@ -47,7 +51,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 
 ## Public API
 
-`VoiceModule`, `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts` and `store` modules for the actor, the panel and tests.
+`VoiceModule`, `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 

@@ -55,6 +55,10 @@ const BAD_SUFFIX: &str =
 
 /// The picks' key in the section, which also names a dropped pick in the settings notice.
 pub(crate) const PICKS: &str = "picks";
+/// The device's key in the section, which the Device page's Use writes.
+pub(crate) const DEVICE: &str = "device";
+/// The models folder's key in the section, which the first download's folder question writes.
+pub(crate) const MODELS_DIR: &str = "models_dir";
 
 /// How the kernel reads the `[voice]` section: version 1, with the defaults embedded.
 pub static SPEC: SettingsSpec = SettingsSpec {

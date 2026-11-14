@@ -2,6 +2,7 @@
 
 use super::*;
 
+mod clips;
 mod fit;
 mod orders;
 mod refuse;

@@ -162,13 +162,11 @@ impl Flow {
 /// The note a fault that ended the run shows, with its action: Listen again for the microphone, Download for a file
 /// gone, the gear for the language.
 fn fault_note(error: SpeechError, lang: &Lang, bytes: u64) -> (BarHint, Option<BarButton>) {
-    let listen = Some(BarButton::Listen);
+    if let Some(hint) = mic_hint(error) {
+        return (hint, Some(BarButton::Listen));
+    }
     let shown = lang.shown.clone();
     match error {
-        SpeechError::NoMic => (BarHint::NoMic, listen),
-        SpeechError::MicBusy => (BarHint::MicBusy, listen),
-        SpeechError::MicRefused => (BarHint::MicRefused, listen),
-        SpeechError::Unplugged => (BarHint::Unplugged, listen),
         SpeechError::NoFile => (
             BarHint::NoModel { lang: shown, bytes },
             Some(BarButton::Download),
@@ -176,5 +174,16 @@ fn fault_note(error: SpeechError, lang: &Lang, bytes: u64) -> (BarHint, Option<B
         SpeechError::Language => (BarHint::Language(shown), None),
         SpeechError::Memory => (BarHint::NoFit, None),
         _ => (BarHint::Fault, None),
+    }
+}
+
+/// The note of a microphone's fault, which Compare's recording shows too; `None` for any other fault.
+pub(crate) fn mic_hint(error: SpeechError) -> Option<BarHint> {
+    match error {
+        SpeechError::NoMic => Some(BarHint::NoMic),
+        SpeechError::MicBusy => Some(BarHint::MicBusy),
+        SpeechError::MicRefused => Some(BarHint::MicRefused),
+        SpeechError::Unplugged => Some(BarHint::Unplugged),
+        _ => None,
     }
 }

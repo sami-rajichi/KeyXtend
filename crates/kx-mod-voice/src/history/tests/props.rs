@@ -97,8 +97,10 @@ proptest! {
             for id in edit.mute.keys() {
                 prop_assert!(history.get(*id).is_none_or(|e| e.sound.is_none()), "a muted recording stays");
             }
+            // A recording trims recordings alone, so texts an unpin left past history_max wait for the next keep.
+            let texts = !matches!(op, Op::Sound(..));
             if limited {
-                prop_assert!(history.unpinned() <= r.max, "past history_max");
+                prop_assert!(!texts || history.unpinned() <= r.max, "past history_max");
                 let pinned_only = history.entries().iter().all(|e| e.pinned || e.sound.is_none());
                 prop_assert!(history.voice_bytes() <= r.voice_bytes || pinned_only, "past voice_max_mb");
             }

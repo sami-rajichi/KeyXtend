@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 00:19 — P11: the models folder, downloads, Compare and the Voice panel's state
+The voice module now knows the models folder by fingerprint, offers `KeyXtend\models` on the drive with most room, refuses relative, device and climbing paths, and runs one download at a time with a note for a full drive, a read-only folder or a taken name. Compare records once and writes it with each ready model in a fresh job, keeping numbers only, and borrows the microphone through the flow so it never meets a dictation; the panel builds every page in 5-row pages with tick-then-act lists and Options checked by the settings' own ranges. A review fixed 15 points, among them a stale fingerprint cache after a folder change, a card granted to an unchecked file, re-checks after a driver update and stale panel clicks.
+
 ## 2026-11-14 23:17 — P11: the worker's Linux lint without the engine
 The worker's Linux lint without the engine failed on sound parts that only the Windows microphone and the gate's sound file reach. They now carry the same scoped `expect(dead_code)` as the engine-only parts, and all six lint builds pass on Windows and Linux.
 

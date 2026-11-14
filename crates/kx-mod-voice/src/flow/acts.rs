@@ -16,6 +16,9 @@ impl Flow {
             return;
         }
         self.key_at = Some(now);
+        if self.lent_click(BarButton::Stop, out) {
+            return;
+        }
         match self.phase() {
             Phase::Listening => self.stop(true, out),
             Phase::Transcribing => {}
@@ -37,6 +40,9 @@ impl Flow {
     /// A bar button, where the bar shows it.
     fn button(&mut self, button: BarButton, supply: &dyn Supply, out: &mut Vec<Out>) {
         use BarButton as B;
+        if self.lent_click(button, out) {
+            return;
+        }
         match (button, self.phase()) {
             (B::Cancel, Phase::Listening | Phase::Transcribing) => self.cancel(out),
             (B::Stop, Phase::Listening) => self.stop(true, out),
@@ -50,8 +56,12 @@ impl Flow {
         }
     }
 
-    /// Starts a dictation in the language shown, fixed from now on, after closing any bar.
+    /// Starts a dictation in the language shown, fixed from now on, after closing any bar; never while Compare holds
+    /// the microphone's run.
     pub(super) fn start(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
+        if self.lent.is_some() {
+            return;
+        }
         self.close(out);
         let lang = self.front.clone();
         let supplied = if lang.iso.is_empty() {
@@ -89,7 +99,7 @@ impl Flow {
                 BarHint::NoModel { lang: shown, bytes },
                 Some(BarButton::Download),
             ),
-            Lack::Stranger => (BarHint::Language(shown), None),
+            Lack::Stranger | Lack::Checking => (BarHint::Language(shown), None),
             Lack::Unknown => (BarHint::NoLanguage(shown), None),
             Lack::NoFit => (BarHint::NoFit, None),
         };

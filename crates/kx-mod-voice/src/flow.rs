@@ -3,12 +3,15 @@
 
 mod acts;
 mod io;
+mod lend;
 mod notes;
 mod take;
 mod text;
 mod view;
 
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
+pub use lend::Lend;
+pub(crate) use notes::mic_hint;
 
 use std::sync::Arc;
 
@@ -87,6 +90,8 @@ pub struct Flow {
     key_at: Option<Mono>,
     /// The microphone is open.
     lit: bool,
+    /// Compare models holds the microphone's run, so no dictation starts.
+    lent: Option<lend::Lent>,
     told: Told,
 }
 
@@ -112,6 +117,7 @@ impl Flow {
             shown_at: Mono::default(),
             key_at: None,
             lit: false,
+            lent: None,
             told: Told::default(),
         }
     }
@@ -127,14 +133,15 @@ impl Flow {
             In::Note { take, note } => self.note(take, note, &mut out),
             In::Field(change) => self.field(change),
             In::Elsewhere => self.elsewhere(),
-            In::Session(note) if note.away() => self.close(&mut out),
+            In::Session(note) if note.away() => self.stop_all(&mut out),
             In::Session(_) => {}
             In::Layout(layout) => self.front = Lang::from(&layout),
             In::Typed(done) => self.typed(done),
             In::Settings(settings) => self.set_settings(*settings, &mut out),
             In::Tick => self.tick(&mut out),
+            In::Lend(lend) => self.lend(lend, &mut out),
             In::Quit => {
-                self.close(&mut out);
+                self.stop_all(&mut out);
                 self.panel = None;
             }
         }
@@ -164,6 +171,18 @@ impl Flow {
     #[must_use]
     pub fn can_again(&self) -> bool {
         self.phase() == Phase::Text && self.held()
+    }
+
+    /// A dictation listens or writes, so Compare waits (`Facts::dictating`).
+    #[must_use]
+    pub fn dictating(&self) -> bool {
+        self.busy()
+    }
+
+    /// Every run stops: the dictation's bar closes and Compare's run is cancelled.
+    fn stop_all(&mut self, out: &mut Vec<Out>) {
+        self.end_lend(out);
+        self.close(out);
     }
 
     /// The state's kind.
@@ -211,11 +230,11 @@ impl Flow {
         self.panel = panel;
     }
 
-    /// New settings; the feature turned off closes the bar.
+    /// New settings; the feature turned off closes the bar and cancels Compare's run.
     fn set_settings(&mut self, settings: VoiceSettings, out: &mut Vec<Out>) {
         self.settings = settings;
         if !self.settings.on {
-            self.close(out);
+            self.stop_all(out);
         }
     }
 }

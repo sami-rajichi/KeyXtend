@@ -82,8 +82,11 @@ impl Flow {
         self.told.fresh(round)
     }
 
-    /// The bar for the state.
+    /// The bar for the state, or Compare's Listening while it records.
     fn bar(&self) -> VoiceBar {
+        if let Some(lent) = self.lent_bar() {
+            return lent;
+        }
         match &self.state {
             State::Idle => VoiceBar::Hidden,
             State::Listening { since, nothing } => self.listening(*since, *nothing),

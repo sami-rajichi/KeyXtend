@@ -23,6 +23,8 @@ licences = ["MIT", "Apache-2.0", "CC-BY-4.0", "OpenMDW-1.1"]
 runners = ["transcribe"]
 # Hex digits of the commit every address names as one part of its path, so it never follows a moving branch.
 revision = 40
+# The languages of the card check's clips shipped in assets/voice; a model takes the first one it knows.
+clips = ["en", "fr", "ar"]
 
 [[models]]
 id = "whisper-small-q5km"

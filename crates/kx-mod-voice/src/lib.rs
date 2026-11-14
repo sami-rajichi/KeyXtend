@@ -5,16 +5,21 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod compare;
 pub mod counts;
 pub mod device;
+pub mod fetch;
 pub mod flow;
+pub mod folder;
 pub mod history;
 mod manifest;
 pub mod models;
 mod module;
+pub mod panel;
 pub mod score;
 mod settings;
 pub mod store;
+pub mod view;
 
 pub use manifest::{ID, MANIFEST};
 pub use module::VoiceModule;

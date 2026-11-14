@@ -2,12 +2,13 @@
 //! gets, which the actor answers from the models table, the device rule and the folder.
 
 use kx_module_api::ports::{
-    CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, SessionNote, SpeechAsk, SpeechDone,
-    SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit, VoicePanel,
-    VoiceView,
+    BarButton, CardId, CardUse, FieldChange, Fingerprint, LayoutChanged, SessionNote, SpeechAsk,
+    SpeechDone, SpeechModel, SpeechNote, TextAsk, TextDone, VoiceAct, VoiceLevel, VoiceLit,
+    VoicePanel, VoiceView,
 };
 use kx_module_api::{Redacted, Secret};
 
+use super::Lend;
 use crate::VoiceSettings;
 
 /// One input to the flow, from the bus, a port or the clock.
@@ -42,6 +43,8 @@ pub enum In {
     Settings(Box<VoiceSettings>),
     /// The time `Flow::deadline` named came: a hint or a fade.
     Tick,
+    /// Compare models holds the microphone's run, or lets it go (`Compare::lend`).
+    Lend(Lend),
     /// The module stops: the microphone closes and the sound is wiped.
     Quit,
 }
@@ -127,6 +130,8 @@ pub enum Out {
         /// The model file's fingerprint.
         model: Fingerprint,
     },
+    /// Compare holds the run: give it this Stop or Cancel (`Panel::click` with `VoiceClick::Bar`).
+    Lent(BarButton),
 }
 
 /// The model and device that serve a language now.
@@ -152,8 +157,11 @@ pub enum Lack {
         /// The download's size.
         bytes: u64,
     },
-    /// The picked model does not know the language.
+    /// The picked model does not know the language, or its file cannot be read.
     Stranger,
+    /// The picked file is still being read for its fingerprint or its languages; the bar says Stranger's line until
+    /// the port has one of its own.
+    Checking,
     /// No listed model knows the language.
     Unknown,
     /// The model does not fit in the memory free now.
