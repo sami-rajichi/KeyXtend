@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 21:04 — P11: the worker-only download crate `kx-platform-net`
+`kx-platform-net` gives the worker's coming `fetch` job its `Http` port and a WinHTTP adapter: HTTPS only, every host and every redirect checked against the row's list before it is asked, at most five redirects, and resume by byte range with a 206 that must start where asked. Every wait is held within `stall_s`, cookies and WinHTTP's own redirects are off, TLS is 1.2 or 1.3, and errors carry fixed reasons, never an address. A review added length caps on joined addresses, dot-folder and fragment rules, and a sweep of tricky addresses; the crate joins CI's Linux list.
+
 ## 2026-11-14 20:45 — P11: the voice module's models table, device rule, scorer and settings
 `kx-mod-voice` holds the ten-row models table with fixed-revision links, sizes, fingerprints, memory and language codes, and an order per tested language from the 2026-11-14 trial, with a general order for the rest marked untested. Automatic keeps the processor until a card passes its check, then takes the passed card with room and the best gain, and says why on every fallback. The scorer counts words wrong per language and keeps Arabic letter forms apart; `[voice]` settings repair a bad key alone, and a bad pick resets only its language with a notice.
 

@@ -1,0 +1,27 @@
+[package]
+name = "kx-platform-net"
+description = "Worker-only HTTPS downloads: the HTTP port with its redirect, range and fault rules, and its WinHTTP adapter (ADR-0004, ADR-0043)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# The scripted `FakeHttp`, for the worker's fetch tests; no shipped build turns it on.
+fake = []
+
+[dependencies]
+# The fetch limits, the host rule and the fetch faults, one copy for the host and the worker.
+kx-ipc = { path = "../kx-ipc" }
+thiserror.workspace = true
+
+# WinHTTP is Windows-only; the rules and the fake build and test everywhere.
+[target.'cfg(windows)'.dependencies]
+# WinHTTP sends the requests, with TLS and the system's proxy (`Win32_Networking_WinHttp`); errors come back as
+# Win32 codes (`Win32_Foundation`).
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Networking_WinHttp"] }
