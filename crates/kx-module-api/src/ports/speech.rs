@@ -136,7 +136,8 @@ pub trait SpeechRun: Send {
     /// Writes the held recording again as `ask` says, in a new job when its model differs; notes follow as before.
     ///
     /// # Errors
-    /// `Range` when `ask.check` refuses it or it names no model, `NoSound` when the recording is gone.
+    /// `Range` when `ask.check` refuses it or it names no model, `NoSound` when the recording is gone, `Gone` or
+    /// `Timeout` when the worker does not answer, and `Down` while a new job waits to start.
     fn again(&mut self, ask: SpeechAsk) -> Result<(), SpeechError>;
 
     /// The held recording, in pieces under the frame limit, for Keep recordings or a later service.

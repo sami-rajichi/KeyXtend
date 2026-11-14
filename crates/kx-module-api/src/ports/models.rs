@@ -227,7 +227,8 @@ pub trait ModelFiles: Send + Sync {
     /// Starts downloading `ask` into its part file, resuming a part there; `tell` hears its notes on any thread.
     ///
     /// # Errors
-    /// `Range` when `ask.check` refuses it, `Full` under its room, `Missing` or `ReadOnly` for its folder.
+    /// `Range` when `ask.check` refuses it, `Full` under its room, `Missing` or `ReadOnly` for its folder, and `Gone`
+    /// when the download job cannot start.
     fn fetch(
         &self,
         ask: FetchAsk,

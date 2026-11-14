@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-14 21:30 — P11: fakes for speech, model files and the session
+`FakeSpeech`, `FakeModelFiles` and `FakeSessionWatch` script levels, pieces, faults, a worker death, devices, card checks, download steps, and lock and sleep, and record every ask for the module's tests. Each checks asks with the port's own rules, and no note reaches a run after it closed, died or was dropped. They start no threads and never sleep, so the module's flow tests stay exact.
+
 ## 2026-11-14 20:40 — P11: the worker's streaming session
 Beside one ask and one reply, the worker host now keeps a streaming session: asks with deadlines, plus notes the worker sends on its own, told in order on one thread. A late note, a bad or stray frame, or a quit ends the worker and holds the next start back from `restart_ms` doubling to `restart_max_ms`, and a worker holds at most two unread frames, so a flooding worker cannot grow the app's memory. A property test checks one worker at most, no note after a loss and none left running after drop.
 
