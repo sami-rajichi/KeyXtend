@@ -155,7 +155,7 @@ impl Flow {
             return self.salvage(pieces, if death { BarHint::Pieces } else { hint }, out);
         }
         self.take = None;
-        self.show_note(hint, act, lang.iso);
+        self.show_note(hint, act, lang.shown.iso);
     }
 }
 

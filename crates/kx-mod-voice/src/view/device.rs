@@ -59,7 +59,7 @@ impl Panel {
     fn item(&self, d: &Device, facts: &Facts<'_>, print: Option<&Fingerprint>) -> DeviceItem {
         let DeviceKind::Card(id) = &d.kind else {
             return DeviceItem::Cpu {
-                cores: facts.cores,
+                cores: d.cores,
                 memory: d.memory,
             };
         };
@@ -72,7 +72,7 @@ impl Panel {
         };
         DeviceItem::Card {
             name: d.name.clone(),
-            built_in: false,
+            built_in: d.built_in,
             memory: d.memory,
             check,
         }

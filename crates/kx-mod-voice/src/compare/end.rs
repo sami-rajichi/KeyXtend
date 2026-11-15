@@ -3,9 +3,9 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::Zeroizing;
-use kx_module_api::ports::{BarHint, SpeechDone, SpeechError};
+use kx_module_api::ports::{BarHint, RunStep, SpeechDone, SpeechError};
 
-use super::{Act, Compare, Line, Stage};
+use super::{Act, Compare, Line, Stage, Turn};
 use crate::counts::{Board, Score};
 use crate::flow::mic_hint;
 use crate::score::wrong;
@@ -21,8 +21,11 @@ impl Compare {
                 .join(" "),
         );
         self.pieces.clear();
-        let (Some(turn), Some(plan)) = (self.turns.get(at), self.plan.as_ref()) else {
+        let (Some(turn), Some(plan)) = (self.turns.get_mut(at), self.plan.as_ref()) else {
             return;
+        };
+        turn.step = RunStep::Done {
+            wait_ms: done.wait_ms,
         };
         let set = plan.set.expose();
         let count = (!set.is_empty())
@@ -42,7 +45,8 @@ impl Compare {
         });
     }
 
-    /// A fault: a card's lets the processor go on; a model's skips it; the recording's ends the run with its note.
+    /// A fault: a card's lets the processor go on; a model's marks it failed and skips it; the recording's ends the
+    /// run with its note.
     pub(super) fn fault(&mut self, error: SpeechError) -> Vec<Act> {
         let Stage::Running(Some(at)) = self.stage else {
             if !error.ends() {
@@ -61,8 +65,10 @@ impl Compare {
             return self.lost();
         }
         self.pieces.clear();
-        self.turns.remove(at);
-        self.next(at)
+        if let Some(turn) = self.turns.get_mut(at) {
+            turn.step = RunStep::Failed;
+        }
+        self.next(at + 1)
     }
 
     /// The card of model `at` failed: its check of that file is dropped.
@@ -78,10 +84,10 @@ impl Compare {
         }
     }
 
-    /// The recording is gone: the run ends with the models already written.
+    /// The recording is gone: the run ends with the models already written or failed.
     pub(super) fn lost(&mut self) -> Vec<Act> {
-        let written = self.turns.len().min(self.lines.len());
-        self.turns.truncate(written);
+        let ended = |t: &Turn| matches!(t.step, RunStep::Done { .. } | RunStep::Failed);
+        self.turns.retain(ended);
         self.finish()
     }
 

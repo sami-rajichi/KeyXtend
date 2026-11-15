@@ -2,14 +2,15 @@
 //! panel, Start sends the set text of the language in front, a pad page turns the open panel, a bad or late click
 //! sends nothing, and no log line holds a text.
 
-use super::{heard, home, listening_bar, page, panel};
+use super::{coded, heard, home, listening_bar, page, panel};
 use crate::Rig;
 use crate::logs::lines_of;
 use crate::texts::rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, BarText, CompareSheet, DeviceLabel, DeviceName, FetchButton, PanelButton,
-    ScrollPage, VoiceAct, VoiceBar, VoiceClick, VoiceSheet, VoiceTab, VoiceText, VoiceView,
+    ScrollPage, VoiceAct, VoiceBar, VoiceClick, VoicePanel, VoiceSheet, VoiceTab, VoiceText,
+    VoiceView,
 };
 use kx_ui::i18n::keys::VOICE_READ_TEXT;
 use kx_ui::voice_acts::{
@@ -82,11 +83,18 @@ fn the_gear_opens_the_panel_and_sends_no_click() {
     assert!(rig.wakes().is_empty(), "the keyboard is not asked to show");
 }
 
+/// Compare's set text on a panel for the language of code `iso`.
+fn ready_in(iso: &str) -> VoicePanel {
+    let mut panel = panel(ready());
+    panel.lang = coded(iso);
+    panel
+}
+
 #[test]
-fn start_sends_the_set_text_of_the_layout_in_front_not_the_panels_language() {
-    let (rig, _face, _host) = rig("en", "fr", "en");
+fn start_sends_the_set_text_of_the_panels_language_not_its_words_or_the_face() {
+    let (rig, _face, _host) = rig("en", "ar", "en");
     let heard = heard(&rig);
-    heard.shown(&rig, page(ROUND, VoiceBar::Hidden, Some(panel(ready()))));
+    heard.shown(&rig, page(ROUND, VoiceBar::Hidden, Some(ready_in("fr"))));
     rig.hub.voice_act(COMPARE, "", 0, i64::from(ROUND));
     let french = I18n::new(find("fr").unwrap()).text(VOICE_READ_TEXT);
     let want = VoiceClick::Compare(Redacted::new(french));
@@ -95,9 +103,9 @@ fn start_sends_the_set_text_of_the_layout_in_front_not_the_panels_language() {
 
 #[test]
 fn a_language_with_no_set_text_starts_compare_with_none() {
-    let (rig, _face, _host) = rig("en", "de", "auto");
+    let (rig, _face, _host) = rig("en", "en", "auto");
     let heard = heard(&rig);
-    heard.shown(&rig, page(ROUND, VoiceBar::Hidden, Some(panel(ready()))));
+    heard.shown(&rig, page(ROUND, VoiceBar::Hidden, Some(ready_in("de"))));
     rig.hub.voice_act(COMPARE, "", 0, i64::from(ROUND));
     let want = VoiceClick::Compare(Redacted::new(String::new()));
     assert_eq!(heard.sent.acts(), [act(ROUND, want)]);

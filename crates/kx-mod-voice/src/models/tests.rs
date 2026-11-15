@@ -2,11 +2,11 @@
 
 use super::*;
 
-mod clips;
 mod fit;
 mod orders;
 mod refuse;
 mod rows;
+mod tested;
 
 /// The compiled-in table, which must load.
 fn shipped() -> &'static Table {

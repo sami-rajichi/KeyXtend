@@ -67,6 +67,8 @@ pub const VOICE_FOR_LANG: &str = "voice.for-lang";
 pub const VOICE_BEST: &str = "voice.best";
 /// The general order serves `$lang`, untested.
 pub const VOICE_UNTESTED: &str = "voice.untested";
+/// The default for `$lang` is not for this PC, so local models will be very slow here.
+pub const VOICE_SLOW: &str = "voice.slow";
 /// A model that does not fit: `$need` and `$free`.
 pub const VOICE_UNFIT: &str = "voice.unfit";
 /// A download's progress: `$done` of `$total`.

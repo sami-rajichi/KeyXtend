@@ -1,7 +1,7 @@
 # Security note: kx-platform
 
 - **Owner:** product owner
-- **Last review:** 2026-11-15 (P11 task 14: the speech and model files hosts; its review: a keep answered by any ending fault and capped, a check's callback closed on return, no callback under the job's lock, no progress while paused, the folder made guarded from the start); 2026-11-05 (P9 `kx-security-check`: the host's checks on vault replies, nothing new; P9 Task 23: the neutral worker host, its vault job and the hidden-run rules); 2026-10-31 (P8 security check: the host's checks on a worker treated as compromised, and its command words from `kx-ipc`; P8 task 9: the media worker's host and its review fixes; P8 final fix: the DIB ask)
+- **Last review:** 2026-11-15 (P11 task 14 part b: the processor's cores and memory and the built-in mark in `Device`, the clips' languages; nothing new crosses the pipe); 2026-11-15 (P11 task 14: the speech and model files hosts; its review: a keep answered by any ending fault and capped, a check's callback closed on return, no callback under the job's lock, no progress while paused, the folder made guarded from the start); 2026-11-05 (P9 `kx-security-check`: the host's checks on vault replies, nothing new; P9 Task 23: the neutral worker host, its vault job and the hidden-run rules); 2026-10-31 (P8 security check: the host's checks on a worker treated as compromised, and its command words from `kx-ipc`; P8 task 9: the media worker's host and its review fixes; P8 final fix: the DIB ask)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-platform`'s neutral worker host (`worker`) and the two ports it serves over an adapter's `Spawner` (ADR-0004): `Pictures` through `pictures` (ADR-0034 decision 5), and `Boxes` through `boxes` (P9, ADR-0038 decision 6). P11 adds `Speech` through `speech` and `ModelFiles` through `models`, over the worker's `voice` and `fetch` jobs (ADR-0042, ADR-0043, ADR-0044). It also holds the hidden-run rules (`mirror`, ADR-0037). The folder rule, the pack, field-watch and selection-watch halves (`selection`, P10) and the UI ports, P8's `Reveal` included, are covered with their adapter in `kx-platform-windows.md`.
 
@@ -22,6 +22,7 @@
 | A dictation's recording, kept or handed to a new job after a model change (P11) | Secret | Memory: each piece in a wiped buffer (`SecretBytes`), sent as `Wiped::Kept`; a recording a new job could not take stays parked in the run until it closes | No | Until the run closes or its job ends after `idle_min` |
 | Dictated text pieces and a check's texts (P11) | Secret | Memory, as the port's `Redacted` secrets, told to the run's callback | No | Handed to the caller |
 | Model, detector and clip paths, folder scans and download fields (P11) | Sensitive (paths hold the account name) | Memory only, never logged; `Assets` has no `Debug` | N/A | One call or run |
+| The PC's total and free memory, the processor's real cores and the clips' languages the speech port tells (P11 task 14 part b) | Public (numbers and ISO codes) | Memory, in each `Device` and `Speech::clips` | No | One call; a built-in card is marked by the worker's own kind, never guessed |
 
 The host logs only why a worker failed or stopped and a fixed note for its exit code, never bytes or sizes of content.
 

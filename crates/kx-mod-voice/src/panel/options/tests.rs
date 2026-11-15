@@ -28,6 +28,8 @@ fn every_row_names_a_setting_of_its_kind() {
             Kind::Place => PLACES.iter().any(|(n, _)| value.as_str() == Some(*n)),
         };
         assert!(fits, "{}", row.key);
+        let unit = row.unit.is_some() == (row.kind == Kind::Number);
+        assert!(unit, "only a number names its unit: {}", row.key);
         let under = row.under.as_ref().map(|u| opt(u).kind);
         assert!(under.is_none_or(|k| k == Kind::Switch), "{}", row.key);
     }
@@ -63,7 +65,7 @@ fn a_stepper_walks_its_steps_and_dims_at_its_ends() {
         Some(Value::Integer(50)),
         "off the list"
     );
-    let row = max.row(&lowest, 8).unwrap();
+    let row = max.row(&lowest, Some(8)).unwrap();
     let OptionValue::Number { value, ends, .. } = row.value else {
         panic!("{row:?}");
     };
@@ -98,15 +100,15 @@ fn a_switch_flips_and_the_suffix_writes_empty_or_its_default() {
 #[test]
 fn a_row_under_an_off_switch_is_not_live() {
     let start = defaults();
-    assert!(!opt("silence_stop_s").row(&start, 8).unwrap().live);
+    assert!(!opt("silence_stop_s").row(&start, Some(8)).unwrap().live);
     let on = with("silence_stop", Value::Boolean(true));
-    assert!(opt("silence_stop_s").row(&on, 8).unwrap().live);
-    assert!(opt("history_max").row(&start, 8).unwrap().live);
+    assert!(opt("silence_stop_s").row(&on, Some(8)).unwrap().live);
+    assert!(opt("history_max").row(&start, Some(8)).unwrap().live);
 }
 
 #[test]
 fn threads_zero_reads_as_the_cores_and_a_factor_as_hundredths() {
-    let threads = opt("threads").row(&defaults(), 8).unwrap();
+    let threads = opt("threads").row(&defaults(), Some(8)).unwrap();
     assert!(matches!(
         threads.value,
         OptionValue::Number {
@@ -115,7 +117,21 @@ fn threads_zero_reads_as_the_cores_and_a_factor_as_hundredths() {
             ..
         }
     ));
-    let gain = opt("card_gain").row(&defaults(), 8).unwrap();
+    let unknown = opt("threads").row(&defaults(), None).unwrap();
+    let OptionValue::Number { auto, .. } = unknown.value else {
+        panic!("{unknown:?}");
+    };
+    assert_eq!(
+        auto,
+        Some(0),
+        "Auto with no count until the processor is read"
+    );
+    let plain = opt("type_gap_ms").row(&with("type_gap_ms", Value::Integer(0)), None);
+    let OptionValue::Number { auto, .. } = plain.unwrap().value else {
+        panic!("not a number");
+    };
+    assert_eq!(auto, None, "a row with no Auto keeps 0 as 0");
+    let gain = opt("card_gain").row(&defaults(), Some(8)).unwrap();
     assert!(matches!(
         gain.value,
         OptionValue::Factor {
@@ -134,10 +150,23 @@ fn the_place_walks_the_bar_places() {
         place.moved(&start, true),
         Some(Value::String(PLACES[1].0.into()))
     );
-    let row = place.row(&start, 8).unwrap();
+    let row = place.row(&start, Some(8)).unwrap();
     assert!(
         matches!(row.value, OptionValue::Choice { name, ends: Ends { low: true, high: false } } if name == PLACES[0].0)
     );
+}
+
+#[test]
+fn each_number_carries_its_unit_from_the_table() {
+    let unit = |key: &str| match opt(key).row(&defaults(), Some(8)).unwrap().value {
+        OptionValue::Number { unit, .. } => unit,
+        other => panic!("{key}: {other:?}"),
+    };
+    assert_eq!(unit("threads"), OptionUnit::Count);
+    assert_eq!(unit("done_ms"), OptionUnit::MsAsSeconds);
+    assert_eq!(unit("record_max_s"), OptionUnit::SecondsOrMinutes);
+    assert_eq!(unit("voice_max_mb"), OptionUnit::Mb);
+    assert_eq!(unit("card_diff"), OptionUnit::Words);
 }
 
 #[test]

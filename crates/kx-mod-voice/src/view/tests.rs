@@ -6,7 +6,7 @@ use kx_module_api::ports::{
 };
 
 use crate::counts::Board;
-use crate::panel::rig::{ROWS, Rig, row};
+use crate::panel::rig::{ROWS, Rig, cpu, row};
 
 /// The rig on `tab`.
 fn on(tab: VoiceTab) -> Rig {
@@ -119,6 +119,30 @@ fn try_again_acts_on_the_home_list_as_the_flow_allows() {
         rig.view().unwrap().acts,
         [PanelButton::Back, PanelButton::Close]
     );
+}
+
+#[test]
+fn the_models_page_says_local_models_are_slow_once_the_default_is_not_for_this_pc() {
+    let mut rig = on(VoiceTab::Models);
+    let slow = |rig: &mut Rig| match rig.view().unwrap().sheet {
+        VoiceSheet::Models(sheet) => sheet.slow,
+        other => panic!("not Models: {other:?}"),
+    };
+    assert!(!slow(&mut rig), "32 GB fits the default");
+    rig.devices = vec![cpu(1_024)];
+    assert!(slow(&mut rig), "1 GB is under any model's job");
+    rig.devices.clear();
+    assert!(
+        !slow(&mut rig),
+        "nothing is said before the processor is read"
+    );
+}
+
+#[test]
+fn the_panel_names_the_language_in_front_with_its_code() {
+    let mut rig = Rig::new();
+    let lang = rig.view().unwrap().lang;
+    assert_eq!((lang.name.as_str(), lang.iso.as_str()), ("English", "en"));
 }
 
 #[test]

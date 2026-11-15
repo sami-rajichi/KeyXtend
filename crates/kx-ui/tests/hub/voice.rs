@@ -124,6 +124,17 @@ pub fn listening(rig: &Rig) -> Heard {
 pub fn english() -> VoiceLang {
     VoiceLang {
         name: "English".to_owned(),
+        iso: "en".to_owned(),
+        rtl: false,
+        arabic: false,
+    }
+}
+
+/// The left-to-right language of code `iso`, named by its code.
+pub fn coded(iso: &str) -> VoiceLang {
+    VoiceLang {
+        name: iso.to_owned(),
+        iso: iso.to_owned(),
         rtl: false,
         arabic: false,
     }
@@ -133,6 +144,7 @@ pub fn english() -> VoiceLang {
 pub fn arabic() -> VoiceLang {
     VoiceLang {
         name: "العربية".to_owned(),
+        iso: "ar".to_owned(),
         rtl: true,
         arabic: true,
     }

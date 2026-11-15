@@ -28,11 +28,13 @@ pub enum VoiceMark {
     Writing,
     /// A model whose turn has not come.
     Waiting,
+    /// A model Compare could not run, or skipped after its fault.
+    RunFailed,
 }
 
 impl VoiceMark {
     /// Every mark.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Used,
         Self::Default,
         Self::Ready,
@@ -44,6 +46,7 @@ impl VoiceMark {
         Self::Done,
         Self::Writing,
         Self::Waiting,
+        Self::RunFailed,
     ];
 }
 
@@ -62,6 +65,7 @@ pub const fn mark_id(mark: VoiceMark) -> &'static str {
         VoiceMark::Done => "done",
         VoiceMark::Writing => "writing",
         VoiceMark::Waiting => "waiting",
+        VoiceMark::RunFailed => "run-failed",
     }
 }
 
@@ -77,6 +81,7 @@ pub const fn bar_hint_id(hint: &BarHint) -> &'static str {
         BarHint::Unplugged => "unplugged",
         BarHint::NoModel { .. } => "no-model",
         BarHint::Language(_) => "language",
+        BarHint::Checking => "checking",
         BarHint::NoLanguage(_) => "no-language",
         BarHint::NoFit => "no-fit",
         BarHint::Fault => "fault",
@@ -86,6 +91,7 @@ pub const fn bar_hint_id(hint: &BarHint) -> &'static str {
         BarHint::Password => "password",
         BarHint::Fell => "fell",
         BarHint::Print => "print",
+        BarHint::Taken => "taken",
         BarHint::Full => "full",
         BarHint::Folder => "folder",
         BarHint::Net => "net",

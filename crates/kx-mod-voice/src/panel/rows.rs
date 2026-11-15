@@ -69,7 +69,7 @@ impl Panel {
         let table = options::values(settings);
         let opt = self
             .opt(at)
-            .filter(|o| o.row(&table, 0).is_some_and(|r| r.live));
+            .filter(|o| o.row(&table, None).is_some_and(|r| r.live));
         let value = opt.and_then(|o| o.moved(&table, up));
         opt.zip(value)
             .map(|(o, v)| Do::Set(o.key.as_str(), v))

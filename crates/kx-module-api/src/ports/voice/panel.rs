@@ -12,7 +12,7 @@ pub use compare::{CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};
 pub use history::{HistoryRow, HistorySheet};
 pub use models::{FetchState, FolderLine, ModelRow, ModelState, ModelsSheet};
-pub use options::{Ends, OptionRow, OptionValue};
+pub use options::{Ends, OptionRow, OptionUnit, OptionValue};
 
 use super::act::PanelButton;
 use super::bar::{BarHint, VoiceLang};

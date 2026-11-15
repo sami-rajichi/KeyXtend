@@ -7,8 +7,8 @@ mod history;
 mod models;
 
 use kx_module_api::ports::{
-    BarHint, Device, Drive, FolderList, LayoutChanged, LocalTime, Pages, PanelButton, VoiceHome,
-    VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
+    BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, Pages, PanelButton,
+    VoiceHome, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Redacted, is_arabic};
 
@@ -29,8 +29,8 @@ pub struct Facts<'a> {
     pub drives: &'a [Drive],
     /// The processor and the cards, as last read.
     pub devices: &'a [Device],
-    /// The processor's real cores, which `threads` 0 means.
-    pub cores: u16,
+    /// The check clips' languages the speech port ships, in the order a model takes them.
+    pub clips: &'a [String],
     /// Each card's check.
     pub checks: &'a Checks,
     /// Compare's last numbers per language.
@@ -51,6 +51,7 @@ impl Facts<'_> {
     pub fn lang(&self) -> VoiceLang {
         VoiceLang {
             name: self.front.name.clone(),
+            iso: self.front.iso.clone(),
             rtl: self.front.rtl,
             arabic: is_arabic(&self.front.name),
         }
@@ -60,6 +61,12 @@ impl Facts<'_> {
     #[must_use]
     pub fn iso(&self) -> &str {
         &self.front.iso
+    }
+
+    /// The processor as last read; `None` before the first read.
+    #[must_use]
+    pub fn cpu(&self) -> Option<&Device> {
+        self.devices.iter().find(|d| d.kind == DeviceKind::Cpu)
     }
 }
 
@@ -144,9 +151,9 @@ impl Panel {
     /// The Options page's shown rows.
     fn options_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let table = options::values(facts.settings);
-        let row = |(i, o): (usize, &'static options::Opt)| {
-            Some((Key::Opt(i), o.row(&table, facts.cores)?))
-        };
+        let cores = facts.cpu().map(|d| d.cores);
+        let row =
+            |(i, o): (usize, &'static options::Opt)| Some((Key::Opt(i), o.row(&table, cores)?));
         let list = options::rows().iter().enumerate().filter_map(row).collect();
         let (rows, pages) = self.paged(list);
         (VoiceSheet::Options(rows), pages)

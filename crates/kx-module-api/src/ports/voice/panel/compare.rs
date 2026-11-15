@@ -13,6 +13,8 @@ pub enum RunStep {
         /// How long its text took, in ms.
         wait_ms: u32,
     },
+    /// It failed, or Compare skipped it after its fault, so it has no numbers.
+    Failed,
     /// It writes the recording now.
     Writing,
     /// Its turn has not come.

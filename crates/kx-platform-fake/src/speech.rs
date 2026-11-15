@@ -207,6 +207,10 @@ impl Speech for FakeSpeech {
         notes.into_iter().for_each(tell);
         answer
     }
+
+    fn clips(&self) -> Vec<String> {
+        lock(&self.shared.log).info.clips.clone()
+    }
 }
 
 #[cfg(test)]

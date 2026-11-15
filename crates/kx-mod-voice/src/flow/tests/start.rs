@@ -91,6 +91,7 @@ fn no_model_yet_shows_a_note_with_download_and_opens_nothing() {
     assert!(!rig.lit);
     let lang = VoiceLang {
         name: "العربية".into(),
+        iso: "ar".into(),
         rtl: true,
         arabic: true,
     };
@@ -146,6 +147,15 @@ fn a_model_that_does_not_know_the_language_points_to_the_gear() {
 }
 
 #[test]
+fn a_picked_file_still_read_says_it_is_being_checked() {
+    let mut rig = Rig::new();
+    rig.book.0.insert("fr".into(), Err(Lack::Checking));
+    let out = rig.key();
+    assert!(opened(&out).is_empty());
+    assert_eq!(note(&rig.shown()), Some((BarHint::Checking, None)));
+}
+
+#[test]
 fn the_worker_refusing_the_language_points_to_the_gear() {
     let mut rig = Rig::new();
     rig.key();
@@ -163,6 +173,7 @@ fn a_language_no_listed_model_knows_says_so() {
     assert!(opened(&out).is_empty());
     let lang = VoiceLang {
         name: "Kiswahili".into(),
+        iso: "sw".into(),
         rtl: false,
         arabic: false,
     };

@@ -1,13 +1,14 @@
-//! Voice typing's events and ports (ADR-0042): the voice events travel only with `Voice`, the level with no grant,
-//! the speech port needs `Microphone`, the model files port `Network`, and the session watch nothing.
+//! Voice typing's events and ports (ADR-0042, ADR-0046): the voice events travel only with `Voice`, the level with no
+//! grant, the speech port needs `Microphone`, the model files port `Network`, the folder reveal `OpenFolder`, and the
+//! session watch nothing.
 
 use kx_module_api::Capability::{
-    Microphone, Network, ReadFocusedText, SecretStore, Voice, WriteClipboard,
+    Microphone, Network, OpenFolder, ReadFocusedText, SecretStore, Voice, WriteClipboard,
 };
 use kx_module_api::ports::{
-    BarPlace, JobLimits, ModelFilesKey, SessionWatchKey, SpeechAsk, SpeechError, SpeechKey,
-    TextAsk, TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceKey, VoiceLevel, VoiceLit,
-    VoiceOpen, VoicePage, VoiceView,
+    BarPlace, FolderError, FolderPath, FolderRevealKey, JobLimits, ModelFilesKey, SessionWatchKey,
+    SpeechAsk, SpeechError, SpeechKey, TextAsk, TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick,
+    VoiceKey, VoiceLevel, VoiceLit, VoiceOpen, VoicePage, VoiceView,
 };
 use kx_module_api::{
     Bus, Capability, Event, EventError, Host, Manifest, ModuleCx, ModuleId, Redacted, ServiceError,
@@ -19,11 +20,16 @@ use stub::Stub;
 
 mod stub;
 
-/// A voice module declaring its powers (ADR-0042 decisions 7 and 8).
+/// A voice module declaring its powers (ADR-0042 decisions 7 and 8, ADR-0046).
 static VOICE: Manifest = Manifest {
     id: ModuleId::new("voice"),
     version: env!("CARGO_PKG_VERSION"),
-    requires: &[SpeechKey::ID, ModelFilesKey::ID, SessionWatchKey::ID],
+    requires: &[
+        SpeechKey::ID,
+        ModelFilesKey::ID,
+        SessionWatchKey::ID,
+        FolderRevealKey::ID,
+    ],
     provides: &[],
     capabilities: &[
         Voice,
@@ -32,6 +38,7 @@ static VOICE: Manifest = Manifest {
         SecretStore,
         ReadFocusedText,
         WriteClipboard,
+        OpenFolder,
     ],
     settings: None,
 };
@@ -43,6 +50,7 @@ const OTHERS: &[Capability] = &[
     SecretStore,
     ReadFocusedText,
     WriteClipboard,
+    OpenFolder,
 ];
 
 /// Puts `api` into `host` under `K`'s id and gate.
@@ -57,6 +65,7 @@ fn host(granted: &[Capability]) -> FakeHost {
     put::<SpeechKey>(&mut host, Arc::new(Stub));
     put::<ModelFilesKey>(&mut host, Arc::new(Stub));
     put::<SessionWatchKey>(&mut host, Arc::new(Stub));
+    put::<FolderRevealKey>(&mut host, Arc::new(Stub));
     host
 }
 
@@ -158,6 +167,31 @@ fn speech_needs_the_microphone_and_model_files_the_network() {
     assert_eq!(cx.service::<SpeechKey>().err(), Some(speech));
     let files = ServiceError::NotGranted(ModelFilesKey::ID, Network);
     assert_eq!(cx.service::<ModelFilesKey>().err(), Some(files));
+}
+
+#[test]
+fn the_folder_reveal_needs_open_folder() {
+    let mut bare = host(&[Voice, Microphone, Network]);
+    let cx = ModuleCx::new(&mut bare);
+    let refused = ServiceError::NotGranted(FolderRevealKey::ID, OpenFolder);
+    assert_eq!(cx.service::<FolderRevealKey>().err(), Some(refused));
+    let mut granted = host(&[OpenFolder]);
+    let reveal = ModuleCx::new(&mut granted)
+        .service::<FolderRevealKey>()
+        .unwrap();
+    let folder = FolderPath::new(r"D:\KeyXtend\models".into()).unwrap();
+    assert_eq!(reveal.show(&folder), Err(FolderError::Missing));
+}
+
+#[test]
+fn the_speech_port_names_the_check_clips_languages() {
+    let mut host = host(&[Microphone]);
+    let speech = ModuleCx::new(&mut host).service::<SpeechKey>().unwrap();
+    assert_eq!(
+        speech.clips(),
+        ["en", "fr", "ar"],
+        "as the host staged them"
+    );
 }
 
 #[test]

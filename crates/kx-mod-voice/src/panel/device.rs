@@ -87,7 +87,7 @@ impl Panel {
         let (Some(device), Some(ready)) = (device, ready) else {
             return Vec::new();
         };
-        let Some((need_mb, clip, lang)) = self.clip_of(&ready) else {
+        let Some((need_mb, clip, lang)) = self.clip_of(&ready, facts.clips) else {
             return Vec::new();
         };
         let mut model = ready.model;
@@ -116,21 +116,16 @@ impl Panel {
         vec![Do::Check(Box::new(check))]
     }
 
-    /// The card memory `ready` needs, the clip it is checked on and that clip's language as the model names it: a
-    /// row's own, else an other file's size and the first clip its facts know.
-    fn clip_of(&self, ready: &Ready) -> Option<(u32, &'static str, String)> {
-        let table = table().ok()?;
-        if let Some(row) = table.printed(&ready.print) {
-            let clip = table.clip_for(row)?;
-            return Some((row.card_mb, clip, row.code(clip)?.to_owned()));
+    /// The card memory `ready` needs, the first of `clips` it knows and that clip's language as the model names it:
+    /// a row's own, else an other file's size and its facts' code.
+    fn clip_of<'c>(&self, ready: &Ready, clips: &'c [String]) -> Option<(u32, &'c str, String)> {
+        if let Some(row) = table().ok()?.printed(&ready.print) {
+            let (clip, code) = clips.iter().find_map(|c| Some((c, row.code(c)?)))?;
+            return Some((row.card_mb, clip.as_str(), code.to_owned()));
         }
         let known = self.folder.facts(&ready.print)?;
-        let clip = table.clips().iter().find(|c| code_in(known, c).is_some())?;
-        Some((
-            ready.model.cpu_mb,
-            clip.as_str(),
-            code_in(known, clip)?.to_owned(),
-        ))
+        let (clip, code) = clips.iter().find_map(|c| Some((c, code_in(known, c)?)))?;
+        Some((ready.model.cpu_mb, clip.as_str(), code.to_owned()))
     }
 
     /// A card's warm-up moved on.

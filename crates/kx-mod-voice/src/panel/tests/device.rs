@@ -53,7 +53,7 @@ fn the_device_page_lists_automatic_the_processor_and_the_card() {
     assert!(sheet.rows[0].used && sheet.rows[0].item == DeviceItem::Auto);
     assert!(matches!(
         sheet.rows[1].item,
-        DeviceItem::Cpu { cores: 8, .. }
+        DeviceItem::Cpu { cores: 6, .. }
     ));
     assert!(matches!(
         sheet.rows[2].item,
@@ -64,6 +64,31 @@ fn the_device_page_lists_automatic_the_processor_and_the_card() {
         }
     ));
     assert_eq!(sheet.failed, None);
+}
+
+#[test]
+fn built_in_graphics_shows_its_mark_from_the_port() {
+    let mut rig = on_device();
+    rig.devices[1].built_in = true;
+    let sheet = device(&mut rig);
+    assert!(matches!(
+        sheet.rows[2].item,
+        DeviceItem::Card { built_in: true, .. }
+    ));
+}
+
+#[test]
+fn a_check_reads_the_first_shipped_clip_the_model_knows() {
+    let mut rig = on_device();
+    rig.clips = vec!["ar".into(), "fr".into(), "en".into()];
+    let check = check_card(&mut rig);
+    let langs = (check.clip.as_str(), check.ask.model.lang.as_str());
+    assert_eq!(langs, ("fr", "fr"), "Parakeet knows no Arabic");
+    let mut rig = on_device();
+    rig.clips = vec!["ar".into()];
+    rig.click(&VoiceClick::Row(2));
+    let out = rig.click(&VoiceClick::Button(PanelButton::Check));
+    assert!(out.is_empty(), "no shipped clip it knows: {out:?}");
 }
 
 #[test]

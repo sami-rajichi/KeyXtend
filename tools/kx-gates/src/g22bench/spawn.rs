@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
+use kx_module_api::ports::Memory;
 use kx_platform::speech::Hardware;
 use kx_platform::worker::{Child, Launch, Piped, SpawnError, Spawner, VoiceFrames};
 use kx_platform_windows::{WinChild, WinSpawner};
@@ -154,13 +155,17 @@ impl Drop for Gated {
     }
 }
 
-/// The cores the host counts for its threads: the real ones, or weak mode's. The bench runs on the processor only, so
-/// it names no card's driver.
+/// The cores the host counts for its threads: the real ones, or weak mode's. The bench runs on the processor only and
+/// reads no device list, so it names no memory and no card's driver.
 pub(super) struct Cores(pub(super) usize);
 
 impl Hardware for Cores {
     fn cores(&self) -> usize {
         self.0.max(1)
+    }
+
+    fn memory(&self) -> Option<Memory> {
+        None
     }
 
     fn driver(&self, _name: &str) -> Option<String> {

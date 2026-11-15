@@ -38,7 +38,7 @@ max_weak_rtf = 1.0
 # Longest wait for a worker the bench let go to end after the host's goodbye, in ms.
 end_wait_ms = 10000
 
-# The check clips by language, exactly the table's: the shipped file and the sentence it reads, as
+# The check clips by language, exactly the table's tested languages: the shipped file and the sentence it reads, as
 # assets/voice/README.md credits it (a test pins both), and other readings of it the words-wrong count also accepts.
 [g22_bench.clips.en]
 file = "check-en.wav"

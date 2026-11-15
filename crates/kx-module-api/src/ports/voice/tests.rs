@@ -7,6 +7,7 @@ use crate::{REDACTED_MARKER, Redacted, Zeroizing};
 use std::collections::HashSet;
 
 mod names;
+mod options;
 mod panel;
 
 /// The `Voice` gate.
@@ -48,6 +49,7 @@ fn keeps_secrets(shown: &str) -> bool {
 fn english() -> VoiceLang {
     VoiceLang {
         name: "English".into(),
+        iso: "en".into(),
         rtl: false,
         arabic: false,
     }
@@ -175,6 +177,7 @@ fn a_note_carries_the_language_and_size_its_line_and_action_print() {
     let shown = format!("{no_model:?}{nothing:?}{hints:?}");
     let parts = [
         "English",
+        "iso: \"en\"",
         "bytes: 740000000",
         "Download",
         "Nothing",
@@ -184,6 +187,18 @@ fn a_note_carries_the_language_and_size_its_line_and_action_print() {
         assert!(shown.contains(part), "{shown} lacks {part}");
     }
     assert_eq!(shown.matches("English").count(), 3, "{shown}");
+}
+
+#[test]
+fn a_bad_download_a_file_in_the_way_and_a_file_still_read_each_have_a_hint() {
+    let hints = [
+        BarHint::Print,
+        BarHint::Taken,
+        BarHint::Checking,
+        BarHint::Language(english()),
+    ];
+    let shown: HashSet<String> = hints.iter().map(|h| format!("{h:?}")).collect();
+    assert_eq!(shown.len(), hints.len(), "{shown:?}");
 }
 
 #[test]

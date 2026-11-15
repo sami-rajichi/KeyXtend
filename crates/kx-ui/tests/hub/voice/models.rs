@@ -37,6 +37,7 @@ fn sheet(rows: Vec<ModelRow>) -> ModelsSheet {
         rows,
         best: Some("Cohere Transcribe".to_owned()),
         untested: true,
+        slow: false,
         folder: Some(folder()),
         offer: None,
     }
@@ -58,7 +59,8 @@ fn each_state() -> Vec<ModelRow> {
     ready.tick = true;
     let unfit = ModelState::NotHere {
         need_mb: 3277,
-        have_mb: 2867,
+        have_mb: 3072,
+        free_mb: 1434,
     };
     vec![
         used,
@@ -93,7 +95,10 @@ fn each_model_shows_its_size_and_marks() {
     );
     assert_eq!(marks(&rows[2]), ["download"]);
     assert_eq!(rows[2]["line"], "3.1 GB");
-    assert_eq!(rows[3]["line"], "Needs 3.2 GB of memory, 2.8 GB free");
+    assert_eq!(
+        rows[3]["line"], "Needs 3.2 GB of memory, 1.4 GB free",
+        "the free memory, not the total"
+    );
     assert_eq!(marks(&rows[3]), ["not-here"]);
     assert_eq!(
         (marks(&rows[4]), &rows[4]["line"]),
@@ -109,7 +114,8 @@ fn in_use_shows_only_for_a_file_that_is_here() {
     (missing.default, missing.used) = (true, true);
     let unfit = ModelState::NotHere {
         need_mb: 3277,
-        have_mb: 2867,
+        have_mb: 3072,
+        free_mb: 1434,
     };
     let mut big = row("Cohere Transcribe", 4_000_000_000, unfit);
     (big.default, big.used) = (true, true);
@@ -204,6 +210,20 @@ fn the_page_names_the_best_model_the_folder_and_its_buttons() {
     ];
     assert_eq!(buttons(&p["foot"]), foot);
     assert_eq!(p["line"], Value::Null);
+    assert_eq!(p["sheet"]["slow"], Value::Null, "the default fits");
+}
+
+#[test]
+fn a_default_not_for_this_pc_says_local_models_are_slow_here() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    let mut slow = sheet(vec![]);
+    slow.slow = true;
+    let p = panel_json(&rig, &heard, panel(VoiceSheet::Models(slow)));
+    assert_eq!(
+        p["sheet"]["slow"],
+        "Local models for English will be very slow on this PC."
+    );
 }
 
 #[test]

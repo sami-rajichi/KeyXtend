@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 10:54 — P11: the voice ports' follow-ups and the models folder reveal
+The speech port's devices now carry their cores and whether a card is built-in graphics, a model that does not fit tells free memory beside the total, clip languages come from the speech port and number options carry their unit, so four stopgaps are gone. Compare marks a model that failed and runs the next, the bar gains notes for a name another file holds and a file still being checked, and the Models sheet knows when local models will be very slow on this PC. A new gated service that only the voice module holds (ADR-0046) shows the models folder in Explorer. A review made it accept only a held folder on a fixed local drive with no link from the drive down, and use a verb that runs no file.
+
 ## 2026-11-15 08:29 — P11: G22's weak-mode bench and the worker job's processor cap
 `kx-gates g22 bench` reads each language's shipped check clip through the product's worker and speech host with its default model, on this PC, then in weak mode: a worker copy with only the plain processor parts, in a job capped at 2 cores at 30 % each before it starts, with 4 GB for the fit rule. It prints numbers only: Parakeet waits 0.3 s here and about 21 s for a 6 s clip in weak mode, and Cohere Transcribe Arabic does not fit 4 GB. The owner decided weak-mode speed is a reading, as the roadmap says, and Parakeet stays the default. A review moved the cap before the worker starts, dropped AVX from weak mode and made each take count the sound heard, not the clock.
 

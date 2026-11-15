@@ -1,11 +1,11 @@
 //! A platform for the voice contract that answers every port at once: a run tells the microphone opening and its end,
-//! a download its end, and a watch one lock.
+//! a download its end, a watch one lock, and a folder to show is never there.
 
 use kx_module_api::ports::{
     CheckAsk, CheckDone, Device, Drive, FactsAsk, FetchAsk, FetchNote, FetchRun, Fingerprint,
-    FolderScan, JobLimits, ModelError, ModelFacts, ModelFiles, SessionError, SessionNote,
-    SessionRun, SessionWatch, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechNote, SpeechRun,
-    SpeechStage,
+    FolderError, FolderPath, FolderReveal, FolderScan, JobLimits, ModelError, ModelFacts,
+    ModelFiles, SessionError, SessionNote, SessionRun, SessionWatch, Speech, SpeechAsk, SpeechDone,
+    SpeechError, SpeechNote, SpeechRun, SpeechStage,
 };
 use kx_module_api::{Redacted, SecretBytes, Zeroizing};
 use std::path::Path;
@@ -71,6 +71,15 @@ impl Speech for Stub {
         _: Box<dyn Fn(SpeechNote) + Send>,
     ) -> Result<CheckDone, SpeechError> {
         Err(SpeechError::Runner)
+    }
+    fn clips(&self) -> Vec<String> {
+        ["en", "fr", "ar"].map(str::to_owned).into()
+    }
+}
+
+impl FolderReveal for Stub {
+    fn show(&self, _: &FolderPath) -> Result<(), FolderError> {
+        Err(FolderError::Missing)
     }
 }
 impl ModelFiles for Stub {

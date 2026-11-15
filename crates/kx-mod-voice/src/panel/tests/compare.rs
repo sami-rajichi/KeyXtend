@@ -126,6 +126,22 @@ fn each_model_writes_in_turn_then_one_result_is_used() {
     used_second(&mut rig);
 }
 
+#[test]
+fn a_model_that_failed_shows_failed_while_the_next_writes() {
+    let mut rig = on_compare();
+    let take = recorded(&mut rig);
+    rig.panel.compare_note(take, done(0));
+    let fault = SpeechNote::Fault(kx_module_api::ports::SpeechError::BadFile);
+    rig.panel.compare_note(take, fault);
+    let CompareSheet::Running { at, rows, .. } = sheet(&mut rig) else {
+        panic!("not running");
+    };
+    assert_eq!(
+        (at, rows[0].step, rows[1].step),
+        (2, RunStep::Failed, RunStep::Writing)
+    );
+}
+
 /// The results show numbers, never texts, and Use on the second writes its pick for English.
 fn used_second(rig: &mut Rig) {
     let small = row("whisper-small-q5km");

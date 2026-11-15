@@ -223,11 +223,11 @@ impl Flow {
     }
 
     /// The panel shown; `done_ms` starts again once it closes.
-    fn set_panel(&mut self, panel: Option<VoicePanel>) {
+    fn set_panel(&mut self, panel: Option<Box<VoicePanel>>) {
         if self.panel.is_some() && panel.is_none() {
             self.shown_at = self.now();
         }
-        self.panel = panel;
+        self.panel = panel.map(|p| *p);
     }
 
     /// New settings; the feature turned off closes the bar and cancels Compare's run.

@@ -13,12 +13,11 @@ use crate::worker::{Spawner, Split, Stream, VoiceFrames};
 use job::{Key, Live};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    CheckAsk, CheckDone, Device, FactsAsk, JobLimits, ModelFacts, Speech, SpeechAsk, SpeechError,
-    SpeechRun,
+    CheckAsk, CheckDone, Device, FactsAsk, JobLimits, Memory, ModelFacts, Speech, SpeechAsk,
+    SpeechError, SpeechRun,
 };
 use router::{Router, Tell};
 use run::WorkerRun;
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -34,14 +33,17 @@ const THREAD: &str = "kx-voice";
 pub struct Assets {
     /// The voice detector's model file.
     pub detector: PathBuf,
-    /// The self-test clips, by language.
-    pub clips: HashMap<String, PathBuf>,
+    /// The self-test clips by language, in the order a model takes them, which `Speech::clips` tells.
+    pub clips: Vec<(String, PathBuf)>,
 }
 
 /// What the system tells the speech host beside the engine.
 pub trait Hardware: Send + Sync {
     /// The processor's real cores, at least 1.
     fn cores(&self) -> usize;
+
+    /// The PC's physical memory, all of it and what is free now; `None` when the system does not tell.
+    fn memory(&self) -> Option<Memory>;
 
     /// The driver version of the card the system names `name`, as the engine names it; `None` when unknown.
     fn driver(&self, name: &str) -> Option<String>;
@@ -149,6 +151,11 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> Speech for WorkerSpeec
     fn check(&self, ask: CheckAsk, tell: Tell) -> Result<CheckDone, SpeechError> {
         ask.check()?;
         once::check(&self.shared, &ask, tell)
+    }
+
+    fn clips(&self) -> Vec<String> {
+        let clips = self.shared.assets.clips.iter();
+        clips.map(|(lang, _)| lang.clone()).collect()
     }
 }
 

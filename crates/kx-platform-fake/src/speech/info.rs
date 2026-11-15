@@ -1,5 +1,5 @@
-//! The fake's reads: the devices, each file's facts and each card's check answer as the test set them, and every
-//! checked ask is recorded.
+//! The fake's reads: the devices, each file's facts, each card's check and the clips' languages answer as the test set
+//! them, and every checked ask is recorded.
 
 use super::{FakeSpeech, SpeechError};
 use crate::lock;
@@ -43,6 +43,7 @@ pub(super) struct Info {
     devices: Option<Result<Vec<Device>, SpeechError>>,
     facts: HashMap<PathBuf, Result<ModelFacts, SpeechError>>,
     checks: HashMap<CardId, Check>,
+    pub(super) clips: Vec<String>,
     device_asks: Vec<JobLimits>,
     facts_asks: Vec<FactsAsk>,
     check_asks: Vec<CheckAsk>,
@@ -95,6 +96,12 @@ impl FakeSpeech {
         ported(&answer, card_error, "check");
         let checks = &mut lock(&self.shared.log).info.checks;
         checks.insert(card.clone(), (notes, answer));
+    }
+
+    /// Makes `clips` name these check clips' languages, in this order; none until set.
+    pub fn set_clips(&self, langs: &[&str]) {
+        let clips = langs.iter().map(|l| (*l).to_owned()).collect();
+        lock(&self.shared.log).info.clips = clips;
     }
 
     /// The limits each `devices` was asked with, in order; refused ones are not kept.

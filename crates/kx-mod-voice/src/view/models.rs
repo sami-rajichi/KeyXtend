@@ -1,9 +1,10 @@
 //! The Models page: the language's models in its order, then the other files that may know it, each with its size,
-//! marks and download; the best model's note, the folder line and the first download's folder question.
+//! marks and download; the best model's note, the slow-PC line, the folder line and the first download's folder
+//! question.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    DeviceKind, ModelRow, ModelState, ModelsSheet, Pages, PanelButton, VoiceSheet,
+    Device, ModelRow, ModelState, ModelsSheet, Pages, PanelButton, VoiceSheet,
 };
 
 use super::Facts;
@@ -23,10 +24,14 @@ impl Panel {
         let (rows, pages) = self.paged(list.collect());
         let order = table().ok().map(|t| t.order(facts.iso()));
         let best = order.as_ref().and_then(Ranked::first);
+        let job_mb = facts.settings.job_mb;
+        let slow = (best.zip(facts.cpu()))
+            .is_some_and(|(r, cpu)| r.not_here(&cpu.memory, job_mb).is_some());
         let sheet = ModelsSheet {
             rows,
             best: best.map(|r| r.name.clone()),
             untested: order.is_some_and(|o| o.untested),
+            slow,
             folder: self.folder.line(facts.drives),
             offer: self
                 .offer
@@ -92,8 +97,8 @@ impl Panel {
             Choice::Row(id) => table().ok()?.get(id)?,
             Choice::File(name) => return self.folder.file(name).map(|_| ModelState::Other),
         };
-        let cpu = facts.devices.iter().find(|d| d.kind == DeviceKind::Cpu);
-        if let Some(not_here) = cpu.and_then(|d| row.not_here(&d.memory, facts.settings.job_mb)) {
+        let not_here = |d: &Device| row.not_here(&d.memory, facts.settings.job_mb);
+        if let Some(not_here) = facts.cpu().and_then(not_here) {
             return Some(not_here);
         }
         Some(

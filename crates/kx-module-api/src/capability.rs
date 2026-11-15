@@ -63,6 +63,8 @@ capabilities! {
     /// Carry voice typing's events: the key, its light, the bar's view, its clicks and the text to type; the voice
     /// module, the keyboard and the ui hold it as an event gate (ADR-0042).
     Voice => "voice",
+    /// Show a folder in the system's file manager; the voice module alone holds it, for its models folder (ADR-0046).
+    OpenFolder => "open-folder",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -158,6 +160,17 @@ mod tests {
             let others = Capability::ALL.iter().filter(|&&c| c != cap);
             assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
         }
+    }
+
+    #[test]
+    fn open_folder_follows_voice() {
+        let folder = Capability::OpenFolder;
+        assert_eq!(folder.name(), "open-folder");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let voice = at(Capability::Voice);
+        assert_eq!(at(folder), voice.map(|i| i + 1), "ADR-0046");
+        let others = Capability::ALL.iter().filter(|&&c| c != folder);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
     }
 
     #[test]

@@ -1,7 +1,7 @@
 # Security note: kernel, settings and log
 
 - **Owner:** product owner
-- **Last review:** 2026-11-05 (P9 Task 23: `Kernel::fresh`, `KeptOff` and `kept_copies`, ADR-0037); 2026-10-02 (P3)
+- **Last review:** 2026-11-15 (P11 task 14 part b: `OpenFolder` and the folder reveal's port); 2026-11-05 (P9 Task 23: `Kernel::fresh`, `KeptOff` and `kept_copies`, ADR-0037); 2026-10-02 (P3)
 - **Status:** Reviewed
 - **Scope:** `kx-module-api`, `kx-kernel` (lifecycle, order, bus, registry, grants, `Kernel`, log), `kx-settings`, `kx-platform`. They run inside the uiAccess `keyxtend` process from P3 on. The test crates (`kx-platform-fake`, `kx-test-support`) and the tools never ship.
 
@@ -13,6 +13,7 @@
 - A service is gated by the capability its provider stored, and a provider must itself hold that capability. Only the kernel builds `Grants`.
 - An event may name a capability (`Event::CAPABILITY`). To subscribe to, intercept or publish it, a module needs that grant, on its `ModuleCx` and on every clone of its `Bus`; only the kernel's own handle is unlimited.
 - Capabilities are policy inside one process, not a sandbox (ADR-0005).
+- `kx-module-api` adds `OpenFolder` (P11, ADR-0046): it gates `FolderRevealKey`, whose `FolderPath` takes a plain drive path only, with no part ending in a dot or a space, and prints none in `Debug` (`ports/reveal/tests.rs`).
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |

@@ -21,7 +21,7 @@ pub enum In {
     /// A late starter asked for the light and the view again (`VoiceAsk`).
     Ask,
     /// The panel to draw above the bar, or `None` once it closed; an open panel keeps the bar.
-    Panel(Option<VoicePanel>),
+    Panel(Option<Box<VoicePanel>>),
     /// A note from dictation `take`'s run, or a call's error told as a fault; an older take's notes are dropped.
     Note {
         /// The dictation the run belongs to, as `Out::Open` named it.
@@ -159,8 +159,7 @@ pub enum Lack {
     },
     /// The picked model does not know the language, or its file cannot be read.
     Stranger,
-    /// The picked file is still being read for its fingerprint or its languages; the bar says Stranger's line until
-    /// the port has one of its own.
+    /// The picked file is still being read for its fingerprint or its languages.
     Checking,
     /// No listed model knows the language.
     Unknown,

@@ -31,6 +31,8 @@ pub(crate) struct Rig {
     pub(crate) front: LayoutChanged,
     pub(crate) drives: Vec<Drive>,
     pub(crate) devices: Vec<Device>,
+    /// The check clips' languages the speech port ships, in order.
+    pub(crate) clips: Vec<String>,
     pub(crate) checks: Checks,
     pub(crate) scores: Scores,
     pub(crate) history: History,
@@ -56,6 +58,7 @@ impl Rig {
             },
             drives: vec![drive(r"C:\", 40_000 * MB), drive(r"D:\", 900_000 * MB)],
             devices: vec![cpu(32_768)],
+            clips: ["en", "fr", "ar"].map(String::from).to_vec(),
             checks: Checks::default(),
             scores: Scores::default(),
             history: History::default(),
@@ -139,6 +142,7 @@ impl Rig {
             front: self.front.clone(),
             drives: self.drives.clone(),
             devices: self.devices.clone(),
+            clips: self.clips.clone(),
             checks: self.checks.clone(),
             scores: self.scores.clone(),
             history: self.history.clone(),
@@ -185,6 +189,7 @@ struct Owned {
     front: LayoutChanged,
     drives: Vec<Drive>,
     devices: Vec<Device>,
+    clips: Vec<String>,
     checks: Checks,
     scores: Scores,
     history: History,
@@ -199,7 +204,7 @@ impl Owned {
             front: &self.front,
             drives: &self.drives,
             devices: &self.devices,
-            cores: 8,
+            clips: &self.clips,
             checks: &self.checks,
             scores: &self.scores,
             history: &self.history,
@@ -224,7 +229,7 @@ pub(crate) fn drive(root: &str, free: u64) -> Drive {
     }
 }
 
-/// The processor with `total_mb` of memory.
+/// The processor with 6 real cores and `total_mb` of memory.
 pub(crate) fn cpu(total_mb: u32) -> Device {
     Device {
         kind: DeviceKind::Cpu,
@@ -234,6 +239,8 @@ pub(crate) fn cpu(total_mb: u32) -> Device {
             free_mb: total_mb / 2,
         },
         driver: String::new(),
+        cores: 6,
+        built_in: false,
     }
 }
 
@@ -247,6 +254,8 @@ pub(crate) fn card(free_mb: u32) -> Device {
             free_mb,
         },
         driver: "1.0".into(),
+        cores: 0,
+        built_in: false,
     }
 }
 

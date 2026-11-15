@@ -208,9 +208,9 @@ impl<'a> Bench<'a> {
             free_mb: total_mb,
         };
         match default.not_here(&memory, self.settings.job_mb) {
-            Some(ModelState::NotHere { need_mb, have_mb }) => {
-                Err(Miss::NotHere { need_mb, have_mb })
-            }
+            Some(ModelState::NotHere {
+                need_mb, have_mb, ..
+            }) => Err(Miss::NotHere { need_mb, have_mb }),
             _ => Ok(()),
         }
     }

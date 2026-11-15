@@ -189,6 +189,10 @@ pub trait Speech: Send + Sync {
         ask: CheckAsk,
         tell: Box<dyn Fn(SpeechNote) + Send>,
     ) -> Result<CheckDone, SpeechError>;
+
+    /// The ISO 639 codes of the shipped check clips, in the order a model takes them: a card's check reads the first
+    /// one the model knows.
+    fn clips(&self) -> Vec<String>;
 }
 
 /// The speech service; it needs `Microphone` (ADR-0042 decision 8).

@@ -49,5 +49,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0043 | [One engine runner and a compiled-in models table serve every model](0043-one-engine-runner-and-a-models-table-serve-every-model.md) | Accepted (2026-11-14). Defaults per language, the models folder and checked downloads; supersedes ADR-0007's engine lines and benchmark button. |
 | 0044 | [The engine loads its card and processor parts from the worker's folder only](0044-the-engine-loads-its-card-and-processor-parts-from-the-worker-folder.md) | Accepted (2026-11-14). No `GGML_*` or `TRANSCRIBE_*` variable reaches the worker; the card's checks, Automatic and the fallback. |
 | 0045 | [The dictation bar takes clicks but never focus](0045-the-dictation-bar-takes-clicks-but-never-focus.md) | Accepted (2026-11-14). An ownerless, guarded window; supersedes ADR-0013's click-through line for the caption bar. |
+| 0046 | [The voice module opens its models folder through a reveal service](0046-the-voice-module-opens-its-models-folder-through-a-reveal-service.md) | Accepted (2026-11-15). Adds `FolderReveal` and `OpenFolder`, held by the voice module alone; plain local folders only, explored by the running Explorer. |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.

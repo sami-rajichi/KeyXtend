@@ -23,6 +23,8 @@ fn card(id: &str, free_mb: u32) -> Device {
         name,
         memory,
         driver: "1.0".into(),
+        cores: 0,
+        built_in: false,
     }
 }
 

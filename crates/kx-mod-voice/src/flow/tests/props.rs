@@ -163,7 +163,7 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
         }
         Step::Again => rig.again(),
         Step::Over(over) => rig.click(VoiceClick::Over(*over)),
-        Step::Panel(open) => rig.on(In::Panel(open.then(panel))),
+        Step::Panel(open) => rig.on(In::Panel(open.then(|| Box::new(panel())))),
         Step::Field(kind, box_id) => rig.field(*kind, *box_id),
         Step::Elsewhere => rig.on(In::Elsewhere),
         Step::Session(note) => rig.on(In::Session(*note)),

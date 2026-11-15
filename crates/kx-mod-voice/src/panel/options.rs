@@ -3,7 +3,7 @@
 
 use std::sync::LazyLock;
 
-use kx_module_api::ports::{Ends, Hundredths, OptionRow, OptionValue};
+use kx_module_api::ports::{Ends, Hundredths, OptionRow, OptionUnit, OptionValue};
 use serde::Deserialize;
 use toml::{Table, Value};
 
@@ -52,6 +52,8 @@ pub struct Opt {
     /// 0 reads as the processor's real cores.
     #[serde(default)]
     pub auto: bool,
+    /// How a number reads; only numbers have one.
+    pub unit: Option<OptionUnit>,
 }
 
 /// The rows in order; none when `options.toml` does not parse, which a test rules out.
@@ -78,9 +80,10 @@ pub fn changed(settings: &VoiceSettings) -> u16 {
 }
 
 impl Opt {
-    /// Its row for the page, with `cores` for what 0 threads means; `None` for a key the settings lack.
+    /// Its row for the page, with `cores` for what 0 threads means once the processor is read, else Auto with 0; `None`
+    /// for a key the settings lack or a number with no unit.
     #[must_use]
-    pub fn row(&'static self, table: &Table, cores: u16) -> Option<OptionRow> {
+    pub fn row(&'static self, table: &Table, cores: Option<u16>) -> Option<OptionRow> {
         let now = table.get(&self.key)?;
         let ends = || Ends {
             low: self.moved(table, false).is_none(),
@@ -90,10 +93,11 @@ impl Opt {
             Kind::Switch => OptionValue::Switch(on(now)),
             Kind::Number => {
                 let value = now.as_integer().and_then(|v| u32::try_from(v).ok())?;
-                let auto = (self.auto && value == 0).then_some(u32::from(cores));
+                let auto = (self.auto && value == 0).then(|| u32::from(cores.unwrap_or_default()));
                 OptionValue::Number {
                     value,
                     auto,
+                    unit: self.unit?,
                     ends: ends(),
                 }
             }

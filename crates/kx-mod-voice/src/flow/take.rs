@@ -9,12 +9,10 @@ use kx_module_api::{LINE_BREAKS, Redacted, Secret, Zeroizing, is_arabic, is_hidd
 
 use super::{Out, Ready, RunCall, State};
 
-/// A keyboard language: its ISO 639 code and its name for the bar.
+/// A keyboard language as the bar and its notes show it, with its ISO 639 code.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Lang {
-    /// The code; empty when unknown.
-    pub(super) iso: String,
-    /// The name the bar and its notes show.
+    /// The name, the code and the way.
     pub(super) shown: VoiceLang,
 }
 
@@ -23,13 +21,16 @@ impl Lang {
     pub(super) fn unknown() -> Self {
         let shown = VoiceLang {
             name: String::new(),
+            iso: String::new(),
             rtl: false,
             arabic: false,
         };
-        Self {
-            iso: String::new(),
-            shown,
-        }
+        Self { shown }
+    }
+
+    /// The code; empty when unknown.
+    pub(super) fn iso(&self) -> &str {
+        &self.shown.iso
     }
 }
 
@@ -37,13 +38,11 @@ impl From<&LayoutChanged> for Lang {
     fn from(layout: &LayoutChanged) -> Self {
         let shown = VoiceLang {
             name: layout.name.clone(),
+            iso: layout.iso.clone(),
             rtl: layout.rtl,
             arabic: is_arabic(&layout.name),
         };
-        Self {
-            iso: layout.iso.clone(),
-            shown,
-        }
+        Self { shown }
     }
 }
 

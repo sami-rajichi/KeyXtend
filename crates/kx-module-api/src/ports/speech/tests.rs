@@ -79,6 +79,33 @@ fn the_device_pick_reads_and_writes_auto_cpu_or_a_card() {
 }
 
 #[test]
+fn a_device_carries_the_processors_cores_and_the_built_in_mark() {
+    let memory = Memory {
+        total_mb: 16_384,
+        free_mb: 9_626,
+    };
+    let cpu = Device {
+        kind: DeviceKind::Cpu,
+        name: "Ryzen 7".into(),
+        memory,
+        cores: 8,
+        built_in: false,
+        driver: String::new(),
+    };
+    let shared = Device {
+        kind: DeviceKind::Card(CardId::new("Vulkan1").unwrap()),
+        cores: 0,
+        built_in: true,
+        driver: "31.0".into(),
+        ..cpu.clone()
+    };
+    let shown = format!("{cpu:?}{shared:?}");
+    for part in ["cores: 8", "built_in: false", "cores: 0", "built_in: true"] {
+        assert!(shown.contains(part), "{shown} lacks {part}");
+    }
+}
+
+#[test]
 fn a_piece_prints_its_place_and_never_its_text() {
     let note = SpeechNote::Piece {
         index: 2,

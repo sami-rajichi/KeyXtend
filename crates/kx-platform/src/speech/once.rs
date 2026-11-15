@@ -57,12 +57,8 @@ pub(super) fn check<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>>(
     ask: &CheckAsk,
     tell: Tell,
 ) -> Result<CheckDone, SpeechError> {
-    let clip = shared
-        .assets
-        .clips
-        .get(&ask.clip)
-        .ok_or(SpeechError::NoFile)?;
-    let clip = path(clip)?;
+    let clip = (shared.assets.clips.iter()).find(|(lang, _)| *lang == ask.clip);
+    let clip = path(&clip.ok_or(SpeechError::NoFile)?.1)?;
     let threads = threads(ask.threads, shared.hardware.cores());
     let model = model_of(&ask.model, Some(&ask.card), threads)?;
     let make = move |id| VoiceAsk::Check { id, model, clip };

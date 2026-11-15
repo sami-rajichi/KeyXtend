@@ -1,5 +1,5 @@
 //! The Models page: each model that knows the language in front with its size and state, a download's progress, the
-//! best model's note and the models folder with its drive's room.
+//! best model's note, the slow-PC line and the models folder with its drive's room.
 
 use crate::Redacted;
 
@@ -14,8 +14,10 @@ pub enum ModelState {
     NotHere {
         /// What it needs, in MB.
         need_mb: u32,
-        /// What this PC has, in MB.
+        /// What this PC has in all, in MB, which the fit goes by.
         have_mb: u32,
+        /// What is free on this PC now, in MB, which the reason shows.
+        free_mb: u32,
     },
     /// A file no row names: Other file, not checked.
     Other,
@@ -69,6 +71,8 @@ pub struct ModelsSheet {
     pub best: Option<String>,
     /// The language has no tested order of its own, so the general order is used.
     pub untested: bool,
+    /// The language's default is Not for this PC, so the page says local models will be very slow here.
+    pub slow: bool,
     /// The models folder, with Change and Open; `None` until the first download asks for it.
     pub folder: Option<FolderLine>,
     /// The folder offered at the first download, while that question shows.

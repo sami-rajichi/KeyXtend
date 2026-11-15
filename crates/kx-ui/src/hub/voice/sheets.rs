@@ -9,8 +9,8 @@ use crate::i18n::clean;
 use crate::i18n::keys::vars::{DONE, FREE, LANG, NEED, PATH, TOTAL};
 use crate::i18n::keys::{
     VOICE_BEST, VOICE_DELETE_FILE, VOICE_DRIVES, VOICE_FOLDER, VOICE_FOLDER_OFFER, VOICE_FOLDERS,
-    VOICE_GOT, VOICE_MARK, VOICE_PAUSED, VOICE_UNFIT, VOICE_UNTESTED, VoiceMark, fetch_button_id,
-    mark_id,
+    VOICE_GOT, VOICE_MARK, VOICE_PAUSED, VOICE_SLOW, VOICE_UNFIT, VOICE_UNTESTED, VoiceMark,
+    fetch_button_id, mark_id,
 };
 use kx_module_api::ports::{
     FetchButton, FetchState, FolderLine, FolderList, ModelRow, ModelState, ModelsSheet,
@@ -43,8 +43,8 @@ pub(super) struct Room {
     buttons: Vec<Button>,
 }
 
-/// The Models page: the best model's note, the rows, the folder line, and Delete file, Download and Use, or the first
-/// download's folder question.
+/// The Models page: the best model's note, the rows, the slow-PC line, the folder line, and Delete file, Download and
+/// Use, or the first download's folder question.
 pub(super) fn models(cx: &Cx<'_>, m: &ModelsSheet) -> Page {
     let t = cx.t;
     let lang = || (LANG, cx.lang());
@@ -56,6 +56,7 @@ pub(super) fn models(cx: &Cx<'_>, m: &ModelsSheet) -> Page {
     let sheet = Sheet::Models {
         rows: rows.collect(),
         untested: m.untested.then(|| t.voice_with(VOICE_UNTESTED, &[lang()])),
+        slow: m.slow.then(|| t.voice_with(VOICE_SLOW, &[lang()])),
         room,
     };
     let mut page = Page::new(
@@ -94,11 +95,12 @@ fn model(t: &I18n, r: &ModelRow, at: usize) -> ModelView {
         ModelState::Ready | ModelState::Other if r.used => vec![Some(VoiceMark::Used), default],
         ModelState::Ready => vec![default, Some(VoiceMark::Ready)],
         ModelState::Missing => vec![default, Some(VoiceMark::Download)],
-        ModelState::NotHere { need_mb, have_mb } => {
-            // Until the port carries free memory, `$free` shows the total the module compared against.
+        ModelState::NotHere {
+            need_mb, free_mb, ..
+        } => {
             let args = [
                 (NEED, t.voice_memory(need_mb)),
-                (FREE, t.voice_memory(have_mb)),
+                (FREE, t.voice_memory(free_mb)),
             ];
             line = t.voice_with(VOICE_UNFIT, &args);
             vec![default, Some(VoiceMark::NotHere)]

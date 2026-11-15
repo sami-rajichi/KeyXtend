@@ -1,8 +1,8 @@
 //! What the voice module declares (ADR-0042 decision 8): the microphone through the speech port, downloads the user
-//! asks for, its sealed store, the focused box and Copy; it never types, as the keyboard stays the only typist.
+//! asks for, its sealed store, the focused box, Copy and its models folder shown (ADR-0046); it never types.
 
 use kx_module_api::ports::{
-    ClipboardWriterKey, FieldWatchKey, ModelFilesKey, SessionWatchKey, SpeechKey,
+    ClipboardWriterKey, FieldWatchKey, FolderRevealKey, ModelFilesKey, SessionWatchKey, SpeechKey,
 };
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
@@ -21,6 +21,7 @@ pub static MANIFEST: Manifest = Manifest {
         SessionWatchKey::ID,
         FieldWatchKey::ID,
         ClipboardWriterKey::ID,
+        FolderRevealKey::ID,
     ],
     provides: &[],
     capabilities: &[
@@ -30,6 +31,7 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::SecretStore,
         Capability::ReadFocusedText,
         Capability::WriteClipboard,
+        Capability::OpenFolder,
     ],
     settings: Some(&SPEC),
 };
@@ -51,9 +53,17 @@ mod tests {
             Capability::SecretStore,
             Capability::ReadFocusedText,
             Capability::WriteClipboard,
+            Capability::OpenFolder,
         ];
         assert_eq!(MANIFEST.capabilities, want);
         assert!(!MANIFEST.capabilities.contains(&Capability::InjectInput));
+    }
+
+    #[test]
+    fn it_shows_its_models_folder_through_the_folder_reveal_alone() {
+        assert!(MANIFEST.requires.contains(&FolderRevealKey::ID));
+        assert_eq!(FolderRevealKey::CAPABILITY, Some(Capability::OpenFolder));
+        assert!(!MANIFEST.capabilities.contains(&Capability::OpenLink));
     }
 
     #[test]
@@ -64,6 +74,7 @@ mod tests {
             SessionWatchKey::CAPABILITY,
             FieldWatchKey::CAPABILITY,
             ClipboardWriterKey::CAPABILITY,
+            FolderRevealKey::CAPABILITY,
         ];
         assert_eq!(MANIFEST.requires.len(), gates.len());
         assert!(

@@ -6,9 +6,9 @@ use std::sync::Arc;
 use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource,
-    ModelFiles, Pictures, Places, PointerHook, PowerDialog, ScrollTarget, SelectionWatch,
-    SessionWatch, Shortcuts, Speech, WebLink, WordPacks,
+    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, FolderReveal, InputInjector,
+    LayoutSource, ModelFiles, Pictures, Places, PointerHook, PowerDialog, ScrollTarget,
+    SelectionWatch, SessionWatch, Shortcuts, Speech, WebLink, WordPacks,
 };
 use kx_platform::boxes::WorkerBoxes;
 use kx_platform::models::WorkerModels;
@@ -24,10 +24,10 @@ use crate::hook::Source;
 use crate::voice::{WinDisk, WinHardware};
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
-    WinFieldWatch, WinGuard, WinHidden, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook,
-    WinMemory, WinPackDisk, WinPlaces, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll,
-    WinSelectionWatch, WinSessionWatch, WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWebLink,
-    WinWordPacks, dirs,
+    WinFieldWatch, WinFolderReveal, WinGuard, WinHidden, WinInjector, WinInstance, WinKeyGuard,
+    WinLayouts, WinLook, WinMemory, WinPackDisk, WinPlaces, WinPointerHook, WinPower, WinReveal,
+    WinScreens, WinScroll, WinSelectionWatch, WinSessionWatch, WinShortcuts, WinSpawner,
+    WinSpeaker, WinTray, WinWebLink, WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -185,6 +185,12 @@ impl WindowsPlatform {
     #[must_use]
     pub fn web_link(&self) -> Arc<dyn WebLink> {
         Arc::new(WinWebLink)
+    }
+
+    /// The folder reveal through the running Explorer, for the app to register under `FolderRevealKey`.
+    #[must_use]
+    pub fn folder_reveal(&self) -> Arc<dyn FolderReveal> {
+        Arc::new(WinFolderReveal)
     }
 
     /// The window guard, for the UI to call on the thread that owns our windows.

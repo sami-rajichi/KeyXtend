@@ -113,7 +113,7 @@ fn the_pointer_over_a_closed_bar_does_not_keep_the_next_one() {
 fn an_open_panel_keeps_the_bar_and_done_ms_starts_again_when_it_closes() {
     let mut rig = Rig::new();
     rig.dictate("bonjour");
-    rig.on(In::Panel(Some(panel())));
+    rig.on(In::Panel(Some(Box::new(panel()))));
     assert_eq!(rig.page.as_ref().unwrap().panel, Some(panel()));
     rig.tick_after(done_ms() * 2);
     assert!(text(&rig.shown()).is_some());

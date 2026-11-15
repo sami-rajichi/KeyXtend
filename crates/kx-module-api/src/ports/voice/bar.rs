@@ -25,6 +25,8 @@ listed! {
 pub struct VoiceLang {
     /// Its name for the user, as `LayoutChanged::name` gives it.
     pub name: String,
+    /// Its ISO 639 code, such as `fr`, as `LayoutChanged::iso` gives it; empty when unknown.
+    pub iso: String,
     /// It is written right to left.
     pub rtl: bool,
     /// It needs the Arabic font.
@@ -121,6 +123,8 @@ pub enum BarHint {
     },
     /// The picked model does not know the language: the gear acts.
     Language(VoiceLang),
+    /// The picked file is still being read for its fingerprint or its languages.
+    Checking,
     /// No listed model knows the language.
     NoLanguage(VoiceLang),
     /// The model does not fit in the memory free now.
@@ -139,6 +143,8 @@ pub enum BarHint {
     Fell,
     /// A download had the wrong size or fingerprint, so its part was deleted.
     Print,
+    /// Another file in the models folder holds the model's name, so nothing was downloaded.
+    Taken,
     /// The drive is full, or under `min_free_mb`, so nothing was downloaded.
     Full,
     /// The models folder is gone, read-only or refused.

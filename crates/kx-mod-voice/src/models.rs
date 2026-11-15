@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use kx_module_api::is_hidden;
-use kx_module_api::ports::{Fingerprint, RESERVED_NAMES, fits_iso};
+use kx_module_api::ports::{Fingerprint, RESERVED_NAMES};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -65,9 +65,6 @@ pub enum TableError {
     /// The general order breaks a rule.
     #[error("the general order is refused: {0}")]
     General(OrderError),
-    /// The check clips are missing, or one is no ISO 639 code or listed twice.
-    #[error("the check clips are missing or malformed")]
-    Clips,
 }
 
 /// The table as written.
@@ -82,8 +79,6 @@ struct Raw {
     runners: Vec<String>,
     /// The hex digits of the commit each address names.
     revision: usize,
-    /// The languages of the card check's clips, in the order a model takes them.
-    clips: Vec<String>,
     /// The rows.
     models: Vec<row::RawRow>,
     /// The tested orders.
@@ -111,8 +106,6 @@ pub struct Table {
     rows: Vec<Row>,
     /// The extensions a model file may have.
     exts: Vec<String>,
-    /// The languages of the card check's clips, in the order a model takes them.
-    clips: Vec<String>,
     /// Each tested language's order.
     orders: BTreeMap<String, order::Order>,
     /// The order for a language without its own.
@@ -135,30 +128,12 @@ impl Table {
         let rows = checked_rows(raw.models, &rules)?;
         let orders = order::orders(raw.orders, &rows)?;
         let general = order::general(&raw.general, &rows, &orders)?;
-        let once = |(at, c): (usize, &String)| fits_iso(c) && !raw.clips[..at].contains(c);
-        if raw.clips.is_empty() || !raw.clips.iter().enumerate().all(once) {
-            return Err(TableError::Clips);
-        }
         Ok(Self {
             rows,
             exts: raw.exts,
-            clips: raw.clips,
             orders,
             general,
         })
-    }
-
-    /// The languages of the card check's clips, in the order a model takes them.
-    #[must_use]
-    pub fn clips(&self) -> &[String] {
-        &self.clips
-    }
-
-    /// The clip `row` takes for its card check: the first whose language it knows.
-    #[must_use]
-    pub fn clip_for(&self, row: &Row) -> Option<&str> {
-        let known = |c: &&String| row.code(c).is_some();
-        self.clips.iter().find(known).map(String::as_str)
     }
 
     /// The rows, in the table's order.

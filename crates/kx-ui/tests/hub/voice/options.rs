@@ -4,7 +4,7 @@
 use super::{acting, heard, panel_json};
 use crate::Rig;
 use crate::texts::rig;
-use kx_module_api::ports::{Ends, Hundredths, OptionRow, OptionValue, VoiceSheet};
+use kx_module_api::ports::{Ends, Hundredths, OptionRow, OptionUnit, OptionValue, VoiceSheet};
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -25,13 +25,14 @@ const fn row(key: &'static str, value: OptionValue) -> OptionRow {
     }
 }
 
-/// A number row.
-const fn number(key: &'static str, value: u32) -> OptionRow {
+/// A number row in `unit`.
+const fn number(key: &'static str, value: u32, unit: OptionUnit) -> OptionRow {
     row(
         key,
         OptionValue::Number {
             value,
             auto: None,
+            unit,
             ends: MID,
         },
     )
@@ -44,8 +45,8 @@ fn page(rows: Vec<OptionRow>) -> Value {
     panel_json(&rig, &heard, acting(VoiceSheet::Options(rows), &[]))
 }
 
-/// Each `(key, kind)` of the voice module's rows.
-fn shipped() -> Vec<(&'static str, String)> {
+/// Each `(key, kind, unit)` of the voice module's rows; only a number has a unit.
+fn shipped() -> Vec<(&'static str, String, Option<OptionUnit>)> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(OPTIONS);
     let text = std::fs::read_to_string(path).expect("the options table reads");
     let table: toml::Table = toml::from_str(&text).expect("the options table parses");
@@ -53,14 +54,17 @@ fn shipped() -> Vec<(&'static str, String)> {
     let field = |r: &toml::Value, k: &str| r[k].as_str().unwrap_or_default().to_owned();
     // Each key lives for the test run, as the module's own keys are static.
     let key = |r: &toml::Value| -> &'static str { field(r, "key").leak() };
-    rows.iter().map(|r| (key(r), field(r, "kind"))).collect()
+    let unit = |r: &toml::Value| r.get("unit").and_then(|u| u.clone().try_into().ok());
+    rows.iter()
+        .map(|r| (key(r), field(r, "kind"), unit(r)))
+        .collect()
 }
 
 #[test]
 fn every_shipped_row_has_its_label_and_reads_in_every_language() {
     let rows: Vec<OptionRow> = shipped()
         .into_iter()
-        .map(|(key, kind)| match kind.as_str() {
+        .map(|(key, kind, unit)| match kind.as_str() {
             "switch" => row(key, OptionValue::Switch(true)),
             "factor" => row(
                 key,
@@ -76,7 +80,7 @@ fn every_shipped_row_has_its_label_and_reads_in_every_language() {
                     ends: MID,
                 },
             ),
-            _ => number(key, 1),
+            _ => number(key, 1, unit.expect("a number names its unit")),
         })
         .collect();
     assert!(rows.len() > 20, "the table is read: {}", rows.len());
@@ -109,23 +113,22 @@ fn reads(cases: Vec<(OptionRow, &str)>) {
 }
 
 #[test]
-fn each_number_reads_with_its_unit() {
+fn each_number_reads_with_the_unit_its_row_names_whatever_its_key() {
+    use OptionUnit as U;
     reads(vec![
-        (number("silence_stop_s", 3), "3 s"),
-        (number("done_ms", 9000), "9 s"),
-        (number("history_max", 50), "50 texts"),
-        (number("voice_max_mb", 1024), "1 GB"),
-        (number("idle_min", 5), "5 min"),
-        (number("record_max_s", 600), "10 min"),
-        (number("record_max_s", 30), "30 s"),
-        (number("nothing_s", 5), "5 s"),
-        (number("debounce_ms", 400), "400 ms"),
-        (number("type_gap_ms", 10), "10 ms"),
-        (number("wave_ms", 300), "300 ms"),
-        (number("min_free_mb", 2048), "2 GB"),
-        (number("card_margin_mb", 512), "512 MB"),
-        (number("card_diff", 1), "1 word"),
-        (number("threads", 4), "4"),
+        (number("silence_stop_s", 3, U::Seconds), "3 s"),
+        (number("done_ms", 9000, U::MsAsSeconds), "9 s"),
+        (number("done_ms", 2500, U::MsAsSeconds), "2.5 s"),
+        (number("history_max", 50, U::Texts), "50 texts"),
+        (number("voice_max_mb", 1024, U::Mb), "1 GB"),
+        (number("idle_min", 5, U::Minutes), "5 min"),
+        (number("record_max_s", 600, U::SecondsOrMinutes), "10 min"),
+        (number("record_max_s", 30, U::SecondsOrMinutes), "30 s"),
+        (number("debounce_ms", 400, U::Ms), "400 ms"),
+        (number("card_margin_mb", 512, U::Mb), "512 MB"),
+        (number("card_diff", 1, U::Words), "1 word"),
+        (number("threads", 4, U::Count), "4"),
+        (number("threads", 4, U::Minutes), "4 min"),
     ]);
 }
 
@@ -133,7 +136,10 @@ fn each_number_reads_with_its_unit() {
 fn whole_seconds_and_milliseconds_take_their_arabic_plural() {
     let (rig, _face, _host) = rig("en", "ar", "auto");
     let heard = heard(&rig);
-    let rows = vec![number("done_ms", 9000), number("type_gap_ms", 5)];
+    let rows = vec![
+        number("done_ms", 9000, OptionUnit::MsAsSeconds),
+        number("type_gap_ms", 5, OptionUnit::Ms),
+    ];
     let p = panel_json(&rig, &heard, acting(VoiceSheet::Options(rows), &[]));
     let value = |at: usize| p["sheet"]["rows"][at]["value"].clone();
     assert_eq!(value(0), "9 ثوانٍ", "not 9 ثانية");
@@ -142,9 +148,10 @@ fn whole_seconds_and_milliseconds_take_their_arabic_plural() {
 
 #[test]
 fn auto_a_factor_a_place_and_a_switch_read_as_their_words() {
-    let auto = OptionValue::Number {
+    let auto = |cores| OptionValue::Number {
         value: 0,
-        auto: Some(8),
+        auto: Some(cores),
+        unit: OptionUnit::Count,
         ends: MID,
     };
     let factor = OptionValue::Factor {
@@ -156,7 +163,8 @@ fn auto_a_factor_a_place_and_a_switch_read_as_their_words() {
         ends: MID,
     };
     reads(vec![
-        (row("threads", auto), "Auto (8)"),
+        (row("threads", auto(8)), "Auto (8)"),
+        (row("threads", auto(0)), "Automatic"),
         (row("card_gain", factor), "1.5×"),
         (row("place", place), "Top of the screen"),
         (row("sounds", OptionValue::Switch(false)), "Off"),
@@ -169,10 +177,11 @@ fn a_switch_reads_on_and_a_stepper_names_its_ends() {
         low: true,
         high: false,
     };
-    let mut dim = number("history_max", 1);
+    let mut dim = number("history_max", 1, OptionUnit::Texts);
     dim.value = OptionValue::Number {
         value: 1,
         auto: None,
+        unit: OptionUnit::Texts,
         ends: low,
     };
     dim.live = false;

@@ -55,7 +55,7 @@ impl Fetches {
     /// Starts `row`'s download into `folder` once its drive among `drives` has the room; gives the ask to fetch.
     ///
     /// # Errors
-    /// The note to show: `Folder` without a folder or its drive, `Full` under the file and `min_free_mb`, `Print` while
+    /// The note to show: `Folder` without a folder or its drive, `Full` under the file and `min_free_mb`, `Taken` while
     /// another file holds its name, as the job never replaces a file.
     pub fn start(
         &mut self,
@@ -65,7 +65,7 @@ impl Fetches {
         settings: &VoiceSettings,
     ) -> Result<FetchAsk, BarHint> {
         if folder.taken(row).is_some() {
-            return Err(BarHint::Print);
+            return Err(BarHint::Taken);
         }
         let min_free_mb = settings.min_free_mb;
         let refused = |e| hint(e).unwrap_or(BarHint::Net);

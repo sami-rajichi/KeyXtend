@@ -161,7 +161,8 @@ fn a_name_another_file_holds_starts_no_download() {
     let mut fetches = Fetches::default();
     assert_eq!(
         fetches.start(row, &folder, &roomy(), &settings()),
-        Err(BarHint::Print)
+        Err(BarHint::Taken),
+        "the file in the way has its own note"
     );
     assert!(!fetches.busy());
 }

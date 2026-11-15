@@ -13,8 +13,8 @@ pub use bar::{
 pub use panel::{
     CardCheck, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
     DeviceRow, DeviceSheet, Ends, FailedCheck, FetchState, FolderLine, FolderList, HistoryRow,
-    HistorySheet, ModelRow, ModelState, ModelsSheet, OptionRow, OptionValue, RunStep, VoiceHome,
-    VoicePanel, VoiceSheet, VoiceTab,
+    HistorySheet, ModelRow, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, RunStep,
+    VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
 };
 
 use crate::{Capability, Event, Secret};

@@ -232,12 +232,11 @@ impl Hub {
         self.voice_send(&VoiceAct { round, click: rows });
     }
 
-    /// Compare's set text in the language of the layout in front, which the user reads aloud; `None` for a language
-    /// the UI has no text for. The panel's own words may be pinned to another language; the face names the layout
-    /// until `VoiceLang` carries its code.
+    /// Compare's set text in the panel's language, the layout's in front, which the user reads aloud; `None` before a
+    /// panel or for a language the UI has no text for. The panel's own words may be pinned to another language.
     fn set_text(&self) -> Option<String> {
-        let face = self.lock().face.clone()?;
-        let lang = spoken(&face.lang())?;
+        let iso = self.voice().page.as_ref()?.panel.as_ref()?.lang.iso.clone();
+        let lang = spoken(&iso)?;
         let shown = self.i18n();
         let other;
         let t = if shown.lang().tag == lang.tag {

@@ -1,6 +1,33 @@
-//! The Options page: switches, steppers and choices, each with the facts its value and dimmed ends need.
+//! The Options page: switches, steppers and choices, each with the facts its value, its unit and dimmed ends need.
 
 use crate::ports::Hundredths;
+use serde::Deserialize;
+
+listed! {
+    /// How a whole number reads, which names its text; the module's options table gives each number one.
+    #[derive(Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum OptionUnit ("Every unit.") {
+        /// A bare count, as `threads`.
+        Count,
+        /// Whole seconds.
+        Seconds,
+        /// Milliseconds, read as seconds.
+        MsAsSeconds,
+        /// Seconds, read in minutes from one whole minute.
+        SecondsOrMinutes,
+        /// Minutes.
+        Minutes,
+        /// Milliseconds.
+        Ms,
+        /// Binary megabytes, read in gigabytes from one.
+        Mb,
+        /// History's texts.
+        Texts,
+        /// Words.
+        Words,
+    }
+}
 
 /// Where a stepper's or a choice's value stands, so minus or the left chevron dims at the lowest, plus or the right
 /// chevron at the highest.
@@ -19,10 +46,13 @@ pub enum OptionValue {
     Switch(bool),
     /// A whole number with minus and plus.
     Number {
-        /// The value, in the unit its text names.
+        /// The value, in its unit.
         value: u32,
-        /// What 0 stands for now, as `threads`' real cores in Auto (8); `None` when 0 is just 0.
+        /// What 0 stands for now, as `threads`' real cores in Auto (8), and 0 until they are read; `None` when 0 is
+        /// just 0.
         auto: Option<u32>,
+        /// How it reads.
+        unit: OptionUnit,
         /// Where it stands.
         ends: Ends,
     },

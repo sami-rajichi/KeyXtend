@@ -16,14 +16,26 @@ fn devices() -> Vec<Device> {
             total_mb: 16_000,
             free_mb: 9_000,
         },
+        cores: 8,
+        built_in: false,
         driver: String::new(),
     };
     let card = Device {
         kind: DeviceKind::Card(card_id()),
+        cores: 0,
+        built_in: true,
         driver: "31.0".into(),
         ..cpu.clone()
     };
     vec![cpu, card]
+}
+
+#[test]
+fn the_clips_are_none_until_set_then_as_set_in_their_order() {
+    let fake = FakeSpeech::new();
+    assert!(fake.clips().is_empty(), "no clip shipped until set");
+    fake.set_clips(&["fr", "en"]);
+    assert_eq!(fake.clips(), ["fr", "en"]);
 }
 
 fn facts_ask(file: &str) -> FactsAsk {

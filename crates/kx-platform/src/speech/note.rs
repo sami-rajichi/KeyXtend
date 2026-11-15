@@ -1,5 +1,5 @@
 //! The voice job's notes and losses as the speech port tells them: a run's stages, levels, speech, warm-up, pieces,
-//! end and faults; the devices with each card's driver from the system; and a lost worker as `Timeout` or `Gone`.
+//! end and faults; the devices with the system's cores, memory and drivers; and a lost worker as `Timeout` or `Gone`.
 
 use super::Hardware;
 use crate::worker::{Lost, Unsent};
@@ -62,25 +62,33 @@ pub(super) fn unsent(unsent: Unsent) -> SpeechError {
     }
 }
 
-/// The engine's device as the port's, with a card's driver read from the system; built-in graphics serves as a card
-/// until the port tells them apart. A card whose id the port refuses is left out.
+/// The engine's device as the port's: the processor with its real cores and the system's memory reading, a card with
+/// its driver from the system, and built-in graphics as a card with its mark. A card whose id the port refuses is left
+/// out.
 pub(super) fn device(found: kx_ipc::Device, hardware: &dyn Hardware) -> Option<Device> {
-    let kind = match found.kind {
-        Kind::Cpu => DeviceKind::Cpu,
-        Kind::Card | Kind::BuiltIn => DeviceKind::Card(CardId::new(&found.id)?),
-    };
-    let driver = match kind {
-        DeviceKind::Cpu => String::new(),
-        DeviceKind::Card(_) => hardware.driver(&found.name).unwrap_or(found.driver),
-    };
-    let memory = Memory {
+    let engine = Memory {
         total_mb: found.total_mb,
         free_mb: found.free_mb,
+    };
+    let built_in = found.kind == Kind::BuiltIn;
+    let (kind, memory, cores, driver) = match found.kind {
+        Kind::Cpu => {
+            let cores = u16::try_from(hardware.cores()).unwrap_or(u16::MAX);
+            let memory = hardware.memory().unwrap_or(engine);
+            (DeviceKind::Cpu, memory, cores, String::new())
+        }
+        Kind::Card | Kind::BuiltIn => {
+            let card = DeviceKind::Card(CardId::new(&found.id)?);
+            let driver = hardware.driver(&found.name).unwrap_or(found.driver);
+            (card, engine, 0, driver)
+        }
     };
     Some(Device {
         kind,
         name: found.name,
         memory,
+        cores,
+        built_in,
         driver,
     })
 }

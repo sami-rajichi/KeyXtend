@@ -172,6 +172,34 @@ fn an_options_switch_and_stepper_write_their_setting() {
 }
 
 #[test]
+fn the_options_page_reads_the_devices_and_auto_threads_name_the_processors_cores() {
+    let mut rig = Rig::new();
+    let out = rig.click(&VoiceClick::Open(VoiceTab::Options));
+    assert_eq!(out, [Do::Devices]);
+    let threads = |rig: &mut Rig| {
+        let pages = rig.view().unwrap().pages.count;
+        (0..pages).find_map(|_| {
+            let row = options(rig).into_iter().find(|r| r.key == "threads");
+            rig.click(&VoiceClick::Page { back: false });
+            row
+        })
+    };
+    let row = threads(&mut rig).unwrap();
+    assert!(matches!(
+        row.value,
+        OptionValue::Number { auto: Some(6), .. }
+    ));
+    rig.devices.clear();
+    rig.click(&VoiceClick::Button(PanelButton::Back));
+    rig.click(&VoiceClick::Open(VoiceTab::Options));
+    let row = threads(&mut rig).unwrap();
+    assert!(
+        matches!(row.value, OptionValue::Number { auto: Some(0), .. }),
+        "Auto with no count before the processor is read: {row:?}"
+    );
+}
+
+#[test]
 fn a_stepper_under_a_switch_that_is_off_does_nothing() {
     let mut rig = Rig::new();
     rig.click(&VoiceClick::Open(VoiceTab::Options));

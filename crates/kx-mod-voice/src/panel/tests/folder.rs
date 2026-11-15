@@ -100,7 +100,7 @@ fn a_name_another_file_holds_offers_delete_file_not_download() {
     );
     assert!(rig.with(|p, f| p.download(&small.id, f)).is_empty());
     let view = rig.view().unwrap();
-    assert_eq!(view.note, Some(BarHint::Print));
+    assert_eq!(view.note, Some(BarHint::Taken));
     assert!(
         view.acts.contains(&PanelButton::Delete),
         "the row is ticked for Delete file"

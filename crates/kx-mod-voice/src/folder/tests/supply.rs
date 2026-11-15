@@ -15,11 +15,15 @@ fn devices(total_mb: u32, card_free_mb: u32) -> Vec<Device> {
         name: "CPU".into(),
         memory: memory(total_mb, total_mb / 2),
         driver: String::new(),
+        cores: 8,
+        built_in: false,
     };
     let card = Device {
         kind: DeviceKind::Card(card()),
         name: "Card".into(),
         memory: memory(8_192, card_free_mb),
+        cores: 0,
+        built_in: false,
         driver: "1.0".into(),
     };
     vec![cpu, card]

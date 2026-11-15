@@ -2,8 +2,8 @@
 //! pointer hook, the scroll target, the power dialog, the box watch and the sealed store each reach only the modules
 //! whose manifest declares their capability, `KeyboardUi` goes only to the ui and its sources, `ReadFocusedText` only
 //! to the modules that read typed text, and the shortcuts reach the keyboard's layer. `clip` pins the clipboard's
-//! gates and services, `vault` Quick-fill's, `sel` the selection chips', and `tree` keeps the media decoders and the
-//! box formats out of the app.
+//! gates and services, `vault` Quick-fill's, `sel` the selection chips', `folder` the folder reveal's, and `tree`
+//! keeps the media decoders and the box formats out of the app.
 
 use crate::rig::{OS, Rig};
 use keyxtend::boot::{modules, policy};
@@ -26,6 +26,7 @@ use std::sync::Arc;
 
 mod ci;
 mod clip;
+mod folder;
 mod sel;
 mod tree;
 mod vault;

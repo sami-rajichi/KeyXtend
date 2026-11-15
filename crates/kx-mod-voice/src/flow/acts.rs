@@ -64,10 +64,10 @@ impl Flow {
         }
         self.close(out);
         let lang = self.front.clone();
-        let supplied = if lang.iso.is_empty() {
+        let supplied = if lang.iso().is_empty() {
             Err(Lack::Unknown)
         } else {
-            supply.supply(&lang.iso)
+            supply.supply(lang.iso())
         };
         match supplied {
             Ok(ready) => self.open(lang, ready, out),
@@ -99,11 +99,12 @@ impl Flow {
                 BarHint::NoModel { lang: shown, bytes },
                 Some(BarButton::Download),
             ),
-            Lack::Stranger | Lack::Checking => (BarHint::Language(shown), None),
+            Lack::Stranger => (BarHint::Language(shown), None),
+            Lack::Checking => (BarHint::Checking, None),
             Lack::Unknown => (BarHint::NoLanguage(shown), None),
             Lack::NoFit => (BarHint::NoFit, None),
         };
-        self.show_note(hint, act, lang.iso.clone());
+        self.show_note(hint, act, lang.iso().to_owned());
     }
 
     /// Shows a note about language `iso`; `done_ms` starts.
@@ -130,8 +131,8 @@ impl Flow {
 
     /// Nothing was heard: the run ends, cancelled first when `cancel`, and Listen again is offered.
     pub(super) fn nothing(&mut self, cancel: bool, out: &mut Vec<Out>) {
-        let iso =
-            (self.take.as_ref()).map_or_else(|| self.front.iso.clone(), |t| t.lang.iso.clone());
+        let iso = (self.take.as_ref())
+            .map_or_else(|| self.front.iso().to_owned(), |t| t.lang.iso().to_owned());
         self.end_run(cancel, out);
         self.take = None;
         self.show_note(BarHint::Nothing, Some(BarButton::Listen), iso);
@@ -147,7 +148,7 @@ impl Flow {
             out.push(take.call(RunCall::Cancel));
         }
         take.pieces.clear();
-        let iso = take.lang.iso.clone();
+        let iso = take.lang.iso().to_owned();
         self.show_note(BarHint::Cancelled, Some(BarButton::Anyway), iso);
     }
 
@@ -180,7 +181,7 @@ impl Flow {
         let Some(take) = self.take.as_mut() else {
             return;
         };
-        match supply.supply(&take.lang.iso) {
+        match supply.supply(take.lang.iso()) {
             Ok(ready) => {
                 let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
                 take.ready = ready;

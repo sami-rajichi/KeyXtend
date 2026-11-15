@@ -67,12 +67,18 @@ pub fn code_in<'f>(facts: &'f ModelFacts, lang: &str) -> Option<&'f str> {
 }
 
 impl Row {
-    /// Not for this PC, with both numbers, when the row's memory and `job_mb` pass the processor's total memory.
+    /// Not for this PC, with the need, the total and the free memory, when the row's memory and `job_mb` pass the
+    /// processor's total memory.
     #[must_use]
     pub fn not_here(&self, memory: &Memory, job_mb: u32) -> Option<ModelState> {
         let need_mb = self.cpu_mb.saturating_add(job_mb);
-        let have_mb = memory.total_mb;
-        (need_mb > have_mb).then_some(ModelState::NotHere { need_mb, have_mb })
+        let (have_mb, free_mb) = (memory.total_mb, memory.free_mb);
+        let state = ModelState::NotHere {
+            need_mb,
+            have_mb,
+            free_mb,
+        };
+        (need_mb > have_mb).then_some(state)
     }
 }
 

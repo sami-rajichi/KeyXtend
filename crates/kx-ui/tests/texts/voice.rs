@@ -1,5 +1,6 @@
 //! Voice typing's texts in each language: every id the hub words has its text, the owner's and the mock-up's words,
 //! sizes, memory, seconds and factors with the language's marks, Arabic's plural forms, and a note naming its language.
+//! The port's newer notes are in `newer`.
 
 use crate::{all, lang};
 use kx_module_api::ports::{
@@ -12,10 +13,13 @@ use kx_ui::i18n::keys::{
     voice_tab_id,
 };
 
+mod newer;
+
 /// A language as the module names it, by its own name.
 fn named(name: &str) -> VoiceLang {
     VoiceLang {
         name: name.to_owned(),
+        iso: String::new(),
         rtl: false,
         arabic: false,
     }
@@ -36,6 +40,7 @@ fn hints() -> Vec<BarHint> {
             bytes: 1,
         },
         BarHint::Language(lang.clone()),
+        BarHint::Checking,
         BarHint::NoLanguage(lang),
         BarHint::NoFit,
         BarHint::Fault,
@@ -45,6 +50,7 @@ fn hints() -> Vec<BarHint> {
         BarHint::Password,
         BarHint::Fell,
         BarHint::Print,
+        BarHint::Taken,
         BarHint::Full,
         BarHint::Folder,
         BarHint::Net,
@@ -72,7 +78,7 @@ fn keys() -> Vec<String> {
 #[test]
 fn every_id_the_hub_words_has_its_text_in_each_language() {
     let keys = keys();
-    assert_eq!(hints().len(), 20, "every hint is listed");
+    assert_eq!(hints().len(), 22, "every hint is listed");
     for t in all() {
         let missing: Vec<&String> = keys.iter().filter(|k| !t.has(k)).collect();
         assert!(missing.is_empty(), "{}: {missing:?}", t.lang().tag);

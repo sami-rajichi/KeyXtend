@@ -131,6 +131,7 @@ fn run(t: &I18n, r: &CompareRun) -> RunView {
             let text = t.voice_with(&key, &[(WAIT, t.voice_secs(wait_ms))]);
             Hint::new(mark_id(VoiceMark::Done), text)
         }
+        RunStep::Failed => mark(t, VoiceMark::RunFailed),
         RunStep::Writing => mark(t, VoiceMark::Writing),
         RunStep::Waiting => mark(t, VoiceMark::Waiting),
     };

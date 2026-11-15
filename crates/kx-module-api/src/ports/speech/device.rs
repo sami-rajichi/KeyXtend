@@ -87,8 +87,12 @@ pub struct Device {
     pub kind: DeviceKind,
     /// Its name as the system gives it, such as the card's model.
     pub name: String,
-    /// Its memory now.
+    /// Its memory now: the PC's own for the processor, which built-in graphics share.
     pub memory: Memory,
+    /// The processor's real cores, which `threads` 0 means; 0 for a card.
+    pub cores: u16,
+    /// It is built-in graphics, sharing the processor's memory.
+    pub built_in: bool,
     /// Its driver's version, kept with each check; empty for the processor or when unknown.
     pub driver: String,
 }

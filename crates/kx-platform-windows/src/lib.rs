@@ -100,7 +100,7 @@ pub use platform::WindowsPlatform;
 pub use power::WinPower;
 pub use redirect::WinHidden;
 #[cfg(windows)]
-pub use reveal::WinReveal;
+pub use reveal::{WinFolderReveal, WinReveal};
 #[cfg(windows)]
 pub use screen::WinScreens;
 #[cfg(windows)]

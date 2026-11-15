@@ -60,6 +60,7 @@ pub(super) enum Sheet {
     Models {
         rows: Vec<sheets::ModelView>,
         untested: Option<String>,
+        slow: Option<String>,
         room: Option<sheets::Room>,
     },
     Device {

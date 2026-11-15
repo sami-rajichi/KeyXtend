@@ -37,8 +37,10 @@ fn a_model_too_big_for_the_pc_is_not_for_this_pc_with_the_reason() {
         arabic.not_here(&short, job_mb),
         Some(ModelState::NotHere {
             need_mb,
-            have_mb: need_mb - 1
-        })
+            have_mb: need_mb - 1,
+            free_mb: short.free_mb
+        }),
+        "the fit goes by the total, the reason shows the free memory too"
     );
     assert_eq!(
         row("whisper-small-q5km").not_here(&short, job_mb),

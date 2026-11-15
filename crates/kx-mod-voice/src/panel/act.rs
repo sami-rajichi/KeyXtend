@@ -29,7 +29,7 @@ pub struct Check {
 pub enum Do {
     /// The panel closed: draw no panel.
     Close,
-    /// Read the devices again, for their memory now.
+    /// Read the devices again, for their memory now and the processor's cores.
     Devices,
     /// Read the models folder, then call `Panel::scanned`.
     Scan,

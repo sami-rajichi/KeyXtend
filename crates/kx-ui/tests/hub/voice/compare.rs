@@ -1,7 +1,7 @@
 //! Compare models: the set text in the language in front with its models and Start, Cancel while the user reads, each
 //! model's turn, and the results' table with what Compare keeps; a language with no set text asks for free speech.
 
-use super::{acting, button, buttons, english_text, heard, panel, panel_json};
+use super::{acting, button, buttons, coded, english_text, heard, panel, panel_json};
 use crate::Rig;
 use crate::texts::rig;
 use kx_module_api::Redacted;
@@ -65,15 +65,17 @@ fn while_the_user_reads_start_goes_and_cancel_stays() {
     );
 }
 
-/// The set text's sheet for a layout in `layout` with `[ui] language` `setting`.
-fn read_for(layout: &str, setting: &str) -> Value {
-    let (rig, _face, _host) = rig("en", layout, setting);
+/// The set text's sheet on a panel for code `iso`, with `[ui] language` `setting` and a German layout on the face.
+fn read_for(iso: &str, setting: &str) -> Value {
+    let (rig, _face, _host) = rig("en", "de", setting);
     let heard = heard(&rig);
-    panel_json(&rig, &heard, panel(ready(6, false)))["sheet"].clone()
+    let mut panel = panel(ready(6, false));
+    panel.lang = coded(iso);
+    panel_json(&rig, &heard, panel)["sheet"].clone()
 }
 
 #[test]
-fn the_set_text_follows_the_layout_in_front_and_a_language_with_none_speaks_freely() {
+fn the_set_text_follows_the_panels_language_and_a_language_with_none_speaks_freely() {
     let sheet = read_for("fr", "en");
     let text = sheet["text"].as_str().unwrap().to_owned();
     assert!(
@@ -96,17 +98,18 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     };
     let rows = vec![
         run("Whisper small", RunStep::Done { wait_ms: 2100 }),
+        run("Parakeet", RunStep::Failed),
         run("Whisper medium", RunStep::Writing),
         run("Cohere", RunStep::Waiting),
     ];
     let sheet = VoiceSheet::Compare(CompareSheet::Running {
-        at: 2,
-        of: 3,
+        at: 3,
+        of: 4,
         name: name("Whisper medium"),
         rows,
     });
     let p = panel_json(&rig, &heard, acting(sheet, &[PanelButton::Cancel]));
-    let top = json!({"id": "step", "text": "Model 2 of 3", "name": "Whisper medium"});
+    let top = json!({"id": "step", "text": "Model 3 of 4", "name": "Whisper medium"});
     assert_eq!(p["top"], top);
     let rows = &p["sheet"]["rows"];
     assert_eq!(
@@ -115,9 +118,13 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     );
     assert_eq!(
         rows[1]["mark"],
+        json!({"id": "run-failed", "text": "Failed"})
+    );
+    assert_eq!(
+        rows[2]["mark"],
         json!({"id": "writing", "text": "Writing…"})
     );
-    assert_eq!(rows[2]["mark"]["id"], "waiting");
+    assert_eq!(rows[3]["mark"]["id"], "waiting");
     assert_eq!(
         buttons(&p["foot"]),
         [button("button", "cancel", "Cancel", true, "plain")],

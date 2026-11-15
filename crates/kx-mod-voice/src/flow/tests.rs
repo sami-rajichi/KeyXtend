@@ -92,6 +92,7 @@ fn layout(iso: &str, name: &str, rtl: bool) -> LayoutChanged {
 fn french() -> VoiceLang {
     VoiceLang {
         name: "Français".into(),
+        iso: "fr".into(),
         rtl: false,
         arabic: false,
     }

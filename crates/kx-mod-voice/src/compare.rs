@@ -10,7 +10,9 @@ pub use act::{Act, Entrant, Line, Plan};
 use std::collections::BTreeMap;
 
 use kx_module_api::Secret;
-use kx_module_api::ports::{BarHint, CardId, SpeechAsk, SpeechDone, SpeechNote, SpeechStage};
+use kx_module_api::ports::{
+    BarHint, CardId, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
+};
 
 use crate::VoiceSettings;
 use crate::flow::{Lend, RunCall};
@@ -29,11 +31,15 @@ enum Stage {
     Results,
 }
 
-/// A model's turn: the model and its ask.
+/// Each model of a run with where it stands, in turn order.
+pub type Runs<'a> = Vec<(&'a Entrant, RunStep)>;
+
+/// A model's turn: the model, its ask and where it stands.
 #[derive(Clone, Debug)]
 struct Turn {
     entrant: Entrant,
     ask: SpeechAsk,
+    step: RunStep,
 }
 
 /// Compare's state.
@@ -62,6 +68,7 @@ impl Compare {
                 entrant.ready.card.clone(),
             ),
             entrant: entrant.clone(),
+            step: RunStep::Waiting,
         };
         self.turns = plan.entrants.iter().map(turn).collect();
         self.reset();
@@ -165,17 +172,14 @@ impl Compare {
         }
     }
 
-    /// The models to run, the one writing (from 0; `None` while the recording ends) and the results so far.
+    /// The one writing (from 0; `None` while the recording ends), and each model to run with where it stands.
     #[must_use]
-    pub fn running(&self) -> Option<(Option<usize>, Vec<&Entrant>, &[Line])> {
+    pub fn running(&self) -> Option<(Option<usize>, Runs<'_>)> {
         let Stage::Running(at) = self.stage else {
             return None;
         };
-        Some((
-            at,
-            self.turns.iter().map(|t| &t.entrant).collect(),
-            &self.lines,
-        ))
+        let runs = self.turns.iter().map(|t| (&t.entrant, t.step));
+        Some((at, runs.collect()))
     }
 
     /// The results shown, once the run ended.
@@ -235,12 +239,13 @@ impl Compare {
 
     /// Model `at`'s turn, or the end once every model ran.
     fn next(&mut self, at: usize) -> Vec<Act> {
-        let Some(turn) = self.turns.get(at) else {
+        let Some(turn) = self.turns.get_mut(at) else {
             return self.finish();
         };
-        let call = self.call(RunCall::Again(turn.ask.clone()));
+        turn.step = RunStep::Writing;
+        let ask = turn.ask.clone();
         self.stage = Stage::Running(Some(at));
-        vec![call]
+        vec![self.call(RunCall::Again(ask))]
     }
 
     /// Ends the run, cancelled first when `cancel`; the page goes back to the set text.

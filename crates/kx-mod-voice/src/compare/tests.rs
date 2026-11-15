@@ -5,7 +5,7 @@ use super::*;
 use crate::flow::Ready;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardId, CardUse, Date, Fingerprint, SpeechError, SpeechModel, SpeechStage,
+    CardId, CardUse, Date, Fingerprint, RunStep, SpeechError, SpeechModel, SpeechStage,
 };
 use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
@@ -198,6 +198,14 @@ fn one_models_fault_does_not_stop_the_others() {
     compare.note(take, done(0, 0));
     let next = compare.note(take, SpeechNote::Fault(SpeechError::BadFile));
     assert_eq!(agains(&next)[0].model, Some(entrant(2, false).ready.model));
+    let (at, runs) = compare.running().unwrap();
+    let steps: Vec<RunStep> = runs.iter().map(|(_, step)| *step).collect();
+    assert_eq!(at, Some(1));
+    assert_eq!(
+        steps,
+        [RunStep::Failed, RunStep::Writing],
+        "it stays listed"
+    );
     compare.note(take, piece(SET));
     compare.note(take, done(900, 800));
     let names: Vec<String> = compare

@@ -47,6 +47,7 @@ mod places;
 mod pointer;
 mod power;
 mod random;
+mod reveal;
 mod scroll;
 mod sealed;
 mod selection;
@@ -122,6 +123,7 @@ pub use pointer::{
 };
 pub use power::{PowerAsk, PowerAsked, PowerChanged, PowerDialog, PowerDialogKey, PowerError};
 pub use random::{Random, RandomError, RandomKey};
+pub use reveal::{FolderError, FolderPath, FolderReveal, FolderRevealKey};
 pub use scroll::{
     Aim, Dir, Reach, ScrollAimed, ScrollAsk, ScrollChanged, ScrollConfig, ScrollError, ScrollPage,
     ScrollPeek, ScrollRun, ScrollStop, ScrollTap, ScrollTarget, ScrollTargetKey, TargetId,
@@ -151,9 +153,9 @@ pub use voice::{
     BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CompareRow, CompareRun,
     CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, FailedCheck,
     FetchButton, FetchState, FolderLine, FolderList, HistoryRow, HistorySheet, Listening, ModelRow,
-    ModelState, ModelsSheet, OptionRow, OptionValue, PanelButton, RunStep, TextAsk, TextDone,
-    VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLit,
-    VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
+    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, TextAsk,
+    TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel,
+    VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

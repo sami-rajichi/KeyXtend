@@ -1,17 +1,21 @@
-//! The voice hosts' Windows side (ADR-0042, ADR-0044): the processor's real cores and each card's driver version for
-//! the speech host, the disk for the models host, and the session watch's adapter lives in `session`.
+//! The voice hosts' Windows side (ADR-0042, ADR-0044): the processor's real cores, the PC's memory and each card's
+//! driver version for the speech host, the disk for the models host, and the session watch's adapter lives in
+//! `session`.
 
 mod cards;
 mod cores;
 mod disk;
+mod memory;
 
 pub use disk::WinDisk;
 #[cfg(test)]
 pub(crate) use disk::make_guarded;
 
+use kx_module_api::ports::Memory;
 use kx_platform::speech::Hardware;
 
-/// What Windows tells the speech host: the real cores, counted once, and each card's driver as DXGI reads it.
+/// What Windows tells the speech host: the real cores, counted once, the memory at each read, and each card's driver as
+/// DXGI reads it.
 #[derive(Clone, Copy, Debug)]
 pub struct WinHardware {
     cores: usize,
@@ -36,6 +40,10 @@ impl Default for WinHardware {
 impl Hardware for WinHardware {
     fn cores(&self) -> usize {
         self.cores
+    }
+
+    fn memory(&self) -> Option<Memory> {
+        memory::now()
     }
 
     fn driver(&self, name: &str) -> Option<String> {

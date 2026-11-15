@@ -170,9 +170,9 @@ impl G22Bench {
         Ok(())
     }
 
-    /// One clip for each language the table has a check clip in, each a plain name with words its rules count.
+    /// One clip for each language the table has a tested order for, each a plain name with words its rules count.
     fn check_clips(&self, table: &Table) -> Result<(), String> {
-        let want: BTreeSet<&str> = table.clips().iter().map(String::as_str).collect();
+        let want: BTreeSet<&str> = table.tested().collect();
         if self
             .clips
             .keys()

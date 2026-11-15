@@ -15,10 +15,10 @@ use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
     DEFAULT_LANGUAGE, FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock,
-    FakeFieldWatch, FakeInjector, FakeLayoutSource, FakePictures, FakePlaces, FakePlatform,
-    FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget, FakeSealedStore,
-    FakeSelectionWatch, FakeShelf, FakeShortcuts, FakeSystemLook, FakeTray, FakeWebLink,
-    FakeWordPacks,
+    FakeFieldWatch, FakeFolderReveal, FakeInjector, FakeLayoutSource, FakePictures, FakePlaces,
+    FakePlatform, FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget,
+    FakeSealedStore, FakeSelectionWatch, FakeShelf, FakeShortcuts, FakeSystemLook, FakeTray,
+    FakeWebLink, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -92,6 +92,8 @@ pub struct Rig {
     pub sel: FakeSelectionWatch,
     /// Behind the web link, which records each link and opens none.
     pub web: Arc<FakeWebLink>,
+    /// Behind the folder reveal, which records each folder it shows.
+    pub folders: Arc<FakeFolderReveal>,
     /// Behind the system look, in `OS` until a test sets another language.
     pub look: Arc<FakeSystemLook>,
 }
@@ -134,6 +136,7 @@ impl Rig {
             places: FakePlaces::new(),
             sel: FakeSelectionWatch::new(),
             web: Arc::new(FakeWebLink::new()),
+            folders: Arc::new(FakeFolderReveal::new()),
             look: Arc::new(FakeSystemLook::new()),
         }
     }
@@ -181,6 +184,7 @@ impl Rig {
             places: Arc::new(self.places.clone()),
             selection: Arc::new(self.sel.clone()),
             link: self.web.clone(),
+            folders: self.folders.clone(),
         };
         let mut ports = ports(self.tray.clone());
         ports.reveal = self.reveal.clone();

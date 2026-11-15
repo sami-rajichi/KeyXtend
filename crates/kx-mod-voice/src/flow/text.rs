@@ -96,7 +96,7 @@ impl Flow {
         out.push(Out::Keep(Kept {
             take: take.id,
             text: secret(text),
-            lang: take.lang.iso.clone(),
+            lang: take.lang.iso().to_owned(),
             model: take.ready.name.clone(),
         }));
         if voice && !take.kept && take.open && take.held {

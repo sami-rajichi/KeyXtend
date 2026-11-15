@@ -1,7 +1,7 @@
 # Security note: kx-mod-voice
 
 - **Owner:** product owner
-- **Last review:** 2026-11-15 (P11 task 19: the models folder, the downloads, Compare and the Voice panel's state, reviewed and fixed; before it task 18: History with its recordings, the counts, the card checks, Compare's numbers and the sealed store; before it task 16: the models table, the orders, the device rule, the strict scorer and `[voice]` with its per-language pick repair)
+- **Last review:** 2026-11-15 (P11 task 14 part b: `OpenFolder`, the clips' languages from the speech port and the port's new notes; before it task 19: the models folder, the downloads, Compare and the Voice panel's state, reviewed and fixed; before it task 18: History with its recordings, the counts, the card checks, Compare's numbers and the sealed store; before it task 16: the models table, the orders, the device rule, the strict scorer and `[voice]` with its per-language pick repair)
 - **Status:** Draft
 - **Scope:** `crates/kx-mod-voice`: the manifest, the `[voice]` settings, the models table (`models.toml`, `models`), the device rule (`device`) and the scorer (`score.toml`, `score`). History, the counts and the store (`history`, `counts`, `store`), the models folder (`folder`), the downloads (`fetch`), Compare (`compare`) and the panel's state (`panel`, `view`, `options.toml`) are pure parts the actor wires in task 20, which extends this note. It runs inside the uiAccess `keyxtend` process; the speech jobs and downloads run in `keyxtend-worker` (ADR-0042).
 
@@ -14,6 +14,7 @@
 | `SecretStore` | It seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers. | The module cannot keep History, recordings, counts, card checks or Compare's numbers. |
 | `ReadFocusedText` | It gates `FieldWatchKey`, so a password box shows dots, no Copy, and keeps nothing. | The module does not start. |
 | `WriteClipboard` | It gates `ClipboardWriterKey`, for Copy on the bar and a history row. | The module does not start. |
+| `OpenFolder` | It gates `FolderRevealKey`, which shows the models folder in the file manager: a plain folder only, never a file or a link (ADR-0046). The actor calls it in task 20. | The module does not start. |
 
 - It has no `InjectInput` (`it_holds_the_plans_capabilities_and_never_injects_input`): the keyboard stays the only typist.
 - `SessionWatchKey` is ungated, as it carries no content (ADR-0042 decision 9).
@@ -50,7 +51,7 @@
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a renamed copy of a model is known by its fingerprint (`Table::printed`), not its name. A card's verdict attaches only to a fingerprint read from the file, never to a file served by its name and size.
-- **Tampering:** every address is HTTPS, on a listed host, pinned to a 40-hex commit, and ends in the row's file; every row carries a 64-hex SHA-256 and its size. A table that breaks any rule turns local models off and never panics. A download asks only for a row's own address, host list, size and SHA-256 (`Row::fetch`), and the worker checks the file before it is used; a wrong size or fingerprint tells the Print note and nothing is used. A download never replaces a file holding the row's name; that file must be deleted first. The shelf seals each blob (ADR-0010); the store refuses another mark, a newer version and a text whose id differs from its name.
+- **Tampering:** every address is HTTPS, on a listed host, pinned to a 40-hex commit, and ends in the row's file; every row carries a 64-hex SHA-256 and its size. A table that breaks any rule turns local models off and never panics. A download asks only for a row's own address, host list, size and SHA-256 (`Row::fetch`), and the worker checks the file before it is used; a wrong size or fingerprint deletes the part and tells the Print note. A download never replaces a file holding the row's name; that file must be deleted first. The shelf seals each blob (ADR-0010); the store refuses another mark, a newer version and a text whose id differs from its name.
 - **Logging / repudiation:** the scorer and the check hold texts in `Zeroizing` or `Redacted`; no text reaches a log or an error.
 - **Information disclosure:** the scorer keeps no text, and a check keeps only its verdict and timings. A hidden run, a password box and `history` off keep nothing (`Rules::of`; the flow sends no keep from a password box or a hidden run, and never asks for the sound with `history` off, so it stays in the worker); `Debug` of the store, History and the codec shows no text or sound, and nothing is logged. Compare keeps numbers only; its texts are `Secret` and wiped after scoring. The microphone never records unseen: Compare's recording shows the Listening bar and lights the key, as a dictation does.
 - **Denial of service:** the tables are read once at first use; a bad settings value resets alone, and a bad pick goes without the other languages' picks. Automatic never picks a card that has not passed its check or lacks room, and says why it uses the processor. The store's limits come from `[voice]` and `MAX_BLOB_BYTES`; a failed write waits for the next change instead of looping.
@@ -70,7 +71,7 @@
 - A pick that is not text, such as a number, fails the read of the whole `picks` table, so the kernel resets it with the notice; a bad text pick, such as a removed row, goes alone.
 - The check takes any text pick, so a bad one written to the file is dropped at the module's next read of `[voice]`, not refused at the write.
 - A file named and sized as a row's serves on the processor before its fingerprint is read, so dictation works at start without hashing gigabytes first. The file sits in the user's own folder, runs in the capped job, and a wrong fingerprint moves it to the other files once read.
-- A name held by another file ticks its row so Delete file is at hand, and shows the Print note; neither the bar nor the panel has a note of its own for this case until the port adds `BarHint::Taken`.
-- A picked file still being read (`Lack::Checking`) shows the Language note until the port adds a note of its own.
+- A name held by another file ticks its row so Delete file is at hand, and shows its own note (`BarHint::Taken`).
+- A picked file still being read (`Lack::Checking`) shows its own note (`BarHint::Checking`).
 - A first download with no fixed drive shows the Folder note (edge 21); the folder list is empty too, so there is nothing to offer.
 - The table's `hosts` follow today's redirect (`us.aws.cdn.hf.co`); a region whose CDN host differs fails with the Net note, never a silent fetch. Check another region before the hosts are final.

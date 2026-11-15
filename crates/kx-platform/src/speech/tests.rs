@@ -8,7 +8,7 @@ use crate::worker::{Launch, SpawnError, Spawner};
 use kx_ipc::{
     MAX_SOUND_BYTES, SoundPiece, Stage, VOICE_JOB, VoiceAsk, VoiceFault, VoiceNote, Wiped,
 };
-use kx_module_api::ports::{SpeechModel, SpeechNote};
+use kx_module_api::ports::{Memory, SpeechModel, SpeechNote};
 use kx_module_api::{Redacted, Zeroizing};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver};
@@ -31,9 +31,15 @@ const FILE_B: &str = r"D:\Models\b.gguf";
 const RUNNER: &str = "transcribe";
 /// The language code the test models take.
 const LANG: &str = "fr";
-/// The shipped detector and the English clip in the tests.
+/// The shipped detector and the English and German clips in the tests.
 const DETECTOR: &str = r"C:\App\silero.gguf";
 const CLIP: &str = r"C:\App\check-en.wav";
+const CLIP_DE: &str = r"C:\App\check-de.wav";
+/// The PC's memory as the test system reads it.
+const SYSTEM: Memory = Memory {
+    total_mb: 16_384,
+    free_mb: 9_626,
+};
 /// A card the engine lists, its system name, and the driver the system gives it.
 const CARD: &str = "Vulkan0";
 const CARD_NAME: &str = "Card A";
@@ -83,7 +89,7 @@ fn ask(file: Option<&str>) -> SpeechAsk {
     }
 }
 
-/// The test system: `CORES` real cores, and `DRIVER` for the card named `CARD_NAME`.
+/// The test system: `CORES` real cores, `SYSTEM`'s memory, and `DRIVER` for the card named `CARD_NAME`.
 struct Box8;
 
 impl Hardware for Box8 {
@@ -91,14 +97,38 @@ impl Hardware for Box8 {
         CORES
     }
 
+    fn memory(&self) -> Option<Memory> {
+        Some(SYSTEM)
+    }
+
     fn driver(&self, name: &str) -> Option<String> {
         (name == CARD_NAME).then(|| DRIVER.to_owned())
     }
 }
 
-/// The shipped files in the tests.
+/// A system that tells no memory and no driver.
+struct Quiet;
+
+impl Hardware for Quiet {
+    fn cores(&self) -> usize {
+        CORES
+    }
+
+    fn memory(&self) -> Option<Memory> {
+        None
+    }
+
+    fn driver(&self, _: &str) -> Option<String> {
+        None
+    }
+}
+
+/// The shipped files in the tests, the English clip staged before the German one.
 fn assets() -> Assets {
-    let clips = HashMap::from([("en".to_owned(), PathBuf::from(CLIP))]);
+    let clips = vec![
+        ("en".to_owned(), PathBuf::from(CLIP)),
+        ("de".to_owned(), PathBuf::from(CLIP_DE)),
+    ];
     Assets {
         detector: PathBuf::from(DETECTOR),
         clips,

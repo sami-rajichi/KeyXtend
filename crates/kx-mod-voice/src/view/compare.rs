@@ -2,9 +2,7 @@
 //! results with their day and device. A text shows only for a language with no set text.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{
-    CompareRow, CompareRun, CompareSheet, Pages, PanelButton, RunStep, VoiceSheet,
-};
+use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet};
 
 use super::{Facts, device, short};
 use crate::compare::Line;
@@ -13,22 +11,15 @@ use crate::panel::{Key, Panel};
 impl Panel {
     /// The Compare page as it stands.
     pub(super) fn compare_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
-        if let Some((at, models, lines)) = self.compare.running() {
+        if let Some((at, models)) = self.compare.running() {
             let name = models
                 .get(at.unwrap_or(0))
-                .map(|m| m.name.clone())
+                .map(|(m, _)| m.name.clone())
                 .unwrap_or_default();
-            let step = |i: usize| match (lines.get(i), at) {
-                (Some(line), _) => RunStep::Done {
-                    wait_ms: line.wait_ms,
-                },
-                (None, Some(now)) if now == i => RunStep::Writing,
-                (None, _) => RunStep::Waiting,
-            };
-            let runs = models.iter().enumerate().map(|(i, m)| {
+            let runs = models.iter().map(|(m, step)| {
                 let run = CompareRun {
                     name: m.name.clone(),
-                    step: step(i),
+                    step: *step,
                 };
                 (Key::Plain, run)
             });

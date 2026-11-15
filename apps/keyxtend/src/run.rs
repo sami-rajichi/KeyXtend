@@ -144,6 +144,7 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot
         places: platform.places(),
         selection: platform.selection_watch(),
         link: platform.web_link(),
+        folders: platform.folder_reveal(),
     };
     Boot::load(platform.clone(), services, ports(platform), run)
 }

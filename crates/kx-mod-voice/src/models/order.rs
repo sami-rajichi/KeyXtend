@@ -109,6 +109,11 @@ impl Table {
         self.order(lang).first()
     }
 
+    /// The languages with a tested order of their own, in code order.
+    pub fn tested(&self) -> impl Iterator<Item = &str> {
+        self.orders.keys().map(String::as_str)
+    }
+
     /// Every keyboard language some row knows.
     #[must_use]
     pub fn langs(&self) -> BTreeSet<&str> {

@@ -1,5 +1,6 @@
-//! The Voice panel's pages: the home list's order and values, model names and folders that never print, the Device
-//! page's numbers, Compare's steps, day and device, the options' factor, auto count and ends, and History's counts.
+//! The Voice panel's pages: the home list's order and values, model names and folders that never print, a model not
+//! for this PC, the Device page's numbers, Compare's steps, day and device, and History's counts. Options are in
+//! `options`.
 
 use super::{SECRETS, english, hidden, keeps_secrets};
 use crate::ports::voice::*;
@@ -23,14 +24,14 @@ fn panel(sheet: VoiceSheet) -> VoicePanel {
 }
 
 /// `sheet`'s panel as `Debug` prints it, which must hold no secret.
-fn shown(sheet: VoiceSheet) -> String {
+pub(super) fn shown(sheet: VoiceSheet) -> String {
     let shown = format!("{:?}", panel(sheet));
     assert!(keeps_secrets(&shown), "{shown}");
     shown
 }
 
 /// Asserts `shown` holds each of `parts`.
-fn holds(shown: &str, parts: &[&str]) {
+pub(super) fn holds(shown: &str, parts: &[&str]) {
     for part in parts {
         assert!(shown.contains(part), "{shown} lacks {part}");
     }
@@ -83,6 +84,7 @@ fn model_names_and_folders_never_print_but_sizes_and_room_do() {
         ],
         best: Some("Parakeet TDT 0.6b v3".into()),
         untested: false,
+        slow: false,
         folder: Some(folder()),
         offer: Some(folder()),
     };
@@ -92,6 +94,40 @@ fn model_names_and_folders_never_print_but_sizes_and_room_do() {
         "free: 212000000000",
         "paused: true",
         "Parakeet",
+    ];
+    holds(&shown, &parts);
+}
+
+#[test]
+fn a_model_not_for_this_pc_carries_its_need_the_total_and_the_free_memory() {
+    let unfit = ModelState::NotHere {
+        need_mb: 5_120,
+        have_mb: 4_096,
+        free_mb: 2_867,
+    };
+    let row = ModelRow {
+        name: hidden(2),
+        bytes: 2_410_655_136,
+        default: true,
+        state: unfit,
+        used: false,
+        tick: false,
+        fetch: None,
+    };
+    let models = ModelsSheet {
+        rows: vec![row],
+        best: None,
+        untested: false,
+        slow: true,
+        folder: None,
+        offer: None,
+    };
+    let shown = shown(VoiceSheet::Models(models));
+    let parts = [
+        "need_mb: 5120",
+        "have_mb: 4096",
+        "free_mb: 2867",
+        "slow: true",
     ];
     holds(&shown, &parts);
 }
@@ -150,7 +186,7 @@ fn the_device_page_carries_cores_built_in_memory_and_the_checks_numbers() {
 }
 
 #[test]
-fn comparing_shows_each_models_step_and_results_their_day_and_device() {
+fn comparing_shows_each_models_step_a_failed_one_too() {
     let run = |step| CompareRun {
         name: hidden(2),
         step,
@@ -161,10 +197,25 @@ fn comparing_shows_each_models_step_and_results_their_day_and_device() {
         name: hidden(2),
         rows: vec![
             run(RunStep::Done { wait_ms: 2_100 }),
+            run(RunStep::Failed),
             run(RunStep::Writing),
             run(RunStep::Waiting),
         ],
     };
+    let shown = shown(VoiceSheet::Compare(running));
+    let parts = [
+        "at: 3",
+        "of: 6",
+        "wait_ms: 2100",
+        "Failed",
+        "Writing",
+        "Waiting",
+    ];
+    holds(&shown, &parts);
+}
+
+#[test]
+fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
     let line = CompareRow {
         name: hidden(2),
         wrong: None,
@@ -184,56 +235,9 @@ fn comparing_shows_each_models_step_and_results_their_day_and_device() {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
     };
-    let shown = [ready, running, results].map(|s| shown(VoiceSheet::Compare(s)));
+    let shown = [ready, results].map(|s| shown(VoiceSheet::Compare(s)));
     holds(&shown[0], &["models: 6", "Auto(Cpu)", "recording: false"]);
-    holds(
-        &shown[1],
-        &["at: 3", "of: 6", "wait_ms: 2100", "Writing", "Waiting"],
-    );
-    holds(&shown[2], &["day: Date", "RTX 4060", "wait_ms: 2900"]);
-}
-
-#[test]
-fn options_carry_a_factor_the_auto_count_and_each_ends() {
-    let ends = |low, high| Ends { low, high };
-    let option = |key, value| OptionRow {
-        key,
-        value,
-        live: true,
-    };
-    let rows = vec![
-        option(
-            "card_gain",
-            OptionValue::Factor {
-                value: Hundredths(150),
-                ends: ends(false, false),
-            },
-        ),
-        option(
-            "threads",
-            OptionValue::Number {
-                value: 0,
-                auto: Some(8),
-                ends: ends(true, false),
-            },
-        ),
-        option(
-            "place",
-            OptionValue::Choice {
-                name: "top",
-                ends: ends(false, true),
-            },
-        ),
-    ];
-    let shown = shown(VoiceSheet::Options(rows));
-    let parts = [
-        "Hundredths(150)",
-        "auto: Some(8)",
-        "low: true",
-        "high: true",
-        "\"top\"",
-    ];
-    holds(&shown, &parts);
+    holds(&shown[1], &["day: Date", "RTX 4060", "wait_ms: 2900"]);
 }
 
 #[test]

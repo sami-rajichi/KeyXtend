@@ -264,7 +264,7 @@ impl Panel {
         self.ticks.clear();
         match page {
             Page::Tab(VoiceTab::Models) => vec![Do::Scan],
-            Page::Tab(VoiceTab::Device) => vec![Do::Devices],
+            Page::Tab(VoiceTab::Device | VoiceTab::Options) => vec![Do::Devices],
             Page::Folders => {
                 (self.browse, self.dirs) = (None, Vec::new());
                 Vec::new()

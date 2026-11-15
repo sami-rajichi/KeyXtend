@@ -6,11 +6,12 @@ use crate::hidden::Run;
 use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter,
-    ClipboardWriterKey, FieldWatch, FieldWatchKey, InputInjector, InputInjectorKey, LayoutSource,
-    LayoutSourceKey, Pictures, PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey,
-    PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf,
-    SealedShelfKey, SealedStore, SealedStoreKey, SelectionWatch, SelectionWatchKey, Shortcuts,
-    ShortcutsKey, VaultStoreKey, WebLink, WebLinkKey, WordPacks, WordPacksKey,
+    ClipboardWriterKey, FieldWatch, FieldWatchKey, FolderReveal, FolderRevealKey, InputInjector,
+    InputInjectorKey, LayoutSource, LayoutSourceKey, Pictures, PicturesKey, Places, PlacesKey,
+    PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget,
+    ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore, SealedStoreKey, SelectionWatch,
+    SelectionWatchKey, Shortcuts, ShortcutsKey, VaultStoreKey, WebLink, WebLinkKey, WordPacks,
+    WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
 use kx_platform::Platform;
@@ -65,6 +66,8 @@ pub struct Services {
     pub selection: Arc<dyn SelectionWatch>,
     /// Opens Translate's page in the user's browser.
     pub link: Arc<dyn WebLink>,
+    /// Shows the voice models folder in the file manager (ADR-0046).
+    pub folders: Arc<dyn FolderReveal>,
 }
 
 /// The modules this build ships; the `ui` module feeds `hub`, and `os`, the system's display language, is the one
@@ -141,7 +144,8 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<BoxesKey>(services.boxes)?;
     kernel.provide_platform::<PlacesKey>(services.places)?;
     kernel.provide_platform::<SelectionWatchKey>(services.selection)?;
-    kernel.provide_platform::<WebLinkKey>(services.link)
+    kernel.provide_platform::<WebLinkKey>(services.link)?;
+    kernel.provide_platform::<FolderRevealKey>(services.folders)
 }
 
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.

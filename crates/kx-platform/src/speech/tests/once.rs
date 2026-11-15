@@ -100,7 +100,7 @@ fn devices_run_in_a_job_of_their_own_each_card_with_the_systems_driver() {
         DeviceKind::Card(card(BUILT_IN)),
     ];
     assert_eq!(kinds[0], DeviceKind::Cpu);
-    assert_eq!(kinds[1..], cards, "a built-in card is a card for now");
+    assert_eq!(kinds[1..], cards, "built-in graphics is picked as a card");
     let drivers: Vec<&str> = list.iter().map(|d| d.driver.as_str()).collect();
     assert_eq!(drivers, ["", DRIVER, ENGINE], "the system's driver first");
     let memory = Memory {
@@ -111,6 +111,45 @@ fn devices_run_in_a_job_of_their_own_each_card_with_the_systems_driver() {
     assert_eq!(script.launches(), [job(limits().job_mb)], "job_mb alone");
     assert!(matches!(asks(&script)[..], [VoiceAsk::Devices { .. }]));
     assert!(said_bye(&seen), "it ends once it answered");
+}
+
+#[test]
+fn only_built_in_graphics_has_the_built_in_mark_and_only_the_processor_its_cores() {
+    let (script, _, speech) = solo();
+    script.act(VoiceAct::Say(vec![three]));
+    let list = speech.devices(&limits()).unwrap();
+    let marks: Vec<(u16, bool)> = list.iter().map(|d| (d.cores, d.built_in)).collect();
+    let cores = u16::try_from(CORES).unwrap();
+    assert_eq!(marks, [(cores, false), (0, false), (0, true)]);
+}
+
+#[test]
+fn the_processors_memory_is_the_systems_free_and_total_when_it_tells_them() {
+    let (script, _, speech) = solo();
+    script.act(VoiceAct::Say(vec![three]));
+    let list = speech.devices(&limits()).unwrap();
+    assert_eq!(list[0].memory, SYSTEM, "the system's own reading");
+    let engine = Memory {
+        total_mb: TOTAL_MB,
+        free_mb: FREE_MB,
+    };
+    assert_eq!(list[2].memory, engine, "a card keeps the engine's");
+    let script = Script::default();
+    let turns = Turns(Arc::new((vec![script.clone()], AtomicUsize::new(0))));
+    let clock = Arc::new(Hands::default());
+    let quiet = WorkerSpeech::new(turns, clock, assets(), Arc::new(Quiet));
+    script.act(VoiceAct::Say(vec![three]));
+    let list = quiet.devices(&limits()).unwrap();
+    assert_eq!(
+        list[0].memory, engine,
+        "the engine's when the system is quiet"
+    );
+}
+
+#[test]
+fn the_clips_are_the_staged_ones_in_their_order() {
+    let (_, _, speech) = solo();
+    assert_eq!(speech.clips(), ["en", "de"], "as staged, never sorted");
 }
 
 #[test]
