@@ -4,14 +4,7 @@
 
 use super::*;
 use crate::VoiceSettings;
-
-/// kx-ipc's `SOUND_HZ`, the mono sound the worker hands over; this and the next two are copies until `kx-module-api`
-/// carries them (P11 task 14).
-const SOUND_HZ: usize = 16_000;
-/// kx-ipc's `SAMPLE_BYTES`, 16-bit samples.
-const SAMPLE_BYTES: usize = 2;
-/// kx-ipc's `MAX_SOUND_BYTES`, the most sound one frame carries.
-const FRAME: usize = 1 << 20;
+use kx_module_api::ports::{MAX_SOUND_BYTES, SAMPLE_BYTES, SOUND_HZ};
 
 #[test]
 fn edge_31_a_ten_minute_recording_is_kept_in_blobs_under_the_limits() {
@@ -21,7 +14,7 @@ fn edge_31_a_ten_minute_recording_is_kept_in_blobs_under_the_limits() {
     let mb = u64::from(settings.voice_max_mb) * MB;
     let (mut o, r) = (open(&shelf, MAX_BLOB_BYTES), rules(mb));
     keep(&mut o, 1, "dix minutes", &r);
-    let sound = pieces(ten_min, FRAME);
+    let sound = pieces(ten_min, MAX_SOUND_BYTES);
     assert!(voice(&mut o, 1, &sound, &r));
     let kept = o.history.entries()[0].sound.unwrap();
     assert_eq!(kept.bytes, u64::try_from(ten_min).unwrap());

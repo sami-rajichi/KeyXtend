@@ -242,6 +242,8 @@ listed! {
         Predict,
         /// The selection chips, which look again when a button comes up.
         Selection,
+        /// Voice typing, whose Undo insert dims at a click outside our windows.
+        Voice,
     }
 }
 

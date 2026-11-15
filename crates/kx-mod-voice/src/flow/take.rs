@@ -170,7 +170,7 @@ fn typable(c: char) -> Option<char> {
 }
 
 /// `text` with `suffix` after it, as the keyboard types it.
-pub(super) fn suffixed(text: &str, suffix: &str) -> Secret {
+pub(crate) fn suffixed(text: &str, suffix: &str) -> Secret {
     let mut out = Zeroizing::new(String::with_capacity(text.len() + suffix.len()));
     out.push_str(text);
     out.push_str(suffix);

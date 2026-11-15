@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 13:15 — P11: the voice module's actor
+The voice module now runs: the Dictation key drives the flow and its light follows the microphone exactly, speech runs and every save happen off the actor's thread, and one typer thread types each text. The panel is drawn once per change, its clicks reach downloads, Compare, History and the folder reveal, and a failed save shows a note and is retried at stop. A panic hides the bar, closes the microphone and darkens the key, and with the module off nothing starts. A review stopped a stopped typer from typing queued texts, a model being fingerprinted again on every rescan, a dictation hung by a panicking port, and unretried count saves.
+
 ## 2026-11-15 10:54 — P11: the voice ports' follow-ups and the models folder reveal
 The speech port's devices now carry their cores and whether a card is built-in graphics, a model that does not fit tells free memory beside the total, clip languages come from the speech port and number options carry their unit, so four stopgaps are gone. Compare marks a model that failed and runs the next, the bar gains notes for a name another file holds and a file still being checked, and the Models sheet knows when local models will be very slow on this PC. A new gated service that only the voice module holds (ADR-0046) shows the models folder in Explorer. A review made it accept only a held folder on a fixed local drive with no link from the drive down, and use a verb that runs no file.
 

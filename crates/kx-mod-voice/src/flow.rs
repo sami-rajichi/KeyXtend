@@ -12,6 +12,7 @@ mod view;
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
 pub use lend::Lend;
 pub(crate) use notes::mic_hint;
+pub(crate) use take::suffixed;
 
 use std::sync::Arc;
 

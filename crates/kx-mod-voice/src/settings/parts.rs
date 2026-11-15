@@ -3,14 +3,46 @@
 
 use std::time::Duration;
 
+use kx_module_api::Settings;
 use kx_module_api::ports::{
-    BarPlace, CardUse, DevicePick, Hundredths, JobLimits, SpeechAsk, SpeechModel,
+    BarPlace, CardUse, ClipWait, DevicePick, FieldConfig, Hundredths, JobLimits, SpeechAsk,
+    SpeechModel,
 };
 
 use super::{VoiceSettings, place_named};
 use crate::device::CardRules;
 
+/// The characters a look at the focused box takes: none, as only its kind matters.
+const NO_TEXT: u16 = 0;
+
 impl VoiceSettings {
+    /// The settings with `key` set to `value`, as the panel writes it; `None` for a key or value `check` refuses.
+    #[must_use]
+    pub fn with(&self, key: &str, value: toml::Value) -> Option<Self> {
+        let mut table = toml::Table::try_from(self).ok()?;
+        table.insert(key.to_owned(), value);
+        let next: Self = table.try_into().ok()?;
+        next.check().ok().map(|()| next)
+    }
+
+    /// How the field watch looks at the focused box: within `read_ms`, reading its kind and no text.
+    #[must_use]
+    pub fn field_config(&self) -> FieldConfig {
+        FieldConfig {
+            read_ms: self.read_ms,
+            read_chars: NO_TEXT,
+        }
+    }
+
+    /// How long Copy waits for the clipboard.
+    #[must_use]
+    pub fn copy_wait(&self) -> ClipWait {
+        ClipWait {
+            open_ms: self.copy_ms,
+            poll_ms: self.copy_poll_ms,
+        }
+    }
+
     /// A voice or fetch job's memory cap and waits.
     #[must_use]
     pub fn job(&self) -> JobLimits {

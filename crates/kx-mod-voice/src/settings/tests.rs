@@ -7,6 +7,7 @@ use kx_module_api::ports::{BarPlace, CardId, FetchAsk, Hundredths, JobLimits, Sp
 use std::time::Duration;
 
 mod picks;
+mod wiring;
 
 /// The defaults as a table.
 fn defaults() -> toml::Table {
@@ -102,6 +103,9 @@ fn every_range_takes_its_ends_and_refuses_past_them() {
         ("stall_s", ends(&FetchAsk::STALL_S)),
         ("restart_ms", ends(&JobLimits::RESTART_MS)),
         ("restart_max_ms", ends(&JobLimits::RESTART_MAX_MS)),
+        ("read_ms", ends(&READ_MS)),
+        ("copy_ms", ends(&COPY_MS)),
+        ("copy_poll_ms", ends(&COPY_POLL_MS)),
     ];
     for (key, (lo, hi)) in bounds {
         let mut top = with(key, hi);

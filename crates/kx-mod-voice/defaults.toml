@@ -70,3 +70,9 @@ stall_s = 30
 restart_ms = 1000
 # The longest wait before a failed worker starts again, in ms.
 restart_max_ms = 30000
+# The longest a look at the focused box may take, in ms; only its kind is read, never its text.
+read_ms = 150
+# The longest Copy waits for another app to let go of the clipboard, in ms.
+copy_ms = 250
+# How often Copy tries again within that wait, in ms.
+copy_poll_ms = 10

@@ -1,11 +1,16 @@
 //! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick alone with the settings notice,
-//! and stays idle until its actor arrives.
+//! fails on a bad section or a missing service, and stops.
 
 use std::sync::{Arc, Mutex};
 
-use kx_mod_voice::{ID, MANIFEST, VoiceModule, VoiceSettings};
-use kx_module_api::{Host, Module, ModuleCx, Notice, NoticeArg, Subscription, args, keys};
+use kx_mod_voice::{ID, VoiceModule, VoiceSettings};
+use kx_module_api::ports::SpeechKey;
+use kx_module_api::{
+    Host, Module, ModuleCx, Notice, NoticeArg, ServiceKey, Subscription, args, keys,
+};
 use kx_test_support::host::FakeHost;
+
+use crate::rig::{Fakes, start, stop};
 
 /// The notices published on `host`'s bus while the guard lives.
 fn notices(host: &FakeHost) -> (Arc<Mutex<Vec<Notice>>>, Subscription) {
@@ -27,29 +32,26 @@ fn picks(pairs: &[(&str, &str)]) -> toml::Value {
 
 #[test]
 fn it_starts_on_the_defaults_and_stops() {
-    let mut host = FakeHost::new(&MANIFEST);
+    let mut host = Fakes::new().host();
     let (heard, _guard) = notices(&host);
     let mut module = VoiceModule::new();
     assert_eq!(module.manifest().id.as_str(), "voice");
-    assert!(module.start(&mut ModuleCx::new(&mut host)).is_ok());
-    assert_eq!(host.lookups.get(), 0, "it asks for no service yet");
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
     assert!(heard.lock().unwrap().is_empty() && host.sink.writes().is_empty());
-    module.stop();
 }
 
 #[test]
 fn a_bad_pick_falls_back_alone_with_the_notice_and_is_written_back() {
-    let mut host = FakeHost::new(&MANIFEST);
+    let mut host = Fakes::new().host();
     host.put(
         "picks",
         picks(&[("fr", "whisper-medium-q5"), ("ar", "cohere-q8")]),
     );
     let (heard, _guard) = notices(&host);
-    assert!(
-        VoiceModule::new()
-            .start(&mut ModuleCx::new(&mut host))
-            .is_ok()
-    );
+    let mut module = VoiceModule::new();
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
     let mut want = Notice::about(keys::SETTINGS_RESET, ID);
     want.args
         .push((args::KEYS, NoticeArg::List(vec!["picks.fr".into()])));
@@ -64,8 +66,24 @@ fn a_bad_pick_falls_back_alone_with_the_notice_and_is_written_back() {
 
 #[test]
 fn a_bad_section_fails_the_start() {
-    let mut host = FakeHost::new(&MANIFEST);
+    let mut host = Fakes::new().host();
     host.put("job_mb", 1.into());
     let mut module = VoiceModule::new();
     assert!(module.start(&mut ModuleCx::new(&mut host)).is_err());
+}
+
+#[test]
+fn a_missing_service_fails_the_start() {
+    let mut host = Fakes::new().host();
+    host.services.remove(&SpeechKey::ID);
+    let mut module = VoiceModule::new();
+    assert!(start(&mut module, &mut host).is_err());
+}
+
+#[test]
+fn a_hidden_run_starts_on_the_same_services() {
+    let mut host = Fakes::new().host();
+    let mut module = VoiceModule::hidden();
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
 }

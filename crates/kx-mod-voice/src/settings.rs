@@ -38,6 +38,12 @@ pub const VOICE_MAX_MB: RangeInclusive<u32> = 64..=65_536;
 pub const CARD_GAIN: RangeInclusive<f64> = 1.0..=10.0;
 /// The most words a card's text may differ by.
 pub const CARD_DIFF: RangeInclusive<u8> = 0..=5;
+/// The longest a look at the focused box may take, in ms; the module reads its kind alone.
+pub const READ_MS: RangeInclusive<u32> = 50..=1_000;
+/// The longest Copy waits for another app to let go of the clipboard, in ms.
+pub const COPY_MS: RangeInclusive<u32> = 10..=2_000;
+/// How often Copy tries again within that wait, in ms.
+pub const COPY_POLL_MS: RangeInclusive<u32> = 1..=100;
 /// Each bar place's name in the setting.
 pub const PLACES: [(&str, BarPlace); 3] = [
     ("above", BarPlace::Above),
@@ -47,6 +53,7 @@ pub const PLACES: [(&str, BarPlace); 3] = [
 
 /// Why a value or a pair was refused.
 const BAD_RESTART: &str = "restart_ms must not pass restart_max_ms";
+const BAD_POLL: &str = "copy_poll_ms must not pass copy_ms";
 const BAD_DEVICE: &str = "device must be auto, cpu or a card's id";
 const BAD_PLACE: &str = "place must be above, bottom or top";
 const BAD_DIR: &str = "models_dir must be empty or an absolute drive path";
@@ -148,6 +155,12 @@ pub struct VoiceSettings {
     pub restart_ms: u32,
     /// The longest wait before a failed worker starts again, in ms.
     pub restart_max_ms: u32,
+    /// The longest a look at the focused box may take, in ms.
+    pub read_ms: u32,
+    /// The longest Copy waits for the clipboard, in ms.
+    pub copy_ms: u32,
+    /// How often Copy tries again within that wait, in ms.
+    pub copy_poll_ms: u32,
 }
 
 impl VoiceSettings {
@@ -203,7 +216,11 @@ impl VoiceSettings {
         within("history_max", self.history_max, &HISTORY_MAX)?;
         within("voice_max_mb", self.voice_max_mb, &VOICE_MAX_MB)?;
         within("card_gain", self.card_gain, &CARD_GAIN)?;
-        within("card_diff", self.card_diff, &CARD_DIFF)
+        within("card_diff", self.card_diff, &CARD_DIFF)?;
+        within("read_ms", self.read_ms, &READ_MS)?;
+        within("copy_ms", self.copy_ms, &COPY_MS)?;
+        within("copy_poll_ms", self.copy_poll_ms, &COPY_POLL_MS)?;
+        refuse_if(self.copy_poll_ms > self.copy_ms, BAD_POLL)
     }
 
     /// The named values: the device, the place, the folder and the suffix.

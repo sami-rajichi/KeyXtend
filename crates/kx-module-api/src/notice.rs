@@ -161,6 +161,12 @@ pub mod keys {
     pub const CLIP_DAMAGED: &str = "notice.clip-damaged";
     /// The clipboard history could not be unlocked, so copies are not kept this run.
     pub const CLIP_LOCKED: &str = "notice.clip-locked";
+    /// Part of the dictation history was damaged, so those texts were left out.
+    pub const VOICE_DAMAGED: &str = "notice.voice-damaged";
+    /// The dictation history could not be opened, locked or saved by a newer version, so texts are not kept this run.
+    pub const VOICE_LOCKED: &str = "notice.voice-locked";
+    /// A change to the dictation history could not be saved; it is tried again with the next one.
+    pub const VOICE_UNSAVED: &str = "notice.voice-unsaved";
     /// The run was started from inside another app, whose copy would hide its saves, so it saves nothing.
     pub const HIDDEN_RUN: &str = "notice.hidden-run";
     /// Asks whether to delete a hidden copy of our data in another app's folder.
@@ -181,7 +187,7 @@ pub mod keys {
     pub const TRANSLATE_FAILED: &str = "notice.translate-failed";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 33] = [
+    pub const ALL_KEYS: [&str; 36] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -206,6 +212,9 @@ pub mod keys {
         WORDS_LOCKED,
         CLIP_DAMAGED,
         CLIP_LOCKED,
+        VOICE_DAMAGED,
+        VOICE_LOCKED,
+        VOICE_UNSAVED,
         HIDDEN_RUN,
         HIDDEN_COPY,
         HIDDEN_COPY_FAILED,

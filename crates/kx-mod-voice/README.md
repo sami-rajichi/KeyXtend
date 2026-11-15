@@ -1,6 +1,6 @@
 # kx-mod-voice
 
-Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module itself is a skeleton that reads its settings, drops a bad pick, and waits; the actor that wires it all comes in plan task 20.
+Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module reads its settings, drops a bad pick, and starts the actor that wires every part to the ports and the bus.
 
 - **Models table** (`models`, `models.toml`): one row per local model with its file, size, SHA-256, a download address pinned to a commit on an allowed host, its licence and credit, its memory on the processor and on a card, and its languages with each model's own code. A bad table turns local models off; it never panics.
 - **Orders** (`models::order`): each tested language has a list, best first, with the day of its tests; its first is the default. The English, French and Arabic orders were ranked on the 2026-11-14 trial numbers (the owner's six clips, the voice detector at pad 300 ms). A language without a list takes the general order of the models that know it, marked untested. A model that never leads (`lead = false`, Nemotron) is first in no list.
@@ -15,6 +15,7 @@ Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text
 - **Downloads** (`fetch`): one at a time, only with room for the file and `min_free_mb`, and never over a file holding the row's name; each fault becomes the bar's note. A download asked while the folder is read waits for the read, so a copy under another name is not fetched again.
 - **Compare** (`compare`): the set text is recorded once, then each ready model writes it in a fresh job; only numbers are kept, and a text shows only for a language with no set text. While it records, the flow shows its Listening bar and light (`In::Lend`), and no dictation starts until it ends.
 - **Panel** (`panel`, `view`, `options.toml`): the Voice panel's pages, 5 rows a page by default, ticked then acted on; each click gives the actor its next steps as `Do`s. A row click on rows that moved since is dropped (`told`), and `recheck` checks a picked card, or with Automatic a card checked under an older driver.
+- **Actor** (`actor`): on `kx-voice`, it feeds the flow and the panel and carries out their effects in order. The microphone's runs (one call at a time each) and the slow reads go to short job threads, texts to one typer thread, so it never waits on the worker or the keyboard; the stop joins only the actor. Undo insert wants the mouse module's presses while it can act.
 
 ## Services and capabilities
 
@@ -24,16 +25,20 @@ Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text
 | `ModelFiles` (`ModelFilesKey`) | Scans the models folder, checks a file's fingerprint and downloads a model the user asks for. |
 | `SessionWatch` (`SessionWatchKey`) | Stops and wipes a dictation when the session locks or sleeps. |
 | `FieldWatch` (`FieldWatchKey`) | Knows the focused box's kind: a password box shows dots, no Copy, and keeps nothing. |
-| `ClipboardWriter` (`ClipboardWriterKey`) | Copy on a history row. |
+| `ClipboardWriter` (`ClipboardWriterKey`) | Copy on the bar and on a history row. |
+| `FolderReveal` (`FolderRevealKey`) | Shows the models folder in the file manager (ADR-0046). |
+| `SealedShelf` (`VoiceShelfKey`) | The store's own sealed shelf over `<data>/voice/`. |
+| `Calendar` (`CalendarKey`) | History's times and the counts' days. |
 
 | Capability | Why |
 |---|---|
 | `Voice` | It gates the voice key, its light, the bar and the text to type (ADR-0042 decision 8). |
 | `Microphone` | It gates `SpeechKey`. |
 | `Network` | It gates `ModelFilesKey`, for the model downloads the user asks for, and nothing else. |
-| `SecretStore` | It seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers. |
+| `SecretStore` | It gates `VoiceShelfKey`, which seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers. |
 | `ReadFocusedText` | It gates `FieldWatchKey`. |
 | `WriteClipboard` | It gates `ClipboardWriterKey`. |
+| `OpenFolder` | It gates `FolderRevealKey`. |
 
 It provides no service, and it never injects input: the keyboard types each text.
 
@@ -45,17 +50,17 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 |---|---|
 | Listening | `on`, `threads`, `record_max_s`, `piece_s`, `pad_ms`, `level_hz`, `nothing_s`, `silence_stop`, `silence_stop_s`, `debounce_ms` |
 | Models and device | `models_dir`, `picks`, `device`, `card_margin_mb`, `card_gain`, `card_diff`, `min_free_mb`, `stall_s` |
-| Typing and bar | `type_suffix`, `type_gap_ms`, `done_ms`, `wave_ms`, `place`, `sounds` |
+| Typing and bar | `type_suffix`, `type_gap_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
 | History | `history`, `history_max`, `keep_voice`, `voice_max_mb` |
 | Worker | `job_mb`, `idle_min`, `ask_ms`, `load_s`, `warm_s`, `piece_wait_s`, `restart_ms`, `restart_max_ms` |
 
 ## Public API
 
-`VoiceModule`, `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
+`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 
-`cargo test -p kx-mod-voice`: unit and property tests of each part, the kernel's settings repair in `tests/voice/settings.rs`, and `tests/voice/module.rs` starts and stops the module on the fake host, with a bad pick's notice and write-back.
+`cargo test -p kx-mod-voice`: unit and property tests of each part, the kernel's settings repair in `tests/voice/settings.rs`, `src/actor/tests` drives the actor over every port's fake without a thread, `tests/voice/module.rs` starts and stops the module on the fake host with a bad pick's notice and write-back, and `tests/voice/thread.rs` runs it on its threads: the key and the light, the typer, a panic and the feature off.
 
 ## Security
 
