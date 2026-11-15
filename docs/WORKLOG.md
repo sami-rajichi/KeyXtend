@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 03:39 — P11: the hub's voice side and every voice text
+The UI hub now turns the voice module's bar and panel views into JSON for QML, sends clicks back with the round QML drew, and places the bar the panel gap above the keyboard, else at the bottom centre, never over it, as the `place` setting asks. The tray's Dictation row shows a hidden keyboard first, then opens the panel, and every voice text exists in English, French and Arabic with correct plurals. A review fixed Arabic seconds and milliseconds, an "In use" mark on a model not yet downloaded, a text bundle rebuilt on every read, and a hub file past 300 lines.
+
 ## 2026-11-15 01:43 — P11: the speech, model files and session hosts
 The app now serves the `Speech`, `ModelFiles` and `SessionWatch` ports over the worker's `voice` and `fetch` jobs: one job per model with its memory cap, `idle_min` on the clock, the recording handed to a new model in wiped pieces, devices, facts and card checks in jobs of their own, and one fetch job per download with room checked first. On Windows the worker starts with an allow-listed environment and its own folder, real cores and job peaks come from the system, a hidden non-activating window tells lock and sleep, and a new models folder is created with a protected rights list in one step. A review fixed a keep that could hang under the job's lock, an uncapped keep, a fingerprint that followed links or read a changing file, and rights that could land on another program's folder.
 

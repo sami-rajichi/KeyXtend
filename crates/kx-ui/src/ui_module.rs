@@ -1,7 +1,8 @@
 //! The `ui` module: it reads the `[ui]` settings, takes the keyboard face and hands both to the hub, with its
 //! settings handle for the theme button and the light or dark switch. It holds `KeyboardUi`, the face's gate,
 //! `ReadFocusedText`, the chip lane's (ADR-0033), `ReadClipboard`, the clipboard panel's (ADR-0034), `Vault`,
-//! Quick-fill's event gate (ADR-0038), and `Selection`, the selection chips' event gate (ADR-0041).
+//! Quick-fill's event gate (ADR-0038), `Selection`, the selection chips' event gate (ADR-0041), and `Voice`, voice
+//! typing's event gate (ADR-0042).
 
 use crate::hub::Hub;
 use crate::settings::{SPEC, UiSettings};
@@ -13,8 +14,8 @@ use std::sync::Arc;
 pub const ID: ModuleId = ModuleId::new("ui");
 
 /// The module's manifest: it needs the keyboard face, behind `KeyboardUi`, hears the chip lane, behind
-/// `ReadFocusedText`, and draws the clipboard panel, behind `ReadClipboard`, Quick-fill's, behind `Vault`, and the
-/// selection chips, behind `Selection`.
+/// `ReadFocusedText`, and draws the clipboard panel, behind `ReadClipboard`, Quick-fill's, behind `Vault`, the
+/// selection chips, behind `Selection`, and the dictation bar and Voice panel, behind `Voice`.
 pub static MANIFEST: Manifest = Manifest {
     id: ID,
     version: env!("CARGO_PKG_VERSION"),
@@ -28,6 +29,8 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::Vault,
         // An event gate only: the strip's views and clicks need it, and no selection or link service is asked.
         Capability::Selection,
+        // An event gate only: the bar's and panel's views, clicks and open need it; no text is typed or heard typed.
+        Capability::Voice,
     ],
     settings: Some(&SPEC),
 };

@@ -28,7 +28,7 @@ key =
     .rclick = Right click by holding
     .grab = Grab: drag and drop, select text
     .shortcuts = Shortcuts
-    .mic = Voice typing
+    .mic = Dictation
     .clip = Clipboard history
     .snip = Screen snip
     .fill = Quick fill
@@ -61,7 +61,7 @@ label =
     .rclick = Right click
     .grab = Grab
     .shortcuts = Shortcuts
-    .mic = Voice
+    .mic = Dictation
     .clip = Clipboard
     .snip = Snip
     .fill = Fill
@@ -222,6 +222,8 @@ window =
     .outline = Scroll outline
     .clip = { -app } clipboard history
     .fill = { -app } Quick-fill
+    .voice = { -app } dictation bar
+    .voice-panel = { -app } dictation settings
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -234,8 +236,10 @@ badge =
     .fast = fast
     .join = {", "}
 
+## The tray menu's rows; Dictation opens the Voice panel.
 tray =
     .show = Show keyboard
+    .voice = Dictation
     .quit = Quit
 
 ## Buttons on a notice.
@@ -310,6 +314,7 @@ module =
     .selection = Selection helper
     .ui = Appearance
     .vault = Quick-fill
+    .voice = Dictation
 
 ## The language key's designs, by [keyboard] lang_key value.
 langkey =

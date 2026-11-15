@@ -1,8 +1,8 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
-//! state, outline and page turns, the chip lane, both panels and the selection strip, each through a handler that holds
-//! the hub weakly, then asks the scroll, prediction and vault modules for their state, and it sends the notices'
-//! answers. The keyboard's wake, power and vault changes included, is heard only while a face is attached, after the
-//! face's own handlers.
+//! state, outline and page turns, the chip lane, the panels, the selection strip and voice typing, each through a
+//! handler that holds the hub weakly, then asks the scroll, prediction, vault and voice modules for their state, and it
+//! sends the notices' answers. The keyboard's wake, power and vault changes included, is heard only while a face is
+//! attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use crate::ui_module::MANIFEST;
@@ -31,10 +31,11 @@ pub(super) fn send<E: Event>(handle: Option<Bus>, event: &E, what: &str) {
 }
 
 impl Hub {
-    /// Hears every notice, mouse-assist and scroll event, the chip lane, both panels and the selection strip on `bus`
-    /// until the subscriptions drop; a pad page turns the open panel, else our open list. It keeps `bus` for the
-    /// keyboard's wake and a copy limited to the `ui` module's grants for the answers, and asks the scroll, prediction
-    /// and vault modules for their state, so any start order works; the app calls it before the kernel loads.
+    /// Hears every notice, mouse-assist and scroll event, the chip lane, the panels, the selection strip and voice
+    /// typing on `bus` until the subscriptions drop; a pad page turns the open panel, else our open list. It keeps
+    /// `bus` for the keyboard's wake and a copy limited to the `ui` module's grants for the answers, and asks the
+    /// scroll, prediction, vault and voice modules for their state, so any start order works; the app calls it before
+    /// the kernel loads.
     ///
     /// # Errors
     /// `EventError` when the bus refuses a subscription or an ask.
@@ -57,6 +58,7 @@ impl Hub {
         heard.extend(self.hear_clip(bus)?);
         heard.extend(self.hear_fill(bus)?);
         heard.extend(self.hear_sel(bus)?);
+        heard.extend(self.hear_voice(bus)?);
         bus.publish(&ScrollAsk)?;
         Ok(heard)
     }

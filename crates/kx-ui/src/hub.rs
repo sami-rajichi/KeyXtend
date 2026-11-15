@@ -1,7 +1,7 @@
 //! The hub the `ui` module, the app and the QML bridges share: settings, the keyboard's and the system's texts, the
 //! face, the look and its fonts, notices, sounds, the pointer overlay, the scroll pad, the chip lane, the clipboard
-//! panel, the Quick-fill panel, the selection strip, the tray icon, and the requests the app drains on its own thread.
-//! No lock is held while a face call, a port call or a waker runs.
+//! panel, the Quick-fill panel, the selection strip, voice typing, the tray icon, and the requests the app drains on its
+//! own thread. No lock is held while a face call, a port call or a waker runs.
 
 mod app;
 mod assist;
@@ -12,6 +12,7 @@ mod fill;
 mod fonts;
 mod look;
 mod notices;
+mod ports;
 mod scroll;
 mod sel;
 mod sound;
@@ -20,6 +21,7 @@ mod texts;
 mod timings;
 mod tray;
 mod unread;
+mod voice;
 mod words;
 
 pub use app::Mode;
@@ -30,15 +32,14 @@ pub use face::{Redraw, Resize};
 pub use fill::{FillWaker, acts as fill_acts};
 pub use fonts::FontBook;
 pub use notices::{Answers, Shown};
+pub use ports::UiPorts;
+pub use voice::{VoiceWake, VoiceWaker, acts as voice_acts};
 pub use words::asks;
 
 use crate::settings::UiSettings;
 use kx_module_api::ports::KeyboardFace;
 use kx_module_api::{ModuleId, Notice, SettingsError, SettingsHandle};
-use kx_platform::ui::{
-    Backdrop, FocusToken, Memory, Reveal, Screens, Speaker, SysLook, SystemLook, Tray, TrayEvent,
-    WindowGuard,
-};
+use kx_platform::ui::{FocusToken, SysLook, TrayEvent};
 use kx_theme::assets::FontFiles;
 use kx_theme::{ThemeError, Themes};
 use notices::Notices;
@@ -48,26 +49,6 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use texts::Texts;
 use thiserror::Error;
-
-/// The UI ports the app hands over; they run on the UI thread unless their docs say otherwise.
-pub struct UiPorts {
-    /// Keeps our windows from taking the focus and shapes where they take clicks.
-    pub guard: Arc<dyn WindowGuard>,
-    /// The screens and the pointer.
-    pub screens: Arc<dyn Screens>,
-    /// The system look and the system's display language.
-    pub look: Arc<dyn SystemLook>,
-    /// The material behind a window.
-    pub backdrop: Arc<dyn Backdrop>,
-    /// The tray icon, whose events come on the adapter's thread.
-    pub tray: Arc<dyn Tray>,
-    /// Gives the heaps' free pages back after a look change (ADR-0023).
-    pub memory: Arc<dyn Memory>,
-    /// Plays the sounds; any thread may call it, since it never blocks.
-    pub speaker: Arc<dyn Speaker>,
-    /// Shows the clipboard history's folder in the file manager; it may wait, so the hub calls it off the UI thread.
-    pub reveal: Arc<dyn Reveal>,
-}
 
 /// What the UI asks of the app, which owns the kernel and drains these on its thread until the queue ends.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,6 +166,8 @@ pub struct Hub {
     fill: fill::Fill,
     /// The selection strip.
     sel: sel::Sel,
+    /// Voice typing's bar and panel, and its object's waker.
+    voice: voice::Voice,
 }
 
 impl Hub {
@@ -229,6 +212,7 @@ impl Hub {
             clip: clip::Clip::default(),
             fill: fill::Fill::default(),
             sel: sel::Sel::default(),
+            voice: voice::Voice::default(),
         };
         Ok((Arc::new(hub), drain))
     }
@@ -238,8 +222,9 @@ impl Hub {
     }
 
     /// Takes the `ui` module's settings, the keyboard face and the module's own settings handle; the keyboard's texts
-    /// follow the layout's language, a new `sound_idle_ms` prepares the speaker again, the clipboard panel and Quick-fill
-    /// hear their rows, and a shown strip is worded again. The keyboard's wake is heard from now on, after the face's.
+    /// follow the layout's language, a new `sound_idle_ms` prepares the speaker again, the clipboard, Quick-fill and
+    /// Voice panels hear their rows, and a shown strip or voice view is worded again. The keyboard's wake is heard from
+    /// now on, after the face's.
     pub fn attach(
         self: &Arc<Self>,
         settings: UiSettings,
@@ -261,6 +246,7 @@ impl Hub {
         self.clip_rows();
         self.fill_start();
         self.sel_reword();
+        self.voice_start();
         self.wake(Wake::Settings);
     }
 

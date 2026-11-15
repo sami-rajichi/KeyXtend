@@ -1,5 +1,5 @@
 //! The hub with fake ports and a fake face: settings, texts, notices, requests, face actions, the guard, the look, the
-//! sounds, the pointer overlay, the scroll pad, the chip lane, the panels and the selection strip.
+//! sounds, the pointer overlay, the scroll pad, the chip lane, the panels, the selection strip and voice typing.
 
 #![allow(
     clippy::expect_used,
@@ -33,6 +33,7 @@ mod spots;
 mod suggest;
 mod texts;
 mod tray;
+mod voice;
 mod words;
 
 use kx_module_api::ports::{

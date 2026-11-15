@@ -189,7 +189,7 @@ impl Hub {
     }
 
     /// Wakes the UI with `what`, or keeps it until the waker is set; an `End` is noted under the same lock.
-    fn wake_or_wait(&self, what: Wake) {
+    pub(super) fn wake_or_wait(&self, what: Wake) {
         let waiting = {
             let mut live = self.lock();
             live.ended |= what == Wake::End;

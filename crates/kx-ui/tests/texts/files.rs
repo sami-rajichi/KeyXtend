@@ -20,7 +20,7 @@ use kx_ui::i18n::keys::{
 use std::collections::BTreeSet;
 
 /// Module ids whose names the texts hold today; the app checks the real list (P3 Task 19).
-const MODULES: [&str; 10] = [
+const MODULES: [&str; 11] = [
     "clipboard",
     "kernel",
     "keyboard",
@@ -31,6 +31,7 @@ const MODULES: [&str; 10] = [
     "scroll",
     "ui",
     "vault",
+    "voice",
 ];
 /// The language key's designs, `[keyboard] lang_key` values; the app checks the real list too.
 const DESIGNS: [&str; 3] = ["carousel", "cycle", "list"];

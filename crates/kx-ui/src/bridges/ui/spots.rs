@@ -2,7 +2,7 @@
 //! clipboard panel's spot with its fit.
 
 use super::qobject;
-use crate::bridges::qs;
+use crate::bridges::{keyboard_box, qs};
 use crate::geom::whole;
 use crate::hub::{NULL, json};
 use cxx_qt_lib::QString;
@@ -53,11 +53,6 @@ fn beside(over: &QString, left: f64, centred: bool) -> Option<(Option<Rect>, Opt
         return None;
     };
     Some((over, (!centred).then(|| whole(left))))
-}
-
-/// The shown keyboard's box in physical pixels, `null` while it is hidden.
-fn keyboard_box(json: &str) -> serde_json::Result<Option<Rect>> {
-    serde_json::from_str(json)
 }
 
 #[cfg(test)]

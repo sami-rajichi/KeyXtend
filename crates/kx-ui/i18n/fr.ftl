@@ -28,7 +28,7 @@ key =
     .rclick = Clic droit par appui long
     .grab = Saisir : glisser-déposer, sélectionner du texte
     .shortcuts = Raccourcis
-    .mic = Saisie vocale
+    .mic = Dictée
     .clip = Historique du Presse-papiers
     .snip = Capture d’écran
     .fill = Remplissage rapide
@@ -223,6 +223,8 @@ window =
     .outline = Contour de défilement
     .clip = Historique du Presse-papiers { -app }
     .fill = Remplissage rapide de { -app }
+    .voice = Barre de dictée de { -app }
+    .voice-panel = Réglages de la dictée de { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -235,8 +237,10 @@ badge =
     .fast = rapide
     .join = {", "}
 
+## Les lignes du menu de la zone de notification ; Dictée ouvre le panneau de la dictée.
 tray =
     .show = Afficher le clavier
+    .voice = Dictée
     .quit = Quitter
 
 ## Boutons d’une notification.
@@ -311,6 +315,7 @@ module =
     .selection = Aide à la sélection
     .ui = Apparence
     .vault = Remplissage rapide
+    .voice = Dictée
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.
 langkey =

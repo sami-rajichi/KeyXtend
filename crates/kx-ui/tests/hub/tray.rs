@@ -1,13 +1,18 @@
-//! The tray icon: its picture and tooltip, its clicks as wakes, and hiding it.
+//! The tray icon: its picture and tooltip, its clicks as wakes, hiding it, and the menu's Dictation row.
 
-use crate::{Rig, TRAY_PX};
+use crate::{Rig, TRAY_PX, texts, voice};
 use kx_module_api::ports::Point;
+use kx_module_api::ports::VoiceOpen;
 use kx_platform::ui::{TrayEvent, TrayImage, UiError};
-use kx_ui::i18n::keys::WINDOW_KEYBOARD;
-use kx_ui::{Hub, Wake};
+use kx_ui::i18n::keys::{TRAY_VOICE, WINDOW_KEYBOARD};
+use kx_ui::{AUTO, Hub, Mode, Wake};
 use proptest::collection::vec;
 use proptest::option;
 use proptest::prelude::*;
+use std::sync::{Arc, Mutex};
+
+/// The Dictation key's name, which the keyboard's language speaks.
+const KEY_MIC: &str = "key.mic";
 
 fn image(fill: u8) -> TrayImage {
     TrayImage::new(1, 1, vec![fill; 4]).unwrap()
@@ -164,4 +169,47 @@ proptest! {
             prop_assert!(hub.tray_show(&image(0)), "a new hub makes its slot anew");
         }
     }
+}
+
+#[test]
+fn the_dictation_row_shows_a_hidden_keyboard_first_then_opens_the_panel() {
+    for mode in [Mode::Away, Mode::Minimised] {
+        let rig = Rig::new();
+        let heard = voice::heard(&rig);
+        rig.hub.keep_mode(mode);
+        rig.wakes();
+        let (wakes, seen) = (Arc::clone(&rig.wakes), Arc::new(Mutex::new(Vec::new())));
+        let at_open = Arc::clone(&seen);
+        let _open = heard
+            .bus
+            .subscribe(move |_: &VoiceOpen| {
+                at_open.lock().unwrap().push(wakes.lock().unwrap().clone());
+            })
+            .unwrap();
+        rig.hub.voice_open();
+        let want = vec![vec![Wake::Show]];
+        assert_eq!(
+            *seen.lock().unwrap(),
+            want,
+            "{mode:?}: shown before the panel opens"
+        );
+        assert_eq!(heard.sent.opens(), 1);
+    }
+}
+
+#[test]
+fn with_the_keyboard_shown_the_dictation_row_only_opens_the_panel() {
+    let rig = Rig::new();
+    let heard = voice::heard(&rig);
+    rig.hub.voice_open();
+    assert!(rig.wakes().is_empty());
+    assert_eq!(heard.sent.opens(), 1);
+    assert!(heard.sent.acts().is_empty(), "no click on any view");
+}
+
+#[test]
+fn the_dictation_row_speaks_the_systems_language_and_the_key_the_keyboards() {
+    let (rig, _face, _host) = texts::rig("fr", "ar", AUTO);
+    assert_eq!(rig.hub.tray_i18n().text(TRAY_VOICE), "Dictée");
+    assert_eq!(rig.hub.i18n().text(KEY_MIC), "إملاء");
 }

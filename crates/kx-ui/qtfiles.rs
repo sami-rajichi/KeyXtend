@@ -144,6 +144,7 @@ pub const BRIDGES: &[&str] = &[
     "src/bridges/frames.rs",
     "src/bridges/clip.rs",
     "src/bridges/fill.rs",
+    "src/bridges/voice.rs",
 ];
 /// The hand-written C++ `QObject` classes, which moc reads: the soft shadows' adopter.
 pub const MOC: &[&str] = &["cpp/shadows.h"];

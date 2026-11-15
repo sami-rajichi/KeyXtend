@@ -169,9 +169,9 @@ impl Hub {
         page.rows.iter().find(|r| r.id == id)?.thumb.clone()
     }
 
-    /// A pad page tap: it turns the open Quick-fill or clipboard panel's page, else our open list's.
+    /// A pad page tap: it turns the open Quick-fill, Voice or clipboard panel's page, else our open list's.
     pub(super) fn pad_page(&self, back: bool) {
-        if self.fill_pad(back) {
+        if self.fill_pad(back) || self.voice_pad(back) {
             return;
         }
         if self.clip().open {
