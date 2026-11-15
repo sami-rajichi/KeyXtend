@@ -5,6 +5,8 @@ use std::path::Path;
 use serde::Deserialize;
 
 use super::check;
+use super::engine::Engine;
+use super::voice::Voice;
 use crate::config::ConfigError;
 use crate::devtools::config::first_failing;
 use crate::devtools::paths;
@@ -43,6 +45,24 @@ pub(crate) struct StageConfig {
     pub system_dir: String,
     /// The gate-only build's flag; the check refuses a program that holds its text.
     pub gate_flag: String,
+    /// The worker's features in the stage build, which never hold the gate's.
+    pub worker_features: Vec<String>,
+    /// The worker's gate-only feature and the flag only it takes; the check refuses a worker holding the flag's text.
+    pub worker_gate: Gate,
+    /// The speech engine's parts, staged beside the worker (ADR-0044).
+    pub engine: Engine,
+    /// The voice files, staged in the platform's folder beside the worker (ADR-0044).
+    pub voice: Voice,
+}
+
+/// A gate-only feature and the flag only a build with it takes.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Gate {
+    /// The feature, which no staged build turns on.
+    pub feature: String,
+    /// The flag's text.
+    pub flag: String,
 }
 
 /// Qt's network library and its allowed importers.
@@ -56,7 +76,8 @@ pub(crate) struct Network {
 }
 
 impl StageConfig {
-    /// Rejects a zero cap, empty lists, names or paths that are not plain, and network names missing from `libs`.
+    /// Rejects a zero cap, empty lists, names or paths that are not plain, network names missing from `libs`, a worker
+    /// built with its gate, and a bad engine or voice section.
     pub(crate) fn validate(&self) -> Result<(), ConfigError> {
         if self.max_mb == 0 {
             return Err(ConfigError::ZeroValue("max_mb"));
@@ -77,7 +98,31 @@ impl StageConfig {
         let rel = [("out_dir", &self.out_dir), ("system_dir", &self.system_dir)];
         first_failing(&rel, paths::is_relative_plain, ConfigError::NotRelative)?;
         self.check_lists()?;
-        self.check_network()
+        self.check_network()?;
+        self.check_worker()?;
+        self.engine.validate()?;
+        self.voice.validate()
+    }
+
+    /// The worker's features must be named and never hold the gate's, which must be named with its flag.
+    fn check_worker(&self) -> Result<(), ConfigError> {
+        const GATE: &str = "worker_gate";
+        let gate = [
+            (GATE, &self.worker_gate.feature),
+            (GATE, &self.worker_gate.flag),
+        ];
+        first_failing(&gate, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
+        let named = |v: &str| !v.trim().is_empty();
+        each(
+            "worker_features",
+            &self.worker_features,
+            named,
+            ConfigError::BlankEntry,
+        )?;
+        if self.worker_features.contains(&self.worker_gate.feature) {
+            return Err(ConfigError::Same("worker_features", GATE));
+        }
+        Ok(())
     }
 
     /// The network library and its importers must be in `libs`, so a rename there cannot leave the guard idle.
@@ -136,7 +181,7 @@ fn exe(name: &str) -> String {
 }
 
 /// Fails on an empty `list`, or with `error` on its first value that fails `ok`.
-fn each(
+pub(super) fn each(
     name: &'static str,
     list: &[String],
     ok: impl Fn(&str) -> bool,

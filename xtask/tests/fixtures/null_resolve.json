@@ -41,6 +41,7 @@
       "spawn_dirs": ["apps", "crates"],
       "spawn_extensions": ["rs", "h", "cpp"],
       "banned_spawns": ["std::process::Command", "QProcess"],
+      "apart": [],
       "build_scripts": ["build.rs", "qtbuild.rs"]
     },
     "dco": {

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 16:23 — P11: voice typing in the app and its staged engine
+Voice typing is now a default part of the app: it gets the speech, model-file and session services and its own sealed shelf, kept only in memory in a hidden run, and a life test boots every shipped module to show only voice takes that shelf. The install carries the worker built with its graphics-card part and without the gate, the engine's parts with the plain processor part required, the voice detector, the three check clips and their notices, at 66 MB of the 80 MB budget. Tidy keeps the network crate out of the voice job and the audio and engine crates out of the download job, and CI installs the Vulkan SDK from a pinned, hash-checked download and tests the worker's gate build. A review fixed prediction ending the word when the same layout was told again, which could drop a typed start as voice typing started (P7's open note).
+
 ## 2026-11-15 13:15 — P11: the voice module's actor
 The voice module now runs: the Dictation key drives the flow and its light follows the microphone exactly, speech runs and every save happen off the actor's thread, and one typer thread types each text. The panel is drawn once per change, its clicks reach downloads, Compare, History and the folder reveal, and a failed save shows a note and is retried at stop. A panic hides the bar, closes the microphone and darkens the key, and with the module off nothing starts. A review stopped a stopped typer from typing queued texts, a model being fingerprinted again on every rescan, a dictation hung by a panicking port, and unretried count saves.
 

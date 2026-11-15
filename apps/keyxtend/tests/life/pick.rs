@@ -1,6 +1,6 @@
 //! The whole word loop over the app: keys typed in a text box bring a chip from the shipped pack, its pick keeps what
-//! was typed and types the rest of the word through the keyboard, even after the keyboard's mode and Quick-fill's
-//! emails were told again unchanged, and the word is learned and sealed at Quit.
+//! was typed and types the rest of the word through the keyboard, even after the keyboard's mode, Quick-fill's emails
+//! and the layout were told again unchanged, and the word is learned and sealed at Quit.
 
 use crate::rig::{Rig, WAIT, char_key, hear, words_out};
 use keyxtend::boot::Boot;
@@ -12,8 +12,8 @@ use kx_mod_predict::script::{self, Script};
 use kx_mod_predict::{PredictSettings, learned_blob};
 use kx_module_api::Bus;
 use kx_module_api::ports::{
-    FaceAction, FieldKind, FillAsk, KeyId, Lane, Piece, Suggested, Typed, TypingMode,
-    TypingModeAsk, VaultEmails, pack_file,
+    FaceAction, FieldKind, FillAsk, KeyId, Lane, LayoutAsk, LayoutChanged, Piece, Suggested, Typed,
+    TypingMode, TypingModeAsk, VaultEmails, pack_file,
 };
 use kx_platform_fake::Stroke;
 use std::sync::Arc;
@@ -79,13 +79,20 @@ fn quit(boot: Boot) {
     drop(heard);
 }
 
-/// Asks the keyboard for its typing mode and Quick-fill for its emails again, as other modules' starts do, and waits
-/// for both answers; handlers run in subscription order, so predict heard each first.
+/// Asks the keyboard for its typing mode, Quick-fill for its emails and the layouts for the layout again, as other
+/// modules' starts do (voice typing's among them), and waits for each answer; handlers run in subscription order, so
+/// predict heard each first.
 fn told_again(bus: &Bus) {
     let (_modes, modes) = hear::<TypingMode>(bus);
     let (_emails, emails) = hear::<VaultEmails>(bus);
+    let (_layouts, layouts) = hear::<LayoutChanged>(bus);
     bus.publish(&TypingModeAsk).unwrap();
     bus.publish(&FillAsk).unwrap();
+    bus.publish(&LayoutAsk).unwrap();
+    assert!(
+        layouts.recv_timeout(WAIT).is_ok(),
+        "the layouts told the layout"
+    );
     assert!(
         modes.recv_timeout(WAIT).is_ok(),
         "the keyboard told its mode"

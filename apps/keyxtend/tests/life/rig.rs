@@ -1,8 +1,9 @@
 //! The app over the fake platform: temp folders with a portable data folder, a clock that moves only when told, the
 //! fake injector and layouts on the captured EN, FR and AR tables, the fake mouse hook, scroll target, shortcuts, power
 //! dialog, box watch, word packs, sealed store, clipboard, shelf, pictures and calendar, Quick-fill's notebook in
-//! memory with seeded random bytes, boxes and places, the selection watch and web link, and the shared fake UI ports
-//! with a reveal and a look the rig keeps; a waker keeps every wake.
+//! memory with seeded random bytes, boxes and places, the selection watch and web link, voice typing's speech, model
+//! files, session watch and shelf, and the shared fake UI ports with a reveal and a look the rig keeps; a waker keeps
+//! every wake.
 
 use crate::fakes::{ports, tray};
 use keyxtend::boot::{Boot, Services};
@@ -15,10 +16,10 @@ use kx_module_api::{Bus, Event, Subscription};
 use kx_platform::{AppDirs, PORTABLE_DIR};
 use kx_platform_fake::{
     DEFAULT_LANGUAGE, FakeBoxes, FakeCalendar, FakeClipboard, FakeClipboardWriter, FakeClock,
-    FakeFieldWatch, FakeFolderReveal, FakeInjector, FakeLayoutSource, FakePictures, FakePlaces,
-    FakePlatform, FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal, FakeScrollTarget,
-    FakeSealedStore, FakeSelectionWatch, FakeShelf, FakeShortcuts, FakeSystemLook, FakeTray,
-    FakeWebLink, FakeWordPacks,
+    FakeFieldWatch, FakeFolderReveal, FakeInjector, FakeLayoutSource, FakeModelFiles, FakePictures,
+    FakePlaces, FakePlatform, FakePointerHook, FakePowerDialog, FakeRandom, FakeReveal,
+    FakeScrollTarget, FakeSealedStore, FakeSelectionWatch, FakeSessionWatch, FakeShelf,
+    FakeShortcuts, FakeSpeech, FakeSystemLook, FakeTray, FakeWebLink, FakeWordPacks,
 };
 use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
@@ -96,20 +97,20 @@ pub struct Rig {
     pub folders: Arc<FakeFolderReveal>,
     /// Behind the system look, in `OS` until a test sets another language.
     pub look: Arc<FakeSystemLook>,
+    /// Behind speech, which opens a run on each ask and tells its notes on cue.
+    pub speech: FakeSpeech,
+    /// Behind the model files, with no drive until a test adds one.
+    pub files: FakeModelFiles,
+    /// Behind the session watch, which tells a lock or a sleep on cue.
+    pub session: FakeSessionWatch,
+    /// Behind voice typing's sealed shelf, empty.
+    pub voice: FakeShelf,
 }
 
 impl Rig {
     /// Fresh folders and fakes, with an empty portable data folder.
     pub fn new() -> Self {
-        let (exe, user) = (
-            TempDir::new("app-exe").unwrap(),
-            TempDir::new("app-user").unwrap(),
-        );
-        std::fs::create_dir(exe.path().join(PORTABLE_DIR)).unwrap();
-        let dirs = AppDirs {
-            exe_dir: exe.path().to_path_buf(),
-            user_dir: user.path().to_path_buf(),
-        };
+        let (exe, user, dirs) = folders();
         Self {
             exe,
             _user: user,
@@ -138,6 +139,10 @@ impl Rig {
             web: Arc::new(FakeWebLink::new()),
             folders: Arc::new(FakeFolderReveal::new()),
             look: Arc::new(FakeSystemLook::new()),
+            speech: FakeSpeech::new(),
+            files: FakeModelFiles::new(),
+            session: FakeSessionWatch::new(),
+            voice: FakeShelf::new(),
         }
     }
 
@@ -163,7 +168,20 @@ impl Rig {
 
     /// The app loaded over the fakes as `run` says, normal or hidden.
     pub fn load_as(&self, run: &Run) -> Boot {
-        let services = Services {
+        self.load_with(run, self.services())
+    }
+
+    /// The app loaded over `services` as `run` says, with the rig's UI ports.
+    pub fn load_with(&self, run: &Run, services: Services) -> Boot {
+        let mut ports = ports(self.tray.clone());
+        ports.reveal = self.reveal.clone();
+        ports.look = self.look.clone();
+        Boot::load(self.platform(), services, ports, run).unwrap()
+    }
+
+    /// The services over the rig's fakes.
+    pub fn services(&self) -> Services {
+        Services {
             injector: self.injector.clone(),
             layouts: self.layouts.clone(),
             pointer: self.pointer.clone(),
@@ -185,11 +203,11 @@ impl Rig {
             selection: Arc::new(self.sel.clone()),
             link: self.web.clone(),
             folders: self.folders.clone(),
-        };
-        let mut ports = ports(self.tray.clone());
-        ports.reveal = self.reveal.clone();
-        ports.look = self.look.clone();
-        Boot::load(self.platform(), services, ports, run).unwrap()
+            speech: Arc::new(self.speech.clone()),
+            models: Arc::new(self.files.clone()),
+            session: Arc::new(self.session.clone()),
+            voice_shelf: Arc::new(self.voice.clone()),
+        }
     }
 
     /// True once the started predict module settled in language `iso`: it opened that pack and heard the typing mode,
@@ -204,6 +222,20 @@ impl Rig {
         bus.publish(&TypingModeAsk).unwrap();
         modes.recv_timeout(WAIT).is_ok()
     }
+}
+
+/// Fresh program and user folders, with an empty portable data folder in the first, and the app's view of them.
+fn folders() -> (TempDir, TempDir, AppDirs) {
+    let (exe, user) = (
+        TempDir::new("app-exe").unwrap(),
+        TempDir::new("app-user").unwrap(),
+    );
+    std::fs::create_dir(exe.path().join(PORTABLE_DIR)).unwrap();
+    let dirs = AppDirs {
+        exe_dir: exe.path().to_path_buf(),
+        user_dir: user.path().to_path_buf(),
+    };
+    (exe, user, dirs)
 }
 
 /// The fake calendar at `TODAY` and `NOW`.

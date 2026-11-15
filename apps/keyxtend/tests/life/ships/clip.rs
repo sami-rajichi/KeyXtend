@@ -1,10 +1,11 @@
 //! The clipboard history's grants (ADR-0034): its feature is a default and the build ships it, it holds the three
-//! gates, the keyboard adds both clipboard gates, the ui and Quick-fill the read one, and the watch, the writer and the
-//! shelf each reach only the modules holding their gate.
+//! gates, the keyboard adds both clipboard gates, the ui and Quick-fill the read one, voice typing the write one for
+//! Copy, and the watch, the writer and the shelf each reach only the modules holding their gate.
 
 use super::{defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
+use keyxtend::hidden::Run;
 use kx_module_api::ports::{
     Clipboard, ClipboardKey, ClipboardWriter, ClipboardWriterKey, SealedShelf, SealedShelfKey,
 };
@@ -19,7 +20,7 @@ const CLIP_FEATURE: &str = "mod-clipboard";
 #[test]
 fn mod_clipboard_is_a_default_feature_and_the_default_build_ships_it() {
     assert!(defaults(&features()).contains(&CLIP_FEATURE));
-    let shipped = modules(&Rig::new().load().hub, OS);
+    let shipped = modules(&Rig::new().load().hub, OS, &Run::Normal);
     let ids: Vec<ModuleId> = shipped.iter().map(|m| m.manifest().id).collect();
     assert!(ids.contains(&kx_mod_clipboard::ID), "{ids:?}");
 }
@@ -35,7 +36,7 @@ fn the_clipboard_holds_read_write_and_the_secret_store() {
 }
 
 #[test]
-fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_and_predict() {
+fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predict_and_voice() {
     let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
     let read = BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID]);
     assert_eq!(
@@ -43,9 +44,13 @@ fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_and_pr
         read,
         "the panel's events and Paste's take"
     );
-    let write = BTreeSet::from([clip, keyboard]);
-    assert_eq!(holders(Capability::WriteClipboard), write, "the paste ask");
-    let secret = BTreeSet::from([clip, kx_mod_predict::ID]);
+    let write = BTreeSet::from([clip, keyboard, kx_mod_voice::ID]);
+    assert_eq!(
+        holders(Capability::WriteClipboard),
+        write,
+        "the paste ask and the bar's Copy"
+    );
+    let secret = BTreeSet::from([clip, kx_mod_predict::ID, kx_mod_voice::ID]);
     assert_eq!(holders(Capability::SecretStore), secret, "the sealed files");
 }
 

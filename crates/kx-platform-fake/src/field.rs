@@ -65,10 +65,10 @@ impl Log {
     }
 }
 
-/// The log, and the live watch's callback, kept apart so `focus` tells with the log unlocked.
+/// The log, and each live watch's callback by its number, kept apart so `focus` tells with the log unlocked.
 #[derive(Default)]
 struct Shared {
-    tell: Mutex<Option<Tell>>,
+    tells: Mutex<Vec<(usize, Tell)>>,
     log: Mutex<Log>,
 }
 
@@ -76,8 +76,8 @@ struct Shared {
 /// read cap and the asked words.
 ///
 /// The scripted text, selection and `ends_with` answer stay across focus changes; a read failure lasts only for its
-/// box. A `tell` runs under the fake's lock, so it must not call `focus` or drop its run, and a second watch replaces
-/// the first's.
+/// box. A `tell` runs under the fake's lock, so it must not call `focus` or drop its run. Each live watch hears every
+/// change, as the real adapter runs one watch per module.
 #[derive(Clone, Default)]
 pub struct FakeFieldWatch {
     shared: Arc<Shared>,
@@ -90,7 +90,7 @@ impl FakeFieldWatch {
         Self::default()
     }
 
-    /// Moves focus to a new box of `kind`, with a fresh `box_id`, and tells the live watch at once on this thread.
+    /// Moves focus to a new box of `kind`, with a fresh `box_id`, and tells each live watch at once on this thread.
     pub fn focus(&self, kind: FieldKind) {
         let change = {
             let mut log = lock(&self.shared.log);
@@ -103,7 +103,7 @@ impl FakeFieldWatch {
                 box_id: log.box_id,
             }
         };
-        if let Some(tell) = lock(&self.shared.tell).as_ref() {
+        for (_, tell) in lock(&self.shared.tells).iter() {
             tell(change);
         }
     }
@@ -209,10 +209,11 @@ impl FieldWatch for FakeFieldWatch {
         }
         log.config = Some(cfg);
         log.watches += 1;
+        let id = log.watches;
         drop(log);
-        *lock(&self.shared.tell) = Some(tell);
+        lock(&self.shared.tells).push((id, tell));
         let shared = Arc::clone(&self.shared);
-        Ok(Box::new(FakeRun { shared, cfg }))
+        Ok(Box::new(FakeRun { shared, cfg, id }))
     }
 }
 

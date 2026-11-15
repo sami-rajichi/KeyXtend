@@ -6,6 +6,7 @@
 use crate::fakes::{ports, tray};
 use crate::{designs, pages, views};
 use keyxtend::boot::modules;
+use keyxtend::hidden::Run;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
 use kx_mod_keyboard::spec::NEXT_ID;
@@ -87,7 +88,7 @@ fn every_mark_the_face_names_is_one_the_mark_fonts_are_checked_for_on_their_circ
 #[test]
 fn every_shipped_module_and_the_kernel_have_a_name() {
     let (hub, _requests) = Hub::new(ports(tray())).unwrap();
-    let ids = modules(&hub, DEFAULT_LANGUAGE)
+    let ids = modules(&hub, DEFAULT_LANGUAGE, &Run::Normal)
         .into_iter()
         .map(|m| m.manifest().id)
         .chain([KERNEL]);

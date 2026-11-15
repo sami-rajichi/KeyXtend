@@ -13,6 +13,8 @@ pub(super) struct FakeRun {
     pub(super) shared: Arc<Shared>,
     /// The watch's config, whose `read_chars` caps each read.
     pub(super) cfg: FieldConfig,
+    /// The watch's number, which finds its callback.
+    pub(super) id: usize,
 }
 
 impl FieldRun for FakeRun {
@@ -64,13 +66,11 @@ impl FieldRun for FakeRun {
 
 impl Drop for FakeRun {
     fn drop(&mut self) {
-        let mut log = lock(&self.shared.log);
-        log.stops += 1;
-        let idle = log.watches == log.stops;
-        drop(log);
-        if idle {
-            let gone = lock(&self.shared.tell).take();
-            drop(gone);
-        }
+        lock(&self.shared.log).stops += 1;
+        let mut tells = lock(&self.shared.tells);
+        let gone = tells.iter().position(|(id, _)| *id == self.id);
+        let gone = gone.map(|at| tells.remove(at));
+        drop(tells);
+        drop(gone);
     }
 }

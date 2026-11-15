@@ -4,7 +4,7 @@
 use crate::rig::{Rig, plant, saved};
 use kx_mod_predict::Msg;
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ChipKind, ChipPicked, FieldKind, Lane, Piece};
+use kx_module_api::ports::{ChipKind, ChipPicked, FieldKind, Lane, LayoutId, Piece};
 
 /// A rig in English whose learner knows `hello` and `help`, focus on a new box of `kind`.
 fn in_box(kind: FieldKind) -> Rig {
@@ -226,6 +226,7 @@ fn a_box_the_watch_already_sees_as_a_password_box_is_never_read() {
     rig.fakes.field.focus(FieldKind::Password);
     let reads = rig.fakes.field.before_calls();
     rig.late(Msg::Lang {
+        id: LayoutId::default(),
         iso: "fr".to_owned(),
         name: "fr".to_owned(),
     });

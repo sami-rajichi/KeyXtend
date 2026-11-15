@@ -51,9 +51,9 @@ Everything we ship or bundle that we did not write ourselves. Updated by the `kx
 | "Playing Card Sounds" by BMacZero (Brian MacIntosh), `contact2.wav` as `assets/sounds/card-down.wav` | – | CC0-1.0 | https://opengameart.org/node/118338 | The drop sound (P4) | yes, built into the app from P4 |
 | whisper.cpp + Whisper weights | – | MIT | https://github.com/ggml-org/whisper.cpp | Local voice typing | models downloaded on demand |
 | whisper.cpp Windows build (`whisper-server`) | b5130 (v1.9.4) | MIT; the bundle also has `SDL2.dll` (Zlib) | https://github.com/ggml-org/whisper.cpp | Local speech server in the voice worker (tested in G22) | P11 decides: shipped or downloaded |
-| cpal | 0.18.2 | Apache-2.0 | https://github.com/RustAudio/cpal | Microphone in the voice worker (tested in G22) | yes, built into the worker (P11) |
+| cpal | 0.18.2 | Apache-2.0; its text is in `licenses/cpal/` | https://github.com/RustAudio/cpal | Microphone in the voice worker (tested in G22) | yes, built into the worker (P11) |
 | transcribe-cpp, transcribe-cpp-sys | 0.4.1 | MIT; they vendor ggml (MIT), miniz (MIT) and Silero VAD's timestamp code (MIT); texts in `licenses/transcribe-cpp/` | https://github.com/handy-computer/transcribe.cpp | The speech engine of the worker's `voice` job, for every model (P11, ADR-0043). Its own crates (log, thiserror; at build cmake, serde_json) are checked by `cargo deny` when the worker takes it | yes, in `keyxtend-worker` and its engine parts |
-| Vulkan-Headers (from the Vulkan SDK) | 1.4.363 | Apache-2.0 OR MIT, used as MIT | https://github.com/KhronosGroup/Vulkan-Headers | Compiled into the engine's graphics-card part (P11) | yes, inside the card part |
+| Vulkan-Headers (from the Vulkan SDK) | 1.4.363 | Apache-2.0 OR MIT, used as MIT; its MIT text is in `licenses/vulkan-headers/` | https://github.com/KhronosGroup/Vulkan-Headers | Compiled into the engine's graphics-card part (P11) | yes, inside the card part |
 | Vulkan loader (`vulkan-1.dll`) | – | Apache-2.0 | https://github.com/KhronosGroup/Vulkan-Loader | Comes with the graphics driver; the build links the SDK's import library only | no |
 | Silero VAD v6.2, GGUF by handy-computer, as `assets/voice/silero-vad-v6.2-F32.gguf` | silero-vad 6.2.3 (`5cd7945`); file revision `a9b2d61c`, SHA-256 `0d871a80…1c88e6` | MIT; `LICENSE` and `NOTICE` beside it | https://huggingface.co/handy-computer/silero-vad-v6.2-gguf | The voice detector that cuts a dictation at pauses (P11) | yes, as a separate file |
 | FLEURS speech clips (en_us 1677, fr_fr 1720, ar_eg 1778), three of about 6 s | revision `70bb2e84` | CC-BY-4.0 (data, with credit) | https://huggingface.co/datasets/google/fleurs | The graphics card's self-test (P11); credits in `assets/voice/README.md` | yes, unmodified separate files with `assets/voice/LICENSE-CLIPS.txt` |
@@ -95,7 +95,7 @@ The Voice panel downloads these on the user's click, from their publisher's repo
 
 | Tool | Version | Licence | Source | Used for |
 |---|---|---|---|---|
-| Vulkan SDK (glslc and the import library) | 1.4.363.1 | Apache-2.0 and the LunarG SDK terms | https://vulkan.lunarg.com | Builds the engine's graphics-card part (P11); installed portable in `D:\dev` |
+| Vulkan SDK (glslc and the import library) | 1.4.363.1 | Apache-2.0 and the LunarG SDK terms | https://vulkan.lunarg.com | Builds the engine's graphics-card part (P11); installed portable in `D:\dev`, and in CI by `.github/actions/vulkan`, pinned by its installer's SHA-256 |
 | aqtinstall | master `076e165` | MIT | https://github.com/miurahr/aqtinstall | Downloads Qt, on the dev PC and in CI |
 | py7zr | 1.1.3 | LGPL-2.1-or-later | https://github.com/miurahr/py7zr | Unpacks Qt's archives for aqtinstall |
 | PresentMon | 2.6.0 | MIT | https://github.com/GameTechDev/PresentMon | Frame times (G8) |

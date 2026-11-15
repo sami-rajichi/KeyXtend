@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
-use crate::config::TidyConfig;
+use crate::config::{Apart, TidyConfig};
 use crate::test_support::{dco_config, tidy_config, unique_temp_dir};
 use crate::workspace::{
     Dependency, DependencyKind, Package, ResolvedDependency, ResolvedGraph, Target, Workspace,
@@ -127,6 +127,12 @@ impl WorkspaceBuilder {
                 id: to.to_string(),
                 kind,
             });
+        self
+    }
+
+    /// Sets the modules F5 keeps apart.
+    pub(crate) fn apart(mut self, apart: Vec<Apart>) -> Self {
+        self.tidy.apart = apart;
         self
     }
 

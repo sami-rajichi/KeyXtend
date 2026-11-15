@@ -107,6 +107,7 @@ pub(crate) fn tidy_config() -> TidyConfig {
             .map(String::from)
             .to_vec(),
         build_scripts: ["build.rs", "qtbuild.rs"].map(String::from).to_vec(),
+        apart: Vec::new(),
     }
 }
 
@@ -171,7 +172,16 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "network": { "lib": "Qt6Network.dll", "by": ["Qt6Qml.dll", "Qt6Quick.dll"] },
         "api_sets": ["api-ms-", "ext-ms-"],
         "system_dir": "System32",
-        "gate_flag": "--sim-input"
+        "gate_flag": "--sim-input",
+        "worker_features": ["card"],
+        "worker_gate": { "feature": "gate", "flag": "--sound" },
+        "engine": {
+            "linked": ["transcribe.dll", "ggml.dll"],
+            "loaded": ["ggml-cpu-x64.dll", "ggml-vulkan.dll"],
+            "floor": "ggml-cpu-x64.dll",
+            "driver": { "lib": "vulkan-1.dll", "by": ["ggml-vulkan.dll"] }
+        },
+        "voice": { "from": "assets/voice", "notices": ["LICENSE"] }
     })
 }
 

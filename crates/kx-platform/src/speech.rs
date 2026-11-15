@@ -8,6 +8,7 @@ mod note;
 mod once;
 mod router;
 mod run;
+mod shipped;
 
 use crate::worker::{Spawner, Split, Stream, VoiceFrames};
 use job::{Key, Live};
@@ -18,6 +19,7 @@ use kx_module_api::ports::{
 };
 use router::{Router, Tell};
 use run::WorkerRun;
+pub use shipped::{CLIPS, DETECTOR, VOICE_FILES};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 

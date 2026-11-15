@@ -232,9 +232,10 @@ The module trait, its lifecycle, services, events and settings: [docs/architectu
 3. Only `kx-platform-*` crates may contain `unsafe`. Every other crate has `#![forbid(unsafe_code)]`. Every `unsafe` block has a `// SAFETY:` comment.
    - Two narrow exceptions: the cxx-qt bridge blocks in `kx-ui/src/bridges/` (ADR-0013), and the never-shipped test tools in `tools/` (ADR-0014).
    - These use `#![deny(unsafe_code)]` with a scoped allow instead of `forbid`. Tidy enforces this for `tools/` and for `kx-ui`, where rule F3 refuses `unsafe` outside `src/bridges/` and any block without a `// SAFETY:` comment.
-4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`.
+4. The `keyxtend` app has **no HTTP/TLS dependency**. `cargo tree -p keyxtend` must not contain `reqwest`, `hyper`, `ureq`, `rustls` or `native-tls`, or `kx-platform-net`, which only the worker's `fetch` job uses (ADR-0042).
 5. The `keyxtend` app never decodes untrusted images, audio or documents. Those crates may appear only in `keyxtend-worker`.
    - The worker is the only PNG and DIB decoder and the only reader of backup boxes and KeePass files, and tidy D4 (`banned_media`) keeps `png`, `fdeflate`, `age` and `keepass` out of the app's tree (ADR-0034, ADR-0038).
+   - The worker's `voice` job alone hears the microphone and runs the speech engine, so D4 keeps `cpal`, `transcribe-cpp` and `transcribe-cpp-sys` out of the app's tree too (ADR-0042).
 6. No module logs typed text, learned words, emails, clipboard content, secrets or transcripts. Such values travel as `Redacted<T>`.
 7. Every new dependency passes `cargo deny check` (licences that allow a closed, sold app: ADR-0030 and `deny.toml`) and is recorded in `THIRD_PARTY.md` if it ships data, fonts, models or icons.
    - No outside code is merged, and the licence-key check and signing secrets never enter this repository (ADR-0030).
@@ -250,13 +251,14 @@ The module trait, its lifecycle, services, events and settings: [docs/architectu
 12. No package turns on a crate feature that `banned_features` in the root `Cargo.toml` lists (tidy D6). Today that is toml's `unbounded`, which lifts the nesting limit that keeps a settings file from overflowing the stack.
 13. Nothing in the app's normal-dependency tree turns on a feature that `build_only_features` lists (tidy D7). Today that is kx-theme's `files` (the asset readers and the WAV reader), which only kx-ui's build and tests and xtask turn on, so the uiAccess app parses no media (invariant 5), and kx-mod-predict's `build` (the pack writer), which only xtask turns on.
 14. Product code in `apps/` and `crates/` starts no process with `std::process::Command` or `QProcess` (tidy F4, `banned_spawns`). A worker starts through the platform's spawner (`WinSpawner`), which lowers its rights and lets it inherit only its pipes; tests, test modules, build scripts and `tools/` may start processes.
+15. The worker's two P11 jobs stay apart (tidy F5, `apart`): no file of its `src/voice` names `kx-platform-net`, and none of its `src/fetch` names `cpal` or `transcribe-cpp`. F5 reads names only (`docs/security/keyxtend-worker.md`).
 
 **CI** (`.github/workflows/ci.yml`):
 - Windows builds and tests everything with Qt, runs the Qt Quick tests and checks the stage.
 - Windows sets `KX_LIVE_CLIPBOARD=1`, so the adapter's live clipboard tests run there; elsewhere they are ignored, as they overwrite the real clipboard (`ci_opts_in_to_these_tests` pins the line).
 - Windows also lints and tests the gate-only `gate-input` build and the adapter's `sim-input` in steps of their own; the stage then refuses that flag (ADR-0027).
 - Windows also lints the app with the scroll module's feature off, so the scroll module stays optional.
-- Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016).
+- Linux leaves out the app and builds `kx-ui` without Qt until P15 (ADR-0016), and the worker without its default speech engine (ADR-0044).
 
 ## Cross-cutting patterns
 

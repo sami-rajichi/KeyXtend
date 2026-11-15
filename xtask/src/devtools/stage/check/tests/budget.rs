@@ -39,7 +39,7 @@ fn a_stage_whose_download_passes_the_budget_is_refused() {
 }
 
 /// The size of one file holding `bytes`, deflated at the download's level.
-fn sized(bytes: &[u8]) -> Size {
+pub(super) fn sized(bytes: &[u8]) -> Size {
     let deflated = crate::deflate::deflated(bytes, level()).unwrap();
     Size {
         bytes: u64::try_from(bytes.len()).unwrap(),
@@ -59,7 +59,7 @@ fn the_summary_counts_files_and_their_size_installed_and_deflated() {
     let want = Summary {
         files: 2,
         size,
-        packs: Size::default(),
+        ..Summary::default()
     };
     assert_eq!(stage.check(), Ok(want));
 }

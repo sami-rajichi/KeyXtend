@@ -7,10 +7,11 @@ use kx_kernel::{Kernel, KernelError, Policy};
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Clipboard, ClipboardKey, ClipboardWriter,
     ClipboardWriterKey, FieldWatch, FieldWatchKey, FolderReveal, FolderRevealKey, InputInjector,
-    InputInjectorKey, LayoutSource, LayoutSourceKey, Pictures, PicturesKey, Places, PlacesKey,
-    PointerHook, PointerHookKey, PowerDialog, PowerDialogKey, Random, RandomKey, ScrollTarget,
-    ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore, SealedStoreKey, SelectionWatch,
-    SelectionWatchKey, Shortcuts, ShortcutsKey, VaultStoreKey, WebLink, WebLinkKey, WordPacks,
+    InputInjectorKey, LayoutSource, LayoutSourceKey, ModelFiles, ModelFilesKey, Pictures,
+    PicturesKey, Places, PlacesKey, PointerHook, PointerHookKey, PowerDialog, PowerDialogKey,
+    Random, RandomKey, ScrollTarget, ScrollTargetKey, SealedShelf, SealedShelfKey, SealedStore,
+    SealedStoreKey, SelectionWatch, SelectionWatchKey, SessionWatch, SessionWatchKey, Shortcuts,
+    ShortcutsKey, Speech, SpeechKey, VaultStoreKey, VoiceShelfKey, WebLink, WebLinkKey, WordPacks,
     WordPacksKey,
 };
 use kx_module_api::{Module, Subscription};
@@ -68,25 +69,34 @@ pub struct Services {
     pub link: Arc<dyn WebLink>,
     /// Shows the voice models folder in the file manager (ADR-0046).
     pub folders: Arc<dyn FolderReveal>,
+    /// Records and transcribes in the worker's `voice` job, for voice typing.
+    pub speech: Arc<dyn Speech>,
+    /// Lists, downloads and checks the voice model files, in the worker's `fetch` job.
+    pub models: Arc<dyn ModelFiles>,
+    /// Tells a lock or a sleep, so a dictation stops and wipes.
+    pub session: Arc<dyn SessionWatch>,
+    /// Keeps voice typing's history, recordings and counts sealed in its own folder, under its own key.
+    pub voice_shelf: Arc<dyn SealedShelf>,
 }
 
-/// The modules this build ships; the `ui` module feeds `hub`, and `os`, the system's display language, is the one
-/// Translate follows.
+/// The modules this build ships for `run`; the `ui` module feeds `hub`, and `os`, the system's display language, is
+/// the one Translate follows.
 #[must_use]
-pub fn modules(hub: &Arc<Hub>, os: &str) -> Vec<Box<dyn Module>> {
-    let mut list = picked(os);
+pub fn modules(hub: &Arc<Hub>, os: &str, run: &Run) -> Vec<Box<dyn Module>> {
+    let mut list = picked(os, run);
     list.push(Box::new(UiModule::new(Arc::clone(hub))));
     list
 }
 
-/// The modules the build's features pick (one feature per module), with the system's display language `os`.
+/// The modules the build's features pick (one feature per module), with the system's display language `os`; voice
+/// typing keeps nothing when `run` is hidden (ADR-0037).
 #[allow(
     unused_mut,
     unused_variables,
     clippy::vec_init_then_push,
     reason = "each push sits behind its module's feature, and a build may turn them all off"
 )]
-fn picked(os: &str) -> Vec<Box<dyn Module>> {
+fn picked(os: &str, run: &Run) -> Vec<Box<dyn Module>> {
     let mut list: Vec<Box<dyn Module>> = Vec::new();
     #[cfg(feature = "mod-layouts")]
     list.push(Box::new(kx_mod_layouts::LayoutsModule));
@@ -106,6 +116,12 @@ fn picked(os: &str) -> Vec<Box<dyn Module>> {
     list.push(Box::new(kx_mod_vault::VaultModule::default()));
     #[cfg(feature = "mod-selection")]
     list.push(Box::new(kx_mod_selection::SelectionModule::new(os)));
+    #[cfg(feature = "mod-voice")]
+    list.push(Box::new(if run.is_hidden() {
+        kx_mod_voice::VoiceModule::hidden()
+    } else {
+        kx_mod_voice::VoiceModule::new()
+    }));
     list
 }
 
@@ -145,7 +161,11 @@ fn provide(kernel: &mut Kernel, services: Services) -> Result<(), KernelError> {
     kernel.provide_platform::<PlacesKey>(services.places)?;
     kernel.provide_platform::<SelectionWatchKey>(services.selection)?;
     kernel.provide_platform::<WebLinkKey>(services.link)?;
-    kernel.provide_platform::<FolderRevealKey>(services.folders)
+    kernel.provide_platform::<FolderRevealKey>(services.folders)?;
+    kernel.provide_platform::<SpeechKey>(services.speech)?;
+    kernel.provide_platform::<ModelFilesKey>(services.models)?;
+    kernel.provide_platform::<SessionWatchKey>(services.session)?;
+    kernel.provide_platform::<VoiceShelfKey>(services.voice_shelf)
 }
 
 /// The hub, the kernel and the queue of the UI's requests, before Qt runs.
@@ -182,7 +202,7 @@ impl Boot {
         if !run.is_hidden() {
             hub.set_clip_folder(folder);
         }
-        let modules = modules(&hub, &os);
+        let modules = modules(&hub, &os, run);
         let mut kernel = Kernel::new(platform, policy(&modules));
         run.ready(&mut kernel, &hub)?;
         provide(&mut kernel, services)?;

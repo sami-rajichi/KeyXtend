@@ -8,7 +8,7 @@ use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::hidden::{Asked, Deletes, Probed, Run};
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, words};
+use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, voice, words};
 use kx_crypto::OsRandom;
 use kx_kernel::KernelSettings;
 use kx_module_api::ports::PointerHook;
@@ -115,14 +115,15 @@ fn tell_booted(boot: &Boot, probed: &Probed, files: &Files, listened: Result<(),
 }
 
 /// The hub and the kernel over `platform` for `run`, with every module added and the settings loaded; the learned
-/// words, the clipboard history and Quick-fill's notebook each keep their own sealed folder and key, or memory alone in
-/// a hidden run.
+/// words, the clipboard history, Quick-fill's notebook and voice typing's history each keep their own sealed folder and
+/// key, or memory alone in a hidden run.
 fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot, BootError> {
     let dirs = platform.dirs();
     let sealed = dirs.data_dir().path().join(words::SEALED_DIR);
     let guard = || platform.key_guard();
     let shelf = run.shelf(clip::folder(dirs), guard, platform.disk_room());
     let vault = run.store(vault::folder(dirs), guard);
+    let voice_shelf = run.shelf(voice::folder(dirs), guard, platform.disk_room());
     let services = Services {
         injector: platform.injector(),
         layouts: platform.layouts(),
@@ -145,6 +146,10 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot
         selection: platform.selection_watch(),
         link: platform.web_link(),
         folders: platform.folder_reveal(),
+        speech: platform.speech(voice::assets(&dirs.exe_dir)),
+        models: platform.model_files(),
+        session: platform.session_watch(),
+        voice_shelf,
     };
     Boot::load(platform.clone(), services, ports(platform), run)
 }

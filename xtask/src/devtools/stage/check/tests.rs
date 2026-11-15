@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 mod budget;
+mod engine;
 mod gate;
 mod listed;
 

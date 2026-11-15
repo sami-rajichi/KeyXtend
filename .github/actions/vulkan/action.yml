@@ -1,0 +1,51 @@
+name: Vulkan SDK
+description: Installs the Vulkan SDK that builds the engine's graphics-card part, and sets VULKAN_SDK as a developer does.
+
+inputs:
+  version:
+    description: The LunarG SDK version THIRD_PARTY.md reviewed.
+    default: 1.4.363.1
+  sha256:
+    description: The SHA-256 of that version's Windows installer.
+    default: c02932bd9a968b22d404536108adaacac908c081cd6b0113f5bfefc523dd0a6a
+
+runs:
+  using: composite
+  steps:
+    # Only an installer whose hash matched is ever saved, and the hash is checked again after each restore.
+    - id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vulkan-sdk.exe
+        key: vulkan-sdk-${{ inputs.version }}-${{ inputs.sha256 }}
+
+    - if: steps.restore.outputs.cache-hit != 'true'
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        $exe = Join-Path $env:RUNNER_TEMP 'vulkan-sdk.exe'
+        Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VERSION/windows/vulkansdk-windows-X64-$env:VERSION.exe" -OutFile $exe
+
+    - shell: pwsh
+      env:
+        SHA256: ${{ inputs.sha256 }}
+      run: |
+        $hash = (Get-FileHash (Join-Path $env:RUNNER_TEMP 'vulkan-sdk.exe') -Algorithm SHA256).Hash
+        if ($hash -ne $env:SHA256) { throw "the Vulkan SDK installer's SHA-256 is $hash, not the pinned one" }
+
+    - if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vulkan-sdk.exe
+        key: vulkan-sdk-${{ inputs.version }}-${{ inputs.sha256 }}
+
+    # `copy_only=1` leaves PATH, the registry and system variables alone; only this job's VULKAN_SDK names the SDK.
+    - shell: pwsh
+      run: |
+        $root = Join-Path $env:RUNNER_TEMP 'VulkanSDK'
+        $opts = '--root', $root, '--accept-licenses', '--default-answer', '--confirm-command', 'install', 'copy_only=1'
+        $p = Start-Process (Join-Path $env:RUNNER_TEMP 'vulkan-sdk.exe') -ArgumentList $opts -Wait -PassThru
+        if ($p.ExitCode -ne 0) { throw "the Vulkan SDK installer exited with $($p.ExitCode)" }
+        if (-not (Test-Path (Join-Path $root 'Bin/glslc.exe'))) { throw 'the Vulkan SDK has no glslc' }
+        "VULKAN_SDK=$root" >> $env:GITHUB_ENV

@@ -43,6 +43,8 @@ embed-manifest.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+# The root manifest's stage and tidy settings, which the args and root tests read.
+toml.workspace = true
 # KeePass test files are written at test time; the feature adds no crate.
 keepass = { workspace = true, features = ["save_kdbx4"] }
 # The scripted server the fetch tests download from; no shipped build turns `fake` on.

@@ -80,6 +80,7 @@ impl Module for PredictModule {
         relay(cx, &tx, |e: &TypingMode| Msg::Mode(*e))?;
         relay(cx, &tx, |e: &AimedLine| Msg::Line(e.line.clone()))?;
         relay(cx, &tx, |e: &LayoutChanged| Msg::Lang {
+            id: e.id,
             iso: e.iso.clone(),
             name: e.name.clone(),
         })?;

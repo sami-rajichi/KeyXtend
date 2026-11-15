@@ -1,5 +1,6 @@
 //! Tidy violation types, and `cargo xtask tidy`'s rule pipeline and report format.
 
+pub(crate) mod apart;
 pub(crate) mod bridges;
 pub(crate) mod deps;
 pub(crate) mod files;
@@ -33,6 +34,9 @@ pub(crate) const F3: &str = "F3";
 /// F4: product code under `spawn_dirs` names a `banned_spawns` API, or renames its module, outside tests, test modules
 /// and build scripts. A rename split over lines slips past this line-based check.
 pub(crate) const F4: &str = "F4";
+/// F5: a file of a module listed in `apart` names a crate banned there, outside comments and literals. It reads names
+/// only, so an alias made outside the module, a re-export or a renamed dependency slips past it.
+pub(crate) const F5: &str = "F5";
 
 /// How serious a tidy [`Violation`] is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,7 +67,7 @@ const WARNING: &str = "warning";
 /// The label [`summary`] prints its line under.
 const SUMMARY_LABEL: &str = "tidy";
 
-/// Runs every tidy rule against `ws`, in a fixed order: D1-D7, then F1-F4.
+/// Runs every tidy rule against `ws`, in a fixed order: D1-D7, then F1-F5.
 pub(crate) fn run(ws: &Workspace) -> Vec<Violation> {
     let mut violations = deps::d1_module_isolation(ws);
     violations.extend(deps::d2_app_only_platform_and_module(ws));
@@ -76,6 +80,7 @@ pub(crate) fn run(ws: &Workspace) -> Vec<Violation> {
     violations.extend(files::f2_unsafe_attr(ws));
     violations.extend(bridges::f3_bridge_unsafe(ws));
     violations.extend(spawns::f4_no_spawn(ws));
+    violations.extend(apart::f5_apart(ws));
     violations
 }
 

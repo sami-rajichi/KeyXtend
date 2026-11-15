@@ -66,6 +66,20 @@ pub(crate) struct TidyConfig {
     pub banned_spawns: Vec<String>,
     /// Build scripts, as paths inside their package, which may start processes.
     pub build_scripts: Vec<String>,
+    /// Modules whose files must not name some crates (tidy F5), as the worker's two jobs stay apart.
+    pub apart: Vec<Apart>,
+}
+
+/// One module of a package whose files must not name the `banned` crates (tidy F5).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Apart {
+    /// The package.
+    pub package: String,
+    /// The module's folder inside the package, `/`-separated; its `.rs` file beside it counts too.
+    pub module: String,
+    /// The crates its files must not name, as packages are named.
+    pub banned: Vec<String>,
 }
 
 impl TidyConfig {
@@ -119,7 +133,7 @@ impl TidyConfig {
         if !self.build_scripts.iter().all(|s| is_relative_plain(s)) {
             return Err(ConfigError::NotRelative("build_scripts"));
         }
-        Ok(())
+        self.apart.iter().try_for_each(Apart::validate)
     }
 
     /// Rejects a blank crate name, a crate with no feature, or a blank feature in a feature map, which would ban
@@ -137,6 +151,24 @@ impl TidyConfig {
             Some((name, _)) => Err(ConfigError::BlankEntry(name)),
             None => Ok(()),
         }
+    }
+}
+
+impl Apart {
+    /// Rejects a blank package or crate, no crate, and a module outside its package, which would read nothing.
+    fn validate(&self) -> Result<(), ConfigError> {
+        const NAME: &str = "apart";
+        let blank = |v: &String| v.trim().is_empty();
+        if blank(&self.package) || self.banned.iter().any(blank) {
+            return Err(ConfigError::BlankEntry(NAME));
+        }
+        if self.banned.is_empty() {
+            return Err(ConfigError::EmptyList(NAME));
+        }
+        if !is_relative_plain(&self.module) {
+            return Err(ConfigError::NotRelative(NAME));
+        }
+        Ok(())
     }
 }
 

@@ -5,6 +5,7 @@
 use super::{asking, defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
+use keyxtend::hidden::Run;
 use kx_crypto::MemoryStore;
 use kx_module_api::ports::{
     Boxes, BoxesKey, Calendar, CalendarKey, Places, PlacesKey, Random, RandomKey, SealedStore,
@@ -24,7 +25,7 @@ const GATES: [ModuleId; 3] = [kx_mod_keyboard::ID, kx_mod_predict::ID, kx_ui::ID
 
 /// Every shipped module's id.
 fn shipped() -> BTreeSet<ModuleId> {
-    let shipped = modules(&Rig::new().load().hub, OS);
+    let shipped = modules(&Rig::new().load().hub, OS, &Run::Normal);
     shipped.iter().map(|m| m.manifest().id).collect()
 }
 

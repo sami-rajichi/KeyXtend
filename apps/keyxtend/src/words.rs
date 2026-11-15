@@ -6,14 +6,6 @@ use std::path::{Path, PathBuf};
 
 pub use kx_platform::SEALED_DIR;
 
-/// The workspace root, from this crate's folder; only a debug build reads under it.
-#[cfg(debug_assertions)]
-macro_rules! root {
-    () => {
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../..")
-    };
-}
-
 /// The words tool's manifest, which names the folder its packs go to under the workspace root.
 #[cfg(debug_assertions)]
 const WORDS_TOML: &str = include_str!(concat!(root!(), "/xtask/words.toml"));

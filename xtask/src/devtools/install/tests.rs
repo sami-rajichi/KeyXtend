@@ -1,4 +1,5 @@
 use kx_module_api::ports::{PACK_DIR, PACK_INDEX};
+use kx_platform::speech::VOICE_FILES;
 
 use super::*;
 use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, noise, stage_config};
@@ -90,12 +91,21 @@ fn worker(ui_access: &str) -> Vec<u8> {
     [stage::bare_image(), level.into_bytes()].concat()
 }
 
-/// A folder holding only the program and the worker, bare images importing nothing, with settings rooted there.
+/// A folder holding the program, the worker and the engine's floor part, bare images importing nothing, and empty voice
+/// files, with settings rooted there.
 fn bare_app(label: &str) -> (TempDir, DevSetup) {
-    let dir = TempDir::new(label);
-    let (program, helper) = (stage_config().program(), stage_config().worker_program());
+    let (dir, config) = (TempDir::new(label), stage_config());
+    let (program, helper) = (config.program(), config.worker_program());
     std::fs::write(dir.path().join(program), stage::bare_image()).unwrap();
     std::fs::write(dir.path().join(helper), worker("false")).unwrap();
+    std::fs::write(dir.path().join(&config.engine.floor), stage::bare_image()).unwrap();
+    let voice = stage::planned(&config)
+        .into_iter()
+        .filter(|p| p.starts_with(VOICE_FILES));
+    for file in voice.map(|f| dir.path().join(f)) {
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(file, b"").unwrap();
+    }
     let setup = DevSetup {
         root: dir.path().to_path_buf(),
         config: devtools_config(),
