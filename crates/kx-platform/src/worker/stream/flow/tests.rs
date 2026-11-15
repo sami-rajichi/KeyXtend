@@ -14,6 +14,7 @@ use std::sync::mpsc::{self, TryRecvError};
 
 mod life;
 mod props;
+mod shift;
 
 /// Test values; the real ones come from each port's config. The cap is four first waits, so the waits double twice.
 const TIMES: Times = Times {

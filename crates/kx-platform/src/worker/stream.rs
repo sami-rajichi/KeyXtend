@@ -29,6 +29,14 @@ pub trait Streams: Frames {
 
     /// True for a note after which its id needs no more watching: an answer, a run's end, or a fault that ends it.
     fn last(note: &Self::Reply) -> bool;
+
+    /// True for a note after which a `Wait::Shift` takes its longer time; none to start.
+    fn shift(_note: &Self::Reply) -> bool {
+        false
+    }
+
+    /// Adds what `peak`, the job's most memory in MB, tells to a note that reports memory; none to start.
+    fn stamp(_note: &mut Self::Reply, _peak: &mut dyn FnMut() -> Option<u32>) {}
 }
 
 /// A worker whose frames another thread may read, as a stream needs.
@@ -152,8 +160,20 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Stream<S, F> {
     }
 
     /// Says goodbye to the worker now and drops every watch; the next fresh ask starts another.
+    #[cfg(test)]
     pub(crate) fn stop(&self) {
         let _ = self.run(Flow::stop);
+    }
+
+    /// Says goodbye to the worker now, and starts the next as `launch` and `times` say; the backoff stays.
+    pub(crate) fn relaunch(&self, launch: Launch, times: Times) {
+        let _ = self.run(move |flow| flow.relaunch(launch, times));
+    }
+
+    /// Wakes the stream's thread, which then checks its waits and its idle time against its clock.
+    #[cfg(test)]
+    pub(crate) fn poke(&self) {
+        let _ = self.run(|_| ());
     }
 
     /// Runs `call` on the stream's thread and waits for its answer; `None` without the thread, or on it.

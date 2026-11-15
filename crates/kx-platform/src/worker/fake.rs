@@ -2,16 +2,18 @@
 //! act, whose frames go to a stream's notes once it took them, and every call is kept in order. It never sleeps: a
 //! silent worker is late at once, and the clock moves only when a test moves it.
 
+mod fetch;
 mod media;
 mod vault;
 pub mod voice;
 
+pub use fetch::FetchAct;
 pub use media::Act;
 pub use vault::VaultAct;
 pub use voice::VoiceAct;
 
 use super::{Frames, Heard, Launch, SpawnError, Spawner, Split, Worker};
-use kx_ipc::{CLEAN_EXIT, IpcError, VaultAsk, VoiceAsk};
+use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, VaultAsk, VoiceAsk};
 use kx_module_api::{Clock, Mono};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -46,7 +48,7 @@ pub trait Faked: Frames {
     }
 }
 
-/// What the host did to a worker, in order, with the waits it gave; a vault or voice ask is kept whole, as its
+/// What the host did to a worker, in order, with the waits it gave; a vault, voice or fetch ask is kept whole, as its
 /// `Debug` hides its values.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
@@ -54,6 +56,7 @@ pub enum Call {
     Dib { id: u32, max_bytes: u32 },
     Vault(VaultAsk<'static>),
     Voice(VoiceAsk<'static>),
+    Fetch(FetchAsk<'static>),
     Bye,
     Reply { within: Duration },
     End,
@@ -77,6 +80,8 @@ struct Log<F: Faked> {
     tell: Option<Sender<Call>>,
     /// The live worker's notes, once a stream took them; dropping it closes them.
     tap: Option<Sender<Frame<F>>>,
+    /// The most memory each worker's job took, as the system would tell it.
+    peak: Option<u32>,
 }
 
 /// A spawner of scripted workers of job `F`; clones share one script.
@@ -94,6 +99,7 @@ impl<F: Faked> Default for Script<F> {
             asked: None,
             tell: None,
             tap: None,
+            peak: None,
         })))
     }
 }
@@ -151,6 +157,11 @@ impl<F: Faked> Script<F> {
     /// Every call so far.
     pub fn calls(&self) -> Vec<Call> {
         self.log().calls.clone()
+    }
+
+    /// Makes each worker's job tell `mb` as its peak memory.
+    pub fn peak(&self, mb: Option<u32>) {
+        self.log().peak = mb;
     }
 
     /// Sends each later call to `to`.
@@ -232,6 +243,10 @@ impl<F: Faked> Worker<F> for FakeWorker<F> {
     fn code(&mut self, within: Duration) -> Option<u32> {
         self.0.record(Call::Code { within });
         self.0.log().exit
+    }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.0.log().peak
     }
 }
 

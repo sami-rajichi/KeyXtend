@@ -13,13 +13,15 @@ use windows::Win32::Foundation::{
 };
 use windows::Win32::System::Pipes::CreatePipe;
 use windows::Win32::System::Threading::{
-    CREATE_SUSPENDED, CreateProcessAsUserW, DETACHED_PROCESS, DeleteProcThreadAttributeList,
-    EXTENDED_STARTUPINFO_PRESENT, InitializeProcThreadAttributeList, LPPROC_THREAD_ATTRIBUTE_LIST,
-    PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROCESS_INFORMATION, ResumeThread, STARTF_USESTDHANDLES,
-    STARTUPINFOEXW, STARTUPINFOW, TerminateProcess, UpdateProcThreadAttribute,
+    CREATE_SUSPENDED, CREATE_UNICODE_ENVIRONMENT, CreateProcessAsUserW, DETACHED_PROCESS,
+    DeleteProcThreadAttributeList, EXTENDED_STARTUPINFO_PRESENT, InitializeProcThreadAttributeList,
+    LPPROC_THREAD_ATTRIBUTE_LIST, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, PROCESS_INFORMATION,
+    ResumeThread, STARTF_USESTDHANDLES, STARTUPINFOEXW, STARTUPINFOW, TerminateProcess,
+    UpdateProcThreadAttribute,
 };
 use windows::core::{PCWSTR, PWSTR};
 
+use super::env::{Home, home};
 use super::job::{ENDED, Job};
 use super::{WinChild, access, line, raw, refused, size32, token};
 
@@ -37,14 +39,14 @@ pub(super) fn start(
     exe: &Path,
     launch: &Launch,
 ) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
-    let job = Job::new(launch.memory_mb)?;
+    let (job, home) = (Job::new(launch.memory_mb)?, home(exe)?);
     let (theirs_in, ours_in) = pipe()?;
     let (ours_out, theirs_out) = pipe()?;
     let made = {
         let token = token::reduced()?;
         let std = (inherit(&theirs_in)?, inherit(&theirs_out)?);
         let mut list = Inherit::new(vec![std.0, std.1])?;
-        create(exe, launch, &token, &mut list, std)?
+        create(exe, launch, &token, &mut list, std, &home)?
     };
     // Our copies of the worker's ends close here, so its exit ends our reads.
     drop((theirs_in, theirs_out));
@@ -89,8 +91,8 @@ fn inherit(end: &OwnedHandle) -> Result<HANDLE, SpawnError> {
     Ok(raw(end))
 }
 
-/// Makes the worker's process suspended, with stdin and stdout from `std`, no stderr and no console, whose host would
-/// load `user32` under the worker's token and fail where that token reaches no desktop.
+/// Makes the worker's process suspended in its `home`, with stdin and stdout from `std`, no stderr and no console,
+/// whose host would load `user32` under the worker's token and fail where that token reaches no desktop.
 #[allow(unsafe_code, reason = "Starts a process with our reduced token.")]
 fn create(
     exe: &Path,
@@ -98,6 +100,7 @@ fn create(
     token: &OwnedHandle,
     list: &mut Inherit,
     std: (HANDLE, HANDLE),
+    home: &Home,
 ) -> Result<Made, SpawnError> {
     let mut info = STARTUPINFOEXW::default();
     info.StartupInfo.cb = size32::<STARTUPINFOEXW>();
@@ -107,11 +110,14 @@ fn create(
     info.lpAttributeList = list.at();
     let app: Vec<u16> = exe.as_os_str().encode_wide().chain([0]).collect();
     let mut line = line::command_line(exe.as_os_str(), &launch.args);
-    let flags = EXTENDED_STARTUPINFO_PRESENT | DETACHED_PROCESS | CREATE_SUSPENDED;
+    let flags = EXTENDED_STARTUPINFO_PRESENT
+        | DETACHED_PROCESS
+        | CREATE_SUSPENDED
+        | CREATE_UNICODE_ENVIRONMENT;
     let mut made = PROCESS_INFORMATION::default();
     let startup = (&raw const info).cast::<STARTUPINFOW>();
-    // SAFETY: every pointer is to a live local or to `list`, which outlive the call; `app` and `line` end with a null
-    // and `line` is writable, as the call wants; the token is open with the rights a start needs.
+    // SAFETY: every pointer is to a live local, `list` or `home`, which outlive the call; `app`, `line` and the folder
+    // end with a null and the block with two; `line` is writable, and the token has the rights a start needs.
     unsafe {
         CreateProcessAsUserW(
             Some(raw(token)),
@@ -121,8 +127,8 @@ fn create(
             None,
             true,
             flags,
-            None,
-            PCWSTR::null(),
+            Some(home.env.as_ptr().cast()),
+            PCWSTR(home.dir.as_ptr()),
             startup,
             &raw mut made,
         )

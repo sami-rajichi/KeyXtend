@@ -119,6 +119,14 @@ pub fn shut(id: u32) -> VoiceNote {
     }
 }
 
+/// The microphone closed at `record_max_s` for run `id`, which the job then writes on its own.
+pub fn limit(id: u32) -> VoiceNote {
+    VoiceNote::Stage {
+        id,
+        stage: Stage::Limit,
+    }
+}
+
 /// A sound level for run `id`.
 pub fn level(id: u32) -> VoiceNote {
     VoiceNote::Level { id, level: 1 }

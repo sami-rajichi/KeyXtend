@@ -11,6 +11,9 @@ pub use note::{
     CheckDone, Hundredths, LEVEL_FULL, MAX_PERCENT, SpeechDone, SpeechNote, SpeechStage, Verdict,
 };
 
+/// The handed-over sound's form and frame cap, the frames' own: 16 kHz mono 16-bit pieces, as `keep` gives them.
+pub use kx_ipc::{MAX_SOUND_BYTES, SAMPLE_BYTES, SOUND_HZ};
+
 use crate::{Capability, SecretBytes, ServiceId, ServiceKey};
 use kx_ipc::VoiceFault;
 use std::ops::RangeInclusive;

@@ -138,10 +138,9 @@ fn a_fingerprint_reads_and_writes_lower_case_hex() {
     for bad in [short, &long, &odd, &signed, "", &"é".repeat(32)] {
         assert_eq!(Fingerprint::from_hex(bad), None, "{bad}");
     }
-    assert_eq!(
-        Fingerprint::new([0xab; Fingerprint::BYTES]).hex(),
-        "ab".repeat(32)
-    );
+    let ab = Fingerprint::new([0xab; Fingerprint::BYTES]);
+    assert_eq!(ab.hex(), "ab".repeat(32));
+    assert_eq!(ab.bytes(), [0xab; Fingerprint::BYTES], "the bytes it wraps");
 }
 
 #[test]

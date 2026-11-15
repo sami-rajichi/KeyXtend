@@ -136,15 +136,16 @@ pub use selection::{
     same_box,
 };
 pub use session::{SessionError, SessionNote, SessionRun, SessionWatch, SessionWatchKey};
-pub use shelf::{Room, SealedShelf, SealedShelfKey};
+pub use shelf::{Room, SealedShelf, SealedShelfKey, VoiceShelfKey};
 pub use shortcut::{
     COPY_ID, COPY_TERM_ID, CUT_ID, KeyName, MAX_ID_LEN, PASTE_ID, PASTE_TERM_ID, ShortcutError,
     ShortcutId, ShortcutInfo, Shortcuts, ShortcutsKey, Step,
 };
 pub use speech::{
     CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, FactsAsk, Hundredths,
-    JobLimits, LEVEL_FULL, MAX_PERCENT, Memory, ModelFacts, Speech, SpeechAsk, SpeechDone,
-    SpeechError, SpeechKey, SpeechModel, SpeechNote, SpeechRun, SpeechStage, TAG_LEN, Verdict,
+    JobLimits, LEVEL_FULL, MAX_PERCENT, MAX_SOUND_BYTES, Memory, ModelFacts, SAMPLE_BYTES,
+    SOUND_HZ, Speech, SpeechAsk, SpeechDone, SpeechError, SpeechKey, SpeechModel, SpeechNote,
+    SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
     BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CompareRow, CompareRun,

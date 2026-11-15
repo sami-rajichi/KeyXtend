@@ -114,6 +114,12 @@ impl Fingerprint {
         Some(Self(bytes))
     }
 
+    /// The SHA-256's bytes, as the frames carry them.
+    #[must_use]
+    pub const fn bytes(&self) -> [u8; Self::BYTES] {
+        self.0
+    }
+
     /// The fingerprint in lower-case hex, as the table writes it.
     #[must_use]
     pub fn hex(&self) -> String {

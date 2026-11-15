@@ -7,19 +7,13 @@ mod frames;
 mod host;
 mod piped;
 mod session;
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the speech and model hosts open streams (P11 task 14)"
-    )
-)]
 mod stream;
 
 pub use frames::{FetchFrames, MediaFrames, VaultFrames, VoiceFrames};
 pub(crate) use host::Host;
 pub use piped::{Child, Piped};
 pub(crate) use session::Session;
+pub(crate) use stream::Stream;
 pub use stream::{Split, Streams, Told, Unsent, Wait};
 
 use kx_ipc::{CLEAN_EXIT, IpcError, REFUSED_EXIT};
@@ -109,6 +103,11 @@ pub trait Worker<F: Frames>: Send {
 
     /// Its exit code, waiting `within` at most for it to end; `None` while it runs.
     fn code(&mut self, within: Duration) -> Option<u32>;
+
+    /// The most memory its job has taken, in MB; `None` when the system cannot tell.
+    fn peak_mb(&mut self) -> Option<u32> {
+        None
+    }
 }
 
 /// What an OS adapter gives the host: the worker program, started with reduced rights, talking job `F`'s frames.

@@ -88,3 +88,42 @@ fn a_fetch_watch_ends_at_the_named_file_or_a_fault() {
     assert!(!FetchFrames::last(&progress), "progress goes on");
     assert_eq!(FetchFrames::ask_id(&FetchAsk::Cancel { id: ID }), ID);
 }
+
+#[test]
+fn a_voice_wait_shifts_when_the_microphone_closes_and_at_nothing_else() {
+    let closed = [Stage::Shut, Stage::Limit, Stage::Silence];
+    let stage = |stage| VoiceNote::Stage { id: ID, stage };
+    assert!(
+        closed
+            .into_iter()
+            .map(stage)
+            .all(|n| VoiceFrames::shift(&n))
+    );
+    let others = going()
+        .into_iter()
+        .chain([open(ID), level(ID), piece(ID), done(ID)]);
+    assert!(!others.into_iter().any(|n| VoiceFrames::shift(&n)));
+    let progress = FetchNote::Progress {
+        id: ID,
+        got: 0,
+        total: 1,
+    };
+    assert!(!FetchFrames::shift(&progress), "a download never shifts");
+}
+
+#[test]
+fn only_a_runs_end_takes_the_jobs_peak_and_never_lowers_its_own() {
+    let peak = |mb: u32| move || Some(mb);
+    let memory = |note: &VoiceNote| match note {
+        VoiceNote::Done { memory_mb, .. } => Some(*memory_mb),
+        _ => None,
+    };
+    let mut end = done(ID);
+    VoiceFrames::stamp(&mut end, &mut peak(7));
+    assert_eq!(memory(&end), Some(7));
+    VoiceFrames::stamp(&mut end, &mut peak(3));
+    assert_eq!(memory(&end), Some(7), "the larger stays");
+    let mut level = level(ID);
+    VoiceFrames::stamp(&mut level, &mut || panic!("a level reads no peak"));
+    assert_eq!(level, crate::worker::fake::voice::level(ID));
+}

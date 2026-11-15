@@ -6,11 +6,14 @@ use std::sync::Arc;
 use kx_crypto::{DiskRoom, KeyGuard};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
-    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource, Pictures,
-    Places, PointerHook, PowerDialog, ScrollTarget, SelectionWatch, Shortcuts, WebLink, WordPacks,
+    Boxes, Calendar, Clipboard, ClipboardWriter, FieldWatch, InputInjector, LayoutSource,
+    ModelFiles, Pictures, Places, PointerHook, PowerDialog, ScrollTarget, SelectionWatch,
+    SessionWatch, Shortcuts, Speech, WebLink, WordPacks,
 };
 use kx_platform::boxes::WorkerBoxes;
+use kx_platform::models::WorkerModels;
 use kx_platform::pictures::WorkerPictures;
+use kx_platform::speech::{Assets, WorkerSpeech};
 use kx_platform::ui::{
     Backdrop, Hidden, Instance, Memory, Reveal, Screens, Speaker, SystemLook, Tray, WindowGuard,
 };
@@ -18,12 +21,13 @@ use kx_platform::{APP_DIR_NAME, AppDirs, Platform};
 
 use crate::disk::WinDiskRoom;
 use crate::hook::Source;
+use crate::voice::{WinDisk, WinHardware};
 use crate::{
     PlatformError, QpcClock, WinBackdrop, WinCalendar, WinClipboard, WinClipboardWriter,
     WinFieldWatch, WinGuard, WinHidden, WinInjector, WinInstance, WinKeyGuard, WinLayouts, WinLook,
     WinMemory, WinPackDisk, WinPlaces, WinPointerHook, WinPower, WinReveal, WinScreens, WinScroll,
-    WinSelectionWatch, WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWebLink, WinWordPacks,
-    dirs,
+    WinSelectionWatch, WinSessionWatch, WinShortcuts, WinSpawner, WinSpeaker, WinTray, WinWebLink,
+    WinWordPacks, dirs,
 };
 
 /// The Windows `Platform`: the QPC clock and the program and per-user folders.
@@ -125,6 +129,38 @@ impl WindowsPlatform {
     #[must_use]
     pub fn places(&self) -> Arc<dyn Places> {
         Arc::new(places(&self.dirs))
+    }
+
+    /// Speech by the voice worker beside the program, with the shipped voice files `assets`, for the app to register
+    /// under `SpeechKey`.
+    #[must_use]
+    pub fn speech(&self, assets: Assets) -> Arc<dyn Speech> {
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
+        let hardware = Arc::new(WinHardware::new());
+        Arc::new(WorkerSpeech::new(
+            worker,
+            Arc::new(self.clock),
+            assets,
+            hardware,
+        ))
+    }
+
+    /// Model files on this PC's drives, downloaded by the fetch worker, for the app to register under
+    /// `ModelFilesKey`.
+    #[must_use]
+    pub fn model_files(&self) -> Arc<dyn ModelFiles> {
+        let worker = WinSpawner::beside(&self.dirs.exe_dir);
+        Arc::new(WorkerModels::new(
+            worker,
+            Arc::new(self.clock),
+            Arc::new(WinDisk),
+        ))
+    }
+
+    /// The session watch, for the app to register under `SessionWatchKey`.
+    #[must_use]
+    pub fn session_watch(&self) -> Arc<dyn SessionWatch> {
+        Arc::new(WinSessionWatch)
     }
 
     /// The word packs in `dirs`, the first folder first, for the app to register under `WordPacksKey`.

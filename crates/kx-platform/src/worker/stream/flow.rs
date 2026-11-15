@@ -171,12 +171,24 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Flow<S, F> {
         self.watches.set(id, wait, now);
     }
 
-    /// Tells `note`; one on a watched id keeps or ends its watch and resets the backoff.
-    fn note(&mut self, note: F::Reply) {
+    /// Says goodbye to the worker and drops every watch, as `stop`; the next starts as `launch` and `times` say, held
+    /// back by the same backoff.
+    pub(super) fn relaunch(&mut self, launch: Launch, times: Times) {
+        self.stop();
+        (self.launch, self.times) = (launch, times);
+    }
+
+    /// Tells `note`, with its job's peak memory added where it reports memory; one on a watched id keeps, shifts or
+    /// ends its watch and resets the backoff.
+    fn note(&mut self, mut note: F::Reply) {
         let now = self.clock.now();
         self.used = now;
-        if self.watches.heard(F::id(&note), now, F::last(&note)) {
+        let (id, last, shift) = (F::id(&note), F::last(&note), F::shift(&note));
+        if self.watches.heard(id, now, last, shift) {
             self.backoff.reset();
+        }
+        if let Some(worker) = self.worker.as_mut() {
+            F::stamp(&mut note, &mut || worker.peak_mb());
         }
         (self.tell)(Told::Note(note));
     }

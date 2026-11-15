@@ -42,7 +42,8 @@ tracing.workspace = true
 # (`Storage_FileSystem`), the calendar reads the time zone (`System_Time`), the worker starts on anonymous pipes
 # (`System_Pipes`) in a job object (`System_JobObjects`), the disk room reads a drive's free space and root, and the
 # places list the drives with their types and labels (`Storage_FileSystem`) with Windows' disk dialogs off
-# (`System_Diagnostics_Debug`).
+# (`System_Diagnostics_Debug`), the session watch hears locks (`System_RemoteDesktop`) and sleeps (`System_Power`),
+# and a models folder made gets rights its owner alone holds (`Security_Authorization`).
 windows = { workspace = true, features = [
     "UI",
     "UI_ViewManagement",
@@ -53,6 +54,7 @@ windows = { workspace = true, features = [
     "Win32_Graphics_Gdi",
     "Win32_Media_Audio_XAudio2",
     "Win32_Security",
+    "Win32_Security_Authorization",
     "Win32_Security_Cryptography",
     "Win32_Storage_FileSystem",
     "Win32_System_Com",
@@ -65,7 +67,9 @@ windows = { workspace = true, features = [
     "Win32_System_Ole",
     "Win32_System_Performance",
     "Win32_System_Pipes",
+    "Win32_System_Power",
     "Win32_System_Registry",
+    "Win32_System_RemoteDesktop",
     "Win32_System_Shutdown",
     "Win32_System_SystemInformation",
     "Win32_System_StationsAndDesktops",

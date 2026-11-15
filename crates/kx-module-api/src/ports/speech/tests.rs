@@ -27,6 +27,23 @@ fn the_speech_service_is_named_and_gated_by_the_microphone() {
 }
 
 #[test]
+fn the_sound_limits_are_the_frames_own_whole_samples() {
+    assert_eq!(
+        (SOUND_HZ, SAMPLE_BYTES, MAX_SOUND_BYTES),
+        (
+            kx_ipc::SOUND_HZ,
+            kx_ipc::SAMPLE_BYTES,
+            kx_ipc::MAX_SOUND_BYTES
+        )
+    );
+    assert_eq!(
+        MAX_SOUND_BYTES % SAMPLE_BYTES,
+        0,
+        "a piece holds whole samples"
+    );
+}
+
+#[test]
 fn a_card_id_is_the_engines_plain_name() {
     for good in ["Vulkan0", "vulkan-1", "Metal_2", "card.3"] {
         let id = CardId::new(good).map(|c| c.as_str().to_owned());

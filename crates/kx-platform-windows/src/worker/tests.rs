@@ -14,6 +14,7 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, OnceLock};
 
+mod home;
 mod rights;
 mod vault;
 mod verdict;

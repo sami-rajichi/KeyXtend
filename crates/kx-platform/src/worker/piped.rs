@@ -27,6 +27,11 @@ pub trait Child: Send {
 
     /// Its exit code, waiting `within` at most for it to end; `None` while it runs.
     fn code(&mut self, within: Duration) -> Option<u32>;
+
+    /// The most memory its job has taken, in MB; `None` when the system cannot tell.
+    fn peak_mb(&mut self) -> Option<u32> {
+        None
+    }
 }
 
 /// A worker that talks job `F`'s frames over its stdin and stdout. Dropping it lets its threads end and drops the
@@ -86,6 +91,10 @@ impl<C: Child, F: Frames> Worker<F> for Piped<C, F> {
 
     fn code(&mut self, within: Duration) -> Option<u32> {
         self.child.code(within)
+    }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.child.peak_mb()
     }
 }
 

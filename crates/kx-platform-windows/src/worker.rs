@@ -4,6 +4,7 @@
 //! it with us. The neutral host in `kx_platform::worker` drives it.
 
 mod access;
+mod env;
 mod job;
 mod label;
 mod line;
@@ -76,6 +77,10 @@ pub struct WinChild {
 impl Child for WinChild {
     fn end(&mut self) {
         self.job.end();
+    }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.job.peak_mb()
     }
 
     #[allow(unsafe_code, reason = "Waits on and reads our own process handle.")]

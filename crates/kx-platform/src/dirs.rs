@@ -17,6 +17,9 @@ pub const SEALED_DIR: &str = "words";
 /// The folder under the data folder that holds Quick-fill's sealed notebook, with its own key (ADR-0038).
 pub const VAULT_DIR: &str = "quickfill";
 
+/// The folder under the data folder that holds voice typing's sealed history, recordings and counts (ADR-0042).
+pub const VOICE_DIR: &str = "voice";
+
 /// The folders an OS adapter reports.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AppDirs {
@@ -101,13 +104,14 @@ mod tests {
 
     #[test]
     fn the_sealed_folders_differ() {
-        let dirs = [CLIP_DIR, SEALED_DIR, VAULT_DIR];
+        let dirs = [CLIP_DIR, SEALED_DIR, VAULT_DIR, VOICE_DIR];
         let apart = dirs
             .iter()
             .enumerate()
             .all(|(i, a)| !dirs[i + 1..].contains(a));
         assert!(apart, "{dirs:?}");
         assert_eq!(VAULT_DIR, "quickfill", "ADR-0038 decision 2");
+        assert_eq!(VOICE_DIR, "voice", "the voice design's store");
     }
 
     #[test]

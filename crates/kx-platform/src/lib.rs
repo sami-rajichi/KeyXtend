@@ -6,16 +6,20 @@
 
 pub mod boxes;
 mod dirs;
+mod ear;
 pub mod field;
 pub mod mirror;
+pub mod models;
 pub mod packs;
 pub mod pictures;
 pub mod selection;
+pub mod speech;
 pub mod ui;
 pub mod worker;
 
 pub use dirs::{
-    APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, VAULT_DIR, pick_data_dir,
+    APP_DIR_NAME, AppDirs, CLIP_DIR, DataDir, PORTABLE_DIR, SEALED_DIR, VAULT_DIR, VOICE_DIR,
+    pick_data_dir,
 };
 
 use kx_module_api::Clock;

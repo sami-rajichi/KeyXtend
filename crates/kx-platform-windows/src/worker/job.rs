@@ -13,8 +13,8 @@ use windows::Win32::System::JobObjects::{
     JOB_OBJECT_UILIMIT_GLOBALATOMS, JOB_OBJECT_UILIMIT_HANDLES, JOB_OBJECT_UILIMIT_READCLIPBOARD,
     JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS, JOB_OBJECT_UILIMIT_WRITECLIPBOARD,
     JOBOBJECT_BASIC_UI_RESTRICTIONS, JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOBOBJECTINFOCLASS,
-    JobObjectBasicUIRestrictions, JobObjectExtendedLimitInformation, SetInformationJobObject,
-    TerminateJobObject,
+    JobObjectBasicUIRestrictions, JobObjectExtendedLimitInformation, QueryInformationJobObject,
+    SetInformationJobObject, TerminateJobObject,
 };
 use windows::core::PCWSTR;
 
@@ -102,6 +102,20 @@ impl Job {
     pub(super) fn end(&self) {
         // SAFETY: our live job handle; a job with no process left is no error worth telling.
         let _ = unsafe { TerminateJobObject(self.handle(), ENDED) };
+    }
+
+    /// The most memory its process has taken, in MB rounded up; `None` when Windows does not tell.
+    #[allow(unsafe_code, reason = "Reads a figure of our own job.")]
+    pub(super) fn peak_mb(&self) -> Option<u32> {
+        let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+        let (at, size) = (
+            (&raw mut info).cast(),
+            size32::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>(),
+        );
+        let class = JobObjectExtendedLimitInformation;
+        // SAFETY: `at` points to a live struct of the size passed, which Windows fills.
+        unsafe { QueryInformationJobObject(Some(self.handle()), class, at, size, None) }.ok()?;
+        u32::try_from(info.PeakProcessMemoryUsed.div_ceil(MIB)).ok()
     }
 
     /// The job's handle, open while the job lives.

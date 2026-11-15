@@ -43,6 +43,7 @@ pub mod reveal;
 pub mod screen;
 pub mod scroll;
 pub mod selection;
+pub mod session;
 pub mod shortcut;
 pub mod sound;
 pub mod strokes;
@@ -55,6 +56,8 @@ pub mod tray;
 pub mod uia;
 #[cfg(windows)]
 pub mod uiaccess;
+#[cfg(windows)]
+pub mod voice;
 pub mod watch;
 pub mod window;
 #[cfg(windows)]
@@ -105,6 +108,8 @@ pub use scroll::WinScroll;
 #[cfg(windows)]
 pub use selection::WinSelectionWatch;
 #[cfg(windows)]
+pub use session::WinSessionWatch;
+#[cfg(windows)]
 pub use shortcut::WinShortcuts;
 #[cfg(windows)]
 pub use sound::WinSpeaker;
@@ -112,6 +117,8 @@ pub use sound::WinSpeaker;
 pub use sysui::WinLook;
 #[cfg(windows)]
 pub use tray::WinTray;
+#[cfg(windows)]
+pub use voice::{WinDisk, WinHardware};
 #[cfg(windows)]
 pub use window::WinGuard;
 #[cfg(windows)]

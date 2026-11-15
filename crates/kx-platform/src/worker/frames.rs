@@ -3,7 +3,7 @@
 
 use super::{Frames, Streams};
 use kx_ipc::{
-    Ask, FETCH_JOB, FetchAsk, FetchNote, IpcError, MEDIA_JOB, Reply, VAULT_JOB, VOICE_JOB,
+    Ask, FETCH_JOB, FetchAsk, FetchNote, IpcError, MEDIA_JOB, Reply, Stage, VAULT_JOB, VOICE_JOB,
     VaultAsk, VaultReply, VoiceAsk, VoiceNote,
 };
 use kx_module_api::ports::SpeechError;
@@ -106,6 +106,19 @@ impl Streams for VoiceFrames {
             | VoiceNote::Stage { .. }
             | VoiceNote::Warm { .. }
             | VoiceNote::Piece { .. } => false,
+        }
+    }
+
+    /// The microphone closing, after which the job writes the rest on its own, as after Stop.
+    fn shift(note: &VoiceNote) -> bool {
+        let closed = [Stage::Shut, Stage::Limit, Stage::Silence];
+        matches!(note, VoiceNote::Stage { stage, .. } if closed.contains(stage))
+    }
+
+    /// A run's end with the job's peak memory, as the job reads none of its own.
+    fn stamp(note: &mut VoiceNote, peak: &mut dyn FnMut() -> Option<u32>) {
+        if let VoiceNote::Done { memory_mb, .. } = note {
+            *memory_mb = (*memory_mb).max(peak().unwrap_or_default());
         }
     }
 }

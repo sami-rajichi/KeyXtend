@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 01:43 — P11: the speech, model files and session hosts
+The app now serves the `Speech`, `ModelFiles` and `SessionWatch` ports over the worker's `voice` and `fetch` jobs: one job per model with its memory cap, `idle_min` on the clock, the recording handed to a new model in wiped pieces, devices, facts and card checks in jobs of their own, and one fetch job per download with room checked first. On Windows the worker starts with an allow-listed environment and its own folder, real cores and job peaks come from the system, a hidden non-activating window tells lock and sleep, and a new models folder is created with a protected rights list in one step. A review fixed a keep that could hang under the job's lock, an uncapped keep, a fingerprint that followed links or read a changing file, and rights that could land on another program's folder.
+
 ## 2026-11-15 00:19 — P11: the models folder, downloads, Compare and the Voice panel's state
 The voice module now knows the models folder by fingerprint, offers `KeyXtend\models` on the drive with most room, refuses relative, device and climbing paths, and runs one download at a time with a note for a full drive, a read-only folder or a taken name. Compare records once and writes it with each ready model in a fresh job, keeping numbers only, and borrows the microphone through the flow so it never meets a dictation; the panel builds every page in 5-row pages with tick-then-act lists and Options checked by the settings' own ranges. A review fixed 15 points, among them a stale fingerprint cache after a folder change, a card granted to an unchecked file, re-checks after a driver update and stale panel clicks.
 
