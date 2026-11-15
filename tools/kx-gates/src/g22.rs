@@ -1,6 +1,8 @@
 //! G22: the Mic button records in the worker, the caption bar shows on top without focus, and the words land in Notepad.
+//! `bench` times the product's default models instead (`g22bench`).
 #![cfg(windows)]
 
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use kx_module_api::MS_PER_S;
@@ -10,6 +12,7 @@ use serde_json::{Value, json};
 use spike_core::config::ToolButton;
 use spike_core::langkey;
 use spike_core::voicecfg::VoiceConfig;
+use spike_core::voiceproto::clip_lang;
 
 use crate::apps::{AppKind, Ctx, Opened};
 use crate::facetools::{self, FaceWin};
@@ -21,6 +24,12 @@ use crate::{g22bench, g22type, g25, langs, probe, readback, wer};
 
 /// Name that runs the bench instead of a face.
 pub const BENCH: &str = "bench";
+
+/// How many clips the face's worker kept in `dir`, each named by its language.
+fn kept(dir: &Path) -> usize {
+    let named = |e: &std::fs::DirEntry| e.file_name().to_str().and_then(clip_lang).is_some();
+    std::fs::read_dir(dir).map_or(0, |list| list.filter_map(Result::ok).filter(named).count())
+}
 
 /// Refuses waits that would let a recording stop by itself or give up before an engine does.
 fn fits(g: &G22, v: &VoiceConfig) -> Result<(), String> {
@@ -151,20 +160,20 @@ fn drive(ctx: &Ctx, fw: &FaceWin, app: &Opened) -> Result<Value, String> {
     }))
 }
 
-/// Runs G22 with face `name` in Notepad, the bench for `bench` and `bench-cloud`, or the typing check.
+/// Runs G22 with face `name` in Notepad, the product's bench for `bench`, or the typing check.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     if name == g22type::TYPING {
         return g22type::run(ctx);
     }
-    g22cfg::one_per_language(&ctx.cfg.g22, &ctx.spike.voice)?;
-    if name == BENCH || name == g22bench::WITH_CLOUD {
-        return g22bench::run(ctx, name);
+    if name == BENCH {
+        return g22bench::run(ctx);
     }
+    g22cfg::one_per_language(&ctx.cfg.g22, &ctx.spike.voice)?;
     fits(&ctx.cfg.g22, &ctx.spike.voice)?;
     let fw = FaceWin::parked(ctx, name)?;
     let doc = probe::open_text(ctx, AppKind::Notepad, "")?;
     let (mut v, notes) = probe::run_on(ctx, doc, |doc| drive(ctx, &fw, &doc.app))?;
-    let kept = g22bench::clips(&ctx.cfg.g22.clips_dir()).map_or(0, |c| c.len());
+    let kept = kept(&ctx.cfg.g22.clips_dir());
     v["gate"] = json!("G22");
     v["face"] = json!(name);
     v["clips_kept"] = json!(kept);
@@ -208,5 +217,18 @@ mod tests {
             "other",
             "a changed start keeps the whole text"
         );
+    }
+
+    #[test]
+    fn only_clips_named_by_their_language_count_as_kept() {
+        let dir = std::env::temp_dir().join("kx-g22-kept-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("creates");
+        for name in ["ar-1.wav", "notes.txt", "nolang.wav"] {
+            std::fs::write(dir.join(name), b"x").expect("writes");
+        }
+        assert_eq!(kept(&dir), 1);
+        std::fs::remove_dir_all(&dir).expect("cleans");
+        assert_eq!(kept(&dir), 0, "no folder keeps none");
     }
 }

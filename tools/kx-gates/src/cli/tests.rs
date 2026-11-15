@@ -70,7 +70,6 @@ const NAME_ONLY: &[&str] = &[
     "g21 win32",
     "g22 qt",
     "g22 bench",
-    "g22 bench-cloud",
     "g22 typing",
     "g23 keyxtend",
     "g24 qt",
@@ -243,4 +242,11 @@ fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate
         Mouse::Held,
         "only G19's"
     );
+}
+
+#[test]
+fn g22s_bench_moves_nothing_and_its_faces_stay_held() {
+    assert_eq!(mouse("g22", crate::g22::BENCH), Mouse::Free);
+    assert_eq!(mouse("g22", crate::g22type::TYPING), Mouse::Held);
+    assert_eq!(mouse("g22", spike_core::config::FACE), Mouse::Held);
 }

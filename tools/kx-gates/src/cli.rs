@@ -123,10 +123,11 @@ const DRIVEN: [(&str, &str); 5] = [
     ("g19", g19chips::HUNG),
 ];
 /// A gate's names that wait on the owner's own mouse or move nothing, though the gate itself holds it.
-const FREED: [(&str, &str); 3] = [
+const FREED: [(&str, &str); 4] = [
     ("g19", g19chips::READ),
     ("g19", g19chips::BESIDE),
     ("g19", g19chips::LOOK),
+    ("g22", g22::BENCH),
 ];
 
 /// Every gate's name.

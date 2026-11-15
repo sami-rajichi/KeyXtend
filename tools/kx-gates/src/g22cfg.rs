@@ -1,5 +1,10 @@
-//! Settings of the voice probe G22 and its bench: the sentences read aloud, folders and waits, from `[g22]`.
+//! Settings of the voice probe G22: the sentences read aloud, folders and waits, from `[g22]`; its bench's settings,
+//! from `[g22_bench]`, are in `bench`.
 #![cfg(windows)]
+
+mod bench;
+
+pub use bench::{Clip, G22Bench, is_part};
 
 use std::collections::HashSet;
 
@@ -49,7 +54,7 @@ impl Sentence {
     }
 }
 
-/// Voice probe (G22) and its bench.
+/// Voice probe (G22).
 #[derive(Debug, Clone, Deserialize)]
 pub struct G22 {
     /// The sentences, read in this order.
@@ -66,10 +71,6 @@ pub struct G22 {
     pub max_chars: i32,
     /// Folder under TEMP where the face's worker keeps the clips; a plain name.
     pub clips: String,
-    /// Folder of the staged worker the bench starts, relative to the gate settings folder.
-    pub worker_dir: String,
-    /// Longest wait for the bench worker to load or answer, in ms.
-    pub answer_wait_ms: u64,
     /// Gaps between typed characters the typing check tries, in ms; 0 types one batch.
     pub type_gaps_ms: Vec<u64>,
 }

@@ -39,9 +39,11 @@ kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard" }
 kx-mod-vault = { path = "../../crates/kx-mod-vault" }
 # The selection chips' settings and translate sites: G19's caret wait, its long Arabic line and the link it reads.
 kx-mod-selection = { path = "../../crates/kx-mod-selection" }
-# The product's commands: `close` posts Quit to the running copy.
+# Voice typing's models table, [voice] defaults and scorer: G22's bench takes each language's default and its ask.
+kx-mod-voice = { path = "../../crates/kx-mod-voice" }
+# The product's commands: `close` posts Quit to the running copy; the speech host G22's bench drives.
 kx-platform = { path = "../../crates/kx-platform" }
-# The golden layout table format that `capture-layouts` writes.
+# The golden layout table format that `capture-layouts` writes, and the fake speech G22's bench tests drive.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 # The product's file names: G8 reads its log, and the gates its keyboard settings.

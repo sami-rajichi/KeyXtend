@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 08:29 — P11: G22's weak-mode bench and the worker job's processor cap
+`kx-gates g22 bench` reads each language's shipped check clip through the product's worker and speech host with its default model, on this PC, then in weak mode: a worker copy with only the plain processor parts, in a job capped at 2 cores at 30 % each before it starts, with 4 GB for the fit rule. It prints numbers only: Parakeet waits 0.3 s here and about 21 s for a 6 s clip in weak mode, and Cohere Transcribe Arabic does not fit 4 GB. The owner decided weak-mode speed is a reading, as the roadmap says, and Parakeet stays the default. A review moved the cap before the worker starts, dropped AVX from weak mode and made each take count the sound heard, not the clock.
+
 ## 2026-11-15 03:39 — P11: the hub's voice side and every voice text
 The UI hub now turns the voice module's bar and panel views into JSON for QML, sends clicks back with the round QML drew, and places the bar the panel gap above the keyboard, else at the bottom centre, never over it, as the `place` setting asks. The tray's Dictation row shows a hidden keyboard first, then opens the panel, and every voice text exists in English, French and Arabic with correct plurals. A review fixed Arabic seconds and milliseconds, an "In use" mark on a model not yet downloaded, a text bundle rebuilt on every read, and a hub file past 300 lines.
 

@@ -1,0 +1,57 @@
+# Settings P11 adds: G22's bench (`g22 bench`, `[g22_bench]`). kx-gates reads them with kx-gates.toml, from its folder;
+# a section sits in one file only.
+
+# G22's bench (risk 7): each check clip's default model in kx-mod-voice's table reads the clip through the gate worker
+# and the product's speech host, with [voice]'s defaults, normal then weak. It starts no screen, moves nothing and
+# prints numbers, never text.
+[g22_bench]
+# The worker built with `gate`, which plays a sound file in place of the microphone; never a staged one. Build it with
+# `cargo build --release -p keyxtend-worker --features gate` into this target folder.
+worker = "../../target/p11-gates/release/keyxtend-worker.exe"
+# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts, as the roadmap's weak
+# PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses a folder holding any other part.
+weak_worker = "../../target/p11-gates/weak/keyxtend-worker.exe"
+# What every processor part of the engine is named from, and the ones a processor without AVX loads.
+part_prefix = "ggml-cpu-"
+weak_parts = ["ggml-cpu-x64.dll", "ggml-cpu-sse42.dll"]
+# The gate worker's flag before the sound file (keyxtend-worker's SOUND_FLAG; a test pins it).
+sound_flag = "--sound"
+# The folder holding the model files: this PC's own, an absolute drive path.
+models_dir = 'D:\dev\models'
+# The shipped voice folder; the detector and every clip are plain names in it, so no other sound is ever read.
+voice_dir = "../../assets/voice"
+detector = "silero-vad-v6.2-F32.gguf"
+# Weak mode: the roadmap's weak PC, as this many cores each at this percent of one here (the job's hard cap and the
+# host's threads), with its 4 GB. A default the product would mark Not for this PC on that memory is not timed there.
+weak_cores = 2
+weak_core_pct = 30
+weak_mb = 4096
+# Each take listens this long past its clip's end, in ms, from the moment the microphone opened, so the cut hears
+# silence after the last word; at least [voice] pad_ms (checked).
+tail_ms = 1000
+# The run passes when each normal row's warm wait after Stop over its clip's length is at most max_rtf, with at most
+# [voice] card_diff words wrong; normal's 0.5 is about 1.5 times the slowest default's trial rate (docs/items/P11.md).
+# Weak rows are readings (roadmap G22: speed recorded in weak mode): past max_weak_rtf a row only reads "slow", and one
+# not for this PC is a reading too; only a fault or words wrong fails. Weak's 1.0 is real time, where pieces keep up.
+max_rtf = 0.5
+max_weak_rtf = 1.0
+# Longest wait for a worker the bench let go to end after the host's goodbye, in ms.
+end_wait_ms = 10000
+
+# The check clips by language, exactly the table's: the shipped file and the sentence it reads, as
+# assets/voice/README.md credits it (a test pins both), and other readings of it the words-wrong count also accepts.
+[g22_bench.clips.en]
+file = "check-en.wav"
+sentence = "Today, the only insects that cannot fold back their wings are dragon flies and mayflies."
+# FLEURS splits "dragon flies", which models write as the one word "dragonflies" and the count would take as 2 wrong.
+also = ["Today, the only insects that cannot fold back their wings are dragonflies and mayflies."]
+
+[g22_bench.clips.fr]
+file = "check-fr.wav"
+sentence = "Le chocolat chaud est conforme aux normes belges. Les jus de fruits sont chers mais excellents."
+also = []
+
+[g22_bench.clips.ar]
+file = "check-ar.wav"
+sentence = "يتصاعد من المصنع دخاناً أبيض، وهذا ما أظهرته تقارير تلفزيونية."
+also = []

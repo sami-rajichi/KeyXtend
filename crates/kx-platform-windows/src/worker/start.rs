@@ -22,7 +22,7 @@ use windows::Win32::System::Threading::{
 use windows::core::{PCWSTR, PWSTR};
 
 use super::env::{Home, home};
-use super::job::{ENDED, Job};
+use super::job::{CpuCap, ENDED, Job};
 use super::{WinChild, access, line, raw, refused, size32, token};
 
 /// What `ResumeThread` returns when it fails.
@@ -34,12 +34,16 @@ struct Made {
     thread: OwnedHandle,
 }
 
-/// Starts `exe` as `launch` says and hands back its stdin, its stdout and its process.
+/// Starts `exe` as `launch` says, its job capped by `cap` if any, and hands back its stdin, its stdout and its process.
 pub(super) fn start(
     exe: &Path,
     launch: &Launch,
+    cap: Option<CpuCap>,
 ) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
     let (job, home) = (Job::new(launch.memory_mb)?, home(exe)?);
+    if let Some(cap) = cap {
+        job.weaken(cap)?;
+    }
     let (theirs_in, ours_in) = pipe()?;
     let (ours_out, theirs_out) = pipe()?;
     let made = {

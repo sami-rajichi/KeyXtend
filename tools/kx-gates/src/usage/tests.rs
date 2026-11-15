@@ -145,3 +145,15 @@ fn p8_lists_g20_on_the_product_and_g8_clip_and_warns_of_the_clipboard() {
         .find(|l| l.starts_with(&format!("g20 {}", workertok::WORKER)));
     assert!(worker.is_some_and(|l| l.contains("only reads")), "{text}");
 }
+
+#[test]
+fn p11_lists_the_bench_which_moves_nothing_and_names_the_gate_worker() {
+    let text = usage();
+    let runs = format!("g22 <{FACE}|{}|{}>", g22::BENCH, g22type::TYPING);
+    assert!(text.contains(&runs), "{text}");
+    let told = text
+        .lines()
+        .find(|l| l.starts_with(&format!("g22 {} ", g22::BENCH)));
+    let says = |l: &str| l.contains("moves nothing") && l.contains("--features gate");
+    assert!(told.is_some_and(says), "{text}");
+}

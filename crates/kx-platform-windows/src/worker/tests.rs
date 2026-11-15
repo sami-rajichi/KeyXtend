@@ -182,6 +182,16 @@ fn a_missing_or_relative_worker_is_missing() {
 }
 
 #[test]
+fn only_a_capped_spawner_starts_its_worker_capped() {
+    let (launch, cap) = (Launch::media(&CFG), CpuCap { cores: 2, pct: 30 });
+    let (_input, _output, plain) = spawner().start(&launch).unwrap();
+    assert_eq!(plain.cpu_cap(), None, "normal mode");
+    let (_input, _output, weak) = spawner().capped(cap).start(&launch).unwrap();
+    let want = job::share(cap, job::logical());
+    assert_eq!(weak.cpu_cap(), Some(want), "weak mode");
+}
+
+#[test]
 fn a_wait_always_ends_however_long_it_is() {
     assert_eq!(wait_ms(Duration::from_millis(5)), 5);
     let longest = [u64::from(INFINITE), u64::MAX].map(Duration::from_millis);

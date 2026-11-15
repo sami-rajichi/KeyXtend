@@ -1535,6 +1535,7 @@ dependencies = [
  "kx-mod-scroll",
  "kx-mod-selection",
  "kx-mod-vault",
+ "kx-mod-voice",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",

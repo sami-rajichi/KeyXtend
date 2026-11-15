@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p10.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p11.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -14,7 +14,7 @@ use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
-use crate::g22cfg::G22;
+use crate::g22cfg::{G22, G22Bench};
 use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
@@ -80,6 +80,8 @@ pub struct GatesConfig {
     pub g21: G21,
     /// G22 settings.
     pub g22: G22,
+    /// G22's bench.
+    pub g22_bench: G22Bench,
     /// G23 on the product.
     pub g23: G23,
     /// G19 on the product.
@@ -251,6 +253,7 @@ pub fn load() -> Result<GatesConfig, String> {
     p8cfg::check(&config)?;
     p9cfg::check(&config)?;
     p10cfg::check(&config)?;
+    config.g22_bench.check()?;
     Ok(config)
 }
 

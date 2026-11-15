@@ -5,9 +5,7 @@
 use spike_core::config::FACE;
 
 use crate::usage::usage;
-use crate::{
-    g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, g22bench, g22type, product,
-};
+use crate::{g8, g8clip, g8hook, g8lang, g8lit, g8predict, g19, g19chips, g22, g22type, product};
 
 /// Gates aimed at the product, which take its name.
 pub(crate) const PRODUCT_GATES: [&str; 14] = [
@@ -44,7 +42,7 @@ fn own_names(gate: &str) -> &'static [&'static str] {
             g19chips::HUNG,
             g19chips::LOOK,
         ],
-        "g22" => &[g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING],
+        "g22" => &[g22::BENCH, g22type::TYPING],
         _ => &[],
     }
 }
@@ -119,7 +117,7 @@ mod tests {
 
     #[test]
     fn a_gates_own_names_stay_valid_for_that_gate_only() {
-        for name in [g22::BENCH, g22bench::WITH_CLOUD, g22type::TYPING] {
+        for name in [g22::BENCH, g22type::TYPING] {
             assert!(check("g22", name).is_ok(), "g22 {name}");
             assert!(check("g2", name).is_err(), "g2 {name}");
         }

@@ -7,7 +7,7 @@ use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
     capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
-    g20, g21, g22, g22bench, g22type, g25, hand, workertok,
+    g20, g21, g22, g22type, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -44,12 +44,20 @@ fn product_lines() -> String {
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g22 <{FACE}|{}|{}|{}>
+       {PROG} g22 <{FACE}|{}|{}>
        {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
         g22::BENCH,
-        g22bench::WITH_CLOUD,
         g22type::TYPING,
+    )
+}
+
+/// The help line of P11's voice bench.
+fn voice_lines() -> String {
+    format!(
+        "g22 {} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
+         the worker built with --features gate, normal then weak, and it prints a table of numbers.",
+        g22::BENCH
     )
 }
 
@@ -147,7 +155,14 @@ g5 {} is the owner's manual check on the installed product, as the test build ca
 
 /// The help's notes on each phase's gates, in order.
 fn notes() -> String {
-    [g8_notes(), typing_lines(), clip_lines(), sel_lines()].join("\n")
+    [
+        g8_notes(),
+        typing_lines(),
+        clip_lines(),
+        sel_lines(),
+        voice_lines(),
+    ]
+    .join("\n")
 }
 
 #[cfg(test)]
