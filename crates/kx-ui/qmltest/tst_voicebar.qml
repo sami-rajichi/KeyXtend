@@ -7,6 +7,7 @@ import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
+import "pointer.js" as Pointer
 import "fixtures/voice.js" as Voice
 import "fixtures/ui-en.js" as En
 import "fixtures/ui-fr.js" as Fr
@@ -39,15 +40,19 @@ Item {
         function view(tag, name, more) {
             return Object.assign(JSON.parse(JSON.stringify(Voice.views[tag][name])), more || {});
         }
-        // A bar over a stand-in Voice object showing `v`, in language `tag` and look `lk` (Native light by default).
+        // A bar over a stand-in Voice object showing `v`, in language `tag` and look `lk` (Native light by default). It
+        // is made hidden and click-through for the real pointer first, so a pointer resting where it shows never hovers
+        // it and sends an extra `over` click.
         function make(v, tag, lk) {
             const t = tag || "en";
             const look = lk || N.lk;
-            const voice = createTemporaryObject(voiceC, root, { page: v });
+            const voice = createTemporaryObject(voiceC, root, { page: null });
             const bar = createTemporaryObject(barC, root, {
                 voice: voice, lk: look, res: Board.resOf(look, root.texts[t]), s: 1, ar: t === "ar",
                 box: () => root.over, logical: (x, y) => ({ x: x, y: y })
             });
+            Pointer.through([bar]);
+            voice.page = v;
             if (v.bar.state !== "hidden") {
                 tryVerify(() => bar.visible, 2000, "it shows");
                 waitForRendering(bar.contentItem);
@@ -179,7 +184,7 @@ Item {
             return [{ tag: "light", lk: N.lk }, { tag: "contrast", lk: H.lk }];
         }
         function test_every_icon_loads_in_its_tint(d) {
-            for (const name of ["listening", "transcribing", "text", "password", "noModel", "checking", "cancelled"]) {
+            for (const name of ["listening", "transcribing", "text", "password", "noModel", "checking", "taken", "cancelled"]) {
                 const bar = make(view("en", name), "en", d.lk);
                 const icons = Board.all(bar.contentItem, o => o.base !== undefined && o.px !== undefined && o.visible);
                 verify(icons.length > 0, name);
@@ -187,6 +192,17 @@ Item {
                     verify(i.icon.length > 0, name + ": an icon name");
                     tryCompare(i, "status", Image.Ready);
                 }
+            }
+        }
+
+        // A download's name clash and a file still being checked each wear their own mark (P11 task 14).
+        function test_the_taken_and_checking_notes_wear_their_own_marks() {
+            for (const [name, id] of [["taken", "taken"], ["checking", "checking"]]) {
+                const bar = make(view("en", name));
+                compare(bar.view.bar.hint.id, id);
+                const icon = Board.all(bar.contentItem, o => o.base !== undefined && o.icon === N.lk.icons.voice.notes[id] && o.visible);
+                compare(icon.length, bar.view.bar.mic ? 0 : 1, name + ": its own mark, or the dot while the microphone is open");
+                verify(!!label(bar, bar.view.bar.hint.text), name + " reads its line");
             }
         }
 

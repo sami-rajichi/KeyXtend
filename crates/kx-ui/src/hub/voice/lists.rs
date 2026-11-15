@@ -164,6 +164,7 @@ pub(super) fn history(cx: &Cx<'_>, h: &HistorySheet) -> Page {
     let sheet = Sheet::History {
         rows: h.rows.iter().map(|r| history_row(t, r)).collect(),
         empty: (h.total == 0).then(|| t.text(VOICE_EMPTY)),
+        unpin: h.unpin,
     };
     let tab = VoiceTab::History;
     let sub = t.voice_with(VOICE_HISTORY_SUB, &[(TEXTS, texts)]);

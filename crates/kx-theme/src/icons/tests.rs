@@ -247,3 +247,32 @@ fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
     let t = text().replacen("voice = \"mic\"", "voice = \"../mic\"", 1);
     assert!(parse(&t).expect_err("a path").contains("tray.voice"));
 }
+
+#[test]
+fn the_voice_panel_shows_the_mock_ups_icons() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "room=hard-drive minus=minus plus=plus before=chevron-left after=chevron-right pinned=pin \
+                ticked=check unpin=pin-off slow=cpu untested=languages folder=folder pages.compare=scale \
+                pages.device=cpu pages.folders=folder-open pages.history=history pages.home=mic \
+                pages.models=audio-lines pages.options=settings-2 buttons.again=rotate-ccw buttons.back=arrow-left \
+                buttons.cancel=x buttons.change=folder buttons.check=activity buttons.close=x buttons.compare=mic \
+                buttons.copy=copy buttons.delete=trash-2 buttons.delete-all=trash-2 buttons.download=download \
+                buttons.here=check buttons.insert=clipboard-paste buttons.open=folder-open buttons.pause=pause \
+                buttons.pin=pin buttons.rerun=rotate-ccw buttons.resume=play buttons.use=check marks.done=check \
+                marks.download=download marks.failed=x marks.not-here=x marks.other=file marks.passed=check \
+                marks.ready=check marks.run-failed=x marks.used=check tops.best=check tops.failed=x tops.kept=check \
+                tops.step=scale kinds.auto=arrow-left-right kinds.built-in=gpu kinds.card=gpu kinds.cpu=cpu";
+    let got: Vec<_> = (i.voice.panel.named().into_iter())
+        .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.panel.")))
+        .collect();
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(got, want, "design/voice-bar.html PAGE");
+    let named = i.named();
+    assert!(named.contains(&("voice.panel.kinds.card".into(), "gpu")));
+    let t = text().replacen("built-in = \"gpu\"", "built-in = \"Gpu\"", 1);
+    assert!(
+        parse(&t)
+            .expect_err("a capital")
+            .contains("voice.panel.kinds.built-in")
+    );
+}

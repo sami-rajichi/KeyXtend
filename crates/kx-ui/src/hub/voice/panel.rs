@@ -82,6 +82,8 @@ pub(super) enum Sheet {
     History {
         rows: Vec<lists::HistoryView>,
         empty: Option<String>,
+        // Pin reads Unpin, as every ticked text is pinned.
+        unpin: bool,
     },
     Options {
         rows: Vec<options::OptionView>,
@@ -152,9 +154,9 @@ impl Cx<'_> {
         vec![yes, Button::new(CONFIRM, "", 0, self.t.text(VOICE_NO))]
     }
 
-    /// The language in front's own name.
+    /// The language in front as the panel's sentences name it.
     pub(super) fn lang(&self) -> String {
-        clean(&self.panel.lang.name)
+        self.t.voice_lang(&self.panel.lang)
     }
 
     /// A page's line naming the language in front.
@@ -200,7 +202,7 @@ pub(super) fn of(panel: &VoicePanel, t: &I18n, read: Option<&str>) -> Panel {
         window: t.text(WINDOW_VOICE_PANEL),
         title: page.title,
         sub: page.sub,
-        lang: (&panel.lang).into(),
+        lang: Lang::of(t, &panel.lang),
         back: (page.id != HOME).then(|| header(PanelButton::Back)),
         close: header(PanelButton::Close),
         top: page.top,

@@ -50,7 +50,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 |---|---|
 | Listening | `on`, `threads`, `record_max_s`, `piece_s`, `pad_ms`, `level_hz`, `nothing_s`, `silence_stop`, `silence_stop_s`, `debounce_ms` |
 | Models and device | `models_dir`, `picks`, `device`, `card_margin_mb`, `card_gain`, `card_diff`, `min_free_mb`, `stall_s` |
-| Typing and bar | `type_suffix`, `type_gap_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
+| Typing and bar | `type_suffix`, `history_join`, `type_gap_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
 | History | `history`, `history_max`, `keep_voice`, `voice_max_mb` |
 | Worker | `job_mb`, `idle_min`, `ask_ms`, `load_s`, `warm_s`, `piece_wait_s`, `restart_ms`, `restart_max_ms` |
 

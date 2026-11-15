@@ -4,7 +4,9 @@
 use super::I18n;
 use super::compose::{FORM_VAR, clean, count};
 use super::keys::vars::LANG;
-use super::keys::{NUM_DECIMAL, VOICE_GB, VOICE_MB, VOICE_NOTE, VOICE_SECS, bar_hint_id};
+use super::keys::{
+    LANG_IN, LANG_NAME, NUM_DECIMAL, VOICE_GB, VOICE_MB, VOICE_NOTE, VOICE_SECS, bar_hint_id,
+};
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::ports::{BarHint, Date, Hundredths, VoiceLang};
 
@@ -38,9 +40,31 @@ impl I18n {
     pub fn voice_hint(&self, hint: &BarHint) -> String {
         let key = format!("{VOICE_NOTE}{}", bar_hint_id(hint));
         match lang_of(hint) {
-            Some(lang) => self.with(&key, [(LANG, clean(&lang.name))]),
+            Some(lang) => self.with(&key, [(LANG, self.voice_lang(lang))]),
             None => self.text(&key),
         }
+    }
+
+    /// Language `lang` as a sentence of these texts names it: their own name for its code, French in lower case, else
+    /// the system's name for it.
+    #[must_use]
+    pub fn voice_lang(&self, lang: &VoiceLang) -> String {
+        self.lang_in(LANG_IN, lang)
+    }
+
+    /// Language `lang` as a title, as the chip shows it: these texts' own name for its code, else the system's name.
+    #[must_use]
+    pub fn voice_title(&self, lang: &VoiceLang) -> String {
+        self.lang_in(LANG_NAME, lang)
+    }
+
+    /// Language `lang` by its code in name group `group`, else the system's name for it.
+    fn lang_in(&self, group: &str, lang: &VoiceLang) -> String {
+        let key = format!("{group}.{}", lang.iso);
+        if lang.iso.is_empty() || !self.has(&key) {
+            return clean(&lang.name);
+        }
+        self.text(&key)
     }
 
     /// Text `key` with text arguments `args`, which the caller cleaned of hidden marks.

@@ -151,7 +151,7 @@ QtObject {
             res: face.res
             st: app.assist
             spots: face.spots
-            ours: [face, bubble, app.notice, trayMenu, app.strip.chips, app.dictation.bar, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
+            ours: [face, bubble, app.notice, trayMenu, app.strip.chips, app.dictation.bar, app.dictation.panel ? app.dictation.panel.pane : null, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }

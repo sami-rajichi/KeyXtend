@@ -6,6 +6,7 @@ mod fill;
 mod place;
 mod plate;
 mod voice;
+mod voicepanel;
 
 use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast};
 use crate::rgba::Rgba;
@@ -85,6 +86,7 @@ pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     clip::clip(v, &mut out);
     fill::fill(v, &mut out);
     voice::voice(v, &mut out);
+    voicepanel::panel(v, &mut out);
     out
 }
 

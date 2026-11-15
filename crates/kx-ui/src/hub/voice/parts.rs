@@ -3,7 +3,6 @@
 
 use super::acts::{BAR, BUTTON};
 use crate::I18n;
-use crate::i18n::clean;
 use crate::i18n::keys::{VOICE_WORD, bar_button_id, bar_hint_id, panel_button_id};
 use kx_module_api::ports::{BarButton, BarHint, PanelButton, VoiceLang};
 use serde::Serialize;
@@ -98,7 +97,7 @@ impl Hint {
     }
 }
 
-/// A language as the bar's chip and the panel name it.
+/// A language as the bar's chip and the panel name it, as a title.
 #[derive(Serialize)]
 pub(super) struct Lang {
     name: String,
@@ -106,10 +105,11 @@ pub(super) struct Lang {
     arabic: bool,
 }
 
-impl From<&VoiceLang> for Lang {
-    fn from(l: &VoiceLang) -> Self {
+impl Lang {
+    /// Language `l`, named in `t`'s words.
+    pub(super) fn of(t: &I18n, l: &VoiceLang) -> Self {
         Self {
-            name: clean(&l.name),
+            name: t.voice_title(l),
             rtl: l.rtl,
             arabic: l.arabic,
         }

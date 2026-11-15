@@ -8,11 +8,13 @@ mod chips;
 mod clip;
 mod fill;
 mod voice;
+mod voicepanel;
 
 pub use chips::ChipsIcons;
 pub use clip::ClipIcons;
 pub use fill::FillIcons;
 pub use voice::VoiceIcons;
+pub use voicepanel::VoicePanelIcons;
 
 /// The top bar's buttons, the resize corner and the bubble.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -227,9 +229,7 @@ impl Icons {
             ("tray.voice", &t.voice),
             ("tray.quit", &t.quit),
         ];
-        let fixed = fixed
-            .into_iter()
-            .map(|(at, v)| (at.to_string(), v.as_str()));
+        let fixed = fixed.map(|(at, v)| (at.to_string(), v.as_str()));
         let panels = self.words.named().into_iter().chain(self.chips.named());
         let panels = panels.chain(self.clip.named()).chain(self.fill.named());
         let keys = by_id("keys", &self.keys);
@@ -237,6 +237,7 @@ impl Icons {
             .chain(fixed)
             .chain(panels.map(|(at, v)| (at.to_string(), v)))
             .chain(self.voice.named())
+            .chain(self.voice.panel.named())
             .collect()
     }
 

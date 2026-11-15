@@ -202,3 +202,9 @@ langname =
     .en = Anglais
     .fr = Français
     .ar = Arabe
+
+## Le nom d’une langue dans une phrase, par code ISO 639, en minuscules ; un autre code garde le nom donné par le système.
+langin =
+    .en = anglais
+    .fr = français
+    .ar = arabe

@@ -92,6 +92,24 @@ fn copy_keeps_the_ticks_and_pin_reads_unpin_on_pinned_texts() {
     );
 }
 
+// A pinned and an unpinned text ticked together read Pin, which pins both, as the clipboard's History does.
+#[test]
+fn pin_reads_pin_while_any_ticked_text_is_unpinned() {
+    let mut rig = on_history(3);
+    let pinned = history(&mut rig).rows[1].id;
+    rig.history.pin(&[pinned]);
+    let rows = history(&mut rig).rows;
+    assert_eq!(rows[0].id, pinned, "pinned texts come first");
+    let loose = rows[1].id;
+    rig.click(&VoiceClick::Row(0));
+    rig.click(&VoiceClick::Row(1));
+    assert!(!history(&mut rig).unpin, "one ticked text is unpinned");
+    assert_eq!(
+        rig.click(&VoiceClick::Button(PanelButton::Pin)),
+        [Do::Pin(vec![pinned, loose])]
+    );
+}
+
 #[test]
 fn delete_all_asks_first_counting_the_unpinned_texts() {
     let mut rig = on_history(3);

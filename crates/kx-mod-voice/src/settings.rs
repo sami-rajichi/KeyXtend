@@ -24,6 +24,8 @@ pub const NOTHING_S: RangeInclusive<u8> = 2..=60;
 pub const DEBOUNCE_MS: RangeInclusive<u16> = 100..=2_000;
 /// The most characters of what follows the typed text.
 pub const TYPE_SUFFIX_CHARS: usize = 8;
+/// The most characters of what goes between History's texts.
+pub const HISTORY_JOIN_CHARS: usize = 8;
 /// The wait between typed pieces, in ms.
 pub const TYPE_GAP_MS: RangeInclusive<u16> = 0..=200;
 /// How long the bar shows the text, in ms.
@@ -59,6 +61,8 @@ const BAD_PLACE: &str = "place must be above, bottom or top";
 const BAD_DIR: &str = "models_dir must be empty or an absolute drive path";
 const BAD_SUFFIX: &str =
     "type_suffix must stay within its length and hold only characters that show";
+const BAD_JOIN: &str =
+    "history_join must stay within its length and hold only characters that show";
 
 /// The picks' key in the section, which also names a dropped pick in the settings notice.
 pub(crate) const PICKS: &str = "picks";
@@ -111,6 +115,8 @@ pub struct VoiceSettings {
     pub debounce_ms: u16,
     /// What follows the typed text.
     pub type_suffix: String,
+    /// What goes between History's texts when Copy or Insert takes more than one.
+    pub history_join: String,
     /// The wait between typed pieces, in ms.
     pub type_gap_ms: u16,
     /// How long the bar shows the text, in ms.
@@ -223,15 +229,14 @@ impl VoiceSettings {
         refuse_if(self.copy_poll_ms > self.copy_ms, BAD_POLL)
     }
 
-    /// The named values: the device, the place, the folder and the suffix.
+    /// The named values: the device, the place, the folder, the suffix and the join.
     fn check_names(&self) -> Result<(), SettingsError> {
         refuse_if(DevicePick::parse(&self.device).is_none(), BAD_DEVICE)?;
         refuse_if(place_named(&self.place).is_none(), BAD_PLACE)?;
         let dir = &self.models_dir;
         refuse_if(!dir.is_empty() && !path_ok(Path::new(dir)), BAD_DIR)?;
-        let suffix = &self.type_suffix;
-        let shows = suffix.chars().count() <= TYPE_SUFFIX_CHARS && !suffix.chars().any(is_hidden);
-        refuse_if(!shows, BAD_SUFFIX)
+        refuse_if(!shows(&self.type_suffix, TYPE_SUFFIX_CHARS), BAD_SUFFIX)?;
+        refuse_if(!shows(&self.history_join, HISTORY_JOIN_CHARS), BAD_JOIN)
     }
 
     /// Drops each pick that is not a language code naming a row that knows it or a model file, alone (edge case 19),
@@ -263,6 +268,11 @@ impl Settings for VoiceSettings {
         self.check_own()?;
         self.check_names()
     }
+}
+
+/// True when `text` is at most `chars` characters, each one that shows.
+fn shows(text: &str, chars: usize) -> bool {
+    text.chars().count() <= chars && !text.chars().any(is_hidden)
 }
 
 /// The bar place `name` names in the setting; `None` for any other text.

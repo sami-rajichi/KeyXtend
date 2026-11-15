@@ -1,5 +1,5 @@
 //! The `Voice` object: the dictation bar and the Voice panel as JSON, the sound level, their clicks, the tray's
-//! Dictation row and the bar's spot. It takes the hub's voice wakes as it starts and tells QML on the Qt thread, so make
+//! Dictation row and the bar's and panel's spots. It takes the hub's voice wakes as it starts and tells QML on the Qt thread, so make
 //! one, at the app's root; a new one takes them over.
 
 use super::{hub, keyboard_box, qs};
@@ -49,6 +49,11 @@ pub mod qobject {
         /// JSON `{x, y}` in physical pixels, or null.
         #[qinvokable]
         fn bar_at(&self, over: &QString, w: f64, h: f64) -> QString;
+
+        /// Where a `w` by `h` Voice panel goes by the keyboard box `over` and the bar box `bar` (JSON, physical pixels,
+        /// null while hidden), as JSON `{x, y, fit}` in physical pixels, or null.
+        #[qinvokable]
+        fn panel_at(&self, over: &QString, bar: &QString, w: f64, h: f64) -> QString;
 
         /// A new view, or the keyboard's language changed: read `view`.
         #[qsignal]
@@ -118,6 +123,17 @@ impl qobject::Voice {
             return qs(NULL);
         };
         let spot = self.with(None, |hub| hub.voice_at(over, w, h));
+        qs(&json(&spot))
+    }
+
+    fn panel_at(&self, over: &QString, bar: &QString, w: f64, h: f64) -> QString {
+        let boxes = keyboard_box(&over.to_string())
+            .and_then(|kb| Ok((kb, keyboard_box(&bar.to_string())?)));
+        let Ok((kb, bar)) = boxes else {
+            tracing::warn!("QML sent a keyboard or bar box that does not read");
+            return qs(NULL);
+        };
+        let spot = self.with(None, |hub| hub.voice_panel_at(kb, bar, w, h));
         qs(&json(&spot))
     }
 

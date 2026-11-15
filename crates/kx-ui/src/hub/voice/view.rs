@@ -124,7 +124,7 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
 /// The Listening state, with the hint while it hears nothing yet.
 fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
     Bar::Listening {
-        lang: (&l.lang).into(),
+        lang: Lang::of(t, &l.lang),
         word: t.text(VOICE_LISTENING),
         elapsed_ms: l.elapsed_ms,
         wave_ms: l.wave_ms,

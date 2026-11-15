@@ -1,10 +1,11 @@
 //! Where the bar goes (design "The bar"): just above the keyboard and centred on it, else the bottom centre of its
 //! screen, else the top centre, never over the keyboard while a spot is free; `place` tries the bottom or the top of
-//! the screen first. Sizes come in Qt units and spots go out in physical pixels; the maths saturates.
+//! the screen first. The Voice panel goes above the bar, else below it, off the keyboard. Sizes come in Qt units and
+//! spots go out in physical pixels; the maths saturates.
 
 use super::super::Hub;
 use super::super::spots::size;
-use crate::geom::{Size, centre, clamp, main_screen, screen_near};
+use crate::geom::{Fitted, Size, by_bar, centre, clamp, main_screen, screen_near};
 use kx_module_api::ports::{BarPlace, Point, Rect};
 
 /// A spot the bar may take.
@@ -70,6 +71,26 @@ impl Hub {
         let place = self.voice_place();
         let bar = size(screen, w, h);
         Some(at(bar, place, over, screen.rect, self.gaps(screen)))
+    }
+
+    /// Where a `w` by `h` Voice panel goes by the shown bar `bar` and keyboard `kb` (physical pixels), with the share of
+    /// its size it takes; with no bar, beside the keyboard as `pop_fit` puts it. `None` when there is no screen.
+    #[must_use]
+    pub fn voice_panel_at(
+        &self,
+        kb: Option<Rect>,
+        bar: Option<Rect>,
+        w: f64,
+        h: f64,
+    ) -> Option<Fitted> {
+        let Some(bar) = bar else {
+            return self.pop_fit(kb, None, w, h);
+        };
+        let screens = self.ports.screens.work_areas();
+        let screen = screen_near(centre(bar), &screens)?;
+        let least = f64::from(self.themes.shape.panel.min_fit);
+        let size = size(screen, w, h);
+        Some(by_bar(size, bar, kb, screen.rect, self.gaps(screen), least))
     }
 }
 

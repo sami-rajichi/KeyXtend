@@ -21,11 +21,15 @@ pub struct VoiceShape {
     pub value_px: f32,
     /// A number column of the Compare table.
     pub col_px: f32,
+    /// The Voice panel's width.
+    pub panel_px: f32,
+    /// Compare's writing line: the moving part's share of its track, and the line's opacity under reduced motion.
+    pub run_share: [f32; 2],
 }
 
 impl VoiceShape {
-    /// Refuses, naming the size: no line, a size of 0 or less, a wave gap below 0, a wide bar narrower than the other,
-    /// a wave whose rest is above its full height, or a knob larger than its switch.
+    /// Refuses, naming the size: no line, a size of 0 or less, a share outside 0 to 1, a wave gap below 0, a wide bar
+    /// narrower than the other, a wave whose rest is above its full height, or a knob larger than its switch.
     pub(super) fn check(&self) -> Result<(), String> {
         if self.text_lines == 0 {
             return Err("shape: voice.text_lines 0 must be 1 or more".to_owned());
@@ -40,9 +44,15 @@ impl VoiceShape {
             ("voice.progress_px", self.progress_px),
             ("voice.value_px", self.value_px),
             ("voice.col_px", self.col_px),
+            ("voice.panel_px", self.panel_px),
         ]);
         if let Some((n, v)) = above.find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));
+        }
+        if let Some(v) = self.run_share.iter().find(|v| !(**v > 0.0 && **v <= 1.0)) {
+            return Err(format!(
+                "shape: voice.run_share {v} must be above 0 and at most 1"
+            ));
         }
         if !(gap.is_finite() && gap >= 0.0) {
             return Err(format!("shape: voice.wave_px gap {gap} must be 0 or more"));

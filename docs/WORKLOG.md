@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 23:55 — P11: the voice panel's pages
+The Voice panel follows the approved mock-up: home, Models with downloads, Pause, Cancel and the folder line, devices with their memory, Compare, History and Options, each list paged at five rows where a click ticks a row and the footer acts on the ticked ones, with switches and steppers instead of sliders. It opens above the voice bar, or below it when there is no room, never over the keyboard, moves when the bar moves or grows, and takes clicks but never focus. A language whose default model is too big for the PC says on the Models page that local models will be very slow here; French names a language in lower case inside a sentence, and the bar's chip names it as a title. History's Copy and a multi-row Insert join texts with the new `history_join` setting, and the panel gets its rows as soon as it first opens.
+
 ## 2026-11-15 19:56 — P11: the voice bar, its tokens, icons and sounds
 The floating voice bar follows the approved mock-up: a wave that follows the voice level (a plain meter under reduced motion), the red dot and timer, Cancel left and Stop right in every language, Stop dark and dimmed while transcribing, placed above the keyboard or else at the bottom centre, taking clicks but never focus. Its sizes, motion, icons and colour pairs are theme tokens, and two short chimes from our own recipes mark the start and end of listening when the voice sounds are on. The bar now says when Copy failed and when typing stopped part way, and the Dictation key's light reads its own flag. A review matched the wave height and the notes' weight to the mock-up, moved the timer's format into the texts and moved the notice window out of App.qml.
 

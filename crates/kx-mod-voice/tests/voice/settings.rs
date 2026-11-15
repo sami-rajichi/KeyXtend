@@ -1,5 +1,6 @@
 //! The kernel's repair of `[voice]`: a bad pick stays for the module to drop alone (plan edge case 19), while a bad
-//! `place` or `device` (edge case 35) goes back to its default with the settings notice; the other values stay.
+//! `place`, `device` (edge case 35) or `history_join` goes back to its default with the settings notice; the other values
+//! stay.
 
 use std::fs;
 
@@ -78,6 +79,19 @@ fn a_bad_device_goes_back_to_automatic_with_the_notice() {
         assert_eq!(notices, [keys::SETTINGS_RESET], "{bad}");
         assert_eq!((s.device(), s.history_max), (DevicePick::Auto, 80), "{bad}");
     }
+}
+
+// History's join (P11 task 25): too long, or a mark that does not show, goes back to a space with the notice.
+#[test]
+fn a_bad_history_join_goes_back_to_a_space_with_the_notice() {
+    for bad in ["\"123456789\"", "\"\\n\"", "\"\\u200B\"", "3"] {
+        let (s, notices) = load(&format!("history_join = {bad}\nhistory_max = 80\n"));
+        assert_eq!(notices, [keys::SETTINGS_RESET], "{bad}");
+        assert_eq!((s.history_join.as_str(), s.history_max), (" ", 80), "{bad}");
+    }
+    let (s, notices) = load("history_join = \" · \"\n");
+    assert!(notices.is_empty(), "{notices:?}");
+    assert_eq!(s.history_join, " · ");
 }
 
 #[test]

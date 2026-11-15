@@ -63,7 +63,10 @@ fn listening_that_hears_nothing_yet_says_so_and_keeps_listening() {
     }));
     assert_eq!(bar["hint"], "Nothing heard yet");
     assert_eq!(bar["lang"]["rtl"], true);
-    assert_eq!(bar["lang"]["name"], "العربية");
+    assert_eq!(
+        bar["lang"]["name"], "Arabic",
+        "named in the keyboard's words"
+    );
 }
 
 #[test]

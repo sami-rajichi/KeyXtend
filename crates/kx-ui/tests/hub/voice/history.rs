@@ -105,6 +105,11 @@ fn the_footer_copies_pins_deletes_and_inserts_in_tick_order() {
         .map(|b| b[2].clone())
         .collect();
     assert_eq!(labels, ["Copy", "Pin", "Delete", "Insert"]);
+    assert_eq!(
+        (&p["sheet"]["unpin"], &one["sheet"]["unpin"]),
+        (&json!(true), &json!(false)),
+        "the footer draws Unpin's icon"
+    );
 }
 
 #[test]

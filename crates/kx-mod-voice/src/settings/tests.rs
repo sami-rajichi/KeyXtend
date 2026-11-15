@@ -206,6 +206,23 @@ fn type_suffix_is_short_and_shows() {
 }
 
 #[test]
+fn history_join_is_a_space_short_and_shows() {
+    let s = VoiceSettings::from_defaults().unwrap();
+    assert_eq!(s.history_join, " ", "a space, so texts never glue together");
+    let eight = "·".repeat(HISTORY_JOIN_CHARS);
+    for good in ["", " ", " · ", eight.as_str()] {
+        assert!(taken(&with("history_join", good)), "{good:?}");
+    }
+    let nine = "·".repeat(HISTORY_JOIN_CHARS + 1);
+    for bad in [nine.as_str(), "\n", "\u{200B}"] {
+        assert!(
+            refused(&with("history_join", bad), "history_join"),
+            "{bad:?}"
+        );
+    }
+}
+
+#[test]
 fn an_unknown_key_is_refused() {
     assert!(unread(&with("engine", "whisper")));
 }

@@ -561,7 +561,12 @@ var lk = {
         12.0
       ],
       "value_px": 92.0,
-      "col_px": 84.0
+      "col_px": 84.0,
+      "panel_px": 600.0,
+      "run_share": [
+        0.4,
+        0.5
+      ]
     }
   },
   "motion": {
@@ -759,6 +764,17 @@ var lk = {
           0.25,
           0.1,
           0.25,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "run": {
+        "ms": 1000,
+        "bez": [
+          0.42,
+          0.0,
+          0.58,
           1.0,
           1.0,
           1.0
@@ -1169,6 +1185,72 @@ var lk = {
         "print": "download",
         "taken": "file",
         "unplugged": "mic-off"
+      },
+      "panel": {
+        "room": "hard-drive",
+        "minus": "minus",
+        "plus": "plus",
+        "before": "chevron-left",
+        "after": "chevron-right",
+        "pinned": "pin",
+        "ticked": "check",
+        "unpin": "pin-off",
+        "slow": "cpu",
+        "untested": "languages",
+        "folder": "folder",
+        "pages": {
+          "compare": "scale",
+          "device": "cpu",
+          "folders": "folder-open",
+          "history": "history",
+          "home": "mic",
+          "models": "audio-lines",
+          "options": "settings-2"
+        },
+        "buttons": {
+          "again": "rotate-ccw",
+          "back": "arrow-left",
+          "cancel": "x",
+          "change": "folder",
+          "check": "activity",
+          "close": "x",
+          "compare": "mic",
+          "copy": "copy",
+          "delete": "trash-2",
+          "delete-all": "trash-2",
+          "download": "download",
+          "here": "check",
+          "insert": "clipboard-paste",
+          "open": "folder-open",
+          "pause": "pause",
+          "pin": "pin",
+          "rerun": "rotate-ccw",
+          "resume": "play",
+          "use": "check"
+        },
+        "marks": {
+          "done": "check",
+          "download": "download",
+          "failed": "x",
+          "not-here": "x",
+          "other": "file",
+          "passed": "check",
+          "ready": "check",
+          "run-failed": "x",
+          "used": "check"
+        },
+        "tops": {
+          "best": "check",
+          "failed": "x",
+          "kept": "check",
+          "step": "scale"
+        },
+        "kinds": {
+          "auto": "arrow-left-right",
+          "built-in": "gpu",
+          "card": "gpu",
+          "cpu": "cpu"
+        }
       }
     }
   },

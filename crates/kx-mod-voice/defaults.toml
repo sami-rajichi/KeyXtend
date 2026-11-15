@@ -26,6 +26,8 @@ silence_stop_s = 3
 debounce_ms = 400
 # What follows the typed text, at most 8 characters.
 type_suffix = " "
+# What goes between History's texts when Copy or Insert takes more than one, at most 8 characters.
+history_join = " "
 # The wait between typed pieces, in ms.
 type_gap_ms = 10
 # How long the bar shows the text, in ms, before it fades.

@@ -248,3 +248,9 @@ langname =
     .en = الإنجليزية
     .fr = الفرنسية
     .ar = العربية
+
+## اسم اللغة داخل الجملة حسب رمز ISO 639؛ ويبقى لأي رمز آخر الاسمُ الذي يعطيه النظام.
+langin =
+    .en = { langname.en }
+    .fr = { langname.fr }
+    .ar = { langname.ar }

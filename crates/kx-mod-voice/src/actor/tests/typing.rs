@@ -4,7 +4,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use kx_module_api::ports::{BarButton, BarHint, ClipPart, TextAsk, TextDone, VoiceBar};
+use kx_module_api::ports::{
+    BarButton, BarHint, ClipPart, PanelButton, TextAsk, TextDone, VoiceBar, VoiceClick, VoiceTab,
+};
 use kx_module_api::{Bus, Redacted, Zeroizing};
 
 use super::super::typing::{queue, type_all};
@@ -127,6 +129,62 @@ fn copy_puts_the_text_on_the_clipboard_within_its_wait() {
         rig.fake.clip.last_wait(),
         Some(rig.actor.settings().copy_wait())
     );
+}
+
+/// The rows a panel page holds, as the ui tells them.
+const ROWS: u8 = 5;
+
+/// History with "one" then "two" dictated, both ticked in that order, on settings `setup` writes.
+fn two_ticked(setup: impl FnOnce(&mut kx_test_support::host::FakeHost)) -> Rig {
+    let mut rig = Rig::build(|_, host| setup(host));
+    rig.speak("one");
+    rig.speak("two");
+    rig.act(VoiceClick::Rows(ROWS));
+    rig.send(Msg::Open);
+    rig.act(VoiceClick::Open(VoiceTab::History));
+    // Newest first, so "one" is the second row.
+    rig.act(VoiceClick::Row(1));
+    rig.act(VoiceClick::Row(0));
+    rig
+}
+
+/// The text of the last clipboard write.
+fn copied(rig: &Rig) -> String {
+    let writes = rig.fake.clip.writes();
+    match writes.last().map(|w| &w[..]) {
+        Some([ClipPart::Text(t)]) => t.expose().as_str().to_owned(),
+        other => panic!("{other:?}"),
+    }
+}
+
+// With no suffix, History's texts still never glue together (P11 task 20).
+#[test]
+fn history_joins_its_texts_by_the_join_and_types_the_suffix_after_the_last() {
+    let mut rig = two_ticked(|host| host.put("type_suffix", "".into()));
+    rig.act(VoiceClick::Button(PanelButton::Copy));
+    assert_eq!(copied(&rig), "one two");
+    let before = rig.asks().len();
+    rig.act(VoiceClick::Button(PanelButton::Insert));
+    let typed: Vec<String> = rig.asks()[before..]
+        .iter()
+        .map(|a| a.text.expose().as_str().to_owned())
+        .collect();
+    assert_eq!(typed, ["one ", "two"]);
+}
+
+#[test]
+fn history_takes_its_join_from_the_settings() {
+    let mut rig = two_ticked(|host| host.put("history_join", " / ".into()));
+    rig.act(VoiceClick::Button(PanelButton::Copy));
+    assert_eq!(copied(&rig), "one / two");
+    let before = rig.asks().len();
+    rig.act(VoiceClick::Button(PanelButton::Insert));
+    let last = rig
+        .asks()
+        .last()
+        .map(|a| a.text.expose().as_str().to_owned());
+    assert_eq!(rig.asks().len() - before, 2);
+    assert_eq!(last.as_deref(), Some("two "), "the suffix after the last");
 }
 
 #[test]

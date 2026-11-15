@@ -75,6 +75,36 @@ fn the_start_asks_the_module_and_tells_it_the_rows_a_page_holds() {
     assert_eq!(heard.sent.acts(), [want]);
 }
 
+/// The rows a page holds, told on the view of `round`.
+fn rows_on(rig: &Rig, round: u32) -> VoiceAct {
+    let rows = VoiceClick::Rows(u8::try_from(rig.hub.settings().page_rows).unwrap());
+    VoiceAct { round, click: rows }
+}
+
+// The ui module starts first, so its first Rows may reach the bus before the voice module listens (P11 task 20).
+#[test]
+fn a_view_that_first_carries_a_panel_tells_the_module_the_rows_again() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    heard.view(page(1, listening_bar(), None));
+    assert!(heard.sent.acts().is_empty(), "no panel, no rows");
+    heard.view(page(2, listening_bar(), Some(panel(home()))));
+    assert_eq!(heard.sent.acts(), [rows_on(&rig, 2)], "the panel opened");
+    heard.view(page(3, listening_bar(), Some(panel(home()))));
+    assert!(heard.sent.acts().is_empty(), "it stays open");
+    heard.view(page(4, VoiceBar::Hidden, None));
+    heard.view(page(5, VoiceBar::Hidden, Some(panel(home()))));
+    assert_eq!(heard.sent.acts(), [rows_on(&rig, 5)], "opened again");
+}
+
+#[test]
+fn the_first_view_with_a_panel_tells_the_rows() {
+    let rig = Rig::new();
+    let heard = heard(&rig);
+    heard.view(page(7, VoiceBar::Hidden, Some(panel(home()))));
+    assert_eq!(heard.sent.acts(), [rows_on(&rig, 7)]);
+}
+
 #[test]
 fn the_pointer_leaves_a_bar_that_hides() {
     let rig = Rig::new();

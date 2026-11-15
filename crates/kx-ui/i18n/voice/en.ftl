@@ -201,3 +201,9 @@ langname =
     .en = English
     .fr = French
     .ar = Arabic
+
+## A language's name inside a sentence, by ISO 639 code; another code keeps the system's own name.
+langin =
+    .en = { langname.en }
+    .fr = { langname.fr }
+    .ar = { langname.ar }

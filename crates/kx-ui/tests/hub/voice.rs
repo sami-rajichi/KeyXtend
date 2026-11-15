@@ -8,7 +8,9 @@ mod device;
 mod gate;
 mod history;
 mod models;
+mod named;
 mod options;
+mod pane;
 mod panel;
 mod place;
 // Without `qt` the sound table is empty, as for the hub's own sound tests.

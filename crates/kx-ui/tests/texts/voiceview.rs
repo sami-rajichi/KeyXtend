@@ -44,7 +44,7 @@ fn spoken(tag: &str) -> (VoiceLang, &'static str) {
     };
     match tag {
         "fr" => (
-            lang("Français", false),
+            lang("français", false),
             "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine.",
         ),
         "ar" => (
@@ -115,6 +115,7 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
         ),
         ("noModel", note(no_model, Some(BarButton::Download), false)),
         ("checking", note(BarHint::Checking, None, true)),
+        ("taken", note(BarHint::Taken, None, false)),
         ("fault", note(BarHint::Fault, None, false)),
     ]
 }

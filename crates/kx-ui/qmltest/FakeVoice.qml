@@ -1,5 +1,5 @@
 // A stand-in for the hub's Voice object: the view and level as the hub writes them, where the hub places the bar for
-// each place, and every click, sound, open and place ask QML sends.
+// each place and the Voice panel, and every click, sound, open and place ask QML sends.
 import QtQuick
 
 QtObject {
@@ -12,6 +12,9 @@ QtObject {
     property var spots: ({ above: { x: 300, y: 500 }, bottom: { x: 300, y: 900 }, top: { x: 300, y: 10 } })
     // Each `barAt` ask as `{over, w, h}`, and each call as `act kind id arg round`, `chime true|false` or `open`.
     property var asks: []
+    // Where `panelAt` puts the Voice panel, `{x, y, fit}` in physical pixels, and each ask as `{over, bar, w, h}`.
+    property var panelSpot: ({ x: 300, y: 100, fit: 1 })
+    property var panelAsks: []
     property var calls: []
     // How often QML read the level.
     property int reads: 0
@@ -45,5 +48,9 @@ QtObject {
         asks = asks.concat([{ over: box, w: w, h: h }]);
         const place = box && page ? page.place : "bottom";
         return JSON.stringify(spots[place]);
+    }
+    function panelAt(over, bar, w, h) {
+        panelAsks = panelAsks.concat([{ over: JSON.parse(over), bar: JSON.parse(bar), w: w, h: h }]);
+        return JSON.stringify(panelSpot);
     }
 }

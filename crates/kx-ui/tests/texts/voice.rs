@@ -7,10 +7,10 @@ use kx_module_api::ports::{
     BarButton, BarHint, BarPlace, FetchButton, Hundredths, PanelButton, VoiceLang, VoiceTab,
 };
 use kx_ui::i18n::keys::{
-    LANG_NAME, TRAY_VOICE, VOICE_COL, VOICE_COLS, VOICE_CORES, VOICE_FASTER, VOICE_MARK, VOICE_MS,
-    VOICE_NOTE, VOICE_PLACE, VOICE_SECONDS, VOICE_TEXTS, VOICE_TIMES, VOICE_TITLE, VOICE_WORD,
-    VoiceMark, bar_button_id, bar_hint_id, fetch_button_id, mark_id, panel_button_id, place_id,
-    voice_tab_id,
+    LANG_IN, LANG_NAME, TRAY_VOICE, VOICE_COL, VOICE_COLS, VOICE_CORES, VOICE_FASTER, VOICE_MARK,
+    VOICE_MS, VOICE_NOTE, VOICE_PLACE, VOICE_SECONDS, VOICE_TEXTS, VOICE_TIMES, VOICE_TITLE,
+    VOICE_WORD, VoiceMark, bar_button_id, bar_hint_id, fetch_button_id, mark_id, panel_button_id,
+    place_id, voice_tab_id,
 };
 
 mod icons;
@@ -74,7 +74,9 @@ fn keys() -> Vec<String> {
     keys.extend(BarPlace::ALL.map(|p| format!("{VOICE_PLACE}{}", place_id(p))));
     keys.extend(VoiceMark::ALL.map(|m| format!("{VOICE_MARK}{}", mark_id(m))));
     keys.extend(VOICE_COLS.map(|c| format!("{VOICE_COL}{c}")));
-    keys.extend(["en", "fr", "ar"].map(|iso| format!("{LANG_NAME}.{iso}")));
+    for group in [LANG_NAME, LANG_IN] {
+        keys.extend(["en", "fr", "ar"].map(|iso| format!("{group}.{iso}")));
+    }
     keys
 }
 
@@ -155,6 +157,42 @@ fn a_note_names_the_language_in_its_own_words() {
     assert_eq!(no_model("ar", "العربية"), "لا يوجد نموذج للغة العربية بعد");
     let hidden = lang("en").voice_hint(&BarHint::Language(named("Eng\u{202e}lish")));
     assert!(hidden.contains("English"), "hidden marks go: {hidden}");
+}
+
+// Words pinned to another language than the one in front name it by its code in their own words, French in lower case
+// inside a sentence; a language they have no name for keeps the system's own name.
+#[test]
+fn a_note_names_the_language_in_front_by_its_code_in_the_words_language() {
+    let no_model = |tag: &str, iso: &str, name: &str| {
+        let mut front = named(name);
+        iso.clone_into(&mut front.iso);
+        lang(tag).voice_hint(&BarHint::NoModel {
+            lang: front,
+            bytes: 1,
+        })
+    };
+    let fr = "Aucun modèle en anglais pour l’instant";
+    assert_eq!(no_model("fr", "en", "English"), fr);
+    assert_eq!(
+        no_model("fr", "fr", "Français"),
+        "Aucun modèle en français pour l’instant"
+    );
+    assert_eq!(
+        no_model("fr", "ar", "العربية"),
+        "Aucun modèle en arabe pour l’instant"
+    );
+    let ar = "لا يوجد نموذج للغة الإنجليزية بعد";
+    assert_eq!(no_model("ar", "en", "English"), ar);
+    assert_eq!(
+        no_model("ar", "fr", "français"),
+        "لا يوجد نموذج للغة الفرنسية بعد"
+    );
+    assert_eq!(no_model("en", "fr", "français"), "No model for French yet");
+    assert_eq!(
+        no_model("en", "de", "Deutsch"),
+        "No model for Deutsch yet",
+        "the system's name"
+    );
 }
 
 #[test]

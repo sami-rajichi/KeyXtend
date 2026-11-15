@@ -25,6 +25,6 @@ pub mod view;
 pub use manifest::{ID, MANIFEST};
 pub use module::VoiceModule;
 pub use settings::{
-    CARD_DIFF, CARD_GAIN, DEBOUNCE_MS, DONE_MS, HISTORY_MAX, NOTHING_S, PLACES, SPEC, TYPE_GAP_MS,
-    TYPE_SUFFIX_CHARS, VOICE_MAX_MB, VoiceSettings, WAVE_MS, place_name,
+    CARD_DIFF, CARD_GAIN, DEBOUNCE_MS, DONE_MS, HISTORY_JOIN_CHARS, HISTORY_MAX, NOTHING_S, PLACES,
+    SPEC, TYPE_GAP_MS, TYPE_SUFFIX_CHARS, VOICE_MAX_MB, VoiceSettings, WAVE_MS, place_name,
 };

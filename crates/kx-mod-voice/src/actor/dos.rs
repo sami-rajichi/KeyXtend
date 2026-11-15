@@ -147,14 +147,15 @@ impl Actor {
         }
     }
 
-    /// Types History's texts `ids`, in order, each with the suffix; their answers never reach the flow.
+    /// Types History's texts `ids`, in order, joined by the join, the suffix after the last; their answers never reach
+    /// the flow.
     fn insert(&mut self, ids: &[u64]) {
-        let (suffix, gap_ms) = (
-            &self.held.settings.type_suffix,
-            self.held.settings.type_gap_ms,
-        );
-        let texts: Vec<_> = (ids.iter().filter_map(|id| self.held.history.get(*id)))
-            .map(|entry| suffixed(entry.text.expose(), suffix))
+        let s = &self.held.settings;
+        let (suffix, join, gap_ms) = (&s.type_suffix, &s.history_join, s.type_gap_ms);
+        let entries: Vec<_> = (ids.iter().filter_map(|id| self.held.history.get(*id))).collect();
+        let last = entries.len().saturating_sub(1);
+        let texts: Vec<_> = (entries.iter().enumerate())
+            .map(|(at, e)| suffixed(e.text.expose(), if at == last { suffix } else { join }))
             .collect();
         for text in texts {
             let ask = TextAsk {
@@ -167,11 +168,11 @@ impl Actor {
         }
     }
 
-    /// Copies History's texts `ids`, in order, joined by the suffix; a failure shows the fault band.
+    /// Copies History's texts `ids`, in order, joined by the join; a failure shows the fault band.
     fn copy_texts(&mut self, ids: &[u64]) {
         let texts = ids.iter().filter_map(|id| self.held.history.get(*id));
         let texts: Vec<&str> = texts.map(|entry| entry.text.expose().as_str()).collect();
-        let joined = Zeroizing::new(texts.join(&self.held.settings.type_suffix));
+        let joined = Zeroizing::new(texts.join(&self.held.settings.history_join));
         if !self.clip_text(&joined) {
             self.panel.note = Some(BarHint::Fault);
         }

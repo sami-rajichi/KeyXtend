@@ -162,7 +162,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 15,
+      "round": 16,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -497,6 +497,37 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "taken": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "taken",
+          "text": "يحمل ملف آخر في مجلد النماذج اسم هذا النموذج، فلم يُنزَّل شيء."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 15,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "text": {
       "bar": {
         "buttons": [
@@ -775,7 +806,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 15,
+      "round": 16,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1110,6 +1141,37 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "taken": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "taken",
+          "text": "Another file in the models folder has this model’s name, so nothing was downloaded."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 15,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "text": {
       "bar": {
         "buttons": [
@@ -1388,7 +1450,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 15,
+      "round": 16,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -1567,7 +1629,7 @@ var views = {
         ],
         "hint": {
           "id": "no-model",
-          "text": "Aucun modèle en Français pour l’instant"
+          "text": "Aucun modèle en français pour l’instant"
         },
         "mic": false,
         "state": "note"
@@ -1714,6 +1776,37 @@ var views = {
       "panel": null,
       "place": "above",
       "round": 8,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "taken": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "taken",
+          "text": "Un autre fichier du dossier des modèles porte déjà ce nom ; rien n’a été téléchargé."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 15,
       "sounds": true,
       "words": {
         "copied": "Copié",

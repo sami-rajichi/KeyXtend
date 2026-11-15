@@ -379,3 +379,7 @@ progress_px = 4.0
 switch_px = [40.0, 22.0, 12.0]
 value_px = 92.0
 col_px = 84.0
+# The Voice panel's width (.vp, 600 as the mock-up draws it), its own so Quick-fill's can change alone. Compare's writing
+# line (.prog.run): the moving part's share of its track, and the whole line's opacity while motion is reduced (.still).
+panel_px = 600.0
+run_share = [0.4, 0.5]

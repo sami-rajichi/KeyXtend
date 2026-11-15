@@ -34,6 +34,12 @@ fn the_voice_panel_takes_the_mock_up_sizes() {
     assert_eq!(v.switch_px, [40.0, 22.0, 12.0], "--voice-switch-px");
     assert_eq!(v.value_px, 92.0, "--voice-value-px");
     assert_eq!(v.col_px, 84.0, "--voice-col-px");
+    assert_eq!(v.panel_px, 600.0, ".vp: 600 wide");
+    assert_eq!(
+        v.run_share,
+        [0.4, 0.5],
+        ".prog.run i: 40 %, .still: opacity .5"
+    );
 }
 
 #[test]
@@ -76,6 +82,24 @@ fn an_odd_voice_size_is_refused_by_name() {
             "inset_px = 2.0",
             "inset_px = -1.0",
             "caption.inset_px",
+        ),
+    ]);
+}
+
+#[test]
+fn an_odd_panel_size_is_refused_by_name() {
+    refused_in(&[
+        (
+            "voice",
+            "panel_px = 600.0",
+            "panel_px = 0.0",
+            "voice.panel_px",
+        ),
+        (
+            "voice",
+            "run_share = [0.4, 0.5]",
+            "run_share = [0.4, 1.5]",
+            "voice.run_share",
         ),
     ]);
 }

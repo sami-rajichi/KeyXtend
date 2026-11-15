@@ -18,6 +18,8 @@ pub const VOICE_OPTION: &str = "voice.opt-";
 pub const VOICE_PLACE: &str = "voice.place-";
 /// A language's name by ISO 639 code, as History names a text's language.
 pub const LANG_NAME: &str = "langname";
+/// A language's name inside a sentence, by ISO 639 code; French writes it in lower case.
+pub const LANG_IN: &str = "langin";
 /// The tray menu's Dictation row, which opens the Voice panel.
 pub const TRAY_VOICE: &str = "tray.voice";
 /// The bar's window title.

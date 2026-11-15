@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-/// The bar: each button by the id the hub gives it, the gear, the marks before a status or a text, and each note's icon.
+/// The dictation bar: each button by the id the hub gives it, the gear, the marks before a status or a text and each
+/// note's icon; and the Voice panel's icons.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VoiceIcons {
@@ -38,10 +39,12 @@ pub struct VoiceIcons {
     pub note: String,
     /// Before a note, by the hint id the hub gives it.
     pub notes: BTreeMap<String, String>,
+    /// The Voice panel's pages.
+    pub panel: super::VoicePanelIcons,
 }
 
 impl VoiceIcons {
-    /// Every name with where it is used, such as `voice.stop` or `voice.notes.no-mic`.
+    /// The bar's names with where each is used, such as `voice.stop` or `voice.notes.no-mic`; the panel's are its own.
     pub(super) fn named(&self) -> Vec<(String, &str)> {
         let fixed = [
             ("voice.cancel", &self.cancel),

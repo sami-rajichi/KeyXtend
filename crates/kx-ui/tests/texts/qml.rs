@@ -252,6 +252,7 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
     written.push(crate::fillview::FILE.into());
     written.push(crate::selview::FILE.into());
     written.push(crate::voiceview::FILE.into());
+    written.push(crate::voicepanel::FILE.into());
     for f in std::fs::read_dir(dir())
         .expect("the fixtures folder reads")
         .flatten()

@@ -9,6 +9,7 @@ mod options;
 mod panel;
 mod parts;
 mod place;
+mod rows;
 mod sheets;
 mod view;
 
@@ -169,24 +170,6 @@ impl Hub {
         }
     }
 
-    /// A pad page tap turns the open panel's page; true when it did.
-    pub(super) fn voice_pad(&self, back: bool) -> bool {
-        let round = {
-            let s = self.voice();
-            match s.page.as_deref() {
-                Some(VoicePage {
-                    panel: Some(_),
-                    round,
-                    ..
-                }) => *round,
-                _ => return false,
-            }
-        };
-        let click = VoiceClick::Page { back };
-        self.voice_send(&VoiceAct { round, click });
-        true
-    }
-
     /// The place of the shown view's bar, Above before any view.
     pub(super) fn voice_place(&self) -> BarPlace {
         self.voice()
@@ -201,17 +184,21 @@ impl Hub {
         bus::send(handle, event, "a voice event was not sent");
     }
 
-    /// Keeps `page` and wakes; a bar that stops listening drops its level, and one that hides while the pointer is over
-    /// it tells the module the pointer left.
+    /// Keeps `page` and wakes; a bar that stops listening drops its level, one that hides while the pointer is over it
+    /// tells the module the pointer left, and a panel that opens tells it the rows again.
     fn voice_view(&self, page: &Arc<VoicePage>) {
         let hidden = page.bar == VoiceBar::Hidden;
-        let left = {
+        let (left, opened) = {
             let mut s = self.voice();
+            let had = s.page.as_ref().is_some_and(|p| p.panel.is_some());
             s.page = Some(Arc::clone(page));
             let was = s.over;
             s.over = was && !hidden;
-            was && hidden
+            (was && hidden, page.panel.is_some() && !had)
         };
+        if opened {
+            self.voice_rows();
+        }
         if !matches!(page.bar, VoiceBar::Listening(_)) {
             self.voice.level.store(0, Ordering::SeqCst);
         }
@@ -236,14 +223,6 @@ impl Hub {
             self.voice.level.store(level, Ordering::SeqCst);
             self.voice_woken(&self.voice.meter, VoiceWake::Level);
         }
-    }
-
-    /// Tells the module the rows a page holds, `[ui] page_rows`; it pages by the last one heard.
-    fn voice_rows(&self) {
-        let rows = self.lock().settings.page_rows;
-        let rows = VoiceClick::Rows(u8::try_from(rows).unwrap_or(u8::MAX));
-        let round = self.voice().page.as_ref().map_or(0, |p| p.round);
-        self.voice_send(&VoiceAct { round, click: rows });
     }
 
     /// Compare's set text in the panel's language, the layout's in front, which the user reads aloud; `None` before a
