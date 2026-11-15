@@ -44,9 +44,12 @@ fn listening_shows_the_language_and_the_timer_between_cancel_and_stop() {
     assert_eq!(bar["waveMs"], 300);
     assert_eq!(bar["hint"], Value::Null);
     assert_eq!(ids(&bar), want(&[("cancel", true), ("stop", true)]));
+    let [cancel, stop] = [0, 1].map(|i| buttons(&bar["buttons"])[i].clone());
+    assert_eq!(cancel, button("bar", "cancel", "Cancel", true, "plain"));
     assert_eq!(
-        buttons(&bar["buttons"])[0],
-        button("bar", "cancel", "Cancel", true, "plain")
+        stop,
+        button("bar", "stop", "Stop", true, "primary"),
+        "Stop is the strongest button, drawn dark (owner, 2026-11-14)"
     );
 }
 
@@ -69,6 +72,11 @@ fn transcribing_keeps_stop_in_its_place_dimmed() {
     assert_eq!(bar["state"], "transcribing");
     assert_eq!(bar["word"], "Transcribing…");
     assert_eq!(ids(&bar), want(&[("cancel", true), ("stop", false)]));
+    assert_eq!(
+        buttons(&bar["buttons"])[1][4],
+        "primary",
+        "still dark, dimmed"
+    );
 }
 
 #[test]
@@ -158,6 +166,10 @@ fn the_view_carries_the_place_the_sounds_and_the_bars_words() {
     assert_eq!(words["title"], "Dictation");
     assert_eq!(words["gear"], "Dictation settings");
     assert_eq!(words["copied"], "Copied");
+    assert_eq!(
+        words["timer"], "%1:%2",
+        "the timer's minutes, then its seconds, as Qt's arg fills them"
+    );
 }
 
 #[test]

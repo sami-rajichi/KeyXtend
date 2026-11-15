@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-15 19:56 — P11: the voice bar, its tokens, icons and sounds
+The floating voice bar follows the approved mock-up: a wave that follows the voice level (a plain meter under reduced motion), the red dot and timer, Cancel left and Stop right in every language, Stop dark and dimmed while transcribing, placed above the keyboard or else at the bottom centre, taking clicks but never focus. Its sizes, motion, icons and colour pairs are theme tokens, and two short chimes from our own recipes mark the start and end of listening when the voice sounds are on. The bar now says when Copy failed and when typing stopped part way, and the Dictation key's light reads its own flag. A review matched the wave height and the notes' weight to the mock-up, moved the timer's format into the texts and moved the notice window out of App.qml.
+
 ## 2026-11-15 16:23 — P11: voice typing in the app and its staged engine
 Voice typing is now a default part of the app: it gets the speech, model-file and session services and its own sealed shelf, kept only in memory in a hidden run, and a life test boots every shipped module to show only voice takes that shelf. The install carries the worker built with its graphics-card part and without the gate, the engine's parts with the plain processor part required, the voice detector, the three check clips and their notices, at 66 MB of the 80 MB budget. Tidy keeps the network crate out of the voice job and the audio and engine crates out of the download job, and CI installs the Vulkan SDK from a pinned, hash-checked download and tests the worker's gate build. A review fixed prediction ending the word when the same layout was told again, which could drop a typed start as voice typing started (P7's open note).
 

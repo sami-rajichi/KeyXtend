@@ -8,7 +8,7 @@ use crate::ringmove::{RingFile, RingMotion};
 use crate::theme::{bez, outside_unit};
 
 /// Every animation the faces play, by what it moves.
-pub const MOVES: [&str; 20] = [
+pub const MOVES: [&str; 21] = [
     "press",
     "colour",
     "plate",
@@ -29,6 +29,7 @@ pub const MOVES: [&str; 20] = [
     "badge",
     "outline",
     "layer",
+    "wave",
 ];
 /// Every animation the clipboard panel plays, by what it moves.
 pub const CLIP_MOVES: [&str; 4] = ["tick", "highlight", "swap", "turn"];
@@ -86,6 +87,10 @@ pub struct Amounts {
     pub tick_scale: f32,
     /// How far the selection strip rises as it fades, in pixels.
     pub fade_rise_px: f32,
+    /// The least share of the level a dictation wave bar takes.
+    pub wave_floor: f32,
+    /// How far the wave's ripple turns from one bar to the next, in radians.
+    pub wave_step: f32,
 }
 
 /// One animation ready to play: its length and its curve as Qt bezier points (two controls, then the end).
@@ -232,7 +237,8 @@ fn timed(
 }
 
 impl Amounts {
-    /// Refuses a share or scale outside 0 to 1, a glow that darkens and a negative rise; NaN fails each.
+    /// Refuses a share or scale outside 0 to 1, a glow that darkens, a negative rise and a ripple step that is not a
+    /// number; NaN fails each.
     fn check(&self) -> Result<(), String> {
         let shares = [
             ("pulse_low", self.pulse_low),
@@ -241,6 +247,7 @@ impl Amounts {
             ("pop_scale", self.pop_scale),
             ("menu_scale", self.menu_scale),
             ("tick_scale", self.tick_scale),
+            ("wave_floor", self.wave_floor),
         ];
         if let Some((n, _)) = outside_unit(&shares) {
             return Err(format!("amount.{n} must be 0 to 1"));
@@ -254,6 +261,9 @@ impl Amounts {
         ];
         if let Some((n, _)) = rises.iter().find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
             return Err(format!("amount.{n} must be 0 or more"));
+        }
+        if !self.wave_step.is_finite() {
+            return Err("amount.wave_step must be a number".into());
         }
         Ok(())
     }

@@ -91,9 +91,15 @@ impl Flow {
             State::Idle => VoiceBar::Hidden,
             State::Listening { since, nothing } => self.listening(*since, *nothing),
             State::Transcribing => VoiceBar::Transcribing,
-            State::Text { text, hint } => VoiceBar::Text(BarText {
+            State::Text {
+                text,
+                hint,
+                unclipped,
+            } => VoiceBar::Text(BarText {
                 text: text.clone(),
-                hint: hint.clone(),
+                hint: unclipped
+                    .then_some(BarHint::CopyFailed)
+                    .or_else(|| hint.clone()),
                 undo: self.undo_ok(),
             }),
             State::Note { hint, act, .. } => VoiceBar::Note(BarNote {

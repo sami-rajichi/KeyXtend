@@ -41,6 +41,10 @@ pub mod qobject {
         #[qinvokable]
         fn open(&self);
 
+        /// The bar started (`start`) or stopped listening: the start or stop sound plays, unless sounds are off.
+        #[qinvokable]
+        fn chime(&self, start: bool);
+
         /// Where a `w` by `h` bar goes by the keyboard box `over` (JSON, physical pixels, null while hidden), as
         /// JSON `{x, y}` in physical pixels, or null.
         #[qinvokable]
@@ -102,6 +106,10 @@ impl qobject::Voice {
 
     fn open(&self) {
         self.with((), Hub::voice_open);
+    }
+
+    fn chime(&self, start: bool) {
+        self.with((), |h| h.voice_chime(start));
     }
 
     fn bar_at(&self, over: &QString, w: f64, h: f64) -> QString {

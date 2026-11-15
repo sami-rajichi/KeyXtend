@@ -6,10 +6,10 @@ use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
 use crate::I18n;
 use crate::i18n::clean;
-use crate::i18n::keys::vars::SIZE;
+use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
     VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING,
-    VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
+    VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
 };
 use kx_module_api::ports::{
     BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoicePage, VoiceText,
@@ -27,13 +27,18 @@ pub(super) struct View {
     panel: Option<Panel>,
 }
 
-/// The words outside the buttons: the window's and bar's names, the gear's, and Copy's once it copied.
+/// Qt's marks for the timer's minutes and seconds, which QML fills with `arg`.
+const TIMER_MARKS: [&str; 2] = ["%1", "%2"];
+
+/// The words outside the buttons: the window's and bar's names, the gear's, Copy's once it copied, and the timer
+/// with `TIMER_MARKS` in its language's order.
 #[derive(Serialize)]
 struct Words {
     window: String,
     title: String,
     gear: String,
     copied: String,
+    timer: String,
 }
 
 /// The bar's state, with its buttons in order.
@@ -86,16 +91,24 @@ pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
             title: t.text(VOICE_TITLE),
             gear: t.text(VOICE_GEAR),
             copied: t.text(VOICE_COPIED),
+            timer: timer(t),
         },
         bar: bar(&page.bar, t),
         panel: page.panel.as_ref().map(|p| panel::of(p, t, read)),
     }
 }
 
+/// The timer in `t`'s words, its minutes and seconds left as `TIMER_MARKS`.
+fn timer(t: &I18n) -> String {
+    let [minutes, seconds] = TIMER_MARKS.map(str::to_owned);
+    t.voice_with(VOICE_TIMER, &[(MINUTES, minutes), (SECONDS, seconds)])
+}
+
 /// The bar in `t`'s words.
 fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
     let cancel = || Button::bar(t, BarButton::Cancel);
-    let stop = || Button::bar(t, BarButton::Stop);
+    // The strongest button last, drawn dark (owner, 2026-11-14).
+    let stop = || Button::bar(t, BarButton::Stop).tone(Tone::Primary);
     match bar {
         VoiceBar::Hidden => Bar::Hidden,
         VoiceBar::Listening(l) => listening(l, t, vec![cancel(), stop()]),

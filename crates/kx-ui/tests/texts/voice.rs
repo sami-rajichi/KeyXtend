@@ -13,6 +13,7 @@ use kx_ui::i18n::keys::{
     voice_tab_id,
 };
 
+mod icons;
 mod newer;
 
 /// A language as the module names it, by its own name.
@@ -47,6 +48,8 @@ fn hints() -> Vec<BarHint> {
         BarHint::Pieces,
         BarHint::TooLong,
         BarHint::NoField,
+        BarHint::Stopped,
+        BarHint::CopyFailed,
         BarHint::Password,
         BarHint::Fell,
         BarHint::Print,
@@ -78,7 +81,7 @@ fn keys() -> Vec<String> {
 #[test]
 fn every_id_the_hub_words_has_its_text_in_each_language() {
     let keys = keys();
-    assert_eq!(hints().len(), 22, "every hint is listed");
+    assert_eq!(hints().len(), 24, "every hint is listed");
     for t in all() {
         let missing: Vec<&String> = keys.iter().filter(|k| !t.has(k)).collect();
         assert!(missing.is_empty(), "{}: {missing:?}", t.lang().tag);

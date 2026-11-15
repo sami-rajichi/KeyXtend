@@ -1,0 +1,81 @@
+//! The dictation bar's and the Voice panel's own sizes (design/voice-bar.html `--voice-*`), and the bar's padding.
+
+use super::pad::refused_in;
+use super::*;
+
+#[test]
+fn the_voice_bar_takes_the_mock_up_sizes() {
+    let s = load().expect("shape.toml loads");
+    let v = &s.voice;
+    assert_eq!(
+        v.bar_px,
+        [500.0, 640.0],
+        "--voice-bar-w, --voice-bar-w-text"
+    );
+    assert_eq!(
+        v.wave_px,
+        [4.0, 3.0, 3.0, 24.0],
+        ".wave b, frame(): 3 + 21 at full level"
+    );
+    assert_eq!(v.text_lines, 2, "--voice-text-lines");
+    assert_eq!(
+        (s.caption.pad_px, s.caption.inset_px),
+        (3.0, 2.0),
+        ".vbar padding, .st padding-inline"
+    );
+    let room = s.caption.bar_px - 2.0 * s.caption.pad_px;
+    assert!(v.wave_px[3] <= room, "the wave fits in the bar");
+}
+
+#[test]
+fn the_voice_panel_takes_the_mock_up_sizes() {
+    let v = load().expect("shape.toml loads").voice;
+    assert_eq!(v.progress_px, 4.0, "--voice-progress-px");
+    assert_eq!(v.switch_px, [40.0, 22.0, 12.0], "--voice-switch-px");
+    assert_eq!(v.value_px, 92.0, "--voice-value-px");
+    assert_eq!(v.col_px, 84.0, "--voice-col-px");
+}
+
+#[test]
+fn an_odd_voice_size_is_refused_by_name() {
+    refused_in(&[
+        (
+            "voice",
+            "text_lines = 2",
+            "text_lines = 0",
+            "voice.text_lines",
+        ),
+        ("voice", "bar_px = [500.0", "bar_px = [0.0", "voice.bar_px"),
+        (
+            "voice",
+            "bar_px = [500.0, 640.0]",
+            "bar_px = [500.0, 400.0]",
+            "voice.bar_px",
+        ),
+        (
+            "voice",
+            "wave_px = [4.0, 3.0",
+            "wave_px = [4.0, -1.0",
+            "voice.wave_px",
+        ),
+        (
+            "voice",
+            "wave_px = [4.0, 3.0, 3.0, 24.0]",
+            "wave_px = [4.0, 3.0, 30.0, 24.0]",
+            "voice.wave_px",
+        ),
+        (
+            "voice",
+            "switch_px = [40.0, 22.0, 12.0]",
+            "switch_px = [40.0, 22.0, 30.0]",
+            "voice.switch_px",
+        ),
+        ("voice", "col_px = 84.0", "col_px = nan", "voice.col_px"),
+        (
+            "caption",
+            "inset_px = 2.0",
+            "inset_px = -1.0",
+            "caption.inset_px",
+        ),
+    ]);
+}

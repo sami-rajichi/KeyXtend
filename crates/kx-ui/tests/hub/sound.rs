@@ -77,19 +77,23 @@ pub(crate) fn rig_with(change: impl FnOnce(&mut UiSettings)) -> (Rig, Arc<FakeFa
     (rig, face, host)
 }
 
-/// Sets the `[ui]` switch of `event` to `on`.
+/// The events a `[ui]` switch turns off; `[voice] sounds` switches the dictation's, which `voice/sounds.rs` covers.
+const SWITCHED: [Event; 4] = [Event::Key, Event::Rclick, Event::Pick, Event::Drop];
+
+/// Sets the `[ui]` switch of `event` to `on`; the dictation's sounds have none.
 fn switch(s: &mut UiSettings, event: Event, on: bool) {
     match event {
         Event::Key => s.sound_key = on,
         Event::Rclick => s.sound_rclick = on,
         Event::Pick => s.sound_pick = on,
         Event::Drop => s.sound_drop = on,
+        Event::VoiceStart | Event::VoiceStop => {}
     }
 }
 
-/// Asks the hub to sound every event once.
+/// Asks the hub to sound every switched event once.
 fn sound_all(rig: &Rig) {
-    for event in Event::ALL {
+    for event in SWITCHED {
         rig.hub.sound(event);
     }
 }
@@ -233,13 +237,13 @@ fn a_hold_starting_ending_or_a_cancelled_carry_plays_nothing() {
 
 #[test]
 fn a_sound_switched_off_never_plays_and_the_others_still_do() {
-    for off in Event::ALL {
+    for off in SWITCHED {
         let (rig, _face, _host) = rig_with(|s| switch(s, off, false));
         rig.hub.sent(tap("a"), || {});
         sound_all(&rig);
         let keys = if off == Event::Key { 0 } else { 2 };
         let mut want = takes(Event::Key, keys, defaults().sound_volume);
-        let mouse = Event::ALL.into_iter().filter(|&e| e != Event::Key);
+        let mouse = SWITCHED.into_iter().filter(|&e| e != Event::Key);
         want.extend(first_of(mouse.filter(|&e| e != off)));
         assert_plays(&rig.speaker.take_plays(), &want);
     }
@@ -253,7 +257,7 @@ fn volume_0_never_plays_and_50_plays_at_half_each_gain() {
     assert!(rig.speaker.plays().is_empty());
     let (rig, _face, _host) = rig_with(|s| s.sound_volume = 50);
     sound_all(&rig);
-    let half = Event::ALL.into_iter().map(cue);
+    let half = SWITCHED.into_iter().map(cue);
     let half: Vec<_> = half.map(|c| (c.clips[0], c.gain / 2.0)).collect();
     assert_plays(&rig.speaker.take_plays(), &half);
 }

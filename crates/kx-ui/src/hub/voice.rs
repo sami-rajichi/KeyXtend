@@ -23,6 +23,7 @@ use kx_module_api::ports::{
     VoiceOpen, VoicePage, VoiceSheet, VoiceView,
 };
 use kx_module_api::{Bus, Event, EventError, Redacted, Subscription};
+use kx_theme::sounds::Event as Sound;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -123,6 +124,19 @@ impl Hub {
             self.voice().over = over;
         }
         self.voice_send(&VoiceAct { round, click });
+    }
+
+    /// The bar started listening (`start`) or stopped: plays the start or stop sound at the `[ui]` volume, unless the
+    /// shown view has `[voice] sounds` off or no view came yet. Call it on the Qt thread.
+    pub fn voice_chime(&self, start: bool) {
+        let sounds = self.voice().page.as_ref().is_some_and(|p| p.sounds);
+        if sounds {
+            self.sound(if start {
+                Sound::VoiceStart
+            } else {
+                Sound::VoiceStop
+            });
+        }
     }
 
     /// Registers the Voice object's waker and hands it the wakes QML has not read; a new one replaces the last, as the

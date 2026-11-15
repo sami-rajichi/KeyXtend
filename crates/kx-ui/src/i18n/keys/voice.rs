@@ -39,6 +39,8 @@ pub const VOICE_NOTHING: &str = "voice.nothing";
 pub const VOICE_COPIED: &str = "voice.copied";
 /// The dots a password box's text shows as.
 pub const VOICE_MASK: &str = "voice.mask";
+/// The listening timer: `$minutes`, then `$seconds` in two digits.
+pub const VOICE_TIMER: &str = "voice.timer";
 /// Download with the model's `$size`.
 pub const VOICE_DOWNLOAD_SIZE: &str = "voice.download-size";
 /// The home list's header: `$lang`.

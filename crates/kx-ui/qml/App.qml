@@ -1,16 +1,19 @@
-// The app's windows over the Ui and Keyboard objects: the keyboard, its minimise bubble, the notice banner, the tray menu
-// and the selection strip, each over a click-through shadow window, the pointer overlay, the scroll outline and the tray
-// icon's picture. A shadow window owns its window, so Windows keeps the window just above it; owners show first.
+// The app's windows over the Ui, Keyboard, QuickFill and Voice objects: the keyboard, its minimise bubble, the notice
+// banner, the tray menu, the selection strip and the dictation bar, each over a click-through shadow window, the pointer
+// overlay, the scroll outline and the tray icon's picture. A shadow window owns its window, so Windows keeps the window
+// just above it; owners show first.
 pragma ComponentBehavior: Bound
 import QtQuick
 
 QtObject {
     id: app
 
-    // The hub's Ui, Keyboard and QuickFill objects, or the tests' stand-ins; without the last no Quick-fill shows.
+    // The hub's Ui, Keyboard, QuickFill and Voice objects, or the tests' stand-ins; without the last two no Quick-fill
+    // or dictation bar shows.
     required property QtObject ui
     required property QtObject keyboard
     property QtObject fill: null
+    property QtObject voice: null
     // The clock in ms for the tray menu and the overlay's reads; tests set their own.
     property var now: () => Date.now()
     // Minimise or Close put the keyboard away; it comes back from the bubble or a second copy's Show.
@@ -25,7 +28,7 @@ QtObject {
     // The windows, for the tests.
     readonly property alias face: face
     readonly property alias bubble: bubble
-    readonly property alias notice: notice
+    readonly property Notice notice: noticeGlow.notice
     readonly property alias menu: trayMenu
 
     property Connections hub: Connections {
@@ -95,26 +98,10 @@ QtObject {
         }
     }
     // Notices show above the keyboard, or at the bottom of the main screen while it is away.
-    property Glow noticeGlow: Glow {
-        transientParent: null
-        lk: face.lk
-        box: Qt.rect(notice.x, notice.y, notice.width, notice.height)
-        radius: notice.radius
-        follow: notice.body
-
-        Notice {
-            id: notice
-            ui: app.ui
-            lk: face.lk
-            res: face.res
-            s: face.s
-            widest: face.running ? face.drawn.width : face.lk.shape.panel.width_px
-            spot: (w, h) => face.spots.popSpot(w, h, NaN)
-            onShowing: on => app.shadow(app.noticeGlow, on, notice)
-            onTouched: trayMenu.shut()
-        }
+    property NoticeGlow noticeGlow: NoticeGlow {
+        app: app
     }
-    // The tray icon's menu: Show keyboard and Quit; a press on any of our windows closes it too.
+    // The tray icon's menu: Show keyboard, Dictation and Quit; a press on any of our windows closes it too.
     property Glow menuGlow: Glow {
         transientParent: null
         lk: face.lk
@@ -134,11 +121,16 @@ QtObject {
             }
             onShowing: on => app.shadow(app.menuGlow, on, trayMenu)
             onShowKeyboard: app.open()
+            onOpenVoice: if (app.voice) app.voice.open()
             onQuitApp: app.ui.quit()
         }
     }
     // The selection strip by the selected text, over its own shadow, which shows while the keyboard is minimised too.
     property SelStrip strip: SelStrip {
+        app: app
+    }
+    // The dictation bar where the hub places it, over its own shadow, which stays while the keyboard hides.
+    property VoiceGlow dictation: VoiceGlow {
         app: app
     }
     // The pointer overlay's state as last read: a wake reads it on the event loop's next pass, never on a frame, at
@@ -159,7 +151,7 @@ QtObject {
             res: face.res
             st: app.assist
             spots: face.spots
-            ours: [face, bubble, notice, trayMenu, app.strip.chips, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
+            ours: [face, bubble, app.notice, trayMenu, app.strip.chips, app.dictation.bar, face.panel ? face.panel.list : null, face.clips ? face.clips.pane : null, face.fills ? face.fills.pane : null]
             // A quiet run: a key's tip and a pop-up's place stay, as the overlay draws nothing over our windows.
             onVisibleChanged: if (visible) face.guardQuiet()
         }
@@ -185,20 +177,6 @@ QtObject {
         function start() {
             if (active && source.toString() === "")
                 setSource("Churn.qml", { app: app, plan: JSON.parse(plan) });
-        }
-    }
-
-    // The banner follows the keyboard as it shows, hides, moves or changes size.
-    property Connections noticeFollows: Connections {
-        target: face
-        function onAtChanged() {
-            notice.follow();
-        }
-        function onVisibleChanged() {
-            notice.follow();
-        }
-        function onDrawnChanged() {
-            notice.follow();
         }
     }
 

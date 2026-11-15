@@ -29,6 +29,7 @@ mod selview;
 mod suggest;
 mod sync;
 mod voice;
+mod voiceview;
 mod windows;
 mod words;
 

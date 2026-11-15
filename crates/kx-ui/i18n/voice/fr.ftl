@@ -1,10 +1,10 @@
 ### Textes français de la dictée (P11), chargés dans le même paquet que fr.ftl ; les trois fichiers ont les mêmes clés.
 ### Les formes du pluriel se choisissent selon $form, le nombre tel que le lisent les règles CLDR ; [0] est le nombre 0.
 
-## Dans l’ordre : la barre (nom, réglages, états, boutons, l’avis tant que rien n’est entendu, les points du mot de passe),
-## chaque note par identifiant, l’en-tête et l’accueil du panneau, Modèles, Unité de calcul, Comparer les modèles,
-## Historique, puis Options (chaque option par sa clé de réglage, tirets pour les soulignés), les positions de la barre
-## et les unités. $lang est le nom de la langue dans cette langue.
+## Dans l’ordre : la barre (nom, réglages, états, boutons, l’avis tant que rien n’est entendu, les points du mot de passe,
+## le chronomètre), chaque note par identifiant, l’en-tête et l’accueil du panneau, Modèles, Unité de calcul, Comparer
+## les modèles, Historique, puis Options (chaque option par sa clé de réglage, tirets pour les soulignés), les positions
+## de la barre et les unités. $lang est le nom de la langue dans cette langue.
 voice =
     .title = Dictée
     .gear = Réglages de la dictée
@@ -23,6 +23,7 @@ voice =
     .download = Télécharger
     .download-size = Télécharger · { $size }
     .mask = ••••••••
+    .timer = { $minutes }:{ $seconds }
     .note-nothing = Rien entendu. Le micro est-il allumé ?
     .note-cancelled = Annulé. Rien n’a été tapé.
     .note-no-mic = Aucun micro n’a été trouvé.
@@ -38,6 +39,8 @@ voice =
     .note-pieces = La dictée s’est arrêtée en cours de route. Voici le texte déjà écrit.
     .note-too-long = Arrêt à la durée maximale ; le texte a été tapé.
     .note-no-field = Le texte n’a pas été tapé en entier. Copiez-le ici ou depuis l’historique.
+    .note-stopped = La saisie s’est arrêtée en cours de route. Copiez le texte entier ici ou depuis l’historique.
+    .note-copy-failed = Le texte n’a pas pu être copié. Réessayez.
     .note-password = Tapé dans un champ de mot de passe. Non conservé, sans copie.
     .note-fell = La carte graphique a échoué ; le processeur a écrit ce texte.
     .note-print = Un téléchargement n’a pas réussi sa vérification ; il a été supprimé.

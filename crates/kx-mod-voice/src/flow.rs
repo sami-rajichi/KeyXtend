@@ -43,6 +43,8 @@ enum State {
         text: VoiceText,
         /// The line under it.
         hint: Option<BarHint>,
+        /// The last Copy was refused, so its line shows in place of `hint` until a Copy goes through.
+        unclipped: bool,
     },
     /// A note about keyboard language `iso`, with the action it names.
     Note {
@@ -138,6 +140,7 @@ impl Flow {
             In::Session(_) => {}
             In::Layout(layout) => self.front = Lang::from(&layout),
             In::Typed(done) => self.typed(done),
+            In::Copied(ok) => self.copied(ok),
             In::Settings(settings) => self.set_settings(*settings, &mut out),
             In::Tick => self.tick(&mut out),
             In::Lend(lend) => self.lend(lend, &mut out),

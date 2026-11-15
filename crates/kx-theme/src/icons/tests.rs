@@ -214,3 +214,36 @@ fn the_quick_fill_panel_shows_its_icons_by_role() {
     let t = text().replacen("make = \"wand-sparkles\"", "make = \"Wand\"", 1);
     assert!(parse(&t).expect_err("a capital").contains("fill.make"));
 }
+
+#[test]
+fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "cancel=x stop=square gear=settings-2 close=x copy=copy copied=check undo=undo-2 \
+                anyway=rotate-ccw listen=mic download=download transcribing=audio-lines \
+                text=captions password=lock note=square-x notes.cancelled=x notes.checking=refresh-cw \
+                notes.folder=folder notes.full=hard-drive notes.language=languages notes.mic-busy=mic-off \
+                notes.mic-refused=mic-off notes.net=wifi notes.no-fit=cpu notes.no-language=languages \
+                notes.no-mic=mic-off notes.no-model=hard-drive notes.nothing=mic-off notes.print=download \
+                notes.taken=file notes.unplugged=mic-off";
+    let got: Vec<_> = i
+        .voice
+        .named()
+        .into_iter()
+        .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.")))
+        .collect();
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(got, want, "design/voice-bar.html bar()");
+    assert_eq!(i.tray.voice, "mic", "the Dictation key's icon");
+    assert!(
+        i.named()
+            .contains(&("voice.notes.no-mic".into(), "mic-off"))
+    );
+    let t = text().replacen("no-fit = \"cpu\"", "no-fit = \"Cpu\"", 1);
+    assert!(
+        parse(&t)
+            .expect_err("a capital")
+            .contains("voice.notes.no-fit")
+    );
+    let t = text().replacen("voice = \"mic\"", "voice = \"../mic\"", 1);
+    assert!(parse(&t).expect_err("a path").contains("tray.voice"));
+}

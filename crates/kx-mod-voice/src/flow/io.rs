@@ -39,6 +39,8 @@ pub enum In {
     Layout(LayoutChanged),
     /// The keyboard typed a `TextAsk` (`TextDone`).
     Typed(TextDone),
+    /// The clipboard took the bar's text (Copy), or refused it.
+    Copied(bool),
     /// `[voice]` changed.
     Settings(Box<VoiceSettings>),
     /// The time `Flow::deadline` named came: a hint or a fade.

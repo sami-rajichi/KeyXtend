@@ -17,6 +17,7 @@ use outs::{ask, calls, kept, note, opened, text};
 
 mod cancel;
 mod close;
+mod copied;
 mod faults;
 mod lend;
 mod listen;

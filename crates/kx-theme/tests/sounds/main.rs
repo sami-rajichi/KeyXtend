@@ -55,19 +55,29 @@ fn refused(from: &str, to: &str, word: &str) {
 }
 
 #[test]
-fn the_shipped_tokens_load_the_owners_four_sounds_in_order() {
+fn the_shipped_tokens_load_the_owners_four_sounds_and_the_dictations_two_in_order() {
     let s = shipped();
     let events: Vec<Event> = s.cues.iter().map(|(e, _)| *e).collect();
     assert_eq!(events, Event::ALL);
     let takes: Vec<String> = (1..=6).map(|i| format!("cherry-key-{i}.wav")).collect();
     let files: Vec<&[String]> = s.cues.iter().map(|(_, c)| c.files.as_slice()).collect();
-    let mouse = ["mouse-click.wav", "mouse-press.wav", "card-down.wav"].map(|f| vec![f.to_owned()]);
-    assert_eq!(files, [&takes[..], &mouse[0], &mouse[1], &mouse[2]]);
+    let one = [
+        "mouse-click.wav",
+        "mouse-press.wav",
+        "card-down.wav",
+        "voice-start.wav",
+        "voice-stop.wav",
+    ]
+    .map(|f| vec![f.to_owned()]);
+    assert_eq!(
+        files,
+        [&takes[..], &one[0], &one[1], &one[2], &one[3], &one[4]]
+    );
     assert!(s.play.voices >= 1);
     let names: Vec<&str> = Event::ALL.iter().map(|e| e.name()).collect();
     assert_eq!(
         names,
-        ["key", "rclick", "pick", "drop"],
+        ["key", "rclick", "pick", "drop", "voice_start", "voice_stop"],
         "the tables sounds.toml holds"
     );
     let read = Sounds::parse(&shipped_text()).expect("the file at SOUNDS_PATH loads");

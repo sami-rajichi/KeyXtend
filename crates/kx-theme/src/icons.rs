@@ -7,10 +7,12 @@ use serde::{Deserialize, Serialize};
 mod chips;
 mod clip;
 mod fill;
+mod voice;
 
 pub use chips::ChipsIcons;
 pub use clip::ClipIcons;
 pub use fill::FillIcons;
+pub use voice::VoiceIcons;
 
 /// The top bar's buttons, the resize corner and the bubble.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -100,6 +102,8 @@ pub struct TrayIcons {
     pub glyph: String,
     /// Show keyboard.
     pub show: String,
+    /// Dictation, which opens the Voice panel.
+    pub voice: String,
     /// Quit.
     pub quit: String,
 }
@@ -187,6 +191,8 @@ pub struct Icons {
     pub clip: ClipIcons,
     /// Quick-fill.
     pub fill: FillIcons,
+    /// The dictation bar.
+    pub voice: VoiceIcons,
 }
 
 impl Icons {
@@ -218,6 +224,7 @@ impl Icons {
             ("notice.icon", &self.notice.icon),
             ("tray.glyph", &t.glyph),
             ("tray.show", &t.show),
+            ("tray.voice", &t.voice),
             ("tray.quit", &t.quit),
         ];
         let fixed = fixed
@@ -229,6 +236,7 @@ impl Icons {
         keys.chain(by_id("shortcuts", &self.shortcuts))
             .chain(fixed)
             .chain(panels.map(|(at, v)| (at.to_string(), v)))
+            .chain(self.voice.named())
             .collect()
     }
 

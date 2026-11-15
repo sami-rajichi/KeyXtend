@@ -137,6 +137,10 @@ pub enum BarHint {
     TooLong,
     /// Nothing in front took text, so it stays on the bar with Copy and in History.
     NoField,
+    /// Typing stopped part way, as the user's own key or click came: the whole text stays on the bar with Copy.
+    Stopped,
+    /// Copy failed, as another app held the clipboard: the text stays on the bar, so Copy may be tried again.
+    CopyFailed,
     /// A password box took the text: it shows as dots and is never kept.
     Password,
     /// The card failed, so the processor wrote the text.

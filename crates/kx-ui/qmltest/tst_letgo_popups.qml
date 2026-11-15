@@ -96,15 +96,17 @@ Item {
             };
             const menu = createTemporaryObject(menuC, root, { lk: N.lk, res: root.res, spot: spot, graceMs: En.settings.trayGraceMs });
             Pointer.through([menu]);
-            const [show, quit] = [spy(menu, "showKeyboard"), spy(menu, "quitApp")];
+            const [show, voice, quit] = [spy(menu, "showKeyboard"), spy(menu, "openVoice"), spy(menu, "quitApp")];
             for (const at of [0, 1]) {
                 menu.toggle(300, 500);
                 waitForRendering(menu.contentItem);
                 const items = Board.all(menu.contentItem, o => o.Accessible.role === Accessible.MenuItem);
-                slip(items[at], onto(items[at], items[1 - at]));
+                // Show and Quit, with Dictation between them.
+                const ends = [items[0], items[items.length - 1]];
+                slip(ends[at], onto(ends[at], ends[1 - at]));
                 verify(!menu.visible, "closed on the pick");
             }
-            compare([show.count, quit.count], [1, 1]);
+            compare([show.count, voice.count, quit.count], [1, 0, 1]);
         }
 
         function test_a_notice_button_acts_once_after_a_slip_onto_the_other_or_off_the_banner() {

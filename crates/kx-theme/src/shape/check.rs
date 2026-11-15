@@ -11,7 +11,8 @@ impl Shape {
     /// Refuses, naming the size: a weight outside 100 to 900, a share outside 0 to 1, a size of 0 or less (a list
     /// line's caret and underline, Quick-fill's width, `panel.min_fit`, `panel.wheel_notch`, `panel.wheel_rest_s` and the
     /// others in `check_sizes`), no kind row, a gap or place below 0, a lit dot no larger than the others, and a D-pad
-    /// hub or Stop inset of half the pad or more or a Stop wider than the hub, and an odd selection keycap size.
+    /// hub or Stop inset of half the pad or more or a Stop wider than the hub, an odd selection keycap size, and an odd
+    /// dictation size (`VoiceShape::check`).
     pub(crate) fn check(&self) -> Result<(), String> {
         self.check_weights()?;
         self.check_sizes()?;
@@ -19,7 +20,8 @@ impl Shape {
         self.check_dots()?;
         self.check_counts()?;
         self.check_shares()?;
-        self.check_insets()
+        self.check_insets()?;
+        self.voice.check()
     }
 
     /// The D-pad's hub and Stop must keep a size, so each inset stays below `INSET_BELOW`, and Stop sits inside the hub.
@@ -146,6 +148,8 @@ impl Shape {
             ("dots.gap_px", self.dots.gap_px),
             ("dpad.dot_gap_px", self.dpad.dot_gap_px),
             ("dpad.gap_px", self.dpad.gap_px),
+            ("caption.pad_px", self.caption.pad_px),
+            ("caption.inset_px", self.caption.inset_px),
         ]);
         match zero_up.find(|(_, v)| !(v.is_finite() && *v >= 0.0)) {
             Some((n, v)) => Err(format!("shape: {n} {v} must be 0 or more")),

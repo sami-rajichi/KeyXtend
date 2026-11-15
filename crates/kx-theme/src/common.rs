@@ -11,7 +11,7 @@ use crate::rgba::Rgba;
 pub struct Common {
     /// Laid, through each palette's press, over a pressed key or D-pad arrow (mock-up `brightness(.94)`).
     pub press: Rgba,
-    /// The recording dot in the caption bar.
+    /// The recording dot on the dictation bar.
     pub rec_dot: Rgba,
     /// Laid over the frozen screen outside the snip region.
     pub snip_dim: Rgba,

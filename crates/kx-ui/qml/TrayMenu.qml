@@ -1,6 +1,6 @@
-// The tray icon's menu (mock-up .ctx, in the theme's panel colours): Show keyboard and Quit, in the system's language
-// (ADR-0020). It opens by the tray icon, never takes focus, and closes on a pick, another click on the icon, a press on
-// our windows or a new front window.
+// The tray icon's menu (mock-up .ctx, in the theme's panel colours): Show keyboard, Dictation and Quit, in the system's
+// language (ADR-0020). It opens by the tray icon, never takes focus, and closes on a pick, another click on the icon, a
+// press on our windows or a new front window.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -19,6 +19,7 @@ Window {
 
     // An item was picked; the menu has closed.
     signal showKeyboard
+    signal openVoice
     signal quitApp
     // The menu shows (true) or hides (false); its shadow follows.
     signal showing(bool on)
@@ -33,7 +34,7 @@ Window {
     color: "transparent"
     visible: false
     // Whole units up, as a window's size is whole, so the widest item always fits.
-    width: rescale.keep(Math.ceil(Math.max(sh.width_px, Math.max(showItem.implicitWidth, quitItem.implicitWidth) + 2 * sh.pad_px)))
+    width: rescale.keep(Math.ceil(Math.max(sh.width_px, Math.max(showItem.implicitWidth, voiceItem.implicitWidth, quitItem.implicitWidth) + 2 * sh.pad_px)))
     height: rescale.keep(Math.ceil(items.implicitHeight + 2 * sh.pad_px))
 
     // Keeps the size above across display scale changes; a new scale closes it, as it was placed in the old one.
@@ -99,6 +100,13 @@ Window {
                 part: "show"
                 text: menu.res.tray("tray.show")
                 onClicked: menu.picked(menu.showKeyboard)
+            }
+            // Opens the Voice panel, showing a hidden keyboard first.
+            MenuItem {
+                id: voiceItem
+                part: "voice"
+                text: menu.res.tray("tray.voice")
+                onClicked: menu.picked(menu.openVoice)
             }
             // The rule between items (.ctx hr).
             Item {

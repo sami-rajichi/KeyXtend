@@ -63,3 +63,30 @@ fn the_language_note_and_the_slow_line_name_the_language() {
         assert_eq!(t.voice_with(VOICE_SLOW, &[(LANG, name.to_owned())]), slow);
     }
 }
+
+#[test]
+fn a_stopped_typing_and_a_refused_copy_read_as_written_in_each_language() {
+    let table = [
+        (
+            BarHint::Stopped,
+            [
+                "Typing stopped part way. Copy the whole text from here or from History.",
+                "La saisie s’est arrêtée en cours de route. Copiez le texte entier ici ou depuis l’historique.",
+                "توقفت كتابة النص قبل اكتمالها. انسخه كاملًا من هنا أو من السجل.",
+            ],
+        ),
+        (
+            BarHint::CopyFailed,
+            [
+                "The text could not be copied. Try again.",
+                "Le texte n’a pas pu être copié. Réessayez.",
+                "تعذّر نسخ النص. حاول مرة أخرى.",
+            ],
+        ),
+    ];
+    for (hint, words) in table {
+        for (tag, word) in ["en", "fr", "ar"].into_iter().zip(words) {
+            assert_eq!(lang(tag).voice_hint(&hint), word, "{tag} {hint:?}");
+        }
+    }
+}

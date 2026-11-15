@@ -1,4 +1,4 @@
-//! Sizes of the small windows beside the keyboard: the selection strip, the caption bar, the snip overlay, the Arabic
+//! Sizes of the small windows beside the keyboard: the selection strip, the dictation bar, the snip overlay, the Arabic
 //! panel, the hold ring, the notice banner, the tray menu and icon, the language list and the pointer's badge.
 
 use serde::{Deserialize, Serialize};
@@ -35,13 +35,15 @@ impl ChipsShape {
     }
 }
 
-/// The caption bar (mock-up `.capbar`).
+/// The dictation bar's status and words (design/voice-bar.html `.vbar`); its own sizes are `VoiceShape`'s.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaptionShape {
-    /// Padding around a status: top and bottom, left, right.
-    pub pad_px: [f32; 3],
-    /// Padding around the words heard (mock-up `.capbar.done`).
+    /// Padding around the bar's parts.
+    pub pad_px: f32,
+    /// Room beside a status, a text or a note (`.st`, `.vtx`, `.msg`).
+    pub inset_px: f32,
+    /// Padding around the words heard (design/voice-bar.html `.vtx`).
     pub words_pad_px: f32,
     /// Gap between the dot and the status text.
     pub gap_px: f32,
@@ -57,7 +59,7 @@ pub struct CaptionShape {
     pub icon_px: f32,
     /// Height of the bar while it shows a status.
     pub bar_px: f32,
-    /// Corner radius around the words heard (mock-up `.capbar.done`).
+    /// Corner radius around the words heard (`.vbar.wide`).
     pub words_radius_px: f32,
     /// Shimmer bar height and corner radius (mock-up `.shimmer`).
     pub shimmer_px: [f32; 2],

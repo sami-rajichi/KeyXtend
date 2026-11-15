@@ -52,7 +52,11 @@ impl Flow {
             take.masked |= masked;
             take.text = Some(Redacted::new(text));
         }
-        self.state = State::Text { text: shown, hint };
+        self.state = State::Text {
+            text: shown,
+            hint,
+            unclipped: false,
+        };
         self.shown_at = self.now();
     }
 
@@ -145,7 +149,7 @@ impl Flow {
     }
 
     /// The keyboard's answer: a text typed in full is what Undo erases, while the box kept focus. One it could not
-    /// type, or that the user's own key or click stopped, dims Undo and stays on the bar with Copy (edge 8).
+    /// type dims Undo and stays on the bar with Copy (edge 8), saying typing stopped when part of it went in.
     pub(super) fn typed(&mut self, done: TextDone) {
         let box_id = self.field.box_id;
         let Some(take) = self.take.as_mut() else {
@@ -169,7 +173,24 @@ impl Flow {
             }
         );
         if let (false, true, State::Text { hint, .. }) = (done.ok, shown, &mut self.state) {
-            *hint = Some(BarHint::NoField);
+            let part = done.count > 0;
+            *hint = Some(if part {
+                BarHint::Stopped
+            } else {
+                BarHint::NoField
+            });
+        }
+    }
+
+    /// The clipboard's answer to Copy: a refusal shows its line for a full `done_ms`; a copy that went through brings
+    /// the line before back.
+    pub(super) fn copied(&mut self, ok: bool) {
+        let now = self.now();
+        if let State::Text { unclipped, .. } = &mut self.state {
+            *unclipped = !ok;
+            if !ok {
+                self.shown_at = now;
+            }
         }
     }
 

@@ -88,6 +88,8 @@ pub const fn bar_hint_id(hint: &BarHint) -> &'static str {
         BarHint::Pieces => "pieces",
         BarHint::TooLong => "too-long",
         BarHint::NoField => "no-field",
+        BarHint::Stopped => "stopped",
+        BarHint::CopyFailed => "copy-failed",
         BarHint::Password => "password",
         BarHint::Fell => "fell",
         BarHint::Print => "print",

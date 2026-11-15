@@ -11,6 +11,9 @@ mod models;
 mod options;
 mod panel;
 mod place;
+// Without `qt` the sound table is empty, as for the hub's own sound tests.
+#[cfg(feature = "qt")]
+mod sounds;
 mod wakes;
 
 use crate::Rig;

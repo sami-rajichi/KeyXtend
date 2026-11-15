@@ -44,3 +44,7 @@ pub const WRONG: &str = "wrong";
 pub const TEXTS: &str = "texts";
 /// When a text was dictated.
 pub const WHEN: &str = "when";
+/// The listening timer's whole minutes.
+pub const MINUTES: &str = "minutes";
+/// The listening timer's seconds past the minute.
+pub const SECONDS: &str = "seconds";

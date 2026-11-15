@@ -244,11 +244,8 @@ var lk = {
       "gap_px": 8.0
     },
     "caption": {
-      "pad_px": [
-        6.0,
-        14.0,
-        8.0
-      ],
+      "pad_px": 3.0,
+      "inset_px": 2.0,
       "words_pad_px": 10.0,
       "gap_px": 6.0,
       "status_px": 12.5,
@@ -544,6 +541,27 @@ var lk = {
         6.0
       ],
       "kind_rows": 2
+    },
+    "voice": {
+      "bar_px": [
+        500.0,
+        640.0
+      ],
+      "wave_px": [
+        4.0,
+        3.0,
+        3.0,
+        24.0
+      ],
+      "text_lines": 2,
+      "progress_px": 4.0,
+      "switch_px": [
+        40.0,
+        22.0,
+        12.0
+      ],
+      "value_px": 92.0,
+      "col_px": 84.0
     }
   },
   "motion": {
@@ -767,6 +785,17 @@ var lk = {
           1.0,
           1.0
         ]
+      },
+      "wave": {
+        "ms": 900,
+        "bez": [
+          0.0,
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
       }
     },
     "clip": {
@@ -881,7 +910,9 @@ var lk = {
       "pop_scale": 0.98,
       "menu_scale": 0.96,
       "tick_scale": 0.6,
-      "fade_rise_px": 3.0
+      "fade_rise_px": 3.0,
+      "wave_floor": 0.4,
+      "wave_step": 0.9
     },
     "shows": {
       "chips_done": 650
@@ -1009,6 +1040,7 @@ var lk = {
     "tray": {
       "glyph": "keyboard",
       "show": "keyboard",
+      "voice": "mic",
       "quit": "power"
     },
     "words": {
@@ -1104,6 +1136,40 @@ var lk = {
       "here": "check",
       "done": "check",
       "lock": "lock"
+    },
+    "voice": {
+      "cancel": "x",
+      "stop": "square",
+      "gear": "settings-2",
+      "close": "x",
+      "copy": "copy",
+      "copied": "check",
+      "undo": "undo-2",
+      "anyway": "rotate-ccw",
+      "listen": "mic",
+      "download": "download",
+      "transcribing": "audio-lines",
+      "text": "captions",
+      "password": "lock",
+      "note": "square-x",
+      "notes": {
+        "cancelled": "x",
+        "checking": "refresh-cw",
+        "folder": "folder",
+        "full": "hard-drive",
+        "language": "languages",
+        "mic-busy": "mic-off",
+        "mic-refused": "mic-off",
+        "net": "wifi",
+        "no-fit": "cpu",
+        "no-language": "languages",
+        "no-mic": "mic-off",
+        "no-model": "hard-drive",
+        "nothing": "mic-off",
+        "print": "download",
+        "taken": "file",
+        "unplugged": "mic-off"
+      }
     }
   },
   "dpad": {

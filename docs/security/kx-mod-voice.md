@@ -1,7 +1,7 @@
 # Security note: kx-mod-voice
 
 - **Owner:** product owner
-- **Last review:** 2026-11-15 (P11 task 20: the actor, the module thread, the jobs and the typer that wire every part to the ports and the bus; before it task 14 part b: `OpenFolder`, the clips' languages from the speech port and the port's new notes; before it task 19: the models folder, the downloads, Compare and the Voice panel's state, reviewed and fixed; before it task 18: History with its recordings, the counts, the card checks, Compare's numbers and the sealed store; before it task 16: the models table, the orders, the device rule, the strict scorer and `[voice]` with its per-language pick repair)
+- **Last review:** 2026-11-15 (P11 task 24: a refused Copy shows its line on the bar, and a text typed in part says typing stopped; before it task 20: the actor, the module thread, the jobs and the typer that wire every part to the ports and the bus; before it task 14 part b: `OpenFolder`, the clips' languages from the speech port and the port's new notes; before it task 19: the models folder, the downloads, Compare and the Voice panel's state, reviewed and fixed; before it task 18: History with its recordings, the counts, the card checks, Compare's numbers and the sealed store; before it task 16: the models table, the orders, the device rule, the strict scorer and `[voice]` with its per-language pick repair)
 - **Status:** Draft
 - **Scope:** `crates/kx-mod-voice`: the manifest, the `[voice]` settings, the models table (`models.toml`, `models`), the device rule (`device`), the scorer (`score.toml`, `score`), the flow (`flow`), History, the counts and the store (`history`, `counts`, `store`), the models folder (`folder`), the downloads (`fetch`), Compare (`compare`), the panel's state (`panel`, `view`, `options.toml`), and the module and its actor (`module`, `actor`), which wire them to the ports and the bus. It runs inside the uiAccess `keyxtend` process; the speech jobs and downloads run in `keyxtend-worker` (ADR-0042).
 
@@ -88,6 +88,7 @@
 - A file queued or being fingerprinted is not queued again by the next scan, so a large model is hashed once (`a_file_is_fingerprinted_once_however_often_the_folder_is_read`).
 - A failed counts, checks or scores save is tried again at the stop (`a_count_that_failed_to_save_is_saved_again_at_the_stop`).
 - Copy wipes its own copy of the text once the clipboard has it.
+- A failed Copy is logged by kind and shows its line on the bar until a Copy goes through (`a_copy_the_clipboard_refuses_shows_its_line_on_the_bar`); History's Copy shows the fault band.
 - A run that panics in a call and again as it drops still answers its lane, so the flow is never stuck waiting.
 ### Accepted (with reason)
 - Job threads are never joined and may outlive the stop, as in the other modules; each ends within the port's own waits, and its run closes then.
@@ -96,7 +97,6 @@
 - The stop's join of the actor has no time limit, as in selection and clipboard; the actor waits only on bounded disk and clipboard work.
 - With no keyboard, the typer's round map keeps a few bytes per text until the stop.
 - `VOICE_DAMAGED` names texts even when a numbers blob was the damaged one; that blob is removed, which loses numbers only, never a text.
-- A failed Copy is logged by kind; the bar has no line for it, and History's Copy shows the fault band.
 - No keyboard means no `TextDone`: the bar keeps the text with Copy and Undo stays dim, as the keyboard is part of every start. The typer never synthesizes an answer, since the keyboard may send a real one later from its pieces' thread.
 - The devices are read at the start only when a card could serve (a card picked, or Automatic with a stored check), so a plain start never starts the worker; until then every model counts as fitting, and the job's memory cap still holds.
 - Turning `history` or `keep_voice` off keeps what is already kept, as Delete all is the way to remove it; the panel may say so. The design is silent, and the house's switches (Pause learning, Prediction off) keep their data too.

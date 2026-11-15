@@ -9,7 +9,7 @@ use kx_module_api::{Redacted, Secret, Zeroizing};
 use super::Actor;
 use super::lanes::Owner;
 use super::typing::Source;
-use crate::flow::Out;
+use crate::flow::{In, Out};
 
 /// The round a bar click the flow hands to Compare names: none, as such a click is never stale.
 const NO_ROUND: u32 = 0;
@@ -45,9 +45,10 @@ impl Actor {
         self.want_presses(undo);
     }
 
-    /// Puts the bar's text on the clipboard.
+    /// Puts the bar's text on the clipboard, and tells the flow whether it went, so a refusal shows on the bar.
     fn copy(&mut self, text: &Secret) {
-        self.clip_text(text.expose());
+        let ok = self.clip_text(text.expose());
+        self.step(In::Copied(ok));
     }
 
     /// Puts `text` on the clipboard within `copy_ms`, through a copy wiped after; false, logged by kind, when it could

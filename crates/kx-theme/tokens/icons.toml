@@ -103,10 +103,12 @@ on = "chevron-down"
 [notice]
 icon = "keyboard"
 
-# The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364), Show keyboard and Quit.
+# The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364): Show keyboard, Dictation as the
+# Dictation key shows it, and Quit.
 [tray]
 glyph = "keyboard"
 show = "keyboard"
+voice = "mic"
 quit = "power"
 
 # The selection strip's keycaps (design/selection-chips.html design 4, I): Copy, Cut and Paste as on the shortcuts
@@ -218,3 +220,42 @@ other_folder = "folder-open"
 here = "check"
 done = "check"
 lock = "lock"
+
+# The dictation bar (design/voice-bar.html bar(), lines 279-298): each button by the hub's id (Listen again as the
+# Dictation key, Copy turning to its tick once copied), the gear, the mark before Transcribing, a text and a password
+# box's dots, and before each note by its hint id; a note not listed wears `note`.
+[voice]
+cancel = "x"
+stop = "square"
+gear = "settings-2"
+close = "x"
+copy = "copy"
+copied = "check"
+undo = "undo-2"
+anyway = "rotate-ccw"
+listen = "mic"
+download = "download"
+transcribing = "audio-lines"
+text = "captions"
+password = "lock"
+note = "square-x"
+
+# The microphone's faults show it off, a model's room its drive, a language its languages, the memory the processor,
+# and a download's faults their own mark.
+[voice.notes]
+cancelled = "x"
+nothing = "mic-off"
+no-mic = "mic-off"
+mic-busy = "mic-off"
+mic-refused = "mic-off"
+unplugged = "mic-off"
+no-model = "hard-drive"
+language = "languages"
+no-language = "languages"
+checking = "refresh-cw"
+no-fit = "cpu"
+print = "download"
+taken = "file"
+full = "hard-drive"
+folder = "folder"
+net = "wifi"

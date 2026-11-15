@@ -45,7 +45,7 @@ Item {
     // The English "1" key, which has a second legend, recording or not.
     function ks(rec) {
         const one = Face.states.en.keys["c-0x0002"];
-        return Object.assign({}, one, { on: rec, paint: rec ? root.paintRec : one.paint });
+        return Object.assign({}, one, { on: rec, rec: rec, paint: rec ? root.paintRec : one.paint });
     }
     // The first item under `item` for which `ok` holds.
     function find(item, ok) {

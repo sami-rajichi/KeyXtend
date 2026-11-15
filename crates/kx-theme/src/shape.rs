@@ -10,10 +10,12 @@ use crate::extras::{
 mod check;
 mod clip;
 mod fill;
+mod voice;
 mod whole;
 
 pub use clip::ClipShape;
 pub use fill::FillShape;
+pub use voice::VoiceShape;
 pub use whole::{BackdropShape, DimShape, DotsShape, WidthShape};
 
 /// Top-bar buttons (`.tb`).
@@ -243,7 +245,7 @@ pub struct Shape {
     pub line: WidthShape,
     /// The selection strip's keycaps.
     pub chips: ChipsShape,
-    /// The caption bar.
+    /// The dictation bar's status and words.
     pub caption: CaptionShape,
     /// The snip overlay.
     pub snip: SnipShape,
@@ -273,6 +275,8 @@ pub struct Shape {
     pub clip: ClipShape,
     /// Quick-fill.
     pub fill: FillShape,
+    /// The dictation bar and the Voice panel's own parts.
+    pub voice: VoiceShape,
 }
 
 /// The checked sizes in `text`.

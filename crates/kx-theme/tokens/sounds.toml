@@ -49,3 +49,14 @@ gain_db = 0
 [drop]
 files = ["card-down.wav"]
 gain_db = 0
+
+# A dictation starts listening (P11): two soft tones rising a fifth, our own recipe `voice-start` in
+# assets/sounds/recipes.toml, rendered by `cargo xtask sounds render`; `[voice] sounds` switches both off.
+[voice_start]
+files = ["voice-start.wav"]
+gain_db = -6
+
+# A dictation stops listening: the same two tones falling, recipe `voice-stop`.
+[voice_stop]
+files = ["voice-stop.wav"]
+gain_db = -6

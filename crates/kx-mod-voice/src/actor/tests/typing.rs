@@ -128,3 +128,19 @@ fn copy_puts_the_text_on_the_clipboard_within_its_wait() {
         Some(rig.actor.settings().copy_wait())
     );
 }
+
+#[test]
+fn a_copy_the_clipboard_refuses_shows_its_line_on_the_bar() {
+    let mut rig = Rig::new();
+    rig.speak("hello");
+    rig.fake
+        .clip
+        .queue(Err(kx_module_api::ports::ClipError::Busy));
+    rig.act(kx_module_api::ports::VoiceClick::Bar(BarButton::Copy));
+    assert!(matches!(rig.bar(), VoiceBar::Text(t) if t.hint == Some(BarHint::CopyFailed)));
+    rig.act(kx_module_api::ports::VoiceClick::Bar(BarButton::Copy));
+    assert!(
+        matches!(rig.bar(), VoiceBar::Text(t) if t.hint.is_none()),
+        "a copy that went through"
+    );
+}

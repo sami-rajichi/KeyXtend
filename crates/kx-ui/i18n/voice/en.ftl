@@ -1,9 +1,9 @@
 ### English texts of voice typing (P11), loaded into the same bundle as en.ftl; all three files hold the same keys.
 ### Plural forms select on $form, which is the count as the CLDR rules read it; [0] is the exact count 0.
 
-## In order: the bar (name, gear, states, buttons, the hint while nothing is heard yet, the password dots), each note
-## by hint id, the panel's header and home list, Models, Device, Compare models, History, then Options (each option by
-## its setting key, hyphens for underscores), the bar's places and the units. $lang is the language's own name.
+## In order: the bar (name, gear, states, buttons, the hint while nothing is heard yet, the password dots, the timer),
+## each note by hint id, the panel's header and home list, Models, Device, Compare models, History, then Options (each
+## option by its setting key, hyphens for underscores), the bar's places and units. $lang is the language's own name.
 voice =
     .title = Dictation
     .gear = Dictation settings
@@ -22,6 +22,7 @@ voice =
     .download = Download
     .download-size = Download · { $size }
     .mask = ••••••••
+    .timer = { $minutes }:{ $seconds }
     .note-nothing = Nothing heard. Is the microphone on?
     .note-cancelled = Cancelled. Nothing was typed.
     .note-no-mic = No microphone was found.
@@ -37,6 +38,8 @@ voice =
     .note-pieces = Dictation stopped part way. This is the text written so far.
     .note-too-long = Stopped at the longest dictation, and the text was typed.
     .note-no-field = Not all of the text was typed. Copy it from here or from History.
+    .note-stopped = Typing stopped part way. Copy the whole text from here or from History.
+    .note-copy-failed = The text could not be copied. Try again.
     .note-password = Typed into a password box. Not kept, no Copy.
     .note-fell = The graphics card failed, so the processor wrote this text.
     .note-print = A download did not pass its check, so it was deleted.
