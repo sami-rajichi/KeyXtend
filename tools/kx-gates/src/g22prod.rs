@@ -2,20 +2,24 @@
 //! makes plays that clip through the gate worker in place of the microphone, while the gate dictates it by clicks into
 //! target-window in the clip's layout. The words typed must be within `[voice] card_diff`, target-window must keep the
 //! foreground, the bar must sit on top above the keyboard, never activated, and the device `device` allows must write
-//! the text, as the copy's log says. It prints numbers and the device's id, never text.
+//! the text, as the copy's log says. It prints numbers and the device's id, never text; a failed language adds the
+//! copy's marked log lines, the windows in front by class and program, and the bar's button ids.
 #![cfg(windows)]
 
 mod bar;
 mod front;
 mod say;
 mod settle;
+mod why;
 mod wrote;
 
 use std::path::Path;
 
+use kx_kernel::{KERNEL, KernelSettings, SPEC as KERNEL_SPEC};
 use kx_mod_voice::score::Wrong;
 use kx_mod_voice::{SPEC, VoiceSettings};
 use kx_settings::VERSION_KEY;
+use serde::Serialize;
 use serde_json::{Value, json};
 use toml::Table;
 
@@ -75,15 +79,30 @@ impl Said {
     }
 }
 
-/// The copy's settings file: `[voice]`'s defaults with the bench's models folder and the run's device.
+/// The copy's settings file: `[voice]`'s defaults with the bench's models folder and the run's device, and
+/// `[kernel]`'s with the run's log level.
 fn table(g: &G22Product, bench: &G22Bench) -> Result<Table, String> {
     let mut s = VoiceSettings::from_defaults().map_err(|e| format!("the voice defaults: {e}"))?;
     (s.models_dir, s.device) = (bench.models()?.to_owned(), g.device.clone());
-    let mut section = Table::try_from(&s).map_err(|e| format!("the copy's voice settings: {e}"))?;
-    section.insert(VERSION_KEY.into(), i64::from(SPEC.version).into());
+    let mut k = KernelSettings::from_defaults().map_err(|e| format!("the kernel defaults: {e}"))?;
+    k.log_level.clone_from(&g.log_level);
     let mut table = Table::new();
-    table.insert(kx_mod_voice::ID.as_str().into(), section.into());
+    table.insert(
+        kx_mod_voice::ID.as_str().into(),
+        section(&s, SPEC.version)?.into(),
+    );
+    table.insert(
+        KERNEL.as_str().into(),
+        section(&k, KERNEL_SPEC.version)?.into(),
+    );
     Ok(table)
+}
+
+/// Settings `s` as a section of version `version`.
+fn section(s: &impl Serialize, version: u32) -> Result<Table, String> {
+    let mut t = Table::try_from(s).map_err(|e| format!("the copy's settings: {e}"))?;
+    t.insert(VERSION_KEY.into(), i64::from(version).into());
+    Ok(t)
 }
 
 /// Each clip of the bench, its file in the voice folder `voice` and its length read.
@@ -156,9 +175,9 @@ fn dictate(ctx: &Ctx, fresh: &Fresh, case: &Case, s: &VoiceSettings) -> (Value, 
     let (args, since) = ([g22::sound_flag(), case.path.clone()], now_us());
     let drive = |pid| one(ctx, pid, case, s);
     let (got, ended) = fresh.with_args(&args, g.ready_ms, Some(&g.warn_line), drive);
-    let read = fresh
-        .log()
-        .and_then(|log| wrote::read(&log, since, &g.wrote_line));
+    let log = fresh.log();
+    let read =
+        (log.as_ref().map_err(Clone::clone)).and_then(|l| wrote::read(l, since, &g.wrote_line));
     let pick = g.pick().ok_or("g22_product.device is no device pick");
     let (device, fit) = match &pick {
         Ok(pick) => wrote::judge(&read, pick),
@@ -171,6 +190,9 @@ fn dictate(ctx: &Ctx, fresh: &Fresh, case: &Case, s: &VoiceSettings) -> (Value, 
     let quit = ended.as_ref().is_some_and(Ended::ok);
     line["pass"] = json!(line["pass"] == true && quit && fit);
     line["copy_quit"] = json!(quit);
+    if let (false, Ok(log)) = (line["pass"] == true, &log) {
+        line["log"] = json!(why::marked(log, since, &g.why_marks));
+    }
     if let (Some(to), Value::Object(from)) = (line.as_object_mut(), device) {
         to.extend(from);
     }

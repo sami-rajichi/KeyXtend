@@ -26,6 +26,7 @@ struct Log {
     config: Option<FieldConfig>,
     before_calls: usize,
     ends_calls: usize,
+    looks: usize,
     /// The text the latest `ends_with` asked about.
     last_ends: Option<Redacted<String>>,
     watches: usize,
@@ -46,6 +47,7 @@ impl Default for Log {
             config: None,
             before_calls: 0,
             ends_calls: 0,
+            looks: 0,
             last_ends: None,
             watches: 0,
             stops: 0,
@@ -109,7 +111,7 @@ impl FakeFieldWatch {
     }
 
     /// Moves focus to a box of `kind` that raises no focus event: `kind` and the module keep the box told last, and
-    /// reads find the new one, as the real adapter checks the kind afresh at each read.
+    /// reads and looks find the new one under the same id, as the real adapter checks the kind afresh at each read.
     pub fn move_unheard(&self, kind: FieldKind) {
         lock(&self.shared.log).unheard = Some(kind);
     }
@@ -181,6 +183,12 @@ impl FakeFieldWatch {
     #[must_use]
     pub fn ends_calls(&self) -> usize {
         lock(&self.shared.log).ends_calls
+    }
+
+    /// How many `look` calls the runs took, failed ones too.
+    #[must_use]
+    pub fn looks(&self) -> usize {
+        lock(&self.shared.log).looks
     }
 
     /// The text the latest `ends_with` asked about, unread ones too; `None` before any.

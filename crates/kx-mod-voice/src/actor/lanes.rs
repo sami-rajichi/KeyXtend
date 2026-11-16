@@ -129,10 +129,15 @@ impl Actor {
         self.next_call(lane);
     }
 
-    /// A note from run `lane`, for its owner.
+    /// A note from run `lane`, for its owner; the flow's written text comes after a look at the box when none was told.
     pub(super) fn noted(&mut self, (owner, take): Lane, note: SpeechNote) {
         match owner {
-            Owner::Flow => self.step(In::Note { take, note }),
+            Owner::Flow => {
+                if matches!(note, SpeechNote::Done(_)) {
+                    self.look();
+                }
+                self.step(In::Note { take, note });
+            }
             Owner::Compare => {
                 let dos = self.panel.compare_note(take, note);
                 self.dos(dos);

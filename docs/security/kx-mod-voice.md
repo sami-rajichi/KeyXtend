@@ -32,7 +32,7 @@
 - A job's port panic counts as `Internal` and is told as a fault, even when the run panics again as it closes (`a_port_that_panics_in_a_call_tells_a_fault_and_frees_the_run`). A panic on the actor hides the bar, darkens the key, lets presses go and raises `MODULE_FAILED`; its runs close as it unwinds (`a_panic_on_the_actors_thread_hides_the_bar_closes_the_microphone_and_tells_the_user`).
 - At the stop the watches go first, the flow closes every run, a failed save (History, counts, checks or scores) is tried once more, downloads pause (their parts stay) and the runs left close as they drop. A run out in a job closes when the job ends; the stop never waits for it or for the typer (`a_text_goes_out_on_the_typers_thread_and_a_held_keyboard_never_holds_the_stop`).
 - With `on` off the module asks for no service, starts no thread, shows no bar and lights no key (edge 36, `with_the_feature_off_no_bar_shows_no_key_lights_and_nothing_starts`).
-- Logs carry fixed texts and error kinds only, never a text, a recording, a file name or a folder (`a_failed_copy_save_reveal_or_run_logs_no_text_or_folder`); a settings write is logged by `WriteError::kind`.
+- Logs carry fixed texts, error kinds, a box's kind and a typed count only, never a text, a recording, a file name or a folder (`a_failed_copy_save_reveal_or_run_logs_no_text_or_folder`); a settings write is logged by `WriteError::kind`.
 
 ## Data handled
 | Data | Class (Secret/Sensitive/Public) | Stored where | Encrypted | Retention |
@@ -61,7 +61,7 @@
 | Compare's notes and the panel's clicks | Compare drops a note of another run id; a row click names only a row of the view it saw, and is dropped once those rows moved (`Panel::told`); a button acts only when the view offers it (`acts`) | Compare's recording within `record_max_s` | `src/compare/tests.rs`, `src/panel/tests.rs`, `src/panel/tests/lists.rs` |
 | Compare's hold on the microphone (`In::Lend`) | While it records the flow shows the Listening bar and lights the key; the key, Stop and Cancel go to Compare (`Out::Lent`); no dictation starts; a lock, a sleep, Quit or the feature off cancels it | — | `src/flow/tests/lend.rs` |
 | The bus's events (`VoiceKey`, `VoiceAct`, `VoiceOpen`, `VoiceAsk`, `LayoutChanged`, `TextDone`, `Typed`, `PointerPressed`, `PressesAsk`) | Relays only post to the inbox; a click names the round it saw, the bar's buttons, the pointer and Try again go to the flow and the rest to the panel; a `TextDone` counts only for a round the typer gave, mapped back to the flow's own, and History's texts get none | One text in flight; the flow's waits from `[voice]` | `src/actor/tests/*.rs`, `tests/voice/thread.rs` |
-| The watches' notes (`FieldChange`, `SessionNote`) | Only the box's kind and id are read, never its text (`read_chars` 0); a lock or a sleep stops every run | `read_ms` per look | `src/actor/tests/faults.rs` |
+| The watches' notes (`FieldChange`, `SessionNote`) | Only the box's kind and id are read, never its text (`read_chars` 0); a text written while no box was told looks once more (`FieldRun::look`, no text); a lock or a sleep stops every run | `read_ms` per look | `src/actor/tests/faults.rs`, `src/actor/tests/typing.rs` |
 | The runs' answers and the store's open | A refused open, a failed call or a job that cannot start becomes the run's fault note; `Newer` or a shelf error keeps nothing this run with `VOICE_LOCKED`, damage tells `VOICE_TEXTS_DAMAGED` or `VOICE_NUMBERS_DAMAGED`, by the damaged blob's folder; the recording is never fetched while it would not be kept | The port's waits from `JobLimits` | `src/actor/tests/faults.rs`, `src/actor/tests/store.rs` |
 | A model file's facts from the worker (`FactsAsk`) | Its language code matched by its part before `-` or `_`, case ignored | — | Unit tests |
 | A card check's result (`CheckDone`) | Texts scored before speed; a zero card time reads as the fastest, never a division by zero; a check runs only on a file whose fingerprint is read, and a card gone (`NoCard`) keeps no verdict | — | Unit tests in `src/device/tests.rs`, `src/panel/tests/device.rs` |
@@ -95,7 +95,7 @@
 - A run that panics in a call and again as it drops still answers its lane, so the flow is never stuck waiting.
 ### Accepted (with reason)
 - Job threads are never joined and may outlive the stop, as in the other modules; each ends within the port's own waits, and its run closes then.
-- At the stop or a panic, a run busy in a job closes only when its call returns, so an opening microphone can stay on up to `ask_ms` after the light goes off.
+- At the stop or a panic, a run busy in a job closes only when its call returns, so an opening microphone can stay on up to `ask_ms` after the light goes off. A fresh job's start may take up to `load_s`, though its microphone opens only at the end of that start and shuts at the Close queued behind it.
 - A panic on the actor does not retry failed saves; the stop does.
 - The stop's join of the actor has no time limit, as in selection and clipboard; the actor waits only on bounded disk and clipboard work.
 - With no keyboard, the typer's round map keeps a few bytes per text until the stop.

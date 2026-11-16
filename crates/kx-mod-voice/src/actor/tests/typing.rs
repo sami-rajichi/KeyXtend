@@ -1,11 +1,13 @@
-//! The text goes to the typer with the suffix, the keyboard's answer reaches the flow by its round, Undo insert wants
-//! presses while it can act, the typer drops what is queued at the stop, and Copy goes to the clipboard within its wait.
+//! The text goes to the typer with the suffix, after a fresh look when no box was told; the keyboard's answer reaches
+//! the flow by its round, Undo insert wants presses while it can act, the typer drops what is queued at the stop, and
+//! Copy goes to the clipboard within its wait.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use kx_module_api::ports::{
-    BarButton, BarHint, ClipPart, PanelButton, TextAsk, TextDone, VoiceBar, VoiceClick, VoiceTab,
+    BarButton, BarHint, ClipPart, FieldError, FieldKind, PanelButton, TextAsk, TextDone, VoiceBar,
+    VoiceClick, VoiceTab,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing};
 
@@ -77,6 +79,41 @@ fn an_answer_to_another_round_is_dropped() {
     };
     rig.send(Msg::Typed(done));
     assert!(!undo(&rig));
+}
+
+// A focus change told out of order can leave no box while the box in front takes text (P11 task 30's card run).
+#[test]
+fn a_text_ready_while_no_box_was_told_looks_again_and_types_into_the_box_found() {
+    let mut rig = Rig::new();
+    rig.fake.field.focus(FieldKind::None);
+    rig.pump();
+    rig.fake.field.move_unheard(FieldKind::Text);
+    rig.speak("hello");
+    assert_eq!(rig.asks().len(), 1, "typed into the box found");
+    assert_eq!(rig.fake.field.looks(), 1, "once, for the text");
+}
+
+#[test]
+fn a_text_box_told_takes_no_look() {
+    let mut rig = Rig::new();
+    rig.speak("hello");
+    assert_eq!(rig.fake.field.looks(), 0);
+}
+
+#[test]
+fn with_no_box_found_or_a_failed_look_the_text_only_shows() {
+    for fails in [false, true] {
+        let mut rig = Rig::new();
+        rig.fake.field.focus(FieldKind::None);
+        rig.pump();
+        if fails {
+            rig.fake.field.fail_reads(FieldError::Refused);
+        }
+        rig.speak("hello");
+        assert!(rig.asks().is_empty(), "failed look: {fails}");
+        assert!(matches!(rig.bar(), VoiceBar::Text(t) if t.hint == Some(BarHint::NoField)));
+        assert_eq!(rig.fake.field.looks(), 1);
+    }
 }
 
 #[test]

@@ -6,6 +6,7 @@ use kx_module_api::ports::FieldEnds;
 use std::thread::{self, ThreadId};
 
 mod ends;
+mod look;
 mod many;
 
 /// Test values, whose read cap holds every scripted text; the real ones come from the predict module's settings.

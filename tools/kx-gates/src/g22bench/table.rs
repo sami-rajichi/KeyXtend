@@ -57,6 +57,8 @@ impl Rule {
 /// What one clip measured in one mode: the cold take's load and wait, the warm take's times and words, the job's peak.
 #[derive(Copy, Clone, Debug)]
 pub(super) struct Timed {
+    /// The cold take's open to the microphone's opening: a fresh job's first answer.
+    pub(super) start_ms: u32,
     /// The cold take's load.
     pub(super) load_ms: u32,
     /// The cold take's wait after Stop: a first dictation's, with any load left.
@@ -178,7 +180,8 @@ impl Row {
         let t = self.got.as_ref().ok();
         json!({
             "lang": self.lang, "model": self.model, "mode": mode(self.weak), "cores": self.cores, "cap": self.cap,
-            "clip_ms": self.clip_ms, "load_ms": t.map(|t| t.load_ms), "first_use_ms": t.map(|t| t.first_use_ms),
+            "clip_ms": self.clip_ms, "start_ms": t.map(|t| t.start_ms), "load_ms": t.map(|t| t.load_ms),
+            "first_use_ms": t.map(|t| t.first_use_ms),
             "first_ms": t.and_then(|t| t.first_ms), "total_ms": t.map(|t| t.total_ms), "rtf": self.rtf(),
             "peak_mb": t.map(|t| t.peak_mb), "words_wrong": t.and_then(|t| t.wrong).map(|w| w.words),
             "words": t.and_then(|t| t.wrong).map(|w| w.total), "verdict": self.verdict(rule).word(),

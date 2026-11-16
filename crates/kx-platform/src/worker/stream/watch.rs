@@ -14,8 +14,11 @@ pub enum Wait {
     Once(Duration),
     /// A note on the id must come within this time, and again after each note, until a last note.
     Each(Duration),
-    /// As `Each(each)` until a note `Streams::shift` marks, such as the microphone closing by itself, then `Each(then)`.
+    /// As `Each(each)` until a note `Streams::shift` marks, such as the microphone closing by itself, then `Each(then)`;
+    /// the first note has `first`, which may wait for a fresh job's start.
     Shift {
+        /// The wait for the first note.
+        first: Duration,
         /// The wait before the shift.
         each: Duration,
         /// The wait after it.
@@ -43,16 +46,16 @@ pub(super) struct Watches(BTreeMap<u32, Watch>);
 impl Watches {
     /// Watches `id` as `wait` says from `now`.
     pub(super) fn set(&mut self, id: u32, wait: Wait, now: Mono) {
-        let (wait, each, then) = match wait {
+        let (first, wait, each, then) = match wait {
             Wait::Off => {
                 self.0.remove(&id);
                 return;
             }
-            Wait::Once(wait) => (wait, false, None),
-            Wait::Each(wait) => (wait, true, None),
-            Wait::Shift { each, then } => (each, true, Some(then)),
+            Wait::Once(wait) => (wait, wait, false, None),
+            Wait::Each(wait) => (wait, wait, true, None),
+            Wait::Shift { first, each, then } => (first, each, true, Some(then)),
         };
-        let due = now.saturating_add(wait);
+        let due = now.saturating_add(first);
         let watch = Watch {
             wait,
             each,

@@ -1,9 +1,10 @@
 //! G22 on the product's pure parts: the copy's settings, the bar's look, the foreground's count, the typed text's
 //! settling, the device that wrote each text and each language's verdict, which prints numbers only.
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
+use kx_kernel::{KERNEL, SPEC as KERNEL_SPEC};
 use kx_mod_voice::score::Wrong;
 use kx_mod_voice::{SPEC, VoiceSettings};
 use kx_module_api::ports::{CardId, DevicePick};
@@ -24,7 +25,7 @@ use crate::config::load;
 const APP_TOLD: &str = include_str!("../../../../apps/keyxtend/src/played/told.rs");
 
 #[test]
-fn the_copy_reads_the_bench_models_on_the_runs_device_and_keeps_every_other_default() {
+fn the_copy_reads_the_bench_models_on_the_runs_device_and_logs_at_the_runs_level() {
     let mut c = load().expect("the settings load");
     c.g22_bench.models_dir = r"E:\models".into();
     let t = table(&c.g22_product, &c.g22_bench).expect("a table");
@@ -42,7 +43,18 @@ fn the_copy_reads_the_bench_models_on_the_runs_device_and_keeps_every_other_defa
     let mut want = VoiceSettings::from_defaults().expect("the defaults");
     (want.models_dir, want.device) = (c.g22_bench.models_dir.clone(), c.g22_product.device.clone());
     assert_eq!(got, want);
-    assert_eq!(t.len(), 1, "only [voice]");
+    let kernel = t[KERNEL.as_str()].as_table().expect("[kernel]");
+    let level = kernel.get("log_level").and_then(toml::Value::as_str);
+    assert_eq!(
+        level,
+        Some(c.g22_product.log_level.as_str()),
+        "the run's log level"
+    );
+    assert_eq!(
+        kernel.get(VERSION_KEY),
+        Some(&i64::from(KERNEL_SPEC.version).into())
+    );
+    assert_eq!(t.len(), 2, "only [voice] and [kernel]");
     c.g22_bench.models_dir.clear();
     assert!(
         table(&c.g22_product, &c.g22_bench).is_err(),
@@ -95,9 +107,14 @@ fn the_bar_must_be_no_activate_topmost_uncovered_above_the_keyboard_and_beside_i
 #[test]
 fn the_target_keeps_the_foreground_only_when_no_other_window_ever_took_it() {
     let (target, bar) = (5, 8);
+    let seen = |keys: &[isize]| {
+        keys.iter()
+            .map(|&k| (k, format!("[C{k}] of p.exe")))
+            .collect()
+    };
     let kept = Fronts {
         samples: 4,
-        seen: BTreeSet::new(),
+        seen: BTreeMap::new(),
     };
     assert_eq!(
         kept.count(target, bar),
@@ -110,15 +127,21 @@ fn the_target_keeps_the_foreground_only_when_no_other_window_ever_took_it() {
     assert!(kept.count(target, bar).kept());
     let lost = Fronts {
         samples: 4,
-        seen: [bar, 2].into(),
+        seen: seen(&[bar, 2]),
     };
     let n = lost.count(target, bar);
     assert_eq!((n.away, n.bar, n.kept()), (2, true, false));
+    assert_eq!(
+        lost.away(target),
+        ["[C2] of p.exe", "[C8] of p.exe"],
+        "each named"
+    );
     let own = Fronts {
         samples: 4,
-        seen: [target].into(),
+        seen: seen(&[target]),
     };
     assert!(own.count(target, bar).kept(), "the target itself");
+    assert!(own.away(target).is_empty());
     assert!(
         !Fronts::default().count(target, bar).kept(),
         "never sampled"

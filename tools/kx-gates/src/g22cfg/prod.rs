@@ -45,6 +45,10 @@ pub struct G22Product {
     pub group: String,
     /// Stop's id on the bar (kx-ui `bar_button_id`).
     pub stop: String,
+    /// The copy's `[kernel] log_level`.
+    pub log_level: String,
+    /// What marks the copy's log lines a failed language prints, each found as written.
+    pub why_marks: Vec<String>,
 }
 
 impl G22Product {
@@ -92,6 +96,9 @@ impl G22Product {
         if self.pick().is_none() {
             return Err("g22_product.device must be one [voice] device takes".into());
         }
+        if kx_kernel::log::level(&self.log_level).is_none() {
+            return Err("g22_product.log_level must be a log level name".into());
+        }
         let waits = [
             self.ready_ms,
             self.card_wait_ms,
@@ -107,6 +114,15 @@ impl G22Product {
             return Err(format!(
                 "g22_product needs a warn_line, a wrote_line, a group without {SEP:?} and stop"
             ));
+        }
+        self.check_marks()
+    }
+
+    /// Refuses an empty `why_marks` or a blank mark in it.
+    fn check_marks(&self) -> Result<(), String> {
+        let blank = self.why_marks.iter().any(|m| m.trim().is_empty());
+        if self.why_marks.is_empty() || blank {
+            return Err("g22_product.why_marks must list marks that are not blank".into());
         }
         Ok(())
     }

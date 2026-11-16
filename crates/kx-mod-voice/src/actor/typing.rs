@@ -37,12 +37,32 @@ pub(super) struct Typing {
 }
 
 impl Actor {
+    /// Before a written text reaches the flow: when no box was told, the box in front is looked at again, as a focus
+    /// change told out of order can leave none. The look reads no text, and what it finds reaches the flow first.
+    pub(super) fn look(&mut self) {
+        if !self.flow.no_box() {
+            return;
+        }
+        let Some(run) = self.ports.field.as_mut() else {
+            return;
+        };
+        match run.look() {
+            Ok(Some(change)) => {
+                tracing::info!(kind = ?change.kind, "the box in front was looked at again");
+                self.step(In::Field(change));
+            }
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, "the box in front could not be looked at"),
+        }
+    }
+
     /// Hands `ask` to the typer under a round of its own; a typer that is gone answers nothing typed.
     pub(super) fn type_text(&mut self, source: Source, mut ask: TextAsk) {
         let round = self.typing.last.wrapping_add(1);
         self.typing.last = round;
         self.typing.asked.push_back((round, source));
         ask.round = round;
+        tracing::debug!("a text went to the keyboard");
         if !(self.ports.typist)(ask) {
             self.typed(TextDone {
                 round,
@@ -54,6 +74,12 @@ impl Actor {
 
     /// The keyboard's answer, to the flow under the flow's round; the texts asked before it get none now.
     pub(super) fn typed(&mut self, done: TextDone) {
+        if !done.ok {
+            tracing::warn!(
+                count = done.count,
+                "the keyboard did not type all of a dictated text"
+            );
+        }
         let asked = &mut self.typing.asked;
         let Some(at) = asked.iter().position(|(round, _)| *round == done.round) else {
             return;

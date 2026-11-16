@@ -1,5 +1,5 @@
-//! The shared read rules over a scripted reader: reads come from the focused box, our own focus reads nothing, a late
-//! read never starts, and the cut at the read cap and the deadline.
+//! The shared read rules over a scripted reader: reads and looks come from the focused box, our own focus reads
+//! nothing, a late read never starts, and the cut at the read cap and the deadline.
 
 use super::*;
 use crate::deadline;
@@ -101,6 +101,20 @@ fn ends(desk: &Desk, by: Instant) -> Result<Option<FieldEnds>, FieldError> {
     answer.recv().unwrap()
 }
 
+/// What `serve` answers to a look at the focused box, by `by`.
+fn look(desk: &Desk, by: Instant) -> Result<Option<FieldChange>, FieldError> {
+    let (reply, answer) = mpsc::channel();
+    serve(desk, Job(Ask::Look { by, reply }));
+    answer.recv().unwrap()
+}
+
+#[test]
+fn a_look_names_the_focused_box_and_reads_no_text() {
+    let desk = Desk::on(Ok(theirs()));
+    assert_eq!(look(&desk, far()), Ok(Some(theirs().1)));
+    assert_eq!((desk.looks.get(), desk.reads.get()), (1, 0));
+}
+
 #[test]
 fn a_read_comes_back_from_the_focused_box() {
     let desk = Desk::on(Ok(theirs()));
@@ -122,6 +136,7 @@ fn focus_in_our_own_process_reads_as_none_and_reads_nothing() {
     let desk = Desk::on(Ok((true, theirs().1)));
     assert_eq!(before(&desk, far()), Ok(None));
     assert_eq!(ends(&desk, far()), Ok(None));
+    assert_eq!(look(&desk, far()), Ok(None));
     assert_eq!(desk.reads.get(), 0);
 }
 
@@ -133,6 +148,7 @@ fn a_late_read_times_out_before_it_looks_at_the_focus() {
         .unwrap();
     assert_eq!(before(&desk, past), Err(FieldError::TimedOut));
     assert_eq!(ends(&desk, past), Err(FieldError::TimedOut));
+    assert_eq!(look(&desk, past), Err(FieldError::TimedOut));
     assert_eq!((desk.looks.get(), desk.reads.get()), (0, 0));
 }
 
@@ -140,6 +156,7 @@ fn a_late_read_times_out_before_it_looks_at_the_focus() {
 fn a_refused_focus_lookup_passes_its_error_on() {
     let desk = Desk::on(Err(FieldError::Refused));
     assert_eq!(before(&desk, far()), Err(FieldError::Refused));
+    assert_eq!(look(&desk, far()), Err(FieldError::Refused));
     assert_eq!(desk.reads.get(), 0);
 }
 

@@ -1,9 +1,11 @@
-//! A shifting wait that takes its longer time once the microphone closed by itself, a relaunch that keeps the backoff,
-//! and a run's end stamped with its job's peak memory.
+//! A shifting wait that gives its first note a time of its own and takes its longer time once the microphone closed
+//! by itself, a relaunch that keeps the backoff, and a run's end stamped with its job's peak memory.
 
 use super::*;
 use crate::worker::fake::voice::limit;
 
+/// The time a shifting watch gives its first note, as a fresh job starts.
+const FIRST: Duration = Duration::from_secs(2);
 /// The longer wait a shifting watch takes after its shift.
 const THEN: Duration = Duration::from_secs(5);
 /// A test job's peak memory, in MB.
@@ -11,13 +13,45 @@ const PEAK_MB: u32 = 321;
 /// A relaunched job's memory cap, in MB.
 const BIGGER_MB: u32 = 128;
 
-/// Begins a start watched short until the microphone closes, then long.
-fn shifting(rig: &mut Rig) -> u32 {
+/// Begins a start watched short until the microphone closes, then long, its first note due within `first`.
+fn shifting_from(rig: &mut Rig, first: Duration) -> u32 {
     let wait = Wait::Shift {
+        first,
         each: WAIT,
         then: THEN,
     };
     rig.flow.begin(start, wait).unwrap()
+}
+
+/// Like `shifting_from`, with the short wait for the first note too.
+fn shifting(rig: &mut Rig) -> u32 {
+    shifting_from(rig, WAIT)
+}
+
+#[test]
+fn a_shifting_wait_gives_its_first_note_a_time_of_its_own_then_its_short_one() {
+    let mut rig = rig();
+    let id = shifting_from(&mut rig, FIRST);
+    assert_eq!(
+        rig.after(FIRST.saturating_sub(TICK)),
+        [],
+        "a fresh job starting"
+    );
+    rig.script.say(Ok(open(id)));
+    assert_eq!(rig.heard(), notes(&[open(id)]));
+    assert_eq!(
+        rig.after(WAIT.saturating_sub(TICK)),
+        [],
+        "the short wait now"
+    );
+    assert_eq!(rig.after(TICK), [Told::Lost(Lost::Late)]);
+}
+
+#[test]
+fn a_first_note_past_its_own_time_is_late() {
+    let mut rig = rig();
+    shifting_from(&mut rig, FIRST);
+    assert_eq!(rig.after(FIRST), [Told::Lost(Lost::Late)]);
 }
 
 /// `done` with the job's memory set to `mb`.

@@ -96,6 +96,11 @@ wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"
 stop = "stop"
+# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard.
+log_level = "debug"
+# What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
+# which holds text.
+why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
 
 # The staged worker's edges (`g22 staged`), on a copy of what `cargo xtask stage` wrote, with no screen and no mouse.
 # Edge 28: without the card part the worker starts and offers no card. Edge 29: with only the plainest processor part,

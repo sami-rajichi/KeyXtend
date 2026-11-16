@@ -12,7 +12,7 @@ use kx_module_api::Redacted;
 use super::bar::{self, BarLook};
 use super::front::Watch;
 use super::settle::Settle;
-use super::{Case, Said};
+use super::{Case, Said, why};
 use crate::apps::{Ctx, Opened};
 use crate::g22bench::within;
 use crate::g27type::Typist;
@@ -43,19 +43,22 @@ pub(super) fn dictate(
         .layout(&case.lang)
         .ok_or("the clip's language has no layout")?;
     to_layout(t.app(), id, g.layout_wait_ms, poll)?;
+    // Watched from here, as a card's check runs during the wait and may bring a window to the front.
+    let watch = Watch::start(Duration::from_millis(poll));
     // A card serves only once its check of this language's model passed, and that check follows the language in front.
     sleep_ms(product::follow_ms(poll)?.saturating_add(g.dictate_wait_ms()));
-    let watch = Watch::start(Duration::from_millis(poll));
     let heard = listen(ctx, pid, t, case, s);
     let fronts = watch.finish();
-    let heard = heard?;
+    let target = win::key(t.app().hwnd);
+    let away = |e| format!("{e}; other windows in front: {:?}", fronts.away(target));
+    let heard = heard.map_err(away)?;
     Ok(Said {
         lang: case.lang.clone(),
         clip_ms: case.clip_ms,
         first_ms: heard.first_ms,
         wrong: case.clip.wrong(heard.text.expose(), &case.lang),
         look: heard.look,
-        front: fronts.count(win::key(t.app().hwnd), heard.bar),
+        front: fronts.count(target, heard.bar),
     })
 }
 
@@ -80,7 +83,8 @@ fn listen(
     let (now, stop) = find()?.ok_or("Stop went before its click")?;
     bar::stop(t.app(), now, stop)?;
     let stopped = Instant::now();
-    let (text, first) = settled(t, g.settle_ms, within(s), poll)?;
+    let settles = settled(t, g.settle_ms, within(s), poll);
+    let (text, first) = settles.map_err(|e| why::with_bar(&e, &reader, now))?;
     let first_ms = first.map(|f| ms(f.saturating_duration_since(stopped)));
     Ok(Heard {
         bar: win::key(bar),

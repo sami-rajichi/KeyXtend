@@ -60,7 +60,8 @@ min_free_mb = 2048
 job_mb = 512
 # The longest wait for the worker's answer to an ask, in ms.
 ask_ms = 3000
-# The longest a model may take to load, or the devices or a file's facts to be read, in seconds.
+# The longest a model may take to load, a fresh voice job to start, or the devices or a file's facts to be read, in
+# seconds.
 load_s = 60
 # The longest a card may take to warm up, in seconds.
 warm_s = 180

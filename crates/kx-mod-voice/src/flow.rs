@@ -183,6 +183,12 @@ impl Flow {
         self.busy()
     }
 
+    /// The box told last is no box, so a written text would only show.
+    #[must_use]
+    pub fn no_box(&self) -> bool {
+        self.field.kind == FieldKind::None
+    }
+
     /// Every run stops: the dictation's bar closes and Compare's run is cancelled.
     fn stop_all(&mut self, out: &mut Vec<Out>) {
         self.end_lend(out);

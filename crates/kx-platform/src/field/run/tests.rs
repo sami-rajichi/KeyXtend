@@ -5,6 +5,10 @@ use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 mod ends;
+mod look;
+
+/// The box id a scripted thread's look finds.
+const LOOKED: u64 = 40;
 
 /// How long a test waits for a thread; a wait, never a sleep.
 const WAIT: Duration = Duration::from_secs(5);
@@ -80,7 +84,7 @@ where
     (run, got.recv_timeout(WAIT).unwrap(), heard)
 }
 
-/// A body that answers every read: the words asked as text, and whether the text is "ap".
+/// A body that answers every read: the words asked as text, whether the text is "ap", and a text box for a look.
 fn answers(inbox: &Receiver<Job>) {
     for job in inbox {
         match job.0 {
@@ -97,6 +101,9 @@ fn answers(inbox: &Receiver<Job>) {
             Ask::Ends { text, reply, .. } => {
                 let ended = FieldEnds::new(FieldKind::Text, Some(text.expose() == "ap"));
                 let _ = reply.send(Ok(Some(ended)));
+            }
+            Ask::Look { reply, .. } => {
+                let _ = reply.send(Ok(Some(change(FieldKind::Text, LOOKED))));
             }
         }
     }

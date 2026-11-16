@@ -16,7 +16,8 @@ pub struct JobLimits {
     pub idle_min: u16,
     /// The longest wait for the worker's answer to an ask, in ms.
     pub ask_ms: u32,
-    /// The longest a model may take to load, or the devices or a file's facts to be read, in seconds.
+    /// The longest a model may take to load, a fresh voice job to start, or the devices or a file's facts to be read,
+    /// in seconds.
     pub load_s: u16,
     /// The longest a card may take to warm up, in seconds.
     pub warm_s: u16,

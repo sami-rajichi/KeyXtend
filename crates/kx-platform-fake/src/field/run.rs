@@ -4,7 +4,8 @@ use super::Shared;
 use crate::lock;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, last_words, read_end,
+    FieldChange, FieldConfig, FieldEnds, FieldError, FieldKind, FieldRead, FieldRun, last_words,
+    read_end,
 };
 use std::sync::Arc;
 
@@ -61,6 +62,18 @@ impl FieldRun for FakeRun {
             (true, false) => FieldEnds::selection(kind),
             (true, true) => FieldEnds::new(kind, log.ends),
         }
+    }
+
+    fn look(&mut self) -> Result<Option<FieldChange>, FieldError> {
+        let mut log = lock(&self.shared.log);
+        log.looks += 1;
+        if let Some(error) = log.read_fail {
+            return Err(error);
+        }
+        Ok(Some(FieldChange {
+            kind: log.seen(),
+            box_id: log.box_id,
+        }))
     }
 }
 

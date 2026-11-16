@@ -269,6 +269,7 @@ impl<'a> Bench<'a> {
             return Err(RELOADED.into());
         }
         Ok(Timed {
+            start_ms: cold.open_ms,
             load_ms: cold.load_ms,
             first_use_ms: cold.total_ms,
             first_ms: warm.first_ms,

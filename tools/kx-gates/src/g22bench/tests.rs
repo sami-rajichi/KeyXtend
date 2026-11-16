@@ -193,6 +193,10 @@ fn a_take_keeps_the_jobs_load_and_memory_times_its_own_wait_and_counts_the_words
     fake.on(SpeechCall::Stop, notes);
     let got = take(&fake, ask(), &script(WAIT)).unwrap();
     assert_eq!((got.load_ms, got.memory_mb), (450, 700));
+    assert!(
+        got.open_ms <= 1_000,
+        "the open, on the bench's own clock: {got:?}"
+    );
     assert!(got.first_ms.is_some_and(|f| f <= got.total_ms), "{got:?}");
     assert!(got.total_ms <= 1_000, "the bench's own clock: {got:?}");
     assert_eq!(got.wrong, Some(Wrong { words: 1, total: 4 }));

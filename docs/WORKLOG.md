@@ -4,6 +4,18 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 18:25 — P11 part 1: gates and the owner's check passed
+G22's bench, staged edges and product runs on the processor and the card passed, with the box proofs and `g19 hung`, and the owner passed all 20 hands-on checks ([test report](test-reports/2026-11-16-p11-voice-typing.md)). The last card run's slow English and French texts stay open for part 2. At the owner's yes, the voice trial with their clips, the speed test, the research files and the old Whisper models were deleted; the ten speech models stay for part 2's gates.
+
+## 2026-11-16 17:50 — P11: History's recordings stay within `voice_max_mb` at a later text
+History's property test found that a later text of the same take kept its recording past `voice_max_mb`, when that recording was unpinned after the limit fell. A kept text now drops recordings oldest first and its own last, as `admit` already refuses one past the room left; the text itself always stays. A unit test and the saved property case cover it, and every property test of the changed crates passes at 2,000 cases.
+
+## 2026-11-16 17:00 — P11: a fresh voice job's first answer gets the load wait
+G22's card runs at times lost a dictation as `Late`, since a fresh voice job must answer Start within `ask_ms` (3 s) though it first loads the engine's parts and the detector. The bench now prints that first answer's time, 1.0 to 2.3 s on an idle PC. `Wait::Shift` gains a wait of its own for the first note, which a Start takes from `load_s`; each later note keeps `ask_ms`. The Listening bar's time and its nothing-heard hint now count from the microphone's opening.
+
+## 2026-11-16 15:20 — P11: a dictated text no longer misses a box it was told late
+G22's card runs at times typed nothing, as the voice module's last focus report said "no box" while target-window's box held focus. The field port gains `look`, which reads the box in front again on the watch's thread, its kind and id only, and the voice module looks once before a written text when no box was told. G22 now prints, for a failed language only, the copy's marked log lines, the windows that came to the front and the bar's button states.
+
 ## 2026-11-16 07:00 — P11: review and security
 The saved review notes are fixed: a shared reserved-name check, a damaged notice per kind, dictated texts held as wiped secrets in the bar, History and Compare, the host's thread count, one weak-PC section for the gates, and no machine paths in tracked files. Downloads may follow Hugging Face's redirects under `hf.co`, while every layer makes a link name its host exactly. The branch code review's three host-rule findings are fixed, the security review found no high or medium issue, and each P11 security note now carries its final status.
 

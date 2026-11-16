@@ -44,6 +44,20 @@ fn listen_again_acts_only_where_the_note_offers_it() {
     assert_eq!(note(&rig.shown()).map(|n| n.0), Some(BarHint::Cancelled));
 }
 
+/// A fresh job's start before the microphone opens, in ms, shorter than `nothing_s`.
+const START_MS: u64 = 2_000;
+
+#[test]
+fn listening_counts_from_the_microphone_opening_not_the_click() {
+    let mut rig = Rig::new();
+    rig.key();
+    rig.wait(START_MS);
+    rig.tell(SpeechNote::Stage(SpeechStage::Open));
+    let due = Mono::from_us((START_MS + nothing_ms()) * 1_000);
+    assert_eq!(rig.flow.deadline(), Some(due), "the hint after the opening");
+    assert!(matches!(rig.shown(), VoiceBar::Listening(l) if l.elapsed_ms == 0));
+}
+
 #[test]
 fn after_nothing_s_the_bar_hints_and_keeps_listening() {
     let mut rig = Rig::new();

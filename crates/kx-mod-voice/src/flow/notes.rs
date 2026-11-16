@@ -28,12 +28,13 @@ impl Flow {
         }
     }
 
-    /// The light follows the microphone; the job stopping by itself ends listening.
+    /// The light follows the microphone, and listening counts from its opening; the job stopping by itself ends
+    /// listening.
     fn stage(&mut self, stage: SpeechStage, out: &mut Vec<Out>) {
         let listening = self.phase() == Phase::Listening;
         match stage {
             SpeechStage::Loading => {}
-            SpeechStage::Open => self.lit = listening,
+            SpeechStage::Open => self.opened(),
             SpeechStage::Shut => self.lit = false,
             SpeechStage::Limit | SpeechStage::Silence => {
                 if let Some(take) = self.take.as_mut() {
@@ -44,6 +45,15 @@ impl Flow {
                     self.stop(false, out);
                 }
             }
+        }
+    }
+
+    /// The microphone opened: the key lights while listening, whose time and hint start now.
+    fn opened(&mut self) {
+        let now = self.now();
+        self.lit = self.phase() == Phase::Listening;
+        if let super::State::Listening { since, .. } = &mut self.state {
+            *since = now;
         }
     }
 

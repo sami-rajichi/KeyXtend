@@ -45,6 +45,7 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> WorkerRun<S> {
         let (stream, _) = shared.stream_for(&mut live, &key, 0);
         let start = move |id| VoiceAsk::Start { id, setup };
         let wait = Wait::Shift {
+            first: w.start,
             each: w.ask,
             then: w.write,
         };

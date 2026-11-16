@@ -14,6 +14,7 @@ const RULE: Rule = Rule {
 /// A row that measured `total_ms` on a 6 s clip with `words` wrong.
 fn row(weak: bool, total_ms: u32, words: u16) -> Row {
     let timed = Timed {
+        start_ms: 700,
         load_ms: 500,
         first_use_ms: 900,
         first_ms: Some(total_ms),

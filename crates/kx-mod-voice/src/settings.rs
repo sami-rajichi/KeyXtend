@@ -149,7 +149,7 @@ pub struct VoiceSettings {
     pub job_mb: u32,
     /// The longest wait for the worker's answer, in ms.
     pub ask_ms: u32,
-    /// The longest load or read, in seconds.
+    /// The longest load, read or start of a fresh job, in seconds.
     pub load_s: u16,
     /// The longest warm-up, in seconds.
     pub warm_s: u16,

@@ -104,7 +104,9 @@ pub(super) fn times(job: &JobLimits) -> Times {
 /// How long each ask may wait for the worker, from a job's limits.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(super) struct Waits {
-    /// An answer to a plain ask: the microphone opening, a Cancel, a Close or each kept piece.
+    /// A run's first answer, the microphone opening, which may first wait for a fresh job to start and load its parts.
+    pub(super) start: Duration,
+    /// Each note while listening, a Cancel, a Close or each kept piece.
     pub(super) ask: Duration,
     /// Each note while the job writes: a load, a warm-up and a piece in the worst case.
     pub(super) write: Duration,
@@ -118,8 +120,10 @@ pub(super) struct Waits {
 pub(super) fn waits(job: &JobLimits) -> Waits {
     let s = |n: u16| Duration::from_secs(u64::from(n));
     let (load, warm, piece) = (s(job.load_s), s(job.warm_s), s(job.piece_wait_s));
+    let ask = Duration::from_millis(u64::from(job.ask_ms));
     Waits {
-        ask: Duration::from_millis(u64::from(job.ask_ms)),
+        start: load.max(ask),
+        ask,
         write: load + warm + piece,
         read: load,
         check: (load + piece) * CHECK_RUNS + warm,

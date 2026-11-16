@@ -124,6 +124,13 @@ pub trait FieldRun: Send {
     /// Whether the text just before the cursor ends with `text`, with the kind of box the check saw; a selection that
     /// is not empty, which the answer names, or a box that is no text box, never ends with it.
     fn ends_with(&mut self, text: &Redacted<String>) -> FieldEnds;
+
+    /// The box with focus now, looked at afresh within `FieldConfig::read_ms`, for a focus change the OS told late or
+    /// never; it reads no text and keeps nothing. `None` when focus is in our own process.
+    ///
+    /// # Errors
+    /// `TimedOut` when the look takes too long, `Refused` when the OS refuses, `Unavailable` when nothing can look.
+    fn look(&mut self) -> Result<Option<FieldChange>, FieldError>;
 }
 
 /// Watches the focused box in other apps; the platform provides it.

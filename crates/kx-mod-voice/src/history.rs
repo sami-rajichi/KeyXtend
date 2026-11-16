@@ -244,8 +244,8 @@ impl History {
         edit
     }
 
-    /// Drops the oldest unpinned texts past `max`, then the oldest unpinned recordings past `voice_bytes`, never
-    /// `keep`'s.
+    /// Drops the oldest unpinned texts past `max`, never `keep`, then the oldest unpinned recordings past
+    /// `voice_bytes`, `keep`'s last.
     fn trim_into(&mut self, rules: &Rules, keep: Option<u64>, edit: &mut Edit) {
         while self.unpinned() > rules.max {
             let oldest = self
@@ -258,6 +258,7 @@ impl History {
             edit.drop_entry(&self.entries.remove(at));
         }
         self.trim_voice(rules, keep, edit);
+        self.trim_voice(rules, None, edit);
     }
 
     /// Drops the oldest unpinned recordings, never `keep`'s, until all fit in `voice_bytes`.

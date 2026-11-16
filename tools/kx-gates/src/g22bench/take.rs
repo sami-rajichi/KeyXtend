@@ -37,6 +37,9 @@ pub(super) struct Script<'a> {
 /// What one take measured.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(super) struct Take {
+    /// The open to the microphone's opening, in ms: on a cold take, a fresh job's first answer, within the host's
+    /// `load_s` wait.
+    pub(super) open_ms: u32,
     /// The model's load, in ms, as the job timed it; 0 when it was loaded already.
     pub(super) load_ms: u32,
     /// Stop to the first piece's text, in ms; `None` when no piece came.
@@ -52,11 +55,11 @@ pub(super) struct Take {
 /// A note, and when the bench heard it.
 type Heard = (Instant, SpeechNote);
 
-/// What a take gathers: whether the microphone opened, the levels heard, when Stop went and the first piece came, the
+/// What a take gathers: when the microphone opened, the levels heard, when Stop went and the first piece came, the
 /// pieces and the end.
 #[derive(Default)]
 struct Gathered {
-    opened: bool,
+    opened: Option<Instant>,
     levels: u32,
     stopped: Option<Instant>,
     first: Option<Instant>,
@@ -68,10 +71,11 @@ struct Gathered {
 pub(super) fn take(speech: &dyn Speech, ask: SpeechAsk, script: &Script) -> Result<Take, String> {
     let (tx, rx) = mpsc::channel();
     let tell = Box::new(move |note| drop(tx.send((Instant::now(), note))));
+    let began = Instant::now();
     let mut run = speech.open(ask, tell).map_err(|e| e.to_string())?;
     let got = listen(&rx, &mut *run, script);
     run.close();
-    measure(&got?, script)
+    measure(&got?, script, began)
 }
 
 /// Listens until the job heard `script.levels` levels, stops, and gathers every piece.
@@ -81,7 +85,7 @@ fn listen(
     script: &Script,
 ) -> Result<Gathered, String> {
     let mut got = Gathered::default();
-    let heard = |g: &Gathered| g.opened && g.levels >= script.levels;
+    let heard = |g: &Gathered| g.opened.is_some() && g.levels >= script.levels;
     gather(rx, Instant::now() + script.within, &mut got, heard)?;
     // Takes what came with the last level, so a run that already ended is never stopped.
     gather(rx, Instant::now(), &mut got, |_| false)?;
@@ -89,7 +93,7 @@ fn listen(
         return Err(EARLY.into());
     }
     if !heard(&got) {
-        return Err((if got.opened { SLOW } else { SHUT }).into());
+        return Err((if got.opened.is_some() { SLOW } else { SHUT }).into());
     }
     let stopped = Instant::now();
     got.stopped = Some(stopped);
@@ -98,9 +102,11 @@ fn listen(
     Ok(got)
 }
 
-/// The numbers `got` holds, its pieces counted against the closest of `script`'s readings; the caller drops them, wiped.
-fn measure(got: &Gathered, script: &Script) -> Result<Take, String> {
+/// The numbers `got` holds since the open at `began`, its pieces counted against the closest of `script`'s readings;
+/// the caller drops them, wiped.
+fn measure(got: &Gathered, script: &Script, began: Instant) -> Result<Take, String> {
     let ((end, done), stopped) = (got.done.ok_or(LATE)?, got.stopped.ok_or(LATE)?);
+    let opened = got.opened.ok_or(SHUT)?;
     let since = |at: Instant| ms(at.saturating_duration_since(stopped));
     let heard = Zeroizing::new(
         got.pieces
@@ -111,6 +117,7 @@ fn measure(got: &Gathered, script: &Script) -> Result<Take, String> {
     );
     let wrong = fewest(script.sentence, script.also, &heard, script.lang);
     Ok(Take {
+        open_ms: ms(opened.saturating_duration_since(began)),
         load_ms: done.load_ms,
         first_ms: got.first.map(since),
         total_ms: since(end),
@@ -140,7 +147,7 @@ fn gather(
 /// Adds `note`, heard `at`, to `got`.
 fn hear(got: &mut Gathered, at: Instant, note: SpeechNote) -> Result<(), String> {
     match note {
-        SpeechNote::Stage(SpeechStage::Open) => got.opened = true,
+        SpeechNote::Stage(SpeechStage::Open) => drop(got.opened.get_or_insert(at)),
         SpeechNote::Level(_) => got.levels = got.levels.saturating_add(1),
         SpeechNote::Piece { text, .. } => {
             got.first.get_or_insert(at);

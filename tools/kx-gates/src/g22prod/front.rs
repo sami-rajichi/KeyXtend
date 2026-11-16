@@ -1,8 +1,9 @@
-//! Who holds the foreground while a clip is dictated: a thread samples the window in front until it finishes, keeping
-//! each window's key once. A moment with no window in front is skipped, as Windows shows one while focus moves.
+//! Who holds the foreground from a language's card wait until its text settles: a thread samples the window in front,
+//! keeping each window's key once with its class and program, never its title. A moment with no window in front is
+//! skipped, as Windows shows one while focus moves.
 #![cfg(windows)]
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
@@ -12,11 +13,11 @@ use kx_platform_windows::window::foreground;
 
 use crate::win;
 
-/// What the samples saw: how many, and each window that was in front.
+/// What the samples saw: how many, and each window that was in front, by key, as `[class] of program`.
 #[derive(Debug, Default)]
 pub(super) struct Fronts {
     pub(super) samples: u32,
-    pub(super) seen: BTreeSet<isize>,
+    pub(super) seen: BTreeMap<isize, String>,
 }
 
 /// The samples' count against the target and the bar.
@@ -33,12 +34,17 @@ pub(super) struct FrontCount {
 impl Fronts {
     /// The count against `target`'s key and `bar`'s.
     pub(super) fn count(&self, target: isize, bar: isize) -> FrontCount {
-        let away = self.seen.iter().filter(|&&k| k != target).count();
         FrontCount {
             samples: self.samples,
-            away,
-            bar: self.seen.contains(&bar),
+            away: self.away(target).len(),
+            bar: self.seen.contains_key(&bar),
         }
+    }
+
+    /// Each window other than `target` that was in front, as `[class] of program`.
+    pub(super) fn away(&self, target: isize) -> Vec<&str> {
+        let others = self.seen.iter().filter(|&(&k, _)| k != target);
+        others.map(|(_, name)| name.as_str()).collect()
     }
 }
 
@@ -63,10 +69,11 @@ impl Watch {
         let thread = thread::spawn(move || {
             let mut f = Fronts::default();
             while !halt.load(Ordering::Acquire) {
-                let key = win::key(foreground());
+                let w = foreground();
+                let key = win::key(w);
                 if key != 0 {
                     f.samples += 1;
-                    f.seen.insert(key);
+                    f.seen.entry(key).or_insert_with(|| win::describe(w));
                 }
                 thread::sleep(poll);
             }

@@ -50,7 +50,7 @@ fn a_plain_name_is_one_folder_name_and_a_clip_must_be_one() {
 fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
-    let bad: [fn(&mut G22Product); 18] = [
+    let bad: [fn(&mut G22Product); 21] = [
         |g| g.card_wait_ms = 0,
         |g| g.wrote_line = " ".into(),
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
@@ -69,6 +69,9 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
         |g| g.open_ms = 0,
         |g| g.settle_ms = 0,
         |g| g.layout_wait_ms = 0,
+        |g| g.log_level = "loud".into(),
+        |g| g.why_marks.clear(),
+        |g| g.why_marks.push(" ".into()),
     ];
     for (i, spoil) in bad.iter().enumerate() {
         let mut g = c.g22_product.clone();

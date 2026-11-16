@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::worker::fake::voice::{level, open as opened};
-use kx_module_api::ports::{CardId, CardUse, SpeechDone};
+use kx_module_api::ports::{CardId, CardUse, SpeechDone, SpeechStage};
 
 /// Speech heard, then silence, for run `id`.
 fn heard_then_quiet() -> VoiceAct {
@@ -99,15 +99,44 @@ fn after_a_worker_death_the_pieces_stay_keep_and_again_say_no_sound_and_stop_and
     assert_eq!(run.again(ask(None)), Err(none), "no model is refused first");
 }
 
+/// The wait a Start's first answer gets: `load_s`, as a fresh job loads its parts.
+fn load() -> Duration {
+    Duration::from_secs(limits().load_s.into())
+}
+
 #[test]
-fn a_worker_silent_past_its_wait_is_a_timeout_and_never_a_hang() {
+fn a_fresh_jobs_first_answer_may_come_just_before_the_load_wait_ends() {
+    let (script, clock, speech) = solo();
+    let (tell, heard) = ear();
+    let _run = speech.open(ask(Some(FILE_A)), tell).unwrap();
+    clock.advance(load().saturating_sub(Duration::from_millis(1)));
+    speech.poke();
+    script.say(Ok(opened(1)));
+    let open = SpeechNote::Stage(SpeechStage::Open);
+    assert_eq!(next(&heard, 1), [open], "no timeout first");
+}
+
+#[test]
+fn a_worker_silent_past_the_load_wait_is_a_timeout_and_never_a_hang() {
     let (_, clock, speech) = solo();
     let (tell, heard) = ear();
     let mut run = speech.open(ask(Some(FILE_A)), tell).unwrap();
-    clock.advance(Duration::from_millis(limits().ask_ms.into()));
+    clock.advance(load());
     speech.poke();
     assert_eq!(next(&heard, 1), [SpeechNote::Fault(SpeechError::Timeout)]);
     assert_eq!(run.stop(), Err(SpeechError::Gone));
+}
+
+#[test]
+fn after_the_first_answer_each_note_comes_within_the_ask_wait() {
+    let (script, clock, speech) = solo();
+    let (tell, heard) = ear();
+    script.act(VoiceAct::Say(vec![opened]));
+    let _run = speech.open(ask(Some(FILE_A)), tell).unwrap();
+    next(&heard, 1);
+    clock.advance(Duration::from_millis(limits().ask_ms.into()));
+    speech.poke();
+    assert_eq!(next(&heard, 1), [SpeechNote::Fault(SpeechError::Timeout)]);
 }
 
 #[test]
