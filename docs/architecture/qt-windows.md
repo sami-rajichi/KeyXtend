@@ -11,7 +11,8 @@ Moved from [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the overview, t
   - It returns `MA_NOACTIVATE` for `WM_MOUSEACTIVATE`.
   - Every window it covers must start topmost (Qt's `WindowStaysOnTopHint`); guarding a plain hidden window can leave it below the topmost band.
 - Never call `requestActivate()` on a no-focus window. Only the full Settings window takes focus, and it gives it back when it closes.
-- Owned windows (shadows, bubble, tips, caption, ring) are declared inside their owner, so Qt keeps them above it. The selection strip sits inside its own shadow, which has no owner (`transientParent: null`), so it also shows by the bubble.
+- Owned windows (shadows, bubble, tips, ring) are declared inside their owner, so Qt keeps them above it. The selection strip sits inside its own shadow, which has no owner (`transientParent: null`), so it also shows by the bubble.
+- The voice bar and the Voice panel sit inside their own ownerless shadows too, so they stay while the keyboard hides. They take clicks but never focus, and the guard keeps them above as it keeps a pop-up (ADR-0045).
 - The scroll outline's four edge windows have no owner (`transientParent: null`) and join the guard's quiet run, so `lay_under` can put them just under the keyboard each time a set shows or the keyboard shows again. They exist only while there is a box.
 - A tip also lifts itself alone to the front as it shows (`SWP_NOOWNERZORDER`), since the guard may lift a banner or the list after its owner. A shown tip hides as a guard run starts, or the guard would lift its owner with it.
 - A hidden window shows again at its old place, so a pop-up's guard run names it as `top` to land in front.

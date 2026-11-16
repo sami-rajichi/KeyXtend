@@ -1,6 +1,6 @@
 # kx-mod-voice
 
-Voice typing (P11, ADR-0042 to ADR-0044): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module reads its settings, drops a bad pick, and starts the actor that wires every part to the ports and the bus.
+Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module reads its settings, drops a bad pick, and starts the actor that wires every part to the ports and the bus.
 
 - **Models table** (`models`, `models.toml`): one row per local model with its file, size, SHA-256, a download address pinned to a commit on an allowed host, its licence and credit, its memory on the processor and on a card, and its languages with each model's own code. A bad table turns local models off; it never panics.
 - **Orders** (`models::order`): each tested language has a list, best first, with the day of its tests; its first is the default. The English, French and Arabic orders were ranked on the 2026-11-14 trial numbers (the owner's six clips, the voice detector at pad 300 ms). A language without a list takes the general order of the models that know it, marked untested. A model that never leads (`lead = false`, Nemotron) is first in no list.
@@ -56,7 +56,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 
 ## Public API
 
-`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants and `PLACES`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
+`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants, `PLACES` and `place_name`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 

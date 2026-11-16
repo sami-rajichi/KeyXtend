@@ -34,7 +34,7 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27, to be added one 
 | # | Feature | What it does | Needs | Size |
 |---|---|---|---|---|
 | F1 | **Camera head control** | Move the pointer with your head and click with a face gesture (smile, raised eyebrows); webcam only, free and on your PC. | P4, v1.0 | Large |
-| F2 | **AI voice control** | Voice commands such as "open Chrome", "scroll down", "right-click" or "delete last word", using local Whisper plus a command list. Later, an optional small local AI for free-form requests. | P11 | Large |
+| F2 | **AI voice control** | Voice commands such as "open Chrome", "scroll down", "right-click" or "delete last word", using local speech models plus a command list. Later, an optional small local AI for free-form requests. | P11 | Large |
 | F3 | **Zoom-to-click** | Point near a tiny button, a magnified view appears, and you click inside it. | P4 | Medium |
 | F4 | **More click types** | Double-click and middle-click hold modes, and a "repeat last action" key. | P4 | Small |
 | F5 | **Quick system panel** | Volume, brightness, Wi-Fi, night light, plus window snap, switch and minimise, all in one paged panel. | P6 | Medium |

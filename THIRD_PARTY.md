@@ -49,8 +49,8 @@ Everything we ship or bundle that we did not write ourselves. Updated by the `kx
 | Keystrokes of a Cherry KC 1000 keyboard: "Keyboard Soundpack #1 [Typing and Single Keystrokes]" by unicaegames, six single keys as `assets/sounds/cherry-key-1.wav` … `-6.wav` | – | CC0-1.0 | https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes | The key sound (P4) | yes, built into the app from P4 |
 | "Middle Mouse Click" by 1j01, as `assets/sounds/mouse-click.wav` and `mouse-press.wav` | – | CC0-1.0 | https://opengameart.org/node/186493 | The right-click and pick-up sounds (P4) | yes, built into the app from P4 |
 | "Playing Card Sounds" by BMacZero (Brian MacIntosh), `contact2.wav` as `assets/sounds/card-down.wav` | – | CC0-1.0 | https://opengameart.org/node/118338 | The drop sound (P4) | yes, built into the app from P4 |
-| whisper.cpp + Whisper weights | – | MIT | https://github.com/ggml-org/whisper.cpp | Local voice typing | models downloaded on demand |
-| whisper.cpp Windows build (`whisper-server`) | b5130 (v1.9.4) | MIT; the bundle also has `SDL2.dll` (Zlib) | https://github.com/ggml-org/whisper.cpp | Local speech server in the voice worker (tested in G22) | P11 decides: shipped or downloaded |
+| whisper.cpp + Whisper weights | – | MIT | https://github.com/ggml-org/whisper.cpp | Local voice typing; replaced in P11 by transcribe-cpp and the downloaded models below (ADR-0043) | no |
+| whisper.cpp Windows build (`whisper-server`) | b5130 (v1.9.4) | MIT; the bundle also has `SDL2.dll` (Zlib) | https://github.com/ggml-org/whisper.cpp | Local speech server in the spike's voice worker (tested in G22); removed in P11 | no |
 | cpal | 0.18.2 | Apache-2.0; its text is in `licenses/cpal/` | https://github.com/RustAudio/cpal | Microphone in the voice worker (tested in G22) | yes, built into the worker (P11) |
 | transcribe-cpp, transcribe-cpp-sys | 0.4.1 | MIT; they vendor ggml (MIT), miniz (MIT) and Silero VAD's timestamp code (MIT); texts in `licenses/transcribe-cpp/` | https://github.com/handy-computer/transcribe.cpp | The speech engine of the worker's `voice` job, for every model (P11, ADR-0043). Its own crates (log, thiserror; at build cmake, serde_json) are checked by `cargo deny` when the worker takes it | yes, in `keyxtend-worker` and its engine parts |
 | Vulkan-Headers (from the Vulkan SDK) | 1.4.363 | Apache-2.0 OR MIT, used as MIT; its MIT text is in `licenses/vulkan-headers/` | https://github.com/KhronosGroup/Vulkan-Headers | Compiled into the engine's graphics-card part (P11) | yes, inside the card part |
@@ -95,14 +95,14 @@ The Voice panel downloads these on the user's click, from their publisher's repo
 
 | Tool | Version | Licence | Source | Used for |
 |---|---|---|---|---|
-| Vulkan SDK (glslc and the import library) | 1.4.363.1 | Apache-2.0 and the LunarG SDK terms | https://vulkan.lunarg.com | Builds the engine's graphics-card part (P11); installed portable in `D:\dev`, and in CI by `.github/actions/vulkan`, pinned by its installer's SHA-256 |
+| Vulkan SDK (glslc and the import library) | 1.4.363.1 | Apache-2.0 and the LunarG SDK terms | https://vulkan.lunarg.com | Builds the engine's graphics-card part (P11); installed portable on the development PC, and in CI by `.github/actions/vulkan`, pinned by its installer's SHA-256 |
 | aqtinstall | master `076e165` | MIT | https://github.com/miurahr/aqtinstall | Downloads Qt, on the dev PC and in CI |
 | py7zr | 1.1.3 | LGPL-2.1-or-later | https://github.com/miurahr/py7zr | Unpacks Qt's archives for aqtinstall |
 | PresentMon | 2.6.0 | MIT | https://github.com/GameTechDev/PresentMon | Frame times (G8) |
 | NVDA (portable) | 2026.2 | GPL-2.0 with exceptions | https://github.com/nvaccess/nvda | Screen-reader check (G10) |
 | Tauri | 2.12.0 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tauri | Quick comparison only; removed in P2 |
 | proptest | 1.11.0 | MIT OR Apache-2.0 | https://github.com/proptest-rs/proptest | Property tests |
-| Whisper `base` model (`ggml-base.bin`) | SHA-256 `60ed5bc3…2efe` | MIT | https://huggingface.co/ggerganov/whisper.cpp | Local speech model (G22) |
+| Whisper `base` model (`ggml-base.bin`) | SHA-256 `60ed5bc3…2efe` | MIT | https://huggingface.co/ggerganov/whisper.cpp | Local speech model (G22); removed in P11 |
 
 ## CI actions (never shipped)
 

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 04:30 — P11: the docs for local voice typing
+A new voice section in the architecture docs covers the events, ports, module, worker jobs, hosts, engine parts, files and UI, and the code map, crate READMEs and security notes now match the code as built. The spec's §8.2 gained an "as built" list, the roadmap and README name the voice bar and the transcribe.cpp models, and THIRD_PARTY marks the spike's Whisper tools removed. P11's item file lists what part 1 built, and its findings for P13, P15, F2, F8 and F11 sit in their own files.
+
 ## 2026-11-16 03:30 — P11: the spike's voice code removed
 The spike's voice code is gone now that the product holds it: its voice core, worker, typer, weak job, caption, mic button, voice settings and the unused note helper. The spike's worker is now a small library that keeps only the cloud parts part 2 builds from, under a `[cloud]` section. The move map marks each voice row as moved, with its home in the product.
 

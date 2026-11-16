@@ -17,3 +17,6 @@ Moved from [ARCHITECTURE.md](../../ARCHITECTURE.md), which keeps the overview, t
 | Hidden run (P9) | A probe file looked for in each package's `LocalCache\Local`, from `redirect.toml` | None known; P15 checks the App Sandbox | None known |
 | Power dialog | `Shell.Application.ShutdownWindows` | loginwindow prompt | session-manager prompt |
 | Shortcuts | `SendInput` from `shortcuts.toml`; Lock PC by `LockWorkStation` (ADR-0031) | (P15) | (P15) |
+| Speech (P11) | The worker's `voice` job: the microphone through `cpal` (WASAPI), and `transcribe.cpp` with its processor parts and Vulkan card part loaded from the worker's own folder (ADR-0044) | The same jobs; the card part is Metal (P15) | The same jobs; the card part is Vulkan (P15) |
+| Session lock and sleep (P11) | A hidden window on its own thread hears `WM_WTSSESSION_CHANGE` and `WM_POWERBROADCAST`, mapped by `session.toml` | Its own lock and sleep signals (P15) | Its own lock and sleep signals (P15) |
+| Models folder (P11) | The fixed drives `places.toml` lists, a new folder made with protected rights in one step, SHA-256 by CNG, and Open through the running Explorer's `explore` verb (ADR-0046) | Its own file manager, under the same checks (P15) | Its own file manager, under the same checks (P15) |

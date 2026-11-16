@@ -93,7 +93,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 | G19 Selection helper | A selection in Notepad and Chrome is noticed without copying it (core). On the product, the selection strip shows without taking focus in Notepad, Chrome, Windows Terminal and the console: Copy, Cut and Paste work, a page shows no Cut, a terminal takes keys that never stop its program, a caret shows Paste, and Translate asks once; its real open is in the owner's manual check |
 | G20 Clipboard (core) | Every copy is seen; copies marked "exclude from history" are skipped; one click pastes an older entry into Notepad and Word |
 | G21 Password fields (core) | Focus in a password box is flagged in Chrome and in a Win32 password field; normal fields are not flagged |
-| G22 Voice | The mic records in a separate worker process (core); the caption bar never takes focus. Local Whisper (base model) transcribes EN, FR and AR; its speed is recorded normally and in weak mode |
+| G22 Voice | The mic records in a separate worker process (core); the voice bar never takes focus. The transcribe.cpp models (Parakeet v3 for EN and FR, Cohere Transcribe Arabic for AR) transcribe each language's check clip; its speed is recorded normally and in weak mode |
 | G23 Quick-fill | Quick-fill's Both types a test user, a Tab and the password into a login page from the no-focus keyboard; nothing reaches the clipboard and no Enter is sent |
 | G24 Snip | The capture overlay covers every window; a region is picked by click, move, click; the image matches the region at 125 % |
 | G25 Language and shortcuts (core) | The language key also switches the target app's input language; the shortcuts layer's Copy, Paste, Undo, Copy all and Switch app, Win+V and the Power key's dialog (always cancelled) work from the keyboard |
@@ -223,7 +223,7 @@ Versions are pre-1.0 until the Windows feature set is complete.
 
 ## Phase 11 — Voice typing — v0.7
 
-- `kx-mod-voice` plus the worker's `voice` and `fetch` jobs (ADR-0042 to ADR-0045, [design](superpowers/specs/2026-11-10-voice-typing-design.md)).
+- `kx-mod-voice` plus the worker's `voice` and `fetch` jobs (ADR-0042 to ADR-0046, [design](superpowers/specs/2026-11-10-voice-typing-design.md)).
 - Part 1, on this PC: the Dictation key and its bar with the live wave, ten local models through one engine with a default per language, the models folder and checked downloads, the processor or a checked graphics card, Compare models, history and optional recordings.
 - Part 2, after part 1 is merged: cloud services with the user's own key ([design](superpowers/specs/2026-11-10-voice-cloud-design.md)).
 - **Edge cases:**
