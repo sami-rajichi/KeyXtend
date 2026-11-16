@@ -68,9 +68,9 @@ const NAME_ONLY: &[&str] = &[
     "g19 look",
     "g20 notepad",
     "g21 win32",
-    "g22 qt",
+    "g22 keyxtend",
     "g22 bench",
-    "g22 typing",
+    "g22 staged",
     "g23 keyxtend",
     "g24 qt",
     "g25 notepad",
@@ -135,7 +135,9 @@ const BAD_INPUT: &[&str] = &[
     "g21 chrome --clicks 2",
     "g22",
     "g22 bench --seed 1",
-    "g22 typing --pause 10",
+    "g22 staged --pause 10",
+    "g22 qt",
+    "g22 typing",
     "g25 notepad --attach",
     "g23 keyxtend --seed 2",
     "g23 qt",
@@ -245,8 +247,8 @@ fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate
 }
 
 #[test]
-fn g22s_bench_moves_nothing_and_its_faces_stay_held() {
+fn g22s_bench_and_staged_edges_move_nothing_and_its_product_run_holds_the_mouse() {
     assert_eq!(mouse("g22", crate::g22::BENCH), Mouse::Free);
-    assert_eq!(mouse("g22", crate::g22type::TYPING), Mouse::Held);
-    assert_eq!(mouse("g22", spike_core::config::FACE), Mouse::Held);
+    assert_eq!(mouse("g22", crate::g22::STAGED), Mouse::Free);
+    assert_eq!(mouse("g22", crate::product::NAME), Mouse::Held);
 }

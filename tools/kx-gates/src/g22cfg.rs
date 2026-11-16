@@ -1,121 +1,41 @@
-//! Settings of the voice probe G22: the sentences read aloud, folders and waits, from `[g22]`; its bench's settings,
-//! from `[g22_bench]`, are in `bench`.
+//! G22's settings in `kx-gates-p11.toml`: the bench's (`[g22_bench]`, in `bench`), the product run's
+//! (`[g22_product]`, in `prod`) and the staged worker's edges (`[g22_staged]`, in `staged`). The run and the edges
+//! read the bench's clips, folders and gate worker, so each is written once.
 #![cfg(windows)]
 
 mod bench;
+mod prod;
+mod staged;
 
+#[cfg(feature = "voice")]
+pub use bench::fewest;
 pub use bench::{Clip, G22Bench, is_part};
+pub use prod::G22Product;
+pub use staged::G22Staged;
 
-use std::collections::HashSet;
+use std::path::{Component, Path, PathBuf};
 
-use serde::Deserialize;
-use spike_core::voicecfg::VoiceConfig;
-
-/// Refuses two G22 sentences in one voice language, since the bench scores each clip by its language.
-pub fn one_per_language(g: &G22, v: &VoiceConfig) -> Result<(), String> {
-    let mut seen = HashSet::new();
-    let ids = g.sentences.iter().filter_map(Sentence::layout_id);
-    if ids.map(|id| v.language(id)).all(|lang| seen.insert(lang)) {
-        Ok(())
-    } else {
-        Err("g22.sentences must each be in a different voice language".to_string())
-    }
-}
-
-/// A single folder name: not empty, not a dot name, no drive or separator; the bench deletes in it.
+/// A single folder name: not empty, not a dot name, no drive or separator; the gates delete in it.
 pub fn plain_name(n: &str) -> bool {
-    let mut parts = std::path::Path::new(n).components();
+    let mut parts = Path::new(n).components();
     matches!(
         (parts.next(), parts.next()),
-        (Some(std::path::Component::Normal(_)), None)
+        (Some(Component::Normal(_)), None)
     ) && !n.contains(':')
 }
 
-/// One sentence the owner reads for G22.
-#[derive(Debug, Clone, Deserialize)]
-pub struct Sentence {
-    /// Keyboard layout (LANGID, 4 hex digits) Notepad switches to first.
-    pub layout: String,
-    /// The words read aloud.
-    pub text: String,
-}
-
-/// Digits in a LANGID written in hex.
-const LAYOUT_DIGITS: usize = 4;
-/// Base of the LANGID digits.
-const HEX: u32 = 16;
-
-impl Sentence {
-    /// The layout as a LANGID; `None` unless it is 4 hex digits.
-    pub fn layout_id(&self) -> Option<u16> {
-        let l = &self.layout;
-        let digits = l.len() == LAYOUT_DIGITS && l.bytes().all(|b| b.is_ascii_hexdigit());
-        digits.then(|| u16::from_str_radix(l, HEX).ok()).flatten()
-    }
-}
-
-/// Voice probe (G22).
-#[derive(Debug, Clone, Deserialize)]
-pub struct G22 {
-    /// The sentences, read in this order.
-    pub sentences: Vec<Sentence>,
-    /// How long the Mic stays on for each sentence, in ms.
-    pub record_ms: u64,
-    /// Longest wait for the words after Mic is clicked again, in ms.
-    pub text_wait_ms: u64,
-    /// How long a failed Mic stop click is retried, in ms.
-    pub stop_wait_ms: u64,
-    /// Pause between sentences, in ms.
-    pub pause_ms: u64,
-    /// Longest document text read back, in characters.
-    pub max_chars: i32,
-    /// Folder under TEMP where the face's worker keeps the clips; a plain name.
-    pub clips: String,
-    /// Gaps between typed characters the typing check tries, in ms; 0 types one batch.
-    pub type_gaps_ms: Vec<u64>,
-}
-
-impl G22 {
-    /// The clips folder.
-    pub fn clips_dir(&self) -> std::path::PathBuf {
-        std::env::temp_dir().join(&self.clips)
+/// Clip `file` in the voice folder `voice`; refused unless it is a plain name, so no sound outside the folder is read.
+#[cfg_attr(
+    not(feature = "voice"),
+    allow(dead_code, reason = "Only the voice gates call it.")
+)]
+pub fn clip_in(voice: &Path, file: &str) -> Result<PathBuf, String> {
+    if plain_name(file) {
+        Ok(voice.join(file))
+    } else {
+        Err(format!("{file:?} is no plain name in the voice folder"))
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The LANGID of a sentence whose layout text is `layout`.
-    fn id(layout: &str) -> Option<u16> {
-        let text = String::new();
-        let sentence = Sentence {
-            layout: layout.into(),
-            text,
-        };
-        sentence.layout_id()
-    }
-
-    #[test]
-    fn a_layout_is_exactly_four_hex_digits() {
-        assert_eq!(id("0409"), Some(0x0409));
-        assert_eq!(id("040c"), Some(0x040c));
-        assert_eq!(id("040C"), Some(0x040c));
-        for bad in ["+409", "-409", "409", "04090", "04 9", "040g", ""] {
-            assert_eq!(id(bad), None, "{bad:?}");
-        }
-    }
-
-    #[test]
-    fn each_sentence_needs_its_own_voice_language() {
-        let g = crate::config::load().expect("kx-gates.toml loads").g22;
-        let v = spike_core::config::load().expect("spike.toml loads").voice;
-        assert!(one_per_language(&g, &v).is_ok());
-        let mut twice = g.clone();
-        twice.sentences.push(g.sentences[0].clone());
-        assert!(
-            one_per_language(&twice, &v).is_err(),
-            "a second sentence in one language would be scored against the first"
-        );
-    }
-}
+mod tests;

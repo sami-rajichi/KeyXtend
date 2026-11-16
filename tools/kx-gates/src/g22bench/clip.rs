@@ -39,7 +39,7 @@ pub(super) fn length_ms(bytes: &[u8]) -> Option<u32> {
 }
 
 /// The clip at `path`'s length, in ms.
-pub(super) fn read_ms(path: &Path) -> Result<u32, String> {
+pub(crate) fn read_ms(path: &Path) -> Result<u32, String> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     length_ms(&bytes).ok_or_else(|| format!("{} is no WAV file", path.display()))
 }

@@ -2,15 +2,13 @@
 //! The host passes trusted arguments and only a gate build takes `voice --sound <file.wav>`; the OCR and update jobs
 //! come in later phases, so any other job is refused.
 
+#[cfg(feature = "gate")]
+use kx_ipc::SOUND_FLAG;
 use kx_ipc::{FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, VAULT_JOB, VOICE_JOB};
 use std::ffi::OsString;
 #[cfg(feature = "gate")]
 use std::path::PathBuf;
 use thiserror::Error;
-
-/// Gate builds only: the flag after `voice` that names a WAV file to play in place of the microphone.
-#[cfg(feature = "gate")]
-pub const SOUND_FLAG: &str = "--sound";
 
 /// What the worker was started to do.
 #[derive(Debug, PartialEq, Eq)]

@@ -147,13 +147,27 @@ fn p8_lists_g20_on_the_product_and_g8_clip_and_warns_of_the_clipboard() {
 }
 
 #[test]
-fn p11_lists_the_bench_which_moves_nothing_and_names_the_gate_worker() {
+fn p11_lists_g22s_runs_and_says_which_move_nothing() {
     let text = usage();
-    let runs = format!("g22 <{FACE}|{}|{}>", g22::BENCH, g22type::TYPING);
+    let runs = format!("g22 <{NAME}|{}|{}>", g22::BENCH, g22::STAGED);
     assert!(text.contains(&runs), "{text}");
-    let told = text
-        .lines()
-        .find(|l| l.starts_with(&format!("g22 {} ", g22::BENCH)));
-    let says = |l: &str| l.contains("moves nothing") && l.contains("--features gate");
-    assert!(told.is_some_and(says), "{text}");
+    let told = |name: &str| {
+        text.lines()
+            .find(|l| l.starts_with(&format!("g22 {name} ")))
+    };
+    let still = |l: &str| l.contains("moves nothing");
+    assert!(
+        told(g22::BENCH).is_some_and(|l| still(l) && l.contains("--features gate")),
+        "{text}"
+    );
+    assert!(told(g22::STAGED).is_some_and(still), "{text}");
+    let product =
+        told(NAME).is_some_and(|l| l.contains("--features gate-voice") && l.contains("close"));
+    assert!(product, "{text}");
+    let voiced = format!("g22 {NAME} and g22 {} ", g22::BENCH);
+    let hint = text.lines().find(|l| l.starts_with(&voiced));
+    assert!(
+        hint.is_some_and(|l| l.contains("--features voice")),
+        "{text}"
+    );
 }

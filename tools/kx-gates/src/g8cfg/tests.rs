@@ -95,7 +95,7 @@ fn a_g8_table_without_a_commit_budget_is_refused() {
 
 #[test]
 fn a_run_that_could_pass_with_nothing_measured_is_refused() {
-    let bad: [fn(&mut G8); 14] = [
+    let bad: [fn(&mut G8); 17] = [
         |g| g.highlight_worst_frames = f64::NAN,
         |g| g.rise_ms = 0,
         |g| g.rise_wait_ms = g.rise_ms - 1,
@@ -110,6 +110,9 @@ fn a_run_that_could_pass_with_nothing_measured_is_refused() {
         |g| g.resize_slack_px = -1,
         |g| g.press_key = "c-0xFFFF".into(),
         |g| g.presentmon_secs = 0,
+        |g| g.weak.cores = 0,
+        |g| g.weak.rate_pct = 101,
+        |g| g.weak.mem_mb = 0,
     ];
     for f in bad {
         let mut g = shipped();

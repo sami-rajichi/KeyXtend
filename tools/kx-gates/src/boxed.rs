@@ -1,7 +1,11 @@
 //! `boxed --mb <n> <program> [args…]`: starts a program under the worker's own limits (restricted token, Medium
-//! integrity, no uiAccess, its job's memory cap) and reports its exit code and what it printed. P11 uses it to prove
-//! that the microphone and a graphics card work inside the worker's box before the voice job is built.
+//! integrity, no uiAccess, its job's memory cap) and reports its exit code and what it printed. P11 used it to prove
+//! that the microphone and a graphics card work inside the worker's box; `boxed https` and `boxed folder` prove the
+//! real install's fetch job there (`proof`, with its settings in `cfg`).
 #![cfg(windows)]
+
+mod cfg;
+mod proof;
 
 use std::io::Read;
 use std::path::PathBuf;
@@ -10,6 +14,9 @@ use std::time::Duration;
 use kx_platform::worker::{Child, Launch};
 use kx_platform_windows::WinSpawner;
 use serde_json::{Value, json};
+
+pub use cfg::BoxProofs;
+use proof::{FOLDER_WORD, HTTPS, Proof};
 
 /// The command's word.
 pub const COMMAND: &str = "boxed";
@@ -29,7 +36,10 @@ struct Boxed {
 
 /// The usage line.
 fn usage() -> String {
-    format!("usage: kx-gates {COMMAND} {CAP_FLAG} <MB> <absolute program path> [arguments…]")
+    format!(
+        "usage: kx-gates {COMMAND} {CAP_FLAG} <MB> <absolute program path> [arguments…]\n       kx-gates {COMMAND} \
+         <{HTTPS}|{FOLDER_WORD}>"
+    )
 }
 
 /// Reads `--mb <n> <program> [args…]`; the cap is required, above zero, and the program's path absolute.
@@ -56,8 +66,11 @@ fn parse(rest: &[String]) -> Result<Boxed, String> {
     })
 }
 
-/// Runs the program in the box, waits for it to end, and reports its code and output.
+/// Runs a proof by its word, or else the program in the box, waiting for it to end: its code and output.
 pub fn run(rest: &[String]) -> Result<Value, String> {
+    if let Some(proof) = Proof::parse(rest) {
+        return proof::run(proof);
+    }
     let b = parse(rest)?;
     let name = b.exe.file_name().map(|n| n.to_string_lossy().into_owned());
     let launch = Launch {

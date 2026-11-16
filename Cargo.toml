@@ -247,9 +247,9 @@ gate_flag = "--sim-input"
 # The worker's features in the stage build: the graphics-card part (ADR-0044), whose build needs the Vulkan SDK. Never
 # the gate's feature; config validation refuses it.
 worker_features = ["card"]
-# The worker's gate-only feature and the flag only it takes (`voice --sound <file.wav>`); the check refuses a worker
-# holding the flag's text. The worker's args test pins it.
-worker_gate = { feature = "gate", flag = "--sound" }
+# The worker's gate-only feature. The flag only it and the app's `gate-voice` build take is kx-ipc's `SOUND_FLAG`
+# (`voice --sound <file.wav>`), written once there; the check refuses any staged or signed program holding its text.
+worker_gate = { feature = "gate" }
 # The word packs (ADR-0032) need no key here: the index, each pack it lists and the credits go from the folder that
 # xtask/words.toml names (`[text] out`, `[credits]`) into kx-module-api's `PACK_DIR`, which the check refuses incomplete.
 

@@ -7,7 +7,7 @@ use crate::apps::AppKind;
 use crate::product::NAME;
 use crate::{
     capture, g5, g6, g6rec, g8, g8clip, g8hook, g8lang, g8lit, g8predict, g17, g18, g19, g19chips,
-    g20, g21, g22, g22type, g25, hand, workertok,
+    g20, g21, g22, g25, hand, workertok,
 };
 
 /// The program's name in the help.
@@ -23,6 +23,7 @@ fn product_lines() -> String {
     let (weak, arabic, lit, osk) = (g8::WEAK, g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
     let (hook, hook_weak, predict) = (g8hook::HOOK, g8hook::HOOK_WEAK, g8predict::PREDICT);
     let (apps, records, clip) = (names(&g6::APPS), g6rec::NAMES.join("|"), g8clip::CLIP);
+    let (bench, staged) = (g22::BENCH, g22::STAGED);
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
@@ -34,6 +35,7 @@ fn product_lines() -> String {
        {PROG} g11 <{NAME}>
        {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
+       {PROG} g22 <{NAME}|{bench}|{staged}>
        {PROG} g23 <{NAME}>
        {PROG} g26 <{NAME}>
        {PROG} g27 <{NAME}>"
@@ -44,20 +46,23 @@ fn product_lines() -> String {
 fn face_lines() -> String {
     format!(
         "       {PROG} g7 <{FACE}>
-       {PROG} g22 <{FACE}|{}|{}>
        {PROG} g24 <{FACE}>
        {PROG} close <{NAME}|{FACE}>",
-        g22::BENCH,
-        g22type::TYPING,
     )
 }
 
-/// The help line of P11's voice bench.
+/// The help lines of P11's voice gates.
 fn voice_lines() -> String {
+    let (bench, staged) = (g22::BENCH, g22::STAGED);
     format!(
-        "g22 {} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
-         the worker built with --features gate, normal then weak, and it prints a table of numbers.",
-        g22::BENCH
+        "g22 {NAME} starts the build with --features gate-voice beside the gate worker on a data folder it makes, so \
+         close the product first; it dictates each shipped clip into target-window by clicks and prints numbers.
+g22 {bench} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
+         the worker built with --features gate, normal then weak, and it prints a table of numbers.
+g22 {staged} starts no screen and moves nothing: it copies the worker cargo xtask stage wrote, checks edges 28, 29 \
+         and 39 on it, then deletes every copy.
+g22 {NAME} and g22 {bench} pass the sound flag, so they run only from kx-gates built with --features voice, never \
+         the signed one."
     )
 }
 

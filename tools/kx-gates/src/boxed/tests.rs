@@ -32,3 +32,9 @@ fn a_relative_or_missing_program_is_refused() {
     assert!(of(&["--mb", "64"]).is_err());
     assert!(of(&[]).is_err());
 }
+
+#[test]
+fn a_proofs_word_is_no_program() {
+    assert!(of(&["https"]).is_err());
+    assert!(of(&["folder"]).is_err());
+}

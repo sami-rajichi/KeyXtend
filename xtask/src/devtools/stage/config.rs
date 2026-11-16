@@ -47,7 +47,7 @@ pub(crate) struct StageConfig {
     pub gate_flag: String,
     /// The worker's features in the stage build, which never hold the gate's.
     pub worker_features: Vec<String>,
-    /// The worker's gate-only feature and the flag only it takes; the check refuses a worker holding the flag's text.
+    /// The worker's gate-only feature; the check refuses a program holding the sound flag only it takes.
     pub worker_gate: Gate,
     /// The speech engine's parts, staged beside the worker (ADR-0044).
     pub engine: Engine,
@@ -55,14 +55,12 @@ pub(crate) struct StageConfig {
     pub voice: Voice,
 }
 
-/// A gate-only feature and the flag only a build with it takes.
+/// A gate-only feature; its flag is kx-ipc's `SOUND_FLAG`, so it is written once.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Gate {
     /// The feature, which no staged build turns on.
     pub feature: String,
-    /// The flag's text.
-    pub flag: String,
 }
 
 /// Qt's network library and its allowed importers.
@@ -104,13 +102,10 @@ impl StageConfig {
         self.voice.validate()
     }
 
-    /// The worker's features must be named and never hold the gate's, which must be named with its flag.
+    /// The worker's features must be named and never hold the gate's, which must be named.
     fn check_worker(&self) -> Result<(), ConfigError> {
         const GATE: &str = "worker_gate";
-        let gate = [
-            (GATE, &self.worker_gate.feature),
-            (GATE, &self.worker_gate.flag),
-        ];
+        let gate = [(GATE, &self.worker_gate.feature)];
         first_failing(&gate, |v| !v.trim().is_empty(), ConfigError::EmptyValue)?;
         let named = |v: &str| !v.trim().is_empty();
         each(
@@ -162,6 +157,12 @@ impl StageConfig {
         }
         let filled = |v: &str| !v.trim().is_empty();
         each("api_sets", &self.api_sets, filled, ConfigError::EmptyValue)
+    }
+
+    /// Every gate-only flag no staged or signed program may hold: the app's own, and the sound flag its voice gate
+    /// build passes the gate worker, which takes it too.
+    pub(crate) fn gate_flags(&self) -> [&str; 2] {
+        [self.gate_flag.as_str(), kx_ipc::SOUND_FLAG]
     }
 
     /// The app's program file name.

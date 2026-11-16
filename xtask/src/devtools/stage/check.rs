@@ -71,7 +71,7 @@ pub(crate) fn check(
     if !files.contains(&program) {
         return Err(StageError::NoExe(paths::text(stage)).into());
     }
-    refuse_gate_exe(&stage.join(&program), &program, &config.gate_flag)?;
+    refuse_gate_exe(&stage.join(&program), &program, &config.gate_flags())?;
     walk(stage, &files, config, read, in_system)?;
     refuse_unplanned(&files, &planned(config))?;
     let summary = measure(stage, &files, level, config)?;
@@ -170,20 +170,26 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
     found.map_or(Ok(()), |f| Err(StageError::Banned(paths::text(f)).into()))
 }
 
-/// Reads the program at `path` and fails, naming it `exe`, when it holds the gate-only `flag`.
-pub(crate) fn refuse_gate_exe(path: &Path, exe: &Path, flag: &str) -> Result<(), DevError> {
+/// Reads the program at `path` and fails, naming it `exe`, when it holds any of the gate-only `flags`.
+pub(crate) fn refuse_gate_exe(path: &Path, exe: &Path, flags: &[&str]) -> Result<(), DevError> {
     let bytes = std::fs::read(path)?;
-    refuse_gate(&bytes, flag, exe).map_err(DevError::from)
+    refuse_gate(&bytes, flags, exe).map_err(DevError::from)
 }
 
-/// Fails when `bytes`, the program `exe`, hold the gate-only `flag` anywhere; an empty flag fails every program.
-pub(super) fn refuse_gate(bytes: &[u8], flag: &str, exe: &Path) -> Result<(), StageError> {
-    let flag_bytes = flag.as_bytes();
-    if flag.is_empty() || bytes.windows(flag_bytes.len()).any(|w| w == flag_bytes) {
-        let (exe, flag) = (paths::text(exe), flag.to_string());
-        return Err(StageError::GateFlag { exe, flag });
+/// Fails on the first of the gate-only `flags` that `bytes`, the program `exe`, hold anywhere; an empty flag fails
+/// every program.
+pub(super) fn refuse_gate(bytes: &[u8], flags: &[&str], exe: &Path) -> Result<(), StageError> {
+    let held = |flag: &&str| {
+        let flag_bytes = flag.as_bytes();
+        flag.is_empty() || bytes.windows(flag_bytes.len()).any(|w| w == flag_bytes)
+    };
+    match flags.iter().copied().find(held) {
+        Some(flag) => {
+            let (exe, flag) = (paths::text(exe), flag.to_string());
+            Err(StageError::GateFlag { exe, flag })
+        }
+        None => Ok(()),
     }
-    Ok(())
 }
 
 /// Fails on the first file outside the packs folder that is not one of the `planned` paths, in any letter case, so no

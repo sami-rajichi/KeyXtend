@@ -10,6 +10,9 @@ pub const VAULT_JOB: &str = "vault";
 pub const VOICE_JOB: &str = "voice";
 /// The job that downloads model files, with no microphone (ADR-0042).
 pub const FETCH_JOB: &str = "fetch";
+/// Gate builds only: the flag after `VOICE_JOB` that names a WAV file played in place of the microphone; the stage
+/// refuses any program holding its text.
+pub const SOUND_FLAG: &str = "--sound";
 /// The exit code after goodbye or the end of input; every OS reads 0 as success.
 pub const CLEAN_EXIT: u8 = 0;
 /// The exit code after a refused command line or a broken frame.

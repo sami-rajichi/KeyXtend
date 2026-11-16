@@ -4,8 +4,6 @@ use std::path::Path;
 
 use super::*;
 
-/// The gate worker's command line, which names its sound flag.
-const WORKER_ARGS: &str = include_str!("../../../../../apps/keyxtend-worker/src/args.rs");
 /// The shipped voice files' credits, which name each clip's sentence.
 const VOICE_README: &str = include_str!("../../../../../assets/voice/README.md");
 /// The folder of those files and credits, from kx-gates' own folder.
@@ -24,7 +22,7 @@ fn the_shipped_bench_passes_its_check() {
 #[test]
 fn a_bad_value_is_refused() {
     let good = shipped();
-    let bad: [fn(&mut G22Bench); 27] = [
+    let bad: [fn(&mut G22Bench); 24] = [
         |g| g.worker = "../../target/p11-gates/release/keyxtend.exe".into(),
         |g| g.weak_worker = "../../target/p11-gates/weak/keyxtend.exe".into(),
         |g| g.weak_worker = g.worker.clone(),
@@ -33,9 +31,6 @@ fn a_bad_value_is_refused() {
         |g| g.weak_parts.push("vulkan-1.dll".into()),
         |g| g.weak_parts.push(g.part_prefix.clone()),
         |g| g.weak_parts.push(format!("..\\{}x.dll", g.part_prefix)),
-        |g| g.sound_flag = "sound".into(),
-        |g| g.sound_flag = "--".into(),
-        |g| g.sound_flag = "--so und".into(),
         |g| g.models_dir = "models".into(),
         |g| g.models_dir = r"D:\dev\..\models".into(),
         |g| g.voice_dir.clear(),
@@ -72,7 +67,7 @@ fn the_weak_limit_keeps_each_piece_within_the_hosts_wait() {
 }
 
 #[test]
-fn the_clips_are_the_tables_languages_each_a_plain_file_with_words() {
+fn the_clips_are_exactly_the_tables_languages() {
     let good = shipped();
     let mut gone = good.clone();
     gone.clips.pop_first();
@@ -84,35 +79,34 @@ fn the_clips_are_the_tables_languages_each_a_plain_file_with_words() {
         extra.check().is_err(),
         "a language the table has no clip for"
     );
-    let mut mute = good.clone();
-    mute.clips
-        .values_mut()
-        .for_each(|c| c.sentence = " . ".into());
-    assert!(mute.check().is_err(), "a sentence of no words");
-    let mut nameless = good.clone();
-    nameless.clips.values_mut().for_each(|c| c.file.clear());
-    assert!(nameless.check().is_err(), "a clip with no file");
-    let mut outside = good.clone();
-    let owner = r"D:\dev\tmp\kx-p11-trial\owner-en.wav";
-    outside
-        .clips
-        .values_mut()
-        .for_each(|c| c.file = owner.into());
-    assert!(outside.check().is_err(), "a clip outside the voice folder");
-    let mut same = good.clone();
-    same.clips
-        .values_mut()
-        .for_each(|c| c.also = vec![c.sentence.clone()]);
-    assert!(
-        same.check().is_err(),
-        "another reading that is the sentence"
-    );
-    let mut blank = good;
-    blank
-        .clips
-        .values_mut()
-        .for_each(|c| c.also = vec![" . ".into()]);
-    assert!(blank.check().is_err(), "another reading of no words");
+}
+
+/// A change that spoils every clip, and why it must be refused.
+type Spoil = (fn(&mut Clip), &'static str);
+
+#[test]
+fn each_clip_is_a_plain_file_with_words_and_other_readings_unlike_it() {
+    let bad: [Spoil; 5] = [
+        (|c| c.sentence = " . ".into(), "a sentence of no words"),
+        (|c| c.file.clear(), "a clip with no file"),
+        (
+            |c| c.file = r"D:\dev\tmp\kx-p11-trial\owner-en.wav".into(),
+            "a clip outside the voice folder",
+        ),
+        (
+            |c| c.also = vec![c.sentence.clone()],
+            "another reading that is the sentence",
+        ),
+        (
+            |c| c.also = vec![" . ".into()],
+            "another reading of no words",
+        ),
+    ];
+    for (spoil, why) in bad {
+        let mut g = shipped();
+        g.clips.values_mut().for_each(spoil);
+        assert!(g.check().is_err(), "{why}");
+    }
 }
 
 #[test]
@@ -131,13 +125,6 @@ fn the_english_reading_forgives_only_the_split_the_reference_makes() {
         "the credited sentence's quirk"
     );
     assert_eq!(words(&en.also[0]), Some(0));
-}
-
-#[test]
-fn the_sound_flag_is_the_gate_workers_own() {
-    let flag = shipped().sound_flag;
-    let line = format!("SOUND_FLAG: &str = \"{flag}\";");
-    assert!(WORKER_ARGS.contains(&line), "keyxtend-worker names {flag}");
 }
 
 #[test]
@@ -160,4 +147,26 @@ fn the_voice_folder_is_the_shipped_one_whose_readme_credits_each_file() {
         assert!(VOICE_README.contains(&format!("`{name}`")), "{name}");
         assert!(shipped_dir.join(name).is_file(), "{name}");
     }
+}
+
+#[test]
+fn a_clips_words_wrong_are_the_closest_readings_count_in_its_language() {
+    let en = shipped().clips["en"].clone();
+    let heard = en.also[0].clone();
+    assert_eq!(
+        en.wrong(&heard, "en").map(|w| w.words),
+        Some(0),
+        "the other reading"
+    );
+    let credited = score::wrong(&en.sentence, &heard, "en").expect("rules");
+    assert!(
+        credited.words > 0,
+        "the credited spelling alone counts it wrong"
+    );
+    let none = en.wrong("", "en").expect("rules");
+    assert!(
+        none.words == none.total && none.total > 0,
+        "nothing heard is every word wrong"
+    );
+    assert_eq!(en.wrong(&heard, "xx"), None, "no rules, no count");
 }

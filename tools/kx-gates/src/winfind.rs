@@ -56,6 +56,10 @@ pub fn wait_no_match(m: &Match, timeout_ms: u64, poll_ms: u64) -> Option<HWND> {
 }
 
 /// The seen window on top over `w`'s box, going by z-order; it finds click-through windows, which `root_at` skips.
+#[cfg_attr(
+    not(feature = "voice"),
+    allow(dead_code, reason = "Only the voice gates call it.")
+)]
 pub fn over(w: HWND) -> Option<HWND> {
     let r = rect(w).ok()?;
     let boxes = seen_windows()
@@ -65,6 +69,10 @@ pub fn over(w: HWND) -> Option<HWND> {
 }
 
 /// The first window in `front_first` whose box overlaps `r`.
+#[cfg_attr(
+    not(feature = "voice"),
+    allow(dead_code, reason = "Only the voice gates call it.")
+)]
 fn first_over(front_first: impl IntoIterator<Item = (isize, RECT)>, r: &RECT) -> Option<isize> {
     let overlaps =
         |b: &RECT| b.left < r.right && r.left < b.right && b.top < r.bottom && r.top < b.bottom;

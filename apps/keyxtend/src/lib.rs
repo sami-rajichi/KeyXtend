@@ -4,8 +4,8 @@
 
 #![forbid(unsafe_code)]
 
-/// The workspace root, from this crate's folder; only a debug build reads under it.
-#[cfg(debug_assertions)]
+/// The workspace root, from this crate's folder; only a debug build and the voice gate build read under it.
+#[cfg(any(debug_assertions, feature = "gate-voice"))]
 macro_rules! root {
     () => {
         concat!(env!("CARGO_MANIFEST_DIR"), "/../..")
@@ -24,6 +24,8 @@ pub mod hidden;
 #[cfg(debug_assertions)]
 pub mod layouts_debug;
 pub mod log;
+#[cfg(feature = "gate-voice")]
+pub mod played;
 pub mod quiet;
 pub mod relay;
 pub mod vault;

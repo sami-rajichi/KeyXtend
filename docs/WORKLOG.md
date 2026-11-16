@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 02:20 — P11: the voice gates
+G22 now runs on the product's test build: for English, French and Arabic it clicks Dictation in our test window, a gate worker plays the shipped clip, and it checks the words, the focus and the bar's place, printing numbers only. `g22 staged` proves the staged copy with no card part, with only the processor floor, and with a library planted in the models folder, and `boxed` proves HTTPS and a second-drive folder under the worker's restricted token. The sound flag lives in kx-ipc, the app's `gate-voice` build and kx-gates' `voice` feature hold it, and the stage and dev-install refuse any program that does. The gates no longer use the spike's voice code.
+
 ## 2026-11-15 23:55 — P11: the voice panel's pages
 The Voice panel follows the approved mock-up: home, Models with downloads, Pause, Cancel and the folder line, devices with their memory, Compare, History and Options, each list paged at five rows where a click ticks a row and the footer acts on the ticked ones, with switches and steppers instead of sliders. It opens above the voice bar, or below it when there is no room, never over the keyboard, moves when the bar moves or grows, and takes clicks but never focus. A language whose default model is too big for the PC says on the Models page that local models will be very slow here; French names a language in lower case inside a sentence, and the bar's chip names it as a title. History's Copy and a multi-row Insert join texts with the new `history_join` setting, and the panel gets its rows as soon as it first opens.
 

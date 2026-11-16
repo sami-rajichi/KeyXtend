@@ -8,7 +8,7 @@ use std::path::Path;
 
 use kx_mod_voice::VoiceSettings;
 use kx_mod_voice::models::{Table, table};
-use kx_mod_voice::score;
+use kx_mod_voice::score::{self, Wrong};
 use kx_module_api::ports::{SpeechAsk, path_ok};
 use kx_platform_windows::worker::{CpuCap, WORKER_EXE};
 use serde::Deserialize;
@@ -17,8 +17,6 @@ use super::plain_name;
 
 /// One core at its full speed, in percent; weak mode's speed is a share of it.
 const FULL_PCT: u8 = CpuCap::FULL_PCT;
-/// What a long flag starts with, as the worker's own flags do.
-const FLAG_MARK: &str = "--";
 
 /// True when `name` is one of the engine's processor parts: it starts with `prefix`, in any case.
 pub fn is_part(name: &str, prefix: &str) -> bool {
@@ -28,6 +26,7 @@ pub fn is_part(name: &str, prefix: &str) -> bool {
 
 /// One shipped check clip: its file and the sentence it reads, which only the words-wrong count reads.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Clip {
     /// The WAV file's plain name in the voice folder.
     pub file: String,
@@ -37,8 +36,25 @@ pub struct Clip {
     pub also: Vec<String>,
 }
 
+impl Clip {
+    /// Words wrong in `heard` against the closest of its readings, by `lang`'s rules; `None` for a language without.
+    pub fn wrong(&self, heard: &str, lang: &str) -> Option<Wrong> {
+        fewest(&self.sentence, &self.also, heard, lang)
+    }
+}
+
+/// Words wrong in `heard` against the closest of `sentence` and its other readings `also`, by `lang`'s rules: the
+/// one count the bench, the product run and the staged edges judge by.
+pub fn fewest(sentence: &str, also: &[String], heard: &str, lang: &str) -> Option<Wrong> {
+    let readings = std::iter::once(sentence).chain(also.iter().map(String::as_str));
+    readings
+        .filter_map(|r| score::wrong(r, heard, lang))
+        .min_by_key(|w| w.words)
+}
+
 /// G22's bench (`g22 bench`).
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct G22Bench {
     /// The worker built with `gate`, relative to the settings folder; never a staged one.
     pub worker: String,
@@ -48,8 +64,6 @@ pub struct G22Bench {
     pub part_prefix: String,
     /// The processor parts a weak PC's processor loads, which has no AVX.
     pub weak_parts: Vec<String>,
-    /// The gate worker's flag before the sound file it plays in place of the microphone.
-    pub sound_flag: String,
     /// The folder holding the model files, an absolute drive path.
     pub models_dir: String,
     /// The shipped voice folder, relative to the settings folder; the detector and clips are plain names in it.
@@ -68,7 +82,7 @@ pub struct G22Bench {
     pub max_rtf: f64,
     /// The weak rate past which a row reads slow; weak rows are readings, never a fail.
     pub max_weak_rtf: f64,
-    /// The longest wait for a worker the bench let go to end, after the host's goodbye, in ms.
+    /// The longest wait for a worker the bench or the staged edges let go to end, after the host's goodbye, in ms.
     pub end_wait_ms: u64,
     /// The check clips, by language.
     pub clips: BTreeMap<String, Clip>,
@@ -112,14 +126,8 @@ impl G22Bench {
         Ok(())
     }
 
-    /// The sound flag, the models folder and the shipped voice files.
+    /// The models folder and the shipped voice files.
     fn check_files(&self) -> Result<(), String> {
-        let flag = self.sound_flag.strip_prefix(FLAG_MARK).unwrap_or_default();
-        if flag.is_empty() || flag.chars().any(char::is_whitespace) {
-            return Err(format!(
-                "g22_bench.sound_flag must be one word after {FLAG_MARK}"
-            ));
-        }
         if !path_ok(Path::new(&self.models_dir)) {
             return Err("g22_bench.models_dir must be an absolute drive path".into());
         }

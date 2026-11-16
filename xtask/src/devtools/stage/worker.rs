@@ -36,7 +36,7 @@ pub(crate) fn check(
         return Err(StageError::NoWorker(name).into());
     }
     let bytes = std::fs::read(&path)?;
-    refuse_gate(&bytes, &config.worker_gate.flag, Path::new(&name))?;
+    refuse_gate(&bytes, &config.gate_flags(), Path::new(&name))?;
     let texts = renderings(&bytes);
     if texts
         .iter()
@@ -168,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn the_worker_names_its_features_its_gate_feature_and_flag() {
+    fn the_worker_names_its_features_and_its_gate_feature() {
         let invalid = |change: fn(&mut StageConfig)| {
             let mut config = stage_config();
             change(&mut config);
@@ -176,7 +176,10 @@ mod tests {
         };
         let unnamed = Err(ConfigError::EmptyValue("worker_gate"));
         assert_eq!(invalid(|c| c.worker_gate.feature.clear()), unnamed);
-        assert_eq!(invalid(|c| c.worker_gate.flag = " ".to_string()), unnamed);
+        assert_eq!(
+            invalid(|c| c.worker_gate.feature = " ".to_string()),
+            unnamed
+        );
         let blank = Err(ConfigError::BlankEntry("worker_features"));
         assert_eq!(
             invalid(|c| c.worker_features = vec![" ".to_string()]),
@@ -187,8 +190,8 @@ mod tests {
     }
 
     #[test]
-    fn a_worker_holding_the_gate_flag_is_refused() {
-        let flag = stage_config().worker_gate.flag;
+    fn a_worker_holding_the_sound_flag_is_refused() {
+        let flag = kx_ipc::SOUND_FLAG.to_string();
         let dir = stage(
             "worker-gate",
             format!("{} {flag}", level("false")).as_bytes(),

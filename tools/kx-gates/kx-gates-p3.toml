@@ -138,6 +138,13 @@ arabic = "ar"
 # Longest wait for target-window to type in a layout G8 asks it for, in ms.
 layout_wait_ms = 2000
 
+# Weak mode (`g8 weak`, `g8 hook-weak`): the roadmap's weak PC as a job on the copy, this many cores at this percent of
+# one core each, and this many MiB.
+[g8.weak]
+cores = 2
+rate_pct = 30
+mem_mb = 4096
+
 # Windows' On-Screen Keyboard, which `g8 osk` times as a baseline by G8's screen copy; G8 never starts or closes it.
 [osk]
 program = "osk.exe"

@@ -68,6 +68,11 @@ pub(crate) fn fake_env(pairs: Vec<(&'static str, PathBuf)>) -> impl Fn(&str) -> 
     }
 }
 
+/// Owned copies of `items`.
+fn strings(items: &[&str]) -> Vec<String> {
+    items.iter().map(ToString::to_string).collect()
+}
+
 /// A trimmed copy of the project's tidy config: the same limits, prefixes and app, but shorter lists.
 pub(crate) fn tidy_config() -> TidyConfig {
     TidyConfig {
@@ -89,24 +94,15 @@ pub(crate) fn tidy_config() -> TidyConfig {
         build_only_features: BTreeMap::from([("kx-theme".to_string(), vec!["files".to_string()])]),
         unsafe_attr: "#![forbid(unsafe_code)]".to_string(),
         deny_attr: "#![deny(unsafe_code)]".to_string(),
-        root_kinds: vec![
-            "lib".to_string(),
-            "bin".to_string(),
-            "proc-macro".to_string(),
-        ],
-        test_only: vec![
-            "kx-test-support".to_string(),
-            "kx-platform-fake".to_string(),
-        ],
+        root_kinds: strings(&["lib", "bin", "proc-macro"]),
+        test_only: strings(&["kx-test-support", "kx-platform-fake"]),
         bridge_crate: "kx-ui".to_string(),
         bridge_dir: "src/bridges".to_string(),
         safety_tag: "// SAFETY:".to_string(),
-        spawn_dirs: ["apps", "crates"].map(String::from).to_vec(),
-        spawn_extensions: ["rs", "h"].map(String::from).to_vec(),
-        banned_spawns: ["std::process::Command", "QProcess"]
-            .map(String::from)
-            .to_vec(),
-        build_scripts: ["build.rs", "qtbuild.rs"].map(String::from).to_vec(),
+        spawn_dirs: strings(&["apps", "crates"]),
+        spawn_extensions: strings(&["rs", "h"]),
+        banned_spawns: strings(&["std::process::Command", "QProcess"]),
+        build_scripts: strings(&["build.rs", "qtbuild.rs"]),
         apart: Vec::new(),
     }
 }
@@ -174,7 +170,7 @@ pub(crate) fn stage_json() -> serde_json::Value {
         "system_dir": "System32",
         "gate_flag": "--sim-input",
         "worker_features": ["card"],
-        "worker_gate": { "feature": "gate", "flag": "--sound" },
+        "worker_gate": { "feature": "gate" },
         "engine": {
             "linked": ["transcribe.dll", "ggml.dll"],
             "loaded": ["ggml-cpu-x64.dll", "ggml-vulkan.dll"],

@@ -159,21 +159,22 @@ fn dev_install_holds_an_app_folder_to_the_install_limit() {
 }
 
 #[test]
-fn dev_install_refuses_any_program_it_would_sign_that_holds_the_gate_flag() {
+fn dev_install_refuses_any_program_it_would_sign_that_holds_a_gate_flag() {
     let dir = TempDir::new("gate-exes");
-    let flag = stage_config().gate_flag;
+    let config = stage_config();
+    let flags = config.gate_flags();
     let (tool, gate) = (dir.path().join("tool.exe"), dir.path().join("other.exe"));
     std::fs::write(&tool, b"MZ --show").unwrap();
-    std::fs::write(&gate, format!("MZ {flag} x")).unwrap();
-    let programs = exes(dir.path()).unwrap();
-    let exe = paths::text(&gate);
-    let refused = StageError::GateFlag {
-        exe,
-        flag: flag.clone(),
-    };
-    assert_eq!(refuse_gate_builds(&programs, &flag), Err(refused.into()));
     std::fs::write(&gate, b"MZ --quit").unwrap();
-    assert_eq!(refuse_gate_builds(&programs, &flag), Ok(()));
+    let programs = exes(dir.path()).unwrap();
+    for flag in flags {
+        std::fs::write(&gate, format!("MZ {flag} x")).unwrap();
+        let (exe, flag) = (paths::text(&gate), flag.to_string());
+        let refused = StageError::GateFlag { exe, flag };
+        assert_eq!(refuse_gate_builds(&programs, &flags), Err(refused.into()));
+    }
+    std::fs::write(&gate, b"MZ --quit").unwrap();
+    assert_eq!(refuse_gate_builds(&programs, &flags), Ok(()));
 }
 
 #[test]

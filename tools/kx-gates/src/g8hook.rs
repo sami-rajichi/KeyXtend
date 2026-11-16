@@ -4,7 +4,6 @@
 #![cfg(windows)]
 
 use serde_json::{Value, json};
-use spike_core::weak::Job;
 
 use crate::apps::Ctx;
 use crate::budget::{self, Part};
@@ -14,6 +13,7 @@ use crate::hooklog::{self, HookLine};
 use crate::out::say;
 use crate::p4cfg::G8Hook;
 use crate::testbuild::{Closed, TestBuild};
+use crate::weakjob::Job;
 use crate::{g5, g8};
 use crate::{probe, product};
 

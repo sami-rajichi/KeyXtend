@@ -1528,6 +1528,7 @@ name = "kx-gates"
 version = "0.0.0"
 dependencies = [
  "embed-manifest",
+ "kx-ipc",
  "kx-kernel",
  "kx-mod-clipboard",
  "kx-mod-keyboard",
@@ -3412,6 +3413,7 @@ version = "0.0.0"
 dependencies = [
  "bzip2",
  "flate2",
+ "kx-ipc",
  "kx-mod-predict",
  "kx-module-api",
  "kx-platform",

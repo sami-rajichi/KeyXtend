@@ -27,11 +27,17 @@ mod-voice = ["dep:kx-mod-voice"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
 # ships, and `cargo xtask stage` refuses a program that holds the flag.
 gate-input = ["kx-platform-windows/sim-input"]
+# The gate-only voice build: `--sound <file.wav>` makes its worker, the one built with `gate`, play that file in place
+# of the microphone, so G22 dictates without a voice. It never ships: the stage and dev-install refuse a program holding
+# kx-ipc's `SOUND_FLAG`.
+gate-voice = ["dep:kx-ipc"]
 
 [dependencies]
 # The sealed files that keep the learned words, the clipboard history and Quick-fill's notebook, under data keys the
 # platform's guard wraps (ADR-0010, ADR-0034, ADR-0038), and the OS's random bytes.
 kx-crypto = { path = "../../crates/kx-crypto" }
+# The sound flag the voice gate build passes its gate worker; only `gate-voice` turns it on.
+kx-ipc = { path = "../../crates/kx-ipc", optional = true }
 kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard", optional = true }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard", optional = true }

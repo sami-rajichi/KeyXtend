@@ -123,3 +123,57 @@ proptest::proptest! {
         proptest::prop_assert_eq!(got.is_ok(), known, "{:?}", text);
     }
 }
+
+/// A clip as the voice gate build takes it: an absolute path.
+const CLIP: &str = r"D:\clips\check-en.wav";
+
+#[cfg(not(feature = "gate-voice"))]
+#[test]
+fn without_the_voice_gate_build_the_sound_flag_is_refused() {
+    let flag = kx_ipc::SOUND_FLAG;
+    assert_eq!(parse(args(&[flag, CLIP])), Err(ArgError::Many));
+    let unknown = Err(ArgError::Unknown(flag.to_owned()));
+    assert_eq!(parse(args(&[flag])), unknown);
+}
+
+#[cfg(feature = "gate-voice")]
+#[test]
+fn the_voice_gate_build_shows_with_the_hands_input_and_names_its_clip() {
+    let line = args(&[SOUND_FLAG, CLIP]);
+    assert_eq!(parse(line.clone()), Ok(hand(Command::Show)));
+    assert_eq!(clip(&line), Some(std::path::PathBuf::from(CLIP)));
+    assert_eq!(clip(&args(&["--show"])), None);
+    assert_eq!(clip(&args(&[])), None);
+}
+
+#[cfg(feature = "gate-voice")]
+#[test]
+fn the_voice_gate_build_takes_one_absolute_clip_after_its_flag_only() {
+    for bad in [
+        &[SOUND_FLAG][..],
+        &[SOUND_FLAG, "clip.wav"],
+        &[SOUND_FLAG, CLIP, CLIP],
+        &[CLIP, SOUND_FLAG],
+        &["--show", SOUND_FLAG, CLIP],
+    ] {
+        assert!(parse(args(bad)).is_err(), "{bad:?}");
+        assert_eq!(clip(&args(bad)), None, "{bad:?}");
+    }
+}
+
+#[test]
+fn read_gives_the_command_and_the_flags_beside_it() {
+    let (command, flags) = read(args(&["--quit"])).expect("quit reads");
+    assert_eq!((command, flags.input), hand(Command::Quit));
+    assert_eq!(
+        read(args(&["--quit", "--show"])).err(),
+        Some(ArgError::Many)
+    );
+    #[cfg(feature = "gate-voice")]
+    {
+        assert_eq!(flags.clip, None);
+        let (command, flags) = read(args(&[SOUND_FLAG, CLIP])).expect("a clip reads");
+        assert_eq!(command, Command::Show);
+        assert_eq!(flags.clip, Some(std::path::PathBuf::from(CLIP)));
+    }
+}

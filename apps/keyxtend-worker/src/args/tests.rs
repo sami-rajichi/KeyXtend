@@ -113,26 +113,9 @@ fn a_gate_build_takes_one_sound_file_after_the_voice_job() {
     }
 }
 
-/// The root manifest, whose stage settings name the flag the stage refuses in a worker.
-const ROOT_MANIFEST: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
-
-/// `[workspace.metadata.stage] worker_gate.flag`.
-fn stage_flag() -> String {
-    let text = std::fs::read_to_string(ROOT_MANIFEST).unwrap();
-    let root: toml::Table = text.parse().unwrap();
-    let flag = &root["workspace"]["metadata"]["stage"]["worker_gate"]["flag"];
-    flag.as_str().unwrap().to_owned()
-}
-
-#[cfg(feature = "gate")]
-#[test]
-fn the_stage_refuses_the_flag_only_a_gate_build_takes() {
-    assert_eq!(stage_flag(), SOUND_FLAG);
-}
-
 #[cfg(not(feature = "gate"))]
 #[test]
-fn a_build_without_the_gate_refuses_the_sound_flag_the_stage_names() {
-    let job = parse_all(&[VOICE_JOB, &stage_flag(), "clip.wav"]);
+fn a_build_without_the_gate_refuses_the_sound_flag_the_stage_refuses() {
+    let job = parse_all(&[VOICE_JOB, kx_ipc::SOUND_FLAG, "clip.wav"]);
     assert_eq!(job, Err(ArgError::Alone(VOICE_JOB)));
 }

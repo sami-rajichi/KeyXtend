@@ -123,11 +123,12 @@ const DRIVEN: [(&str, &str); 5] = [
     ("g19", g19chips::HUNG),
 ];
 /// A gate's names that wait on the owner's own mouse or move nothing, though the gate itself holds it.
-const FREED: [(&str, &str); 4] = [
+const FREED: [(&str, &str); 5] = [
     ("g19", g19chips::READ),
     ("g19", g19chips::BESIDE),
     ("g19", g19chips::LOOK),
     ("g22", g22::BENCH),
+    ("g22", g22::STAGED),
 ];
 
 /// Every gate's name.
@@ -198,6 +199,9 @@ fn dispatch(ctx: &Ctx, args: &Args) -> Result<Value, String> {
 
 /// Runs one gate; the result line (or its error) is also appended to results.jsonl.
 pub fn run(args: &Args) -> Result<Value, String> {
+    if let Some(hint) = g22::unvoiced(&args.gate, &args.name) {
+        return Err(hint);
+    }
     let cfg = config::load()?;
     let spike = spike_core::config::load()?;
     let target = kx_target_window::config::load().map_err(|e| e.to_string())?;

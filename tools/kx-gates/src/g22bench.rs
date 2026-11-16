@@ -4,7 +4,7 @@
 //! product's own fit rule); the bench starts no screen and moves nothing.
 #![cfg(windows)]
 
-mod clip;
+pub(crate) mod clip;
 mod spawn;
 mod table;
 mod take;
@@ -23,7 +23,7 @@ use kx_platform_windows::{QpcClock, WinHardware, WinSpawner};
 use serde_json::{Value, json};
 
 use crate::apps::Ctx;
-use crate::g22::BENCH;
+use crate::g22::{self, BENCH};
 use crate::g22cfg::{Clip, G22Bench};
 use crate::out;
 use spawn::{Cores, GateWorker, lock};
@@ -223,7 +223,7 @@ impl<'a> Bench<'a> {
                 Err(Miss::Fault("the clip's path is not UTF-8".into())),
             );
         };
-        let extra = vec![self.g.sound_flag.clone(), clip.to_owned()];
+        let extra = vec![g22::sound_flag(), clip.to_owned()];
         let spawner = if case.weak {
             let cap = CpuCap {
                 cores: case.cores,
@@ -254,7 +254,7 @@ impl<'a> Bench<'a> {
         let levels = sound_ms.saturating_mul(u64::from(self.settings.level_hz));
         let script = Script {
             levels: u32::try_from(levels.div_ceil(u64::from(MS_PER_S))).unwrap_or(u32::MAX),
-            within: self.within(),
+            within: within(&self.settings),
             sentence: &case.clip.sentence,
             also: &case.clip.also,
             lang: case.lang,
@@ -274,18 +274,17 @@ impl<'a> Bench<'a> {
         })
     }
 
-    /// The longest wait for the clip to be heard, or after Stop: the host's own for a load, a warm-up and a piece, and
-    /// one answer.
-    fn within(&self) -> Duration {
-        let s = &self.settings;
-        let secs = u64::from(s.load_s) + u64::from(s.warm_s) + u64::from(s.piece_wait_s);
-        Duration::from_secs(secs) + Duration::from_millis(u64::from(s.ask_ms))
-    }
-
     /// The longest wait for a worker let go to end: the host's goodbye within one answer, then the end's own wait.
     fn let_go(&self) -> Duration {
         Duration::from_millis(u64::from(self.settings.ask_ms).saturating_add(self.g.end_wait_ms))
     }
+}
+
+/// The longest wait for a clip to be heard, or for text after Stop: the host's own for a load, a warm-up and a piece,
+/// and one answer, from the product's settings `s`.
+pub(crate) fn within(s: &VoiceSettings) -> Duration {
+    let secs = u64::from(s.load_s) + u64::from(s.warm_s) + u64::from(s.piece_wait_s);
+    Duration::from_secs(secs) + Duration::from_millis(u64::from(s.ask_ms))
 }
 
 #[cfg(test)]

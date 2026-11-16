@@ -6,9 +6,11 @@
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::time::{Duration, Instant};
 
-use kx_mod_voice::score::{self, Wrong};
+use kx_mod_voice::score::Wrong;
 use kx_module_api::ports::{Speech, SpeechAsk, SpeechDone, SpeechNote, SpeechRun, SpeechStage};
 use kx_module_api::{Secret, Zeroizing};
+
+use crate::g22cfg::fewest;
 
 /// Why a take failed without a fault of the job's.
 const SHUT: &str = "the microphone did not open within the wait";
@@ -107,10 +109,7 @@ fn measure(got: &Gathered, script: &Script) -> Result<Take, String> {
             .collect::<Vec<_>>()
             .join(" "),
     );
-    let readings = std::iter::once(script.sentence).chain(script.also.iter().map(String::as_str));
-    let wrong = readings
-        .filter_map(|r| score::wrong(r, &heard, script.lang))
-        .min_by_key(|w| w.words);
+    let wrong = fewest(script.sentence, script.also, &heard, script.lang);
     Ok(Take {
         load_ms: done.load_ms,
         first_ms: got.first.map(since),

@@ -26,7 +26,7 @@ mod ours;
 mod page;
 mod place;
 mod plan;
-mod procs;
+pub(crate) mod procs;
 mod read;
 mod script;
 mod select;

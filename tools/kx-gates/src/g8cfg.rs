@@ -5,6 +5,7 @@
 use serde::Deserialize;
 
 use crate::board;
+use crate::weakjob::Weak;
 
 /// G8 settings; times in ms unless named otherwise.
 #[derive(Debug, Clone, Deserialize)]
@@ -113,11 +114,13 @@ pub struct G8 {
     pub arabic: String,
     /// Longest wait for target-window to type in a layout G8 asks it for.
     pub layout_wait_ms: u64,
+    /// Weak mode's caps on the copy's job, the roadmap's weak PC.
+    pub weak: Weak,
 }
 
 impl G8 {
     /// Refuses a zero count or warm-up, a bad budget, a negative slack, a pressed key the board does not have, a churn
-    /// that churns nothing, or a use step or Arabic run that could pass with nothing used.
+    /// that churns nothing, weak caps no job takes, or a use step or Arabic run that could pass with nothing used.
     pub fn check(&self) -> Result<(), String> {
         self.check_budgets()?;
         if [self.presses, self.clicks, self.subscribers, self.publishes].contains(&0) {
@@ -145,6 +148,7 @@ impl G8 {
                 self.press_key
             ));
         }
+        crate::weakjob::Caps::from(&self.weak, 1).map_err(|e| format!("g8.weak: {e}"))?;
         crate::g8use::check(self)?;
         crate::g8lang::check(self)?;
         crate::g8churn::check(self)

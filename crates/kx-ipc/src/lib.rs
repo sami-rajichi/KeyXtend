@@ -21,7 +21,8 @@ mod wire;
 pub use ask::Ask;
 pub use code::{Codec, Fault, Why};
 pub use command::{
-    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, VAULT_JOB, VOICE_JOB,
+    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, SOUND_FLAG, VAULT_JOB,
+    VOICE_JOB,
 };
 pub use error::IpcError;
 pub use fetch::ask::FetchAsk;

@@ -45,15 +45,20 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
-      # The gate-only inputs: the adapter's `sim-input` for the real-hook test, the app's `gate-input` for its parser tests
-      # and exe check, and the worker's `gate` for its sound-file tests. The stage below builds without them and refuses a
+      # The gate-only inputs: the adapter's `sim-input` for the real-hook test, the app's `gate-input` for its parser
+      # tests and exe check and its `gate-voice` for the played clip, the worker's `gate` for its sound-file tests, and
+      # kx-gates' `voice` for the G22 runs that pass the sound flag. The stage below builds without them and refuses a
       # program holding a gate flag.
       - run: cargo clippy -p kx-platform-windows --all-targets --features sim-input --locked -- -D warnings
       - run: cargo clippy -p keyxtend --all-targets --features gate-input --locked -- -D warnings
+      - run: cargo clippy -p keyxtend --all-targets --features gate-voice --locked -- -D warnings
       - run: cargo clippy -p keyxtend-worker --all-targets --features gate --locked -- -D warnings
+      - run: cargo clippy -p kx-gates --all-targets --features voice --locked -- -D warnings
       - run: cargo test -p kx-platform-windows --features sim-input --locked
       - run: cargo test -p keyxtend --features gate-input --locked
+      - run: cargo test -p keyxtend --features gate-voice --locked
       - run: cargo test -p keyxtend-worker --features gate --locked
+      - run: cargo test -p kx-gates --features voice --locked
       # The app with the scroll module's feature off, so the scroll module stays optional. The app's life test `ships`
       # checks that this list is the default features without `mod-scroll`.
       - run: >-
