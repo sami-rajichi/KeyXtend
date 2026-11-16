@@ -6,7 +6,7 @@ use std::path::Path;
 
 use kx_module_api::ports::{
     CardId, CardUse, FetchAsk, Fingerprint, JobLimits, LINK_SCHEME, Link, SpeechModel, TAG_LEN,
-    fits_iso,
+    fits_iso, host_ok,
 };
 use kx_module_api::{Redacted, is_hidden};
 use serde::Deserialize;
@@ -32,7 +32,8 @@ pub enum RowError {
     /// The SHA-256 is not 64 lower-case hex digits.
     #[error("its SHA-256 is not 64 lower-case hex digits")]
     Print,
-    /// An address is not HTTPS at a fixed revision on a listed host, ending in the file, or there is none.
+    /// An address is not HTTPS at a fixed revision on a host listed by name, ending in the file, or there is none; or
+    /// a listed host is none `host_ok` takes.
     #[error("an address is not https at a fixed revision on a listed host")]
     Link,
     /// The licence is not one the table lists.
@@ -67,7 +68,7 @@ pub(super) struct RawRow {
     sha256: String,
     /// The addresses, tried in order.
     links: Vec<String>,
-    /// The hosts a link or a redirect may reach.
+    /// The hosts a link or a redirect may reach: a link names one exactly; `.` and a site's domain take those under it.
     hosts: Vec<String>,
     /// The licence.
     licence: String,
@@ -104,7 +105,7 @@ pub struct Row {
     pub print: Fingerprint,
     /// HTTPS addresses at a fixed revision, tried in order.
     pub links: Vec<String>,
-    /// The hosts a link or a redirect may reach.
+    /// The hosts a link or a redirect may reach: a link names one exactly; `.` and a site's domain take those under it.
     pub hosts: Vec<String>,
     /// The licence the user receives it under.
     pub licence: String,
@@ -229,12 +230,13 @@ impl RawRow {
             .find_map(|(ok, why)| (!ok).then_some(why))
     }
 
-    /// True when there is an address and each is good.
+    /// True when there is an address and each is good, and each listed host is one a download may list.
     fn links_ok(&self, revision: usize) -> bool {
-        !self.links.is_empty() && self.links.iter().all(|l| self.link_ok(l, revision))
+        let hosts = !self.hosts.is_empty() && self.hosts.iter().all(|h| host_ok(h));
+        hosts && !self.links.is_empty() && self.links.iter().all(|l| self.link_ok(l, revision))
     }
 
-    /// True for an https link to a listed host whose path names a commit of `revision` hex digits and ends in the file.
+    /// True for an https link to a host listed by name, at a commit of `revision` hex digits and ending in the file.
     fn link_ok(&self, link: &str, revision: usize) -> bool {
         let Some((host, path)) = link
             .strip_prefix(LINK_SCHEME)

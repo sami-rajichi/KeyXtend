@@ -159,6 +159,8 @@ fn a_pick_names_its_row_or_file_and_anything_else_takes_the_default() {
         "a/b.gguf",
         "C:b.gguf",
         "NUL.gguf",
+        "COM¹.gguf",
+        "conout$.bin",
         "a\u{200B}.gguf",
     ] {
         assert!(t.pick("fr", bad).is_none(), "{bad:?}");

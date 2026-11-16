@@ -72,11 +72,15 @@ fn numbers_come_back_and_a_damaged_one_starts_empty() {
     assert_eq!(numbers(&back), numbers(&o));
     shelf.plant("numbers", "checks", b"junk");
     let damaged = open(&shelf, MAX_BLOB_BYTES);
-    assert_eq!(damaged.damaged, 1);
+    let numbers_only = Damage {
+        texts: 0,
+        numbers: 1,
+    };
+    assert_eq!(damaged.damaged, numbers_only, "no text is named");
     assert!(damaged.checks.rows().is_empty());
     assert_eq!(damaged.counts, o.counts);
     let after = open(&shelf, MAX_BLOB_BYTES).damaged;
-    assert_eq!(after, 0, "the junk was removed");
+    assert_eq!(after, Damage::default(), "the junk was removed");
 }
 
 #[test]

@@ -75,7 +75,7 @@ impl Said {
 /// The copy's settings file: `[voice]`'s defaults with the bench's models folder and the run's device.
 fn table(g: &G22Product, bench: &G22Bench) -> Result<Table, String> {
     let mut s = VoiceSettings::from_defaults().map_err(|e| format!("the voice defaults: {e}"))?;
-    (s.models_dir, s.device) = (bench.models_dir.clone(), g.device.clone());
+    (s.models_dir, s.device) = (bench.models()?.to_owned(), g.device.clone());
     let mut section = Table::try_from(&s).map_err(|e| format!("the copy's voice settings: {e}"))?;
     section.insert(VERSION_KEY.into(), i64::from(SPEC.version).into());
     let mut table = Table::new();

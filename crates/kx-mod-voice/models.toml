@@ -4,8 +4,9 @@
 # Each row:
 # - `id`: the name `picks` stores; `name`: the shown name; `runner`: the engine adapter that reads it.
 # - `file`, `bytes`, `sha256`: the file and the size and SHA-256 checked before it takes its name.
-# - `links`: HTTPS addresses at a fixed revision, tried in order; `hosts`: the hosts a link or its redirect may reach,
-#   as a HEAD request on 2026-11-14 showed them (huggingface.co, then its CDN).
+# - `links`: HTTPS addresses at a fixed revision, tried in order; `hosts`: the hosts a link names (exactly) or its
+#   redirect may reach. `.hf.co` takes every host under Hugging Face's own hf.co, whose CDN host differs by region;
+#   its firewall guide (huggingface.co/docs/hub/models-downloading) lists them and says they change.
 # - `licence`, `credit`, `origin`: the licence, who to credit and the original model's page.
 # - `cpu_mb`: the system memory a job needs: the larger of peak working set and peak commit over the trial's processor
 #   and card runs (8 threads, clips up to 31.5 s), plus 25 %, rounded up to 64 MB.
@@ -32,7 +33,7 @@ file = "whisper-small-Q5_K_M.gguf"
 bytes = 193749056
 sha256 = "326cd00c3e7217c751667c7c1600eaf7e0de174e186ca2c16b4bf590251c3c3b"
 links = ["https://huggingface.co/handy-computer/whisper-small-gguf/resolve/4afdc7942ecf1997f359deae48a63506b062eac4/whisper-small-Q5_K_M.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "MIT"
 credit = "OpenAI"
 origin = "https://github.com/openai/whisper"
@@ -62,7 +63,7 @@ file = "whisper-large-v3-turbo-Q5_K_M.gguf"
 bytes = 619628096
 sha256 = "06fc9923c09fb3ae878ea12c34d1be3ed18fad039ab14b4b045c7b6c40af56b2"
 links = ["https://huggingface.co/handy-computer/whisper-large-v3-turbo-gguf/resolve/18ada752005f5fddef499256f9a458d0b37a203a/whisper-large-v3-turbo-Q5_K_M.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "MIT"
 credit = "OpenAI"
 origin = "https://github.com/openai/whisper"
@@ -92,7 +93,7 @@ file = "whisper-large-v3-Q5_K_M.gguf"
 bytes = 1161143008
 sha256 = "6053d0fd69a0fd48b8fea5ea7a52b9e0cde389343566fa30e453a1b2b258dc38"
 links = ["https://huggingface.co/handy-computer/whisper-large-v3-gguf/resolve/274ad1d1cf680b7ee53cc70f78461394cd3a344b/whisper-large-v3-Q5_K_M.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "MIT"
 credit = "OpenAI"
 origin = "https://github.com/openai/whisper"
@@ -122,7 +123,7 @@ file = "parakeet-tdt-0.6b-v3-Q8_0.gguf"
 bytes = 739508576
 sha256 = "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
 links = ["https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/d8d8c32cb2017c57e5307767343e97870f8a7f53/parakeet-tdt-0.6b-v3-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "CC-BY-4.0"
 credit = "NVIDIA"
 origin = "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3"
@@ -144,7 +145,7 @@ file = "canary-1b-v2-Q8_0.gguf"
 bytes = 1144290016
 sha256 = "224f83d1bc487b3303b495a7d6874912fdece93de19d1a04b550829c30a5d289"
 links = ["https://huggingface.co/handy-computer/canary-1b-v2-gguf/resolve/692af661b140183b60e44f55ad03c59e1e77d078/canary-1b-v2-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "CC-BY-4.0"
 credit = "NVIDIA"
 origin = "https://huggingface.co/nvidia/canary-1b-v2"
@@ -166,7 +167,7 @@ file = "nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf"
 bytes = 751094240
 sha256 = "b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c"
 links = ["https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/53ce288f69326b415aeef030cfcb02a08a8096dd/nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "OpenMDW-1.1"
 credit = "NVIDIA"
 origin = "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b"
@@ -189,7 +190,7 @@ file = "Qwen3-ASR-0.6B-Q8_0.gguf"
 bytes = 850423456
 sha256 = "f081b2d5e23bd669d92cc331d722a8a0681943b8e6f34b48996fd5c319b5acd8"
 links = ["https://huggingface.co/handy-computer/Qwen3-ASR-0.6B-gguf/resolve/7e7c69a577fa2725dfedbe34b5e999336e30a19b/Qwen3-ASR-0.6B-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "Apache-2.0"
 credit = "Alibaba Cloud"
 origin = "https://huggingface.co/Qwen/Qwen3-ASR-0.6B"
@@ -211,7 +212,7 @@ file = "Qwen3-ASR-1.7B-Q8_0.gguf"
 bytes = 2185030624
 sha256 = "9a0d81792dfea2d5f278b8a63deb3ea6e02139ce42c2301f32ea19c4f77526b7"
 links = ["https://huggingface.co/handy-computer/Qwen3-ASR-1.7B-gguf/resolve/0e0a596e3959c3f3f2ab7d443a5b6f0f4a4bba6f/Qwen3-ASR-1.7B-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "Apache-2.0"
 credit = "Alibaba Cloud"
 origin = "https://huggingface.co/Qwen/Qwen3-ASR-1.7B"
@@ -233,7 +234,7 @@ file = "cohere-transcribe-03-2026-Q8_0.gguf"
 bytes = 2410655232
 sha256 = "931916663432fd895423a4291a8400221802b288967ca2d435fc5e3141c9e71e"
 links = ["https://huggingface.co/handy-computer/cohere-transcribe-03-2026-gguf/resolve/7353b6040bdc1be9e5a3823d99d5fe12afe88264/cohere-transcribe-03-2026-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "Apache-2.0"
 credit = "Cohere Labs"
 origin = "https://huggingface.co/CohereLabs/cohere-transcribe-03-2026"
@@ -254,7 +255,7 @@ file = "cohere-transcribe-arabic-07-2026-Q8_0.gguf"
 bytes = 2410655136
 sha256 = "910de5c9c57f9fd8a280e1701f9cd96f63768878c1ca9e4ecf23638a5e0fef16"
 links = ["https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf/resolve/11a54d6895f94cce78d0ece142b8e552e7822539/cohere-transcribe-arabic-07-2026-Q8_0.gguf"]
-hosts = ["huggingface.co", "us.aws.cdn.hf.co"]
+hosts = ["huggingface.co", ".hf.co"]
 licence = "Apache-2.0"
 credit = "Cohere Labs"
 origin = "https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026"

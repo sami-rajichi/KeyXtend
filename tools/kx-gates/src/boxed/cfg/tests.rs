@@ -19,7 +19,7 @@ fn the_shipped_proofs_pass_their_check_and_each_bad_key_is_refused() {
         |b| b.worker = r"keyxtend\keyxtend-worker.exe".into(),
         |b| b.worker = r"C:\Program Files\KeyXtend-dev\keyxtend\keyxtend.exe".into(),
         |b| b.drive = "D:".into(),
-        |b| b.drive = r"D:\dev".into(),
+        |b| b.drive = r"D:\tools".into(),
         |b| b.drive = r"\server\share\".into(),
         |b| b.folder = "..".into(),
         |b| b.folder = r"a\b".into(),
@@ -55,7 +55,7 @@ fn only_a_drives_root_alone_is_a_root() {
     }
     for not in [
         "D:",
-        r"D:\dev",
+        r"D:\tools",
         "",
         r"\",
         r"\server\share\",

@@ -6,12 +6,12 @@ use super::{coded, heard, home, listening_bar, page, panel};
 use crate::Rig;
 use crate::logs::lines_of;
 use crate::texts::rig;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, BarText, CompareSheet, DeviceLabel, DeviceName, FetchButton, PanelButton,
     ScrollPage, VoiceAct, VoiceBar, VoiceClick, VoicePanel, VoiceSheet, VoiceTab, VoiceText,
     VoiceView,
 };
+use kx_module_api::{Redacted, Zeroizing};
 use kx_ui::i18n::keys::VOICE_READ_TEXT;
 use kx_ui::voice_acts::{
     BAR, BUTTON, COMPARE, CONFIRM, FETCH, FLIP, GEAR, MINUS, OPEN, OVER, PAGE, PLUS, ROW, STEP,
@@ -148,7 +148,7 @@ fn no_text_name_or_set_text_reaches_a_log_line_or_a_debug_print() {
     let (rig, _face, _host) = rig("en", "en", "auto");
     let heard = heard(&rig);
     let text = VoiceText::Shown {
-        text: Redacted::new(SECRET.to_owned()),
+        text: Redacted::new(Zeroizing::new(SECRET.to_owned())),
         rtl: false,
         arabic: false,
     };
@@ -162,7 +162,13 @@ fn no_text_name_or_set_text_reaches_a_log_line_or_a_debug_print() {
     assert!(!format!("{view:?}").contains(SECRET), "{view:?}");
     let lines = lines_of(|| {
         heard.shown(&rig, shown);
-        assert!(rig.hub.voice_json().contains(SECRET), "QML reads it");
+        let json: Zeroizing<String> = rig.hub.voice_json();
+        assert!(json.contains(SECRET), "QML reads it");
+        assert_eq!(
+            json.capacity(),
+            json.len(),
+            "sized once, so no grown copy is left"
+        );
         rig.hub.voice_act(COMPARE, "", 0, i64::from(ROUND));
         rig.hub.voice_act(SECRET, SECRET, 0, i64::from(ROUND));
         rig.hub.voice_act(BAR, SECRET, -7, -7);

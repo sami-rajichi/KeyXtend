@@ -25,17 +25,14 @@ fn only_our_own_children_of_the_program_are_ours() {
 
 #[test]
 fn a_module_is_inside_a_folder_by_whole_parts_in_any_case() {
-    let dir = Path::new(r"D:\dev\models\kx-plant");
-    assert!(inside(
-        Path::new(r"D:\dev\models\kx-plant\ggml-cpu.dll"),
-        dir
-    ));
-    assert!(inside(Path::new(r"d:\DEV\Models\KX-PLANT\sub\a.dll"), dir));
+    let dir = Path::new(r"E:\models\kx-plant");
+    assert!(inside(Path::new(r"E:\models\kx-plant\ggml-cpu.dll"), dir));
+    assert!(inside(Path::new(r"e:\MODELS\KX-PLANT\sub\a.dll"), dir));
     assert!(
-        !inside(Path::new(r"D:\dev\models\kx-plant2\a.dll"), dir),
+        !inside(Path::new(r"E:\models\kx-plant2\a.dll"), dir),
         "a longer name"
     );
-    assert!(!inside(Path::new(r"D:\dev\models\a.dll"), dir));
+    assert!(!inside(Path::new(r"E:\models\a.dll"), dir));
     assert!(!inside(dir, dir), "the folder itself is no module");
 }
 

@@ -8,6 +8,17 @@ use kx_module_api::ports::{
 };
 use std::path::Path;
 
+/// Hugging Face's download hosts by region, from its firewall table (huggingface.co/docs/hub/models-downloading) and
+/// its Xet bridge.
+const REGIONS: [&str; 6] = [
+    "us.aws.cdn.hf.co",
+    "us.gcp.cdn.hf.co",
+    "cdn-lfs-us-1.hf.co",
+    "cdn-lfs-eu-1.hf.co",
+    "transfer.xethub-eu.hf.co",
+    "cas-bridge.xethub.hf.co",
+];
+
 /// The ten files of `docs/items/P11.md`, with their bytes and SHA-256.
 const TRIAL: [(&str, u64, &str); 10] = [
     (
@@ -116,6 +127,22 @@ fn every_row_makes_a_download_the_port_takes() {
         let part = ask.part().unwrap();
         assert!(part.to_string_lossy().ends_with(PART_EXT), "{}", row.id);
         assert_eq!(ask.hosts, row.hosts);
+    }
+}
+
+#[test]
+fn every_rows_download_may_follow_hugging_faces_redirects_in_every_region() {
+    let s = VoiceSettings::from_defaults().unwrap();
+    for row in shipped().rows() {
+        let ask = row
+            .fetch(Path::new(FOLDER), s.job(), s.min_free_mb, s.stall_s)
+            .unwrap();
+        for host in REGIONS {
+            assert!(ask.reaches(host), "{} {host}", row.id);
+        }
+        for host in ["hf.co", "hf.co.evil.example", "cdn.huggingface.co"] {
+            assert!(!ask.reaches(host), "{} {host}", row.id);
+        }
     }
 }
 

@@ -56,6 +56,8 @@ fn an_address_that_is_not_https_at_a_fixed_revision_on_a_listed_host_is_refused(
         LINK.replace(REV, "main"),
         LINK.replace(REV, &REV[..7]),
         LINK.replace("huggingface.co", "example.com"),
+        LINK.replace("huggingface.co", "us.aws.cdn.hf.co"),
+        LINK.replace("huggingface.co", ".hf.co"),
         LINK.replace("Q5_K_M.gguf", "Q8_0.gguf"),
         LINK.replace("https://", "http://"),
         "https://huggingface.co/a b".to_owned(),
@@ -65,8 +67,14 @@ fn an_address_that_is_not_https_at_a_fixed_revision_on_a_listed_host_is_refused(
     }
     let none = format!("links = [\"{LINK}\"]");
     assert_eq!(row_err(&none, "links = []"), Some(RowError::Link));
-    let hosts = "hosts = [\"huggingface.co\", \"us.aws.cdn.hf.co\"]";
-    assert_eq!(row_err(hosts, "hosts = []"), Some(RowError::Link));
+    let hosts = "hosts = [\"huggingface.co\", \".hf.co\"]";
+    for to in [
+        "hosts = []",
+        "hosts = [\"huggingface.co\", \".co\"]",
+        "hosts = [\"huggingface.co\", \"a b\"]",
+    ] {
+        assert_eq!(row_err(hosts, to), Some(RowError::Link), "{to}");
+    }
 }
 
 #[test]

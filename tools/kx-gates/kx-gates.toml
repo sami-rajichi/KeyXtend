@@ -7,6 +7,15 @@
 # PresentMon CSVs, and results.jsonl.
 out = "../../target/gate-logs"
 
+# The roadmap's weak PC (Celeron N4020 class), which every weak-mode run copies here: `g8 weak` and `g8 hook-weak` cap
+# the product's job to it, and `g22 bench` its worker's job and the product's fit rule.
+[weak]
+# Cores a weak copy may use, each at this percent of one core here.
+cores = 2
+core_pct = 30
+# Its memory in MB of 2^20 bytes, as the product counts: the job's cap and what the fit rule reads.
+mem_mb = 4096
+
 [timing]
 # How often we look again for a window, file or clipboard change, in ms.
 poll_ms = 50

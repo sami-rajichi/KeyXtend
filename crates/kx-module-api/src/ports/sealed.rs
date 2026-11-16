@@ -10,12 +10,21 @@ pub const MIN_BLOB_LEN: usize = 1;
 pub const MAX_BLOB_LEN: usize = 32;
 /// The largest blob a store seals or opens, 16 MiB; a larger save is `Io`.
 pub const MAX_BLOB_BYTES: usize = 16 * 1024 * 1024;
-/// Names some supported OS refuses as file names (Windows keeps them for devices, even with an extension); no data
-/// is named after one, so data moves between systems, and `fits_iso` refuses them as pack language codes too.
+/// Names some supported OS refuses as file names (Windows keeps them for devices, even with an extension, and reads
+/// `¹`, `²` and `³` as digits); no data is named after one, and `fits_iso` refuses them as pack language codes too.
 pub const RESERVED_NAMES: &[&str] = &[
-    "con", "prn", "aux", "nul", "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
-    "com8", "com9", "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    "con", "prn", "aux", "nul", "conin$", "conout$", "com0", "com1", "com2", "com3", "com4",
+    "com5", "com6", "com7", "com8", "com9", "com¹", "com²", "com³", "lpt0", "lpt1", "lpt2", "lpt3",
+    "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9", "lpt¹", "lpt²", "lpt³",
 ];
+
+/// True when `name`'s stem, before its first dot and without trailing spaces, is a device name (`RESERVED_NAMES`)
+/// in any case, as `NUL.txt` or `COM¹`, which Windows opens as the device.
+#[must_use]
+pub fn names_device(name: &str) -> bool {
+    let stem = name.split('.').next().unwrap_or_default().trim_end();
+    RESERVED_NAMES.iter().any(|d| stem.eq_ignore_ascii_case(d))
+}
 
 /// Why a blob could not be named, loaded or saved.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]

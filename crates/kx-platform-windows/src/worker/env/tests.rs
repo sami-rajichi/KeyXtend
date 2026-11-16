@@ -10,7 +10,7 @@ fn ours() -> Vec<(OsString, OsString)> {
         ("GGML_VK_VISIBLE_DEVICES", "0"),
         ("TRANSCRIBE_MODEL", r"C:\x.bin"),
         ("VK_ICD_FILENAMES", r"C:\evil.json"),
-        ("CARGO_HOME", r"D:\dev\cargo"),
+        ("CARGO_HOME", r"C:\Users\me\.cargo"),
         ("Path", r"C:\evil;C:\Windows"),
         ("TEMP", r"C:\Temp"),
     ]

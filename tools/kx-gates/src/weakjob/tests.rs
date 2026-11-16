@@ -5,17 +5,17 @@ use std::process::{Command, Stdio};
 
 use super::*;
 
-fn weak(cores: u32, rate_pct: u32) -> Weak {
+fn weak(cores: u8, core_pct: u8) -> Weak {
     Weak {
         cores,
-        rate_pct,
+        core_pct,
         mem_mb: 4096,
     }
 }
 
 #[test]
 fn caps_turn_settings_into_job_values() {
-    let c = Caps::from(&weak(2, 30), 16).expect("valid");
+    let c = Caps::from(weak(2, 30), 16).expect("valid");
     assert_eq!(c.affinity, 0b11);
     assert_eq!(
         c.cpu_rate, 375,
@@ -27,37 +27,38 @@ fn caps_turn_settings_into_job_values() {
 #[test]
 fn each_allowed_core_runs_at_the_share_on_any_pc() {
     for cpus in [2, 8, 16] {
-        let c = Caps::from(&weak(2, 30), cpus).expect("valid");
+        let c = Caps::from(weak(2, 30), cpus).expect("valid");
         assert!((c.cpu_cores(cpus) - 0.6).abs() < 1e-9, "{cpus} CPUs");
     }
-    let tiny = Caps::from(&weak(1, 1), 256).expect("valid");
+    let tiny = Caps::from(weak(1, 1), 256).expect("valid");
     assert_eq!(tiny.cpu_rate, 1, "never 0, which Windows refuses");
 }
 
 #[test]
 fn more_cores_than_the_pc_has_means_all_of_them() {
-    let c = Caps::from(&weak(16, 30), 4).expect("valid");
+    let c = Caps::from(weak(16, 30), 4).expect("valid");
     assert_eq!(c.affinity, 0b1111);
 }
 
 #[test]
-fn every_core_or_a_huge_memory_cap_saturates() {
-    let all = Caps::from(&weak(u32::MAX, 30), usize::MAX).expect("valid");
+fn every_core_saturates_and_the_largest_memory_cap_fits() {
+    let all = Caps::from(weak(u8::MAX, 30), usize::MAX).expect("valid");
     assert_eq!(all.affinity, usize::MAX);
     let mut w = weak(2, 30);
-    w.mem_mb = u64::MAX;
-    assert_eq!(Caps::from(&w, 8).expect("valid").mem_bytes, usize::MAX);
+    w.mem_mb = u32::MAX;
+    let want = usize::try_from(u32::MAX).map_or(usize::MAX, |mb| mb.saturating_mul(1 << 20));
+    assert_eq!(Caps::from(w, 8).expect("valid").mem_bytes, want);
 }
 
 #[test]
 fn bad_caps_are_reported_not_ignored() {
-    assert!(Caps::from(&weak(2, 30), 0).is_err(), "no cores known");
+    assert!(Caps::from(weak(2, 30), 0).is_err(), "no cores known");
     let mut w = weak(2, 30);
     w.mem_mb = 0;
-    assert!(Caps::from(&w, 8).is_err(), "no memory");
-    assert!(Caps::from(&weak(0, 30), 8).is_err());
-    assert!(Caps::from(&weak(2, 0), 8).is_err());
-    assert!(Caps::from(&weak(2, 101), 8).is_err());
+    assert!(Caps::from(w, 8).is_err(), "no memory");
+    assert!(Caps::from(weak(0, 30), 8).is_err());
+    assert!(Caps::from(weak(2, 0), 8).is_err());
+    assert!(Caps::from(weak(2, 101), 8).is_err());
 }
 
 #[test]
@@ -79,16 +80,16 @@ fn a_child_joins_a_job_by_its_handle() {
 #[test]
 fn a_job_is_made_with_and_without_caps() {
     let cpus = std::thread::available_parallelism().map_or(1, usize::from);
-    let caps = Caps::from(&weak(2, 30), cpus).expect("valid");
+    let caps = Caps::from(weak(2, 30), cpus).expect("valid");
     assert!(Job::new(None).is_ok());
     assert!(Job::new(Some(&caps)).is_ok());
 }
 
 #[test]
 fn the_shipped_weak_mode_is_the_roadmaps_weak_pc() {
-    let w = crate::config::load().expect("the settings load").g8.weak;
+    let w = crate::config::load().expect("the settings load").weak;
     assert_eq!(
-        Caps::from(&w, w.cores as usize).map(|c| c.affinity.count_ones()),
-        Ok(w.cores)
+        Caps::from(w, usize::from(w.cores)).map(|c| c.affinity.count_ones()),
+        Ok(u32::from(w.cores))
     );
 }

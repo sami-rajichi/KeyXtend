@@ -1,7 +1,7 @@
 //! G22's bench (`g22 bench`, risk 7): each check clip's default model reads that clip through the gate worker and the
 //! product's speech host, normal then as the roadmap's weak PC, and one table of numbers prints, never the text. Weak
-//! mode is few slow cores (the job's cap), no AVX (a worker folder with only the plain processor parts) and 4 GB (the
-//! product's own fit rule); the bench starts no screen and moves nothing.
+//! mode is `[weak]`'s few slow cores (the job's cap), no AVX (a worker folder with only the plain processor parts) and
+//! its memory (the product's own fit rule); the bench starts no screen and moves nothing.
 #![cfg(windows)]
 
 pub(crate) mod clip;
@@ -26,6 +26,7 @@ use crate::apps::Ctx;
 use crate::g22::{self, BENCH};
 use crate::g22cfg::{Clip, G22Bench};
 use crate::out;
+use crate::weakcfg::Weak;
 use spawn::{Cores, GateWorker, lock};
 use table::{Miss, Row, Rule, Timed, mode};
 use take::{Script, take};
@@ -49,6 +50,7 @@ struct Case<'c> {
 /// What a run reads once: the resolved files, the product's `[voice]` defaults and the processor's real cores.
 struct Bench<'a> {
     g: &'a G22Bench,
+    weak: Weak,
     worker: PathBuf,
     weak_worker: PathBuf,
     voice: PathBuf,
@@ -60,7 +62,7 @@ struct Bench<'a> {
 
 /// Runs the bench: both modes of each clip, then the table on stdout and the numbers in the result line.
 pub fn run(ctx: &Ctx) -> Result<Value, String> {
-    let bench = Bench::of(&ctx.cfg.g22_bench, &ctx.cfg.dir)?;
+    let bench = Bench::of(&ctx.cfg.g22_bench, ctx.cfg.weak, &ctx.cfg.dir)?;
     let rule = bench.rule();
     let mut rows = Vec::new();
     for (lang, clip) in &bench.g.clips {
@@ -80,8 +82,9 @@ pub fn run(ctx: &Ctx) -> Result<Value, String> {
 }
 
 impl<'a> Bench<'a> {
-    /// The bench `g` describes, its paths from the settings folder `dir`; a missing file is an error naming it.
-    fn of(g: &'a G22Bench, dir: &Path) -> Result<Self, String> {
+    /// The bench `g` describes on the weak PC `weak`, its paths from the settings folder `dir`; a missing file is an
+    /// error naming it.
+    fn of(g: &'a G22Bench, weak: Weak, dir: &Path) -> Result<Self, String> {
         let file = |rel: &str| out::plain(&dir.join(rel));
         let worker = file(&g.worker).map_err(|e| format!("{e}; build it with --features gate"))?;
         let weak_worker = file(&g.weak_worker).map_err(|e| {
@@ -91,7 +94,7 @@ impl<'a> Bench<'a> {
             )
         })?;
         spawn::plain_parts(&weak_worker, &g.part_prefix, &g.weak_parts)?;
-        let models = PathBuf::from(&g.models_dir);
+        let models = PathBuf::from(g.models()?);
         if !models.is_dir() {
             return Err(format!(
                 "g22_bench.models_dir {} is no folder",
@@ -101,6 +104,7 @@ impl<'a> Bench<'a> {
         let voice = file(&g.voice_dir)?;
         Ok(Self {
             g,
+            weak,
             worker,
             weak_worker,
             detector: out::plain(&voice.join(&g.detector))?,
@@ -122,14 +126,14 @@ impl<'a> Bench<'a> {
 
     /// The table's first line: weak mode and the pass rule.
     fn lead(&self, rule: &Rule) -> String {
-        let g = self.g;
+        let w = self.weak;
         format!(
             "G22 bench: weak mode is {} cores at {} % each, {} MB and only {:?}; RTF is the warm wait over the \
              clip; {}",
-            g.weak_cores,
-            g.weak_core_pct,
-            g.weak_mb,
-            g.weak_parts,
+            w.cores,
+            w.core_pct,
+            w.mem_mb,
+            self.g.weak_parts,
             rule.text()
         )
     }
@@ -137,7 +141,7 @@ impl<'a> Bench<'a> {
     /// The row of `lang`'s clip in one mode.
     fn row(&self, lang: &str, clip: &Clip, weak: bool) -> Row {
         let cores = if weak {
-            usize::from(self.g.weak_cores)
+            usize::from(self.weak.cores)
         } else {
             self.real
         };
@@ -202,7 +206,7 @@ impl<'a> Bench<'a> {
         if !weak {
             return Ok(());
         }
-        let total_mb = self.g.weak_mb;
+        let total_mb = self.weak.mem_mb;
         let memory = Memory {
             total_mb,
             free_mb: total_mb,
@@ -227,7 +231,7 @@ impl<'a> Bench<'a> {
         let spawner = if case.weak {
             let cap = CpuCap {
                 cores: case.cores,
-                pct: self.g.weak_core_pct,
+                pct: self.weak.core_pct,
             };
             WinSpawner::at(self.weak_worker.clone()).capped(cap)
         } else {

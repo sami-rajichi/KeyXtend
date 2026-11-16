@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::capability::is_kebab;
-use crate::{REDACTED_MARKER, Redacted, Zeroizing};
+use crate::{REDACTED_MARKER, Redacted, Secret, Zeroizing};
 use std::collections::HashSet;
 
 mod names;
@@ -38,6 +38,11 @@ fn events() -> [(&'static str, Option<Capability>); 9] {
 /// Secret `at`, redacted.
 fn hidden(at: usize) -> Redacted<String> {
     Redacted::new(SECRETS[at].to_owned())
+}
+
+/// Secret `at`, redacted and wiped on drop.
+fn secret(at: usize) -> Secret {
+    Redacted::new(Zeroizing::new(SECRETS[at].to_owned()))
 }
 
 /// True when `shown` holds no secret.
@@ -136,9 +141,26 @@ fn the_bar_has_the_approved_mock_ups_buttons() {
 }
 
 #[test]
+fn the_bars_text_is_a_secret_wiped_on_drop_that_never_prints() {
+    let shown = VoiceText::Shown {
+        text: secret(1),
+        rtl: true,
+        arabic: true,
+    };
+    let VoiceText::Shown { text, .. } = &shown else {
+        unreachable!("a shown text")
+    };
+    let held: &Zeroizing<String> = text.expose();
+    assert_eq!(held.as_str(), SECRETS[1]);
+    let printed = format!("{shown:?}{:?}", shown.clone());
+    assert!(keeps_secrets(&printed), "{printed}");
+    assert!(printed.contains(REDACTED_MARKER), "{printed}");
+}
+
+#[test]
 fn a_text_bar_hides_its_text_and_a_masked_one_carries_none() {
     let shown = VoiceText::Shown {
-        text: hidden(0),
+        text: secret(0),
         rtl: false,
         arabic: false,
     };

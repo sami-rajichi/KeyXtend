@@ -103,7 +103,7 @@ pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, Lay
 pub use link::{LINK_SCHEME, Link, LinkError, MAX_LINK_BYTES, WebLink, WebLinkKey};
 pub use models::{
     Drive, FetchAsk, FetchNote, FetchRun, Fingerprint, FolderScan, ModelError, ModelFile,
-    ModelFiles, ModelFilesKey, PART_EXT, path_ok,
+    ModelFiles, ModelFilesKey, PART_EXT, host_ok, path_ok,
 };
 pub use packs::{
     IndexError, MAX_INDEX_BYTES, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_DIR, PACK_EXT,
@@ -130,7 +130,7 @@ pub use scroll::{
 };
 pub use sealed::{
     BlobName, MAX_BLOB_BYTES, MAX_BLOB_LEN, MIN_BLOB_LEN, RESERVED_NAMES, SealedError, SealedStore,
-    SealedStoreKey, VaultStoreKey,
+    SealedStoreKey, VaultStoreKey, names_device,
 };
 pub use selection::{
     Board, BoardPlace, BoardPlaceAsk, ChipAct, ChipsView, Edit, EditAsk, EditDone, Legend, SelChip,

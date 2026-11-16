@@ -12,3 +12,5 @@ target/
 # Personal notes for this machine and owner
 CLAUDE.local.md
 /docs/NEXT-SESSION.md
+# This PC's own gate paths, such as its models folder
+kx-gates.local.toml

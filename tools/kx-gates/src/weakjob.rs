@@ -1,8 +1,8 @@
 //! G8's own weak-mode job, copied from the spike's (gone in P11): a Windows job its copy dies with, capped in weak mode
-//! in cores, CPU time and memory, from `[g8.weak]`.
+//! in cores, CPU time and memory, from `[weak]`.
 #![cfg(windows)]
 
-use serde::Deserialize;
+use crate::weakcfg::Weak;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_CPU_RATE_CONTROL_ENABLE,
@@ -19,18 +19,6 @@ const MIB: usize = 1 << 20;
 const RATE_PER_PCT: u32 = 100;
 /// Highest CPU time per allowed core, in percent of one core.
 const MAX_PCT: u32 = 100;
-
-/// Weak mode's caps, as `[g8.weak]` gives them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Weak {
-    /// Cores the copy may use.
-    pub cores: u32,
-    /// CPU time per allowed core, in percent of one core: the job gets `cores × rate_pct` % of one core in all.
-    pub rate_pct: u32,
-    /// Memory cap, in MiB.
-    pub mem_mb: u64,
-}
 
 /// Weak-mode limits in the units the job takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,10 +44,10 @@ impl Caps {
         f64::from(self.cpu_rate) * cpus as f64 / f64::from(RATE_PER_PCT * MAX_PCT)
     }
 
-    /// Checks `w` and converts it for a PC with `cpus` logical cores.
-    pub fn from(w: &Weak, cpus: usize) -> Result<Caps, String> {
+    /// Checks `w` and converts it for a PC with `cpus` logical cores: the job gets `cores × core_pct` % of one core.
+    pub fn from(w: Weak, cpus: usize) -> Result<Caps, String> {
         let bits = usize::BITS as usize;
-        let cores = (w.cores as usize).min(cpus).min(bits);
+        let cores = usize::from(w.cores).min(cpus).min(bits);
         if cores == 0 {
             return Err(format!(
                 "weak mode needs at least one core, got {}",
@@ -69,10 +57,10 @@ impl Caps {
         if w.mem_mb == 0 {
             return Err("weak mode needs a memory cap above 0 MiB".to_string());
         }
-        if w.rate_pct == 0 || w.rate_pct > MAX_PCT {
+        let pct = u32::from(w.core_pct);
+        if pct == 0 || pct > MAX_PCT {
             return Err(format!(
-                "weak rate_pct must be 1 to {MAX_PCT} % of a core, got {}",
-                w.rate_pct
+                "weak core_pct must be 1 to {MAX_PCT} % of a core, got {pct}"
             ));
         }
         let affinity = if cores == bits {
@@ -85,7 +73,7 @@ impl Caps {
             .saturating_mul(MIB);
         Ok(Caps {
             affinity,
-            cpu_rate: rate_of(w.rate_pct, cores, cpus),
+            cpu_rate: rate_of(pct, cores, cpus),
             mem_bytes,
         })
     }

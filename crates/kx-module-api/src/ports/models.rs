@@ -4,11 +4,11 @@
 
 mod fetch;
 
-pub use fetch::{FetchAsk, FetchNote, FetchRun, PART_EXT};
+pub use fetch::{FetchAsk, FetchNote, FetchRun, PART_EXT, host_ok};
 
 use super::clip::SEPARATORS;
 use super::probe_ok;
-use super::sealed::RESERVED_NAMES;
+use super::sealed::names_device;
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
 use kx_ipc::FetchFault;
 use std::fmt;
@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 /// True for an absolute drive path (`probe_ok`) in UTF-8 within the frames' `MAX_PATH_BYTES`, with no control
-/// character, no part made only of dots and spaces (read as `.` or `..`), no device name (`reserved`) and no colon
-/// after the drive's, which names a stream.
+/// character, no part made only of dots and spaces (read as `.` or `..`), no device name (`names_device`) and no
+/// colon after the drive's, which names a stream.
 #[must_use]
 pub fn path_ok(path: &Path) -> bool {
     let fits = |text: &&str| text.len() <= kx_ipc::MAX_PATH_BYTES;
@@ -26,9 +26,9 @@ pub fn path_ok(path: &Path) -> bool {
         return false;
     };
     let bytes = text.as_bytes();
-    let dots = |part: &[u8]| !part.is_empty() && part.iter().all(|b| b" .".contains(b));
-    let mut parts = bytes.split(|b| SEPARATORS.contains(b));
-    let odd = parts.any(|part| dots(part) || reserved(part));
+    let dots = |part: &&str| !part.is_empty() && part.bytes().all(|b| b" .".contains(&b));
+    let mut parts = text.split(|c: char| u8::try_from(c).is_ok_and(|b| SEPARATORS.contains(&b)));
+    let odd = parts.any(|part| dots(&part) || names_device(part));
     let stream = bytes
         .get(DRIVE_LEN..)
         .is_some_and(|rest| rest.contains(&b':'));
@@ -38,16 +38,6 @@ pub fn path_ok(path: &Path) -> bool {
 
 /// Bytes in a drive's prefix, such as `C:`, whose colon is the only one a path may hold.
 const DRIVE_LEN: usize = 2;
-
-/// True for a part whose stem, before its first dot and without trailing spaces, is a device name in any case, as
-/// `NUL.gguf` or `com1`, which Windows opens as the device.
-fn reserved(part: &[u8]) -> bool {
-    let stem = part.split(|&b| b == b'.').next().unwrap_or_default();
-    let stem = stem.trim_ascii_end();
-    RESERVED_NAMES
-        .iter()
-        .any(|name| stem.eq_ignore_ascii_case(name.as_bytes()))
-}
 
 /// A fixed drive and its room.
 #[derive(Clone, Debug, PartialEq, Eq)]

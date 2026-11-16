@@ -1,9 +1,10 @@
 //! The devices (ADR-0044): the list the host gets, the fit check that refuses a card short of free memory before any
-//! load, and the processor's real cores, which `threads` 0 means and nothing passes (16 threads ran 3–8× slower than 8).
+//! load, and the threads a model runs on: the host's count of real cores (16 threads ran 3–8× slower than 8).
 
 use super::library::{Found, Place};
 use kx_ipc::{
-    Device, DeviceKind, MAX_DEVICES, MAX_NAME_BYTES, MAX_TAG_BYTES, Target, VoiceFault, VoiceNote,
+    Device, DeviceKind, MAX_DEVICES, MAX_NAME_BYTES, MAX_TAG_BYTES, THREADS, Target, VoiceFault,
+    VoiceNote,
 };
 use std::num::NonZero;
 use std::thread;
@@ -25,17 +26,17 @@ const LEVEL_MASK: u32 = 0xFF;
 /// The mask of EBX's count of logical processors at that level.
 const COUNT_MASK: u32 = 0xFFFF;
 
-/// The processor threads a model runs on: `asked`, or the real cores for 0, and never more than them.
+/// The processor threads a model runs on: the host's resolved `asked`, capped only at the `threads` setting's top
+/// (`THREADS`), as the host reads the real cores better; 0, which no resolving host sends, means our own `cores`.
 pub fn threads(asked: u8, cores: usize) -> usize {
-    let cores = cores.max(1);
-    match usize::from(asked) {
-        0 => cores,
-        n => n.min(cores),
+    match usize::from(asked.min(*THREADS.end())) {
+        0 => cores.max(1),
+        n => n,
     }
 }
 
-/// The processor's real cores: its logical processors less the extra threads each core runs. On a hybrid processor
-/// it is half its threads, which never counts a core's second thread; the host's exact count comes in P11 task 14.
+/// The processor's real cores, used only when the host sent no count: its logical processors less the extra threads
+/// each core runs. On a hybrid processor it is half its threads, which never counts a core's second thread.
 pub fn cores() -> usize {
     let logical = thread::available_parallelism().map_or(1, NonZero::get);
     (logical / per_core()).max(1)

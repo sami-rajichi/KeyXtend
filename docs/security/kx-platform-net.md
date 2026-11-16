@@ -1,7 +1,7 @@
 # Security note: kx-platform-net
 
 - **Owner:** product owner
-- **Last review:** 2026-11-14 (P11 task 13: the crate's first version, then a hard review against the code)
+- **Last review:** 2026-11-16 (P11 task 29: a listed `.` entry takes the hosts under one domain, for Hugging Face's regional CDN hosts); 2026-11-14 (P11 task 13: the crate's first version, then a hard review against the code)
 - **Status:** Draft
 - **Scope:** `crates/kx-platform-net`, used only by `keyxtend-worker`'s `fetch` job (ADR-0004, ADR-0043 decision 8). It holds the `Http` port with its address, redirect and range rules, the WinHTTP adapter (`WinHttp`) and a scripted fake behind the `fake` feature. The `keyxtend` app never depends on it; P11 task 22 adds it to tidy's `banned_network` list.
 
@@ -33,7 +33,7 @@ The host and the path go to WinHTTP apart (`WinHttpConnect`, `WinHttpOpenRequest
 
 ## Threats (STRIDE-lite)
 - **Spoofing:** a server posing as a listed host is stopped by TLS, which Windows checks against its trusted roots (`WINHTTP_FLAG_SECURE`, TLS 1.2 or 1.3, no certificate-error flags). A swapped file still fails the fetch job's SHA-256 check.
-- **Tampering:** a redirect to an unlisted host, or to `http://`, is refused before it is asked, at every hop of a chain (edge 22), and WinHTTP's own redirects are off (`WINHTTP_OPTION_REDIRECT_POLICY_NEVER`). A 206 that answers another range is refused, so no wrong bytes join the part.
+- **Tampering:** a redirect to an unlisted host, or to `http://`, is refused before it is asked, at every hop of a chain (edge 22). A listed host takes only itself; a `.` entry such as `.hf.co` takes the hosts under that domain, never the domain, a look-alike or a whole top-level domain (`kx_ipc::rules::covers`). WinHTTP's own redirects are off (`WINHTTP_OPTION_REDIRECT_POLICY_NEVER`). A 206 that answers another range is refused, so no wrong bytes join the part.
 - **Logging / repudiation:** the crate logs nothing; errors carry fixed reasons.
 - **Information disclosure:** no cookies, no credentials, no telemetry, no personal user agent. The loopback test checks that the first byte sent behind an HTTPS address is TLS's, never a plain GET.
 - **Denial of service:** every wait is capped at `wait_ms(stall_s)`: name, connection, send, head and each read. `wait_ms` holds `stall_s` within `kx_ipc::STALL_S`, so a 0, which WinHTTP reads as no limit, never reaches it. Redirects stop at `MAX_HOPS`; header reads stop at `MAX_URL_BYTES`; a relative redirect cannot grow the address past `MAX_URL_BYTES`. The body's total size is the fetch job's to cap.
@@ -55,4 +55,5 @@ The host and the path go to WinHTTP apart (`WinHttpConnect`, `WinHttpOpenRequest
 - WinHTTP's automatic sign-in policy is left as Windows sets it, which offers Windows credentials only to intranet hosts; the table lists only public hosts.
 - A pause or cancel that lands during a stalled read waits up to `stall_s` for that read to return: the body owns its handles and is read on one thread, so nothing closes them mid-read.
 - `Unlisted` reads as `FetchFault::Redirect` even for the table's first address; the table names its own hosts, so that only happens on a table mistake.
+- A `.hf.co` entry trusts every host under Hugging Face's hf.co, as its firewall guide advises, since the CDN host differs by region and changes; TLS and the SHA-256 still guard the file.
 - `get` is a provided method of `Http`, so an adapter could replace the rules; only this crate's `WinHttp` and `FakeHttp` implement it, and neither does.

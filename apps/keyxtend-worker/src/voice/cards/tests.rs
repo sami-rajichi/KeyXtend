@@ -22,12 +22,29 @@ fn card(id: &str, need_mb: u32) -> Target<'_> {
 }
 
 #[test]
-fn threads_zero_means_the_real_cores_and_more_is_capped_at_them() {
-    assert_eq!(threads(0, 8), 8);
+fn the_hosts_count_is_taken_past_the_workers_own_reading() {
     assert_eq!(threads(4, 8), 4);
     assert_eq!(threads(8, 8), 8);
-    assert_eq!(threads(16, 8), 8);
-    assert_eq!(threads(64, 6), 6);
+    let (host, hybrid_reading) = (14, 10);
+    assert_eq!(
+        threads(host, hybrid_reading),
+        14,
+        "a hybrid PC's real cores"
+    );
+    assert_eq!(threads(16, 8), 16);
+}
+
+#[test]
+fn only_the_settings_top_caps_the_hosts_count() {
+    let top = *kx_ipc::THREADS.end();
+    assert_eq!(threads(top, 8), usize::from(top));
+    assert_eq!(threads(u8::MAX, 8), usize::from(top));
+}
+
+#[test]
+fn zero_from_no_host_count_means_the_workers_own_reading() {
+    assert_eq!(threads(0, 8), 8);
+    assert_eq!(threads(0, 6), 6);
     assert_eq!(threads(0, 0), 1, "a count of none is one core");
 }
 

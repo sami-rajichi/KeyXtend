@@ -4,10 +4,10 @@
 use super::{arabic, button, buttons, english, heard, json, listening_bar, page};
 use crate::Rig;
 use crate::texts::{rig, switch};
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceText,
 };
+use kx_module_api::{Redacted, Zeroizing};
 use kx_ui::VoiceWake;
 use kx_ui::i18n::keys::{VOICE_MASK, WINDOW_VOICE};
 use serde_json::{Value, json};
@@ -85,7 +85,7 @@ fn transcribing_keeps_stop_in_its_place_dimmed() {
 #[test]
 fn a_text_shows_with_its_direction_then_copy_undo_and_close() {
     let text = VoiceText::Shown {
-        text: Redacted::new("مرحبا\u{202e}".to_owned()),
+        text: Redacted::new(Zeroizing::new("مرحبا\u{202e}".to_owned())),
         rtl: true,
         arabic: true,
     };

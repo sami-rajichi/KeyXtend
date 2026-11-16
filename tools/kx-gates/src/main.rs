@@ -163,6 +163,7 @@ mod typebox;
 mod uilook;
 mod usage;
 mod walk;
+mod weakcfg;
 mod weakjob;
 mod win;
 mod winclip;

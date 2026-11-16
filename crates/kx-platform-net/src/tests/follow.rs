@@ -242,3 +242,28 @@ fn hosts_from_a_read_ask_are_taken_as_they_are() {
     };
     assert!(http.get(&ask).is_ok());
 }
+
+#[test]
+fn a_redirect_under_an_under_entry_is_followed_and_its_bare_domain_is_not() {
+    let hosts = [
+        Cow::Borrowed("models.example"),
+        Cow::Borrowed(".cdn.example"),
+    ];
+    let get = Get {
+        hosts: &hosts,
+        ..ask(0)
+    };
+    let edge = "https://eu.edge.cdn.example/m.bin";
+    let http = FakeHttp::new([Act::moved(edge), Act::whole(FILE)]);
+    assert_eq!(
+        http.get(&get).map(|g| g.url.to_string()).ok(),
+        Some(edge.to_owned())
+    );
+    let http = FakeHttp::new([Act::moved("https://cdn.example/m.bin"), Act::whole(FILE)]);
+    assert_eq!(http.get(&get).err(), Some(NetError::Unlisted));
+    assert_eq!(
+        http.seen(),
+        [seen(URL, 0)],
+        "the bare domain is never asked"
+    );
+}

@@ -27,6 +27,7 @@ use crate::p9cfg::{self, G23};
 use crate::p10cfg::{self, G19Product};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
+use crate::weakcfg::Weak;
 
 /// All gate settings.
 #[derive(Debug, Clone, Deserialize)]
@@ -99,6 +100,8 @@ pub struct GatesConfig {
     pub capture: Capture,
     /// G8 settings.
     pub g8: G8,
+    /// The roadmap's weak PC, which G8's weak runs and G22's bench both copy.
+    pub weak: Weak,
     /// G8's hook part, on the test build.
     pub g8_hook: G8Hook,
     /// G9 settings.
@@ -247,6 +250,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;
+    config.weak.check()?;
     config.mouse_guard.check()?;
     config.gate_input.check()?;
     config.g5.check()?;

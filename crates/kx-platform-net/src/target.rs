@@ -92,12 +92,12 @@ impl Target {
         }
     }
 
-    /// Refuses this address unless `hosts` names its host.
+    /// Refuses this address unless `hosts` takes its host: by name, or under a `rules::UNDER` entry's site domain.
     ///
     /// # Errors
-    /// `Unlisted` when no listed host is this one.
+    /// `Unlisted` when no listed host takes this one.
     pub fn listed(&self, hosts: &[Cow<'_, str>]) -> Result<(), NetError> {
-        if hosts.iter().any(|h| *h == self.host) {
+        if hosts.iter().any(|h| rules::covers(h, &self.host)) {
             Ok(())
         } else {
             Err(NetError::Unlisted)

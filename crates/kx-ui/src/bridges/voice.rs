@@ -6,6 +6,7 @@ use super::{hub, keyboard_box, qs};
 use crate::hub::{Hub, NULL, VoiceWake, json};
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
+use kx_module_api::Zeroizing;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -97,7 +98,7 @@ impl cxx_qt::Initialize for qobject::Voice {
 
 impl qobject::Voice {
     fn view(&self) -> QString {
-        qs(&self.with(NULL.to_owned(), Hub::voice_json))
+        qs(&self.with(Zeroizing::new(NULL.to_owned()), Hub::voice_json))
     }
 
     fn level(&self) -> f64 {

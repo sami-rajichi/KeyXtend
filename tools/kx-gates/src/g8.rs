@@ -39,13 +39,13 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
-/// In `weak` mode, the job from `[g8.weak]` and the CPU time it allows in whole cores; else neither.
+/// In `weak` mode, the job from `[weak]` and the CPU time it allows in whole cores; else neither.
 pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
     if !weak {
         return Ok((None, None));
     }
     let cpus = std::thread::available_parallelism().map_or(1, usize::from);
-    let caps = Caps::from(&ctx.cfg.g8.weak, cpus)?;
+    let caps = Caps::from(ctx.cfg.weak, cpus)?;
     Ok((Some(Job::new(Some(&caps))?), Some(caps.cpu_cores(cpus))))
 }
 

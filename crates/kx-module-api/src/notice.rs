@@ -161,8 +161,10 @@ pub mod keys {
     pub const CLIP_DAMAGED: &str = "notice.clip-damaged";
     /// The clipboard history could not be unlocked, so copies are not kept this run.
     pub const CLIP_LOCKED: &str = "notice.clip-locked";
-    /// Part of the dictation history was damaged, so those texts were left out.
-    pub const VOICE_DAMAGED: &str = "notice.voice-damaged";
+    /// Part of the dictation history was damaged, so those texts and their recordings were removed.
+    pub const VOICE_TEXTS_DAMAGED: &str = "notice.voice-texts-damaged";
+    /// Part of the dictation measurements was damaged, so those card checks, comparisons or counts start over.
+    pub const VOICE_NUMBERS_DAMAGED: &str = "notice.voice-numbers-damaged";
     /// The dictation history could not be opened, locked or saved by a newer version, so texts are not kept this run.
     pub const VOICE_LOCKED: &str = "notice.voice-locked";
     /// A change to the dictation history could not be saved; it is tried again with the next one.
@@ -187,7 +189,7 @@ pub mod keys {
     pub const TRANSLATE_FAILED: &str = "notice.translate-failed";
 
     /// Every notice key, so the UI can check that each has its text.
-    pub const ALL_KEYS: [&str; 36] = [
+    pub const ALL_KEYS: [&str; 37] = [
         SETTINGS_RESET,
         SETTINGS_RESTORED,
         SETTINGS_DEFAULTS,
@@ -212,7 +214,8 @@ pub mod keys {
         WORDS_LOCKED,
         CLIP_DAMAGED,
         CLIP_LOCKED,
-        VOICE_DAMAGED,
+        VOICE_TEXTS_DAMAGED,
+        VOICE_NUMBERS_DAMAGED,
         VOICE_LOCKED,
         VOICE_UNSAVED,
         HIDDEN_RUN,

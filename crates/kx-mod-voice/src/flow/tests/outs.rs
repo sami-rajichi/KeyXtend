@@ -49,7 +49,7 @@ pub(super) fn note(bar: &VoiceBar) -> Option<(BarHint, Option<BarButton>)> {
 pub(super) fn text(bar: &VoiceBar) -> Option<String> {
     match bar {
         VoiceBar::Text(t) => match &t.text {
-            VoiceText::Shown { text, .. } => Some(text.expose().clone()),
+            VoiceText::Shown { text, .. } => Some(text.expose().to_string()),
             VoiceText::Masked => None,
         },
         _ => None,

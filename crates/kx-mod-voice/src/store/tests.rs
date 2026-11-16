@@ -100,7 +100,7 @@ fn texts_pins_and_recordings_come_back_after_a_reopen() {
     let back = open(&shelf, MAX_BLOB_BYTES);
     assert_eq!(back.history.entries(), o.history.entries());
     assert!(back.history.next() >= o.history.next());
-    assert_eq!(back.damaged, 0);
+    assert_eq!(back.damaged, Damage::default());
     let voiced = back.history.entries().iter().find(|e| e.sound.is_some());
     let sound = back.store.sound(voiced.unwrap()).unwrap().unwrap();
     assert_eq!(joined(&sound), joined(&pieces(5_000, 1_000)));
@@ -134,7 +134,13 @@ fn a_damaged_text_goes_with_its_recording_and_is_counted() {
     shelf.plant("texts", "5", b"sealed badly");
     shelf.damage("texts", "5");
     let back = open(&shelf, MAX_BLOB_BYTES);
-    assert_eq!(back.damaged, 2);
+    assert_eq!(
+        back.damaged,
+        Damage {
+            texts: 2,
+            numbers: 0
+        }
+    );
     assert_eq!(back.history.len(), 1);
     let kept = o.history.entries()[0].id.to_string();
     assert_eq!(shelf.names_in("texts"), [kept]);

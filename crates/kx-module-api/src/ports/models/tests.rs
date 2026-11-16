@@ -32,7 +32,7 @@ fn fetch() -> FetchAsk {
     FetchAsk {
         job: job(),
         links: vec![link],
-        hosts: vec!["huggingface.co".into(), "cdn-lfs.hf.co".into()],
+        hosts: vec!["huggingface.co".into(), ".hf.co".into()],
         file: Redacted::new(PathBuf::from(format!(r"D:\{SECRET}\x.gguf"))),
         bytes: 776_000_000,
         print: Fingerprint::from_hex(HEX).unwrap(),
@@ -111,6 +111,10 @@ fn a_path_with_a_control_character_or_a_device_name_is_refused() {
         r"D:\m\aux",
         r"D:\m\con.tar.gz",
         r"D:\m\prn .gguf",
+        r"D:\m\COM¹.gguf",
+        r"D:\Lpt³\x.gguf",
+        r"D:\m\CONIN$",
+        r"D:\m\conout$.gguf",
     ];
     for path in bad {
         assert!(!path_ok(Path::new(path)), "{path:?}");
@@ -189,6 +193,13 @@ fn a_fetch_ask_without_an_address_a_host_a_size_or_a_good_file_is_refused() {
     assert_eq!(refused(|a| a.hosts.clear()), Some("hosts"));
     assert_eq!(refused(|a| a.hosts.push("bad host".into())), Some("hosts"));
     assert_eq!(refused(|a| a.hosts.push(String::new())), Some("hosts"));
+    for wide in [".co", ".", ".hf..co"] {
+        assert_eq!(
+            refused(|a| a.hosts.push(wide.into())),
+            Some("hosts"),
+            "{wide}"
+        );
+    }
     assert_eq!(refused(|a| a.bytes = 0), Some("bytes"));
     let relative = Redacted::new(PathBuf::from("x.gguf"));
     assert_eq!(refused(|a| a.file = relative), Some("file"));

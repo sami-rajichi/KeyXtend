@@ -1,6 +1,7 @@
 //! The fetch frames, both directions: the wire layout, round trips, the largest ask, the `.part` name, each job
 //! reading only its own kinds, and `Debug` that shows no path. Refusals and properties have their own files.
 
+mod hosts;
 mod props;
 mod refuse;
 

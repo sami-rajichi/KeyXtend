@@ -65,7 +65,7 @@ impl<'a> Run<'a> {
         let row = table
             .default_for(&g.lang)
             .ok_or("g22_staged.lang has no default model")?;
-        let model = PathBuf::from(&b.models_dir).join(&row.file);
+        let model = PathBuf::from(b.models()?).join(&row.file);
         if !model.is_file() {
             return Err(format!("{} is not in g22_bench.models_dir", row.file));
         }

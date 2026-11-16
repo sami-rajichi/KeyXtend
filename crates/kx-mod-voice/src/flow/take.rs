@@ -177,10 +177,10 @@ pub(crate) fn suffixed(text: &str, suffix: &str) -> Secret {
     Redacted::new(out)
 }
 
-/// `text` as the bar shows it, with its way and font.
+/// `text` as the bar shows it, with its way and font, in a copy wiped on drop.
 pub(super) fn shown(text: &str) -> VoiceText {
     VoiceText::Shown {
-        text: Redacted::new(text.to_owned()),
+        text: secret(text),
         rtl: is_rtl(text),
         arabic: is_arabic(text),
     }

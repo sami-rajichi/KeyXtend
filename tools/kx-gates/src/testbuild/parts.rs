@@ -144,7 +144,7 @@ mod tests {
     }
 
     /// Where the test build sits, as `open` names it.
-    const TEST_BUILD: &str = r"D:\Projects\KeyXtend\target\gate-input\release\keyxtend.exe";
+    const TEST_BUILD: &str = r"E:\src\keyxtend\target\gate-input\release\keyxtend.exe";
     /// Where the owner's copy runs from.
     const OWNERS: &str = r"C:\Program Files\KeyXtend-dev\keyxtend\keyxtend.exe";
 

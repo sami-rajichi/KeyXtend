@@ -1,9 +1,9 @@
-//! What the dictation bar shows (design "The bar"): its place, its state, its hint and its text. Text stays redacted,
-//! and a password box's text never reaches the ui.
+//! What the dictation bar shows (design "The bar"): its place, its state, its hint and its text. Text stays redacted
+//! and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
 use super::panel::VoicePanel;
-use crate::Redacted;
+use crate::Secret;
 use serde::{Deserialize, Serialize};
 
 listed! {
@@ -38,8 +38,8 @@ pub struct VoiceLang {
 pub enum VoiceText {
     /// The text typed or kept; the bar shows its first lines, with Copy.
     Shown {
-        /// The text.
-        text: Redacted<String>,
+        /// The text, wiped when the last view holding it drops.
+        text: Secret,
         /// It reads right to left.
         rtl: bool,
         /// It needs the Arabic font.

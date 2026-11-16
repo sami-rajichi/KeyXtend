@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use kx_module_api::is_hidden;
-use kx_module_api::ports::{Fingerprint, RESERVED_NAMES};
+use kx_module_api::ports::{Fingerprint, names_device};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -203,14 +203,12 @@ fn has_ext(name: &str, exts: &[String]) -> bool {
 }
 
 /// True for a model file's name in a folder: a model extension, no separator, colon or hidden mark, and no device
-/// name as its stem (`RESERVED_NAMES`), which the system would open as the device.
+/// name as its stem (`names_device`), which the system would open as the device.
 pub(crate) fn file_ok(name: &str, exts: &[String]) -> bool {
-    let stem = name.split('.').next().unwrap_or_default().trim_end();
-    let device = RESERVED_NAMES.iter().any(|d| stem.eq_ignore_ascii_case(d));
     let odd = name
         .chars()
         .any(|c| is_hidden(c) || PATH_MARKS.contains(&c));
-    has_ext(name, exts) && !odd && !device
+    has_ext(name, exts) && !odd && !names_device(name)
 }
 
 #[cfg(test)]

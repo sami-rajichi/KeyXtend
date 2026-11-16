@@ -15,16 +15,16 @@ weak_worker = "../../target/p11-gates/weak/keyxtend-worker.exe"
 # What every processor part of the engine is named from, and the ones a processor without AVX loads.
 part_prefix = "ggml-cpu-"
 weak_parts = ["ggml-cpu-x64.dll", "ggml-cpu-sse42.dll"]
-# The folder holding the model files: this PC's own, an absolute drive path.
-models_dir = 'D:\dev\models'
+# The folder holding the model files, `models_dir`, is this PC's own absolute drive path, so it is set only in the
+# git-ignored kx-gates.local.toml beside this file; the bench, G22 on the product and the staged edges refuse to run
+# without it.
+
 # The shipped voice folder; the detector and every clip are plain names in it, so no other sound is ever read.
 voice_dir = "../../assets/voice"
 detector = "silero-vad-v6.2-F32.gguf"
-# Weak mode: the roadmap's weak PC, as this many cores each at this percent of one here (the job's hard cap and the
-# host's threads), with its 4 GB. A default the product would mark Not for this PC on that memory is not timed there.
-weak_cores = 2
-weak_core_pct = 30
-weak_mb = 4096
+# Weak mode is [weak] in kx-gates.toml: its cores at its speed (the job's hard cap and the host's threads) and its
+# memory. A default the product would mark Not for this PC on that memory is not timed there.
+
 # Each take listens this long past its clip's end, in ms, from the moment the microphone opened, so the cut hears
 # silence after the last word; at least [voice] pad_ms (checked).
 tail_ms = 1000

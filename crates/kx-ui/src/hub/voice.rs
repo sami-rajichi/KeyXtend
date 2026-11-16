@@ -14,7 +14,7 @@ mod sheets;
 mod view;
 
 use super::unread::Unread;
-use super::{Hub, NULL, bus, json};
+use super::{Hub, NULL, bus, wiped};
 use crate::i18n::keys::VOICE_READ_TEXT;
 use crate::ui_module::MANIFEST;
 use crate::{I18n, spoken};
@@ -23,7 +23,7 @@ use kx_module_api::ports::{
     BarPlace, CompareSheet, LEVEL_FULL, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceLevel,
     VoiceOpen, VoicePage, VoiceSheet, VoiceView,
 };
-use kx_module_api::{Bus, Event, EventError, Redacted, Subscription};
+use kx_module_api::{Bus, Event, EventError, Redacted, Subscription, Zeroizing};
 use kx_theme::sounds::Event as Sound;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -79,15 +79,15 @@ impl Hub {
     }
 
     /// The bar and the panel as JSON for QML, every word in the keyboard's language, or `null` before any view;
-    /// reading it lets the next view wake again. It holds the dictated text, so never log it.
+    /// reading it lets the next view wake again. It holds the dictated text, so it is wiped on drop; never log it.
     #[must_use]
-    pub fn voice_json(&self) -> String {
+    pub fn voice_json(&self) -> Zeroizing<String> {
         self.voice.view.read();
         let Some(page) = self.voice().page.clone() else {
-            return NULL.to_owned();
+            return Zeroizing::new(NULL.to_owned());
         };
         let read = reads(&page).then(|| self.set_text()).flatten();
-        json(&view::of(&page, &self.i18n(), read.as_deref()))
+        wiped::json(&view::of(&page, &self.i18n(), read.as_deref()))
     }
 
     /// The sound level while the bar listens, 0 to 1, else 0; reading it lets the next level wake again.

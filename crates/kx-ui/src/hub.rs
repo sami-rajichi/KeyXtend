@@ -22,6 +22,7 @@ mod timings;
 mod tray;
 mod unread;
 mod voice;
+mod wiped;
 mod words;
 
 pub use app::Mode;

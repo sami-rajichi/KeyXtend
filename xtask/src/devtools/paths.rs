@@ -2,14 +2,12 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use kx_module_api::ports::RESERVED_NAMES;
+use kx_module_api::ports::names_device;
 
 use super::DevError;
 
 /// Characters Windows forbids in a folder name, both separators, and PowerShell wildcards.
 const FORBIDDEN: &str = "\\/:*?\"<>|[]`";
-/// The superscript digits Windows also takes after a numbered device name (`COM¹`), each with its plain digit.
-const SUPERSCRIPTS: [(char, char); 3] = [('¹', '1'), ('²', '2'), ('³', '3')];
 /// Separator of the relative paths in the settings and in `words.toml`.
 pub(crate) const SEP: char = '/';
 /// Bytes in one MB for the size limits: 10⁶, as spec §10 and ADR-0012 count.
@@ -43,21 +41,7 @@ pub(crate) fn is_plain_name(name: &str) -> bool {
         && !name
             .chars()
             .any(|c| c.is_control() || FORBIDDEN.contains(c))
-        && !is_device(name)
-}
-
-/// True if `name`, before its first dot, is one of `RESERVED_NAMES` in any letter case, a superscript digit read as
-/// its plain one.
-fn is_device(name: &str) -> bool {
-    let stem = name.split('.').next().unwrap_or_default();
-    let plain = |c: char| {
-        SUPERSCRIPTS
-            .iter()
-            .find(|(s, _)| *s == c)
-            .map_or(c, |(_, d)| *d)
-    };
-    let stem: String = stem.chars().map(plain).collect();
-    RESERVED_NAMES.iter().any(|r| r.eq_ignore_ascii_case(&stem))
+        && !names_device(name)
 }
 
 /// True if `rel` is a relative, `/`-separated path of plain names.

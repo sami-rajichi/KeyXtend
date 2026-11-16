@@ -1,6 +1,6 @@
 //! What a field's content may hold, checked by both sides after its length: a number within its range, a short ASCII
-//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag and
-//! host rules are public, so the ports refuse what the frames refuse.
+//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag, host
+//! and host-list rules are public, so the ports and the fetch refuse what the frames refuse.
 
 use crate::error::IpcError;
 use std::ops::RangeInclusive;
@@ -40,6 +40,33 @@ pub fn tag(text: &str) -> Result<(), IpcError> {
 pub fn host(text: &str) -> Result<(), IpcError> {
     let plain = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-';
     ok_if(text.bytes().all(plain))
+}
+
+/// Starts a listed host that takes each host under it, as `.hf.co` takes `us.aws.cdn.hf.co`.
+pub const UNDER: char = '.';
+/// The fewest names after `UNDER`, so an entry is one site's domain and never a whole top-level one.
+pub const UNDER_NAMES: usize = 2;
+
+/// Refuses a download's listed host unless it is a plain host, or `UNDER` and a domain of `UNDER_NAMES` names or more.
+///
+/// # Errors
+/// `BadField` for an empty entry, a byte `host` refuses, an empty name, or too few names after `UNDER`.
+pub fn listed(entry: &str) -> Result<(), IpcError> {
+    host(entry)?;
+    let (domain, least) = match entry.strip_prefix(UNDER) {
+        Some(domain) => (domain, UNDER_NAMES),
+        None => (entry, 1),
+    };
+    let names = domain.split(UNDER);
+    ok_if(names.clone().all(|n| !n.is_empty()) && names.count() >= least)
+}
+
+/// True when the listed `entry` takes the plain `host`: the same host, or one under a good `UNDER` entry's domain.
+#[must_use]
+pub fn covers(entry: &str, host: &str) -> bool {
+    let plain = !host.starts_with(UNDER) && listed(host).is_ok();
+    let under = entry.starts_with(UNDER) && listed(entry).is_ok();
+    plain && (entry == host || (under && host.len() > entry.len() && host.ends_with(entry)))
 }
 
 /// Refuses a path holding a NUL, which ends a path early for the OS.

@@ -1,6 +1,6 @@
-//! G22's bench settings (`[g22_bench]` in `kx-gates-p11.toml`): the gate worker and its weak copy, the models folder,
-//! the shipped voice folder with its detector and clips, weak mode and the pass rule. The dictation's numbers, the
-//! words a text may differ by and each language's default model come from kx-mod-voice, so they are written once.
+//! G22's bench settings (`[g22_bench]` in `kx-gates-p11.toml`): the gate worker and its weak copy, the models folder
+//! from this PC's local file, the shipped voice folder with its detector and clips, and the pass rule; weak mode is
+//! `[weak]`. The dictation's numbers, the words a text may differ by and each default come from kx-mod-voice.
 #![cfg(windows)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -9,14 +9,12 @@ use std::path::Path;
 use kx_mod_voice::VoiceSettings;
 use kx_mod_voice::models::{Table, table};
 use kx_mod_voice::score::{self, Wrong};
-use kx_module_api::ports::{SpeechAsk, path_ok};
-use kx_platform_windows::worker::{CpuCap, WORKER_EXE};
+use kx_module_api::ports::path_ok;
+use kx_platform_windows::worker::WORKER_EXE;
 use serde::Deserialize;
 
 use super::plain_name;
-
-/// One core at its full speed, in percent; weak mode's speed is a share of it.
-const FULL_PCT: u8 = CpuCap::FULL_PCT;
+use crate::cfgfile::{FILE, LOCAL_FILE};
 
 /// True when `name` is one of the engine's processor parts: it starts with `prefix`, in any case.
 pub fn is_part(name: &str, prefix: &str) -> bool {
@@ -64,18 +62,13 @@ pub struct G22Bench {
     pub part_prefix: String,
     /// The processor parts a weak PC's processor loads, which has no AVX.
     pub weak_parts: Vec<String>,
-    /// The folder holding the model files, an absolute drive path.
+    /// The folder holding the model files, an absolute drive path that only `LOCAL_FILE` sets; empty while unset.
+    #[serde(default)]
     pub models_dir: String,
     /// The shipped voice folder, relative to the settings folder; the detector and clips are plain names in it.
     pub voice_dir: String,
     /// The shipped voice detector's plain name.
     pub detector: String,
-    /// Weak mode's cores, which the host counts and the job's cap allows.
-    pub weak_cores: u8,
-    /// Weak mode's speed of each core, in percent.
-    pub weak_core_pct: u8,
-    /// Weak mode's memory in MB, which the product's fit rule reads.
-    pub weak_mb: u32,
     /// How long each take listens past its clip's end, in ms.
     pub tail_ms: u64,
     /// The highest warm wait over clip length that passes in normal mode.
@@ -89,17 +82,30 @@ pub struct G22Bench {
 }
 
 impl G22Bench {
-    /// Refuses settings the bench could not run or judge by, naming the first bad key.
+    /// Refuses settings the bench could not run or judge by, naming the first bad key; an unset models folder loads,
+    /// so every other gate runs, and only the runs that need it refuse it (`models`).
     pub fn check(&self) -> Result<(), String> {
         let settings =
             VoiceSettings::from_defaults().map_err(|e| format!("[voice] defaults: {e}"))?;
         let table = table().map_err(|e| format!("the models table: {e}"))?;
         self.check_workers()?;
         self.check_files()?;
-        self.check_weak(&settings)?;
         self.check_rule(&settings)?;
         self.check_clips(table)?;
         self.check_asks(&settings, table)
+    }
+
+    /// The models folder.
+    ///
+    /// # Errors
+    /// While it is unset, naming the local file that sets it.
+    pub fn models(&self) -> Result<&str, String> {
+        if self.models_dir.is_empty() {
+            return Err(format!(
+                "set g22_bench.models_dir to this PC's models folder in {LOCAL_FILE} beside {FILE}"
+            ));
+        }
+        Ok(&self.models_dir)
     }
 
     /// Both workers, in folders of their own, and weak mode's processor parts.
@@ -126,9 +132,10 @@ impl G22Bench {
         Ok(())
     }
 
-    /// The models folder and the shipped voice files.
+    /// The models folder, once set, and the shipped voice files.
     fn check_files(&self) -> Result<(), String> {
-        if !path_ok(Path::new(&self.models_dir)) {
+        let set = !self.models_dir.is_empty();
+        if set && !path_ok(Path::new(&self.models_dir)) {
             return Err("g22_bench.models_dir must be an absolute drive path".into());
         }
         if self.voice_dir.is_empty() || !Path::new(&self.voice_dir).is_relative() {
@@ -136,20 +143,6 @@ impl G22Bench {
         }
         if !plain_name(&self.detector) {
             return Err("g22_bench.detector must be a plain name in voice_dir".into());
-        }
-        Ok(())
-    }
-
-    /// Weak mode's cores, speed and memory.
-    fn check_weak(&self, settings: &VoiceSettings) -> Result<(), String> {
-        if !(1..=*SpeechAsk::THREADS.end()).contains(&self.weak_cores) {
-            return Err("g22_bench.weak_cores must be a core count the host takes".into());
-        }
-        if !(1..=FULL_PCT).contains(&self.weak_core_pct) {
-            return Err(format!("g22_bench.weak_core_pct must be 1 to {FULL_PCT}"));
-        }
-        if self.weak_mb <= settings.job_mb {
-            return Err("g22_bench.weak_mb must be above [voice] job_mb".into());
         }
         Ok(())
     }
@@ -204,9 +197,12 @@ impl G22Bench {
         Ok(())
     }
 
-    /// Each language's default model, and the product's ask for it, which the speech port takes.
+    /// Each language's default model, and the product's ask for it in the models folder once set, which the speech
+    /// port takes.
     fn check_asks(&self, settings: &VoiceSettings, table: &Table) -> Result<(), String> {
-        let dir = Path::new(&self.models_dir);
+        let Ok(dir) = self.models().map(Path::new) else {
+            return Ok(());
+        };
         for lang in self.clips.keys() {
             let model = table.default_for(lang).and_then(|r| r.model(dir, lang));
             let model = model.ok_or_else(|| format!("no default model knows {lang}"))?;

@@ -19,10 +19,13 @@ fn the_shipped_bench_passes_its_check() {
     assert_eq!(shipped().check(), Ok(()));
 }
 
+/// A models folder for the tests, an example drive path; this PC's own is set in the local file.
+const MODELS: &str = r"E:\models";
+
 #[test]
 fn a_bad_value_is_refused() {
     let good = shipped();
-    let bad: [fn(&mut G22Bench); 24] = [
+    let bad: [fn(&mut G22Bench); 19] = [
         |g| g.worker = "../../target/p11-gates/release/keyxtend.exe".into(),
         |g| g.weak_worker = "../../target/p11-gates/weak/keyxtend.exe".into(),
         |g| g.weak_worker = g.worker.clone(),
@@ -32,16 +35,11 @@ fn a_bad_value_is_refused() {
         |g| g.weak_parts.push(g.part_prefix.clone()),
         |g| g.weak_parts.push(format!("..\\{}x.dll", g.part_prefix)),
         |g| g.models_dir = "models".into(),
-        |g| g.models_dir = r"D:\dev\..\models".into(),
+        |g| g.models_dir = r"E:\models\..\other".into(),
         |g| g.voice_dir.clear(),
-        |g| g.voice_dir = r"D:\dev\tmp".into(),
+        |g| g.voice_dir = r"E:\clips".into(),
         |g| g.detector.clear(),
         |g| g.detector = r"..\silero.gguf".into(),
-        |g| g.weak_cores = 0,
-        |g| g.weak_cores = u8::MAX,
-        |g| g.weak_core_pct = 0,
-        |g| g.weak_core_pct = FULL_PCT + 1,
-        |g| g.weak_mb = 0,
         |g| g.tail_ms = 0,
         |g| g.max_rtf = 0.0,
         |g| g.max_weak_rtf = f64::NAN,
@@ -53,6 +51,26 @@ fn a_bad_value_is_refused() {
         spoil(&mut g);
         assert!(g.check().is_err(), "case {i} passed");
     }
+}
+
+#[test]
+fn the_models_folder_comes_unset_and_once_set_is_a_drive_path_whose_asks_pass() {
+    let mut g = shipped();
+    g.models_dir.clear();
+    assert_eq!(g.check(), Ok(()), "unset loads, so every other gate runs");
+    let unset = g.models().expect_err("no run without it");
+    assert!(unset.contains(LOCAL_FILE), "{unset}");
+    g.models_dir = MODELS.into();
+    assert_eq!(g.check(), Ok(()));
+    assert_eq!(g.models(), Ok(MODELS));
+}
+
+#[test]
+fn the_tracked_settings_name_no_models_folder() {
+    let p11: toml::Table = include_str!("../../../kx-gates-p11.toml")
+        .parse()
+        .expect("the P11 file parses");
+    assert!(p11["g22_bench"].get("models_dir").is_none());
 }
 
 #[test]
@@ -90,7 +108,7 @@ fn each_clip_is_a_plain_file_with_words_and_other_readings_unlike_it() {
         (|c| c.sentence = " . ".into(), "a sentence of no words"),
         (|c| c.file.clear(), "a clip with no file"),
         (
-            |c| c.file = r"D:\dev\tmp\kx-p11-trial\owner-en.wav".into(),
+            |c| c.file = r"E:\clips\speech-en.wav".into(),
             "a clip outside the voice folder",
         ),
         (

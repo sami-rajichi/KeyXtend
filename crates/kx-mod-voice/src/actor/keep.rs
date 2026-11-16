@@ -51,7 +51,7 @@ impl Keep {
 }
 
 impl Actor {
-    /// Opens the store and takes what it holds; a newer or locked one keeps nothing, and damage is told.
+    /// Opens the store and takes what it holds; a newer or locked one keeps nothing, and damage is told by kind.
     pub(super) fn open_store(&mut self) {
         match Store::open(Arc::clone(&self.ports.shelf), MAX_BLOB_BYTES) {
             Ok(opened) => {
@@ -60,8 +60,11 @@ impl Actor {
                 self.held.counts = opened.counts;
                 self.held.checks = opened.checks;
                 self.held.scores = opened.scores;
-                if opened.damaged > 0 {
-                    self.say(keys::VOICE_DAMAGED);
+                if opened.damaged.texts > 0 {
+                    self.say(keys::VOICE_TEXTS_DAMAGED);
+                }
+                if opened.damaged.numbers > 0 {
+                    self.say(keys::VOICE_NUMBERS_DAMAGED);
                 }
             }
             Err(error) => {

@@ -10,8 +10,15 @@ use kx_module_api::ports::{BlobName, MAX_BLOB_BYTES, SealedError, SealedShelf};
 
 use super::codec::Bad;
 use super::names::{CHECKS, COUNTS, NUMBERS, SCORES, SOUNDS, TEXTS, name, sound_of, text_id};
-use super::{Opened, Store, StoreError, numbers, text};
+use super::{Damage, Opened, Store, StoreError, numbers, text};
 use crate::history::{Edit, Entry, History, Sound};
+
+/// The kind of blob a read was for, so its damage is told by name.
+#[derive(Copy, Clone)]
+enum Kind {
+    Text,
+    Number,
+}
 
 /// What the reads found, before anything changes.
 #[derive(Default)]
@@ -19,8 +26,8 @@ struct Found {
     entries: Vec<Entry>,
     /// Past every id a text or a recording's blob names, so none is used again.
     next: u64,
-    /// Blobs that would not read.
-    damaged: usize,
+    /// Blobs that would not read, by kind.
+    damaged: Damage,
     /// Blobs to remove, by folder and name.
     trash: Vec<(BlobName, BlobName)>,
     /// Texts to write again without their recording.
@@ -32,9 +39,13 @@ impl Found {
         self.next = self.next.max(id.saturating_add(1));
     }
 
-    /// Notes `blob` in `folder` as damaged, to remove.
-    fn damage(&mut self, folder: &BlobName, blob: &BlobName) {
-        self.damaged += 1;
+    /// Notes `blob` of `kind` in `folder` as damaged, to remove.
+    fn damage(&mut self, kind: Kind, folder: &BlobName, blob: &BlobName) {
+        let count = match kind {
+            Kind::Text => &mut self.damaged.texts,
+            Kind::Number => &mut self.damaged.numbers,
+        };
+        *count += 1;
         self.trash.push((folder.clone(), blob.clone()));
     }
 }
@@ -78,13 +89,13 @@ impl Store {
                 continue;
             };
             found.seen(id);
-            let Some(bytes) = self.load(&folder, &blob, found)? else {
+            let Some(bytes) = self.load(Kind::Text, &folder, &blob, found)? else {
                 continue;
             };
             match text::decode(&bytes) {
                 Ok(entry) if entry.id == id => found.entries.push(entry),
                 Err(Bad::Newer) => return Err(StoreError::Newer),
-                _ => found.damage(&folder, &blob),
+                _ => found.damage(Kind::Text, &folder, &blob),
             }
         }
         Ok(())
@@ -127,22 +138,24 @@ impl Store {
         found: &mut Found,
     ) -> Result<T, StoreError> {
         let (folder, blob) = (name(NUMBERS)?, name(blob)?);
-        let Some(bytes) = self.load(&folder, &blob, found)? else {
+        let Some(bytes) = self.load(Kind::Number, &folder, &blob, found)? else {
             return Ok(T::default());
         };
         match decode(&bytes) {
             Ok(value) => Ok(value),
             Err(Bad::Newer) => Err(StoreError::Newer),
             Err(Bad::Damaged) => {
-                found.damage(&folder, &blob);
+                found.damage(Kind::Number, &folder, &blob);
                 Ok(T::default())
             }
         }
     }
 
-    /// The opened bytes of `blob`, in a wiped buffer; `None` when it is gone or would not open, which is noted.
+    /// The opened bytes of `blob`, a `kind`, in a wiped buffer; `None` when it is gone or would not open, which is
+    /// noted.
     fn load(
         &self,
+        kind: Kind,
         folder: &BlobName,
         blob: &BlobName,
         found: &mut Found,
@@ -150,7 +163,7 @@ impl Store {
         match self.shelf.load(folder, blob) {
             Ok(bytes) => Ok(bytes.map(Zeroizing::new)),
             Err(SealedError::Damaged) => {
-                found.damage(folder, blob);
+                found.damage(kind, folder, blob);
                 Ok(None)
             }
             Err(error) => Err(error.into()),

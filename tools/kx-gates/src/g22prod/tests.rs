@@ -18,7 +18,8 @@ use crate::config::load;
 
 #[test]
 fn the_copy_reads_the_bench_models_on_the_runs_device_and_keeps_every_other_default() {
-    let c = load().expect("the settings load");
+    let mut c = load().expect("the settings load");
+    c.g22_bench.models_dir = r"E:\models".into();
     let t = table(&c.g22_product, &c.g22_bench).expect("a table");
     let mut section = t[kx_mod_voice::ID.as_str()]
         .as_table()
@@ -35,6 +36,11 @@ fn the_copy_reads_the_bench_models_on_the_runs_device_and_keeps_every_other_defa
     (want.models_dir, want.device) = (c.g22_bench.models_dir.clone(), c.g22_product.device.clone());
     assert_eq!(got, want);
     assert_eq!(t.len(), 1, "only [voice]");
+    c.g22_bench.models_dir.clear();
+    assert!(
+        table(&c.g22_product, &c.g22_bench).is_err(),
+        "no models folder"
+    );
 }
 
 fn rect(left: i32, top: i32, right: i32, bottom: i32) -> RECT {

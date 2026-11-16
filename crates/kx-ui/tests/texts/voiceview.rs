@@ -7,7 +7,7 @@ use kx_module_api::ports::{
     BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceLang, VoicePage,
     VoiceText, VoiceView,
 };
-use kx_module_api::{Bus, Redacted};
+use kx_module_api::{Bus, Redacted, Zeroizing};
 use kx_test_support::host::FakeCore;
 use kx_ui::voice_acts as acts;
 use serde_json::{Map, Value, json};
@@ -61,7 +61,7 @@ fn spoken(tag: &str) -> (VoiceLang, &'static str) {
 /// The Text state showing `said` with `hint`, Undo insert acting while `undo`.
 fn text(said: &str, lang: &VoiceLang, hint: Option<BarHint>, undo: bool) -> VoiceBar {
     let text = VoiceText::Shown {
-        text: Redacted::new(said.to_owned()),
+        text: Redacted::new(Zeroizing::new(said.to_owned())),
         rtl: lang.rtl,
         arabic: lang.arabic,
     };

@@ -8,7 +8,7 @@ The crate builds on every system. The rules (addresses, redirects, ranges, the f
 
 | Part | What it does |
 |---|---|
-| `Http` | The port. `send` makes one GET and hands back the answer as it came, a redirect included. `get`, a provided method, runs the rules over `send`: HTTPS only, each address checked against the download's hosts before it is asked, at most `MAX_HOPS` redirects followed by hand, and the range check. |
+| `Http` | The port. `send` makes one GET and hands back the answer as it came, a redirect included. `get`, a provided method, runs the rules over `send`: HTTPS only, each address checked against the download's hosts before it is asked (a `.` entry takes the hosts under its domain), at most `MAX_HOPS` redirects followed by hand, and the range check. |
 | `Get`, `Answer` | One download's request (address, hosts, first byte, `stall_s`) and its answer: the address that answered, where the body starts (`from`, or 0 when the server sent the whole file, so the part restarts), the file's size when known, and the body. |
 | `Hop`, `Reply`, `Head`, `Body` | One GET to one checked address, its answer, the status and the headers the rules read (`Location`, `Content-Length`, `Content-Range`), and the body, read in order on any thread. |
 | `Target` | A checked HTTPS address: a plain lower-case host, a port and the path, its `.` and `..` folders resolved, at most `MAX_URL_BYTES` written out. A redirect's `Location` is read against it as RFC 3986 §5.2 says (`join`), and `listed` refuses a host the download does not name. |

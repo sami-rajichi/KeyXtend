@@ -5,12 +5,14 @@
 use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
 use crate::I18n;
+use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
     VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING,
     VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
 };
+use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
     BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoicePage, VoiceText,
 };
@@ -71,10 +73,11 @@ enum Bar {
     },
 }
 
-/// The text on the bar, or the dots a password box's text shows as.
+/// The text on the bar, wiped on drop, or the dots a password box's text shows as.
 #[derive(Serialize)]
 struct Shown {
-    text: String,
+    #[serde(serialize_with = "wiped::text")]
+    text: Zeroizing<String>,
     rtl: bool,
     arabic: bool,
     masked: bool,
@@ -138,7 +141,7 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
     let (shown, copy) = match &text.text {
         VoiceText::Shown { text, rtl, arabic } => {
             let shown = Shown {
-                text: clean(text.expose()),
+                text: Zeroizing::new(clean(text.expose())),
                 rtl: *rtl,
                 arabic: *arabic,
                 masked: false,
@@ -147,7 +150,7 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
         }
         VoiceText::Masked => {
             let dots = Shown {
-                text: t.text(VOICE_MASK),
+                text: Zeroizing::new(t.text(VOICE_MASK)),
                 rtl: false,
                 arabic: false,
                 masked: true,

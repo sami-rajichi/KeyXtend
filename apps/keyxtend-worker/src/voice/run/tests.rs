@@ -167,8 +167,8 @@ fn pieces_are_told_in_order_in_the_models_own_language() {
 }
 
 #[test]
-fn threads_zero_is_the_real_cores_and_more_is_capped() {
-    for (asked, want) in [(0, 8), (4, 4), (64, 8)] {
+fn threads_zero_is_the_real_cores_and_the_hosts_count_is_taken() {
+    for (asked, want) in [(0, 8), (4, 4), (14, 14), (64, 64)] {
         let (mut engine, lib, tell, rx) = rig(0);
         write(
             &mut engine,

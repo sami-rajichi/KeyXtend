@@ -57,13 +57,31 @@ fn a_locked_shelf_keeps_nothing_and_says_so() {
     assert!(reopen(&rig).history.is_empty());
 }
 
+/// A rig whose shelf holds junk in each `(folder, blob)` of `junk` at the start.
+fn junk(junk: &'static [(&'static str, &'static str)]) -> Rig {
+    Rig::build(move |fake, _| {
+        for (folder, blob) in junk {
+            let (folder, blob) = (BlobName::new(folder).unwrap(), BlobName::new(blob).unwrap());
+            fake.shelf.plant(&folder, &blob, vec![0xFF; 3]);
+        }
+    })
+}
+
 #[test]
 fn a_damaged_text_is_dropped_with_its_note() {
-    let rig = Rig::build(|fake, _| {
-        let (texts, one) = (BlobName::new("texts").unwrap(), BlobName::new("1").unwrap());
-        fake.shelf.plant(&texts, &one, vec![0xFF; 3]);
-    });
-    assert_eq!(rig.notices(), [keys::VOICE_DAMAGED]);
+    let rig = junk(&[("texts", "1")]);
+    assert_eq!(rig.notices(), [keys::VOICE_TEXTS_DAMAGED]);
+}
+
+#[test]
+fn a_damaged_numbers_blob_names_the_numbers_never_the_texts() {
+    let rig = junk(&[("numbers", "checks")]);
+    assert_eq!(rig.notices(), [keys::VOICE_NUMBERS_DAMAGED]);
+    let both = junk(&[("texts", "1"), ("numbers", "counts")]);
+    assert_eq!(
+        both.notices(),
+        [keys::VOICE_TEXTS_DAMAGED, keys::VOICE_NUMBERS_DAMAGED]
+    );
 }
 
 #[test]

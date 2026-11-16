@@ -47,8 +47,17 @@ pub struct Opened {
     pub checks: Checks,
     /// Compare's results.
     pub scores: Scores,
-    /// How many blobs would not read and were dropped, for one note.
-    pub damaged: usize,
+    /// The blobs that would not read and were dropped, by kind, for one note each.
+    pub damaged: Damage,
+}
+
+/// Blobs that would not read at the open, by kind; a recording's blobs are only listed then, never read.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct Damage {
+    /// Texts dropped, each with its recording.
+    pub texts: usize,
+    /// Numbers blobs dropped, each starting empty: counts, card checks or Compare's results.
+    pub numbers: usize,
 }
 
 /// The voice folder on the sealed shelf; only `open` makes one, so nothing is written before the shelf was read.

@@ -59,7 +59,7 @@ fn a_bar_that_stops_listening_shows_no_old_level() {
 fn before_any_view_qml_reads_null() {
     let rig = Rig::new();
     let _heard = heard(&rig);
-    assert_eq!(rig.hub.voice_json(), "null");
+    assert_eq!(rig.hub.voice_json().as_str(), "null");
 }
 
 #[test]
