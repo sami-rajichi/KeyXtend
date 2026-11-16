@@ -1,4 +1,4 @@
-//! G8's own weak-mode job, copied from the spike before it goes: a Windows job its copy dies with, capped in weak mode
+//! G8's own weak-mode job, copied from the spike's (gone in P11): a Windows job its copy dies with, capped in weak mode
 //! in cores, CPU time and memory, from `[g8.weak]`.
 #![cfg(windows)]
 

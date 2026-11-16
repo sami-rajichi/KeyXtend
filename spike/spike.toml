@@ -24,13 +24,13 @@ widths = [
     [0x39, 6.25], [0xE038, 1.25], [0xE01D, 1.5],
 ]
 
-# Stage 1b: the tools row under the keys and snip; the selection pill left the source in P10 (kx-mod-selection).
+# Stage 1b: the tools row under the keys and snip; the pill left the source in P10 and the mic in P11.
 [tools]
-labels = { snip = "Snip", mic = "Mic" }
-# The frozen face's tools row holds four buttons; quick-fill's two came first and left the source in P9 (ADR-0038).
+labels = { snip = "Snip" }
+# The frozen face's tools row holds four buttons: quick-fill's two (gone in P9, ADR-0038), snip, then the mic.
 slots = 4
 # Each button's place in that row, 0 on the left.
-slot = { snip = 2, mic = 3 }
+slot = { snip = 2 }
 # The snip overlay's window title, so kx-gates can find it.
 overlay_title = "KeyXtend spike - snip"
 # Folder under TEMP for snips and the frozen screen; kx-gates deletes what it reads.
@@ -44,75 +44,14 @@ snip_hint = "Snip: click two corners of the region. Click the same spot twice to
 # The region's size tag, in physical pixels.
 snip_size = "{w} × {h}"
 
-# Stage 1b part C: voice. Only the worker opens the mic; the face shows a caption bar.
-[voice]
-# The worker program, staged next to each face.
-worker = "worker.exe"
-# Worker switches: run the local server in weak mode; allow the cloud engine.
-weak_arg = "--weak"
-cloud_arg = "--cloud"
-# Engine for the Mic button: "local" or "cloud". Cloud also needs cloud_on and a key.
-engine = "local"
-# Nothing goes to the cloud unless this is true.
-cloud_on = false
-# Longest recording, in seconds, and the sample rate both engines take, in Hz.
-record_max_s = 30
-rate_hz = 16000
-# Primary language of the keyboard layout in front (low 10 bits of its LANGID) to the spoken language; covers regional layouts.
-languages = { "09" = "en", "0C" = "fr", "01" = "ar" }
-# Language for any other layout; "auto" lets the engine detect it.
-default_lang = "auto"
-# Typed after each transcript, so sentences do not run together.
-type_suffix = " "
-# Gap between typed characters, in ms: Notepad kept 10 ms exact but dropped most of a one-batch sentence (G22 typing check).
-type_gap_ms = 10
-# Face and worker switch, followed by a folder: keep each clip there for the bench.
-keep_arg = "--keep"
-# Longest JSON line between face and worker, in bytes; a 30 s transcript is far shorter.
-line_max_bytes = 16384
-
-# whisper.cpp's server, started once with the worker so the model loads once.
-[voice.local]
-server = "D:/dev/whisper/b5130/whisper-server.exe"
-model = "D:/dev/models/ggml-base.bin"
-host = "127.0.0.1"
-port = 8178
-threads = 4
-path = "/inference"
-# Answers 200 once the model is loaded.
-health_path = "/health"
-# Longest wait for the server to answer after start, the pause between checks, and the longest wait per clip, in ms.
-ready_wait_ms = 30000
-ready_poll_ms = 250
-timeout_ms = 60000
-
-# The opt-in cloud engine; the key is read from the environment, never from a file.
-[voice.cloud]
+# The opt-in cloud speech engine, kept as source for P11 part 2; the key is read from the environment, never from a file.
+# The local voice parts moved to the product in P11 (docs/spike-move-map.md).
+[cloud]
 host = "api.groq.com"
 path = "/openai/v1/audio/transcriptions"
 model = "whisper-large-v3"
 key_env = "GROQ_API_KEY"
 timeout_ms = 30000
-
-# Weak mode: the local server's job is capped to these cores, cores × rate_pct % of one core's time in all, and memory (MiB).
-[voice.weak]
-cores = 2
-rate_pct = 30
-mem_mb = 4096
-
-# The caption bar at the bottom centre; it never takes focus.
-[voice.caption]
-title = "KeyXtend spike - caption"
-# Largest width (mock-up .capbar 540), height (two lines of words) and gap from the bottom of the work area, in logical pixels.
-px = [540.0, 56.0, 24.0]
-listening = "Listening…"
-transcribing = "Transcribing…"
-nothing_heard = "Nothing heard."
-# Lucide icons beside "Transcribing…" and beside the words heard (mock-up .capbar .st).
-busy_icon = "audio-lines"
-words_icon = "captions"
-# How long the text stays after it arrives, in ms.
-hide_ms = 4000
 
 # The Arabic test panel for gate G7 (mock-up .pop): a right-to-left stand-in for Settings, opened by the Settings key.
 # Rows per page (ADR-0008), the page text with {n} and {count}, the field's screen-reader name, and each button's icon and name.

@@ -1,4 +1,4 @@
-//! One HTTP request through WinHTTP: to the local server, or over HTTPS to the opt-in cloud engine.
+//! One HTTP POST through WinHTTP: over HTTPS to the opt-in cloud engine, or plain HTTP to a test server here.
 
 use std::ffi::c_void;
 
@@ -16,8 +16,6 @@ use windows::core::{HSTRING, PCWSTR, w};
 const AGENT: PCWSTR = w!("KeyXtend-spike-worker");
 /// Sends a clip.
 const POST: PCWSTR = w!("POST");
-/// Asks whether the server is ready.
-const GET: PCWSTR = w!("GET");
 /// Largest answer read, in bytes; a transcript is far smaller.
 const MAX_REPLY: usize = 1024 * 1024;
 /// Bytes read per call.
@@ -41,11 +39,11 @@ pub struct Request<'a> {
     pub secure: bool,
     /// Path on the host.
     pub path: &'a str,
-    /// Type of the body; none for a GET.
+    /// Type of the body, if any.
     pub content_type: Option<&'a str>,
     /// API key sent as a bearer token.
     pub bearer: Option<&'a str>,
-    /// The body; empty for a GET.
+    /// The body, which may be empty.
     pub body: &'a [u8],
     /// Longest wait for each step, in ms.
     pub timeout_ms: u64,
@@ -81,11 +79,6 @@ fn owned(h: *mut c_void, what: &str) -> Result<Handle, String> {
 /// Sends `r` as a POST and reads the answer.
 pub fn post(r: &Request) -> Result<Reply, String> {
     exchange(r, POST, MAX_REPLY)
-}
-
-/// Sends `r` as a GET and reads the answer.
-pub fn get(r: &Request) -> Result<Reply, String> {
-    exchange(r, GET, MAX_REPLY)
 }
 
 /// One request and an answer of at most `max` bytes; the handles close in reverse order.
@@ -281,7 +274,7 @@ mod tests {
         r.bearer = None;
         assert_eq!(headers(&r), "Content-Type: text/plain\r\n");
         r.content_type = None;
-        assert_eq!(headers(&r), "", "a GET has no extra lines");
+        assert_eq!(headers(&r), "", "no lines when none are given");
     }
 
     #[test]

@@ -1,11 +1,10 @@
-//! Where the spike's later windows go: the caption (P11), the test panel (P13) and a snip's pointer (P12).
-//! Built on the product's screens and windows (`kx_platform_windows`, ADR-0014) and kx-mod-keyboard's place maths.
+//! Where the spike's later windows go: the test panel (P13) and a snip's pointer (P12).
+//! Built on the product's screens and windows (`kx_platform_windows`, ADR-0014) and kx-mod-keyboard's boxes.
 
 use kx_mod_keyboard::Area;
-use kx_mod_keyboard::place;
-use kx_module_api::ports::{Point, Rect};
+use kx_module_api::ports::Point;
 use kx_platform::ui::UiError;
-use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, rect_of, work_area};
+use kx_platform_windows::screen::{DEFAULT_DPI, dpi_of, work_area};
 use kx_platform_windows::window::own_bounds;
 use windows::Win32::Foundation::RECT;
 
@@ -20,24 +19,9 @@ fn text(e: UiError) -> String {
     e.to_string()
 }
 
-/// A Windows box as the ports' rect.
-fn rect(r: &RECT) -> Rect {
-    rect_of([r.left, r.top, r.right, r.bottom])
-}
-
 /// A ports point as the face's point.
 fn pt(p: Point) -> Pt {
     Pt { x: p.x, y: p.y }
-}
-
-/// Top-left of a box of `size` centred `gap` above the bottom of `work`, inside it (the product's `bottom_centre`).
-pub fn bottom_centre(work: &RECT, size: (i32, i32), gap: i32) -> Pt {
-    let r = rect(work);
-    let raised = Rect {
-        h: r.h.saturating_sub(gap).max(0),
-        ..r
-    };
-    pt(place::bottom_centre(raised, size))
 }
 
 /// Where a `size` panel goes by our window `title` (see `pop_in`); the spot is in physical pixels.
@@ -111,19 +95,6 @@ mod tests {
             right,
             bottom,
         }
-    }
-
-    #[test]
-    fn a_box_sits_centred_above_the_bottom_of_the_work_area() {
-        assert_eq!(
-            bottom_centre(&rect(0, 0, 1920, 1040), (900, 70), 30),
-            Pt { x: 510, y: 940 }
-        );
-        let wide = bottom_centre(&rect(100, 0, 500, 800), (600, 50), 10);
-        assert_eq!(
-            wide.x, 100,
-            "a box wider than the screen starts at its left edge"
-        );
     }
 
     #[test]

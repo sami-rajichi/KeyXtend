@@ -76,11 +76,7 @@ impl PanelConfig {
 
 /// Every window title the spike opens, the keyboard's first.
 pub fn titles(cfg: &SpikeConfig) -> Vec<&String> {
-    let named = [
-        &cfg.panel.title,
-        &cfg.tools.overlay_title,
-        &cfg.voice.caption.title,
-    ];
+    let named = [&cfg.panel.title, &cfg.tools.overlay_title];
     std::iter::once(&cfg.keyboard.title).chain(named).collect()
 }
 
@@ -153,7 +149,7 @@ mod tests {
             "the keyboard's"
         );
         assert!(
-            with(&|c| c.voice.caption.title.clear()).is_err(),
+            with(&|c| c.tools.overlay_title.clear()).is_err(),
             "untitled windows"
         );
     }

@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 03:30 — P11: the spike's voice code removed
+The spike's voice code is gone now that the product holds it: its voice core, worker, typer, weak job, caption, mic button, voice settings and the unused note helper. The spike's worker is now a small library that keeps only the cloud parts part 2 builds from, under a `[cloud]` section. The move map marks each voice row as moved, with its home in the product.
+
 ## 2026-11-16 02:20 — P11: the voice gates
 G22 now runs on the product's test build: for English, French and Arabic it clicks Dictation in our test window, a gate worker plays the shipped clip, and it checks the words, the focus and the bar's place, printing numbers only. `g22 staged` proves the staged copy with no card part, with only the processor floor, and with a library planted in the models folder, and `boxed` proves HTTPS and a second-drive folder under the worker's restricted token. The sound flag lives in kx-ipc, the app's `gate-voice` build and kx-gates' `voice` feature hold it, and the stage and dev-install refuse any program that does. The gates no longer use the spike's voice code.
 
