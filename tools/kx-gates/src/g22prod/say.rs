@@ -1,6 +1,6 @@
-//! One clip dictated into target-window by clicks: the clip's layout in front, the Dictation key, the bar, Stop once the
-//! clip has played, then the typed text read until it settles. The foreground is watched all through; the text is only
-//! counted, never kept or printed.
+//! One clip dictated into target-window by clicks: the clip's layout in front, a card's wait when one is picked, the
+//! Dictation key, the bar, Stop once the clip has played, then the typed text read until it settles. The foreground is
+//! watched all through; the text is only counted, never kept or printed.
 #![cfg(windows)]
 
 use std::time::{Duration, Instant};
@@ -43,7 +43,8 @@ pub(super) fn dictate(
         .layout(&case.lang)
         .ok_or("the clip's language has no layout")?;
     to_layout(t.app(), id, g.layout_wait_ms, poll)?;
-    sleep_ms(product::follow_ms(poll)?);
+    // A card serves only once its check of this language's model passed, and that check follows the language in front.
+    sleep_ms(product::follow_ms(poll)?.saturating_add(g.dictate_wait_ms()));
     let watch = Watch::start(Duration::from_millis(poll));
     let heard = listen(ctx, pid, t, case, s);
     let fronts = watch.finish();

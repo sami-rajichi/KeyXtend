@@ -96,11 +96,13 @@ impl<'a> Fresh<'a> {
 
     /// Refuses a copy that logged no `warn` line, when one is due, so it may not run as the gate asks.
     fn warns(&self, s: &Started, warn: Option<&str>) -> Result<(), String> {
-        let log = || {
-            let file = product::files(&self.program)?.log;
-            Ok(std::fs::read_to_string(file).unwrap_or_default())
-        };
-        heard(warn, log, s.at_us)
+        heard(warn, || self.log(), s.at_us)
+    }
+
+    /// The copy's log as it stands; empty before it has one.
+    pub fn log(&self) -> Result<String, String> {
+        let file = product::files(&self.program)?.log;
+        Ok(std::fs::read_to_string(file).unwrap_or_default())
     }
 
     /// Writes the copy's settings file `table` into its data folder, before a copy starts.

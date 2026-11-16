@@ -3,6 +3,8 @@
 
 use std::path::Path;
 
+use kx_module_api::ports::DevicePick;
+
 use super::*;
 use crate::cfgfile::OWN;
 use crate::config::{GatesConfig, load};
@@ -13,6 +15,8 @@ const VOICE_NAMES: &str = include_str!("../../../../crates/kx-ui/qml/VoiceNames.
 const BAR_IDS: &str = include_str!("../../../../crates/kx-ui/src/i18n/keys/voice/ids.rs");
 /// The app's run, which logs the voice gate build's warning.
 const APP_RUN: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
+/// The voice gate build's speech, which logs each written dictation's device.
+const APP_TOLD: &str = include_str!("../../../../apps/keyxtend/src/played/told.rs");
 /// The root manifest, whose stage settings G22's staged edges read.
 const ROOT_MANIFEST: &str = include_str!("../../../../Cargo.toml");
 
@@ -46,7 +50,9 @@ fn a_plain_name_is_one_folder_name_and_a_clip_must_be_one() {
 fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
-    let bad: [fn(&mut G22Product); 16] = [
+    let bad: [fn(&mut G22Product); 18] = [
+        |g| g.card_wait_ms = 0,
+        |g| g.wrote_line = " ".into(),
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
         |g| g.program = "../../target/gate-input/release/keyxtend.exe".into(),
         |g| drop(g.layouts.pop_first()),
@@ -90,6 +96,27 @@ fn the_product_runs_names_are_kx_uis_and_the_apps() {
         APP_RUN.contains(&format!("\"{}\"", g.warn_line)),
         "the app's warning"
     );
+    assert!(
+        APP_TOLD.contains(&format!("\"{}\"", g.wrote_line)),
+        "the app's written-dictation line"
+    );
+}
+
+#[test]
+fn only_a_card_in_device_waits_after_the_layout_before_dictation() {
+    let mut g = shipped().g22_product;
+    assert_eq!(g.pick(), Some(DevicePick::Cpu));
+    assert_eq!(g.dictate_wait_ms(), 0, "the processor");
+    g.device = DevicePick::AUTO.into();
+    assert_eq!(
+        g.dictate_wait_ms(),
+        0,
+        "Automatic checks no card on a fresh folder"
+    );
+    g.device = "Vulkan1".into();
+    assert_eq!(g.dictate_wait_ms(), g.card_wait_ms, "a card");
+    g.device = "card with space".into();
+    assert_eq!((g.pick(), g.dictate_wait_ms()), (None, 0), "no pick");
 }
 
 #[test]

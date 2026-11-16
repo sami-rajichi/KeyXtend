@@ -1,6 +1,8 @@
 //! The voice gate build only: the gate worker started with its clip after the voice job's words, so it plays the clip in
 //! place of the microphone (G22). No shipped build holds it, and the stage refuses a program holding its flag.
 
+mod told;
+
 use std::path::Path;
 use std::sync::Arc;
 
@@ -10,6 +12,7 @@ use kx_module_api::ports::Speech;
 use kx_platform::speech::{Assets, WorkerSpeech};
 use kx_platform::worker::{Launch, Piped, SpawnError, Spawner, VoiceFrames};
 use kx_platform_windows::{WinChild, WinHardware, WinSpawner};
+use told::Told;
 
 /// The worker's spawner, with the sound flag and the clip after each launch's own words.
 pub struct Played {
@@ -44,8 +47,8 @@ impl Spawner<VoiceFrames> for Played {
     }
 }
 
-/// Speech by the gate worker beside the program in `exe_dir`, on `clock`, with `assets`, playing `clip`; `None` when
-/// the clip's path is not UTF-8.
+/// Speech by the gate worker beside the program in `exe_dir`, on `clock`, with `assets`, playing `clip` and logging the
+/// device of each dictation it writes; `None` when the clip's path is not UTF-8.
 #[must_use]
 pub fn speech(
     exe_dir: &Path,
@@ -55,7 +58,8 @@ pub fn speech(
 ) -> Option<Arc<dyn Speech>> {
     let played = Played::new(WinSpawner::beside(exe_dir), clip)?;
     let hardware = Arc::new(WinHardware::new());
-    Some(Arc::new(WorkerSpeech::new(played, clock, assets, hardware)))
+    let speech = WorkerSpeech::new(played, clock, assets, hardware);
+    Some(Arc::new(Told(speech)))
 }
 
 #[cfg(test)]

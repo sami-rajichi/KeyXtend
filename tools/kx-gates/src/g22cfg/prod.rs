@@ -26,6 +26,9 @@ pub struct G22Product {
     pub device: String,
     /// Wait after the copy's keyboard shows before the first click, so its models folder is read, in ms.
     pub ready_ms: u64,
+    /// With a card in `device`, the wait after a clip's layout is in front before Dictation, so the card's check of
+    /// that language's model can end, in ms.
+    pub card_wait_ms: u64,
     /// Longest wait for the bar to show after the Dictation click, in ms.
     pub bar_wait_ms: u64,
     /// Longest wait for target-window to type in a clip's layout, in ms.
@@ -36,6 +39,8 @@ pub struct G22Product {
     pub settle_ms: u64,
     /// The line the voice gate build logs at start with its clip; without it the copy may hear the microphone.
     pub warn_line: String,
+    /// The line the voice gate build logs with the device id of each dictation it writes.
+    pub wrote_line: String,
     /// The bar's gate-id group (kx-ui `VoiceNames.group`).
     pub group: String,
     /// Stop's id on the bar (kx-ui `bar_button_id`).
@@ -57,6 +62,23 @@ impl G22Product {
         self.layouts.get(lang).and_then(|l| lang_id(l))
     }
 
+    /// The device pick `device` names; none for a name `[voice] device` refuses.
+    pub fn pick(&self) -> Option<DevicePick> {
+        DevicePick::parse(&self.device)
+    }
+
+    /// The wait before Dictation once a clip's layout is in front: `card_wait_ms` with a card in `device`, else none.
+    #[cfg_attr(
+        not(feature = "voice"),
+        allow(dead_code, reason = "Only the voice gates call it.")
+    )]
+    pub fn dictate_wait_ms(&self) -> u64 {
+        match self.pick() {
+            Some(DevicePick::Card(_)) => self.card_wait_ms,
+            _ => 0,
+        }
+    }
+
     /// Refuses settings the run could not judge by, naming the first bad key; `bench` holds the clips and worker.
     pub fn check(&self, bench: &G22Bench) -> Result<(), String> {
         self.check_program(bench)?;
@@ -67,11 +89,12 @@ impl G22Product {
                 "g22_product.layouts must give {langs:?} each a 4-digit hex LANGID"
             ));
         }
-        if DevicePick::parse(&self.device).is_none() {
+        if self.pick().is_none() {
             return Err("g22_product.device must be one [voice] device takes".into());
         }
         let waits = [
             self.ready_ms,
+            self.card_wait_ms,
             self.bar_wait_ms,
             self.layout_wait_ms,
             self.open_ms,
@@ -79,10 +102,10 @@ impl G22Product {
         if waits.contains(&0) || self.settle_ms == 0 {
             return Err("g22_product's waits must be above 0".into());
         }
-        let named = [&self.warn_line, &self.group, &self.stop];
+        let named = [&self.warn_line, &self.wrote_line, &self.group, &self.stop];
         if named.iter().any(|t| t.trim().is_empty()) || self.group.contains(SEP) {
             return Err(format!(
-                "g22_product needs a warn_line, a group without {SEP:?} and stop"
+                "g22_product needs a warn_line, a wrote_line, a group without {SEP:?} and stop"
             ));
         }
         Ok(())

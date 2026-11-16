@@ -1,13 +1,15 @@
 //! G22 on the product (`g22 keyxtend`): for each check clip, a copy of the voice gate build on a data folder the gate
 //! makes plays that clip through the gate worker in place of the microphone, while the gate dictates it by clicks into
 //! target-window in the clip's layout. The words typed must be within `[voice] card_diff`, target-window must keep the
-//! foreground, and the bar must sit on top above the keyboard, never activated. It prints numbers, never text.
+//! foreground, the bar must sit on top above the keyboard, never activated, and the device `device` allows must write
+//! the text, as the copy's log says. It prints numbers and the device's id, never text.
 #![cfg(windows)]
 
 mod bar;
 mod front;
 mod say;
 mod settle;
+mod wrote;
 
 use std::path::Path;
 
@@ -18,6 +20,7 @@ use serde_json::{Value, json};
 use toml::Table;
 
 use crate::apps::Ctx;
+use crate::budget::now_us;
 use crate::copyend::{self, Ended};
 use crate::freshcopy::Fresh;
 use crate::g22;
@@ -132,20 +135,9 @@ fn dictate_all(
     cases: &[Case],
     s: &VoiceSettings,
 ) -> (Vec<Value>, Option<Ended>) {
-    let (g, diff) = (&ctx.cfg.g22_product, s.card_diff);
     let (mut lines, mut last) = (Vec::new(), None);
     for case in cases {
-        eprintln!("g22 {NAME}: {}", case.lang);
-        let args = [g22::sound_flag(), case.path.clone()];
-        let drive = |pid| one(ctx, pid, case, s);
-        let (got, ended) = fresh.with_args(&args, g.ready_ms, Some(&g.warn_line), drive);
-        let mut line = got.map_or_else(
-            |e| json!({ "lang": case.lang, "error": e, "pass": false }),
-            |l| l.json_with(diff),
-        );
-        let quit = ended.as_ref().is_some_and(Ended::ok);
-        line["pass"] = json!(line["pass"] == true && quit);
-        line["copy_quit"] = json!(quit);
+        let (line, ended) = dictate(ctx, fresh, case, s);
         lines.push(line);
         let over = copyend::may_follow(ended.as_ref().map(|e| e.gone));
         last = ended;
@@ -154,6 +146,35 @@ fn dictate_all(
         }
     }
     (lines, last)
+}
+
+/// `case` on a copy of its own: its line, which passes only when the copy quit and the device `device` allows wrote
+/// the text, and how the copy went.
+fn dictate(ctx: &Ctx, fresh: &Fresh, case: &Case, s: &VoiceSettings) -> (Value, Option<Ended>) {
+    let g = &ctx.cfg.g22_product;
+    eprintln!("g22 {NAME}: {}", case.lang);
+    let (args, since) = ([g22::sound_flag(), case.path.clone()], now_us());
+    let drive = |pid| one(ctx, pid, case, s);
+    let (got, ended) = fresh.with_args(&args, g.ready_ms, Some(&g.warn_line), drive);
+    let read = fresh
+        .log()
+        .and_then(|log| wrote::read(&log, since, &g.wrote_line));
+    let pick = g.pick().ok_or("g22_product.device is no device pick");
+    let (device, fit) = match &pick {
+        Ok(pick) => wrote::judge(&read, pick),
+        Err(e) => (json!({ "device_error": e }), false),
+    };
+    let mut line = got.map_or_else(
+        |e| json!({ "lang": case.lang, "error": e, "pass": false }),
+        |l| l.json_with(s.card_diff),
+    );
+    let quit = ended.as_ref().is_some_and(Ended::ok);
+    line["pass"] = json!(line["pass"] == true && quit && fit);
+    line["copy_quit"] = json!(quit);
+    if let (Some(to), Value::Object(from)) = (line.as_object_mut(), device) {
+        to.extend(from);
+    }
+    (line, ended)
 }
 
 /// One case in a fresh target-window on the copy `pid`: its line, and whether the box's first layout came back.

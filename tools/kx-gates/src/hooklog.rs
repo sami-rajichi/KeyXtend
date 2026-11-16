@@ -50,7 +50,7 @@ fn names<T: Serialize + Default>() -> Vec<String> {
 }
 
 /// The value of `name=value` among `line`'s words.
-fn value_of<'a>(line: &'a str, name: &str) -> Option<&'a str> {
+pub fn value_of<'a>(line: &'a str, name: &str) -> Option<&'a str> {
     let at = |word: &'a str| word.strip_prefix(name)?.strip_prefix('=');
     line.split_whitespace().find_map(at)
 }

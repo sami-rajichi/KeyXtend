@@ -65,10 +65,18 @@ also = []
 program = "../../target/p11-gates/release/keyxtend.exe"
 # The layout (LANGID) target-window takes for each clip's language: English (US), French (France), Arabic (Tunisia).
 layouts = { en = "0409", fr = "040C", ar = "1C01" }
-# Where the copy's models run ([voice] device): the processor; "auto" lets a checked card serve.
+# Where the copy's models run ([voice] device): "cpu", "auto", or a card's id as the engine lists it, such as "Vulkan1"
+# (ASCII letters, digits, "-", "_" and "."; built-in graphics list as a card too). For the card run, pick the card with
+# Use on the Voice panel's Device page and copy the `device` value it writes into the product's settings file. With a
+# card here, a language passes only when that card wrote its text.
 device = "cpu"
 # Wait after the copy's keyboard shows before the first click, so the voice module has read the models folder, in ms.
 ready_ms = 5000
+# With a card in device, the wait after a clip's layout is in front before Dictation, in ms. On the gate's fresh data
+# folder the card serves a language only once its check of that language's model passed: the devices and every model's
+# fingerprint are read, then the check runs (load, warm-up, the clip on the card and on the processor). A first
+# estimate past Cohere Arabic's check; set it from the first card run.
+card_wait_ms = 120000
 # Longest wait for the bar to show after the Dictation click, in ms.
 bar_wait_ms = 10000
 # Longest wait for target-window to type in a clip's layout, in ms.
@@ -82,6 +90,9 @@ open_ms = 15000
 settle_ms = 3000
 # The line the voice gate build logs at start with its clip (apps/keyxtend/src/run.rs).
 warn_line = "played sound in place of the microphone: a gate build, never for daily use"
+# The line it logs with the device id of each dictation it writes, which each language's line prints
+# (apps/keyxtend/src/played/told.rs).
+wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"
 stop = "stop"
