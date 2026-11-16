@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 21:40 — P11: the fetch tests' folders no longer race on Windows CI
+Windows CI failed a fetch test with "Access is denied" while making its folder. Each test deleted the shared parent folder when it looked empty, and Windows refuses a new folder inside one being deleted; a probe on this PC showed the same error. Each test now has its own folder in the profile folder and deletes only that, and the fetch tests passed 100 runs at 64 threads.
+
 ## 2026-11-16 18:25 — P11 part 1: gates and the owner's check passed
 G22's bench, staged edges and product runs on the processor and the card passed, with the box proofs and `g19 hung`, and the owner passed all 20 hands-on checks ([test report](test-reports/2026-11-16-p11-voice-typing.md)). The last card run's slow English and French texts stay open for part 2. At the owner's yes, the voice trial with their clips, the speed test, the research files and the old Whisper models were deleted; the ten speech models stay for part 2's gates.
 

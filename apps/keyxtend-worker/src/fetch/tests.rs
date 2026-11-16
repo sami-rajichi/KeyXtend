@@ -34,13 +34,14 @@ const HOSTS: [&str; 2] = ["models.example", "cdn.example"];
 const STALL_S: u16 = 30;
 /// The most steps `drive` takes, so a stuck job fails its test instead of hanging it.
 const MAX_STEPS: usize = 10_000;
-/// The folder, in the test program's profile folder, that holds every test's files.
-const ROOT: &str = "kx-fetch-tests";
+/// The start of each test's folder name in the test program's profile folder.
+const ROOT: &str = "kx-fetch-test";
 
 /// Makes each test's folder name unique within this process.
 static UNIQUE: AtomicU32 = AtomicU32::new(0);
 
-/// A fresh folder under the target folder, deleted when dropped.
+/// A fresh folder under the target folder, deleted when dropped. It shares no parent that a test deletes, as
+/// Windows refuses a new folder inside one being deleted.
 struct Dir(PathBuf);
 
 impl Dir {
@@ -48,9 +49,7 @@ impl Dir {
         let exe = std::env::current_exe().unwrap();
         let profile = exe.parent().and_then(Path::parent).unwrap();
         let n = UNIQUE.fetch_add(1, Ordering::Relaxed);
-        let path = profile
-            .join(ROOT)
-            .join(format!("{}-{n}", std::process::id()));
+        let path = profile.join(format!("{ROOT}-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
         Self(path)
@@ -75,10 +74,6 @@ impl Dir {
 impl Drop for Dir {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
-        if let Some(root) = self.0.parent() {
-            // Fails while another test's folder is still there; the last one removes it.
-            let _ = fs::remove_dir(root);
-        }
     }
 }
 
