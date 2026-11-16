@@ -6,6 +6,7 @@ use crate::settings::VoiceSettings;
 use kx_module_api::ports::{
     CardId, CardUse, Fingerprint, LINK_SCHEME, Link, PART_EXT, SpeechModel, TAG_LEN, fits_iso,
 };
+use std::collections::BTreeSet;
 use std::path::Path;
 
 /// Hugging Face's download hosts by region, from its firewall table (huggingface.co/docs/hub/models-downloading) and
@@ -144,6 +145,17 @@ fn every_rows_download_may_follow_hugging_faces_redirects_in_every_region() {
             assert!(!ask.reaches(host), "{} {host}", row.id);
         }
     }
+}
+
+#[test]
+fn the_tables_dot_entries_are_exactly_hf_co_so_a_new_one_needs_a_reviewed_test_change() {
+    let rows = shipped().rows();
+    let dots: BTreeSet<&str> = (rows.iter().flat_map(|r| &r.hosts))
+        .map(String::as_str)
+        .filter(|h| h.starts_with('.'))
+        .collect();
+    let why = "the host rule takes any two-name suffix, such as .co.uk or .github.io";
+    assert_eq!(dots, BTreeSet::from([".hf.co"]), "{why}");
 }
 
 #[test]

@@ -3,8 +3,8 @@
 
 use super::{acting, button, buttons, heard, panel_json};
 use crate::Rig;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{Date, HistoryRow, HistorySheet, PanelButton, VoiceSheet, When};
+use kx_module_api::{Redacted, Zeroizing};
 use kx_ui::i18n::keys::VOICE_EMPTY;
 use serde_json::{Value, json};
 
@@ -22,7 +22,7 @@ fn today() -> When {
 fn bonjour() -> HistoryRow {
     HistoryRow {
         id: 7,
-        text: Redacted::new("Bonjour".to_owned()),
+        text: Redacted::new(Zeroizing::new("Bonjour".to_owned())),
         rtl: false,
         arabic: false,
         when: today(),

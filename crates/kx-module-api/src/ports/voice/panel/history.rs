@@ -1,15 +1,15 @@
-//! History: the shown page of texts, with the counts its header, Pin and Delete all need.
+//! History: the shown page of texts, with the counts its header, Pin and Delete all need. Each text is wiped on drop.
 
-use crate::Redacted;
 use crate::ports::When;
+use crate::{Redacted, Secret};
 
 /// One text in History.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HistoryRow {
     /// The text's id, so the ui keeps a row's place as the list moves.
     pub id: u64,
-    /// The start of the text.
-    pub text: Redacted<String>,
+    /// The text, wiped when the last view holding it drops.
+    pub text: Secret,
     /// It reads right to left.
     pub rtl: bool,
     /// It needs the Arabic font.

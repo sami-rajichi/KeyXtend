@@ -267,3 +267,19 @@ fn a_redirect_under_an_under_entry_is_followed_and_its_bare_domain_is_not() {
         "the bare domain is never asked"
     );
 }
+
+#[test]
+fn a_first_address_under_an_under_entry_alone_is_never_asked() {
+    let hosts = [
+        Cow::Borrowed("models.example"),
+        Cow::Borrowed(".cdn.example"),
+    ];
+    let get = Get {
+        url: "https://eu.edge.cdn.example/m.bin",
+        hosts: &hosts,
+        ..ask(0)
+    };
+    let http = FakeHttp::new([Act::whole(FILE)]);
+    assert_eq!(http.get(&get).err(), Some(NetError::Unlisted));
+    assert_eq!(http.seen(), [], "a link names its host by name");
+}

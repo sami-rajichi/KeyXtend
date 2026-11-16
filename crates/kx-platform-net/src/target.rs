@@ -92,12 +92,25 @@ impl Target {
         }
     }
 
-    /// Refuses this address unless `hosts` takes its host: by name, or under a `rules::UNDER` entry's site domain.
+    /// Refuses this redirect unless `hosts` takes its host: by name, or under a `rules::UNDER` entry's domain.
     ///
     /// # Errors
     /// `Unlisted` when no listed host takes this one.
     pub fn listed(&self, hosts: &[Cow<'_, str>]) -> Result<(), NetError> {
-        if hosts.iter().any(|h| rules::covers(h, &self.host)) {
+        self.any(hosts, rules::covers)
+    }
+
+    /// Refuses this first address unless a plain entry of `hosts` names its host (`rules::names`).
+    ///
+    /// # Errors
+    /// `Unlisted` when no plain entry is this host.
+    pub fn named(&self, hosts: &[Cow<'_, str>]) -> Result<(), NetError> {
+        self.any(hosts, rules::names)
+    }
+
+    /// `Ok` when `takes` holds for an entry of `hosts` and this host, else `Unlisted`.
+    fn any(&self, hosts: &[Cow<'_, str>], takes: fn(&str, &str) -> bool) -> Result<(), NetError> {
+        if hosts.iter().any(|h| takes(h, &self.host)) {
             Ok(())
         } else {
             Err(NetError::Unlisted)

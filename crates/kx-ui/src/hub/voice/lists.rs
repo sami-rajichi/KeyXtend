@@ -6,6 +6,7 @@ use super::panel::{Cx, Page, Sheet, count};
 use super::parts::{Button, Hint, TOP_KEPT, TOP_STEP, Tone, Top, word};
 use super::sheets::{mark, mark_key, tab_id};
 use crate::I18n;
+use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{AT, DATE, DEVICE, LANG, MODEL, OF, TEXTS, WAIT, WHEN, WORDS, WRONG};
 use crate::i18n::keys::{
@@ -14,6 +15,7 @@ use crate::i18n::keys::{
     VOICE_PINNED, VOICE_READY, VOICE_RECORDING, VOICE_RESULT_LINE, VOICE_START, VOICE_STEP,
     VOICE_TEXTS, VOICE_TICKED, VOICE_UNPIN, VOICE_WRONG_OF, VoiceMark, mark_id, panel_button_id,
 };
+use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
     CompareRow, CompareRun, CompareSheet, DeviceLabel, HistoryRow, HistorySheet, PanelButton,
     RunStep, VoiceTab,
@@ -27,28 +29,31 @@ pub(super) struct RunView {
     mark: Hint,
 }
 
-/// A model's row in the results' table; `wrong` is `None`, and `text` shows, for a language with no set text.
+/// A model's row in the results' table; `wrong` is `None`, and `text` shows, wiped on drop, with no set text.
 #[derive(Serialize)]
 pub(super) struct ResultView {
     name: String,
     wrong: Option<String>,
     wait: String,
     memory: String,
-    text: Option<String>,
+    #[serde(serialize_with = "wiped::maybe_text")]
+    text: Option<Zeroizing<String>>,
     tick: bool,
 }
 
-/// A dictated text, with its line and the name readers hear.
+/// A dictated text, with its line and the name readers hear; both hold the text, so both are wiped on drop.
 #[derive(Serialize)]
 pub(super) struct HistoryView {
     id: u64,
-    text: String,
+    #[serde(serialize_with = "wiped::text")]
+    text: Zeroizing<String>,
     rtl: bool,
     arabic: bool,
     meta: String,
     pinned: bool,
     tick: Option<u16>,
-    name: String,
+    #[serde(serialize_with = "wiped::text")]
+    name: Zeroizing<String>,
 }
 
 /// Compare models: the set text with Start, each model's turn with Cancel, or the results with Compare again and Use.
@@ -152,7 +157,7 @@ fn result(t: &I18n, r: &CompareRow) -> ResultView {
         wrong,
         wait: t.voice_secs(r.wait_ms),
         memory: t.voice_memory(r.mb),
-        text: r.text.as_ref().map(|x| clean(x.expose())),
+        text: r.text.as_ref().map(|x| Zeroizing::new(clean(x.expose()))),
         tick: r.tick,
     }
 }
@@ -199,8 +204,9 @@ pub(super) fn history(cx: &Cx<'_>, h: &HistorySheet) -> Page {
 }
 
 /// A dictated text: its line names when, the language by its code and the model; readers also hear its tick and pin.
+/// The text's copies are wiped, and the name is joined once at its full size, so it never grows.
 fn history_row(t: &I18n, r: &HistoryRow) -> HistoryView {
-    let text = clean(r.text.expose());
+    let text = Zeroizing::new(clean(r.text.expose()));
     let lang = t.name_of(LANG_NAME, &clean(&r.lang));
     let args = [
         (WHEN, t.clip_when(&r.when)),
@@ -210,10 +216,16 @@ fn history_row(t: &I18n, r: &HistoryRow) -> HistoryView {
     let meta = t.voice_with(VOICE_META, &args);
     let ticked = r.tick.map(|n| t.counted(VOICE_TICKED, usize::from(n)));
     let pinned = r.pinned.then(|| t.text(VOICE_PINNED));
-    let parts: Vec<String> = [Some(text.clone()), Some(meta.clone()), ticked, pinned]
-        .into_iter()
-        .flatten()
-        .collect();
+    let parts: Vec<&str> = [
+        Some(text.as_str()),
+        Some(&meta),
+        ticked.as_deref(),
+        pinned.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let name = Zeroizing::new(parts.join(&t.text(VOICE_JOIN)));
     HistoryView {
         id: r.id,
         text,
@@ -222,6 +234,6 @@ fn history_row(t: &I18n, r: &HistoryRow) -> HistoryView {
         meta,
         pinned: r.pinned,
         tick: r.tick,
-        name: parts.join(&t.text(VOICE_JOIN)),
+        name,
     }
 }

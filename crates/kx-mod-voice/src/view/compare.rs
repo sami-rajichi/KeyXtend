@@ -1,7 +1,6 @@
 //! The Compare page: the set text with the ready models and where they run, each model's turn while they run, and the
 //! results with their day and device. A text shows only for a language with no set text.
 
-use kx_module_api::Redacted;
 use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet};
 
 use super::{Facts, device, short};
@@ -73,19 +72,15 @@ impl Panel {
     }
 }
 
-/// A result's row; its text only with no set text.
+/// A result's row; its text, in a copy wiped on drop, only with no set text.
 fn compare_row(line: &Line, tick: bool) -> CompareRow {
-    let text = line
-        .text
-        .as_ref()
-        .map(|t| Redacted::new(t.expose().to_string()));
     CompareRow {
         name: line.name.clone(),
         wrong: line.wrong,
         words: line.words,
         wait_ms: line.wait_ms,
         mb: line.mb,
-        text,
+        text: line.text.clone(),
         tick,
     }
 }

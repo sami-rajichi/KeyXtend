@@ -1,8 +1,9 @@
-//! The crate's tests: addresses, ranges, the redirect and resume rules over the fake, and the fault map. None touches
-//! the network or sleeps; a stall is a scripted quiet the fake weighs against the hop's wait.
+//! The crate's tests: addresses, host lists, ranges, the redirect and resume rules over the fake, and the fault map.
+//! None touches the network or sleeps; a stall is a scripted quiet the fake weighs against the hop's wait.
 
 mod faults;
 mod follow;
+mod hosts;
 mod range;
 mod sweep;
 mod target;

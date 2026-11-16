@@ -103,7 +103,7 @@ pub use layouts::{LangLabel, LayoutAsk, LayoutChanged, LayoutTable, Layouts, Lay
 pub use link::{LINK_SCHEME, Link, LinkError, MAX_LINK_BYTES, WebLink, WebLinkKey};
 pub use models::{
     Drive, FetchAsk, FetchNote, FetchRun, Fingerprint, FolderScan, ModelError, ModelFile,
-    ModelFiles, ModelFilesKey, PART_EXT, host_ok, path_ok,
+    ModelFiles, ModelFilesKey, PART_EXT, host_ok, link_named, path_ok,
 };
 pub use packs::{
     IndexError, MAX_INDEX_BYTES, MAX_ISO_LEN, MAX_PACK_BYTES, MIN_ISO_LEN, PACK_DIR, PACK_EXT,

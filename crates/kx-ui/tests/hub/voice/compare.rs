@@ -4,11 +4,11 @@
 use super::{acting, button, buttons, coded, english_text, heard, panel, panel_json};
 use crate::Rig;
 use crate::texts::rig;
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, PanelButton, RunStep,
     VoiceSheet,
 };
+use kx_module_api::{Redacted, Secret, Zeroizing};
 use kx_ui::i18n::keys::{VOICE_INTRO, VOICE_INTRO_FREE, VOICE_KEPT, VOICE_READ_TEXT};
 use serde_json::{Value, json};
 
@@ -24,6 +24,11 @@ fn ready(models: u16, recording: bool) -> VoiceSheet {
 /// `name`, redacted.
 fn name(name: &str) -> Redacted<String> {
     Redacted::new(name.to_owned())
+}
+
+/// A spoken `text`, redacted and wiped on drop.
+fn spoken(text: &str) -> Secret {
+    Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
 #[test]
@@ -145,7 +150,7 @@ fn results() -> VoiceSheet {
     };
     let free = CompareRow {
         wrong: None,
-        text: Some(name("hello there")),
+        text: Some(spoken("hello there")),
         tick: false,
         ..scored.clone()
     };

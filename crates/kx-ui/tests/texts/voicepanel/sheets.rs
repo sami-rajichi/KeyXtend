@@ -1,12 +1,12 @@
 //! The Voice panel's pages the Qt Quick tests draw, as the module would hand them: the home list, Models with each
 //! mark, a download and the folder line, Compare's three steps and History.
 
-use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, FetchState, FolderLine,
     HistoryRow, HistorySheet, ModelRow, ModelState, ModelsSheet, RunStep, VoiceHome, VoiceSheet,
     When,
 };
+use kx_module_api::{Redacted, Secret, Zeroizing};
 
 /// Bytes in a megabyte, and the models drive's free room.
 const MB: u64 = 1 << 20;
@@ -23,6 +23,11 @@ fn day((y, m, d): (u16, u8, u8)) -> Date {
 /// `text`, redacted.
 fn secret(text: &str) -> Redacted<String> {
     Redacted::new(text.to_owned())
+}
+
+/// A spoken `text`, redacted and wiped on drop.
+fn spoken(text: &str) -> Secret {
+    Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
 /// The home list: Parakeet ready, Automatic on the processor, run on the 12th, 12 texts, two options changed.
@@ -179,7 +184,7 @@ pub fn results(free: bool) -> VoiceSheet {
         words: 28,
         wait_ms,
         mb,
-        text: free.then(|| secret("The evening train leaves at seven.")),
+        text: free.then(|| spoken("The evening train leaves at seven.")),
         tick,
     };
     VoiceSheet::Compare(CompareSheet::Results {
@@ -198,7 +203,7 @@ fn said(id: u64, text: &str, lang: &str, hour: u8, model: &str) -> HistoryRow {
     let ar = lang == "ar";
     HistoryRow {
         id,
-        text: secret(text),
+        text: spoken(text),
         rtl: ar,
         arabic: ar,
         when: When {

@@ -3,7 +3,8 @@
 
 use super::{Fingerprint, ModelError};
 use crate::Redacted;
-use crate::ports::{JobLimits, Link, path_ok};
+use crate::ports::{JobLimits, LINK_SCHEME, Link, path_ok};
+use kx_ipc::rules::{covers, listed, names};
 use kx_ipc::{MAX_HOST_BYTES, MAX_HOSTS, MAX_MODEL_BYTES, MAX_URL_BYTES, MAX_URLS};
 use std::ops::RangeInclusive;
 use std::path::PathBuf;
@@ -11,11 +12,24 @@ use std::path::PathBuf;
 /// The suffix a download's part file adds to its file's name until it is checked, as the `fetch` job writes it.
 pub use kx_ipc::PART_EXT;
 
-/// True for a host a download may list, within `MAX_HOST_BYTES`: a plain lower-case host, or `.` and one site's domain,
-/// which takes each host under it (`kx_ipc::rules::listed`).
+/// Ends a link's host and starts its path.
+const SLASH: char = '/';
+
+/// True for a host a download may list, within `MAX_HOST_BYTES`: a plain lower-case host, or `.` and a domain of two
+/// names or more, which takes each host under it (`kx_ipc::rules::listed`).
 #[must_use]
 pub fn host_ok(entry: &str) -> bool {
-    entry.len() <= MAX_HOST_BYTES && kx_ipc::rules::listed(entry).is_ok()
+    entry.len() <= MAX_HOST_BYTES && listed(entry).is_ok()
+}
+
+/// True when the text between `link`'s scheme and its path is a plain entry of `hosts` itself (`rules::names`); a host
+/// only under a `.` entry, a port, a user name or a query there never passes.
+#[must_use]
+pub fn link_named(hosts: &[String], link: &str) -> bool {
+    let host = link
+        .strip_prefix(LINK_SCHEME)
+        .and_then(|rest| rest.split_once(SLASH));
+    host.is_some_and(|(host, _)| hosts.iter().any(|h| names(h, host)))
 }
 
 /// One row's download into the models folder.
@@ -45,23 +59,24 @@ impl FetchAsk {
     /// `stall_s`' range, the frames' own.
     pub const STALL_S: RangeInclusive<u16> = kx_ipc::STALL_S;
 
-    /// Refuses an ask with a value outside its range or cap, no address, a host `host_ok` refuses, or a file that is
-    /// no plain drive path.
+    /// Refuses an ask with a value outside its range or cap, a host `host_ok` refuses, no address or one `link_named`
+    /// refuses, or a file that is no plain drive path.
     ///
     /// # Errors
     /// `ModelError::Range` naming the first such value.
     pub fn check(&self) -> Result<(), ModelError> {
-        let link = |l: &Link| l.expose().len() <= MAX_URL_BYTES;
+        let link =
+            |l: &Link| l.expose().len() <= MAX_URL_BYTES && link_named(&self.hosts, l.expose());
         let part = self.part().is_some_and(|p| path_ok(&p));
         let shape = [
-            (
-                (1..=MAX_URLS).contains(&self.links.len()) && self.links.iter().all(link),
-                "links",
-            ),
             (
                 (1..=MAX_HOSTS).contains(&self.hosts.len())
                     && self.hosts.iter().all(|h| host_ok(h)),
                 "hosts",
+            ),
+            (
+                (1..=MAX_URLS).contains(&self.links.len()) && self.links.iter().all(link),
+                "links",
             ),
             ((1..=MAX_MODEL_BYTES).contains(&self.bytes), "bytes"),
             (path_ok(self.file.expose()) && part, "file"),
@@ -74,10 +89,11 @@ impl FetchAsk {
         bad.map_or(Ok(()), |name| Err(ModelError::Range(name)))
     }
 
-    /// True when its download may reach `host`, a redirect's among them, as the fetch's own host-list rule decides.
+    /// True when a redirect of its download may reach `host`, by name or under a `.` entry, as the fetch's own rule
+    /// decides; its links need `link_named`.
     #[must_use]
     pub fn reaches(&self, host: &str) -> bool {
-        self.hosts.iter().any(|h| kx_ipc::rules::covers(h, host))
+        self.hosts.iter().any(|h| covers(h, host))
     }
 
     /// The part file the download writes until it is checked, as the frames' `part_path` names it; `None` for a file

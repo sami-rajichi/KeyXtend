@@ -4,7 +4,7 @@
 use kx_module_api::ports::{
     HistoryRow, HistorySheet, LocalTime, Pages, PanelButton, VoiceSheet, When,
 };
-use kx_module_api::{Redacted, is_arabic, is_rtl};
+use kx_module_api::{is_arabic, is_rtl};
 
 use super::{Facts, shown_name};
 use crate::history::{Asked, Entry, Stamp};
@@ -72,7 +72,7 @@ fn row(entry: &Entry, tick: Option<usize>, now: &LocalTime) -> HistoryRow {
     let text = entry.text.expose();
     HistoryRow {
         id: entry.id,
-        text: Redacted::new(text.to_string()),
+        text: entry.text.clone(),
         rtl: is_rtl(text),
         arabic: is_arabic(text),
         when: when(entry.at, now),

@@ -44,10 +44,12 @@ pub fn host(text: &str) -> Result<(), IpcError> {
 
 /// Starts a listed host that takes each host under it, as `.hf.co` takes `us.aws.cdn.hf.co`.
 pub const UNDER: char = '.';
-/// The fewest names after `UNDER`, so an entry is one site's domain and never a whole top-level one.
+/// The fewest names after `UNDER`, so a bare top-level domain such as `.co` never passes. A two-name public suffix such
+/// as `.co.uk` still does, so the models table's test pins its `UNDER` entries.
 pub const UNDER_NAMES: usize = 2;
 
-/// Refuses a download's listed host unless it is a plain host, or `UNDER` and a domain of `UNDER_NAMES` names or more.
+/// Refuses a download's listed host unless it is a plain host, or `UNDER` and a domain of `UNDER_NAMES` names or more;
+/// it knows no public-suffix list.
 ///
 /// # Errors
 /// `BadField` for an empty entry, a byte `host` refuses, an empty name, or too few names after `UNDER`.
@@ -67,6 +69,13 @@ pub fn covers(entry: &str, host: &str) -> bool {
     let plain = !host.starts_with(UNDER) && listed(host).is_ok();
     let under = entry.starts_with(UNDER) && listed(entry).is_ok();
     plain && (entry == host || (under && host.len() > entry.len() && host.ends_with(entry)))
+}
+
+/// True when the listed `entry` is the plain `host` itself, never an `UNDER` entry: a download's first address must be
+/// listed by name, while its redirects may be `covers`'.
+#[must_use]
+pub fn names(entry: &str, host: &str) -> bool {
+    !entry.starts_with(UNDER) && covers(entry, host)
 }
 
 /// Refuses a path holding a NUL, which ends a path early for the OS.

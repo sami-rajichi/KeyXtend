@@ -1,9 +1,7 @@
 //! Reading an address and a redirect's `Location`: HTTPS only, a plain host, and the request path.
 
-use super::HOSTS;
 use crate::{NetError, Target};
 use kx_ipc::{HTTPS, MAX_HOST_BYTES, MAX_URL_BYTES};
-use std::borrow::Cow;
 
 /// The parts `url` reads as, or why not.
 fn parts(url: &str) -> Result<(String, u16, String), NetError> {
@@ -245,46 +243,4 @@ fn a_backslash_location_stays_on_the_same_host() {
         let host = base.join(to).map(|t| t.host().to_owned());
         assert_eq!(host, Ok("models.example".to_owned()), "{to}");
     }
-}
-
-#[test]
-fn only_a_listed_host_passes() {
-    let listed = |u: &str| Target::parse(u).and_then(|t| t.listed(&HOSTS));
-    assert_eq!(listed("https://cdn.example/x"), Ok(()));
-    assert_eq!(listed("https://CDN.example/x"), Ok(()));
-    assert_eq!(listed("https://evil.example/x"), Err(NetError::Unlisted));
-    assert_eq!(listed("https://cdn.example./x"), Err(NetError::Unlisted));
-    assert_eq!(
-        listed("https://cdn.example.evil.example/x"),
-        Err(NetError::Unlisted)
-    );
-}
-
-#[test]
-fn an_under_entry_lets_each_host_below_its_site_pass_and_nothing_else() {
-    let hosts = [Cow::Borrowed("models.example"), Cow::Borrowed(".hf.co")];
-    let listed = |u: &str| Target::parse(u).and_then(|t| t.listed(&hosts));
-    for ok in [
-        "us.aws.cdn.hf.co",
-        "CDN-lfs-eu-1.hf.co",
-        "cas-bridge.xethub.hf.co",
-    ] {
-        assert_eq!(listed(&format!("https://{ok}/x")), Ok(()), "{ok}");
-    }
-    for bad in [
-        "hf.co",
-        "evilhf.co",
-        "hf.co.evil.example",
-        "x.models.example",
-    ] {
-        let got = listed(&format!("https://{bad}/x"));
-        assert_eq!(got, Err(NetError::Unlisted), "{bad}");
-    }
-    let wide = [Cow::Borrowed(".co")];
-    let host = Target::parse("https://us.aws.cdn.hf.co/x").unwrap();
-    assert_eq!(
-        host.listed(&wide),
-        Err(NetError::Unlisted),
-        "a whole top-level domain"
-    );
 }

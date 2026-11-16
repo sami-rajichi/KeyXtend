@@ -2,9 +2,10 @@
 //! for this PC, the Device page's numbers, Compare's steps, day and device, and History's counts. Options are in
 //! `options`.
 
-use super::{SECRETS, english, hidden, keeps_secrets};
+use super::{SECRETS, english, hidden, keeps_secrets, secret};
 use crate::ports::voice::*;
 use crate::ports::{Date, Hundredths, Memory, Pages, Verdict, When};
+use crate::{Redacted, Zeroizing};
 
 /// 12 Nov 2026, Compare's last run in the mock-up.
 fn day() -> Date {
@@ -222,9 +223,11 @@ fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
         words: 0,
         wait_ms: 2_900,
         mb: 900,
-        text: Some(hidden(0)),
+        text: Some(secret(0)),
         tick: false,
     };
+    let held: Option<&Zeroizing<String>> = line.text.as_ref().map(Redacted::expose);
+    assert_eq!(held.map(|t| t.as_str()), Some(SECRETS[0]), "wiped on drop");
     let results = CompareSheet::Results {
         day: day(),
         device: DeviceLabel::Card("RTX 4060".into()),
@@ -250,7 +253,7 @@ fn history_carries_its_counts_for_the_header_pin_and_delete_all() {
     };
     let row = HistoryRow {
         id: 4,
-        text: hidden(1),
+        text: secret(1),
         rtl: true,
         arabic: true,
         when,
@@ -259,6 +262,8 @@ fn history_carries_its_counts_for_the_header_pin_and_delete_all() {
         pinned: true,
         tick: Some(1),
     };
+    let held: &Zeroizing<String> = row.text.expose();
+    assert_eq!(held.as_str(), SECRETS[1], "wiped on drop");
     let sheet = HistorySheet {
         rows: vec![row],
         total: 12,

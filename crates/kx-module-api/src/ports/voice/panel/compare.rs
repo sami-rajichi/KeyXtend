@@ -1,9 +1,9 @@
 //! Compare models: the set text with the models it runs and where, each model's turn while they run, and the results
-//! with their day and device. Only numbers are kept; a text shows only for a language with no set text.
+//! with their day and device. Only numbers are kept; a text shows only for a language with no set text, wiped on drop.
 
 use super::DeviceLabel;
-use crate::Redacted;
 use crate::ports::Date;
+use crate::{Redacted, Secret};
 
 /// Where one model stands while Compare runs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -43,8 +43,8 @@ pub struct CompareRow {
     pub wait_ms: u32,
     /// The most memory its job took, in MB.
     pub mb: u32,
-    /// Its text, shown only for a language with no set text and never kept.
-    pub text: Option<Redacted<String>>,
+    /// Its text, shown only for a language with no set text, never kept, and wiped when the last view holding it drops.
+    pub text: Option<Secret>,
     /// It is ticked.
     pub tick: bool,
 }

@@ -6,7 +6,7 @@ use std::path::Path;
 
 use kx_module_api::ports::{
     CardId, CardUse, FetchAsk, Fingerprint, JobLimits, LINK_SCHEME, Link, SpeechModel, TAG_LEN,
-    fits_iso, host_ok,
+    fits_iso, host_ok, link_named,
 };
 use kx_module_api::{Redacted, is_hidden};
 use serde::Deserialize;
@@ -236,9 +236,10 @@ impl RawRow {
         hosts && !self.links.is_empty() && self.links.iter().all(|l| self.link_ok(l, revision))
     }
 
-    /// True for an https link to a host listed by name, at a commit of `revision` hex digits and ending in the file.
+    /// True for an https link to a host listed by name (`link_named`, the port's own rule), at a commit of `revision`
+    /// hex digits and ending in the file.
     fn link_ok(&self, link: &str, revision: usize) -> bool {
-        let Some((host, path)) = link
+        let Some((_, path)) = link
             .strip_prefix(LINK_SCHEME)
             .and_then(|r| r.split_once('/'))
         else {
@@ -249,7 +250,7 @@ impl RawRow {
             .split('/')
             .any(|p| p.len() == revision && p.bytes().all(hex));
         let named = path.rsplit('/').next() == Some(self.file.as_str());
-        let listed = self.hosts.iter().any(|h| h == host);
+        let listed = link_named(&self.hosts, link);
         Link::new(link.to_owned()).is_ok() && listed && fixed && named
     }
 

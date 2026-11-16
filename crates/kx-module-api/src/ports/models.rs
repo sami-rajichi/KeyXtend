@@ -4,7 +4,7 @@
 
 mod fetch;
 
-pub use fetch::{FetchAsk, FetchNote, FetchRun, PART_EXT, host_ok};
+pub use fetch::{FetchAsk, FetchNote, FetchRun, PART_EXT, host_ok, link_named};
 
 use super::clip::SEPARATORS;
 use super::probe_ok;

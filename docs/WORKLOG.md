@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-16 07:00 — P11: review and security
+The saved review notes are fixed: a shared reserved-name check, a damaged notice per kind, dictated texts held as wiped secrets in the bar, History and Compare, the host's thread count, one weak-PC section for the gates, and no machine paths in tracked files. Downloads may follow Hugging Face's redirects under `hf.co`, while every layer makes a link name its host exactly. The branch code review's three host-rule findings are fixed, the security review found no high or medium issue, and each P11 security note now carries its final status.
+
 ## 2026-11-16 04:30 — P11: the docs for local voice typing
 A new voice section in the architecture docs covers the events, ports, module, worker jobs, hosts, engine parts, files and UI, and the code map, crate READMEs and security notes now match the code as built. The spec's §8.2 gained an "as built" list, the roadmap and README name the voice bar and the transcribe.cpp models, and THIRD_PARTY marks the spike's Whisper tools removed. P11's item file lists what part 1 built, and its findings for P13, P15, F2, F8 and F11 sit in their own files.
 
