@@ -15,6 +15,7 @@ mod compare;
 mod device;
 mod folder;
 mod lists;
+mod props;
 
 /// The Models page as shown.
 fn models(view: &VoicePanel) -> &ModelsSheet {

@@ -5,6 +5,8 @@ use super::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+mod props;
+
 /// Silero's frame, 32 ms.
 const FRAME: usize = 512;
 /// Probabilities clearly speech, clearly silence, and between the marks.

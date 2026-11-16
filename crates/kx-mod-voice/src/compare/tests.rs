@@ -11,6 +11,7 @@ use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
 
 mod ends;
+mod props;
 
 /// The set text the tests read, nine words.
 const SET: &str = "The evening train leaves at a quarter past seven.";

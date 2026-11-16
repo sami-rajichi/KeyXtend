@@ -1,6 +1,7 @@
-//! Properties over any run of clicks, notes, focus, session, layouts and time: the key is lit only while listening,
-//! each run gets one Close and no call after it, no run stays open behind a hidden bar, rounds only grow, a hidden run
-//! keeps and counts nothing, and a take once shown as dots is never shown or kept again.
+//! Properties over any run of clicks, notes, focus, session, layouts, Compare's lend and time: the key is lit only
+//! while listening, each run gets one Close and no call after it, no run stays open behind a hidden bar, none opens
+//! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, and a take once shown as dots
+//! is never shown or kept again.
 
 use super::close::panel;
 use super::*;
@@ -109,6 +110,8 @@ enum Step {
     Wait(u64),
     On(bool),
     Quit,
+    /// Compare's lend, which changes only while no dictation runs, as Compare starts only then.
+    Lend(Lend),
 }
 
 fn said() -> impl Strategy<Value = Said> {
@@ -148,6 +151,7 @@ fn step() -> impl Strategy<Value = Step> {
         2 => (0..MAX_WAIT_MS).prop_map(Step::Wait),
         1 => prop::bool::weighted(ON).prop_map(Step::On),
         1 => Just(Step::Quit),
+        1 => select(vec![Lend::Off, Lend::Listen, Lend::Write]).prop_map(Step::Lend),
     ]
 }
 
@@ -181,6 +185,8 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
             rig.on(In::Settings(Box::new(settings)))
         }
         Step::Quit => rig.on(In::Quit),
+        Step::Lend(lend) if !rig.flow.dictating() => rig.on(In::Lend(*lend)),
+        Step::Lend(_) => Vec::new(),
     }
 }
 
@@ -208,13 +214,15 @@ struct Seen {
 }
 
 impl Seen {
-    /// Checks one step's effects; a hidden run keeps and counts nothing.
-    fn effects(&mut self, out: &[Out], hidden: bool) -> Result<(), TestCaseError> {
+    /// Checks one step's effects; a hidden run keeps and counts nothing, and none opens while `lent`.
+    fn effects(&mut self, out: &[Out], hidden: bool, lent: bool) -> Result<(), TestCaseError> {
         for effect in out {
             match effect {
                 Out::Open { take, .. } => {
+                    prop_assert!(!lent, "a dictation opened while Compare holds the run");
                     prop_assert!(self.opened.insert(*take), "{take} reopened");
                 }
+                Out::Lent(_) => prop_assert!(lent, "Compare's run handed back while it held none"),
                 Out::Run { take, call } => {
                     let live = self.opened.contains(take) && !self.closed.contains(take);
                     prop_assert!(live, "{call:?} on run {take}");
@@ -283,8 +291,9 @@ proptest! {
         let mut rig = Rig::with(settings, hidden);
         let mut seen = Seen::default();
         for step in &steps {
+            let lent = rig.flow.lent.is_some();
             let out = act(&mut rig, step, seen.ask.as_ref());
-            seen.effects(&out, hidden)?;
+            seen.effects(&out, hidden, lent)?;
             seen.bar(&rig)?;
         }
     }

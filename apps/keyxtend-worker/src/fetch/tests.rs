@@ -4,6 +4,7 @@
 mod check;
 mod hosts;
 mod pipe;
+mod props;
 mod resume;
 mod stop;
 

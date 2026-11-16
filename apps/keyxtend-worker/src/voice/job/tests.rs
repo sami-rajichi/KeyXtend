@@ -6,6 +6,7 @@ mod asks;
 mod engine;
 mod hand;
 mod listen;
+mod props;
 
 use super::*;
 use crate::voice::fake::{self, Got, LOUD, Mic};

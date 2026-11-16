@@ -9,6 +9,7 @@
 
 mod during;
 mod pieces;
+mod props;
 mod text;
 
 use crate::assist::{Bench, ear};

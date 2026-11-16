@@ -7,6 +7,8 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{Fingerprint, FolderScan, MB, ModelFile};
 use std::path::{Path, PathBuf};
 
+mod props;
+
 /// The folder the tests use.
 const DIR: &str = r"D:\KeyXtend\models";
 
