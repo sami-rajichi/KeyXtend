@@ -89,6 +89,8 @@ pub struct Panel {
     pub(crate) dirs: Vec<String>,
     /// The card being checked and its warm-up's percent.
     pub(crate) checking: Option<(CardId, u8)>,
+    /// `recheck` waits for the running check, dictation or Compare to end.
+    pub(crate) queued: bool,
     pub(crate) folder: Folder,
     pub(crate) fetches: Fetches,
     pub(crate) compare: Compare,

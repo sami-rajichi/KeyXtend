@@ -217,6 +217,29 @@ fn a_card_gone_during_its_check_keeps_no_verdict() {
     assert_eq!(rig.view().unwrap().note, Some(BarHint::Fault));
 }
 
+#[test]
+fn a_recheck_held_back_by_a_dictation_or_a_check_runs_once_through_dequeue() {
+    let mut rig = on_device();
+    rig.settings.device = "Vulkan0".into();
+    rig.dictating = true;
+    assert!(rig.with(Panel::recheck).is_empty(), "not while it dictates");
+    assert!(rig.with(Panel::dequeue).is_empty(), "still dictating");
+    rig.dictating = false;
+    let out = rig.with(Panel::dequeue);
+    let [Do::Check(check)] = &out[..] else {
+        panic!("{out:?}");
+    };
+    let check = (**check).clone();
+    assert!(rig.with(Panel::recheck).is_empty(), "one check at a time");
+    let out = rig.with(|p, f| p.checked(&check, Ok(passed()), f));
+    let [Do::Checked(checked)] = &out[..] else {
+        panic!("{out:?}");
+    };
+    rig.checks.put(checked.clone());
+    assert!(rig.with(Panel::dequeue).is_empty(), "the model is checked");
+    assert!(!rig.panel.queued, "nothing waits any more");
+}
+
 /// A check where the card wrote the clip three times faster.
 fn passed() -> CheckDone {
     CheckDone {

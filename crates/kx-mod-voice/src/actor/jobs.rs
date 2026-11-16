@@ -131,9 +131,7 @@ impl Actor {
         match read {
             Ok(devices) => {
                 self.held.devices = devices;
-                let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
-                let dos = self.panel.recheck(&facts);
-                self.dos(dos);
+                self.recheck();
             }
             Err(error) => {
                 tracing::warn!(%error, "the devices could not be read");
@@ -178,6 +176,20 @@ impl Actor {
         let dos = self.panel.printed(file, bytes, print, &facts);
         self.dos(dos);
         self.next_print();
+    }
+
+    /// The check the card lacks for the model in front, now or once no check, dictation or Compare runs.
+    pub(super) fn recheck(&mut self) {
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.recheck(&facts);
+        self.dos(dos);
+    }
+
+    /// The check `recheck` held back, when nothing holds it now.
+    pub(super) fn dequeue(&mut self) {
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.dequeue(&facts);
+        self.dos(dos);
     }
 
     /// A card's check ended, for the panel.

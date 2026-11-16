@@ -258,7 +258,7 @@ Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](
   - There is no forced-language setting: the language is the keyboard's shown layout, fixed at Start and never guessed (ADR-0042, owner).
   - One engine, transcribe.cpp, runs ten models from one table, in place of whisper-rs. The defaults are Parakeet v3 for English and French and Cohere Transcribe Arabic for Arabic (ADR-0043, owner).
   - Models download on demand into a folder the user picks, each checked by its size and SHA-256; none is bundled (ADR-0043).
-  - Models run on the processor, or on a graphics card through Vulkan once the card passes its check; Automatic takes the fastest checked card with room (ADR-0044).
+  - Models run on the processor, or on a graphics card through Vulkan once the card passes its check; Automatic takes the fastest checked card with room (ADR-0044). Under Automatic, a card that passed one model's check is checked by itself for each newly used model; a first check stays one click on Check or picking the card.
   - The benchmark button is Compare models: the user reads a set text once, each ready model writes it, and only the numbers are kept.
   - Silence trimming is the Silero voice detector, which cuts pieces at pauses and keeps `pad_ms` (300 ms) of silence around speech.
   - History keeps the last 50 texts (`history_max`, pins aside), sealed on disk with no time limit, not one day. Recordings are kept only with `keep_voice`, off by default.

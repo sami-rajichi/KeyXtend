@@ -2,12 +2,12 @@
 //! card's check in the background, whose warm-up and verdict come back here (ADR-0044, edges 26 and 27).
 
 use kx_module_api::ports::{
-    BarHint, CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, PanelButton,
-    SpeechError, Verdict,
+    BarHint, CardId, CardUse, CheckAsk, CheckDone, Device, DeviceKind, DevicePick, Fingerprint,
+    PanelButton, SpeechError, Verdict,
 };
 
 use super::{Check, Do, Key, Panel};
-use crate::counts::Checked;
+use crate::counts::{Checked, Checks};
 use crate::device::verdict;
 use crate::flow::{Ready, Supply};
 use crate::models::{code_in, table};
@@ -33,30 +33,32 @@ impl Panel {
         }
     }
 
-    /// The check a card lacks for the model the language in front uses now (edge 26): the picked card's when it has
-    /// none under its driver, and with Automatic a card checked before under another driver. Call it after the
-    /// devices or the folder are read; `follow` and the folder's reads call it too.
+    /// The check a card lacks under its driver for the model the language in front uses now (edge 26). While a check,
+    /// a dictation or Compare runs, it waits for `dequeue`. The actor calls it after the devices or a layout; `follow`
+    /// and the folder's reads call it too.
     pub fn recheck(&mut self, facts: &Facts<'_>) -> Vec<Do> {
-        let Some(print) = self.used_print(facts).filter(|_| self.checking.is_none()) else {
+        self.queued = self.checking.is_some() || facts.dictating || self.compare.busy();
+        let Some(print) = self.used_print(facts).filter(|_| !self.queued) else {
             return Vec::new();
         };
         let pick = facts.settings.device();
-        let before =
-            |id: &CardId| (facts.checks.rows().iter()).any(|c| c.card == *id && c.model == print);
-        let wanted = |id: &CardId| match &pick {
-            DevicePick::Card(want) => want == id,
-            DevicePick::Auto => before(id),
-            DevicePick::Cpu => false,
-        };
         let lacks = |d: &Device| match &d.kind {
             DeviceKind::Card(id) => {
                 let unchecked = facts.checks.verdict(id, &d.driver, &print).is_none();
-                (unchecked && wanted(id)).then(|| id.clone())
+                (unchecked && wanted(&pick, d, id, &print, facts.checks)).then(|| id.clone())
             }
             DeviceKind::Cpu => None,
         };
         let card = facts.devices.iter().find_map(lacks);
         card.map_or_else(Vec::new, |id| self.check(&id, facts))
+    }
+
+    /// The check `recheck` held back, once no check, dictation or Compare runs; the actor calls it after each input.
+    pub fn dequeue(&mut self, facts: &Facts<'_>) -> Vec<Do> {
+        if !self.queued {
+            return Vec::new();
+        }
+        self.recheck(facts)
     }
 
     /// A card picked with no check for the model in use is checked now.
@@ -135,7 +137,8 @@ impl Panel {
         }
     }
 
-    /// A card's check ended: its verdict is kept, or its error shows a note and nothing is kept.
+    /// A card's check ended: its verdict is kept and another card the model lacks is queued, or its error shows a
+    /// note and nothing is kept, so a fault never loops.
     pub fn checked(
         &mut self,
         check: &Check,
@@ -166,6 +169,25 @@ impl Panel {
             verdict,
             day: facts.now.date,
         };
+        self.queued = true;
         vec![Do::Checked(checked)]
+    }
+}
+
+/// Whether `pick` wants card `id`, device `d`, checked for file `print`: the picked card; with Automatic, a card
+/// checked for it under another driver, or one that passed another model's check under its present driver.
+fn wanted(
+    pick: &DevicePick,
+    d: &Device,
+    id: &CardId,
+    print: &Fingerprint,
+    checks: &Checks,
+) -> bool {
+    let mut rows = checks.rows().iter().filter(|c| c.card == *id);
+    let passed = |c: &Checked| matches!(c.verdict, Verdict::Passed { .. });
+    match pick {
+        DevicePick::Card(want) => want == id,
+        DevicePick::Auto => rows.any(|c| c.model == *print || (c.driver == d.driver && passed(c))),
+        DevicePick::Cpu => false,
     }
 }

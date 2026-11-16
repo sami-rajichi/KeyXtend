@@ -189,7 +189,8 @@ impl Actor {
         self.stepping = false;
     }
 
-    /// After each message: the flow learns what Compare holds, then the panel to draw when it changed.
+    /// After each message: the flow learns what Compare holds, a held-back check may start, then the panel to draw
+    /// when it changed.
     fn after(&mut self) {
         if self.stopped {
             return;
@@ -199,6 +200,7 @@ impl Actor {
             self.lend = lend;
             self.step(In::Lend(lend));
         }
+        self.dequeue();
         let now = self.ports.calendar.now();
         let facts = self.held.facts(now, &self.flow);
         let view = self.panel.view(&facts);
@@ -230,10 +232,11 @@ impl Actor {
         self.dos(dos);
     }
 
-    /// The layout in front, for the flow and the panel.
+    /// The layout in front, for the flow and the panel; its model gets the check the card lacks.
     fn layout(&mut self, layout: LayoutChanged) {
         self.held.front = layout.clone();
         self.step(In::Layout(layout));
+        self.recheck();
     }
 
     /// A card may serve a dictation now: one is picked, or Automatic has a check to go by.
