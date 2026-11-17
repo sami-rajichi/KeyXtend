@@ -43,6 +43,9 @@ pub use limits::{
     PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SHA256_BYTES, SILENCE_STOP_S, SOUND_HZ, STALL_S,
     THREADS,
 };
+pub use limits::{
+    MAX_FIXED, MAX_KEY_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN, NET_TRIES, NET_WAIT_S,
+};
 pub use reply::Reply;
 pub use vault::ask::VaultAsk;
 pub use vault::reply::VaultReply;

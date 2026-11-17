@@ -1,13 +1,17 @@
-//! The voice and fetch limits: the settings' ranges the asks carry, and the hand-over's sizes against the longest
-//! dictation (edge 31).
+//! The voice, fetch and cloud limits: the settings' ranges the asks carry, and the hand-over's sizes against the
+//! longest dictation (edge 31).
 
 use crate::limits::MIB;
 use crate::voice::wire as voice_wire;
 use crate::{
-    LEVEL_HZ, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SOUND_MS, MAX_SOUND_PIECES,
-    MAX_TEXT_BYTES, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
+    LEVEL_HZ, MAX_FIXED, MAX_KEY_BYTES, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES,
+    MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN,
+    NET_TRIES, NET_WAIT_S, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
     SOUND_HZ, STALL_S, THREADS,
 };
+
+/// `ElevenLabs`' cap on one file in MB, the largest a service row names.
+const ELEVEN_MB: u32 = 5_000;
 
 /// Seconds in ten minutes, the dictation edge 31 names.
 const TEN_MIN_S: usize = 600;
@@ -64,4 +68,19 @@ fn a_piece_holds_a_long_text_in_any_script() {
 fn the_part_name_is_a_lower_case_extension() {
     assert!(PART_EXT.starts_with('.'));
     assert!(PART_EXT[1..].bytes().all(|b| b.is_ascii_lowercase()));
+}
+
+#[test]
+fn the_cloud_ranges_are_the_plans_and_fit_their_widths() {
+    assert_eq!(NET_WAIT_S, 5..=300, "the plan's net_wait_s bound");
+    assert_eq!(NET_TRIES, 1..=5, "the plan's net_tries bound");
+    let starts: [u32; 3] = [
+        *NET_MAX_MB.start(),
+        (*NET_PER_MIN.start()).into(),
+        (*NET_AT_ONCE.start()).into(),
+    ];
+    assert_eq!(starts, [1; 3], "a row's limit is never zero");
+    assert!(NET_MAX_MB.contains(&ELEVEN_MB), "{NET_MAX_MB:?}");
+    assert!(u16::try_from(MAX_KEY_BYTES).is_ok() && u8::try_from(MAX_FIXED).is_ok());
+    const { assert!(MAX_FIXED >= 1, "OpenRouter's keep-nothing field") };
 }

@@ -6,7 +6,7 @@ use crate::Redacted;
 use crate::ports::{CloudButton, Date, Hundredths};
 
 listed! {
-    /// Where a service stands, as its row's mark says.
+    /// Where a service stands, as its row's mark says; a cloud model's Unavailable is its Models row's.
     pub enum ServiceMark ("Every mark.") {
         /// Not switched on.
         Off,
@@ -14,8 +14,6 @@ listed! {
         NeedsKey,
         /// A key is set, tested or not.
         Ready,
-        /// It cannot serve now, such as `OpenRouter`'s typed model with no host that keeps nothing.
-        Unavailable,
     }
 }
 
@@ -60,6 +58,8 @@ pub enum FactValue {
     },
     /// A day, such as the end of an offer.
     Day(Date),
+    /// A name from the service's own pages, printed as it is, such as its account switch's label.
+    Text(String),
 }
 
 /// A fact's value under the name its text gives it.
@@ -100,8 +100,8 @@ pub struct ServiceRow {
     pub mark: ServiceMark,
     /// No real key has checked this connection yet, so the Untested tag shows beside its name.
     pub untested: bool,
-    /// Its free use, which the row's second line names.
-    pub free: Fact,
+    /// Its free use, which the row's second line names; `None` for the Custom row, whose line says what to type.
+    pub free: Option<Fact>,
     /// Its card carries a warning, so the row shows the warning mark.
     pub warn: bool,
     /// It is ticked.
@@ -142,8 +142,9 @@ pub struct CloudCard {
     pub old: bool,
     /// The host of the facts' page, which the link names, such as `groq.com`; `None` for the Custom row.
     pub site: Option<String>,
-    /// The id of the card's warning text, for a service that trains by default; `None` for none.
-    pub warn: Option<String>,
+    /// The card's warning, for a service that trains by default, with its account switch's name as a `Text`; `None`
+    /// for none.
+    pub warn: Option<Fact>,
     /// No real key has checked this connection yet.
     pub untested: bool,
     /// The day it was switched on; `None` while off, so the card asks to switch it on.
@@ -163,8 +164,12 @@ pub struct ServiceSheet {
     pub check: KeyCheck,
     /// The typed address, for the Custom and Azure rows; `None` for a row with its own address.
     pub address: Option<Redacted<String>>,
+    /// The typed address is HTTPS, or none is typed yet; false shows the line's warning (edge 13).
+    pub address_ok: bool,
     /// The Other model line's typed id, empty for none.
     pub model: Redacted<String>,
+    /// The typed model has no host that keeps nothing while `keep` is on, so its line says why.
+    pub model_na: bool,
     /// `OpenRouter`'s keep-nothing switch, for a row that has one.
     pub keep: Option<bool>,
     /// The host where keys are made, which the link names; `None` for the Custom row.

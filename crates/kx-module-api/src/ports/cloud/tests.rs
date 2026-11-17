@@ -6,6 +6,7 @@ use crate::ports::JobLimits;
 use crate::{REDACTED_MARKER, Redacted, SecretBytes, Zeroizing};
 
 mod ask;
+mod url;
 
 /// A key no output may show.
 const KEY: &str = "gsk_live-7731-zebra";
@@ -15,6 +16,8 @@ const SOUND: [u8; 4] = [0x7f, 0x3e, 0x11, 0x5a];
 const SOUND_SHOWN: &str = "127, 62, 17, 90";
 /// Groq's address, from its row.
 const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
+/// A model id no output may show, as a typed one is the user's.
+const MODEL: &str = "whisper-large-v3-turbo";
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
 
@@ -69,7 +72,7 @@ fn ask() -> CloudAsk {
         url: HttpsUrl::new(GROQ).unwrap(),
         header: KeyHeader::Bearer,
         key: secret(KEY),
-        model: Some("whisper-large-v3-turbo".into()),
+        model: Some(Redacted::new(MODEL.into())),
         lang: "fr".into(),
         limits: limits(),
         wait_s: 60,
@@ -90,9 +93,9 @@ fn test() -> CloudTest {
     }
 }
 
-/// Asserts `shown` holds no key, sound, address or text, and the marker in their place.
+/// Asserts `shown` holds no key, sound, address, model or text, and the marker in their place.
 fn keeps_secrets(shown: &str) {
-    for secret in [KEY, SOUND_SHOWN, "api.groq.com", SAID] {
+    for secret in [KEY, SOUND_SHOWN, "api.groq.com", MODEL, SAID] {
         assert!(!shown.contains(secret), "{shown} shows {secret}");
     }
     assert!(shown.contains(REDACTED_MARKER), "{shown}");
@@ -169,16 +172,11 @@ fn an_address_prints_redacted_as_a_typed_one_is_the_users() {
 }
 
 #[test]
-fn an_ask_prints_no_key_no_sound_and_no_address() {
+fn an_ask_prints_no_key_no_sound_no_address_and_no_model() {
     let ask = ask();
     let shown = format!("{ask:?}{ask:#?}");
     keeps_secrets(&shown);
-    for part in [
-        "whisper-large-v3-turbo",
-        "lang: \"fr\"",
-        "Bearer",
-        "max_mb: 25",
-    ] {
+    for part in ["lang: \"fr\"", "Bearer", "max_mb: 25"] {
         assert!(shown.contains(part), "{shown} lacks {part}");
     }
 }

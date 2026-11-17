@@ -3,16 +3,15 @@
 
 use super::{CloudFault, CloudShape, HttpsUrl, KeyHeader};
 use crate::ports::{JobLimits, MB, SAMPLE_BYTES, SOUND_HZ, TAG_LEN};
-use crate::{Secret, SecretBytes};
+use crate::{Redacted, Secret, SecretBytes};
+pub use kx_ipc::MAX_KEY_BYTES;
 use std::ops::RangeInclusive;
-
-/// The longest key, in bytes: a safety ceiling far above any service's key.
-pub const MAX_KEY_BYTES: usize = 1 << 10;
 
 /// A service row's limits on one request, from the service's own pages; a dictation is cut within them.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct CloudLimits {
-    /// The most megabytes of sound one request may carry, after its shape's own growth such as Base64.
+    /// The most megabytes of raw sound one request may carry: the table stores the service's cap already reduced for
+    /// its shape's growth (Base64, the WAV header, the form's parts), as `piece_bytes` counts raw sound.
     pub max_mb: u32,
     /// The most seconds of sound one request may carry.
     pub max_s: u16,
@@ -23,15 +22,15 @@ pub struct CloudLimits {
 }
 
 impl CloudLimits {
-    /// `max_mb`'s range: up to a safety ceiling past any service's own cap.
-    pub const MAX_MB: RangeInclusive<u32> = 1..=8_192;
+    /// `max_mb`'s range, the frames' own.
+    pub const MAX_MB: RangeInclusive<u32> = kx_ipc::NET_MAX_MB;
     /// `max_s`' range: from the shortest piece the `voice` job cuts to the longest dictation, the frames' own.
     pub const MAX_S: RangeInclusive<u16> =
         RangeInclusive::new(*kx_ipc::PIECE_S.start() as u16, *kx_ipc::RECORD_MAX_S.end());
-    /// `per_min`'s range.
-    pub const PER_MIN: RangeInclusive<u16> = 1..=6_000;
-    /// `at_once`' range.
-    pub const AT_ONCE: RangeInclusive<u8> = 1..=16;
+    /// `per_min`'s range, the frames' own.
+    pub const PER_MIN: RangeInclusive<u16> = kx_ipc::NET_PER_MIN;
+    /// `at_once`' range, the frames' own.
+    pub const AT_ONCE: RangeInclusive<u8> = kx_ipc::NET_AT_ONCE;
 
     /// The most bytes one piece may hold: within both `max_mb` and `max_s`, in whole samples.
     #[must_use]
@@ -55,7 +54,7 @@ impl CloudLimits {
 }
 
 /// One dictation's pieces for one service, as its row and the user's choices say.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CloudAsk {
     /// The `speech-net` job's limits and waits; its cap is `job_mb`.
     pub job: JobLimits,
@@ -67,8 +66,9 @@ pub struct CloudAsk {
     pub header: KeyHeader,
     /// The user's key: visible ASCII within `MAX_KEY_BYTES`, wiped on drop.
     pub key: Secret,
-    /// The model's id, such as `whisper-large-v3-turbo`; `None` sends none, as Lemonfox and Azure's classic take none.
-    pub model: Option<String>,
+    /// The model's id, such as `whisper-large-v3-turbo`, redacted as a typed Other model is the user's; `None` sends
+    /// none, as Lemonfox and Azure's classic take none.
+    pub model: Option<Redacted<String>>,
     /// The model's code for the language in front, such as `fr`, `ar-SA` or `french`, within `TAG_LEN`.
     pub lang: String,
     /// The row's limits.
@@ -82,10 +82,10 @@ pub struct CloudAsk {
 }
 
 impl CloudAsk {
-    /// `wait_s`' range.
-    pub const WAIT_S: RangeInclusive<u16> = 5..=300;
-    /// `tries`' range.
-    pub const TRIES: RangeInclusive<u8> = 1..=5;
+    /// `wait_s`' range, the frames' own; the default is the `[voice]` settings'.
+    pub const WAIT_S: RangeInclusive<u16> = kx_ipc::NET_WAIT_S;
+    /// `tries`' range, the frames' own; the default is the `[voice]` settings'.
+    pub const TRIES: RangeInclusive<u8> = kx_ipc::NET_TRIES;
     /// How many pieces an ask holds: from one to a whole dictation's, the frames' own.
     pub const PIECES: RangeInclusive<usize> = 1..=kx_ipc::MAX_PIECES;
 
@@ -100,7 +100,10 @@ impl CloudAsk {
             n > 0 && n <= most && n.is_multiple_of(SAMPLE_BYTES)
         };
         let codes = [
-            (self.model.as_deref().is_none_or(tag_ok), "model"),
+            (
+                self.model.as_ref().is_none_or(|m| tag_ok(m.expose())),
+                "model",
+            ),
             (tag_ok(&self.lang), "lang"),
         ];
         let pieces = Self::PIECES.contains(&self.pieces.len()) && self.pieces.iter().all(piece);
@@ -117,7 +120,7 @@ impl CloudAsk {
 }
 
 /// A key's test: a call to the row's test address that needs the key and sends no sound.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct CloudTest {
     /// The `speech-net` job's limits and waits.
     pub job: JobLimits,

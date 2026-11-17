@@ -132,7 +132,7 @@ fn a_model_or_language_code_that_is_no_plain_tag_is_refused() {
     let past = "a".repeat(*crate::ports::TAG_LEN.end() + 1);
     for code in ["", "fr FR", "عربي", past.as_str()] {
         let model = CloudAsk {
-            model: Some(code.into()),
+            model: Some(Redacted::new(code.into())),
             ..ask()
         };
         assert_eq!(refused(&model), Some("model"), "{code:?}");
@@ -169,6 +169,17 @@ const PAST: [Case; 13] = [
     ("tries", |a| a.tries = CloudAsk::TRIES.end() + 1),
     ("job_mb", |a| a.job.job_mb = 0),
 ];
+
+#[test]
+fn the_ranges_are_the_frames_own_limits() {
+    assert_eq!(MAX_KEY_BYTES, kx_ipc::MAX_KEY_BYTES);
+    assert_eq!(MAX_FIXED, kx_ipc::MAX_FIXED);
+    assert_eq!(CloudLimits::MAX_MB, kx_ipc::NET_MAX_MB);
+    assert_eq!(CloudLimits::PER_MIN, kx_ipc::NET_PER_MIN);
+    assert_eq!(CloudLimits::AT_ONCE, kx_ipc::NET_AT_ONCE);
+    assert_eq!(CloudAsk::WAIT_S, kx_ipc::NET_WAIT_S);
+    assert_eq!(CloudAsk::TRIES, kx_ipc::NET_TRIES);
+}
 
 #[test]
 fn each_limit_and_wait_outside_its_range_is_named() {

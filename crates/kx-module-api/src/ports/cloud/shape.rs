@@ -2,9 +2,8 @@
 //! the key, each refused when it could break a request's head or body.
 
 use crate::ports::TAG_LEN;
+pub use kx_ipc::MAX_FIXED;
 
-/// The most fixed fields a form adds, such as `OpenRouter`'s keep-nothing `provider`.
-pub const MAX_FIXED: usize = 4;
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
 pub const MAX_FIELD_VALUE: usize = kx_ipc::MAX_NAME_BYTES;
 /// The marks a field's or a header's name may hold besides ASCII letters and digits.

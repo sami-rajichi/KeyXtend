@@ -58,8 +58,12 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 fn the_marks_and_buttons_are_the_designs() {
     use CloudButton::{Facts, Lines, Link, Paste, Remove, Test};
     use KeyCheck::{NoTest, Refused, Testing, Works};
-    use ServiceMark::{NeedsKey, Off, Ready, Unavailable};
-    assert_eq!(ServiceMark::ALL, [Off, NeedsKey, Ready, Unavailable]);
+    use ServiceMark::{NeedsKey, Off, Ready};
+    assert_eq!(
+        ServiceMark::ALL,
+        [Off, NeedsKey, Ready],
+        "a model's Unavailable is its row's"
+    );
     let want = [
         CloudButton::On,
         CloudButton::Off,
@@ -122,7 +126,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
         name,
         mark,
         untested: warn,
-        free: free(),
+        free: Some(free()),
         warn,
         tick: false,
     };
@@ -133,7 +137,10 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
             ServiceMark::Off,
             true,
         ),
-        row(ServiceName::Custom, ServiceMark::NeedsKey, false),
+        ServiceRow {
+            free: None,
+            ..row(ServiceName::Custom, ServiceMark::NeedsKey, false)
+        },
     ];
     let acts = vec![CloudButton::Facts, CloudButton::On];
     let shown = shown(VoiceSheet::Cloud(CloudSheet {
@@ -148,6 +155,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
         "warn: true",
         "Custom",
         "Count(8)",
+        "free: None",
         "On]",
     ];
     holds(&shown, &parts);
@@ -159,6 +167,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
         hours,
         price: fact("one", vec![arg("amount", usd(cents))]),
     };
+    let switch = FactValue::Text("Use my data for training".into());
     let card = CloudCard {
         service: ServiceName::Named("ElevenLabs".into()),
         place: fact("us", Vec::new()),
@@ -173,7 +182,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
         read: read(),
         old: true,
         site: Some("elevenlabs.io".into()),
-        warn: Some("trains".into()),
+        warn: Some(fact("trains", vec![arg("sw", switch)])),
         untested: true,
         on: None,
     };
@@ -187,6 +196,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
         "day: 17",
         "old: true",
         "elevenlabs.io",
+        "Text(\"Use my data for training\")",
         "untested: true",
         "on: None",
     ];
@@ -201,7 +211,9 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         key: Redacted::new(56),
         check: KeyCheck::Untested,
         address: Some(hidden(1)),
+        address_ok: false,
         model: hidden(2),
+        model_na: true,
         keep: Some(true),
         site: None,
         acts: vec![CloudButton::Paste, CloudButton::Test],
@@ -210,7 +222,15 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
     assert!(!shown.contains("56"), "a key's length is a secret: {shown}");
     holds(
         &shown,
-        &["Custom", "Ready", "Untested", "keep: Some(true)", "Paste"],
+        &[
+            "Custom",
+            "Ready",
+            "Untested",
+            "address_ok: false",
+            "model_na: true",
+            "keep: Some(true)",
+            "Paste",
+        ],
     );
 }
 

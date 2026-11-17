@@ -97,7 +97,7 @@ fn ask() -> CloudAsk {
         url: HttpsUrl::new("https://api.groq.com/openai/v1/audio/transcriptions").unwrap(),
         header: KeyHeader::Bearer,
         key: Redacted::new(Zeroizing::new("gsk_contract".into())),
-        model: Some("whisper-large-v3".into()),
+        model: Some(Redacted::new("whisper-large-v3".into())),
         lang: "ar".into(),
         limits: CloudLimits {
             max_mb: 25,
