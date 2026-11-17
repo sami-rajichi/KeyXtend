@@ -63,6 +63,47 @@ fn a_model_that_breaks_a_rule_is_refused_by_its_id() {
 }
 
 #[test]
+fn a_model_takes_a_named_language_set_that_must_exist() {
+    let groq = shipped().get("groq").unwrap();
+    let whisper = &groq.models[0].langs;
+    assert!(
+        groq.models.iter().all(|m| m.langs == *whisper),
+        "one set, written once"
+    );
+    let codes = ["en", "fr", "ar", "fil"].map(|l| whisper.get(l).map(String::as_str));
+    assert_eq!(codes, [Some("en"), Some("fr"), Some("ar"), Some("tl")]);
+    let turbo = Some(("whisper-large-v3-turbo".to_owned(), M::Set));
+    let typo = edits(&[("langs = \"whisper\"", "langs = \"whispr\"")]);
+    let typo = match typo {
+        Err(ServicesError::Row {
+            why: ServiceError::Model { id, why },
+            ..
+        }) => Some((id, why)),
+        _ => None,
+    };
+    assert_eq!(typo, turbo, "a set the table does not name");
+}
+
+#[test]
+fn a_models_own_form_that_asks_for_timings_says_so() {
+    let own = "form = { lang = \"languages\", list = true }";
+    let timed = "form = { lang = \"languages\", list = true, fixed = [{ name = \"timestamp_granularities\", value = \"word\" }] }";
+    let err = model_err(OPENAI, own, timed);
+    assert_eq!(err, Some(("gpt-transcribe".into(), M::Reply)));
+    let said = err.map(|(_, why)| why.to_string()).unwrap_or_default();
+    assert!(said.contains("timings"), "{said}");
+}
+
+#[test]
+fn groqs_least_billed_length_is_a_fact_the_validator_checks() {
+    let bills = shipped().get("groq").unwrap().facts.bills.clone().unwrap();
+    assert_eq!((bills.id.as_str(), bills.args.len()), ("least", 1));
+    assert!(shipped().get("custom").unwrap().facts.bills.is_none());
+    let least = "bills = { id = \"least\", count = { seconds = 10 } }";
+    refused(least, &least.replace("least", "Least"), "bills", F::Id);
+}
+
+#[test]
 fn a_model_on_a_shape_that_needs_a_name_or_takes_no_form_is_refused() {
     let classic = |why| Some(("classic".to_owned(), why));
     let eleven = model_err(AZURE, "shape = \"azure\"", "shape = \"eleven\"");

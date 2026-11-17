@@ -72,6 +72,9 @@ pub(super) struct RawFacts {
     /// The card's warning.
     #[serde(default)]
     warn: Option<RawFact>,
+    /// The least a request bills, when the service rounds up.
+    #[serde(default)]
+    bills: Option<RawFact>,
 }
 
 /// A fact as written: its text's id and its values by kind.
@@ -121,6 +124,8 @@ pub struct Facts {
     pub heavy: Fact,
     /// The card's warning, in the warning tone; `None` for none.
     pub warn: Option<Fact>,
+    /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` for none.
+    pub bills: Option<Fact>,
 }
 
 impl Facts {
@@ -151,6 +156,7 @@ pub(super) fn checked(raw: RawFacts, named: bool) -> Result<Facts, ServiceError>
         fact(raw, money).map_err(|why| ServiceError::Fact(name, why))
     };
     let warn = raw.warn.map(|w| one(w, "warn")).transpose()?;
+    let bills = raw.bills.map(|b| one(b, "bills")).transpose()?;
     Ok(Facts {
         read,
         source,
@@ -161,6 +167,7 @@ pub(super) fn checked(raw: RawFacts, named: bool) -> Result<Facts, ServiceError>
         light: one(raw.light, "light")?,
         heavy: one(raw.heavy, "heavy")?,
         warn: warn.map(|w| Fact { warn: true, ..w }),
+        bills,
     })
 }
 

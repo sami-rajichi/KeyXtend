@@ -165,9 +165,9 @@ fn row_err(from: &str, to: &str) -> Option<ServiceError> {
 }
 
 #[test]
-fn the_shipped_table_loads_groq_first_then_custom() {
+fn the_shipped_table_loads_groq_first_with_custom() {
     let ids: Vec<&str> = shipped().rows().iter().map(|r| r.id.as_str()).collect();
-    assert_eq!(ids, ["groq", "custom"]);
+    assert!(ids.contains(&"custom"), "{ids:?}");
     let first = shipped().offered().next().map(|r| r.id.as_str());
     assert_eq!(first, Some("groq"), "edge 24: Groq is listed first");
     assert_eq!((shipped().light_hours(), shipped().heavy_hours()), (15, 60));
@@ -175,38 +175,34 @@ fn the_shipped_table_loads_groq_first_then_custom() {
 }
 
 #[test]
-fn every_shipped_row_is_https_shaped_with_languages_limits_dated_facts_and_terms() {
-    let read = Date::new(2026, 11, 17).unwrap();
+fn every_shipped_row_is_https_with_fitting_limits_and_only_custom_is_unnamed() {
+    let unnamed: Vec<&str> = shipped()
+        .rows()
+        .iter()
+        .filter(|r| r.name.is_none())
+        .map(|r| r.id.as_str())
+        .collect();
+    assert_eq!(unnamed, ["custom"], "one unnamed row, the Custom one");
     for row in shipped().rows() {
         let id = &row.id;
+        let named = row.name.is_some();
         match &row.address {
             Address::Fixed(url) => assert!(url.expose().starts_with(LINK_SCHEME), "{id}"),
-            Address::Typed { under } => assert!(under.is_none() && row.name.is_none(), "{id}"),
+            Address::Typed { under } => assert_eq!(under.is_some(), named, "{id}"),
         }
-        assert!(
-            row.shape.fits() && matches!(row.shape, CloudShape::Form(_)),
-            "{id}"
-        );
+        assert!(row.shape.fits() && row.terms >= 1, "{id}");
         assert!(row.other || !row.models.is_empty(), "{id}");
-        for model in &row.models {
-            let spoken = ["en", "fr", "ar"].map(|lang| model.code(lang).is_some());
-            assert_eq!(spoken, [true; 3], "{id} {}", model.id);
-        }
+        assert!(row.models.iter().all(|m| !m.langs.is_empty()), "{id}");
         let l = row.limits;
         assert!(CloudLimits::MAX_MB.contains(&l.max_mb) && CloudLimits::MAX_S.contains(&l.max_s));
         assert!(
             CloudLimits::PER_MIN.contains(&l.per_min) && CloudLimits::AT_ONCE.contains(&l.at_once)
         );
+        let linked = (row.keys.is_some(), row.facts.source.is_some());
         assert_eq!(
-            row.facts.read, read,
-            "{id}: the facts of the day they were read"
-        );
-        assert!(row.terms >= 1 && row.offered && row.untested, "{id}");
-        let named = row.name.is_some();
-        assert_eq!(
-            (row.keys.is_some(), row.facts.source.is_some()),
+            linked,
             (named, named),
-            "{id}"
+            "{id}: a named row links its keys and facts pages"
         );
     }
 }
@@ -215,6 +211,12 @@ fn every_shipped_row_is_https_shaped_with_languages_limits_dated_facts_and_terms
 fn groqs_facts_are_numbers_and_flags_with_their_day_and_source() {
     let groq = shipped().get("groq").unwrap();
     let facts = &groq.facts;
+    assert_eq!(facts.read, Date::new(2026, 11, 17).unwrap());
+    let spoken = groq
+        .models
+        .iter()
+        .all(|m| ["en", "fr", "ar"].iter().all(|l| m.code(l).is_some()));
+    assert!(spoken, "Groq's models know the owner's three languages");
     assert_eq!(
         facts.source.as_ref().map(HttpsUrl::host),
         Some("console.groq.com")

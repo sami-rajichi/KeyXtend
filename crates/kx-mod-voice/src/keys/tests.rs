@@ -172,6 +172,17 @@ fn a_blob_that_is_no_key_reads_as_damaged() {
 }
 
 #[test]
+fn has_lists_the_names_and_opens_no_blob() {
+    let (keys, shelf) = keys();
+    shelf.plant(KEYS, "groq", b"two words");
+    assert_eq!(keys.has("groq"), Ok(true), "a damaged blob is still listed");
+    assert_eq!(keys.has("custom"), Ok(false));
+    let opened = keys.get("groq").map(|k| k.is_some());
+    assert_eq!(opened, Err(KeyError::Shelf(SealedError::Damaged)));
+    assert_eq!(keys.has("Groq"), Err(KeyError::Shelf(SealedError::BadName)));
+}
+
+#[test]
 fn no_key_reaches_a_print_or_an_error() {
     let (keys, _) = keys();
     let key = made_key(10);

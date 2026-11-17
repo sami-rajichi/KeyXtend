@@ -7,11 +7,14 @@ use crate::services::table;
 use kx_module_api::ports::{FactValue, ServiceName};
 
 mod props;
+mod typed;
 
 /// The compiled-in services table text.
 const TEXT: &str = include_str!("../../services.toml");
 /// Groq's turbo model.
 const TURBO: &str = "whisper-large-v3-turbo";
+/// An address Custom takes: HTTPS on a host name.
+const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
 
 /// The day the tests confirm on.
 fn today() -> Date {
@@ -93,54 +96,6 @@ fn a_service_is_off_until_the_user_confirms_its_card() {
         "the model does not know the language"
     );
     assert!(!rules().confirm(&mut s, "openai", today()), "no such row");
-}
-
-#[test]
-fn an_other_model_is_typed_then_picked_and_its_change_drops_its_picks() {
-    let mut s = on();
-    assert!(
-        !rules().type_model(&mut s, "custom", "my-model"),
-        "not switched on yet"
-    );
-    assert!(rules().confirm(&mut s, "custom", today()));
-    assert!(!rules().type_model(&mut s, "custom", "a//b"));
-    assert!(rules().type_model(&mut s, "custom", "my-model"));
-    assert!(
-        !rules().pick(&mut s, "en", "custom", "other-model"),
-        "only the typed id"
-    );
-    assert!(rules().pick(&mut s, "en", "custom", "my-model"));
-    let c = rules().choice(&s, "en").unwrap();
-    assert_eq!(
-        (c.code.as_str(), c.model),
-        ("en", Chosen::Typed("my-model"))
-    );
-    assert!(rules().type_model(&mut s, "custom", "other-model"));
-    assert!(
-        rules().choice(&s, "en").is_none() && s.picks.is_empty(),
-        "no pick follows a new id by itself"
-    );
-}
-
-#[test]
-fn a_typed_address_is_kept_only_when_https_on_a_host_name() {
-    let mut s = on();
-    assert!(rules().confirm(&mut s, "custom", today()) && rules().confirm(&mut s, "groq", today()));
-    for bad in [
-        "http://stt.example.com/v1",
-        "http://192.168.1.20",
-        "https://192.168.1.20/v1",
-        "stt",
-    ] {
-        assert!(!rules().type_address(&mut s, "custom", bad), "{bad}");
-    }
-    let good = "https://stt.example.com/v1/audio/transcriptions";
-    assert!(rules().type_address(&mut s, "custom", good));
-    assert_eq!(s.services["custom"].address, good);
-    assert!(
-        !rules().type_address(&mut s, "groq", good),
-        "a row with its own address takes none"
-    );
 }
 
 #[test]
@@ -239,7 +194,23 @@ fn edge_24_groq_is_listed_first() {
     let offered = rules().offered(&on());
     let ids: Vec<&str> = offered.iter().map(|r| r.id.as_str()).collect();
     assert_eq!(ids.first(), Some(&"groq"));
-    assert_eq!(ids, ["groq", "custom"]);
+    assert!(ids.contains(&"custom"), "{ids:?}");
+}
+
+#[test]
+fn the_card_shows_the_least_a_request_bills_where_a_service_rounds_up() {
+    let groq = rules().card(&on(), row("groq"), today()).bills.unwrap();
+    let seconds: Vec<_> = groq
+        .args
+        .iter()
+        .map(|a| (a.name.as_str(), &a.value))
+        .collect();
+    assert_eq!(
+        seconds,
+        [("seconds", &FactValue::Count(10))],
+        "Groq bills 10 s at least [G1]"
+    );
+    assert!(rules().card(&on(), row("custom"), today()).bills.is_none());
 }
 
 #[test]

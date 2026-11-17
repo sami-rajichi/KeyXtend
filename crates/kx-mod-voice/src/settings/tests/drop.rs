@@ -35,6 +35,7 @@ fn a_bad_service_entry_is_dropped_alone_and_named() {
     let bad = [
         ("openai", entry(|_| {})),
         ("groq", entry(|on| on.terms = 0)),
+        ("groq", entry(|on| on.terms = 2)),
         ("groq", entry(|on| on.on = at_ten)),
         ("groq", at("https://api.groq.com/v1")),
         ("custom", at("http://stt.example.com/v1")),
@@ -77,8 +78,9 @@ fn an_odd_id_names_the_whole_key_and_a_second_read_drops_nothing() {
 fn a_cloud_pick_stays_only_while_it_names_a_service_on_and_a_model_for_its_language() {
     let mut s = on();
     s.services.insert("groq".into(), entry(|_| {}));
-    s.services
-        .insert("custom".into(), entry(|on| on.model = "my-model".into()));
+    let mut custom = at("https://stt.example.com/v1/audio/transcriptions");
+    custom.model = "my-model".into();
+    s.services.insert("custom".into(), custom);
     let picks = [
         ("fr", "groq:whisper-large-v3-turbo"),
         ("ar", "groq:whisper-large-v3"),
@@ -110,4 +112,14 @@ fn a_cloud_pick_stays_only_while_it_names_a_service_on_and_a_model_for_its_langu
         2,
         "the confirmations stay for the next time cloud is on"
     );
+}
+
+#[test]
+fn a_typed_rows_pick_goes_while_no_address_is_typed() {
+    let mut s = on();
+    s.services
+        .insert("custom".into(), entry(|on| on.model = "my-model".into()));
+    s.picks.insert("en".into(), "custom:my-model".into());
+    assert_eq!(s.drop_bad(), ["picks.en"], "edge 13: nowhere to send it");
+    assert!(s.services.contains_key("custom"), "the confirmation stays");
 }

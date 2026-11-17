@@ -66,12 +66,16 @@ impl Keys {
         }
     }
 
-    /// True when service `id` has a key; the key read is wiped at once.
+    /// True when service `id` has a key blob, from the folder's names alone, so no key is opened; false in a hidden run.
     ///
     /// # Errors
-    /// As `get`.
+    /// `Shelf` with `BadName` for an id that names no blob, or the shelf's error.
     pub fn has(&self, id: &str) -> Result<bool, KeyError> {
-        Ok(self.get(id)?.is_some())
+        let Some(sealed) = &self.shelf else {
+            return Ok(false);
+        };
+        let name = BlobName::new(id)?;
+        Ok(sealed.names(&folder()?)?.contains(&name))
     }
 
     /// Seals `key` as service `id`'s, in place of the one before; the key is wiped as this returns.

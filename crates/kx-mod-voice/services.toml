@@ -8,6 +8,7 @@
 # - `max_models`: the most models a row offers (design "Connections and services").
 # - `[reply]`: replies stay plain text or JSON without timings: a fixed field named in `formats` asks only for one of
 #   `plain`, and one named in `timings` only for one of `untimed`.
+# - `[langs]`: language sets by name, which a model's `langs` may name in place of its own list.
 #
 # Each row ([[services]]):
 # - `id`: the name `services`, `picks` and the key's sealed blob use; `name`: the shown name, left out for Custom,
@@ -25,10 +26,12 @@
 # - `other`: an Other model line takes a typed id, sent with the keyboard's language code as it is.
 # - `terms`: raised when the training, retention or region fact changes, so the user confirms again.
 # - `offered`: shown on the Cloud page; `untested`: no real key has checked the connection yet.
-# - `[[services.models]]`: each `id`, shown `name`, the code it wants per keyboard language, maybe its own `form`,
-#   `unnamed = true` when the request names no model, and `keeps` when every host of it keeps the voice.
+# - `[[services.models]]`: each `id`, shown `name`, its `langs` (the code it wants per keyboard language, or a set's
+#   name), maybe its own `form`, `unnamed = true` when the request names no model, and `keeps` when every host of it
+#   keeps the voice.
 # - `[services.facts]`: the day `read` and its `source` page, the `currency`, and the card's facts: each a text `id`
-#   with its values by kind (`count`, `number`, `money`, `day`, `text`) and `warn` for the warning tone.
+#   with its values by kind (`count`, `number`, `money`, `day`, `text`) and `warn` for the warning tone. The optional
+#   `warn` fact is the card's warning, and `bills` the least a request bills when the service rounds up.
 
 light_hours = 15
 heavy_hours = 60
@@ -40,6 +43,22 @@ formats = ["response_format"]
 plain = ["json", "text"]
 timings = ["timestamp_granularities", "timestamps_granularity"]
 untimed = ["none"]
+
+# Language sets by name, each keyboard language with the code a model wants, written once for every model that shares
+# it. `whisper`: the models table's Whisper languages less haw and yue, with fil, jv and nb in Whisper's own codes.
+[langs]
+whisper = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
+    jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
+    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
+    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
+    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
+    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
+    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
+}
 
 # Groq: console.groq.com docs read 2026-11-17 (speech-to-text, rate-limits, models, billing-faqs, your-data, and the
 # services agreement section 4.2). The free plan's 20 requests a minute and 28,800 audio seconds a day; 25 MB a file.
@@ -62,34 +81,12 @@ untested = true
 [[services.models]]
 id = "whisper-large-v3-turbo"
 name = "Whisper Large v3 Turbo"
-langs = {
-    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
-    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
-    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
-    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
-    jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
-    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
-    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
-    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
-    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
-    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
-}
+langs = "whisper"
 
 [[services.models]]
 id = "whisper-large-v3"
 name = "Whisper Large v3"
-langs = {
-    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
-    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
-    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
-    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
-    jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
-    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
-    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
-    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
-    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
-    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
-}
+langs = "whisper"
 
 [services.facts]
 read = 2026-11-17
@@ -101,6 +98,7 @@ keeps = { id = "logs", count = { days = 30 }, text = { switch = "Settings → Da
 free = { id = "daily", count = { hours = 8, per_min = 20 } }
 light = { id = "free-or", money = { low = 0.60, high = 1.67 } }
 heavy = { id = "free-or", money = { low = 2.40, high = 6.66 } }
+bills = { id = "least", count = { seconds = 10 } }
 
 # Custom (design "Connections and services"): any service that speaks the upload form, such as the user's own server,
 # at an HTTPS host name the user types with its model; its card says the facts are that service's own.

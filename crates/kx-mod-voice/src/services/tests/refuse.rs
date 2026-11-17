@@ -47,6 +47,26 @@ fn a_typed_rows_test_must_be_a_path_and_its_domain_a_host_entry() {
 }
 
 #[test]
+fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
+    let azure = edits_of(&format!("{TEXT}{AZURE}"), &[("name = \"Azure\"\n", "")]);
+    let unnamed = |id: &str| {
+        Some(ServicesError::Row {
+            id: id.into(),
+            why: E::Name,
+        })
+    };
+    assert_eq!(
+        azure.err(),
+        unnamed("azure-test"),
+        "a typed row under a domain is named"
+    );
+    let custom = &TEXT[TEXT.find("[[services]]\nid = \"custom\"").unwrap()..];
+    let second = custom.replace("id = \"custom\"", "id = \"custom-two\"");
+    let twice = Services::parse(&format!("{TEXT}{second}"));
+    assert_eq!(twice.err(), unnamed("custom-two"), "a second Custom row");
+}
+
+#[test]
 fn a_shape_or_form_that_breaks_a_request_is_refused() {
     let five = ["{ name = \"a\", value = \"1\" }"; 5].join(", ");
     refused("shape = \"form\"", "shape = \"json\"", E::Shape);

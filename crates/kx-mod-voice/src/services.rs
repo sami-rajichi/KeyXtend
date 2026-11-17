@@ -14,6 +14,7 @@ pub use facts::{FactError, Facts};
 pub use model::{Model, ModelError};
 pub use row::{Service, ServiceError};
 
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use kx_module_api::ports::BlobName;
@@ -74,9 +75,15 @@ struct Raw {
     max_models: usize,
     /// What a form may ask about its reply.
     reply: form::Reply,
+    /// Language sets by name, each keyboard language with its code, which a model names in place of its own list.
+    #[serde(default)]
+    langs: BTreeMap<String, LangCodes>,
     /// The rows.
     services: Vec<row::RawService>,
 }
+
+/// Each keyboard language (ISO 639) and the code a service wants for it.
+pub type LangCodes = BTreeMap<String, String>;
 
 /// What every row is checked against.
 struct Rules<'a> {
@@ -86,6 +93,8 @@ struct Rules<'a> {
     max_models: usize,
     /// What a form may ask about its reply.
     reply: &'a form::Reply,
+    /// The table's language sets by name.
+    sets: &'a BTreeMap<String, LangCodes>,
 }
 
 /// The checked table: its rows in the Cloud page's order, and the hours of light and heavy use the cards price.
@@ -115,6 +124,7 @@ impl Services {
             room,
             max_models: raw.max_models,
             reply: &raw.reply,
+            sets: &raw.langs,
         };
         let rows = checked_rows(raw.services, &rules)?;
         Ok(Self {
@@ -168,7 +178,14 @@ fn checked_rows(
         if BlobName::new(&id).is_err() || rows.iter().any(|r| r.id == id) {
             return Err(ServicesError::Id(id));
         }
-        rows.push(Service::checked(one, rules).map_err(|why| ServicesError::Row { id, why })?);
+        // Only the one Custom row may go unnamed, so a second is refused by the name rule.
+        let unnamed = rows.iter().any(|r| r.name.is_none());
+        let row = Service::checked(one, rules).and_then(|r| {
+            (r.name.is_some() || !unnamed)
+                .then_some(r)
+                .ok_or(ServiceError::Name)
+        });
+        rows.push(row.map_err(|why| ServicesError::Row { id, why })?);
     }
     Ok(rows)
 }

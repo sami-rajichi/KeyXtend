@@ -78,12 +78,13 @@ impl<'a> Cloud<'a> {
         self.table.offered().collect()
     }
 
-    /// Where `service` stands: Off until the user confirms its card while cloud is on, then by whether a key is set.
+    /// Where `service` stands: Off until the user confirms its card while cloud is on, then Ready once a key is set
+    /// and, for a typed row, an address typed.
     #[must_use]
     pub fn mark(&self, s: &VoiceSettings, service: &Service, key: bool) -> ServiceMark {
         match self.entry(s, service) {
             None => ServiceMark::Off,
-            Some(_) if key => ServiceMark::Ready,
+            Some(on) if key && reaches(service, on) => ServiceMark::Ready,
             Some(_) => ServiceMark::NeedsKey,
         }
     }
@@ -122,6 +123,7 @@ impl<'a> Cloud<'a> {
             free: facts.free.clone(),
             light: price(self.table.light_hours(), &facts.light),
             heavy: price(self.table.heavy_hours(), &facts.heavy),
+            bills: facts.bills.clone(),
             read: facts.read,
             old: facts.old(today, s.facts_days),
             site: facts.source.as_ref().map(|url| url.host().to_owned()),
@@ -151,7 +153,7 @@ impl<'a> Cloud<'a> {
     {
         let service: &'s Service = self.table.get(id)?;
         let entry = self.entry(s, service)?;
-        if !fits_iso(lang) {
+        if !fits_iso(lang) || !reaches(service, entry) {
             return None;
         }
         let (model, code) = match service.model(model) {
@@ -176,12 +178,19 @@ fn typed(service: &Service, entry: &ServiceOn, model: &str, lang: &str) -> bool 
     service.other && !entry.model.is_empty() && entry.model == model && CloudAsk::lang_fits(lang)
 }
 
-/// True when `on` is an entry `row` still takes: a plain day, a terms number, and typed lines the row allows.
+/// True when `service`'s pieces have somewhere to go: its own address, or one typed for a typed row (edge 13).
+fn reaches(service: &Service, on: &ServiceOn) -> bool {
+    service.url(&on.address).is_some()
+}
+
+/// True when `on` is an entry `row` still takes: a plain day, a terms number from 1 to the row's, so a hand edit
+/// cannot skip a later one, and typed lines the row allows.
 pub(crate) fn entry_ok(row: &Service, on: &ServiceOn) -> bool {
     let typed_row = matches!(row.address, Address::Typed { .. });
     let address = on.address.is_empty() || (typed_row && row.url(&on.address).is_some());
     let model = on.model.is_empty() || (row.other && CloudAsk::model_fits(&on.model));
-    on.day().is_some() && on.terms > 0 && address && model
+    let terms = (1..=row.terms).contains(&on.terms);
+    on.day().is_some() && terms && address && model
 }
 
 #[cfg(test)]

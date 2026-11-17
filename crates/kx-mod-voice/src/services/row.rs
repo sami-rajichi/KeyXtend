@@ -17,8 +17,10 @@ const BEARER: &str = "bearer";
 /// Why a row was refused, in the order the rules are checked.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ServiceError {
-    /// The name is empty or holds a hidden mark, or a row with its own address has none.
-    #[error("its name is empty, holds a hidden mark, or is missing on a row with its own address")]
+    /// The name is empty or holds a hidden mark, or is missing on a row other than the one Custom row.
+    #[error(
+        "its name is empty, holds a hidden mark, or is missing on a row other than the one custom row"
+    )]
     Name,
     /// The shape is not one `speech-net` knows.
     #[error("its shape is not one speech-net knows")]
@@ -221,10 +223,10 @@ impl Service {
     }
 }
 
-/// Fine for a one-line name, or none on a row whose address is typed (Custom).
+/// Fine for a one-line name, or none on the Custom row: typed, on any host name.
 fn name_ok(name: Option<&str>, address: &Address) -> Result<(), ServiceError> {
-    let typed = matches!(address, Address::Typed { .. });
-    let good = name.map_or(typed, one_line);
+    let custom = matches!(address, Address::Typed { under: None });
+    let good = name.map_or(custom, one_line);
     if good {
         Ok(())
     } else {

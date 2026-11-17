@@ -114,29 +114,24 @@ fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     if dropped.is_empty() {
         return Ok(settings);
     }
-    let kept = [
-        (
-            SERVICES,
-            before.0 != settings.services.len(),
-            settings.services_value(),
-        ),
-        (
-            PICKS,
-            before.1 != settings.picks.len(),
-            toml::Value::try_from(&settings.picks).ok(),
-        ),
-    ];
-    for (key, _, value) in kept.into_iter().filter(|(_, changed, _)| *changed) {
-        if let Some(value) = value {
-            // A failed save keeps the repair for this run, and the kernel tells the user about the file.
-            let _ = cx.settings_handle().set(key, value);
-        }
+    if before.0 != settings.services.len() {
+        keep(cx, SERVICES, settings.services_value());
+    }
+    if before.1 != settings.picks.len() {
+        keep(cx, PICKS, toml::Value::try_from(&settings.picks).ok());
     }
     let mut notice = Notice::about(keys::SETTINGS_RESET, ID);
     notice.args.push((args::KEYS, NoticeArg::List(dropped)));
     // A notice needs no gate, so none is refused.
     let _ = cx.bus().publish(&notice);
     Ok(settings)
+}
+
+/// Writes `value` back under `key`; a failed save keeps the repair for this run, and the kernel tells the user.
+fn keep(cx: &ModuleCx<'_>, key: &str, value: Option<toml::Value>) {
+    if let Some(value) = value {
+        let _ = cx.settings_handle().set(key, value);
+    }
 }
 
 /// The actor's ports: every service through the manifest's gates, the watches telling the inbox, and the typer.

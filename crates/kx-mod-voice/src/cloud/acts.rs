@@ -32,11 +32,16 @@ impl<'a> Cloud<'a> {
             .services
             .entry(id.to_owned())
             .or_insert_with(|| fresh.clone());
-        if !entry_ok(row, entry) {
+        let stale = !entry_ok(row, entry);
+        if stale {
             *entry = fresh;
         }
         entry.on = datetime(today);
         entry.terms = row.terms;
+        if stale {
+            // A stale entry's typed lines go, and with them the picks that needed them.
+            drop_picks(s, |service, _| service == id);
+        }
         true
     }
 
@@ -70,8 +75,9 @@ impl<'a> Cloud<'a> {
         true
     }
 
-    /// Keeps `text` as service `id`'s typed address, empty to clear it; false for a service not on, a row with its
-    /// own address, or an address that is not HTTPS on a host name the row takes (edge 13).
+    /// Keeps `text` as service `id`'s typed address, empty to clear it, which drops its picks so none comes back when
+    /// one is typed again. False for a service not on, a row with its own address, or an address that is not HTTPS on
+    /// a host name the row takes (edge 13).
     pub fn type_address(&self, s: &mut VoiceSettings, id: &str, text: &str) -> bool {
         let takes = |row: &Service| {
             matches!(row.address, Address::Typed { .. })
@@ -81,6 +87,9 @@ impl<'a> Cloud<'a> {
             return false;
         };
         text.clone_into(&mut entry.address);
+        if text.is_empty() {
+            drop_picks(s, |service, _| service == id);
+        }
         true
     }
 
