@@ -78,7 +78,7 @@ pub(super) struct Take {
     pub(super) lang: Lang,
     /// The local model or the cloud service that writes it, Try again's or "Use the local model"'s once it ran.
     pub(super) engine: Engine,
-    /// The cloud side, for a dictation opened listen-only for a cloud service.
+    /// The cloud side, while the dictation's run still listens alone for a cloud service; gone once a model wrote it.
     pub(super) wire: Option<Wire>,
     /// The ask the recording was last written with, which Transcribe anyway writes again.
     pub(super) ask: SpeechAsk,
@@ -94,7 +94,8 @@ pub(super) struct Take {
     pub(super) fell: bool,
     /// The recording was asked for Keep recordings.
     pub(super) kept: bool,
-    /// A text of it went to a password box, so each later one stays dots and is never kept.
+    /// It went to a password box, or one was in front when it would upload: each later text stays dots, is never kept
+    /// and never goes to a cloud service.
     pub(super) masked: bool,
     /// The pieces written, by their place.
     pub(super) pieces: BTreeMap<u16, Secret>,

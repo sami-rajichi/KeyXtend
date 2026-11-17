@@ -1,8 +1,11 @@
-//! A cloud dictation through the actor (ADR-0047, carries 1, 2 and 6): the listen-only run hands its speech over at
-//! Stop, the key is read just before `send`, and the service's texts are typed, kept and counted under the pick; the
-//! run is dropped once it ends, and Cancel drops its requests. Keys that cannot be read and hidden runs are in `keys`.
+//! A cloud dictation through the actor (ADR-0047): the listen-only run hands its speech over at Stop, the key is read
+//! just before `send`, and the service's texts are typed, kept and counted under the pick; the run is dropped once it
+//! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the local model's take in `local`, and the
+//! missing port and the row's piece length in `port`.
 
 mod keys;
+mod local;
+mod port;
 
 use std::sync::Arc;
 
@@ -128,7 +131,7 @@ fn nothing_leaves_before_stop_then_the_speech_goes_and_its_text_is_typed() {
 }
 
 #[test]
-fn carry_1_notes_told_before_send_returns_are_heard_and_the_ended_run_is_dropped() {
+fn notes_told_before_send_returns_are_heard_and_the_ended_run_is_dropped() {
     let mut rig = Rig::build(groq);
     rig.fake
         .cloud
@@ -156,7 +159,7 @@ fn the_text_is_kept_and_counted_under_the_service() {
 }
 
 #[test]
-fn carry_1_no_speech_handed_over_sends_nothing() {
+fn no_speech_handed_over_sends_nothing() {
     let mut rig = Rig::build(groq);
     rig.listen();
     rig.key();

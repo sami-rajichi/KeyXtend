@@ -49,7 +49,7 @@ pub enum ServiceError {
     /// A limit is outside the frames' range, or the service's cap is zero.
     #[error("a limit is outside the frames' range")]
     Limits,
-    /// A piece leaves no room for the WAV header and the form under the service's own cap (carry 3).
+    /// A piece leaves no room for the WAV header and the form under the service's own cap.
     #[error("a piece leaves no room for the wav header and the form under the service's cap")]
     Room,
     /// It offers no model and no Other line, or more models than the table allows.
@@ -210,7 +210,7 @@ impl Service {
     }
 
     /// The request's shape for `model` (a typed one is `None`): the model's own form, such as `OpenAI`'s `languages[]`
-    /// list (carry 1), else the row's, with the keep-nothing field last while `keep` is on.
+    /// list, else the row's, with the keep-nothing field last while `keep` is on.
     #[must_use]
     pub fn shape_for(&self, model: Option<&Model>, keep: bool) -> CloudShape {
         let mut shape = model

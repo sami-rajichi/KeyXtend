@@ -84,20 +84,23 @@ impl Flow {
         }
     }
 
-    /// A piece is kept, unshown, while the run writes.
+    /// A piece is kept, unshown, while the run writes; a listen-only run writes none, so a cloud take's pieces come
+    /// only from its service.
     fn piece(&mut self, index: u16, text: Secret) {
         let writing = self.busy();
-        if let Some(take) = self.take.as_mut().filter(|_| writing) {
+        if let Some(take) = (self.take.as_mut()).filter(|t| writing && t.wire.is_none()) {
             take.pieces.insert(index, text);
         }
     }
 
     /// The run wrote every piece: the text goes out; with none, Try again's bar comes back, else nothing was heard. A
-    /// listen-only run's first end hands its speech over instead.
+    /// listen-only run's end hands its speech over instead, and only its first counts.
     fn done(&mut self, done: SpeechDone, supply: &dyn Supply, out: &mut Vec<Out>) {
-        let wire = self.take.as_ref().and_then(|t| t.wire.as_ref());
-        if wire.is_some_and(|w| w.spoken.is_none()) {
-            return self.listened(done, supply, out);
+        let spoken = (self.take.as_ref()).and_then(|t| t.wire.as_ref().map(|w| w.spoken.is_some()));
+        match spoken {
+            Some(false) => return self.listened(done, supply, out),
+            Some(true) => return,
+            None => {}
         }
         if !self.busy() {
             return;

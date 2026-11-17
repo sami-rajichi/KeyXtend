@@ -1,4 +1,4 @@
-//! The key and the hidden run (carries 5 and 6): a key that is missing, damaged or holds no key, found as it is read
+//! The key and the hidden run: a key that is missing, damaged or holds no key, found as it is read
 //! just before `send`, sends nothing, types nothing and keeps the recording for Try again and "Use the local model";
 //! a hidden run offers no service and reads no key.
 
@@ -55,7 +55,7 @@ fn a_blob_that_holds_no_key_sends_nothing_and_the_local_model_writes_the_speech(
 }
 
 #[test]
-fn carry_5_a_hidden_run_offers_no_service_and_reads_no_key() {
+fn a_hidden_run_offers_no_service_and_reads_no_key() {
     let mut rig = Rig::hidden_with(groq);
     let reads = |rig: &Rig| [ShelfCall::Load, ShelfCall::Names].map(|c| rig.fake.shelf.calls(c));
     let before = reads(&rig);

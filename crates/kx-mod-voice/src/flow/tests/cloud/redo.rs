@@ -1,6 +1,6 @@
 //! Acting on a cloud dictation's recording: Cancel hands the speech over and sends nothing, Transcribe anyway and Try
-//! again send it to the service the language picks now, "Use the local model" writes it on this PC, and no failure
-//! moves the voice to another service by itself (carry 7); nothing is typed twice.
+//! again send it to the service the language picks now, "Use the local model" writes it on this PC for good, and no
+//! failure moves the voice to another service by itself; nothing is typed twice.
 
 use super::*;
 
@@ -90,6 +90,32 @@ fn use_the_local_model_writes_the_held_recording_on_this_pc() {
 }
 
 #[test]
+fn after_the_local_model_wrote_it_try_again_stays_on_this_pc() {
+    let mut rig = sending();
+    rig.fail(CloudFault::Credit);
+    rig.click(VoiceClick::Local);
+    let first = ask(&rig.write(&["en local"])).unwrap();
+    let count = u32::try_from(first.text.expose().chars().count()).unwrap();
+    rig.typed(&first, count);
+    rig.book.1.insert("fr".into(), custom());
+    let out = rig.again();
+    let settings = VoiceSettings::from_defaults().unwrap();
+    let local = settings.ask(Some(ready("parakeet", "fr").model), None);
+    assert!(
+        uploads(&out).is_empty(),
+        "the local model's take never goes back"
+    );
+    assert_eq!(calls(&out), [RunCall::Again(local)]);
+    assert_eq!((rig.shown(), rig.mark()), (VoiceBar::Transcribing, None));
+    let second = ask(&rig.write(&["encore"])).unwrap();
+    assert_eq!(
+        second.erase, count,
+        "the first text is erased, never typed twice"
+    );
+    assert_eq!(text(&rig.shown()).as_deref(), Some("encore"));
+}
+
+#[test]
 fn try_again_sends_to_the_service_the_language_picks_now() {
     let mut rig = sending();
     rig.fail(CloudFault::Rate);
@@ -111,7 +137,7 @@ fn try_again_with_no_cloud_pick_left_writes_with_the_local_model() {
 }
 
 #[test]
-fn carry_7_a_pick_moved_to_another_service_before_stop_sends_to_neither() {
+fn a_pick_moved_to_another_service_before_stop_sends_to_neither() {
     let mut rig = Rig::cloud();
     rig.listen();
     rig.book.1.insert("fr".into(), custom());

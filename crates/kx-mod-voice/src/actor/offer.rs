@@ -2,7 +2,7 @@
 //! names, with whether a key is set from the blobs' names alone. A hidden run offers no service and reads no key.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::SpeechAsk;
+use kx_module_api::ports::{CloudLimits, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 
 use crate::VoiceSettings;
 use crate::cloud::{Chosen, Cloud, pick_text};
@@ -43,15 +43,17 @@ impl Supply for Offer<'_> {
             service: row.id.clone(),
             name: row.shown(),
             model: Redacted::new(pick_text(&row.id, model)),
-            piece_s: piece_s(row.limits.max_s),
+            piece_s: piece_s(&row.limits),
             key: has.unwrap_or(false),
             terms: choice.ask,
         })
     }
 }
 
-/// The longest piece a listen-only run cuts for a row taking `max_s` seconds: within `SpeechAsk::PIECE_S`.
-fn piece_s(max_s: u16) -> u8 {
+/// The longest piece a listen-only run cuts for a row's `limits`: the whole seconds its size and time caps both
+/// allow (`piece_bytes`), within `SpeechAsk::PIECE_S`.
+pub(super) fn piece_s(limits: &CloudLimits) -> u8 {
     let (low, high) = (*SpeechAsk::PIECE_S.start(), *SpeechAsk::PIECE_S.end());
-    u8::try_from(max_s).map_or(high, |s| s.clamp(low, high))
+    let secs = limits.piece_bytes() / (SOUND_HZ * SAMPLE_BYTES);
+    u8::try_from(secs).map_or(high, |s| s.clamp(low, high))
 }

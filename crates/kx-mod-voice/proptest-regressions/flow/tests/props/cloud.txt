@@ -6,3 +6,6 @@
 # everyone who runs the test benefits from these saved cases.
 cc b2807a52ce8d7dddfc5f22e8cd3618ed6359e940ef8f4bdea930a32b29833119 # shrinks to steps = [Pick(3), Key, Talk, Key, Over], hidden = false, keep_voice = false
 cc 601270258c846d12cb7ab74f0cf8055b34cd2f77f9207ca8f8807ee682ac362c # shrinks to steps = [Base(Key), Base(Key), Talk, Over, Sent(Done, false), Sent(Silent, false)], hidden = false, keep_voice = false
+cc a05911c9f8db5a2f7810354561243e21604ada662537a95f1170e7e5c00253df # shrinks to steps = [Base(Key), Talk, Write, Pick(2), Local, Write, Retry], hidden = false, keep_voice = false
+cc 1e1f852f76efa73b7a5447f5b9fc23f0d9589dff792ed53efa54265f2212f56b # shrinks to steps = [Base(Key), Talk, Over, Sent(Done, false), Local, Write, Retry], hidden = false, keep_voice = false
+cc d6c4f95ef94c3c611fbf5e31c8a3219ae07082b2cadce5efa4187e198d055441 # shrinks to steps = [Key, Talk, Base(Said(Done, false)), Box(true), Write, Box(false), Retry], hidden = false, keep_voice = false

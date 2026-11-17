@@ -1,4 +1,4 @@
-//! A cloud fault (edges 6 and 7, carries 1 and 3): the recording stays, the bar names why with Try again and "Use the
+//! A cloud fault (edges 6 and 7): the recording stays, the bar names why with Try again and "Use the
 //! local model", nothing is typed, and a recording the job let go, or no speech at all, has its own note.
 
 use super::*;
@@ -86,7 +86,17 @@ fn edge_7_a_code_the_service_refuses_names_the_language_in_front() {
 }
 
 #[test]
-fn carry_3_a_recording_the_job_let_go_says_so_and_offers_nothing() {
+fn a_listen_only_runs_late_text_never_mixes_into_the_services_reply() {
+    let mut rig = sending();
+    let out = rig.write(&["intrus"]);
+    assert!(ask(&out).is_none(), "the run wrote nothing to type");
+    assert_eq!(rig.shown(), VoiceBar::Transcribing);
+    let typed = ask(&rig.reply(&["bonjour"])).unwrap();
+    assert_eq!(typed.text.expose().as_str(), suffixed("bonjour"));
+}
+
+#[test]
+fn a_recording_the_job_let_go_says_so_and_offers_nothing() {
     let mut rig = sending();
     rig.fail(CloudFault::Network);
     rig.bar(BarButton::Again);
@@ -117,7 +127,7 @@ fn a_wiped_recording_dims_try_again_and_the_local_model() {
 }
 
 #[test]
-fn carry_1_no_speech_handed_over_sends_nothing_and_says_nothing_was_heard() {
+fn no_speech_handed_over_sends_nothing_and_says_nothing_was_heard() {
     let mut rig = sending();
     let out = rig.sent(Sent::Silent);
     assert_eq!(calls(&out), [RunCall::Close]);

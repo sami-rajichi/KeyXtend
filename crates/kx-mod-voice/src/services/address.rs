@@ -38,7 +38,7 @@ pub enum KeyTest {
     Under(String),
 }
 
-/// The address `text` names: "typed", or HTTPS on exactly the row's `host` (carry 2).
+/// The address `text` names: "typed", or HTTPS on exactly the row's `host`.
 pub(super) fn address(text: &str, host: Option<&str>) -> Result<Address, ServiceError> {
     if text == TYPED {
         return match host {

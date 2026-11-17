@@ -140,8 +140,8 @@ impl Actor {
         self.net.ups.remove(&take);
     }
 
-    /// The run handed dictation `take`'s speech over for upload `round`: none sends nothing (carry 1), and the
-    /// speech of an upload halted since is wiped as it drops.
+    /// The run handed dictation `take`'s speech over for upload `round`: none sends nothing, and the speech of an
+    /// upload halted since is wiped as it drops.
     pub(super) fn spoken(
         &mut self,
         take: u32,
@@ -262,8 +262,8 @@ fn shut(run: Wired) {
     let _ = catch_unwind(AssertUnwindSafe(|| drop(run)));
 }
 
-/// Reads the key just before `send` and moves it into the ask (carry 6): no key, or one that cannot be read, sends
-/// nothing; neither does a halted upload. A panic in the port counts as `Gone`.
+/// Reads the key just before `send` and moves it into the ask: no key, or one that cannot be read, sends nothing;
+/// neither does a halted upload, nor a run with no cloud port. A panic in the port counts as `Gone`.
 fn deliver(
     cloud: Option<&dyn CloudSpeech>,
     keys: &Keys,

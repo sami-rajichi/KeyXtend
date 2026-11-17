@@ -147,7 +147,9 @@ fn ports(
     let shelf = cx.service::<VoiceShelfKey>()?;
     let calendar = cx.service::<CalendarKey>()?;
     // A run without cloud speech still dictates with local models; an upload then ends with the fault note.
-    let cloud = cx.service::<CloudSpeechKey>().ok();
+    let cloud = cx.service::<CloudSpeechKey>();
+    let cloud = cloud.inspect_err(|error| tracing::warn!(%error, "cloud speech is not available"));
+    let cloud = cloud.ok();
     let field = field_watch(cx, settings, tx)?;
     let session = session_watch(cx, tx)?;
     let typist = typer(cx.bus()).ok_or(ModuleError::Start(NO_TYPER))?;

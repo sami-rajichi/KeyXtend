@@ -1,6 +1,6 @@
 //! A cloud dictation (ADR-0047): a listen-only run from Start, its speech sent at Stop to the service the bar shows,
 //! the replies typed once, and a note naming why when none come; the recording stays for Try again and "Use the local
-//! model". Nothing moves to another service or model by itself (carry 7).
+//! model". Nothing moves to another service or model by itself, and once the local model wrote a take it stays here.
 
 use kx_module_api::ports::{
     BarButton, BarHint, CloudNote, CloudWhy, LocalUse, SpeechAsk, SpeechDone,
@@ -13,7 +13,7 @@ use super::{Count, Flow, Out, Phase, RunCall, State, Supply};
 
 impl Flow {
     /// Starts a cloud dictation, listen-only and cut within the service's row; a password box takes the local model,
-    /// or the bar says none is ready (edge 10).
+    /// or the bar says none is ready (edge 10). A pick with no key or newer terms says so and never listens.
     pub(super) fn start_cloud(
         &mut self,
         lang: Lang,
@@ -26,6 +26,9 @@ impl Flow {
                 Ok(ready) => self.open(lang, ready, out),
                 Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned()),
             };
+        }
+        if let Some(why) = net::blocked(&net, Some(&net)) {
+            return self.show_cloud(why, lang.iso().to_owned());
         }
         let ask = SpeechAsk {
             piece_s: net.piece_s,
@@ -54,8 +57,8 @@ impl Flow {
         self.upload(supply, out);
     }
 
-    /// Sends the held speech to the take's service once its run handed it over: never from a password box (edge 19),
-    /// nor to a service now off, without its key, or waiting on new terms.
+    /// Sends the held speech to the take's service once its run handed it over: never from a password box, nor from a
+    /// take that went to one (edge 19), nor to a service now off, without its key, or waiting on new terms.
     pub(super) fn upload(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
         let password = self.password();
         let Some(take) = self.take.as_mut() else {
@@ -68,8 +71,9 @@ impl Flow {
         if wire.spoken.is_none() {
             return;
         }
-        if password {
-            return self.write_local(supply, out);
+        if password || take.masked {
+            take.masked = true;
+            return self.write_local(CloudWhy::NoLocal, supply, out);
         }
         if let Some(why) = net::blocked(net, supply.cloud(take.lang.iso()).as_ref()) {
             return self.cloud_note(why, out);
@@ -86,16 +90,18 @@ impl Flow {
     }
 
     /// Writes the held recording with the language's local model: "Use the local model", a password box, or Try
-    /// again with no cloud pick left; with none ready, the bar says so.
-    pub(super) fn write_local(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
+    /// again with no cloud pick left; with none ready, the bar shows `none`. The run no longer listens alone, so the
+    /// take stays local for good.
+    pub(super) fn write_local(&mut self, none: CloudWhy, supply: &dyn Supply, out: &mut Vec<Out>) {
         let Some(take) = self.take.as_mut() else {
             return;
         };
         let Ok(ready) = supply.supply(take.lang.iso()) else {
-            return self.cloud_note(CloudWhy::NoLocal, out);
+            return self.cloud_note(none, out);
         };
         let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
         take.engine = Engine::Local(ready);
+        take.wire = None;
         take.ask = ask.clone();
         take.redo();
         out.push(take.call(RunCall::Again(ask)));
@@ -104,23 +110,25 @@ impl Flow {
 
     /// "Use the local model", only while the cloud note lights it.
     pub(super) fn use_local(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
-        let lit = matches!(
-            &self.state,
+        let why = match &self.state {
             State::Note {
-                hint: BarHint::Cloud {
-                    local: LocalUse::Ready,
-                    ..
-                },
+                hint:
+                    BarHint::Cloud {
+                        why,
+                        local: LocalUse::Ready,
+                    },
                 ..
-            }
-        );
-        if lit && self.anyway_ok() {
-            self.write_local(supply, out);
+            } => why.clone(),
+            _ => return,
+        };
+        if self.anyway_ok() {
+            self.write_local(why, supply, out);
         }
     }
 
     /// Try again on a cloud dictation: the held speech goes to the service the language picks now, or to its local
-    /// model when it picks none. A Text bar waits in the take, to come back should nothing be written.
+    /// model when it picks none, with the Off note when none is ready. A Text bar waits in the take, to come back
+    /// should nothing be written.
     pub(super) fn retry(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
         let now = self.now();
         let text = self.phase() == Phase::Text;
@@ -139,7 +147,7 @@ impl Flow {
                 take.engine = Engine::Cloud(net);
                 self.upload(supply, out);
             }
-            None => self.write_local(supply, out),
+            None => self.write_local(CloudWhy::Off, supply, out),
         }
     }
 
@@ -209,7 +217,7 @@ impl Flow {
         }
     }
 
-    /// The run let the recording go before it reached the service (carry 3): the bar says so, with nothing to retry.
+    /// The run let the recording go before it reached the service: the bar says so, with nothing to retry.
     fn let_go(&mut self, out: &mut Vec<Out>) {
         let Some(take) = self.take.as_ref() else {
             return;
