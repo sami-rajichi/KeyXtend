@@ -104,7 +104,7 @@ impl Actor {
         })
     }
 
-    /// Asks the clipboard history for its text as Paste's `round`, waited for up to `paste_ms`; an answer comes as
+    /// Asks the clipboard history for its text as Paste's `round`, waited for up to `take_ms`; an answer comes as
     /// `ClipTaken`.
     fn take_clip(&mut self, round: u32) {
         self.pasting.take = Some((round, self.ports.clock.now()));

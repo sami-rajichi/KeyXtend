@@ -1,5 +1,6 @@
 //! An address built from any text never panics, starts with `https://`, holds no user name or fragment, and names one
-//! plain host; a typed one gets its scheme and host in lower case, as both ignore case.
+//! plain host; a typed one gets its scheme and host in lower case, as both ignore case, and one refused for its path
+//! or query still has a host.
 
 use super::*;
 use proptest::prelude::*;
@@ -58,5 +59,26 @@ proptest! {
         if HttpsUrl::new(&text).is_some() {
             prop_assert_eq!(lowered, text);
         }
+    }
+}
+
+#[test]
+fn a_typed_address_with_a_good_host_and_a_bad_path_still_has_a_host() {
+    for text in [
+        "https://speech.example.com/v1 audio",
+        "https://speech.example.com/a@b",
+        "https://speech.example.com/صوت",
+    ] {
+        assert!(
+            HttpsUrl::new(text).is_none() && HttpsUrl::has_host(text),
+            "{text}"
+        );
+    }
+    for text in [
+        "https://10.0.0.1/v1",
+        "https://user@speech.example.com/v1",
+        "http://speech.example.com/v1",
+    ] {
+        assert!(!HttpsUrl::has_host(text), "{text}");
     }
 }

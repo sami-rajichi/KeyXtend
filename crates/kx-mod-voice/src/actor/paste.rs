@@ -1,7 +1,7 @@
 //! Paste at once (`insert` = "paste", owner 2026-11-17): a text goes to the clipboard history, which pastes it and puts
 //! the clipboard back. A pasted text counts as typed in full; a refusal, or no answer within `paste_ms`, types it and
 //! drops a late answer, so it goes in once. An erase goes to the typer first, as only the keyboard erases. The key
-//! page's Paste waits as long for the clipboard's text, then shows the busy note and drops a late answer.
+//! page's Paste waits `take_ms` for the clipboard's text, then shows the busy note and drops a late answer.
 
 use std::collections::VecDeque;
 use std::mem;
@@ -87,18 +87,24 @@ impl Actor {
         }
     }
 
-    /// At `now`, each text whose answer is past `paste_ms` is typed, and a key page's take past it shows as busy.
+    /// At `now`, each text whose answer is past `paste_ms` is typed, and a key page's take past `take_ms` shows as busy.
     pub(super) fn paste_tick(&mut self, now: Mono) {
-        let wait = self.held.settings.paste_wait();
-        let late = |since: Mono| now.saturating_since(since) >= wait;
-        while self.pasting.asked.front().is_some_and(|a| late(a.since)) {
+        let s = &self.held.settings;
+        let late = |since: Mono, wait| now.saturating_since(since) >= wait;
+        let (paste, take) = (s.paste_wait(), s.take_wait());
+        while self
+            .pasting
+            .asked
+            .front()
+            .is_some_and(|a| late(a.since, paste))
+        {
             let Some(asked) = self.pasting.asked.pop_front() else {
                 return;
             };
             tracing::warn!("the clipboard history did not answer a paste in time, so it is typed");
             self.type_text(asked.source, asked.ask);
         }
-        if let Some((round, _)) = self.pasting.take.filter(|(_, since)| late(*since)) {
+        if let Some((round, _)) = self.pasting.take.filter(|(_, since)| late(*since, take)) {
             self.pasting.take = None;
             tracing::warn!("the clipboard history did not answer the key page's Paste in time");
             let dos = self.panel.pasted(round, ClipText::Busy);
@@ -108,11 +114,10 @@ impl Actor {
 
     /// When the oldest text's answer or the key page's take is due, if one is out.
     pub(super) fn paste_due(&self) -> Option<Mono> {
-        let wait = self.held.settings.paste_wait();
-        let text = (self.pasting.asked.front()).map(|a| a.since);
-        let take = self.pasting.take.map(|(_, since)| since);
-        let first = [text, take].into_iter().flatten().min();
-        first.map(|since| since.saturating_add(wait))
+        let s = &self.held.settings;
+        let text = (self.pasting.asked.front()).map(|a| a.since.saturating_add(s.paste_wait()));
+        let take = (self.pasting.take).map(|(_, since)| since.saturating_add(s.take_wait()));
+        [text, take].into_iter().flatten().min()
     }
 
     /// Hands `ask`'s text to the clipboard history under a round of its own, noted before the bus hears it.

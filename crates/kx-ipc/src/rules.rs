@@ -129,6 +129,16 @@ pub fn https_host(text: &str) -> &str {
     host_port(text).0
 }
 
+/// The scheme, host and maybe port of an address, up to its path or query; empty for a text that is no https one.
+#[must_use]
+pub fn https_origin(text: &str) -> &str {
+    let Some(rest) = text.strip_prefix(HTTPS) else {
+        return "";
+    };
+    let auth = rest.split(HOST_END).next().unwrap_or_default();
+    &text[..HTTPS.len() + auth.len()]
+}
+
 /// The host and maybe the port of an address, between `HTTPS` and its path or query.
 fn host_port(text: &str) -> (&str, Option<&str>) {
     let rest = text.strip_prefix(HTTPS).unwrap_or_default();

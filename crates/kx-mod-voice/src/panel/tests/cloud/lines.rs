@@ -1,7 +1,7 @@
 //! A service's key page (design "Keys"): Paste puts the clipboard's text on the key line as dots (edges 23 and carry 9),
 //! a test's answer counts only while its page and key stand (carry 3), the link opens only the row's own HTTPS address
-//! (edge 23), and a typed address is kept or refused with why: no https, no host name, outside the domain or too long
-//! (edges 13 and 22, carries 6, 10 and 11).
+//! (edge 23), and a typed address is kept or refused with why: no https, no host name, a bad path or query, outside the
+//! domain or too long (edges 13 and 22, carries 6, 10 and 11).
 
 use kx_module_api::ports::{
     AddressFault, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, PanelButton, ServiceMark,
@@ -249,4 +249,21 @@ fn an_address_outside_the_rows_domain_says_domain() {
     let inside = "https://kx-test.cognitiveservices.azure.com/stt";
     let out = rig.click(&VoiceClick::SetAddress(Redacted::new(inside.into())));
     assert!(matches!(&out[..], [Do::Set(SERVICES, _)]), "{out:?}");
+}
+
+#[test]
+fn a_bad_character_after_a_good_host_says_path_and_a_bad_host_still_says_host() {
+    let mut rig = on_custom_lines(r#", model = "whisper-1""#);
+    for (text, fault) in [
+        ("https://speech.example.com/v1 audio", AddressFault::Path),
+        ("https://speech.example.com/v1/a@b", AddressFault::Path),
+        ("https://speech.example.com/v1/صوت", AddressFault::Path),
+        ("https://user@speech.example.com/v1", AddressFault::Host),
+    ] {
+        assert!(
+            rig.click(&VoiceClick::SetAddress(Redacted::new(text.into())))
+                .is_empty()
+        );
+        assert_eq!(lines_sheet(&mut rig).address_fault, Some(fault), "{text}");
+    }
 }

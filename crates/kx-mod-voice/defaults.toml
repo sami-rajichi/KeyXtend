@@ -35,6 +35,8 @@ type_gap_ms = 10
 insert = "type"
 # The longest wait for the clipboard history to paste a text, in ms; then it is typed.
 paste_ms = 2000
+# How long the key page's Paste waits for the clipboard's text, in ms: past its longest read, open_ms up to 2000.
+take_ms = 3000
 # How long the bar shows the text, in ms, before it fades.
 done_ms = 9000
 # The wave's smoothing, in ms; 0 draws each level as it comes.

@@ -1,7 +1,9 @@
 //! The key page's effects through the actor (ADR-0047): a set key is sealed and shown as dots, a removed one stops the
 //! upload under way (carry 7), the key's test runs in a job that reads the key there and whose late answer is dropped
-//! (carry 3), Paste asks the clipboard history as Quick-fill does and stops waiting after `paste_ms` (carry 9), and a
-//! card's link opens (edge 23).
+//! (carry 3), Paste asks the clipboard history as Quick-fill does and stops waiting after `take_ms`, past the clipboard's
+//! longest read (carry 9), and a card's link opens (edge 23).
+
+use std::time::Duration;
 
 use kx_module_api::ports::{
     BarHint, ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
@@ -12,7 +14,11 @@ use super::super::taps::{Heard, held, release, waiting};
 use super::*;
 use crate::actor::Msg;
 use crate::panel::Do;
+use crate::settings::{PASTE_MS, TAKE_MS};
 use crate::{ID, VoiceSettings};
+
+/// The clipboard's longest read of a take, its `open_ms` at most, which the key page's Paste must outwait.
+const CLIP_READ_MS: u64 = 2_000;
 
 /// A key-like text, built as the test runs.
 fn made_key() -> String {
@@ -27,9 +33,15 @@ fn sealed(rig: &Rig) -> Option<String> {
 
 /// Groq on with its terms confirmed and no key, on its key page.
 fn on_lines() -> Rig {
+    on_lines_with(|_| {})
+}
+
+/// As `on_lines`, with `set` putting more of `[voice]`.
+fn on_lines_with(set: impl FnOnce(&mut FakeHost)) -> Rig {
     let mut rig = Rig::build(|_, host| {
         host.put("cloud", true.into());
         host.put("services", table("groq = { on = 2026-11-01, terms = 1 }"));
+        set(host);
     });
     rig.send(Msg::Open);
     rig.act(VoiceClick::Open(VoiceTab::Cloud));
@@ -125,11 +137,11 @@ fn paste_asks_the_clipboard_history_and_seals_its_text() {
 }
 
 #[test]
-fn a_paste_unanswered_within_paste_ms_shows_busy_and_its_late_answer_is_dropped() {
+fn a_paste_unanswered_within_take_ms_shows_busy_and_its_late_answer_is_dropped() {
     let mut rig = on_lines();
     rig.act(VoiceClick::Service(CloudButton::Paste));
     let take = asked(&rig);
-    rig.advance(VoiceSettings::from_defaults().unwrap().paste_wait());
+    rig.advance(VoiceSettings::from_defaults().unwrap().take_wait());
     let note = rig
         .views()
         .last()
@@ -138,6 +150,20 @@ fn a_paste_unanswered_within_paste_ms_shows_busy_and_its_late_answer_is_dropped(
     assert_eq!(note, Some(BarHint::Fault), "the busy clipboard's note");
     rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&made_key())))));
     assert_eq!(sealed(&rig), None, "the late answer is dropped");
+}
+
+#[test]
+fn take_ms_at_its_floor_still_takes_an_answer_just_inside_the_clipboards_longest_read() {
+    let mut rig = on_lines_with(|host| {
+        host.put("paste_ms", i64::from(*PASTE_MS.start()).into());
+        host.put("take_ms", i64::from(*TAKE_MS.start()).into());
+    });
+    rig.act(VoiceClick::Service(CloudButton::Paste));
+    let take = asked(&rig);
+    rig.advance(Duration::from_millis(CLIP_READ_MS - 1));
+    let key = made_key();
+    rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
+    assert_eq!(sealed(&rig).as_deref(), Some(key.as_str()));
 }
 
 #[test]

@@ -153,15 +153,17 @@ impl Panel {
     }
 }
 
-/// Why a typed `text`, its scheme and host lowered, was refused: no `https://`, too long, no host name, or a host
-/// outside the row's domain.
+/// Why a typed `text`, its scheme and host lowered, was refused: no `https://`, too long, no host name, a bad path or
+/// query, or a host outside the row's domain.
 fn fault(text: &str) -> AddressFault {
     if !text.starts_with(LINK_SCHEME) {
         AddressFault::Https
     } else if text.len() > HttpsUrl::MAX_BYTES {
         AddressFault::Long
-    } else if HttpsUrl::new(text).is_none() {
+    } else if !HttpsUrl::has_host(text) {
         AddressFault::Host
+    } else if HttpsUrl::new(text).is_none() {
+        AddressFault::Path
     } else {
         AddressFault::Domain
     }

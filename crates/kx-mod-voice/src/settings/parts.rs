@@ -98,6 +98,12 @@ impl VoiceSettings {
         Duration::from_millis(self.paste_ms.into())
     }
 
+    /// How long the key page's Paste waits for the clipboard's text, before the clipboard counts as busy.
+    #[must_use]
+    pub fn take_wait(&self) -> Duration {
+        Duration::from_millis(self.take_ms.into())
+    }
+
     /// What a card's check must meet: `card_gain` in hundredths and `card_diff`.
     #[must_use]
     pub fn card_rules(&self) -> CardRules {

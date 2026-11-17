@@ -1,5 +1,5 @@
 //! How a dictated text goes in (owner, 2026-11-17): typed to start, or pasted at once, any other name refused, and the
-//! wait for the clipboard history's answer within its range.
+//! wait for the clipboard history's answer within its range; the key page's Paste waits past the clipboard's read.
 
 use super::*;
 use std::time::Duration;
@@ -32,4 +32,20 @@ fn paste_ms_takes_its_ends_and_refuses_past_them() {
     assert!(taken(&with("paste_ms", lo)) && taken(&with("paste_ms", hi)));
     assert!(refused(&with("paste_ms", lo - 1), "paste_ms"));
     assert!(refused(&with("paste_ms", hi + 1), "paste_ms"));
+}
+
+#[test]
+fn the_key_pages_paste_waits_take_ms_whose_floor_outwaits_the_clipboards_longest_read() {
+    let s = VoiceSettings::from_defaults().unwrap();
+    assert_eq!(s.take_ms, 3_000);
+    assert_eq!(s.take_wait(), Duration::from_millis(3_000));
+    assert_eq!(
+        TAKE_MS,
+        2_500..=10_000,
+        "past the clipboard's open_ms, 2000 at most"
+    );
+    let (lo, hi) = ends(&TAKE_MS);
+    assert!(taken(&with("take_ms", lo)) && taken(&with("take_ms", hi)));
+    assert!(refused(&with("take_ms", lo - 1), "take_ms"));
+    assert!(refused(&with("take_ms", hi + 1), "take_ms"));
 }

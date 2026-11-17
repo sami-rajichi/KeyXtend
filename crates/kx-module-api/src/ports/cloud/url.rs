@@ -3,7 +3,7 @@
 //! (`kx_ipc::rules::https`), so the `speech-net` job takes every address this type holds.
 
 use crate::ports::Link;
-use kx_ipc::rules::{covers, https, https_host};
+use kx_ipc::rules::{covers, https, https_host, https_origin};
 use kx_ipc::{HTTPS, MAX_URL_BYTES};
 
 /// A checked HTTPS address within the frames' `MAX_URL_BYTES`: `LINK_SCHEME`, a plain lower-case host and maybe a port,
@@ -36,6 +36,12 @@ impl HttpsUrl {
         let fits = text.len() <= MAX_URL_BYTES && https(text).is_ok();
         let link = Link::new(text.to_owned()).ok().filter(|_| fits)?;
         Some(Self(link))
+    }
+
+    /// True when `text`'s scheme, host and port alone make an address, so a refusal of `text` lies in its path or query.
+    #[must_use]
+    pub fn has_host(text: &str) -> bool {
+        Self::new(https_origin(text)).is_some()
     }
 
     /// The host, in lower case, the only one its requests may reach.

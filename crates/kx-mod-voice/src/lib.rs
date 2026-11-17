@@ -29,6 +29,6 @@ pub use manifest::{ID, MANIFEST};
 pub use module::VoiceModule;
 pub use settings::{
     CARD_DIFF, CARD_GAIN, DEBOUNCE_MS, DONE_MS, FACTS_DAYS, HISTORY_JOIN_CHARS, HISTORY_MAX,
-    INSERTS, Insert, KEEP_START, NOTHING_S, PASTE_MS, PLACES, SPEC, ServiceOn, TYPE_GAP_MS,
-    TYPE_SUFFIX_CHARS, VOICE_MAX_MB, VoiceSettings, WAVE_MS, place_name,
+    INSERTS, Insert, KEEP_START, NOTHING_S, PASTE_MS, PLACES, SPEC, ServiceOn, TAKE_MS,
+    TYPE_GAP_MS, TYPE_SUFFIX_CHARS, VOICE_MAX_MB, VoiceSettings, WAVE_MS, place_name,
 };

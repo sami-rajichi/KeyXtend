@@ -51,6 +51,8 @@ pub const COPY_MS: RangeInclusive<u32> = 10..=2_000;
 pub const COPY_POLL_MS: RangeInclusive<u32> = 1..=100;
 /// The longest wait for the clipboard history to paste a text, in ms.
 pub const PASTE_MS: RangeInclusive<u32> = 500..=10_000;
+/// How long the key page's Paste waits for the clipboard's text, in ms: past its longest read, `open_ms` up to 2000.
+pub const TAKE_MS: RangeInclusive<u32> = 2_500..=10_000;
 
 /// Why a value or a pair was refused.
 const BAD_RESTART: &str = "restart_ms must not pass restart_max_ms";
@@ -135,9 +137,10 @@ pub struct VoiceSettings {
     pub type_gap_ms: u16,
     /// How a text goes in, by its name in `INSERTS`.
     pub insert: String,
-    /// The longest wait for the clipboard history to paste a text, in ms, then it is typed; the key page's Paste waits as
-    /// long for the clipboard's text.
+    /// The longest wait for the clipboard history to paste a text, in ms; then it is typed.
     pub paste_ms: u32,
+    /// How long the key page's Paste waits for the clipboard's text, in ms; then the clipboard counts as busy.
+    pub take_ms: u32,
     /// How long the bar shows the text, in ms.
     pub done_ms: u32,
     /// The wave's smoothing, in ms.
@@ -246,6 +249,7 @@ impl VoiceSettings {
         within("copy_ms", self.copy_ms, &COPY_MS)?;
         within("copy_poll_ms", self.copy_poll_ms, &COPY_POLL_MS)?;
         within("paste_ms", self.paste_ms, &PASTE_MS)?;
+        within("take_ms", self.take_ms, &TAKE_MS)?;
         refuse_if(self.copy_poll_ms > self.copy_ms, BAD_POLL)
     }
 

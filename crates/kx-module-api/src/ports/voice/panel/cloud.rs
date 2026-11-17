@@ -30,6 +30,8 @@ listed! {
         Domain,
         /// It is longer than the frames take (`HttpsUrl::MAX_BYTES`).
         Long,
+        /// Its path or query holds a character an address may not, such as a space, `@`, `#` or a non-ASCII letter.
+        Path,
     }
 }
 

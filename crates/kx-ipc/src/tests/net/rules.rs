@@ -5,7 +5,7 @@
 use super::*;
 use crate::IpcError::BadField;
 use crate::code::Code;
-use crate::rules::{form_value, https, https_host, model, token};
+use crate::rules::{form_value, https, https_host, https_origin, model, token};
 use crate::{
     MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB,
     NET_MAX_MB, PIECE_S, RECORD_MAX_S, SOUND_HZ, ShapeCode, piece_bytes,
@@ -30,6 +30,19 @@ fn an_https_address_passes_and_names_its_host() {
     for (url, host) in good {
         assert_eq!(https(url), Ok(()), "{url}");
         assert_eq!(https_host(url), host);
+    }
+}
+
+#[test]
+fn an_addresss_origin_is_its_scheme_host_and_port_up_to_its_path_or_query() {
+    for (url, origin) in [
+        ("https://stt.lan:8443/v1?x=1", "https://stt.lan:8443"),
+        ("https://api.groq.com?x=1", "https://api.groq.com"),
+        ("https://localhost:8000", "https://localhost:8000"),
+        ("https://api.groq.com/v 1", "https://api.groq.com"),
+        ("http://api.groq.com/v1", ""),
+    ] {
+        assert_eq!(https_origin(url), origin, "{url}");
     }
 }
 

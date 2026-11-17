@@ -75,7 +75,8 @@ mod tests {
     {
         assert!(MANIFEST.requires.contains(&FolderRevealKey::ID));
         assert_eq!(FolderRevealKey::CAPABILITY, Some(Capability::OpenFolder));
-        // The app provides the web link; a run whose host lacks it still dictates, and Link then logs why.
+        // The app provides the web link; without it the kernel never starts the module (`Reason::Missing`), and a host
+        // that refuses the lookup leaves Link to log why.
         assert!(MANIFEST.requires.contains(&WebLinkKey::ID));
         assert_eq!(WebLinkKey::CAPABILITY, Some(Capability::OpenLink));
         assert!(MANIFEST.declares(Capability::OpenLink));
