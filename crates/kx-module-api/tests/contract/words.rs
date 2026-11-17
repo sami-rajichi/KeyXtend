@@ -69,6 +69,13 @@ impl FieldRun for OneRun {
     fn ends_with(&mut self, end: &Redacted<String>) -> FieldEnds {
         FieldEnds::new(FieldKind::Text, Some(TEXT.ends_with(end.expose().as_str())))
     }
+
+    fn look(&mut self) -> Result<Option<FieldChange>, FieldError> {
+        Ok(Some(FieldChange {
+            kind: FieldKind::Text,
+            box_id: BOX,
+        }))
+    }
 }
 
 /// Packs for no language.

@@ -24,8 +24,6 @@ Item {
         space: parts => parts.join(" · "),
         noteTip: (name, note) => name + "\n" + note
     })
-    // The recording mic's paint.
-    readonly property var paintRec: ({ fill: "rec", ink: "rec_ink", skirt: "rec" })
     // Caps Lock off, and on.
     readonly property var capsOff: Face.states.en.keys.caps
     readonly property var capsOn: Face.states["en-caps"].keys.caps
@@ -140,7 +138,7 @@ Item {
         function test_a_recording_key_holds_a_pulsing_light() {
             const k = makeKey("mic", N.lk);
             compare(lightOf(k), null, "none before it records");
-            k.ks = Object.assign({}, k.ks, { paint: root.paintRec });
+            k.ks = Object.assign({}, k.ks, { rec: true });
             const light = lightOf(k);
             verify(light && light.pulsing, "the light pulses");
             k.ks = Face.states.en.keys.mic;

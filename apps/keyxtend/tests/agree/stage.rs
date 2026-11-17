@@ -1,6 +1,6 @@
-//! The stage settings in the root `Cargo.toml` name this app, the worker the platform starts, the gate-only flag and
-//! the QML folder kx-ui pins, and list each QML module the app imports with every plugin Qt loads for it, so `cargo
-//! xtask stage` ships what the uiAccess build loads.
+//! The stage settings in the root `Cargo.toml` name this app, the worker the platform starts, the gate-only flag, the
+//! QML folder kx-ui pins and the folder of the voice files the app names, with their notices, and list each QML module
+//! the app imports with every plugin Qt loads for it, so `cargo xtask stage` ships what the uiAccess build loads.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 
@@ -39,6 +39,36 @@ fn the_stage_refuses_the_apps_gate_flag() {
         stage()["gate_flag"].as_str(),
         Some(keyxtend::args::SIM_INPUT)
     );
+}
+
+/// The root of the workspace, from this crate.
+const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+
+#[test]
+fn the_stage_ships_every_voice_file_the_app_names_and_their_notices_from_the_voice_folder() {
+    let voice = stage()["voice"].clone();
+    let source = std::path::Path::new(ROOT).join(voice["from"].as_str().unwrap());
+    let assets = keyxtend::voice::assets(std::path::Path::new(""));
+    let named = std::iter::once(&assets.detector).chain(assets.clips.iter().map(|(_, p)| p));
+    let name = |p: &std::path::PathBuf| p.file_name().unwrap().to_string_lossy().into_owned();
+    let notices = voice["notices"].as_array().unwrap().clone();
+    let notices = notices
+        .iter()
+        .filter_map(toml::Value::as_str)
+        .map(str::to_owned);
+    for file in named.map(name).chain(notices) {
+        assert!(source.join(&file).is_file(), "{file} ships");
+    }
+}
+
+#[cfg(feature = "mod-voice")]
+#[test]
+fn every_check_clip_is_in_a_language_the_models_table_tested() {
+    let table = kx_mod_voice::models::table().unwrap();
+    let assets = keyxtend::voice::assets(std::path::Path::new(""));
+    for (lang, _) in &assets.clips {
+        assert!(table.default_for(lang).is_some(), "{lang} has its order");
+    }
 }
 
 /// QML modules that need no staged file because a library Qt Quick loads registers them (measured in P3 Task 20).

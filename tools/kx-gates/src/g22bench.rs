@@ -1,290 +1,296 @@
-//! G22 bench: the kept clips through the local engine, the local engine in weak mode, and the cloud engine when allowed.
-//! Only times and word error rates are reported, never the words; the clips are deleted once every run worked.
+//! G22's bench (`g22 bench`, risk 7): each check clip's default model reads that clip through the gate worker and the
+//! product's speech host, normal then as the roadmap's weak PC, and one table of numbers prints, never the text. Weak
+//! mode is `[weak]`'s few slow cores (the job's cap), no AVX (a worker folder with only the plain processor parts) and
+//! its memory (the product's own fit rule); the bench starts no screen and moves nothing.
 #![cfg(windows)]
 
-use std::net::TcpStream;
-use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, Receiver};
-use std::time::{Duration, Instant};
+pub(crate) mod clip;
+mod spawn;
+mod table;
+mod take;
 
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+use kx_mod_voice::VoiceSettings;
+use kx_mod_voice::models::{Row as ModelRow, table as models};
+use kx_module_api::MS_PER_S;
+use kx_module_api::ports::{Memory, ModelState, SpeechModel};
+use kx_platform::speech::{Assets, Hardware, WorkerSpeech};
+use kx_platform_windows::worker::CpuCap;
+use kx_platform_windows::{QpcClock, WinHardware, WinSpawner};
 use serde_json::{Value, json};
-use spike_core::voicecfg::{Engine, VoiceConfig};
-use spike_core::voiceproto::{Cmd, Event, clip_lang};
-use spike_core::voiceworker::Worker;
 
 use crate::apps::Ctx;
-use crate::g22cfg::G22;
-use crate::{wer, win};
+use crate::g22::{self, BENCH};
+use crate::g22cfg::{Clip, G22Bench};
+use crate::out;
+use crate::weakcfg::Weak;
+use spawn::{Cores, GateWorker, lock};
+use table::{Miss, Row, Rule, Timed, mode};
+use take::{Script, take};
 
-/// Bench name that also runs the cloud engine; the key must be in kx-gates' environment.
-pub const WITH_CLOUD: &str = "bench-cloud";
-/// Shown when the cloud run was left out.
-const CLOUD_SKIPPED: &str = "skipped: cloud is off";
+/// Why a row has no numbers, beside a take's own fault.
+const NO_DEFAULT: &str = "no default model";
+const NOT_ENDED: &str = "the worker did not end in time";
+const RELOADED: &str = "the warm take loaded the model again";
 
-/// A worker the bench started, and its events.
-struct Bench {
-    worker: Worker,
-    events: Receiver<Event>,
+/// One clip in one mode: its default model, its plain path and length, and the cores the host counts.
+struct Case<'c> {
+    lang: &'c str,
+    clip: &'c Clip,
+    model: SpeechModel,
+    path: PathBuf,
+    clip_ms: u32,
+    weak: bool,
+    cores: usize,
 }
 
-impl Bench {
-    fn start(exe: &Path, args: &[String], max_line: usize) -> Result<Bench, String> {
-        let (tx, events) = mpsc::channel();
-        let worker = Worker::spawn(exe, args, max_line, move |e| drop(tx.send(e)))?;
-        Ok(Bench { worker, events })
-    }
+/// What a run reads once: the resolved files, the product's `[voice]` defaults and the processor's real cores.
+struct Bench<'a> {
+    g: &'a G22Bench,
+    weak: Weak,
+    worker: PathBuf,
+    weak_worker: PathBuf,
+    voice: PathBuf,
+    detector: PathBuf,
+    models: PathBuf,
+    settings: VoiceSettings,
+    real: usize,
+}
 
-    /// The next event, waiting up to `wait_ms`.
-    fn next(&self, wait_ms: u64) -> Option<Event> {
-        self.events
-            .recv_timeout(Duration::from_millis(wait_ms))
-            .ok()
-    }
-
-    /// The next event that is not a note, waiting up to `wait_ms` in all.
-    fn answer(&self, wait_ms: u64) -> Option<Event> {
-        let end = Instant::now() + Duration::from_millis(wait_ms);
-        loop {
-            let left = end.saturating_duration_since(Instant::now());
-            match self.events.recv_timeout(left).ok()? {
-                Event::Note { .. } => {}
-                e => return Some(e),
-            }
+/// Runs the bench: both modes of each clip, then the table on stdout and the numbers in the result line.
+pub fn run(ctx: &Ctx) -> Result<Value, String> {
+    let bench = Bench::of(&ctx.cfg.g22_bench, ctx.cfg.weak, &ctx.cfg.dir)?;
+    let rule = bench.rule();
+    let mut rows = Vec::new();
+    for (lang, clip) in &bench.g.clips {
+        for weak in [false, true] {
+            eprintln!("g22 bench: {lang}, {}", mode(weak));
+            rows.push(bench.row(lang, clip, weak));
         }
     }
+    let mut text = vec![bench.lead(&rule)];
+    text.extend(table::lines(&rows, &rule));
+    for line in &text {
+        out::say!("{line}");
+    }
+    let pass = table::pass(&rows, &rule);
+    let rows: Vec<Value> = rows.iter().map(|r| r.json(&rule)).collect();
+    Ok(json!({ "gate": "G22", "name": BENCH, "pass": pass, "rows": rows, "table": text }))
 }
 
-/// The kept clips and their languages, sorted by name: by language, then time.
-pub fn clips(dir: &Path) -> Result<Vec<(PathBuf, String)>, String> {
-    let list = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    let mut all: Vec<_> = list
-        .filter_map(Result::ok)
-        .filter_map(|e| {
-            let name = e.file_name().into_string().ok()?;
-            let lang = clip_lang(&name)?.to_string();
-            Some((e.path(), lang))
+impl<'a> Bench<'a> {
+    /// The bench `g` describes on the weak PC `weak`, its paths from the settings folder `dir`; a missing file is an
+    /// error naming it.
+    fn of(g: &'a G22Bench, weak: Weak, dir: &Path) -> Result<Self, String> {
+        let file = |rel: &str| out::plain(&dir.join(rel));
+        let worker = file(&g.worker).map_err(|e| format!("{e}; build it with --features gate"))?;
+        let weak_worker = file(&g.weak_worker).map_err(|e| {
+            format!(
+                "{e}; copy the gate worker's folder there with only {:?}",
+                g.weak_parts
+            )
+        })?;
+        spawn::plain_parts(&weak_worker, &g.part_prefix, &g.weak_parts)?;
+        let models = PathBuf::from(g.models()?);
+        if !models.is_dir() {
+            return Err(format!(
+                "g22_bench.models_dir {} is no folder",
+                models.display()
+            ));
+        }
+        let voice = file(&g.voice_dir)?;
+        Ok(Self {
+            g,
+            weak,
+            worker,
+            weak_worker,
+            detector: out::plain(&voice.join(&g.detector))?,
+            voice,
+            models,
+            settings: VoiceSettings::from_defaults().map_err(|e| e.to_string())?,
+            real: WinHardware::new().cores(),
         })
-        .collect();
-    all.sort();
-    Ok(all)
+    }
+
+    /// The pass rule: the settings' rates (weak's only marks a row slow), and `[voice] card_diff` words wrong.
+    fn rule(&self) -> Rule {
+        Rule {
+            rtf: self.g.max_rtf,
+            weak_rtf: self.g.max_weak_rtf,
+            wrong: u16::from(self.settings.card_diff),
+        }
+    }
+
+    /// The table's first line: weak mode and the pass rule.
+    fn lead(&self, rule: &Rule) -> String {
+        let w = self.weak;
+        format!(
+            "G22 bench: weak mode is {} cores at {} % each, {} MB and only {:?}; RTF is the warm wait over the \
+             clip; {}",
+            w.cores,
+            w.core_pct,
+            w.mem_mb,
+            self.g.weak_parts,
+            rule.text()
+        )
+    }
+
+    /// The row of `lang`'s clip in one mode.
+    fn row(&self, lang: &str, clip: &Clip, weak: bool) -> Row {
+        let cores = if weak {
+            usize::from(self.weak.cores)
+        } else {
+            self.real
+        };
+        let default = models().ok().and_then(|t| t.default_for(lang));
+        let mut row = Row {
+            lang: lang.to_owned(),
+            model: default.map(|r| r.name.clone()).unwrap_or_default(),
+            weak,
+            cores,
+            cap: None,
+            clip_ms: 0,
+            got: Err(Miss::Fault(NO_DEFAULT.into())),
+        };
+        if let Some(default) = default {
+            match self.case(lang, clip, default, weak, cores) {
+                Ok(case) => (row.clip_ms, (row.cap, row.got)) = (case.clip_ms, self.timed(&case)),
+                Err(miss) => row.got = Err(miss),
+            }
+        }
+        row
+    }
+
+    /// The case of `lang`'s clip: its default model, which must fit the mode's PC and be in the folder, and the clip.
+    fn case<'c>(
+        &self,
+        lang: &'c str,
+        clip: &'c Clip,
+        default: &ModelRow,
+        weak: bool,
+        cores: usize,
+    ) -> Result<Case<'c>, Miss> {
+        self.fits(default, weak)?;
+        let fault = |e: &str| Miss::Fault(e.to_owned());
+        let model = default
+            .model(&self.models, lang)
+            .ok_or_else(|| fault("the default does not know it"))?;
+        if !model.file.expose().is_file() {
+            return Err(fault(&format!(
+                "{} is not in the models folder",
+                default.file
+            )));
+        }
+        let path = out::plain(&self.voice.join(&clip.file)).map_err(Miss::Fault)?;
+        let clip_ms = clip::read_ms(&path).map_err(Miss::Fault)?;
+        let room = u64::from(self.settings.record_max_s) * u64::from(MS_PER_S);
+        if u64::from(clip_ms) + self.g.tail_ms >= room {
+            return Err(fault("the clip and its tail pass [voice] record_max_s"));
+        }
+        Ok(Case {
+            lang,
+            clip,
+            model,
+            path,
+            clip_ms,
+            weak,
+            cores,
+        })
+    }
+
+    /// In weak mode, the product's own rule on the weak PC's memory: `NotHere` when it would mark the default so.
+    fn fits(&self, default: &ModelRow, weak: bool) -> Result<(), Miss> {
+        if !weak {
+            return Ok(());
+        }
+        let total_mb = self.weak.mem_mb;
+        let memory = Memory {
+            total_mb,
+            free_mb: total_mb,
+        };
+        match default.not_here(&memory, self.settings.job_mb) {
+            Some(ModelState::NotHere {
+                need_mb, have_mb, ..
+            }) => Err(Miss::NotHere { need_mb, have_mb }),
+            _ => Ok(()),
+        }
+    }
+
+    /// Both takes of `case` in one fresh job, then its end: the cap read back from the job and what was measured.
+    fn timed(&self, case: &Case) -> (Option<u32>, Result<Timed, Miss>) {
+        let Some(clip) = case.path.to_str() else {
+            return (
+                None,
+                Err(Miss::Fault("the clip's path is not UTF-8".into())),
+            );
+        };
+        let extra = vec![g22::sound_flag(), clip.to_owned()];
+        let spawner = if case.weak {
+            let cap = CpuCap {
+                cores: case.cores,
+                pct: self.weak.core_pct,
+            };
+            WinSpawner::at(self.weak_worker.clone()).capped(cap)
+        } else {
+            WinSpawner::at(self.worker.clone())
+        };
+        let gate = GateWorker::new(spawner, extra, Duration::from_millis(self.g.end_wait_ms));
+        let (cap, alive) = (gate.cap(), gate.alive());
+        let got = self.takes(gate, case);
+        let ended = alive.none_within(self.let_go());
+        let got = got.and_then(|t| if ended { Ok(t) } else { Err(NOT_ENDED.into()) });
+        (*lock(&cap), got.map_err(Miss::Fault))
+    }
+
+    /// The cold take, which loads the model, then the warm take on the loaded model; the job ends with `speech`.
+    fn takes(&self, gate: GateWorker, case: &Case) -> Result<Timed, String> {
+        let clock = Arc::new(QpcClock::new().map_err(|e| e.to_string())?);
+        let assets = Assets {
+            detector: self.detector.clone(),
+            ..Assets::default()
+        };
+        let speech = WorkerSpeech::new(gate, clock, assets, Arc::new(Cores(case.cores)));
+        let ask = self.settings.ask(Some(case.model.clone()), None);
+        let sound_ms = u64::from(case.clip_ms).saturating_add(self.g.tail_ms);
+        let levels = sound_ms.saturating_mul(u64::from(self.settings.level_hz));
+        let script = Script {
+            levels: u32::try_from(levels.div_ceil(u64::from(MS_PER_S))).unwrap_or(u32::MAX),
+            within: within(&self.settings),
+            sentence: &case.clip.sentence,
+            also: &case.clip.also,
+            lang: case.lang,
+        };
+        let cold = take(&speech, ask.clone(), &script).map_err(|e| format!("cold: {e}"))?;
+        let warm = take(&speech, ask, &script).map_err(|e| format!("warm: {e}"))?;
+        if warm.load_ms > 0 {
+            return Err(RELOADED.into());
+        }
+        Ok(Timed {
+            start_ms: cold.open_ms,
+            load_ms: cold.load_ms,
+            first_use_ms: cold.total_ms,
+            first_ms: warm.first_ms,
+            total_ms: warm.total_ms,
+            peak_mb: cold.memory_mb.max(warm.memory_mb),
+            wrong: warm.wrong,
+        })
+    }
+
+    /// The longest wait for a worker let go to end: the host's goodbye within one answer, then the end's own wait.
+    fn let_go(&self) -> Duration {
+        Duration::from_millis(u64::from(self.settings.ask_ms).saturating_add(self.g.end_wait_ms))
+    }
 }
 
-/// Deletes the listed clips, then the folder, which fails if anything else is in it.
-fn delete(dir: &Path, clips: &[(PathBuf, String)]) -> Result<(), String> {
-    for (p, _) in clips {
-        std::fs::remove_file(p).map_err(|e| format!("{}: {e}", p.display()))?;
-    }
-    std::fs::remove_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))
-}
-
-/// Deletes the clips once every run passed: true when gone, false when kept, else the error.
-fn clean_up(pass: bool, dir: &Path, clips: &[(PathBuf, String)]) -> Value {
-    if !pass {
-        return json!(false);
-    }
-    match delete(dir, clips) {
-        Ok(()) => json!(true),
-        Err(e) => json!({ "error": e }),
-    }
-}
-
-/// The sentence read in `lang`: the one whose layout the voice settings map to it; the settings allow one per language.
-fn sentence<'a>(g: &'a G22, v: &VoiceConfig, lang: &str) -> Option<&'a str> {
-    g.sentences
-        .iter()
-        .find(|s| s.layout_id().is_some_and(|id| v.language(id) == lang))
-        .map(|s| s.text.as_str())
-}
-
-/// Time to answer over clip length; below 1 is faster than real time.
-#[allow(
-    clippy::cast_precision_loss,
-    reason = "Clip times in ms are far below 2^53."
-)]
-fn rtf(ms: u64, audio_ms: u64) -> Option<f64> {
-    (audio_ms > 0).then(|| ms as f64 / audio_ms as f64)
-}
-
-/// Mean of the numbers at `key` in `rows`.
-#[allow(clippy::cast_precision_loss, reason = "Row counts are far below 2^53.")]
-fn mean(rows: &[Value], key: &str) -> Option<f64> {
-    let v: Vec<f64> = rows.iter().filter_map(|r| r[key].as_f64()).collect();
-    (!v.is_empty()).then(|| v.iter().sum::<f64>() / v.len() as f64)
-}
-
-/// One clip through `engine`: its times and word error rate.
-fn one(ctx: &Ctx, b: &mut Bench, engine: Engine, (path, lang): &(PathBuf, String)) -> Value {
-    let path = path.to_string_lossy().into_owned();
-    let cmd = Cmd::File {
-        path,
-        lang: lang.clone(),
-        engine,
-    };
-    if let Err(e) = b.worker.send(&cmd) {
-        return json!({ "lang": lang, "error": e });
-    }
-    let want = sentence(&ctx.cfg.g22, &ctx.spike.voice, lang);
-    match b.answer(ctx.cfg.g22.answer_wait_ms) {
-        Some(Event::Text {
-            text, ms, audio_ms, ..
-        }) => json!({
-            "lang": lang, "audio_ms": audio_ms, "ms": ms, "rtf": rtf(ms, audio_ms),
-            "wer": want.and_then(|s| wer::wer(s, &text)),
-        }),
-        Some(Event::Error { error }) => json!({ "lang": lang, "error": error }),
-        _ => json!({ "lang": lang, "error": "no answer in time" }),
-    }
-}
-
-/// True once nothing listens on the local server's port, so the next worker can start its own.
-fn port_free(ctx: &Ctx) -> bool {
-    let (l, t) = (&ctx.spike.voice.local, &ctx.cfg.timing);
-    let addr = format!("{}:{}", l.host, l.port);
-    win::poll_until(t.close_wait_ms, t.poll_ms, || {
-        TcpStream::connect(&addr).is_err().then_some(())
-    })
-    .is_some()
-}
-
-/// One worker set-up: start (the model loads once), every clip, quit.
-fn run_one(
-    ctx: &Ctx,
-    exe: &Path,
-    run: &(&str, Vec<String>, Engine),
-    clips: &[(PathBuf, String)],
-) -> Value {
-    let (name, args, engine) = run;
-    if !port_free(ctx) {
-        return json!({ "run": name, "error": "the local server port is still busy" });
-    }
-    let mut b = match Bench::start(exe, args, ctx.spike.voice.line_max_bytes) {
-        Ok(b) => b,
-        Err(e) => return json!({ "run": name, "error": e }),
-    };
-    let load = match b.next(ctx.cfg.g22.answer_wait_ms) {
-        Some(Event::Ready { load_ms }) => json!(load_ms),
-        Some(Event::Note { note: error } | Event::Error { error }) => json!({ "error": error }),
-        _ => Value::Null,
-    };
-    let rows: Vec<Value> = clips.iter().map(|c| one(ctx, &mut b, *engine, c)).collect();
-    b.worker
-        .quit(ctx.cfg.timing.close_wait_ms, ctx.cfg.timing.poll_ms);
-    let errors = rows.iter().filter(|r| r.get("error").is_some()).count();
-    let (rtf, wer) = (mean(&rows, "rtf"), mean(&rows, "wer"));
-    json!({ "run": name, "load_ms": load, "errors": errors, "mean_rtf": rtf, "mean_wer": wer, "clips": rows })
-}
-
-/// Runs the kept clips through each engine set-up for bench `name`; the clips are deleted only when every run worked.
-pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
-    let (g, v) = (&ctx.cfg.g22, &ctx.spike.voice);
-    let dir = g.clips_dir();
-    let clips = clips(&dir)?;
-    if clips.is_empty() {
-        return Err(format!("no clips in {}", dir.display()));
-    }
-    let exe = ctx.cfg.dir.join(&g.worker_dir).join(&v.worker);
-    if !exe.is_file() {
-        return Err(format!("worker not found: {}", exe.display()));
-    }
-    let cloud = name == WITH_CLOUD || v.cloud_on;
-    let mut runs = vec![
-        ("local", vec![], Engine::Local),
-        ("local-weak", vec![v.weak_arg.clone()], Engine::Local),
-    ];
-    if cloud {
-        runs.push(("cloud", vec![v.cloud_arg.clone()], Engine::Cloud));
-    }
-    let results: Vec<Value> = runs.iter().map(|r| run_one(ctx, &exe, r, &clips)).collect();
-    let pass = results
-        .iter()
-        .all(|r| r["errors"] == 0 && r["mean_rtf"].is_number());
-    let deleted = clean_up(pass, &dir, &clips);
-    Ok(json!({
-        "gate": "G22", "face": name, "pass": pass, "clips": clips.len(),
-        "cloud": if cloud { "run" } else { CLOUD_SKIPPED }, "runs": results, "clips_deleted": deleted,
-    }))
+/// The longest wait for a clip to be heard, or for text after Stop: the host's own for a load, a warm-up and a piece,
+/// and one answer, from the product's settings `s`.
+pub(crate) fn within(s: &VoiceSettings) -> Duration {
+    let secs = u64::from(s.load_s) + u64::from(s.warm_s) + u64::from(s.piece_wait_s);
+    Duration::from_secs(secs) + Duration::from_millis(u64::from(s.ask_ms))
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A fresh folder in TEMP holding `files`.
-    fn folder(name: &str, files: &[&str]) -> PathBuf {
-        let dir = std::env::temp_dir().join(name);
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("creates");
-        for f in files {
-            std::fs::write(dir.join(f), b"x").expect("writes");
-        }
-        dir
-    }
-
-    #[test]
-    fn only_named_clips_are_listed_with_their_language() {
-        let dir = folder(
-            "kx-bench-list-test",
-            &["ar-1.wav", "notes.txt", "nolang.wav"],
-        );
-        let got = clips(&dir).expect("lists");
-        assert_eq!(got.len(), 1);
-        assert_eq!(got[0].1, "ar");
-        std::fs::remove_dir_all(&dir).expect("cleans");
-    }
-
-    #[test]
-    fn only_the_listed_clips_are_deleted() {
-        let dir = folder("kx-bench-delete-test", &["en-1.wav", "keep.txt"]);
-        let listed = clips(&dir).expect("lists");
-        assert!(
-            delete(&dir, &listed).is_err(),
-            "the folder still holds another file"
-        );
-        assert!(dir.join("keep.txt").is_file() && !dir.join("en-1.wav").exists());
-        std::fs::remove_dir_all(&dir).expect("cleans");
-        let dir = folder("kx-bench-delete-test", &["fr-2.wav"]);
-        assert_eq!(delete(&dir, &clips(&dir).expect("lists")), Ok(()));
-        assert!(!dir.exists());
-    }
-
-    #[test]
-    fn clean_up_reports_kept_deleted_or_the_error() {
-        let dir = folder("kx-bench-clean-test", &["en-1.wav", "keep.txt"]);
-        let listed = clips(&dir).expect("lists");
-        assert_eq!(clean_up(false, &dir, &listed), json!(false));
-        assert!(
-            dir.join("en-1.wav").is_file(),
-            "a failed bench keeps the clips"
-        );
-        assert!(clean_up(true, &dir, &listed)["error"].is_string());
-        std::fs::remove_dir_all(&dir).expect("cleans");
-        let dir = folder("kx-bench-clean-test", &["fr-2.wav"]);
-        let listed = clips(&dir).expect("lists");
-        assert_eq!(clean_up(true, &dir, &listed), json!(true));
-    }
-
-    #[test]
-    fn each_clip_is_scored_against_the_sentence_in_its_language() {
-        let g = crate::config::load().expect("kx-gates.toml loads").g22;
-        let v = spike_core::config::load().expect("spike.toml loads").voice;
-        for s in &g.sentences {
-            let lang = v.language(s.layout_id().expect("a layout"));
-            let want = Some(s.text.as_str());
-            assert_eq!(sentence(&g, &v, lang), want, "{}", s.layout);
-        }
-        assert_eq!(sentence(&g, &v, "zz"), None, "no sentence is read in zz");
-    }
-
-    #[test]
-    fn speed_and_means_are_plain_ratios() {
-        assert_eq!(rtf(500, 2000), Some(0.25));
-        assert_eq!(rtf(5, 0), None);
-        let rows = [
-            json!({ "rtf": 0.5 }),
-            json!({ "rtf": 1.5 }),
-            json!({ "error": "x" }),
-        ];
-        assert_eq!(mean(&rows, "rtf"), Some(1.0));
-        assert_eq!(mean(&rows[2..], "rtf"), None);
-    }
-}
+mod tests;

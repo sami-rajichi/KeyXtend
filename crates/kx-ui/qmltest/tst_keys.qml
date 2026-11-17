@@ -185,7 +185,7 @@ Item {
         }
 
         function test_a_dimmed_key_neither_sinks_nor_marks_the_hover() {
-            const k = makeKey("mic");
+            const k = makeKey("snip");
             verify(Qt.colorEqual(k.fillColour, N.lk.palette.dim), "dimmed");
             mousePress(k);
             verify(!k.down, "a press does not hold it down");
@@ -219,11 +219,11 @@ Item {
         }
 
         function test_a_dimmed_key_tip_says_when_it_comes() {
-            const k = makeKey("mic");
+            const k = makeKey("snip");
             const spy = createTemporaryObject(spyC, root, { target: k, signalName: "tip" });
             mouseMove(k, k.width / 2, k.height / 2);
             compare(spy.count, 1);
-            compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.mic"], En.texts["tip.later"]));
+            compare(spy.signalArguments[0][0], root.res.noteTip(En.texts["key.snip"], En.texts["tip.later"]));
         }
 
         // The lone language's tip goes as the pointer leaves, though a second layout took the note away meanwhile.

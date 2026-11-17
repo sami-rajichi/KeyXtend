@@ -198,3 +198,40 @@ layer = [
     { kind = "noise", filter = "lowpass", hz = 1800, q = 0.6,
       start_ms = 0, attack_ms = 0.6, decay_ms = 6, level = 0.35 },
 ]
+
+# The dictation's start (P11): two soft bell tones rising a fifth, E5 then B5, as Windows voice typing and the phone
+# assistants sound a microphone opening; a warm fundamental with a quiet octave and twelfth.
+[[recipe]]
+name = "voice-start"
+length_ms = 360
+gain_db = 0
+layer = [
+    { kind = "modes", start_ms = 0, attack_ms = 3, level = 0.8, partials = [
+        { hz = 659.25, decay_ms = 240, level = 1.0 },
+        { hz = 1318.5, decay_ms = 110, level = 0.25 },
+        { hz = 1977.75, decay_ms = 55, level = 0.05 },
+    ] },
+    { kind = "modes", start_ms = 110, attack_ms = 3, level = 0.8, partials = [
+        { hz = 987.77, decay_ms = 230, level = 1.0 },
+        { hz = 1975.54, decay_ms = 100, level = 0.25 },
+        { hz = 2963.31, decay_ms = 50, level = 0.05 },
+    ] },
+]
+
+# The dictation's stop: the same two tones falling, B5 then E5, so the ear tells the two apart.
+[[recipe]]
+name = "voice-stop"
+length_ms = 360
+gain_db = 0
+layer = [
+    { kind = "modes", start_ms = 0, attack_ms = 3, level = 0.8, partials = [
+        { hz = 987.77, decay_ms = 240, level = 1.0 },
+        { hz = 1975.54, decay_ms = 110, level = 0.25 },
+        { hz = 2963.31, decay_ms = 55, level = 0.05 },
+    ] },
+    { kind = "modes", start_ms = 110, attack_ms = 3, level = 0.8, partials = [
+        { hz = 659.25, decay_ms = 230, level = 1.0 },
+        { hz = 1318.5, decay_ms = 100, level = 0.25 },
+        { hz = 1977.75, decay_ms = 50, level = 0.05 },
+    ] },
+]

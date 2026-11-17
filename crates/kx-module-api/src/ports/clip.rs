@@ -117,7 +117,7 @@ pub enum FileFact {
 }
 
 /// The separators a copied path may use.
-const SEPARATORS: &[u8] = br"\/";
+pub(super) const SEPARATORS: &[u8] = br"\/";
 
 /// True only for an absolute drive path such as `C:\…`, which Windows parses as `Prefix::Disk` then `RootDir`. Every
 /// other form (a share, a device, an NT path, a relative path or a bare `C:foo`) could reach another machine, so no

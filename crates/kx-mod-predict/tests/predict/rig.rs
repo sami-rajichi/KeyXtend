@@ -4,7 +4,7 @@
 
 use kx_mod_predict::{Actor, Days, Flow, MANIFEST, Msg, Pack, Ports, PredictSettings};
 use kx_module_api::ports::{
-    ChipKind, ChipPicked, FieldKind, Lane, PackView, Piece, Suggested, WordsAsk,
+    ChipKind, ChipPicked, FieldKind, Lane, LayoutId, PackView, Piece, Suggested, WordsAsk,
 };
 use kx_module_api::{Bus, ModuleCx, Mono, Redacted, Subscription};
 use kx_platform_fake::{FakeClock, FakeFieldWatch, FakeSealedStore, FakeWordPacks};
@@ -165,12 +165,15 @@ impl Rig {
         self.named(iso, iso)
     }
 
-    /// The keyboard now shows language `iso`, which the OS names `name`.
+    /// The keyboard now shows language `iso`, which the OS names `name`, on the rig's first layout.
     pub fn named(&mut self, iso: &str, name: &str) -> Flow {
-        self.send(Msg::Lang {
-            iso: iso.to_owned(),
-            name: name.to_owned(),
-        })
+        self.shown(LayoutId::default(), iso, name)
+    }
+
+    /// The keyboard now shows layout `id`, in language `iso` named `name`.
+    pub fn shown(&mut self, id: LayoutId, iso: &str, name: &str) -> Flow {
+        let (iso, name) = (iso.to_owned(), name.to_owned());
+        self.send(Msg::Lang { id, iso, name })
     }
 
     /// Focus moves to a new box of `kind`.

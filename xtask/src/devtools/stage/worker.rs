@@ -1,8 +1,10 @@
-//! The media worker in the stage (ADR-0004, ADR-0034): its program sits beside the app, and its manifest never asks
-//! for uiAccess, which would let a decoder of untrusted images drive other apps.
+//! The worker in the stage (ADR-0004, ADR-0034, ADR-0044): it is built with its stage features and never its gate's,
+//! sits beside the app, holds no gate flag, and its manifest never asks for uiAccess, which would let a decoder of
+//! untrusted images drive other apps.
 
 use std::path::Path;
 
+use super::check::refuse_gate;
 use super::{StageConfig, StageError};
 use crate::devtools::DevError;
 use crate::devtools::check::manifest_value;
@@ -12,9 +14,17 @@ use crate::devtools::config::DevToolsConfig;
 const TAG_OPEN: char = '<';
 /// The bytes in one UTF-16 code unit, the other text a manifest resource may be stored in.
 const WIDE: usize = size_of::<u16>();
+/// Cargo's flag that turns on a package's features, and what it joins them with.
+const FEATURES: [&str; 2] = ["--features", ","];
 
-/// Refuses `stage` when the worker program is missing, or when any element of its manifest, in UTF-8 or UTF-16LE,
-/// asks for uiAccess as `devtools` names it, in any letter case.
+/// Cargo's arguments, after the package, that build the worker with its stage features.
+pub(crate) fn build_args(config: &StageConfig) -> Vec<String> {
+    let [flag, join] = FEATURES;
+    vec![flag.to_string(), config.worker_features.join(join)]
+}
+
+/// Refuses `stage` when the worker program is missing, holds its gate flag, or when any element of its manifest, in
+/// UTF-8 or UTF-16LE, asks for uiAccess as `devtools` names it, in any letter case.
 pub(crate) fn check(
     stage: &Path,
     config: &StageConfig,
@@ -25,7 +35,9 @@ pub(crate) fn check(
     if !path.is_file() {
         return Err(StageError::NoWorker(name).into());
     }
-    let texts = renderings(&std::fs::read(&path)?);
+    let bytes = std::fs::read(&path)?;
+    refuse_gate(&bytes, &config.gate_flags(), Path::new(&name))?;
+    let texts = renderings(&bytes);
     if texts
         .iter()
         .flat_map(|t| t.split(TAG_OPEN))
@@ -59,6 +71,7 @@ fn asks(piece: &str, devtools: &DevToolsConfig) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ConfigError;
     use crate::test_support::{TempDir, devtools_config, stage_config};
 
     /// A worker manifest's level element, asking for uiAccess as `value` says.
@@ -141,5 +154,49 @@ mod tests {
         let manifest = format!("<!-- {} -->", level("true"));
         let dir = stage("worker-comment", manifest.as_bytes());
         assert!(matches!(refusal(&dir), Some(StageError::WorkerUiAccess(_))));
+    }
+
+    #[test]
+    fn the_worker_builds_with_its_features_and_never_the_gate() {
+        assert_eq!(build_args(&stage_config()), ["--features", "card"]);
+        let mut gated = stage_config();
+        gated
+            .worker_features
+            .push(gated.worker_gate.feature.clone());
+        let mixed = Err(ConfigError::Same("worker_features", "worker_gate"));
+        assert_eq!(gated.validate(), mixed);
+    }
+
+    #[test]
+    fn the_worker_names_its_features_and_its_gate_feature() {
+        let invalid = |change: fn(&mut StageConfig)| {
+            let mut config = stage_config();
+            change(&mut config);
+            config.validate()
+        };
+        let unnamed = Err(ConfigError::EmptyValue("worker_gate"));
+        assert_eq!(invalid(|c| c.worker_gate.feature.clear()), unnamed);
+        assert_eq!(
+            invalid(|c| c.worker_gate.feature = " ".to_string()),
+            unnamed
+        );
+        let blank = Err(ConfigError::BlankEntry("worker_features"));
+        assert_eq!(
+            invalid(|c| c.worker_features = vec![" ".to_string()]),
+            blank
+        );
+        let none = Err(ConfigError::EmptyList("worker_features"));
+        assert_eq!(invalid(|c| c.worker_features.clear()), none);
+    }
+
+    #[test]
+    fn a_worker_holding_the_sound_flag_is_refused() {
+        let flag = kx_ipc::SOUND_FLAG.to_string();
+        let dir = stage(
+            "worker-gate",
+            format!("{} {flag}", level("false")).as_bytes(),
+        );
+        let exe = stage_config().worker_program();
+        assert_eq!(refusal(&dir), Some(StageError::GateFlag { exe, flag }));
     }
 }

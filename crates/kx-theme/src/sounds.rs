@@ -32,11 +32,22 @@ pub enum Event {
     Pick,
     /// Grab drops it.
     Drop,
+    /// A dictation starts listening.
+    VoiceStart,
+    /// A dictation stops listening.
+    VoiceStop,
 }
 
 impl Event {
     /// Every event, in the order the app lists them.
-    pub const ALL: [Self; 4] = [Self::Key, Self::Rclick, Self::Pick, Self::Drop];
+    pub const ALL: [Self; 6] = [
+        Self::Key,
+        Self::Rclick,
+        Self::Pick,
+        Self::Drop,
+        Self::VoiceStart,
+        Self::VoiceStop,
+    ];
 
     /// Its table in `sounds.toml`.
     #[must_use]
@@ -46,6 +57,8 @@ impl Event {
             Self::Rclick => "rclick",
             Self::Pick => "pick",
             Self::Drop => "drop",
+            Self::VoiceStart => "voice_start",
+            Self::VoiceStop => "voice_stop",
         }
     }
 }

@@ -38,8 +38,8 @@ Item {
     // This press holds the key instead of clicking it, as `repeats` said when the pointer went down.
     property bool holds: false
     readonly property bool on: ks ? ks.on : false
-    // The recording mic takes the rec paint.
-    readonly property bool rec: ks ? ks.paint.fill === "rec" : false
+    // The Dictation key while the microphone is open, as the state tells it; it glows in the rec paint.
+    readonly property bool rec: ks ? !!ks.rec : false
     readonly property bool down: area.pressed && !dim
     // The palette tokens for the cap, legend and skirt, which the face picks from the kind and state.
     readonly property var paint: ks ? ks.paint : ({})

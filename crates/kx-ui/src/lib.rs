@@ -54,9 +54,9 @@ pub use churn::{caps_flipped, flip_caps};
 pub use geom::{Area, Fitted};
 pub use hub::{
     Answers, FillWaker, FontBook, Hub, HubError, Mode, Redraw, Request, Resize, Shown, UiPorts,
-    Wake, Waker, asks, clip_acts, fill_acts,
+    VoiceWake, VoiceWaker, Wake, Waker, asks, clip_acts, fill_acts, voice_acts,
 };
-pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick};
+pub use i18n::{AUTO, I18n, LANGS, Lang, find, os_lang, pick, spoken};
 pub use settings::{Backdrop, PressFrame, SPEC, UiSettings};
 #[cfg(feature = "qt")]
 pub use shell::{After, Pick, Shell};

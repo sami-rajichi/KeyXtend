@@ -252,7 +252,11 @@ fn a_word_fits_the_cap_when_its_erase_and_its_characters_each_stay_within() {
 fn a_press_request_names_its_asker() {
     assert_eq!(
         PressAsker::ALL,
-        [PressAsker::Predict, PressAsker::Selection]
+        [
+            PressAsker::Predict,
+            PressAsker::Selection,
+            PressAsker::Voice
+        ]
     );
     let wanted = PressesWanted {
         asker: PressAsker::Selection,

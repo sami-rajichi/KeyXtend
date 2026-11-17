@@ -1,13 +1,17 @@
-//! The language in front: a switch saves the old learner and loads the new one, only that language is opened, a
-//! missing shipped pack is told once per language and run, and with prediction off nothing opens.
+//! The language in front: a switch saves the old learner and loads the new one, the same layout told again changes
+//! nothing while another layout of it ends the word, only that language is opened, a missing shipped pack is told once
+//! per language and run, and with prediction off nothing opens.
 
 use crate::rig::{Rig, blob, plant, saved};
 use kx_mod_predict::email::Emails;
 use kx_mod_predict::score::Learned;
 use kx_mod_predict::{Flow, ON_KEY, emails_blob};
 use kx_module_api::keys;
-use kx_module_api::ports::{ChipKind, FieldKind, WordsAsk};
+use kx_module_api::ports::{ChipKind, FieldKind, LayoutId, WordsAsk};
 use toml::Value;
+
+/// A second layout, beside the rig's first, the default id.
+const OTHER_LAYOUT: LayoutId = LayoutId::new(2);
 
 #[test]
 fn a_switch_saves_the_old_learner_and_loads_the_new_one() {
@@ -55,6 +59,35 @@ fn a_switch_mid_word_ends_it_unlearned() {
         rig.fakes.store.blob(&blob("fr")).is_none(),
         "no word ended in French"
     );
+}
+
+#[test]
+fn the_same_layout_told_again_mid_word_keeps_the_word_and_tells_nothing() {
+    let mut rig = Rig::build(|f, _| plant(f, "en", &["hello", "elbow"]));
+    rig.lang("en");
+    rig.focus(FieldKind::Text);
+    rig.typed("hel");
+    let _ = rig.take();
+    // Another module's start asks for the layout, and the layouts module tells everyone again.
+    assert_eq!(rig.lang("en"), Flow::Go);
+    assert!(rig.take().is_empty(), "nothing changed, nothing told");
+    rig.typed("l");
+    assert_eq!(rig.words(), ["hello"], "the word went on");
+}
+
+#[test]
+fn another_layout_of_the_same_language_mid_word_ends_it_unlearned() {
+    let mut rig = Rig::build(|f, _| plant(f, "en", &["hello", "elbow"]));
+    rig.lang("en");
+    rig.focus(FieldKind::Text);
+    rig.typed("h");
+    assert_eq!(
+        rig.shown(OTHER_LAYOUT, "en", "en"),
+        Flow::Go,
+        "the same language"
+    );
+    rig.typed("el");
+    assert_eq!(rig.words(), ["elbow"], "a new word began");
 }
 
 #[test]

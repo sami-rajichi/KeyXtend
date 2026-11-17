@@ -6,6 +6,7 @@ mod combo;
 mod compose;
 mod fill;
 pub mod keys;
+mod voice;
 
 pub(crate) use compose::clean;
 
@@ -23,8 +24,8 @@ pub struct Lang {
     pub rtl: bool,
     /// Its main Fluent file, compiled in.
     pub ftl: &'static str,
-    /// Its feature files, the clipboard panel's, Quick-fill's and the selection strip's, compiled in and loaded into the
-    /// same texts.
+    /// Its feature files, the clipboard panel's, Quick-fill's, the selection strip's and voice typing's, compiled in and
+    /// loaded into the same texts.
     pub extra: &'static [&'static str],
 }
 
@@ -46,6 +47,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/clip/en.ftl"),
             include_str!("../i18n/fill/en.ftl"),
             include_str!("../i18n/sel/en.ftl"),
+            include_str!("../i18n/voice/en.ftl"),
         ],
     },
     Lang {
@@ -56,6 +58,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/clip/fr.ftl"),
             include_str!("../i18n/fill/fr.ftl"),
             include_str!("../i18n/sel/fr.ftl"),
+            include_str!("../i18n/voice/fr.ftl"),
         ],
     },
     Lang {
@@ -66,6 +69,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/clip/ar.ftl"),
             include_str!("../i18n/fill/ar.ftl"),
             include_str!("../i18n/sel/ar.ftl"),
+            include_str!("../i18n/voice/ar.ftl"),
         ],
     },
 ];
@@ -101,8 +105,9 @@ pub fn find(tag: &str) -> Option<&'static Lang> {
     LANGS.iter().find(|l| l.tag == tag)
 }
 
-/// The language closest to `tag`, such as French for `fr-CA`, else the fallback.
-fn negotiate(tag: &str) -> &'static Lang {
+/// The language the UI has closest to `tag`, such as French for `fr-CA`; `None` when it has none near it.
+#[must_use]
+pub fn spoken(tag: &str) -> Option<&'static Lang> {
     let wanted: Vec<LanguageIdentifier> = langid(tag).into_iter().collect();
     let have: Vec<LanguageIdentifier> = LANGS
         .iter()
@@ -111,8 +116,13 @@ fn negotiate(tag: &str) -> &'static Lang {
     let best = negotiate_languages(&wanted, &have, None, NegotiationStrategy::Lookup);
     let at = best
         .first()
-        .and_then(|id| have.iter().position(|h| h == *id));
-    &LANGS[at.unwrap_or(0)]
+        .and_then(|id| have.iter().position(|h| h == *id))?;
+    LANGS.get(at)
+}
+
+/// The language closest to `tag`, else the fallback.
+fn negotiate(tag: &str) -> &'static Lang {
+    spoken(tag).unwrap_or(&LANGS[0])
 }
 
 /// `tag` as a language id; a tag with extensions, such as `fr-FR-u-ca-gregory`, is read by its first part.

@@ -1,20 +1,21 @@
-//! The stage check: no banned plugin, no gate-only build, every import of the program, the worker and the plugins
-//! found in the stage or the system folder, the network library imported only by the listed Qt libraries, no library
-//! that nothing imports, no file off the list, and the download budget: the files deflated, a conservative stand-in
-//! for the installer's LZMA2, within `max_mb`. The packs folder is the words check's (`words::check`), and the worker's
-//! manifest the worker check's (`worker::check`).
+//! The stage check: no banned plugin, no gate-only build, every import of the program, the worker, the engine's loaded
+//! parts and the plugins found in the stage or the system folder, the network library imported only by the listed Qt
+//! libraries and the graphics driver only by the card part, no library that nothing imports, no file off the list, and
+//! the download budget: the files deflated, a conservative stand-in for the installer's LZMA2, within `max_mb`. The
+//! packs folder is the words check's (`words::check`), the worker's manifest the worker check's (`worker::check`), and
+//! the floor part and voice files the engine's and voice checks'.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use super::{Network, StageConfig, StageError, planned, words};
+use super::{Network, StageConfig, StageError, engine, planned, voice, words};
 use crate::devtools::{DevError, paths};
 
 /// The extension of Windows libraries, which Qt's plugins are too.
 pub(super) const LIB_EXT: &str = "dll";
 
 /// What the check found in a stage that passed.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Summary {
     /// Files in the stage.
     pub files: usize,
@@ -22,6 +23,10 @@ pub(crate) struct Summary {
     pub size: Size,
     /// The packs folder's share of it.
     pub packs: Size,
+    /// The speech engine's parts' share of it.
+    pub engine: Size,
+    /// The voice folder's share of it.
+    pub voice: Size,
 }
 
 /// A size in bytes, as installed and deflated, as the download carries it.
@@ -66,20 +71,10 @@ pub(crate) fn check(
     if !files.contains(&program) {
         return Err(StageError::NoExe(paths::text(stage)).into());
     }
-    refuse_gate_exe(&stage.join(&program), &program, &config.gate_flag)?;
-    let libs = libraries(&files);
-    let found = |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib);
-    let resolves = |lib: &str| paths::is_plain_name(lib) && found(lib);
-    let guarded = |file: &Path| {
-        let imports = read(&stage.join(file))?;
-        guard(file, &imports, &config.network).map(|()| imports)
-    };
-    let reached = closure(roots(&files, config), &libs, guarded, resolves)?;
-    if let Some(unused) = libs.iter().find(|(key, _)| !reached.contains(*key)) {
-        return Err(StageError::Unused(paths::text(unused.1)).into());
-    }
+    refuse_gate_exe(&stage.join(&program), &program, &config.gate_flags())?;
+    walk(stage, &files, config, read, in_system)?;
     refuse_unplanned(&files, &planned(config))?;
-    let summary = measure(stage, &files, level)?;
+    let summary = measure(stage, &files, level, config)?;
     if summary.size.mb() > config.max_mb {
         let (mb, max) = (summary.size.mb(), config.max_mb);
         return Err(StageError::OverBudget { mb, max }.into());
@@ -87,10 +82,47 @@ pub(crate) fn check(
     Ok(summary)
 }
 
+/// Walks the imports from every root, each file guarded, and fails on an import found nowhere or a library beside the
+/// program that nothing imports. The engine's loaded parts are roots, never unused, and the driver resolves for the
+/// parts its guard lets import it.
+fn walk(
+    stage: &Path,
+    files: &[PathBuf],
+    config: &StageConfig,
+    read: impl Fn(&Path) -> Result<Vec<String>, DevError>,
+    in_system: impl Fn(&str) -> bool,
+) -> Result<(), DevError> {
+    let libs = libraries(files);
+    let driver = key(&config.engine.driver.lib);
+    let found =
+        |lib: &str| is_api_set(lib, &config.api_sets) || in_system(lib) || key(lib) == driver;
+    let resolves = |lib: &str| paths::is_plain_name(lib) && found(lib);
+    let guarded = |file: &Path| {
+        let imports = read(&stage.join(file))?;
+        guard(file, &imports, &config.network)?;
+        engine::guard(file, &imports, &config.engine.driver).map(|()| imports)
+    };
+    let mut reached = closure(roots(files, config), &libs, guarded, resolves)?;
+    reached.extend(config.engine.loaded.iter().map(|l| key(l)));
+    match libs.iter().find(|(lib, _)| !reached.contains(*lib)) {
+        Some((_, unused)) => Err(StageError::Unused(paths::text(unused)).into()),
+        None => Ok(()),
+    }
+}
+
 /// The count and size of the stage-relative `files` in `stage`, each read once and deflated at `level`, with the
-/// packs folder's share.
-fn measure(stage: &Path, files: &[PathBuf], level: u32) -> Result<Summary, DevError> {
-    let (mut size, mut packs) = (Size::default(), Size::default());
+/// shares of the packs, the engine's parts and the voice files.
+fn measure(
+    stage: &Path,
+    files: &[PathBuf],
+    level: u32,
+    config: &StageConfig,
+) -> Result<Summary, DevError> {
+    let mut summary = Summary {
+        files: files.len(),
+        ..Summary::default()
+    };
+    let parts: BTreeSet<String> = config.engine.parts().map(|p| key(p)).collect();
     let total = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
     for file in files {
         let path = stage.join(file);
@@ -101,16 +133,29 @@ fn measure(stage: &Path, files: &[PathBuf], level: u32) -> Result<Summary, DevEr
             bytes: total(read.len()),
             deflated: total(deflated),
         };
-        size.add(one);
-        if words::inside(file) {
-            packs.add(one);
+        summary.size.add(one);
+        if let Some(share) = share(&mut summary, file, &parts) {
+            share.add(one);
         }
     }
-    Ok(Summary {
-        files: files.len(),
-        size,
-        packs,
-    })
+    Ok(summary)
+}
+
+/// The share of `summary` the stage-relative `file` counts in, if any; `parts` are the engine's, by key.
+fn share<'a>(
+    summary: &'a mut Summary,
+    file: &Path,
+    parts: &BTreeSet<String>,
+) -> Option<&'a mut Size> {
+    if words::inside(file) {
+        Some(&mut summary.packs)
+    } else if voice::inside(file) {
+        Some(&mut summary.voice)
+    } else if parts.contains(&path_key(file)) {
+        Some(&mut summary.engine)
+    } else {
+        None
+    }
 }
 
 /// Fails on the first file with a `banned` folder anywhere in its path, in any letter case.
@@ -125,20 +170,26 @@ fn refuse_banned(files: &[PathBuf], banned: &[String]) -> Result<(), DevError> {
     found.map_or(Ok(()), |f| Err(StageError::Banned(paths::text(f)).into()))
 }
 
-/// Reads the program at `path` and fails, naming it `exe`, when it holds the gate-only `flag`.
-pub(crate) fn refuse_gate_exe(path: &Path, exe: &Path, flag: &str) -> Result<(), DevError> {
+/// Reads the program at `path` and fails, naming it `exe`, when it holds any of the gate-only `flags`.
+pub(crate) fn refuse_gate_exe(path: &Path, exe: &Path, flags: &[&str]) -> Result<(), DevError> {
     let bytes = std::fs::read(path)?;
-    refuse_gate(&bytes, flag, exe).map_err(DevError::from)
+    refuse_gate(&bytes, flags, exe).map_err(DevError::from)
 }
 
-/// Fails when `bytes`, the program `exe`, hold the gate-only `flag` anywhere; an empty flag fails every program.
-fn refuse_gate(bytes: &[u8], flag: &str, exe: &Path) -> Result<(), StageError> {
-    let flag_bytes = flag.as_bytes();
-    if flag.is_empty() || bytes.windows(flag_bytes.len()).any(|w| w == flag_bytes) {
-        let (exe, flag) = (paths::text(exe), flag.to_string());
-        return Err(StageError::GateFlag { exe, flag });
+/// Fails on the first of the gate-only `flags` that `bytes`, the program `exe`, hold anywhere; an empty flag fails
+/// every program.
+pub(super) fn refuse_gate(bytes: &[u8], flags: &[&str], exe: &Path) -> Result<(), StageError> {
+    let held = |flag: &&str| {
+        let flag_bytes = flag.as_bytes();
+        flag.is_empty() || bytes.windows(flag_bytes.len()).any(|w| w == flag_bytes)
+    };
+    match flags.iter().copied().find(held) {
+        Some(flag) => {
+            let (exe, flag) = (paths::text(exe), flag.to_string());
+            Err(StageError::GateFlag { exe, flag })
+        }
+        None => Ok(()),
     }
-    Ok(())
 }
 
 /// Fails on the first file outside the packs folder that is not one of the `planned` paths, in any letter case, so no
@@ -179,15 +230,22 @@ fn libraries(files: &[PathBuf]) -> BTreeMap<String, PathBuf> {
         .collect()
 }
 
-/// Where the walk starts: the program, the worker when staged, and every library in a subfolder, which Qt loads as a
-/// plugin.
+/// Where the walk starts: the program, the worker and the engine's loaded parts when staged beside it, and every
+/// library in a subfolder, which Qt loads as a plugin.
 fn roots(files: &[PathBuf], config: &StageConfig) -> Vec<PathBuf> {
     let plugin = |f: &&PathBuf| f.parent() != Some(Path::new("")) && is_lib(f);
     let plugins = files.iter().filter(plugin).cloned();
-    let worker = path_key(Path::new(&config.worker_program()));
-    let worker = files.iter().find(|f| path_key(f) == worker).cloned();
+    let worker = std::iter::once(config.worker_program());
+    let starts: BTreeSet<String> = worker
+        .chain(config.engine.loaded.iter().cloned())
+        .map(|s| key(&s))
+        .collect();
+    let started = files
+        .iter()
+        .filter(|f| starts.contains(&path_key(f)))
+        .cloned();
     std::iter::once(PathBuf::from(config.program()))
-        .chain(worker)
+        .chain(started)
         .chain(plugins)
         .collect()
 }

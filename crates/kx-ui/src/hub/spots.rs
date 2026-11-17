@@ -63,14 +63,14 @@ impl Hub {
     }
 
     /// The theme's gaps to the keyboard and to the screen edge, in `screen`'s pixels.
-    fn gaps(&self, screen: &Screen) -> [i32; 2] {
+    pub(super) fn gaps(&self, screen: &Screen) -> [i32; 2] {
         let gap = self.themes.shape.panel.gap_px;
         gap.map(|g| physical(f64::from(g), screen.dpi))
     }
 }
 
 /// `w` by `h` Qt units in `screen`'s pixels.
-fn size(screen: &Screen, w: f64, h: f64) -> Size {
+pub(super) fn size(screen: &Screen, w: f64, h: f64) -> Size {
     Size {
         w: physical(w, screen.dpi),
         h: physical(h, screen.dpi),

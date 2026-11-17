@@ -1,8 +1,16 @@
 //! The app without Qt: the command line, the one running copy, the quiet panic hook, the log, the hidden run, the
-//! words', the clipboard history's and Quick-fill's folders, and the kernel with every module over the hub the UI
-//! shares. `main.rs` adds the Windows adapter and Qt's loop.
+//! words', the clipboard history's, Quick-fill's and voice typing's folders, and the kernel with every module over the
+//! hub the UI shares. `main.rs` adds the Windows adapter and Qt's loop.
 
 #![forbid(unsafe_code)]
+
+/// The workspace root, from this crate's folder; only a debug build and the voice gate build read under it.
+#[cfg(any(debug_assertions, feature = "gate-voice"))]
+macro_rules! root {
+    () => {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../..")
+    };
+}
 
 pub mod args;
 pub mod boot;
@@ -16,9 +24,12 @@ pub mod hidden;
 #[cfg(debug_assertions)]
 pub mod layouts_debug;
 pub mod log;
+#[cfg(feature = "gate-voice")]
+pub mod played;
 pub mod quiet;
 pub mod relay;
 pub mod vault;
+pub mod voice;
 pub mod words;
 
 /// True in the build whose manifest asks for uiAccess (`build.rs` sets `kx_ui_access`), which loads libraries only from

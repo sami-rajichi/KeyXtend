@@ -214,3 +214,65 @@ fn the_quick_fill_panel_shows_its_icons_by_role() {
     let t = text().replacen("make = \"wand-sparkles\"", "make = \"Wand\"", 1);
     assert!(parse(&t).expect_err("a capital").contains("fill.make"));
 }
+
+#[test]
+fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "cancel=x stop=square gear=settings-2 close=x copy=copy copied=check undo=undo-2 \
+                anyway=rotate-ccw listen=mic download=download transcribing=audio-lines \
+                text=captions password=lock note=square-x notes.cancelled=x notes.checking=refresh-cw \
+                notes.folder=folder notes.full=hard-drive notes.language=languages notes.mic-busy=mic-off \
+                notes.mic-refused=mic-off notes.net=wifi notes.no-fit=cpu notes.no-language=languages \
+                notes.no-mic=mic-off notes.no-model=hard-drive notes.nothing=mic-off notes.print=download \
+                notes.taken=file notes.unplugged=mic-off";
+    let got: Vec<_> = i
+        .voice
+        .named()
+        .into_iter()
+        .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.")))
+        .collect();
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(got, want, "design/voice-bar.html bar()");
+    assert_eq!(i.tray.voice, "mic", "the Dictation key's icon");
+    assert!(
+        i.named()
+            .contains(&("voice.notes.no-mic".into(), "mic-off"))
+    );
+    let t = text().replacen("no-fit = \"cpu\"", "no-fit = \"Cpu\"", 1);
+    assert!(
+        parse(&t)
+            .expect_err("a capital")
+            .contains("voice.notes.no-fit")
+    );
+    let t = text().replacen("voice = \"mic\"", "voice = \"../mic\"", 1);
+    assert!(parse(&t).expect_err("a path").contains("tray.voice"));
+}
+
+#[test]
+fn the_voice_panel_shows_the_mock_ups_icons() {
+    let i = parse(crate::ICONS).expect("icons.toml loads");
+    let want = "room=hard-drive minus=minus plus=plus before=chevron-left after=chevron-right pinned=pin \
+                ticked=check unpin=pin-off slow=cpu untested=languages folder=folder pages.compare=scale \
+                pages.device=cpu pages.folders=folder-open pages.history=history pages.home=mic \
+                pages.models=audio-lines pages.options=settings-2 buttons.again=rotate-ccw buttons.back=arrow-left \
+                buttons.cancel=x buttons.change=folder buttons.check=activity buttons.close=x buttons.compare=mic \
+                buttons.copy=copy buttons.delete=trash-2 buttons.delete-all=trash-2 buttons.download=download \
+                buttons.here=check buttons.insert=clipboard-paste buttons.open=folder-open buttons.pause=pause \
+                buttons.pin=pin buttons.rerun=rotate-ccw buttons.resume=play buttons.use=check marks.done=check \
+                marks.download=download marks.failed=x marks.not-here=x marks.other=file marks.passed=check \
+                marks.ready=check marks.run-failed=x marks.used=check tops.best=check tops.failed=x tops.kept=check \
+                tops.step=scale kinds.auto=arrow-left-right kinds.built-in=gpu kinds.card=gpu kinds.cpu=cpu";
+    let got: Vec<_> = (i.voice.panel.named().into_iter())
+        .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.panel.")))
+        .collect();
+    let want: Vec<&str> = want.split_whitespace().collect();
+    assert_eq!(got, want, "design/voice-bar.html PAGE");
+    let named = i.named();
+    assert!(named.contains(&("voice.panel.kinds.card".into(), "gpu")));
+    let t = text().replacen("built-in = \"gpu\"", "built-in = \"Gpu\"", 1);
+    assert!(
+        parse(&t)
+            .expect_err("a capital")
+            .contains("voice.panel.kinds.built-in")
+    );
+}

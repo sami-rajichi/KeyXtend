@@ -40,6 +40,11 @@ pub(super) enum Ask {
         by: Instant,
         reply: Reply<FieldEnds>,
     },
+    /// The kind and id of the box with focus now; no text.
+    Look {
+        by: Instant,
+        reply: Reply<FieldChange>,
+    },
 }
 
 /// The box told last, how many focus changes were told, and whether the watch failed to start.
@@ -237,6 +242,13 @@ impl FieldRun for Run {
         let text = text.clone();
         let ended = self.ask(|reply, by| Ask::Ends { text, by, reply });
         ended.ok().flatten().unwrap_or(unsure)
+    }
+
+    fn look(&mut self) -> Result<Option<FieldChange>, FieldError> {
+        if self.shared.dead() {
+            return Err(FieldError::Unavailable);
+        }
+        self.ask(|reply, by| Ask::Look { by, reply })
     }
 }
 

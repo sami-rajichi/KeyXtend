@@ -200,6 +200,11 @@ fn a_wait_or_slack_past_its_range_is_refused() {
 }
 
 #[test]
+fn a_z_order_note_with_no_row_below_the_keyboard_is_refused() {
+    refused(&[(|g| g.z_below = 0, "g19_product.z_below")]);
+}
+
+#[test]
 fn the_hung_cases_must_all_fall_within_the_hang() {
     let c = load().expect("loads");
     let g = &c.g19_product;

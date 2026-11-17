@@ -28,7 +28,7 @@ key =
     .rclick = Right click by holding
     .grab = Grab: drag and drop, select text
     .shortcuts = Shortcuts
-    .mic = Voice typing
+    .mic = Dictation
     .clip = Clipboard history
     .snip = Screen snip
     .fill = Quick fill
@@ -61,7 +61,7 @@ label =
     .rclick = Right click
     .grab = Grab
     .shortcuts = Shortcuts
-    .mic = Voice
+    .mic = Dictation
     .clip = Clipboard
     .snip = Snip
     .fill = Fill
@@ -222,6 +222,8 @@ window =
     .outline = Scroll outline
     .clip = { -app } clipboard history
     .fill = { -app } Quick-fill
+    .voice = { -app } dictation bar
+    .voice-panel = { -app } dictation settings
 
 ## What screen readers name the cover that ends a move or resize.
 catch = Click to finish moving or resizing
@@ -234,8 +236,10 @@ badge =
     .fast = fast
     .join = {", "}
 
+## The tray menu's rows; Dictation opens the Voice panel.
 tray =
     .show = Show keyboard
+    .voice = Dictation
     .quit = Quit
 
 ## Buttons on a notice.
@@ -287,6 +291,10 @@ notice =
     .words-locked = Learned words could not be unlocked, so nothing learned is saved this time.
     .clip-damaged = Part of the clipboard history was damaged, so those entries were removed.
     .clip-locked = Clipboard history could not be unlocked, so copies are not kept this time.
+    .voice-texts-damaged = Part of the dictation history was damaged, so those texts were removed.
+    .voice-numbers-damaged = Part of the dictation measurements was damaged, so the affected card checks, model comparisons or usage counts start over.
+    .voice-locked = Dictation history could not be opened, so texts are not kept this time.
+    .voice-unsaved = Dictation history could not be saved. It will be tried again with the next change.
     .hidden-run = { -app } was started from inside { $app }, where Windows hides what { -app } saves, so nothing is saved this time. Quit { -app }, then start it from the Start menu.
     .hidden-copy = A hidden copy of { -app }'s data is in { $app }'s folder. Delete it for good?
     .hidden-copy-failed = The hidden copy in { $app }'s folder could not be deleted. { -app } will ask again next time.
@@ -310,6 +318,7 @@ module =
     .selection = Selection helper
     .ui = Appearance
     .vault = Quick-fill
+    .voice = Dictation
 
 ## The language key's designs, by [keyboard] lang_key value.
 langkey =

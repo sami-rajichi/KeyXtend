@@ -1,5 +1,5 @@
-# Settings P10 adds: G19 on the product (`g19 keyxtend`, `terminals`, `translate-read`, `translate-beside` and `look`,
-# `[g19_product]`). kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
+# Settings P10 adds: G19 on the product (`g19 keyxtend`, `terminals`, `hung`, `translate-read`, `translate-beside` and
+# `look`, `[g19_product]`). kx-gates reads them with kx-gates.toml, from its folder; a section sits in one file only.
 
 # G19 on the product: the plain kx-gates starts the test build ([gate_input] program, with its flag, so Grab and
 # Right-click hear only the gate's input) on a data folder it makes, marks with [g20_product] marker and removes at the
@@ -89,6 +89,9 @@ hang_lead_ms = 200
 hung_quiet_ms = 600
 hung_wait_ms = 700
 hang_margin_ms = 300
+# The hung step notes the z-order, classes and numbers only: every window from the top down to z_below rows below the
+# keyboard.
+z_below = 8
 # How long the ping must keep writing after Copy, in ms.
 ping_ms = 3000
 # Longest wait for the ping to end after its terminal closed, in ms; one the script started still running then is

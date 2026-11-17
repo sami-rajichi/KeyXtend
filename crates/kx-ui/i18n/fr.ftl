@@ -28,7 +28,7 @@ key =
     .rclick = Clic droit par appui long
     .grab = Saisir : glisser-déposer, sélectionner du texte
     .shortcuts = Raccourcis
-    .mic = Saisie vocale
+    .mic = Dictée
     .clip = Historique du Presse-papiers
     .snip = Capture d’écran
     .fill = Remplissage rapide
@@ -223,6 +223,8 @@ window =
     .outline = Contour de défilement
     .clip = Historique du Presse-papiers { -app }
     .fill = Remplissage rapide de { -app }
+    .voice = Barre de dictée de { -app }
+    .voice-panel = Réglages de la dictée de { -app }
 
 ## Ce que les lecteurs d’écran annoncent pour le voile qui termine un déplacement ou un redimensionnement.
 catch = Cliquez pour terminer le déplacement ou le redimensionnement
@@ -235,8 +237,10 @@ badge =
     .fast = rapide
     .join = {", "}
 
+## Les lignes du menu de la zone de notification ; Dictée ouvre le panneau de la dictée.
 tray =
     .show = Afficher le clavier
+    .voice = Dictée
     .quit = Quitter
 
 ## Boutons d’une notification.
@@ -288,6 +292,10 @@ notice =
     .words-locked = Les mots appris n’ont pas pu être déverrouillés : rien de ce qui est appris n’est enregistré cette fois.
     .clip-damaged = Une partie de l’historique du Presse-papiers était endommagée ; ces éléments ont été supprimés.
     .clip-locked = L’historique du Presse-papiers n’a pas pu être déverrouillé : les copies ne sont pas conservées cette fois.
+    .voice-texts-damaged = Une partie de l’historique de la dictée était endommagée ; ces textes ont été supprimés.
+    .voice-numbers-damaged = Une partie des mesures de la dictée était endommagée ; les tests de carte, comparaisons de modèles ou compteurs d’utilisation concernés repartent de zéro.
+    .voice-locked = L’historique de la dictée n’a pas pu être ouvert : les textes ne sont pas conservés cette fois.
+    .voice-unsaved = L’historique de la dictée n’a pas pu être enregistré. Un nouvel essai aura lieu au prochain changement.
     .hidden-run = { -app } a été lancé depuis { $app }, où Windows cache ce que { -app } enregistre : rien n’est donc enregistré cette fois. Quittez { -app }, puis relancez-le depuis le menu Démarrer.
     .hidden-copy = Une copie cachée des données de { -app } se trouve dans le dossier de { $app }. Voulez-vous la supprimer définitivement ?
     .hidden-copy-failed = La copie cachée dans le dossier de { $app } n’a pas pu être supprimée. { -app } vous posera de nouveau la question la prochaine fois.
@@ -311,6 +319,7 @@ module =
     .selection = Aide à la sélection
     .ui = Apparence
     .vault = Remplissage rapide
+    .voice = Dictée
 
 ## Les présentations de la touche de langue, par valeur de [keyboard] lang_key.
 langkey =

@@ -23,8 +23,8 @@ use crate::score::ScoreConfig;
 use crate::settings::PredictSettings;
 use crate::track::{Show, Tracker};
 use kx_module_api::ports::{
-    ChipPicked, FieldChange, FieldConfig, FieldKind, FieldRun, FieldWatch, PanelLine, Piece,
-    SealedStore, Suggested, TypingMode, WordPacks, WordsAsk,
+    ChipPicked, FieldChange, FieldConfig, FieldKind, FieldRun, FieldWatch, LayoutId, PanelLine,
+    Piece, SealedStore, Suggested, TypingMode, WordPacks, WordsAsk,
 };
 use kx_module_api::{Bus, Clock, Redacted, Secret, SettingsHandle};
 use line::Line;
@@ -46,8 +46,10 @@ pub enum Msg {
     Typed(Piece),
     /// The keyboard's latches changed.
     Mode(TypingMode),
-    /// The keyboard shows a layout in language `iso`.
+    /// The keyboard shows layout `id` in language `iso`.
     Lang {
+        /// The layout; the same one told again changes nothing.
+        id: LayoutId,
         /// The language, as `LangLabel::iso` names it.
         iso: String,
         /// Its name for the user, as `LayoutChanged::name` gives it.
@@ -129,8 +131,9 @@ pub struct Actor {
     score_cfg: ScoreConfig,
     learn_cfg: LearnConfig,
     email_cfg: EmailConfig,
-    /// The language in front as the layout names it, the code of its words (the pack serving it, else the same), and
-    /// its name for notices.
+    /// The layout in front, its language as the layout names it, the code of its words (the pack serving it, else the
+    /// same), and its name for notices.
+    layout: Option<LayoutId>,
     iso: String,
     code: String,
     lang_name: String,
@@ -182,6 +185,7 @@ impl Actor {
             score_cfg: settings.score_config(),
             learn_cfg: settings.learn_config(),
             email_cfg: settings.email_config(),
+            layout: None,
             iso: String::new(),
             code: String::new(),
             lang_name: String::new(),
@@ -251,7 +255,7 @@ impl Actor {
             Msg::Typed(piece) => self.typed(seed, &piece),
             // The keyboard tells its mode again at each ask, so only a change starts a new round.
             Msg::Mode(mode) => std::mem::replace(&mut self.mode, mode) != mode,
-            Msg::Lang { iso, name } => return self.lang(seed, iso, name),
+            Msg::Lang { id, iso, name } => return self.lang(seed, id, iso, name),
             Msg::Pressed(ours) => !ours && self.clicked(seed),
             Msg::Picked(pick) => self.picked(seed, pick),
             Msg::Ask(ask) => return self.ask(seed, ask),

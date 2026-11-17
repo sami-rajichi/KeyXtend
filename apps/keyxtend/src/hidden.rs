@@ -1,6 +1,6 @@
 //! A run whose saves would be hidden saves nothing (ADR-0037): it reads nothing from the data folder, keeps its words,
-//! copies and notebook in memory with Quick-fill off, logs to standard error alone and shows a banner. Only a normal
-//! run asks about the hidden copies earlier runs left.
+//! copies, notebook and voice history in memory with Quick-fill off, logs to standard error alone and shows a banner.
+//! Only a normal run asks about the hidden copies earlier runs left.
 
 mod copies;
 #[cfg(test)]
@@ -107,7 +107,8 @@ impl Run {
         }
     }
 
-    /// The clipboard history's shelf: sealed day folders in `dir`, or memory alone when hidden; `disk` tells its room.
+    /// A shelf of its own, for the clipboard history or voice typing: sealed folders in `dir` under `guard`'s key, or
+    /// memory alone when hidden; `disk` tells its room.
     pub fn shelf(
         &self,
         dir: PathBuf,

@@ -1,6 +1,7 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, and recording fakes
 //! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures, the
-//! calendar, the backup box and its places, and seeded randomness. Only tests, tools and test-only crates use it.
+//! calendar, the backup box and its places, speech, model files, the folder reveal, the session and seeded randomness.
+//! Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
@@ -9,6 +10,7 @@ mod calendar;
 mod clip;
 mod clock;
 mod field;
+mod folder;
 mod hidden;
 mod input;
 mod instance;
@@ -18,6 +20,7 @@ mod layouts;
 mod link;
 mod look;
 mod memory;
+mod models;
 mod packs;
 mod pictures;
 mod places;
@@ -28,9 +31,11 @@ mod reveal;
 mod scroll;
 mod sealed;
 mod selection;
+mod session;
 mod shelf;
 mod shortcut;
 mod sound;
+mod speech;
 mod tray;
 mod ui;
 
@@ -39,6 +44,7 @@ pub use calendar::{FakeCalendar, PARIS};
 pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
 pub use field::FakeFieldWatch;
+pub use folder::FakeFolderReveal;
 pub use hidden::FakeHidden;
 pub use input::{FakeInjector, Stroke};
 pub use instance::FakeInstance;
@@ -48,6 +54,7 @@ pub use layouts::{Ask, FakeLayouts};
 pub use link::FakeWebLink;
 pub use look::{DEFAULT_LANGUAGE, FakeSystemLook};
 pub use memory::FakeMemory;
+pub use models::{FakeModelFiles, FetchLog, FileCall};
 pub use packs::FakeWordPacks;
 pub use pictures::FakePictures;
 pub use places::{FakePlaces, PlaceCall};
@@ -58,9 +65,11 @@ pub use reveal::FakeReveal;
 pub use scroll::{FakeScrollTarget, Turn};
 pub use sealed::FakeSealedStore;
 pub use selection::{FakeSelectionWatch, SelCalls};
+pub use session::FakeSessionWatch;
 pub use shelf::{FakeShelf, ShelfCall};
 pub use shortcut::FakeShortcuts;
 pub use sound::{FakeSpeaker, Prepared};
+pub use speech::{FakeSpeech, NO_MODEL, RunLog, SpeechCall};
 pub use tray::FakeTray;
 pub use ui::{FakeBackdrop, FakeScreens, FakeWindowGuard, GuardCall};
 

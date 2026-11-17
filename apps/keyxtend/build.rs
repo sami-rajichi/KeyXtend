@@ -1,4 +1,4 @@
-//! Embeds the Windows manifest (uiAccess only in release without the gate-only feature, per-monitor DPI, UTF-8, no
+//! Embeds the Windows manifest (uiAccess only in release without a gate-only feature, per-monitor DPI, UTF-8, no
 //! elevation) and sets `kx_no_console` in every release build and `kx_ui_access` in the uiAccess one. On MSVC it also
 //! stops the linker writing an import library for Qt's exported QML registration, as `kx-ui`'s own link arguments stop
 //! here.
@@ -32,7 +32,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo::rustc-check-cfg=cfg({NO_CONSOLE_CFG})");
     if env::var_os("CARGO_CFG_WINDOWS").is_some() {
         let profile = env::var("PROFILE").unwrap_or_default();
-        let ui_access = choice::ui_access(&profile, env::var_os(choice::GATE_INPUT_VAR).is_some());
+        let gate = choice::GATE_VARS.iter().any(|v| env::var_os(v).is_some());
+        let ui_access = choice::ui_access(&profile, gate);
         let manifest = new_manifest(APP)
             .dpi_awareness(DpiAwareness::PerMonitorV2)
             .requested_execution_level(ExecutionLevel::AsInvoker)

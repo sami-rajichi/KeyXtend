@@ -198,7 +198,7 @@ fn tidy_config_rejects_unknown_field() {
         "build_only_features": {}, "unsafe_attr": "x",
         "deny_attr": "y", "root_kinds": [], "test_only": [], "bridge_crate": "b",
         "bridge_dir": "d", "safety_tag": "t", "spawn_dirs": [], "spawn_extensions": [],
-        "banned_spawns": [], "build_scripts": [], "bogus": 1
+        "banned_spawns": [], "build_scripts": [], "apart": [], "bogus": 1
     }"#;
     assert!(serde_json::from_str::<TidyConfig>(json).is_err());
     let known = json.replace(r#", "bogus": 1"#, "");
@@ -212,4 +212,38 @@ fn tidy_config_rejects_unknown_field() {
 fn dco_config_rejects_unknown_field() {
     let json = r#"{"trailer": "Signed-off-by", "exempt_authors": [], "bogus": 1}"#;
     assert!(serde_json::from_str::<DcoConfig>(json).is_err());
+}
+
+/// The tidy config with one `apart` entry changed by `change`.
+fn apart(change: impl FnOnce(&mut Apart)) -> Result<(), ConfigError> {
+    let mut config = tidy();
+    let mut entry = Apart {
+        package: "keyxtend-worker".to_string(),
+        module: "src/voice".to_string(),
+        banned: vec!["kx-platform-net".to_string()],
+    };
+    change(&mut entry);
+    config.apart = vec![entry];
+    config.validate()
+}
+
+#[test]
+fn an_apart_entry_passes_and_none_is_allowed() {
+    assert_eq!(apart(|_| {}), Ok(()));
+    assert_eq!(tidy().apart, Vec::new(), "the trimmed config keeps none");
+}
+
+#[test]
+fn an_apart_entry_names_its_package_its_module_and_a_crate() {
+    let blank = Err(ConfigError::BlankEntry("apart"));
+    assert_eq!(apart(|a| a.package = " ".to_string()), blank);
+    assert_eq!(apart(|a| a.banned = vec![String::new()]), blank);
+    assert_eq!(
+        apart(|a| a.banned.clear()),
+        Err(ConfigError::EmptyList("apart"))
+    );
+    for module in ["../src/voice", "C:/src", "src//voice", ""] {
+        let refused = apart(|a| a.module = module.to_string());
+        assert_eq!(refused, Err(ConfigError::NotRelative("apart")), "{module}");
+    }
 }

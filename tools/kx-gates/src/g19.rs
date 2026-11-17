@@ -18,13 +18,14 @@ use crate::{g19chips, launch, product, simuser};
 /// G19's detection run, each line read back through UI Automation.
 pub const CORE: &str = "core";
 /// G19's run names: detection, the strip on the test build, the reads of the owner's translate page (on the test
-/// build or beside the owner's own keyboard), the strip in the terminals alone, and the product's look.
-pub const NAMES: [&str; 6] = [
+/// build or beside the owner's own keyboard), the terminals step or the hung step alone, and the product's look.
+pub const NAMES: [&str; 7] = [
     CORE,
     product::NAME,
     g19chips::READ,
     g19chips::BESIDE,
     g19chips::TERMINALS,
+    g19chips::HUNG,
     g19chips::LOOK,
 ];
 /// The apps G19 core selects in.
@@ -189,6 +190,11 @@ mod tests {
         }
         let e = only_ours(spike_core::config::FACE).expect_err("the face's pill is gone");
         assert!(NAMES.iter().all(|n| e.contains(n)), "{e}");
+    }
+
+    #[test]
+    fn g19_runs_the_hung_step_alone_by_its_step_name() {
+        assert!(NAMES.contains(&g19chips::HUNG));
     }
 
     #[test]

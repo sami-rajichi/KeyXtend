@@ -68,10 +68,9 @@ const NAME_ONLY: &[&str] = &[
     "g19 look",
     "g20 notepad",
     "g21 win32",
-    "g22 qt",
+    "g22 keyxtend",
     "g22 bench",
-    "g22 bench-cloud",
-    "g22 typing",
+    "g22 staged",
     "g23 keyxtend",
     "g24 qt",
     "g25 notepad",
@@ -136,7 +135,9 @@ const BAD_INPUT: &[&str] = &[
     "g21 chrome --clicks 2",
     "g22",
     "g22 bench --seed 1",
-    "g22 typing --pause 10",
+    "g22 staged --pause 10",
+    "g22 qt",
+    "g22 typing",
     "g25 notepad --attach",
     "g23 keyxtend --seed 2",
     "g23 qt",
@@ -221,6 +222,7 @@ fn g8s_hook_names_drive_the_test_build_and_its_other_names_stay_held() {
 fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate_page() {
     assert_eq!(mouse("g19", crate::product::NAME), Mouse::Drives);
     assert_eq!(mouse("g19", crate::g19chips::TERMINALS), Mouse::Drives);
+    assert_eq!(mouse("g19", crate::g19chips::HUNG), Mouse::Drives);
     assert_eq!(
         mouse("g19", crate::g19chips::READ),
         Mouse::Free,
@@ -242,4 +244,11 @@ fn g19_drives_the_test_build_and_leaves_the_mouse_to_the_owner_for_the_translate
         Mouse::Held,
         "only G19's"
     );
+}
+
+#[test]
+fn g22s_bench_and_staged_edges_move_nothing_and_its_product_run_holds_the_mouse() {
+    assert_eq!(mouse("g22", crate::g22::BENCH), Mouse::Free);
+    assert_eq!(mouse("g22", crate::g22::STAGED), Mouse::Free);
+    assert_eq!(mouse("g22", crate::product::NAME), Mouse::Held);
 }

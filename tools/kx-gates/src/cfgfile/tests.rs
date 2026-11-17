@@ -21,8 +21,10 @@ const SHIPPED_P8: &str = include_str!("../../kx-gates-p8.toml");
 const SHIPPED_P9: &str = include_str!("../../kx-gates-p9.toml");
 /// The shipped settings P10 adds.
 const SHIPPED_P10: &str = include_str!("../../kx-gates-p10.toml");
+/// The shipped settings P11 adds.
+const SHIPPED_P11: &str = include_str!("../../kx-gates-p11.toml");
 /// Every shipped settings file, by name.
-const SHIPPED_ALL: [(&str, &str); 8] = [
+const SHIPPED_ALL: [(&str, &str); 9] = [
     (FILE, SHIPPED),
     (P3_FILE, SHIPPED_P3),
     (P4_FILE, SHIPPED_P4),
@@ -31,6 +33,7 @@ const SHIPPED_ALL: [(&str, &str); 8] = [
     (P8_FILE, SHIPPED_P8),
     (P9_FILE, SHIPPED_P9),
     (P10_FILE, SHIPPED_P10),
+    (P11_FILE, SHIPPED_P11),
 ];
 /// The workspace manifest, whose `[workspace.metadata.tidy]` holds the file size rule.
 const WORKSPACE: &str = include_str!("../../../../Cargo.toml");
@@ -196,7 +199,7 @@ fn folding_catches_a_path_that_leaves_the_repo() {
 #[test]
 fn every_relative_path_stays_inside_the_repo() {
     let cfg = config::load().expect("kx-gates.toml loads");
-    let mut paths = vec![cfg.out_dir(), cfg.dir.join(&cfg.g22.worker_dir)];
+    let mut paths = vec![cfg.out_dir(), cfg.dir.join(&cfg.g22_bench.worker)];
     paths.extend(cfg.apps.values().map(|app| cfg.program(&app.exe)));
     let mut strings = Vec::new();
     for (_, shipped) in SHIPPED_ALL {
@@ -216,7 +219,11 @@ fn every_relative_path_stays_inside_the_repo() {
     let target = root.join(BUILD_DIR);
     let built = [
         ("paths.out", cfg.out_dir()),
-        ("g22.worker_dir", cfg.dir.join(&cfg.g22.worker_dir)),
+        ("g22_bench.worker", cfg.dir.join(&cfg.g22_bench.worker)),
+        (
+            "g22_bench.weak_worker",
+            cfg.dir.join(&cfg.g22_bench.weak_worker),
+        ),
         ("apps.target.exe", cfg.program(&cfg.apps[TARGET_APP].exe)),
         ("gate_input.program", cfg.program(&cfg.gate_input.program)),
     ];

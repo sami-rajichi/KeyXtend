@@ -60,6 +60,11 @@ capabilities! {
     Selection => "selection",
     /// Hand a link to the user's browser through the desktop shell; the selection module alone holds it (ADR-0041).
     OpenLink => "open-link",
+    /// Carry voice typing's events: the key, its light, the bar's view, its clicks and the text to type; the voice
+    /// module, the keyboard and the ui hold it as an event gate (ADR-0042).
+    Voice => "voice",
+    /// Show a folder in the system's file manager; the voice module alone holds it, for its models folder (ADR-0046).
+    OpenFolder => "open-folder",
 }
 
 /// True for a kebab-case name, as capability and event names must be.
@@ -144,15 +149,38 @@ mod tests {
     fn selection_then_open_link_follow_vault_data() {
         let (sel, link) = (Capability::Selection, Capability::OpenLink);
         assert_eq!((sel.name(), link.name()), ("selection", "open-link"));
-        let last = &Capability::ALL[Capability::ALL.len() - 3..];
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let data = at(Capability::VaultData);
         assert_eq!(
-            last,
-            [Capability::VaultData, sel, link],
+            (at(sel), at(link)),
+            (data.map(|i| i + 1), data.map(|i| i + 2)),
             "older ones keep their places"
         );
         for cap in [sel, link] {
             let others = Capability::ALL.iter().filter(|&&c| c != cap);
             assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
         }
+    }
+
+    #[test]
+    fn open_folder_follows_voice() {
+        let folder = Capability::OpenFolder;
+        assert_eq!(folder.name(), "open-folder");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let voice = at(Capability::Voice);
+        assert_eq!(at(folder), voice.map(|i| i + 1), "ADR-0046");
+        let others = Capability::ALL.iter().filter(|&&c| c != folder);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
+    }
+
+    #[test]
+    fn voice_follows_open_link() {
+        let voice = Capability::Voice;
+        assert_eq!(voice.name(), "voice");
+        let at = |cap| Capability::ALL.iter().position(|&c| c == cap);
+        let link = at(Capability::OpenLink);
+        assert_eq!(at(voice), link.map(|i| i + 1), "ADR-0042 decision 7");
+        let others = Capability::ALL.iter().filter(|&&c| c != voice);
+        assert_eq!(others.count(), Capability::ALL.len() - 1, "listed once");
     }
 }

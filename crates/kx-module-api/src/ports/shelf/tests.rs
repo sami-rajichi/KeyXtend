@@ -9,6 +9,17 @@ fn the_shelf_is_named_and_gated_by_secret_store() {
 }
 
 #[test]
+fn the_voice_shelf_is_its_own_service_gated_by_secret_store() {
+    assert_eq!(VoiceShelfKey::ID.as_str(), "voice-shelf");
+    assert_ne!(
+        VoiceShelfKey::ID,
+        SealedShelfKey::ID,
+        "its own folder and key"
+    );
+    assert_eq!(VoiceShelfKey::CAPABILITY, Some(Capability::SecretStore));
+}
+
+#[test]
 fn a_day_and_the_pinned_folder_are_blob_names() {
     for folder in ["2026-10-30", "pinned"] {
         assert_eq!(BlobName::new(folder).unwrap().as_str(), folder);

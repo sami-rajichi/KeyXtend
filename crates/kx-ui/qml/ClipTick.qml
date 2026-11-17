@@ -1,5 +1,5 @@
-// A clipboard row's tick box (mock-up .ck): an outline in the row's mark colour, or filled in the badge colours with
-// the row's place in the tick order, which pops in as the row is ticked.
+// A list row's tick box (mock-up .ck): an outline in the row's mark colour, or filled in the badge colours with the
+// row's place in the tick order, or a check where a list ticks one row (Voice panel), which pops in as it is ticked.
 import QtQuick
 
 Rectangle {
@@ -11,6 +11,8 @@ Rectangle {
     required property var lk
     required property var res
     required property real s
+    // The check icon shown in place of the number, empty for the number.
+    property string glyph: ""
 
     readonly property var sh: lk.shape.clip.tick_px
     readonly property bool on: number !== null && number !== undefined
@@ -31,7 +33,7 @@ Rectangle {
     // Fills the box, so the number sits in the same place on every row, Arabic ones too.
     Label {
         anchors.fill: parent
-        visible: tick.on
+        visible: tick.on && !tick.glyph
         text: tick.on ? String(tick.number) : ""
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -39,6 +41,15 @@ Rectangle {
         font.pixelSize: tick.sh[3] * tick.s
         font.weight: tick.lk.shape.clip.tick_weight
         color: tick.lk.palette.badge_ink
+    }
+    Icon {
+        anchors.centerIn: parent
+        visible: tick.on && !!tick.glyph
+        icon: tick.glyph
+        base: tick.res.icons
+        ext: tick.res.ext
+        px: tick.sh[3] * tick.s
+        tint: tick.lk.palette.badge_ink
     }
     Tween {
         id: grow

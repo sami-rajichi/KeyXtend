@@ -12,6 +12,7 @@ mod layer;
 mod outbox;
 mod pad;
 mod panels;
+mod voice;
 mod words;
 
 pub(crate) use bus::listen;
@@ -195,6 +196,7 @@ impl Face {
                 self.fill_open();
                 Ok(STATE)
             }
+            Ok(Tapped::Voice) => Ok(self.voice_key()),
             Ok(Tapped::Layer) => Ok(self.flip()),
             Ok(Tapped::Next) => Ok(self.lock().next_page()),
             Ok(Tapped::Lang { back }) => Ok(self.lock().lang(back)),

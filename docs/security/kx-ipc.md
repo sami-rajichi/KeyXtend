@@ -1,9 +1,9 @@
 # Security note: kx-ipc
 
 - **Owner:** product owner
-- **Last review:** 2026-11-05 (P9 `kx-security-check`: frame caps against a crafted worker, nothing new; P9 Task 23: the vault frames, their caps and wiped buffers); 2026-10-31 (P8 security check: a dripped reply's buffer and the worker's command words; P8 task 6: the frame format and its limits; P8 final fix: the DIB ask and reply)
+- **Last review:** 2026-11-16 (P11 task 29 `kx-security-check`: the host-list rules `listed`, `covers` and `names`, where a `.` entry takes the hosts under a domain and a first address needs a plain entry by name; `listed`'s doc now says a two-name public suffix passes; final); 2026-11-14 (P11 task 9: the voice and fetch frames, their caps and wiped buffers); 2026-11-05 (P9 `kx-security-check`: frame caps against a crafted worker, nothing new; P9 Task 23: the vault frames, their caps and wiped buffers); 2026-10-31 (P8 security check: a dripped reply's buffer and the worker's command words; P8 task 6: the frame format and its limits; P8 final fix: the DIB ask and reply)
 - **Status:** Reviewed
-- **Scope:** `crates/kx-ipc`, a library with no module of its own. The worker host (P8 task 9) writes asks and reads replies; `keyxtend-worker media` (task 8) reads asks and writes replies (ADR-0004, ADR-0034 decision 5). It also holds the worker's command words and exit codes (`MEDIA_JOB`, `MAX_PIXELS_FLAG`, `CLEAN_EXIT`, `REFUSED_EXIT`), so the host and the worker read one copy, and the worker's memory figures (`READ_TIMES`, `DECODE_BYTES`) that the clipboard settings check reads through `kx-module-api`. From P9 it also holds the vault job's frames (`VaultAsk`, `VaultReply`), its job word and every box fact the host, the worker and the settings share (`limits.rs`, ADR-0038 decision 6).
+- **Scope:** `crates/kx-ipc`, a library with no module of its own. The worker host (P8 task 9) writes asks and reads replies; `keyxtend-worker media` (task 8) reads asks and writes replies (ADR-0004, ADR-0034 decision 5). It also holds the worker's command words and exit codes (`MEDIA_JOB`, `MAX_PIXELS_FLAG`, `CLEAN_EXIT`, `REFUSED_EXIT`), so the host and the worker read one copy, and the worker's memory figures (`READ_TIMES`, `DECODE_BYTES`) that the clipboard settings check reads through `kx-module-api`. From P9 it also holds the vault job's frames (`VaultAsk`, `VaultReply`), its job word and every box fact the host, the worker and the settings share (`limits.rs`, ADR-0038 decision 6). From P11 it holds the `voice` and `fetch` jobs' frames (`VoiceAsk`, `VoiceNote`, `FetchAsk`, `FetchNote`), their job words and the `[voice]` ranges the asks carry (ADR-0042, ADR-0043 decision 8).
 
 ## Capabilities
 | Capability | Why needed | What breaks without it |
@@ -17,8 +17,12 @@
 | Pixels in a `Pixels` reply, a DIB in a `Dib` reply | Sensitive | Memory, and the same pipe | No | Until the frame is dropped |
 | Passwords, notebook parts and KeePass values in a vault frame (P9) | Secret | Memory as `Wiped`: lent, or kept in `Zeroizing`; `read_wiped` reads into a buffer wiped as it grows; and the same pipe | No | Until the frame is dropped |
 | Padlocks, sealed boxes and KeePass files in a vault frame (P9) | Sensitive: already locked | Memory, unwiped, and the same pipe | `age` or KDBX | Until the frame is dropped |
+| A piece's text and a card check's texts in a voice note (P11) | Secret | Memory as `Zeroizing<String>`, read into a buffer wiped as it grows; the same pipe | No | Until the frame is dropped |
+| Sound pieces in a voice ask or note (P11): 16 kHz mono 16-bit | Secret | Memory as `Wiped`, at most `MAX_SOUND_BYTES` (1 MiB) a frame; the same pipe | No | Until the frame is dropped |
+| Model, detector, clip and download paths (P11) | Sensitive: may name the user | Memory and the same pipe | No | Until the frame is dropped |
+| Addresses, hosts, fingerprints, device names and language codes (P11) | Public | Memory and the same pipe | No | Until the frame is dropped |
 
-`Debug` of `Ask` and `Reply` prints lengths, never bytes, and so does `Debug` of the vault frames, which never shows a value. Errors name only the kind of refusal.
+`Debug` of `Ask` and `Reply` prints lengths, never bytes, and so does `Debug` of the vault frames, which never shows a value. `Debug` of the voice and fetch frames shows ids, codes, numbers, lengths, language, runner and card tags, and device names and drivers, never a text, a sound or a path. Errors name only the kind of refusal.
 
 ## Inputs from outside (files, IPC, OS callbacks, clipboard, network)
 | Input | Validation | Size/time limit | Fuzzed |
@@ -27,6 +31,9 @@
 | Asks the worker reads, from the host | The same header checks (`Draw`, `Dib` or `Bye` only). Codec from a fixed list, side from 1 to `MAX_SIDE`, a DIB's cap from 1 to `MAX_IMAGE_BYTES`, an image of at least one byte; `Bye` has id 0 and no payload | `MAX_ASK_LEN`: 5 + 64 MiB (`MAX_IMAGE_BYTES`, the largest entry `max_entry_mb` allows) | The same properties |
 | Frames either side writes | The writer runs the same checks and refuses before writing a byte, so neither side sends what the other refuses | The same caps | Round-trip properties |
 | Vault frames, read by each side (P9) | The media header with their own kinds, so a media reply is no vault reply. Every length, part, entry and field within its cap before its bytes are read; a password must be UTF-8; a part's name must be one `BOX_PARTS` names. A work factor must be within `MIN_BOX_WORK` to `MAX_BOX_WORK` | `MAX_BOX_BYTES` (64 MiB), `MAX_KEEPASS_BYTES` (16 MiB), `MAX_LOCKED_BYTES`, `MAX_RECIPIENT_BYTES`, `MAX_PASSWORD_BYTES`, `MAX_FIELD_BYTES`, `MAX_ENTRIES`, `MAX_FIELDS` | Property tests: round trips, random bytes, a changed byte, every cut (`tests/vault/props.rs`) |
+| Voice notes the host reads, from a job that runs hostile model files (P11) | Their own kinds, each with its length range, checked before any payload byte. Codes from fixed lists; a piece's index below `MAX_PIECES`; a sound index below `MAX_SOUND_PIECES` and whole samples; a done note within the longest dictation; free memory at most total; names without control characters or the format marks that reorder or hide text (`rules::HIDDEN`); texts UTF-8, read into wiped buffers | `MAX_TEXT_BYTES` (64 000) a text, `MAX_SOUND_BYTES` a piece, `MAX_DEVICES`, `MAX_LANGS`, `MAX_TAG_BYTES`, `MAX_NAME_BYTES` | Property tests (`tests/voice/props.rs`) |
+| Voice asks the job reads (P11) | Each setting within its `[voice]` range (`THREADS`, `PAD_MS`, `PIECE_S`, `RECORD_MAX_S`, `LEVEL_HZ`, `SILENCE_STOP_S`); language, runner and card id visible ASCII; paths without a NUL; sound in whole samples | `MAX_PATH_BYTES` (4096) a path; a hand-over at most `MAX_SOUND_PIECES` pieces | The same properties |
+| Fetch frames, read by each side (P11) | Addresses start with `https://` and are visible ASCII; hosts are lower-case letters, digits, dots and hyphens; the path leaves room for `PART_EXT`; size from 1 to `MAX_MODEL_BYTES`; `stall_s` within `STALL_S`; progress at most its total, which is a size from 1 to `MAX_MODEL_BYTES` | `MAX_URLS`, `MAX_URL_BYTES`, `MAX_HOSTS`, `MAX_HOST_BYTES`, `MAX_MODEL_BYTES` (64 GiB) | Property tests (`tests/fetch/props.rs`) |
 
 The crate sets no time limit: the host's deadlines (`media_ms`, `vault_ms`) and kill on timeout belong to the worker host (task 9).
 
@@ -34,18 +41,23 @@ The crate sets no time limit: the host's deadlines (`media_ms`, `vault_ms`) and 
 - **Spoofing:** frames carry no authentication; the pipe is the boundary. The host hands only inherited anonymous pipe handles to its own child (ADR-0004), and the reply's `id` lets the host refuse an answer to another request (task 9).
 - **Tampering:** a compromised worker can send any bytes, so every field is checked before use and a length that disagrees with its fields is `Inconsistent`. The host then checks the size it asked for (`Pixels::new`) or the DIB's length against its cap. Tests: `a_field_out_of_range_is_refused`, `pixels_that_are_not_width_by_height_are_inconsistent`, `a_changed_reply_never_panics_and_what_reads_writes_back_the_same`.
 - **Version confusion:** the magic `KXIP` and the version byte come first, so another version or stray output on the pipe is `BadMagic` or `BadVersion`. Each side reads only the other side's kinds (`BadKind`), so an echoed ask is never taken as a reply. Tests: `a_wrong_magic_is_refused`, `another_version_is_refused`, `an_unknown_kind_is_refused`, `each_side_reads_only_the_other_sides_kinds`, `each_side_reads_only_the_other_sides_dib_kind`.
-- **Logging / repudiation:** the crate never logs. `Debug` shows lengths only (`debug_shows_lengths_never_content`, `debug_shows_the_dib_frames_lengths_never_content`), and `Why` is a fixed enum, so a worker cannot push free text into the host's logs.
-- **Information disclosure:** content stays in memory and in a pipe only the two processes hold. Media buffers are not wiped (Accepted); a vault frame's secrets are, in the crate's own buffers.
+  - Each job reads only its own kinds, so a `voice` job never takes a fetch ask (`every_kind_belongs_to_exactly_one_reader_and_the_codes_have_no_gap`, `each_voice_frame_is_refused_by_every_other_reader`, `each_fetch_frame_is_refused_by_every_other_reader`).
+- **Logging / repudiation:** the crate never logs. `Debug` shows lengths only (`debug_shows_lengths_never_content`, `debug_shows_the_dib_frames_lengths_never_content`, `debug_shows_no_text_sound_or_path`, `debug_shows_no_path_or_fingerprint`), and `Why`, `VoiceFault` and `FetchFault` are fixed enums, so a worker cannot push free text into the host's logs. A device name with a line break or a right-to-left override is refused (`a_device_name_or_driver_with_a_hidden_format_mark_is_refused_both_ways`).
+- **Information disclosure:** content stays in memory and in a pipe only the two processes hold. Media buffers are not wiped (Accepted); a vault frame's secrets are, in the crate's own buffers, and so are voice texts and sound.
+- **Network reach (P11):** a fetch ask refuses an address that is not HTTPS before it is sent, and carries the only hosts a redirect may name; the fetch job enforces them on each redirect (task 13). A `.` entry takes the hosts under a domain of at least `UNDER_NAMES` names, never a bare top-level domain, and `names` takes only a plain entry, for a first address (`tests/fetch/hosts.rs`).
+  - `listed` knows no public-suffix list, so a two-name suffix such as `.co.uk` passes; the models table's test pins its `.` entries to exactly `.hf.co`, so a new one needs a reviewed test change (`kx-mod-voice.md`).
 - **Denial of service:**
   - Oversized frames: the length is checked against its kind's cap right after the header, before any payload byte is read (`a_length_past_its_kind_is_refused_before_the_payload`, `a_good_header_is_never_read_past_its_frame_or_cap`, `a_length_past_the_largest_image_is_refused_right_after_the_header`).
   - A lying length within the cap costs only what arrives, and never more than the cap; a growing read holds at most `READ_TIMES` times its length (`a_read_buffer_grows_past_neither_its_length_nor_twice_what_arrived`, `a_lying_pixel_length_is_refused_before_the_pixels`).
   - A reader never reads past its frame, so a refused frame cannot swallow the next one (`*_round_trip_and_end_at_their_frame`).
+  - The voice and fetch kinds have their own ranges, and a sound frame stays near 1 MiB (`a_good_voice_header_is_never_read_past_its_frame_or_cap`, `a_good_fetch_header_is_never_read_past_its_frame_or_cap`, `a_sound_frame_stays_small_beside_a_whole_recording`).
   - Random and cut input never panics (`random_bytes_never_panic`, `a_cut_frame_fails_cleanly`). A worker that stops mid-frame blocks the read until the host's deadline ends it (task 9).
 - **Elevation:** `#![forbid(unsafe_code)]`, no dependency beyond `thiserror` and `zeroize`, and no media or box parsing. Decoding stays in the worker, which runs from a restricted token without uiAccess at Medium integrity (ADR-0034 decision 5, `kx-platform-windows.md`).
 
 ## Findings
 ### Must fix (blocks Definition of Done)
 - None.
+- Done (task 29 code review): `listed`'s doc said "never a whole top-level one" while a two-name public suffix passes; the doc now says what the rule guarantees, and `names` gives the port and the net layer one by-name rule for a first address.
 ### Should fix (tracked issue)
 - Done (task 16): the settings stay inside these limits, `max_entry_mb` at most 64 and `preview_px` and `thumb_px` at most `MAX_SIDE`; the app's agree test pins both (`apps/keyxtend/tests/agree/clip.rs`).
 ### Accepted (with reason)
@@ -56,3 +68,5 @@ The crate sets no time limit: the host's deadlines (`media_ms`, `vault_ms`) and 
 - No rate limit in the crate: one draw at a time within the host's deadline bounds the rate ADR-0004 asks for (task 9).
 - After any error the stream is out of step; the host restarts the worker with backoff, and the worker exits.
 - No `cargo fuzz` target: property tests stand in until the owner allows the nightly toolchain, as in `kx-kernel.md`.
+- A frame cannot see order: a sound index sent twice, or a piece's text past its run's end, is the host's and the job's to refuse (tasks 10 and 14). The index cap bounds a hand-over to `MAX_SOUND_PIECES` pieces either way.
+- The host may hold up to `MAX_SOUND_BYTES` for one dripped sound piece, far below the media cap.

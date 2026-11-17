@@ -5,6 +5,7 @@
 use super::{asking, defaults, features, holders, reached};
 use crate::rig::{OS, Rig};
 use keyxtend::boot::modules;
+use keyxtend::hidden::Run;
 use kx_module_api::ports::{SelectionWatch, SelectionWatchKey, WebLink, WebLinkKey};
 use kx_module_api::{Capability, ModuleId, ServiceKey};
 use kx_platform_fake::{FakeSelectionWatch, FakeWebLink};
@@ -17,7 +18,7 @@ const SEL_FEATURE: &str = "mod-selection";
 #[test]
 fn mod_selection_is_a_default_feature_and_the_default_build_ships_it() {
     assert!(defaults(&features()).contains(&SEL_FEATURE));
-    let shipped = modules(&Rig::new().load().hub, OS);
+    let shipped = modules(&Rig::new().load().hub, OS, &Run::Normal);
     let ids: Vec<ModuleId> = shipped.iter().map(|m| m.manifest().id).collect();
     assert!(ids.contains(&kx_mod_selection::ID), "{ids:?}");
 }

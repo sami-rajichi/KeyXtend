@@ -69,7 +69,13 @@ fn key_view(k: &KeyBox, style: LangKey, repeat: bool) -> KeyView {
         dots: false,
         checkable: matches!(
             k.role,
-            Role::Latch(_) | Role::Caps | Role::Assist(_) | Role::Layer | Role::Clip | Role::Fill
+            Role::Latch(_)
+                | Role::Caps
+                | Role::Assist(_)
+                | Role::Layer
+                | Role::Clip
+                | Role::Fill
+                | Role::Voice
         ),
         dim,
         tip: dim.then_some(LATER_TIP),

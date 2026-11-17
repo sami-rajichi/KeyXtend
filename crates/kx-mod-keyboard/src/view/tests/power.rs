@@ -34,6 +34,6 @@ fn a_running_power_module_makes_the_power_key_a_plain_side_key() {
 
 #[test]
 fn the_later_side_keys_stay_dim_with_no_tip_whatever_the_power_module_says() {
-    let mic = &with(PowerChanged { live: true }).keys["mic"];
-    assert_eq!((mic.paint, mic.tip, mic.dim), (DIM, None, true));
+    let snip = &with(PowerChanged { live: true }).keys["snip"];
+    assert_eq!((snip.paint, snip.tip, snip.dim), (DIM, None, true));
 }

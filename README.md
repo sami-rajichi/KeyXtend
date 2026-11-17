@@ -42,7 +42,7 @@ KeyXtend is in early development; this is what it is being built to do.
 
 - **Typing:** the keyboard for the active language, a one-click shortcuts layer (copy, paste, undo, switch app…), and word prediction with email suggestions.
 - **Mouse:** Right-click hold, Grab and the scroll pad, with a ring and soft sounds that show when a hold fires.
-- **Voice typing:** local Whisper, click to start and click to stop. A cloud engine with your own free key is optional and off by default.
+- **Voice typing:** speech models that run on your PC through transcribe.cpp: click Dictation to start and to stop, and the voice bar shows the text it typed. A cloud engine with your own free key is optional and off by default.
 - **Clipboard history:** text, links, images and files, newest first, with pins and "Paste together".
 - **Quick-fill:** a notebook of saved logins, details and notes, which types any value at the caret in one click, with a locked backup that keeps itself up to date.
 - **Selection helper:** select text and a strip of keys beside it copies, cuts, pastes or translates it.

@@ -7,6 +7,15 @@
 # PresentMon CSVs, and results.jsonl.
 out = "../../target/gate-logs"
 
+# The roadmap's weak PC (Celeron N4020 class), which every weak-mode run copies here: `g8 weak` and `g8 hook-weak` cap
+# the product's job to it, and `g22 bench` its worker's job and the product's fit rule.
+[weak]
+# Cores a weak copy may use, each at this percent of one core here.
+cores = 2
+core_pct = 30
+# Its memory in MB of 2^20 bytes, as the product counts: the job's cap and what the fit rule reads.
+mem_mb = 4096
+
 [timing]
 # How often we look again for a window, file or clipboard change, in ms.
 poll_ms = 50
@@ -299,30 +308,6 @@ ready_ms = 3000
 # `capture-layouts` writes one golden table per language, from the first installed layout of each. The keys it reads
 # are kx-mod-layouts' scans.toml, the table the product reads, so the range lives in one place.
 languages = ["en", "fr", "ar"]
-
-[g22]
-# Read aloud, one per Mic press, in this order; Notepad switches to each layout (LANGID) first.
-sentences = [
-    { layout = "0409", text = "Please open the file and send it to me tomorrow." },
-    { layout = "040C", text = "Merci d'ouvrir le fichier et de me l'envoyer demain." },
-    { layout = "1C01", text = "من فضلك افتح الملف وأرسله لي غدًا." },
-]
-# How long the Mic stays on for each sentence, the longest wait for the words, and the pause between sentences, in ms.
-record_ms = 8000
-text_wait_ms = 90000
-pause_ms = 3000
-# How long a failed Mic stop click is retried, in ms; record_ms plus this must stay below voice.record_max_s.
-stop_wait_ms = 5000
-# Longest document text read back, in characters.
-max_chars = 4000
-# Folder under TEMP where the face's worker keeps the clips: start the face with its keep switch and this folder.
-clips = "kx-spike-clips"
-# Folder of the Qt stage, whose worker the bench starts, relative to this file; the exe name and spike.toml come from there.
-worker_dir = "../../target/spike-stage/qt-kb"
-# Longest wait for the bench worker to load or answer, in ms.
-answer_wait_ms = 120000
-# Gaps between typed characters the typing check tries, in ms; 0 types each sentence in one batch.
-type_gaps_ms = [0, 2, 10]
 
 [g7]
 # The frozen spike face's name for its Settings key, which opens the panel (spike.toml [keys] ended in P3 Task 22).

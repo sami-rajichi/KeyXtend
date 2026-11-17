@@ -1,11 +1,12 @@
 //! Every name, label and tip the face draws, with the shortcuts layer hidden or on any page, every text a shortcut's
 //! tip is made of, every mark it names, every module the app ships and the kernel, every language-key design and every
-//! selection keycap has its text in English, French and Arabic; every mark it names is one the theme's mark fonts are
-//! checked to draw.
+//! selection keycap, every voice option and bar place has its text in English, French and Arabic, and the Dictation key
+//! says its name; every mark it names is one the theme's mark fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
 use crate::{designs, pages, views};
 use keyxtend::boot::modules;
+use keyxtend::hidden::Run;
 use kx_kernel::KERNEL;
 use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
 use kx_mod_keyboard::spec::NEXT_ID;
@@ -87,7 +88,7 @@ fn every_mark_the_face_names_is_one_the_mark_fonts_are_checked_for_on_their_circ
 #[test]
 fn every_shipped_module_and_the_kernel_have_a_name() {
     let (hub, _requests) = Hub::new(ports(tray())).unwrap();
-    let ids = modules(&hub, DEFAULT_LANGUAGE)
+    let ids = modules(&hub, DEFAULT_LANGUAGE, &Run::Normal)
         .into_iter()
         .map(|m| m.manifest().id)
         .chain([KERNEL]);
@@ -127,4 +128,72 @@ fn every_language_key_design_has_a_name() {
     let wanted: BTreeSet<String> = names.into_iter().collect();
     assert_eq!(wanted.len(), designs().len());
     assert_eq!(missing(&wanted), Vec::new());
+}
+
+/// The voice module's Options rows, from the app's folder.
+const VOICE_OPTIONS: &str = "../../crates/kx-mod-voice/options.toml";
+/// An Options row's kind whose value is one of the bar's places.
+const PLACE_KIND: &str = "place";
+
+/// Each `(key, kind)` of the voice module's Options rows.
+fn voice_rows() -> Vec<(String, String)> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(VOICE_OPTIONS);
+    let table: toml::Table = toml::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let field = |r: &toml::Value, k: &str| r[k].as_str().unwrap_or_default().to_owned();
+    let rows = table["rows"].as_array().cloned().unwrap_or_default();
+    rows.iter()
+        .map(|r| (field(r, "key"), field(r, "kind")))
+        .collect()
+}
+
+/// Every row of voice typing's Options page has its label, and each of the bar's places its name, as the setting
+/// spells it (P11).
+#[test]
+fn every_voice_option_and_bar_place_has_its_text() {
+    use kx_module_api::ports::BarPlace;
+    use kx_ui::i18n::keys::{VOICE_OPTION, VOICE_PLACE, place_id};
+    let rows = voice_rows();
+    assert!(
+        rows.iter().any(|(_, kind)| kind == PLACE_KIND),
+        "the table is read"
+    );
+    let labels = rows
+        .iter()
+        .map(|(key, _)| format!("{VOICE_OPTION}{}", key.replace('_', "-")));
+    let places = BarPlace::ALL.map(|p| {
+        assert_eq!(
+            serde_json::to_value(p).unwrap(),
+            place_id(p),
+            "the setting's name"
+        );
+        format!("{VOICE_PLACE}{}", place_id(p))
+    });
+    let wanted: BTreeSet<String> = labels.chain(places).collect();
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
+/// The Dictation key and the name readers hear for it say the same word in every language (P11 design).
+#[test]
+fn the_dictation_key_says_the_same_word_as_its_name() {
+    use kx_mod_keyboard::spec::Role;
+    use kx_mod_keyboard::view::LABEL_PREFIX;
+    use kx_mod_keyboard::{BoardSpec, LangKey};
+    let roles = BoardSpec::shipped().unwrap().roles();
+    let voice: Vec<String> = roles
+        .into_iter()
+        .filter(|r| r.1 == Role::Voice)
+        .map(|r| r.0)
+        .collect();
+    assert_eq!(voice.len(), 1, "one Dictation key");
+    let view = crate::board(LangKey::Cycle);
+    let key = view.keys.iter().find(|k| k.id == voice[0]).unwrap();
+    let name = key.name.clone().unwrap();
+    let label = key
+        .label
+        .clone()
+        .unwrap_or_else(|| format!("{LABEL_PREFIX}{}", key.id));
+    for l in &LANGS {
+        let t = I18n::new(l);
+        assert_eq!(t.text(&name), t.text(&label), "{}", l.tag);
+    }
 }

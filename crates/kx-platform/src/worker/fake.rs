@@ -1,22 +1,29 @@
 //! A scripted spawner and worker for the hosts' tests, for any job its `Faked` side knows: each ask takes the next
-//! act, and every call is kept in order. It never sleeps: a silent worker is late at once, and the clock moves only
-//! when a test moves it.
+//! act, whose frames go to a stream's notes once it took them, and every call is kept in order. It never sleeps: a
+//! silent worker is late at once, and the clock moves only when a test moves it.
 
+mod fetch;
 mod media;
 mod vault;
+pub mod voice;
 
+pub use fetch::FetchAct;
 pub use media::Act;
 pub use vault::VaultAct;
+pub use voice::VoiceAct;
 
-use super::{Frames, Heard, Launch, SpawnError, Spawner, Worker};
-use kx_ipc::{CLEAN_EXIT, IpcError, VaultAsk};
+use super::{Frames, Heard, Launch, SpawnError, Spawner, Split, Worker};
+use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, VaultAsk, VoiceAsk};
 use kx_module_api::{Clock, Mono};
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
+
+/// A frame as a streamed worker sends it, or why it could not be read.
+pub type Frame<F> = Result<<F as Frames>::Reply, IpcError>;
 
 /// How a job's asks and acts look to the script.
 pub trait Faked: Frames {
@@ -31,15 +38,25 @@ pub trait Faked: Frames {
 
     /// What a worker doing `act` answers to ask `id`.
     fn answer(act: Self::Act, id: u32) -> Heard<Self::Reply>;
+
+    /// The frames a streamed worker doing `act` sends for ask `id`, in order; a silent one sends none.
+    fn play(act: Self::Act, id: u32) -> Vec<Frame<Self>> {
+        match Self::answer(act, id) {
+            Heard::Frame(frame) => vec![frame],
+            Heard::Late => Vec::new(),
+        }
+    }
 }
 
-/// What the host did to a worker, in order, with the waits it gave; a vault ask is kept whole, as its `Debug` hides
-/// its values.
+/// What the host did to a worker, in order, with the waits it gave; a vault, voice or fetch ask is kept whole, as its
+/// `Debug` hides its values.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
     Dib { id: u32, max_bytes: u32 },
     Vault(VaultAsk<'static>),
+    Voice(VoiceAsk<'static>),
+    Fetch(FetchAsk<'static>),
     Bye,
     Reply { within: Duration },
     End,
@@ -61,6 +78,10 @@ struct Log<F: Faked> {
     asked: Option<u32>,
     /// Hears each call, for a test on another thread.
     tell: Option<Sender<Call>>,
+    /// The live worker's notes, once a stream took them; dropping it closes them.
+    tap: Option<Sender<Frame<F>>>,
+    /// The most memory each worker's job took, as the system would tell it.
+    peak: Option<u32>,
 }
 
 /// A spawner of scripted workers of job `F`; clones share one script.
@@ -77,6 +98,8 @@ impl<F: Faked> Default for Script<F> {
             exit: None,
             asked: None,
             tell: None,
+            tap: None,
+            peak: None,
         })))
     }
 }
@@ -97,9 +120,18 @@ impl<F: Faked> Script<F> {
         self.log().acts.push_back(act);
     }
 
-    /// Makes the live worker quit with `code`, as if it died between asks.
+    /// Makes the live worker quit with `code`, as if it died between asks; its notes close.
     pub fn quit(&self, code: u32) {
-        self.log().exit = Some(code);
+        let mut log = self.log();
+        log.exit = Some(code);
+        log.tap = None;
+    }
+
+    /// Sends `frame` from the live streamed worker on its own, with no ask.
+    pub fn say(&self, frame: Frame<F>) {
+        if let Some(tap) = &self.log().tap {
+            let _ = tap.send(frame);
+        }
     }
 
     /// Refuses the next `n` starts.
@@ -127,6 +159,11 @@ impl<F: Faked> Script<F> {
         self.log().calls.clone()
     }
 
+    /// Makes each worker's job tell `mb` as its peak memory.
+    pub fn peak(&self, mb: Option<u32>) {
+        self.log().peak = mb;
+    }
+
     /// Sends each later call to `to`.
     pub fn tell(&self, to: Sender<Call>) {
         self.log().tell = Some(to);
@@ -138,6 +175,20 @@ impl<F: Faked> Script<F> {
             let _ = tell.send(call.clone());
         }
         log.calls.push(call);
+    }
+
+    /// Sends the next act's frames for ask `id` to a streamed worker's notes; a worker that is not streamed waits for
+    /// its `reply` instead.
+    fn play(&self, id: u32) {
+        let mut log = self.log();
+        let Some(tap) = log.tap.clone() else {
+            return;
+        };
+        let act = log.acts.pop_front().unwrap_or_else(F::usual);
+        drop(log);
+        for frame in F::play(act, id) {
+            let _ = tap.send(frame);
+        }
     }
 }
 
@@ -153,6 +204,7 @@ impl<F: Faked> Spawner<F> for Script<F> {
         }
         log.launches.push(launch.clone());
         log.exit = None;
+        log.tap = None;
         Ok(FakeWorker(self.clone()))
     }
 }
@@ -165,8 +217,9 @@ impl<F: Faked> Worker<F> for FakeWorker<F> {
         if let Some((id, call)) = F::note(ask) {
             self.0.log().asked = Some(id);
             self.0.record(call);
+            self.0.play(id);
         } else {
-            self.0.log().exit = Some(u32::from(CLEAN_EXIT));
+            self.0.quit(u32::from(CLEAN_EXIT));
             self.0.record(Call::Bye);
         }
     }
@@ -183,12 +236,25 @@ impl<F: Faked> Worker<F> for FakeWorker<F> {
     }
 
     fn end(&mut self) {
+        self.0.log().tap = None;
         self.0.record(Call::End);
     }
 
     fn code(&mut self, within: Duration) -> Option<u32> {
         self.0.record(Call::Code { within });
         self.0.log().exit
+    }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.0.log().peak
+    }
+}
+
+impl<F: Faked> Split<F> for FakeWorker<F> {
+    fn notes(&mut self) -> Receiver<Frame<F>> {
+        let (tap, notes) = mpsc::channel();
+        self.0.log().tap = Some(tap);
+        notes
     }
 }
 

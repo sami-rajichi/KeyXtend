@@ -38,10 +38,21 @@ pub(crate) enum StageError {
         /// The flag it holds.
         flag: String,
     },
-    /// The media worker's program is not beside the app's.
+    /// The worker's program is not beside the app's.
     NoWorker(String),
-    /// The media worker's manifest asks for uiAccess.
+    /// The worker's manifest asks for uiAccess.
     WorkerUiAccess(String),
+    /// The stage lacks the speech engine's processor part that every machine runs.
+    NoFloor(String),
+    /// A staged file other than the graphics-card part imports the graphics driver.
+    DriverImport {
+        /// The staged file, relative to the stage.
+        by: String,
+        /// The driver library it names.
+        lib: String,
+    },
+    /// The voice folder lacks a file the platform names, or a notice.
+    NoVoice(String),
     /// The packs folder lacks its index, a pack the index lists, or a credit file.
     NoWords(String),
     /// The pack index is empty or does not read.
@@ -91,8 +102,41 @@ impl fmt::Display for StageError {
                     "{exe} holds {flag}: a gate-only build, which never ships"
                 )
             }
+            Self::OverBudget { mb, max } => {
+                write!(f, "{mb} MB deflated is over the {max} MB download budget")
+            }
+            Self::QtVersion { found, want } => {
+                write!(f, "qmake reports Qt {found}; only Qt {want} is reviewed")
+            }
+            Self::NoWorker(_)
+            | Self::WorkerUiAccess(_)
+            | Self::NoFloor(_)
+            | Self::DriverImport { .. }
+            | Self::NoVoice(_)
+            | Self::NoWords(_)
+            | Self::BadIndex(_) => self.fmt_beside(f),
+        }
+    }
+}
+
+impl StageError {
+    /// The texts of the refusals about what ships beside the program: the worker, its engine, voice files and packs.
+    fn fmt_beside(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
             Self::NoWorker(exe) => write!(f, "{exe} is missing; the worker ships beside the app"),
             Self::WorkerUiAccess(exe) => write!(f, "{exe} asks for uiAccess; the worker never may"),
+            Self::NoFloor(lib) => {
+                write!(f, "{lib} is missing; every processor runs the engine on it")
+            }
+            Self::DriverImport { by, lib } => {
+                write!(f, "{by} imports {lib}; only the graphics-card part may")
+            }
+            Self::NoVoice(path) => {
+                write!(
+                    f,
+                    "{path} is missing; the voice files ship beside the worker"
+                )
+            }
             Self::NoWords(path) => {
                 write!(
                     f,
@@ -100,12 +144,8 @@ impl fmt::Display for StageError {
                 )
             }
             Self::BadIndex(path) => write!(f, "{path} is empty or not a pack index"),
-            Self::OverBudget { mb, max } => {
-                write!(f, "{mb} MB deflated is over the {max} MB download budget")
-            }
-            Self::QtVersion { found, want } => {
-                write!(f, "qmake reports Qt {found}; only Qt {want} is reviewed")
-            }
+            // `fmt` sends only the refusals above here; any other still reads as its name, never as nothing.
+            other => write!(f, "{other:?}"),
         }
     }
 }
@@ -124,6 +164,25 @@ mod tests {
             (dev.to_string(), dev),
             (text.to_string(), DevError::Stage(unplanned))
         );
+    }
+
+    #[test]
+    fn the_engine_and_voice_refusals_name_their_file_on_one_line() {
+        let (floor, by, lib, clip) = ("x64.dll", "ggml.dll", "vulkan-1.dll", "voice/en.wav");
+        let driver = StageError::DriverImport {
+            by: by.to_string(),
+            lib: lib.to_string(),
+        };
+        let cases = [
+            (StageError::NoFloor(floor.to_string()), vec![floor]),
+            (driver, vec![by, lib]),
+            (StageError::NoVoice(clip.to_string()), vec![clip]),
+        ];
+        for (error, names) in cases {
+            let text = error.to_string();
+            assert!(names.iter().all(|n| text.contains(n)), "{text}");
+            assert!(!text.contains('\n'), "{text}");
+        }
     }
 
     #[test]

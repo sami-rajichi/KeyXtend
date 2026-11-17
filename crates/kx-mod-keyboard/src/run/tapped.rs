@@ -39,6 +39,8 @@ pub enum Tapped {
     /// The Quick-fill key: nothing was sent and the latches stay; the face asks the vault module to open or close its
     /// panel.
     Fill,
+    /// The Dictation key: nothing was sent and the latches stay; the face asks the voice module to start or stop.
+    Voice,
     /// The layer's Next key: nothing was sent and the latches stay; the face turns the page.
     Next,
     /// A key from a later version: nothing happened.

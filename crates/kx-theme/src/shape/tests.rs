@@ -28,9 +28,12 @@ fn the_shared_sizes_load() {
 #[test]
 fn the_extra_windows_take_the_mock_up_sizes() {
     let s = load().expect("shape.toml loads");
-    assert_eq!(s.caption.icon_px, 15.0, ".capbar .i");
-    assert_eq!(s.caption.gap_px, 6.0, ".capbar .st gap");
-    assert_eq!(s.caption.bar_px, 38.0, ".capbar with its 26 px wave");
+    assert_eq!(s.caption.icon_px, 15.0, ".st .i");
+    assert_eq!(s.caption.gap_px, 6.0, ".vbar, .st gap");
+    assert_eq!(
+        s.caption.bar_px, 38.0,
+        ".vbar: 3 + 6 + the 26 px wave box + 3"
+    );
     assert_eq!(s.snip.bar_radius_px, 9.0, ".snip-bar");
     assert_eq!(s.caption.shimmer_px, [10.0, 6.0], ".shimmer");
     assert_eq!(s.caption.shimmer_span, 2.0, ".shimmer background-size 200%");
@@ -276,3 +279,5 @@ mod dots;
 mod fill;
 /// The scroll pad's arrows, Stop's speed dots and the target's outline.
 mod pad;
+/// The dictation bar's and the Voice panel's own sizes.
+mod voice;

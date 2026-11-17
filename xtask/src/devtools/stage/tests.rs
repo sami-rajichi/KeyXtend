@@ -260,7 +260,7 @@ fn summary(files: usize, bytes: u64) -> check::Summary {
     check::Summary {
         files,
         size: check::Size { bytes, deflated },
-        packs: check::Size::default(),
+        ..check::Summary::default()
     }
 }
 

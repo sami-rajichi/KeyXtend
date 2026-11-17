@@ -1,6 +1,7 @@
 //! Key ids and roles: character ids follow scan codes, and every key is listed once with its role.
 
 use super::*;
+use kx_module_api::ports::Toggle;
 
 #[test]
 fn character_ids_name_their_scan_code() {
@@ -21,12 +22,14 @@ fn each_live_side_key_has_its_role_and_the_rest_come_later() {
         (role("shortcuts"), role("clip"), role("power"), role("fill")),
         (Role::Layer, Role::Clip, Role::Power, Role::Fill)
     );
+    assert_eq!(role("mic"), Role::Voice);
+    assert_eq!((role("snip"), role("settings")), (Role::Later, Role::Later));
     let now = |r: Role| {
-        let panels = matches!(r, Role::Clip | Role::Fill);
+        let panels = matches!(r, Role::Clip | Role::Fill | Role::Voice);
         panels || matches!(r, Role::Assist(_) | Role::Layer | Role::Power)
     };
     let rest: Vec<_> = s.side.iter().filter(|k| !now(k.role)).collect();
-    assert_eq!(rest.len(), 3);
+    assert_eq!(rest.len(), 2);
     assert!(rest.iter().all(|k| k.role == Role::Later));
     assert_eq!(Toggle::from(Assist::RClick), Toggle::RightClick);
     assert_eq!(Toggle::from(Assist::Grab), Toggle::Grab);
@@ -72,7 +75,8 @@ fn roles_list_every_key_once_with_its_role_and_code() {
     assert_eq!(find(&q), Some((Role::Char, Some(Scan::new(0x10)))));
     assert_eq!(find("esc"), Some((Role::Send, Some(Scan::new(0x01)))));
     assert_eq!(find("lang"), Some((Role::Lang, None)));
-    assert_eq!(find("mic"), Some((Role::Later, None)));
+    assert_eq!(find("mic"), Some((Role::Voice, None)));
+    assert_eq!(find("snip"), Some((Role::Later, None)));
     let chars = roles.iter().filter(|r| r.1 == Role::Char).count();
     assert_eq!(chars, s.char_scans().len());
 }

@@ -1,6 +1,6 @@
 //! The running Explorer's desktop shell object, under an apartment-threaded COM on the calling thread: its
 //! `ShellExecute` opens a folder or a link in Explorer itself (Raymond Chen's "launch from the shell" route), so nothing
-//! starts as our child and nothing inherits our uiAccess. The reveal and the link both use it.
+//! starts as our child and nothing inherits our uiAccess. The reveals and the link use it.
 
 use windows::Win32::Foundation::E_FAIL;
 use windows::Win32::System::Com::{
@@ -19,6 +19,8 @@ use crate::com::Com;
 
 /// The shell verb that opens a folder in Explorer or a link in the default browser.
 const OPEN: &str = "open";
+/// The shell verb that only folders have, so a file in a folder's place is never run.
+const EXPLORE: &str = "explore";
 /// No arguments and no working folder: the empty strings the recipe passes, not empty variants.
 const NONE: &str = "";
 
@@ -38,11 +40,24 @@ impl Explorer {
     }
 
     /// Has Explorer open `file` with the `open` verb and no arguments, or gives the code that refused.
-    #[allow(unsafe_code, reason = "Asks Explorer's shell object to open a file.")]
     pub(crate) fn open(&self, file: &BSTR) -> Result<(), i32> {
+        self.run(file, OPEN)
+    }
+
+    /// Has Explorer explore `folder`, a verb only folders have, with no arguments, or gives the code that refused.
+    pub(crate) fn explore(&self, folder: &BSTR) -> Result<(), i32> {
+        self.run(folder, EXPLORE)
+    }
+
+    /// Has Explorer run `verb` on `file` with no arguments, or gives the code that refused.
+    #[allow(
+        unsafe_code,
+        reason = "Asks Explorer's shell object to run a verb on a file."
+    )]
+    fn run(&self, file: &BSTR, verb: &str) -> Result<(), i32> {
         let (empty, verb, show) = (
             VARIANT::from(NONE),
-            VARIANT::from(OPEN),
+            VARIANT::from(verb),
             VARIANT::from(SW_SHOWNORMAL.0),
         );
         // SAFETY: a call on a live object made on this thread, with a BSTR and VARIANTs that outlive it.

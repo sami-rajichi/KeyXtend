@@ -17,10 +17,26 @@ pub struct SpikeConfig {
     pub keyboard: KeyboardConfig,
     /// The tools row and snip.
     pub tools: ToolsConfig,
-    /// Voice: the worker, its engines and the caption bar.
-    pub voice: crate::voicecfg::VoiceConfig,
+    /// The opt-in cloud speech engine, kept for P11 part 2; the local voice parts moved to the product.
+    pub cloud: CloudConfig,
     /// The Arabic test panel (gate G7).
     pub panel: crate::panelcfg::PanelConfig,
+}
+
+/// The opt-in cloud speech engine (an OpenAI-style transcription API).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CloudConfig {
+    /// Host, reached over HTTPS.
+    pub host: String,
+    /// Request path.
+    pub path: String,
+    /// Model name.
+    pub model: String,
+    /// Environment variable that holds the API key.
+    pub key_env: String,
+    /// Longest wait for one answer, in ms.
+    pub timeout_ms: u64,
 }
 
 /// The face's title and stage-1 geometry; the keyboard itself is kx-mod-keyboard's since P3.
@@ -74,8 +90,6 @@ pub struct ToolsConfig {
 pub struct ToolLabels {
     /// Starts a snip.
     pub snip: String,
-    /// Starts and stops recording.
-    pub mic: String,
 }
 
 /// Each tool button's place in the frozen face's row, 0 on the left.
@@ -84,22 +98,18 @@ pub struct ToolLabels {
 pub struct ToolSlots {
     /// The snip button's place.
     pub snip: usize,
-    /// The mic button's place.
-    pub mic: usize,
 }
 
-/// The tool buttons, in row order; the faces and kx-gates share this order.
+/// The tool buttons, in row order; the faces and kx-gates share this order. The mic left in P11.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolButton {
     /// Starts a snip.
     Snip,
-    /// Starts and stops recording.
-    Mic,
 }
 
 impl ToolButton {
     /// Every button, in row order.
-    pub const ALL: [ToolButton; 2] = [Self::Snip, Self::Mic];
+    pub const ALL: [ToolButton; 1] = [Self::Snip];
 
     /// The button at row position `i`.
     pub fn at(i: usize) -> Option<ToolButton> {
@@ -112,7 +122,6 @@ impl ToolLabels {
     pub fn of(&self, b: ToolButton) -> &str {
         match b {
             ToolButton::Snip => &self.snip,
-            ToolButton::Mic => &self.mic,
         }
     }
 }
@@ -122,7 +131,6 @@ impl ToolSlots {
     pub fn of(&self, b: ToolButton) -> usize {
         match b {
             ToolButton::Snip => self.snip,
-            ToolButton::Mic => self.mic,
         }
     }
 }
@@ -172,7 +180,6 @@ pub fn load() -> Result<SpikeConfig, String> {
     let at = |e: String| format!("{}: {e}", file.display());
     let config: SpikeConfig = toml::from_str(&text).map_err(|e| at(e.to_string()))?;
     config.tools.check().map_err(at)?;
-    config.voice.caption.check().map_err(at)?;
     config.panel.check().map_err(at)?;
     crate::panelcfg::check_titles(&config).map_err(at)?;
     Ok(config)
@@ -191,21 +198,21 @@ mod tests {
     }
 
     #[test]
-    fn snip_and_mic_keep_the_frozen_faces_last_two_slots() {
+    fn snip_keeps_the_frozen_faces_third_slot_of_four() {
         let t = load().expect("spike.toml loads").tools;
-        let slots = (t.slot.of(ToolButton::Snip), t.slot.of(ToolButton::Mic));
-        assert_eq!((slots, t.slots), ((2, 3), 4), "quick-fill's two came first");
+        let slot = t.slot.of(ToolButton::Snip);
+        assert_eq!(
+            (slot, t.slots),
+            (2, 4),
+            "quick-fill's two came first, and the mic last"
+        );
     }
 
     #[test]
-    fn a_slot_past_the_row_or_shared_by_two_buttons_is_refused() {
+    fn a_slot_past_the_row_is_refused() {
         let good = load().expect("spike.toml loads").tools;
         assert_eq!(good.check(), Ok(()));
-        let spoils: [fn(&mut ToolsConfig); 3] = [
-            |t| t.slot.mic = t.slots,
-            |t| t.slot.snip = t.slot.mic,
-            |t| t.slots = 0,
-        ];
+        let spoils: [fn(&mut ToolsConfig); 2] = [|t| t.slot.snip = t.slots, |t| t.slots = 0];
         for (i, spoil) in spoils.iter().enumerate() {
             let mut t = good.clone();
             spoil(&mut t);
@@ -218,25 +225,17 @@ mod tests {
     fn spike_toml_loads_the_tools() {
         let cfg = load().expect("spike.toml loads");
         assert_eq!(cfg.tools.labels.of(ToolButton::Snip), cfg.tools.labels.snip);
-        assert_eq!(cfg.tools.labels.of(ToolButton::Mic), cfg.tools.labels.mic);
-        assert_eq!(
-            ToolButton::ALL.last(),
-            Some(&ToolButton::Mic),
-            "Mic is last"
-        );
+        assert_eq!(ToolButton::ALL, [ToolButton::Snip], "the mic left in P11");
         assert!(cfg.tools.snip_edge_px > 0.0 && !cfg.tools.snip_hint.is_empty());
         let size = &cfg.tools.snip_size;
         assert!(size.contains("{w}") && size.contains("{h}"), "{size}");
     }
 
     #[test]
-    fn the_caption_uses_the_mock_ups_icons() {
-        let cfg = load().expect("spike.toml loads");
-        let c = &cfg.voice.caption;
-        assert_eq!(
-            (c.busy_icon.as_str(), c.words_icon.as_str()),
-            ("audio-lines", "captions")
-        );
+    fn spike_toml_keeps_the_cloud_settings_for_part_2() {
+        let c = load().expect("spike.toml loads").cloud;
+        assert!(!c.host.is_empty() && c.path.starts_with('/'));
+        assert!(!c.key_env.is_empty() && c.timeout_ms > 0);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 //! The protocol's and the backup box's magic, versions, names and limits, in one place.
 
 use crate::vault::wire;
+use std::ops::RangeInclusive;
 
 /// A kibibyte, the unit of the read chunk and of the locked identity's cap.
 const KIB: usize = 1024;
@@ -116,6 +117,71 @@ pub const MAX_KDF_LANES: u32 = 64;
 /// The most AES-KDF rounds, a sanity cap at a 32-bit count; the host's deadline bounds the time.
 pub const MAX_AES_ROUNDS: u64 = u32::MAX as u64;
 
+/// The `threads` setting's range: processor threads, 0 for the real cores.
+pub const THREADS: RangeInclusive<u8> = 0..=64;
+/// The `pad_ms` setting's range: silence kept around speech, in ms.
+pub const PAD_MS: RangeInclusive<u16> = 0..=2000;
+/// The `piece_s` setting's range: seconds of sound before a cut at the next pause.
+pub const PIECE_S: RangeInclusive<u8> = 10..=120;
+/// The `record_max_s` setting's range: the longest dictation, in seconds.
+pub const RECORD_MAX_S: RangeInclusive<u16> = 10..=3600;
+/// The `level_hz` setting's range: sound levels per second.
+pub const LEVEL_HZ: RangeInclusive<u8> = 5..=60;
+/// The `silence_stop_s` setting's range: seconds of silence after speech that stop a dictation.
+pub const SILENCE_STOP_S: RangeInclusive<u8> = 1..=30;
+/// The `stall_s` setting's range: seconds without a byte before a download stops.
+pub const STALL_S: RangeInclusive<u16> = 5..=300;
+
+/// The sound hand-over's rate: 16 kHz mono, the form the models hear and the store keeps.
+pub const SOUND_HZ: usize = 16_000;
+/// Bytes in one sound sample: signed 16-bit, little-endian.
+pub const SAMPLE_BYTES: usize = size_of::<i16>();
+/// The most sound one frame carries, in whole samples: about 33 seconds.
+pub const MAX_SOUND_BYTES: usize = MIB;
+/// The longest recording in bytes: `record_max_s` at its top, as hand-over sound.
+pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_HZ * SAMPLE_BYTES;
+/// The most pieces a recording is handed over in, so a piece's index stays bounded.
+pub const MAX_SOUND_PIECES: usize = MAX_RECORD_BYTES.div_ceil(MAX_SOUND_BYTES);
+/// Milliseconds in a second.
+const MS_PER_S: u32 = 1000;
+/// The longest recording in ms, which a done note's sound may not pass.
+pub const MAX_SOUND_MS: u32 = *RECORD_MAX_S.end() as u32 * MS_PER_S;
+/// The most text pieces a dictation is cut into: each but the last is at least `piece_s` long.
+pub const MAX_PIECES: usize = (*RECORD_MAX_S.end() / *PIECE_S.start() as u16) as usize + 1;
+/// The longest text of one piece in UTF-8 bytes: far past two minutes of speech in any script.
+pub const MAX_TEXT_BYTES: usize = 64_000;
+/// The longest file path in UTF-8 bytes.
+pub const MAX_PATH_BYTES: usize = 4096;
+/// The longest short ASCII name: a language code, a runner or a card's id.
+pub const MAX_TAG_BYTES: usize = 64;
+/// The longest device name or driver version in UTF-8 bytes.
+pub const MAX_NAME_BYTES: usize = u8::MAX as usize;
+/// The most devices a list holds: the processor and its cards.
+pub const MAX_DEVICES: usize = 16;
+/// The most language codes a file's facts name.
+pub const MAX_LANGS: usize = 128;
+/// The top of a warm-up's progress.
+pub const MAX_PERCENT: u8 = 100;
+
+/// The most addresses a download tries, in the table's order.
+pub const MAX_URLS: usize = 8;
+/// The longest download address.
+pub const MAX_URL_BYTES: usize = 2048;
+/// The most hosts a download may be redirected to.
+pub const MAX_HOSTS: usize = 16;
+/// The longest host name, as DNS allows.
+pub const MAX_HOST_BYTES: usize = 253;
+/// A gibibyte, the unit of the model file cap.
+const GIB: u64 = (MIB * KIB) as u64;
+/// The largest model file a download takes.
+pub const MAX_MODEL_BYTES: u64 = 64 * GIB;
+/// Bytes in a SHA-256 fingerprint.
+pub const SHA256_BYTES: usize = 32;
+/// The start every download address must have.
+pub const HTTPS: &str = "https://";
+/// What a download's partial file adds to the final name.
+pub const PART_EXT: &str = ".part";
+
 /// The longest of `names`, in bytes.
 const fn longest(names: &[&str]) -> usize {
     let (mut at, mut most) = (0, 0);
@@ -152,3 +218,10 @@ const _: () = assert!(MAX_PASSWORD_BYTES <= u16::MAX as usize);
 // A DIB ask and its reply fit within the largest payloads.
 const _: () = assert!(MAKE_HEAD + MAX_IMAGE_BYTES <= MAX_ASK_LEN);
 const _: () = assert!(MAX_IMAGE_BYTES <= MAX_REPLY_LEN);
+// A sound piece is whole samples, each index fits its two bytes, 0 is free for no silence stop, and a `.part` name
+// fits a path; `Spec::new` checks the other voice and fetch widths.
+const _: () = assert!(MAX_SOUND_BYTES.is_multiple_of(SAMPLE_BYTES));
+const _: () = assert!(MAX_SOUND_PIECES <= u16::MAX as usize);
+const _: () = assert!(MAX_PIECES <= u16::MAX as usize);
+const _: () = assert!(*SILENCE_STOP_S.start() > 0);
+const _: () = assert!(PART_EXT.len() < MAX_PATH_BYTES);

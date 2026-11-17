@@ -1,5 +1,5 @@
 //! G19 on the product (`g19 keyxtend`): the selection strip on the test build, in the gate's own Notepad document,
-//! Chrome page, target-window and terminals, or in the terminals alone (`g19 terminals`); `g19 translate-read` and
+//! Chrome page, target-window and terminals, or one step alone (`g19 terminals`, `g19 hung`); `g19 translate-read` and
 //! `g19 translate-beside`, which only read the translate page the owner opened; and `g19 look`, the product's look.
 #![cfg(windows)]
 
@@ -26,7 +26,7 @@ mod ours;
 mod page;
 mod place;
 mod plan;
-mod procs;
+pub(crate) mod procs;
 mod read;
 mod script;
 mod select;
@@ -36,10 +36,12 @@ mod term;
 mod termrow;
 mod terms;
 mod watch;
+mod zlist;
+mod zread;
 
 pub use link::{site_key, text_of};
 pub use look::LOOK;
-pub use plan::TERMINALS;
+pub use plan::{HUNG, TERMINALS};
 pub use read::{BESIDE, READ};
 
 use std::path::Path;
@@ -141,6 +143,17 @@ fn drive(ctx: &Ctx, (pid, program): (u32, &Path), left: &mut Vec<String>) -> Res
     Ok(v)
 }
 
+/// Step `step`'s result `got`, run alone, with the groups over its `cases` and its verdict.
+fn alone(step: &str, got: Value, cases: &[Value]) -> Value {
+    let mut v = json!({});
+    v[step] = got;
+    v["cases"] = plan::groups(cases);
+    v["each"] = json!(cases);
+    v["unexercised"] = json!(plan::unrun_parts(&v));
+    v["ok"] = json!(plan::step_passed(&v, step));
+    v
+}
+
 /// The terminals step alone on a ready copy at `program` with process id `pid`, once the start's notices are
 /// answered; `left` gathers the clean-up.
 fn terminals(
@@ -151,12 +164,29 @@ fn terminals(
     let gate = Gate::new(ctx, (pid, program))?;
     notice::check_normal(ctx, &gate.reader)?;
     let mut cases = Vec::new();
-    let mut v = json!({ TERMINALS: part(terms::run(&gate, &mut cases, left)) });
-    v["cases"] = plan::groups(&cases);
-    v["each"] = json!(cases);
-    v["unexercised"] = json!(plan::unrun_parts(&v));
-    v["ok"] = json!(plan::step_passed(&v, TERMINALS));
-    Ok(v)
+    let got = part(terms::run(&gate, &mut cases, left));
+    Ok(alone(TERMINALS, got, &cases))
+}
+
+/// The hung step alone on the gate's own Notepad document, which closes after, as `terminals` runs its step.
+fn hung_alone(
+    ctx: &Ctx,
+    (pid, program): (u32, &Path),
+    left: &mut Vec<String>,
+) -> Result<Value, String> {
+    let gate = Gate::new(ctx, (pid, program))?;
+    notice::check_normal(ctx, &gate.reader)?;
+    let (mut cases, mut later) = (Vec::new(), Vec::new());
+    let doc = probe::open_text(ctx, AppKind::Notepad, &docs::doc(gate.g()))?;
+    let got = probe::run_on(ctx, doc, |d| {
+        let lines = probe::front(ctx, &d.app).and_then(|()| Lines::read(&gate, &d.app));
+        let step = lines.and_then(|l| hung::run(&gate, &d.app, &l, &mut cases, &mut later));
+        Ok(part(step))
+    });
+    left.extend(later);
+    let (step, notes_left) = got?;
+    left.extend(notes_left);
+    Ok(alone(HUNG, step, &cases))
 }
 
 /// A run on a ready copy: its process id and program, and where the clean-up gathers.
@@ -172,8 +202,9 @@ fn is_test(ctx: &Ctx, text: &str) -> bool {
         || t.contains(&g.ping_host)
 }
 
-/// Runs `g19 keyxtend`, `terminals`, `translate-read`, `translate-beside` or `look`: the first three are refused under
-/// uiAccess or while a product copy runs, and their data folder and copies in Windows' clipboard history go at the end.
+/// Runs `g19 keyxtend`, `terminals`, `hung`, `translate-read`, `translate-beside` or `look`: the first four are refused
+/// under uiAccess or while a product copy runs, and their data folder and copies in Windows' clipboard history go at
+/// the end.
 pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
     let (name, drive): (&str, Drive) = match name {
         READ => return read::run(ctx),
@@ -181,9 +212,10 @@ pub fn run(ctx: &Ctx, name: &str) -> Result<Value, String> {
         LOOK => return look::run(ctx),
         NAME => (NAME, drive),
         TERMINALS => (TERMINALS, terminals),
+        HUNG => (HUNG, hung_alone),
         _ => {
             return Err(format!(
-                "G19 runs on {NAME}, {TERMINALS}, {READ}, {BESIDE} or {LOOK}, not {name}"
+                "G19 runs on {NAME}, {TERMINALS}, {HUNG}, {READ}, {BESIDE} or {LOOK}, not {name}"
             ));
         }
     };
@@ -233,6 +265,21 @@ mod tests {
         assert_eq!(n["kinds"]["notepad_keys"], "RichEditD2DPT / type 50030");
         assert_eq!(n["arabic_line"]["one_line"], true);
         assert_eq!(n["second_screen"]["placed"]["ok"], true);
+    }
+
+    #[test]
+    fn a_step_alone_is_judged_by_its_own_result_and_cases() {
+        let case = json!({ "case": "after_hung", "seen": true, "focus": true, "chips": true });
+        let v = alone(HUNG, json!({ "ok": true }), std::slice::from_ref(&case));
+        assert_eq!((&v["ok"], &v["unexercised"]), (&json!(true), &json!([])));
+        assert_eq!(v["each"], json!([case]));
+        let failed = alone(HUNG, json!({ "ok": false, "error": "covered" }), &[case]);
+        assert_eq!(failed["ok"], false);
+        assert_eq!(
+            alone(HUNG, json!({ "ok": true }), &[])["ok"],
+            false,
+            "no case"
+        );
     }
 
     #[test]

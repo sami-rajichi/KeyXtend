@@ -23,9 +23,11 @@ repeat_every_ms = 100
 # Apps that get text as key presses in their own layout, by file name such as "app.exe"; scrcpy (a phone mirror)
 # reads letters only as key presses.
 key_apps = ["scrcpy.exe"]
-# The most characters a picked word may erase or type; a longer request types nothing.
+# The most characters a picked word may erase or type, a longer one typing nothing; a dictated text goes in pieces
+# this long.
 text_cap = 256
-# The pause after each Backspace of a picked word, in ms, so apps that drop fast key bursts take every key.
+# The pause after each Backspace of a picked word or a dictated text, in ms, so apps that drop fast key bursts take
+# every key.
 erase_gap_ms = 10
 # How late a Quick-fill part after a Tab may still go, in ms, at least twice relabel_ms; later, the fill stops.
 fill_late_ms = 2000

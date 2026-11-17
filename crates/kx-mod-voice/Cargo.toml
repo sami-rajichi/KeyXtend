@@ -1,0 +1,31 @@
+[package]
+name = "kx-mod-voice"
+description = "Voice typing: the models table, the per-language orders, the device rule, scoring and the [voice] settings."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+publish.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The speech, model files and voice ports, the settings contract, the calendar's dates and the shared folding.
+kx-module-api = { path = "../kx-module-api" }
+# The settings and the compiled-in models and scoring tables.
+serde.workspace = true
+toml.workspace = true
+# The tables' error types.
+thiserror.workspace = true
+# Error kinds only, never a text, a recording or a path.
+tracing.workspace = true
+
+[dev-dependencies]
+# The speech, model files, watches, clipboard, folder reveal, shelf, calendar and clock the tests script.
+kx-platform-fake = { path = "../kx-platform-fake" }
+# The kernel's settings repair, for the bad-value tests.
+kx-settings = { path = "../kx-settings" }
+kx-test-support = { path = "../kx-test-support" }
+proptest.workspace = true

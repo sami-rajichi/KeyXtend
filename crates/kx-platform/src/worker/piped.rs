@@ -5,11 +5,11 @@
 
 mod wipe;
 
-use super::{Frames, Heard, SpawnError, Worker};
+use super::{Frames, Heard, SpawnError, Split, Worker, start};
 use kx_ipc::IpcError;
 use std::io::{Read, Write};
+use std::mem;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, SyncSender};
-use std::thread;
 use std::time::Duration;
 use wipe::Wipe;
 
@@ -27,6 +27,11 @@ pub trait Child: Send {
 
     /// Its exit code, waiting `within` at most for it to end; `None` while it runs.
     fn code(&mut self, within: Duration) -> Option<u32>;
+
+    /// The most memory its job has taken, in MB; `None` when the system cannot tell.
+    fn peak_mb(&mut self) -> Option<u32> {
+        None
+    }
 }
 
 /// A worker that talks job `F`'s frames over its stdin and stdout. Dropping it lets its threads end and drops the
@@ -87,20 +92,22 @@ impl<C: Child, F: Frames> Worker<F> for Piped<C, F> {
     fn code(&mut self, within: Duration) -> Option<u32> {
         self.child.code(within)
     }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.child.peak_mb()
+    }
+}
+
+impl<C: Child, F: Frames> Split<F> for Piped<C, F> {
+    fn notes(&mut self) -> Receiver<Result<F::Reply, IpcError>> {
+        let (_, closed) = mpsc::channel();
+        mem::replace(&mut self.replies, closed)
+    }
 }
 
 /// Job `F`'s pipe thread name for `end`, such as `kx-vault-in`, so a dump tells the jobs apart.
 fn named<F: Frames>(end: &str) -> String {
     format!("{THREAD}-{}-{end}", F::JOB)
-}
-
-/// Starts `body` as thread `name`, never waiting for it.
-fn start(name: &str, body: impl FnOnce() + Send + 'static) -> Result<(), SpawnError> {
-    let started = thread::Builder::new().name(name.to_owned()).spawn(body);
-    started.map(drop).map_err(|e| {
-        tracing::warn!(error = %e, thread = name, "a worker thread did not start");
-        SpawnError::Thread
-    })
 }
 
 /// Writes each ask in turn, straight to the pipe, until the host drops its sender or the stdin fails.

@@ -143,9 +143,12 @@ impl I18n {
     }
 }
 
-/// `text` without hidden marks (`is_hidden`), so an argument can neither split a text nor turn it around.
+/// `text` without hidden marks (`is_hidden`), so an argument can neither split a text nor turn it around. It is sized
+/// once, as it never grows past `text`, so a wiped holder leaves no grown copy behind.
 pub(crate) fn clean(text: &str) -> String {
-    text.chars().filter(|c| !is_hidden(*c)).collect()
+    let mut out = String::with_capacity(text.len());
+    out.extend(text.chars().filter(|c| !is_hidden(*c)));
+    out
 }
 
 /// `n` as a Fluent number, capped so the plural rules never fail on a huge count.

@@ -116,7 +116,9 @@ fn predict_opens_the_language_in_front_whether_it_starts_before_or_after_layouts
 #[test]
 fn with_predict_switched_off_nothing_watches_the_box_or_opens_a_pack() {
     let rig = Rig::new();
-    let section = format!("[kernel]\ndisabled = [\"{}\"]\n", kx_mod_predict::ID);
+    // Voice typing watches the box too, for its password check, so it stays off here.
+    let (predict, voice) = (kx_mod_predict::ID, kx_mod_voice::ID);
+    let section = format!("[kernel]\ndisabled = [\"{predict}\", \"{voice}\"]\n");
     std::fs::write(rig.files().settings, section).unwrap();
     let mut boot = rig.load();
     boot.start().unwrap();

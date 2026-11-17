@@ -75,6 +75,21 @@ fn the_clipboard_notices_keep_their_keys_and_are_listed() {
 }
 
 #[test]
+fn the_voice_notices_keep_their_keys_and_are_listed() {
+    assert_eq!(keys::VOICE_TEXTS_DAMAGED, "notice.voice-texts-damaged");
+    assert_eq!(keys::VOICE_NUMBERS_DAMAGED, "notice.voice-numbers-damaged");
+    assert_eq!(keys::VOICE_LOCKED, "notice.voice-locked");
+    assert_eq!(keys::VOICE_UNSAVED, "notice.voice-unsaved");
+    let voice = [
+        keys::VOICE_TEXTS_DAMAGED,
+        keys::VOICE_NUMBERS_DAMAGED,
+        keys::VOICE_LOCKED,
+        keys::VOICE_UNSAVED,
+    ];
+    assert!(voice.iter().all(|k| ALL_KEYS.contains(k)));
+}
+
+#[test]
 fn an_asking_notice_keeps_its_two_answer_keys() {
     let ask = &NoticeAsk::YES_NO;
     assert_eq!((ask.yes, ask.no), ("button.yes", "button.no"));

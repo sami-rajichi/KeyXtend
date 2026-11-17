@@ -28,6 +28,9 @@ mod selview;
 #[path = "../shared/suggest.rs"]
 mod suggest;
 mod sync;
+mod voice;
+mod voicepanel;
+mod voiceview;
 mod windows;
 mod words;
 

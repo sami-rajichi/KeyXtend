@@ -41,6 +41,9 @@ fn device_names_are_refused() {
         "lpt³.txt",
         "COM0",
         "Lpt0.log",
+        "CONIN$",
+        "conout$.txt",
+        "nul .txt",
     ] {
         assert!(!is_plain_name(bad), "{bad:?} was accepted");
     }

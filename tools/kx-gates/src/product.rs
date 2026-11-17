@@ -198,7 +198,7 @@ mod tests {
         assert!(is_ours(
             r"C:\Program Files\KeyXtend-dev\keyxtend\keyxtend.exe"
         ));
-        assert!(is_ours(r"D:\Projects\KeyXtend\target\debug\KeyXtend.EXE"));
+        assert!(is_ours(r"E:\src\keyxtend\target\debug\KeyXtend.EXE"));
         assert!(!is_ours(r"C:\Program Files\KeyXtend-dev\qt-kb\qt-kb.exe"));
         assert!(!is_ours(r"C:\x\keyxtend.exe.bak"));
         assert!(!is_ours(""));

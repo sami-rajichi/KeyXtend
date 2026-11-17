@@ -1,5 +1,7 @@
-//! The reveal port: the running Explorer opens the folder itself, so no program starts as our child and Explorer keeps
-//! its own rights, never our uiAccess (ADR-0034). The rule is pure over `Os`; only `win` calls Windows.
+//! The reveal ports: the running Explorer opens the folder itself, so no program starts as our child and Explorer keeps
+//! its own rights, never our uiAccess (ADR-0034). The ui's reveal shows the clipboard's folder; the folder reveal shows
+//! the voice module's models folder only when it is a plain folder, never a file or a link (`plain`, ADR-0046). The
+//! rules are pure; only `win` calls Windows.
 #![cfg_attr(
     not(windows),
     allow(
@@ -11,13 +13,14 @@
 use kx_platform::ui::RevealError;
 use std::path::Path;
 
+mod plain;
 #[cfg(windows)]
 mod win;
 
 #[cfg(windows)]
-pub use win::WinReveal;
+pub use win::{WinFolderReveal, WinReveal};
 
-/// The OS calls behind the reveal: the running shell on Windows, a recorder in tests.
+/// The OS calls behind the ui's reveal: the running shell on Windows, a recorder in tests.
 pub(crate) trait Os {
     /// The running file manager's shell object.
     type Shell;

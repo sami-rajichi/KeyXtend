@@ -9,7 +9,6 @@ use kx_platform_windows::WinInjector;
 use kx_platform_windows::inject::{self, send_keys, vk_key};
 use kx_platform_windows::screen::cursor;
 use kx_platform_windows::strokes::{self, KeyEvent};
-use spike_core::sendkeys;
 use windows::Win32::Foundation::POINT;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     INPUT, INPUT_KEYBOARD, INPUT_MOUSE, KEYEVENTF_KEYUP, MOUSE_EVENT_FLAGS, MOUSEEVENTF_ABSOLUTE,
@@ -201,12 +200,6 @@ pub fn text(text: &str) -> Result<(), String> {
     WinInjector
         .text(&text, TextRoute::Unicode)
         .map_err(|e| e.to_string())
-}
-
-/// Types `text` one character at a time, `gap_ms` apart, or in one batch when `gap_ms` is 0.
-pub fn paced(text: &str, gap_ms: u64) -> Result<(), String> {
-    live();
-    sendkeys::text_paced(text, gap_ms)
 }
 
 /// Virtual key `vk` pressed or released (`up`), marked `tag`.

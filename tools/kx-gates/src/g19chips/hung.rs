@@ -2,7 +2,7 @@
 //! makes the product look at it, which must end at the look's deadline with no strip; the gate never asks the hung
 //! window anything. The gate's Notepad then shows the strip while the target still sleeps, and the time from the last
 //! key to the strip is the lock's wait. After the hang, a new selection still shows the strip, and the field watch
-//! still hears focus: a password box locks the lane.
+//! still hears focus: a password box locks the lane. The z-order is a note, never judged.
 #![cfg(windows)]
 
 use std::time::Instant;
@@ -18,6 +18,7 @@ use crate::g19chips::gate::{Gate, wait_ms};
 use crate::g19chips::kept::{Kept, Target};
 use crate::g19chips::notepad::{Lines, by_keys};
 use crate::g19chips::ontop;
+use crate::g19chips::zread::Notes;
 use crate::keymap::centre;
 use crate::win::{self, ms_since, sleep_ms};
 use crate::{board, launch, probe, typebox};
@@ -35,6 +36,12 @@ const HUNG: &str = "hung";
 const BESIDE_HUNG: &str = "beside_hung";
 /// Notepad's case after the hang.
 const AFTER_HUNG: &str = "after_hung";
+/// The z-order note once the hang ended, before target-window closes.
+const Z_HUNG: &str = "z_after_hang";
+/// The z-order note right after target-window closed.
+const Z_CLOSED: &str = "z_after_close";
+/// The z-order note when our key stayed covered past one follow period, beside the cover note.
+const Z_COVERED: &str = "z_at_timeout";
 
 /// True when the strip, first seen `lock_ms` after the act that ended at `sent`, came before the hang from `at` ended.
 pub fn in_hang(at: Instant, sent: Instant, lock_ms: Option<u64>, hang_ms: u64) -> bool {
@@ -116,9 +123,36 @@ fn verdict(cases: &[Value], (within, after): (bool, bool), field: &Value) -> Val
     json!({ "lock_ms": lock_ms, "field_watch": field, "failed": failed, "ok": failed.is_empty() })
 }
 
+/// After the target closed: our Esc once the key is on top, Notepad's case after the hang, then the field watch. At a
+/// cover timeout the z-order is noted beside the cover note, then the keyboard is lifted from outside.
+fn after(
+    gate: &Gate,
+    (app, lines): (&Opened, &Lines),
+    within: bool,
+    (cases, left): (&mut Vec<Value>, &mut Vec<String>),
+    z: &mut Notes,
+) -> Result<Value, String> {
+    probe::front(gate.ctx, app)?;
+    let esc = board::nav_key(Nav::Esc)?;
+    let poll = gate.ctx.cfg.timing.poll_ms;
+    let covered = ontop::wait(poll, &esc).inspect_err(|_| {
+        z.snap(Z_COVERED);
+        z.relift(poll, &esc);
+    })?;
+    gate.acts.key(app, &esc)?;
+    let (after, _) = by_keys(gate, app, lines, Line::Copy, AFTER_HUNG)?;
+    let shown = after["chips"] == true;
+    cases.push(after);
+    gate.acts.key(app, &esc)?;
+    let field = heard(gate, left);
+    let mut v = verdict(cases, (within, shown), &field);
+    v["esc_covered_ms"] = json!(covered);
+    Ok(v)
+}
+
 /// The hung target's look, Notepad beside it and after it, then the field watch; the target closes first. Its close
 /// hands the front to Notepad at once, so our Esc first waits for the keyboard on top at its key, and the ms the key
-/// stayed covered is a note.
+/// stayed covered is a note; so are the z-order after the hang and after the close.
 pub fn run(
     gate: &Gate,
     app: &Opened,
@@ -133,22 +167,14 @@ pub fn run(
         ));
     }
     let target = Kept::new(Target::new(gate.ctx, launch::start_target(gate.ctx)?));
-    let got = launch::park_target(target.get().app.hwnd)
-        .and_then(|()| during(gate, app, lines, &target.get().app, cases));
+    let t = &target.get().app;
+    let mut z = Notes::new(app.hwnd, t.hwnd, gate.g());
+    let got = launch::park_target(t.hwnd).and_then(|()| during(gate, app, lines, t, cases));
+    z.snap(Z_HUNG);
     left.extend(target.close());
-    let within = got?;
-    probe::front(gate.ctx, app)?;
-    let esc = board::nav_key(Nav::Esc)?;
-    let covered = ontop::wait(gate.ctx.cfg.timing.poll_ms, &esc)?;
-    gate.acts.key(app, &esc)?;
-    let (after, _) = by_keys(gate, app, lines, Line::Copy, AFTER_HUNG)?;
-    let shown = after["chips"] == true;
-    cases.push(after);
-    gate.acts.key(app, &esc)?;
-    let field = heard(gate, left);
-    let mut v = verdict(cases, (within, shown), &field);
-    v["esc_covered_ms"] = json!(covered);
-    Ok(v)
+    z.snap(Z_CLOSED);
+    let rest = got.and_then(|within| after(gate, (app, lines), within, (cases, left), &mut z));
+    Ok(z.attach(rest))
 }
 
 #[cfg(test)]

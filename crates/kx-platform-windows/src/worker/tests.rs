@@ -14,6 +14,7 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, OnceLock};
 
+mod home;
 mod rights;
 mod vault;
 mod verdict;
@@ -178,6 +179,16 @@ fn a_missing_or_relative_worker_is_missing() {
     assert_eq!(spawn(WinSpawner::at(gone)), Err(SpawnError::Missing));
     let relative = WinSpawner::at(PathBuf::from(WORKER_EXE));
     assert_eq!(spawn(relative), Err(SpawnError::Missing));
+}
+
+#[test]
+fn only_a_capped_spawner_starts_its_worker_capped() {
+    let (launch, cap) = (Launch::media(&CFG), CpuCap { cores: 2, pct: 30 });
+    let (_input, _output, plain) = spawner().start(&launch).unwrap();
+    assert_eq!(plain.cpu_cap(), None, "normal mode");
+    let (_input, _output, weak) = spawner().capped(cap).start(&launch).unwrap();
+    let want = job::share(cap, job::logical());
+    assert_eq!(weak.cpu_cap(), Some(want), "weak mode");
 }
 
 #[test]

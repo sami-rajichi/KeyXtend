@@ -4,6 +4,7 @@
 //! it with us. The neutral host in `kx_platform::worker` drives it.
 
 mod access;
+mod env;
 mod job;
 mod label;
 mod line;
@@ -19,6 +20,7 @@ use kx_platform::worker::{Child, Frames, Launch, Piped, SpawnError, Spawner};
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
 use windows::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
 
+pub use job::CpuCap;
 use job::Job;
 
 /// The worker program's file, beside ours.
@@ -30,6 +32,8 @@ const LONGEST_WAIT_MS: u32 = INFINITE - 1;
 #[derive(Clone)]
 pub struct WinSpawner {
     exe: PathBuf,
+    /// The processor cap each worker's job holds from its start; `None` but in the gate tool's weak mode.
+    cap: Option<CpuCap>,
 }
 
 impl WinSpawner {
@@ -42,15 +46,29 @@ impl WinSpawner {
     /// The worker at `exe`; a relative path is refused at each start, so no search path is ever used.
     #[must_use]
     pub const fn at(exe: PathBuf) -> Self {
-        Self { exe }
+        Self { exe, cap: None }
     }
 
-    /// Starts the worker and hands back its stdin, its stdout and its process.
-    fn start(&self, launch: &Launch) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
+    /// The same spawner, whose workers' jobs hold `cap` before the worker's first instruction; only the gate tool's
+    /// weak mode asks for it, and it only tightens the job.
+    #[must_use]
+    pub fn capped(self, cap: CpuCap) -> Self {
+        Self {
+            cap: Some(cap),
+            ..self
+        }
+    }
+
+    /// Starts the worker and hands back its stdin, its stdout and its process; the gate tool also starts its probes
+    /// this way, so they run under the very same limits.
+    ///
+    /// # Errors
+    /// `Missing` when the program is not an absolute path to a file; any refused step of the start, as for a worker.
+    pub fn start(&self, launch: &Launch) -> Result<(PipeWriter, PipeReader, WinChild), SpawnError> {
         if !self.exe.is_absolute() || !self.exe.is_file() {
             return Err(SpawnError::Missing);
         }
-        start::start(&self.exe, launch)
+        start::start(&self.exe, launch, self.cap)
     }
 }
 
@@ -72,6 +90,10 @@ pub struct WinChild {
 impl Child for WinChild {
     fn end(&mut self) {
         self.job.end();
+    }
+
+    fn peak_mb(&mut self) -> Option<u32> {
+        self.job.peak_mb()
     }
 
     #[allow(unsafe_code, reason = "Waits on and reads our own process handle.")]

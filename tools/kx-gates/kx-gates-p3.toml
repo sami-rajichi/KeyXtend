@@ -25,7 +25,7 @@ guard_headroom_ms = 120000
 # each target window's start, in ms.
 capture_headroom_ms = 30000
 
-# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode (spike.toml [voice.weak] caps the product),
+# G8 budgets (spec §10): `g8 keyxtend` on this PC, `g8 weak` in weak mode ([weak] in kx-gates.toml caps the product),
 # `g8 arabic` with an Arabic layout in front.
 [g8]
 # The copy G8 starts, through the shell: the signed uiAccess one beside the installed kx-gates, where

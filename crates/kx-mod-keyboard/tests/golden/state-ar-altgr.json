@@ -22,6 +22,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -44,6 +45,7 @@
         "ink": "lock_ink",
         "skirt": "on"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -66,6 +68,7 @@
         "ink": "danger_ink",
         "skirt": "danger"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -88,6 +91,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -110,6 +114,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -132,6 +137,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -154,6 +160,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "'",
       "second_ar": false,
       "second_mark": false,
@@ -176,6 +183,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -198,6 +206,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -220,6 +229,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -242,6 +252,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -264,6 +275,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -286,6 +298,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -308,6 +321,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -330,6 +344,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -355,6 +370,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -380,6 +396,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -405,6 +422,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -430,6 +448,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -452,6 +471,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -474,6 +494,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -496,6 +517,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -518,6 +540,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -540,6 +563,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -562,6 +586,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -584,6 +609,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -606,6 +632,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -628,6 +655,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -650,6 +678,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -672,6 +701,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -694,6 +724,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -716,6 +747,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -738,6 +770,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -760,6 +793,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -782,6 +816,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -804,6 +839,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -826,6 +862,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -848,6 +885,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -870,6 +908,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -892,6 +931,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -914,6 +954,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -936,6 +977,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -961,6 +1003,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -986,6 +1029,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1008,6 +1052,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1030,6 +1075,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1052,6 +1098,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1074,6 +1121,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1096,6 +1144,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1118,6 +1167,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1140,6 +1190,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1162,6 +1213,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1184,6 +1236,7 @@
         "ink": "legend_act",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1206,6 +1259,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1228,6 +1282,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1250,6 +1305,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1272,6 +1328,7 @@
         "ink": "enter_ink",
         "skirt": "enter"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1294,6 +1351,7 @@
         "ink": "danger_ink",
         "skirt": "danger"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1316,6 +1374,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1338,6 +1397,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1360,6 +1420,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1382,6 +1443,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1404,6 +1466,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1414,7 +1477,7 @@
     },
     "mic": {
       "blank": null,
-      "dim": true,
+      "dim": false,
       "main": "",
       "main_ar": false,
       "main_mark": false,
@@ -1422,10 +1485,11 @@
       "name": "",
       "on": false,
       "paint": {
-        "fill": "dim",
-        "ink": "dim_ink",
-        "skirt": "dim"
+        "fill": "key_act",
+        "ink": "legend_act",
+        "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1448,6 +1512,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1470,6 +1535,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1492,6 +1558,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1514,6 +1581,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1536,6 +1604,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1558,6 +1627,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1580,6 +1650,7 @@
         "ink": "legend_act",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1602,6 +1673,7 @@
         "ink": "dim_ink",
         "skirt": "dim"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1624,6 +1696,7 @@
         "ink": "legend",
         "skirt": "key"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1646,6 +1719,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1668,6 +1742,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,
@@ -1690,6 +1765,7 @@
         "ink": "legend_mod",
         "skirt": "key_mod"
       },
+      "rec": false,
       "second": "",
       "second_ar": false,
       "second_mark": false,

@@ -1,4 +1,4 @@
-//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p10.toml`);
+//! Loads and checks `kx-gates.toml` and the files each phase adds (`kx-gates-p3.toml` to `kx-gates-p11.toml`);
 //! `cfgfile` finds their folder and `cfgload` reads them.
 #![cfg(windows)]
 
@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::boxed::BoxProofs;
 use crate::capture::Capture;
 use crate::cfgfile::{self, FILE, OWN};
 use crate::cfgload;
@@ -14,7 +15,7 @@ use crate::featcfg::{self, EditKeys, G7, G19, G20, G21, G24, G25};
 use crate::fit::{self, Fit};
 use crate::g8cfg::G8;
 use crate::g8lit::Osk;
-use crate::g22cfg::G22;
+use crate::g22cfg::{G22Bench, G22Product, G22Staged};
 use crate::gatecfg::{G1, G2, G3, G4};
 use crate::mouseguard::MouseGuard;
 use crate::p3cfg::{self, G9, G10, G11, G13, G26};
@@ -26,6 +27,7 @@ use crate::p9cfg::{self, G23};
 use crate::p10cfg::{self, G19Product};
 use crate::probecfg::{Probes, Sim};
 use crate::text::Charsets;
+use crate::weakcfg::Weak;
 
 /// All gate settings.
 #[derive(Debug, Clone, Deserialize)]
@@ -78,8 +80,14 @@ pub struct GatesConfig {
     pub g20: G20,
     /// G21 settings.
     pub g21: G21,
-    /// G22 settings.
-    pub g22: G22,
+    /// G22's bench.
+    pub g22_bench: G22Bench,
+    /// G22 on the product.
+    pub g22_product: G22Product,
+    /// The staged worker's edges.
+    pub g22_staged: G22Staged,
+    /// The box proofs from the real install.
+    pub boxed: BoxProofs,
     /// G23 on the product.
     pub g23: G23,
     /// G19 on the product.
@@ -92,6 +100,8 @@ pub struct GatesConfig {
     pub capture: Capture,
     /// G8 settings.
     pub g8: G8,
+    /// The roadmap's weak PC, which G8's weak runs and G22's bench both copy.
+    pub weak: Weak,
     /// G8's hook part, on the test build.
     pub g8_hook: G8Hook,
     /// G9 settings.
@@ -240,6 +250,7 @@ pub fn load() -> Result<GatesConfig, String> {
     config.g3.check()?;
     config.g12.check()?;
     config.g8.check()?;
+    config.weak.check()?;
     config.mouse_guard.check()?;
     config.gate_input.check()?;
     config.g5.check()?;
@@ -251,6 +262,10 @@ pub fn load() -> Result<GatesConfig, String> {
     p8cfg::check(&config)?;
     p9cfg::check(&config)?;
     p10cfg::check(&config)?;
+    config.g22_bench.check()?;
+    config.g22_product.check(&config.g22_bench)?;
+    config.g22_staged.check(&config.g22_bench)?;
+    config.boxed.check()?;
     Ok(config)
 }
 

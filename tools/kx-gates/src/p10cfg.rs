@@ -87,6 +87,7 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     g.check_strip()?;
     g.check_keys()?;
     g.check_ping()?;
+    g.check_z()?;
     g.check_bars()?;
     g.check_waits(c.mouse_guard.limit_ms, (front_ms(c), press_ms(c)))?;
     held_fits(c, "g19_product: G19 on the product", g19_ms(c))

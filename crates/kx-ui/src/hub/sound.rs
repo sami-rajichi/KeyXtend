@@ -98,13 +98,14 @@ pub(super) fn on_note(hub: &Hub, note: &AssistNote) {
     hub.sound(event);
 }
 
-/// The `[ui]` switch of `event`.
+/// The `[ui]` switch of `event`; the dictation's sounds have none, as the voice view carries `[voice] sounds`.
 fn switched_on(s: &UiSettings, event: Event) -> bool {
     match event {
         Event::Key => s.sound_key,
         Event::Rclick => s.sound_rclick,
         Event::Pick => s.sound_pick,
         Event::Drop => s.sound_drop,
+        Event::VoiceStart | Event::VoiceStop => true,
     }
 }
 

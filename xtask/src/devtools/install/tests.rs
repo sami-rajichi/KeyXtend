@@ -1,4 +1,5 @@
 use kx_module_api::ports::{PACK_DIR, PACK_INDEX};
+use kx_platform::speech::VOICE_FILES;
 
 use super::*;
 use crate::test_support::{TempDir, devtools_config, fake_env, make_dir_link, noise, stage_config};
@@ -90,12 +91,21 @@ fn worker(ui_access: &str) -> Vec<u8> {
     [stage::bare_image(), level.into_bytes()].concat()
 }
 
-/// A folder holding only the program and the worker, bare images importing nothing, with settings rooted there.
+/// A folder holding the program, the worker and the engine's floor part, bare images importing nothing, and empty voice
+/// files, with settings rooted there.
 fn bare_app(label: &str) -> (TempDir, DevSetup) {
-    let dir = TempDir::new(label);
-    let (program, helper) = (stage_config().program(), stage_config().worker_program());
+    let (dir, config) = (TempDir::new(label), stage_config());
+    let (program, helper) = (config.program(), config.worker_program());
     std::fs::write(dir.path().join(program), stage::bare_image()).unwrap();
     std::fs::write(dir.path().join(helper), worker("false")).unwrap();
+    std::fs::write(dir.path().join(&config.engine.floor), stage::bare_image()).unwrap();
+    let voice = stage::planned(&config)
+        .into_iter()
+        .filter(|p| p.starts_with(VOICE_FILES));
+    for file in voice.map(|f| dir.path().join(f)) {
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(file, b"").unwrap();
+    }
     let setup = DevSetup {
         root: dir.path().to_path_buf(),
         config: devtools_config(),
@@ -149,21 +159,22 @@ fn dev_install_holds_an_app_folder_to_the_install_limit() {
 }
 
 #[test]
-fn dev_install_refuses_any_program_it_would_sign_that_holds_the_gate_flag() {
+fn dev_install_refuses_any_program_it_would_sign_that_holds_a_gate_flag() {
     let dir = TempDir::new("gate-exes");
-    let flag = stage_config().gate_flag;
+    let config = stage_config();
+    let flags = config.gate_flags();
     let (tool, gate) = (dir.path().join("tool.exe"), dir.path().join("other.exe"));
     std::fs::write(&tool, b"MZ --show").unwrap();
-    std::fs::write(&gate, format!("MZ {flag} x")).unwrap();
-    let programs = exes(dir.path()).unwrap();
-    let exe = paths::text(&gate);
-    let refused = StageError::GateFlag {
-        exe,
-        flag: flag.clone(),
-    };
-    assert_eq!(refuse_gate_builds(&programs, &flag), Err(refused.into()));
     std::fs::write(&gate, b"MZ --quit").unwrap();
-    assert_eq!(refuse_gate_builds(&programs, &flag), Ok(()));
+    let programs = exes(dir.path()).unwrap();
+    for flag in flags {
+        std::fs::write(&gate, format!("MZ {flag} x")).unwrap();
+        let (exe, flag) = (paths::text(&gate), flag.to_string());
+        let refused = StageError::GateFlag { exe, flag };
+        assert_eq!(refuse_gate_builds(&programs, &flags), Err(refused.into()));
+    }
+    std::fs::write(&gate, b"MZ --quit").unwrap();
+    assert_eq!(refuse_gate_builds(&programs, &flags), Ok(()));
 }
 
 #[test]

@@ -8,7 +8,6 @@ use std::time::{Instant, SystemTime};
 use kx_platform_windows::WinLayouts;
 use serde_json::{Value, json};
 use spike_core::clock::now_us;
-use spike_core::weak::{Caps, Job};
 use windows::Win32::System::Threading::GetCurrentProcess;
 
 use crate::apps::{Ctx, Opened};
@@ -27,6 +26,7 @@ use crate::out::{say, shown};
 use crate::presentmon::Frames;
 use crate::proc::{Memory, Process};
 use crate::product::{self, Keyboard};
+use crate::weakjob::{Caps, Job};
 use crate::win::sleep_ms;
 use crate::{copyend, g2, g2raw, g8hook, g8host, mouseguard, out};
 use crate::{g8clip, g8lit, g8predict, g8size, g8type, g8ui, g8use};
@@ -39,13 +39,13 @@ const NO_SOFTWARE: &str = "not forced, as the app clears Qt's variables: weak mo
 /// The shell cannot start a program paused, so the caps reach it only once it runs.
 const CAPS_LATE: &str = "from a few ms after start: the shell cannot start the product paused";
 
-/// In `weak` mode, the job from `spike.toml [voice.weak]` and the CPU time it allows in whole cores; else neither.
+/// In `weak` mode, the job from `[weak]` and the CPU time it allows in whole cores; else neither.
 pub(crate) fn weak_job(ctx: &Ctx, weak: bool) -> Result<(Option<Job>, Option<f64>), String> {
     if !weak {
         return Ok((None, None));
     }
     let cpus = std::thread::available_parallelism().map_or(1, usize::from);
-    let caps = Caps::from(&ctx.spike.voice.weak, cpus)?;
+    let caps = Caps::from(ctx.cfg.weak, cpus)?;
     Ok((Some(Job::new(Some(&caps))?), Some(caps.cpu_cores(cpus))))
 }
 

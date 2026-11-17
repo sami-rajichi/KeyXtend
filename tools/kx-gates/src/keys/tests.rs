@@ -176,6 +176,5 @@ fn a_test_that_reaches_a_real_sender_panics_before_any_input_goes_out() {
     assert!(refused(|| drop(send(&[]))), "send");
     assert!(refused(|| drop(send_as(&[], After::Away))), "send_as");
     assert!(refused(|| drop(text(""))), "text");
-    assert!(refused(|| drop(paced("", 0))), "paced");
     assert!(refused(|| drop(restore_combo(&[]))), "restore_combo");
 }

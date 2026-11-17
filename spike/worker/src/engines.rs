@@ -1,14 +1,11 @@
-//! The two engines and which one answers: cloud only when it was allowed and has a key.
+//! The form the cloud engine takes (an OpenAI-style transcription API) and how its answer reads.
 
 use serde_json::Value;
-use spike_core::voicecfg::Engine;
 
-use crate::cloud::Cloud;
 use crate::http::{self, HTTP_OK, Reply, Request};
-use crate::local::Local;
 use crate::multipart::{self, Part};
 
-/// Form field names and values shared by both engines (OpenAI-style transcription API).
+/// Form field names and values of the transcription API.
 pub const FILE_FIELD: &str = "file";
 /// File name sent with each clip.
 pub const CLIP_NAME: &str = "clip.wav";
@@ -16,7 +13,7 @@ pub const CLIP_NAME: &str = "clip.wav";
 pub const WAV_TYPE: &str = "audio/wav";
 /// Language field.
 pub const LANG_FIELD: &str = "language";
-/// Model field (cloud only).
+/// Model field.
 pub const MODEL_FIELD: &str = "model";
 /// Sampling temperature field and its value: 0 is the steadiest.
 pub const TEMP_FIELD: (&str, &str) = ("temperature", "0");
@@ -32,42 +29,6 @@ const ERROR_KEY: &str = "error";
 const MESSAGE_KEY: &str = "message";
 /// Longest error note kept from an answer, in characters.
 const ERROR_CHARS: usize = 160;
-
-/// Both engines, or why each is not available.
-pub struct Engines {
-    /// The local server.
-    pub local: Result<Local, String>,
-    /// The cloud engine.
-    pub cloud: Result<Cloud, String>,
-}
-
-/// The engine that will answer.
-pub enum Pick<'a> {
-    /// The local server.
-    Local(&'a Local),
-    /// The cloud engine.
-    Cloud(&'a Cloud),
-}
-
-impl Engines {
-    /// Engine `e`, or the reason it is not available.
-    pub fn pick(&self, e: Engine) -> Result<Pick<'_>, String> {
-        match e {
-            Engine::Local => self.local.as_ref().map(Pick::Local).map_err(Clone::clone),
-            Engine::Cloud => self.cloud.as_ref().map(Pick::Cloud).map_err(Clone::clone),
-        }
-    }
-}
-
-impl Pick<'_> {
-    /// The words in `wav`, spoken in `lang`.
-    pub fn text(&self, wav: &[u8], lang: &str) -> Result<String, String> {
-        match self {
-            Pick::Local(l) => l.text(wav, lang),
-            Pick::Cloud(c) => c.text(wav, lang),
-        }
-    }
-}
 
 /// Where a clip goes: an engine's address, path, wait and optional API key.
 pub struct Target<'a> {
@@ -108,7 +69,7 @@ pub fn ask(
     answer(reply)
 }
 
-/// The form both engines take: the clip, the fields in `extra`, and the language when given.
+/// The form the engine takes: the clip, the fields in `extra`, and the language when given.
 pub fn form(boundary: &str, wav: &[u8], lang: Option<&str>, extra: &[(&str, &str)]) -> Vec<u8> {
     let mut parts = vec![Part::file(FILE_FIELD, CLIP_NAME, WAV_TYPE, wav)];
     let fields = [TEMP_FIELD, FORMAT_FIELD];
@@ -151,37 +112,6 @@ pub fn text_of(body: &[u8]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spike_core::voicecfg::CloudConfig;
-
-    fn cloud_cfg() -> CloudConfig {
-        spike_core::config::load()
-            .expect("spike.toml loads")
-            .voice
-            .cloud
-    }
-
-    #[test]
-    fn cloud_is_refused_before_any_network_call() {
-        let off = Cloud::new(&cloud_cfg(), false, Some("k".into()));
-        assert!(off.is_err_and(|e| e.contains("off")));
-        let no_key = Cloud::new(&cloud_cfg(), true, None);
-        assert!(no_key.is_err_and(|e| e.contains(&cloud_cfg().key_env)));
-        assert!(Cloud::new(&cloud_cfg(), true, Some(String::new())).is_err());
-        assert!(Cloud::new(&cloud_cfg(), true, Some("k".into())).is_ok());
-    }
-
-    #[test]
-    fn the_engine_asked_for_is_the_one_used_or_its_reason_is_given() {
-        let e = Engines {
-            local: Err("server did not start".into()),
-            cloud: Cloud::new(&cloud_cfg(), true, Some("k".into())),
-        };
-        assert!(matches!(e.pick(Engine::Cloud), Ok(Pick::Cloud(_))));
-        assert_eq!(
-            e.pick(Engine::Local).err().as_deref(),
-            Some("server did not start")
-        );
-    }
 
     #[test]
     fn answers_are_read_from_json() {
@@ -209,13 +139,10 @@ mod tests {
     }
 
     #[test]
-    fn the_local_server_always_gets_the_language_but_the_cloud_never_gets_auto() {
+    fn the_form_holds_the_language_only_when_given_and_the_cloud_never_gets_auto() {
         let has_lang =
             |lang| String::from_utf8_lossy(&form("B", b"", lang, &[])).contains(LANG_FIELD);
-        assert!(
-            has_lang(Some(AUTO)),
-            "the local server detects the language only when told auto"
-        );
+        assert!(has_lang(Some("fr")));
         assert!(!has_lang(None));
         assert_eq!(cloud_lang("ar"), Some("ar"));
         assert_eq!(cloud_lang(AUTO), None);

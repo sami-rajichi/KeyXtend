@@ -5,6 +5,8 @@ mod clip;
 mod fill;
 mod place;
 mod plate;
+mod voice;
+mod voicepanel;
 
 use crate::contrast::{WCAG_AA, WCAG_SHAPES, contrast};
 use crate::rgba::Rgba;
@@ -71,7 +73,8 @@ impl Drawn {
 }
 
 /// Every pair view `v` draws on a keyboard whose rows are `row_px` high at size 1: legends on caps, the language
-/// key's and the shortcuts layer's marks, the D-pad, the plate, the panels, the clipboard panel and Quick-fill.
+/// key's and the shortcuts layer's marks, the D-pad, the plate, the panels, the clipboard panel, Quick-fill and the
+/// dictation bar.
 #[must_use]
 pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     let (mut out, h) = (Vec::new(), height(v, row_px));
@@ -82,6 +85,8 @@ pub fn drawn(v: &LookView, row_px: f32) -> Vec<Drawn> {
     plate::panels(v, &mut out);
     clip::clip(v, &mut out);
     fill::fill(v, &mut out);
+    voice::voice(v, &mut out);
+    voicepanel::panel(v, &mut out);
     out
 }
 

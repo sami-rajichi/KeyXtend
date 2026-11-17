@@ -79,5 +79,15 @@ impl ServiceKey for SealedShelfKey {
     const CAPABILITY: Option<Capability> = Some(Capability::SecretStore);
 }
 
+/// Voice typing's shelf (ADR-0042): its history, recordings and counts, in their own folder with their own key; it
+/// needs `SecretStore`.
+pub struct VoiceShelfKey;
+
+impl ServiceKey for VoiceShelfKey {
+    type Api = dyn SealedShelf;
+    const ID: ServiceId = ServiceId::new("voice-shelf");
+    const CAPABILITY: Option<Capability> = Some(Capability::SecretStore);
+}
+
 #[cfg(test)]
 mod tests;

@@ -1,6 +1,6 @@
-//! The uiAccess app decodes no media and opens no box (ADR-0004, ADR-0034, ADR-0038): tidy bans `png`, `fdeflate`,
-//! `age` and `keepass` from its tree, and no crate it builds with, its tests' included, reaches them or the worker,
-//! which alone decodes images, opens boxes and reads `KeePass` files.
+//! The uiAccess app decodes no media, opens no box, hears no microphone and downloads nothing (ADR-0004, ADR-0034,
+//! ADR-0038, ADR-0042): tidy bans `png`, `fdeflate`, `age`, `keepass`, the speech engine, `cpal` and the HTTPS crate
+//! from its tree, and no crate it builds with, its tests' included, reaches them or the worker, which alone does each.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -14,6 +14,10 @@ const APP: &str = env!("CARGO_PKG_NAME");
 const DECODERS: [&str; 2] = ["png", "fdeflate"];
 /// The formats of the backup box and of `KeePass`, which only the worker's vault job may use.
 const BOX_FORMATS: [&str; 2] = ["age", "keepass"];
+/// The speech engine and the microphone's audio crate, which only the worker's `voice` job may use (ADR-0042).
+const VOICE: [&str; 3] = ["transcribe-cpp", "transcribe-cpp-sys", "cpal"];
+/// The HTTPS crate only the worker's `fetch` job may use (ADR-0042).
+const NETWORK: [&str; 1] = ["kx-platform-net"];
 
 /// Each package's dependency names, its versions merged: the lock names one as `name`, `name version` or more.
 fn graph() -> BTreeMap<String, BTreeSet<String>> {
@@ -53,29 +57,52 @@ fn metadata(path: &[&str]) -> toml::Value {
     path.iter().fold(start, |v, key| v[*key].clone())
 }
 
-#[test]
-fn tidy_bans_the_image_decoders_and_the_box_formats_from_the_app() {
-    let banned = metadata(&["tidy", "banned_media"]);
-    let banned: Vec<&str> = banned
+/// The names in the root manifest's tidy list `list`.
+fn tidy_list(list: &str) -> Vec<String> {
+    let value = metadata(&["tidy", list]);
+    let names = value
         .as_array()
         .unwrap()
         .iter()
-        .filter_map(toml::Value::as_str)
-        .collect();
-    let formats = DECODERS.iter().chain(&BOX_FORMATS);
-    assert!(formats.copied().all(|d| banned.contains(&d)), "{banned:?}");
+        .filter_map(toml::Value::as_str);
+    names.map(str::to_owned).collect()
+}
+
+#[test]
+fn tidy_bans_the_image_decoders_and_the_box_formats_from_the_app() {
+    let banned = tidy_list("banned_media");
+    let mut formats = DECODERS.iter().chain(&BOX_FORMATS);
+    assert!(formats.all(|d| banned.iter().any(|b| b == d)), "{banned:?}");
     assert_eq!(metadata(&["tidy", "app"]).as_str(), Some(APP));
 }
 
 #[test]
-fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_or_the_worker() {
+fn tidy_bans_the_engine_the_audio_and_the_network_crates_from_the_app() {
+    let (media, network) = (tidy_list("banned_media"), tidy_list("banned_network"));
+    assert!(
+        VOICE.iter().all(|c| media.iter().any(|b| b == c)),
+        "{media:?}"
+    );
+    assert!(
+        NETWORK.iter().all(|c| network.iter().any(|b| b == c)),
+        "{network:?}"
+    );
+}
+
+#[test]
+fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_a_voice_crate_or_the_worker() {
     let graph = graph();
     let reached = reached(&graph);
     let worker = metadata(&["stage", "worker"]);
     let worker = worker.as_str().unwrap();
     assert!(graph.contains_key(worker), "the lock lists {worker}");
     assert!(!reached.contains(worker), "{APP} depends on {worker}");
-    for banned in DECODERS.iter().chain(&BOX_FORMATS) {
+    let all = DECODERS
+        .iter()
+        .chain(&BOX_FORMATS)
+        .chain(&VOICE)
+        .chain(&NETWORK);
+    for banned in all {
         assert!(graph.contains_key(*banned), "the lock lists {banned}");
         assert!(!reached.contains(*banned), "{APP} reaches {banned}");
     }

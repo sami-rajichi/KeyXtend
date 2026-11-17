@@ -1,0 +1,303 @@
+# The models table (ADR-0043): one row per model file the Voice panel downloads on the user's click; none ships.
+# The rows are the ten files of the 2026-11-10 trial (docs/items/P11.md), licences and credits as THIRD_PARTY.md.
+#
+# Each row:
+# - `id`: the name `picks` stores; `name`: the shown name; `runner`: the engine adapter that reads it.
+# - `file`, `bytes`, `sha256`: the file and the size and SHA-256 checked before it takes its name.
+# - `links`: HTTPS addresses at a fixed revision, tried in order; `hosts`: the hosts a link names (exactly) or its
+#   redirect may reach. `.hf.co` takes every host under Hugging Face's own hf.co, whose CDN host differs by region;
+#   its firewall guide (huggingface.co/docs/hub/models-downloading) lists them and says they change.
+# - `licence`, `credit`, `origin`: the licence, who to credit and the original model's page.
+# - `cpu_mb`: the system memory a job needs: the larger of peak working set and peak commit over the trial's processor
+#   and card runs (8 threads, clips up to 31.5 s), plus 25 %, rounded up to 64 MB.
+# - `card_mb`: the card memory it takes: card free memory before the run less after it (RTX 4060 Laptop, Vulkan), plus
+#   25 %, rounded up to 64 MB; `card_margin_mb` is added when it is checked against a card.
+# - `live`: it can write while hearing (recorded, unused); `lead`: false keeps it from heading any order (never a default).
+# - `langs`: each keyboard language (ISO 639) and the model's own code for it, as the engine listed them; a model with
+#   region codes takes the first region it lists, and `jv`, `nb` and `fil` reach Whisper's `jw`, `no` and `tl`.
+
+# File extensions a model file may have; the folder scan lists these, in any case.
+exts = ["gguf", "bin"]
+# The licences a row may name.
+licences = ["MIT", "Apache-2.0", "CC-BY-4.0", "OpenMDW-1.1"]
+# The runners the worker's engine knows (ADR-0043 decision 1).
+runners = ["transcribe"]
+# Hex digits of the commit every address names as one part of its path, so it never follows a moving branch.
+revision = 40
+
+[[models]]
+id = "whisper-small-q5km"
+name = "Whisper Small"
+runner = "transcribe"
+file = "whisper-small-Q5_K_M.gguf"
+bytes = 193749056
+sha256 = "326cd00c3e7217c751667c7c1600eaf7e0de174e186ca2c16b4bf590251c3c3b"
+links = ["https://huggingface.co/handy-computer/whisper-small-gguf/resolve/4afdc7942ecf1997f359deae48a63506b062eac4/whisper-small-Q5_K_M.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "MIT"
+credit = "OpenAI"
+origin = "https://github.com/openai/whisper"
+cpu_mb = 1344
+card_mb = 384
+live = false
+lead = true
+langs = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    haw = "haw", he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it",
+    ja = "ja", jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln",
+    lo = "lo", lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms",
+    mt = "mt", my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl",
+    ps = "ps", pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn",
+    so = "so", sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th",
+    tk = "tk", tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo",
+    zh = "zh",
+}
+
+[[models]]
+id = "whisper-turbo-q5km"
+name = "Whisper Large v3 Turbo"
+runner = "transcribe"
+file = "whisper-large-v3-turbo-Q5_K_M.gguf"
+bytes = 619628096
+sha256 = "06fc9923c09fb3ae878ea12c34d1be3ed18fad039ab14b4b045c7b6c40af56b2"
+links = ["https://huggingface.co/handy-computer/whisper-large-v3-turbo-gguf/resolve/18ada752005f5fddef499256f9a458d0b37a203a/whisper-large-v3-turbo-Q5_K_M.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "MIT"
+credit = "OpenAI"
+origin = "https://github.com/openai/whisper"
+cpu_mb = 1792
+card_mb = 896
+live = false
+lead = true
+langs = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    haw = "haw", he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it",
+    ja = "ja", jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln",
+    lo = "lo", lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms",
+    mt = "mt", my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl",
+    ps = "ps", pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn",
+    so = "so", sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th",
+    tk = "tk", tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo",
+    yue = "yue", zh = "zh",
+}
+
+[[models]]
+id = "whisper-large-v3-q5km"
+name = "Whisper Large v3"
+runner = "transcribe"
+file = "whisper-large-v3-Q5_K_M.gguf"
+bytes = 1161143008
+sha256 = "6053d0fd69a0fd48b8fea5ea7a52b9e0cde389343566fa30e453a1b2b258dc38"
+links = ["https://huggingface.co/handy-computer/whisper-large-v3-gguf/resolve/274ad1d1cf680b7ee53cc70f78461394cd3a344b/whisper-large-v3-Q5_K_M.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "MIT"
+credit = "OpenAI"
+origin = "https://github.com/openai/whisper"
+cpu_mb = 2688
+card_mb = 1856
+live = false
+lead = true
+langs = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    haw = "haw", he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it",
+    ja = "ja", jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln",
+    lo = "lo", lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms",
+    mt = "mt", my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl",
+    ps = "ps", pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn",
+    so = "so", sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th",
+    tk = "tk", tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo",
+    yue = "yue", zh = "zh",
+}
+
+[[models]]
+id = "parakeet-v3-q8"
+name = "Parakeet TDT 0.6b v3"
+runner = "transcribe"
+file = "parakeet-tdt-0.6b-v3-Q8_0.gguf"
+bytes = 739508576
+sha256 = "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7"
+links = ["https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/d8d8c32cb2017c57e5307767343e97870f8a7f53/parakeet-tdt-0.6b-v3-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "CC-BY-4.0"
+credit = "NVIDIA"
+origin = "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3"
+cpu_mb = 2112
+card_mb = 960
+live = false
+lead = true
+langs = {
+    bg = "bg", cs = "cs", da = "da", de = "de", el = "el", en = "en", es = "es", et = "et", fi = "fi", fr = "fr",
+    hr = "hr", hu = "hu", it = "it", lt = "lt", lv = "lv", mt = "mt", nl = "nl", pl = "pl", pt = "pt", ro = "ro",
+    ru = "ru", sk = "sk", sl = "sl", sv = "sv", uk = "uk",
+}
+
+[[models]]
+id = "canary-v2-q8"
+name = "Canary 1b v2"
+runner = "transcribe"
+file = "canary-1b-v2-Q8_0.gguf"
+bytes = 1144290016
+sha256 = "224f83d1bc487b3303b495a7d6874912fdece93de19d1a04b550829c30a5d289"
+links = ["https://huggingface.co/handy-computer/canary-1b-v2-gguf/resolve/692af661b140183b60e44f55ad03c59e1e77d078/canary-1b-v2-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "CC-BY-4.0"
+credit = "NVIDIA"
+origin = "https://huggingface.co/nvidia/canary-1b-v2"
+cpu_mb = 2944
+card_mb = 1600
+live = false
+lead = true
+langs = {
+    bg = "bg", cs = "cs", da = "da", de = "de", el = "el", en = "en", es = "es", et = "et", fi = "fi", fr = "fr",
+    hr = "hr", hu = "hu", it = "it", lt = "lt", lv = "lv", mt = "mt", nl = "nl", pl = "pl", pt = "pt", ro = "ro",
+    ru = "ru", sk = "sk", sl = "sl", sv = "sv", uk = "uk",
+}
+
+[[models]]
+id = "nemotron-0.6b-q8"
+name = "Nemotron 3.5 ASR 0.6B"
+runner = "transcribe"
+file = "nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf"
+bytes = 751094240
+sha256 = "b94545b313b3223fda7b2857a52681da813935c2127643d1e9ff0c23d988089c"
+links = ["https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/53ce288f69326b415aeef030cfcb02a08a8096dd/nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "OpenMDW-1.1"
+credit = "NVIDIA"
+origin = "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b"
+cpu_mb = 1792
+card_mb = 960
+live = true
+lead = false
+langs = {
+    ar = "ar-AR", bg = "bg-BG", cs = "cs-CZ", da = "da-DK", de = "de-DE", en = "en-US", es = "es-US", et = "et-EE",
+    fi = "fi-FI", fr = "fr-FR", hi = "hi-IN", hr = "hr-HR", hu = "hu-HU", it = "it-IT", ja = "ja-JP", ko = "ko-KR",
+    nb = "nb-NO", nl = "nl-NL", pl = "pl-PL", pt = "pt-BR", ro = "ro-RO", ru = "ru-RU", sk = "sk-SK", sv = "sv-SE",
+    tr = "tr-TR", uk = "uk-UA", vi = "vi-VN", zh = "zh-CN",
+}
+
+[[models]]
+id = "qwen3-0.6b-q8"
+name = "Qwen3-ASR 0.6B"
+runner = "transcribe"
+file = "Qwen3-ASR-0.6B-Q8_0.gguf"
+bytes = 850423456
+sha256 = "f081b2d5e23bd669d92cc331d722a8a0681943b8e6f34b48996fd5c319b5acd8"
+links = ["https://huggingface.co/handy-computer/Qwen3-ASR-0.6B-gguf/resolve/7e7c69a577fa2725dfedbe34b5e999336e30a19b/Qwen3-ASR-0.6B-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "Apache-2.0"
+credit = "Alibaba Cloud"
+origin = "https://huggingface.co/Qwen/Qwen3-ASR-0.6B"
+cpu_mb = 2624
+card_mb = 1408
+live = false
+lead = true
+langs = {
+    ar = "ar", cs = "cs", da = "da", de = "de", el = "el", en = "en", es = "es", fa = "fa", fi = "fi", fil = "fil",
+    fr = "fr", hi = "hi", hu = "hu", id = "id", it = "it", ja = "ja", ko = "ko", mk = "mk", ms = "ms", nl = "nl",
+    pl = "pl", pt = "pt", ro = "ro", ru = "ru", sv = "sv", th = "th", tr = "tr", vi = "vi", yue = "yue", zh = "zh",
+}
+
+[[models]]
+id = "qwen3-1.7b-q8"
+name = "Qwen3-ASR 1.7B"
+runner = "transcribe"
+file = "Qwen3-ASR-1.7B-Q8_0.gguf"
+bytes = 2185030624
+sha256 = "9a0d81792dfea2d5f278b8a63deb3ea6e02139ce42c2301f32ea19c4f77526b7"
+links = ["https://huggingface.co/handy-computer/Qwen3-ASR-1.7B-gguf/resolve/0e0a596e3959c3f3f2ab7d443a5b6f0f4a4bba6f/Qwen3-ASR-1.7B-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "Apache-2.0"
+credit = "Alibaba Cloud"
+origin = "https://huggingface.co/Qwen/Qwen3-ASR-1.7B"
+cpu_mb = 4224
+card_mb = 2944
+live = false
+lead = true
+langs = {
+    ar = "ar", cs = "cs", da = "da", de = "de", el = "el", en = "en", es = "es", fa = "fa", fi = "fi", fil = "fil",
+    fr = "fr", hi = "hi", hu = "hu", id = "id", it = "it", ja = "ja", ko = "ko", mk = "mk", ms = "ms", nl = "nl",
+    pl = "pl", pt = "pt", ro = "ro", ru = "ru", sv = "sv", th = "th", tr = "tr", vi = "vi", yue = "yue", zh = "zh",
+}
+
+[[models]]
+id = "cohere-q8"
+name = "Cohere Transcribe"
+runner = "transcribe"
+file = "cohere-transcribe-03-2026-Q8_0.gguf"
+bytes = 2410655232
+sha256 = "931916663432fd895423a4291a8400221802b288967ca2d435fc5e3141c9e71e"
+links = ["https://huggingface.co/handy-computer/cohere-transcribe-03-2026-gguf/resolve/7353b6040bdc1be9e5a3823d99d5fe12afe88264/cohere-transcribe-03-2026-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "Apache-2.0"
+credit = "Cohere Labs"
+origin = "https://huggingface.co/CohereLabs/cohere-transcribe-03-2026"
+cpu_mb = 4608
+card_mb = 3008
+live = false
+lead = true
+langs = {
+    ar = "ar", de = "de", el = "el", en = "en", es = "es", fr = "fr", it = "it", ja = "ja", ko = "ko", nl = "nl",
+    pl = "pl", pt = "pt", vi = "vi", zh = "zh",
+}
+
+[[models]]
+id = "cohere-arabic-q8"
+name = "Cohere Transcribe Arabic"
+runner = "transcribe"
+file = "cohere-transcribe-arabic-07-2026-Q8_0.gguf"
+bytes = 2410655136
+sha256 = "910de5c9c57f9fd8a280e1701f9cd96f63768878c1ca9e4ecf23638a5e0fef16"
+links = ["https://huggingface.co/handy-computer/cohere-transcribe-arabic-07-2026-gguf/resolve/11a54d6895f94cce78d0ece142b8e552e7822539/cohere-transcribe-arabic-07-2026-Q8_0.gguf"]
+hosts = ["huggingface.co", ".hf.co"]
+licence = "Apache-2.0"
+credit = "Cohere Labs"
+origin = "https://huggingface.co/CohereLabs/cohere-transcribe-arabic-07-2026"
+cpu_mb = 4608
+card_mb = 3008
+live = false
+lead = true
+langs = { ar = "ar", en = "en" }
+
+# The tested order per keyboard language: the first is its default and the model the panel's note names (ADR-0043
+# decision 4). Each lists exactly the rows that know the language: the owner's default first (2026-11-10), then fewest
+# words wrong on the owner's six clips with the voice detector at pad 300 ms (2026-11-14), ties to the shorter wait.
+[[orders]]
+lang = "en"
+tested = 2026-11-14
+models = [
+    "parakeet-v3-q8", "whisper-small-q5km", "cohere-arabic-q8", "cohere-q8", "whisper-turbo-q5km",
+    "whisper-large-v3-q5km", "qwen3-1.7b-q8", "canary-v2-q8", "qwen3-0.6b-q8", "nemotron-0.6b-q8",
+]
+
+[[orders]]
+lang = "fr"
+tested = 2026-11-14
+models = [
+    "parakeet-v3-q8", "cohere-q8", "whisper-turbo-q5km", "canary-v2-q8", "whisper-large-v3-q5km", "qwen3-0.6b-q8",
+    "qwen3-1.7b-q8", "whisper-small-q5km", "nemotron-0.6b-q8",
+]
+
+[[orders]]
+lang = "ar"
+tested = 2026-11-14
+models = [
+    "cohere-arabic-q8", "cohere-q8", "whisper-large-v3-q5km", "whisper-turbo-q5km", "nemotron-0.6b-q8",
+    "qwen3-1.7b-q8", "whisper-small-q5km", "qwen3-0.6b-q8",
+]
+
+# The order for a language without its own list, limited to the rows that know it and marked untested (ADR-0043
+# decision 5): Parakeet, the owner's European default, first; then the smallest share of words wrong over the tested
+# languages each model knows (2026-11-14); Nemotron last, as it never leads. It names every row once.
+[general]
+tested = 2026-11-14
+models = [
+    "parakeet-v3-q8", "cohere-arabic-q8", "cohere-q8", "whisper-turbo-q5km", "canary-v2-q8", "whisper-large-v3-q5km",
+    "qwen3-1.7b-q8", "whisper-small-q5km", "qwen3-0.6b-q8", "nemotron-0.6b-q8",
+]

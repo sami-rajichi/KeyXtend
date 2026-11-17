@@ -116,13 +116,13 @@ fn only_one_side_key_shows_the_layer() {
 }
 
 /// The shipped Mic key as `board.toml` writes it.
-const MIC: &str = "{ id = \"mic\", col = 3, row = 2, role = \"later\" }";
+const MIC: &str = "{ id = \"mic\", col = 3, row = 2, role = \"voice\" }";
 
 #[test]
 fn the_generated_roles_are_refused_in_the_file() {
     assert!(BOARD.contains(MIC));
     for role in ["shortcut", "next"] {
-        let text = BOARD.replace(MIC, &MIC.replace("later", role));
+        let text = BOARD.replace(MIC, &MIC.replace("voice", role));
         assert_eq!(
             BoardSpec::read(&text),
             Err(BoardError::Role("mic".into())),
@@ -152,8 +152,8 @@ fn the_shipped_board_has_one_layer_key_and_one_power_key() {
 }
 
 #[test]
-fn the_layer_and_power_roles_belong_to_the_side_block() {
-    for role in [Role::Layer, Role::Power] {
+fn the_layer_power_and_voice_roles_belong_to_the_side_block() {
+    for role in [Role::Layer, Role::Power, Role::Voice] {
         let mut s = spec();
         named_mut(&mut s, "lang").role = role;
         assert_eq!(s.check(), Err(BoardError::Role("lang".into())), "{role:?}");

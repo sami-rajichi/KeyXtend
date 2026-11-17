@@ -6,15 +6,17 @@ mod error;
 mod fill;
 mod keys;
 mod layer;
+mod role;
 mod tell;
 
 pub use error::BoardError;
 pub use fill::FillSpec;
 pub use keys::{RowKey, char_id};
 pub use layer::{LayerGrid, LayerSpec, NEXT_ID, SideCell, shortcut_key_id};
+pub use role::{Assist, Role};
 pub use tell::Tell;
 
-use kx_module_api::ports::{Scan, Toggle};
+use kx_module_api::ports::Scan;
 use serde::{Deserialize, Serialize};
 
 /// The board, compiled in so it is never read from disk.
@@ -72,66 +74,6 @@ impl LatchRole {
     #[must_use]
     pub const fn of(latch: Latch) -> Self {
         Self { latch, lone: false }
-    }
-}
-
-/// A mouse-assist mode a side key flips; the mouse module runs it (spec §5.1).
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Assist {
-    /// Right-click by holding still.
-    RClick,
-    /// Pick up at the next press, drop at the next click.
-    Grab,
-}
-
-impl From<Assist> for Toggle {
-    fn from(a: Assist) -> Self {
-        match a {
-            Assist::RClick => Self::RightClick,
-            Assist::Grab => Self::Grab,
-        }
-    }
-}
-
-/// What a click on a key does.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Role {
-    /// Types its character in the layout shown; only the keys of a `chars` run have it.
-    Char,
-    /// Sends its scan code, with the latched modifiers.
-    Send,
-    /// Caps Lock: sends its scan code and lights while Caps Lock is on.
-    Caps,
-    /// Steps through or picks the layouts.
-    Lang,
-    /// Asks the mouse module to flip a mode; lit while it is on, dimmed while that module is not running.
-    Assist(Assist),
-    /// Comes in a later version: drawn dimmed and does nothing.
-    Later,
-    /// The Shortcuts key: a click shows or hides the shortcuts layer.
-    Layer,
-    /// The Power key: a click asks for the system's power dialog.
-    Power,
-    /// The clipboard key: a click asks the clipboard module to open or close its panel.
-    Clip,
-    /// The Quick-fill key: a click asks the vault module to open or close its panel.
-    Fill,
-    /// A shortcut on the layer; only the layer's generated cells have it.
-    Shortcut,
-    /// The layer's Next page key; only the layer's generated cell has it.
-    Next,
-    /// Latches a modifier; `board.toml` writes it as a table, `{ latch = "win", lone = true }`.
-    #[serde(untagged)]
-    Latch(LatchRole),
-}
-
-impl Role {
-    /// True when a key with this role sends a scan code.
-    #[must_use]
-    pub fn sends(self) -> bool {
-        matches!(self, Self::Char | Self::Send | Self::Caps | Self::Latch(_))
     }
 }
 

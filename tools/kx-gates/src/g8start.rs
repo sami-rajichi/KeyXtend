@@ -5,11 +5,10 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use spike_core::weak::Job;
-
 use crate::apps::Ctx;
 use crate::copyend::{self, Ended};
 use crate::proc::Process;
+use crate::weakjob::Job;
 use crate::{admin, budget, product, win};
 
 /// The product as G8 started it.

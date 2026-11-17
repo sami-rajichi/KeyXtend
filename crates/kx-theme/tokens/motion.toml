@@ -42,6 +42,11 @@ panel = { ms = 180, curve = "swift" }
 layer = { ms = 180, curve = "swift" }
 # One pass of the shimmer while the words are on their way (.shimmer).
 shimmer = { ms = 1000, curve = "linear" }
+# One turn of the dictation wave's ripple across its bars (design/voice-bar.html frame(), sin(s * 7)); reduced motion
+# draws a plain meter instead.
+wave = { ms = 900, curve = "linear" }
+# One slide of Compare's writing line across its track, then one back (design/voice-bar.html .prog.run, --shimmer-ms).
+run = { ms = 1000, curve = "ease_in_out" }
 # The burst when a hold fires (.burst .b-ring, .b-dot).
 burst = { ms = 420, curve = "ease_out" }
 # The mode badge beside the pointer fading in and out; the mock-up shows it at once, so WinUI's ControlFastAnimationDuration.
@@ -86,6 +91,10 @@ menu_scale = 0.96
 tick_scale = 0.6
 # The selection strip rises this far (px) as it fades (.chips.go translateY(-3px)).
 fade_rise_px = 3.0
+# A dictation wave bar takes at least this share of the level, and its ripple turns this far (radians) from one bar to
+# the next (frame(): .4 + .6 * |sin(n * .9 + s * 7)|).
+wave_floor = 0.4
+wave_step = 0.9
 
 # How long a state shows before what comes next, in ms: reduced motion keeps it, as it is time to read, not a move.
 [shows]

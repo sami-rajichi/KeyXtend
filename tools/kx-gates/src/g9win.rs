@@ -89,7 +89,7 @@ fn write_ex(w: HWND, ex: u32) -> Result<(), String> {
 
 /// Puts window `w` in or out of the topmost band without moving or activating it.
 #[allow(unsafe_code, reason = "Moves another window in the z-order.")]
-fn set_topmost(w: HWND, on: bool) -> Result<(), String> {
+pub fn set_topmost(w: HWND, on: bool) -> Result<(), String> {
     let band = if on { HWND_TOPMOST } else { HWND_NOTOPMOST };
     // SAFETY: a plain call on a window handle; Windows reports a refusal.
     unsafe {

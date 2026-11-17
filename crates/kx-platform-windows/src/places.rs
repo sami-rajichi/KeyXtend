@@ -75,3 +75,28 @@ impl Drive {
         }
     }
 }
+
+/// The fixed drives there now, A to Z, each with its root and its name as the folder list shows it; none when the
+/// table does not parse.
+#[cfg(windows)]
+pub(crate) fn fixed_drives() -> Vec<(PathBuf, String)> {
+    let Ok(table) = table() else {
+        return Vec::new();
+    };
+    let fixed = drives::live(table)
+        .into_iter()
+        .filter(|d| d.kind == PlaceKind::Drive && !d.remote);
+    let named = |d: Drive| {
+        let name = table.drive_name(&d.root, &d.label);
+        (d.root, name)
+    };
+    fixed.map(named).collect()
+}
+
+/// True for file attributes the table hides, such as hidden or system; an unreadable table hides everything.
+pub(crate) fn hides(attributes: u32) -> bool {
+    match table() {
+        Ok(t) => t.hides(attributes),
+        Err(_) => true,
+    }
+}

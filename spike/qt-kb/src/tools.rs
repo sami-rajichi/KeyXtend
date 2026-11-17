@@ -33,7 +33,7 @@ pub mod qobject {
         #[qinvokable]
         fn buttons_json(&self) -> QString;
 
-        /// Runs tool button `i`: JSON with a status `note`, the `snip` to show, or `mic` for QML's Voice.
+        /// Runs tool button `i`: JSON with a status `note` or the `snip` to show.
         #[qinvokable]
         fn tool(self: Pin<&mut Self>, i: i32) -> QString;
 
@@ -99,7 +99,6 @@ impl qobject::Tools {
     fn tool(mut self: Pin<&mut Self>, i: i32) -> QString {
         match usize::try_from(i).ok().and_then(ToolButton::at) {
             Some(ToolButton::Snip) => js(self.as_mut().begin_snip()),
-            Some(ToolButton::Mic) => js(json!({ "mic": true })),
             None => js(json!({})),
         }
     }

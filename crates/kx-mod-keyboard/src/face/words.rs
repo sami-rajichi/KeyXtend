@@ -1,6 +1,6 @@
 //! Word prediction on the face (ADR-0033): the typed pieces leave in order, one thread at a time and outside the lock,
 //! so the bus hears each once; a picked word from the bus types on the sender's thread, one part per lock, tells each
-//! part's pieces and waits its pauses outside the lock, and stops at a click outside our windows or a board key sent.
+//! part's pieces and waits its pauses outside the lock, and stops at a click outside our windows or a key or text sent.
 
 use super::Face;
 use super::inner::{Queued, WordTo};
@@ -9,8 +9,8 @@ use kx_module_api::ports::{AimedLine, PanelKey, PointerPressed, TypeWord, Typed}
 use std::sync::atomic::Ordering::SeqCst;
 
 impl Face {
-    /// Tells the bus every piece typed, line change and edit answer not yet told, through the outbox, so none goes out
-    /// twice or out of order.
+    /// Tells the bus every piece typed, line change and edit or text answer not yet told, through the outbox, so none
+    /// goes out twice or out of order.
     pub(super) fn pour(&self) {
         self.pieces.post(|| self.send_pieces());
     }
@@ -26,12 +26,13 @@ impl Face {
                 return;
             }
             for item in told {
-                // The module holds `ReadFocusedText` and `Selection`, which these events need, or its start would have
-                // failed.
+                // The module holds `ReadFocusedText`, `Selection` and `Voice`, which these events need, or its start
+                // would have failed.
                 let _ = match item {
                     Queued::Piece(piece) => bus.publish(&Typed { piece }),
                     Queued::Line(line) => bus.publish(&AimedLine { line }),
                     Queued::Done(done) => bus.publish(&done),
+                    Queued::Text(done) => bus.publish(&done),
                 };
             }
         }
@@ -58,7 +59,7 @@ impl Face {
     }
 
     /// Types `left` as keys would, telling its pieces after each part and waiting each pause on the sender's thread with
-    /// the lock free. A click outside our windows since `seen`, or a board key sent meanwhile, stops the rest.
+    /// the lock free. A click outside our windows since `seen`, or a key, word or text sent meanwhile, stops the rest.
     fn drive_word(&self, mut left: Word, seen: u64) {
         let pause = self.lock().pause();
         let away = || self.clicks.load(SeqCst) != seen;

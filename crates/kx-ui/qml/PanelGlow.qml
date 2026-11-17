@@ -15,6 +15,9 @@ Glow {
 
     // The share of its size the panel takes, as the hub works it out for the room beside the keyboard.
     property real fit: 1
+    // Where a `w` by `h` panel goes in Qt units, with its fit (`spot(w, h)` gives `{x, y, fit}` or null), as the Voice
+    // panel opens by the bar; null opens it beside the keyboard.
+    property var spot: null
     // A note came or went, or the display scale changed, so the next settle takes the hub's fit as it comes.
     property bool renew: false
     readonly property bool noted: !!view.note
@@ -29,15 +32,19 @@ Glow {
     // takes the hub's spot for its own size, so it stays centred.
     function place(fresh) {
         const w = wide * win.s, h = pane.unit * win.s;
-        let p = win.spots.popFit(w, h, NaN);
+        let p = fits(w, h);
         if (!p)
             return;
         if (fresh || p.fit < fit)
             fit = p.fit;
         else if (fit < p.fit)
-            p = win.spots.popFit(w * fit, h * fit, NaN) || p;
+            p = fits(w * fit, h * fit) || p;
         pane.x = p.x;
         pane.y = p.y;
+    }
+    // Where a `w` by `h` panel goes, with its fit: where `spot` puts it, else beside the keyboard.
+    function fits(w, h) {
+        return spot ? spot(w, h) : win.spots.popFit(w, h, NaN);
     }
     // Places it again once a layout has settled.
     function settle() {

@@ -1,11 +1,13 @@
-//! `cargo xtask stage`: builds the app and the media worker in release and stages them with only the Qt files the app
-//! loads and the word packs, then checks the stage.
+//! `cargo xtask stage`: builds the app and the worker in release and stages them with only the Qt files the app loads,
+//! the speech engine's parts, the voice files and the word packs, then checks the stage.
 
 mod check;
 mod config;
+mod engine;
 mod error;
 mod pe;
 mod qt;
+mod voice;
 mod words;
 mod worker;
 
@@ -68,10 +70,13 @@ pub(crate) fn plan(config: &StageConfig, qt: &QtDirs, release: &Path) -> Vec<Cop
         .collect()
 }
 
-/// The stage-relative path of every file `plan` stages; the check refuses any other file outside the packs folder.
+/// The stage-relative path of every file `plan`, the engine and the voice files stage; the check refuses any other
+/// file outside the packs folder.
 pub(crate) fn planned(config: &StageConfig) -> Vec<PathBuf> {
-    let unread = QtDirs::default();
-    let files = plan(config, &unread, Path::new(""));
+    let (unread, none) = (QtDirs::default(), Path::new(""));
+    let mut files = plan(config, &unread, none);
+    files.extend(engine::plan(&config.engine, none));
+    files.extend(voice::plan(&config.voice, none));
     files.into_iter().map(|c| c.to).collect()
 }
 
@@ -114,8 +119,8 @@ fn discard(stage: &Path, err: DevError) -> DevError {
 }
 
 /// Runs the stage check on the app folder `folder`, reading real imports and Windows' system folder and measuring the
-/// download at the words build's level, checks the worker's manifest, then holds its installed size to the install's
-/// limit and checks its packs.
+/// download at the words build's level, checks the worker, the engine's floor part and the voice files, then holds
+/// its installed size to the install's limit and checks its packs.
 pub(crate) fn verify(
     setup: &DevSetup,
     config: &StageConfig,
@@ -126,6 +131,8 @@ pub(crate) fn verify(
     let in_system = |lib: &str| system.join(lib).is_file();
     let summary = check::check(folder, config, level()?, pe::read, in_system)?;
     worker::check(folder, config, &setup.config)?;
+    engine::check(folder, &config.engine)?;
+    voice::check(folder, &config.voice)?;
     paths::fits(summary.size.bytes, setup.config.install_max_mb)?;
     words::check(folder, &Words::load(&setup.root)?.credits)?;
     Ok(summary)
@@ -143,12 +150,18 @@ pub(crate) fn load(json: &str) -> Result<StageConfig, LoadError> {
     Ok(config)
 }
 
-/// Builds `package` in release with cargo, alone so no other package changes its features, showing cargo's progress.
-fn build(package: &str) -> Result<(), DevError> {
-    let step = format!("{} {package}", BUILD.join(" "));
+/// Builds `package` in release with cargo and the `extra` arguments, alone so no other package changes its features,
+/// showing cargo's progress.
+fn build(package: &str, extra: &[String]) -> Result<(), DevError> {
+    let words = BUILD
+        .into_iter()
+        .chain([package])
+        .chain(extra.iter().map(String::as_str));
+    let step = words.collect::<Vec<_>>().join(" ");
     let status = crate::cargo::command()
         .args(BUILD)
         .arg(package)
+        .args(extra)
         .status()
         .map_err(|e| DevError::Spawn {
             program: step.clone(),
@@ -164,27 +177,29 @@ fn build(package: &str) -> Result<(), DevError> {
     }
 }
 
-/// Runs `cargo xtask stage`: builds the app and the worker, stages them in `<out_dir>/<app>`, checks the stage and
-/// reports its size.
+/// Runs `cargo xtask stage`: builds the app, and the worker with its stage features, stages them in `<out_dir>/<app>`,
+/// checks the stage and reports its size.
 pub(crate) fn run() -> Result<(), DevError> {
     let json = workspace::metadata_json()?;
     let (setup, config) = (super::config::load(&json)?, load(&json)?);
     let env = |key: &str| std::env::var(key).ok();
     let qt = qt::find(&config, env)?;
     let words = words::plan(&Words::load(&setup.root)?)?;
-    build(&config.app)?;
-    build(&config.worker)?;
+    build(&config.app, &[])?;
+    build(&config.worker, &worker::build_args(&config))?;
     let release = workspace::target_dir(&json)?.join(RELEASE_DIR);
     let stage = setup.path(&config.out_dir).join(&config.app);
     let mut files = plan(&config, &qt, &release);
+    files.extend(engine::plan(&config.engine, &release));
+    files.extend(voice::plan(&config.voice, &setup.root));
     files.extend(words);
     let summary = fill(&stage, &files, |s| verify(&setup, &config, s, env))?;
     report(&setup, &stage, &config, &summary);
     Ok(())
 }
 
-/// Prints where the stage is, its files, its download against the budget beside its installed size, and the packs'
-/// share of both.
+/// Prints where the stage is, its files, its download against the budget beside its installed size, and the shares of
+/// the packs, the engine and the voice files.
 fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check::Summary) {
     let rel = stage.strip_prefix(&setup.root).unwrap_or(stage);
     println!("Staged {}: {} files.", paths::text(rel), summary.files);
@@ -193,6 +208,11 @@ fn report(setup: &DevSetup, stage: &Path, config: &StageConfig, summary: &check:
     println!("Download: {mb} MB deflated of the {max} MB budget; {installed} MB installed.");
     let (packs_mb, packs_installed) = (packs.mb(), packs.raw_mb());
     println!("Word packs: {packs_mb} MB deflated of it, {packs_installed} MB installed.");
+    let (engine, voice) = (summary.engine, summary.voice);
+    let (engine_mb, engine_installed) = (engine.mb(), engine.raw_mb());
+    println!("Speech engine: {engine_mb} MB deflated of it, {engine_installed} MB installed.");
+    let (voice_mb, voice_installed) = (voice.mb(), voice.raw_mb());
+    println!("Voice files: {voice_mb} MB deflated of it, {voice_installed} MB installed.");
 }
 
 #[cfg(test)]

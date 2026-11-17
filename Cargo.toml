@@ -1,6 +1,6 @@
 [workspace]
 # New crates are listed here by name when created (see kx-new-module).
-members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-mod-selection", "crates/kx-mod-vault", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
+members = ["apps/keyxtend", "apps/keyxtend-worker", "crates/kx-crypto", "crates/kx-ipc", "crates/kx-kernel", "crates/kx-mod-clipboard", "crates/kx-mod-keyboard", "crates/kx-mod-layouts", "crates/kx-mod-mouse", "crates/kx-mod-power", "crates/kx-mod-predict", "crates/kx-mod-scroll", "crates/kx-mod-selection", "crates/kx-mod-vault", "crates/kx-mod-voice", "crates/kx-module-api", "crates/kx-platform", "crates/kx-platform-fake", "crates/kx-platform-net", "crates/kx-platform-windows", "crates/kx-settings", "crates/kx-test-support", "crates/kx-theme", "crates/kx-ui", "tools/kx-gates", "tools/kx-target-window", "tools/kx-test-icons", "xtask"]
 # The spike has its own workspace; excluding it keeps Cargo from taking this file as the root of a spike crate.
 exclude = ["spike"]
 resolver = "3"
@@ -39,6 +39,10 @@ png = "0.18.1"
 age = { version = "0.11.5", default-features = false }
 # keepass is pinned: the worker's KDF check walks its exact header reads, so a new version needs that walk rechecked.
 keepass = { version = "=0.17.0", default-features = false }
+# The voice worker's microphone (ADR-0042): WASAPI on Windows; only the `voice` job opens it.
+cpal = "0.18.2"
+# The voice worker's speech engine (ADR-0043, ADR-0044), pinned: its loadable parts and their loading are reviewed.
+transcribe-cpp = { version = "=0.4.1", default-features = false }
 toml = "1.1.6"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std"] }
@@ -86,11 +90,12 @@ platform_prefix = "kx-platform-"
 module_allowed = ["kx-module-api"]
 # The uiAccess app that the network and media bans protect.
 app = "keyxtend"
-# Network crates banned from the app (ARCHITECTURE.md invariant 4).
-banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls"]
+# Network crates banned from the app (ARCHITECTURE.md invariant 4); the worker's `fetch` job alone downloads (ADR-0042).
+banned_network = ["reqwest", "hyper", "ureq", "rustls", "native-tls", "kx-platform-net"]
 # Media-decoding and box-format crates banned from the app (ARCHITECTURE.md invariant 5): the media worker alone decodes
-# PNG (ADR-0034), and the vault worker alone opens boxes and KeePass files (ADR-0038).
-banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate", "age", "keepass"]
+# PNG (ADR-0034), the vault worker alone opens boxes and KeePass files (ADR-0038), and the `voice` job alone hears the
+# microphone and runs the speech engine (ADR-0042).
+banned_media = ["image", "symphonia", "hound", "lopdf", "ffmpeg-next", "gstreamer", "png", "fdeflate", "age", "keepass", "cpal", "transcribe-cpp", "transcribe-cpp-sys"]
 # Crate features no package may turn on (tidy D6): toml's `unbounded` lifts the nesting limit that keeps a settings file from overflowing the stack.
 banned_features = { toml = ["unbounded"] }
 # Crate features only builds, tests and tools may turn on (tidy D7): kx-theme's `files` reads the assets folder and parses
@@ -121,6 +126,13 @@ spawn_extensions = ["rs", "h", "hpp", "cpp", "cc", "cxx"]
 banned_spawns = ["std::process::Command", "QProcess"]
 # Build scripts, as paths inside their package; like tests and the test tools, they may start processes.
 build_scripts = ["build.rs", "qtbuild.rs"]
+# The worker's two jobs kept apart (ADR-0042 decision 3, tidy F5): no file of a module, its `.rs` file or its folder,
+# names these crates, so the `voice` job never reaches the network and the `fetch` job never hears the microphone or
+# runs the engine. F5 reads names only; the worker's `tests/root.rs` keeps each crate unrenamed in its manifest.
+apart = [
+    { package = "keyxtend-worker", module = "src/voice", banned = ["kx-platform-net"] },
+    { package = "keyxtend-worker", module = "src/fetch", banned = ["cpal", "transcribe-cpp"] },
+]
 
 [workspace.metadata.dco]
 # Commit trailer that counts as a sign-off.
@@ -232,8 +244,31 @@ api_sets = ["api-ms-", "ext-ms-"]
 system_dir = "System32"
 # The flag only the app's gate-only build (`gate-input`) takes; the check refuses a program holding its text. The app's agree test pins it.
 gate_flag = "--sim-input"
+# The worker's features in the stage build: the graphics-card part (ADR-0044), whose build needs the Vulkan SDK. Never
+# the gate's feature; config validation refuses it.
+worker_features = ["card"]
+# The worker's gate-only feature. The flag only it and the app's `gate-voice` build take is kx-ipc's `SOUND_FLAG`
+# (`voice --sound <file.wav>`), written once there; the check refuses any staged or signed program holding its text.
+worker_gate = { feature = "gate" }
 # The word packs (ADR-0032) need no key here: the index, each pack it lists and the credits go from the folder that
 # xtask/words.toml names (`[text] out`, `[credits]`) into kx-module-api's `PACK_DIR`, which the check refuses incomplete.
+
+[workspace.metadata.stage.engine]
+# The speech engine's parts (ADR-0044), from the worker's release build, staged beside it. The worker imports these.
+linked = ["transcribe.dll", "ggml.dll", "ggml-base.dll"]
+# The engine loads these from the worker's own folder at run time, so the import walk starts at each.
+loaded = ["ggml-cpu-alderlake.dll", "ggml-cpu-cannonlake.dll", "ggml-cpu-cascadelake.dll", "ggml-cpu-haswell.dll", "ggml-cpu-icelake.dll", "ggml-cpu-sandybridge.dll", "ggml-cpu-skylakex.dll", "ggml-cpu-sse42.dll", "ggml-cpu-x64.dll", "ggml-vulkan.dll"]
+# The processor part every x64 machine runs; the stage must hold it.
+floor = "ggml-cpu-x64.dll"
+# The Vulkan loader comes with the graphics driver and is never staged; only the card part may import it.
+driver = { lib = "vulkan-1.dll", by = ["ggml-vulkan.dll"] }
+
+[workspace.metadata.stage.voice]
+# The voice files (ADR-0044): kx-platform's detector and check clips (`speech::{DETECTOR, CLIPS}`) go from this folder,
+# under the workspace root, into its `VOICE_FILES` folder beside the worker. The app's agree test checks they are here.
+from = "assets/voice"
+# The licence and credit files that ship beside them (THIRD_PARTY.md: Silero VAD, FLEURS).
+notices = ["LICENSE", "NOTICE", "LICENSE-CLIPS.txt", "README.md"]
 
 [workspace.metadata.sounds]
 # The sound recipes, variant jitter and resampler that `cargo xtask sounds` reads, under the workspace root.

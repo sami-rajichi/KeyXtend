@@ -21,7 +21,7 @@ These are the roadmap phases (`docs/roadmap.md`). Each one needs the one before 
 | P8 | Clipboard history | Done (v0.5) |
 | P9 | Quick-fill (vault) and one data folder | Done (v0.6) |
 | P10 | Selection helper | Done (v0.6) |
-| P11 | Voice typing (local Whisper) | Ready |
+| P11 | Voice typing ([design](superpowers/specs/2026-11-10-voice-typing-design.md)) | In progress (part 1 built; part 2, the cloud, next) |
 | P12 | Snip + OCR | Waiting |
 | P13 | ET66 and Dolch themes, quick settings strip and settings window, EN/FR/AR interface | Waiting |
 | P14 | Release pipeline and v1.0 | Waiting |
@@ -34,7 +34,7 @@ F1–F12 were chosen on 2026-09-26 and F13–F16 on 2026-09-27, to be added one 
 | # | Feature | What it does | Needs | Size |
 |---|---|---|---|---|
 | F1 | **Camera head control** | Move the pointer with your head and click with a face gesture (smile, raised eyebrows); webcam only, free and on your PC. | P4, v1.0 | Large |
-| F2 | **AI voice control** | Voice commands such as "open Chrome", "scroll down", "right-click" or "delete last word", using local Whisper plus a command list. Later, an optional small local AI for free-form requests. | P11 | Large |
+| F2 | **AI voice control** | Voice commands such as "open Chrome", "scroll down", "right-click" or "delete last word", using local speech models plus a command list. Later, an optional small local AI for free-form requests. | P11 | Large |
 | F3 | **Zoom-to-click** | Point near a tiny button, a magnified view appears, and you click inside it. | P4 | Medium |
 | F4 | **More click types** | Double-click and middle-click hold modes, and a "repeat last action" key. | P4 | Small |
 | F5 | **Quick system panel** | Volume, brightness, Wi-Fi, night light, plus window snap, switch and minimise, all in one paged panel. | P6 | Medium |

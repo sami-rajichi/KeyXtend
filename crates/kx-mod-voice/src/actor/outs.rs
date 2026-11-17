@@ -1,0 +1,97 @@
+//! The flow's effects, carried out in order: the runs, the view and the light, the level, the text for the typer, Copy,
+//! History and the counts, a download, a lost model file, a failed card, and the bar's clicks Compare holds.
+
+use kx_module_api::ports::{
+    BarButton, CardId, ClipPart, Fingerprint, VoiceAct, VoiceBar, VoiceClick, VoiceView,
+};
+use kx_module_api::{Redacted, Secret, Zeroizing};
+
+use super::Actor;
+use super::lanes::Owner;
+use super::typing::Source;
+use crate::flow::{In, Out};
+
+/// The round a bar click the flow hands to Compare names: none, as such a click is never stale.
+const NO_ROUND: u32 = 0;
+
+impl Actor {
+    /// Carries out one of the flow's effects.
+    pub(super) fn out(&mut self, out: Out) {
+        match out {
+            Out::Open { take, ask } => self.open_run((Owner::Flow, take), ask),
+            Out::Run { take, call } => self.call_run((Owner::Flow, take), call),
+            Out::View(view) => self.view(&view),
+            Out::Lit(lit) => self.publish(&lit),
+            Out::Level(level) => self.publish(&level),
+            Out::Type(ask) => self.type_text(Source::Flow(ask.round), ask),
+            Out::Copy(text) => self.copy(&text),
+            Out::Keep(kept) => self.keep_text(kept),
+            Out::Count(count) => self.count(&count),
+            Out::Download(iso) => self.download(&iso),
+            Out::Lost => {
+                let dos = self.panel.lost();
+                self.dos(dos);
+            }
+            Out::Fell { card, model } => self.fell(&card, &model),
+            Out::Lent(button) => self.lent(button),
+        }
+    }
+
+    /// Tells the view, notes its rows for the panel's clicks, and wants presses while Undo insert can act.
+    fn view(&mut self, view: &VoiceView) {
+        self.panel.told(&view.0);
+        self.publish(view);
+        let undo = matches!(&view.0.bar, VoiceBar::Text(text) if text.undo);
+        self.want_presses(undo);
+    }
+
+    /// Puts the bar's text on the clipboard, and tells the flow whether it went, so a refusal shows on the bar.
+    fn copy(&mut self, text: &Secret) {
+        let ok = self.clip_text(text.expose());
+        self.step(In::Copied(ok));
+    }
+
+    /// Puts `text` on the clipboard within `copy_ms`, through a copy wiped after; false, logged by kind, when it could
+    /// not.
+    pub(super) fn clip_text(&mut self, text: &str) -> bool {
+        let parts = [ClipPart::Text(Redacted::new(text.to_owned()))];
+        let written = self
+            .ports
+            .clip
+            .write(&parts, self.held.settings.copy_wait());
+        for part in parts {
+            if let ClipPart::Text(copy) = part {
+                drop(Zeroizing::new(copy.into_inner()));
+            }
+        }
+        written
+            .inspect_err(|error| tracing::warn!(%error, "a dictated text could not be copied"))
+            .is_ok()
+    }
+
+    /// Downloads language `iso`'s model: the panel opens on Models with the drives read now.
+    fn download(&mut self, iso: &str) {
+        self.held.drives = self.ports.files.drives();
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.download_for(iso, &facts);
+        self.dos(dos);
+    }
+
+    /// A card failed mid-run: its check of the model file is dropped, so the check runs again.
+    pub(super) fn fell(&mut self, card: &CardId, model: &Fingerprint) {
+        if self.held.checks.fell(card, model) {
+            self.save_checks();
+        }
+    }
+
+    /// The bar's Stop or Cancel while Compare holds the run, as a click on the panel.
+    fn lent(&mut self, button: BarButton) {
+        let act = VoiceAct {
+            round: NO_ROUND,
+            click: VoiceClick::Bar(button),
+        };
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.click(&act, &facts);
+        self.dos(dos);
+    }
+}

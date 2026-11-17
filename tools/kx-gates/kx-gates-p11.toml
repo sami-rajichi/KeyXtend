@@ -1,0 +1,136 @@
+# Settings P11 adds: G22's bench (`[g22_bench]`), G22 on the product (`[g22_product]`), the staged worker's edges
+# (`[g22_staged]`) and the box proofs (`[boxed]`). kx-gates reads them with kx-gates.toml, from its folder; a section
+# sits in one file only.
+
+# G22's bench (risk 7): each check clip's default model in kx-mod-voice's table reads the clip through the gate worker
+# and the product's speech host, with [voice]'s defaults, normal then weak. It starts no screen, moves nothing and
+# prints numbers, never text.
+[g22_bench]
+# The worker built with `gate`, which plays a sound file in place of the microphone; never a staged one. Build it with
+# `cargo build --release -p keyxtend-worker --features gate` into this target folder.
+worker = "../../target/p11-gates/release/keyxtend-worker.exe"
+# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts, as the roadmap's weak
+# PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses a folder holding any other part.
+weak_worker = "../../target/p11-gates/weak/keyxtend-worker.exe"
+# What every processor part of the engine is named from, and the ones a processor without AVX loads.
+part_prefix = "ggml-cpu-"
+weak_parts = ["ggml-cpu-x64.dll", "ggml-cpu-sse42.dll"]
+# The folder holding the model files, `models_dir`, is this PC's own absolute drive path, so it is set only in the
+# git-ignored kx-gates.local.toml beside this file; the bench, G22 on the product and the staged edges refuse to run
+# without it.
+
+# The shipped voice folder; the detector and every clip are plain names in it, so no other sound is ever read.
+voice_dir = "../../assets/voice"
+detector = "silero-vad-v6.2-F32.gguf"
+# Weak mode is [weak] in kx-gates.toml: its cores at its speed (the job's hard cap and the host's threads) and its
+# memory. A default the product would mark Not for this PC on that memory is not timed there.
+
+# Each take listens this long past its clip's end, in ms, from the moment the microphone opened, so the cut hears
+# silence after the last word; at least [voice] pad_ms (checked).
+tail_ms = 1000
+# The run passes when each normal row's warm wait after Stop over its clip's length is at most max_rtf, with at most
+# [voice] card_diff words wrong; normal's 0.5 is about 1.5 times the slowest default's trial rate (docs/items/P11.md).
+# Weak rows are readings (roadmap G22: speed recorded in weak mode): past max_weak_rtf a row only reads "slow", and one
+# not for this PC is a reading too; only a fault or words wrong fails. Weak's 1.0 is real time, where pieces keep up.
+max_rtf = 0.5
+max_weak_rtf = 1.0
+# Longest wait for a worker the bench or the staged edges let go to end after the host's goodbye, in ms.
+end_wait_ms = 10000
+
+# The check clips by language, exactly the table's tested languages: the shipped file and the sentence it reads, as
+# assets/voice/README.md credits it (a test pins both), and other readings of it the words-wrong count also accepts.
+[g22_bench.clips.en]
+file = "check-en.wav"
+sentence = "Today, the only insects that cannot fold back their wings are dragon flies and mayflies."
+# FLEURS splits "dragon flies", which models write as the one word "dragonflies" and the count would take as 2 wrong.
+also = ["Today, the only insects that cannot fold back their wings are dragonflies and mayflies."]
+
+[g22_bench.clips.fr]
+file = "check-fr.wav"
+sentence = "Le chocolat chaud est conforme aux normes belges. Les jus de fruits sont chers mais excellents."
+also = []
+
+[g22_bench.clips.ar]
+file = "check-ar.wav"
+sentence = "يتصاعد من المصنع دخاناً أبيض، وهذا ما أظهرته تقارير تلفزيونية."
+also = []
+
+# G22 on the product (`g22 keyxtend`): for each clip above, a copy of the voice gate build on a data folder of its own
+# plays that clip through the gate worker in place of the microphone. target-window takes the clip's layout, the gate
+# clicks Dictation, waits the clip and the bench's tail_ms, then clicks Stop. The words typed must be within [voice]
+# card_diff, target-window must keep the foreground, and the bar must sit above the keyboard on top, never activated.
+[g22_product]
+# The app built with `gate-voice` beside the bench's gate worker, so its worker is that one. Build it with
+# `cargo build --release -p keyxtend --features gate-voice` into the bench's target folder.
+program = "../../target/p11-gates/release/keyxtend.exe"
+# The layout (LANGID) target-window takes for each clip's language: English (US), French (France), Arabic (Tunisia).
+layouts = { en = "0409", fr = "040C", ar = "1C01" }
+# Where the copy's models run ([voice] device): "cpu", "auto", or a card's id as the engine lists it, such as "Vulkan1"
+# (ASCII letters, digits, "-", "_" and "."; built-in graphics list as a card too). For the card run, pick the card with
+# Use on the Voice panel's Device page and copy the `device` value it writes into the product's settings file. With a
+# card here, a language passes only when that card wrote its text.
+device = "cpu"
+# Wait after the copy's keyboard shows before the first click, so the voice module has read the models folder, in ms.
+ready_ms = 5000
+# With a card in device, the wait after a clip's layout is in front before Dictation, in ms. On the gate's fresh data
+# folder the card serves a language only once its check of that language's model passed: the devices and every model's
+# fingerprint are read, then the check runs (load, warm-up, the clip on the card and on the processor). A first
+# estimate past Cohere Arabic's check; set it from the first card run.
+card_wait_ms = 120000
+# Longest wait for the bar to show after the Dictation click, in ms.
+bar_wait_ms = 10000
+# Longest wait for target-window to type in a clip's layout, in ms.
+layout_wait_ms = 3000
+# Longest wait after the bar shows for the copy's worker to load the model and start playing the clip, in ms; Stop
+# goes this long, the clip's length and the bench's tail_ms after the bar shows. Cohere Arabic's cold load is the
+# slowest default (docs/items/P11.md).
+open_ms = 15000
+# The typed text counts as done once it stays the same this long after Stop, in ms; the longest wait for it is the
+# speech host's own (a load, a warm-up, a piece and one answer, as the bench waits).
+settle_ms = 3000
+# The line the voice gate build logs at start with its clip (apps/keyxtend/src/run.rs).
+warn_line = "played sound in place of the microphone: a gate build, never for daily use"
+# The line it logs with the device id of each dictation it writes, which each language's line prints
+# (apps/keyxtend/src/played/told.rs).
+wrote_line = "voice gate build: a dictation was written"
+# The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
+group = "voice"
+stop = "stop"
+# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard.
+log_level = "debug"
+# What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
+# which holds text.
+why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
+
+# The staged worker's edges (`g22 staged`), on a copy of what `cargo xtask stage` wrote, with no screen and no mouse.
+# Edge 28: without the card part the worker starts and offers no card. Edge 29: with only the plainest processor part,
+# the card's self-test still reads the clip right on the processor. Edge 39: a part planted beside a model in a models
+# folder is never loaded. Each copy and planted file goes at the end.
+[g22_staged]
+# The staged app's folder: the stage's out_dir and app in the root Cargo.toml (a test pins it).
+stage = "../../target/stage/keyxtend"
+# The gate's copy of the staged worker's files, under TEMP.
+copy = "kx-g22-staged"
+# The card part and the plainest processor part (the root Cargo.toml's engine driver.by and floor; a test pins them).
+card_part = "ggml-vulkan.dll"
+floor_part = "ggml-cpu-x64.dll"
+# Edge 39's models folder, made inside g22_bench.models_dir, and the part name its planted copy of floor_part takes.
+plant = "kx-g22-plant"
+plant_as = "ggml-cpu-alderlake.dll"
+# The clip whose default model edges 29 and 39 check.
+lang = "en"
+# How often edges 29 and 39 list the worker's modules while its check runs, in ms.
+poll_ms = 100
+
+# The box proofs from the real install (`boxed https`, `boxed folder`), task 14's two: the installed worker's fetch job,
+# under the worker's own token and job, reaches HTTPS through WinHTTP, and works in a folder made with the product's
+# guard at a second drive's root. The HTTPS proof sends one request and refuses its answer by the head, saving no byte;
+# the folder goes at the end. They move nothing and print no path.
+[boxed]
+# The real install's worker: Program Files, the root Cargo.toml's devtools install_dir and stage app (a test pins it).
+worker = 'C:\Program Files\KeyXtend-dev\keyxtend\keyxtend-worker.exe'
+# The second drive's root, never the system drive, and the guarded folder the proofs make at it.
+drive = 'D:\'
+folder = "kx-boxed-proof"
+# The language whose default model's row in kx-mod-voice's table gives the HTTPS address and its hosts.
+lang = "en"

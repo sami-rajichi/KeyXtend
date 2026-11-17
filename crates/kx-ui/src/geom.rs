@@ -266,5 +266,8 @@ pub fn screen_near(at: Point, screens: &[Screen]) -> Option<&Screen> {
     screens.iter().min_by_key(off)
 }
 
+mod bar;
+pub use bar::by_bar;
+
 #[cfg(test)]
 mod tests;

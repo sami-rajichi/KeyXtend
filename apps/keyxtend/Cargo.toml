@@ -13,7 +13,7 @@ workspace = true
 
 # One feature per module: the app picks the modules it ships (ARCHITECTURE.md).
 [features]
-default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault"]
+default = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault", "mod-voice"]
 mod-clipboard = ["dep:kx-mod-clipboard"]
 mod-keyboard = ["dep:kx-mod-keyboard"]
 mod-layouts = ["dep:kx-mod-layouts"]
@@ -23,14 +23,21 @@ mod-predict = ["dep:kx-mod-predict"]
 mod-scroll = ["dep:kx-mod-scroll"]
 mod-selection = ["dep:kx-mod-selection"]
 mod-vault = ["dep:kx-mod-vault"]
+mod-voice = ["dep:kx-mod-voice"]
 # The gate-only build: `--sim-input` makes the mouse engine act on the gate tool's input, not the hand's. It never
 # ships, and `cargo xtask stage` refuses a program that holds the flag.
 gate-input = ["kx-platform-windows/sim-input"]
+# The gate-only voice build: `--sound <file.wav>` makes its worker, the one built with `gate`, play that file in place
+# of the microphone, so G22 dictates without a voice. It never ships: the stage and dev-install refuse a program holding
+# kx-ipc's `SOUND_FLAG`.
+gate-voice = ["dep:kx-ipc"]
 
 [dependencies]
 # The sealed files that keep the learned words, the clipboard history and Quick-fill's notebook, under data keys the
 # platform's guard wraps (ADR-0010, ADR-0034, ADR-0038), and the OS's random bytes.
 kx-crypto = { path = "../../crates/kx-crypto" }
+# The sound flag the voice gate build passes its gate worker; only `gate-voice` turns it on.
+kx-ipc = { path = "../../crates/kx-ipc", optional = true }
 kx-kernel = { path = "../../crates/kx-kernel" }
 kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard", optional = true }
 kx-mod-keyboard = { path = "../../crates/kx-mod-keyboard", optional = true }
@@ -41,13 +48,15 @@ kx-mod-predict = { path = "../../crates/kx-mod-predict", optional = true }
 kx-mod-scroll = { path = "../../crates/kx-mod-scroll", optional = true }
 kx-mod-selection = { path = "../../crates/kx-mod-selection", optional = true }
 kx-mod-vault = { path = "../../crates/kx-mod-vault", optional = true }
+kx-mod-voice = { path = "../../crates/kx-mod-voice", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
 kx-platform = { path = "../../crates/kx-platform" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 # The data folder's file names, where the log opens.
 kx-settings = { path = "../../crates/kx-settings" }
 kx-ui = { path = "../../crates/kx-ui" }
-# A later copy reads the user's `[ui]` section without changing the file, and a debug build reads the words manifest.
+# A later copy reads the user's `[ui]` section without changing the file, and a debug build reads the words manifest
+# and the root manifest's voice folder.
 toml.workspace = true
 tracing.workspace = true
 # Qt's app object and QML engine, which run the UI on the main thread.
@@ -73,4 +82,4 @@ required-features = ["mod-keyboard", "mod-layouts"]
 # The app from start to stop over the fake platform, without Qt.
 [[test]]
 name = "life"
-required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault"]
+required-features = ["mod-clipboard", "mod-keyboard", "mod-layouts", "mod-mouse", "mod-power", "mod-predict", "mod-scroll", "mod-selection", "mod-vault", "mod-voice"]

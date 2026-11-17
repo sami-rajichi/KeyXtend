@@ -14,6 +14,8 @@ mod clip;
 mod fill;
 mod layer;
 mod pad;
+mod voice;
+mod voicepanel;
 
 fn themes() -> Themes {
     Themes::shipped().expect("tokens load")

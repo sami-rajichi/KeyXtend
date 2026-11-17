@@ -8,6 +8,8 @@ use super::units::{db_gain, index, samples};
 use super::*;
 use crate::test_support::TempDir;
 
+mod shipped;
+
 /// The recipe file the project ships.
 const SHIPPED: &str = include_str!("../../../assets/sounds/recipes.toml");
 

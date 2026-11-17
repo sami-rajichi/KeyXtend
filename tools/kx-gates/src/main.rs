@@ -6,6 +6,7 @@ mod admin;
 mod aim;
 mod apps;
 mod board;
+mod boxed;
 mod budget;
 mod busbench;
 mod capture;
@@ -56,9 +57,12 @@ mod g20tab;
 mod g21;
 mod g21prod;
 mod g22;
+#[cfg(feature = "voice")]
 mod g22bench;
 mod g22cfg;
-mod g22type;
+#[cfg(feature = "voice")]
+mod g22prod;
+mod g22staged;
 mod g23;
 mod g24;
 mod g25;
@@ -115,10 +119,12 @@ mod hand;
 mod hooklog;
 mod keymap;
 mod keys;
+mod langkey;
 mod langs;
 mod launch;
 mod launchterm;
 mod modekey;
+mod modlist;
 mod mouse;
 mod mouseguard;
 mod out;
@@ -157,7 +163,8 @@ mod typebox;
 mod uilook;
 mod usage;
 mod walk;
-mod wer;
+mod weakcfg;
+mod weakjob;
 mod win;
 mod winclip;
 mod winfind;
@@ -195,6 +202,7 @@ fn main() -> ExitCode {
     keep_stdio_private();
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let result = match raw.as_slice() {
+        [command, rest @ ..] if command == boxed::COMMAND => boxed::run(rest),
         [command] if command == capture::COMMAND => {
             config::load().and_then(|cfg| capture::run(&cfg.capture))
         }

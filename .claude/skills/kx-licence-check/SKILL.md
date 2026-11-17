@@ -12,6 +12,7 @@ KeyXtend is view only, all rights reserved, and is sold as a closed app (ADR-003
    - MIT, Apache-2.0 (also WITH LLVM-exception), BSD-2/3-Clause, ISC, Zlib, Unicode-3.0, MPL-2.0, CC0-1.0, OFL-1.1;
    - LGPL only as a separate, replaceable library, reviewed; the app's licence must let users replace it and reverse engineer to debug that (LGPL-3.0 §4, LGPL-2.1 §6);
    - CC-BY-4.0 and CC-BY-SA-4.0 for **data files** only, shipped as separate files with attribution;
+   - OpenMDW-1.1 for model files the user downloads, never shipped (owner, 2026-11-14);
    - Qt's bundled parts, checked against Qt's SBOM: permissive notice licences inside Qt are accepted (owner, 2026-09-29) and recorded per DLL with their credits; copyleft-only parts are still refused.
 3. **Refuse:**
    - any GPL or AGPL (for example Vosk ar-linto); a dual licence is fine when we take its permissive side;

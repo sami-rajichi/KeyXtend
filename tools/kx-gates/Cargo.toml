@@ -11,6 +11,12 @@ repository.workspace = true
 [lints]
 workspace = true
 
+# `voice` adds the gates that name kx-ipc's `SOUND_FLAG` (`g22 keyxtend`, `g22 bench`). It is off by default, so the
+# release kx-gates that `cargo xtask dev-install` signs holds no gate flag.
+[features]
+default = []
+voice = ["dep:kx-ipc"]
+
 [dependencies]
 kx-test-support = { path = "../../crates/kx-test-support" }
 kx-target-window = { path = "../../tools/kx-target-window" }
@@ -20,6 +26,8 @@ toml.workspace = true
 
 # Windows-only gates. spike-core is the Qt test face's shared code, until each phase aims its gates at the product.
 [target.'cfg(windows)'.dependencies]
+# The sound flag the gate worker and the voice gate build take, written once in kx-ipc; only `voice` turns it on.
+kx-ipc = { path = "../../crates/kx-ipc", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
 # G8's bus publish time on the product's own event bus.
 kx-kernel = { path = "../../crates/kx-kernel" }
@@ -39,9 +47,11 @@ kx-mod-clipboard = { path = "../../crates/kx-mod-clipboard" }
 kx-mod-vault = { path = "../../crates/kx-mod-vault" }
 # The selection chips' settings and translate sites: G19's caret wait, its long Arabic line and the link it reads.
 kx-mod-selection = { path = "../../crates/kx-mod-selection" }
-# The product's commands: `close` posts Quit to the running copy.
+# Voice typing's models table, [voice] defaults and scorer: G22's bench takes each language's default and its ask.
+kx-mod-voice = { path = "../../crates/kx-mod-voice" }
+# The product's commands: `close` posts Quit to the running copy; the speech host G22's bench drives.
 kx-platform = { path = "../../crates/kx-platform" }
-# The golden layout table format that `capture-layouts` writes.
+# The golden layout table format that `capture-layouts` writes, and the fake speech G22's bench tests drive.
 kx-platform-fake = { path = "../../crates/kx-platform-fake" }
 kx-platform-windows = { path = "../../crates/kx-platform-windows" }
 # The product's file names: G8 reads its log, and the gates its keyboard settings.
@@ -61,6 +71,7 @@ windows = { workspace = true, features = [
     "Win32_System_Console",
     "Win32_System_DataExchange",
     "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_JobObjects",
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
     "Win32_System_Ole",
@@ -81,6 +92,10 @@ windows = { workspace = true, features = [
 [dev-dependencies]
 # Property tests for the parsers of what the browser shows.
 proptest.workspace = true
+
+[target.'cfg(windows)'.dev-dependencies]
+# The sound flag the exe test looks for in the built kx-gates.
+kx-ipc = { path = "../../crates/kx-ipc" }
 
 [build-dependencies]
 embed-manifest.workspace = true

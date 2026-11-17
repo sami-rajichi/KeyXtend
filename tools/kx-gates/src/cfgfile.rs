@@ -22,12 +22,19 @@ pub const P8_FILE: &str = "kx-gates-p8.toml";
 pub const P9_FILE: &str = "kx-gates-p9.toml";
 /// File name of the settings P10 adds; it is read only from the folder of `FILE`.
 pub const P10_FILE: &str = "kx-gates-p10.toml";
+/// File name of the settings P11 adds; it is read only from the folder of `FILE`.
+pub const P11_FILE: &str = "kx-gates-p11.toml";
+/// This PC's own values, git-ignored and optional; read only from the folder of `FILE`, so with uiAccess only beside
+/// the exe, never from the user-writable repo.
+pub const LOCAL_FILE: &str = "kx-gates.local.toml";
+/// The only keys `LOCAL_FILE` may set, by section; a tracked file never sets them.
+pub const LOCAL_KEYS: [(&str, &str); 1] = [("g22_bench", "models_dir")];
 /// kx-gates' own settings files, in the order they are read.
-pub const OWN: [&str; 8] = [
-    FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE, P8_FILE, P9_FILE, P10_FILE,
+pub const OWN: [&str; 9] = [
+    FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE, P8_FILE, P9_FILE, P10_FILE, P11_FILE,
 ];
 /// Every settings file kx-gates reads: its own, the spike's and target-window's.
-pub const ALL: [&str; 10] = [
+pub const ALL: [&str; 11] = [
     FILE,
     P3_FILE,
     P4_FILE,
@@ -36,6 +43,7 @@ pub const ALL: [&str; 10] = [
     P8_FILE,
     P9_FILE,
     P10_FILE,
+    P11_FILE,
     spike_core::config::FILE,
     kx_target_window::config::FILE,
 ];

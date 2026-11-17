@@ -31,6 +31,14 @@ gain_db = 0
 [drop]
 files = ["thud.wav"]
 gain_db = 0
+
+[voice_start]
+files = ["tap-1.wav"]
+gain_db = 0
+
+[voice_stop]
+files = ["tap-1.wav"]
+gain_db = 0
 "#;
 
 /// A small valid recipe book: one recipe with three variants, one without.

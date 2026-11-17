@@ -117,7 +117,7 @@ pub struct G8 {
 
 impl G8 {
     /// Refuses a zero count or warm-up, a bad budget, a negative slack, a pressed key the board does not have, a churn
-    /// that churns nothing, or a use step or Arabic run that could pass with nothing used.
+    /// that churns nothing, or a use step or Arabic run that could pass with nothing used; `[weak]` checks itself.
     pub fn check(&self) -> Result<(), String> {
         self.check_budgets()?;
         if [self.presses, self.clicks, self.subscribers, self.publishes].contains(&0) {

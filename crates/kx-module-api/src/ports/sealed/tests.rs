@@ -59,16 +59,41 @@ fn a_device_name_is_refused_though_it_has_the_form() {
     for text in RESERVED_NAMES {
         assert_eq!(BlobName::new(text), Err(SealedError::BadName), "{text}");
         let longer = format!("{text}-x");
-        assert!(BlobName::new(&longer).is_ok(), "{longer}");
+        let formed = text.chars().all(|c| alphabet().contains(&c));
+        assert_eq!(BlobName::new(&longer).is_ok(), formed, "{longer}");
     }
 }
 
 #[test]
 fn the_device_names_cover_every_windows_device() {
-    let numbered = (0..=9).flat_map(|n| [format!("com{n}"), format!("lpt{n}")]);
-    let named = ["con", "prn", "aux", "nul"].map(String::from);
+    let digits = ('0'..='9').chain(['¹', '²', '³']);
+    let numbered = digits.flat_map(|n| [format!("com{n}"), format!("lpt{n}")]);
+    let named = ["con", "prn", "aux", "nul", "conin$", "conout$"].map(String::from);
     for device in named.into_iter().chain(numbered) {
         assert!(RESERVED_NAMES.contains(&device.as_str()), "{device}");
+    }
+}
+
+#[test]
+fn a_name_whose_stem_is_a_device_names_one_in_any_case() {
+    let devices = [
+        "NUL",
+        "nul.txt",
+        "COM¹",
+        "lpt³.log",
+        "CONIN$",
+        "conout$.txt",
+        "aux .x",
+        "Lpt0.a.b",
+    ];
+    for name in devices {
+        assert!(names_device(name), "{name:?}");
+    }
+    let near = [
+        "COM10", "COM⁴", "console", "conin", "conin$x", "x.nul", "nul-1",
+    ];
+    for name in near {
+        assert!(!names_device(name), "{name:?}");
     }
 }
 

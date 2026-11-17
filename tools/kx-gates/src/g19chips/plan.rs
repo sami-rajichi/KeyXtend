@@ -16,6 +16,8 @@ pub const PLACE: &str = "place";
 pub const GROUPS: [&str; 4] = [SEEN, FOCUS, PLACE, CHIPS];
 /// The terminals step, by its key in the run; `g19 terminals` runs it alone.
 pub const TERMINALS: &str = "terminals";
+/// The hung-app step, by its key in the run; `g19 hung` runs it alone.
+pub const HUNG: &str = "hung";
 /// The parts each run step gives, in order.
 pub const STEPS: [&str; 8] = [
     "edits",
@@ -24,7 +26,7 @@ pub const STEPS: [&str; 8] = [
     "ours",
     "near_bottom",
     TERMINALS,
-    "hung",
+    HUNG,
     "translate",
 ];
 /// What is recorded beside them, never judged.
@@ -183,6 +185,11 @@ mod tests {
             ["console"],
             "no place case in a run alone"
         );
+    }
+
+    #[test]
+    fn the_steps_run_alone_are_steps_of_the_full_run() {
+        assert!(STEPS.contains(&TERMINALS) && STEPS.contains(&HUNG));
     }
 
     #[test]

@@ -75,6 +75,9 @@ pub fn serve<R: Reader>(reader: &R, job: Job) {
             });
             let _ = reply.send(read);
         }
+        Ask::Look { by, reply } => {
+            let _ = reply.send(on_focus(reader, by, |el| Ok(Some(reader.change(el)))));
+        }
     }
 }
 

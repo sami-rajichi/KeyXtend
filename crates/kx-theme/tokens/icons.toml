@@ -103,10 +103,12 @@ on = "chevron-down"
 [notice]
 icon = "keyboard"
 
-# The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364), Show keyboard and Quit.
+# The tray: the drawing on its icon, and its menu's items (mock-up .ctx .i, line 364): Show keyboard, Dictation as the
+# Dictation key shows it, and Quit.
 [tray]
 glyph = "keyboard"
 show = "keyboard"
+voice = "mic"
 quit = "power"
 
 # The selection strip's keycaps (design/selection-chips.html design 4, I): Copy, Cut and Paste as on the shortcuts
@@ -218,3 +220,112 @@ other_folder = "folder-open"
 here = "check"
 done = "check"
 lock = "lock"
+
+# The dictation bar (design/voice-bar.html bar(), lines 279-298): each button by the hub's id (Listen again as the
+# Dictation key, Copy turning to its tick once copied), the gear, the mark before Transcribing, a text and a password
+# box's dots, and before each note by its hint id; a note not listed wears `note`.
+[voice]
+cancel = "x"
+stop = "square"
+gear = "settings-2"
+close = "x"
+copy = "copy"
+copied = "check"
+undo = "undo-2"
+anyway = "rotate-ccw"
+listen = "mic"
+download = "download"
+transcribing = "audio-lines"
+text = "captions"
+password = "lock"
+note = "square-x"
+
+# The microphone's faults show it off, a model's room its drive, a language its languages, the memory the processor,
+# and a download's faults their own mark.
+[voice.notes]
+cancelled = "x"
+nothing = "mic-off"
+no-mic = "mic-off"
+mic-busy = "mic-off"
+mic-refused = "mic-off"
+unplugged = "mic-off"
+no-model = "hard-drive"
+language = "languages"
+no-language = "languages"
+checking = "refresh-cw"
+no-fit = "cpu"
+print = "download"
+taken = "file"
+full = "hard-drive"
+folder = "folder"
+net = "wifi"
+
+# The Voice panel (design/voice-bar.html PAGE, lines 301-393): the folder line, a stepper's minus and plus, a place's
+# chevrons, a pinned text, the tick where one row is picked, Unpin, the slow-PC and untested lines, a folder row; each
+# page's header icon (also a home row's tile), each button by the hub's id or its kind (Start reading is `compare`),
+# each mark, line above a list and Device kind by id. An id left out shows no icon, as Default and Waiting in the mock-up.
+[voice.panel]
+room = "hard-drive"
+minus = "minus"
+plus = "plus"
+before = "chevron-left"
+after = "chevron-right"
+pinned = "pin"
+ticked = "check"
+unpin = "pin-off"
+slow = "cpu"
+untested = "languages"
+folder = "folder"
+
+[voice.panel.pages]
+home = "mic"
+models = "audio-lines"
+device = "cpu"
+compare = "scale"
+history = "history"
+options = "settings-2"
+folders = "folder-open"
+
+[voice.panel.buttons]
+back = "arrow-left"
+close = "x"
+use = "check"
+download = "download"
+delete = "trash-2"
+check = "activity"
+again = "rotate-ccw"
+rerun = "rotate-ccw"
+insert = "clipboard-paste"
+copy = "copy"
+pin = "pin"
+delete-all = "trash-2"
+cancel = "x"
+change = "folder"
+open = "folder-open"
+here = "check"
+compare = "mic"
+pause = "pause"
+resume = "play"
+
+[voice.panel.marks]
+used = "check"
+ready = "check"
+download = "download"
+not-here = "x"
+other = "file"
+passed = "check"
+failed = "x"
+done = "check"
+run-failed = "x"
+
+[voice.panel.tops]
+best = "check"
+failed = "x"
+step = "scale"
+kept = "check"
+
+[voice.panel.kinds]
+auto = "arrow-left-right"
+cpu = "cpu"
+card = "gpu"
+built-in = "gpu"

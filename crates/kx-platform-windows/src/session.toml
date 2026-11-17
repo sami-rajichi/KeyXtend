@@ -1,0 +1,15 @@
+# The window messages that tell a session change (ADR-0042 decision 9), each as its message and its wParam; every
+# number names its constant in WinUser.h or WtsApi32.h. A wake comes twice when a person wakes the PC, told once.
+locked = [
+    [0x2B1, 7], # WM_WTSSESSION_CHANGE, WTS_SESSION_LOCK
+]
+unlocked = [
+    [0x2B1, 8], # WM_WTSSESSION_CHANGE, WTS_SESSION_UNLOCK
+]
+sleeping = [
+    [0x218, 4], # WM_POWERBROADCAST, PBT_APMSUSPEND
+]
+woke = [
+    [0x218, 18], # WM_POWERBROADCAST, PBT_APMRESUMEAUTOMATIC
+    [0x218, 7],  # WM_POWERBROADCAST, PBT_APMRESUMESUSPEND
+]

@@ -1,8 +1,9 @@
 //! A session's worker and the rules it lives by: started on demand, one ask at a time within the deadline, ended when
 //! late or lying and held back by a doubling backoff, and stopped when idle.
 
-use super::{Frames, Heard, Launch, Lost, Spawner, Times, Worker, exit_note};
-use kx_ipc::{CLEAN_EXIT, IpcError};
+use super::backoff::{Backoff, ms};
+use super::{Frames, Heard, Launch, Lost, Spawner, Times, Worker, bye, exit_note};
+use kx_ipc::IpcError;
 use kx_module_api::{Clock, Mono};
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,10 +32,7 @@ pub(crate) struct Host<S: Spawner<F>, F: Frames> {
     worker: Option<S::Worker>,
     /// When the worker last answered.
     used: Mono,
-    /// No start before this point.
-    calm: Mono,
-    /// The backoff after the next failure.
-    pause: Duration,
+    backoff: Backoff,
     /// The next ask's id; ids start at 1.
     next: u32,
 }
@@ -54,8 +52,7 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
             launch,
             worker: None,
             used: Mono::default(),
-            calm: Mono::default(),
-            pause: first_pause(times),
+            backoff: Backoff::new(times),
             next: 1,
         }
     }
@@ -100,26 +97,19 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
         self.clear_quit();
         let now = self.clock.now();
         if self.worker.is_none() {
-            if now < self.calm {
-                return Err(self.down(now));
+            if self.backoff.resting(now) {
+                return Err(self.backoff.down(now));
             }
             match self.spawner.spawn(&self.launch) {
                 Ok(worker) => self.worker = Some(worker),
                 Err(e) => {
                     tracing::warn!(job = F::JOB, error = %e, "a worker did not start");
-                    self.back_off(now);
+                    self.backoff.hold(now);
                 }
             }
         }
-        let down = self.down(now);
+        let down = self.backoff.down(now);
         self.worker.as_mut().ok_or(down)
-    }
-
-    /// The refusal of an ask while no worker runs: how long until one may start again.
-    fn down(&self, now: Mono) -> Lost {
-        Lost::Down {
-            retry_in: self.calm.saturating_since(now),
-        }
     }
 
     /// Ends a worker that quit since the last ask, with no backoff, since no ask of ours failed.
@@ -159,7 +149,7 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
     /// Notes an answer: the idle time starts again and the backoff goes back to its first wait.
     fn served(&mut self) {
         self.used = self.clock.now();
-        self.pause = first_pause(self.times);
+        self.backoff.reset();
     }
 
     /// Ends the worker for `fault` and starts the backoff; a late worker is `Late`, any other `Gone`.
@@ -170,7 +160,7 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
             let note = code.map(exit_note);
             tracing::warn!(job = F::JOB, ?fault, ?note, "a worker failed and was ended");
         }
-        self.back_off(self.clock.now());
+        self.backoff.hold(self.clock.now());
         if fault == Fault::Late {
             Lost::Late
         } else {
@@ -178,30 +168,16 @@ impl<S: Spawner<F>, F: Frames> Host<S, F> {
         }
     }
 
-    /// Holds the next start back by the backoff, which then doubles up to its cap.
-    fn back_off(&mut self, now: Mono) {
-        self.calm = now.saturating_add(self.pause);
-        let cap = ms(self.times.restart_max_ms);
-        self.pause = self.pause.saturating_mul(2).min(cap);
-    }
-
     /// Says goodbye to the worker, waits the deadline at most for it to quit, then ends it.
     fn stop(&mut self) {
-        let Some(mut worker) = self.worker.take() else {
-            return;
-        };
-        worker.send(F::bye());
-        let code = worker.code(ms(self.times.deadline_ms));
-        worker.end();
-        if code != Some(u32::from(CLEAN_EXIT)) {
-            let note = exit_note(code);
-            tracing::warn!(job = F::JOB, note, "a worker did not quit cleanly");
+        if let Some(mut worker) = self.worker.take() {
+            bye::<F, _>(&mut worker, ms(self.times.deadline_ms));
         }
     }
 
     /// How long the worker may sit idle.
     fn idle_time(&self) -> Duration {
-        Duration::from_secs(u64::from(self.times.idle_s))
+        self.times.idle()
     }
 }
 
@@ -209,15 +185,6 @@ impl<S: Spawner<F>, F: Frames> Drop for Host<S, F> {
     fn drop(&mut self) {
         self.stop();
     }
-}
-
-/// The backoff's first wait, never past its cap.
-fn first_pause(times: Times) -> Duration {
-    ms(times.restart_ms).min(ms(times.restart_max_ms))
-}
-
-fn ms(n: u32) -> Duration {
-    Duration::from_millis(u64::from(n))
 }
 
 #[cfg(test)]

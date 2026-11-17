@@ -21,7 +21,7 @@ pub(crate) const REPEAT_EVERY_MS: RangeInclusive<u64> = 33..=1_000;
 /// The most characters a picked word may erase or type: room for the longest word with chips and its gap (the app ties
 /// it to `[predict] max_word`) or a long email, and never a page of text.
 pub const TEXT_CAP: RangeInclusive<u16> = 128..=1_024;
-/// The pause after each Backspace of a picked word, in ms: none, up to one too short to notice across a word.
+/// The pause after each Backspace of a picked word or text, in ms: none, up to one too short to notice across a word.
 pub const ERASE_GAP_MS: RangeInclusive<u64> = 0..=50;
 /// How late a fill's part after a Tab may still go, in ms: from a slow app's hiccup to a long one. 20 s is long enough
 /// to switch apps; the app check, not this bound, keeps a fill from reaching another app.
@@ -118,9 +118,10 @@ pub struct KeyboardSettings {
     pub repeat_every_ms: u64,
     /// Apps that get text as key presses in their own layout, by file name.
     pub key_apps: Vec<String>,
-    /// The most characters a picked word may erase or type; a longer request types nothing.
+    /// The most characters a picked word may erase or type, a longer one typing nothing; a dictated text goes in pieces
+    /// this long.
     pub text_cap: u16,
-    /// The pause after each Backspace of a picked word, in ms.
+    /// The pause after each Backspace of a picked word or a dictated text, in ms.
     pub erase_gap_ms: u64,
     /// How late a fill's part after a Tab may still go, in ms.
     pub fill_late_ms: u64,

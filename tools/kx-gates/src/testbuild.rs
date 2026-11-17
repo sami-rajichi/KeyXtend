@@ -13,7 +13,6 @@ use kx_module_api::{ModuleId, Settings, SettingsSpec};
 use kx_platform::PORTABLE_DIR;
 use kx_platform_windows::uiaccess;
 use kx_settings::{peek, peek_section};
-use spike_core::weak::Job;
 
 pub use parts::{Closed, holds, warned};
 use parts::{SLOW, START_MENU, ended_at_start, gone, not_asked, not_back, plain, to_restore};
@@ -25,6 +24,7 @@ use crate::modekey::{ModeKey, Wait};
 use crate::out::say;
 use crate::proc::Process;
 use crate::product::{self, Keyboard, NAME};
+use crate::weakjob::Job;
 use crate::{admin, close, copyend, g8start, out, probe, win};
 
 /// The product's test build while it runs; dropping it quits it and starts the owner's copy again, best effort.

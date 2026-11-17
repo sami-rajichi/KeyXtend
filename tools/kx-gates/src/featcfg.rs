@@ -1,5 +1,5 @@
 //! Settings of the probes G7, G19 to G21, G24 and G25: `[edit_keys]`, `[g7]`, `[g19]` to `[g21]`, `[g24]` and
-//! `[g25]`. `check` also validates G22, whose settings live in `g22cfg`; G23's are in `p9cfg`.
+//! `[g25]`. G22's settings live in `g22cfg`, G23's in `p9cfg`.
 #![cfg(windows)]
 
 use kx_mod_keyboard::legend::is_mark;
@@ -8,7 +8,6 @@ use windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE;
 
 use crate::board;
 use crate::config::GatesConfig;
-use crate::g22cfg::plain_name;
 
 /// Refuses probe settings that could pick the wrong copy, clean up the owner's copies or pass with nothing checked.
 pub fn check(c: &GatesConfig) -> Result<(), String> {
@@ -29,17 +28,6 @@ pub fn check(c: &GatesConfig) -> Result<(), String> {
     }
     if c.g19.lines.is_empty() || c.g19.lines.iter().any(String::is_empty) {
         return Err("g19.lines must hold at least one line, none empty".to_string());
-    }
-    let g = &c.g22;
-    let bad_layout = g
-        .sentences
-        .iter()
-        .any(|s| s.layout_id().is_none() || s.text.is_empty());
-    if g.sentences.is_empty() || bad_layout || !plain_name(&g.clips) || g.type_gaps_ms.is_empty() {
-        return Err(
-            "g22 needs sentences with a 4-digit hex layout and text, a plain clips folder name and typing gaps"
-                .to_string(),
-        );
     }
     Ok(())
 }
@@ -214,12 +202,11 @@ mod tests {
     fn check_refuses_a_bad_paste_back_min_length_or_prefix() {
         let good = crate::config::load().expect("kx-gates.toml loads");
         assert!(check(&good).is_ok());
-        let bad: [fn(&mut GatesConfig); 18] = [
+        let bad: [fn(&mut GatesConfig); 11] = [
             |c| c.g7.word.clear(),
             |c| c.g7.keys.clear(),
             |c| c.g7.opener.clear(),
             |c| c.g7.word.insert(0, '\u{064E}'),
-            |c| c.g22.type_gaps_ms.clear(),
             |c| c.g19.lines.clear(),
             |c| c.g19.lines[0].clear(),
             |c| c.g20.paste_back = 0,
@@ -227,12 +214,6 @@ mod tests {
             |c| c.probes.forget_min_chars = 0,
             |c| c.g20.prefix.clear(),
             |c| c.g25.text.clear(),
-            |c| c.g22.sentences.clear(),
-            |c| c.g22.sentences[0].layout = "EN".into(),
-            |c| c.g22.clips.clear(),
-            |c| c.g22.clips = "..".into(),
-            |c| c.g22.clips = "a/b".into(),
-            |c| c.g22.clips = "C:\\x".into(),
         ];
         for (i, spoil) in bad.iter().enumerate() {
             let mut c = good.clone();

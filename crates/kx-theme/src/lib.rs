@@ -28,7 +28,7 @@ pub use common::Common;
 pub use hc::{contrast_common, contrast_palette, hover_line};
 pub use icons::{
     BarIcons, ChipsIcons, ClipIcons, DpadIcons, FillIcons, Icons, LangIcons, LayerIcons,
-    NoticeIcons, PageIcons, TrayIcons,
+    NoticeIcons, PageIcons, TrayIcons, VoiceIcons,
 };
 pub use look::{Cap, Dpad, DpadRefs, Gradient, Look};
 pub use mode::{Mode, ModeChoice, mode_for};
@@ -36,7 +36,7 @@ pub use motion::{Amounts, CLIP_MOVES, FILL_MOVES, MOVES, Motion, Motions, SHOWS,
 pub use palette::{Palette, Shadow, Skirt};
 pub use rgba::Rgba;
 pub use ringmove::{RingAmounts, RingMotion};
-pub use shape::{ClipShape, FillShape, Shape};
+pub use shape::{ClipShape, FillShape, Shape, VoiceShape};
 pub use theme::Theme;
 pub use view::{LookChoice, LookView, look_view, reach};
 

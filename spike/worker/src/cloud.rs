@@ -1,13 +1,13 @@
-//! The opt-in cloud engine: refused unless the worker was started with the cloud switch and a key is set.
+//! The opt-in cloud engine: refused unless the user turned it on and a key is set.
 
-use spike_core::voicecfg::CloudConfig;
+use spike_core::config::CloudConfig;
 
 use crate::engines::{self, MODEL_FIELD, Target};
 
 /// HTTPS port.
 const HTTPS_PORT: u16 = 443;
 /// Why the cloud engine is refused when it was not turned on.
-const OFF: &str = "cloud is off: the worker was not started with the cloud switch";
+const OFF: &str = "cloud is off: the user has not turned it on";
 
 /// The cloud engine with its key. No `Debug`, so the key cannot reach a log.
 pub struct Cloud {
@@ -60,10 +60,17 @@ mod tests {
     use super::*;
 
     fn cfg() -> CloudConfig {
-        spike_core::config::load()
-            .expect("spike.toml loads")
-            .voice
-            .cloud
+        spike_core::config::load().expect("spike.toml loads").cloud
+    }
+
+    #[test]
+    fn cloud_is_refused_before_any_network_call() {
+        let off = Cloud::new(&cfg(), false, Some("k".into()));
+        assert!(off.is_err_and(|e| e.contains("off")));
+        let no_key = Cloud::new(&cfg(), true, None);
+        assert!(no_key.is_err_and(|e| e.contains(&cfg().key_env)));
+        assert!(Cloud::new(&cfg(), true, Some(String::new())).is_err());
+        assert!(Cloud::new(&cfg(), true, Some("k".into())).is_ok());
     }
 
     #[test]

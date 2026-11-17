@@ -3,21 +3,25 @@
 //! adapter. It stops as Quit stops the modules and ends the UI, then `drain::stop` hides the tray icon and joins the
 //! kernel's thread, and `drain::release` frees the session before it waits for the deletes still running.
 
-use keyxtend::args::{self, Input};
+use keyxtend::args::{self, Flags, Input};
 use keyxtend::boot::{Boot, BootError, Services};
 use keyxtend::copy::{self, Reach, Start};
 use keyxtend::hidden::{Asked, Deletes, Probed, Run};
+#[cfg(feature = "gate-voice")]
+use keyxtend::played;
 use keyxtend::relay::Relay;
-use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, words};
+use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, voice, words};
 use kx_crypto::OsRandom;
 use kx_kernel::KernelSettings;
-use kx_module_api::ports::PointerHook;
+use kx_module_api::ports::{PointerHook, Speech};
 use kx_platform::Platform;
+use kx_platform::speech::Assets;
 use kx_platform::ui::UiError;
 use kx_platform_windows::{WindowsPlatform, dll, gpu, release_now, uiaccess};
 use kx_settings::Files;
 use kx_ui::{Hub, UiPorts};
 use std::env;
+use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
 use std::thread;
@@ -30,7 +34,7 @@ pub fn main() -> ExitCode {
     if let Err(e) = UI_ACCESS.then(dll::pin).transpose() {
         return fail(&e);
     }
-    let (command, input) = match args::parse(env::args_os().skip(1)) {
+    let (command, flags) = match args::read(env::args_os().skip(1).collect()) {
         Ok(parsed) => parsed,
         Err(e) => return fail(&e),
     };
@@ -54,23 +58,23 @@ pub fn main() -> ExitCode {
     let relay = Arc::new(Relay::default());
     let heard = Arc::clone(&relay);
     let listened = claim.listen(Box::new(move |c| heard.hear(c)));
-    let (code, deletes) = run(&platform, &files, &relay, listened, input, &probed);
+    let (code, deletes) = run(&platform, &files, &relay, listened, &flags, &probed);
     drain::release(claim, &deletes);
     tracing::info!("KeyXtend ended");
     code
 }
 
-/// Boots the kernel and the hub over `platform` for the `probed` run, the mouse engine on `input`, logging into
-/// `files` unless hidden, then runs Qt until the UI ends; it gives the deletes still running.
+/// Boots the kernel and the hub over `platform` for the `probed` run, as `flags` ask, logging into `files` unless
+/// hidden, then runs Qt until the UI ends; it gives the deletes still running.
 fn run(
     platform: &Arc<WindowsPlatform>,
     files: &Files,
     relay: &Relay,
     listened: Result<(), UiError>,
-    input: Input,
+    flags: &Flags,
     probed: &Probed,
 ) -> (ExitCode, Deletes) {
-    let mut boot = match boot(platform, input, &probed.run) {
+    let mut boot = match boot(platform, flags, &probed.run) {
         Ok(boot) => boot,
         Err(e) => {
             start_log(probed, None, files);
@@ -80,7 +84,9 @@ fn run(
     let _tray = TrayGuard(Arc::clone(&boot.hub));
     tell_booted(&boot, probed, files, listened);
     #[cfg(feature = "gate-input")]
-    warn_gate(input);
+    warn_gate(flags.input);
+    #[cfg(feature = "gate-voice")]
+    warn_voice(flags.clip.as_deref());
     relay.attach(&boot.hub);
     kx_ui::install(Arc::clone(&boot.hub));
     if let Err(e) = boot.start() {
@@ -115,18 +121,19 @@ fn tell_booted(boot: &Boot, probed: &Probed, files: &Files, listened: Result<(),
 }
 
 /// The hub and the kernel over `platform` for `run`, with every module added and the settings loaded; the learned
-/// words, the clipboard history and Quick-fill's notebook each keep their own sealed folder and key, or memory alone in
-/// a hidden run.
-fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot, BootError> {
+/// words, the clipboard history, Quick-fill's notebook and voice typing's history each keep their own sealed folder and
+/// key, or memory alone in a hidden run; `flags` choose the mouse hook and, in the voice gate build, the played clip.
+fn boot(platform: &Arc<WindowsPlatform>, flags: &Flags, run: &Run) -> Result<Boot, BootError> {
     let dirs = platform.dirs();
     let sealed = dirs.data_dir().path().join(words::SEALED_DIR);
     let guard = || platform.key_guard();
     let shelf = run.shelf(clip::folder(dirs), guard, platform.disk_room());
     let vault = run.store(vault::folder(dirs), guard);
+    let voice_shelf = run.shelf(voice::folder(dirs), guard, platform.disk_room());
     let services = Services {
         injector: platform.injector(),
         layouts: platform.layouts(),
-        pointer: pointer(platform, input),
+        pointer: pointer(platform, flags.input),
         scroll: platform.scroll_target(),
         shortcuts: platform.shortcuts(),
         power: platform.power_dialog(),
@@ -144,8 +151,39 @@ fn boot(platform: &Arc<WindowsPlatform>, input: Input, run: &Run) -> Result<Boot
         places: platform.places(),
         selection: platform.selection_watch(),
         link: platform.web_link(),
+        folders: platform.folder_reveal(),
+        speech: speech(platform, &dirs.exe_dir, flags),
+        models: platform.model_files(),
+        session: platform.session_watch(),
+        voice_shelf,
     };
     Boot::load(platform.clone(), services, ports(platform), run)
+}
+
+/// Speech by the worker beside the program in `exe_dir`, with the shipped voice files, or by the gate worker playing
+/// the clip `flags` name.
+fn speech(platform: &WindowsPlatform, exe_dir: &Path, flags: &Flags) -> Arc<dyn Speech> {
+    let assets = voice::assets(exe_dir);
+    played(platform, flags, exe_dir, &assets).unwrap_or_else(|| platform.speech(assets))
+}
+
+/// Speech by the gate worker beside the program in `exe_dir`, on `platform`'s clock, playing the clip `flags` name;
+/// none without one. The parse already refused a clip whose path is not UTF-8, the only other none.
+#[cfg(feature = "gate-voice")]
+fn played(
+    platform: &WindowsPlatform,
+    flags: &Flags,
+    exe_dir: &Path,
+    assets: &Assets,
+) -> Option<Arc<dyn Speech>> {
+    let clip = flags.clip.as_deref()?;
+    played::speech(exe_dir, platform.clock(), assets.clone(), clip)
+}
+
+/// None: only the voice gate build plays a clip.
+#[cfg(not(feature = "gate-voice"))]
+fn played(_: &WindowsPlatform, _: &Flags, _: &Path, _: &Assets) -> Option<Arc<dyn Speech>> {
+    None
 }
 
 /// The mouse hook on `input`: the hand's, or in the gate-only build the gate tool's.
@@ -166,6 +204,19 @@ fn warn_gate(input: Input) {
         tracing::warn!(
             flag,
             "simulated mouse input: a gate build, never for daily use"
+        );
+    }
+}
+
+/// Warns once that the worker plays a file in place of the microphone; only the voice gate build can. Its `flag` field
+/// keeps the flag's text whole in a release exe, which the stage check refuses; the clip's path is never logged.
+#[cfg(feature = "gate-voice")]
+fn warn_voice(clip: Option<&Path>) {
+    if clip.is_some() {
+        let flag = args::SOUND_FLAG;
+        tracing::warn!(
+            flag,
+            "played sound in place of the microphone: a gate build, never for daily use"
         );
     }
 }

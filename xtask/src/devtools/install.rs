@@ -98,11 +98,11 @@ pub(crate) fn vet(
     Ok(())
 }
 
-/// Refuses any of `programs` that holds the gate-only `flag`, so no gate build is ever signed.
-pub(crate) fn refuse_gate_builds(programs: &[PathBuf], flag: &str) -> Result<(), DevError> {
+/// Refuses any of `programs` that holds one of the gate-only `flags`, so no gate build is ever signed.
+pub(crate) fn refuse_gate_builds(programs: &[PathBuf], flags: &[&str]) -> Result<(), DevError> {
     programs
         .iter()
-        .try_for_each(|exe| stage::refuse_gate_exe(exe, exe, flag))
+        .try_for_each(|exe| stage::refuse_gate_exe(exe, exe, flags))
 }
 
 /// The shortcut `source`'s install gets, worked out before anything changes; none when it does not hold the app.
@@ -151,7 +151,7 @@ pub(crate) fn run(folder: &str) -> Result<(), DevError> {
     let program = stage.program();
     let link = link_for(&source, &program, &setup.config, env)?;
     let programs = exes(&source)?;
-    refuse_gate_builds(&programs, &stage.gate_flag)?;
+    refuse_gate_builds(&programs, &stage.gate_flags())?;
     let thumbprint = require_cert(&setup)?;
     let signtool = sdk::find_tool(&setup.config, &setup.config.signtool)?;
     for exe in programs {

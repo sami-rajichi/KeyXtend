@@ -1,7 +1,9 @@
-//! The tray side of the hub: the icon's picture and tooltip, and its clicks, which reach the UI as wakes.
+//! The tray side of the hub: the icon's picture and tooltip, its clicks, which reach the UI as wakes, and the menu's
+//! Dictation row.
 
-use super::{Hub, Wake};
+use super::{Hub, Mode, Wake};
 use crate::i18n::keys::WINDOW_KEYBOARD;
+use kx_module_api::ports::VoiceOpen;
 use kx_platform::ui::{OnTray, TrayIcon, TrayImage, UiError};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -44,6 +46,15 @@ impl Hub {
                 }
             },
         }
+    }
+
+    /// The tray menu's Dictation row: a hidden or minimised keyboard shows first, then the Voice panel opens (P11
+    /// design, edge 41). Call it on the Qt thread.
+    pub fn voice_open(&self) {
+        if self.mode() != Mode::Shown {
+            self.wake_or_wait(Wake::Show);
+        }
+        self.voice_send(&VoiceOpen);
     }
 
     /// Removes the tray icon for good, so no dead icon stays in the taskbar; call it before the app ends.

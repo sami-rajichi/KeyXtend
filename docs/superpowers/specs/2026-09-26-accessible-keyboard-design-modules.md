@@ -233,6 +233,8 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 
 ### 8.2 Voice typing
 
+Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](2026-11-10-voice-typing-design.md) on this PC (ADR-0042 to ADR-0045) and [`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md) for the cloud; the lines below are the first plan, kept as written.
+
 - **Mic key:** click to start, click to stop. There is no voice-activity auto-stop, so users who speak slowly or pause are never cut off.
 - Distinct start and stop sounds, and a live waveform in a **caption bar at the bottom centre**, never over the keyboard.
 - **Flow:** Listening, then Transcribing (shimmer), then the text is inserted into the focused field and shown in the caption with **Copy** and **Undo insert**.
@@ -250,6 +252,18 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 - Silence trimming before sending, to reduce Whisper's hallucinations on silence.
 - **Transcript history:** kept locally and encrypted, 1 day by default. It can be exported later to build a personal dataset; this is opt-in.
 - Runs in the **voice worker process**, the only process that may use the microphone and the network (§11).
+- **As built (P11 part 1, 2026-11-16):** where the build settles or differs from the text above; the 2026-11-10 design holds the full rules.
+  - The key reads Dictation · Dictée · إملاء. Click to start and click to stop stays; a `silence_stop` setting, off by default, can also stop after a silence (owner).
+  - The bar sits just above the keyboard, else at the bottom centre, else at the top, never over the keyboard, and it takes clicks but never focus (ADR-0045). It offers Copy and Undo insert, as above.
+  - There is no forced-language setting: the language is the keyboard's shown layout, fixed at Start and never guessed (ADR-0042, owner).
+  - One engine, transcribe.cpp, runs ten models from one table, in place of whisper-rs. The defaults are Parakeet v3 for English and French and Cohere Transcribe Arabic for Arabic (ADR-0043, owner).
+  - Models download on demand into a folder the user picks, each checked by its size and SHA-256; none is bundled (ADR-0043).
+  - Models run on the processor, or on a graphics card through Vulkan once the card passes its check; Automatic takes the fastest checked card with room (ADR-0044). Under Automatic, a card that passed one model's check is checked by itself for each newly used model; a first check stays one click on Check or picking the card.
+  - The benchmark button is Compare models: the user reads a set text once, each ready model writes it, and only the numbers are kept.
+  - Silence trimming is the Silero voice detector, which cuts pieces at pauses and keeps `pad_ms` (300 ms) of silence around speech.
+  - History keeps the last 50 texts (`history_max`, pins aside), sealed on disk with no time limit, not one day. Recordings are kept only with `keep_voice`, off by default.
+  - The worker runs two jobs: `voice` hears the microphone and has no network, and `fetch` downloads models and has no microphone (ADR-0042).
+  - The cloud engines are part 2 ([`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md)).
 
 ### 8.3 Selection helper
 

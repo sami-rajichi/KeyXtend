@@ -13,7 +13,7 @@ All fonts are SIL OFL-1.1 and ship unmodified.
 
 ## Icons
 
-- `icons/lucide/`: 61 icons from Lucide 1.48.0 (`lucide-static`), https://lucide.dev, unmodified: the keys, the shortcuts layer, the panels and the top bar. ISC, and MIT for the ones derived from Feather; both texts are in `LICENSE`.
+- `icons/lucide/`: 91 icons from Lucide 1.48.0 (`lucide-static`), https://lucide.dev, unmodified: the keys, the shortcuts layer, the panels and the top bar. ISC, and MIT for the ones derived from Feather; both texts are in `LICENSE`.
 - `icons/win-logo.svg`: KeyXtend's own drawing of the Windows key legend, all rights reserved like the code. Windows and its logo are Microsoft trademarks; used only to label the Windows key.
 
 ## Sounds
@@ -24,6 +24,11 @@ All sounds are CC0-1.0 (text in `sounds/CC0-1.0.txt`), converted with `cargo xta
 - `sounds/mouse-click.wav`, `sounds/mouse-press.wav`: the right-click and pick-up sounds, from "Middle Mouse Click" by 1j01 (https://opengameart.org/node/186493).
 - `sounds/card-down.wav`: the drop sound, from "Playing Card Sounds" by BMacZero (https://opengameart.org/node/118338).
 - `sounds/recipes.toml`: KeyXtend's own candidate recipes, all rights reserved like the code; the shipping format is in kx-theme's `tokens/sounds.toml`.
+
+## Voice
+
+- `voice/silero-vad-v6.2-F32.gguf`: the voice detector, Silero VAD 6.2 converted to GGUF by handy-computer, unmodified; MIT, with its `LICENSE` and `NOTICE` beside it. `cargo xtask stage` puts it beside the worker (P11); `voice/README.md` gives its source and fingerprint.
+- `voice/check-{en,fr,ar}.wav`: the graphics card's self-test clips, one FLEURS sentence each, unmodified; CC-BY-4.0, with `LICENSE-CLIPS.txt` beside them. They are staged beside the worker too.
 
 ## Word packs
 

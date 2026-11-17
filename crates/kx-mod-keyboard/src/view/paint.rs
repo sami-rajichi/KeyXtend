@@ -22,6 +22,13 @@ pub const DIM: Paint = Paint {
     skirt: "dim",
 };
 
+/// The paint of the Dictation key while the microphone is open (mock-up `.key.rec`).
+pub const REC: Paint = Paint {
+    fill: "rec",
+    ink: "rec_ink",
+    skirt: "rec",
+};
+
 /// The paint of a key of `kind`: side keys turn `on` when toggled, other keys `lock` when latched.
 #[must_use]
 pub fn paint(kind: KeyKind, on: bool) -> Paint {
@@ -47,6 +54,11 @@ mod tests {
         assert_eq!(paint(KeyKind::Act, true).fill, "on");
         assert_eq!(paint(KeyKind::Act, false).skirt, "key_mod");
         assert_eq!(paint(KeyKind::Enter, false).ink, "enter_ink");
+    }
+
+    #[test]
+    fn a_recording_key_takes_the_rec_tokens() {
+        assert_eq!((REC.fill, REC.ink, REC.skirt), ("rec", "rec_ink", "rec"));
     }
 
     #[test]

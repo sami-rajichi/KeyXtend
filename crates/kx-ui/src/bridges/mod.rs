@@ -1,6 +1,6 @@
 //! The cxx-qt objects QML makes (ADR-0013): `Ui` for the app's look, texts, notices and commands, `Keyboard` for the
-//! keyboard window, and `QuickFill` for the Quick-fill panel. They reach the app's hub through `install`, since QML
-//! makes them without arguments.
+//! keyboard window, `QuickFill` for the Quick-fill panel, and `Voice` for the dictation bar and the Voice panel. They
+//! reach the app's hub through `install`, since QML makes them without arguments.
 #![allow(
     unsafe_code,
     reason = "each cxx-qt bridge declares its C++ side in an unsafe extern block (ADR-0013, tidy F3)"
@@ -20,12 +20,14 @@ mod keyboard;
 pub mod shadows;
 pub mod tint;
 mod ui;
+mod voice;
 
 #[cfg(debug_assertions)]
 pub use ui::wakes;
 
 use crate::hub::Hub;
 use cxx_qt_lib::QString;
+use kx_module_api::ports::Rect;
 use std::sync::{Arc, OnceLock};
 
 /// The resource folder of the bundled files, as a path Qt opens, from the build.
@@ -56,4 +58,9 @@ fn hub() -> Option<Arc<Hub>> {
 /// `text` as a Qt string.
 fn qs(text: &str) -> QString {
     QString::from(text)
+}
+
+/// The shown keyboard's box in physical pixels, `null` while it is hidden.
+fn keyboard_box(json: &str) -> serde_json::Result<Option<Rect>> {
+    serde_json::from_str(json)
 }

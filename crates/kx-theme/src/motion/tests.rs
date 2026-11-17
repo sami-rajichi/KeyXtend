@@ -7,6 +7,8 @@
 
 use super::*;
 
+mod voice;
+
 fn text() -> String {
     crate::MOTION.to_string()
 }

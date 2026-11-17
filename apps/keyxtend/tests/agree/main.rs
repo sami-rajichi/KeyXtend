@@ -1,9 +1,10 @@
-//! What only the app sees, since it alone depends on every crate: the board, the shortcuts layer, the modules and the
-//! language key's designs have their texts in every language, the shortcuts agree with the Windows table, the board's
-//! icons resolve, every paint names tokens each theme has, the Next key holds the most pages' dots, every character
-//! key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages past a rule go back to
-//! their default, the stage puts Qt's QML where the app pins it and the worker where the platform starts it, the
-//! longest word with chips fits the keyboard's text cap, and the clipboard's settings fit the worker's frames.
+//! What only the app sees, since it alone depends on every crate: the board, the shortcuts layer, the modules, voice
+//! typing's options and the language key's designs have their texts in every language, the shortcuts agree with the
+//! Windows table, the board's icons resolve, every paint names tokens each theme has, the Next key holds the most
+//! pages' dots, every character key has its scan code in the layouts table, a size, a buffer pool or the shortcut pages
+//! past a rule go back to their default, the stage puts Qt's QML where the app pins it and the worker where the
+//! platform starts it, the longest word with chips fits the keyboard's text cap, and the clipboard's settings fit the
+//! worker's frames.
 
 #![allow(
     clippy::unwrap_used,

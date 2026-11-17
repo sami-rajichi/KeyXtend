@@ -1,5 +1,5 @@
 //! The built app asks for uiAccess in its manifest exactly in the build that pins where code loads from, opens no
-//! console exactly in the release build, and only the gate-only build holds its flag.
+//! console exactly in the release build, and only the gate-only builds hold their flags.
 #![cfg(windows)]
 #![allow(clippy::unwrap_used, reason = "a failed read should fail the test")]
 
@@ -60,4 +60,10 @@ fn the_exe_reads_narrow_text_as_utf8() {
 fn only_the_gate_build_holds_the_gate_flag() {
     let held = holds(&exe(), keyxtend::args::SIM_INPUT.as_bytes());
     assert_eq!(held, cfg!(feature = "gate-input"));
+}
+
+#[test]
+fn only_the_voice_gate_build_holds_the_sound_flag() {
+    let held = holds(&exe(), kx_ipc::SOUND_FLAG.as_bytes());
+    assert_eq!(held, cfg!(feature = "gate-voice"));
 }

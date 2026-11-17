@@ -82,7 +82,7 @@ fn send<T: Answer, W: Write + ?Sized>(w: &mut W, reply: &T, id: u32) -> Result<(
 }
 
 /// Keeps an ask's panic off stderr: its reply says it failed inside, and its message and place are never written.
-fn hush() {
+pub fn hush() {
     panic::set_hook(Box::new(|_| {}));
 }
 

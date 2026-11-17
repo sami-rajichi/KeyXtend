@@ -4,13 +4,22 @@
 use super::store::Blob;
 use super::{Actor, Flow};
 use crate::pack::Pack;
-use kx_module_api::ports::{LayoutAsk, PackView, TypingModeAsk, fits_iso};
+use kx_module_api::ports::{LayoutAsk, LayoutId, PackView, TypingModeAsk, fits_iso};
 
 impl Actor {
-    /// The keyboard shows a layout in `iso`, named `name`: the word ends unlearned, and a new language saves the old
-    /// learner.
-    pub(super) fn lang(&mut self, seed: Option<&Pack<'_>>, iso: String, name: String) -> Flow {
+    /// The keyboard shows layout `id` in `iso`, named `name`: the same layout told again for another module's ask changes
+    /// nothing, another ends the word unlearned, and a new language saves the old learner.
+    pub(super) fn lang(
+        &mut self,
+        seed: Option<&Pack<'_>>,
+        id: LayoutId,
+        iso: String,
+        name: String,
+    ) -> Flow {
         self.lang_name = name;
+        if self.layout.replace(id) == Some(id) && iso == self.iso {
+            return Flow::Go;
+        }
         self.menu.key();
         if iso == self.iso {
             self.end_word(seed);
