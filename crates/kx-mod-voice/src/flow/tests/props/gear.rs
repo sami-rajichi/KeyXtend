@@ -1,35 +1,38 @@
-//! The gear's checks in the properties: only what records gets a Cancel, and a run it ended writes nothing after.
+//! The gear's checks in the properties: only what records gets a Cancel, a preparing run ends with no bar, and a run
+//! it ended writes nothing after.
 
 use super::*;
 
 impl Seen {
-    /// Checks a gear click that found the flow `busy` or Compare `recording`: only what records gets a Cancel, and a
-    /// dictation shows Cancel's note and is noted as ended.
+    /// Checks a gear click that found the flow `busy` (and `preparing`) or Compare `recording`: only what records gets
+    /// a Cancel, a preparing run also closes with no bar, and a listening or writing one shows Cancel's note.
     pub(super) fn gear(
         &mut self,
         rig: &Rig,
         out: &[Out],
-        busy: bool,
+        (busy, preparing): (bool, bool),
         recording: bool,
     ) -> Result<(), TestCaseError> {
-        let called: Vec<&Out> = (out.iter())
+        let called: Vec<Out> = (out.iter())
             .filter(|o| matches!(o, Out::Run { .. } | Out::Lent(_)))
+            .cloned()
             .collect();
-        let cancel = Out::Run {
+        let run = |call| Out::Run {
             take: rig.take,
-            call: RunCall::Cancel,
+            call,
         };
-        let want = if busy {
-            Some(cancel)
-        } else {
-            recording.then_some(Out::Lent(BarButton::Cancel))
+        let want = match (busy, preparing) {
+            (true, true) => vec![run(RunCall::Cancel), run(RunCall::Close)],
+            (true, false) => vec![run(RunCall::Cancel)],
+            _ => (recording
+                .then_some(Out::Lent(BarButton::Cancel))
+                .into_iter())
+            .collect(),
         };
-        prop_assert_eq!(
-            called,
-            want.iter().collect::<Vec<_>>(),
-            "the gear cancels what records"
-        );
-        if busy {
+        prop_assert_eq!(called, want, "the gear cancels what records");
+        if preparing {
+            prop_assert_eq!(rig.shown(), VoiceBar::Hidden, "nothing was recorded");
+        } else if busy {
             let hint = note(&rig.shown()).map(|(hint, _)| hint);
             prop_assert_eq!(
                 hint,

@@ -26,7 +26,7 @@ static SPEC: SettingsSpec = SettingsSpec {
 /// The `[ui]` settings the gates depend on: the look, and the tip time G8's churn waits out.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UiLook {
-    /// The theme, by its `themes.toml` id.
+    /// The theme, by its `themes/*.toml` id.
     pub theme: String,
     /// True when a theme that can take the Windows accent takes it.
     pub follow_accent: bool,

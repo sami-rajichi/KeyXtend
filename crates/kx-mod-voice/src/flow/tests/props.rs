@@ -86,7 +86,7 @@ fn step() -> impl Strategy<Value = Step> {
         2 => (0..MAX_WAIT_MS).prop_map(Step::Wait),
         1 => prop::bool::weighted(ON).prop_map(Step::On),
         1 => Just(Step::Quit),
-        1 => select(vec![Lend::Off, Lend::Listen, Lend::Write]).prop_map(Step::Lend),
+        1 => select(vec![Lend::Off, Lend::Prep, Lend::Listen, Lend::Write]).prop_map(Step::Lend),
     ]
 }
 
@@ -238,11 +238,11 @@ proptest! {
         let mut seen = Seen::default();
         for step in &steps {
             let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
-            let recording = lent && matches!(rig.shown(), VoiceBar::Listening(_));
             let was = rig.light;
+            let recording = lent && (was == VoiceLit::Prep || matches!(rig.shown(), VoiceBar::Listening(_)));
             let out = act(&mut rig, step, seen.ask.as_ref());
             if matches!(step, Step::Gear) {
-                seen.gear(&rig, &out, busy, recording)?;
+                seen.gear(&rig, &out, (busy, busy && was == VoiceLit::Prep), recording)?;
             }
             seen.effects(&out, hidden, lent)?;
             seen.after_gear(&out)?;

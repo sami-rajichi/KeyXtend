@@ -113,6 +113,8 @@ struct Seen {
     last: u32,
     /// The last run's set text was empty.
     bare: bool,
+    /// The last run's microphone said it opened.
+    mic: bool,
 }
 
 /// Feeds `step` to `compare`; an older run's note must change nothing.
@@ -162,6 +164,7 @@ impl Seen {
                     prop_assert!(ask.model.is_none(), "the recording loads no model");
                     let set = compare.plan().map(|p| p.set.expose().is_empty());
                     (self.last, self.bare) = (*take, set.unwrap_or(false));
+                    self.mic = false;
                 }
                 Act::Run { take, call } => {
                     let live = *take == self.last && !self.closed.contains(take);
@@ -189,7 +192,17 @@ impl Seen {
     fn state(&self, compare: &Compare) -> Result<(), TestCaseError> {
         let lend = compare.lend();
         prop_assert_eq!(compare.busy(), lend != Lend::Off);
-        prop_assert_eq!(compare.recording(), lend == Lend::Listen);
+        prop_assert_eq!(
+            compare.recording(),
+            matches!(lend, Lend::Prep | Lend::Listen)
+        );
+        if compare.recording() {
+            prop_assert_eq!(
+                lend == Lend::Listen,
+                self.mic,
+                "Listening only once its microphone opened"
+            );
+        }
         prop_assert_eq!(compare.running().is_some(), lend == Lend::Write);
         let open = self.opened.len() - self.closed.len();
         prop_assert_eq!(
@@ -215,6 +228,9 @@ proptest! {
         for step in &steps {
             let acts = act(&mut compare, step, &seen)?;
             seen.effects(&acts, &compare)?;
+            if let Step::Note(Said::Stage(i), false) = step {
+                seen.mic |= STAGES[*i] == SpeechStage::Open;
+            }
             seen.state(&compare)?;
         }
     }

@@ -253,7 +253,7 @@ The module trait, its lifecycle, services, events and settings: [docs/architectu
 8. UI never needs scrolling or dragging to operate. Every list is paged, with 5 rows per page (spec §3.3). UI reviews check this.
 9. **Nothing hardcoded.**
    - Timings, sizes, speeds and limits live in the settings schema defaults.
-   - Colours, fonts, spacing, motion, icon names and sounds live in theme tokens (`crates/kx-theme/tokens/`: `themes.toml`, `shape.toml`, `motion.toml`, `icons.toml`, `sounds.toml`).
+   - Colours, fonts, spacing, motion, icon names and sounds live in theme tokens (`crates/kx-theme/tokens/`: `themes/*.toml`, `shape.toml`, `motion.toml`, `icons.toml`, `sounds.toml`).
    - User-visible text lives in translation files.
    - OS mappings live in adapter tables.
    - `kx-review` checks this.

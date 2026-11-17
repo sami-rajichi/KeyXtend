@@ -71,11 +71,11 @@ impl Flow {
         }
     }
 
-    /// The key's light: red while the microphone is open, amber while a dictation waits for it, else off.
+    /// The key's light: red while the microphone is open, amber while a dictation or Compare waits for it, else off.
     fn light(&self) -> VoiceLit {
         if self.lit {
             VoiceLit::Rec
-        } else if matches!(self.state, State::Preparing) {
+        } else if matches!(self.state, State::Preparing) || self.lent_prep() {
             VoiceLit::Prep
         } else {
             VoiceLit::Off

@@ -1,4 +1,4 @@
-//! The amber Preparing light against the shipped `themes.toml`: each palette takes the approved mock-up's colours
+//! The amber Preparing light against the shipped `themes/*.toml`: each palette takes the approved mock-up's colours
 //! (design/voice-bar.html lines 86-117), Dolch light's ink nudged for AA under the press shade, and it is never the red
 //! recording light.
 

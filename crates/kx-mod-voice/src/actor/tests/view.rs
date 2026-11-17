@@ -93,20 +93,22 @@ fn the_gear_while_listening_cancels_the_run_before_the_panel_opens() {
 }
 
 #[test]
-fn the_gear_while_preparing_cancels_the_run_and_the_key_never_turns_red() {
+fn the_gear_while_preparing_ends_the_run_with_no_bar_and_the_key_never_turns_red() {
     let mut rig = Rig::new();
     rig.key();
     rig.send(Msg::Open);
     let run = &rig.fake.speech.runs()[0];
-    assert_eq!((run.cancels, run.stops), (1, 0));
+    assert_eq!((run.cancels, run.stops, run.closed), (1, 0, true));
     assert_eq!(
         rig.lits(),
         [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Off],
         "amber, never red: the microphone never said it opened"
     );
     let page = rig.views().pop().unwrap();
-    assert!(
-        matches!(&page.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled && n.act.is_none())
+    assert_eq!(
+        page.bar,
+        VoiceBar::Hidden,
+        "nothing was recorded, so no note"
     );
     assert!(matches!(
         page.panel.map(|p| p.sheet),

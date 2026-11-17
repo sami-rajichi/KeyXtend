@@ -1,5 +1,6 @@
 //! The gear or the tray opening the panel (part 2's edge case 25): a dictation that prepares, listens or transcribes,
-//! or Compare's recording, ends exactly as the bar's Cancel ends it; in Idle, Text or a note nothing changes.
+//! or Compare's recording, ends exactly as the bar's Cancel ends it, with no bar while it prepared (mock-up `end()`);
+//! in Idle, Text or a note nothing changes.
 
 use super::close::done_ms;
 use super::*;
@@ -17,6 +18,14 @@ enum Run {
 
 /// Every running stage.
 const RUNS: [Run; 3] = [Run::Preparing, Run::Listening, Run::Transcribing];
+
+/// What the gear or Cancel leaves of `run`: its calls, and the note's hint, none with no bar as nothing was recorded.
+fn ended(run: Run) -> (Vec<RunCall>, Option<BarHint>) {
+    match run {
+        Run::Preparing => (vec![RunCall::Cancel, RunCall::Close], None),
+        Run::Listening | Run::Transcribing => (vec![RunCall::Cancel], Some(BarHint::Cancelled)),
+    }
+}
 
 /// A rig whose dictation got as far as `run`.
 fn rig_at(run: Run) -> Rig {
@@ -39,10 +48,12 @@ fn the_gear_ends_a_running_dictation_exactly_as_cancel_does() {
         let (mut geared, mut cancelled) = (rig_at(run), rig_at(run));
         let out = geared.on(In::Opening);
         assert_eq!(out, cancelled.bar(BarButton::Cancel), "{run:?}");
-        assert_eq!(calls(&out), [RunCall::Cancel], "{run:?}");
+        let (want, hint) = ended(run);
+        assert_eq!(calls(&out), want, "{run:?}");
         assert!(ask(&out).is_none() && kept(&out).is_empty(), "{run:?}");
         assert_eq!(geared.light, VoiceLit::Off, "{run:?}");
         assert_eq!(geared.shown(), cancelled.shown(), "{run:?}");
+        assert_eq!(note(&geared.shown()).map(|(h, _)| h), hint, "{run:?}");
     }
 }
 
@@ -55,7 +66,7 @@ fn nothing_the_run_writes_after_the_gear_is_typed_kept_or_counted() {
         assert!(ask(&out).is_none() && kept(&out).is_empty(), "{run:?}");
         assert!(!out.iter().any(|o| matches!(o, Out::Count(_))), "{run:?}");
         let hint = note(&rig.shown()).map(|(hint, _)| hint);
-        assert_eq!(hint, Some(BarHint::Cancelled), "{run:?}");
+        assert_eq!(hint, ended(run).1, "{run:?}");
     }
 }
 

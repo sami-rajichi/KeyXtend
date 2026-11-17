@@ -1,4 +1,4 @@
-//! `themes.toml`: three looks, each light and soft dark, and the colours they share.
+//! `tokens/themes/`: three looks, a file each, each light and soft dark, and the colours they share (`common.toml`).
 
 use std::collections::BTreeMap;
 
@@ -127,6 +127,8 @@ fn palette(
 
 #[cfg(test)]
 mod derived;
+#[cfg(test)]
+mod parts;
 #[cfg(test)]
 mod prep;
 #[cfg(test)]

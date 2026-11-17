@@ -1,14 +1,14 @@
 //! The hub on the kernel's bus: it hears notices, the mouse module's state, pointer and notes, the scroll module's
 //! state, outline and page turns, the chip lane, the panels, the selection strip and voice typing, each through a
 //! handler that holds the hub weakly, then asks the scroll, prediction, vault and voice modules for their state, and it
-//! sends the notices' answers. The keyboard's wake, power and vault changes included, is heard only while a face is
-//! attached, after the face's own handlers.
+//! sends the notices' answers. The keyboard's wake, power and vault changes and the Dictation key's light included, is
+//! heard only while a face is attached, after the face's own handlers.
 
 use super::{Hub, Wake, sound};
 use crate::ui_module::MANIFEST;
 use kx_module_api::ports::{
     AssistChanged, AssistNote, FillLive, LatchesUsed, PointerMoved, PowerChanged, ScrollAimed,
-    ScrollAsk, ScrollChanged, ScrollPage,
+    ScrollAsk, ScrollChanged, ScrollPage, VoiceLit,
 };
 use kx_module_api::{Bus, Event, EventError, Notice, NoticeAnswered, Subscription};
 use std::sync::{Arc, MutexGuard, PoisonError};
@@ -63,19 +63,21 @@ impl Hub {
         Ok(heard)
     }
 
-    /// Wakes the keyboard on each mouse mode change, used latch, scroll change, power change and vault state through
-    /// new handlers. The face that `attach` takes started first, so these run after its own and the window reads its
-    /// new state; the last ones go.
+    /// Wakes the keyboard on each mouse mode change, used latch, scroll change, power change, vault state and Dictation
+    /// light through new handlers, the light through the `ui` module's gated handle. The face that `attach` takes
+    /// started first, so these run after its own and the window reads its new state; the last ones go.
     pub(super) fn hear_keys(self: &Arc<Self>) {
         let Some(bus) = self.heard().bus.clone() else {
             return;
         };
+        let gated = bus.restricted(MANIFEST.capabilities);
         let keys = [
             self.hear(&bus, |hub, _: &AssistChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &LatchesUsed| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &ScrollChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &PowerChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &FillLive| hub.wake(Wake::Keys)),
+            self.hear(&gated, |hub, _: &VoiceLit| hub.wake(Wake::Keys)),
         ];
         let keys: Vec<Subscription> = keys
             .into_iter()

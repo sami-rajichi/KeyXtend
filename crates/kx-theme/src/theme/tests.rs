@@ -1,4 +1,4 @@
-//! Theme tests against the shipped `themes.toml`.
+//! Theme tests against the shipped `themes/*.toml`.
 
 use super::*;
 use crate::Themes;
@@ -261,13 +261,13 @@ fn sculpted_caps_cannot_take_the_accent() {
 
 #[test]
 fn a_palette_without_plate_text_takes_legend_2() {
-    let (shipped, _) = parse(&text()).expect("themes.toml parses");
+    let (shipped, _) = parse(&text()).expect("themes/*.toml parses");
     let et66 = &shipped[1].light;
     assert_ne!(
         et66.legend_2_plate, et66.legend_2,
         "ET66 light writes its own"
     );
-    let mut file: toml::Table = toml::from_str(&text()).expect("themes.toml parses");
+    let mut file: toml::Table = toml::from_str(&text()).expect("themes/*.toml parses");
     let themes = file.get_mut("theme").and_then(toml::Value::as_array_mut);
     let light = themes.and_then(|t| t[1].get_mut("light")?.as_table_mut());
     let dropped = light.and_then(|l| l.remove("legend_2_plate"));
@@ -280,7 +280,7 @@ fn a_palette_without_plate_text_takes_legend_2() {
 
 #[test]
 fn plate_text_is_written_only_where_it_differs() {
-    let file: toml::Table = toml::from_str(&text()).expect("themes.toml parses");
+    let file: toml::Table = toml::from_str(&text()).expect("themes/*.toml parses");
     let themes = file["theme"].as_array().expect("a theme list");
     let colour = |v: Option<&toml::Value>| v.and_then(toml::Value::as_str).map(Rgba::parse);
     for (t, mode) in themes.iter().flat_map(|t| Mode::ALL.map(|m| (t, m))) {

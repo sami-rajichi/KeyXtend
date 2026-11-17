@@ -134,7 +134,16 @@ fn a_microphone_fault_while_recording_names_the_microphone() {
 fn the_lend_follows_the_run_and_a_card_fallback_names_the_processor() {
     let mut compare = Compare::default();
     assert_eq!(compare.lend(), Lend::Off);
-    compare.start(plan(SET, vec![entrant(1, true)]), &settings());
+    let acts = compare.start(plan(SET, vec![entrant(1, true)]), &settings());
+    assert_eq!(
+        compare.lend(),
+        Lend::Prep,
+        "no Listening until its microphone opens"
+    );
+    let Some(Act::Open { take, .. }) = acts.first().cloned() else {
+        panic!("no open");
+    };
+    compare.note(take, SpeechNote::Stage(SpeechStage::Open));
     assert_eq!(compare.lend(), Lend::Listen);
     let (mut compare, take) = recorded(vec![entrant(1, true)], SET);
     assert_eq!(compare.lend(), Lend::Write);

@@ -1,5 +1,6 @@
-//! Compare models on the actor: its run borrows the microphone, so the bar listens and the key glows and stops it; then
-//! each ready model writes the recording again, and only the numbers are kept on the shelf. The gear cancels it.
+//! Compare models on the actor: its run borrows the microphone, so the key glows amber until it opens, then the bar
+//! listens, the key glows red and stops it; each ready model writes the recording again, and only the numbers are kept
+//! on the shelf. The gear cancels it.
 
 use std::sync::Arc;
 
@@ -17,15 +18,37 @@ use crate::store::Store;
 /// The set text the ui would hand over.
 const SET: &str = "hello world";
 
-/// A rig on Compare's page, its recording started.
-fn started() -> Rig {
+/// A rig on Compare's page.
+fn on_compare() -> Rig {
     let mut rig = Rig::new();
     rig.send(Msg::Open);
     rig.act(VoiceClick::Open(VoiceTab::Compare));
+    rig
+}
+
+/// Starts the recording of the set text.
+fn record(rig: &mut Rig) {
+    rig.act(VoiceClick::Compare(Redacted::new(SET.to_owned())));
+}
+
+/// A rig on Compare's page, its recording started and its microphone open.
+fn started() -> Rig {
+    let mut rig = on_compare();
     let open = vec![SpeechNote::Stage(SpeechStage::Open)];
     rig.fake.speech.on(SpeechCall::Open, open);
-    rig.act(VoiceClick::Compare(Redacted::new(SET.to_owned())));
+    record(&mut rig);
     rig
+}
+
+#[test]
+fn compares_bar_waits_for_its_microphone_and_the_key_glows_amber_meanwhile() {
+    let mut rig = on_compare();
+    record(&mut rig);
+    assert_eq!(rig.bar(), VoiceBar::Hidden, "not heard yet");
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Prep));
+    rig.tell(SpeechNote::Stage(SpeechStage::Open));
+    assert!(matches!(rig.bar(), VoiceBar::Listening(l) if l.elapsed_ms == 0));
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Rec));
 }
 
 #[test]

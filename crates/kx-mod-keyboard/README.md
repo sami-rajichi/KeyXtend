@@ -208,7 +208,7 @@ The keyboard never depends on the selection module; they talk only through `kx_m
 
 The keyboard never depends on the voice module; they talk only through `kx_module_api::ports` voice events (ADR-0042), and the keyboard stays the only typist.
 - **Key:** a click on the Dictation key publishes `VoiceKey`, sends nothing to the app and keeps every latch; the state redraws, so a light told at once shows at once.
-- **Light:** the key follows `VoiceLit`, and a change marks the state unshown. At start the keyboard forgets it (unlit) and publishes `VoiceAsk`.
+- **Light:** the key follows `VoiceLit` (off, amber while the microphone starts, red while it is open), and a change marks the state unshown; the ui hears it too and reads the state at once. At start the keyboard forgets it (unlit) and publishes `VoiceAsk`.
 - **Text:** `TextAsk { round, erase, text, gap_ms }` ends a held key and takes the aim, as an edit does. It erases with the board's erase key, waiting `erase_gap_ms` after each Backspace as a picked word does, then types by the route a letter takes (`text_route`), waiting `gap_ms` after each piece; one piece per lock on the sender's thread, each wait through `Ports::pause` with the lock free, none after the last piece.
 - **Pieces:** paced, each character or Backspace goes alone, as Notepad drops a sentence sent in one batch; with a gap of 0, pieces of up to `text_cap` go at once. A text or erase longer than `text_cap` is never refused, only split (edge 34).
 - **Latches:** every latch stays as it was, apart from a held key's own let-go.

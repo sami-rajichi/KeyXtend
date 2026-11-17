@@ -6,7 +6,7 @@ use crate::run::{Part, Text};
 use kx_module_api::ports::{TextAsk, TextDone, VoiceLit};
 
 impl Inner {
-    /// The voice module tells the key's light; a change redraws the key at the next relabel.
+    /// The voice module tells the key's light; the ui's wake reads a change at once, else the next relabel does.
     pub(in crate::face) fn heard_voice(&mut self, lit: VoiceLit) {
         if self.voice != lit {
             self.voice = lit;

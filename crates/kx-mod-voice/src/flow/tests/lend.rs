@@ -86,3 +86,40 @@ fn a_lock_quit_or_the_feature_off_cancels_compare() {
         assert_eq!(rig.shown(), VoiceBar::Hidden);
     }
 }
+
+#[test]
+fn while_compares_microphone_opens_the_key_glows_amber_with_no_bar() {
+    let mut rig = Rig::new();
+    rig.on(In::Lend(Lend::Prep));
+    assert_eq!((rig.shown(), rig.light), (VoiceBar::Hidden, VoiceLit::Prep));
+    rig.wait(3_000);
+    rig.on(In::Lend(Lend::Listen));
+    assert!(matches!(rig.shown(), VoiceBar::Listening(l) if l.elapsed_ms == 0));
+    assert_eq!(rig.light, VoiceLit::Rec, "heard from the opening on");
+}
+
+#[test]
+fn the_key_cancel_or_the_gear_while_compare_prepares_cancel_it() {
+    let presses = [None, Some(BarButton::Cancel), Some(BarButton::Stop)];
+    for press in presses {
+        let mut rig = Rig::new();
+        rig.on(In::Lend(Lend::Prep));
+        let out = match press {
+            Some(button) => rig.bar(button),
+            None => rig.key(),
+        };
+        assert_eq!(
+            lent(&out),
+            [BarButton::Cancel],
+            "{press:?}: nothing was recorded"
+        );
+        assert_eq!(
+            (rig.shown(), rig.light),
+            (VoiceBar::Hidden, VoiceLit::Off),
+            "{press:?}"
+        );
+    }
+    let mut rig = Rig::new();
+    rig.on(In::Lend(Lend::Prep));
+    assert_eq!(lent(&rig.gear()), [BarButton::Cancel], "the gear");
+}

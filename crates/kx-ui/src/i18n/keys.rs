@@ -13,7 +13,7 @@ use kx_module_api::ports::{ClipKind, Filter, MAX_PRESETS, PanelNote};
 
 /// Module names, by module id.
 pub const MODULE: &str = "module";
-/// Theme names, by `themes.toml` id.
+/// Theme names, by `themes/*.toml` id.
 pub const THEME: &str = "theme";
 /// Top-bar button names, by `icons.toml` `[bar]` id.
 pub const BAR: &str = "bar";

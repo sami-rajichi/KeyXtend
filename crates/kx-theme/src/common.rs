@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::palette::Shadow;
 use crate::rgba::Rgba;
 
-/// The shared colours, from `[common]` in `themes.toml`.
+/// The shared colours, from `[common]` in `themes/common.toml`.
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Common {
@@ -26,7 +26,7 @@ pub struct Common {
 }
 
 impl Common {
-    /// Every shared colour with its name in `themes.toml`.
+    /// Every shared colour with its name in `themes/common.toml`.
     #[must_use]
     pub fn named(&self) -> [(&'static str, Rgba); 5] {
         [

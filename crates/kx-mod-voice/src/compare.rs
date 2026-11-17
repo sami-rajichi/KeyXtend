@@ -51,6 +51,8 @@ pub struct Compare {
     plan: Option<Plan>,
     turns: Vec<Turn>,
     heard: bool,
+    /// The recording's microphone said it opened.
+    open: bool,
     pieces: BTreeMap<u16, Secret>,
     lines: Vec<Line>,
     hint: Option<BarHint>,
@@ -74,7 +76,7 @@ impl Compare {
         self.reset();
         self.plan = Some(plan);
         self.take = self.take.wrapping_add(1);
-        self.stage = Stage::Recording;
+        (self.stage, self.open) = (Stage::Recording, false);
         let ask = settings.ask(None, None);
         vec![Act::Open {
             take: self.take,
@@ -138,6 +140,10 @@ impl Compare {
                 self.heard = true;
                 Vec::new()
             }
+            SpeechNote::Stage(SpeechStage::Open) => {
+                self.open = true;
+                Vec::new()
+            }
             SpeechNote::Stage(SpeechStage::Limit | SpeechStage::Silence) if self.recording() => {
                 self.stop_self()
             }
@@ -161,11 +167,12 @@ impl Compare {
         matches!(self.stage, Stage::Recording | Stage::Running(_))
     }
 
-    /// What it holds of the microphone's run, for the flow (`In::Lend`): the bar while it records, then no dictation
-    /// until it ends.
+    /// What it holds of the microphone's run, for the flow (`In::Lend`): the amber key until its microphone opens, the
+    /// bar while it records, then no dictation until it ends.
     #[must_use]
     pub fn lend(&self) -> Lend {
         match self.stage {
+            Stage::Recording if !self.open => Lend::Prep,
             Stage::Recording => Lend::Listen,
             Stage::Running(_) => Lend::Write,
             Stage::Ready | Stage::Results => Lend::Off,

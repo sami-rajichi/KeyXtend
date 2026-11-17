@@ -1,0 +1,121 @@
+# The ET66 theme, light and soft dark; the notes for every theme are in common.toml.
+
+[[theme]]
+id = "et66"
+key_radius_px = 9.0
+window_radius_px = 14.0
+gap_px = 5.0
+legend_px = 13.0
+mod_legend_px = 10.5
+legend_weight = 500
+arabic_scale = 1.14
+latin_fonts = ["IBM Plex Sans"]
+font_metrics = [1.025, 0.275, 0.698]
+arabic_fonts = ["IBM Plex Sans Arabic", "Noto Sans Arabic"]
+led_glow_px = 5.0
+lock_glow_px = 0.0
+lock_glow_mix = 0.0
+# ET66 marks function with its own colours, so it never takes the accent.
+accent = false
+
+# A convex cap: lighter at the top, darker at the bottom; pressed, the gradient flips.
+[theme.cap]
+kind = "convex"
+rest = { lighten = 0.07, mid_stop = 0.55, darken = 0.07, upward = false }
+pressed = { lighten = 0.05, mid_stop = 0.50, darken = 0.08, upward = true }
+
+# The D-pad's colours, as token names: ET66 lights its arrow and Stop in the Enter yellow (mock-up lines 253 and 257).
+[theme.dpad]
+face = "key_act"
+ink = "legend_act"
+on = "enter"
+on_ink = "enter_ink"
+stop = "enter"
+stop_ink = "enter_ink"
+
+[theme.light]
+plate = "#E4E1DA"
+key = "#F8F6F1"
+key_mod = "#CDBBA7"
+key_act = "#F8F6F1"
+enter = "#F2C400"
+enter_ink = "#1D1B18"
+danger = "#CDBBA7"
+danger_ink = "#1D1B18"
+legend = "#1D1B18"
+legend_mod = "#1D1B18"
+legend_2 = "#5D5850"  # 2026-10-11: AA under the press shade (was #666057, first #6B655C)
+legend_2_plate = "#69635B"  # owner 2026-09-30: nudged to AA on the plate (was #6B655C)
+legend_act = "#1D1B18"
+on = "#FFFFFF"
+on_ink = "#795D00"  # 2026-10-11: AA under the press shade (was #7A5E00)
+lock = "#B39C83"
+lock_ink = "#1D1B18"
+rec = "#FFFFFF"
+rec_ink = "#795D00"  # 2026-10-11: AA under the press shade (was #7A5E00)
+prep = "#E58A2E"  # the Preparing light, design/voice-bar.html line 98
+prep_ink = "#1D1B18"
+led_off = "#D3CEC4"
+led_on = "#2F7A4C"
+ring = "#947700"  # 2026-10-02: 3:1 as a mark on the plate (was #A68600)
+badge_bg = "#1D1B18"
+badge_ink = "#F2C400"
+pop_bg = "#FBFAF7"
+pop_ink = "#1D1B18"
+pop_muted = "#6B655C"
+pop_line = "#00000017"
+pop_hover = "#0000000A"
+pop_sel = "#F3E7C0"
+chip_bg = "#F8F6F1"
+hover = "#0000000F"
+key_shadow = [
+    { x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#3C322847" },
+    { inset = true, x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#FFFFFFBF" },
+]
+window_shadow = [
+    { x = 0.0, y = 14.0, blur = 34.0, spread = 0.0, color = "#281E1440" },
+    { x = 0.0, y = 0.0, blur = 0.0, spread = 1.0, color = "#0000000F" },
+]
+
+[theme.dark]
+plate = "#2A2826"
+key = "#3A3734"
+key_mod = "#6B5645"
+key_act = "#3A3734"
+enter = "#E6BE3A"
+enter_ink = "#2A2418"
+danger = "#6B5645"
+danger_ink = "#F0ECE4"  # 2026-10-02: AA under the hover (was #EDE8DF)
+legend = "#EDE8DF"
+legend_mod = "#F3EEE6"
+legend_2 = "#C6C0B9"  # 2026-10-02: AA where it sits, under the hover (was #B3ACA2)
+legend_act = "#EDE8DF"
+on = "#3F3B37"  # 2026-10-02: AA under the hover (was #44403C)
+on_ink = "#E6BE3A"
+lock = "#79624F"  # 2026-10-02: AA under the hover (was #846B56)
+lock_ink = "#FFFFFF"
+rec = "#3F3B37"  # 2026-10-02: as on (was #44403C)
+rec_ink = "#E6BE3A"
+prep = "#E0913A"  # the Preparing light, design/voice-bar.html line 103
+prep_ink = "#2A1D0E"
+led_off = "#4A4642"
+led_on = "#6CC08A"
+ring = "#E6BE3A"
+badge_bg = "#2A2418"
+badge_ink = "#E6BE3A"
+pop_bg = "#33302D"
+pop_ink = "#EDE8DF"
+pop_muted = "#B3ACA2"
+pop_line = "#FFFFFF14"
+pop_hover = "#FFFFFF0D"
+pop_sel = "#4A4130"
+chip_bg = "#3A3734"
+hover = "#FFFFFF14"
+key_shadow = [
+    { x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#00000059" },
+    { inset = true, x = 0.0, y = 1.0, blur = 0.0, spread = 0.0, color = "#FFFFFF0F" },
+]
+window_shadow = [
+    { x = 0.0, y = 14.0, blur = 36.0, spread = 0.0, color = "#00000066" },
+    { x = 0.0, y = 0.0, blur = 0.0, spread = 1.0, color = "#FFFFFF0D" },
+]

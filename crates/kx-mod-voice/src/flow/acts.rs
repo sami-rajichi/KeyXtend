@@ -7,8 +7,8 @@ use super::take::{Lang, Take};
 use super::{Flow, Lack, Out, Phase, Ready, RunCall, State, Supply};
 
 impl Flow {
-    /// The Dictation key: Start, Stop while listening, or a cancel with nothing sent while preparing; a second click
-    /// within `debounce_ms` counts as none.
+    /// The Dictation key: Start, Stop while listening, or, as Cancel, an end with nothing sent and no bar while
+    /// preparing; a second click within `debounce_ms` counts as none.
     pub(super) fn key(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
         let now = self.now();
         let quick =
@@ -46,16 +46,16 @@ impl Flow {
             return;
         }
         match (button, self.phase()) {
-            (B::Cancel, Phase::Preparing | Phase::Listening | Phase::Transcribing) => {
-                self.cancel(out);
+            (B::Cancel, Phase::Preparing) | (B::Close, Phase::Text | Phase::Note) => {
+                self.close(out);
             }
+            (B::Cancel, Phase::Listening | Phase::Transcribing) => self.cancel(out),
             (B::Stop, Phase::Listening) => self.stop(true, out),
             (B::Copy, Phase::Text) => self.copy(out),
             (B::Undo, Phase::Text) => self.undo(out),
             (B::Anyway, Phase::Note) => self.anyway(out),
             (B::Listen, Phase::Note) if self.offers(B::Listen) => self.start(supply, out),
             (B::Download, Phase::Note) => self.download(out),
-            (B::Close, Phase::Text | Phase::Note) => self.close(out),
             _ => {}
         }
     }
@@ -138,11 +138,16 @@ impl Flow {
         self.show_note(BarHint::Nothing, Some(BarButton::Listen), iso);
     }
 
-    /// The gear or the tray opens the panel: a dictation that prepares, listens or writes, or Compare's recording, ends
-    /// first as the bar's Cancel ends it.
+    /// The gear or the tray opens the panel: a dictation, or Compare's recording, ends first as the bar's Cancel ends
+    /// it, with no bar while it prepares, as nothing was recorded (mock-up `end()`).
     pub(super) fn opening(&mut self, out: &mut Vec<Out>) {
-        if !self.lent_click(BarButton::Cancel, out) && self.busy() {
-            self.cancel(out);
+        if self.lent_click(BarButton::Cancel, out) {
+            return;
+        }
+        match self.phase() {
+            Phase::Preparing => self.close(out),
+            Phase::Listening | Phase::Transcribing => self.cancel(out),
+            Phase::Idle | Phase::Text | Phase::Note => {}
         }
     }
 

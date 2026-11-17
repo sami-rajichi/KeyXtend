@@ -253,12 +253,12 @@ Item {
             verify(!bar.visible, "and hides it");
         }
 
-        // Preparing (owner, 2026-11-17): no bar shows, and the amber Dictation key says it prepares, in each language.
-        function test_while_preparing_no_bar_shows_and_the_amber_key_says_so_data() {
+        // Preparing (owner, 2026-11-17): with no bar yet (a hidden view, as above), the amber Dictation key says it
+        // prepares, in each language.
+        function test_while_preparing_the_amber_key_says_so_data() {
             return ["en", "fr", "ar"].map(t => ({ tag: t, t: t }));
         }
-        function test_while_preparing_no_bar_shows_and_the_amber_key_says_so(d) {
-            verify(!make(view(d.t, "hidden"), d.t).visible, "no bar");
+        function test_while_preparing_the_amber_key_says_so(d) {
             const ui = root.texts[d.t].texts;
             const plain = Face.states.en.keys.mic;
             const prep = Object.assign({}, plain, { lit: "prep", spoken: "voice.preparing", paint: { fill: "prep", ink: "prep_ink", skirt: "prep" } });

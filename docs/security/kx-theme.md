@@ -39,7 +39,7 @@ No typed text, clipboard content or secret passes through this crate. The `[ui]`
 
 ## Findings
 ### Must fix (blocks Definition of Done)
-- Done (P3, 7666e09, fe5a6fe, f9bdea4, a918bc4): the tests checked flat token pairs only, so Dolch's sculpted top, the hover and press tints and the lit size letter fell below their minimums. `drawn` now checks what the keyboard really draws, each legend where it sits on its cap on the board's own row, and the nudged tokens are marked in `themes.toml`.
+- Done (P3, 7666e09, fe5a6fe, f9bdea4, a918bc4): the tests checked flat token pairs only, so Dolch's sculpted top, the hover and press tints and the lit size letter fell below their minimums. `drawn` now checks what the keyboard really draws, each legend where it sits on its cap on the board's own row, and the nudged tokens are marked in `themes/*.toml`.
 - Done (P3, 302c48b, 658a5a8): the system accent replaced the theme's colours unchecked. `with_accent` keeps it only when every drawn pair still passes on the keyboard's rows, and without a measurable row the theme keeps its own colours.
 - Done (P3, a049b94): high contrast kept the caps' gradient tints and mixed system pairs. It now draws flat caps and only pairs Windows makes readable.
 ### Should fix (tracked issue)

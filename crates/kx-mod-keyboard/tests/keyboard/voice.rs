@@ -196,6 +196,15 @@ fn voice_lit_sets_the_light_and_paint_and_redraws_at_the_next_relabel() {
 }
 
 #[test]
+fn a_new_light_is_in_the_state_at_once_for_the_uis_wake_to_read() {
+    let m = Mic::quiet(None);
+    for (light, want) in [(VoiceLit::Prep, amber()), (VoiceLit::Rec, red())] {
+        m.lit(light);
+        assert_eq!(m.light(), want, "{light:?} with no relabel");
+    }
+}
+
+#[test]
 fn a_restart_forgets_the_light_and_asks_again() {
     let mut m = Mic::quiet(None);
     m.lit(VoiceLit::Prep);

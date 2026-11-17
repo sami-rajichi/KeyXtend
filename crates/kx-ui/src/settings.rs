@@ -100,7 +100,7 @@ pub enum PressFrame {
     reason = "Each flag is one on-or-off setting of the flat [ui] section the user reads and writes."
 )]
 pub struct UiSettings {
-    /// The theme, by `themes.toml` id.
+    /// The theme, by `themes/*.toml` id.
     pub theme: String,
     /// Light, dark, or following the system.
     pub mode: ModeChoice,

@@ -4,7 +4,7 @@ import QtQuick
 Item {
     id: face
 
-    // How caps are built (themes.toml [theme.cap]); the key's colour and skirt colour; radius, size, press and sink (0 to 1).
+    // How caps are built (themes/*.toml [theme.cap]); the key's colour and skirt colour; radius, size, press and sink (0 to 1).
     required property var cap
     required property color topColour
     required property color skirt

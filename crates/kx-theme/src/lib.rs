@@ -42,8 +42,8 @@ pub use view::{LookChoice, LookView, look_view, reach};
 
 use thiserror::Error;
 
-/// Name of the themes file, for errors.
-const THEMES_FILE: &str = "themes.toml";
+/// Name of the themes' folder, whose parts are joined before they are read, for errors.
+const THEMES_FILE: &str = "themes/*.toml";
 /// Name of the shared sizes file, for errors.
 const SHAPE_FILE: &str = "shape.toml";
 /// Name of the motion file, for errors.
@@ -52,8 +52,19 @@ const MOTION_FILE: &str = "motion.toml";
 const ICONS_FILE: &str = "icons.toml";
 /// Name of the sounds file, for errors.
 const SOUNDS_FILE: &str = "sounds.toml";
-/// The themes, compiled in so the app reads nothing it draws from disk (ADR-0016).
-const THEMES: &str = include_str!("../tokens/themes.toml");
+/// The themes' parts in `tokens/themes/`, named once: the shared colours, then each theme in the theme button's order.
+macro_rules! theme_parts {
+    ($($part:literal),+) => {
+        /// The themes, their parts joined in order and compiled in, so the app reads nothing it draws from disk
+        /// (ADR-0016).
+        const THEMES: &str = concat!($(include_str!(concat!("../tokens/themes/", $part, ".toml"))),+);
+        /// Each part with its name, in the order `THEMES` joins them.
+        #[cfg(test)]
+        const THEME_PARTS: &[(&str, &str)] =
+            &[$(($part, include_str!(concat!("../tokens/themes/", $part, ".toml")))),+];
+    };
+}
+theme_parts!("common", "native", "et66", "dolch");
 /// The shared sizes, compiled in.
 const SHAPE: &str = include_str!("../tokens/shape.toml");
 /// The motion, compiled in.

@@ -1,4 +1,4 @@
-//! Press shade tests against the shipped `themes.toml`: a pressed key reads unlike a hovered or resting one.
+//! Press shade tests against the shipped `themes/*.toml`: a pressed key reads unlike a hovered or resting one.
 
 use super::*;
 use crate::Themes;

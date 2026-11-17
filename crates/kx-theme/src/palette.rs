@@ -185,7 +185,7 @@ impl Skirt {
 }
 
 impl Palette {
-    /// Every colour token with its name in `themes.toml`.
+    /// Every colour token with its name in `themes/*.toml`.
     #[must_use]
     pub fn named(&self) -> [(&'static str, Rgba); 37] {
         [
