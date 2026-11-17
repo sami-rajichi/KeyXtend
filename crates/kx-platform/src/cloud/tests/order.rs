@@ -1,5 +1,5 @@
 //! A run takes a text only at the next untold index below its piece count and within its cap in all; anything else
-//! ends the run and cancels the job's run (carry 1). The job's faults are the port's, `Range` naming the shape.
+//! ends the run and cancels the job's run. The job's faults are the port's, `Range` naming the shape.
 
 use super::*;
 use kx_ipc::{MAX_NET_RUN_TEXT_BYTES, MAX_NET_TEXT_BYTES};

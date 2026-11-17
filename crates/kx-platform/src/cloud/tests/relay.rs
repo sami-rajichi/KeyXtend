@@ -140,7 +140,7 @@ fn a_bad_ask_is_refused_before_any_job_starts() {
         host.send(long, tell()).err(),
         Some(CloudFault::Range("pieces"))
     );
-    assert_eq!(script.spawns(), 0, "refused before any job (carry 4)");
+    assert_eq!(script.spawns(), 0, "refused before any job");
 }
 
 #[test]

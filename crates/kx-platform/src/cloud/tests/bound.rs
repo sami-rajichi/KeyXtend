@@ -1,6 +1,6 @@
-//! A run's job is sized by its sound, its bodies in flight and their replies (carry 2), and each piece has a time
-//! bound scaled by its size from the moment the one before it is told; past it the run times out and the job's run
-//! is cancelled, on a clock the test moves (carry 5). A key's test waits for no turn in the pace.
+//! A run's job is sized by its sound, its bodies in flight and their replies, and each piece has a time bound scaled
+//! by its size from the moment the one before it is told; past it the run times out and the job's run is cancelled,
+//! on a clock the test moves. A key's test waits for no turn in the pace.
 
 use super::*;
 use kx_ipc::{MAX_RECORD_BYTES, NET_AT_ONCE, NET_MAX_S, NET_PACE_S, piece_bytes};
