@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-17 23:40 — P11: the Voice panel's cloud side
+The Voice panel now has a Cloud page, Groq first, with one card per service: its dated facts, a link to where the key is made, and lines for the key, an address or a model id. Paste puts a key on its line as dots, seals it, and KeyXtend's clipboard history forgets that copy; switching a service off keeps the key, and only Remove key deletes it. The Models page gets a Local | Cloud switch, and Compare sends the recording only to the cloud models the user ticked. A clipboard answer now names the module that asked, so a vault password and a cloud key can never cross.
+
 ## 2026-11-17 21:15 — P11: a dictation can go to a cloud service
 With a cloud model picked, the bar names the service from Start; the speech stays on this PC until Stop and then goes, cut at pauses, only to that service. After any fault the recording is kept and the bar offers Try again or "Use the local model", and nothing is typed twice. A password box, or a take the local model has written, never goes to the cloud, and a removed key or a switched-off service stops the upload with a note.
 
