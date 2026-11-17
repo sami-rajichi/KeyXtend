@@ -251,3 +251,17 @@ fn a_range_fault_in_a_script_is_a_test_mistake() {
 fn a_fault_send_never_returns_is_a_test_mistake() {
     FakeCloud::new().fail(CloudFault::Key);
 }
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "never returns")]
+fn a_failed_range_is_the_asks_own_check_not_a_script() {
+    FakeCloud::new().fail(CloudFault::Range("wait_s"));
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "never answers")]
+fn a_range_answer_for_a_key_test_is_a_test_mistake() {
+    FakeCloud::new().script_test(Err(CloudFault::Range("key")));
+}

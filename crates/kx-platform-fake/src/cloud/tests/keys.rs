@@ -61,9 +61,9 @@ fn the_service_refuses_a_key_other_than_its_own() {
     let (heard, tell) = hearer();
     let _refused = fake.send(other, tell).unwrap();
     assert_eq!(notes(&heard), [CloudNote::Fault(CloudFault::Key)]);
-    fake.script(vec![text(SAID)]);
     let (_run, heard) = sent(&fake, &[2]);
-    assert_eq!(notes(&heard), [piece(0, SAID), CloudNote::Done]);
+    let texts = [piece(0, SAID), CloudNote::Done];
+    assert_eq!(notes(&heard), texts, "the refused run left the script");
     let wrong = CloudTest {
         key: secret("gsk_other-1"),
         ..key_test()

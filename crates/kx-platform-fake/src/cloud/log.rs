@@ -37,13 +37,14 @@ pub(super) struct Log {
 }
 
 impl Log {
-    /// Records a run of `ask` that tells `tell` and gives its place; it takes the next script, led by `Fault(Key)`
-    /// when the service refuses its key.
+    /// Records a run of `ask` that tells `tell` and gives its place; it takes the next script, or only `Fault(Key)`
+    /// when the service refuses its key, which leaves the scripts for the next run.
     pub(super) fn open(&mut self, ask: CloudAsk, tell: Tell) -> usize {
-        let mut script = self.scripts.pop_front().unwrap_or_default();
-        if !self.key_ok(&ask.key) {
-            script.push_front(CloudAnswer::Fault(CloudFault::Key));
-        }
+        let script = if self.key_ok(&ask.key) {
+            self.scripts.pop_front().unwrap_or_default()
+        } else {
+            VecDeque::from([CloudAnswer::Fault(CloudFault::Key)])
+        };
         self.calls.runs.push(CloudLog::new(ask));
         let hearer = Some(Arc::new(Mutex::new(tell)));
         self.ears.push(Ear { script, hearer });

@@ -67,15 +67,19 @@ impl FakeCloud {
         self.shared.tell(run, |log| log.cut(run, fault))
     }
 
-    /// Fails the next `send` with `fault`, once, opening no run; a debug build stops on a fault `send` never returns.
+    /// Fails the next `send` with `fault`, once, opening no run; a debug build stops on anything but `Gone`, as a
+    /// `Range` comes only from the ask's own check.
     pub fn fail(&self, fault: CloudFault) {
-        let ported = matches!(fault, CloudFault::Range(_) | CloudFault::Gone);
-        debug_assert!(ported, "send never returns {fault:?}");
+        let ported = matches!(fault, CloudFault::Gone);
+        debug_assert!(ported, "send never returns {fault:?} unasked");
         lock(&self.shared.log).fail = Some(fault);
     }
 
-    /// Scripts the next key test's answer, after those queued; a test with none answers `Ok`.
+    /// Scripts the next key test's answer, after those queued; a test with none answers `Ok`. A debug build stops on
+    /// a `Range`, which comes only from the test's own check.
     pub fn script_test(&self, answer: Result<(), CloudFault>) {
+        let ported = !matches!(answer, Err(CloudFault::Range(_)));
+        debug_assert!(ported, "a key test never answers {answer:?} unasked");
         lock(&self.shared.log).test_answers.push_back(answer);
     }
 
@@ -85,8 +89,8 @@ impl FakeCloud {
         self.shared.changed.notify_all();
     }
 
-    /// Sets the key the service takes: a run then tells `Fault(Key)` first, and a test answers `Key`, for any other;
-    /// `None` takes any key. It is the test's own key; a sent key is never kept.
+    /// Sets the key the service takes: for any other, a run tells only `Fault(Key)` and a test answers `Key`, both
+    /// leaving the scripts queued; `None` takes any. It is the test's own key; a sent key is never kept.
     pub fn take_key(&self, key: Option<Secret>) {
         lock(&self.shared.log).key = key;
     }
