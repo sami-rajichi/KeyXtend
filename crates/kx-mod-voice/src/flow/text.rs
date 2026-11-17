@@ -108,7 +108,7 @@ impl Flow {
             take: take.id,
             text: secret(text),
             lang: take.lang.iso().to_owned(),
-            model: take.ready.name.clone(),
+            model: take.engine.name(),
         }));
         if voice && !take.kept && take.open && take.held {
             take.kept = true;

@@ -32,6 +32,21 @@ pub(crate) enum Answer {
     Done,
     /// The recording, for Keep recordings.
     Sound(Vec<SecretBytes>),
+    /// A listen-only run's speech, for upload `round`, or why it could not be had.
+    Speech {
+        /// The upload it goes to.
+        round: u32,
+        /// The pieces, wiped on drop.
+        pieces: Result<Vec<SecretBytes>, SpeechError>,
+    },
+}
+
+/// A call waiting on a run: the flow's, or the actor's own ask for the speech an upload sends.
+enum Call {
+    /// The flow's call.
+    Run(RunCall),
+    /// Hand the speech over for upload `round`.
+    Speech(u32),
 }
 
 /// One run's place: the run while no job holds it, and the calls waiting.
@@ -40,7 +55,7 @@ struct Slot {
     run: Option<Run>,
     /// A job holds the run, opening it or calling it.
     busy: bool,
-    calls: VecDeque<RunCall>,
+    calls: VecDeque<Call>,
 }
 
 /// The open runs.
@@ -84,9 +99,20 @@ impl Actor {
             return;
         }
         if let Some(slot) = self.lanes.0.get_mut(&lane) {
-            slot.calls.push_back(call);
+            slot.calls.push_back(Call::Run(call));
             self.next_call(lane);
         }
+    }
+
+    /// Asks dictation `take`'s run for its speech, for upload `round`, after the calls before it; a closed run has
+    /// none to give.
+    pub(super) fn hand(&mut self, take: u32, round: u32) {
+        let lane = (Owner::Flow, take);
+        let Some(slot) = self.lanes.0.get_mut(&lane) else {
+            return self.spoken(take, round, Err(SpeechError::NoSound));
+        };
+        slot.calls.push_back(Call::Speech(round));
+        self.next_call(lane);
     }
 
     /// Run `lane` opened: its calls go on; a refusal tells its owner the fault.
@@ -117,14 +143,24 @@ impl Actor {
             return;
         };
         slot.busy = false;
-        match run {
-            Some(run) => slot.run = Some(run),
-            None => drop(self.lanes.0.remove(&lane)),
-        }
+        let left = match run {
+            Some(run) => {
+                slot.run = Some(run);
+                VecDeque::new()
+            }
+            None => (self.lanes.0.remove(&lane)).map_or_else(VecDeque::new, |s| s.calls),
+        };
         match answer {
             Ok(Answer::Sound(pieces)) if lane.0 == Owner::Flow => self.keep_sound(lane.1, &pieces),
+            Ok(Answer::Speech { round, pieces }) => self.spoken(lane.1, round, pieces),
             Ok(_) => {}
             Err(error) => self.run_fault(lane, error),
+        }
+        // A closed run has no speech left for an upload still waiting on it.
+        for call in left {
+            if let Call::Speech(round) = call {
+                self.spoken(lane.1, round, Err(SpeechError::NoSound));
+            }
         }
         self.next_call(lane);
     }
@@ -158,13 +194,14 @@ impl Actor {
         };
         slot.busy = true;
         let back = self.ports.back.clone();
+        let failed = broke(&call);
         let job: Job = Box::new(move || {
             let (run, answer) = call_on(run, call);
             // Only a stopped actor misses it, and the run then closes as it drops.
             let _ = back.send(Msg::Back(Back::Called { lane, run, answer }));
         });
         if !(self.ports.spawn)(job) {
-            self.called(lane, None, Err(SpeechError::Internal));
+            self.called(lane, None, failed);
         }
     }
 
@@ -176,28 +213,50 @@ impl Actor {
 }
 
 /// Carries out `call` on `run`; the run comes back unless it closed, and a panic in the port counts as `Internal`.
-fn call_on(mut run: Run, call: RunCall) -> (Option<Run>, Result<Answer, SpeechError>) {
-    let close = call == RunCall::Close;
-    let done = |result: Result<(), SpeechError>| result.map(|()| Answer::Done);
-    let caught = catch_unwind(AssertUnwindSafe(|| match call {
-        RunCall::Stop => done(run.0.stop()),
-        RunCall::Cancel => done(run.0.cancel()),
-        RunCall::Again(ask) => done(run.0.again(ask)),
-        RunCall::Keep => run.0.keep().map(Answer::Sound),
-        RunCall::Close => {
-            run.0.close();
-            Ok(Answer::Done)
-        }
-    }));
+fn call_on(mut run: Run, call: Call) -> (Option<Run>, Result<Answer, SpeechError>) {
+    let close = matches!(call, Call::Run(RunCall::Close));
+    let failed = broke(&call);
+    let caught = catch_unwind(AssertUnwindSafe(|| carry(&mut run, call)));
     let Ok(answer) = caught else {
         shut(run);
-        return (None, Err(SpeechError::Internal));
+        return (None, failed);
     };
     if close {
         shut(run);
         return (None, answer);
     }
     (Some(run), answer)
+}
+
+/// What `call` gives when its job breaks: an upload's ask still hears back, so it never waits on speech that will
+/// not come.
+fn broke(call: &Call) -> Result<Answer, SpeechError> {
+    match call {
+        Call::Speech(round) => Ok(Answer::Speech {
+            round: *round,
+            pieces: Err(SpeechError::Internal),
+        }),
+        Call::Run(_) => Err(SpeechError::Internal),
+    }
+}
+
+/// Carries out `call` on `run`.
+fn carry(run: &mut Run, call: Call) -> Result<Answer, SpeechError> {
+    let done = |result: Result<(), SpeechError>| result.map(|()| Answer::Done);
+    match call {
+        Call::Run(RunCall::Stop) => done(run.0.stop()),
+        Call::Run(RunCall::Cancel) => done(run.0.cancel()),
+        Call::Run(RunCall::Again(ask)) => done(run.0.again(ask)),
+        Call::Run(RunCall::Keep) => run.0.keep().map(Answer::Sound),
+        Call::Run(RunCall::Close) => {
+            run.0.close();
+            Ok(Answer::Done)
+        }
+        Call::Speech(round) => Ok(Answer::Speech {
+            round,
+            pieces: run.0.pieces(),
+        }),
+    }
 }
 
 /// Drops `run`; a port that breaks again as it closes is caught, so the job still answers its lane.

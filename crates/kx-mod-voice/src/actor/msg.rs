@@ -4,11 +4,13 @@
 use std::path::PathBuf;
 
 use kx_module_api::ports::{
-    CardId, CheckDone, Device, FetchNote, FieldChange, Fingerprint, FolderError, LayoutChanged,
-    ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone, TextPasted, VoiceAct,
+    CardId, CheckDone, CloudNote, Device, FetchNote, FieldChange, Fingerprint, FolderError,
+    LayoutChanged, ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone,
+    TextPasted, VoiceAct,
 };
 
 use super::lanes::{Answer, Lane, Run};
+use super::net::Wired;
 use crate::panel::Check;
 
 /// A message for the actor, from the bus, a watch, a job or the module.
@@ -97,4 +99,22 @@ pub(crate) enum Back {
     },
     /// The models folder was shown, or why not.
     Shown(Result<(), FolderError>),
+    /// A note from dictation `take`'s upload of round `round`.
+    Net {
+        /// The dictation.
+        take: u32,
+        /// The upload.
+        round: u32,
+        /// The note; a text stays secret.
+        note: CloudNote,
+    },
+    /// The service's run for dictation `take`'s upload of round `round` opened.
+    Sending {
+        /// The dictation.
+        take: u32,
+        /// The upload.
+        round: u32,
+        /// The run, held until it ends; dropping it cancels its requests.
+        run: Wired,
+    },
 }

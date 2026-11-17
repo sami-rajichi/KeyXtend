@@ -7,10 +7,10 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, FieldRun, FieldWatchKey, FolderRevealKey, LayoutChanged,
-    ModelFilesKey, PointerPressed, PressAsker, PressesAsk, PressesWanted, SessionRun,
-    SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk, VoiceBar,
-    VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
+    CalendarKey, ClipboardWriterKey, CloudSpeechKey, FieldRun, FieldWatchKey, FolderRevealKey,
+    LayoutChanged, ModelFilesKey, PointerPressed, PressAsker, PressesAsk, PressesWanted,
+    SessionRun, SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk,
+    VoiceBar, VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, NoticeArg, args, keys,
@@ -146,6 +146,8 @@ fn ports(
     let reveal = cx.service::<FolderRevealKey>()?;
     let shelf = cx.service::<VoiceShelfKey>()?;
     let calendar = cx.service::<CalendarKey>()?;
+    // A run without cloud speech still dictates with local models; an upload then ends with the fault note.
+    let cloud = cx.service::<CloudSpeechKey>().ok();
     let field = field_watch(cx, settings, tx)?;
     let session = session_watch(cx, tx)?;
     let typist = typer(cx.bus()).ok_or(ModuleError::Start(NO_TYPER))?;
@@ -158,6 +160,7 @@ fn ports(
         clip,
         reveal,
         shelf,
+        cloud,
         field,
         session,
         handle: cx.settings_handle(),

@@ -1,4 +1,4 @@
-//! What the actor logs when a port fails: fixed texts and error kinds, never a dictated text or a folder.
+//! What the actor logs when a port fails: fixed texts and error kinds, never a dictated text, a folder or a cloud key.
 
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
@@ -7,13 +7,13 @@ use std::sync::Once;
 use kx_module_api::ports::{
     BarButton, ClipError, FolderError, PanelButton, SealedError, VoiceClick, VoiceTab,
 };
-use kx_platform_fake::ShelfCall;
+use kx_platform_fake::{CloudAnswer, ShelfCall};
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Metadata, Subscriber};
 
-use super::Msg;
 use super::rig::Rig;
+use super::{Msg, cloud};
 
 /// A dictated text that appears nowhere else.
 const SECRET: &str = "zebra-quartz";
@@ -95,5 +95,25 @@ fn a_failed_copy_save_reveal_or_run_logs_no_text_or_folder() {
     assert!(lines.len() >= 3, "{lines:?}");
     for line in &lines {
         assert!(!line.contains(SECRET) && !line.contains(FOLDER), "{line}");
+    }
+}
+
+#[test]
+fn a_cloud_dictation_logs_no_key_and_no_reply() {
+    let lines = lines_of(|| {
+        let mut rig = Rig::build(cloud::groq);
+        rig.fake.shelf.fail(ShelfCall::Load, SealedError::Damaged);
+        rig.dictate();
+        cloud::set_key(&rig.fake, cloud::KEY);
+        rig.fake.cloud.script(vec![CloudAnswer::text(SECRET); 2]);
+        rig.act(VoiceClick::Bar(BarButton::Again));
+        assert_eq!(rig.typed_texts(), [format!("{SECRET} {SECRET}")]);
+    });
+    assert!(!lines.is_empty(), "the unread key is logged by kind");
+    for line in &lines {
+        assert!(
+            !line.contains(SECRET) && !line.contains(cloud::KEY),
+            "{line}"
+        );
     }
 }

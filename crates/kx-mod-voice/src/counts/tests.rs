@@ -6,6 +6,8 @@ use super::*;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{CardId, Fingerprint, Hundredths, SpeechDone, Verdict};
 
+mod cloud;
+
 /// A row of the models table.
 const ROW: &str = "parakeet-v3-q8";
 

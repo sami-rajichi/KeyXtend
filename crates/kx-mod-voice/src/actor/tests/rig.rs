@@ -43,7 +43,12 @@ impl Rig {
 
     /// A begun rig of a run whose saves would be hidden (ADR-0037).
     pub fn hidden() -> Self {
-        Self::begun(Self::unbegun_as(true, |_, _| {}))
+        Self::hidden_with(|_, _| {})
+    }
+
+    /// A begun rig of a hidden run whose fakes and settings `setup` prepares first.
+    pub fn hidden_with(setup: impl FnOnce(&Fakes, &mut FakeHost)) -> Self {
+        Self::begun(Self::unbegun_as(true, setup))
     }
 
     /// `rig` begun, then a text box focused and English in front.
@@ -251,6 +256,7 @@ fn ports(
         clip: Arc::clone(&fake.clip) as _,
         reveal: Arc::clone(&fake.reveal) as _,
         shelf: Arc::new(fake.shelf.clone()),
+        cloud: Some(Arc::new(fake.cloud.clone())),
         field: field.ok(),
         session: session.ok(),
         handle: host.handle(),

@@ -47,6 +47,8 @@ impl Actor {
             Back::Checked(check, done) => self.checked(&check, done),
             Back::Fetched { row, note } => self.fetched(&row, note),
             Back::Shown(shown) => self.shown(shown),
+            Back::Net { take, round, note } => self.net_note(take, round, note),
+            Back::Sending { take, round, run } => self.opened_net(take, round, run),
         }
     }
 

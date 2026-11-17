@@ -8,9 +8,12 @@ mod jobs;
 mod keep;
 mod lanes;
 mod msg;
+mod net;
+mod offer;
 mod outs;
 mod paste;
 mod ports;
+mod presses;
 mod typing;
 
 pub(crate) use msg::{Back, Msg};
@@ -23,18 +26,21 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    DevicePick, FieldChange, FieldKind, LayoutAsk, LayoutChanged, PanelButton, PressAsker,
-    PressesWanted, VoiceAct, VoiceClick, VoicePanel,
+    DevicePick, FieldChange, FieldKind, LayoutAsk, LayoutChanged, PanelButton, VoiceAct,
+    VoiceClick, VoicePanel,
 };
 use kx_module_api::{Event, Notice};
 
 use crate::flow::{Flow, In, Lend};
+use crate::keys::Keys;
 use crate::panel::Panel;
 use crate::{ID, VoiceSettings};
 use held::Held;
 use jobs::Jobs;
 use keep::Keep;
 use lanes::Lanes;
+use net::Uploads;
+use offer::Offer;
 use paste::Pasting;
 use typing::Typing;
 
@@ -52,6 +58,8 @@ pub(crate) struct Actor {
     typing: Typing,
     pasting: Pasting,
     jobs: Jobs,
+    /// The cloud keys and uploads.
+    net: Uploads,
     /// The flow's inputs still to feed, so an effect never feeds it while it is fed.
     inputs: VecDeque<In>,
     stepping: bool,
@@ -68,6 +76,7 @@ impl Actor {
     /// An actor following `settings`; `hidden` is a run whose saves would be hidden (ADR-0037).
     pub(crate) fn new(ports: Ports, settings: VoiceSettings, hidden: bool) -> Self {
         let clips = ports.speech.clips();
+        let keys = Keys::new(Arc::clone(&ports.shelf), hidden);
         Self {
             flow: Flow::new(Arc::clone(&ports.clock), settings.clone(), hidden),
             panel: Panel::new(&settings),
@@ -78,6 +87,7 @@ impl Actor {
             typing: Typing::default(),
             pasting: Pasting::default(),
             jobs: Jobs::default(),
+            net: Uploads::new(keys, hidden),
             inputs: VecDeque::new(),
             stepping: false,
             drawn: None,
@@ -183,6 +193,7 @@ impl Actor {
         self.retry_saves();
         self.jobs.fetches.clear();
         self.lanes.clear();
+        self.net.clear();
     }
 
     /// Feeds `input` to the flow and carries out its effects; an input an effect brings waits its turn.
@@ -194,8 +205,13 @@ impl Actor {
         while let Some(input) = self.inputs.pop_front() {
             let now = self.ports.calendar.now();
             let facts = self.held.facts(now, &self.flow);
-            let stock = self.panel.stock(&facts);
-            let outs = self.flow.on(input, &stock);
+            let offer = Offer {
+                stock: self.panel.stock(&facts),
+                settings: &self.held.settings,
+                keys: &self.net.keys,
+                hidden: self.net.hidden,
+            };
+            let outs = self.flow.on(input, &offer);
             for out in outs {
                 self.out(out);
             }
@@ -224,11 +240,15 @@ impl Actor {
         }
     }
 
-    /// A click: the bar's buttons, the pointer and Try again go to the flow, the rest to the panel.
+    /// A click: the bar's buttons, the pointer, Try again and "Use the local model" go to the flow, the rest to the
+    /// panel.
     fn act(&mut self, act: VoiceAct) {
         let flow = matches!(
             act.click,
-            VoiceClick::Bar(_) | VoiceClick::Over(_) | VoiceClick::Button(PanelButton::Again)
+            VoiceClick::Bar(_)
+                | VoiceClick::Over(_)
+                | VoiceClick::Button(PanelButton::Again)
+                | VoiceClick::Local
         );
         if flow {
             return self.step(In::Act(act));
@@ -260,26 +280,6 @@ impl Actor {
             DevicePick::Cpu => false,
             DevicePick::Card(_) => true,
             DevicePick::Auto => !self.held.checks.rows().is_empty(),
-        }
-    }
-
-    /// Tells the mouse module whether presses are wanted, when that changed.
-    fn want_presses(&mut self, on: bool) {
-        if std::mem::replace(&mut self.presses, on) != on {
-            self.publish(&PressesWanted {
-                asker: PressAsker::Voice,
-                on,
-            });
-        }
-    }
-
-    /// A late mouse module hears the wish again, while there is one.
-    fn retell_presses(&self) {
-        if self.presses {
-            self.publish(&PressesWanted {
-                asker: PressAsker::Voice,
-                on: true,
-            });
         }
     }
 

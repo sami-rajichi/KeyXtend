@@ -56,7 +56,7 @@ pub struct Entry {
     pub text: Secret,
     /// The language it was dictated in, an ISO 639 code.
     pub lang: String,
-    /// The model that wrote it: a row's id or a model file's name.
+    /// The model that wrote it: a row's id, a model file's name, or the cloud pick, `service:model`.
     pub model: Redacted<String>,
     /// It is pinned, outside `history_max`.
     pub pinned: bool,

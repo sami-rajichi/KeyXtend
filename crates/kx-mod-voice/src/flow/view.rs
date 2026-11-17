@@ -4,7 +4,8 @@
 use std::mem::{Discriminant, discriminant};
 
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarText, Listening, VoiceBar, VoiceLit, VoicePage, VoiceView,
+    BarButton, BarHint, BarNote, BarText, CloudWhy, Listening, ServiceName, VoiceBar, VoiceLit,
+    VoicePage, VoiceView,
 };
 
 use super::{Flow, Out, State};
@@ -58,7 +59,7 @@ impl Flow {
             panel: self.panel.clone(),
             place: self.settings.bar_place(),
             sounds: self.settings.sounds,
-            cloud: None,
+            cloud: self.mark(),
         };
         if !self.told.page.as_ref().is_some_and(|p| same(p, &page)) {
             let take = self.take.as_ref().map(|t| t.id);
@@ -117,10 +118,26 @@ impl Flow {
             }),
             State::Note { hint, act, .. } => VoiceBar::Note(BarNote {
                 hint: hint.clone(),
-                act: act.filter(|a| *a != BarButton::Anyway || self.anyway_ok()),
+                act: act.filter(|a| {
+                    !matches!(a, BarButton::Anyway | BarButton::Again) || self.anyway_ok()
+                }),
                 mic: false,
             }),
         }
+    }
+
+    /// The cloud mark: the service a cloud dictation goes to, from Start to its text or its note.
+    fn mark(&self) -> Option<ServiceName> {
+        let net = self.take.as_ref()?.engine.net()?;
+        let shows = match &self.state {
+            State::Preparing | State::Listening { .. } | State::Transcribing => true,
+            State::Note {
+                hint: BarHint::Cloud { why, .. },
+                ..
+            } => *why != CloudWhy::NoLocal,
+            State::Idle | State::Text { .. } | State::Note { .. } => false,
+        };
+        shows.then(|| net.name.clone())
     }
 
     /// The Listening bar, with the time listened so far.

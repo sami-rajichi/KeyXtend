@@ -1,5 +1,6 @@
 //! The flow's effects, carried out in order: the runs, the view and the light, the level, the text for the typer or to
-//! paste, Copy, History and the counts, a download, a lost model file, a failed card, and the bar's clicks Compare holds.
+//! paste, Copy, History and the counts, a download, a lost model file, a failed card, the bar's clicks Compare holds,
+//! and a cloud upload sent or dropped.
 
 use kx_module_api::ports::{
     BarButton, CardId, ClipPart, Fingerprint, VoiceAct, VoiceBar, VoiceClick, VoiceView,
@@ -35,6 +36,8 @@ impl Actor {
             }
             Out::Fell { card, model } => self.fell(&card, &model),
             Out::Lent(button) => self.lent(button),
+            Out::Send(up) => self.send(&up),
+            Out::Halt { take } => self.halt(take),
         }
     }
 

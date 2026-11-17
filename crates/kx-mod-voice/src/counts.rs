@@ -1,5 +1,6 @@
-//! The numbers the store keeps, never content (design "Counts"): per day, model and device, the dictations, the time
-//! heard and the time waited, for P13's dashboard; each card's check (`checks`); and Compare's results (`scores`).
+//! The numbers the store keeps, never content (design "Counts"): per day, model and device, a cloud service's too, the
+//! dictations, the time heard and the time waited, for P13's dashboard; each card's check (`checks`); and Compare's
+//! results (`scores`).
 
 mod checks;
 mod scores;
@@ -11,24 +12,46 @@ use std::collections::BTreeMap;
 
 use kx_module_api::ports::{CardId, Date};
 
+use crate::cloud::cloud_pick;
 use crate::flow::Count;
 use crate::models::table;
+use crate::services;
 
-/// The model a count is for: a models table row by its id, or any other file, whose name is never kept.
+/// The model a count is for: a models table row by its id, a cloud service's model, or any other file, whose name is
+/// never kept.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Model {
     /// A row of the models table.
     Row(String),
     /// A model file the table does not name.
     Other,
+    /// A cloud service's model (ADR-0047).
+    Cloud {
+        /// The service's id in the services table.
+        service: String,
+        /// The listed model's id; `None` for one the user typed, whose id is never kept.
+        model: Option<String>,
+    },
 }
 
 impl Model {
-    /// The model `name` names: a row's id, else any other file.
+    /// The model `name` names: a row's id, a cloud pick of a service in the table, else any other file.
     #[must_use]
     pub fn of(name: &str) -> Self {
+        if let Some((service, model)) = cloud_pick(name) {
+            return Self::cloud(service, model);
+        }
         let row = table().ok().and_then(|t| t.get(name));
         row.map_or(Self::Other, |r| Self::Row(r.id.clone()))
+    }
+
+    /// Service `id`'s `model`, kept only when the service lists it.
+    fn cloud(id: &str, model: &str) -> Self {
+        let row = services::table().ok().and_then(|t| t.get(id));
+        row.map_or(Self::Other, |r| Self::Cloud {
+            service: r.id.clone(),
+            model: r.model(model).map(|m| m.id.clone()),
+        })
     }
 }
 
@@ -39,6 +62,8 @@ pub enum Device {
     Cpu,
     /// This graphics card, to the end.
     Card(CardId),
+    /// A cloud service, so no device of this PC.
+    Cloud,
 }
 
 /// What a count is kept under: a local day, a model and a device.
@@ -82,8 +107,11 @@ impl Counts {
 
     /// Counts `count`, a dictation written on local day `date`; each number stops at its top rather than wrap.
     pub fn add(&mut self, date: Date, count: &Count) {
-        let device = count.card.clone().map_or(Device::Cpu, Device::Card);
         let model = Model::of(count.model.expose());
+        let device = match (&model, count.card.clone()) {
+            (Model::Cloud { .. }, _) => Device::Cloud,
+            (_, card) => card.map_or(Device::Cpu, Device::Card),
+        };
         let tally = self.0.entry(Bucket {
             date,
             model,

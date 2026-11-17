@@ -1,5 +1,8 @@
-//! The numbers' blobs, each a mark and a version, then its rows: the counts by day, model and device; the card checks
-//! by card, driver and file fingerprint; Compare's runs by language. They hold ids and numbers, never a text.
+//! The numbers' blobs, each a mark and a version, then its rows: the counts by day, model and device, a cloud
+//! service's too; the card checks by card, driver and file fingerprint; Compare's runs by language. They hold ids and
+//! numbers, never a text.
+
+mod tags;
 
 use std::collections::BTreeMap;
 
@@ -7,8 +10,8 @@ use kx_module_api::Zeroizing;
 use kx_module_api::ports::{CardId, Fingerprint, Hundredths, Verdict, fits_iso};
 
 use super::codec::{self, Bad, Mark, Reader, Writer};
-use crate::counts::{Board, Bucket, Checked, Checks, Counts, Device, Model, Score, Scores, Tally};
-use crate::models::id_ok;
+use crate::counts::{Board, Bucket, Checked, Checks, Counts, Score, Scores, Tally};
+use tags::{device, model, put_device, put_model};
 
 /// The forms' version, the byte after each mark; a newer one is never read or written over.
 pub(crate) const VERSION: u8 = 1;
@@ -19,12 +22,6 @@ pub(crate) const CHECKS_MARK: Mark = *b"KXVK";
 /// What starts Compare's results' blob.
 pub(crate) const SCORES_MARK: Mark = *b"KXVS";
 
-/// A model's tag: any other file, then a table row followed by its id.
-const OTHER: u8 = 0;
-const ROW: u8 = 1;
-/// A device's tag: the processor, then a card followed by its id.
-const CPU: u8 = 0;
-const CARD: u8 = 1;
 /// A verdict's tag, in `Verdict`'s order.
 const PASSED: u8 = 0;
 const SLOW: u8 = 1;
@@ -39,13 +36,7 @@ pub(crate) fn encode_counts(counts: &Counts) -> Zeroizing<Vec<u8>> {
         w.count(counts.rows().len());
         for (bucket, tally) in counts.rows() {
             w.date(bucket.date);
-            match &bucket.model {
-                Model::Other => w.u8(OTHER),
-                Model::Row(id) => {
-                    w.u8(ROW);
-                    w.text(id);
-                }
-            }
+            put_model(w, &bucket.model);
             put_device(w, &bucket.device);
             w.u32(tally.dictations);
             w.u64(tally.sound_ms);
@@ -61,11 +52,7 @@ pub(crate) fn decode_counts(bytes: &[u8]) -> Result<Counts, Bad> {
     let mut rows = BTreeMap::new();
     for _ in 0..r.count()? {
         let date = r.date()?;
-        let model = match r.u8()? {
-            OTHER => Model::Other,
-            ROW => Model::Row(r.text().map(str::to_owned).and_then(row_id)?),
-            _ => return Err(Bad::Damaged),
-        };
+        let model = model(&mut r)?;
         let device = device(&mut r)?;
         let (dictations, sound_ms, wait_ms) = (r.u32()?, r.u64()?, r.u64()?);
         let tally = Tally {
@@ -230,37 +217,10 @@ fn verdict(r: &mut Reader<'_>) -> Result<Verdict, Bad> {
     })
 }
 
-fn put_device(w: &mut Writer, device: &Device) {
-    match device {
-        Device::Cpu => w.u8(CPU),
-        Device::Card(card) => {
-            w.u8(CARD);
-            w.text(card.as_str());
-        }
-    }
-}
-
-fn device(r: &mut Reader<'_>) -> Result<Device, Bad> {
-    match r.u8()? {
-        CPU => Ok(Device::Cpu),
-        CARD => card(r).map(Device::Card),
-        _ => Err(Bad::Damaged),
-    }
-}
-
 fn card(r: &mut Reader<'_>) -> Result<CardId, Bad> {
     CardId::new(r.text()?).ok_or(Bad::Damaged)
 }
 
 fn print(r: &mut Reader<'_>) -> Result<Fingerprint, Bad> {
     Fingerprint::from_hex(r.text()?).ok_or(Bad::Damaged)
-}
-
-/// `id` when it is a row id as the table writes them.
-fn row_id(id: String) -> Result<String, Bad> {
-    if id_ok(&id) {
-        Ok(id)
-    } else {
-        Err(Bad::Damaged)
-    }
 }

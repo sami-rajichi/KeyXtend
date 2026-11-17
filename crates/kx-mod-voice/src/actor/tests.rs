@@ -9,6 +9,7 @@
 
 mod auto;
 mod cards;
+mod cloud;
 mod compare;
 mod fakes;
 mod faults;

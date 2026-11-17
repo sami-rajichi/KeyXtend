@@ -17,6 +17,7 @@ use outs::{ask, calls, kept, note, opened, text};
 
 mod cancel;
 mod close;
+mod cloud;
 mod copied;
 mod faults;
 mod gear;
@@ -55,12 +56,16 @@ impl Clock for TestClock {
     }
 }
 
-/// What each language gets.
-struct Book(BTreeMap<String, Result<Ready, Lack>>);
+/// What each language gets: its local model, then its cloud pick, if any.
+struct Book(BTreeMap<String, Result<Ready, Lack>>, BTreeMap<String, Net>);
 
 impl Supply for Book {
     fn supply(&self, iso: &str) -> Result<Ready, Lack> {
         self.0.get(iso).cloned().unwrap_or(Err(Lack::Unknown))
+    }
+
+    fn cloud(&self, iso: &str) -> Option<Net> {
+        self.1.get(iso).cloned()
     }
 }
 
@@ -130,6 +135,8 @@ struct Rig {
     clock: Arc<TestClock>,
     book: Book,
     take: u32,
+    /// The last upload's take and round, which `sent` answers.
+    upload: Option<(u32, u32)>,
     page: Option<VoicePage>,
     /// The light told last.
     light: VoiceLit,
@@ -152,8 +159,9 @@ impl Rig {
         let mut rig = Self {
             flow,
             clock,
-            book: Book(book),
+            book: Book(book, BTreeMap::new()),
             take: 0,
+            upload: None,
             page: None,
             light: VoiceLit::Off,
             lit: false,
@@ -169,6 +177,7 @@ impl Rig {
         for effect in &out {
             match effect {
                 Out::Open { take, .. } => self.take = *take,
+                Out::Send(up) => self.upload = Some((up.take, up.round)),
                 Out::View(view) => self.page = Some((*view.0).clone()),
                 Out::Lit(light) => (self.light, self.lit) = (*light, *light == VoiceLit::Rec),
                 _ => {}

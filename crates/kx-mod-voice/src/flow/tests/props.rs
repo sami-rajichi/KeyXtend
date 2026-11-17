@@ -4,6 +4,7 @@
 //! is never shown or kept again, the gear cancels only what records, and a run it ended types, keeps and counts
 //! nothing until Transcribe anyway.
 
+mod cloud;
 mod gear;
 mod prep;
 mod said;

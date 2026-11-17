@@ -4,13 +4,17 @@
 mod acts;
 mod io;
 mod lend;
+mod net;
 mod notes;
+mod redo;
 mod take;
 mod text;
 mod view;
+mod wire;
 
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
 pub use lend::Lend;
+pub use net::{Net, Sent, Upload};
 pub(crate) use notes::mic_hint;
 pub(crate) use take::suffixed;
 
@@ -137,7 +141,9 @@ impl Flow {
             In::Ask => self.retell(&mut out),
             In::Panel(panel) => self.set_panel(panel),
             In::Opening => self.opening(&mut out),
-            In::Note { take, note } => self.note(take, note, &mut out),
+            In::Note { take, note } => self.note(take, note, supply, &mut out),
+            In::Sent { take, round, sent } => self.sent(take, round, sent, &mut out),
+            In::Keys => self.recheck(supply, &mut out),
             In::Field(change) => self.field(change),
             In::Elsewhere => self.elsewhere(),
             In::Session(note) if note.away() => self.stop_all(&mut out),
@@ -145,7 +151,10 @@ impl Flow {
             In::Layout(layout) => self.front = Lang::from(&layout),
             In::Typed(done) => self.typed(done),
             In::Copied(ok) => self.copied(ok),
-            In::Settings(settings) => self.set_settings(*settings, &mut out),
+            In::Settings(settings) => {
+                self.set_settings(*settings, &mut out);
+                self.recheck(supply, &mut out);
+            }
             In::Tick => self.tick(&mut out),
             In::Lend(lend) => self.lend(lend, &mut out),
             In::Quit => {
@@ -155,6 +164,7 @@ impl Flow {
         }
         // A hidden bar has no pointer over it, so the next bar still fades.
         self.over &= !matches!(self.phase(), Phase::Idle | Phase::Preparing);
+        self.refresh(supply);
         self.tell(&mut out);
         out
     }

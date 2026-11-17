@@ -48,8 +48,21 @@ fn date() -> impl Strategy<Value = Date> {
 }
 
 fn counts() -> impl Strategy<Value = Counts> {
-    let model = prop_oneof![Just(Model::Other), Just(Model::Row(ROW.into()))];
-    let device = prop_oneof![Just(Device::Cpu), card().prop_map(Device::Card)];
+    let cloud = |model: Option<&str>| Model::Cloud {
+        service: "groq".into(),
+        model: model.map(str::to_owned),
+    };
+    let model = prop_oneof![
+        Just(Model::Other),
+        Just(Model::Row(ROW.into())),
+        Just(cloud(Some("whisper-large-v3"))),
+        Just(cloud(None)),
+    ];
+    let device = prop_oneof![
+        Just(Device::Cpu),
+        card().prop_map(Device::Card),
+        Just(Device::Cloud),
+    ];
     let bucket = (date(), model, device).prop_map(|(date, model, device)| Bucket {
         date,
         model,

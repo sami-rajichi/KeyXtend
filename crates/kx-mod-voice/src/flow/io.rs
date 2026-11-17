@@ -8,7 +8,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Redacted, Secret};
 
-use super::Lend;
+use super::{Lend, Net, Sent, Upload};
 use crate::VoiceSettings;
 
 /// One input to the flow, from the bus, a port or the clock.
@@ -49,6 +49,17 @@ pub enum In {
     Tick,
     /// Compare models holds the microphone's run, or lets it go (`Compare::lend`).
     Lend(Lend),
+    /// Dictation `take`'s upload of round `round` tells `sent`; an older round's are dropped.
+    Sent {
+        /// The dictation, as `Out::Send` named it.
+        take: u32,
+        /// The upload's round.
+        round: u32,
+        /// What it tells.
+        sent: Sent,
+    },
+    /// A service's key was set or removed, so a running cloud dictation checks its own.
+    Keys,
     /// The module stops: the microphone closes and the sound is wiped.
     Quit,
 }
@@ -77,16 +88,16 @@ pub struct Kept {
     pub text: Secret,
     /// The language it was dictated in, an ISO 639 code.
     pub lang: String,
-    /// The model that wrote it, as `Ready::name` names it.
+    /// The model that wrote it, as `Ready::name` names it, or the cloud pick, `service:model`.
     pub model: Redacted<String>,
 }
 
 /// A written dictation's numbers for the counts; never its content.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Count {
-    /// The model that wrote it.
+    /// The model that wrote it, or the cloud pick, `service:model`.
     pub model: Redacted<String>,
-    /// The card that wrote it to the end; `None` for the processor.
+    /// The card that wrote it to the end; `None` for the processor or a cloud service.
     pub card: Option<CardId>,
     /// Its times and memory.
     pub done: SpeechDone,
@@ -138,6 +149,13 @@ pub enum Out {
     },
     /// Compare holds the run: give it this Stop or Cancel (`Panel::click` with `VoiceClick::Bar`).
     Lent(BarButton),
+    /// Send the dictation's speech, which its run hands over, to the service the upload names.
+    Send(Upload),
+    /// Drop dictation `take`'s running upload: nothing more is sent or heard of it.
+    Halt {
+        /// The dictation.
+        take: u32,
+    },
 }
 
 /// The model and device that serve a language now.
@@ -180,6 +198,11 @@ pub trait Supply {
     /// # Errors
     /// The `Lack` the bar's note names.
     fn supply(&self, iso: &str) -> Result<Ready, Lack>;
+
+    /// The cloud service the user picked for keyboard language `iso`, while cloud services and that service are on.
+    fn cloud(&self, _iso: &str) -> Option<Net> {
+        None
+    }
 }
 
 impl<F: Fn(&str) -> Result<Ready, Lack>> Supply for F {
