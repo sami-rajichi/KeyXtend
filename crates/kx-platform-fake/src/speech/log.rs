@@ -45,6 +45,8 @@ pub(super) struct Log {
     pub(super) cues: HashMap<SpeechCall, VecDeque<Vec<SpeechNote>>>,
     pub(super) fails: HashMap<SpeechCall, SpeechError>,
     pub(super) sound: Vec<SecretBytes>,
+    /// The speech a listen-only run hands over.
+    pub(super) speech: Vec<SecretBytes>,
     pub(super) info: Info,
 }
 
@@ -58,11 +60,12 @@ impl Log {
         queued.unwrap_or_default()
     }
 
-    /// Refuses `call` on run `id`: `NoSound` without the recording, `Gone` after a death, else the failure set, which
-    /// kills the worker when it is `Gone` or `Timeout`.
+    /// Refuses `call` on run `id`: `NoSound` without the recording, or for speech the run cannot hand over, `Gone`
+    /// after a death, else the failure set, which kills the worker when it is `Gone` or `Timeout`.
     pub(super) fn refuse(&mut self, id: usize, call: SpeechCall) -> Result<(), SpeechError> {
         let run = &self.runs[id];
-        if matches!(call, SpeechCall::Again | SpeechCall::Keep) && !run.held {
+        let unheld = matches!(call, SpeechCall::Again | SpeechCall::Keep) && !run.held;
+        if unheld || (call == SpeechCall::Pieces && !run.hands_over()) {
             return Err(SpeechError::NoSound);
         }
         if run.dead {
@@ -98,6 +101,8 @@ impl Log {
         if notes.iter().any(|n| matches!(n, SpeechNote::Wiped)) {
             self.runs[id].held = false;
         }
+        let dones = notes.iter().filter(|n| matches!(n, SpeechNote::Done(_)));
+        self.runs[id].dones += dones.count();
     }
 }
 
