@@ -8,6 +8,7 @@ use std::collections::HashSet;
 
 mod cloud;
 mod names;
+mod note;
 mod options;
 mod panel;
 
@@ -141,12 +142,14 @@ fn a_place_reads_and_writes_as_its_lowercase_name() {
 
 #[test]
 fn the_bar_has_the_approved_mock_ups_buttons() {
-    use BarButton::{Anyway, Cancel, Close, Copy, Download, Listen, Stop, Undo};
-    let want = [Cancel, Stop, Copy, Undo, Anyway, Listen, Download, Close];
+    use BarButton::{Again, Anyway, Cancel, Close, Copy, Download, Listen, Stop, Undo};
+    let want = [
+        Cancel, Stop, Copy, Undo, Anyway, Again, Listen, Download, Close,
+    ];
     assert_eq!(
         BarButton::ALL,
         want,
-        "Try again lives in the panel's footer"
+        "Try again shows on a cloud note and in the panel's footer"
     );
     assert!(PanelButton::ALL.contains(&PanelButton::Again));
     assert!(

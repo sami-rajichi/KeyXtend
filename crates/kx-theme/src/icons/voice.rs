@@ -25,6 +25,8 @@ pub struct VoiceIcons {
     pub undo: String,
     /// Transcribe anyway.
     pub anyway: String,
+    /// Try again, after a cloud service failed.
+    pub again: String,
     /// Listen again.
     pub listen: String,
     /// Download.
@@ -55,6 +57,7 @@ impl VoiceIcons {
             ("voice.copied", &self.copied),
             ("voice.undo", &self.undo),
             ("voice.anyway", &self.anyway),
+            ("voice.again", &self.again),
             ("voice.listen", &self.listen),
             ("voice.download", &self.download),
             ("voice.transcribing", &self.transcribing),

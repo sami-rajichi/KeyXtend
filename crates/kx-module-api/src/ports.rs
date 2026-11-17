@@ -157,13 +157,13 @@ pub use speech::{
 };
 pub use voice::{
     BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CloudButton, CloudCard, CloudSheet,
-    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
+    CloudWhy, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
     DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
-    FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, ModelRow, ModelState, ModelsSheet,
-    OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, ServiceMark, ServiceName, ServiceRow,
-    ServiceSheet, TextAsk, TextDone, UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome,
-    VoiceKey, VoiceLang, VoiceLevel, VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet,
-    VoiceTab, VoiceText, VoiceView,
+    FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow, ModelState,
+    ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, ServiceMark,
+    ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, UsePrice, VoiceAct, VoiceAsk,
+    VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLit, VoiceOpen,
+    VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

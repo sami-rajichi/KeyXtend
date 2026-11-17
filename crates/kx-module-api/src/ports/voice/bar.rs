@@ -5,6 +5,7 @@ use super::act::BarButton;
 use super::panel::{ServiceName, VoicePanel};
 use crate::Secret;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 listed! {
     /// Where the bar goes, from the `place` setting.
@@ -155,6 +156,62 @@ pub enum BarHint {
     Folder,
     /// A download failed, stalled or met a host its row does not list.
     Net,
+    /// A cloud dictation's voice brought no text back, or never left (ADR-0047): the recording stays for Try again and
+    /// "Use the local model".
+    Cloud {
+        /// Why.
+        why: CloudWhy,
+        /// "Use the local model".
+        local: LocalUse,
+    },
+}
+
+/// Why a cloud dictation's voice brought no text back, or never left; each names one line of the bar's cloud note.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CloudWhy {
+    /// The network failed, the service is down, or it gave no answer within `net_wait_s`.
+    Net,
+    /// The service refused the key, or none could be read, as one removed or damaged.
+    Key,
+    /// The account has no credit left.
+    Credit,
+    /// The free allowance is used up.
+    Allowance {
+        /// How long until it renews, when the service tells.
+        renews_in: Option<Duration>,
+    },
+    /// Too many requests, still after one wait.
+    Rate,
+    /// A piece was too big for the service.
+    TooBig,
+    /// The service's model does not take this language's code, such as a regional one.
+    Language(VoiceLang),
+    /// The service sent no text.
+    Empty,
+    /// The reply was not the service's, such as a hotspot's sign-in page.
+    Strange,
+    /// The service's terms changed since they were confirmed, so nothing is sent until they are confirmed again.
+    Terms,
+    /// The service was switched off, or the language's pick left it, so nothing was sent.
+    Off,
+    /// A password box never goes to a cloud service, and no local model is ready for it.
+    NoLocal,
+    /// The cloud worker failed.
+    Fault,
+}
+
+/// "Use the local model" on a cloud note, which writes the held recording with the language's local model.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum LocalUse {
+    /// A local model is ready, so the button acts.
+    Ready,
+    /// None is ready: the button stays dimmed, and Download fetches the language's model.
+    Download {
+        /// The download's size, in bytes.
+        bytes: u64,
+    },
+    /// None is ready, or the recording is gone, so the button stays dimmed.
+    Dimmed,
 }
 
 /// Everything the bar and the panel draw.

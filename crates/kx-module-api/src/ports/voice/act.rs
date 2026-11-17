@@ -18,6 +18,8 @@ listed! {
         Undo,
         /// Write the recording a Cancel left.
         Anyway,
+        /// Try again: send the held recording to the cloud again, after a cloud note.
+        Again,
         /// Listen again after Nothing heard.
         Listen,
         /// Download the language's model.

@@ -1164,6 +1164,7 @@ var lk = {
       "copied": "check",
       "undo": "undo-2",
       "anyway": "rotate-ccw",
+      "again": "rotate-ccw",
       "listen": "mic",
       "download": "download",
       "transcribing": "audio-lines",

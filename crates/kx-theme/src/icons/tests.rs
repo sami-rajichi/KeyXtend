@@ -219,8 +219,9 @@ fn the_quick_fill_panel_shows_its_icons_by_role() {
 fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
     let i = parse(crate::ICONS).expect("icons.toml loads");
     let want = "cancel=x stop=square gear=settings-2 close=x copy=copy copied=check undo=undo-2 \
-                anyway=rotate-ccw listen=mic download=download transcribing=audio-lines \
-                text=captions password=lock note=square-x notes.cancelled=x notes.checking=refresh-cw \
+                anyway=rotate-ccw again=rotate-ccw listen=mic download=download \
+                transcribing=audio-lines text=captions password=lock note=square-x notes.cancelled=x \
+                notes.checking=refresh-cw \
                 notes.folder=folder notes.full=hard-drive notes.language=languages notes.mic-busy=mic-off \
                 notes.mic-refused=mic-off notes.net=wifi notes.no-fit=cpu notes.no-language=languages \
                 notes.no-mic=mic-off notes.no-model=hard-drive notes.nothing=mic-off notes.print=download \

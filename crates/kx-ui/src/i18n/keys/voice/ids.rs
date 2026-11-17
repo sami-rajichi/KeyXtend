@@ -97,6 +97,7 @@ pub const fn bar_hint_id(hint: &BarHint) -> &'static str {
         BarHint::Full => "full",
         BarHint::Folder => "folder",
         BarHint::Net => "net",
+        BarHint::Cloud { .. } => "cloud",
     }
 }
 
@@ -109,6 +110,7 @@ pub const fn bar_button_id(button: BarButton) -> &'static str {
         BarButton::Copy => "copy",
         BarButton::Undo => "undo",
         BarButton::Anyway => "anyway",
+        BarButton::Again => "again",
         BarButton::Listen => "listen",
         BarButton::Download => "download",
         BarButton::Close => "close",
