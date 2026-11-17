@@ -132,7 +132,7 @@ struct Fill {
 
 /// Each key's ink, colour, skirt and what the ink draws, by token, as kx-mod-keyboard's paint.rs pairs them; a
 /// named key's label also has an icon.
-const KEYS: [(&str, &str, &str, Mark); 9] = [
+const KEYS: [(&str, &str, &str, Mark); 10] = [
     ("legend", "key", "key", Mark::Main),
     ("legend_2", "key", "key", Mark::Second),
     ("legend_mod", "key_mod", "key_mod", Mark::Label),
@@ -142,6 +142,7 @@ const KEYS: [(&str, &str, &str, Mark); 9] = [
     ("on_ink", "on", "on", Mark::Label),
     ("lock_ink", "lock", "on", Mark::Label),
     ("rec_ink", "rec", "rec", Mark::Label),
+    ("prep_ink", "prep", "prep", Mark::Label),
 ];
 
 /// The palette colour `name`; an unknown one is clear, which fails the opacity test.

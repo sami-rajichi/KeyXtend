@@ -14,7 +14,7 @@ use kx_mod_voice::{VoiceModule, VoiceSettings};
 use kx_module_api::ports::{
     Drive, FetchAsk, FetchNote, FetchRun, FieldKind, Fingerprint, FolderScan, LayoutChanged,
     LayoutId, ModelError, ModelFiles, SpeechDone, SpeechNote, SpeechStage, TextAsk, TextDone,
-    VoiceBar, VoiceKey, VoiceOpen,
+    VoiceBar, VoiceKey, VoiceLit, VoiceOpen,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing, keys};
 use kx_platform_fake::{FakeModelFiles, SpeechCall};
@@ -38,7 +38,7 @@ fn listen(fakes: &Fakes, bus: &Bus, heard: &Heard) {
     let open = vec![SpeechNote::Stage(SpeechStage::Open)];
     fakes.speech.on(SpeechCall::Open, open);
     bus.publish(&VoiceKey).unwrap();
-    heard.wait_for(&Said::Lit(true));
+    heard.wait_for(&Said::Lit(VoiceLit::Rec));
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn a_panic_on_the_actors_thread_hides_the_bar_closes_the_microphone_and_tells_th
     armed.store(true, Ordering::SeqCst);
     bus.publish(&VoiceOpen).unwrap();
     heard.wait(|s| matches!(s, Said::View(page) if page.bar == VoiceBar::Hidden).then_some(()));
-    heard.wait_for(&Said::Lit(false));
+    heard.wait_for(&Said::Lit(VoiceLit::Off));
     heard.wait_for(&Said::Notice(keys::MODULE_FAILED));
     assert!(
         fakes
@@ -216,7 +216,7 @@ fn with_the_feature_off_no_bar_shows_no_key_lights_and_nothing_starts() {
     start(&mut module, &mut host).unwrap();
     let told = heard.drain();
     assert!(
-        matches!(&told[..], [Said::View(page), Said::Lit(false)] if page.bar == VoiceBar::Hidden && page.panel.is_none())
+        matches!(&told[..], [Said::View(page), Said::Lit(VoiceLit::Off)] if page.bar == VoiceBar::Hidden && page.panel.is_none())
     );
     assert_eq!(host.lookups.get(), 0, "no service, so no worker");
     bus.publish(&VoiceKey).unwrap();

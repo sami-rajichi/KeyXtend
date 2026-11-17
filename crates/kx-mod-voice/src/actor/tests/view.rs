@@ -4,8 +4,8 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    BarButton, BarHint, FieldKind, SpeechNote, VoiceBar, VoiceClick, VoicePage, VoiceSheet,
-    VoiceTab,
+    BarButton, BarHint, FieldKind, SpeechNote, SpeechStage, VoiceBar, VoiceClick, VoiceLit,
+    VoicePage, VoiceSheet, VoiceTab,
 };
 
 use super::Msg;
@@ -43,6 +43,7 @@ fn the_text_fades_at_the_flows_deadline() {
 fn nothing_heard_shows_its_hint_once_nothing_s_passed() {
     let mut rig = Rig::new();
     rig.key();
+    rig.tell(SpeechNote::Stage(SpeechStage::Open));
     rig.advance(rig.actor.settings().nothing());
     assert!(matches!(rig.bar(), VoiceBar::Listening(l) if l.nothing));
 }
@@ -76,7 +77,7 @@ fn the_gear_while_listening_cancels_the_run_before_the_panel_opens() {
         run.held && !run.closed,
         "the recording stays for Transcribe anyway"
     );
-    assert_eq!(rig.lits().last(), Some(&false));
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Off));
     assert!(rig.asks().is_empty(), "nothing is typed");
     let views = rig.views().split_off(told);
     let cancelled =
@@ -92,13 +93,17 @@ fn the_gear_while_listening_cancels_the_run_before_the_panel_opens() {
 }
 
 #[test]
-fn the_gear_while_preparing_cancels_the_run_and_the_key_never_lights() {
+fn the_gear_while_preparing_cancels_the_run_and_the_key_never_turns_red() {
     let mut rig = Rig::new();
     rig.key();
     rig.send(Msg::Open);
     let run = &rig.fake.speech.runs()[0];
     assert_eq!((run.cancels, run.stops), (1, 0));
-    assert_eq!(rig.lits(), [false], "the microphone never said it opened");
+    assert_eq!(
+        rig.lits(),
+        [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Off],
+        "amber, never red: the microphone never said it opened"
+    );
     let page = rig.views().pop().unwrap();
     assert!(
         matches!(&page.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled && n.act.is_none())

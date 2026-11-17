@@ -82,6 +82,7 @@ fn a_copy_answer_with_no_text_on_the_bar_changes_nothing() {
     let out = rig.on(In::Copied(false));
     assert!(out.is_empty());
     rig.key();
+    rig.tell(SpeechNote::Stage(SpeechStage::Open));
     rig.on(In::Copied(false));
     assert!(matches!(rig.shown(), VoiceBar::Listening(_)));
 }

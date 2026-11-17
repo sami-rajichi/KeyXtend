@@ -7,7 +7,8 @@ use super::take::{Lang, Take};
 use super::{Flow, Lack, Out, Phase, Ready, RunCall, State, Supply};
 
 impl Flow {
-    /// The Dictation key: Start, or Stop while listening; a second click within `debounce_ms` counts as none.
+    /// The Dictation key: Start, Stop while listening, or a cancel with nothing sent while preparing; a second click
+    /// within `debounce_ms` counts as none.
     pub(super) fn key(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
         let now = self.now();
         let quick =
@@ -20,6 +21,7 @@ impl Flow {
             return;
         }
         match self.phase() {
+            Phase::Preparing => self.close(out),
             Phase::Listening => self.stop(true, out),
             Phase::Transcribing => {}
             Phase::Idle | Phase::Text | Phase::Note => self.start(supply, out),
@@ -44,7 +46,9 @@ impl Flow {
             return;
         }
         match (button, self.phase()) {
-            (B::Cancel, Phase::Listening | Phase::Transcribing) => self.cancel(out),
+            (B::Cancel, Phase::Preparing | Phase::Listening | Phase::Transcribing) => {
+                self.cancel(out);
+            }
             (B::Stop, Phase::Listening) => self.stop(true, out),
             (B::Copy, Phase::Text) => self.copy(out),
             (B::Undo, Phase::Text) => self.undo(out),
@@ -75,7 +79,7 @@ impl Flow {
         }
     }
 
-    /// Opens a run for `ready` and listens.
+    /// Opens a run for `ready`, which prepares until its microphone opens.
     fn open(&mut self, lang: Lang, ready: Ready, out: &mut Vec<Out>) {
         self.takes = self.takes.wrapping_add(1);
         let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
@@ -84,11 +88,7 @@ impl Flow {
             ask: ask.clone(),
         });
         self.take = Some(Take::new(self.takes, lang, ready, ask));
-        let since = self.now();
-        self.state = State::Listening {
-            since,
-            nothing: false,
-        };
+        self.state = State::Preparing;
     }
 
     /// The note for a language no model serves now.
@@ -138,8 +138,8 @@ impl Flow {
         self.show_note(BarHint::Nothing, Some(BarButton::Listen), iso);
     }
 
-    /// The gear or the tray opens the panel: a dictation that listens or writes, or Compare's recording, ends first as
-    /// the bar's Cancel ends it.
+    /// The gear or the tray opens the panel: a dictation that prepares, listens or writes, or Compare's recording, ends
+    /// first as the bar's Cancel ends it.
     pub(super) fn opening(&mut self, out: &mut Vec<Out>) {
         if !self.lent_click(BarButton::Cancel, out) && self.busy() {
             self.cancel(out);

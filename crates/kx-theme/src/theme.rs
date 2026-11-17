@@ -128,6 +128,8 @@ fn palette(
 #[cfg(test)]
 mod derived;
 #[cfg(test)]
+mod prep;
+#[cfg(test)]
 mod press;
 #[cfg(test)]
 mod tests;

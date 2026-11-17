@@ -71,7 +71,7 @@ fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
     rig.speech
         .on(SpeechCall::Open, vec![SpeechNote::Stage(SpeechStage::Open)]);
     tap_mic(boot);
-    while !lit.recv_timeout(WAIT).unwrap().rec {}
+    while lit.recv_timeout(WAIT).unwrap() != VoiceLit::Rec {}
     assert!(rig.speech.tell(SpeechNote::Heard));
     rig.clock()
         .advance(VoiceSettings::from_defaults().unwrap().debounce());

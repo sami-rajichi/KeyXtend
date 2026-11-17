@@ -9,6 +9,7 @@ voice =
     .gear = إعدادات الإملاء
     .listening = جارٍ الاستماع…
     .transcribing = جارٍ تحويل الكلام إلى نص…
+    .preparing = إملاء، جارٍ تجهيز الميكروفون
     .nothing = لم يُسمع شيء بعد
     .stop = إيقاف
     .cancel = إلغاء

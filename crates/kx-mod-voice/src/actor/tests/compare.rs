@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use kx_module_api::ports::{
-    MAX_BLOB_BYTES, PanelButton, SpeechNote, SpeechStage, VoiceBar, VoiceClick, VoiceSheet,
-    VoiceTab,
+    MAX_BLOB_BYTES, PanelButton, SpeechNote, SpeechStage, VoiceBar, VoiceClick, VoiceLit,
+    VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Redacted, Zeroizing};
 use kx_platform_fake::SpeechCall;
@@ -37,11 +37,11 @@ fn compares_recording_listens_on_the_bar_and_the_key_stops_it() {
         "a listen-only run"
     );
     assert!(matches!(rig.bar(), VoiceBar::Listening(_)));
-    assert_eq!(rig.lits().last(), Some(&true));
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Rec));
     rig.tell(SpeechNote::Heard);
     rig.key();
     assert_eq!(rig.fake.speech.runs()[0].stops, 1);
-    assert_eq!(rig.lits().last(), Some(&false));
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Off));
     assert_eq!(rig.bar(), VoiceBar::Hidden, "no bar while the models write");
 }
 
@@ -80,7 +80,7 @@ fn the_gear_while_compare_records_ends_it_as_compares_cancel_does() {
     let shelf = Arc::new(geared.fake.shelf.clone());
     let opened = Store::open(shelf, MAX_BLOB_BYTES).unwrap();
     assert!(opened.scores.boards().is_empty(), "nothing is scored");
-    assert_eq!(geared.lits().last(), Some(&false));
+    assert_eq!(geared.lits().last(), Some(&VoiceLit::Off));
     let (page, theirs) = (
         geared.views().pop().unwrap(),
         cancelled.views().pop().unwrap(),

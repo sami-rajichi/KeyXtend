@@ -16,7 +16,7 @@ type Face = (Discriminant<VoiceBar>, Option<u32>, Option<BarHint>);
 #[derive(Debug, Default)]
 pub(super) struct Told {
     page: Option<VoicePage>,
-    lit: Option<bool>,
+    lit: Option<VoiceLit>,
     /// The last view's round.
     round: u32,
     /// The round since which the bar has kept its face.
@@ -64,9 +64,21 @@ impl Flow {
             let take = self.take.as_ref().map(|t| t.id);
             self.told.show(page, take, out);
         }
-        if self.told.lit != Some(self.lit) {
-            self.told.lit = Some(self.lit);
-            out.push(Out::Lit(VoiceLit { rec: self.lit }));
+        let light = self.light();
+        if self.told.lit != Some(light) {
+            self.told.lit = Some(light);
+            out.push(Out::Lit(light));
+        }
+    }
+
+    /// The key's light: red while the microphone is open, amber while a dictation waits for it, else off.
+    fn light(&self) -> VoiceLit {
+        if self.lit {
+            VoiceLit::Rec
+        } else if matches!(self.state, State::Preparing) {
+            VoiceLit::Prep
+        } else {
+            VoiceLit::Off
         }
     }
 
@@ -89,7 +101,7 @@ impl Flow {
             return lent;
         }
         match &self.state {
-            State::Idle => VoiceBar::Hidden,
+            State::Idle | State::Preparing => VoiceBar::Hidden,
             State::Listening { since, nothing } => self.listening(*since, *nothing),
             State::Transcribing => VoiceBar::Transcribing,
             State::Text {

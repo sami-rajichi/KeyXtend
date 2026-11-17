@@ -2,7 +2,7 @@
 //! `kbctl` tests, since only the app sees both the keyboard and the themes).
 
 use kx_mod_keyboard::KeyKind;
-use kx_mod_keyboard::view::{DIM, Paint, REC, paint};
+use kx_mod_keyboard::view::{DIM, PREP, Paint, REC, paint};
 use kx_theme::Themes;
 
 /// Every key kind.
@@ -34,7 +34,7 @@ fn every_paint_names_tokens_each_theme_has() {
     let lit = kinds()
         .into_iter()
         .flat_map(|k| [paint(k, false), paint(k, true)]);
-    let all: Vec<Paint> = lit.chain([DIM, REC]).collect();
+    let all: Vec<Paint> = lit.chain([DIM, REC, PREP]).collect();
     for t in &Themes::shipped().unwrap().list {
         for p in [&t.light, &t.dark] {
             let skirt = serde_json::to_value(p.skirt.as_ref()).unwrap();

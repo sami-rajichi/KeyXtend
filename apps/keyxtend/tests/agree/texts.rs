@@ -12,11 +12,13 @@ use kx_mod_keyboard::legend::{HARAKA_NAMES, mark_names, shown};
 use kx_mod_keyboard::spec::NEXT_ID;
 use kx_mod_keyboard::view::{
     EMPTY_NAME, FILL_OFF_TIP, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
-    SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
+    PREP_NAME, SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
 use kx_platform_fake::DEFAULT_LANGUAGE;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
-use kx_ui::i18n::keys::{COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, LAYER_PAGE, MODULE};
+use kx_ui::i18n::keys::{
+    COMBO_JOIN, COMBO_THEN, KEYS_TIP, LABEL, LANG_KEY, LAYER_PAGE, MODULE, VOICE_PREPARING,
+};
 use kx_ui::{Hub, I18n, LANGS};
 use std::collections::BTreeSet;
 
@@ -39,6 +41,7 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
         NO_SHORTCUTS_TIP,
         POWER_OFF_TIP,
         FILL_OFF_TIP,
+        PREP_NAME,
         KEYS_TIP,
         COMBO_JOIN,
         COMBO_THEN,
@@ -63,6 +66,11 @@ fn every_name_label_and_tip_the_face_draws_has_its_text() {
 #[test]
 fn a_shortcuts_tip_reads_key_labels_from_the_group_the_board_names_them_in() {
     assert_eq!(format!("{LABEL}."), LABEL_PREFIX);
+}
+
+#[test]
+fn the_dictation_keys_preparing_name_is_the_voice_texts_own() {
+    assert_eq!(PREP_NAME, VOICE_PREPARING);
 }
 
 #[test]

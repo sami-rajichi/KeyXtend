@@ -1,13 +1,15 @@
 //! The keys whose role alone sets their state: a later key, a mouse mode, the Shortcuts and Power keys, the fill key,
 //! dimmed with a tip while the vault module is not running (ADR-0037 decision 2), and the Dictation key's light.
 
-use super::{DIM, KeyState, REC, StateInput, assist, layer, paint, power};
+use super::{DIM, KeyState, PREP, REC, StateInput, assist, layer, paint, power};
 use crate::geom::KeyBox;
 use crate::spec::{KeyKind, Role};
-use kx_module_api::ports::FillLive;
+use kx_module_api::ports::{FillLive, VoiceLit};
 
 /// The fill key's tip while the vault module is not running: "Quick-fill is off".
 pub const FILL_OFF_TIP: &str = "tip.fill-off";
+/// The Dictation key's name while the microphone starts, which readers hear in place of its own.
+pub const PREP_NAME: &str = "voice.preparing";
 
 /// Key `k`'s state when its role alone sets it: a later key, a mouse mode, the Shortcuts, Power, stopped fill or
 /// Dictation key.
@@ -22,7 +24,7 @@ pub(super) fn role_state(i: &StateInput<'_>, k: &KeyBox) -> Option<KeyState> {
         Role::Layer => Some(layer::layer_key(i.layer, k.kind)),
         Role::Power => Some(power::power_key(i.power, k.kind)),
         Role::Fill => fill_key(i.fill),
-        Role::Voice => Some(voice_key(i.rec, k.kind)),
+        Role::Voice => Some(voice_key(i.voice, k.kind)),
         _ => None,
     }
 }
@@ -37,12 +39,19 @@ fn fill_key(s: FillLive) -> Option<KeyState> {
     })
 }
 
-/// The Dictation key of `kind`: on, flagged and in the recording paint while the microphone is open (`rec`).
-fn voice_key(rec: bool, kind: KeyKind) -> KeyState {
+/// The Dictation key of `kind` under light `lit`: on and red while the microphone is open, amber with its preparing
+/// name while it starts.
+fn voice_key(lit: VoiceLit, kind: KeyKind) -> KeyState {
+    let paint = match lit {
+        VoiceLit::Off => paint(kind, false),
+        VoiceLit::Prep => PREP,
+        VoiceLit::Rec => REC,
+    };
     KeyState {
-        on: rec,
-        rec,
-        paint: if rec { REC } else { paint(kind, false) },
+        on: lit == VoiceLit::Rec,
+        lit,
+        spoken: (lit == VoiceLit::Prep).then_some(PREP_NAME),
+        paint,
         ..KeyState::default()
     }
 }

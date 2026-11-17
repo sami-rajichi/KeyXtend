@@ -1,5 +1,5 @@
-//! The dictation flow (design "How a dictation runs"): Idle, Listening, Transcribing, Text and Note, on an injected
-//! `Clock`. Pure: inputs in, effects out; the actor carries them out on the ports and the bus.
+//! The dictation flow (design "How a dictation runs"): Idle, Preparing, Listening, Transcribing, Text and Note, on an
+//! injected `Clock`. Pure: inputs in, effects out; the actor carries them out on the ports and the bus.
 
 mod acts;
 mod io;
@@ -28,6 +28,8 @@ use view::Told;
 enum State {
     /// No bar.
     Idle,
+    /// The run opens the microphone: no bar yet, and the key glows amber.
+    Preparing,
     /// The microphone listens since `since`; `nothing` once `nothing_s` passed with no speech.
     Listening {
         /// When listening began.
@@ -61,6 +63,7 @@ enum State {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Phase {
     Idle,
+    Preparing,
     Listening,
     Transcribing,
     Text,
@@ -151,7 +154,7 @@ impl Flow {
             }
         }
         // A hidden bar has no pointer over it, so the next bar still fades.
-        self.over &= self.phase() != Phase::Idle;
+        self.over &= !matches!(self.phase(), Phase::Idle | Phase::Preparing);
         self.tell(&mut out);
         out
     }
@@ -178,7 +181,7 @@ impl Flow {
         self.phase() == Phase::Text && self.held()
     }
 
-    /// A dictation listens or writes, so Compare waits (`Facts::dictating`).
+    /// A dictation prepares, listens or writes, so Compare waits (`Facts::dictating`).
     #[must_use]
     pub fn dictating(&self) -> bool {
         self.busy()
@@ -200,6 +203,7 @@ impl Flow {
     fn phase(&self) -> Phase {
         match self.state {
             State::Idle => Phase::Idle,
+            State::Preparing => Phase::Preparing,
             State::Listening { .. } => Phase::Listening,
             State::Transcribing => Phase::Transcribing,
             State::Text { .. } => Phase::Text,
@@ -207,9 +211,12 @@ impl Flow {
         }
     }
 
-    /// The microphone listens or the last piece is being written.
+    /// The run opens the microphone, listens, or writes the last piece.
     fn busy(&self) -> bool {
-        matches!(self.phase(), Phase::Listening | Phase::Transcribing)
+        matches!(
+            self.phase(),
+            Phase::Preparing | Phase::Listening | Phase::Transcribing
+        )
     }
 
     /// The take's run is open and still holds the recording.

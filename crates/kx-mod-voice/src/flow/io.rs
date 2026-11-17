@@ -111,7 +111,7 @@ pub enum Out {
     },
     /// Tell the bar and the panel (`VoiceView`).
     View(VoiceView),
-    /// Light the key, or not (`VoiceLit`).
+    /// The key's light: off, amber or red (`VoiceLit`).
     Lit(VoiceLit),
     /// Tell the sound level while listening (`VoiceLevel`).
     Level(VoiceLevel),

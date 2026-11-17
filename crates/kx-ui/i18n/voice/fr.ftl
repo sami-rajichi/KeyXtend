@@ -10,6 +10,7 @@ voice =
     .gear = Réglages de la dictée
     .listening = Écoute…
     .transcribing = Transcription…
+    .preparing = Dictée, préparation du micro
     .nothing = Rien entendu pour l’instant
     .stop = Arrêter
     .cancel = Annuler

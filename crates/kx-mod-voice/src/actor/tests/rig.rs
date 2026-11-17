@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use kx_module_api::ports::{
     FieldKind, FieldWatch, SessionWatch, SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct,
-    VoiceBar, VoiceClick, VoicePage,
+    VoiceBar, VoiceClick, VoiceLit, VoicePage,
 };
 use kx_module_api::{Bus, ModuleCx, Redacted, Subscription, Zeroizing};
 use kx_platform_fake::SpeechCall;
@@ -180,7 +180,7 @@ impl Rig {
     }
 
     /// Every light told, in order.
-    pub fn lits(&self) -> Vec<bool> {
+    pub fn lits(&self) -> Vec<VoiceLit> {
         self.picked(|h| match h {
             Heard::Lit(on) => Some(on),
             _ => None,

@@ -20,6 +20,7 @@ fn the_key_opens_the_microphone_at_once_with_the_settings_ask() {
     let settings = VoiceSettings::from_defaults().unwrap();
     let want = settings.ask(Some(ready("parakeet", "fr").model), None);
     assert_eq!(opened(&out), [want]);
+    rig.tell(SpeechNote::Stage(SpeechStage::Open));
     let VoiceBar::Listening(shown) = rig.shown() else {
         panic!("no Listening bar: {:?}", rig.shown());
     };

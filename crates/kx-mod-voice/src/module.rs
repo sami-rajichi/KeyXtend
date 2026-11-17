@@ -197,7 +197,7 @@ fn hide(bus: &Bus, settings: &VoiceSettings) {
     };
     // The module holds `Voice`, which these events need, or its start would have failed.
     let _ = bus.publish(&VoiceView::new(page));
-    let _ = bus.publish(&VoiceLit::OFF);
+    let _ = bus.publish(&VoiceLit::Off);
 }
 
 /// The actor's thread. A panic there hides the bar, darkens the key, lets presses go and tells the user; the runs it

@@ -19,6 +19,7 @@ pub use panel::{
 };
 
 use crate::{Capability, Event, Secret};
+use serde::Serialize;
 use std::sync::Arc;
 
 /// The gate of every event here but `VoiceLevel`.
@@ -33,17 +34,18 @@ impl Event for VoiceKey {
     const CAPABILITY: Option<Capability> = GATE;
 }
 
-/// From the voice module: whether the microphone is open, so the keyboard lights the key; told at each change and on
-/// `VoiceAsk`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct VoiceLit {
-    /// The microphone is open.
-    pub rec: bool,
-}
-
-impl VoiceLit {
-    /// The key unlit: before the module speaks, and after it stops or fails.
-    pub const OFF: Self = Self { rec: false };
+/// From the voice module: the Dictation key's light, so the keyboard draws it; told at each change and on `VoiceAsk`.
+/// The face's state writes it by its lowercase name.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceLit {
+    /// Unlit: before the module speaks, and after a dictation stops, ends or fails.
+    #[default]
+    Off,
+    /// Amber: a dictation started and the microphone is not open yet.
+    Prep,
+    /// Red: the microphone is open.
+    Rec,
 }
 
 impl Event for VoiceLit {

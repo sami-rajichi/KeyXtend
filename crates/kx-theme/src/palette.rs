@@ -39,6 +39,8 @@ pub struct Skirt {
     pub on: Rgba,
     /// The recording key.
     pub rec: Rgba,
+    /// The Dictation key while the microphone starts.
+    pub prep: Rgba,
     /// A dimmed key: the side keys' skirt faded over the plate, set from `shape.toml [dim]`.
     #[serde(skip_deserializing, default = "clear")]
     pub dim: Rgba,
@@ -112,6 +114,10 @@ pub struct Palette {
     pub rec: Rgba,
     /// Legend on the recording key.
     pub rec_ink: Rgba,
+    /// The Dictation key while the microphone starts: the amber stand-by light.
+    pub prep: Rgba,
+    /// Legend on the preparing key.
+    pub prep_ink: Rgba,
     /// LED when off.
     pub led_off: Rgba,
     /// LED when on.
@@ -172,6 +178,7 @@ impl Skirt {
             ("danger", self.danger),
             ("on", self.on),
             ("rec", self.rec),
+            ("prep", self.prep),
         ];
         all.into_iter().find_map(|(n, c)| (n == name).then_some(c))
     }
@@ -180,7 +187,7 @@ impl Skirt {
 impl Palette {
     /// Every colour token with its name in `themes.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 35] {
+    pub fn named(&self) -> [(&'static str, Rgba); 37] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -201,6 +208,8 @@ impl Palette {
             ("lock_ink", self.lock_ink),
             ("rec", self.rec),
             ("rec_ink", self.rec_ink),
+            ("prep", self.prep),
+            ("prep_ink", self.prep_ink),
             ("led_off", self.led_off),
             ("led_on", self.led_on),
             ("ring", self.ring),

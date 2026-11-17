@@ -160,7 +160,7 @@ impl Face {
             inner.panel_shut(Panel::Clip);
             inner.heard_fill(FillLive::OFF);
             inner.heard_history(false);
-            inner.heard_voice(VoiceLit::OFF);
+            inner.heard_voice(VoiceLit::Off);
         }
         self.pour();
         self.peek_again();

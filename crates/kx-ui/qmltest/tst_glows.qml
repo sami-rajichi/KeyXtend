@@ -138,11 +138,27 @@ Item {
         function test_a_recording_key_holds_a_pulsing_light() {
             const k = makeKey("mic", N.lk);
             compare(lightOf(k), null, "none before it records");
-            k.ks = Object.assign({}, k.ks, { rec: true });
+            k.ks = Object.assign({}, k.ks, { lit: "rec" });
             const light = lightOf(k);
             verify(light && light.pulsing, "the light pulses");
             k.ks = Face.states.en.keys.mic;
             tryVerify(() => lightOf(k) === null, 1000, "and goes when recording ends");
+        }
+
+        // Preparing (owner, 2026-11-17): the cap glows in the amber paint, Dolch's skirt too, with no light pulsing, as
+        // nothing records yet.
+        function test_a_preparing_key_glows_amber_with_no_light() {
+            for (const lk of [N.lk, D.lk]) {
+                const k = makeKey("mic", lk);
+                k.ks = Object.assign({}, k.ks, { lit: "prep", paint: { fill: "prep", ink: "prep_ink", skirt: "prep" } });
+                tryVerify(() => Qt.colorEqual(k.fillColour, lk.palette.prep), 1000, "amber");
+                const skirt = lk.palette.skirt ? lk.palette.skirt.prep : lk.palette.prep;
+                tryVerify(() => Qt.colorEqual(k.skirt, skirt), 1000, "its skirt");
+                verify(k.glowing, "the cap glows");
+                compare(lightOf(k), null, "no light");
+                k.ks = Face.states.en.keys.mic;
+                verify(!k.glowing, "the glow ends with it");
+            }
         }
     }
 }

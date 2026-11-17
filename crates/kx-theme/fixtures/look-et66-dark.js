@@ -21,6 +21,8 @@ var lk = {
     "lock_ink": "#FFFFFFFF",
     "rec": "#FF3F3B37",
     "rec_ink": "#FFE6BE3A",
+    "prep": "#FFE0913A",
+    "prep_ink": "#FF2A1D0E",
     "led_off": "#FF4A4642",
     "led_on": "#FF6CC08A",
     "ring": "#FFE6BE3A",

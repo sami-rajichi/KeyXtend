@@ -111,6 +111,36 @@ fn the_engine_writes_pieces_in_the_models_language_while_listening_goes_on() {
 }
 
 #[test]
+fn sound_heard_while_the_model_still_loads_is_all_written_once_it_loads() {
+    let (mut rig, lib) = engine_rig();
+    let (go, gate) = mpsc::channel();
+    lib.script().gate = Some(gate);
+    let heard = rig.ask(writing());
+    let notes = rig.until(|n| *n == stage(1, Stage::Loading), heard);
+    assert_eq!(
+        plain(&notes),
+        [stage(1, Stage::Open), stage(1, Stage::Loading)]
+    );
+    let mut talk = loud(12 * SEC);
+    talk.extend(silent(SEC));
+    talk.extend(loud(3 * SEC));
+    let heard = rig.speak(&talk, CHUNK);
+    assert!(
+        lib.script().runs.is_empty(),
+        "nothing is written while it loads"
+    );
+    go.send(()).unwrap();
+    rig.only(VoiceAsk::Stop { id: 1 });
+    let notes = rig.until(|n| matches!(n, VoiceNote::Done { .. }), heard);
+    let pad = SEC * 3 / 10;
+    let pieces: Vec<VoiceNote> = (notes.iter())
+        .filter(|n| matches!(n, VoiceNote::Piece { .. }))
+        .cloned()
+        .collect();
+    assert_eq!(pieces, [said(0, 12 * SEC + pad), said(1, pad + 3 * SEC)]);
+}
+
+#[test]
 fn the_engines_answers_reach_the_host_and_free_their_ask() {
     let (mut rig, lib) = engine_rig();
     lib.script().found = vec![device(DeviceKind::Cpu, "CPU", 8000)];

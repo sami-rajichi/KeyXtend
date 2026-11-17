@@ -21,6 +21,8 @@ var lk = {
     "lock_ink": "#FFFFFFFF",
     "rec": "#FFA9405F",
     "rec_ink": "#FFFFFFFF",
+    "prep": "#FFD9952F",
+    "prep_ink": "#FF2A2C2E",
     "led_off": "#00000000",
     "led_on": "#FF8FF0F2",
     "ring": "#FF3CC0C4",
@@ -83,6 +85,7 @@ var lk = {
       "danger": "#FF86314B",
       "on": "#FF106568",
       "rec": "#FF86314B",
+      "prep": "#FFA9701D",
       "dim": "#FF2A2C2F"
     }
   },

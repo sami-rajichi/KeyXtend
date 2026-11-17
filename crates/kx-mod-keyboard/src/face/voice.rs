@@ -18,7 +18,7 @@ impl Face {
         STATE
     }
 
-    /// The voice module says whether the microphone is open.
+    /// The voice module tells the key's light: off, amber while the microphone starts, or red.
     pub(super) fn heard_lit(&self, lit: VoiceLit) {
         self.lock().heard_voice(lit);
     }

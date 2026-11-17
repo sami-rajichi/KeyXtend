@@ -112,6 +112,19 @@ fn names_are_kebab_case_and_unique_in_the_crate() {
 }
 
 #[test]
+fn the_light_starts_off_and_glows_amber_before_red() {
+    assert_eq!(
+        VoiceLit::default(),
+        VoiceLit::Off,
+        "before the module speaks"
+    );
+    let lights = [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Rec];
+    let names = lights.map(|l| serde_json::to_value(l).ok());
+    let want = ["off", "prep", "rec"].map(|n| Some(serde_json::Value::from(n)));
+    assert_eq!(names, want, "the face's state writes these");
+}
+
+#[test]
 fn a_place_reads_and_writes_as_its_lowercase_name() {
     assert_eq!(
         BarPlace::ALL,

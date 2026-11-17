@@ -5,6 +5,7 @@
 //! nothing until Transcribe anyway.
 
 mod gear;
+mod prep;
 mod said;
 
 use super::close::panel;
@@ -49,6 +50,8 @@ enum Step {
     Typed(bool),
     /// A note to the open take, or to the older one when true.
     Said(Said, bool),
+    /// Time passes, in ms, then the open take's microphone opens, as after a slow first start.
+    Open(u64),
     /// Time passes, in ms, then a tick.
     Wait(u64),
     On(bool),
@@ -79,6 +82,7 @@ fn step() -> impl Strategy<Value = Step> {
         1 => (0..LANGS.len()).prop_map(Step::Layout),
         1 => any::<bool>().prop_map(Step::Typed),
         6 => (said(), prop::bool::weighted(OLD)).prop_map(|(s, old)| Step::Said(s, old)),
+        2 => (0..MAX_WAIT_MS).prop_map(Step::Open),
         2 => (0..MAX_WAIT_MS).prop_map(Step::Wait),
         1 => prop::bool::weighted(ON).prop_map(Step::On),
         1 => Just(Step::Quit),
@@ -109,6 +113,10 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
             let take = rig.take.wrapping_sub(u32::from(*old));
             let note = said.note();
             rig.on(In::Note { take, note })
+        }
+        Step::Open(ms) => {
+            rig.wait(*ms);
+            rig.tell(SpeechNote::Stage(SpeechStage::Open))
         }
         Step::Wait(ms) => rig.tick_after(*ms),
         Step::On(on) => {
@@ -195,7 +203,9 @@ impl Seen {
             !rig.lit || matches!(shown, VoiceBar::Listening(_)),
             "lit on {shown:?}"
         );
-        let closed = shown != VoiceBar::Hidden || self.opened == self.closed;
+        let open: BTreeSet<u32> = self.opened.difference(&self.closed).copied().collect();
+        let preparing = rig.light == VoiceLit::Prep && open == BTreeSet::from([rig.take]);
+        let closed = shown != VoiceBar::Hidden || open.is_empty() || preparing;
         prop_assert!(closed, "a run stays open behind the hidden bar");
         match &shown {
             VoiceBar::Text(text) if text.text == VoiceText::Masked => {
@@ -229,6 +239,7 @@ proptest! {
         for step in &steps {
             let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
             let recording = lent && matches!(rig.shown(), VoiceBar::Listening(_));
+            let was = rig.light;
             let out = act(&mut rig, step, seen.ask.as_ref());
             if matches!(step, Step::Gear) {
                 seen.gear(&rig, &out, busy, recording)?;
@@ -236,6 +247,7 @@ proptest! {
             seen.effects(&out, hidden, lent)?;
             seen.after_gear(&out)?;
             seen.bar(&rig)?;
+            prep::check(&rig, step, was)?;
         }
     }
 }

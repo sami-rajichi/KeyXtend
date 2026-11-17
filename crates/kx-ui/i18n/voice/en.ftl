@@ -9,6 +9,7 @@ voice =
     .gear = Dictation settings
     .listening = Listening…
     .transcribing = Transcribing…
+    .preparing = Dictation, preparing the microphone
     .nothing = Nothing heard yet
     .stop = Stop
     .cancel = Cancel

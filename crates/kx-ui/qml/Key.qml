@@ -38,8 +38,11 @@ Item {
     // This press holds the key instead of clicking it, as `repeats` said when the pointer went down.
     property bool holds: false
     readonly property bool on: ks ? ks.on : false
-    // The Dictation key while the microphone is open, as the state tells it; it glows in the rec paint.
-    readonly property bool rec: ks ? !!ks.rec : false
+    // The Dictation key's light as the state tells it: amber ("prep") while the microphone starts, red ("rec") while it
+    // is open; each glows in its own paint.
+    readonly property string light: ks && ks.lit ? ks.lit : "off"
+    readonly property bool rec: light === "rec"
+    readonly property bool prep: light === "prep"
     readonly property bool down: area.pressed && !dim
     // The palette tokens for the cap, legend and skirt, which the face picks from the kind and state.
     readonly property var paint: ks ? ks.paint : ({})
@@ -60,7 +63,8 @@ Item {
     // The icon file the theme gives this key; without one the key shows its label.
     readonly property string icon: iconOf(kv.icon)
     readonly property string label: !icon && kv.label ? res.tr(kv.label) : ""
-    readonly property string name: kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
+    // The state may give a name readers hear in place of its own, as the Dictation key's while it prepares.
+    readonly property string name: ks && ks.spoken ? res.tr(ks.spoken) : kv.name ? res.tr(kv.name) : (ks ? said(ks) : "")
     readonly property string later: dim && kv.tip ? res.tr(kv.tip) : ""
     // What readers hear after its name, also in its tip: when a dimmed key comes, the state's tip, such as a lone
     // language key's, or the shortcuts layer's page on the key that shows its dots.
@@ -69,7 +73,7 @@ Item {
     readonly property string keys: kv.icon_only && icon ? res.keysText(kv.steps) : ""
     // The cap sits half a gap inside its cell.
     readonly property real inset: look.gap_px * s / 2
-    // The recording glow runs.
+    // The lit Dictation key's glow runs.
     readonly property bool glowing: glow.running
     // This key showed a tip, which it takes back on leave even when its note went meanwhile.
     property bool tipped: false
@@ -159,10 +163,10 @@ Item {
             move: key.mv.colour
         }
     }
-    // A recording cap glows (mock-up .key.rec .cap); loops never run at 0 ms.
+    // A recording or preparing cap glows (mock-up .key.rec .cap, .key.prep .cap); loops never run at 0 ms.
     SequentialAnimation on lift {
         id: glow
-        running: key.rec && key.mv.glow.ms > 0
+        running: (key.rec || key.prep) && key.mv.glow.ms > 0
         loops: Animation.Infinite
         onStopped: key.lift = 0
 

@@ -265,6 +265,7 @@ var texts = {
   "tray.quit": "Quitter",
   "tray.show": "Afficher le clavier",
   "tray.voice": "Dictée",
+  "voice.preparing": "Dictée, préparation du micro",
   "window.bubble": "Clavier KeyXtend (réduit)",
   "window.clip": "Historique du Presse-papiers KeyXtend",
   "window.fill": "Remplissage rapide de KeyXtend",

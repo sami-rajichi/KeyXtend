@@ -1,8 +1,9 @@
-//! The Dictation key drives the flow on the actor, and `VoiceLit` follows the microphone exactly: on when the run says
-//! it opened, off at Stop, at its end and when it shuts.
+//! The Dictation key drives the flow on the actor, and `VoiceLit` follows the microphone exactly: amber from the click,
+//! red when the run says it opened, off at Stop, at its end and when it shuts.
 
 use std::path::Path;
 
+use kx_module_api::ports::VoiceLit::{Off, Prep, Rec};
 use kx_module_api::ports::{SpeechNote, SpeechStage, VoiceBar};
 
 use super::Msg;
@@ -14,11 +15,11 @@ fn the_key_opens_the_microphone_and_the_light_follows_it_exactly() {
     let mut rig = Rig::new();
     rig.listen();
     assert_eq!(rig.fake.speech.runs().len(), 1);
-    assert_eq!(rig.lits(), [false, true]);
+    assert_eq!(rig.lits(), [Off, Prep, Rec]);
     assert!(matches!(rig.bar(), VoiceBar::Listening(_)));
     rig.key();
     assert_eq!(rig.fake.speech.runs()[0].stops, 1);
-    assert_eq!(rig.lits(), [false, true, false]);
+    assert_eq!(rig.lits(), [Off, Prep, Rec, Off]);
     assert_eq!(rig.bar(), VoiceBar::Transcribing);
 }
 
@@ -28,13 +29,13 @@ fn the_light_waits_for_the_microphone_and_goes_out_when_it_shuts() {
     rig.key();
     assert_eq!(rig.fake.speech.runs().len(), 1);
     assert_eq!(
-        rig.lits(),
-        [false],
-        "the run has not said the microphone opened"
+        (rig.lits(), rig.bar()),
+        (vec![Off, Prep], VoiceBar::Hidden),
+        "amber with no bar until the run says the microphone opened"
     );
     rig.tell(SpeechNote::Stage(SpeechStage::Open));
     rig.tell(SpeechNote::Stage(SpeechStage::Shut));
-    assert_eq!(rig.lits(), [false, true, false]);
+    assert_eq!(rig.lits(), [Off, Prep, Rec, Off]);
 }
 
 #[test]
@@ -55,7 +56,7 @@ fn a_late_starter_hears_the_view_and_the_light_again() {
     rig.listen();
     let (told, page) = (rig.heard().len(), rig.views().pop().unwrap());
     rig.send(Msg::Ask);
-    assert_eq!(rig.heard()[told..], [Heard::View(page), Heard::Lit(true)]);
+    assert_eq!(rig.heard()[told..], [Heard::View(page), Heard::Lit(Rec)]);
 }
 
 #[test]

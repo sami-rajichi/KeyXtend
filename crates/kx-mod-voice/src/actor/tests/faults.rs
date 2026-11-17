@@ -9,7 +9,7 @@ use std::time::Duration;
 use kx_module_api::SecretBytes;
 use kx_module_api::ports::{
     BarHint, CheckAsk, CheckDone, Device, FactsAsk, JobLimits, ModelFacts, SessionNote, Speech,
-    SpeechAsk, SpeechError, SpeechNote, SpeechRun, VoiceBar,
+    SpeechAsk, SpeechError, SpeechNote, SpeechRun, VoiceBar, VoiceLit,
 };
 use kx_platform_fake::{FakeSpeech, SpeechCall};
 
@@ -112,12 +112,15 @@ fn a_worker_death_tells_its_note_closes_the_run_and_puts_the_light_out() {
     assert!(rig.fake.speech.die());
     rig.pump();
     assert_eq!(note(&rig), Some(BarHint::Fault));
-    assert_eq!(rig.lits(), [false, true, false]);
+    assert_eq!(
+        rig.lits(),
+        [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Rec, VoiceLit::Off]
+    );
     assert!(rig.fake.speech.runs()[0].closed);
 }
 
 #[test]
-fn a_refused_open_tells_its_note_and_never_lights() {
+fn a_refused_open_tells_its_note_and_never_turns_red() {
     let mut rig = Rig::new();
     let retry_in = Duration::from_secs(1);
     rig.fake
@@ -125,7 +128,8 @@ fn a_refused_open_tells_its_note_and_never_lights() {
         .fail(SpeechCall::Open, SpeechError::Down { retry_in });
     rig.key();
     assert_eq!(note(&rig), Some(BarHint::Fault));
-    assert_eq!(rig.lits(), [false]);
+    let lits = [VoiceLit::Off, VoiceLit::Prep, VoiceLit::Off];
+    assert_eq!(rig.lits(), lits, "amber, never red");
     assert!(rig.fake.speech.runs().is_empty());
 }
 
@@ -147,7 +151,7 @@ fn a_port_that_panics_in_a_call_tells_a_fault_and_frees_the_run() {
     rig.listen();
     rig.key();
     assert_eq!(note(&rig), Some(BarHint::Fault));
-    assert_eq!(rig.lits().last(), Some(&false));
+    assert_eq!(rig.lits().last(), Some(&VoiceLit::Off));
     assert!(
         rig.fake.speech.runs()[0].closed,
         "the run closed as it dropped"
@@ -191,6 +195,6 @@ fn a_lock_stops_the_dictation_and_wipes_the_recording() {
     assert!(run.closed && !run.held);
     assert_eq!(
         (rig.bar(), rig.lits().last()),
-        (VoiceBar::Hidden, Some(&false))
+        (VoiceBar::Hidden, Some(&VoiceLit::Off))
     );
 }

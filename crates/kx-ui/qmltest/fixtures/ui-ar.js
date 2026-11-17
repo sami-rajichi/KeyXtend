@@ -265,6 +265,7 @@ var texts = {
   "tray.quit": "إنهاء",
   "tray.show": "إظهار لوحة المفاتيح",
   "tray.voice": "إملاء",
+  "voice.preparing": "إملاء، جارٍ تجهيز الميكروفون",
   "window.bubble": "لوحة مفاتيح KeyXtend (مصغّرة)",
   "window.clip": "محفوظات الحافظة في KeyXtend",
   "window.fill": "التعبئة السريعة في KeyXtend",

@@ -15,6 +15,7 @@ use kx_test_support::golden::assert_golden;
 use kx_test_support::host::FakeHost;
 use kx_test_support::tempdir::TempDir;
 use kx_theme::assets::{ICON_EXT, SYSTEM_FONTS, bundle, icon_url};
+use kx_ui::i18n::keys::VOICE_PREPARING;
 use kx_ui::{Hub, I18n, MANIFEST, UiPorts, UiSettings};
 use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
@@ -40,6 +41,8 @@ const ASSETS: &str = "../../assets";
 const TRAY_PX: u32 = 16;
 /// The banner's counts the tests read, from none up to this many.
 const MORE_UP_TO: usize = 12;
+/// The feature files' texts the keyboard window draws: the Dictation key's name while the microphone starts.
+const FACE_TEXTS: [&str; 1] = [VOICE_PREPARING];
 /// What starts each fixture, so QML imports it as a JavaScript library.
 pub const HEAD: &str = ".pragma library\n// Written by kx-ui's texts test; do not edit.\n";
 
@@ -129,8 +132,10 @@ fn ui(tag: &str) -> String {
     let assist: Value = serde_json::from_str(&hub.assist_json()).expect("overlay JSON");
     let scroll: Value = serde_json::from_str(&hub.scroll_json()).expect("scroll JSON");
     let t: Arc<I18n> = hub.i18n();
+    let face = FACE_TEXTS.map(str::to_owned);
     let texts: Map<String, Value> = keys_of(t.lang().ftl)
         .into_iter()
+        .chain(face)
         .map(|k| {
             let v = Value::String(t.text(&k));
             (k, v)
@@ -262,6 +267,15 @@ fn the_qml_fixtures_match_the_hub_texts_and_face() {
             written.contains(&name),
             "{DIR}/{name} is no longer written; delete it"
         );
+    }
+}
+
+#[test]
+fn the_keyboards_texts_hold_the_dictation_keys_preparing_name() {
+    for tag in LANGS {
+        let said = Value::String(crate::lang(tag).text(VOICE_PREPARING));
+        let line = format!("\"{VOICE_PREPARING}\": {said}");
+        assert!(ui(tag).contains(&line), "{tag}: {line}");
     }
 }
 

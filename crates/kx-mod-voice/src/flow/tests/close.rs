@@ -156,7 +156,7 @@ fn a_late_starter_hears_the_light_and_the_view_again() {
     rig.speak();
     let round = rig.round();
     let out = rig.on(In::Ask);
-    assert!(out.contains(&Out::Lit(kx_module_api::ports::VoiceLit { rec: true })));
+    assert!(out.contains(&Out::Lit(VoiceLit::Rec)));
     let view = out.iter().find_map(|o| match o {
         Out::View(view) => Some(view.0.round),
         _ => None,

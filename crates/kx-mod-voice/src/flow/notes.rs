@@ -28,8 +28,8 @@ impl Flow {
         }
     }
 
-    /// The light follows the microphone, and listening counts from its opening; the job stopping by itself ends
-    /// listening.
+    /// The light follows the microphone, and listening starts at its opening; a model still loading is no error, and
+    /// the job stopping by itself ends listening.
     fn stage(&mut self, stage: SpeechStage, out: &mut Vec<Out>) {
         let listening = self.phase() == Phase::Listening;
         match stage {
@@ -48,13 +48,17 @@ impl Flow {
         }
     }
 
-    /// The microphone opened: the key lights while listening, whose time and hint start now.
+    /// The microphone opened: a preparing dictation shows its Listening bar, whose time and hint start now, and the key
+    /// turns red.
     fn opened(&mut self) {
-        let now = self.now();
-        self.lit = self.phase() == Phase::Listening;
-        if let super::State::Listening { since, .. } = &mut self.state {
-            *since = now;
+        if self.phase() == Phase::Preparing {
+            let since = self.now();
+            self.state = super::State::Listening {
+                since,
+                nothing: false,
+            };
         }
+        self.lit = self.phase() == Phase::Listening;
     }
 
     /// The level reaches the bar only while listening.

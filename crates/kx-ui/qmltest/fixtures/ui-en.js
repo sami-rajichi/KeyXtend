@@ -265,6 +265,7 @@ var texts = {
   "tray.quit": "Quit",
   "tray.show": "Show keyboard",
   "tray.voice": "Dictation",
+  "voice.preparing": "Dictation, preparing the microphone",
   "window.bubble": "KeyXtend keyboard (minimised)",
   "window.clip": "KeyXtend clipboard history",
   "window.fill": "KeyXtend Quick-fill",

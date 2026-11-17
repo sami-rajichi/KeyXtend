@@ -4,7 +4,7 @@ use super::*;
 use kx_module_api::ports::{
     BarButton, BarHint, FieldChange, FieldKind, LayoutChanged, LayoutId, PanelButton, SpeechError,
     SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct, VoiceBar, VoiceClick, VoiceLang,
-    VoicePage, VoiceText,
+    VoiceLit, VoicePage, VoiceText,
 };
 use kx_module_api::ports::{Fingerprint, SpeechAsk, SpeechDone, SpeechModel};
 use kx_module_api::{Redacted, Secret, Zeroizing};
@@ -23,6 +23,7 @@ mod gear;
 mod lend;
 mod listen;
 mod outs;
+mod prep;
 mod props;
 mod session;
 mod start;
@@ -129,6 +130,9 @@ struct Rig {
     book: Book,
     take: u32,
     page: Option<VoicePage>,
+    /// The light told last.
+    light: VoiceLit,
+    /// The light is red.
     lit: bool,
 }
 
@@ -150,6 +154,7 @@ impl Rig {
             book: Book(book),
             take: 0,
             page: None,
+            light: VoiceLit::Off,
             lit: false,
         };
         rig.on(In::Layout(layout("fr", "Français", false)));
@@ -164,7 +169,7 @@ impl Rig {
             match effect {
                 Out::Open { take, .. } => self.take = *take,
                 Out::View(view) => self.page = Some((*view.0).clone()),
-                Out::Lit(lit) => self.lit = lit.rec,
+                Out::Lit(light) => (self.light, self.lit) = (*light, *light == VoiceLit::Rec),
                 _ => {}
             }
         }

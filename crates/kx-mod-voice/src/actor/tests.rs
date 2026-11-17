@@ -22,7 +22,7 @@ mod typing;
 mod view;
 
 use kx_module_api::Event;
-use kx_module_api::ports::{LayoutAsk, VoiceBar};
+use kx_module_api::ports::{LayoutAsk, VoiceBar, VoiceLit};
 use kx_platform_fake::FileCall;
 
 use super::Msg;
@@ -38,7 +38,7 @@ fn the_start_tells_a_hidden_bar_and_no_light_then_asks_for_the_layout() {
     assert!(
         matches!(&heard[0], Heard::View(page) if page.bar == VoiceBar::Hidden && page.panel.is_none())
     );
-    assert_eq!(heard[1], Heard::Lit(false));
+    assert_eq!(heard[1], Heard::Lit(VoiceLit::Off));
     assert_eq!(heard.last(), Some(&Heard::Ask(LayoutAsk::NAME)));
 }
 
@@ -59,7 +59,7 @@ fn the_stop_closes_the_microphone_hides_the_bar_and_drops_the_watches() {
     assert!(run.closed && !run.held, "the recording is wiped");
     assert_eq!(
         (rig.bar(), rig.lits().last()),
-        (VoiceBar::Hidden, Some(&false))
+        (VoiceBar::Hidden, Some(&VoiceLit::Off))
     );
     assert!(!rig.fake.field.watching() && !rig.fake.session.watching());
 }

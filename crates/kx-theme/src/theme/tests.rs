@@ -124,6 +124,7 @@ fn sculpted_skirts_stay_darker_than_their_tops() {
                 ("danger", s.danger, p.danger),
                 ("on", s.on, p.on),
                 ("rec", s.rec, p.rec),
+                ("prep", s.prep, p.prep),
             ];
             for (n, skirt, top) in pairs {
                 let at = format!("{}.{}: {n}", t.look.id, mode.key());

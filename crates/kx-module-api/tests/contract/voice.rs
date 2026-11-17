@@ -100,7 +100,7 @@ fn sends(bus: &Bus) -> [Result<(), EventError>; 8] {
     };
     [
         bus.publish(&VoiceKey),
-        bus.publish(&VoiceLit { rec: true }),
+        bus.publish(&VoiceLit::Prep),
         bus.publish(&VoiceOpen),
         bus.publish(&VoiceAsk),
         bus.publish(&VoiceView::new(page())),

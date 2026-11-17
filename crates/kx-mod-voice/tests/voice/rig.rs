@@ -116,7 +116,7 @@ pub fn stop(module: &mut VoiceModule, host: &mut FakeHost) {
 )]
 pub enum Said {
     View(VoicePage),
-    Lit(bool),
+    Lit(VoiceLit),
     Presses(bool),
     Notice(&'static str),
 }
@@ -134,7 +134,7 @@ impl Heard {
         let bus = Bus::new(Arc::clone(&host.core));
         let ears = vec![
             ear(&bus, &tx, |e: &VoiceView| Said::View((*e.0).clone())),
-            ear(&bus, &tx, |e: &VoiceLit| Said::Lit(e.rec)),
+            ear(&bus, &tx, |e: &VoiceLit| Said::Lit(*e)),
             ear(&bus, &tx, |e: &PressesWanted| Said::Presses(e.on)),
             ear(&bus, &tx, |e: &Notice| Said::Notice(e.key)),
         ];

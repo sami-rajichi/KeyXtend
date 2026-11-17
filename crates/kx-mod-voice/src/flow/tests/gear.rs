@@ -7,7 +7,7 @@ use super::*;
 /// How far a dictation got when the panel opens.
 #[derive(Copy, Clone, Debug)]
 enum Run {
-    /// Started, before the microphone's `Open` stage, so the key is not lit yet.
+    /// Started, before the microphone's `Open` stage: no bar, and the key glows amber.
     Preparing,
     /// The microphone open and speech heard.
     Listening,
@@ -41,7 +41,7 @@ fn the_gear_ends_a_running_dictation_exactly_as_cancel_does() {
         assert_eq!(out, cancelled.bar(BarButton::Cancel), "{run:?}");
         assert_eq!(calls(&out), [RunCall::Cancel], "{run:?}");
         assert!(ask(&out).is_none() && kept(&out).is_empty(), "{run:?}");
-        assert!(!geared.lit, "{run:?}");
+        assert_eq!(geared.light, VoiceLit::Off, "{run:?}");
         assert_eq!(geared.shown(), cancelled.shown(), "{run:?}");
     }
 }

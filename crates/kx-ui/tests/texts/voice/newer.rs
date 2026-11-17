@@ -1,11 +1,11 @@
 //! The voice port's newer notes and lines in each language: a bad download, a name another file holds, a file still
-//! checked, a failed Compare run, the language note and the slow-PC line.
+//! checked, a failed Compare run, the Dictation key's preparing name, the language note and the slow-PC line.
 
 use super::named;
 use crate::lang;
 use kx_module_api::ports::BarHint;
 use kx_ui::i18n::keys::vars::LANG;
-use kx_ui::i18n::keys::{VOICE_SLOW, VOICE_WORD};
+use kx_ui::i18n::keys::{VOICE_PREPARING, VOICE_SLOW, VOICE_WORD};
 
 #[test]
 fn the_ports_newer_notes_and_lines_read_as_written_in_each_language() {
@@ -41,6 +41,18 @@ fn the_ports_newer_notes_and_lines_read_as_written_in_each_language() {
             let got = lang(tag).text(&format!("{VOICE_WORD}{id}"));
             assert_eq!(got, word, "{tag} {id}");
         }
+    }
+}
+
+#[test]
+fn the_dictation_keys_preparing_name_reads_as_the_owner_gave_it() {
+    let want = [
+        ("en", "Dictation, preparing the microphone"),
+        ("fr", "Dictée, préparation du micro"),
+        ("ar", "إملاء، جارٍ تجهيز الميكروفون"),
+    ];
+    for (tag, word) in want {
+        assert_eq!(lang(tag).text(VOICE_PREPARING), word, "{tag}");
     }
 }
 

@@ -57,7 +57,7 @@ pub(super) fn typist(asks: &Arc<Mutex<Vec<TextAsk>>>) -> Typist {
 )]
 pub(super) enum Heard {
     View(VoicePage),
-    Lit(bool),
+    Lit(VoiceLit),
     Level(u8),
     Presses(bool),
     Notice(&'static str),
@@ -69,7 +69,7 @@ pub(super) enum Heard {
 pub(super) fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscription> {
     vec![
         ear(bus, heard, |e: &VoiceView| Heard::View((*e.0).clone())),
-        ear(bus, heard, |e: &VoiceLit| Heard::Lit(e.rec)),
+        ear(bus, heard, |e: &VoiceLit| Heard::Lit(*e)),
         ear(bus, heard, |e: &VoiceLevel| Heard::Level(e.level)),
         ear(bus, heard, |e: &PressesWanted| Heard::Presses(e.on)),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.key)),
