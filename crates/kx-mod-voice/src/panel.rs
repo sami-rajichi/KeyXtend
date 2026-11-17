@@ -184,6 +184,15 @@ impl Panel {
         }
         match &act.click {
             VoiceClick::Rows(rows) => self.rows = row(rows),
+            // The Cloud page and its clicks act once its state is built (P11 part 2); until then they do nothing.
+            VoiceClick::Open(VoiceTab::Cloud)
+            | VoiceClick::Cloud(_)
+            | VoiceClick::Service(_)
+            | VoiceClick::SetKey(_)
+            | VoiceClick::SetAddress(_)
+            | VoiceClick::SetModel(_)
+            | VoiceClick::KeepNothing(_)
+            | VoiceClick::Local => {}
             VoiceClick::Open(tab) if self.page == Some(Page::Home) => {
                 return self.go(Page::Tab(*tab));
             }

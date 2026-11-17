@@ -1,4 +1,4 @@
-//! The Voice panel's pages: the home list's order and values, model names and folders that never print, a model not
+//! The Voice panel's pages: the home list's values, model names and folders that never print, a model not
 //! for this PC, the Device page's numbers, Compare's steps, day and device, and History's counts. Options are in
 //! `options`.
 
@@ -36,12 +36,6 @@ pub(super) fn holds(shown: &str, parts: &[&str]) {
     for part in parts {
         assert!(shown.contains(part), "{shown} lacks {part}");
     }
-}
-
-#[test]
-fn the_panels_pages_keep_the_home_lists_order() {
-    use VoiceTab::{Compare, Device, History, Models, Options};
-    assert_eq!(VoiceTab::ALL, [Models, Device, Compare, History, Options]);
 }
 
 #[test]

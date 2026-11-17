@@ -1,8 +1,9 @@
 //! The clicks the bar and the Voice panel send: a bar button, the pointer over the bar, a page, a row, a download's
-//! button, an option, a panel button, Compare's start with its set text, and an answer.
+//! button, an option, a panel button, Compare's start with its set text, an answer, and the cloud pages' switches,
+//! buttons and typed lines, whose text stays redacted.
 
 use super::panel::VoiceTab;
-use crate::Redacted;
+use crate::{Redacted, Secret};
 
 listed! {
     /// A button on the bar; the gear sends `VoiceOpen` instead.
@@ -76,6 +77,28 @@ listed! {
     }
 }
 
+listed! {
+    /// A button of the Cloud page, a service's card or its key page (ADR-0047).
+    pub enum CloudButton ("Every cloud button.") {
+        /// Switch the ticked service on: its card shows first, to confirm.
+        On,
+        /// Switch the ticked or shown service off.
+        Off,
+        /// Show the ticked or shown service's card.
+        Facts,
+        /// Open the ticked service's key page.
+        Lines,
+        /// Put the clipboard's text on the key line, as dots.
+        Paste,
+        /// Test the key.
+        Test,
+        /// Remove the key.
+        Remove,
+        /// Open the shown page's link in the browser: the facts' page, or where keys are made.
+        Link,
+    }
+}
+
 /// What a click on the bar or the panel names.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VoiceClick {
@@ -112,8 +135,22 @@ pub enum VoiceClick {
     Button(PanelButton),
     /// Start Compare models with the set text the ui shows, from its translations; empty when the language has none.
     Compare(Redacted<String>),
-    /// Answer the shown question: yes on true.
+    /// Answer the shown question, a card's switch-on among them: yes on true.
     Confirm(bool),
     /// The ui's rows per page (`page_rows`); the module pages by the last one heard.
     Rows(u8),
+    /// Turn cloud services on, or off on false (`cloud`).
+    Cloud(bool),
+    /// A button of the cloud pages.
+    Service(CloudButton),
+    /// The key line's text, set as the shown service's key.
+    SetKey(Secret),
+    /// The address line's text, set as the shown service's address.
+    SetAddress(Redacted<String>),
+    /// The Other model line's text, set as the shown service's model id.
+    SetModel(Redacted<String>),
+    /// Ask only for hosts that keep nothing, or not on false: `OpenRouter`'s switch.
+    KeepNothing(bool),
+    /// Use the local model: write the held recording with the language's local model, after a cloud fault.
+    Local,
 }

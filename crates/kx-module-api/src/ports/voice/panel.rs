@@ -1,13 +1,18 @@
-//! The Voice panel's pages (design "The gear and the Voice panel"): the home list, Models, Device, Compare, History,
-//! Options and the folder list, each list paged as the ui's `page_rows` says, tick then act. Texts, folder names and
-//! model names, which may be the user's own file names, stay redacted.
+//! The Voice panel's pages (design "The gear and the Voice panel"): the home list, Models, Cloud with its cards and key
+//! pages, Device, Compare, History, Options and the folder list, each list paged as the ui's `page_rows` says, tick
+//! then act. Texts, folder names, model names and typed lines, which may be the user's own, stay redacted.
 
+mod cloud;
 mod compare;
 mod device;
 mod history;
 mod models;
 mod options;
 
+pub use cloud::{
+    CloudCard, CloudSheet, Fact, FactArg, FactValue, KeyCheck, ServiceMark, ServiceName,
+    ServiceRow, ServiceSheet, UsePrice,
+};
 pub use compare::{CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};
 pub use history::{HistoryRow, HistorySheet};
@@ -24,6 +29,8 @@ listed! {
     pub enum VoiceTab ("Every page, in the home list's order.") {
         /// The models that know the language in front.
         Models,
+        /// The cloud services, each with its card and key page (ADR-0047).
+        Cloud,
         /// Automatic, the processor and each card.
         Device,
         /// Compare models on the user's own voice.
@@ -86,6 +93,12 @@ pub enum VoiceSheet {
     Home(VoiceHome),
     /// The models.
     Models(ModelsSheet),
+    /// The cloud services.
+    Cloud(CloudSheet),
+    /// A cloud service's card, boxed as it holds many facts.
+    Card(Box<CloudCard>),
+    /// A cloud service's key page.
+    Service(ServiceSheet),
     /// The devices.
     Device(DeviceSheet),
     /// Compare models.

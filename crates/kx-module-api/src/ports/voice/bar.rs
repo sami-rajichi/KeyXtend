@@ -1,8 +1,8 @@
-//! What the dictation bar shows (design "The bar"): its place, its state, its hint and its text. Text stays redacted
-//! and is wiped on drop, and a password box's text never reaches the ui.
+//! What the dictation bar shows (design "The bar"): its place, its state, its hint, its text and the cloud mark. Text
+//! stays redacted and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
-use super::panel::VoicePanel;
+use super::panel::{ServiceName, VoicePanel};
 use crate::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -170,4 +170,6 @@ pub struct VoicePage {
     pub place: BarPlace,
     /// The start and stop sounds play (`sounds`).
     pub sounds: bool,
+    /// The service a cloud dictation sends the voice to at Stop; while set, the bar shows the cloud mark and its name.
+    pub cloud: Option<ServiceName>,
 }

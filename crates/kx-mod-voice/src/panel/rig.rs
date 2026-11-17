@@ -114,6 +114,7 @@ impl Rig {
                 panel: view.clone(),
                 place: BarPlace::Above,
                 sounds: true,
+                cloud: None,
             };
             self.panel.told(&page);
         }

@@ -2,6 +2,7 @@
 
 mod bus;
 mod clip;
+mod cloud;
 mod cx;
 mod face;
 mod fill;

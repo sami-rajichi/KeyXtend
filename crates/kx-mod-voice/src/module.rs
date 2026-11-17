@@ -193,6 +193,7 @@ fn hide(bus: &Bus, settings: &VoiceSettings) {
         panel: None,
         place: settings.bar_place(),
         sounds: settings.sounds,
+        cloud: None,
     };
     // The module holds `Voice`, which these events need, or its start would have failed.
     let _ = bus.publish(&VoiceView::new(page));

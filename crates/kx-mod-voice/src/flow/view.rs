@@ -58,6 +58,7 @@ impl Flow {
             panel: self.panel.clone(),
             place: self.settings.bar_place(),
             sounds: self.settings.sounds,
+            cloud: None,
         };
         if !self.told.page.as_ref().is_some_and(|p| same(p, &page)) {
             let take = self.take.as_ref().map(|t| t.id);
@@ -143,5 +144,5 @@ fn same(a: &VoicePage, b: &VoicePage) -> bool {
         }
         (x, y) => x == y,
     };
-    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds
+    bars && a.panel == b.panel && a.place == b.place && a.sounds == b.sounds && a.cloud == b.cloud
 }

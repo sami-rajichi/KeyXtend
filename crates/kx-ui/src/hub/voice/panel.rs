@@ -11,7 +11,7 @@ use crate::i18n::keys::vars::{DATE, DEVICE, LANG};
 use crate::i18n::keys::{
     VOICE_AGAIN_HINT, VOICE_AUTO_CPU, VOICE_AUTO_ON, VOICE_CHANGED, VOICE_CPU, VOICE_DEFAULTS,
     VOICE_FOR_LANG, VOICE_LANG, VOICE_LAST_RUN, VOICE_NEVER, VOICE_NO, VOICE_NO_MODEL, VOICE_TEXTS,
-    VOICE_TITLE, VOICE_YES, WINDOW_VOICE_PANEL, voice_tab_id,
+    VOICE_TITLE, VOICE_YES, WINDOW_VOICE_PANEL, home_tab, voice_tab_id,
 };
 use kx_module_api::ports::{
     DeviceLabel, DeviceName, PanelButton, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
@@ -194,6 +194,7 @@ pub(super) fn of(panel: &VoicePanel, t: &I18n, read: Option<&str>) -> Panel {
         VoiceSheet::Compare(c) => lists::compare(&cx, c),
         VoiceSheet::History(h) => lists::history(&cx, h),
         VoiceSheet::Options(rows) => options::page(&cx, rows),
+        VoiceSheet::Cloud(_) | VoiceSheet::Card(_) | VoiceSheet::Service(_) => blank(t),
     };
     // Back and Close always act: the module names only the buttons that may dim.
     let header = |b| Button::panel(t, b, &[b]);
@@ -235,18 +236,33 @@ fn home(cx: &Cx<'_>, h: &VoiceHome) -> Page {
         VoiceTab::History => t.counted(VOICE_TEXTS, count(h.history)),
         VoiceTab::Options if h.changed == 0 => t.text(VOICE_DEFAULTS),
         VoiceTab::Options => t.counted(VOICE_CHANGED, usize::from(h.changed)),
+        VoiceTab::Cloud => String::new(),
     };
-    let rows = VoiceTab::ALL.map(|tab| HomeRow {
+    let row = |tab| HomeRow {
         tab: voice_tab_id(tab),
         label: cx.tab(tab),
         value: value(tab),
-    });
+    };
+    let rows = VoiceTab::ALL.into_iter().filter(|&tab| home_tab(tab));
     let sub = t.voice_with(VOICE_LANG, &[(LANG, cx.lang())]);
-    let sheet = Sheet::Home { rows: rows.into() };
+    let sheet = Sheet::Home {
+        rows: rows.map(row).collect(),
+    };
     let mut page = Page::new(HOME, t.text(VOICE_TITLE), sub, sheet);
     page.line = Some(t.text(VOICE_AGAIN_HINT));
     page.foot = vec![cx.button(PanelButton::Again).tone(Tone::Primary)];
     page
+}
+
+/// An empty home page for a cloud page; the module sends none until its state and the ui's page are built (P11 part 2).
+fn blank(t: &I18n) -> Page {
+    let rows = Vec::new();
+    Page::new(
+        HOME,
+        t.text(VOICE_TITLE),
+        String::new(),
+        Sheet::Home { rows },
+    )
 }
 
 /// `n` as a count.

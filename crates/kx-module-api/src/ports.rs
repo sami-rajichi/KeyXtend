@@ -31,6 +31,7 @@ mod boxes;
 mod calendar;
 mod clip;
 mod clips;
+mod cloud;
 mod code;
 mod face;
 mod field;
@@ -79,6 +80,11 @@ pub use clips::{
     ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipTake,
     ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted, MB, Pages, PanelKey,
     PanelLine, PanelNote, PasteAsk, Pasted, Preview, When,
+};
+pub use cloud::{
+    CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,
+    CloudSpeechKey, CloudTest, FormField, FormFields, HttpsUrl, KeyHeader, MAX_FIELD_VALUE,
+    MAX_FIXED, MAX_KEY_BYTES,
 };
 pub use code::CodeError;
 pub use face::{
@@ -150,12 +156,14 @@ pub use speech::{
     SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CompareRow, CompareRun,
-    CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, FailedCheck,
-    FetchButton, FetchState, FolderLine, FolderList, HistoryRow, HistorySheet, Listening, ModelRow,
-    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, TextAsk,
-    TextDone, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel,
-    VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CloudButton, CloudCard, CloudSheet,
+    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
+    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
+    FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, ModelRow, ModelState, ModelsSheet,
+    OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, ServiceMark, ServiceName, ServiceRow,
+    ServiceSheet, TextAsk, TextDone, UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceHome,
+    VoiceKey, VoiceLang, VoiceLevel, VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet,
+    VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

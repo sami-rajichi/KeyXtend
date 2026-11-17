@@ -76,7 +76,10 @@ impl Panel {
         let page = self.page()?;
         self.sync(facts);
         let (sheet, pages) = match page {
-            Page::Home => (VoiceSheet::Home(home(self, facts)), self.single()),
+            // The panel never opens the Cloud page until its state is built (P11 part 2).
+            Page::Home | Page::Tab(VoiceTab::Cloud) => {
+                (VoiceSheet::Home(home(self, facts)), self.single())
+            }
             Page::Tab(VoiceTab::Models) => self.models_sheet(facts),
             Page::Tab(VoiceTab::Device) => self.device_sheet(facts),
             Page::Tab(VoiceTab::Compare) => self.compare_sheet(facts),
@@ -104,7 +107,7 @@ impl Panel {
             Some(Page::Tab(VoiceTab::Compare)) => acts.extend(self.compare_acts()),
             Some(Page::Tab(VoiceTab::History)) => acts.extend(self.history_acts(facts)),
             Some(Page::Folders) => acts.extend(self.browse.as_ref().map(|_| PanelButton::Here)),
-            Some(Page::Tab(VoiceTab::Options)) | None => {}
+            Some(Page::Tab(VoiceTab::Options | VoiceTab::Cloud)) | None => {}
         }
         if self.page().is_some_and(|p| p != Page::Home) {
             acts.insert(0, PanelButton::Back);

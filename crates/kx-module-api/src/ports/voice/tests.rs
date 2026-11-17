@@ -1,11 +1,12 @@
 //! Voice typing's events: their names and gates, the place's names, the approved bar's buttons and hints, and `Debug`
-//! that never shows a transcript or a text to type. The panel's pages are in `panel`.
+//! that never shows a transcript or a text to type. The panel's pages are in `panel`, cloud services in `cloud`.
 
 use super::*;
 use crate::capability::is_kebab;
 use crate::{REDACTED_MARKER, Redacted, Secret, Zeroizing};
 use std::collections::HashSet;
 
+mod cloud;
 mod names;
 mod options;
 mod panel;
@@ -68,6 +69,7 @@ fn page(bar: VoiceBar) -> VoicePage {
         panel: None,
         place: BarPlace::Above,
         sounds: true,
+        cloud: None,
     }
 }
 

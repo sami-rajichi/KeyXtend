@@ -153,11 +153,18 @@ pub const fn fetch_button_id(button: FetchButton) -> &'static str {
 pub const fn voice_tab_id(tab: VoiceTab) -> &'static str {
     match tab {
         VoiceTab::Models => "models",
+        VoiceTab::Cloud => "cloud",
         VoiceTab::Device => "device",
         VoiceTab::Compare => "compare",
         VoiceTab::History => "history",
         VoiceTab::Options => "options",
     }
+}
+
+/// True for a page the home list shows; the Cloud page joins once its page and texts are built (P11 part 2).
+#[must_use]
+pub const fn home_tab(tab: VoiceTab) -> bool {
+    !matches!(tab, VoiceTab::Cloud)
 }
 
 /// A bar place's id, as the `place` setting names it.

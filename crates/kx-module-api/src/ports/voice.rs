@@ -6,15 +6,16 @@ mod act;
 mod bar;
 mod panel;
 
-pub use act::{BarButton, FetchButton, PanelButton, VoiceClick};
+pub use act::{BarButton, CloudButton, FetchButton, PanelButton, VoiceClick};
 pub use bar::{
     BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceLang, VoicePage, VoiceText,
 };
 pub use panel::{
-    CardCheck, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
-    DeviceRow, DeviceSheet, Ends, FailedCheck, FetchState, FolderLine, FolderList, HistoryRow,
-    HistorySheet, ModelRow, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, RunStep,
-    VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
+    CardCheck, CloudCard, CloudSheet, CompareRow, CompareRun, CompareSheet, DeviceItem,
+    DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck,
+    FetchState, FolderLine, FolderList, HistoryRow, HistorySheet, KeyCheck, ModelRow, ModelState,
+    ModelsSheet, OptionRow, OptionUnit, OptionValue, RunStep, ServiceMark, ServiceName, ServiceRow,
+    ServiceSheet, UsePrice, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
 };
 
 use crate::{Capability, Event, Secret};

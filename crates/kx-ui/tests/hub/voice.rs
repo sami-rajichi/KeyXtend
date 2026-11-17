@@ -173,6 +173,7 @@ pub fn page(round: u32, bar: VoiceBar, panel: Option<VoicePanel>) -> VoicePage {
         panel,
         place: BarPlace::Above,
         sounds: true,
+        cloud: None,
     }
 }
 
