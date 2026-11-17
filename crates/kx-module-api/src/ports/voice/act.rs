@@ -2,7 +2,7 @@
 //! button, an option, a panel button, Compare's start with its set text, an answer, and the cloud pages' switches,
 //! buttons and typed lines, whose text stays redacted.
 
-use super::panel::VoiceTab;
+use super::panel::{ModelSide, VoiceTab};
 use crate::{Redacted, Secret};
 
 listed! {
@@ -108,8 +108,10 @@ pub enum VoiceClick {
     Bar(BarButton),
     /// The pointer came over the bar, or left it; while over it, the bar stays.
     Over(bool),
-    /// A home row: open its page.
+    /// A home row: open its page; the Models page's Cloud band and slow line open the Cloud page too.
     Open(VoiceTab),
+    /// Show the Models page's Local or Cloud side.
+    Side(ModelSide),
     /// A row of the shown page: tick or untick it, or open a folder in the folder list.
     Row(u8),
     /// Turn a page, from the panel's arrows or a scroll pad page tap, which the ui turns into this.

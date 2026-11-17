@@ -62,6 +62,7 @@ fn home_values_name_the_model_the_card_the_last_run_and_the_changes() {
         compared: Date::new(2026, 11, 12),
         history: 1,
         changed: 3,
+        cloud: None,
     });
     let values: Vec<String> = rows(&panel_json(&rig, &heard, panel(sheet)))
         .into_iter()
@@ -91,6 +92,7 @@ fn a_device_picked_by_hand_reads_as_itself() {
             compared: None,
             history: 0,
             changed: 0,
+            cloud: None,
         });
         let p = panel_json(&rig, &heard, panel(sheet));
         assert_eq!(rows(&p)[1].2, word);

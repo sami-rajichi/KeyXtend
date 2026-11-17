@@ -8,7 +8,7 @@ use kx_module_api::ports::{Date, Drive, LayoutChanged, LayoutId, MB, SpeechDone}
 use kx_module_api::{Mono, Redacted};
 use kx_platform_fake::{
     FakeCalendar, FakeClipboardWriter, FakeClock, FakeCloud, FakeFieldWatch, FakeFolderReveal,
-    FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech,
+    FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
 
 use crate::models::{Row, table};
@@ -31,6 +31,7 @@ pub(super) struct Fakes {
     pub clock: FakeClock,
     pub calendar: FakeCalendar,
     pub cloud: FakeCloud,
+    pub link: Arc<FakeWebLink>,
 }
 
 impl Fakes {
@@ -47,6 +48,7 @@ impl Fakes {
             clock: FakeClock::new(START),
             calendar: FakeCalendar::new(Date::new(2026, 11, 15).unwrap(), 12, 0, 60),
             cloud: FakeCloud::new(),
+            link: Arc::new(FakeWebLink::new()),
         };
         let drive = Drive {
             root: Redacted::new(r"D:\".into()),

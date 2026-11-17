@@ -7,10 +7,11 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, CloudSpeechKey, FieldRun, FieldWatchKey, FolderRevealKey,
-    LayoutChanged, ModelFilesKey, PointerPressed, PressAsker, PressesAsk, PressesWanted,
-    SessionRun, SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk,
-    VoiceBar, VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
+    CalendarKey, ClipTaken, ClipboardWriterKey, CloudSpeechKey, FieldRun, FieldWatchKey,
+    FolderRevealKey, LayoutChanged, ModelFilesKey, PointerPressed, PressAsker, PressesAsk,
+    PressesWanted, SessionRun, SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct,
+    VoiceAsk, VoiceBar, VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
+    WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, NoticeArg, args, keys,
@@ -150,6 +151,9 @@ fn ports(
     let cloud = cx.service::<CloudSpeechKey>();
     let cloud = cloud.inspect_err(|error| tracing::warn!(%error, "cloud speech is not available"));
     let cloud = cloud.ok();
+    let link = cx.service::<WebLinkKey>();
+    let link = link.inspect_err(|error| tracing::warn!(%error, "links cannot be opened"));
+    let link = link.ok();
     let field = field_watch(cx, settings, tx)?;
     let session = session_watch(cx, tx)?;
     let typist = typer(cx.bus()).ok_or(ModuleError::Start(NO_TYPER))?;
@@ -163,6 +167,7 @@ fn ports(
         reveal,
         shelf,
         cloud,
+        link,
         field,
         session,
         handle: cx.settings_handle(),
@@ -247,6 +252,7 @@ fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |e: &LayoutChanged| Some(Msg::Layout(e.clone())))?;
     relay(cx, tx, |e: &TextDone| Some(Msg::Typed(*e)))?;
     relay(cx, tx, |e: &TextPasted| Some(Msg::Pasted(*e)))?;
+    relay(cx, tx, |e: &ClipTaken| Some(Msg::Taken(e.clone())))?;
     relay(cx, tx, |_: &Typed| Some(Msg::Elsewhere))?;
     relay(cx, tx, |e: &PointerPressed| {
         (!e.ours).then_some(Msg::Elsewhere)

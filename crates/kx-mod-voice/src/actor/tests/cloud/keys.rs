@@ -23,7 +23,7 @@ fn a_damaged_key_sends_nothing_types_nothing_and_keeps_the_recording() {
     // The shelf set the damaged blob aside, so Try again finds no key until one is set again.
     rig.act(VoiceClick::Bar(BarButton::Again));
     assert!(rig.fake.cloud.calls().runs.is_empty());
-    set_key(&rig.fake, KEY);
+    set_key(&rig.fake, &key());
     rig.fake
         .cloud
         .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);

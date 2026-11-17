@@ -55,7 +55,7 @@ heavy = { id = "price", money = { price = 16.20 } }
 "#;
 
 /// An Azure row: a typed address under its domain, a test path, and a classic model that the request names not.
-const AZURE: &str = r#"
+pub(crate) const AZURE: &str = r#"
 [[services]]
 id = "azure-test"
 name = "Azure"
@@ -93,7 +93,7 @@ heavy = { id = "unknown" }
 "#;
 
 /// An `OpenRouter` row with its keep-nothing field, and a model whose every host keeps the voice.
-const ROUTER: &str = r#"
+pub(crate) const ROUTER: &str = r#"
 [[services]]
 id = "router-test"
 name = "OpenRouter"
@@ -138,7 +138,7 @@ fn shipped() -> &'static Services {
 }
 
 /// The shipped text with `rows` after it.
-fn with_rows(rows: &str) -> Services {
+pub(crate) fn with_rows(rows: &str) -> Services {
     Services::parse(&format!("{TEXT}{rows}")).unwrap()
 }
 

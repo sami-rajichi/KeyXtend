@@ -191,4 +191,4 @@ fn checked_rows(
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

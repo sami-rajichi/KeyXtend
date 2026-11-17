@@ -1,9 +1,10 @@
-//! What the actor does after a panel input, in order: reads, writes, downloads, a card's check, History's acts and
-//! Compare's run. Each read comes back through the `Panel` method its line names.
+//! What the actor does after a panel input, in order: reads, writes, downloads, a card's check, History's acts,
+//! Compare's run and the cloud keys, Paste and link. Each read comes back through the `Panel` method its line names.
 
 use std::path::PathBuf;
 
-use kx_module_api::ports::{CardId, CheckAsk, FactsAsk, FetchAsk, FetchButton, Fingerprint};
+use kx_module_api::Secret;
+use kx_module_api::ports::{CardId, CheckAsk, FactsAsk, FetchAsk, FetchButton, Fingerprint, Link};
 
 use crate::compare::Act;
 use crate::counts::Checked;
@@ -84,4 +85,26 @@ pub enum Do {
     DeleteAll(Asked),
     /// An effect on Compare's run.
     Compare(Act),
+    /// Seal `key` as service `service`'s, then call `Panel::key_set` and tell the flow the keys changed.
+    SetKey {
+        /// The service's id.
+        service: String,
+        /// The key, wiped once sealed.
+        key: Secret,
+    },
+    /// Remove this service's key, then tell the flow the keys changed.
+    RemoveKey(String),
+    /// Count the characters of this service's key, then call `Panel::dots`.
+    Dots(String),
+    /// Test service `service`'s key off the actor, then call `Panel::tested` with `ticket`.
+    Test {
+        /// The service's id.
+        service: String,
+        /// Names the test, so an answer the user no longer waits for is dropped.
+        ticket: u32,
+    },
+    /// Ask the clipboard history for its text (`ClipTake`) as this round, which `Panel::pasted` gets.
+    Take(u32),
+    /// Open this link from the services table in the browser.
+    Link(Link),
 }

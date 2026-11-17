@@ -57,11 +57,11 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 #[test]
 fn the_marks_and_buttons_are_the_designs() {
     use CloudButton::{Facts, Lines, Link, Paste, Remove, Test};
-    use KeyCheck::{NoTest, Refused, Testing, Works};
-    use ServiceMark::{NeedsKey, Off, Ready};
+    use KeyCheck::{Failed, NoTest, Refused, Testing, Unfit, Works};
+    use ServiceMark::{NeedsAddress, NeedsKey, Off, Ready};
     assert_eq!(
         ServiceMark::ALL,
-        [Off, NeedsKey, Ready],
+        [Off, NeedsKey, NeedsAddress, Ready],
         "a model's Unavailable is its row's"
     );
     let want = [
@@ -75,8 +75,23 @@ fn the_marks_and_buttons_are_the_designs() {
         Link,
     ];
     assert_eq!(CloudButton::ALL, want);
-    let checks = [KeyCheck::Untested, Testing, Works, Refused, NoTest];
+    let checks = [
+        KeyCheck::Untested,
+        Testing,
+        Works,
+        Refused,
+        Failed,
+        Unfit,
+        NoTest,
+    ];
     assert_eq!(KeyCheck::ALL, checks);
+
+    let faults = [
+        AddressFault::Https,
+        AddressFault::Host,
+        AddressFault::Domain,
+    ];
+    assert_eq!(AddressFault::ALL, faults);
 }
 
 #[test]
@@ -213,7 +228,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         key: Redacted::new(56),
         check: KeyCheck::Untested,
         address: Some(hidden(1)),
-        address_ok: false,
+        address_fault: Some(AddressFault::Host),
         model: hidden(2),
         model_na: true,
         keep: Some(true),
@@ -228,7 +243,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
             "Custom",
             "Ready",
             "Untested",
-            "address_ok: false",
+            "address_fault: Some(Host)",
             "model_na: true",
             "keep: Some(true)",
             "Paste",

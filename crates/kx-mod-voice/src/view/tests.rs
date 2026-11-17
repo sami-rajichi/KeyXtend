@@ -1,9 +1,13 @@
 //! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home
-//! list names the model, the device, the last Compare and the counts; Try again acts as the flow allows.
+//! list names the model, the device, the last Compare and the counts; Try again acts as the flow allows; History names a
+//! cloud text's model and service.
 
 use kx_module_api::ports::{
-    DeviceLabel, DeviceName, Pages, PanelButton, VoiceClick, VoiceHome, VoiceSheet, VoiceTab,
+    DeviceLabel, DeviceName, Pages, PanelButton, ServiceName, VoiceClick, VoiceHome, VoiceSheet,
+    VoiceTab,
 };
+
+use kx_module_api::{Redacted, Zeroizing};
 
 use crate::counts::Board;
 use crate::panel::rig::{ROWS, Rig, cpu, row};
@@ -92,6 +96,7 @@ fn the_home_list_names_the_model_the_device_compare_and_the_counts() {
         compared: Some(day),
         history: 3,
         changed: 1,
+        cloud: None,
     };
     assert_eq!(home, want);
 }
@@ -150,4 +155,41 @@ fn the_panel_draws_nothing_while_closed() {
     let mut rig = Rig::new();
     rig.click(&VoiceClick::Button(PanelButton::Close));
     assert!(rig.view().is_none());
+}
+
+#[test]
+fn history_names_a_cloud_texts_model_and_its_service_never_the_raw_pick() {
+    let mut rig = Rig::new();
+    let rules = crate::history::Rules {
+        texts: true,
+        max: 500,
+        voice: false,
+        voice_bytes: 0,
+    };
+    for (take, pick) in [(1, "custom:whisper-1"), (2, "groq:whisper-large-v3-turbo")] {
+        let kept = crate::flow::Kept {
+            take,
+            text: Redacted::new(Zeroizing::new(format!("texte {take}"))),
+            lang: "fr".into(),
+            model: Redacted::new(pick.into()),
+        };
+        let at = crate::history::Stamp {
+            unix_ms: 1_794_657_600_000 + i64::from(take),
+            offset_min: 0,
+        };
+        rig.history.keep(kept, at, &rules);
+    }
+    rig.click(&VoiceClick::Open(VoiceTab::History));
+    let VoiceSheet::History(sheet) = rig.view().unwrap().sheet else {
+        panic!("not History");
+    };
+    let named: Vec<_> = (sheet.rows.iter())
+        .map(|r| (r.model.expose().clone(), r.cloud.clone()))
+        .collect();
+    let groq = Some(ServiceName::Named("Groq".into()));
+    let want = [
+        ("Whisper Large v3 Turbo".to_owned(), groq),
+        ("whisper-1".to_owned(), Some(ServiceName::Custom)),
+    ];
+    assert_eq!(named, want);
 }

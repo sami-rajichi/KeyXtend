@@ -1,24 +1,31 @@
 //! The Voice panel's view (design "The gear and the Voice panel"): each page's rows, `page_rows` to a page with the
 //! ticks shown, the buttons that act now and the note band. It holds no words; the ui words each value.
 
+mod cloud;
 mod compare;
 mod device;
 mod history;
+mod lines;
 mod models;
+mod remote;
 
+use std::collections::BTreeSet;
 use std::mem;
 
 use kx_module_api::ports::{
     BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, OptionRow,
-    OptionValue, Pages, PanelButton, VoiceHome, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
+    OptionValue, Pages, PanelButton, ServiceMark, ServiceName, VoiceHome, VoiceLang, VoicePanel,
+    VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
+use crate::cloud::{Cloud, cloud_pick};
 use crate::counts::{Checks, Scores};
 use crate::flow::Supply;
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
+use crate::services::{self, Service};
 
 /// What the view and the clicks need beyond the panel; the actor holds it.
 #[derive(Copy, Clone, Debug)]
@@ -45,6 +52,10 @@ pub struct Facts<'a> {
     pub again: bool,
     /// A dictation listens or writes, so Compare waits.
     pub dictating: bool,
+    /// The cloud rules, in a run that is hidden or not; `None` when the services table does not load, so cloud is off.
+    pub cloud: Option<Cloud<'a>>,
+    /// The services with a key, from the blobs' names alone.
+    pub keyed: &'a BTreeSet<String>,
 }
 
 impl Facts<'_> {
@@ -78,10 +89,10 @@ impl Panel {
         let page = self.page()?;
         self.sync(facts);
         let (sheet, pages) = match page {
-            // The panel never opens the Cloud page until its state is built (P11 part 2).
-            Page::Home | Page::Tab(VoiceTab::Cloud) => {
-                (VoiceSheet::Home(home(self, facts)), self.single())
-            }
+            Page::Home => (VoiceSheet::Home(home(self, facts)), self.single()),
+            Page::Tab(VoiceTab::Cloud) => self.cloud_sheet(facts),
+            Page::Card => self.card_sheet(facts),
+            Page::Lines => self.lines_sheet(facts),
             Page::Tab(VoiceTab::Models) => self.models_sheet(facts),
             Page::Tab(VoiceTab::Device) => self.device_sheet(facts),
             Page::Tab(VoiceTab::Compare) => self.compare_sheet(facts),
@@ -109,7 +120,9 @@ impl Panel {
             Some(Page::Tab(VoiceTab::Compare)) => acts.extend(self.compare_acts()),
             Some(Page::Tab(VoiceTab::History)) => acts.extend(self.history_acts(facts)),
             Some(Page::Folders) => acts.extend(self.browse.as_ref().map(|_| PanelButton::Here)),
-            Some(Page::Tab(VoiceTab::Options | VoiceTab::Cloud)) | None => {}
+            // The cloud pages' buttons are their sheets' own.
+            Some(Page::Tab(VoiceTab::Options | VoiceTab::Cloud) | Page::Card | Page::Lines)
+            | None => {}
         }
         if self.page().is_some_and(|p| p != Page::Home) {
             acts.insert(0, PanelButton::Back);
@@ -212,15 +225,39 @@ fn home(panel: &Panel, facts: &Facts<'_>) -> VoiceHome {
         compared,
         history: u32::try_from(facts.history.len()).unwrap_or(u32::MAX),
         changed: options::changed(facts.settings),
+        cloud: cloud_home(facts),
     }
 }
 
-/// A model's shown name: its row's name, else its file's name.
+/// The home's Cloud value: how many services are ready while cloud is on; `None` while off.
+fn cloud_home(facts: &Facts<'_>) -> Option<u16> {
+    let cloud = facts.cloud.filter(|c| c.on(facts.settings))?;
+    let s = facts.settings;
+    let ready = cloud.offered(s).into_iter().filter(|row| {
+        let key = facts.keyed.contains(&row.id);
+        cloud.mark(s, row, key) == ServiceMark::Ready
+    });
+    Some(short(ready.count()))
+}
+
+/// A model's shown name: its row's name, else its file's name; a cloud pick's listed model name, else its typed id.
 pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
+    if let Some((service, model)) = cloud_pick(name.expose()) {
+        let row = services::table().ok().and_then(|t| t.get(service));
+        let listed = row.and_then(|r| r.model(model)).map(|m| m.name.as_str());
+        return Redacted::new(listed.unwrap_or(model).to_owned());
+    }
     let row = crate::models::table()
         .ok()
         .and_then(|t| t.get(name.expose()));
     row.map_or_else(|| name.clone(), |r| Redacted::new(r.name.clone()))
+}
+
+/// A cloud pick's service, as its row names it; `None` for a model on this PC.
+pub(crate) fn service_of(name: &Redacted<String>) -> Option<ServiceName> {
+    let (service, _) = cloud_pick(name.expose())?;
+    let row = services::table().ok().and_then(|t| t.get(service));
+    Some(row.map_or_else(|| ServiceName::Named(service.to_owned()), Service::shown))
 }
 
 /// `n` as a count the view holds, or the largest one.

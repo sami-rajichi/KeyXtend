@@ -1,9 +1,9 @@
 //! The rows of the shown page: turning pages, ticking (one row, or History's in order), opening a folder, an option's
 //! switch and stepper, and the answer to the question shown.
 
-use kx_module_api::ports::BarHint;
+use kx_module_api::ports::{BarHint, VoiceTab};
 
-use super::{Do, Key, Panel, options};
+use super::{Do, Key, Page, Panel, options};
 use crate::VoiceSettings;
 use crate::folder::offer;
 use crate::view::Facts;
@@ -24,11 +24,21 @@ impl Panel {
         let Some(key) = self.shown.get(at).cloned() else {
             return Vec::new();
         };
+        let many =
+            self.page == Some(Page::Tab(VoiceTab::Compare)) && self.compare.results().is_empty();
         match key {
             Key::Dir(dir) => return self.open_dir(dir),
             Key::Opt(_) | Key::Plain => {}
+            // History's texts, and the cloud models Compare sends the recording to.
             Key::Text(_) => self.tick_many(key),
-            Key::Model(_) | Key::Device(_) | Key::Score(_) => self.tick_one(key),
+            Key::Cloud { .. } if many => self.tick_many(key),
+            Key::Model(_)
+            | Key::Device(_)
+            | Key::Score(_)
+            | Key::Service(_)
+            | Key::Cloud { .. } => {
+                self.tick_one(key);
+            }
         }
         Vec::new()
     }
@@ -87,8 +97,11 @@ impl Panel {
         }
     }
 
-    /// An answer to the question shown: Delete all, or the folder offered at the first download.
+    /// An answer to the question shown: a card's, Delete all, or the folder offered at the first download.
     pub(super) fn confirm(&mut self, yes: bool, facts: &Facts<'_>) -> Vec<Do> {
+        if self.page == Some(Page::Card) {
+            return self.card_confirm(yes, facts);
+        }
         if let Some(asked) = self.asked.take() {
             return if yes {
                 vec![Do::DeleteAll(asked)]

@@ -257,6 +257,7 @@ fn ports(
         reveal: Arc::clone(&fake.reveal) as _,
         shelf: Arc::new(fake.shelf.clone()),
         cloud: Some(Arc::new(fake.cloud.clone())),
+        link: Some(Arc::clone(&fake.link) as _),
         field: field.ok(),
         session: session.ok(),
         handle: host.handle(),

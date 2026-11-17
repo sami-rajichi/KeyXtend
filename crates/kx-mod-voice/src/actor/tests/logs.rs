@@ -104,7 +104,7 @@ fn a_cloud_dictation_logs_no_key_and_no_reply() {
         let mut rig = Rig::build(cloud::groq);
         rig.fake.shelf.fail(ShelfCall::Load, SealedError::Damaged);
         rig.dictate();
-        cloud::set_key(&rig.fake, cloud::KEY);
+        cloud::set_key(&rig.fake, &cloud::key());
         rig.fake.cloud.script(vec![CloudAnswer::text(SECRET); 2]);
         rig.act(VoiceClick::Bar(BarButton::Again));
         assert_eq!(rig.typed_texts(), [format!("{SECRET} {SECRET}")]);
@@ -112,7 +112,7 @@ fn a_cloud_dictation_logs_no_key_and_no_reply() {
     assert!(!lines.is_empty(), "the unread key is logged by kind");
     for line in &lines {
         assert!(
-            !line.contains(SECRET) && !line.contains(cloud::KEY),
+            !line.contains(SECRET) && !line.contains(&cloud::key()),
             "{line}"
         );
     }

@@ -49,6 +49,7 @@ impl Actor {
             Back::Shown(shown) => self.shown(shown),
             Back::Net { take, round, note } => self.net_note(take, round, note),
             Back::Sending { take, round, run } => self.opened_net(take, round, run),
+            Back::Tested { ticket, answer } => self.panel.tested(ticket, answer),
         }
     }
 

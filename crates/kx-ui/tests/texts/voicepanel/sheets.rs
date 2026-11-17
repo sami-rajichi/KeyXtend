@@ -3,8 +3,8 @@
 
 use kx_module_api::ports::{
     CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, FetchState, FolderLine,
-    HistoryRow, HistorySheet, ModelRow, ModelState, ModelsSheet, RunStep, VoiceHome, VoiceSheet,
-    When,
+    HistoryRow, HistorySheet, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep, VoiceHome,
+    VoiceSheet, When,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
@@ -38,6 +38,7 @@ pub fn home() -> VoiceSheet {
         compared: Some(day(RAN)),
         history: 12,
         changed: 2,
+        cloud: None,
     })
 }
 
@@ -51,6 +52,7 @@ fn model(name: &str, mb: u64, state: ModelState) -> ModelRow {
         used: false,
         tick: false,
         fetch: None,
+        cloud: None,
     }
 }
 
@@ -115,6 +117,8 @@ pub fn models(page: u16, used_ticked: bool) -> VoiceSheet {
         slow: false,
         folder: Some(folder()),
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     })
 }
 
@@ -135,6 +139,8 @@ pub fn slow() -> VoiceSheet {
         slow: true,
         folder: Some(folder()),
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     })
 }
 
@@ -154,6 +160,8 @@ pub fn ready() -> VoiceSheet {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
         preparing: false,
+        cloud: Vec::new(),
+        send: Vec::new(),
     })
 }
 
@@ -187,6 +195,7 @@ pub fn results(free: bool) -> VoiceSheet {
         mb,
         text: free.then(|| spoken("The evening train leaves at seven.")),
         tick,
+        cloud: None,
     };
     VoiceSheet::Compare(CompareSheet::Results {
         day: day(RAN),
@@ -217,6 +226,7 @@ fn said(id: u64, text: &str, lang: &str, hour: u8, model: &str) -> HistoryRow {
         model: secret(model),
         pinned: false,
         tick: None,
+        cloud: None,
     }
 }
 

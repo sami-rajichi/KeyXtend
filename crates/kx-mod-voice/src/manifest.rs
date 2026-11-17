@@ -1,6 +1,6 @@
 //! What the voice module declares (ADR-0042 decision 8): the microphone through the speech port, downloads the user
 //! asks for, its sealed store on its own shelf, the focused box, Copy, the calendar's dates and its models folder
-//! shown (ADR-0046); it never types.
+//! shown (ADR-0046), a card's link and the key page's Paste (ADR-0047); it never types.
 
 use kx_module_api::ports::{
     CalendarKey, ClipboardWriterKey, FieldWatchKey, FolderRevealKey, ModelFilesKey,
@@ -36,6 +36,8 @@ pub static MANIFEST: Manifest = Manifest {
         Capability::ReadFocusedText,
         Capability::WriteClipboard,
         Capability::OpenFolder,
+        Capability::OpenLink,
+        Capability::ReadClipboard,
     ],
     settings: Some(&SPEC),
 };
@@ -45,9 +47,9 @@ mod tests {
     use super::*;
     use kx_module_api::Event;
     use kx_module_api::ports::{
-        LayoutAsk, LayoutChanged, PasteText, PointerPressed, PressesAsk, PressesWanted,
-        SealedShelfKey, TextAsk, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk, VoiceKey,
-        VoiceLit, VoiceOpen, VoiceView,
+        ClipTake, ClipTaken, LayoutAsk, LayoutChanged, PasteText, PointerPressed, PressesAsk,
+        PressesWanted, SealedShelfKey, TextAsk, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk,
+        VoiceKey, VoiceLit, VoiceOpen, VoiceView, WebLinkKey,
     };
 
     #[test]
@@ -60,16 +62,22 @@ mod tests {
             Capability::ReadFocusedText,
             Capability::WriteClipboard,
             Capability::OpenFolder,
+            Capability::OpenLink,
+            Capability::ReadClipboard,
         ];
         assert_eq!(MANIFEST.capabilities, want);
         assert!(!MANIFEST.capabilities.contains(&Capability::InjectInput));
     }
 
     #[test]
-    fn it_shows_its_models_folder_through_the_folder_reveal_alone() {
+    fn it_shows_its_models_folder_through_the_folder_reveal_and_a_cards_link_through_the_web_link()
+    {
         assert!(MANIFEST.requires.contains(&FolderRevealKey::ID));
         assert_eq!(FolderRevealKey::CAPABILITY, Some(Capability::OpenFolder));
-        assert!(!MANIFEST.capabilities.contains(&Capability::OpenLink));
+        // A card's link is optional, as cloud speech is: a run without it still dictates.
+        assert!(!MANIFEST.requires.contains(&WebLinkKey::ID));
+        assert_eq!(WebLinkKey::CAPABILITY, Some(Capability::OpenLink));
+        assert!(MANIFEST.declares(Capability::OpenLink));
     }
 
     #[test]
@@ -89,16 +97,20 @@ mod tests {
             LayoutChanged::CAPABILITY,
             LayoutAsk::CAPABILITY,
             TextPasted::CAPABILITY,
+            ClipTaken::CAPABILITY,
         ];
         assert!(heard.into_iter().flatten().all(|c| MANIFEST.declares(c)));
     }
 
-    // Paste at once asks the clipboard history to paste through the gate Copy holds, so it gains no clipboard read.
+    // Paste at once asks the clipboard history to paste through the gate Copy holds; the key page's Paste reads the
+    // clipboard's text through `ClipTake`, as Quick-fill's does, under `ReadClipboard`.
     #[test]
-    fn paste_at_once_needs_only_the_write_gate_it_holds_for_copy() {
+    fn paste_at_once_needs_the_write_gate_and_the_key_pages_paste_the_read_gate() {
         let write = Some(Capability::WriteClipboard);
         assert_eq!([PasteText::CAPABILITY, TextPasted::CAPABILITY], [write; 2]);
-        assert!(!MANIFEST.capabilities.contains(&Capability::ReadClipboard));
+        let read = Some(Capability::ReadClipboard);
+        assert_eq!([ClipTake::CAPABILITY, ClipTaken::CAPABILITY], [read; 2]);
+        assert!(MANIFEST.declares(Capability::ReadClipboard));
     }
 
     #[test]

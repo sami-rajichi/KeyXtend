@@ -34,6 +34,8 @@ fn ready() -> VoiceSheet {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
         preparing: false,
+        cloud: Vec::new(),
+        send: Vec::new(),
     })
 }
 

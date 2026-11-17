@@ -68,6 +68,8 @@ const BAD_JOIN: &str =
 pub(crate) const PICKS: &str = "picks";
 /// The switched-on services' key in the section, which also names a dropped entry in the settings notice.
 pub(crate) const SERVICES: &str = "services";
+/// The cloud switch's key in the section, which the Cloud page's switch writes.
+pub(crate) const CLOUD: &str = "cloud";
 /// The device's key in the section, which the Device page's Use writes.
 pub(crate) const DEVICE: &str = "device";
 /// The models folder's key in the section, which the first download's folder question writes.

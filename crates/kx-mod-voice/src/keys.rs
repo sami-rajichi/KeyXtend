@@ -1,6 +1,7 @@
 //! The cloud keys (ADR-0047 decision 10): each the user's own, sealed as one blob per service in `keys` on the voice
 //! shelf with its own key, and handed out as a `Secret` wiped after use. A hidden run reads and writes none.
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::Arc;
 
@@ -76,6 +77,29 @@ impl Keys {
         };
         let name = BlobName::new(id)?;
         Ok(sealed.names(&folder()?)?.contains(&name))
+    }
+
+    /// The services with a key blob, from the folder's names alone, so no key is opened; none in a hidden run.
+    ///
+    /// # Errors
+    /// `Shelf` with the shelf's error.
+    pub fn listed(&self) -> Result<BTreeSet<String>, KeyError> {
+        let Some(sealed) = &self.shelf else {
+            return Ok(BTreeSet::new());
+        };
+        let names = sealed.names(&folder()?)?;
+        Ok(names.iter().map(|n| n.as_str().to_owned()).collect())
+    }
+
+    /// How many characters service `id`'s key holds, for its dots; 0 for none or a hidden run. The key is wiped as
+    /// this returns.
+    ///
+    /// # Errors
+    /// As `get`.
+    pub fn dots(&self, id: &str) -> Result<u32, KeyError> {
+        let key = self.get(id)?;
+        let count = key.map_or(0, |k| k.expose().chars().count());
+        Ok(u32::try_from(count).unwrap_or(u32::MAX))
     }
 
     /// Seals `key` as service `id`'s, in place of the one before; the key is wiped as this returns.

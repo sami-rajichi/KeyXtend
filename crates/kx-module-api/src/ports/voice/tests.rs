@@ -11,6 +11,7 @@ mod names;
 mod note;
 mod options;
 mod panel;
+mod sides;
 
 /// The `Voice` gate.
 const VOICE: Option<Capability> = Some(Capability::Voice);

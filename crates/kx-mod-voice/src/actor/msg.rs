@@ -4,9 +4,9 @@
 use std::path::PathBuf;
 
 use kx_module_api::ports::{
-    CardId, CheckDone, CloudNote, Device, FetchNote, FieldChange, Fingerprint, FolderError,
-    LayoutChanged, ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone,
-    TextPasted, VoiceAct,
+    CardId, CheckDone, ClipTaken, CloudFault, CloudNote, Device, FetchNote, FieldChange,
+    Fingerprint, FolderError, LayoutChanged, ModelError, ModelFacts, SessionNote, SpeechError,
+    SpeechNote, TextDone, TextPasted, VoiceAct,
 };
 
 use super::lanes::{Answer, Lane, Run};
@@ -37,6 +37,8 @@ pub(crate) enum Msg {
     Typed(TextDone),
     /// The clipboard history pasted a text, or not (`TextPasted`).
     Pasted(TextPasted),
+    /// The clipboard history's text for the key page's Paste (`ClipTaken`).
+    Taken(ClipTaken),
     /// A job's answer.
     Back(Back),
     /// The module stops.
@@ -107,6 +109,13 @@ pub(crate) enum Back {
         round: u32,
         /// The note; a text stays secret.
         note: CloudNote,
+    },
+    /// A key's test of `ticket` answered.
+    Tested {
+        /// Names the test, so an answer the user no longer waits for is dropped.
+        ticket: u32,
+        /// Works, or why not.
+        answer: Result<(), CloudFault>,
     },
     /// The service's run for dictation `take`'s upload of round `round` opened.
     Sending {

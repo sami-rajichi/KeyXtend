@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 
 use kx_module_api::ports::{
     Calendar, ClipboardWriter, CloudSpeech, FieldRun, FolderReveal, ModelFiles, SealedShelf,
-    SessionRun, Speech,
+    SessionRun, Speech, WebLink,
 };
 use kx_module_api::{Bus, Clock, SettingsHandle};
 
@@ -38,6 +38,8 @@ pub(crate) struct Ports {
     pub shelf: Arc<dyn SealedShelf>,
     /// Cloud speech, when the module may reach it; without it an upload ends with the cloud fault note.
     pub cloud: Option<Arc<dyn CloudSpeech>>,
+    /// Opens the services table's links in the browser, when the module may.
+    pub link: Option<Arc<dyn WebLink>>,
     /// The focused box's watch, dropped at the stop.
     pub field: Option<Box<dyn FieldRun>>,
     /// The session's watch, dropped at the stop.

@@ -6,7 +6,8 @@ use super::{acting, button, buttons, heard, panel, panel_json};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    FetchState, FolderLine, FolderList, ModelRow, ModelState, ModelsSheet, PanelButton, VoiceSheet,
+    FetchState, FolderLine, FolderList, ModelRow, ModelSide, ModelState, ModelsSheet, PanelButton,
+    VoiceSheet,
 };
 use serde_json::{Value, json};
 
@@ -20,6 +21,7 @@ fn row(name: &str, bytes: u64, state: ModelState) -> ModelRow {
         used: false,
         tick: false,
         fetch: None,
+        cloud: None,
     }
 }
 
@@ -40,6 +42,8 @@ fn sheet(rows: Vec<ModelRow>) -> ModelsSheet {
         slow: false,
         folder: Some(folder()),
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     }
 }
 

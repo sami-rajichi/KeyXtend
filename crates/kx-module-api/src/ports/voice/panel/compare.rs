@@ -2,8 +2,20 @@
 //! with their day and device. Only numbers are kept; a text shows only for a language with no set text, wiped on drop.
 
 use super::DeviceLabel;
+use super::cloud::ServiceName;
 use crate::ports::Date;
 use crate::{Redacted, Secret};
+
+/// A cloud model Compare may send the recording to (ADR-0047); only a ticked one's service gets it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompareCloud {
+    /// The model's shown name, or the id the user typed.
+    pub name: Redacted<String>,
+    /// Its service.
+    pub service: ServiceName,
+    /// It is ticked.
+    pub tick: bool,
+}
 
 /// Where one model stands while Compare runs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -47,6 +59,8 @@ pub struct CompareRow {
     pub text: Option<Secret>,
     /// It is ticked.
     pub tick: bool,
+    /// The service that wrote it, for a cloud model; `None` for one on this PC.
+    pub cloud: Option<ServiceName>,
 }
 
 /// Where Compare stands.
@@ -62,6 +76,11 @@ pub enum CompareSheet {
         recording: bool,
         /// Its microphone opens: Start is gone and Cancel ends it, but nothing asks to read yet, as no bar shows.
         preparing: bool,
+        /// The shown page of the cloud models of the services ready, ticked or not.
+        cloud: Vec<CompareCloud>,
+        /// The services the recording goes to after it is read, which the send warning names before Start; empty for
+        /// none, so no warning shows.
+        send: Vec<ServiceName>,
     },
     /// Model `at` of `of` writes the recording, as in Model 3 of 6 · its name, with Cancel.
     Running {

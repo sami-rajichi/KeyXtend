@@ -9,7 +9,7 @@ use crate::flow::Lend;
 use crate::panel::{Key, Panel};
 
 impl Panel {
-    /// The Compare page as it stands.
+    /// The Compare page as it stands; while ready, the cloud models it may send the recording to, with the warning.
     pub(super) fn compare_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         if let Some((at, models)) = self.compare.running() {
             let name = models
@@ -33,13 +33,17 @@ impl Panel {
         }
         let entrants = self.entrants(facts);
         let lend = self.compare.lend();
+        let (clouds, send) = self.compare_clouds(facts);
+        let (cloud, pages) = self.paged(clouds);
         let sheet = CompareSheet::Ready {
             models: short(entrants.len()),
             device: device::label(facts, entrants.first().map(|e| &e.ready)),
             recording: lend == Lend::Listen,
             preparing: lend == Lend::Prep,
+            cloud,
+            send,
         };
-        (VoiceSheet::Compare(sheet), self.single())
+        (VoiceSheet::Compare(sheet), pages)
     }
 
     /// The results, ticked to use one for the language.
@@ -84,6 +88,7 @@ fn compare_row(line: &Line, tick: bool) -> CompareRow {
         wait_ms: line.wait_ms,
         mb: line.mb,
         text: line.text.clone(),
+        cloud: None,
         tick,
     }
 }

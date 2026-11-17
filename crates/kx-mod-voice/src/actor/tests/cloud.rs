@@ -1,10 +1,11 @@
 //! A cloud dictation through the actor (ADR-0047): the listen-only run hands its speech over at Stop, the key is read
 //! just before `send`, and the service's texts are typed, kept and counted under the pick; the run is dropped once it
-//! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the local model's take in `local`, and the
-//! missing port and the row's piece length in `port`.
+//! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the key page's effects in `page`, the local
+//! model's take in `local`, and the missing port and the row's piece length in `port`.
 
 mod keys;
 mod local;
+mod page;
 mod port;
 
 use std::sync::Arc;
@@ -28,8 +29,10 @@ const PICK: &str = "groq:whisper-large-v3-turbo";
 const MODEL: &str = "whisper-large-v3-turbo";
 /// A tenth of a second of sound, as one piece.
 const PIECE: usize = 3_200;
-/// The test's own key for the fake service.
-pub(super) const KEY: &str = "gsk-test-key";
+/// The test's own key for the fake service, built as the test runs so no key-like text sits in the source.
+pub(super) fn key() -> String {
+    ["kx", "fake", "key"].join("-")
+}
 /// The longest piece Groq's row takes, held to the most a run cuts.
 const PIECE_S: u8 = 120;
 
@@ -53,7 +56,7 @@ pub(super) fn groq(fake: &Fakes, host: &mut FakeHost) {
     host.put("cloud", true.into());
     host.put("services", table("groq = { on = 2026-11-17, terms = 1 }"));
     host.put("picks", table(&format!("en = \"{PICK}\"")));
-    set_key(fake, KEY);
+    set_key(fake, &key());
 }
 
 /// The cloud note for `why`, with "Use the local model" ready and Try again.

@@ -156,14 +156,15 @@ pub use speech::{
     SpeechRun, SpeechStage, TAG_LEN, Verdict,
 };
 pub use voice::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CloudButton, CloudCard, CloudSheet,
-    CloudWhy, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
-    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
-    FolderList, HistoryRow, HistorySheet, KeyCheck, Listening, LocalUse, ModelRow, ModelState,
-    ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, ServiceMark,
-    ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, UsePrice, VoiceAct, VoiceAsk,
-    VoiceBar, VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLit, VoiceOpen,
-    VoicePage, VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
+    AddressFault, BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CloudBand,
+    CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, CompareRow, CompareRun,
+    CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends, Fact, FactArg,
+    FactValue, FailedCheck, FetchButton, FetchState, FolderLine, FolderList, HistoryRow,
+    HistorySheet, KeyCheck, Listening, LocalUse, ModelRow, ModelSide, ModelState, ModelsSheet,
+    OptionRow, OptionUnit, OptionValue, PanelButton, RunStep, ServiceMark, ServiceName, ServiceRow,
+    ServiceSheet, TextAsk, TextDone, Unavailable, UsePrice, VoiceAct, VoiceAsk, VoiceBar,
+    VoiceClick, VoiceHome, VoiceKey, VoiceLang, VoiceLevel, VoiceLit, VoiceOpen, VoicePage,
+    VoicePanel, VoiceSheet, VoiceTab, VoiceText, VoiceView,
 };
 pub use words::{
     AimedLine, Chip, ChipKind, ChipPicked, Lane, ListPage, PanelPressesWanted, Piece, PressAsker,

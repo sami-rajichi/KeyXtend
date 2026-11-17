@@ -10,13 +10,16 @@ mod models;
 mod options;
 
 pub use cloud::{
-    CloudCard, CloudSheet, Fact, FactArg, FactValue, KeyCheck, ServiceMark, ServiceName,
-    ServiceRow, ServiceSheet, UsePrice,
+    AddressFault, CloudCard, CloudSheet, Fact, FactArg, FactValue, KeyCheck, ServiceMark,
+    ServiceName, ServiceRow, ServiceSheet, UsePrice,
 };
-pub use compare::{CompareRow, CompareRun, CompareSheet, RunStep};
+pub use compare::{CompareCloud, CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};
 pub use history::{HistoryRow, HistorySheet};
-pub use models::{FetchState, FolderLine, ModelRow, ModelState, ModelsSheet};
+pub use models::{
+    CloudBand, CloudRow, FetchState, FolderLine, ModelRow, ModelSide, ModelState, ModelsSheet,
+    Unavailable,
+};
 pub use options::{Ends, OptionRow, OptionUnit, OptionValue};
 
 use super::act::PanelButton;
@@ -75,6 +78,8 @@ pub struct VoiceHome {
     pub history: u32,
     /// How many options differ from their defaults; 0 reads All at defaults.
     pub changed: u16,
+    /// The Cloud row's value: how many services are ready while cloud services are on; `None` while off.
+    pub cloud: Option<u16>,
 }
 
 /// The folder list, to pick the models folder: the drives, then a folder's subfolders.

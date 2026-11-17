@@ -22,7 +22,8 @@ impl<'a> Cloud<'a> {
     }
 
     /// Switches service `id` on as confirmed on `today` at its row's terms number, keeping its typed lines; false
-    /// while cloud is off or for a row not offered.
+    /// while cloud is off or for a row not offered. An entry the row no longer takes, as a hand edit leaves, starts
+    /// afresh, and the picks that named its service go, so none comes back with it.
     pub fn confirm(&self, s: &mut VoiceSettings, id: &str, today: Date) -> bool {
         let Some(row) = self.table.get(id).filter(|row| row.offered && self.on(s)) else {
             return false;
@@ -89,6 +90,20 @@ impl<'a> Cloud<'a> {
         text.clone_into(&mut entry.address);
         if text.is_empty() {
             drop_picks(s, |service, _| service == id);
+        }
+        true
+    }
+
+    /// Sets service `id`'s keep-nothing switch; on drops the picks of its models that every host keeps, so none waits
+    /// to come back (edge 17). False for a service not on or a row without the switch.
+    pub fn keep(&self, s: &mut VoiceSettings, id: &str, on: bool) -> bool {
+        let Some((row, entry)) = self.entry_mut(s, id).filter(|(row, _)| row.keep.is_some()) else {
+            return false;
+        };
+        entry.keep = on;
+        let kept = |model: &str| row.model(model).is_some_and(|m| m.keeps);
+        if on {
+            drop_picks(s, |service, model| service == id && kept(model));
         }
         true
     }

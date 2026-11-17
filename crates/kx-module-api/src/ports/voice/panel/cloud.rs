@@ -10,10 +10,24 @@ listed! {
     pub enum ServiceMark ("Every mark.") {
         /// Not switched on.
         Off,
-        /// Switched on, with no key yet, or a typed row with no address yet.
+        /// Switched on, with no key yet.
         NeedsKey,
-        /// A key is set, tested or not.
+        /// Switched on with a key, on a typed row with no address yet, so the user is never told to add a key.
+        NeedsAddress,
+        /// A key is set, tested or not, and the row has somewhere to send.
         Ready,
+    }
+}
+
+listed! {
+    /// Why a typed address was refused, which its line's warning names (edge 13).
+    pub enum AddressFault ("Every fault.") {
+        /// It does not start with `https://`.
+        Https,
+        /// Its host is no host name, such as a numeric address.
+        Host,
+        /// Its host is not under the service's own domain, as Azure's must be.
+        Domain,
     }
 }
 
@@ -28,6 +42,10 @@ listed! {
         Works,
         /// The service refused the key.
         Refused,
+        /// The test got no answer about the key, as the network failed; Test may be tried again.
+        Failed,
+        /// The text set or pasted is no key a request can carry, so nothing was kept.
+        Unfit,
         /// The row has no test call, so the first dictation tests the key.
         NoTest,
     }
@@ -165,10 +183,10 @@ pub struct ServiceSheet {
     pub key: Redacted<u32>,
     /// How the key's test stands.
     pub check: KeyCheck,
-    /// The typed address, for the Custom and Azure rows; `None` for a row with its own address.
+    /// The typed address, or the one just refused, for the Custom and Azure rows; `None` for a row with its own address.
     pub address: Option<Redacted<String>>,
-    /// The typed address is HTTPS, or none is typed yet; false shows the line's warning (edge 13).
-    pub address_ok: bool,
+    /// Why the address on the line was refused, which its warning names; `None` while it is kept or empty.
+    pub address_fault: Option<AddressFault>,
     /// The Other model line's typed id, empty for none.
     pub model: Redacted<String>,
     /// The typed model has no host that keeps nothing while `keep` is on, so its line says why.

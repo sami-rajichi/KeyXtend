@@ -1,12 +1,12 @@
-//! The History page: the texts, pinned first then newest first, each with its time, language and model, ticked in
-//! order; the counts its header, Pin and Delete all need. It lists what is stored even with `history` off.
+//! The History page: the texts, pinned first then newest first, each with its time, language, model and service,
+//! ticked in order; the counts its header, Pin and Delete all need. It lists what is stored even with `history` off.
 
 use kx_module_api::ports::{
     HistoryRow, HistorySheet, LocalTime, Pages, PanelButton, VoiceSheet, When,
 };
 use kx_module_api::{is_arabic, is_rtl};
 
-use super::{Facts, shown_name};
+use super::{Facts, service_of, shown_name};
 use crate::history::{Asked, Entry, Stamp};
 use crate::panel::{Key, Panel};
 
@@ -78,6 +78,7 @@ fn row(entry: &Entry, tick: Option<usize>, now: &LocalTime) -> HistoryRow {
         when: when(entry.at, now),
         lang: entry.lang.clone(),
         model: shown_name(&entry.model),
+        cloud: service_of(&entry.model),
         pinned: entry.pinned,
         tick: tick.map(|n| u16::try_from(n + 1).unwrap_or(u16::MAX)),
     }

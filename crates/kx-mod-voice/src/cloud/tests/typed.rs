@@ -55,10 +55,11 @@ fn a_typed_row_is_neither_ready_nor_picked_until_its_address_is_typed() {
     let mut s = custom_on();
     let custom = row("custom");
     assert!(rules().type_model(&mut s, "custom", "my-model"));
+    assert_eq!(rules().mark(&s, custom, false), ServiceMark::NeedsKey);
     assert_eq!(
         rules().mark(&s, custom, true),
-        ServiceMark::NeedsKey,
-        "a key alone"
+        ServiceMark::NeedsAddress,
+        "a user with a key is never told to add one"
     );
     assert!(!rules().pick(&mut s, "en", "custom", "my-model") && s.picks.is_empty());
     assert!(rules().type_address(&mut s, "custom", ADDRESS));

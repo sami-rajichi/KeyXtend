@@ -1,7 +1,50 @@
 //! The Models page: each model that knows the language in front with its size and state, a download's progress, the
-//! best model's note, the slow-PC line and the models folder with its drive's room.
+//! best model's note, the slow-PC line and the models folder with its drive's room; its Cloud side lists the switched-on
+//! services' models, each with its service and mark (ADR-0047).
 
+use super::cloud::{ServiceMark, ServiceName};
 use crate::Redacted;
+
+listed! {
+    /// Which models the Models page lists; each side pages alone.
+    pub enum ModelSide ("Both sides.") {
+        /// The models on this PC.
+        Local,
+        /// The models of the cloud services switched on.
+        Cloud,
+    }
+}
+
+listed! {
+    /// What the Cloud side's band says, beside its button to the Cloud page.
+    pub enum CloudBand ("Every band.") {
+        /// Cloud services are off, so none is listed.
+        Off,
+        /// No service is switched on yet.
+        NoneOn,
+        /// The models of the services switched on; nothing leaves before Stop.
+        Listed,
+    }
+}
+
+listed! {
+    /// Why a cloud model cannot be used now, which its row says.
+    pub enum Unavailable ("Every reason.") {
+        /// The keep-nothing switch is on, and no host of the model keeps nothing.
+        KeepNothing,
+    }
+}
+
+/// A cloud model's parts of its row: its service, which the cloud mark names, and where it stands.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CloudRow {
+    /// Its service.
+    pub service: ServiceName,
+    /// Where its service stands; Use acts only while it is Ready.
+    pub mark: ServiceMark,
+    /// Why it cannot be used now; `None` when it can.
+    pub unavailable: Option<Unavailable>,
+}
 
 /// Where a model's file stands on this PC.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -51,6 +94,8 @@ pub struct ModelRow {
     pub tick: bool,
     /// Its download, while one runs or waits paused.
     pub fetch: Option<FetchState>,
+    /// Its service and mark, for a cloud model; `None` for a model on this PC.
+    pub cloud: Option<CloudRow>,
 }
 
 /// A folder line: the folder and its drive's free room, as in Models folder: D:\KeyXtend\models · 212 GB free.
@@ -77,4 +122,8 @@ pub struct ModelsSheet {
     pub folder: Option<FolderLine>,
     /// The folder offered at the first download, while that question shows.
     pub offer: Option<FolderLine>,
+    /// The side shown.
+    pub side: ModelSide,
+    /// The Cloud side's band; `None` on the Local side.
+    pub band: Option<CloudBand>,
 }

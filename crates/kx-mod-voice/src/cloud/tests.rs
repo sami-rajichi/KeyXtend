@@ -4,8 +4,9 @@
 use super::*;
 use crate::models::{self, Pick};
 use crate::services::table;
-use kx_module_api::ports::{FactValue, ServiceName};
+use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
+mod keep;
 mod props;
 mod typed;
 

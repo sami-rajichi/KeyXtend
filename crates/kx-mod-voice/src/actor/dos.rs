@@ -50,6 +50,12 @@ impl Actor {
             Do::Insert(ids) => self.insert(&ids),
             Do::Copy(ids) => self.copy_texts(&ids),
             Do::Compare(act) => self.compare(act),
+            key @ (Do::SetKey { .. }
+            | Do::RemoveKey(_)
+            | Do::Dots(_)
+            | Do::Test { .. }
+            | Do::Take(_)
+            | Do::Link(_)) => self.key_do(key),
             edit @ (Do::Pin(_) | Do::Unpin(_) | Do::Delete(_) | Do::DeleteAll(_)) => {
                 self.edit(edit);
             }

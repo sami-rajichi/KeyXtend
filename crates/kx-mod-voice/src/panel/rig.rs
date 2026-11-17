@@ -1,6 +1,7 @@
 //! The panel's tests' rig: the facts the actor would hold, owned, five rows to a page as `[ui] page_rows` is by
 //! default, English in front, the folder's drive and the processor.
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use kx_module_api::ports::{
@@ -11,10 +12,12 @@ use kx_module_api::{Redacted, Zeroizing};
 
 use super::{Do, Panel};
 use crate::VoiceSettings;
+use crate::cloud::Cloud;
 use crate::counts::{Checks, Scores};
 use crate::flow::Kept;
 use crate::history::{History, Rules, Stamp};
 use crate::models::{Row, table};
+use crate::services::{self, Services};
 use crate::view::Facts;
 
 /// Rows a page shows, as `[ui] page_rows` is by default.
@@ -38,6 +41,12 @@ pub(crate) struct Rig {
     pub(crate) history: History,
     pub(crate) again: bool,
     pub(crate) dictating: bool,
+    /// The services table the cloud rules read; `None` as if it did not load.
+    pub(crate) services: Option<Services>,
+    /// The services with a key.
+    pub(crate) keyed: BTreeSet<String>,
+    /// The run is hidden, so cloud is off.
+    pub(crate) hidden: bool,
     /// The round of the last view, counted as the flow counts it: once per change.
     pub(crate) round: u32,
     drawn: Option<VoicePanel>,
@@ -64,6 +73,9 @@ impl Rig {
             history: History::default(),
             again: false,
             dictating: false,
+            services: services::table().ok().cloned(),
+            keyed: BTreeSet::new(),
+            hidden: false,
             round: 0,
             drawn: None,
         };
@@ -149,6 +161,9 @@ impl Rig {
             history: self.history.clone(),
             again: self.again,
             dictating: self.dictating,
+            services: self.services.clone(),
+            keyed: self.keyed.clone(),
+            hidden: self.hidden,
         }
     }
 
@@ -196,6 +211,9 @@ struct Owned {
     history: History,
     again: bool,
     dictating: bool,
+    services: Option<Services>,
+    keyed: BTreeSet<String>,
+    hidden: bool,
 }
 
 impl Owned {
@@ -212,6 +230,8 @@ impl Owned {
             now: LocalTime::at(NOW_MS, 0).unwrap(),
             again: self.again,
             dictating: self.dictating,
+            cloud: self.services.as_ref().map(|t| Cloud::new(t, self.hidden)),
+            keyed: &self.keyed,
         }
     }
 }

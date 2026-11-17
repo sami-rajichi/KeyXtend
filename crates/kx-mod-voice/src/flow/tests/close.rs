@@ -17,6 +17,7 @@ pub(super) fn panel() -> VoicePanel {
         compared: None,
         history: 0,
         changed: 0,
+        cloud: None,
     };
     VoicePanel {
         sheet: VoiceSheet::Home(home),

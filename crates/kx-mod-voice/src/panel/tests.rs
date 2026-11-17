@@ -11,6 +11,7 @@ use kx_module_api::ports::{
 use super::rig::{DIR, Rig, row};
 use super::*;
 
+mod cloud;
 mod compare;
 mod device;
 mod folder;

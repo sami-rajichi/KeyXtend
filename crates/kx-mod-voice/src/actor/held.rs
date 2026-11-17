@@ -1,13 +1,17 @@
 //! What the actor holds beside the flow and the panel: `[voice]`, the layout in front, the drives and devices as last
 //! read, the clips' languages, the checks, Compare's numbers, History and the counts. It lends them as the panel's
-//! `Facts`.
+//! `Facts`, with the cloud rules and the services that have a key.
+
+use std::collections::BTreeSet;
 
 use kx_module_api::ports::{Device, Drive, LayoutChanged, LayoutId, LocalTime};
 
 use crate::VoiceSettings;
+use crate::cloud::Cloud;
 use crate::counts::{Checks, Counts, Scores};
 use crate::flow::Flow;
 use crate::history::History;
+use crate::services;
 use crate::view::Facts;
 
 /// The actor's facts.
@@ -23,11 +27,15 @@ pub(super) struct Held {
     pub scores: Scores,
     pub history: History,
     pub counts: Counts,
+    /// The run's saves would be hidden, so cloud is off.
+    pub hidden: bool,
+    /// The services with a key, read from the blobs' names as the panel opens and kept as keys are set or removed.
+    pub keyed: BTreeSet<String>,
 }
 
 impl Held {
-    /// The facts at the start: `settings`, the clips' languages, and nothing read yet.
-    pub fn new(settings: VoiceSettings, clips: Vec<String>) -> Self {
+    /// The facts at the start: `settings`, the clips' languages, a `hidden` run or not, and nothing read yet.
+    pub fn new(settings: VoiceSettings, clips: Vec<String>, hidden: bool) -> Self {
         Self {
             settings,
             front: LayoutChanged {
@@ -43,6 +51,8 @@ impl Held {
             scores: Scores::default(),
             history: History::default(),
             counts: Counts::default(),
+            hidden,
+            keyed: BTreeSet::new(),
         }
     }
 
@@ -60,6 +70,8 @@ impl Held {
             now,
             again: flow.can_again(),
             dictating: flow.dictating(),
+            cloud: services::table().ok().map(|t| Cloud::new(t, self.hidden)),
+            keyed: &self.keyed,
         }
     }
 }

@@ -19,6 +19,8 @@ fn ready(models: u16, recording: bool) -> VoiceSheet {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording,
         preparing: false,
+        cloud: Vec::new(),
+        send: Vec::new(),
     })
 }
 
@@ -80,6 +82,8 @@ fn while_its_microphone_opens_start_goes_and_nothing_asks_to_read() {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
         preparing: true,
+        cloud: Vec::new(),
+        send: Vec::new(),
     });
     let p = panel_json(&rig, &heard, acting(preparing, &[PanelButton::Cancel]));
     assert_eq!(
@@ -170,6 +174,7 @@ fn results() -> VoiceSheet {
         mb: 512,
         text: None,
         tick: true,
+        cloud: None,
     };
     let free = CompareRow {
         wrong: None,

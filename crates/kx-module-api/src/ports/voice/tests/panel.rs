@@ -46,9 +46,17 @@ fn the_home_list_names_its_language_compare_day_options_and_device() {
         compared: Some(day()),
         history: 12,
         changed: 0,
+        cloud: Some(2),
     };
     let shown = shown(VoiceSheet::Home(home));
-    let parts = ["English", "Auto(Cpu)", "month: 11", "changed: 0", "Again"];
+    let parts = [
+        "English",
+        "Auto(Cpu)",
+        "month: 11",
+        "changed: 0",
+        "cloud: Some(2)",
+        "Again",
+    ];
     holds(&shown, &parts);
 }
 
@@ -67,6 +75,7 @@ fn model_names_and_folders_never_print_but_sizes_and_room_do() {
         used: false,
         tick: false,
         fetch,
+        cloud: None,
     };
     let folder = || FolderLine {
         path: hidden(2),
@@ -82,6 +91,8 @@ fn model_names_and_folders_never_print_but_sizes_and_room_do() {
         slow: false,
         folder: Some(folder()),
         offer: Some(folder()),
+        side: ModelSide::Local,
+        band: None,
     };
     let shown = shown(VoiceSheet::Models(models));
     let parts = [
@@ -108,6 +119,7 @@ fn a_model_not_for_this_pc_carries_its_need_the_total_and_the_free_memory() {
         used: false,
         tick: false,
         fetch: None,
+        cloud: None,
     };
     let models = ModelsSheet {
         rows: vec![row],
@@ -116,6 +128,8 @@ fn a_model_not_for_this_pc_carries_its_need_the_total_and_the_free_memory() {
         slow: true,
         folder: None,
         offer: None,
+        side: ModelSide::Local,
+        band: None,
     };
     let shown = shown(VoiceSheet::Models(models));
     let parts = [
@@ -219,6 +233,7 @@ fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
         mb: 900,
         text: Some(secret(0)),
         tick: false,
+        cloud: None,
     };
     let held: Option<&Zeroizing<String>> = line.text.as_ref().map(Redacted::expose);
     assert_eq!(held.map(|t| t.as_str()), Some(SECRETS[0]), "wiped on drop");
@@ -232,6 +247,8 @@ fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
         preparing: false,
+        cloud: Vec::new(),
+        send: Vec::new(),
     };
     let shown = [ready, results].map(|s| shown(VoiceSheet::Compare(s)));
     holds(
@@ -264,6 +281,7 @@ fn history_carries_its_counts_for_the_header_pin_and_delete_all() {
         model: hidden(2),
         pinned: true,
         tick: Some(1),
+        cloud: Some(ServiceName::Named("Groq".into())),
     };
     let held: &Zeroizing<String> = row.text.expose();
     assert_eq!(held.as_str(), SECRETS[1], "wiped on drop");
@@ -275,7 +293,13 @@ fn history_carries_its_counts_for_the_header_pin_and_delete_all() {
         confirm: false,
     };
     let shown = shown(VoiceSheet::History(sheet));
-    let parts = ["total: 12", "unpinned: 0", "unpin: true", "pinned: true"];
+    let parts = [
+        "total: 12",
+        "unpinned: 0",
+        "unpin: true",
+        "pinned: true",
+        "Named(\"Groq\")",
+    ];
     holds(&shown, &parts);
     assert!(!shown.contains(SECRETS[1]), "{shown}");
 }

@@ -225,6 +225,7 @@ pub fn home() -> VoiceSheet {
         compared: None,
         history: 12,
         changed: 0,
+        cloud: None,
     })
 }
 

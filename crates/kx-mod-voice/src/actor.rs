@@ -6,6 +6,7 @@ mod dos;
 mod held;
 mod jobs;
 mod keep;
+mod keyed;
 mod lanes;
 mod msg;
 mod net;
@@ -81,7 +82,7 @@ impl Actor {
             flow: Flow::new(Arc::clone(&ports.clock), settings.clone(), hidden),
             panel: Panel::new(&settings),
             keep: Keep::new(&settings, hidden),
-            held: Held::new(settings, clips),
+            held: Held::new(settings, clips, hidden),
             ports,
             lanes: Lanes::default(),
             typing: Typing::default(),
@@ -154,6 +155,7 @@ impl Actor {
             Msg::PressesAsk => self.retell_presses(),
             Msg::Typed(done) => self.typed(done),
             Msg::Pasted(done) => self.pasted(done),
+            Msg::Taken(taken) => self.clip_taken(taken),
             Msg::Back(back) => self.answer(back),
         }
         self.after();
@@ -254,6 +256,7 @@ impl Actor {
             return self.step(In::Act(act));
         }
         self.held.drives = self.ports.files.drives();
+        self.read_keyed();
         let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
         let dos = self.panel.click(&act, &facts);
         self.dos(dos);
@@ -263,6 +266,7 @@ impl Actor {
     fn open_panel(&mut self) {
         self.step(In::Opening);
         self.held.drives = self.ports.files.drives();
+        self.read_keyed();
         let dos = self.panel.open();
         self.dos(dos);
     }

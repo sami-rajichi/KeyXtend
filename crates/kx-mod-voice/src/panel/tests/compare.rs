@@ -80,6 +80,8 @@ fn the_compare_page_names_the_ready_models_and_where_they_run() {
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording,
         preparing,
+        cloud: Vec::new(),
+        send: Vec::new(),
     };
     assert_eq!(sheet(&mut rig), ready(false, false));
     let out = rig.click(&VoiceClick::Compare(set()));

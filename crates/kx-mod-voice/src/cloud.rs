@@ -3,6 +3,9 @@
 //! user's own pick, and a hidden run or `cloud` off offers none.
 
 mod acts;
+mod offer;
+
+pub use offer::Offered;
 
 use kx_module_api::ports::{CloudAsk, CloudCard, Date, Fact, ServiceMark, UsePrice, fits_iso};
 
@@ -78,14 +81,15 @@ impl<'a> Cloud<'a> {
         self.table.offered().collect()
     }
 
-    /// Where `service` stands: Off until the user confirms its card while cloud is on, then Ready once a key is set
-    /// and, for a typed row, an address typed.
+    /// Where `service` stands: Off until the user confirms its card while cloud is on, then it needs a key, then a typed
+    /// row needs its address, so a user with a key is never told to add one; Ready once it has both.
     #[must_use]
     pub fn mark(&self, s: &VoiceSettings, service: &Service, key: bool) -> ServiceMark {
         match self.entry(s, service) {
             None => ServiceMark::Off,
-            Some(on) if key && reaches(service, on) => ServiceMark::Ready,
-            Some(_) => ServiceMark::NeedsKey,
+            Some(_) if !key => ServiceMark::NeedsKey,
+            Some(on) if !reaches(service, on) => ServiceMark::NeedsAddress,
+            Some(_) => ServiceMark::Ready,
         }
     }
 
@@ -97,7 +101,7 @@ impl<'a> Cloud<'a> {
     }
 
     /// What `lang` dictates with in the cloud; `None` means its local model, as for cloud off, a hidden run, a service
-    /// not on or not offered, or a model that does not know the language (edge 21).
+    /// not on or not offered, or a model that does not know the language or is unavailable (edges 17 and 21).
     #[must_use]
     pub fn choice<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Choice<'s>>
     where
@@ -163,6 +167,9 @@ impl<'a> Cloud<'a> {
             }
             None => return None,
         };
+        if self.unavailable(s, service, model).is_some() {
+            return None;
+        }
         let ask = entry.terms < service.terms;
         Some(Choice {
             service,

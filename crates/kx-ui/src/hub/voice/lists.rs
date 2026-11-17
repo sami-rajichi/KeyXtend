@@ -66,6 +66,7 @@ pub(super) fn compare(cx: &Cx<'_>, c: &CompareSheet) -> Page {
             device,
             recording,
             preparing,
+            ..
         } => ready(cx, *models, device, (*recording, *preparing)),
         CompareSheet::Running { at, of, name, rows } => {
             let sheet = Sheet::Running {
