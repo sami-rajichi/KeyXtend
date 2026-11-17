@@ -88,7 +88,7 @@ impl Flow {
     /// only from its service.
     fn piece(&mut self, index: u16, text: Secret) {
         let writing = self.busy();
-        if let Some(take) = (self.take.as_mut()).filter(|t| writing && t.wire.is_none()) {
+        if let Some(take) = (self.take.as_mut()).filter(|t| writing && t.engine.net().is_none()) {
             take.pieces.insert(index, text);
         }
     }

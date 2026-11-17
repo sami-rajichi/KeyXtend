@@ -134,6 +134,14 @@ pub(super) fn may_send(step: &Wire) -> bool {
     }
 }
 
+/// True for a step that tells the open take's run its end; a listen-only run's first end is its hand-over.
+pub(super) fn ends_run(step: &Wire) -> bool {
+    matches!(
+        step,
+        Wire::Over | Wire::Write | Wire::Base(Step::Said(Said::Done, false))
+    )
+}
+
 /// True for a step that tells the last upload's end.
 pub(super) fn ends_upload(step: &Wire) -> bool {
     match step {

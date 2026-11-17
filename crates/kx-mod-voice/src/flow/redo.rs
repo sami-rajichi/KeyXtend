@@ -62,7 +62,7 @@ impl Flow {
         let Some(take) = self.take.as_mut() else {
             return;
         };
-        if take.wire.is_some() {
+        if take.engine.net().is_some() {
             return self.retry(supply, out);
         }
         match supply.supply(take.lang.iso()) {

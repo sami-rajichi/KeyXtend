@@ -38,17 +38,22 @@ impl Flow {
     }
 
     /// The listen-only run handed its speech over: it goes to the service while the dictation runs, unless no speech
-    /// was heard; a note shown since keeps it for the user's act.
+    /// was heard; a note shown since keeps it for the user's act. Once the local model took the take over, this end is
+    /// only taken in: nothing is counted, closed or sent.
     pub(super) fn listened(&mut self, done: SpeechDone, supply: &dyn Supply, out: &mut Vec<Out>) {
         self.lit = false;
         let busy = self.busy();
         let Some(take) = self.take.as_mut() else {
             return;
         };
+        if take.engine.net().is_none() {
+            take.wire = None;
+            return;
+        }
         if let Some(wire) = take.wire.as_mut() {
             wire.spoken = Some(done);
         }
-        if !busy || take.engine.net().is_none() {
+        if !busy {
             return;
         }
         if !take.heard {
@@ -91,7 +96,7 @@ impl Flow {
 
     /// Writes the held recording with the language's local model: "Use the local model", a password box, or Try
     /// again with no cloud pick left; with none ready, the bar shows `none`. The run no longer listens alone, so the
-    /// take stays local for good.
+    /// take stays local for good; its side stays only until a hand-over still due comes, so that end is taken in.
     pub(super) fn write_local(&mut self, none: CloudWhy, supply: &dyn Supply, out: &mut Vec<Out>) {
         let Some(take) = self.take.as_mut() else {
             return;
@@ -101,7 +106,7 @@ impl Flow {
         };
         let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
         take.engine = Engine::Local(ready);
-        take.wire = None;
+        take.wire = take.wire.take().filter(|w| w.spoken.is_none());
         take.ask = ask.clone();
         take.redo();
         out.push(take.call(RunCall::Again(ask)));
@@ -132,7 +137,8 @@ impl Flow {
     pub(super) fn retry(&mut self, supply: &dyn Supply, out: &mut Vec<Out>) {
         let now = self.now();
         let text = self.phase() == Phase::Text;
-        let Some(take) = self.take.as_mut() else {
+        // A take the local model wrote never goes back to a service.
+        let Some(take) = self.take.as_mut().filter(|t| t.engine.net().is_some()) else {
             return;
         };
         if let Some(wire) = take.wire.as_mut() {

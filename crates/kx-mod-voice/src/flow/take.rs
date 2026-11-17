@@ -78,7 +78,8 @@ pub(super) struct Take {
     pub(super) lang: Lang,
     /// The local model or the cloud service that writes it, Try again's or "Use the local model"'s once it ran.
     pub(super) engine: Engine,
-    /// The cloud side, while the dictation's run still listens alone for a cloud service; gone once a model wrote it.
+    /// The cloud side, while the dictation's run still listens alone for a cloud service; gone once a model wrote it
+    /// and its hand-over came.
     pub(super) wire: Option<Wire>,
     /// The ask the recording was last written with, which Transcribe anyway writes again.
     pub(super) ask: SpeechAsk,
