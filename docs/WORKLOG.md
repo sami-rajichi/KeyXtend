@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-17 22:30 — P11: dictated text can be pasted at once
+A new Options row, "Insert the text", offers Type it (the default) or Paste at once. Paste at once goes through the clipboard history's paste route, keeps the text out of both clipboard histories, and then puts the previous clipboard back. It types instead in a password box, when a password manager marked the clipboard private, after a copy from a skipped app, or when the clipboard cannot come back whole. A new decision record (ADR-0048) explains the route.
+
 ## 2026-11-17 16:10 — P11: the groundwork for cloud voice typing
 The plugin API now has the `CloudSpeech` port, which only a holder of Network may use, with the faults a service can give and the panel's cloud views. A fake cloud service lets tests script texts and faults. Checked frames now carry a cloud request from the app to a third worker job, with each recording piece at most ten minutes, replies capped, and numeric or non-HTTPS addresses refused. No sound or key leaves the PC yet; the sending job comes next.
 
