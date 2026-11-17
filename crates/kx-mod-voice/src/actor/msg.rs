@@ -9,8 +9,8 @@ use kx_module_api::ports::{
     SpeechNote, TextDone, TextPasted, VoiceAct,
 };
 
+use super::ask::Wired;
 use super::lanes::{Answer, Lane, Run};
-use super::net::Wired;
 use crate::panel::Check;
 
 /// A message for the actor, from the bus, a watch, a job or the module.
@@ -116,6 +116,24 @@ pub(crate) enum Back {
         ticket: u32,
         /// Works, or why not.
         answer: Result<(), CloudFault>,
+    },
+    /// A note from cloud model `at` of Compare's run `take`.
+    Trial {
+        /// Compare's run.
+        take: u32,
+        /// The model, in the run's order.
+        at: usize,
+        /// The note; a text stays secret.
+        note: CloudNote,
+    },
+    /// Model `at`'s service run for Compare's run `take` opened.
+    Tried {
+        /// Compare's run.
+        take: u32,
+        /// The model.
+        at: usize,
+        /// The run, held until it ends; dropping it cancels its requests.
+        run: Wired,
     },
     /// The service's run for dictation `take`'s upload of round `round` opened.
     Sending {

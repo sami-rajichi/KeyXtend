@@ -10,6 +10,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
 
+mod cloud;
 mod ends;
 mod props;
 
@@ -60,6 +61,7 @@ fn plan(set: &str, models: Vec<Entrant>) -> Plan {
         lang: "en".into(),
         set: Redacted::new(set.to_owned()),
         entrants: models,
+        clouds: Vec::new(),
         day: Date::new(2026, 11, 14).unwrap(),
         auto: true,
     }

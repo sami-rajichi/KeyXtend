@@ -14,11 +14,11 @@ impl Panel {
         if let Some((at, models)) = self.compare.running() {
             let name = models
                 .get(at.unwrap_or(0))
-                .map(|(m, _)| m.name.clone())
+                .map(|(name, _)| (*name).clone())
                 .unwrap_or_default();
-            let runs = models.iter().map(|(m, step)| {
+            let runs = models.iter().map(|(name, step)| {
                 let run = CompareRun {
-                    name: m.name.clone(),
+                    name: (*name).clone(),
                     step: *step,
                 };
                 (Key::Plain, run)
@@ -51,7 +51,7 @@ impl Panel {
         let ticks = self.ticks.clone();
         let list: Vec<(Key, CompareRow)> = (self.compare.results().iter())
             .map(|line| {
-                let key = Key::Score(line.print);
+                let key = result_key(line);
                 let row = compare_row(line, ticks.contains(&key));
                 (key, row)
             })
@@ -72,7 +72,7 @@ impl Panel {
         if self.compare.results().is_empty() {
             return Vec::new();
         }
-        let ticked = matches!(self.ticked(), Some(Key::Score(_)));
+        let ticked = matches!(self.ticked(), Some(Key::Score(_) | Key::Cloud { .. }));
         let mut acts = vec![PanelButton::Rerun];
         acts.extend(ticked.then_some(PanelButton::Use));
         acts
@@ -88,7 +88,19 @@ fn compare_row(line: &Line, tick: bool) -> CompareRow {
         wait_ms: line.wait_ms,
         mb: line.mb,
         text: line.text.clone(),
-        cloud: None,
+        cloud: line.cloud.as_ref().map(|r| r.shown.clone()),
         tick,
+    }
+}
+
+/// What a result's row is ticked by: its file's fingerprint, or its cloud model, which Use then picks.
+fn result_key(line: &Line) -> Key {
+    match (&line.cloud, line.print) {
+        (Some(r), _) => Key::Cloud {
+            service: r.service.clone(),
+            model: r.model.clone(),
+        },
+        (None, Some(print)) => Key::Score(print),
+        (None, None) => Key::Plain,
     }
 }

@@ -3,9 +3,9 @@
 //! count, the Models page's Cloud side with Use (edge 29), and Compare's cloud ticks with the send warning (edge 12).
 
 use kx_module_api::ports::{
-    CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, CompareSheet, Date, ModelSide,
-    PanelButton, ServiceMark, ServiceName, ServiceSheet, Unavailable, VoiceClick, VoiceHome,
-    VoiceSheet, VoiceTab,
+    CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, Date, ModelSide, PanelButton,
+    ServiceMark, ServiceName, ServiceSheet, Unavailable, VoiceClick, VoiceHome, VoiceSheet,
+    VoiceTab,
 };
 
 use super::super::rig::Rig;
@@ -15,6 +15,7 @@ use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
 
 mod lines;
+mod trial;
 
 /// Applies the `[voice]` writes in `dos`, as the settings would after the actor wrote them.
 pub(super) fn apply(rig: &mut Rig, dos: &[Do]) {
@@ -157,7 +158,7 @@ fn a_card_shows_the_day_its_facts_were_read_and_turns_old_past_facts_days() {
 }
 
 #[test]
-fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_and_key() {
+fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_keeps_its_key() {
     let newer = ROUTER.replace("terms = 1", "terms = 2");
     let mut rig = on_cloud(&newer);
     put(
@@ -182,10 +183,22 @@ fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_and_ke
     rig.click(&VoiceClick::Service(CloudButton::On));
     assert_eq!(card(&mut rig).on, None, "it asks again");
     let out = rig.click(&VoiceClick::Confirm(false));
-    assert!(out.contains(&Do::RemoveKey("router-test".into())));
+    assert!(
+        !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
+        "only Remove key deletes it"
+    );
     apply(&mut rig, &out);
     assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
     assert_eq!(cloud_sheet(&mut rig).rows[2].mark, ServiceMark::Off);
+    let out = act(&mut rig, 2, CloudButton::On);
+    assert!(out.is_empty());
+    let out = rig.click(&VoiceClick::Confirm(true));
+    apply(&mut rig, &out);
+    assert_eq!(
+        lines_sheet(&mut rig).mark,
+        ServiceMark::Ready,
+        "the key is still there"
+    );
 }
 
 #[test]
@@ -257,32 +270,24 @@ fn use_on_a_ready_cloud_model_picks_it_and_a_kept_model_is_unavailable_with_its_
 }
 
 #[test]
-fn compare_lists_the_ready_cloud_models_and_names_each_ticked_service_once_before_it_sends() {
-    let mut rig = Rig::new();
-    rig.settings.cloud = true;
+fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
+    let mut rig = on_cloud("");
     put(
         &mut rig,
         "services",
         "groq = { on = 2026-11-01, terms = 1 }",
     );
-    rig.click(&VoiceClick::Open(VoiceTab::Compare));
-    let ready = |rig: &mut Rig| match rig.view().unwrap().sheet {
-        VoiceSheet::Compare(CompareSheet::Ready { cloud, send, .. }) => (cloud, send),
-        other => panic!("not ready: {other:?}"),
-    };
-    assert!(
-        ready(&mut rig).0.is_empty(),
-        "a service with no key is not offered"
-    );
+    put(&mut rig, "picks", r#"en = "groq:whisper-large-v3-turbo""#);
     rig.keyed.insert("groq".into());
-    let (cloud, send) = ready(&mut rig);
-    assert_eq!((cloud.len(), send.len()), (2, 0));
-    rig.click(&VoiceClick::Row(0));
-    rig.click(&VoiceClick::Row(1));
-    let (cloud, send) = ready(&mut rig);
-    assert!(cloud.iter().all(|c| c.tick));
-    assert_eq!(send, [ServiceName::Named("Groq".into())]);
-    rig.click(&VoiceClick::Row(0));
-    rig.click(&VoiceClick::Row(1));
-    assert!(ready(&mut rig).1.is_empty(), "no tick, no warning");
+    let out = act(&mut rig, 0, CloudButton::Off);
+    assert!(
+        !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
+        "only Remove key deletes it"
+    );
+    apply(&mut rig, &out);
+    assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
+    rig.click(&VoiceClick::Service(CloudButton::On)); // Groq stays ticked.
+    let out = rig.click(&VoiceClick::Confirm(true));
+    apply(&mut rig, &out);
+    assert_eq!(lines_sheet(&mut rig).mark, ServiceMark::Ready);
 }

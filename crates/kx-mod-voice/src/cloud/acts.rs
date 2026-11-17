@@ -53,9 +53,10 @@ impl<'a> Cloud<'a> {
     }
 
     /// Picks service `id`'s `model` for `lang`, the only act that moves a language to a service; false, changing
-    /// nothing, unless the rules then take it.
+    /// nothing, unless the rules then take it and the model can be used now.
     pub fn pick(&self, s: &mut VoiceSettings, lang: &str, id: &str, model: &str) -> bool {
-        if self.resolve(s, lang, id, model).is_none() {
+        let choice = self.resolve(s, lang, id, model);
+        if choice.is_none_or(|c| c.unavailable.is_some()) {
             return false;
         }
         s.picks.insert(lang.to_owned(), pick_text(id, model));
@@ -94,17 +95,13 @@ impl<'a> Cloud<'a> {
         true
     }
 
-    /// Sets service `id`'s keep-nothing switch; on drops the picks of its models that every host keeps, so none waits
-    /// to come back (edge 17). False for a service not on or a row without the switch.
+    /// Sets service `id`'s keep-nothing switch; a pick it rules out stays, marked unavailable, so nothing moves by
+    /// itself (edge 17). False for a service not on or a row without the switch.
     pub fn keep(&self, s: &mut VoiceSettings, id: &str, on: bool) -> bool {
-        let Some((row, entry)) = self.entry_mut(s, id).filter(|(row, _)| row.keep.is_some()) else {
+        let Some((_, entry)) = self.entry_mut(s, id).filter(|(row, _)| row.keep.is_some()) else {
             return false;
         };
         entry.keep = on;
-        let kept = |model: &str| row.model(model).is_some_and(|m| m.keeps);
-        if on {
-            drop_picks(s, |service, model| service == id && kept(model));
-        }
         true
     }
 

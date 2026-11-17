@@ -130,13 +130,13 @@ impl Panel {
         self.go(page)
     }
 
-    /// Switches service `id` off: its picks go to the local default and its key is removed (edge 16).
+    /// Switches service `id` off: its picks go to the local default (edge 16); its sealed key stays, as only Remove key
+    /// deletes it.
     fn turn_off(&mut self, id: &str, facts: &Facts<'_>) -> Vec<Do> {
         let mut out = edit(facts, |c, s| {
             c.turn_off(s, id);
             true
         });
-        out.push(Do::RemoveKey(id.to_owned()));
         if self.page != Some(Page::Tab(VoiceTab::Cloud)) {
             out.extend(self.go(Page::Tab(VoiceTab::Cloud)));
         }

@@ -46,6 +46,7 @@ impl Supply for Offer<'_> {
             piece_s: piece_s(&row.limits),
             key: has.unwrap_or(false),
             terms: choice.ask,
+            unavailable: choice.unavailable,
         })
     }
 }

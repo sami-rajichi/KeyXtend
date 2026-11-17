@@ -130,3 +130,14 @@ fn a_cards_link_opens_its_facts_page_in_the_browser() {
     assert_eq!(opened.len(), 1);
     assert!(opened[0].expose().starts_with("https://"));
 }
+
+#[test]
+fn switching_the_service_off_stops_the_upload_under_way_and_keeps_its_key() {
+    let mut rig = Rig::build(groq);
+    rig.dictate();
+    assert_eq!(rig.fake.cloud.calls().runs[0].state, CloudState::Sending);
+    let off = toml::Value::Table(toml::Table::new());
+    rig.actor.dos(vec![Do::Set(crate::settings::SERVICES, off)]);
+    assert_eq!(rig.fake.cloud.calls().runs[0].state, CloudState::Dropped);
+    assert_eq!(sealed(&rig), Some(key()));
+}

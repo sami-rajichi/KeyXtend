@@ -104,12 +104,10 @@ impl Actor {
         }
     }
 
-    /// Asks dictation `take`'s run for its speech, for upload `round`, after the calls before it; a closed run has
-    /// none to give.
-    pub(super) fn hand(&mut self, take: u32, round: u32) {
-        let lane = (Owner::Flow, take);
+    /// Asks run `lane` for its speech, for upload `round`, after the calls before it; a closed run has none to give.
+    pub(super) fn hand(&mut self, lane: Lane, round: u32) {
         let Some(slot) = self.lanes.0.get_mut(&lane) else {
-            return self.spoken(take, round, Err(SpeechError::NoSound));
+            return self.handed(lane, round, Err(SpeechError::NoSound));
         };
         slot.calls.push_back(Call::Speech(round));
         self.next_call(lane);
@@ -152,14 +150,14 @@ impl Actor {
         };
         match answer {
             Ok(Answer::Sound(pieces)) if lane.0 == Owner::Flow => self.keep_sound(lane.1, &pieces),
-            Ok(Answer::Speech { round, pieces }) => self.spoken(lane.1, round, pieces),
+            Ok(Answer::Speech { round, pieces }) => self.handed(lane, round, pieces),
             Ok(_) => {}
             Err(error) => self.run_fault(lane, error),
         }
         // A closed run has no speech left for an upload still waiting on it.
         for call in left {
             if let Call::Speech(round) = call {
-                self.spoken(lane.1, round, Err(SpeechError::NoSound));
+                self.handed(lane, round, Err(SpeechError::NoSound));
             }
         }
         self.next_call(lane);

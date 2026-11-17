@@ -210,6 +210,8 @@ impl Actor {
                 }
             }
             Act::Fell { card, model } => self.fell(&card, &model),
+            Act::Send { take, lang, to } => self.trial(take, &lang, &to),
+            Act::Halt(take) => self.halt_trials(take),
         }
     }
 }

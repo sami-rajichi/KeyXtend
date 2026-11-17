@@ -2,7 +2,8 @@
 //! actor carries out, and the bar's line for each cloud fault.
 
 use kx_module_api::ports::{
-    CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName, SpeechDone, SpeechError, VoiceLang,
+    CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName, SpeechDone, SpeechError, Unavailable,
+    VoiceLang,
 };
 use kx_module_api::{Mono, Redacted};
 
@@ -71,6 +72,8 @@ pub struct Net {
     pub key: bool,
     /// The row's terms changed since they were confirmed, so nothing is sent until they are confirmed again.
     pub terms: bool,
+    /// Why the pick's model cannot be used now, which Start says, sending nothing; `None` when it can.
+    pub unavailable: Option<Unavailable>,
 }
 
 /// What an upload tells the flow.
@@ -114,14 +117,14 @@ pub(super) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
 }
 
 /// Why `shown`, the service on the bar, cannot have the speech now that the language picks `now`: another service or
-/// none, a key gone, or newer terms; `None` when it can.
+/// none, a key gone, newer terms, or a model ruled out; `None` when it can.
 pub(super) fn blocked(shown: &Net, now: Option<&Net>) -> Option<CloudWhy> {
     match now {
         None => Some(CloudWhy::Off),
         Some(net) if net.service != shown.service => Some(CloudWhy::Off),
         Some(net) if !net.key => Some(CloudWhy::Key),
         Some(net) if net.terms => Some(CloudWhy::Terms),
-        Some(_) => None,
+        Some(net) => net.unavailable.map(CloudWhy::Unavailable),
     }
 }
 

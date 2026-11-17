@@ -2,7 +2,7 @@
 //! stays redacted and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
-use super::panel::{ServiceName, VoicePanel};
+use super::panel::{ServiceName, Unavailable, VoicePanel};
 use crate::Secret;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -198,6 +198,8 @@ pub enum CloudWhy {
     NoLocal,
     /// The cloud worker failed.
     Fault,
+    /// The pick's model cannot be used now, for this reason, so nothing is sent until the user changes it.
+    Unavailable(Unavailable),
 }
 
 /// "Use the local model" on a cloud note, which writes the held recording with the language's local model.

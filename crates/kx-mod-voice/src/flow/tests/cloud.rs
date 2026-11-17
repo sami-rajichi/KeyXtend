@@ -32,6 +32,7 @@ fn groq() -> Net {
         piece_s: PIECE_S,
         key: true,
         terms: false,
+        unavailable: None,
     }
 }
 

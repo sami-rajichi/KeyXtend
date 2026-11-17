@@ -183,6 +183,9 @@ impl Seen {
                     prop_assert_eq!(board.scores.len(), compare.results().len());
                 }
                 Act::Fell { .. } => {}
+                Act::Send { .. } | Act::Halt(_) => {
+                    return Err(TestCaseError::fail("a run with no cloud model sent"));
+                }
             }
         }
         Ok(())

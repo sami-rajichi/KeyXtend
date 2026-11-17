@@ -4,15 +4,16 @@
 
 mod act;
 mod end;
+mod net;
 
-pub use act::{Act, Entrant, Line, Plan};
+pub use act::{Act, Entrant, Line, Plan, Remote};
 
 use std::collections::BTreeMap;
 
-use kx_module_api::Secret;
 use kx_module_api::ports::{
     BarHint, CardId, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
 };
+use kx_module_api::{Redacted, Secret};
 
 use crate::VoiceSettings;
 use crate::flow::{Lend, RunCall};
@@ -31,8 +32,8 @@ enum Stage {
     Results,
 }
 
-/// Each model of a run with where it stands, in turn order.
-pub type Runs<'a> = Vec<(&'a Entrant, RunStep)>;
+/// Each model's name in a run with where it stands: the local ones in turn order, then the cloud ones.
+pub type Runs<'a> = Vec<(&'a Redacted<String>, RunStep)>;
 
 /// A model's turn: the model, its ask and where it stands.
 #[derive(Clone, Debug)]
@@ -55,13 +56,16 @@ pub struct Compare {
     open: bool,
     pieces: BTreeMap<u16, Secret>,
     lines: Vec<Line>,
+    /// The cloud models with where each stands, and their texts by model and piece until each ends.
+    remotes: Vec<(Remote, RunStep)>,
+    texts: BTreeMap<(usize, u16), Secret>,
     hint: Option<BarHint>,
 }
 
 impl Compare {
     /// Starts a run of `plan`: its run opens and listens with no model; nothing with no ready model or while busy.
     pub fn start(&mut self, plan: Plan, settings: &VoiceSettings) -> Vec<Act> {
-        if plan.entrants.is_empty() || self.busy() {
+        if (plan.entrants.is_empty() && plan.clouds.is_empty()) || self.busy() {
             return Vec::new();
         }
         let turn = |entrant: &Entrant| Turn {
@@ -74,6 +78,9 @@ impl Compare {
         };
         self.turns = plan.entrants.iter().map(turn).collect();
         self.reset();
+        self.remotes = (plan.clouds.iter())
+            .map(|r| (r.clone(), RunStep::Waiting))
+            .collect();
         self.plan = Some(plan);
         self.take = self.take.wrapping_add(1);
         (self.stage, self.open) = (Stage::Recording, false);
@@ -125,6 +132,7 @@ impl Compare {
             self.stage = Stage::Ready;
             self.lines.clear();
             self.pieces.clear();
+            (self.remotes, self.texts) = (Vec::new(), BTreeMap::new());
             (self.heard, self.hint) = (false, None);
         }
     }
@@ -179,13 +187,15 @@ impl Compare {
         }
     }
 
-    /// The one writing (from 0; `None` while the recording ends), and each model to run with where it stands.
+    /// The one writing (from 0; `None` while the recording ends), and each model to run, local then cloud, with where
+    /// it stands.
     #[must_use]
     pub fn running(&self) -> Option<(Option<usize>, Runs<'_>)> {
         let Stage::Running(at) = self.stage else {
             return None;
         };
-        let runs = self.turns.iter().map(|t| (&t.entrant, t.step));
+        let locals = self.turns.iter().map(|t| (&t.entrant.name, t.step));
+        let runs = locals.chain(self.remotes.iter().map(|(r, step)| (&r.name, *step)));
         Some((at, runs.collect()))
     }
 
@@ -238,7 +248,12 @@ impl Compare {
                 self.score(at, done);
                 at + 1
             }
-            Stage::Running(None) | Stage::Recording => 0,
+            // The recording ended: it goes to the cloud models first, as the run hands it over only before `again`.
+            Stage::Running(None) | Stage::Recording => {
+                let mut acts = self.send();
+                acts.extend(self.next(0));
+                return acts;
+            }
             Stage::Ready | Stage::Results => return Vec::new(),
         };
         self.next(at)
@@ -247,7 +262,7 @@ impl Compare {
     /// Model `at`'s turn, or the end once every model ran.
     fn next(&mut self, at: usize) -> Vec<Act> {
         let Some(turn) = self.turns.get_mut(at) else {
-            return self.finish();
+            return self.settle();
         };
         turn.step = RunStep::Writing;
         let ask = turn.ask.clone();
@@ -255,13 +270,17 @@ impl Compare {
         vec![self.call(RunCall::Again(ask))]
     }
 
-    /// Ends the run, cancelled first when `cancel`; the page goes back to the set text.
+    /// Ends the run, cancelled first when `cancel`, which also drops the cloud uploads; the page goes back to the set text.
     fn end(&mut self, cancel: bool) -> Vec<Act> {
         let mut acts = Vec::new();
         if cancel {
             acts.push(self.call(RunCall::Cancel));
         }
         acts.push(self.call(RunCall::Close));
+        if cancel && !self.remotes.is_empty() {
+            acts.push(Act::Halt(self.take));
+        }
+        self.texts.clear();
         self.pieces.clear();
         self.stage = Stage::Ready;
         acts

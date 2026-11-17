@@ -1,15 +1,16 @@
 //! The flow's effects, carried out in order: the runs, the view and the light, the level, the text for the typer or to
 //! paste, Copy, History and the counts, a download, a lost model file, a failed card, the bar's clicks Compare holds,
-//! and a cloud upload sent or dropped.
+//! a cloud upload sent or dropped, and the notices the actor tells.
 
 use kx_module_api::ports::{
     BarButton, CardId, ClipPart, Fingerprint, VoiceAct, VoiceBar, VoiceClick, VoiceView,
 };
-use kx_module_api::{Redacted, Secret, Zeroizing};
+use kx_module_api::{Event, Notice, Redacted, Secret, Zeroizing};
 
 use super::Actor;
 use super::lanes::Owner;
 use super::typing::Source;
+use crate::ID;
 use crate::flow::{In, Out};
 
 /// The round a bar click the flow hands to Compare names: none, as such a click is never stale.
@@ -97,5 +98,15 @@ impl Actor {
         let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
         let dos = self.panel.click(&act, &facts);
         self.dos(dos);
+    }
+
+    /// Tells the user `key`.
+    pub(super) fn say(&self, key: &'static str) {
+        self.publish(&Notice::about(key, ID));
+    }
+
+    /// Publishes `event`; a refusal is the bus's gate on a capability the module holds, so it never happens.
+    pub(super) fn publish<E: Event>(&self, event: &E) {
+        let _ = self.ports.bus.publish(event);
     }
 }

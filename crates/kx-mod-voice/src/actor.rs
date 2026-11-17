@@ -2,6 +2,7 @@
 //! carries out what they give back, in order. The microphone's runs and the slow reads go to jobs off its thread and
 //! texts to the typer's own thread, so it never waits on the worker or the keyboard.
 
+mod ask;
 mod dos;
 mod held;
 mod jobs;
@@ -15,6 +16,7 @@ mod outs;
 mod paste;
 mod ports;
 mod presses;
+mod trial;
 mod typing;
 
 pub(crate) use msg::{Back, Msg};
@@ -30,12 +32,11 @@ use kx_module_api::ports::{
     DevicePick, FieldChange, FieldKind, LayoutAsk, LayoutChanged, PanelButton, VoiceAct,
     VoiceClick, VoicePanel,
 };
-use kx_module_api::{Event, Notice};
 
+use crate::VoiceSettings;
 use crate::flow::{Flow, In, Lend};
 use crate::keys::Keys;
 use crate::panel::Panel;
-use crate::{ID, VoiceSettings};
 use held::Held;
 use jobs::Jobs;
 use keep::Keep;
@@ -285,16 +286,6 @@ impl Actor {
             DevicePick::Card(_) => true,
             DevicePick::Auto => !self.held.checks.rows().is_empty(),
         }
-    }
-
-    /// Tells the user `key`.
-    fn say(&self, key: &'static str) {
-        self.publish(&Notice::about(key, ID));
-    }
-
-    /// Publishes `event`; a refusal is the bus's gate on a capability the module holds, so it never happens.
-    fn publish<E: Event>(&self, event: &E) {
-        let _ = self.ports.bus.publish(event);
     }
 }
 

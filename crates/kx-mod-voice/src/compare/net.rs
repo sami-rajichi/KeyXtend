@@ -1,0 +1,97 @@
+//! A Compare run's cloud models (edge 12): once the recording ends, it goes to each ticked one before any local model
+//! writes it, as the run hands its speech over only before `again`. Each one's text or fault is its own result, and
+//! the run ends once every model ended; its numbers are shown, never kept.
+
+use std::collections::BTreeMap;
+
+use kx_module_api::ports::{CloudNote, RunStep};
+use kx_module_api::{Redacted, Secret, Zeroizing};
+
+use super::{Act, Compare, Line, Stage};
+use crate::score::wrong;
+
+impl Compare {
+    /// The send of the recording to every cloud model, which then writes; none with no cloud model.
+    pub(super) fn send(&mut self) -> Vec<Act> {
+        let (Some(plan), false) = (self.plan.as_ref(), self.remotes.is_empty()) else {
+            return Vec::new();
+        };
+        let (take, lang) = (self.take, plan.lang.clone());
+        let to = self.remotes.iter().map(|(r, _)| r.clone()).collect();
+        for (_, step) in &mut self.remotes {
+            *step = RunStep::Writing;
+        }
+        vec![Act::Send { take, lang, to }]
+    }
+
+    /// A note from cloud model `at` of run `take`, its text `wait_ms` after the send; a note of another run, or of a
+    /// model that ended, is not heard.
+    pub fn net(&mut self, take: u32, at: usize, note: CloudNote, wait_ms: u32) -> Vec<Act> {
+        let live = take == self.take && matches!(self.stage, Stage::Running(_));
+        let writing = self
+            .remotes
+            .get(at)
+            .is_some_and(|(_, s)| *s == RunStep::Writing);
+        if !live || !writing {
+            return Vec::new();
+        }
+        match note {
+            CloudNote::Piece { index, text } => {
+                self.texts.insert((at, index), text);
+                return Vec::new();
+            }
+            CloudNote::Done => self.score_remote(at, wait_ms),
+            CloudNote::Fault(_) => {
+                self.texts.retain(|(of, _), _| *of != at);
+                self.remotes[at].1 = RunStep::Failed;
+            }
+        }
+        match self.stage {
+            Stage::Running(Some(at)) if at >= self.turns.len() => self.settle(),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Every local model ran: the run ends once no cloud model still writes.
+    pub(super) fn settle(&mut self) -> Vec<Act> {
+        self.stage = Stage::Running(Some(self.turns.len()));
+        let writes = self.remotes.iter().any(|(_, s)| *s == RunStep::Writing);
+        if writes { Vec::new() } else { self.finish() }
+    }
+
+    /// Cloud model `at`'s result from its texts, which are wiped; its text stays only with no set text.
+    fn score_remote(&mut self, at: usize, wait_ms: u32) {
+        let (mine, rest) = std::mem::take(&mut self.texts)
+            .into_iter()
+            .partition(|((of, _), _)| *of == at);
+        self.texts = rest;
+        let mine: BTreeMap<_, Secret> = mine;
+        let text = Zeroizing::new(
+            mine.values()
+                .map(|p| p.expose().as_str())
+                .collect::<Vec<_>>()
+                .join(" "),
+        );
+        let (Some(plan), Some((remote, step))) = (self.plan.as_ref(), self.remotes.get_mut(at))
+        else {
+            return;
+        };
+        *step = RunStep::Done { wait_ms };
+        let set = plan.set.expose();
+        let count = (!set.is_empty())
+            .then(|| wrong(set, &text, &plan.lang))
+            .flatten();
+        let shown = count.is_none().then(|| Redacted::new(text));
+        self.lines.push(Line {
+            name: remote.name.clone(),
+            print: None,
+            wrong: count.map(|c| c.words),
+            words: count.map_or(0, |c| c.total),
+            wait_ms,
+            mb: 0,
+            card: None,
+            cloud: Some(remote.clone()),
+            text: shown,
+        });
+    }
+}

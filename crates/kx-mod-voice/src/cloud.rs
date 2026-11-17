@@ -7,7 +7,9 @@ mod offer;
 
 pub use offer::Offered;
 
-use kx_module_api::ports::{CloudAsk, CloudCard, Date, Fact, ServiceMark, UsePrice, fits_iso};
+use kx_module_api::ports::{
+    CloudAsk, CloudCard, Date, Fact, ServiceMark, Unavailable, UsePrice, fits_iso,
+};
 
 use crate::services::{Address, Model, Service, Services};
 use crate::settings::{ServiceOn, VoiceSettings};
@@ -48,6 +50,8 @@ pub struct Choice<'a> {
     pub code: String,
     /// The row's terms number is newer than the one confirmed, so the user is asked again before the next upload.
     pub ask: bool,
+    /// Why its model cannot be used now; the flow then says so at Start and sends nothing.
+    pub unavailable: Option<Unavailable>,
 }
 
 /// The rules over a services table, in a run that is hidden or not.
@@ -101,7 +105,8 @@ impl<'a> Cloud<'a> {
     }
 
     /// What `lang` dictates with in the cloud; `None` means its local model, as for cloud off, a hidden run, a service
-    /// not on or not offered, or a model that does not know the language or is unavailable (edges 17 and 21).
+    /// not on or not offered, or a model that does not know the language (edge 21). A model the keep-nothing switch rules
+    /// out still resolves, marked unavailable, so nothing moves to the local model by itself (edge 17).
     #[must_use]
     pub fn choice<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Choice<'s>>
     where
@@ -167,15 +172,14 @@ impl<'a> Cloud<'a> {
             }
             None => return None,
         };
-        if self.unavailable(s, service, model).is_some() {
-            return None;
-        }
+        let unavailable = self.unavailable(s, service, model);
         let ask = entry.terms < service.terms;
         Some(Choice {
             service,
             model,
             code,
             ask,
+            unavailable,
         })
     }
 }

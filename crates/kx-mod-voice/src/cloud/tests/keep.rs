@@ -15,7 +15,7 @@ fn router() -> Services {
 }
 
 #[test]
-fn the_keep_nothing_switch_makes_a_kept_model_unavailable_and_drops_its_picks() {
+fn the_keep_nothing_switch_makes_a_kept_model_unavailable() {
     let table = router();
     let rules = Cloud::new(&table, false);
     let mut s = on();
@@ -36,9 +36,11 @@ fn the_keep_nothing_switch_makes_a_kept_model_unavailable_and_drops_its_picks() 
     assert_eq!(rules.unavailable(&s, row, kept), None);
     assert!(rules.pick(&mut s, "en", "router-test", KEPT));
     assert!(rules.keep(&mut s, "router-test", true));
-    let left: Vec<&str> = s.picks.keys().map(String::as_str).collect();
-    assert_eq!(left, ["fr"], "the kept model's pick goes, the other stays");
-    assert!(rules.choice(&s, "fr").is_some());
+    assert!(
+        rules
+            .choice(&s, "fr")
+            .is_some_and(|c| c.unavailable.is_none())
+    );
     assert!(!rules.keep(&mut s, "groq", false), "a row with no switch");
 }
 
@@ -102,4 +104,21 @@ fn a_language_may_pick_each_switched_on_services_models_that_know_it() {
     );
     rules().switch(&mut s, false);
     assert!(rules().models(&s, "fr").is_empty(), "cloud off lists none");
+}
+
+#[test]
+fn the_keep_nothing_switch_leaves_the_pick_resolving_marked_unavailable_never_moved() {
+    let table = router();
+    let rules = Cloud::new(&table, false);
+    let mut s = on();
+    assert!(rules.confirm(&mut s, "router-test", today()));
+    assert!(rules.keep(&mut s, "router-test", false));
+    assert!(rules.pick(&mut s, "en", "router-test", KEPT));
+    assert!(rules.keep(&mut s, "router-test", true));
+    assert!(
+        s.picks.contains_key("en"),
+        "never a silent move to the local model"
+    );
+    let choice = rules.choice(&s, "en").expect("the pick still resolves");
+    assert_eq!(choice.unavailable, Some(Unavailable::KeepNothing));
 }

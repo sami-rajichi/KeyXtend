@@ -61,6 +61,7 @@ fn every_reason_and_local_state_is_distinct() {
         CloudWhy::Off,
         CloudWhy::NoLocal,
         CloudWhy::Fault,
+        CloudWhy::Unavailable(Unavailable::KeepNothing),
     ];
     let names: HashSet<String> = whys.iter().map(|w| format!("{w:?}")).collect();
     assert_eq!(names.len(), whys.len());

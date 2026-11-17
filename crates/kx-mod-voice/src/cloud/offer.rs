@@ -77,6 +77,21 @@ impl<'a> Cloud<'a> {
         out
     }
 
+    /// What service `id`'s `model` is for `lang` now, as Compare sends to it; `None` when the rules do not take it.
+    #[must_use]
+    pub fn model_for<'s>(
+        &self,
+        s: &'s VoiceSettings,
+        lang: &str,
+        id: &str,
+        model: &str,
+    ) -> Option<Choice<'s>>
+    where
+        'a: 's,
+    {
+        self.resolve(s, lang, id, model)
+    }
+
     /// Why `service`'s `model` cannot be used now: a model every host of which keeps the voice, while the row's
     /// keep-nothing switch is on (edge 17). A typed id's hosts are checked later, so it is never unavailable here.
     #[must_use]

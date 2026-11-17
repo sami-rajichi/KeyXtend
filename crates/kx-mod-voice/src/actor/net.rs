@@ -3,64 +3,20 @@
 //! or at Halt, which cancels its requests.
 
 use std::collections::HashMap;
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use kx_module_api::ports::{
-    CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech, HttpsUrl,
-    JobLimits, KeyHeader, SpeechError,
-};
-use kx_module_api::{Redacted, Secret, SecretBytes};
+use kx_module_api::SecretBytes;
+use kx_module_api::ports::{CloudFault, CloudNote, SpeechError};
 
+use super::ask::{Head, Tell, Wired, deliver, head_of, shut};
+use super::lanes::Owner;
+use super::trial::Trial;
 use super::{Actor, Back, Job, Msg};
-use crate::cloud::{Chosen, Cloud};
+use crate::cloud::Cloud;
 use crate::flow::{In, Sent, Upload};
 use crate::keys::Keys;
 use crate::services;
-
-/// The service's run, which prints nothing of itself; dropping it cancels its requests.
-pub(crate) struct Wired {
-    /// Held only to be dropped.
-    _run: Box<dyn CloudRun>,
-}
-
-/// What a run's notes are told to.
-type Tell = Box<dyn Fn(CloudNote) + Send>;
-
-/// A cloud ask without its key and speech, built on the actor from the row and `[voice]`.
-struct Head {
-    /// The service's id, which names its key's blob.
-    service: String,
-    job: JobLimits,
-    shape: CloudShape,
-    url: HttpsUrl,
-    header: KeyHeader,
-    model: Option<Redacted<String>>,
-    lang: String,
-    limits: CloudLimits,
-    wait_s: u16,
-    tries: u8,
-}
-
-impl Head {
-    /// The ask with `key` and `pieces` moved in.
-    fn ask(self, key: Secret, pieces: Vec<SecretBytes>) -> CloudAsk {
-        CloudAsk {
-            job: self.job,
-            shape: self.shape,
-            url: self.url,
-            header: self.header,
-            key,
-            model: self.model,
-            lang: self.lang,
-            limits: self.limits,
-            wait_s: self.wait_s,
-            tries: self.tries,
-            pieces,
-        }
-    }
-}
 
 /// One dictation's upload.
 struct Up {
@@ -83,13 +39,15 @@ impl Drop for Up {
     }
 }
 
-/// The actor's cloud side: the keys, and each dictation's upload.
+/// The actor's cloud side: the keys, each dictation's upload and Compare's.
 pub(super) struct Uploads {
     /// The run's saves would be hidden (ADR-0037), so cloud is off and no key is read.
     pub hidden: bool,
     /// The keys on the voice shelf; a hidden run's has none.
     pub keys: Keys,
     ups: HashMap<u32, Up>,
+    /// Compare's cloud models' uploads, by run and model.
+    pub trials: HashMap<(u32, usize), Trial>,
 }
 
 impl Uploads {
@@ -99,18 +57,20 @@ impl Uploads {
             hidden,
             keys,
             ups: HashMap::new(),
+            trials: HashMap::new(),
         }
     }
 
-    /// Drops every upload, which cancels their runs.
+    /// Drops every upload, Compare's too, which cancels their runs.
     pub(super) fn clear(&mut self) {
         self.ups.clear();
+        self.trials.clear();
     }
 
     /// No upload runs or waits for its speech.
     #[cfg(test)]
     pub(super) fn idle(&self) -> bool {
-        self.ups.is_empty()
+        self.ups.is_empty() && self.trials.is_empty()
     }
 }
 
@@ -132,7 +92,7 @@ impl Actor {
             run: None,
         };
         self.net.ups.insert(up.take, entry);
-        self.hand(up.take, up.round);
+        self.hand((Owner::Flow, up.take), up.round);
     }
 
     /// Drops dictation `take`'s upload: nothing more is sent, and its run's requests are cancelled.
@@ -234,58 +194,8 @@ impl Actor {
         let s = &self.held.settings;
         let table = services::table().ok()?;
         let choice = Cloud::new(table, self.net.hidden).choice(s, &up.lang)?;
-        let (row, entry) = (choice.service, s.services.get(&up.service)?);
-        if row.id != up.service {
-            return None;
-        }
-        let (listed, model) = match choice.model {
-            Chosen::Listed(m) => (Some(m), (!m.unnamed).then(|| m.id.clone())),
-            Chosen::Typed(id) => (None, Some(id.to_owned())),
-        };
-        Some(Head {
-            service: row.id.clone(),
-            job: s.job(),
-            shape: row.shape_for(listed, entry.keep),
-            url: row.url(&entry.address)?,
-            header: row.header.clone(),
-            model: model.map(Redacted::new),
-            lang: choice.code,
-            limits: row.limits,
-            wait_s: s.net_wait_s,
-            tries: s.net_tries,
-        })
+        (choice.service.id == up.service)
+            .then(|| head_of(s, &choice))
+            .flatten()
     }
-}
-
-/// Drops `run`, which cancels its requests; a port that breaks as it drops is caught.
-fn shut(run: Wired) {
-    let _ = catch_unwind(AssertUnwindSafe(|| drop(run)));
-}
-
-/// Reads the key just before `send` and moves it into the ask: no key, or one that cannot be read, sends nothing;
-/// neither does a halted upload, nor a run with no cloud port. A panic in the port counts as `Gone`.
-fn deliver(
-    cloud: Option<&dyn CloudSpeech>,
-    keys: &Keys,
-    head: Head,
-    pieces: Vec<SecretBytes>,
-    stop: &AtomicBool,
-    tell: Tell,
-) -> Result<Option<Wired>, CloudFault> {
-    let cloud = cloud.ok_or(CloudFault::Gone)?;
-    let key = match keys.get(&head.service) {
-        Ok(Some(key)) => key,
-        Ok(None) => return Err(CloudFault::Key),
-        Err(error) => {
-            tracing::warn!(%error, "a cloud key could not be read");
-            return Err(CloudFault::Key);
-        }
-    };
-    if stop.load(Ordering::SeqCst) {
-        return Ok(None);
-    }
-    let ask = head.ask(key, pieces);
-    let sent = catch_unwind(AssertUnwindSafe(|| cloud.send(ask, tell)));
-    sent.unwrap_or(Err(CloudFault::Gone))
-        .map(|run| Some(Wired { _run: run }))
 }

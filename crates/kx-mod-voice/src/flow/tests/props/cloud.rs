@@ -88,7 +88,9 @@ impl Track {
         prop_assert!(!rig.flow.password(), "a password box sent");
         prop_assert!(!masked.contains(&up.take), "a password box's take sent");
         let now = rig.book.1.get(&up.lang);
-        let fits = now.is_some_and(|n| n.service == up.service && n.key && !n.terms);
+        let fits = now.is_some_and(|n| {
+            n.service == up.service && n.key && !n.terms && n.unavailable.is_none()
+        });
         prop_assert!(fits, "sent to {} while the pick is {now:?}", up.service);
         Ok(())
     }

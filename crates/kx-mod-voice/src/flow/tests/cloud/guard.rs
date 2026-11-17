@@ -1,8 +1,10 @@
 //! What keeps the voice on the PC (edges 9, 10, 19 and 20): a password box takes the local model or says none is
 //! ready, a box the system cannot read goes as text, the key or the service gone sends nothing after it, newer terms
-//! wait for a confirmation, and "Use the local model" with none ready stays dimmed and offers Download.
+//! wait for a confirmation, a pick the keep-nothing switch rules out says why, and "Use the local model" with none ready
+//! stays dimmed and offers Download.
 
 use super::*;
+use kx_module_api::ports::Unavailable;
 
 /// A rig in front of Arabic, picked on Groq, with no local model downloaded.
 fn arabic() -> Rig {
@@ -238,4 +240,18 @@ fn a_local_model_once_ready_lights_use_the_local_model() {
     rig.on(In::Panel(None));
     let want = cloud_note(CloudWhy::Net, LocalUse::Ready, true);
     assert_eq!(rig.shown(), want);
+}
+
+#[test]
+fn a_pick_the_keep_nothing_switch_rules_out_says_why_at_start_and_never_listens() {
+    let mut rig = Rig::cloud();
+    let pick = rig.book.1.get_mut("fr").unwrap();
+    pick.unavailable = Some(Unavailable::KeepNothing);
+    let out = rig.key();
+    assert!(
+        opened(&out).is_empty(),
+        "nothing listens, so nothing is sent"
+    );
+    let why = CloudWhy::Unavailable(Unavailable::KeepNothing);
+    assert_eq!(rig.shown(), cloud_note(why, LocalUse::Dimmed, false));
 }

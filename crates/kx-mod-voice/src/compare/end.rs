@@ -35,12 +35,13 @@ impl Compare {
         let card = (turn.ask.card.as_ref()).filter(|_| done.card);
         self.lines.push(Line {
             name: turn.entrant.name.clone(),
-            print: turn.entrant.ready.print,
+            print: Some(turn.entrant.ready.print),
             wrong: count.map(|c| c.words),
             words: count.map_or(0, |c| c.total),
             wait_ms: done.wait_ms,
             mb: done.memory_mb,
             card: card.map(|c| c.id.clone()),
+            cloud: None,
             text: shown,
         });
     }
@@ -84,35 +85,40 @@ impl Compare {
         }
     }
 
-    /// The recording is gone: the run ends with the models already written or failed.
+    /// The recording is gone: the run ends with the local models already written or failed, once the cloud ones end.
     pub(super) fn lost(&mut self) -> Vec<Act> {
         let ended = |t: &Turn| matches!(t.step, RunStep::Done { .. } | RunStep::Failed);
         self.turns.retain(ended);
-        self.finish()
+        self.settle()
     }
 
-    /// Every model ran: the run closes and the numbers are kept, if any.
+    /// Every model ran: the run closes and the local models' numbers are kept, if any.
     pub(super) fn finish(&mut self) -> Vec<Act> {
         let mut acts = self.end(false);
         let Some(plan) = self.plan.as_ref().filter(|_| !self.lines.is_empty()) else {
             self.hint.get_or_insert(BarHint::Fault);
             return acts;
         };
-        let score = |l: &Line| Score {
-            model: l.print,
-            wrong: l.wrong,
-            words: l.words,
-            wait_ms: l.wait_ms,
-            mb: l.mb,
+        let score = |l: &Line| {
+            Some(Score {
+                model: l.print?,
+                wrong: l.wrong,
+                words: l.words,
+                wait_ms: l.wait_ms,
+                mb: l.mb,
+            })
         };
         let board = Board {
             lang: plan.lang.clone(),
             day: plan.day,
             auto: plan.auto,
             card: self.served().cloned(),
-            scores: self.lines.iter().map(score).collect(),
+            scores: self.lines.iter().filter_map(score).collect(),
         };
-        acts.push(Act::Save(board));
+        // A cloud model's numbers are shown, never kept, so a run of cloud models alone keeps nothing.
+        if !board.scores.is_empty() {
+            acts.push(Act::Save(board));
+        }
         self.stage = Stage::Results;
         acts
     }
