@@ -1,19 +1,9 @@
 //! Compare's cloud models (edge 12): the recording goes once to each ticked cloud model before any local model writes
 //! it, each one's text or fault is its own result, the run ends once every model ended, and Cancel drops the uploads.
 
-use kx_module_api::ports::{CloudFault, CloudNote, ServiceName};
+use kx_module_api::ports::{CloudFault, CloudNote};
 
 use super::*;
-
-/// Cloud model `n` of Groq.
-fn remote(n: u8) -> Remote {
-    Remote {
-        name: Redacted::new(format!("Cloud {n}")),
-        shown: ServiceName::Named("Groq".into()),
-        service: "groq".into(),
-        model: format!("m{n}"),
-    }
-}
 
 /// A compare of `models` and `clouds` that recorded speech and stopped, with its run's id.
 fn recorded_with(models: Vec<Entrant>, clouds: Vec<Remote>) -> (Compare, u32) {

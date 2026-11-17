@@ -1,5 +1,5 @@
 //! An address built from any text never panics, starts with `https://`, holds no user name or fragment, and names one
-//! plain host.
+//! plain host; a typed one gets its scheme and host in lower case, as both ignore case.
 
 use super::*;
 use proptest::prelude::*;
@@ -26,5 +26,37 @@ proptest! {
         rest in "[A-Za-z0-9._~:/?#\\[\\]@!$&'()*+,;=%-]{0,80}",
     ) {
         plain(&format!("{}{rest}", kx_ipc::HTTPS))?;
+    }
+}
+
+#[test]
+fn a_typed_address_gets_its_scheme_and_host_in_lower_case_and_keeps_its_path() {
+    let typed = "HTTPS://Speech.Example.COM:8443/V1/Audio?Lang=EN";
+    let lowered = HttpsUrl::lowered(typed);
+    assert_eq!(lowered, "https://speech.example.com:8443/V1/Audio?Lang=EN");
+    assert_eq!(
+        HttpsUrl::new(&lowered)
+            .map(|u| u.host().to_owned())
+            .as_deref(),
+        Some("speech.example.com")
+    );
+    for other in ["", "http://X.com/A", "Speech.Example.com/A"] {
+        assert_eq!(
+            HttpsUrl::lowered(other),
+            other,
+            "only an https address changes"
+        );
+    }
+    assert_eq!(HttpsUrl::MAX_BYTES, kx_ipc::MAX_URL_BYTES);
+}
+
+proptest! {
+    #[test]
+    fn lowering_keeps_the_length_and_an_address_already_taken(text in any::<String>()) {
+        let lowered = HttpsUrl::lowered(&text);
+        prop_assert_eq!(lowered.len(), text.len());
+        if HttpsUrl::new(&text).is_some() {
+            prop_assert_eq!(lowered, text);
+        }
     }
 }

@@ -28,6 +28,8 @@ listed! {
         Host,
         /// Its host is not under the service's own domain, as Azure's must be.
         Domain,
+        /// It is longer than the frames take (`HttpsUrl::MAX_BYTES`).
+        Long,
     }
 }
 

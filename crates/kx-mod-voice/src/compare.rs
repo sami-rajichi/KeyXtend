@@ -187,13 +187,25 @@ impl Compare {
         }
     }
 
-    /// The one writing (from 0; `None` while the recording ends), and each model to run, local then cloud, with where
-    /// it stands.
+    /// The one the header names (from 0; `None` while the recording ends): the local one writing, then the first cloud
+    /// one still writing. Then each model to run, local then cloud, with where it stands.
     #[must_use]
     pub fn running(&self) -> Option<(Option<usize>, Runs<'_>)> {
         let Stage::Running(at) = self.stage else {
             return None;
         };
+        let count = self.turns.len();
+        let writing = self
+            .remotes
+            .iter()
+            .position(|(_, s)| *s == RunStep::Writing);
+        let at = at.map(|at| {
+            if at < count {
+                at
+            } else {
+                writing.map_or(at, |i| count + i)
+            }
+        });
         let locals = self.turns.iter().map(|t| (&t.entrant.name, t.step));
         let runs = locals.chain(self.remotes.iter().map(|(r, step)| (&r.name, *step)));
         Some((at, runs.collect()))
@@ -268,22 +280,6 @@ impl Compare {
         let ask = turn.ask.clone();
         self.stage = Stage::Running(Some(at));
         vec![self.call(RunCall::Again(ask))]
-    }
-
-    /// Ends the run, cancelled first when `cancel`, which also drops the cloud uploads; the page goes back to the set text.
-    fn end(&mut self, cancel: bool) -> Vec<Act> {
-        let mut acts = Vec::new();
-        if cancel {
-            acts.push(self.call(RunCall::Cancel));
-        }
-        acts.push(self.call(RunCall::Close));
-        if cancel && !self.remotes.is_empty() {
-            acts.push(Act::Halt(self.take));
-        }
-        self.texts.clear();
-        self.pieces.clear();
-        self.stage = Stage::Ready;
-        acts
     }
 }
 

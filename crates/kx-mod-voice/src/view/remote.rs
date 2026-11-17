@@ -98,6 +98,6 @@ fn ready(row: &ModelRow) -> bool {
 fn key_of(o: Offered<'_>) -> Key {
     Key::Cloud {
         service: o.service.id.clone(),
-        model: o.id().to_owned(),
+        model: Redacted::new(o.id().to_owned()),
     }
 }

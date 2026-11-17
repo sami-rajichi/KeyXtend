@@ -24,8 +24,11 @@ impl Actor {
             Do::SetKey { service, key } => self.seal(&service, key),
             Do::RemoveKey(service) => self.unseal(&service),
             Do::Dots(service) => {
-                let dots = self.keys().dots(&service).unwrap_or(0);
-                self.panel.dots(&service, dots);
+                let dots = self.keys().dots(&service);
+                let dots = dots.inspect_err(
+                    |error| tracing::warn!(%error, "a cloud key's length was not read"),
+                );
+                self.panel.dots(&service, dots.unwrap_or(0));
             }
             Do::Test { service, ticket } => self.test_key(&service, ticket),
             Do::Take(round) => self.take_clip(round),
@@ -127,7 +130,8 @@ impl Actor {
     }
 }
 
-/// Reads `service`'s key and tests it with `head`; no key, or one that cannot be read, is the key fault.
+/// Reads `service`'s key and tests it with `head`; no key, or one that cannot be read and is logged by kind, is the key
+/// fault.
 fn test_with(
     cloud: &dyn CloudSpeech,
     keys: &Keys,
@@ -136,7 +140,11 @@ fn test_with(
 ) -> Result<(), CloudFault> {
     head.key = match keys.get(service) {
         Ok(Some(key)) => key,
-        _ => return Err(CloudFault::Key),
+        Ok(None) => return Err(CloudFault::Key),
+        Err(error) => {
+            tracing::warn!(%error, "a cloud key was not read for its test");
+            return Err(CloudFault::Key);
+        }
     };
     let tested = catch_unwind(AssertUnwindSafe(|| cloud.test(head)));
     tested.unwrap_or(Err(CloudFault::Gone))

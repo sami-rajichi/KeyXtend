@@ -4,11 +4,11 @@
 
 use std::collections::BTreeMap;
 
+use kx_module_api::Secret;
 use kx_module_api::ports::{CloudNote, RunStep};
-use kx_module_api::{Redacted, Secret, Zeroizing};
 
+use super::end::line;
 use super::{Act, Compare, Line, Stage};
-use crate::score::wrong;
 
 impl Compare {
     /// The send of the recording to every cloud model, which then writes; none with no cloud model.
@@ -66,32 +66,15 @@ impl Compare {
             .partition(|((of, _), _)| *of == at);
         self.texts = rest;
         let mine: BTreeMap<_, Secret> = mine;
-        let text = Zeroizing::new(
-            mine.values()
-                .map(|p| p.expose().as_str())
-                .collect::<Vec<_>>()
-                .join(" "),
-        );
         let (Some(plan), Some((remote, step))) = (self.plan.as_ref(), self.remotes.get_mut(at))
         else {
             return;
         };
         *step = RunStep::Done { wait_ms };
-        let set = plan.set.expose();
-        let count = (!set.is_empty())
-            .then(|| wrong(set, &text, &plan.lang))
-            .flatten();
-        let shown = count.is_none().then(|| Redacted::new(text));
+        let marked = line(plan, mine.values(), remote.name.clone(), wait_ms);
         self.lines.push(Line {
-            name: remote.name.clone(),
-            print: None,
-            wrong: count.map(|c| c.words),
-            words: count.map_or(0, |c| c.total),
-            wait_ms,
-            mb: 0,
-            card: None,
             cloud: Some(remote.clone()),
-            text: shown,
+            ..marked
         });
     }
 }

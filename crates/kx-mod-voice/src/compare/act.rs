@@ -24,9 +24,10 @@ pub struct Remote {
     pub shown: ServiceName,
     /// The service's row id.
     pub service: String,
-    /// The model's id, as a pick names it.
-    pub model: String,
+    /// The model's id, as a pick names it; redacted, as a typed Other id is the user's own.
+    pub model: Redacted<String>,
 }
+
 /// What a run compares: the language, the set text the ui showed, the ready models, the day and the device pick.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Plan {

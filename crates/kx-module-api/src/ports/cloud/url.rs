@@ -3,8 +3,8 @@
 //! (`kx_ipc::rules::https`), so the `speech-net` job takes every address this type holds.
 
 use crate::ports::Link;
-use kx_ipc::MAX_URL_BYTES;
 use kx_ipc::rules::{covers, https, https_host};
+use kx_ipc::{HTTPS, MAX_URL_BYTES};
 
 /// A checked HTTPS address within the frames' `MAX_URL_BYTES`: `LINK_SCHEME`, a plain lower-case host and maybe a port,
 /// then a path and query of link characters (`Link`). It prints redacted, as a typed address is the user's own.
@@ -12,6 +12,24 @@ use kx_ipc::rules::{covers, https, https_host};
 pub struct HttpsUrl(Link);
 
 impl HttpsUrl {
+    /// The longest address it holds: the frames' own cap.
+    pub const MAX_BYTES: usize = MAX_URL_BYTES;
+
+    /// `text` with its scheme and host in lower case, as both ignore case (RFC 3986), so a typed `HTTPS://Host.com/A`
+    /// can be taken; the path and query keep their case, and a text that is no https address stays as it is.
+    #[must_use]
+    pub fn lowered(text: &str) -> String {
+        let lower = text.to_ascii_lowercase();
+        if !lower.starts_with(HTTPS) {
+            return text.to_owned();
+        }
+        // Lowering keeps every byte's place, so the host ends at the same place in both texts.
+        let end = HTTPS.len() + https_host(&lower).len();
+        let mut out = lower[..end].to_owned();
+        out.push_str(&text[end..]);
+        out
+    }
+
     /// `text` as an address; `None` for anything else, an `http://` one among them.
     #[must_use]
     pub fn new(text: &str) -> Option<Self> {

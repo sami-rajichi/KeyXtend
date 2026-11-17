@@ -11,7 +11,7 @@ use kx_mod_voice::{MANIFEST, VoiceModule};
 use kx_module_api::ports::{
     CalendarKey, ClipboardWriterKey, Date, Drive, FieldWatchKey, FolderRevealKey, MB, ModelFiles,
     ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey, VoiceLit, VoicePage, VoiceShelfKey,
-    VoiceView,
+    VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted, ServiceId, ServiceKey,
@@ -19,7 +19,7 @@ use kx_module_api::{
 };
 use kx_platform_fake::{
     FakeCalendar, FakeClipboardWriter, FakeClock, FakeFieldWatch, FakeFolderReveal, FakeModelFiles,
-    FakeSessionWatch, FakeShelf, FakeSpeech,
+    FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
 use kx_test_support::host::{FakeHost, Stored};
 
@@ -39,6 +39,7 @@ pub struct Fakes {
     pub reveal: Arc<FakeFolderReveal>,
     pub shelf: FakeShelf,
     pub calendar: FakeCalendar,
+    pub link: Arc<FakeWebLink>,
     pub clock: FakeClock,
 }
 
@@ -54,6 +55,7 @@ impl Fakes {
             reveal: Arc::new(FakeFolderReveal::new()),
             shelf: FakeShelf::new(),
             calendar: FakeCalendar::new(Date::new(2026, 11, 15).unwrap(), 12, 0, 60),
+            link: Arc::new(FakeWebLink::new()),
             clock: FakeClock::new(Mono::from_us(1_000)),
         };
         fakes.files.set_drives(vec![Drive {
@@ -87,6 +89,7 @@ impl Fakes {
             stored::<FolderRevealKey>(self.reveal.clone()),
             stored::<VoiceShelfKey>(Arc::new(self.shelf.clone())),
             stored::<CalendarKey>(Arc::new(self.calendar.clone())),
+            stored::<WebLinkKey>(self.link.clone()),
         ]);
         host
     }

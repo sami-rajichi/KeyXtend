@@ -5,7 +5,7 @@ use super::*;
 use crate::flow::Ready;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardId, CardUse, Date, Fingerprint, RunStep, SpeechError, SpeechModel, SpeechStage,
+    CardId, CardUse, Date, Fingerprint, RunStep, ServiceName, SpeechError, SpeechModel, SpeechStage,
 };
 use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
@@ -52,6 +52,16 @@ fn entrant(n: u8, card: bool) -> Entrant {
     Entrant {
         name: Redacted::new(format!("Model {n}")),
         ready,
+    }
+}
+
+/// Cloud model `n` of Groq.
+fn remote(n: u8) -> Remote {
+    Remote {
+        name: Redacted::new(format!("Cloud {n}")),
+        shown: ServiceName::Named("Groq".into()),
+        service: "groq".into(),
+        model: Redacted::new(format!("m{n}")),
     }
 }
 

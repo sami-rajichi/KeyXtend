@@ -4,7 +4,7 @@
 
 use kx_module_api::ports::{
     CalendarKey, ClipboardWriterKey, FieldWatchKey, FolderRevealKey, ModelFilesKey,
-    SessionWatchKey, SpeechKey, VoiceShelfKey,
+    SessionWatchKey, SpeechKey, VoiceShelfKey, WebLinkKey,
 };
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
 
@@ -26,6 +26,7 @@ pub static MANIFEST: Manifest = Manifest {
         FolderRevealKey::ID,
         VoiceShelfKey::ID,
         CalendarKey::ID,
+        WebLinkKey::ID,
     ],
     provides: &[],
     capabilities: &[
@@ -49,7 +50,7 @@ mod tests {
     use kx_module_api::ports::{
         ClipTake, ClipTaken, LayoutAsk, LayoutChanged, PasteText, PointerPressed, PressesAsk,
         PressesWanted, SealedShelfKey, TextAsk, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk,
-        VoiceKey, VoiceLit, VoiceOpen, VoiceView, WebLinkKey,
+        VoiceKey, VoiceLit, VoiceOpen, VoiceView,
     };
 
     #[test]
@@ -74,8 +75,8 @@ mod tests {
     {
         assert!(MANIFEST.requires.contains(&FolderRevealKey::ID));
         assert_eq!(FolderRevealKey::CAPABILITY, Some(Capability::OpenFolder));
-        // A card's link is optional, as cloud speech is: a run without it still dictates.
-        assert!(!MANIFEST.requires.contains(&WebLinkKey::ID));
+        // The app provides the web link; a run whose host lacks it still dictates, and Link then logs why.
+        assert!(MANIFEST.requires.contains(&WebLinkKey::ID));
         assert_eq!(WebLinkKey::CAPABILITY, Some(Capability::OpenLink));
         assert!(MANIFEST.declares(Capability::OpenLink));
     }
@@ -124,6 +125,7 @@ mod tests {
             FolderRevealKey::CAPABILITY,
             VoiceShelfKey::CAPABILITY,
             CalendarKey::CAPABILITY,
+            WebLinkKey::CAPABILITY,
         ];
         assert_eq!(MANIFEST.requires.len(), gates.len());
         assert!(

@@ -1,15 +1,18 @@
 //! A service's key page (design "Keys"): Paste puts the clipboard's text on the key line as dots (edges 23 and carry 9),
 //! a test's answer counts only while its page and key stand (carry 3), the link opens only the row's own HTTPS address
-//! (edge 23), and a typed address is kept or refused with why (edges 13 and 22, carries 6, 10 and 11).
+//! (edge 23), and a typed address is kept or refused with why: no https, no host name, outside the domain or too long
+//! (edges 13 and 22, carries 6, 10 and 11).
 
 use kx_module_api::ports::{
-    AddressFault, ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceMark, VoiceClick,
+    AddressFault, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, PanelButton, ServiceMark,
+    VoiceClick,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::{act, apply, lines_sheet, on_cloud, put};
+use crate::services::tests::AZURE;
 use crate::settings::{PICKS, SERVICES};
 
 /// A key-like text, built as the test runs so no key sits in the source.
@@ -195,4 +198,55 @@ fn a_typed_address_is_kept_when_https_on_a_host_name_and_refused_with_why() {
         !rig.settings.picks.contains_key("en"),
         "a cleared address sends the picks to the local default"
     );
+}
+
+#[test]
+fn a_long_address_says_long_and_a_host_in_capitals_is_kept_in_lower_case() {
+    let mut rig = on_custom_lines(r#", model = "whisper-1""#);
+    let long = format!(
+        "https://speech.example.com/{}",
+        "a".repeat(HttpsUrl::MAX_BYTES)
+    );
+    assert!(
+        rig.click(&VoiceClick::SetAddress(Redacted::new(long)))
+            .is_empty()
+    );
+    assert_eq!(
+        lines_sheet(&mut rig).address_fault,
+        Some(AddressFault::Long)
+    );
+    let typed = Redacted::new("HTTPS://Speech.Example.COM/V1/Audio".into());
+    let out = rig.click(&VoiceClick::SetAddress(typed));
+    assert!(matches!(&out[..], [Do::Set(SERVICES, _)]), "{out:?}");
+    apply(&mut rig, &out);
+    let kept = &rig.settings.services["custom"].address;
+    assert_eq!(
+        kept, "https://speech.example.com/V1/Audio",
+        "the path keeps its case"
+    );
+    assert_eq!(lines_sheet(&mut rig).address_fault, None);
+}
+
+#[test]
+fn an_address_outside_the_rows_domain_says_domain() {
+    let mut rig = on_cloud(AZURE);
+    put(
+        &mut rig,
+        "services",
+        "azure-test = { on = 2026-11-01, terms = 1 }",
+    );
+    rig.keyed.insert("azure-test".into());
+    act(&mut rig, 2, CloudButton::Lines);
+    let outside = "https://speech.example.com/stt";
+    assert!(
+        rig.click(&VoiceClick::SetAddress(Redacted::new(outside.into())))
+            .is_empty()
+    );
+    assert_eq!(
+        lines_sheet(&mut rig).address_fault,
+        Some(AddressFault::Domain)
+    );
+    let inside = "https://kx-test.cognitiveservices.azure.com/stt";
+    let out = rig.click(&VoiceClick::SetAddress(Redacted::new(inside.into())));
+    assert!(matches!(&out[..], [Do::Set(SERVICES, _)]), "{out:?}");
 }

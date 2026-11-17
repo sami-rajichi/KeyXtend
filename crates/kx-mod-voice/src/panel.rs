@@ -20,6 +20,7 @@ pub(crate) use cloud::Clouds;
 
 use std::path::PathBuf;
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, BarHint, CardId, DevicePick, Fingerprint, PanelButton, VoiceAct, VoiceClick,
     VoicePage, VoiceTab,
@@ -67,10 +68,10 @@ pub(crate) enum Key {
     Dir(PathBuf),
     /// A service on the Cloud page, by its id.
     Service(String),
-    /// A cloud model, by its service's id and the id a pick names.
+    /// A cloud model, by its service's id and the id a pick names, redacted as a typed Other id is the user's.
     Cloud {
         service: String,
-        model: String,
+        model: Redacted<String>,
     },
     /// A row a click does nothing on, as a model's turn while Compare runs.
     Plain,
@@ -262,7 +263,7 @@ impl Panel {
         }
         self.note = None;
         if let (PanelButton::Use, Some((service, model))) = (button, self.cloud_ticked()) {
-            return self.cloud_pick(&service, &model, facts);
+            return self.cloud_pick(&service, model.expose(), facts);
         }
         match (button, self.page) {
             (PanelButton::Back, _) => self.back(),

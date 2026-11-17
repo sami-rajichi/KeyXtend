@@ -106,21 +106,23 @@ impl Panel {
         }
     }
 
-    /// The address line's text: kept in `services` when HTTPS on a host name the row takes, else shown with why
-    /// (edge 13). A changed address keeps the picks, and a cleared one sends them to the local default.
+    /// The address line's text, its scheme and host lowered: kept in `services` when HTTPS on a host name the row
+    /// takes, else shown with why (edge 13). A changed address keeps the picks, and a cleared one sends them to the
+    /// local default.
     pub(super) fn type_address(&mut self, text: &Redacted<String>, facts: &Facts<'_>) -> Vec<Do> {
         let Some(id) = self.lines_id() else {
             return Vec::new();
         };
-        let out = edit(facts, |c, s| c.type_address(s, &id, text.expose()));
+        let typed = HttpsUrl::lowered(text.expose());
+        let out = edit(facts, |c, s| c.type_address(s, &id, &typed));
         let same = facts
             .settings
             .services
             .get(&id)
-            .is_some_and(|e| &e.address == text.expose());
+            .is_some_and(|e| e.address == typed);
         let row = facts.cloud.and_then(|c| c.row(&id));
         self.cloud.refused = match row {
-            Some(_) if out.is_empty() && !same => Some((text.clone(), fault(text.expose()))),
+            Some(_) if out.is_empty() && !same => Some((text.clone(), fault(&typed))),
             _ => None,
         };
         out
@@ -151,16 +153,20 @@ impl Panel {
     }
 }
 
-/// Why a typed `text` was refused: no `https://`, no host name, or a host outside the row's domain.
+/// Why a typed `text`, its scheme and host lowered, was refused: no `https://`, too long, no host name, or a host
+/// outside the row's domain.
 fn fault(text: &str) -> AddressFault {
     if !text.starts_with(LINK_SCHEME) {
         AddressFault::Https
+    } else if text.len() > HttpsUrl::MAX_BYTES {
+        AddressFault::Long
     } else if HttpsUrl::new(text).is_none() {
         AddressFault::Host
     } else {
         AddressFault::Domain
     }
 }
+
 /// `key` without the spaces and line breaks a copy may carry at its ends, in a wiped buffer.
 fn trimmed(key: &Secret) -> Secret {
     Redacted::new(Zeroizing::new(key.expose().trim().to_owned()))

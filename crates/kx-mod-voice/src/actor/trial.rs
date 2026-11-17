@@ -178,7 +178,7 @@ impl Actor {
     fn trial_head(&self, lang: &str, remote: &Remote) -> Option<Head> {
         let s = &self.held.settings;
         let rules = Cloud::new(services::table().ok()?, self.net.hidden);
-        let choice = rules.model_for(s, lang, &remote.service, &remote.model)?;
+        let choice = rules.model_for(s, lang, &remote.service, remote.model.expose())?;
         head_of(s, &choice).filter(|_| !choice.ask)
     }
 }

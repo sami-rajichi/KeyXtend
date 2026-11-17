@@ -90,6 +90,7 @@ fn the_marks_and_buttons_are_the_designs() {
         AddressFault::Https,
         AddressFault::Host,
         AddressFault::Domain,
+        AddressFault::Long,
     ];
     assert_eq!(AddressFault::ALL, faults);
 }

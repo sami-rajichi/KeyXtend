@@ -1,6 +1,7 @@
 //! The Models page's Local | Cloud sides (edge 29), each paging alone, and Use on a cloud model, the one act that moves
 //! a language to a service.
 
+use kx_module_api::Redacted;
 use kx_module_api::ports::{ModelSide, VoiceTab};
 
 use super::cloud::edit;
@@ -26,7 +27,7 @@ impl Panel {
     }
 
     /// The ticked cloud model's service and pick id, on a page that ticks one.
-    pub(crate) fn cloud_ticked(&self) -> Option<(String, String)> {
+    pub(crate) fn cloud_ticked(&self) -> Option<(String, Redacted<String>)> {
         match self.ticked() {
             Some(Key::Cloud { service, model }) => Some((service.clone(), model.clone())),
             _ => None,

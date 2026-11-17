@@ -1,5 +1,6 @@
 //! Compare's cloud models on the panel (edge 12): the ready ones to tick with the send warning, Start taking only the
-//! ticked ones, none while cloud is off or the run is hidden, and a cloud result named by its service that Use picks.
+//! ticked ones, none while cloud is off or the run is hidden, a header naming the first one still writing, and a cloud
+//! result named by its service that Use picks.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -62,7 +63,7 @@ fn turbo() -> Remote {
         name: Redacted::new("Whisper Large v3 Turbo".into()),
         shown: ServiceName::Named("Groq".into()),
         service: "groq".into(),
-        model: "whisper-large-v3-turbo".into(),
+        model: Redacted::new("whisper-large-v3-turbo".into()),
     }
 }
 
@@ -153,4 +154,49 @@ fn compare_lists_the_ready_cloud_models_and_names_each_ticked_service_once_befor
     rig.click(&VoiceClick::Row(0));
     rig.click(&VoiceClick::Row(1));
     assert!(ready(&mut rig).1.is_empty(), "no tick, no warning");
+}
+
+/// The running page's header: the model it names, from 1, of how many, and its name.
+fn header(rig: &mut Rig) -> (u16, u16, String) {
+    match rig.view().unwrap().sheet {
+        VoiceSheet::Compare(CompareSheet::Running { at, of, name, .. }) => {
+            (at, of, name.expose().clone())
+        }
+        other => panic!("not running: {other:?}"),
+    }
+}
+
+#[test]
+fn the_running_header_names_the_first_cloud_model_still_writing() {
+    let mut rig = on_compare();
+    rig.click(&VoiceClick::Row(0));
+    rig.click(&VoiceClick::Row(1));
+    let take = start(&mut rig);
+    rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
+    rig.click(&VoiceClick::Bar(BarButton::Stop));
+    rig.with(|p, _| p.compare_note(take, done(0)));
+    assert_eq!(header(&mut rig), (1, 2, "Whisper Large v3 Turbo".into()));
+    rig.with(|p, _| p.compare_net(take, 0, CloudNote::Done, 700));
+    assert_eq!(header(&mut rig), (2, 2, "Whisper Large v3".into()));
+}
+
+#[test]
+fn a_typed_model_id_never_prints_in_the_ticks_the_plan_or_the_send() {
+    let typed = ["kx", "typed", "model", "77"].join("-");
+    let mut rig = Rig::new();
+    rig.settings.cloud = true;
+    let custom = format!(
+        r#"custom = {{ on = 2026-11-01, terms = 1, address = "https://speech.example.com/v1/audio", model = "{typed}" }}"#
+    );
+    put(&mut rig, "services", &custom);
+    rig.keyed.insert("custom".into());
+    rig.click(&VoiceClick::Open(VoiceTab::Compare));
+    rig.click(&VoiceClick::Row(0));
+    let take = start(&mut rig);
+    assert_eq!(rig.panel.compare.plan().unwrap().clouds.len(), 1);
+    rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
+    rig.click(&VoiceClick::Bar(BarButton::Stop));
+    let sent = rig.with(|p, _| p.compare_note(take, done(0)));
+    let shown = format!("{:?}{sent:?}", rig.panel);
+    assert!(!shown.contains(&typed), "{shown}");
 }
