@@ -4,13 +4,16 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
-## 2026-11-18 01:20 — P11: the cloud services table and sealed keys
+## 2026-11-17 21:15 — P11: a dictation can go to a cloud service
+With a cloud model picked, the bar names the service from Start; the speech stays on this PC until Stop and then goes, cut at pauses, only to that service. After any fault the recording is kept and the bar offers Try again or "Use the local model", and nothing is typed twice. A password box, or a take the local model has written, never goes to the cloud, and a removed key or a switched-off service stops the upload with a note.
+
+## 2026-11-17 18:59 — P11: the cloud services table and sealed keys
 The voice module now has a table of cloud services, checked when it loads, with Groq first and a Custom row for a server of the user's own; each row holds its address, limits, models and its dated facts. Each service's key is sealed on its own on this PC and is never in the settings, a log or a test file. A service stays off until the user confirms it, a newer terms number asks again, and a property test shows that no change of settings ever moves a language from a local model to a service by itself.
 
-## 2026-11-18 01:10 — P11: the worker sends speech to a cloud service
+## 2026-11-17 18:58 — P11: the worker sends speech to a cloud service
 A third worker job, `speech-net`, sends each piece of a dictation to the chosen service over HTTPS with the user's key in its header only; it follows no redirect and caps every reply. The app hands it the pieces at Stop, cut at pauses and never mid-word, several at a time within the service's limits, and Cancel stops an upload between its chunks. A rate limit waits once before it is reported, and no cloud request is ever read as "no credit" because of words in its message.
 
-## 2026-11-17 22:30 — P11: dictated text can be pasted at once
+## 2026-11-17 18:10 — P11: dictated text can be pasted at once
 A new Options row, "Insert the text", offers Type it (the default) or Paste at once. Paste at once goes through the clipboard history's paste route, keeps the text out of both clipboard histories, and then puts the previous clipboard back. It types instead in a password box, when a password manager marked the clipboard private, after a copy from a skipped app, or when the clipboard cannot come back whole. A new decision record (ADR-0048) explains the route.
 
 ## 2026-11-17 16:10 — P11: the groundwork for cloud voice typing
