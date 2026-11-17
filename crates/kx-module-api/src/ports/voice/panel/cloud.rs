@@ -10,7 +10,7 @@ listed! {
     pub enum ServiceMark ("Every mark.") {
         /// Not switched on.
         Off,
-        /// Switched on, with no key yet.
+        /// Switched on, with no key yet, or a typed row with no address yet.
         NeedsKey,
         /// A key is set, tested or not.
         Ready,
@@ -136,6 +136,9 @@ pub struct CloudCard {
     pub light: UsePrice,
     /// The price of heavy use.
     pub heavy: UsePrice,
+    /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` when it bills the
+    /// sound's own length.
+    pub bills: Option<Fact>,
     /// The day these facts were read on the service's own pages.
     pub read: Date,
     /// They are older than `facts_days`, so their day takes the warning tone.

@@ -10,8 +10,8 @@ mod fits;
 mod pieces;
 mod url;
 
-/// A key no output may show.
-const KEY: &str = "gsk_live-7731-zebra";
+/// The length of the key `key` makes.
+const KEY_LEN: usize = 40;
 /// Sound no output may show, as `Debug` would print its bytes.
 const SOUND: [u8; 4] = [0x7f, 0x3e, 0x11, 0x5a];
 /// The bytes of `SOUND` as a plain `Debug` prints them.
@@ -22,6 +22,12 @@ const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
 const MODEL: &str = "whisper-large-v3-turbo";
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
+
+/// A key no output may show, made up at run time so no file holds one.
+fn key() -> String {
+    let marks = ('a'..='z').rev().chain('0'..='9');
+    marks.cycle().step_by(3).take(KEY_LEN).collect()
+}
 
 /// `text` as a secret.
 fn secret(text: &str) -> Secret {
@@ -82,7 +88,7 @@ fn ask() -> CloudAsk {
         shape: form(),
         url: HttpsUrl::new(GROQ).unwrap(),
         header: KeyHeader::Bearer,
-        key: secret(KEY),
+        key: secret(&key()),
         model: Some(Redacted::new(MODEL.into())),
         lang: "fr".into(),
         limits: limits(),
@@ -99,14 +105,15 @@ fn test() -> CloudTest {
         shape: form(),
         url: HttpsUrl::new("https://api.groq.com/openai/v1/models").unwrap(),
         header: KeyHeader::Bearer,
-        key: secret(KEY),
+        key: secret(&key()),
         wait_s: 60,
     }
 }
 
 /// Asserts `shown` holds no key, sound, address, model or text, and the marker in their place.
 fn keeps_secrets(shown: &str) {
-    for secret in [KEY, SOUND_SHOWN, "api.groq.com", MODEL, SAID] {
+    let key = key();
+    for secret in [key.as_str(), SOUND_SHOWN, "api.groq.com", MODEL, SAID] {
         assert!(!shown.contains(secret), "{shown} shows {secret}");
     }
     assert!(shown.contains(REDACTED_MARKER), "{shown}");

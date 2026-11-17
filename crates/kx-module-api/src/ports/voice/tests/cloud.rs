@@ -162,7 +162,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
 }
 
 #[test]
-fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
+fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_and_age() {
     let price = |hours, cents| UsePrice {
         hours,
         price: fact("one", vec![arg("amount", usd(cents))]),
@@ -179,6 +179,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
         free: free(),
         light: price(15, 330),
         heavy: price(60, 1_320),
+        bills: Some(fact("least", vec![arg("seconds", FactValue::Count(10))])),
         read: read(),
         old: true,
         site: Some("elevenlabs.io".into()),
@@ -197,6 +198,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_warning_and_age() {
         "old: true",
         "elevenlabs.io",
         "Text(\"Use my data for training\")",
+        "Count(10)",
         "untested: true",
         "on: None",
     ];
