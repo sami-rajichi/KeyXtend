@@ -17,6 +17,8 @@ use crate::{
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+mod take;
+
 /// Texts that appear nowhere else in the output: a Latin one, an Arabic one ("hello"), and an app's name.
 const SECRETS: [&str; 3] = ["zebra-quartz", "مرحبا", "KeePass"];
 /// A caret that appears nowhere else.
@@ -216,6 +218,7 @@ fn debug_never_shows_a_text_a_search_a_path_or_an_app() {
         format!(
             "{:?}",
             ClipTaken {
+                asker: crate::ModuleId::new("vault"),
                 round: 1,
                 text: ClipText::Text(taken)
             }
@@ -223,7 +226,7 @@ fn debug_never_shows_a_text_a_search_a_path_or_an_app() {
         format!("{:?}", ClipLine(PanelLine::Search(secret(1)))),
         format!("{:?}", ClipAct::Tick { round: 3, row: 1 }),
         format!("{:?}", ClipAct::Rows(5)),
-        format!("{:?}", ClipTake::new(1, 9)),
+        format!("{:?}", ClipTake::new(crate::ModuleId::new("vault"), 1, 9)),
     ];
     for text in &shown[..6] {
         assert!(text.contains(REDACTED_MARKER), "{text}");
@@ -280,21 +283,4 @@ fn every_kind_and_note_is_listed_once_in_declaration_order() {
 #[test]
 fn a_megabyte_is_the_binary_one_windows_counts_sizes_in() {
     assert_eq!(MB, 1024 * 1024);
-}
-
-#[test]
-fn a_take_reads_twice_a_fields_characters_but_never_past_the_longest_fields_room() {
-    let most = MAX_FIELD_CHARS * 2;
-    assert_eq!(
-        (ClipTake::new(3, 10).round, ClipTake::new(3, 10).max_chars),
-        (3, 20)
-    );
-    assert_eq!(ClipTake::new(1, 10).cap(), 20);
-    assert_eq!(ClipTake::new(1, MAX_FIELD_CHARS).cap(), most);
-    assert_eq!(ClipTake::new(1, usize::MAX).cap(), most);
-    let wide = ClipTake {
-        round: 1,
-        max_chars: most + 1,
-    };
-    assert_eq!(wide.cap(), most);
 }

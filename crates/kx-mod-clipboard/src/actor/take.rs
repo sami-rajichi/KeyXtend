@@ -3,7 +3,7 @@
 //! nothing if it is that text, as the watch's note can come after the take. Every copy read here is wiped, none is
 //! logged.
 
-use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipTaken, ClipText};
+use kx_module_api::ports::{ClipError, ClipKind, ClipPart, ClipTake, ClipText};
 use kx_module_api::{Secret, Zeroizing};
 
 use super::Actor;
@@ -11,7 +11,8 @@ use crate::entry::Entry;
 
 impl Actor {
     /// Answers `take` with what the clipboard holds, read within the take's cap: a longer text is `TooLong` and forgets
-    /// nothing, and a held, refused or unreadable clipboard is `Busy`, logged by its kind alone.
+    /// nothing, and a held, refused or unreadable clipboard is `Busy`, logged by its kind alone. The answer names the
+    /// take's asker, so only that module takes it.
     pub(super) fn take(&mut self, take: ClipTake) {
         let wait = self.settings.clip_config().wait;
         let text = match self.ports.clip.text(wait, take.cap()) {
@@ -26,10 +27,7 @@ impl Actor {
                 ClipText::Busy
             }
         };
-        self.publish(&ClipTaken {
-            round: take.round,
-            text,
-        });
+        self.publish(&take.answer(text));
     }
 
     /// Deletes the newest entry when it is a text not pinned whose text is `text`; true when it did.

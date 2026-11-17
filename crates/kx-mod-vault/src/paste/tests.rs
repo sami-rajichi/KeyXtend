@@ -1,10 +1,11 @@
 //! Paste: breaks at the ends go, an interior one becomes one space in a shown field and refuses a hidden one, in a
-//! wiped buffer; only the take waited for counts, until its wait runs out (a fake clock, no sleep).
+//! wiped buffer; only the take waited for counts, until its wait runs out (a fake clock, no sleep), and only its own
+//! module's answer.
 
 use std::time::Duration;
 
-use kx_module_api::Mono;
 use kx_module_api::ports::{ClipTaken, ClipText};
+use kx_module_api::{ModuleId, Mono};
 
 use super::*;
 
@@ -17,12 +18,9 @@ const T0: Mono = Mono::from_us(1_000_000);
 /// The breaks past CR and LF: NEL and the Unicode line and paragraph separators.
 const SEPARATORS: [char; 3] = ['\u{85}', '\u{2028}', '\u{2029}'];
 
-/// The answer to round `round`, which found nothing.
+/// The answer to this module's take of round `round`, which found nothing.
 fn taken(round: u32) -> ClipTaken {
-    ClipTaken {
-        round,
-        text: ClipText::Empty,
-    }
+    ClipTake::new(crate::ID, round, FIELD).answer(ClipText::Empty)
 }
 
 /// What `copied` becomes in a field that is `hidden` or not.
@@ -98,7 +96,7 @@ fn a_take_asks_for_twice_the_fields_characters_and_only_the_one_waited_for_count
     let first = pasting.ask(T0);
     let second = pasting.ask(T0);
     assert_ne!(first.round, second.round);
-    assert_eq!(second, ClipTake::new(second.round, FIELD));
+    assert_eq!(second, ClipTake::new(crate::ID, second.round, FIELD));
     assert!(!pasting.answers(&taken(first.round)));
     assert!(pasting.answers(&taken(second.round)));
     assert!(!pasting.answers(&taken(second.round)), "once");
@@ -125,4 +123,16 @@ fn a_stop_drops_the_answer_and_the_wait() {
     pasting.stop();
     assert_eq!(pasting.due(), None);
     assert!(!pasting.answers(&taken(ask.round)));
+}
+
+#[test]
+fn another_modules_answer_of_the_same_round_is_dropped_and_its_own_still_counts() {
+    let mut pasting = Pasting::new(WAIT, FIELD);
+    let take = pasting.ask(T0);
+    let other = ClipTaken {
+        asker: ModuleId::new("voice"),
+        ..taken(take.round)
+    };
+    assert!(!pasting.answers(&other), "the voice module's answer");
+    assert!(pasting.answers(&taken(take.round)));
 }

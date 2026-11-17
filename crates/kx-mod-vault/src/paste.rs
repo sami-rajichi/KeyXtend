@@ -38,12 +38,13 @@ impl Pasting {
     pub fn ask(&mut self, now: Mono) -> ClipTake {
         self.round = self.round.wrapping_add(1);
         self.until = Some(now.saturating_add(self.wait));
-        ClipTake::new(self.round, self.field_chars)
+        ClipTake::new(crate::ID, self.round, self.field_chars)
     }
 
-    /// True when `taken` answers the take waited for, which then waits no more; any other answer is dropped.
+    /// True when `taken` answers this module's take waited for, which then waits no more; any other answer, another
+    /// module's of the same round among them, is dropped.
     pub fn answers(&mut self, taken: &ClipTaken) -> bool {
-        if self.until.is_none() || taken.round != self.round {
+        if self.until.is_none() || !taken.is_for(crate::ID, self.round) {
             return false;
         }
         self.until = None;

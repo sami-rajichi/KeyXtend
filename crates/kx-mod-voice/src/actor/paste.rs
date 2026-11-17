@@ -1,11 +1,12 @@
 //! Paste at once (`insert` = "paste", owner 2026-11-17): a text goes to the clipboard history, which pastes it and puts
 //! the clipboard back. A pasted text counts as typed in full; a refusal, or no answer within `paste_ms`, types it and
-//! drops a late answer, so it goes in once. An erase goes to the typer first, as only the keyboard erases.
+//! drops a late answer, so it goes in once. An erase goes to the typer first, as only the keyboard erases. The key
+//! page's Paste waits as long for the clipboard's text, then shows the busy note and drops a late answer.
 
 use std::collections::VecDeque;
 use std::mem;
 
-use kx_module_api::ports::{PasteText, TextAsk, TextDone, TextPasted};
+use kx_module_api::ports::{ClipText, PasteText, TextAsk, TextDone, TextPasted};
 use kx_module_api::{Mono, Redacted, Zeroizing};
 
 use super::Actor;
@@ -27,6 +28,8 @@ pub(super) struct Pasting {
     asked: VecDeque<Asked>,
     /// Who asked, and the text pasted once the typer erased what it replaces.
     erasing: Option<(Source, TextAsk)>,
+    /// The key page's take waiting for its answer: its round and when it was asked.
+    pub(super) take: Option<(u32, Mono)>,
 }
 
 impl Actor {
@@ -84,23 +87,32 @@ impl Actor {
         }
     }
 
-    /// At `now`, each text whose answer is past `paste_ms` is typed.
+    /// At `now`, each text whose answer is past `paste_ms` is typed, and a key page's take past it shows as busy.
     pub(super) fn paste_tick(&mut self, now: Mono) {
         let wait = self.held.settings.paste_wait();
-        let late = |a: &Asked| now.saturating_since(a.since) >= wait;
-        while self.pasting.asked.front().is_some_and(late) {
+        let late = |since: Mono| now.saturating_since(since) >= wait;
+        while self.pasting.asked.front().is_some_and(|a| late(a.since)) {
             let Some(asked) = self.pasting.asked.pop_front() else {
                 return;
             };
             tracing::warn!("the clipboard history did not answer a paste in time, so it is typed");
             self.type_text(asked.source, asked.ask);
         }
+        if let Some((round, _)) = self.pasting.take.filter(|(_, since)| late(*since)) {
+            self.pasting.take = None;
+            tracing::warn!("the clipboard history did not answer the key page's Paste in time");
+            let dos = self.panel.pasted(round, ClipText::Busy);
+            self.dos(dos);
+        }
     }
 
-    /// When the oldest text's answer is due, if one is out.
+    /// When the oldest text's answer or the key page's take is due, if one is out.
     pub(super) fn paste_due(&self) -> Option<Mono> {
         let wait = self.held.settings.paste_wait();
-        (self.pasting.asked.front()).map(|a| a.since.saturating_add(wait))
+        let text = (self.pasting.asked.front()).map(|a| a.since);
+        let take = self.pasting.take.map(|(_, since)| since);
+        let first = [text, take].into_iter().flatten().min();
+        first.map(|since| since.saturating_add(wait))
     }
 
     /// Hands `ask`'s text to the clipboard history under a round of its own, noted before the bus hears it.

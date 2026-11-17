@@ -9,9 +9,9 @@ use std::time::Duration;
 use kx_mod_voice::models::table;
 use kx_mod_voice::{MANIFEST, VoiceModule};
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, Date, Drive, FieldWatchKey, FolderRevealKey, MB, ModelFiles,
-    ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey, VoiceLit, VoicePage, VoiceShelfKey,
-    VoiceView, WebLinkKey,
+    CalendarKey, ClipboardWriterKey, CloudButton, Date, Drive, FieldWatchKey, FolderRevealKey, MB,
+    ModelFiles, ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey, VoiceAct, VoiceClick,
+    VoiceLit, VoiceOpen, VoicePage, VoiceSheet, VoiceShelfKey, VoiceTab, VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted, ServiceId, ServiceKey,
@@ -173,4 +173,37 @@ fn ear<E: Event>(
 ) -> Subscription {
     let tx = tx.clone();
     bus.subscribe(move |e: &E| drop(tx.send(make(e)))).unwrap()
+}
+
+/// Clicks `click` on the view of round `round`, then waits for a view whose page `shows`; its round.
+pub fn click(
+    bus: &Bus,
+    heard: &Heard,
+    round: u32,
+    click: VoiceClick,
+    shows: fn(&VoiceSheet) -> bool,
+) -> u32 {
+    bus.publish(&VoiceAct { round, click }).unwrap();
+    heard.wait(|s| match s {
+        Said::View(page) => page
+            .panel
+            .as_ref()
+            .is_some_and(|p| shows(&p.sheet))
+            .then_some(page.round),
+        _ => None,
+    })
+}
+
+/// Opens the panel on the Cloud page with its first service ticked; the round of that view.
+pub fn first_service(bus: &Bus, heard: &Heard) -> u32 {
+    bus.publish(&VoiceOpen).unwrap();
+    let round = heard.wait(|s| match s {
+        Said::View(page) if page.panel.is_some() => Some(page.round),
+        _ => None,
+    });
+    let cloud = |s: &VoiceSheet| matches!(s, VoiceSheet::Cloud(_));
+    let round = click(bus, heard, round, VoiceClick::Open(VoiceTab::Cloud), cloud);
+    let ticked =
+        |s: &VoiceSheet| matches!(s, VoiceSheet::Cloud(c) if c.acts.contains(&CloudButton::Facts));
+    click(bus, heard, round, VoiceClick::Row(0), ticked)
 }

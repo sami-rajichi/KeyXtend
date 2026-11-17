@@ -1,12 +1,12 @@
 //! Quick-fill's take: what the clipboard holds now, read within the take's cap, whatever the history kept. The newest
 //! entry is forgotten when the text was read in full and the entry is that copy and not pinned, else the next copy
 //! keeps nothing if it is that text; no text, a text too long or a busy clipboard each answer as such, and nothing is
-//! logged.
+//! logged. Each answer names the module that asked.
 
 use kx_module_api::ports::{
     ClipAct, ClipError, ClipNote, ClipTake, ClipTaken, ClipText, MAX_FIELD_CHARS,
 };
-use kx_module_api::{Redacted, Zeroizing};
+use kx_module_api::{ModuleId, Redacted, Zeroizing};
 use kx_platform_fake::ShelfCall;
 use toml::Value;
 
@@ -18,12 +18,14 @@ use crate::fixture::{app, image, text as part};
 
 /// A password copied from a note.
 const PASSWORD: &str = "zebra-quartz";
+/// The module that asks in these tests.
+const ASKER: ModuleId = ModuleId::new("vault");
 /// The characters of the field Paste was asked on.
 const FIELD: usize = 50;
 
 /// Asks the take of round `round` for a field of `FIELD` characters.
 fn take(rig: &mut Rig, round: u32) {
-    rig.send(Msg::Take(ClipTake::new(round, FIELD)));
+    rig.send(Msg::Take(ClipTake::new(ASKER, round, FIELD)));
 }
 
 /// The answer that carries `text`.
@@ -34,7 +36,7 @@ fn text(text: &str) -> ClipText {
 /// Every answer, each as its round and what it found.
 fn answers(rig: &Rig) -> Vec<(u32, ClipText)> {
     let taken = rig.all().into_iter().filter_map(|h| match h {
-        Heard::Taken(ClipTaken { round, text }) => Some((round, text)),
+        Heard::Taken(ClipTaken { round, text, .. }) => Some((round, text)),
         _ => None,
     });
     taken.collect()
@@ -59,7 +61,7 @@ fn a_take_answers_the_text_held_now_and_forgets_the_newest_entry_that_is_this_co
     assert_eq!(kept(&mut rig), ["older"]);
     assert_eq!(
         rig.fakes.clip.take_cap(),
-        Some(ClipTake::new(3, FIELD).cap())
+        Some(ClipTake::new(ASKER, 3, FIELD).cap())
     );
 }
 
@@ -67,11 +69,12 @@ fn a_take_answers_the_text_held_now_and_forgets_the_newest_entry_that_is_this_co
 fn the_read_stops_at_the_takes_cap_never_past_the_longest_fields_room() {
     let mut rig = Rig::new();
     let wide = ClipTake {
+        asker: ASKER,
         round: 1,
         max_chars: usize::MAX,
     };
     rig.send(Msg::Take(wide));
-    let most = ClipTake::new(1, MAX_FIELD_CHARS).cap();
+    let most = ClipTake::new(ASKER, 1, MAX_FIELD_CHARS).cap();
     assert_eq!(rig.fakes.clip.take_cap(), Some(most));
 }
 
@@ -81,6 +84,7 @@ fn a_text_past_the_cap_is_too_long_and_forgets_nothing() {
     rig.text(PASSWORD);
     rig.fakes.clip.set_text(Some(PASSWORD));
     let short = ClipTake {
+        asker: ASKER,
         round: 2,
         max_chars: PASSWORD.chars().count() - 1,
     };
@@ -255,4 +259,19 @@ fn a_later_take_with_no_text_leaves_the_text_waiting() {
     take(&mut rig, 2);
     rig.text(PASSWORD);
     assert_eq!(rig.fakes.shelf.calls(ShelfCall::Save), 0, "nothing written");
+}
+
+#[test]
+fn an_answer_names_the_module_that_asked_so_only_it_takes_the_text() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some(PASSWORD));
+    let voice = ModuleId::new("voice");
+    rig.send(Msg::Take(ClipTake::new(voice, 4, FIELD)));
+    let askers: Vec<_> = (rig.all().into_iter())
+        .filter_map(|h| match h {
+            Heard::Taken(t) => Some((t.asker, t.round)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(askers, [(voice, 4)]);
 }

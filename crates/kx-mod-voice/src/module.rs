@@ -243,7 +243,8 @@ fn detached(job: Job) -> bool {
 }
 
 /// Hands the keyboard's, the ui's, the layouts', the clipboard history's and the mouse module's events to the actor; a
-/// typed key or a click outside our windows reaches it only as that, never with its text.
+/// typed key or a click outside our windows reaches it only as that, never with its text, and a clipboard answer only
+/// when it names this module.
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &VoiceKey| Some(Msg::Key))?;
     relay(cx, tx, |e: &VoiceAct| Some(Msg::Act(e.clone())))?;
@@ -252,7 +253,9 @@ fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |e: &LayoutChanged| Some(Msg::Layout(e.clone())))?;
     relay(cx, tx, |e: &TextDone| Some(Msg::Typed(*e)))?;
     relay(cx, tx, |e: &TextPasted| Some(Msg::Pasted(*e)))?;
-    relay(cx, tx, |e: &ClipTaken| Some(Msg::Taken(e.clone())))?;
+    relay(cx, tx, |e: &ClipTaken| {
+        (e.asker == ID).then(|| Msg::Taken(e.clone()))
+    })?;
     relay(cx, tx, |_: &Typed| Some(Msg::Elsewhere))?;
     relay(cx, tx, |e: &PointerPressed| {
         (!e.ours).then_some(Msg::Elsewhere)

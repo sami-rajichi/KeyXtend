@@ -104,16 +104,25 @@ impl Actor {
         })
     }
 
-    /// Asks the clipboard history for its text as Paste's `round`; an answer comes as `ClipTaken`.
-    fn take_clip(&self, round: u32) {
-        let take = ClipTake::new(round, MAX_KEY_BYTES);
+    /// Asks the clipboard history for its text as Paste's `round`, waited for up to `paste_ms`; an answer comes as
+    /// `ClipTaken`.
+    fn take_clip(&mut self, round: u32) {
+        self.pasting.take = Some((round, self.ports.clock.now()));
+        let take = ClipTake::new(crate::ID, round, MAX_KEY_BYTES);
         if let Err(error) = self.ports.bus.publish(&take) {
             tracing::warn!(%error, "the clipboard's text could not be asked for");
         }
     }
 
-    /// The clipboard history's answer to a Paste.
+    /// The clipboard history's answer to a Paste, which ends its wait.
     pub(super) fn clip_taken(&mut self, taken: ClipTaken) {
+        if self
+            .pasting
+            .take
+            .is_some_and(|(round, _)| round == taken.round)
+        {
+            self.pasting.take = None;
+        }
         let dos = self.panel.pasted(taken.round, taken.text);
         self.dos(dos);
     }

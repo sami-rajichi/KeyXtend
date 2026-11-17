@@ -1,9 +1,10 @@
 //! The key page's effects through the actor (ADR-0047): a set key is sealed and shown as dots, a removed one stops the
 //! upload under way (carry 7), the key's test runs in a job that reads the key there and whose late answer is dropped
-//! (carry 3), Paste asks the clipboard history as Quick-fill does (carry 9), and a card's link opens (edge 23).
+//! (carry 3), Paste asks the clipboard history as Quick-fill does and stops waiting after `paste_ms` (carry 9), and a
+//! card's link opens (edge 23).
 
 use kx_module_api::ports::{
-    ClipTake, ClipTaken, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
+    BarHint, ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
     VoiceClick, VoiceSheet, VoiceTab,
 };
 
@@ -11,6 +12,7 @@ use super::super::taps::{Heard, held, release, waiting};
 use super::*;
 use crate::actor::Msg;
 use crate::panel::Do;
+use crate::{ID, VoiceSettings};
 
 /// A key-like text, built as the test runs.
 fn made_key() -> String {
@@ -101,24 +103,41 @@ fn a_test_runs_off_the_actor_and_its_answer_after_the_key_changed_is_dropped() {
     );
 }
 
-#[test]
-fn paste_asks_the_clipboard_history_and_seals_its_text() {
-    let mut rig = on_lines();
-    rig.act(VoiceClick::Service(CloudButton::Paste));
+/// The clipboard text asked for since the rig began.
+fn asked(rig: &Rig) -> ClipTake {
     let take = rig.heard().into_iter().find_map(|h| match h {
         Heard::Take(take) => Some(take),
         _ => None,
     });
-    let take = take.expect("an ask for the clipboard's text");
-    assert_eq!(take, ClipTake::new(take.round, MAX_KEY_BYTES));
+    take.expect("an ask for the clipboard's text")
+}
+
+#[test]
+fn paste_asks_the_clipboard_history_and_seals_its_text() {
+    let mut rig = on_lines();
+    rig.act(VoiceClick::Service(CloudButton::Paste));
+    let take = asked(&rig);
+    assert_eq!(take, ClipTake::new(ID, take.round, MAX_KEY_BYTES));
     let key = made_key();
-    let text = ClipText::Text(secret(&key));
-    rig.send(Msg::Taken(ClipTaken {
-        round: take.round,
-        text,
-    }));
+    rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
     assert_eq!(sealed(&rig).as_deref(), Some(key.as_str()));
     assert!(rig.views().iter().all(|v| !format!("{v:?}").contains(&key)));
+}
+
+#[test]
+fn a_paste_unanswered_within_paste_ms_shows_busy_and_its_late_answer_is_dropped() {
+    let mut rig = on_lines();
+    rig.act(VoiceClick::Service(CloudButton::Paste));
+    let take = asked(&rig);
+    rig.advance(VoiceSettings::from_defaults().unwrap().paste_wait());
+    let note = rig
+        .views()
+        .last()
+        .and_then(|v| v.panel.clone())
+        .and_then(|p| p.note);
+    assert_eq!(note, Some(BarHint::Fault), "the busy clipboard's note");
+    rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&made_key())))));
+    assert_eq!(sealed(&rig), None, "the late answer is dropped");
 }
 
 #[test]

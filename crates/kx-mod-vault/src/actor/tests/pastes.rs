@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    ClipTake, ClipTaken, ClipText, EntryKind, FieldButton, FillButton, FillClick, FillNote, Sheet,
+    ClipTake, ClipText, EntryKind, FieldButton, FillButton, FillClick, FillNote, Sheet,
 };
 
 use super::super::Msg;
@@ -31,8 +31,8 @@ fn asked(rig: &mut Rig) {
 
 /// The clipboard history answers the last take with `text`.
 fn answer(rig: &mut Rig, text: ClipText) {
-    let round = rig.takes().last().unwrap().round;
-    rig.send(Msg::Taken(ClipTaken { round, text }));
+    let take = *rig.takes().last().unwrap();
+    rig.send(Msg::Taken(take.answer(text)));
 }
 
 /// The clipboard history answers the last take with the copied `text`.
@@ -55,7 +55,10 @@ fn paste_asks_once_for_twice_the_fields_characters_and_its_text_fills_the_field(
     asked(&mut rig);
     let takes = rig.takes();
     let field_chars = defaults().field_chars;
-    assert_eq!(takes, [ClipTake::new(takes[0].round, field_chars)]);
+    assert_eq!(
+        takes,
+        [ClipTake::new(crate::ID, takes[0].round, field_chars)]
+    );
     copied(&mut rig, "\r\nsam\r\nmartin\r\n");
     assert_eq!(user(&rig), "sam martin");
     assert_eq!(rig.note(), None);

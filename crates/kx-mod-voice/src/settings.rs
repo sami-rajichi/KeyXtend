@@ -135,7 +135,8 @@ pub struct VoiceSettings {
     pub type_gap_ms: u16,
     /// How a text goes in, by its name in `INSERTS`.
     pub insert: String,
-    /// The longest wait for the clipboard history to paste a text, in ms; then it is typed.
+    /// The longest wait for the clipboard history to paste a text, in ms, then it is typed; the key page's Paste waits as
+    /// long for the clipboard's text.
     pub paste_ms: u32,
     /// How long the bar shows the text, in ms.
     pub done_ms: u32,
