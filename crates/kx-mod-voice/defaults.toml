@@ -84,3 +84,13 @@ read_ms = 150
 copy_ms = 250
 # How often Copy tries again within that wait, in ms.
 copy_poll_ms = 10
+# Cloud services may be switched on; off, none is offered and every language uses its local model.
+cloud = false
+# The services the user switched on, by id: the day and terms number confirmed, and any typed address or model.
+services = {}
+# The longest wait for one cloud request's answer, in seconds.
+net_wait_s = 60
+# Tries per piece before a cloud note.
+net_tries = 2
+# Days after which a service card's facts show as old.
+facts_days = 180

@@ -1,10 +1,13 @@
 # kx-mod-voice
 
-Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models table and its order per language, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module reads its settings, drops a bad pick, and starts the actor that wires every part to the ports and the bus.
+Voice typing (P11, ADR-0042 to ADR-0044, ADR-0046 and ADR-0047): speak, and the keyboard types the text into the focused app. This crate holds the compiled-in models and services tables, the cloud rules and sealed keys, Automatic's device rule, the scorer that Compare and a card's check count words with, the dictation flow, History, the counts, the sealed store and the `[voice]` settings. It also holds the models folder, the downloads, Compare and the Voice panel's state. The module reads its settings, drops a bad service entry or pick, and starts the actor that wires every part to the ports and the bus.
 
 - **Models table** (`models`, `models.toml`): one row per local model with its file, size, SHA-256, a download address pinned to a commit on an allowed host, its licence and credit, its memory on the processor and on a card, and its languages with each model's own code. A bad table turns local models off; it never panics.
 - **Orders** (`models::order`): each tested language has a list, best first, with the day of its tests; its first is the default. The English, French and Arabic orders were ranked on the 2026-11-14 trial numbers (the owner's six clips, the voice detector at pad 300 ms). A language without a list takes the general order of the models that know it, marked untested. A model that never leads (`lead = false`, Nemotron) is first in no list.
-- **Picks** (`models::pick`): a pick per language names a row that knows it, or a model file of the folder; anything else goes back to that language's default alone.
+- **Picks** (`models::pick`): a pick per language names a row that knows it, or a model file of the folder; anything else goes back to that language's default alone. A cloud pick names a service and its model as `<service>:<model>` (`cloud::PICK_MARK`).
+- **Services table** (`services`, `services.toml`): one row per cloud service, Groq first then Custom: its request shape and form fields (a model may carry its own), its own HTTPS host or a typed address, its key header and test, its limits with room for the WAV header under the service's cap, its models with each language's code, its terms number and its dated facts. The validator refuses a broken row with its rule in plain words; a bad table turns cloud services off and never panics.
+- **Cloud rules** (`cloud`): nothing in the table is a default. A service is off until the user confirms its card while `cloud` is on, and only the user's own pick moves a language to it. `cloud` off or a hidden run offers no service, and a declined newer terms number turns the service off; either way its languages go back to their local models.
+- **Keys** (`keys`): each service's key is sealed alone as a blob named by its id in the shelf's `keys` folder, handed out as a `Secret` and wiped after use. Removing a key deletes its blob, and a hidden run reads and writes none.
 - **Other files** (`models::other`): a model file not in the table gets its memory from its size and its language code from its own facts.
 - **Device** (`device`): the processor until a card passes its check; Automatic then takes the passed card with room and the best gain, a picked card serves only when present, checked and with room, and every fallback says why.
 - **Score** (`score`, `score.toml`): words apart between two texts, per language. Case, punctuation and the apostrophe's forms are no difference, and digits 0 to 10 count as their number word in either gender. Arabic is strict: only the harakat, the superscript alef and tatweel go (the shared fold table's drops in the Arabic block), Arabic-Indic digits read as digits, and a hamza written apart joins its letter; ه for ة, a lost hamza or ي for ى is a word wrong, as the user would fix it.
@@ -27,7 +30,7 @@ Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046): speak, and the keyboard t
 | `FieldWatch` (`FieldWatchKey`) | Knows the focused box's kind: a password box shows dots, no Copy, and keeps nothing. |
 | `ClipboardWriter` (`ClipboardWriterKey`) | Copy on the bar and on a history row. |
 | `FolderReveal` (`FolderRevealKey`) | Shows the models folder in the file manager (ADR-0046). |
-| `SealedShelf` (`VoiceShelfKey`) | The store's own sealed shelf over `<data>/voice/`. |
+| `SealedShelf` (`VoiceShelfKey`) | The store's own sealed shelf over `<data>/voice/`, with the cloud keys in its `keys` folder. |
 | `Calendar` (`CalendarKey`) | History's times and the counts' days. |
 
 | Capability | Why |
@@ -35,7 +38,7 @@ Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046): speak, and the keyboard t
 | `Voice` | It gates the voice key, its light, the bar and the text to type (ADR-0042 decision 8). |
 | `Microphone` | It gates `SpeechKey`. |
 | `Network` | It gates `ModelFilesKey`, for the model downloads the user asks for, and nothing else. |
-| `SecretStore` | It gates `VoiceShelfKey`, which seals `<data>/voice/`: the history, kept recordings, counts, card checks and compare numbers. |
+| `SecretStore` | It gates `VoiceShelfKey`, which seals `<data>/voice/`: the history, kept recordings, counts, card checks, compare numbers and cloud keys. |
 | `ReadFocusedText` | It gates `FieldWatchKey`. |
 | `WriteClipboard` | It gates `ClipboardWriterKey`. |
 | `OpenFolder` | It gates `FolderRevealKey`. |
@@ -44,7 +47,7 @@ It provides no service, and it never injects input: the keyboard types each text
 
 ## Settings (`[voice]`, version 1)
 
-The defaults live only in `defaults.toml`, each with its one-line meaning. The ranges the ports already know come from `kx-module-api` (`SpeechAsk`, `JobLimits`, `FetchAsk`, `CardUse`); the module's own ranges are named constants in `src/settings.rs`. A bad key goes back to its default with the kernel's settings notice. A bad pick goes alone: the check takes any text pick, and every read of `[voice]` drops a bad one with `VoiceSettings::drop_bad_picks`, raises the same notice naming `picks.<lang>`, and writes the rest back.
+The defaults live only in `defaults.toml`, each with its one-line meaning. The ranges the ports already know come from `kx-module-api` (`SpeechAsk`, `JobLimits`, `FetchAsk`, `CardUse`, and `CloudAsk` for `net_wait_s` and `net_tries`); the module's own ranges are named constants in `src/settings.rs` and `src/settings/cloud.rs`. A bad key goes back to its default with the kernel's settings notice. A bad service entry or pick goes alone: the check takes any, and every read of `[voice]` drops a bad one with `VoiceSettings::drop_bad`, raises the same notice naming `services.<id>` or `picks.<lang>`, and writes back only the key it changed. An entry in `services` keeps the day and terms number the user confirmed, and any typed address, Other model and keep-nothing switch.
 
 | Group | Keys |
 |---|---|
@@ -53,14 +56,15 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 | Typing and bar | `type_suffix`, `history_join`, `type_gap_ms`, `insert`, `paste_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
 | History | `history`, `history_max`, `keep_voice`, `voice_max_mb` |
 | Worker | `job_mb`, `idle_min`, `ask_ms`, `load_s`, `warm_s`, `piece_wait_s`, `restart_ms`, `restart_max_ms` |
+| Cloud | `cloud`, `services`, `net_wait_s`, `net_tries`, `facts_days` |
 
 ## Public API
 
-`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad_picks`) and its `SPEC` with the range constants, `PLACES` and `place_name`; the `models`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
+`VoiceModule` (with `hidden` for a run whose saves would be hidden), `ID`, `MANIFEST`, `VoiceSettings` (with `drop_bad` and `services_value`), `ServiceOn` and its `SPEC` with the range constants, `PLACES` and `place_name`; the `models`, `services`, `cloud`, `keys`, `device`, `score`, `flow`, `history`, `counts`, `store`, `folder`, `fetch`, `compare`, `panel` and `view` modules for the actor, the ui and tests.
 
 ## Tests
 
-`cargo test -p kx-mod-voice`: unit and property tests of each part, the kernel's settings repair in `tests/voice/settings.rs`, `src/actor/tests` drives the actor over every port's fake without a thread, `tests/voice/module.rs` starts and stops the module on the fake host with a bad pick's notice and write-back, and `tests/voice/thread.rs` runs it on its threads: the key and the light, the typer, a panic and the feature off.
+`cargo test -p kx-mod-voice`: unit and property tests of each part, the kernel's settings repair in `tests/voice/settings.rs`, `src/actor/tests` drives the actor over every port's fake without a thread, `tests/voice/module.rs` starts and stops the module on the fake host with a bad pick's or service entry's notice and write-back, and `tests/voice/thread.rs` runs it on its threads: the key and the light, the typer, a panic and the feature off. `src/cloud/tests/props.rs` checks that no sequence of settings changes, picks or table loads moves a language from local to a service by itself; the keys' tests make their keys at run time.
 
 ## Security
 

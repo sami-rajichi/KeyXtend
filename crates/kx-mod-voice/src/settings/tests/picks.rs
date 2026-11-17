@@ -51,7 +51,7 @@ fn a_bad_pick_is_dropped_alone_and_named() {
         .chain(&bad)
         .map(|(l, p)| ((*l).to_owned(), (*p).to_owned()))
         .collect();
-    let dropped = s.drop_bad_picks();
+    let dropped = s.drop_bad();
     let named = [
         "picks", "picks.bg", "picks.es", "picks.nl", "picks.pl", "picks.pt", "picks.ro", "picks.sv",
     ];
@@ -62,5 +62,5 @@ fn a_bad_pick_is_dropped_alone_and_named() {
     let mut kept: Vec<&str> = good.iter().map(|(l, _)| *l).collect();
     kept.sort_unstable();
     assert_eq!(s.picks.keys().map(String::as_str).collect::<Vec<_>>(), kept);
-    assert!(s.drop_bad_picks().is_empty(), "a second read drops nothing");
+    assert!(s.drop_bad().is_empty(), "a second read drops nothing");
 }

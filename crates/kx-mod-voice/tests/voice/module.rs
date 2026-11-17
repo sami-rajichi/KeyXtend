@@ -1,5 +1,5 @@
-//! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick alone with the settings notice,
-//! fails on a bad section or a missing service, and stops.
+//! The module's start over the shared fake host: it reads `[voice]`, drops a bad pick or service entry alone with the
+//! settings notice, fails on a bad section or a missing service, and stops.
 
 use std::sync::{Arc, Mutex};
 
@@ -62,6 +62,36 @@ fn a_bad_pick_falls_back_alone_with_the_notice_and_is_written_back() {
     let saved = host.sink.read_as::<VoiceSettings>().unwrap();
     assert_eq!(saved.picks.get("ar").map(String::as_str), Some("cohere-q8"));
     assert_eq!(saved.picks.len(), 1);
+}
+
+#[test]
+fn a_service_entry_no_row_takes_is_dropped_alone_and_written_back() {
+    let mut host = Fakes::new().host();
+    let entry = |terms: i64| {
+        let on = "2026-11-17".parse::<toml::value::Datetime>().unwrap();
+        toml::Value::Table(toml::Table::from_iter([
+            ("on".to_owned(), toml::Value::Datetime(on)),
+            ("terms".to_owned(), terms.into()),
+        ]))
+    };
+    let services = [("groq", entry(1)), ("no-such-row", entry(1))];
+    let services = toml::Table::from_iter(services.map(|(k, v)| (k.to_owned(), v)));
+    host.put("services", toml::Value::Table(services));
+    let (heard, _guard) = notices(&host);
+    let mut module = VoiceModule::new();
+    assert!(start(&mut module, &mut host).is_ok());
+    stop(&mut module, &mut host);
+    let mut want = Notice::about(keys::SETTINGS_RESET, ID);
+    let named = vec!["services.no-such-row".into()];
+    want.args.push((args::KEYS, NoticeArg::List(named)));
+    assert_eq!(*heard.lock().unwrap(), [want]);
+    let mut groq = entry(1);
+    groq.as_table_mut()
+        .unwrap()
+        .insert("keep".to_owned(), true.into());
+    let kept = toml::Table::from_iter([("groq".to_owned(), groq)]);
+    let written = toml::Table::from_iter([("services".to_owned(), toml::Value::Table(kept))]);
+    assert_eq!(host.sink.writes(), [(ID, written)]);
 }
 
 #[test]

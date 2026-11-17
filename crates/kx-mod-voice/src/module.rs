@@ -17,7 +17,7 @@ use kx_module_api::{
 };
 
 use crate::actor::{Actor, Job, Msg, Ports, typer};
-use crate::settings::{PICKS, VoiceSettings};
+use crate::settings::{PICKS, SERVICES, VoiceSettings};
 use crate::{ID, MANIFEST};
 
 /// The actor thread's name, as a debugger shows it.
@@ -105,17 +105,32 @@ impl Drop for VoiceModule {
     }
 }
 
-/// `[voice]` with each bad pick dropped alone (edge case 19): the settings notice names it, and the rest is written
-/// back so the next start finds it gone.
+/// `[voice]` with each bad service entry and pick dropped alone (edge case 19): the settings notice names it, and the
+/// rest is written back so the next start finds it gone.
 fn read(cx: &ModuleCx<'_>) -> Result<VoiceSettings, ModuleError> {
     let mut settings = cx.settings::<VoiceSettings>()?;
-    let dropped = settings.drop_bad_picks();
+    let before = (settings.services.len(), settings.picks.len());
+    let dropped = settings.drop_bad();
     if dropped.is_empty() {
         return Ok(settings);
     }
-    if let Ok(picks) = toml::Value::try_from(&settings.picks) {
-        // A failed save keeps the repair for this run, and the kernel tells the user about the file.
-        let _ = cx.settings_handle().set(PICKS, picks);
+    let kept = [
+        (
+            SERVICES,
+            before.0 != settings.services.len(),
+            settings.services_value(),
+        ),
+        (
+            PICKS,
+            before.1 != settings.picks.len(),
+            toml::Value::try_from(&settings.picks).ok(),
+        ),
+    ];
+    for (key, _, value) in kept.into_iter().filter(|(_, changed, _)| *changed) {
+        if let Some(value) = value {
+            // A failed save keeps the repair for this run, and the kernel tells the user about the file.
+            let _ = cx.settings_handle().set(key, value);
+        }
     }
     let mut notice = Notice::about(keys::SETTINGS_RESET, ID);
     notice.args.push((args::KEYS, NoticeArg::List(dropped)));

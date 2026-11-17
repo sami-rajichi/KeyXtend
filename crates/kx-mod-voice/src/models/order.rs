@@ -208,7 +208,7 @@ fn places(ids: &[String], rows: &[Row], lang: Option<&str>) -> Result<Vec<usize>
 }
 
 /// The plain day `when` names; `None` for a time or an offset, or a day that does not exist.
-fn day(when: &Datetime) -> Option<Date> {
+pub(crate) fn day(when: &Datetime) -> Option<Date> {
     let date = when
         .date
         .filter(|_| when.time.is_none() && when.offset.is_none())?;

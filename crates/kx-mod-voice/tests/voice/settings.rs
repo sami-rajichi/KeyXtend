@@ -38,7 +38,7 @@ fn a_pick_of_a_row_no_longer_in_the_table_falls_back_alone() {
         "the kernel keeps the picks whole: {notices:?}"
     );
     assert_eq!((s.picks.len(), s.threads), (2, 4));
-    assert_eq!(s.drop_bad_picks(), ["picks.fr"]);
+    assert_eq!(s.drop_bad(), ["picks.fr"]);
     assert_eq!(used(&s, "fr"), "parakeet-v3-q8", "the default");
     assert_eq!(
         used(&s, "ar"),
@@ -50,7 +50,7 @@ fn a_pick_of_a_row_no_longer_in_the_table_falls_back_alone() {
 #[test]
 fn a_pick_of_a_row_that_does_not_know_the_language_falls_back_alone() {
     let (mut s, _) = load("picks = { ar = \"canary-v2-q8\", fr = \"canary-v2-q8\" }\n");
-    assert_eq!(s.drop_bad_picks(), ["picks.ar"]);
+    assert_eq!(s.drop_bad(), ["picks.ar"]);
     assert_eq!(used(&s, "ar"), "cohere-arabic-q8");
     assert_eq!(used(&s, "fr"), "canary-v2-q8");
 }
@@ -102,6 +102,6 @@ fn a_good_section_raises_no_notice() {
     assert!(notices.is_empty(), "{notices:?}");
     assert_eq!(s.bar_place(), BarPlace::Top);
     assert_eq!(s.device().name(), "Vulkan1");
-    assert!(s.drop_bad_picks().is_empty());
+    assert!(s.drop_bad().is_empty());
     assert_eq!(s.picks.len(), 2);
 }

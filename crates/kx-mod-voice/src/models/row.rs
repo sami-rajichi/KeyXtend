@@ -267,7 +267,7 @@ fn print_of(sha256: &str) -> Option<Fingerprint> {
 }
 
 /// True for text that is not empty and holds no hidden mark.
-fn one_line(text: &str) -> bool {
+pub(crate) fn one_line(text: &str) -> bool {
     !text.is_empty() && !text.chars().any(is_hidden)
 }
 

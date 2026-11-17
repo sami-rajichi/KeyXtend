@@ -1,25 +1,25 @@
 //! The `[voice]` settings (plan "Settings `[voice]`"): the switches, the folder and picks, the device, the listening
-//! and typing numbers, the bar, history and recordings, the card's check and the worker's limits. The worker's ranges
-//! are the ports' own, so a value is never checked twice; the rest are named consts here.
+//! and typing numbers, the bar, history and recordings, the card's check, the worker's limits and the cloud services.
+//! The worker's ranges are the ports' own, so a value is never checked twice; the rest are named consts here.
 
+mod cloud;
+mod drop;
 mod names;
 mod parts;
 
+pub(crate) use cloud::datetime;
+pub use cloud::{FACTS_DAYS, KEEP_START, ServiceOn};
 pub use names::{INSERTS, Insert, PLACES, insert_named, place_name, place_named};
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
 use std::path::Path;
 
-use kx_module_api::ports::{
-    CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, fits_iso, path_ok,
-};
+use kx_module_api::ports::{CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, path_ok};
 use kx_module_api::{
     Settings, SettingsError, SettingsSpec, is_hidden, refuse_if, validate_as, within,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::models::table;
 
 /// Seconds without speech before the bar hints that nothing is heard.
 pub const NOTHING_S: RangeInclusive<u8> = 2..=60;
@@ -66,6 +66,8 @@ const BAD_JOIN: &str =
 
 /// The picks' key in the section, which also names a dropped pick in the settings notice.
 pub(crate) const PICKS: &str = "picks";
+/// The switched-on services' key in the section, which also names a dropped entry in the settings notice.
+pub(crate) const SERVICES: &str = "services";
 /// The device's key in the section, which the Device page's Use writes.
 pub(crate) const DEVICE: &str = "device";
 /// The models folder's key in the section, which the first download's folder question writes.
@@ -91,8 +93,18 @@ pub struct VoiceSettings {
     pub on: bool,
     /// The models folder; empty until the first download asks for it.
     pub models_dir: String,
-    /// The user's model per language, by row id or file name.
+    /// The user's model per language, by row id or file name, or a service's id and model joined by `PICK_MARK`.
     pub picks: BTreeMap<String, String>,
+    /// Cloud services may be switched on; off, none is offered and every language uses its local model.
+    pub cloud: bool,
+    /// The services the user switched on, by row id.
+    pub services: BTreeMap<String, ServiceOn>,
+    /// The longest wait for one cloud request's answer, in seconds.
+    pub net_wait_s: u16,
+    /// Tries per piece before a cloud note.
+    pub net_tries: u8,
+    /// Days after which a card's facts show as old.
+    pub facts_days: u16,
     /// Where models run: `auto`, `cpu` or a card's id.
     pub device: String,
     /// Processor threads; 0 means the real cores.
@@ -244,34 +256,16 @@ impl VoiceSettings {
         refuse_if(!shows(&self.type_suffix, TYPE_SUFFIX_CHARS), BAD_SUFFIX)?;
         refuse_if(!shows(&self.history_join, HISTORY_JOIN_CHARS), BAD_JOIN)
     }
-
-    /// Drops each pick that is not a language code naming a row that knows it or a model file, alone (edge case 19),
-    /// and names the dropped ones as `picks.<lang>`. Nothing drops while the models table does not load.
-    pub fn drop_bad_picks(&mut self) -> Vec<String> {
-        let Ok(table) = table() else {
-            return Vec::new();
-        };
-        let mut dropped = BTreeSet::new();
-        self.picks.retain(|lang, pick| {
-            let iso = fits_iso(lang);
-            let good = iso && table.pick(lang, pick).is_some();
-            let name = || iso.then(|| format!("{PICKS}.{lang}"));
-            if !good {
-                dropped.insert(name().unwrap_or_else(|| PICKS.to_owned()));
-            }
-            good
-        });
-        dropped.into_iter().collect()
-    }
 }
 
 impl Settings for VoiceSettings {
-    /// Each range, the restart pair's order, then the named values; a bad pick is left for `drop_bad_picks`, so the
-    /// kernel never resets the other languages' picks with it.
+    /// Each range, the restart pair's order, then the named values; a bad pick or service entry is left for
+    /// `drop_bad`, so the kernel never resets the other languages' picks or services with it.
     fn check(&self) -> Result<(), SettingsError> {
         self.check_listening()?;
         self.check_job()?;
         self.check_own()?;
+        self.check_cloud()?;
         self.check_names()
     }
 }

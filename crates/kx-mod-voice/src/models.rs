@@ -6,9 +6,11 @@ mod other;
 mod pick;
 mod row;
 
+pub(crate) use order::day;
 pub use order::{OrderError, Ranked};
 pub use other::{Other, code_in};
 pub use pick::Pick;
+pub(crate) use row::one_line;
 pub use row::{Row, RowError};
 
 use std::collections::BTreeMap;
