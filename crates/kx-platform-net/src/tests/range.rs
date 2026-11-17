@@ -10,6 +10,7 @@ fn head(status: u16, len: Option<&str>, range: Option<&str>) -> Head {
         location: None,
         length: len.map(str::to_owned),
         range: range.map(str::to_owned),
+        extra: Vec::new(),
     }
 }
 

@@ -52,6 +52,10 @@ impl Http for Boom {
     fn send(&self, _: &Hop<'_>) -> Result<Reply, NetError> {
         panic!("the test client panics");
     }
+
+    fn deliver(&self, _: &kx_platform_net::Call<'_>) -> Result<Reply, NetError> {
+        panic!("the fetch job sends no call");
+    }
 }
 
 /// The size of the file `Drip` serves: far more reads than a test takes.
@@ -68,6 +72,10 @@ impl Http for Drip {
             head: Head::whole(len),
             body,
         })
+    }
+
+    fn deliver(&self, _: &kx_platform_net::Call<'_>) -> Result<Reply, NetError> {
+        Err(NetError::Net)
     }
 }
 

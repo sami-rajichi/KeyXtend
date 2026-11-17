@@ -59,32 +59,6 @@ impl<W: Write + ?Sized> Notes for Pipe<'_, W> {
     }
 }
 
-/// The client the shipped job downloads with: `WinHTTP` on Windows.
-#[cfg(windows)]
-pub fn live() -> Box<dyn Http> {
-    Box::new(kx_platform_net::WinHttp::new())
-}
-
-/// The client elsewhere: every download fails as `Net` until P15 brings an adapter.
-#[cfg(not(windows))]
-pub fn live() -> Box<dyn Http> {
-    Box::new(Offline)
-}
-
-/// A client with no network, for systems without an adapter yet; tests check it everywhere.
-#[cfg(any(test, not(windows)))]
-struct Offline;
-
-#[cfg(any(test, not(windows)))]
-impl Http for Offline {
-    fn send(
-        &self,
-        _: &kx_platform_net::Hop<'_>,
-    ) -> Result<kx_platform_net::Reply, kx_platform_net::NetError> {
-        Err(kx_platform_net::NetError::Net)
-    }
-}
-
 /// The fetch job: `run` with every panic kept off stderr.
 ///
 /// # Errors

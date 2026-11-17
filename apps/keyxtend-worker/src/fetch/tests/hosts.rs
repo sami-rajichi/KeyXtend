@@ -92,7 +92,7 @@ fn a_body_cut_partway_goes_on_from_the_next_address_at_the_parts_length() {
 #[test]
 fn a_system_without_an_adapter_fails_every_download_as_net() {
     let dir = Dir::new();
-    let (mut job, mut out) = (Job::new(Box::new(super::super::Offline)), Vec::new());
+    let (mut job, mut out) = (Job::new(Box::new(crate::client::Offline)), Vec::new());
     take(&mut job, get_of(1, &dir, &[URL, MIRROR], FILE), &mut out);
     drive(&mut job, &mut out);
     assert_eq!(out, [progress(1, 0), fault(1, FetchFault::Net)]);

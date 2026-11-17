@@ -1,9 +1,11 @@
-//! Worker-only HTTPS downloads (ADR-0004, ADR-0043 decision 8): the OS-neutral `Http` port with its redirect, range
-//! and fault rules, and `WinHttp`, its `WinHTTP` adapter. The uiAccess app never depends on this crate.
+//! Worker-only HTTPS requests (ADR-0004, ADR-0043 decision 8, ADR-0047 decision 6): the OS-neutral `Http` port with
+//! its redirect, range, header and fault rules, and `WinHttp`, its `WinHTTP` adapter. The uiAccess app never depends on
+//! this crate.
 
 // Backstop to the workspace lint: each unsafe block in the adapter still needs its own scoped allow.
 #![deny(unsafe_code)]
 
+mod call;
 mod error;
 #[cfg(any(test, feature = "fake"))]
 pub mod fake;
@@ -13,6 +15,7 @@ mod target;
 #[cfg(windows)]
 mod win;
 
+pub use call::{Call, Field, Verb};
 pub use error::NetError;
 pub use range::Span;
 pub use target::Target;
@@ -52,6 +55,17 @@ pub struct Head {
     pub length: Option<String>,
     /// `Content-Range`, which a partial answer names.
     pub range: Option<String>,
+    /// The headers a call asked to keep that the answer holds, as names and values.
+    pub extra: Vec<(String, String)>,
+}
+
+impl Head {
+    /// The kept header `name`'s value, its name matched in any case.
+    #[must_use]
+    pub fn header(&self, name: &str) -> Option<&str> {
+        let named = |(n, _): &&(String, String)| n.eq_ignore_ascii_case(name);
+        self.extra.iter().find(named).map(|(_, v)| v.as_str())
+    }
 }
 
 /// One answer: its head and its body.
@@ -96,7 +110,7 @@ pub struct Answer {
     pub body: Box<dyn Body>,
 }
 
-/// Sends GET requests; the worker's fetch job holds one, and tests a fake.
+/// Sends requests; the worker's fetch and speech jobs hold one, and tests a fake.
 pub trait Http: Send + Sync {
     /// Sends one GET and hands back the answer as it came, a redirect included.
     ///
@@ -104,6 +118,22 @@ pub trait Http: Send + Sync {
     /// `Net` when the name, the connection or TLS failed, `Stall` when no byte came in time, `Server` for a head that
     /// cannot be read, `Internal` otherwise.
     fn send(&self, hop: &Hop<'_>) -> Result<Reply, NetError>;
+
+    /// Sends one call as it is and hands back the answer as it came, a redirect included; use `call`.
+    ///
+    /// # Errors
+    /// As `send`.
+    fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError>;
+
+    /// Sends `call` once its head passes `Call::check`; a redirect comes back unfollowed, so its headers and body
+    /// reach one address only.
+    ///
+    /// # Errors
+    /// `Header` before anything is sent for a call `check` refuses; else as `send`.
+    fn call(&self, call: &Call<'_>) -> Result<Reply, NetError> {
+        call.check()?;
+        self.deliver(call)
+    }
 
     /// Gets `ask.url` from `ask.from` on, following at most `MAX_HOPS` redirects to listed HTTPS hosts.
     ///

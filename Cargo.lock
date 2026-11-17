@@ -1502,6 +1502,8 @@ dependencies = [
  "kx-platform-net",
  "png",
  "proptest",
+ "serde",
+ "serde_json",
  "sha2 0.11.1",
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
@@ -1767,6 +1769,7 @@ dependencies = [
  "kx-ipc",
  "thiserror 2.0.21",
  "windows",
+ "zeroize",
 ]
 
 [[package]]

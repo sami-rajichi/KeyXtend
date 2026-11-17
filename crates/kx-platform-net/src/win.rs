@@ -1,15 +1,16 @@
 //! The `WinHTTP` adapter, moved from the spike's `http.rs`: one session per request, TLS and the system's proxy from
-//! Windows, redirects handed back unfollowed, no cookies, and every wait capped by the hop's stall time.
+//! Windows, redirects handed back unfollowed, no cookies, and every wait capped by the request's stall time.
 
 mod codes;
 mod handle;
 mod head;
+mod post;
 #[cfg(test)]
 mod tests;
 
 use self::handle::{Handle, owned, set};
 use crate::range::range_header;
-use crate::{AGENT, Body, Hop, Http, NetError, Reply, Target, wait_ms};
+use crate::{AGENT, Body, Call, Hop, Http, NetError, Reply, Target, Verb, wait_ms};
 use windows::Win32::Networking::WinHttp::{
     WINHTTP_ACCESS_TYPE, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_DISABLE_COOKIES,
     WINHTTP_FLAG_SECURE, WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2, WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3,
@@ -18,16 +19,14 @@ use windows::Win32::Networking::WinHttp::{
     WINHTTP_OPTION_SECURE_PROTOCOLS, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest,
     WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest, WinHttpSetTimeouts,
 };
-use windows::core::{HSTRING, PCWSTR, w};
+use windows::core::{HSTRING, PCWSTR};
 
-/// The only verb this crate sends.
-const GET: PCWSTR = w!("GET");
 /// The TLS versions a session allows: 1.2 and 1.3.
 const TLS: u32 = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
 /// The TLS version a Windows without 1.3 in `WinHTTP` allows.
 const TLS_OLD: u32 = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
 
-/// Sends GET requests through `WinHTTP`, over HTTPS only.
+/// Sends GET and POST requests through `WinHTTP`, over HTTPS only.
 #[derive(Clone, Copy, Debug)]
 pub struct WinHttp {
     /// How the session reaches a server: through the system's proxy settings, or straight in tests.
@@ -69,18 +68,33 @@ impl Http for WinHttp {
         let wait = wait_ms(hop.stall_s);
         let session = self.session(i32::try_from(wait).unwrap_or(i32::MAX))?;
         let connect = connect(&session, hop.target)?;
-        let request = request(&connect, hop.target, wait)?;
+        let request = request(&connect, hop.target, Verb::Get, wait)?;
         send(&request, hop.from)?;
-        let head = head::read(&request)?;
-        let body = WinBody {
-            request,
-            _connect: connect,
-            _session: session,
-        };
-        Ok(Reply {
-            head,
-            body: Box::new(body),
-        })
+        let head = head::read(&request, &[])?;
+        Ok(reply(head, request, connect, session))
+    }
+
+    fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError> {
+        let wait = wait_ms(call.stall_s);
+        let session = self.session(i32::try_from(wait).unwrap_or(i32::MAX))?;
+        let connect = connect(&session, call.target)?;
+        let request = request(&connect, call.target, call.verb, wait)?;
+        post::send(&request, call)?;
+        let head = head::read(&request, call.keep)?;
+        Ok(reply(head, request, connect, session))
+    }
+}
+
+/// An answer with `head`, whose body reads from `request` while its handles stay open.
+fn reply(head: crate::Head, request: Handle, connect: Handle, session: Handle) -> Reply {
+    let body = WinBody {
+        request,
+        _connect: connect,
+        _session: session,
+    };
+    Reply {
+        head,
+        body: Box::new(body),
     }
 }
 
@@ -92,16 +106,16 @@ fn connect(session: &Handle, target: &Target) -> Result<Handle, NetError> {
     owned(unsafe { WinHttpConnect(session.raw(), &host, target.port(), 0) })
 }
 
-/// A secure GET of `target`'s path that hands redirects back, keeps no cookies and waits `wait` ms for its head.
+/// A secure `verb` of `target`'s path that hands redirects back, keeps no cookies and waits `wait` ms for its head.
 #[allow(unsafe_code, reason = "Opens a WinHTTP request.")]
-fn request(connect: &Handle, target: &Target, wait: u32) -> Result<Handle, NetError> {
+fn request(connect: &Handle, target: &Target, verb: Verb, wait: u32) -> Result<Handle, NetError> {
     let (path, none) = (HSTRING::from(target.path()), PCWSTR::null());
-    let accept = std::ptr::null();
-    // SAFETY: `connect` is open and `path` lives for the call; the default version, no referrer, no accept types.
+    let (verb, accept) = (HSTRING::from(verb.word()), std::ptr::null());
+    // SAFETY: `connect` is open; `verb` and `path` live for the call; the default version, no referrer or accept types.
     let req = unsafe {
         WinHttpOpenRequest(
             connect.raw(),
-            GET,
+            &verb,
             &path,
             none,
             none,

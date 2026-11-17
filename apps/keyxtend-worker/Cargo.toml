@@ -1,6 +1,6 @@
 [package]
 name = "keyxtend-worker"
-description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone and downloads model files outside the uiAccess keyboard (ADR-0004, ADR-0042)."
+description = "KeyXtend's worker program: it decodes untrusted images, reads backup boxes and KeePass files, records the microphone, downloads model files and sends dictations to a cloud service outside the uiAccess keyboard (ADR-0004, ADR-0042, ADR-0047)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -32,6 +32,10 @@ transcribe-cpp = { workspace = true, optional = true }
 kx-platform-net = { path = "../../crates/kx-platform-net" }
 # The fetch job's SHA-256 check: the same release `keepass` already builds into this program, so no new crate.
 sha2 = { version = "0.11.1", default-features = false }
+# The speech job reads a service's JSON reply (ADR-0047): `serde_json` 1.0.151, checked on 2026-11-17 and already in
+# the app, with `serde`, its own dependency.
+serde.workspace = true
+serde_json.workspace = true
 
 # The voice job's microphone; other systems build without it until P15, as Linux needs ALSA's headers for it.
 [target.'cfg(windows)'.dependencies]

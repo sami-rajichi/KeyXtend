@@ -1,8 +1,8 @@
-//! The adapter's error table, and one request to a local server on the loopback that speaks plain HTTP behind an
-//! HTTPS address, with no proxy: it is refused, and the first byte sent is TLS's, never a plain GET.
+//! The adapter's error table, and requests to a local server on the loopback that speaks plain HTTP behind an HTTPS
+//! address, with no proxy: each is refused, and the first byte sent is TLS's, never a plain GET or a POST's key.
 
 use super::{WinHttp, codes};
-use crate::{Hop, Http, NetError, Target};
+use crate::{Call, Field, Hop, Http, NetError, Target, Verb};
 use kx_ipc::STALL_S;
 use std::io::{Read, Write};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
@@ -72,6 +72,39 @@ fn a_plain_http_server_behind_an_https_address_is_refused() {
         access: WINHTTP_ACCESS_TYPE_NO_PROXY,
     };
     let got = direct.send(&hop).err();
+    done.store(true, Ordering::SeqCst);
+    drop(TcpStream::connect((Ipv4Addr::LOCALHOST, port)));
+    let first = server.join().unwrap();
+    assert_eq!(got, Some(NetError::Net));
+    assert_eq!(first, Some(HANDSHAKE), "the request starts with TLS");
+}
+
+#[test]
+fn a_post_to_a_plain_http_server_never_sends_its_key_in_clear() {
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let done = Arc::new(AtomicBool::new(false));
+    let server = {
+        let done = Arc::clone(&done);
+        std::thread::spawn(move || serve(&listener, &done))
+    };
+    let target = Target::parse(&format!("https://{}:{port}/v1", Ipv4Addr::LOCALHOST)).unwrap();
+    let fields = [Field {
+        name: "Authorization",
+        value: b"Bearer kx-test-key-not-real",
+    }];
+    let call = Call {
+        target: &target,
+        verb: Verb::Post,
+        fields: &fields,
+        body: b"sound",
+        keep: &[],
+        stall_s: *STALL_S.start(),
+    };
+    let direct = WinHttp {
+        access: WINHTTP_ACCESS_TYPE_NO_PROXY,
+    };
+    let got = direct.call(&call).err();
     done.store(true, Ordering::SeqCst);
     drop(TcpStream::connect((Ipv4Addr::LOCALHOST, port)));
     let first = server.join().unwrap();

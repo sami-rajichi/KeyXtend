@@ -28,7 +28,7 @@ mod span;
 #[cfg(any(test, feature = "engine"))]
 mod split;
 #[cfg(any(test, feature = "engine", feature = "gate"))]
-mod wav;
+pub(crate) mod wav;
 mod wipe;
 
 pub use job::Parts;
