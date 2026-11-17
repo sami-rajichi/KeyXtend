@@ -18,6 +18,7 @@ fn ready(models: u16, recording: bool) -> VoiceSheet {
         models,
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording,
+        preparing: false,
     })
 }
 
@@ -64,6 +65,28 @@ fn while_the_user_reads_start_goes_and_cancel_stays() {
         "Read the text now, then press Stop on the bar."
     );
     assert_eq!(p["sheet"]["line"], "1 ready model · Automatic (processor)");
+    assert_eq!(
+        buttons(&p["foot"]),
+        [button("button", "cancel", "Cancel", true, "plain")]
+    );
+}
+
+#[test]
+fn while_its_microphone_opens_start_goes_and_nothing_asks_to_read() {
+    let (rig, _face, _host) = rig("en", "en", "auto");
+    let heard = heard(&rig);
+    let preparing = VoiceSheet::Compare(CompareSheet::Ready {
+        models: 1,
+        device: DeviceLabel::Auto(DeviceName::Cpu),
+        recording: false,
+        preparing: true,
+    });
+    let p = panel_json(&rig, &heard, acting(preparing, &[PanelButton::Cancel]));
+    assert_eq!(
+        p["sheet"]["recording"],
+        Value::Null,
+        "no bar yet, so no ask to read"
+    );
     assert_eq!(
         buttons(&p["foot"]),
         [button("button", "cancel", "Cancel", true, "plain")]

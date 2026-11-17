@@ -231,9 +231,18 @@ fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
         models: 6,
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
+        preparing: false,
     };
     let shown = [ready, results].map(|s| shown(VoiceSheet::Compare(s)));
-    holds(&shown[0], &["models: 6", "Auto(Cpu)", "recording: false"]);
+    holds(
+        &shown[0],
+        &[
+            "models: 6",
+            "Auto(Cpu)",
+            "recording: false",
+            "preparing: false",
+        ],
+    );
     holds(&shown[1], &["day: Date", "RTX 4060", "wait_ms: 2900"]);
 }
 

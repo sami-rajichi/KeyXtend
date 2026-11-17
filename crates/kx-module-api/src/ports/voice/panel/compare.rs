@@ -58,8 +58,10 @@ pub enum CompareSheet {
         models: u16,
         /// Where they run.
         device: DeviceLabel,
-        /// The user reads it aloud now, so Start is gone and the bar's Stop ends it.
+        /// The microphone is open and the user reads it aloud now, so Start is gone and the bar's Stop ends it.
         recording: bool,
+        /// Its microphone opens: Start is gone and Cancel ends it, but nothing asks to read yet, as no bar shows.
+        preparing: bool,
     },
     /// Model `at` of `of` writes the recording, as in Model 3 of 6 · its name, with Cancel.
     Running {

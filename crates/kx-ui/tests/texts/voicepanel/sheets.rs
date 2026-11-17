@@ -153,6 +153,7 @@ pub fn ready() -> VoiceSheet {
         models: 6,
         device: DeviceLabel::Auto(DeviceName::Cpu),
         recording: false,
+        preparing: false,
     })
 }
 

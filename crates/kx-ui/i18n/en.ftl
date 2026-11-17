@@ -330,7 +330,7 @@ langkey =
 lang =
     .space = { $lang } · { $layout }
 
-## Theme names by themes.toml id: model names stay, plain words are translated.
+## Theme names by theme id (kx-theme's tokens/themes/*.toml): model names stay, plain words are translated.
 theme =
     .native = Native Adaptive
     .et66 = ET66

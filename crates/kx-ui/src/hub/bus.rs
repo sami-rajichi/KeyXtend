@@ -64,13 +64,16 @@ impl Hub {
     }
 
     /// Wakes the keyboard on each mouse mode change, used latch, scroll change, power change, vault state and Dictation
-    /// light through new handlers, the light through the `ui` module's gated handle. The face that `attach` takes
+    /// light through new handlers, the light through the gated handle `listen` keeps. The face that `attach` takes
     /// started first, so these run after its own and the window reads its new state; the last ones go.
     pub(super) fn hear_keys(self: &Arc<Self>) {
-        let Some(bus) = self.heard().bus.clone() else {
+        let kept = {
+            let heard = self.heard();
+            (heard.bus.clone(), heard.gated.clone())
+        };
+        let (Some(bus), Some(gated)) = kept else {
             return;
         };
-        let gated = bus.restricted(MANIFEST.capabilities);
         let keys = [
             self.hear(&bus, |hub, _: &AssistChanged| hub.wake(Wake::Keys)),
             self.hear(&bus, |hub, _: &LatchesUsed| hub.wake(Wake::Keys)),

@@ -5,7 +5,8 @@ use super::*;
 
 impl Seen {
     /// Checks a gear click that found the flow `busy` (and `preparing`) or Compare `recording`: only what records gets
-    /// a Cancel, a preparing run also closes with no bar, and a listening or writing one shows Cancel's note.
+    /// a Cancel, a preparing run also closes with no bar, a listening or writing one shows Cancel's note, and either is
+    /// noted as ended.
     pub(super) fn gear(
         &mut self,
         rig: &Rig,
@@ -39,6 +40,8 @@ impl Seen {
                 Some(BarHint::Cancelled),
                 "the gear ends it as Cancel does"
             );
+        }
+        if busy {
             self.geared.insert(rig.take);
         }
         Ok(())

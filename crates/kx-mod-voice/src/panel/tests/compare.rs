@@ -4,7 +4,7 @@
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     BarButton, CompareSheet, DeviceLabel, DeviceName, PanelButton, RunStep, SpeechDone, SpeechNote,
-    VoiceClick, VoiceSheet, VoiceTab,
+    SpeechStage, VoiceClick, VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Secret, Zeroizing};
 
@@ -75,25 +75,30 @@ fn recorded(rig: &mut Rig) -> u32 {
 #[test]
 fn the_compare_page_names_the_ready_models_and_where_they_run() {
     let mut rig = on_compare();
-    let want = CompareSheet::Ready {
+    let ready = |recording, preparing| CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
+        recording,
+        preparing,
     };
-    assert_eq!(sheet(&mut rig), want);
-    rig.click(&VoiceClick::Compare(set()));
-    assert!(matches!(
-        sheet(&mut rig),
-        CompareSheet::Ready {
-            recording: true,
-            ..
-        }
-    ));
-    let acts = rig.view().unwrap().acts;
+    assert_eq!(sheet(&mut rig), ready(false, false));
+    let out = rig.click(&VoiceClick::Compare(set()));
+    let [Do::Compare(Act::Open { take, .. })] = &out[..] else {
+        panic!("no open: {out:?}");
+    };
+    let take = *take;
+    let cancel = [PanelButton::Back, PanelButton::Close, PanelButton::Cancel];
+    let preparing = sheet(&mut rig);
     assert_eq!(
-        acts,
-        [PanelButton::Back, PanelButton::Close, PanelButton::Cancel]
+        preparing,
+        ready(false, true),
+        "no ask to read before the microphone opens"
     );
+    assert_eq!(rig.view().unwrap().acts, cancel);
+    rig.panel
+        .compare_note(take, SpeechNote::Stage(SpeechStage::Open));
+    assert_eq!(sheet(&mut rig), ready(true, false), "read now");
+    assert_eq!(rig.view().unwrap().acts, cancel);
 }
 
 #[test]

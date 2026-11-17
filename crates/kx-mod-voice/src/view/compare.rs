@@ -5,6 +5,7 @@ use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelBut
 
 use super::{Facts, device, short};
 use crate::compare::Line;
+use crate::flow::Lend;
 use crate::panel::{Key, Panel};
 
 impl Panel {
@@ -31,10 +32,12 @@ impl Panel {
             return self.results_sheet(facts);
         }
         let entrants = self.entrants(facts);
+        let lend = self.compare.lend();
         let sheet = CompareSheet::Ready {
             models: short(entrants.len()),
             device: device::label(facts, entrants.first().map(|e| &e.ready)),
-            recording: self.compare.recording(),
+            recording: lend == Lend::Listen,
+            preparing: lend == Lend::Prep,
         };
         (VoiceSheet::Compare(sheet), self.single())
     }

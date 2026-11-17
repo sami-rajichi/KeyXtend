@@ -1,6 +1,6 @@
 //! The ui holds `Voice` as an event gate only (ADR-0042 decision 7): it hears the views and sends the clicks and the
 //! open, the level needs no grant, and its code never types, hears typing done or presses the key. It hears the key's
-//! light only to redraw the keyboard at once, and never makes one, so it never lights it.
+//! light only to redraw the keyboard at once, in one handler, and never renames, makes or sends one.
 
 use std::fs;
 use std::path::Path;
@@ -16,8 +16,36 @@ use std::sync::Arc;
 const NEVER: [&str; 3] = ["TextAsk", "TextDone", "VoiceKey"];
 /// The key's light, which only the keys' wake names, to hear it.
 const LIGHT: &str = "VoiceLit";
-/// The one file that hears the light.
+/// The one file that hears the light, which names it twice: in its import and in one handler's argument.
 const HEARS_LIGHT: &str = "hub/bus.rs";
+/// That handler's argument.
+const HANDLER: &str = "_: &VoiceLit|";
+
+/// Checks how `file` names the light: in `HEARS_LIGHT` only its import and one handler, nowhere else, never under
+/// another name and never sent; true for `HEARS_LIGHT`.
+fn hears_light(file: &Path, code: &str) -> bool {
+    let shown = file.display();
+    assert!(
+        !code.contains(&format!("{LIGHT} as")),
+        "{shown} renames {LIGHT}"
+    );
+    assert!(
+        !code.contains(&format!("publish(&{LIGHT}")),
+        "{shown} sends {LIGHT}"
+    );
+    let named = code.matches(LIGHT).count();
+    if !file.ends_with(HEARS_LIGHT) {
+        assert_eq!(named, 0, "{shown} names {LIGHT}");
+        return false;
+    }
+    let handlers = code.matches(HANDLER).count();
+    assert_eq!(
+        (named, handlers),
+        (2, 1),
+        "{shown}: only its import and one handler"
+    );
+    true
+}
 
 #[test]
 fn the_ui_never_names_typing_or_the_key_and_only_hears_the_light() {
@@ -27,25 +55,15 @@ fn the_ui_never_names_typing_or_the_key_and_only_hears_the_light() {
         files.iter().any(|f| f.ends_with("hub/voice.rs")),
         "the walk reached the hub"
     );
+    let mut hearers = 0;
     for file in files {
         let code = fs::read_to_string(&file).unwrap();
         for name in NEVER {
             assert!(!code.contains(name), "{} names {name}", file.display());
         }
-        if code.contains(LIGHT) {
-            assert!(
-                file.ends_with(HEARS_LIGHT),
-                "{} names {LIGHT}",
-                file.display()
-            );
-            let made = code.contains(&format!("{LIGHT}::"));
-            assert!(
-                !made,
-                "{} makes a light, which only the voice module sends",
-                file.display()
-            );
-        }
+        hearers += usize::from(hears_light(&file, &code));
     }
+    assert_eq!(hearers, 1, "the walk reached {HEARS_LIGHT}");
 }
 
 #[test]

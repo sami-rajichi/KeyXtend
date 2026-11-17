@@ -65,7 +65,8 @@ pub(super) fn compare(cx: &Cx<'_>, c: &CompareSheet) -> Page {
             models,
             device,
             recording,
-        } => ready(cx, *models, device, *recording),
+            preparing,
+        } => ready(cx, *models, device, (*recording, *preparing)),
         CompareSheet::Running { at, of, name, rows } => {
             let sheet = Sheet::Running {
                 rows: rows.iter().map(|r| run(t, r)).collect(),
@@ -99,8 +100,14 @@ fn compare_page(cx: &Cx<'_>, sub: String, sheet: Sheet) -> Page {
     Page::new(tab_id(tab), cx.tab(tab), sub, sheet)
 }
 
-/// The set text with the `models` it runs on `device`, and Start, or Cancel while the user reads it.
-fn ready(cx: &Cx<'_>, models: u16, device: &DeviceLabel, recording: bool) -> Page {
+/// The set text with the `models` it runs on `device`, and Start, or Cancel while its microphone opens (`preparing`) or
+/// the user reads it (`recording`); only reading asks to read, as no bar shows before.
+fn ready(
+    cx: &Cx<'_>,
+    models: u16,
+    device: &DeviceLabel,
+    (recording, preparing): (bool, bool),
+) -> Page {
     let t = cx.t;
     let line = t.voice_counted(
         VOICE_READY,
@@ -120,7 +127,7 @@ fn ready(cx: &Cx<'_>, models: u16, device: &DeviceLabel, recording: bool) -> Pag
     };
     let mut page = compare_page(cx, cx.for_lang(), sheet);
     let start = Button::new(COMPARE, "", 0, t.text(VOICE_START)).on(models > 0);
-    page.foot = if recording {
+    page.foot = if recording || preparing {
         vec![cx.button(PanelButton::Cancel)]
     } else {
         vec![start.tone(Tone::Primary)]
