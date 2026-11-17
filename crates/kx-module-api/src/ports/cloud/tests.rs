@@ -6,6 +6,7 @@ use crate::ports::JobLimits;
 use crate::{REDACTED_MARKER, Redacted, SecretBytes, Zeroizing};
 
 mod ask;
+mod fits;
 mod pieces;
 mod url;
 

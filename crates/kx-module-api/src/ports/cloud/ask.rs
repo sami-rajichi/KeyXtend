@@ -93,13 +93,8 @@ impl CloudAsk {
         let model = self
             .model
             .as_ref()
-            .map_or(!self.shape.code().needs_model(), |m| {
-                fits(m.expose(), kx_ipc::rules::model)
-            });
-        let codes = [
-            (model, "model"),
-            (fits(&self.lang, kx_ipc::rules::token), "lang"),
-        ];
+            .map_or(!self.shape.needs_model(), |m| Self::model_fits(m.expose()));
+        let codes = [(model, "model"), (Self::lang_fits(&self.lang), "lang")];
         let bad = self
             .job
             .bad()
@@ -109,6 +104,25 @@ impl CloudAsk {
             .or_else(|| first_bad!(self, wait_s: Self::WAIT_S, tries: Self::TRIES))
             .or((!self.pieces_fit()).then_some("pieces"));
         refuse(bad)
+    }
+
+    /// True for a model's id the frames take: `rules::model` within `TAG_LEN`.
+    #[must_use]
+    pub fn model_fits(id: &str) -> bool {
+        fits(id, kx_ipc::rules::model)
+    }
+
+    /// True for a language code the frames take: `rules::token` within `TAG_LEN`.
+    #[must_use]
+    pub fn lang_fits(code: &str) -> bool {
+        fits(code, kx_ipc::rules::token)
+    }
+
+    /// True for a key a header carries: 1 to `MAX_KEY_BYTES` of visible ASCII (`rules::key`).
+    #[must_use]
+    pub fn key_fits(key: &str) -> bool {
+        let key = key.as_bytes();
+        (1..=MAX_KEY_BYTES).contains(&key.len()) && kx_ipc::rules::key(key).is_ok()
     }
 
     /// True for one to `PIECES` pieces, each whole samples within `limits.piece_bytes`, at most `MAX_RECORD_BYTES`
@@ -157,12 +171,10 @@ impl CloudTest {
 
 /// The name of the first of a request's shape, header and key that could break it, if any.
 fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'static str> {
-    let key = key.expose().as_bytes();
-    let key_ok = (1..=MAX_KEY_BYTES).contains(&key.len()) && kx_ipc::rules::key(key).is_ok();
     first_odd([
         (shape.fits(), "shape"),
         (header.fits(), "header"),
-        (key_ok, "key"),
+        (CloudAsk::key_fits(key.expose()), "key"),
     ])
 }
 

@@ -4,7 +4,7 @@
 
 use crate::ports::Link;
 use kx_ipc::MAX_URL_BYTES;
-use kx_ipc::rules::{https, https_host};
+use kx_ipc::rules::{covers, https, https_host};
 
 /// A checked HTTPS address within the frames' `MAX_URL_BYTES`: `LINK_SCHEME`, a plain lower-case host and maybe a port,
 /// then a path and query of link characters (`Link`). It prints redacted, as a typed address is the user's own.
@@ -24,6 +24,13 @@ impl HttpsUrl {
     #[must_use]
     pub fn host(&self) -> &str {
         https_host(self.0.expose())
+    }
+
+    /// True when its host is `entry`, or under `entry` when that starts with `.` (`rules::covers`), as a typed Azure
+    /// address must be under its service's domain.
+    #[must_use]
+    pub fn is_on(&self, entry: &str) -> bool {
+        covers(entry, self.host())
     }
 
     /// The whole address, for the job that sends to it.

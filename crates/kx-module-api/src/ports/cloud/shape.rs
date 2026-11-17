@@ -25,14 +25,21 @@ pub enum CloudShape {
 
 impl CloudShape {
     /// True when a form's names and values fit; the other shapes name no field.
-    pub(super) fn fits(&self) -> bool {
+    #[must_use]
+    pub fn fits(&self) -> bool {
         match self {
             Self::Form(form) => form.fits(),
             Self::Azure | Self::Eleven | Self::Gemini => true,
         }
     }
 
-    /// The frames' code for this shape, whose `needs_model` an ask checks.
+    /// True when a run must name a model, as the frames' code says: `ElevenLabs` and Gemini have no default one.
+    #[must_use]
+    pub const fn needs_model(&self) -> bool {
+        self.code().needs_model()
+    }
+
+    /// The frames' code for this shape.
     pub(super) const fn code(&self) -> ShapeCode {
         match self {
             Self::Form(_) => ShapeCode::Form,
@@ -91,7 +98,8 @@ pub enum KeyHeader {
 
 impl KeyHeader {
     /// True for `Bearer` or a plain header name.
-    pub(super) fn fits(&self) -> bool {
+    #[must_use]
+    pub fn fits(&self) -> bool {
         match self {
             Self::Bearer => true,
             Self::Named(name) => name_ok(name),
