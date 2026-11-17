@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 pub mod boxes;
+pub mod cloud;
 mod dirs;
 mod ear;
 pub mod field;

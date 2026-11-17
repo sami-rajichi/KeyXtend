@@ -4,6 +4,7 @@
 
 mod fetch;
 mod media;
+mod net;
 mod vault;
 pub mod voice;
 
@@ -13,7 +14,7 @@ pub use vault::VaultAct;
 pub use voice::VoiceAct;
 
 use super::{Frames, Heard, Launch, SpawnError, Spawner, Split, Worker};
-use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, VaultAsk, VoiceAsk};
+use kx_ipc::{CLEAN_EXIT, FetchAsk, IpcError, NetAsk, VaultAsk, VoiceAsk};
 use kx_module_api::{Clock, Mono};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -48,8 +49,8 @@ pub trait Faked: Frames {
     }
 }
 
-/// What the host did to a worker, in order, with the waits it gave; a vault, voice or fetch ask is kept whole, as its
-/// `Debug` hides its values.
+/// What the host did to a worker, in order, with the waits it gave; a vault, voice, fetch or net ask is kept whole,
+/// as its `Debug` hides its values.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
     Draw { id: u32, side: u32 },
@@ -57,6 +58,7 @@ pub enum Call {
     Vault(VaultAsk<'static>),
     Voice(VoiceAsk<'static>),
     Fetch(FetchAsk<'static>),
+    Net(NetAsk<'static>),
     Bye,
     Reply { within: Duration },
     End,

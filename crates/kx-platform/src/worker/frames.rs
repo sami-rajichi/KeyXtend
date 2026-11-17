@@ -1,10 +1,10 @@
-//! Each job's frames from `kx-ipc`: the media and vault jobs' asks and replies, and the voice and fetch jobs' asks and
-//! the notes they send on their own.
+//! Each job's frames from `kx-ipc`: the media and vault jobs' asks and replies, and the voice, fetch and speech-net
+//! jobs' asks and the notes they send on their own.
 
 use super::{Frames, Streams};
 use kx_ipc::{
-    Ask, FETCH_JOB, FetchAsk, FetchNote, IpcError, MEDIA_JOB, Reply, Stage, VAULT_JOB, VOICE_JOB,
-    VaultAsk, VaultReply, VoiceAsk, VoiceNote,
+    Ask, FETCH_JOB, FetchAsk, FetchNote, IpcError, MEDIA_JOB, NET_JOB, NetAsk, NetNote, Reply,
+    Stage, VAULT_JOB, VOICE_JOB, VaultAsk, VaultReply, VoiceAsk, VoiceNote,
 };
 use kx_module_api::ports::SpeechError;
 use std::io::{Read, Write};
@@ -159,6 +159,46 @@ impl Streams for FetchFrames {
         match note {
             FetchNote::Done { .. } | FetchNote::Fault { .. } => true,
             FetchNote::Progress { .. } => false,
+        }
+    }
+}
+
+/// The speech-net job's frames (ADR-0047): a run's pieces or a key's test, and the texts and ends it sends.
+#[derive(Debug)]
+pub struct NetFrames;
+
+impl Frames for NetFrames {
+    const JOB: &'static str = NET_JOB;
+    type Ask = NetAsk<'static>;
+    type Reply = NetNote;
+
+    fn bye() -> NetAsk<'static> {
+        NetAsk::Bye
+    }
+
+    fn id(note: &NetNote) -> u32 {
+        note.id()
+    }
+
+    fn write<W: Write + ?Sized>(ask: &NetAsk<'static>, w: &mut W) -> Result<(), IpcError> {
+        ask.write(w)
+    }
+
+    fn read<R: Read + ?Sized>(r: &mut R) -> Result<NetNote, IpcError> {
+        NetNote::read(r)
+    }
+}
+
+impl Streams for NetFrames {
+    fn ask_id(ask: &NetAsk<'static>) -> u32 {
+        ask.id()
+    }
+
+    /// A run's or a test's end, or its fault; a text goes on.
+    fn last(note: &NetNote) -> bool {
+        match note {
+            NetNote::Done { .. } | NetNote::Fault { .. } => true,
+            NetNote::Text { .. } => false,
         }
     }
 }

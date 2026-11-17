@@ -7,7 +7,7 @@ use super::run::Run;
 use super::send::{self, Sending};
 use super::shape;
 use super::{Event, Kit, Said, Told};
-use kx_ipc::{IpcError, NetAsk, NetCall, NetFault, NetNote};
+use kx_ipc::{IpcError, NET_TEST_TRIES, NetAsk, NetCall, NetFault, NetNote};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::panic::{self, AssertUnwindSafe};
@@ -16,8 +16,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::thread;
 
-/// A key's test sends once: a wrong key is told at once, and a 429 still waits once.
-const TEST_TRIES: u8 = 1;
 /// The name of each test's thread.
 const TESTER: &str = "speech-net-test";
 
@@ -145,7 +143,7 @@ impl Job {
             call,
             model: None,
             lang: Cow::Borrowed(""),
-            tries: TEST_TRIES,
+            tries: NET_TEST_TRIES,
             pace: None,
             dropped: dropped.clone(),
         };

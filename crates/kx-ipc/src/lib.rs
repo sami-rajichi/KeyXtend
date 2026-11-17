@@ -47,8 +47,8 @@ pub use limits::{
 };
 pub use limits::{
     MAX_FIXED, MAX_KEY_BYTES, MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_NET_TEXT_BYTES,
-    NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S,
-    piece_bytes,
+    NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PACE_S, NET_PER_MIN, NET_RENEW_S, NET_TEST_TRIES,
+    NET_TRIES, NET_TRY_WAITS, NET_UPLOAD_TIMES, NET_WAIT_S, piece_bytes,
 };
 pub use net::ask::NetAsk;
 pub use net::code::ShapeCode;

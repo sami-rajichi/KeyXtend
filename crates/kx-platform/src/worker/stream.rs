@@ -159,6 +159,26 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Stream<S, F> {
         sent.unwrap_or(Err(Lost::Gone.into()))
     }
 
+    /// Sends `ask` unwatched on a run the live worker took, without waiting: from any thread, the stream's own too. A
+    /// run no live worker took drops it.
+    pub(crate) fn post(&self, ask: F::Ask) {
+        self.queue(Box::new(move |flow| {
+            let _ = flow.ask(ask, Wait::Off);
+        }));
+    }
+
+    /// Runs `call` on the stream's thread after what it already holds, without waiting: from any thread.
+    pub(crate) fn later(&self, call: impl FnOnce() + Send + 'static) {
+        self.queue(Box::new(move |_| call()));
+    }
+
+    /// Hands `task` to the stream's thread; without the thread it is dropped.
+    fn queue(&self, task: Task<S, F>) {
+        if let Some(events) = &self.events {
+            let _ = events.send(Event::Task(task));
+        }
+    }
+
     /// Says goodbye to the worker now and drops every watch; the next fresh ask starts another.
     #[cfg(test)]
     pub(crate) fn stop(&self) {

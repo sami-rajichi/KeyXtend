@@ -217,6 +217,14 @@ pub const MAX_NET_RUN_TEXT_BYTES: usize =
 /// The largest reply `speech-net` reads from a service: ten minutes' words with their timings stay under 1 MiB, so
 /// this leaves room yet bounds a hostile reply.
 pub const MAX_NET_REPLY_BYTES: usize = 4 * MIB;
+/// The span a row's `per_min` counts requests in, in seconds; a request may wait this long for its turn.
+pub const NET_PACE_S: u16 = 60;
+/// The waits of `net_wait_s` one try may spend beside its upload: connecting, the service's answer and its reply.
+pub const NET_TRY_WAITS: u32 = 3;
+/// How many times its own length a piece's upload may take: a link at half the sound's rate still sends it.
+pub const NET_UPLOAD_TIMES: u32 = 2;
+/// A key's test sends once: a wrong key is told at once, and a 429 still waits once.
+pub const NET_TEST_TRIES: u8 = 1;
 
 /// The most bytes one cloud piece may hold within a row's `max_mb` and `max_s`, in whole samples.
 #[must_use]

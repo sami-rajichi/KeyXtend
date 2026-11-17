@@ -127,3 +127,19 @@ fn only_a_runs_end_takes_the_jobs_peak_and_never_lowers_its_own() {
     VoiceFrames::stamp(&mut level, &mut || panic!("a level reads no peak"));
     assert_eq!(level, crate::worker::fake::voice::level(ID));
 }
+
+#[test]
+fn a_net_watch_ends_at_done_or_a_fault_and_a_text_goes_on() {
+    let fault = kx_ipc::NetFault::Network;
+    let text = Zeroizing::new(String::new());
+    let ends = [NetNote::Done { id: ID }, NetNote::Fault { id: ID, fault }];
+    assert!(ends.iter().all(NetFrames::last));
+    let said = NetNote::Text {
+        id: ID,
+        index: 0,
+        text,
+    };
+    assert!(!NetFrames::last(&said), "the next text still comes");
+    assert_eq!(NetFrames::ask_id(&NetAsk::Cancel { id: ID }), ID);
+    assert_eq!(NetFrames::JOB, kx_ipc::NET_JOB);
+}
