@@ -1,7 +1,9 @@
 //! Properties over any run of clicks, notes, focus, session, layouts, Compare's lend and time: the key is lit only
 //! while listening, each run gets one Close and no call after it, no run stays open behind a hidden bar, none opens
-//! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, and a take once shown as dots
-//! is never shown or kept again.
+//! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, a take once shown as dots
+//! is never shown or kept again, and a run the gear ended types, keeps and counts nothing until Transcribe anyway.
+
+mod said;
 
 use super::close::panel;
 use super::*;
@@ -9,6 +11,7 @@ use kx_module_api::ports::SessionNote;
 use proptest::collection::vec;
 use proptest::prelude::*;
 use proptest::sample::select;
+use said::{Said, said};
 use std::collections::BTreeSet;
 
 /// Random runs per property.
@@ -24,70 +27,6 @@ const ON: f64 = 0.8;
 /// How often a note goes to the older take.
 const OLD: f64 = 0.1;
 
-/// The stages a run may tell.
-const STAGES: [SpeechStage; 5] = [
-    SpeechStage::Loading,
-    SpeechStage::Open,
-    SpeechStage::Shut,
-    SpeechStage::Limit,
-    SpeechStage::Silence,
-];
-
-/// The faults a run or a call may tell.
-const FAULTS: [SpeechError; 19] = [
-    SpeechError::Range("model"),
-    SpeechError::BadPath,
-    SpeechError::NoMic,
-    SpeechError::MicBusy,
-    SpeechError::MicRefused,
-    SpeechError::Unplugged,
-    SpeechError::NoFile,
-    SpeechError::BadFile,
-    SpeechError::Language,
-    SpeechError::Runner,
-    SpeechError::NoCard,
-    SpeechError::CardRoom,
-    SpeechError::CardFailed,
-    SpeechError::NoSound,
-    SpeechError::OutOfStep,
-    SpeechError::Memory,
-    SpeechError::Internal,
-    SpeechError::Timeout,
-    SpeechError::Gone,
-];
-
-/// What a run tells, by index into the tables above.
-#[derive(Copy, Clone, Debug)]
-enum Said {
-    Stage(usize),
-    Level(u8),
-    Heard,
-    Quiet,
-    /// A piece at its place, empty when true.
-    Piece(u16, bool),
-    Done,
-    Wiped,
-    Fault(usize),
-}
-
-impl Said {
-    fn note(self) -> SpeechNote {
-        match self {
-            Self::Stage(i) => SpeechNote::Stage(STAGES[i]),
-            Self::Level(level) => SpeechNote::Level(level),
-            Self::Heard => SpeechNote::Heard,
-            Self::Quiet => SpeechNote::Quiet,
-            Self::Piece(index, empty) => {
-                let text = secret(if empty { " " } else { "mot" });
-                SpeechNote::Piece { index, text }
-            }
-            Self::Done => SpeechNote::Done(done(1)),
-            Self::Wiped => SpeechNote::Wiped,
-            Self::Fault(i) => SpeechNote::Fault(FAULTS[i]),
-        }
-    }
-}
-
 /// One thing the flow meets.
 #[derive(Clone, Debug)]
 enum Step {
@@ -98,6 +37,8 @@ enum Step {
     Again,
     Over(bool),
     Panel(bool),
+    /// The gear or the tray: the panel's open reaches the flow, then the panel shows.
+    Gear,
     Field(FieldKind, u64),
     Elsewhere,
     Session(SessionNote),
@@ -112,19 +53,6 @@ enum Step {
     Quit,
     /// Compare's lend, which changes only while no dictation runs, as Compare starts only then.
     Lend(Lend),
-}
-
-fn said() -> impl Strategy<Value = Said> {
-    prop_oneof![
-        (0..STAGES.len()).prop_map(Said::Stage),
-        any::<u8>().prop_map(Said::Level),
-        Just(Said::Heard),
-        Just(Said::Quiet),
-        (0..3_u16, any::<bool>()).prop_map(|(i, empty)| Said::Piece(i, empty)),
-        Just(Said::Done),
-        Just(Said::Wiped),
-        (0..FAULTS.len()).prop_map(Said::Fault),
-    ]
 }
 
 fn step() -> impl Strategy<Value = Step> {
@@ -142,6 +70,7 @@ fn step() -> impl Strategy<Value = Step> {
         1 => Just(Step::Again),
         1 => any::<bool>().prop_map(Step::Over),
         1 => any::<bool>().prop_map(Step::Panel),
+        1 => Just(Step::Gear),
         1 => (select(kinds.to_vec()), 0..2_u64).prop_map(|(k, b)| Step::Field(k, b)),
         1 => Just(Step::Elsewhere),
         1 => select(SessionNote::ALL.to_vec()).prop_map(Step::Session),
@@ -168,6 +97,11 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
         Step::Again => rig.again(),
         Step::Over(over) => rig.click(VoiceClick::Over(*over)),
         Step::Panel(open) => rig.on(In::Panel(open.then(|| Box::new(panel())))),
+        Step::Gear => {
+            let mut out = rig.on(In::Opening);
+            out.extend(rig.on(In::Panel(Some(Box::new(panel())))));
+            out
+        }
         Step::Field(kind, box_id) => rig.field(*kind, *box_id),
         Step::Elsewhere => rig.on(In::Elsewhere),
         Step::Session(note) => rig.on(In::Session(*note)),
@@ -209,6 +143,10 @@ struct Seen {
     closed: BTreeSet<u32>,
     /// The takes shown as dots.
     masked: BTreeSet<u32>,
+    /// The takes the gear ended while they ran, until Transcribe anyway writes them again.
+    geared: BTreeSet<u32>,
+    /// The take opened last, which a text or a count belongs to.
+    live: u32,
     round: u32,
     ask: Option<TextAsk>,
 }
@@ -246,6 +184,39 @@ impl Seen {
                     );
                 }
                 Out::Count(_) => prop_assert!(!hidden, "a hidden run counted"),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks that a run the gear ended is never stopped, typed, kept or counted until Transcribe anyway writes it.
+    fn after_gear(&mut self, out: &[Out]) -> Result<(), TestCaseError> {
+        for effect in out {
+            match effect {
+                Out::Open { take, .. } => self.live = *take,
+                Out::Run {
+                    take,
+                    call: RunCall::Again(_),
+                } => {
+                    self.geared.remove(take);
+                }
+                Out::Run { take, call } => {
+                    let wrote = matches!(call, RunCall::Stop | RunCall::Keep);
+                    prop_assert!(
+                        !wrote || !self.geared.contains(take),
+                        "{call:?} after the gear"
+                    );
+                }
+                Out::Type(_) | Out::Count(_) => {
+                    prop_assert!(
+                        !self.geared.contains(&self.live),
+                        "{effect:?} after the gear"
+                    );
+                }
+                Out::Keep(kept) => {
+                    prop_assert!(!self.geared.contains(&kept.take), "kept after the gear");
+                }
                 _ => {}
             }
         }
@@ -291,9 +262,15 @@ proptest! {
         let mut rig = Rig::with(settings, hidden);
         let mut seen = Seen::default();
         for step in &steps {
-            let lent = rig.flow.lent.is_some();
+            let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
             let out = act(&mut rig, step, seen.ask.as_ref());
+            if busy && matches!(step, Step::Gear) {
+                seen.geared.insert(rig.take);
+                let hint = note(&rig.shown()).map(|(hint, _)| hint);
+                prop_assert_eq!(hint, Some(BarHint::Cancelled), "the gear ends it as Cancel does");
+            }
             seen.effects(&out, hidden, lent)?;
+            seen.after_gear(&out)?;
             seen.bar(&rig)?;
         }
     }

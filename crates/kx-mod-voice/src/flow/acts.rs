@@ -1,5 +1,5 @@
-//! The user's acts: the key, the bar's buttons, the pointer and Try again; and starting, stopping, cancelling and
-//! closing a dictation.
+//! The user's acts: the key, the bar's buttons, the gear, the pointer and Try again; and starting, stopping,
+//! cancelling and closing a dictation.
 
 use kx_module_api::ports::{BarButton, BarHint, PanelButton, VoiceAct, VoiceClick, VoiceText};
 
@@ -136,6 +136,13 @@ impl Flow {
         self.end_run(cancel, out);
         self.take = None;
         self.show_note(BarHint::Nothing, Some(BarButton::Listen), iso);
+    }
+
+    /// The gear or the tray opens the panel: a dictation that listens or writes ends first, as Cancel ends it.
+    pub(super) fn opening(&mut self, out: &mut Vec<Out>) {
+        if self.busy() {
+            self.cancel(out);
+        }
     }
 
     /// Cancel: nothing is typed, and the recording stays for Transcribe anyway.

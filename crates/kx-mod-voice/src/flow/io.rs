@@ -22,6 +22,8 @@ pub enum In {
     Ask,
     /// The panel to draw above the bar, or `None` once it closed; an open panel keeps the bar.
     Panel(Option<Box<VoicePanel>>),
+    /// The gear or the tray opens the panel (`VoiceOpen`); a dictation that listens or writes ends first.
+    Opening,
     /// A note from dictation `take`'s run, or a call's error told as a fault; an older take's notes are dropped.
     Note {
         /// The dictation the run belongs to, as `Out::Open` named it.

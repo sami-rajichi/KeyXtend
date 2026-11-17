@@ -5,7 +5,7 @@ use super::*;
 use kx_module_api::ports::{DeviceLabel, Pages, VoiceHome, VoicePanel, VoiceSheet};
 
 /// `done_ms` in the defaults.
-fn done_ms() -> u64 {
+pub(super) fn done_ms() -> u64 {
     VoiceSettings::from_defaults().unwrap().done_ms.into()
 }
 

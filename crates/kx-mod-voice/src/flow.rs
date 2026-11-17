@@ -133,6 +133,7 @@ impl Flow {
             In::Act(act) => self.act(&act, supply, &mut out),
             In::Ask => self.retell(&mut out),
             In::Panel(panel) => self.set_panel(panel),
+            In::Opening => self.opening(&mut out),
             In::Note { take, note } => self.note(take, note, &mut out),
             In::Field(change) => self.field(change),
             In::Elsewhere => self.elsewhere(),

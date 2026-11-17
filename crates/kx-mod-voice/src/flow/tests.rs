@@ -19,6 +19,7 @@ mod cancel;
 mod close;
 mod copied;
 mod faults;
+mod gear;
 mod lend;
 mod listen;
 mod outs;

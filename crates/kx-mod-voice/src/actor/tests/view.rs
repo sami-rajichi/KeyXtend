@@ -1,9 +1,12 @@
 //! The views: told once per change with a new round, the bar's times armed from the flow's deadline, and the panel
-//! riding on the view.
+//! riding on the view, its gear ending a running dictation first.
 
 use std::time::Duration;
 
-use kx_module_api::ports::{FieldKind, SpeechNote, VoiceBar, VoiceClick, VoiceSheet, VoiceTab};
+use kx_module_api::ports::{
+    BarButton, BarHint, FieldKind, SpeechNote, VoiceBar, VoiceClick, VoicePage, VoiceSheet,
+    VoiceTab,
+};
 
 use super::Msg;
 use super::rig::{Rig, english_layout};
@@ -58,5 +61,50 @@ fn the_gear_opens_the_panel_on_the_view_and_its_clicks_reach_the_panel() {
     assert!(matches!(
         page.panel.map(|p| p.sheet),
         Some(VoiceSheet::Models(_))
+    ));
+}
+
+#[test]
+fn the_gear_while_listening_cancels_the_run_before_the_panel_opens() {
+    let mut rig = Rig::new();
+    rig.listen();
+    let told = rig.views().len();
+    rig.send(Msg::Open);
+    let run = &rig.fake.speech.runs()[0];
+    assert_eq!((run.cancels, run.stops), (1, 0), "nothing is transcribed");
+    assert!(
+        run.held && !run.closed,
+        "the recording stays for Transcribe anyway"
+    );
+    assert_eq!(rig.lits().last(), Some(&false));
+    assert!(rig.asks().is_empty(), "nothing is typed");
+    let views = rig.views().split_off(told);
+    let cancelled =
+        |p: &VoicePage| matches!(&p.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled);
+    let note = views.iter().position(cancelled).unwrap();
+    let panel = views.iter().position(|p| p.panel.is_some()).unwrap();
+    assert!(
+        note < panel,
+        "the dictation ends first, then the panel opens"
+    );
+    let last = views.last().unwrap();
+    assert!(matches!(&last.bar, VoiceBar::Note(n) if n.act == Some(BarButton::Anyway)));
+}
+
+#[test]
+fn the_gear_while_preparing_cancels_the_run_and_the_key_never_lights() {
+    let mut rig = Rig::new();
+    rig.key();
+    rig.send(Msg::Open);
+    let run = &rig.fake.speech.runs()[0];
+    assert_eq!((run.cancels, run.stops), (1, 0));
+    assert_eq!(rig.lits(), [false], "the microphone never said it opened");
+    let page = rig.views().pop().unwrap();
+    assert!(
+        matches!(&page.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled && n.act.is_none())
+    );
+    assert!(matches!(
+        page.panel.map(|p| p.sheet),
+        Some(VoiceSheet::Home(_))
     ));
 }
