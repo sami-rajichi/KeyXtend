@@ -1,16 +1,7 @@
 //! An ask's and a test's ranges: each shape's fields, the key's header, the key, the model and language codes, the
-//! row's limits, the waits and the pieces, each refused by its name, and how big a piece may be.
+//! row's limits and the waits, each refused by its name; the pieces are in `pieces`.
 
 use super::*;
-
-/// `ask` as `check` refuses it, by the name of its bad value.
-fn refused(ask: &CloudAsk) -> Option<&'static str> {
-    match ask.check() {
-        Err(CloudFault::Range(name)) => Some(name),
-        Err(other) => panic!("not a range: {other:?}"),
-        Ok(()) => None,
-    }
-}
 
 /// The upload form naming its language `lang`, as a list when `list`, with `fixed` fields.
 fn form_as(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
@@ -127,20 +118,78 @@ fn a_header_or_a_key_that_could_break_a_requests_head_is_refused() {
     }
 }
 
+/// `ask()` for `model` in `lang`.
+fn ask_as(model: Option<&str>, lang: &str) -> CloudAsk {
+    CloudAsk {
+        model: model.map(|m| Redacted::new(m.into())),
+        lang: lang.into(),
+        ..ask()
+    }
+}
+
 #[test]
-fn a_model_or_language_code_that_is_no_plain_tag_is_refused() {
+fn real_model_ids_and_language_codes_pass() {
+    let ids = [
+        "whisper-large-v3-turbo",
+        "gpt-transcribe",
+        "openai/whisper-large-v3",
+        "voxtral-mini-transcribe-3-0",
+        "scribe_v3",
+        "gemini-3.5-transcribe",
+        "MAI-Transcribe-2",
+    ];
+    for id in ids {
+        assert_eq!(ask_as(Some(id), "fr").check(), Ok(()), "{id}");
+    }
+    for lang in ["fr", "ar-SA", "french", "zh_Hans"] {
+        assert_eq!(ask_as(Some(MODEL), lang).check(), Ok(()), "{lang}");
+    }
+}
+
+#[test]
+fn a_model_or_language_code_that_could_break_a_request_is_refused() {
     let past = "a".repeat(*crate::ports::TAG_LEN.end() + 1);
-    for code in ["", "fr FR", "عربي", past.as_str()] {
-        let model = CloudAsk {
-            model: Some(Redacted::new(code.into())),
-            ..ask()
+    let both = [
+        "",
+        "fr FR",
+        "عربي",
+        "a\"b",
+        "a\\b",
+        "a?b",
+        "a#b",
+        "a%b",
+        past.as_str(),
+    ];
+    for code in both.iter().chain(&["/ab", "ab/", "a//b", "a/../b"]) {
+        assert_eq!(
+            refused(&ask_as(Some(*code), "fr")),
+            Some("model"),
+            "{code:?}"
+        );
+    }
+    for code in both.iter().chain(&["fr/CA", "fr.CA", "fr:CA"]) {
+        assert_eq!(
+            refused(&ask_as(Some(MODEL), code)),
+            Some("lang"),
+            "{code:?}"
+        );
+    }
+}
+
+#[test]
+fn elevenlabs_and_gemini_need_a_model_and_the_others_take_none() {
+    let rows = [
+        (CloudShape::Eleven, Some("model")),
+        (CloudShape::Gemini, Some("model")),
+        (CloudShape::Azure, None),
+        (form(), None),
+    ];
+    for (shape, want) in rows {
+        let ask = CloudAsk {
+            shape: shape.clone(),
+            ..ask_as(None, "fr")
         };
-        assert_eq!(refused(&model), Some("model"), "{code:?}");
-        let lang = CloudAsk {
-            lang: code.into(),
-            ..ask()
-        };
-        assert_eq!(refused(&lang), Some("lang"), "{code:?}");
+        assert_eq!(refused(&ask), want, "{shape:?}");
     }
 }
 
@@ -193,52 +242,4 @@ fn each_limit_and_wait_outside_its_range_is_named() {
         ..test()
     };
     assert_eq!(slow.check(), Err(CloudFault::Range("wait_s")));
-}
-
-/// The row's limits with its fewest seconds a request, which cap a piece before its megabytes do.
-fn short() -> CloudLimits {
-    CloudLimits {
-        max_s: *CloudLimits::MAX_S.start(),
-        ..limits()
-    }
-}
-
-#[test]
-fn a_piece_may_hold_whole_samples_within_the_rows_size_and_seconds() {
-    let tight = CloudLimits {
-        max_mb: 1,
-        ..limits()
-    };
-    assert_eq!(tight.piece_bytes(), 1 << 20, "a megabyte of whole samples");
-    let by_time = usize::from(short().max_s) * crate::ports::SOUND_HZ * crate::ports::SAMPLE_BYTES;
-    assert_eq!(short().piece_bytes(), by_time);
-}
-
-#[test]
-fn pieces_past_the_cap_or_count_or_of_half_samples_are_refused() {
-    let (short, most) = (short(), short().piece_bytes());
-    let pieces = |sizes: &[usize]| sizes.iter().map(|n| sound(&vec![1; *n])).collect();
-    let over = CloudAsk::PIECES.end() + 1;
-    let bad = [
-        Vec::new(),
-        pieces(&[0]),
-        pieces(&[3]),
-        pieces(&[2, most + 2]),
-        pieces(&vec![2; over]),
-    ];
-    for pieces in bad {
-        let count = pieces.len();
-        let ask = CloudAsk {
-            limits: short,
-            pieces,
-            ..ask()
-        };
-        assert_eq!(refused(&ask), Some("pieces"), "{count} pieces");
-    }
-    let ask = CloudAsk {
-        limits: short,
-        pieces: pieces(&[most, 2]),
-        ..ask()
-    };
-    assert_eq!(ask.check(), Ok(()), "a piece at the cap fits");
 }

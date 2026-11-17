@@ -3,6 +3,7 @@
 
 use crate::ports::TAG_LEN;
 pub use kx_ipc::MAX_FIXED;
+use kx_ipc::ShapeCode;
 use kx_ipc::rules::{form_value, token};
 
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
@@ -28,6 +29,16 @@ impl CloudShape {
         match self {
             Self::Form(form) => form.fits(),
             Self::Azure | Self::Eleven | Self::Gemini => true,
+        }
+    }
+
+    /// The frames' code for this shape, whose `needs_model` an ask checks.
+    pub(super) const fn code(&self) -> ShapeCode {
+        match self {
+            Self::Form(_) => ShapeCode::Form,
+            Self::Azure => ShapeCode::Azure,
+            Self::Eleven => ShapeCode::Eleven,
+            Self::Gemini => ShapeCode::Gemini,
         }
     }
 }

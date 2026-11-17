@@ -61,10 +61,10 @@ pub struct CloudAsk {
     pub header: KeyHeader,
     /// The user's key: visible ASCII within `MAX_KEY_BYTES`, wiped on drop.
     pub key: Secret,
-    /// The model's id, such as `whisper-large-v3-turbo`, redacted as a typed Other model is the user's; `None` sends
-    /// none, as Lemonfox and Azure's classic take none.
+    /// The model's id, such as `openai/whisper-large-v3` (`rules::model`), redacted as a typed Other model is the
+    /// user's; `None` sends none, as Lemonfox and Azure's classic take none, and `needs_model` shapes refuse it.
     pub model: Option<Redacted<String>>,
-    /// The model's code for the language in front, such as `fr`, `ar-SA` or `french`, within `TAG_LEN`.
+    /// The model's code for the language in front, such as `fr`, `ar-SA` or `french`: a `rules::token` in `TAG_LEN`.
     pub lang: String,
     /// The row's limits.
     pub limits: CloudLimits,
@@ -72,7 +72,8 @@ pub struct CloudAsk {
     pub wait_s: u16,
     /// Tries per piece before its fault is told (`net_tries`).
     pub tries: u8,
-    /// The pieces in order, as the `voice` job cut them: 16 kHz mono 16-bit sound, each within `limits.piece_bytes`.
+    /// The pieces in order, as the `voice` job cut them: 16 kHz mono 16-bit sound, each within `limits.piece_bytes`, at
+    /// most `MAX_RECORD_BYTES` together.
     pub pieces: Vec<SecretBytes>,
 }
 
@@ -89,19 +90,16 @@ impl CloudAsk {
     /// # Errors
     /// `CloudFault::Range` naming the first such value.
     pub fn check(&self) -> Result<(), CloudFault> {
-        let most = self.limits.piece_bytes();
-        let piece = |p: &SecretBytes| {
-            let n = p.expose().len();
-            n > 0 && n <= most && n.is_multiple_of(SAMPLE_BYTES)
-        };
+        let model = self
+            .model
+            .as_ref()
+            .map_or(!self.shape.code().needs_model(), |m| {
+                fits(m.expose(), kx_ipc::rules::model)
+            });
         let codes = [
-            (
-                self.model.as_ref().is_none_or(|m| tag_ok(m.expose())),
-                "model",
-            ),
-            (tag_ok(&self.lang), "lang"),
+            (model, "model"),
+            (fits(&self.lang, kx_ipc::rules::token), "lang"),
         ];
-        let pieces = Self::PIECES.contains(&self.pieces.len()) && self.pieces.iter().all(piece);
         let bad = self
             .job
             .bad()
@@ -109,8 +107,19 @@ impl CloudAsk {
             .or_else(|| first_odd(codes))
             .or_else(|| self.limits.bad())
             .or_else(|| first_bad!(self, wait_s: Self::WAIT_S, tries: Self::TRIES))
-            .or((!pieces).then_some("pieces"));
+            .or((!self.pieces_fit()).then_some("pieces"));
         refuse(bad)
+    }
+
+    /// True for one to `PIECES` pieces, each whole samples within `limits.piece_bytes`, at most `MAX_RECORD_BYTES`
+    /// together, as the frames check.
+    fn pieces_fit(&self) -> bool {
+        let most = self.limits.piece_bytes();
+        let mut sizes = self.pieces.iter().map(|p| p.expose().len());
+        let total: usize = sizes.clone().sum();
+        let count = Self::PIECES.contains(&self.pieces.len());
+        let piece = |n: usize| n > 0 && n <= most && n.is_multiple_of(SAMPLE_BYTES);
+        count && total <= kx_ipc::MAX_RECORD_BYTES && sizes.all(piece)
     }
 }
 
@@ -157,9 +166,9 @@ fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'st
     ])
 }
 
-/// True for a plain tag within `TAG_LEN`, as the frames take a language code.
-fn tag_ok(text: &str) -> bool {
-    TAG_LEN.contains(&text.len()) && kx_ipc::rules::tag(text).is_ok()
+/// True for a code within `TAG_LEN` that passes `rule`, as the frames take a model's id or a language code.
+fn fits(text: &str, rule: fn(&str) -> Result<(), kx_ipc::IpcError>) -> bool {
+    TAG_LEN.contains(&text.len()) && rule(text).is_ok()
 }
 
 /// The name of the first rule that does not hold, if any.

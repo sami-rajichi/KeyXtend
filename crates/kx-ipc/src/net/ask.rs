@@ -1,6 +1,6 @@
 //! What the host sends the `speech-net` job: send a run's pieces, hand in their sound, test a key, cancel, or goodbye.
 
-use super::body::{put_call, put_run, put_sound, read_call, read_run, read_sound};
+use super::body::{named, put_call, put_run, put_sound, read_call, read_run, read_sound};
 use super::{NetCall, NetRun};
 use crate::code::Kind;
 use crate::error::IpcError;
@@ -68,6 +68,7 @@ impl NetAsk<'_> {
             Kind::NetSend => {
                 let call = read_call(&mut p)?;
                 let run = read_run(&mut p)?;
+                named(&call, &run)?;
                 NetAsk::Send { id, call, run }
             }
             Kind::NetSound => {
@@ -106,7 +107,8 @@ impl NetAsk<'_> {
         match self {
             Self::Send { call, run, .. } => {
                 put_call(s, call)?;
-                put_run(s, run)
+                put_run(s, run)?;
+                named(call, run)
             }
             Self::Sound { piece, bytes, .. } => put_sound(s, *piece, bytes),
             Self::Test { call, .. } => put_call(s, call),

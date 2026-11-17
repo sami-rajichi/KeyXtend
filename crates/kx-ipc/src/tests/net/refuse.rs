@@ -1,6 +1,6 @@
 //! Each net ask refusal, writing and reading: an address that is not plain HTTPS, a name, value or key that could
 //! break a request, a wait, try or limit outside its range, piece sizes past their caps, bad sound, extra bytes and a
-//! goodbye with an id.
+//! goodbye with an id. Model and language refusals are in `ids`.
 
 use super::*;
 use crate::{MAX_RECORD_BYTES, NET_MAX_MB, piece_bytes};
@@ -37,25 +37,22 @@ fn small() -> NetAsk<'static> {
     }
 }
 
-/// Checks that writing `ask` is refused with `err` and writes nothing.
-fn refused(ask: &NetAsk, err: IpcError) {
-    let mut out = Vec::new();
-    assert_eq!(ask.write(&mut out), Err(err), "{ask:?}");
-    assert!(out.is_empty());
-}
-
-/// Checks that each `(at, value)` patch of `good` is refused with `err` when read.
-fn refused_reads(good: &[u8], reads: &[(usize, &[u8])], err: IpcError) {
-    for &(at, value) in reads {
-        let bytes = patch(good.to_vec(), at, value);
-        assert_eq!(read_net_ask(&mut &bytes[..]), Err(err), "{at} {value:?}");
-    }
-}
-
 /// The largest piece Groq's limits take, in bytes.
 fn groq_cap() -> u32 {
     let limits = limits();
     u32::try_from(piece_bytes(limits.max_mb, limits.max_s)).unwrap()
+}
+
+/// Sets `run`'s limits to their tops, so a piece may be ten minutes, and returns that cap.
+fn at_top(run: &mut NetRun) -> u32 {
+    run.limits.max_mb = *NET_MAX_MB.end();
+    run.limits.max_s = *NET_MAX_S.end();
+    u32::try_from(run.limits.piece_bytes()).unwrap()
+}
+
+/// How many top pieces the longest dictation holds.
+fn top_pieces(top: u32) -> usize {
+    MAX_RECORD_BYTES / usize::try_from(top).unwrap()
 }
 
 #[test]
@@ -197,9 +194,8 @@ fn a_run_value_outside_its_range_is_refused_when_written() {
         (|r| r.sizes = vec![2, u32::MAX - 1], BadField),
         (
             |r| {
-                r.limits.max_mb = *NET_MAX_MB.end();
-                let half = u32::try_from(MAX_RECORD_BYTES / 2 + SAMPLE_BYTES).unwrap();
-                r.sizes = vec![half, half];
+                let top = at_top(r);
+                r.sizes = vec![top; top_pieces(top) + 1];
             },
             BadField,
         ),
@@ -213,14 +209,18 @@ fn a_run_value_outside_its_range_is_refused_when_written() {
 }
 
 #[test]
-fn a_piece_at_its_caps_passes() {
-    let cap = groq_cap();
-    let at_cap = NetAsk::Send {
-        id: 1,
-        call: small_call(),
-        run: run(vec![cap, 2]),
-    };
-    assert_eq!(NetAsk::read(&mut &net_ask_bytes(&at_cap)[..]), Ok(at_cap));
+fn a_piece_and_a_run_at_their_caps_pass() {
+    let mut longest = run(Vec::new());
+    let top = at_top(&mut longest);
+    longest.sizes = vec![top; top_pieces(top)];
+    for run in [run(vec![groq_cap(), 2]), longest] {
+        let at_cap = NetAsk::Send {
+            id: 1,
+            call: small_call(),
+            run,
+        };
+        assert_eq!(NetAsk::read(&mut &net_ask_bytes(&at_cap)[..]), Ok(at_cap));
+    }
 }
 
 #[test]

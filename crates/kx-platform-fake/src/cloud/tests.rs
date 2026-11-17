@@ -95,7 +95,7 @@ fn form() -> CloudShape {
 fn ask(sizes: &[usize]) -> CloudAsk {
     let limits = CloudLimits {
         max_mb: 25,
-        max_s: 3_600,
+        max_s: 600,
         per_min: 20,
         at_once: 2,
     };

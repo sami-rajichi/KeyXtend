@@ -15,14 +15,16 @@ const MAX_CASE_BYTES: usize = 64;
 const MAX_JUNK_BYTES: usize = 256;
 /// How far around each cap a case's length lands.
 const NEAR_CAP: u32 = 2;
-/// A plain HTTPS address with maybe a port, a path and a query.
-const URL: &str = "https://[a-z0-9-]{1,8}(\\.[a-z0-9-]{1,8}){0,2}(:[1-9][0-9]{0,3})?(/[A-Za-z0-9._~/?=&%-]{0,24})?";
+/// A plain HTTPS address, its last label never a number, with maybe a port, a path and a query.
+const URL: &str = "https://([a-z0-9-]{1,8}\\.){0,2}[a-z][a-z0-9-]{0,7}(:[1-9][0-9]{0,3})?(/[A-Za-z0-9._~/?=&%-]{0,24})?";
 /// A request's name.
 const NAME: &str = "[A-Za-z0-9_-]{1,16}";
 /// A form value: visible ASCII and spaces.
 const VALUE: &str = "[ -~]{0,24}";
-/// A key, a model id or a language code: visible ASCII.
-const TAG: &str = "[!-~]{1,24}";
+/// A key: visible ASCII.
+const KEY: &str = "[!-~]{1,24}";
+/// A model id: names parted by dots, slashes and colons.
+const MODEL_ID: &str = "[A-Za-z0-9_-]{1,8}([./:][A-Za-z0-9_-]{1,8}){0,2}";
 
 fn owned(s: String) -> Cow<'static, str> {
     Cow::Owned(s)
@@ -54,7 +56,7 @@ fn a_call() -> impl Strategy<Value = NetCall<'static>> {
         Just(NetHeader::Bearer),
         NAME.prop_map(|n| NetHeader::Named(owned(n)))
     ];
-    let key = TAG.prop_map(|k| Wiped::Kept(Zeroizing::new(k.into_bytes())));
+    let key = KEY.prop_map(|k| Wiped::Kept(Zeroizing::new(k.into_bytes())));
     (a_shape(), URL, header, key, NET_WAIT_S).prop_map(|(shape, url, header, key, wait_s)| {
         NetCall {
             shape,
@@ -78,8 +80,8 @@ fn a_run() -> impl Strategy<Value = NetRun<'static>> {
     let samples = 1..=u32::try_from(MAX_CASE_BYTES / SAMPLE_BYTES).unwrap();
     let size = samples.prop_map(|n| n * u32::try_from(SAMPLE_BYTES).unwrap());
     let sizes = prop::collection::vec(size, 1..=MAX_CASE_ITEMS);
-    let model = prop::option::of(TAG.prop_map(owned));
-    (model, TAG, limits, NET_TRIES, sizes).prop_map(|(model, lang, limits, tries, sizes)| NetRun {
+    let model = prop::option::of(MODEL_ID.prop_map(owned));
+    (model, NAME, limits, NET_TRIES, sizes).prop_map(|(model, lang, limits, tries, sizes)| NetRun {
         model,
         lang: owned(lang),
         limits,
@@ -97,8 +99,14 @@ fn a_net_ask() -> impl Strategy<Value = NetAsk<'static>> {
         piece,
         bytes: Wiped::Kept(Zeroizing::new(s.concat())),
     });
+    let send = (id(), a_call(), a_run(), MODEL_ID).prop_map(|(id, call, mut run, named)| {
+        if call.shape.code().needs_model() {
+            run.model.get_or_insert(owned(named));
+        }
+        NetAsk::Send { id, call, run }
+    });
     prop_oneof![
-        (id(), a_call(), a_run()).prop_map(|(id, call, run)| NetAsk::Send { id, call, run }),
+        send,
         sound,
         (id(), a_call()).prop_map(|(id, call)| NetAsk::Test { id, call }),
         id().prop_map(|id| NetAsk::Cancel { id }),
@@ -185,6 +193,19 @@ proptest! {
             let mut r = &junk[..];
             while read(&mut r).is_ok() {}
         }
+    }
+
+    #[test]
+    fn junk_after_the_magic_and_version_never_panics_and_reads_only_as_frames_that_hold_every_rule(
+        kind in prop_oneof![a_net_kind().prop_map(Code::code), any::<u8>()],
+        junk in prop::collection::vec(any::<u8>(), 0..MAX_JUNK_BYTES),
+    ) {
+        let bytes = [&MAGIC[..], &[VERSION, kind], &junk].concat();
+        for read in [read_net_ask as Reader, read_net_note] {
+            let mut r = &bytes[..];
+            while read(&mut r).is_ok() {}
+        }
+        reads_back(&bytes)?;
     }
 
     #[test]

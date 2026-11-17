@@ -6,6 +6,7 @@ use crate::ports::JobLimits;
 use crate::{REDACTED_MARKER, Redacted, SecretBytes, Zeroizing};
 
 mod ask;
+mod pieces;
 mod url;
 
 /// A key no output may show.
@@ -58,9 +59,18 @@ fn form() -> CloudShape {
 fn limits() -> CloudLimits {
     CloudLimits {
         max_mb: 25,
-        max_s: 3_600,
+        max_s: 600,
         per_min: 20,
         at_once: 2,
+    }
+}
+
+/// `ask` as `check` refuses it, by the name of its bad value.
+fn refused(ask: &CloudAsk) -> Option<&'static str> {
+    match ask.check() {
+        Err(CloudFault::Range(name)) => Some(name),
+        Err(other) => panic!("not a range: {other:?}"),
+        Ok(()) => None,
     }
 }
 
@@ -134,6 +144,9 @@ fn an_address_that_is_not_https_cannot_be_built() {
         "https://api.groq.com/a b",
         "https://api.groq.com/v1\r\nX-Key: 1",
         "https://مثال.com/v1",
+        "https://192.168.1.20:8443/v1",
+        "https://2130706433/v1",
+        "https://0x7f.1/v1",
         long.as_str(),
     ];
     for text in bad {
@@ -147,10 +160,7 @@ fn an_https_address_keeps_its_text_and_names_its_host() {
     let good = [
         (GROQ, "api.groq.com"),
         (azure, "kx-test.cognitiveservices.azure.com"),
-        (
-            "https://192.168.1.20:8443/v1/audio/transcriptions",
-            "192.168.1.20",
-        ),
+        ("https://stt.lan:8443/v1/audio/transcriptions", "stt.lan"),
         ("https://localhost:8000", "localhost"),
         (
             "https://api.elevenlabs.io/v1/speech-to-text?x=1",

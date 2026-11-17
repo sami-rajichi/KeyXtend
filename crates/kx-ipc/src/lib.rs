@@ -46,10 +46,12 @@ pub use limits::{
     THREADS,
 };
 pub use limits::{
-    MAX_FIXED, MAX_KEY_BYTES, MAX_NET_REPLY_BYTES, MAX_NET_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB,
-    NET_MAX_S, NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, piece_bytes,
+    MAX_FIXED, MAX_KEY_BYTES, MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_NET_TEXT_BYTES,
+    NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S,
+    piece_bytes,
 };
 pub use net::ask::NetAsk;
+pub use net::code::ShapeCode;
 pub use net::note::NetNote;
 pub use net::{NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetRun, NetShape};
 pub use reply::Reply;

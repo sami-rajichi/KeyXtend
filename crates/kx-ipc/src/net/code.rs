@@ -2,10 +2,10 @@
 
 use crate::code::Code;
 
-/// A request shape's byte; a form's names follow it.
+/// A request shape's byte, which a form's names follow; the port and the frames share its `needs_model` rule.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub(crate) enum ShapeCode {
+pub enum ShapeCode {
     /// The upload form.
     Form = 1,
     /// Azure's fast transcription.
@@ -21,6 +21,14 @@ impl Code for ShapeCode {
 
     fn code(self) -> u8 {
         self as u8
+    }
+}
+
+impl ShapeCode {
+    /// True when a run to this shape must name a model: `ElevenLabs` and Gemini have no default one.
+    #[must_use]
+    pub const fn needs_model(self) -> bool {
+        matches!(self, Self::Eleven | Self::Gemini)
     }
 }
 

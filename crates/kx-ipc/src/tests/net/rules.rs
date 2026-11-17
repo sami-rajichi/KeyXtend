@@ -1,12 +1,14 @@
-//! The net rules and caps the port shares: a service's address is plain HTTPS naming one host, request names and form
-//! values hold nothing a request misreads, a piece fits the row's size and time, and the text and reply caps.
+//! The net rules and caps the port shares: a service's address is plain HTTPS naming one host that never reads as a
+//! number, request names, form values, model ids and language codes hold nothing a request misreads, a piece fits the
+//! row's size and time, `ElevenLabs` and Gemini need a model, and the text and reply caps.
 
 use super::*;
 use crate::IpcError::BadField;
-use crate::rules::{form_value, https, https_host, token};
+use crate::code::Code;
+use crate::rules::{form_value, https, https_host, model, token};
 use crate::{
-    MAX_NET_REPLY_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB, NET_MAX_MB, PIECE_S,
-    RECORD_MAX_S, SOUND_HZ, piece_bytes,
+    MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB,
+    NET_MAX_MB, PIECE_S, RECORD_MAX_S, SOUND_HZ, ShapeCode, piece_bytes,
 };
 
 /// Seconds in a day.
@@ -18,7 +20,7 @@ fn an_https_address_passes_and_names_its_host() {
     let good = [
         (GROQ, "api.groq.com"),
         (azure, "kx-test.cognitiveservices.azure.com"),
-        ("https://192.168.1.20:8443/v1", "192.168.1.20"),
+        ("https://stt.lan:8443/v1", "stt.lan"),
         ("https://localhost:8000", "localhost"),
         (
             "https://api.elevenlabs.io/v1/speech-to-text?x=1",
@@ -63,6 +65,33 @@ fn an_address_that_could_reach_another_host_or_break_a_request_is_refused() {
 }
 
 #[test]
+fn a_host_whose_last_label_reads_as_a_number_is_refused() {
+    let numbers = [
+        "https://2130706433/v1",
+        "https://0x7f.1/v1",
+        "https://127.0.0.1/v1",
+        "https://192.168.1.20:8443/v1",
+        "https://a.0x7f/v1",
+        "https://a.0x/v1",
+        "https://a.0177/v1",
+        "https://speech.example.4/v1",
+    ];
+    for url in numbers {
+        assert_eq!(https(url), Err(BadField), "{url}");
+    }
+    let names = [
+        "https://0x7f.speech/v1",
+        "https://1.example/v1",
+        "https://a.0xg/v1",
+        "https://a.x7f/v1",
+        "https://a.4b/v1",
+    ];
+    for url in names {
+        assert_eq!(https(url), Ok(()), "{url}");
+    }
+}
+
+#[test]
 fn a_request_name_is_letters_digits_and_two_marks() {
     let good = [
         "language",
@@ -80,6 +109,46 @@ fn a_request_name_is_letters_digits_and_two_marks() {
 }
 
 #[test]
+fn a_model_id_is_a_name_with_dots_slashes_and_colons_and_a_language_a_name() {
+    let ids = [
+        "whisper-large-v3-turbo",
+        "gpt-transcribe",
+        "openai/whisper-large-v3",
+        "voxtral-mini-transcribe-3-0",
+        "scribe_v3",
+        "gemini-3.5-transcribe",
+        "MAI-Transcribe-2",
+        "whisper:large",
+    ];
+    for id in ids {
+        assert_eq!(model(id), Ok(()), "{id}");
+    }
+    let bad = [
+        "", "a b", "a\"b", "a\\b", "a?b", "a#b", "a%20b", "a&b", "a=b", "a+b", "/a", "a/", "a//b",
+        "../a", "a/../b", "a/./b", ".", "..", "عربي", "a\nb",
+    ];
+    for id in bad {
+        assert_eq!(model(id), Err(BadField), "{id:?}");
+    }
+    for lang in ["fr", "ar-SA", "french", "zh_Hans"] {
+        assert_eq!(token(lang), Ok(()), "{lang}");
+    }
+    for lang in [
+        "fr FR", "fr/FR", "fr.FR", "fr:FR", "fr\"", "fr?", "fr#", "fr%", "fr\\",
+    ] {
+        assert_eq!(token(lang), Err(BadField), "{lang:?}");
+    }
+}
+
+#[test]
+fn elevenlabs_and_gemini_alone_need_a_model() {
+    for &shape in ShapeCode::ALL {
+        let needs = matches!(shape, ShapeCode::Eleven | ShapeCode::Gemini);
+        assert_eq!(shape.needs_model(), needs, "{shape:?}");
+    }
+}
+
+#[test]
 fn a_form_value_is_visible_ascii_and_spaces() {
     for value in [r#"{"zdr":true}"#, "a b", ""] {
         assert_eq!(form_value(value), Ok(()), "{value}");
@@ -93,14 +162,12 @@ fn a_form_value_is_visible_ascii_and_spaces() {
 fn a_piece_fits_both_the_rows_size_and_its_time_in_whole_samples() {
     let per_s = SOUND_HZ * SAMPLE_BYTES;
     let mib = 1 << 20;
-    assert_eq!(piece_bytes(25, 3_600), 25 * mib, "Groq: size first");
+    assert_eq!(piece_bytes(10, 600), 10 * mib, "size first");
     assert_eq!(piece_bytes(1, 10), 10 * per_s, "time first");
     let top = piece_bytes(*NET_MAX_MB.end(), *NET_MAX_S.end());
-    assert_eq!(
-        top, MAX_RECORD_BYTES,
-        "the longest piece is the longest dictation"
-    );
-    for (mb, s) in [(1, 10), (7, 333), (25, 3_600)] {
+    assert_eq!(top, 600 * per_s, "the longest piece is ten minutes");
+    assert!(top < MAX_RECORD_BYTES, "a long dictation goes in pieces");
+    for (mb, s) in [(1, 10), (7, 333), (25, 600)] {
         assert_eq!(piece_bytes(mb, s) % SAMPLE_BYTES, 0);
     }
 }
@@ -108,11 +175,19 @@ fn a_piece_fits_both_the_rows_size_and_its_time_in_whole_samples() {
 #[test]
 fn the_caps_are_the_plans_and_hold_each_other() {
     assert_eq!(NET_JOB, "speech-net", "ADR-0047 decision 1");
-    let longest = RECORD_MAX_S.end() / u16::from(*PIECE_S.end());
-    assert_eq!(MAX_NET_TEXT_BYTES, MAX_TEXT_BYTES * usize::from(longest));
-    const { assert!(MAX_NET_REPLY_BYTES >= MAX_NET_TEXT_BYTES) };
     assert_eq!(*NET_MAX_S.start(), u16::from(*PIECE_S.start()));
-    assert_eq!(*NET_MAX_S.end(), *RECORD_MAX_S.end());
+    assert_eq!(
+        *NET_MAX_S.end(),
+        600,
+        "the controller's ruling: ten minutes"
+    );
+    let text = |s: &u16| MAX_TEXT_BYTES * usize::from(s / u16::from(*PIECE_S.end()));
+    assert_eq!(MAX_NET_TEXT_BYTES, text(NET_MAX_S.end()));
+    assert_eq!(MAX_NET_RUN_TEXT_BYTES, text(RECORD_MAX_S.end()));
+    assert_eq!(MAX_NET_TEXT_BYTES, 320_000);
+    assert_eq!(MAX_NET_REPLY_BYTES, 4 << 20);
+    const { assert!(MAX_NET_REPLY_BYTES >= MAX_NET_TEXT_BYTES) };
+    const { assert!(MAX_NET_RUN_TEXT_BYTES >= MAX_NET_TEXT_BYTES) };
     assert_eq!(
         NET_RENEW_S,
         1..=31 * DAY_S,

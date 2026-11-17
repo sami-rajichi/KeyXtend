@@ -12,7 +12,7 @@ pub(crate) mod wire;
 
 use crate::limits::piece_bytes;
 use crate::wiped::Wiped;
-use code::FaultCode;
+use code::{FaultCode, ShapeCode};
 use std::borrow::Cow;
 
 /// One call to a service: where it goes, how it carries the key and how long it waits; the job holds no table.
@@ -41,6 +41,19 @@ pub enum NetShape<'a> {
     Eleven,
     /// Gemini's single request, with the sound inline.
     Gemini,
+}
+
+impl NetShape<'_> {
+    /// This shape's code.
+    #[must_use]
+    pub const fn code(&self) -> ShapeCode {
+        match self {
+            Self::Form(_) => ShapeCode::Form,
+            Self::Azure => ShapeCode::Azure,
+            Self::Eleven => ShapeCode::Eleven,
+            Self::Gemini => ShapeCode::Gemini,
+        }
+    }
 }
 
 /// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound.
@@ -96,9 +109,9 @@ impl NetLimits {
 /// What a run sends besides its call: the model, the language, the row's limits, the tries and each piece's size.
 #[derive(Clone, PartialEq, Eq)]
 pub struct NetRun<'a> {
-    /// The model's id, a tag; `None` sends none.
+    /// The model's id (`rules::model`); `None` sends none, which `ShapeCode::needs_model` shapes refuse.
     pub model: Option<Cow<'a, str>>,
-    /// The model's code for the language in front, a tag.
+    /// The model's code for the language in front (`rules::token`).
     pub lang: Cow<'a, str>,
     /// The row's limits.
     pub limits: NetLimits,
@@ -136,7 +149,7 @@ pub enum NetFault {
     Network,
     /// The service gave no answer within the call's wait.
     Timeout,
-    /// The shape refused a value the frames let through, such as no model where it needs one.
+    /// The shape refused a value the frames let through, such as a `/` in a model id it puts in its address.
     Range,
     /// The job failed inside, reached its memory cap, or got an ask out of step.
     Gone,

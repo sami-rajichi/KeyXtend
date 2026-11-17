@@ -12,7 +12,6 @@ use crate::limits::{
     NET_WAIT_S, SAMPLE_BYTES,
 };
 use crate::rules::{self, ok_if, within};
-use crate::voice::body::{put_tag, read_tag};
 use crate::wiped::Wiped;
 use crate::wire::{Payload, Sink, Spec};
 use std::borrow::Cow;
@@ -40,13 +39,10 @@ fn read_text<R: Read + ?Sized>(
 
 /// Sends a shape: its code, then a form's language name, list flag and fixed fields.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
-    let form = match shape {
-        NetShape::Form(form) => form,
-        NetShape::Azure => return s.byte(ShapeCode::Azure.code()),
-        NetShape::Eleven => return s.byte(ShapeCode::Eleven.code()),
-        NetShape::Gemini => return s.byte(ShapeCode::Gemini.code()),
+    s.byte(shape.code().code())?;
+    let NetShape::Form(form) = shape else {
+        return Ok(());
     };
-    s.byte(ShapeCode::Form.code())?;
     put_text(s, TAG, &form.lang, rules::token)?;
     s.byte(u8::from(form.list))?;
     s.count(FIXED, form.fixed.len())?;
@@ -141,13 +137,18 @@ fn size(limits: NetLimits, n: u32, total: &mut usize) -> Result<u32, IpcError> {
     Ok(n)
 }
 
+/// Refuses a run with no model to a shape that needs one.
+pub(super) fn named(call: &NetCall<'_>, run: &NetRun<'_>) -> Result<(), IpcError> {
+    ok_if(run.model.is_some() || !call.shape.code().needs_model())
+}
+
 /// Sends a run: whether it names a model, the model, the language, the limits, the tries, then each piece's size.
 pub(super) fn put_run(s: &mut dyn Sink, run: &NetRun<'_>) -> Result<(), IpcError> {
     s.byte(u8::from(run.model.is_some()))?;
     if let Some(model) = &run.model {
-        put_tag(s, model)?;
+        put_text(s, TAG, model, rules::model)?;
     }
-    put_tag(s, &run.lang)?;
+    put_text(s, TAG, &run.lang, rules::token)?;
     let l = run.limits;
     s.u32(within(l.max_mb, &NET_MAX_MB)?)?;
     s.u16(within(l.max_s, &NET_MAX_S)?)?;
@@ -166,11 +167,11 @@ pub(super) fn read_run<R: Read + ?Sized>(
     p: &mut Payload<'_, R>,
 ) -> Result<NetRun<'static>, IpcError> {
     let model = if p.flag()? {
-        Some(Cow::Owned(read_tag(p)?))
+        Some(read_text(p, TAG, rules::model)?)
     } else {
         None
     };
-    let lang = Cow::Owned(read_tag(p)?);
+    let lang = read_text(p, TAG, rules::token)?;
     let limits = NetLimits {
         max_mb: within(p.u32()?, &NET_MAX_MB)?,
         max_s: within(p.u16()?, &NET_MAX_S)?,

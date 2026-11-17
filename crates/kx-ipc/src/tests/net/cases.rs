@@ -81,11 +81,11 @@ pub(super) fn groq() -> NetCall<'static> {
     call(form("language", false, Vec::new()), NetHeader::Bearer)
 }
 
-/// Groq's limits on its free plan.
+/// Groq's limits on its free plan, at most ten minutes a request.
 pub(super) fn limits() -> NetLimits {
     NetLimits {
         max_mb: 25,
-        max_s: 3_600,
+        max_s: 600,
         per_min: 20,
         at_once: 2,
     }
@@ -202,4 +202,19 @@ pub(super) fn patch(mut bytes: Vec<u8>, at: usize, value: &[u8]) -> Vec<u8> {
     let at = HEADER_LEN + at;
     bytes[at..at + value.len()].copy_from_slice(value);
     bytes
+}
+
+/// Checks that writing `ask` is refused with `err` and writes nothing.
+pub(super) fn refused(ask: &NetAsk, err: IpcError) {
+    let mut out = Vec::new();
+    assert_eq!(ask.write(&mut out), Err(err), "{ask:?}");
+    assert!(out.is_empty());
+}
+
+/// Checks that each `(at, value)` patch of `good` is refused with `err` when read.
+pub(super) fn refused_reads(good: &[u8], reads: &[(usize, &[u8])], err: IpcError) {
+    for &(at, value) in reads {
+        let bytes = patch(good.to_vec(), at, value);
+        assert_eq!(read_net_ask(&mut &bytes[..]), Err(err), "{at} {value:?}");
+    }
 }

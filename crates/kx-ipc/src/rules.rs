@@ -16,6 +16,14 @@ const HOST_END: [char; 2] = ['/', '?'];
 const PORT_MARK: char = ':';
 /// Marks a user name or a fragment, which a service's address never holds.
 const NOT_IN: [char; 2] = ['@', '#'];
+/// Starts a hex number, which a URL reader takes as part of an IPv4 address.
+const HEX_MARK: &str = "0x";
+/// The marks a model's id may hold besides a name's: a version's dot, a provider's slash and a tag's colon.
+const MODEL_MARKS: &[u8] = b"./:";
+/// Parts a model id's path segments, as in `openai/whisper-large-v3`.
+const SEGMENT_MARK: char = '/';
+/// Path segments that would climb or stay in an address's path.
+const DOT_SEGMENTS: [&str; 2] = [".", ".."];
 
 /// Format marks that reorder or hide text in a right-to-left panel: the Arabic letter mark, zero-width and direction
 /// marks, embeddings and overrides, invisible operators, isolates and the byte-order mark.
@@ -64,6 +72,18 @@ pub fn token(text: &str) -> Result<(), IpcError> {
     )
 }
 
+/// Refuses a model's id unless it is `token` bytes and `MODEL_MARKS` in `/` segments, none empty, `.` or `..`, so it
+/// breaks no body and climbs no address.
+///
+/// # Errors
+/// `BadField` for any other id.
+pub fn model(text: &str) -> Result<(), IpcError> {
+    let plain =
+        |b: u8| b.is_ascii_alphanumeric() || TOKEN_MARKS.contains(&b) || MODEL_MARKS.contains(&b);
+    let segment = |s: &str| !s.is_empty() && !DOT_SEGMENTS.contains(&s);
+    ok_if(text.bytes().all(plain) && text.split(SEGMENT_MARK).all(segment))
+}
+
 /// Refuses a form field's value unless it is visible ASCII and spaces, so it holds no line break.
 ///
 /// # Errors
@@ -73,7 +93,8 @@ pub fn form_value(text: &str) -> Result<(), IpcError> {
 }
 
 /// Refuses a service's address unless it is `HTTPS`, visible ASCII without `NOT_IN`, then a plain host (`listed`,
-/// never `UNDER`) within `MAX_HOST_BYTES` and maybe `:` and a port from 1; its requests may reach only that host.
+/// never `UNDER`, never a number) within `MAX_HOST_BYTES` and maybe `:` and a port from 1; its requests may reach only
+/// that host.
 ///
 /// # Errors
 /// `BadField` for anything else.
@@ -81,11 +102,25 @@ pub fn https(text: &str) -> Result<(), IpcError> {
     let plain = text.starts_with(HTTPS) && !text.contains(NOT_IN);
     visible(text.as_bytes())?;
     let (host, port) = host_port(text);
-    let digits = |p: &str| p.bytes().all(|b| b.is_ascii_digit());
     let port_ok = port.is_none_or(|p| digits(p) && p.parse::<u16>().is_ok_and(|n| n > 0));
     let short = !host.starts_with(UNDER) && host.len() <= MAX_HOST_BYTES;
-    ok_if(plain && port_ok && short)?;
+    ok_if(plain && port_ok && short && !numeric(host))?;
     listed(host)
+}
+
+/// True for a host whose last label is all digits or `HEX_MARK` and hex digits, which a URL reader takes as an IPv4
+/// address, as `2130706433` or `0x7f.1`; refusing it fails closed.
+fn numeric(host: &str) -> bool {
+    let last = host.rsplit(UNDER).next().unwrap_or_default();
+    let hex = last
+        .strip_prefix(HEX_MARK)
+        .is_some_and(|h| h.bytes().all(|b| b.is_ascii_hexdigit()));
+    hex || digits(last)
+}
+
+/// True when `text` is all ASCII digits.
+fn digits(text: &str) -> bool {
+    text.bytes().all(|b| b.is_ascii_digit())
 }
 
 /// The host of an address `https` takes, in lower case: the only one its requests may reach.
