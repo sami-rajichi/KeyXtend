@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-17 07:20 — P11: the gear ends a running dictation before the panel opens
+The bar's gear and the tray's Voice typing row opened the panel while the dictation kept recording. Opening the panel now first ends a preparing, listening or transcribing dictation exactly as Cancel does, so nothing is sent, transcribed or typed, and Transcribe anyway still works. The gear also ends a Compare models recording as Compare's own Cancel does, and flow, actor and property tests pin each case.
+
 ## 2026-11-16 21:40 — P11: the fetch tests' folders no longer race on Windows CI
 Windows CI failed a fetch test with "Access is denied" while making its folder. Each test deleted the shared parent folder when it looked empty, and Windows refuses a new folder inside one being deleted; a probe on this PC showed the same error. Each test now has its own folder in the profile folder and deletes only that, and the fetch tests passed 100 runs at 64 threads.
 
