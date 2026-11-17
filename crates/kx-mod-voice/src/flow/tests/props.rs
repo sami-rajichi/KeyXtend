@@ -1,8 +1,10 @@
 //! Properties over any run of clicks, notes, focus, session, layouts, Compare's lend and time: the key is lit only
 //! while listening, each run gets one Close and no call after it, no run stays open behind a hidden bar, none opens
 //! while Compare holds the run, rounds only grow, a hidden run keeps and counts nothing, a take once shown as dots
-//! is never shown or kept again, and a run the gear ended types, keeps and counts nothing until Transcribe anyway.
+//! is never shown or kept again, the gear cancels only what records, and a run it ended types, keeps and counts
+//! nothing until Transcribe anyway.
 
+mod gear;
 mod said;
 
 use super::close::panel;
@@ -97,11 +99,7 @@ fn act(rig: &mut Rig, step: &Step, ask: Option<&TextAsk>) -> Vec<Out> {
         Step::Again => rig.again(),
         Step::Over(over) => rig.click(VoiceClick::Over(*over)),
         Step::Panel(open) => rig.on(In::Panel(open.then(|| Box::new(panel())))),
-        Step::Gear => {
-            let mut out = rig.on(In::Opening);
-            out.extend(rig.on(In::Panel(Some(Box::new(panel())))));
-            out
-        }
+        Step::Gear => rig.gear(),
         Step::Field(kind, box_id) => rig.field(*kind, *box_id),
         Step::Elsewhere => rig.on(In::Elsewhere),
         Step::Session(note) => rig.on(In::Session(*note)),
@@ -190,39 +188,6 @@ impl Seen {
         Ok(())
     }
 
-    /// Checks that a run the gear ended is never stopped, typed, kept or counted until Transcribe anyway writes it.
-    fn after_gear(&mut self, out: &[Out]) -> Result<(), TestCaseError> {
-        for effect in out {
-            match effect {
-                Out::Open { take, .. } => self.live = *take,
-                Out::Run {
-                    take,
-                    call: RunCall::Again(_),
-                } => {
-                    self.geared.remove(take);
-                }
-                Out::Run { take, call } => {
-                    let wrote = matches!(call, RunCall::Stop | RunCall::Keep);
-                    prop_assert!(
-                        !wrote || !self.geared.contains(take),
-                        "{call:?} after the gear"
-                    );
-                }
-                Out::Type(_) | Out::Count(_) => {
-                    prop_assert!(
-                        !self.geared.contains(&self.live),
-                        "{effect:?} after the gear"
-                    );
-                }
-                Out::Keep(kept) => {
-                    prop_assert!(!self.geared.contains(&kept.take), "kept after the gear");
-                }
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-
     /// Checks the bar and the light after a step.
     fn bar(&mut self, rig: &Rig) -> Result<(), TestCaseError> {
         let shown = rig.shown();
@@ -263,11 +228,10 @@ proptest! {
         let mut seen = Seen::default();
         for step in &steps {
             let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
+            let recording = lent && matches!(rig.shown(), VoiceBar::Listening(_));
             let out = act(&mut rig, step, seen.ask.as_ref());
-            if busy && matches!(step, Step::Gear) {
-                seen.geared.insert(rig.take);
-                let hint = note(&rig.shown()).map(|(hint, _)| hint);
-                prop_assert_eq!(hint, Some(BarHint::Cancelled), "the gear ends it as Cancel does");
+            if matches!(step, Step::Gear) {
+                seen.gear(&rig, &out, busy, recording)?;
             }
             seen.effects(&out, hidden, lent)?;
             seen.after_gear(&out)?;

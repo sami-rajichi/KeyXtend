@@ -138,9 +138,10 @@ impl Flow {
         self.show_note(BarHint::Nothing, Some(BarButton::Listen), iso);
     }
 
-    /// The gear or the tray opens the panel: a dictation that listens or writes ends first, as Cancel ends it.
+    /// The gear or the tray opens the panel: a dictation that listens or writes, or Compare's recording, ends first as
+    /// the bar's Cancel ends it.
     pub(super) fn opening(&mut self, out: &mut Vec<Out>) {
-        if self.busy() {
+        if !self.lent_click(BarButton::Cancel, out) && self.busy() {
             self.cancel(out);
         }
     }

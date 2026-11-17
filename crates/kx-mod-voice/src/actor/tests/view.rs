@@ -108,3 +108,47 @@ fn the_gear_while_preparing_cancels_the_run_and_the_key_never_lights() {
         Some(VoiceSheet::Home(_))
     ));
 }
+
+#[test]
+fn the_gear_while_transcribing_cancels_the_writing_and_keeps_the_recording() {
+    let mut rig = Rig::new();
+    rig.listen();
+    rig.key();
+    assert_eq!(rig.bar(), VoiceBar::Transcribing);
+    rig.send(Msg::Open);
+    let run = &rig.fake.speech.runs()[0];
+    assert_eq!((run.cancels, run.stops), (1, 1));
+    assert!(
+        run.held && !run.closed,
+        "the recording stays for Transcribe anyway"
+    );
+    assert!(rig.asks().is_empty(), "nothing is typed");
+    let page = rig.views().pop().unwrap();
+    let anyway = Some(BarButton::Anyway);
+    assert!(
+        matches!(&page.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled && n.act == anyway)
+    );
+    assert!(matches!(
+        page.panel.map(|p| p.sheet),
+        Some(VoiceSheet::Home(_))
+    ));
+}
+
+#[test]
+fn the_gear_ends_a_dictation_started_under_the_open_panel_and_leaves_the_panel_as_it_was() {
+    let mut rig = Rig::new();
+    rig.send(Msg::Open);
+    rig.act(VoiceClick::Open(VoiceTab::Models));
+    rig.listen();
+    assert!(matches!(rig.bar(), VoiceBar::Listening(_)));
+    let before = rig.views().pop().unwrap().panel;
+    rig.send(Msg::Open);
+    assert_eq!(rig.fake.speech.runs()[0].cancels, 1);
+    let page = rig.views().pop().unwrap();
+    assert!(matches!(&page.bar, VoiceBar::Note(n) if n.hint == BarHint::Cancelled));
+    assert_eq!(page.panel, before, "the panel stays as it was");
+    assert!(matches!(
+        page.panel.map(|p| p.sheet),
+        Some(VoiceSheet::Models(_))
+    ));
+}

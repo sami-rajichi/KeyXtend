@@ -52,8 +52,8 @@ impl Flow {
         self.lit = listen;
     }
 
-    /// The key (as Stop), Stop or Cancel while Compare holds the run; true when the lend took the click. The light goes
-    /// off at the click, as for a dictation's Stop.
+    /// The key (as Stop), Stop, Cancel or the gear (as Cancel) while Compare holds the run; true when the lend took the
+    /// click. The light goes off at the click, as for a dictation's Stop.
     pub(super) fn lent_click(&mut self, button: BarButton, out: &mut Vec<Out>) -> bool {
         let Some(lent) = self.lent.as_mut() else {
             return false;

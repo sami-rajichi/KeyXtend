@@ -232,6 +232,13 @@ impl Rig {
         self.click(VoiceClick::Button(PanelButton::Again))
     }
 
+    /// The gear or the tray: the panel's open reaches the flow, then the panel shows.
+    fn gear(&mut self) -> Vec<Out> {
+        let mut out = self.on(In::Opening);
+        out.extend(self.on(In::Panel(Some(Box::new(close::panel())))));
+        out
+    }
+
     fn field(&mut self, kind: FieldKind, box_id: u64) -> Vec<Out> {
         self.on(In::Field(FieldChange { kind, box_id }))
     }

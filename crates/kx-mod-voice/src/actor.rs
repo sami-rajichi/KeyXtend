@@ -225,7 +225,7 @@ impl Actor {
         self.dos(dos);
     }
 
-    /// Ends a running dictation as Cancel does, then opens the panel on its home list, with the drives read now.
+    /// Ends a running dictation or Compare's recording as Cancel does, then opens the panel, with the drives read now.
     fn open_panel(&mut self) {
         self.step(In::Opening);
         self.held.drives = self.ports.files.drives();
