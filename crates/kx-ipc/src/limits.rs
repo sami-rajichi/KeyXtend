@@ -148,6 +148,8 @@ const MS_PER_S: u32 = 1000;
 pub const MAX_SOUND_MS: u32 = *RECORD_MAX_S.end() as u32 * MS_PER_S;
 /// The most text pieces a dictation is cut into: each but the last is at least `piece_s` long.
 pub const MAX_PIECES: usize = (*RECORD_MAX_S.end() / *PIECE_S.start() as u16) as usize + 1;
+/// The most speech pieces a listen-only Stop hands over: two in a row hold more than the shortest `piece_s`.
+pub const MAX_SPEECH_PIECES: usize = 2 * MAX_PIECES;
 /// The longest text of one piece in UTF-8 bytes: far past two minutes of speech in any script.
 pub const MAX_TEXT_BYTES: usize = 64_000;
 /// The longest file path in UTF-8 bytes.
@@ -277,6 +279,7 @@ const _: () = assert!(MAX_IMAGE_BYTES <= MAX_REPLY_LEN);
 const _: () = assert!(MAX_SOUND_BYTES.is_multiple_of(SAMPLE_BYTES));
 const _: () = assert!(MAX_SOUND_PIECES <= u16::MAX as usize);
 const _: () = assert!(MAX_PIECES <= u16::MAX as usize);
+const _: () = assert!(MAX_SPEECH_PIECES <= u16::MAX as usize);
 const _: () = assert!(*SILENCE_STOP_S.start() > 0);
 const _: () = assert!(PART_EXT.len() < MAX_PATH_BYTES);
 // A service's reply holds the longest text it may yield, a run holds its longest piece's text, and the longest piece

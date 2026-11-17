@@ -139,7 +139,8 @@ pub struct SpeechAsk {
     pub card: Option<CardUse>,
     /// Processor threads; 0 means the real cores, and more are capped at them.
     pub threads: u8,
-    /// A piece longer than this, in seconds, is cut at the next pause.
+    /// A piece longer than this, in seconds, is cut at the next pause; a run with no model packs its speech into
+    /// pieces no longer than this instead, the cloud row's own cut.
     pub piece_s: u8,
     /// The silence kept around speech when a piece is cut, in ms.
     pub pad_ms: u16,

@@ -7,7 +7,7 @@ use super::VoiceNote;
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
 use crate::frame::Head;
-use crate::limits::{MAX_PIECES, MAX_SOUND_MS};
+use crate::limits::{MAX_PIECES, MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_SPEECH_PIECES};
 use crate::rules::{ok_if, within};
 use crate::wire::Payload;
 use std::io::Read;
@@ -49,6 +49,10 @@ pub(super) fn read_run<R: Read + ?Sized>(
             let fault = VoiceFault::from_code(p.byte()?).ok_or(IpcError::BadField)?;
             VoiceNote::Fault { id, fault }
         }
+        Kind::SpeechOut => VoiceNote::Speech {
+            id,
+            piece: read_sound(p, MAX_SPEECH_PIECES)?,
+        },
         _ => return Err(IpcError::BadKind),
     })
 }
@@ -102,7 +106,7 @@ pub(super) fn read_answer<R: Read + ?Sized>(
         }
         Kind::SoundOut => VoiceNote::Sound {
             id,
-            piece: read_sound(p)?,
+            piece: read_sound(p, MAX_SOUND_PIECES)?,
         },
         _ => return Err(IpcError::BadKind),
     })

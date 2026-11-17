@@ -1,21 +1,24 @@
 //! A listening run: the source's chunks become 16 kHz mono samples, recorded up to `record_max_s`, measured into
-//! levels at `level_hz` and cut at pauses into pieces for the engine's writer. It stops itself at the limit, or after
-//! `silence_stop_s` of silence once speech was heard. Again cuts a held recording the same way, a stretch at a time.
+//! levels at `level_hz` and cut at pauses into pieces for the engine's writer, or packed for a listen-only run's Stop.
+//! It stops itself at the limit, or after `silence_stop_s` of silence once speech was heard. Again cuts a held
+//! recording the same way, a stretch at a time.
 
 use super::Notes;
 use super::cut::{Cut, Cutter, Piece};
 use super::engine::Writer;
+use super::hand::PIECE_SAMPLES;
 use super::job::Fail;
 use super::level::Meter;
 use super::mic::Opened;
+use super::pack::Packer;
 use super::resample::{Mixer, Resampler, pcm16};
 use super::span;
 use super::wipe::Buf;
 use kx_ipc::{SOUND_HZ, Setup, Stage, VoiceFault, VoiceNote};
 use std::any::Any;
 
-/// What an ended run leaves: its recording, and its writer when the engine still writes.
-pub type Ended = (Buf<i16>, Option<Box<dyn Writer>>);
+/// What an ended run leaves: its recording, its writer when the engine still writes, and a listen-only run's speech.
+pub type Ended = (Buf<i16>, Option<Box<dyn Writer>>, Option<Packer>);
 
 /// The held sound Again cuts in one turn of the job's loop: the detector judges it in tens of milliseconds.
 const REPLAY_S: u16 = 5;
@@ -32,6 +35,8 @@ pub struct Run {
     meter: Meter,
     cut: Option<Cutter>,
     writer: Option<Box<dyn Writer>>,
+    /// A listen-only run's speech, packed within `piece_s` and one frame for Stop.
+    pack: Option<Packer>,
     /// The recording, at most `cap` samples.
     sound: Buf<i16>,
     cap: usize,
@@ -58,6 +63,7 @@ impl Run {
             return Err(VoiceFault::Internal);
         }
         let cap = span::secs(setup.record_max_s);
+        let most = span::secs(setup.piece_s.into()).min(PIECE_SAMPLES);
         Ok(Self {
             id,
             epoch,
@@ -66,6 +72,7 @@ impl Run {
             rate: Resampler::new(format.rate, SOUND_HZ),
             meter: Meter::new(setup.level_hz),
             cut,
+            pack: writer.is_none().then(|| Packer::new(most)),
             writer,
             sound: Buf::with_limit(cap),
             cap,
@@ -90,12 +97,13 @@ impl Run {
         self.writer.is_some()
     }
 
-    /// Drops the writer, so no more text comes: a cancel or a fault.
+    /// Drops the writer and the packed speech, so no more text or speech comes: a cancel or a fault.
     pub fn mute(&mut self) {
-        self.writer = None;
+        (self.writer, self.pack) = (None, None);
     }
 
-    /// Closes the source and takes the last samples and the last piece; gives back the recording and the writer.
+    /// Closes the source and takes the last samples and the last piece; gives back the recording, the writer and the
+    /// packed speech, which is the whole recording when no detector cut it.
     ///
     /// # Errors
     /// As `take`.
@@ -108,7 +116,11 @@ impl Run {
             cut.finish(&mut cuts);
         }
         self.act(cuts, out)?;
-        Ok((std::mem::take(&mut self.sound), self.writer.take()))
+        if let (None, Some(pack)) = (&self.cut, self.pack.as_mut()) {
+            pack.add(0..self.sound.len());
+        }
+        let sound = std::mem::take(&mut self.sound);
+        Ok((sound, self.writer.take(), self.pack.take()))
     }
 
     /// Records 16 kHz samples up to the cap, tells their levels and acts on their cuts.
@@ -143,12 +155,16 @@ impl Run {
         Ok(())
     }
 
-    /// Gives the writer a copy of `piece` trimmed to its speech and pad; a silent piece is skipped.
+    /// Gives the writer a copy of `piece` trimmed to its speech and pad, or packs that stretch for a listen-only run; a
+    /// silent piece is skipped.
     fn give(&mut self, piece: &Piece) -> Result<(), VoiceFault> {
-        match self.writer.as_mut() {
-            Some(writer) => give(writer.as_mut(), &self.sound, piece, self.pad),
-            None => Ok(()),
+        if let Some(writer) = self.writer.as_mut() {
+            return give(writer.as_mut(), &self.sound, piece, self.pad);
         }
+        if let (Some(pack), Some(span)) = (self.pack.as_mut(), piece.trim(self.pad)) {
+            pack.add(span);
+        }
+        Ok(())
     }
 
     /// Why the run stops itself now, if it does.

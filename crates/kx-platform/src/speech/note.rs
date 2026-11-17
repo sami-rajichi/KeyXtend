@@ -9,7 +9,7 @@ use kx_module_api::ports::{
     CardId, Device, DeviceKind, Memory, SpeechDone, SpeechError, SpeechNote,
 };
 
-/// `note` as a run tells it; `None` for an answer or a sound piece, which no run hears.
+/// `note` as a run tells it; `None` for an answer, a sound piece or speech, which no run hears.
 pub(super) fn note(note: VoiceNote) -> Option<SpeechNote> {
     Some(match note {
         VoiceNote::Level { level, .. } => SpeechNote::Level(level),
@@ -41,7 +41,8 @@ pub(super) fn note(note: VoiceNote) -> Option<SpeechNote> {
         VoiceNote::Devices { .. }
         | VoiceNote::Facts { .. }
         | VoiceNote::Checked { .. }
-        | VoiceNote::Sound { .. } => return None,
+        | VoiceNote::Sound { .. }
+        | VoiceNote::Speech { .. } => return None,
     })
 }
 

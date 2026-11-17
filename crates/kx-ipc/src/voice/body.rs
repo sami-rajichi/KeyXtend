@@ -6,8 +6,7 @@ use super::{Device, DeviceKind, Model, Setup, SoundPiece, Target};
 use crate::code::Code;
 use crate::error::IpcError;
 use crate::limits::{
-    LEVEL_HZ, MAX_SOUND_PIECES, PAD_MS, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
-    THREADS,
+    LEVEL_HZ, PAD_MS, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S, THREADS,
 };
 use crate::rules::{self, ok_if, within};
 use crate::wiped::Wiped;
@@ -146,25 +145,30 @@ pub(crate) fn read_setup<R: Read + ?Sized>(
     })
 }
 
-/// `index` when it is below `MAX_SOUND_PIECES`.
-fn sound_index(index: u16) -> Result<u16, IpcError> {
-    ok_if(usize::from(index) < MAX_SOUND_PIECES)?;
+/// `index` when it is below `most`.
+fn sound_index(index: u16, most: usize) -> Result<u16, IpcError> {
+    ok_if(usize::from(index) < most)?;
     Ok(index)
 }
 
-/// Sends a sound piece: its index, whether it is the last, then its whole samples.
-pub(crate) fn put_sound(s: &mut dyn Sink, piece: &SoundPiece<'_>) -> Result<(), IpcError> {
-    s.u16(sound_index(piece.index)?)?;
+/// Sends a sound piece: its index below `most`, whether it is the last, then its whole samples.
+pub(crate) fn put_sound(
+    s: &mut dyn Sink,
+    piece: &SoundPiece<'_>,
+    most: usize,
+) -> Result<(), IpcError> {
+    s.u16(sound_index(piece.index, most)?)?;
     s.byte(u8::from(piece.last))?;
     s.field(SOUND, &piece.bytes)?;
     ok_if(piece.bytes.len().is_multiple_of(SAMPLE_BYTES))
 }
 
-/// Reads a sound piece into a wiped buffer, refusing a part sample before its bytes are read.
+/// Reads a sound piece with its index below `most` into a wiped buffer, refusing a part sample before its bytes.
 pub(crate) fn read_sound<R: Read + ?Sized>(
     p: &mut Payload<'_, R>,
+    most: usize,
 ) -> Result<SoundPiece<'static>, IpcError> {
-    let index = sound_index(p.u16()?)?;
+    let index = sound_index(p.u16()?, most)?;
     let last = p.flag()?;
     let n = p.count(SOUND)?;
     ok_if(n.is_multiple_of(SAMPLE_BYTES))?;

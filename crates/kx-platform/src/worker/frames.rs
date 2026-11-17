@@ -92,7 +92,8 @@ impl Streams for VoiceFrames {
         ask.id()
     }
 
-    /// A run's end, an ask's answer, the held recording's last piece, or a fault other than a card's.
+    /// A run's end, an ask's answer, the held recording's last piece, or a fault other than a card's; speech goes on
+    /// to its run's end.
     fn last(note: &VoiceNote) -> bool {
         match note {
             VoiceNote::Done { .. }
@@ -105,7 +106,8 @@ impl Streams for VoiceFrames {
             | VoiceNote::Heard { .. }
             | VoiceNote::Stage { .. }
             | VoiceNote::Warm { .. }
-            | VoiceNote::Piece { .. } => false,
+            | VoiceNote::Piece { .. }
+            | VoiceNote::Speech { .. } => false,
         }
     }
 

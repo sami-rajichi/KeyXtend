@@ -59,7 +59,7 @@ impl Job {
     fn cancel(&mut self, id: u32, out: &mut dyn Notes) -> Result<(), Fail> {
         if let Some(mut run) = self.run.take_if(|r| r.id == id) {
             run.mute();
-            let (sound, _) = run.end(out)?;
+            let (sound, ..) = run.end(out)?;
             self.held = Some(Held::new(id, sound));
             out.tell(stage(id, Stage::Shut))?;
             return Ok(());

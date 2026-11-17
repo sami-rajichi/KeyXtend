@@ -1,8 +1,9 @@
-//! A listening run: levels at `level_hz` from any format, the recording handed over at Stop in pieces under the cap,
-//! the limit and the silence stop, a lost or refused source, and pieces reaching the engine trimmed and in order.
+//! A listening run: levels at `level_hz` from any format, a listen-only recording handed over at Stop in pieces of
+//! `piece_s`, the limit and the silence stop, a lost or refused source, and pieces reaching the engine trimmed and
+//! in order.
 
 use super::*;
-use kx_ipc::{MAX_SOUND_BYTES, RECORD_MAX_S};
+use kx_ipc::RECORD_MAX_S;
 
 #[test]
 fn start_opens_the_source_and_tells_open() {
@@ -28,18 +29,24 @@ fn levels_come_at_level_hz_from_any_format() {
 }
 
 #[test]
-fn listening_only_hands_the_recording_over_at_stop_in_pieces_under_the_cap() {
+fn listening_only_without_a_detector_hands_the_whole_recording_over_at_stop_in_pieces_of_piece_s() {
     let (mut rig, n) = (Rig::plain(), 40 * SEC);
     rig.ask(start(7));
     rig.speak(&ramp(n), 1600);
     let notes = rig.ask(VoiceAsk::Stop { id: 7 });
     assert_eq!(notes.first(), Some(&stage(7, Stage::Shut)));
-    let (samples, pieces) = sounds(&notes);
-    let rest = n * SAMPLE_BYTES - MAX_SOUND_BYTES;
-    assert_eq!(pieces, [(0, false, MAX_SOUND_BYTES), (1, true, rest)]);
+    let (samples, pieces) = speech(&notes);
+    let full = usize::from(*PIECE_S.start()) * SEC * SAMPLE_BYTES;
+    let want = [
+        (0, false, full),
+        (1, false, full),
+        (2, false, full),
+        (3, true, full),
+    ];
+    assert_eq!(pieces, want);
     assert_eq!(samples, ramp16(n));
     assert_eq!(notes.last(), Some(&fake::done(7, 0, 40_000)));
-    assert_eq!(notes.len(), 4);
+    assert_eq!(notes.len(), 6);
     assert!(!rig.open());
 }
 
@@ -55,7 +62,7 @@ fn the_limit_stops_the_run_at_exactly_record_max_s() {
     let max = usize::from(*RECORD_MAX_S.start()) * SEC;
     let notes = plain(&rig.speak(&ramp(max + 2 * SEC), CHUNK));
     assert_eq!(notes.first(), Some(&stage(1, Stage::Limit)));
-    assert_eq!(sounds(&notes).0, ramp16(max));
+    assert_eq!(speech(&notes).0, ramp16(max));
     assert_eq!(notes.last(), Some(&fake::done(1, 0, 10_000)));
     assert!(!rig.open());
     assert!(
@@ -94,7 +101,7 @@ fn a_stalled_job_queues_no_more_sound_than_its_run_can_record() {
         }
         let notes = plain(&rig.told());
         assert_eq!(notes.first(), Some(&stage(1, Stage::Limit)), "{rate} Hz");
-        assert_eq!(sounds(&notes).0.len(), usize::from(max_s) * SEC);
+        assert_eq!(speech(&notes).0.len(), usize::from(max_s) * SEC);
     }
 }
 
@@ -123,9 +130,12 @@ fn the_silence_stop_waits_for_speech_then_stops_after_its_silence() {
     }));
     let notes = plain(&notes);
     assert_eq!(notes.first(), Some(&stage(1, Stage::Silence)));
+    let spoken = speech(&notes).0.len();
+    assert_eq!(spoken, SEC + 2 * PAD, "the loud second and its pad");
+    let done = fake::done(1, 0, 4_000);
     assert_eq!(
-        sounds(&notes).0.len(),
-        4 * SEC,
+        notes.last(),
+        Some(&done),
         "two silent, one loud, one silent"
     );
 }

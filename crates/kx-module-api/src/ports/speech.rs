@@ -149,6 +149,16 @@ pub trait SpeechRun: Send {
     /// `NoSound` when the recording is gone, `Gone` or `Timeout` when the worker does not answer.
     fn keep(&mut self) -> Result<Vec<SecretBytes>, SpeechError>;
 
+    /// A listen-only run's speech once its `Done` was told: pieces cut at pauses within `piece_s`, each under the
+    /// frame limit, for a cloud service; empty when no speech was heard. Each call gives fresh copies, for Try again.
+    ///
+    /// # Errors
+    /// `NoSound` before `Done`, after a Cancel, a close or a wipe, or on a run that cannot listen alone; `Internal`
+    /// when the job handed it over out of order.
+    fn pieces(&mut self) -> Result<Vec<SecretBytes>, SpeechError> {
+        Err(SpeechError::NoSound)
+    }
+
     /// Wipes the recording and ends the run; the job stays for `JobLimits::idle_min`.
     fn close(&mut self);
 }

@@ -10,11 +10,15 @@ use super::engine::{self, Engine, Writer};
 use super::hand::{self, HandIn, Held};
 use super::listen::{Replay, Run};
 use super::mic::{Mic, Source};
+use super::pack::Packer;
 use super::{Event, Feed, Notes, Tell, span};
 use asks::{answer, stage};
 use kx_ipc::{IpcError, Setup, Stage, VoiceAsk, VoiceFault, VoiceNote};
 use notes::listened;
 use std::sync::mpsc::Sender;
+
+/// The shortest piece a listen-only run's cutter makes: none, so it cuts at every pause.
+const EVERY_PAUSE: usize = 0;
 
 /// The job's parts: the sound source, the voice detector and the engine.
 pub struct Parts {
@@ -171,7 +175,7 @@ impl Job {
             return Ok(());
         };
         let id = run.id;
-        let (sound, writer) = run.end(out)?;
+        let (sound, writer, pack) = run.end(out)?;
         out.tell(stage(id, why))?;
         let heard = span::heard_ms(sound.len());
         if let Some(mut writer) = writer {
@@ -182,7 +186,8 @@ impl Job {
                 replay: None,
             });
         } else {
-            hand::over(id, &sound, out)?;
+            let pieces = pack.map(Packer::pieces).unwrap_or_default();
+            hand::speech(id, &sound, &pieces, out)?;
             out.tell(listened(id, heard))?;
         }
         self.held = Some(Held::new(id, sound));
@@ -197,7 +202,7 @@ impl Job {
         let id = run.id;
         run.mute();
         match run.end(out) {
-            Ok((sound, _)) => self.held = Some(Held::new(id, sound)),
+            Ok((sound, ..)) => self.held = Some(Held::new(id, sound)),
             Err(Fail::Out(e)) => return Err(e),
             Err(Fail::Fault(_)) => {}
         }
@@ -216,10 +221,15 @@ impl Job {
         Run::new(id, self.epoch, opened, setup, cut, writer)
     }
 
-    /// A cutter over the setup's detector, or `None` when this build has no detector.
+    /// A cutter over the setup's detector, or `None` when this build has no detector. A listen-only run cuts at every
+    /// pause, and its packer joins the stretches within `piece_s`.
     fn cutter(&mut self, setup: &Setup<'_>) -> Result<Option<Cutter>, VoiceFault> {
         let det = self.parts.detectors.open(&setup.detector)?;
-        let (piece, pad) = (span::secs(setup.piece_s.into()), span::millis(setup.pad_ms));
+        let piece = match setup.model {
+            Some(_) => span::secs(setup.piece_s.into()),
+            None => EVERY_PAUSE,
+        };
+        let pad = span::millis(setup.pad_ms);
         Ok(det.map(|det| Cutter::new(det, piece, pad)))
     }
 

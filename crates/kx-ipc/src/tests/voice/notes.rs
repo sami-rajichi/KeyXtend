@@ -2,7 +2,9 @@
 //! or text that is not UTF-8, a done note past the longest dictation, and a bad device list or name.
 
 use super::*;
-use crate::{MAX_PERCENT, MAX_PIECES, MAX_SOUND_MS, Stage, VoiceFault};
+use crate::{
+    MAX_PERCENT, MAX_PIECES, MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_SPEECH_PIECES, Stage, VoiceFault,
+};
 use IpcError::{BadField, Inconsistent, TooLong};
 
 /// Checks that writing `note` is refused with `err` and writes nothing, as its `check` says.
@@ -146,4 +148,23 @@ fn a_device_name_or_driver_with_a_hidden_format_mark_is_refused_both_ways() {
     let mut list = devices();
     list[1].name = "بطاقة رسومية, carte graphique".into();
     assert_eq!(VoiceNote::Devices { id: 1, list }.check(), Ok(()));
+}
+
+#[test]
+fn a_speech_piece_may_pass_the_hand_overs_count_but_never_its_own() {
+    let speech = |index| VoiceNote::Speech {
+        id: 1,
+        piece: SoundPiece {
+            index,
+            last: false,
+            bytes: Wiped::Kept(Zeroizing::new(b"ab".to_vec())),
+        },
+    };
+    let beyond = speech(u16::try_from(MAX_SOUND_PIECES).unwrap());
+    let read = VoiceNote::read(&mut &voice_note_bytes(&beyond)[..]);
+    assert_eq!(read, Ok(beyond), "past the hand-over's count");
+    let past = u16::try_from(MAX_SPEECH_PIECES).unwrap();
+    refused_note(&speech(past), BadField);
+    let bytes = patch(voice_note_bytes(&speech(0)), 0, &past.to_le_bytes());
+    assert_eq!(read_voice_note(&mut &bytes[..]), Err(BadField));
 }

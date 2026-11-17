@@ -133,6 +133,8 @@ pub(crate) enum Kind {
     NetDone = 55,
     /// The speech-net job stopped, for a fixed reason.
     NetFailed = 56,
+    /// The voice job hands over a piece of a listen-only run's speech at Stop.
+    SpeechOut = 57,
 }
 
 impl Code for Kind {
@@ -193,6 +195,7 @@ impl Code for Kind {
         Self::NetText,
         Self::NetDone,
         Self::NetFailed,
+        Self::SpeechOut,
     ];
 
     fn code(self) -> u8 {

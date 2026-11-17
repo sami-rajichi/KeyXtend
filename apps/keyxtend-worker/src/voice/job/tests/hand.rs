@@ -1,5 +1,5 @@
 //! The hand-in: pieces of a moved recording are taken in order and serve Keep and Again; a piece out of order drops
-//! the hand-in; an empty recording is one empty last piece.
+//! the hand-in; an empty recording hands over no speech and is kept as one empty last piece.
 
 use super::*;
 use kx_ipc::MAX_SOUND_BYTES;
@@ -65,22 +65,22 @@ fn a_hand_in_while_listening_is_out_of_step() {
 }
 
 #[test]
-fn an_empty_recording_is_one_empty_last_piece() {
+fn an_empty_recording_hands_over_no_speech_and_keeps_as_one_empty_last_piece() {
     let mut rig = Rig::plain();
     rig.ask(start(1));
     let notes = rig.ask(VoiceAsk::Stop { id: 1 });
+    assert_eq!(notes, [stage(1, Stage::Shut), fake::done(1, 0, 0)]);
     let empty = SoundPiece {
         index: 0,
         last: true,
         bytes: kx_ipc::Wiped::Lent(&[]),
     };
-    let want = [
-        stage(1, Stage::Shut),
-        VoiceNote::Sound {
+    let kept = rig.ask(VoiceAsk::Keep { id: 1 });
+    assert_eq!(
+        kept,
+        [VoiceNote::Sound {
             id: 1,
-            piece: empty,
-        },
-        fake::done(1, 0, 0),
-    ];
-    assert_eq!(notes, want);
+            piece: empty
+        }]
+    );
 }

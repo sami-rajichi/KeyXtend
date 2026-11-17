@@ -21,6 +21,17 @@ fn sound(last: bool) -> VoiceNote {
     VoiceNote::Sound { id: ID, piece }
 }
 
+/// A listen-only run's last piece of speech, which the run's end still follows.
+fn speech() -> VoiceNote {
+    let bytes = Wiped::Kept(Zeroizing::new(Vec::new()));
+    let piece = SoundPiece {
+        index: 0,
+        last: true,
+        bytes,
+    };
+    VoiceNote::Speech { id: ID, piece }
+}
+
 /// A model file's facts, naming no language.
 fn facts() -> VoiceNote {
     let (runner, langs) = (RUNNER.to_owned(), Vec::new());
@@ -69,6 +80,7 @@ fn a_voice_watch_ends_at_an_answer_a_runs_end_the_last_sound_or_a_fault_that_end
         piece(ID),
         card_failed(ID),
         sound(false),
+        speech(),
     ];
     let goes_on = going().into_iter().chain(notes);
     let ended = goes_on.into_iter().any(|note| VoiceFrames::last(&note));

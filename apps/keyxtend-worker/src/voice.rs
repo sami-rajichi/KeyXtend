@@ -19,6 +19,7 @@ mod level;
 mod library;
 mod listen;
 mod mic;
+mod pack;
 #[cfg(feature = "gate")]
 mod played;
 mod resample;

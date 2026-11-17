@@ -52,7 +52,9 @@ impl Kind {
             Self::VoiceStart | Self::VoiceAgain => voice::SETUP_LEAST..=voice::SETUP_MOST,
             Self::VoiceFacts => voice::PATH.least()..=voice::PATH.most(),
             Self::VoiceCheck => voice::CHECK_LEAST..=voice::CHECK_MOST,
-            Self::SoundIn | Self::SoundOut => voice::SOUND_LEAST..=voice::SOUND_MOST,
+            Self::SoundIn | Self::SoundOut | Self::SpeechOut => {
+                voice::SOUND_LEAST..=voice::SOUND_MOST
+            }
             Self::Piece => voice::PIECE_LEAST..=voice::PIECE_MOST,
             Self::Done => voice::DONE_LEN..=voice::DONE_LEN,
             Self::DeviceList => voice::DEVICES_LEAST..=voice::DEVICES_MOST,

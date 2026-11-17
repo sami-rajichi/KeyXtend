@@ -5,9 +5,9 @@ use crate::limits::MIB;
 use crate::voice::wire as voice_wire;
 use crate::{
     LEVEL_HZ, MAX_FIXED, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SOUND_MS,
-    MAX_SOUND_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN, NET_TRIES, NET_WAIT_S,
-    PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S, SOUND_HZ, STALL_S,
-    THREADS,
+    MAX_SOUND_PIECES, MAX_SPEECH_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN,
+    NET_TRIES, NET_WAIT_S, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
+    SOUND_HZ, STALL_S, THREADS,
 };
 
 /// `ElevenLabs`' cap on one file in MB, the largest a service row names.
@@ -56,6 +56,17 @@ fn the_pieces_cover_the_longest_dictation_at_the_shortest_piece() {
     let most = usize::from(*RECORD_MAX_S.end() / u16::from(*PIECE_S.start())) + 1;
     assert_eq!(MAX_PIECES, most);
     assert!(u16::try_from(MAX_PIECES).is_ok() && u16::try_from(MAX_SOUND_PIECES).is_ok());
+}
+
+#[test]
+fn speech_pieces_packed_two_past_the_shortest_cover_the_longest_dictation() {
+    let shortest = usize::from(*RECORD_MAX_S.end() / u16::from(*PIECE_S.start()));
+    assert!(
+        MAX_SPEECH_PIECES > 2 * shortest,
+        "two in a row hold more than one"
+    );
+    const { assert!(MAX_SPEECH_PIECES > MAX_SOUND_PIECES) };
+    assert!(u16::try_from(MAX_SPEECH_PIECES).is_ok());
 }
 
 #[test]

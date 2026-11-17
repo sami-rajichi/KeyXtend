@@ -111,7 +111,7 @@ impl fmt::Debug for VoiceNote {
             Self::Checked {
                 card_ms, cpu_ms, ..
             } => s.field("card_ms", card_ms).field("cpu_ms", cpu_ms),
-            Self::Sound { piece, .. } => s.field("piece", piece),
+            Self::Sound { piece, .. } | Self::Speech { piece, .. } => s.field("piece", piece),
         }
         .finish()
     }
@@ -131,5 +131,6 @@ const fn note_name(note: &VoiceNote) -> &'static str {
         VoiceNote::Facts { .. } => "Facts",
         VoiceNote::Checked { .. } => "Checked",
         VoiceNote::Sound { .. } => "Sound",
+        VoiceNote::Speech { .. } => "Speech",
     }
 }

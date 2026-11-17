@@ -5,6 +5,7 @@ use super::body::{
     put_model, put_path, put_setup, put_sound, read_model, read_path, read_setup, read_sound,
 };
 use super::{Model, Setup, SoundPiece};
+use crate::MAX_SOUND_PIECES;
 use crate::code::Kind;
 use crate::error::IpcError;
 use crate::frame::{Head, write_head};
@@ -133,7 +134,7 @@ impl VoiceAsk<'_> {
                 put_model(s, model)?;
                 put_path(s, clip)
             }
-            Self::Sound { piece, .. } => put_sound(s, piece),
+            Self::Sound { piece, .. } => put_sound(s, piece, MAX_SOUND_PIECES),
             Self::Stop { .. }
             | Self::Cancel { .. }
             | Self::Keep { .. }
@@ -209,7 +210,7 @@ fn read_body<R: Read + ?Sized>(
         }
         Kind::SoundIn => VoiceAsk::Sound {
             id,
-            piece: read_sound(p)?,
+            piece: read_sound(p, MAX_SOUND_PIECES)?,
         },
         Kind::VoiceBye if id == 0 => VoiceAsk::Bye,
         Kind::VoiceBye => return Err(IpcError::Inconsistent),
