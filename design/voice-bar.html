@@ -26,6 +26,20 @@ Which reference each choice follows:
 Every colour, radius and size is a token copied below from crates/kx-theme/tokens/*.toml, named after it. Sizes marked
 "proposed" are not in shape.toml yet; task 24 adds them as [voice]. The app window and wall behind are the scene's
 stand-ins, copied from selection-chips.html.
+
+Part 2 (spec 2026-11-10-voice-cloud-design.md, plan task 2) adds, mostly in voice-cloud.js and voice-cloud.css:
+- Preparing (owner, 2026-11-17): no bar until the microphone opens, only an amber Dictation key, as a studio's amber
+  stand-by light comes before the red on-air light; the bar then opens straight in Listening.
+- The Cloud page: a master switch drawn as Options' switches (Windows Settings' toggles), then the paged services list
+  with the clipboard panel's tick-then-act footer.
+- A service's card: fixed rows of facts with the date read, as Apple's App Store privacy labels and Google Play's Data
+  safety section; a warning band in the Windows 11 InfoBar's Warning colours.
+- The key, address and model lines: the panel's own line (PanelLine.qml), drawn as WinUI's focused TextBox.
+- The bar's cloud mark: a chip beside the language chip, so the user always sees where the voice goes.
+- Models' Local | Cloud and Options' Insert the text: the panel's filter chips (PanelChip.qml), as the clipboard panel's
+  filters; each side of Models is its own paged list.
+Colours prep, prep_ink, warn and warn_ink are proposed for themes.toml; Native's warn pair is Fluent's Caution pair and its
+prep is the Windows accent palette's Gold. Each text pair is at least 4.5:1, also under the row's hover.
 -->
 <html lang="en">
 <head>
@@ -68,33 +82,39 @@ stand-ins, copied from selection-chips.html.
 [data-theme="native"][data-mode="light"]{--plate:#E9EBEB; --key:#FFFFFF; --key-mod:#EBEBEB; --key-act:#F7F7F7; --enter:#005FB8; --enter-ink:#FFFFFF; --danger:#EBEBEB; --danger-ink:#1B1B1B;
   --legend:#1B1B1B; --legend-mod:#1B1B1B; --legend-2:#5F5F5F; --legend-act:#1B1B1B; --rec:#C42B1C; --rec-ink:#FFFFFF; --ring:#005FB8; --badge-bg:#005FB8; --badge-ink:#FFFFFF;
   --pop-bg:#F9F9F9; --pop-ink:#1B1B1B; --pop-muted:#5F5F5F; --pop-line:#00000017; --pop-hover:#0000000B; --pop-sel:#DCE9F7; --chip-bg:#0000000E; --hover:#0000000F;
-  --key-shadow:inset 0 -1px 0 #00000024, 0 0 0 1px #0000000B; --window-shadow:0 12px 32px #00000038, 0 0 0 1px #00000014}
+  --key-shadow:inset 0 -1px 0 #00000024, 0 0 0 1px #0000000B; --window-shadow:0 12px 32px #00000038, 0 0 0 1px #00000014;
+  --prep:#FFB900; --prep-ink:#1B1B1B; --warn:#FFF4CE; --warn-ink:#9D5D00}
 [data-theme="native"][data-mode="dark"]{--plate:#2C2F33; --key:#3B3E43; --key-mod:#34373C; --key-act:#373A3F; --enter:#7CB7F0; --enter-ink:#10202E; --danger:#34373C; --danger-ink:#E3E5E8;
   --legend:#E3E5E8; --legend-mod:#E3E5E8; --legend-2:#BABEC3; --legend-act:#E3E5E8; --rec:#E8848F; --rec-ink:#2A0E12; --ring:#7CB7F0; --badge-bg:#7CB7F0; --badge-ink:#10202E;
   --pop-bg:#33363B; --pop-ink:#E3E5E8; --pop-muted:#A9AEB5; --pop-line:#FFFFFF17; --pop-hover:#FFFFFF0E; --pop-sel:#2E4760; --chip-bg:#FFFFFF12; --hover:#FFFFFF14;
-  --key-shadow:inset 0 -1px 0 #00000047, 0 0 0 1px #FFFFFF0A; --window-shadow:0 14px 34px #00000066, 0 0 0 1px #FFFFFF0F}
+  --key-shadow:inset 0 -1px 0 #00000047, 0 0 0 1px #FFFFFF0A; --window-shadow:0 14px 34px #00000066, 0 0 0 1px #FFFFFF0F;
+  --prep:#F2B84B; --prep-ink:#2B1D04; --warn:#433519; --warn-ink:#FCE100}
 [data-theme="et66"]{--key-radius-px:9; --window-radius-px:14; --gap-px:5; --legend-px:13; --mod-legend-px:10.5; --legend-weight:500; --arabic-scale:1.14;
   --latin-fonts:"IBM Plex Sans",sans-serif; --arabic-fonts:"IBM Plex Sans Arabic","Noto Sans Arabic",sans-serif}
 [data-theme="et66"][data-mode="light"]{--plate:#E4E1DA; --key:#F8F6F1; --key-mod:#CDBBA7; --key-act:#F8F6F1; --enter:#F2C400; --enter-ink:#1D1B18; --danger:#CDBBA7; --danger-ink:#1D1B18;
   --legend:#1D1B18; --legend-mod:#1D1B18; --legend-2:#5D5850; --legend-act:#1D1B18; --rec:#FFFFFF; --rec-ink:#795D00; --ring:#947700; --badge-bg:#1D1B18; --badge-ink:#F2C400;
   --pop-bg:#FBFAF7; --pop-ink:#1D1B18; --pop-muted:#6B655C; --pop-line:#00000017; --pop-hover:#0000000A; --pop-sel:#F3E7C0; --chip-bg:#F8F6F1; --hover:#0000000F;
-  --key-shadow:0 1px 0 #3C322847, inset 0 1px 0 #FFFFFFBF; --window-shadow:0 14px 34px #281E1440, 0 0 0 1px #0000000F}
+  --key-shadow:0 1px 0 #3C322847, inset 0 1px 0 #FFFFFFBF; --window-shadow:0 14px 34px #281E1440, 0 0 0 1px #0000000F;
+  --prep:#E58A2E; --prep-ink:#1D1B18; --warn:#F7E6C4; --warn-ink:#8A5400}
 [data-theme="et66"][data-mode="dark"]{--plate:#2A2826; --key:#3A3734; --key-mod:#6B5645; --key-act:#3A3734; --enter:#E6BE3A; --enter-ink:#2A2418; --danger:#6B5645; --danger-ink:#F0ECE4;
   --legend:#EDE8DF; --legend-mod:#F3EEE6; --legend-2:#C6C0B9; --legend-act:#EDE8DF; --rec:#3F3B37; --rec-ink:#E6BE3A; --ring:#E6BE3A; --badge-bg:#2A2418; --badge-ink:#E6BE3A;
   --pop-bg:#33302D; --pop-ink:#EDE8DF; --pop-muted:#B3ACA2; --pop-line:#FFFFFF14; --pop-hover:#FFFFFF0D; --pop-sel:#4A4130; --chip-bg:#3A3734; --hover:#FFFFFF14;
-  --key-shadow:0 1px 0 #00000059, inset 0 1px 0 #FFFFFF0F; --window-shadow:0 14px 36px #00000066, 0 0 0 1px #FFFFFF0D}
+  --key-shadow:0 1px 0 #00000059, inset 0 1px 0 #FFFFFF0F; --window-shadow:0 14px 36px #00000066, 0 0 0 1px #FFFFFF0D;
+  --prep:#E0913A; --prep-ink:#2A1D0E; --warn:#4A3C24; --warn-ink:#F0BE5A}
 [data-theme="dolch"]{--key-radius-px:5; --window-radius-px:10; --gap-px:3; --legend-px:13; --mod-legend-px:10.5; --legend-weight:500; --arabic-scale:1.1;
   --latin-fonts:Rubik,sans-serif; --arabic-fonts:Rubik,"Noto Sans Arabic",sans-serif}
 [data-theme="dolch"][data-mode="light"]{--plate:#B9BBBE; --key:#E6E7E8; --key-mod:#5F6161; --key-act:#5F6161; --enter:#00797D; --enter-ink:#FFFFFF; --danger:#B83262; --danger-ink:#F7F2EA;
   --legend:#393B3B; --legend-mod:#F7F2EA; --legend-2:#575759; --legend-act:#F7F2EA; --rec:#B83262; --rec-ink:#FFFFFF; --ring:#00696D; --badge-bg:#393B3B; --badge-ink:#7FE6E9;
   --pop-bg:#E6E7E8; --pop-ink:#393B3B; --pop-muted:#5F6161; --pop-line:#0000001F; --pop-hover:#0000000D; --pop-sel:#CBEDEE; --chip-bg:#D4D6D8; --hover:#0000000F;
   --key-shadow:0 1px 1px #00000040; --window-shadow:0 14px 34px #00000047, 0 0 0 1px #00000014;
-  --skirt-key:#C5C7CA; --skirt-key-mod:#4A4C4C; --skirt-enter:#006D70; --skirt-danger:#952749; --skirt-rec:#952749}
+  --skirt-key:#C5C7CA; --skirt-key-mod:#4A4C4C; --skirt-enter:#006D70; --skirt-danger:#952749; --skirt-rec:#952749;
+  --prep:#E8A33C; --prep-ink:#393B3B; --warn:#F1DFB8; --warn-ink:#865000; --skirt-prep:#BF8124}
 [data-theme="dolch"][data-mode="dark"]{--plate:#2A2C2E; --key:#4A4D4F; --key-mod:#35383B; --key-act:#35383B; --enter:#137378; --enter-ink:#FFFFFF; --danger:#A03D5A; --danger-ink:#F4F1EA;
   --legend:#EDEAE4; --legend-mod:#EDEAE4; --legend-2:#E2E4E4; --legend-act:#EDEAE4; --rec:#A9405F; --rec-ink:#FFFFFF; --ring:#3CC0C4; --badge-bg:#168388; --badge-ink:#FFFFFF;
   --pop-bg:#34373A; --pop-ink:#EDEAE4; --pop-muted:#B0B3B6; --pop-line:#FFFFFF14; --pop-hover:#FFFFFF0D; --pop-sel:#1D4A4C; --chip-bg:#3E4144; --hover:#FFFFFF0A;
   --key-shadow:0 1px 1px #00000059; --window-shadow:0 14px 36px #0000006B, 0 0 0 1px #FFFFFF0D;
-  --skirt-key:#3A3C3E; --skirt-key-mod:#2B2D30; --skirt-enter:#106568; --skirt-danger:#86314B; --skirt-rec:#86314B}
+  --skirt-key:#3A3C3E; --skirt-key-mod:#2B2D30; --skirt-enter:#106568; --skirt-danger:#86314B; --skirt-rec:#86314B;
+  --prep:#D9952F; --prep-ink:#2A2C2E; --warn:#4B3E26; --warn-ink:#EDB956; --skirt-prep:#A9701D}
 /* The scene's stand-ins, copied from selection-chips.html: the wall and the app behind the keyboard. */
 [data-mode="light"]{--wall:#C6CFD6; --a-bg:#FFFFFF; --a-ink:#1B1B1B; --a-top:#F3F3F3; --a-mute:#5F5F5F; --a-line:#00000014}
 [data-mode="dark"]{--wall:#191C20; --a-bg:#202124; --a-ink:#E6E6E6; --a-top:#2B2C2F; --a-mute:#A9AEB5; --a-line:#FFFFFF14}
@@ -154,7 +174,9 @@ body{margin:0; overflow:hidden; background:var(--pop-bg); color:var(--pop-ink); 
 .cap{position:relative; display:flex; align-items:center; justify-content:center; gap:calc(4 * var(--u)); width:100%; height:100%; overflow:hidden; background:var(--top); color:var(--ink);
   border-radius:calc(var(--key-radius-px) * var(--u)); box-shadow:var(--key-shadow); box-sizing:border-box; font-size:calc(14 * var(--u))}
 .cap>*{position:relative; z-index:1}
-.key.rec .cap{animation:glow var(--glow-ms) var(--ease-in-out) infinite}
+.key.prep{--top:var(--prep); --ink:var(--prep-ink); --sk:var(--skirt-prep, var(--prep))}
+.key.rec .cap,.key.prep .cap{animation:glow var(--glow-ms) var(--ease-in-out) infinite}
+.key[data-a]{cursor:pointer}
 @keyframes glow{50%{filter:brightness(var(--glow-lift))}}
 .lg{font-size:calc(var(--legend-px) * var(--u)); font-weight:var(--legend-weight); line-height:1}
 .lg.ar{font-family:var(--arabic-fonts); font-size:calc(var(--legend-px) * var(--arabic-scale) * var(--u))}
@@ -181,6 +203,7 @@ body{margin:0; overflow:hidden; background:var(--pop-bg); color:var(--pop-ink); 
 .st{display:inline-flex; align-items:center; gap:calc(var(--caption-gap-px) * var(--u)); white-space:nowrap; padding-inline:calc(2 * var(--u))}
 .st .i{font-size:calc(var(--caption-icon-px) * var(--u)); color:var(--pop-muted)}
 .st.ar{font-size:calc(var(--caption-status-px) * var(--arabic-scale) * var(--u))}
+/* Preparing: the status as an amber pill in prep and prep_ink, the same pair as the Dictation key. */
 .dot{width:calc(var(--caption-dot-px) * var(--u)); height:calc(var(--caption-dot-px) * var(--u)); border-radius:50%; background:var(--rec-dot); flex:none; animation:pulse var(--dot-ms) var(--ease) infinite}
 @keyframes pulse{50%{opacity:var(--pulse-low)}}
 .lc{flex:none; box-sizing:border-box; height:calc(var(--chip-height-px) * var(--u)); padding:0 calc(var(--chip-pad-px) * var(--u)); border-radius:999px; border:var(--line-px) solid var(--pop-line);
@@ -321,14 +344,16 @@ body{margin:0; overflow:hidden; background:var(--pop-bg); color:var(--pop-ink); 
 .sw.on::after{inset-inline-start:calc((var(--voice-switch-px-0) - var(--voice-switch-px-2) - 7) * var(--u)); background:var(--badge-ink)}
 
 /* Reduced motion (motion.toml: every length 0): no pulse, glow, shimmer, rise or slide. */
-.still .dot,.still .key.rec .cap,.still .shim,.still .caret,.still .vbar.in,.still .vp.in,.still .sel .ck{animation:none}
+.still .dot,.still .key.rec .cap,.still .key.prep .cap,.still .shim,.still .caret,.still .vbar.in,.still .vp.in,.still .sel .ck{animation:none}
 .still .prog.run i{animation:none; width:100%; opacity:.5}
 </style>
+<link rel="stylesheet" href="voice-cloud.css">
 </head>
 <body>
 <div id="ctl"></div>
 <div id="say" role="status"></div>
 <div id="fit"><div id="stage" class="sc"></div></div>
 <script src="voice-bar.js"></script>
+<script src="voice-cloud.js"></script>
 </body>
 </html>

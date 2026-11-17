@@ -1,4 +1,5 @@
 // Voice typing mock-up (design/voice-bar.html): texts in three languages, sample data and drawing. Reference only.
+// Part 2's cloud services live in voice-cloud.js, which loads after this file and before boot() at the end.
 'use strict';
 
 // Lucide icons (ISC), copied from assets/icons/lucide; win-logo is our own drawing (selection-chips.html).
@@ -53,7 +54,7 @@ const ic = n => '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentC
 // Texts. EN, FR and AR words of the design's table are used as written; the rest are new and listed in the report.
 const L = {
 en:{code:'EN', own:'English', ar:false,
-  listening:'Listening…', transcribing:'Transcribing…', stop:'Stop', cancel:'Cancel', close:'Close', gear:'Dictation settings',
+  listening:'Listening…', transcribing:'Transcribing…', namePrep:'Dictation, preparing the microphone', stop:'Stop', cancel:'Cancel', close:'Close', gear:'Dictation settings',
   copy:'Copy', copied:'Copied', undo:'Undo insert', again:'Try again', anyway:'Transcribe anyway',
   cancelled:'Cancelled. Nothing was typed.', nothing:'Nothing heard. Is the microphone on?', listenAgain:'Listen again',
   noModel:'No model for English yet', download:'Download', pwLine:'Typed into a password box. Not kept, no Copy.',
@@ -75,14 +76,15 @@ en:{code:'EN', own:'English', ar:false,
   histSub:'{n} · newest first', deleteAll:'Delete all', pin:'Pin', unpin:'Unpin', del:'Delete', insert:'Insert ({n})', insertOne:'Insert',
   ask:'Delete {n}? Pinned ones stay.', yes:'Yes', no:'No', days:{today:'Today', yesterday:'Yesterday', wed:'Wed', mon:'Mon'}, langs:{en:'English', fr:'French', ar:'Arabic'},
   forAll:'For every language', applies:'Changes apply at once.', on:'On', off:'Off', less:'Less', more:'More', autoN:'Auto ({n})',
-  places:['Above the keyboard', 'Bottom of the screen', 'Top of the screen'],
+  places:['Above the keyboard', 'Bottom of the screen', 'Top of the screen'], inserts:['Type it', 'Paste at once'],
+  pasteHint:'Uses the clipboard, then puts yours back; a password box is always typed.',
   opt:{sounds:'Start and stop sounds', silenceStop:'Stop after silence', silenceS:'Silence before stopping', doneS:'Text stays on the bar', place:'Bar position',
     history:'Keep a history of texts', historyMax:'Texts kept', keepVoice:'Keep recordings', voiceMax:'Space for recordings', idle:'Model leaves memory after',
-    recordMax:'Longest dictation', nothingS:'“Nothing heard” hint after', debounce:'Ignore a second click within', suffix:'Space after the text', typeGap:'Pause between letters',
+    recordMax:'Longest dictation', nothingS:'“Nothing heard” hint after', debounce:'Ignore a second click within', insert:'Insert the text', suffix:'Space after the text', typeGap:'Pause between letters',
     threads:'Processor threads', waveMs:'Wave smoothing', minFree:'Room left on the models drive', cardMargin:'Room left on a card', cardGain:'A card must be faster by', cardDiff:'A card’s text may differ by'},
   app:['Notes', 'Dear Maya,', 'The meeting moved to Thursday at ten.', 'Sign in', 'Email', 'Password']},
 fr:{code:'FR', own:'Français', ar:false,
-  listening:'Écoute…', transcribing:'Transcription…', stop:'Arrêter', cancel:'Annuler', close:'Fermer', gear:'Réglages de la dictée',
+  listening:'Écoute…', transcribing:'Transcription…', namePrep:'Dictée, préparation du micro', stop:'Arrêter', cancel:'Annuler', close:'Fermer', gear:'Réglages de la dictée',
   copy:'Copier', copied:'Copié', undo:'Annuler l’insertion', again:'Réessayer', anyway:'Transcrire quand même',
   cancelled:'Annulé. Rien n’a été tapé.', nothing:'Rien entendu. Le micro est-il allumé\u202F?', listenAgain:'Écouter de nouveau',
   noModel:'Aucun modèle pour le français', download:'Télécharger', pwLine:'Tapé dans un champ de mot de passe. Non conservé, sans copie.',
@@ -104,14 +106,15 @@ fr:{code:'FR', own:'Français', ar:false,
   histSub:'{n} · les plus récents d’abord', deleteAll:'Tout supprimer', pin:'Épingler', unpin:'Désépingler', del:'Supprimer', insert:'Insérer ({n})', insertOne:'Insérer',
   ask:'Supprimer {n}\u202F? Les textes épinglés restent.', yes:'Oui', no:'Non', days:{today:'Aujourd’hui', yesterday:'Hier', wed:'Mer.', mon:'Lun.'}, langs:{en:'Anglais', fr:'Français', ar:'Arabe'},
   forAll:'Pour toutes les langues', applies:'Les changements s’appliquent tout de suite.', on:'Activé', off:'Désactivé', less:'Moins', more:'Plus', autoN:'Auto ({n})',
-  places:['Au-dessus du clavier', 'En bas de l’écran', 'En haut de l’écran'],
+  places:['Au-dessus du clavier', 'En bas de l’écran', 'En haut de l’écran'], inserts:['Le saisir', 'Le coller en une fois'],
+  pasteHint:'Passe par le presse-papiers, puis y remet votre contenu ; un champ de mot de passe est toujours saisi.',
   opt:{sounds:'Sons de début et de fin', silenceStop:'Arrêt après un silence', silenceS:'Silence avant l’arrêt', doneS:'Durée d’affichage du texte', place:'Position de la barre',
     history:'Garder l’historique des textes', historyMax:'Textes conservés', keepVoice:'Garder les enregistrements', voiceMax:'Place pour les enregistrements', idle:'Le modèle quitte la mémoire après',
-    recordMax:'Durée maximale d’une dictée', nothingS:'Avis «\u00A0Rien entendu\u00A0» après', debounce:'Ignorer un second clic pendant', suffix:'Espace après le texte', typeGap:'Pause entre les caractères',
+    recordMax:'Durée maximale d’une dictée', nothingS:'Avis «\u00A0Rien entendu\u00A0» après', debounce:'Ignorer un second clic pendant', insert:'Insérer le texte', suffix:'Espace après le texte', typeGap:'Pause entre les caractères',
     threads:'Fils d’exécution du processeur', waveMs:'Lissage de l’onde', minFree:'Espace laissé sur le disque des modèles', cardMargin:'Mémoire laissée sur la carte', cardGain:'Gain minimal d’une carte', cardDiff:'Écart permis pour une carte'},
   app:['Notes', 'Bonjour Maya,', 'La réunion est déplacée à jeudi à dix heures.', 'Connexion', 'E-mail', 'Mot de passe']},
 ar:{code:'ع', own:'العربية', ar:true,
-  listening:'جارٍ الاستماع…', transcribing:'جارٍ تحويل الكلام إلى نص…', stop:'إيقاف', cancel:'إلغاء', close:'إغلاق', gear:'إعدادات الإملاء',
+  listening:'جارٍ الاستماع…', transcribing:'جارٍ تحويل الكلام إلى نص…', namePrep:'إملاء، جارٍ تجهيز الميكروفون', stop:'إيقاف', cancel:'إلغاء', close:'إغلاق', gear:'إعدادات الإملاء',
   copy:'نسخ', copied:'تم النسخ', undo:'تراجع عن الإدراج', again:'إعادة المحاولة', anyway:'تحويل التسجيل إلى نص',
   cancelled:'أُلغي الإملاء، ولم يُكتب شيء.', nothing:'لم يُسمع شيء. هل يعمل الميكروفون؟', listenAgain:'إعادة الاستماع',
   noModel:'لا يوجد نموذج للعربية بعد', download:'تنزيل', pwLine:'كُتب في حقل كلمة مرور، فلا يُحفَظ ولا يُنسَخ.',
@@ -133,10 +136,11 @@ ar:{code:'ع', own:'العربية', ar:true,
   histSub:'{n} · الأحدث أولًا', deleteAll:'حذف الكل', pin:'تثبيت', unpin:'إلغاء التثبيت', del:'حذف', insert:'إدراج ({n})', insertOne:'إدراج',
   ask:'هل تريد حذف {n}؟ تبقى النصوص المثبّتة.', yes:'نعم', no:'لا', days:{today:'اليوم', yesterday:'أمس', wed:'الأربعاء', mon:'الاثنين'}, langs:{en:'الإنجليزية', fr:'الفرنسية', ar:'العربية'},
   forAll:'لجميع اللغات', applies:'تُطبَّق التغييرات فورًا.', on:'مفعّل', off:'معطّل', less:'أقل', more:'أكثر', autoN:'تلقائي ({n})',
-  places:['فوق لوحة المفاتيح', 'أسفل الشاشة', 'أعلى الشاشة'],
+  places:['فوق لوحة المفاتيح', 'أسفل الشاشة', 'أعلى الشاشة'], inserts:['كتابته', 'لصقه دفعة واحدة'],
+  pasteHint:'يستخدم الحافظة ثم يعيد إليها ما كان فيها؛ أما حقل كلمة المرور فيُكتب فيه النص دائمًا.',
   opt:{sounds:'صوتا البدء والإيقاف', silenceStop:'الإيقاف بعد الصمت', silenceS:'مدة الصمت قبل الإيقاف', doneS:'مدة بقاء النص على الشريط', place:'موضع الشريط',
     history:'الاحتفاظ بسجل النصوص', historyMax:'عدد النصوص المحفوظة', keepVoice:'الاحتفاظ بالتسجيلات', voiceMax:'المساحة المخصصة للتسجيلات', idle:'يُفرَّغ النموذج من الذاكرة بعد',
-    recordMax:'أقصى مدة للإملاء', nothingS:'تنبيه «لم يُسمع شيء» بعد', debounce:'تجاهل النقرة الثانية خلال', suffix:'مسافة بعد النص', typeGap:'الفاصل بين الأحرف',
+    recordMax:'أقصى مدة للإملاء', nothingS:'تنبيه «لم يُسمع شيء» بعد', debounce:'تجاهل النقرة الثانية خلال', insert:'إدراج النص', suffix:'مسافة بعد النص', typeGap:'الفاصل بين الأحرف',
     threads:'خيوط المعالجة', waveMs:'تنعيم الموجة', minFree:'المساحة المتروكة على قرص النماذج', cardMargin:'الذاكرة المتروكة على البطاقة', cardGain:'أدنى تسريع مطلوب من البطاقة', cardDiff:'الفرق المسموح في نص البطاقة'},
   app:['ملاحظات', 'عزيزتي مايا،', 'نُقل الاجتماع إلى يوم الخميس الساعة العاشرة.', 'تسجيل الدخول', 'البريد الإلكتروني', 'كلمة المرور']}
 };
@@ -197,11 +201,11 @@ const OPTS = [['sounds','sw'], ['silenceStop','sw'], ['silenceS','st',{min:1, ma
   ['history','sw'], ['historyMax','st',{list:[1,10,20,50,100,200,500], fmt:'texts', dep:'history'}], ['keepVoice','sw'],
   ['voiceMax','st',{list:[64,128,256,512,1024,2048,4096,8192,16384,32768,65536], fmt:'bin', dep:'keepVoice'}], ['idle','st',{list:[1,2,5,10,15,30,60,120], fmt:'min'}],
   ['recordMax','st',{list:[10,30,60,120,300,600,1200,1800,3600], fmt:'dur'}], ['nothingS','st',{min:2, max:60, fmt:'sec'}], ['debounce','st',{list:[100,200,300,400,600,800,1000,1500,2000], fmt:'ms'}],
-  ['suffix','sw'], ['typeGap','st',{list:[0,5,10,20,50,100,200], fmt:'ms'}], ['threads','st',{min:0, max:64, fmt:'threads'}], ['waveMs','st',{list:[0,100,200,300,500,1000,2000], fmt:'ms'}],
+  ['insert','two',{texts:'inserts', hint:'pasteHint'}], ['suffix','sw'], ['typeGap','st',{list:[0,5,10,20,50,100,200], fmt:'ms'}], ['threads','st',{min:0, max:64, fmt:'threads'}], ['waveMs','st',{list:[0,100,200,300,500,1000,2000], fmt:'ms'}],
   ['minFree','st',{list:[256,512,1024,2048,4096,8192,16384,32768,65536], fmt:'bin'}], ['cardMargin','st',{list:[0,256,512,1024,2048,4096,8192], fmt:'bin'}],
   ['cardGain','st',{list:[1,1.25,1.5,2,3,5,10], fmt:'times'}], ['cardDiff','st',{min:0, max:5, fmt:'words'}]];
 const OPT0 = {sounds:true, silenceStop:false, silenceS:3, doneS:9, place:0, history:true, historyMax:50, keepVoice:false, voiceMax:1024, idle:5, recordMax:600, nothingS:5,
-  debounce:400, suffix:true, typeGap:10, threads:0, waveMs:300, minFree:2048, cardMargin:512, cardGain:1.5, cardDiff:1};
+  debounce:400, insert:0, suffix:true, typeGap:10, threads:0, waveMs:300, minFree:2048, cardMargin:512, cardGain:1.5, cardDiff:1};
 // The keyboard's legends, as selection-chips.html draws them.
 const KB = {
   en:{words:['the','and','please'], sp:'English (United States)', lang:'EN', keys:['Esc','Del','Caps','Ctrl','Alt','AltGr'],
@@ -213,7 +217,7 @@ const KB = {
 
 // The controls on top, in English, as on the other mock-ups.
 const CTL = {
-  bar:[['listening','Listening'],['transcribing','Transcribing'],['text','Text'],['password','Password box'],['cancelled','Cancelled'],['nothing','Nothing heard'],['nomodel','No model yet']],
+  bar:[['preparing','Preparing (no bar)'],['listening','Listening'],['transcribing','Transcribing'],['text','Text'],['password','Password box'],['cancelled','Cancelled'],['nothing','Nothing heard'],['nomodel','No model yet']],
   panel:[['none','Closed'],['home','Home'],['models','Models'],['device','Device'],['compare','Compare'],['comparing','Comparing'],['results','Results'],['history','History'],['options','Options']],
   theme:[['native','Native Adaptive'],['et66','ET66'],['dolch','Modern Dolch']], mode:[['light','Light'],['dark','Soft dark']], lang:[['en','EN'],['fr','FR'],['ar','ع']],
   size:[['1','S'],['1.25','M'],['1.5','L']], still:[['0','Full'],['1','Reduced']], view:[['kb','With keyboard'],['close','Close-up']]};
@@ -239,16 +243,17 @@ const SAY = {
 
 // State, kept between visits like selection-chips.html.
 const S = {theme:'native', mode:'light', lang:'en', size:1.25, still:matchMedia('(prefers-reduced-motion: reduce)').matches, view:'kb', bar:'listening', panel:'none',
-  pg:0, tick:[], ask:false, pw:false, undone:false, copied:false, hcopied:false, extra:'', devUse:'auto', check:null, passed:{}, failed:{amd:true}, opt:{...OPT0}, t0:performance.now()};
-const KEEP = ['theme','mode','lang','size','still','view','bar','panel'];
+  pg:0, tick:[], ask:false, pw:false, undone:false, copied:false, hcopied:false, extra:'', devUse:'auto', check:null, passed:{}, failed:{amd:true}, opt:{...OPT0}, t0:performance.now(),
+  engine:'local', weak:false};
+const KEEP = ['theme','mode','lang','size','still','view','bar','panel','engine','weak'];
 try { const k = JSON.parse(localStorage.getItem('kx-voice') || '{}'); KEEP.forEach(n => { if (n in k) S[n] = k[n]; }); } catch (e) {}
 const save = () => { try { localStorage.setItem('kx-voice', JSON.stringify(Object.fromEntries(KEEP.map(n => [n, S[n]])))); } catch (e) {} };
 function fresh() {
   S.models = LIST[S.lang].map(([id, st], i) => ({id, st, def:i === 0, p:st === 'dl' ? .46 : 0, paused:false}));
+  addCloud();
   S.hist = HIST.map(h => ({lang:h[0], text:h[1], day:h[2], time:h[3], model:h[4], pin:h[5]}));
   S.tick = []; S.pg = 0; S.ask = false; S.undone = false;
 }
-fresh();
 
 const $ = id => document.getElementById(id);
 const seen = {bar:'', panel:''};
@@ -265,6 +270,9 @@ const row = (cols, inner, act, cls = '', extra = '') => '<div class="pr ' + cls 
 const tickRow = (cols, inner, i) => row(cols, inner, 'tick:' + i, S.tick.includes(i) ? 'sel' : '', ' aria-pressed="' + S.tick.includes(i) + '"');
 const note = (icon, html) => '<div class="pn' + A + '">' + ic(icon) + '<span class="x"' + D + '>' + html + '</span></div>';
 const gap = '<span style="flex:1"></span>';
+// Filter chips (PanelChip.qml): a radio group of acts, the shown one filled and checked.
+const chips = (name, items, on, cls = '', desc = '') => '<div class="flt' + cls + '" role="radiogroup" aria-label="' + name + '"' + (desc ? ' aria-describedby="' + desc + '"' : '') + '>' + items.map(([act, label], i) =>
+  '<button class="fl' + A + '" role="radio" aria-checked="' + (i === on) + '" data-a="' + act + '">' + (i === on ? ic('check') : '') + '<span' + D + '>' + label + '</span></button>').join('') + '</div>';
 function list(rows, head = '') {
   const pages = Math.max(1, Math.ceil(rows.length / 5));
   S.pg = Math.max(0, Math.min(S.pg, pages - 1));
@@ -278,16 +286,19 @@ function list(rows, head = '') {
 
 // The bar in each state; Cancel stays at the left end and Stop or Close at the right end in every language.
 function bar() {
-  if (S.bar === 'none') return '';
+  // Preparing (owner, 2026-11-17): no bar until the microphone is open; only the Dictation key glows amber.
+  if (S.bar === 'none' || S.bar === 'preparing') return '';
   const vb = (act, icon, name, cls = '', dis = false) => '<button class="vb ' + cls + '" data-a="' + act + '" aria-label="' + name + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '</button>';
   const vt = (act, icon, label, cls = '', dis = false) => '<button class="vt ' + cls + A + '" data-a="' + act + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '<span' + D + '>' + label + '</span></button>';
   const slot = n => '<span class="slot" aria-hidden="true">' + ic(n) + '</span>';
   const msg = s => '<span class="msg' + A + '"' + D + '>' + s + '</span>';
   const gear = vb('gear', 'settings-2', l.gear), close = vb('close', 'x', l.close), cancel = vb('cancel', 'x', l.cancel);
   let inner = '', wide = false;
-  if (S.bar === 'listening') inner = cancel + '<span class="st' + A + '"><span class="dot"></span><span' + D + '>' + l.listening + '</span></span><span class="lc' + A + '"' + D + '>' + l.own + '</span>' +
+  const own = '<span class="lc' + A + '"' + D + '>' + l.own + '</span>';
+  if (S.bar === 'listening') inner = cancel + '<span class="st' + A + '"><span class="dot"></span><span' + D + '>' + l.listening + '</span></span>' + own + cloudChip('listen') +
     (S.still ? '<span class="meter"><i></i></span>' : '<span class="wave"></span>') + '<span class="tm">0:00</span>' + gear + vb('stop', 'square', l.stop, 'stop');
-  if (S.bar === 'transcribing') inner = cancel + '<span class="st' + A + '">' + ic('audio-lines') + '<span' + D + '>' + l.transcribing + '</span></span><span class="shim"></span>' + gear + vb('stop', 'square', l.stop, 'stop', true);
+  if (S.bar === 'transcribing') inner = cancel + '<span class="st' + A + '">' + ic('audio-lines') + '<span' + D + '>' + l.transcribing + '</span></span>' + cloudChip('send') +
+    '<span class="shim"></span>' + gear + vb('stop', 'square', l.stop, 'stop', true);
   if (S.bar === 'text') { wide = true; inner = slot('captions') + '<div class="vtx' + A + '"' + D + '><div class="w">' + l.said + '</div></div>' +
     vt('copy', S.copied ? 'check' : 'copy', S.copied ? l.copied : l.copy) + vt('undo', 'undo-2', l.undo, '', S.undone) + gear + close; }
   if (S.bar === 'password') { wide = true; inner = slot('lock') + '<div class="vtx' + A + '"><div class="w mask">••••••••</div><small' + D + '>' + l.pwLine + '</small></div>' +
@@ -305,32 +316,36 @@ const PAGE = {
   home() {
     const changed = Object.keys(OPT0).filter(k => S.opt[k] !== OPT0[k]).length;
     const dev = S.devUse === 'auto' ? l.homeDevice : S.devUse === 'cpu' ? l.cpu : DEV.find(d => d.id === S.devUse).name;
-    const rows = [['models','audio-lines',M[inUse().id][0]], ['device','cpu',dev], ['compare','scale',l.homeCompare], ['history','history',f().texts(S.hist.length)],
+    const rows = [['models','audio-lines',M[inUse().id][0]], ['cloud','cloud',cloudHome()], ['device','cpu',dev], ['compare','scale',l.homeCompare], ['history','history',f().texts(S.hist.length)],
       ['options','settings-2',changed ? t(l.changed, {n:changed}) : l.homeOptions]].map(([p, icon, v]) => row([TL, '1fr'], tile(icon) + cell(l[p], v), 'go:' + p));
     return {icon:'mic', title:l.title, sub:l.langLine, body:list(rows),
       foot:'<span class="x' + A + '"' + D + '>' + l.againHint + '</span>' + btn('again', 'rotate-ccw', l.again, 'enter', !['text','password'].includes(S.bar))};
   },
   models() {
+    // The Local side (owner, 2026-11-17). "Models, slow PC" draws the default as Not for this PC, and the next ready local model in use in its place.
+    const weak = S.weak, def = S.models[0], spare = weak && def.st === 'use' ? S.models.find(m => !m.cloud && m.st === 'ready') : null;
+    const look = r => weak && r === def ? 'unfit' : r === spare ? 'use' : r.st;
     const rows = S.models.map((r, i) => {
-      const [name, mb] = M[r.id];
+      if (r.cloud) return '';
+      const [name, mb] = M[r.id], st = look(r);
       let sub = fileSize(mb), right = '';
-      if (r.st === 'use') right = mark(l.inUse, 'check', 'lit') + (r.def ? mark(l.def) : '');
-      if (r.st === 'ready') right = (r.def ? mark(l.def) : '') + mark(l.ready, 'check');
-      if (r.st === 'none') right = mark(l.notDl, 'download', 'out');
-      if (r.st === 'other') right = mark(l.other, 'file', 'out');
-      if (r.st === 'unfit') { right = mark(l.notHere, 'x', 'out'); sub = t(l.unfitWhy, {need:gb1(3.2), free:gb1(2.8)}); }
+      if (st === 'use') right = mark(l.inUse, 'check', 'lit') + (r.def ? mark(l.def) : '');
+      if (st === 'ready') right = (r.def ? mark(l.def) : '') + mark(l.ready, 'check');
+      if (st === 'none') right = mark(l.notDl, 'download', 'out');
+      if (st === 'other') right = mark(l.other, 'file', 'out');
+      if (st === 'unfit') { right = mark(l.notHere, 'x', 'out'); sub = t(l.unfitWhy, {need:gb1(3.2), free:gb1(2.8)}); }
       if (r.st === 'dl') {
         sub = '<span data-dlt="' + i + '">' + dlText(r) + '</span><div class="prog"><i data-dl="' + i + '" style="width:' + (r.p * 100).toFixed(1) + '%"></i></div>';
         right = '<div class="acts">' + btn('pause:' + i, r.paused ? 'play' : 'pause', r.paused ? l.resume : l.pause) + btn('dlcancel:' + i, 'x', l.cancel) + '</div>';
       }
       return tickRow([CK, '1fr', 'auto'], tickBox(i, true) + cell(name, sub) + '<div class="marks">' + right + '</div>', i);
-    });
+    }).filter(Boolean);
     const r = ticked();
-    return {icon:'audio-lines', title:l.models, sub:l.forLang, top:note('check', l.best + ' <b>' + M[S.models.find(m => m.def).id][0] + '</b>'), body:list(rows),
+    return {icon:'audio-lines', title:l.models, sub:l.forLang, top:sides('local') + note('check', l.best + ' <b>' + M[S.models.find(m => m.def).id][0] + '</b>') + (weak ? slowBand() : ''), body:list(rows),
       room:'<div class="room' + A + '">' + ic('hard-drive') + '<span class="x"' + D + '>' + t(l.folderLine, {path:'<bdi dir="ltr">D:\\KeyXtend\\models</bdi>', free:fileSize(212000)}) + '</span>' +
         btn('noop', 'folder', l.change) + btn('noop', 'folder-open', l.open) + '</div>',
-      foot:btn('del', 'trash-2', l.delFile, 'danger', !r || !['ready','other'].includes(r.st)) + btn('dl', 'download', l.download, '', !r || r.st !== 'none') + gap +
-        btn('use', 'check', l.use, 'enter', !r || r.st !== 'ready')};
+      foot:btn('del', 'trash-2', l.delFile, 'danger', !r || !['ready','other'].includes(look(r))) + btn('dl', 'download', l.download, '', !r || look(r) !== 'none') + gap +
+        btn('use', 'check', l.use, 'enter', !r || look(r) !== 'ready')};
   },
   device() {
     const rows = DEV.map((d, i) => {
@@ -349,13 +364,13 @@ const PAGE = {
       foot:btn('devcheck', 'activity', l.check, '', !d || !d.name || !!S.check) + gap + btn('devuse', 'check', l.devUse, 'enter', !d || d.id === S.devUse)};
   },
   compare() {
-    const n = S.models.filter(r => r.st === 'use' || r.st === 'ready').length;
+    const n = S.models.filter(r => !r.cloud && (r.st === 'use' || r.st === 'ready')).length;
     return {icon:'scale', title:l.compare, sub:l.forLang,
       body:'<div class="pb"><div class="read' + A + '"><p class="m"' + D + '>' + l.intro + '</p><div class="big' + A + '"' + D + '>' + l.read + '</div><p class="m"' + D + '>' + f().ready(n) + ' · ' + l.homeDevice + '</p></div></div>',
       foot:gap + btn('start', 'mic', l.start, 'enter')};
   },
   comparing() {
-    const ready = S.models.filter(r => r.st === 'use' || r.st === 'ready'), cur = 2;
+    const ready = S.models.filter(r => !r.cloud && (r.st === 'use' || r.st === 'ready')), cur = 2;
     const wait = id => (RESULT[S.lang].rows.find(r => r[0] === id) || [0, 0, 1.5])[2];
     const rows = ready.map((r, i) => row(['1fr', 'auto'], cell(M[r.id][0]) + '<div class="marks">' + (i < cur ? mark(t(l.doneIn, {t:secs(wait(r.id))}), 'check') :
       i === cur ? '<div class="chk' + A + '"><span' + D + '>' + l.writing + '</span><div class="prog run"><i></i></div></div>' : mark(l.waiting, '', 'out')) + '</div>', '', 'flat'));
@@ -380,10 +395,13 @@ const PAGE = {
     return {icon:'history', title:l.history, sub:t(l.histSub, {n:f().texts(S.hist.length)}), extra:btn('hall', 'trash-2', l.deleteAll, '', !loose || S.ask), body:list(rows), foot};
   },
   options() {
-    const rows = OPTS.map(([k, kind, o]) => {
+    const rows = OPTS.flatMap(([k, kind, o]) => {
       const v = S.opt[k], label = cell(l.opt[k]);
       if (kind === 'sw') return row(['1fr', 'auto', 'auto'], label + '<span class="onoff' + A + '"' + D + '>' + (v ? l.on : l.off) + '</span><span class="sw' + (v ? ' on' : '') + '"></span>',
         'sw:' + k, '', ' role="switch" aria-checked="' + v + '"');
+      // Insert the text (owner, 2026-11-17): Type it or Paste at once; while Paste is chosen, its hint takes the next row.
+      if (kind === 'two') return [row(['1fr', 'auto'], label + chips(l.opt[k], l[o.texts].map((s, i) => ['pick:' + k + ':' + i, s]), v, ' in', v ? 'hint-' + k : ''), '', 'flat')]
+        .concat(v ? [row(['auto', '1fr'], ic('clipboard-paste') + '<div class="tx' + A + '"' + D + '><div class="m" id="hint-' + k + '">' + l[o.hint] + '</div></div>', '', 'flat hint')] : []);
       const off = o && o.dep && !S.opt[o.dep], ends = kind === 'ch' ? [v <= 0, v >= 2] : o.list ? [v === o.list[0], v === o.list[o.list.length - 1]] : [v <= o.min, v >= o.max];
       const value = kind === 'ch' ? l.places[v] : fmtOpt(o.fmt, v), icons = kind === 'ch' ? ['chevron-left', 'chevron-right'] : ['minus', 'plus'];
       return row(['1fr', 'auto'], label + '<span class="ctl' + (off ? ' off' : '') + '">' + btn('st:' + k + ':-1', icons[0], '', 'sq', off || ends[0], l.less + ': ' + l.opt[k]) +
@@ -418,10 +436,12 @@ function app() {
   return '<div class="app"><div class="a-t"' + cls + '>' + a[0] + '</div><div class="a-b"' + dir + cls + '><p>' + a[1] + '</p><p>' + a[2] + typed + S.extra + '<span class="caret"></span></p></div></div>';
 }
 const keyEl = (w, cls, inner) => '<div class="key ' + cls + '" style="grid-column:span ' + Math.round(w * 4) + '"><div class="cap">' + inner + '</div></div>';
+// The Dictation key works in the mock-up; while preparing, its Narrator name says so.
+const micAct = () => ' data-a="mic" role="button" tabindex="0" aria-label="' + (S.bar === 'preparing' ? l.namePrep : l.title) + '"';
 function keyboard() {
   const k = KB[S.lang], ar = S.lang === 'ar', lb = s => '<span class="lbl">' + s + '</span>';
   const row = a => a.map(s => keyEl(1, 'char', '<span class="lg' + (ar && /[\u0600-\u06FF]/.test(s) ? ' ar' : '') + '">' + s.replace('<', '&lt;') + '</span>')).join('');
-  const side = [['mouse-right',1,1,'act'],['hand-grab',2,1,'act'],['command',3,1,'act'],['clipboard-clock',3,3,'act'],['key-round',1,5,'act'],['mic',2,5,S.bar === 'listening' ? 'rec' : 'act'],['power',3,5,'danger']];
+  const side = [['mouse-right',1,1,'act'],['hand-grab',2,1,'act'],['command',3,1,'act'],['clipboard-clock',3,3,'act'],['key-round',1,5,'act'],['mic',2,5,S.bar === 'listening' ? 'rec' : S.bar === 'preparing' ? 'prep' : 'act'],['power',3,5,'danger']];
   return '<div class="kb"><div class="kb-top"><div class="lane">' + k.words.map(w => '<span class="wchip' + (ar ? ' ar' : '') + '">' + w + '</span>').join('') + '</div><span class="tb">' + ic('minus') + '</span><span class="tb">' + ic('x') + '</span></div>' +
     '<div class="kb-body"><div class="kb-main">' +
     '<div class="row">' + keyEl(1, 'danger', lb(k.keys[0])) + row(k.rows[0]) + keyEl(2, 'danger', ic('delete')) + '</div>' +
@@ -432,13 +452,14 @@ function keyboard() {
     keyEl(7, 'space', '<span class="spn' + (ar ? ' ar' : '') + '">' + k.sp + '</span>') + keyEl(1, 'mod', lb(k.keys[5])) + keyEl(1, 'mod', ic('chevron-left')) + keyEl(1, 'mod', ic('chevron-down')) + keyEl(1, 'mod', ic('chevron-right')) + '</div>' +
     '</div><div class="kb-side"><div class="key act" style="grid-column:1/3;grid-row:2/5"><div class="cap dpad"><span class="d up">' + ic('chevron-up') + '</span><span class="d lf">' + ic('chevron-left') +
     '</span><span class="d rt">' + ic('chevron-right') + '</span><span class="d bt">' + ic('chevron-down') + '</span></div></div>' +
-    side.map(([n, cx, ry, c]) => '<div class="key ' + c + '" style="grid-column:' + cx + ';grid-row:' + ry + '"><div class="cap">' + ic(n) + '</div></div>').join('') + '</div></div></div>';
+    side.map(([n, cx, ry, c]) => '<div class="key ' + c + '"' + (n === 'mic' ? micAct() : '') + ' style="grid-column:' + cx + ';grid-row:' + ry + '"><div class="cap">' + ic(n) + '</div></div>').join('') + '</div></div></div>';
 }
 
 // Drawing, placing and fitting: the bar sits just above the keyboard, centred; the open panel sits just above the bar.
 function controls() {
   const g = (label, k, opts, cur) => '<div class="grp"><b>' + label + '</b><div class="opts">' + opts.map(([v, s]) => '<button class="o" data-k="' + k + '" data-v="' + v + '" aria-pressed="' + (String(v) === String(cur)) + '">' + s + '</button>').join('') + '</div></div>';
-  return g('Bar', 'bar', CTL.bar, S.bar) + g('Voice panel', 'panel', CTL.panel, S.panel) + g('Theme', 'theme', CTL.theme, S.theme) + g('Light or dark', 'mode', CTL.mode, S.mode) +
+  return g('Bar', 'bar', CTL.bar, S.bar) + g('Voice panel', 'panel', CTL.panel, S.panel) + g('Cloud (part 2)', 'panel', CTL.cloud, S.panel) + g('Dictating with', 'engine', CTL.engine, S.engine) +
+    g('Theme', 'theme', CTL.theme, S.theme) + g('Light or dark', 'mode', CTL.mode, S.mode) +
     g('Language', 'lang', CTL.lang, S.lang) + g('Keyboard size', 'size', CTL.size, S.size) + g('Motion', 'still', CTL.still, S.still ? 1 : 0) + g('View', 'view', CTL.view, S.view);
 }
 function render() {
@@ -447,8 +468,10 @@ function render() {
   de.dataset.theme = S.theme; de.dataset.mode = S.mode; de.style.setProperty('--s', S.size); de.style.colorScheme = S.mode === 'dark' ? 'dark' : 'light';
   document.body.classList.toggle('still', S.still);
   $('ctl').innerHTML = controls();
-  $('stage').innerHTML = (S.view === 'kb' ? app() + keyboard() : '') + bar() + panel();
-  $('say').innerHTML = SAY[S.bar] + (S.panel === 'none' ? '' : SAY[S.panel] + (S.view === 'kb' ? SAY.zoom : '')) + (S.still ? SAY.still : '');
+  $('stage').innerHTML = (S.view === 'kb' || S.bar === 'preparing' ? app() + keyboard() : '') + bar() + panel();
+  const marked = inUse().cloud && ['listening','transcribing'].includes(S.bar);
+  $('say').innerHTML = SAY[S.bar].replace('{name}', '<bdi>' + l.namePrep + '</bdi>') + (marked ? SAY.cloudbar : '') +
+    (S.panel === 'none' ? '' : SAY[S.panel] + (S.view === 'kb' ? SAY.zoom : '')) + (S.still ? SAY.still : '');
   seen.bar = S.bar; seen.panel = S.panel;
   place();
 }
@@ -503,16 +526,22 @@ function frame(now) {
 }
 
 // Clicks: the controls on top, then the bar's and the panel's own buttons, which work as the product's will.
+// The mock-up's own pacing in ms (writing, a Copied flash, preparing, a key's test), not the product's timings.
+const PACE = {write:1800, flash:1200, prep:1600, test:1200};
 function transcribe() {
   clearTimeout(timer); S.bar = 'transcribing'; S.undone = false;
-  timer = setTimeout(() => { S.bar = S.pw ? 'password' : 'text'; save(); render(); }, 1800);
+  timer = setTimeout(() => { S.bar = S.pw ? 'password' : 'text'; save(); render(); }, PACE.write);
 }
-function flash(k) { S[k] = true; setTimeout(() => { S[k] = false; render(); }, 1200); }
-function go(p) { S.panel = p; S.pg = 0; S.tick = []; S.ask = false; if (p === 'device' && !S.passed.nv && !S.check) S.check = {id:'nv', p:.3}; }
+function flash(k) { S[k] = true; setTimeout(() => { S[k] = false; render(); }, PACE.flash); }
+function go(p) { S.panel = p; S.pg = 0; S.tick = []; S.ask = false; if (p === 'device' && !S.passed.nv && !S.check) S.check = {id:'nv', p:.3}; cloudGo(p); }
+// Cancel, the gear or the Dictation key while preparing (owner, 2026-11-17): nothing was recorded, so nothing is sent.
+function end() { clearTimeout(timer); S.bar = S.bar === 'preparing' ? 'none' : 'cancelled'; }
 const ACT = {
   stop:transcribe, anyway:transcribe, again:transcribe, copy:() => flash('copied'), undo:() => { S.undone = true; },
-  cancel:() => { clearTimeout(timer); S.bar = 'cancelled'; }, close:() => { clearTimeout(timer); S.bar = 'none'; },
-  listen:() => { S.bar = 'listening'; S.t0 = performance.now(); }, gear:() => go(S.panel === 'none' ? 'home' : 'none'),
+  cancel:end, close:() => { clearTimeout(timer); S.bar = 'none'; },
+  listen:() => { clearTimeout(timer); S.bar = 'preparing'; timer = setTimeout(() => { S.bar = 'listening'; S.t0 = performance.now(); save(); render(); }, PACE.prep); },
+  mic:() => { if (S.bar === 'preparing') end(); else if (S.bar === 'listening') transcribe(); else ACT.listen(); },
+  gear:() => { if (['preparing','listening','transcribing'].includes(S.bar)) end(); go(S.panel === 'none' ? 'home' : 'none'); },
   getmodel:() => { const r = S.models[0]; if (r.st !== 'dl') { r.after = r.st; r.st = 'dl'; r.p = 0; } go('models'); },
   back:() => go('home'), pclose:() => go('none'), go:p => go(p), pg:d => { S.pg += +d; }, noop:() => {},
   tick:x => { const i = +x, n = S.tick.indexOf(i); if (S.panel === 'history') { if (n < 0) S.tick.push(i); else S.tick.splice(n, 1); } else S.tick = n < 0 ? [i] : []; },
@@ -528,7 +557,7 @@ const ACT = {
   hdel:() => { S.hist = S.hist.filter((h, i) => !S.tick.includes(i)); S.tick = []; },
   hins:() => { S.extra += S.tick.map(i => ' ' + S.hist[i].text).join(''); S.tick = []; },
   hall:() => { S.ask = true; }, hno:() => { S.ask = false; }, hyes:() => { S.hist = S.hist.filter(h => h.pin); S.ask = false; S.tick = []; S.pg = 0; },
-  sw:k => { S.opt[k] = !S.opt[k]; },
+  sw:k => { S.opt[k] = !S.opt[k]; }, pick:(k, i) => { S.opt[k] = +i; },
   st:(k, d) => {
     const [, kind, o] = OPTS.find(x => x[0] === k), v = S.opt[k];
     if (kind === 'ch') S.opt[k] = Math.max(0, Math.min(2, v + +d));
@@ -544,6 +573,7 @@ document.addEventListener('click', e => {
     if (k === 'lang') fresh();
     if (k === 'bar') { clearTimeout(timer); S.undone = false; S.t0 = performance.now(); if (v === 'password' || v === 'text') S.pw = v === 'password'; }
     if (k === 'panel') go(v);
+    if (k === 'engine') useEngine(v);
     save(); render(); return;
   }
   const a = e.target.closest('[data-a]');
@@ -551,9 +581,14 @@ document.addEventListener('click', e => {
   const [name, x, y] = a.dataset.a.split(':');
   if (ACT[name]) { ACT[name](x, y); save(); render(); }
 });
-document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.pr[data-a]')) { e.preventDefault(); e.target.click(); } });
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-a]:not(button)')) { e.preventDefault(); e.target.click(); } });
 addEventListener('resize', fit);
-if (S.panel === 'device') go('device');
-render();
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
-requestAnimationFrame(frame);
+// Starts once voice-cloud.js has added part 2's texts, pages and acts.
+function boot() {
+  fresh();
+  if (S.panel === 'device' || PRESET[S.panel]) go(S.panel);
+  render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+  requestAnimationFrame(frame);
+}
+document.addEventListener('DOMContentLoaded', boot);
