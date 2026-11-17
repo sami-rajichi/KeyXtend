@@ -1,7 +1,7 @@
 //! Paste at once for another module (owner, 2026-11-17): the clipboard is kept, the text written as ours and pasted
 //! once, the answer sent right after the keyboard's, and the clipboard put back after the gap. One with a private
-//! marker on it or that cannot be put back whole, a busy read, a late ask or an insert under way answers no and
-//! writes nothing.
+//! marker on it, a skipped app's copy, one that cannot be put back whole, a busy read, a late ask or an insert under
+//! way answers no and writes nothing.
 
 use std::time::Duration;
 
@@ -17,6 +17,7 @@ use crate::fixture::{files, image, text};
 
 mod back;
 mod props;
+mod skip;
 mod start;
 
 /// The asker's round.

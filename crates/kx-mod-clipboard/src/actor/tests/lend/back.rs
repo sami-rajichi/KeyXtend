@@ -1,12 +1,13 @@
 //! When a lent paste leaves the clipboard alone: one with a private marker on it is never read or written back, even
-//! when a stale echo kept the board, a text past `back_chars` is never read whole, and a copy made during the gap is
-//! never overwritten. A skipped app's unmarked copy is never kept, but its text comes back.
+//! when a stale echo kept the board, a kept entry that cannot come back whole is typed, a text past `back_chars` is
+//! never read whole, and a copy made during the gap is never overwritten.
 
-use kx_module_api::ports::{ClipNote, ClipPart};
+use kx_module_api::ports::{ClipNote, ClipPart, SealedError};
+use kx_platform_fake::ShelfCall;
 use toml::Value;
 
 use super::super::rig::Rig;
-use super::{SAID, holding, lend, lent, round_trip};
+use super::{SAID, holding, html, lend, lent, round_trip};
 use crate::fixture::{app, text};
 
 /// The most characters the rigs here read back.
@@ -76,17 +77,6 @@ fn a_copy_made_during_the_gap_is_never_overwritten_but_our_echo_is() {
 }
 
 #[test]
-fn a_skipped_apps_copy_is_never_kept_but_its_unmarked_text_comes_back() {
-    let skip = Value::Array(vec!["vault.exe".into()]);
-    let mut rig = Rig::build(|_, host| host.put("skip_apps", skip));
-    rig.fakes.clip.set_text(Some("from the vault"));
-    rig.copy(vec![text("from the vault")], Some(app("vault.exe")));
-    assert_eq!(round_trip(&mut rig), [text("from the vault")]);
-    rig.open();
-    assert!(rig.titles().is_empty(), "never kept");
-}
-
-#[test]
 fn a_stale_echo_never_puts_back_a_marked_text() {
     let mut rig = Rig::new();
     rig.push(ClipNote::TooBig {
@@ -121,5 +111,18 @@ fn a_kept_entry_on_the_board_is_refused_once_its_twin_on_the_clipboard_is_marked
         refused,
         (Some(false), tries),
         "the whole entry never goes back"
+    );
+}
+
+#[test]
+fn a_kept_entry_that_cannot_come_back_whole_is_typed_and_the_clipboard_untouched() {
+    let mut rig = holding(vec![text("rich"), html("<b>rich</b>")]);
+    rig.fakes.shelf.fail(ShelfCall::Load, SealedError::Damaged);
+    lend(&mut rig);
+    let refused = (lent(&rig), rig.fakes.writer.tries());
+    assert_eq!(
+        refused,
+        (vec![false], 0),
+        "its text alone would drop the HTML"
     );
 }

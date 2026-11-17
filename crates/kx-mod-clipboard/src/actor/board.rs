@@ -1,6 +1,6 @@
 //! What the clipboard holds, as the watch and our own writes told it, so Paste at once can put an entry back whole
-//! (owner, 2026-11-17, ADR-0048). Our writes come back from the watch as `Marked`, so each is counted and its echo
-//! keeps the board. Privacy is checked live at the read: a clipboard with a private marker on it is never read.
+//! and never put back a skipped app's copy (owner, 2026-11-17, ADR-0048). Our writes' echoes keep the board, and
+//! privacy is checked live at the read, so a clipboard with a private marker on it is never read.
 
 use std::mem;
 
@@ -24,25 +24,26 @@ pub(super) enum Held {
     Entry(u64),
 }
 
-/// What the clipboard holds, and how many of our writes the watch has not told back yet.
+/// What the clipboard holds, how many of our writes the watch has not told back yet, and whether it may hold a
+/// skipped app's copy.
 #[derive(Debug, Default)]
 pub(super) struct Board {
     held: Held,
     echoes: u32,
+    skipped: bool,
 }
 
 impl Board {
-    /// The watch told `note`; true for our own write's echo, which keeps the board. A clear empties it, and anything
-    /// else is other until a copy is kept.
-    pub(super) fn heard(&mut self, note: &ClipNote) -> bool {
-        match note {
-            ClipNote::Marked { .. } if self.echoes > 0 => {
-                self.echoes -= 1;
-                return true;
-            }
-            ClipNote::Cleared { .. } => self.held = Held::Empty,
-            _ => self.held = Held::Other,
+    /// The watch told `note`, from a skipped app or unread when `skipped`; true for our own write's echo, which keeps
+    /// the board. A skipped app's note is never taken as our echo, and only another app's copy or a clear lets it go.
+    pub(super) fn heard(&mut self, note: &ClipNote, skipped: bool) -> bool {
+        let cleared = matches!(note, ClipNote::Cleared { .. });
+        if matches!(note, ClipNote::Marked { .. }) && self.echoes > 0 && !skipped {
+            self.echoes -= 1;
+            return true;
         }
+        self.skipped = skipped && !cleared;
+        self.held = if cleared { Held::Empty } else { Held::Other };
         false
     }
 
@@ -51,9 +52,9 @@ impl Board {
         self.held = Held::Entry(id);
     }
 
-    /// We wrote what `held` names, so its echo is due.
+    /// We wrote what `held` names, so its echo is due and no skipped app's copy is left.
     pub(super) fn wrote(&mut self, held: Held) {
-        self.held = held;
+        (self.held, self.skipped) = (held, false);
         self.echoes = self.echoes.saturating_add(1);
     }
 }
@@ -65,31 +66,38 @@ pub(super) struct Back {
     pub(super) held: Held,
 }
 
+/// What a kept entry on the board gives back.
+enum Found {
+    /// All its stored parts.
+    Whole(Vec<ClipPart>),
+    /// The clipboard's text differs, so the entry is no longer there.
+    Moved,
+    /// It may still be there but cannot come back whole, so nothing goes back.
+    Partial,
+}
+
 impl Actor {
-    /// What to put back after a paste, once the live check finds no private marker: the entry on the board, whole,
-    /// when the clipboard's text agrees; else the clipboard's text alone; or nothing for an empty clipboard. `None`
-    /// for a marked or unreadable clipboard, or one with no text the history cannot name, as it may hold a picture.
+    /// What to put back after a paste: the entry on the board, whole; else the clipboard's unmarked text alone; or
+    /// nothing for an empty clipboard. `None` for a skipped app's copy, a marked or unreadable clipboard, an entry that
+    /// cannot come back whole, or no text the history can name, as it may be a picture.
     pub(super) fn previous(&mut self) -> Option<Back> {
-        let read = self
-            .ports
-            .clip
-            .unmarked_text(self.settings.wait(), self.settings.back_chars);
-        let text = match read {
-            Ok(text) => text,
-            Err(ClipError::Marked) => {
-                tracing::info!("a private copy is on the clipboard, so the text is typed");
-                return None;
-            }
-            Err(error) => {
-                tracing::warn!(%error, "the clipboard was not read before a paste");
-                return None;
-            }
-        };
+        if self.board.skipped {
+            tracing::info!("a skipped app's copy may be on the clipboard, so the text is typed");
+            return None;
+        }
+        let text = self.unmarked().ok()?;
         let held = self.board.held;
-        if let Held::Entry(id) = held
-            && let Some(parts) = self.whole(id, text.as_ref())
-        {
-            return Some(Back { parts, held });
+        if let Held::Entry(id) = held {
+            match self.whole(id, text.as_ref()) {
+                Found::Whole(parts) => return Some(Back { parts, held }),
+                Found::Partial => {
+                    tracing::info!(
+                        "the entry on the clipboard cannot come back whole, so the text is typed"
+                    );
+                    return None;
+                }
+                Found::Moved => {}
+            }
         }
         let (parts, held) = match (text, held) {
             (Some(text), _) => (vec![ClipPart::Text(own(text))], Held::Other),
@@ -99,17 +107,33 @@ impl Actor {
         Some(Back { parts, held })
     }
 
-    /// Entry `id`'s stored parts when the clipboard holds them: the same text, or no text in either, and a picture
-    /// that needs no DIB made.
-    fn whole(&self, id: u64, text: Option<&Secret>) -> Option<Vec<ClipPart>> {
-        let entry = self.history.get(id)?;
-        let parts = self.store.parts(entry).ok().flatten()?;
+    /// The clipboard's text once the live check finds no private marker on it; a marked or unreadable one is logged.
+    fn unmarked(&self) -> Result<Option<Secret>, ClipError> {
+        let (wait, cap) = (self.settings.wait(), self.settings.back_chars);
+        let read = self.ports.clip.unmarked_text(wait, cap);
+        match &read {
+            Ok(_) => {}
+            Err(ClipError::Marked) => {
+                tracing::info!("a private copy is on the clipboard, so the text is typed");
+            }
+            Err(error) => tracing::warn!(%error, "the clipboard was not read before a paste"),
+        }
+        read
+    }
+
+    /// Entry `id` as the clipboard holds it: whole when the text agrees, or neither has text, and a picture needs no
+    /// DIB made; moved when the text differs; partial otherwise, a store that cannot read it included.
+    fn whole(&self, id: u64, text: Option<&Secret>) -> Found {
+        let stored = self.history.get(id).map(|e| self.store.parts(e));
+        let Some(Ok(Some(parts))) = stored else {
+            return Found::Partial;
+        };
         let same = text_of(&parts) == text.map(|t| t.expose().as_str());
         if same && !wants_dib(&parts) {
-            return Some(parts);
+            return Found::Whole(parts);
         }
         wipe(parts);
-        None
+        if same { Found::Partial } else { Found::Moved }
     }
 }
 

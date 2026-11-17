@@ -1,0 +1,55 @@
+//! A skipped app's copy is never put back (ADR-0048 decision 5): a password manager's clear timer could fire during
+//! the gap and leave its password there. A note from a skipped app, or a change the watch could not read, refuses
+//! until another app's copy or a clear, even with our echoes still due.
+
+use kx_module_api::ports::ClipNote;
+use toml::Value;
+
+use super::super::rig::Rig;
+use super::{lend, lent, round_trip};
+use crate::fixture::{app, text};
+
+/// The skipped app.
+pub(super) const VAULT: &str = "vault.exe";
+
+/// A rig that skips `VAULT`'s copies.
+pub(super) fn skipping() -> Rig {
+    let skip = Value::Array(vec![VAULT.into()]);
+    Rig::build(|_, host| host.put("skip_apps", skip))
+}
+
+/// Lends once and checks it was refused with nothing read or written.
+fn refused(rig: &mut Rig, why: &str) {
+    let (takes, tries) = (rig.fakes.clip.takes(), rig.fakes.writer.tries());
+    lend(rig);
+    assert_eq!(lent(rig).last(), Some(&false), "{why}");
+    let after = (rig.fakes.clip.takes(), rig.fakes.writer.tries());
+    assert_eq!(after, (takes, tries), "{why}: never read or written");
+}
+
+#[test]
+fn a_skipped_apps_copy_is_typed_and_the_clipboard_untouched_until_another_copy() {
+    let mut rig = skipping();
+    rig.fakes.clip.set_text(Some("from the vault"));
+    rig.copy(vec![text("from the vault")], Some(app(VAULT)));
+    refused(&mut rig, "a copy");
+    rig.fakes.clip.set_text(Some("mine"));
+    rig.text("mine");
+    assert_eq!(round_trip(&mut rig), [text("mine")], "another app's copy");
+}
+
+#[test]
+fn a_skipped_apps_mark_or_a_missed_change_refuses_even_with_echoes_due() {
+    let mut rig = skipping();
+    rig.fakes.clip.set_text(Some("mine"));
+    rig.text("mine");
+    assert_eq!(round_trip(&mut rig), [text("mine")], "two echoes still due");
+    rig.fakes.clip.set_text(Some("from the vault"));
+    rig.push(ClipNote::Marked {
+        app: Some(app(VAULT)),
+    });
+    refused(&mut rig, "its mark is never our echo");
+    rig.push(ClipNote::Cleared { app: None });
+    rig.push(ClipNote::Busy);
+    refused(&mut rig, "a change the watch missed");
+}

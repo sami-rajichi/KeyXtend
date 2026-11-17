@@ -1,10 +1,10 @@
-//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private copies, clears,
-//! echoes, failed reads and inserts never run a lend beside an insert, answer each ask once, never write a private
-//! text, and always end with the clipboard put back, unless the watch told a change after the text was written.
+//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private and skipped
+//! copies, clears, echoes, failed reads and inserts never run a lend beside an insert, answer each ask once, never
+//! write a private or skipped text, and always end with the clipboard put back, unless the watch told a change since.
 
 use std::time::Duration;
 
-use kx_module_api::ports::{ClipAct, ClipError, ClipNote, PasteText, Pasted};
+use kx_module_api::ports::{AppRef, ClipAct, ClipError, ClipNote, PasteText, Pasted};
 use kx_module_api::{Clock, Redacted, Zeroizing};
 use proptest::prelude::*;
 
@@ -12,8 +12,9 @@ use super::super::super::Msg;
 use super::super::super::paste::Paste;
 use super::super::ears::Heard;
 use super::super::rig::Rig;
+use super::skip::{VAULT, skipping};
 use super::{SAID, WAIT_MS};
-use crate::fixture::text;
+use crate::fixture::{app, text};
 use crate::settings::ClipSettings;
 
 /// Random runs tried; each builds a rig.
@@ -28,6 +29,8 @@ const OK_SHARE: f64 = 0.8;
 const COPY: &str = "x";
 /// The text a password manager copies with a private marker.
 const PRIVATE: &str = "p";
+/// The text a skipped app copies, unmarked.
+const VAULTED: &str = "v";
 
 /// One thing that can happen around a lent paste.
 #[derive(Clone, Debug)]
@@ -40,6 +43,8 @@ enum Step {
     Advance(u64),
     /// The user copies `COPY`.
     Copy,
+    /// A skipped app copies `VAULTED`.
+    Skipped,
     /// A password manager copies `PRIVATE` with a private marker.
     Private,
     /// The watch tells a marked copy.
@@ -67,20 +72,29 @@ fn step() -> impl Strategy<Value = Step> {
         2 => Just(Step::Copy),
         2 => Just(Step::Marked),
         1 => Just(Step::Private),
+        1 => Just(Step::Skipped),
         1 => Just(Step::Clear),
         1 => Just(Step::Busy),
         1 => Just(Step::Insert),
     ]
 }
 
-/// A rig, the asks made so far, and whether the watch told a change since the text was last written.
+/// A rig, the asks made so far, whether the watch told a change since the text was last written, and whether a skipped
+/// app's copy came after every other change.
 struct Run {
     rig: Rig,
     asks: u32,
     told: bool,
+    vault: bool,
 }
 
 impl Run {
+    /// The clipboard holds `said`, copied by `by`, and the watch tells it.
+    fn copy(&mut self, said: &str, by: Option<AppRef>) {
+        self.rig.fakes.clip.set_text(Some(said));
+        self.rig.copy(vec![text(said)], by);
+    }
+
     /// Asks for `SAID` pasted on the next round, as the voice module does.
     fn lend(&mut self) {
         self.asks += 1;
@@ -105,10 +119,8 @@ impl Run {
                 rig.send(Msg::Pasted(Pasted { round, ok: *ok }));
             }
             Step::Advance(ms) => rig.advance(Duration::from_millis(*ms)),
-            Step::Copy => {
-                rig.fakes.clip.set_text(Some(COPY));
-                rig.copy(vec![text(COPY)], None);
-            }
+            Step::Copy => self.copy(COPY, None),
+            Step::Skipped => self.copy(VAULTED, Some(app(VAULT))),
             Step::Private => {
                 rig.fakes.clip.set_marked(Some(PRIVATE));
                 rig.push(ClipNote::Marked { app: None });
@@ -140,16 +152,18 @@ impl Run {
         rounds
     }
 
-    /// Does `step`, noting a change the watch told, then checks no private text was written, no lend runs beside an
-    /// insert and no ask is answered twice.
+    /// Does `step`, noting a change the watch told, then checks no private or skipped text was written, no lend runs
+    /// beside an insert and no ask is answered twice.
     fn step(&mut self, step: &Step) -> Result<(), TestCaseError> {
         let writes = self.rig.fakes.writer.writes().len();
         self.apply(step);
         let moved = matches!(
             step,
-            Step::Copy | Step::Private | Step::Marked | Step::Clear
+            Step::Copy | Step::Skipped | Step::Private | Step::Marked | Step::Clear
         );
         self.told |= moved;
+        self.vault = matches!(step, Step::Skipped)
+            || (self.vault && !moved && !matches!(step, Step::Insert));
         let now = self.rig.fakes.writer.writes();
         if now.len() > writes && now.last() == Some(&vec![text(SAID)]) {
             self.told = false;
@@ -157,6 +171,11 @@ impl Run {
         prop_assert!(
             !now.contains(&vec![text(PRIVATE)]),
             "a private text is never written"
+        );
+        let vaulted = now[writes..].contains(&vec![text(VAULTED)]);
+        prop_assert!(
+            !(self.vault && vaulted),
+            "a skipped app's text is never put back"
         );
         let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
@@ -197,7 +216,7 @@ proptest! {
     fn random_lends_run_alone_answer_once_and_always_put_the_clipboard_back(
         steps in prop::collection::vec(step(), 0..MAX_STEPS),
     ) {
-        let mut run = Run { rig: Rig::new(), asks: 0, told: false };
+        let mut run = Run { rig: skipping(), asks: 0, told: false, vault: false };
         for step in &steps {
             run.step(step)?;
         }

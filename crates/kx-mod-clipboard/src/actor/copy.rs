@@ -15,7 +15,7 @@ impl Actor {
     /// Takes `note` from the watch, the board first, and a change not ours keeps a lent paste from putting back. A copy
     /// too big shows a note unless its app is skipped, and a busy clipboard tells nothing.
     pub(super) fn note(&mut self, note: ClipNote) {
-        if !self.board.heard(&note) {
+        if !self.board.heard(&note, self.unsure(&note)) {
             self.lend_moved();
         }
         match note {
@@ -29,6 +29,17 @@ impl Actor {
                 self.say_note(PanelNote::TooBig);
             }
             ClipNote::TooBig { .. } | ClipNote::Marked { .. } | ClipNote::Busy => {}
+        }
+    }
+
+    /// True when `note` comes from a skipped app, or tells a change the watch could not read, which may be one.
+    fn unsure(&self, note: &ClipNote) -> bool {
+        match note {
+            ClipNote::Copied { app, .. }
+            | ClipNote::Marked { app }
+            | ClipNote::Cleared { app }
+            | ClipNote::TooBig { app, .. } => self.follow.skips(app.as_ref()),
+            ClipNote::Busy => true,
         }
     }
 
