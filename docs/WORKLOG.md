@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-17 12:40 — P11: the Dictation key glows amber until the microphone opens
+After an idle spell the bar showed while the microphone was still starting, so the first words could be lost. Now no bar shows until the microphone is open: only the Dictation key glows amber, at once, with a Narrator name saying it is preparing, and the bar then appears in red. A worker test proves that speech heard while the model still loads is all written, and Compare models waits for its microphone the same way. The themes' tokens moved into one file per theme to keep each file small.
+
 ## 2026-11-17 07:20 — P11: the gear ends a running dictation before the panel opens
 The bar's gear and the tray's Voice typing row opened the panel while the dictation kept recording. Opening the panel now first ends a preparing, listening or transcribing dictation exactly as Cancel does, so nothing is sent, transcribed or typed, and Transcribe anyway still works. The gear also ends a Compare models recording as Compare's own Cancel does, and flow, actor and property tests pin each case.
 
