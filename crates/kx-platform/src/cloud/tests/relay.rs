@@ -1,5 +1,6 @@
 //! A run's relay: no job before `send`, one job per run sized by its sound, the row, the key and each piece's size
-//! first, then the sound in wiped parts in order, the texts back in order, and a drop that cancels at once.
+//! first, then the sound in wiped parts in order, the texts back in order, and a drop that cancels at once, even while
+//! its upload and its job are held.
 
 use super::*;
 use kx_ipc::{MAX_SOUND_BYTES, NET_JOB, NetHeader, NetShape, Wiped};
@@ -152,6 +153,30 @@ fn dropping_a_run_cancels_its_requests_and_says_goodbye() {
     drop(run);
     took(&called, &NetAsk::Cancel { id: ID });
     assert!(said_bye(&called), "a goodbye");
+    script.say(Ok(text(0, SAID)));
+    assert!(heard.try_recv().is_err(), "a closed run tells nothing");
+}
+
+#[test]
+fn a_run_dropped_while_its_upload_and_its_job_are_held_returns_at_once() {
+    let (host, script, _) = host();
+    let (calls, called) = mpsc::channel();
+    script.tell(calls);
+    let (run, heard) = sent(&host, ask(&[PER_S, PER_S]));
+    let (open, gate) = mpsc::channel::<()>();
+    script.hold(gate);
+    let (gone, dropped) = mpsc::channel();
+    std::thread::spawn(move || {
+        drop(run);
+        let _ = gone.send(());
+    });
+    let back = dropped.recv_timeout(LONG);
+    assert!(back.is_ok(), "the drop returns while the job is held");
+    let cancel = Call::Net(NetAsk::Cancel { id: ID });
+    assert!(!script.calls().contains(&cancel), "the job still holds it");
+    drop(open);
+    took(&called, &NetAsk::Cancel { id: ID });
+    assert!(said_bye(&called), "then a goodbye");
     script.say(Ok(text(0, SAID)));
     assert!(heard.try_recv().is_err(), "a closed run tells nothing");
 }

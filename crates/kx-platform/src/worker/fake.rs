@@ -84,6 +84,8 @@ struct Log<F: Faked> {
     tap: Option<Sender<Frame<F>>>,
     /// The most memory each worker's job took, as the system would tell it.
     peak: Option<u32>,
+    /// Holds the worker's next ask until it hears or closes, as a worker that stopped reading does.
+    hold: Option<Receiver<()>>,
 }
 
 /// A spawner of scripted workers of job `F`; clones share one script.
@@ -102,6 +104,7 @@ impl<F: Faked> Default for Script<F> {
             tell: None,
             tap: None,
             peak: None,
+            hold: None,
         })))
     }
 }
@@ -171,6 +174,11 @@ impl<F: Faked> Script<F> {
         self.log().tell = Some(to);
     }
 
+    /// Holds the worker's next ask, on the thread that sends it, until `gate` hears or its sender drops.
+    pub fn hold(&self, gate: Receiver<()>) {
+        self.log().hold = Some(gate);
+    }
+
     fn record(&self, call: Call) {
         let mut log = self.log();
         if let Some(tell) = &log.tell {
@@ -216,6 +224,10 @@ pub struct FakeWorker<F: Faked>(Script<F>);
 
 impl<F: Faked> Worker<F> for FakeWorker<F> {
     fn send(&mut self, ask: F::Ask) {
+        let held = self.0.log().hold.take();
+        if let Some(gate) = held {
+            let _ = gate.recv();
+        }
         if let Some((id, call)) = F::note(ask) {
             self.0.log().asked = Some(id);
             self.0.record(call);
