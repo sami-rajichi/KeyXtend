@@ -1,7 +1,8 @@
 //! A listen-only run's speech packed for a cloud service: each stretch of speech with its pad joins the piece before it
-//! while the piece stays within `cap` samples, so two pieces in a row always hold more than `cap`; a longer stretch is
-//! split at `cap`.
+//! while the piece stays within `cap` samples, so two pieces in a row always hold more than `cap`. A longer stretch is
+//! cut at its quietest stretches first, as a model's long piece is.
 
+use super::split;
 use std::ops::Range;
 
 /// The pieces packed so far, each as the stretches of the recording it joins.
@@ -22,13 +23,16 @@ impl Packer {
         }
     }
 
-    /// Adds the stretch `span` after the last, split at `cap` when longer; an empty one adds nothing.
-    pub fn add(&mut self, span: Range<usize>) {
-        let mut at = span.start;
-        while at < span.end {
-            let part = at..span.end.min(at.saturating_add(self.cap));
-            at = part.end;
-            self.join(part);
+    /// Adds the stretch `span` of `sound` after the last, cut at its quietest stretches when longer than `cap`; an
+    /// empty one adds nothing.
+    pub fn add(&mut self, sound: &[i16], span: Range<usize>) {
+        match sound.get(span.clone()) {
+            Some(stretch) if span.len() > self.cap => {
+                for part in split::spans(stretch, Some(self.cap)) {
+                    self.join(span.start + part.start..span.start + part.end);
+                }
+            }
+            _ => self.join(span),
         }
     }
 
@@ -37,9 +41,13 @@ impl Packer {
         self.pieces
     }
 
-    /// Joins `part`, no longer than `cap`, to the last piece, or starts a new one when it would pass `cap`.
+    /// Joins `part`, no longer than `cap`, to the last piece, or starts a new one when it would pass `cap`; an empty
+    /// part joins nothing.
     fn join(&mut self, part: Range<usize>) {
         let len = part.len();
+        if len == 0 {
+            return;
+        }
         match self.pieces.last_mut() {
             Some(last) if self.size + len <= self.cap => {
                 last.push(part);
@@ -54,39 +62,4 @@ impl Packer {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stretches_join_in_order_while_their_piece_stays_within_the_cap() {
-        let mut pack = Packer::new(9);
-        for span in [0..3, 5..9, 12..15, 15..20, 30..30] {
-            pack.add(span);
-        }
-        assert_eq!(pack.pieces(), [vec![0..3, 5..9], vec![12..15, 15..20]]);
-    }
-
-    #[test]
-    fn a_stretch_past_the_cap_is_split_and_two_pieces_in_a_row_pass_it() {
-        let mut pack = Packer::new(4);
-        pack.add(0..1);
-        pack.add(2..12);
-        let pieces = pack.pieces();
-        let ends: Vec<Vec<(usize, usize)>> = pieces
-            .iter()
-            .map(|p| p.iter().map(|r| (r.start, r.end)).collect())
-            .collect();
-        assert_eq!(ends, [[(0, 1)], [(2, 6)], [(6, 10)], [(10, 12)]]);
-        let sizes: Vec<usize> = pieces
-            .iter()
-            .map(|p| p.iter().map(ExactSizeIterator::len).sum())
-            .collect();
-        assert!(sizes.iter().all(|&n| n <= 4));
-        assert!(sizes.windows(2).all(|w| w[0] + w[1] > 4));
-    }
-
-    #[test]
-    fn nothing_added_is_no_piece() {
-        assert!(Packer::new(0).pieces().is_empty());
-    }
-}
+mod tests;

@@ -26,7 +26,6 @@ mod resample;
 #[cfg(any(test, feature = "engine"))]
 mod run;
 mod span;
-#[cfg(any(test, feature = "engine"))]
 mod split;
 #[cfg(any(test, feature = "engine", feature = "gate"))]
 pub(crate) mod wav;

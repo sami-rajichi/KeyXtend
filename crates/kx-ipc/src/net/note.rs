@@ -21,7 +21,7 @@ pub enum NetNote {
     Text {
         /// The run.
         id: u32,
-        /// The piece's place from 0, below `MAX_PIECES`.
+        /// The piece's place from 0, below `MAX_SPEECH_PIECES`.
         index: u16,
         /// The service's text, an untrusted reply, at most `MAX_NET_TEXT_BYTES`.
         text: Zeroizing<String>,

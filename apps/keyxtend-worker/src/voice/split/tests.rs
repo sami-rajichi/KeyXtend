@@ -29,7 +29,7 @@ fn a_piece_that_fits_or_a_model_without_a_limit_is_one_span() {
     let pcm = vec![0.5; 1000];
     assert_eq!(spans(&pcm, Some(1000)), one(0..1000));
     assert_eq!(spans(&pcm, None), one(0..1000));
-    assert_eq!(spans(&[], Some(10)), one(0..0));
+    assert_eq!(spans::<f32>(&[], Some(10)), one(0..0));
 }
 
 #[test]

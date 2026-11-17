@@ -70,3 +70,12 @@ fn pieces_past_the_longest_dictation_together_are_refused() {
     ask.pieces.push(silence(crate::ports::SAMPLE_BYTES));
     assert_eq!(refused(&ask), Some("pieces"), "one sample past it");
 }
+
+#[test]
+fn the_most_pieces_a_listen_only_stop_hands_over_pass_the_check() {
+    let ask = CloudAsk {
+        pieces: vec![sound(&[1, 2]); kx_ipc::MAX_SPEECH_PIECES],
+        ..ask()
+    };
+    assert_eq!(ask.check(), Ok(()), "the voice job's worst packing");
+}

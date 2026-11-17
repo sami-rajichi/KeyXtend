@@ -60,7 +60,7 @@ fn a_key_test_past_its_bound_is_a_timeout() {
             called.recv_timeout(LONG),
             Ok(Call::Net(NetAsk::Test { .. }))
         ) {}
-        clock.advance(size::bound(0, WAIT_S, kx_ipc::NET_TEST_TRIES));
+        clock.advance(size::bound(0, WAIT_S, kx_ipc::NET_TEST_TRIES, TEST_PACE_S));
         host.poke();
     });
     assert_eq!(late, Err(CloudFault::Timeout));

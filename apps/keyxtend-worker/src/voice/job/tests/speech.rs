@@ -89,3 +89,18 @@ fn a_ten_minute_dictation_goes_in_several_pieces_each_within_piece_s() {
     let lasts: Vec<bool> = sent.iter().map(|p| p.1).collect();
     assert_eq!(lasts, [vec![false; 19], vec![true]].concat());
 }
+
+#[test]
+fn a_failed_hand_over_keeps_the_recording_for_try_again() {
+    let mut rig = Rig::plain();
+    let sound = Buf::collect([1_i16, 2].into_iter()).unwrap();
+    let past: Vec<_> = std::iter::once(0..5).collect();
+    let failed = rig.job.hand_speech(1, sound, &[past], &mut rig.notes);
+    assert!(matches!(failed, Err(Fail::Fault(VoiceFault::Internal))));
+    let kept = sounds(&rig.ask(VoiceAsk::Keep { id: 1 })).0;
+    assert_eq!(
+        kept,
+        [1, 2],
+        "kept for Try again and the local model (edge 6)"
+    );
+}

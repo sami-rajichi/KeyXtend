@@ -15,10 +15,10 @@ use crate::net::{ask as net_ask, note as net_note, wire as net_wire};
 use crate::wire::Spec;
 use crate::{
     FetchAsk, FetchNote, HTTPS, MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES,
-    MAX_PIECES, MAX_SOUND_BYTES, MAX_TAG_BYTES, MAX_URL_BYTES, NET_AT_ONCE, NET_MAX_S, NET_PER_MIN,
-    NET_RENEW_S, NET_TRIES, NET_WAIT_S, NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader,
-    NetLimits, NetNote, NetRun, NetShape, SAMPLE_BYTES, VaultAsk, VaultReply, VoiceAsk, VoiceNote,
-    Wiped,
+    MAX_SOUND_BYTES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_URL_BYTES, NET_AT_ONCE, NET_MAX_S,
+    NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, NetAsk, NetCall, NetFault, NetField, NetForm,
+    NetHeader, NetLimits, NetNote, NetRun, NetShape, SAMPLE_BYTES, VaultAsk, VaultReply, VoiceAsk,
+    VoiceNote, Wiped,
 };
 use cases::*;
 use zeroize::Zeroizing;
@@ -111,7 +111,7 @@ fn longest_run() -> NetRun<'static> {
         lang: tag,
         limits,
         tries: *NET_TRIES.end(),
-        sizes: vec![sample; MAX_PIECES],
+        sizes: vec![sample; MAX_SPEECH_PIECES],
     }
 }
 
@@ -136,7 +136,7 @@ fn the_largest_send_and_test_fill_their_caps_and_round_trip() {
         (
             NetAsk::Sound {
                 id: 3,
-                piece: u16::try_from(MAX_PIECES - 1).unwrap(),
+                piece: u16::try_from(MAX_SPEECH_PIECES - 1).unwrap(),
                 bytes: Wiped::Kept(Zeroizing::new(vec![7; MAX_SOUND_BYTES])),
             },
             net_wire::SOUND_MOST,
@@ -155,7 +155,7 @@ fn the_longest_text_and_a_told_renewal_fill_their_caps_and_round_trip() {
         (
             NetNote::Text {
                 id: 1,
-                index: u16::try_from(MAX_PIECES - 1).unwrap(),
+                index: u16::try_from(MAX_SPEECH_PIECES - 1).unwrap(),
                 text: text(&"x".repeat(MAX_NET_TEXT_BYTES)),
             },
             net_wire::TEXT_MOST,

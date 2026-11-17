@@ -187,7 +187,7 @@ fn a_run_value_outside_its_range_is_refused_when_written() {
         (|r| r.tries = *NET_TRIES.start() - 1, BadField),
         (|r| r.tries = *NET_TRIES.end() + 1, BadField),
         (|r| r.sizes = Vec::new(), Inconsistent),
-        (|r| r.sizes = vec![2; MAX_PIECES + 1], TooLong),
+        (|r| r.sizes = vec![2; MAX_SPEECH_PIECES + 1], TooLong),
         (|r| r.sizes = vec![2, 0], BadField),
         (|r| r.sizes = vec![3], BadField),
         (|r| r.sizes = vec![groq_cap() + 2], BadField),
@@ -257,13 +257,13 @@ fn a_bad_call_or_run_is_refused_when_read() {
     refused_reads(&good, bad, BadField);
     refused_reads(&good, empty, Inconsistent);
     let fixed = [u8::try_from(MAX_FIXED + 1).unwrap()];
-    let pieces = u16::try_from(MAX_PIECES + 1).unwrap().to_le_bytes();
+    let pieces = u16::try_from(MAX_SPEECH_PIECES + 1).unwrap().to_le_bytes();
     refused_reads(&good, &[(4, &fixed), (44, &pieces)], TooLong);
 }
 
 #[test]
 fn sound_that_is_odd_empty_too_long_or_past_the_last_piece_is_refused_both_ways() {
-    let past = u16::try_from(MAX_PIECES).unwrap();
+    let past = u16::try_from(MAX_SPEECH_PIECES).unwrap();
     let sound = |piece, bytes| NetAsk::Sound {
         id: 1,
         piece,

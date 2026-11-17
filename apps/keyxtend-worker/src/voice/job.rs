@@ -11,10 +11,12 @@ use super::hand::{self, HandIn, Held};
 use super::listen::{Replay, Run};
 use super::mic::{Mic, Source};
 use super::pack::Packer;
+use super::wipe::Buf;
 use super::{Event, Feed, Notes, Tell, span};
 use asks::{answer, stage};
 use kx_ipc::{IpcError, Setup, Stage, VoiceAsk, VoiceFault, VoiceNote};
 use notes::listened;
+use std::ops::Range;
 use std::sync::mpsc::Sender;
 
 /// The shortest piece a listen-only run's cutter makes: none, so it cuts at every pause.
@@ -177,20 +179,33 @@ impl Job {
         let id = run.id;
         let (sound, writer, pack) = run.end(out)?;
         out.tell(stage(id, why))?;
-        let heard = span::heard_ms(sound.len());
-        if let Some(mut writer) = writer {
-            writer.end(heard);
-            self.writing = Some(Writing {
-                id,
-                writer,
-                replay: None,
-            });
-        } else {
+        let Some(mut writer) = writer else {
             let pieces = pack.map(Packer::pieces).unwrap_or_default();
-            hand::speech(id, &sound, &pieces, out)?;
-            out.tell(listened(id, heard))?;
-        }
+            return self.hand_speech(id, sound, &pieces, out);
+        };
+        writer.end(span::heard_ms(sound.len()));
+        self.writing = Some(Writing {
+            id,
+            writer,
+            replay: None,
+        });
         self.held = Some(Held::new(id, sound));
+        Ok(())
+    }
+
+    /// Holds run `id`'s recording first, then hands its speech `pieces` over and ends the run, so a failed hand-over
+    /// still leaves it for Try again and the local model.
+    fn hand_speech(
+        &mut self,
+        id: u32,
+        sound: Buf<i16>,
+        pieces: &[Vec<Range<usize>>],
+        out: &mut dyn Notes,
+    ) -> Result<(), Fail> {
+        let heard = span::heard_ms(sound.len());
+        let held = self.held.insert(Held::new(id, sound));
+        hand::speech(id, held.sound(), pieces, out)?;
+        out.tell(listened(id, heard))?;
         Ok(())
     }
 

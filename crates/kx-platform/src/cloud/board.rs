@@ -24,6 +24,8 @@ pub(super) struct Board {
     sizes: Vec<usize>,
     wait_s: u16,
     tries: u8,
+    /// The turn a try may wait in the pace, in seconds.
+    pace_s: u16,
     /// The next index to tell.
     told: usize,
     /// The text bytes told so far.
@@ -34,12 +36,14 @@ pub(super) struct Board {
 }
 
 impl Board {
-    /// A run of pieces of `sizes`, each sent with `wait_s` and `tries`; nothing is late before `start`.
-    pub(super) const fn new(sizes: Vec<usize>, wait_s: u16, tries: u8) -> Self {
+    /// A run of pieces of `sizes`, each sent with `wait_s` and `tries`, waiting up to `pace_s` for each turn; nothing is
+    /// late before `start`.
+    pub(super) const fn new(sizes: Vec<usize>, wait_s: u16, tries: u8, pace_s: u16) -> Self {
         Self {
             sizes,
             wait_s,
             tries,
+            pace_s,
             told: 0,
             bytes: 0,
             due: None,
@@ -128,6 +132,6 @@ impl Board {
     /// When the next untold piece, or the end after the last, is late from `now`.
     fn next_due(&self, now: Mono) -> Mono {
         let bytes = self.sizes.get(self.told).copied().unwrap_or_default();
-        now.saturating_add(bound(bytes, self.wait_s, self.tries))
+        now.saturating_add(bound(bytes, self.wait_s, self.tries, self.pace_s))
     }
 }

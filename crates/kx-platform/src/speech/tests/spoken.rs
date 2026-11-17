@@ -120,6 +120,21 @@ fn a_run_that_heard_no_speech_has_no_pieces() {
     assert_eq!(run.pieces().map(|p| p.len()), Ok(0));
 }
 
+#[test]
+fn a_run_with_a_model_has_no_pieces_even_after_its_end() {
+    let (script, _, speech) = solo();
+    let (tell, heard) = ear();
+    let mut run = speech.open(ask(Some(FILE_A)), tell).unwrap();
+    script.act(finished());
+    run.stop().unwrap();
+    next(&heard, 3);
+    assert_eq!(
+        run.pieces().err(),
+        Some(SpeechError::NoSound),
+        "as the port says"
+    );
+}
+
 /// What the job tells a run in a property case.
 #[derive(Clone, Debug)]
 enum Step {

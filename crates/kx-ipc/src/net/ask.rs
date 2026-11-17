@@ -26,7 +26,7 @@ pub enum NetAsk<'a> {
     Sound {
         /// The run's id.
         id: u32,
-        /// The piece's place in the run from 0, below `MAX_PIECES`.
+        /// The piece's place in the run from 0, below `MAX_SPEECH_PIECES`.
         piece: u16,
         /// Whole samples of 16 kHz mono 16-bit sound, never empty.
         bytes: Wiped<'a>,

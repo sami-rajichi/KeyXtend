@@ -58,7 +58,7 @@ proptest! {
         count in 0usize..5,
         ops in prop::collection::vec(op(), 0..40),
     ) {
-        let mut board = Board::new(vec![PER_S; count], WAIT_S, TRIES);
+        let mut board = Board::new(vec![PER_S; count], WAIT_S, TRIES, kx_ipc::NET_PACE_S);
         let mut now = Mono::default();
         board.start(now);
         let (mut told, mut bytes, mut ended) = (0usize, 0usize, false);

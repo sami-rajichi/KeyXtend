@@ -82,8 +82,8 @@ impl CloudAsk {
     pub const WAIT_S: RangeInclusive<u16> = kx_ipc::NET_WAIT_S;
     /// `tries`' range, the frames' own; the default is the `[voice]` settings'.
     pub const TRIES: RangeInclusive<u8> = kx_ipc::NET_TRIES;
-    /// How many pieces an ask holds: from one to a whole dictation's, the frames' own.
-    pub const PIECES: RangeInclusive<usize> = 1..=kx_ipc::MAX_PIECES;
+    /// How many pieces an ask holds: from one to the most a listen-only Stop hands over, the frames' own.
+    pub const PIECES: RangeInclusive<usize> = 1..=kx_ipc::MAX_SPEECH_PIECES;
 
     /// Refuses an ask with a value outside its range or one that could break a request.
     ///

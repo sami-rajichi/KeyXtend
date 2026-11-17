@@ -14,6 +14,7 @@ mod key;
 mod order;
 mod props;
 mod relay;
+mod show;
 
 /// How long a test waits for a note or a call; a wait, never a sleep.
 const LONG: Duration = Duration::from_secs(10);

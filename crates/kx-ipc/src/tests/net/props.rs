@@ -92,7 +92,7 @@ fn a_run() -> impl Strategy<Value = NetRun<'static>> {
 
 fn a_net_ask() -> impl Strategy<Value = NetAsk<'static>> {
     let id = any::<u32>;
-    let piece = 0..u16::try_from(MAX_PIECES).unwrap();
+    let piece = 0..u16::try_from(MAX_SPEECH_PIECES).unwrap();
     let samples = prop::collection::vec(any::<[u8; 2]>(), 1..MAX_CASE_BYTES / 2);
     let sound = (id(), piece, samples).prop_map(|(id, piece, s)| NetAsk::Sound {
         id,
@@ -122,7 +122,7 @@ fn a_fault() -> impl Strategy<Value = NetFault> {
 
 fn a_net_note() -> impl Strategy<Value = NetNote> {
     let id = any::<u32>;
-    let index = 0..u16::try_from(MAX_PIECES).unwrap();
+    let index = 0..u16::try_from(MAX_SPEECH_PIECES).unwrap();
     let said =
         prop::collection::vec(any::<char>(), 0..MAX_CASE_BYTES / 4).prop_map(String::from_iter);
     prop_oneof![

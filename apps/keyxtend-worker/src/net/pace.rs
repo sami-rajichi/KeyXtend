@@ -1,13 +1,11 @@
 //! A run's pace: the start of every request it sends, first tries, tries again and the re-send after a 429 alike, so
 //! no minute holds more than `per_min` of them. A run's threads share one.
 
-use kx_ipc::NET_PACE_S;
+use kx_ipc::{MS_PER_S, NET_PACE_S};
 use std::collections::VecDeque;
 
-/// Milliseconds in a second.
-const MS_PER_S: u64 = 1000;
 /// The span `per_min` counts requests in, in ms.
-const MINUTE_MS: u64 = NET_PACE_S as u64 * MS_PER_S;
+const MINUTE_MS: u64 = NET_PACE_S as u64 * MS_PER_S as u64;
 
 /// When a run's requests started or will start.
 pub struct Pace {

@@ -23,6 +23,9 @@ pub(super) trait Back: Send + Sync {
 
     /// Runs `call` on the stream's thread, after the notes it holds.
     fn defer(&self, call: Box<dyn FnOnce() + Send>);
+
+    /// Says goodbye to the job once its run ended, so no process outlives it.
+    fn end(&self);
 }
 
 impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> Back for Stream<S, NetFrames> {
@@ -32,6 +35,10 @@ impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> Back for Stream<S, NetFram
 
     fn defer(&self, call: Box<dyn FnOnce() + Send>) {
         self.later(call);
+    }
+
+    fn end(&self) {
+        self.bye();
     }
 }
 
@@ -114,19 +121,36 @@ impl Live {
         true
     }
 
-    /// Wakes the timer to look at the clock again.
+    /// Has the timer look at the clock again, then waits until the stream took what that asked, so a test that moved
+    /// the clock reads the outcome at once.
     #[cfg(test)]
     pub(super) fn poke(&self) {
-        self.wake(Wake::Poke);
+        let (looked, seen) = std::sync::mpsc::channel();
+        self.wake(Wake::Poke(looked));
+        let _ = seen.recv();
+        let (marked, flushed) = std::sync::mpsc::channel();
+        if let Some(back) = self.back.get().and_then(Weak::upgrade) {
+            back.defer(Box::new(move || {
+                let _ = marked.send(());
+            }));
+            let _ = flushed.recv();
+        }
     }
 
-    /// Tells `step`'s notes after giving the timer the due time, then cancels the job's run if it asks.
+    /// Tells `step`'s notes after giving the timer the due time, cancels the job's run if it asks, and lets an ended
+    /// run's timer and job go.
     fn apply(&self, step: Step) {
         let due = self.board().due();
         self.wake(Wake::At(due));
         self.ear.tell(step.notes);
         if step.cancel {
             self.cancel();
+        }
+        if self.ended()
+            && lock(&self.wake).take().is_some()
+            && let Some(back) = self.back.get().and_then(Weak::upgrade)
+        {
+            back.end();
         }
     }
 

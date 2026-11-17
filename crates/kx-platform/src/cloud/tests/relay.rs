@@ -59,14 +59,17 @@ fn the_row_and_the_key_go_first_then_the_sound_in_wiped_parts_in_order() {
 }
 
 #[test]
-fn texts_come_back_in_order_then_the_end() {
+fn texts_come_back_in_order_then_the_end_and_the_job_is_told_goodbye() {
     let (host, script, _) = host();
+    let (calls, called) = mpsc::channel();
+    script.tell(calls);
     let (_run, heard) = sent(&host, ask(&[PER_S, PER_S]));
     script.say(Ok(text(0, SAID)));
     script.say(Ok(text(1, "")));
     script.say(Ok(NetNote::Done { id: ID }));
     let told = next(&heard, 3);
     assert_eq!(told, [piece(0, SAID), piece(1, ""), CloudNote::Done]);
+    assert!(said_bye(&called), "an ended run keeps no job");
 }
 
 #[test]
@@ -97,8 +100,10 @@ fn a_ten_minute_dictation_goes_in_several_pieces_within_the_row() {
 }
 
 #[test]
-fn a_fault_after_its_tries_is_told_once_and_nothing_after_it() {
+fn a_fault_after_its_tries_is_told_once_then_the_job_is_told_goodbye() {
     let (host, script, _) = host();
+    let (calls, called) = mpsc::channel();
+    script.tell(calls);
     let (_run, heard) = sent(&host, ask(&[PER_S, PER_S]));
     let NetAsk::Send { run, .. } = &nets(&script)[0] else {
         panic!("a send first");
@@ -106,13 +111,11 @@ fn a_fault_after_its_tries_is_told_once_and_nothing_after_it() {
     assert_eq!(run.tries, TRIES, "the job tries each piece net_tries times");
     script.say(Ok(text(0, SAID)));
     script.say(Ok(fault(NetFault::Network)));
-    script.say(Ok(text(1, SAID)));
     let fault = CloudNote::Fault(CloudFault::Network);
     assert_eq!(next(&heard, 2), [piece(0, SAID), fault]);
-    assert!(
-        heard.recv_timeout(Duration::from_millis(50)).is_err(),
-        "nothing after"
-    );
+    assert!(said_bye(&called), "an ended run keeps no job");
+    script.say(Ok(text(1, SAID)));
+    assert!(heard.try_recv().is_err(), "nothing after");
 }
 
 #[test]
@@ -148,12 +151,14 @@ fn dropping_a_run_cancels_its_requests_and_says_goodbye() {
     let (run, heard) = sent(&host, ask(&[PER_S, PER_S]));
     drop(run);
     took(&called, &NetAsk::Cancel { id: ID });
-    while called.recv_timeout(LONG).expect("a goodbye") != Call::Bye {}
+    assert!(said_bye(&called), "a goodbye");
     script.say(Ok(text(0, SAID)));
-    assert!(
-        heard.recv_timeout(Duration::from_millis(50)).is_err(),
-        "late notes are ignored"
-    );
+    assert!(heard.try_recv().is_err(), "a closed run tells nothing");
+}
+
+/// Waits for a goodbye among the calls `called` hears.
+fn said_bye(called: &Receiver<Call>) -> bool {
+    std::iter::from_fn(|| called.recv_timeout(LONG).ok()).any(|call| call == Call::Bye)
 }
 
 #[test]

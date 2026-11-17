@@ -5,8 +5,8 @@ use std::ops::RangeInclusive;
 
 /// A kibibyte, the unit of the read chunk and of the locked identity's cap.
 const KIB: usize = 1024;
-/// A mebibyte, the unit of the image, decoder, box and vault job caps.
-pub(crate) const MIB: usize = KIB * KIB;
+/// A mebibyte, the unit of the image, decoder, box and vault job caps, and of every job's memory cap.
+pub const MIB: usize = KIB * KIB;
 
 /// The bytes every frame starts with.
 pub(crate) const MAGIC: [u8; 4] = *b"KXIP";
@@ -143,12 +143,13 @@ pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_HZ * SA
 /// The most pieces a recording is handed over in, so a piece's index stays bounded.
 pub const MAX_SOUND_PIECES: usize = MAX_RECORD_BYTES.div_ceil(MAX_SOUND_BYTES);
 /// Milliseconds in a second.
-const MS_PER_S: u32 = 1000;
+pub const MS_PER_S: u32 = 1000;
 /// The longest recording in ms, which a done note's sound may not pass.
 pub const MAX_SOUND_MS: u32 = *RECORD_MAX_S.end() as u32 * MS_PER_S;
 /// The most text pieces a dictation is cut into: each but the last is at least `piece_s` long.
 pub const MAX_PIECES: usize = (*RECORD_MAX_S.end() / *PIECE_S.start() as u16) as usize + 1;
-/// The most speech pieces a listen-only Stop hands over: two in a row hold more than the shortest `piece_s`.
+/// The most speech pieces a listen-only Stop hands over, and so the most one cloud run sends: two in a row hold more
+/// than the shortest `piece_s`.
 pub const MAX_SPEECH_PIECES: usize = 2 * MAX_PIECES;
 /// The longest text of one piece in UTF-8 bytes: far past two minutes of speech in any script.
 pub const MAX_TEXT_BYTES: usize = 64_000;

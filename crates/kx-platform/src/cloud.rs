@@ -1,6 +1,6 @@
-//! `CloudSpeech` over the worker's `speech-net` job (ADR-0047): each run and each key test in a job of its own, capped
-//! by its sound, its requests in flight and their replies. Texts are taken only in order and within the run's cap, a
-//! piece past its time bound is cancelled, and nothing ever waits on the worker to cancel. Keys and sound stay wiped.
+//! `CloudSpeech` over the worker's `speech-net` job (ADR-0047): each run and key test has a job of its own, capped by
+//! its sound, its requests in flight and their replies. Texts are taken in order within a cap and a time bound, a
+//! cancel never waits on the worker, and keys and sound stay wiped.
 
 mod board;
 mod frame;
@@ -12,7 +12,7 @@ mod tick;
 use crate::worker::{NetFrames, Spawner, Split};
 use board::Board;
 use job::NetJob;
-use kx_ipc::{NET_TEST_TRIES, NetAsk};
+use kx_ipc::{NET_PACE_S, NET_TEST_TRIES, NetAsk};
 use kx_module_api::Clock;
 use kx_module_api::ports::{
     CloudAsk, CloudFault, CloudNote, CloudRun, CloudSpeech, CloudTest, JobLimits,
@@ -26,6 +26,8 @@ pub const SHAPE: &str = "shape";
 
 /// A key's test sends one request, so its job holds one reply.
 const TEST_AT_ONCE: u8 = 1;
+/// A key's test waits for no turn in the pace: it is its job's only request.
+const TEST_PACE_S: u16 = 0;
 
 /// Cloud speech by the worker `S` starts; no job starts before the first `send` or `test`.
 pub struct WorkerCloud<S: Spawner<NetFrames, Worker: Split<NetFrames>>> {
@@ -96,7 +98,7 @@ impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> CloudSpeech for WorkerClou
         let room = size::run_mb(sizes.iter().sum(), limits.at_once, longest);
         let call = frame::call(shape, &url, header, key, wait_s);
         let run = frame::run(model, lang, limits, tries, &sizes)?;
-        let board = Board::new(sizes, wait_s, tries);
+        let board = Board::new(sizes, wait_s, tries, NET_PACE_S);
         let job = self.open(&job, room, board, tell)?;
         let id = job.begin(move |id| NetAsk::Send { id, call, run })?;
         job.hand_over(id, pieces);
@@ -116,7 +118,7 @@ impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> CloudSpeech for WorkerClou
         let call = frame::call(shape, &url, header, key, wait_s);
         let (said, heard) = mpsc::channel();
         let tell: Tell = Box::new(move |note| drop(said.send(note)));
-        let board = Board::new(Vec::new(), wait_s, NET_TEST_TRIES);
+        let board = Board::new(Vec::new(), wait_s, NET_TEST_TRIES, TEST_PACE_S);
         let test = self.open(&job, size::run_mb(0, TEST_AT_ONCE, 0), board, tell)?;
         test.live().start();
         test.begin(move |id| NetAsk::Test { id, call })?;

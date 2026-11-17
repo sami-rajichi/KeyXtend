@@ -1,7 +1,6 @@
-//! One dictation on the dictation job: its asks watched as `job::waits` says, its recording kept in the job until
-//! Close, and Again in a new job when the model differs, the recording moved in wiped pieces through the host. A
-//! recording a new job could not take stays parked here, wiped at Close, so Again can try once more. A listen-only
-//! run's speech comes back from the router once its Stop ended.
+//! One dictation on the dictation job: its asks watched as `job::waits` says, its recording kept in the job until Close
+//! or parked here when a new job could not take it, and Again in a new job when the model differs. A listen-only run's
+//! speech comes back from the router once its Stop ended.
 
 use super::begin::{begin, hand_in};
 use super::frame::setup;
@@ -27,6 +26,8 @@ pub(super) struct WorkerRun<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>>
     limits: JobLimits,
     /// A recording a new job did not take yet.
     parked: Option<Vec<SecretBytes>>,
+    /// It listens with no model, so its Stop hands its speech over.
+    alone: bool,
     closed: bool,
 }
 
@@ -54,13 +55,14 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> WorkerRun<S> {
         let begun = begin(&shared.router, stream, run, start, wait);
         drop(live);
         let id = begun.inspect_err(|_| drop(lock(&shared.router).close(run)))?;
-        let (limits, parked, closed) = (ask.job, None, false);
+        let (limits, parked, alone, closed) = (ask.job, None, ask.model.is_none(), false);
         Ok(Self {
             shared,
             run,
             id,
             limits,
             parked,
+            alone,
             closed,
         })
     }
@@ -201,7 +203,7 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> SpeechRun for WorkerRu
         drop(live);
         router::tell(wiped);
         written?;
-        self.limits = ask.job;
+        (self.limits, self.alone) = (ask.job, false);
         Ok(())
     }
 
@@ -222,6 +224,9 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> SpeechRun for WorkerRu
     }
 
     fn pieces(&mut self) -> Result<Vec<SecretBytes>, SpeechError> {
+        if !self.alone {
+            return Err(SpeechError::NoSound);
+        }
         lock(&self.shared.router).spoken(self.run)
     }
 

@@ -172,6 +172,12 @@ impl<S: Spawner<F, Worker: Split<F>>, F: Streams> Stream<S, F> {
         self.queue(Box::new(move |_| call()));
     }
 
+    /// Says goodbye to the worker on the stream's thread after what it already holds, without waiting: from any
+    /// thread. The next fresh ask starts another.
+    pub(crate) fn bye(&self) {
+        self.queue(Box::new(Flow::stop));
+    }
+
     /// Hands `task` to the stream's thread; without the thread it is dropped.
     fn queue(&self, task: Task<S, F>) {
         if let Some(events) = &self.events {

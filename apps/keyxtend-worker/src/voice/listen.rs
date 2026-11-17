@@ -117,7 +117,7 @@ impl Run {
         }
         self.act(cuts, out)?;
         if let (None, Some(pack)) = (&self.cut, self.pack.as_mut()) {
-            pack.add(0..self.sound.len());
+            pack.add(&self.sound, 0..self.sound.len());
         }
         let sound = std::mem::take(&mut self.sound);
         Ok((sound, self.writer.take(), self.pack.take()))
@@ -162,7 +162,7 @@ impl Run {
             return give(writer.as_mut(), &self.sound, piece, self.pad);
         }
         if let (Some(pack), Some(span)) = (self.pack.as_mut(), piece.trim(self.pad)) {
-            pack.add(span);
+            pack.add(&self.sound, span);
         }
         Ok(())
     }

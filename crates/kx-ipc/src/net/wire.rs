@@ -2,7 +2,8 @@
 
 pub(crate) use crate::fetch::wire::URL;
 use crate::limits::{
-    MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES, MAX_PIECES, MAX_SOUND_BYTES,
+    MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES, MAX_SOUND_BYTES,
+    MAX_SPEECH_PIECES,
 };
 pub(crate) use crate::voice::wire::TAG;
 use crate::wire::{FOUR, ONE, Spec, TWO};
@@ -14,7 +15,7 @@ pub(crate) const FIXED: Spec = Spec::new(ONE, 0, MAX_FIXED);
 /// The user's key: visible ASCII.
 pub(crate) const KEY: Spec = Spec::new(TWO, 1, MAX_KEY_BYTES);
 /// The count of a run's pieces, each sent as its size.
-pub(crate) const SIZES: Spec = Spec::new(TWO, 1, MAX_PIECES);
+pub(crate) const SIZES: Spec = Spec::new(TWO, 1, MAX_SPEECH_PIECES);
 /// A part of a piece's sound: whole samples.
 pub(crate) const SOUND: Spec = Spec::new(FOUR, 1, MAX_SOUND_BYTES);
 /// A piece's text, possibly empty.

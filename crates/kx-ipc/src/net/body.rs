@@ -8,8 +8,8 @@ use super::{NetCall, NetField, NetForm, NetHeader, NetLimits, NetRun, NetShape};
 use crate::code::Code;
 use crate::error::IpcError;
 use crate::limits::{
-    MAX_PIECES, MAX_RECORD_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN, NET_TRIES,
-    NET_WAIT_S, SAMPLE_BYTES,
+    MAX_RECORD_BYTES, MAX_SPEECH_PIECES, NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN,
+    NET_TRIES, NET_WAIT_S, SAMPLE_BYTES,
 };
 use crate::rules::{self, ok_if, within};
 use crate::wiped::Wiped;
@@ -192,9 +192,9 @@ pub(super) fn read_run<R: Read + ?Sized>(
     })
 }
 
-/// `index` when it is below `MAX_PIECES`.
+/// `index` when it is below `MAX_SPEECH_PIECES`.
 pub(super) fn piece_index(index: u16) -> Result<u16, IpcError> {
-    ok_if(usize::from(index) < MAX_PIECES)?;
+    ok_if(usize::from(index) < MAX_SPEECH_PIECES)?;
     Ok(index)
 }
 

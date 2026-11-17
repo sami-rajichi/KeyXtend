@@ -29,24 +29,19 @@ fn levels_come_at_level_hz_from_any_format() {
 }
 
 #[test]
-fn listening_only_without_a_detector_hands_the_whole_recording_over_at_stop_in_pieces_of_piece_s() {
+fn listening_only_without_a_detector_hands_the_whole_recording_over_at_stop_within_piece_s() {
     let (mut rig, n) = (Rig::plain(), 40 * SEC);
     rig.ask(start(7));
     rig.speak(&ramp(n), 1600);
     let notes = rig.ask(VoiceAsk::Stop { id: 7 });
     assert_eq!(notes.first(), Some(&stage(7, Stage::Shut)));
     let (samples, pieces) = speech(&notes);
-    let full = usize::from(*PIECE_S.start()) * SEC * SAMPLE_BYTES;
-    let want = [
-        (0, false, full),
-        (1, false, full),
-        (2, false, full),
-        (3, true, full),
-    ];
-    assert_eq!(pieces, want);
-    assert_eq!(samples, ramp16(n));
+    let most = usize::from(*PIECE_S.start()) * SEC * SAMPLE_BYTES;
+    assert!(pieces.len() >= 4, "{pieces:?}");
+    assert!(pieces.iter().all(|&(_, _, n)| n <= most), "{pieces:?}");
+    assert_eq!(samples, ramp16(n), "every sample once, in order");
     assert_eq!(notes.last(), Some(&fake::done(7, 0, 40_000)));
-    assert_eq!(notes.len(), 6);
+    assert_eq!(notes.len(), pieces.len() + 2);
     assert!(!rig.open());
 }
 

@@ -3,15 +3,12 @@
 
 use crate::worker::{Launch, Times};
 use kx_ipc::{
-    MAX_NET_REPLY_BYTES, NET_JOB, NET_PACE_S, NET_TRY_WAITS, NET_UPLOAD_TIMES, SAMPLE_BYTES,
-    SOUND_HZ,
+    MAX_NET_REPLY_BYTES, MIB, NET_JOB, NET_TRY_WAITS, NET_UPLOAD_TIMES, SAMPLE_BYTES, SOUND_HZ,
 };
 use kx_module_api::MS_PER_S;
 use kx_module_api::ports::JobLimits;
 use std::time::Duration;
 
-/// Bytes in one MB of a job's cap.
-const MIB: usize = 1 << 20;
 /// A run's job never ends on its own when idle: it lives while its run does, however long a piece takes.
 const NEVER_IDLE_S: u32 = u32::MAX;
 /// Bytes of hand-over sound in one second.
@@ -43,14 +40,14 @@ pub(super) const fn times(job: &JobLimits) -> Times {
     }
 }
 
-/// How long a piece of `bytes` may take once the one before it is told: each of its `tries` waits its turn in the
-/// pace, then `NET_TRY_WAITS` of `wait_s` and an upload of `NET_UPLOAD_TIMES` its length; a 429 adds one `wait_s`.
-pub(super) fn bound(bytes: usize, wait_s: u16, tries: u8) -> Duration {
+/// How long a piece of `bytes` may take once the one before it is told: each of its `tries` waits `pace_s` for its
+/// turn, then `NET_TRY_WAITS` of `wait_s` and an upload of `NET_UPLOAD_TIMES` its length; a 429 adds one `wait_s`.
+pub(super) fn bound(bytes: usize, wait_s: u16, tries: u8, pace_s: u16) -> Duration {
     let wait = Duration::from_secs(wait_s.into());
     let (bytes, per_s) = (u64::try_from(bytes), u64::try_from(BYTES_PER_S));
     let (bytes, per_s) = (bytes.unwrap_or(u64::MAX), per_s.unwrap_or(u64::MAX));
     let sound = Duration::from_millis(bytes.saturating_mul(MS_PER_S.into()) / per_s);
-    let pace = Duration::from_secs(NET_PACE_S.into());
+    let pace = Duration::from_secs(pace_s.into());
     let one = pace
         .saturating_add(wait.saturating_mul(NET_TRY_WAITS))
         .saturating_add(sound.saturating_mul(NET_UPLOAD_TIMES));

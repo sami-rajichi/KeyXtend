@@ -140,7 +140,8 @@ pub struct SpeechAsk {
     /// Processor threads; 0 means the real cores, and more are capped at them.
     pub threads: u8,
     /// A piece longer than this, in seconds, is cut at the next pause; a run with no model packs its speech into
-    /// pieces no longer than this instead, the cloud row's own cut.
+    /// pieces no longer than this instead, the cloud row's own cut. Such a piece never passes one frame of sound
+    /// (`kx_ipc::MAX_SOUND_BYTES`), so a larger `piece_s` is held to it.
     pub piece_s: u8,
     /// The silence kept around speech when a piece is cut, in ms.
     pub pad_ms: u16,

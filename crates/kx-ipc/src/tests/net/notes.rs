@@ -38,7 +38,7 @@ fn an_oversized_reply_is_refused_both_ways() {
 
 #[test]
 fn a_text_past_the_last_piece_or_not_utf8_is_refused() {
-    let past = u16::try_from(MAX_PIECES).unwrap();
+    let past = u16::try_from(MAX_SPEECH_PIECES).unwrap();
     let note = NetNote::Text {
         id: 1,
         index: past,

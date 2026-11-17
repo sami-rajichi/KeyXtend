@@ -5,7 +5,7 @@ use std::time::Duration;
 /// Microseconds in one millisecond.
 pub const US_PER_MS: u32 = 1_000;
 /// Milliseconds in one second.
-pub const MS_PER_S: u32 = 1_000;
+pub const MS_PER_S: u32 = kx_ipc::MS_PER_S;
 /// Microseconds in one second.
 pub const US_PER_S: u32 = US_PER_MS * MS_PER_S;
 
