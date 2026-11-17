@@ -11,9 +11,10 @@ use crate::keep::{admit, trim};
 use crate::media::{Size, job_of};
 
 impl Actor {
-    /// Takes `note` from the watch: a copy too big shows a note unless its app is skipped, and a busy clipboard tells
-    /// nothing.
+    /// Takes `note` from the watch, the board first: a copy too big shows a note unless its app is skipped, and a busy
+    /// clipboard tells nothing.
     pub(super) fn note(&mut self, note: ClipNote) {
+        self.board.heard(&note);
         match note {
             ClipNote::Copied { parts, app } => {
                 if let Some(parts) = self.past_take(parts) {
@@ -98,9 +99,11 @@ impl Actor {
         }
     }
 
-    /// Notes that `id` was kept or moved up for `app`: follow-the-clear watches it, and the note is past.
+    /// Notes that `id` was kept or moved up for `app`: follow-the-clear watches it, the board holds it, and the note is
+    /// past.
     fn kept(&mut self, id: u64, app: Option<&AppRef>) {
         self.follow.kept(id, app, self.ports.clock.now());
+        self.board.kept(id);
         self.note = None;
         self.changed();
     }

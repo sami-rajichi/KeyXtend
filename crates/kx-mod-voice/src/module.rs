@@ -9,8 +9,8 @@ use std::thread::{self, JoinHandle};
 use kx_module_api::ports::{
     CalendarKey, ClipboardWriterKey, FieldRun, FieldWatchKey, FolderRevealKey, LayoutChanged,
     ModelFilesKey, PointerPressed, PressAsker, PressesAsk, PressesWanted, SessionRun,
-    SessionWatchKey, SpeechKey, TextDone, Typed, VoiceAct, VoiceAsk, VoiceBar, VoiceKey, VoiceLit,
-    VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
+    SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk, VoiceBar,
+    VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, NoticeArg, args, keys,
@@ -222,8 +222,8 @@ fn detached(job: Job) -> bool {
         .is_ok()
 }
 
-/// Hands the keyboard's, the ui's, the layouts' and the mouse module's events to the actor; a typed key or a click
-/// outside our windows reaches it only as that, never with its text.
+/// Hands the keyboard's, the ui's, the layouts', the clipboard history's and the mouse module's events to the actor; a
+/// typed key or a click outside our windows reaches it only as that, never with its text.
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &VoiceKey| Some(Msg::Key))?;
     relay(cx, tx, |e: &VoiceAct| Some(Msg::Act(e.clone())))?;
@@ -231,6 +231,7 @@ fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &VoiceAsk| Some(Msg::Ask))?;
     relay(cx, tx, |e: &LayoutChanged| Some(Msg::Layout(e.clone())))?;
     relay(cx, tx, |e: &TextDone| Some(Msg::Typed(*e)))?;
+    relay(cx, tx, |e: &TextPasted| Some(Msg::Pasted(*e)))?;
     relay(cx, tx, |_: &Typed| Some(Msg::Elsewhere))?;
     relay(cx, tx, |e: &PointerPressed| {
         (!e.ours).then_some(Msg::Elsewhere)

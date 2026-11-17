@@ -15,6 +15,7 @@ mod faults;
 mod key;
 mod logs;
 mod panel;
+mod paste;
 mod rig;
 mod store;
 mod taps;

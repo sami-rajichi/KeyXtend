@@ -70,6 +70,15 @@ pub enum OptionValue {
         /// Where it stands.
         ends: Ends,
     },
+    /// One of two names, such as `insert`'s, as two chips with the chosen one checked; minus picks the first.
+    Pair {
+        /// The two names in the setting, in order, which also name their chips' texts.
+        names: [&'static str; 2],
+        /// The second is chosen.
+        second: bool,
+    },
+    /// The line under a pair whose second name is chosen, saying what that choice does; the row's key names its text.
+    Hint,
 }
 
 /// One row of the Options page.

@@ -9,7 +9,7 @@ use kx_module_api::ports::{
     SpeechModel,
 };
 
-use super::{VoiceSettings, place_named};
+use super::{Insert, VoiceSettings, insert_named, place_named};
 use crate::device::CardRules;
 
 /// The characters a look at the focused box takes: none, as only its kind matters.
@@ -84,6 +84,18 @@ impl VoiceSettings {
     #[must_use]
     pub fn bar_place(&self) -> BarPlace {
         place_named(&self.place).unwrap_or(BarPlace::Above)
+    }
+
+    /// How a text goes in; typed for a name `check` would have refused.
+    #[must_use]
+    pub fn way(&self) -> Insert {
+        insert_named(&self.insert).unwrap_or(Insert::Type)
+    }
+
+    /// The longest wait for the clipboard history to paste a text, before it is typed.
+    #[must_use]
+    pub fn paste_wait(&self) -> Duration {
+        Duration::from_millis(self.paste_ms.into())
     }
 
     /// What a card's check must meet: `card_gain` in hundredths and `card_diff`.

@@ -1,9 +1,11 @@
 //! The clipboard history's bus events (ADR-0034 decision 2, ADR-0035): the panel's state and what carries copied
-//! content or search text need `ReadClipboard`, Quick-fill's text hand-over too, the paste request needs
-//! `WriteClipboard`, and the open toggle and the chord flags carry nothing.
+//! content or search text need `ReadClipboard`, Quick-fill's text hand-over too, the paste request and Paste at once
+//! need `WriteClipboard`, and the open toggle and the chord flags carry nothing.
 
+mod paste;
 mod view;
 
+pub use paste::{PasteText, TextPasted};
 pub use view::{ClipKind, ClipPage, ClipRow, Filter, Pages, PanelNote, Preview, When};
 
 use super::MAX_FIELD_CHARS;

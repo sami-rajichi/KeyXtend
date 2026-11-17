@@ -155,6 +155,8 @@ struct Seen {
     live: u32,
     round: u32,
     ask: Option<TextAsk>,
+    /// Paste at once is chosen.
+    paste: bool,
 }
 
 impl Seen {
@@ -183,6 +185,10 @@ impl Seen {
                     self.round = view.0.round;
                 }
                 Out::Type(ask) => self.ask = Some(ask.clone()),
+                Out::Paste(ask) => {
+                    prop_assert!(self.paste, "pasted while typing is chosen");
+                    self.ask = Some(ask.clone());
+                }
                 Out::Keep(kept) => {
                     prop_assert!(
                         !hidden && !self.masked.contains(&kept.take),
@@ -230,13 +236,18 @@ proptest! {
         hidden in any::<bool>(),
         keep_voice in any::<bool>(),
         silence_stop in any::<bool>(),
+        paste in any::<bool>(),
     ) {
         let mut settings = VoiceSettings::from_defaults().unwrap();
         settings.keep_voice = keep_voice;
         settings.silence_stop = silence_stop;
+        settings.insert = crate::INSERTS[usize::from(paste)].0.into();
         let mut rig = Rig::with(settings, hidden);
-        let mut seen = Seen::default();
+        let mut seen = Seen { paste, ..Seen::default() };
         for step in &steps {
+            if matches!(step, Step::On(_)) {
+                seen.paste = false;
+            }
             let (lent, busy) = (rig.flow.lent.is_some(), rig.flow.dictating());
             let was = rig.light;
             let recording = lent && (was == VoiceLit::Prep || matches!(rig.shown(), VoiceBar::Listening(_)));
@@ -246,6 +257,8 @@ proptest! {
             }
             seen.effects(&out, hidden, lent)?;
             seen.after_gear(&out)?;
+            let masked = matches!(rig.shown(), VoiceBar::Text(t) if t.text == VoiceText::Masked);
+            prop_assert!(!masked || !out.iter().any(|o| matches!(o, Out::Paste(_))), "a password box pasted");
             seen.bar(&rig)?;
             prep::check(&rig, step, was)?;
         }

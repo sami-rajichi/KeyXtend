@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    FieldKind, FieldWatch, SessionWatch, SpeechNote, SpeechStage, TextAsk, TextDone, VoiceAct,
-    VoiceBar, VoiceClick, VoiceLit, VoicePage,
+    FieldKind, FieldWatch, PasteText, SessionWatch, SpeechNote, SpeechStage, TextAsk, TextDone,
+    TextPasted, VoiceAct, VoiceBar, VoiceClick, VoiceLit, VoicePage,
 };
 use kx_module_api::{Bus, ModuleCx, Redacted, Subscription, Zeroizing};
 use kx_platform_fake::SpeechCall;
@@ -206,6 +206,20 @@ impl Rig {
     /// Every text handed to the typer, in order.
     pub fn asks(&self) -> Vec<TextAsk> {
         self.asks.lock().unwrap().clone()
+    }
+
+    /// Every text handed to the clipboard history to paste, in order.
+    pub fn pastes(&self) -> Vec<PasteText> {
+        self.picked(|h| match h {
+            Heard::Paste(ask) => Some(ask),
+            _ => None,
+        })
+    }
+
+    /// The clipboard history answers the last paste asked.
+    pub fn pasted(&mut self, ok: bool) {
+        let round = self.pastes().last().unwrap().round;
+        self.send(Msg::Pasted(TextPasted { round, ok }));
     }
 
     /// The settings as the module's own writes left them.

@@ -193,6 +193,12 @@ impl Flow {
         self.field.kind == FieldKind::None
     }
 
+    /// The box told last is a password box, so a text is always typed there, never pasted.
+    #[must_use]
+    pub fn password(&self) -> bool {
+        self.field.kind == FieldKind::Password
+    }
+
     /// Every run stops: the dictation's bar closes and Compare's run is cancelled.
     fn stop_all(&mut self, out: &mut Vec<Out>) {
         self.end_lend(out);

@@ -7,8 +7,8 @@ mod history;
 mod models;
 
 use kx_module_api::ports::{
-    BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, Pages, PanelButton,
-    VoiceHome, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
+    BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, OptionRow,
+    OptionValue, Pages, PanelButton, VoiceHome, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Redacted, is_arabic};
 
@@ -151,13 +151,29 @@ impl Panel {
         }
     }
 
-    /// The Options page's shown rows.
+    /// The Options page's shown rows; a pair whose second name is chosen has its hint on the row below.
     fn options_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let table = options::values(facts.settings);
         let cores = facts.cpu().map(|d| d.cores);
-        let row =
-            |(i, o): (usize, &'static options::Opt)| Some((Key::Opt(i), o.row(&table, cores)?));
-        let list = options::rows().iter().enumerate().filter_map(row).collect();
+        let rows = |(i, o): (usize, &'static options::Opt)| {
+            let row = o.row(&table, cores)?;
+            let second = matches!(row.value, OptionValue::Pair { second: true, .. });
+            let hint = OptionRow {
+                value: OptionValue::Hint,
+                ..row
+            };
+            Some(
+                [(Key::Opt(i), row)]
+                    .into_iter()
+                    .chain(second.then_some((Key::Plain, hint))),
+            )
+        };
+        let list = options::rows()
+            .iter()
+            .enumerate()
+            .filter_map(rows)
+            .flatten()
+            .collect();
         let (rows, pages) = self.paged(list);
         (VoiceSheet::Options(rows), pages)
     }

@@ -1,10 +1,12 @@
 //! The `kx-clip` actor (spec §7, ADR-0034): it keeps the watch's copies within the limits, answers the panel's keys
-//! and clicks, inserts through the keyboard and saves on a short debounce. A plain struct driven by messages, plus a
-//! loop that waits for the next message or timer.
+//! and clicks, inserts and pastes others' texts through the keyboard, and saves on a short debounce. A plain struct
+//! driven by messages, plus a loop that waits for the next message or timer.
 
+mod board;
 mod copy;
 mod days;
 mod edit;
+mod lend;
 mod look;
 mod paste;
 mod show;
@@ -18,7 +20,7 @@ use std::time::Duration;
 
 use kx_module_api::ports::{
     Calendar, ClipAct, ClipNote, ClipPanel, ClipRun, ClipTake, Clipboard, ClipboardWriter, Date,
-    HistoryWanted, PanelKey, PanelLine, PanelNote, Pasted, Room, SealedShelf,
+    HistoryWanted, PanelKey, PanelLine, PanelNote, PasteText, Pasted, Room, SealedShelf,
 };
 use kx_module_api::{Bus, Clock, Event, Mono, Notice, Secret, keys};
 
@@ -30,6 +32,8 @@ use crate::order::History;
 use crate::panel::Panel;
 use crate::settings::ClipSettings;
 use crate::store::{Loaded, Store};
+use board::Board;
+use lend::Lend;
 use paste::Pasting;
 pub(crate) use watched::Watched;
 
@@ -46,6 +50,8 @@ pub(crate) enum Msg {
     Key(PanelKey),
     /// A click on the panel, or the ui's rows.
     Act(ClipAct),
+    /// Another module's text to paste at once, and when the module heard it.
+    Lend(PasteText, Mono),
     /// The keyboard's answer to a paste request.
     Pasted(Pasted),
     /// A keyboard that starts later asks for the chord flag.
@@ -125,6 +131,9 @@ pub(crate) struct Actor {
     /// The open panel draws again after this message.
     redraw: bool,
     paste: Pasting,
+    /// What the clipboard holds, and a lent paste under way.
+    board: Board,
+    lent: Lend,
     /// The text of the last take that found no entry to forget, wiped once the next copy's note comes.
     missed: Option<Secret>,
     /// The entries whose thumbnail was asked this run.
@@ -162,6 +171,8 @@ impl Actor {
             failing: false,
             redraw: false,
             paste: Pasting::default(),
+            board: Board::default(),
+            lent: Lend::default(),
             missed: None,
             asked: BTreeSet::new(),
             thumbs_at: None,
@@ -216,6 +227,7 @@ impl Actor {
                 self.act_on(done);
             }
             Msg::Act(act) => self.act(act),
+            Msg::Lend(ask, at) => self.lend(ask, at),
             Msg::Pasted(pasted) => self.pasted(pasted),
             Msg::HistoryAsk => self.history_again(),
             Msg::Take(take) => self.take(take),
@@ -238,16 +250,16 @@ impl Actor {
             self.save();
         }
         self.paste_tick(now);
+        self.lend_tick(now);
         self.thumbs_tick(now);
         self.flush();
     }
 
-    /// How long the loop waits for a message: until the save, the paste's next step or wait, the worker's restart, or
-    /// local midnight.
+    /// How long the loop waits for a message: until the save, a paste's next step, the worker's restart, or midnight.
     pub(crate) fn wait(&self) -> Duration {
         let now = self.ports.clock.now();
         let save = (self.dirty).map(|t| t.saturating_add(self.settings.save()));
-        let due = [save, self.paste_due(), self.thumbs_at]
+        let due = [save, self.paste_due(), self.lend_due(), self.thumbs_at]
             .into_iter()
             .flatten();
         let midnight = days::until_midnight(&self.ports.calendar.now());
@@ -262,6 +274,7 @@ impl Actor {
         }
         self.stopped = true;
         self.ports.watch = None;
+        self.lend_quit();
         self.paste = Pasting::default();
         self.save();
         self.panel.close();

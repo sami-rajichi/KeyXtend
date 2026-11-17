@@ -19,6 +19,8 @@ Item {
     property bool rtl: host.ar
     property bool arabic: host.ar
     property bool takes: true
+    // A hint row (mock-up .pr.hint): its tile a bare muted icon, its name a muted line that wraps as a flat question does.
+    property bool quiet: false
     // The parts at the row's end, and what shows under its line.
     default property alias ends: ends.data
     property alias under: below.data
@@ -133,12 +135,21 @@ Item {
                 s: r.s
             }
             PanelTile {
-                visible: !!r.tile
+                visible: !!r.tile && !r.quiet
                 anchors.verticalCenter: parent.verticalCenter
                 icon: r.tile
                 lk: r.lk
                 res: r.res
                 s: r.s
+            }
+            Icon {
+                visible: !!r.tile && r.quiet
+                anchors.verticalCenter: parent.verticalCenter
+                icon: r.tile
+                base: r.res.icons
+                ext: r.res.ext
+                px: r.lk.shape.clip.button_px[4] * r.s
+                tint: r.p.pop_muted
             }
         }
         Column {
@@ -152,10 +163,12 @@ Item {
                 width: parent.width
                 text: r.name
                 elide: Text.ElideRight
+                wrapMode: r.quiet ? Text.Wrap : Text.NoWrap
+                maximumLineCount: r.quiet ? r.pn.question_lines : undefined
                 horizontalAlignment: r.rtl ? Text.AlignRight : Text.AlignLeft
-                font.family: r.arabic ? r.res.fam.arabic : r.res.fam.latin
-                font.pixelSize: r.pn.row_text_px[r.arabic ? 1 : 0] * r.s
-                color: r.lit ? r.lk.sel_ink : r.p.pop_ink
+                font.family: r.quiet ? r.res.fam.ui : (r.arabic ? r.res.fam.arabic : r.res.fam.latin)
+                font.pixelSize: (r.quiet ? r.pn.hint_px[0] * r.scale : r.pn.row_text_px[r.arabic ? 1 : 0]) * r.s
+                color: r.lit ? r.lk.sel_ink : (r.quiet ? r.p.pop_muted : r.p.pop_ink)
             }
             Label {
                 id: meta

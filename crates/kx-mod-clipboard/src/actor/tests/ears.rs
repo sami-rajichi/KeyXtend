@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use kx_module_api::ports::{
-    ClipLine, ClipPanel, ClipTaken, ClipView, HistoryWanted, PanelLine, PasteAsk,
+    ClipLine, ClipPanel, ClipTaken, ClipView, HistoryWanted, PanelLine, PasteAsk, TextPasted,
 };
 use kx_module_api::{Bus, Event, Notice, Subscription};
 
@@ -17,6 +17,8 @@ pub(super) enum Heard {
     Wanted(HistoryWanted),
     Taken(ClipTaken),
     Notice(Notice),
+    /// The answer to a text lent for Paste at once.
+    Lent(TextPasted),
 }
 
 /// Records every event the actor publishes into `heard`.
@@ -29,6 +31,7 @@ pub(super) fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscript
         ear(bus, heard, |e: &HistoryWanted| Heard::Wanted(*e)),
         ear(bus, heard, |e: &ClipTaken| Heard::Taken(e.clone())),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.clone())),
+        ear(bus, heard, |e: &TextPasted| Heard::Lent(*e)),
     ]
 }
 

@@ -54,7 +54,9 @@ QtObject {
     readonly property var options: ({
             switch: "switch",
             number: "number",
-            choice: "choice"
+            choice: "choice",
+            pair: "pair",
+            hint: "hint"
         })
     // The panel button look (ClipButton) each of the hub's tones takes.
     readonly property var tones: ({
@@ -66,7 +68,8 @@ QtObject {
     readonly property var lit: ["used"]
     readonly property var outlined: ["download", "not-here", "other", "failed", "waiting", "run-failed"]
     readonly property string writing: "writing"
-    // Each panel part's gate id in `group`; a row's, a stepper's and a download button's take their place after it.
+    // Each panel part's gate id in `group`; a row's, a stepper's and a download button's take their place after it, and a
+    // pair's chips take its minus's and plus's.
     readonly property var ids: ({
             list: "list",
             row: "row-",

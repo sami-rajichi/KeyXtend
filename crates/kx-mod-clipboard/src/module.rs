@@ -9,8 +9,8 @@ use std::thread::{self, JoinHandle};
 
 use kx_module_api::ports::{
     CalendarKey, ClipAct, ClipError, ClipKey, ClipOpen, ClipPanel, ClipTake, Clipboard,
-    ClipboardKey, ClipboardWriterKey, HistoryAsk, HistoryWanted, Pasted, Pictures, PicturesKey,
-    SealedError, SealedShelfKey,
+    ClipboardKey, ClipboardWriterKey, HistoryAsk, HistoryWanted, PasteText, Pasted, Pictures,
+    PicturesKey, SealedError, SealedShelfKey,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, keys,
@@ -189,12 +189,17 @@ fn sender<T: 'static>(tx: &Sender<Msg>, msg: fn(T) -> Msg) -> impl Fn(T) + Send 
     move |t| drop(tx.send(msg(t)))
 }
 
-/// Hands the panel's, the keyboard's and Quick-fill's events to the actor.
+/// Hands the panel's, the keyboard's, Quick-fill's and Paste at once's events to the actor; a text to paste goes with
+/// the time it was heard, so a late one is refused.
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &ClipOpen| Msg::Open)?;
     relay(cx, tx, |e: &ClipKey| Msg::Key(e.0.clone()))?;
     relay(cx, tx, |e: &ClipAct| Msg::Act(*e))?;
     relay(cx, tx, |e: &Pasted| Msg::Pasted(*e))?;
+    let clock = cx.clock();
+    relay(cx, tx, move |e: &PasteText| {
+        Msg::Lend(e.clone(), clock.now())
+    })?;
     relay(cx, tx, |e: &ClipTake| Msg::Take(*e))?;
     relay(cx, tx, |_: &HistoryAsk| Msg::HistoryAsk)
 }

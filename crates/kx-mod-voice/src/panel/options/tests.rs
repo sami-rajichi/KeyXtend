@@ -18,7 +18,7 @@ fn opt(key: &str) -> &'static Opt {
 #[test]
 fn every_row_names_a_setting_of_its_kind() {
     let start = defaults();
-    assert_eq!(rows().len(), 21, "the mock-up's options");
+    assert_eq!(rows().len(), 22, "the mock-up's options");
     for row in rows() {
         let value = start.get(&row.key).unwrap_or_else(|| panic!("{}", row.key));
         let fits = match row.kind {
@@ -26,6 +26,7 @@ fn every_row_names_a_setting_of_its_kind() {
             Kind::Number => value.is_integer() && (row.steps.is_empty() != row.step.is_none()),
             Kind::Factor => value.is_float() && !row.steps.is_empty(),
             Kind::Place => PLACES.iter().any(|(n, _)| value.as_str() == Some(*n)),
+            Kind::Insert => INSERTS.iter().any(|(n, _)| value.as_str() == Some(*n)),
         };
         assert!(fits, "{}", row.key);
         let unit = row.unit.is_some() == (row.kind == Kind::Number);
@@ -156,6 +157,39 @@ fn the_place_walks_the_bar_places() {
     );
 }
 
+// Insert the text (owner, 2026-11-17): after the click's debounce, as in the mock-up, two chips, typing first.
+#[test]
+fn the_insert_row_follows_the_debounce_and_picks_type_or_paste() {
+    let keys: Vec<&str> = rows().iter().map(|o| o.key.as_str()).collect();
+    let at = keys.iter().position(|k| *k == "insert").unwrap();
+    assert_eq!(
+        &keys[at - 1..=at + 1],
+        ["debounce_ms", "insert", "type_suffix"]
+    );
+    let insert = opt("insert");
+    let start = defaults();
+    let pair = |second| OptionValue::Pair {
+        names: INSERTS.map(|(n, _)| n),
+        second,
+    };
+    assert_eq!(insert.row(&start, None).unwrap().value, pair(false));
+    assert_eq!(
+        insert.moved(&start, false),
+        None,
+        "typing is already chosen"
+    );
+    let paste = Value::String(INSERTS[1].0.into());
+    assert_eq!(insert.moved(&start, true), Some(paste.clone()));
+    let pasting = with("insert", paste);
+    assert_eq!(insert.row(&pasting, None).unwrap().value, pair(true));
+    assert_eq!(insert.moved(&pasting, true), None);
+    assert_eq!(
+        insert.moved(&pasting, false),
+        Some(Value::String(INSERTS[0].0.into()))
+    );
+    assert_eq!(insert.flipped(&start), None, "chips, not a switch");
+}
+
 #[test]
 fn each_number_carries_its_unit_from_the_table() {
     let unit = |key: &str| match opt(key).row(&defaults(), Some(8)).unwrap().value {
@@ -176,4 +210,6 @@ fn changed_counts_the_rows_off_their_defaults() {
     settings.sounds = false;
     settings.history_max = 20;
     assert_eq!(changed(&settings), 2);
+    settings.insert = INSERTS[1].0.into();
+    assert_eq!(changed(&settings), 3, "Paste at once counts too");
 }

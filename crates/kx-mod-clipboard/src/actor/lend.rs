@@ -1,0 +1,152 @@
+//! Paste at once for another module (owner, 2026-11-17): the history keeps what the clipboard holds, writes the text
+//! as ours, asks the keyboard for one paste on a round of its own, answers right after the keyboard does, and puts the
+//! clipboard back after `paste_gap_ms`. It answers no, writing nothing, when it cannot put the clipboard back whole.
+
+use std::mem;
+use std::time::Duration;
+
+use kx_module_api::Mono;
+use kx_module_api::ports::{ClipError, ClipPart, PasteAsk, PasteText, Pasted, TextPasted};
+
+use super::Actor;
+use super::board::{Back, Held, own};
+use super::paste::Paste;
+use super::take::wipe;
+
+/// Where a lent paste is.
+#[derive(Debug, Default)]
+pub(super) enum Lend {
+    /// None under way.
+    #[default]
+    Idle,
+    /// The text was written and the keyboard asked to paste it on `round`, for the asker's `asker`.
+    Asked {
+        round: u32,
+        asker: u32,
+        back: Back,
+        since: Mono,
+    },
+    /// The keyboard pasted; the clipboard goes back at `until`.
+    Gap { back: Back, until: Mono },
+}
+
+impl Lend {
+    /// True when none is under way.
+    pub(super) const fn idle(&self) -> bool {
+        matches!(self, Self::Idle)
+    }
+}
+
+impl Actor {
+    /// Pastes `ask`'s text, asked at `at`, unless an insert or a paste is under way, the paste could not start within
+    /// the asker's `start_ms`, or the clipboard cannot be put back whole.
+    pub(super) fn lend(&mut self, ask: PasteText, at: Mono) {
+        let (asker, start) = (ask.round, Duration::from_millis(ask.start_ms().into()));
+        let free = self.lent.idle() && matches!(self.paste.state, Paste::Idle);
+        let Some(back) = (free && self.in_time(at, start))
+            .then(|| self.previous())
+            .flatten()
+        else {
+            return self.answer(asker, false);
+        };
+        let parts = vec![ClipPart::Text(own(ask.text))];
+        let wrote = self.ports.writer.write(&parts, self.settings.wait());
+        wipe(parts);
+        if let Err(error) = wrote {
+            tracing::warn!(%error, "a text to paste was not written to the clipboard");
+            // A held clipboard was left as it was; any other failure may have emptied it.
+            if error == ClipError::Busy {
+                wipe(back.parts);
+            } else {
+                self.put_back(back);
+            }
+            return self.answer(asker, false);
+        }
+        self.board.wrote(Held::Unknown);
+        if !self.in_time(at, start) {
+            self.put_back(back);
+            return self.answer(asker, false);
+        }
+        let (round, since) = (self.paste.next_round(), self.ports.clock.now());
+        self.lent = Lend::Asked {
+            round,
+            asker,
+            back,
+            since,
+        };
+        // The keyboard answers on this thread while it handles this; the answer waits in the inbox, no lock held.
+        self.publish(&PasteAsk { round });
+    }
+
+    /// The keyboard's answer to the lent paste: the asker hears it at once, and the clipboard goes back after the gap,
+    /// or now when nothing went out. False when the answer is not the lend's.
+    pub(super) fn lend_pasted(&mut self, pasted: Pasted) -> bool {
+        let ours = matches!(self.lent, Lend::Asked { round, .. } if round == pasted.round);
+        if !ours {
+            return false;
+        }
+        if let Lend::Asked { asker, back, .. } = mem::take(&mut self.lent) {
+            self.answer(asker, pasted.ok);
+            if pasted.ok {
+                let until = self.ports.clock.now();
+                let until = until.saturating_add(self.settings.paste_gap());
+                self.lent = Lend::Gap { back, until };
+            } else {
+                self.put_back(back);
+            }
+        }
+        true
+    }
+
+    /// At `now`: a paste the keyboard never answered puts the clipboard back and answers no, and a gap that ended puts
+    /// it back.
+    pub(super) fn lend_tick(&mut self, now: Mono) {
+        if self.lend_due().is_none_or(|due| now < due) {
+            return;
+        }
+        match mem::take(&mut self.lent) {
+            Lend::Asked { asker, back, .. } => {
+                tracing::warn!("the keyboard did not answer a lent paste in time");
+                self.put_back(back);
+                self.answer(asker, false);
+            }
+            Lend::Gap { back, .. } => self.put_back(back),
+            Lend::Idle => {}
+        }
+    }
+
+    /// When the lent paste's timer is due, if one runs.
+    pub(super) fn lend_due(&self) -> Option<Mono> {
+        match &self.lent {
+            Lend::Asked { since, .. } => Some(since.saturating_add(self.settings.paste_wait())),
+            Lend::Gap { until, .. } => Some(*until),
+            Lend::Idle => None,
+        }
+    }
+
+    /// At the stop, the clipboard goes back; an asker still waiting types its text once its own wait ends.
+    pub(super) fn lend_quit(&mut self) {
+        if let Lend::Asked { back, .. } | Lend::Gap { back, .. } = mem::take(&mut self.lent) {
+            self.put_back(back);
+        }
+    }
+
+    /// True while a paste asked at `at` may still start.
+    fn in_time(&self, at: Mono, start: Duration) -> bool {
+        self.ports.clock.now().saturating_since(at) <= start
+    }
+
+    /// Writes `back` as ours; a failure is logged, as the text pasted then stays.
+    fn put_back(&mut self, back: Back) {
+        match self.ports.writer.write(&back.parts, self.settings.wait()) {
+            Ok(()) => self.board.wrote(back.held),
+            Err(error) => tracing::warn!(%error, "the clipboard was not put back after a paste"),
+        }
+        wipe(back.parts);
+    }
+
+    /// Tells the asker of round `round` whether its text was pasted.
+    fn answer(&self, round: u32, ok: bool) {
+        self.publish(&TextPasted { round, ok });
+    }
+}

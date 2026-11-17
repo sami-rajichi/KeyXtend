@@ -30,6 +30,11 @@ type_suffix = " "
 history_join = " "
 # The wait between typed pieces, in ms.
 type_gap_ms = 10
+# How a dictated text goes in: "type" has the keyboard type it, "paste" pastes it at once through the clipboard history
+# and puts the clipboard back; a password box is always typed.
+insert = "type"
+# The longest wait for the clipboard history to paste a text, in ms; then it is typed.
+paste_ms = 2000
 # How long the bar shows the text, in ms, before it fades.
 done_ms = 9000
 # The wave's smoothing, in ms; 0 draws each level as it comes.

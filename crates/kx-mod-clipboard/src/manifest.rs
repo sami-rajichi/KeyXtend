@@ -37,7 +37,7 @@ mod tests {
     use super::*;
     use kx_module_api::ports::{
         ClipAct, ClipKey, ClipLine, ClipOpen, ClipPanel, ClipView, HistoryAsk, HistoryWanted,
-        PasteAsk, Pasted,
+        PasteAsk, PasteText, Pasted, TextPasted,
     };
     use kx_module_api::{Event, Notice};
 
@@ -90,7 +90,13 @@ mod tests {
             .iter()
             .all(|g| *g == read)
         );
-        assert_eq!([PasteAsk::CAPABILITY, Pasted::CAPABILITY], [write, write]);
+        let pastes = [PasteAsk::CAPABILITY, Pasted::CAPABILITY];
+        let lent = [PasteText::CAPABILITY, TextPasted::CAPABILITY];
+        assert_eq!(
+            [pastes, lent],
+            [[write; 2]; 2],
+            "Paste at once needs only the write gate"
+        );
         let open = [
             ClipOpen::CAPABILITY,
             HistoryWanted::CAPABILITY,

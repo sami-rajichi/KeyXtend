@@ -117,6 +117,8 @@ pub enum Out {
     Level(VoiceLevel),
     /// Ask the keyboard to erase, then type (`TextAsk`).
     Type(TextAsk),
+    /// Erase as `Type` does, then put the text in at once through the clipboard history; typed should that fail.
+    Paste(TextAsk),
     /// Put this text on the clipboard (Copy).
     Copy(Secret),
     /// Keep this text in History, whose `Rules` drop it while `history` is off.

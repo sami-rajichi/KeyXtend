@@ -23,6 +23,7 @@ mod gear;
 mod lend;
 mod listen;
 mod outs;
+mod paste;
 mod prep;
 mod props;
 mod session;

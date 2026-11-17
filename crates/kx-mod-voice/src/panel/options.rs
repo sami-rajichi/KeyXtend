@@ -7,7 +7,7 @@ use kx_module_api::ports::{Ends, Hundredths, OptionRow, OptionUnit, OptionValue}
 use serde::Deserialize;
 use toml::{Table, Value};
 
-use crate::settings::{PLACES, VoiceSettings};
+use crate::settings::{INSERTS, PLACES, VoiceSettings};
 use kx_module_api::Settings as _;
 
 /// The rows, read once.
@@ -32,6 +32,8 @@ pub enum Kind {
     Factor,
     /// One of the bar's places, with chevrons.
     Place,
+    /// One of the two ways a text goes in, as two chips; minus picks typing, plus pasting.
+    Insert,
 }
 
 /// One row of the Options page.
@@ -106,6 +108,10 @@ impl Opt {
                 ends: ends(),
             },
             Kind::Place => place(now)?,
+            Kind::Insert => OptionValue::Pair {
+                names: INSERTS.map(|(n, _)| n),
+                second: INSERTS.iter().position(|(n, _)| now.as_str() == Some(*n))? > 0,
+            },
         };
         let live = self
             .under
@@ -136,15 +142,20 @@ impl Opt {
     #[must_use]
     pub fn moved(&self, table: &Table, up: bool) -> Option<Value> {
         let now = table.get(&self.key)?;
-        if self.kind == Kind::Place {
-            let at = PLACES.iter().position(|(n, _)| now.as_str() == Some(*n))?;
+        let names: Option<Vec<&str>> = match self.kind {
+            Kind::Place => Some(PLACES.iter().map(|(n, _)| *n).collect()),
+            Kind::Insert => Some(INSERTS.iter().map(|(n, _)| *n).collect()),
+            _ => None,
+        };
+        if let Some(names) = names {
+            let at = names.iter().position(|n| now.as_str() == Some(*n))?;
             let next = if up {
                 at.checked_add(1)
             } else {
                 at.checked_sub(1)
             };
-            let name = PLACES.get(next?)?.0;
-            return accepted(table, &self.key, Value::String(name.to_owned()));
+            let name = names.get(next?)?;
+            return accepted(table, &self.key, Value::String((*name).to_owned()));
         }
         if self.steps.is_empty() {
             let (now, step) = (now.as_integer()?, self.step?);

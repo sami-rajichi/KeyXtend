@@ -6,6 +6,7 @@ use kx_module_api::parse_as;
 use kx_module_api::ports::{BarPlace, CardId, FetchAsk, Hundredths, JobLimits, SpeechAsk};
 use std::time::Duration;
 
+mod insert;
 mod picks;
 mod wiring;
 

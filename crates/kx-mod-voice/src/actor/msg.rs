@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use kx_module_api::ports::{
     CardId, CheckDone, Device, FetchNote, FieldChange, Fingerprint, FolderError, LayoutChanged,
-    ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone, VoiceAct,
+    ModelError, ModelFacts, SessionNote, SpeechError, SpeechNote, TextDone, TextPasted, VoiceAct,
 };
 
 use super::lanes::{Answer, Lane, Run};
@@ -33,6 +33,8 @@ pub(crate) enum Msg {
     PressesAsk,
     /// The keyboard typed a text (`TextDone`).
     Typed(TextDone),
+    /// The clipboard history pasted a text, or not (`TextPasted`).
+    Pasted(TextPasted),
     /// A job's answer.
     Back(Back),
     /// The module stops.

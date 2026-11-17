@@ -79,7 +79,7 @@ pub use clip::{
 pub use clips::{
     ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipTake,
     ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted, MB, Pages, PanelKey,
-    PanelLine, PanelNote, PasteAsk, Pasted, Preview, When,
+    PanelLine, PanelNote, PasteAsk, PasteText, Pasted, Preview, TextPasted, When,
 };
 pub use cloud::{
     CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,

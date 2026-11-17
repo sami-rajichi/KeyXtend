@@ -2,8 +2,8 @@
 # [voice] key, in the mock-up's order. Switches and minus and plus steppers only, no slider (ADR-0008).
 #
 # - `key`: the setting, which also names the row's text.
-# - `kind`: "switch" (on or off), "number" (a whole number), "factor" (kept in hundredths) or "place" (the bar's places,
-#   with chevrons).
+# - `kind`: "switch" (on or off), "number" (a whole number), "factor" (kept in hundredths), "place" (the bar's places,
+#   with chevrons) or "insert" (Type it or Paste at once, as two chips; Paste's hint takes the row below).
 # - `steps`: the values minus and plus walk through; without it a number moves by `step`. A value the settings' own
 #   check refuses is skipped, so each range stays in one place.
 # - `under`: the switch that makes the row live; `auto`: 0 reads as the processor's real cores.
@@ -79,6 +79,10 @@ key = "debounce_ms"
 kind = "number"
 unit = "ms"
 steps = [100, 200, 300, 400, 600, 800, 1000, 1500, 2000]
+
+[[rows]]
+key = "insert"
+kind = "insert"
 
 [[rows]]
 key = "type_suffix"

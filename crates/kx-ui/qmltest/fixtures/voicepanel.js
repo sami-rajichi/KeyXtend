@@ -368,7 +368,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 17,
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1777,6 +1777,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "sounds",
               "kind": "switch",
               "label": "صوتا البدء والإيقاف",
@@ -1786,6 +1787,7 @@ var views = {
               "value": "مفعّل"
             },
             {
+              "chips": null,
               "key": "silence_stop",
               "kind": "switch",
               "label": "الإيقاف بعد الصمت",
@@ -1795,6 +1797,7 @@ var views = {
               "value": "معطّل"
             },
             {
+              "chips": null,
               "key": "silence_stop_s",
               "kind": "number",
               "label": "مدة الصمت قبل الإيقاف",
@@ -1809,6 +1812,7 @@ var views = {
               "value": "3 ثوانٍ"
             },
             {
+              "chips": null,
               "key": "done_ms",
               "kind": "number",
               "label": "مدة بقاء النص على الشريط",
@@ -1823,6 +1827,7 @@ var views = {
               "value": "9 ثوانٍ"
             },
             {
+              "chips": null,
               "key": "place",
               "kind": "choice",
               "label": "موضع الشريط",
@@ -1846,6 +1851,132 @@ var views = {
       },
       "place": "above",
       "round": 15,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "optionsInsert": {
+      "bar": {
+        "state": "hidden"
+      },
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "تُطبَّق التغييرات فورًا.",
+        "note": null,
+        "page": "options",
+        "pages": {
+          "at": 2,
+          "count": 5
+        },
+        "sheet": {
+          "is": "options",
+          "rows": [
+            {
+              "chips": null,
+              "key": "debounce_ms",
+              "kind": "number",
+              "label": "تجاهل النقرة الثانية خلال",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "أقل: تجاهل النقرة الثانية خلال",
+                "plus": "أكثر: تجاهل النقرة الثانية خلال"
+              },
+              "value": "400 ميلي ثانية"
+            },
+            {
+              "chips": [
+                {
+                  "label": "كتابته",
+                  "on": false
+                },
+                {
+                  "label": "لصقه دفعة واحدة",
+                  "on": true
+                }
+              ],
+              "key": "insert",
+              "kind": "pair",
+              "label": "إدراج النص",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": "لصقه دفعة واحدة"
+            },
+            {
+              "chips": null,
+              "key": "insert",
+              "kind": "hint",
+              "label": "يستخدم الحافظة ثم يعيد إليها ما كان فيها؛ أما حقل كلمة المرور فيُكتب فيه النص دائمًا.",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": ""
+            },
+            {
+              "chips": null,
+              "key": "type_suffix",
+              "kind": "switch",
+              "label": "مسافة بعد النص",
+              "live": true,
+              "on": true,
+              "steps": null,
+              "value": "مفعّل"
+            },
+            {
+              "chips": null,
+              "key": "type_gap_ms",
+              "kind": "number",
+              "label": "الفاصل بين الأحرف",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "أقل: الفاصل بين الأحرف",
+                "plus": "أكثر: الفاصل بين الأحرف"
+              },
+              "value": "5 ميلي ثوانٍ"
+            }
+          ]
+        },
+        "sub": "لجميع اللغات",
+        "ticked": 0,
+        "title": "الخيارات",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 17,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1894,6 +2025,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "threads",
               "kind": "number",
               "label": "خيوط المعالجة",
@@ -1908,6 +2040,7 @@ var views = {
               "value": "تلقائي"
             },
             {
+              "chips": null,
               "key": "type_suffix",
               "kind": "switch",
               "label": "مسافة بعد النص",
@@ -1917,6 +2050,7 @@ var views = {
               "value": "مفعّل"
             },
             {
+              "chips": null,
               "key": "card_gain",
               "kind": "number",
               "label": "أدنى تسريع مطلوب من البطاقة",
@@ -1931,6 +2065,7 @@ var views = {
               "value": "1,5 مرة"
             },
             {
+              "chips": null,
               "key": "history_max",
               "kind": "number",
               "label": "عدد النصوص المحفوظة",
@@ -1945,6 +2080,7 @@ var views = {
               "value": "500 نص"
             },
             {
+              "chips": null,
               "key": "card_diff",
               "kind": "number",
               "label": "الفرق المسموح في نص البطاقة",
@@ -2453,7 +2589,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 17,
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3862,6 +3998,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "sounds",
               "kind": "switch",
               "label": "Start and stop sounds",
@@ -3871,6 +4008,7 @@ var views = {
               "value": "On"
             },
             {
+              "chips": null,
               "key": "silence_stop",
               "kind": "switch",
               "label": "Stop after silence",
@@ -3880,6 +4018,7 @@ var views = {
               "value": "Off"
             },
             {
+              "chips": null,
               "key": "silence_stop_s",
               "kind": "number",
               "label": "Silence before stopping",
@@ -3894,6 +4033,7 @@ var views = {
               "value": "3 s"
             },
             {
+              "chips": null,
               "key": "done_ms",
               "kind": "number",
               "label": "Text stays on the bar",
@@ -3908,6 +4048,7 @@ var views = {
               "value": "9 s"
             },
             {
+              "chips": null,
               "key": "place",
               "kind": "choice",
               "label": "Bar position",
@@ -3931,6 +4072,132 @@ var views = {
       },
       "place": "above",
       "round": 15,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "optionsInsert": {
+      "bar": {
+        "state": "hidden"
+      },
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Changes apply at once.",
+        "note": null,
+        "page": "options",
+        "pages": {
+          "at": 2,
+          "count": 5
+        },
+        "sheet": {
+          "is": "options",
+          "rows": [
+            {
+              "chips": null,
+              "key": "debounce_ms",
+              "kind": "number",
+              "label": "Ignore a second click within",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "Less: Ignore a second click within",
+                "plus": "More: Ignore a second click within"
+              },
+              "value": "400 ms"
+            },
+            {
+              "chips": [
+                {
+                  "label": "Type it",
+                  "on": false
+                },
+                {
+                  "label": "Paste at once",
+                  "on": true
+                }
+              ],
+              "key": "insert",
+              "kind": "pair",
+              "label": "Insert the text",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": "Paste at once"
+            },
+            {
+              "chips": null,
+              "key": "insert",
+              "kind": "hint",
+              "label": "Uses the clipboard, then puts yours back; a password box is always typed.",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": ""
+            },
+            {
+              "chips": null,
+              "key": "type_suffix",
+              "kind": "switch",
+              "label": "Space after the text",
+              "live": true,
+              "on": true,
+              "steps": null,
+              "value": "On"
+            },
+            {
+              "chips": null,
+              "key": "type_gap_ms",
+              "kind": "number",
+              "label": "Pause between letters",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "Less: Pause between letters",
+                "plus": "More: Pause between letters"
+              },
+              "value": "5 ms"
+            }
+          ]
+        },
+        "sub": "For every language",
+        "ticked": 0,
+        "title": "Options",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 17,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -3979,6 +4246,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "threads",
               "kind": "number",
               "label": "Processor threads",
@@ -3993,6 +4261,7 @@ var views = {
               "value": "Automatic"
             },
             {
+              "chips": null,
               "key": "type_suffix",
               "kind": "switch",
               "label": "Space after the text",
@@ -4002,6 +4271,7 @@ var views = {
               "value": "On"
             },
             {
+              "chips": null,
               "key": "card_gain",
               "kind": "number",
               "label": "A card must be faster by",
@@ -4016,6 +4286,7 @@ var views = {
               "value": "1.5×"
             },
             {
+              "chips": null,
               "key": "history_max",
               "kind": "number",
               "label": "Texts kept",
@@ -4030,6 +4301,7 @@ var views = {
               "value": "500 texts"
             },
             {
+              "chips": null,
               "key": "card_diff",
               "kind": "number",
               "label": "A card’s text may differ by",
@@ -4538,7 +4810,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 17,
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -5947,6 +6219,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "sounds",
               "kind": "switch",
               "label": "Sons de début et de fin",
@@ -5956,6 +6229,7 @@ var views = {
               "value": "Activé"
             },
             {
+              "chips": null,
               "key": "silence_stop",
               "kind": "switch",
               "label": "Arrêt après un silence",
@@ -5965,6 +6239,7 @@ var views = {
               "value": "Désactivé"
             },
             {
+              "chips": null,
               "key": "silence_stop_s",
               "kind": "number",
               "label": "Silence avant l’arrêt",
@@ -5979,6 +6254,7 @@ var views = {
               "value": "3 s"
             },
             {
+              "chips": null,
               "key": "done_ms",
               "kind": "number",
               "label": "Durée d’affichage du texte",
@@ -5993,6 +6269,7 @@ var views = {
               "value": "9 s"
             },
             {
+              "chips": null,
               "key": "place",
               "kind": "choice",
               "label": "Position de la barre",
@@ -6016,6 +6293,132 @@ var views = {
       },
       "place": "above",
       "round": 15,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "optionsInsert": {
+      "bar": {
+        "state": "hidden"
+      },
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Les changements s’appliquent tout de suite.",
+        "note": null,
+        "page": "options",
+        "pages": {
+          "at": 2,
+          "count": 5
+        },
+        "sheet": {
+          "is": "options",
+          "rows": [
+            {
+              "chips": null,
+              "key": "debounce_ms",
+              "kind": "number",
+              "label": "Ignorer un second clic pendant",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "Moins : Ignorer un second clic pendant",
+                "plus": "Plus : Ignorer un second clic pendant"
+              },
+              "value": "400 ms"
+            },
+            {
+              "chips": [
+                {
+                  "label": "Le saisir",
+                  "on": false
+                },
+                {
+                  "label": "Le coller en une fois",
+                  "on": true
+                }
+              ],
+              "key": "insert",
+              "kind": "pair",
+              "label": "Insérer le texte",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": "Le coller en une fois"
+            },
+            {
+              "chips": null,
+              "key": "insert",
+              "kind": "hint",
+              "label": "Passe par le presse-papiers, puis y remet votre contenu ; un champ de mot de passe est toujours saisi.",
+              "live": true,
+              "on": false,
+              "steps": null,
+              "value": ""
+            },
+            {
+              "chips": null,
+              "key": "type_suffix",
+              "kind": "switch",
+              "label": "Espace après le texte",
+              "live": true,
+              "on": true,
+              "steps": null,
+              "value": "Activé"
+            },
+            {
+              "chips": null,
+              "key": "type_gap_ms",
+              "kind": "number",
+              "label": "Pause entre les caractères",
+              "live": true,
+              "on": false,
+              "steps": {
+                "high": false,
+                "low": false,
+                "minus": "Moins : Pause entre les caractères",
+                "plus": "Plus : Pause entre les caractères"
+              },
+              "value": "5 ms"
+            }
+          ]
+        },
+        "sub": "Pour toutes les langues",
+        "ticked": 0,
+        "title": "Options",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 17,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -6064,6 +6467,7 @@ var views = {
           "is": "options",
           "rows": [
             {
+              "chips": null,
               "key": "threads",
               "kind": "number",
               "label": "Fils d’exécution du processeur",
@@ -6078,6 +6482,7 @@ var views = {
               "value": "Automatique"
             },
             {
+              "chips": null,
               "key": "type_suffix",
               "kind": "switch",
               "label": "Espace après le texte",
@@ -6087,6 +6492,7 @@ var views = {
               "value": "Activé"
             },
             {
+              "chips": null,
               "key": "card_gain",
               "kind": "number",
               "label": "Gain minimal d’une carte",
@@ -6101,6 +6507,7 @@ var views = {
               "value": "1,5×"
             },
             {
+              "chips": null,
               "key": "history_max",
               "kind": "number",
               "label": "Textes conservés",
@@ -6115,6 +6522,7 @@ var views = {
               "value": "500 textes"
             },
             {
+              "chips": null,
               "key": "card_diff",
               "kind": "number",
               "label": "Écart permis pour une carte",

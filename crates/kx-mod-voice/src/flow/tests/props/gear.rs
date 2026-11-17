@@ -65,7 +65,7 @@ impl Seen {
                         "{call:?} after the gear"
                     );
                 }
-                Out::Type(_) | Out::Count(_) => {
+                Out::Type(_) | Out::Paste(_) | Out::Count(_) => {
                     prop_assert!(
                         !self.geared.contains(&self.live),
                         "{effect:?} after the gear"

@@ -3,19 +3,19 @@
 
 use std::path::Path;
 
-use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
     BarHint, FetchAsk, FetchButton, FetchNote, FetchRun, TextAsk, VoiceLevel,
 };
+use kx_module_api::{Redacted, Zeroizing};
 
 use super::lanes::Owner;
 use super::typing::Source;
 use super::{Actor, Back, Msg};
-use crate::VoiceSettings;
 use crate::compare::Act;
 use crate::flow::{In, suffixed};
 use crate::models::table;
 use crate::panel::Do;
+use crate::{Insert, VoiceSettings};
 
 /// The round a text names until the typer gives it its own.
 const UNSENT: u32 = 0;
@@ -148,7 +148,7 @@ impl Actor {
     }
 
     /// Types History's texts `ids`, in order, joined by the join, the suffix after the last; their answers never reach
-    /// the flow.
+    /// the flow. With Paste at once they go as one text, but into a password box.
     fn insert(&mut self, ids: &[u64]) {
         let s = &self.held.settings;
         let (suffix, join, gap_ms) = (&s.type_suffix, &s.history_join, s.type_gap_ms);
@@ -157,6 +157,20 @@ impl Actor {
         let texts: Vec<_> = (entries.iter().enumerate())
             .map(|(at, e)| suffixed(e.text.expose(), if at == last { suffix } else { join }))
             .collect();
+        if s.way() == Insert::Paste && !self.flow.password() && !texts.is_empty() {
+            let all: Zeroizing<String> =
+                Zeroizing::new(texts.iter().map(|t| t.expose().as_str()).collect());
+            let (round, erase, text) = (UNSENT, 0, Redacted::new(all));
+            return self.paste_text(
+                Source::History,
+                TextAsk {
+                    round,
+                    erase,
+                    text,
+                    gap_ms,
+                },
+            );
+        }
         for text in texts {
             let ask = TextAsk {
                 round: UNSENT,

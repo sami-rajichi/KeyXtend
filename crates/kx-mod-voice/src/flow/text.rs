@@ -1,11 +1,12 @@
-//! The text: typed into the box in front, kept on the bar when nothing takes it, dots for a password box, kept in
-//! History, and Undo insert while nothing else was typed.
+//! The text: typed or pasted into the box in front, kept on the bar when nothing takes it, dots for a password box,
+//! kept in History, and Undo insert while nothing else was typed.
 
 use kx_module_api::ports::{BarHint, FieldChange, FieldKind, TextAsk, TextDone, VoiceText};
 use kx_module_api::{Redacted, Zeroizing};
 
 use super::take::{Asking, Typed, secret, shown, suffixed};
 use super::{Flow, Kept, Out, RunCall, State};
+use crate::settings::Insert;
 
 impl Flow {
     /// The written text: typed when the box takes it, first or in place of a text Undo can still erase.
@@ -60,8 +61,8 @@ impl Flow {
         self.shown_at = self.now();
     }
 
-    /// Asks the keyboard to type `text`, erasing the text before while Undo can; nothing when no box takes it, or
-    /// when a later text can no longer replace the first.
+    /// Asks for `text` to go in, erasing the text before while Undo can: pasted when `insert` says so and the box is
+    /// no password box, else typed. Nothing when no box takes it, or when a later text can no longer replace the first.
     fn type_text(&mut self, text: &str, kind: FieldKind, out: &mut Vec<Out>) {
         let round = self.asks.wrapping_add(1);
         let box_id = self.field.box_id;
@@ -79,12 +80,18 @@ impl Flow {
             box_id,
             undo: false,
         });
-        out.push(Out::Type(TextAsk {
+        let ask = TextAsk {
             round,
             erase: erase.unwrap_or_default(),
             text: suffixed(text, &self.settings.type_suffix),
             gap_ms: self.settings.type_gap_ms,
-        }));
+        };
+        let paste = self.settings.way() == Insert::Paste && kind != FieldKind::Password;
+        out.push(if paste {
+            Out::Paste(ask)
+        } else {
+            Out::Type(ask)
+        });
     }
 
     /// Keeps `text` in History and, with Keep recordings, its sound; never a password box's, never in a hidden run.

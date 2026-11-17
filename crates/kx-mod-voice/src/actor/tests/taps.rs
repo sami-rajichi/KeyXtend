@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::sync::{Arc, Mutex};
 
 use kx_module_api::ports::{
-    LayoutAsk, PressesWanted, TextAsk, VoiceLevel, VoiceLit, VoicePage, VoiceView,
+    LayoutAsk, PasteText, PressesWanted, TextAsk, VoiceLevel, VoiceLit, VoicePage, VoiceView,
 };
 use kx_module_api::{Bus, Event, Notice, Subscription};
 
@@ -63,6 +63,8 @@ pub(super) enum Heard {
     Notice(&'static str),
     /// An ask for another part's state, by its event name.
     Ask(&'static str),
+    /// A text for the clipboard history to paste.
+    Paste(PasteText),
 }
 
 /// Listens on `bus` for everything the actor publishes, into `heard`.
@@ -74,6 +76,7 @@ pub(super) fn listen(bus: &Bus, heard: &Arc<Mutex<Vec<Heard>>>) -> Vec<Subscript
         ear(bus, heard, |e: &PressesWanted| Heard::Presses(e.on)),
         ear(bus, heard, |e: &Notice| Heard::Notice(e.key)),
         ear(bus, heard, |_: &LayoutAsk| Heard::Ask(LayoutAsk::NAME)),
+        ear(bus, heard, |e: &PasteText| Heard::Paste(e.clone())),
     ]
 }
 

@@ -193,6 +193,7 @@ voice =
     .opt-record-max-s = أقصى مدة للإملاء
     .opt-nothing-s = تنبيه «لم يُسمع شيء» بعد
     .opt-debounce-ms = تجاهل النقرة الثانية خلال
+    .opt-insert = إدراج النص
     .opt-type-suffix = مسافة بعد النص
     .opt-type-gap-ms = الفاصل بين الأحرف
     .opt-threads = خيوط المعالجة
@@ -204,6 +205,9 @@ voice =
     .place-above = فوق لوحة المفاتيح
     .place-bottom = أسفل الشاشة
     .place-top = أعلى الشاشة
+    .insert-type = كتابته
+    .insert-paste = لصقه دفعة واحدة
+    .insert-hint = يستخدم الحافظة ثم يعيد إليها ما كان فيها؛ أما حقل كلمة المرور فيُكتب فيه النص دائمًا.
     .seconds = { $form ->
         [one] ثانية واحدة
         [two] ثانيتان

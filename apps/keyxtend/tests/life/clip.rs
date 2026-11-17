@@ -24,7 +24,7 @@ const CLIP_KEY: &str = "clip";
 const HELLO: &str = "hello";
 
 /// The paste shortcut, Ctrl+V, as the platform's table lists it.
-fn paste() -> ShortcutInfo {
+pub fn paste() -> ShortcutInfo {
     let name = |n: &str| KeyName::new(n).unwrap();
     ShortcutInfo {
         id: ShortcutId::new(PASTE_ID).unwrap(),

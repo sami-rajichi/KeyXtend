@@ -45,8 +45,9 @@ mod tests {
     use super::*;
     use kx_module_api::Event;
     use kx_module_api::ports::{
-        LayoutAsk, LayoutChanged, PointerPressed, PressesAsk, PressesWanted, SealedShelfKey,
-        TextAsk, TextDone, Typed, VoiceAct, VoiceAsk, VoiceKey, VoiceLit, VoiceOpen, VoiceView,
+        LayoutAsk, LayoutChanged, PasteText, PointerPressed, PressesAsk, PressesWanted,
+        SealedShelfKey, TextAsk, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk, VoiceKey,
+        VoiceLit, VoiceOpen, VoiceView,
     };
 
     #[test]
@@ -87,8 +88,17 @@ mod tests {
             PressesAsk::CAPABILITY,
             LayoutChanged::CAPABILITY,
             LayoutAsk::CAPABILITY,
+            TextPasted::CAPABILITY,
         ];
         assert!(heard.into_iter().flatten().all(|c| MANIFEST.declares(c)));
+    }
+
+    // Paste at once asks the clipboard history to paste through the gate Copy holds, so it gains no clipboard read.
+    #[test]
+    fn paste_at_once_needs_only_the_write_gate_it_holds_for_copy() {
+        let write = Some(Capability::WriteClipboard);
+        assert_eq!([PasteText::CAPABILITY, TextPasted::CAPABILITY], [write; 2]);
+        assert!(!MANIFEST.capabilities.contains(&Capability::ReadClipboard));
     }
 
     #[test]

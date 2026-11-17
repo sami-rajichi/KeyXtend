@@ -9,6 +9,7 @@ mod keep;
 mod lanes;
 mod msg;
 mod outs;
+mod paste;
 mod ports;
 mod typing;
 
@@ -34,6 +35,7 @@ use held::Held;
 use jobs::Jobs;
 use keep::Keep;
 use lanes::Lanes;
+use paste::Pasting;
 use typing::Typing;
 
 /// The box the first look names, before the watch tells one.
@@ -48,6 +50,7 @@ pub(crate) struct Actor {
     keep: Keep,
     lanes: Lanes,
     typing: Typing,
+    pasting: Pasting,
     jobs: Jobs,
     /// The flow's inputs still to feed, so an effect never feeds it while it is fed.
     inputs: VecDeque<In>,
@@ -73,6 +76,7 @@ impl Actor {
             ports,
             lanes: Lanes::default(),
             typing: Typing::default(),
+            pasting: Pasting::default(),
             jobs: Jobs::default(),
             inputs: VecDeque::new(),
             stepping: false,
@@ -139,24 +143,34 @@ impl Actor {
             Msg::Elsewhere => self.step(In::Elsewhere),
             Msg::PressesAsk => self.retell_presses(),
             Msg::Typed(done) => self.typed(done),
+            Msg::Pasted(done) => self.pasted(done),
             Msg::Back(back) => self.answer(back),
         }
         self.after();
     }
 
-    /// Feeds the flow the hint or the fade whose time came.
+    /// Types each text whose paste was not answered in time, then feeds the flow the hint or the fade whose time came.
     pub(crate) fn tick(&mut self) {
         let now = self.ports.clock.now();
+        if !self.stopped && self.paste_due().is_some_and(|due| now >= due) {
+            self.paste_tick(now);
+            self.after();
+        }
         if !self.stopped && self.flow.deadline().is_some_and(|due| now >= due) {
             self.step(In::Tick);
             self.after();
         }
     }
 
-    /// How long the loop waits for a message: until the flow's next hint or fade, else no limit.
+    /// How long the loop waits for a message: until a paste's answer is due or the flow's next hint or fade, else
+    /// no limit.
     pub(crate) fn wait(&self) -> Option<Duration> {
         let now = self.ports.clock.now();
-        self.flow.deadline().map(|due| due.saturating_since(now))
+        let due = [self.paste_due(), self.flow.deadline()]
+            .into_iter()
+            .flatten()
+            .min();
+        due.map(|due| due.saturating_since(now))
     }
 
     /// Stops: the watches go, every run closes, the bar hides, and what failed to save is tried once more.

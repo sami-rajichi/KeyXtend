@@ -76,7 +76,7 @@ fn holds(parts: &[ClipPart], text: &Secret) -> bool {
 }
 
 /// Wipes the content of `parts` as it drops.
-fn wipe(parts: Vec<ClipPart>) {
+pub(super) fn wipe(parts: Vec<ClipPart>) {
     for part in parts {
         match part {
             ClipPart::Text(t) => drop(Zeroizing::new(t.into_inner())),

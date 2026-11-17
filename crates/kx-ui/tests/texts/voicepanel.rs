@@ -1,6 +1,7 @@
 //! The Voice panel's views the Qt Quick tests draw (`qmltest/fixtures/voicepanel.js`), as the hub writes them in each
 //! language: every page, a second page of models with a note, the model in use ticked, a slow language, the folder
-//! question, Compare's steps, History with two ticks, its question and empty, two pages of Options and the drives.
+//! question, Compare's steps, History with two ticks, its question and empty, three pages of Options, Paste at once
+//! chosen on the third, and the drives.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::ports::{
@@ -100,6 +101,21 @@ fn options_second() -> VoiceSheet {
     ])
 }
 
+/// Options' third page: Paste at once chosen, its hint on the row below.
+fn options_insert() -> VoiceSheet {
+    let pair = OptionValue::Pair {
+        names: ["type", "paste"],
+        second: true,
+    };
+    VoiceSheet::Options(vec![
+        opt("debounce_ms", number(400, OptionUnit::Ms, false, false)),
+        opt("insert", pair),
+        opt("insert", OptionValue::Hint),
+        opt("type_suffix", OptionValue::Switch(true)),
+        opt("type_gap_ms", number(5, OptionUnit::Ms, false, false)),
+    ])
+}
+
 /// The drives, to pick the models folder.
 fn drives() -> VoiceSheet {
     let rows = [r"C:\", r"D:\"].map(|d| Redacted::new(d.to_owned()));
@@ -176,6 +192,10 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
         ("historyEmpty", history(false, true, &[], 1, 0)),
         ("options", paged(shown(options_first(), &[]), 0, 5, 0)),
         ("optionsMore", paged(shown(options_second(), &[]), 1, 5, 0)),
+        (
+            "optionsInsert",
+            paged(shown(options_insert(), &[]), 2, 5, 0),
+        ),
         ("folders", shown(drives(), &[])),
     ]
 }

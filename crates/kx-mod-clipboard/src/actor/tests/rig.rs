@@ -30,7 +30,7 @@ pub(super) const ROWS: u8 = 5;
 pub(super) struct Rig {
     pub fakes: Fakes,
     pub settings: ClipSettings,
-    actor: Actor,
+    pub actor: Actor,
     notes: Receiver<Msg>,
     tasks: Receiver<Task>,
     looks: Receiver<Look>,

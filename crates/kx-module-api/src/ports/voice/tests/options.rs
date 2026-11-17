@@ -59,6 +59,18 @@ fn options_carry_a_factor_the_auto_count_and_each_ends() {
     holds(&shown, &parts);
 }
 
+// Insert the text (owner, 2026-11-17): two chips, and the hint on the row below while the second is chosen.
+#[test]
+fn a_pair_names_both_its_choices_and_its_hint_takes_a_row_of_its_own() {
+    let pair = OptionValue::Pair {
+        names: ["type", "paste"],
+        second: true,
+    };
+    let rows = vec![option("insert", pair), option("insert", OptionValue::Hint)];
+    let shown = shown(VoiceSheet::Options(rows));
+    holds(&shown, &["\"type\"", "\"paste\"", "second: true", "Hint"]);
+}
+
 #[test]
 fn an_options_unit_reads_as_its_snake_case_name() {
     use OptionUnit::{

@@ -14,6 +14,7 @@ use super::*;
 mod compare;
 mod device;
 mod folder;
+mod insert;
 mod lists;
 mod props;
 

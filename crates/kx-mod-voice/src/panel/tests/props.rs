@@ -154,7 +154,9 @@ fn at_end(value: OptionValue, up: bool) -> bool {
         OptionValue::Number { ends, .. }
         | OptionValue::Factor { ends, .. }
         | OptionValue::Choice { ends, .. } => ends,
-        OptionValue::Switch(_) => return true,
+        // The chosen chip picks nothing new.
+        OptionValue::Pair { second, .. } => return second == up,
+        OptionValue::Switch(_) | OptionValue::Hint => return true,
     };
     if up { ends.high } else { ends.low }
 }

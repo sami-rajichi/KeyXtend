@@ -1,6 +1,6 @@
 //! Texts for the keyboard: each goes to one typer thread of its own, as a `TextAsk` holds the publishing thread for the
 //! whole text, so one text is in flight at a time. Each gets the typer's own round, which maps the keyboard's answer
-//! back to the flow; History's texts get no answer there.
+//! back to the flow, or to Paste at once after its erase; History's texts get no answer there.
 
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -27,6 +27,8 @@ pub(super) enum Source {
     Flow(u32),
     /// History's Insert.
     History,
+    /// Paste at once's erase, before the text that replaces it is pasted.
+    Erase,
 }
 
 /// The texts handed to the typer and not yet answered, oldest first, by the typer's round.
@@ -85,8 +87,10 @@ impl Actor {
             return;
         };
         let last = asked.drain(..=at).next_back();
-        if let Some((_, Source::Flow(round))) = last {
-            self.step(In::Typed(TextDone { round, ..done }));
+        match last {
+            Some((_, Source::Flow(round))) => self.step(In::Typed(TextDone { round, ..done })),
+            Some((_, Source::Erase)) => self.erased(done.ok),
+            _ => {}
         }
     }
 }
