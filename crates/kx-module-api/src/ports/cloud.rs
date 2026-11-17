@@ -31,6 +31,7 @@ pub enum CloudNote {
 }
 
 /// A run on the platform's side. Dropping it cancels it: the requests in flight are dropped and nothing more is told.
+/// The drop never blocks, so Cancel never waits on the network.
 pub trait CloudRun: Send {}
 
 /// Sends speech to a cloud service in the worker's `speech-net` job, which has the network and no microphone; the

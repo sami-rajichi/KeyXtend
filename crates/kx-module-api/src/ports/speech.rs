@@ -153,8 +153,8 @@ pub trait SpeechRun: Send {
     /// frame limit, for a cloud service; empty when no speech was heard. Each call gives fresh copies, for Try again.
     ///
     /// # Errors
-    /// `NoSound` before `Done`, after a Cancel, a close or a wipe, or on a run that cannot listen alone; `Internal`
-    /// when the job handed it over out of order.
+    /// `NoSound` before `Done`, after a Cancel, an `again`, a close or a wipe, or on a run that cannot listen alone;
+    /// `Internal` when the job handed it over out of order.
     fn pieces(&mut self) -> Result<Vec<SecretBytes>, SpeechError> {
         Err(SpeechError::NoSound)
     }
