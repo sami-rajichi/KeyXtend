@@ -61,7 +61,7 @@ impl Actor {
             run.wrote = true;
         }
         let entry = step.map(|s| s.id);
-        self.board.wrote(entry.map_or(Held::Plain, Held::Entry));
+        self.board.wrote(entry.map_or(Held::Other, Held::Entry));
         let (round, since) = (self.paste.next_round(), self.ports.clock.now());
         self.paste.state = Paste::Asked {
             run,

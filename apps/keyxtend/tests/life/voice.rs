@@ -10,8 +10,8 @@ use kx_mod_voice::models::table;
 use kx_mod_voice::{INSERTS, VoiceSettings};
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
-    ClipNote, ClipPart, Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB,
-    ShortcutId, SpeechDone, SpeechNote, SpeechStage, TextDone, TextPasted, VoiceLit,
+    ClipPart, Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB, ShortcutId,
+    SpeechDone, SpeechNote, SpeechStage, TextDone, TextPasted, VoiceLit,
 };
 use kx_module_api::{Event, Redacted, Zeroizing};
 use kx_platform_fake::{ShelfCall, SpeechCall};
@@ -152,12 +152,6 @@ fn paste_at_once_pastes_the_text_through_the_clipboard_history_then_puts_the_cli
     rig.clip.set_text(Some(KEPT));
     let mut boot = rig.load();
     start(&mut boot, INSERTS[1].0);
-    assert!(rig.clip.wait_watching(WAIT));
-    let kept = vec![ClipPart::Text(Redacted::new(KEPT.to_owned()))];
-    rig.clip.push(ClipNote::Copied {
-        parts: kept,
-        app: None,
-    });
     let pasted: TextPasted = speak(&rig, &mut boot);
     assert!(pasted.ok, "{pasted:?}");
     let sent: Vec<ShortcutId> = rig.shortcuts.sent().into_iter().map(|s| s.0).collect();

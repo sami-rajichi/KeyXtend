@@ -140,9 +140,13 @@ pub enum ClipError {
     /// A part could not be read or written.
     #[error("the clipboard data could not be read or written")]
     Io,
-    /// The text Quick-fill's take read is past its cap; only `Clipboard::text` returns it.
+    /// The text read is past its cap; only the text reads return it.
     #[error("the clipboard text is past the cap")]
     TooLong,
+    /// A private marker, such as a password manager's, is on the clipboard, so nothing was read; only
+    /// `Clipboard::unmarked_text` returns it.
+    #[error("the clipboard holds a copy marked private")]
+    Marked,
 }
 
 /// A running watch on the platform's side. Dropping it stops the watch, but an adapter that bounds its wait may still
@@ -171,6 +175,14 @@ pub trait Clipboard: Send + Sync {
     /// `Busy` past `wait.open_ms`, `Refused` when the OS refuses, `TooLong` past `max_chars` characters, and `Io` when
     /// it cannot be read.
     fn text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError>;
+
+    /// The clipboard's text as `text` reads it, but only when no private marker whose mere presence asks to be left
+    /// alone is on it, checked in the same open. Our own writes never carry one, so writing such a text back keeps it
+    /// as private as it was.
+    ///
+    /// # Errors
+    /// `Marked`, with nothing read, when such a marker is there; otherwise as `text`.
+    fn unmarked_text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError>;
 }
 
 /// Sets the system clipboard; the platform provides it.

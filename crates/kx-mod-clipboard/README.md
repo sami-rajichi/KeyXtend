@@ -17,7 +17,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
 - inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a PNG goes with the DIB the worker makes within `media_ms`, or alone when none comes; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
 - answers Quick-fill's `ClipTake` with the clipboard's text, read within the take's cap, and forgets the newest entry only when it is an unpinned text of this copy, else the next copy keeps nothing if it is that text, as its note can come after the take; a text too long, a busy clipboard or no text forgets nothing;
-- pastes another module's `PasteText` once through the keyboard and puts the clipboard back after `paste_gap_ms`, unless a copy came meanwhile; it answers no, writing nothing, for a clipboard it cannot put back whole, a private copy or one not yet seen (ADR-0048);
+- pastes another module's `PasteText` once through the keyboard and puts the clipboard back after `paste_gap_ms`, unless a copy came meanwhile; it answers no, writing nothing, when a private marker is on the clipboard (checked live as it reads, `Clipboard::unmarked_text`), the read fails, or it cannot put the clipboard back (ADR-0048);
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).
 
 ## Services and capabilities

@@ -66,8 +66,10 @@ pub struct Panel {
     pub(crate) page: Option<Page>,
     /// Rows a page shows, the ui's `page_rows` once it tells them; 0 counts as 1.
     pub(crate) rows: usize,
-    /// The shown page of the list.
+    /// The shown page of the list, or the one holding `hold`.
     pub(crate) at: usize,
+    /// The option row a stepper or chip click keeps on screen until the page turns.
+    pub(crate) hold: Option<Key>,
     pub(crate) ticks: Vec<Key>,
     /// What each row of the last view stands for.
     pub(crate) shown: Vec<Key>,
@@ -271,7 +273,7 @@ impl Panel {
     /// Shows `page` afresh, with what it needs read.
     fn go(&mut self, page: Page) -> Vec<Do> {
         self.page = Some(page);
-        (self.at, self.note, self.asked) = (0, None, None);
+        (self.at, self.note, self.asked, self.hold) = (0, None, None, None);
         self.ticks.clear();
         match page {
             Page::Tab(VoiceTab::Models) => vec![Do::Scan],

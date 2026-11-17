@@ -1,5 +1,5 @@
 //! Insert the text on the Options page (owner, 2026-11-17): two chips write `insert`, and while Paste at once is
-//! chosen its hint takes the row below, on the same page, and acts on nothing.
+//! chosen its hint takes the row below, on the same page, and acts on nothing. A chip click keeps its row on screen.
 
 use kx_module_api::ports::{OptionRow, OptionValue, VoiceClick, VoiceSheet, VoiceTab};
 
@@ -7,14 +7,19 @@ use super::super::rig::Rig;
 use super::Do;
 use crate::INSERTS;
 
+/// The shown page's Options rows.
+fn shown(rig: &mut Rig) -> Vec<OptionRow> {
+    match rig.view().unwrap().sheet {
+        VoiceSheet::Options(rows) => rows,
+        other => panic!("not Options: {other:?}"),
+    }
+}
+
 /// The rig on the Options page whose rows hold Insert the text, and that page's rows.
 fn insert_page(rig: &mut Rig) -> Vec<OptionRow> {
     rig.click(&VoiceClick::Open(VoiceTab::Options));
     loop {
-        let rows = match rig.view().unwrap().sheet {
-            VoiceSheet::Options(rows) => rows,
-            other => panic!("not Options: {other:?}"),
-        };
+        let rows = shown(rig);
         if rows.iter().any(|r| r.key == "insert") {
             return rows;
         }
@@ -117,5 +122,24 @@ fn the_hint_stays_on_its_chips_page_even_when_insert_ends_a_page() {
             typed.len() + 1,
             "no row lost at {per} a page"
         );
+    }
+}
+
+#[test]
+fn a_chip_click_keeps_the_insert_row_on_screen_both_ways() {
+    for per in 2..=8 {
+        let mut rig = Rig::new();
+        rig.click(&VoiceClick::Rows(per));
+        let mut row = at(&insert_page(&mut rig));
+        for (up, insert) in [(true, INSERTS[1].0), (false, INSERTS[0].0)] {
+            rig.click(&VoiceClick::Step { row, up });
+            rig.settings.insert = insert.into();
+            let rows = shown(&mut rig);
+            assert!(
+                rows.iter().any(|r| r.key == "insert"),
+                "{per} a page, up {up}"
+            );
+            row = at(&rows);
+        }
     }
 }

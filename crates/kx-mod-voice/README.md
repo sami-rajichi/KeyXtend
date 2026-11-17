@@ -40,7 +40,7 @@ Voice typing (P11, ADR-0042 to ADR-0044 and ADR-0046): speak, and the keyboard t
 | `WriteClipboard` | It gates `ClipboardWriterKey`. |
 | `OpenFolder` | It gates `FolderRevealKey`. |
 
-It provides no service, and it never injects input: the keyboard types each text.
+It provides no service, and it never injects input: the keyboard types each text. With `insert = "paste"` (Paste at once), it hands the text to the clipboard history with `PasteText`; the history checks the clipboard for a private marker as it reads it, then pastes and puts the clipboard back, and any no types the text (ADR-0048).
 
 ## Settings (`[voice]`, version 1)
 
@@ -50,7 +50,7 @@ The defaults live only in `defaults.toml`, each with its one-line meaning. The r
 |---|---|
 | Listening | `on`, `threads`, `record_max_s`, `piece_s`, `pad_ms`, `level_hz`, `nothing_s`, `silence_stop`, `silence_stop_s`, `debounce_ms` |
 | Models and device | `models_dir`, `picks`, `device`, `card_margin_mb`, `card_gain`, `card_diff`, `min_free_mb`, `stall_s` |
-| Typing and bar | `type_suffix`, `history_join`, `type_gap_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
+| Typing and bar | `type_suffix`, `history_join`, `type_gap_ms`, `insert`, `paste_ms`, `done_ms`, `wave_ms`, `place`, `sounds`, `read_ms`, `copy_ms`, `copy_poll_ms` |
 | History | `history`, `history_max`, `keep_voice`, `voice_max_mb` |
 | Worker | `job_mb`, `idle_min`, `ask_ms`, `load_s`, `warm_s`, `piece_wait_s`, `restart_ms`, `restart_max_ms` |
 

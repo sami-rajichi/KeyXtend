@@ -1,6 +1,6 @@
-//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, clears, echoes, failed
-//! reads and inserts never run a lend beside an insert, answer each ask once, and always end with the clipboard put
-//! back, unless the watch told a change after the text was written.
+//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private copies, clears,
+//! echoes, failed reads and inserts never run a lend beside an insert, answer each ask once, never write a private
+//! text, and always end with the clipboard put back, unless the watch told a change after the text was written.
 
 use std::time::Duration;
 
@@ -26,6 +26,8 @@ const DRAIN: usize = 8;
 const OK_SHARE: f64 = 0.8;
 /// The text copied.
 const COPY: &str = "x";
+/// The text a password manager copies with a private marker.
+const PRIVATE: &str = "p";
 
 /// One thing that can happen around a lent paste.
 #[derive(Clone, Debug)]
@@ -38,6 +40,8 @@ enum Step {
     Advance(u64),
     /// The user copies `COPY`.
     Copy,
+    /// A password manager copies `PRIVATE` with a private marker.
+    Private,
     /// The watch tells a marked copy.
     Marked,
     /// The user clears the clipboard.
@@ -62,6 +66,7 @@ fn step() -> impl Strategy<Value = Step> {
         3 => ms.prop_map(|n| Step::Advance(u64::from(n))),
         2 => Just(Step::Copy),
         2 => Just(Step::Marked),
+        1 => Just(Step::Private),
         1 => Just(Step::Clear),
         1 => Just(Step::Busy),
         1 => Just(Step::Insert),
@@ -76,21 +81,24 @@ struct Run {
 }
 
 impl Run {
+    /// Asks for `SAID` pasted on the next round, as the voice module does.
+    fn lend(&mut self) {
+        self.asks += 1;
+        let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
+        let ask = PasteText {
+            round: self.asks,
+            text,
+            wait_ms: WAIT_MS,
+        };
+        let now = self.rig.fakes.clock.now();
+        self.rig.send(Msg::Lend(ask, now));
+    }
+
     /// Does `step`.
     fn apply(&mut self, step: &Step) {
         let rig = &mut self.rig;
         match step {
-            Step::Lend => {
-                self.asks += 1;
-                let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
-                let ask = PasteText {
-                    round: self.asks,
-                    text,
-                    wait_ms: WAIT_MS,
-                };
-                let now = rig.fakes.clock.now();
-                rig.send(Msg::Lend(ask, now));
-            }
+            Step::Lend => self.lend(),
             Step::Answer { back, ok } => {
                 let last = rig.pastes().last().map_or(0, |p| p.round);
                 let round = last.wrapping_sub(u32::from(*back));
@@ -100,6 +108,10 @@ impl Run {
             Step::Copy => {
                 rig.fakes.clip.set_text(Some(COPY));
                 rig.copy(vec![text(COPY)], None);
+            }
+            Step::Private => {
+                rig.fakes.clip.set_marked(Some(PRIVATE));
+                rig.push(ClipNote::Marked { app: None });
             }
             Step::Marked => rig.push(ClipNote::Marked { app: None }),
             Step::Clear => {
@@ -128,16 +140,24 @@ impl Run {
         rounds
     }
 
-    /// Does `step`, noting a change the watch told, then checks no lend runs beside an insert and no ask is answered
-    /// twice.
+    /// Does `step`, noting a change the watch told, then checks no private text was written, no lend runs beside an
+    /// insert and no ask is answered twice.
     fn step(&mut self, step: &Step) -> Result<(), TestCaseError> {
         let writes = self.rig.fakes.writer.writes().len();
         self.apply(step);
-        self.told |= matches!(step, Step::Copy | Step::Marked | Step::Clear);
+        let moved = matches!(
+            step,
+            Step::Copy | Step::Private | Step::Marked | Step::Clear
+        );
+        self.told |= moved;
         let now = self.rig.fakes.writer.writes();
         if now.len() > writes && now.last() == Some(&vec![text(SAID)]) {
             self.told = false;
         }
+        prop_assert!(
+            !now.contains(&vec![text(PRIVATE)]),
+            "a private text is never written"
+        );
         let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
         prop_assert!(idle || !inserting, "a lend never runs beside an insert");

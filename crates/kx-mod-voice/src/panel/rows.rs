@@ -9,8 +9,9 @@ use crate::folder::offer;
 use crate::view::Facts;
 
 impl Panel {
-    /// Turns the page; the view keeps it within the list.
+    /// Turns the page, letting go of a held row; the view keeps it within the list.
     pub(super) fn turn(&mut self, back: bool) {
+        self.hold = None;
         self.at = if back {
             self.at.saturating_sub(1)
         } else {
@@ -64,8 +65,9 @@ impl Panel {
             .collect()
     }
 
-    /// An option's minus or plus on the shown page, where its row is live.
-    pub(super) fn step(&self, at: usize, up: bool, settings: &VoiceSettings) -> Vec<Do> {
+    /// An option's minus or plus on the shown page, where its row is live; the row then stays on screen.
+    pub(super) fn step(&mut self, at: usize, up: bool, settings: &VoiceSettings) -> Vec<Do> {
+        self.hold = self.shown.get(at).cloned();
         let table = options::values(settings);
         let opt = self
             .opt(at)

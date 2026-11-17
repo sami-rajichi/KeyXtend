@@ -1,7 +1,9 @@
-//! Each kind of part written as the product writes it, then heard by a watch that reads the tests' own writes; opt-in
-//! like every live test.
+//! Each kind of part written as the product writes it, then heard by a watch that reads the tests' own writes, and the
+//! unmarked read a put-back makes; opt-in like every live test.
 
 use windows::Win32::System::Ole::DROPEFFECT_COPY;
+
+use crate::clip::parts::wide_z;
 
 use super::*;
 
@@ -148,4 +150,32 @@ fn a_take_of_a_picture_alone_finds_no_text() {
     let _real = hold();
     write(&[image(ImageCodec::Dib, dib(INFO, 1))]);
     assert_eq!(WinClipboard::new().text(WAIT, TEXT.len()), Ok(None));
+}
+
+#[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
+fn an_unmarked_read_takes_our_own_write_but_never_a_presence_marked_copy() {
+    let _real = hold();
+    write(&[text(TEXT)]);
+    let ours = WinClipboard::new().unmarked_text(WAIT, TEXT.len()).unwrap();
+    assert_eq!(ours.as_ref().map(|t| t.expose().as_str()), Some(TEXT));
+    let t = table().unwrap();
+    let present = t
+        .marks()
+        .presence()
+        .names()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    let zero = 0u32.to_ne_bytes();
+    let put = |open: &open::Open| {
+        open::empty(open)?;
+        open::put(open, open::format_id(&present[0])?, b"x")?;
+        for name in [HISTORY, t.cloud_off.as_str()] {
+            open::put(open, open::format_id(name)?, &zero)?;
+        }
+        open::put(open, u32::from(CF_UNICODETEXT.0), &wide_z(TEXT))
+    };
+    open::open(WAIT).and_then(|o| put(&o)).unwrap();
+    let marked = WinClipboard::new().unmarked_text(WAIT, TEXT.len());
+    assert_eq!(marked, Err(ClipError::Marked), "never read");
 }

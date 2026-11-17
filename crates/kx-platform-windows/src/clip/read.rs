@@ -123,3 +123,20 @@ fn unicode(open: &Open, max_chars: usize) -> Result<Option<String>, ClipError> {
 pub fn read_text(wait: ClipWait, max_chars: usize) -> Result<Option<String>, ClipError> {
     unicode(&open::open(wait)?, max_chars)
 }
+
+/// The clipboard's text as `read_text` reads it, unless one of `marks` is on it, checked in the same open so no copy
+/// slips in between.
+///
+/// # Errors
+/// `Marked`, with nothing read, when a marker is there; otherwise as `read_text`.
+pub(crate) fn unmarked_text(
+    wait: ClipWait,
+    max_chars: usize,
+    marks: &Marks,
+) -> Result<Option<String>, ClipError> {
+    let open = open::open(wait)?;
+    if marks.on(&open) {
+        return Err(ClipError::Marked);
+    }
+    unicode(&open, max_chars)
+}

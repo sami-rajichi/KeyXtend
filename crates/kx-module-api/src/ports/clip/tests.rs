@@ -120,6 +120,7 @@ fn each_error_says_something_else() {
         ClipError::Refused,
         ClipError::Io,
         ClipError::TooLong,
+        ClipError::Marked,
     ];
     let texts: HashSet<_> = errors.iter().map(ToString::to_string).collect();
     assert_eq!(texts.len(), errors.len());

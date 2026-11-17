@@ -160,6 +160,7 @@
   - Layout names and characters are not typed text, but a caller must never log `Scan` values next to what the user typed.
 - **Information disclosure:** no network; nothing leaves the process. Text is read only through `Redacted::expose` to build the send.
   - A copy a password manager marks (`ExcludeClipboardContentFromMonitorProcessing`, `Clipboard Viewer Ignore`, `CanIncludeInClipboardHistory` = 0) is reported `Marked` before a byte or size of it is read, and a table that does not parse refuses the watch. Our own writes set the marker before any part and turn Windows' cloud clipboard off, so an Insert never adds a row here or in Windows' history.
+  - A put-back's read for Paste at once (`Clipboard::unmarked_text`, ADR-0048) checks the presence markers in the same open as the text read and answers `Marked` before a byte is read. It passes the number markers, as our own writes set them, so a text written back keeps its privacy.
   - The clipboard part logs only one fixed warning, when its compiled-in table does not parse; never a part, a path, an app or a size.
   - The entry watch keeps a point only while the scroll module runs, as the keyboard asks for it only then (`kx-ui.md`); `unwatch_entries` at the module's stop and the keyboard window's end forget it (`window/entry.rs` `unwatch_entries`, `forget`).
 - **Denial of service:** start-up fails with a typed error, never a panic, when Windows refuses the clock or a folder.

@@ -126,6 +126,25 @@ fn without_drops_one_marker_and_keeps_the_rest() {
 }
 
 #[test]
+fn a_put_back_checks_only_the_presence_markers_our_own_writes_never_set() {
+    let t = Table::parse(TABLE).unwrap();
+    let live = t.marks().presence();
+    assert!(
+        !live.has(&t.marker) && !live.has(&t.cloud_off),
+        "our own write passes"
+    );
+    let shipped = [
+        "ExcludeClipboardContentFromMonitorProcessing",
+        "Clipboard Viewer Ignore",
+    ];
+    assert!(shipped.iter().all(|n| live.has(n)));
+    assert!(
+        !live.marked(|_| false, |_| Some(0)),
+        "a zero alone is no presence marker"
+    );
+}
+
+#[test]
 fn the_parts_follow_the_clipboards_order_with_each_kind_once() {
     let held = [OTHER, F.html, F.text, F.rtf, F.files, F.text];
     let kinds: Vec<Kind> = F.pick(&held).iter().map(|w| w.kind).collect();

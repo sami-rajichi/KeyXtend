@@ -1,6 +1,7 @@
 //! Paste at once for another module (owner, 2026-11-17): the clipboard is kept, the text written as ours and pasted
-//! once, the answer sent right after the keyboard's, and the clipboard put back after the gap. One it cannot put back
-//! whole, an unknown, busy or private one (`back`), a late ask or an insert under way answers no and writes nothing.
+//! once, the answer sent right after the keyboard's, and the clipboard put back after the gap. One with a private
+//! marker on it or that cannot be put back whole, a busy read, a late ask or an insert under way answers no and
+//! writes nothing.
 
 use std::time::Duration;
 
@@ -16,6 +17,7 @@ use crate::fixture::{files, image, text};
 
 mod back;
 mod props;
+mod start;
 
 /// The asker's round.
 const ASKER: u32 = 7;
@@ -100,7 +102,7 @@ fn the_text_is_pasted_once_answered_then_the_copy_comes_back() {
 }
 
 #[test]
-fn the_echoes_of_our_writes_keep_the_board_and_a_foreign_mark_makes_it_private() {
+fn the_echoes_of_our_writes_keep_the_entry_whole_and_another_mark_leaves_its_text() {
     let mut rig = holding(vec![text("kept"), html("<b>kept</b>")]);
     let whole = round_trip(&mut rig);
     assert_eq!(whole, [text("kept"), html("<b>kept</b>")]);
@@ -111,10 +113,11 @@ fn the_echoes_of_our_writes_keep_the_board_and_a_foreign_mark_makes_it_private()
     for _ in 0..3 {
         rig.push(marked());
     }
-    let tries = rig.fakes.writer.tries();
-    lend(&mut rig);
-    let refused = (lent(&rig).pop(), rig.fakes.writer.tries());
-    assert_eq!(refused, (Some(false), tries), "a foreign mark is private");
+    assert_eq!(
+        round_trip(&mut rig),
+        [text("kept")],
+        "unmarked, its text alone"
+    );
 }
 
 #[test]
@@ -150,14 +153,9 @@ fn a_text_the_history_never_kept_comes_back_as_text_and_an_empty_clipboard_empty
 #[test]
 fn a_clipboard_it_cannot_put_back_or_read_answers_no_and_writes_nothing() {
     let mut rig = Rig::new();
-    rig.fakes.clip.set_text(Some("there before the start"));
     lend(&mut rig);
-    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
-    assert_eq!(
-        rig.fakes.clip.takes(),
-        0,
-        "an unknown clipboard is never read"
-    );
+    let none = (lent(&rig), rig.fakes.writer.tries());
+    assert_eq!(none, (vec![false], 0), "no text may still be a picture");
     let mut rig = holding(vec![text("kept")]);
     rig.fakes.clip.fail_text(ClipError::Busy);
     lend(&mut rig);

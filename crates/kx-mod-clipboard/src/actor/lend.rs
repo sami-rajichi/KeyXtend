@@ -1,7 +1,7 @@
 //! Paste at once for another module (owner, 2026-11-17, ADR-0048): the history keeps what the clipboard holds, writes
 //! the text as ours, asks the keyboard for one paste on a round of its own, answers right after the keyboard does, and
 //! puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile. It answers no, writing
-//! nothing, when it cannot put the clipboard back whole.
+//! nothing, when a private marker is on the clipboard or it cannot put the clipboard back.
 
 use std::mem;
 use std::time::Duration;
@@ -40,7 +40,7 @@ impl Lend {
 
 impl Actor {
     /// Pastes `ask`'s text, asked at `at`, unless an insert or a paste is under way, the paste could not start within
-    /// the asker's `start_ms`, or the clipboard cannot be put back whole.
+    /// the asker's `start_ms`, a private marker is on the clipboard, or it cannot be put back.
     pub(super) fn lend(&mut self, ask: PasteText, at: Mono) {
         let (asker, start) = (ask.round, Duration::from_millis(ask.start_ms().into()));
         let free = self.lent.idle() && matches!(self.paste.state, Paste::Idle);
@@ -63,7 +63,7 @@ impl Actor {
             }
             return self.answer(asker, false);
         }
-        self.board.wrote(Held::Plain);
+        self.board.wrote(Held::Other);
         if !self.in_time(at, start) {
             self.put_back(Some(back));
             return self.answer(asker, false);

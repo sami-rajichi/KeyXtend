@@ -6,7 +6,6 @@ use kx_module_api::keys;
 use kx_module_api::ports::{AppRef, ClipKind, ClipNote, ClipPart, PanelNote, SealedError};
 
 use super::Actor;
-use super::board::Held;
 use super::take::wipe;
 use crate::entry::{Entry, keep_parts};
 use crate::keep::{admit, trim};
@@ -21,29 +20,16 @@ impl Actor {
         }
         match note {
             ClipNote::Copied { parts, app } => {
-                let skipped = self.skipped(app.as_ref());
-                match self.past_take(parts) {
-                    Some(parts) if !skipped => self.copied(parts, app.as_ref()),
-                    parts => parts.into_iter().for_each(wipe),
+                if let Some(parts) = self.past_take(parts) {
+                    self.copied(parts, app.as_ref());
                 }
             }
             ClipNote::Cleared { app } => self.cleared(app.as_ref()),
-            ClipNote::TooBig { app, .. } => {
-                if !self.skipped(app.as_ref()) {
-                    self.say_note(PanelNote::TooBig);
-                }
+            ClipNote::TooBig { app, .. } if !self.follow.skips(app.as_ref()) => {
+                self.say_note(PanelNote::TooBig);
             }
-            ClipNote::Marked { .. } | ClipNote::Busy => {}
+            ClipNote::TooBig { .. } | ClipNote::Marked { .. } | ClipNote::Busy => {}
         }
-    }
-
-    /// True when `app` is skipped; the board then holds its copy as private.
-    fn skipped(&mut self, app: Option<&AppRef>) -> bool {
-        let skips = self.follow.skips(app);
-        if skips {
-            self.board.set(Held::Private);
-        }
-        skips
     }
 
     /// Shows `note` in the panel.
@@ -54,6 +40,9 @@ impl Actor {
 
     /// Keeps a copy of `parts` by `app`, moves up the entry holding the same content, or refuses it with a note.
     fn copied(&mut self, parts: Vec<ClipPart>, app: Option<&AppRef>) {
+        if self.follow.skips(app) {
+            return wipe(parts);
+        }
         let Some(parts) = keep_parts(parts) else {
             return;
         };
@@ -117,7 +106,7 @@ impl Actor {
     /// past.
     fn kept(&mut self, id: u64, app: Option<&AppRef>) {
         self.follow.kept(id, app, self.ports.clock.now());
-        self.board.set(Held::Entry(id));
+        self.board.kept(id);
         self.note = None;
         self.changed();
     }

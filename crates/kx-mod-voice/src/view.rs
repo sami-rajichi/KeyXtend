@@ -122,11 +122,14 @@ impl Panel {
         self.grouped(list.into_iter().map(|row| vec![row]).collect())
     }
 
-    /// As `paged`, but a group that fits a page never splits: it starts the next page instead.
+    /// As `paged`, but a group that fits a page never splits: it starts the next page instead. The page holding the
+    /// held row shows, so a click that moves its row keeps it on screen.
     pub(crate) fn grouped<T>(&mut self, groups: Vec<Vec<(Key, T)>>) -> (Vec<T>, Pages) {
         let mut pages = lay_out(groups, self.rows.max(1));
+        let holds = |p: &Vec<(Key, T)>| p.iter().any(|(k, _)| self.hold.as_ref() == Some(k));
+        let held = pages.iter().position(holds);
         let count = pages.len().max(1);
-        let at = self.at.min(count - 1);
+        let at = held.unwrap_or(self.at).min(count - 1);
         self.at = at;
         let page = pages.get_mut(at).map(mem::take).unwrap_or_default();
         let (keys, rows): (Vec<Key>, Vec<T>) = page.into_iter().unzip();

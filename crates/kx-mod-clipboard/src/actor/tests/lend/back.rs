@@ -1,12 +1,12 @@
-//! When a lent paste leaves the clipboard alone: a copy another app marked private, or a skipped app made, is never
-//! read or written back, a text past `back_chars` is never read whole, and a copy made during the gap is never
-//! overwritten.
+//! When a lent paste leaves the clipboard alone: one with a private marker on it is never read or written back, even
+//! when a stale echo kept the board, a text past `back_chars` is never read whole, and a copy made during the gap is
+//! never overwritten. A skipped app's unmarked copy is never kept, but its text comes back.
 
 use kx_module_api::ports::{ClipNote, ClipPart};
 use toml::Value;
 
 use super::super::rig::Rig;
-use super::{SAID, holding, lend, lent};
+use super::{SAID, holding, lend, lent, round_trip};
 use crate::fixture::{app, text};
 
 /// The most characters the rigs here read back.
@@ -24,7 +24,7 @@ fn a_copy_another_app_marked_private_is_never_read_or_written_back() {
     rig.push(ClipNote::Marked {
         app: Some(app("vault")),
     });
-    rig.fakes.clip.set_text(Some("hunter2"));
+    rig.fakes.clip.set_marked(Some("hunter2"));
     let takes = rig.fakes.clip.takes();
     lend(&mut rig);
     assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
@@ -76,16 +76,50 @@ fn a_copy_made_during_the_gap_is_never_overwritten_but_our_echo_is() {
 }
 
 #[test]
-fn a_skipped_apps_copy_too_big_or_not_is_private_too() {
+fn a_skipped_apps_copy_is_never_kept_but_its_unmarked_text_comes_back() {
     let skip = Value::Array(vec!["vault.exe".into()]);
     let mut rig = Rig::build(|_, host| host.put("skip_apps", skip));
-    rig.fakes.clip.set_text(Some("hunter2"));
-    rig.copy(vec![text("hunter2")], Some(app("vault.exe")));
+    rig.fakes.clip.set_text(Some("from the vault"));
+    rig.copy(vec![text("from the vault")], Some(app("vault.exe")));
+    assert_eq!(round_trip(&mut rig), [text("from the vault")]);
+    rig.open();
+    assert!(rig.titles().is_empty(), "never kept");
+}
+
+#[test]
+fn a_stale_echo_never_puts_back_a_marked_text() {
+    let mut rig = Rig::new();
+    rig.push(ClipNote::TooBig {
+        app: None,
+        bytes: u64::MAX,
+    });
+    rig.fakes.clip.set_text(Some("long"));
+    assert_eq!(round_trip(&mut rig), [text("long")], "two echoes still due");
+    rig.push(ClipNote::Marked {
+        app: Some(app("vault")),
+    });
+    rig.fakes.clip.set_marked(Some("hunter2"));
+    let (takes, tries) = (rig.fakes.clip.takes(), rig.fakes.writer.tries());
     lend(&mut rig);
-    rig.text("plain");
-    let app = Some(app("vault.exe"));
-    let bytes = u64::MAX;
-    rig.push(ClipNote::TooBig { app, bytes });
+    assert_eq!(lent(&rig).last(), Some(&false));
+    let after = (rig.fakes.clip.takes(), rig.fakes.writer.tries());
+    assert_eq!(after, (takes, tries), "never read or written");
+}
+
+#[test]
+fn a_kept_entry_on_the_board_is_refused_once_its_twin_on_the_clipboard_is_marked() {
+    let mut rig = holding(vec![text("kept")]);
+    assert_eq!(round_trip(&mut rig), [text("kept")], "two echoes still due");
+    rig.push(ClipNote::Marked {
+        app: Some(app("vault")),
+    });
+    rig.fakes.clip.set_marked(Some("kept"));
+    let tries = rig.fakes.writer.tries();
     lend(&mut rig);
-    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false; 2], 0));
+    let refused = (lent(&rig).last().copied(), rig.fakes.writer.tries());
+    assert_eq!(
+        refused,
+        (Some(false), tries),
+        "the whole entry never goes back"
+    );
 }
