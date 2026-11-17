@@ -1,6 +1,7 @@
-//! Paste at once for another module (owner, 2026-11-17): the history keeps what the clipboard holds, writes the text
-//! as ours, asks the keyboard for one paste on a round of its own, answers right after the keyboard does, and puts the
-//! clipboard back after `paste_gap_ms`. It answers no, writing nothing, when it cannot put the clipboard back whole.
+//! Paste at once for another module (owner, 2026-11-17, ADR-0048): the history keeps what the clipboard holds, writes
+//! the text as ours, asks the keyboard for one paste on a round of its own, answers right after the keyboard does, and
+//! puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile. It answers no, writing
+//! nothing, when it cannot put the clipboard back whole.
 
 use std::mem;
 use std::time::Duration;
@@ -13,7 +14,7 @@ use super::board::{Back, Held, own};
 use super::paste::Paste;
 use super::take::wipe;
 
-/// Where a lent paste is.
+/// Where a lent paste is; `back` is `None` once another app changed the clipboard.
 #[derive(Debug, Default)]
 pub(super) enum Lend {
     /// None under way.
@@ -23,11 +24,11 @@ pub(super) enum Lend {
     Asked {
         round: u32,
         asker: u32,
-        back: Back,
+        back: Option<Back>,
         since: Mono,
     },
-    /// The keyboard pasted; the clipboard goes back at `until`.
-    Gap { back: Back, until: Mono },
+    /// The keyboard answered; the clipboard goes back at `until`.
+    Gap { back: Option<Back>, until: Mono },
 }
 
 impl Lend {
@@ -58,16 +59,17 @@ impl Actor {
             if error == ClipError::Busy {
                 wipe(back.parts);
             } else {
-                self.put_back(back);
+                self.put_back(Some(back));
             }
             return self.answer(asker, false);
         }
-        self.board.wrote(Held::Unknown);
+        self.board.wrote(Held::Plain);
         if !self.in_time(at, start) {
-            self.put_back(back);
+            self.put_back(Some(back));
             return self.answer(asker, false);
         }
         let (round, since) = (self.paste.next_round(), self.ports.clock.now());
+        let back = Some(back);
         self.lent = Lend::Asked {
             round,
             asker,
@@ -79,7 +81,7 @@ impl Actor {
     }
 
     /// The keyboard's answer to the lent paste: the asker hears it at once, and the clipboard goes back after the gap,
-    /// or now when nothing went out. False when the answer is not the lend's.
+    /// as even a paste not all sent may still be read. False when the answer is not the lend's.
     pub(super) fn lend_pasted(&mut self, pasted: Pasted) -> bool {
         let ours = matches!(self.lent, Lend::Asked { round, .. } if round == pasted.round);
         if !ours {
@@ -87,15 +89,24 @@ impl Actor {
         }
         if let Lend::Asked { asker, back, .. } = mem::take(&mut self.lent) {
             self.answer(asker, pasted.ok);
-            if pasted.ok {
-                let until = self.ports.clock.now();
-                let until = until.saturating_add(self.settings.paste_gap());
-                self.lent = Lend::Gap { back, until };
-            } else {
-                self.put_back(back);
-            }
+            let until = self
+                .ports
+                .clock
+                .now()
+                .saturating_add(self.settings.paste_gap());
+            self.lent = Lend::Gap { back, until };
         }
         true
+    }
+
+    /// Another app changed the clipboard while a paste is lent: its copy stays, so nothing is put back.
+    pub(super) fn lend_moved(&mut self) {
+        if let Lend::Asked { back, .. } | Lend::Gap { back, .. } = &mut self.lent
+            && let Some(back) = back.take()
+        {
+            tracing::info!("the clipboard changed during a lent paste, so it is not put back");
+            wipe(back.parts);
+        }
     }
 
     /// At `now`: a paste the keyboard never answered puts the clipboard back and answers no, and a gap that ended puts
@@ -136,8 +147,10 @@ impl Actor {
         self.ports.clock.now().saturating_since(at) <= start
     }
 
-    /// Writes `back` as ours; a failure is logged, as the text pasted then stays.
-    fn put_back(&mut self, back: Back) {
+    /// Writes `back` as ours, if another app left the clipboard alone; a failure is logged, as the text pasted then
+    /// stays.
+    fn put_back(&mut self, back: Option<Back>) {
+        let Some(back) = back else { return };
         match self.ports.writer.write(&back.parts, self.settings.wait()) {
             Ok(()) => self.board.wrote(back.held),
             Err(error) => tracing::warn!(%error, "the clipboard was not put back after a paste"),

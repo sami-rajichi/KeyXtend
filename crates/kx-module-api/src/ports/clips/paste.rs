@@ -1,6 +1,6 @@
-//! Paste at once (P11): a module that types, as the voice module, hands a text to the clipboard history, which pastes
-//! it through its own paste route and puts the clipboard back. Both events need `WriteClipboard`, as the paste request
-//! does, so the asker never gains a way to read the clipboard.
+//! Paste at once (P11, ADR-0048): a module that types, as the voice module, hands a text to the clipboard history,
+//! which pastes it through its own paste route and puts the clipboard back. Both events need `WriteClipboard`, as the
+//! paste request does, so the asker never gains a way to read the clipboard.
 
 use super::WRITE;
 use crate::{Capability, Event, Secret};
@@ -34,12 +34,13 @@ impl Event for PasteText {
     const CAPABILITY: Option<Capability> = WRITE;
 }
 
-/// From the clipboard module: whether a `PasteText`'s text was pasted; on false nothing was, so the asker types it.
+/// From the clipboard module: whether a `PasteText`'s text was pasted. On false not all of it went, so the asker types
+/// it.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct TextPasted {
     /// The round of the request.
     pub round: u32,
-    /// The paste went out.
+    /// All of the paste went out.
     pub ok: bool,
 }
 

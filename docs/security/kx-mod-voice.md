@@ -101,7 +101,8 @@
 - With no keyboard, the typer's round map keeps a few bytes per text until the stop.
 - A damaged recording has no note of its own: its blobs are only listed at the open, and one without its text may be a deletion still being written, so the note could be false.
 - No keyboard means no `TextDone`: the bar keeps the text with Copy and Undo stays dim, as the keyboard is part of every start. The typer never synthesizes an answer, since the keyboard may send a real one later from its pieces' thread.
-- With Paste at once, a password box is always typed. A paste the clipboard history answers ok counts as typed in full, so Undo erases exactly it; if the clipboard history stops between the paste and its answer, the text is typed once more after `paste_ms`.
+- With Paste at once, a password box is always typed. A paste the clipboard history answers ok counts as typed in full, so Undo erases exactly it; if the clipboard history stops between the paste and its answer, the text is typed once more after `paste_ms`. A no means not all of the paste went, so a paste that went in part is typed as well.
+- With Paste at once and the clipboard history off or failed, each dictation waits `paste_ms` for an answer that never comes, then types. The module cannot tell an absent history from a slow one, and the wait is a setting.
 - The devices are read at the start only when a card could serve (a card picked, or Automatic with a stored check), so a plain start never starts the worker; until then every model counts as fitting, and the job's memory cap still holds.
 - Turning `history` or `keep_voice` off keeps what is already kept, as Delete all is the way to remove it; the panel may say so. The design is silent, and the house's switches (Pause learning, Prediction off) keep their data too.
 - An unpin counts as dictated then, as the clipboard's History counts it as copied then, so an unpinned recording's date becomes the unpin's.

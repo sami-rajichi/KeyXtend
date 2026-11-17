@@ -1,5 +1,6 @@
 //! What the clipboard holds, as the watch and our own writes told it, so Paste at once can put it back (owner,
-//! 2026-11-17). Our writes come back from the watch as `Marked`, so each is counted and its echo keeps the board.
+//! 2026-11-17). Our writes come back from the watch as `Marked`, so each is counted and its echo keeps the board; a
+//! mark another app set makes it private, and a private or unknown clipboard is never read or written back (ADR-0048).
 
 use std::mem;
 
@@ -14,9 +15,13 @@ use crate::entry::text_of;
 /// What the clipboard holds, as far as the history knows.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub(super) enum Held {
-    /// Something the history cannot put back whole.
+    /// Not seen since the start, or a change the watch missed: it may be private.
     #[default]
     Unknown,
+    /// A copy another app marked private, as a password manager does, or a skipped app's copy.
+    Private,
+    /// A copy the history did not keep: its text alone may come back.
+    Plain,
     /// Nothing.
     Empty,
     /// Entry `id`'s content.
@@ -31,18 +36,25 @@ pub(super) struct Board {
 }
 
 impl Board {
-    /// The watch told `note`: our write's echo keeps the board, a clear empties it, anything else is unknown.
-    pub(super) fn heard(&mut self, note: &ClipNote) {
-        match note {
-            ClipNote::Marked { .. } if self.echoes > 0 => self.echoes -= 1,
-            ClipNote::Cleared { .. } => self.held = Held::Empty,
-            _ => self.held = Held::Unknown,
-        }
+    /// The watch told `note`; true for our own write's echo, which keeps the board. Another app's mark makes it
+    /// private, a clear empties it, a copy is plain until kept, and a missed change is unknown.
+    pub(super) fn heard(&mut self, note: &ClipNote) -> bool {
+        self.held = match note {
+            ClipNote::Marked { .. } if self.echoes > 0 => {
+                self.echoes -= 1;
+                return true;
+            }
+            ClipNote::Marked { .. } => Held::Private,
+            ClipNote::Cleared { .. } => Held::Empty,
+            ClipNote::Copied { .. } | ClipNote::TooBig { .. } => Held::Plain,
+            ClipNote::Busy => Held::Unknown,
+        };
+        false
     }
 
-    /// The copy just told was kept as entry `id`.
-    pub(super) fn kept(&mut self, id: u64) {
-        self.held = Held::Entry(id);
+    /// The copy just told is `held`: an entry kept, or a skipped app's private copy.
+    pub(super) fn set(&mut self, held: Held) {
+        self.held = held;
     }
 
     /// We wrote what `held` names, so its echo is due.
@@ -60,34 +72,35 @@ pub(super) struct Back {
 }
 
 impl Actor {
-    /// What to put back after a paste: the entry on the board, whole, when the clipboard's text agrees; else the
-    /// clipboard's text alone; else nothing when it was empty. `None` when it cannot be read or put back whole.
+    /// What to put back after a paste: the entry on the board, whole, when the clipboard's text agrees; a plain
+    /// copy's text alone; or nothing for an empty clipboard. `None`, read or not, for anything else.
     pub(super) fn previous(&mut self) -> Option<Back> {
-        let cap = usize::try_from(self.settings.clip_config().max_bytes).unwrap_or(usize::MAX);
-        let text = match self.ports.clip.text(self.settings.wait(), cap) {
+        let held = self.board.held;
+        if matches!(held, Held::Unknown | Held::Private) {
+            tracing::info!(
+                ?held,
+                "the clipboard cannot be put back, so the text is typed"
+            );
+            return None;
+        }
+        let text = match self
+            .ports
+            .clip
+            .text(self.settings.wait(), self.settings.back_chars)
+        {
             Ok(text) => text,
             Err(error) => {
                 tracing::warn!(%error, "the clipboard was not read before a paste");
                 return None;
             }
         };
-        let held = self.board.held;
-        if let Held::Entry(id) = held
-            && let Some(parts) = self.whole(id, text.as_ref())
-        {
-            return Some(Back { parts, held });
-        }
-        match (text, held) {
-            (Some(text), _) => Some(Back {
-                parts: vec![ClipPart::Text(own(text))],
-                held: Held::Unknown,
-            }),
-            (None, Held::Empty) => Some(Back {
-                parts: Vec::new(),
-                held,
-            }),
-            (None, _) => None,
-        }
+        let parts = match (held, text) {
+            (Held::Entry(id), text) => self.whole(id, text.as_ref()),
+            (Held::Plain, Some(text)) => Some(vec![ClipPart::Text(own(text))]),
+            (Held::Empty, None) => Some(Vec::new()),
+            _ => None,
+        };
+        parts.map(|parts| Back { parts, held })
     }
 
     /// Entry `id`'s stored parts when the clipboard holds them: the same text, or no text in either, and a picture

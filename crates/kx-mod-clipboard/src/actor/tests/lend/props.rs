@@ -1,6 +1,6 @@
 //! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, clears, echoes, failed
 //! reads and inserts never run a lend beside an insert, answer each ask once, and always end with the clipboard put
-//! back, never the text pasted.
+//! back, unless the watch told a change after the text was written.
 
 use std::time::Duration;
 
@@ -68,10 +68,11 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
-/// A rig and the asks made so far.
+/// A rig, the asks made so far, and whether the watch told a change since the text was last written.
 struct Run {
     rig: Rig,
     asks: u32,
+    told: bool,
 }
 
 impl Run {
@@ -127,9 +128,16 @@ impl Run {
         rounds
     }
 
-    /// Does `step`, then checks no lend runs beside an insert and no ask is answered twice.
+    /// Does `step`, noting a change the watch told, then checks no lend runs beside an insert and no ask is answered
+    /// twice.
     fn step(&mut self, step: &Step) -> Result<(), TestCaseError> {
+        let writes = self.rig.fakes.writer.writes().len();
         self.apply(step);
+        self.told |= matches!(step, Step::Copy | Step::Marked | Step::Clear);
+        let now = self.rig.fakes.writer.writes();
+        if now.len() > writes && now.last() == Some(&vec![text(SAID)]) {
+            self.told = false;
+        }
         let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
         prop_assert!(idle || !inserting, "a lend never runs beside an insert");
@@ -153,7 +161,11 @@ impl Run {
             "every ask answered"
         );
         let last = self.rig.fakes.writer.writes().pop();
-        prop_assert!(last != Some(vec![text(SAID)]), "the clipboard is put back");
+        let left = last == Some(vec![text(SAID)]);
+        prop_assert!(
+            !left || self.told,
+            "the clipboard is put back unless a change came after"
+        );
         Ok(())
     }
 }
@@ -165,7 +177,7 @@ proptest! {
     fn random_lends_run_alone_answer_once_and_always_put_the_clipboard_back(
         steps in prop::collection::vec(step(), 0..MAX_STEPS),
     ) {
-        let mut run = Run { rig: Rig::new(), asks: 0 };
+        let mut run = Run { rig: Rig::new(), asks: 0, told: false };
         for step in &steps {
             run.step(step)?;
         }

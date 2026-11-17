@@ -1,0 +1,91 @@
+//! When a lent paste leaves the clipboard alone: a copy another app marked private, or a skipped app made, is never
+//! read or written back, a text past `back_chars` is never read whole, and a copy made during the gap is never
+//! overwritten.
+
+use kx_module_api::ports::{ClipNote, ClipPart};
+use toml::Value;
+
+use super::super::rig::Rig;
+use super::{SAID, holding, lend, lent};
+use crate::fixture::{app, text};
+
+/// The most characters the rigs here read back.
+const CHARS: usize = 1000;
+
+/// A rig that reads at most `CHARS` characters back.
+fn capped() -> Rig {
+    let chars = i64::try_from(CHARS).unwrap();
+    Rig::build(|_, host| host.put("back_chars", Value::Integer(chars)))
+}
+
+#[test]
+fn a_copy_another_app_marked_private_is_never_read_or_written_back() {
+    let mut rig = holding(vec![text("kept")]);
+    rig.push(ClipNote::Marked {
+        app: Some(app("vault")),
+    });
+    rig.fakes.clip.set_text(Some("hunter2"));
+    let takes = rig.fakes.clip.takes();
+    lend(&mut rig);
+    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
+    assert_eq!(rig.fakes.clip.takes(), takes, "never read");
+    assert!(rig.pastes().is_empty());
+    rig.fakes.clip.set_text(Some("after"));
+    rig.text("after");
+    lend(&mut rig);
+    assert_eq!(rig.pastes().len(), 1, "a new copy is no longer private");
+}
+
+#[test]
+fn a_text_past_back_chars_is_never_read_whole_and_the_text_is_typed() {
+    let mut rig = capped();
+    let long = "a".repeat(CHARS + 1);
+    rig.fakes.clip.set_text(Some(&long));
+    rig.text(&long);
+    lend(&mut rig);
+    assert_eq!(rig.fakes.clip.take_cap(), Some(CHARS));
+    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
+    let fits = "b".repeat(CHARS);
+    rig.fakes.clip.set_text(Some(&fits));
+    rig.text(&fits);
+    lend(&mut rig);
+    assert_eq!(rig.pastes().len(), 1, "a text within the cap comes back");
+}
+
+#[test]
+fn a_copy_made_during_the_gap_is_never_overwritten_but_our_echo_is() {
+    let mut rig = holding(vec![text("kept")]);
+    lend(&mut rig);
+    rig.answer(true);
+    rig.push(ClipNote::Marked { app: None });
+    rig.advance(rig.settings.paste_gap());
+    let back = rig.fakes.writer.writes();
+    assert_eq!(
+        back.last(),
+        Some(&vec![text("kept")]),
+        "our echo changes nothing"
+    );
+    lend(&mut rig);
+    rig.answer(true);
+    rig.fakes.clip.set_text(Some("new"));
+    rig.text("new");
+    rig.advance(rig.settings.paste_gap());
+    let writes: Vec<Vec<ClipPart>> = rig.fakes.writer.writes();
+    assert_eq!(writes.last(), Some(&vec![text(SAID)]), "the new copy stays");
+    assert_eq!(writes.len(), back.len() + 1);
+}
+
+#[test]
+fn a_skipped_apps_copy_too_big_or_not_is_private_too() {
+    let skip = Value::Array(vec!["vault.exe".into()]);
+    let mut rig = Rig::build(|_, host| host.put("skip_apps", skip));
+    rig.fakes.clip.set_text(Some("hunter2"));
+    rig.copy(vec![text("hunter2")], Some(app("vault.exe")));
+    lend(&mut rig);
+    rig.text("plain");
+    let app = Some(app("vault.exe"));
+    let bytes = u64::MAX;
+    rig.push(ClipNote::TooBig { app, bytes });
+    lend(&mut rig);
+    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false; 2], 0));
+}

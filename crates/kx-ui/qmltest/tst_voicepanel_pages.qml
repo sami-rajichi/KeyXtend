@@ -158,6 +158,7 @@ Item {
             compare(chips.map(c => c.Accessible.name), pair.chips.map(c => c.label), "both ways");
             compare(chips.map(c => c.Accessible.checked), [false, true], "Paste at once chosen");
             compare(chips.map(c => c.Accessible.id), ["voice.minus-1", "voice.plus-1"], "a stepper's ids");
+            compare(chips.map(c => c.Accessible.description), [hint.label, hint.label], "the hint describes each chip");
             compare(heard(box.contentItem, pair.label).length, 1, "the row's name");
             const line = heard(box.contentItem, hint.label);
             compare(line.length, 1, "the hint takes the next row");

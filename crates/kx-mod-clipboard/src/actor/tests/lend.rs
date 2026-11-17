@@ -1,6 +1,6 @@
 //! Paste at once for another module (owner, 2026-11-17): the clipboard is kept, the text written as ours and pasted
 //! once, the answer sent right after the keyboard's, and the clipboard put back after the gap. One it cannot put back
-//! whole, a busy one, a late ask or an insert under way answers no and writes nothing.
+//! whole, an unknown, busy or private one (`back`), a late ask or an insert under way answers no and writes nothing.
 
 use std::time::Duration;
 
@@ -14,6 +14,7 @@ use super::ears::Heard;
 use super::rig::Rig;
 use crate::fixture::{files, image, text};
 
+mod back;
 mod props;
 
 /// The asker's round.
@@ -99,7 +100,7 @@ fn the_text_is_pasted_once_answered_then_the_copy_comes_back() {
 }
 
 #[test]
-fn the_echoes_of_our_writes_keep_the_board_and_a_foreign_mark_does_not() {
+fn the_echoes_of_our_writes_keep_the_board_and_a_foreign_mark_makes_it_private() {
     let mut rig = holding(vec![text("kept"), html("<b>kept</b>")]);
     let whole = round_trip(&mut rig);
     assert_eq!(whole, [text("kept"), html("<b>kept</b>")]);
@@ -107,14 +108,13 @@ fn the_echoes_of_our_writes_keep_the_board_and_a_foreign_mark_does_not() {
     rig.push(marked());
     rig.push(marked());
     assert_eq!(round_trip(&mut rig), whole, "our two echoes");
-    rig.push(marked());
-    rig.push(marked());
-    rig.push(marked());
-    assert_eq!(
-        round_trip(&mut rig),
-        [text("kept")],
-        "a foreign mark: the text alone"
-    );
+    for _ in 0..3 {
+        rig.push(marked());
+    }
+    let tries = rig.fakes.writer.tries();
+    lend(&mut rig);
+    let refused = (lent(&rig).pop(), rig.fakes.writer.tries());
+    assert_eq!(refused, (Some(false), tries), "a foreign mark is private");
 }
 
 #[test]
@@ -136,9 +136,12 @@ fn pictures_and_files_come_back_whole_and_a_png_alone_is_refused() {
 #[test]
 fn a_text_the_history_never_kept_comes_back_as_text_and_an_empty_clipboard_empty() {
     let mut rig = Rig::new();
-    rig.push(ClipNote::Marked { app: None });
-    rig.fakes.clip.set_text(Some("secret"));
-    assert_eq!(round_trip(&mut rig), [text("secret")]);
+    rig.push(ClipNote::TooBig {
+        app: None,
+        bytes: u64::MAX,
+    });
+    rig.fakes.clip.set_text(Some("long"));
+    assert_eq!(round_trip(&mut rig), [text("long")]);
     rig.push(ClipNote::Cleared { app: None });
     rig.fakes.clip.set_text(None);
     assert_eq!(round_trip(&mut rig), []);
@@ -147,8 +150,14 @@ fn a_text_the_history_never_kept_comes_back_as_text_and_an_empty_clipboard_empty
 #[test]
 fn a_clipboard_it_cannot_put_back_or_read_answers_no_and_writes_nothing() {
     let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some("there before the start"));
     lend(&mut rig);
     assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
+    assert_eq!(
+        rig.fakes.clip.takes(),
+        0,
+        "an unknown clipboard is never read"
+    );
     let mut rig = holding(vec![text("kept")]);
     rig.fakes.clip.fail_text(ClipError::Busy);
     lend(&mut rig);
@@ -170,12 +179,18 @@ fn a_refused_write_answers_no_and_puts_back_unless_the_clipboard_is_held() {
 }
 
 #[test]
-fn a_paste_that_failed_or_never_came_puts_back_at_once_and_answers_no() {
+fn a_paste_not_all_sent_puts_back_after_the_gap_and_one_never_answered_at_once() {
     let mut rig = holding(vec![text("kept")]);
     lend(&mut rig);
     rig.answer(false);
     assert_eq!(lent(&rig), [false]);
-    assert_eq!(rig.fakes.writer.writes().len(), 2, "back at once");
+    assert_eq!(
+        rig.fakes.writer.writes().len(),
+        1,
+        "a part may still be read"
+    );
+    rig.advance(rig.settings.paste_gap());
+    assert_eq!(rig.fakes.writer.writes().len(), 2, "back after the gap");
     rig.advance(rig.settings.save());
     lend(&mut rig);
     assert_eq!(

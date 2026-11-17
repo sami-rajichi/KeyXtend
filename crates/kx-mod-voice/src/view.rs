@@ -6,6 +6,8 @@ mod device;
 mod history;
 mod models;
 
+use std::mem;
+
 use kx_module_api::ports::{
     BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, OptionRow,
     OptionValue, Pages, PanelButton, VoiceHome, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
@@ -117,11 +119,17 @@ impl Panel {
 
     /// The shown page of `list`, `page_rows` to a page, kept within it; notes what each shown row stands for.
     pub(crate) fn paged<T>(&mut self, list: Vec<(Key, T)>) -> (Vec<T>, Pages) {
-        let per = self.rows.max(1);
-        let count = list.len().div_ceil(per).max(1);
+        self.grouped(list.into_iter().map(|row| vec![row]).collect())
+    }
+
+    /// As `paged`, but a group that fits a page never splits: it starts the next page instead.
+    pub(crate) fn grouped<T>(&mut self, groups: Vec<Vec<(Key, T)>>) -> (Vec<T>, Pages) {
+        let mut pages = lay_out(groups, self.rows.max(1));
+        let count = pages.len().max(1);
         let at = self.at.min(count - 1);
         self.at = at;
-        let (keys, rows): (Vec<Key>, Vec<T>) = list.into_iter().skip(at * per).take(per).unzip();
+        let page = pages.get_mut(at).map(mem::take).unwrap_or_default();
+        let (keys, rows): (Vec<Key>, Vec<T>) = page.into_iter().unzip();
         self.shown = keys;
         let pages = Pages {
             at: short(at),
@@ -151,7 +159,7 @@ impl Panel {
         }
     }
 
-    /// The Options page's shown rows; a pair whose second name is chosen has its hint on the row below.
+    /// The Options page's shown rows; a pair whose second name is chosen has its hint on the row below, on its page.
     fn options_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let table = options::values(facts.settings);
         let cores = facts.cpu().map(|d| d.cores);
@@ -162,19 +170,17 @@ impl Panel {
                 value: OptionValue::Hint,
                 ..row
             };
-            Some(
-                [(Key::Opt(i), row)]
-                    .into_iter()
-                    .chain(second.then_some((Key::Plain, hint))),
-            )
+            let group = [(Key::Opt(i), row)]
+                .into_iter()
+                .chain(second.then_some((Key::Plain, hint)));
+            Some(group.collect())
         };
         let list = options::rows()
             .iter()
             .enumerate()
             .filter_map(rows)
-            .flatten()
             .collect();
-        let (rows, pages) = self.paged(list);
+        let (rows, pages) = self.grouped(list);
         (VoiceSheet::Options(rows), pages)
     }
 
@@ -217,6 +223,24 @@ pub(crate) fn shown_name(name: &Redacted<String>) -> Redacted<String> {
 /// `n` as a count the view holds, or the largest one.
 pub(crate) fn short(n: usize) -> u16 {
     u16::try_from(n).unwrap_or(u16::MAX)
+}
+
+/// `groups` laid out `per` rows to a page: a group that fits a page but not what is left of this one starts the next.
+fn lay_out<T>(groups: Vec<Vec<(Key, T)>>, per: usize) -> Vec<Vec<(Key, T)>> {
+    let mut pages: Vec<Vec<(Key, T)>> = Vec::new();
+    for group in groups {
+        let left = pages.last().map_or(0, |p| per - p.len());
+        if group.len() > left && group.len() <= per {
+            pages.push(Vec::new());
+        }
+        for row in group {
+            match pages.last_mut() {
+                Some(page) if page.len() < per => page.push(row),
+                _ => pages.push(vec![row]),
+            }
+        }
+    }
+    pages
 }
 
 #[cfg(test)]

@@ -10,8 +10,8 @@ use kx_mod_voice::models::table;
 use kx_mod_voice::{INSERTS, VoiceSettings};
 use kx_module_api::ModuleState::Active;
 use kx_module_api::ports::{
-    ClipPart, Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB, ShortcutId,
-    SpeechDone, SpeechNote, SpeechStage, TextDone, TextPasted, VoiceLit,
+    ClipNote, ClipPart, Drive, FaceAction, FieldKind, KeyId, LayoutChanged, LayoutId, MB,
+    ShortcutId, SpeechDone, SpeechNote, SpeechStage, TextDone, TextPasted, VoiceLit,
 };
 use kx_module_api::{Event, Redacted, Zeroizing};
 use kx_platform_fake::{ShelfCall, SpeechCall};
@@ -65,9 +65,8 @@ fn start(boot: &mut Boot, insert: &str) {
     }
 }
 
-/// Starts `boot` as `start` does and dictates `SAID` in English; it gives the first `E` heard once the text is out.
-fn dictate_by<E: Event + Clone>(rig: &Rig, boot: &mut Boot, insert: &str) -> E {
-    start(boot, insert);
+/// Dictates `SAID` in English on a started `boot`; it gives the first `E` heard once the text is out.
+fn speak<E: Event + Clone>(rig: &Rig, boot: &mut Boot) -> E {
     let bus = boot.kernel.bus();
     let ((_lit, lit), (_done, done)) = (hear::<VoiceLit>(&bus), hear::<E>(&bus));
     let english = LayoutChanged {
@@ -102,9 +101,10 @@ fn dictate_by<E: Event + Clone>(rig: &Rig, boot: &mut Boot, insert: &str) -> E {
     done.recv_timeout(WAIT).unwrap()
 }
 
-/// Dictates `SAID` as `dictate_by` does, typed; it gives the keyboard's answer.
+/// Starts `boot` and dictates `SAID` as `speak` does, typed; it gives the keyboard's answer.
 fn dictate(rig: &Rig, boot: &mut Boot) -> TextDone {
-    dictate_by(rig, boot, INSERTS[0].0)
+    start(boot, INSERTS[0].0);
+    speak(rig, boot)
 }
 
 #[test]
@@ -151,7 +151,14 @@ fn paste_at_once_pastes_the_text_through_the_clipboard_history_then_puts_the_cli
     rig.shortcuts.set_known(vec![crate::clip::paste()]);
     rig.clip.set_text(Some(KEPT));
     let mut boot = rig.load();
-    let pasted: TextPasted = dictate_by(&rig, &mut boot, INSERTS[1].0);
+    start(&mut boot, INSERTS[1].0);
+    assert!(rig.clip.wait_watching(WAIT));
+    let kept = vec![ClipPart::Text(Redacted::new(KEPT.to_owned()))];
+    rig.clip.push(ClipNote::Copied {
+        parts: kept,
+        app: None,
+    });
+    let pasted: TextPasted = speak(&rig, &mut boot);
     assert!(pasted.ok, "{pasted:?}");
     let sent: Vec<ShortcutId> = rig.shortcuts.sent().into_iter().map(|s| s.0).collect();
     assert_eq!(sent, [crate::clip::paste().id], "one paste");

@@ -1,5 +1,5 @@
 //! Insert the text on the Options page (owner, 2026-11-17): two chips write `insert`, and while Paste at once is
-//! chosen its hint takes the row below, which acts on nothing.
+//! chosen its hint takes the row below, on the same page, and acts on nothing.
 
 use kx_module_api::ports::{OptionRow, OptionValue, VoiceClick, VoiceSheet, VoiceTab};
 
@@ -66,4 +66,56 @@ fn paste_at_once_shows_its_hint_on_the_row_below_which_acts_on_nothing() {
     let typed = toml::Value::String(INSERTS[0].0.into());
     let out = rig.click(&VoiceClick::Step { row, up: false });
     assert_eq!(out, [Do::Set("insert", typed)]);
+}
+
+/// Every page of the Options list at `per` rows a page, the first first.
+fn option_pages(settings: &str, per: u8) -> Vec<Vec<OptionRow>> {
+    let mut rig = Rig::new();
+    rig.settings.insert = settings.into();
+    rig.click(&VoiceClick::Rows(per));
+    rig.click(&VoiceClick::Open(VoiceTab::Options));
+    let mut pages = Vec::new();
+    loop {
+        let view = rig.view().unwrap();
+        let VoiceSheet::Options(rows) = view.sheet else {
+            panic!("not Options: {:?}", view.sheet);
+        };
+        pages.push(rows);
+        if view.pages.at + 1 >= view.pages.count {
+            return pages;
+        }
+        rig.click(&VoiceClick::Page { back: false });
+    }
+}
+
+#[test]
+fn the_hint_stays_on_its_chips_page_even_when_insert_ends_a_page() {
+    let typed = option_pages(INSERTS[0].0, u8::MAX).concat();
+    let last = (at(&typed) + 1).max(2);
+    for per in (2..=8).chain([last]) {
+        let pages = option_pages(INSERTS[1].0, per);
+        let page = pages
+            .iter()
+            .find(|p| p.iter().any(|r| r.key == "insert"))
+            .unwrap();
+        let row = usize::from(at(page));
+        assert!(
+            matches!(page[row].value, OptionValue::Pair { .. }),
+            "{per} a page"
+        );
+        assert_eq!(
+            page.get(row + 1).map(|r| r.value),
+            Some(OptionValue::Hint),
+            "{per} a page"
+        );
+        assert!(
+            pages.iter().all(|p| p.len() <= usize::from(per)),
+            "{per} a page"
+        );
+        assert_eq!(
+            pages.concat().len(),
+            typed.len() + 1,
+            "no row lost at {per} a page"
+        );
+    }
 }

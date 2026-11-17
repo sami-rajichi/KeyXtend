@@ -1,6 +1,7 @@
 // An option (mock-up options()): its name, then its switch with On or Off, which a click on the row flips, a stepper
 // with Less and More or the last and next choice, or two chips, the first picked by minus and the second by plus; a
-// hint row shows its line under a bare icon. Never a slider (ADR-0008).
+// hint row shows its line under a bare icon, which the chips above read as their description. Never a slider
+// (ADR-0008).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -11,6 +12,9 @@ VoiceRow {
     readonly property bool flips: !!entry && entry.kind === kinds.switch
     readonly property bool pair: !!entry && entry.kind === kinds.pair
     readonly property bool hint: !!entry && entry.kind === kinds.hint
+    // A pair's hint row below, which its chips read as their description (mock-up aria-describedby).
+    readonly property var below: pair ? list.entry(index + 1) : null
+    readonly property string about: (!!below && below.kind === kinds.hint) ? below.label : ""
 
     name: entry ? entry.label : ""
     tile: hint ? lk.icons.voice.panel.buttons.insert : ""
@@ -61,6 +65,7 @@ VoiceRow {
                 rtl: row.host.ar
                 move: row.lk.motion.clip.highlight
                 uid: row.res.uid(row.host.names.group, row.host.names.ids[way] + row.place)
+                Accessible.description: row.about
                 lk: row.lk
                 res: row.res
                 s: row.s
