@@ -1,6 +1,7 @@
-//! The uiAccess app decodes no media, opens no box, hears no microphone and downloads nothing (ADR-0004, ADR-0034,
-//! ADR-0038, ADR-0042): tidy bans `png`, `fdeflate`, `age`, `keepass`, the speech engine, `cpal` and the HTTPS crate
-//! from its tree, and no crate it builds with, its tests' included, reaches them or the worker, which alone does each.
+//! The uiAccess app decodes no media, opens no box, hears no microphone, downloads nothing and uploads nothing
+//! (ADR-0004, ADR-0034, ADR-0038, ADR-0042, ADR-0047): tidy bans `png`, `fdeflate`, `age`, `keepass`, the speech
+//! engine, `cpal` and the HTTPS crate from its tree, and no crate it builds with, its tests' and the cloud relay's
+//! included, reaches them, any of tidy's network crates or the worker, which alone does each.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -16,8 +17,10 @@ const DECODERS: [&str; 2] = ["png", "fdeflate"];
 const BOX_FORMATS: [&str; 2] = ["age", "keepass"];
 /// The speech engine and the microphone's audio crate, which only the worker's `voice` job may use (ADR-0042).
 const VOICE: [&str; 3] = ["transcribe-cpp", "transcribe-cpp-sys", "cpal"];
-/// The HTTPS crate only the worker's `fetch` job may use (ADR-0042).
+/// The HTTPS crate only the worker's `fetch` and `speech-net` jobs may use (ADR-0042, ADR-0047).
 const NETWORK: [&str; 1] = ["kx-platform-net"];
+/// The app's crate that relays a cloud dictation's sound to `speech-net` unread (ADR-0047 decision 3).
+const RELAY: &str = "kx-platform";
 
 /// Each package's dependency names, its versions merged: the lock names one as `name`, `name version` or more.
 fn graph() -> BTreeMap<String, BTreeSet<String>> {
@@ -36,10 +39,10 @@ fn graph() -> BTreeMap<String, BTreeSet<String>> {
     graph
 }
 
-/// Every package the app reaches in `graph`, itself included.
-fn reached(graph: &BTreeMap<String, BTreeSet<String>>) -> BTreeSet<String> {
-    let mut seen = BTreeSet::from([APP.to_owned()]);
-    let mut queue = vec![APP.to_owned()];
+/// Every package `from` reaches in `graph`, itself included.
+fn reached(graph: &BTreeMap<String, BTreeSet<String>>, from: &str) -> BTreeSet<String> {
+    let mut seen = BTreeSet::from([from.to_owned()]);
+    let mut queue = vec![from.to_owned()];
     while let Some(name) = queue.pop() {
         for dep in graph.get(&name).into_iter().flatten() {
             if seen.insert(dep.clone()) {
@@ -92,7 +95,7 @@ fn tidy_bans_the_engine_the_audio_and_the_network_crates_from_the_app() {
 #[test]
 fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_a_voice_crate_or_the_worker() {
     let graph = graph();
-    let reached = reached(&graph);
+    let reached = reached(&graph, APP);
     let worker = metadata(&["stage", "worker"]);
     let worker = worker.as_str().unwrap();
     assert!(graph.contains_key(worker), "the lock lists {worker}");
@@ -106,4 +109,22 @@ fn nothing_the_app_builds_with_reaches_a_decoder_a_box_format_a_voice_crate_or_t
         assert!(graph.contains_key(*banned), "the lock lists {banned}");
         assert!(!reached.contains(*banned), "{APP} reaches {banned}");
     }
+}
+
+#[test]
+fn the_cloud_relay_builds_into_the_app_which_reaches_no_network_crate_and_the_worker_alone_does() {
+    let graph = graph();
+    let app = reached(&graph, APP);
+    assert!(app.contains(RELAY), "{APP} builds the relay");
+    let banned = tidy_list("banned_network");
+    assert!(NETWORK.iter().all(|n| banned.iter().any(|b| b == n)));
+    for network in &banned {
+        assert!(!app.contains(network), "{APP} reaches {network}");
+    }
+    let worker = metadata(&["stage", "worker"]);
+    let worker = reached(&graph, worker.as_str().unwrap());
+    assert!(
+        NETWORK.iter().all(|n| worker.contains(*n)),
+        "the worker uploads, so the walk sees the network"
+    );
 }

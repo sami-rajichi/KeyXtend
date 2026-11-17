@@ -1,6 +1,9 @@
 //! Voice typing over the whole app: the module watches the session while it runs and Quit lets it go, the Dictation
 //! key opens a dictation whose text the keyboard types and the voice shelf keeps, Paste at once pastes it through the
 //! clipboard history and puts the clipboard back, and a hidden run still dictates but keeps nothing (ADR-0037, edge 16).
+//! `cloud` sends a dictation to a cloud service.
+
+mod cloud;
 
 use crate::rig::{Rig, WAIT, hear};
 use keyxtend::boot::Boot;
@@ -65,10 +68,10 @@ fn start(boot: &mut Boot, insert: &str) {
     }
 }
 
-/// Dictates `SAID` in English on a started `boot`; it gives the first `E` heard once the text is out.
-fn speak<E: Event + Clone>(rig: &Rig, boot: &mut Boot) -> E {
+/// Starts a dictation in English on a started `boot`, and the key stops it once speech was heard.
+fn talk(rig: &Rig, boot: &Boot) {
     let bus = boot.kernel.bus();
-    let ((_lit, lit), (_done, done)) = (hear::<VoiceLit>(&bus), hear::<E>(&bus));
+    let (_lit, lit) = hear::<VoiceLit>(&bus);
     let english = LayoutChanged {
         id: LayoutId::new(1),
         iso: ENGLISH.into(),
@@ -88,17 +91,28 @@ fn speak<E: Event + Clone>(rig: &Rig, boot: &mut Boot) -> E {
         rig.speech.wait(WAIT, |runs| runs[0].stops == 1),
         "the key stops it"
     );
-    let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
-    assert!(rig.speech.tell(SpeechNote::Piece { index: 0, text }));
-    assert!(rig.speech.tell(SpeechNote::Done(SpeechDone {
-        pieces: 1,
+}
+
+/// A run's end after it wrote `pieces` pieces; a listen-only run writes none.
+const fn done(pieces: u16) -> SpeechNote {
+    SpeechNote::Done(SpeechDone {
+        pieces,
         sound_ms: 2_000,
         wait_ms: 300,
         load_ms: 0,
         memory_mb: 600,
         card: false,
-    })));
-    done.recv_timeout(WAIT).unwrap()
+    })
+}
+
+/// Dictates `SAID` in English on a started `boot`; it gives the first `E` heard once the text is out.
+fn speak<E: Event + Clone>(rig: &Rig, boot: &mut Boot) -> E {
+    let (_done, heard) = hear::<E>(&boot.kernel.bus());
+    talk(rig, boot);
+    let text = Redacted::new(Zeroizing::new(SAID.to_owned()));
+    assert!(rig.speech.tell(SpeechNote::Piece { index: 0, text }));
+    assert!(rig.speech.tell(done(1)));
+    heard.recv_timeout(WAIT).unwrap()
 }
 
 /// Starts `boot` and dictates `SAID` as `speak` does, typed; it gives the keyboard's answer.

@@ -1,5 +1,5 @@
-//! What the module tests share: the fakes behind its services, a host holding them, an ear on the bus that hears from
-//! any thread, and a models folder holding English's default model.
+//! What the module tests share: the fakes behind its services, the cloud port among them, a host holding them, an
+//! ear on the bus that hears from any thread, and a models folder holding English's default model.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -9,17 +9,18 @@ use std::time::Duration;
 use kx_mod_voice::models::table;
 use kx_mod_voice::{MANIFEST, VoiceModule};
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, CloudButton, Date, Drive, FieldWatchKey, FolderRevealKey, MB,
-    ModelFiles, ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey, VoiceAct, VoiceClick,
-    VoiceLit, VoiceOpen, VoicePage, VoiceSheet, VoiceShelfKey, VoiceTab, VoiceView, WebLinkKey,
+    CalendarKey, ClipboardWriterKey, CloudButton, CloudSpeechKey, Date, Drive, FieldWatchKey,
+    FolderRevealKey, MB, ModelFiles, ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey,
+    VoiceAct, VoiceClick, VoiceLit, VoiceOpen, VoicePage, VoiceSheet, VoiceShelfKey, VoiceTab,
+    VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted, ServiceId, ServiceKey,
     Subscription,
 };
 use kx_platform_fake::{
-    FakeCalendar, FakeClipboardWriter, FakeClock, FakeFieldWatch, FakeFolderReveal, FakeModelFiles,
-    FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
+    FakeCalendar, FakeClipboardWriter, FakeClock, FakeCloud, FakeFieldWatch, FakeFolderReveal,
+    FakeModelFiles, FakeSessionWatch, FakeShelf, FakeSpeech, FakeWebLink,
 };
 use kx_test_support::host::{FakeHost, Stored};
 
@@ -40,6 +41,7 @@ pub struct Fakes {
     pub shelf: FakeShelf,
     pub calendar: FakeCalendar,
     pub link: Arc<FakeWebLink>,
+    pub cloud: FakeCloud,
     pub clock: FakeClock,
 }
 
@@ -56,6 +58,7 @@ impl Fakes {
             shelf: FakeShelf::new(),
             calendar: FakeCalendar::new(Date::new(2026, 11, 15).unwrap(), 12, 0, 60),
             link: Arc::new(FakeWebLink::new()),
+            cloud: FakeCloud::new(),
             clock: FakeClock::new(Mono::from_us(1_000)),
         };
         fakes.files.set_drives(vec![Drive {
@@ -90,6 +93,7 @@ impl Fakes {
             stored::<VoiceShelfKey>(Arc::new(self.shelf.clone())),
             stored::<CalendarKey>(Arc::new(self.calendar.clone())),
             stored::<WebLinkKey>(self.link.clone()),
+            stored::<CloudSpeechKey>(Arc::new(self.cloud.clone())),
         ]);
         host
     }

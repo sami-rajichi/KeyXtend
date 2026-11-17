@@ -1,9 +1,9 @@
 //! What the voice module declares (ADR-0042 decision 8): the microphone through the speech port, downloads the user
 //! asks for, its sealed store on its own shelf, the focused box, Copy, the calendar's dates and its models folder
-//! shown (ADR-0046), a card's link and the key page's Paste (ADR-0047); it never types.
+//! shown (ADR-0046), the cloud port, a card's link and the key page's Paste (ADR-0047); it never types.
 
 use kx_module_api::ports::{
-    CalendarKey, ClipboardWriterKey, FieldWatchKey, FolderRevealKey, ModelFilesKey,
+    CalendarKey, ClipboardWriterKey, CloudSpeechKey, FieldWatchKey, FolderRevealKey, ModelFilesKey,
     SessionWatchKey, SpeechKey, VoiceShelfKey, WebLinkKey,
 };
 use kx_module_api::{Capability, Manifest, ModuleId, ServiceKey};
@@ -27,6 +27,7 @@ pub static MANIFEST: Manifest = Manifest {
         VoiceShelfKey::ID,
         CalendarKey::ID,
         WebLinkKey::ID,
+        CloudSpeechKey::ID,
     ],
     provides: &[],
     capabilities: &[
@@ -83,6 +84,15 @@ mod tests {
     }
 
     #[test]
+    fn it_requires_the_cloud_port_the_app_provides_under_the_network_gate() {
+        // Without the port the kernel never starts the module (`Reason::Missing`); a host that refuses the lookup
+        // leaves each upload to end with the fault note.
+        assert!(MANIFEST.requires.contains(&CloudSpeechKey::ID));
+        assert_eq!(CloudSpeechKey::CAPABILITY, Some(Capability::Network));
+        assert!(MANIFEST.declares(Capability::Network));
+    }
+
+    #[test]
     fn it_keeps_its_store_on_its_own_shelf_and_dates_by_the_calendar() {
         assert!(MANIFEST.requires.contains(&VoiceShelfKey::ID));
         assert!(!MANIFEST.requires.contains(&SealedShelfKey::ID));
@@ -127,6 +137,7 @@ mod tests {
             VoiceShelfKey::CAPABILITY,
             CalendarKey::CAPABILITY,
             WebLinkKey::CAPABILITY,
+            CloudSpeechKey::CAPABILITY,
         ];
         assert_eq!(MANIFEST.requires.len(), gates.len());
         assert!(

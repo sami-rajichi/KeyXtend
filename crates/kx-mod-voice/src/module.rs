@@ -147,7 +147,8 @@ fn ports(
     let reveal = cx.service::<FolderRevealKey>()?;
     let shelf = cx.service::<VoiceShelfKey>()?;
     let calendar = cx.service::<CalendarKey>()?;
-    // A run without cloud speech still dictates with local models; an upload then ends with the fault note.
+    // The app provides cloud speech, which the manifest requires; a host that refuses the lookup still dictates with
+    // local models, and each upload then ends with the fault note.
     let cloud = cx.service::<CloudSpeechKey>();
     let cloud = cloud.inspect_err(|error| tracing::warn!(%error, "cloud speech is not available"));
     let cloud = cloud.ok();

@@ -153,6 +153,7 @@ fn boot(platform: &Arc<WindowsPlatform>, flags: &Flags, run: &Run) -> Result<Boo
         link: platform.web_link(),
         folders: platform.folder_reveal(),
         speech: speech(platform, &dirs.exe_dir, flags),
+        cloud: platform.cloud_speech(),
         models: platform.model_files(),
         session: platform.session_watch(),
         voice_shelf,

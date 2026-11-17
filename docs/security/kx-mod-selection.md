@@ -10,7 +10,7 @@
 |---|---|---|
 | `ReadFocusedText` | It gates `SelectionWatchKey`, so the module can see the focused box's selection with no text and read it once for Translate. It also gates the keyboard's `Typed`, `TypingModeAsk` and `AimedLine`, which end the caret's Paste and hide the strip over a panel line (`manifest.rs:20`). | The start fails, so no strip shows (`each_missing_gate_fails_the_start_and_watches_nothing`). |
 | `Selection` | It gates the chips' events: `ChipsView` to the ui, `ChipAct` from it, `EditAsk` to the keyboard and `EditDone` back. | The start fails before the watch starts, so nothing is watched (`module.rs:73`). |
-| `OpenLink` | It gates `WebLinkKey`, which hands Translate's https link to the desktop shell. Only this module holds it. | The start fails, as Translate is one of the module's keycaps. |
+| `OpenLink` | It gates `WebLinkKey`, which hands Translate's https link to the desktop shell. Only this module and, for a cloud card's link, the voice module hold it (ADR-0047). | The start fails, as Translate is one of the module's keycaps. |
 
 - The module holds no `InjectInput`: the keyboard sends every edit's keys (`it_holds_the_three_gates_and_never_injects_input`).
 - The events it hears (`PointerPressed`, `PointerReleased`, `AssistChanged`, `BoardPlace`, `PressesAsk`, `NoticeAnswered`) and sends (`PressesWanted`, `BoardPlaceAsk`, `AssistAsk`, `Notice`) need no capability (`the_events_it_uses_need_only_the_gates_it_holds`). Their fields are flags, a place, Grab's state, an asker or a notice, so none carries text.
