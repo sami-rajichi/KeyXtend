@@ -32,6 +32,9 @@ pub enum NetError {
     /// A call's header would break its head, or a GET carries a body; nothing was sent.
     #[error("a header would break the request")]
     Header,
+    /// The call was stopped before its body was all sent, as its run was cancelled.
+    #[error("the request was stopped")]
+    Stopped,
     /// The system failed inside.
     #[error("the system's HTTP client failed")]
     Internal,
@@ -47,7 +50,7 @@ impl From<NetError> for FetchFault {
             }
             NetError::Stall => Self::Stall,
             NetError::Net => Self::Net,
-            NetError::Header | NetError::Internal => Self::Internal,
+            NetError::Header | NetError::Stopped | NetError::Internal => Self::Internal,
         }
     }
 }
@@ -63,7 +66,7 @@ impl From<NetError> for NetFault {
             | NetError::Server => Self::Strange,
             NetError::Stall => Self::Timeout,
             NetError::Net => Self::Network,
-            NetError::Internal => Self::Gone,
+            NetError::Stopped | NetError::Internal => Self::Gone,
         }
     }
 }

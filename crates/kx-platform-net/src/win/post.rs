@@ -1,5 +1,5 @@
-//! A call's head and body: its headers go as one block in a wiped buffer, as a value may be a key, and its body in
-//! chunks, so each chunk waits at most the call's stall time rather than the whole upload.
+//! A call's head and body: its headers go as one block in a wiped buffer sized once, as a value may be a key, and its
+//! body in chunks, so each chunk waits at most the call's stall time and a stop is seen between two of them.
 
 use super::codes;
 use super::handle::Handle;
@@ -13,36 +13,40 @@ use zeroize::Zeroizing;
 const COLON: &str = ": ";
 /// Ends each header line.
 const CRLF: &str = "\r\n";
-/// The most body bytes one write sends.
-const CHUNK: usize = 64 * 1024;
 
-/// The call's headers as one UTF-16 block of `name: value` lines, wiped when dropped; `Call::check` made each byte
-/// visible ASCII or a space.
-fn block(call: &Call<'_>) -> Zeroizing<Vec<u16>> {
+/// The call's headers as one UTF-16 block of `name: value` lines, wiped when dropped and sized before it is filled, so
+/// no growth leaves a copy of a key; `Call::check` made each byte visible ASCII or a space.
+///
+/// # Errors
+/// `Internal` when the room cannot be had.
+pub(super) fn block(call: &Call<'_>) -> Result<Zeroizing<Vec<u16>>, NetError> {
+    let line = |name: &str, value: &[u8]| name.len() + COLON.len() + value.len() + CRLF.len();
+    let units: usize = call.fields.iter().map(|f| line(f.name, f.value)).sum();
     let mut wide = Zeroizing::new(Vec::new());
+    wide.try_reserve_exact(units)
+        .map_err(|_| NetError::Internal)?;
     for f in call.fields {
         wide.extend(f.name.encode_utf16());
         wide.extend(COLON.encode_utf16());
         wide.extend(f.value.iter().map(|b| u16::from(*b)));
         wide.extend(CRLF.encode_utf16());
     }
-    wide
+    Ok(wide)
 }
 
-/// Sends `call`'s head, then its body in chunks, and waits for the answer's head.
+/// Sends `call`'s head, then its body in chunks, and waits for the answer's head; a stop ends it between two steps.
 ///
 /// # Errors
-/// `Internal` for a body past 4 GiB; `WinHTTP`'s error otherwise.
+/// `Stopped` once the call's stop is set; `Internal` for a body past 4 GiB; `WinHTTP`'s error otherwise.
 #[allow(unsafe_code, reason = "Sends a WinHTTP request with its body.")]
 pub(super) fn send(req: &Handle, call: &Call<'_>) -> Result<(), NetError> {
     let total = u32::try_from(call.body.len()).map_err(|_| NetError::Internal)?;
-    let head = block(call);
+    let head = block(call)?;
     let head = (!head.is_empty()).then_some(&head[..]);
+    call.stopped()?;
     // SAFETY: `req` is open, `head` outlives the call, and the body follows in writes of `total` bytes in all.
     unsafe { WinHttpSendRequest(req.raw(), head, None, 0, total, 0) }.map_err(|e| codes::of(&e))?;
-    for chunk in call.body.chunks(CHUNK) {
-        write(req, chunk)?;
-    }
+    call.upload(|chunk| write(req, chunk))?;
     // SAFETY: `req` is open and its body is sent.
     unsafe { WinHttpReceiveResponse(req.raw(), std::ptr::null_mut()) }.map_err(|e| codes::of(&e))
 }

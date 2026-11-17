@@ -6,6 +6,7 @@
 pub mod clock;
 mod form;
 mod job;
+mod pace;
 mod reply;
 mod run;
 mod send;
@@ -147,13 +148,13 @@ fn wake(rx: &Receiver<Event>) -> Event {
     rx.recv().unwrap_or(Event::End(Ok(())))
 }
 
-/// Takes `event`. A panic inside drops what it touched, told as `Gone` on the ask's id, or on every live id.
+/// Takes `event`. A panic inside drops every run and test, told as `Gone` on the ask's id and on each live id.
 fn act(job: &mut Job, event: Event, out: &mut dyn Notes) -> Result<Flow, IpcError> {
-    let (asked, live) = match &event {
-        Event::Ask(NetAsk::Bye) | Event::End(_) => (Vec::new(), Vec::new()),
-        Event::Ask(ask) => (vec![ask.id()], Vec::new()),
-        Event::Told(_) => (Vec::new(), job.live()),
+    let asked = match &event {
+        Event::Ask(NetAsk::Bye) | Event::End(_) | Event::Told(_) => None,
+        Event::Ask(ask) => Some(ask.id()),
     };
+    let live = job.live();
     let taken = panic::catch_unwind(AssertUnwindSafe(|| match event {
         Event::Ask(NetAsk::Bye) => Ok(Flow::Exit(Ok(()))),
         Event::End(end) => Ok(Flow::Exit(end)),
@@ -162,6 +163,7 @@ fn act(job: &mut Job, event: Event, out: &mut dyn Notes) -> Result<Flow, IpcErro
     }));
     let Ok(taken) = taken else {
         job.end();
+        let live = live.into_iter().filter(|&id| asked != Some(id));
         for id in asked.into_iter().chain(live) {
             out.tell(NetNote::Fault {
                 id,

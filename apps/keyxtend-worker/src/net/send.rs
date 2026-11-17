@@ -1,16 +1,17 @@
 //! One piece's request, or a key's test, as its thread sends it: the shape builds it once; a broken link, a stall or a
 //! service down is tried again up to the run's tries; a 429 waits once for its `Retry-After`, held within the call's
-//! wait, then is the rate fault; every other fault is told at once. A reply is read within `MAX_NET_REPLY_BYTES`, and
-//! a redirect is never followed.
+//! wait, then is the rate fault; every other fault is told at once. Every try waits its turn in the run's pace. A
+//! reply is read within `MAX_NET_REPLY_BYTES`, a redirect is never followed, and a dropped run's call stops mid-upload.
 
 use super::Kit;
+use super::pace::Pace;
 use super::reply;
 use super::shape::{Piece, Request, Shape, Verdict};
 use kx_ipc::{MAX_NET_REPLY_BYTES, NetCall, NetFault};
 use kx_platform_net::{Call, Field, Head, Target};
 use std::borrow::Cow;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 use zeroize::Zeroizing;
 
 /// Milliseconds in a second.
@@ -28,6 +29,8 @@ pub struct Sending {
     pub lang: Cow<'static, str>,
     /// Tries per request before its fault is told.
     pub tries: u8,
+    /// The run's pace, which every try waits its turn in; none for a key's test.
+    pub pace: Option<Mutex<Pace>>,
     /// Set once the run or test is dropped: nothing more is sent.
     pub dropped: Arc<AtomicBool>,
 }
@@ -66,9 +69,7 @@ fn tries<T>(
     let target = Target::parse(&s.call.url).map_err(NetFault::from)?;
     let (mut left, mut waited) = (s.tries, false);
     loop {
-        if s.dropped.load(Ordering::SeqCst) {
-            return Err(NetFault::Gone);
-        }
+        turn(kit, s)?;
         match once(kit, s, &target, request, &read) {
             Verdict::Said(said) => return Ok(said),
             Verdict::Busy(Some(wait)) if !waited && wait <= u32::from(s.call.wait_s) => {
@@ -80,6 +81,28 @@ fn tries<T>(
             Verdict::Fault(fault) => return Err(fault),
         }
     }
+}
+
+/// Waits the run's turn to send within `per_min`, so every try counts.
+///
+/// # Errors
+/// `Gone` once the run or test is dropped, before or after the wait.
+fn turn(kit: &Kit, s: &Sending) -> Result<(), NetFault> {
+    let gone = || s.dropped.load(Ordering::SeqCst);
+    if gone() {
+        return Err(NetFault::Gone);
+    }
+    if let Some(pace) = &s.pace {
+        let now = kit.clock.now_ms();
+        let delay = pace
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .turn(now);
+        if delay > 0 {
+            kit.clock.wait(delay);
+        }
+    }
+    if gone() { Err(NetFault::Gone) } else { Ok(()) }
 }
 
 /// One request and what its reply says.
@@ -102,12 +125,13 @@ fn once<T>(
         body: &request.body,
         keep: request.keep,
         stall_s: s.call.wait_s,
+        stop: &s.dropped,
     };
     let mut answer = match kit.http.call(&call) {
         Ok(answer) => answer,
         Err(e) => return Verdict::Fault(e.into()),
     };
-    match reply::drain(answer.body.as_mut(), MAX_NET_REPLY_BYTES) {
+    match reply::drain(answer.body.as_mut(), MAX_NET_REPLY_BYTES, &s.dropped) {
         Ok(body) => read(&answer.head, &body),
         Err(fault) => Verdict::Fault(fault),
     }

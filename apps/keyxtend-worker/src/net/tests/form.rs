@@ -217,6 +217,24 @@ fn a_fixed_field_may_not_repeat_the_forms_own_names() {
 }
 
 #[test]
+fn a_fixed_field_may_not_repeat_a_list_languages_name() {
+    for name in ["languages[]", "LANGUAGES[]", "languages"] {
+        let fixed = vec![NetField {
+            name: Cow::Borrowed(name),
+            value: Cow::Borrowed("x"),
+        }];
+        let shape = NetShape::Form(NetForm {
+            lang: Cow::Borrowed("languages"),
+            list: true,
+            fixed,
+        });
+        let call = call_to(URL, shape);
+        let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();
+        assert_eq!(got, Some(NetFault::Range), "{name}");
+    }
+}
+
+#[test]
 fn names_are_escaped_as_forms_escape_them() {
     assert_eq!(escape("a\"b\r\nc"), "a%22b%0D%0Ac");
     assert!(matches!(escape("model"), Cow::Borrowed("model")));

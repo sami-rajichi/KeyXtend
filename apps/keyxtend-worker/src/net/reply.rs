@@ -1,12 +1,13 @@
-//! Reading a service's reply, an untrusted body: read within a cap and refused one byte past it, its JSON `text` read
-//! straight into a wiped string, its error's words, and the headers a 429 is judged by. Every reader takes any bytes
-//! without a panic.
+//! Reading a service's reply, an untrusted body: read within a cap, refused one byte past it and ended once its call
+//! stops, its JSON `text` read straight into a wiped string, its error's exact code or words, and the headers a 429 is
+//! judged by. Every reader takes any bytes without a panic.
 
 use kx_ipc::NetFault;
 use kx_platform_net::Body;
 use serde::Deserialize;
 use serde::de::{self, Deserializer, Visitor};
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 use zeroize::Zeroizing;
 
 /// The most bytes one read of a body takes.
@@ -28,16 +29,24 @@ const POINT: char = '.';
 const TEN: u128 = 10;
 
 /// `body`'s bytes, read into wiped chunks of `READ` bytes, each filled before the next, and joined once, so no growth
-/// leaves an unwiped copy and the room taken stays within `cap` and one chunk.
+/// leaves an unwiped copy and the room taken stays within `cap` and one chunk; `stop` is looked at before each read.
 ///
 /// # Errors
-/// `Strange` once the body passes `cap`, read no further; `Network`, `Timeout` or `Gone` when a read fails.
-pub fn drain(body: &mut dyn Body, cap: usize) -> Result<Zeroizing<Vec<u8>>, NetFault> {
+/// `Strange` once the body passes `cap`, read no further; `Gone` once `stop` is set; `Network`, `Timeout` or `Gone`
+/// when a read fails.
+pub fn drain(
+    body: &mut dyn Body,
+    cap: usize,
+    stop: &AtomicBool,
+) -> Result<Zeroizing<Vec<u8>>, NetFault> {
     let (mut filled, mut chunk, mut fill, mut got) = (Vec::new(), chunk()?, 0, 0usize);
     loop {
         if fill == chunk.len() {
             filled.push(std::mem::replace(&mut chunk, self::chunk()?));
             fill = 0;
+        }
+        if stop.load(Ordering::SeqCst) {
+            return Err(NetFault::Gone);
         }
         let want = (chunk.len() - fill).min(cap - got + 1);
         let n = body
@@ -119,13 +128,26 @@ pub fn object(bytes: &[u8]) -> bool {
     serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(bytes).is_ok()
 }
 
+/// The `error` of a JSON reply; `Null` for another body.
+fn error(bytes: &[u8]) -> serde_json::Value {
+    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
+    reply.get("error").cloned().unwrap_or_default()
+}
+
+/// True when a JSON error reply's code or type is exactly one of `codes`, in any case; never for another body.
+pub fn coded(bytes: &[u8], codes: &[&str]) -> bool {
+    let error = error(bytes);
+    let is = |v: &serde_json::Value| {
+        v.as_str()
+            .is_some_and(|s| codes.iter().any(|c| c.eq_ignore_ascii_case(s)))
+    };
+    is(&error["code"]) || is(&error["type"])
+}
+
 /// True when a JSON error reply's message, type or code holds one of `words`, in any case; never for another body.
 pub fn says(bytes: &[u8], words: &[&str]) -> bool {
-    let Ok(reply) = serde_json::from_slice::<serde_json::Value>(bytes) else {
-        return false;
-    };
-    let error = &reply["error"];
-    let parts = [error, &error["message"], &error["type"], &error["code"]];
+    let error = error(bytes);
+    let parts = [&error, &error["message"], &error["type"], &error["code"]];
     let said: String = parts
         .iter()
         .filter_map(|v| v.as_str())

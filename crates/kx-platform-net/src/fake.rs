@@ -1,13 +1,13 @@
 //! A scripted `Http` for tests: each request takes the next act and is kept in order. It never sleeps or touches the
 //! network; a quiet step at or past the hop's `wait_ms` reads as a stall, as `WinHTTP`'s receive timeout does. A call's
-//! answer keeps only the headers it asked for, as the adapter reads only those.
+//! body is written in chunks that end once it is stopped, and its answer keeps only the headers it asked for.
 
 use crate::follow::FOUND;
 use crate::range::{DASH, OK, OVER, PARTIAL, UNIT};
 use crate::{Body, Call, Head, Hop, Http, NetError, Reply, Verb, wait_ms};
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 /// What the fake server does with one request.
 #[derive(Clone, Debug)]
@@ -57,6 +57,16 @@ pub struct Called {
     pub stall_s: u16,
 }
 
+/// A test's hook on each body chunk.
+#[derive(Clone)]
+struct Hook(Arc<dyn Fn(usize) + Send + Sync>);
+
+impl fmt::Debug for Hook {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Hook")
+    }
+}
+
 /// The scripted server; with no act left, a request fails as `Net`.
 #[derive(Debug, Default)]
 pub struct FakeHttp {
@@ -66,6 +76,8 @@ pub struct FakeHttp {
     seen: Mutex<Vec<Seen>>,
     /// Every call so far.
     called: Mutex<Vec<Called>>,
+    /// Run after each body chunk a call writes, with the count so far.
+    hook: Mutex<Option<Hook>>,
 }
 
 impl FakeHttp {
@@ -76,7 +88,13 @@ impl FakeHttp {
             acts,
             seen: Mutex::default(),
             called: Mutex::default(),
+            hook: Mutex::default(),
         }
+    }
+
+    /// Runs `hook` after each body chunk a call writes, with the count of chunks so far, so a test can act mid-upload.
+    pub fn on_chunk(&self, hook: impl Fn(usize) + Send + Sync + 'static) {
+        *lock(&self.hook) = Some(Hook(Arc::new(hook)));
     }
 
     /// Every call so far, in order.
@@ -124,14 +142,28 @@ impl Http for FakeHttp {
 
     fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError> {
         let field = |f: &crate::Field<'_>| (f.name.to_owned(), f.value.to_vec());
-        lock(&self.called).push(Called {
-            url: call.target.to_string(),
-            verb: call.verb,
-            fields: call.fields.iter().map(field).collect(),
-            body: call.body.to_vec(),
-            keep: call.keep.iter().map(|k| (*k).to_owned()).collect(),
-            stall_s: call.stall_s,
-        });
+        let index = {
+            let mut called = lock(&self.called);
+            called.push(Called {
+                url: call.target.to_string(),
+                verb: call.verb,
+                fields: call.fields.iter().map(field).collect(),
+                body: Vec::new(),
+                keep: call.keep.iter().map(|k| (*k).to_owned()).collect(),
+                stall_s: call.stall_s,
+            });
+            called.len() - 1
+        };
+        let hook = lock(&self.hook).clone();
+        let mut chunks = 0;
+        call.upload(|chunk| {
+            lock(&self.called)[index].body.extend_from_slice(chunk);
+            chunks += 1;
+            if let Some(Hook(hook)) = &hook {
+                hook(chunks);
+            }
+            Ok(())
+        })?;
         let mut reply = self.next(wait_ms(call.stall_s))?;
         let asked = |(n, _): &(String, String)| call.keep.iter().any(|k| k.eq_ignore_ascii_case(n));
         reply.head.extra.retain(asked);

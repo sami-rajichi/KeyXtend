@@ -146,6 +146,7 @@ impl Job {
             model: None,
             lang: Cow::Borrowed(""),
             tries: TEST_TRIES,
+            pace: None,
             dropped: dropped.clone(),
         };
         let (kit, tx) = (self.kit.clone(), self.tx.clone());

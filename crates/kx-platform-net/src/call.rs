@@ -1,12 +1,16 @@
 //! One request with headers and maybe a body, as the `speech-net` job sends (ADR-0047 decision 6): checked before it
-//! is sent, and never followed to another address. A header's value may be a key, so `Debug` shows names only.
+//! is sent, never followed to another address, and its body sent in chunks that end once its stop flag is set. A
+//! header's value may be a key, so `Debug` shows names only.
 
 use crate::{NetError, Target};
 use kx_ipc::rules;
 use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// The one byte a header value may hold besides visible ASCII.
 const SPACE: u8 = b' ';
+/// The most body bytes one write sends; a stop is seen between two writes.
+pub const SEND_CHUNK: usize = 64 * 1024;
 
 /// A request's verb.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -52,6 +56,8 @@ pub struct Call<'a> {
     pub keep: &'a [&'a str],
     /// Seconds without a byte, while connecting, sending or reading, before the call is a stall; see `wait_ms`.
     pub stall_s: u16,
+    /// Set by another thread to end the call: no more of its body is written.
+    pub stop: &'a AtomicBool,
 }
 
 impl Call<'_> {
@@ -70,6 +76,34 @@ impl Call<'_> {
         } else {
             Err(NetError::Header)
         }
+    }
+
+    /// `Stopped` once `stop` is set: nothing more of the call goes.
+    ///
+    /// # Errors
+    /// `Stopped` when it is set.
+    pub fn stopped(&self) -> Result<(), NetError> {
+        if self.stop.load(Ordering::SeqCst) {
+            Err(NetError::Stopped)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Sends the body through `write` in chunks of `SEND_CHUNK` bytes, looking at `stop` before each one and after the
+    /// last, so a stop ends the call before its answer is read.
+    ///
+    /// # Errors
+    /// `Stopped` once `stop` is set, with no more written; else `write`'s error.
+    pub fn upload(
+        &self,
+        mut write: impl FnMut(&[u8]) -> Result<(), NetError>,
+    ) -> Result<(), NetError> {
+        for chunk in self.body.chunks(SEND_CHUNK) {
+            self.stopped()?;
+            write(chunk)?;
+        }
+        self.stopped()
     }
 }
 

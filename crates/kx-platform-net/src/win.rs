@@ -75,6 +75,7 @@ impl Http for WinHttp {
     }
 
     fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError> {
+        call.check()?;
         let wait = wait_ms(call.stall_s);
         let session = self.session(i32::try_from(wait).unwrap_or(i32::MAX))?;
         let connect = connect(&session, call.target)?;

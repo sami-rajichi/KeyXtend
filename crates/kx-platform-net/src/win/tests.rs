@@ -1,7 +1,7 @@
 //! The adapter's error table, and requests to a local server on the loopback that speaks plain HTTP behind an HTTPS
 //! address, with no proxy: each is refused, and the first byte sent is TLS's, never a plain GET or a POST's key.
 
-use super::{WinHttp, codes};
+use super::{WinHttp, codes, post};
 use crate::{Call, Field, Hop, Http, NetError, Target, Verb};
 use kx_ipc::STALL_S;
 use std::io::{Read, Write};
@@ -100,6 +100,7 @@ fn a_post_to_a_plain_http_server_never_sends_its_key_in_clear() {
         body: b"sound",
         keep: &[],
         stall_s: *STALL_S.start(),
+        stop: &AtomicBool::new(false),
     };
     let direct = WinHttp {
         access: WINHTTP_ACCESS_TYPE_NO_PROXY,
@@ -110,6 +111,63 @@ fn a_post_to_a_plain_http_server_never_sends_its_key_in_clear() {
     let first = server.join().unwrap();
     assert_eq!(got, Some(NetError::Net));
     assert_eq!(first, Some(HANDSHAKE), "the request starts with TLS");
+}
+
+#[test]
+fn the_header_block_takes_its_room_once() {
+    let target = Target::parse("https://api.example/v1").unwrap();
+    let fields = [
+        Field {
+            name: "Authorization",
+            value: b"Bearer kx-test-key-not-real",
+        },
+        Field {
+            name: "Content-Type",
+            value: b"multipart/form-data; boundary=b",
+        },
+    ];
+    let call = Call {
+        target: &target,
+        verb: Verb::Post,
+        fields: &fields,
+        body: b"",
+        keep: &[],
+        stall_s: *STALL_S.start(),
+        stop: &AtomicBool::new(false),
+    };
+    let block = post::block(&call).unwrap();
+    let want = "Authorization: Bearer kx-test-key-not-real\r\nContent-Type: multipart/form-data; boundary=b\r\n";
+    assert_eq!(String::from_utf16(&block).unwrap(), want);
+    assert_eq!(
+        block.capacity(),
+        block.len(),
+        "no growth left a copy of the key"
+    );
+}
+
+#[test]
+fn deliver_refuses_a_head_that_would_break_before_it_connects() {
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    let target = Target::parse(&format!("https://{}:{port}/v1", Ipv4Addr::LOCALHOST)).unwrap();
+    let fields = [Field {
+        name: "X-Key",
+        value: b"a\r\nX-Evil: 1",
+    }];
+    let call = Call {
+        target: &target,
+        verb: Verb::Post,
+        fields: &fields,
+        body: b"",
+        keep: &[],
+        stall_s: *STALL_S.start(),
+        stop: &AtomicBool::new(false),
+    };
+    let direct = WinHttp {
+        access: WINHTTP_ACCESS_TYPE_NO_PROXY,
+    };
+    assert_eq!(direct.deliver(&call).err(), Some(NetError::Header));
 }
 
 /// Answers each connection with `PLAIN` until `done`; gives the first byte the first client sent.

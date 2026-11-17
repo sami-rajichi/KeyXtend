@@ -15,6 +15,7 @@ fn each_error_maps_to_its_fetch_fault() {
         (NetError::Stall, FetchFault::Stall),
         (NetError::Net, FetchFault::Net),
         (NetError::Header, FetchFault::Internal),
+        (NetError::Stopped, FetchFault::Internal),
         (NetError::Internal, FetchFault::Internal),
     ];
     for (e, fault) in cases {
@@ -35,6 +36,7 @@ fn each_error_maps_to_its_cloud_fault() {
         (NetError::Stall, NetFault::Timeout),
         (NetError::Net, NetFault::Network),
         (NetError::Internal, NetFault::Gone),
+        (NetError::Stopped, NetFault::Gone),
     ];
     for (e, fault) in cases {
         assert_eq!(NetFault::from(e), fault, "{e:?}");

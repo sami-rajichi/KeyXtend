@@ -1,5 +1,6 @@
 //! The form's status table over Groq's documented answers: the text in any script, a blank text, a reply that is not
-//! the form's JSON, each error status, the wait a 429 asks for, a used allowance with its renewal, and the key's test.
+//! the form's JSON, each error status, the wait a 429 asks for even when its message names billing, credit told only by
+//! its exact code, a used allowance with its renewal, and the key's test.
 
 use super::*;
 use crate::net::form::Form;
@@ -175,4 +176,51 @@ fn a_key_test_works_on_the_model_list_and_fails_as_a_piece_does() {
         Got::Wait(Some(3))
     );
     assert_eq!(tested(503, &[], DOWN), Got::Fault(NetFault::Network));
+}
+
+#[test]
+fn a_groq_rate_limit_that_names_billing_is_a_wait_never_credit() {
+    let wait = [("retry-after", "63")];
+    assert_eq!(read(BUSY, &wait, RATE_HOUR), Got::Wait(Some(63)));
+    assert_eq!(read(BUSY, &[], RATE_HOUR), Got::Wait(None));
+    let headers = used("59m0.5s");
+    let extra: Vec<(&str, &str)> = headers.iter().map(|(n, v)| (*n, v.as_str())).collect();
+    let renews = NetFault::Allowance {
+        renews_s: Some(3541),
+    };
+    assert_eq!(read(BUSY, &extra, RATE_HOUR), Got::Fault(renews));
+    let words = br#"{"error":{"message":"Add credit or a payment in billing.","type":"requests","code":"rate_limit_exceeded"}}"#;
+    assert_eq!(read(BUSY, &[], words), Got::Wait(None));
+    assert_eq!(
+        read(400, &[], words),
+        Got::Fault(NetFault::Strange),
+        "words never mean credit"
+    );
+}
+
+#[test]
+fn credit_is_told_only_by_its_exact_code_or_type() {
+    let codes = [
+        "insufficient_quota",
+        "credit_balance_exhausted",
+        "organization_spend_limit_exceeded",
+        "project_spend_limit_exceeded",
+        "organization_usage_limit_exceeded",
+    ];
+    for code in codes {
+        let by_code =
+            serde_json::json!({"error": {"message": "m", "type": "requests", "code": code}});
+        let by_type = serde_json::json!({"error": {"message": "m", "type": code}});
+        for body in [by_code.to_string(), by_type.to_string()] {
+            for status in [BUSY, 400] {
+                let got = read(status, &[], body.as_bytes());
+                assert_eq!(got, Got::Fault(NetFault::Credit), "{status} {body}");
+            }
+        }
+    }
+    let near = serde_json::json!({"error": {"message": "insufficient_quota", "code": "insufficient_quota_soon"}});
+    assert_eq!(
+        read(BUSY, &[], near.to_string().as_bytes()),
+        Got::Wait(None)
+    );
 }

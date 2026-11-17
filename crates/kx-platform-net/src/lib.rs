@@ -15,7 +15,7 @@ mod target;
 #[cfg(windows)]
 mod win;
 
-pub use call::{Call, Field, Verb};
+pub use call::{Call, Field, SEND_CHUNK, Verb};
 pub use error::NetError;
 pub use range::Span;
 pub use target::Target;

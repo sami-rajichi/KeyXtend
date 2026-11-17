@@ -21,6 +21,7 @@ fn sending(call: NetCall<'static>, tries: u8) -> Sending {
         model: Some(Cow::Borrowed(MODEL)),
         lang: Cow::Borrowed(LANG),
         tries,
+        pace: None,
         dropped: Arc::new(AtomicBool::new(false)),
     }
 }
@@ -57,6 +58,17 @@ fn a_second_429_is_the_rate_fault() {
     let (got, http, clock) = post(acts, 3);
     assert_eq!(got, Err(NetFault::Rate));
     assert_eq!((clock.waits(), http.called().len()), (vec![1000], 2));
+}
+
+#[test]
+fn a_groq_rate_limit_waits_once_then_is_rate() {
+    let hour = || busy_with(&[("retry-after", "3")], RATE_HOUR);
+    let (got, http, clock) = post([hour(), said("Bonjour")], 1);
+    assert_eq!(got, Ok("Bonjour".into()));
+    assert_eq!((clock.waits(), http.called().len()), (vec![3000], 2));
+    let (got, http, clock) = post([hour(), hour(), said("x")], 3);
+    assert_eq!(got, Err(NetFault::Rate));
+    assert_eq!((clock.waits(), http.called().len()), (vec![3000], 2));
 }
 
 #[test]

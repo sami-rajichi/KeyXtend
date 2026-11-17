@@ -1,14 +1,14 @@
-//! Properties: a random reply never panics the readers, a body past any cap is always refused one byte past it, a run
-//! takes exactly the parts that fill its pieces in order, and texts are told in the pieces' order whatever order they
-//! come in.
+//! Properties: a random reply never panics the readers, a random JSON error with a used allowance always tells a
+//! renewal in range, a body past any cap is always refused one byte past it, a run takes exactly the parts that fill
+//! its pieces in order, and texts are told in the pieces' order whatever order they come in.
 
-use super::reply::endless;
+use super::reply::{NEVER, endless};
 use super::*;
 use crate::net::form::Form;
 use crate::net::reply::{drain, seconds, span_s, text};
 use crate::net::run::Run;
-use crate::net::shape::Shape;
-use kx_ipc::{NetFault, NetNote};
+use crate::net::shape::{Shape, Verdict};
+use kx_ipc::{NET_RENEW_S, NetFault, NetNote};
 use proptest::prelude::*;
 
 /// What a model of the run expects of a part: the pieces' cursor and the bytes in the current one.
@@ -23,6 +23,15 @@ fn accepts(sizes: &[u32], cursor: &mut (usize, usize), piece: u16, n: usize) -> 
         };
     }
     fits
+}
+
+/// A value an error's field may hold: nothing, a number or any text.
+fn loose() -> impl Strategy<Value = serde_json::Value> {
+    prop_oneof![
+        Just(serde_json::Value::Null),
+        any::<i64>().prop_map(serde_json::Value::from),
+        ".{0,32}".prop_map(serde_json::Value::from),
+    ]
 }
 
 proptest! {
@@ -42,16 +51,35 @@ proptest! {
     }
 
     #[test]
+    fn a_random_json_error_never_panics_and_a_used_allowance_renews_in_range(
+        status in 400u16..=599,
+        (message, kind, code) in (loose(), loose(), loose()),
+        reset in prop_oneof![".{0,16}", r"([0-9]{1,6}(\.[0-9]{1,3})?(ms|h|m|s)){1,3}"],
+    ) {
+        let body = serde_json::json!({"error": {"message": message, "type": kind, "code": code}}).to_string();
+        let used = [("x-ratelimit-remaining-requests", "0"), ("x-ratelimit-reset-requests", reset.as_str())];
+        let head = head(status, &used);
+        let _ = Form.tested(&head, body.as_bytes());
+        match Form.read(&head, body.as_bytes()) {
+            Verdict::Fault(NetFault::Allowance { renews_s }) => {
+                prop_assert!(renews_s.is_none_or(|s| NET_RENEW_S.contains(&s)), "{renews_s:?}");
+            }
+            Verdict::Fault(NetFault::Credit) => {}
+            _ => prop_assert!(status != BUSY, "a used allowance is told"),
+        }
+    }
+
+    #[test]
     fn a_body_past_any_cap_is_refused_one_byte_past_it(
         cap in 1usize..=65_536,
         extra in 1usize..=65_536,
         step in 1usize..=8_192,
     ) {
         let (mut body, given) = endless(cap + extra, step);
-        prop_assert_eq!(drain(&mut body, cap).err(), Some(NetFault::Strange));
+        prop_assert_eq!(drain(&mut body, cap, &NEVER).err(), Some(NetFault::Strange));
         prop_assert_eq!(given.load(Ordering::SeqCst), cap + 1);
         let (mut body, _) = endless(cap, step);
-        prop_assert_eq!(drain(&mut body, cap).map(|b| b.len()), Ok(cap));
+        prop_assert_eq!(drain(&mut body, cap, &NEVER).map(|b| b.len()), Ok(cap));
     }
 
     #[test]

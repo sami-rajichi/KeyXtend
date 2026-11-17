@@ -1,10 +1,12 @@
 //! A run's pieces and texts: parts filling each piece in order, texts told in the pieces' order whatever order the
-//! replies come in, a fault ending the run before its later pieces go, `Cancel`, `at_once` and `per_min`, a blank run,
-//! a text past its cap, a shape not built yet, a repeated id and the key's test.
+//! replies come in, a fault ending the run before its later pieces go, `Cancel` before and during an upload, `at_once`
+//! and `per_min` over every try, a blank run, a text past its cap, a shape not built yet, a repeated id and the key's
+//! test.
 
 use super::bench::{Bench, Swap, WAIT, faked, fault, gate, part, send, text};
 use super::*;
 use kx_ipc::{MAX_NET_TEXT_BYTES, NetAsk, NetFault, NetNote};
+use kx_platform_net::{NetError, SEND_CHUNK};
 use std::sync::mpsc;
 
 #[test]
@@ -206,4 +208,48 @@ fn a_key_test_tells_done_or_its_fault() {
         b.ask(NetAsk::Test { id: 13, call });
         assert_eq!(b.until(1), [want]);
     }
+}
+
+#[test]
+fn cancel_stops_an_upload_between_its_chunks_and_tells_nothing() {
+    let (mut b, http, _) = faked([said("x")]);
+    let ((started, seen), (free, freed)) = (mpsc::channel(), mpsc::channel::<()>());
+    let (started, freed) = (Mutex::new(started), Mutex::new(freed));
+    http.on_chunk(move |n| {
+        if n == 1 {
+            lock(&started).send(()).unwrap();
+            lock(&freed).recv_timeout(WAIT).unwrap();
+        }
+    });
+    let size = SEND_CHUNK * 3;
+    b.ask(send(
+        14,
+        call(),
+        run_of(&[u32::try_from(size).unwrap()], 1, 1, 20),
+    ));
+    b.ask(part(14, 0, sound(size, 1)));
+    seen.recv_timeout(WAIT).unwrap();
+    b.ask(NetAsk::Cancel { id: 14 });
+    free.send(()).unwrap();
+    b.one();
+    assert!(b.out.is_empty(), "nothing is told after Cancel");
+    assert_eq!(
+        http.called()[0].body.len(),
+        SEND_CHUNK,
+        "no chunk after the first"
+    );
+}
+
+#[test]
+fn a_retry_and_a_429_resend_wait_their_turn_within_per_min() {
+    let (mut b, http, clock) = faked([Act::Fail(NetError::Net), said("x")]);
+    b.ask(send(15, call(), run_of(&[2], 2, 1, 1)));
+    b.ask(part(15, 0, sound(2, 1)));
+    assert_eq!(b.until(2).last(), Some(&NetNote::Done { id: 15 }));
+    assert_eq!((clock.waits(), http.called().len()), (vec![60_000], 2));
+    let (mut b, _, clock) = faked([busy(&[("retry-after", "3")]), said("x")]);
+    b.ask(send(16, call(), run_of(&[2], 1, 1, 1)));
+    b.ask(part(16, 0, sound(2, 1)));
+    assert_eq!(b.until(2).last(), Some(&NetNote::Done { id: 16 }));
+    assert_eq!(clock.waits(), [3000, 60_000]);
 }

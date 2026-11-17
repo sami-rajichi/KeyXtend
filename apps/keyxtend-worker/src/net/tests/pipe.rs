@@ -1,18 +1,16 @@
 //! The job's loop over pipes: a dictation sent and told in order, then goodbye; no note holds the key or the sound; a
-//! clean end and a broken frame; a request that panics told as `Gone` while the loop goes on.
+//! clean end and a broken frame; a request that panics told as `Gone` while the loop goes on; and a panic on an ask told
+//! as `Gone` on that ask and on every run still live.
 
-use super::bench::{fault, part, send, text};
+use super::bench::{WAIT, fault, part, send, text};
 use super::*;
-use crate::net::run;
-use kx_ipc::{NetAsk, NetFault, NetNote};
+use crate::net::job::Job;
+use crate::net::{Event, Notes, act, run};
+use kx_ipc::{IpcError, NetAsk, NetFault, NetNote};
 use kx_platform_net::{Call, Hop, Http, NetError, Reply};
 use std::io::{self, Cursor, Read, Write};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-use std::time::Duration;
-
-/// The longest the test waits for the loop's next write before it fails; no test sleeps.
-const WAIT: Duration = Duration::from_secs(20);
 
 /// Input fed by the test, one frame at a time; it ends when the test drops its sender.
 struct Feed(Receiver<Vec<u8>>, Vec<u8>);
@@ -56,6 +54,20 @@ impl Http for Boom {
 
     fn deliver(&self, _: &Call<'_>) -> Result<Reply, NetError> {
         panic!("the test server panics");
+    }
+}
+
+/// Notes whose first `tell` panics, as a broken writer might; later notes are kept.
+struct Shaky(bool, Vec<NetNote>);
+
+impl Notes for Shaky {
+    fn tell(&mut self, note: NetNote) -> Result<(), IpcError> {
+        if !self.0 {
+            self.0 = true;
+            panic!("the test's notes panic once");
+        }
+        self.1.push(note);
+        Ok(())
     }
 }
 
@@ -153,4 +165,25 @@ fn a_request_that_panics_is_gone_and_the_loop_goes_on() {
     assert_eq!(notes(&until(&rx, 1)), [fault(3, NetFault::Gone)]);
     tx.send(frame(&NetAsk::Bye)).unwrap();
     job.join().unwrap();
+}
+
+#[test]
+fn a_panic_on_an_ask_tells_gone_on_it_and_on_every_live_run() {
+    let kit = Kit {
+        http: Arc::new(FakeHttp::new([])),
+        clock: Arc::new(Still::default()),
+    };
+    let (mut job, mut out) = (Job::new(kit, mpsc::channel().0), Shaky(false, Vec::new()));
+    for id in [1, 2] {
+        let ask = send(id, call(), run_of(&[2], 1, 1, 20));
+        assert!(act(&mut job, Event::Ask(ask), &mut out).is_ok());
+    }
+    let azure = send(3, call_to(URL, NetShape::Azure), run_of(&[2], 1, 1, 20));
+    assert!(act(&mut job, Event::Ask(azure), &mut out).is_ok());
+    let (asked, live) = out.1.split_first().unwrap();
+    assert_eq!(asked, &fault(3, NetFault::Gone));
+    let mut live = live.to_vec();
+    live.sort_by_key(NetNote::id);
+    assert_eq!(live, [fault(1, NetFault::Gone), fault(2, NetFault::Gone)]);
+    assert!(job.live().is_empty());
 }

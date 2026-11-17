@@ -1,7 +1,8 @@
 //! One run: its pieces' sound taken in order into wiped WAV buffers sized once, each full piece sent on its own thread
-//! within `at_once` and `per_min`, and the texts told in the pieces' order. A part out of order or past its piece is
+//! within `at_once` and the run's pace, and the texts told in the pieces' order. A part out of order or past its piece is
 //! `Gone`; a run whose every text is blank ends `Empty`, as the service heard nothing.
 
+use super::pace::Pace;
 use super::send::{self, Sending};
 use super::shape;
 use super::wav;
@@ -9,14 +10,12 @@ use super::{Event, Kit, Said, Told};
 use kx_ipc::{NetCall, NetFault, NetNote, NetRun};
 use std::collections::{BTreeMap, VecDeque};
 use std::panic::{self, AssertUnwindSafe};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use zeroize::Zeroizing;
 
-/// The span `per_min` counts requests in, in ms.
-const MINUTE_MS: u64 = 60_000;
 /// The name of each request's thread.
 const SENDER: &str = "speech-net-send";
 
@@ -27,7 +26,6 @@ pub struct Run {
     sending: Arc<Sending>,
     sizes: Vec<u32>,
     at_once: usize,
-    per_min: usize,
     /// The piece being filled, as a WAV file.
     filling: Option<Zeroizing<Vec<u8>>>,
     /// The next piece to fill.
@@ -36,8 +34,6 @@ pub struct Run {
     waiting: VecDeque<(u16, Zeroizing<Vec<u8>>)>,
     /// Requests sent and not answered.
     flying: usize,
-    /// When each request started or will start, for `per_min`.
-    starts: VecDeque<u64>,
     /// Texts come out of order, told in order.
     texts: BTreeMap<u16, Zeroizing<String>>,
     /// The next index to tell.
@@ -63,6 +59,7 @@ impl Run {
             model: run.model,
             lang: run.lang,
             tries: run.tries,
+            pace: Some(Mutex::new(Pace::new(usize::from(run.limits.per_min)))),
             dropped: Arc::new(AtomicBool::new(false)),
         };
         Ok(Self {
@@ -70,12 +67,10 @@ impl Run {
             sending: Arc::new(sending),
             sizes: run.sizes,
             at_once: usize::from(run.limits.at_once),
-            per_min: usize::from(run.limits.per_min),
             filling: None,
             next: 0,
             waiting: VecDeque::new(),
             flying: 0,
-            starts: VecDeque::new(),
             texts: BTreeMap::new(),
             told: 0,
             heard: false,
@@ -114,7 +109,8 @@ impl Run {
         Ok(())
     }
 
-    /// Sends the waiting pieces within `at_once` and `per_min`, each on its own thread telling `tx` as run `id`.
+    /// Sends the waiting pieces within `at_once`, each on its own thread telling `tx` as run `id`; each try there waits
+    /// its turn in the run's pace.
     ///
     /// # Errors
     /// `Gone` when a thread cannot start.
@@ -123,16 +119,11 @@ impl Run {
             let Some((index, wav)) = self.waiting.pop_front() else {
                 return Ok(());
             };
-            let delay = self.pace(kit.clock.now_ms());
             let (kit, tx, sending, serial) =
                 (kit.clone(), tx.clone(), self.sending.clone(), self.serial);
             let work = move || {
-                let said = panic::catch_unwind(AssertUnwindSafe(|| {
-                    if delay > 0 {
-                        kit.clock.wait(delay);
-                    }
-                    send::piece(&kit, &sending, &wav)
-                }));
+                let said =
+                    panic::catch_unwind(AssertUnwindSafe(|| send::piece(&kit, &sending, &wav)));
                 let said = Said::Piece(index, said.unwrap_or(Err(NetFault::Gone)));
                 let _ = tx.send(Event::Told(Told { id, serial, said }));
             };
@@ -143,25 +134,6 @@ impl Run {
             self.flying += 1;
         }
         Ok(())
-    }
-
-    /// The ms to wait before the next request, so no minute holds more than `per_min` starts.
-    fn pace(&mut self, now: u64) -> u64 {
-        while self
-            .starts
-            .front()
-            .is_some_and(|&s| s.saturating_add(MINUTE_MS) <= now)
-        {
-            self.starts.pop_front();
-        }
-        let last = self.starts.back().copied().unwrap_or(now);
-        let full = self.starts.len().checked_sub(self.per_min);
-        let free = full
-            .and_then(|at| self.starts.get(at))
-            .map_or(now, |s| s + MINUTE_MS);
-        let at = now.max(last).max(free);
-        self.starts.push_back(at);
-        at - now
     }
 
     /// Takes piece `index`'s outcome: the notes now due in order, and whether the run ended.

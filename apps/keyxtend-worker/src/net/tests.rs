@@ -142,9 +142,14 @@ fn head(status: u16, extra: &[(&str, &str)]) -> Head {
 
 /// A 429 answer with the headers `extra` and the fixture's rate message.
 fn busy(extra: &[(&str, &str)]) -> Act {
+    busy_with(extra, RATE)
+}
+
+/// A 429 answer with the headers `extra` and `body`.
+fn busy_with(extra: &[(&str, &str)], body: &[u8]) -> Act {
     Act::Answer(
         head(BUSY, extra),
-        vec![kx_platform_net::fake::Step::Bytes(RATE.to_vec())],
+        vec![kx_platform_net::fake::Step::Bytes(body.to_vec())],
     )
 }
 
@@ -163,6 +168,7 @@ const BLANK: &[u8] = include_bytes!("tests/replies/blank.json");
 const NO_TEXT: &[u8] = include_bytes!("tests/replies/no-text.json");
 const KEY_BAD: &[u8] = include_bytes!("tests/replies/key.json");
 const RATE: &[u8] = include_bytes!("tests/replies/rate.json");
+const RATE_HOUR: &[u8] = include_bytes!("tests/replies/rate-hour.json");
 const CREDIT: &[u8] = include_bytes!("tests/replies/credit.json");
 const LANGUAGE: &[u8] = include_bytes!("tests/replies/language.json");
 const BAD: &[u8] = include_bytes!("tests/replies/bad.json");

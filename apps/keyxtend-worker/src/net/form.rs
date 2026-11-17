@@ -10,7 +10,7 @@ pub use body::escape;
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use body::{File, Text};
-use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetShape};
+use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
 use std::ops::RangeInclusive;
@@ -40,14 +40,16 @@ const RESET: &str = "x-ratelimit-reset-requests";
 const KEEP: &[&str] = &[RETRY, LEFT, RESET];
 /// `LEFT` once the day's requests are used.
 const NONE_LEFT: &str = "0";
-/// Words of an error that means no credit, and of one that means the language.
+/// The exact error codes or types that mean no credit (`OpenAI`'s error page): a rate limit's message may name billing,
+/// so words never decide it.
 const CREDIT: &[&str] = &[
-    "credit",
     "insufficient_quota",
-    "billing",
-    "balance",
-    "payment",
+    "credit_balance_exhausted",
+    "organization_spend_limit_exceeded",
+    "project_spend_limit_exceeded",
+    "organization_usage_limit_exceeded",
 ];
+/// Words of an error that means the language, read only on a 400 or a 422.
 const LANGUAGE: &[&str] = &["language"];
 /// Statuses whose reply holds what was asked.
 const DONE: RangeInclusive<u16> = 200..=299;
@@ -61,32 +63,51 @@ enum Then {
     Busy,
 }
 
-/// One row of the status table: the statuses it covers, words the error must hold (none: any), and what it means.
+/// What a row asks of the error beside its status.
+#[derive(Copy, Clone)]
+enum Says {
+    /// Nothing.
+    Any,
+    /// Its code or type is exactly one of these.
+    Code(&'static [&'static str]),
+    /// Its words hold one of these.
+    Words(&'static [&'static str]),
+}
+
+/// One row of the status table: the statuses it covers, what the error must say, and what it means.
 struct Row {
     codes: RangeInclusive<u16>,
-    says: &'static [&'static str],
+    says: Says,
     then: Then,
 }
 
 /// The status table, from Groq's error page: the first row that matches wins, and a status no row takes is strange.
 const TABLE: &[Row] = &[
     // No redirect is followed, so the key and the sound reach one address only.
-    row(300..=399, &[], Then::Fault(NetFault::Strange)),
-    row(401..=401, &[], Then::Fault(NetFault::Key)),
-    row(403..=403, &[], Then::Fault(NetFault::Key)),
-    row(402..=402, &[], Then::Fault(NetFault::Credit)),
-    row(400..=499, CREDIT, Then::Fault(NetFault::Credit)),
-    row(413..=413, &[], Then::Fault(NetFault::TooBig)),
-    row(400..=400, LANGUAGE, Then::Fault(NetFault::Language)),
-    row(422..=422, LANGUAGE, Then::Fault(NetFault::Language)),
-    row(429..=429, &[], Then::Busy),
+    row(300..=399, Says::Any, Then::Fault(NetFault::Strange)),
+    row(401..=401, Says::Any, Then::Fault(NetFault::Key)),
+    row(403..=403, Says::Any, Then::Fault(NetFault::Key)),
+    row(402..=402, Says::Any, Then::Fault(NetFault::Credit)),
+    row(400..=499, Says::Code(CREDIT), Then::Fault(NetFault::Credit)),
+    row(413..=413, Says::Any, Then::Fault(NetFault::TooBig)),
+    row(
+        400..=400,
+        Says::Words(LANGUAGE),
+        Then::Fault(NetFault::Language),
+    ),
+    row(
+        422..=422,
+        Says::Words(LANGUAGE),
+        Then::Fault(NetFault::Language),
+    ),
+    row(429..=429, Says::Any, Then::Busy),
     // Groq's flex tier is full, or the service is down.
-    row(498..=498, &[], Then::Fault(NetFault::Network)),
-    row(500..=599, &[], Then::Fault(NetFault::Network)),
+    row(498..=498, Says::Any, Then::Fault(NetFault::Network)),
+    row(500..=599, Says::Any, Then::Fault(NetFault::Network)),
 ];
 
 /// A table row.
-const fn row(codes: RangeInclusive<u16>, says: &'static [&'static str], then: Then) -> Row {
+const fn row(codes: RangeInclusive<u16>, says: Says, then: Then) -> Row {
     Row { codes, says, then }
 }
 
@@ -95,16 +116,14 @@ impl Shape for Form {
         let NetShape::Form(form) = &piece.call.shape else {
             return Err(NetFault::Range);
         };
-        let own = [MODEL, FORMAT, FILE, form.lang.as_ref()];
-        let repeats = |name: &str| own.iter().any(|o| o.eq_ignore_ascii_case(name));
-        if form.fixed.iter().any(|f| repeats(&f.name)) {
-            return Err(NetFault::Range);
-        }
         let lang = if form.list {
             Cow::Owned(format!("{}{LIST}", form.lang))
         } else {
             Cow::Borrowed(form.lang.as_ref())
         };
+        if repeats(form, &lang) {
+            return Err(NetFault::Range);
+        }
         let model = piece.model.map(|m| Text::of(MODEL, m));
         let fixed = form.fixed.iter().map(|f| Text::of(&f.name, &f.value));
         let texts: Vec<Text<'_>> = model
@@ -160,11 +179,21 @@ impl Shape for Form {
     }
 }
 
+/// True when a fixed field repeats one of the form's own names, `lang` as sent included, in any case.
+fn repeats(form: &NetForm<'_>, lang: &str) -> bool {
+    let own = [MODEL, FORMAT, FILE, form.lang.as_ref(), lang];
+    let taken = |name: &str| own.iter().any(|o| o.eq_ignore_ascii_case(name));
+    form.fixed.iter().any(|f| taken(&f.name))
+}
+
 /// What an answer that is not done means, by the first table row that takes it.
 fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
-    let takes = |r: &&Row| {
-        r.codes.contains(&head.status) && (r.says.is_empty() || reply::says(body, r.says))
+    let said = |says: Says| match says {
+        Says::Any => true,
+        Says::Code(codes) => reply::coded(body, codes),
+        Says::Words(words) => reply::says(body, words),
     };
+    let takes = |r: &&Row| r.codes.contains(&head.status) && said(r.says);
     match TABLE.iter().find(takes).map(|r| r.then) {
         Some(Then::Fault(fault)) => Verdict::Fault(fault),
         Some(Then::Busy) => busy(head),

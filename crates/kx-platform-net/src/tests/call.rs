@@ -1,8 +1,11 @@
-//! `Http::call` over the fake: a POST's verb, headers and body sent as given, a head that would break refused before
-//! anything is sent, kept headers matched in any case, a redirect handed back unfollowed, and no value in any `Debug`.
+//! `Http::call` over the fake: a POST's verb, headers and body sent as given, the body in chunks that end once the
+//! call is stopped, a head that would break refused before anything is sent, kept headers matched in any case, a
+//! redirect handed back unfollowed, and no value in any `Debug`.
 
 use crate::fake::{Act, FakeHttp, Step};
-use crate::{Call, Field, Head, Http, NetError, Target, Verb, wait_ms};
+use crate::{Call, Field, Head, Http, NetError, SEND_CHUNK, Target, Verb, wait_ms};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 /// The address the calls go to.
 const URL: &str = "https://api.example/v1/audio";
@@ -12,6 +15,8 @@ const KEY: &[u8] = b"Bearer kx-test-key-not-real";
 const STALL_S: u16 = 30;
 /// The status of a reply that holds what was asked.
 const OK: u16 = 200;
+/// A stop flag no test sets.
+static NEVER: AtomicBool = AtomicBool::new(false);
 
 fn target() -> Target {
     Target::parse(URL).unwrap()
@@ -32,6 +37,7 @@ fn call<'a>(
         body,
         keep,
         stall_s: STALL_S,
+        stop: &NEVER,
     }
 }
 
@@ -165,4 +171,44 @@ fn no_debug_print_or_error_shows_a_header_value_or_the_body() {
         "{called}"
     );
     assert!(!NetError::Header.to_string().contains(&*key));
+}
+
+#[test]
+fn a_body_goes_in_chunks_in_order() {
+    let (http, t) = (FakeHttp::new([Act::with(OK, b"{}")]), target());
+    let chunks = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::clone(&chunks);
+    http.on_chunk(move |n| seen.store(n, Ordering::SeqCst));
+    let body: Vec<u8> = (0..SEND_CHUNK * 2 + 5)
+        .map(|i| u8::try_from(i % 251).unwrap())
+        .collect();
+    let reply = http.call(&call(&t, Verb::Post, &[], &body, &[]));
+    assert_eq!(reply.unwrap().head.status, OK);
+    assert_eq!(http.called()[0].body, body);
+    assert_eq!(chunks.load(Ordering::SeqCst), 3);
+}
+
+#[test]
+fn a_stopped_call_writes_no_more_of_its_body_and_takes_no_answer() {
+    let (http, t) = (FakeHttp::new([Act::with(OK, b"{}")]), target());
+    let stop = Arc::new(AtomicBool::new(false));
+    let flag = Arc::clone(&stop);
+    http.on_chunk(move |n| flag.store(n == 1, Ordering::SeqCst));
+    let body = vec![7u8; SEND_CHUNK * 3];
+    let mut sent = call(&t, Verb::Post, &[], &body, &[]);
+    sent.stop = &*stop;
+    assert_eq!(http.call(&sent).err(), Some(NetError::Stopped));
+    assert_eq!(
+        http.called()[0].body.len(),
+        SEND_CHUNK,
+        "one chunk, then none"
+    );
+    let reply = http.call(&call(&t, Verb::Post, &[], b"", &[]));
+    assert_eq!(reply.unwrap().head.status, OK, "the answer was not taken");
+    let early = FakeHttp::new([]);
+    assert_eq!(early.call(&sent).err(), Some(NetError::Stopped));
+    assert!(
+        early.called()[0].body.is_empty(),
+        "stopped before the first chunk"
+    );
 }
