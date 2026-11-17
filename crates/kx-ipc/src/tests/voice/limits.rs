@@ -4,10 +4,10 @@
 use crate::limits::MIB;
 use crate::voice::wire as voice_wire;
 use crate::{
-    LEVEL_HZ, MAX_FIXED, MAX_KEY_BYTES, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES,
-    MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN,
-    NET_TRIES, NET_WAIT_S, PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S,
-    SOUND_HZ, STALL_S, THREADS,
+    LEVEL_HZ, MAX_FIXED, MAX_PIECES, MAX_RECORD_BYTES, MAX_SOUND_BYTES, MAX_SOUND_MS,
+    MAX_SOUND_PIECES, MAX_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN, NET_TRIES, NET_WAIT_S,
+    PAD_MS, PART_EXT, PIECE_S, RECORD_MAX_S, SAMPLE_BYTES, SILENCE_STOP_S, SOUND_HZ, STALL_S,
+    THREADS,
 };
 
 /// `ElevenLabs`' cap on one file in MB, the largest a service row names.
@@ -71,7 +71,7 @@ fn the_part_name_is_a_lower_case_extension() {
 }
 
 #[test]
-fn the_cloud_ranges_are_the_plans_and_fit_their_widths() {
+fn the_cloud_ranges_are_the_plans_and_never_zero() {
     assert_eq!(NET_WAIT_S, 5..=300, "the plan's net_wait_s bound");
     assert_eq!(NET_TRIES, 1..=5, "the plan's net_tries bound");
     let starts: [u32; 3] = [
@@ -81,6 +81,6 @@ fn the_cloud_ranges_are_the_plans_and_fit_their_widths() {
     ];
     assert_eq!(starts, [1; 3], "a row's limit is never zero");
     assert!(NET_MAX_MB.contains(&ELEVEN_MB), "{NET_MAX_MB:?}");
-    assert!(u16::try_from(MAX_KEY_BYTES).is_ok() && u8::try_from(MAX_FIXED).is_ok());
+    // The key's and the fixed fields' widths are the net frames' own (`tests/net.rs`).
     const { assert!(MAX_FIXED >= 1, "OpenRouter's keep-nothing field") };
 }

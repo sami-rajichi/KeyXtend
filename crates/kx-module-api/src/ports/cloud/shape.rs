@@ -3,13 +3,10 @@
 
 use crate::ports::TAG_LEN;
 pub use kx_ipc::MAX_FIXED;
+use kx_ipc::rules::{form_value, token};
 
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
 pub const MAX_FIELD_VALUE: usize = kx_ipc::MAX_NAME_BYTES;
-/// The marks a field's or a header's name may hold besides ASCII letters and digits.
-const NAME_MARKS: &[u8] = b"-_";
-/// The one byte a fixed field's value may hold besides visible ASCII.
-const SPACE: u8 = b' ';
 
 /// The request shape a service row names; `speech-net` holds one adapter per shape.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -65,10 +62,9 @@ pub struct FormField {
 }
 
 impl FormField {
-    /// True for a plain name and a value of visible ASCII and spaces within `MAX_FIELD_VALUE`.
+    /// True for a plain name and a value of visible ASCII and spaces within `MAX_FIELD_VALUE` (`rules::form_value`).
     fn fits(&self) -> bool {
-        let plain = |b: u8| b.is_ascii_graphic() || b == SPACE;
-        let value = self.value.len() <= MAX_FIELD_VALUE && self.value.bytes().all(plain);
+        let value = self.value.len() <= MAX_FIELD_VALUE && form_value(&self.value).is_ok();
         name_ok(&self.name) && value
     }
 }
@@ -92,8 +88,8 @@ impl KeyHeader {
     }
 }
 
-/// True for a name within `TAG_LEN` of ASCII letters, digits and `NAME_MARKS`, which no request's head misreads.
+/// True for a name within `TAG_LEN` of ASCII letters, digits, `-` and `_` (`rules::token`), which no request's head
+/// misreads.
 fn name_ok(name: &str) -> bool {
-    let plain = |b: u8| b.is_ascii_alphanumeric() || NAME_MARKS.contains(&b);
-    TAG_LEN.contains(&name.len()) && name.bytes().all(plain)
+    TAG_LEN.contains(&name.len()) && token(name).is_ok()
 }

@@ -197,6 +197,30 @@ pub const MAX_KEY_BYTES: usize = KIB;
 /// The most fixed fields an upload form adds: `OpenRouter`'s keep-nothing `provider` needs one, and 4 leaves room
 /// for a new row's own without a frame change.
 pub const MAX_FIXED: usize = 4;
+/// A service row's seconds a request: from the shortest piece the `voice` job cuts to the longest dictation.
+pub const NET_MAX_S: RangeInclusive<u16> = (*PIECE_S.start() as u16)..=*RECORD_MAX_S.end();
+/// Seconds in a day, the unit of a renewal's cap.
+const DAY_S: u32 = 24 * 60 * 60;
+/// The most days an allowance's renewal may be away: a month, the longest period a service's free use names.
+const RENEW_DAYS: u32 = 31;
+/// How far away an allowance's renewal may be, in seconds.
+pub const NET_RENEW_S: RangeInclusive<u32> = 1..=RENEW_DAYS * DAY_S;
+/// The longest text of one cloud piece in UTF-8 bytes: `MAX_TEXT_BYTES` for each top `piece_s` the longest piece holds.
+pub const MAX_NET_TEXT_BYTES: usize =
+    MAX_TEXT_BYTES * (*RECORD_MAX_S.end() / *PIECE_S.end() as u16) as usize;
+/// The largest reply `speech-net` reads from a service: an hour's words with their timings stay near 2 MiB, so this
+/// leaves room yet bounds a hostile reply.
+pub const MAX_NET_REPLY_BYTES: usize = 16 * MIB;
+
+/// The most bytes one cloud piece may hold within a row's `max_mb` and `max_s`, in whole samples.
+#[must_use]
+pub fn piece_bytes(max_mb: u32, max_s: u16) -> usize {
+    let by_size = u64::from(max_mb).saturating_mul(MIB as u64);
+    let by_size = usize::try_from(by_size).unwrap_or(usize::MAX);
+    let by_time = usize::from(max_s) * SOUND_HZ * SAMPLE_BYTES;
+    let most = by_size.min(by_time);
+    most - most % SAMPLE_BYTES
+}
 
 /// The longest of `names`, in bytes.
 const fn longest(names: &[&str]) -> usize {
@@ -241,3 +265,5 @@ const _: () = assert!(MAX_SOUND_PIECES <= u16::MAX as usize);
 const _: () = assert!(MAX_PIECES <= u16::MAX as usize);
 const _: () = assert!(*SILENCE_STOP_S.start() > 0);
 const _: () = assert!(PART_EXT.len() < MAX_PATH_BYTES);
+// A service's reply holds the longest text it may yield.
+const _: () = assert!(MAX_NET_REPLY_BYTES >= MAX_NET_TEXT_BYTES);

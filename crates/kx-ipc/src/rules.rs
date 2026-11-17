@@ -1,9 +1,21 @@
 //! What a field's content may hold, checked by both sides after its length: a number within its range, a short ASCII
-//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag, host
-//! and host-list rules are public, so the ports and the fetch refuse what the frames refuse.
+//! name, a host name, a path without a NUL and a name without control characters or hidden format marks. The tag, host,
+//! host-list and cloud request rules are public, so the ports and the jobs refuse what the frames refuse.
 
 use crate::error::IpcError;
+use crate::limits::{HTTPS, MAX_HOST_BYTES};
 use std::ops::RangeInclusive;
+
+/// The marks a request's header or form field name may hold besides ASCII letters and digits.
+const TOKEN_MARKS: &[u8] = b"-_";
+/// The one byte a form value may hold besides visible ASCII.
+const SPACE: u8 = b' ';
+/// What ends an address's host and port: its path or its query.
+const HOST_END: [char; 2] = ['/', '?'];
+/// Parts a host from its port.
+const PORT_MARK: char = ':';
+/// Marks a user name or a fragment, which a service's address never holds.
+const NOT_IN: [char; 2] = ['@', '#'];
 
 /// Format marks that reorder or hide text in a right-to-left panel: the Arabic letter mark, zero-width and direction
 /// marks, embeddings and overrides, invisible operators, isolates and the byte-order mark.
@@ -25,12 +37,74 @@ pub(crate) fn within<T: PartialOrd>(n: T, range: &RangeInclusive<T>) -> Result<T
     }
 }
 
-/// Refuses anything but visible ASCII, for a language code, a runner or a card's id.
+/// Refuses anything but visible ASCII, for a language code, a runner, a card's id or a model's id.
 ///
 /// # Errors
 /// `BadField` for any other byte.
 pub fn tag(text: &str) -> Result<(), IpcError> {
-    ok_if(text.bytes().all(|b| b.is_ascii_graphic()))
+    visible(text.as_bytes())
+}
+
+/// Refuses a cloud key unless it is visible ASCII, so no request's head misreads it.
+///
+/// # Errors
+/// `BadField` for any other byte.
+pub fn key(bytes: &[u8]) -> Result<(), IpcError> {
+    visible(bytes)
+}
+
+/// Refuses a request's header or form field name unless it is ASCII letters, digits and `TOKEN_MARKS`.
+///
+/// # Errors
+/// `BadField` for any other byte.
+pub fn token(text: &str) -> Result<(), IpcError> {
+    ok_if(
+        text.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || TOKEN_MARKS.contains(&b)),
+    )
+}
+
+/// Refuses a form field's value unless it is visible ASCII and spaces, so it holds no line break.
+///
+/// # Errors
+/// `BadField` for any other byte.
+pub fn form_value(text: &str) -> Result<(), IpcError> {
+    ok_if(text.bytes().all(|b| b.is_ascii_graphic() || b == SPACE))
+}
+
+/// Refuses a service's address unless it is `HTTPS`, visible ASCII without `NOT_IN`, then a plain host (`listed`,
+/// never `UNDER`) within `MAX_HOST_BYTES` and maybe `:` and a port from 1; its requests may reach only that host.
+///
+/// # Errors
+/// `BadField` for anything else.
+pub fn https(text: &str) -> Result<(), IpcError> {
+    let plain = text.starts_with(HTTPS) && !text.contains(NOT_IN);
+    visible(text.as_bytes())?;
+    let (host, port) = host_port(text);
+    let digits = |p: &str| p.bytes().all(|b| b.is_ascii_digit());
+    let port_ok = port.is_none_or(|p| digits(p) && p.parse::<u16>().is_ok_and(|n| n > 0));
+    let short = !host.starts_with(UNDER) && host.len() <= MAX_HOST_BYTES;
+    ok_if(plain && port_ok && short)?;
+    listed(host)
+}
+
+/// The host of an address `https` takes, in lower case: the only one its requests may reach.
+#[must_use]
+pub fn https_host(text: &str) -> &str {
+    host_port(text).0
+}
+
+/// The host and maybe the port of an address, between `HTTPS` and its path or query.
+fn host_port(text: &str) -> (&str, Option<&str>) {
+    let rest = text.strip_prefix(HTTPS).unwrap_or_default();
+    let auth = rest.split(HOST_END).next().unwrap_or_default();
+    auth.rsplit_once(PORT_MARK)
+        .map_or((auth, None), |(host, port)| (host, Some(port)))
+}
+
+/// Refuses any byte but visible ASCII.
+fn visible(bytes: &[u8]) -> Result<(), IpcError> {
+    ok_if(bytes.iter().all(u8::is_ascii_graphic))
 }
 
 /// Refuses a host that is not lower-case letters, digits, dots and hyphens.

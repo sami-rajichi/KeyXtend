@@ -2,7 +2,7 @@
 //! pieces, each refused outside its range. The `[voice]` settings and the services table check against these ranges.
 
 use super::{CloudFault, CloudShape, HttpsUrl, KeyHeader};
-use crate::ports::{JobLimits, MB, SAMPLE_BYTES, SOUND_HZ, TAG_LEN};
+use crate::ports::{JobLimits, SAMPLE_BYTES, TAG_LEN};
 use crate::{Redacted, Secret, SecretBytes};
 pub use kx_ipc::MAX_KEY_BYTES;
 use std::ops::RangeInclusive;
@@ -25,21 +25,16 @@ impl CloudLimits {
     /// `max_mb`'s range, the frames' own.
     pub const MAX_MB: RangeInclusive<u32> = kx_ipc::NET_MAX_MB;
     /// `max_s`' range: from the shortest piece the `voice` job cuts to the longest dictation, the frames' own.
-    pub const MAX_S: RangeInclusive<u16> =
-        RangeInclusive::new(*kx_ipc::PIECE_S.start() as u16, *kx_ipc::RECORD_MAX_S.end());
+    pub const MAX_S: RangeInclusive<u16> = kx_ipc::NET_MAX_S;
     /// `per_min`'s range, the frames' own.
     pub const PER_MIN: RangeInclusive<u16> = kx_ipc::NET_PER_MIN;
     /// `at_once`' range, the frames' own.
     pub const AT_ONCE: RangeInclusive<u8> = kx_ipc::NET_AT_ONCE;
 
-    /// The most bytes one piece may hold: within both `max_mb` and `max_s`, in whole samples.
+    /// The most bytes one piece may hold: within both `max_mb` and `max_s`, in whole samples, as the frames check.
     #[must_use]
     pub fn piece_bytes(&self) -> usize {
-        let by_size = u64::from(self.max_mb).saturating_mul(MB);
-        let by_size = usize::try_from(by_size).unwrap_or(usize::MAX);
-        let by_time = usize::from(self.max_s) * SOUND_HZ * SAMPLE_BYTES;
-        let most = by_size.min(by_time);
-        most - most % SAMPLE_BYTES
+        kx_ipc::piece_bytes(self.max_mb, self.max_s)
     }
 
     /// The name of the first value outside its range, if any.
@@ -153,9 +148,8 @@ impl CloudTest {
 
 /// The name of the first of a request's shape, header and key that could break it, if any.
 fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'static str> {
-    let key = key.expose();
-    let key_ok =
-        (1..=MAX_KEY_BYTES).contains(&key.len()) && key.bytes().all(|b| b.is_ascii_graphic());
+    let key = key.expose().as_bytes();
+    let key_ok = (1..=MAX_KEY_BYTES).contains(&key.len()) && kx_ipc::rules::key(key).is_ok();
     first_odd([
         (shape.fits(), "shape"),
         (header.fits(), "header"),

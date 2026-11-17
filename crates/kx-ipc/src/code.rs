@@ -1,5 +1,5 @@
-//! One-byte wire codes for the frame kinds, image codecs and failure reasons; code 0 is never used. The voice and
-//! fetch jobs keep their own codes beside their frames.
+//! One-byte wire codes for the frame kinds, image codecs and failure reasons; code 0 is never used. The voice, fetch
+//! and net jobs keep their own codes beside their frames.
 
 mod lens;
 
@@ -117,6 +117,22 @@ pub(crate) enum Kind {
     Fetched = 47,
     /// The fetch job stopped, for a fixed reason.
     FetchFailed = 48,
+    /// The host sends a dictation's pieces to a cloud service.
+    NetSend = 49,
+    /// The host hands a part of a piece's sound to the speech-net job.
+    NetSound = 50,
+    /// The host asks whether a key works.
+    NetTest = 51,
+    /// The host drops a run or a test.
+    NetCancel = 52,
+    /// The host tells the speech-net job to end.
+    NetBye = 53,
+    /// The speech-net job sends a piece's text.
+    NetText = 54,
+    /// The speech-net job told every piece, or the key works.
+    NetDone = 55,
+    /// The speech-net job stopped, for a fixed reason.
+    NetFailed = 56,
 }
 
 impl Code for Kind {
@@ -169,6 +185,14 @@ impl Code for Kind {
         Self::Progress,
         Self::Fetched,
         Self::FetchFailed,
+        Self::NetSend,
+        Self::NetSound,
+        Self::NetTest,
+        Self::NetCancel,
+        Self::NetBye,
+        Self::NetText,
+        Self::NetDone,
+        Self::NetFailed,
     ];
 
     fn code(self) -> u8 {

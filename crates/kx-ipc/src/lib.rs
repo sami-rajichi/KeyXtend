@@ -1,6 +1,7 @@
 //! The frames between the keyboard and its worker processes, the worker's command words and exit codes, and the backup
-//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042). A frame has a fixed header
-//! and a payload capped by its kind, and every field is checked before it is trusted or a buffer is allocated.
+//! box's facts, one copy for both sides (ADR-0004, ADR-0034 decision 5, ADR-0038, ADR-0042, ADR-0047). A frame has a
+//! fixed header and a payload capped by its kind, and every field is checked before it is trusted or a buffer is
+//! allocated.
 
 #![forbid(unsafe_code)]
 
@@ -11,6 +12,7 @@ mod error;
 mod fetch;
 mod frame;
 mod limits;
+mod net;
 mod reply;
 pub mod rules;
 mod vault;
@@ -21,8 +23,8 @@ mod wire;
 pub use ask::Ask;
 pub use code::{Codec, Fault, Why};
 pub use command::{
-    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, REFUSED_EXIT, SOUND_FLAG, VAULT_JOB,
-    VOICE_JOB,
+    CLEAN_EXIT, FETCH_JOB, MAX_PIXELS_FLAG, MEDIA_JOB, NET_JOB, REFUSED_EXIT, SOUND_FLAG,
+    VAULT_JOB, VOICE_JOB,
 };
 pub use error::IpcError;
 pub use fetch::ask::FetchAsk;
@@ -44,8 +46,12 @@ pub use limits::{
     THREADS,
 };
 pub use limits::{
-    MAX_FIXED, MAX_KEY_BYTES, NET_AT_ONCE, NET_MAX_MB, NET_PER_MIN, NET_TRIES, NET_WAIT_S,
+    MAX_FIXED, MAX_KEY_BYTES, MAX_NET_REPLY_BYTES, MAX_NET_TEXT_BYTES, NET_AT_ONCE, NET_MAX_MB,
+    NET_MAX_S, NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, piece_bytes,
 };
+pub use net::ask::NetAsk;
+pub use net::note::NetNote;
+pub use net::{NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetRun, NetShape};
 pub use reply::Reply;
 pub use vault::ask::VaultAsk;
 pub use vault::reply::VaultReply;

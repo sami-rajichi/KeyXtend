@@ -6,12 +6,13 @@ use crate::limits::{
     DRAW_HEAD, FAILED_LEN, MAKE_HEAD, MAX_ASK_LEN, MAX_IMAGE_BYTES, MAX_REPLY_LEN, MIN_IMAGE_BYTES,
     PIXELS_HEAD, RGBA_BYTES,
 };
+use crate::net::wire as net;
 use crate::vault::wire as vault;
 use crate::voice::wire as voice;
 use crate::wire::ONE;
 use std::ops::RangeInclusive;
 
-/// No payload: a goodbye, an ask that carries only its id, or the fetched note.
+/// No payload: a goodbye, an ask that carries only its id, or the fetched or net done note.
 const NONE: RangeInclusive<usize> = 0..=0;
 /// A payload of one byte: a yes or no, a level, a stage or a percentage.
 const ONE_BYTE: RangeInclusive<usize> = ONE..=ONE;
@@ -36,6 +37,9 @@ impl Kind {
                 | Self::FetchResume
                 | Self::FetchCancel
                 | Self::Fetched
+                | Self::NetBye
+                | Self::NetCancel
+                | Self::NetDone
         )
     }
 
@@ -56,6 +60,11 @@ impl Kind {
             Self::CardChecked => voice::CHECKED_LEAST..=voice::CHECKED_MOST,
             Self::Fetch => fetch::GET_LEAST..=fetch::GET_MOST,
             Self::Progress => fetch::PROGRESS_LEN..=fetch::PROGRESS_LEN,
+            Self::NetSend => net::SEND_LEAST..=net::SEND_MOST,
+            Self::NetSound => net::SOUND_LEAST..=net::SOUND_MOST,
+            Self::NetTest => net::TEST_LEAST..=net::TEST_MOST,
+            Self::NetText => net::TEXT_LEAST..=net::TEXT_MOST,
+            Self::NetFailed => net::FAULT_LEAST..=net::FAULT_MOST,
             Self::Pixels => PIXELS_HEAD + RGBA_BYTES..=MAX_REPLY_LEN,
             Self::MakeDib => MAKE_HEAD + MIN_IMAGE_BYTES..=MAKE_HEAD + MAX_IMAGE_BYTES,
             Self::Dib => MIN_IMAGE_BYTES..=MAX_IMAGE_BYTES,
