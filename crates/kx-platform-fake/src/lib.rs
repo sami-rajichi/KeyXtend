@@ -1,7 +1,7 @@
 //! A deterministic fake platform for tests: a clock that moves only when told, given folders, and recording fakes
 //! of the platform's ports, from input, layouts and the UI to the clipboard, the sealed shelf, pictures, the
-//! calendar, the backup box and its places, speech, model files, the folder reveal, the session and seeded randomness.
-//! Only tests, tools and test-only crates use it.
+//! calendar, the backup box and its places, speech and cloud speech, model files, the folder reveal, the session and
+//! seeded randomness. Only tests, tools and test-only crates use it.
 
 #![forbid(unsafe_code)]
 
@@ -9,6 +9,7 @@ mod boxes;
 mod calendar;
 mod clip;
 mod clock;
+mod cloud;
 mod field;
 mod folder;
 mod hidden;
@@ -43,6 +44,7 @@ pub use boxes::{BoxCall, FakeBoxes};
 pub use calendar::{FakeCalendar, PARIS};
 pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
+pub use cloud::{CloudAnswer, CloudCalls, CloudLog, CloudState, CloudTestLog, FakeCloud};
 pub use field::FakeFieldWatch;
 pub use folder::FakeFolderReveal;
 pub use hidden::FakeHidden;
