@@ -10,8 +10,8 @@ mod models;
 mod options;
 
 pub use cloud::{
-    AddressFault, CloudCard, CloudSheet, Fact, FactArg, FactValue, KeyCheck, ServiceMark,
-    ServiceName, ServiceRow, ServiceSheet, UsePrice,
+    AddressFault, CardPart, CloudCard, CloudSheet, Fact, FactArg, FactValue, KeyCheck, LinesPart,
+    ServiceMark, ServiceName, ServiceRow, ServiceSheet, UsePrice,
 };
 pub use compare::{CompareCloud, CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};

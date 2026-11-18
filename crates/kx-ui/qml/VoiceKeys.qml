@@ -1,6 +1,7 @@
 // A service's key page (mock-up svcPage()): the key line as dots with Paste and Test and the test's answer, the address
 // and Other model lines with why one was refused, the keep-nothing switch, and where keys are made. The lines only draw:
-// the key never shows as text, and a click never focuses them (ADR-0013, ADR-0040). It takes at least a page of rows.
+// the key never shows as text, and a click never focuses them (ADR-0013, ADR-0040). It takes a page of rows' height; a
+// typed address puts its lines on a second page the pager turns to (ADR-0008).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -19,15 +20,17 @@ Item {
     readonly property var names: host.names
     readonly property real gap: pn.row_gap_px * s
     readonly property real hintPx: pn.hint_px[0] * s * (host.ar ? lk.look.arabic_scale : 1)
-    readonly property var lines: shows ? [sheet.key].concat(sheet.address ? [sheet.address] : [], [sheet.model]) : []
+    readonly property var lines: shows ? [sheet.key, sheet.address, sheet.model].filter(l => !!l) : []
+    // The pager's room beside the lines while the page has more than one part.
+    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     readonly property alias body: col
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height)
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
 
     Column {
         id: col
         x: keys.pn.body_pad_px[1] * keys.s + keys.pn.row_px[2] * keys.s
-        width: keys.width - 2 * x
+        width: keys.width - 2 * x - keys.pager
         anchors.verticalCenter: parent.verticalCenter
         spacing: keys.pn.body_gap_px * keys.s
         Repeater {
@@ -104,6 +107,13 @@ Item {
             alert: false
             button: keys.shows && keys.sheet.link ? keys.sheet.link.button : null
         }
+    }
+
+    VoicePager {
+        anchors.right: parent.right
+        anchors.rightMargin: keys.pn.body_pad_px[1] * keys.s
+        anchors.verticalCenter: parent.verticalCenter
+        host: keys.host
     }
 
     // A line under a typed line: the test's answer or why it was refused, in warn_ink when it warns, read at once.

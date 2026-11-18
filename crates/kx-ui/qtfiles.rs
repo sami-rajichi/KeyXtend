@@ -158,6 +158,7 @@ pub const QML: &[&str] = &[
     "qml/VoiceSides.qml",
     "qml/VoiceCard.qml",
     "qml/VoiceKeys.qml",
+    "qml/VoicePager.qml",
     "qml/Shimmer.qml",
     "qml/TrayMenu.qml",
     "qml/TrayPicture.qml",

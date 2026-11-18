@@ -33,6 +33,8 @@ Window {
     readonly property real radius: lk.look.window_radius_px * pn.radius_share
     readonly property var sheet: view.sheet
     readonly property bool asking: view.foot.some(b => b.kind === names.acts.confirm)
+    // A question holds the pages still, but a card's, which asks about the whole card, lets its two parts turn.
+    readonly property bool held: asking && sheet.is !== names.sheets.card
     readonly property int per: Math.max(1, rows)
     // A row fits its tick box, its tile, or its name over its line and a progress line, in the tallest of its fonts, so
     // every page and language keeps the panel's size.
@@ -94,10 +96,10 @@ Window {
     function press(b) {
         send(b.kind, b.id, b.arg);
     }
-    // A notch of the wheel: what the page buttons do, silently, and nothing past either end or while a question waits.
+    // A notch of the wheel: what the page buttons do, silently, and nothing past either end or while the pages are held.
     function turn(by) {
         const at = view.pages.at + by;
-        if (!asking && at >= 0 && at < view.pages.count)
+        if (!held && at >= 0 && at < view.pages.count)
             send(names.acts.wheel, "", by);
     }
 

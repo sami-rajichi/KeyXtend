@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 mod cloud;
 mod device;
+mod long;
 mod sheets;
 
 /// The fixture's file name.
@@ -203,7 +204,7 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
 
 /// Every panel the tests draw, by name.
 fn panels() -> Vec<(&'static str, Shown)> {
-    let cloud = cloud::panels().into_iter();
+    let cloud = cloud::panels().into_iter().chain(long::panels());
     model_panels()
         .into_iter()
         .chain(other_panels())

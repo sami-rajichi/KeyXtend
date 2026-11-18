@@ -8,7 +8,7 @@ mod offer;
 pub use offer::Offered;
 
 use kx_module_api::ports::{
-    CloudAsk, CloudCard, Date, Fact, ServiceMark, Unavailable, UsePrice, fits_iso,
+    CardPart, CloudAsk, CloudCard, Date, Fact, ServiceMark, Unavailable, UsePrice, fits_iso,
 };
 
 use crate::services::{Address, Model, Service, Services};
@@ -139,6 +139,7 @@ impl<'a> Cloud<'a> {
             warn: facts.warn.clone(),
             untested: service.untested,
             on: self.entry(s, service).and_then(ServiceOn::day),
+            part: CardPart::Voice,
         }
     }
 

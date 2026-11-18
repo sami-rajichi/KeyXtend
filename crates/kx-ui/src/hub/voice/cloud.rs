@@ -18,7 +18,7 @@ use crate::i18n::keys::{
 };
 use crate::i18n::{Said, clean};
 use kx_module_api::ports::{
-    CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, Fact, LocalUse,
+    CardPart, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, Fact, LocalUse,
     PanelButton, ServiceMark, ServiceName, ServiceRow, UsePrice, VoiceTab,
 };
 use serde::Serialize;
@@ -209,7 +209,7 @@ pub(super) fn card(cx: &Cx<'_>, c: &CloudCard) -> Page {
     page
 }
 
-/// The card's facts in their fixed order, the least billed last when the service rounds up.
+/// The facts of the card's shown part in their fixed order, the least billed last when the service rounds up.
 fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
     let label = |id: &str| t.text(&format!("{VOICE_CARD}{id}"));
     let fact = |id, label, group, f: &Fact| FactView {
@@ -224,10 +224,14 @@ fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
         fact(id, label, FACT_PRICE, &u.price)
     };
     let [place, trains, keeps, free, light, heavy] = CARD_LABELS;
+    if c.part == CardPart::Voice {
+        return vec![
+            fact(place, label(place), FACT_WHERE, &c.place),
+            fact(trains, label(trains), FACT_TRAINS, &c.trains),
+            fact(keeps, label(keeps), FACT_KEEPS, &c.keeps),
+        ];
+    }
     let mut out = vec![
-        fact(place, label(place), FACT_WHERE, &c.place),
-        fact(trains, label(trains), FACT_TRAINS, &c.trains),
-        fact(keeps, label(keeps), FACT_KEEPS, &c.keeps),
         fact(free, label(free), FACT_FREE, &c.free),
         used(light, &c.light),
         used(heavy, &c.heavy),

@@ -4,7 +4,7 @@
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudCard, CloudFault, CloudRow, CloudSheet,
+    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudFault, CloudRow, CloudSheet,
     CompareCloud, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg,
     FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep,
     ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
@@ -37,7 +37,7 @@ fn usd(name: &str, h: u32) -> FactArg {
 }
 
 /// A service by its own name.
-fn named(name: &str) -> ServiceName {
+pub(super) fn named(name: &str) -> ServiceName {
     ServiceName::Named(name.to_owned())
 }
 
@@ -77,7 +77,7 @@ fn cloud(on: bool) -> VoiceSheet {
 }
 
 /// Groq's card, read on `read`, asking or switched on, `old` with its warning band.
-fn card(old: bool) -> VoiceSheet {
+pub(super) fn card(old: bool) -> VoiceSheet {
     let day = |d| Date::new(2026, 11, d).expect("a day");
     let switch = arg(
         "switch",
@@ -110,12 +110,13 @@ fn card(old: bool) -> VoiceSheet {
         warn,
         untested: !old,
         on: old.then(|| day(10)),
+        part: CardPart::Voice,
     }))
 }
 
 /// Groq's key page with its key tested, the keep-nothing row's with a refused model, or the Custom row's
 /// with an address that is not HTTPS.
-fn lines(which: &str) -> VoiceSheet {
+pub(super) fn lines(which: &str) -> VoiceSheet {
     let text = |s: &str| Redacted::new(s.to_owned());
     let mut s = ServiceSheet {
         service: named("Groq"),
@@ -130,6 +131,7 @@ fn lines(which: &str) -> VoiceSheet {
         keep: None,
         site: Some("console.groq.com".to_owned()),
         acts: CloudButton::ALL.to_vec(),
+        part: None,
     };
     if which == "router" {
         (s.service, s.mark, s.check) = (named("OpenRouter"), ServiceMark::Ready, KeyCheck::NoTest);

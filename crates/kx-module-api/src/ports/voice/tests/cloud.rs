@@ -179,14 +179,14 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
     holds(&shown, &parts);
 }
 
-#[test]
-fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_and_age() {
+/// `ElevenLabs`' card, its price part on show, with the training warning and old facts.
+fn elevenlabs() -> CloudCard {
     let price = |hours, cents| UsePrice {
         hours,
         price: fact("one", vec![arg("amount", usd(cents))]),
     };
     let switch = FactValue::Text("Use my data for training".into());
-    let card = CloudCard {
+    CloudCard {
         service: ServiceName::Named("ElevenLabs".into()),
         place: fact("us", Vec::new()),
         trains: Fact {
@@ -204,8 +204,13 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_a
         warn: Some(fact("trains", vec![arg("sw", switch)])),
         untested: true,
         on: None,
-    };
-    let shown = shown(VoiceSheet::Card(Box::new(card)));
+        part: CardPart::Price,
+    }
+}
+
+#[test]
+fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_and_age() {
+    let shown = shown(VoiceSheet::Card(Box::new(elevenlabs())));
     let parts = [
         "by-default",
         "warn: true",
@@ -219,6 +224,7 @@ fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_a
         "Count(10)",
         "untested: true",
         "on: None",
+        "part: Price",
     ];
     holds(&shown, &parts);
 }
@@ -238,6 +244,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         keep: Some(true),
         site: None,
         acts: vec![CloudButton::Paste, CloudButton::Test],
+        part: Some(LinesPart::Model),
     };
     let shown = shown(VoiceSheet::Service(sheet));
     assert!(!shown.contains("56"), "a key's length is a secret: {shown}");
@@ -251,6 +258,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
             "model_na: true",
             "model_refused: true",
             "keep: Some(true)",
+            "part: Some(Model)",
             "Paste",
         ],
     );

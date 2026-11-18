@@ -1,6 +1,7 @@
 // A service's card (mock-up cardPage()): each fact's label in a column, then its sentence, a warning fact in warn_ink;
 // under a rule, the day the facts were read with the link to the service's page, the words after it in warn_ink once
-// they are old, and the Untested line. It takes at least a page of rows' height, as the mock-up's .card does (ADR-0047).
+// they are old, and the Untested line. It takes a page of rows' height, its facts in two parts the pager turns, so the
+// panel keeps its size (ADR-0008, ADR-0047).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -21,14 +22,16 @@ Item {
     readonly property real gap: pn.row_gap_px * s
     readonly property real scale: host.ar ? lk.look.arabic_scale : 1
     readonly property real hintPx: pn.hint_px[0] * s * scale
+    // The pager's room beside the facts while the card has more than one page.
+    readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     readonly property alias body: col
 
-    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + Math.max(host.pageH, col.height)
+    height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
 
     Column {
         id: col
         x: card.pn.body_pad_px[1] * card.s + card.side
-        width: card.width - 2 * x
+        width: card.width - 2 * x - card.pager
         anchors.verticalCenter: parent.verticalCenter
         spacing: card.pn.body_gap_px * card.s
         Column {
@@ -80,6 +83,13 @@ Item {
             icon: card.lk.icons.voice.panel.cloud.untested
             text: card.shows ? card.sheet.untested || "" : ""
         }
+    }
+
+    VoicePager {
+        anchors.right: parent.right
+        anchors.rightMargin: card.pn.body_pad_px[1] * card.s
+        anchors.verticalCenter: parent.verticalCenter
+        host: card.host
     }
 
     // A sentence in parts, a service's own words apart from the rest (ADR-0022), from the right in Arabic.

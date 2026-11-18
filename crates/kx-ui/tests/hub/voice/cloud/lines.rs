@@ -1,13 +1,14 @@
 //! A service's key page through the hub: the key as dots with Paste and Test and the test's answer, where keys are
-//! made and that the key is sealed, a refused address or model or a busy Paste each with its reason (carries 1, 5), and
-//! the keep-nothing switch with a model no host of which keeps nothing (edge 17).
+//! made and that the key is sealed, a refused address or model or a busy Paste each with its reason (carries 1, 5),
+//! the keep-nothing switch with a model no host of which keeps nothing (edge 17), and its two parts for a typed address.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, KeyCheck, ServiceMark, ServiceName, ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, KeyCheck, LinesPart, ServiceMark, ServiceName, ServiceSheet,
+    VoiceSheet,
 };
 use kx_ui::voice_acts::{KEEP, SERVICE};
 use serde_json::Value;
@@ -27,6 +28,7 @@ fn groq_lines() -> ServiceSheet {
         keep: None,
         site: Some("console.groq.com".to_owned()),
         acts: CloudButton::ALL.to_vec(),
+        part: None,
     }
 }
 
@@ -153,4 +155,31 @@ fn keep_nothing_says_why_a_model_with_no_such_host_cannot_be_used() {
         (Some("Only hosts that keep nothing"), Some(true))
     );
     assert_eq!(keep["kind"], KEEP);
+}
+
+#[test]
+fn a_key_page_in_two_parts_shows_the_key_then_the_address_model_and_keep_nothing() {
+    let mut lines = custom_lines();
+    (lines.keep, lines.site) = (Some(true), Some("console.groq.com".to_owned()));
+    lines.part = Some(LinesPart::Key);
+    let p = lines_json(lines.clone());
+    let sheet = &p["sheet"];
+    assert_eq!(sheet["key"]["caption"], "Key");
+    assert!(sheet["check"].is_object(), "the test's answer");
+    assert_eq!(sheet["link"]["text"], "Make a key at console.groq.com");
+    for later in ["address", "model", "keep"] {
+        assert_eq!(sheet[later], Value::Null, "{later} on the next page");
+    }
+    lines.part = Some(LinesPart::Model);
+    let p = lines_json(lines);
+    let sheet = &p["sheet"];
+    for first in ["key", "check", "link"] {
+        assert_eq!(sheet[first], Value::Null, "{first} on the first page");
+    }
+    let typed = (
+        sheet["address"]["text"].as_str(),
+        sheet["model"]["text"].as_str(),
+    );
+    assert_eq!(typed, (Some("http://lan.example"), Some("no such/model")));
+    assert_eq!(sheet["keep"]["on"], true);
 }

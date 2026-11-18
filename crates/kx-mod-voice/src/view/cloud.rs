@@ -3,10 +3,10 @@
 //! old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
 
 use kx_module_api::ports::{
-    CloudButton, CloudSheet, Pages, ServiceMark, ServiceRow, VoiceSheet, VoiceTab,
+    CardPart, CloudButton, CloudSheet, Pages, ServiceMark, ServiceRow, VoiceSheet, VoiceTab,
 };
 
-use super::Facts;
+use super::{Facts, short};
 use crate::panel::{Key, Page, Panel};
 use crate::services::Service;
 
@@ -34,15 +34,28 @@ impl Panel {
 
     /// The shown service's card on today's date; it asks while the service is off or its newer terms wait.
     pub(super) fn card_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
-        let pages = self.single();
         let (Some(cloud), Some(row)) = (facts.cloud, self.shown_row(facts)) else {
             return self.cloud_sheet(facts);
         };
         let mut card = cloud.card(facts.settings, row, facts.now.date);
+        let (part, pages) = self.parted(&CardPart::ALL);
+        card.part = part.unwrap_or(card.part);
         if self.asking(facts) {
             card.on = None;
         }
         (VoiceSheet::Card(Box::new(card)), pages)
+    }
+
+    /// Part `at` of `parts`, one to a page of the panel, kept within them, as a card or a key page shows no rows.
+    pub(super) fn parted<T: Copy>(&mut self, parts: &[T]) -> (Option<T>, Pages) {
+        self.shown.clear();
+        let count = parts.len().max(1);
+        self.at = self.at.min(count - 1);
+        let pages = Pages {
+            at: short(self.at),
+            count: short(count),
+        };
+        (parts.get(self.at).copied(), pages)
     }
 
     /// The cloud buttons the shown page offers now: the ticked service's on the Cloud page, the link on a card, and

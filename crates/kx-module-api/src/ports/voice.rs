@@ -12,12 +12,12 @@ pub use bar::{
     VoicePage, VoiceText,
 };
 pub use panel::{
-    AddressFault, CardCheck, CloudBand, CloudCard, CloudRow, CloudSheet, CompareCloud, CompareRow,
-    CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends,
-    Fact, FactArg, FactValue, FailedCheck, FetchState, FolderLine, FolderList, HistoryRow,
-    HistorySheet, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet, OptionRow, OptionUnit,
-    OptionValue, RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable,
-    UsePrice, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
+    AddressFault, CardCheck, CardPart, CloudBand, CloudCard, CloudRow, CloudSheet, CompareCloud,
+    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
+    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchState, FolderLine, FolderList,
+    HistoryRow, HistorySheet, KeyCheck, LinesPart, ModelRow, ModelSide, ModelState, ModelsSheet,
+    OptionRow, OptionUnit, OptionValue, RunStep, ServiceMark, ServiceName, ServiceRow,
+    ServiceSheet, Unavailable, UsePrice, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
 };
 
 use crate::{Capability, Event, Secret};

@@ -1,12 +1,12 @@
-//! A service's card through the hub: its facts filled from the services table's row with the least billed (carry 3),
-//! a name from the service's pages kept as its own part (carry 2), the day read, its warning tone once old (edge 15),
-//! the Untested line (edge 18), the warning band, and Confirm or the day it was switched on.
+//! A service's card through the hub: its facts filled from the services table's row, the voice then the price, with the
+//! least billed (carry 3), a name from the service's pages kept as its own part (carry 2), the day read, its warning tone
+//! once old (edge 15), the Untested line (edge 18), the warning band, and Confirm or the day it was switched on.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{count, daily, fact, groq, usd};
 use crate::Rig;
 use kx_module_api::ports::{
-    CloudCard, Date, FactArg, FactValue, ServiceName, UsePrice, VoiceSheet,
+    CardPart, CloudCard, Date, FactArg, FactValue, ServiceName, UsePrice, VoiceSheet,
 };
 use kx_ui::voice_acts::{CONFIRM, SERVICE};
 use serde_json::Value;
@@ -44,6 +44,7 @@ pub fn groq_card() -> CloudCard {
         warn: None,
         untested: true,
         on: None,
+        part: CardPart::Voice,
     }
 }
 
@@ -99,7 +100,7 @@ const GROQ_FACTS: [(&str, &str, &str); 7] = [
 ];
 
 #[test]
-fn a_card_fills_its_facts_from_the_row_with_the_least_billed() {
+fn a_card_fills_its_facts_from_the_row_the_voice_then_the_price_with_the_least_billed() {
     let p = card_json(groq_card());
     assert_eq!(
         (p["page"].as_str(), p["sheet"]["is"].as_str()),
@@ -113,7 +114,17 @@ fn a_card_fills_its_facts_from_the_row_with_the_least_billed() {
         .iter()
         .map(|(a, b, c)| ((*a).to_owned(), (*b).to_owned(), (*c).to_owned(), false))
         .collect();
-    assert_eq!(facts(&p), want);
+    assert_eq!(facts(&p), want[..3], "the voice");
+    let price = card_json(CloudCard {
+        part: CardPart::Price,
+        ..groq_card()
+    });
+    assert_eq!(facts(&price), want[3..], "the price");
+    assert_eq!(
+        price["sheet"]["read"], p["sheet"]["read"],
+        "the day read on each"
+    );
+    assert_eq!(price["sheet"]["untested"], p["sheet"]["untested"]);
     let parts = &p["sheet"]["facts"][2]["value"]["parts"];
     assert_eq!(parts[1]["text"], "Settings → Data Controls");
     assert_eq!(
@@ -150,12 +161,13 @@ fn a_card_asks_with_the_day_read_its_link_and_untested() {
 fn old_facts_take_the_warning_tone_and_a_card_switched_on_names_its_day() {
     let mut card = groq_card();
     (card.old, card.untested, card.on, card.bills) = (true, false, Some(day(12)), None);
+    card.part = CardPart::Price;
     let p = card_json(card);
     let old = "They may be out of date; check the service’s page.";
     assert_eq!(p["sheet"]["read"]["old"], old, "edge 15");
     assert_eq!(p["sub"], "Switched on 12/11/2026");
     assert_eq!(p["sheet"]["untested"], Value::Null);
-    assert_eq!(facts(&p).len(), 6, "no least billed");
+    assert_eq!(facts(&p).len(), 3, "no least billed");
     assert_eq!(
         (p["line"].as_null(), buttons(&p["foot"]).len()),
         (Some(()), 0)

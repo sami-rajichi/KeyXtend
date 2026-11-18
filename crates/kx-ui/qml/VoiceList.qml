@@ -93,21 +93,11 @@ Item {
             }
         }
     }
-    Pager {
+    VoicePager {
         anchors.right: parent.right
         anchors.rightMargin: listing.side
         anchors.verticalCenter: parent.verticalCenter
-        page: listing.view.pages.at
-        pages: listing.view.pages.count
-        canBack: listing.view.pages.at > 0 && !listing.host.asking
-        canOn: listing.view.pages.at < listing.view.pages.count - 1 && !listing.host.asking
-        ui: listing.host.ui
-        lk: listing.lk
-        res: listing.host.res
-        s: listing.s
-        backId: listing.host.res.uid(listing.names.group, listing.names.ids.pageBack)
-        onId: listing.host.res.uid(listing.names.group, listing.names.ids.pageOn)
-        onTurn: by => listing.host.send(listing.names.acts.page, "", by)
+        host: listing.host
     }
     Column {
         visible: !!listing.sheet.empty

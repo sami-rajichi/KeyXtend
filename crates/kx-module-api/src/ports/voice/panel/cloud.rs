@@ -57,6 +57,26 @@ listed! {
     }
 }
 
+listed! {
+    /// The part of a card a page shows, as a card takes two pages of the panel (ADR-0008).
+    pub enum CardPart ("Every part, in page order.") {
+        /// Where the voice goes, whether the service trains on it, and what it keeps.
+        Voice,
+        /// Free use, the prices of light and heavy use, and the least a request bills.
+        Price,
+    }
+}
+
+listed! {
+    /// The part of a key page a page shows, when a typed address makes it two pages of the panel (ADR-0008).
+    pub enum LinesPart ("Every part, in page order.") {
+        /// The key line, its test's answer and where keys are made.
+        Key,
+        /// The address and Other model lines and the keep-nothing switch.
+        Model,
+    }
+}
+
 /// A cloud service as a line names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ServiceName {
@@ -176,6 +196,8 @@ pub struct CloudCard {
     pub untested: bool,
     /// The day it was switched on; `None` while off, so the card asks to switch it on.
     pub on: Option<Date>,
+    /// The facts the shown page holds; the day read and Untested show on each.
+    pub part: CardPart,
 }
 
 /// A service's key page: the key line with Paste and Test, the address and model lines and its switch.
@@ -205,4 +227,6 @@ pub struct ServiceSheet {
     pub site: Option<String>,
     /// The page's buttons that act now; the others stay in their place dimmed.
     pub acts: Vec<CloudButton>,
+    /// The lines the shown page holds; `None` while one page holds them all.
+    pub part: Option<LinesPart>,
 }

@@ -16,6 +16,7 @@ use crate::settings::{PICKS, SERVICES};
 
 mod answers;
 mod lines;
+mod parts;
 mod trial;
 
 /// Applies the `[voice]` writes in `dos`, as the settings would after the actor wrote them.

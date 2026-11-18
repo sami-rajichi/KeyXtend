@@ -18,7 +18,7 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CloudButton, CloudWhy, PanelButton, ServiceName, ServiceSheet, Unavailable,
+    CloudButton, CloudWhy, LinesPart, PanelButton, ServiceName, ServiceSheet, Unavailable,
 };
 use serde::Serialize;
 
@@ -44,13 +44,13 @@ pub(super) struct LineView {
 }
 
 /// The key page's body: the key line, the test's answer, the address and model lines, keep-nothing and where keys are
-/// made.
+/// made; a part of two shows only its own.
 #[derive(Serialize)]
 pub(super) struct KeyPage {
-    key: LineView,
+    key: Option<LineView>,
     check: Option<Hint>,
     address: Option<LineView>,
-    model: LineView,
+    model: Option<LineView>,
     keep: Option<Switch>,
     link: Option<Lead>,
 }
@@ -59,31 +59,28 @@ pub(super) struct KeyPage {
 pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
     let t = cx.t;
     let b = |x| cloud::button(t, x, &s.acts);
-    let key = LineView {
-        id: KEY_LINE,
-        caption: t.text(VOICE_KEY_LINE),
-        hint: t.text(VOICE_KEY_HINT),
-        text: String::new(),
-        dots: *s.key.expose(),
-        mask: Some(t.text(VOICE_MASK)),
-        fault: None,
-        buttons: vec![b(CloudButton::Paste), b(CloudButton::Test)],
-    };
+    let (first, rest) = (
+        s.part != Some(LinesPart::Model),
+        s.part != Some(LinesPart::Key),
+    );
     let check = key_check_id(s.check).map(|id| Hint::new(id, t.text(&format!("{VOICE_KEY}{id}"))));
     let link = s.site.as_ref().map(|site| {
         let text = t.voice_with(VOICE_KEY_LINK, &[(SITE, clean(site))]);
         let open = t.text(&word(panel_button_id(PanelButton::Open)));
         Lead::new(text, b(CloudButton::Link).labelled(open))
     });
+    let keep = |on| Switch::new(t, KEEP, t.text(VOICE_KEEP_NOTHING), on);
     let sheet = Sheet::Service(Box::new(KeyPage {
-        key,
-        check,
-        address: s.address.as_ref().map(|a| address(t, s, a)),
-        model: model(t, s),
-        keep: s
-            .keep
-            .map(|on| Switch::new(t, KEEP, t.text(VOICE_KEEP_NOTHING), on)),
-        link,
+        key: first.then(|| key(t, s)),
+        check: check.filter(|_| first),
+        address: s
+            .address
+            .as_ref()
+            .filter(|_| rest)
+            .map(|a| address(t, s, a)),
+        model: rest.then(|| model(t, s)),
+        keep: s.keep.filter(|_| rest).map(keep),
+        link: link.filter(|_| first),
     }));
     let sub = t.text(&mark_key(service_mark(s.mark)));
     let mut page = Page::new(SERVICE_PAGE, cloud::service(t, &s.service), sub, sheet);
@@ -94,6 +91,21 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
         b(CloudButton::Off),
     ];
     page
+}
+
+/// The key line: its dots, the mask `PanelLine` draws them from, and Paste and Test.
+fn key(t: &I18n, s: &ServiceSheet) -> LineView {
+    let b = |x| cloud::button(t, x, &s.acts);
+    LineView {
+        id: KEY_LINE,
+        caption: t.text(VOICE_KEY_LINE),
+        hint: t.text(VOICE_KEY_HINT),
+        text: String::new(),
+        dots: *s.key.expose(),
+        mask: Some(t.text(VOICE_MASK)),
+        fault: None,
+        buttons: vec![b(CloudButton::Paste), b(CloudButton::Test)],
+    }
 }
 
 /// The address line with `a`: the Custom row's hint names an HTTPS host, a service's own its resource.
