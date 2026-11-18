@@ -29,7 +29,7 @@ impl Panel {
         (self.at, self.note, self.asked, self.hold) = (0, None, None, None);
         self.ticks.clear();
         self.cloud.next();
-        self.cloud.refused = None;
+        (self.cloud.refused, self.cloud.refused_model) = (None, None);
         match page {
             Page::Tab(VoiceTab::Models) => {
                 self.cloud.side = (ModelSide::Local, 0);

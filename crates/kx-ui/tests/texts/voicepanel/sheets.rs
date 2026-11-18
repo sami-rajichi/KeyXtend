@@ -170,6 +170,7 @@ pub fn running() -> VoiceSheet {
     let run = |name: &str, step| CompareRun {
         name: secret(name),
         step,
+        why: None,
     };
     VoiceSheet::Compare(CompareSheet::Running {
         at: 3,

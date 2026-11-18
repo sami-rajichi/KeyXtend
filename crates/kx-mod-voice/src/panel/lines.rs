@@ -80,7 +80,7 @@ impl Panel {
                 Vec::new()
             }
             ClipText::Busy => {
-                self.note = Some(BarHint::Fault);
+                self.cloud.check = KeyCheck::Busy;
                 Vec::new()
             }
         }
@@ -128,12 +128,24 @@ impl Panel {
         out
     }
 
-    /// The Other model line's id, kept in `services`; a new id drops the picks of the one before.
+    /// The Other model line's id, kept in `services`; a new id drops the picks of the one before. An id the row takes
+    /// but the frames refuse stays on the line with why, until the page changes.
     pub(super) fn type_model(&mut self, text: &Redacted<String>, facts: &Facts<'_>) -> Vec<Do> {
         let Some(id) = self.lines_id() else {
             return Vec::new();
         };
-        edit(facts, |c, s| c.type_model(s, &id, text.expose()))
+        let out = edit(facts, |c, s| c.type_model(s, &id, text.expose()));
+        let same = facts
+            .settings
+            .services
+            .get(&id)
+            .is_some_and(|e| &e.model == text.expose());
+        let other = facts
+            .cloud
+            .and_then(|c| c.row(&id))
+            .is_some_and(|r| r.other);
+        self.cloud.refused_model = (other && out.is_empty() && !same).then(|| text.clone());
+        out
     }
 
     /// `OpenRouter`'s keep-nothing switch on the key page.

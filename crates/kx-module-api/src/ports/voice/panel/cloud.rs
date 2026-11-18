@@ -52,6 +52,8 @@ listed! {
         Unfit,
         /// The row has no test call, so the first dictation tests the key.
         NoTest,
+        /// The clipboard was busy or gave no answer to Paste, which may be tried again.
+        Busy,
     }
 }
 
@@ -191,10 +193,12 @@ pub struct ServiceSheet {
     pub address: Option<Redacted<String>>,
     /// Why the address on the line was refused, which its warning names; `None` while it is kept or empty.
     pub address_fault: Option<AddressFault>,
-    /// The Other model line's typed id, empty for none.
+    /// The Other model line's typed id, or the one just refused, empty for none.
     pub model: Redacted<String>,
     /// The typed model has no host that keeps nothing while `keep` is on, so its line says why.
     pub model_na: bool,
+    /// The id on the Other model line was refused, as the frames cannot carry it, so its line says why.
+    pub model_refused: bool,
     /// `OpenRouter`'s keep-nothing switch, for a row that has one.
     pub keep: Option<bool>,
     /// The host where keys are made, which the link names; `None` for the Custom row.

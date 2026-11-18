@@ -57,7 +57,7 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 #[test]
 fn the_marks_and_buttons_are_the_designs() {
     use CloudButton::{Facts, Lines, Link, Paste, Remove, Test};
-    use KeyCheck::{Failed, NoTest, Refused, Testing, Unfit, Works};
+    use KeyCheck::{Busy, Failed, NoTest, Refused, Testing, Unfit, Works};
     use ServiceMark::{NeedsAddress, NeedsKey, Off, Ready};
     assert_eq!(
         ServiceMark::ALL,
@@ -83,6 +83,7 @@ fn the_marks_and_buttons_are_the_designs() {
         Failed,
         Unfit,
         NoTest,
+        Busy,
     ];
     assert_eq!(KeyCheck::ALL, checks);
 
@@ -233,6 +234,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         address_fault: Some(AddressFault::Host),
         model: hidden(2),
         model_na: true,
+        model_refused: true,
         keep: Some(true),
         site: None,
         acts: vec![CloudButton::Paste, CloudButton::Test],
@@ -247,6 +249,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
             "Untested",
             "address_fault: Some(Host)",
             "model_na: true",
+            "model_refused: true",
             "keep: Some(true)",
             "Paste",
         ],

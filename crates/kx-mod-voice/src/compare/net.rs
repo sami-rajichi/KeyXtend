@@ -41,9 +41,10 @@ impl Compare {
                 return Vec::new();
             }
             CloudNote::Done => self.score_remote(at, wait_ms),
-            CloudNote::Fault(_) => {
+            CloudNote::Fault(fault) => {
                 self.texts.retain(|(of, _), _| *of != at);
                 self.remotes[at].1 = RunStep::Failed;
+                self.faults.insert(at, fault);
             }
         }
         match self.stage {

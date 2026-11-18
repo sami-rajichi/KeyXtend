@@ -6,7 +6,7 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    BarHint, ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
+    ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
     VoiceClick, VoiceSheet, VoiceTab,
 };
 
@@ -142,12 +142,19 @@ fn a_paste_unanswered_within_take_ms_shows_busy_and_its_late_answer_is_dropped()
     rig.act(VoiceClick::Service(CloudButton::Paste));
     let take = asked(&rig);
     rig.advance(VoiceSettings::from_defaults().unwrap().take_wait());
-    let note = rig
-        .views()
-        .last()
-        .and_then(|v| v.panel.clone())
-        .and_then(|p| p.note);
-    assert_eq!(note, Some(BarHint::Fault), "the busy clipboard's note");
+    let panel = rig.views().last().and_then(|v| v.panel.clone());
+    let (note, check) = match panel {
+        Some(p) => match p.sheet {
+            VoiceSheet::Service(s) => (p.note, Some(s.check)),
+            _ => (p.note, None),
+        },
+        None => (None, None),
+    };
+    assert_eq!(
+        (note, check),
+        (None, Some(KeyCheck::Busy)),
+        "the busy clipboard's own line, not the general fault"
+    );
     rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&made_key())))));
     assert_eq!(sealed(&rig), None, "the late answer is dropped");
 }

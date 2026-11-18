@@ -127,6 +127,7 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     let run = |n: &str, step| CompareRun {
         name: name(n),
         step,
+        why: None,
     };
     let rows = vec![
         run("Whisper small", RunStep::Done { wait_ms: 2100 }),

@@ -11,7 +11,7 @@ pub use act::{Act, Entrant, Line, Plan, Remote};
 use std::collections::BTreeMap;
 
 use kx_module_api::ports::{
-    BarHint, CardId, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
+    BarHint, CardId, CloudFault, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
 };
 use kx_module_api::{Redacted, Secret};
 
@@ -59,6 +59,8 @@ pub struct Compare {
     /// The cloud models with where each stands, and their texts by model and piece until each ends.
     remotes: Vec<(Remote, RunStep)>,
     texts: BTreeMap<(usize, u16), Secret>,
+    /// Why each cloud model that failed did, by its place among the cloud models.
+    faults: BTreeMap<usize, CloudFault>,
     hint: Option<BarHint>,
 }
 
@@ -133,6 +135,7 @@ impl Compare {
             self.lines.clear();
             self.pieces.clear();
             (self.remotes, self.texts) = (Vec::new(), BTreeMap::new());
+            self.faults.clear();
             (self.heard, self.hint) = (false, None);
         }
     }
@@ -209,6 +212,15 @@ impl Compare {
         let locals = self.turns.iter().map(|t| (&t.entrant.name, t.step));
         let runs = locals.chain(self.remotes.iter().map(|(r, step)| (&r.name, *step)));
         Some((at, runs.collect()))
+    }
+
+    /// Why model `at` of `running`'s list failed, for a cloud model that did while the run shows; else `None`.
+    #[must_use]
+    pub fn why(&self, at: usize) -> Option<CloudFault> {
+        let remote = at.checked_sub(self.turns.len())?;
+        matches!(self.stage, Stage::Running(_))
+            .then(|| self.faults.get(&remote).copied())
+            .flatten()
     }
 
     /// The results shown, once the run ended.

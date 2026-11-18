@@ -25,7 +25,7 @@ fn secret(text: &str) -> Secret {
 }
 
 /// Groq on and keyed, on its key page.
-fn on_groq_lines() -> Rig {
+pub(super) fn on_groq_lines() -> Rig {
     let mut rig = on_cloud("");
     put(
         &mut rig,

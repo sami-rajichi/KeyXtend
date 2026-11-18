@@ -31,6 +31,8 @@ pub(crate) struct Clouds {
     pub(crate) test: Option<u32>,
     /// The address just refused, with why, until the page changes.
     pub(crate) refused: Option<(Redacted<String>, AddressFault)>,
+    /// The Other model id just refused, until the page changes.
+    pub(crate) refused_model: Option<Redacted<String>>,
     /// The Models page's side, and the page the other side was left on.
     pub(crate) side: (ModelSide, usize),
 }
@@ -46,6 +48,7 @@ impl Default for Clouds {
             take: None,
             test: None,
             refused: None,
+            refused_model: None,
             side: (ModelSide::Local, 0),
         }
     }

@@ -3,7 +3,7 @@
 
 use super::DeviceLabel;
 use super::cloud::ServiceName;
-use crate::ports::Date;
+use crate::ports::{CloudFault, Date};
 use crate::{Redacted, Secret};
 
 /// A cloud model Compare may send the recording to (ADR-0047); only a ticked one's service gets it.
@@ -40,6 +40,8 @@ pub struct CompareRun {
     pub name: Redacted<String>,
     /// Where it stands.
     pub step: RunStep,
+    /// Why a cloud model failed, its row's reason; `None` for a local model or one that did not fail.
+    pub why: Option<CloudFault>,
 }
 
 /// One model's numbers in Compare's table.

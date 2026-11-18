@@ -86,6 +86,22 @@ fn a_cloud_fault_fails_that_model_alone_and_the_run_ends_once_every_model_ended(
 }
 
 #[test]
+fn a_cloud_model_that_failed_keeps_its_reason_for_the_page() {
+    let (mut compare, take) = recorded_with(vec![entrant(1, false)], vec![remote(1), remote(2)]);
+    compare.note(take, done(0, 0));
+    assert_eq!(compare.why(1), None, "none before a fault");
+    compare.net(take, 0, CloudNote::Fault(CloudFault::Key), 0);
+    assert_eq!(steps(&compare)[1], RunStep::Failed);
+    assert_eq!(
+        (compare.why(0), compare.why(1), compare.why(2)),
+        (None, Some(CloudFault::Key), None),
+        "only the failed cloud model, after the local one"
+    );
+    compare.cancel();
+    assert_eq!(compare.why(1), None, "a new run forgets it");
+}
+
+#[test]
 fn cancel_drops_the_uploads_and_a_later_note_is_not_heard() {
     let (mut compare, take) = recorded_with(Vec::new(), vec![remote(1)]);
     let acts = compare.note(take, done(0, 0));

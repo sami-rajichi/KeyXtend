@@ -31,8 +31,11 @@ impl Panel {
             check: self.key_check(row),
             address,
             address_fault: refused.map(|(_, fault)| *fault),
-            model: Redacted::new(entry.map(|e| e.model.clone()).unwrap_or_default()),
+            model: self.cloud.refused_model.clone().unwrap_or_else(|| {
+                Redacted::new(entry.map(|e| e.model.clone()).unwrap_or_default())
+            }),
             model_na: false,
+            model_refused: self.cloud.refused_model.is_some(),
             keep: row.keep.as_ref().map(|_| entry.is_some_and(|e| e.keep)),
             site: row.keys.as_ref().map(|url| url.host().to_owned()),
             acts: self.cloud_acts(facts),

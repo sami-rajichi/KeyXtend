@@ -4,7 +4,7 @@
 
 use super::{SECRETS, english, hidden, keeps_secrets, secret};
 use crate::ports::voice::*;
-use crate::ports::{Date, Hundredths, Memory, Pages, Verdict, When};
+use crate::ports::{CloudFault, Date, Hundredths, Memory, Pages, Verdict, When};
 use crate::{Redacted, Zeroizing};
 
 /// 12 Nov 2026, Compare's last run in the mock-up.
@@ -199,6 +199,11 @@ fn comparing_shows_each_models_step_a_failed_one_too() {
     let run = |step| CompareRun {
         name: hidden(2),
         step,
+        why: None,
+    };
+    let refused = CompareRun {
+        why: Some(CloudFault::Key),
+        ..run(RunStep::Failed)
     };
     let running = CompareSheet::Running {
         at: 3,
@@ -206,7 +211,7 @@ fn comparing_shows_each_models_step_a_failed_one_too() {
         name: hidden(2),
         rows: vec![
             run(RunStep::Done { wait_ms: 2_100 }),
-            run(RunStep::Failed),
+            refused,
             run(RunStep::Writing),
             run(RunStep::Waiting),
         ],
@@ -217,6 +222,7 @@ fn comparing_shows_each_models_step_a_failed_one_too() {
         "of: 6",
         "wait_ms: 2100",
         "Failed",
+        "why: Some(Key)",
         "Writing",
         "Waiting",
     ];

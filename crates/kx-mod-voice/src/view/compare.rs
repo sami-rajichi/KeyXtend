@@ -16,10 +16,11 @@ impl Panel {
                 .get(at.unwrap_or(0))
                 .map(|(name, _)| (*name).clone())
                 .unwrap_or_default();
-            let runs = models.iter().map(|(name, step)| {
+            let runs = models.iter().enumerate().map(|(i, (name, step))| {
                 let run = CompareRun {
                     name: (*name).clone(),
                     step: *step,
+                    why: self.compare.why(i),
                 };
                 (Key::Plain, run)
             });
