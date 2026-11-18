@@ -1,6 +1,7 @@
 // A mark on a Voice panel row (mock-up .mk): a pill with its icon and word. In use takes the badge colours, a missing,
-// failed, other or waiting one is outlined, the rest sit on the chip colour; kx-theme checks each pair on every row
-// (drawn/voicepanel.rs). Readers hear its word.
+// failed, other, off, unavailable or waiting one is outlined, a warning takes the warning colours with no sign of its
+// own, the rest sit on the chip colour; kx-theme checks each pair on every row (drawn/voicepanel.rs). Readers hear its
+// word.
 import QtQuick
 
 Rectangle {
@@ -16,17 +17,19 @@ Rectangle {
     readonly property var names: host.names
     readonly property bool shown: names.lit.indexOf(markId) >= 0
     readonly property bool outlined: names.outlined.indexOf(markId) >= 0
-    readonly property string tone: shown ? "lit" : outlined ? "out" : "plain"
+    readonly property bool warned: names.warned.indexOf(markId) >= 0
+    readonly property string tone: shown ? "lit" : outlined ? "out" : warned ? "warn" : "plain"
     readonly property string icon: host.lk.icons.voice.panel.marks[markId] || ""
     readonly property var sh: host.lk.shape.chip
     readonly property var p: host.lk.palette
     readonly property bool hc: host.lk.contrast
     // Each tone's fill, word and icon. An outlined mark sits on its row, so on a lit row its parts take sel_ink; high
-    // contrast draws a chip's in ButtonText.
+    // contrast draws a chip's in ButtonText, and a warning's on Highlight in sel_ink.
     readonly property var looks: ({
             lit: [p.badge_bg, p.badge_ink, p.badge_ink],
             out: ["transparent", lit ? host.lk.sel_ink : p.pop_ink, lit ? host.lk.sel_ink : p.pop_muted],
-            plain: [p.chip_bg, hc ? p.legend : p.pop_ink, hc ? p.legend : p.ring]
+            plain: [p.chip_bg, hc ? p.legend : p.pop_ink, hc ? p.legend : p.ring],
+            warn: [p.warn, hc ? host.lk.sel_ink : p.pop_ink, hc ? host.lk.sel_ink : p.pop_ink]
         })
     readonly property color fill: looks[tone][0]
     readonly property color ink: looks[tone][1]
@@ -37,7 +40,7 @@ Rectangle {
     radius: height / 2
     color: fill
     border.width: host.lk.shape.line.px
-    border.color: tone === "lit" ? p.badge_bg : p.pop_line
+    border.color: tone === "lit" ? p.badge_bg : tone === "warn" ? p.warn : p.pop_line
     Accessible.role: Accessible.StaticText
     Accessible.name: mark.text
 

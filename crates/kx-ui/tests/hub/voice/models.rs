@@ -218,15 +218,20 @@ fn the_page_names_the_best_model_the_folder_and_its_buttons() {
 }
 
 #[test]
-fn a_default_not_for_this_pc_says_local_models_are_slow_here() {
+fn a_default_not_for_this_pc_says_local_models_are_slow_here_and_leads_to_the_cloud_page() {
     let rig = Rig::new();
     let heard = heard(&rig);
     let mut slow = sheet(vec![]);
     slow.slow = true;
     let p = panel_json(&rig, &heard, panel(VoiceSheet::Models(slow)));
     assert_eq!(
-        p["sheet"]["slow"],
+        p["sheet"]["slow"]["text"],
         "Local models for English will be very slow on this PC."
+    );
+    let to = button("open", "cloud", "Cloud services", true, "plain");
+    assert_eq!(
+        buttons(&Value::Array(vec![p["sheet"]["slow"]["button"].clone()])),
+        [to]
     );
 }
 

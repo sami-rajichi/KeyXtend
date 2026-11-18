@@ -45,7 +45,8 @@ fn the_set_text_shows_with_its_models_and_start() {
     );
     assert_eq!(p["sub"], "For English");
     let sheet = json!({"is": "ready", "intro": english_text(VOICE_INTRO),
-        "text": english_text(VOICE_READ_TEXT), "line": "6 ready models · Automatic (processor)", "recording": null});
+        "text": english_text(VOICE_READ_TEXT), "line": "6 ready models · Automatic (processor)", "recording": null,
+        "picks": [], "send": null});
     assert_eq!(p["sheet"], sheet);
     let start = button("compare", "", "Start reading", true, "primary");
     assert_eq!(buttons(&p["foot"]), [start]);
@@ -147,17 +148,15 @@ fn each_model_shows_its_turn_and_the_step_names_the_one_writing() {
     let rows = &p["sheet"]["rows"];
     assert_eq!(
         rows[0],
-        json!({"name": "Whisper small", "mark": {"id": "done", "text": "Done · 2.1 s"}})
+        json!({"name": "Whisper small", "mark": {"id": "done", "text": "Done · 2.1 s"}, "why": null})
     );
-    assert_eq!(
-        rows[1]["mark"],
-        json!({"id": "run-failed", "text": "Failed"})
-    );
-    assert_eq!(
-        rows[2]["mark"],
-        json!({"id": "writing", "text": "Writing…"})
-    );
-    assert_eq!(rows[3]["mark"]["id"], "waiting");
+    let marks: Vec<_> = (1..4).map(|at| rows[at]["mark"].clone()).collect();
+    let want = [
+        json!({"id": "run-failed", "text": "Failed"}),
+        json!({"id": "writing", "text": "Writing…"}),
+    ];
+    assert_eq!(marks[..2], want);
+    assert_eq!(marks[2]["id"], "waiting");
     assert_eq!(
         buttons(&p["foot"]),
         [button("button", "cancel", "Cancel", true, "plain")],

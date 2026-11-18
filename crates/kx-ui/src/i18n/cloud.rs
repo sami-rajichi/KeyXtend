@@ -1,0 +1,181 @@
+//! Voice typing's cloud words (ADR-0047): a card's fact filled with its row's values, money in its currency, and each
+//! reason a cloud note or a Compare row gives. A name from a service's own pages stays a part of its own, so the UI lays
+//! it out apart in the UI's order, as ADR-0022 asks in place of bidi marks.
+
+use super::I18n;
+use super::compose::{clean, form};
+use super::keys::vars::{HTTPS, LANG};
+use super::keys::{
+    VOICE_HOURS, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
+    cloud_why_id, fact_key, fault_why,
+};
+use fluent_bundle::FluentArgs;
+use kx_module_api::ports::{
+    CloudFault, CloudWhy, Fact, FactValue, Hundredths, LINK_SCHEME, VoiceLang,
+};
+use serde::Serialize;
+use std::time::Duration;
+
+/// What a counted value's plural form takes after its name, as in `$days-form`.
+const FORM_END: &str = "-form";
+/// The money texts' variables.
+const AMOUNT_VAR: &str = "amount";
+const CODE_VAR: &str = "code";
+/// A renewal's variable.
+const IN_VAR: &str = "in";
+/// What marks a name from a service's pages while its text is filled: these around the value's name.
+const OPEN: char = '\u{1}';
+const SHUT: char = '\u{2}';
+/// Money's decimals, shown only when it has cents.
+const CENTS: u32 = 2;
+/// Seconds in a minute, and minutes in an hour: a renewal reads in minutes below an hour.
+const SECS_PER_MIN: u64 = 60;
+const MIN_PER_HOUR: u64 = 60;
+
+/// A sentence in parts: `own` parts are names from a service's pages, laid out apart; `text` is the whole.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct Said {
+    /// The whole sentence, as readers hear it.
+    pub text: String,
+    /// Its parts in reading order.
+    pub parts: Vec<SaidPart>,
+}
+
+/// A part of a `Said`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct SaidPart {
+    /// Its words.
+    pub text: String,
+    /// It is a name from a service's own pages, kept apart and left to right.
+    pub own: bool,
+}
+
+impl I18n {
+    /// Fact `fact` of `group` as its text says it, filled with its values: counts with their plural form, numbers and
+    /// money with the language's marks, days as dates, and names from the service's pages as parts of their own.
+    #[must_use]
+    pub fn voice_fact(&self, group: &str, fact: &Fact) -> Said {
+        let mut values = FluentArgs::new();
+        let mut names = Vec::new();
+        for arg in &fact.args {
+            let name = arg.name.clone();
+            match &arg.value {
+                FactValue::Count(n) => {
+                    let wide = usize::try_from(*n).unwrap_or(usize::MAX);
+                    values.set(format!("{name}{FORM_END}"), form(wide));
+                    values.set(name, self.grouped(u128::from(*n)));
+                }
+                FactValue::Number(h) => values.set(name, self.hundredths(*h, false)),
+                FactValue::Money { amount, currency } => {
+                    values.set(name, self.voice_money(*amount, currency));
+                }
+                FactValue::Day(d) => values.set(name, self.voice_date(*d)),
+                FactValue::Text(t) => {
+                    values.set(name.clone(), format!("{OPEN}{name}{SHUT}"));
+                    names.push((name, clean(t)));
+                }
+            }
+        }
+        let filled = self.format(&fact_key(group, &fact.id), Some(&values));
+        said(&filled, &names)
+    }
+
+    /// `amount` hundredths of `currency` in this language's way, cents only when it has some.
+    #[must_use]
+    pub fn voice_money(&self, amount: Hundredths, currency: &str) -> String {
+        let cents = !amount.0.is_multiple_of(Hundredths::PER_ONE);
+        let shown = self.hundredths(amount, cents);
+        let code = clean(currency);
+        let key = format!("{VOICE_MONEY}{}", code.to_lowercase());
+        let mut values = FluentArgs::new();
+        values.set(AMOUNT_VAR, shown);
+        if self.has(&key) {
+            return self.format(&key, Some(&values));
+        }
+        values.set(CODE_VAR, code);
+        self.format(VOICE_MONEY_ANY, Some(&values))
+    }
+
+    /// Text `key` with `$https` set to the scheme every typed address starts with.
+    #[must_use]
+    pub fn voice_https(&self, key: &str) -> String {
+        self.with(key, [(HTTPS, LINK_SCHEME.to_owned())])
+    }
+
+    /// The cloud note's line for `why`, naming the language or the renewal where it has one.
+    #[must_use]
+    pub fn voice_cloud(&self, why: &CloudWhy) -> String {
+        match why {
+            CloudWhy::Allowance { renews_in: Some(d) } => {
+                self.with(VOICE_NOTE_RENEWS, [(IN_VAR, self.renewal(*d))])
+            }
+            CloudWhy::Language(lang) => self.cloud_line(cloud_why_id(why), lang),
+            _ => self.text(&format!("{VOICE_NOTE_CLOUD}{}", cloud_why_id(why))),
+        }
+    }
+
+    /// A Compare row's reason for cloud `fault`, naming `lang` when the service refused it.
+    #[must_use]
+    pub fn voice_fault(&self, fault: CloudFault, lang: &VoiceLang) -> String {
+        match fault {
+            CloudFault::Allowance { renews_in: Some(d) } => {
+                self.with(VOICE_NOTE_RENEWS, [(IN_VAR, self.renewal(d))])
+            }
+            _ => self.cloud_line(fault_why(fault), lang),
+        }
+    }
+
+    /// The cloud line `id`, with `$lang` set to `lang`'s name for the lines that take it.
+    fn cloud_line(&self, id: &str, lang: &VoiceLang) -> String {
+        let key = format!("{VOICE_NOTE_CLOUD}{id}");
+        self.with(&key, [(LANG, self.voice_lang(lang))])
+    }
+
+    /// How long until an allowance renews: whole minutes below an hour, else whole hours, each rounded up.
+    fn renewal(&self, d: Duration) -> String {
+        let minutes = d.as_secs().div_ceil(SECS_PER_MIN).max(1);
+        let (key, n) = if minutes < MIN_PER_HOUR {
+            (VOICE_MINUTES, minutes)
+        } else {
+            (VOICE_HOURS, minutes.div_ceil(MIN_PER_HOUR))
+        };
+        self.counted(key, usize::try_from(n).unwrap_or(usize::MAX))
+    }
+
+    /// Hundredths `h` with the language's decimal mark; `cents` keeps both decimals, else trailing zeros drop.
+    fn hundredths(&self, h: Hundredths, cents: bool) -> String {
+        let per = u128::from(Hundredths::PER_ONE);
+        self.places(u128::from(h.0), per, CENTS, !cents)
+    }
+}
+
+/// `filled` cut at each marked name of `names` into parts, the names in their own; the whole joined again.
+fn said(filled: &str, names: &[(String, String)]) -> Said {
+    let mut parts = Vec::new();
+    let mut rest = filled;
+    while let Some(open) = rest.find(OPEN) {
+        let after = &rest[open + OPEN.len_utf8()..];
+        let Some(shut) = after.find(SHUT) else { break };
+        let name = &after[..shut];
+        push(&mut parts, &rest[..open], false);
+        let own = names
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, t)| t.as_str());
+        push(&mut parts, own.unwrap_or_default(), true);
+        rest = &after[shut + SHUT.len_utf8()..];
+    }
+    push(&mut parts, rest, false);
+    let text = parts.iter().map(|p| p.text.as_str()).collect();
+    Said { text, parts }
+}
+
+/// Adds `text` as a part, unless it is empty.
+fn push(parts: &mut Vec<SaidPart>, text: &str, own: bool) {
+    if !text.is_empty() {
+        parts.push(SaidPart {
+            text: text.to_owned(),
+            own,
+        });
+    }
+}

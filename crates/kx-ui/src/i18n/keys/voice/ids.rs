@@ -30,11 +30,25 @@ pub enum VoiceMark {
     Waiting,
     /// A model Compare could not run, or skipped after its fault.
     RunFailed,
+    /// A cloud service not switched on.
+    Off,
+    /// A cloud service, or its model, with no key yet.
+    NeedsKey,
+    /// A typed cloud service with a key and no address yet.
+    NeedsAddress,
+    /// A cloud service ready to send to.
+    On,
+    /// A connection no real key checked yet.
+    Untested,
+    /// A service whose card carries a warning.
+    Warn,
+    /// A cloud model that cannot be used now.
+    Unavailable,
 }
 
 impl VoiceMark {
     /// Every mark.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 19] = [
         Self::Used,
         Self::Default,
         Self::Ready,
@@ -47,6 +61,13 @@ impl VoiceMark {
         Self::Writing,
         Self::Waiting,
         Self::RunFailed,
+        Self::Off,
+        Self::NeedsKey,
+        Self::NeedsAddress,
+        Self::On,
+        Self::Untested,
+        Self::Warn,
+        Self::Unavailable,
     ];
 }
 
@@ -66,6 +87,13 @@ pub const fn mark_id(mark: VoiceMark) -> &'static str {
         VoiceMark::Writing => "writing",
         VoiceMark::Waiting => "waiting",
         VoiceMark::RunFailed => "run-failed",
+        VoiceMark::Off => "off",
+        VoiceMark::NeedsKey => "needs-key",
+        VoiceMark::NeedsAddress => "needs-address",
+        VoiceMark::On => "on",
+        VoiceMark::Untested => "untested",
+        VoiceMark::Warn => "warn",
+        VoiceMark::Unavailable => "unavailable",
     }
 }
 
@@ -161,12 +189,6 @@ pub const fn voice_tab_id(tab: VoiceTab) -> &'static str {
         VoiceTab::History => "history",
         VoiceTab::Options => "options",
     }
-}
-
-/// True for a page the home list shows; the Cloud page joins once its page and texts are built (P11 part 2).
-#[must_use]
-pub const fn home_tab(tab: VoiceTab) -> bool {
-    !matches!(tab, VoiceTab::Cloud)
 }
 
 /// A bar place's id, as the `place` setting names it.

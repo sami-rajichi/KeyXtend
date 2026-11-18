@@ -3,17 +3,22 @@
 var acts = {
   "bar": "bar",
   "button": "button",
+  "cloud": "cloud",
   "compare": "compare",
   "confirm": "confirm",
   "fetch": "fetch",
   "flip": "flip",
   "gear": "gear",
+  "keep": "keep",
+  "local": "local",
   "minus": "minus",
   "open": "open",
   "over": "over",
   "page": "page",
   "plus": "plus",
   "row": "row",
+  "service": "service",
+  "side": "side",
   "step": "step",
   "wheel": "wheel"
 };
@@ -46,6 +51,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -77,9 +83,210 @@ var views = {
         "mic": true,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 14,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudKey": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "إعادة المحاولة",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "استخدام النموذج المحلي",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "رفضت الخدمة المفتاح. تحقّق منه في صفحة المفتاح."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "state": "listening",
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 17,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudNet": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "إعادة المحاولة",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "استخدام النموذج المحلي",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "تنزيل · 776 ميغابايت",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "لم تستجب الخدمة. تحقّق من الشبكة وحاول مرة أخرى."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudNoLocal": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "استخدام النموذج المحلي",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "لا يُرسَل ما يُكتب في حقل كلمة المرور إلى السحابة أبدًا، ولا يوجد نموذج محلي جاهز."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -129,6 +336,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 9,
@@ -160,6 +368,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -199,6 +408,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -215,6 +425,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -258,6 +469,7 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -307,6 +519,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل. شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل. شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -346,6 +559,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -389,6 +603,7 @@ var views = {
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -433,6 +648,7 @@ var views = {
           "text": "••••••••"
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -485,6 +701,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -516,6 +733,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -565,6 +783,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -600,6 +819,7 @@ var views = {
         "state": "transcribing",
         "word": "جارٍ تحويل الكلام إلى نص…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -649,6 +869,7 @@ var views = {
           "text": "شكرًا على التحديث. سأرسل الاستمارة الموقّعة صباح يوم الخميس، وستصل النسختان اللتان تحدثنا عنهما بالبريد في الأسبوع المقبل."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 7,
@@ -690,6 +911,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -721,9 +943,210 @@ var views = {
         "mic": true,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 14,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudKey": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Try again",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Use the local model",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "The service refused the key. Check it on the key page."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "state": "listening",
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 17,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudNet": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Try again",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Use the local model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "Download · 776 MB",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "The service did not answer. Check the network and try again."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudNoLocal": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Use the local model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "A password box never goes to the cloud, and no local model is ready."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -773,6 +1196,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 9,
@@ -804,6 +1228,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -843,6 +1268,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -859,6 +1285,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -902,6 +1329,7 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -951,6 +1379,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week. Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week. Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -990,6 +1419,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -1033,6 +1463,7 @@ var views = {
         "waveMs": 300,
         "word": "Listening…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -1077,6 +1508,7 @@ var views = {
           "text": "••••••••"
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -1129,6 +1561,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -1160,6 +1593,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -1209,6 +1643,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -1244,6 +1679,7 @@ var views = {
         "state": "transcribing",
         "word": "Transcribing…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -1293,6 +1729,7 @@ var views = {
           "text": "Thanks for the update. I will send the signed form on Thursday morning, and the two copies we talked about will follow by post next week."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 7,
@@ -1334,6 +1771,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 12,
@@ -1365,9 +1803,210 @@ var views = {
         "mic": true,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 14,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudKey": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Réessayer",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Utiliser le modèle local",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "Le service a refusé la clé. Vérifiez-la sur la page de la clé."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudListening": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "state": "listening",
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 17,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudNet": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Réessayer",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Utiliser le modèle local",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "Télécharger · 776 Mo",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "Le service n’a pas répondu. Vérifiez le réseau et réessayez."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudNoLocal": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Utiliser le modèle local",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "Un champ de mot de passe ne part jamais vers le cloud, et aucun modèle local n’est prêt."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -1417,6 +2056,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 9,
@@ -1448,6 +2088,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 16,
@@ -1487,6 +2128,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 11,
@@ -1503,6 +2145,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 1,
@@ -1546,6 +2189,7 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 2,
@@ -1595,6 +2239,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine. Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine. Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 6,
@@ -1634,6 +2279,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 13,
@@ -1677,6 +2323,7 @@ var views = {
         "waveMs": 300,
         "word": "Écoute…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 3,
@@ -1721,6 +2368,7 @@ var views = {
           "text": "••••••••"
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 10,
@@ -1773,6 +2421,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 8,
@@ -1804,6 +2453,7 @@ var views = {
         "mic": false,
         "state": "note"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 15,
@@ -1853,6 +2503,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 5,
@@ -1888,6 +2539,7 @@ var views = {
         "state": "transcribing",
         "word": "Transcription…"
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 4,
@@ -1937,6 +2589,7 @@ var views = {
           "text": "Merci pour la mise à jour. J’enverrai le formulaire signé jeudi matin, et les deux copies dont nous avons parlé suivront par la poste la semaine prochaine."
         }
       },
+      "cloud": null,
       "panel": null,
       "place": "above",
       "round": 7,

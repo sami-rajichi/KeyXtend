@@ -18,6 +18,7 @@ pub(super) fn panel() -> VoicePanel {
         history: 0,
         changed: 0,
         cloud: None,
+        tabs: Vec::new(),
     };
     VoicePanel {
         sheet: VoiceSheet::Home(home),

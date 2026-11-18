@@ -2,12 +2,14 @@
 //! A key `group.name` in code is message `group`, attribute `name`, since Fluent ids cannot hold dots.
 
 mod clip;
+mod cloud;
 mod combo;
 mod compose;
 mod fill;
 pub mod keys;
 mod voice;
 
+pub use cloud::{Said, SaidPart};
 pub(crate) use compose::clean;
 
 use fluent_bundle::concurrent::FluentBundle;
@@ -24,8 +26,8 @@ pub struct Lang {
     pub rtl: bool,
     /// Its main Fluent file, compiled in.
     pub ftl: &'static str,
-    /// Its feature files, the clipboard panel's, Quick-fill's, the selection strip's and voice typing's, compiled in and
-    /// loaded into the same texts.
+    /// Its feature files, the clipboard panel's, Quick-fill's, the selection strip's, voice typing's and its cloud
+    /// services', compiled in and loaded into the same texts.
     pub extra: &'static [&'static str],
 }
 
@@ -48,6 +50,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/fill/en.ftl"),
             include_str!("../i18n/sel/en.ftl"),
             include_str!("../i18n/voice/en.ftl"),
+            include_str!("../i18n/cloud/en.ftl"),
         ],
     },
     Lang {
@@ -59,6 +62,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/fill/fr.ftl"),
             include_str!("../i18n/sel/fr.ftl"),
             include_str!("../i18n/voice/fr.ftl"),
+            include_str!("../i18n/cloud/fr.ftl"),
         ],
     },
     Lang {
@@ -70,6 +74,7 @@ pub static LANGS: [Lang; 3] = [
             include_str!("../i18n/fill/ar.ftl"),
             include_str!("../i18n/sel/ar.ftl"),
             include_str!("../i18n/voice/ar.ftl"),
+            include_str!("../i18n/cloud/ar.ftl"),
         ],
     },
 ];

@@ -2,10 +2,700 @@
 // Written by kx-ui's texts test; do not edit.
 var views = {
   "ar": {
+    "card": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Groq إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الولايات المتحدة"
+                  }
+                ],
+                "text": "الولايات المتحدة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا يُستخدم للتدريب"
+                  }
+                ],
+                "text": "لا يُستخدم للتدريب"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «"
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": "»"
+                  }
+                ],
+                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «Settings → Data Controls»"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "الاستخدام المجاني",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 ساعات يوميًا، و20 طلبًا في الدقيقة"
+                  }
+                ],
+                "text": "8 ساعات يوميًا، و20 طلبًا في الدقيقة"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+                  }
+                ],
+                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+                  }
+                ],
+                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "الحد الأدنى للفوترة",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يُحتسَب لكل طلب ما لا يقل عن 10 ثوانٍ، فتكلّف المقاطع القصيرة أكثر"
+                  }
+                ],
+                "text": "يُحتسَب لكل طلب ما لا يقل عن 10 ثوانٍ، فتكلّف المقاطع القصيرة أكثر"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": null,
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": null
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardOld": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الولايات المتحدة"
+                  }
+                ],
+                "text": "الولايات المتحدة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «"
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": "»"
+                  }
+                ],
+                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «Settings → Data Controls»"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "الاستخدام المجاني",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 ساعات يوميًا، و20 طلبًا في الدقيقة"
+                  }
+                ],
+                "text": "8 ساعات يوميًا، و20 طلبًا في الدقيقة"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+                  }
+                ],
+                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+                  }
+                ],
+                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "الحد الأدنى للفوترة",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يُحتسَب لكل طلب ما لا يقل عن 10 ثوانٍ، فتكلّف المقاطع القصيرة أكثر"
+                  }
+                ],
+                "text": "يُحتسَب لكل طلب ما لا يقل عن 10 ثوانٍ، فتكلّف المقاطع القصيرة أكثر"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 02/11/2026."
+          },
+          "untested": null,
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «"
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              },
+              {
+                "own": false,
+                "text": "» في حسابك."
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «Settings → Data Controls» في حسابك."
+          }
+        },
+        "sub": "فُعِّلت في 10/11/2026",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "جاهزة"
+                }
+              ],
+              "name": "Groq",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            },
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "تنبيه"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "يلزم عنوان"
+                }
+              ],
+              "name": "عنوان مخصّص",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": "الخدمات السحابية معطّلة: لا تُعرض أي خدمة ولا يُرسَل شيء.",
+          "rows": [
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "جاهزة"
+                }
+              ],
+              "name": "Groq",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "تنبيه"
+                },
+                {
+                  "id": "off",
+                  "text": "معطّلة"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "يلزم عنوان"
+                }
+              ],
+              "name": "عنوان مخصّص",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": false,
+            "value": "معطّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 0,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 20,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "compare": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -50,7 +740,9 @@ var views = {
           "intro": "اقرأ هذا النص بصوت عالٍ مرة واحدة، ثم يكتبه كل نموذج جاهز، واحدًا تلو الآخر.",
           "is": "ready",
           "line": "6 نماذج جاهزة · تلقائي (المعالج)",
+          "picks": [],
           "recording": null,
+          "send": null,
           "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
         },
         "sub": "للغة العربية",
@@ -70,10 +762,88 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "compareCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "بدء القراءة",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "intro": "اقرأ هذا النص بصوت عالٍ مرة واحدة، ثم يكتبه كل نموذج جاهز، واحدًا تلو الآخر.",
+          "is": "ready",
+          "line": "نموذجان جاهزان · تلقائي (المعالج)",
+          "picks": [
+            {
+              "name": "Whisper Large v3 Turbo",
+              "service": "Groq",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "سترسل المقارنة صوتك إلى Groq عند الإيقاف.",
+          "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
+        },
+        "sub": "للغة العربية",
+        "ticked": 0,
+        "title": "مقارنة النماذج",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 27,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "comparing": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -122,35 +892,40 @@ var views = {
                 "id": "done",
                 "text": "انتهى · 2,1 ثانية"
               },
-              "name": "Whisper Small"
+              "name": "Whisper Small",
+              "why": null
             },
             {
               "mark": {
                 "id": "run-failed",
                 "text": "فشل"
               },
-              "name": "Whisper Large v3 Turbo"
+              "name": "Whisper Large v3 Turbo",
+              "why": null
             },
             {
               "mark": {
                 "id": "writing",
                 "text": "جارٍ الكتابة…"
               },
-              "name": "Canary 1b v2"
+              "name": "Canary 1b v2",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "في الانتظار"
               },
-              "name": "Qwen3-ASR 0.6B"
+              "name": "Qwen3-ASR 0.6B",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "في الانتظار"
               },
-              "name": "Parakeet TDT 0.6b v3"
+              "name": "Parakeet TDT 0.6b v3",
+              "why": null
             }
           ]
         },
@@ -175,10 +950,98 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "comparingCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "button",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "running",
+          "rows": [
+            {
+              "mark": {
+                "id": "run-failed",
+                "text": "فشل"
+              },
+              "name": "Whisper Large v3 Turbo",
+              "why": "رفضت الخدمة المفتاح. تحقّق منه في صفحة المفتاح."
+            },
+            {
+              "mark": {
+                "id": "writing",
+                "text": "جارٍ الكتابة…"
+              },
+              "name": "Whisper small",
+              "why": null
+            }
+          ]
+        },
+        "sub": "للغة العربية",
+        "ticked": 0,
+        "title": "مقارنة النماذج",
+        "top": {
+          "id": "step",
+          "name": "Whisper small",
+          "text": "النموذج 2 من 2"
+        },
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 28,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "device": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -314,6 +1177,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -382,6 +1246,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -490,6 +1355,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -619,6 +1485,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -732,6 +1599,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -830,6 +1698,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": null,
         "close": {
@@ -872,6 +1741,11 @@ var views = {
               "value": "Parakeet TDT 0.6b v3"
             },
             {
+              "label": "الخدمات السحابية",
+              "tab": "cloud",
+              "value": "معطّل"
+            },
+            {
               "label": "وحدة المعالجة",
               "tab": "device",
               "value": "تلقائي (المعالج)"
@@ -885,11 +1759,6 @@ var views = {
               "label": "السجل",
               "tab": "history",
               "value": "12 نصًا"
-            },
-            {
-              "label": "الخيارات",
-              "tab": "options",
-              "value": "المعدَّلة: 2"
             }
           ]
         },
@@ -914,6 +1783,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -971,6 +1841,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -1075,6 +1946,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -1099,10 +1992,178 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "modelsCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "delete",
+            "kind": "button",
+            "label": "حذف الملف",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "button",
+            "label": "تنزيل",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "use",
+            "kind": "button",
+            "label": "استخدامه لهذه اللغة",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "models",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "band": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "الخدمات السحابية",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "نماذج الخدمات التي فعّلتها، ولا يُرسَل شيء قبل الإيقاف."
+          },
+          "is": "models",
+          "room": null,
+          "rows": [
+            {
+              "fetch": null,
+              "line": "في السحابة، بمفتاحك",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "Groq"
+                },
+                {
+                  "id": "ready",
+                  "text": "جاهز"
+                }
+              ],
+              "name": "Whisper Large v3 Turbo",
+              "tick": true
+            },
+            {
+              "fetch": null,
+              "line": "لا يتعهّد أي مضيف لهذا النموذج بعدم الاحتفاظ بشيء.",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "OpenRouter"
+                },
+                {
+                  "id": "unavailable",
+                  "text": "غير متاح"
+                }
+              ],
+              "name": "voxtral-small",
+              "tick": false
+            },
+            {
+              "fetch": null,
+              "line": "في السحابة، بمفتاحك",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "DeepInfra"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "Nemotron 3.5 Transcribe",
+              "tick": false
+            }
+          ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "cloud"
+          },
+          "slow": null,
+          "untested": null
+        },
+        "sub": "للغة العربية",
+        "ticked": 1,
+        "title": "النماذج",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "modelsMore": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1163,6 +2224,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -1227,6 +2289,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -1255,6 +2339,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1304,6 +2389,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": null,
           "rows": [
@@ -1388,6 +2474,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -1416,6 +2524,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1473,6 +2582,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -1525,7 +2635,39 @@ var views = {
               "tick": false
             }
           ],
-          "slow": "ستكون النماذج المحلية للغة العربية بطيئة جدًا على هذا الحاسوب.",
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "local"
+          },
+          "slow": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "الخدمات السحابية",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "ستكون النماذج المحلية للغة العربية بطيئة جدًا على هذا الحاسوب."
+          },
           "untested": "لم يُختبر هذا الترتيب للغة العربية."
         },
         "sub": "للغة العربية",
@@ -1553,6 +2695,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1610,6 +2753,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -1714,6 +2858,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "محلية",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "سحابية",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "مكان تشغيل النموذج",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -1742,6 +2908,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1864,6 +3031,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -1990,6 +3158,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2117,6 +3286,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2220,13 +3390,1109 @@ var views = {
         "title": "إملاء",
         "window": "شريط الإملاء في KeyXtend"
       }
+    },
+    "service": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "يُحفَظ المفتاح مشفّرًا على هذا الحاسوب ولا يُعرض أبدًا.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "المفتاح يعمل"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "اختبار",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "المفتاح",
+            "dots": 56,
+            "fault": null,
+            "hint": "اكتب مفتاحك أو الصقه",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "إنشاء مفتاح في console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "نموذج آخر",
+            "dots": 0,
+            "fault": null,
+            "hint": "معرّف النموذج من صفحة الخدمة",
+            "id": "model",
+            "mask": null,
+            "text": ""
+          }
+        },
+        "sub": "جاهزة",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "serviceCustom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "يُحفَظ المفتاح مشفّرًا على هذا الحاسوب ولا يُعرض أبدًا.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": {
+            "buttons": [],
+            "caption": "العنوان",
+            "dots": 0,
+            "fault": "يجب أن يبدأ العنوان بـ https://",
+            "hint": "عنوان خدمتك، مثل https://example.com/v1/audio/transcriptions",
+            "id": "address",
+            "mask": null,
+            "text": "http://lan.example"
+          },
+          "check": null,
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "اختبار",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "المفتاح",
+            "dots": 0,
+            "fault": null,
+            "hint": "اكتب مفتاحك أو الصقه",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": null,
+          "model": {
+            "buttons": [],
+            "caption": "نموذج آخر",
+            "dots": 0,
+            "fault": "معرّف النموذج هذا طويل جدًا أو يحتوي على حرف غير مسموح به.",
+            "hint": "معرّف النموذج من صفحة الخدمة",
+            "id": "model",
+            "mask": null,
+            "text": "no such/model"
+          }
+        },
+        "sub": "يلزم مفتاح",
+        "ticked": 0,
+        "title": "عنوان مخصّص",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "serviceRouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "يُحفَظ المفتاح مشفّرًا على هذا الحاسوب ولا يُعرض أبدًا.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "no-test",
+            "text": "لا يوجد اختبار مسبق لهذه الخدمة، فسيُختبر المفتاح عند أول إملاء."
+          },
+          "is": "service",
+          "keep": {
+            "kind": "keep",
+            "label": "الاقتصار على مضيفين لا يحتفظون بشيء",
+            "on": true,
+            "value": "مفعّل"
+          },
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "اختبار",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "المفتاح",
+            "dots": 56,
+            "fault": null,
+            "hint": "اكتب مفتاحك أو الصقه",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "إنشاء مفتاح في console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "نموذج آخر",
+            "dots": 0,
+            "fault": "لا يتعهّد أي مضيف لهذا النموذج بعدم الاحتفاظ بشيء.",
+            "hint": "معرّف النموذج من صفحة الخدمة",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small"
+          }
+        },
+        "sub": "جاهزة",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
     }
   },
   "en": {
+    "card": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Groq only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "United States"
+                  }
+                ],
+                "text": "United States"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not used for training"
+                  }
+                ],
+                "text": "Not used for training"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Nothing by default, but checks may keep requests up to 30 days; “"
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": "” turns that off"
+                  }
+                ],
+                "text": "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "Free use",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 hours a day, 20 requests a minute"
+                  }
+                ],
+                "text": "8 hours a day, 20 requests a minute"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Free within the free use, else $0.60 to $1.67 by model"
+                  }
+                ],
+                "text": "Free within the free use, else $0.60 to $1.67 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Free within the free use, else $2.40 to $6.66 by model"
+                  }
+                ],
+                "text": "Free within the free use, else $2.40 to $6.66 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "Least billed",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "At least 10 seconds a request, so short pieces cost more"
+                  }
+                ],
+                "text": "At least 10 seconds a request, so short pieces cost more"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": null,
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": null
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardOld": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "United States"
+                  }
+                ],
+                "text": "United States"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Nothing by default, but checks may keep requests up to 30 days; “"
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": "” turns that off"
+                  }
+                ],
+                "text": "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "Free use",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 hours a day, 20 requests a minute"
+                  }
+                ],
+                "text": "8 hours a day, 20 requests a minute"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Free within the free use, else $0.60 to $1.67 by model"
+                  }
+                ],
+                "text": "Free within the free use, else $0.60 to $1.67 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Free within the free use, else $2.40 to $6.66 by model"
+                  }
+                ],
+                "text": "Free within the free use, else $2.40 to $6.66 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "Least billed",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "At least 10 seconds a request, so short pieces cost more"
+                  }
+                ],
+                "text": "At least 10 seconds a request, so short pieces cost more"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 02/11/2026."
+          },
+          "untested": null,
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off “"
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              },
+              {
+                "own": false,
+                "text": "” in your account."
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off “Settings → Data Controls” in your account."
+          }
+        },
+        "sub": "Switched on 10/11/2026",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "Ready"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Untested",
+              "tick": true
+            },
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Warning"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "An HTTPS address, a model and a key you type",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Needs an address"
+                }
+              ],
+              "name": "Custom address",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": "Cloud services are off: none is offered and nothing is sent.",
+          "rows": [
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "Ready"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Warning"
+                },
+                {
+                  "id": "off",
+                  "text": "Off"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "An HTTPS address, a model and a key you type",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Needs an address"
+                }
+              ],
+              "name": "Custom address",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": false,
+            "value": "Off"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 0,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 20,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "compare": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2271,7 +4537,9 @@ var views = {
           "intro": "Read this text aloud once. Each ready model then writes it, one after another.",
           "is": "ready",
           "line": "6 ready models · Automatic (processor)",
+          "picks": [],
           "recording": null,
+          "send": null,
           "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
         },
         "sub": "For English",
@@ -2291,10 +4559,88 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "compareCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Start reading",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "intro": "Read this text aloud once. Each ready model then writes it, one after another.",
+          "is": "ready",
+          "line": "2 ready models · Automatic (processor)",
+          "picks": [
+            {
+              "name": "Whisper Large v3 Turbo",
+              "service": "Groq",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Compare sends your voice to Groq at Stop.",
+          "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
+        },
+        "sub": "For English",
+        "ticked": 0,
+        "title": "Compare models",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 27,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "comparing": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2343,35 +4689,40 @@ var views = {
                 "id": "done",
                 "text": "Done · 2.1 s"
               },
-              "name": "Whisper Small"
+              "name": "Whisper Small",
+              "why": null
             },
             {
               "mark": {
                 "id": "run-failed",
                 "text": "Failed"
               },
-              "name": "Whisper Large v3 Turbo"
+              "name": "Whisper Large v3 Turbo",
+              "why": null
             },
             {
               "mark": {
                 "id": "writing",
                 "text": "Writing…"
               },
-              "name": "Canary 1b v2"
+              "name": "Canary 1b v2",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "Waiting"
               },
-              "name": "Qwen3-ASR 0.6B"
+              "name": "Qwen3-ASR 0.6B",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "Waiting"
               },
-              "name": "Parakeet TDT 0.6b v3"
+              "name": "Parakeet TDT 0.6b v3",
+              "why": null
             }
           ]
         },
@@ -2396,10 +4747,98 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "comparingCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "button",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "running",
+          "rows": [
+            {
+              "mark": {
+                "id": "run-failed",
+                "text": "Failed"
+              },
+              "name": "Whisper Large v3 Turbo",
+              "why": "The service refused the key. Check it on the key page."
+            },
+            {
+              "mark": {
+                "id": "writing",
+                "text": "Writing…"
+              },
+              "name": "Whisper small",
+              "why": null
+            }
+          ]
+        },
+        "sub": "For English",
+        "ticked": 0,
+        "title": "Compare models",
+        "top": {
+          "id": "step",
+          "name": "Whisper small",
+          "text": "Model 2 of 2"
+        },
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 28,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "device": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2535,6 +4974,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2603,6 +5043,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2711,6 +5152,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2840,6 +5282,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -2953,6 +5396,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3051,6 +5495,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": null,
         "close": {
@@ -3093,6 +5538,11 @@ var views = {
               "value": "Parakeet TDT 0.6b v3"
             },
             {
+              "label": "Cloud services",
+              "tab": "cloud",
+              "value": "Off"
+            },
+            {
               "label": "Device",
               "tab": "device",
               "value": "Automatic (processor)"
@@ -3106,11 +5556,6 @@ var views = {
               "label": "History",
               "tab": "history",
               "value": "12 texts"
-            },
-            {
-              "label": "Options",
-              "tab": "options",
-              "value": "Changed: 2"
             }
           ]
         },
@@ -3135,6 +5580,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3192,6 +5638,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -3296,6 +5743,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -3320,10 +5789,178 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "modelsCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "delete",
+            "kind": "button",
+            "label": "Delete file",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "button",
+            "label": "Download",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "use",
+            "kind": "button",
+            "label": "Use for this language",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "models",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "band": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "Cloud services",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Models of the services you switched on; nothing leaves before Stop."
+          },
+          "is": "models",
+          "room": null,
+          "rows": [
+            {
+              "fetch": null,
+              "line": "In the cloud, with your key",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "Groq"
+                },
+                {
+                  "id": "ready",
+                  "text": "Ready"
+                }
+              ],
+              "name": "Whisper Large v3 Turbo",
+              "tick": true
+            },
+            {
+              "fetch": null,
+              "line": "No host of this model promises to keep nothing.",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "OpenRouter"
+                },
+                {
+                  "id": "unavailable",
+                  "text": "Unavailable"
+                }
+              ],
+              "name": "voxtral-small",
+              "tick": false
+            },
+            {
+              "fetch": null,
+              "line": "In the cloud, with your key",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "DeepInfra"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "Nemotron 3.5 Transcribe",
+              "tick": false
+            }
+          ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "cloud"
+          },
+          "slow": null,
+          "untested": null
+        },
+        "sub": "For English",
+        "ticked": 1,
+        "title": "Models",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "modelsMore": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3384,6 +6021,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -3448,6 +6086,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -3476,6 +6136,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3525,6 +6186,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": null,
           "rows": [
@@ -3609,6 +6271,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -3637,6 +6321,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3694,6 +6379,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -3746,7 +6432,39 @@ var views = {
               "tick": false
             }
           ],
-          "slow": "Local models for English will be very slow on this PC.",
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "local"
+          },
+          "slow": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "Cloud services",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Local models for English will be very slow on this PC."
+          },
           "untested": "This order is not tested for English."
         },
         "sub": "For English",
@@ -3774,6 +6492,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -3831,6 +6550,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -3935,6 +6655,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Local",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Where the model runs",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -3963,6 +6705,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4085,6 +6828,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4211,6 +6955,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4338,6 +7083,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4441,13 +7187,1109 @@ var views = {
         "title": "Dictation",
         "window": "KeyXtend dictation bar"
       }
+    },
+    "service": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "The key is kept encrypted on this PC and never shown.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "Key works"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Test",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Key",
+            "dots": 56,
+            "fault": null,
+            "hint": "Type or paste your key",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Make a key at console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "Other model",
+            "dots": 0,
+            "fault": null,
+            "hint": "A model id from the service’s page",
+            "id": "model",
+            "mask": null,
+            "text": ""
+          }
+        },
+        "sub": "Ready",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "serviceCustom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "The key is kept encrypted on this PC and never shown.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": {
+            "buttons": [],
+            "caption": "Address",
+            "dots": 0,
+            "fault": "The address must start with https://",
+            "hint": "Your service’s address, such as https://example.com/v1/audio/transcriptions",
+            "id": "address",
+            "mask": null,
+            "text": "http://lan.example"
+          },
+          "check": null,
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Test",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Key",
+            "dots": 0,
+            "fault": null,
+            "hint": "Type or paste your key",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": null,
+          "model": {
+            "buttons": [],
+            "caption": "Other model",
+            "dots": 0,
+            "fault": "This model id is too long or holds a character it may not.",
+            "hint": "A model id from the service’s page",
+            "id": "model",
+            "mask": null,
+            "text": "no such/model"
+          }
+        },
+        "sub": "Needs a key",
+        "ticked": 0,
+        "title": "Custom address",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "serviceRouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "The key is kept encrypted on this PC and never shown.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "no-test",
+            "text": "No test call here: the first dictation tests the key."
+          },
+          "is": "service",
+          "keep": {
+            "kind": "keep",
+            "label": "Only hosts that keep nothing",
+            "on": true,
+            "value": "On"
+          },
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Test",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Key",
+            "dots": 56,
+            "fault": null,
+            "hint": "Type or paste your key",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Make a key at console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "Other model",
+            "dots": 0,
+            "fault": "No host of this model promises to keep nothing.",
+            "hint": "A model id from the service’s page",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small"
+          }
+        },
+        "sub": "Ready",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
     }
   },
   "fr": {
+    "card": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Groq qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "États-Unis"
+                  }
+                ],
+                "text": "États-Unis"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non utilisée pour l’entraînement"
+                  }
+                ],
+                "text": "Non utilisée pour l’entraînement"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « "
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": " » l’empêche"
+                  }
+                ],
+                "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « Settings → Data Controls » l’empêche"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "Usage gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 heures par jour, 20 requêtes par minute"
+                  }
+                ],
+                "text": "8 heures par jour, 20 requêtes par minute"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+                  }
+                ],
+                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+                  }
+                ],
+                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "Facturation minimale",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+                  }
+                ],
+                "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": null,
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": null
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardOld": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "États-Unis"
+                  }
+                ],
+                "text": "États-Unis"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « "
+                  },
+                  {
+                    "own": true,
+                    "text": "Settings → Data Controls"
+                  },
+                  {
+                    "own": false,
+                    "text": " » l’empêche"
+                  }
+                ],
+                "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « Settings → Data Controls » l’empêche"
+              },
+              "warn": false
+            },
+            {
+              "id": "free",
+              "label": "Usage gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "8 heures par jour, 20 requêtes par minute"
+                  }
+                ],
+                "text": "8 heures par jour, 20 requêtes par minute"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+                  }
+                ],
+                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+                  }
+                ],
+                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "bills",
+              "label": "Facturation minimale",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+                  }
+                ],
+                "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir groq.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 02/11/2026."
+          },
+          "untested": null,
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              },
+              {
+                "own": false,
+                "text": " » dans votre compte."
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « Settings → Data Controls » dans votre compte."
+          }
+        },
+        "sub": "Activé le 10/11/2026",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "Prêt"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Non testé",
+              "tick": true
+            },
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Avertissement"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Une adresse HTTPS, un modèle et une clé à saisir",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Adresse requise"
+                }
+              ],
+              "name": "Adresse personnalisée",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 19,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": "Services cloud désactivés : aucun n’est proposé, rien n’est envoyé.",
+          "rows": [
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "on",
+                  "text": "Prêt"
+                }
+              ],
+              "name": "Groq",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Avertissement"
+                },
+                {
+                  "id": "off",
+                  "text": "Désactivé"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": null,
+              "tick": false
+            },
+            {
+              "line": "Une adresse HTTPS, un modèle et une clé à saisir",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Adresse requise"
+                }
+              ],
+              "name": "Adresse personnalisée",
+              "tag": null,
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": false,
+            "value": "Désactivé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 0,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 20,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "compare": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4492,7 +8334,9 @@ var views = {
           "intro": "Lisez ce texte à voix haute une fois. Chaque modèle prêt l’écrit ensuite, l’un après l’autre.",
           "is": "ready",
           "line": "6 modèles prêts · Automatique (processeur)",
+          "picks": [],
           "recording": null,
+          "send": null,
           "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
         },
         "sub": "En français",
@@ -4512,10 +8356,88 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "compareCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "compare",
+            "label": "Commencer la lecture",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "intro": "Lisez ce texte à voix haute une fois. Chaque modèle prêt l’écrit ensuite, l’un après l’autre.",
+          "is": "ready",
+          "line": "2 modèles prêts · Automatique (processeur)",
+          "picks": [
+            {
+              "name": "Whisper Large v3 Turbo",
+              "service": "Groq",
+              "tick": true
+            }
+          ],
+          "recording": null,
+          "send": "Comparer enverra votre voix à Groq à l’arrêt.",
+          "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
+        },
+        "sub": "En français",
+        "ticked": 0,
+        "title": "Comparer les modèles",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 27,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "comparing": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4564,35 +8486,40 @@ var views = {
                 "id": "done",
                 "text": "Terminé · 2,1 s"
               },
-              "name": "Whisper Small"
+              "name": "Whisper Small",
+              "why": null
             },
             {
               "mark": {
                 "id": "run-failed",
                 "text": "Échec"
               },
-              "name": "Whisper Large v3 Turbo"
+              "name": "Whisper Large v3 Turbo",
+              "why": null
             },
             {
               "mark": {
                 "id": "writing",
                 "text": "Écriture…"
               },
-              "name": "Canary 1b v2"
+              "name": "Canary 1b v2",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "En attente"
               },
-              "name": "Qwen3-ASR 0.6B"
+              "name": "Qwen3-ASR 0.6B",
+              "why": null
             },
             {
               "mark": {
                 "id": "waiting",
                 "text": "En attente"
               },
-              "name": "Parakeet TDT 0.6b v3"
+              "name": "Parakeet TDT 0.6b v3",
+              "why": null
             }
           ]
         },
@@ -4617,10 +8544,98 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "comparingCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "button",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "compare",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "is": "running",
+          "rows": [
+            {
+              "mark": {
+                "id": "run-failed",
+                "text": "Échec"
+              },
+              "name": "Whisper Large v3 Turbo",
+              "why": "Le service a refusé la clé. Vérifiez-la sur la page de la clé."
+            },
+            {
+              "mark": {
+                "id": "writing",
+                "text": "Écriture…"
+              },
+              "name": "Whisper small",
+              "why": null
+            }
+          ]
+        },
+        "sub": "En français",
+        "ticked": 0,
+        "title": "Comparer les modèles",
+        "top": {
+          "id": "step",
+          "name": "Whisper small",
+          "text": "Modèle 2 sur 2"
+        },
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 28,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "device": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4756,6 +8771,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4824,6 +8840,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -4932,6 +8949,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5061,6 +9079,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5174,6 +9193,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5272,6 +9292,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": null,
         "close": {
@@ -5314,6 +9335,11 @@ var views = {
               "value": "Parakeet TDT 0.6b v3"
             },
             {
+              "label": "Services cloud",
+              "tab": "cloud",
+              "value": "Désactivé"
+            },
+            {
               "label": "Unité de calcul",
               "tab": "device",
               "value": "Automatique (processeur)"
@@ -5327,11 +9353,6 @@ var views = {
               "label": "Historique",
               "tab": "history",
               "value": "12 textes"
-            },
-            {
-              "label": "Options",
-              "tab": "options",
-              "value": "Modifiées : 2"
             }
           ]
         },
@@ -5356,6 +9377,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5413,6 +9435,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -5517,6 +9540,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -5541,10 +9586,178 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "modelsCloud": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "delete",
+            "kind": "button",
+            "label": "Supprimer le fichier",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "button",
+            "label": "Télécharger",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "use",
+            "kind": "button",
+            "label": "Utiliser pour cette langue",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "models",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "band": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "Services cloud",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Modèles des services que vous avez activés ; rien ne part avant l’arrêt."
+          },
+          "is": "models",
+          "room": null,
+          "rows": [
+            {
+              "fetch": null,
+              "line": "Dans le cloud, avec votre clé",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "Groq"
+                },
+                {
+                  "id": "ready",
+                  "text": "Prêt"
+                }
+              ],
+              "name": "Whisper Large v3 Turbo",
+              "tick": true
+            },
+            {
+              "fetch": null,
+              "line": "Aucun hébergeur de ce modèle ne s’engage à ne rien garder.",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "OpenRouter"
+                },
+                {
+                  "id": "unavailable",
+                  "text": "Indisponible"
+                }
+              ],
+              "name": "voxtral-small",
+              "tick": false
+            },
+            {
+              "fetch": null,
+              "line": "Dans le cloud, avec votre clé",
+              "marks": [
+                {
+                  "id": "cloud",
+                  "text": "DeepInfra"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "Nemotron 3.5 Transcribe",
+              "tick": false
+            }
+          ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "cloud"
+          },
+          "slow": null,
+          "untested": null
+        },
+        "sub": "En français",
+        "ticked": 1,
+        "title": "Modèles",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 26,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "modelsMore": {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5605,6 +9818,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -5669,6 +9883,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -5697,6 +9933,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5746,6 +9983,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": null,
           "rows": [
@@ -5830,6 +10068,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -5858,6 +10118,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -5915,6 +10176,7 @@ var views = {
           "count": 1
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -5967,7 +10229,39 @@ var views = {
               "tick": false
             }
           ],
-          "slow": "Les modèles locaux en français seront très lents sur ce PC.",
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "local"
+          },
+          "slow": {
+            "button": {
+              "arg": 0,
+              "id": "cloud",
+              "kind": "open",
+              "label": "Services cloud",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Les modèles locaux en français seront très lents sur ce PC."
+          },
           "untested": "Cet ordre n’a pas été testé en français."
         },
         "sub": "En français",
@@ -5995,6 +10289,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -6052,6 +10347,7 @@ var views = {
           "count": 2
         },
         "sheet": {
+          "band": null,
           "is": "models",
           "room": {
             "buttons": [
@@ -6156,6 +10452,28 @@ var views = {
               "tick": false
             }
           ],
+          "sides": {
+            "chips": [
+              {
+                "arg": 0,
+                "id": "local",
+                "kind": "side",
+                "label": "Sur ce PC",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "cloud",
+                "kind": "side",
+                "label": "Dans le cloud",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "name": "Où le modèle s’exécute",
+            "shown": "local"
+          },
           "slow": null,
           "untested": null
         },
@@ -6184,6 +10502,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -6306,6 +10625,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -6432,6 +10752,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -6559,6 +10880,7 @@ var views = {
       "bar": {
         "state": "hidden"
       },
+      "cloud": null,
       "panel": {
         "back": {
           "arg": 0,
@@ -6654,6 +10976,412 @@ var views = {
       },
       "place": "above",
       "round": 10,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "service": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "La clé est chiffrée sur ce PC et jamais affichée.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "La clé fonctionne"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Tester",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Clé",
+            "dots": 56,
+            "fault": null,
+            "hint": "Tapez ou collez votre clé",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Créer une clé sur console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "Autre modèle",
+            "dots": 0,
+            "fault": null,
+            "hint": "L’identifiant du modèle, sur la page du service",
+            "id": "model",
+            "mask": null,
+            "text": ""
+          }
+        },
+        "sub": "Prêt",
+        "ticked": 0,
+        "title": "Groq",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 23,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "serviceCustom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": false,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "La clé est chiffrée sur ce PC et jamais affichée.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": {
+            "buttons": [],
+            "caption": "Adresse",
+            "dots": 0,
+            "fault": "L’adresse doit commencer par https://",
+            "hint": "L’adresse de votre service, par exemple https://example.com/v1/audio/transcriptions",
+            "id": "address",
+            "mask": null,
+            "text": "http://lan.example"
+          },
+          "check": null,
+          "is": "service",
+          "keep": null,
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Tester",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Clé",
+            "dots": 0,
+            "fault": null,
+            "hint": "Tapez ou collez votre clé",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": null,
+          "model": {
+            "buttons": [],
+            "caption": "Autre modèle",
+            "dots": 0,
+            "fault": "Cet identifiant est trop long ou contient un caractère interdit.",
+            "hint": "L’identifiant du modèle, sur la page du service",
+            "id": "model",
+            "mask": null,
+            "text": "no such/model"
+          }
+        },
+        "sub": "Clé requise",
+        "ticked": 0,
+        "title": "Adresse personnalisée",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 25,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "serviceRouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "La clé est chiffrée sur ce PC et jamais affichée.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "no-test",
+            "text": "Pas de test possible ici : la première dictée testera la clé."
+          },
+          "is": "service",
+          "keep": {
+            "kind": "keep",
+            "label": "Seulement des hébergeurs qui ne gardent rien",
+            "on": true,
+            "value": "Activé"
+          },
+          "key": {
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Tester",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Clé",
+            "dots": 56,
+            "fault": null,
+            "hint": "Tapez ou collez votre clé",
+            "id": "key",
+            "mask": "••••••••",
+            "text": ""
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Créer une clé sur console.groq.com"
+          },
+          "model": {
+            "buttons": [],
+            "caption": "Autre modèle",
+            "dots": 0,
+            "fault": "Aucun hébergeur de ce modèle ne s’engage à ne rien garder.",
+            "hint": "L’identifiant du modèle, sur la page du service",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small"
+          }
+        },
+        "sub": "Prêt",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 24,
       "sounds": true,
       "words": {
         "copied": "Copié",

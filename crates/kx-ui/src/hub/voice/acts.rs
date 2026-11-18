@@ -1,8 +1,12 @@
 //! The kinds of click QML names to `Hub::voice_act`, and what each one sends. A button, page or download button goes by
 //! the id the view gives it; a row's place, a page's way or an answer is the argument.
 
-use crate::i18n::keys::{bar_button_id, fetch_button_id, panel_button_id, voice_tab_id};
-use kx_module_api::ports::{BarButton, FetchButton, PanelButton, VoiceClick, VoiceTab};
+use crate::i18n::keys::{
+    bar_button_id, cloud_button_id, fetch_button_id, model_side_id, panel_button_id, voice_tab_id,
+};
+use kx_module_api::ports::{
+    BarButton, CloudButton, FetchButton, ModelSide, PanelButton, VoiceClick, VoiceTab,
+};
 use std::cmp::Ordering;
 
 /// The bar button `id`.
@@ -33,8 +37,18 @@ pub const MINUS: &str = "minus";
 pub const BUTTON: &str = "button";
 /// Start Compare models with the set text.
 pub const COMPARE: &str = "compare";
-/// Answer the shown question: 1 is yes, 0 is no.
+/// Answer the shown question, a card's switch-on among them: 1 is yes, 0 is no.
 pub const CONFIRM: &str = "confirm";
+/// The `cloud` switch: 1 turns cloud services on, 0 off.
+pub const CLOUD: &str = "cloud";
+/// The cloud button `id`.
+pub const SERVICE: &str = "service";
+/// The keep-nothing switch: 1 asks only for hosts that keep nothing, 0 not.
+pub const KEEP: &str = "keep";
+/// Show the Models page's side `id`.
+pub const SIDE: &str = "side";
+/// Use the local model after a cloud note.
+pub const LOCAL: &str = "local";
 
 /// True for a click that plays no key sound: the pointer's move and the wheel.
 pub(super) fn silent(kind: &str) -> bool {
@@ -82,6 +96,11 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         },
         BUTTON => VoiceClick::Button(by_id(PanelButton::ALL, panel_button_id, id)?),
         CONFIRM => VoiceClick::Confirm(switch(arg)?),
+        CLOUD => VoiceClick::Cloud(switch(arg)?),
+        SERVICE => VoiceClick::Service(by_id(CloudButton::ALL, cloud_button_id, id)?),
+        KEEP => VoiceClick::KeepNothing(switch(arg)?),
+        SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
+        LOCAL => VoiceClick::Local,
         _ => return Err(Bad),
     };
     Ok(Click::Send(click))

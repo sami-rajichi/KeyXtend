@@ -1,7 +1,7 @@
 //! The Voice panel's views the Qt Quick tests draw (`qmltest/fixtures/voicepanel.js`), as the hub writes them in each
 //! language: every page, a second page of models with a note, the model in use ticked, a slow language, the folder
 //! question, Compare's steps, History with two ticks, its question and empty, three pages of Options, Paste at once
-//! chosen on the third, and the drives.
+//! chosen on the third, the drives, and the cloud pages.
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::ports::{
@@ -13,6 +13,7 @@ use kx_test_support::host::FakeCore;
 use serde_json::{Map, Value};
 use std::sync::Arc;
 
+mod cloud;
 mod device;
 mod sheets;
 
@@ -202,7 +203,12 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
 
 /// Every panel the tests draw, by name.
 fn panels() -> Vec<(&'static str, Shown)> {
-    model_panels().into_iter().chain(other_panels()).collect()
+    let cloud = cloud::panels().into_iter();
+    model_panels()
+        .into_iter()
+        .chain(other_panels())
+        .chain(cloud)
+        .collect()
 }
 
 /// Every view in language `tag`, by name, each its own round from 1, the bar hidden.

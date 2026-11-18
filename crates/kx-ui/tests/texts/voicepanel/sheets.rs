@@ -4,7 +4,7 @@
 use kx_module_api::ports::{
     CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, FetchState, FolderLine,
     HistoryRow, HistorySheet, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep, VoiceHome,
-    VoiceSheet, When,
+    VoiceSheet, VoiceTab, When,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
@@ -39,6 +39,7 @@ pub fn home() -> VoiceSheet {
         history: 12,
         changed: 2,
         cloud: None,
+        tabs: VoiceTab::ALL[..5].to_vec(),
     })
 }
 

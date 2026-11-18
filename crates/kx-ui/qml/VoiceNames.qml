@@ -7,17 +7,22 @@ QtObject {
     readonly property var acts: ({
             bar: "bar",
             button: "button",
+            cloud: "cloud",
             compare: "compare",
             confirm: "confirm",
             fetch: "fetch",
             flip: "flip",
             gear: "gear",
+            keep: "keep",
+            local: "local",
             minus: "minus",
             open: "open",
             over: "over",
             page: "page",
             plus: "plus",
             row: "row",
+            service: "service",
+            side: "side",
             step: "step",
             wheel: "wheel"
         })
@@ -48,7 +53,10 @@ QtObject {
             results: "results",
             history: "history",
             options: "options",
-            folders: "folders"
+            folders: "folders",
+            cloud: "cloud",
+            card: "card",
+            service: "service"
         })
     // Each option row's kind.
     readonly property var options: ({
@@ -66,10 +74,17 @@ QtObject {
         })
     // The marks in the badge colours and the outlined ones, by id; the rest sit on a chip, and Writing draws its line.
     readonly property var lit: ["used"]
-    readonly property var outlined: ["download", "not-here", "other", "failed", "waiting", "run-failed"]
+    readonly property var outlined: ["download", "not-here", "other", "failed", "waiting", "run-failed", "off", "unavailable"]
+    // The marks in the warning tone, with no sign of their own (ADR-0047); a Cloud row's Untested tag, as a mark; and the
+    // key tests whose answer warns.
+    readonly property var warned: ["warn"]
+    readonly property string untested: "untested"
+    // The mark naming a cloud model's service, which takes the cloud icon.
+    readonly property string cloud: "cloud"
+    readonly property var refused: ["bad", "failed", "unfit", "busy"]
     readonly property string writing: "writing"
-    // Each panel part's gate id in `group`; a row's, a stepper's and a download button's take their place after it, and a
-    // pair's chips take its minus's and plus's.
+    // Each panel part's gate id in `group`; a row's, a stepper's and a download button's take their place after it, a
+    // pair's chips take its minus's and plus's, a key page's line its id, and a Models side's chip its side.
     readonly property var ids: ({
             list: "list",
             row: "row-",
@@ -79,6 +94,8 @@ QtObject {
             yes: "yes",
             no: "no",
             minus: "minus-",
-            plus: "plus-"
+            plus: "plus-",
+            line: "line-",
+            side: "side-"
         })
 }

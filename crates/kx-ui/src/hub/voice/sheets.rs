@@ -1,20 +1,23 @@
 //! The Models page and the folder list as QML reads them: each model's name, size and marks, a download's progress
-//! with its buttons, the models folder line, and the marks and page ids the other pages share.
+//! with its buttons, the Local | Cloud chips and the Cloud side's band, the models folder line, and the marks and page
+//! ids the other pages share.
 
-use super::acts::FETCH;
+use super::acts::{FETCH, SIDE};
+use super::cloud::{self, Lead};
 use super::panel::{Cx, FOLDERS, Page, Sheet};
 use super::parts::{Button, Hint, TOP_BEST, Tone, Top, word};
 use crate::I18n;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{DONE, FREE, LANG, NEED, PATH, TOTAL};
 use crate::i18n::keys::{
-    VOICE_BEST, VOICE_DELETE_FILE, VOICE_DRIVES, VOICE_FOLDER, VOICE_FOLDER_OFFER, VOICE_FOLDERS,
-    VOICE_GOT, VOICE_MARK, VOICE_PAUSED, VOICE_SLOW, VOICE_UNFIT, VOICE_UNTESTED, VoiceMark,
-    fetch_button_id, mark_id,
+    VOICE_BAND, VOICE_BEST, VOICE_CLOUD_OFF, VOICE_DELETE_FILE, VOICE_DRIVES, VOICE_FOLDER,
+    VOICE_FOLDER_OFFER, VOICE_FOLDERS, VOICE_GOT, VOICE_MARK, VOICE_MODELS_SIDE,
+    VOICE_MODELS_SIDES, VOICE_PAUSED, VOICE_SLOW, VOICE_UNFIT, VOICE_UNTESTED, VoiceMark,
+    cloud_band_id, fetch_button_id, mark_id, model_side_id,
 };
 use kx_module_api::ports::{
-    FetchButton, FetchState, FolderLine, FolderList, ModelRow, ModelState, ModelsSheet,
-    PanelButton, VoiceTab,
+    CloudBand, CloudRow, FetchButton, FetchState, FolderLine, FolderList, ModelRow, ModelSide,
+    ModelState, ModelsSheet, PanelButton, VoiceTab,
 };
 use serde::Serialize;
 
@@ -36,6 +39,14 @@ pub(super) struct Fetch {
     buttons: Vec<Button>,
 }
 
+/// The Local | Cloud chips: their caption, the side shown, and a chip for each side.
+#[derive(Serialize)]
+pub(super) struct Sides {
+    name: String,
+    shown: &'static str,
+    chips: Vec<Button>,
+}
+
 /// The models folder line, with Change and Open.
 #[derive(Serialize)]
 pub(super) struct Room {
@@ -48,15 +59,18 @@ pub(super) struct Room {
 pub(super) fn models(cx: &Cx<'_>, m: &ModelsSheet) -> Page {
     let t = cx.t;
     let lang = || (LANG, cx.lang());
-    let rows = m.rows.iter().enumerate().map(|(at, r)| model(t, r, at));
+    let rows = m.rows.iter().enumerate().map(|(at, r)| row(t, r, at));
     let room = m.folder.as_ref().map(|f| Room {
         text: folder(t, VOICE_FOLDER, f),
         buttons: vec![cx.button(PanelButton::Change), cx.button(PanelButton::Open)],
     });
+    let slow = || Lead::new(t.voice_with(VOICE_SLOW, &[lang()]), cloud::to_cloud(cx));
     let sheet = Sheet::Models {
         rows: rows.collect(),
         untested: m.untested.then(|| t.voice_with(VOICE_UNTESTED, &[lang()])),
-        slow: m.slow.then(|| t.voice_with(VOICE_SLOW, &[lang()])),
+        slow: m.slow.then(slow),
+        sides: sides(t, m.side),
+        band: m.band.map(|b| band(cx, b)),
         room,
     };
     let mut page = Page::new(
@@ -83,6 +97,47 @@ pub(super) fn models(cx: &Cx<'_>, m: &ModelsSheet) -> Page {
         ];
     }
     page
+}
+
+/// The Local | Cloud chips, `shown` the side listed.
+fn sides(t: &I18n, shown: ModelSide) -> Sides {
+    let chip = |s| {
+        let id = model_side_id(s);
+        Button::new(SIDE, id, 0, t.text(&format!("{VOICE_MODELS_SIDE}{id}")))
+    };
+    Sides {
+        name: t.text(VOICE_MODELS_SIDES),
+        shown: model_side_id(shown),
+        chips: ModelSide::ALL.map(chip).into(),
+    }
+}
+
+/// The Cloud side's band `b`, with its button to the Cloud page.
+fn band(cx: &Cx<'_>, b: CloudBand) -> Lead {
+    let text = match b {
+        CloudBand::Off => cx.t.text(VOICE_CLOUD_OFF),
+        _ => cx.t.text(&format!("{VOICE_BAND}{}", cloud_band_id(b))),
+    };
+    Lead::new(text, cloud::to_cloud(cx))
+}
+
+/// Row `r` at place `at`, a cloud model's or one on this PC.
+fn row(t: &I18n, r: &ModelRow, at: usize) -> ModelView {
+    r.cloud
+        .as_ref()
+        .map_or_else(|| model(t, r, at), |c| cloud_model(t, r, c))
+}
+
+/// Cloud model row `r` with its service and where it stands, `c`.
+fn cloud_model(t: &I18n, r: &ModelRow, c: &CloudRow) -> ModelView {
+    let (line, marks) = cloud::model(t, r.used, c);
+    ModelView {
+        name: clean(r.name.expose()),
+        line,
+        marks,
+        tick: r.tick,
+        fetch: None,
+    }
 }
 
 /// Model row `r` at place `at`: its size or why it does not fit, its marks, or its download's progress. In use shows

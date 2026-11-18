@@ -3,6 +3,7 @@
 //! handle limited to the `ui` module's capabilities. Nothing here logs a text, a name or a path.
 
 pub mod acts;
+mod cloud;
 mod device;
 mod lists;
 mod options;
@@ -10,6 +11,7 @@ mod panel;
 mod parts;
 mod place;
 mod rows;
+mod service;
 mod sheets;
 mod view;
 

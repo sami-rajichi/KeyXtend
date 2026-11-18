@@ -65,7 +65,7 @@ pub enum DeviceLabel {
     Card(String),
 }
 
-/// The home list's present values, one per page.
+/// The home list's present values, one per page, and the pages its shown page lists.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VoiceHome {
     /// The model used for the language in front; `None` when none is ready.
@@ -80,6 +80,8 @@ pub struct VoiceHome {
     pub changed: u16,
     /// The Cloud row's value: how many services are ready while cloud services are on; `None` while off.
     pub cloud: Option<u16>,
+    /// The pages the shown page of the list holds, `page_rows` to a page, in `VoiceTab::ALL`'s order.
+    pub tabs: Vec<VoiceTab>,
 }
 
 /// The folder list, to pick the models folder: the drives, then a folder's subfolders.

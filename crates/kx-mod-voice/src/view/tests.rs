@@ -97,6 +97,7 @@ fn the_home_list_names_the_model_the_device_compare_and_the_counts() {
         history: 3,
         changed: 1,
         cloud: None,
+        tabs: VoiceTab::ALL[..usize::from(ROWS)].to_vec(),
     };
     assert_eq!(home, want);
 }
@@ -192,4 +193,20 @@ fn history_names_a_cloud_texts_model_and_its_service_never_the_raw_pick() {
         ("whisper-1".to_owned(), Some(ServiceName::Custom)),
     ];
     assert_eq!(named, want);
+}
+
+#[test]
+fn the_home_list_pages_its_six_pages_five_to_a_page_with_options_on_the_second() {
+    let mut rig = Rig::new();
+    let view = rig.view().unwrap();
+    assert_eq!(view.pages, Pages { at: 0, count: 2 });
+    let VoiceSheet::Home(home) = view.sheet else {
+        panic!("not Home");
+    };
+    assert_eq!(home.tabs, VoiceTab::ALL[..usize::from(ROWS)]);
+    rig.click(&VoiceClick::Page { back: false });
+    let VoiceSheet::Home(home) = rig.view().unwrap().sheet else {
+        panic!("not Home");
+    };
+    assert_eq!(home.tabs, [VoiceTab::Options]);
 }

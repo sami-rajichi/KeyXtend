@@ -1,6 +1,6 @@
 // Compare's set text (mock-up compare()): what to do, the text to read aloud in a box, in its language's direction and
-// font, then how many models it runs on which device, or the recording's line while the user reads; it takes a page
-// of rows' height, so the panel keeps its size.
+// font, then how many models it runs on which device, or the recording's line while the user reads, then its cloud
+// models; it takes a page of rows' height, so the panel keeps its size.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -54,6 +54,37 @@ Item {
         }
         Line {
             text: read.sheet.recording || read.sheet.line || ""
+        }
+        // The cloud models it may send the recording to, each with its service's mark; an unticked one is muted.
+        Flow {
+            visible: picks.count > 0
+            width: parent.width
+            spacing: read.pn.row_gap_px * read.s
+            layoutDirection: read.host.ar ? Qt.RightToLeft : Qt.LeftToRight
+            Repeater {
+                id: picks
+                model: read.sheet.picks || []
+                delegate: Row {
+                    id: pick
+                    required property var modelData
+                    spacing: read.lk.shape.chip.gap_px * read.s
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: modelData.name + " " + modelData.service
+                    Label {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: pick.modelData.name
+                        font.family: read.host.res.fam.latin
+                        font.pixelSize: read.pn.hint_px[0] * read.s
+                        color: pick.modelData.tick ? read.lk.palette.pop_ink : read.lk.palette.pop_muted
+                    }
+                    VoiceMark {
+                        anchors.verticalCenter: parent.verticalCenter
+                        host: read.host
+                        mark: ({ id: read.host.names.cloud, text: pick.modelData.service })
+                        lit: false
+                    }
+                }
+            }
         }
     }
 

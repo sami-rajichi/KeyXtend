@@ -1,9 +1,11 @@
 //! Voice typing's translation keys (P11 design "What the user sees"): every key starts `voice.`, and a group's key
 //! takes an id from `ids`, as in `voice.note-no-mic`.
 
+mod cloud;
 mod ids;
 pub mod vars;
 
+pub use cloud::*;
 pub use ids::*;
 
 /// A word by id, and the start of every voice key: this, then a button's or a page's id, as in `voice.stop`.

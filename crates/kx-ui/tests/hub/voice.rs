@@ -3,6 +3,7 @@
 
 mod acts;
 mod bar;
+mod cloud;
 mod compare;
 mod device;
 mod gate;
@@ -21,7 +22,8 @@ mod wakes;
 use crate::Rig;
 use kx_module_api::ports::{
     BarPlace, DeviceLabel, DeviceName, Listening, Pages, PanelButton, VoiceAct, VoiceAsk, VoiceBar,
-    VoiceHome, VoiceLang, VoiceLevel, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceView,
+    VoiceHome, VoiceLang, VoiceLevel, VoiceOpen, VoicePage, VoicePanel, VoiceSheet, VoiceTab,
+    VoiceView,
 };
 use kx_module_api::{Bus, Subscription};
 use kx_test_support::host::FakeCore;
@@ -226,6 +228,7 @@ pub fn home() -> VoiceSheet {
         history: 12,
         changed: 0,
         cloud: None,
+        tabs: VoiceTab::ALL[..5].to_vec(),
     })
 }
 

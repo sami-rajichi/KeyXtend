@@ -89,7 +89,11 @@ impl Panel {
         let page = self.page()?;
         self.sync(facts);
         let (sheet, pages) = match page {
-            Page::Home => (VoiceSheet::Home(home(self, facts)), self.single()),
+            Page::Home => {
+                let list = VoiceTab::ALL.into_iter().map(|t| (Key::Plain, t)).collect();
+                let (tabs, pages) = self.paged(list);
+                (VoiceSheet::Home(home(self, facts, tabs)), pages)
+            }
             Page::Tab(VoiceTab::Cloud) => self.cloud_sheet(facts),
             Page::Card => self.card_sheet(facts),
             Page::Lines => self.lines_sheet(facts),
@@ -154,7 +158,7 @@ impl Panel {
         (rows, pages)
     }
 
-    /// One page and no rows, as the home list and the set text.
+    /// One page and no rows, as the set text, a card and a key page.
     pub(crate) fn single(&mut self) -> Pages {
         self.shown.clear();
         Pages { at: 0, count: 1 }
@@ -215,8 +219,8 @@ impl Panel {
     }
 }
 
-/// The home list's values for the language in front.
-fn home(panel: &Panel, facts: &Facts<'_>) -> VoiceHome {
+/// The home list's values for the language in front, with `tabs`, the pages its shown page lists.
+fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> VoiceHome {
     let ready = panel.stock(facts).supply(facts.iso()).ok();
     let compared = facts.scores.get(facts.iso()).map(|b| b.day);
     VoiceHome {
@@ -226,6 +230,7 @@ fn home(panel: &Panel, facts: &Facts<'_>) -> VoiceHome {
         history: u32::try_from(facts.history.len()).unwrap_or(u32::MAX),
         changed: options::changed(facts.settings),
         cloud: cloud_home(facts),
+        tabs,
     }
 }
 

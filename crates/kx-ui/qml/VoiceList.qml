@@ -64,6 +64,10 @@ Item {
                 delegate: VoiceModels { list: listing }
             }
             Repeater {
+                model: listing.slots(listing.names.sheets.cloud)
+                delegate: VoiceCloud { list: listing }
+            }
+            Repeater {
                 model: listing.slots(listing.names.sheets.device)
                 delegate: VoiceDevice { list: listing }
             }

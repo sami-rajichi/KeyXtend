@@ -47,6 +47,7 @@ fn the_home_list_names_its_language_compare_day_options_and_device() {
         history: 12,
         changed: 0,
         cloud: Some(2),
+        tabs: vec![VoiceTab::Models],
     };
     let shown = shown(VoiceSheet::Home(home));
     let parts = [

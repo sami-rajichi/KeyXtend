@@ -38,6 +38,9 @@ impl I18n {
     /// The line of note `hint`, naming its language where it has one.
     #[must_use]
     pub fn voice_hint(&self, hint: &BarHint) -> String {
+        if let BarHint::Cloud { why, .. } = hint {
+            return self.voice_cloud(why);
+        }
         let key = format!("{VOICE_NOTE}{}", bar_hint_id(hint));
         match lang_of(hint) {
             Some(lang) => self.with(&key, [(LANG, self.voice_lang(lang))]),
@@ -155,7 +158,7 @@ impl I18n {
 
     /// `num` / `den` rounded to `places` decimals, grouped, with the language's decimal mark; `trim` drops trailing
     /// zeros, and the mark with them.
-    fn places(&self, num: u128, den: u128, places: u32, trim: bool) -> String {
+    pub(super) fn places(&self, num: u128, den: u128, places: u32, trim: bool) -> String {
         let scale = TEN.pow(places);
         let scaled = round(num.saturating_mul(scale), den);
         let whole = self.grouped(scaled / scale);

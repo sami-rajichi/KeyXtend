@@ -9,10 +9,11 @@ use kx_module_api::ports::{
 use kx_ui::i18n::keys::{
     LANG_IN, LANG_NAME, TRAY_VOICE, VOICE_COL, VOICE_COLS, VOICE_CORES, VOICE_FASTER, VOICE_MARK,
     VOICE_MS, VOICE_NOTE, VOICE_PLACE, VOICE_SECONDS, VOICE_TEXTS, VOICE_TIMES, VOICE_TITLE,
-    VOICE_WORD, VoiceMark, bar_button_id, bar_hint_id, fetch_button_id, home_tab, mark_id,
-    panel_button_id, place_id, voice_tab_id,
+    VOICE_WORD, VoiceMark, bar_button_id, bar_hint_id, fetch_button_id, mark_id, panel_button_id,
+    place_id, voice_tab_id,
 };
 
+mod cloud;
 mod icons;
 mod newer;
 
@@ -70,7 +71,7 @@ fn keys() -> Vec<String> {
     keys.extend(BarButton::ALL.map(|b| word(bar_button_id(b))));
     keys.extend(FetchButton::ALL.map(|b| word(fetch_button_id(b))));
     keys.extend(PanelButton::ALL.map(|b| word(panel_button_id(b))));
-    let tabs = VoiceTab::ALL.into_iter().filter(|&t| home_tab(t));
+    let tabs = VoiceTab::ALL.into_iter();
     keys.extend(tabs.map(|t| word(voice_tab_id(t))));
     keys.extend(BarPlace::ALL.map(|p| format!("{VOICE_PLACE}{}", place_id(p))));
     keys.extend(VoiceMark::ALL.map(|m| format!("{VOICE_MARK}{}", mark_id(m))));

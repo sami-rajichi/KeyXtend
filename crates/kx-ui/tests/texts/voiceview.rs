@@ -1,11 +1,12 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
-//! language: each state, a long text, the password dots, each kind of note, and the lines a text can carry; and the
-//! click kinds QML sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
+//! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, and the cloud
+//! mark with a cloud note's buttons; and the click kinds QML sends to `Voice.act`, by the name QML holds each under
+//! (VoiceNames.qml).
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoiceLang, VoicePage,
-    VoiceText, VoiceView,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, ServiceName,
+    VoiceBar, VoiceLang, VoicePage, VoiceText, VoiceView,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing};
 use kx_test_support::host::FakeCore;
@@ -19,10 +20,13 @@ pub const FILE: &str = "voice.js";
 const ELAPSED_MS: u32 = 1200;
 /// The wave's smoothing, as the module's default.
 const WAVE_MS: u16 = 300;
-/// The default model's size in the no-model note: 740 MB.
+/// The default model's size in the no-model note and a cloud note's Download: 740 MB.
 const MODEL_BYTES: u64 = 740 << 20;
 /// How many times the long view says its sentence, so it runs past the bar's lines.
 const LONG: usize = 3;
+/// The start of a view's name that shows the cloud mark, and the service it names.
+const CLOUD: &str = "cloud";
+const SERVICE: &str = "Groq";
 
 /// Each click kind by the name QML holds it under.
 fn kinds() -> Value {
@@ -30,7 +34,8 @@ fn kinds() -> Value {
         "bar": acts::BAR, "gear": acts::GEAR, "over": acts::OVER, "open": acts::OPEN, "row": acts::ROW,
         "page": acts::PAGE, "wheel": acts::WHEEL, "fetch": acts::FETCH, "flip": acts::FLIP, "step": acts::STEP,
         "plus": acts::PLUS, "minus": acts::MINUS, "button": acts::BUTTON, "compare": acts::COMPARE,
-        "confirm": acts::CONFIRM,
+        "confirm": acts::CONFIRM, "cloud": acts::CLOUD, "service": acts::SERVICE, "keep": acts::KEEP,
+        "side": acts::SIDE, "local": acts::LOCAL,
     })
 }
 
@@ -71,6 +76,12 @@ fn text(said: &str, lang: &VoiceLang, hint: Option<BarHint>, undo: bool) -> Voic
 /// The Note state for `hint` with `act`, the microphone open while `mic`.
 fn note(hint: BarHint, act: Option<BarButton>, mic: bool) -> VoiceBar {
     VoiceBar::Note(BarNote { hint, act, mic })
+}
+
+/// A cloud note on `why` with `local`, and Try again while `again`.
+fn cloud(why: CloudWhy, local: LocalUse, again: bool) -> VoiceBar {
+    let act = again.then_some(BarButton::Again);
+    note(BarHint::Cloud { why, local }, act, false)
 }
 
 /// The Listening state in `lang`, with nothing heard yet while `nothing`.
@@ -118,6 +129,23 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
         ("taken", note(BarHint::Taken, None, false)),
         ("fault", note(BarHint::Fault, None, false)),
     ]
+    .into_iter()
+    .chain(cloud_bars(&lang))
+    .collect()
+}
+
+/// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first.
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
+    let fetch = LocalUse::Download { bytes: MODEL_BYTES };
+    [
+        ("cloudListening", listening(lang, false)),
+        ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
+        ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
+        (
+            "cloudNoLocal",
+            cloud(CloudWhy::NoLocal, LocalUse::Dimmed, false),
+        ),
+    ]
 }
 
 /// A password box took the text: dots, its line, and Undo insert.
@@ -142,7 +170,9 @@ fn views(tag: &str) -> Value {
             panel: None,
             place: BarPlace::Above,
             sounds: true,
-            cloud: None,
+            cloud: name
+                .starts_with(CLOUD)
+                .then(|| ServiceName::Named(SERVICE.to_owned())),
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");

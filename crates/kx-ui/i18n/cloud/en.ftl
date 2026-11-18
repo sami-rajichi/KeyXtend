@@ -1,0 +1,120 @@
+### English texts of voice typing's cloud services (P11, ADR-0047), loaded into the same bundle as en.ftl.
+### Plural forms select on $form, or on a fact's $<name>-form; [0] is the exact count 0.
+
+## In order: the Cloud page and its buttons, a service's card, its facts by group and id (filled with the services
+## table's numbers), money, the key page, the bar and its notes, Compare's warning, and the Models page's Cloud side.
+## $https is the scheme every typed address starts with; a fact's own names from a service's pages come in as they are.
+cloud =
+    .sub = Your own key · nothing leaves before Stop
+    .switch = Use cloud services
+    .off-line = Cloud services are off: none is offered and nothing is sent.
+    .free = Free use: { $free }
+    .custom = Custom address
+    .custom-line = An HTTPS address, a model and a key you type
+    .home = On · { $ready }
+    .ready = { $form ->
+        [0] No service ready
+        [one] { $count } service ready
+       *[other] { $count } services ready
+    }
+    .on = Switch on
+    .off = Switch off
+    .facts = Facts
+    .lines = Key and model
+    .card-sub = Read this before you switch it on
+    .card-on = Switched on { $date }
+    .card-where = Where your voice goes
+    .card-trains = Training
+    .card-keeps = What is kept
+    .card-free = Free use
+    .card-light = Light use · { $hours }
+    .card-heavy = Heavy use · { $hours }
+    .card-bills = Least billed
+    .card-hours = { $form ->
+        [one] { $count } hour a month
+       *[other] { $count } hours a month
+    }
+    .card-read-on = Facts read on { $date }.
+    .card-old = They may be out of date; check the service’s page.
+    .card-link = Open { $site }
+    .card-confirm = Confirm
+    .card-ask = Your voice goes to { $name } only after Stop, with your own key.
+    .card-custom = the address you type
+    .card-untested = Untested: not yet checked with a real key.
+    .fact-where-us = United States
+    .fact-where-typed = The address you type
+    .fact-trains-never = Not used for training
+    .fact-trains-unknown = Unknown; it depends on the service
+    .fact-keeps-logs = Nothing by default, but checks may keep requests up to { $days-form ->
+        [one] { $days } day
+       *[other] { $days } days
+    }; “{ $switch }” turns that off
+    .fact-keeps-unknown = Unknown; it depends on the service
+    .fact-free-daily = { $hours-form ->
+        [one] { $hours } hour
+       *[other] { $hours } hours
+    } a day, { $per_min-form ->
+        [one] { $per_min } request
+       *[other] { $per_min } requests
+    } a minute
+    .fact-free-unknown = Unknown; it depends on the service
+    .fact-price-free-or = Free within the free use, else { $low } to { $high } by model
+    .fact-price-unknown = Unknown; it depends on the service
+    .fact-warn-trains = Trains its models on your voice by default. Before you confirm, turn off “{ $switch }” in your account.
+    .fact-bills-least = At least { $seconds-form ->
+        [one] { $seconds } second
+       *[other] { $seconds } seconds
+    } a request, so short pieces cost more
+    .money-usd = ${ $amount }
+    .money = { $amount } { $code }
+    .key-line = Key
+    .key-hint = Type or paste your key
+    .key-sealed = The key is kept encrypted on this PC and never shown.
+    .key-link = Make a key at { $site }
+    .key-paste = Paste
+    .key-test = Test
+    .key-remove = Remove key
+    .key-testing = Testing…
+    .key-ok = Key works
+    .key-bad = Key refused. Check it on the service’s page.
+    .key-failed = No answer about the key. Check the network and test again.
+    .key-unfit = This is not a key a request can carry, so nothing was kept.
+    .key-no-test = No test call here: the first dictation tests the key.
+    .key-busy = The clipboard did not answer. Try Paste again.
+    .address-line = Address
+    .address-hint = Your service’s address, such as { $https }example.com/v1/audio/transcriptions
+    .address-hint-own = The address of your own resource on this service, starting { $https }
+    .address-https = The address must start with { $https }
+    .address-host = The address needs a host name, not a number.
+    .address-domain = The address must be under the service’s own domain.
+    .address-long = The address is too long.
+    .address-path = The address holds a character it may not, such as a space.
+    .model-line = Other model
+    .model-hint = A model id from the service’s page
+    .model-refused = This model id is too long or holds a character it may not.
+    .keep-nothing = Only hosts that keep nothing
+    .on-bar = Your voice goes to { $name } at Stop
+    .use-local = Use the local model
+    .send-warning = Compare sends your voice to { $names } at Stop.
+    .note-net = The service did not answer. Check the network and try again.
+    .note-key = The service refused the key. Check it on the key page.
+    .note-credit = The account has no credit left.
+    .note-allowance = The free use is used up for now.
+    .note-allowance-in = The free use is used up. It renews in { $in }.
+    .note-rate = Too many requests. Wait a moment and try again.
+    .note-too-big = The recording was too big for the service.
+    .note-language = The service does not take { $lang }.
+    .note-empty = The service sent no text.
+    .note-strange = The reply was not the service’s, maybe a sign-in page. Check the network.
+    .note-terms = The service’s terms changed. Confirm its facts again to send.
+    .note-off = The service is off, so nothing was sent.
+    .note-no-local = A password box never goes to the cloud, and no local model is ready.
+    .note-fault = The cloud part stopped after an error. Try again.
+    .note-keep-nothing = No host of this model promises to keep nothing.
+    .hours = { $count } h
+    .model = In the cloud, with your key
+    .sides = Where the model runs
+    .side-local = Local
+    .side-cloud = Cloud
+    .band-none-on = No cloud service is switched on yet.
+    .band-listed = Models of the services you switched on; nothing leaves before Stop.

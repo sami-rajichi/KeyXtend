@@ -23,7 +23,7 @@ fn slow_line(layout: &str, setting: &str, iso: &str, name: &str) -> Value {
     let mut shown = panel(VoiceSheet::Models(slow));
     shown.lang = coded(iso);
     name.clone_into(&mut shown.lang.name);
-    panel_json(&rig, &heard, shown)["sheet"]["slow"].clone()
+    panel_json(&rig, &heard, shown)["sheet"]["slow"]["text"].clone()
 }
 
 #[test]

@@ -1,7 +1,7 @@
 //! Every name, label and tip the face draws, with the shortcuts layer hidden or on any page, every text a shortcut's
 //! tip is made of, every mark it names, every module the app ships and the kernel, every language-key design and every
-//! selection keycap, every voice option and bar place has its text in English, French and Arabic, and the Dictation key
-//! says its name; every mark it names is one the theme's mark fonts are checked to draw.
+//! selection keycap, every voice option, bar place and cloud fact has its text in English, French and Arabic, and the
+//! Dictation key says its name; every mark it names is one the theme's mark fonts are checked to draw.
 
 use crate::fakes::{ports, tray};
 use crate::{designs, pages, views};
@@ -177,6 +177,37 @@ fn every_voice_option_and_bar_place_has_its_text() {
         format!("{VOICE_PLACE}{}", place_id(p))
     });
     let wanted: BTreeSet<String> = labels.chain(places).collect();
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
+/// Every fact the services table writes on a card has its sentence in its group, so a card never shows a key (P11 cloud,
+/// carry 2).
+#[test]
+fn every_fact_in_the_services_table_has_its_text() {
+    use kx_module_api::ports::Fact;
+    use kx_ui::i18n::keys::{
+        FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_TRAINS, FACT_WARN, FACT_WHERE, fact_key,
+    };
+    let table = kx_mod_voice::services::table().unwrap();
+    let mut wanted = BTreeSet::new();
+    for f in table.rows().iter().map(|s| &s.facts) {
+        let shown: [(&str, Option<&Fact>); 8] = [
+            (FACT_WHERE, Some(&f.place)),
+            (FACT_TRAINS, Some(&f.trains)),
+            (FACT_KEEPS, Some(&f.keeps)),
+            (FACT_FREE, Some(&f.free)),
+            (FACT_PRICE, Some(&f.light)),
+            (FACT_PRICE, Some(&f.heavy)),
+            (FACT_WARN, f.warn.as_ref()),
+            (FACT_BILLS, f.bills.as_ref()),
+        ];
+        wanted.extend(
+            shown
+                .iter()
+                .filter_map(|(g, f)| f.map(|f| fact_key(g, &f.id))),
+        );
+    }
+    assert!(wanted.len() > 1, "the table is read");
     assert_eq!(missing(&wanted), Vec::new());
 }
 

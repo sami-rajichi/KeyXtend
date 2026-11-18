@@ -2,6 +2,7 @@
 //! in every language with the dimmed ones in place, a text with its own direction or dots, and a note with its action.
 //! The gear shows in every state but `hidden`, before the last button.
 
+use super::cloud::{self, CloudMark};
 use super::panel::{self, Panel};
 use super::parts::{Button, Hint, Lang, Tone};
 use crate::I18n;
@@ -14,11 +15,12 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, VoiceBar, VoicePage, VoiceText,
+    BarButton, BarHint, BarNote, BarPlace, BarText, Listening, LocalUse, VoiceBar, VoicePage,
+    VoiceText,
 };
 use serde::Serialize;
 
-/// The bar and the panel, as JSON.
+/// The bar with its cloud mark, and the panel, as JSON.
 #[derive(Serialize)]
 pub(super) struct View {
     round: u32,
@@ -26,6 +28,7 @@ pub(super) struct View {
     sounds: bool,
     words: Words,
     bar: Bar,
+    cloud: Option<CloudMark>,
     panel: Option<Panel>,
 }
 
@@ -97,6 +100,7 @@ pub(super) fn of(page: &VoicePage, t: &I18n, read: Option<&str>) -> View {
             timer: timer(t),
         },
         bar: bar(&page.bar, t),
+        cloud: page.cloud.as_ref().map(|s| cloud::cloud_mark(t, s)),
         panel: page.panel.as_ref().map(|p| panel::of(p, t, read)),
     }
 }
@@ -169,10 +173,15 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
     }
 }
 
-/// The Note state: the action it names, then Close.
+/// The Note state: the action it names, a cloud note's local model, then Close.
 fn note_bar(note: &BarNote, t: &I18n) -> Bar {
     let act = note.act.map(|b| action(b, &note.hint, t));
-    let buttons = act.into_iter().chain([Button::bar(t, BarButton::Close)]);
+    let local = match note.hint {
+        BarHint::Cloud { local, .. } => use_local(t, local),
+        _ => Vec::new(),
+    };
+    let close = Button::bar(t, BarButton::Close);
+    let buttons = act.into_iter().chain(local).chain([close]);
     Bar::Note {
         hint: Hint::of(t, &note.hint),
         mic: note.mic,
@@ -184,10 +193,25 @@ fn note_bar(note: &BarNote, t: &I18n) -> Bar {
 fn action(b: BarButton, hint: &BarHint, t: &I18n) -> Button {
     let button = Button::bar(t, b).tone(Tone::Primary);
     match (b, hint) {
-        (BarButton::Download, BarHint::NoModel { bytes, .. }) => {
-            let size = (SIZE, t.voice_size(*bytes));
-            button.labelled(t.voice_with(VOICE_DOWNLOAD_SIZE, &[size]))
-        }
+        (BarButton::Download, BarHint::NoModel { bytes, .. }) => sized(t, button, *bytes),
         _ => button,
     }
+}
+
+/// "Use the local model", dimmed unless one is ready, then Download when none is (edge 20).
+fn use_local(t: &I18n, local: LocalUse) -> Vec<Button> {
+    let fetch = match local {
+        LocalUse::Download { bytes } => Some(sized(t, Button::bar(t, BarButton::Download), bytes)),
+        LocalUse::Ready | LocalUse::Dimmed => None,
+    };
+    [Some(cloud::use_local(t, local)), fetch]
+        .into_iter()
+        .flatten()
+        .collect()
+}
+
+/// Download `button` naming the size of the `bytes` it fetches.
+fn sized(t: &I18n, button: Button, bytes: u64) -> Button {
+    let size = (SIZE, t.voice_size(bytes));
+    button.labelled(t.voice_with(VOICE_DOWNLOAD_SIZE, &[size]))
 }
