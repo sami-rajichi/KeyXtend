@@ -165,7 +165,9 @@ fn a_cloud_dictation_leaves_only_at_stop_and_the_keyboard_types_the_services_tex
     assert_eq!(runs.len(), 1, "one upload");
     assert_eq!((runs[0].lang.as_str(), runs[0].sizes.len()), (ENGLISH, 2));
     assert!(shelf.key_reads() > 0, "the key was read for it");
-    let asked: Vec<TextAsk> = asks.try_iter().collect();
+    // The keyboard answers inside its own handler, so the ask can reach this later listener after the answer.
+    let first = asks.recv_timeout(WAIT).expect("the keyboard was asked");
+    let asked: Vec<TextAsk> = std::iter::once(first).chain(asks.try_iter()).collect();
     assert!(
         asked[0].text.expose().starts_with(TYPED),
         "the service's text"
