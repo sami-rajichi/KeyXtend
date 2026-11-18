@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-18 16:32 — P11: the cloud pages drawn in three languages
+The Voice panel now draws the Cloud page, each service's card, the key and address lines, Compare's send warning and the Models page's Local | Cloud switch, in the keyboard's theme and in English, French and Arabic. Every page fits the panel at both sizes with no scrolling; a card, or a key page with an address, takes two pages. A service's own setting name ends its sentence after a colon, so it reads correctly in Arabic, and old facts or a refused key show in the warning tone. The bar names the cloud service while it works and says why when it cannot, and "Use the local model" dims when no local model is ready.
+
 ## 2026-11-18 08:27 — P11: the app connects cloud voice typing
 The app now gives the voice module its cloud speech service, which the module requires, so a cloud dictation can reach the chosen service. Tests pin that only the voice module gets the service and the key, that the keyboard and the screens never see a key, and that a hidden run reads no key. The app itself still links no network code, and the staged build is 67 MB of its 80 MB budget.
 
