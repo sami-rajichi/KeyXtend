@@ -176,7 +176,7 @@ Item {
             verify(key.masked, "the key never shows");
             compare(key.drawn, s.key.mask.charAt(0).repeat(s.key.dots));
             compare(key.Accessible.description, s.key.mask, "readers hear the mask");
-            verify(!key.aims, "a click never aims letters at it");
+            verify(key.aims, "a click aims our keyboard's letters at it");
             compare(heard(box.contentItem, s.check.text).length, 1, "the test's answer");
             compare(heard(box.contentItem, s.link.text).length, 1, "where keys are made");
             compare(heard(box.contentItem, box.view.line).length, 1, "the key is sealed");

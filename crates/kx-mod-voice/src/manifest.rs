@@ -51,7 +51,7 @@ mod tests {
     use kx_module_api::ports::{
         ClipTake, ClipTaken, LayoutAsk, LayoutChanged, PasteText, PointerPressed, PressesAsk,
         PressesWanted, SealedShelfKey, TextAsk, TextDone, TextPasted, Typed, VoiceAct, VoiceAsk,
-        VoiceKey, VoiceLit, VoiceOpen, VoiceView,
+        VoiceClose, VoiceKey, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen, VoiceView,
     };
 
     #[test]
@@ -161,8 +161,11 @@ mod tests {
             VoiceAsk::CAPABILITY,
             TextAsk::CAPABILITY,
             TextDone::CAPABILITY,
+            VoiceLineKey::CAPABILITY,
+            VoiceLine::CAPABILITY,
+            VoiceClose::CAPABILITY,
         ];
-        assert_eq!(events, [voice; 8]);
+        assert_eq!(events, [voice; 11]);
     }
 
     #[test]

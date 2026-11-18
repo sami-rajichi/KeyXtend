@@ -2,7 +2,9 @@
 //! the keep-nothing switch, the site where keys are made, and the buttons that act now.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CloudButton, KeyCheck, LinesPart, Pages, ServiceSheet, VoiceSheet};
+use kx_module_api::ports::{
+    CloudButton, CloudLine, KeyCheck, LinesPart, Pages, ServiceSheet, VoiceSheet,
+};
 
 use super::Facts;
 use crate::panel::Panel;
@@ -23,28 +25,29 @@ impl Panel {
         } else {
             (None, self.single())
         };
-        let kept = entry.map(|e| Redacted::new(e.address.clone()));
-        let refused = self.cloud.refused.as_ref();
-        let address = refused
-            .map(|(text, _)| text.clone())
-            .or(kept)
-            .filter(|_| typed);
+        let lines = self.typed_lines(facts).unwrap_or_default();
+        let typing = self.cloud.typed.at(lines).unwrap_or(CloudLine::Key);
+        let text = |line| Redacted::new(self.line_text(line, facts));
         let sheet = ServiceSheet {
             service: row.shown(),
             mark: cloud.mark(s, row, facts.keyed.contains(&row.id)),
             key: Redacted::new(self.cloud.dots),
+            typed: Redacted::new(self.cloud.typed.key_dots()),
             check: self.key_check(row),
-            address,
-            address_fault: refused.map(|(_, fault)| *fault),
-            model: self.cloud.refused_model.clone().unwrap_or_else(|| {
-                Redacted::new(entry.map(|e| e.model.clone()).unwrap_or_default())
-            }),
+            address: typed.then(|| text(CloudLine::Address)),
+            address_fault: self.cloud.refused.as_ref().map(|(_, fault)| *fault),
+            model: text(CloudLine::Model),
             model_na: false,
             model_refused: self.cloud.refused_model.is_some(),
             keep: row.keep.as_ref().map(|_| entry.is_some_and(|e| e.keep)),
             site: row.keys.as_ref().map(|url| url.host().to_owned()),
             acts: self.cloud_acts(facts),
             part,
+            typing,
+            caret: Redacted::new(self.line_caret(typing, facts)),
+            saves: (lines.iter().copied())
+                .filter(|&l| !self.line_empty(l, facts))
+                .collect(),
         };
         (VoiceSheet::Service(sheet), pages)
     }

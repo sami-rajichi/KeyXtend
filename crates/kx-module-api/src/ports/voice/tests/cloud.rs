@@ -235,6 +235,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         service: ServiceName::Custom,
         mark: ServiceMark::Ready,
         key: Redacted::new(56),
+        typed: Redacted::new(0),
         check: KeyCheck::Untested,
         address: Some(hidden(1)),
         address_fault: Some(AddressFault::Host),
@@ -245,6 +246,9 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         site: None,
         acts: vec![CloudButton::Paste, CloudButton::Test],
         part: Some(LinesPart::Model),
+        typing: CloudLine::Address,
+        caret: Redacted::new(0),
+        saves: vec![CloudLine::Address],
     };
     let shown = shown(VoiceSheet::Service(sheet));
     assert!(!shown.contains("56"), "a key's length is a secret: {shown}");

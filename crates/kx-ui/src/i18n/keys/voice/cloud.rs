@@ -3,7 +3,8 @@
 
 use super::VoiceMark;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudWhy, KeyCheck, ModelSide, ServiceMark, Unavailable,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, ServiceMark,
+    Unavailable,
 };
 
 /// The start of every cloud key.
@@ -96,6 +97,8 @@ pub const VOICE_MODEL_LINE: &str = "cloud.model-line";
 pub const VOICE_MODEL_HINT: &str = "cloud.model-hint";
 /// The Other model line's refusal.
 pub const VOICE_MODEL_REFUSED: &str = "cloud.model-refused";
+/// A typed line's Save (ADR-0049).
+pub const VOICE_LINE_SAVE: &str = "cloud.line-save";
 /// The keep-nothing switch's label.
 pub const VOICE_KEEP_NOTHING: &str = "cloud.keep-nothing";
 /// The bar's cloud mark for readers: `$name`.
@@ -154,6 +157,16 @@ pub const fn cloud_button_id(button: CloudButton) -> &'static str {
         CloudButton::Test => "test",
         CloudButton::Remove => "remove",
         CloudButton::Link => "link",
+    }
+}
+
+/// A key page line's id, which QML sends back with a click on it or its Save.
+#[must_use]
+pub const fn cloud_line_id(line: CloudLine) -> &'static str {
+    match line {
+        CloudLine::Key => "key",
+        CloudLine::Address => "address",
+        CloudLine::Model => "model",
     }
 }
 

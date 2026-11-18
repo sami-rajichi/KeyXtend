@@ -7,6 +7,7 @@ use kx_module_api::ports::{
     AddressFault, CloudButton, KeyCheck, Link, ModelSide, ServiceMark, VoiceClick, VoiceTab,
 };
 
+use super::typing::Typed;
 use super::{Do, Key, Page, Panel};
 use crate::cloud::Cloud;
 use crate::settings::{CLOUD, PICKS, SERVICES, VoiceSettings};
@@ -37,6 +38,8 @@ pub(crate) struct Clouds {
     pub(crate) refused_model: Option<Redacted<String>>,
     /// The Models page's side, and the page the other side was left on.
     pub(crate) side: (ModelSide, usize),
+    /// The key page's lines as typed (ADR-0049).
+    pub(crate) typed: Typed,
 }
 
 impl Default for Clouds {
@@ -53,6 +56,7 @@ impl Default for Clouds {
             refused: None,
             refused_model: None,
             side: (ModelSide::Local, 0),
+            typed: Typed::default(),
         }
     }
 }
@@ -89,6 +93,11 @@ impl Panel {
             VoiceClick::SetKey(key) if lines => self.set_key(key),
             VoiceClick::SetAddress(text) => self.type_address(text, facts),
             VoiceClick::SetModel(text) => self.type_model(text, facts),
+            VoiceClick::Save(line) => self.save(*line, facts),
+            VoiceClick::Caret { line, at } => {
+                self.place_caret(*line, *at.expose(), facts);
+                Vec::new()
+            }
             VoiceClick::KeepNothing(on) => self.keep_nothing(*on, facts),
             VoiceClick::Side(side) => self.side(*side),
             _ => Vec::new(),

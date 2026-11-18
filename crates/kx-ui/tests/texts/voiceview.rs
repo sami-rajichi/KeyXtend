@@ -35,7 +35,7 @@ fn kinds() -> Value {
         "page": acts::PAGE, "wheel": acts::WHEEL, "fetch": acts::FETCH, "flip": acts::FLIP, "step": acts::STEP,
         "plus": acts::PLUS, "minus": acts::MINUS, "button": acts::BUTTON, "compare": acts::COMPARE,
         "confirm": acts::CONFIRM, "cloud": acts::CLOUD, "service": acts::SERVICE, "keep": acts::KEEP,
-        "side": acts::SIDE, "local": acts::LOCAL,
+        "side": acts::SIDE, "local": acts::LOCAL, "save": acts::SAVE, "caret": acts::CARET,
     })
 }
 

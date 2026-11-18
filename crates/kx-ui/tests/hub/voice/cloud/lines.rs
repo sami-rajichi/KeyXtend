@@ -7,18 +7,19 @@ use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, KeyCheck, LinesPart, ServiceMark, ServiceName, ServiceSheet,
-    VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, ServiceMark, ServiceName,
+    ServiceSheet, VoiceSheet,
 };
-use kx_ui::voice_acts::{KEEP, SERVICE};
+use kx_ui::voice_acts::{KEEP, SAVE, SERVICE};
 use serde_json::Value;
 
 /// Groq's key page: a 56-character key that works, nothing typed on the model line.
-fn groq_lines() -> ServiceSheet {
+pub(super) fn groq_lines() -> ServiceSheet {
     ServiceSheet {
         service: groq(),
         mark: ServiceMark::Ready,
         key: Redacted::new(56),
+        typed: Redacted::new(0),
         check: KeyCheck::Works,
         address: None,
         address_fault: None,
@@ -29,6 +30,9 @@ fn groq_lines() -> ServiceSheet {
         site: Some("console.groq.com".to_owned()),
         acts: CloudButton::ALL.to_vec(),
         part: None,
+        typing: CloudLine::Key,
+        caret: Redacted::new(0),
+        saves: Vec::new(),
     }
 }
 
@@ -83,11 +87,10 @@ fn the_key_page_shows_the_key_as_dots_with_paste_and_test() {
         key["mask"], "••••••••",
         "the mask PanelLine draws its dots from"
     );
-    let paste = button(SERVICE, "paste", "Paste", true, "plain");
-    assert_eq!(
-        buttons(&key["buttons"]),
-        [paste, button(SERVICE, "test", "Test", true, "plain")]
-    );
+    let save = button(SAVE, "key", "Save", false, "plain");
+    let [paste, test] =
+        [("paste", "Paste"), ("test", "Test")].map(|(id, w)| button(SERVICE, id, w, true, "plain"));
+    assert_eq!(buttons(&key["buttons"]), [paste, save, test]);
     assert_eq!(
         marks(&one(&p["sheet"]["check"])),
         pairs(&[("ok", "Key works")])

@@ -7,6 +7,7 @@ QtObject {
     readonly property var acts: ({
             bar: "bar",
             button: "button",
+            caret: "caret",
             cloud: "cloud",
             compare: "compare",
             confirm: "confirm",
@@ -21,6 +22,7 @@ QtObject {
             page: "page",
             plus: "plus",
             row: "row",
+            save: "save",
             service: "service",
             side: "side",
             step: "step",
@@ -97,6 +99,7 @@ QtObject {
             minus: "minus-",
             plus: "plus-",
             line: "line-",
+            save: "save-",
             side: "side-"
         })
 }

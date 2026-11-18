@@ -15,18 +15,24 @@ ClipButton {
     readonly property var hub: button || ({ kind: "", id: "", arg: 0, label: "", on: false, tone: host.names.plain })
     readonly property var names: host.names
 
-    // Its gate id: a question's answer, Compare's Start and a download's button by their meaning, the rest by id.
+    // Its gate id: a question's answer, Compare's Start, a line's Save and a download's button by their meaning, the rest
+    // by id.
     function uidOf(h) {
         const ids = names.ids;
         if (h.kind === names.acts.confirm)
             return h.arg ? ids.yes : ids.no;
         if (h.kind === names.acts.compare)
             return ids.start;
+        if (h.kind === names.acts.save)
+            return ids.save + h.id;
         return h.kind === names.acts.fetch ? h.id + "-" + h.arg : h.id;
     }
 
+    // Compare's Start and a line's Save take their kind's icon, as their id names what they act on.
+    readonly property string iconId: [names.acts.compare, names.acts.save].indexOf(hub.kind) >= 0 ? hub.kind : hub.id
+
     label: bare ? "" : hub.label
-    icon: alt || lk.icons.voice.panel.buttons[hub.kind === names.acts.compare ? names.acts.compare : hub.id] || ""
+    icon: alt || lk.icons.voice.panel.buttons[iconId] || ""
     tone: bare ? "flat" : names.tones[hub.tone]
     can: hub.on
     lk: host.lk

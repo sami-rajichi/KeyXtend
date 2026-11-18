@@ -9,6 +9,7 @@ mod jobs;
 mod keep;
 mod keyed;
 mod lanes;
+mod line;
 mod msg;
 mod net;
 mod offer;
@@ -29,8 +30,8 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    DevicePick, FieldChange, FieldKind, LayoutAsk, LayoutChanged, PanelButton, VoiceAct,
-    VoiceClick, VoicePanel,
+    FieldChange, FieldKind, LayoutAsk, LayoutChanged, PanelButton, PanelLine, VoiceAct, VoiceClick,
+    VoicePanel,
 };
 
 use crate::VoiceSettings;
@@ -67,6 +68,8 @@ pub(crate) struct Actor {
     stepping: bool,
     /// The panel the flow draws.
     drawn: Option<VoicePanel>,
+    /// The panel's line as the keyboard was told, `None` while closed (ADR-0049).
+    line: Option<PanelLine>,
     /// What Compare holds of the microphone, as the flow knows it.
     lend: Lend,
     /// Presses are wanted, as Undo insert can act.
@@ -93,6 +96,7 @@ impl Actor {
             inputs: VecDeque::new(),
             stepping: false,
             drawn: None,
+            line: None,
             lend: Lend::Off,
             presses: false,
             stopped: false,
@@ -148,7 +152,12 @@ impl Actor {
             Msg::Key => self.step(In::Key),
             Msg::Act(act) => self.act(act),
             Msg::Open => self.open_panel(),
-            Msg::Ask => self.step(In::Ask),
+            Msg::Ask => {
+                self.step(In::Ask);
+                self.retell_line();
+            }
+            Msg::LineKey(key) => self.line_key(&key),
+            Msg::Close => self.close_panel(),
             Msg::Layout(layout) => self.layout(layout),
             Msg::Field(change) => self.step(In::Field(change)),
             Msg::Session(note) => self.step(In::Session(note)),
@@ -193,6 +202,7 @@ impl Actor {
         }
         (self.ports.field, self.ports.session) = (None, None);
         self.step(In::Quit);
+        self.drop_line();
         self.retry_saves();
         self.jobs.fetches.clear();
         self.lanes.clear();
@@ -223,7 +233,7 @@ impl Actor {
     }
 
     /// After each message: the flow learns what Compare holds, a held-back check may start, then the panel to draw
-    /// when it changed.
+    /// when it changed, and the keyboard the panel's line.
     fn after(&mut self) {
         if self.stopped {
             return;
@@ -241,6 +251,7 @@ impl Actor {
             self.drawn.clone_from(&view);
             self.step(In::Panel(view.map(Box::new)));
         }
+        self.tell_line();
     }
 
     /// A click: the bar's buttons, the pointer, Try again and "Use the local model" go to the flow, the rest to the
@@ -277,15 +288,6 @@ impl Actor {
         self.held.front = layout.clone();
         self.step(In::Layout(layout));
         self.recheck();
-    }
-
-    /// A card may serve a dictation now: one is picked, or Automatic has a check to go by.
-    fn card_could_serve(&self) -> bool {
-        match self.held.settings.device() {
-            DevicePick::Cpu => false,
-            DevicePick::Card(_) => true,
-            DevicePick::Auto => !self.held.checks.rows().is_empty(),
-        }
     }
 }
 

@@ -43,6 +43,8 @@ PanelGlow {
         round: panel.round
         rows: panel.win.cfg.pageRows
         ar: !!panel.win.tongue.rtl
+        aimed: !!panel.win.st.aimed
+        onAiming: panel.win.redraw(panel.win.keyboard.aimPanel())
         onTouched: panel.touched()
         onRescaled: panel.rescaled()
         onUnitChanged: panel.relaid()

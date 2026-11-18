@@ -5,8 +5,8 @@ use std::path::PathBuf;
 
 use kx_module_api::ports::{
     CardId, CheckDone, ClipTaken, CloudFault, CloudNote, Device, FetchNote, FieldChange,
-    Fingerprint, FolderError, LayoutChanged, ModelError, ModelFacts, SessionNote, SpeechError,
-    SpeechNote, TextDone, TextPasted, VoiceAct,
+    Fingerprint, FolderError, LayoutChanged, ModelError, ModelFacts, PanelKey, SessionNote,
+    SpeechError, SpeechNote, TextDone, TextPasted, VoiceAct,
 };
 
 use super::ask::Wired;
@@ -23,6 +23,10 @@ pub(crate) enum Msg {
     Open,
     /// A late starter asks for the view and the light again (`VoiceAsk`).
     Ask,
+    /// A key from the keyboard for the panel's line (`VoiceLineKey`).
+    LineKey(PanelKey),
+    /// Another panel opened, so this one closes (`VoiceClose`).
+    Close,
     /// The keyboard shows another layout.
     Layout(LayoutChanged),
     /// The focused box changed.

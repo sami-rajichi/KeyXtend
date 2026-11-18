@@ -15,6 +15,7 @@ pub mod flow;
 pub mod folder;
 pub mod history;
 pub mod keys;
+pub mod line;
 mod manifest;
 pub mod models;
 mod module;

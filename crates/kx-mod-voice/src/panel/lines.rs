@@ -22,6 +22,9 @@ impl Panel {
         facts: &Facts<'_>,
     ) -> Vec<Do> {
         let round = self.cloud.next();
+        if matches!(button, CloudButton::Paste | CloudButton::Remove) {
+            self.cloud.typed.key = None;
+        }
         match button {
             CloudButton::Paste => {
                 self.cloud.take = Some(round);
@@ -42,12 +45,13 @@ impl Panel {
         }
     }
 
-    /// The key line's text, set as the shown service's key; a test or Paste waited for is dropped.
+    /// The key line's text, set as the shown service's key; a test or Paste waited for, and a key typed, are dropped.
     pub(super) fn set_key(&mut self, key: &Secret) -> Vec<Do> {
         let Some(id) = self.cloud.shown.clone() else {
             return Vec::new();
         };
         self.cloud.next();
+        self.cloud.typed.key = None;
         vec![Do::SetKey {
             service: id,
             key: trimmed(key),

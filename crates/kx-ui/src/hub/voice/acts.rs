@@ -2,10 +2,12 @@
 //! the id the view gives it; a row's place, a page's way or an answer is the argument.
 
 use crate::i18n::keys::{
-    bar_button_id, cloud_button_id, fetch_button_id, model_side_id, panel_button_id, voice_tab_id,
+    bar_button_id, cloud_button_id, cloud_line_id, fetch_button_id, model_side_id, panel_button_id,
+    voice_tab_id,
 };
+use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, CloudButton, FetchButton, ModelSide, PanelButton, VoiceClick, VoiceTab,
+    BarButton, CloudButton, CloudLine, FetchButton, ModelSide, PanelButton, VoiceClick, VoiceTab,
 };
 use std::cmp::Ordering;
 
@@ -49,6 +51,10 @@ pub const KEEP: &str = "keep";
 pub const SIDE: &str = "side";
 /// Use the local model after a cloud note.
 pub const LOCAL: &str = "local";
+/// Save the key page's line `id` (ADR-0049).
+pub const SAVE: &str = "save";
+/// A click on the key page's line `id`, with the caret's place in what it draws as the argument.
+pub const CARET: &str = "caret";
 
 /// True for a click that plays no key sound: the pointer's move and the wheel.
 pub(super) fn silent(kind: &str) -> bool {
@@ -101,6 +107,11 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         KEEP => VoiceClick::KeepNothing(switch(arg)?),
         SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
         LOCAL => VoiceClick::Local,
+        SAVE => VoiceClick::Save(by_id(CloudLine::ALL, cloud_line_id, id)?),
+        CARET => VoiceClick::Caret {
+            line: by_id(CloudLine::ALL, cloud_line_id, id)?,
+            at: Redacted::new(u32::try_from(arg).map_err(|_| Bad)?),
+        },
         _ => return Err(Bad),
     };
     Ok(Click::Send(click))

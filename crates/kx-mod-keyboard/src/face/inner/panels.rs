@@ -48,8 +48,8 @@ impl Inner {
 
     /// Key `id` from our panels' key list `uses`, for the panel open now and aimed at, with `clicks` outside clicks
     /// heard so far: a move, or what a character key gives its search or line, after a burst left open ends as before a
-    /// tap. `None` while no panel is open or aimed at, or for a key it does not take; `Pass` for a key Ctrl, Alt or Win
-    /// acts on.
+    /// tap. `None` while no panel is open or aimed at, or for a key it does not take, as the Voice panel's Esc;
+    /// `Pass` for a key Ctrl, Alt or Win acts on.
     pub(in crate::face) fn took(
         &mut self,
         id: &str,
@@ -62,6 +62,9 @@ impl Inner {
             return None;
         }
         let &key = uses.get(id)?;
+        if !self.takes(panel, key) {
+            return None;
+        }
         self.ended();
         let table = self.ports.layouts.current();
         let cells = self.layer.cells();

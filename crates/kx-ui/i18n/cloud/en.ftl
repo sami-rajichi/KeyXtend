@@ -94,6 +94,7 @@ cloud =
     .model-line = Other model
     .model-hint = A model id from the service’s page
     .model-refused = This model id is too long or holds a character that is not allowed.
+    .line-save = Save
     .keep-nothing = Only hosts that keep nothing
     .on-bar = Your voice goes to { $name } at Stop
     .use-local = Use the local model

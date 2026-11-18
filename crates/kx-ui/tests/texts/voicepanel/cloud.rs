@@ -4,8 +4,8 @@
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy,
-    CompareCloud, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg,
+    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet,
+    CloudWhy, CompareCloud, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg,
     FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep,
     ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
 };
@@ -117,14 +117,15 @@ pub(super) fn card(old: bool) -> VoiceSheet {
     }))
 }
 
-/// Groq's key page with its key tested, the keep-nothing row's with a refused model, or the Custom row's
-/// with an address that is not HTTPS.
+/// Groq's key page with its key tested, the keep-nothing row's with a refused model, or the Custom row's with an
+/// address that is not HTTPS taking the letters.
 pub(super) fn lines(which: &str) -> VoiceSheet {
     let text = |s: &str| Redacted::new(s.to_owned());
     let mut s = ServiceSheet {
         service: named("Groq"),
         mark: ServiceMark::Ready,
         key: Redacted::new(56),
+        typed: Redacted::new(0),
         check: KeyCheck::Works,
         address: None,
         address_fault: None,
@@ -135,10 +136,14 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         site: Some("console.groq.com".to_owned()),
         acts: CloudButton::ALL.to_vec(),
         part: None,
+        typing: CloudLine::Key,
+        caret: Redacted::new(0),
+        saves: Vec::new(),
     };
     if which == "router" {
         (s.service, s.mark, s.check) = (named("OpenRouter"), ServiceMark::Ready, KeyCheck::NoTest);
         (s.model, s.model_na, s.keep) = (text("mistralai/voxtral-small"), true, Some(true));
+        s.saves.push(CloudLine::Model);
     } else if which == "custom" {
         (s.service, s.mark, s.key, s.check) = (
             ServiceName::Custom,
@@ -150,7 +155,18 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
             (Some(text("http://lan.example")), Some(AddressFault::Https));
         (s.model, s.model_refused, s.site) = (text("no such/model"), true, None);
         s.acts = vec![CloudButton::Paste, CloudButton::Facts, CloudButton::Off];
+        (s.typing, s.caret) = (CloudLine::Address, Redacted::new(7));
+        s.saves = vec![CloudLine::Address, CloudLine::Model];
     }
+    VoiceSheet::Service(s)
+}
+
+/// Groq's key page with a new key typed, its caret inside it.
+fn typed() -> VoiceSheet {
+    let VoiceSheet::Service(mut s) = lines("groq") else {
+        unreachable!("a key page")
+    };
+    (s.typed, s.caret, s.saves) = (Redacted::new(20), Redacted::new(12), vec![CloudLine::Key]);
     VoiceSheet::Service(s)
 }
 
@@ -248,6 +264,7 @@ pub fn panels() -> Vec<(&'static str, Shown)> {
         ("service", shown(lines("groq"), &[])),
         ("serviceRouter", shown(lines("router"), &[])),
         ("serviceCustom", shown(lines("custom"), &[])),
+        ("serviceTyped", shown(typed(), &[])),
         ("modelsCloud", paged(shown(models(), &[Use]), 0, 1, 1)),
         ("compareCloud", shown(compare(), &[])),
         ("comparingCloud", shown(comparing(), &[Cancel])),

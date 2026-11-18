@@ -2,7 +2,8 @@
 //! only counted, as their handler takes no lock, so a read compares the count first; a change shows at the next relabel.
 
 use super::{Inner, STATE};
-use crate::panel::Panel;
+use crate::panel::{Panel, PanelUse};
+use crate::spec::Nav;
 use kx_module_api::ports::{FaceReply, PanelLine};
 
 /// The aim on the open panel's line.
@@ -80,6 +81,13 @@ impl Inner {
             Some(was) if was != now => self.lose_aim(),
             _ => self.aim.front = Some(now),
         }
+    }
+
+    /// The open `panel` takes `key` while aimed at: the Voice panel only on a line, and never its Esc, which leaves the
+    /// text and reaches the app (ADR-0049).
+    pub(super) fn takes(&self, panel: Panel, key: PanelUse) -> bool {
+        let line = matches!(self.aim.line, PanelLine::Private);
+        panel != Panel::Voice || (line && key != PanelUse::Nav(Nav::Esc))
     }
 
     /// The line is aimed at; only an open panel's ever is.

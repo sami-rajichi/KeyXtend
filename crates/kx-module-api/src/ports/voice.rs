@@ -12,14 +12,15 @@ pub use bar::{
     VoicePage, VoiceText,
 };
 pub use panel::{
-    AddressFault, CardCheck, CardPart, CloudBand, CloudCard, CloudRow, CloudSheet, CompareCloud,
-    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
-    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchState, FolderLine, FolderList,
-    HistoryRow, HistorySheet, KeyCheck, LinesPart, ModelRow, ModelSide, ModelState, ModelsSheet,
-    OptionRow, OptionUnit, OptionValue, RunStep, ServiceMark, ServiceName, ServiceRow,
+    AddressFault, CardCheck, CardPart, CloudBand, CloudCard, CloudLine, CloudRow, CloudSheet,
+    CompareCloud, CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName,
+    DeviceRow, DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchState, FolderLine,
+    FolderList, HistoryRow, HistorySheet, KeyCheck, LinesPart, ModelRow, ModelSide, ModelState,
+    ModelsSheet, OptionRow, OptionUnit, OptionValue, RunStep, ServiceMark, ServiceName, ServiceRow,
     ServiceSheet, Unavailable, UsePrice, VoiceHome, VoicePanel, VoiceSheet, VoiceTab,
 };
 
+use super::{PanelKey, PanelLine};
 use crate::{Capability, Event, Secret};
 use serde::Serialize;
 use std::sync::Arc;
@@ -138,6 +139,36 @@ pub struct TextDone {
 
 impl Event for TextDone {
     const NAME: &'static str = "text-done";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the keyboard: a key clicked while the Voice panel's line is aimed at, which goes to that line instead of the app
+/// (ADR-0049).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceLineKey(pub PanelKey);
+
+impl Event for VoiceLineKey {
+    const NAME: &'static str = "voice-line-key";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the voice module: the line the Voice panel's page shows, `None` while the panel is closed, told after the view
+/// as it changes and on `VoiceAsk`. A key, address or model line is `PanelLine::Private`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceLine(pub Option<PanelLine>);
+
+impl Event for VoiceLine {
+    const NAME: &'static str = "voice-line";
+    const CAPABILITY: Option<Capability> = GATE;
+}
+
+/// From the keyboard: the clipboard or Quick-fill panel opened, so the Voice panel closes as its Close does; it never
+/// opens one, so a late one is harmless.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct VoiceClose;
+
+impl Event for VoiceClose {
+    const NAME: &'static str = "voice-close";
     const CAPABILITY: Option<Capability> = GATE;
 }
 

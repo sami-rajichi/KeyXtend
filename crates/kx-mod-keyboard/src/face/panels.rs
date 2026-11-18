@@ -1,11 +1,13 @@
 //! Our panels on the face (spec §3.3, §3.4, §7, §8.1, ADR-0040): while one is open and aimed at its keys go to it instead
-//! of the app, and one opening closes the other. As in `bus.rs`, nothing is sent while the face's lock is held.
+//! of the app, and one opening closes the others. As in `bus.rs`, nothing is sent while the face's lock is held.
 
 use super::{Face, STATE};
 use crate::panel::Panel;
 use crate::run::ToPanel;
 use kx_module_api::Bus;
-use kx_module_api::ports::{ClipAct, ClipKey, FaceReply, FillClose, FillKey, PanelKey, PanelLine};
+use kx_module_api::ports::{
+    ClipAct, ClipKey, FaceReply, FillClose, FillKey, PanelKey, PanelLine, VoiceClose, VoiceLineKey,
+};
 use std::sync::atomic::Ordering::SeqCst;
 
 impl Face {
@@ -48,14 +50,19 @@ impl Face {
             inner.bus()
         };
         if open {
-            // The module holds `ReadClipboard`, which the clipboard's close needs; Quick-fill's needs none.
-            let _ = match panel {
-                Panel::Clip => bus.publish(&FillClose),
-                Panel::Fill => bus.publish(&ClipAct::Close),
-            };
+            close_others(&bus, panel);
         }
         self.pour();
         self.tell(false);
+    }
+
+    /// The voice module said which line its panel shows, `None` once closed: the panel opens or closes as the others
+    /// do on their words, and its line aims as theirs (ADR-0049).
+    pub(super) fn heard_voice_line(&self, line: Option<&PanelLine>) {
+        self.heard_panel(Panel::Voice, line.is_some());
+        if let Some(line) = line {
+            self.heard_line(Panel::Voice, line);
+        }
     }
 
     /// `panel`'s module said which line shows; prediction hears it while it is aimed at.
@@ -75,11 +82,26 @@ impl Face {
     }
 }
 
-/// Sends `key` to `panel`'s module. The module holds `ReadClipboard` and `Vault`, which these keys need, or its start
-/// would have failed.
+/// Sends `key` to `panel`'s module. The module holds `ReadClipboard`, `Vault` and `Voice`, which these keys need, or
+/// its start would have failed.
 fn send_key(bus: &Bus, panel: Panel, key: PanelKey) {
     let _ = match panel {
         Panel::Clip => bus.publish(&ClipKey(key)),
         Panel::Fill => bus.publish(&FillKey(key)),
+        Panel::Voice => bus.publish(&VoiceLineKey(key)),
     };
+}
+
+/// Asks every panel but `open` to close. The module holds `ReadClipboard` and `Voice`, which the clipboard's and the
+/// Voice panel's closes need; Quick-fill's needs none.
+fn close_others(bus: &Bus, open: Panel) {
+    if open != Panel::Fill {
+        let _ = bus.publish(&FillClose);
+    }
+    if open != Panel::Clip {
+        let _ = bus.publish(&ClipAct::Close);
+    }
+    if open != Panel::Voice {
+        let _ = bus.publish(&VoiceClose);
+    }
 }

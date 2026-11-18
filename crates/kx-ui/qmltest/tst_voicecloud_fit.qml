@@ -20,7 +20,7 @@ Item {
         // the key pages, Models with its Local | Cloud chips, and Compare's set text and run with cloud models and the
         // warning.
         readonly property var cloudPages: ["cloud", "cloudOff", "card", "cardOld"].concat(Kit.named("en", "cloudLong-"), Kit.named("en", "cardLong"), [
-            "service", "serviceRouter", "serviceCustom", "serviceLong", "serviceLongModel", "models", "modelsSlow",
+            "service", "serviceRouter", "serviceCustom", "serviceTyped", "serviceLong", "serviceLongModel", "models", "modelsSlow",
             "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"])
 
         // The shown children of `item`.

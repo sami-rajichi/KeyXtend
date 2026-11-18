@@ -263,7 +263,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -410,7 +410,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -546,7 +546,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -703,7 +703,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1109,7 +1109,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1407,7 +1407,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1494,7 +1494,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1692,7 +1692,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2814,7 +2814,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2997,7 +2997,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4309,6 +4309,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -4316,6 +4317,14 @@ var views = {
                 "kind": "service",
                 "label": "لصق",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -4333,7 +4342,9 @@ var views = {
             "hint": "اكتب مفتاحك أو الصقه",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": true
           },
           "link": {
             "button": {
@@ -4347,14 +4358,26 @@ var views = {
             "text": "إنشاء مفتاح في console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "نموذج آخر",
             "dots": 0,
             "fault": null,
             "hint": "معرّف النموذج من صفحة الخدمة",
             "id": "model",
             "mask": null,
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "جاهزة",
@@ -4437,19 +4460,32 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "حفظ",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "العنوان",
             "dots": 0,
             "fault": "يجب أن يستخدم العنوان HTTPS، مثل https://example.com",
             "hint": "عنوان خدمتك، مثل https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -4457,6 +4493,14 @@ var views = {
                 "kind": "service",
                 "label": "لصق",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -4474,18 +4518,32 @@ var views = {
             "hint": "اكتب مفتاحك أو الصقه",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "نموذج آخر",
             "dots": 0,
             "fault": "معرّف النموذج هذا طويل جدًا أو يحتوي على حرف غير مسموح به.",
             "hint": "معرّف النموذج من صفحة الخدمة",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "يلزم مفتاح",
@@ -4575,6 +4633,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -4582,6 +4641,14 @@ var views = {
                 "kind": "service",
                 "label": "لصق",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -4599,7 +4666,9 @@ var views = {
             "hint": "اكتب مفتاحك أو الصقه",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": {
             "button": {
@@ -4621,7 +4690,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4694,14 +4763,26 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "حفظ",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "العنوان",
             "dots": 0,
             "fault": "يحتوي العنوان على حرف غير مسموح به، مثل المسافة.",
             "hint": "عنوان خدمتك، مثل https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
@@ -4714,14 +4795,26 @@ var views = {
           "key": null,
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "نموذج آخر",
             "dots": 0,
             "fault": "معرّف النموذج هذا طويل جدًا أو يحتوي على حرف غير مسموح به.",
             "hint": "معرّف النموذج من صفحة الخدمة",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "يلزم مفتاح",
@@ -4731,7 +4824,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4816,12 +4909,179 @@ var views = {
             "value": "مفعّل"
           },
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
                 "id": "paste",
                 "kind": "service",
                 "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "اختبار",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "المفتاح",
+            "dots": 56,
+            "fault": null,
+            "hint": "اكتب مفتاحك أو الصقه",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "إنشاء مفتاح في console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "نموذج آخر",
+            "dots": 0,
+            "fault": "لا يتعهّد أي مضيف لهذا النموذج بعدم الاحتفاظ بشيء.",
+            "hint": "معرّف النموذج من صفحة الخدمة",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small",
+            "typed": 0,
+            "typing": false
+          }
+        },
+        "sub": "جاهزة",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "serviceTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "إزالة المفتاح",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "يُحفَظ المفتاح مشفّرًا على هذا الحاسوب ولا يُعرض أبدًا.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "المفتاح يعمل"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 12,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "لصق",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "حفظ",
                 "on": true,
                 "tone": "plain"
               },
@@ -4840,7 +5100,9 @@ var views = {
             "hint": "اكتب مفتاحك أو الصقه",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 20,
+            "typing": true
           },
           "link": {
             "button": {
@@ -4854,24 +5116,36 @@ var views = {
             "text": "إنشاء مفتاح في console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "حفظ",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "نموذج آخر",
             "dots": 0,
-            "fault": "لا يتعهّد أي مضيف لهذا النموذج بعدم الاحتفاظ بشيء.",
+            "fault": null,
             "hint": "معرّف النموذج من صفحة الخدمة",
             "id": "model",
             "mask": null,
-            "text": "mistralai/voxtral-small"
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "جاهزة",
         "ticked": 0,
-        "title": "OpenRouter",
+        "title": "Groq",
         "top": null,
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 24,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5144,7 +5418,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5291,7 +5565,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5427,7 +5701,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5584,7 +5858,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5990,7 +6264,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -6288,7 +6562,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -6375,7 +6649,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -6573,7 +6847,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -7695,7 +7969,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -7878,7 +8152,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9190,6 +9464,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -9197,6 +9472,14 @@ var views = {
                 "kind": "service",
                 "label": "Paste",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -9214,7 +9497,9 @@ var views = {
             "hint": "Type or paste your key",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": true
           },
           "link": {
             "button": {
@@ -9228,14 +9513,26 @@ var views = {
             "text": "Make a key at console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "Other model",
             "dots": 0,
             "fault": null,
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Ready",
@@ -9318,19 +9615,32 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "Save",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Address",
             "dots": 0,
             "fault": "The address must use HTTPS, such as https://example.com",
             "hint": "Your service’s address, such as https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -9338,6 +9648,14 @@ var views = {
                 "kind": "service",
                 "label": "Paste",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -9355,18 +9673,32 @@ var views = {
             "hint": "Type or paste your key",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Other model",
             "dots": 0,
             "fault": "This model id is too long or holds a character that is not allowed.",
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Needs a key",
@@ -9456,6 +9788,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -9463,6 +9796,14 @@ var views = {
                 "kind": "service",
                 "label": "Paste",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -9480,7 +9821,9 @@ var views = {
             "hint": "Type or paste your key",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": {
             "button": {
@@ -9502,7 +9845,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9575,14 +9918,26 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "Save",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Address",
             "dots": 0,
             "fault": "The address holds a character that is not allowed, such as a space.",
             "hint": "Your service’s address, such as https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
@@ -9595,14 +9950,26 @@ var views = {
           "key": null,
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Other model",
             "dots": 0,
             "fault": "This model id is too long or holds a character that is not allowed.",
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Needs a key",
@@ -9612,7 +9979,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9697,12 +10064,179 @@ var views = {
             "value": "On"
           },
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
                 "id": "paste",
                 "kind": "service",
                 "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Test",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Key",
+            "dots": 56,
+            "fault": null,
+            "hint": "Type or paste your key",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Make a key at console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Other model",
+            "dots": 0,
+            "fault": "No host of this model promises to keep nothing.",
+            "hint": "A model id from the service’s page",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small",
+            "typed": 0,
+            "typing": false
+          }
+        },
+        "sub": "Ready",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "serviceTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Remove key",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "The key is kept encrypted on this PC and never shown.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "Key works"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 12,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Paste",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Save",
                 "on": true,
                 "tone": "plain"
               },
@@ -9721,7 +10255,9 @@ var views = {
             "hint": "Type or paste your key",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 20,
+            "typing": true
           },
           "link": {
             "button": {
@@ -9735,24 +10271,36 @@ var views = {
             "text": "Make a key at console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Save",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "Other model",
             "dots": 0,
-            "fault": "No host of this model promises to keep nothing.",
+            "fault": null,
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
-            "text": "mistralai/voxtral-small"
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Ready",
         "ticked": 0,
-        "title": "OpenRouter",
+        "title": "Groq",
         "top": null,
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 24,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10025,7 +10573,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10172,7 +10720,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 34,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10308,7 +10856,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10465,7 +11013,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10871,7 +11419,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11169,7 +11717,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 27,
+      "round": 28,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11256,7 +11804,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11454,7 +12002,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 28,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -12576,7 +13124,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 26,
+      "round": 27,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -12759,7 +13307,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 29,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -14071,6 +14619,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -14078,6 +14627,14 @@ var views = {
                 "kind": "service",
                 "label": "Coller",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -14095,7 +14652,9 @@ var views = {
             "hint": "Tapez ou collez votre clé",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": true
           },
           "link": {
             "button": {
@@ -14109,14 +14668,26 @@ var views = {
             "text": "Créer une clé sur console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "Autre modèle",
             "dots": 0,
             "fault": null,
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Prêt",
@@ -14199,19 +14770,32 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Adresse",
             "dots": 0,
             "fault": "L’adresse doit utiliser HTTPS, par exemple https://example.com",
             "hint": "L’adresse de votre service, par exemple https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -14219,6 +14803,14 @@ var views = {
                 "kind": "service",
                 "label": "Coller",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -14236,18 +14828,32 @@ var views = {
             "hint": "Tapez ou collez votre clé",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Autre modèle",
             "dots": 0,
             "fault": "Cet identifiant de modèle est trop long ou contient un caractère non autorisé.",
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Clé requise",
@@ -14337,6 +14943,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
@@ -14344,6 +14951,14 @@ var views = {
                 "kind": "service",
                 "label": "Coller",
                 "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
                 "tone": "plain"
               },
               {
@@ -14361,7 +14976,9 @@ var views = {
             "hint": "Tapez ou collez votre clé",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 0,
+            "typing": false
           },
           "link": {
             "button": {
@@ -14383,7 +15000,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 30,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -14456,14 +15073,26 @@ var views = {
         },
         "sheet": {
           "address": {
-            "buttons": [],
+            "at": 7,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "address",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Adresse",
             "dots": 0,
             "fault": "L’adresse contient un caractère non autorisé, comme un espace.",
             "hint": "L’adresse de votre service, par exemple https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
-            "text": "http://lan.example"
+            "text": "http://lan.example",
+            "typed": 0,
+            "typing": true
           },
           "check": null,
           "is": "service",
@@ -14476,14 +15105,26 @@ var views = {
           "key": null,
           "link": null,
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
             "caption": "Autre modèle",
             "dots": 0,
             "fault": "Cet identifiant de modèle est trop long ou contient un caractère non autorisé.",
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
-            "text": "no such/model"
+            "text": "no such/model",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Clé requise",
@@ -14493,7 +15134,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -14578,12 +15219,179 @@ var views = {
             "value": "Activé"
           },
           "key": {
+            "at": 0,
             "buttons": [
               {
                 "arg": 0,
                 "id": "paste",
                 "kind": "service",
                 "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "test",
+                "kind": "service",
+                "label": "Tester",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Clé",
+            "dots": 56,
+            "fault": null,
+            "hint": "Tapez ou collez votre clé",
+            "id": "key",
+            "mask": "••••••••",
+            "text": "",
+            "typed": 0,
+            "typing": true
+          },
+          "link": {
+            "button": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir",
+              "on": true,
+              "tone": "plain"
+            },
+            "text": "Créer une clé sur console.groq.com"
+          },
+          "model": {
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": true,
+                "tone": "plain"
+              }
+            ],
+            "caption": "Autre modèle",
+            "dots": 0,
+            "fault": "Aucun hébergeur ne s’engage à ne rien garder.",
+            "hint": "L’identifiant du modèle, sur la page du service",
+            "id": "model",
+            "mask": null,
+            "text": "mistralai/voxtral-small",
+            "typed": 0,
+            "typing": false
+          }
+        },
+        "sub": "Prêt",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 24,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "serviceTyped": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "remove",
+            "kind": "service",
+            "label": "Retirer la clé",
+            "on": true,
+            "tone": "danger"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "La clé est chiffrée sur ce PC et jamais affichée.",
+        "note": null,
+        "page": "service",
+        "pages": {
+          "at": 0,
+          "count": 1
+        },
+        "sheet": {
+          "address": null,
+          "check": {
+            "id": "ok",
+            "text": "La clé fonctionne"
+          },
+          "is": "service",
+          "keep": null,
+          "key": {
+            "at": 12,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "paste",
+                "kind": "service",
+                "label": "Coller",
+                "on": true,
+                "tone": "plain"
+              },
+              {
+                "arg": 0,
+                "id": "key",
+                "kind": "save",
+                "label": "Enregistrer",
                 "on": true,
                 "tone": "plain"
               },
@@ -14602,7 +15410,9 @@ var views = {
             "hint": "Tapez ou collez votre clé",
             "id": "key",
             "mask": "••••••••",
-            "text": ""
+            "text": "",
+            "typed": 20,
+            "typing": true
           },
           "link": {
             "button": {
@@ -14616,24 +15426,36 @@ var views = {
             "text": "Créer une clé sur console.groq.com"
           },
           "model": {
-            "buttons": [],
+            "at": 0,
+            "buttons": [
+              {
+                "arg": 0,
+                "id": "model",
+                "kind": "save",
+                "label": "Enregistrer",
+                "on": false,
+                "tone": "plain"
+              }
+            ],
             "caption": "Autre modèle",
             "dots": 0,
-            "fault": "Aucun hébergeur ne s’engage à ne rien garder.",
+            "fault": null,
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
-            "text": "mistralai/voxtral-small"
+            "text": "",
+            "typed": 0,
+            "typing": false
           }
         },
         "sub": "Prêt",
         "ticked": 0,
-        "title": "OpenRouter",
+        "title": "Groq",
         "top": null,
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 24,
+      "round": 26,
       "sounds": true,
       "words": {
         "copied": "Copié",

@@ -94,6 +94,7 @@ cloud =
     .model-line = Autre modèle
     .model-hint = L’identifiant du modèle, sur la page du service
     .model-refused = Cet identifiant de modèle est trop long ou contient un caractère non autorisé.
+    .line-save = Enregistrer
     .keep-nothing = Seulement des hébergeurs qui ne gardent rien
     .on-bar = Votre voix partira chez { $name } à l’arrêt
     .use-local = Utiliser le modèle local

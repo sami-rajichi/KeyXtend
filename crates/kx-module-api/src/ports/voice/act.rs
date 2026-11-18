@@ -2,7 +2,7 @@
 //! button, an option, a panel button, Compare's start with its set text, an answer, and the cloud pages' switches,
 //! buttons and typed lines, whose text stays redacted.
 
-use super::panel::{ModelSide, VoiceTab};
+use super::panel::{CloudLine, ModelSide, VoiceTab};
 use crate::{Redacted, Secret};
 
 listed! {
@@ -153,6 +153,15 @@ pub enum VoiceClick {
     SetAddress(Redacted<String>),
     /// The Other model line's text, set as the shown service's model id.
     SetModel(Redacted<String>),
+    /// Save a typed line's text as the shown service's key, address or model id, as Enter on it does (ADR-0049).
+    Save(CloudLine),
+    /// A click on a typed line: it takes the letters, with its caret `at` into what it draws.
+    Caret {
+        /// The line.
+        line: CloudLine,
+        /// UTF-16 units of its text, or dots on the key line; it may tell a secret's length.
+        at: Redacted<u32>,
+    },
     /// Ask only for hosts that keep nothing, or not on false: `OpenRouter`'s switch.
     KeepNothing(bool),
     /// Use the local model: write the held recording with the language's local model, after a cloud fault.

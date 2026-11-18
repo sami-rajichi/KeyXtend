@@ -8,6 +8,7 @@
 )]
 
 mod during;
+mod lines;
 mod pieces;
 mod props;
 mod text;

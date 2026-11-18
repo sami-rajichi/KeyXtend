@@ -18,7 +18,12 @@ Window {
     required property int round
     required property int rows
     required property bool ar
+    // The keys are aimed at the panel, which only the keyboard knows (ADR-0040).
+    property bool aimed: false
 
+    // A press on the panel, unless it follows another inside the double-click time, or a reader's on a line, aims the
+    // keys at it; they reach it only on a key page's line (ADR-0049).
+    signal aiming
     // A press landed on the panel, which closes the tray menu; the press still reaches the part under it.
     signal touched
     // The display scale changed, so its place, set in the old Qt units, is stale.
@@ -212,6 +217,7 @@ Window {
         }
         PressWatch {
             onTouched: box.touched()
+            onAlone: box.aiming()
         }
         // Hidden lines laid out as the rows' are, which round each line up, so a row always fits them.
         Label {

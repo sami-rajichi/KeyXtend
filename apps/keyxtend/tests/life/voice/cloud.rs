@@ -2,6 +2,7 @@
 //! provides, and the keyboard types the service's text; a key set on its line or pasted is sealed on the voice shelf
 //! and reaches neither the ui's view nor the keyboard; a hidden run offers no service and reads no key.
 
+mod typed;
 mod watched;
 
 use super::{APP, ENGLISH, INSERTS, done, rig, speak, start, talk};

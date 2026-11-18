@@ -10,9 +10,9 @@ use kx_mod_voice::models::table;
 use kx_mod_voice::{MANIFEST, VoiceModule};
 use kx_module_api::ports::{
     CalendarKey, ClipboardWriterKey, CloudButton, CloudSpeechKey, Date, Drive, FieldWatchKey,
-    FolderRevealKey, MB, ModelFiles, ModelFilesKey, PressesWanted, SessionWatchKey, SpeechKey,
-    VoiceAct, VoiceClick, VoiceLit, VoiceOpen, VoicePage, VoiceSheet, VoiceShelfKey, VoiceTab,
-    VoiceView, WebLinkKey,
+    FolderRevealKey, MB, ModelFiles, ModelFilesKey, PanelLine, PressesWanted, SessionWatchKey,
+    SpeechKey, VoiceAct, VoiceClick, VoiceLine, VoiceLit, VoiceOpen, VoicePage, VoiceSheet,
+    VoiceShelfKey, VoiceTab, VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, Module, ModuleCx, ModuleError, Mono, Notice, Redacted, ServiceId, ServiceKey,
@@ -126,6 +126,8 @@ pub enum Said {
     Lit(VoiceLit),
     Presses(bool),
     Notice(&'static str),
+    /// The panel's line, for the keyboard.
+    Line(Option<PanelLine>),
 }
 
 /// What the module publishes, heard on the host's bus from any thread.
@@ -144,6 +146,7 @@ impl Heard {
             ear(&bus, &tx, |e: &VoiceLit| Said::Lit(*e)),
             ear(&bus, &tx, |e: &PressesWanted| Said::Presses(e.on)),
             ear(&bus, &tx, |e: &Notice| Said::Notice(e.key)),
+            ear(&bus, &tx, |e: &VoiceLine| Said::Line(e.0.clone())),
         ];
         Self { said, _ears: ears }
     }

@@ -8,6 +8,7 @@ mod local;
 mod page;
 mod port;
 mod trial;
+mod typed;
 
 use std::sync::Arc;
 

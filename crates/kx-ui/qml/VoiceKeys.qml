@@ -1,8 +1,8 @@
-// A service's key page (mock-up svcPage()): the key line as dots with Paste and Test and the test's answer, Key works
-// as a lit mark and a refused one as a warning band, the address and Other model lines with why one was refused, the
-// keep-nothing switch, and where keys are made. The lines only draw: the key never shows as text, and a click never
-// focuses them (ADR-0013, ADR-0040). It takes a page of rows' height; a typed address puts its lines on a second page
-// the pager turns to (ADR-0008).
+// A service's key page (mock-up svcPage()): the key line as dots with Paste, Save and Test and the test's answer, Key
+// works as a lit mark and a refused one as a warning band, the address and Other model lines with their Save and why one
+// was refused, the keep-nothing switch, and where keys are made. The lines take our keyboard's letters while aimed but
+// only draw: the key never shows as text, and a click never focuses them (ADR-0013, ADR-0049). It takes a page of rows'
+// height; a typed address puts its lines on a second page the pager turns to (ADR-0008).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -50,19 +50,26 @@ Item {
                     height: field.height
                     PanelLine {
                         id: field
+                        // The key shows the typed key's dots while one is typed or the line takes the letters, else the
+                        // sealed key's; an address or model id reads left to right in every language (ADR-0049).
+                        readonly property var d: entry.modelData
                         width: parent.width - (ends.width > 0 ? ends.width + keys.gap : 0)
-                        said: entry.modelData.mask && entry.modelData.dots > 0 ? null : ({ text: entry.modelData.text, rtl: false, arabic: false })
-                        hint: entry.modelData.hint
-                        caption: entry.modelData.caption
-                        aims: false
-                        secret: !!entry.modelData.mask
-                        mask: entry.modelData.mask || ""
-                        count: entry.modelData.dots
-                        rtl: keys.host.ar
+                        said: d.mask && count > 0 ? null : ({ text: d.text, rtl: false, arabic: false })
+                        hint: d.hint
+                        caption: d.caption
+                        at: d.at
+                        takes: d.typing && keys.host.aimed
+                        aims: !keys.host.asking
+                        search: true
+                        secret: !!d.mask
+                        mask: d.mask || ""
+                        count: !d.mask ? 0 : d.typed > 0 || takes ? d.typed : d.dots
+                        rtl: !!d.mask && keys.host.ar
                         lk: keys.lk
                         res: keys.host.res
                         s: keys.s
-                        uid: keys.host.res.uid(keys.names.group, keys.names.ids.line + entry.modelData.id)
+                        uid: keys.host.res.uid(keys.names.group, keys.names.ids.line + d.id)
+                        onPlaced: at => keys.host.send(keys.names.acts.caret, d.id, at)
                     }
                     Row {
                         id: ends

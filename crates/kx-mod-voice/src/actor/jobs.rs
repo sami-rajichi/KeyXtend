@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use kx_module_api::ports::{
-    BarHint, CheckDone, Device, FactsAsk, Fingerprint, FolderError, FolderPath, ModelError,
-    SpeechError, SpeechNote,
+    BarHint, CheckDone, Device, DevicePick, FactsAsk, Fingerprint, FolderError, FolderPath,
+    ModelError, SpeechError, SpeechNote,
 };
 
 use super::dos::Fetches;
@@ -52,6 +52,15 @@ impl Actor {
             Back::Tested { ticket, answer } => self.panel.tested(ticket, answer),
             Back::Trial { take, at, note } => self.trial_note(take, at, note),
             Back::Tried { take, at, run } => self.tried(take, at, run),
+        }
+    }
+
+    /// A card may serve a dictation now: one is picked, or Automatic has a check to go by.
+    pub(super) fn card_could_serve(&self) -> bool {
+        match self.held.settings.device() {
+            DevicePick::Cpu => false,
+            DevicePick::Card(_) => true,
+            DevicePick::Auto => !self.held.checks.rows().is_empty(),
         }
     }
 

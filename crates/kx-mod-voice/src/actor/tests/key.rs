@@ -51,12 +51,13 @@ fn the_run_opens_with_the_model_of_the_language_in_front() {
 }
 
 #[test]
-fn a_late_starter_hears_the_view_and_the_light_again() {
+fn a_late_starter_hears_the_view_the_light_and_the_panels_line_again() {
     let mut rig = Rig::new();
     rig.listen();
     let (told, page) = (rig.heard().len(), rig.views().pop().unwrap());
     rig.send(Msg::Ask);
-    assert_eq!(rig.heard()[told..], [Heard::View(page), Heard::Lit(Rec)]);
+    let again = [Heard::View(page), Heard::Lit(Rec), Heard::Line(None)];
+    assert_eq!(rig.heard()[told..], again);
 }
 
 #[test]

@@ -3,6 +3,7 @@
 
 use kx_module_api::ports::{ModelSide, VoiceTab};
 
+use super::typing::Typed;
 use super::{Do, Page, Panel, wrap};
 
 impl Panel {
@@ -30,6 +31,7 @@ impl Panel {
         self.ticks.clear();
         self.cloud.next();
         (self.cloud.refused, self.cloud.refused_model) = (None, None);
+        self.cloud.typed = Typed::default();
         match page {
             Page::Tab(VoiceTab::Models) => {
                 self.cloud.side = (ModelSide::Local, 0);

@@ -68,6 +68,18 @@ listed! {
 }
 
 listed! {
+    /// A typed line of a service's key page (ADR-0049).
+    pub enum CloudLine ("Every line, in page order.") {
+        /// The key, shown only as dots.
+        Key,
+        /// The address, for the Custom and Azure rows.
+        Address,
+        /// The Other model id.
+        Model,
+    }
+}
+
+listed! {
     /// The part of a key page a page shows, when a typed address makes it two pages of the panel (ADR-0008).
     pub enum LinesPart ("Every part, in page order.") {
         /// The key line, its test's answer and where keys are made.
@@ -209,13 +221,16 @@ pub struct ServiceSheet {
     pub mark: ServiceMark,
     /// The key's characters, one dot each, 0 for none; it tells a secret's length, so never log it.
     pub key: Redacted<u32>,
+    /// The key typed on its line and not saved yet, one dot per character, 0 for none; never log it either.
+    pub typed: Redacted<u32>,
     /// How the key's test stands.
     pub check: KeyCheck,
-    /// The typed address, or the one just refused, for the Custom and Azure rows; `None` for a row with its own address.
+    /// The address line's text, as typed, just refused or kept, for the Custom and Azure rows; `None` for a row with its
+    /// own address.
     pub address: Option<Redacted<String>>,
     /// Why the address on the line was refused, which its warning names; `None` while it is kept or empty.
     pub address_fault: Option<AddressFault>,
-    /// The Other model line's typed id, or the one just refused, empty for none.
+    /// The Other model line's id, as typed, just refused or kept, empty for none.
     pub model: Redacted<String>,
     /// The typed model has no host that keeps nothing while `keep` is on, so its line says why.
     pub model_na: bool,
@@ -229,4 +244,10 @@ pub struct ServiceSheet {
     pub acts: Vec<CloudButton>,
     /// The lines the shown page holds; `None` while one page holds them all.
     pub part: Option<LinesPart>,
+    /// The shown line that takes the letters while the panel is aimed at.
+    pub typing: CloudLine,
+    /// That line's caret: UTF-16 units of the text it draws, or dots on the key line; it may tell a secret's length.
+    pub caret: Redacted<u32>,
+    /// The shown lines whose Save acts now, as each holds text.
+    pub saves: Vec<CloudLine>,
 }

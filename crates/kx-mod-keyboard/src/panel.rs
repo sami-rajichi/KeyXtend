@@ -125,6 +125,8 @@ pub enum Panel {
     Clip,
     /// Quick-fill (spec §8.1).
     Fill,
+    /// The Voice panel, whose keys go to its key page's lines only (ADR-0049).
+    Voice,
 }
 
 /// What a board key does while one of our panels is open.

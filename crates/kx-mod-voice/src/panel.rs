@@ -14,6 +14,7 @@ mod pages;
 mod rows;
 mod sides;
 mod trial;
+mod typing;
 
 pub use act::{Check, Do};
 pub(crate) use cloud::Clouds;
@@ -210,6 +211,8 @@ impl Panel {
             | VoiceClick::SetKey(_)
             | VoiceClick::SetAddress(_)
             | VoiceClick::SetModel(_)
+            | VoiceClick::Save(_)
+            | VoiceClick::Caret { .. }
             | VoiceClick::KeepNothing(_)
             | VoiceClick::Side(_) => return self.cloud_click(&act.click, facts),
             VoiceClick::Open(tab) if self.page == Some(Page::Home) => {

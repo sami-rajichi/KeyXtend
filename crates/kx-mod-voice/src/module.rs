@@ -10,8 +10,8 @@ use kx_module_api::ports::{
     CalendarKey, ClipTaken, ClipboardWriterKey, CloudSpeechKey, FieldRun, FieldWatchKey,
     FolderRevealKey, LayoutChanged, ModelFilesKey, PointerPressed, PressAsker, PressesAsk,
     PressesWanted, SessionRun, SessionWatchKey, SpeechKey, TextDone, TextPasted, Typed, VoiceAct,
-    VoiceAsk, VoiceBar, VoiceKey, VoiceLit, VoiceOpen, VoicePage, VoiceShelfKey, VoiceView,
-    WebLinkKey,
+    VoiceAsk, VoiceBar, VoiceClose, VoiceKey, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen,
+    VoicePage, VoiceShelfKey, VoiceView, WebLinkKey,
 };
 use kx_module_api::{
     Bus, Event, EventError, Manifest, Module, ModuleCx, ModuleError, Notice, NoticeArg, args, keys,
@@ -206,7 +206,7 @@ fn session_watch(
     Ok(run.ok())
 }
 
-/// Shows no bar and a dark key, as an idle or failed module does.
+/// Shows no bar, a dark key and no panel line, as an idle or failed module does.
 fn hide(bus: &Bus, settings: &VoiceSettings) {
     let page = VoicePage {
         round: HIDDEN_ROUND,
@@ -219,6 +219,7 @@ fn hide(bus: &Bus, settings: &VoiceSettings) {
     // The module holds `Voice`, which these events need, or its start would have failed.
     let _ = bus.publish(&VoiceView::new(page));
     let _ = bus.publish(&VoiceLit::Off);
+    let _ = bus.publish(&VoiceLine(None));
 }
 
 /// The actor's thread. A panic there hides the bar, darkens the key, lets presses go and tells the user; the runs it
@@ -245,12 +246,14 @@ fn detached(job: Job) -> bool {
 
 /// Hands the keyboard's, the ui's, the layouts', the clipboard history's and the mouse module's events to the actor; a
 /// typed key or a click outside our windows reaches it only as that, never with its text, and a clipboard answer only
-/// when it names this module.
+/// when it names this module. A key for the panel's line keeps its letters redacted (ADR-0049).
 fn relays(cx: &mut ModuleCx<'_>, tx: &Sender<Msg>) -> Result<(), EventError> {
     relay(cx, tx, |_: &VoiceKey| Some(Msg::Key))?;
     relay(cx, tx, |e: &VoiceAct| Some(Msg::Act(e.clone())))?;
     relay(cx, tx, |_: &VoiceOpen| Some(Msg::Open))?;
     relay(cx, tx, |_: &VoiceAsk| Some(Msg::Ask))?;
+    relay(cx, tx, |e: &VoiceLineKey| Some(Msg::LineKey(e.0.clone())))?;
+    relay(cx, tx, |_: &VoiceClose| Some(Msg::Close))?;
     relay(cx, tx, |e: &LayoutChanged| Some(Msg::Layout(e.clone())))?;
     relay(cx, tx, |e: &TextDone| Some(Msg::Typed(*e)))?;
     relay(cx, tx, |e: &TextPasted| Some(Msg::Pasted(*e)))?;

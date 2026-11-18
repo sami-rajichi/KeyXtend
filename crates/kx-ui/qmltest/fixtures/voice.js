@@ -3,6 +3,7 @@
 var acts = {
   "bar": "bar",
   "button": "button",
+  "caret": "caret",
   "cloud": "cloud",
   "compare": "compare",
   "confirm": "confirm",
@@ -17,6 +18,7 @@ var acts = {
   "page": "page",
   "plus": "plus",
   "row": "row",
+  "save": "save",
   "service": "service",
   "side": "side",
   "step": "step",
