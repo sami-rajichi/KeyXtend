@@ -133,7 +133,6 @@ voice =
     .mark-needs-address = Needs an address
     .mark-on = Ready
     .mark-untested = Untested
-    .mark-warn = Trains by default
     .mark-unavailable = Unavailable
     .col-model = Model
     .col-wrong = Words wrong

@@ -219,6 +219,16 @@ fn every_fact_in_the_services_table_has_its_text() {
     assert_eq!(missing(&wanted), Vec::new());
 }
 
+/// Every warning fact of the services table has its row's short mark, so a row never shows a key (P11 cloud).
+#[test]
+fn every_warning_fact_in_the_services_table_has_its_rows_mark() {
+    use kx_ui::i18n::keys::{FACT_WARN, warn_mark_key};
+    let facts = table_facts();
+    let warns = facts.iter().filter(|(g, _)| *g == FACT_WARN);
+    let wanted: BTreeSet<String> = warns.map(|(_, f)| warn_mark_key(&f.id)).collect();
+    assert_eq!(missing(&wanted), Vec::new());
+}
+
 /// Every fact of the services table reads whole in each language once filled: no key, placeholder or marker is left.
 #[test]
 fn every_fact_in_the_services_table_reads_whole_in_every_language() {

@@ -150,7 +150,6 @@ voice =
     .mark-needs-address = يلزم عنوان
     .mark-on = جاهزة
     .mark-untested = غير مُختبَرة
-    .mark-warn = التدريب مفعّل افتراضيًا
     .mark-unavailable = غير متاح
     .col-model = النموذج
     .col-wrong = كلمات خاطئة

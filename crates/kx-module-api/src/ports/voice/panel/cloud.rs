@@ -146,8 +146,8 @@ pub struct ServiceRow {
     pub untested: bool,
     /// Its free use, which the row's second line names; `None` for the Custom row, whose line says what to type.
     pub free: Option<Fact>,
-    /// Its card carries a warning, so the row shows the warning mark.
-    pub warn: bool,
+    /// Its card's warning fact id, whose own short mark the row shows; `None` without a warning.
+    pub warn: Option<String>,
     /// It is ticked.
     pub tick: bool,
 }

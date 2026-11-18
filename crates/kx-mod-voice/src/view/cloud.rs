@@ -22,7 +22,7 @@ impl Panel {
                 mark,
                 untested: row.untested,
                 free: row.name.is_some().then(|| row.facts.free.clone()),
-                warn: row.facts.warn.is_some(),
+                warn: row.facts.warn.as_ref().map(|f| f.id.clone()),
                 tick: ticks.contains(&key),
             };
             (key, shown)

@@ -4,11 +4,12 @@
 ## In order: the Cloud page and its buttons, a service's card, its facts by group and id (filled with the services
 ## table's numbers), money, the key page, the bar and its notes, Compare's warning, and the Models page's Cloud side.
 ## $https is the scheme every typed address starts with; a fact's own names from a service's pages come in as they are.
+## Each warning fact has its row's short mark: warn-mark-, then the fact's id.
 cloud =
     .sub = Your own key · nothing leaves before Stop
     .switch = Use cloud services
     .off-line = Cloud services are off: none is offered and nothing is sent.
-    .free = Free use: { $free }
+    .free = Free: { $free }
     .custom = Custom address
     .custom-line = An HTTPS address, a model and a key you type
     .home = On · { $ready }
@@ -26,7 +27,7 @@ cloud =
     .card-where = Where your voice goes
     .card-trains = Training
     .card-keeps = What is kept
-    .card-free = Free use
+    .card-free = Free allowance
     .card-light = Light use · { $hours }
     .card-heavy = Heavy use · { $hours }
     .card-bills = Least billed
@@ -61,6 +62,7 @@ cloud =
     .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
     .fact-warn-trains = Trains its models on your voice by default. Before you confirm, turn off this switch in your account: { $switch }
+    .warn-mark-trains = Trains by default
     .fact-bills-least = At least { $seconds-form ->
         [one] { $seconds } second
        *[other] { $seconds } seconds
@@ -99,8 +101,8 @@ cloud =
     .note-net = The service did not answer. Check the network and try again.
     .note-key = The service refused the key. Check it on the key page.
     .note-credit = The account has no credit left.
-    .note-allowance = The free use is used up for now.
-    .note-allowance-in = The free use is used up. It renews in { $in }.
+    .note-allowance = The free allowance is used up for now.
+    .note-allowance-in = The free allowance is used up. It renews in { $in }.
     .note-rate = Too many requests. Wait a moment and try again.
     .note-too-big = The recording was too big for the service.
     .note-language = The service does not take { $lang }.

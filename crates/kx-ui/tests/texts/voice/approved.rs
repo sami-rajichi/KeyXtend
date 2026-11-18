@@ -2,15 +2,21 @@
 //! address that must use HTTPS, speech for a password box, the keep-nothing claim, the training mark, the free allowance
 //! and the least billed. No Latin run ends an Arabic line on a neutral mark, so `https://` never reads backwards.
 
+use crate::files::keys_of;
 use crate::lang;
-use kx_module_api::ports::{Fact, FactArg, FactValue, Hundredths};
-use kx_ui::i18n::keys::{FACT_BILLS, FACT_PRICE};
+use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths};
+use kx_ui::i18n::keys::vars::FREE;
+use kx_ui::i18n::keys::{
+    FACT_BILLS, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
+};
+use kx_ui::{I18n, LANGS};
+use std::time::Duration;
 
 /// The UI languages, in the order the table gives their words.
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
 /// Each reworded line's key and its words in English, French and Arabic, `$https` filled.
-const LINES: [(&str, [&str; 3]); 9] = [
+const LINES: [(&str, [&str; 3]); 11] = [
     (
         "cloud.key-unfit",
         [
@@ -76,12 +82,43 @@ const LINES: [(&str, [&str; 3]); 9] = [
         ],
     ),
     (
-        "voice.mark-warn",
+        "cloud.warn-mark-trains",
         [
             "Trains by default",
-            "Entraîne par défaut",
+            "Entraînement activé",
             "التدريب مفعّل افتراضيًا",
         ],
+    ),
+    (
+        "cloud.card-free",
+        ["Free allowance", "Quota gratuit", "الحصة المجانية"],
+    ),
+    (
+        "cloud.note-allowance",
+        [
+            "The free allowance is used up for now.",
+            "Le quota gratuit est épuisé pour l’instant.",
+            "نفدت الحصة المجانية حاليًا.",
+        ],
+    ),
+];
+
+/// The free allowance's row line, short, and the start of its renewal's line, in each language: one term throughout.
+const ALLOWANCE: [(&str, &str, &str); 3] = [
+    (
+        "en",
+        "Free: 8",
+        "The free allowance is used up. It renews in ",
+    ),
+    (
+        "fr",
+        "Gratuit\u{a0}: 8",
+        "Le quota gratuit est épuisé. Il se renouvelle dans ",
+    ),
+    (
+        "ar",
+        "مجانًا: 8",
+        "نفدت الحصة المجانية، وتتجدد بعد مدة قدرها ",
     ),
 ];
 
@@ -91,6 +128,36 @@ fn the_reworded_cloud_lines_read_as_approved_in_each_language() {
         for (tag, want) in TAGS.into_iter().zip(words) {
             assert_eq!(lang(tag).voice_https(key), want, "{tag} {key}");
         }
+    }
+}
+
+/// Every warning fact brings its own short mark for its row, so a new warning never shows another's word.
+#[test]
+fn every_warning_fact_has_its_own_short_mark_in_each_language() {
+    let start = fact_key(FACT_WARN, "");
+    for l in &LANGS {
+        let t = I18n::new(l);
+        let keys = l.files().flat_map(keys_of);
+        let ids: Vec<String> = keys
+            .filter_map(|k| k.strip_prefix(&start).map(str::to_owned))
+            .collect();
+        assert!(!ids.is_empty(), "{}: a warning fact", l.tag);
+        let bare: Vec<&String> = ids.iter().filter(|id| !t.has(&warn_mark_key(id))).collect();
+        assert!(bare.is_empty(), "{}: {bare:?}", l.tag);
+    }
+}
+
+#[test]
+fn the_free_allowance_keeps_one_term_on_the_row_and_the_renewal() {
+    let renews = CloudWhy::Allowance {
+        renews_in: Some(Duration::from_hours(2)),
+    };
+    for (tag, row, renewal) in ALLOWANCE {
+        let t = lang(tag);
+        let line = t.voice_with(VOICE_CLOUD_FREE, &[(FREE, "8".to_owned())]);
+        assert_eq!(line, row, "{tag}");
+        let said = t.voice_cloud(&renews);
+        assert!(said.starts_with(renewal), "{tag}: {said}");
     }
 }
 

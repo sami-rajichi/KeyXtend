@@ -14,7 +14,7 @@ pub const VOICE_CLOUD_SUB: &str = "cloud.sub";
 pub const VOICE_CLOUD_SWITCH: &str = "cloud.switch";
 /// The line while cloud services are off, which the Models page's Cloud side shows too.
 pub const VOICE_CLOUD_OFF: &str = "cloud.off-line";
-/// A service row's free use: `$free`.
+/// A service row's free allowance, short: `$free`.
 pub const VOICE_CLOUD_FREE: &str = "cloud.free";
 /// The Custom row's name.
 pub const VOICE_CUSTOM: &str = "cloud.custom";
@@ -52,13 +52,15 @@ pub const VOICE_CARD_CUSTOM: &str = "cloud.card-custom";
 pub const VOICE_CARD_UNTESTED: &str = "cloud.card-untested";
 /// A fact's text: this, then a `FACT_*` group, `-`, then the fact's id.
 pub const VOICE_FACT: &str = "cloud.fact-";
+/// A warning fact's short mark on its service's row: this, then the fact's id.
+pub const VOICE_WARN_MARK: &str = "cloud.warn-mark-";
 /// The fact group of where the voice goes.
 pub const FACT_WHERE: &str = "where";
 /// The fact group of training.
 pub const FACT_TRAINS: &str = "trains";
 /// The fact group of what is kept.
 pub const FACT_KEEPS: &str = "keeps";
-/// The fact group of free use.
+/// The fact group of the free allowance.
 pub const FACT_FREE: &str = "free";
 /// The fact group of a use's price.
 pub const FACT_PRICE: &str = "price";
@@ -121,6 +123,12 @@ pub const VOICE_CLOUD_MODEL: &str = "cloud.model";
 #[must_use]
 pub fn fact_key(group: &str, id: &str) -> String {
     format!("{VOICE_FACT}{group}-{id}")
+}
+
+/// The key of the short mark a service's row shows for its warning fact `id`.
+#[must_use]
+pub fn warn_mark_key(id: &str) -> String {
+    format!("{VOICE_WARN_MARK}{id}")
 }
 
 /// The mark a service's row shows for `mark`.

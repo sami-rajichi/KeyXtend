@@ -134,7 +134,6 @@ voice =
     .mark-needs-address = Adresse requise
     .mark-on = Prêt
     .mark-untested = Non testé
-    .mark-warn = Entraîne par défaut
     .mark-unavailable = Indisponible
     .col-model = Modèle
     .col-wrong = Mots erronés

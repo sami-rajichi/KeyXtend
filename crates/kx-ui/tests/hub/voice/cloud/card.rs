@@ -81,7 +81,11 @@ const GROQ_FACTS: [(&str, &str, &str); 7] = [
         "What is kept",
         "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: Settings → Data Controls",
     ),
-    ("free", "Free use", "8 hours a day, 20 requests a minute"),
+    (
+        "free",
+        "Free allowance",
+        "8 hours a day, 20 requests a minute",
+    ),
     (
         "light",
         "Light use · 15 hours a month",

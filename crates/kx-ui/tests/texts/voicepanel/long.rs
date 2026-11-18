@@ -1,8 +1,8 @@
-//! The cloud panels with their longest content, which the fit test measures: the Cloud page with the services table's
-//! rows, the Models page's Cloud side, each part of each table service's card with every line on, each part of a key page
-//! with every line and the longest answers, and Compare with every cloud model of the services in the table.
+//! The cloud panels with their longest content, which the fit test measures: each Cloud page of the services table's
+//! rows, page by page, the Models page's Cloud side, each part of each table service's card with every line on, each
+//! part of a key page with every line and the longest answers, and Compare with each table service's cloud models.
 
-use super::cloud::{card, lines, named};
+use super::cloud::{TRAINS, card, lines, named};
 use super::{Shown, paged, shown};
 use kx_mod_voice::VoiceSettings;
 use kx_mod_voice::cloud::Cloud;
@@ -15,6 +15,8 @@ use kx_module_api::ports::{
 };
 use kx_ui::UiSettings;
 
+/// The start of each long Cloud page's name, then its page number from 1.
+const CLOUD_LONG: &str = "cloudLong-";
 /// The start of a service's long card's name, then its id: its first part, and its second.
 const CARD_LONG: &str = "cardLong-";
 const PRICE_LONG: &str = "cardLongPrice-";
@@ -24,13 +26,25 @@ fn services() -> &'static Services {
     table().expect("the services table reads")
 }
 
-/// The Cloud page with the first page of the table's rows, each untested, a named service with the warning mark, and the
-/// mark its address asks for; the first ticked.
-fn cloud_long() -> VoiceSheet {
-    let per = UiSettings::from_defaults()
+/// The warning a named row of the table shows: its card's own, else the training warning, as its long card does.
+fn warn_id(s: &Service) -> Option<String> {
+    let own = s.facts.warn.as_ref().map(|f| f.id.clone());
+    s.name
+        .is_some()
+        .then(|| own.unwrap_or_else(|| TRAINS.to_owned()))
+}
+
+/// The rows a panel's page holds.
+fn per() -> usize {
+    UiSettings::from_defaults()
         .expect("the [ui] defaults")
-        .page_rows;
-    let row = |(i, s): (usize, &Service)| ServiceRow {
+        .page_rows
+}
+
+/// Row `s` of the table on the Cloud page, untested, a named one with its warning mark, with the mark its address asks
+/// for; `tick`ed or not.
+fn long_row(s: &Service, tick: bool) -> ServiceRow {
+    ServiceRow {
         name: s.shown(),
         mark: if matches!(s.address, Address::Typed { .. }) {
             ServiceMark::NeedsAddress
@@ -39,16 +53,26 @@ fn cloud_long() -> VoiceSheet {
         },
         untested: true,
         free: s.name.is_some().then(|| s.facts.free.clone()),
-        warn: s.name.is_some(),
-        tick: i == 0,
-    };
-    let rows = services().rows().iter().take(per).enumerate().map(row);
+        warn: warn_id(s),
+        tick,
+    }
+}
+
+/// The Cloud pages with every row of the table, a panel's rows to a page, each page's first row ticked.
+fn cloud_long() -> Vec<Shown> {
+    let rows = services().rows();
+    let count = u16::try_from(rows.len().div_ceil(per())).expect("a few pages");
     let acts = vec![CloudButton::Facts, CloudButton::Lines, CloudButton::Off];
-    VoiceSheet::Cloud(CloudSheet {
-        on: true,
-        rows: rows.collect(),
-        acts,
-    })
+    let page = |(at, part): (u16, &[Service])| {
+        let rows = part.iter().enumerate().map(|(i, s)| long_row(s, i == 0));
+        let sheet = VoiceSheet::Cloud(CloudSheet {
+            on: true,
+            rows: rows.collect(),
+            acts: acts.clone(),
+        });
+        paged(shown(sheet, &[]), at, count, 1)
+    };
+    (0..count).zip(rows.chunks(per())).map(page).collect()
 }
 
 /// A cloud model `name` of `service` at `mark`, maybe one that keeps nothing it cannot promise.
@@ -152,11 +176,10 @@ fn compare_long() -> VoiceSheet {
 }
 
 /// The longest cloud panels, by name; a card and a key page show their first part on page 1 of 2, and their second
-/// on page 2. Each service of the table has its card's two parts, named after its id.
+/// on page 2. Each Cloud page is named by its number, and each service of the table has its card's two parts.
 pub fn panels() -> Vec<(String, Shown)> {
     let two = |sheet, at| paged(shown(sheet, &[]), at, 2, 0);
     let mut out = vec![
-        ("cloudLong", paged(shown(cloud_long(), &[]), 0, 1, 1)),
         (
             "modelsLong",
             paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1),
@@ -168,6 +191,8 @@ pub fn panels() -> Vec<(String, Shown)> {
     .into_iter()
     .map(|(name, s)| (name.to_owned(), s))
     .collect::<Vec<_>>();
+    let pages = cloud_long().into_iter().enumerate();
+    out.extend(pages.map(|(i, s)| (format!("{CLOUD_LONG}{}", i + 1), s)));
     for s in services().rows() {
         out.push((
             format!("{CARD_LONG}{}", s.id),
@@ -179,4 +204,27 @@ pub fn panels() -> Vec<(String, Shown)> {
         ));
     }
     out
+}
+
+/// Every row of the table shows on the long Cloud pages, a panel's rows to a page, so the fit test measures each one.
+#[test]
+fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
+    let per = per();
+    let all: Vec<ServiceName> = services().rows().iter().map(Service::shown).collect();
+    let named = panels()
+        .into_iter()
+        .filter(|(n, _)| n.starts_with(CLOUD_LONG));
+    let pages: Vec<Shown> = named.map(|(_, s)| s).collect();
+    let count = u16::try_from(all.len().div_ceil(per)).expect("a few pages");
+    assert_eq!(pages.len(), usize::from(count), "one panel a page");
+    let mut shown = Vec::new();
+    for (at, p) in (0..count).zip(&pages) {
+        assert_eq!(p.pages, (at, count), "page {at}");
+        let VoiceSheet::Cloud(c) = &p.sheet else {
+            panic!("a Cloud page")
+        };
+        assert!(c.rows.len() <= per, "page {at} keeps a page of rows");
+        shown.extend(c.rows.iter().map(|r| r.name.clone()));
+    }
+    assert_eq!(shown, all);
 }

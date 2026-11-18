@@ -4,6 +4,7 @@
 ## Dans l’ordre : la page Services cloud et ses boutons, la fiche d’un service, ses informations par groupe et identifiant
 ## (remplies avec les chiffres de la table des services), les montants, la page de la clé, la barre et ses notes,
 ## l’avertissement de Comparer, puis le côté Cloud de la page Modèles. $https est le début de toute adresse saisie.
+## Chaque avertissement a sa marque courte sur la ligne du service : warn-mark-, puis l’identifiant de l’information.
 cloud =
     .sub = Votre propre clé · rien ne part avant l’arrêt
     .switch = Utiliser les services cloud
@@ -26,7 +27,7 @@ cloud =
     .card-where = Où va votre voix
     .card-trains = Entraînement
     .card-keeps = Conservation
-    .card-free = Usage gratuit
+    .card-free = Quota gratuit
     .card-light = Usage léger · { $hours }
     .card-heavy = Usage intensif · { $hours }
     .card-bills = Facturation minimale
@@ -61,6 +62,7 @@ cloud =
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
     .fact-warn-trains = Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : { $switch }
+    .warn-mark-trains = Entraînement activé
     .fact-bills-least = Au moins { $seconds-form ->
         [one] { $seconds } seconde
        *[other] { $seconds } secondes
@@ -99,8 +101,8 @@ cloud =
     .note-net = Le service n’a pas répondu. Vérifiez le réseau et réessayez.
     .note-key = Le service a refusé la clé. Vérifiez-la sur la page de la clé.
     .note-credit = Le compte n’a plus de crédit.
-    .note-allowance = L’usage gratuit est épuisé pour l’instant.
-    .note-allowance-in = L’usage gratuit est épuisé. Il se renouvelle dans { $in }.
+    .note-allowance = Le quota gratuit est épuisé pour l’instant.
+    .note-allowance-in = Le quota gratuit est épuisé. Il se renouvelle dans { $in }.
     .note-rate = Trop de requêtes. Patientez un instant et réessayez.
     .note-too-big = L’enregistrement était trop gros pour le service.
     .note-language = Le service n’écrit pas en { $lang }.

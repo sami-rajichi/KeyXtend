@@ -477,7 +477,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "الاستخدام المجاني",
+              "label": "الحصة المجانية",
               "value": {
                 "parts": [
                   {
@@ -613,7 +613,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "الاستخدام المجاني",
+              "label": "الحصة المجانية",
               "value": {
                 "parts": [
                   {
@@ -993,7 +993,7 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
-    "cloudLong": {
+    "cloudLong-1": {
       "bar": {
         "state": "hidden"
       },
@@ -1109,7 +1109,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 29,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1494,7 +1494,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2997,7 +2997,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 30,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4621,7 +4621,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4731,7 +4731,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5358,7 +5358,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "Free use",
+              "label": "Free allowance",
               "value": {
                 "parts": [
                   {
@@ -5494,7 +5494,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "Free use",
+              "label": "Free allowance",
               "value": {
                 "parts": [
                   {
@@ -5798,7 +5798,7 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "on",
@@ -5810,7 +5810,7 @@ var views = {
               "tick": true
             },
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "needs-key",
@@ -5822,7 +5822,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "warn",
@@ -5874,7 +5874,7 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
-    "cloudLong": {
+    "cloudLong-1": {
       "bar": {
         "state": "hidden"
       },
@@ -5948,7 +5948,7 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "warn",
@@ -5990,7 +5990,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 29,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -6074,7 +6074,7 @@ var views = {
           "off": "Cloud services are off: none is offered and nothing is sent.",
           "rows": [
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "on",
@@ -6086,7 +6086,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "needs-key",
@@ -6098,7 +6098,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Free use: 8 hours a day, 20 requests a minute",
+              "line": "Free: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
                   "id": "warn",
@@ -6375,7 +6375,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 33,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -7878,7 +7878,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 30,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9502,7 +9502,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 31,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9612,7 +9612,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 32,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10239,7 +10239,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "Usage gratuit",
+              "label": "Quota gratuit",
               "value": {
                 "parts": [
                   {
@@ -10375,7 +10375,7 @@ var views = {
           "facts": [
             {
               "id": "free",
-              "label": "Usage gratuit",
+              "label": "Quota gratuit",
               "value": {
                 "parts": [
                   {
@@ -10707,7 +10707,7 @@ var views = {
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Entraîne par défaut"
+                  "text": "Entraînement activé"
                 },
                 {
                   "id": "off",
@@ -10755,7 +10755,7 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
-    "cloudLong": {
+    "cloudLong-1": {
       "bar": {
         "state": "hidden"
       },
@@ -10833,7 +10833,7 @@ var views = {
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Entraîne par défaut"
+                  "text": "Entraînement activé"
                 },
                 {
                   "id": "needs-key",
@@ -10871,7 +10871,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 29,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10983,7 +10983,7 @@ var views = {
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Entraîne par défaut"
+                  "text": "Entraînement activé"
                 },
                 {
                   "id": "off",
@@ -11256,7 +11256,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -12759,7 +12759,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 30,
+      "round": 29,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -14383,7 +14383,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 30,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -14493,7 +14493,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copié",

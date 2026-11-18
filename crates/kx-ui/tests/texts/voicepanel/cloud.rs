@@ -10,6 +10,9 @@ use kx_module_api::ports::{
     ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
 };
 
+/// The training warning's fact id, which the sample card and the warned rows carry.
+pub(super) const TRAINS: &str = "trains";
+
 /// A fact `id` with `args`.
 fn fact(id: &str, args: Vec<FactArg>) -> Fact {
     Fact {
@@ -47,7 +50,7 @@ fn daily() -> Fact {
     fact("daily", vec![n("hours", 8), n("per_min", 20)])
 }
 
-/// A service's row on the Cloud page.
+/// A service's row on the Cloud page, `warn`ing that it trains.
 fn service(name: ServiceName, mark: ServiceMark, warn: bool, tick: bool) -> ServiceRow {
     let custom = name == ServiceName::Custom;
     ServiceRow {
@@ -55,7 +58,7 @@ fn service(name: ServiceName, mark: ServiceMark, warn: bool, tick: bool) -> Serv
         mark,
         untested: mark == ServiceMark::Ready,
         free: (!custom).then(daily),
-        warn,
+        warn: warn.then(|| TRAINS.to_owned()),
         tick,
     }
 }
@@ -87,7 +90,7 @@ pub(super) fn card(old: bool) -> VoiceSheet {
     let price = |low, high| fact("free-or", vec![usd("low", low), usd("high", high)]);
     let mut trains = fact(if old { "unknown" } else { "never" }, Vec::new());
     trains.warn = old;
-    let warn = old.then(|| fact("trains", vec![switch.clone()]));
+    let warn = old.then(|| fact(TRAINS, vec![switch.clone()]));
     let secs = arg("seconds", FactValue::Count(10));
     VoiceSheet::Card(Box::new(CloudCard {
         service: named("Groq"),

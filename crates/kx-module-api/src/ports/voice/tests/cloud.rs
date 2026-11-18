@@ -140,12 +140,12 @@ fn the_switches_buttons_and_the_local_model_are_plain_clicks() {
 
 #[test]
 fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
-    let row = |name, mark, warn| ServiceRow {
+    let row = |name, mark, warn: bool| ServiceRow {
         name,
         mark,
         untested: warn,
         free: Some(free()),
-        warn,
+        warn: warn.then(|| "trains".to_owned()),
         tick: false,
     };
     let rows = vec![
@@ -170,7 +170,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
         "Groq",
         "Ready",
         "untested: true",
-        "warn: true",
+        "warn: Some(\"trains\")",
         "Custom",
         "Count(8)",
         "free: None",

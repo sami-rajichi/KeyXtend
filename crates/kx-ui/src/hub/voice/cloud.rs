@@ -14,7 +14,7 @@ use crate::i18n::keys::{
     VOICE_CARD_SUB, VOICE_CARD_UNTESTED, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL, VOICE_CLOUD_OFF,
     VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE, VOICE_JOIN, VOICE_OFF,
     VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL, VoiceMark, cloud_button_id,
-    cloud_button_key, panel_button_id, service_mark,
+    cloud_button_key, mark_id, panel_button_id, service_mark, warn_mark_key,
 };
 use crate::i18n::{Said, clean};
 use kx_module_api::ports::{
@@ -149,7 +149,7 @@ pub(super) fn page(cx: &Cx<'_>, c: &CloudSheet) -> Page {
     page
 }
 
-/// Service row `r`: its free use, or what the Custom row asks for, the warning mark before its state.
+/// Service row `r`: its free use, or what the Custom row asks for, its warning fact's own mark before its state.
 fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
     let line = r.free.as_ref().map_or_else(
         || t.text(VOICE_CUSTOM_LINE),
@@ -158,13 +158,18 @@ fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
             t.voice_with(VOICE_CLOUD_FREE, &[(FREE, free)])
         },
     );
-    let warn = r.warn.then_some(VoiceMark::Warn);
-    let marks = [warn, Some(service_mark(r.mark))].into_iter().flatten();
+    let warn = r
+        .warn
+        .as_ref()
+        .map(|id| Hint::new(mark_id(VoiceMark::Warn), t.text(&warn_mark_key(id))));
     ServiceView {
         name: service(t, &r.name),
         line,
         tag: r.untested.then(|| t.text(&mark_key(VoiceMark::Untested))),
-        marks: marks.map(|m| mark(t, m)).collect(),
+        marks: warn
+            .into_iter()
+            .chain([mark(t, service_mark(r.mark))])
+            .collect(),
         tick: r.tick,
     }
 }

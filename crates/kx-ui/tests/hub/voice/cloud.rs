@@ -56,14 +56,14 @@ pub fn daily() -> Fact {
     fact("daily", vec![count("hours", 8), count("per_min", 20)])
 }
 
-/// The Cloud page, `on` or off, with Groq ready and ticked and the Custom row off.
+/// The Cloud page, `on` or off, with Groq ready and ticked and the Custom row off with the training warning.
 fn cloud(on: bool, acts: &[CloudButton]) -> VoiceSheet {
     let groq = ServiceRow {
         name: groq(),
         mark: ServiceMark::Ready,
         untested: true,
         free: Some(daily()),
-        warn: false,
+        warn: None,
         tick: true,
     };
     let custom = ServiceRow {
@@ -71,7 +71,7 @@ fn cloud(on: bool, acts: &[CloudButton]) -> VoiceSheet {
         mark: ServiceMark::Off,
         untested: false,
         free: None,
-        warn: true,
+        warn: Some("trains".to_owned()),
         tick: false,
     };
     VoiceSheet::Cloud(CloudSheet {
@@ -167,15 +167,12 @@ fn the_cloud_page_shows_its_switch_and_its_footer() {
 }
 
 #[test]
-fn the_cloud_page_lists_each_service_with_its_free_use_and_marks() {
+fn the_cloud_page_lists_each_service_with_its_free_allowance_and_marks() {
     let p = cloud_json();
     let sheet = &p["sheet"];
     let groq = &sheet["rows"][0];
     assert_eq!(groq["name"], "Groq");
-    assert_eq!(
-        groq["line"],
-        "Free use: 8 hours a day, 20 requests a minute"
-    );
+    assert_eq!(groq["line"], "Free: 8 hours a day, 20 requests a minute");
     assert_eq!(groq["tag"], "Untested");
     assert_eq!(marks(&groq["marks"]), pairs(&[("on", "Ready")]));
     assert_eq!(groq["tick"], true);
