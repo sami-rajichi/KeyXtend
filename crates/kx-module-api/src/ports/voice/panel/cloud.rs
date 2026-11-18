@@ -62,7 +62,7 @@ listed! {
     pub enum CardPart ("Every part, in page order.") {
         /// Where the voice goes, whether the service trains on it, and what it keeps.
         Voice,
-        /// Free use, the prices of light and heavy use, and the least a request bills.
+        /// The free allowance, the prices of light and heavy use, and the least a request bills.
         Price,
     }
 }
@@ -118,7 +118,7 @@ pub struct FactArg {
 /// One fact, as the services table holds it: the id of its text and the values that fill it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fact {
-    /// Its text's id among its line's, such as `us` for where the voice goes or `day` for free use.
+    /// Its text's id among its line's, such as `us` for where the voice goes or `day` for the free allowance.
     pub id: String,
     /// The values its text prints.
     pub args: Vec<FactArg>,
@@ -144,7 +144,7 @@ pub struct ServiceRow {
     pub mark: ServiceMark,
     /// No real key has checked this connection yet, so the Untested tag shows beside its name.
     pub untested: bool,
-    /// Its free use, which the row's second line names; `None` for the Custom row, whose line says what to type.
+    /// Its free allowance, which the row's second line names; `None` for the Custom row, whose line says what to type.
     pub free: Option<Fact>,
     /// Its card's warning fact id, whose own short mark the row shows; `None` without a warning.
     pub warn: Option<String>,

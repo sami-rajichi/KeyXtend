@@ -10,8 +10,9 @@ use kx_mod_voice::services::{Address, Service, Services, table};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud,
-    CompareSheet, DeviceLabel, DeviceName, KeyCheck, LinesPart, ModelRow, ModelSide, ModelState,
-    ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow, Unavailable, VoiceSheet,
+    CompareSheet, DeviceLabel, DeviceName, Fact, KeyCheck, LinesPart, ModelRow, ModelSide,
+    ModelState, ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow, Unavailable,
+    VoiceSheet,
 };
 use kx_ui::UiSettings;
 
@@ -26,12 +27,11 @@ fn services() -> &'static Services {
     table().expect("the services table reads")
 }
 
-/// The warning a named row of the table shows: its card's own, else the training warning, as its long card does.
+/// The warning a row of the table shows: its card's own, as the module draws it, Custom's too; else a named row's
+/// training warning, as its long card does.
 fn warn_id(s: &Service) -> Option<String> {
     let own = s.facts.warn.as_ref().map(|f| f.id.clone());
-    s.name
-        .is_some()
-        .then(|| own.unwrap_or_else(|| TRAINS.to_owned()))
+    own.or_else(|| s.name.is_some().then(|| TRAINS.to_owned()))
 }
 
 /// The rows a panel's page holds.
@@ -227,4 +227,23 @@ fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
         shown.extend(c.rows.iter().map(|r| r.name.clone()));
     }
     assert_eq!(shown, all);
+}
+
+/// A Custom row shows its own warning as the module does, and none without one, so the fit test measures it too.
+#[test]
+fn a_custom_row_shows_its_own_warning_and_none_without_one() {
+    let rows = services().rows();
+    let mut custom = rows
+        .iter()
+        .find(|s| s.name.is_none())
+        .expect("Custom")
+        .clone();
+    assert_eq!(long_row(&custom, false).warn, None, "no warning of its own");
+    custom.facts.warn = Some(Fact {
+        id: "keeps-logs".to_owned(),
+        args: Vec::new(),
+        warn: true,
+    });
+    let warn = long_row(&custom, false).warn;
+    assert_eq!(warn.as_deref(), Some("keeps-logs"));
 }

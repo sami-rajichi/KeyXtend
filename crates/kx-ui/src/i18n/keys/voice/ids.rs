@@ -40,15 +40,13 @@ pub enum VoiceMark {
     On,
     /// A connection no real key checked yet.
     Untested,
-    /// A service whose card carries a warning.
-    Warn,
     /// A cloud model that cannot be used now.
     Unavailable,
 }
 
 impl VoiceMark {
     /// Every mark.
-    pub const ALL: [Self; 19] = [
+    pub const ALL: [Self; 18] = [
         Self::Used,
         Self::Default,
         Self::Ready,
@@ -66,7 +64,6 @@ impl VoiceMark {
         Self::NeedsAddress,
         Self::On,
         Self::Untested,
-        Self::Warn,
         Self::Unavailable,
     ];
 }
@@ -92,7 +89,6 @@ pub const fn mark_id(mark: VoiceMark) -> &'static str {
         VoiceMark::NeedsAddress => "needs-address",
         VoiceMark::On => "on",
         VoiceMark::Untested => "untested",
-        VoiceMark::Warn => "warn",
         VoiceMark::Unavailable => "unavailable",
     }
 }

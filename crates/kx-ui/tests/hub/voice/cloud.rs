@@ -51,7 +51,7 @@ pub fn groq() -> ServiceName {
     ServiceName::Named("Groq".to_owned())
 }
 
-/// Groq's free use: 8 hours a day, 20 requests a minute.
+/// Groq's free allowance: 8 hours a day, 20 requests a minute.
 pub fn daily() -> Fact {
     fact("daily", vec![count("hours", 8), count("per_min", 20)])
 }

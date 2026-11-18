@@ -63,8 +63,7 @@ fn hints() -> Vec<BarHint> {
     ]
 }
 
-/// Every key the hub builds from an id: notes, bar and download buttons, pages, places, marks, columns, languages; the
-/// warning mark takes its fact's own word instead.
+/// Every key the hub builds from an id: notes, bar and download buttons, pages, places, marks, columns, languages.
 fn keys() -> Vec<String> {
     let word = |id: &str| format!("{VOICE_WORD}{id}");
     let mut keys: Vec<String> = hints()
@@ -77,8 +76,7 @@ fn keys() -> Vec<String> {
     let tabs = VoiceTab::ALL.into_iter();
     keys.extend(tabs.map(|t| word(voice_tab_id(t))));
     keys.extend(BarPlace::ALL.map(|p| format!("{VOICE_PLACE}{}", place_id(p))));
-    let worded = VoiceMark::ALL.into_iter().filter(|m| *m != VoiceMark::Warn);
-    keys.extend(worded.map(|m| format!("{VOICE_MARK}{}", mark_id(m))));
+    keys.extend(VoiceMark::ALL.map(|m| format!("{VOICE_MARK}{}", mark_id(m))));
     keys.extend(VOICE_COLS.map(|c| format!("{VOICE_COL}{c}")));
     for group in [LANG_NAME, LANG_IN] {
         keys.extend(["en", "fr", "ar"].map(|iso| format!("{group}.{iso}")));

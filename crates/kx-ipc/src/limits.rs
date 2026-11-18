@@ -207,7 +207,7 @@ const NET_PIECE_MAX_S: u16 = 600;
 pub const NET_MAX_S: RangeInclusive<u16> = (*PIECE_S.start() as u16)..=NET_PIECE_MAX_S;
 /// Seconds in a day, the unit of a renewal's cap.
 const DAY_S: u32 = 24 * 60 * 60;
-/// The most days an allowance's renewal may be away: a month, the longest period a service's free use names.
+/// The most days an allowance's renewal may be away: a month, the longest period a service's free allowance names.
 const RENEW_DAYS: u32 = 31;
 /// How far away an allowance's renewal may be, in seconds.
 pub const NET_RENEW_S: RangeInclusive<u32> = 1..=RENEW_DAYS * DAY_S;

@@ -1,6 +1,6 @@
-// A service on the Cloud page (mock-up cloudPage()): one tick, its name with the Untested tag beside it over its free use
-// or what the Custom row asks for, then the warning and where it stands. While cloud services are off its row only
-// shows, unticked and dimmed (mock-up .pr.off).
+// A service on the Cloud page (mock-up cloudPage()): one tick, its name with the Untested tag beside it over its free
+// allowance or what the Custom row asks for, then the warning and where it stands. While cloud services are off its row
+// only shows, unticked and dimmed (mock-up .pr.off).
 pragma ComponentBehavior: Bound
 import QtQuick
 

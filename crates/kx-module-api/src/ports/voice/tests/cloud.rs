@@ -38,7 +38,7 @@ fn usd(cents: u32) -> FactValue {
     }
 }
 
-/// Groq's free use: 8 hours a day, 20 requests a minute.
+/// Groq's free allowance: 8 hours a day, 20 requests a minute.
 fn free() -> Fact {
     let counts = vec![
         arg("hours", FactValue::Count(8)),
@@ -139,7 +139,7 @@ fn the_switches_buttons_and_the_local_model_are_plain_clicks() {
 }
 
 #[test]
-fn the_cloud_page_lists_services_with_their_marks_free_use_and_warning() {
+fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
     let row = |name, mark, warn: bool| ServiceRow {
         name,
         mark,

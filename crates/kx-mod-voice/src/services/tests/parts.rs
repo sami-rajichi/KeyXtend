@@ -4,7 +4,7 @@ use super::*;
 use FactError as F;
 use ModelError as M;
 
-/// Groq's light price and free use, which the fact edits below break.
+/// Groq's light price and free allowance, which the fact edits below break.
 const LIGHT: &str = "light = { id = \"free-or\", money = { low = 0.60, high = 1.67 } }";
 const FREE: &str = "free = { id = \"daily\", count = { hours = 8, per_min = 20 } }";
 

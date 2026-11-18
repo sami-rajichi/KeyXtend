@@ -44,7 +44,7 @@ pub(super) fn named(name: &str) -> ServiceName {
     ServiceName::Named(name.to_owned())
 }
 
-/// Groq's free use.
+/// Groq's free allowance.
 fn daily() -> Fact {
     let n = |name, v| arg(name, FactValue::Count(v));
     fact("daily", vec![n("hours", 8), n("per_min", 20)])

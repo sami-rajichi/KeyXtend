@@ -1,6 +1,6 @@
 //! The Cloud page and a service's card (ADR-0047): the `cloud` switch, then the services offered, Groq first, each with
-//! its mark, free use and warning (edge 24); none while cloud is off (edge 21). A card shows its facts with the day read,
-//! old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
+//! its mark, free allowance and warning (edge 24); none while cloud is off (edge 21). A card shows its facts with the
+//! day read, old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
 
 use kx_module_api::ports::{
     CardPart, CloudButton, CloudSheet, Pages, ServiceMark, ServiceRow, VoiceSheet, VoiceTab,

@@ -63,7 +63,7 @@ pub(super) struct RawFacts {
     trains: RawFact,
     /// What it keeps.
     keeps: RawFact,
-    /// What is free.
+    /// The free allowance.
     free: RawFact,
     /// The price of light use.
     light: RawFact,
@@ -116,7 +116,7 @@ pub struct Facts {
     pub trains: Fact,
     /// What it keeps.
     pub keeps: Fact,
-    /// What is free.
+    /// The free allowance.
     pub free: Fact,
     /// The price of light use.
     pub light: Fact,
