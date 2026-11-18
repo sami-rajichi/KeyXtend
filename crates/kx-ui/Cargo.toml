@@ -50,6 +50,8 @@ kx-platform-fake = { path = "../kx-platform-fake" }
 # The tests read the bundled sounds and assets as the build does.
 kx-theme = { path = "../kx-theme", features = ["files"] }
 kx-test-support = { path = "../kx-test-support" }
+# The fit fixtures measure the voice module's own services table: its cards and its Cloud page's rows.
+kx-mod-voice = { path = "../kx-mod-voice" }
 proptest.workspace = true
 
 # The Qt Quick tests' QML plugin, which the texts test lays out beside the icons (Windows, where they run).

@@ -47,7 +47,8 @@ Rectangle {
         px: band.lk.shape.clip.button_px[4] * band.s
         tint: band.tint
     }
-    // The name follows the line a space apart, on the next line when it does not fit, from the right in Arabic.
+    // The name follows the line a space apart, on the next line when it does not fit, from the right in Arabic; a line in
+    // parts adds no space inside its sentence, whose parts carry their own.
     Flow {
         id: line
         anchors.left: band.icon ? glyph.right : parent.left
@@ -56,7 +57,7 @@ Rectangle {
         anchors.rightMargin: band.pn.row_px[2] * band.s
         anchors.verticalCenter: parent.verticalCenter
         layoutDirection: band.host.ar ? Qt.RightToLeft : Qt.LeftToRight
-        spacing: space.advanceWidth(" ")
+        spacing: band.parts.length > 0 ? 0 : space.advanceWidth(" ")
         Repeater {
             model: band.pieces
             delegate: Part {

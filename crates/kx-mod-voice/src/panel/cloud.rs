@@ -25,6 +25,8 @@ pub(crate) struct Clouds {
     pub(crate) check: KeyCheck,
     /// Counts Pastes, tests and key changes, so an answer to an older one is dropped.
     pub(crate) round: u32,
+    /// Why a Paste or a typed key kept nothing, Busy or Unfit, until the next round; the test's answer stays beneath.
+    pub(crate) unkept: Option<KeyCheck>,
     /// The Paste waited for.
     pub(crate) take: Option<u32>,
     /// The test waited for.
@@ -45,6 +47,7 @@ impl Default for Clouds {
             dots: 0,
             check: KeyCheck::Untested,
             round: 0,
+            unkept: None,
             take: None,
             test: None,
             refused: None,
@@ -62,7 +65,7 @@ impl Clouds {
         if self.test.take().is_some() {
             self.check = KeyCheck::Untested;
         }
-        self.take = None;
+        (self.take, self.unkept) = (None, None);
         self.round
     }
 }

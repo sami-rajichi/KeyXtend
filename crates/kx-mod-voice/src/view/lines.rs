@@ -70,8 +70,12 @@ impl Panel {
         acts
     }
 
-    /// How the shown key's test stands; a row with no test says so while the key is untested.
+    /// Why a Paste or typed key kept nothing, else how the shown key's test stands; a row with no test says so while
+    /// the key is untested.
     fn key_check(&self, row: &Service) -> KeyCheck {
+        if let Some(unkept) = self.cloud.unkept {
+            return unkept;
+        }
         match self.cloud.check {
             KeyCheck::Untested if row.test == KeyTest::None => KeyCheck::NoTest,
             check => check,

@@ -79,18 +79,18 @@ const GROQ_FACTS: [(&str, &str, &str); 7] = [
     (
         "keeps",
         "What is kept",
-        "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off",
+        "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: Settings → Data Controls",
     ),
     ("free", "Free use", "8 hours a day, 20 requests a minute"),
     (
         "light",
         "Light use · 15 hours a month",
-        "Free within the free use, else $0.60 to $1.67 by model",
+        "Free within the free allowance, else $0.60 to $1.67 by model",
     ),
     (
         "heavy",
         "Heavy use · 60 hours a month",
-        "Free within the free use, else $2.40 to $6.66 by model",
+        "Free within the free allowance, else $2.40 to $6.66 by model",
     ),
     (
         "bills",
@@ -190,7 +190,7 @@ fn a_warning_takes_its_band_and_the_custom_card_names_the_typed_address() {
     assert_eq!(p["sheet"]["read"]["link"], Value::Null);
     assert!(facts(&p)[1].3, "the training fact takes the warning tone");
     let warn = &p["sheet"]["warn"];
-    let text = "Trains its models on your voice by default. Before you confirm, turn off “Use my data for training” in your account.";
+    let text = "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Use my data for training";
     assert_eq!(warn["text"], text);
     assert_eq!(warn["parts"][1]["own"], true);
     let ask = "Your voice goes to the address you type only after Stop, with your own key.";

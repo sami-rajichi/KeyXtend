@@ -203,13 +203,13 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
 }
 
 /// Every panel the tests draw, by name.
-fn panels() -> Vec<(&'static str, Shown)> {
-    let cloud = cloud::panels().into_iter().chain(long::panels());
-    model_panels()
+fn panels() -> Vec<(String, Shown)> {
+    let fixed = model_panels()
         .into_iter()
         .chain(other_panels())
-        .chain(cloud)
-        .collect()
+        .chain(cloud::panels())
+        .map(|(name, s)| (name.to_owned(), s));
+    fixed.chain(long::panels()).collect()
 }
 
 /// Every view in language `tag`, by name, each its own round from 1, the bar hidden.
@@ -240,7 +240,7 @@ fn views(tag: &str) -> Value {
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");
         let v: Value = serde_json::from_str(&hub.voice_json()).expect("voice JSON");
-        (name.to_owned(), v)
+        (name, v)
     });
     Value::Object(shown.collect::<Map<_, _>>())
 }

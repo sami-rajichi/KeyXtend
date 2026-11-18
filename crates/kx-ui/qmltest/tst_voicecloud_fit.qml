@@ -16,11 +16,11 @@ Item {
         name: "voicecloudfit"
         host: root
 
-        // The cloud pages: the Cloud page, the cards, the key pages, Models with its Local | Cloud chips, and Compare's
-        // set text and run with cloud models and the warning.
-        readonly property var cloudPages: ["cloud", "cloudOff", "cloudLong", "card", "cardOld", "cardLong", "cardLongPrice",
+        // The cloud pages: the Cloud page, the cards with each table service's long one, the key pages, Models with its
+        // Local | Cloud chips, and Compare's set text and run with cloud models and the warning.
+        readonly property var cloudPages: ["cloud", "cloudOff", "cloudLong", "card", "cardOld"].concat(Kit.named("en", "cardLong"), [
             "service", "serviceRouter", "serviceCustom", "serviceLong", "serviceLongModel", "models", "modelsSlow",
-            "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"]
+            "modelsCloud", "modelsLong", "compareCloud", "comparingCloud", "compareLong"])
 
         // The shown children of `item`.
         function kids(item) {

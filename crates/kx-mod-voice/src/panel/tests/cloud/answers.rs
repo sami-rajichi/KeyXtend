@@ -1,10 +1,11 @@
 //! The key page says why, in its own words: a Paste the clipboard could not answer shows Busy on the key's line, not
-//! the general fault, and an Other model id the frames refuse stays on its line with the refusal until the page changes.
+//! the general fault, and only until the page changes; an Other model id the frames refuse stays on its line likewise.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{ClipText, CloudButton, KeyCheck, PanelButton, VoiceClick};
 
 use super::super::super::Do;
+use super::super::super::rig::Rig;
 use super::lines::on_groq_lines;
 use super::{apply, cloud_sheet, lines_sheet};
 
@@ -23,7 +24,7 @@ fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
 #[test]
 fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
     let mut rig = on_groq_lines();
-    let typed = |rig: &mut super::super::super::rig::Rig, text: &str| {
+    let typed = |rig: &mut Rig, text: &str| {
         rig.click(&VoiceClick::SetModel(Redacted::new(text.to_owned())))
     };
     let bad = "two words";
@@ -41,13 +42,41 @@ fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
         ("whisper-large-v3", false)
     );
     assert!(typed(&mut rig, bad).is_empty());
-    rig.click(&VoiceClick::Button(PanelButton::Back));
-    if !cloud_sheet(&mut rig).rows[0].tick {
-        rig.click(&VoiceClick::Row(0));
-    }
-    rig.click(&VoiceClick::Service(CloudButton::Lines));
+    reopen(&mut rig);
     assert!(
         !lines_sheet(&mut rig).model_refused,
         "a new page forgets it"
     );
+}
+
+#[test]
+fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing() {
+    for (clip, said) in [
+        (ClipText::Busy, KeyCheck::Busy),
+        (ClipText::Empty, KeyCheck::Unfit),
+    ] {
+        let mut rig = on_groq_lines();
+        let out = rig.click(&VoiceClick::Service(CloudButton::Test));
+        let [Do::Test { ticket, .. }] = out[..] else {
+            panic!("no test: {out:?}");
+        };
+        rig.with(|p, _| p.tested(ticket, Ok(())));
+        let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
+        let [Do::Take(round)] = out[..] else {
+            panic!("no take: {out:?}");
+        };
+        rig.with(|p, _| p.pasted(round, clip));
+        assert_eq!(lines_sheet(&mut rig).check, said);
+        reopen(&mut rig);
+        assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Works, "{said:?}");
+    }
+}
+
+/// Leaves Groq's key page for the Cloud page and opens it again.
+fn reopen(rig: &mut Rig) {
+    rig.click(&VoiceClick::Button(PanelButton::Back));
+    if !cloud_sheet(rig).rows[0].tick {
+        rig.click(&VoiceClick::Row(0));
+    }
+    rig.click(&VoiceClick::Service(CloudButton::Lines));
 }

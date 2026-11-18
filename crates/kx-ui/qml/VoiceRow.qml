@@ -1,4 +1,4 @@
-// One Voice panel row (mock-up .pr): its tick box, tile, name over its line and the parts at its end, on the ticked
+// One Voice panel row (mock-up .pr): its tick box, tile, name and tag over its line and the parts at its end, on the ticked
 // fill or the hover tint. A padding slot stays blank; a click ticks the row or acts, at let-go (ADR-0024). Arabic reads
 // from the right in its font while each part keeps its place (ADR-0020); a page turn slides the rows in, a tick pops.
 import QtQuick
@@ -19,6 +19,8 @@ Item {
     property bool rtl: host.ar
     property bool arabic: host.ar
     property bool takes: true
+    // A tag after its name, such as a Cloud row's Untested (empty for none).
+    property string tag: ""
     // A hint row (mock-up .pr.hint): its tile a bare muted icon, its name a muted line that wraps as a flat question does.
     property bool quiet: false
     // The parts at the row's end, and what shows under its line.
@@ -45,6 +47,7 @@ Item {
     // The empty tick box's colour; lit rows sit on pop_hover or pop_sel, Highlight in high contrast.
     readonly property color outline: (hot || (on && lk.contrast)) ? lk.sel_ink : p.ring
     readonly property real gap: pn.row_gap_px * s
+    readonly property real tagGap: lk.shape.chip.gap_px * s
     readonly property real scale: host.ar ? lk.look.arabic_scale : 1
 
     // The tick the slot showed last, so a new view knows whether it is new.
@@ -158,17 +161,48 @@ Item {
             anchors.right: ends.left
             anchors.rightMargin: ends.width > 0 ? r.gap : 0
             anchors.verticalCenter: parent.verticalCenter
-            Label {
-                id: title
+            Item {
                 width: parent.width
-                text: r.name
-                elide: Text.ElideRight
-                wrapMode: r.quiet ? Text.Wrap : Text.NoWrap
-                maximumLineCount: r.quiet ? r.pn.question_lines : undefined
-                horizontalAlignment: r.rtl ? Text.AlignRight : Text.AlignLeft
-                font.family: r.quiet ? r.res.fam.ui : (r.arabic ? r.res.fam.arabic : r.res.fam.latin)
-                font.pixelSize: (r.quiet ? r.pn.hint_px[0] * r.scale : r.pn.row_text_px[r.arabic ? 1 : 0]) * r.s
-                color: r.lit ? r.lk.sel_ink : (r.quiet ? r.p.pop_muted : r.p.pop_ink)
+                height: Math.max(title.height, chip.visible ? chip.height : 0)
+                Label {
+                    id: title
+                    // Beside a tag it is as wide as the name reads, so the tag follows the name.
+                    width: chip.visible ? Math.min(implicitWidth, parent.width - chip.width - r.tagGap) : parent.width
+                    x: chip.visible && r.rtl ? parent.width - width : 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: r.name
+                    elide: Text.ElideRight
+                    wrapMode: r.quiet ? Text.Wrap : Text.NoWrap
+                    maximumLineCount: r.quiet ? r.pn.question_lines : undefined
+                    horizontalAlignment: r.rtl ? Text.AlignRight : Text.AlignLeft
+                    font.family: r.quiet ? r.res.fam.ui : (r.arabic ? r.res.fam.arabic : r.res.fam.latin)
+                    font.pixelSize: (r.quiet ? r.pn.hint_px[0] * r.scale : r.pn.row_text_px[r.arabic ? 1 : 0]) * r.s
+                    color: r.lit ? r.lk.sel_ink : (r.quiet ? r.p.pop_muted : r.p.pop_ink)
+                }
+                // The tag after the name (mock-up .tag): a small outlined chip in the muted ink, which readers hear.
+                Rectangle {
+                    id: chip
+                    visible: !!r.tag
+                    x: r.rtl ? title.x - width - r.tagGap : title.width + r.tagGap
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: word.implicitWidth + 2 * r.tagGap
+                    height: word.implicitHeight
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: r.lk.shape.line.px
+                    border.color: r.p.pop_line
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: r.tag
+                    Label {
+                        id: word
+                        anchors.centerIn: parent
+                        text: r.tag
+                        font.family: r.host.ar ? r.res.fam.arabic : r.res.fam.latin
+                        font.pixelSize: r.pn.hint_px[0] * r.s * r.scale
+                        font.weight: r.lk.shape.chip.weight
+                        color: r.lit ? r.lk.sel_ink : r.p.pop_muted
+                    }
+                }
             }
             Label {
                 id: meta

@@ -1,7 +1,7 @@
-// A mark on a Voice panel row (mock-up .mk): a pill with its icon and word. In use takes the badge colours, a missing,
-// failed, other, off, unavailable or waiting one is outlined, a warning takes the warning colours with no sign of its
-// own, the rest sit on the chip colour; kx-theme checks each pair on every row (drawn/voicepanel.rs). Readers hear its
-// word.
+// A mark on a Voice panel row (mock-up .mk): a pill with its icon and word. In use and Key works take the badge colours,
+// a missing, failed, other, off, unavailable or waiting one is outlined, a warning takes the warning colours with no sign
+// of its own, the rest sit on the chip colour; kx-theme checks each pair on every row (drawn/voicepanel.rs). Readers
+// hear its word.
 import QtQuick
 
 Rectangle {
@@ -12,14 +12,17 @@ Rectangle {
     required property var host
     required property var mark
     required property bool lit
+    // Its own icon in place of its id's (empty for its id's), and the badge colours whatever its id: Key works takes both.
+    property string glyph: ""
+    property bool badge: false
 
     readonly property string markId: mark.id
     readonly property var names: host.names
-    readonly property bool shown: names.lit.indexOf(markId) >= 0
+    readonly property bool shown: badge || names.lit.indexOf(markId) >= 0
     readonly property bool outlined: names.outlined.indexOf(markId) >= 0
     readonly property bool warned: names.warned.indexOf(markId) >= 0
     readonly property string tone: shown ? "lit" : outlined ? "out" : warned ? "warn" : "plain"
-    readonly property string icon: host.lk.icons.voice.panel.marks[markId] || ""
+    readonly property string icon: glyph || host.lk.icons.voice.panel.marks[markId] || ""
     readonly property var sh: host.lk.shape.chip
     readonly property var p: host.lk.palette
     readonly property bool hc: host.lk.contrast

@@ -92,18 +92,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «"
+                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "»"
                   }
                 ],
-                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «Settings → Data Controls»"
+                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: Settings → Data Controls"
               },
               "warn": false
             }
@@ -141,7 +137,143 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
-    "cardLong": {
+    "cardLong-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى العنوان الذي تكتبه إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "العنوان الذي تكتبه"
+                  }
+                ],
+                "text": "العنوان الذي تكتبه"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "عنوان مخصّص",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -217,12 +349,12 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "غير معروف، ويتوقف على الخدمة"
+                    "text": "لا يُستخدم للتدريب"
                   }
                 ],
-                "text": "غير معروف، ويتوقف على الخدمة"
+                "text": "لا يُستخدم للتدريب"
               },
-              "warn": true
+              "warn": false
             },
             {
               "id": "keeps",
@@ -231,18 +363,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «"
+                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "»"
                   }
                 ],
-                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «Settings → Data Controls»"
+                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: Settings → Data Controls"
               },
               "warn": false
             }
@@ -253,30 +381,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "فتح groq.com",
+              "label": "فتح console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
-            "text": "قُرئت هذه المعلومات في 02/11/2026."
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
           },
           "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «"
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "» في حسابك."
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «Settings → Data Controls» في حسابك."
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -286,7 +410,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -296,7 +420,143 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
-    "cardLongPrice": {
+    "cardLongPrice-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى العنوان الذي تكتبه إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الاستخدام المجاني",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير معروف، ويتوقف على الخدمة"
+                  }
+                ],
+                "text": "غير معروف، ويتوقف على الخدمة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "عنوان مخصّص",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -372,10 +632,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+                    "text": "مجاني ضمن الحصة المجانية، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
                   }
                 ],
-                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
+                "text": "مجاني ضمن الحصة المجانية، وإلا فمن 0,60 دولار إلى 1,67 دولار حسب النموذج"
               },
               "warn": false
             },
@@ -386,10 +646,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+                    "text": "مجاني ضمن الحصة المجانية، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
                   }
                 ],
-                "text": "مجاني ضمن الاستخدام المجاني، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
+                "text": "مجاني ضمن الحصة المجانية، وإلا فمن 2,40 دولار إلى 6,66 دولار حسب النموذج"
               },
               "warn": false
             },
@@ -414,30 +674,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "فتح groq.com",
+              "label": "فتح console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
-            "text": "قُرئت هذه المعلومات في 02/11/2026."
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
           },
           "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «"
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "» في حسابك."
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «Settings → Data Controls» في حسابك."
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -447,7 +703,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -530,18 +786,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «"
+                    "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "»"
                   }
                 ],
-                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من «Settings → Data Controls»"
+                "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: Settings → Data Controls"
               },
               "warn": false
             }
@@ -564,18 +816,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «"
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "» في حسابك."
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل الخيار «Settings → Data Controls» في حسابك."
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "فُعِّلت في 10/11/2026",
@@ -669,7 +917,7 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "on",
@@ -681,7 +929,7 @@ var views = {
               "tick": true
             },
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "needs-key",
@@ -693,11 +941,11 @@ var views = {
               "tick": false
             },
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "warn",
-                  "text": "تنبيه"
+                  "text": "التدريب مفعّل افتراضيًا"
                 },
                 {
                   "id": "off",
@@ -819,11 +1067,15 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
-                  "id": "on",
-                  "text": "جاهزة"
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
                 }
               ],
               "name": "Groq",
@@ -941,7 +1193,7 @@ var views = {
           "off": "الخدمات السحابية معطّلة: لا تُعرض أي خدمة ولا يُرسَل شيء.",
           "rows": [
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "on",
@@ -953,7 +1205,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "needs-key",
@@ -965,11 +1217,11 @@ var views = {
               "tick": false
             },
             {
-              "line": "الاستخدام المجاني: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
+              "line": "مجانًا: 8 ساعات يوميًا، و20 طلبًا في الدقيقة",
               "marks": [
                 {
                   "id": "warn",
-                  "text": "تنبيه"
+                  "text": "التدريب مفعّل افتراضيًا"
                 },
                 {
                   "id": "off",
@@ -1242,7 +1494,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4188,7 +4440,7 @@ var views = {
             "buttons": [],
             "caption": "العنوان",
             "dots": 0,
-            "fault": "يجب أن يبدأ العنوان بـ https://",
+            "fault": "يجب أن يستخدم العنوان HTTPS، مثل https://example.com",
             "hint": "عنوان خدمتك، مثل https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
@@ -4369,7 +4621,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4479,7 +4731,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 34,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -4721,18 +4973,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Nothing by default, but checks may keep requests up to 30 days; “"
+                    "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "” turns that off"
                   }
                 ],
-                "text": "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off"
+                "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: Settings → Data Controls"
               },
               "warn": false
             }
@@ -4770,7 +5018,143 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
-    "cardLong": {
+    "cardLong-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to the address you type only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "The address you type"
+                  }
+                ],
+                "text": "The address you type"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Custom address",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -4846,12 +5230,12 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Unknown; it depends on the service"
+                    "text": "Not used for training"
                   }
                 ],
-                "text": "Unknown; it depends on the service"
+                "text": "Not used for training"
               },
-              "warn": true
+              "warn": false
             },
             {
               "id": "keeps",
@@ -4860,18 +5244,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Nothing by default, but checks may keep requests up to 30 days; “"
+                    "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "” turns that off"
                   }
                 ],
-                "text": "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off"
+                "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: Settings → Data Controls"
               },
               "warn": false
             }
@@ -4882,30 +5262,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "Open groq.com",
+              "label": "Open console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "They may be out of date; check the service’s page.",
-            "text": "Facts read on 02/11/2026."
+            "text": "Facts read on 17/11/2026."
           },
           "untested": "Untested: not yet checked with a real key.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off “"
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "” in your account."
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off “Settings → Data Controls” in your account."
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -4915,7 +5291,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 31,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -4925,7 +5301,143 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
-    "cardLongPrice": {
+    "cardLongPrice-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to the address you type only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free use",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Unknown; it depends on the service"
+                  }
+                ],
+                "text": "Unknown; it depends on the service"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Custom address",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -5001,10 +5513,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Free within the free use, else $0.60 to $1.67 by model"
+                    "text": "Free within the free allowance, else $0.60 to $1.67 by model"
                   }
                 ],
-                "text": "Free within the free use, else $0.60 to $1.67 by model"
+                "text": "Free within the free allowance, else $0.60 to $1.67 by model"
               },
               "warn": false
             },
@@ -5015,10 +5527,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Free within the free use, else $2.40 to $6.66 by model"
+                    "text": "Free within the free allowance, else $2.40 to $6.66 by model"
                   }
                 ],
-                "text": "Free within the free use, else $2.40 to $6.66 by model"
+                "text": "Free within the free allowance, else $2.40 to $6.66 by model"
               },
               "warn": false
             },
@@ -5043,30 +5555,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "Open groq.com",
+              "label": "Open console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "They may be out of date; check the service’s page.",
-            "text": "Facts read on 02/11/2026."
+            "text": "Facts read on 17/11/2026."
           },
           "untested": "Untested: not yet checked with a real key.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off “"
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "” in your account."
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off “Settings → Data Controls” in your account."
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -5076,7 +5584,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 32,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5159,18 +5667,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Nothing by default, but checks may keep requests up to 30 days; “"
+                    "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": "” turns that off"
                   }
                 ],
-                "text": "Nothing by default, but checks may keep requests up to 30 days; “Settings → Data Controls” turns that off"
+                "text": "Nothing by default, but checks may keep requests up to 30 days; this account switch turns that off: Settings → Data Controls"
               },
               "warn": false
             }
@@ -5193,18 +5697,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off “"
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": "” in your account."
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off “Settings → Data Controls” in your account."
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Switched on 10/11/2026",
@@ -5326,7 +5826,7 @@ var views = {
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Warning"
+                  "text": "Trains by default"
                 },
                 {
                   "id": "off",
@@ -5451,8 +5951,12 @@ var views = {
               "line": "Free use: 8 hours a day, 20 requests a minute",
               "marks": [
                 {
-                  "id": "on",
-                  "text": "Ready"
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
                 }
               ],
               "name": "Groq",
@@ -5598,7 +6102,7 @@ var views = {
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Warning"
+                  "text": "Trains by default"
                 },
                 {
                   "id": "off",
@@ -5871,7 +6375,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 35,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8817,7 +9321,7 @@ var views = {
             "buttons": [],
             "caption": "Address",
             "dots": 0,
-            "fault": "The address must start with https://",
+            "fault": "The address must use HTTPS, such as https://example.com",
             "hint": "Your service’s address, such as https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
@@ -8858,7 +9362,7 @@ var views = {
             "buttons": [],
             "caption": "Other model",
             "dots": 0,
-            "fault": "This model id is too long or holds a character it may not.",
+            "fault": "This model id is too long or holds a character that is not allowed.",
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
@@ -8998,7 +9502,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 33,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9074,7 +9578,7 @@ var views = {
             "buttons": [],
             "caption": "Address",
             "dots": 0,
-            "fault": "The address holds a character it may not, such as a space.",
+            "fault": "The address holds a character that is not allowed, such as a space.",
             "hint": "Your service’s address, such as https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
@@ -9094,7 +9598,7 @@ var views = {
             "buttons": [],
             "caption": "Other model",
             "dots": 0,
-            "fault": "This model id is too long or holds a character it may not.",
+            "fault": "This model id is too long or holds a character that is not allowed.",
             "hint": "A model id from the service’s page",
             "id": "model",
             "mask": null,
@@ -9108,7 +9612,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 34,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9350,18 +9854,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « "
+                    "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": " » l’empêche"
                   }
                 ],
-                "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « Settings → Data Controls » l’empêche"
+                "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : Settings → Data Controls"
               },
               "warn": false
             }
@@ -9399,7 +9899,143 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
-    "cardLong": {
+    "cardLong-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers l’adresse que vous saisissez qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "L’adresse que vous saisissez"
+                  }
+                ],
+                "text": "L’adresse que vous saisissez"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Adresse personnalisée",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -9475,12 +10111,12 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Inconnu ; cela dépend du service"
+                    "text": "Non utilisée pour l’entraînement"
                   }
                 ],
-                "text": "Inconnu ; cela dépend du service"
+                "text": "Non utilisée pour l’entraînement"
               },
-              "warn": true
+              "warn": false
             },
             {
               "id": "keeps",
@@ -9489,18 +10125,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « "
+                    "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": " » l’empêche"
                   }
                 ],
-                "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « Settings → Data Controls » l’empêche"
+                "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : Settings → Data Controls"
               },
               "warn": false
             }
@@ -9511,30 +10143,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "Ouvrir groq.com",
+              "label": "Ouvrir console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "Elles datent peut-être ; vérifiez la page du service.",
-            "text": "Informations relevées le 02/11/2026."
+            "text": "Informations relevées le 17/11/2026."
           },
           "untested": "Non testé : pas encore vérifié avec une vraie clé.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": " » dans votre compte."
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « Settings → Data Controls » dans votre compte."
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -9544,7 +10172,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 31,
+      "round": 34,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -9554,7 +10182,143 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
-    "cardLongPrice": {
+    "cardLongPrice-custom": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers l’adresse que vous saisissez qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Usage gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Inconnu ; cela dépend du service"
+                  }
+                ],
+                "text": "Inconnu ; cela dépend du service"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": null,
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Adresse personnalisée",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-groq": {
       "bar": {
         "state": "hidden"
       },
@@ -9630,10 +10394,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+                    "text": "Gratuit dans la limite du quota gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
                   }
                 ],
-                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
+                "text": "Gratuit dans la limite du quota gratuit, sinon de 0,60 $ à 1,67 $ selon le modèle"
               },
               "warn": false
             },
@@ -9644,10 +10408,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+                    "text": "Gratuit dans la limite du quota gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
                   }
                 ],
-                "text": "Gratuit dans la limite de l’usage gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
+                "text": "Gratuit dans la limite du quota gratuit, sinon de 2,40 $ à 6,66 $ selon le modèle"
               },
               "warn": false
             },
@@ -9658,10 +10422,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+                    "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus cher"
                   }
                 ],
-                "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus"
+                "text": "Au moins 10 secondes par requête ; les morceaux courts coûtent donc plus cher"
               },
               "warn": false
             }
@@ -9672,30 +10436,26 @@ var views = {
               "arg": 0,
               "id": "link",
               "kind": "service",
-              "label": "Ouvrir groq.com",
+              "label": "Ouvrir console.groq.com",
               "on": true,
               "tone": "plain"
             },
             "old": "Elles datent peut-être ; vérifiez la page du service.",
-            "text": "Informations relevées le 02/11/2026."
+            "text": "Informations relevées le 17/11/2026."
           },
           "untested": "Non testé : pas encore vérifié avec une vraie clé.",
           "warn": {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": " » dans votre compte."
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « Settings → Data Controls » dans votre compte."
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -9705,7 +10465,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 32,
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -9788,18 +10548,14 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « "
+                    "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : "
                   },
                   {
                     "own": true,
                     "text": "Settings → Data Controls"
-                  },
-                  {
-                    "own": false,
-                    "text": " » l’empêche"
                   }
                 ],
-                "text": "Rien par défaut, mais des contrôles peuvent garder les requêtes jusqu’à 30 jours ; « Settings → Data Controls » l’empêche"
+                "text": "Rien par défaut, mais les requêtes peuvent être gardées jusqu’à 30 jours pour contrôle ; ce réglage du compte l’empêche : Settings → Data Controls"
               },
               "warn": false
             }
@@ -9822,18 +10578,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
-              },
-              {
-                "own": false,
-                "text": " » dans votre compte."
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez « Settings → Data Controls » dans votre compte."
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "Activé le 10/11/2026",
@@ -9927,7 +10679,7 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "on",
@@ -9939,7 +10691,7 @@ var views = {
               "tick": true
             },
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "needs-key",
@@ -9951,11 +10703,11 @@ var views = {
               "tick": false
             },
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Avertissement"
+                  "text": "Entraîne par défaut"
                 },
                 {
                   "id": "off",
@@ -10077,11 +10829,15 @@ var views = {
           "off": null,
           "rows": [
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
-                  "id": "on",
-                  "text": "Prêt"
+                  "id": "warn",
+                  "text": "Entraîne par défaut"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
                 }
               ],
               "name": "Groq",
@@ -10199,7 +10955,7 @@ var views = {
           "off": "Services cloud désactivés : aucun n’est proposé, rien n’est envoyé.",
           "rows": [
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "on",
@@ -10211,7 +10967,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "needs-key",
@@ -10223,11 +10979,11 @@ var views = {
               "tick": false
             },
             {
-              "line": "Usage gratuit : 8 heures par jour, 20 requêtes par minute",
+              "line": "Gratuit : 8 heures par jour, 20 requêtes par minute",
               "marks": [
                 {
                   "id": "warn",
-                  "text": "Avertissement"
+                  "text": "Entraîne par défaut"
                 },
                 {
                   "id": "off",
@@ -10500,7 +11256,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 33,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11757,7 +12513,7 @@ var views = {
             },
             {
               "fetch": null,
-              "line": "Ce modèle n’a aucun hébergeur qui ne garde rien.",
+              "line": "Aucun hébergeur ne s’engage à ne rien garder.",
               "marks": [
                 {
                   "id": "cloud",
@@ -11956,7 +12712,7 @@ var views = {
             },
             {
               "fetch": null,
-              "line": "Ce modèle n’a aucun hébergeur qui ne garde rien.",
+              "line": "Aucun hébergeur ne s’engage à ne rien garder.",
               "marks": [
                 {
                   "id": "cloud",
@@ -13446,7 +14202,7 @@ var views = {
             "buttons": [],
             "caption": "Adresse",
             "dots": 0,
-            "fault": "L’adresse doit commencer par https://",
+            "fault": "L’adresse doit utiliser HTTPS, par exemple https://example.com",
             "hint": "L’adresse de votre service, par exemple https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
@@ -13487,7 +14243,7 @@ var views = {
             "buttons": [],
             "caption": "Autre modèle",
             "dots": 0,
-            "fault": "Cet identifiant est trop long ou contient un caractère interdit.",
+            "fault": "Cet identifiant de modèle est trop long ou contient un caractère non autorisé.",
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
@@ -13627,7 +14383,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 33,
+      "round": 31,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -13703,7 +14459,7 @@ var views = {
             "buttons": [],
             "caption": "Adresse",
             "dots": 0,
-            "fault": "L’adresse contient un caractère interdit, comme un espace.",
+            "fault": "L’adresse contient un caractère non autorisé, comme un espace.",
             "hint": "L’adresse de votre service, par exemple https://example.com/v1/audio/transcriptions",
             "id": "address",
             "mask": null,
@@ -13723,7 +14479,7 @@ var views = {
             "buttons": [],
             "caption": "Autre modèle",
             "dots": 0,
-            "fault": "Cet identifiant est trop long ou contient un caractère interdit.",
+            "fault": "Cet identifiant de modèle est trop long ou contient un caractère non autorisé.",
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,
@@ -13737,7 +14493,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 34,
+      "round": 32,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -13863,7 +14619,7 @@ var views = {
             "buttons": [],
             "caption": "Autre modèle",
             "dots": 0,
-            "fault": "Ce modèle n’a aucun hébergeur qui ne garde rien.",
+            "fault": "Aucun hébergeur ne s’engage à ne rien garder.",
             "hint": "L’identifiant du modèle, sur la page du service",
             "id": "model",
             "mask": null,

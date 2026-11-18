@@ -57,6 +57,12 @@ const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
 /// The press shade token, which a mode table writes only to replace the shade made from `[common] press`.
 const PRESS: &str = "press";
 
+/// How many key and light tokens `named` starts with, and how many panel and state tokens follow them.
+const KEY_TOKENS: usize = 25;
+const REST_TOKENS: usize = 14;
+/// How many colour tokens a palette names; each part's array holds its own count, so none is dropped.
+const TOKENS: usize = KEY_TOKENS + REST_TOKENS;
+
 /// True when mode table `t` writes its own press shade.
 pub(crate) fn own_press(t: &toml::Table) -> bool {
     t.contains_key(PRESS)
@@ -191,13 +197,13 @@ impl Skirt {
 impl Palette {
     /// Every colour token with its name in `themes/*.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 39] {
+    pub fn named(&self) -> [(&'static str, Rgba); TOKENS] {
         let (keys, rest) = (self.keys_named(), self.rest_named());
         std::array::from_fn(|i| keys.get(i).copied().unwrap_or_else(|| rest[i - keys.len()]))
     }
 
     /// The keys' and lights' tokens, the first part of `named`.
-    fn keys_named(&self) -> [(&'static str, Rgba); 25] {
+    fn keys_named(&self) -> [(&'static str, Rgba); KEY_TOKENS] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -228,7 +234,7 @@ impl Palette {
     }
 
     /// The panels' and states' tokens, the rest of `named`.
-    fn rest_named(&self) -> [(&'static str, Rgba); 14] {
+    fn rest_named(&self) -> [(&'static str, Rgba); REST_TOKENS] {
         [
             ("ring", self.ring),
             ("badge_bg", self.badge_bg),

@@ -1,6 +1,7 @@
 // A switch on its own band (mock-up .swb, .swr): its icon, its label, On or Off, then the switch, on pop_hover as a band
-// is. A click anywhere on it sends its kind with the other state, at let-go (ADR-0024); readers hear a checkable box.
-// Each part keeps its place in Arabic, whose words read from the right (ADR-0020).
+// is, with the hover tint under the pointer. A click anywhere on it sends its kind with the other state, at let-go
+// (ADR-0024); readers hear a checkable box. Each part keeps its place in Arabic, whose words read from the right
+// (ADR-0020).
 import QtQuick
 
 Rectangle {
@@ -19,6 +20,8 @@ Rectangle {
     readonly property var sh: lk.shape.clip.note_px
     readonly property real scale: host.ar ? lk.look.arabic_scale : 1
     readonly property real gap: pn.head_gap_px * s
+    // The pointer is over it, which tints it (mock-up .swb:hover).
+    readonly property bool hot: act.containsMouse
 
     // Sends the other state.
     function flip() {
@@ -38,9 +41,15 @@ Rectangle {
     Accessible.onToggleAction: tg.flip()
 
     Act {
+        id: act
         anchors.fill: parent
         hoverEnabled: true
         onActed: tg.flip()
+    }
+    Hover {
+        lk: tg.lk
+        radius: tg.radius
+        visible: tg.hot
     }
     Icon {
         id: glyph

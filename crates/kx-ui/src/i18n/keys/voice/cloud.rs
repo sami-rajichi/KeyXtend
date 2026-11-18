@@ -3,7 +3,7 @@
 
 use super::VoiceMark;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudFault, CloudWhy, KeyCheck, ModelSide, ServiceMark,
+    AddressFault, CloudBand, CloudButton, CloudWhy, KeyCheck, ModelSide, ServiceMark, Unavailable,
 };
 
 /// The start of every cloud key.
@@ -84,7 +84,7 @@ pub const VOICE_KEY: &str = "cloud.key-";
 pub const VOICE_ADDRESS_LINE: &str = "cloud.address-line";
 /// The address line's hint for Custom: `$https`.
 pub const VOICE_ADDRESS_HINT: &str = "cloud.address-hint";
-/// The address line's hint for a service's own resource: `$https`.
+/// The address line's hint for a service's own resource.
 pub const VOICE_ADDRESS_HINT_OWN: &str = "cloud.address-hint-own";
 /// An address fault's line: this, then its `address_fault_id`; `$https` too.
 pub const VOICE_ADDRESS: &str = "cloud.address-";
@@ -208,24 +208,7 @@ pub const fn cloud_why_id(why: &CloudWhy) -> &'static str {
         CloudWhy::Off => "off",
         CloudWhy::NoLocal => "no-local",
         CloudWhy::Fault => "fault",
-        CloudWhy::Unavailable(_) => "keep-nothing",
-    }
-}
-
-/// The reason a cloud fault gives, by the id a cloud note's line takes.
-#[must_use]
-pub const fn fault_why(fault: CloudFault) -> &'static str {
-    match fault {
-        CloudFault::Key => "key",
-        CloudFault::Credit => "credit",
-        CloudFault::Allowance { .. } => "allowance",
-        CloudFault::Rate => "rate",
-        CloudFault::TooBig => "too-big",
-        CloudFault::Language => "language",
-        CloudFault::Empty => "empty",
-        CloudFault::Strange => "strange",
-        CloudFault::Network | CloudFault::Timeout => "net",
-        CloudFault::Range(_) | CloudFault::Gone => "fault",
+        CloudWhy::Unavailable(Unavailable::KeepNothing) => "keep-nothing",
     }
 }
 

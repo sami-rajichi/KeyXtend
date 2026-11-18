@@ -1,5 +1,6 @@
 // The Models page's Local | Cloud chips (mock-up sides()): their caption, then a chip for each side, the shown one
-// filled and checked as the panels' filters are (PanelChip); a click shows that side, which pages alone (edge 29).
+// filled and checked as the panels' filters are (PanelChip); a click shows that side, which pages alone (edge 29). Each
+// part keeps its place in Arabic, as the filters and Options' paired chips do (ADR-0020).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -14,7 +15,6 @@ Row {
     readonly property real s: host.s
 
     spacing: lk.shape.panel.filter_gap_px * s
-    layoutDirection: host.ar ? Qt.RightToLeft : Qt.LeftToRight
     Accessible.role: Accessible.Grouping
     Accessible.name: sides.name
 

@@ -2,14 +2,14 @@
 //! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
 //! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4).
 
-use super::super::{button, buttons, heard, json, listening_bar, page, panel, panel_json};
+use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
 use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, CloudBand, CloudFault, CloudRow, CloudWhy, CompareCloud,
-    CompareRun, CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState,
-    ModelsSheet, RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
+    BarButton, BarHint, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareRun,
+    CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState, ModelsSheet,
+    RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
 };
 use kx_ui::voice_acts::{BAR, LOCAL, OPEN, SIDE};
 use serde_json::{Value, json};
@@ -143,8 +143,8 @@ fn a_cloud_model_that_failed_while_compare_runs_says_why() {
         of: 2,
         name: Redacted::new("Whisper small".to_owned()),
         rows: vec![
-            run(Some(CloudFault::Key)),
-            run(Some(CloudFault::Language)),
+            run(Some(CloudWhy::Key)),
+            run(Some(CloudWhy::Language(english()))),
             run(None),
         ],
     });

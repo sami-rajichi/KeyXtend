@@ -275,7 +275,7 @@ var views = {
         ],
         "hint": {
           "id": "cloud",
-          "text": "لا يُرسَل ما يُكتب في حقل كلمة المرور إلى السحابة أبدًا، ولا يوجد نموذج محلي جاهز."
+          "text": "لا يُرسَل ما يُملى في حقل كلمة المرور إلى السحابة أبدًا، ولا يوجد نموذج محلي جاهز."
         },
         "mic": false,
         "state": "note"
@@ -1135,7 +1135,7 @@ var views = {
         ],
         "hint": {
           "id": "cloud",
-          "text": "A password box never goes to the cloud, and no local model is ready."
+          "text": "Speech for a password box never goes to the cloud, and no local model is ready."
         },
         "mic": false,
         "state": "note"
@@ -1995,7 +1995,7 @@ var views = {
         ],
         "hint": {
           "id": "cloud",
-          "text": "Un champ de mot de passe ne part jamais vers le cloud, et aucun modèle local n’est prêt."
+          "text": "Ce qui est dicté dans un champ de mot de passe ne part jamais vers le cloud, et aucun modèle local n’est prêt."
         },
         "mic": false,
         "state": "note"

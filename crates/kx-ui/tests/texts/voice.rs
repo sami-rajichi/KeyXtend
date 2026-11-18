@@ -13,9 +13,11 @@ use kx_ui::i18n::keys::{
     place_id, voice_tab_id,
 };
 
+mod approved;
 mod cloud;
 mod icons;
 mod newer;
+pub(crate) mod own;
 
 /// A language as the module names it, by its own name.
 fn named(name: &str) -> VoiceLang {

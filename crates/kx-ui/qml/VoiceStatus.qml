@@ -94,8 +94,8 @@ Row {
             Label {
                 anchors.verticalCenter: parent.verticalCenter
                 text: st.cloud ? st.cloud.name : ""
-                font.family: st.host.res.fam.latin
-                font.pixelSize: st.chip.font_px[0] * st.host.s
+                font.family: st.host.ar ? st.host.res.fam.arabic : st.host.res.fam.latin
+                font.pixelSize: st.chip.font_px[st.host.ar ? 1 : 0] * st.host.s
                 font.weight: st.chip.weight
                 color: st.host.lk.contrast ? st.host.p.legend : st.host.p.pop_ink
             }

@@ -1862,6 +1862,7 @@ dependencies = [
  "cxx-qt-lib",
  "fluent-bundle 0.16.0",
  "fluent-langneg",
+ "kx-mod-voice",
  "kx-module-api",
  "kx-platform",
  "kx-platform-fake",

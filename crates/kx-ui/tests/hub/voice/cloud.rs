@@ -188,7 +188,7 @@ fn the_cloud_page_lists_each_service_with_its_free_use_and_marks() {
     assert_eq!(custom["tag"], Value::Null);
     assert_eq!(
         marks(&custom["marks"]),
-        pairs(&[("warn", "Warning"), ("off", "Off")])
+        pairs(&[("warn", "Trains by default"), ("off", "Off")])
     );
 }
 

@@ -14,6 +14,7 @@ mod wire;
 
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
 pub use lend::Lend;
+pub(crate) use net::why as net_why;
 pub use net::{Net, Sent, Upload};
 pub(crate) use notes::mic_hint;
 pub(crate) use take::suffixed;

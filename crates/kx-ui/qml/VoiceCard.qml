@@ -1,7 +1,7 @@
 // A service's card (mock-up cardPage()): each fact's label in a column, then its sentence, a warning fact in warn_ink;
-// under a rule, the day the facts were read with the link to the service's page, the words after it in warn_ink once
-// they are old, and the Untested line. It takes a page of rows' height, its facts in two parts the pager turns, so the
-// panel keeps its size (ADR-0008, ADR-0047).
+// under a rule, the day the facts were read with the link to the service's page, the day, its icon and the words after it
+// in warn_ink and bold once they are old (mock-up .ro.old), and the Untested line. It takes a page of rows' height, its
+// facts in two parts the pager turns, so the panel keeps its size (ADR-0008, ADR-0047).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -113,7 +113,7 @@ Item {
             }
         }
     }
-    // A muted line under the facts with its icon, words after it in warn_ink, and a button at its end.
+    // A muted line under the facts with its icon and a button at its end; with words after it, all of it warns.
     component Note: Item {
         id: note
         property string icon: ""
@@ -131,7 +131,7 @@ Item {
             base: card.host.res.icons
             ext: card.host.res.ext
             px: card.lk.shape.clip.button_px[4] * card.s
-            tint: card.p.pop_muted
+            tint: note.more ? card.p.warn_ink : card.p.pop_muted
         }
         Flow {
             id: line
@@ -144,6 +144,8 @@ Item {
             spacing: space.advanceWidth(" ")
             Muted {
                 text: note.text
+                font.weight: note.more ? card.pn.count_weight : Font.Normal
+                color: note.more ? card.p.warn_ink : card.p.pop_muted
             }
             Muted {
                 visible: !!note.more

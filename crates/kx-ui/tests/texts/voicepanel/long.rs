@@ -1,37 +1,52 @@
-//! The cloud panels with their longest content, which the fit test measures: the Cloud page and the Models page's Cloud
-//! side with the services table's rows, each part of Groq's card with every line on, each part of a key page with every
-//! line and the longest answers, and Compare with every cloud model of the services in the table.
+//! The cloud panels with their longest content, which the fit test measures: the Cloud page with the services table's
+//! rows, the Models page's Cloud side, each part of each table service's card with every line on, each part of a key page
+//! with every line and the longest answers, and Compare with every cloud model of the services in the table.
 
 use super::cloud::{card, lines, named};
 use super::{Shown, paged, shown};
+use kx_mod_voice::VoiceSettings;
+use kx_mod_voice::cloud::Cloud;
+use kx_mod_voice::services::{Address, Service, Services, table};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud,
     CompareSheet, DeviceLabel, DeviceName, KeyCheck, LinesPart, ModelRow, ModelSide, ModelState,
     ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow, Unavailable, VoiceSheet,
 };
+use kx_ui::UiSettings;
 
-/// The Cloud page with the table's rows, both untested, Groq ticked and Custom waiting for its address.
+/// The start of a service's long card's name, then its id: its first part, and its second.
+const CARD_LONG: &str = "cardLong-";
+const PRICE_LONG: &str = "cardLongPrice-";
+
+/// The voice module's services table, which the long panels show whole.
+fn services() -> &'static Services {
+    table().expect("the services table reads")
+}
+
+/// The Cloud page with the first page of the table's rows, each untested, a named service with the warning mark, and the
+/// mark its address asks for; the first ticked.
 fn cloud_long() -> VoiceSheet {
-    let row = |name, mark, free, tick| ServiceRow {
-        name,
-        mark,
+    let per = UiSettings::from_defaults()
+        .expect("the [ui] defaults")
+        .page_rows;
+    let row = |(i, s): (usize, &Service)| ServiceRow {
+        name: s.shown(),
+        mark: if matches!(s.address, Address::Typed { .. }) {
+            ServiceMark::NeedsAddress
+        } else {
+            ServiceMark::NeedsKey
+        },
         untested: true,
-        free,
-        warn: false,
-        tick,
+        free: s.name.is_some().then(|| s.facts.free.clone()),
+        warn: s.name.is_some(),
+        tick: i == 0,
     };
-    let VoiceSheet::Card(groq) = card(false) else {
-        unreachable!("a card")
-    };
-    let rows = vec![
-        row(named("Groq"), ServiceMark::Ready, Some(groq.free), true),
-        row(ServiceName::Custom, ServiceMark::NeedsAddress, None, false),
-    ];
+    let rows = services().rows().iter().take(per).enumerate().map(row);
     let acts = vec![CloudButton::Facts, CloudButton::Lines, CloudButton::Off];
     VoiceSheet::Cloud(CloudSheet {
         on: true,
-        rows,
+        rows: rows.collect(),
         acts,
     })
 }
@@ -91,13 +106,17 @@ fn models_long() -> VoiceSheet {
     })
 }
 
-/// Part `part` of Groq's card asking again, old, untested and with the training warning.
-fn card_long(part: CardPart) -> VoiceSheet {
-    let VoiceSheet::Card(mut c) = card(true) else {
+/// Part `part` of service `s`'s card as the module builds it from the table, asking again, old and untested, with the
+/// training warning when the table gives it none.
+fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
+    let settings = VoiceSettings::from_defaults().expect("the [voice] defaults");
+    let mut c = Cloud::new(services(), false).card(&settings, s, s.facts.read);
+    let VoiceSheet::Card(sample) = card(true) else {
         unreachable!("a card")
     };
-    (c.untested, c.on, c.part) = (true, None, part);
-    VoiceSheet::Card(c)
+    c.warn = c.warn.or_else(|| sample.warn.clone());
+    (c.old, c.untested, c.on, c.part) = (true, true, None, part);
+    VoiceSheet::Card(Box::new(c))
 }
 
 /// Part `part` of the Custom row's key page with every line, each with its longest answer.
@@ -133,19 +152,31 @@ fn compare_long() -> VoiceSheet {
 }
 
 /// The longest cloud panels, by name; a card and a key page show their first part on page 1 of 2, and their second
-/// on page 2.
-pub fn panels() -> Vec<(&'static str, Shown)> {
+/// on page 2. Each service of the table has its card's two parts, named after its id.
+pub fn panels() -> Vec<(String, Shown)> {
     let two = |sheet, at| paged(shown(sheet, &[]), at, 2, 0);
-    vec![
+    let mut out = vec![
         ("cloudLong", paged(shown(cloud_long(), &[]), 0, 1, 1)),
         (
             "modelsLong",
             paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1),
         ),
-        ("cardLong", two(card_long(CardPart::Voice), 0)),
-        ("cardLongPrice", two(card_long(CardPart::Price), 1)),
         ("serviceLong", two(service_long(LinesPart::Key), 0)),
         ("serviceLongModel", two(service_long(LinesPart::Model), 1)),
         ("compareLong", shown(compare_long(), &[])),
     ]
+    .into_iter()
+    .map(|(name, s)| (name.to_owned(), s))
+    .collect::<Vec<_>>();
+    for s in services().rows() {
+        out.push((
+            format!("{CARD_LONG}{}", s.id),
+            two(card_long(s, CardPart::Voice), 0),
+        ));
+        out.push((
+            format!("{PRICE_LONG}{}", s.id),
+            two(card_long(s, CardPart::Price), 1),
+        ));
+    }
+    out
 }

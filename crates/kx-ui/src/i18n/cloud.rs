@@ -7,12 +7,10 @@ use super::compose::{clean, form};
 use super::keys::vars::{HTTPS, LANG};
 use super::keys::{
     VOICE_HOURS, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
-    cloud_why_id, fact_key, fault_why,
+    cloud_why_id, fact_key,
 };
 use fluent_bundle::FluentArgs;
-use kx_module_api::ports::{
-    CloudFault, CloudWhy, Fact, FactValue, Hundredths, LINK_SCHEME, VoiceLang,
-};
+use kx_module_api::ports::{CloudWhy, Fact, FactValue, Hundredths, LINK_SCHEME, VoiceLang};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -111,17 +109,6 @@ impl I18n {
             }
             CloudWhy::Language(lang) => self.cloud_line(cloud_why_id(why), lang),
             _ => self.text(&format!("{VOICE_NOTE_CLOUD}{}", cloud_why_id(why))),
-        }
-    }
-
-    /// A Compare row's reason for cloud `fault`, naming `lang` when the service refused it.
-    #[must_use]
-    pub fn voice_fault(&self, fault: CloudFault, lang: &VoiceLang) -> String {
-        match fault {
-            CloudFault::Allowance { renews_in: Some(d) } => {
-                self.with(VOICE_NOTE_RENEWS, [(IN_VAR, self.renewal(d))])
-            }
-            _ => self.cloud_line(fault_why(fault), lang),
         }
     }
 

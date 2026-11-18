@@ -10,6 +10,72 @@ var texts = {
       ],
       "text": "بعض إعدادات mystery لم تكن صالحة، فعادت إلى قيمها الافتراضية: bubble_corner و erase_gap_ms و3 إعدادات أخرى."
     },
+    "runs": [
+      {
+        "runs": [
+          "https://example.com/v1/audio/transcriptions"
+        ],
+        "tag": "cloud.address-hint",
+        "text": "عنوان خدمتك، مثل https://example.com/v1/audio/transcriptions"
+      },
+      {
+        "runs": [
+          "HTTPS"
+        ],
+        "tag": "cloud.address-hint-own",
+        "text": "عنوان HTTPS لموردك الخاص لدى هذه الخدمة"
+      },
+      {
+        "runs": [
+          "HTTPS"
+        ],
+        "tag": "cloud.custom-line",
+        "text": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك"
+      },
+      {
+        "runs": [
+          "HTTPS",
+          "https://example.com"
+        ],
+        "tag": "cloud.address-https",
+        "text": "يجب أن يستخدم العنوان HTTPS، مثل https://example.com"
+      },
+      {
+        "runs": [
+          "IP"
+        ],
+        "tag": "cloud.address-host",
+        "text": "يجب أن يحتوي العنوان على اسم مضيف، لا على عنوان IP."
+      },
+      {
+        "runs": [
+          "console.groq.com"
+        ],
+        "tag": "cloud.key-link",
+        "text": "إنشاء مفتاح في console.groq.com"
+      },
+      {
+        "runs": [
+          "30"
+        ],
+        "tag": "keeps-logs-0",
+        "text": "لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى 30 يومًا، ويمكن إيقاف ذلك من هذا الخيار في حسابك: "
+      },
+      {
+        "runs": [
+          "Settings → Data Controls"
+        ],
+        "tag": "keeps-logs-1",
+        "text": "Settings → Data Controls"
+      },
+      {
+        "runs": [
+          "Settings → Data Controls"
+        ],
+        "tag": "warn-trains-1",
+        "text": "Settings → Data Controls"
+      }
+    ],
     "spaces": [
       {
         "parts": [
@@ -68,6 +134,7 @@ var texts = {
       ],
       "text": "Some mystery settings were not valid, so they went back to their defaults: bubble_corner, erase_gap_ms and 3 more."
     },
+    "runs": [],
     "spaces": [
       {
         "parts": [
@@ -126,6 +193,7 @@ var texts = {
       ],
       "text": "Certains paramètres de « mystery » n’étaient pas valides et ont repris leur valeur par défaut : bubble_corner, erase_gap_ms et 3 autres."
     },
+    "runs": [],
     "spaces": [
       {
         "parts": [

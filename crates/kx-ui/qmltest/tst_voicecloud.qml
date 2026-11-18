@@ -1,7 +1,8 @@
 // The Voice panel's cloud pages over the hub's views (ADR-0047): the Cloud page's switch, services and marks, the
 // warning in its own tone, a card's facts with the day read and its link, an old card's warning, the key page's dots,
 // answers and refused lines, the keep-nothing switch, the Models page's Local | Cloud chips and band, and Compare's
-// cloud models with their warning and why one failed, in English, French and Arabic, each page fitting its height.
+// cloud models with their warning and why one failed, in English, French and Arabic, each page fitting its height; a page
+// change inside one panel warns nothing.
 import QtQuick
 import QtTest
 import "../qml"
@@ -50,7 +51,7 @@ Item {
             const all = rows(box);
             compare(all.map(r => r.Accessible.name), s.rows.map(r => r.name));
             compare(all.map(r => r.Accessible.description), s.rows.map(r => r.line));
-            compare(shown(all[0]), [[box.names.untested, s.rows[0].tag]].concat(s.rows[0].marks.map(m => [m.id, m.text])));
+            compare(shown(all[0]), s.rows[0].marks.map(m => [m.id, m.text]), "Untested is the tag beside the name");
             const warn = marks(all[2])[0];
             compare([warn.markId, warn.tone, warn.icon], ["warn", "warn", ""], "the warning in its tone, with no sign");
             verify(Qt.colorEqual(warn.fill, N.lk.palette.warn));
@@ -65,8 +66,11 @@ Item {
             box.visible = false;
         }
 
-        function test_cloud_services_off_say_so_and_their_rows_only_show() {
-            const box = make("cloudOff");
+        function test_cloud_services_off_say_so_and_their_rows_only_show_data() {
+            return langs_data();
+        }
+        function test_cloud_services_off_say_so_and_their_rows_only_show(d) {
+            const box = make("cloudOff", d.t);
             const s = box.view.sheet;
             compare(heard(box.contentItem, s.off).length, 1, "nothing is offered or sent");
             const all = rows(box);
@@ -74,6 +78,22 @@ Item {
             mouseClick(all[0]);
             mouseClick(one(box, "voice.cloud"));
             compare(acts(box), ["act cloud  1 " + box.round]);
+            box.visible = false;
+        }
+
+        function test_a_page_change_inside_one_panel_warns_nothing_data() {
+            return langs_data();
+        }
+        // The panel turns from the Cloud page to pages with no switch and back, as the hub's views follow one another.
+        function test_a_page_change_inside_one_panel_warns_nothing(d) {
+            const box = make("cloud", d.t);
+            for (const name of ["service", "cloudOff", "card", "cloud", "models"]) {
+                const v = Kit.view(d.t, name);
+                box.view = v.panel;
+                box.round = v.round;
+                verify(waitForPolish(box), name + " laid out");
+                compare(box.view.sheet.is, v.panel.sheet.is, name);
+            }
             box.visible = false;
         }
 
@@ -86,6 +106,8 @@ Item {
             for (const f of s.facts)
                 compare(heard(box.contentItem, f.label + " " + f.value.text).length, 1, f.id);
             compare(heard(box.contentItem, s.read.text).length, 1, "the day the facts were read");
+            const day = Kit.texts(box.contentItem, s.read.text)[0];
+            verify(Qt.colorEqual(day.color, N.lk.palette.pop_muted), "a recent day stays muted");
             compare(heard(box.contentItem, s.untested).length, 1, "edge 18: Untested");
             compare(warnings(box).length, 0, "no warning");
             fits(part(box, "read"), "the card");
@@ -104,9 +126,16 @@ Item {
             compare(heard(box.contentItem, s.read.text + " " + s.read.old).length, 1, "edge 15: the facts may be old");
             const old = Kit.texts(box.contentItem, s.read.old)[0];
             verify(Qt.colorEqual(old.color, N.lk.palette.warn_ink), "in warn_ink");
+            const day = Kit.texts(box.contentItem, s.read.text)[0];
+            verify(Qt.colorEqual(day.color, N.lk.palette.warn_ink), "edge 15: the old day itself in warn_ink");
+            compare(day.font.weight, box.pn.count_weight, "and bold");
+            const glyph = Kit.only(Board.all(box.contentItem, o => o.visible && o.icon === N.lk.icons.voice.panel.cloud.read && o.tint !== undefined));
+            verify(Qt.colorEqual(glyph.tint, N.lk.palette.warn_ink), "its icon too");
             const band = Kit.only(warnings(box));
             compare(band.Accessible.name, s.warn.text);
             compare(band.pieces.map(p => p.text), s.warn.parts.map(p => p.text), "a service's own words apart");
+            const line = Board.all(band, o => o.layoutDirection !== undefined && o.spacing !== undefined)[0];
+            compare(line.spacing, 0, "no space added inside the sentence");
             verify(Kit.ratio(band.ink, band.fill) >= Kit.text, "the warning reads");
             const fact = s.facts.find(f => f.warn);
             const words = Kit.texts(box.contentItem, fact.value.parts[0].text)[0];
@@ -120,7 +149,9 @@ Item {
         }
         // A card's two parts and a typed key page's two parts each keep the panel's height, with the pager beside them.
         function test_a_card_and_a_typed_key_page_turn_by_the_pager(d) {
-            for (const [name, by] of [["cardLong", 1], ["cardLongPrice", -1], ["serviceLong", 1], ["serviceLongModel", -1]]) {
+            const card = Kit.named(d.t, "cardLong-")[0];
+            const price = card.replace("cardLong-", "cardLongPrice-");
+            for (const [name, by] of [[card, 1], [price, -1], ["serviceLong", 1], ["serviceLongModel", -1]]) {
                 const box = make(name, d.t);
                 const [back, on] = [one(box, "voice.page-back"), one(box, "voice.page-on")];
                 compare([back.enabled, on.enabled], [by < 0, by > 0], name + ": one way to turn");

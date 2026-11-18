@@ -135,9 +135,10 @@ fn a_refused_address_model_or_busy_paste_each_says_why_on_its_own_line() {
     assert_eq!(address["text"], "http://lan.example");
     let hint = "Your service’s address, such as https://example.com/v1/audio/transcriptions";
     assert_eq!(address["hint"], hint);
-    assert_eq!(address["fault"], "The address must start with https://");
+    let https = "The address must use HTTPS, such as https://example.com";
+    assert_eq!(address["fault"], https);
     assert_eq!(sheet["model"]["text"], "no such/model");
-    let refused = "This model id is too long or holds a character it may not.";
+    let refused = "This model id is too long or holds a character that is not allowed.";
     assert_eq!(sheet["model"]["fault"], refused);
     assert_eq!(sheet["link"], Value::Null);
 }

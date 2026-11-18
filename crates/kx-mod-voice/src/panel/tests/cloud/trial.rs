@@ -1,17 +1,19 @@
 //! Compare's cloud models on the panel (edge 12): the ready ones to tick with the send warning, Start taking only the
 //! ticked ones, none while cloud is off or the run is hidden, a header naming the first one still writing, and a cloud
-//! result named by its service that Use picks.
+//! result named by its service that Use picks, and a failed one's reason, the bar's own.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, CloudNote, CompareCloud, CompareSheet, PanelButton, ServiceName, SpeechDone,
-    SpeechNote, VoiceClick, VoiceSheet, VoiceTab,
+    BarButton, CloudFault, CloudNote, CompareCloud, CompareSheet, PanelButton, ServiceName,
+    SpeechDone, SpeechNote, VoiceClick, VoiceSheet, VoiceTab,
 };
+use std::time::Duration;
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::{apply, put};
 use crate::compare::{Act, Remote};
+use crate::flow::net_why;
 use crate::settings::PICKS;
 
 /// Groq on and keyed, cloud on, on the Compare page.
@@ -199,4 +201,42 @@ fn a_typed_model_id_never_prints_in_the_ticks_the_plan_or_the_send() {
     let sent = rig.with(|p, _| p.compare_note(take, done(0)));
     let shown = format!("{:?}{sent:?}", rig.panel);
     assert!(!shown.contains(&typed), "{shown}");
+}
+
+/// Every cloud fault, each allowance with and without its renewal.
+const FAULTS: [CloudFault; 13] = [
+    CloudFault::Range("model"),
+    CloudFault::Key,
+    CloudFault::Credit,
+    CloudFault::Allowance { renews_in: None },
+    CloudFault::Allowance {
+        renews_in: Some(Duration::from_mins(5)),
+    },
+    CloudFault::Rate,
+    CloudFault::TooBig,
+    CloudFault::Language,
+    CloudFault::Empty,
+    CloudFault::Strange,
+    CloudFault::Network,
+    CloudFault::Timeout,
+    CloudFault::Gone,
+];
+
+#[test]
+fn a_failed_cloud_models_reason_on_compare_is_the_bars_for_every_fault() {
+    for fault in FAULTS {
+        let mut rig = on_compare();
+        rig.click(&VoiceClick::Row(0));
+        rig.click(&VoiceClick::Row(1));
+        let take = start(&mut rig);
+        rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
+        rig.click(&VoiceClick::Bar(BarButton::Stop));
+        rig.with(|p, _| p.compare_note(take, done(0)));
+        rig.with(|p, _| p.compare_net(take, 0, CloudNote::Fault(fault), 0));
+        let view = rig.view().unwrap();
+        let VoiceSheet::Compare(CompareSheet::Running { rows, .. }) = view.sheet else {
+            panic!("not running: {fault:?}");
+        };
+        assert_eq!(rows[0].why, Some(net_why(fault, &view.lang)), "{fault:?}");
+    }
 }

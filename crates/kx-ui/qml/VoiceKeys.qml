@@ -1,7 +1,8 @@
-// A service's key page (mock-up svcPage()): the key line as dots with Paste and Test and the test's answer, the address
-// and Other model lines with why one was refused, the keep-nothing switch, and where keys are made. The lines only draw:
-// the key never shows as text, and a click never focuses them (ADR-0013, ADR-0040). It takes a page of rows' height; a
-// typed address puts its lines on a second page the pager turns to (ADR-0008).
+// A service's key page (mock-up svcPage()): the key line as dots with Paste and Test and the test's answer, Key works
+// as a lit mark and a refused one as a warning band, the address and Other model lines with why one was refused, the
+// keep-nothing switch, and where keys are made. The lines only draw: the key never shows as text, and a click never
+// focuses them (ADR-0013, ADR-0040). It takes a page of rows' height; a typed address puts its lines on a second page
+// the pager turns to (ADR-0008).
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -23,6 +24,9 @@ Item {
     readonly property var lines: shows ? [sheet.key, sheet.address, sheet.model].filter(l => !!l) : []
     // The pager's room beside the lines while the page has more than one part.
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
+    // The key works, which shows as a lit mark; or its answer warns, which shows as a warning band (mock-up .res.bad).
+    readonly property bool works: shows && !!sheet.check && sheet.check.id === names.works
+    readonly property bool refused: shows && !!sheet.check && names.refused.indexOf(sheet.check.id) >= 0
     readonly property alias body: col
 
     height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH
@@ -78,15 +82,25 @@ Item {
                     }
                 }
                 Said {
-                    visible: entry.index === 0 && !!keys.sheet.check
+                    visible: entry.index === 0 && !!keys.sheet.check && !keys.works && !keys.refused
                     icon: keys.sheet.check ? keys.lk.icons.voice.panel.cloud[keys.sheet.check.id] || "" : ""
                     text: keys.sheet.check ? keys.sheet.check.text : ""
-                    warn: !!keys.sheet.check && keys.names.refused.indexOf(keys.sheet.check.id) >= 0
                 }
-                Said {
+                VoiceMark {
+                    visible: entry.index === 0 && keys.works
+                    host: keys.host
+                    mark: keys.works ? keys.sheet.check : ({ id: "", text: "" })
+                    glyph: keys.lk.icons.voice.panel.cloud.ok
+                    badge: true
+                    lit: false
+                }
+                Refused {
+                    visible: entry.index === 0 && keys.refused
+                    text: keys.refused ? keys.sheet.check.text : ""
+                }
+                Refused {
                     visible: !!entry.modelData.fault
                     text: entry.modelData.fault || ""
-                    warn: true
                 }
             }
         }
@@ -116,16 +130,15 @@ Item {
         host: keys.host
     }
 
-    // A line under a typed line: the test's answer or why it was refused, in warn_ink when it warns, read at once.
+    // A line under a typed line, such as Testing, in the muted ink with its icon.
     component Said: Row {
         id: said
         property string icon: ""
         property string text: ""
-        property bool warn: false
         width: parent ? parent.width : 0
         spacing: keys.pn.head_gap_px * keys.s
         layoutDirection: keys.host.ar ? Qt.RightToLeft : Qt.LeftToRight
-        Accessible.role: warn ? Accessible.AlertMessage : Accessible.StaticText
+        Accessible.role: Accessible.StaticText
         Accessible.name: text
         Icon {
             id: sign
@@ -135,7 +148,7 @@ Item {
             base: keys.host.res.icons
             ext: keys.host.res.ext
             px: keys.lk.shape.chip.icon_px * keys.s
-            tint: said.warn ? keys.p.warn_ink : keys.p.pop_muted
+            tint: keys.p.pop_muted
         }
         Label {
             width: Math.min(implicitWidth, said.width - (sign.visible ? sign.width + said.spacing : 0))
@@ -144,8 +157,16 @@ Item {
             horizontalAlignment: keys.host.ar ? Text.AlignRight : Text.AlignLeft
             font.family: keys.host.res.fam.ui
             font.pixelSize: keys.hintPx
-            font.weight: said.warn ? keys.pn.count_weight : Font.Normal
-            color: said.warn ? keys.p.warn_ink : keys.p.pop_muted
+            color: keys.p.pop_muted
         }
+    }
+    // A refused answer or line as a warning band, which readers hear at once.
+    component Refused: VoiceBand {
+        width: parent ? parent.width : 0
+        host: keys.host
+        icon: ""
+        name: ""
+        alert: true
+        warn: true
     }
 }

@@ -68,6 +68,10 @@ Item {
             compare(heard(bar, mark.said).length, 1, "readers hear where the voice goes");
             const name = Board.all(bar.contentItem, o => o.visible && o.text === mark.name && o.font !== undefined);
             compare(name.length, 1, "the service's name");
+            const ar = d.t === "ar";
+            const fam = Board.resOf(N.lk, root.texts[d.t]).fam;
+            compare(name[0].font.family, ar ? fam.arabic : fam.latin, "in the language's own font, as a mark is");
+            compare(name[0].font.pixelSize, Math.round(N.lk.shape.chip.font_px[ar ? 1 : 0]), "at its size, in whole pixels");
             const icon = Board.all(bar.contentItem, o => o.visible && o.icon === N.lk.icons.voice.cloud && o.tint !== undefined);
             compare(icon.length, 1, "the cloud mark");
             const local = make("listening", d.t);

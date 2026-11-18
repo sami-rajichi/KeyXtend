@@ -224,21 +224,23 @@ fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
         fact(id, label, FACT_PRICE, &u.price)
     };
     let [place, trains, keeps, free, light, heavy] = CARD_LABELS;
-    if c.part == CardPart::Voice {
-        return vec![
+    match c.part {
+        CardPart::Voice => vec![
             fact(place, label(place), FACT_WHERE, &c.place),
             fact(trains, label(trains), FACT_TRAINS, &c.trains),
             fact(keeps, label(keeps), FACT_KEEPS, &c.keeps),
-        ];
+        ],
+        CardPart::Price => {
+            let mut out = vec![
+                fact(free, label(free), FACT_FREE, &c.free),
+                used(light, &c.light),
+                used(heavy, &c.heavy),
+            ];
+            let bills = c.bills.as_ref();
+            out.extend(bills.map(|b| fact(CARD_BILLS, label(CARD_BILLS), FACT_BILLS, b)));
+            out
+        }
     }
-    let mut out = vec![
-        fact(free, label(free), FACT_FREE, &c.free),
-        used(light, &c.light),
-        used(heavy, &c.heavy),
-    ];
-    let bills = c.bills.as_ref();
-    out.extend(bills.map(|b| fact(CARD_BILLS, label(CARD_BILLS), FACT_BILLS, b)));
-    out
 }
 
 /// A cloud model's line and marks on Models: in the cloud, or why it cannot be used now; its service, then where it

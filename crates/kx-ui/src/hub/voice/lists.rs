@@ -73,7 +73,7 @@ pub(super) fn compare(cx: &Cx<'_>, c: &CompareSheet) -> Page {
         } => ready(cx, *models, device, (*recording, *preparing), (cloud, send)),
         CompareSheet::Running { at, of, name, rows } => {
             let sheet = Sheet::Running {
-                rows: rows.iter().map(|r| run(cx, r)).collect(),
+                rows: rows.iter().map(|r| run(t, r)).collect(),
             };
             let mut page = new(cx.for_lang(), sheet);
             let step = t.voice_with(VOICE_STEP, &[(AT, at.to_string()), (OF, of.to_string())]);
@@ -142,9 +142,8 @@ fn ready(
     page
 }
 
-/// A model's turn while Compare runs, with why a cloud model failed in the language in front.
-fn run(cx: &Cx<'_>, r: &CompareRun) -> RunView {
-    let t = cx.t;
+/// A model's turn while Compare runs, with why a cloud model failed.
+fn run(t: &I18n, r: &CompareRun) -> RunView {
     let mark = match r.step {
         RunStep::Done { wait_ms } => {
             let key = mark_key(VoiceMark::Done);
@@ -158,7 +157,7 @@ fn run(cx: &Cx<'_>, r: &CompareRun) -> RunView {
     RunView {
         name: clean(r.name.expose()),
         mark,
-        why: r.why.map(|f| t.voice_fault(f, &cx.panel.lang)),
+        why: r.why.as_ref().map(|w| t.voice_cloud(w)),
     }
 }
 

@@ -116,7 +116,9 @@ fn sides(t: &I18n, shown: ModelSide) -> Sides {
 fn band(cx: &Cx<'_>, b: CloudBand) -> Lead {
     let text = match b {
         CloudBand::Off => cx.t.text(VOICE_CLOUD_OFF),
-        _ => cx.t.text(&format!("{VOICE_BAND}{}", cloud_band_id(b))),
+        CloudBand::NoneOn | CloudBand::Listed => {
+            cx.t.text(&format!("{VOICE_BAND}{}", cloud_band_id(b)))
+        }
     };
     Lead::new(text, cloud::to_cloud(cx))
 }

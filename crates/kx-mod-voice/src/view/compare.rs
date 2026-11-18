@@ -5,7 +5,7 @@ use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelBut
 
 use super::{Facts, device, short};
 use crate::compare::Line;
-use crate::flow::Lend;
+use crate::flow::{Lend, net_why};
 use crate::panel::{Key, Panel};
 
 impl Panel {
@@ -16,11 +16,12 @@ impl Panel {
                 .get(at.unwrap_or(0))
                 .map(|(name, _)| (*name).clone())
                 .unwrap_or_default();
+            let lang = facts.lang();
             let runs = models.iter().enumerate().map(|(i, (name, step))| {
                 let run = CompareRun {
                     name: (*name).clone(),
                     step: *step,
-                    why: self.compare.why(i),
+                    why: self.compare.why(i).map(|f| net_why(f, &lang)),
                 };
                 (Key::Plain, run)
             });

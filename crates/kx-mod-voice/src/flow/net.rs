@@ -100,8 +100,8 @@ pub struct Upload {
     pub lang: String,
 }
 
-/// The bar's line for `fault`, about language `lang`.
-pub(super) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
+/// The reason the bar and a Compare row give for `fault`, about language `lang`.
+pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
     match fault {
         CloudFault::Network | CloudFault::Timeout => CloudWhy::Net,
         CloudFault::Key => CloudWhy::Key,

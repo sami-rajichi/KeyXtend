@@ -4,7 +4,7 @@
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudFault, CloudRow, CloudSheet,
+    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy,
     CompareCloud, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg,
     FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep,
     ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
@@ -227,7 +227,7 @@ fn comparing() -> VoiceSheet {
             run(
                 "Whisper Large v3 Turbo",
                 RunStep::Failed,
-                Some(CloudFault::Key),
+                Some(CloudWhy::Key),
             ),
             run("Whisper small", RunStep::Writing, None),
         ],

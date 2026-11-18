@@ -48,7 +48,7 @@ cloud =
     .fact-keeps-logs = Nothing by default, but checks may keep requests up to { $days-form ->
         [one] { $days } day
        *[other] { $days } days
-    }; “{ $switch }” turns that off
+    }; this account switch turns that off: { $switch }
     .fact-keeps-unknown = Unknown; it depends on the service
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
@@ -58,9 +58,9 @@ cloud =
        *[other] { $per_min } requests
     } a minute
     .fact-free-unknown = Unknown; it depends on the service
-    .fact-price-free-or = Free within the free use, else { $low } to { $high } by model
+    .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
-    .fact-warn-trains = Trains its models on your voice by default. Before you confirm, turn off “{ $switch }” in your account.
+    .fact-warn-trains = Trains its models on your voice by default. Before you confirm, turn off this switch in your account: { $switch }
     .fact-bills-least = At least { $seconds-form ->
         [one] { $seconds } second
        *[other] { $seconds } seconds
@@ -78,20 +78,20 @@ cloud =
     .key-ok = Key works
     .key-bad = Key refused. Check it on the service’s page.
     .key-failed = No answer about the key. Check the network and test again.
-    .key-unfit = This is not a key a request can carry, so nothing was kept.
+    .key-unfit = This text cannot be sent as a key, so nothing was kept.
     .key-no-test = No test call here: the first dictation tests the key.
     .key-busy = The clipboard did not answer. Try Paste again.
     .address-line = Address
     .address-hint = Your service’s address, such as { $https }example.com/v1/audio/transcriptions
-    .address-hint-own = The address of your own resource on this service, starting { $https }
-    .address-https = The address must start with { $https }
-    .address-host = The address needs a host name, not a number.
+    .address-hint-own = The HTTPS address of your own resource on this service
+    .address-https = The address must use HTTPS, such as { $https }example.com
+    .address-host = The address needs a host name, not an IP address.
     .address-domain = The address must be under the service’s own domain.
     .address-long = The address is too long.
-    .address-path = The address holds a character it may not, such as a space.
+    .address-path = The address holds a character that is not allowed, such as a space.
     .model-line = Other model
     .model-hint = A model id from the service’s page
-    .model-refused = This model id is too long or holds a character it may not.
+    .model-refused = This model id is too long or holds a character that is not allowed.
     .keep-nothing = Only hosts that keep nothing
     .on-bar = Your voice goes to { $name } at Stop
     .use-local = Use the local model
@@ -108,7 +108,7 @@ cloud =
     .note-strange = The reply was not the service’s, maybe a sign-in page. Check the network.
     .note-terms = The service’s terms changed. Confirm its facts again to send.
     .note-off = The service is off, so nothing was sent.
-    .note-no-local = A password box never goes to the cloud, and no local model is ready.
+    .note-no-local = Speech for a password box never goes to the cloud, and no local model is ready.
     .note-fault = The cloud part stopped after an error. Try again.
     .note-keep-nothing = No host of this model promises to keep nothing.
     .hours = { $count } h

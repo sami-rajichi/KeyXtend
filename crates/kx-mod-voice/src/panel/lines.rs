@@ -61,7 +61,7 @@ impl Panel {
         }
         match set {
             Ok(dots) => (self.cloud.dots, self.cloud.check) = (dots, KeyCheck::Untested),
-            Err(KeyError::Unfit) => self.cloud.check = KeyCheck::Unfit,
+            Err(KeyError::Unfit) => self.cloud.unkept = Some(KeyCheck::Unfit),
             Err(_) => self.note = Some(BarHint::Fault),
         }
     }
@@ -73,17 +73,13 @@ impl Panel {
             return Vec::new();
         }
         self.cloud.take = None;
-        match text {
-            ClipText::Text(key) => self.set_key(&key),
-            ClipText::Empty | ClipText::TooLong => {
-                self.cloud.check = KeyCheck::Unfit;
-                Vec::new()
-            }
-            ClipText::Busy => {
-                self.cloud.check = KeyCheck::Busy;
-                Vec::new()
-            }
-        }
+        let unkept = match text {
+            ClipText::Text(key) => return self.set_key(&key),
+            ClipText::Empty | ClipText::TooLong => KeyCheck::Unfit,
+            ClipText::Busy => KeyCheck::Busy,
+        };
+        self.cloud.unkept = Some(unkept);
+        Vec::new()
     }
 
     /// The test of `ticket` answered; dropped once the user left the page or changed the key.

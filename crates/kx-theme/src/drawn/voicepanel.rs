@@ -26,9 +26,9 @@ pub(super) const SWITCH_OFF: &str = "voice switch off";
 pub(super) const PROGRESS: &str = "voice progress on its track";
 /// The progress on a row under the pointer or ticked.
 pub(super) const LIT_PROGRESS: &str = "voice progress on a lit row";
-/// A band's line above a list.
+/// A band's line above a list, and a switch band's under the pointer too.
 pub(super) const BAND: &str = "voice band line";
-/// A band's icon.
+/// A band's icon, at rest and under the pointer.
 pub(super) const BAND_ICON: &str = "voice band icon";
 /// A warning band's or mark's words in the panel's ink, `HighlightText` in high contrast.
 pub(super) const WARN_BAND: &str = "voice warning band";
@@ -88,14 +88,15 @@ fn controls(v: &LookView) -> [Pair; 6] {
         (v.sel_ink, vec![rest], vec![hot, ticked, both])
     };
     let band = p.pop_hover.on(p.pop_bg);
+    let bands = vec![band, p.hover.on(band)];
     let band_icon = if v.contrast { v.sel_ink } else { p.ring };
     [
         (SWITCH_ON, p.badge_ink, vec![p.badge_bg], WCAG_SHAPES),
         (SWITCH_OFF, p.pop_muted, vec![p.pop_bg], WCAG_SHAPES),
         (PROGRESS, p.ring, tracks, WCAG_SHAPES),
         (LIT_PROGRESS, lit_ink, lit_tracks, WCAG_SHAPES),
-        (BAND, v.sel_ink, vec![band], WCAG_AA),
-        (BAND_ICON, band_icon, vec![band], WCAG_SHAPES),
+        (BAND, v.sel_ink, bands.clone(), WCAG_AA),
+        (BAND_ICON, band_icon, bands, WCAG_SHAPES),
     ]
 }
 
