@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-18 08:27 — P11: the app connects cloud voice typing
+The app now gives the voice module its cloud speech service, which the module requires, so a cloud dictation can reach the chosen service. Tests pin that only the voice module gets the service and the key, that the keyboard and the screens never see a key, and that a hidden run reads no key. The app itself still links no network code, and the staged build is 67 MB of its 80 MB budget.
+
 ## 2026-11-17 23:40 — P11: the Voice panel's cloud side
 The Voice panel now has a Cloud page, Groq first, with one card per service: its dated facts, a link to where the key is made, and lines for the key, an address or a model id. Paste puts a key on its line as dots, seals it, and KeyXtend's clipboard history forgets that copy; switching a service off keeps the key, and only Remove key deletes it. The Models page gets a Local | Cloud switch, and Compare sends the recording only to the cloud models the user ticked. A clipboard answer now names the module that asked, so a vault password and a cloud key can never cross.
 
