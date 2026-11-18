@@ -56,9 +56,10 @@ pub const SAVE: &str = "save";
 /// A click on the key page's line `id`, with the caret's place in what it draws as the argument.
 pub const CARET: &str = "caret";
 
-/// True for a click that plays no key sound: the pointer's move and the wheel.
+/// True for a click that plays no key sound: the pointer's move, the wheel, and a line's caret, as a click on a line
+/// sends two (ADR-0049).
 pub(super) fn silent(kind: &str) -> bool {
-    matches!(kind, OVER | WHEEL)
+    matches!(kind, OVER | WHEEL | CARET)
 }
 
 /// A click QML should never send: an unknown kind or id, or an argument or round out of range.

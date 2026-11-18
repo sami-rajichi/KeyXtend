@@ -1,12 +1,15 @@
 //! Typing on the key page's lines through the hub (ADR-0049): the key line draws the typed key's dots and caret, never
 //! its text; only the line taking the letters has a caret; each line's Save dims while it is empty; and a click on a
-//! line or its Save sends that line.
+//! line or its Save sends that line, a line's click silently.
 
 use super::super::{button, buttons, heard, listening_bar, page, panel, panel_json};
 use super::lines::groq_lines;
 use crate::Rig;
+use crate::sound::{assert_plays, rig_with, takes};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{CloudLine, VoiceAct, VoiceClick, VoiceSheet};
+use kx_theme::sounds::Event;
+use kx_ui::UiSettings;
 use kx_ui::voice_acts::{CARET, SAVE, SERVICE};
 use serde_json::Value;
 
@@ -132,4 +135,23 @@ fn each_lines_save_has_its_own_name_for_readers() {
     );
     assert_eq!(save("address"), named("Save the address"));
     assert_eq!(save("model"), named("Save the model"));
+}
+
+/// A click on a line sends two carets, its pick and its place, so both are silent; its Save sounds as a key does.
+#[test]
+fn a_lines_carets_are_silent_and_its_save_plays_the_key_sound_once() {
+    let (rig, _face, _host) = rig_with(|_| {});
+    let heard = heard(&rig);
+    heard.shown(&rig, page(ROUND, listening_bar(), None));
+    rig.speaker.take_plays();
+    for at in [24, 4] {
+        rig.hub.voice_act(CARET, "address", at, i64::from(ROUND));
+    }
+    assert!(
+        rig.speaker.take_plays().is_empty(),
+        "a line's click is silent"
+    );
+    rig.hub.voice_act(SAVE, "address", 0, i64::from(ROUND));
+    let volume = UiSettings::from_defaults().unwrap().sound_volume;
+    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 1, volume));
 }

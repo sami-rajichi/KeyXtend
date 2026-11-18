@@ -100,8 +100,8 @@ impl Hub {
     }
 
     /// Sends the click `kind` names (one of `acts`) with `id` and `arg`, on the view of round `round`, and sounds as a
-    /// key does but for the pointer and the wheel. Nothing goes before a view; a bad click sends nothing and warns.
-    /// Call it on the Qt thread.
+    /// key does but for the pointer, the wheel and a caret. Nothing goes before a view; a bad click sends nothing and
+    /// warns. Call it on the Qt thread.
     pub fn voice_act(&self, kind: &str, id: &str, arg: i32, round: i64) {
         if !silent(kind) {
             self.tapped();
