@@ -1,6 +1,6 @@
 //! What the Voice panel draws beyond the clipboard's pairs (VoiceMark.qml, VoiceSwitch.qml, VoiceProgress.qml,
-//! VoiceBand.qml): a mark on its chip on any row, the lit and the outlined marks, a switch on and off, the progress line
-//! and the band above a list. A ticked row's text and the ghost buttons are the clipboard's pairs.
+//! VoiceBand.qml): a mark on its chip on any row, the lit and the outlined marks, a switch on and off, the progress line,
+//! the band above a list and a warning's. A ticked row's text and the ghost buttons are the clipboard's pairs.
 
 use super::{Drawn, worst};
 use crate::contrast::{WCAG_AA, WCAG_SHAPES};
@@ -30,6 +30,10 @@ pub(super) const LIT_PROGRESS: &str = "voice progress on a lit row";
 pub(super) const BAND: &str = "voice band line";
 /// A band's icon.
 pub(super) const BAND_ICON: &str = "voice band icon";
+/// A warning band's or mark's words in the panel's ink, `HighlightText` in high contrast.
+pub(super) const WARN_BAND: &str = "voice warning band";
+/// A warning's words on the panel, such as old facts' day.
+pub(super) const WARN_WORDS: &str = "voice warning words";
 
 /// One pair: its name, the ink, the backgrounds it sits on and the least contrast it needs.
 type Pair = (&'static str, Rgba, Vec<Rgba>, f32);
@@ -37,7 +41,7 @@ type Pair = (&'static str, Rgba, Vec<Rgba>, f32);
 /// The panel's own pairs; high contrast draws a chip's mark in `ButtonText`, a lit row's parts in `HighlightText` and
 /// the progress track in `Window`, as system colours.
 pub(super) fn panel(v: &LookView, out: &mut Vec<Drawn>) {
-    for (name, ink, bgs, min) in marks(v).into_iter().chain(controls(v)) {
+    for (name, ink, bgs, min) in marks(v).into_iter().chain(controls(v)).chain(warning(v)) {
         out.push(worst(name, ink, 1.0, &bgs, min));
     }
 }
@@ -92,5 +96,15 @@ fn controls(v: &LookView) -> [Pair; 6] {
         (LIT_PROGRESS, lit_ink, lit_tracks, WCAG_SHAPES),
         (BAND, v.sel_ink, vec![band], WCAG_AA),
         (BAND_ICON, band_icon, vec![band], WCAG_SHAPES),
+    ]
+}
+
+/// A warning's pairs: its band's or mark's words, and its words on the panel; it shows no icon of its own.
+fn warning(v: &LookView) -> [Pair; 2] {
+    let p = &v.palette;
+    let ink = if v.contrast { v.sel_ink } else { p.pop_ink };
+    [
+        (WARN_BAND, ink, vec![p.warn], WCAG_AA),
+        (WARN_WORDS, p.warn_ink, vec![p.pop_bg], WCAG_AA),
     ]
 }

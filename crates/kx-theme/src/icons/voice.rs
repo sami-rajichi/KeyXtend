@@ -31,6 +31,10 @@ pub struct VoiceIcons {
     pub listen: String,
     /// Download.
     pub download: String,
+    /// "Use the local model", after a cloud note.
+    pub local: String,
+    /// The cloud mark beside the language while a cloud service takes the voice.
+    pub cloud: String,
     /// Before Transcribing.
     pub transcribing: String,
     /// Before a text.
@@ -60,6 +64,8 @@ impl VoiceIcons {
             ("voice.again", &self.again),
             ("voice.listen", &self.listen),
             ("voice.download", &self.download),
+            ("voice.local", &self.local),
+            ("voice.cloud", &self.cloud),
             ("voice.transcribing", &self.transcribing),
             ("voice.text", &self.text),
             ("voice.password", &self.password),

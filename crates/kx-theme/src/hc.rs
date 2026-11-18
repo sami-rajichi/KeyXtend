@@ -90,8 +90,8 @@ fn states(p: &mut Palette, s: &SysColors) {
     }
 }
 
-/// Panels and text on the plate in `Window` and `WindowText`, with `Highlight` on the row under the pointer and the
-/// selected one.
+/// Panels and text on the plate in `Window` and `WindowText`, with `Highlight` on the row under the pointer, the
+/// selected one and a warning band; a warning's words on the panel take `WindowText`.
 fn panels(p: &mut Palette, s: &SysColors) {
     let text: Rgba = s.window_text.into();
     p.pop_bg = s.window.into();
@@ -105,6 +105,8 @@ fn panels(p: &mut Palette, s: &SysColors) {
     }
     p.pop_hover = s.highlight.into();
     p.pop_sel = s.highlight.into();
+    p.warn = s.highlight.into();
+    p.warn_ink = text;
 }
 
 /// The outline of a key under the pointer in high contrast: `Highlight`, as Windows marks hover.

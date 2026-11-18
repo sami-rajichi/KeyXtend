@@ -118,6 +118,10 @@ pub struct Palette {
     pub prep: Rgba,
     /// Legend on the preparing key.
     pub prep_ink: Rgba,
+    /// A warning's band and mark behind the panel's ink, as a card's that a service trains by default.
+    pub warn: Rgba,
+    /// A warning's words and icons on the panel, as old facts' day.
+    pub warn_ink: Rgba,
     /// LED when off.
     pub led_off: Rgba,
     /// LED when on.
@@ -187,7 +191,13 @@ impl Skirt {
 impl Palette {
     /// Every colour token with its name in `themes/*.toml`.
     #[must_use]
-    pub fn named(&self) -> [(&'static str, Rgba); 37] {
+    pub fn named(&self) -> [(&'static str, Rgba); 39] {
+        let (keys, rest) = (self.keys_named(), self.rest_named());
+        std::array::from_fn(|i| keys.get(i).copied().unwrap_or_else(|| rest[i - keys.len()]))
+    }
+
+    /// The keys' and lights' tokens, the first part of `named`.
+    fn keys_named(&self) -> [(&'static str, Rgba); 25] {
         [
             ("plate", self.plate),
             ("key", self.key),
@@ -210,8 +220,16 @@ impl Palette {
             ("rec_ink", self.rec_ink),
             ("prep", self.prep),
             ("prep_ink", self.prep_ink),
+            ("warn", self.warn),
+            ("warn_ink", self.warn_ink),
             ("led_off", self.led_off),
             ("led_on", self.led_on),
+        ]
+    }
+
+    /// The panels' and states' tokens, the rest of `named`.
+    fn rest_named(&self) -> [(&'static str, Rgba); 14] {
+        [
             ("ring", self.ring),
             ("badge_bg", self.badge_bg),
             ("badge_ink", self.badge_ink),

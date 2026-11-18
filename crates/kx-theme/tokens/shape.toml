@@ -383,3 +383,5 @@ col_px = 84.0
 # line (.prog.run): the moving part's share of its track, and the whole line's opacity while motion is reduced (.still).
 panel_px = 600.0
 run_share = [0.4, 0.5]
+# A cloud card's label column (.facts, --voice-fact-px).
+fact_px = 200.0

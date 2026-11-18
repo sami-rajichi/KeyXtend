@@ -25,6 +25,8 @@ pub struct VoiceShape {
     pub panel_px: f32,
     /// Compare's writing line: the moving part's share of its track, and the line's opacity under reduced motion.
     pub run_share: [f32; 2],
+    /// A cloud card's label column.
+    pub fact_px: f32,
 }
 
 impl VoiceShape {
@@ -45,6 +47,7 @@ impl VoiceShape {
             ("voice.value_px", self.value_px),
             ("voice.col_px", self.col_px),
             ("voice.panel_px", self.panel_px),
+            ("voice.fact_px", self.fact_px),
         ]);
         if let Some((n, v)) = above.find(|(_, v)| !(v.is_finite() && *v > 0.0)) {
             return Err(format!("shape: {n} {v} must be above 0"));

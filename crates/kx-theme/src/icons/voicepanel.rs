@@ -41,6 +41,9 @@ pub struct VoicePanelIcons {
     pub tops: BTreeMap<String, String>,
     /// Each Device row's tile by its kind.
     pub kinds: BTreeMap<String, String>,
+    /// Each line of the cloud pages by its id: the switch, the off line, the day read, Untested, where keys are made
+    /// and a key test's answer.
+    pub cloud: BTreeMap<String, String>,
 }
 
 impl VoicePanelIcons {
@@ -65,6 +68,7 @@ impl VoicePanelIcons {
             ("voice.panel.marks", &self.marks),
             ("voice.panel.tops", &self.tops),
             ("voice.panel.kinds", &self.kinds),
+            ("voice.panel.cloud", &self.cloud),
         ];
         let fixed = fixed.map(|(at, v)| (at.to_owned(), v.as_str()));
         let maps = maps.into_iter().flat_map(|(at, m)| super::by_id(at, m));

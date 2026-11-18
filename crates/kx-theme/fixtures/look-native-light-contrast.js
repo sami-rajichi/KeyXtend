@@ -23,6 +23,8 @@ var lk = {
     "rec_ink": "#FF050505",
     "prep": "#FF1AEBFF",
     "prep_ink": "#FF050505",
+    "warn": "#FF1AEBFF",
+    "warn_ink": "#FFFFFFFF",
     "led_off": "#FF101010",
     "led_on": "#FF1AEBFF",
     "ring": "#FF1AEBFF",
@@ -568,7 +570,8 @@ var lk = {
       "run_share": [
         0.4,
         0.5
-      ]
+      ],
+      "fact_px": 200.0
     }
   },
   "motion": {
@@ -1167,6 +1170,8 @@ var lk = {
       "again": "rotate-ccw",
       "listen": "mic",
       "download": "download",
+      "local": "cpu",
+      "cloud": "cloud",
       "transcribing": "audio-lines",
       "text": "captions",
       "password": "lock",
@@ -1202,13 +1207,16 @@ var lk = {
         "untested": "languages",
         "folder": "folder",
         "pages": {
+          "card": "file-text",
+          "cloud": "cloud",
           "compare": "scale",
           "device": "cpu",
           "folders": "folder-open",
           "history": "history",
           "home": "mic",
           "models": "audio-lines",
-          "options": "settings-2"
+          "options": "settings-2",
+          "service": "key-round"
         },
         "buttons": {
           "again": "rotate-ccw",
@@ -1222,24 +1230,39 @@ var lk = {
           "delete": "trash-2",
           "delete-all": "trash-2",
           "download": "download",
+          "facts": "file-text",
           "here": "check",
           "insert": "clipboard-paste",
+          "lines": "key-round",
+          "link": "link",
+          "off": "power",
+          "on": "power",
           "open": "folder-open",
+          "paste": "clipboard-paste",
           "pause": "pause",
           "pin": "pin",
+          "remove": "trash-2",
           "rerun": "rotate-ccw",
           "resume": "play",
+          "test": "activity",
           "use": "check"
         },
         "marks": {
+          "cloud": "cloud",
           "done": "check",
           "download": "download",
           "failed": "x",
+          "needs-address": "globe",
+          "needs-key": "key-round",
           "not-here": "x",
+          "off": "power",
+          "on": "check",
           "other": "file",
           "passed": "check",
           "ready": "check",
           "run-failed": "x",
+          "unavailable": "x",
+          "untested": "activity",
           "used": "check"
         },
         "tops": {
@@ -1253,6 +1276,16 @@ var lk = {
           "built-in": "gpu",
           "card": "gpu",
           "cpu": "cpu"
+        },
+        "cloud": {
+          "no-test": "activity",
+          "off": "power",
+          "ok": "check",
+          "read": "history",
+          "site": "key-round",
+          "switch": "cloud",
+          "testing": "activity",
+          "untested": "activity"
         }
       }
     }
