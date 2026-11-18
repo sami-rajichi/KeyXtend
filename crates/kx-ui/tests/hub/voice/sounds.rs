@@ -1,10 +1,15 @@
 //! The dictation's start and stop sounds (edge 40): the bar asks for them as it starts and stops listening, each plays
-//! its take at the `[ui]` volume, and none plays with `[voice] sounds` off, before any view, or at volume 0.
+//! its take at the `[ui]` volume, and none plays with `[voice] sounds` off, before any view, or at volume 0. A press on a
+//! key page's line plays the key sound once, as on Quick-fill's lines.
 
+use super::cloud::typing::typed_panel;
 use super::{heard, listening_bar, page};
 use crate::sound::{assert_plays, rig_with, takes};
+use kx_module_api::Redacted;
+use kx_module_api::ports::{CloudLine, VoiceAct, VoiceBar, VoiceClick};
 use kx_theme::sounds::Event;
 use kx_ui::UiSettings;
+use kx_ui::voice_acts::{CARET, PICK};
 
 /// The volume a test sets.
 const VOLUME: u8 = 40;
@@ -65,5 +70,31 @@ fn the_key_sound_switch_leaves_the_dictation_sounds_alone() {
     assert_plays(
         &rig.speaker.take_plays(),
         &takes(Event::VoiceStart, 1, volume),
+    );
+}
+
+#[test]
+fn a_press_on_a_line_plays_the_key_sound_once_and_its_caret_none() {
+    let (rig, _face, _host) = rig_with(|_| {});
+    let heard = heard(&rig);
+    let key_page = typed_panel(0, CloudLine::Key, 0, &[]);
+    heard.shown(&rig, page(1, VoiceBar::Hidden, Some(key_page)));
+    rig.speaker.take_plays();
+    rig.hub.voice_act(PICK, "address", 24, 1);
+    let volume = UiSettings::from_defaults().unwrap().sound_volume;
+    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 1, volume));
+    rig.hub.voice_act(CARET, "address", 4, 1);
+    assert!(rig.speaker.take_plays().is_empty(), "the place is silent");
+    let caret = |at| VoiceAct {
+        round: 1,
+        click: VoiceClick::Caret {
+            line: CloudLine::Address,
+            at: Redacted::new(at),
+        },
+    };
+    assert_eq!(
+        heard.sent.acts(),
+        [caret(24), caret(4)],
+        "both place the caret"
     );
 }

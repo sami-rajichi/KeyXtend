@@ -20,6 +20,7 @@ QtObject {
             open: "open",
             over: "over",
             page: "page",
+            pick: "pick",
             plus: "plus",
             row: "row",
             save: "save",

@@ -99,9 +99,8 @@ impl Hub {
         f64::from(self.voice.level.load(Ordering::SeqCst)) / f64::from(LEVEL_FULL)
     }
 
-    /// Sends the click `kind` names (one of `acts`) with `id` and `arg`, on the view of round `round`, and sounds as a
-    /// key does but for the pointer, the wheel and a caret. Nothing goes before a view; a bad click sends nothing and
-    /// warns. Call it on the Qt thread.
+    /// Sends the click `kind` names (one of `acts`) with `id` and `arg` on the view of round `round`, sounding as a key
+    /// does unless `silent`. A click before any view or a bad one, which warns, sends nothing; call it on the Qt thread.
     pub fn voice_act(&self, kind: &str, id: &str, arg: i32, round: i64) {
         if !silent(kind) {
             self.tapped();

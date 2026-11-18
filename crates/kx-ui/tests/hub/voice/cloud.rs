@@ -14,7 +14,7 @@ use serde_json::Value;
 mod card;
 mod lines;
 mod models;
-mod typing;
+pub(super) mod typing;
 
 /// The round the tests click on.
 const ROUND: u32 = 4;

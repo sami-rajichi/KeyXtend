@@ -53,11 +53,12 @@ pub const SIDE: &str = "side";
 pub const LOCAL: &str = "local";
 /// Save the key page's line `id` (ADR-0049).
 pub const SAVE: &str = "save";
-/// A click on the key page's line `id`, with the caret's place in what it draws as the argument.
+/// A press on the key page's line `id`, which picks it with its caret at the argument and sounds as a key does.
+pub const PICK: &str = "pick";
+/// The place a click puts the caret on the key page's line `id` after its pick, in what the line draws, as the argument.
 pub const CARET: &str = "caret";
 
-/// True for a click that plays no key sound: the pointer's move, the wheel, and a line's caret, as a click on a line
-/// sends two (ADR-0049).
+/// True for a click that plays no key sound: the pointer's move, the wheel, and a caret, as the pick before it sounded.
 pub(super) fn silent(kind: &str) -> bool {
     matches!(kind, OVER | WHEEL | CARET)
 }
@@ -109,7 +110,7 @@ pub(super) fn click_of(kind: &str, id: &str, arg: i32) -> Result<Click, Bad> {
         SIDE => VoiceClick::Side(by_id(ModelSide::ALL, model_side_id, id)?),
         LOCAL => VoiceClick::Local,
         SAVE => VoiceClick::Save(by_id(CloudLine::ALL, cloud_line_id, id)?),
-        CARET => VoiceClick::Caret {
+        CARET | PICK => VoiceClick::Caret {
             line: by_id(CloudLine::ALL, cloud_line_id, id)?,
             at: Redacted::new(u32::try_from(arg).map_err(|_| Bad)?),
         },

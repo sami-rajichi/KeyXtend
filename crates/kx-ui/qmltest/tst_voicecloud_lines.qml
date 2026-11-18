@@ -74,9 +74,10 @@ Item {
             compare(one(box, "voice.line-model").takes, false, "one line takes the letters");
             mouseClick(line, 1, line.height / 2);
             mouseClick(line, line.width - 1, line.height / 2);
-            const at = n => "act caret address " + n + " " + box.round;
-            const end = at(a.text.length);
-            compare(acts(box), [end, at(0), end, end], "each click picks the line, then places its caret");
+            const act = (kind, n) => "act " + kind + " address " + n + " " + box.round;
+            const end = a.text.length;
+            const sent = [act("pick", end), act("caret", 0), act("pick", end), act("caret", end)];
+            compare(acts(box), sent, "each click picks the line, then places its caret");
             box.visible = false;
         }
 
@@ -102,7 +103,7 @@ Item {
             const s = box.view.sheet;
             one(box, "voice.line-model").aim();
             one(box, "voice.line-address").aim();
-            const at = (id, n) => "act caret " + id + " " + n + " " + box.round;
+            const at = (id, n) => "act pick " + id + " " + n + " " + box.round;
             compare(acts(box), [at("model", s.model.text.length), at("address", s.address.text.length)], "at its end");
             box.visible = false;
         }

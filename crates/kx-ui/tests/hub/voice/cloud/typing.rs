@@ -1,30 +1,37 @@
 //! Typing on the key page's lines through the hub (ADR-0049): the key line draws the typed key's dots and caret, never
 //! its text; only the line taking the letters has a caret; each line's Save dims while it is empty; and a click on a
-//! line or its Save sends that line, a line's click silently.
+//! line or its Save sends that line; a press on a line picks it as a click does.
 
 use super::super::{button, buttons, heard, listening_bar, page, panel, panel_json};
 use super::lines::groq_lines;
 use crate::Rig;
-use crate::sound::{assert_plays, rig_with, takes};
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CloudLine, VoiceAct, VoiceClick, VoiceSheet};
-use kx_theme::sounds::Event;
-use kx_ui::UiSettings;
-use kx_ui::voice_acts::{CARET, SAVE, SERVICE};
+use kx_module_api::ports::{CloudLine, VoiceAct, VoiceClick, VoicePanel, VoiceSheet};
+use kx_ui::voice_acts::{CARET, PICK, SAVE, SERVICE};
 use serde_json::Value;
 
 /// The round of the view the tests click on.
 const ROUND: u32 = 9;
 
-/// The panel QML reads for Groq's key page with `typed` dots typed, the caret `at` on line `typing`, and `saves`.
-fn typed(typed: u32, typing: CloudLine, at: u32, saves: &[CloudLine]) -> Value {
+/// Groq's key page with `typed` dots typed, the caret `at` on line `typing`, and `saves`.
+pub(in crate::voice) fn typed_panel(
+    typed: u32,
+    typing: CloudLine,
+    at: u32,
+    saves: &[CloudLine],
+) -> VoicePanel {
     let mut lines = groq_lines();
     lines.address = Some(Redacted::new("https://a.example.com/v1".to_owned()));
     (lines.typed, lines.typing, lines.caret) = (Redacted::new(typed), typing, Redacted::new(at));
     lines.saves = saves.to_vec();
+    panel(VoiceSheet::Service(lines))
+}
+
+/// The panel QML reads for that key page.
+fn typed(typed: u32, typing: CloudLine, at: u32, saves: &[CloudLine]) -> Value {
     let rig = Rig::new();
     let heard = heard(&rig);
-    panel_json(&rig, &heard, panel(VoiceSheet::Service(lines)))
+    panel_json(&rig, &heard, typed_panel(typed, typing, at, saves))
 }
 
 /// Line `line`'s Save, acting or dimmed.
@@ -91,6 +98,7 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
     let cases = [
         (CARET, "address", 4, caret(CloudLine::Address, 4)),
         (CARET, "key", 0, caret(CloudLine::Key, 0)),
+        (PICK, "model", 3, caret(CloudLine::Model, 3)),
         (SAVE, "key", 0, VoiceClick::Save(CloudLine::Key)),
         (SAVE, "model", 0, VoiceClick::Save(CloudLine::Model)),
     ];
@@ -105,6 +113,7 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
     for (kind, id, arg) in [
         (CARET, "address", -1),
         (CARET, "site", 0),
+        (PICK, "model", -1),
         (SAVE, "keep", 0),
     ] {
         rig.hub.voice_act(kind, id, arg, i64::from(ROUND));
@@ -135,23 +144,4 @@ fn each_lines_save_has_its_own_name_for_readers() {
     );
     assert_eq!(save("address"), named("Save the address"));
     assert_eq!(save("model"), named("Save the model"));
-}
-
-/// A click on a line sends two carets, its pick and its place, so both are silent; its Save sounds as a key does.
-#[test]
-fn a_lines_carets_are_silent_and_its_save_plays_the_key_sound_once() {
-    let (rig, _face, _host) = rig_with(|_| {});
-    let heard = heard(&rig);
-    heard.shown(&rig, page(ROUND, listening_bar(), None));
-    rig.speaker.take_plays();
-    for at in [24, 4] {
-        rig.hub.voice_act(CARET, "address", at, i64::from(ROUND));
-    }
-    assert!(
-        rig.speaker.take_plays().is_empty(),
-        "a line's click is silent"
-    );
-    rig.hub.voice_act(SAVE, "address", 0, i64::from(ROUND));
-    let volume = UiSettings::from_defaults().unwrap().sound_volume;
-    assert_plays(&rig.speaker.take_plays(), &takes(Event::Key, 1, volume));
 }

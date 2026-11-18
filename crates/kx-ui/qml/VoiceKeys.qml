@@ -69,9 +69,9 @@ Item {
                         res: keys.host.res
                         s: keys.s
                         uid: keys.host.res.uid(keys.names.group, keys.names.ids.line + d.id)
-                        // A press picks the line with its caret at the end, as a reader's press does; a click on the
-                        // text then places it.
-                        onClicked: keys.host.send(keys.names.acts.caret, d.id, field.drawn.length)
+                        // A press, a reader's too, picks the line with its caret at the end and the key sound; a click
+                        // on the text then places the caret silently.
+                        onClicked: keys.host.send(keys.names.acts.pick, d.id, field.drawn.length)
                         onPlaced: at => keys.host.send(keys.names.acts.caret, d.id, at)
                     }
                     Row {
