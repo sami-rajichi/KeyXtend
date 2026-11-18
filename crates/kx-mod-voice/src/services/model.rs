@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use kx_module_api::ports::{CloudAsk, CloudShape, FormField, fits_iso};
+use kx_module_api::ports::{CloudAsk, CloudShape, fits_iso};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -103,8 +103,8 @@ impl Model {
 pub(super) struct Row<'a> {
     /// The row's shape.
     pub(super) shape: &'a CloudShape,
-    /// The row's keep-nothing field.
-    pub(super) keep: Option<&'a FormField>,
+    /// What every form of the row sends: its keep-nothing field and paywall.
+    pub(super) sent: &'a form::Sent<'a>,
     /// The row has an Other model line.
     pub(super) other: bool,
 }
@@ -149,7 +149,7 @@ impl RawModel {
                 !(self.unnamed && row.shape.needs_model()),
                 ModelError::Unnamed,
             ),
-            (!self.keeps || row.keep.is_some(), ModelError::Keeps),
+            (!self.keeps || row.sent.keep.is_some(), ModelError::Keeps),
         ];
         if let Some(why) = checks
             .into_iter()
@@ -157,7 +157,7 @@ impl RawModel {
         {
             return Err(why);
         }
-        let shape = self.own_shape(row, rules)?;
+        let shape = self.own_shape(row)?;
         Ok(Model {
             id: self.id,
             name: self.name,
@@ -169,14 +169,10 @@ impl RawModel {
     }
 
     /// Its own form as a request shape, on a row whose shape is a form; a reply it may not ask for keeps its reason.
-    fn own_shape(
-        &self,
-        row: &Row<'_>,
-        rules: &Rules<'_>,
-    ) -> Result<Option<CloudShape>, ModelError> {
+    fn own_shape(&self, row: &Row<'_>) -> Result<Option<CloudShape>, ModelError> {
         match (&self.form, row.shape) {
             (None, _) => Ok(None),
-            (Some(form), CloudShape::Form(_)) => match form::fields(form, rules.reply, row.keep) {
+            (Some(form), CloudShape::Form(_)) => match form::fields(form, row.sent) {
                 Ok(shape) => Ok(Some(shape)),
                 Err(ServiceError::Reply) => Err(ModelError::Reply),
                 Err(_) => Err(ModelError::Form),

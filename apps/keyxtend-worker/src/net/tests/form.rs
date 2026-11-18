@@ -13,7 +13,8 @@ const WAV: &[u8] = b"RIFF-and-samples";
 /// The form's content type, before its boundary.
 const FORM_TYPE: &str = "multipart/form-data; boundary=";
 
-fn piece<'a>(
+/// A piece of `wav` over `call` for `model` in `lang`.
+pub(super) fn piece<'a>(
     call: &'a NetCall<'a>,
     model: Option<&'a str>,
     lang: &'a str,
@@ -28,7 +29,7 @@ fn piece<'a>(
 }
 
 /// The header `name`'s value in `req`, as text.
-fn field(req: &Request, name: &str) -> Option<String> {
+pub(super) fn field(req: &Request, name: &str) -> Option<String> {
     let named = req
         .fields
         .iter()
@@ -59,7 +60,7 @@ fn boundary(req: &Request) -> String {
 }
 
 /// Each part of `req`'s body: its name, its file name when it has one, its head and its bytes.
-fn parts(req: &Request) -> Vec<(String, Option<String>, String, Vec<u8>)> {
+pub(super) fn parts(req: &Request) -> Vec<(String, Option<String>, String, Vec<u8>)> {
     let delim = format!("\r\n--{}", boundary(req));
     let body = [&b"\r\n"[..], &req.body].concat();
     let chunks = split(&body, delim.as_bytes());
@@ -95,7 +96,7 @@ fn parts(req: &Request) -> Vec<(String, Option<String>, String, Vec<u8>)> {
 }
 
 /// The part names in `req`'s body, in order.
-fn names(req: &Request) -> Vec<String> {
+pub(super) fn names(req: &Request) -> Vec<String> {
     parts(req).into_iter().map(|p| p.0).collect()
 }
 
@@ -141,6 +142,7 @@ fn a_list_language_and_the_rows_fixed_fields_keep_the_rows_order() {
         lang: Cow::Borrowed("languages"),
         list: true,
         fixed,
+        paywall: false,
     });
     let call = call_to(URL, shape);
     let req = Form.build(&piece(&call, Some(MODEL), "ar", WAV)).unwrap();
@@ -227,6 +229,7 @@ fn a_fixed_field_may_not_repeat_a_list_languages_name() {
             lang: Cow::Borrowed("languages"),
             list: true,
             fixed,
+            paywall: false,
         });
         let call = call_to(URL, shape);
         let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();

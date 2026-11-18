@@ -1,6 +1,7 @@
-//! Properties: a random reply never panics the readers, a random JSON error with a used allowance always tells a
-//! renewal in range, a body past any cap is always refused one byte past it, a run takes exactly the parts that fill
-//! its pieces in order, and texts are told in the pieces' order whatever order they come in.
+//! Properties: a random reply never panics the readers, behind a paywall or not, a random JSON error with a used
+//! allowance always tells a renewal in range, a random `detail[]` names the language only on a 400 or a 422, a body
+//! past any cap is always refused one byte past it, a run takes exactly the parts that fill its pieces in order, and
+//! texts are told in the pieces' order whatever order they come in.
 
 use super::reply::{NEVER, endless};
 use super::*;
@@ -42,10 +43,12 @@ proptest! {
         status in any::<u16>(),
         body in proptest::collection::vec(any::<u8>(), 0..512),
         value in ".{0,24}",
+        paywall in any::<bool>(),
     ) {
         let head = head(status, &[("retry-after", value.as_str()), ("x-ratelimit-reset-requests", value.as_str())]);
-        let _ = Form.read(&head, &body);
-        let _ = Form.tested(&head, &body);
+        let call = walled(paywall);
+        let _ = Form.read(&call, &head, &body);
+        let _ = Form.tested(&call, &head, &body);
         let _ = text(&body);
         let _ = (seconds(&value), span_s(&value));
     }
@@ -59,13 +62,34 @@ proptest! {
         let body = serde_json::json!({"error": {"message": message, "type": kind, "code": code}}).to_string();
         let used = [("x-ratelimit-remaining-requests", "0"), ("x-ratelimit-reset-requests", reset.as_str())];
         let head = head(status, &used);
-        let _ = Form.tested(&head, body.as_bytes());
-        match Form.read(&head, body.as_bytes()) {
+        let _ = Form.tested(&call(), &head, body.as_bytes());
+        match Form.read(&call(), &head, body.as_bytes()) {
             Verdict::Fault(NetFault::Allowance { renews_s }) => {
                 prop_assert!(renews_s.is_none_or(|s| NET_RENEW_S.contains(&s)), "{renews_s:?}");
             }
             Verdict::Fault(NetFault::Credit) => {}
             _ => prop_assert!(status != BUSY, "a used allowance is told"),
+        }
+    }
+
+    #[test]
+    fn a_random_detail_never_panics_and_names_the_language_only_on_a_400_or_422(
+        status in 400u16..=599,
+        items in prop::collection::vec((loose(), prop::collection::vec(loose(), 0..3), loose()), 0..4),
+        nested in any::<bool>(),
+    ) {
+        let detail: Vec<serde_json::Value> = items
+            .into_iter()
+            .map(|(msg, loc, kind)| serde_json::json!({"msg": msg, "loc": loc, "type": kind}))
+            .collect();
+        let body = if nested {
+            serde_json::json!({"message": {"detail": detail}})
+        } else {
+            serde_json::json!({"detail": detail})
+        };
+        let got = Form.read(&call(), &head(status, &[]), body.to_string().as_bytes());
+        if matches!(got, Verdict::Fault(NetFault::Language)) {
+            prop_assert!(status == 400 || status == 422, "{status}");
         }
     }
 

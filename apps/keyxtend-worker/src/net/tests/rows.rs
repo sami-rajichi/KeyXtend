@@ -1,0 +1,212 @@
+//! Each upload-form row as `services.toml` gives it from the services' pages read 2026-11-17 (research file `[X]`
+//! lines): Groq, `OpenAI`'s `languages[]` list, Mistral, Together, Lemonfox with no model and English names,
+//! `DeepInfra`, `OpenRouter` with its keep-nothing field and a Custom address. Each sends its fields in order to its own
+//! address with the key in its header and reads its text; `replies` reads each one's faults.
+
+mod replies;
+
+use super::form::{names, parts, piece};
+use super::*;
+use crate::net::form::Form;
+use crate::net::send::{self, Sending};
+use crate::net::shape::{self, Shape};
+use kx_ipc::{NetField, ShapeCode};
+use kx_platform_net::Verb;
+use std::sync::atomic::AtomicBool;
+
+/// The sound the row tests send.
+const WAV: &[u8] = b"RIFF-and-samples";
+/// What the rows' text fixtures say.
+const SAID: &str = "Bonjour tout le monde.";
+
+/// A form row as `services.toml` gives it: its address, language field, list flag, fixed fields and paywall.
+#[derive(Clone, Copy)]
+struct Row {
+    url: &'static str,
+    lang: &'static str,
+    list: bool,
+    fixed: &'static [(&'static str, &'static str)],
+    paywall: bool,
+}
+
+/// A row at `url` with the one `language` field.
+const fn plain(url: &'static str) -> Row {
+    Row {
+        url,
+        lang: "language",
+        list: false,
+        fixed: &[],
+        paywall: false,
+    }
+}
+
+/// `OpenRouter`'s keep-nothing field while its switch is on: `provider` as a JSON string [R2][R5].
+const ZDR: (&str, &str) = ("provider", r#"{"zdr":true}"#);
+
+/// Groq [G1].
+const GROQ: Row = plain(URL);
+/// `OpenAI`: `gpt-transcribe` takes `languages[]` in place of `language` [O2].
+const OPENAI: Row = Row {
+    lang: "languages",
+    list: true,
+    ..plain("https://api.openai.com/v1/audio/transcriptions")
+};
+/// Mistral: multipart is the working reading of its guide [M1].
+const MISTRAL: Row = plain("https://api.mistral.ai/v1/audio/transcriptions");
+/// Together: its 403 is a plan limit or a missing payment method [T5].
+const TOGETHER: Row = Row {
+    paywall: true,
+    ..plain("https://api.together.ai/v1/audio/transcriptions")
+};
+/// Lemonfox [L2].
+const LEMONFOX: Row = plain("https://api.lemonfox.ai/v1/audio/transcriptions");
+/// `DeepInfra`: the `OpenAI`-style address its reference names [D3].
+const DEEPINFRA: Row = plain("https://api.deepinfra.com/v1/audio/transcriptions");
+/// `OpenRouter` with its keep-nothing switch on: its 403 is a key's spending cap [R2][R7].
+const ROUTER: Row = Row {
+    fixed: &[ZDR],
+    paywall: true,
+    ..plain("https://openrouter.ai/api/v1/audio/transcriptions")
+};
+/// `OpenRouter` with its keep-nothing switch off.
+const ROUTER_OPEN: Row = Row {
+    fixed: &[],
+    ..ROUTER
+};
+/// A Custom address the user types, on any HTTPS host name.
+const CUSTOM: Row = plain("https://stt.example.com/v1/audio/transcriptions");
+
+impl Row {
+    /// The row's call, its key as a bearer.
+    fn call(self) -> NetCall<'static> {
+        let fixed = self.fixed.iter().map(|&(name, value)| NetField {
+            name: Cow::Borrowed(name),
+            value: Cow::Borrowed(value),
+        });
+        let form = NetForm {
+            lang: Cow::Borrowed(self.lang),
+            list: self.list,
+            fixed: fixed.collect(),
+            paywall: self.paywall,
+        };
+        call_to(self.url, NetShape::Form(form))
+    }
+}
+
+/// One row's request: the model it names, the code it sends and the parts in order, with their values.
+struct Case {
+    row: Row,
+    model: Option<&'static str>,
+    lang: &'static str,
+    parts: &'static [(&'static str, &'static str)],
+}
+
+/// Each row with a model it offers; Lemonfox names none and wants an English name [L2], a Custom row a typed id.
+const CASES: [Case; 9] = [
+    case(GROQ, Some("whisper-large-v3-turbo"), "fr", &[]),
+    case(OPENAI, Some("gpt-transcribe"), "fr", &[]),
+    case(MISTRAL, Some("voxtral-mini-transcribe-3-0"), "ar", &[]),
+    case(TOGETHER, Some("openai/whisper-large-v3"), "en", &[]),
+    case(LEMONFOX, None, "french", &[]),
+    case(DEEPINFRA, Some("openai/whisper-large-v3-turbo"), "fr", &[]),
+    case(ROUTER, Some("openai/whisper-large-v3-turbo"), "fr", &[ZDR]),
+    case(
+        ROUTER_OPEN,
+        Some("openai/whisper-large-v3-turbo"),
+        "fr",
+        &[],
+    ),
+    case(CUSTOM, Some("my-own-model"), "fr", &[]),
+];
+
+/// A case for `row`, naming `model` in `lang`, with `fixed` after the language.
+const fn case(
+    row: Row,
+    model: Option<&'static str>,
+    lang: &'static str,
+    fixed: &'static [(&'static str, &'static str)],
+) -> Case {
+    Case {
+        row,
+        model,
+        lang,
+        parts: fixed,
+    }
+}
+
+impl Case {
+    /// The parts the request holds, in order: the model, the language, the fixed fields, JSON asked, the sound.
+    fn want(&self) -> Vec<(String, Vec<u8>)> {
+        let lang = if self.row.list {
+            format!("{}[]", self.row.lang)
+        } else {
+            self.row.lang.to_owned()
+        };
+        let model = self
+            .model
+            .map(|m| ("model".to_owned(), m.as_bytes().to_vec()));
+        let fixed = (self.parts.iter()).map(|(n, v)| ((*n).to_owned(), v.as_bytes().to_vec()));
+        let tail = [
+            ("response_format".to_owned(), b"json".to_vec()),
+            ("file".to_owned(), WAV.to_vec()),
+        ];
+        let lang = (lang, self.lang.as_bytes().to_vec());
+        model
+            .into_iter()
+            .chain([lang])
+            .chain(fixed)
+            .chain(tail)
+            .collect()
+    }
+
+    /// What one piece's thread sends with.
+    fn sending(&self) -> Sending {
+        Sending {
+            shape: shape::of(ShapeCode::Form).unwrap(),
+            call: self.row.call(),
+            model: self.model.map(Cow::Borrowed),
+            lang: Cow::Borrowed(self.lang),
+            tries: 1,
+            pace: None,
+            dropped: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+#[test]
+fn each_row_sends_its_model_and_language_then_its_fixed_fields_then_the_sound() {
+    for c in &CASES {
+        let call = c.row.call();
+        let req = Form.build(&piece(&call, c.model, c.lang, WAV)).unwrap();
+        let got: Vec<(String, Vec<u8>)> = parts(&req).into_iter().map(|p| (p.0, p.3)).collect();
+        assert_eq!(got, c.want(), "{}", c.row.url);
+    }
+}
+
+#[test]
+fn openrouters_keep_nothing_field_goes_only_while_its_switch_is_on() {
+    let model = Some("openai/whisper-large-v3-turbo");
+    let named = |row: Row| names(&Form.build(&piece(&row.call(), model, "fr", WAV)).unwrap());
+    assert!(named(ROUTER).contains(&ZDR.0.to_owned()));
+    assert!(!named(ROUTER_OPEN).contains(&ZDR.0.to_owned()));
+}
+
+#[test]
+fn each_row_posts_to_its_own_address_with_the_key_in_its_header_and_reads_its_text() {
+    let texts = replies::TEXTS;
+    for (c, text) in CASES.iter().zip(texts) {
+        let http = Arc::new(FakeHttp::new([reply(OK, text)]));
+        let clock = Arc::new(Still::default());
+        let got = send::piece(&kit(&http, &clock), &c.sending(), WAV);
+        let got = got.map(|t| t.trim().to_owned());
+        assert_eq!(got, Ok(SAID.to_owned()), "{}", c.row.url);
+        let called = http.called();
+        let [one] = &called[..] else {
+            panic!("{}: one call, not {}", c.row.url, called.len())
+        };
+        assert_eq!((one.url.as_str(), one.verb), (c.row.url, Verb::Post));
+        let auth = one.fields.iter().find(|(n, _)| n == "Authorization");
+        let bearer = format!("Bearer {KEY_TEXT}").into_bytes();
+        assert_eq!(auth.map(|(_, v)| v), Some(&bearer), "{}", c.row.url);
+    }
+}

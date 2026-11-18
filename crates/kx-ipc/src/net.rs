@@ -65,6 +65,8 @@ pub struct NetForm<'a> {
     pub list: bool,
     /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
     pub fixed: Vec<NetField<'a>>,
+    /// A 403 asks the account to pay, as a missing payment method or a spending cap does: no credit, not a bad key.
+    pub paywall: bool,
 }
 
 /// A field a form always sends, such as `OpenRouter`'s keep-nothing `provider`.

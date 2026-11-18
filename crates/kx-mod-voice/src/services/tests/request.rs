@@ -10,6 +10,7 @@ fn form(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
         lang: lang.into(),
         list,
         fixed,
+        paywall: false,
     })
 }
 
@@ -43,6 +44,27 @@ fn a_model_carries_its_own_form_fields_beside_the_rows() {
         row.shape_for(gpt, true),
         row.shape_for(gpt, false),
         "no keep field, no switch"
+    );
+}
+
+#[test]
+fn a_rows_paywall_goes_with_every_form_it_sends_a_models_own_too() {
+    let walled = OPENAI.replace("shape = \"form\"", "shape = \"form\"\npaywall = true");
+    let table = with_rows(&walled);
+    let row = table.get("openai-test").unwrap();
+    for model in [row.model("gpt-transcribe"), row.model("whisper-1"), None] {
+        let shape = row.shape_for(model, false);
+        assert!(
+            matches!(&shape, CloudShape::Form(f) if f.paywall),
+            "{shape:?}"
+        );
+    }
+    let open = with_rows(OPENAI);
+    let row = open.get("openai-test").unwrap();
+    let shape = row.shape_for(row.model("gpt-transcribe"), false);
+    assert!(
+        matches!(&shape, CloudShape::Form(f) if !f.paywall),
+        "none by default"
     );
 }
 

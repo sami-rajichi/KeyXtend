@@ -1,0 +1,1 @@
+{"error":{"message":"Rate limit reached for gpt-transcribe on requests per min. Please try again in 2s.","type":"requests","param":null,"code":"rate_limit_exceeded"}}

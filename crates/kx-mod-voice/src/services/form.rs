@@ -85,52 +85,70 @@ impl RawField {
     }
 }
 
-/// The shape `name` names, with `form`'s fields for a form, whose fixed fields and `keep` must fit one request.
+/// What every form of a row sends beside its own fields, and the rules its reply keeps.
+pub(super) struct Sent<'a> {
+    /// What a form may ask about its reply.
+    reply: &'a Reply,
+    /// The row's keep-nothing field, sent while its switch is on.
+    pub(super) keep: Option<&'a FormField>,
+    /// A 403 is the row's paywall.
+    paywall: bool,
+}
+
+impl<'a> Sent<'a> {
+    /// What a row with `keep` and `paywall` sends, under `reply`'s rules.
+    pub(super) fn new(reply: &'a Reply, keep: Option<&'a FormField>, paywall: bool) -> Self {
+        Self {
+            reply,
+            keep,
+            paywall,
+        }
+    }
+}
+
+/// The shape `name` names, with `form`'s fields for a form, whose fixed fields and keep field must fit one request; only
+/// a form takes a keep field or a paywall.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
-    reply: &Reply,
-    keep: Option<&FormField>,
+    sent: &Sent<'_>,
 ) -> Result<CloudShape, ServiceError> {
     let kind = SHAPES
         .iter()
         .find(|(n, ..)| *n == name)
         .map(|(_, kind, _)| *kind)
         .ok_or(ServiceError::Shape)?;
-    match (kind, form, keep) {
-        (Kind::Form, Some(form), _) => fields(form, reply, keep),
-        (Kind::Azure, None, None) => Ok(CloudShape::Azure),
-        (Kind::Eleven, None, None) => Ok(CloudShape::Eleven),
-        (Kind::Gemini, None, None) => Ok(CloudShape::Gemini),
+    let bare = sent.keep.is_none() && !sent.paywall;
+    match (kind, form, bare) {
+        (Kind::Form, Some(form), _) => fields(form, sent),
+        (Kind::Azure, None, true) => Ok(CloudShape::Azure),
+        (Kind::Eleven, None, true) => Ok(CloudShape::Eleven),
+        (Kind::Gemini, None, true) => Ok(CloudShape::Gemini),
         _ => Err(ServiceError::Form),
     }
 }
 
-/// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with `keep`, and a plain reply.
-pub(super) fn fields(
-    form: &RawForm,
-    reply: &Reply,
-    keep: Option<&FormField>,
-) -> Result<CloudShape, ServiceError> {
+/// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with the keep field, and a plain reply;
+/// it carries the row's paywall.
+pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, ServiceError> {
     let fixed: Vec<FormField> = form.fixed.iter().map(RawField::field).collect();
-    let mut sent = fixed.clone();
-    sent.extend(keep.cloned());
-    let whole = CloudShape::Form(FormFields {
-        lang: form.lang.clone(),
-        list: form.list,
-        fixed: sent.clone(),
-    });
-    if !whole.fits() || sent.len() > MAX_FIXED {
+    let mut all = fixed.clone();
+    all.extend(sent.keep.cloned());
+    let shape = |fixed| {
+        CloudShape::Form(FormFields {
+            lang: form.lang.clone(),
+            list: form.list,
+            fixed,
+            paywall: sent.paywall,
+        })
+    };
+    if !shape(all.clone()).fits() || all.len() > MAX_FIXED {
         return Err(ServiceError::Form);
     }
-    if !sent.iter().all(|f| reply.allows(f)) {
+    if !all.iter().all(|f| sent.reply.allows(f)) {
         return Err(ServiceError::Reply);
     }
-    Ok(CloudShape::Form(FormFields {
-        lang: form.lang.clone(),
-        list: form.list,
-        fixed,
-    }))
+    Ok(shape(fixed))
 }
 
 /// True when shape `name` carries the sound as Base64 text.

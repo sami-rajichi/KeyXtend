@@ -12,10 +12,16 @@ use proptest::test_runner::{Config, TestCaseError, TestRunner};
 
 /// The keyboard languages the steps touch; `tlh` is one no Groq model knows.
 const LANGS: [&str; 4] = ["en", "fr", "ar", "tlh"];
-/// The services a step names; `openai` is in no table here.
-const SERVICES: [&str; 3] = ["groq", "custom", "openai"];
-/// The models a step names: Groq's two, and two typed ids.
-const MODELS: [&str; 4] = [TURBO, "whisper-large-v3", "my-model", "other-model"];
+/// The services a step names: `openrouter` has the keep-nothing switch, and `ovhcloud` is in no table here.
+const SERVICES: [&str; 4] = ["groq", "custom", "openrouter", "ovhcloud"];
+/// The models a step names: Groq's two, two typed ids, and `OpenRouter`'s Voxtral, which the switch rules out.
+const MODELS: [&str; 5] = [
+    TURBO,
+    "whisper-large-v3",
+    "my-model",
+    "other-model",
+    "mistralai/voxtral-mini-transcribe-3-0",
+];
 /// Local rows a step picks.
 const LOCAL: [&str; 2] = ["whisper-turbo-q5km", "canary-v2-q8"];
 /// Addresses a step types: none, one Custom takes, and one no row takes.
@@ -46,6 +52,8 @@ enum Step {
     Type(usize, usize),
     /// An address typed or cleared.
     Address(usize, usize),
+    /// A row's keep-nothing switch, which rules a kept model out but never hides its pick.
+    Keep(usize, bool),
     /// Another version's table loads, and `[voice]` is read again.
     Load(usize),
     /// `cloud` written in the file, then `[voice]` read again.
@@ -77,7 +85,8 @@ fn step() -> impl Strategy<Value = Step> {
         1 => (l.clone(), 0..LOCAL.len()).prop_map(|(l, r)| Step::Local(l, r)),
         1 => l.prop_map(Step::Unpick),
         2 => (s.clone(), m).prop_map(|(s, m)| Step::Type(s, m)),
-        2 => (s, 0..ADDRESSES.len()).prop_map(|(s, a)| Step::Address(s, a)),
+        2 => (s.clone(), 0..ADDRESSES.len()).prop_map(|(s, a)| Step::Address(s, a)),
+        2 => (s, any::<bool>()).prop_map(|(s, on)| Step::Keep(s, on)),
         3 => (0..TABLES).prop_map(Step::Load),
         2 => mostly_on().prop_map(Step::Raw),
     ]
@@ -153,6 +162,7 @@ fn apply(step: &Step, tables: &[Services], at: &mut usize, s: &mut VoiceSettings
         Step::Unpick(l) => s.picks.remove(LANGS[l]).is_some(),
         Step::Type(i, m) => rules.type_model(s, SERVICES[i], MODELS[m]),
         Step::Address(i, a) => rules.type_address(s, SERVICES[i], ADDRESSES[a]),
+        Step::Keep(i, on) => rules.keep(s, SERVICES[i], on),
         Step::Load(t) => {
             *at = t;
             s.drop_bad_with(models, &tables[t]).is_empty()

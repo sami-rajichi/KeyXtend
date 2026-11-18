@@ -49,8 +49,15 @@ cloud =
     .card-untested = غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.
     .fact-where-us = الولايات المتحدة
     .fact-where-typed = العنوان الذي تكتبه
+    .fact-where-eu = الاتحاد الأوروبي
+    .fact-where-unstated = غير مذكور في صفحات الخدمة
+    .fact-where-host = يتوقف على المضيف الذي يشغّل النموذج
     .fact-trains-never = لا يُستخدم للتدريب
     .fact-trains-unknown = غير معروف، ويتوقف على الخدمة
+    .fact-trains-opt-in = لا يُستخدم للتدريب إلا إذا وافقتَ على ذلك
+    .fact-trains-switch = غير مذكور، ويوقفه هذا الخيار في حسابك: { $switch }
+    .fact-trains-unstated = غير مذكور في صفحات الخدمة
+    .fact-trains-host = يتوقف على المضيف الذي يشغّل النموذج
     .fact-keeps-logs = لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى { $days-form ->
         [one] يوم واحد
         [two] يومين
@@ -59,6 +66,12 @@ cloud =
        *[other] { $days } يوم
     }، ويمكن إيقاف ذلك من هذا الخيار في حسابك: { $switch }
     .fact-keeps-unknown = غير معروف، ويتوقف على الخدمة
+    .fact-keeps-none = لا شيء
+    .fact-keeps-on-request = غير مذكور، وعدم الاحتفاظ بأي شيء متاح عند الطلب فقط
+    .fact-keeps-stored = طلباتك افتراضيًا، ويوقف ذلك هذا الخيار في حسابك: { $switch }
+    .fact-keeps-deleted = لا شيء: يُحذف كل شيء فور المعالجة
+    .fact-keeps-memory = لا شيء: يبقى في الذاكرة أثناء المعالجة فقط
+    .fact-keeps-host = يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء
     .fact-free-daily = { $hours-form ->
         [one] ساعة واحدة
         [two] ساعتان
@@ -73,8 +86,15 @@ cloud =
        *[other] { $per_min } طلب
     } في الدقيقة
     .fact-free-unknown = غير معروف، ويتوقف على الخدمة
+    .fact-free-none = لا شيء
+    .fact-free-first-buy = لا شيء قبل دفع { $least } على الأقل
+    .fact-free-first-month = الشهر الأول
+    .fact-free-small = حصة صغيرة للحسابات الجديدة
     .fact-price-free-or = مجاني ضمن الحصة المجانية، وإلا فمن { $low } إلى { $high } حسب النموذج
     .fact-price-unknown = غير معروف، ويتوقف على الخدمة
+    .fact-price-plain = { $price }
+    .fact-price-range = من { $low } إلى { $high } حسب النموذج
+    .fact-price-range-fee = من { $low } إلى { $high } حسب النموذج، مع رسوم بنسبة { $fee }% عند شراء الرصيد
     .fact-warn-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: { $switch }
     .warn-mark-trains = التدريب مفعّل افتراضيًا
     .fact-bills-least = يُحتسَب لكل طلب ما لا يقل عن { $seconds-form ->

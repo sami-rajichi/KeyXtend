@@ -7,6 +7,8 @@ use kx_module_api::ports::{
 };
 
 use super::Facts;
+use crate::VoiceSettings;
+use crate::cloud::{Chosen, Cloud};
 use crate::panel::Panel;
 use crate::services::{Address, KeyTest, Service};
 
@@ -37,7 +39,7 @@ impl Panel {
             address: typed.then(|| text(CloudLine::Address)),
             address_fault: self.cloud.refused.as_ref().map(|(_, fault)| *fault),
             model: text(CloudLine::Model),
-            model_na: false,
+            model_na: model_na(cloud, s, row),
             model_refused: self.cloud.refused_model.is_some(),
             keep: row.keep.as_ref().map(|_| entry.is_some_and(|e| e.keep)),
             site: row.keys.as_ref().map(|url| url.host().to_owned()),
@@ -84,4 +86,12 @@ impl Panel {
             check => check,
         }
     }
+}
+
+/// True when the Other model line's kept id names a model no host of which keeps nothing, while `row`'s keep-nothing
+/// switch is on, so the line says why it cannot go (edge 17).
+fn model_na(cloud: Cloud<'_>, s: &VoiceSettings, row: &Service) -> bool {
+    let typed = s.services.get(&row.id).map(|e| e.model.as_str());
+    let typed = typed.filter(|id| !id.is_empty());
+    typed.is_some_and(|id| cloud.unavailable(s, row, Chosen::Typed(id)).is_some())
 }

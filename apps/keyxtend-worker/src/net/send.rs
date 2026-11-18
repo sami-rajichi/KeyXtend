@@ -47,7 +47,9 @@ pub fn piece(kit: &Kit, s: &Sending, wav: &[u8]) -> Result<Zeroizing<String>, Ne
         wav,
     };
     let request = s.shape.build(&piece)?;
-    tries(kit, s, &request, |head, body| s.shape.read(head, body))
+    tries(kit, s, &request, |head, body| {
+        s.shape.read(&s.call, head, body)
+    })
 }
 
 /// Whether the call's key works.
@@ -56,7 +58,9 @@ pub fn piece(kit: &Kit, s: &Sending, wav: &[u8]) -> Result<Zeroizing<String>, Ne
 /// The test's `NetFault`; `Gone` once the test is dropped.
 pub fn test(kit: &Kit, s: &Sending) -> Result<(), NetFault> {
     let request = s.shape.test(&s.call)?;
-    tries(kit, s, &request, |head, body| s.shape.tested(head, body))
+    tries(kit, s, &request, |head, body| {
+        s.shape.tested(&s.call, head, body)
+    })
 }
 
 /// Sends `request` until `read` says what was asked, or a fault is final.

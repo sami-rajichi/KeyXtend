@@ -8,9 +8,10 @@ use ModelError as M;
 const LIGHT: &str = "light = { id = \"free-or\", money = { low = 0.60, high = 1.67 } }";
 const FREE: &str = "free = { id = \"daily\", count = { hours = 8, per_min = 20 } }";
 
-/// The model error one edit of the shipped text with `rows` after it gives, with the model's id.
+/// The model error one edit of `rows`, put after the shipped text, gives, with the model's id.
 fn model_err(rows: &str, from: &str, to: &str) -> Option<(String, ModelError)> {
-    match edits_of(&format!("{TEXT}{rows}"), &[(from, to)]) {
+    let rows = edits_text(rows, &[(from, to)]);
+    match Services::parse(&format!("{TEXT}{rows}")) {
         Err(ServicesError::Row {
             why: ServiceError::Model { id, why },
             ..

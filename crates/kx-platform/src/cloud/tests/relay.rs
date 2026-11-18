@@ -4,6 +4,7 @@
 
 use super::*;
 use kx_ipc::{MAX_SOUND_BYTES, NET_JOB, NetHeader, NetShape, Wiped};
+use kx_module_api::ports::FormField;
 use std::sync::{Mutex, PoisonError};
 
 #[test]
@@ -18,6 +19,44 @@ fn nothing_starts_before_send_and_each_run_has_a_job_of_its_own() {
     let room = size::run_mb(3 * PER_S, limits().at_once, 2 * PER_S);
     assert_eq!(launches[0].args, [NET_JOB]);
     assert_eq!(launches[0].memory_mb, job().job_mb + room);
+}
+
+#[test]
+fn the_rows_form_reaches_the_frame_whole_with_its_paywall() {
+    let (host, script, _) = host();
+    let keep = FormField {
+        name: "provider".into(),
+        value: r#"{"zdr":true}"#.into(),
+    };
+    let shape = CloudShape::Form(FormFields {
+        lang: "languages".into(),
+        list: true,
+        fixed: vec![keep],
+        paywall: true,
+    });
+    let (_run, _) = sent(
+        &host,
+        CloudAsk {
+            shape,
+            ..ask(&[PER_S])
+        },
+    );
+    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
+        panic!("a send first");
+    };
+    let NetShape::Form(form) = &call.shape else {
+        panic!("a form, not {:?}", call.shape);
+    };
+    assert_eq!(
+        (form.lang.as_ref(), form.list, form.paywall),
+        ("languages", true, true)
+    );
+    let fixed: Vec<(&str, &str)> = form
+        .fixed
+        .iter()
+        .map(|f| (f.name.as_ref(), f.value.as_ref()))
+        .collect();
+    assert_eq!(fixed, [("provider", r#"{"zdr":true}"#)]);
 }
 
 #[test]

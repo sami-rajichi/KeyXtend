@@ -58,6 +58,7 @@ fn asks() -> [NetAsk<'static>; 5] {
         lang: Cow::Borrowed("language"),
         list: false,
         fixed: Vec::new(),
+        paywall: false,
     });
     let send = |id, call| NetAsk::Send {
         id,

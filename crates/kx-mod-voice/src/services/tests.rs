@@ -10,6 +10,7 @@ mod parts;
 mod refuse;
 mod request;
 mod room;
+mod rows;
 
 /// The compiled-in text.
 const TEXT: &str = include_str!("../../services.toml");
@@ -92,11 +93,11 @@ light = { id = "unknown" }
 heavy = { id = "unknown" }
 "#;
 
-/// An `OpenRouter` row with its keep-nothing field, and a model whose every host keeps the voice.
+/// A row like `OpenRouter`'s, with its keep-nothing field and a model whose every host keeps the voice.
 pub(crate) const ROUTER: &str = r#"
 [[services]]
 id = "router-test"
-name = "OpenRouter"
+name = "Router Test"
 shape = "form"
 form = { lang = "language", list = false }
 keep = { name = "provider", value = '{"zdr":true}' }
@@ -142,13 +143,17 @@ pub(crate) fn with_rows(rows: &str) -> Services {
     Services::parse(&format!("{TEXT}{rows}")).unwrap()
 }
 
-/// The text with each pair's first `from` replaced by its `to`, in turn.
-fn edits_of(text: &str, pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
-    let text = pairs.iter().fold(text.to_owned(), |text, (from, to)| {
+/// `text` with each pair's first `from` replaced by its `to`, in turn.
+fn edits_text(text: &str, pairs: &[(&str, &str)]) -> String {
+    pairs.iter().fold(text.to_owned(), |text, (from, to)| {
         assert!(text.contains(from), "{from}");
         text.replacen(from, to, 1)
-    });
-    Services::parse(&text)
+    })
+}
+
+/// The table `text` gives with the edits.
+fn edits_of(text: &str, pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
+    Services::parse(&edits_text(text, pairs))
 }
 
 /// The shipped table with the edits.

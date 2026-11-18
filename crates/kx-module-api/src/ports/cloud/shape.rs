@@ -60,6 +60,9 @@ pub struct FormFields {
     pub list: bool,
     /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
     pub fixed: Vec<FormField>,
+    /// A 403 asks the account to pay, as Together's missing payment method or `OpenRouter`'s spending cap: no credit,
+    /// not a bad key.
+    pub paywall: bool,
 }
 
 impl FormFields {

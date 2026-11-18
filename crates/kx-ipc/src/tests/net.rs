@@ -88,6 +88,7 @@ fn longest_call() -> NetCall<'static> {
             lang: tag(),
             list: true,
             fixed: vec![field; MAX_FIXED],
+            paywall: true,
         }),
         url: Cow::Owned(format!("{HTTPS}h/{path}")),
         header: NetHeader::Named(tag()),

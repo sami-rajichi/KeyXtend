@@ -1,6 +1,7 @@
 //! The `OpenAI`-style upload form (ADR-0047 decision 5), moved from the spike's `cloud.rs`: the model, the language,
 //! the row's fixed fields, `response_format=json` and the piece as a WAV file, with the key in its header only. A reply
-//! is `{"text": …}`; anything else is read through one status table from Groq's error page.
+//! is `{"text": …}`; anything else is read through one status table from Groq's error page, where a row whose form
+//! names a 403 its paywall reads it as no credit.
 
 mod body;
 
@@ -68,6 +69,8 @@ enum Then {
 enum Says {
     /// Nothing.
     Any,
+    /// Nothing, but the call's form must name this status its paywall.
+    Paywall,
     /// Its code or type is exactly one of these.
     Code(&'static [&'static str]),
     /// Its words hold one of these.
@@ -81,11 +84,14 @@ struct Row {
     then: Then,
 }
 
-/// The status table, from Groq's error page: the first row that matches wins, and a status no row takes is strange.
+/// The status table, from Groq's error page and the rows' own: the first row that matches wins, and a status no row
+/// takes is strange.
 const TABLE: &[Row] = &[
     // No redirect is followed, so the key and the sound reach one address only.
     row(300..=399, Says::Any, Then::Fault(NetFault::Strange)),
     row(401..=401, Says::Any, Then::Fault(NetFault::Key)),
+    // Together's missing payment method and OpenRouter's spending cap are a 403, which no key fixes.
+    row(403..=403, Says::Paywall, Then::Fault(NetFault::Credit)),
     row(403..=403, Says::Any, Then::Fault(NetFault::Key)),
     row(402..=402, Says::Any, Then::Fault(NetFault::Credit)),
     row(400..=499, Says::Code(CREDIT), Then::Fault(NetFault::Credit)),
@@ -163,20 +169,25 @@ impl Shape for Form {
         })
     }
 
-    fn read(&self, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>> {
+    fn read(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>> {
         if DONE.contains(&head.status) {
             return reply::text(body).map_or(Verdict::Fault(NetFault::Strange), Verdict::Said);
         }
-        judge(head, body)
+        judge(paywall(call), head, body)
     }
 
-    fn tested(&self, head: &Head, body: &[u8]) -> Verdict<()> {
+    fn tested(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()> {
         match (DONE.contains(&head.status), reply::object(body)) {
             (true, true) => Verdict::Said(()),
             (true, false) => Verdict::Fault(NetFault::Strange),
-            (false, _) => judge(head, body),
+            (false, _) => judge(paywall(call), head, body),
         }
     }
+}
+
+/// True when `call`'s form names a 403 its paywall.
+fn paywall(call: &NetCall<'_>) -> bool {
+    matches!(&call.shape, NetShape::Form(form) if form.paywall)
 }
 
 /// True when a fixed field repeats one of the form's own names, `lang` as sent included, in any case.
@@ -186,10 +197,12 @@ fn repeats(form: &NetForm<'_>, lang: &str) -> bool {
     form.fixed.iter().any(|f| taken(&f.name))
 }
 
-/// What an answer that is not done means, by the first table row that takes it.
-fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
+/// What an answer that is not done means, by the first table row that takes it; `paywall` when the call's form names a
+/// 403 its paywall.
+fn judge<T>(paywall: bool, head: &Head, body: &[u8]) -> Verdict<T> {
     let said = |says: Says| match says {
         Says::Any => true,
+        Says::Paywall => paywall,
         Says::Code(codes) => reply::coded(body, codes),
         Says::Words(words) => reply::says(body, words),
     };

@@ -9,28 +9,41 @@ use kx_ipc::NetFault;
 
 /// A verdict with its text as plain text, so a test can compare it.
 #[derive(Debug, PartialEq, Eq)]
-enum Got {
+pub(super) enum Got {
     Text(String),
     Wait(Option<u32>),
     Fault(NetFault),
 }
 
-/// What the form reads in a piece's reply of `status`, with the headers `extra` and `body`.
-fn read(status: u16, extra: &[(&str, &str)], body: &[u8]) -> Got {
-    match Form.read(&head(status, extra), body) {
+/// The headers of an answer, as names and values.
+pub(super) type Extra<'a> = &'a [(&'a str, &'a str)];
+
+/// What the form reads in a piece's reply of `status` over `call`, with the headers `extra` and `body`.
+pub(super) fn read_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    match Form.read(call, &head(status, extra), body) {
         Verdict::Said(text) => Got::Text(text.to_string()),
         Verdict::Busy(s) => Got::Wait(s),
         Verdict::Fault(f) => Got::Fault(f),
     }
 }
 
-/// What the form reads in a key test's reply.
-fn tested(status: u16, extra: &[(&str, &str)], body: &[u8]) -> Got {
-    match Form.tested(&head(status, extra), body) {
+/// What the form reads in a key test's reply over `call`.
+pub(super) fn tested_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    match Form.tested(call, &head(status, extra), body) {
         Verdict::Said(()) => Got::Text(String::new()),
         Verdict::Busy(s) => Got::Wait(s),
         Verdict::Fault(f) => Got::Fault(f),
     }
+}
+
+/// What the form reads in a piece's reply from Groq.
+fn read(status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    read_by(&call(), status, extra, body)
+}
+
+/// What the form reads in a key test's reply from Groq.
+fn tested(status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    tested_by(&call(), status, extra, body)
 }
 
 /// A 429's headers when the day's requests are used, renewing in `reset`.

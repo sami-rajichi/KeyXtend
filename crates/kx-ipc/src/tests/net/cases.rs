@@ -54,7 +54,19 @@ pub(super) fn form(
         lang: Cow::Borrowed(lang),
         list,
         fixed,
+        paywall: false,
     })
+}
+
+/// `shape` with its 403 read as a paywall, as Together's and `OpenRouter`'s rows say.
+pub(super) fn paywalled(shape: NetShape<'static>) -> NetShape<'static> {
+    match shape {
+        NetShape::Form(form) => NetShape::Form(NetForm {
+            paywall: true,
+            ..form
+        }),
+        other => other,
+    }
 }
 
 /// A fixed field.
@@ -116,7 +128,7 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
     }
 }
 
-/// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field, Azure with no model,
+/// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall, Azure with no model,
 /// `ElevenLabs` and Gemini.
 fn sends() -> Vec<NetAsk<'static>> {
     let zdr = vec![field("provider", r#"{"zdr":true}"#)];
@@ -136,7 +148,10 @@ fn sends() -> Vec<NetAsk<'static>> {
             2,
             call(form("languages", true, Vec::new()), NetHeader::Bearer),
         ),
-        send(3, call(form("language", false, zdr), NetHeader::Bearer)),
+        send(
+            3,
+            call(paywalled(form("language", false, zdr)), NetHeader::Bearer),
+        ),
         azure,
         send(5, call(NetShape::Eleven, named("xi-api-key"))),
         send(6, call(NetShape::Gemini, named("x-goog-api-key"))),

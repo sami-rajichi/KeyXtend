@@ -4,14 +4,14 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, HttpsUrl, PanelButton, PanelKey, PanelLine, ServiceSheet,
-    TAG_LEN, VoiceClick, VoiceTab,
+    AddressFault, CloudButton, CloudLine, HttpsUrl, PanelButton, PanelKey, PanelLine, ServiceName,
+    ServiceSheet, TAG_LEN, VoiceClick, VoiceTab,
 };
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::lines::on_groq_lines;
-use super::{act, apply, lines_sheet, on_cloud, put};
+use super::{act, apply, lines_sheet, named, on_cloud, put};
 use crate::settings::SERVICES;
 
 /// A key-like text, built as the test runs so no key sits in the source.
@@ -48,7 +48,7 @@ fn on_custom_model(extra: &str) -> Rig {
     let mut rig = on_cloud("");
     let entry = format!("custom = {{ on = 2026-11-01, terms = 1{extra} }}");
     put(&mut rig, "services", &entry);
-    act(&mut rig, 1, CloudButton::Lines);
+    act(&mut rig, &ServiceName::Custom, CloudButton::Lines);
     rig.click(&VoiceClick::Page { back: false });
     rig
 }
@@ -118,14 +118,14 @@ fn the_typed_key_is_wiped_on_paste_remove_leaving_the_page_and_closing() {
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Back));
             assert!(rig.panel.cloud.typed.key.is_none(), "wiped on leaving");
-            act(rig, 0, CloudButton::Lines);
+            act(rig, &named("Groq"), CloudButton::Lines);
         },
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Close));
             assert!(rig.panel.cloud.typed.key.is_none(), "wiped on closing");
             rig.panel.open();
             rig.click(&VoiceClick::Open(VoiceTab::Cloud));
-            act(rig, 0, CloudButton::Lines);
+            act(rig, &named("Groq"), CloudButton::Lines);
         },
     ];
     for (at, wipe) in wipes.into_iter().enumerate() {

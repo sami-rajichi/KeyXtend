@@ -87,6 +87,7 @@ fn form() -> CloudShape {
         lang: "language".into(),
         list: false,
         fixed: Vec::new(),
+        paywall: false,
     };
     CloudShape::Form(fields)
 }

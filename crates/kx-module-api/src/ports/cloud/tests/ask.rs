@@ -9,7 +9,19 @@ fn form_as(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
         lang: lang.into(),
         list,
         fixed,
+        paywall: false,
     })
+}
+
+/// `shape` with its 403 read as a paywall, as Together's row says.
+fn paywalled(shape: CloudShape) -> CloudShape {
+    match shape {
+        CloudShape::Form(form) => CloudShape::Form(FormFields {
+            paywall: true,
+            ..form
+        }),
+        other => other,
+    }
 }
 
 /// A fixed field.
@@ -26,6 +38,10 @@ fn every_shape_with_its_header_passes() {
     let rows = [
         (form_as("languages", true, Vec::new()), KeyHeader::Bearer),
         (form_as("language", false, zdr), KeyHeader::Bearer),
+        (
+            paywalled(form_as("language", false, Vec::new())),
+            KeyHeader::Bearer,
+        ),
         (
             CloudShape::Azure,
             KeyHeader::Named("Ocp-Apim-Subscription-Key".into()),

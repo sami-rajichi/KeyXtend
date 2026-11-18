@@ -5,13 +5,13 @@
 
 use kx_module_api::ports::{
     AddressFault, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, PanelButton, ServiceMark,
-    VoiceClick,
+    ServiceName, VoiceClick,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
-use super::{act, apply, lines_sheet, on_cloud, put};
+use super::{act, apply, lines_sheet, named, on_cloud, put};
 use crate::services::tests::AZURE;
 use crate::settings::{PICKS, SERVICES};
 
@@ -33,7 +33,7 @@ pub(super) fn on_groq_lines() -> Rig {
         "groq = { on = 2026-11-01, terms = 1 }",
     );
     rig.keyed.insert("groq".into());
-    act(&mut rig, 0, CloudButton::Lines);
+    act(&mut rig, &named("Groq"), CloudButton::Lines);
     rig
 }
 
@@ -46,7 +46,7 @@ fn on_custom_lines(extra: &str) -> Rig {
         &format!("custom = {{ on = 2026-11-01, terms = 1{extra} }}"),
     );
     rig.keyed.insert("custom".into());
-    act(&mut rig, 1, CloudButton::Lines);
+    act(&mut rig, &ServiceName::Custom, CloudButton::Lines);
     rig
 }
 
@@ -117,7 +117,7 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
     let third = test(&mut rig);
     rig.click(&VoiceClick::Button(PanelButton::Back));
     rig.with(|p, _| p.tested(third, Err(CloudFault::Key)));
-    act(&mut rig, 0, CloudButton::Lines);
+    act(&mut rig, &named("Groq"), CloudButton::Lines);
     assert_eq!(
         lines_sheet(&mut rig).check,
         KeyCheck::Untested,
@@ -236,7 +236,7 @@ fn an_address_outside_the_rows_domain_says_domain() {
         "azure-test = { on = 2026-11-01, terms = 1 }",
     );
     rig.keyed.insert("azure-test".into());
-    act(&mut rig, 2, CloudButton::Lines);
+    act(&mut rig, &named("Azure"), CloudButton::Lines);
     let outside = "https://speech.example.com/stt";
     assert!(
         rig.click(&VoiceClick::SetAddress(Redacted::new(outside.into())))
@@ -266,4 +266,18 @@ fn a_bad_character_after_a_good_host_says_path_and_a_bad_host_still_says_host() 
         );
         assert_eq!(lines_sheet(&mut rig).address_fault, Some(fault), "{text}");
     }
+}
+
+#[test]
+fn edge_17_the_other_model_line_says_why_a_kept_models_id_cannot_go_while_keep_nothing_is_on() {
+    let mut rig = on_cloud("");
+    let kept = r#"openrouter = { on = 2026-11-01, terms = 1, keep = true, model = "mistralai/voxtral-mini-transcribe-3-0" }"#;
+    put(&mut rig, "services", kept);
+    act(&mut rig, &named("OpenRouter"), CloudButton::Lines);
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!((sheet.keep, sheet.model_na), (Some(true), true));
+    let out = rig.click(&VoiceClick::KeepNothing(false));
+    apply(&mut rig, &out);
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!((sheet.keep, sheet.model_na), (Some(false), false));
 }

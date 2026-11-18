@@ -2,11 +2,11 @@
 //! key page with a typed address takes two, the key then the address and model; the pager turns them.
 
 use kx_module_api::ports::{
-    CardPart, CloudButton, LinesPart, Pages, VoiceClick, VoicePanel, VoiceSheet,
+    CardPart, CloudButton, LinesPart, Pages, ServiceName, VoiceClick, VoicePanel, VoiceSheet,
 };
 
 use super::super::super::rig::Rig;
-use super::{act, on_cloud, put};
+use super::{act, named, on_cloud, put};
 
 /// The shown sheet's part and the pages, after `turns` page clicks (back when negative).
 fn turned<T>(rig: &mut Rig, turns: i8, part: impl Fn(VoiceSheet) -> T) -> (T, Pages) {
@@ -41,7 +41,7 @@ const fn of_two(at: u16) -> Pages {
 #[test]
 fn a_card_takes_two_pages_the_voice_then_the_price() {
     let mut rig = on_cloud("");
-    act(&mut rig, 0, CloudButton::Facts);
+    act(&mut rig, &named("Groq"), CloudButton::Facts);
     assert_eq!(turned(&mut rig, 0, card), (CardPart::Voice, of_two(0)));
     assert_eq!(turned(&mut rig, 1, card), (CardPart::Price, of_two(1)));
     assert_eq!(
@@ -52,20 +52,24 @@ fn a_card_takes_two_pages_the_voice_then_the_price() {
     assert_eq!(turned(&mut rig, -1, card), (CardPart::Voice, of_two(0)));
 }
 
-/// Groq and Custom on, on the key page of row `at`.
-fn on_lines(at: u8) -> Rig {
+/// Groq and Custom on, on the key page of row `name`.
+fn on_lines(name: &ServiceName) -> Rig {
     let mut rig = on_cloud("");
     let on = "groq = { on = 2026-11-01, terms = 1 }\ncustom = { on = 2026-11-01, terms = 1 }";
     put(&mut rig, "services", on);
-    act(&mut rig, at, CloudButton::Lines);
+    act(&mut rig, name, CloudButton::Lines);
     rig
 }
 
 #[test]
 fn a_key_page_takes_two_pages_only_with_a_typed_address() {
     let one = Pages { at: 0, count: 1 };
-    assert_eq!(turned(&mut on_lines(0), 0, lines), (None, one), "Groq's");
-    let mut rig = on_lines(1);
+    assert_eq!(
+        turned(&mut on_lines(&named("Groq")), 0, lines),
+        (None, one),
+        "Groq's"
+    );
+    let mut rig = on_lines(&ServiceName::Custom);
     assert_eq!(
         turned(&mut rig, 0, lines),
         (Some(LinesPart::Key), of_two(0))

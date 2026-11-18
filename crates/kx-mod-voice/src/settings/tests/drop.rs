@@ -33,7 +33,7 @@ fn at(address: &str) -> ServiceOn {
 fn a_bad_service_entry_is_dropped_alone_and_named() {
     let at_ten = "2026-11-17T10:00:00".parse().unwrap();
     let bad = [
-        ("openai", entry(|_| {})),
+        ("ovhcloud", entry(|_| {})),
         ("groq", entry(|on| on.terms = 0)),
         ("groq", entry(|on| on.terms = 2)),
         ("groq", entry(|on| on.on = at_ten)),

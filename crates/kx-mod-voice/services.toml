@@ -14,7 +14,8 @@
 # - `id`: the name `services`, `picks` and the key's sealed blob use; `name`: the shown name, left out for Custom,
 #   which the ui names in the user's language.
 # - `shape`: "form", "azure", "eleven" or "gemini"; `form`: a form's language field, whether it goes as a list (`[]`)
-#   and its fixed fields; `keep`: a field sent while the keep-nothing switch is on, which gives the row that switch.
+#   and its fixed fields; `keep`: a field sent while the keep-nothing switch is on, which gives the row that switch;
+#   `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells no credit.
 # - `host`: the only host its requests reach; for a typed address, the `.` domain it must be under, or none for
 #   Custom, which takes any HTTPS host name.
 # - `address`: where the pieces go, or "typed"; `test`: the key's test address, a path under a typed host, or none.
@@ -59,6 +60,31 @@ whisper = {
     sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
     tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
 }
+# `whisper-names`: the same languages by Whisper's own lower-case English names, which Lemonfox's `language` takes; its
+# page shows english, french and arabic, and "haitian" stands for Whisper's two-word name.
+whisper-names = {
+    af = "afrikaans", am = "amharic", ar = "arabic", as = "assamese", az = "azerbaijani", ba = "bashkir",
+    be = "belarusian", bg = "bulgarian", bn = "bengali", bo = "tibetan", br = "breton", bs = "bosnian",
+    ca = "catalan", cs = "czech", cy = "welsh", da = "danish", de = "german", el = "greek", en = "english",
+    es = "spanish", et = "estonian", eu = "basque", fa = "persian", fi = "finnish", fil = "tagalog", fo = "faroese",
+    fr = "french", gl = "galician", gu = "gujarati", ha = "hausa", he = "hebrew", hi = "hindi", hr = "croatian",
+    ht = "haitian", hu = "hungarian", hy = "armenian", id = "indonesian", is = "icelandic", it = "italian",
+    ja = "japanese", jv = "javanese", ka = "georgian", kk = "kazakh", km = "khmer", kn = "kannada", ko = "korean",
+    la = "latin", lb = "luxembourgish", ln = "lingala", lo = "lao", lt = "lithuanian", lv = "latvian",
+    mg = "malagasy", mi = "maori", mk = "macedonian", ml = "malayalam", mn = "mongolian", mr = "marathi",
+    ms = "malay", mt = "maltese", my = "myanmar", nb = "norwegian", ne = "nepali", nl = "dutch", nn = "nynorsk",
+    no = "norwegian", oc = "occitan", pa = "punjabi", pl = "polish", ps = "pashto", pt = "portuguese",
+    ro = "romanian", ru = "russian", sa = "sanskrit", sd = "sindhi", si = "sinhala", sk = "slovak", sl = "slovenian",
+    sn = "shona", so = "somali", sq = "albanian", sr = "serbian", su = "sundanese", sv = "swedish", sw = "swahili",
+    ta = "tamil", te = "telugu", tg = "tajik", th = "thai", tk = "turkmen", tl = "tagalog", tr = "turkish",
+    tt = "tatar", uk = "ukrainian", ur = "urdu", uz = "uzbek", vi = "vietnamese", yi = "yiddish", yo = "yoruba",
+    zh = "chinese",
+}
+# `checked`: the keyboard languages read on a model's page whose whole list is not in the table yet (Voxtral's 53 and
+# MAI-Transcribe-2's 60 name English, French and Arabic); the live check adds the rest.
+checked = { ar = "ar", en = "en", fr = "fr" }
+# `english`: a model whose page names its language count only, such as Nemotron 3.5 Transcribe's 40.
+english = { en = "en" }
 
 # Groq: console.groq.com docs read 2026-11-17 (speech-to-text, rate-limits, models, billing-faqs, your-data, and the
 # services agreement section 4.2). The free plan's 20 requests a minute and 28,800 audio seconds a day; 25 MB a file.
@@ -100,6 +126,152 @@ light = { id = "free-or", money = { low = 0.60, high = 1.67 } }
 heavy = { id = "free-or", money = { low = 2.40, high = 6.66 } }
 bills = { id = "least", count = { seconds = 10 } }
 
+# OpenAI: developers.openai.com read 2026-11-17 (pricing, speech-to-text, the transcriptions reference, rate limits, error
+# codes, your data). Only gpt-transcribe is offered, as whisper-1 and the gpt-4o models shut down on 2027-02-26; it takes
+# `languages[]` in place of `language`. 25 MB a file; transcription keeps nothing for abuse checks; no free allowance.
+[[services]]
+id = "openai"
+name = "OpenAI"
+shape = "form"
+form = { lang = "language", list = false }
+host = "api.openai.com"
+address = "https://api.openai.com/v1/audio/transcriptions"
+test = "https://api.openai.com/v1/models"
+header = "bearer"
+keys = "https://platform.openai.com/api-keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 50, at_once = 4 }
+other = true
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "gpt-transcribe"
+name = "GPT Transcribe"
+langs = "whisper"
+form = { lang = "languages", list = true }
+
+[services.facts]
+read = 2026-11-17
+source = "https://developers.openai.com/api/docs/guides/your-data"
+currency = "USD"
+place = { id = "us" }
+trains = { id = "opt-in" }
+keeps = { id = "none" }
+free = { id = "none" }
+light = { id = "plain", money = { price = 4.05 } }
+heavy = { id = "plain", money = { price = 16.20 } }
+
+# Mistral: docs.mistral.ai and help.mistral.ai read 2026-11-17 (transcribe files, the transcriptions endpoint, languages,
+# limits, pricing, usage limits, the training switch, zero data retention). Voxtral 3 in multipart, the guide's working
+# reading; no API use without billing; data in the EU; keeping nothing only on request. No cap is stated, so 25 MB.
+[[services]]
+id = "mistral"
+name = "Mistral"
+shape = "form"
+form = { lang = "language", list = false }
+host = "api.mistral.ai"
+address = "https://api.mistral.ai/v1/audio/transcriptions"
+test = "https://api.mistral.ai/v1/models"
+header = "bearer"
+keys = "https://console.mistral.ai/api-keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
+other = true
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "voxtral-mini-transcribe-3-0"
+name = "Voxtral Mini Transcribe 3"
+langs = "checked"
+
+[[services.models]]
+id = "voxtral-small-transcribe-3-0"
+name = "Voxtral Small Transcribe 3"
+langs = "checked"
+
+[services.facts]
+read = 2026-11-17
+source = "https://docs.mistral.ai/admin/monitor-comply/zero-data-retention"
+currency = "USD"
+place = { id = "eu" }
+trains = { id = "switch", text = { switch = "Admin panel → Privacy → Anonymous improvement data" } }
+keeps = { id = "on-request" }
+free = { id = "none" }
+light = { id = "range", money = { low = 3.15, high = 3.60 } }
+heavy = { id = "range", money = { low = 12.60, high = 14.40 } }
+
+# Together AI: together.ai and docs.together.ai read 2026-11-17 (pricing, speech-to-text, billing, zero data retention,
+# error codes, rate limits). No key before a first purchase of $15; prompts are stored until a switch is off; a 403 is a
+# plan limit or a missing payment method. 80 MB and 4 hours a request; no rate is published.
+[[services]]
+id = "together"
+name = "Together AI"
+shape = "form"
+form = { lang = "language", list = false }
+paywall = true
+host = "api.together.ai"
+address = "https://api.together.ai/v1/audio/transcriptions"
+test = "https://api.together.ai/v1/models"
+header = "bearer"
+keys = "https://api.together.ai/settings/api-keys"
+limits = { cap_mb = 80, cap_s = 14400, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
+other = true
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "openai/whisper-large-v3"
+name = "Whisper Large v3"
+langs = "whisper"
+
+[services.facts]
+read = 2026-11-17
+source = "https://docs.together.ai/docs/zero-data-retention"
+currency = "USD"
+place = { id = "unstated" }
+trains = { id = "opt-in" }
+keeps = { id = "stored", text = { switch = "Organization Settings → Privacy → Prompt storage" } }
+free = { id = "first-buy", money = { least = 15 } }
+light = { id = "plain", money = { price = 1.35 } }
+heavy = { id = "plain", money = { price = 5.40 } }
+
+# Lemonfox: lemonfox.ai read 2026-11-17 (home, speech-to-text API, Whisper API, terms). Whisper large-v3 with no model
+# field and the language as an English name; deleted right after processing; the first month free; a $5 plan for about
+# 30 hours, then $0.50 for about 3 more. 100 MB an upload; fair use; no key test.
+[[services]]
+id = "lemonfox"
+name = "Lemonfox"
+shape = "form"
+form = { lang = "language", list = false }
+host = "api.lemonfox.ai"
+address = "https://api.lemonfox.ai/v1/audio/transcriptions"
+header = "bearer"
+keys = "https://www.lemonfox.ai/apis/keys"
+limits = { cap_mb = 100, max_mb = 23, max_s = 600, per_min = 20, at_once = 2 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "whisper-large-v3"
+name = "Whisper Large v3"
+langs = "whisper-names"
+unnamed = true
+
+[services.facts]
+read = 2026-11-17
+source = "https://www.lemonfox.ai/"
+currency = "USD"
+place = { id = "unstated" }
+trains = { id = "unstated" }
+keeps = { id = "deleted" }
+free = { id = "first-month" }
+light = { id = "plain", money = { price = 5.00 } }
+heavy = { id = "plain", money = { price = 10.00 } }
+
 # Custom (design "Connections and services"): any service that speaks the upload form, such as the user's own server,
 # at an HTTPS host name the user types with its model; its card says the facts are that service's own.
 [[services]]
@@ -122,3 +294,106 @@ keeps = { id = "unknown" }
 free = { id = "unknown" }
 light = { id = "unknown" }
 heavy = { id = "unknown" }
+
+# OpenRouter: openrouter.ai docs read 2026-11-17 (speech-to-text, the transcriptions reference, models, pricing, ZDR,
+# provider routing, limits, errors, the key endpoint). One key routes to many hosts; `provider.zdr` sends only to hosts
+# that keep nothing, on to start (edge 17); a 402 is no credit and a 403 a key's spending cap; a 5.5% fee on credit.
+[[services]]
+id = "openrouter"
+name = "OpenRouter"
+shape = "form"
+form = { lang = "language", list = false }
+keep = { name = "provider", value = '{"zdr":true}' }
+paywall = true
+host = "openrouter.ai"
+address = "https://openrouter.ai/api/v1/audio/transcriptions"
+test = "https://openrouter.ai/api/v1/key"
+header = "bearer"
+keys = "https://openrouter.ai/settings/keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 180, per_min = 60, at_once = 4 }
+other = true
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "openai/whisper-large-v3-turbo"
+name = "Whisper Large v3 Turbo"
+langs = "whisper"
+
+[[services.models]]
+id = "openai/whisper-large-v3"
+name = "Whisper Large v3"
+langs = "whisper"
+
+[[services.models]]
+id = "openai/gpt-transcribe"
+name = "GPT Transcribe"
+langs = "whisper"
+
+[[services.models]]
+id = "microsoft/mai-transcribe-2"
+name = "MAI-Transcribe-2"
+langs = "checked"
+
+# Mistral keeps nothing only on request, so no host of it keeps nothing.
+[[services.models]]
+id = "mistralai/voxtral-mini-transcribe-3-0"
+name = "Voxtral Mini Transcribe 3"
+langs = "checked"
+keeps = true
+
+[services.facts]
+read = 2026-11-17
+source = "https://openrouter.ai/docs/guides/features/zdr"
+currency = "USD"
+place = { id = "host" }
+trains = { id = "host" }
+keeps = { id = "host" }
+free = { id = "small" }
+light = { id = "range-fee", number = { fee = 5.5 }, money = { low = 0.16, high = 4.05 } }
+heavy = { id = "range-fee", number = { fee = 5.5 }, money = { low = 0.65, high = 16.20 } }
+
+# DeepInfra: deepinfra.com and docs.deepinfra.com read 2026-11-17 (the speech-to-text models, the OpenAI-compatible
+# API, pricing, data privacy, errors). Whisper and Nemotron 3.5 Transcribe by the minute; held in memory only while it
+# works and never trained on; no cap or rate is stated, so 25 MB, and no key test was found.
+[[services]]
+id = "deepinfra"
+name = "DeepInfra"
+shape = "form"
+form = { lang = "language", list = false }
+host = "api.deepinfra.com"
+address = "https://api.deepinfra.com/v1/audio/transcriptions"
+header = "bearer"
+keys = "https://deepinfra.com/dash/api_keys"
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
+other = true
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "openai/whisper-large-v3-turbo"
+name = "Whisper Large v3 Turbo"
+langs = "whisper"
+
+[[services.models]]
+id = "openai/whisper-large-v3"
+name = "Whisper Large v3"
+langs = "whisper"
+
+[[services.models]]
+id = "nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B"
+name = "Nemotron 3.5 Transcribe"
+langs = "english"
+
+[services.facts]
+read = 2026-11-17
+source = "https://docs.deepinfra.com/account/data-privacy"
+currency = "USD"
+place = { id = "unstated" }
+trains = { id = "never" }
+keeps = { id = "memory" }
+free = { id = "none" }
+light = { id = "range", money = { low = 0.18, high = 1.80 } }
+heavy = { id = "range", money = { low = 0.72, high = 7.20 } }

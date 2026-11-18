@@ -27,6 +27,11 @@ const MAX_DIGITS: usize = 20;
 const POINT: char = '.';
 /// Base ten, for a span's fraction.
 const TEN: u128 = 10;
+/// The names an error's words sit under.
+const SAYING: &[&str] = &["error", "message", "type", "code", "detail", "msg", "loc"];
+/// How many levels of objects and lists the words are looked for in: a list of `loc` inside a `detail` item, inside
+/// `detail`, inside `message`, inside the reply.
+const SAYING_DEPTH: usize = 5;
 
 /// `body`'s bytes, read into wiped chunks of `READ` bytes, each filled before the next, and joined once, so no growth
 /// leaves an unwiped copy and the room taken stays within `cap` and one chunk; `stop` is looked at before each read.
@@ -144,17 +149,34 @@ pub fn coded(bytes: &[u8], codes: &[&str]) -> bool {
     is(&error["code"]) || is(&error["type"])
 }
 
-/// True when a JSON error reply's message, type or code holds one of `words`, in any case; never for another body.
+/// True when a JSON error reply's words hold one of `words`, in any case; never for another body. The words are the
+/// texts under `SAYING`'s names, within `SAYING_DEPTH`: `error` or its message, type and code, and a 422's `detail[]`
+/// with each item's `msg`, `type` and `loc`, at the top as `DeepInfra` sends it or under `message`.
 pub fn says(bytes: &[u8], words: &[&str]) -> bool {
-    let error = error(bytes);
-    let parts = [&error, &error["message"], &error["type"], &error["code"]];
-    let said: String = parts
-        .iter()
-        .filter_map(|v| v.as_str())
-        .collect::<Vec<_>>()
-        .join(" ");
+    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
+    let mut said = String::new();
+    if reply.is_object() {
+        gather(&reply, SAYING_DEPTH, &mut said);
+    }
     let said = said.to_ascii_lowercase();
     words.iter().any(|w| said.contains(w))
+}
+
+/// Adds the texts of `value` under `SAYING`'s names to `said`, `depth` levels down at most.
+fn gather(value: &serde_json::Value, depth: usize, said: &mut String) {
+    let deeper = depth.checked_sub(1);
+    match (value, deeper) {
+        (serde_json::Value::String(text), _) => {
+            said.push(' ');
+            said.push_str(text);
+        }
+        (serde_json::Value::Array(items), Some(d)) => items.iter().for_each(|i| gather(i, d, said)),
+        (serde_json::Value::Object(map), Some(d)) => {
+            let named = SAYING.iter().filter_map(|name| map.get(*name));
+            named.for_each(|v| gather(v, d, said));
+        }
+        _ => {}
+    }
 }
 
 /// A `Retry-After` of whole seconds; none for a date or anything else.

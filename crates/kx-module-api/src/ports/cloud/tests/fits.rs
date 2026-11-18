@@ -57,6 +57,7 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
         lang: "lang uage".into(),
         list: false,
         fixed: Vec::new(),
+        paywall: false,
     });
     assert!(!spaced.fits());
     assert!(!form().needs_model() && !CloudShape::Azure.needs_model());

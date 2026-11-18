@@ -13,6 +13,7 @@ use super::super::{Do, Page};
 use super::{models, on_models};
 use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
+use rows::{named, row_of, tick};
 
 mod answers;
 mod lines;
@@ -80,9 +81,9 @@ fn home(rig: &mut Rig) -> VoiceHome {
     }
 }
 
-/// Ticks the Cloud page's row `at`, then clicks the service's `button`.
-pub(super) fn act(rig: &mut Rig, at: u8, button: CloudButton) -> Vec<Do> {
-    rig.click(&VoiceClick::Row(at));
+/// Ticks the Cloud page's row `name`, then clicks the service's `button`.
+pub(super) fn act(rig: &mut Rig, name: &ServiceName, button: CloudButton) -> Vec<Do> {
+    tick(rig, name);
     rig.click(&VoiceClick::Service(button))
 }
 
@@ -113,17 +114,16 @@ fn groq_is_listed_first_off_and_untested_and_custom_names_no_free_allowance() {
     let sheet = cloud_sheet(&mut rig);
     assert!(sheet.on);
     let names: Vec<_> = sheet.rows.iter().map(|r| r.name.clone()).collect();
-    assert_eq!(
-        names,
-        [ServiceName::Named("Groq".into()), ServiceName::Custom]
-    );
+    let first = ["Groq", "OpenAI", "Mistral", "Together AI", "Lemonfox"].map(named);
+    assert_eq!(names, first, "a page holds five");
     let groq = &sheet.rows[0];
     assert_eq!(
         (groq.mark, groq.untested, groq.free.is_some()),
         (ServiceMark::Off, true, true)
     );
-    assert_eq!(sheet.rows[1].free, None);
     assert!(sheet.acts.is_empty(), "nothing acts before a tick");
+    let custom = usize::from(row_of(&mut rig, &ServiceName::Custom));
+    assert_eq!(cloud_sheet(&mut rig).rows[custom].free, None);
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn a_service_goes_on_through_its_card_to_its_key_page_and_the_home_counts_it_onc
 fn a_card_shows_the_day_its_facts_were_read_and_turns_old_past_facts_days() {
     let read = ROUTER.replace("read = 2026-11-17", "read = 2026-01-01");
     let mut rig = on_cloud(&read);
-    act(&mut rig, 2, CloudButton::Facts);
+    act(&mut rig, &named("Router Test"), CloudButton::Facts);
     let card = card(&mut rig);
     assert_eq!(
         (card.read, card.old),
@@ -165,18 +165,16 @@ fn a_card_shows_the_day_its_facts_were_read_and_turns_old_past_facts_days() {
 fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_keeps_its_key() {
     let newer = ROUTER.replace("terms = 1", "terms = 2");
     let mut rig = on_cloud(&newer);
-    put(
-        &mut rig,
-        "services",
-        r#""router-test" = { on = 2026-11-01, terms = 1 }"#,
-    );
+    let on = r#""router-test" = { on = 2026-11-01, terms = 1 }"#;
+    put(&mut rig, "services", on);
     put(
         &mut rig,
         "picks",
         r#"en = "router-test:openai/whisper-large-v3-turbo""#,
     );
     rig.keyed.insert("router-test".into());
-    rig.click(&VoiceClick::Row(2));
+    let router = named("Router Test");
+    tick(&mut rig, &router);
     let acts = [
         CloudButton::Facts,
         CloudButton::Lines,
@@ -193,8 +191,9 @@ fn newer_terms_ask_again_and_a_no_switches_the_service_off_with_its_picks_but_ke
     );
     apply(&mut rig, &out);
     assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
-    assert_eq!(cloud_sheet(&mut rig).rows[2].mark, ServiceMark::Off);
-    let out = act(&mut rig, 2, CloudButton::On);
+    let at = usize::from(row_of(&mut rig, &router));
+    assert_eq!(cloud_sheet(&mut rig).rows[at].mark, ServiceMark::Off);
+    let out = act(&mut rig, &router, CloudButton::On);
     assert!(out.is_empty());
     let out = rig.click(&VoiceClick::Confirm(true));
     apply(&mut rig, &out);
@@ -283,7 +282,7 @@ fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
     );
     put(&mut rig, "picks", r#"en = "groq:whisper-large-v3-turbo""#);
     rig.keyed.insert("groq".into());
-    let out = act(&mut rig, 0, CloudButton::Off);
+    let out = act(&mut rig, &named("Groq"), CloudButton::Off);
     assert!(
         !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
         "only Remove key deletes it"

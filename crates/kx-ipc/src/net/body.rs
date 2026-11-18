@@ -37,7 +37,7 @@ fn read_text<R: Read + ?Sized>(
     Ok(Cow::Owned(text))
 }
 
-/// Sends a shape: its code, then a form's language name, list flag and fixed fields.
+/// Sends a shape: its code, then a form's language name, list flag, fixed fields and paywall flag.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     s.byte(shape.code().code())?;
     let NetShape::Form(form) = shape else {
@@ -49,7 +49,8 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     form.fixed.iter().try_for_each(|f| {
         put_text(s, TAG, &f.name, rules::token)?;
         put_text(s, VALUE, &f.value, rules::form_value)
-    })
+    })?;
+    s.byte(u8::from(form.paywall))
 }
 
 /// Reads a shape.
@@ -63,7 +64,7 @@ fn read_shape<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetShape<'stat
     Ok(NetShape::Form(form))
 }
 
-/// Reads a form's language name, list flag and fixed fields.
+/// Reads a form's language name, list flag, fixed fields and paywall flag.
 fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static>, IpcError> {
     let lang = read_text(p, TAG, rules::token)?;
     let list = p.flag()?;
@@ -74,7 +75,13 @@ fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static
         Ok::<_, IpcError>(NetField { name, value })
     };
     let fixed = (0..n).map(|_| field(p)).collect::<Result<_, _>>()?;
-    Ok(NetForm { lang, list, fixed })
+    let paywall = p.flag()?;
+    Ok(NetForm {
+        lang,
+        list,
+        fixed,
+        paywall,
+    })
 }
 
 /// Sends a key's header: its code, then a name.

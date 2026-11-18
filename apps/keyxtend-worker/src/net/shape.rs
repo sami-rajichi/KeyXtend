@@ -60,11 +60,11 @@ pub trait Shape: Send + Sync {
     /// As `build`.
     fn test(&self, call: &NetCall<'_>) -> Result<Request, NetFault>;
 
-    /// What a piece's reply with `head` and `body` says.
-    fn read(&self, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>>;
+    /// What a piece's reply over `call` with `head` and `body` says.
+    fn read(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>>;
 
-    /// What a key test's reply with `head` and `body` says.
-    fn tested(&self, head: &Head, body: &[u8]) -> Verdict<()>;
+    /// What a key test's reply over `call` with `head` and `body` says.
+    fn tested(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()>;
 }
 
 /// The adapter for `code`; none for a shape this job does not build yet.

@@ -84,6 +84,18 @@ fn a_shape_or_form_that_breaks_a_request_is_refused() {
 }
 
 #[test]
+fn a_paywall_is_refused_on_a_shape_without_a_form() {
+    let azure = "shape = \"azure\"";
+    let walled = format!("{azure}\npaywall = true");
+    let refused = edits_of(&format!("{TEXT}{AZURE}"), &[(azure, &walled)]);
+    let form = ServicesError::Row {
+        id: "azure-test".into(),
+        why: E::Form,
+    };
+    assert_eq!(refused.err(), Some(form));
+}
+
+#[test]
 fn a_fixed_field_that_asks_for_timings_or_an_odd_reply_is_refused() {
     let verbose = "{ name = \"response_format\", value = \"verbose_json\" }";
     refused(FORM, &fixed(verbose), E::Reply);

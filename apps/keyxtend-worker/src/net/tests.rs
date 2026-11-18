@@ -8,6 +8,7 @@ mod job;
 mod pipe;
 mod props;
 mod reply;
+mod rows;
 mod send;
 mod table;
 mod wav;
@@ -77,6 +78,7 @@ fn form() -> NetForm<'static> {
         lang: Cow::Borrowed("language"),
         list: false,
         fixed: Vec::new(),
+        paywall: false,
     }
 }
 
@@ -94,6 +96,11 @@ fn call_to(url: &'static str, shape: NetShape<'static>) -> NetCall<'static> {
 /// Groq's transcription call.
 fn call() -> NetCall<'static> {
     call_to(URL, NetShape::Form(form()))
+}
+
+/// Groq's call, its 403 read as a paywall when `paywall`.
+fn walled(paywall: bool) -> NetCall<'static> {
+    call_to(URL, NetShape::Form(NetForm { paywall, ..form() }))
 }
 
 /// A run of pieces of `sizes` bytes, `tries` per piece, at most `at_once` at once and `per_min` a minute.

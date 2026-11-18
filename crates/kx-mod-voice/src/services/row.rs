@@ -74,6 +74,10 @@ pub enum ServiceError {
 /// A row as written.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Each flag is one on-or-off field of a row as the table writes it."
+)]
 pub(super) struct RawService {
     /// The id `services`, `picks` and the key's blob use.
     pub(super) id: String,
@@ -88,6 +92,9 @@ pub(super) struct RawService {
     /// The field sent while the keep-nothing switch is on.
     #[serde(default)]
     keep: Option<form::RawField>,
+    /// A 403 is the form's paywall: a missing payment method or a spending cap, so it tells no credit.
+    #[serde(default)]
+    paywall: bool,
     /// The only host, or the domain a typed host must be under.
     #[serde(default)]
     host: Option<String>,
@@ -160,7 +167,8 @@ impl Service {
         let address = address::address(&raw.address, raw.host.as_deref())?;
         name_ok(raw.name.as_deref(), &address)?;
         let keep = raw.keep.as_ref().map(form::RawField::field);
-        let shape = form::shape(&raw.shape, raw.form.as_ref(), rules.reply, keep.as_ref())?;
+        let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall);
+        let shape = form::shape(&raw.shape, raw.form.as_ref(), &sent)?;
         let test = address::test(raw.test.as_deref(), &address)?;
         let header = header(&raw.header)?;
         let named = raw.name.is_some();
@@ -168,7 +176,7 @@ impl Service {
         let limits = limits::checked(&raw.limits, form::base64(&raw.shape), rules.room)?;
         let row = model::Row {
             shape: &shape,
-            keep: keep.as_ref(),
+            sent: &sent,
             other: raw.other,
         };
         let models = model::checked(raw.models, &row, rules)?;

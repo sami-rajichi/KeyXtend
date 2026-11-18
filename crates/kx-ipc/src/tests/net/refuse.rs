@@ -58,7 +58,7 @@ fn top_pieces(top: u32) -> usize {
 #[test]
 fn the_small_send_has_the_payload_its_offsets_name() {
     let good = net_ask_bytes(&small());
-    assert_eq!(good.len(), HEADER_LEN + 50);
+    assert_eq!(good.len(), HEADER_LEN + 51);
     assert_eq!(NetAsk::read(&mut &good[..]), Ok(small()));
 }
 
@@ -94,7 +94,7 @@ fn an_address_that_is_not_plain_https_is_refused_both_ways() {
     let good = net_ask_bytes(&small());
     refused_reads(
         &good,
-        &[(11, b"H"), (19, b"A"), (19, b"@"), (20, b"#"), (21, b"\r")],
+        &[(12, b"H"), (20, b"A"), (20, b"@"), (21, b"#"), (22, b"\r")],
         BadField,
     );
 }
@@ -227,38 +227,39 @@ fn a_piece_and_a_run_at_their_caps_pass() {
 fn a_bad_call_or_run_is_refused_when_read() {
     let good = net_ask_bytes(&small());
     let over = (groq_cap() + 2).to_le_bytes();
-    let reads: [(usize, &[u8]); 24] = [
+    let reads: [(usize, &[u8]); 25] = [
         (0, &[0]),
         (0, &[5]),
         (2, b" "),
         (3, &[2]),
         (6, b"."),
         (8, b"\n"),
-        (22, &[0]),
-        (22, &[3]),
-        (25, b" "),
-        (25, b"\x7f"),
-        (26, &(*NET_WAIT_S.start() - 1).to_le_bytes()),
-        (28, &[2]),
-        (30, b" "),
-        (32, b"\0"),
-        (34, &0u32.to_le_bytes()),
-        (38, &(*NET_MAX_S.start() - 1).to_le_bytes()),
-        (40, &0u16.to_le_bytes()),
-        (42, &[*NET_AT_ONCE.end() + 1]),
-        (43, &[0]),
-        (46, &0u32.to_le_bytes()),
-        (46, &3u32.to_le_bytes()),
-        (46, &over),
+        (9, &[2]),
+        (23, &[0]),
+        (23, &[3]),
+        (26, b" "),
+        (26, b"\x7f"),
+        (27, &(*NET_WAIT_S.start() - 1).to_le_bytes()),
+        (29, &[2]),
+        (31, b" "),
+        (33, b"\0"),
+        (35, &0u32.to_le_bytes()),
+        (39, &(*NET_MAX_S.start() - 1).to_le_bytes()),
+        (41, &0u16.to_le_bytes()),
+        (43, &[*NET_AT_ONCE.end() + 1]),
+        (44, &[0]),
+        (47, &0u32.to_le_bytes()),
+        (47, &3u32.to_le_bytes()),
+        (47, &over),
         (1, &[0]),
-        (44, &0u16.to_le_bytes()),
+        (45, &0u16.to_le_bytes()),
     ];
     let (bad, empty) = reads.split_at(reads.len() - 2);
     refused_reads(&good, bad, BadField);
     refused_reads(&good, empty, Inconsistent);
     let fixed = [u8::try_from(MAX_FIXED + 1).unwrap()];
     let pieces = u16::try_from(MAX_SPEECH_PIECES + 1).unwrap().to_le_bytes();
-    refused_reads(&good, &[(4, &fixed), (44, &pieces)], TooLong);
+    refused_reads(&good, &[(4, &fixed), (45, &pieces)], TooLong);
 }
 
 #[test]

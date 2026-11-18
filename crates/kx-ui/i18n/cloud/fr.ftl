@@ -44,13 +44,26 @@ cloud =
     .card-untested = Non testé : pas encore vérifié avec une vraie clé.
     .fact-where-us = États-Unis
     .fact-where-typed = L’adresse que vous saisissez
+    .fact-where-eu = Union européenne
+    .fact-where-unstated = Non précisé sur ses pages
+    .fact-where-host = Dépend de l’hébergeur qui sert le modèle
     .fact-trains-never = Non utilisée pour l’entraînement
     .fact-trains-unknown = Inconnu ; cela dépend du service
+    .fact-trains-opt-in = Seulement si vous l’acceptez
+    .fact-trains-switch = Non précisé ; ce réglage du compte l’arrête : { $switch }
+    .fact-trains-unstated = Non précisé sur ses pages
+    .fact-trains-host = Dépend de l’hébergeur qui sert le modèle
     .fact-keeps-logs = Rien par défaut, mais les requêtes peuvent être gardées jusqu’à { $days-form ->
         [one] { $days } jour
        *[other] { $days } jours
     } pour contrôle ; ce réglage du compte l’empêche : { $switch }
     .fact-keeps-unknown = Inconnu ; cela dépend du service
+    .fact-keeps-none = Rien
+    .fact-keeps-on-request = Non précisé ; ne rien garder n’est possible que sur demande
+    .fact-keeps-stored = Vos requêtes, par défaut ; ce réglage du compte l’arrête : { $switch }
+    .fact-keeps-deleted = Rien : tout est supprimé juste après le traitement
+    .fact-keeps-memory = Rien : gardé en mémoire le temps du traitement seulement
+    .fact-keeps-host = Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien
     .fact-free-daily = { $hours-form ->
         [one] { $hours } heure
        *[other] { $hours } heures
@@ -59,8 +72,15 @@ cloud =
        *[other] { $per_min } requêtes
     } par minute
     .fact-free-unknown = Inconnu ; cela dépend du service
+    .fact-free-none = Aucun
+    .fact-free-first-buy = Aucun avant de payer au moins { $least }
+    .fact-free-first-month = Le premier mois
+    .fact-free-small = Un petit quota pour les nouveaux comptes
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
+    .fact-price-plain = { $price }
+    .fact-price-range = De { $low } à { $high } selon le modèle
+    .fact-price-range-fee = De { $low } à { $high } selon le modèle, plus { $fee } % de frais sur le crédit
     .fact-warn-trains = Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : { $switch }
     .warn-mark-trains = Entraînement activé
     .fact-bills-least = Au moins { $seconds-form ->

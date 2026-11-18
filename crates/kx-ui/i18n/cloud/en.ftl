@@ -44,13 +44,26 @@ cloud =
     .card-untested = Untested: not yet checked with a real key.
     .fact-where-us = United States
     .fact-where-typed = The address you type
+    .fact-where-eu = European Union
+    .fact-where-unstated = Not stated on its pages
+    .fact-where-host = Depends on the host that serves the model
     .fact-trains-never = Not used for training
     .fact-trains-unknown = Unknown; it depends on the service
+    .fact-trains-opt-in = Only if you opt in
+    .fact-trains-switch = Not stated; this account switch stops it: { $switch }
+    .fact-trains-unstated = Not stated on its pages
+    .fact-trains-host = Depends on the host that serves the model
     .fact-keeps-logs = Nothing by default, but checks may keep requests up to { $days-form ->
         [one] { $days } day
        *[other] { $days } days
     }; this account switch turns that off: { $switch }
     .fact-keeps-unknown = Unknown; it depends on the service
+    .fact-keeps-none = Nothing
+    .fact-keeps-on-request = Not stated; keeping nothing is only on request
+    .fact-keeps-stored = Your requests, by default; this account switch stops that: { $switch }
+    .fact-keeps-deleted = Nothing: deleted right after processing
+    .fact-keeps-memory = Nothing: held in memory only while it works
+    .fact-keeps-host = Depends on the host; a switch, on to start, sends only to hosts that keep nothing
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
        *[other] { $hours } hours
@@ -59,8 +72,15 @@ cloud =
        *[other] { $per_min } requests
     } a minute
     .fact-free-unknown = Unknown; it depends on the service
+    .fact-free-none = None
+    .fact-free-first-buy = None before you pay at least { $least }
+    .fact-free-first-month = The first month
+    .fact-free-small = A small allowance for new accounts
     .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
+    .fact-price-plain = { $price }
+    .fact-price-range = { $low } to { $high } by model
+    .fact-price-range-fee = { $low } to { $high } by model, plus a { $fee }% fee on credit
     .fact-warn-trains = Trains its models on your voice by default. Before you confirm, turn off this switch in your account: { $switch }
     .warn-mark-trains = Trains by default
     .fact-bills-least = At least { $seconds-form ->

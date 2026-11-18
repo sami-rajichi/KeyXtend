@@ -8,6 +8,7 @@ use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
 mod keep;
 mod props;
+mod router;
 mod typed;
 
 /// The compiled-in services table text.
@@ -96,7 +97,7 @@ fn a_service_is_off_until_the_user_confirms_its_card() {
         !rules().pick(&mut s, "tlh", "groq", TURBO),
         "the model does not know the language"
     );
-    assert!(!rules().confirm(&mut s, "openai", today()), "no such row");
+    assert!(!rules().confirm(&mut s, "ovhcloud", today()), "no such row");
 }
 
 #[test]

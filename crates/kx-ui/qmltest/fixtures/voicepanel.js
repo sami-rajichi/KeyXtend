@@ -263,7 +263,150 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى DeepInfra إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا يُستخدم للتدريب"
+                  }
+                ],
+                "text": "لا يُستخدم للتدريب"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء: يبقى في الذاكرة أثناء المعالجة فقط"
+                  }
+                ],
+                "text": "لا شيء: يبقى في الذاكرة أثناء المعالجة فقط"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -410,7 +553,730 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Lemonfox إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء: يُحذف كل شيء فور المعالجة"
+                  }
+                ],
+                "text": "لا شيء: يُحذف كل شيء فور المعالجة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Mistral إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الاتحاد الأوروبي"
+                  }
+                ],
+                "text": "الاتحاد الأوروبي"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور، ويوقفه هذا الخيار في حسابك: "
+                  },
+                  {
+                    "own": true,
+                    "text": "Admin panel → Privacy → Anonymous improvement data"
+                  }
+                ],
+                "text": "غير مذكور، ويوقفه هذا الخيار في حسابك: Admin panel → Privacy → Anonymous improvement data"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور، وعدم الاحتفاظ بأي شيء متاح عند الطلب فقط"
+                  }
+                ],
+                "text": "غير مذكور، وعدم الاحتفاظ بأي شيء متاح عند الطلب فقط"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى OpenAI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الولايات المتحدة"
+                  }
+                ],
+                "text": "الولايات المتحدة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا يُستخدم للتدريب إلا إذا وافقتَ على ذلك"
+                  }
+                ],
+                "text": "لا يُستخدم للتدريب إلا إذا وافقتَ على ذلك"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء"
+                  }
+                ],
+                "text": "لا شيء"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى OpenRouter إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يتوقف على المضيف الذي يشغّل النموذج"
+                  }
+                ],
+                "text": "يتوقف على المضيف الذي يشغّل النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يتوقف على المضيف الذي يشغّل النموذج"
+                  }
+                ],
+                "text": "يتوقف على المضيف الذي يشغّل النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء"
+                  }
+                ],
+                "text": "يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLong-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Together AI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا يُستخدم للتدريب إلا إذا وافقتَ على ذلك"
+                  }
+                ],
+                "text": "لا يُستخدم للتدريب إلا إذا وافقتَ على ذلك"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "طلباتك افتراضيًا، ويوقف ذلك هذا الخيار في حسابك: "
+                  },
+                  {
+                    "own": true,
+                    "text": "Organization Settings → Privacy → Prompt storage"
+                  }
+                ],
+                "text": "طلباتك افتراضيًا، ويوقف ذلك هذا الخيار في حسابك: Organization Settings → Privacy → Prompt storage"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -546,7 +1412,150 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 47,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى DeepInfra إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء"
+                  }
+                ],
+                "text": "لا شيء"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 0,18 دولار إلى 1,80 دولار حسب النموذج"
+                  }
+                ],
+                "text": "من 0,18 دولار إلى 1,80 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 0,72 دولار إلى 7,20 دولار حسب النموذج"
+                  }
+                ],
+                "text": "من 0,72 دولار إلى 7,20 دولار حسب النموذج"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -703,7 +1712,722 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Lemonfox إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الشهر الأول"
+                  }
+                ],
+                "text": "الشهر الأول"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "5 دولار"
+                  }
+                ],
+                "text": "5 دولار"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "10 دولار"
+                  }
+                ],
+                "text": "10 دولار"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 45,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Mistral إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء"
+                  }
+                ],
+                "text": "لا شيء"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 3,15 دولار إلى 3,60 دولار حسب النموذج"
+                  }
+                ],
+                "text": "من 3,15 دولار إلى 3,60 دولار حسب النموذج"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 12,60 دولار إلى 14,40 دولار حسب النموذج"
+                  }
+                ],
+                "text": "من 12,60 دولار إلى 14,40 دولار حسب النموذج"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 41,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى OpenAI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء"
+                  }
+                ],
+                "text": "لا شيء"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,05 دولار"
+                  }
+                ],
+                "text": "4,05 دولار"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "16,20 دولار"
+                  }
+                ],
+                "text": "16,20 دولار"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى OpenRouter إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "حصة صغيرة للحسابات الجديدة"
+                  }
+                ],
+                "text": "حصة صغيرة للحسابات الجديدة"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 0,16 دولار إلى 4,05 دولار حسب النموذج، مع رسوم بنسبة 5,5% عند شراء الرصيد"
+                  }
+                ],
+                "text": "من 0,16 دولار إلى 4,05 دولار حسب النموذج، مع رسوم بنسبة 5,5% عند شراء الرصيد"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "من 0,65 دولار إلى 16,20 دولار حسب النموذج، مع رسوم بنسبة 5,5% عند شراء الرصيد"
+                  }
+                ],
+                "text": "من 0,65 دولار إلى 16,20 دولار حسب النموذج، مع رسوم بنسبة 5,5% عند شراء الرصيد"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 49,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Together AI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا شيء قبل دفع 15 دولار على الأقل"
+                  }
+                ],
+                "text": "لا شيء قبل دفع 15 دولار على الأقل"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "1,35 دولار"
+                  }
+                ],
+                "text": "1,35 دولار"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "5,40 دولار"
+                  }
+                ],
+                "text": "5,40 دولار"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1060,7 +2784,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 1
+          "count": 2
         },
         "sheet": {
           "is": "cloud",
@@ -1083,14 +2807,66 @@ var views = {
               "tick": true
             },
             {
-              "line": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك",
+              "line": "مجانًا: لا شيء",
               "marks": [
                 {
-                  "id": "needs-address",
-                  "text": "يلزم عنوان"
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
                 }
               ],
-              "name": "عنوان مخصّص",
+              "name": "OpenAI",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء قبل دفع 15 دولار على الأقل",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: الشهر الأول",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "Lemonfox",
               "tag": "غير مُختبَرة",
               "tick": false
             }
@@ -1110,6 +2886,148 @@ var views = {
       },
       "place": "above",
       "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudLong-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "عنوان HTTPS ونموذج ومفتاح تكتبها بنفسك",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "يلزم عنوان"
+                }
+              ],
+              "name": "عنوان مخصّص",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            },
+            {
+              "line": "مجانًا: حصة صغيرة للحسابات الجديدة",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: لا شيء",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -5430,7 +7348,150 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 37,
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to DeepInfra only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not used for training"
+                  }
+                ],
+                "text": "Not used for training"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Nothing: held in memory only while it works"
+                  }
+                ],
+                "text": "Nothing: held in memory only while it works"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5577,7 +7638,730 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Lemonfox only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Nothing: deleted right after processing"
+                  }
+                ],
+                "text": "Nothing: deleted right after processing"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Mistral only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "European Union"
+                  }
+                ],
+                "text": "European Union"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated; this account switch stops it: "
+                  },
+                  {
+                    "own": true,
+                    "text": "Admin panel → Privacy → Anonymous improvement data"
+                  }
+                ],
+                "text": "Not stated; this account switch stops it: Admin panel → Privacy → Anonymous improvement data"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated; keeping nothing is only on request"
+                  }
+                ],
+                "text": "Not stated; keeping nothing is only on request"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to OpenAI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "United States"
+                  }
+                ],
+                "text": "United States"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Only if you opt in"
+                  }
+                ],
+                "text": "Only if you opt in"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Nothing"
+                  }
+                ],
+                "text": "Nothing"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to OpenRouter only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Depends on the host that serves the model"
+                  }
+                ],
+                "text": "Depends on the host that serves the model"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Depends on the host that serves the model"
+                  }
+                ],
+                "text": "Depends on the host that serves the model"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Depends on the host; a switch, on to start, sends only to hosts that keep nothing"
+                  }
+                ],
+                "text": "Depends on the host; a switch, on to start, sends only to hosts that keep nothing"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLong-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Together AI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Only if you opt in"
+                  }
+                ],
+                "text": "Only if you opt in"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Your requests, by default; this account switch stops that: "
+                  },
+                  {
+                    "own": true,
+                    "text": "Organization Settings → Privacy → Prompt storage"
+                  }
+                ],
+                "text": "Your requests, by default; this account switch stops that: Organization Settings → Privacy → Prompt storage"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5713,7 +8497,150 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 38,
+      "round": 47,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to DeepInfra only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "None"
+                  }
+                ],
+                "text": "None"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$0.18 to $1.80 by model"
+                  }
+                ],
+                "text": "$0.18 to $1.80 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$0.72 to $7.20 by model"
+                  }
+                ],
+                "text": "$0.72 to $7.20 by model"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -5870,7 +8797,722 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Lemonfox only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "The first month"
+                  }
+                ],
+                "text": "The first month"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$5"
+                  }
+                ],
+                "text": "$5"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$10"
+                  }
+                ],
+                "text": "$10"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 45,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Mistral only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "None"
+                  }
+                ],
+                "text": "None"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$3.15 to $3.60 by model"
+                  }
+                ],
+                "text": "$3.15 to $3.60 by model"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$12.60 to $14.40 by model"
+                  }
+                ],
+                "text": "$12.60 to $14.40 by model"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 41,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to OpenAI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "None"
+                  }
+                ],
+                "text": "None"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$4.05"
+                  }
+                ],
+                "text": "$4.05"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$16.20"
+                  }
+                ],
+                "text": "$16.20"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to OpenRouter only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "A small allowance for new accounts"
+                  }
+                ],
+                "text": "A small allowance for new accounts"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$0.16 to $4.05 by model, plus a 5.5% fee on credit"
+                  }
+                ],
+                "text": "$0.16 to $4.05 by model, plus a 5.5% fee on credit"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$0.65 to $16.20 by model, plus a 5.5% fee on credit"
+                  }
+                ],
+                "text": "$0.65 to $16.20 by model, plus a 5.5% fee on credit"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 49,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Together AI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "None before you pay at least $15"
+                  }
+                ],
+                "text": "None before you pay at least $15"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$1.35"
+                  }
+                ],
+                "text": "$1.35"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$5.40"
+                  }
+                ],
+                "text": "$5.40"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -6227,7 +9869,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 1
+          "count": 2
         },
         "sheet": {
           "is": "cloud",
@@ -6250,14 +9892,66 @@ var views = {
               "tick": true
             },
             {
-              "line": "An HTTPS address, a model and a key you type",
+              "line": "Free: None",
               "marks": [
                 {
-                  "id": "needs-address",
-                  "text": "Needs an address"
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
                 }
               ],
-              "name": "Custom address",
+              "name": "OpenAI",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None before you pay at least $15",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: The first month",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "Lemonfox",
               "tag": "Untested",
               "tick": false
             }
@@ -6277,6 +9971,148 @@ var views = {
       },
       "place": "above",
       "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudLong-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "An HTTPS address, a model and a key you type",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Needs an address"
+                }
+              ],
+              "name": "Custom address",
+              "tag": "Untested",
+              "tick": true
+            },
+            {
+              "line": "Free: A small allowance for new accounts",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: None",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "Untested",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10597,7 +14433,150 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 46,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers DeepInfra qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non utilisée pour l’entraînement"
+                  }
+                ],
+                "text": "Non utilisée pour l’entraînement"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Rien : gardé en mémoire le temps du traitement seulement"
+                  }
+                ],
+                "text": "Rien : gardé en mémoire le temps du traitement seulement"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10744,7 +14723,730 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 35,
+      "round": 36,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Lemonfox qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Rien : tout est supprimé juste après le traitement"
+                  }
+                ],
+                "text": "Rien : tout est supprimé juste après le traitement"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 44,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Mistral qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Union européenne"
+                  }
+                ],
+                "text": "Union européenne"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé ; ce réglage du compte l’arrête : "
+                  },
+                  {
+                    "own": true,
+                    "text": "Admin panel → Privacy → Anonymous improvement data"
+                  }
+                ],
+                "text": "Non précisé ; ce réglage du compte l’arrête : Admin panel → Privacy → Anonymous improvement data"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé ; ne rien garder n’est possible que sur demande"
+                  }
+                ],
+                "text": "Non précisé ; ne rien garder n’est possible que sur demande"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 40,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers OpenAI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "États-Unis"
+                  }
+                ],
+                "text": "États-Unis"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Seulement si vous l’acceptez"
+                  }
+                ],
+                "text": "Seulement si vous l’acceptez"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Rien"
+                  }
+                ],
+                "text": "Rien"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 38,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers OpenRouter qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Dépend de l’hébergeur qui sert le modèle"
+                  }
+                ],
+                "text": "Dépend de l’hébergeur qui sert le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Dépend de l’hébergeur qui sert le modèle"
+                  }
+                ],
+                "text": "Dépend de l’hébergeur qui sert le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien"
+                  }
+                ],
+                "text": "Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 48,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLong-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Together AI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Seulement si vous l’acceptez"
+                  }
+                ],
+                "text": "Seulement si vous l’acceptez"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Vos requêtes, par défaut ; ce réglage du compte l’arrête : "
+                  },
+                  {
+                    "own": true,
+                    "text": "Organization Settings → Privacy → Prompt storage"
+                  }
+                ],
+                "text": "Vos requêtes, par défaut ; ce réglage du compte l’arrête : Organization Settings → Privacy → Prompt storage"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -10880,7 +15582,150 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 47,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-deepinfra": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers DeepInfra qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Aucun"
+                  }
+                ],
+                "text": "Aucun"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 0,18 $ à 1,80 $ selon le modèle"
+                  }
+                ],
+                "text": "De 0,18 $ à 1,80 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 0,72 $ à 7,20 $ selon le modèle"
+                  }
+                ],
+                "text": "De 0,72 $ à 7,20 $ selon le modèle"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.deepinfra.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "DeepInfra",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11037,7 +15882,722 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-lemonfox": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Lemonfox qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Le premier mois"
+                  }
+                ],
+                "text": "Le premier mois"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "5 $"
+                  }
+                ],
+                "text": "5 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "10 $"
+                  }
+                ],
+                "text": "10 $"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir www.lemonfox.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Lemonfox",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 45,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-mistral": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Mistral qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Aucun"
+                  }
+                ],
+                "text": "Aucun"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 3,15 $ à 3,60 $ selon le modèle"
+                  }
+                ],
+                "text": "De 3,15 $ à 3,60 $ selon le modèle"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 12,60 $ à 14,40 $ selon le modèle"
+                  }
+                ],
+                "text": "De 12,60 $ à 14,40 $ selon le modèle"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.mistral.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Mistral",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 41,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-openai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers OpenAI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Aucun"
+                  }
+                ],
+                "text": "Aucun"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,05 $"
+                  }
+                ],
+                "text": "4,05 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "16,20 $"
+                  }
+                ],
+                "text": "16,20 $"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir developers.openai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "OpenAI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 39,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-openrouter": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers OpenRouter qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Un petit quota pour les nouveaux comptes"
+                  }
+                ],
+                "text": "Un petit quota pour les nouveaux comptes"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 0,16 $ à 4,05 $ selon le modèle, plus 5,5 % de frais sur le crédit"
+                  }
+                ],
+                "text": "De 0,16 $ à 4,05 $ selon le modèle, plus 5,5 % de frais sur le crédit"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "De 0,65 $ à 16,20 $ selon le modèle, plus 5,5 % de frais sur le crédit"
+                  }
+                ],
+                "text": "De 0,65 $ à 16,20 $ selon le modèle, plus 5,5 % de frais sur le crédit"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir openrouter.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "OpenRouter",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 49,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-together": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Together AI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Aucun avant de payer au moins 15 $"
+                  }
+                ],
+                "text": "Aucun avant de payer au moins 15 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "1,35 $"
+                  }
+                ],
+                "text": "1,35 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "5,40 $"
+                  }
+                ],
+                "text": "5,40 $"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir docs.together.ai",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Together AI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 43,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -11394,7 +16954,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 1
+          "count": 2
         },
         "sheet": {
           "is": "cloud",
@@ -11417,14 +16977,66 @@ var views = {
               "tick": true
             },
             {
-              "line": "Une adresse HTTPS, un modèle et une clé à saisir",
+              "line": "Gratuit : Aucun",
               "marks": [
                 {
-                  "id": "needs-address",
-                  "text": "Adresse requise"
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
                 }
               ],
-              "name": "Adresse personnalisée",
+              "name": "OpenAI",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "Mistral",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun avant de payer au moins 15 $",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "Together AI",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Le premier mois",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "Lemonfox",
               "tag": "Non testé",
               "tick": false
             }
@@ -11444,6 +17056,148 @@ var views = {
       },
       "place": "above",
       "round": 34,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudLong-2": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Une adresse HTTPS, un modèle et une clé à saisir",
+              "marks": [
+                {
+                  "id": "needs-address",
+                  "text": "Adresse requise"
+                }
+              ],
+              "name": "Adresse personnalisée",
+              "tag": "Non testé",
+              "tick": true
+            },
+            {
+              "line": "Gratuit : Un petit quota pour les nouveaux comptes",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "OpenRouter",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Aucun",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "DeepInfra",
+              "tag": "Non testé",
+              "tick": false
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 35,
       "sounds": true,
       "words": {
         "copied": "Copié",

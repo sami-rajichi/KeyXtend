@@ -50,6 +50,7 @@ fn shape_of(shape: CloudShape) -> NetShape<'static> {
                     value: Cow::Owned(f.value),
                 })
                 .collect(),
+            paywall: form.paywall,
         }),
         CloudShape::Azure => NetShape::Azure,
         CloudShape::Eleven => NetShape::Eleven,

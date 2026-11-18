@@ -92,8 +92,8 @@ impl<'a> Cloud<'a> {
         self.resolve(s, lang, id, model)
     }
 
-    /// Why `service`'s `model` cannot be used now: a model every host of which keeps the voice, while the row's
-    /// keep-nothing switch is on (edge 17). A typed id's hosts are checked later, so it is never unavailable here.
+    /// Why `service`'s `model` cannot be used now: a model every host of which keeps the voice, listed or typed by its
+    /// id, while the row's keep-nothing switch is on (edge 17). Another typed id's hosts are checked when it is sent.
     #[must_use]
     pub fn unavailable(
         &self,
@@ -101,7 +101,11 @@ impl<'a> Cloud<'a> {
         service: &Service,
         model: Chosen<'_>,
     ) -> Option<Unavailable> {
-        let keeps = matches!(model, Chosen::Listed(m) if m.keeps);
+        let listed = match model {
+            Chosen::Listed(m) => Some(m),
+            Chosen::Typed(id) => service.model(id),
+        };
+        let keeps = listed.is_some_and(|m| m.keeps);
         let on = self.entry(s, service).is_some_and(|e| e.keep);
         (keeps && on && service.keep.is_some()).then_some(Unavailable::KeepNothing)
     }

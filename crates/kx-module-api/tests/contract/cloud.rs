@@ -89,6 +89,7 @@ fn ask() -> CloudAsk {
         lang: "language".into(),
         list: false,
         fixed: Vec::new(),
+        paywall: false,
     });
     let piece = || Redacted::new(Zeroizing::new(vec![0; 4]));
     CloudAsk {

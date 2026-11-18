@@ -18,6 +18,7 @@ mod cloud;
 mod icons;
 mod newer;
 pub(crate) mod own;
+mod table;
 
 /// A language as the module names it, by its own name.
 fn named(name: &str) -> VoiceLang {
