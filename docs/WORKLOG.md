@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-18 20:25 — P11: type a key, address and model on our keyboard
+The Voice panel now joins the keyboard's panels, so a service key, a Custom address and an "Other model" id can be typed on our own keyboard, and the keys go to the panel only while one of these lines shows. The key shows only as dots, lives only in the voice module, and is wiped on Save, Cancel, leaving the page or closing the panel, and a test confirms that no screen and no log line holds it. Each line has its own Save, which screen readers name as "Save the key", "Save the address" or "Save the model", and a press on a line picks it with one key sound, also when Narrator presses it. ADR-0049 records that the panel takes keys only while a line shows.
+
 ## 2026-11-18 16:32 — P11: the cloud pages drawn in three languages
 The Voice panel now draws the Cloud page, each service's card, the key and address lines, Compare's send warning and the Models page's Local | Cloud switch, in the keyboard's theme and in English, French and Arabic. Every page fits the panel at both sizes with no scrolling; a card, or a key page with an address, takes two pages. A service's own setting name ends its sentence after a colon, so it reads correctly in Arabic, and old facts or a refused key show in the warning tone. The bar names the cloud service while it works and says why when it cannot, and "Use the local model" dims when no local model is ready.
 
