@@ -2,15 +2,13 @@
 //! again when asked and closed at the stop; the keys the keyboard sends while it is aimed at; and the close another
 //! panel brings.
 
-use kx_module_api::ports::{PanelKey, VoiceLine};
+use kx_module_api::ports::{PanelKey, PanelLine, VoiceLine};
 
 use super::Actor;
 
 impl Actor {
-    /// Tells the keyboard the panel's line when it changed since last told.
-    pub(super) fn tell_line(&mut self) {
-        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
-        let line = self.panel.line(&facts);
+    /// Tells the keyboard the panel's `line`, read from its view's facts, when it changed since last told.
+    pub(super) fn tell_line(&mut self, line: Option<PanelLine>) {
         if line != self.line {
             self.line.clone_from(&line);
             self.publish(&VoiceLine(line));

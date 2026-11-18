@@ -108,3 +108,28 @@ fn a_click_on_a_line_places_its_caret_and_its_save_sends_the_line() {
         assert!(heard.sent.acts().is_empty(), "{kind} {id} {arg}");
     }
 }
+
+#[test]
+fn each_lines_save_has_its_own_name_for_readers() {
+    let p = typed(0, CloudLine::Key, 0, &[]);
+    let sheet = &p["sheet"];
+    let save = |line: &str| {
+        let all = sheet[line]["buttons"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let it = all.into_iter().find(|b| b["kind"] == SAVE).unwrap();
+        (
+            it["label"].as_str().map(str::to_owned),
+            it["name"].as_str().map(str::to_owned),
+        )
+    };
+    let named = |name: &str| (Some("Save".to_owned()), Some(name.to_owned()));
+    assert_eq!(
+        save("key"),
+        named("Save the key"),
+        "a short label, a full name"
+    );
+    assert_eq!(save("address"), named("Save the address"));
+    assert_eq!(save("model"), named("Save the model"));
+}

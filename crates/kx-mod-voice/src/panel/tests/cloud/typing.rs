@@ -117,10 +117,12 @@ fn the_typed_key_is_wiped_on_paste_remove_leaving_the_page_and_closing() {
         |rig| drop(rig.click(&VoiceClick::Service(CloudButton::Remove))),
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Back));
+            assert!(rig.panel.cloud.typed.key.is_none(), "wiped on leaving");
             act(rig, 0, CloudButton::Lines);
         },
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Close));
+            assert!(rig.panel.cloud.typed.key.is_none(), "wiped on closing");
             rig.panel.open();
             rig.click(&VoiceClick::Open(VoiceTab::Cloud));
             act(rig, 0, CloudButton::Lines);

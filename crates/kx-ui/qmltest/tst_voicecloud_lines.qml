@@ -1,10 +1,12 @@
 // The key page's lines over the hub's views (ADR-0049): a typed key draws only its dots and its caret, the sealed key
 // gives way to an empty line once the keys aim at it, an address reads left to right in Arabic too, a click places the
-// caret, and each Save dims while its line is empty and sends its line, in English, French and Arabic.
+// caret, a reader's press picks its line, an empty line's hint starts at its caret, and each Save dims while its line is
+// empty, has a name of its own and sends its line, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
 import "board.js" as Board
+import "voicekit.js" as Kit
 
 Item {
     id: root
@@ -73,7 +75,8 @@ Item {
             mouseClick(line, 1, line.height / 2);
             mouseClick(line, line.width - 1, line.height / 2);
             const at = n => "act caret address " + n + " " + box.round;
-            compare(acts(box), [at(0), at(a.text.length)], "at its start, then past its end");
+            const end = at(a.text.length);
+            compare(acts(box), [end, at(0), end, end], "each click picks the line, then places its caret");
             box.visible = false;
         }
 
@@ -87,7 +90,51 @@ Item {
             mouseClick(one(box, "voice.save-model"));
             const sent = ["address", "model"].map(id => "act save " + id + " 0 " + box.round);
             compare(acts(box), sent);
-            compare(one(box, "voice.save-model").Accessible.name, box.view.sheet.model.buttons[0].label);
+            compare(one(box, "voice.save-model").Accessible.name, box.view.sheet.model.buttons[0].name);
+            box.visible = false;
+        }
+
+        function test_a_readers_press_on_a_line_picks_it_data() {
+            return langs_data();
+        }
+        function test_a_readers_press_on_a_line_picks_it(d) {
+            const box = make("serviceCustom", d.t);
+            const s = box.view.sheet;
+            one(box, "voice.line-model").aim();
+            one(box, "voice.line-address").aim();
+            const at = (id, n) => "act caret " + id + " " + n + " " + box.round;
+            compare(acts(box), [at("model", s.model.text.length), at("address", s.address.text.length)], "at its end");
+            box.visible = false;
+        }
+
+        function test_each_save_has_its_own_name_data() {
+            return langs_data();
+        }
+        function test_each_save_has_its_own_name(d) {
+            for (const [page, ids] of [["service", ["key", "model"]], ["serviceCustom", ["key", "address", "model"]]]) {
+                const box = make(page, d.t);
+                const saves = ids.map(id => one(box, "voice.save-" + id));
+                const names = saves.map(b => b.Accessible.name);
+                compare(new Set(names).size, names.length, page + ": " + names);
+                verify(saves.every(b => b.label === saves[0].label && b.Accessible.name !== b.label), "a short label, a full name");
+                box.visible = false;
+            }
+        }
+
+        // A left-to-right line's hint starts at its start, where the caret waits, as a text box shows its placeholder.
+        function test_an_empty_left_to_right_line_shows_its_hint_from_the_caret_in_arabic() {
+            const v = Kit.view("ar", "serviceCustom");
+            v.panel.sheet.address.text = v.panel.sheet.model.text = "";
+            const box = show(v, "ar");
+            box.aimed = true;
+            const hintOf = line => Board.all(line, o => o.visible && o.text === line.hint)[0];
+            for (const id of ["address", "model"]) {
+                const hint = hintOf(one(box, "voice.line-" + id));
+                compare(hint.effectiveHorizontalAlignment, Text.AlignLeft, id + "'s hint on the left");
+            }
+            const line = one(box, "voice.line-address");
+            const [mark, hint] = [caret(line).mapToItem(line, 0, 0).x, hintOf(line).mapToItem(line, 0, 0).x];
+            verify(mark < hint && hint < line.width / 2, "the caret, then the hint, from the left");
             box.visible = false;
         }
     }

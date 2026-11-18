@@ -36,20 +36,21 @@ impl Face {
         send_key(&bus, panel, key);
     }
 
-    /// A panel's module said it opened or closed. An open one asks the other to close, whatever the keyboard last
-    /// heard of it, with a close that never opens it, so a late or repeated word cannot leave both open. The mouse
-    /// module hears whether presses are wanted.
+    /// A panel's module said it opened or closed. A newly open one asks the others to close, whatever the keyboard last
+    /// heard of them, with a close that never opens them, so a late word cannot leave two open; a repeated word, as
+    /// each Voice line change, closes nothing. The mouse module hears whether presses are wanted.
     pub(super) fn heard_panel(&self, panel: Panel, open: bool) {
-        let bus = {
+        let (new, bus) = {
             let mut inner = self.lock();
-            if open {
-                inner.panel_opened(panel, self.outside());
+            let new = if open {
+                inner.panel_opened(panel, self.outside())
             } else {
                 inner.panel_shut(panel);
-            }
-            inner.bus()
+                false
+            };
+            (new, inner.bus())
         };
-        if open {
+        if new {
             close_others(&bus, panel);
         }
         self.pour();

@@ -161,6 +161,8 @@ Rectangle {
             width: parent.width - (line.takes ? line.clear : 0)
             anchors.verticalCenter: parent.verticalCenter
             text: line.hint
+            // It starts on the line's start side, where the caret waits, whatever language it reads in.
+            horizontalAlignment: line.rtl ? Text.AlignRight : Text.AlignLeft
             elide: Text.ElideRight
             font.family: line.res.fam.ui
             font.pixelSize: line.f[3] * line.s

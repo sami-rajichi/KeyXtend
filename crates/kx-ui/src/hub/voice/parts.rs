@@ -23,6 +23,9 @@ pub(super) struct Button {
     id: &'static str,
     arg: i32,
     label: String,
+    /// What readers hear when the label alone cannot tell it from its neighbours.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     on: bool,
     tone: Tone,
 }
@@ -35,6 +38,7 @@ impl Button {
             id,
             arg,
             label,
+            name: None,
             on: true,
             tone: Tone::Plain,
         }
@@ -65,6 +69,12 @@ impl Button {
     /// This button in `tone`.
     pub(super) const fn tone(mut self, tone: Tone) -> Self {
         self.tone = tone;
+        self
+    }
+
+    /// This button heard by readers as `name`, its label still shown.
+    pub(super) fn named(mut self, name: String) -> Self {
+        self.name = Some(name);
         self
     }
 

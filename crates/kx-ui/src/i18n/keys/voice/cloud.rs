@@ -99,6 +99,8 @@ pub const VOICE_MODEL_HINT: &str = "cloud.model-hint";
 pub const VOICE_MODEL_REFUSED: &str = "cloud.model-refused";
 /// A typed line's Save (ADR-0049).
 pub const VOICE_LINE_SAVE: &str = "cloud.line-save";
+/// A line's Save as readers hear it: this, then its `cloud_line_id`.
+pub const VOICE_LINE_SAVE_NAME: &str = "cloud.line-save-";
 /// The keep-nothing switch's label.
 pub const VOICE_KEEP_NOTHING: &str = "cloud.keep-nothing";
 /// The bar's cloud mark for readers: `$name`.

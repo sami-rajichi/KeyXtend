@@ -178,3 +178,20 @@ fn the_panel_closing_or_a_restart_gives_the_keys_back() {
     l.said();
     assert!(!l.letter_to_line(), "unheard since, so shut");
 }
+
+#[test]
+fn a_line_change_or_a_repeated_word_never_closes_the_others_again() {
+    let l = Lines::new();
+    let closes = || {
+        (l.said().into_iter())
+            .filter(|s| matches!(s, Said::FillClose | Said::ClipClose | Said::Close))
+    };
+    l.line(Some(PanelLine::None));
+    l.said();
+    l.line(Some(PanelLine::Private));
+    assert_eq!(closes().count(), 0, "the Voice panel's new line");
+    l.b.send(&ClipPanel { open: true });
+    l.said();
+    l.b.send(&ClipPanel { open: true });
+    assert_eq!(closes().count(), 0, "the clipboard panel's repeated word");
+}

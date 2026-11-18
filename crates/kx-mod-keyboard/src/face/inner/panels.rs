@@ -10,15 +10,17 @@ use std::collections::HashMap;
 impl Inner {
     /// Takes a module's word that `panel` opened, with `clicks` outside clicks heard so far; the next relabel redraws a
     /// change. The one opened last takes the keys, so one shows at a time, it aims unless the word only repeats, and it
-    /// closes the language list.
-    pub(in crate::face) fn panel_opened(&mut self, panel: Panel, clicks: u64) {
-        if self.open.replace(panel) != Some(panel) {
+    /// closes the language list. True when it newly opened.
+    pub(in crate::face) fn panel_opened(&mut self, panel: Panel, clicks: u64) -> bool {
+        let new = self.open.replace(panel) != Some(panel);
+        if new {
             self.aim_fresh(clicks);
             self.unshown = true;
         }
         if self.list.take().is_some() {
             self.unshown = true;
         }
+        new
     }
 
     /// Takes a module's word that `panel` closed, which ends the aim; closing another panel changes nothing.

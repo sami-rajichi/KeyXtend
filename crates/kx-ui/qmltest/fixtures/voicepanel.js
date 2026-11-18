@@ -4324,6 +4324,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
               },
@@ -4365,6 +4366,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ النموذج",
                 "on": false,
                 "tone": "plain"
               }
@@ -4467,6 +4469,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ العنوان",
                 "on": true,
                 "tone": "plain"
               }
@@ -4500,6 +4503,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
               },
@@ -4531,6 +4535,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ النموذج",
                 "on": true,
                 "tone": "plain"
               }
@@ -4648,6 +4653,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
               },
@@ -4770,6 +4776,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ العنوان",
                 "on": true,
                 "tone": "plain"
               }
@@ -4802,6 +4809,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ النموذج",
                 "on": true,
                 "tone": "plain"
               }
@@ -4924,6 +4932,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ المفتاح",
                 "on": false,
                 "tone": "plain"
               },
@@ -4965,6 +4974,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ النموذج",
                 "on": true,
                 "tone": "plain"
               }
@@ -5082,6 +5092,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ المفتاح",
                 "on": true,
                 "tone": "plain"
               },
@@ -5123,6 +5134,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "حفظ",
+                "name": "حفظ النموذج",
                 "on": false,
                 "tone": "plain"
               }
@@ -9479,6 +9491,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the key",
                 "on": false,
                 "tone": "plain"
               },
@@ -9520,6 +9533,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the model",
                 "on": false,
                 "tone": "plain"
               }
@@ -9622,6 +9636,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the address",
                 "on": true,
                 "tone": "plain"
               }
@@ -9655,6 +9670,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the key",
                 "on": false,
                 "tone": "plain"
               },
@@ -9686,6 +9702,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the model",
                 "on": true,
                 "tone": "plain"
               }
@@ -9803,6 +9820,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the key",
                 "on": false,
                 "tone": "plain"
               },
@@ -9925,6 +9943,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the address",
                 "on": true,
                 "tone": "plain"
               }
@@ -9957,6 +9976,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the model",
                 "on": true,
                 "tone": "plain"
               }
@@ -10079,6 +10099,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the key",
                 "on": false,
                 "tone": "plain"
               },
@@ -10120,6 +10141,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the model",
                 "on": true,
                 "tone": "plain"
               }
@@ -10237,6 +10259,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the key",
                 "on": true,
                 "tone": "plain"
               },
@@ -10278,6 +10301,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Save",
+                "name": "Save the model",
                 "on": false,
                 "tone": "plain"
               }
@@ -14634,6 +14658,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
               },
@@ -14675,6 +14700,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
                 "on": false,
                 "tone": "plain"
               }
@@ -14777,6 +14803,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer l’adresse",
                 "on": true,
                 "tone": "plain"
               }
@@ -14810,6 +14837,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
               },
@@ -14841,6 +14869,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
                 "on": true,
                 "tone": "plain"
               }
@@ -14958,6 +14987,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
               },
@@ -15080,6 +15110,7 @@ var views = {
                 "id": "address",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer l’adresse",
                 "on": true,
                 "tone": "plain"
               }
@@ -15112,6 +15143,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
                 "on": true,
                 "tone": "plain"
               }
@@ -15234,6 +15266,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer la clé",
                 "on": false,
                 "tone": "plain"
               },
@@ -15275,6 +15308,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
                 "on": true,
                 "tone": "plain"
               }
@@ -15392,6 +15426,7 @@ var views = {
                 "id": "key",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer la clé",
                 "on": true,
                 "tone": "plain"
               },
@@ -15433,6 +15468,7 @@ var views = {
                 "id": "model",
                 "kind": "save",
                 "label": "Enregistrer",
+                "name": "Enregistrer le modèle",
                 "on": false,
                 "tone": "plain"
               }

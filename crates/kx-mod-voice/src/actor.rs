@@ -247,11 +247,12 @@ impl Actor {
         let now = self.ports.calendar.now();
         let facts = self.held.facts(now, &self.flow);
         let view = self.panel.view(&facts);
+        let line = self.panel.line(&facts);
         if view != self.drawn {
             self.drawn.clone_from(&view);
             self.step(In::Panel(view.map(Box::new)));
         }
-        self.tell_line();
+        self.tell_line(line);
     }
 
     /// A click: the bar's buttons, the pointer, Try again and "Use the local model" go to the flow, the rest to the

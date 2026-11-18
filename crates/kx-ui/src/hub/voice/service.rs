@@ -13,9 +13,9 @@ use crate::i18n::keys::vars::SITE;
 use crate::i18n::keys::{
     VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN, VOICE_ADDRESS_LINE,
     VOICE_KEEP_NOTHING, VOICE_KEY, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK,
-    VOICE_KEY_SEALED, VOICE_LINE_SAVE, VOICE_MASK, VOICE_MODEL_HINT, VOICE_MODEL_LINE,
-    VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id, panel_button_id,
-    service_mark,
+    VOICE_KEY_SEALED, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT,
+    VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id,
+    panel_button_id, service_mark,
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -46,7 +46,7 @@ pub(super) struct LineView {
 
 impl LineView {
     /// Line `line` of `s` with `words`, its caption's key and its hint, and `text`; its caret while it takes the letters,
-    /// and its Save, which dims while it is empty.
+    /// and its Save, which dims while it is empty and names its line for readers.
     fn new(
         t: &I18n,
         s: &ServiceSheet,
@@ -55,9 +55,11 @@ impl LineView {
         text: String,
     ) -> Self {
         let typing = s.typing == line;
-        let save = Button::new(SAVE, cloud_line_id(line), 0, t.text(VOICE_LINE_SAVE));
+        let id = cloud_line_id(line);
+        let save = Button::new(SAVE, id, 0, t.text(VOICE_LINE_SAVE))
+            .named(t.text(&format!("{VOICE_LINE_SAVE_NAME}{id}")));
         Self {
-            id: cloud_line_id(line),
+            id,
             caption: t.text(words.0),
             hint: words.1,
             text,
