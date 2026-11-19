@@ -16,6 +16,7 @@ use kx_ui::i18n::keys::{
 mod approved;
 mod cloud;
 mod icons;
+mod money;
 mod newer;
 pub(crate) mod own;
 

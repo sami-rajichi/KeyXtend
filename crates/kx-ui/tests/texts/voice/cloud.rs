@@ -1,11 +1,11 @@
 //! Voice typing's cloud texts in each language (ADR-0047): every cloud id the hub words has its text, the owner's
-//! main words, each address fault and cloud reason its own line, and money in each language's way. A card's fact with a
-//! service's own words is in `own`, and the reworded lines in `approved`.
+//! main words, each address fault and cloud reason its own line, and the region note. Money is in `money`, a card's
+//! fact with a service's own words in `own`, and the reworded lines in `approved`.
 
 use crate::{all, lang};
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, Hundredths, KeyCheck, LINK_SCHEME,
-    ModelSide, Unavailable, VoiceLang,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, LINK_SCHEME, ModelSide,
+    Unavailable, VoiceLang,
 };
 use kx_ui::i18n::keys::{
     CARD_BILLS, CARD_LABELS, CLOUD_WORD, VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN,
@@ -258,37 +258,22 @@ fn each_cloud_reason_has_its_own_line_and_names_its_language_or_renewal() {
     assert!(ar.ends_with("ساعتان."), "{ar}");
 }
 
-#[test]
-fn money_reads_in_each_languages_way_with_cents_only_when_it_has_some() {
-    let usd = |tag: &str, h| lang(tag).voice_money(Hundredths(h), "USD");
-    assert_eq!(usd("en", 60), "$0.60");
-    assert_eq!(usd("en", 500), "$5");
-    assert_eq!(usd("fr", 60), "0,60\u{a0}$");
-    assert_eq!(usd("ar", 167), "1,67 دولار");
-    assert_eq!(lang("en").voice_money(Hundredths(69), "EUR"), "0.69 EUR");
-}
-
-/// Dollars in Arabic and the words they take: the noun agrees with a whole number, as CLDR's forms read it, and every
-/// fraction takes the singular, whatever its whole part.
-const DOLLARS: [(u32, &str); 11] = [
-    (100, "دولار واحد"),
-    (200, "دولاران"),
-    (300, "3 دولارات"),
-    (1100, "11 دولارًا"),
-    (1500, "15 دولارًا"),
-    (10_000, "100 دولار"),
-    (10_300, "103 دولارات"),
-    (60, "0,60 دولار"),
-    (167, "1,67 دولار"),
-    (720, "7,20 دولار"),
-    (1620, "16,20 دولار"),
+/// The region note in each language: the service is not offered in the user's country or region.
+const REGION: [(&str, &str); 3] = [
+    (
+        "en",
+        "The service is not offered in your country or region.",
+    ),
+    (
+        "fr",
+        "Le service n’est pas proposé dans votre pays ou votre région.",
+    ),
+    ("ar", "الخدمة غير متاحة في بلدك أو منطقتك."),
 ];
 
 #[test]
-fn arabic_dollars_agree_with_their_number_and_a_fraction_takes_the_singular() {
-    for (h, want) in DOLLARS {
-        assert_eq!(lang("ar").voice_money(Hundredths(h), "USD"), want, "{h}");
+fn the_region_note_says_the_service_is_not_offered_in_the_users_country_or_region() {
+    for (tag, want) in REGION {
+        assert_eq!(lang(tag).voice_cloud(&CloudWhy::Region), want, "{tag}");
     }
-    let usd = |tag: &str| lang(tag).voice_money(Hundredths(1500), "USD");
-    assert_eq!((usd("en"), usd("fr")), ("$15".into(), "15\u{a0}$".into()));
 }

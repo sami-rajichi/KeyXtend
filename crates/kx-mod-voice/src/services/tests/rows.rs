@@ -277,7 +277,7 @@ fn each_rows_prices_are_its_pages_numbers_for_light_and_heavy_use() {
 }
 
 #[test]
-fn openrouters_pieces_last_no_longer_than_its_upstream_timeout() {
+fn openrouters_piece_lasts_its_60_second_upstream_timeout() {
     // [R1]: "Upstream timeout is 60 s per request", so a longer recording goes in pieces.
     assert_eq!(shipped().get("openrouter").unwrap().limits.max_s, 60);
 }

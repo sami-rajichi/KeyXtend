@@ -16,7 +16,7 @@ use std::time::Duration;
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
 /// Each reworded line's key and its words in English, French and Arabic, `$https` filled.
-const LINES: [(&str, [&str; 3]); 12] = [
+const LINES: [(&str, [&str; 3]); 11] = [
     (
         "cloud.key-unfit",
         [
@@ -99,14 +99,6 @@ const LINES: [(&str, [&str; 3]); 12] = [
             "The free allowance is used up for now.",
             "Le quota gratuit est épuisé pour l’instant.",
             "نفدت الحصة المجانية حاليًا.",
-        ],
-    ),
-    (
-        "cloud.note-region",
-        [
-            "The service is not offered in your country or region.",
-            "Le service n’est pas proposé dans votre pays ou votre région.",
-            "الخدمة غير متاحة في بلدك أو منطقتك.",
         ],
     ),
 ];

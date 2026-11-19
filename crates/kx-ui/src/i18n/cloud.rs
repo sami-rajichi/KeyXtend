@@ -19,6 +19,12 @@ const FORM_END: &str = "-form";
 /// The money texts' variables.
 const AMOUNT_VAR: &str = "amount";
 const CODE_VAR: &str = "code";
+/// The money texts' case, `$case`: alone, or after a preposition such as Arabic's "من", where a dual is genitive.
+const CASE_VAR: &str = "case";
+const ALONE: &str = "alone";
+const AFTER: &str = "after";
+/// What a money value's form after a preposition takes after its name, as in `$low-after`.
+const AFTER_END: &str = "-after";
 /// A renewal's variable.
 const IN_VAR: &str = "in";
 /// What marks a name from a service's pages while its text is filled: these around the value's name.
@@ -26,8 +32,8 @@ const OPEN: char = '\u{1}';
 const SHUT: char = '\u{2}';
 /// Money's decimals, shown only when it has cents.
 const CENTS: u32 = 2;
-/// CLDR's plural form for an Arabic fraction, by name: `intl_pluralrules` 7.0.2 reads a fraction's few and many by its
-/// whole part, so 7.20 would take the plural.
+/// CLDR's plural form for an Arabic fraction, by name, set for every language though only Arabic's money selects on it:
+/// `intl_pluralrules` 7.0.2 reads a fraction's few and many by its whole part, so 7.20 would take the plural.
 const FRACTION_FORM: &str = "other";
 /// Seconds in a minute, and minutes in an hour: a renewal reads in minutes below an hour.
 const SECS_PER_MIN: u64 = 60;
@@ -68,7 +74,9 @@ impl I18n {
                 }
                 FactValue::Number(h) => values.set(name, self.hundredths(*h, false)),
                 FactValue::Money { amount, currency } => {
-                    values.set(name, self.voice_money(*amount, currency));
+                    let after = self.money(*amount, currency, AFTER);
+                    values.set(format!("{name}{AFTER_END}"), after);
+                    values.set(name, self.money(*amount, currency, ALONE));
                 }
                 FactValue::Day(d) => values.set(name, self.voice_date(*d)),
                 FactValue::Text(t) => {
@@ -85,6 +93,11 @@ impl I18n {
     /// plural form its noun takes, as Arabic's dollars agree with their number.
     #[must_use]
     pub fn voice_money(&self, amount: Hundredths, currency: &str) -> String {
+        self.money(amount, currency, ALONE)
+    }
+
+    /// `voice_money` in `case`, which `$case` names: alone, or after a preposition, where Arabic's dual is genitive.
+    fn money(&self, amount: Hundredths, currency: &str, case: &'static str) -> String {
         let cents = !amount.0.is_multiple_of(Hundredths::PER_ONE);
         let shown = self.hundredths(amount, cents);
         let code = clean(currency);
@@ -92,6 +105,7 @@ impl I18n {
         let mut values = FluentArgs::new();
         values.set(AMOUNT_VAR, shown);
         values.set(format!("{AMOUNT_VAR}{FORM_END}"), money_form(amount, cents));
+        values.set(CASE_VAR, case);
         if self.has(&key) {
             return self.format(&key, Some(&values));
         }
