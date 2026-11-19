@@ -1,8 +1,9 @@
-//! The key page says why, in its own words: a Paste the clipboard could not answer shows Busy on the key's line, not
-//! the general fault, and only until the page changes; an Other model id the frames refuse stays on its line likewise.
+//! The key page says why, in its own words: a test's refusal names its reason, a Paste the clipboard could not answer
+//! shows Busy on the key's line, not the general fault, and only until the page changes; an Other model id the frames
+//! refuse stays on its line likewise.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipText, CloudButton, KeyCheck, PanelButton, VoiceClick};
+use kx_module_api::ports::{ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, VoiceClick};
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
@@ -47,6 +48,27 @@ fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
         !lines_sheet(&mut rig).model_refused,
         "a new page forgets it"
     );
+}
+
+#[test]
+fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
+    let cases = [
+        (CloudFault::Key, KeyCheck::Refused),
+        (CloudFault::Credit, KeyCheck::Credit),
+        (CloudFault::Account, KeyCheck::Account),
+        (CloudFault::Region, KeyCheck::Region),
+        (CloudFault::Network, KeyCheck::Failed),
+        (CloudFault::Gone, KeyCheck::Failed),
+    ];
+    for (fault, said) in cases {
+        let mut rig = on_groq_lines();
+        let out = rig.click(&VoiceClick::Service(CloudButton::Test));
+        let [Do::Test { ticket, .. }] = out[..] else {
+            panic!("no test: {out:?}");
+        };
+        rig.with(|p, _| p.tested(ticket, Err(fault)));
+        assert_eq!(lines_sheet(&mut rig).check, said, "{fault:?}");
+    }
 }
 
 #[test]

@@ -86,7 +86,7 @@ impl Panel {
         Vec::new()
     }
 
-    /// The test of `ticket` answered; dropped once the user left the page or changed the key.
+    /// The test of `ticket` answered, a refusal by its reason; dropped once the user left the page or changed the key.
     pub fn tested(&mut self, ticket: u32, answer: Result<(), CloudFault>) {
         if self.cloud.test != Some(ticket) || self.page != Some(Page::Lines) {
             return;
@@ -95,6 +95,9 @@ impl Panel {
         self.cloud.check = match answer {
             Ok(()) => KeyCheck::Works,
             Err(CloudFault::Key) => KeyCheck::Refused,
+            Err(CloudFault::Credit) => KeyCheck::Credit,
+            Err(CloudFault::Account) => KeyCheck::Account,
+            Err(CloudFault::Region) => KeyCheck::Region,
             Err(_) => KeyCheck::Failed,
         };
     }

@@ -1,6 +1,6 @@
 //! Voice typing's cloud texts in each language (ADR-0047): every cloud id the hub words has its text, the owner's
-//! main words, each address fault and cloud reason its own line, and the region and account notes. Money is in `money`, a card's
-//! fact with a service's own words in `own`, and the reworded lines in `approved`.
+//! main words, each address fault and cloud reason its own line, and the region and account notes. Money is in
+//! `money`, a card's fact with a service's own words in `own`, and the reworded lines in `approved`.
 
 use crate::{all, lang};
 use kx_module_api::ports::{
@@ -17,7 +17,8 @@ use kx_ui::i18n::keys::{
     VOICE_KEY_LINE, VOICE_KEY_LINK, VOICE_KEY_SEALED, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME,
     VOICE_MODEL_HINT, VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, VOICE_MODELS_SIDE, VOICE_MODELS_SIDES,
     VOICE_MONEY_ANY, VOICE_NOTE_RENEWS, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL,
-    address_fault_id, cloud_band_id, cloud_button_key, cloud_line_id, key_check_id, model_side_id,
+    address_fault_id, cloud_band_id, cloud_button_key, cloud_line_id, key_check_id, key_check_why,
+    model_side_id,
 };
 use std::time::Duration;
 
@@ -108,6 +109,7 @@ fn keys() -> Vec<String> {
     keys.extend(
         KeyCheck::ALL
             .into_iter()
+            .filter(|&c| key_check_why(c).is_none())
             .filter_map(key_check_id)
             .map(|id| format!("{VOICE_KEY}{id}")),
     );

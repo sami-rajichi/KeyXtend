@@ -7174,8 +7174,8 @@ var views = {
         "sheet": {
           "address": null,
           "check": {
-            "id": "failed",
-            "text": "لم يصل رد بشأن المفتاح. تحقّق من الشبكة واختبره مرة أخرى."
+            "id": "account",
+            "text": "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع."
           },
           "is": "service",
           "keep": null,
@@ -14883,8 +14883,8 @@ var views = {
         "sheet": {
           "address": null,
           "check": {
-            "id": "failed",
-            "text": "No answer about the key. Check the network and test again."
+            "id": "account",
+            "text": "The service asks for a step on its site, such as a verification or a payment method."
           },
           "is": "service",
           "keep": null,
@@ -22592,8 +22592,8 @@ var views = {
         "sheet": {
           "address": null,
           "check": {
-            "id": "failed",
-            "text": "Aucune réponse sur la clé. Vérifiez le réseau et testez de nouveau."
+            "id": "account",
+            "text": "Le service demande une étape sur son site, comme une vérification ou un moyen de paiement."
           },
           "is": "service",
           "keep": null,

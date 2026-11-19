@@ -48,6 +48,12 @@ listed! {
         Refused,
         /// The test got no answer about the key, as the network failed; Test may be tried again.
         Failed,
+        /// The service answered that the account has no credit left, which no key fixes.
+        Credit,
+        /// The service asks for a step on its site first, such as a verification, a payment method or a raised cap.
+        Account,
+        /// The service is not offered where the user is.
+        Region,
         /// The text set or pasted is no key a request can carry, so nothing was kept.
         Unfit,
         /// The row has no test call, so the first dictation tests the key.

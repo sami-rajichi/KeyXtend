@@ -55,9 +55,19 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 }
 
 #[test]
+fn a_key_tests_answers_are_the_designs_with_a_refusals_own_reasons() {
+    use KeyCheck::{
+        Account, Busy, Credit, Failed, NoTest, Refused, Region, Testing, Unfit, Untested, Works,
+    };
+    let checks = [
+        Untested, Testing, Works, Refused, Failed, Credit, Account, Region, Unfit, NoTest, Busy,
+    ];
+    assert_eq!(KeyCheck::ALL, checks);
+}
+
+#[test]
 fn the_marks_and_buttons_are_the_designs() {
     use CloudButton::{Facts, Lines, Link, Paste, Remove, Test};
-    use KeyCheck::{Busy, Failed, NoTest, Refused, Testing, Unfit, Works};
     use ServiceMark::{NeedsAddress, NeedsKey, Off, Ready};
     assert_eq!(
         ServiceMark::ALL,
@@ -75,17 +85,6 @@ fn the_marks_and_buttons_are_the_designs() {
         Link,
     ];
     assert_eq!(CloudButton::ALL, want);
-    let checks = [
-        KeyCheck::Untested,
-        Testing,
-        Works,
-        Refused,
-        Failed,
-        Unfit,
-        NoTest,
-        Busy,
-    ];
-    assert_eq!(KeyCheck::ALL, checks);
 
     let faults = [
         AddressFault::Https,

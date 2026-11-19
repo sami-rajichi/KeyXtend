@@ -6,11 +6,13 @@ use super::I18n;
 use super::compose::{clean, form};
 use super::keys::vars::{HTTPS, LANG};
 use super::keys::{
-    VOICE_HOURS, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
-    cloud_why_id, fact_key,
+    VOICE_HOURS, VOICE_KEY, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD,
+    VOICE_NOTE_RENEWS, cloud_why_id, fact_key, key_check_id, key_check_why,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
-use kx_module_api::ports::{CloudWhy, Fact, FactValue, Hundredths, LINK_SCHEME, VoiceLang};
+use kx_module_api::ports::{
+    CloudWhy, Fact, FactValue, Hundredths, KeyCheck, LINK_SCHEME, VoiceLang,
+};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -129,6 +131,17 @@ impl I18n {
             CloudWhy::Language(lang) => self.cloud_line(cloud_why_id(why), lang),
             _ => self.text(&format!("{VOICE_NOTE_CLOUD}{}", cloud_why_id(why))),
         }
+    }
+
+    /// A key test's answer: the cloud note of the reason the service gave, else the key page's own line; none while
+    /// untested.
+    #[must_use]
+    pub fn voice_key_check(&self, check: KeyCheck) -> Option<String> {
+        let id = key_check_id(check)?;
+        Some(match key_check_why(check) {
+            Some(why) => self.voice_cloud(&why),
+            None => self.text(&format!("{VOICE_KEY}{id}")),
+        })
     }
 
     /// The cloud line `id`, with `$lang` set to `lang`'s name for the lines that take it.

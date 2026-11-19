@@ -12,10 +12,10 @@ use crate::i18n::clean;
 use crate::i18n::keys::vars::SITE;
 use crate::i18n::keys::{
     VOICE_ADDRESS, VOICE_ADDRESS_HINT, VOICE_ADDRESS_HINT_OWN, VOICE_ADDRESS_LINE,
-    VOICE_KEEP_NOTHING, VOICE_KEY, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK,
-    VOICE_KEY_SEALED, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT,
-    VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id,
-    panel_button_id, service_mark,
+    VOICE_KEEP_NOTHING, VOICE_KEY_HINT, VOICE_KEY_LINE, VOICE_KEY_LINK, VOICE_KEY_SEALED,
+    VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MASK, VOICE_MODEL_HINT, VOICE_MODEL_LINE,
+    VOICE_MODEL_REFUSED, address_fault_id, cloud_line_id, key_check_id, panel_button_id,
+    service_mark,
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
@@ -94,7 +94,9 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
         s.part != Some(LinesPart::Model),
         s.part != Some(LinesPart::Key),
     );
-    let check = key_check_id(s.check).map(|id| Hint::new(id, t.text(&format!("{VOICE_KEY}{id}"))));
+    let check = key_check_id(s.check)
+        .zip(t.voice_key_check(s.check))
+        .map(|(id, text)| Hint::new(id, text));
     let link = s.site.as_ref().map(|site| {
         let text = t.voice_with(VOICE_KEY_LINK, &[(SITE, clean(site))]);
         let open = t.text(&word(panel_button_id(PanelButton::Open)));

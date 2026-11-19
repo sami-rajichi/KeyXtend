@@ -148,7 +148,7 @@ fn service_long(part: LinesPart) -> VoiceSheet {
     let VoiceSheet::Service(mut s) = lines("custom") else {
         unreachable!("a key page")
     };
-    (s.key, s.check) = (Redacted::new(56), KeyCheck::Failed);
+    (s.key, s.check) = (Redacted::new(56), KeyCheck::Account);
     (s.address_fault, s.keep) = (Some(AddressFault::Path), Some(true));
     (s.site, s.part) = (Some("console.groq.com".to_owned()), Some(part));
     VoiceSheet::Service(s)

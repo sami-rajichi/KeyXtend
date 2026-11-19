@@ -191,7 +191,8 @@ pub const fn cloud_button_key(button: CloudButton) -> &'static str {
     }
 }
 
-/// A key test's id, whose line is `cloud.key-` then it; `None` while untested, which shows no line.
+/// A key test's id, whose line is `cloud.key-` then it unless `key_check_why` names a reason; `None` while untested,
+/// which shows no line.
 #[must_use]
 pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
     Some(match check {
@@ -200,10 +201,24 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
         KeyCheck::Works => "ok",
         KeyCheck::Refused => "bad",
         KeyCheck::Failed => "failed",
+        KeyCheck::Credit => "credit",
+        KeyCheck::Account => "account",
+        KeyCheck::Region => "region",
         KeyCheck::Unfit => "unfit",
         KeyCheck::NoTest => "no-test",
         KeyCheck::Busy => "busy",
     })
+}
+
+/// The cloud reason whose note a key test's answer reads as, so each reason is written once; `None` for the rest.
+#[must_use]
+pub const fn key_check_why(check: KeyCheck) -> Option<CloudWhy> {
+    match check {
+        KeyCheck::Credit => Some(CloudWhy::Credit),
+        KeyCheck::Account => Some(CloudWhy::Account),
+        KeyCheck::Region => Some(CloudWhy::Region),
+        _ => None,
+    }
 }
 
 /// An address fault's id.

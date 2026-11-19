@@ -1,6 +1,7 @@
-//! A service's key page through the hub: the key as dots with Paste and Test and the test's answer, where keys are
-//! made and that the key is sealed, a refused address or model or a busy Paste each with its reason (carries 1, 5),
-//! the keep-nothing switch with a model no host of which keeps nothing (edge 17), and its two parts for a typed address.
+//! A service's key page through the hub: the key as dots with Paste and Test and the test's answer, a refusal by the
+//! note of its reason, where keys are made and that the key is sealed, a refused address or model or a busy Paste each
+//! with its reason (carries 1, 5), the keep-nothing switch with a model no host of which keeps nothing (edge 17), and
+//! its two parts for a typed address.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{groq, marks, pairs};
@@ -122,6 +123,38 @@ fn the_key_page_says_where_keys_are_made_and_that_the_key_is_sealed() {
         button(SERVICE, "off", "Switch off", true, "plain"),
     ];
     assert_eq!(buttons(&p["foot"]), foot);
+}
+
+#[test]
+fn a_tests_refusal_reads_as_the_cloud_note_of_its_reason_and_no_answer_as_its_own() {
+    let cases = [
+        (
+            KeyCheck::Credit,
+            "credit",
+            "The account has no credit left.",
+        ),
+        (
+            KeyCheck::Account,
+            "account",
+            "The service asks for a step on its site, such as a verification or a payment method.",
+        ),
+        (
+            KeyCheck::Region,
+            "region",
+            "The service is not offered in your country or region.",
+        ),
+        (
+            KeyCheck::Failed,
+            "failed",
+            "No answer about the key. Check the network and test again.",
+        ),
+    ];
+    for (check, id, text) in cases {
+        let mut lines = groq_lines();
+        lines.check = check;
+        let p = lines_json(lines);
+        assert_eq!(marks(&one(&p["sheet"]["check"])), pairs(&[(id, text)]));
+    }
 }
 
 #[test]
