@@ -49,6 +49,9 @@ fn shape_of(shape: CloudShape) -> NetShape<'static> {
             fixed: fields_of(own.fixed),
         }),
         CloudShape::Gemini => NetShape::Gemini,
+        CloudShape::Assembly { model_header } => NetShape::Assembly {
+            model_header: Cow::Owned(model_header),
+        },
     }
 }
 

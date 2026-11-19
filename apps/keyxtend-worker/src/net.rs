@@ -3,6 +3,7 @@
 //! are read on a thread of their own and each request runs on one, so `Cancel` is answered while requests wait; the
 //! key and the sound stay in wiped buffers and never reach a note, a log or stderr.
 
+mod assembly;
 mod base64;
 pub mod clock;
 mod eleven;

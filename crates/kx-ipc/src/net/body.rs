@@ -38,7 +38,7 @@ fn read_text<R: Read + ?Sized>(
 }
 
 /// Sends a shape: its code, then an upload form's language name, list flag, fixed fields, paywall flag and region
-/// code, or `ElevenLabs`' language name and fixed fields.
+/// code, `ElevenLabs`' language name and fixed fields, or `AssemblyAI`'s model header name.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     s.byte(shape.code().code())?;
     match shape {
@@ -48,6 +48,7 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
             put_fixed(s, &own.fixed)
         }
         NetShape::Gemini => Ok(()),
+        NetShape::Assembly { model_header } => put_text(s, TAG, model_header, rules::token),
     }
 }
 
@@ -83,6 +84,9 @@ fn read_shape<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetShape<'stat
                 fixed: read_fixed(p)?,
             }),
             ShapeCode::Gemini => NetShape::Gemini,
+            ShapeCode::Assembly => NetShape::Assembly {
+                model_header: read_text(p, TAG, rules::token)?,
+            },
         },
     )
 }

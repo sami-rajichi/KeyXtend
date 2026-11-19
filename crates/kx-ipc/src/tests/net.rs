@@ -202,7 +202,7 @@ fn a_run_and_its_sound_read_back_in_order_and_then_close() {
 #[test]
 fn a_note_names_its_run_and_an_ask_its_run() {
     let ids: Vec<u32> = every_net_ask().iter().map(NetAsk::id).collect();
-    assert_eq!(ids, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0]);
+    assert_eq!(ids, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0]);
     let ids: Vec<u32> = every_net_note().iter().map(NetNote::id).collect();
     assert_eq!(ids[..5], [1, 1, 1, 1, 2]);
 }

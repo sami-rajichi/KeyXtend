@@ -53,10 +53,14 @@ fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
         fixed,
     });
     let eleven = own.prop_map(NetShape::Eleven);
+    let assembly = NAME.prop_map(|name| NetShape::Assembly {
+        model_header: owned(name),
+    });
     prop_oneof![
         form.prop_map(NetShape::Form),
         eleven,
-        Just(NetShape::Gemini)
+        Just(NetShape::Gemini),
+        assembly
     ]
 }
 

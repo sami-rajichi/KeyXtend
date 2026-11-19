@@ -2,6 +2,7 @@
 //! call and the run, and reads the reply into text or a fault; the job holds no table. Every shape the frames name has
 //! its adapter, so a new shape is one more file and one more arm of `of`, which fails to build without it.
 
+use super::assembly::Assembly;
 use super::eleven::Eleven;
 use super::form::Form;
 use super::gemini::Gemini;
@@ -77,6 +78,7 @@ pub fn of(code: ShapeCode) -> &'static dyn Shape {
         ShapeCode::Form => &Form,
         ShapeCode::Eleven => &Eleven,
         ShapeCode::Gemini => &Gemini,
+        ShapeCode::Assembly => &Assembly,
     }
 }
 

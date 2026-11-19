@@ -231,7 +231,7 @@ fn a_bad_call_or_run_is_refused_when_read() {
     let over = (groq_cap() + 2).to_le_bytes();
     let reads: [(usize, &[u8]); 26] = [
         (0, &[0]),
-        (0, &[5]),
+        (0, &[6]),
         (2, b" "),
         (3, &[2]),
         (6, b"."),

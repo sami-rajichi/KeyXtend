@@ -1,5 +1,5 @@
-//! A service row's request (ADR-0047 decision 5): its shape, the upload form's field names and the header that carries
-//! the key, each refused when it could break a request's head or body.
+//! A service row's request (ADR-0047 decision 5, ADR-0051): its shape, the upload form's field names and the header
+//! that carries the key, each refused when it could break a request's head or body.
 
 use crate::ports::TAG_LEN;
 pub use kx_ipc::MAX_FIXED;
@@ -19,20 +19,27 @@ pub enum CloudShape {
     Eleven(OwnFields),
     /// Gemini's single request, with the sound inline.
     Gemini,
+    /// `AssemblyAI`'s Sync request: a JSON `config` part, then the sound, with the model under its own header.
+    Assembly {
+        /// The name of the header that carries the model, such as `X-AAI-Model`.
+        model_header: String,
+    },
 }
 
 impl CloudShape {
-    /// True when a form's names and values fit; Gemini names no field.
+    /// True when a form's names and values, or a model header's name, fit; Gemini names no field.
     #[must_use]
     pub fn fits(&self) -> bool {
         match self {
             Self::Form(form) => form.fits(),
             Self::Eleven(own) => own.fits(),
             Self::Gemini => true,
+            Self::Assembly { model_header } => name_ok(model_header),
         }
     }
 
-    /// True when a run must name a model, as the frames' code says: `ElevenLabs` and Gemini have no default one.
+    /// True when a run must name a model, as the frames' code says: `ElevenLabs`, Gemini and `AssemblyAI` have no
+    /// default one.
     #[must_use]
     pub const fn needs_model(&self) -> bool {
         self.code().needs_model()
@@ -44,6 +51,7 @@ impl CloudShape {
             Self::Form(_) => ShapeCode::Form,
             Self::Eleven(_) => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
+            Self::Assembly { .. } => ShapeCode::Assembly,
         }
     }
 }

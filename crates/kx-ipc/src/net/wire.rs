@@ -30,7 +30,7 @@ const FORM_MOST: usize = TAG.most()
     + ONE
     + ONE
     + TAG.most();
-/// A shape: its code, then a form.
+/// A shape: its code, then a form, the largest of what a shape carries.
 const SHAPE_LEAST: usize = ONE;
 const SHAPE_MOST: usize = ONE + FORM_MOST;
 /// A key's header: its code, then a name.

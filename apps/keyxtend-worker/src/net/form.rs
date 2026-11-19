@@ -167,10 +167,12 @@ pub(super) fn fields<'a>(
         return Err(NetFault::Range);
     }
     let fixed = fixed.iter().map(|f| Text::of(&f.name, &f.value));
-    Ok([Text { name, value: lang }]
-        .into_iter()
-        .chain(fixed)
-        .collect())
+    let lang = Text {
+        name,
+        value: lang,
+        kind: None,
+    };
+    Ok([lang].into_iter().chain(fixed).collect())
 }
 
 /// What an answer that is not done means, by the first table row that takes it, under `form`'s paywall and region code.

@@ -168,27 +168,38 @@ pub fn coded(bytes: &[u8], at: &Coded, codes: &[&str]) -> bool {
 /// texts under `SAYING`'s names, within `SAYING_DEPTH`: `error` or its message, type and code, and a 422's `detail[]`
 /// with each item's `msg`, `type` and `loc`, at the top as `DeepInfra` sends it or under `message`.
 pub fn says(bytes: &[u8], words: &[&str]) -> bool {
+    says_in(bytes, SAYING, words)
+}
+
+/// True when the texts under `names` in a JSON error reply, within `SAYING_DEPTH`, hold one of `words`, in any case;
+/// never for another body.
+pub fn says_in(bytes: &[u8], names: &[&str], words: &[&str]) -> bool {
     let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
     let mut said = String::new();
     if reply.is_object() {
-        gather(&reply, SAYING_DEPTH, &mut said);
+        gather(&reply, names, SAYING_DEPTH, &mut said);
     }
     let said = said.to_ascii_lowercase();
     words.iter().any(|w| said.contains(w))
 }
 
-/// Adds the texts of `value` under `SAYING`'s names to `said`, `depth` levels down at most.
-fn gather(value: &serde_json::Value, depth: usize, said: &mut String) {
+/// Adds the texts of `value` under `names` to `said`, `depth` levels down at most.
+fn gather(value: &serde_json::Value, names: &[&str], depth: usize, said: &mut String) {
     let deeper = depth.checked_sub(1);
     match (value, deeper) {
         (serde_json::Value::String(text), _) => {
             said.push(' ');
             said.push_str(text);
         }
-        (serde_json::Value::Array(items), Some(d)) => items.iter().for_each(|i| gather(i, d, said)),
+        (serde_json::Value::Array(items), Some(d)) => {
+            for item in items {
+                gather(item, names, d, said);
+            }
+        }
         (serde_json::Value::Object(map), Some(d)) => {
-            let named = SAYING.iter().filter_map(|name| map.get(*name));
-            named.for_each(|v| gather(v, d, said));
+            for item in names.iter().filter_map(|name| map.get(*name)) {
+                gather(item, names, d, said);
+            }
         }
         _ => {}
     }

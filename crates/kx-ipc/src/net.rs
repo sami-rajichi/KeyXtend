@@ -39,6 +39,11 @@ pub enum NetShape<'a> {
     Eleven(NetOwn<'a>),
     /// Gemini's single request, with the sound inline.
     Gemini,
+    /// `AssemblyAI`'s Sync request: a JSON `config` part, then the sound, with the model under its own header.
+    Assembly {
+        /// The name of the header that carries the model (`rules::token`).
+        model_header: Cow<'a, str>,
+    },
 }
 
 impl NetShape<'_> {
@@ -49,6 +54,7 @@ impl NetShape<'_> {
             Self::Form(_) => ShapeCode::Form,
             Self::Eleven(_) => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
+            Self::Assembly { .. } => ShapeCode::Assembly,
         }
     }
 }

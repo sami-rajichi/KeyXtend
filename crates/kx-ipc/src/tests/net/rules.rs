@@ -155,9 +155,12 @@ fn a_model_id_is_a_name_with_dots_slashes_and_colons_and_a_language_a_name() {
 }
 
 #[test]
-fn elevenlabs_and_gemini_alone_need_a_model() {
+fn elevenlabs_gemini_and_assemblyai_alone_need_a_model() {
     for &shape in ShapeCode::ALL {
-        let needs = matches!(shape, ShapeCode::Eleven | ShapeCode::Gemini);
+        let needs = matches!(
+            shape,
+            ShapeCode::Eleven | ShapeCode::Gemini | ShapeCode::Assembly
+        );
         assert_eq!(shape.needs_model(), needs, "{shape:?}");
     }
 }

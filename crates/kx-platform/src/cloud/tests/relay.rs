@@ -99,6 +99,20 @@ fn elevenlabs_form_reaches_the_frame_in_its_own_shape() {
 }
 
 #[test]
+fn assemblyais_model_header_reaches_the_frame_in_its_own_shape() {
+    let (host, script, _) = host();
+    let name = "X-AAI-Model";
+    let model_header = name.to_owned();
+    let mut asked = ask(&[PER_S]);
+    asked.shape = CloudShape::Assembly { model_header };
+    let (_run, _) = sent(&host, asked);
+    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
+        panic!("a send first");
+    };
+    assert!(matches!(&call.shape, NetShape::Assembly { model_header } if model_header == name));
+}
+
+#[test]
 fn the_row_and_the_key_go_first_then_the_sound_in_wiped_parts_in_order() {
     let (host, script, _) = host();
     let sizes = [PER_S, MAX_SOUND_BYTES + PER_S, 2 * SAMPLE_BYTES];

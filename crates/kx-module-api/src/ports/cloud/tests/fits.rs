@@ -71,6 +71,13 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
     }
     assert!(!form().needs_model());
     assert!(eleven().needs_model() && CloudShape::Gemini.needs_model());
+    assert!(assembly().needs_model() && assembly().fits());
+    for name in ["X AAI-Model", "X-AAI:Model", "", long.as_str()] {
+        let odd = CloudShape::Assembly {
+            model_header: name.to_owned(),
+        };
+        assert!(!odd.fits(), "a model header of {name:?}");
+    }
 }
 
 #[test]

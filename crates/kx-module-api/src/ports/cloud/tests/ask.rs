@@ -63,6 +63,7 @@ fn every_shape_with_its_header_passes() {
             CloudShape::Gemini,
             KeyHeader::Named("x-goog-api-key".into()),
         ),
+        (assembly(), KeyHeader::Bearer),
     ];
     for (shape, header) in rows {
         let ask = CloudAsk {
@@ -201,10 +202,11 @@ fn a_model_or_language_code_that_could_break_a_request_is_refused() {
 }
 
 #[test]
-fn elevenlabs_and_gemini_need_a_model_and_the_form_takes_none() {
+fn elevenlabs_gemini_and_assemblyai_need_a_model_and_the_form_takes_none() {
     let rows = [
         (eleven(), Some("model")),
         (CloudShape::Gemini, Some("model")),
+        (assembly(), Some("model")),
         (form(), None),
     ];
     for (shape, want) in rows {

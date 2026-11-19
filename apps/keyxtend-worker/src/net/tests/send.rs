@@ -6,7 +6,7 @@
 use super::eleven::own_form;
 use super::*;
 use crate::net::send::{Sending, piece, test};
-use crate::net::shape;
+use crate::net::shape::{self, Piece};
 use kx_ipc::{MAX_NET_REPLY_BYTES, NetFault};
 use kx_platform_net::fake::Step;
 use kx_platform_net::{NetError, Verb, wait_ms};
@@ -228,15 +228,25 @@ fn a_key_test_says_whether_the_key_works() {
 
 #[test]
 fn every_shape_has_its_own_adapter() {
+    let assembly = NetShape::Assembly {
+        model_header: Cow::Borrowed("X-AAI-Model"),
+    };
     let shapes = [
         NetShape::Form(form()),
         NetShape::Eleven(own_form()),
         NetShape::Gemini,
+        assembly,
     ];
     for shape in shapes {
-        let call = call_to(MODELS, shape);
-        // Each adapter refuses another shape's call, so a test request shows the code reached its own.
-        let req = shape::of(call.shape.code()).test(&call);
+        let call = call_to(URL, shape);
+        let one = Piece {
+            call: &call,
+            model: Some(MODEL),
+            lang: LANG,
+            wav: WAV,
+        };
+        // Each adapter refuses another shape's call, so a built request shows the code reached its own.
+        let req = shape::of(call.shape.code()).build(&one);
         assert!(req.is_ok(), "{:?}", call.shape.code());
     }
 }

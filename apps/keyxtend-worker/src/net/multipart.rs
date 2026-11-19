@@ -1,6 +1,6 @@
-//! A form's body (`multipart/form-data`, RFC 7578), moved from the spike's `multipart.rs`, which the upload form and
-//! `ElevenLabs`' share: text fields, then the piece as a WAV file, under a boundary drawn from the parts' own SHA-256, so
-//! no part can hold it, in one wiped buffer sized once.
+//! A form's body (`multipart/form-data`, RFC 7578), moved from the spike's `multipart.rs`, which the upload form,
+//! `ElevenLabs`' and `AssemblyAI`'s share: text fields, then the piece as a WAV file, under a boundary drawn from the
+//! parts' own SHA-256, so no part can hold it, in one wiped buffer sized once.
 
 use super::shape::CONTENT_TYPE;
 use super::wav;
@@ -41,6 +41,8 @@ pub struct Text<'a> {
     pub name: Cow<'a, str>,
     /// Its value, sent as it is.
     pub value: &'a str,
+    /// Its media type, when its part names one, as a JSON part does.
+    pub kind: Option<&'a str>,
 }
 
 impl<'a> Text<'a> {
@@ -49,6 +51,15 @@ impl<'a> Text<'a> {
         Self {
             name: Cow::Borrowed(name),
             value,
+            kind: None,
+        }
+    }
+
+    /// A field named `name`, holding `value` of media type `kind`.
+    pub fn typed(name: &'a str, value: &'a str, kind: &'a str) -> Self {
+        Self {
+            kind: Some(kind),
+            ..Self::of(name, value)
         }
     }
 }
@@ -75,8 +86,13 @@ pub struct Sent {
 
 /// The piece `wav` as the form's WAV file.
 pub const fn wav(wav: &[u8]) -> File<'_> {
+    wav_named(FILE, wav)
+}
+
+/// The piece `wav` as a WAV file in the field `name`.
+pub const fn wav_named<'a>(name: &'a str, wav: &'a [u8]) -> File<'a> {
     File {
-        name: FILE,
+        name,
         called: PIECE_NAME,
         kind: wav::TYPE,
         bytes: wav,
@@ -117,6 +133,7 @@ fn boundary(texts: &[Text<'_>], file: &File<'_>) -> String {
     for t in texts {
         print.update(t.name.as_bytes());
         print.update(t.value.as_bytes());
+        print.update(t.kind.unwrap_or_default().as_bytes());
     }
     print.update(file.bytes);
     let mut out = String::from(MARK);
@@ -129,29 +146,20 @@ fn boundary(texts: &[Text<'_>], file: &File<'_>) -> String {
 /// The body of these parts under `boundary`.
 ///
 /// # Errors
-/// `Range` for a value holding a `BREAKS` byte, `Gone` when the room cannot be had.
+/// `Range` for a value or a media type holding a `BREAKS` byte, `Gone` when the room cannot be had.
 fn body(
     boundary: &str,
     texts: &[Text<'_>],
     file: &File<'_>,
 ) -> Result<Zeroizing<Vec<u8>>, NetFault> {
+    let breaks = |s: &str| s.bytes().any(|b| BREAKS.contains(&b));
     if texts
         .iter()
-        .any(|t| t.value.bytes().any(|b| BREAKS.contains(&b)))
+        .any(|t| breaks(t.value) || t.kind.is_some_and(breaks))
     {
         return Err(NetFault::Range);
     }
-    let line = format!("{DASHES}{boundary}{CRLF}");
-    let head = |name: &str| format!("{line}{DISPOSITION}{}{QUOTE}", escape(name));
-    let heads: Vec<String> = texts
-        .iter()
-        .map(|t| format!("{}{CRLF}{CRLF}", head(&t.name)))
-        .collect();
-    let (file_name, kind) = (escape(file.called), file.kind);
-    let file_head = format!(
-        "{}{FILE_NAME}{file_name}{QUOTE}{CRLF}{CONTENT_TYPE}{TYPE_SEP}{kind}{CRLF}{CRLF}",
-        head(file.name)
-    );
+    let (heads, file_head) = heads_of(boundary, texts, file);
     let last = format!("{DASHES}{boundary}{DASHES}{CRLF}");
     let texts_len: usize = texts
         .iter()
@@ -175,4 +183,25 @@ fn body(
         out.extend_from_slice(part);
     }
     Ok(out)
+}
+
+/// Each part's head under `boundary`: the texts' in order, each with its media type when it names one, then the file's.
+fn heads_of(boundary: &str, texts: &[Text<'_>], file: &File<'_>) -> (Vec<String>, String) {
+    let line = format!("{DASHES}{boundary}{CRLF}");
+    let head = |name: &str| format!("{line}{DISPOSITION}{}{QUOTE}", escape(name));
+    let typed = |kind: &str| format!("{CRLF}{CONTENT_TYPE}{TYPE_SEP}{kind}");
+    let heads = texts
+        .iter()
+        .map(|t| {
+            let kind = t.kind.map(typed).unwrap_or_default();
+            format!("{}{kind}{CRLF}{CRLF}", head(&t.name))
+        })
+        .collect();
+    let file_name = escape(file.called);
+    let file_head = format!(
+        "{}{FILE_NAME}{file_name}{QUOTE}{}{CRLF}{CRLF}",
+        head(file.name),
+        typed(file.kind)
+    );
+    (heads, file_head)
 }

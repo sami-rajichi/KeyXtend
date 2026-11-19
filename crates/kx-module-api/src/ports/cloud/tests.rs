@@ -76,6 +76,13 @@ fn eleven() -> CloudShape {
     })
 }
 
+/// `AssemblyAI`'s shape, naming the header its model goes in.
+fn assembly() -> CloudShape {
+    CloudShape::Assembly {
+        model_header: "X-AAI-Model".into(),
+    }
+}
+
 /// Groq's limits on its free plan.
 fn limits() -> CloudLimits {
     CloudLimits {

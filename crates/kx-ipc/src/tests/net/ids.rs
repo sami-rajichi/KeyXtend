@@ -1,15 +1,15 @@
 //! A run's model and language as both sides take them: real ids pass, a character that could break a request's body or
-//! address is refused, `ElevenLabs` and Gemini refuse a run with no model before any frame, `ElevenLabs`' shape holds
-//! only its language and fixed fields, and Gemini's only its code.
+//! address is refused, `ElevenLabs`, Gemini and `AssemblyAI` refuse a run with no model before any frame, `ElevenLabs`'
+//! shape holds only its language and fixed fields, Gemini's only its code, and `AssemblyAI`'s only its model header.
 
 use super::*;
 use crate::ShapeCode;
 use crate::code::Code;
 use IpcError::BadField;
-use net_wire::URL;
+use net_wire::{TAG, URL};
 
 /// Real model ids from the services' own pages.
-const IDS: [&str; 7] = [
+const IDS: [&str; 8] = [
     "whisper-large-v3-turbo",
     "gpt-transcribe",
     "openai/whisper-large-v3",
@@ -17,7 +17,10 @@ const IDS: [&str; 7] = [
     "scribe_v3",
     "gemini-3.5-transcribe",
     "MAI-Transcribe-2",
+    "universal-3-6-pro",
 ];
+/// The header `AssemblyAI`'s row names for the model [A1].
+const MODEL_HEADER: &str = "X-AAI-Model";
 
 /// The model a read refusal changes in place.
 const MDL: &str = "ab/cd";
@@ -97,9 +100,9 @@ fn a_model_or_language_that_could_break_a_body_or_an_address_is_refused_both_way
 }
 
 #[test]
-fn elevenlabs_and_gemini_refuse_a_run_with_no_model_both_ways() {
+fn elevenlabs_gemini_and_assemblyai_refuse_a_run_with_no_model_both_ways() {
     round_trips(send_as(groq_form(), None, "fr"));
-    for shape in [eleven(), NetShape::Gemini] {
+    for shape in [eleven(), NetShape::Gemini, assembly()] {
         refused(&send_as(shape.clone(), None, "fr"), BadField);
         round_trips(send_as(shape.clone(), Some(MODEL), "fr"));
         let read = |model| NetAsk::read(&mut &bare_as(&shape, model)[..]);
@@ -140,7 +143,7 @@ fn a_shape_code_no_shape_has_is_refused_when_read_the_dropped_2_too() {
     let good = net_ask_bytes(&test);
     assert_eq!(NetAsk::read(&mut &good[..]), Ok(test));
     // Code 2 was a fourth shape's until ADR-0050 dropped it; its byte now reads as no shape at all.
-    for code in [0, 2, 5, u8::MAX] {
+    for code in [0, 2, 6, u8::MAX] {
         let bytes = patch(good.clone(), 0, &[code]);
         assert_eq!(read_net_ask(&mut &bytes[..]), Err(BadField), "{code}");
     }
@@ -194,4 +197,36 @@ fn elevenlabs_shape_sends_only_its_language_and_fixed_fields_and_refuses_a_forms
         ..own
     };
     refused(&test(NetShape::Eleven(many)), IpcError::TooLong);
+}
+
+#[test]
+fn assemblyais_shape_sends_only_its_model_header_and_refuses_a_bad_name_or_another_layout() {
+    let test = |shape| NetAsk::Test {
+        id: 1,
+        call: call(shape, NetHeader::Bearer),
+    };
+    let sent = net_ask_bytes(&test(assembly()));
+    assert_eq!(sent[HEADER_LEN], ShapeCode::Assembly.code());
+    // The header's name follows the code, then the call's address, so the shape carries no other field.
+    let name = HEADER_LEN + 1 + TAG.width;
+    assert_eq!(
+        &sent[name..name + MODEL_HEADER.len()],
+        MODEL_HEADER.as_bytes()
+    );
+    let url = sent.windows(GROQ.len()).position(|w| w == GROQ.as_bytes());
+    assert_eq!(url, Some(name + MODEL_HEADER.len() + URL.width));
+    round_trips(test(assembly()));
+    let named = |name| NetShape::Assembly {
+        model_header: Cow::Borrowed(name),
+    };
+    for bad in ["X AAI-Model", "X-AAI:Model"] {
+        refused(&test(named(bad)), BadField);
+    }
+    assert!(test(named("")).write(&mut Vec::new()).is_err(), "no name");
+    refused_swaps(&sent, b"X-AAI-Model", &[b"X AAI-Model", b"X-AAI:Model"]);
+    let code = ShapeCode::Assembly.code();
+    for other in [groq_form(), eleven(), NetShape::Gemini] {
+        let layout = patch(net_ask_bytes(&test(other.clone())), 0, &[code]);
+        assert!(read_net_ask(&mut &layout[..]).is_err(), "{other:?}");
+    }
 }

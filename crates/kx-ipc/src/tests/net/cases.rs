@@ -96,6 +96,13 @@ pub(super) fn eleven() -> NetShape<'static> {
     })
 }
 
+/// `AssemblyAI`'s shape, naming the header its model goes in, as its row says.
+pub(super) fn assembly() -> NetShape<'static> {
+    NetShape::Assembly {
+        model_header: Cow::Borrowed("X-AAI-Model"),
+    }
+}
+
 /// A fixed field.
 pub(super) fn field(name: &'static str, value: &'static str) -> NetField<'static> {
     NetField {
@@ -156,7 +163,7 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
 }
 
 /// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall with a region code,
-/// a form with no model and its key in a named header, `ElevenLabs` and Gemini.
+/// a form with no model and its key in a named header, `ElevenLabs`, Gemini and `AssemblyAI`.
 fn sends() -> Vec<NetAsk<'static>> {
     let zdr = vec![field("provider", r#"{"zdr":true}"#)];
     let named = |name| NetHeader::Named(Cow::Borrowed(name));
@@ -185,6 +192,7 @@ fn sends() -> Vec<NetAsk<'static>> {
         unnamed,
         send(5, call(eleven(), named("xi-api-key"))),
         send(6, call(NetShape::Gemini, named("x-goog-api-key"))),
+        send(7, call(assembly(), NetHeader::Bearer)),
     ]
 }
 
@@ -193,20 +201,20 @@ pub(super) fn every_net_ask() -> Vec<NetAsk<'static>> {
     let mut asks = sends();
     asks.extend([
         NetAsk::Sound {
-            id: 7,
+            id: 8,
             piece: 0,
             bytes: Wiped::Lent(SPOKEN),
         },
         NetAsk::Sound {
-            id: 8,
+            id: 9,
             piece: 2,
             bytes: Wiped::Kept(Zeroizing::new(SPOKEN.to_vec())),
         },
         NetAsk::Test {
-            id: 9,
+            id: 10,
             call: groq(),
         },
-        NetAsk::Cancel { id: 10 },
+        NetAsk::Cancel { id: 11 },
         NetAsk::Bye,
     ]);
     asks

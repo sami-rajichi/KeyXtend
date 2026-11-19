@@ -13,10 +13,12 @@ pub enum ShapeCode {
     Eleven = 3,
     /// Gemini's single request.
     Gemini = 4,
+    /// `AssemblyAI`'s Sync request (ADR-0051).
+    Assembly = 5,
 }
 
 impl Code for ShapeCode {
-    const ALL: &'static [Self] = &[Self::Form, Self::Eleven, Self::Gemini];
+    const ALL: &'static [Self] = &[Self::Form, Self::Eleven, Self::Gemini, Self::Assembly];
 
     fn code(self) -> u8 {
         self as u8
@@ -24,10 +26,10 @@ impl Code for ShapeCode {
 }
 
 impl ShapeCode {
-    /// True when a run to this shape must name a model: `ElevenLabs` and Gemini have no default one.
+    /// True when a run to this shape must name a model: `ElevenLabs`, Gemini and `AssemblyAI` have no default one.
     #[must_use]
     pub const fn needs_model(self) -> bool {
-        matches!(self, Self::Eleven | Self::Gemini)
+        matches!(self, Self::Eleven | Self::Gemini | Self::Assembly)
     }
 }
 
