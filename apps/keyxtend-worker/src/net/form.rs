@@ -36,9 +36,12 @@ const NONE_LEFT: &str = "0";
 const CREDIT: &[&str] = &[
     "insufficient_quota",
     "credit_balance_exhausted",
+    "organization_usage_limit_exceeded",
+];
+/// The exact codes or types of a spending cap the user set, which they raise on the service's site.
+const CAP: &[&str] = &[
     "organization_spend_limit_exceeded",
     "project_spend_limit_exceeded",
-    "organization_usage_limit_exceeded",
 ];
 
 /// What a row asks of the error beside its status.
@@ -68,6 +71,7 @@ const TABLE: &[Row<Says>] = &[
     row(403..=403, Says::Paywall, Then::Fault(NetFault::Account)),
     row(403..=403, Says::Any, Then::Fault(NetFault::Key)),
     row(402..=402, Says::Any, Then::Fault(NetFault::Credit)),
+    row(400..=499, Says::Code(CAP), Then::Fault(NetFault::Account)),
     row(400..=499, Says::Code(CREDIT), Then::Fault(NetFault::Credit)),
     row(413..=413, Says::Any, Then::Fault(NetFault::TooBig)),
     row(

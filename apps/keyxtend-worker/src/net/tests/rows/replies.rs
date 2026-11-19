@@ -1,7 +1,8 @@
-//! Each row's answers read as its own pages say: its text, a bad key, no credit, a 403 as the account's step behind a
-//! paywall or else the key, a country refused by its row's code, a language refused in an `error` or in a 422's
-//! `detail[]`, too big, too many requests and a service down. The fixtures under `replies/<service>/` copy each page's
-//! body with made-up ids and no key; a body the pages do not show is marked as assumed, for the live check.
+//! Each row's answers read as its own pages say: its text, a bad key, no credit, a spending cap or a 403 behind a
+//! paywall as the account's step or else the key, a country refused by its row's code, a language refused in an
+//! `error` or in a 422's `detail[]`, too big, too many requests and a service down. The fixtures under
+//! `replies/<service>/` copy each page's body with made-up ids and no key; a body the pages do not show is marked as
+//! assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_by, tested_by};
 use super::*;
@@ -100,7 +101,7 @@ fn openais_answers_read_as_its_error_page_says() {
             (OK, &[], OPENAI_TEXT, said()),
             (401, &[], OPENAI_KEY, Got::Fault(Key)),
             (BUSY, &[], OPENAI_CREDIT, Got::Fault(Credit)),
-            (BUSY, &[], OPENAI_SPEND, Got::Fault(Credit)),
+            (BUSY, &[], OPENAI_SPEND, Got::Fault(Account)),
             (
                 BUSY,
                 &[("retry-after", "2")],

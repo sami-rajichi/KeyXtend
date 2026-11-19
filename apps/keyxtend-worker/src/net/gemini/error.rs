@@ -1,5 +1,5 @@
 //! What Gemini's error answers mean [N5][N7]: a detail's exact reason or the canonical status first, then the status
-//! table; a 429 waits as asked, by `Retry-After` or the error's `RetryInfo` delay, unless a per-day quota ran out.
+//! table; a 429 waits as asked, by `Retry-After` or the error's `RetryInfo` delay, unless the free tier's day ran out.
 
 use super::super::reply::{self, Coded};
 use super::super::shape::Verdict;
@@ -31,8 +31,10 @@ const RETRY_DELAY: &str = "retryDelay";
 /// A `QuotaFailure` detail's quotas run out, each by its id.
 const VIOLATIONS: &str = "violations";
 const QUOTA_ID: &str = "quotaId";
-/// What a per-day quota's id names (assumed from Google's quota ids, checked at task 24).
+/// What the free tier's daily quota id names, as in `GenerateRequestsPerDayPerProjectPerModel-FreeTier` (assumed
+/// from Google's quota ids, checked at task 24); a paid tier's day stays a wait.
 const PER_DAY: &str = "PerDay";
+const FREE_TIER: &str = "FreeTier";
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]
@@ -100,27 +102,26 @@ fn reasoned(details: &[Value], reasons: &[&str]) -> bool {
     given.any(is)
 }
 
-/// A 429: the used allowance when a per-day quota ran out, renewing after the delay it asks; else a wait for its
-/// `Retry-After`, or for that delay.
+/// A 429: the used allowance with no date when the free tier's daily quota ran out, as its delay is no renewal; else
+/// a wait for its `Retry-After`, or for its `RetryInfo` delay.
 fn busy<T>(head: &Head, details: &[Value]) -> Verdict<T> {
+    if details.iter().any(daily) {
+        return Verdict::Fault(NetFault::Allowance { renews_s: None });
+    }
     let delay = details
         .iter()
         .filter_map(|d| d.get(RETRY_DELAY)?.as_str())
         .find_map(reply::span_s);
-    if details.iter().any(daily) {
-        let renews_s = delay.and_then(status::renewal);
-        return Verdict::Fault(NetFault::Allowance { renews_s });
-    }
     let asked = head.header(RETRY).and_then(reply::seconds);
     Verdict::Busy(asked.or_else(|| delay.and_then(|s| u32::try_from(s).ok())))
 }
 
-/// True when `detail` names a per-day quota among the quotas run out.
+/// True when `detail` names the free tier's daily quota among the quotas run out.
 fn daily(detail: &Value) -> bool {
     let quotas = detail.get(VIOLATIONS).and_then(Value::as_array);
     let mut ids = quotas
         .into_iter()
         .flatten()
         .filter_map(|v| v.get(QUOTA_ID)?.as_str());
-    ids.any(|id| id.contains(PER_DAY))
+    ids.any(|id| id.contains(PER_DAY) && id.contains(FREE_TIER))
 }

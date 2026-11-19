@@ -234,22 +234,22 @@ fn a_groq_rate_limit_that_names_billing_is_a_wait_never_credit() {
 }
 
 #[test]
-fn credit_is_told_only_by_its_exact_code_or_type() {
+fn credit_and_a_spending_cap_are_told_only_by_their_exact_code_or_type() {
     let codes = [
-        "insufficient_quota",
-        "credit_balance_exhausted",
-        "organization_spend_limit_exceeded",
-        "project_spend_limit_exceeded",
-        "organization_usage_limit_exceeded",
+        ("insufficient_quota", NetFault::Credit),
+        ("credit_balance_exhausted", NetFault::Credit),
+        ("organization_usage_limit_exceeded", NetFault::Credit),
+        ("organization_spend_limit_exceeded", NetFault::Account),
+        ("project_spend_limit_exceeded", NetFault::Account),
     ];
-    for code in codes {
+    for (code, fault) in codes {
         let by_code =
             serde_json::json!({"error": {"message": "m", "type": "requests", "code": code}});
         let by_type = serde_json::json!({"error": {"message": "m", "type": code}});
         for body in [by_code.to_string(), by_type.to_string()] {
             for status in [BUSY, 400] {
                 let got = read(status, &[], body.as_bytes());
-                assert_eq!(got, Got::Fault(NetFault::Credit), "{status} {body}");
+                assert_eq!(got, Got::Fault(fault), "{status} {body}");
             }
         }
     }

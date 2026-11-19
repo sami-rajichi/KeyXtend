@@ -1,10 +1,10 @@
 //! Gemini's answers [N1][N5][N7][N10]: its transcript from `output_text`, else from its model output steps in order,
 //! any other field or content of another shape adding nothing; an empty one is the run's to judge; a bad key by its
 //! exact reason and a leaked one by its exact status; a free tier asking to verify and an unpaid balance as the
-//! account's step, by their reasons; a 429 waits as asked, or is the used allowance when its quota is per day; a 503
-//! retried as any 5xx; a refused location and language; anything else strange; and its key test on the models list
-//! [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the reasons and quota
-//! ids beside [N7]'s are assumed, for the live check.
+//! account's step, by their reasons; a 429 waits as asked, or is the used allowance, undated, for the free tier's
+//! day; a 503 retried as any 5xx; a refused location and language; anything else strange; and its key test on the
+//! models list [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the
+//! reasons and quota ids beside [N7]'s are assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_with, tested_with};
 use super::*;
@@ -36,8 +36,10 @@ const LANGUAGE_CODE: &[u8] = include_bytes!("../replies/gemini/language.json");
 /// A used quota with its retry delay of 37 s [N5], and the model overloaded.
 const QUOTA: &[u8] = include_bytes!("../replies/gemini/quota.json");
 const OVERLOADED: &[u8] = include_bytes!("../replies/gemini/overloaded.json");
-/// A per-day quota used, renewing in 7200 s, and a per-minute one asking for 12.5 s, by their quota ids (assumed).
+/// The free tier's daily quota used, whose retry delay of 1 s is no renewal (as a public report shows it), a paid
+/// tier's daily quota asking for 3600 s, and a per-minute one asking for 12.5 s, by their quota ids (assumed).
 const QUOTA_DAY: &[u8] = include_bytes!("../replies/gemini/quota-day.json");
+const QUOTA_DAY_PAID: &[u8] = include_bytes!("../replies/gemini/quota-day-paid.json");
 const QUOTA_MINUTE: &[u8] = include_bytes!("../replies/gemini/quota-minute.json");
 /// The models list the key test reads [N8].
 const MODELS_LIST: &[u8] = include_bytes!("../replies/gemini/models.json");
@@ -111,7 +113,7 @@ fn a_reply_that_is_not_its_json_is_strange() {
 
 #[test]
 fn each_error_status_is_its_fault_as_its_error_pages_say() {
-    let cases: [(u16, &[u8], Got); 19] = [
+    let cases: [(u16, &[u8], Got); 20] = [
         (400, KEY_BAD, Got::Fault(Key)),
         (403, LEAKED, Got::Fault(Key)),
         (403, HOTSPOT, Got::Fault(Strange)),
@@ -127,7 +129,8 @@ fn each_error_status_is_its_fault_as_its_error_pages_say() {
         (400, LANGUAGE_CODE, Got::Fault(Language)),
         (BUSY, QUOTA, Got::Wait(Some(37))),
         (BUSY, QUOTA_MINUTE, Got::Wait(Some(13))),
-        (BUSY, QUOTA_DAY, used(Some(7_200))),
+        (BUSY, QUOTA_DAY, used(None)),
+        (BUSY, QUOTA_DAY_PAID, Got::Wait(Some(3_600))),
         (500, DOWN, Got::Fault(Network)),
         (503, OVERLOADED, Got::Fault(Network)),
         (400, SYNTAX, Got::Fault(Strange)),
@@ -148,7 +151,7 @@ fn used(renews_s: Option<u32>) -> Got {
 }
 
 #[test]
-fn a_429_waits_for_its_retry_after_else_its_delay_and_a_per_day_quota_is_the_used_allowance() {
+fn a_429_waits_for_its_retry_after_else_its_delay_and_the_free_daily_quota_is_used_with_no_date() {
     let wait = [("retry-after", "3")];
     assert_eq!(
         read(BUSY, &wait, QUOTA),
@@ -160,19 +163,23 @@ fn a_429_waits_for_its_retry_after_else_its_delay_and_a_per_day_quota_is_the_use
         Got::Wait(Some(37)),
         "RetryInfo [N5]"
     );
-    assert_eq!(read(BUSY, &wait, QUOTA_DAY), used(Some(7_200)));
-    let undated = String::from_utf8_lossy(QUOTA_DAY)
-        .replace("\"retryDelay\":\"7200s\"", "\"retryDelay\":\"soon\"");
+    assert_eq!(read(BUSY, &wait, QUOTA_DAY), used(None), "no header date");
+    let long = String::from_utf8_lossy(QUOTA_DAY).replace("\"1s\"", "\"7200s\"");
     assert_eq!(
-        read(BUSY, &[], undated.as_bytes()),
+        read(BUSY, &[], long.as_bytes()),
         used(None),
-        "no renewal guessed"
+        "no delay date"
     );
-    let past = String::from_utf8_lossy(QUOTA_DAY).replace("7200s", "9999999s");
+    assert_eq!(read(BUSY, &wait, QUOTA_DAY_PAID), Got::Wait(Some(3)));
     assert_eq!(
-        read(BUSY, &[], past.as_bytes()),
-        used(None),
-        "past the frames' range"
+        read(BUSY, &[], QUOTA_DAY_PAID),
+        Got::Wait(Some(3_600)),
+        "a paid tier's day waits"
+    );
+    assert_eq!(
+        read(BUSY, &[], QUOTA_MINUTE),
+        Got::Wait(Some(13)),
+        "a free minute waits"
     );
 }
 
@@ -203,7 +210,8 @@ fn a_key_test_works_on_the_models_list_and_fails_as_a_piece_does() {
     assert_eq!(tested(400, KEY_BAD), Got::Fault(Key));
     assert_eq!(tested(403, VERIFY), Got::Fault(Account));
     assert_eq!(tested(BUSY, QUOTA), Got::Wait(Some(37)));
-    assert_eq!(tested(BUSY, QUOTA_DAY), used(Some(7_200)));
+    assert_eq!(tested(BUSY, QUOTA_DAY), used(None));
+    assert_eq!(tested(BUSY, QUOTA_DAY_PAID), Got::Wait(Some(3_600)));
     assert_eq!(tested(503, OVERLOADED), Got::Fault(Network));
 }
 
