@@ -26,6 +26,8 @@ pub(crate) const OFFERED: [&str; 5] = ["groq", "lemonfox", "custom", "openrouter
 pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "deepinfra"];
 /// The rows of a shape other than the upload form, after the form rows, in the table's order.
 pub(crate) const SHAPED: [&str; 1] = ["elevenlabs"];
+/// `ElevenLabs`' own warning id, whose sentence names its profile menu; the shared `trains` names none.
+pub(crate) const PROFILE: &str = "trains-profile";
 
 /// The table `text` gives with the shipped second file and language sets.
 pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {

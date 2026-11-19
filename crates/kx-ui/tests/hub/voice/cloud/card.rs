@@ -217,7 +217,7 @@ fn a_warning_takes_its_band_and_the_custom_card_names_the_typed_address() {
     assert_eq!(p["sheet"]["read"]["link"], Value::Null);
     assert!(facts(&p)[1].3, "the training fact takes the warning tone");
     let warn = &p["sheet"]["warn"];
-    let text = "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Use my data for training";
+    let text = "Trains its models on your voice by default. To stop it, turn off this switch: Use my data for training";
     assert_eq!(warn["text"], text);
     assert_eq!(warn["parts"][1]["own"], true);
     let ask = "Your voice goes to the address you type only after Stop, with your own key.";

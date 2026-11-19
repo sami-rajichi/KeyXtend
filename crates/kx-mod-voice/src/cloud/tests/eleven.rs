@@ -3,6 +3,7 @@
 //! cannot pick it.
 
 use super::*;
+use crate::services::tests::PROFILE;
 use kx_module_api::ports::CloudShape;
 
 /// The model the tests pick [E4].
@@ -13,7 +14,7 @@ fn its_card_carries_the_warning_the_training_tone_and_the_free_plans_rule() {
     let card = rules().card(&on(), row("elevenlabs"), today());
     assert_eq!(card.service, ServiceName::Named("ElevenLabs".into()));
     let warn = card.warn.as_ref().map(|w| (w.id.as_str(), w.warn));
-    assert_eq!(warn, Some(("trains", true)), "the card's warning band");
+    assert_eq!(warn, Some((PROFILE, true)), "the card's warning band");
     assert!(card.trains.warn, "the training line takes the warning tone");
     let rule = card.rule.as_ref().map(|r| r.id.as_str());
     assert_eq!(rule, Some("non-commercial"));

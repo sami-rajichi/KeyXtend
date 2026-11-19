@@ -88,8 +88,10 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = { $low } to { $high } by model
     .fact-price-range-fee = { $low } to { $high } by model, plus a { $fee }% fee on credit
-    .fact-warn-trains = Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: { $switch }
+    .fact-warn-trains = Trains its models on your voice by default. To stop it, turn off this switch: { $switch }
+    .fact-warn-trains-profile = Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: { $switch }
     .warn-mark-trains = Trains by default
+    .warn-mark-trains-profile = Trains by default
     .fact-bills-least = At least { $seconds-form ->
         [one] { $seconds } second
        *[other] { $seconds } seconds

@@ -1,12 +1,13 @@
 //! `ElevenLabs`' card in each language (research [E1] to [E7]): training by default, its history kept, the free
-//! allowance in minutes agreeing with its number, its plans' light and heavy prices, the warning naming the profile
-//! menu before the switch's own labels, and the free plan's rule under its own label.
+//! allowance in minutes agreeing with its number, its plans' light and heavy prices, its own warning naming the profile
+//! menu before the switch's own labels while the shared one names none, and the free plan's rule under its own label.
 
 use crate::lang;
 use kx_mod_voice::services::table;
 use kx_module_api::ports::{Fact, FactArg, FactValue, Hundredths};
 use kx_ui::i18n::keys::{
     CARD_RULE, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE, FACT_TRAINS, FACT_WARN, VOICE_CARD,
+    warn_mark_key,
 };
 
 /// The UI languages, in the order the tables give their words.
@@ -147,15 +148,49 @@ const WARNED: [&str; 3] = [
     "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: ",
 ];
 
+/// The shared training warning's sentence before the switch, naming no menu, as any row's card may carry it.
+const SHARED: [&str; 3] = [
+    "Trains its models on your voice by default. To stop it, turn off this switch: ",
+    "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage\u{a0}: ",
+    "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: ",
+];
+
+/// The short mark a row shows for a training warning, `ElevenLabs`' own too.
+const MARKS: [&str; 3] = [
+    "Trains by default",
+    "Entraînement activé",
+    "التدريب مفعّل افتراضيًا",
+];
+
+#[test]
+fn the_shared_training_warning_names_no_menu_in_each_language() {
+    let switch = FactArg {
+        name: "switch".to_owned(),
+        value: FactValue::Text("Data use".to_owned()),
+    };
+    let fact = Fact {
+        id: "trains".to_owned(),
+        args: vec![switch],
+        warn: true,
+    };
+    for (tag, want) in TAGS.into_iter().zip(SHARED) {
+        let said = lang(tag).voice_fact(FACT_WARN, &fact).text;
+        assert_eq!(said, format!("{want}Data use"), "{tag}");
+    }
+}
+
 #[test]
 fn its_warning_names_the_profile_menu_in_each_language_and_its_own_labels_apart() {
     let row = table().expect("the services table").get("elevenlabs");
     let fact = row.and_then(|r| r.facts.warn.clone()).expect("a warning");
+    assert_ne!(fact.id, "trains", "its own id, not the shared warning");
     let Some(FactValue::Text(switch)) = fact.args.first().map(|a| a.value.clone()) else {
         panic!("its switch's labels")
     };
-    for (tag, want) in TAGS.into_iter().zip(WARNED) {
-        let said = lang(tag).voice_fact(FACT_WARN, &fact);
+    for ((tag, want), mark) in TAGS.into_iter().zip(WARNED).zip(MARKS) {
+        let t = lang(tag);
+        assert_eq!(t.text(&warn_mark_key(&fact.id)), mark, "{tag}: its mark");
+        let said = t.voice_fact(FACT_WARN, &fact);
         assert_eq!(said.text, format!("{want}{switch}"), "{tag}");
         let last = said.parts.last().map(|p| (p.text.as_str(), p.own));
         assert_eq!(

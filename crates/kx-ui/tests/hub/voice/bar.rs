@@ -92,7 +92,8 @@ fn listening_carries_the_cards_warning_in_full_while_the_first_dictation_to_its_
         warn: Some(warn),
         ..plain
     });
-    let text = "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Data use";
+    let text =
+        "Trains its models on your voice by default. To stop it, turn off this switch: Data use";
     let bar = bar_json(warned);
     assert_eq!(bar["warn"], text);
     let said = format!("Listening…, {text}");

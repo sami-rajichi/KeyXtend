@@ -6,7 +6,7 @@ use super::port::eleven;
 use super::*;
 use crate::cloud::Cloud;
 use crate::services::Services;
-use crate::services::tests::{LANGS, OWN, TEXT};
+use crate::services::tests::{LANGS, OWN, PROFILE, TEXT};
 use crate::settings::SERVICES;
 
 /// The id of the warning the bar shows while it listens; `None` for none.
@@ -28,7 +28,7 @@ fn the_first_dictation_shows_the_warning_and_saves_it_seen_and_the_next_shows_no
     let answers = || vec![CloudAnswer::text("hello"), CloudAnswer::text("world")];
     rig.fake.cloud.script(answers());
     rig.talk();
-    assert_eq!(warn(&rig).as_deref(), Some("trains"), "while it listens");
+    assert_eq!(warn(&rig).as_deref(), Some(PROFILE), "while it listens");
     assert_eq!(seen_at(&rig, "elevenlabs"), 1, "seen at its terms number");
     assert_eq!(rig.saved().services["elevenlabs"].warned, 1, "and saved");
     rig.key();
@@ -70,7 +70,7 @@ fn newer_terms_once_confirmed_show_the_warning_again_and_save_it_at_their_number
     rig.talk();
     assert_eq!(
         warn(&rig).as_deref(),
-        Some("trains"),
+        Some(PROFILE),
         "again, at the new terms"
     );
     assert_eq!(seen_at(&rig, "elevenlabs"), 2, "seen at the new number");

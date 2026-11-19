@@ -44,5 +44,5 @@ keeps = { id = "history" }
 free = { id = "minutes-month", count = { minutes = 30 } }
 light = { id = "plain", money = { price = 6.00 } }
 heavy = { id = "plain", money = { price = 22.00 } }
-warn = { id = "trains", text = { switch = "Terms and privacy → Data use → Improve the models for everyone" } }
+warn = { id = "trains-profile", text = { switch = "Terms and privacy → Data use → Improve the models for everyone" } }
 rule = { id = "non-commercial" }

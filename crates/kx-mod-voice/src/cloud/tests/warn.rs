@@ -3,7 +3,7 @@
 //! does.
 
 use super::*;
-use crate::services::tests::{LANGS, OWN};
+use crate::services::tests::{LANGS, OWN, PROFILE};
 
 /// The `ElevenLabs` model the tests pick.
 const SCRIBE: &str = "scribe_v3";
@@ -47,7 +47,7 @@ fn newer_terms_confirmed_bring_the_warning_back() {
     let rules = Cloud::new(&newer, false);
     assert!(rules.choice(&s, "en").is_some_and(|c| c.ask), "asks first");
     assert!(rules.confirm(&mut s, "elevenlabs", today()));
-    assert_eq!(warns(rules, &s, "en").as_deref(), Some("trains"));
+    assert_eq!(warns(rules, &s, "en").as_deref(), Some(PROFILE));
     assert!(rules.warned(&mut s, "elevenlabs"));
     assert_eq!(s.services["elevenlabs"].warned, 2);
 }

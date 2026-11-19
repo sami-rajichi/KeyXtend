@@ -111,7 +111,7 @@ fn its_card_warns_that_it_trains_by_default_and_names_its_switch_last() {
     };
     assert_eq!(
         (warn.id.as_str(), &warn.args[..], warn.warn),
-        ("trains", &[switch][..], true)
+        (PROFILE, &[switch][..], true)
     );
 }
 
