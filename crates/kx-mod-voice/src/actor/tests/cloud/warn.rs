@@ -1,9 +1,13 @@
 //! The card's warning through the actor (ruling 11): the first `ElevenLabs` dictation shows it on the bar while it
 //! listens and saves it seen at the row's terms number, nothing waiting on it; the next shows none, and a Groq
-//! dictation never does.
+//! dictation never does. Newer terms, once confirmed, show it again.
 
 use super::port::eleven;
 use super::*;
+use crate::cloud::Cloud;
+use crate::services::Services;
+use crate::services::tests::{LANGS, OWN, TEXT};
+use crate::settings::SERVICES;
 
 /// The id of the warning the bar shows while it listens; `None` for none.
 fn warn(rig: &Rig) -> Option<String> {
@@ -41,4 +45,33 @@ fn a_service_without_a_warning_never_shows_one() {
     rig.talk();
     assert_eq!(warn(&rig), None);
     assert_eq!(seen_at(&rig, "groq"), 0, "nothing noted");
+}
+
+/// The shipped table with `ElevenLabs`' terms raised to 2, kept for the run.
+fn newer() -> &'static Services {
+    let own = OWN.replacen("terms = 1", "terms = 2", 1);
+    Box::leak(Box::new(Services::parse(TEXT, &own, LANGS).unwrap()))
+}
+
+#[test]
+fn newer_terms_once_confirmed_show_the_warning_again_and_save_it_at_their_number() {
+    let mut rig = Rig::build(eleven);
+    let answers = || vec![CloudAnswer::text("hello"), CloudAnswer::text("world")];
+    rig.fake.cloud.script(answers());
+    rig.dictate();
+    assert_eq!(seen_at(&rig, "elevenlabs"), 1, "seen at the first terms");
+    let table = newer();
+    rig.actor.held.table = Some(table);
+    let mut next = rig.actor.settings().clone();
+    let today = rig.actor.ports.calendar.now().date;
+    assert!(Cloud::new(table, false).confirm(&mut next, "elevenlabs", today));
+    rig.actor.set(SERVICES, next.services_value().unwrap());
+    rig.fake.cloud.script(answers());
+    rig.talk();
+    assert_eq!(
+        warn(&rig).as_deref(),
+        Some("trains"),
+        "again, at the new terms"
+    );
+    assert_eq!(seen_at(&rig, "elevenlabs"), 2, "seen at the new number");
 }

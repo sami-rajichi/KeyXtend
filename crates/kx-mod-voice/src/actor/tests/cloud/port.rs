@@ -6,6 +6,7 @@ use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOU
 
 use super::*;
 use crate::actor::offer::piece_s;
+use crate::services;
 
 /// `ElevenLabs` picked for English with Scribe v3, switched on with its terms confirmed, and its key set.
 pub(super) fn eleven(fake: &Fakes, host: &mut FakeHost) {
@@ -30,17 +31,23 @@ fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
     let [run] = &runs[..] else {
         panic!("one run, not {}", runs.len())
     };
-    let CloudShape::Eleven(form) = &run.shape else {
-        panic!("its own shape, not {:?}", run.shape)
-    };
-    let tags = form
-        .fixed
-        .iter()
-        .map(|f| (f.name.as_str(), f.value.as_str()));
-    assert_eq!(tags.collect::<Vec<_>>(), [("tag_audio_events", "false")]);
-    let url = "https://api.elevenlabs.io/v1/speech-to-text";
-    assert_eq!(run.url.expose(), url);
-    assert_eq!(run.header, KeyHeader::Named("xi-api-key".into()));
+    let row = services::table()
+        .ok()
+        .and_then(|t| t.get("elevenlabs"))
+        .unwrap();
+    assert!(matches!(run.shape, CloudShape::Eleven(_)), "its own shape");
+    assert_eq!(
+        run.shape, row.shape,
+        "the row's form, as the table gives it"
+    );
+    let entry = &rig.actor.settings().services["elevenlabs"];
+    assert_eq!(
+        Some(run.url.clone()),
+        row.url(&entry.address),
+        "its address"
+    );
+    assert!(matches!(run.header, KeyHeader::Named(_)), "its own header");
+    assert_eq!(run.header, row.header, "the row's header");
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     assert_eq!((model, run.lang.as_str()), (Some("scribe_v3"), "en"));
     assert_eq!(rig.typed_texts(), ["hello world"]);

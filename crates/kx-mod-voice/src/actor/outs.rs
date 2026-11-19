@@ -10,10 +10,9 @@ use kx_module_api::{Event, Notice, Redacted, Secret, Zeroizing};
 use super::Actor;
 use super::lanes::Owner;
 use super::typing::Source;
-use crate::cloud::Cloud;
+use crate::ID;
 use crate::flow::{In, Out};
 use crate::settings::SERVICES;
-use crate::{ID, services};
 
 /// The round a bar click the flow hands to Compare names: none, as such a click is never stale.
 const NO_ROUND: u32 = 0;
@@ -105,11 +104,11 @@ impl Actor {
 
     /// Saves service `id`'s card warning as seen at its row's terms number, so the next dictation shows none.
     fn warned(&mut self, id: &str) {
-        let Ok(table) = services::table() else {
+        let Some(rules) = self.held.cloud() else {
             return;
         };
         let mut next = self.held.settings.clone();
-        if !Cloud::new(table, self.net.hidden).warned(&mut next, id) {
+        if !rules.warned(&mut next, id) {
             return;
         }
         if let Some(value) = next.services_value() {

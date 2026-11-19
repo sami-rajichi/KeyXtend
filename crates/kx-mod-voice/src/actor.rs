@@ -222,7 +222,7 @@ impl Actor {
                 stock: self.panel.stock(&facts),
                 settings: &self.held.settings,
                 keys: &self.net.keys,
-                hidden: self.net.hidden,
+                cloud: facts.cloud,
             };
             let outs = self.flow.on(input, &offer);
             for out in outs {

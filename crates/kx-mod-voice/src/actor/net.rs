@@ -13,10 +13,8 @@ use super::ask::{Head, Tell, Wired, deliver, head_of, shut};
 use super::lanes::Owner;
 use super::trial::Trial;
 use super::{Actor, Back, Job, Msg};
-use crate::cloud::Cloud;
 use crate::flow::{In, Sent, Upload};
 use crate::keys::Keys;
-use crate::services;
 
 /// One dictation's upload.
 struct Up {
@@ -192,8 +190,7 @@ impl Actor {
     /// The head of `up`'s ask from the language's pick, while it still names `up`'s service.
     fn head(&self, up: &Upload) -> Option<Head> {
         let s = &self.held.settings;
-        let table = services::table().ok()?;
-        let choice = Cloud::new(table, self.net.hidden).choice(s, &up.lang)?;
+        let choice = self.held.cloud()?.choice(s, &up.lang)?;
         (choice.service.id == up.service)
             .then(|| head_of(s, &choice))
             .flatten()

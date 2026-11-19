@@ -9,7 +9,6 @@ use crate::cloud::{Chosen, Cloud, pick_text};
 use crate::flow::{Lack, Net, Ready, Supply};
 use crate::folder::Stock;
 use crate::keys::Keys;
-use crate::services;
 
 /// What a language gets now.
 pub(super) struct Offer<'a> {
@@ -19,8 +18,8 @@ pub(super) struct Offer<'a> {
     pub settings: &'a VoiceSettings,
     /// The keys on the voice shelf.
     pub keys: &'a Keys,
-    /// The run's saves would be hidden (ADR-0037), so no service is offered.
-    pub hidden: bool,
+    /// The cloud rules, which offer no service in a hidden run (ADR-0037); `None` should the table fail.
+    pub cloud: Option<Cloud<'a>>,
 }
 
 impl Supply for Offer<'_> {
@@ -29,8 +28,7 @@ impl Supply for Offer<'_> {
     }
 
     fn cloud(&self, iso: &str) -> Option<Net> {
-        let table = services::table().ok()?;
-        let choice = Cloud::new(table, self.hidden).choice(self.settings, iso)?;
+        let choice = self.cloud?.choice(self.settings, iso)?;
         let row = choice.service;
         let model = match choice.model {
             Chosen::Listed(model) => model.id.as_str(),

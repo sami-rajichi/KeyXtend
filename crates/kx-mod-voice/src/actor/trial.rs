@@ -11,10 +11,8 @@ use kx_module_api::{Mono, SecretBytes};
 use super::ask::{Head, Tell, Wired, deliver, head_of, shut};
 use super::lanes::{Lane, Owner};
 use super::{Actor, Back, Job, Msg};
-use crate::cloud::Cloud;
 use crate::compare::Remote;
 use crate::keys::Keys;
-use crate::services;
 
 /// The round Compare's hand-over is asked for, as its run hands its recording over once.
 const ONCE: u32 = 0;
@@ -177,7 +175,7 @@ impl Actor {
     /// The head of model `remote`'s ask for `lang`, while its service is on, its terms confirmed and the model usable.
     fn trial_head(&self, lang: &str, remote: &Remote) -> Option<Head> {
         let s = &self.held.settings;
-        let rules = Cloud::new(services::table().ok()?, self.net.hidden);
+        let rules = self.held.cloud()?;
         let choice = rules.model_for(s, lang, &remote.service, remote.model.expose())?;
         head_of(s, &choice).filter(|_| !choice.ask)
     }

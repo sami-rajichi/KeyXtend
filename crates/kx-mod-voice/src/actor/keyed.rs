@@ -11,11 +11,9 @@ use kx_module_api::ports::{
 };
 
 use super::{Actor, Back, Job, Msg};
-use crate::cloud::Cloud;
 use crate::flow::In;
 use crate::keys::Keys;
 use crate::panel::Do;
-use crate::services;
 
 impl Actor {
     /// Carries out one of the key page's effects.
@@ -91,8 +89,7 @@ impl Actor {
     /// The test's ask without its key, from the row and `[voice]`; `None` for a row with no test or a refused address.
     fn test_head(&self, service: &str) -> Option<CloudTest> {
         let s = &self.held.settings;
-        let table = services::table().ok()?;
-        let row = Cloud::new(table, self.held.hidden).row(service)?;
+        let row = self.held.cloud()?.row(service)?;
         let entry = s.services.get(service)?;
         Some(CloudTest {
             job: s.job(),

@@ -1,10 +1,11 @@
 //! The steps a cloud run meets, their odds, the picks they move between, and how each is fed to the rig.
 
 use super::*;
-use kx_module_api::ports::{CloudFault, CloudNote, ServiceName, Unavailable};
+use kx_module_api::ports::{CloudFault, CloudNote, Fact, ServiceName, Unavailable};
 
-/// Each language's pick: none, Groq, Custom, Groq without its key, Groq with newer terms, and a model ruled out.
-const PICKS: usize = 6;
+/// Each language's pick: none, Groq, Custom, Groq without its key, Groq with newer terms, a model ruled out, and
+/// Groq with its card's warning to show.
+const PICKS: usize = 7;
 /// How often a note goes to an older upload.
 const STALE: f64 = 0.1;
 /// The faults a service's run may tell.
@@ -123,6 +124,14 @@ pub(super) fn pick(i: usize) -> Option<Net> {
         }),
         5 => Some(Net {
             unavailable: Some(Unavailable::KeepNothing),
+            ..groq
+        }),
+        6 => Some(Net {
+            warn: Some(Fact {
+                id: "trains".into(),
+                args: Vec::new(),
+                warn: true,
+            }),
             ..groq
         }),
         _ => None,
