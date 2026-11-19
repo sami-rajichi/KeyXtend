@@ -30,7 +30,14 @@ fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
     let [run] = &runs[..] else {
         panic!("one run, not {}", runs.len())
     };
-    assert_eq!(run.shape, CloudShape::Eleven);
+    let CloudShape::Eleven(form) = &run.shape else {
+        panic!("its own shape, not {:?}", run.shape)
+    };
+    let tags = form
+        .fixed
+        .iter()
+        .map(|f| (f.name.as_str(), f.value.as_str()));
+    assert_eq!(tags.collect::<Vec<_>>(), [("tag_audio_events", "false")]);
     let url = "https://api.elevenlabs.io/v1/speech-to-text";
     assert_eq!(run.url.expose(), url);
     assert_eq!(run.header, KeyHeader::Named("xi-api-key".into()));

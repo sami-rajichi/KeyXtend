@@ -88,6 +88,15 @@ pub(super) fn region_form(code: &'static str) -> NetShape<'static> {
     regioned(form("l", false, Vec::new()), code)
 }
 
+/// `ElevenLabs`' shape, its form naming its language field and asking for no sound tags, as its row says.
+pub(super) fn eleven() -> NetShape<'static> {
+    let fixed = vec![field("tag_audio_events", "false")];
+    let NetShape::Form(form) = form("language_code", false, fixed) else {
+        unreachable!("a form")
+    };
+    NetShape::Eleven(form)
+}
+
 /// A fixed field.
 pub(super) fn field(name: &'static str, value: &'static str) -> NetField<'static> {
     NetField {
@@ -175,7 +184,7 @@ fn sends() -> Vec<NetAsk<'static>> {
             ),
         ),
         unnamed,
-        send(5, call(NetShape::Eleven, named("xi-api-key"))),
+        send(5, call(eleven(), named("xi-api-key"))),
         send(6, call(NetShape::Gemini, named("x-goog-api-key"))),
     ]
 }

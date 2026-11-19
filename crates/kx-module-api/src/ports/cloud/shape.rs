@@ -15,19 +15,19 @@ pub enum CloudShape {
     /// The `OpenAI`-style upload form, with the row's field names: Groq, `OpenAI`, Mistral, Together, Lemonfox,
     /// `DeepInfra`, `OpenRouter` and the Custom row.
     Form(FormFields),
-    /// `ElevenLabs`' own form.
-    Eleven,
+    /// `ElevenLabs`' own form, with the row's language field and fixed fields; it takes no paywall or region code.
+    Eleven(FormFields),
     /// Gemini's single request, with the sound inline.
     Gemini,
 }
 
 impl CloudShape {
-    /// True when a form's names and values fit; the other shapes name no field.
+    /// True when a form's names and values fit; Gemini names no field.
     #[must_use]
     pub fn fits(&self) -> bool {
         match self {
-            Self::Form(form) => form.fits(),
-            Self::Eleven | Self::Gemini => true,
+            Self::Form(form) | Self::Eleven(form) => form.fits(),
+            Self::Gemini => true,
         }
     }
 
@@ -41,7 +41,7 @@ impl CloudShape {
     pub(super) const fn code(&self) -> ShapeCode {
         match self {
             Self::Form(_) => ShapeCode::Form,
-            Self::Eleven => ShapeCode::Eleven,
+            Self::Eleven(_) => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
         }
     }

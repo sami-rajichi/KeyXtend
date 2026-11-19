@@ -2,8 +2,6 @@
 //! address is refused, and `ElevenLabs` and Gemini refuse a run with no model before any frame.
 
 use super::*;
-use crate::ShapeCode;
-use crate::code::Code;
 use IpcError::BadField;
 
 /// Real model ids from the services' own pages.
@@ -97,10 +95,10 @@ fn a_model_or_language_that_could_break_a_body_or_an_address_is_refused_both_way
 #[test]
 fn elevenlabs_and_gemini_refuse_a_run_with_no_model_both_ways() {
     round_trips(send_as(groq_form(), None, "fr"));
-    for shape in [NetShape::Eleven, NetShape::Gemini] {
+    for shape in [eleven(), NetShape::Gemini] {
         refused(&send_as(shape.clone(), None, "fr"), BadField);
         round_trips(send_as(shape.clone(), Some(MODEL), "fr"));
-        let read = |model| NetAsk::read(&mut &bare_as(shape.code(), model)[..]);
+        let read = |model| NetAsk::read(&mut &bare_as(&shape, model)[..]);
         assert_eq!(
             read(Some(MODEL)),
             Ok(send_as(shape.clone(), Some(MODEL), "fr"))
@@ -109,17 +107,24 @@ fn elevenlabs_and_gemini_refuse_a_run_with_no_model_both_ways() {
     }
 }
 
-/// A send's frame for `model` with its form taken out and `code` in its place, as a writer that skipped the model
-/// rule would send it.
-fn bare_as(code: ShapeCode, model: Option<&'static str>) -> Vec<u8> {
-    let test = |shape| {
-        let call = call(shape, NetHeader::Bearer);
-        net_ask_bytes(&NetAsk::Test { id: 1, call }).len()
+/// `shape`'s own bytes in a frame: its code, then its form if it has one.
+fn shape_bytes(shape: &NetShape<'static>) -> Vec<u8> {
+    let test = |s: &NetShape<'static>| {
+        let call = call(s.clone(), NetHeader::Bearer);
+        net_ask_bytes(&NetAsk::Test { id: 1, call })
     };
-    let form = test(groq_form()) - test(NetShape::Gemini);
+    let own = test(shape);
+    let len = own.len() + 1 - test(&NetShape::Gemini).len();
+    own[HEADER_LEN..HEADER_LEN + len].to_vec()
+}
+
+/// A send's frame for `model` with Groq's shape swapped for `shape`, as a writer that skipped the model rule would
+/// send it.
+fn bare_as(shape: &NetShape<'static>, model: Option<&'static str>) -> Vec<u8> {
+    let groq = shape_bytes(&groq_form());
     let sent = net_ask_bytes(&send_as(groq_form(), model, "fr"));
-    let rest = &sent[HEADER_LEN + 1 + form..];
-    frame(Kind::NetSend, 1, &[&[code.code()], rest].concat())
+    let rest = &sent[HEADER_LEN + groq.len()..];
+    frame(Kind::NetSend, 1, &[&shape_bytes(shape)[..], rest].concat())
 }
 
 #[test]

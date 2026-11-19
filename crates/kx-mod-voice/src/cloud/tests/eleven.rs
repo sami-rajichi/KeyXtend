@@ -34,10 +34,9 @@ fn a_pick_of_scribe_sends_the_keyboard_languages_code_in_its_own_shape() {
             panic!("{lang}: a listed model")
         };
         assert_eq!(model.id, SCRIBE);
-        assert_eq!(
-            choice.service.shape_for(Some(model), true),
-            CloudShape::Eleven
-        );
+        let shape = choice.service.shape_for(Some(model), true);
+        assert_eq!(shape, choice.service.shape, "the row's own form, as it is");
+        assert!(matches!(shape, CloudShape::Eleven(_)));
     }
     assert!(
         !rules().pick(&mut s, "de", "elevenlabs", SCRIBE),

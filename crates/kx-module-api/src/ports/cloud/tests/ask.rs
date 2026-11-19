@@ -58,7 +58,7 @@ fn every_shape_with_its_header_passes() {
             regioned(form_as("language", false, Vec::new())),
             KeyHeader::Bearer,
         ),
-        (CloudShape::Eleven, KeyHeader::Named("xi-api-key".into())),
+        (eleven(), KeyHeader::Named("xi-api-key".into())),
         (
             CloudShape::Gemini,
             KeyHeader::Named("x-goog-api-key".into()),
@@ -203,7 +203,7 @@ fn a_model_or_language_code_that_could_break_a_request_is_refused() {
 #[test]
 fn elevenlabs_and_gemini_need_a_model_and_the_form_takes_none() {
     let rows = [
-        (CloudShape::Eleven, Some("model")),
+        (eleven(), Some("model")),
         (CloudShape::Gemini, Some("model")),
         (form(), None),
     ];

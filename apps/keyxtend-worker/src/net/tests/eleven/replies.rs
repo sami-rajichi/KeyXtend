@@ -1,7 +1,8 @@
 //! `ElevenLabs`' answers read as its error page says [E8]: its text, a bad key, a plain 401 still the key, a used quota
 //! or no credit by the exact code its `detail` names, each 429 a wait, too big, a language refused, a service down, and
 //! anything else strange; its key test on the subscription [E9]. The fixtures under `replies/elevenlabs/` hold made-up
-//! ids and no key; [E8] names the codes only, so each error body is assumed, for the live check.
+//! ids and no key; [E8] names the codes only, so each error body but the reference's 422 list is assumed, for the live
+//! check.
 
 use super::super::table::{Extra, Got, read_with, tested_with};
 use super::*;
@@ -19,8 +20,10 @@ const CREDITS: &[u8] = include_bytes!("../replies/elevenlabs/credits.json");
 const CONCURRENT: &[u8] = include_bytes!("../replies/elevenlabs/concurrent.json");
 const TOO_MANY: &[u8] = include_bytes!("../replies/elevenlabs/too-many.json");
 const SYSTEM: &[u8] = include_bytes!("../replies/elevenlabs/busy.json");
-/// A 422 naming `language_code` in its `detail[]`, assumed from its validation errors.
+/// A 422 as its reference gives it: `detail` a list of `{loc, msg, type}`, here naming `language_code`.
 const LANGUAGE_CODE: &[u8] = include_bytes!("../replies/elevenlabs/language.json");
+/// The same list naming another field.
+const OTHER_FIELD: &[u8] = include_bytes!("../replies/elevenlabs/field.json");
 /// The subscription the key test reads, with the quota's renewal [E9].
 const SUBSCRIPTION: &[u8] = include_bytes!("../replies/elevenlabs/subscription.json");
 /// The codes [E8] gives for a used quota or no credit.
@@ -163,5 +166,23 @@ proptest! {
             _ => Got::Fault(Credit),
         };
         prop_assert_eq!(read(status, &[], &detail(under, &code)), want);
+    }
+}
+
+#[test]
+fn a_422_list_body_reads_without_a_panic_its_language_as_language_else_strange() {
+    assert_eq!(read(422, &[], LANGUAGE_CODE), Got::Fault(Language));
+    assert_eq!(read(422, &[], OTHER_FIELD), Got::Fault(Strange));
+    let plain = [
+        (401, Got::Fault(Key)),
+        (402, Got::Fault(Credit)),
+        (BUSY, Got::Wait(None)),
+    ];
+    for (status, want) in plain {
+        let got = read(status, &[], OTHER_FIELD);
+        assert_eq!(
+            got, want,
+            "{status}: a list holds no code, so its plain row"
+        );
     }
 }

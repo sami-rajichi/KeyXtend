@@ -69,6 +69,39 @@ fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
 }
 
 #[test]
+fn elevenlabs_form_reaches_the_frame_in_its_own_shape() {
+    let (host, script, _) = host();
+    let tags = FormField {
+        name: "tag_audio_events".into(),
+        value: "false".into(),
+    };
+    let shape = CloudShape::Eleven(FormFields {
+        lang: "language_code".into(),
+        list: false,
+        fixed: vec![tags],
+        paywall: false,
+        region: None,
+    });
+    let ask = CloudAsk {
+        shape,
+        header: KeyHeader::Named("xi-api-key".into()),
+        ..ask(&[PER_S])
+    };
+    let (_run, _) = sent(&host, ask);
+    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
+        panic!("a send first");
+    };
+    let NetShape::Eleven(form) = &call.shape else {
+        panic!("its own shape, not {:?}", call.shape);
+    };
+    let fixed: Vec<(&str, &str)> = (form.fixed.iter())
+        .map(|f| (f.name.as_ref(), f.value.as_ref()))
+        .collect();
+    assert_eq!(form.lang, "language_code");
+    assert_eq!(fixed, [("tag_audio_events", "false")]);
+}
+
+#[test]
 fn the_row_and_the_key_go_first_then_the_sound_in_wiped_parts_in_order() {
     let (host, script, _) = host();
     let sizes = [PER_S, MAX_SOUND_BYTES + PER_S, 2 * SAMPLE_BYTES];

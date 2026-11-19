@@ -1,6 +1,7 @@
-//! `ElevenLabs`' own form [E3]: `model_id`, `language_code` and the piece as `file`, nothing else; the key only in the
-//! call's own header; a run with no model or another shape's call refused; the key's test a GET with the key alone; and
-//! a piece posted and read end to end. `replies` reads each answer as its error page says [E8].
+//! `ElevenLabs`' own form [E3]: `model_id`, the row's language and fixed fields, then the piece as `file`, nothing
+//! else; the key only in the call's own header; a run with no model, another shape's call or a repeated name refused;
+//! the key's test a GET with the key alone; and a piece posted and read end to end. `replies` reads each answer as its
+//! error page says [E8].
 
 mod replies;
 
@@ -9,7 +10,7 @@ use super::*;
 use crate::net::eleven::Eleven;
 use crate::net::send::{self, Sending};
 use crate::net::shape::{self, Shape};
-use kx_ipc::{NetFault, ShapeCode};
+use kx_ipc::{NetFault, NetField, ShapeCode};
 use kx_platform_net::Verb;
 use std::sync::atomic::AtomicBool;
 
@@ -25,38 +26,75 @@ const SCRIBE: &str = "scribe_v3";
 const WAV: &[u8] = b"RIFF-and-samples";
 /// What the text fixture says.
 const SAID: &str = "Bonjour tout le monde.";
+/// The field that asks for no sound tags.
+const TAGS: &str = "tag_audio_events";
 
-/// A call to `url` in `ElevenLabs`' shape, the key under its own header.
-fn eleven(url: &'static str) -> NetCall<'static> {
-    NetCall {
-        header: NetHeader::Named(Cow::Borrowed(HEADER)),
-        ..call_to(url, NetShape::Eleven)
+/// The row's form: its language field, and no sound tags such as "(laughter)" in the text.
+fn own_form() -> NetForm<'static> {
+    NetForm {
+        lang: Cow::Borrowed("language_code"),
+        fixed: vec![NetField {
+            name: Cow::Borrowed(TAGS),
+            value: Cow::Borrowed("false"),
+        }],
+        ..form()
     }
 }
 
+/// A call to `url` in `ElevenLabs`' shape with `form`, the key under its own header.
+fn eleven_with(url: &'static str, form: NetForm<'static>) -> NetCall<'static> {
+    NetCall {
+        header: NetHeader::Named(Cow::Borrowed(HEADER)),
+        ..call_to(url, NetShape::Eleven(form))
+    }
+}
+
+/// A call to `url` in `ElevenLabs`' shape with the row's form.
+fn eleven(url: &'static str) -> NetCall<'static> {
+    eleven_with(url, own_form())
+}
+
 #[test]
-fn the_form_sends_the_model_id_and_language_code_then_the_sound_and_nothing_else() {
+fn the_form_sends_the_model_id_its_language_and_fixed_fields_then_the_sound_and_nothing_else() {
     let call = eleven(ADDRESS);
     let req = Eleven
         .build(&piece(&call, Some(SCRIBE), "fr", WAV))
         .unwrap();
     assert_eq!(req.verb, Verb::Post);
-    assert_eq!(names(&req), ["model_id", "language_code", "file"]);
+    assert_eq!(names(&req), ["model_id", "language_code", TAGS, "file"]);
     let got = parts(&req);
+    let values: Vec<&[u8]> = got[..3].iter().map(|p| p.3.as_slice()).collect();
+    assert_eq!(values, [SCRIBE.as_bytes(), b"fr", b"false"]);
+    assert!(got[..3].iter().all(|p| p.1.is_none()), "three text fields");
     assert_eq!(
-        (got[0].3.as_slice(), got[1].3.as_slice()),
-        (SCRIBE.as_bytes(), &b"fr"[..])
-    );
-    assert!(got[..2].iter().all(|p| p.1.is_none()), "two text fields");
-    assert_eq!(
-        (got[2].1.as_deref(), got[2].3.as_slice()),
+        (got[3].1.as_deref(), got[3].3.as_slice()),
         (Some("piece.wav"), WAV)
     );
     assert!(
-        got[2].2.contains("\r\nContent-Type: audio/wav"),
+        got[3].2.contains("\r\nContent-Type: audio/wav"),
         "{}",
-        got[2].2
+        got[3].2
     );
+}
+
+#[test]
+fn a_fixed_field_that_repeats_one_of_its_own_names_is_out_of_range() {
+    for name in ["model_id", "Language_Code", "file"] {
+        let mut form = own_form();
+        form.fixed[0].name = Cow::Borrowed(name);
+        let call = eleven_with(ADDRESS, form);
+        let got = Eleven.build(&piece(&call, Some(SCRIBE), "fr", WAV)).err();
+        assert_eq!(got, Some(NetFault::Range), "{name}");
+    }
+    let listed = NetForm {
+        list: true,
+        ..own_form()
+    };
+    let call = eleven_with(ADDRESS, listed);
+    let req = Eleven
+        .build(&piece(&call, Some(SCRIBE), "fr", WAV))
+        .unwrap();
+    assert_eq!(names(&req)[1], "language_code[]", "a list as the row says");
 }
 
 #[test]

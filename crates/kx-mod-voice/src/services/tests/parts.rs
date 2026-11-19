@@ -107,7 +107,7 @@ fn groqs_least_billed_length_is_a_fact_the_validator_checks() {
 #[test]
 fn a_model_on_a_shape_that_needs_a_name_or_takes_no_form_is_refused() {
     let base = |why| Some(("base".to_owned(), why));
-    let shape = "shape = \"form\"\nform = { lang = \"language\", list = false }";
+    let shape = "shape = \"form\"";
     let eleven = edits_text(DOMAIN, &[(shape, "shape = \"eleven\"")]);
     assert_eq!(
         model_err(DOMAIN, shape, "shape = \"eleven\""),

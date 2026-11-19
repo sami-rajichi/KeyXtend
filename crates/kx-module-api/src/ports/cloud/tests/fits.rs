@@ -70,7 +70,20 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
         assert!(!CloudShape::Form(odd).fits(), "{code:?}");
     }
     assert!(!form().needs_model());
-    assert!(CloudShape::Eleven.needs_model() && CloudShape::Gemini.needs_model());
+    assert!(eleven().needs_model() && CloudShape::Gemini.needs_model());
+}
+
+#[test]
+fn elevenlabs_form_fits_as_an_upload_forms_does() {
+    assert!(eleven().fits());
+    let CloudShape::Eleven(mut odd) = eleven() else {
+        unreachable!("its own form")
+    };
+    odd.fixed[0].name = "tag audio".into();
+    assert!(!CloudShape::Eleven(odd.clone()).fits(), "a spaced name");
+    odd.fixed[0].name = "tag_audio_events".into();
+    odd.fixed[0].value = "a\r\nb".into();
+    assert!(!CloudShape::Eleven(odd).fits(), "a breaking value");
 }
 
 #[test]

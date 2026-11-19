@@ -37,10 +37,11 @@ fn read_text<R: Read + ?Sized>(
     Ok(Cow::Owned(text))
 }
 
-/// Sends a shape: its code, then a form's language name, list flag, fixed fields, paywall flag and region code.
+/// Sends a shape: its code, then the form's language name, list flag, fixed fields, paywall flag and region code for a
+/// shape with one.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     s.byte(shape.code().code())?;
-    let NetShape::Form(form) = shape else {
+    let (NetShape::Form(form) | NetShape::Eleven(form)) = shape else {
         return Ok(());
     };
     put_text(s, TAG, &form.lang, rules::token)?;
@@ -60,12 +61,13 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
 
 /// Reads a shape.
 fn read_shape<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetShape<'static>, IpcError> {
-    let form = match ShapeCode::from_code(p.byte()?).ok_or(IpcError::BadField)? {
-        ShapeCode::Form => read_form(p)?,
-        ShapeCode::Eleven => return Ok(NetShape::Eleven),
-        ShapeCode::Gemini => return Ok(NetShape::Gemini),
-    };
-    Ok(NetShape::Form(form))
+    Ok(
+        match ShapeCode::from_code(p.byte()?).ok_or(IpcError::BadField)? {
+            ShapeCode::Form => NetShape::Form(read_form(p)?),
+            ShapeCode::Eleven => NetShape::Eleven(read_form(p)?),
+            ShapeCode::Gemini => NetShape::Gemini,
+        },
+    )
 }
 
 /// Reads a form's language name, list flag, fixed fields, paywall flag and region code.

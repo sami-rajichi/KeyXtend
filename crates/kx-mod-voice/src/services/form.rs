@@ -111,8 +111,8 @@ impl<'a> Sent<'a> {
     }
 }
 
-/// The shape `name` names, with `form`'s fields for a form, whose fixed fields and keep field must fit one request; only
-/// a form takes a keep field, a paywall or a region code.
+/// The shape `name` names, with `form`'s fields for an upload form or `ElevenLabs`' own, whose fixed fields and keep
+/// field must fit one request; Gemini takes no form, and only an upload form a keep field, a paywall or a region code.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
@@ -126,28 +126,31 @@ pub(super) fn shape(
     let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
     match (kind, form, bare) {
         (Kind::Form, Some(form), _) => fields(form, sent),
-        (Kind::Eleven, None, true) => Ok(CloudShape::Eleven),
+        (Kind::Eleven, Some(form), true) => checked(form, sent).map(CloudShape::Eleven),
         (Kind::Gemini, None, true) => Ok(CloudShape::Gemini),
         _ => Err(ServiceError::Form),
     }
 }
 
+/// An upload form's checked fields as its shape (`checked`).
+pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, ServiceError> {
+    checked(form, sent).map(CloudShape::Form)
+}
+
 /// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with the keep field, and a plain reply;
 /// it carries the row's paywall and region code, which must be a plain name.
-pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, ServiceError> {
+fn checked(form: &RawForm, sent: &Sent<'_>) -> Result<FormFields, ServiceError> {
     let fixed: Vec<FormField> = form.fixed.iter().map(RawField::field).collect();
     let mut all = fixed.clone();
     all.extend(sent.keep.cloned());
-    let shape = |fixed| {
-        CloudShape::Form(FormFields {
-            lang: form.lang.clone(),
-            list: form.list,
-            fixed,
-            paywall: sent.paywall,
-            region: sent.region.map(str::to_owned),
-        })
+    let shape = |fixed| FormFields {
+        lang: form.lang.clone(),
+        list: form.list,
+        fixed,
+        paywall: sent.paywall,
+        region: sent.region.map(str::to_owned),
     };
-    if !shape(all.clone()).fits() || all.len() > MAX_FIXED {
+    if !CloudShape::Form(shape(all.clone())).fits() || all.len() > MAX_FIXED {
         return Err(ServiceError::Form);
     }
     if !all.iter().all(|f| sent.reply.allows(f)) {

@@ -1,8 +1,9 @@
-//! `ElevenLabs`' own form (ADR-0047 decision 5, research [E3]): `model_id`, `language_code` and the piece as `file`,
-//! nothing else, with the key in the header the call names. A reply is `{"text": …}` beside its word timings; anything
-//! else is read through its status table [E8], where a used quota or no credit is told only by the exact code its
-//! `detail` names, so a plain 401 stays the key.
+//! `ElevenLabs`' own form (ADR-0047 decision 5, research [E3]): `model_id`, then the row's language field and fixed
+//! fields, such as no sound tags, then the piece as `file`, with the key in the header the call names. A reply is
+//! `{"text": …}` beside its word timings; anything else is read through its status table [E8], where a used quota or
+//! no credit is told only by the exact code its `detail` names, so a plain 401 stays the key.
 
+use super::form;
 use super::multipart::{self, Text};
 use super::reply::{self, Coded};
 use super::shape::{self, Piece, Request, Shape, Verdict};
@@ -14,9 +15,8 @@ use zeroize::Zeroizing;
 /// `ElevenLabs`' form.
 pub struct Eleven;
 
-/// The form's own field names beside the file's [E3].
+/// The form's own model field beside the row's language field and the file's [E3].
 const MODEL: &str = "model_id";
-const LANG: &str = "language_code";
 /// The answer header a 429 is read by.
 const KEEP: &[&str] = &[RETRY];
 /// Where an error names its code: `detail.status`, or `detail.code` in the newer shape [E8].
@@ -66,10 +66,11 @@ const TABLE: &[Row<Says>] = &[
 
 impl Shape for Eleven {
     fn build(&self, piece: &Piece<'_>) -> Result<Request, NetFault> {
-        let (NetShape::Eleven, Some(model)) = (&piece.call.shape, piece.model) else {
+        let (NetShape::Eleven(own), Some(model)) = (&piece.call.shape, piece.model) else {
             return Err(NetFault::Range);
         };
-        let texts = [Text::of(MODEL, model), Text::of(LANG, piece.lang)];
+        let rest = form::fields(own, piece.lang, &[MODEL])?;
+        let texts: Vec<Text<'_>> = [Text::of(MODEL, model)].into_iter().chain(rest).collect();
         let sent = multipart::sent(&texts, &multipart::wav(piece.wav))?;
         Ok(Request {
             verb: Verb::Post,
@@ -80,7 +81,7 @@ impl Shape for Eleven {
     }
 
     fn test(&self, call: &NetCall<'_>) -> Result<Request, NetFault> {
-        let NetShape::Eleven = &call.shape else {
+        let NetShape::Eleven(_) = &call.shape else {
             return Err(NetFault::Range);
         };
         Ok(Request {

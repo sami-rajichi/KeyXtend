@@ -64,6 +64,21 @@ fn form() -> CloudShape {
     })
 }
 
+/// `ElevenLabs`' shape, its form naming its language field and asking for no sound tags.
+fn eleven() -> CloudShape {
+    let fixed = vec![FormField {
+        name: "tag_audio_events".into(),
+        value: "false".into(),
+    }];
+    CloudShape::Eleven(FormFields {
+        lang: "language_code".into(),
+        list: false,
+        fixed,
+        paywall: false,
+        region: None,
+    })
+}
+
 /// Groq's limits on its free plan.
 fn limits() -> CloudLimits {
     CloudLimits {

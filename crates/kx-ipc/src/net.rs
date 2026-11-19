@@ -35,8 +35,8 @@ pub struct NetCall<'a> {
 pub enum NetShape<'a> {
     /// The `OpenAI`-style upload form, with the row's field names.
     Form(NetForm<'a>),
-    /// `ElevenLabs`' own form.
-    Eleven,
+    /// `ElevenLabs`' own form, with the row's language field and fixed fields; its paywall and region stay unread.
+    Eleven(NetForm<'a>),
     /// Gemini's single request, with the sound inline.
     Gemini,
 }
@@ -47,7 +47,7 @@ impl NetShape<'_> {
     pub const fn code(&self) -> ShapeCode {
         match self {
             Self::Form(_) => ShapeCode::Form,
-            Self::Eleven => ShapeCode::Eleven,
+            Self::Eleven(_) => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
         }
     }

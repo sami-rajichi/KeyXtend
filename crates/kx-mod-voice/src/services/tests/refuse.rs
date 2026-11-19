@@ -73,7 +73,9 @@ fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
 fn a_shape_or_form_that_breaks_a_request_is_refused() {
     let five = ["{ name = \"a\", value = \"1\" }"; 5].join(", ");
     refused("shape = \"form\"", "shape = \"json\"", E::Shape);
-    refused("shape = \"form\"", "shape = \"eleven\"", E::Form);
+    let bare = format!("shape = \"form\"\n{FORM}");
+    refused(&bare, "shape = \"eleven\"", E::Form);
+    refused("shape = \"form\"", "shape = \"gemini\"", E::Form);
     refused(FORM, "", E::Form);
     refused(
         FORM,
@@ -94,11 +96,11 @@ fn a_row_of_the_dropped_azure_shape_is_refused_as_an_unknown_shape() {
 }
 
 #[test]
-fn a_paywall_or_region_is_refused_on_a_shape_without_a_form_and_an_odd_region_code_anywhere() {
-    let form = format!("shape = \"form\"\n{FORM}");
-    assert!(edits(&[(&form, "shape = \"eleven\"")]).is_ok(), "bare");
+fn a_paywall_or_region_is_refused_on_elevenlabs_shape_and_an_odd_region_code_anywhere() {
+    let form = "shape = \"form\"";
+    assert!(edits(&[(form, "shape = \"eleven\"")]).is_ok(), "its form");
     for rule in ["paywall = true", "region = \"unsupported_country\""] {
-        refused(&form, &format!("shape = \"eleven\"\n{rule}"), E::Form);
+        refused(form, &format!("shape = \"eleven\"\n{rule}"), E::Form);
     }
     for code in ["unsupported country", ""] {
         refused(FORM, &format!("{FORM}\nregion = \"{code}\""), E::Form);

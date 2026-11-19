@@ -1,16 +1,31 @@
-//! `ElevenLabs`' row as its pages read 2026-11-17 give it (research file `[E…]` lines): its own form at its own address
-//! with the key in `xi-api-key`, its key test on the subscription, Scribe v3 and v2 but never the deprecated v1, two
-//! requests at once, and its card: the US, training by default with its switch named last, history kept, the lower
-//! free allowance, its hourly price for light and heavy use, and the free plan's rule.
+//! `ElevenLabs`' row as its pages read 2026-11-17 give it (research file `[E…]` lines): its own form, asking for no
+//! sound tags, at its own address with the key in `xi-api-key`, its key test on the subscription, Scribe v3 and v2 but
+//! never the deprecated v1, two requests at once, and its card: the US, training by default with its switch named
+//! last, history kept, the lower free allowance, its hourly price for light and heavy use, and the free plan's rule.
 
 use super::*;
-use kx_module_api::ports::{Fact, FactArg, KeyHeader};
+use kx_module_api::ports::{Fact, FactArg, FormField, FormFields, KeyHeader};
 
 /// Its price an hour in cents, on every plan [E1].
 const HOURLY: u32 = 20;
 /// The switch that stops training, in its own words [E5][E7].
 const SWITCH: &str =
     "Profile menu → Terms and privacy → Data use → Improve the models for everyone";
+
+/// Its form as the row writes it: its language field, and no sound tags such as "(laughter)" typed into the text.
+fn own_form() -> CloudShape {
+    let tags = FormField {
+        name: "tag_audio_events".into(),
+        value: "false".into(),
+    };
+    CloudShape::Eleven(FormFields {
+        lang: "language_code".into(),
+        list: false,
+        fixed: vec![tags],
+        paywall: false,
+        region: None,
+    })
+}
 
 /// The shipped row.
 fn eleven() -> &'static Service {
@@ -35,7 +50,7 @@ fn usd(cents: u32) -> FactValue {
 fn it_posts_its_own_form_to_its_own_address_and_tests_its_key_on_the_subscription() {
     let row = eleven();
     assert_eq!(row.name.as_deref(), Some("ElevenLabs"));
-    assert_eq!(row.shape, CloudShape::Eleven);
+    assert_eq!(row.shape, own_form(), "[E3]: no `timestamps_granularity`");
     let shown = |url: Option<HttpsUrl>| url.map(|u| u.expose().to_owned());
     let address = "https://api.elevenlabs.io/v1/speech-to-text";
     assert_eq!(shown(row.url("")).as_deref(), Some(address), "[E3]");

@@ -93,23 +93,10 @@ impl Shape for Form {
         let NetShape::Form(form) = &piece.call.shape else {
             return Err(NetFault::Range);
         };
-        let lang = if form.list {
-            Cow::Owned(format!("{}{LIST}", form.lang))
-        } else {
-            Cow::Borrowed(form.lang.as_ref())
-        };
-        if repeats(form, &lang) {
-            return Err(NetFault::Range);
-        }
         let model = piece.model.map(|m| Text::of(MODEL, m));
-        let fixed = form.fixed.iter().map(|f| Text::of(&f.name, &f.value));
         let texts: Vec<Text<'_>> = model
             .into_iter()
-            .chain([Text {
-                name: lang,
-                value: piece.lang,
-            }])
-            .chain(fixed)
+            .chain(fields(form, piece.lang, &[MODEL, FORMAT])?)
             .chain([Text::of(FORMAT, JSON)])
             .collect();
         let sent = multipart::sent(&texts, &multipart::wav(piece.wav))?;
@@ -150,11 +137,32 @@ fn form<'a>(call: &'a NetCall<'_>) -> Option<&'a NetForm<'a>> {
     }
 }
 
-/// True when a fixed field repeats one of the form's own names, `lang` as sent included, in any case.
-fn repeats(form: &NetForm<'_>, lang: &str) -> bool {
-    let own = [MODEL, FORMAT, FILE, form.lang.as_ref(), lang];
-    let taken = |name: &str| own.iter().any(|o| o.eq_ignore_ascii_case(name));
-    form.fixed.iter().any(|f| taken(&f.name))
+/// `form`'s language field holding `lang`, a list's name followed by `LIST`, then its fixed fields; `Range` when a
+/// fixed field repeats a name of `own`, the file's or the language's, in any case.
+pub(super) fn fields<'a>(
+    form: &'a NetForm<'_>,
+    lang: &'a str,
+    own: &[&str],
+) -> Result<Vec<Text<'a>>, NetFault> {
+    let name = if form.list {
+        Cow::Owned(format!("{}{LIST}", form.lang))
+    } else {
+        Cow::Borrowed(form.lang.as_ref())
+    };
+    let names = [FILE, form.lang.as_ref(), name.as_ref()];
+    let repeats = |field: &str| {
+        own.iter()
+            .chain(&names)
+            .any(|o| o.eq_ignore_ascii_case(field))
+    };
+    if form.fixed.iter().any(|f| repeats(&f.name)) {
+        return Err(NetFault::Range);
+    }
+    let fixed = form.fixed.iter().map(|f| Text::of(&f.name, &f.value));
+    Ok([Text { name, value: lang }]
+        .into_iter()
+        .chain(fixed)
+        .collect())
 }
 
 /// What an answer that is not done means, by the first table row that takes it, under `form`'s paywall and region code.

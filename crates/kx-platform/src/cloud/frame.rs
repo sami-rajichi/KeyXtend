@@ -7,7 +7,7 @@ use kx_ipc::{
     MAX_SOUND_BYTES, NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetRun,
     NetShape, Wiped,
 };
-use kx_module_api::ports::{CloudFault, CloudLimits, CloudShape, HttpsUrl, KeyHeader};
+use kx_module_api::ports::{CloudFault, CloudLimits, CloudShape, FormFields, HttpsUrl, KeyHeader};
 use kx_module_api::{Redacted, Secret, SecretBytes, Zeroizing};
 use std::borrow::Cow;
 use std::iter;
@@ -41,20 +41,25 @@ pub(super) fn call(
 /// The frames' shape for the row's `shape`.
 fn shape_of(shape: CloudShape) -> NetShape<'static> {
     match shape {
-        CloudShape::Form(form) => NetShape::Form(NetForm {
-            lang: Cow::Owned(form.lang),
-            list: form.list,
-            fixed: (form.fixed.into_iter())
-                .map(|f| NetField {
-                    name: Cow::Owned(f.name),
-                    value: Cow::Owned(f.value),
-                })
-                .collect(),
-            paywall: form.paywall,
-            region: form.region.map(Cow::Owned),
-        }),
-        CloudShape::Eleven => NetShape::Eleven,
+        CloudShape::Form(form) => NetShape::Form(form_of(form)),
+        CloudShape::Eleven(form) => NetShape::Eleven(form_of(form)),
         CloudShape::Gemini => NetShape::Gemini,
+    }
+}
+
+/// The frames' form for the row's `form`.
+fn form_of(form: FormFields) -> NetForm<'static> {
+    NetForm {
+        lang: Cow::Owned(form.lang),
+        list: form.list,
+        fixed: (form.fixed.into_iter())
+            .map(|f| NetField {
+                name: Cow::Owned(f.name),
+                value: Cow::Owned(f.value),
+            })
+            .collect(),
+        paywall: form.paywall,
+        region: form.region.map(Cow::Owned),
     }
 }
 

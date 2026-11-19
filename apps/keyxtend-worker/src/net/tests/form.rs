@@ -293,7 +293,7 @@ fn the_key_test_is_a_get_of_the_test_address_with_the_key_alone() {
 
 #[test]
 fn another_shapes_call_is_out_of_range() {
-    let call = call_to(URL, NetShape::Eleven);
+    let call = call_to(URL, NetShape::Eleven(form()));
     let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();
     assert_eq!(got, Some(NetFault::Range));
 }
