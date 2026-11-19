@@ -1,6 +1,6 @@
 //! A run's model and language as both sides take them: real ids pass, a character that could break a request's body or
-//! address is refused, `ElevenLabs` and Gemini refuse a run with no model before any frame, and `ElevenLabs`' shape
-//! holds only its language and fixed fields.
+//! address is refused, `ElevenLabs` and Gemini refuse a run with no model before any frame, `ElevenLabs`' shape holds
+//! only its language and fixed fields, and Gemini's only its code.
 
 use super::*;
 use IpcError::BadField;
@@ -140,6 +140,25 @@ fn a_shape_code_no_shape_has_is_refused_when_read_the_dropped_2_too() {
     for code in [0, 2, 5, u8::MAX] {
         let bytes = patch(good.clone(), 0, &[code]);
         assert_eq!(read_net_ask(&mut &bytes[..]), Err(BadField), "{code}");
+    }
+}
+
+#[test]
+fn geminis_shape_is_its_code_alone_and_refuses_another_shapes_layout() {
+    assert_eq!(
+        shape_bytes(&NetShape::Gemini).len(),
+        1,
+        "it carries no field"
+    );
+    let test = |shape| NetAsk::Test {
+        id: 1,
+        call: call(shape, NetHeader::Named(Cow::Borrowed("x-goog-api-key"))),
+    };
+    round_trips(test(NetShape::Gemini));
+    let code = shape_bytes(&NetShape::Gemini)[0];
+    for other in [groq_form(), eleven()] {
+        let layout = patch(net_ask_bytes(&test(other.clone())), 0, &[code]);
+        assert!(read_net_ask(&mut &layout[..]).is_err(), "{other:?}");
     }
 }
 

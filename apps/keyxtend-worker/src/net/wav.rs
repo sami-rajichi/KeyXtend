@@ -10,6 +10,8 @@ use zeroize::Zeroizing;
 
 /// The header's bytes before the samples: the outer chunk, the format chunk and the samples chunk's head.
 pub const HEAD: usize = FIRST_CHUNK + CHUNK_HEAD + FMT_LEAST + CHUNK_HEAD;
+/// A piece's media type, as every shape names it.
+pub const TYPE: &str = "audio/wav";
 /// The hand-over sound's channels: mono.
 const CHANNELS: u16 = 1;
 

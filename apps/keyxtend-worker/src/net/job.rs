@@ -121,13 +121,9 @@ impl Job {
     }
 
     /// Starts a run made by `make` under a new serial; a live id is out of step.
-    fn start(
-        &mut self,
-        id: u32,
-        make: impl FnOnce(u64) -> Result<Run, NetFault>,
-    ) -> Result<(), NetFault> {
+    fn start(&mut self, id: u32, make: impl FnOnce(u64) -> Run) -> Result<(), NetFault> {
         self.taken(id)?;
-        let run = make(self.next_serial())?;
+        let run = make(self.next_serial());
         self.runs.insert(id, run);
         Ok(())
     }
@@ -135,7 +131,7 @@ impl Job {
     /// Starts a test of `call`'s key on a thread of its own.
     fn test(&mut self, id: u32, call: NetCall<'static>) -> Result<(), NetFault> {
         self.taken(id)?;
-        let shape = shape::of(call.shape.code()).ok_or(NetFault::Range)?;
+        let shape = shape::of(call.shape.code());
         let dropped = Arc::new(AtomicBool::new(false));
         let serial = self.next_serial();
         let sending = Sending {

@@ -1,5 +1,6 @@
-//! The `speech-net` job as a program over real pipes: a shape it does not build and a part out of order are refused
-//! before any request, so no test reaches the network; it ends at goodbye, and fails a broken frame with one line.
+//! The `speech-net` job as a program over real pipes: Gemini's run taken, then its id sent again and a part out of
+//! order refused before any request, so no test reaches the network; it ends at goodbye, and fails a broken frame with
+//! one line.
 
 #![allow(clippy::unwrap_used, reason = "a failed setup should fail the test")]
 
@@ -52,8 +53,9 @@ fn run(bytes: u32) -> NetRun<'static> {
     }
 }
 
-/// A shape the job does not build, a part for a piece not reached yet, an unknown id's cancel, then goodbye.
-fn asks() -> [NetAsk<'static>; 5] {
+/// Gemini's run with no sound yet, the same id again, a part for a piece not reached yet, an unknown id's cancel, then
+/// goodbye.
+fn asks() -> [NetAsk<'static>; 6] {
     let form = NetShape::Form(kx_ipc::NetForm {
         lang: Cow::Borrowed("language"),
         list: false,
@@ -71,8 +73,16 @@ fn asks() -> [NetAsk<'static>; 5] {
         piece: 1,
         bytes: Wiped::Lent(&[0, 0]),
     };
-    let (gemini, form) = (send(1, call(NetShape::Gemini)), send(2, call(form)));
-    [gemini, form, late, NetAsk::Cancel { id: 9 }, NetAsk::Bye]
+    let gemini = || send(1, call(NetShape::Gemini));
+    let form = send(2, call(form));
+    [
+        gemini(),
+        gemini(),
+        form,
+        late,
+        NetAsk::Cancel { id: 9 },
+        NetAsk::Bye,
+    ]
 }
 
 #[test]
@@ -85,7 +95,7 @@ fn the_speech_job_refuses_without_the_network_until_bye() {
     let mut stdout = &out.stdout[..];
     let notes = [(); 2].map(|()| NetNote::read(&mut stdout).unwrap());
     let fault = |id, fault| NetNote::Fault { id, fault };
-    assert_eq!(notes, [fault(1, NetFault::Range), fault(2, NetFault::Gone)]);
+    assert_eq!(notes, [fault(1, NetFault::Gone), fault(2, NetFault::Gone)]);
     assert!(stdout.is_empty(), "nothing more is told");
     let code = out.status.code();
     assert_eq!(code, Some(i32::from(CLEAN_EXIT)), "{:?}", out.stderr);

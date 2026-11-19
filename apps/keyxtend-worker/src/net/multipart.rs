@@ -2,6 +2,7 @@
 //! `ElevenLabs`' share: text fields, then the piece as a WAV file, under a boundary drawn from the parts' own SHA-256, so
 //! no part can hold it, in one wiped buffer sized once.
 
+use super::wav;
 use kx_ipc::NetFault;
 use sha2::{Digest, Sha256};
 use std::borrow::Cow;
@@ -10,11 +11,10 @@ use zeroize::Zeroizing;
 
 /// The file field's name, which both forms give the piece.
 pub const FILE: &str = "file";
-/// What the piece is called, and its media type.
+/// What the piece is called.
 const PIECE_NAME: &str = "piece.wav";
-const PIECE_TYPE: &str = "audio/wav";
 /// The header that names a body's type, the request's and a file part's.
-const CONTENT_TYPE: &str = "Content-Type";
+pub const CONTENT_TYPE: &str = "Content-Type";
 /// The request's body type before its boundary.
 const FORM_TYPE: &str = "multipart/form-data; boundary=";
 /// What starts every boundary.
@@ -79,7 +79,7 @@ pub const fn wav(wav: &[u8]) -> File<'_> {
     File {
         name: FILE,
         called: PIECE_NAME,
-        kind: PIECE_TYPE,
+        kind: wav::TYPE,
         bytes: wav,
     }
 }

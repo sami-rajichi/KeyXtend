@@ -84,7 +84,7 @@ fn chunk() -> Result<Zeroizing<Vec<u8>>, NetFault> {
 }
 
 /// A JSON string read straight into a wiped buffer.
-struct Wiped(Zeroizing<String>);
+pub struct Wiped(pub Zeroizing<String>);
 
 /// Reads a `Wiped`.
 struct WipedVisitor;
@@ -120,12 +120,15 @@ struct Said {
 /// What starts a JSON object.
 const OBJECT: u8 = b'{';
 
-/// The `text` a JSON reply object holds; none when the reply is not that JSON. Serde would read the struct from an
-/// array too, so the reply must start as an object.
+/// The `text` a JSON reply object holds; none when the reply is not that JSON.
 pub fn text(bytes: &[u8]) -> Option<Zeroizing<String>> {
-    let object = bytes.trim_ascii_start().first() == Some(&OBJECT);
-    let said = object.then(|| serde_json::from_slice::<Said>(bytes).ok());
+    let said = opens_object(bytes).then(|| serde_json::from_slice::<Said>(bytes).ok());
     said.flatten().map(|s| s.text.0)
+}
+
+/// True when `bytes` start as a JSON object; serde would read a reply's struct from an array too.
+pub fn opens_object(bytes: &[u8]) -> bool {
+    bytes.trim_ascii_start().first() == Some(&OBJECT)
 }
 
 /// True when `bytes` is one JSON object.

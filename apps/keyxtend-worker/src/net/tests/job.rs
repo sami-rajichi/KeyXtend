@@ -1,11 +1,11 @@
 //! A run's pieces and texts: parts filling each piece in order, texts told in the pieces' order whatever order the
 //! replies come in, a fault ending the run before its later pieces go, `Cancel` before and during an upload, `at_once`
-//! and `per_min` over every try, a blank run, a text past its cap, a shape not built yet, a repeated id and the key's
-//! test.
+//! and `per_min` over every try, a blank run, a text past its cap, a value its shape refuses, a repeated id and the
+//! key's test.
 
 use super::bench::{Bench, Swap, WAIT, faked, fault, gate, part, send, text};
 use super::*;
-use kx_ipc::{MAX_NET_TEXT_BYTES, NetAsk, NetFault, NetNote};
+use kx_ipc::{MAX_NET_TEXT_BYTES, NetAsk, NetFault, NetField, NetNote};
 use kx_platform_net::{NetError, SEND_CHUNK};
 use std::sync::mpsc;
 
@@ -174,15 +174,23 @@ fn a_text_past_its_cap_is_strange() {
 }
 
 #[test]
-fn a_shape_this_job_does_not_build_yet_is_out_of_range() {
+fn a_value_its_shape_refuses_is_out_of_range_before_any_request() {
     let (mut b, http, _) = faked([said("a")]);
+    let model = NetField {
+        name: Cow::Borrowed("model"),
+        value: Cow::Borrowed("twice"),
+    };
+    let form = NetForm {
+        fixed: vec![model],
+        ..form()
+    };
     b.ask(send(
         11,
-        call_to(URL, NetShape::Gemini),
+        call_to(URL, NetShape::Form(form)),
         run_of(&[2], 1, 1, 20),
     ));
     b.ask(part(11, 0, sound(2, 1)));
-    assert_eq!(b.out, [fault(11, NetFault::Range)]);
+    assert_eq!(b.until(1), [fault(11, NetFault::Range)]);
     assert!(http.called().is_empty());
 }
 

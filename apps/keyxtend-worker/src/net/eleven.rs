@@ -93,7 +93,7 @@ impl Shape for Eleven {
     }
 
     fn read(&self, _: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>> {
-        status::text(head, body, || judge(head, body))
+        status::text(head, body, reply::text, || judge(head, body))
     }
 
     fn tested(&self, _: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()> {

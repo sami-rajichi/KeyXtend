@@ -141,7 +141,7 @@ fn it_keeps_the_header_a_429_waits_by() {
 #[test]
 fn the_job_builds_it_and_a_piece_posts_its_form_and_reads_its_text() {
     let sending = Sending {
-        shape: shape::of(ShapeCode::Eleven).expect("built"),
+        shape: shape::of(ShapeCode::Eleven),
         call: eleven(ADDRESS),
         model: Some(Cow::Borrowed(SCRIBE)),
         lang: Cow::Borrowed("fr"),

@@ -43,16 +43,9 @@ pub struct Run {
 }
 
 impl Run {
-    /// A run of `run`'s pieces over `call`.
-    ///
-    /// # Errors
-    /// `Range` for a shape this job does not build yet.
-    pub fn new(
-        serial: u64,
-        call: NetCall<'static>,
-        run: NetRun<'static>,
-    ) -> Result<Self, NetFault> {
-        let shape = shape::of(call.shape.code()).ok_or(NetFault::Range)?;
+    /// A run of `run`'s pieces over `call`, in its shape's adapter.
+    pub fn new(serial: u64, call: NetCall<'static>, run: NetRun<'static>) -> Self {
+        let shape = shape::of(call.shape.code());
         let sending = Sending {
             shape,
             call,
@@ -62,7 +55,7 @@ impl Run {
             pace: Some(Mutex::new(Pace::new(usize::from(run.limits.per_min)))),
             dropped: Arc::new(AtomicBool::new(false)),
         };
-        Ok(Self {
+        Self {
             serial,
             sending: Arc::new(sending),
             sizes: run.sizes,
@@ -74,7 +67,7 @@ impl Run {
             texts: BTreeMap::new(),
             told: 0,
             heard: false,
-        })
+        }
     }
 
     /// This run's serial.

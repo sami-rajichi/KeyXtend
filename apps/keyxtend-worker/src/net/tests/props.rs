@@ -111,7 +111,7 @@ proptest! {
         sizes in proptest::collection::vec((1u32..=8).prop_map(|n| n * 2), 1..5),
         parts in proptest::collection::vec((0u16..6, (1usize..=10).prop_map(|n| n * 2)), 0..24),
     ) {
-        let mut run = Run::new(1, call(), run_of(&sizes, 1, 1, 20)).unwrap();
+        let mut run = Run::new(1, call(), run_of(&sizes, 1, 1, 20));
         let mut cursor = (0, 0);
         for (piece, n) in parts {
             let want = accepts(&sizes, &mut cursor, piece, n);
@@ -129,7 +129,7 @@ proptest! {
     fn texts_are_told_in_the_pieces_order_whatever_order_they_come_in(
         order in Just((0u16..6).collect::<Vec<_>>()).prop_shuffle(),
     ) {
-        let mut run = Run::new(1, call(), run_of(&[2; 6], 1, 6, 20)).unwrap();
+        let mut run = Run::new(1, call(), run_of(&[2; 6], 1, 6, 20));
         let mut told = Vec::new();
         for index in order {
             let (notes, _) = run.told(1, index, Ok(Zeroizing::new(index.to_string())));

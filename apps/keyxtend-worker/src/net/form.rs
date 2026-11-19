@@ -126,7 +126,7 @@ impl Shape for Form {
     }
 
     fn read(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>> {
-        status::text(head, body, || judge(form(call), head, body))
+        status::text(head, body, reply::text, || judge(form(call), head, body))
     }
 
     fn tested(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()> {

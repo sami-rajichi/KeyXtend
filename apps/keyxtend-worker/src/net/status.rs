@@ -1,6 +1,6 @@
-//! What a reply's status means, as each shape's table says: a done reply holds a piece's JSON text or a key test's JSON
-//! object; otherwise the first row whose statuses and error words take the answer wins, and a status no row takes is
-//! strange. A 429's wait is read from its `Retry-After`.
+//! What a reply's status means, as each shape's table says: a done reply holds a piece's text where its shape reads it,
+//! or a key test's JSON object; otherwise the first row whose statuses and error words take the answer wins, and a
+//! status no row takes is strange. A 429's wait is read from its `Retry-After`.
 
 use super::reply;
 use super::shape::Verdict;
@@ -35,14 +35,16 @@ pub const fn row<S>(codes: RangeInclusive<u16>, says: S, then: Then) -> Row<S> {
     Row { codes, says, then }
 }
 
-/// What a piece's reply with `head` and `body` says: its text once done, else `judge`'s reading.
+/// What a piece's reply with `head` and `body` says: once done, the text `read` finds, or strange without one; else
+/// `judge`'s reading.
 pub fn text(
     head: &Head,
     body: &[u8],
+    read: impl FnOnce(&[u8]) -> Option<Zeroizing<String>>,
     judge: impl FnOnce() -> Verdict<Zeroizing<String>>,
 ) -> Verdict<Zeroizing<String>> {
     if DONE.contains(&head.status) {
-        return reply::text(body).map_or(Verdict::Fault(NetFault::Strange), Verdict::Said);
+        return read(body).map_or(Verdict::Fault(NetFault::Strange), Verdict::Said);
     }
     judge()
 }

@@ -1,11 +1,13 @@
 //! One piece's request: tried again after a broken link, a stall or a service down, up to its tries; one wait for a
 //! 429's `Retry-After`, then the rate fault; a used allowance, a final fault and a redirect at once; a reply past the
-//! cap strange; the call's wait asked; the key in its header only and in no fault; and the key's test.
+//! cap strange; the call's wait asked; the key in its header only and in no fault; the key's test; and every shape's
+//! own adapter.
 
+use super::eleven::own_form;
 use super::*;
 use crate::net::send::{Sending, piece, test};
 use crate::net::shape;
-use kx_ipc::{MAX_NET_REPLY_BYTES, NetFault, ShapeCode};
+use kx_ipc::{MAX_NET_REPLY_BYTES, NetFault};
 use kx_platform_net::fake::Step;
 use kx_platform_net::{NetError, Verb, wait_ms};
 use std::sync::atomic::AtomicBool;
@@ -16,7 +18,7 @@ const WAV: &[u8] = b"RIFF-and-samples";
 /// What one piece's thread sends over `call` with `tries`.
 fn sending(call: NetCall<'static>, tries: u8) -> Sending {
     Sending {
-        shape: shape::of(call.shape.code()).unwrap(),
+        shape: shape::of(call.shape.code()),
         call,
         model: Some(Cow::Borrowed(MODEL)),
         lang: Cow::Borrowed(LANG),
@@ -225,9 +227,16 @@ fn a_key_test_says_whether_the_key_works() {
 }
 
 #[test]
-fn the_form_and_elevenlabs_are_built_and_gemini_not_yet() {
-    for code in [ShapeCode::Form, ShapeCode::Eleven] {
-        assert!(shape::of(code).is_some(), "{code:?}");
+fn every_shape_has_its_own_adapter() {
+    let shapes = [
+        NetShape::Form(form()),
+        NetShape::Eleven(own_form()),
+        NetShape::Gemini,
+    ];
+    for shape in shapes {
+        let call = call_to(MODELS, shape);
+        // Each adapter refuses another shape's call, so a test request shows the code reached its own.
+        let req = shape::of(call.shape.code()).test(&call);
+        assert!(req.is_ok(), "{:?}", call.shape.code());
     }
-    assert!(shape::of(ShapeCode::Gemini).is_none());
 }

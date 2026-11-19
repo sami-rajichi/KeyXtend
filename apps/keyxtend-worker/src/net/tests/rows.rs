@@ -172,7 +172,7 @@ impl Case {
     /// What one piece's thread sends with.
     fn sending(&self) -> Sending {
         Sending {
-            shape: shape::of(ShapeCode::Form).unwrap(),
+            shape: shape::of(ShapeCode::Form),
             call: self.row.call(),
             model: self.model.map(Cow::Borrowed),
             lang: Cow::Borrowed(self.lang),
