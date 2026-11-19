@@ -202,14 +202,14 @@ fn other_panels() -> Vec<(&'static str, Shown)> {
     ]
 }
 
-/// Every panel the tests draw, by name.
-fn panels() -> Vec<(String, Shown)> {
+/// Every panel the tests draw in language `tag`, by name.
+fn panels(tag: &str) -> Vec<(String, Shown)> {
     let fixed = model_panels()
         .into_iter()
         .chain(other_panels())
         .chain(cloud::panels())
         .map(|(name, s)| (name.to_owned(), s));
-    fixed.chain(long::panels()).collect()
+    fixed.chain(long::panels(tag)).collect()
 }
 
 /// Every view in language `tag`, by name, each its own round from 1, the bar hidden.
@@ -217,7 +217,7 @@ fn views(tag: &str) -> Value {
     let (hub, _host) = hub(tag);
     let bus = Bus::new(Arc::new(FakeCore::default()));
     let _heard = hub.listen(&bus).expect("the hub listens");
-    let shown = (1..).zip(panels()).map(|(round, (name, s))| {
+    let shown = (1..).zip(panels(tag)).map(|(round, (name, s))| {
         let panel = VoicePanel {
             sheet: s.sheet,
             lang: front(tag),

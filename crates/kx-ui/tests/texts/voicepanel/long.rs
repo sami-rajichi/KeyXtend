@@ -1,9 +1,12 @@
 //! The cloud panels with their longest content, which the fit test measures: each Cloud page of the services table's
 //! rows, page by page, the Models page's Cloud side, each part of each table service's card with every line on, each
-//! part of a key page with every line and the longest answers, and Compare with each table service's cloud models.
+//! part of a key page with every line and the longest answer in each language, and Compare with each table service's
+//! cloud models.
 
 use super::cloud::{TRAINS, card, lines, named};
 use super::{Shown, paged, shown};
+use crate::lang;
+use crate::qml::LANGS;
 use kx_mod_voice::VoiceSettings;
 use kx_mod_voice::cloud::Cloud;
 use kx_mod_voice::services::{Address, Service, Services, table};
@@ -15,6 +18,7 @@ use kx_module_api::ports::{
     VoiceSheet,
 };
 use kx_ui::UiSettings;
+use std::time::Duration;
 
 /// The start of each long Cloud page's name, then its page number from 1.
 const CLOUD_LONG: &str = "cloudLong-";
@@ -143,12 +147,29 @@ fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
     VoiceSheet::Card(Box::new(c))
 }
 
-/// Part `part` of the Custom row's key page with every line, each with its longest answer.
-fn service_long(part: LinesPart) -> VoiceSheet {
+/// A renewal of 23 hours, so a used allowance's answer shows a long count.
+const RENEWS: Duration = Duration::from_hours(23);
+
+/// The key test's answer with the longest line in language `tag`, with the renewal it shows.
+fn longest_check(tag: &str) -> (KeyCheck, Option<Duration>) {
+    let t = lang(tag);
+    let len = |c: &KeyCheck| {
+        t.voice_key_check(*c, Some(RENEWS))
+            .map_or(0, |a| a.chars().count())
+    };
+    let check = KeyCheck::ALL
+        .into_iter()
+        .max_by_key(len)
+        .unwrap_or(KeyCheck::Failed);
+    (check, (check == KeyCheck::Allowance).then_some(RENEWS))
+}
+
+/// Part `part` of the Custom row's key page in language `tag` with every line, each with its longest answer.
+fn service_long(part: LinesPart, tag: &str) -> VoiceSheet {
     let VoiceSheet::Service(mut s) = lines("custom") else {
         unreachable!("a key page")
     };
-    (s.key, s.check) = (Redacted::new(56), KeyCheck::Account);
+    (s.key, (s.check, s.renews_in)) = (Redacted::new(56), longest_check(tag));
     (s.address_fault, s.keep) = (Some(AddressFault::Path), Some(true));
     (s.site, s.part) = (Some("console.groq.com".to_owned()), Some(part));
     VoiceSheet::Service(s)
@@ -177,15 +198,18 @@ fn compare_long() -> VoiceSheet {
 
 /// The longest cloud panels, by name; a card and a key page show their first part on page 1 of 2, and their second
 /// on page 2. Each Cloud page is named by its number, and each service of the table has its card's two parts.
-pub fn panels() -> Vec<(String, Shown)> {
+pub fn panels(tag: &str) -> Vec<(String, Shown)> {
     let two = |sheet, at| paged(shown(sheet, &[]), at, 2, 0);
     let mut out = vec![
         (
             "modelsLong",
             paged(shown(models_long(), &[PanelButton::Use]), 0, 1, 1),
         ),
-        ("serviceLong", two(service_long(LinesPart::Key), 0)),
-        ("serviceLongModel", two(service_long(LinesPart::Model), 1)),
+        ("serviceLong", two(service_long(LinesPart::Key, tag), 0)),
+        (
+            "serviceLongModel",
+            two(service_long(LinesPart::Model, tag), 1),
+        ),
         ("compareLong", shown(compare_long(), &[])),
     ]
     .into_iter()
@@ -211,7 +235,7 @@ pub fn panels() -> Vec<(String, Shown)> {
 fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
     let per = per();
     let all: Vec<ServiceName> = services().rows().iter().map(Service::shown).collect();
-    let named = panels()
+    let named = panels(LANGS[0])
         .into_iter()
         .filter(|(n, _)| n.starts_with(CLOUD_LONG));
     let pages: Vec<Shown> = named.map(|(_, s)| s).collect();
@@ -227,6 +251,26 @@ fn the_long_cloud_pages_hold_every_row_of_the_table_page_by_page() {
         shown.extend(c.rows.iter().map(|r| r.name.clone()));
     }
     assert_eq!(shown, all);
+}
+
+/// The long key page shows the key test's longest answer in each language, so the fit test measures it.
+#[test]
+fn the_long_key_page_shows_the_longest_key_answer_in_each_language() {
+    for tag in LANGS {
+        let t = lang(tag);
+        let VoiceSheet::Service(s) = service_long(LinesPart::Key, tag) else {
+            unreachable!("a key page")
+        };
+        let len = |c, r| {
+            t.voice_key_check(c, r)
+                .map_or(0, |a: String| a.chars().count())
+        };
+        let most = KeyCheck::ALL
+            .into_iter()
+            .map(|c| len(c, Some(RENEWS)))
+            .max();
+        assert_eq!(Some(len(s.check, s.renews_in)), most, "{tag}");
+    }
 }
 
 /// A Custom row shows its own warning as the module does, and none without one, so the fit test measures it too.
