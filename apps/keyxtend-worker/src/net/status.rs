@@ -4,7 +4,7 @@
 
 use super::reply;
 use super::shape::Verdict;
-use kx_ipc::NetFault;
+use kx_ipc::{NET_RENEW_S, NetFault};
 use kx_platform_net::Head;
 use std::ops::RangeInclusive;
 use zeroize::Zeroizing;
@@ -13,6 +13,8 @@ use zeroize::Zeroizing;
 pub const DONE: RangeInclusive<u16> = 200..=299;
 /// The answer header a 429's wait is read from.
 pub const RETRY: &str = "retry-after";
+/// Words of an error that means the language, which each table reads only on the statuses its pages name.
+pub const LANGUAGE: &[&str] = &["language"];
 
 /// What a status means.
 #[derive(Copy, Clone)]
@@ -77,4 +79,11 @@ pub fn judge<S: Copy, T>(
 /// A 429's wait: the whole seconds its `Retry-After` asks for, when it names them.
 pub fn wait<T>(head: &Head) -> Verdict<T> {
     Verdict::Busy(head.header(RETRY).and_then(reply::seconds))
+}
+
+/// A used allowance's renewal in `s` seconds, held up to `NET_RENEW_S`'s start; none past its end, as a wrong date is
+/// worse than none.
+pub fn renewal(s: u64) -> Option<u32> {
+    let s = u32::try_from(s).ok()?.max(*NET_RENEW_S.start());
+    NET_RENEW_S.contains(&s).then_some(s)
 }

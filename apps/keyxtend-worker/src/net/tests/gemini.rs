@@ -1,7 +1,7 @@
-//! Gemini's single request [N1][N6]: one JSON POST with the model, the piece inline as Base64 and one language code,
-//! nothing else, the key only in the call's own header; the body is the WAV a third larger in a small wrapper; a run
-//! with no model or language, or another shape's call, is refused; the key's test is a GET with the key alone [N8]; and
-//! a piece goes and its text comes back end to end. `replies` reads each answer as its error pages say [N5][N7].
+//! Gemini's single request [N1][N6][N10]: one JSON POST with the model, the piece inline as Base64, one language code
+//! and `store` off, nothing else, the key only in the call's own header; the body is the WAV a third larger in a small
+//! wrapper; a run with no model or language, or another shape's call, is refused; the key's test is a GET with the key
+//! alone [N8]; and a piece goes and its text comes back end to end. `replies` reads each answer [N5][N7][N10].
 
 mod replies;
 
@@ -31,7 +31,7 @@ const MSA: &str = "ar-SA";
 const WAV: &[u8] = b"RIFF-and-samples";
 /// The JSON's own bytes besides the model, the language and the sound: its names and marks, far within the room the
 /// table keeps under a service's cap, whose room test counts one form part's head for them.
-const WRAP: usize = 142;
+const WRAP: usize = 156;
 
 /// A call to `url` in Gemini's shape, the key under its own header.
 pub(super) fn gemini(url: &'static str) -> NetCall<'static> {
@@ -55,7 +55,7 @@ fn json_of(req: &Request) -> (Value, Option<Vec<u8>>) {
 }
 
 #[test]
-fn one_post_sends_the_model_the_piece_inline_and_one_language_and_nothing_else() {
+fn one_post_sends_the_model_the_piece_inline_one_language_and_store_off_and_nothing_else() {
     let req = built(Some(TRANSCRIBE), MSA, WAV).unwrap();
     assert_eq!(req.verb, Verb::Post);
     let (body, sound) = json_of(&req);
@@ -64,8 +64,12 @@ fn one_post_sends_the_model_the_piece_inline_and_one_language_and_nothing_else()
         "model": TRANSCRIBE,
         "input": [{ "type": "audio", "data": null, "mime_type": "audio/wav" }],
         "generation_config": { "transcription_config": { "language_codes": [MSA] } },
+        "store": false,
     });
-    assert_eq!(body, want, "no file upload, no vocabulary [N1]");
+    assert_eq!(
+        body, want,
+        "no file upload, no vocabulary [N1], and nothing stored [N10]"
+    );
 }
 
 #[test]

@@ -8,7 +8,7 @@ use kx_module_api::ports::{MAX_FIELD_VALUE, MAX_FIXED, MB, SAMPLE_BYTES, SOUND_H
 /// A plain PCM WAV header: the RIFF, `fmt ` and `data` chunks' heads.
 const WAV_HEAD: u64 = 44;
 /// A generous bound on one multipart part's boundary and headers, and on Gemini's JSON names and marks, which the
-/// worker's gemini tests pin at 142 bytes.
+/// worker's gemini tests pin at 156 bytes.
 const PART_HEAD: u64 = 256;
 /// The parts a form sends besides its fixed fields: the model, the language and the file.
 const OWN_PARTS: u64 = 3;

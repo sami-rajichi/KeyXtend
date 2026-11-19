@@ -1,67 +1,107 @@
-//! Gemini's transcript in its reply [N1]: `output_text` as its SDK reads it, else its steps' content texts in order, as
-//! the sample's raw reply places them, each read into a wiped string. A reply with neither is not Gemini's, and steps
-//! with no text are an empty transcript.
+//! Gemini's transcript in its reply [N1][N10]: `output_text`, read alone so no other field can fail it, else the texts
+//! of the model's output steps in order, each read into a wiped string. Steps or content of other shapes add nothing.
 
 use super::super::reply::{self, Wiped};
+use super::lax::{Lax, Text, lax};
 use serde::Deserialize;
-use serde::de::value::MapAccessDeserializer;
-use serde::de::{Deserializer, MapAccess, SeqAccess, Visitor};
-use std::fmt;
+use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess};
 use zeroize::Zeroizing;
 
-/// A reply: its transcript in one place or the other; other fields are skipped unread.
+/// The type of a step the model wrote [N10].
+const MODEL_OUTPUT: &str = "model_output";
+/// The names a step and a part hold.
+const TYPE: &str = "type";
+const CONTENT: &str = "content";
+const TEXT: &str = "text";
+
+/// A reply's `output_text`, the only field read.
 #[derive(Deserialize)]
-struct Said {
+struct Output {
     #[serde(default)]
-    output_text: Option<Wiped>,
+    output_text: Text,
+}
+
+/// A reply's steps, the only field read.
+#[derive(Deserialize)]
+struct Steps {
     #[serde(default)]
     steps: Option<Vec<Step>>,
 }
 
-/// One step of the interaction.
-#[derive(Deserialize)]
-struct Step {
-    #[serde(default)]
-    content: Parts,
-}
-
-/// A step's content: a list of parts, or one part.
+/// One part of a step's content: its text, when it holds one.
 #[derive(Default)]
-struct Parts(Vec<Part>);
+struct Part(Option<Wiped>);
 
-/// One part of a step's content; one with no text, such as the sound sent, adds none.
-#[derive(Deserialize)]
-struct Part {
-    #[serde(default)]
-    text: Option<Wiped>,
+impl Lax for Part {
+    fn of_map<'de, A: MapAccess<'de>>(mut map: A) -> Result<Self, A::Error> {
+        let mut text = None;
+        while let Some(name) = map.next_key::<String>()? {
+            if name == TEXT {
+                text = map.next_value::<Text>()?.0;
+            } else {
+                map.next_value::<IgnoredAny>()?;
+            }
+        }
+        Ok(Self(text))
+    }
 }
 
-/// Reads `Parts` from a list or from one object.
-struct PartsVisitor;
+/// A step's content: its parts' texts in order, from a list of parts or one part.
+#[derive(Default)]
+struct Parts(Vec<Wiped>);
 
-impl<'de> Visitor<'de> for PartsVisitor {
-    type Value = Parts;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a part or a list of parts")
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Parts, A::Error> {
-        let mut parts = Vec::new();
-        while let Some(part) = seq.next_element()? {
-            parts.push(part);
+impl Lax for Parts {
+    fn of_seq<'de, A: SeqAccess<'de>>(mut seq: A) -> Result<Self, A::Error> {
+        let mut texts = Vec::new();
+        while let Some(part) = seq.next_element::<Part>()? {
+            texts.extend(part.0);
         }
-        Ok(Parts(parts))
+        Ok(Self(texts))
     }
 
-    fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Parts, A::Error> {
-        Part::deserialize(MapAccessDeserializer::new(map)).map(|p| Parts(vec![p]))
+    fn of_map<'de, A: MapAccess<'de>>(map: A) -> Result<Self, A::Error> {
+        Ok(Self(Part::of_map(map)?.0.into_iter().collect()))
+    }
+}
+
+/// One step: its content's texts when the model wrote it, else none.
+#[derive(Default)]
+struct Step(Vec<Wiped>);
+
+impl Lax for Step {
+    fn of_map<'de, A: MapAccess<'de>>(mut map: A) -> Result<Self, A::Error> {
+        let (mut model, mut texts) = (false, Vec::new());
+        while let Some(name) = map.next_key::<String>()? {
+            match name.as_str() {
+                TYPE => {
+                    let kind = map.next_value::<Text>()?.0;
+                    model = kind.is_some_and(|k| k.0.eq_ignore_ascii_case(MODEL_OUTPUT));
+                }
+                CONTENT => texts = map.next_value::<Parts>()?.0,
+                _ => {
+                    map.next_value::<IgnoredAny>()?;
+                }
+            }
+        }
+        Ok(Self(if model { texts } else { Vec::new() }))
+    }
+}
+
+impl<'de> Deserialize<'de> for Part {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        lax(d)
     }
 }
 
 impl<'de> Deserialize<'de> for Parts {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        d.deserialize_any(PartsVisitor)
+        lax(d)
+    }
+}
+
+impl<'de> Deserialize<'de> for Step {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        lax(d)
     }
 }
 
@@ -70,12 +110,12 @@ pub fn said(bytes: &[u8]) -> Option<Zeroizing<String>> {
     if !reply::opens_object(bytes) {
         return None;
     }
-    let said: Said = serde_json::from_slice(bytes).ok()?;
-    if let Some(text) = said.output_text {
+    let output: Output = serde_json::from_slice(bytes).ok()?;
+    if let Some(text) = output.output_text.0 {
         return Some(text.0);
     }
-    let parts = said.steps?.into_iter().flat_map(|s| s.content.0);
-    let texts: Vec<Wiped> = parts.filter_map(|p| p.text).collect();
+    let steps: Steps = serde_json::from_slice(bytes).ok()?;
+    let texts: Vec<Wiped> = steps.steps?.into_iter().flat_map(|s| s.0).collect();
     joined(&texts)
 }
 

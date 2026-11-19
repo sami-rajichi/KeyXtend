@@ -9,8 +9,8 @@ pub use super::multipart::escape;
 use super::multipart::{self, FILE, Text};
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
-use super::status::{self, RETRY, Row, Then, row};
-use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetField, NetForm, NetShape};
+use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
+use kx_ipc::{NetCall, NetFault, NetField, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
 use zeroize::Zeroizing;
@@ -40,8 +40,6 @@ const CREDIT: &[&str] = &[
     "project_spend_limit_exceeded",
     "organization_usage_limit_exceeded",
 ];
-/// Words of an error that means the language, read only on a 400 or a 422.
-const LANGUAGE: &[&str] = &["language"];
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]
@@ -187,14 +185,11 @@ fn judge<T>(form: Option<&NetForm<'_>>, head: &Head, body: &[u8]) -> Verdict<T> 
 /// A 429: the used allowance with its renewal when no request is left today, else the wait the service asks for.
 fn busy<T>(head: &Head) -> Verdict<T> {
     if head.header(LEFT).map(str::trim) == Some(NONE_LEFT) {
-        let renews_s = head.header(RESET).and_then(reply::span_s).and_then(renewal);
+        let renews_s = head
+            .header(RESET)
+            .and_then(reply::span_s)
+            .and_then(status::renewal);
         return Verdict::Fault(NetFault::Allowance { renews_s });
     }
     status::wait(head)
-}
-
-/// `s` held up to `NET_RENEW_S`'s start; none past its end, as a wrong date is worse than none.
-fn renewal(s: u64) -> Option<u32> {
-    let s = u32::try_from(s).ok()?.max(*NET_RENEW_S.start());
-    NET_RENEW_S.contains(&s).then_some(s)
 }

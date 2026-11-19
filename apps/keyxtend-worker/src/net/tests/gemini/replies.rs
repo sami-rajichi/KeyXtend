@@ -1,9 +1,10 @@
-//! Gemini's answers [N1][N5][N7]: its transcript from `output_text`, else from its steps' content in order; an empty
-//! one is the run's to judge; a bad key by its exact reason and a leaked one by its exact status; a free tier asking to
-//! verify and an unpaid balance as the account's step, by their reasons; each 429 a wait; a 503 retried as any 5xx; a
-//! refused location and a refused language; anything else strange, a plain 400 or another page's 403 too; and its key
-//! test on the models list [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the reasons beside
-//! [N7]'s are assumed, for the live check.
+//! Gemini's answers [N1][N5][N7][N10]: its transcript from `output_text`, else from its model output steps in order,
+//! any other field or content of another shape adding nothing; an empty one is the run's to judge; a bad key by its
+//! exact reason and a leaked one by its exact status; a free tier asking to verify and an unpaid balance as the
+//! account's step, by their reasons; a 429 waits as asked, or is the used allowance when its quota is per day; a 503
+//! retried as any 5xx; a refused location and language; anything else strange; and its key test on the models list
+//! [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the reasons and quota
+//! ids beside [N7]'s are assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_with, tested_with};
 use super::*;
@@ -14,7 +15,7 @@ use proptest::prelude::*;
 pub(super) const SAID: &str = "Bonjour tout le monde.";
 /// The transcript under `output_text`, as its SDK reads it [N1].
 pub(super) const TEXT: &[u8] = include_bytes!("../replies/gemini/text.json");
-/// The transcript in its steps' content, as the sample's raw reply places it [N1], in two parts after the sound's.
+/// The transcript in a model output step's content, in two parts, as the raw reply places it [N1][N10].
 const STEPS: &[u8] = include_bytes!("../replies/gemini/steps.json");
 /// An empty transcript, and steps with no text.
 pub(super) const EMPTY: &[u8] = include_bytes!("../replies/gemini/empty.json");
@@ -32,9 +33,12 @@ const SYNTAX: &[u8] = include_bytes!("../replies/gemini/syntax.json");
 const LOCATION: &[u8] = include_bytes!("../replies/gemini/location.json");
 /// A language code it refuses.
 const LANGUAGE_CODE: &[u8] = include_bytes!("../replies/gemini/language.json");
-/// A used quota [N5], and the model overloaded.
+/// A used quota with its retry delay of 37 s [N5], and the model overloaded.
 const QUOTA: &[u8] = include_bytes!("../replies/gemini/quota.json");
 const OVERLOADED: &[u8] = include_bytes!("../replies/gemini/overloaded.json");
+/// A per-day quota used, renewing in 7200 s, and a per-minute one asking for 12.5 s, by their quota ids (assumed).
+const QUOTA_DAY: &[u8] = include_bytes!("../replies/gemini/quota-day.json");
+const QUOTA_MINUTE: &[u8] = include_bytes!("../replies/gemini/quota-minute.json");
 /// The models list the key test reads [N8].
 const MODELS_LIST: &[u8] = include_bytes!("../replies/gemini/models.json");
 /// The exact reasons [N7] gives, and the one assumed, for a step on the account's site.
@@ -46,28 +50,43 @@ fn read(status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
 }
 
 #[test]
-fn a_reply_holds_its_text_in_output_text_else_in_its_steps() {
-    assert_eq!(read(OK, &[], TEXT), Got::Text(SAID.to_owned()));
-    assert_eq!(
-        read(OK, &[], STEPS),
-        Got::Text(SAID.to_owned()),
-        "parts in order"
-    );
-    let both = br#"{"output_text":"first","steps":[{"content":[{"text":"second"}]}]}"#;
-    assert_eq!(read(OK, &[], both), Got::Text("first".into()));
-    let one = br#"{"steps":[{"content":{"type":"text","text":"one part"}}]}"#;
-    assert_eq!(
-        read(OK, &[], one),
-        Got::Text("one part".into()),
-        "content as one part"
-    );
-    let null = br#"{"output_text":null,"steps":[{"content":[{"text":"kept"}]}]}"#;
-    assert_eq!(read(OK, &[], null), Got::Text("kept".into()));
+fn a_reply_holds_its_text_in_output_text_else_in_its_model_output_steps() {
+    let cases: [(&[u8], &str); 7] = [
+        (TEXT, SAID),
+        (STEPS, SAID),
+        (
+            br#"{"output_text":"first","steps":[{"type":"model_output","content":[{"text":"second"}]}]}"#,
+            "first",
+        ),
+        // Another field of any shape never fails `output_text`.
+        (
+            br#"{"output_text":"kept","steps":"odd","usage":[1,{"x":null}]}"#,
+            "kept",
+        ),
+        (
+            br#"{"output_text":null,"steps":[{"type":"model_output","content":[{"text":"kept"}]}]}"#,
+            "kept",
+        ),
+        (
+            br#"{"steps":[{"type":"model_output","content":{"type":"text","text":"one part"}}]}"#,
+            "one part",
+        ),
+        (
+            br#"{"steps":[{"type":"user_input","content":[{"text":"echo "}]},{"content":[{"text":"no type "}]},
+            {"type":"model_output","content":[7,"x",{"text":5},{"text":"said"}]}]}"#,
+            "said",
+        ),
+    ];
+    for (body, want) in cases {
+        let shown = String::from_utf8_lossy(body);
+        assert_eq!(read(OK, &[], body), Got::Text(want.into()), "{shown}");
+    }
 }
 
 #[test]
-fn an_empty_transcript_is_the_runs_to_judge() {
-    for body in [EMPTY, NO_STEP_TEXT, br#"{"steps":[]}"#] {
+fn an_empty_transcript_is_the_runs_to_judge_a_content_of_another_shape_too() {
+    let odd = br#"{"steps":[{"type":"model_output","content":"words"},{"type":"model_output","content":null}]}"#;
+    for body in [EMPTY, NO_STEP_TEXT, br#"{"steps":[]}"#, odd] {
         let shown = String::from_utf8_lossy(body);
         assert_eq!(read(OK, &[], body), Got::Text(String::new()), "{shown}");
     }
@@ -82,7 +101,7 @@ fn a_reply_that_is_not_its_json_is_strange() {
         br#"{"text":"the form's"}"#,
         br#"["output_text"]"#,
         br#"{"output_text":7}"#,
-        br#"{"steps":[{"content":"words"}]}"#,
+        br#"{"steps":"odd"}"#,
     ];
     for body in bodies {
         let shown = String::from_utf8_lossy(body);
@@ -92,7 +111,7 @@ fn a_reply_that_is_not_its_json_is_strange() {
 
 #[test]
 fn each_error_status_is_its_fault_as_its_error_pages_say() {
-    let cases: [(u16, &[u8], Got); 17] = [
+    let cases: [(u16, &[u8], Got); 19] = [
         (400, KEY_BAD, Got::Fault(Key)),
         (403, LEAKED, Got::Fault(Key)),
         (403, HOTSPOT, Got::Fault(Strange)),
@@ -106,7 +125,9 @@ fn each_error_status_is_its_fault_as_its_error_pages_say() {
         (403, BILLING, Got::Fault(Account)),
         (400, LOCATION, Got::Fault(Region)),
         (400, LANGUAGE_CODE, Got::Fault(Language)),
-        (BUSY, QUOTA, Got::Wait(None)),
+        (BUSY, QUOTA, Got::Wait(Some(37))),
+        (BUSY, QUOTA_MINUTE, Got::Wait(Some(13))),
+        (BUSY, QUOTA_DAY, used(Some(7_200))),
         (500, DOWN, Got::Fault(Network)),
         (503, OVERLOADED, Got::Fault(Network)),
         (400, SYNTAX, Got::Fault(Strange)),
@@ -121,10 +142,42 @@ fn each_error_status_is_its_fault_as_its_error_pages_say() {
     }
 }
 
+/// The free allowance used up, renewing in `renews_s`.
+fn used(renews_s: Option<u32>) -> Got {
+    Got::Fault(kx_ipc::NetFault::Allowance { renews_s })
+}
+
 #[test]
-fn a_429_waits_for_its_retry_after_and_a_503_is_tried_again() {
+fn a_429_waits_for_its_retry_after_else_its_delay_and_a_per_day_quota_is_the_used_allowance() {
     let wait = [("retry-after", "3")];
-    assert_eq!(read(BUSY, &wait, QUOTA), Got::Wait(Some(3)));
+    assert_eq!(
+        read(BUSY, &wait, QUOTA),
+        Got::Wait(Some(3)),
+        "the header first"
+    );
+    assert_eq!(
+        read(BUSY, &[], QUOTA),
+        Got::Wait(Some(37)),
+        "RetryInfo [N5]"
+    );
+    assert_eq!(read(BUSY, &wait, QUOTA_DAY), used(Some(7_200)));
+    let undated = String::from_utf8_lossy(QUOTA_DAY)
+        .replace("\"retryDelay\":\"7200s\"", "\"retryDelay\":\"soon\"");
+    assert_eq!(
+        read(BUSY, &[], undated.as_bytes()),
+        used(None),
+        "no renewal guessed"
+    );
+    let past = String::from_utf8_lossy(QUOTA_DAY).replace("7200s", "9999999s");
+    assert_eq!(
+        read(BUSY, &[], past.as_bytes()),
+        used(None),
+        "past the frames' range"
+    );
+}
+
+#[test]
+fn a_503_is_tried_again() {
     let sending = Sending {
         shape: &Gemini,
         call: gemini(ADDRESS),
@@ -149,7 +202,8 @@ fn a_key_test_works_on_the_models_list_and_fails_as_a_piece_does() {
     assert_eq!(tested(OK, HOTSPOT), Got::Fault(Strange));
     assert_eq!(tested(400, KEY_BAD), Got::Fault(Key));
     assert_eq!(tested(403, VERIFY), Got::Fault(Account));
-    assert_eq!(tested(BUSY, QUOTA), Got::Wait(None));
+    assert_eq!(tested(BUSY, QUOTA), Got::Wait(Some(37)));
+    assert_eq!(tested(BUSY, QUOTA_DAY), used(Some(7_200)));
     assert_eq!(tested(503, OVERLOADED), Got::Fault(Network));
 }
 
@@ -210,7 +264,7 @@ proptest! {
     fn any_transcript_reads_back_as_itself_from_either_place(text in "\\PC{0,64}") {
         let said = json!({ "output_text": text }).to_string();
         prop_assert_eq!(read(OK, &[], said.as_bytes()), Got::Text(text.clone()));
-        let steps = json!({ "steps": [{ "content": [{ "type": "text", "text": text }] }] });
+        let steps = json!({ "steps": [{ "type": "model_output", "content": [{ "type": "text", "text": text }] }] });
         prop_assert_eq!(read(OK, &[], steps.to_string().as_bytes()), Got::Text(text));
     }
 }

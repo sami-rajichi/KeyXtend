@@ -9,6 +9,8 @@ use kx_ipc::{NetCall, NetFault, NetHeader, ShapeCode};
 use kx_platform_net::{Head, Verb};
 use zeroize::Zeroizing;
 
+/// The header that names a body's type, a request's and a file part's.
+pub const CONTENT_TYPE: &str = "Content-Type";
 /// The header a bearer key goes in.
 const AUTHORIZATION: &str = "Authorization";
 /// What comes before a bearer key.

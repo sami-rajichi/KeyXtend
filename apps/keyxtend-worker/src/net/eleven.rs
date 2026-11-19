@@ -7,7 +7,7 @@ use super::form;
 use super::multipart::{self, Text};
 use super::reply::{self, Coded};
 use super::shape::{self, Piece, Request, Shape, Verdict};
-use super::status::{self, RETRY, Row, Then, row};
+use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
 use kx_ipc::{NetCall, NetFault, NetShape};
 use kx_platform_net::{Head, Verb};
 use zeroize::Zeroizing;
@@ -26,8 +26,6 @@ const DETAIL: Coded = Coded {
 };
 /// The exact codes of a used quota or no credit [E8], on a 401 as on a 402.
 const CREDIT: &[&str] = &["quota_exceeded", "payment_required", "insufficient_credits"];
-/// Words of an error that means the language, read only on a 400 or a 422.
-const LANGUAGE: &[&str] = &["language"];
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]

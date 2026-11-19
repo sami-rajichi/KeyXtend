@@ -2,6 +2,7 @@
 //! `ElevenLabs`' share: text fields, then the piece as a WAV file, under a boundary drawn from the parts' own SHA-256, so
 //! no part can hold it, in one wiped buffer sized once.
 
+use super::shape::CONTENT_TYPE;
 use super::wav;
 use kx_ipc::NetFault;
 use sha2::{Digest, Sha256};
@@ -13,8 +14,6 @@ use zeroize::Zeroizing;
 pub const FILE: &str = "file";
 /// What the piece is called.
 const PIECE_NAME: &str = "piece.wav";
-/// The header that names a body's type, the request's and a file part's.
-pub const CONTENT_TYPE: &str = "Content-Type";
 /// The request's body type before its boundary.
 const FORM_TYPE: &str = "multipart/form-data; boundary=";
 /// What starts every boundary.
