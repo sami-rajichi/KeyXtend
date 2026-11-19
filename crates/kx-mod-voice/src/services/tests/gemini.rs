@@ -96,19 +96,23 @@ fn its_card_warns_what_the_free_allowance_gives_google() {
 }
 
 #[test]
-fn its_facts_are_its_pages_with_the_paid_price_and_its_rule() {
+fn its_facts_are_its_pages_with_the_paid_tiers_keeping_and_price_and_its_rule() {
     let facts = &gemini().facts;
     assert_eq!(facts.read, Date::new(2026, 11, 17).unwrap());
     let host = facts.source.as_ref().map(HttpsUrl::host);
     assert_eq!(host, Some("aistudio.google.com"));
     let ids = [&facts.place, &facts.keeps, &facts.free].map(|f| f.id.as_str());
-    assert_eq!(ids, ["unstated", "limited", "no-card"], "[N3][N4][N5]");
+    assert_eq!(ids, ["unstated", "paid-limited", "no-card"], "[N3][N4][N5]");
     for (fact, cents) in [&facts.light, &facts.heavy].into_iter().zip(PRICES) {
         let price = FactValue::Money {
             amount: Hundredths(cents),
             currency: "USD".into(),
         };
-        assert_eq!(values(fact), ("plain", vec![("price", &price)]), "{cents}");
+        assert_eq!(
+            values(fact),
+            ("paid-plain", vec![("price", &price)]),
+            "{cents}"
+        );
     }
     assert!(facts.bills.is_none());
     let rule = facts

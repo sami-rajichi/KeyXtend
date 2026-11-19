@@ -649,10 +649,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة"
+                    "text": "في المستوى المدفوع: طلباتك لمدة محدودة لكشف إساءة الاستخدام"
                   }
                 ],
-                "text": "طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة"
+                "text": "في المستوى المدفوع: طلباتك لمدة محدودة لكشف إساءة الاستخدام"
               },
               "warn": false
             }
@@ -2066,10 +2066,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "متاحة دون الحاجة إلى بطاقة دفع"
+                    "text": "دون الحاجة إلى بطاقة دفع"
                   }
                 ],
-                "text": "متاحة دون الحاجة إلى بطاقة دفع"
+                "text": "دون الحاجة إلى بطاقة دفع"
               },
               "warn": false
             },
@@ -2080,10 +2080,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "4,50 دولار"
+                    "text": "4,50 دولار في المستوى المدفوع"
                   }
                 ],
-                "text": "4,50 دولار"
+                "text": "4,50 دولار في المستوى المدفوع"
               },
               "warn": false
             },
@@ -2094,10 +2094,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "18 دولارًا"
+                    "text": "18 دولارًا في المستوى المدفوع"
                   }
                 ],
-                "text": "18 دولارًا"
+                "text": "18 دولارًا في المستوى المدفوع"
               },
               "warn": false
             },
@@ -3621,7 +3621,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "مجانًا: متاحة دون الحاجة إلى بطاقة دفع",
+              "line": "مجانًا: دون الحاجة إلى بطاقة دفع",
               "marks": [
                 {
                   "id": "warn",
@@ -8358,10 +8358,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Your requests, for a limited time to check for abuse; how long is not stated"
+                    "text": "On the paid tier: your requests, for a limited time to check for abuse"
                   }
                 ],
-                "text": "Your requests, for a limited time to check for abuse; how long is not stated"
+                "text": "On the paid tier: your requests, for a limited time to check for abuse"
               },
               "warn": false
             }
@@ -9775,10 +9775,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Available, with no card needed"
+                    "text": "No card needed"
                   }
                 ],
-                "text": "Available, with no card needed"
+                "text": "No card needed"
               },
               "warn": false
             },
@@ -9789,10 +9789,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "$4.50"
+                    "text": "$4.50 on the paid tier"
                   }
                 ],
-                "text": "$4.50"
+                "text": "$4.50 on the paid tier"
               },
               "warn": false
             },
@@ -9803,10 +9803,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "$18"
+                    "text": "$18 on the paid tier"
                   }
                 ],
-                "text": "$18"
+                "text": "$18 on the paid tier"
               },
               "warn": false
             },
@@ -11330,7 +11330,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Free: Available, with no card needed",
+              "line": "Free: No card needed",
               "marks": [
                 {
                   "id": "warn",
@@ -16067,10 +16067,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée"
+                    "text": "Au niveau payant : vos requêtes, pendant un temps limité pour détecter les abus"
                   }
                 ],
-                "text": "Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée"
+                "text": "Au niveau payant : vos requêtes, pendant un temps limité pour détecter les abus"
               },
               "warn": false
             }
@@ -17498,10 +17498,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "4,50 $"
+                    "text": "4,50 $ au niveau payant"
                   }
                 ],
-                "text": "4,50 $"
+                "text": "4,50 $ au niveau payant"
               },
               "warn": false
             },
@@ -17512,10 +17512,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "18 $"
+                    "text": "18 $ au niveau payant"
                   }
                 ],
-                "text": "18 $"
+                "text": "18 $ au niveau payant"
               },
               "warn": false
             },

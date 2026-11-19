@@ -68,7 +68,7 @@ cloud =
     .fact-keeps-memory = Nothing: held in memory only while it works
     .fact-keeps-host = Depends on the host; a switch, on to start, sends only to hosts that keep nothing
     .fact-keeps-history = Your history, by default; keeping nothing is for Enterprise plans only
-    .fact-keeps-limited = Your requests, for a limited time to check for abuse; how long is not stated
+    .fact-keeps-paid-limited = On { -cloud-paid-tier }: your requests, for a limited time to check for abuse
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
        *[other] { $hours } hours
@@ -85,10 +85,11 @@ cloud =
         [one] minute
        *[other] minutes
     } a month
-    .fact-free-no-card = Available, with no card needed
-    .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
+    .fact-free-no-card = No card needed
+    .fact-price-free-or = Free within { -cloud-free-use }, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
     .fact-price-plain = { $price }
+    .fact-price-paid-plain = { $price } on { -cloud-paid-tier }
     .fact-price-range = { $low } to { $high } by model
     .fact-price-range-fee = { $low } to { $high } by model, plus a { $fee }% fee on credit
     .fact-warn-trains = { -cloud-trains } To stop it, turn off this switch: { $switch }
@@ -165,5 +166,7 @@ cloud =
 
 # The first sentence of every training warning, the shared one and a service's own.
 -cloud-trains = Trains its models on your voice by default.
-# The one name of a service's free allowance in the lines about its free use.
+# The free allowance's one name in running text; a title or a sentence's start writes it out with its capital.
 -cloud-free-use = the free allowance
+# The paid tier's one name, as Google's pages call it, in the lines about paid use.
+-cloud-paid-tier = the paid tier

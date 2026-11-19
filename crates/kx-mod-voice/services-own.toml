@@ -71,16 +71,17 @@ name = "Gemini 3.5 Transcribe"
 langs = "bcp-47"
 
 # Free of charge with no card, but the free allowance's input trains Google's products and human reviewers may read it
-# [N3][N4]. Light and heavy use take the paid tier's $0.005 a minute [N3].
+# [N3][N4]. Its keeping is the paid tier's abuse logging [N4], and light and heavy use take the paid tier's $0.005 a
+# minute [N3]; each says it is the paid tier's.
 [services.facts]
 read = 2026-11-17
 source = "https://aistudio.google.com/docs/pricing"
 currency = "USD"
 place = { id = "unstated" }
 trains = { id = "free-allowance", warn = true }
-keeps = { id = "limited" }
+keeps = { id = "paid-limited" }
 free = { id = "no-card" }
-light = { id = "plain", money = { price = 4.50 } }
-heavy = { id = "plain", money = { price = 18.00 } }
+light = { id = "paid-plain", money = { price = 4.50 } }
+heavy = { id = "paid-plain", money = { price = 18.00 } }
 warn = { id = "free-allowance" }
 rule = { id = "eea-paid-18" }

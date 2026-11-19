@@ -68,7 +68,7 @@ cloud =
     .fact-keeps-memory = Rien : gardé en mémoire le temps du traitement seulement
     .fact-keeps-host = Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien
     .fact-keeps-history = Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise
-    .fact-keeps-limited = Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée
+    .fact-keeps-paid-limited = Au { -cloud-paid-tier } : vos requêtes, pendant un temps limité pour détecter les abus
     .fact-free-daily = { $hours-form ->
         [one] { $hours } heure
        *[other] { $hours } heures
@@ -89,6 +89,7 @@ cloud =
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
     .fact-price-plain = { $price }
+    .fact-price-paid-plain = { $price } au { -cloud-paid-tier }
     .fact-price-range = De { $low } à { $high } selon le modèle
     .fact-price-range-fee = De { $low } à { $high } selon le modèle, plus { $fee } % de frais sur le crédit
     .fact-warn-trains = { -cloud-trains } Pour arrêter cela, désactivez ce réglage : { $switch }
@@ -165,5 +166,7 @@ cloud =
 
 # La première phrase de chaque avertissement d’entraînement, le commun comme celui propre à un service.
 -cloud-trains = Entraîne ses modèles sur votre voix par défaut.
-# Le seul nom du quota gratuit d’un service dans les lignes sur son usage gratuit.
+# Le seul nom du quota gratuit dans le texte courant ; un titre, un début de phrase et « du quota gratuit » l’écrivent en entier.
 -cloud-free-use = le quota gratuit
+# Le seul nom du niveau payant, comme les pages de Google le nomment, sans article, dans les lignes sur l’usage payant.
+-cloud-paid-tier = niveau payant

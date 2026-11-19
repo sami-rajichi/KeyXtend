@@ -29,7 +29,7 @@ cloud =
     .card-where = وجهة صوتك
     .card-trains = التدريب
     .card-keeps = ما يُحتفَظ به
-    .card-free = الحصة المجانية
+    .card-free = { -cloud-free-use }
     .card-light = استخدام خفيف · { $hours }
     .card-heavy = استخدام مكثّف · { $hours }
     .card-bills = الحد الأدنى للفوترة
@@ -76,7 +76,7 @@ cloud =
     .fact-keeps-memory = لا شيء: يبقى في الذاكرة أثناء المعالجة فقط
     .fact-keeps-host = يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء
     .fact-keeps-history = سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط
-    .fact-keeps-limited = طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة
+    .fact-keeps-paid-limited = في { -cloud-paid-tier }: طلباتك لمدة محدودة لكشف إساءة الاستخدام
     .fact-free-daily = { $hours-form ->
         [one] ساعة واحدة
         [two] ساعتان
@@ -102,10 +102,11 @@ cloud =
         [many] { $minutes } دقيقة
        *[other] { $minutes } دقيقة
     } شهريًا
-    .fact-free-no-card = متاحة دون الحاجة إلى بطاقة دفع
-    .fact-price-free-or = مجاني ضمن الحصة المجانية، وإلا فمن { $low-after } إلى { $high-after } حسب النموذج
+    .fact-free-no-card = دون الحاجة إلى بطاقة دفع
+    .fact-price-free-or = مجاني ضمن { -cloud-free-use }، وإلا فمن { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-unknown = غير معروف، ويتوقف على الخدمة
     .fact-price-plain = { $price }
+    .fact-price-paid-plain = { $price } في { -cloud-paid-tier }
     .fact-price-range = من { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-range-fee = من { $low-after } إلى { $high-after } حسب النموذج، مع رسوم بنسبة { $fee }% عند شراء الرصيد
     .fact-warn-trains = { -cloud-trains } لإيقاف ذلك، عطِّل هذا الخيار: { $switch }
@@ -172,8 +173,8 @@ cloud =
     .note-credit = لم يبقَ رصيد في الحساب.
     .note-account = تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع.
     .note-region = الخدمة غير متاحة في بلدك أو منطقتك.
-    .note-allowance = نفدت الحصة المجانية حاليًا.
-    .note-allowance-in = نفدت الحصة المجانية، وتتجدد بعد مدة قدرها { $in }.
+    .note-allowance = نفدت { -cloud-free-use } حاليًا.
+    .note-allowance-in = نفدت { -cloud-free-use }، وتتجدد بعد مدة قدرها { $in }.
     .note-rate = الطلبات كثيرة جدًا. انتظر قليلًا وحاول مرة أخرى.
     .note-too-big = كان التسجيل أكبر مما تقبله الخدمة.
     .note-language = لا تقبل الخدمة اللغة { $lang }.
@@ -200,5 +201,7 @@ cloud =
 
 # الجملة الأولى في كل تحذير من التدريب، العام منه والخاص بإحدى الخدمات.
 -cloud-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا.
-# الاسم الوحيد للحصة المجانية لخدمة ما في الأسطر التي تتناول استخدامها المجاني.
+# الاسم الوحيد للحصة المجانية في كل سطر يذكرها.
 -cloud-free-use = الحصة المجانية
+# الاسم الوحيد للمستوى المدفوع، كما تسميه صفحات Google، في الأسطر التي تتناول الاستخدام المدفوع.
+-cloud-paid-tier = المستوى المدفوع

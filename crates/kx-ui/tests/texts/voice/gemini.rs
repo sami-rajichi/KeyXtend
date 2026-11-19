@@ -1,6 +1,7 @@
-//! Gemini's card in each language (research [N3] to [N5]): training while the free allowance is used, its limited
-//! keeping, the free allowance with no card, the paid price for light and heavy use with Arabic's dollars agreeing with
-//! their number, its rule for the EEA and for age, and its own warning and mark naming the one free-allowance term.
+//! Gemini's card in each language (research [N3] to [N5]): training while the free allowance is used, the paid tier's
+//! limited keeping, no card needed in one meaning in all three, the paid tier's price for light and heavy use with
+//! Arabic's dollars agreeing with their number, its rule for the EEA and for age, and its own warning and mark naming
+//! the one free-allowance term; the paid tier is one term too.
 
 use crate::lang;
 use kx_mod_voice::services::table;
@@ -13,6 +14,8 @@ use kx_ui::i18n::keys::{
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 /// The one free-allowance term, in each language (ruling 8).
 const FREE_TERM: [&str; 3] = ["free allowance", "quota gratuit", "الحصة المجانية"];
+/// The paid tier's one term, in each language, as Google's own pages name it.
+const PAID_TERM: [&str; 3] = ["paid tier", "niveau payant", "المستوى المدفوع"];
 
 /// Each fact's group, its id and its words in English, French and Arabic.
 const LINES: [(&str, &str, [&str; 3]); 4] = [
@@ -27,20 +30,20 @@ const LINES: [(&str, &str, [&str; 3]); 4] = [
     ),
     (
         FACT_KEEPS,
-        "limited",
+        "paid-limited",
         [
-            "Your requests, for a limited time to check for abuse; how long is not stated",
-            "Vos requêtes, pendant un temps limité pour détecter les abus\u{a0}; la durée n’est pas précisée",
-            "طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة",
+            "On the paid tier: your requests, for a limited time to check for abuse",
+            "Au niveau payant\u{a0}: vos requêtes, pendant un temps limité pour détecter les abus",
+            "في المستوى المدفوع: طلباتك لمدة محدودة لكشف إساءة الاستخدام",
         ],
     ),
     (
         FACT_FREE,
         "no-card",
         [
-            "Available, with no card needed",
+            "No card needed",
             "Sans carte bancaire",
-            "متاحة دون الحاجة إلى بطاقة دفع",
+            "دون الحاجة إلى بطاقة دفع",
         ],
     ),
     (
@@ -72,8 +75,22 @@ const WARNING: [(&str, &str); 3] = [
 
 /// Light and heavy use at the paid tier's $0.005 a minute [N3], in hundredths, and their words.
 const PRICES: [(u32, [&str; 3]); 2] = [
-    (450, ["$4.50", "4,50\u{a0}$", "4,50 دولار"]),
-    (1800, ["$18", "18\u{a0}$", "18 دولارًا"]),
+    (
+        450,
+        [
+            "$4.50 on the paid tier",
+            "4,50\u{a0}$ au niveau payant",
+            "4,50 دولار في المستوى المدفوع",
+        ],
+    ),
+    (
+        1800,
+        [
+            "$18 on the paid tier",
+            "18\u{a0}$ au niveau payant",
+            "18 دولارًا في المستوى المدفوع",
+        ],
+    ),
 ];
 
 /// A fact `id` with no values.
@@ -121,7 +138,7 @@ fn its_warning_and_mark_read_in_each_language_with_the_one_free_allowance_term()
 }
 
 #[test]
-fn its_light_and_heavy_prices_read_in_each_language() {
+fn its_light_and_heavy_prices_read_in_each_language_on_the_paid_tier() {
     for (h, words) in PRICES {
         let price = FactArg {
             name: "price".to_owned(),
@@ -131,13 +148,16 @@ fn its_light_and_heavy_prices_read_in_each_language() {
             },
         };
         let fact = Fact {
-            id: "plain".to_owned(),
+            id: "paid-plain".to_owned(),
             args: vec![price],
             warn: false,
         };
-        for (tag, want) in TAGS.into_iter().zip(words) {
+        for ((tag, want), term) in TAGS.into_iter().zip(words).zip(PAID_TERM) {
             let said = lang(tag).voice_fact(FACT_PRICE, &fact).text;
             assert_eq!(said, want, "{tag} {h}");
+            assert!(said.contains(term), "{tag}: {term}");
         }
     }
+    let keeps = LINES[1].2;
+    assert!(keeps.iter().zip(PAID_TERM).all(|(l, t)| l.contains(t)));
 }
