@@ -1,8 +1,8 @@
-// The dictation bar (design "The bar"; design/voice-bar.html .vbar): one key row tall, a pill in the keyboard's theme
-// where the hub places it. It listens with the red dot, its language, the wave and the timer, with a service's warning
-// under the row on the first dictation to it; writes with the shimmer; then shows the text or a note, each state's
-// buttons in one order in every language (ADR-0020). It takes clicks but never focus, plays the start and stop sounds,
-// and tells the module when the pointer is over it.
+// The dictation bar (design "The bar"; design/voice-bar.html .vbar): one key row tall, a line taller while a card's
+// warning shows, a pill in the keyboard's theme where the hub places it. It listens with the red dot, its language, the
+// wave and the timer, with a service's warning under the row on the first dictation to it; writes with the shimmer;
+// then shows the text or a note, each state's buttons in one order in every language (ADR-0020). It takes clicks but
+// never focus, plays the start and stop sounds, and tells the module when the pointer is over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -178,13 +178,13 @@ Window {
         const h = v && v.bar.hint;
         return !h ? "" : (h.id || h);
     }
-    // Screen readers hear each new state and line, since the bar never takes focus.
+    // Screen readers hear each new state and line, since the bar never takes focus; Listening's sentence is the hub's.
     function tell() {
         const h = shown.hint;
         const line = !h ? "" : (h.text || h);
-        const said = listens || writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
+        const said = listens ? shown.said : writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
         if (said)
-            body.Accessible.announce(warns ? said + " " + warning : said);
+            body.Accessible.announce(said);
     }
 
     Rectangle {

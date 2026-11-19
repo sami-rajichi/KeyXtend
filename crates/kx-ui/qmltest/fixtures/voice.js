@@ -177,6 +177,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -327,6 +328,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "said": "جارٍ الاستماع…، تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
@@ -517,6 +519,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "said": "جارٍ الاستماع…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -652,6 +655,7 @@ var views = {
           "name": "العربية",
           "rtl": true
         },
+        "said": "لم يُسمع شيء بعد",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -1088,6 +1092,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "said": "Listening…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -1238,6 +1243,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "said": "Listening…, Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
@@ -1428,6 +1434,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "said": "Listening…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -1563,6 +1570,7 @@ var views = {
           "name": "English",
           "rtl": false
         },
+        "said": "Nothing heard yet",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -1999,6 +2007,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "said": "Écoute…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -2149,6 +2158,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "said": "Écoute…, Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
         "state": "listening",
         "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
@@ -2339,6 +2349,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "said": "Écoute…",
         "state": "listening",
         "warn": null,
         "waveMs": 300,
@@ -2474,6 +2485,7 @@ var views = {
           "name": "Français",
           "rtl": false
         },
+        "said": "Rien entendu pour l’instant",
         "state": "listening",
         "warn": null,
         "waveMs": 300,

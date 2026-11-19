@@ -11,8 +11,8 @@ use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
-    FACT_WARN, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK,
-    VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
+    FACT_WARN, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_JOIN, VOICE_LISTENING,
+    VOICE_MASK, VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
@@ -60,6 +60,7 @@ enum Bar {
         wave_ms: u16,
         hint: Option<String>,
         warn: Option<String>,
+        said: String,
         buttons: Vec<Button>,
     },
     Transcribing {
@@ -130,15 +131,25 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
     }
 }
 
-/// The Listening state, with the hint while it hears nothing yet and the service's card warning on its first dictation.
+/// The Listening state, with the hint while it hears nothing yet and the service's card warning on its first dictation;
+/// readers hear the hint or the word, then the warning.
 fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
+    let word = t.text(VOICE_LISTENING);
+    let hint = l.nothing.then(|| t.text(VOICE_NOTHING));
+    let warn = l.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w).text);
+    let first = hint.clone().unwrap_or_else(|| word.clone());
+    let said = match &warn {
+        Some(w) => [first, w.clone()].join(&t.text(VOICE_JOIN)),
+        None => first,
+    };
     Bar::Listening {
         lang: Lang::of(t, &l.lang),
-        word: t.text(VOICE_LISTENING),
+        word,
         elapsed_ms: l.elapsed_ms,
         wave_ms: l.wave_ms,
-        hint: l.nothing.then(|| t.text(VOICE_NOTHING)),
-        warn: l.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w).text),
+        hint,
+        warn,
+        said,
         buttons,
     }
 }

@@ -45,6 +45,7 @@ fn listening_shows_the_language_and_the_timer_between_cancel_and_stop() {
     assert_eq!(bar["elapsedMs"], 1200);
     assert_eq!(bar["waveMs"], 300);
     assert_eq!(bar["hint"], Value::Null);
+    assert_eq!(bar["said"], "Listening…", "what readers hear");
     assert_eq!(ids(&bar), want(&[("cancel", true), ("stop", true)]));
     let [cancel, stop] = [0, 1].map(|i| buttons(&bar["buttons"])[i].clone());
     assert_eq!(cancel, button("bar", "cancel", "Cancel", true, "plain"));
@@ -65,6 +66,7 @@ fn listening_that_hears_nothing_yet_says_so_and_keeps_listening() {
         warn: None,
     }));
     assert_eq!(bar["hint"], "Nothing heard yet");
+    assert_eq!(bar["said"], "Nothing heard yet", "readers hear the hint");
     assert_eq!(bar["lang"]["rtl"], true);
     assert_eq!(
         bar["lang"]["name"], "Arabic",
@@ -91,7 +93,10 @@ fn listening_carries_the_cards_warning_in_full_while_the_first_dictation_to_its_
         ..plain
     });
     let text = "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Data use";
-    assert_eq!(bar_json(warned)["warn"], text);
+    let bar = bar_json(warned);
+    assert_eq!(bar["warn"], text);
+    let said = format!("Listening…, {text}");
+    assert_eq!(bar["said"], said.as_str(), "readers hear it after the word");
     assert_eq!(bar_json(listening_bar())["warn"], Value::Null, "none");
 }
 
