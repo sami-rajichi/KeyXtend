@@ -79,7 +79,7 @@ address = "typed"
 test = "/v1/models"
 header = "x-api-key"
 keys = "https://speech.example.com/keys"
-limits = { cap_mb = 500, cap_s = 18000, max_mb = 23, max_s = 600, per_min = 600, at_once = 4 }
+limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 terms = 1
 offered = true
 untested = true
@@ -98,7 +98,7 @@ langs = { ar = "ar", en = "en", fr = "fr" }
 [services.facts]
 read = 2026-11-17
 source = "https://speech.example.com/data"
-place = { id = "region" }
+place = { id = "typed" }
 trains = { id = "unknown" }
 keeps = { id = "none" }
 free = { id = "none" }
