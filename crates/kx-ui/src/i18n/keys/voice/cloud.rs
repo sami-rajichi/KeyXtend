@@ -35,6 +35,8 @@ pub const VOICE_CARD: &str = "cloud.card-";
 pub const CARD_LABELS: [&str; 6] = ["where", "trains", "keeps", "free", "light", "heavy"];
 /// The card's label for the least a request bills.
 pub const CARD_BILLS: &str = "bills";
+/// The card's label for a rule the service sets on its use.
+pub const CARD_RULE: &str = "rule";
 /// A use's hours a month: `$count`, plural by `$form`.
 pub const VOICE_CARD_HOURS: &str = "cloud.card-hours";
 /// The day the facts were read: `$date`.
@@ -67,6 +69,8 @@ pub const FACT_FREE: &str = "free";
 pub const FACT_PRICE: &str = "price";
 /// The fact group of the least a request bills.
 pub const FACT_BILLS: &str = "bills";
+/// The fact group of a rule the service sets on its use.
+pub const FACT_RULE: &str = "rule";
 /// The fact group of a card's warning.
 pub const FACT_WARN: &str = "warn";
 /// Money in a currency: this, then its ISO 4217 code in lower case; `$amount`.

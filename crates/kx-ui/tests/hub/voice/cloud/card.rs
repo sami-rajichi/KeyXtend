@@ -1,6 +1,7 @@
 //! A service's card through the hub: its facts filled from the services table's row, the voice then the price, with the
-//! least billed (carry 3), a name from the service's pages kept as its own part (carry 2), the day read, its warning tone
-//! once old (edge 15), the Untested line (edge 18), the warning band, and Confirm or the day it was switched on.
+//! least billed (carry 3) and a rule of the service last, a name from the service's pages kept as its own part (carry
+//! 2), the day read, its warning tone once old (edge 15), the Untested line (edge 18), the warning band, and Confirm or
+//! the day it was switched on.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{count, daily, fact, groq, usd};
@@ -38,6 +39,7 @@ pub fn groq_card() -> CloudCard {
             price: price(240, 666),
         },
         bills: Some(fact("least", vec![count("seconds", 10)])),
+        rule: None,
         read: day(17),
         old: false,
         site: Some("groq.com".to_owned()),
@@ -175,6 +177,27 @@ fn old_facts_take_the_warning_tone_and_a_card_switched_on_names_its_day() {
     assert_eq!(
         (p["line"].as_null(), buttons(&p["foot"]).len()),
         (Some(()), 0)
+    );
+}
+
+#[test]
+fn a_rule_of_the_service_comes_last_on_the_price_part() {
+    let mut card = groq_card();
+    card.rule = Some(fact("non-commercial", Vec::new()));
+    let voice = card_json(card.clone());
+    assert_eq!(facts(&voice).len(), 3, "the voice part holds no rule");
+    card.part = CardPart::Price;
+    let rule = (
+        "rule".to_owned(),
+        "Terms of use".to_owned(),
+        "The free plan is for non-commercial use only, with attribution".to_owned(),
+        false,
+    );
+    let got = facts(&card_json(card));
+    assert_eq!(
+        (got.len(), got.last()),
+        (5, Some(&rule)),
+        "after the least billed"
     );
 }
 

@@ -1,5 +1,6 @@
-//! The form's body (`multipart/form-data`, RFC 7578), moved from the spike's `multipart.rs`: text fields, then one
-//! file, under a boundary drawn from the parts' own SHA-256, so no part can hold it, in one wiped buffer sized once.
+//! A form's body (`multipart/form-data`, RFC 7578), moved from the spike's `multipart.rs`, which the upload form and
+//! `ElevenLabs`' share: text fields, then the piece as a WAV file, under a boundary drawn from the parts' own SHA-256, so
+//! no part can hold it, in one wiped buffer sized once.
 
 use kx_ipc::NetFault;
 use sha2::{Digest, Sha256};
@@ -7,6 +8,15 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 use zeroize::Zeroizing;
 
+/// The file field's name, which both forms give the piece.
+pub const FILE: &str = "file";
+/// What the piece is called, and its media type.
+const PIECE_NAME: &str = "piece.wav";
+const PIECE_TYPE: &str = "audio/wav";
+/// The header that names a body's type, the request's and a file part's.
+const CONTENT_TYPE: &str = "Content-Type";
+/// The request's body type before its boundary.
+const FORM_TYPE: &str = "multipart/form-data; boundary=";
 /// What starts every boundary.
 const MARK: &str = "kx-";
 /// Bytes of the parts' fingerprint a boundary holds, written as hex.
@@ -18,9 +28,9 @@ const DASHES: &str = "--";
 /// A part's head up to its name, and the quote that ends a name.
 const DISPOSITION: &str = "Content-Disposition: form-data; name=\"";
 const QUOTE: &str = "\"";
-/// A file part's name and type before their values.
+/// A file part's name before its value, and what parts a header's name from its value.
 const FILE_NAME: &str = "; filename=\"";
-const TYPE: &str = "Content-Type: ";
+const TYPE_SEP: &str = ": ";
 /// Bytes a value may not hold: a line break or a NUL would end its part early.
 const BREAKS: &[u8] = b"\r\n\0";
 /// What a name escapes, as the HTML standard's form encoding does: a quote and line breaks.
@@ -56,6 +66,37 @@ pub struct File<'a> {
     pub bytes: &'a [u8],
 }
 
+/// A form ready to send: the header that names its boundary, and its body.
+pub struct Sent {
+    /// The `Content-Type` header and its value.
+    pub kind: (String, Zeroizing<Vec<u8>>),
+    /// The body, wiped when dropped, as it holds the sound.
+    pub body: Zeroizing<Vec<u8>>,
+}
+
+/// The piece `wav` as the form's WAV file.
+pub const fn wav(wav: &[u8]) -> File<'_> {
+    File {
+        name: FILE,
+        called: PIECE_NAME,
+        kind: PIECE_TYPE,
+        bytes: wav,
+    }
+}
+
+/// The form of `texts`, then `file`, with the header that names its boundary.
+///
+/// # Errors
+/// As `body`.
+pub fn sent(texts: &[Text<'_>], file: &File<'_>) -> Result<Sent, NetFault> {
+    let boundary = boundary(texts, file);
+    let kind = Zeroizing::new(format!("{FORM_TYPE}{boundary}").into_bytes());
+    Ok(Sent {
+        kind: (CONTENT_TYPE.to_owned(), kind),
+        body: body(&boundary, texts, file)?,
+    })
+}
+
 /// `name` as a form writes it: `ESCAPES` replaced.
 pub fn escape(name: &str) -> Cow<'_, str> {
     if !name.contains(|c| ESCAPES.iter().any(|(e, _)| *e == c)) {
@@ -72,7 +113,7 @@ pub fn escape(name: &str) -> Cow<'_, str> {
 }
 
 /// The boundary for these parts: `MARK` and the hex of their SHA-256, which no part can hold.
-pub fn boundary(texts: &[Text<'_>], file: &File<'_>) -> String {
+fn boundary(texts: &[Text<'_>], file: &File<'_>) -> String {
     let mut print = Sha256::new();
     for t in texts {
         print.update(t.name.as_bytes());
@@ -90,7 +131,7 @@ pub fn boundary(texts: &[Text<'_>], file: &File<'_>) -> String {
 ///
 /// # Errors
 /// `Range` for a value holding a `BREAKS` byte, `Gone` when the room cannot be had.
-pub fn body(
+fn body(
     boundary: &str,
     texts: &[Text<'_>],
     file: &File<'_>,
@@ -109,7 +150,7 @@ pub fn body(
         .collect();
     let (file_name, kind) = (escape(file.called), file.kind);
     let file_head = format!(
-        "{}{FILE_NAME}{file_name}{QUOTE}{CRLF}{TYPE}{kind}{CRLF}{CRLF}",
+        "{}{FILE_NAME}{file_name}{QUOTE}{CRLF}{CONTENT_TYPE}{TYPE_SEP}{kind}{CRLF}{CRLF}",
         head(file.name)
     );
     let last = format!("{DASHES}{boundary}{DASHES}{CRLF}");

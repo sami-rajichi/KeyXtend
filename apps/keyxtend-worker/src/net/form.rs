@@ -3,39 +3,29 @@
 //! is `{"text": …}`; anything else is read through one status table from Groq's error page, where a row whose form
 //! names a 403 its paywall reads it as no credit, and one that names a region code reads that refusal by it.
 
-mod body;
-
 #[cfg(test)]
-pub use body::escape;
+pub use super::multipart::escape;
 
+use super::multipart::{self, FILE, Text};
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
-use body::{File, Text};
+use super::status::{self, RETRY, Row, Then, row};
 use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
-use std::ops::RangeInclusive;
 use zeroize::Zeroizing;
 
 /// The upload form.
 pub struct Form;
 
-/// The form's own field names, which a row's fixed field may not repeat.
+/// The form's own field names, which a row's fixed field may not repeat, with the file's.
 const MODEL: &str = "model";
 const FORMAT: &str = "response_format";
-const FILE: &str = "file";
 /// The reply asked for: JSON with the text and no word or character timings, so replies stay small.
 const JSON: &str = "json";
 /// What follows a list field's name.
 const LIST: &str = "[]";
-/// The file part's name and type.
-const FILE_NAME: &str = "piece.wav";
-const WAV_TYPE: &str = "audio/wav";
-/// The body's header and its value before the boundary.
-const CONTENT_TYPE: &str = "Content-Type";
-const FORM_TYPE: &str = "multipart/form-data; boundary=";
 /// The answer headers a 429 is read by (Groq's rate-limit page): the wait, the day's requests left and their renewal.
-const RETRY: &str = "retry-after";
 const LEFT: &str = "x-ratelimit-remaining-requests";
 const RESET: &str = "x-ratelimit-reset-requests";
 const KEEP: &[&str] = &[RETRY, LEFT, RESET];
@@ -52,17 +42,6 @@ const CREDIT: &[&str] = &[
 ];
 /// Words of an error that means the language, read only on a 400 or a 422.
 const LANGUAGE: &[&str] = &["language"];
-/// Statuses whose reply holds what was asked.
-const DONE: RangeInclusive<u16> = 200..=299;
-
-/// What a status means.
-#[derive(Copy, Clone)]
-enum Then {
-    /// This fault.
-    Fault(NetFault),
-    /// Too many requests: a used allowance, or a wait.
-    Busy,
-}
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]
@@ -79,16 +58,9 @@ enum Says {
     Words(&'static [&'static str]),
 }
 
-/// One row of the status table: the statuses it covers, what the error must say, and what it means.
-struct Row {
-    codes: RangeInclusive<u16>,
-    says: Says,
-    then: Then,
-}
-
 /// The status table, from Groq's error page and the rows' own: the first row that matches wins, and a status no row
 /// takes is strange.
-const TABLE: &[Row] = &[
+const TABLE: &[Row<Says>] = &[
     // No redirect is followed, so the key and the sound reach one address only.
     row(300..=399, Says::Any, Then::Fault(NetFault::Strange)),
     row(401..=401, Says::Any, Then::Fault(NetFault::Key)),
@@ -116,11 +88,6 @@ const TABLE: &[Row] = &[
     row(500..=599, Says::Any, Then::Fault(NetFault::Network)),
 ];
 
-/// A table row.
-const fn row(codes: RangeInclusive<u16>, says: Says, then: Then) -> Row {
-    Row { codes, says, then }
-}
-
 impl Shape for Form {
     fn build(&self, piece: &Piece<'_>) -> Result<Request, NetFault> {
         let NetShape::Form(form) = &piece.call.shape else {
@@ -145,18 +112,11 @@ impl Shape for Form {
             .chain(fixed)
             .chain([Text::of(FORMAT, JSON)])
             .collect();
-        let file = File {
-            name: FILE,
-            called: FILE_NAME,
-            kind: WAV_TYPE,
-            bytes: piece.wav,
-        };
-        let boundary = body::boundary(&texts, &file);
-        let kind = Zeroizing::new(format!("{FORM_TYPE}{boundary}").into_bytes());
+        let sent = multipart::sent(&texts, &multipart::wav(piece.wav))?;
         Ok(Request {
             verb: Verb::Post,
-            fields: vec![shape::key(piece.call)?, (CONTENT_TYPE.to_owned(), kind)],
-            body: body::body(&boundary, &texts, &file)?,
+            fields: vec![shape::key(piece.call)?, sent.kind],
+            body: sent.body,
             keep: KEEP,
         })
     }
@@ -174,18 +134,11 @@ impl Shape for Form {
     }
 
     fn read(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<Zeroizing<String>> {
-        if DONE.contains(&head.status) {
-            return reply::text(body).map_or(Verdict::Fault(NetFault::Strange), Verdict::Said);
-        }
-        judge(form(call), head, body)
+        status::text(head, body, || judge(form(call), head, body))
     }
 
     fn tested(&self, call: &NetCall<'_>, head: &Head, body: &[u8]) -> Verdict<()> {
-        match (DONE.contains(&head.status), reply::object(body)) {
-            (true, true) => Verdict::Said(()),
-            (true, false) => Verdict::Fault(NetFault::Strange),
-            (false, _) => judge(form(call), head, body),
-        }
+        status::tested(head, body, || judge(form(call), head, body))
     }
 }
 
@@ -210,16 +163,11 @@ fn judge<T>(form: Option<&NetForm<'_>>, head: &Head, body: &[u8]) -> Verdict<T> 
     let said = |says: Says| match says {
         Says::Any => true,
         Says::Paywall => form.is_some_and(|f| f.paywall),
-        Says::Region => region.is_some_and(|code| reply::coded(body, &[code])),
-        Says::Code(codes) => reply::coded(body, codes),
+        Says::Region => region.is_some_and(|code| reply::coded(body, &reply::ERROR, &[code])),
+        Says::Code(codes) => reply::coded(body, &reply::ERROR, codes),
         Says::Words(words) => reply::says(body, words),
     };
-    let takes = |r: &&Row| r.codes.contains(&head.status) && said(r.says);
-    match TABLE.iter().find(takes).map(|r| r.then) {
-        Some(Then::Fault(fault)) => Verdict::Fault(fault),
-        Some(Then::Busy) => busy(head),
-        None => Verdict::Fault(NetFault::Strange),
-    }
+    status::judge(TABLE, head, said, busy)
 }
 
 /// A 429: the used allowance with its renewal when no request is left today, else the wait the service asks for.
@@ -228,7 +176,7 @@ fn busy<T>(head: &Head) -> Verdict<T> {
         let renews_s = head.header(RESET).and_then(reply::span_s).and_then(renewal);
         return Verdict::Fault(NetFault::Allowance { renews_s });
     }
-    Verdict::Busy(head.header(RETRY).and_then(reply::seconds))
+    status::wait(head)
 }
 
 /// `s` held up to `NET_RENEW_S`'s start; none past its end, as a wrong date is worse than none.

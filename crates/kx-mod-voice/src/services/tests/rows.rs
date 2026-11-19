@@ -118,8 +118,11 @@ fn only_the_rows_the_owner_tests_by_hand_are_offered_groq_first_and_the_rest_sta
     let ids: Vec<&str> = shipped().offered().map(|r| r.id.as_str()).collect();
     assert_eq!(ids, OFFERED, "ADR-0050; tasks 18 and 19 add their rows");
     let all: Vec<&str> = shipped().rows().iter().map(|r| r.id.as_str()).collect();
-    let want: Vec<&str> = WANTS.iter().map(|w| w.id).collect();
-    assert_eq!(all, want, "every form row stays in the table, in order");
+    let want: Vec<&str> = WANTS.iter().map(|w| w.id).chain(SHAPED).collect();
+    assert_eq!(
+        all, want,
+        "every form row stays in the table, in order, then the others"
+    );
     for id in NOT_OFFERED {
         let row = shipped().get(id).unwrap();
         assert!(!row.offered && row.untested, "{id}: hidden until tested");

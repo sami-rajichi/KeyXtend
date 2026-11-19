@@ -133,6 +133,7 @@ impl<'a> Cloud<'a> {
             light: price(self.table.light_hours(), &facts.light),
             heavy: price(self.table.heavy_hours(), &facts.heavy),
             bills: facts.bills.clone(),
+            rule: facts.rule.clone(),
             read: facts.read,
             old: facts.old(today, s.facts_days),
             site: facts.source.as_ref().map(|url| url.host().to_owned()),

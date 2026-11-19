@@ -8,13 +8,13 @@ use super::sheets::{mark, mark_key, tab_id};
 use crate::I18n;
 use crate::i18n::keys::vars::{DATE, FREE, HOURS, NAME, NAMES, SITE};
 use crate::i18n::keys::{
-    CARD_BILLS, CARD_LABELS, FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_TRAINS, FACT_WARN,
-    FACT_WHERE, VOICE_CARD, VOICE_CARD_ASK, VOICE_CARD_CONFIRM, VOICE_CARD_CUSTOM,
-    VOICE_CARD_HOURS, VOICE_CARD_LINK, VOICE_CARD_OLD, VOICE_CARD_ON, VOICE_CARD_READ_ON,
-    VOICE_CARD_SUB, VOICE_CARD_UNTESTED, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL, VOICE_CLOUD_OFF,
-    VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE, VOICE_JOIN, VOICE_OFF,
-    VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL, VoiceMark, cloud_button_id,
-    cloud_button_key, panel_button_id, service_mark, warn_mark_key,
+    CARD_BILLS, CARD_LABELS, CARD_RULE, FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE,
+    FACT_TRAINS, FACT_WARN, FACT_WHERE, VOICE_CARD, VOICE_CARD_ASK, VOICE_CARD_CONFIRM,
+    VOICE_CARD_CUSTOM, VOICE_CARD_HOURS, VOICE_CARD_LINK, VOICE_CARD_OLD, VOICE_CARD_ON,
+    VOICE_CARD_READ_ON, VOICE_CARD_SUB, VOICE_CARD_UNTESTED, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL,
+    VOICE_CLOUD_OFF, VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE,
+    VOICE_JOIN, VOICE_OFF, VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL,
+    VoiceMark, cloud_button_id, cloud_button_key, panel_button_id, service_mark, warn_mark_key,
 };
 use crate::i18n::{Said, clean};
 use kx_module_api::ports::{
@@ -216,7 +216,7 @@ pub(super) fn card(cx: &Cx<'_>, c: &CloudCard) -> Page {
     page
 }
 
-/// The facts of the card's shown part in their fixed order, the least billed last when the service rounds up.
+/// The facts of the card's shown part in their fixed order, then the least billed and the service's rule if any.
 fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
     let label = |id: &str| t.text(&format!("{VOICE_CARD}{id}"));
     let fact = |id, label, group, f: &Fact| FactView {
@@ -245,6 +245,8 @@ fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
             ];
             let bills = c.bills.as_ref();
             out.extend(bills.map(|b| fact(CARD_BILLS, label(CARD_BILLS), FACT_BILLS, b)));
+            let rule = c.rule.as_ref();
+            out.extend(rule.map(|r| fact(CARD_RULE, label(CARD_RULE), FACT_RULE, r)));
             out
         }
     }

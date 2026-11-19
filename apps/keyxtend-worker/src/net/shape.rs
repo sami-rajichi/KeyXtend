@@ -1,7 +1,8 @@
 //! A request shape (ADR-0047 decision 5): one adapter per shape builds a piece's request, or a key's test, from the
-//! call and the run, and reads the reply into text or a fault; the job holds no table. `ElevenLabs` and Gemini each
-//! come as one more file and one more arm of `of`.
+//! call and the run, and reads the reply into text or a fault; the job holds no table. The upload form and `ElevenLabs`'
+//! form are built; Gemini comes as one more file and one more arm of `of`.
 
+use super::eleven::Eleven;
 use super::form::Form;
 use kx_ipc::{NetCall, NetFault, NetHeader, ShapeCode};
 use kx_platform_net::{Head, Verb};
@@ -71,7 +72,8 @@ pub trait Shape: Send + Sync {
 pub fn of(code: ShapeCode) -> Option<&'static dyn Shape> {
     match code {
         ShapeCode::Form => Some(&Form),
-        ShapeCode::Eleven | ShapeCode::Gemini => None,
+        ShapeCode::Eleven => Some(&Eleven),
+        ShapeCode::Gemini => None,
     }
 }
 

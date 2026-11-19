@@ -33,6 +33,7 @@ cloud =
     .card-light = استخدام خفيف · { $hours }
     .card-heavy = استخدام مكثّف · { $hours }
     .card-bills = الحد الأدنى للفوترة
+    .card-rule = شروط الاستخدام
     .card-hours = { $form ->
         [one] ساعة واحدة شهريًا
         [two] ساعتان شهريًا
@@ -58,6 +59,7 @@ cloud =
     .fact-trains-switch = غير مذكور، ويوقفه هذا الخيار في حسابك: { $switch }
     .fact-trains-unstated = غير مذكور في صفحات الخدمة
     .fact-trains-host = يتوقف على المضيف الذي يشغّل النموذج
+    .fact-trains-default = يُستخدم للتدريب افتراضيًا
     .fact-keeps-logs = لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى { $days-form ->
         [one] يوم واحد
         [two] يومين
@@ -72,6 +74,7 @@ cloud =
     .fact-keeps-deleted = لا شيء: يُحذف كل شيء فور المعالجة
     .fact-keeps-memory = لا شيء: يبقى في الذاكرة أثناء المعالجة فقط
     .fact-keeps-host = يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء
+    .fact-keeps-history = سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط
     .fact-free-daily = { $hours-form ->
         [one] ساعة واحدة
         [two] ساعتان
@@ -90,6 +93,13 @@ cloud =
     .fact-free-first-buy = لا شيء، وأول شراء { $least } على الأقل
     .fact-free-first-month = الشهر الأول
     .fact-free-small = حصة صغيرة للحسابات الجديدة
+    .fact-free-minutes-month = نحو { $minutes-form ->
+        [one] دقيقة واحدة
+        [two] دقيقتين
+        [few] { $minutes } دقائق
+        [many] { $minutes } دقيقة
+       *[other] { $minutes } دقيقة
+    } شهريًا
     .fact-price-free-or = مجاني ضمن الحصة المجانية، وإلا فمن { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-unknown = غير معروف، ويتوقف على الخدمة
     .fact-price-plain = { $price }
@@ -104,6 +114,7 @@ cloud =
         [many] { $seconds } ثانية
        *[other] { $seconds } ثانية
     }، فتكلّف المقاطع القصيرة أكثر
+    .fact-rule-non-commercial = الخطة المجانية للاستخدام غير التجاري فقط، مع نسب المحتوى إلى الخدمة
     .money-usd = { $amount-form ->
         [one] دولار واحد
         [two] { $case ->

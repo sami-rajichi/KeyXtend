@@ -4,13 +4,16 @@
 //! key and the sound stay in wiped buffers and never reach a note, a log or stderr.
 
 pub mod clock;
+mod eleven;
 mod form;
 mod job;
+mod multipart;
 mod pace;
 mod reply;
 mod run;
 mod send;
 mod shape;
+mod status;
 mod wav;
 
 use crate::{client, serve};

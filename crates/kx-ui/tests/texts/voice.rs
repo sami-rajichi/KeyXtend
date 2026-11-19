@@ -15,6 +15,7 @@ use kx_ui::i18n::keys::{
 
 mod approved;
 mod cloud;
+mod eleven;
 mod icons;
 mod money;
 mod newer;

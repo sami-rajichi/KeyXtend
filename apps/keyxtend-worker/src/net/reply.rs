@@ -133,20 +133,32 @@ pub fn object(bytes: &[u8]) -> bool {
     serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(bytes).is_ok()
 }
 
-/// The `error` of a JSON reply; `Null` for another body.
-fn error(bytes: &[u8]) -> serde_json::Value {
-    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
-    reply.get("error").cloned().unwrap_or_default()
+/// Where a JSON error reply keeps its code: the object at its top, and the names the code may sit under there.
+pub struct Coded {
+    /// The object's name.
+    pub object: &'static str,
+    /// The names its code may sit under.
+    pub names: &'static [&'static str],
 }
 
-/// True when a JSON error reply's code or type is exactly one of `codes`, in any case; never for another body.
-pub fn coded(bytes: &[u8], codes: &[&str]) -> bool {
-    let error = error(bytes);
+/// The upload form's errors (Groq's and `OpenAI`'s pages): `error.code` or `error.type`.
+pub const ERROR: Coded = Coded {
+    object: "error",
+    names: &["code", "type"],
+};
+
+/// True when a JSON error reply's code, where `at` says, is exactly one of `codes`, in any case; never for another
+/// body.
+pub fn coded(bytes: &[u8], at: &Coded, codes: &[&str]) -> bool {
+    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
     let is = |v: &serde_json::Value| {
         v.as_str()
             .is_some_and(|s| codes.iter().any(|c| c.eq_ignore_ascii_case(s)))
     };
-    is(&error["code"]) || is(&error["type"])
+    let object = reply.get(at.object);
+    at.names
+        .iter()
+        .any(|name| object.and_then(|o| o.get(name)).is_some_and(is))
 }
 
 /// True when a JSON error reply's words hold one of `words`, in any case; never for another body. The words are the

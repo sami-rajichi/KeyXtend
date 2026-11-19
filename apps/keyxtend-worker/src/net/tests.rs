@@ -1,8 +1,9 @@
-//! The speech job over a scripted server and a still clock: the upload form, its status table, the reply reader, the
-//! WAV wrap, the tries and the wait after a 429, a run's sound and texts, and the loop over pipes. None touches the
-//! network or sleeps; replies are fixtures under `replies/`, and the key is a made-up one.
+//! The speech job over a scripted server and a still clock: the upload form and `ElevenLabs`' form with their status
+//! tables, the reply reader, the WAV wrap, the tries and the wait after a 429, a run's sound and texts, and the loop
+//! over pipes. None touches the network or sleeps; replies are fixtures under `replies/`, and the key is a made-up one.
 
 mod bench;
+mod eleven;
 mod form;
 mod job;
 mod pipe;

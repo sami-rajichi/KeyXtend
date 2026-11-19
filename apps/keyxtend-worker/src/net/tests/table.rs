@@ -18,22 +18,44 @@ pub(super) enum Got {
 /// The headers of an answer, as names and values.
 pub(super) type Extra<'a> = &'a [(&'a str, &'a str)];
 
-/// What the form reads in a piece's reply of `status` over `call`, with the headers `extra` and `body`.
-pub(super) fn read_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
-    match Form.read(call, &head(status, extra), body) {
+/// What `shape` reads in a piece's reply of `status` over `call`, with the headers `extra` and `body`.
+pub(super) fn read_with(
+    shape: &dyn Shape,
+    call: &NetCall<'_>,
+    status: u16,
+    extra: Extra<'_>,
+    body: &[u8],
+) -> Got {
+    match shape.read(call, &head(status, extra), body) {
         Verdict::Said(text) => Got::Text(text.to_string()),
         Verdict::Busy(s) => Got::Wait(s),
         Verdict::Fault(f) => Got::Fault(f),
     }
 }
 
-/// What the form reads in a key test's reply over `call`.
-pub(super) fn tested_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
-    match Form.tested(call, &head(status, extra), body) {
+/// What `shape` reads in a key test's reply over `call`.
+pub(super) fn tested_with(
+    shape: &dyn Shape,
+    call: &NetCall<'_>,
+    status: u16,
+    extra: Extra<'_>,
+    body: &[u8],
+) -> Got {
+    match shape.tested(call, &head(status, extra), body) {
         Verdict::Said(()) => Got::Text(String::new()),
         Verdict::Busy(s) => Got::Wait(s),
         Verdict::Fault(f) => Got::Fault(f),
     }
+}
+
+/// What the form reads in a piece's reply of `status` over `call`, with the headers `extra` and `body`.
+pub(super) fn read_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    read_with(&Form, call, status, extra, body)
+}
+
+/// What the form reads in a key test's reply over `call`.
+pub(super) fn tested_by(call: &NetCall<'_>, status: u16, extra: Extra<'_>, body: &[u8]) -> Got {
+    tested_with(&Form, call, status, extra, body)
 }
 
 /// What the form reads in a piece's reply from Groq.

@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
+mod eleven;
 mod langs;
 mod parts;
 mod refuse;
@@ -18,9 +19,11 @@ pub(crate) const TEXT: &str = include_str!("../../services.toml");
 const LANGS: &str = include_str!("../../langs.toml");
 
 /// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
-pub(crate) const OFFERED: [&str; 4] = ["groq", "lemonfox", "custom", "openrouter"];
+pub(crate) const OFFERED: [&str; 5] = ["groq", "lemonfox", "custom", "openrouter", "elevenlabs"];
 /// The rows kept in the table, built and tested, but not offered: each needs a card or a payment before any use.
 pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "deepinfra"];
+/// The rows of a shape other than the upload form, after the form rows, in the table's order.
+pub(crate) const SHAPED: [&str; 1] = ["elevenlabs"];
 
 /// The table `text` gives with the shipped language sets.
 pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {
@@ -63,8 +66,8 @@ place = { id = "us" }
 trains = { id = "opt-in" }
 keeps = { id = "none" }
 free = { id = "none" }
-light = { id = "price", money = { price = 4.05 } }
-heavy = { id = "price", money = { price = 16.20 } }
+light = { id = "plain", money = { price = 4.05 } }
+heavy = { id = "plain", money = { price = 16.20 } }
 "#;
 
 /// A form row whose typed address must be under its domain, with a test path and a model the request names not.

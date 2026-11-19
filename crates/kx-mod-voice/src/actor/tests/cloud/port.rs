@@ -1,10 +1,43 @@
 //! The cloud port and the row's limits: with no port a cloud dictation ends with the fault note and keeps its
-//! recording, and a listen-only run cuts pieces no longer than the row's size and time caps both allow.
+//! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and an
+//! `ElevenLabs` dictation asks in its own shape with the key under its own header.
 
-use kx_module_api::ports::{CloudLimits, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
+use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 
 use super::*;
 use crate::actor::offer::piece_s;
+
+/// `ElevenLabs` picked for English with Scribe v3, switched on with its terms confirmed, and its key set.
+fn eleven(fake: &Fakes, host: &mut FakeHost) {
+    host.put("cloud", true.into());
+    host.put(
+        "services",
+        table("elevenlabs = { on = 2026-11-17, terms = 1 }"),
+    );
+    host.put("picks", table("en = \"elevenlabs:scribe_v3\""));
+    let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
+    keys.set("elevenlabs", secret(&key())).unwrap();
+}
+
+#[test]
+fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
+    let mut rig = Rig::build(eleven);
+    rig.fake
+        .cloud
+        .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);
+    rig.dictate();
+    let runs = rig.fake.cloud.calls().runs;
+    let [run] = &runs[..] else {
+        panic!("one run, not {}", runs.len())
+    };
+    assert_eq!(run.shape, CloudShape::Eleven);
+    let url = "https://api.elevenlabs.io/v1/speech-to-text";
+    assert_eq!(run.url.expose(), url);
+    assert_eq!(run.header, KeyHeader::Named("xi-api-key".into()));
+    let model = run.model.as_ref().map(|m| m.expose().as_str());
+    assert_eq!((model, run.lang.as_str()), (Some("scribe_v3"), "en"));
+    assert_eq!(rig.typed_texts(), ["hello world"]);
+}
 
 /// Limits of `max_mb` and `max_s`, the rest at their least.
 fn limits(max_mb: u32, max_s: u16) -> CloudLimits {

@@ -31,6 +31,7 @@ cloud =
     .card-light = Usage léger · { $hours }
     .card-heavy = Usage intensif · { $hours }
     .card-bills = Facturation minimale
+    .card-rule = Conditions d’utilisation
     .card-hours = { $form ->
         [one] { $count } heure par mois
        *[other] { $count } heures par mois
@@ -53,6 +54,7 @@ cloud =
     .fact-trains-switch = Non précisé ; ce réglage du compte l’arrête : { $switch }
     .fact-trains-unstated = Non précisé sur ses pages
     .fact-trains-host = Dépend de l’hébergeur qui sert le modèle
+    .fact-trains-default = Utilisée pour l’entraînement par défaut
     .fact-keeps-logs = Rien par défaut, mais les requêtes peuvent être gardées jusqu’à { $days-form ->
         [one] { $days } jour
        *[other] { $days } jours
@@ -64,6 +66,7 @@ cloud =
     .fact-keeps-deleted = Rien : tout est supprimé juste après le traitement
     .fact-keeps-memory = Rien : gardé en mémoire le temps du traitement seulement
     .fact-keeps-host = Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien
+    .fact-keeps-history = Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise
     .fact-free-daily = { $hours-form ->
         [one] { $hours } heure
        *[other] { $hours } heures
@@ -76,6 +79,10 @@ cloud =
     .fact-free-first-buy = Aucun ; premier achat d’au moins { $least }
     .fact-free-first-month = Le premier mois
     .fact-free-small = Un petit quota pour les nouveaux comptes
+    .fact-free-minutes-month = Environ { $minutes } { $minutes-form ->
+        [one] minute
+       *[other] minutes
+    } par mois
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
     .fact-price-plain = { $price }
@@ -87,6 +94,7 @@ cloud =
         [one] { $seconds } seconde
        *[other] { $seconds } secondes
     } par requête ; les morceaux courts coûtent donc plus cher
+    .fact-rule-non-commercial = L’offre gratuite est réservée à un usage non commercial, avec mention de la source
     .money-usd = { $amount } $
     .money = { $amount } { $code }
     .key-line = Clé

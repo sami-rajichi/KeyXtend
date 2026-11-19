@@ -62,7 +62,7 @@ listed! {
     pub enum CardPart ("Every part, in page order.") {
         /// Where the voice goes, whether the service trains on it, and what it keeps.
         Voice,
-        /// The free allowance, the prices of light and heavy use, and the least a request bills.
+        /// The free allowance, the prices of light and heavy use, the least a request bills, and the service's rule.
         Price,
     }
 }
@@ -195,6 +195,8 @@ pub struct CloudCard {
     /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` when it bills the
     /// sound's own length.
     pub bills: Option<Fact>,
+    /// A rule the service sets on its use, such as a free plan for non-commercial use only; `None` for none.
+    pub rule: Option<Fact>,
     /// The day these facts were read on the service's own pages.
     pub read: Date,
     /// They are older than `facts_days`, so their day takes the warning tone.

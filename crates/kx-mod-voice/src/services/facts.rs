@@ -75,6 +75,9 @@ pub(super) struct RawFacts {
     /// The least a request bills, when the service rounds up.
     #[serde(default)]
     bills: Option<RawFact>,
+    /// A rule the service sets on its use.
+    #[serde(default)]
+    rule: Option<RawFact>,
 }
 
 /// A fact as written: its text's id and its values by kind.
@@ -126,6 +129,8 @@ pub struct Facts {
     pub warn: Option<Fact>,
     /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` for none.
     pub bills: Option<Fact>,
+    /// A rule the service sets on its use, such as a free plan for non-commercial use only; `None` for none.
+    pub rule: Option<Fact>,
 }
 
 impl Facts {
@@ -157,6 +162,7 @@ pub(super) fn checked(raw: RawFacts, named: bool) -> Result<Facts, ServiceError>
     };
     let warn = raw.warn.map(|w| one(w, "warn")).transpose()?;
     let bills = raw.bills.map(|b| one(b, "bills")).transpose()?;
+    let rule = raw.rule.map(|r| one(r, "rule")).transpose()?;
     Ok(Facts {
         read,
         source,
@@ -168,6 +174,7 @@ pub(super) fn checked(raw: RawFacts, named: bool) -> Result<Facts, ServiceError>
         heavy: one(raw.heavy, "heavy")?,
         warn: warn.map(|w| Fact { warn: true, ..w }),
         bills,
+        rule,
     })
 }
 

@@ -107,6 +107,7 @@ pub(super) fn card(old: bool) -> VoiceSheet {
             price: price(240, 666),
         },
         bills: Some(fact("least", vec![secs])),
+        rule: None,
         read: day(if old { 2 } else { 17 }),
         old,
         site: Some("groq.com".to_owned()),

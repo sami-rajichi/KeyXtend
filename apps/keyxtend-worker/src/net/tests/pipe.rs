@@ -178,8 +178,8 @@ fn a_panic_on_an_ask_tells_gone_on_it_and_on_every_live_run() {
         let ask = send(id, call(), run_of(&[2], 1, 1, 20));
         assert!(act(&mut job, Event::Ask(Box::new(ask)), &mut out).is_ok());
     }
-    let eleven = send(3, call_to(URL, NetShape::Eleven), run_of(&[2], 1, 1, 20));
-    assert!(act(&mut job, Event::Ask(Box::new(eleven)), &mut out).is_ok());
+    let gemini = send(3, call_to(URL, NetShape::Gemini), run_of(&[2], 1, 1, 20));
+    assert!(act(&mut job, Event::Ask(Box::new(gemini)), &mut out).is_ok());
     let (asked, live) = out.1.split_first().unwrap();
     assert_eq!(asked, &fault(3, NetFault::Gone));
     let mut live = live.to_vec();

@@ -225,9 +225,9 @@ fn a_key_test_says_whether_the_key_works() {
 }
 
 #[test]
-fn only_the_form_is_built_so_far() {
-    assert!(shape::of(ShapeCode::Form).is_some());
-    for code in [ShapeCode::Eleven, ShapeCode::Gemini] {
-        assert!(shape::of(code).is_none(), "{code:?}");
+fn the_form_and_elevenlabs_are_built_and_gemini_not_yet() {
+    for code in [ShapeCode::Form, ShapeCode::Eleven] {
+        assert!(shape::of(code).is_some(), "{code:?}");
     }
+    assert!(shape::of(ShapeCode::Gemini).is_none());
 }

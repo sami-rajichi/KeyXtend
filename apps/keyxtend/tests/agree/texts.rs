@@ -185,12 +185,13 @@ fn every_voice_option_and_bar_place_has_its_text() {
 /// Every fact the services table writes on a card, with its group.
 fn table_facts() -> Vec<(&'static str, Fact)> {
     use kx_ui::i18n::keys::{
-        FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_TRAINS, FACT_WARN, FACT_WHERE,
+        FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE, FACT_TRAINS, FACT_WARN,
+        FACT_WHERE,
     };
     let table = kx_mod_voice::services::table().unwrap();
     let mut out = Vec::new();
     for f in table.rows().iter().map(|s| &s.facts) {
-        let shown: [(&str, Option<&Fact>); 8] = [
+        let shown: [(&str, Option<&Fact>); 9] = [
             (FACT_WHERE, Some(&f.place)),
             (FACT_TRAINS, Some(&f.trains)),
             (FACT_KEEPS, Some(&f.keeps)),
@@ -199,6 +200,7 @@ fn table_facts() -> Vec<(&'static str, Fact)> {
             (FACT_PRICE, Some(&f.heavy)),
             (FACT_WARN, f.warn.as_ref()),
             (FACT_BILLS, f.bills.as_ref()),
+            (FACT_RULE, f.rule.as_ref()),
         ];
         out.extend(
             shown

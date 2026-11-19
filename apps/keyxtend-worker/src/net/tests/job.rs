@@ -178,7 +178,7 @@ fn a_shape_this_job_does_not_build_yet_is_out_of_range() {
     let (mut b, http, _) = faked([said("a")]);
     b.ask(send(
         11,
-        call_to(URL, NetShape::Eleven),
+        call_to(URL, NetShape::Gemini),
         run_of(&[2], 1, 1, 20),
     ));
     b.ask(part(11, 0, sound(2, 1)));

@@ -31,6 +31,7 @@ cloud =
     .card-light = Light use · { $hours }
     .card-heavy = Heavy use · { $hours }
     .card-bills = Least billed
+    .card-rule = Terms of use
     .card-hours = { $form ->
         [one] { $count } hour a month
        *[other] { $count } hours a month
@@ -53,6 +54,7 @@ cloud =
     .fact-trains-switch = Not stated; this account switch stops it: { $switch }
     .fact-trains-unstated = Not stated on its pages
     .fact-trains-host = Depends on the host that serves the model
+    .fact-trains-default = Used for training by default
     .fact-keeps-logs = Nothing by default, but checks may keep requests up to { $days-form ->
         [one] { $days } day
        *[other] { $days } days
@@ -64,6 +66,7 @@ cloud =
     .fact-keeps-deleted = Nothing: deleted right after processing
     .fact-keeps-memory = Nothing: held in memory only while it works
     .fact-keeps-host = Depends on the host; a switch, on to start, sends only to hosts that keep nothing
+    .fact-keeps-history = Your history, by default; keeping nothing is for Enterprise plans only
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
        *[other] { $hours } hours
@@ -76,6 +79,10 @@ cloud =
     .fact-free-first-buy = None; first purchase at least { $least }
     .fact-free-first-month = The first month
     .fact-free-small = A small allowance for new accounts
+    .fact-free-minutes-month = About { $minutes } { $minutes-form ->
+        [one] minute
+       *[other] minutes
+    } a month
     .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
     .fact-price-plain = { $price }
@@ -87,6 +94,7 @@ cloud =
         [one] { $seconds } second
        *[other] { $seconds } seconds
     } a request, so short pieces cost more
+    .fact-rule-non-commercial = The free plan is for non-commercial use only, with attribution
     .money-usd = ${ $amount }
     .money = { $amount } { $code }
     .key-line = Key

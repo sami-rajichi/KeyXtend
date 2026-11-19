@@ -416,6 +416,149 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "cardLong-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى ElevenLabs إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الولايات المتحدة"
+                  }
+                ],
+                "text": "الولايات المتحدة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يُستخدم للتدريب افتراضيًا"
+                  }
+                ],
+                "text": "يُستخدم للتدريب افتراضيًا"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط"
+                  }
+                ],
+                "text": "سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -1556,6 +1699,163 @@ var views = {
       },
       "place": "above",
       "round": 51,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى ElevenLabs إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "نحو 30 دقيقة شهريًا"
+                  }
+                ],
+                "text": "نحو 30 دقيقة شهريًا"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "3 دولارات"
+                  }
+                ],
+                "text": "3 دولارات"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "12 دولارًا"
+                  }
+                ],
+                "text": "12 دولارًا"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "شروط الاستخدام",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الخطة المجانية للاستخدام غير التجاري فقط، مع نسب المحتوى إلى الخدمة"
+                  }
+                ],
+                "text": "الخطة المجانية للاستخدام غير التجاري فقط، مع نسب المحتوى إلى الخدمة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3009,6 +3309,22 @@ var views = {
                 }
               ],
               "name": "DeepInfra",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: نحو 30 دقيقة شهريًا",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "ElevenLabs",
               "tag": "غير مُختبَرة",
               "tick": false
             }
@@ -7501,6 +7817,149 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "cardLong-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to ElevenLabs only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "United States"
+                  }
+                ],
+                "text": "United States"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Used for training by default"
+                  }
+                ],
+                "text": "Used for training by default"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Your history, by default; keeping nothing is for Enterprise plans only"
+                  }
+                ],
+                "text": "Your history, by default; keeping nothing is for Enterprise plans only"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -8641,6 +9100,163 @@ var views = {
       },
       "place": "above",
       "round": 51,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to ElevenLabs only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "About 30 minutes a month"
+                  }
+                ],
+                "text": "About 30 minutes a month"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$3"
+                  }
+                ],
+                "text": "$3"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$12"
+                  }
+                ],
+                "text": "$12"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "Terms of use",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "The free plan is for non-commercial use only, with attribution"
+                  }
+                ],
+                "text": "The free plan is for non-commercial use only, with attribution"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10094,6 +10710,22 @@ var views = {
                 }
               ],
               "name": "DeepInfra",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: About 30 minutes a month",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "ElevenLabs",
               "tag": "Untested",
               "tick": false
             }
@@ -14586,6 +15218,149 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "cardLong-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers ElevenLabs qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "États-Unis"
+                  }
+                ],
+                "text": "États-Unis"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Utilisée pour l’entraînement par défaut"
+                  }
+                ],
+                "text": "Utilisée pour l’entraînement par défaut"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise"
+                  }
+                ],
+                "text": "Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 52,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -15726,6 +16501,163 @@ var views = {
       },
       "place": "above",
       "round": 51,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-elevenlabs": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers ElevenLabs qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Environ 30 minutes par mois"
+                  }
+                ],
+                "text": "Environ 30 minutes par mois"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "3 $"
+                  }
+                ],
+                "text": "3 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "12 $"
+                  }
+                ],
+                "text": "12 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "Conditions d’utilisation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "L’offre gratuite est réservée à un usage non commercial, avec mention de la source"
+                  }
+                ],
+                "text": "L’offre gratuite est réservée à un usage non commercial, avec mention de la source"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir elevenlabs.io",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+              },
+              {
+                "own": true,
+                "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "ElevenLabs",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17179,6 +18111,22 @@ var views = {
                 }
               ],
               "name": "DeepInfra",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Environ 30 minutes par mois",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "ElevenLabs",
               "tag": "Non testé",
               "tick": false
             }
