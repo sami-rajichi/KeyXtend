@@ -1,6 +1,6 @@
 //! The cloud port and the row's limits: with no port a cloud dictation ends with the fault note and keeps its
-//! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and an
-//! `ElevenLabs` dictation asks in its own shape with the key under its own header.
+//! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and `ElevenLabs`
+//! and Gemini dictations ask in their own shapes with the key under their own headers.
 
 use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 
@@ -50,6 +50,51 @@ fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
     assert_eq!(run.header, row.header, "the row's header");
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     assert_eq!((model, run.lang.as_str()), (Some("scribe_v3"), "en"));
+    assert_eq!(rig.typed_texts(), ["hello world"]);
+}
+
+/// Gemini picked for English with Gemini 3.5 Transcribe, switched on with its terms confirmed, and its key set.
+fn gemini(fake: &Fakes, host: &mut FakeHost) {
+    host.put("cloud", true.into());
+    host.put("services", table("gemini = { on = 2026-11-17, terms = 1 }"));
+    host.put(
+        "picks",
+        table("en = \"gemini:models/gemini-3.5-transcribe\""),
+    );
+    let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
+    keys.set("gemini", secret(&key())).unwrap();
+}
+
+#[test]
+fn a_gemini_dictation_asks_in_its_own_shape_with_its_bcp_47_code_and_its_own_key_header() {
+    let mut rig = Rig::build(gemini);
+    rig.fake
+        .cloud
+        .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);
+    rig.dictate();
+    let runs = rig.fake.cloud.calls().runs;
+    let [run] = &runs[..] else {
+        panic!("one run, not {}", runs.len())
+    };
+    let row = services::table()
+        .ok()
+        .and_then(|t| t.get("gemini"))
+        .unwrap();
+    assert_eq!(run.shape, CloudShape::Gemini, "its own shape, with no form");
+    let entry = &rig.actor.settings().services["gemini"];
+    assert_eq!(
+        Some(run.url.clone()),
+        row.url(&entry.address),
+        "its address"
+    );
+    assert_eq!(run.header, row.header, "the row's header");
+    assert_eq!(
+        run.limits, row.limits,
+        "the row's limits, under its request cap"
+    );
+    let model = run.model.as_ref().map(|m| m.expose().as_str());
+    let sent = (model, run.lang.as_str());
+    assert_eq!(sent, (Some("models/gemini-3.5-transcribe"), "en-US"));
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
 

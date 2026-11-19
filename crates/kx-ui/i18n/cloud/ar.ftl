@@ -60,6 +60,7 @@ cloud =
     .fact-trains-unstated = غير مذكور في صفحات الخدمة
     .fact-trains-host = يتوقف على المضيف الذي يشغّل النموذج
     .fact-trains-default = يُستخدم للتدريب افتراضيًا
+    .fact-trains-free-allowance = يُستخدم للتدريب ما دمت ضمن { -cloud-free-use }
     .fact-keeps-logs = لا شيء افتراضيًا، لكن قد تُحفَظ الطلبات للفحص مدةً تصل إلى { $days-form ->
         [one] يوم واحد
         [two] يومين
@@ -75,6 +76,7 @@ cloud =
     .fact-keeps-memory = لا شيء: يبقى في الذاكرة أثناء المعالجة فقط
     .fact-keeps-host = يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء
     .fact-keeps-history = سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط
+    .fact-keeps-limited = طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة
     .fact-free-daily = { $hours-form ->
         [one] ساعة واحدة
         [two] ساعتان
@@ -100,6 +102,7 @@ cloud =
         [many] { $minutes } دقيقة
        *[other] { $minutes } دقيقة
     } شهريًا
+    .fact-free-no-card = متاحة دون الحاجة إلى بطاقة دفع
     .fact-price-free-or = مجاني ضمن الحصة المجانية، وإلا فمن { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-unknown = غير معروف، ويتوقف على الخدمة
     .fact-price-plain = { $price }
@@ -109,6 +112,8 @@ cloud =
     .fact-warn-trains-profile = { -cloud-trains } لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: { $switch }
     .warn-mark-trains = التدريب مفعّل افتراضيًا
     .warn-mark-trains-profile = { cloud.warn-mark-trains }
+    .fact-warn-free-allowance = ما دمت ضمن { -cloud-free-use }، تستخدم Google صوتك لتحسين منتجاتها، وقد يطّلع مراجعون بشريون على ما تقوله.
+    .warn-mark-free-allowance = التدريب ضمن { -cloud-free-use }
     .fact-bills-least = يُحتسَب لكل طلب ما لا يقل عن { $seconds-form ->
         [one] ثانية واحدة
         [two] ثانيتين
@@ -117,6 +122,7 @@ cloud =
        *[other] { $seconds } ثانية
     }، فتكلّف المقاطع القصيرة أكثر
     .fact-rule-non-commercial = الخطة المجانية للاستخدام غير التجاري فقط، مع نسب المحتوى إلى الخدمة
+    .fact-rule-eea-paid-18 = الاستخدام المدفوع فقط في المنطقة الاقتصادية الأوروبية وسويسرا والمملكة المتحدة، ويجب ألا يقل عمر المستخدم عن 18 عامًا
     .money-usd = { $amount-form ->
         [one] دولار واحد
         [two] { $case ->
@@ -193,3 +199,5 @@ cloud =
 
 # الجملة الأولى في كل تحذير من التدريب، العام منه والخاص بإحدى الخدمات.
 -cloud-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا.
+# الاسم الوحيد للحصة المجانية لخدمة ما في الأسطر التي تتناول استخدامها المجاني.
+-cloud-free-use = الحصة المجانية

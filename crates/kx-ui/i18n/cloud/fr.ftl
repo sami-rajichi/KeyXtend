@@ -55,6 +55,7 @@ cloud =
     .fact-trains-unstated = Non précisé sur ses pages
     .fact-trains-host = Dépend de l’hébergeur qui sert le modèle
     .fact-trains-default = Utilisée pour l’entraînement par défaut
+    .fact-trains-free-allowance = Utilisée pour l’entraînement tant que vous utilisez { -cloud-free-use }
     .fact-keeps-logs = Rien par défaut, mais les requêtes peuvent être gardées jusqu’à { $days-form ->
         [one] { $days } jour
        *[other] { $days } jours
@@ -67,6 +68,7 @@ cloud =
     .fact-keeps-memory = Rien : gardé en mémoire le temps du traitement seulement
     .fact-keeps-host = Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien
     .fact-keeps-history = Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise
+    .fact-keeps-limited = Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée
     .fact-free-daily = { $hours-form ->
         [one] { $hours } heure
        *[other] { $hours } heures
@@ -83,6 +85,7 @@ cloud =
         [one] minute
        *[other] minutes
     } par mois
+    .fact-free-no-card = Sans carte bancaire
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
     .fact-price-plain = { $price }
@@ -92,11 +95,14 @@ cloud =
     .fact-warn-trains-profile = { -cloud-trains } Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : { $switch }
     .warn-mark-trains = Entraînement activé
     .warn-mark-trains-profile = { cloud.warn-mark-trains }
+    .fact-warn-free-allowance = Tant que vous utilisez { -cloud-free-use }, Google utilise votre voix pour améliorer ses produits, et des relecteurs humains peuvent lire ce que vous dites.
+    .warn-mark-free-allowance = Entraînement avec { -cloud-free-use }
     .fact-bills-least = Au moins { $seconds-form ->
         [one] { $seconds } seconde
        *[other] { $seconds } secondes
     } par requête ; les morceaux courts coûtent donc plus cher
     .fact-rule-non-commercial = L’offre gratuite est réservée à un usage non commercial, avec mention de la source
+    .fact-rule-eea-paid-18 = Usage payant seulement dans l’EEE, en Suisse et au Royaume-Uni ; utilisateurs de 18 ans ou plus
     .money-usd = { $amount } $
     .money = { $amount } { $code }
     .key-line = Clé
@@ -158,3 +164,5 @@ cloud =
 
 # La première phrase de chaque avertissement d’entraînement, le commun comme celui propre à un service.
 -cloud-trains = Entraîne ses modèles sur votre voix par défaut.
+# Le seul nom du quota gratuit d’un service dans les lignes sur son usage gratuit.
+-cloud-free-use = le quota gratuit

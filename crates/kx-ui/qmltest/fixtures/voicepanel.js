@@ -559,6 +559,145 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "cardLong-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Gemini إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "يُستخدم للتدريب ما دمت ضمن الحصة المجانية"
+                  }
+                ],
+                "text": "يُستخدم للتدريب ما دمت ضمن الحصة المجانية"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة"
+                  }
+                ],
+                "text": "طلباتك لمدة محدودة لكشف إساءة الاستخدام، والمدة غير مذكورة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "ما دمت ضمن الحصة المجانية، تستخدم Google صوتك لتحسين منتجاتها، وقد يطّلع مراجعون بشريون على ما تقوله."
+              }
+            ],
+            "text": "ما دمت ضمن الحصة المجانية، تستخدم Google صوتك لتحسين منتجاتها، وقد يطّلع مراجعون بشريون على ما تقوله."
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 54,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -1856,6 +1995,159 @@ var views = {
       },
       "place": "above",
       "round": 53,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى Gemini إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "متاحة دون الحاجة إلى بطاقة دفع"
+                  }
+                ],
+                "text": "متاحة دون الحاجة إلى بطاقة دفع"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,50 دولار"
+                  }
+                ],
+                "text": "4,50 دولار"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "18 دولارًا"
+                  }
+                ],
+                "text": "18 دولارًا"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "شروط الاستخدام",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الاستخدام المدفوع فقط في المنطقة الاقتصادية الأوروبية وسويسرا والمملكة المتحدة، ويجب ألا يقل عمر المستخدم عن 18 عامًا"
+                  }
+                ],
+                "text": "الاستخدام المدفوع فقط في المنطقة الاقتصادية الأوروبية وسويسرا والمملكة المتحدة، ويجب ألا يقل عمر المستخدم عن 18 عامًا"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 17/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "ما دمت ضمن الحصة المجانية، تستخدم Google صوتك لتحسين منتجاتها، وقد يطّلع مراجعون بشريون على ما تقوله."
+              }
+            ],
+            "text": "ما دمت ضمن الحصة المجانية، تستخدم Google صوتك لتحسين منتجاتها، وقد يطّلع مراجعون بشريون على ما تقوله."
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3325,6 +3617,22 @@ var views = {
                 }
               ],
               "name": "ElevenLabs",
+              "tag": "غير مُختبَرة",
+              "tick": false
+            },
+            {
+              "line": "مجانًا: متاحة دون الحاجة إلى بطاقة دفع",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب ضمن الحصة المجانية"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "Gemini",
               "tag": "غير مُختبَرة",
               "tick": false
             }
@@ -7960,6 +8268,145 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "cardLong-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Gemini only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Used for training while you use the free allowance"
+                  }
+                ],
+                "text": "Used for training while you use the free allowance"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Your requests, for a limited time to check for abuse; how long is not stated"
+                  }
+                ],
+                "text": "Your requests, for a limited time to check for abuse; how long is not stated"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "While you use the free allowance, Google uses your voice to improve its products, and human reviewers may read what you say."
+              }
+            ],
+            "text": "While you use the free allowance, Google uses your voice to improve its products, and human reviewers may read what you say."
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 54,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -9257,6 +9704,159 @@ var views = {
       },
       "place": "above",
       "round": 53,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to Gemini only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Available, with no card needed"
+                  }
+                ],
+                "text": "Available, with no card needed"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$4.50"
+                  }
+                ],
+                "text": "$4.50"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$18"
+                  }
+                ],
+                "text": "$18"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "Terms of use",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Paid use only in the EEA, Switzerland and the UK; users must be 18 or older"
+                  }
+                ],
+                "text": "Paid use only in the EEA, Switzerland and the UK; users must be 18 or older"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 17/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "While you use the free allowance, Google uses your voice to improve its products, and human reviewers may read what you say."
+              }
+            ],
+            "text": "While you use the free allowance, Google uses your voice to improve its products, and human reviewers may read what you say."
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10726,6 +11326,22 @@ var views = {
                 }
               ],
               "name": "ElevenLabs",
+              "tag": "Untested",
+              "tick": false
+            },
+            {
+              "line": "Free: Available, with no card needed",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains on the free allowance"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "Gemini",
               "tag": "Untested",
               "tick": false
             }
@@ -15361,6 +15977,145 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "cardLong-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Gemini qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Utilisée pour l’entraînement tant que vous utilisez le quota gratuit"
+                  }
+                ],
+                "text": "Utilisée pour l’entraînement tant que vous utilisez le quota gratuit"
+              },
+              "warn": true
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée"
+                  }
+                ],
+                "text": "Vos requêtes, pendant un temps limité pour détecter les abus ; la durée n’est pas précisée"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Tant que vous utilisez le quota gratuit, Google utilise votre voix pour améliorer ses produits, et des relecteurs humains peuvent lire ce que vous dites."
+              }
+            ],
+            "text": "Tant que vous utilisez le quota gratuit, Google utilise votre voix pour améliorer ses produits, et des relecteurs humains peuvent lire ce que vous dites."
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 54,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "cardLong-groq": {
       "bar": {
         "state": "hidden"
@@ -16658,6 +17413,159 @@ var views = {
       },
       "place": "above",
       "round": 53,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-gemini": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers Gemini qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Sans carte bancaire"
+                  }
+                ],
+                "text": "Sans carte bancaire"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,50 $"
+                  }
+                ],
+                "text": "4,50 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "18 $"
+                  }
+                ],
+                "text": "18 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "rule",
+              "label": "Conditions d’utilisation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Usage payant seulement dans l’EEE, en Suisse et au Royaume-Uni ; utilisateurs de 18 ans ou plus"
+                  }
+                ],
+                "text": "Usage payant seulement dans l’EEE, en Suisse et au Royaume-Uni ; utilisateurs de 18 ans ou plus"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir aistudio.google.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 17/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Tant que vous utilisez le quota gratuit, Google utilise votre voix pour améliorer ses produits, et des relecteurs humains peuvent lire ce que vous dites."
+              }
+            ],
+            "text": "Tant que vous utilisez le quota gratuit, Google utilise votre voix pour améliorer ses produits, et des relecteurs humains peuvent lire ce que vous dites."
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "Gemini",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18127,6 +19035,22 @@ var views = {
                 }
               ],
               "name": "ElevenLabs",
+              "tag": "Non testé",
+              "tick": false
+            },
+            {
+              "line": "Gratuit : Sans carte bancaire",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement avec le quota gratuit"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "Gemini",
               "tag": "Non testé",
               "tick": false
             }

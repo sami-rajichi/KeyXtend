@@ -55,6 +55,7 @@ cloud =
     .fact-trains-unstated = Not stated on its pages
     .fact-trains-host = Depends on the host that serves the model
     .fact-trains-default = Used for training by default
+    .fact-trains-free-allowance = Used for training while you use { -cloud-free-use }
     .fact-keeps-logs = Nothing by default, but checks may keep requests up to { $days-form ->
         [one] { $days } day
        *[other] { $days } days
@@ -67,6 +68,7 @@ cloud =
     .fact-keeps-memory = Nothing: held in memory only while it works
     .fact-keeps-host = Depends on the host; a switch, on to start, sends only to hosts that keep nothing
     .fact-keeps-history = Your history, by default; keeping nothing is for Enterprise plans only
+    .fact-keeps-limited = Your requests, for a limited time to check for abuse; how long is not stated
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
        *[other] { $hours } hours
@@ -83,6 +85,7 @@ cloud =
         [one] minute
        *[other] minutes
     } a month
+    .fact-free-no-card = Available, with no card needed
     .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
     .fact-price-plain = { $price }
@@ -92,11 +95,14 @@ cloud =
     .fact-warn-trains-profile = { -cloud-trains } To stop it, turn off this switch in your profile menu: { $switch }
     .warn-mark-trains = Trains by default
     .warn-mark-trains-profile = { cloud.warn-mark-trains }
+    .fact-warn-free-allowance = While you use { -cloud-free-use }, Google uses your voice to improve its products, and human reviewers may read what you say.
+    .warn-mark-free-allowance = Trains on { -cloud-free-use }
     .fact-bills-least = At least { $seconds-form ->
         [one] { $seconds } second
        *[other] { $seconds } seconds
     } a request, so short pieces cost more
     .fact-rule-non-commercial = The free plan is for non-commercial use only, with attribution
+    .fact-rule-eea-paid-18 = Paid use only in the EEA, Switzerland and the UK; users must be 18 or older
     .money-usd = ${ $amount }
     .money = { $amount } { $code }
     .key-line = Key
@@ -158,3 +164,5 @@ cloud =
 
 # The first sentence of every training warning, the shared one and a service's own.
 -cloud-trains = Trains its models on your voice by default.
+# The one name of a service's free allowance in the lines about its free use.
+-cloud-free-use = the free allowance

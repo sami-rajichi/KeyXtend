@@ -1,6 +1,6 @@
 # The services table's second file (ADR-0047 decisions 5 to 9): the rows of services with their own request shape,
-# ElevenLabs now and Gemini after it. It holds `[[services]]` rows only, read after `services.toml`'s upload-form rows
-# as one table and checked by the same rules; the table-wide values and the notes on every key are in `services.toml`.
+# ElevenLabs then Gemini. It holds `[[services]]` rows only, read after `services.toml`'s upload-form rows as one
+# table and checked by the same rules; the table-wide values and the notes on every key are in `services.toml`.
 
 # ElevenLabs: elevenlabs.io read 2026-11-17 (API pricing, pricing, the speech-to-text reference, models, privacy policy,
 # errors, the subscription endpoint). Scribe in its own form with `xi-api-key`; trained on by default, so its card warns.
@@ -46,3 +46,41 @@ light = { id = "plain", money = { price = 6.00 } }
 heavy = { id = "plain", money = { price = 22.00 } }
 warn = { id = "trains-profile", text = { switch = "Terms and privacy → Data use → Improve the models for everyone" } }
 rule = { id = "non-commercial" }
+
+# Gemini: aistudio.google.com read 2026-11-17 (transcribe, the model, pricing, terms, rate limits, audio,
+# troubleshooting, the models reference). Gemini 3.5 Transcribe in one JSON request with the sound inline as Base64.
+[[services]]
+id = "gemini"
+name = "Gemini"
+shape = "gemini"
+host = "generativelanguage.googleapis.com"
+address = "https://generativelanguage.googleapis.com/v1beta/interactions"
+test = "https://generativelanguage.googleapis.com/v1beta/models"
+header = "x-goog-api-key"
+keys = "https://aistudio.google.com/apikey"
+# A request takes 20 MB with the Base64 growth, about 14 MB or 7 minutes of raw sound, and an hour of sound [N1][N6].
+# Its rates are not published [N5]: `per_min` and `at_once` are guesses, checked at task 24.
+limits = { cap_mb = 20, cap_s = 3600, max_mb = 14, max_s = 420, per_min = 10, at_once = 2 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "models/gemini-3.5-transcribe"
+name = "Gemini 3.5 Transcribe"
+langs = "bcp-47"
+
+# Free of charge with no card, but the free allowance's input trains Google's products and human reviewers may read it
+# [N3][N4]. Light and heavy use take the paid tier's $0.005 a minute [N3].
+[services.facts]
+read = 2026-11-17
+source = "https://aistudio.google.com/docs/pricing"
+currency = "USD"
+place = { id = "unstated" }
+trains = { id = "free-allowance", warn = true }
+keeps = { id = "limited" }
+free = { id = "no-card" }
+light = { id = "plain", money = { price = 4.50 } }
+heavy = { id = "plain", money = { price = 18.00 } }
+warn = { id = "free-allowance" }
+rule = { id = "eea-paid-18" }
