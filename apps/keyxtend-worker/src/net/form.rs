@@ -156,10 +156,10 @@ pub(super) fn fields<'a>(
         Cow::Borrowed(field)
     };
     let names = [FILE, field, name.as_ref()];
-    let repeats = |field: &str| {
+    let repeats = |label: &str| {
         own.iter()
             .chain(&names)
-            .any(|o| o.eq_ignore_ascii_case(field))
+            .any(|o| o.eq_ignore_ascii_case(label))
     };
     if fixed.iter().any(|f| repeats(&f.name)) {
         return Err(NetFault::Range);
