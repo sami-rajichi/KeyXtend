@@ -1,10 +1,12 @@
 //! `ElevenLabs`' card in each language (research [E1] to [E7]): training by default, its history kept, the free
 //! allowance in minutes agreeing with its number, its plans' light and heavy prices, its own warning naming the profile
-//! menu before the switch's own labels while the shared one names none, and the free plan's rule under its own label.
+//! menu before the switch's own labels while the shared one names none, its mark and first sentence written once with
+//! the shared ones, and the free plan's rule under its own label.
 
 use crate::lang;
 use kx_mod_voice::services::table;
 use kx_module_api::ports::{Fact, FactArg, FactValue, Hundredths};
+use kx_ui::LANGS;
 use kx_ui::i18n::keys::{
     CARD_RULE, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE, FACT_TRAINS, FACT_WARN, VOICE_CARD,
     warn_mark_key,
@@ -179,10 +181,31 @@ fn the_shared_training_warning_names_no_menu_in_each_language() {
     }
 }
 
+/// `ElevenLabs`' own warning, as its row gives it.
+fn own_warning() -> Fact {
+    let row = table().expect("the services table").get("elevenlabs");
+    row.and_then(|r| r.facts.warn.clone()).expect("a warning")
+}
+
+#[test]
+fn its_mark_and_first_sentence_are_the_shared_ones_written_once_in_each_language() {
+    let id = own_warning().id;
+    for (l, (shared, own)) in LANGS.iter().zip(SHARED.into_iter().zip(WARNED)) {
+        let t = lang(l.tag);
+        let mark = t.text(&warn_mark_key("trains"));
+        assert_eq!(t.text(&warn_mark_key(&id)), mark, "{}: one mark", l.tag);
+        let first = shared.split_inclusive(". ").next().expect("a sentence");
+        assert!(own.starts_with(first), "{}: one first sentence", l.tag);
+        let files = l.files().collect::<String>();
+        for once in [mark.as_str(), first.trim_end()] {
+            assert_eq!(files.matches(once).count(), 1, "{}: {once}", l.tag);
+        }
+    }
+}
+
 #[test]
 fn its_warning_names_the_profile_menu_in_each_language_and_its_own_labels_apart() {
-    let row = table().expect("the services table").get("elevenlabs");
-    let fact = row.and_then(|r| r.facts.warn.clone()).expect("a warning");
+    let fact = own_warning();
     assert_ne!(fact.id, "trains", "its own id, not the shared warning");
     let Some(FactValue::Text(switch)) = fact.args.first().map(|a| a.value.clone()) else {
         panic!("its switch's labels")

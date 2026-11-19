@@ -105,10 +105,10 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = من { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-range-fee = من { $low-after } إلى { $high-after } حسب النموذج، مع رسوم بنسبة { $fee }% عند شراء الرصيد
-    .fact-warn-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: { $switch }
-    .fact-warn-trains-profile = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: { $switch }
+    .fact-warn-trains = { -cloud-trains } لإيقاف ذلك، عطِّل هذا الخيار: { $switch }
+    .fact-warn-trains-profile = { -cloud-trains } لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: { $switch }
     .warn-mark-trains = التدريب مفعّل افتراضيًا
-    .warn-mark-trains-profile = التدريب مفعّل افتراضيًا
+    .warn-mark-trains-profile = { cloud.warn-mark-trains }
     .fact-bills-least = يُحتسَب لكل طلب ما لا يقل عن { $seconds-form ->
         [one] ثانية واحدة
         [two] ثانيتين
@@ -190,3 +190,6 @@ cloud =
     .side-cloud = سحابية
     .band-none-on = لم تُفعَّل أي خدمة سحابية بعد.
     .band-listed = نماذج الخدمات التي فعّلتها، ولا يُرسَل شيء قبل الإيقاف.
+
+# الجملة الأولى في كل تحذير من التدريب، العام منه والخاص بإحدى الخدمات.
+-cloud-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا.

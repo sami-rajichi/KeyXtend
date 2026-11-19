@@ -88,10 +88,10 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = De { $low } à { $high } selon le modèle
     .fact-price-range-fee = De { $low } à { $high } selon le modèle, plus { $fee } % de frais sur le crédit
-    .fact-warn-trains = Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage : { $switch }
-    .fact-warn-trains-profile = Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : { $switch }
+    .fact-warn-trains = { -cloud-trains } Pour arrêter cela, désactivez ce réglage : { $switch }
+    .fact-warn-trains-profile = { -cloud-trains } Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : { $switch }
     .warn-mark-trains = Entraînement activé
-    .warn-mark-trains-profile = Entraînement activé
+    .warn-mark-trains-profile = { cloud.warn-mark-trains }
     .fact-bills-least = Au moins { $seconds-form ->
         [one] { $seconds } seconde
        *[other] { $seconds } secondes
@@ -155,3 +155,6 @@ cloud =
     .side-cloud = Dans le cloud
     .band-none-on = Aucun service cloud n’est encore activé.
     .band-listed = Modèles des services que vous avez activés ; rien ne part avant l’arrêt.
+
+# La première phrase de chaque avertissement d’entraînement, le commun comme celui propre à un service.
+-cloud-trains = Entraîne ses modèles sur votre voix par défaut.

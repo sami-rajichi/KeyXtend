@@ -88,10 +88,10 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = { $low } to { $high } by model
     .fact-price-range-fee = { $low } to { $high } by model, plus a { $fee }% fee on credit
-    .fact-warn-trains = Trains its models on your voice by default. To stop it, turn off this switch: { $switch }
-    .fact-warn-trains-profile = Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: { $switch }
+    .fact-warn-trains = { -cloud-trains } To stop it, turn off this switch: { $switch }
+    .fact-warn-trains-profile = { -cloud-trains } To stop it, turn off this switch in your profile menu: { $switch }
     .warn-mark-trains = Trains by default
-    .warn-mark-trains-profile = Trains by default
+    .warn-mark-trains-profile = { cloud.warn-mark-trains }
     .fact-bills-least = At least { $seconds-form ->
         [one] { $seconds } second
        *[other] { $seconds } seconds
@@ -155,3 +155,6 @@ cloud =
     .side-cloud = Cloud
     .band-none-on = No cloud service is switched on yet.
     .band-listed = Models of the services you switched on; nothing leaves before Stop.
+
+# The first sentence of every training warning, the shared one and a service's own.
+-cloud-trains = Trains its models on your voice by default.
