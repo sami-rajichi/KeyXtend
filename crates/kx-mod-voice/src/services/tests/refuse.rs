@@ -203,7 +203,12 @@ fn a_refusal_names_the_row_and_its_rule_in_plain_words() {
 
 /// The row error one edit of the shipped second file gives.
 fn own_err(from: &str, to: &str) -> Option<ServiceError> {
-    match Services::parse(TEXT, &edits_text(OWN, &[(from, to)]), LANGS) {
+    own_errs(&[(from, to)])
+}
+
+/// The row error these edits of the shipped second file give.
+fn own_errs(pairs: &[(&str, &str)]) -> Option<ServiceError> {
+    match Services::parse(TEXT, &edits_text(OWN, pairs), LANGS) {
         Err(ServicesError::Row { why, .. }) => Some(why),
         _ => None,
     }
@@ -224,4 +229,18 @@ fn a_model_header_goes_on_assemblyais_shape_alone_which_needs_a_plain_one() {
     let shape = "shape = \"form\"";
     refused(shape, &format!("{shape}\n{named}"), E::Form);
     refused(&format!("{shape}\n{FORM}"), "shape = \"assembly\"", E::Form);
+}
+
+#[test]
+fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
+    let named = "model_header = \"X-AAI-Model\"";
+    for taken in ["Authorization", "content-type", "CONTENT-LENGTH", "host"] {
+        let to = format!("model_header = \"{taken}\"");
+        assert_eq!(own_err(named, &to), Some(E::Form), "{taken}");
+    }
+    let key = ("header = \"bearer\"", "header = \"X-Test-Key\"");
+    let alone = Services::parse(TEXT, &edits_text(OWN, &[key]), LANGS);
+    assert!(alone.is_ok(), "a named key header alone passes");
+    let same = (named, "model_header = \"x-test-key\"");
+    assert_eq!(own_errs(&[key, same]), Some(E::Form), "nor the key's own");
 }

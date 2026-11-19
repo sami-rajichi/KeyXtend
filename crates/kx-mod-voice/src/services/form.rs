@@ -1,7 +1,7 @@
 //! A row's request shape and a form's fields: the shapes `speech-net` knows by name, a form's language field and its
 //! fixed fields, each asking only for plain text or JSON without timings (ruling 2026-11-17).
 
-use kx_module_api::ports::{CloudShape, FormField, FormFields, MAX_FIXED, OwnFields};
+use kx_module_api::ports::{CloudShape, FormField, FormFields, KeyHeader, MAX_FIXED, OwnFields};
 use serde::Deserialize;
 
 use super::ServiceError;
@@ -115,12 +115,14 @@ impl<'a> Sent<'a> {
 }
 
 /// The shape `name` names, with `form`'s fields for an upload form or `ElevenLabs`' own, whose fixed fields and keep
-/// field must fit one request; Gemini takes no form, `ElevenLabs` no list, `AssemblyAI` only its plain `model_header`,
-/// and only an upload form a keep field, a paywall or a region code.
+/// field must fit one request; Gemini takes no form, `ElevenLabs` no list, and `AssemblyAI` only its plain
+/// `model_header`, naming neither `key` nor a header the request sets. Only an upload form takes a keep field, a
+/// paywall or a region code.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
     model_header: Option<&str>,
+    key: &KeyHeader,
     sent: &Sent<'_>,
 ) -> Result<CloudShape, ServiceError> {
     let kind = SHAPES
@@ -138,9 +140,8 @@ pub(super) fn shape(
         (Kind::Assembly, None, Some(name), true) => {
             let model_header = name.to_owned();
             let shape = CloudShape::Assembly { model_header };
-            Some(shape)
-                .filter(CloudShape::fits)
-                .ok_or(ServiceError::Form)
+            let fits = |s: &CloudShape| s.fits() && s.fits_beside(key);
+            Some(shape).filter(fits).ok_or(ServiceError::Form)
         }
         _ => Err(ServiceError::Form),
     }

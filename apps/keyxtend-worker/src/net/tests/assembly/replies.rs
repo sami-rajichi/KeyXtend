@@ -1,6 +1,6 @@
 //! `AssemblyAI`'s answers read as its pages say [A1][A2]: its text beside its words, an empty transcript left to the
-//! run, and each problem (RFC 9457) by its status, a 400 as the language only when its title or detail names it and
-//! never as the key, a 402 as no credit or the account's step, and a 429 or a 503 waiting by its `Retry-After`.
+//! run, and each problem (RFC 9457) by its status: a 400 as the language only when its title or detail names it, never
+//! the key; a 402 as no credit or the account's step; a 429 or a 503 waiting by its `Retry-After`; any 5xx the network.
 //! The fixtures under `replies/assemblyai/` are made up and hold no key; the undocumented credit reply is assumed.
 
 use super::super::table::{Extra, Got, read_with, tested_with};
@@ -48,7 +48,7 @@ fn a_reply_holds_its_text_beside_its_words_and_an_empty_one_is_the_runs_to_judge
 
 #[test]
 fn each_problem_is_its_fault_by_its_status_as_its_pages_say() {
-    let cases: [(u16, &[u8], Got); 20] = [
+    let cases: [(u16, &[u8], Got); 22] = [
         (401, KEY_BAD, Got::Fault(Key)),
         (401, b"", Got::Fault(Key)),
         (401, HOTSPOT, Got::Fault(Key)),
@@ -66,7 +66,9 @@ fn each_problem_is_its_fault_by_its_status_as_its_pages_say() {
         (500, MODEL, Got::Fault(Network)),
         (503, COLD, Got::Fault(Network)),
         (504, DEADLINE, Got::Fault(Network)),
-        (502, HOTSPOT, Got::Fault(Strange)),
+        (502, HOTSPOT, Got::Fault(Network)),
+        (501, b"", Got::Fault(Network)),
+        (599, HOTSPOT, Got::Fault(Network)),
         (403, HOTSPOT, Got::Fault(Strange)),
         (302, b"", Got::Fault(Strange)),
     ];
@@ -127,7 +129,7 @@ proptest! {
     }
 
     #[test]
-    fn only_a_401_is_the_key_and_only_a_402_no_credit_or_the_accounts_step(
+    fn only_a_401_is_the_key_only_a_402_no_credit_or_the_accounts_step_and_every_5xx_the_network(
         status in 300u16..600,
         title in ".{0,24}",
         detail in prop_oneof![Just("payment method".to_owned()), Just("language".to_owned()), ".{0,48}"],
@@ -138,5 +140,7 @@ proptest! {
         prop_assert_eq!(matches!(got, Got::Fault(Credit | Account)), status == 402);
         let language = got == Got::Fault(Language);
         prop_assert!(!language || status == 400, "{status}: only a 400 names the language");
+        let down = (500..600).contains(&status);
+        prop_assert_eq!(got == Got::Fault(Network), down, "every 5xx is the network when it names no wait");
     }
 }

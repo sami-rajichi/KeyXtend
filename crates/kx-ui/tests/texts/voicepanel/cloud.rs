@@ -172,6 +172,16 @@ fn typed() -> VoiceSheet {
     VoiceSheet::Service(s)
 }
 
+/// `AssemblyAI`'s key page: no call tests its key, so it says the first dictation does.
+fn assembly() -> VoiceSheet {
+    let VoiceSheet::Service(mut s) = lines("groq") else {
+        unreachable!("a key page")
+    };
+    (s.service, s.check) = (named("AssemblyAI"), KeyCheck::NoTest);
+    s.site = Some("www.assemblyai.com".to_owned());
+    VoiceSheet::Service(s)
+}
+
 /// A cloud model `name` of `service` at `mark`, maybe Unavailable.
 fn model(name: &str, service: &str, mark: ServiceMark, na: bool) -> ModelRow {
     ModelRow {
@@ -265,6 +275,7 @@ pub fn panels() -> Vec<(&'static str, Shown)> {
         ("cardOld", shown(card(true), &[])),
         ("service", shown(lines("groq"), &[])),
         ("serviceRouter", shown(lines("router"), &[])),
+        ("serviceAssembly", shown(assembly(), &[])),
         ("serviceCustom", shown(lines("custom"), &[])),
         ("serviceTyped", shown(typed(), &[])),
         ("modelsCloud", paged(shown(models(), &[Use]), 0, 1, 1)),

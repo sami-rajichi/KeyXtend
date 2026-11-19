@@ -169,10 +169,11 @@ impl CloudTest {
     }
 }
 
-/// The name of the first of a request's shape, header and key that could break it, if any.
+/// The name of the first of a request's shape, header and key that could break it, if any; a model header that names
+/// one the request sets breaks the shape.
 fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'static str> {
     first_odd([
-        (shape.fits(), "shape"),
+        (shape.fits() && shape.fits_beside(header), "shape"),
         (header.fits(), "header"),
         (CloudAsk::key_fits(key.expose()), "key"),
     ])

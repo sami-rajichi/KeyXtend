@@ -17,8 +17,8 @@ use std::sync::atomic::AtomicBool;
 
 /// The one address the tests send to, never the table's.
 const ADDRESS: &str = "https://stt.example.com/v1/transcribe";
-/// The header the row names for the model [A1].
-const MODEL_HEADER: &str = "X-AAI-Model";
+/// A made-up header for the model, so a name held in the worker would fail.
+const MODEL_HEADER: &str = "X-Test-Model";
 /// The model the row offers, the only Sync model [A1][A6].
 const UNIVERSAL: &str = "universal-3-6-pro";
 /// The sound the tests send.
@@ -104,6 +104,24 @@ fn a_run_with_no_model_or_code_another_shapes_call_or_a_breaking_model_is_out_of
         .build(&piece(&form, Some(UNIVERSAL), "fr", WAV))
         .err();
     assert_eq!(other, Some(NetFault::Range));
+}
+
+#[test]
+fn a_model_header_naming_a_header_the_request_sets_is_out_of_range() {
+    let key = NetHeader::Named(Cow::Borrowed("X-Test-Key"));
+    let bearer = ["authorization", "CONTENT-TYPE", "Content-Length", "host"];
+    let cases = bearer.map(|n| (n, NetHeader::Bearer));
+    for (name, header) in cases.into_iter().chain([("x-test-key", key)]) {
+        let model_header = Cow::Borrowed(name);
+        let call = NetCall {
+            header,
+            ..call_to(ADDRESS, NetShape::Assembly { model_header })
+        };
+        let got = Assembly
+            .build(&piece(&call, Some(UNIVERSAL), "en", WAV))
+            .err();
+        assert_eq!(got, Some(NetFault::Range), "{name}");
+    }
 }
 
 #[test]

@@ -143,6 +143,26 @@ fn a_header_or_a_key_that_could_break_a_requests_head_is_refused() {
     }
 }
 
+#[test]
+fn a_model_header_naming_a_header_the_request_sets_is_refused_as_the_shape() {
+    let shape = |name: &str| CloudShape::Assembly {
+        model_header: name.to_owned(),
+    };
+    let named = KeyHeader::Named("X-Test-Key".into());
+    let rows = [
+        (shape("authorization"), KeyHeader::Bearer),
+        (shape("x-test-key"), named),
+    ];
+    for (shape, header) in rows {
+        let ask = CloudAsk {
+            shape,
+            header,
+            ..ask()
+        };
+        assert_eq!(refused(&ask), Some("shape"));
+    }
+}
+
 /// `ask()` for `model` in `lang`.
 fn ask_as(model: Option<&str>, lang: &str) -> CloudAsk {
     CloudAsk {

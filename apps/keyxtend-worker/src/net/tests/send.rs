@@ -229,7 +229,7 @@ fn a_key_test_says_whether_the_key_works() {
 #[test]
 fn every_shape_has_its_own_adapter() {
     let assembly = NetShape::Assembly {
-        model_header: Cow::Borrowed("X-AAI-Model"),
+        model_header: Cow::Borrowed("X-Test-Model"),
     };
     let shapes = [
         NetShape::Form(form()),

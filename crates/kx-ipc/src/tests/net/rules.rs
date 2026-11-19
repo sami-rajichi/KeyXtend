@@ -1,11 +1,14 @@
 //! The net rules and caps the port shares: a service's address is plain HTTPS naming one host that never reads as a
-//! number, request names, form values, model ids and language codes hold nothing a request misreads, a piece fits the
-//! row's size and time, `ElevenLabs` and Gemini need a model, and the text and reply caps.
+//! number, request names, form values, model ids and language codes hold nothing a request misreads, and a model header
+//! names no header a request sets. A piece fits the row's size and time, three shapes need a model, and the caps hold.
 
 use super::*;
 use crate::IpcError::BadField;
 use crate::code::Code;
-use crate::rules::{form_value, https, https_host, https_origin, model, token};
+use crate::rules::{
+    AUTHORIZATION, CONTENT_TYPE, form_value, https, https_host, https_origin, model, token,
+    unset_header,
+};
 use crate::{
     MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB,
     NET_MAX_MB, PIECE_S, RECORD_MAX_S, SOUND_HZ, ShapeCode, piece_bytes,
@@ -209,5 +212,28 @@ fn the_caps_are_the_plans_and_hold_each_other() {
         NET_RENEW_S,
         1..=31 * DAY_S,
         "a month, the longest allowance a service names"
+    );
+}
+
+#[test]
+fn a_header_the_request_sets_or_the_keys_own_is_taken_in_any_case() {
+    let key = "X-Test-Key";
+    let taken = [
+        AUTHORIZATION,
+        "content-type",
+        "CONTENT-LENGTH",
+        "Host",
+        key,
+        "x-test-key",
+    ];
+    for name in taken {
+        assert_eq!(unset_header(name, key), Err(BadField), "{name}");
+    }
+    assert_eq!(unset_header("X-AAI-Model", key), Ok(()));
+    assert_eq!(unset_header("X-AAI-Model", AUTHORIZATION), Ok(()));
+    assert_eq!(unset_header("authorization", AUTHORIZATION), Err(BadField));
+    assert_eq!(
+        (AUTHORIZATION, CONTENT_TYPE),
+        ("Authorization", "Content-Type")
     );
 }

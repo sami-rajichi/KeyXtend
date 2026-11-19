@@ -182,9 +182,9 @@ fn the_key_goes_only_in_its_header() {
     let others = req.fields.iter().filter(|(n, _)| n != "Authorization");
     assert!(others.clone().all(|(_, v)| find(v, KEY).is_none()));
     let mut call = call;
-    call.header = NetHeader::Named(Cow::Borrowed("xi-api-key"));
+    call.header = NetHeader::Named(Cow::Borrowed("X-Test-Key"));
     let req = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).unwrap();
-    assert_eq!(field(&req, "xi-api-key"), Some(KEY_TEXT.to_owned()));
+    assert_eq!(field(&req, "X-Test-Key"), Some(KEY_TEXT.to_owned()));
     assert_eq!(field(&req, "Authorization"), None);
 }
 

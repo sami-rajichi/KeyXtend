@@ -1,11 +1,12 @@
 //! A run's relay: no job before `send`, one job per run sized by its sound, the row, the key and each piece's size
 //! first, then the sound in wiped parts in order, the texts back in order, and a drop that cancels at once, even while
-//! its upload and its job are held.
+//! its upload and its job are held. Each shape reaching the frame is in `shapes`.
 
 use super::*;
 use kx_ipc::{MAX_SOUND_BYTES, NET_JOB, NetHeader, NetShape, Wiped};
-use kx_module_api::ports::{FormField, OwnFields};
 use std::sync::{Mutex, PoisonError};
+
+mod shapes;
 
 #[test]
 fn nothing_starts_before_send_and_each_run_has_a_job_of_its_own() {
@@ -19,97 +20,6 @@ fn nothing_starts_before_send_and_each_run_has_a_job_of_its_own() {
     let room = size::run_mb(3 * PER_S, limits().at_once, 2 * PER_S);
     assert_eq!(launches[0].args, [NET_JOB]);
     assert_eq!(launches[0].memory_mb, job().job_mb + room);
-}
-
-/// `OpenAI`'s error code for a country or region it does not serve.
-const REGION: &str = "unsupported_country_region_territory";
-
-#[test]
-fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
-    let (host, script, _) = host();
-    let keep = FormField {
-        name: "provider".into(),
-        value: r#"{"zdr":true}"#.into(),
-    };
-    let shape = CloudShape::Form(FormFields {
-        lang: "languages".into(),
-        list: true,
-        fixed: vec![keep],
-        paywall: true,
-        region: Some(REGION.into()),
-    });
-    let (_run, _) = sent(
-        &host,
-        CloudAsk {
-            shape,
-            ..ask(&[PER_S])
-        },
-    );
-    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
-        panic!("a send first");
-    };
-    let NetShape::Form(form) = &call.shape else {
-        panic!("a form, not {:?}", call.shape);
-    };
-    assert_eq!(
-        (
-            form.lang.as_ref(),
-            form.list,
-            form.paywall,
-            form.region.as_deref()
-        ),
-        ("languages", true, true, Some(REGION))
-    );
-    let fixed: Vec<(&str, &str)> = form
-        .fixed
-        .iter()
-        .map(|f| (f.name.as_ref(), f.value.as_ref()))
-        .collect();
-    assert_eq!(fixed, [("provider", r#"{"zdr":true}"#)]);
-}
-
-#[test]
-fn elevenlabs_form_reaches_the_frame_in_its_own_shape() {
-    let (host, script, _) = host();
-    let tags = FormField {
-        name: "tag_audio_events".into(),
-        value: "false".into(),
-    };
-    let shape = CloudShape::Eleven(OwnFields {
-        lang: "language_code".into(),
-        fixed: vec![tags],
-    });
-    let ask = CloudAsk {
-        shape,
-        header: KeyHeader::Named("xi-api-key".into()),
-        ..ask(&[PER_S])
-    };
-    let (_run, _) = sent(&host, ask);
-    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
-        panic!("a send first");
-    };
-    let NetShape::Eleven(form) = &call.shape else {
-        panic!("its own shape, not {:?}", call.shape);
-    };
-    let fixed: Vec<(&str, &str)> = (form.fixed.iter())
-        .map(|f| (f.name.as_ref(), f.value.as_ref()))
-        .collect();
-    assert_eq!(form.lang, "language_code");
-    assert_eq!(fixed, [("tag_audio_events", "false")]);
-}
-
-#[test]
-fn assemblyais_model_header_reaches_the_frame_in_its_own_shape() {
-    let (host, script, _) = host();
-    let name = "X-AAI-Model";
-    let model_header = name.to_owned();
-    let mut asked = ask(&[PER_S]);
-    asked.shape = CloudShape::Assembly { model_header };
-    let (_run, _) = sent(&host, asked);
-    let NetAsk::Send { call, .. } = &nets(&script)[0] else {
-        panic!("a send first");
-    };
-    assert!(matches!(&call.shape, NetShape::Assembly { model_header } if model_header == name));
 }
 
 #[test]

@@ -21,8 +21,8 @@ use std::sync::atomic::AtomicBool;
 const ADDRESS: &str = "https://stt.example.com/v1beta/interactions";
 /// The one key test address.
 const TEST: &str = "https://stt.example.com/v1beta/models";
-/// The header the row names for the key [N1].
-const HEADER: &str = "x-goog-api-key";
+/// A made-up header for the key, so a name held in the worker would fail.
+const HEADER: &str = "X-Test-Key";
 /// The model the row offers, as the run names it [N1].
 const TRANSCRIBE: &str = "models/gemini-3.5-transcribe";
 /// Arabic's BCP-47 code, as its set gives it.

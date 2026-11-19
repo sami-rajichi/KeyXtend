@@ -24,6 +24,12 @@ const MODEL_MARKS: &[u8] = b"./:";
 const SEGMENT_MARK: char = '/';
 /// Path segments that would climb or stay in an address's path.
 const DOT_SEGMENTS: [&str; 2] = [".", ".."];
+/// The header a bearer key goes in.
+pub const AUTHORIZATION: &str = "Authorization";
+/// The header that names a body's type, a request's and a form part's.
+pub const CONTENT_TYPE: &str = "Content-Type";
+/// The headers every cloud request sets itself: the bearer key's, the body's type and length, and the host.
+const SET_HEADERS: [&str; 4] = [AUTHORIZATION, CONTENT_TYPE, "Content-Length", "Host"];
 
 /// Format marks that reorder or hide text in a right-to-left panel: the Arabic letter mark, zero-width and direction
 /// marks, embeddings and overrides, invisible operators, isolates and the byte-order mark.
@@ -70,6 +76,15 @@ pub fn token(text: &str) -> Result<(), IpcError> {
         text.bytes()
             .all(|b| b.is_ascii_alphanumeric() || TOKEN_MARKS.contains(&b)),
     )
+}
+
+/// Refuses a header name a request already sets, in any case: `key`, the key's own, or one of `SET_HEADERS`.
+///
+/// # Errors
+/// `BadField` for such a name.
+pub fn unset_header(name: &str, key: &str) -> Result<(), IpcError> {
+    let taken = |set: &&str| set.eq_ignore_ascii_case(name);
+    ok_if(!SET_HEADERS.iter().chain([&key]).any(taken))
 }
 
 /// Refuses a model's id unless it is `token` bytes and `MODEL_MARKS` in `/` segments, none empty, `.` or `..`, so it

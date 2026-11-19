@@ -81,6 +81,24 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
 }
 
 #[test]
+fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
+    let named = KeyHeader::Named("X-Test-Key".to_owned());
+    assert_eq!(KeyHeader::Bearer.name(), "Authorization");
+    assert!(assembly().fits_beside(&KeyHeader::Bearer) && assembly().fits_beside(&named));
+    let shape = |name: &str| CloudShape::Assembly {
+        model_header: name.to_owned(),
+    };
+    for name in ["authorization", "Content-Type", "content-length", "HOST"] {
+        assert!(!shape(name).fits_beside(&KeyHeader::Bearer), "{name}");
+    }
+    assert!(
+        !shape("x-test-key").fits_beside(&named),
+        "the key's own, in any case"
+    );
+    assert!(CloudShape::Gemini.fits_beside(&named) && eleven().fits_beside(&named));
+}
+
+#[test]
 fn elevenlabs_own_form_holds_its_language_and_fixed_fields_and_fits_by_its_own_check() {
     assert!(eleven().fits());
     let CloudShape::Eleven(mut odd) = eleven() else {

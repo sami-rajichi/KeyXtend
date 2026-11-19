@@ -6,7 +6,7 @@ use super::multipart::{self, Text};
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
-use kx_ipc::{NetCall, NetFault, NetShape};
+use kx_ipc::{NetCall, NetFault, NetShape, rules};
 use kx_platform_net::{Head, Verb};
 use serde::Serialize;
 use zeroize::Zeroizing;
@@ -62,10 +62,9 @@ const TABLE: &[Row<Says>] = &[
         Then::Fault(NetFault::Language),
     ),
     row(429..=429, Says::Any, Then::Busy),
-    // A cold start or the concurrency cap waits when it names a time, else it is tried again as a model error is.
+    // A cold start or the concurrency cap waits when it names a time; any other 5xx is the service down, tried again.
     row(503..=503, Says::Waits, Then::Busy),
-    row(500..=500, Says::Any, Then::Fault(NetFault::Network)),
-    row(503..=504, Says::Any, Then::Fault(NetFault::Network)),
+    row(500..=599, Says::Any, Then::Fault(NetFault::Network)),
 ];
 
 impl Shape for Assembly {
@@ -74,8 +73,11 @@ impl Shape for Assembly {
         else {
             return Err(NetFault::Range);
         };
-        // The model goes in a header, so it holds only visible ASCII; the code goes in JSON, never empty.
-        if piece.lang.is_empty() || !model.bytes().all(|b| b.is_ascii_graphic()) {
+        let key = shape::key(piece.call)?;
+        // The model's header names none the request sets, its value is visible ASCII; the code is JSON, never empty.
+        let plain = model.bytes().all(|b| b.is_ascii_graphic());
+        let own = rules::unset_header(model_header, &key.0).is_ok();
+        if piece.lang.is_empty() || !plain || !own {
             return Err(NetFault::Range);
         }
         let config = Config {
@@ -87,11 +89,7 @@ impl Shape for Assembly {
         let named = Zeroizing::new(model.as_bytes().to_vec());
         Ok(Request {
             verb: Verb::Post,
-            fields: vec![
-                shape::key(piece.call)?,
-                (model_header.to_string(), named),
-                sent.kind,
-            ],
+            fields: vec![key, (model_header.to_string(), named), sent.kind],
             body: sent.body,
             keep: KEEP,
         })

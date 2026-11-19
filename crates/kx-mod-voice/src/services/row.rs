@@ -25,9 +25,10 @@ pub enum ServiceError {
     /// The shape is not one `speech-net` knows.
     #[error("its shape is not one speech-net knows")]
     Shape,
-    /// A form's fields or a model header are missing, odd or too many, or given to a shape without them.
+    /// A form's fields or a model header are missing, odd or too many, given to a shape without them, or a model header
+    /// names one the request sets.
     #[error(
-        "its form fields or model header are missing, odd, too many, or given to a shape without them"
+        "its form fields or model header are missing, odd, too many, misplaced, or name a header the request sets"
     )]
     Form,
     /// A fixed field asks for a reply that is not plain, or for timings (ruling 2026-11-17).
@@ -177,10 +178,10 @@ impl Service {
         let keep = raw.keep.as_ref().map(form::RawField::field);
         let region = raw.region.as_deref();
         let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall, region);
-        let model_header = raw.model_header.as_deref();
-        let shape = form::shape(&raw.shape, raw.form.as_ref(), model_header, &sent)?;
-        let test = address::test(raw.test.as_deref(), &address)?;
         let header = header(&raw.header)?;
+        let model_header = raw.model_header.as_deref();
+        let shape = form::shape(&raw.shape, raw.form.as_ref(), model_header, &header, &sent)?;
+        let test = address::test(raw.test.as_deref(), &address)?;
         let named = raw.name.is_some();
         let keys = keys_page(raw.keys.as_deref(), named)?;
         let limits = limits::checked(&raw.limits, form::base64(&raw.shape), rules.room)?;

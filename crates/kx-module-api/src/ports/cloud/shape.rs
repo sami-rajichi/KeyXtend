@@ -4,7 +4,7 @@
 use crate::ports::TAG_LEN;
 pub use kx_ipc::MAX_FIXED;
 use kx_ipc::ShapeCode;
-use kx_ipc::rules::{form_value, token};
+use kx_ipc::rules::{AUTHORIZATION, form_value, token, unset_header};
 
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
 pub const MAX_FIELD_VALUE: usize = kx_ipc::MAX_NAME_BYTES;
@@ -35,6 +35,15 @@ impl CloudShape {
             Self::Eleven(own) => own.fits(),
             Self::Gemini => true,
             Self::Assembly { model_header } => name_ok(model_header),
+        }
+    }
+
+    /// True unless a model header names one the request sets: the key's `header` or one `rules::unset_header` lists.
+    #[must_use]
+    pub fn fits_beside(&self, header: &KeyHeader) -> bool {
+        match self {
+            Self::Assembly { model_header } => unset_header(model_header, header.name()).is_ok(),
+            Self::Form(_) | Self::Eleven(_) | Self::Gemini => true,
         }
     }
 
@@ -138,6 +147,15 @@ impl KeyHeader {
         match self {
             Self::Bearer => true,
             Self::Named(name) => name_ok(name),
+        }
+    }
+
+    /// The name of the header the key goes in: `Authorization` for a bearer key.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Bearer => AUTHORIZATION,
+            Self::Named(name) => name,
         }
     }
 }

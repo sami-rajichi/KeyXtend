@@ -18,8 +18,8 @@ use std::sync::atomic::AtomicBool;
 const ADDRESS: &str = "https://stt.example.com/v1/speech-to-text";
 /// The one key test address.
 const TEST: &str = "https://stt.example.com/v1/user/subscription";
-/// The header the row names for the key [E3].
-const HEADER: &str = "xi-api-key";
+/// A made-up header for the key, so a name held in the worker would fail.
+const HEADER: &str = "X-Test-Key";
 /// A model the row offers, as the run names it [E4].
 const SCRIBE: &str = "scribe_v3";
 /// The sound the tests send.
