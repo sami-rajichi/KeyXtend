@@ -96,16 +96,43 @@ fn a_model_or_language_that_could_break_a_body_or_an_address_is_refused_both_way
 
 #[test]
 fn elevenlabs_and_gemini_refuse_a_run_with_no_model_both_ways() {
+    round_trips(send_as(groq_form(), None, "fr"));
     for shape in [NetShape::Eleven, NetShape::Gemini] {
         refused(&send_as(shape.clone(), None, "fr"), BadField);
-        round_trips(send_as(shape, Some(MODEL), "fr"));
+        round_trips(send_as(shape.clone(), Some(MODEL), "fr"));
+        let read = |model| NetAsk::read(&mut &bare_as(shape.code(), model)[..]);
+        assert_eq!(
+            read(Some(MODEL)),
+            Ok(send_as(shape.clone(), Some(MODEL), "fr"))
+        );
+        assert_eq!(read(None), Err(BadField), "{shape:?}");
     }
-    for shape in [NetShape::Azure, groq_form()] {
-        round_trips(send_as(shape, None, "fr"));
-    }
-    let azure = net_ask_bytes(&send_as(NetShape::Azure, None, "fr"));
-    for shape in [ShapeCode::Eleven, ShapeCode::Gemini] {
-        let bytes = patch(azure.clone(), 0, &[shape.code()]);
-        assert_eq!(read_net_ask(&mut &bytes[..]), Err(BadField), "{shape:?}");
+}
+
+/// A send's frame for `model` with its form taken out and `code` in its place, as a writer that skipped the model
+/// rule would send it.
+fn bare_as(code: ShapeCode, model: Option<&'static str>) -> Vec<u8> {
+    let test = |shape| {
+        let call = call(shape, NetHeader::Bearer);
+        net_ask_bytes(&NetAsk::Test { id: 1, call }).len()
+    };
+    let form = test(groq_form()) - test(NetShape::Gemini);
+    let sent = net_ask_bytes(&send_as(groq_form(), model, "fr"));
+    let rest = &sent[HEADER_LEN + 1 + form..];
+    frame(Kind::NetSend, 1, &[&[code.code()], rest].concat())
+}
+
+#[test]
+fn a_shape_code_no_shape_has_is_refused_when_read_the_dropped_2_too() {
+    let test = NetAsk::Test {
+        id: 1,
+        call: call(NetShape::Gemini, NetHeader::Bearer),
+    };
+    let good = net_ask_bytes(&test);
+    assert_eq!(NetAsk::read(&mut &good[..]), Ok(test));
+    // Code 2 was a fourth shape's until ADR-0050 dropped it; its byte now reads as no shape at all.
+    for code in [0, 2, 5, u8::MAX] {
+        let bytes = patch(good.clone(), 0, &[code]);
+        assert_eq!(read_net_ask(&mut &bytes[..]), Err(BadField), "{code}");
     }
 }

@@ -2,14 +2,13 @@
 
 use crate::code::Code;
 
-/// A request shape's byte, which a form's names follow; the port and the frames share its `needs_model` rule.
+/// A request shape's byte, which a form's names follow; the port and the frames share its `needs_model` rule. Code 2
+/// was a dropped shape's (ADR-0050) and now reads as none, so the others keep their bytes.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ShapeCode {
     /// The upload form.
     Form = 1,
-    /// Azure's fast transcription.
-    Azure = 2,
     /// `ElevenLabs`' form.
     Eleven = 3,
     /// Gemini's single request.
@@ -17,7 +16,7 @@ pub enum ShapeCode {
 }
 
 impl Code for ShapeCode {
-    const ALL: &'static [Self] = &[Self::Form, Self::Azure, Self::Eleven, Self::Gemini];
+    const ALL: &'static [Self] = &[Self::Form, Self::Eleven, Self::Gemini];
 
     fn code(self) -> u8 {
         self as u8

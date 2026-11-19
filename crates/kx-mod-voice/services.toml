@@ -13,7 +13,7 @@
 # Each row ([[services]]):
 # - `id`: the name `services`, `picks` and the key's sealed blob use; `name`: the shown name, left out for Custom,
 #   which the ui names in the user's language.
-# - `shape`: "form", "azure", "eleven" or "gemini"; `form`: a form's language field, whether it goes as a list (`[]`)
+# - `shape`: "form", "eleven" or "gemini"; `form`: a form's language field, whether it goes as a list (`[]`)
 #   and its fixed fields; `keep`: a field sent while the keep-nothing switch is on, which gives the row that switch;
 #   `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells no credit;
 #   `region`: the error code by which a form's reply says the service is not offered in the user's country or region.

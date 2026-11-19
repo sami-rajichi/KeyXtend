@@ -67,36 +67,37 @@ light = { id = "price", money = { price = 4.05 } }
 heavy = { id = "price", money = { price = 16.20 } }
 "#;
 
-/// An Azure row: a typed address under its domain, a test path, and a classic model that the request names not.
-pub(crate) const AZURE: &str = r#"
+/// A form row whose typed address must be under its domain, with a test path and a model the request names not.
+pub(crate) const DOMAIN: &str = r#"
 [[services]]
-id = "azure-test"
-name = "Azure"
-shape = "azure"
-host = ".cognitiveservices.azure.com"
+id = "domain-test"
+name = "Domain Test"
+shape = "form"
+form = { lang = "language", list = false }
+host = ".speech.example.com"
 address = "typed"
-test = "/sts/v1.0/issueToken"
-header = "Ocp-Apim-Subscription-Key"
-keys = "https://portal.azure.com"
+test = "/v1/models"
+header = "x-api-key"
+keys = "https://speech.example.com/keys"
 limits = { cap_mb = 500, cap_s = 18000, max_mb = 23, max_s = 600, per_min = 600, at_once = 4 }
 terms = 1
 offered = true
 untested = true
 
 [[services.models]]
-id = "classic"
-name = "Azure Speech"
+id = "base"
+name = "Base"
 langs = { ar = "ar-SA", en = "en-US", fr = "fr-FR" }
 unnamed = true
 
 [[services.models]]
-id = "MAI-Transcribe-2"
-name = "MAI-Transcribe-2"
+id = "large"
+name = "Large"
 langs = { ar = "ar", en = "en", fr = "fr" }
 
 [services.facts]
 read = 2026-11-17
-source = "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create"
+source = "https://speech.example.com/data"
 place = { id = "region" }
 trains = { id = "unknown" }
 keeps = { id = "none" }

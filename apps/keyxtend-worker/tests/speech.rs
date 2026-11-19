@@ -71,8 +71,8 @@ fn asks() -> [NetAsk<'static>; 5] {
         piece: 1,
         bytes: Wiped::Lent(&[0, 0]),
     };
-    let (azure, form) = (send(1, call(NetShape::Azure)), send(2, call(form)));
-    [azure, form, late, NetAsk::Cancel { id: 9 }, NetAsk::Bye]
+    let (eleven, form) = (send(1, call(NetShape::Eleven)), send(2, call(form)));
+    [eleven, form, late, NetAsk::Cancel { id: 9 }, NetAsk::Bye]
 }
 
 #[test]

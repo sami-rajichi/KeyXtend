@@ -27,7 +27,7 @@ pub struct ServiceOn {
     pub on: Datetime,
     /// The terms number confirmed; a row with a newer one asks again before the next upload.
     pub terms: u16,
-    /// The typed address, for the Custom and Azure rows; empty for none, which the file leaves out.
+    /// The typed address, for a typed row such as Custom; empty for none, which the file leaves out.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub address: String,
     /// The Other model line's typed id; empty for none, which the file leaves out.

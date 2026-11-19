@@ -62,7 +62,7 @@ pub struct CloudAsk {
     /// The user's key: visible ASCII within `MAX_KEY_BYTES`, wiped on drop.
     pub key: Secret,
     /// The model's id, such as `openai/whisper-large-v3` (`rules::model`), redacted as a typed Other model is the
-    /// user's; `None` sends none, as Lemonfox and Azure's classic take none, and `needs_model` shapes refuse it.
+    /// user's; `None` sends none, as Lemonfox takes none, and `needs_model` shapes refuse it.
     pub model: Option<Redacted<String>>,
     /// The model's code for the language in front, such as `fr`, `ar-SA` or `french`: a `rules::token` in `TAG_LEN`.
     pub lang: String,

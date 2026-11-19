@@ -143,30 +143,28 @@ fn customs_typed_address_is_https_on_a_host_name_only() {
 }
 
 #[test]
-fn a_typed_azure_address_stays_under_its_domain_and_its_test_on_that_host() {
-    let table = with_rows(AZURE);
-    let typed = "https://kx-test.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15";
-    assert_eq!(url(&table, "azure-test", typed).as_deref(), Some(typed));
+fn a_typed_address_stays_under_its_rows_domain_and_its_test_on_that_host() {
+    let table = with_rows(DOMAIN);
+    let typed =
+        "https://kx-test.speech.example.com/v1/transcriptions:transcribe?api-version=2025-10-15";
+    assert_eq!(url(&table, "domain-test", typed).as_deref(), Some(typed));
     for bad in [
-        "https://kx-test.cognitiveservices.azure.com.evil.example/x",
-        "https://evil.example/speechtotext",
-        "https://cognitiveservices.azure.com/x",
-        "http://kx-test.cognitiveservices.azure.com/x",
+        "https://kx-test.speech.example.com.evil.example/x",
+        "https://evil.example/v1",
+        "https://speech.example.com/x",
+        "http://kx-test.speech.example.com/x",
     ] {
-        assert_eq!(url(&table, "azure-test", bad), None, "{bad}");
+        assert_eq!(url(&table, "domain-test", bad), None, "{bad}");
     }
-    let row = table.get("azure-test").unwrap();
+    let row = table.get("domain-test").unwrap();
     let test = |typed: &str| row.test_url(typed).map(|u| u.expose().to_owned());
-    let token = "https://kx-test.cognitiveservices.azure.com/sts/v1.0/issueToken";
-    assert_eq!(test(typed).as_deref(), Some(token));
-    let port = "https://kx.cognitiveservices.azure.com:8443/stt?x=1";
+    let models = "https://kx-test.speech.example.com/v1/models";
+    assert_eq!(test(typed).as_deref(), Some(models));
+    let port = "https://kx.speech.example.com:8443/stt?x=1";
     assert_eq!(
         test(port).as_deref(),
-        Some("https://kx.cognitiveservices.azure.com:8443/sts/v1.0/issueToken")
+        Some("https://kx.speech.example.com:8443/v1/models")
     );
     assert_eq!(test("https://evil.example/x"), None);
-    assert!(
-        row.model("classic").is_some_and(|m| m.unnamed)
-            && row.shape_for(None, true) == CloudShape::Azure
-    );
+    assert!(row.model("base").is_some_and(|m| m.unnamed));
 }

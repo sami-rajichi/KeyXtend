@@ -106,11 +106,15 @@ fn groqs_least_billed_length_is_a_fact_the_validator_checks() {
 
 #[test]
 fn a_model_on_a_shape_that_needs_a_name_or_takes_no_form_is_refused() {
-    let classic = |why| Some(("classic".to_owned(), why));
-    let eleven = model_err(AZURE, "shape = \"azure\"", "shape = \"eleven\"");
-    assert_eq!(eleven, classic(M::Unnamed));
-    let form = "\nunnamed = true\nform = { lang = \"language\", list = false }";
-    assert_eq!(model_err(AZURE, "\nunnamed = true", form), classic(M::Form));
+    let base = |why| Some(("base".to_owned(), why));
+    let shape = "shape = \"form\"\nform = { lang = \"language\", list = false }";
+    let eleven = edits_text(DOMAIN, &[(shape, "shape = \"eleven\"")]);
+    assert_eq!(
+        model_err(DOMAIN, shape, "shape = \"eleven\""),
+        base(M::Unnamed)
+    );
+    let form = "\nform = { lang = \"language\", list = false }";
+    assert_eq!(model_err(&eleven, "\nunnamed = true", form), base(M::Form));
 }
 
 #[test]

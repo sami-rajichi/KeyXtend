@@ -58,10 +58,6 @@ fn every_shape_with_its_header_passes() {
             regioned(form_as("language", false, Vec::new())),
             KeyHeader::Bearer,
         ),
-        (
-            CloudShape::Azure,
-            KeyHeader::Named("Ocp-Apim-Subscription-Key".into()),
-        ),
         (CloudShape::Eleven, KeyHeader::Named("xi-api-key".into())),
         (
             CloudShape::Gemini,
@@ -86,11 +82,7 @@ fn a_row_with_no_model_field_passes() {
         lang: "french".into(),
         ..ask()
     };
-    assert_eq!(
-        ask.check(),
-        Ok(()),
-        "Lemonfox and Azure's classic take no model"
-    );
+    assert_eq!(ask.check(), Ok(()), "Lemonfox takes no model");
 }
 
 #[test]
@@ -209,11 +201,10 @@ fn a_model_or_language_code_that_could_break_a_request_is_refused() {
 }
 
 #[test]
-fn elevenlabs_and_gemini_need_a_model_and_the_others_take_none() {
+fn elevenlabs_and_gemini_need_a_model_and_the_form_takes_none() {
     let rows = [
         (CloudShape::Eleven, Some("model")),
         (CloudShape::Gemini, Some("model")),
-        (CloudShape::Azure, None),
         (form(), None),
     ];
     for (shape, want) in rows {

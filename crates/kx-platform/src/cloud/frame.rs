@@ -53,7 +53,6 @@ fn shape_of(shape: CloudShape) -> NetShape<'static> {
             paywall: form.paywall,
             region: form.region.map(Cow::Owned),
         }),
-        CloudShape::Azure => NetShape::Azure,
         CloudShape::Eleven => NetShape::Eleven,
         CloudShape::Gemini => NetShape::Gemini,
     }

@@ -35,8 +35,6 @@ pub struct NetCall<'a> {
 pub enum NetShape<'a> {
     /// The `OpenAI`-style upload form, with the row's field names.
     Form(NetForm<'a>),
-    /// Azure's fast transcription, the model in its settings part.
-    Azure,
     /// `ElevenLabs`' own form.
     Eleven,
     /// Gemini's single request, with the sound inline.
@@ -49,7 +47,6 @@ impl NetShape<'_> {
     pub const fn code(&self) -> ShapeCode {
         match self {
             Self::Form(_) => ShapeCode::Form,
-            Self::Azure => ShapeCode::Azure,
             Self::Eleven => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
         }

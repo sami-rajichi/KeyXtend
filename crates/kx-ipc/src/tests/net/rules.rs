@@ -16,10 +16,11 @@ const DAY_S: u32 = 24 * 60 * 60;
 
 #[test]
 fn an_https_address_passes_and_names_its_host() {
-    let azure = "https://kx-test.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15";
+    let colon =
+        "https://kx-test.speech.example.com/v1/transcriptions:transcribe?api-version=2025-10-15";
     let good = [
         (GROQ, "api.groq.com"),
-        (azure, "kx-test.cognitiveservices.azure.com"),
+        (colon, "kx-test.speech.example.com"),
         ("https://stt.lan:8443/v1", "stt.lan"),
         ("https://localhost:8000", "localhost"),
         (

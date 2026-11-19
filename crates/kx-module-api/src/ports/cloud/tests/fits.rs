@@ -69,23 +69,20 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
         odd.region = Some(code.to_owned());
         assert!(!CloudShape::Form(odd).fits(), "{code:?}");
     }
-    assert!(!form().needs_model() && !CloudShape::Azure.needs_model());
+    assert!(!form().needs_model());
     assert!(CloudShape::Eleven.needs_model() && CloudShape::Gemini.needs_model());
 }
 
 #[test]
 fn an_address_is_on_its_own_host_or_under_a_dot_entry() {
-    let token = "https://kx-test.cognitiveservices.azure.com/sts/v1.0/issueToken";
-    let url = HttpsUrl::new(token).unwrap();
-    for entry in [
-        ".cognitiveservices.azure.com",
-        "kx-test.cognitiveservices.azure.com",
-    ] {
+    let test = "https://kx-test.speech.example.com/v1/models";
+    let url = HttpsUrl::new(test).unwrap();
+    for entry in [".speech.example.com", "kx-test.speech.example.com"] {
         assert!(url.is_on(entry), "{entry}");
     }
-    for entry in ["cognitiveservices.azure.com", ".azure.co", ".com", "", "."] {
+    for entry in ["speech.example.com", ".example.co", ".com", "", "."] {
         assert!(!url.is_on(entry), "{entry:?}");
     }
-    let look = HttpsUrl::new("https://cognitiveservices.azure.com.evil.example/x").unwrap();
-    assert!(!look.is_on(".cognitiveservices.azure.com"), "a look-alike");
+    let look = HttpsUrl::new("https://speech.example.com.evil.example/x").unwrap();
+    assert!(!look.is_on(".speech.example.com"), "a look-alike");
 }

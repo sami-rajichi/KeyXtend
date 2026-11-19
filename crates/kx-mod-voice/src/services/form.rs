@@ -6,13 +6,11 @@ use serde::Deserialize;
 
 use super::ServiceError;
 
-/// The shapes `speech-net` holds an adapter for (ADR-0047 decision 5).
+/// The shapes `speech-net` holds an adapter for (ADR-0047 decision 5, three since ADR-0050).
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Kind {
     /// The `OpenAI`-style upload form, with the row's fields.
     Form,
-    /// Azure's fast transcription.
-    Azure,
     /// `ElevenLabs`' own form.
     Eleven,
     /// Gemini's single request.
@@ -20,9 +18,8 @@ enum Kind {
 }
 
 /// Each shape's name in the table, and whether its request carries the sound as Base64 text, a third larger.
-const SHAPES: [(&str, Kind, bool); 4] = [
+const SHAPES: [(&str, Kind, bool); 3] = [
     ("form", Kind::Form, false),
-    ("azure", Kind::Azure, false),
     ("eleven", Kind::Eleven, false),
     ("gemini", Kind::Gemini, true),
 ];
@@ -129,7 +126,6 @@ pub(super) fn shape(
     let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
     match (kind, form, bare) {
         (Kind::Form, Some(form), _) => fields(form, sent),
-        (Kind::Azure, None, true) => Ok(CloudShape::Azure),
         (Kind::Eleven, None, true) => Ok(CloudShape::Eleven),
         (Kind::Gemini, None, true) => Ok(CloudShape::Gemini),
         _ => Err(ServiceError::Form),

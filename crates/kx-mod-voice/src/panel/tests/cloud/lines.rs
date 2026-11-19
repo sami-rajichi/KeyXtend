@@ -12,7 +12,7 @@ use kx_module_api::{Redacted, Secret, Zeroizing};
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::{act, apply, lines_sheet, named, on_cloud, put};
-use crate::services::tests::AZURE;
+use crate::services::tests::DOMAIN;
 use crate::settings::{PICKS, SERVICES};
 
 /// A key-like text, built as the test runs so no key sits in the source.
@@ -229,15 +229,15 @@ fn a_long_address_says_long_and_a_host_in_capitals_is_kept_in_lower_case() {
 
 #[test]
 fn an_address_outside_the_rows_domain_says_domain() {
-    let mut rig = on_cloud(AZURE);
+    let mut rig = on_cloud(DOMAIN);
     put(
         &mut rig,
         "services",
-        "azure-test = { on = 2026-11-01, terms = 1 }",
+        "domain-test = { on = 2026-11-01, terms = 1 }",
     );
-    rig.keyed.insert("azure-test".into());
-    act(&mut rig, &named("Azure"), CloudButton::Lines);
-    let outside = "https://speech.example.com/stt";
+    rig.keyed.insert("domain-test".into());
+    act(&mut rig, &named("Domain Test"), CloudButton::Lines);
+    let outside = "https://stt.example.org/stt";
     assert!(
         rig.click(&VoiceClick::SetAddress(Redacted::new(outside.into())))
             .is_empty()
@@ -246,7 +246,7 @@ fn an_address_outside_the_rows_domain_says_domain() {
         lines_sheet(&mut rig).address_fault,
         Some(AddressFault::Domain)
     );
-    let inside = "https://kx-test.cognitiveservices.azure.com/stt";
+    let inside = "https://kx-test.speech.example.com/stt";
     let out = rig.click(&VoiceClick::SetAddress(Redacted::new(inside.into())));
     assert!(matches!(&out[..], [Do::Set(SERVICES, _)]), "{out:?}");
 }

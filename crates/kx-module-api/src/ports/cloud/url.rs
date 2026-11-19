@@ -50,8 +50,8 @@ impl HttpsUrl {
         https_host(self.0.expose())
     }
 
-    /// True when its host is `entry`, or under `entry` when that starts with `.` (`rules::covers`), as a typed Azure
-    /// address must be under its service's domain.
+    /// True when its host is `entry`, or under `entry` when that starts with `.` (`rules::covers`), as a typed address
+    /// must be under the domain its row names.
     #[must_use]
     pub fn is_on(&self, entry: &str) -> bool {
         covers(entry, self.host())

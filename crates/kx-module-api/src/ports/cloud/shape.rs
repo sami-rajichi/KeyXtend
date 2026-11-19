@@ -15,8 +15,6 @@ pub enum CloudShape {
     /// The `OpenAI`-style upload form, with the row's field names: Groq, `OpenAI`, Mistral, Together, Lemonfox,
     /// `DeepInfra`, `OpenRouter` and the Custom row.
     Form(FormFields),
-    /// Azure's fast transcription: one upload with a settings part, at the address the user types.
-    Azure,
     /// `ElevenLabs`' own form.
     Eleven,
     /// Gemini's single request, with the sound inline.
@@ -29,7 +27,7 @@ impl CloudShape {
     pub fn fits(&self) -> bool {
         match self {
             Self::Form(form) => form.fits(),
-            Self::Azure | Self::Eleven | Self::Gemini => true,
+            Self::Eleven | Self::Gemini => true,
         }
     }
 
@@ -43,7 +41,6 @@ impl CloudShape {
     pub(super) const fn code(&self) -> ShapeCode {
         match self {
             Self::Form(_) => ShapeCode::Form,
-            Self::Azure => ShapeCode::Azure,
             Self::Eleven => ShapeCode::Eleven,
             Self::Gemini => ShapeCode::Gemini,
         }

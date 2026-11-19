@@ -148,13 +148,13 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
 }
 
 /// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall with a region code,
-/// Azure with no model, `ElevenLabs` and Gemini.
+/// a form with no model and its key in a named header, `ElevenLabs` and Gemini.
 fn sends() -> Vec<NetAsk<'static>> {
     let zdr = vec![field("provider", r#"{"zdr":true}"#)];
     let named = |name| NetHeader::Named(Cow::Borrowed(name));
-    let azure = NetAsk::Send {
+    let unnamed = NetAsk::Send {
         id: 4,
-        call: call(NetShape::Azure, named("Ocp-Apim-Subscription-Key")),
+        call: call(form("language", false, Vec::new()), named("x-api-key")),
         run: NetRun {
             model: None,
             lang: Cow::Borrowed("ar-SA"),
@@ -174,7 +174,7 @@ fn sends() -> Vec<NetAsk<'static>> {
                 NetHeader::Bearer,
             ),
         ),
-        azure,
+        unnamed,
         send(5, call(NetShape::Eleven, named("xi-api-key"))),
         send(6, call(NetShape::Gemini, named("x-goog-api-key"))),
     ]

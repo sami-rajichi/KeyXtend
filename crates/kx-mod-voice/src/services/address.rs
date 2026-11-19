@@ -20,7 +20,7 @@ const PROBE: &str = "probe.invalid";
 pub enum Address {
     /// The row's own address, on its own host.
     Fixed(HttpsUrl),
-    /// The user types it: an HTTPS host name, under `under` when the row names a domain (Azure), any for Custom.
+    /// The user types it: an HTTPS host name, under `under` when the row names a domain, any for Custom.
     Typed {
         /// The `.` domain or host the typed host must be on; `None` takes any HTTPS host name.
         under: Option<String>,

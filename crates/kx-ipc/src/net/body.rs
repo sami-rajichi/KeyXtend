@@ -62,7 +62,6 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
 fn read_shape<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetShape<'static>, IpcError> {
     let form = match ShapeCode::from_code(p.byte()?).ok_or(IpcError::BadField)? {
         ShapeCode::Form => read_form(p)?,
-        ShapeCode::Azure => return Ok(NetShape::Azure),
         ShapeCode::Eleven => return Ok(NetShape::Eleven),
         ShapeCode::Gemini => return Ok(NetShape::Gemini),
     };

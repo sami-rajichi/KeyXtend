@@ -47,12 +47,7 @@ fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
             region: region.map(owned),
         })
     });
-    prop_oneof![
-        form,
-        Just(NetShape::Azure),
-        Just(NetShape::Eleven),
-        Just(NetShape::Gemini)
-    ]
+    prop_oneof![form, Just(NetShape::Eleven), Just(NetShape::Gemini)]
 }
 
 fn a_call() -> impl Strategy<Value = NetCall<'static>> {

@@ -48,7 +48,10 @@ fn a_typed_rows_test_must_be_a_path_and_its_domain_a_host_entry() {
 
 #[test]
 fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
-    let azure = edits_of(&format!("{TEXT}{AZURE}"), &[("name = \"Azure\"\n", "")]);
+    let domain = edits_of(
+        &format!("{TEXT}{DOMAIN}"),
+        &[("name = \"Domain Test\"\n", "")],
+    );
     let unnamed = |id: &str| {
         Some(ServicesError::Row {
             id: id.into(),
@@ -56,8 +59,8 @@ fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
         })
     };
     assert_eq!(
-        azure.err(),
-        unnamed("azure-test"),
+        domain.err(),
+        unnamed("domain-test"),
         "a typed row under a domain is named"
     );
     let custom = &TEXT[TEXT.find("[[services]]\nid = \"custom\"").unwrap()..];
@@ -70,7 +73,7 @@ fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
 fn a_shape_or_form_that_breaks_a_request_is_refused() {
     let five = ["{ name = \"a\", value = \"1\" }"; 5].join(", ");
     refused("shape = \"form\"", "shape = \"json\"", E::Shape);
-    refused("shape = \"form\"", "shape = \"azure\"", E::Form);
+    refused("shape = \"form\"", "shape = \"eleven\"", E::Form);
     refused(FORM, "", E::Form);
     refused(
         FORM,
@@ -84,16 +87,18 @@ fn a_shape_or_form_that_breaks_a_request_is_refused() {
 }
 
 #[test]
+fn a_row_of_the_dropped_azure_shape_is_refused_as_an_unknown_shape() {
+    // ADR-0050 left three shapes, so a row written as an Azure one names no shape at all.
+    let shape = format!("shape = \"form\"\n{FORM}");
+    refused(&shape, "shape = \"azure\"", E::Shape);
+}
+
+#[test]
 fn a_paywall_or_region_is_refused_on_a_shape_without_a_form_and_an_odd_region_code_anywhere() {
-    let azure = "shape = \"azure\"";
-    let form = ServicesError::Row {
-        id: "azure-test".into(),
-        why: E::Form,
-    };
+    let form = format!("shape = \"form\"\n{FORM}");
+    assert!(edits(&[(&form, "shape = \"eleven\"")]).is_ok(), "bare");
     for rule in ["paywall = true", "region = \"unsupported_country\""] {
-        let ruled = format!("{azure}\n{rule}");
-        let got = edits_of(&format!("{TEXT}{AZURE}"), &[(azure, &ruled)]);
-        assert_eq!(got.err(), Some(form.clone()), "{rule}");
+        refused(&form, &format!("shape = \"eleven\"\n{rule}"), E::Form);
     }
     for code in ["unsupported country", ""] {
         refused(FORM, &format!("{FORM}\nregion = \"{code}\""), E::Form);

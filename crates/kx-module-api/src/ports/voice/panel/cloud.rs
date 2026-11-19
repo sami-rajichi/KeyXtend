@@ -26,7 +26,7 @@ listed! {
         Https,
         /// Its host is no host name, such as a numeric address.
         Host,
-        /// Its host is not under the service's own domain, as Azure's must be.
+        /// Its host is not under the domain the service's row names.
         Domain,
         /// It is longer than the frames take (`HttpsUrl::MAX_BYTES`).
         Long,
@@ -72,7 +72,7 @@ listed! {
     pub enum CloudLine ("Every line, in page order.") {
         /// The key, shown only as dots.
         Key,
-        /// The address, for the Custom and Azure rows.
+        /// The address, for a typed row such as Custom.
         Address,
         /// The Other model id.
         Model,
@@ -225,8 +225,8 @@ pub struct ServiceSheet {
     pub typed: Redacted<u32>,
     /// How the key's test stands.
     pub check: KeyCheck,
-    /// The address line's text, as typed, just refused or kept, for the Custom and Azure rows; `None` for a row with its
-    /// own address.
+    /// The address line's text, as typed, just refused or kept, for a typed row such as Custom; `None` for a row with
+    /// its own address.
     pub address: Option<Redacted<String>>,
     /// Why the address on the line was refused, which its warning names; `None` while it is kept or empty.
     pub address_fault: Option<AddressFault>,

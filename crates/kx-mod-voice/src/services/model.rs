@@ -85,7 +85,7 @@ pub struct Model {
     pub langs: LangCodes,
     /// Its own form, in place of the row's.
     pub shape: Option<CloudShape>,
-    /// The request names no model, as Lemonfox's and Azure classic's take none.
+    /// The request names no model, as Lemonfox's takes none.
     pub unnamed: bool,
     /// Every host of it keeps the voice, so the keep-nothing switch makes it unavailable.
     pub keeps: bool,
