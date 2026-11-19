@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-19 11:09 — P11: six more cloud services
+Voice typing can now send to OpenAI, Mistral, Together, Lemonfox, DeepInfra and OpenRouter, each built from its row in the services table, with the fields, language codes, limits, prices and terms read from the services' own pages. A refused key, a missing payment method and a country the service does not serve each show their own reason, and OpenRouter's keep-nothing switch marks a model without such a host as unavailable instead of moving the dictation elsewhere. Arabic prices now agree with their number, as in "دولار واحد", "من دولارين" and "15 دولارًا". Values no page states are marked untested for the final check with real keys.
+
 ## 2026-11-18 20:25 — P11: type a key, address and model on our keyboard
 The Voice panel now joins the keyboard's panels, so a service key, a Custom address and an "Other model" id can be typed on our own keyboard, and the keys go to the panel only while one of these lines shows. The key shows only as dots, lives only in the voice module, and is wiped on Save, Cancel, leaving the page or closing the panel, and a test confirms that no screen and no log line holds it. Each line has its own Save, which screen readers name as "Save the key", "Save the address" or "Save the model", and a press on a line picks it with one key sound, also when Narrator presses it. ADR-0049 records that the panel takes keys only while a line shows.
 
