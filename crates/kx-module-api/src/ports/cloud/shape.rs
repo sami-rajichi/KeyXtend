@@ -58,8 +58,8 @@ pub struct FormFields {
     pub list: bool,
     /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
     pub fixed: Vec<FormField>,
-    /// A 403 asks the account to pay, as Together's missing payment method or `OpenRouter`'s spending cap: no credit,
-    /// not a bad key.
+    /// A 403 asks the account to pay, as Together's missing payment method or `OpenRouter`'s spending cap: the
+    /// account's step, not a bad key.
     pub paywall: bool,
     /// The error code a reply gives where the service is not offered in the user's country or region, a plain name,
     /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.

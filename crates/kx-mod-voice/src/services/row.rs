@@ -92,7 +92,7 @@ pub(super) struct RawService {
     /// The field sent while the keep-nothing switch is on.
     #[serde(default)]
     keep: Option<form::RawField>,
-    /// A 403 is the form's paywall: a missing payment method or a spending cap, so it tells no credit.
+    /// A 403 is the form's paywall: a missing payment method or a spending cap, so it tells the account's step.
     #[serde(default)]
     paywall: bool,
     /// The error code by which a form's reply says the service is not offered in the user's country or region.

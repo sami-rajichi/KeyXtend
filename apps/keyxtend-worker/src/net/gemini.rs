@@ -34,7 +34,8 @@ const STATUS: Coded = Coded {
     object: ERROR,
     names: &["status"],
 };
-/// Reasons that ask the account for a step no key fixes: a free tier to verify [N7] and an unpaid balance (assumed).
+/// Reasons that ask for a step on the account's site, which no key fixes: a free tier to verify [N7] and an unpaid
+/// balance (assumed).
 const PAY: &[&str] = &["FREE_TIER_VERIFICATION_REQUIRED", "BILLING_DISABLED"];
 /// The reason of a key that is not valid, which [N7] gives only as a 400 (assumed).
 const BAD_KEY: &[&str] = &["API_KEY_INVALID"];
@@ -62,7 +63,7 @@ enum Says {
 const TABLE: &[Row<Says>] = &[
     // No redirect is followed, so the key and the sound reach one address only.
     row(300..=399, Says::Any, Then::Fault(NetFault::Strange)),
-    row(400..=499, Says::Reason(PAY), Then::Fault(NetFault::Credit)),
+    row(400..=499, Says::Reason(PAY), Then::Fault(NetFault::Account)),
     row(400..=499, Says::Reason(BAD_KEY), Then::Fault(NetFault::Key)),
     row(
         400..=499,

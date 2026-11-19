@@ -3,7 +3,10 @@
 //! only its language and fixed fields, and Gemini's only its code.
 
 use super::*;
+use crate::ShapeCode;
+use crate::code::Code;
 use IpcError::BadField;
+use net_wire::URL;
 
 /// Real model ids from the services' own pages.
 const IDS: [&str; 7] = [
@@ -145,17 +148,17 @@ fn a_shape_code_no_shape_has_is_refused_when_read_the_dropped_2_too() {
 
 #[test]
 fn geminis_shape_is_its_code_alone_and_refuses_another_shapes_layout() {
-    assert_eq!(
-        shape_bytes(&NetShape::Gemini).len(),
-        1,
-        "it carries no field"
-    );
     let test = |shape| NetAsk::Test {
         id: 1,
         call: call(shape, NetHeader::Named(Cow::Borrowed("x-goog-api-key"))),
     };
+    let sent = net_ask_bytes(&test(NetShape::Gemini));
+    assert_eq!(sent[HEADER_LEN], ShapeCode::Gemini.code());
+    // The call's address follows the code at once, after only its own length, so the shape carries no field.
+    let url = sent.windows(GROQ.len()).position(|w| w == GROQ.as_bytes());
+    assert_eq!(url, Some(HEADER_LEN + 1 + URL.width));
     round_trips(test(NetShape::Gemini));
-    let code = shape_bytes(&NetShape::Gemini)[0];
+    let code = ShapeCode::Gemini.code();
     for other in [groq_form(), eleven()] {
         let layout = patch(net_ask_bytes(&test(other.clone())), 0, &[code]);
         assert!(read_net_ask(&mut &layout[..]).is_err(), "{other:?}");

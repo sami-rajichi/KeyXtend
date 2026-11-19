@@ -27,9 +27,10 @@ const SAMPLE: [u8; 2] = [0x7f, 0x3e];
 /// `SAMPLE` as a plain `Debug` prints it.
 const SAMPLE_SHOWN: &str = "127, 62";
 /// Every fault a run may tell, as `Range` is only `send`'s own refusal.
-const FAULTS: [CloudFault; 13] = [
+const FAULTS: [CloudFault; 14] = [
     CloudFault::Key,
     CloudFault::Credit,
+    CloudFault::Account,
     CloudFault::Allowance { renews_in: None },
     CloudFault::Allowance {
         renews_in: Some(Duration::from_secs(3_600)),

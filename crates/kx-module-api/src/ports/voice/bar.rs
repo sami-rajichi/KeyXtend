@@ -177,6 +177,8 @@ pub enum CloudWhy {
     Key,
     /// The account has no credit left.
     Credit,
+    /// The service asks for a step on its site first, such as a verification or a payment method.
+    Account,
     /// The free allowance is used up.
     Allowance {
         /// How long until it renews, when the service tells.

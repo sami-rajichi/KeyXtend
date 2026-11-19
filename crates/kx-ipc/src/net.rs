@@ -63,7 +63,8 @@ pub struct NetForm<'a> {
     pub list: bool,
     /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
     pub fixed: Vec<NetField<'a>>,
-    /// A 403 asks the account to pay, as a missing payment method or a spending cap does: no credit, not a bad key.
+    /// A 403 asks the account to pay, as a missing payment method or a spending cap does: the account's step, not a
+    /// bad key.
     pub paywall: bool,
     /// The error code a reply gives where the service is not offered in the user's country or region (`rules::token`),
     /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
@@ -142,6 +143,8 @@ pub enum NetFault {
     Key,
     /// The account has no credit left.
     Credit,
+    /// The service asks for a step on its site first, such as a verification or a payment method.
+    Account,
     /// The free allowance is used up.
     Allowance {
         /// Seconds until it renews, within `NET_RENEW_S`, when the service tells.
@@ -175,6 +178,7 @@ impl NetFault {
         match code {
             FaultCode::Key => Self::Key,
             FaultCode::Credit => Self::Credit,
+            FaultCode::Account => Self::Account,
             FaultCode::Allowance => Self::Allowance { renews_s },
             FaultCode::Rate => Self::Rate,
             FaultCode::TooBig => Self::TooBig,
@@ -194,6 +198,7 @@ impl NetFault {
         match self {
             Self::Key => FaultCode::Key,
             Self::Credit => FaultCode::Credit,
+            Self::Account => FaultCode::Account,
             Self::Allowance { .. } => FaultCode::Allowance,
             Self::Rate => FaultCode::Rate,
             Self::TooBig => FaultCode::TooBig,

@@ -143,6 +143,7 @@ pub(super) fn fault(fault: NetFault) -> CloudFault {
     match fault {
         NetFault::Key => CloudFault::Key,
         NetFault::Credit => CloudFault::Credit,
+        NetFault::Account => CloudFault::Account,
         NetFault::Allowance { renews_s } => CloudFault::Allowance {
             renews_in: renews_s.map(|s| Duration::from_secs(s.into())),
         },

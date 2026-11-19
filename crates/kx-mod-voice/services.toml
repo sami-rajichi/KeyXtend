@@ -17,9 +17,9 @@
 #   which the ui names in the user's language.
 # - `shape`: "form", "eleven" or "gemini"; `form`: an upload form's or `ElevenLabs`' language field, whether it goes as a
 #   list (`[]`), and its fixed fields; `keep`: a field sent while the keep-nothing switch is on, which gives the row that
-#   switch; `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells no
-#   credit; `region`: the error code by which a form's reply says the service is not offered in the user's country or
-#   region.
+#   switch; `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells the
+#   account's step; `region`: the error code by which a form's reply says the service is not offered in the user's
+#   country or region.
 # - `host`: the only host its requests reach; for a typed address, the `.` domain it must be under, or none for
 #   Custom, which takes any HTTPS host name.
 # - `address`: where the pieces go, or "typed"; `test`: the key's test address, a path under a typed host, or none.

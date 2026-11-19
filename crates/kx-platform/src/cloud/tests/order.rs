@@ -80,6 +80,7 @@ fn each_fault_of_the_job_is_the_ports_and_range_names_the_shape() {
     let pairs = [
         (NetFault::Key, CloudFault::Key),
         (NetFault::Credit, CloudFault::Credit),
+        (NetFault::Account, CloudFault::Account),
         (
             NetFault::Allowance { renews_s },
             CloudFault::Allowance {

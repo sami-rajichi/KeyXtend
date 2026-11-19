@@ -1,13 +1,13 @@
 //! Gemini's answers [N1][N5][N7]: its transcript from `output_text`, else from its steps' content in order; an empty
 //! one is the run's to judge; a bad key by its exact reason and a leaked one by its exact status; a free tier asking to
-//! verify and an unpaid balance by their reasons; each 429 a wait; a 503 retried as any 5xx; a refused location and a
-//! refused language; anything else strange, a plain 400 or another page's 403 too; and its key test on the models list
-//! [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the reasons beside
+//! verify and an unpaid balance as the account's step, by their reasons; each 429 a wait; a 503 retried as any 5xx; a
+//! refused location and a refused language; anything else strange, a plain 400 or another page's 403 too; and its key
+//! test on the models list [N8]. The fixtures under `replies/gemini/` are made up in Google's error format with no key; the reasons beside
 //! [N7]'s are assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_with, tested_with};
 use super::*;
-use kx_ipc::NetFault::{Credit, Key, Language, Network, Region, Strange};
+use kx_ipc::NetFault::{Account, Key, Language, Network, Region, Strange};
 use proptest::prelude::*;
 
 /// What the text fixtures say.
@@ -37,7 +37,7 @@ const QUOTA: &[u8] = include_bytes!("../replies/gemini/quota.json");
 const OVERLOADED: &[u8] = include_bytes!("../replies/gemini/overloaded.json");
 /// The models list the key test reads [N8].
 const MODELS_LIST: &[u8] = include_bytes!("../replies/gemini/models.json");
-/// The exact reasons [N7] gives, and the one assumed, for no credit.
+/// The exact reasons [N7] gives, and the one assumed, for a step on the account's site.
 const PAY: [&str; 2] = ["FREE_TIER_VERIFICATION_REQUIRED", "BILLING_DISABLED"];
 
 /// What Gemini's shape reads in a piece's reply of `status` with the headers `extra` and `body`.
@@ -102,8 +102,8 @@ fn each_error_status_is_its_fault_as_its_error_pages_say() {
             br#"{"error":{"status":"PERMISSION_DENIED_SOON"}}"#,
             Got::Fault(Strange),
         ),
-        (403, VERIFY, Got::Fault(Credit)),
-        (403, BILLING, Got::Fault(Credit)),
+        (403, VERIFY, Got::Fault(Account)),
+        (403, BILLING, Got::Fault(Account)),
         (400, LOCATION, Got::Fault(Region)),
         (400, LANGUAGE_CODE, Got::Fault(Language)),
         (BUSY, QUOTA, Got::Wait(None)),
@@ -148,7 +148,7 @@ fn a_key_test_works_on_the_models_list_and_fails_as_a_piece_does() {
     assert_eq!(tested(OK, MODELS_LIST), Got::Text(String::new()));
     assert_eq!(tested(OK, HOTSPOT), Got::Fault(Strange));
     assert_eq!(tested(400, KEY_BAD), Got::Fault(Key));
-    assert_eq!(tested(403, VERIFY), Got::Fault(Credit));
+    assert_eq!(tested(403, VERIFY), Got::Fault(Account));
     assert_eq!(tested(BUSY, QUOTA), Got::Wait(None));
     assert_eq!(tested(503, OVERLOADED), Got::Fault(Network));
 }
@@ -182,7 +182,7 @@ proptest! {
     }
 
     #[test]
-    fn credit_and_a_400_key_are_told_only_by_their_exact_reasons(
+    fn the_accounts_step_and_a_400_key_are_told_only_by_their_exact_reasons(
         reason in prop_oneof![
             Just("FREE_TIER_VERIFICATION_REQUIRED".to_owned()),
             Just("BILLING_DISABLED".to_owned()),
@@ -197,7 +197,7 @@ proptest! {
         let key = reason.eq_ignore_ascii_case("API_KEY_INVALID");
         // A 403 is PERMISSION_DENIED, the key's, unless its reason asks for payment; a 400 is the key's only by reason.
         let want = match status {
-            _ if pay => Got::Fault(Credit),
+            _ if pay => Got::Fault(Account),
             _ if key => Got::Fault(Key),
             403 => Got::Fault(Key),
             BUSY => Got::Wait(None),

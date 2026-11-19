@@ -1,11 +1,11 @@
-//! Each row's answers read as its own pages say: its text, a bad key, no credit, a 403 behind a paywall or not, a
-//! country refused by its row's code, a language refused in an `error` or in a 422's `detail[]`, too big, too many
-//! requests and a service down. The fixtures under `replies/<service>/` copy each page's body with made-up ids and
-//! no key; a body the pages do not show is marked as assumed, for the live check.
+//! Each row's answers read as its own pages say: its text, a bad key, no credit, a 403 as the account's step behind a
+//! paywall or else the key, a country refused by its row's code, a language refused in an `error` or in a 422's
+//! `detail[]`, too big, too many requests and a service down. The fixtures under `replies/<service>/` copy each page's
+//! body with made-up ids and no key; a body the pages do not show is marked as assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_by, tested_by};
 use super::*;
-use kx_ipc::NetFault::{Credit, Key, Language, Network, Region, Strange, TooBig};
+use kx_ipc::NetFault::{Account, Credit, Key, Language, Network, Region, Strange, TooBig};
 
 /// The text each case of `CASES` reads, in its order.
 pub(super) const TEXTS: [&[u8]; 9] = [
@@ -135,7 +135,7 @@ fn togethers_403_is_its_paywall_never_the_key() {
             (OK, &[], TOGETHER_TEXT, said()),
             (401, &[], TOGETHER_KEY, Got::Fault(Key)),
             (402, &[], TOGETHER_CREDIT, Got::Fault(Credit)),
-            (403, &[], TOGETHER_PAYWALL, Got::Fault(Credit)),
+            (403, &[], TOGETHER_PAYWALL, Got::Fault(Account)),
             (413, &[], TOGETHER_BIG, Got::Fault(TooBig)),
             (BUSY, &[], TOGETHER_CREDIT, Got::Wait(None)),
             (503, &[], DOWN, Got::Fault(Network)),
@@ -171,7 +171,7 @@ fn deepinfras_422_names_the_language_in_its_detail_list() {
 }
 
 #[test]
-fn openrouters_402_and_its_capped_key_are_credit() {
+fn openrouters_402_is_credit_and_its_capped_key_the_accounts_step() {
     for row in [ROUTER, ROUTER_OPEN] {
         reads(
             row,
@@ -179,7 +179,7 @@ fn openrouters_402_and_its_capped_key_are_credit() {
                 (OK, &[], ROUTER_TEXT, said()),
                 (401, &[], ROUTER_KEY, Got::Fault(Key)),
                 (402, &[], ROUTER_CREDIT, Got::Fault(Credit)),
-                (403, &[], ROUTER_BUDGET, Got::Fault(Credit)),
+                (403, &[], ROUTER_BUDGET, Got::Fault(Account)),
                 (
                     BUSY,
                     &[("retry-after", "4")],
@@ -201,10 +201,10 @@ fn openrouters_402_and_its_capped_key_are_credit() {
 }
 
 #[test]
-fn the_same_403_is_the_key_without_a_paywall_and_credit_behind_one() {
+fn the_same_403_is_the_key_without_a_paywall_and_the_accounts_step_behind_one() {
     for body in [KEY_BAD, TOGETHER_PAYWALL, ROUTER_BUDGET, b""] {
         assert_eq!(read_by(&walled(false), 403, &[], body), Got::Fault(Key));
-        assert_eq!(read_by(&walled(true), 403, &[], body), Got::Fault(Credit));
+        assert_eq!(read_by(&walled(true), 403, &[], body), Got::Fault(Account));
     }
 }
 
@@ -214,7 +214,7 @@ fn a_region_refusal_reads_by_the_rows_exact_code_and_the_same_403_without_it_as_
     assert_eq!(read(OPENAI, OPENAI_COUNTRY), Got::Fault(Region));
     assert_eq!(read(OPENAI, OPENAI_KEY), Got::Fault(Key));
     assert_eq!(read(GROQ, OPENAI_COUNTRY), Got::Fault(Key), "no code named");
-    assert_eq!(read(TOGETHER, OPENAI_COUNTRY), Got::Fault(Credit));
+    assert_eq!(read(TOGETHER, OPENAI_COUNTRY), Got::Fault(Account));
     let near = Row {
         region: Some("unsupported_country"),
         ..OPENAI

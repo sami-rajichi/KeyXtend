@@ -108,6 +108,7 @@ pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
         CloudFault::Network | CloudFault::Timeout => CloudWhy::Net,
         CloudFault::Key => CloudWhy::Key,
         CloudFault::Credit => CloudWhy::Credit,
+        CloudFault::Account => CloudWhy::Account,
         CloudFault::Allowance { renews_in } => CloudWhy::Allowance { renews_in },
         CloudFault::Rate => CloudWhy::Rate,
         CloudFault::TooBig => CloudWhy::TooBig,

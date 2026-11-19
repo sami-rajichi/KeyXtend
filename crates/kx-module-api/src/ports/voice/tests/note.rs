@@ -51,6 +51,7 @@ fn every_reason_and_local_state_is_distinct() {
         CloudWhy::Net,
         CloudWhy::Key,
         CloudWhy::Credit,
+        CloudWhy::Account,
         CloudWhy::Allowance { renews_in: None },
         CloudWhy::Rate,
         CloudWhy::TooBig,

@@ -1,5 +1,5 @@
 //! Each net note refusal, writing and reading: a text over its cap, past the last piece or not UTF-8, a fault code,
-//! flag or renewal out of range, and bytes a fault does not hold.
+//! flag or renewal out of range, bytes a fault does not hold, and the account's step as its own code.
 
 use super::*;
 use crate::code::Code;
@@ -79,6 +79,19 @@ fn bytes_a_fault_does_not_hold_are_inconsistent() {
     refused_fault(&told, Inconsistent);
     let done = frame(Kind::NetDone, 1, &[0]);
     assert_eq!(read_net_note(&mut &done[..]), Err(TooLong));
+}
+
+#[test]
+fn a_step_on_the_services_site_is_its_own_fault_after_the_region_and_reads_back_whole() {
+    assert_eq!(FaultCode::Account.code(), FaultCode::Region.code() + 1);
+    assert_eq!(NetFault::Account.code(), FaultCode::Account);
+    let note = NetNote::Fault {
+        id: 1,
+        fault: NetFault::Account,
+    };
+    let bytes = net_note_bytes(&note);
+    assert_eq!(NetNote::read(&mut &bytes[..]), Ok(note));
+    refused_fault(&[FaultCode::Account.code(), 0], Inconsistent);
 }
 
 #[test]

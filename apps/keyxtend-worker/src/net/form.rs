@@ -1,7 +1,7 @@
 //! The `OpenAI`-style upload form (ADR-0047 decision 5), moved from the spike's `cloud.rs`: the model, the language,
 //! the row's fixed fields, `response_format=json` and the piece as a WAV file, with the key in its header only. A reply
 //! is `{"text": …}`; anything else is read through one status table from Groq's error page, where a row whose form
-//! names a 403 its paywall reads it as no credit, and one that names a region code reads that refusal by it.
+//! names a 403 its paywall reads it as the account's step, and one that names a region code reads that refusal by it.
 
 #[cfg(test)]
 pub use super::multipart::escape;
@@ -66,8 +66,8 @@ const TABLE: &[Row<Says>] = &[
     row(401..=401, Says::Any, Then::Fault(NetFault::Key)),
     // OpenAI's country refusal is a 403 with its own code, which no key fixes.
     row(400..=499, Says::Region, Then::Fault(NetFault::Region)),
-    // Together's missing payment method and OpenRouter's spending cap are a 403, which no key fixes.
-    row(403..=403, Says::Paywall, Then::Fault(NetFault::Credit)),
+    // Together's missing payment method and OpenRouter's spending cap are a 403: a step on the account's site.
+    row(403..=403, Says::Paywall, Then::Fault(NetFault::Account)),
     row(403..=403, Says::Any, Then::Fault(NetFault::Key)),
     row(402..=402, Says::Any, Then::Fault(NetFault::Credit)),
     row(400..=499, Says::Code(CREDIT), Then::Fault(NetFault::Credit)),

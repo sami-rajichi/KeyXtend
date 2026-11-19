@@ -243,6 +243,7 @@ fn each_fault_has_its_own_line_and_none_holds_a_secret() {
         CloudFault::Range("key"),
         CloudFault::Key,
         CloudFault::Credit,
+        CloudFault::Account,
         CloudFault::Allowance { renews_in: None },
         CloudFault::Rate,
         CloudFault::TooBig,

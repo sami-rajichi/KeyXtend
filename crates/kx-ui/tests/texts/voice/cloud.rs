@@ -1,5 +1,5 @@
 //! Voice typing's cloud texts in each language (ADR-0047): every cloud id the hub words has its text, the owner's
-//! main words, each address fault and cloud reason its own line, and the region note. Money is in `money`, a card's
+//! main words, each address fault and cloud reason its own line, and the region and account notes. Money is in `money`, a card's
 //! fact with a service's own words in `own`, and the reworded lines in `approved`.
 
 use crate::{all, lang};
@@ -31,7 +31,8 @@ fn after(why: &CloudWhy) -> Option<CloudWhy> {
     Some(match why {
         CloudWhy::Net => CloudWhy::Key,
         CloudWhy::Key => CloudWhy::Credit,
-        CloudWhy::Credit => CloudWhy::Region,
+        CloudWhy::Credit => CloudWhy::Account,
+        CloudWhy::Account => CloudWhy::Region,
         CloudWhy::Region => CloudWhy::Allowance { renews_in: None },
         CloudWhy::Allowance { .. } => CloudWhy::Rate,
         CloudWhy::Rate => CloudWhy::TooBig,
@@ -258,22 +259,32 @@ fn each_cloud_reason_has_its_own_line_and_names_its_language_or_renewal() {
     assert!(ar.ends_with("ساعتان."), "{ar}");
 }
 
-/// The region note in each language: the service is not offered in the user's country or region.
-const REGION: [(&str, &str); 3] = [
+/// The region and account notes in English, French and Arabic: the service is not offered in the user's country or
+/// region, or it asks for a step on its site first.
+const NOTES: [(CloudWhy, [&str; 3]); 2] = [
     (
-        "en",
-        "The service is not offered in your country or region.",
+        CloudWhy::Region,
+        [
+            "The service is not offered in your country or region.",
+            "Le service n’est pas proposé dans votre pays ou votre région.",
+            "الخدمة غير متاحة في بلدك أو منطقتك.",
+        ],
     ),
     (
-        "fr",
-        "Le service n’est pas proposé dans votre pays ou votre région.",
+        CloudWhy::Account,
+        [
+            "The service asks for a step on its site, such as a verification or a payment method.",
+            "Le service demande une étape sur son site, comme une vérification ou un moyen de paiement.",
+            "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع.",
+        ],
     ),
-    ("ar", "الخدمة غير متاحة في بلدك أو منطقتك."),
 ];
 
 #[test]
-fn the_region_note_says_the_service_is_not_offered_in_the_users_country_or_region() {
-    for (tag, want) in REGION {
-        assert_eq!(lang(tag).voice_cloud(&CloudWhy::Region), want, "{tag}");
+fn the_region_and_account_notes_say_what_the_service_refused_and_why() {
+    for (why, words) in NOTES {
+        for (tag, want) in ["en", "fr", "ar"].into_iter().zip(words) {
+            assert_eq!(lang(tag).voice_cloud(&why), want, "{tag} {why:?}");
+        }
     }
 }
