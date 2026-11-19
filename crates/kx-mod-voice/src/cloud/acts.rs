@@ -1,6 +1,6 @@
 //! The acts that change a language's cloud pick or a service's entry (ADR-0047 decisions 9 and 12): the `cloud` switch,
-//! a card's confirmation, a service off or its newer terms declined, a pick, and the typed lines. Only `pick` moves a
-//! language to a service.
+//! a card's confirmation, a service off or its newer terms declined, a pick, the typed lines, and the card's warning
+//! seen. Only `pick` moves a language to a service.
 
 use kx_module_api::ports::{CloudAsk, Date};
 
@@ -102,6 +102,16 @@ impl<'a> Cloud<'a> {
             return false;
         };
         entry.keep = on;
+        true
+    }
+
+    /// Notes that service `id`'s card warning showed at its row's terms number, so the next dictation shows none until
+    /// newer terms are confirmed. False for a service not on.
+    pub fn warned(&self, s: &mut VoiceSettings, id: &str) -> bool {
+        let Some((row, entry)) = self.entry_mut(s, id) else {
+            return false;
+        };
+        entry.warned = row.terms;
         true
     }
 

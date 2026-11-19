@@ -8,7 +8,7 @@ use super::*;
 use crate::actor::offer::piece_s;
 
 /// `ElevenLabs` picked for English with Scribe v3, switched on with its terms confirmed, and its key set.
-fn eleven(fake: &Fakes, host: &mut FakeHost) {
+pub(super) fn eleven(fake: &Fakes, host: &mut FakeHost) {
     host.put("cloud", true.into());
     host.put(
         "services",

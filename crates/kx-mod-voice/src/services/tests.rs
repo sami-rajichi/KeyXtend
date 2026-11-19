@@ -18,7 +18,7 @@ mod split;
 /// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.
 pub(crate) const TEXT: &str = include_str!("../../services.toml");
 pub(crate) const OWN: &str = include_str!("../../services-own.toml");
-const LANGS: &str = include_str!("../../langs.toml");
+pub(crate) const LANGS: &str = include_str!("../../langs.toml");
 
 /// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
 pub(crate) const OFFERED: [&str; 5] = ["groq", "lemonfox", "custom", "openrouter", "elevenlabs"];

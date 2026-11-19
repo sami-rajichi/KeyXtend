@@ -92,6 +92,7 @@ impl Flow {
             elapsed_ms: u32::try_from(elapsed).unwrap_or(u32::MAX),
             nothing: false,
             wave_ms: self.settings.wave_ms,
+            warn: None,
         }))
     }
 }

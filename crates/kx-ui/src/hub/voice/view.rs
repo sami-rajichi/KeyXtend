@@ -1,5 +1,6 @@
 //! The bar as QML reads it (design "The bar"): each state's words in the keyboard's language, its buttons in one order
-//! in every language with the dimmed ones in place, a text with its own direction or dots, and a note with its action.
+//! in every language with the dimmed ones in place, a text with its own direction or dots, a note with its action, and
+//! a service's card warning while the first dictation to it listens.
 //! The gear shows in every state but `hidden`, before the last button.
 
 use super::cloud::{self, CloudMark};
@@ -10,8 +11,8 @@ use crate::hub::wiped;
 use crate::i18n::clean;
 use crate::i18n::keys::vars::{MINUTES, SECONDS, SIZE};
 use crate::i18n::keys::{
-    VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK, VOICE_NOTHING,
-    VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
+    FACT_WARN, VOICE_COPIED, VOICE_DOWNLOAD_SIZE, VOICE_GEAR, VOICE_LISTENING, VOICE_MASK,
+    VOICE_NOTHING, VOICE_TIMER, VOICE_TITLE, VOICE_TRANSCRIBING, WINDOW_VOICE,
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
@@ -58,6 +59,7 @@ enum Bar {
         elapsed_ms: u32,
         wave_ms: u16,
         hint: Option<String>,
+        warn: Option<String>,
         buttons: Vec<Button>,
     },
     Transcribing {
@@ -128,7 +130,7 @@ fn bar(bar: &VoiceBar, t: &I18n) -> Bar {
     }
 }
 
-/// The Listening state, with the hint while it hears nothing yet.
+/// The Listening state, with the hint while it hears nothing yet and the service's card warning on its first dictation.
 fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
     Bar::Listening {
         lang: Lang::of(t, &l.lang),
@@ -136,6 +138,7 @@ fn listening(l: &Listening, t: &I18n, buttons: Vec<Button>) -> Bar {
         elapsed_ms: l.elapsed_ms,
         wave_ms: l.wave_ms,
         hint: l.nothing.then(|| t.text(VOICE_NOTHING)),
+        warn: l.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w).text),
         buttons,
     }
 }

@@ -1,6 +1,7 @@
 // The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service takes
 // the voice, which readers hear as a sentence, and a cloud note's Try again, Use the local model dimmed unless one is
-// ready, and Download when none is (edge 20), in English, French and Arabic.
+// ready, and Download when none is (edge 20); and the card's warning in full under the row on the first dictation to its
+// service, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -77,6 +78,31 @@ Item {
             const local = make("listening", d.t);
             compare(heard(local, mark.said).length, 0, "a local dictation shows no cloud mark");
             bar.visible = local.visible = false;
+        }
+
+        function test_the_first_dictation_to_a_service_that_warns_shows_its_warning_in_full_under_the_row_data() {
+            return langs_data();
+        }
+        function test_the_first_dictation_to_a_service_that_warns_shows_its_warning_in_full_under_the_row(d) {
+            const bar = make("cloudWarned", d.t);
+            const text = bar.view.bar.warn;
+            verify(!!text, "the card's warning");
+            const line = Board.all(bar.contentItem, o => o.visible && o.text === text && o.font !== undefined);
+            compare(line.length, 1, "one line holds it");
+            verify(Qt.colorEqual(line[0].color, N.lk.palette.warn_ink), "in the warning tone");
+            verify(!line[0].truncated, "never cut");
+            const at = line[0].mapToItem(bar.body, 0, 0);
+            verify(at.x >= 0 && at.x + line[0].width <= bar.body.width + 0.5, "inside the bar's width");
+            verify(at.y >= 0 && at.y + line[0].height <= bar.body.height + 0.5, "inside the bar's height");
+            for (const b of buttons(bar)) {
+                const top = b.mapToItem(bar.body, 0, 0);
+                verify(top.y >= 0 && top.y + b.height <= at.y + 0.5, b.Accessible.id + " sits above it");
+            }
+            compare(bar.width, Math.ceil(N.lk.shape.voice.bar_px[1]), "the bar takes its wide width");
+            const plain = make("cloudListening", d.t);
+            compare(Board.all(plain.contentItem, o => o.visible && o.text === text).length, 0, "no warning");
+            verify(plain.height < bar.height, "the warning adds its lines");
+            bar.visible = plain.visible = false;
         }
 
         function test_a_cloud_note_offers_the_local_model_dimmed_with_download_when_none_is_ready_data() {

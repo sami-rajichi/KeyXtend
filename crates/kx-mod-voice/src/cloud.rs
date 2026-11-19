@@ -52,6 +52,8 @@ pub struct Choice<'a> {
     pub ask: bool,
     /// Why its model cannot be used now; the flow then says so at Start and sends nothing.
     pub unavailable: Option<Unavailable>,
+    /// The card's warning, until a dictation at the row's terms number showed it; `None` for none or once shown.
+    pub warn: Option<Fact>,
 }
 
 /// The rules over a services table, in a run that is hidden or not.
@@ -176,12 +178,14 @@ impl<'a> Cloud<'a> {
         };
         let unavailable = self.unavailable(s, service, model);
         let ask = entry.terms < service.terms;
+        let warn = (service.facts.warn.clone()).filter(|_| entry.warned != service.terms);
         Some(Choice {
             service,
             model,
             code,
             ask,
             unavailable,
+            warn,
         })
     }
 }

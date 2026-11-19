@@ -40,7 +40,7 @@ impl Flow {
         let listening = self.phase() == Phase::Listening;
         match stage {
             SpeechStage::Loading => {}
-            SpeechStage::Open => self.opened(),
+            SpeechStage::Open => self.opened(out),
             SpeechStage::Shut => self.lit = false,
             SpeechStage::Limit | SpeechStage::Silence => {
                 if let Some(take) = self.take.as_mut() {
@@ -55,14 +55,18 @@ impl Flow {
     }
 
     /// The microphone opened: a preparing dictation shows its Listening bar, whose time and hint start now, and the key
-    /// turns red.
-    fn opened(&mut self) {
+    /// turns red. A service's warning on it is noted seen, as it shows from now on.
+    fn opened(&mut self, out: &mut Vec<Out>) {
         if self.phase() == Phase::Preparing {
             let since = self.now();
             self.state = super::State::Listening {
                 since,
                 nothing: false,
             };
+            let net = self.take.as_ref().and_then(|t| t.engine.net());
+            if let Some(net) = net.filter(|n| n.warn.is_some()) {
+                out.push(Out::Warned(net.service.clone()));
+            }
         }
         self.lit = self.phase() == Phase::Listening;
     }

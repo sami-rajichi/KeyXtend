@@ -246,14 +246,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -389,14 +389,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -532,14 +532,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -679,14 +679,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -822,14 +822,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -969,14 +969,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1112,14 +1112,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1255,14 +1255,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1402,14 +1402,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1538,14 +1538,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1681,14 +1681,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1838,14 +1838,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -1995,14 +1995,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2138,14 +2138,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2281,14 +2281,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2424,14 +2424,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2567,14 +2567,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2710,14 +2710,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "اقرأ هذا قبل التفعيل",
@@ -2840,14 +2840,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: "
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Settings → Data Controls"
           }
         },
         "sub": "فُعِّلت في 10/11/2026",
@@ -7647,14 +7647,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -7790,14 +7790,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -7933,14 +7933,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8080,14 +8080,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8223,14 +8223,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8370,14 +8370,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8513,14 +8513,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8656,14 +8656,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8803,14 +8803,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -8939,14 +8939,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9082,14 +9082,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9239,14 +9239,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9396,14 +9396,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9539,14 +9539,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9682,14 +9682,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9825,14 +9825,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -9968,14 +9968,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -10111,14 +10111,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Read this before you switch it on",
@@ -10241,14 +10241,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: "
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Trains its models on your voice by default. Before you confirm, turn off this switch in your account: Settings → Data Controls"
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Settings → Data Controls"
           }
         },
         "sub": "Switched on 10/11/2026",
@@ -15048,14 +15048,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15191,14 +15191,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15334,14 +15334,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15481,14 +15481,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15624,14 +15624,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15771,14 +15771,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -15914,14 +15914,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16057,14 +16057,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16204,14 +16204,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16340,14 +16340,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16483,14 +16483,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16640,14 +16640,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Profile menu → Terms and privacy → Data use → Improve the models for everyone"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16797,14 +16797,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -16940,14 +16940,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -17083,14 +17083,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -17226,14 +17226,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -17369,14 +17369,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -17512,14 +17512,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "À lire avant d’activer",
@@ -17642,14 +17642,14 @@ var views = {
             "parts": [
               {
                 "own": false,
-                "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : "
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : "
               },
               {
                 "own": true,
                 "text": "Settings → Data Controls"
               }
             ],
-            "text": "Entraîne ses modèles sur votre voix par défaut. Avant de confirmer, désactivez ce réglage dans votre compte : Settings → Data Controls"
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Settings → Data Controls"
           }
         },
         "sub": "Activé le 10/11/2026",

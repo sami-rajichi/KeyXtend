@@ -54,6 +54,7 @@ fn chips(layout: &str, setting: &str, lang: &VoiceLang) -> [Value; 2] {
         elapsed_ms: 0,
         nothing: false,
         wave_ms: 0,
+        warn: None,
     });
     heard.view(page(1, bar, None));
     let on_bar = json(&rig)["bar"]["lang"]["name"].clone();

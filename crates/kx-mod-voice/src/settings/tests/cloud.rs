@@ -1,5 +1,6 @@
 //! The cloud settings (ADR-0047): off to start with no service on, the wait and tries in the frames' own ranges, the
-//! facts' age in its own, and an entry with its day, terms number, typed lines and keep-nothing switch.
+//! facts' age in its own, and an entry with its day, terms number, typed lines, keep-nothing switch and the terms
+//! number its warning was seen at.
 
 use super::*;
 use kx_module_api::ports::{CloudAsk, Date};
@@ -116,4 +117,19 @@ fn the_services_value_written_back_holds_a_plain_date() {
     );
     let back = s.with("services", value).unwrap();
     assert_eq!(back.services, s.services);
+}
+
+#[test]
+fn the_warning_seen_reads_back_and_is_left_out_until_shown() {
+    let day = Date::new(2026, 11, 17).unwrap();
+    let mut s = VoiceSettings::from_defaults().unwrap();
+    s.services
+        .insert("elevenlabs".into(), ServiceOn::new(day, 1));
+    let value = s.services_value().unwrap();
+    assert!(value["elevenlabs"].get("warned").is_none(), "never shown");
+    s.services.get_mut("elevenlabs").unwrap().warned = 1;
+    let value = s.services_value().unwrap();
+    assert_eq!(value["elevenlabs"]["warned"].as_integer(), Some(1));
+    let back = s.with("services", value).unwrap();
+    assert_eq!(back.services["elevenlabs"].warned, 1);
 }

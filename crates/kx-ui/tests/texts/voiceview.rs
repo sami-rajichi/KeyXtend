@@ -1,12 +1,13 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
 //! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, and the cloud
-//! mark with a cloud note's buttons; and the click kinds QML sends to `Voice.act`, by the name QML holds each under
-//! (VoiceNames.qml).
+//! mark with a cloud note's buttons and a card's warning; and the click kinds QML sends to `Voice.act`, by the name
+//! QML holds each under (VoiceNames.qml).
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
+use kx_mod_voice::services::table;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, ServiceName,
-    VoiceBar, VoiceLang, VoicePage, VoiceText, VoiceView,
+    BarButton, BarHint, BarNote, BarPlace, BarText, CloudWhy, Fact, Listening, LocalUse,
+    ServiceName, VoiceBar, VoiceLang, VoicePage, VoiceText, VoiceView,
 };
 use kx_module_api::{Bus, Redacted, Zeroizing};
 use kx_test_support::host::FakeCore;
@@ -85,14 +86,21 @@ fn cloud(why: CloudWhy, local: LocalUse, again: bool) -> VoiceBar {
     note(BarHint::Cloud { why, local }, act, false)
 }
 
-/// The Listening state in `lang`, with nothing heard yet while `nothing`.
-fn listening(lang: &VoiceLang, nothing: bool) -> VoiceBar {
+/// The Listening state in `lang`, with nothing heard yet while `nothing`, and a service's card warning if any.
+fn listening(lang: &VoiceLang, nothing: bool, warn: Option<Fact>) -> VoiceBar {
     VoiceBar::Listening(Listening {
         lang: lang.clone(),
         elapsed_ms: ELAPSED_MS,
         nothing,
         wave_ms: WAVE_MS,
+        warn,
     })
+}
+
+/// The first card warning of the voice module's offered services, as the first dictation to that service shows it.
+fn warning() -> Option<Fact> {
+    let services = table().expect("the services table reads");
+    services.offered().find_map(|s| s.facts.warn.clone())
 }
 
 /// Every bar the tests draw in language `tag`, by name.
@@ -105,8 +113,8 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
     };
     vec![
         ("hidden", VoiceBar::Hidden),
-        ("listening", listening(&lang, false)),
-        ("nothing", listening(&lang, true)),
+        ("listening", listening(&lang, false, None)),
+        ("nothing", listening(&lang, true, None)),
         ("transcribing", VoiceBar::Transcribing),
         ("text", text(said, &lang, None, true)),
         ("long", text(&repeated, &lang, None, true)),
@@ -136,10 +144,11 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
 }
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 4] {
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 5] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
-        ("cloudListening", listening(lang, false)),
+        ("cloudListening", listening(lang, false, None)),
+        ("cloudWarned", listening(lang, false, warning())),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
         (

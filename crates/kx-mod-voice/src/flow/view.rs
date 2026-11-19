@@ -140,7 +140,7 @@ impl Flow {
         shows.then(|| net.name.clone())
     }
 
-    /// The Listening bar, with the time listened so far.
+    /// The Listening bar, with the time listened so far and the service's warning on its first dictation.
     fn listening(&self, since: kx_module_api::Mono, nothing: bool) -> VoiceBar {
         let Some(take) = &self.take else {
             return VoiceBar::Hidden;
@@ -151,6 +151,7 @@ impl Flow {
             elapsed_ms: u32::try_from(elapsed).unwrap_or(u32::MAX),
             nothing,
             wave_ms: self.settings.wave_ms,
+            warn: take.engine.net().and_then(|n| n.warn.clone()),
         })
     }
 
@@ -169,7 +170,7 @@ impl Flow {
 fn same(a: &VoicePage, b: &VoicePage) -> bool {
     let bars = match (&a.bar, &b.bar) {
         (VoiceBar::Listening(x), VoiceBar::Listening(y)) => {
-            x.lang == y.lang && x.nothing == y.nothing && x.wave_ms == y.wave_ms
+            x.lang == y.lang && x.nothing == y.nothing && x.wave_ms == y.wave_ms && x.warn == y.warn
         }
         (x, y) => x == y,
     };

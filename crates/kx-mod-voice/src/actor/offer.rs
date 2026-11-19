@@ -47,6 +47,7 @@ impl Supply for Offer<'_> {
             key: has.unwrap_or(false),
             terms: choice.ask,
             unavailable: choice.unavailable,
+            warn: choice.warn,
         })
     }
 }

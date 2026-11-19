@@ -140,7 +140,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -178,6 +178,7 @@ var views = {
           "rtl": true
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
@@ -246,7 +247,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -289,7 +290,55 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudWarned": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "إيقاف",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "state": "listening",
+        "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "waveMs": 300,
+        "word": "جارٍ الاستماع…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -469,6 +518,7 @@ var views = {
           "rtl": true
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
@@ -603,6 +653,7 @@ var views = {
           "rtl": true
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
@@ -1000,7 +1051,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1038,6 +1089,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Listening…"
       },
@@ -1106,7 +1158,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1149,7 +1201,55 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudWarned": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Stop",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "state": "listening",
+        "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "waveMs": 300,
+        "word": "Listening…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -1329,6 +1429,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Listening…"
       },
@@ -1463,6 +1564,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Listening…"
       },
@@ -1860,7 +1962,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 18,
+      "round": 19,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -1898,6 +2000,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Écoute…"
       },
@@ -1966,7 +2069,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 19,
+      "round": 20,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2009,7 +2112,55 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 20,
+      "round": 21,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudWarned": {
+      "bar": {
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "cancel",
+            "kind": "bar",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "stop",
+            "kind": "bar",
+            "label": "Arrêter",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "elapsedMs": 1200,
+        "hint": null,
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "state": "listening",
+        "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "waveMs": 300,
+        "word": "Écoute…"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 18,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -2189,6 +2340,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Écoute…"
       },
@@ -2323,6 +2475,7 @@ var views = {
           "rtl": false
         },
         "state": "listening",
+        "warn": null,
         "waveMs": 300,
         "word": "Écoute…"
       },

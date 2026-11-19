@@ -13,6 +13,7 @@ mod offered;
 mod props;
 mod router;
 mod typed;
+mod warn;
 
 /// Groq's turbo model.
 const TURBO: &str = "whisper-large-v3-turbo";

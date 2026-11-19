@@ -129,6 +129,7 @@ pub const QML: &[&str] = &[
     "qml/VoiceWave.qml",
     "qml/VoiceNote.qml",
     "qml/VoiceTimer.qml",
+    "qml/VoiceWarn.qml",
     "qml/VoicePanel.qml",
     "qml/VoiceBox.qml",
     "qml/VoiceHead.qml",

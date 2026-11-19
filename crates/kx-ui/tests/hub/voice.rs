@@ -164,6 +164,7 @@ pub fn listening_bar() -> VoiceBar {
         elapsed_ms: 1200,
         nothing: false,
         wave_ms: 300,
+        warn: None,
     })
 }
 

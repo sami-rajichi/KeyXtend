@@ -1,7 +1,8 @@
 // The dictation bar (design "The bar"; design/voice-bar.html .vbar): one key row tall, a pill in the keyboard's theme
-// where the hub places it. It listens with the red dot, its language, the wave and the timer, writes with the shimmer,
-// then shows the text or a note, each state's buttons in one order in every language (ADR-0020). It takes clicks but
-// never focus, plays the start and stop sounds, and tells the module when the pointer is over it.
+// where the hub places it. It listens with the red dot, its language, the wave and the timer, with a service's warning
+// under the row on the first dictation to it; writes with the shimmer; then shows the text or a note, each state's
+// buttons in one order in every language (ADR-0020). It takes clicks but never focus, plays the start and stop sounds,
+// and tells the module when the pointer is over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
@@ -40,6 +41,9 @@ Window {
     readonly property bool listens: mode === names.states.listening
     readonly property bool writes: mode === names.states.transcribing
     readonly property bool wide: mode === names.states.text || mode === names.states.note
+    // The card's warning while the first dictation to its service listens, which widens the bar and sits under its row.
+    readonly property string warning: listens ? field("warn", "") : ""
+    readonly property bool warns: warning !== ""
     readonly property var cap: lk.shape.caption
     readonly property var p: lk.palette
     readonly property real gap: cap.gap_px * s
@@ -53,9 +57,13 @@ Window {
     title: view ? view.words.window : ""
     color: "transparent"
     visible: false
-    // Whole units up, as a window's size is whole.
-    width: rescale.keep(Math.ceil(lk.shape.voice.bar_px[wide ? 1 : 0] * s))
-    height: rescale.keep(Math.ceil(Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)))
+    // Whole units up, as a window's size is whole; a warning adds its lines under the row.
+    width: rescale.keep(Math.ceil(lk.shape.voice.bar_px[wide || warns ? 1 : 0] * s))
+    height: rescale.keep(Math.ceil(row + (warns ? warnLine.height : 0)))
+    // The row's height: one key row, or its parts with their padding.
+    readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)
+    // How far the row's parts rise from the middle, so a warning sits under them.
+    readonly property real lift: warns ? warnLine.height / 2 : 0
 
     // Keeps the size above across display scale changes, and the place on a new scale.
     Rescale {
@@ -176,14 +184,14 @@ Window {
         const line = !h ? "" : (h.text || h);
         const said = listens || writes ? (line || shown.word) : (line || (shown.text ? shown.text.text : ""));
         if (said)
-            body.Accessible.announce(said);
+            body.Accessible.announce(warns ? said + " " + warning : said);
     }
 
     Rectangle {
         id: body
         width: bar.width
         height: bar.height
-        radius: bar.wide ? bar.cap.words_radius_px * bar.s : height / 2
+        radius: bar.wide || bar.warns ? bar.cap.words_radius_px * bar.s : height / 2
         color: bar.p.pop_bg
         border.width: bar.lk.contrast ? bar.lk.shape.line.px : 0
         border.color: bar.p.pop_line
@@ -199,6 +207,7 @@ Window {
             id: lead
             x: bar.pad
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             spacing: bar.gap
             layoutDirection: Qt.LeftToRight
             Repeater {
@@ -221,6 +230,7 @@ Window {
             x: lead.x + lead.width + bar.gap
             width: Math.max(0, tail.x - bar.gap - x)
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             host: bar
         }
         // The timer while it listens, then the buttons, the gear before the last.
@@ -228,6 +238,7 @@ Window {
             id: tail
             x: bar.width - bar.pad - width
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -bar.lift
             spacing: bar.gap
             layoutDirection: Qt.LeftToRight
             VoiceTimer {
@@ -245,6 +256,11 @@ Window {
                 model: bar.back
                 delegate: BarButton {}
             }
+        }
+        VoiceWarn {
+            id: warnLine
+            y: body.height - height
+            host: bar
         }
         PressWatch {
             onTouched: bar.touched()

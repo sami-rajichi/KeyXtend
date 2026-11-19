@@ -106,6 +106,7 @@ pub(super) fn pick(i: usize) -> Option<Net> {
         key: true,
         terms: false,
         unavailable: None,
+        warn: None,
     };
     match i {
         1 => Some(groq),

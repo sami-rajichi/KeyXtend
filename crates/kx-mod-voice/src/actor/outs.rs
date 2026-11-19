@@ -1,6 +1,6 @@
 //! The flow's effects, carried out in order: the runs, the view and the light, the level, the text for the typer or to
 //! paste, Copy, History and the counts, a download, a lost model file, a failed card, the bar's clicks Compare holds,
-//! a cloud upload sent or dropped, and the notices the actor tells.
+//! a cloud upload sent or dropped, a card's warning seen, and the notices the actor tells.
 
 use kx_module_api::ports::{
     BarButton, CardId, ClipPart, Fingerprint, VoiceAct, VoiceBar, VoiceClick, VoiceView,
@@ -10,8 +10,10 @@ use kx_module_api::{Event, Notice, Redacted, Secret, Zeroizing};
 use super::Actor;
 use super::lanes::Owner;
 use super::typing::Source;
-use crate::ID;
+use crate::cloud::Cloud;
 use crate::flow::{In, Out};
+use crate::settings::SERVICES;
+use crate::{ID, services};
 
 /// The round a bar click the flow hands to Compare names: none, as such a click is never stale.
 const NO_ROUND: u32 = 0;
@@ -39,6 +41,7 @@ impl Actor {
             Out::Lent(button) => self.lent(button),
             Out::Send(up) => self.send(&up),
             Out::Halt { take } => self.halt(take),
+            Out::Warned(id) => self.warned(&id),
         }
     }
 
@@ -98,6 +101,20 @@ impl Actor {
         let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
         let dos = self.panel.click(&act, &facts);
         self.dos(dos);
+    }
+
+    /// Saves service `id`'s card warning as seen at its row's terms number, so the next dictation shows none.
+    fn warned(&mut self, id: &str) {
+        let Ok(table) = services::table() else {
+            return;
+        };
+        let mut next = self.held.settings.clone();
+        if !Cloud::new(table, self.net.hidden).warned(&mut next, id) {
+            return;
+        }
+        if let Some(value) = next.services_value() {
+            self.set(SERVICES, value);
+        }
     }
 
     /// Tells the user `key`.

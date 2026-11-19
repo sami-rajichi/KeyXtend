@@ -2,8 +2,8 @@
 //! actor carries out, and the bar's line for each cloud fault.
 
 use kx_module_api::ports::{
-    CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName, SpeechDone, SpeechError, Unavailable,
-    VoiceLang,
+    CloudFault, CloudNote, CloudWhy, Fact, LocalUse, ServiceName, SpeechDone, SpeechError,
+    Unavailable, VoiceLang,
 };
 use kx_module_api::{Mono, Redacted};
 
@@ -74,6 +74,8 @@ pub struct Net {
     pub terms: bool,
     /// Why the pick's model cannot be used now, which Start says, sending nothing; `None` when it can.
     pub unavailable: Option<Unavailable>,
+    /// The card's warning, which the bar shows while this dictation listens, as none at this terms number did.
+    pub warn: Option<Fact>,
 }
 
 /// What an upload tells the flow.

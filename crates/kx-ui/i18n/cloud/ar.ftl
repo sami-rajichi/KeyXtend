@@ -105,7 +105,7 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = من { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-range-fee = من { $low-after } إلى { $high-after } حسب النموذج، مع رسوم بنسبة { $fee }% عند شراء الرصيد
-    .fact-warn-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. قبل التأكيد، عطِّل هذا الخيار في حسابك: { $switch }
+    .fact-warn-trains = تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: { $switch }
     .warn-mark-trains = التدريب مفعّل افتراضيًا
     .fact-bills-least = يُحتسَب لكل طلب ما لا يقل عن { $seconds-form ->
         [one] ثانية واحدة

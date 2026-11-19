@@ -87,7 +87,7 @@ impl Actor {
     }
 
     /// Writes `[voice]` key `key`, then follows the settings after it; a refused write shows the fault band.
-    fn set(&mut self, key: &'static str, value: toml::Value) {
+    pub(super) fn set(&mut self, key: &'static str, value: toml::Value) {
         let Some(next) = self.held.settings.with(key, value.clone()) else {
             return;
         };

@@ -156,6 +156,8 @@ pub enum Out {
         /// The dictation.
         take: u32,
     },
+    /// The first dictation to this service at its row's terms number showed the card's warning: note it as seen.
+    Warned(String),
 }
 
 /// The model and device that serve a language now.

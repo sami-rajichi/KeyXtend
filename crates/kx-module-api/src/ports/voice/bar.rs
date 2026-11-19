@@ -2,7 +2,7 @@
 //! stays redacted and is wiped on drop, and a password box's text never reaches the ui.
 
 use super::act::BarButton;
-use super::panel::{ServiceName, Unavailable, VoicePanel};
+use super::panel::{Fact, ServiceName, Unavailable, VoicePanel};
 use crate::Secret;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -61,6 +61,8 @@ pub struct Listening {
     pub nothing: bool,
     /// How long the wave smooths the level over, in ms (`wave_ms`).
     pub wave_ms: u16,
+    /// The service's card warning, a reminder while the first dictation to it at its terms number listens.
+    pub warn: Option<Fact>,
 }
 
 /// The Text state: the text, a hint under it, and Undo insert, which stays in its place dimmed once it cannot act.

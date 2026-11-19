@@ -18,8 +18,8 @@ pub const FACTS_DAYS: RangeInclusive<u16> = 30..=730;
 /// `OpenRouter`'s keep-nothing switch starts on (design "Connections and services").
 pub const KEEP_START: bool = true;
 
-/// A service the user switched on: the day and terms number confirmed, its typed address and Other model, and its
-/// keep-nothing switch.
+/// A service the user switched on: the day and terms number confirmed, its typed address and Other model, its
+/// keep-nothing switch, and the terms number its card warning was seen at.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServiceOn {
@@ -36,6 +36,9 @@ pub struct ServiceOn {
     /// The keep-nothing switch, for a row that has one.
     #[serde(default = "keep_start")]
     pub keep: bool,
+    /// The terms number at which the first dictation showed the card's warning; 0 for never, which the file leaves out.
+    #[serde(default, skip_serializing_if = "unseen")]
+    pub warned: u16,
 }
 
 impl ServiceOn {
@@ -48,6 +51,7 @@ impl ServiceOn {
             address: String::new(),
             model: String::new(),
             keep: KEEP_START,
+            warned: 0,
         }
     }
 
@@ -67,6 +71,7 @@ impl fmt::Debug for ServiceOn {
             .field("address", &Redacted::new(&self.address))
             .field("model", &Redacted::new(&self.model))
             .field("keep", &self.keep)
+            .field("warned", &self.warned)
             .finish()
     }
 }
@@ -104,4 +109,13 @@ pub(crate) fn datetime(day: Date) -> Datetime {
 /// The keep-nothing switch's start, for an entry written without it.
 fn keep_start() -> bool {
     KEEP_START
+}
+
+/// True when no warning was shown yet, so the file leaves the number out.
+#[expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde passes a reference"
+)]
+fn unseen(terms: &u16) -> bool {
+    *terms == 0
 }
