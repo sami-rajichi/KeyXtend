@@ -27,7 +27,8 @@
 #   `at_once` at once.
 # - `other`: an Other model line takes a typed id, sent with the keyboard's language code as it is.
 # - `terms`: raised when the training, retention or region fact changes, so the user confirms again.
-# - `offered`: shown on the Cloud page; `untested`: no real key has checked the connection yet.
+# - `offered`: shown on the Cloud page, only for a service the owner can test by hand; a row not offered stays built
+#   and tested but is never shown, picked or sent to (ADR-0050). `untested`: no real key has checked it yet.
 # - `[[services.models]]`: each `id`, shown `name`, its `langs` (the code it wants per keyboard language, or the name
 #   of a set in `langs.toml`), maybe its own `form`, `unnamed = true` when the request names no model, and `keeps` when
 #   every host of it keeps the voice.
@@ -103,7 +104,8 @@ keys = "https://platform.openai.com/api-keys"
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 50, at_once = 4 }
 other = true
 terms = 1
-offered = true
+# Hidden until the owner tests it, as it needs a card or a payment before any use (ADR-0050).
+offered = false
 untested = true
 
 [[services.models]]
@@ -139,7 +141,8 @@ keys = "https://console.mistral.ai/api-keys"
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1
-offered = true
+# Hidden until the owner tests it, as it needs a card or a payment before any use (ADR-0050).
+offered = false
 untested = true
 
 [[services.models]]
@@ -180,7 +183,8 @@ keys = "https://api.together.ai/settings/api-keys"
 limits = { cap_mb = 80, cap_s = 14400, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1
-offered = true
+# Hidden until the owner tests it, as it needs a card or a payment before any use (ADR-0050).
+offered = false
 untested = true
 
 [[services.models]]
@@ -330,7 +334,8 @@ keys = "https://deepinfra.com/dash/api_keys"
 limits = { cap_mb = 25, max_mb = 23, max_s = 600, per_min = 60, at_once = 4 }
 other = true
 terms = 1
-offered = true
+# Hidden until the owner tests it, as it needs a card or a payment before any use (ADR-0050).
+offered = false
 untested = true
 
 [[services.models]]

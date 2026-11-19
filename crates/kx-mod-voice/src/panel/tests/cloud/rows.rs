@@ -35,7 +35,7 @@ pub(super) fn tick(rig: &mut Rig, name: &ServiceName) {
 }
 
 /// Every page's rows, from the first page to the last.
-fn every_row(rig: &mut Rig) -> Vec<ServiceRow> {
+pub(super) fn every_row(rig: &mut Rig) -> Vec<ServiceRow> {
     row_of(rig, &named("Groq"));
     let mut rows = cloud_sheet(rig).rows;
     loop {

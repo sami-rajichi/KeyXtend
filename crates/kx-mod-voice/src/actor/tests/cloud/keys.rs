@@ -1,12 +1,14 @@
 //! The key and the hidden run: a key that is missing, damaged or holds no key, found as it is read
 //! just before `send`, sends nothing, types nothing and keeps the recording for Try again and "Use the local model";
-//! a hidden run offers no service and reads no key.
+//! a hidden run, or a saved pick of a row not offered (ADR-0050), offers no service and reads no key.
 
 use kx_module_api::ports::{BlobName, SealedError};
 use kx_platform_fake::ShelfCall;
 
 use super::*;
+use crate::cloud::pick_text;
 use crate::keys::KEYS;
+use crate::services::{self, tests::NOT_OFFERED};
 
 #[test]
 fn a_damaged_key_sends_nothing_types_nothing_and_keeps_the_recording() {
@@ -52,6 +54,40 @@ fn a_blob_that_holds_no_key_sends_nothing_and_the_local_model_writes_the_speech(
     rig.tell(SpeechNote::Done(done(1)));
     assert_eq!(rig.typed_texts(), ["hello"]);
     assert!(rig.fake.cloud.calls().runs.is_empty());
+}
+
+#[test]
+fn a_saved_pick_of_a_row_not_offered_dictates_locally_reads_no_key_and_sends_nothing() {
+    for id in NOT_OFFERED {
+        let row = services::table().unwrap().get(id).unwrap();
+        let model = row.models.iter().find(|m| m.code("en").is_some()).unwrap();
+        let mut rig = Rig::build(|fake, host| {
+            host.put("cloud", true.into());
+            host.put(
+                "services",
+                table(&format!("{id} = {{ on = 2026-11-17, terms = 1 }}")),
+            );
+            let pick = pick_text(id, &model.id);
+            host.put("picks", table(&format!("en = \"{pick}\"")));
+            let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
+            keys.set(id, secret(&key())).unwrap();
+        });
+        let loads = rig.fake.shelf.calls(ShelfCall::Load);
+        rig.talk();
+        let local = rig.fake.speech.runs()[0].ask.model.is_some();
+        assert!(
+            local && rig.mark().is_none(),
+            "{id}: the local model listens"
+        );
+        rig.key();
+        rig.tell(SpeechNote::Done(done(1)));
+        assert!(rig.fake.cloud.calls().runs.is_empty(), "{id}: nothing sent");
+        assert_eq!(
+            rig.fake.shelf.calls(ShelfCall::Load),
+            loads,
+            "{id}: no key read"
+        );
+    }
 }
 
 #[test]

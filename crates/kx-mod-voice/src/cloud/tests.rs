@@ -8,6 +8,7 @@ use crate::services::tests::{TEXT, parse};
 use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
 mod keep;
+mod offered;
 mod props;
 mod router;
 mod typed;

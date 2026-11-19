@@ -12,25 +12,28 @@ use proptest::test_runner::{Config, TestCaseError, TestRunner};
 
 /// The keyboard languages the steps touch; `tlh` is one no Groq model knows.
 const LANGS: [&str; 4] = ["en", "fr", "ar", "tlh"];
-/// The services a step names: `openrouter` has the keep-nothing switch, and `ovhcloud` is in no table here.
-const SERVICES: [&str; 4] = ["groq", "custom", "openrouter", "ovhcloud"];
-/// The models a step names: Groq's two, two typed ids, and `OpenRouter`'s Voxtral, which the switch rules out.
-const MODELS: [&str; 5] = [
+/// The services a step names: `openrouter` has the keep-nothing switch, `openai` is offered only in a later table,
+/// and `ovhcloud` is in no table here.
+const SERVICES: [&str; 5] = ["groq", "custom", "openrouter", "openai", "ovhcloud"];
+/// The models a step names: Groq's two, two typed ids, `OpenRouter`'s Voxtral, which the switch rules out, and
+/// `OpenAI`'s own.
+const MODELS: [&str; 6] = [
     TURBO,
     "whisper-large-v3",
     "my-model",
     "other-model",
     "mistralai/voxtral-mini-transcribe-3-0",
+    "gpt-transcribe",
 ];
 /// Local rows a step picks.
 const LOCAL: [&str; 2] = ["whisper-turbo-q5km", "canary-v2-q8"];
 /// Addresses a step types: none, one Custom takes, and one no row takes.
 const ADDRESSES: [&str; 3] = ["", ADDRESS, "http://stt.example.com/v1"];
 /// How many tables a load may bring.
-const TABLES: usize = 5;
+const TABLES: usize = 6;
 /// The cases run.
 const CASES: u32 = 512;
-/// The least share of steps, in percent, that must start with a language in the cloud; runs reach about 54.
+/// The least share of steps, in percent, that must start with a language in the cloud; runs reach about 62.
 const HELD_PCT: u32 = 45;
 
 /// One thing the user, the file or an update does.
@@ -97,7 +100,8 @@ fn mostly_on() -> impl Strategy<Value = bool> {
     prop_oneof![1 => Just(false), 3 => Just(true)]
 }
 
-/// The shipped table, then Groq's terms raised, Groq not offered, Groq's turbo gone, and Groq with no Other line.
+/// The shipped table, then Groq's terms raised, Groq not offered, Groq's turbo gone, Groq with no Other line, and
+/// `OpenAI`, the first row not offered, offered as a later version may, so its entries and picks meet a load hiding it.
 fn tables() -> Vec<Services> {
     let edits = [
         ("", ""),
@@ -108,12 +112,15 @@ fn tables() -> Vec<Services> {
             "id = \"whisper-large-v3-turbo-2\"",
         ),
         ("other = true", "other = false"),
+        ("offered = false", "offered = true"),
     ];
     let tables: Vec<Services> = edits
         .iter()
         .map(|(from, to)| parse(&TEXT.replacen(from, to, 1)).unwrap())
         .collect();
     assert_eq!(tables.len(), TABLES);
+    let offers = |t: &Services| t.get("openai").is_some_and(|r| r.offered);
+    assert!(!offers(&tables[0]) && offers(&tables[TABLES - 1]));
     tables
 }
 

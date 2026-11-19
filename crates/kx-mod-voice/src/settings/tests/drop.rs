@@ -1,8 +1,9 @@
-//! Each read of `[voice]` drops, alone and named, a service entry the table no longer takes and a cloud pick that no
-//! longer names a service the user switched on with a model for its language, so a later table or switch never brings
-//! one back by itself.
+//! Each read of `[voice]` drops, alone and named, a service entry the table no longer takes or offers and a cloud pick
+//! that no longer names a service the user switched on with a model for its language, so a later table or switch never
+//! brings one back by itself.
 
 use super::*;
+use crate::services::tests::NOT_OFFERED;
 use kx_module_api::ports::Date;
 
 /// The day the entries below were confirmed.
@@ -112,6 +113,35 @@ fn a_cloud_pick_stays_only_while_it_names_a_service_on_and_a_model_for_its_langu
         2,
         "the confirmations stay for the next time cloud is on"
     );
+}
+
+#[test]
+fn a_saved_entry_of_a_row_not_offered_drops_alone_and_its_picks_go_back_to_local() {
+    let models = crate::models::table().unwrap();
+    for id in NOT_OFFERED {
+        let mut s = on();
+        s.services.insert("groq".into(), entry(|_| {}));
+        s.services.insert(id.into(), entry(|_| {}));
+        let row = crate::services::table().unwrap().get(id).unwrap();
+        let model = row.models.iter().find(|m| m.code("fr").is_some()).unwrap();
+        let picks = [
+            ("fr", crate::cloud::pick_text(id, &model.id)),
+            ("en", "groq:whisper-large-v3-turbo".into()),
+            ("nl", "canary-v2-q8".into()),
+        ];
+        s.picks = picks.map(|(l, p)| (l.to_owned(), p)).into();
+        let named = ["picks.fr".to_owned(), format!("services.{id}")];
+        assert_eq!(s.drop_bad(), named, "{id}: no crash, each named");
+        assert_eq!(s.services.keys().collect::<Vec<_>>(), ["groq"], "{id}");
+        assert_eq!(s.picks.keys().collect::<Vec<_>>(), ["en", "nl"], "{id}");
+        let local = models.default_for("fr").map(crate::models::Pick::Row);
+        assert_eq!(
+            models.used("fr", &s.picks),
+            local,
+            "{id}: French goes local"
+        );
+        assert!(s.drop_bad().is_empty(), "{id}: a second read drops nothing");
+    }
 }
 
 #[test]

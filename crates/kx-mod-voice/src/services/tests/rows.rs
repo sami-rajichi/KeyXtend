@@ -1,6 +1,6 @@
 //! The shipped upload-form rows as the services' pages read 2026-11-17 give them (research file `[X]` lines): the
-//! Cloud page's order with Groq first, each row's address, key test, form and paywall, its models with the code each
-//! wants for English, French and Arabic, and its prices for light and heavy use.
+//! offered ones with Groq first, each row's address, key test, form and paywall, its models with the code each wants
+//! for English, French and Arabic, and its prices for light and heavy use; a row not offered is tested all the same.
 
 use super::*;
 use kx_module_api::ports::{Fact, KeyHeader};
@@ -20,7 +20,7 @@ struct Want {
 const TURBO: &str = "openai/whisper-large-v3-turbo";
 const LARGE: &str = "openai/whisper-large-v3";
 
-/// The form rows in the Cloud page's order (design "Connections and services").
+/// The form rows in the table's order, offered or not (design "Connections and services").
 const WANTS: [Want; 8] = [
     // [G1][G3]
     Want {
@@ -114,10 +114,16 @@ fn shown(url: Option<HttpsUrl>) -> Option<String> {
 }
 
 #[test]
-fn the_cloud_page_lists_the_form_rows_in_order_groq_first() {
+fn only_the_rows_the_owner_tests_by_hand_are_offered_groq_first_and_the_rest_stay_built() {
     let ids: Vec<&str> = shipped().offered().map(|r| r.id.as_str()).collect();
+    assert_eq!(ids, OFFERED, "ADR-0050; tasks 18 and 19 add their rows");
+    let all: Vec<&str> = shipped().rows().iter().map(|r| r.id.as_str()).collect();
     let want: Vec<&str> = WANTS.iter().map(|w| w.id).collect();
-    assert_eq!(ids, want);
+    assert_eq!(all, want, "every form row stays in the table, in order");
+    for id in NOT_OFFERED {
+        let row = shipped().get(id).unwrap();
+        assert!(!row.offered && row.untested, "{id}: hidden until tested");
+    }
 }
 
 #[test]

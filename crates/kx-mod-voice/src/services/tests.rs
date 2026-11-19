@@ -17,6 +17,11 @@ mod rows;
 pub(crate) const TEXT: &str = include_str!("../../services.toml");
 const LANGS: &str = include_str!("../../langs.toml");
 
+/// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
+pub(crate) const OFFERED: [&str; 4] = ["groq", "lemonfox", "custom", "openrouter"];
+/// The rows kept in the table, built and tested, but not offered: each needs a card or a payment before any use.
+pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "deepinfra"];
+
 /// The table `text` gives with the shipped language sets.
 pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {
     Services::parse(text, LANGS)

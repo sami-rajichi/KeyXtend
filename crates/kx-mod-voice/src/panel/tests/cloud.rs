@@ -17,6 +17,7 @@ use rows::{named, row_of, tick};
 
 mod answers;
 mod lines;
+mod offered;
 mod parts;
 mod rows;
 mod trial;
@@ -113,10 +114,8 @@ fn groq_is_listed_first_off_and_untested_and_custom_names_no_free_allowance() {
     let mut rig = on_cloud("");
     let sheet = cloud_sheet(&mut rig);
     assert!(sheet.on);
-    let names: Vec<_> = sheet.rows.iter().map(|r| r.name.clone()).collect();
-    let first = ["Groq", "OpenAI", "Mistral", "Together AI", "Lemonfox"].map(named);
-    assert_eq!(names, first, "a page holds five");
     let groq = &sheet.rows[0];
+    assert_eq!(groq.name, named("Groq"), "edge 24; `offered` pins the rest");
     assert_eq!(
         (groq.mark, groq.untested, groq.free.is_some()),
         (ServiceMark::Off, true, true)
