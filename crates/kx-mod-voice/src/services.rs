@@ -1,6 +1,6 @@
-//! The compiled-in services table (ADR-0047 decisions 5 to 9): each cloud service's request, host, limits, models and
-//! dated facts, read and checked once. A bad table turns cloud services off; it never panics, and nothing in it is a
-//! default, so a service stays off until the user confirms it.
+//! The compiled-in services table (ADR-0047 decisions 5 to 9), from its two files: each cloud service's request, host,
+//! limits, models and dated facts, read and checked once. A bad table turns cloud services off; it never panics, and
+//! nothing in it is a default, so a service stays off until the user confirms it.
 
 mod address;
 mod facts;
@@ -24,10 +24,11 @@ use thiserror::Error;
 /// Bytes in the KiB `room_kb` counts in.
 const KIB: u64 = 1 << 10;
 
-/// The table and its language sets, read and checked at their first use.
+/// The table's two files and its language sets, read and checked at their first use.
 static TABLE: LazyLock<Result<Services, ServicesError>> = LazyLock::new(|| {
+    let own = include_str!("../services-own.toml");
     let langs = include_str!("../langs.toml");
-    Services::parse(include_str!("../services.toml"), langs)
+    Services::parse(include_str!("../services.toml"), own, langs)
 });
 
 /// The compiled-in services table, read and checked once.
@@ -44,6 +45,9 @@ pub enum ServicesError {
     /// The text is not a services table.
     #[error("the services table does not parse: {0}")]
     Parse(String),
+    /// The second file's text is not rows alone, as a table-wide key there.
+    #[error("the services table's own-shape rows do not parse: {0}")]
+    Own(String),
     /// The language sets' text is not a list of named sets.
     #[error("the language sets do not parse: {0}")]
     Langs(String),
@@ -84,6 +88,15 @@ struct Raw {
     services: Vec<row::RawService>,
 }
 
+/// The second file as written: the rows of services with their own shape, and nothing else.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawOwn {
+    /// The rows.
+    #[serde(default)]
+    services: Vec<row::RawService>,
+}
+
 /// Each keyboard language (ISO 639) and the code a service wants for it.
 pub type LangCodes = BTreeMap<String, String>;
 
@@ -111,12 +124,14 @@ pub struct Services {
 }
 
 impl Services {
-    /// Reads and checks a services table, whose models may name the language sets in `langs`.
+    /// Reads and checks a services table: `text`'s values and rows, then `own`'s rows of their own shape, as one table
+    /// whose models may name the language sets in `langs`.
     ///
     /// # Errors
     /// The first fault found.
-    pub fn parse(text: &str, langs: &str) -> Result<Self, ServicesError> {
+    pub fn parse(text: &str, own: &str, langs: &str) -> Result<Self, ServicesError> {
         let raw: Raw = toml::from_str(text).map_err(|e| ServicesError::Parse(e.to_string()))?;
+        let own: RawOwn = toml::from_str(own).map_err(|e| ServicesError::Own(e.to_string()))?;
         let sets: BTreeMap<String, LangCodes> =
             toml::from_str(langs).map_err(|e| ServicesError::Langs(e.to_string()))?;
         let room = u64::from(raw.room_kb) * KIB;
@@ -130,7 +145,8 @@ impl Services {
             reply: &raw.reply,
             sets: &sets,
         };
-        let rows = checked_rows(raw.services, &rules)?;
+        let all = raw.services.into_iter().chain(own.services).collect();
+        let rows = checked_rows(all, &rules)?;
         Ok(Self {
             rows,
             light_hours: raw.light_hours,

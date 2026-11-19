@@ -1,6 +1,8 @@
 # The services table (ADR-0047 decisions 5 to 9): one row per cloud service, in the Cloud page's order, Groq first. A
 # card's sentences are translations filled with a row's facts, read on the service's own pages on the day noted; no
 # price or claim is written anywhere else. Nothing here is a default: a service stays off until the user confirms it.
+# This file holds the table-wide values and the upload-form rows; `services-own.toml` holds the rows of services with
+# their own shape, read after these as one table.
 #
 # Table-wide:
 # - `light_hours`, `heavy_hours`: the hours of sound a month of light and of heavy use, which the cards' prices cover.
@@ -365,46 +367,3 @@ keeps = { id = "memory" }
 free = { id = "none" }
 light = { id = "range", money = { low = 0.18, high = 1.80 } }
 heavy = { id = "range", money = { low = 0.72, high = 7.20 } }
-
-# ElevenLabs: elevenlabs.io read 2026-11-17 (API pricing, pricing, the speech-to-text reference, models, privacy policy,
-# errors, the subscription endpoint). Scribe in its own form with `xi-api-key`; trained on by default, so its card warns.
-[[services]]
-id = "elevenlabs"
-name = "ElevenLabs"
-shape = "eleven"
-# Its language field; `tag_audio_events` off, so no sound tag such as "(laughter)" is typed into the text.
-form = { lang = "language_code", list = false, fixed = [{ name = "tag_audio_events", value = "false" }] }
-host = "api.elevenlabs.io"
-address = "https://api.elevenlabs.io/v1/speech-to-text"
-test = "https://api.elevenlabs.io/v1/user/subscription"
-header = "xi-api-key"
-keys = "https://elevenlabs.io/app/settings/api-keys"
-# A file may reach 5 GB [E3]; the free plan takes 2 requests at once [E8].
-limits = { cap_mb = 5000, max_mb = 23, max_s = 600, per_min = 60, at_once = 2 }
-terms = 1
-offered = true
-untested = true
-
-[[services.models]]
-id = "scribe_v3"
-name = "Scribe v3"
-langs = "en-fr-ar"
-
-[[services.models]]
-id = "scribe_v2"
-name = "Scribe v2"
-langs = "en-fr-ar"
-
-# The free allowance shows the lower of its pages' figures: about 30 min [E2], not 4 h 30 min [E1]; $0.20 an hour [E1].
-[services.facts]
-read = 2026-11-17
-source = "https://elevenlabs.io/privacy-policy"
-currency = "USD"
-place = { id = "us" }
-trains = { id = "default", warn = true }
-keeps = { id = "history" }
-free = { id = "minutes-month", count = { minutes = 30 } }
-light = { id = "plain", money = { price = 3.00 } }
-heavy = { id = "plain", money = { price = 12.00 } }
-warn = { id = "trains", text = { switch = "Profile menu → Terms and privacy → Data use → Improve the models for everyone" } }
-rule = { id = "non-commercial" }

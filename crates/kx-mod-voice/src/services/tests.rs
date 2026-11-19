@@ -13,9 +13,11 @@ mod refuse;
 mod request;
 mod room;
 mod rows;
+mod split;
 
-/// The compiled-in table text and its language sets.
+/// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.
 pub(crate) const TEXT: &str = include_str!("../../services.toml");
+pub(crate) const OWN: &str = include_str!("../../services-own.toml");
 const LANGS: &str = include_str!("../../langs.toml");
 
 /// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
@@ -25,9 +27,9 @@ pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "dee
 /// The rows of a shape other than the upload form, after the form rows, in the table's order.
 pub(crate) const SHAPED: [&str; 1] = ["elevenlabs"];
 
-/// The table `text` gives with the shipped language sets.
+/// The table `text` gives with the shipped second file and language sets.
 pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {
-    Services::parse(text, LANGS)
+    Services::parse(text, OWN, LANGS)
 }
 
 /// An `OpenAI` row as the 2026-11-17 pages give it: `gpt-transcribe` takes `languages[]`, `whisper-1` `language`.

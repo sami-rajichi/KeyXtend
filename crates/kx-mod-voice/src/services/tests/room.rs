@@ -53,11 +53,14 @@ fn room_kb() -> u64 {
         .unwrap()
 }
 
-/// The service's cap in bytes as row `id`'s limits write it.
+/// The service's cap in bytes as row `id`'s limits write it, in either file of the table.
 fn cap(id: &str) -> u64 {
-    let raw: toml::Table = TEXT.parse().unwrap();
-    let rows = raw["services"].as_array().unwrap();
-    let row = rows.iter().find(|r| r["id"].as_str() == Some(id)).unwrap();
+    let rows = |text: &str| {
+        let raw: toml::Table = text.parse().unwrap();
+        raw["services"].as_array().unwrap().clone()
+    };
+    let all = [rows(TEXT), rows(OWN)].concat();
+    let row = all.iter().find(|r| r["id"].as_str() == Some(id)).unwrap();
     let mb = row["limits"]["cap_mb"]
         .as_integer()
         .and_then(|n| u64::try_from(n).ok())

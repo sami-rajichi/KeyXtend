@@ -8,9 +8,9 @@ fn the_language_sets_come_from_their_own_file_alone() {
     let set = "\n[langs]\nmore = { en = \"en\" }\n";
     let inline = parse(&format!("{TEXT}{set}"));
     assert!(matches!(inline, Err(ServicesError::Parse(_))), "{inline:?}");
-    let odd = Services::parse(TEXT, "whisper = 1");
+    let odd = Services::parse(TEXT, OWN, "whisper = 1");
     assert!(matches!(odd, Err(ServicesError::Langs(_))), "{odd:?}");
-    let none = match Services::parse(TEXT, "") {
+    let none = match Services::parse(TEXT, OWN, "") {
         Err(ServicesError::Row {
             why: ServiceError::Model { why, .. },
             ..
