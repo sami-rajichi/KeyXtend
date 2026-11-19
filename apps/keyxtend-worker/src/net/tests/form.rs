@@ -5,7 +5,7 @@
 use super::*;
 use crate::net::form::{Form, escape};
 use crate::net::shape::{Piece, Request, Shape};
-use kx_ipc::{NetFault, NetField, NetOwn};
+use kx_ipc::{NetFault, NetField};
 use kx_platform_net::Verb;
 
 /// The sound the form tests send: a few bytes standing for a WAV file.
@@ -293,11 +293,7 @@ fn the_key_test_is_a_get_of_the_test_address_with_the_key_alone() {
 
 #[test]
 fn another_shapes_call_is_out_of_range() {
-    let own = NetOwn {
-        lang: Cow::Borrowed("language_code"),
-        fixed: Vec::new(),
-    };
-    let call = call_to(URL, NetShape::Eleven(own));
+    let call = call_to(URL, NetShape::Eleven(super::eleven::own_form()));
     let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();
     assert_eq!(got, Some(NetFault::Range));
 }

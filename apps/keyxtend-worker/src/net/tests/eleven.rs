@@ -30,7 +30,7 @@ const SAID: &str = "Bonjour tout le monde.";
 const TAGS: &str = "tag_audio_events";
 
 /// The row's form: its language field, and no sound tags such as "(laughter)" in the text.
-fn own_form() -> NetOwn<'static> {
+pub(super) fn own_form() -> NetOwn<'static> {
     NetOwn {
         lang: Cow::Borrowed("language_code"),
         fixed: vec![NetField {
