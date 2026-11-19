@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-19 23:06 — P11: Gemini
+Voice typing can now send to Google's Gemini 3.5 Transcribe in one request, with the keyboard's language as a regional code (Arabic as ar-SA) and `store: false`, so Google stores no copy of the request. Its card warns that the free tier uses the voice to improve Google's products and that people may read it, says paid use is required in the EEA, Switzerland and the UK, and labels its prices and logging as the paid tier's. A step the user must take on a service's site, such as a verification, a payment method or a spending cap, now has its own note instead of "no credit left", and a used-up free day says so without guessing when it renews. A key test that fails now names its reason; only a missing answer points at the network.
+
 ## 2026-11-19 18:41 — P11: ElevenLabs
 Voice typing can now send to ElevenLabs' Scribe v3 and v2 in its own form, with no sound tags such as "(laughter)", and its refusals are read by their exact codes, so used-up credit is never taken for a bad key. Its card warns that it trains on the voice by default and names the switch that stops it; the first dictation to any service with such a warning shows it again as a line on the bar, holding nothing back. The card prices light and heavy use at the cheapest plans that cover them ($6 and $22 a month) and says the free plan is for non-commercial use only, with attribution. The services table is split into the upload-form rows and the rows with their own shape.
 
