@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, ServiceMark,
     Unavailable,
 };
+use std::time::Duration;
 
 /// The start of every cloud key.
 pub const CLOUD_WORD: &str = "cloud.";
@@ -204,21 +205,28 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
         KeyCheck::Credit => "credit",
         KeyCheck::Account => "account",
         KeyCheck::Region => "region",
+        KeyCheck::Allowance => "allowance",
+        KeyCheck::Rate => "rate",
+        KeyCheck::Strange => "strange",
         KeyCheck::Unfit => "unfit",
         KeyCheck::NoTest => "no-test",
         KeyCheck::Busy => "busy",
     })
 }
 
-/// The cloud reason whose note a key test's answer reads as, so each reason is written once; `None` for the rest.
+/// The cloud reason whose note a key test's answer reads as, a used allowance with `renews_in`, so each reason is
+/// written once; `None` for the rest.
 #[must_use]
-pub const fn key_check_why(check: KeyCheck) -> Option<CloudWhy> {
-    match check {
-        KeyCheck::Credit => Some(CloudWhy::Credit),
-        KeyCheck::Account => Some(CloudWhy::Account),
-        KeyCheck::Region => Some(CloudWhy::Region),
-        _ => None,
-    }
+pub const fn key_check_why(check: KeyCheck, renews_in: Option<Duration>) -> Option<CloudWhy> {
+    Some(match check {
+        KeyCheck::Credit => CloudWhy::Credit,
+        KeyCheck::Account => CloudWhy::Account,
+        KeyCheck::Region => CloudWhy::Region,
+        KeyCheck::Allowance => CloudWhy::Allowance { renews_in },
+        KeyCheck::Rate => CloudWhy::Rate,
+        KeyCheck::Strange => CloudWhy::Strange,
+        _ => return None,
+    })
 }
 
 /// An address fault's id.

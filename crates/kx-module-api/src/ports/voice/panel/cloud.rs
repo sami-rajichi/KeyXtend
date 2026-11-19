@@ -4,6 +4,7 @@
 
 use crate::Redacted;
 use crate::ports::{CloudButton, Date, Hundredths};
+use std::time::Duration;
 
 listed! {
     /// Where a service stands, as its row's mark says; a cloud model's Unavailable is its Models row's.
@@ -50,10 +51,16 @@ listed! {
         Failed,
         /// The service answered that the account has no credit left, which no key fixes.
         Credit,
-        /// The service asks for a step on its site first, such as a verification, a payment method or a raised cap.
+        /// The service asks for a step on its site first, such as a verification, a payment method or a spending cap.
         Account,
         /// The service is not offered where the user is.
         Region,
+        /// The free allowance is used up; the sheet's `renews_in` tells when it renews, if the service said.
+        Allowance,
+        /// The service had too many requests, still after one wait.
+        Rate,
+        /// The reply was not the service's, such as a hotspot's sign-in page.
+        Strange,
         /// The text set or pasted is no key a request can carry, so nothing was kept.
         Unfit,
         /// The row has no test call, so the first dictation tests the key.
@@ -233,6 +240,8 @@ pub struct ServiceSheet {
     pub typed: Redacted<u32>,
     /// How the key's test stands.
     pub check: KeyCheck,
+    /// How long until the free allowance renews, while `check` is `Allowance` and the service told.
+    pub renews_in: Option<Duration>,
     /// The address line's text, as typed, just refused or kept, for a typed row such as Custom; `None` for a row with
     /// its own address.
     pub address: Option<Redacted<String>>,

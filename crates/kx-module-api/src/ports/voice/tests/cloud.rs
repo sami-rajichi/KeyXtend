@@ -57,10 +57,12 @@ fn the_cloud_page_follows_models_in_the_home_list() {
 #[test]
 fn a_key_tests_answers_are_the_designs_with_a_refusals_own_reasons() {
     use KeyCheck::{
-        Account, Busy, Credit, Failed, NoTest, Refused, Region, Testing, Unfit, Untested, Works,
+        Account, Allowance, Busy, Credit, Failed, NoTest, Rate, Refused, Region, Strange, Testing,
+        Unfit, Untested, Works,
     };
     let checks = [
-        Untested, Testing, Works, Refused, Failed, Credit, Account, Region, Unfit, NoTest, Busy,
+        Untested, Testing, Works, Refused, Failed, Credit, Account, Region, Allowance, Rate,
+        Strange, Unfit, NoTest, Busy,
     ];
     assert_eq!(KeyCheck::ALL, checks);
 }
@@ -238,6 +240,7 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
         key: Redacted::new(56),
         typed: Redacted::new(0),
         check: KeyCheck::Untested,
+        renews_in: None,
         address: Some(hidden(1)),
         address_fault: Some(AddressFault::Host),
         model: hidden(2),

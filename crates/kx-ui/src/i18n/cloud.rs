@@ -133,12 +133,12 @@ impl I18n {
         }
     }
 
-    /// A key test's answer: the cloud note of the reason the service gave, else the key page's own line; none while
-    /// untested.
+    /// A key test's answer: the cloud note of the reason the service gave, a used allowance's with `renews_in`, else
+    /// the key page's own line; none while untested.
     #[must_use]
-    pub fn voice_key_check(&self, check: KeyCheck) -> Option<String> {
+    pub fn voice_key_check(&self, check: KeyCheck, renews_in: Option<Duration>) -> Option<String> {
         let id = key_check_id(check)?;
-        Some(match key_check_why(check) {
+        Some(match key_check_why(check, renews_in) {
             Some(why) => self.voice_cloud(&why),
             None => self.text(&format!("{VOICE_KEY}{id}")),
         })

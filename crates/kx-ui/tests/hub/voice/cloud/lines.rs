@@ -1,7 +1,7 @@
 //! A service's key page through the hub: the key as dots with Paste and Test and the test's answer, a refusal by the
-//! note of its reason, where keys are made and that the key is sealed, a refused address or model or a busy Paste each
-//! with its reason (carries 1, 5), the keep-nothing switch with a model no host of which keeps nothing (edge 17), and
-//! its two parts for a typed address.
+//! note of its reason with a used allowance's renewal, where keys are made and that the key is sealed, a refused
+//! address or model or a busy Paste each with its reason (carries 1, 5), the keep-nothing switch with a model no host
+//! of which keeps nothing (edge 17), and its two parts for a typed address.
 
 use super::super::{button, buttons, heard, panel, panel_json};
 use super::{groq, marks, pairs};
@@ -13,6 +13,7 @@ use kx_module_api::ports::{
 };
 use kx_ui::voice_acts::{KEEP, SAVE, SERVICE};
 use serde_json::Value;
+use std::time::Duration;
 
 /// Groq's key page: a 56-character key that works, nothing typed on the model line.
 pub(super) fn groq_lines() -> ServiceSheet {
@@ -22,6 +23,7 @@ pub(super) fn groq_lines() -> ServiceSheet {
         key: Redacted::new(56),
         typed: Redacted::new(0),
         check: KeyCheck::Works,
+        renews_in: None,
         address: None,
         address_fault: None,
         model: Redacted::new(String::new()),
@@ -125,36 +127,64 @@ fn the_key_page_says_where_keys_are_made_and_that_the_key_is_sealed() {
     assert_eq!(buttons(&p["foot"]), foot);
 }
 
+/// Each test answer with a reason, its id and its line, which is that reason's cloud note; and no answer's own line.
+const ANSWERS: [(KeyCheck, &str, &str); 7] = [
+    (
+        KeyCheck::Credit,
+        "credit",
+        "The account has no credit left.",
+    ),
+    (
+        KeyCheck::Account,
+        "account",
+        "The service asks for a step on its site, such as a verification, a payment method or a spending cap.",
+    ),
+    (
+        KeyCheck::Region,
+        "region",
+        "The service is not offered in your country or region.",
+    ),
+    (
+        KeyCheck::Allowance,
+        "allowance",
+        "The free allowance is used up for now.",
+    ),
+    (
+        KeyCheck::Rate,
+        "rate",
+        "Too many requests. Wait a moment and try again.",
+    ),
+    (
+        KeyCheck::Strange,
+        "strange",
+        "The reply was not the service’s, maybe a sign-in page. Check the network.",
+    ),
+    (
+        KeyCheck::Failed,
+        "failed",
+        "No answer about the key. Check the network and test again.",
+    ),
+];
+
+/// The key test's answer `check` on Groq's key page, renewing in `renews_in`, as its id and line.
+fn answer(check: KeyCheck, renews_in: Option<Duration>) -> Vec<(String, String)> {
+    let mut lines = groq_lines();
+    (lines.check, lines.renews_in) = (check, renews_in);
+    marks(&one(&lines_json(lines)["sheet"]["check"]))
+}
+
 #[test]
 fn a_tests_refusal_reads_as_the_cloud_note_of_its_reason_and_no_answer_as_its_own() {
-    let cases = [
-        (
-            KeyCheck::Credit,
-            "credit",
-            "The account has no credit left.",
-        ),
-        (
-            KeyCheck::Account,
-            "account",
-            "The service asks for a step on its site, such as a verification or a payment method.",
-        ),
-        (
-            KeyCheck::Region,
-            "region",
-            "The service is not offered in your country or region.",
-        ),
-        (
-            KeyCheck::Failed,
-            "failed",
-            "No answer about the key. Check the network and test again.",
-        ),
-    ];
-    for (check, id, text) in cases {
-        let mut lines = groq_lines();
-        lines.check = check;
-        let p = lines_json(lines);
-        assert_eq!(marks(&one(&p["sheet"]["check"])), pairs(&[(id, text)]));
+    for (check, id, text) in ANSWERS {
+        assert_eq!(answer(check, None), pairs(&[(id, text)]), "{check:?}");
     }
+}
+
+#[test]
+fn a_used_allowance_on_test_names_its_renewal_when_the_service_told() {
+    let renews = "The free allowance is used up. It renews in 5 h.";
+    let got = answer(KeyCheck::Allowance, Some(Duration::from_hours(5)));
+    assert_eq!(got, pairs(&[("allowance", renews)]));
 }
 
 #[test]

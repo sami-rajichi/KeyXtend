@@ -6,6 +6,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CloudButton, KeyCheck, Link, ModelSide, ServiceMark, VoiceClick, VoiceTab,
 };
+use std::time::Duration;
 
 use super::typing::Typed;
 use super::{Do, Key, Page, Panel};
@@ -24,6 +25,8 @@ pub(crate) struct Clouds {
     pub(crate) dots: u32,
     /// How the shown key's test stands.
     pub(crate) check: KeyCheck,
+    /// When a test found the free allowance used up, how long until it renews, if the service told.
+    pub(crate) renews_in: Option<Duration>,
     /// Counts Pastes, tests and key changes, so an answer to an older one is dropped.
     pub(crate) round: u32,
     /// Why a Paste or a typed key kept nothing, Busy or Unfit, until the next round; the test's answer stays beneath.
@@ -49,6 +52,7 @@ impl Default for Clouds {
             from_lines: false,
             dots: 0,
             check: KeyCheck::Untested,
+            renews_in: None,
             round: 0,
             unkept: None,
             take: None,

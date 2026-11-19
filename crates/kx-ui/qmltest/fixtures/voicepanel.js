@@ -7175,7 +7175,7 @@ var views = {
           "address": null,
           "check": {
             "id": "account",
-            "text": "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع."
+            "text": "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع أو حدٍّ للإنفاق."
           },
           "is": "service",
           "keep": null,
@@ -14884,7 +14884,7 @@ var views = {
           "address": null,
           "check": {
             "id": "account",
-            "text": "The service asks for a step on its site, such as a verification or a payment method."
+            "text": "The service asks for a step on its site, such as a verification, a payment method or a spending cap."
           },
           "is": "service",
           "keep": null,
@@ -22593,7 +22593,7 @@ var views = {
           "address": null,
           "check": {
             "id": "account",
-            "text": "Le service demande une étape sur son site, comme une vérification ou un moyen de paiement."
+            "text": "Le service demande une étape sur son site, comme une vérification, un moyen de paiement ou un plafond de dépenses."
           },
           "is": "service",
           "keep": null,

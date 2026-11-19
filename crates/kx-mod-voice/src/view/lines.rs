@@ -5,6 +5,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     CloudButton, CloudLine, KeyCheck, LinesPart, Pages, ServiceSheet, VoiceSheet,
 };
+use std::time::Duration;
 
 use super::Facts;
 use crate::VoiceSettings;
@@ -30,12 +31,14 @@ impl Panel {
         let lines = self.typed_lines(facts).unwrap_or_default();
         let typing = self.cloud.typed.at(lines).unwrap_or(CloudLine::Key);
         let text = |line| Redacted::new(self.line_text(line, facts));
+        let (check, renews_in) = self.key_check(row);
         let sheet = ServiceSheet {
             service: row.shown(),
             mark: cloud.mark(s, row, facts.keyed.contains(&row.id)),
             key: Redacted::new(self.cloud.dots),
             typed: Redacted::new(self.cloud.typed.key_dots()),
-            check: self.key_check(row),
+            check,
+            renews_in,
             address: typed.then(|| text(CloudLine::Address)),
             address_fault: self.cloud.refused.as_ref().map(|(_, fault)| *fault),
             model: text(CloudLine::Model),
@@ -75,15 +78,16 @@ impl Panel {
         acts
     }
 
-    /// Why a Paste or typed key kept nothing, else how the shown key's test stands; a row with no test says so while
-    /// the key is untested.
-    fn key_check(&self, row: &Service) -> KeyCheck {
+    /// Why a Paste or typed key kept nothing, else how the shown key's test stands, with a used allowance's renewal
+    /// while that answer shows; a row with no test says so while the key is untested.
+    fn key_check(&self, row: &Service) -> (KeyCheck, Option<Duration>) {
         if let Some(unkept) = self.cloud.unkept {
-            return unkept;
+            return (unkept, None);
         }
         match self.cloud.check {
-            KeyCheck::Untested if row.test == KeyTest::None => KeyCheck::NoTest,
-            check => check,
+            KeyCheck::Untested if row.test == KeyTest::None => (KeyCheck::NoTest, None),
+            KeyCheck::Allowance => (KeyCheck::Allowance, self.cloud.renews_in),
+            check => (check, None),
         }
     }
 }

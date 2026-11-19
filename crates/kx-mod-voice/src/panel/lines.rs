@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     AddressFault, BarHint, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, LINK_SCHEME,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
+use std::time::Duration;
 
 use super::cloud::edit;
 use super::{Do, Page, Panel};
@@ -92,14 +93,7 @@ impl Panel {
             return;
         }
         self.cloud.test = None;
-        self.cloud.check = match answer {
-            Ok(()) => KeyCheck::Works,
-            Err(CloudFault::Key) => KeyCheck::Refused,
-            Err(CloudFault::Credit) => KeyCheck::Credit,
-            Err(CloudFault::Account) => KeyCheck::Account,
-            Err(CloudFault::Region) => KeyCheck::Region,
-            Err(_) => KeyCheck::Failed,
-        };
+        (self.cloud.check, self.cloud.renews_in) = answered(answer);
     }
 
     /// Service `id`'s key holds `dots` characters, as read when its page opened.
@@ -166,6 +160,31 @@ impl Panel {
             .clone()
             .filter(|_| self.page == Some(Page::Lines))
     }
+}
+
+/// The key page's answer to a test, by its reason, with a used allowance's renewal; only no answer is `Failed`.
+fn answered(answer: Result<(), CloudFault>) -> (KeyCheck, Option<Duration>) {
+    let check = match answer {
+        Ok(()) => KeyCheck::Works,
+        Err(CloudFault::Key) => KeyCheck::Refused,
+        Err(CloudFault::Credit) => KeyCheck::Credit,
+        Err(CloudFault::Account) => KeyCheck::Account,
+        Err(CloudFault::Region) => KeyCheck::Region,
+        Err(CloudFault::Allowance { renews_in }) => return (KeyCheck::Allowance, renews_in),
+        Err(CloudFault::Rate) => KeyCheck::Rate,
+        Err(CloudFault::Strange) => KeyCheck::Strange,
+        // No answer; a key test sends no sound, so TooBig, Language and Empty cannot come and read the same.
+        Err(
+            CloudFault::Network
+            | CloudFault::Timeout
+            | CloudFault::Gone
+            | CloudFault::Range(_)
+            | CloudFault::TooBig
+            | CloudFault::Language
+            | CloudFault::Empty,
+        ) => KeyCheck::Failed,
+    };
+    (check, None)
 }
 
 /// Why a typed `text`, its scheme and host lowered, was refused: no `https://`, too long, no host name, a bad path or

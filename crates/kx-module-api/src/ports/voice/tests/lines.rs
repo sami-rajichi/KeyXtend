@@ -84,6 +84,7 @@ fn the_key_page_hides_the_typed_key_and_its_caret_and_names_the_lines_that_save(
         key: Redacted::new(0),
         typed: Redacted::new(LENGTH),
         check: KeyCheck::Untested,
+        renews_in: None,
         address: Some(hidden(1)),
         address_fault: None,
         model: hidden(2),

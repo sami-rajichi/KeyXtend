@@ -109,7 +109,7 @@ fn keys() -> Vec<String> {
     keys.extend(
         KeyCheck::ALL
             .into_iter()
-            .filter(|&c| key_check_why(c).is_none())
+            .filter(|&c| key_check_why(c, None).is_none())
             .filter_map(key_check_id)
             .map(|id| format!("{VOICE_KEY}{id}")),
     );
@@ -275,9 +275,9 @@ const NOTES: [(CloudWhy, [&str; 3]); 2] = [
     (
         CloudWhy::Account,
         [
-            "The service asks for a step on its site, such as a verification or a payment method.",
-            "Le service demande une étape sur son site, comme une vérification ou un moyen de paiement.",
-            "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع.",
+            "The service asks for a step on its site, such as a verification, a payment method or a spending cap.",
+            "Le service demande une étape sur son site, comme une vérification, un moyen de paiement ou un plafond de dépenses.",
+            "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع أو حدٍّ للإنفاق.",
         ],
     ),
 ];

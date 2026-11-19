@@ -81,7 +81,7 @@ QtObject {
     // The marks in the warning tone, with no sign of their own (ADR-0047), and the key tests whose answer warns, drawn as
     // a warning band.
     readonly property var warned: ["warn"]
-    readonly property var refused: ["bad", "failed", "credit", "account", "region", "unfit", "busy"]
+    readonly property var refused: ["bad", "failed", "credit", "account", "region", "allowance", "rate", "strange", "unfit", "busy"]
     // The key test whose answer shows as a mark in the badge colours: Key works.
     readonly property string works: "ok"
     // The mark naming a cloud model's service, which takes the cloud icon.

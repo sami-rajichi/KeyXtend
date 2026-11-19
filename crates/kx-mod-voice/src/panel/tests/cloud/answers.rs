@@ -1,9 +1,12 @@
-//! The key page says why, in its own words: a test's refusal names its reason, a Paste the clipboard could not answer
-//! shows Busy on the key's line, not the general fault, and only until the page changes; an Other model id the frames
-//! refuse stays on its line likewise.
+//! The key page says why, in its own words: a test's refusal names its reason, with a used allowance's renewal, a
+//! Paste the clipboard could not answer shows Busy on the key's line, not the general fault, and only until the page
+//! changes; an Other model id the frames refuse stays on its line likewise.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, VoiceClick};
+use kx_module_api::ports::{
+    ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceSheet, VoiceClick,
+};
+use std::time::Duration;
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
@@ -50,25 +53,66 @@ fn a_refused_other_model_stays_on_its_line_with_why_until_the_page_changes() {
     );
 }
 
+/// Five hours, a renewal a used-up allowance may tell.
+const RENEWS: Option<Duration> = Some(Duration::from_hours(5));
+
 #[test]
 fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
+    use KeyCheck::{Account, Allowance, Credit, Failed, Rate, Refused, Region, Strange};
     let cases = [
-        (CloudFault::Key, KeyCheck::Refused),
-        (CloudFault::Credit, KeyCheck::Credit),
-        (CloudFault::Account, KeyCheck::Account),
-        (CloudFault::Region, KeyCheck::Region),
-        (CloudFault::Network, KeyCheck::Failed),
-        (CloudFault::Gone, KeyCheck::Failed),
+        (CloudFault::Key, Refused),
+        (CloudFault::Credit, Credit),
+        (CloudFault::Account, Account),
+        (CloudFault::Region, Region),
+        (CloudFault::Allowance { renews_in: None }, Allowance),
+        (CloudFault::Rate, Rate),
+        (CloudFault::Strange, Strange),
+        (CloudFault::Network, Failed),
+        (CloudFault::Timeout, Failed),
+        (CloudFault::Gone, Failed),
+        (CloudFault::Range("model"), Failed),
+        // A key test sends no sound, so these cannot come; they read as no answer.
+        (CloudFault::TooBig, Failed),
+        (CloudFault::Language, Failed),
+        (CloudFault::Empty, Failed),
     ];
     for (fault, said) in cases {
-        let mut rig = on_groq_lines();
-        let out = rig.click(&VoiceClick::Service(CloudButton::Test));
-        let [Do::Test { ticket, .. }] = out[..] else {
-            panic!("no test: {out:?}");
-        };
-        rig.with(|p, _| p.tested(ticket, Err(fault)));
-        assert_eq!(lines_sheet(&mut rig).check, said, "{fault:?}");
+        let sheet = tested(Err(fault));
+        assert_eq!((sheet.check, sheet.renews_in), (said, None), "{fault:?}");
     }
+}
+
+#[test]
+fn a_used_allowance_on_test_carries_its_renewal_only_while_its_answer_shows() {
+    let mut rig = on_groq_lines();
+    let ticket = test(&mut rig);
+    rig.with(|p, _| p.tested(ticket, Err(CloudFault::Allowance { renews_in: RENEWS })));
+    let sheet = lines_sheet(&mut rig);
+    assert_eq!(
+        (sheet.check, sheet.renews_in),
+        (KeyCheck::Allowance, RENEWS)
+    );
+    let ticket = test(&mut rig);
+    assert_eq!(lines_sheet(&mut rig).renews_in, None, "testing again");
+    rig.with(|p, _| p.tested(ticket, Ok(())));
+    assert_eq!(lines_sheet(&mut rig).renews_in, None, "the key works");
+}
+
+/// Groq's key page after one test of its key answered `answer`.
+fn tested(answer: Result<(), CloudFault>) -> ServiceSheet {
+    let mut rig = on_groq_lines();
+    let ticket = test(&mut rig);
+    rig.with(|p, _| p.tested(ticket, answer));
+    lines_sheet(&mut rig)
+}
+
+/// Clicks Test on the shown key page; gives the test's ticket.
+fn test(rig: &mut Rig) -> u32 {
+    let out = rig.click(&VoiceClick::Service(CloudButton::Test));
+    let [Do::Test { ticket, .. }] = out[..] else {
+        panic!("no test: {out:?}");
+    };
+    ticket
 }
 
 #[test]
