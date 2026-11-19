@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-19 18:41 — P11: ElevenLabs
+Voice typing can now send to ElevenLabs' Scribe v3 and v2 in its own form, with no sound tags such as "(laughter)", and its refusals are read by their exact codes, so used-up credit is never taken for a bad key. Its card warns that it trains on the voice by default and names the switch that stops it; the first dictation to any service with such a warning shows it again as a line on the bar, holding nothing back. The card prices light and heavy use at the cheapest plans that cover them ($6 and $22 a month) and says the free plan is for non-commercial use only, with attribution. The services table is split into the upload-form rows and the rows with their own shape.
+
 ## 2026-11-19 12:11 — P11: only the services the owner can test are offered
 Azure is dropped, because it has no free path and needs a card; its MAI-Transcribe-2 model stays reachable through OpenRouter, and Azure's unused connection code is removed. OpenAI, Mistral, Together and DeepInfra are hidden for the same reason, while their tested code stays, so one can be switched on after a real test. A hidden service cannot be shown, picked or sent to, and an older saved setting that names one falls back to the local model. ADR-0050 records that only services the owner tests by hand are offered.
 
