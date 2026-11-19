@@ -328,13 +328,13 @@ var views = {
           "rtl": true
         },
         "state": "listening",
-        "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في حسابك: Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "warn": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار في قائمة ملفك الشخصي: Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
         "word": "جارٍ الاستماع…"
       },
       "cloud": {
-        "name": "Groq",
-        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+        "name": "ElevenLabs",
+        "said": "يُرسَل صوتك إلى ElevenLabs عند الإيقاف"
       },
       "panel": null,
       "place": "above",
@@ -1239,13 +1239,13 @@ var views = {
           "rtl": false
         },
         "state": "listening",
-        "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your account: Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "warn": "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
         "word": "Listening…"
       },
       "cloud": {
-        "name": "Groq",
-        "said": "Your voice goes to Groq at Stop"
+        "name": "ElevenLabs",
+        "said": "Your voice goes to ElevenLabs at Stop"
       },
       "panel": null,
       "place": "above",
@@ -2150,13 +2150,13 @@ var views = {
           "rtl": false
         },
         "state": "listening",
-        "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : Profile menu → Terms and privacy → Data use → Improve the models for everyone",
+        "warn": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : Terms and privacy → Data use → Improve the models for everyone",
         "waveMs": 300,
         "word": "Écoute…"
       },
       "cloud": {
-        "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "name": "ElevenLabs",
+        "said": "Votre voix partira chez ElevenLabs à l’arrêt"
       },
       "panel": null,
       "place": "above",

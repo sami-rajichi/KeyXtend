@@ -90,7 +90,7 @@ fn listening_carries_the_cards_warning_in_full_while_the_first_dictation_to_its_
         warn: Some(warn),
         ..plain
     });
-    let text = "Trains its models on your voice by default. To stop it, turn off this switch in your account: Data use";
+    let text = "Trains its models on your voice by default. To stop it, turn off this switch in your profile menu: Data use";
     assert_eq!(bar_json(warned)["warn"], text);
     assert_eq!(bar_json(listening_bar())["warn"], Value::Null, "none");
 }

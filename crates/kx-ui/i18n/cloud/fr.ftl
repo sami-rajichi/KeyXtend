@@ -88,7 +88,7 @@ cloud =
     .fact-price-plain = { $price }
     .fact-price-range = De { $low } à { $high } selon le modèle
     .fact-price-range-fee = De { $low } à { $high } selon le modèle, plus { $fee } % de frais sur le crédit
-    .fact-warn-trains = Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans votre compte : { $switch }
+    .fact-warn-trains = Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage dans le menu de votre profil : { $switch }
     .warn-mark-trains = Entraînement activé
     .fact-bills-least = Au moins { $seconds-form ->
         [one] { $seconds } seconde

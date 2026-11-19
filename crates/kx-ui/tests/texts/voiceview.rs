@@ -28,6 +28,8 @@ const LONG: usize = 3;
 /// The start of a view's name that shows the cloud mark, and the service it names.
 const CLOUD: &str = "cloud";
 const SERVICE: &str = "Groq";
+/// The view of a first dictation to a service whose card warns.
+const WARNED: &str = "cloudWarned";
 
 /// Each click kind by the name QML holds it under.
 fn kinds() -> Value {
@@ -97,10 +99,22 @@ fn listening(lang: &VoiceLang, nothing: bool, warn: Option<Fact>) -> VoiceBar {
     })
 }
 
-/// The first card warning of the voice module's offered services, as the first dictation to that service shows it.
-fn warning() -> Option<Fact> {
+/// The first offered service with a card warning: its cloud mark, and the warning its first dictation shows.
+fn warned() -> (ServiceName, Fact) {
     let services = table().expect("the services table reads");
-    services.offered().find_map(|s| s.facts.warn.clone())
+    let first = services
+        .offered()
+        .find_map(|s| Some((s.shown(), s.facts.warn.clone()?)));
+    first.expect("an offered service warns")
+}
+
+/// The cloud mark view `name` shows: the warning service's on `WARNED`, Groq's on another cloud view, none otherwise.
+fn mark(name: &str) -> Option<ServiceName> {
+    if name == WARNED {
+        return Some(warned().0);
+    }
+    name.starts_with(CLOUD)
+        .then(|| ServiceName::Named(SERVICE.to_owned()))
 }
 
 /// Every bar the tests draw in language `tag`, by name.
@@ -148,7 +162,7 @@ fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 5] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
-        ("cloudWarned", listening(lang, false, warning())),
+        (WARNED, listening(lang, false, Some(warned().1))),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
         (
@@ -180,9 +194,7 @@ fn views(tag: &str) -> Value {
             panel: None,
             place: BarPlace::Above,
             sounds: true,
-            cloud: name
-                .starts_with(CLOUD)
-                .then(|| ServiceName::Named(SERVICE.to_owned())),
+            cloud: mark(name),
         };
         bus.publish(&VoiceView::new(page))
             .expect("the view is sent");

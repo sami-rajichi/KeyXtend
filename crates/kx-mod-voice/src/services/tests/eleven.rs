@@ -1,16 +1,16 @@
 //! `ElevenLabs`' row as its pages read 2026-11-17 give it (research file `[E…]` lines): its own form, asking for no
 //! sound tags, at its own address with the key in `xi-api-key`, its key test on the subscription, Scribe v3 and v2 but
 //! never the deprecated v1, two requests at once, and its card: the US, training by default with its switch named
-//! last, history kept, the lower free allowance, its hourly price for light and heavy use, and the free plan's rule.
+//! last, history kept, the lower free allowance, its cheapest plans for light and heavy use, and the free plan's rule.
 
 use super::*;
 use kx_module_api::ports::{Fact, FactArg, FormField, FormFields, KeyHeader};
 
-/// Its price an hour in cents, on every plan [E1].
-const HOURLY: u32 = 20;
-/// The switch that stops training, in its own words [E5][E7].
-const SWITCH: &str =
-    "Profile menu → Terms and privacy → Data use → Improve the models for everyone";
+/// The cheapest plans for light and heavy use [E1]: Starter and Creator, each its price in cents a month and the hours
+/// of sound it includes.
+const PLANS: [(u32, u16); 2] = [(600, 30), (2200, 110)];
+/// The switch that stops training, in its own labels only [E5][E7]; the card's sentence names the profile menu.
+const SWITCH: &str = "Terms and privacy → Data use → Improve the models for everyone";
 
 /// Its form as the row writes it: its language field, and no sound tags such as "(laughter)" typed into the text.
 fn own_form() -> CloudShape {
@@ -134,11 +134,16 @@ fn its_facts_are_its_pages_with_the_lower_free_allowance_and_the_free_plans_rule
         free,
         ("minutes-month", vec![("minutes", &FactValue::Count(30))])
     );
-    for (fact, hours) in [
+    let uses = [
         (&facts.light, shipped().light_hours()),
         (&facts.heavy, shipped().heavy_hours()),
-    ] {
-        let price = usd(u32::from(hours) * HOURLY);
+    ];
+    for ((fact, hours), (cents, included)) in uses.into_iter().zip(PLANS) {
+        assert!(
+            hours <= included,
+            "{hours} h within the plan's {included} h"
+        );
+        let price = usd(cents);
         assert_eq!(
             values(fact),
             ("plain", vec![("price", &price)]),
