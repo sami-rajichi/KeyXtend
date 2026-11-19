@@ -1,9 +1,7 @@
-// The dictation bar (design "The bar"; design/voice-bar.html .vbar): one key row tall, taller by all the warning's
-// lines while a card's warning shows, a pill in the keyboard's theme where the hub places it. It listens with the red
-// dot, its language, the wave and the timer, with a service's warning under the row on the first dictation to it;
-// writes with the shimmer; then shows the text or a note, each state's buttons in one order in every language
-// (ADR-0020). It takes clicks but never focus, plays the start and stop sounds, and tells the module when the pointer
-// is over it.
+// The dictation bar (design "The bar"; design/voice-bar.html .vbar): a pill in the keyboard's theme where the hub
+// places it, one key row tall, taller by all the warning's lines while a card's warning shows under the row. It
+// listens, writes, then shows the text or a note with each state's buttons in one order (ADR-0020), taking clicks but
+// never focus, playing the start and stop sounds and telling the module when the pointer is over it.
 pragma ComponentBehavior: Bound
 import QtQuick
 
