@@ -77,6 +77,7 @@ cloud =
     .fact-keeps-host = يتوقف على المضيف، وهناك خيار مفعّل من البداية لا يرسل إلا إلى المضيفين الذين لا يحتفظون بشيء
     .fact-keeps-history = سجلّك افتراضيًا، وعدم الاحتفاظ بأي شيء متاح لخطط المؤسسات فقط
     .fact-keeps-paid-limited = في { -cloud-paid-tier }: طلباتك لمدة محدودة لكشف إساءة الاستخدام
+    .fact-keeps-unstated = { cloud.fact-where-unstated }
     .fact-free-daily = { $hours-form ->
         [one] ساعة واحدة
         [two] ساعتان
@@ -103,6 +104,7 @@ cloud =
        *[other] { $minutes } دقيقة
     } شهريًا
     .fact-free-no-card = دون الحاجة إلى بطاقة دفع
+    .fact-free-credit = رصيد دائم بقيمة { $credit-after }، دون بطاقة دفع
     .fact-price-free-or = مجاني ضمن { -cloud-free-use }، وإلا فمن { $low-after } إلى { $high-after } حسب النموذج
     .fact-price-unknown = غير معروف، ويتوقف على الخدمة
     .fact-price-plain = { $price }

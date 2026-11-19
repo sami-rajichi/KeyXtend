@@ -1,6 +1,5 @@
-//! Voice typing's texts in each language: every id the hub words has its text, the owner's and the mock-up's words,
-//! sizes, memory, seconds and factors with the language's marks, Arabic's plural forms, and a note naming its language.
-//! The port's newer notes are in `newer`.
+//! Voice typing's texts in each language: every id the hub words has its text, the owner's and mock-up's words, sizes,
+//! memory, seconds and factors with its marks, Arabic's plurals, a note naming its language; newer notes in `newer`.
 
 use crate::{all, lang};
 use kx_module_api::ports::{
@@ -14,6 +13,7 @@ use kx_ui::i18n::keys::{
 };
 
 mod approved;
+mod assembly;
 mod cloud;
 mod eleven;
 mod gemini;

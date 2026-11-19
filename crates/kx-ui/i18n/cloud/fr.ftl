@@ -69,6 +69,7 @@ cloud =
     .fact-keeps-host = Dépend de l’hébergeur ; un réglage, activé d’emblée, n’envoie qu’aux hébergeurs qui ne gardent rien
     .fact-keeps-history = Votre historique, par défaut ; ne rien garder est réservé aux offres Enterprise
     .fact-keeps-paid-limited = Au { -cloud-paid-tier } : vos requêtes, pendant un temps limité pour détecter les abus
+    .fact-keeps-unstated = { cloud.fact-where-unstated }
     .fact-free-daily = { $hours-form ->
         [one] { $hours } heure
        *[other] { $hours } heures
@@ -86,6 +87,7 @@ cloud =
        *[other] minutes
     } par mois
     .fact-free-no-card = Sans carte bancaire
+    .fact-free-credit = { $credit } de crédit sans expiration, sans carte
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
     .fact-price-unknown = Inconnu ; cela dépend du service
     .fact-price-plain = { $price }

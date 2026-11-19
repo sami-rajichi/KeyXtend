@@ -1,6 +1,7 @@
-# The services table's second file (ADR-0047 decisions 5 to 9): the rows of services with their own request shape,
-# ElevenLabs then Gemini. It holds `[[services]]` rows only, read after `services.toml`'s upload-form rows as one
-# table and checked by the same rules; the table-wide values and the notes on every key are in `services.toml`.
+# The services table's second file (ADR-0047 decisions 5 to 9, ADR-0051): the rows of services with their own request
+# shape, ElevenLabs, Gemini, then AssemblyAI. It holds `[[services]]` rows only, read after `services.toml`'s
+# upload-form rows as one table and checked by the same rules; the table-wide values and the notes on every key are in
+# `services.toml`.
 
 # ElevenLabs: elevenlabs.io read 2026-11-17 (API pricing, pricing, the speech-to-text reference, models, privacy policy,
 # errors, the subscription endpoint). Scribe in its own form with `xi-api-key`; trained on by default, so its card warns.
@@ -85,3 +86,41 @@ light = { id = "paid-plain", money = { price = 4.50 } }
 heavy = { id = "paid-plain", money = { price = 18.00 } }
 warn = { id = "free-allowance" }
 rule = { id = "eea-paid-18" }
+
+# AssemblyAI: assemblyai.com read 2026-11-19 (the Sync API reference, short files, pricing, billing, data retention and
+# training, the STT-3.7 note, models). Universal-3.6 Pro through the Sync API on the European servers: one request a
+# piece, its `config` part first, the key in `Authorization` and the model in its own header; no call tests a key.
+[[services]]
+id = "assemblyai"
+name = "AssemblyAI"
+shape = "assembly"
+# The header the model goes in on every request [A1].
+model_header = "X-AAI-Model"
+host = "sync.eu.assemblyai.com"
+address = "https://sync.eu.assemblyai.com/v1/transcribe"
+header = "bearer"
+keys = "https://www.assemblyai.com/dashboard/api-keys"
+# A request takes 256 MB and 20 minutes, but one past its 30-second server deadline fails [A2], so a piece keeps to
+# the live limit's 2 minutes [A1], 3.84 MB raw. `per_min`, `at_once` and the keys page are guesses, checked at task 24.
+limits = { cap_mb = 256, cap_s = 1200, max_mb = 4, max_s = 120, per_min = 20, at_once = 2 }
+terms = 1
+offered = true
+untested = true
+
+[[services.models]]
+id = "universal-3-6-pro"
+name = "Universal-3.6 Pro"
+langs = "assemblyai"
+
+# Nothing sent to its European servers trains its models [A5], so no warning; the Sync API's keeping is not stated.
+# New accounts get $50 of credit with no card, which never expires [A3][A4]; light and heavy use at $0.30 an hour [A3].
+[services.facts]
+read = 2026-11-19
+source = "https://www.assemblyai.com/pricing"
+currency = "USD"
+place = { id = "eu" }
+trains = { id = "never" }
+keeps = { id = "unstated" }
+free = { id = "credit", money = { credit = 50.00 } }
+light = { id = "plain", money = { price = 4.50 } }
+heavy = { id = "plain", money = { price = 18.00 } }

@@ -200,3 +200,28 @@ fn a_refusal_names_the_row_and_its_rule_in_plain_words() {
     let room = "a piece leaves no room for the wav header and the form under the service's cap";
     assert_eq!(err, format!("the service groq is refused: {room}"));
 }
+
+/// The row error one edit of the shipped second file gives.
+fn own_err(from: &str, to: &str) -> Option<ServiceError> {
+    match Services::parse(TEXT, &edits_text(OWN, &[(from, to)]), LANGS) {
+        Err(ServicesError::Row { why, .. }) => Some(why),
+        _ => None,
+    }
+}
+
+#[test]
+fn a_model_header_goes_on_assemblyais_shape_alone_which_needs_a_plain_one() {
+    let named = "model_header = \"X-AAI-Model\"";
+    assert_eq!(
+        own_err(named, ""),
+        Some(E::Form),
+        "its model header is needed"
+    );
+    let spaced = "model_header = \"X AAI-Model\"";
+    assert_eq!(own_err(named, spaced), Some(E::Form), "a plain name");
+    let with_form = format!("{named}\n{FORM}");
+    assert_eq!(own_err(named, &with_form), Some(E::Form), "no form");
+    let shape = "shape = \"form\"";
+    refused(shape, &format!("{shape}\n{named}"), E::Form);
+    refused(&format!("{shape}\n{FORM}"), "shape = \"assembly\"", E::Form);
+}

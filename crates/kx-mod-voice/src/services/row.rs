@@ -25,8 +25,10 @@ pub enum ServiceError {
     /// The shape is not one `speech-net` knows.
     #[error("its shape is not one speech-net knows")]
     Shape,
-    /// A form's fields are missing, odd or too many, or given to a shape without a form.
-    #[error("its form fields are missing, odd, too many, or given to a shape without a form")]
+    /// A form's fields or a model header are missing, odd or too many, or given to a shape without them.
+    #[error(
+        "its form fields or model header are missing, odd, too many, or given to a shape without them"
+    )]
     Form,
     /// A fixed field asks for a reply that is not plain, or for timings (ruling 2026-11-17).
     #[error("a fixed field asks for timings or a reply that is not plain text or JSON")]
@@ -89,6 +91,9 @@ pub(super) struct RawService {
     /// A form's fields.
     #[serde(default)]
     form: Option<form::RawForm>,
+    /// The header that carries the model, on `AssemblyAI`'s shape.
+    #[serde(default)]
+    model_header: Option<String>,
     /// The field sent while the keep-nothing switch is on.
     #[serde(default)]
     keep: Option<form::RawField>,
@@ -172,7 +177,8 @@ impl Service {
         let keep = raw.keep.as_ref().map(form::RawField::field);
         let region = raw.region.as_deref();
         let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall, region);
-        let shape = form::shape(&raw.shape, raw.form.as_ref(), &sent)?;
+        let model_header = raw.model_header.as_deref();
+        let shape = form::shape(&raw.shape, raw.form.as_ref(), model_header, &sent)?;
         let test = address::test(raw.test.as_deref(), &address)?;
         let header = header(&raw.header)?;
         let named = raw.name.is_some();

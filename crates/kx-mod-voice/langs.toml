@@ -56,3 +56,11 @@ english = { en = "en" }
 # `bcp-47`: one BCP-47 locale per keyboard language, which Gemini's `language_codes` takes [N1][N2]: Arabic as Modern
 # Standard Arabic's usual ar-SA, French and English as fr-FR and en-US, then only the codes its pages name.
 bcp-47 = { ar = "ar-SA", en = "en-US", es = "es-ES", fr = "fr-FR", hi = "hi-IN", zh = "cmn-Hans-CN" }
+# `assemblyai`: the 32 codes of AssemblyAI's Sync API [A1], each a keyboard language's own, with Bokmål (nb) sent as
+# its Norwegian code.
+assemblyai = {
+    af = "af", ar = "ar", ca = "ca", da = "da", de = "de", en = "en", es = "es", et = "et", fa = "fa", fi = "fi",
+    fr = "fr", gl = "gl", he = "he", hi = "hi", it = "it", ja = "ja", ko = "ko", mr = "mr", nb = "no", nl = "nl",
+    nn = "nn", no = "no", pt = "pt", ro = "ro", ru = "ru", sv = "sv", tr = "tr", ur = "ur", vi = "vi", xh = "xh",
+    yue = "yue", zh = "zh", zu = "zu",
+}

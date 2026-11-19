@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
+mod assembly;
 mod eleven;
 pub(crate) mod gemini;
 mod langs;
@@ -22,18 +23,19 @@ pub(crate) const OWN: &str = include_str!("../../services-own.toml");
 pub(crate) const LANGS: &str = include_str!("../../langs.toml");
 
 /// The rows the Cloud page offers, in its order: only those the owner tests by hand (ADR-0050).
-pub(crate) const OFFERED: [&str; 6] = [
+pub(crate) const OFFERED: [&str; 7] = [
     "groq",
     "lemonfox",
     "custom",
     "openrouter",
     "elevenlabs",
     "gemini",
+    "assemblyai",
 ];
 /// The rows kept in the table, built and tested, but not offered: each needs a card or a payment before any use.
 pub(crate) const NOT_OFFERED: [&str; 4] = ["openai", "mistral", "together", "deepinfra"];
 /// The rows of a shape other than the upload form, after the form rows, in the table's order.
-pub(crate) const SHAPED: [&str; 2] = ["elevenlabs", "gemini"];
+pub(crate) const SHAPED: [&str; 3] = ["elevenlabs", "gemini", "assemblyai"];
 /// `ElevenLabs`' own warning id, whose sentence names its profile menu; the shared `trains` names none.
 pub(crate) const PROFILE: &str = "trains-profile";
 

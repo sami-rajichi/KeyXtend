@@ -1,6 +1,6 @@
 //! The cloud port and the row's limits: with no port a cloud dictation ends with the fault note and keeps its
-//! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and `ElevenLabs`
-//! and Gemini dictations ask in their own shapes with the key under their own headers.
+//! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and `ElevenLabs`,
+//! Gemini and `AssemblyAI` dictations ask in their own shapes with the key under their row's header.
 
 use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 
@@ -95,6 +95,44 @@ fn a_gemini_dictation_asks_in_its_own_shape_with_its_bcp_47_code_and_its_own_key
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     let sent = (model, run.lang.as_str());
     assert_eq!(sent, (Some("models/gemini-3.5-transcribe"), "en-US"));
+    assert_eq!(rig.typed_texts(), ["hello world"]);
+}
+
+/// `AssemblyAI` picked for English with Universal-3.6 Pro, switched on with its terms confirmed, and its key set.
+fn assembly(fake: &Fakes, host: &mut FakeHost) {
+    host.put("cloud", true.into());
+    host.put(
+        "services",
+        table("assemblyai = { on = 2026-11-19, terms = 1 }"),
+    );
+    host.put("picks", table("en = \"assemblyai:universal-3-6-pro\""));
+    let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
+    keys.set("assemblyai", secret(&key())).unwrap();
+}
+
+#[test]
+fn an_assemblyai_dictation_asks_in_its_own_shape_with_its_model_header_and_a_bearer_key() {
+    let mut rig = Rig::build(assembly);
+    rig.fake
+        .cloud
+        .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);
+    rig.dictate();
+    let runs = rig.fake.cloud.calls().runs;
+    let [run] = &runs[..] else {
+        panic!("one run, not {}", runs.len())
+    };
+    let row = services::table()
+        .ok()
+        .and_then(|t| t.get("assemblyai"))
+        .unwrap();
+    assert!(matches!(run.shape, CloudShape::Assembly { .. }));
+    assert_eq!(run.shape, row.shape, "the row's model header");
+    assert_eq!((&run.header, run.limits), (&KeyHeader::Bearer, row.limits));
+    let model = run.model.as_ref().map(|m| m.expose().as_str());
+    assert_eq!(
+        (model, run.lang.as_str()),
+        (Some("universal-3-6-pro"), "en")
+    );
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
 

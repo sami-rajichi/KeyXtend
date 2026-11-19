@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use super::ServiceError;
 
-/// The shapes `speech-net` holds an adapter for (ADR-0047 decision 5, three since ADR-0050).
+/// The shapes `speech-net` holds an adapter for (ADR-0047 decision 5, three since ADR-0050, four since ADR-0051).
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Kind {
     /// The `OpenAI`-style upload form, with the row's fields.
@@ -15,13 +15,16 @@ enum Kind {
     Eleven,
     /// Gemini's single request.
     Gemini,
+    /// `AssemblyAI`'s Sync request.
+    Assembly,
 }
 
 /// Each shape's name in the table, and whether its request carries the sound as Base64 text, a third larger.
-const SHAPES: [(&str, Kind, bool); 3] = [
+const SHAPES: [(&str, Kind, bool); 4] = [
     ("form", Kind::Form, false),
     ("eleven", Kind::Eleven, false),
     ("gemini", Kind::Gemini, true),
+    ("assembly", Kind::Assembly, false),
 ];
 
 /// What a form's fixed fields may ask about the reply.
@@ -112,11 +115,12 @@ impl<'a> Sent<'a> {
 }
 
 /// The shape `name` names, with `form`'s fields for an upload form or `ElevenLabs`' own, whose fixed fields and keep
-/// field must fit one request; Gemini takes no form, `ElevenLabs` no list, and only an upload form a keep field, a
-/// paywall or a region code.
+/// field must fit one request; Gemini takes no form, `ElevenLabs` no list, `AssemblyAI` only its plain `model_header`,
+/// and only an upload form a keep field, a paywall or a region code.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
+    model_header: Option<&str>,
     sent: &Sent<'_>,
 ) -> Result<CloudShape, ServiceError> {
     let kind = SHAPES
@@ -125,10 +129,19 @@ pub(super) fn shape(
         .map(|(_, kind, _)| *kind)
         .ok_or(ServiceError::Shape)?;
     let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
-    match (kind, form, bare) {
-        (Kind::Form, Some(form), _) => fields(form, sent),
-        (Kind::Eleven, Some(form), true) if !form.list => own(form, sent).map(CloudShape::Eleven),
-        (Kind::Gemini, None, true) => Ok(CloudShape::Gemini),
+    match (kind, form, model_header, bare) {
+        (Kind::Form, Some(form), None, _) => fields(form, sent),
+        (Kind::Eleven, Some(form), None, true) if !form.list => {
+            own(form, sent).map(CloudShape::Eleven)
+        }
+        (Kind::Gemini, None, None, true) => Ok(CloudShape::Gemini),
+        (Kind::Assembly, None, Some(name), true) => {
+            let model_header = name.to_owned();
+            let shape = CloudShape::Assembly { model_header };
+            Some(shape)
+                .filter(CloudShape::fits)
+                .ok_or(ServiceError::Form)
+        }
         _ => Err(ServiceError::Form),
     }
 }

@@ -137,6 +137,149 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "cardLong-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى AssemblyAI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "وجهة صوتك",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "الاتحاد الأوروبي"
+                  }
+                ],
+                "text": "الاتحاد الأوروبي"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "التدريب",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "لا يُستخدم للتدريب"
+                  }
+                ],
+                "text": "لا يُستخدم للتدريب"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "ما يُحتفَظ به",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "غير مذكور في صفحات الخدمة"
+                  }
+                ],
+                "text": "غير مذكور في صفحات الخدمة"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 19/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 57,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "cardLong-custom": {
       "bar": {
         "state": "hidden"
@@ -263,7 +406,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -406,7 +549,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -549,7 +692,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -688,7 +831,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -835,7 +978,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -978,7 +1121,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1125,7 +1268,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1268,7 +1411,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1411,7 +1554,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1558,7 +1701,150 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cardLongPrice-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "إلغاء",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "تأكيد",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": "لا يُرسَل صوتك إلى AssemblyAI إلا بعد الإيقاف، وبمفتاحك الخاص.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "الحصة المجانية",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "رصيد دائم بقيمة 50 دولارًا، دون بطاقة دفع"
+                  }
+                ],
+                "text": "رصيد دائم بقيمة 50 دولارًا، دون بطاقة دفع"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "استخدام خفيف · 15 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,50 دولار"
+                  }
+                ],
+                "text": "4,50 دولار"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "استخدام مكثّف · 60 ساعة شهريًا",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "18 دولارًا"
+                  }
+                ],
+                "text": "18 دولارًا"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "فتح www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "قد تكون قديمة، فراجع صفحة الخدمة.",
+            "text": "قُرئت هذه المعلومات في 19/11/2026."
+          },
+          "untested": "غير مُختبَرة: لم تُفحص بمفتاح حقيقي بعد.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "تستخدم الخدمة صوتك لتدريب نماذجها افتراضيًا. لإيقاف ذلك، عطِّل هذا الخيار: Settings → Data Controls"
+          }
+        },
+        "sub": "اقرأ هذا قبل التفعيل",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1694,7 +1980,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1837,7 +2123,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1994,7 +2280,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2147,7 +2433,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2304,7 +2590,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2447,7 +2733,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2590,7 +2876,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2733,7 +3019,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -2876,7 +3162,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3019,7 +3305,7 @@ var views = {
         "window": "إعدادات الإملاء في KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -3376,7 +3662,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -3554,7 +3840,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 1,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -3652,6 +3938,120 @@ var views = {
       },
       "place": "above",
       "round": 35,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudLong-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "رجوع",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "إغلاق",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "المعلومات",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "المفتاح والنموذج",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "تعطيل",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "تفعيل",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": true,
+          "name": "العربية",
+          "rtl": true
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "مجانًا: رصيد دائم بقيمة 50 دولارًا، دون بطاقة دفع",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "التدريب مفعّل افتراضيًا"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "يلزم مفتاح"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "غير مُختبَرة",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "استخدام الخدمات السحابية",
+            "on": true,
+            "value": "مفعّل"
+          }
+        },
+        "sub": "بمفتاحك الخاص · لا يُرسَل شيء قبل الإيقاف",
+        "ticked": 1,
+        "title": "الخدمات السحابية",
+        "top": null,
+        "window": "إعدادات الإملاء في KeyXtend"
+      },
+      "place": "above",
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -7846,6 +8246,149 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "cardLong-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to AssemblyAI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Where your voice goes",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "European Union"
+                  }
+                ],
+                "text": "European Union"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Training",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not used for training"
+                  }
+                ],
+                "text": "Not used for training"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "What is kept",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Not stated on its pages"
+                  }
+                ],
+                "text": "Not stated on its pages"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 19/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 57,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "cardLong-custom": {
       "bar": {
         "state": "hidden"
@@ -7972,7 +8515,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8115,7 +8658,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8258,7 +8801,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8397,7 +8940,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8544,7 +9087,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8687,7 +9230,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8834,7 +9377,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -8977,7 +9520,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9120,7 +9663,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9267,7 +9810,150 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cardLongPrice-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Cancel",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirm",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": "Your voice goes to AssemblyAI only after Stop, with your own key.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Free allowance",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$50 of credit that never expires, no card needed"
+                  }
+                ],
+                "text": "$50 of credit that never expires, no card needed"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Light use · 15 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$4.50"
+                  }
+                ],
+                "text": "$4.50"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Heavy use · 60 hours a month",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "$18"
+                  }
+                ],
+                "text": "$18"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Open www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "They may be out of date; check the service’s page.",
+            "text": "Facts read on 19/11/2026."
+          },
+          "untested": "Untested: not yet checked with a real key.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Trains its models on your voice by default. To stop it, turn off this switch: "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Trains its models on your voice by default. To stop it, turn off this switch: Settings → Data Controls"
+          }
+        },
+        "sub": "Read this before you switch it on",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9403,7 +10089,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9546,7 +10232,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9703,7 +10389,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -9856,7 +10542,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10013,7 +10699,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10156,7 +10842,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10299,7 +10985,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10442,7 +11128,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10585,7 +11271,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -10728,7 +11414,7 @@ var views = {
         "window": "KeyXtend dictation settings"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -11085,7 +11771,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -11263,7 +11949,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 1,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -11361,6 +12047,120 @@ var views = {
       },
       "place": "above",
       "round": 35,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudLong-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Back",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Close",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Facts",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Key and model",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Switch off",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Switch on",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "English",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Free: $50 of credit that never expires, no card needed",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Trains by default"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Needs a key"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "Untested",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Use cloud services",
+            "on": true,
+            "value": "On"
+          }
+        },
+        "sub": "Your own key · nothing leaves before Stop",
+        "ticked": 1,
+        "title": "Cloud services",
+        "top": null,
+        "window": "KeyXtend dictation settings"
+      },
+      "place": "above",
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -15555,6 +16355,149 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "cardLong-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers AssemblyAI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 0,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "where",
+              "label": "Où va votre voix",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Union européenne"
+                  }
+                ],
+                "text": "Union européenne"
+              },
+              "warn": false
+            },
+            {
+              "id": "trains",
+              "label": "Entraînement",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non utilisée pour l’entraînement"
+                  }
+                ],
+                "text": "Non utilisée pour l’entraînement"
+              },
+              "warn": false
+            },
+            {
+              "id": "keeps",
+              "label": "Conservation",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "Non précisé sur ses pages"
+                  }
+                ],
+                "text": "Non précisé sur ses pages"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 19/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 57,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "cardLong-custom": {
       "bar": {
         "state": "hidden"
@@ -15681,7 +16624,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 46,
+      "round": 47,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -15824,7 +16767,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 50,
+      "round": 51,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -15967,7 +16910,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 52,
+      "round": 53,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16106,7 +17049,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 54,
+      "round": 55,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16253,7 +17196,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 36,
+      "round": 37,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16396,7 +17339,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 44,
+      "round": 45,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16543,7 +17486,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 40,
+      "round": 41,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16686,7 +17629,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 38,
+      "round": 39,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16829,7 +17772,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 48,
+      "round": 49,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -16976,7 +17919,150 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 42,
+      "round": 43,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cardLongPrice-assemblyai": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "",
+            "kind": "confirm",
+            "label": "Annuler",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 1,
+            "id": "",
+            "kind": "confirm",
+            "label": "Confirmer",
+            "on": true,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": "Votre voix ne part vers AssemblyAI qu’après l’arrêt, avec votre propre clé.",
+        "note": null,
+        "page": "card",
+        "pages": {
+          "at": 1,
+          "count": 2
+        },
+        "sheet": {
+          "facts": [
+            {
+              "id": "free",
+              "label": "Quota gratuit",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "50 $ de crédit sans expiration, sans carte"
+                  }
+                ],
+                "text": "50 $ de crédit sans expiration, sans carte"
+              },
+              "warn": false
+            },
+            {
+              "id": "light",
+              "label": "Usage léger · 15 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "4,50 $"
+                  }
+                ],
+                "text": "4,50 $"
+              },
+              "warn": false
+            },
+            {
+              "id": "heavy",
+              "label": "Usage intensif · 60 heures par mois",
+              "value": {
+                "parts": [
+                  {
+                    "own": false,
+                    "text": "18 $"
+                  }
+                ],
+                "text": "18 $"
+              },
+              "warn": false
+            }
+          ],
+          "is": "card",
+          "read": {
+            "link": {
+              "arg": 0,
+              "id": "link",
+              "kind": "service",
+              "label": "Ouvrir www.assemblyai.com",
+              "on": true,
+              "tone": "plain"
+            },
+            "old": "Elles datent peut-être ; vérifiez la page du service.",
+            "text": "Informations relevées le 19/11/2026."
+          },
+          "untested": "Non testé : pas encore vérifié avec une vraie clé.",
+          "warn": {
+            "parts": [
+              {
+                "own": false,
+                "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage : "
+              },
+              {
+                "own": true,
+                "text": "Settings → Data Controls"
+              }
+            ],
+            "text": "Entraîne ses modèles sur votre voix par défaut. Pour arrêter cela, désactivez ce réglage : Settings → Data Controls"
+          }
+        },
+        "sub": "À lire avant d’activer",
+        "ticked": 0,
+        "title": "AssemblyAI",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 58,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17112,7 +18198,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 47,
+      "round": 48,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17255,7 +18341,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 51,
+      "round": 52,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17412,7 +18498,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 53,
+      "round": 54,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17565,7 +18651,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 55,
+      "round": 56,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17722,7 +18808,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 37,
+      "round": 38,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -17865,7 +18951,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 45,
+      "round": 46,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18008,7 +19094,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 41,
+      "round": 42,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18151,7 +19237,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 39,
+      "round": 40,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18294,7 +19380,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 49,
+      "round": 50,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18437,7 +19523,7 @@ var views = {
         "window": "Réglages de la dictée de KeyXtend"
       },
       "place": "above",
-      "round": 43,
+      "round": 44,
       "sounds": true,
       "words": {
         "copied": "Copié",
@@ -18794,7 +19880,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 0,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -18972,7 +20058,7 @@ var views = {
         "page": "cloud",
         "pages": {
           "at": 1,
-          "count": 2
+          "count": 3
         },
         "sheet": {
           "is": "cloud",
@@ -19070,6 +20156,120 @@ var views = {
       },
       "place": "above",
       "round": 35,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudLong-3": {
+      "bar": {
+        "state": "hidden"
+      },
+      "cloud": null,
+      "panel": {
+        "back": {
+          "arg": 0,
+          "id": "back",
+          "kind": "button",
+          "label": "Retour",
+          "on": true,
+          "tone": "plain"
+        },
+        "close": {
+          "arg": 0,
+          "id": "close",
+          "kind": "button",
+          "label": "Fermer",
+          "on": true,
+          "tone": "plain"
+        },
+        "extra": null,
+        "foot": [
+          {
+            "arg": 0,
+            "id": "facts",
+            "kind": "service",
+            "label": "Informations",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "lines",
+            "kind": "service",
+            "label": "Clé et modèle",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "off",
+            "kind": "service",
+            "label": "Désactiver",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "on",
+            "kind": "service",
+            "label": "Activer",
+            "on": false,
+            "tone": "primary"
+          }
+        ],
+        "lang": {
+          "arabic": false,
+          "name": "Français",
+          "rtl": false
+        },
+        "line": null,
+        "note": null,
+        "page": "cloud",
+        "pages": {
+          "at": 2,
+          "count": 3
+        },
+        "sheet": {
+          "is": "cloud",
+          "off": null,
+          "rows": [
+            {
+              "line": "Gratuit : 50 $ de crédit sans expiration, sans carte",
+              "marks": [
+                {
+                  "id": "warn",
+                  "text": "Entraînement activé"
+                },
+                {
+                  "id": "needs-key",
+                  "text": "Clé requise"
+                }
+              ],
+              "name": "AssemblyAI",
+              "tag": "Non testé",
+              "tick": true
+            }
+          ],
+          "switch": {
+            "kind": "cloud",
+            "label": "Utiliser les services cloud",
+            "on": true,
+            "value": "Activé"
+          }
+        },
+        "sub": "Votre propre clé · rien ne part avant l’arrêt",
+        "ticked": 1,
+        "title": "Services cloud",
+        "top": null,
+        "window": "Réglages de la dictée de KeyXtend"
+      },
+      "place": "above",
+      "round": 36,
       "sounds": true,
       "words": {
         "copied": "Copié",

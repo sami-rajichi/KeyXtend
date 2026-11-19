@@ -7,6 +7,7 @@ use crate::services::table;
 use crate::services::tests::{TEXT, parse};
 use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
+mod assembly;
 mod eleven;
 mod gemini;
 mod keep;

@@ -69,6 +69,7 @@ cloud =
     .fact-keeps-host = Depends on the host; a switch, on to start, sends only to hosts that keep nothing
     .fact-keeps-history = Your history, by default; keeping nothing is for Enterprise plans only
     .fact-keeps-paid-limited = On { -cloud-paid-tier }: your requests, for a limited time to check for abuse
+    .fact-keeps-unstated = { cloud.fact-where-unstated }
     .fact-free-daily = { $hours-form ->
         [one] { $hours } hour
        *[other] { $hours } hours
@@ -86,6 +87,7 @@ cloud =
        *[other] minutes
     } a month
     .fact-free-no-card = No card needed
+    .fact-free-credit = { $credit } of credit that never expires, no card needed
     .fact-price-free-or = Free within { -cloud-free-use }, else { $low } to { $high } by model
     .fact-price-unknown = Unknown; it depends on the service
     .fact-price-plain = { $price }
