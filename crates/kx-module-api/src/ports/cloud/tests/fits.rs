@@ -74,16 +74,28 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
 }
 
 #[test]
-fn elevenlabs_form_fits_as_an_upload_forms_does() {
+fn elevenlabs_own_form_holds_its_language_and_fixed_fields_and_fits_by_its_own_check() {
     assert!(eleven().fits());
     let CloudShape::Eleven(mut odd) = eleven() else {
         unreachable!("its own form")
     };
+    assert!(odd.fits(), "its own check, with no shape around it");
     odd.fixed[0].name = "tag audio".into();
-    assert!(!CloudShape::Eleven(odd.clone()).fits(), "a spaced name");
+    let spaced = !odd.fits() && !CloudShape::Eleven(odd.clone()).fits();
+    assert!(spaced, "a spaced name");
     odd.fixed[0].name = "tag_audio_events".into();
     odd.fixed[0].value = "a\r\nb".into();
-    assert!(!CloudShape::Eleven(odd).fits(), "a breaking value");
+    assert!(!odd.fits(), "a breaking value");
+    let one = FormField {
+        name: "a".into(),
+        value: "1".into(),
+    };
+    odd.fixed = vec![one; MAX_FIXED + 1];
+    assert!(!odd.fits(), "past MAX_FIXED");
+    let CloudShape::Form(form) = form() else {
+        unreachable!("a form")
+    };
+    assert!(form.fits(), "an upload form's own check is public too");
 }
 
 #[test]

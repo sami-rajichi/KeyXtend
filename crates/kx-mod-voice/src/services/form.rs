@@ -1,7 +1,7 @@
 //! A row's request shape and a form's fields: the shapes `speech-net` knows by name, a form's language field and its
 //! fixed fields, each asking only for plain text or JSON without timings (ruling 2026-11-17).
 
-use kx_module_api::ports::{CloudShape, FormField, FormFields, MAX_FIXED};
+use kx_module_api::ports::{CloudShape, FormField, FormFields, MAX_FIXED, OwnFields};
 use serde::Deserialize;
 
 use super::ServiceError;
@@ -112,7 +112,8 @@ impl<'a> Sent<'a> {
 }
 
 /// The shape `name` names, with `form`'s fields for an upload form or `ElevenLabs`' own, whose fixed fields and keep
-/// field must fit one request; Gemini takes no form, and only an upload form a keep field, a paywall or a region code.
+/// field must fit one request; Gemini takes no form, `ElevenLabs` no list, and only an upload form a keep field, a
+/// paywall or a region code.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
@@ -126,7 +127,7 @@ pub(super) fn shape(
     let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
     match (kind, form, bare) {
         (Kind::Form, Some(form), _) => fields(form, sent),
-        (Kind::Eleven, Some(form), true) => checked(form, sent).map(CloudShape::Eleven),
+        (Kind::Eleven, Some(form), true) if !form.list => own(form, sent).map(CloudShape::Eleven),
         (Kind::Gemini, None, true) => Ok(CloudShape::Gemini),
         _ => Err(ServiceError::Form),
     }
@@ -135,6 +136,12 @@ pub(super) fn shape(
 /// An upload form's checked fields as its shape (`checked`).
 pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, ServiceError> {
     checked(form, sent).map(CloudShape::Form)
+}
+
+/// `ElevenLabs`' own checked fields: its language field and fixed fields, as an upload form's are checked.
+fn own(form: &RawForm, sent: &Sent<'_>) -> Result<OwnFields, ServiceError> {
+    let FormFields { lang, fixed, .. } = checked(form, sent)?;
+    Ok(OwnFields { lang, fixed })
 }
 
 /// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with the keep field, and a plain reply;
@@ -150,7 +157,7 @@ fn checked(form: &RawForm, sent: &Sent<'_>) -> Result<FormFields, ServiceError> 
         paywall: sent.paywall,
         region: sent.region.map(str::to_owned),
     };
-    if !CloudShape::Form(shape(all.clone())).fits() || all.len() > MAX_FIXED {
+    if !shape(all.clone()).fits() || all.len() > MAX_FIXED {
         return Err(ServiceError::Form);
     }
     if !all.iter().all(|f| sent.reply.allows(f)) {

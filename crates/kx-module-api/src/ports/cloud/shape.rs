@@ -15,8 +15,8 @@ pub enum CloudShape {
     /// The `OpenAI`-style upload form, with the row's field names: Groq, `OpenAI`, Mistral, Together, Lemonfox,
     /// `DeepInfra`, `OpenRouter` and the Custom row.
     Form(FormFields),
-    /// `ElevenLabs`' own form, with the row's language field and fixed fields; it takes no paywall or region code.
-    Eleven(FormFields),
+    /// `ElevenLabs`' own form: the row's language field and fixed fields, and nothing else.
+    Eleven(OwnFields),
     /// Gemini's single request, with the sound inline.
     Gemini,
 }
@@ -26,7 +26,8 @@ impl CloudShape {
     #[must_use]
     pub fn fits(&self) -> bool {
         match self {
-            Self::Form(form) | Self::Eleven(form) => form.fits(),
+            Self::Form(form) => form.fits(),
+            Self::Eleven(own) => own.fits(),
             Self::Gemini => true,
         }
     }
@@ -67,11 +68,33 @@ pub struct FormFields {
 
 impl FormFields {
     /// True when every name and the region code are plain names and every value fits.
-    fn fits(&self) -> bool {
-        let fixed = self.fixed.len() <= MAX_FIXED && self.fixed.iter().all(FormField::fits);
+    #[must_use]
+    pub fn fits(&self) -> bool {
         let region = self.region.as_deref().is_none_or(name_ok);
-        name_ok(&self.lang) && fixed && region
+        name_ok(&self.lang) && fixed_fit(&self.fixed) && region
     }
+}
+
+/// `ElevenLabs`' own form: it sends the model, the language under `lang`, the fixed fields, then the sound.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OwnFields {
+    /// The language field's name, such as `language_code`.
+    pub lang: String,
+    /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
+    pub fixed: Vec<FormField>,
+}
+
+impl OwnFields {
+    /// True when every name is a plain name and every value fits.
+    #[must_use]
+    pub fn fits(&self) -> bool {
+        name_ok(&self.lang) && fixed_fit(&self.fixed)
+    }
+}
+
+/// True when `fixed` holds at most `MAX_FIXED` fields, each fitting.
+fn fixed_fit(fixed: &[FormField]) -> bool {
+    fixed.len() <= MAX_FIXED && fixed.iter().all(FormField::fits)
 }
 
 /// A field a form always sends, such as `OpenRouter`'s `provider` with `{"zdr":true}`.

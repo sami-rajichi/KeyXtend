@@ -4,10 +4,12 @@
 use super::SHAPE;
 use crate::worker::Lost;
 use kx_ipc::{
-    MAX_SOUND_BYTES, NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetRun,
-    NetShape, Wiped,
+    MAX_SOUND_BYTES, NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetOwn,
+    NetRun, NetShape, Wiped,
 };
-use kx_module_api::ports::{CloudFault, CloudLimits, CloudShape, FormFields, HttpsUrl, KeyHeader};
+use kx_module_api::ports::{
+    CloudFault, CloudLimits, CloudShape, FormField, FormFields, HttpsUrl, KeyHeader,
+};
 use kx_module_api::{Redacted, Secret, SecretBytes, Zeroizing};
 use std::borrow::Cow;
 use std::iter;
@@ -42,7 +44,10 @@ pub(super) fn call(
 fn shape_of(shape: CloudShape) -> NetShape<'static> {
     match shape {
         CloudShape::Form(form) => NetShape::Form(form_of(form)),
-        CloudShape::Eleven(form) => NetShape::Eleven(form_of(form)),
+        CloudShape::Eleven(own) => NetShape::Eleven(NetOwn {
+            lang: Cow::Owned(own.lang),
+            fixed: fields_of(own.fixed),
+        }),
         CloudShape::Gemini => NetShape::Gemini,
     }
 }
@@ -52,15 +57,20 @@ fn form_of(form: FormFields) -> NetForm<'static> {
     NetForm {
         lang: Cow::Owned(form.lang),
         list: form.list,
-        fixed: (form.fixed.into_iter())
-            .map(|f| NetField {
-                name: Cow::Owned(f.name),
-                value: Cow::Owned(f.value),
-            })
-            .collect(),
+        fixed: fields_of(form.fixed),
         paywall: form.paywall,
         region: form.region.map(Cow::Owned),
     }
+}
+
+/// The frames' fixed fields for a row's.
+fn fields_of(fixed: Vec<FormField>) -> Vec<NetField<'static>> {
+    (fixed.into_iter())
+        .map(|f| NetField {
+            name: Cow::Owned(f.name),
+            value: Cow::Owned(f.value),
+        })
+        .collect()
 }
 
 /// A run of `model` in `lang` within `limits`, with `tries` and each piece's size.

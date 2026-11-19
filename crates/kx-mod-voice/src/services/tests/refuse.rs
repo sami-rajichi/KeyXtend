@@ -96,9 +96,14 @@ fn a_row_of_the_dropped_azure_shape_is_refused_as_an_unknown_shape() {
 }
 
 #[test]
-fn a_paywall_or_region_is_refused_on_elevenlabs_shape_and_an_odd_region_code_anywhere() {
+fn a_list_paywall_or_region_is_refused_on_elevenlabs_shape_and_an_odd_region_code_anywhere() {
     let form = "shape = \"form\"";
-    assert!(edits(&[(form, "shape = \"eleven\"")]).is_ok(), "its form");
+    let eleven = (form, "shape = \"eleven\"");
+    assert!(edits(&[eleven]).is_ok(), "its form");
+    let list = FORM.replace("list = false", "list = true");
+    let listed = edits(&[eleven, (FORM, list.as_str())]);
+    let why = matches!(listed, Err(ServicesError::Row { why: E::Form, .. }));
+    assert!(why, "its language goes plain: {listed:?}");
     for rule in ["paywall = true", "region = \"unsupported_country\""] {
         refused(form, &format!("shape = \"eleven\"\n{rule}"), E::Form);
     }

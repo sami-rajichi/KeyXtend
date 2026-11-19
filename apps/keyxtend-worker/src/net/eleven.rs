@@ -69,7 +69,7 @@ impl Shape for Eleven {
         let (NetShape::Eleven(own), Some(model)) = (&piece.call.shape, piece.model) else {
             return Err(NetFault::Range);
         };
-        let rest = form::fields(own, piece.lang, &[MODEL])?;
+        let rest = form::fields((&own.lang, false), &own.fixed, piece.lang, &[MODEL])?;
         let texts: Vec<Text<'_>> = [Text::of(MODEL, model)].into_iter().chain(rest).collect();
         let sent = multipart::sent(&texts, &multipart::wav(piece.wav))?;
         Ok(Request {

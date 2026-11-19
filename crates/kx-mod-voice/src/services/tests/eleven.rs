@@ -4,7 +4,7 @@
 //! last, history kept, the lower free allowance, its cheapest plans for light and heavy use, and the free plan's rule.
 
 use super::*;
-use kx_module_api::ports::{Fact, FactArg, FormField, FormFields, KeyHeader};
+use kx_module_api::ports::{Fact, FactArg, FormField, KeyHeader, OwnFields};
 
 /// The cheapest plans for light and heavy use [E1]: Starter and Creator, each its price in cents a month and the hours
 /// of sound it includes.
@@ -18,12 +18,9 @@ fn own_form() -> CloudShape {
         name: "tag_audio_events".into(),
         value: "false".into(),
     };
-    CloudShape::Eleven(FormFields {
+    CloudShape::Eleven(OwnFields {
         lang: "language_code".into(),
-        list: false,
         fixed: vec![tags],
-        paywall: false,
-        region: None,
     })
 }
 

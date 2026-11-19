@@ -39,14 +39,20 @@ fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
     let flags = (any::<bool>(), any::<bool>());
     let region = prop::option::of(NAME);
     let form =
-        (NAME, flags, fixed, region).prop_map(|(lang, (list, paywall), fixed, region)| NetForm {
-            lang: owned(lang),
-            list,
-            fixed,
-            paywall,
-            region: region.map(owned),
+        (NAME, flags, fixed.clone(), region).prop_map(|(lang, (list, paywall), fixed, region)| {
+            NetForm {
+                lang: owned(lang),
+                list,
+                fixed,
+                paywall,
+                region: region.map(owned),
+            }
         });
-    let eleven = form.clone().prop_map(NetShape::Eleven);
+    let own = (NAME, fixed).prop_map(|(lang, fixed)| NetOwn {
+        lang: owned(lang),
+        fixed,
+    });
+    let eleven = own.prop_map(NetShape::Eleven);
     prop_oneof![
         form.prop_map(NetShape::Form),
         eleven,

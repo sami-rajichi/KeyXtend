@@ -17,8 +17,8 @@ use crate::{
     FetchAsk, FetchNote, HTTPS, MAX_FIXED, MAX_KEY_BYTES, MAX_NAME_BYTES, MAX_NET_TEXT_BYTES,
     MAX_SOUND_BYTES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_URL_BYTES, NET_AT_ONCE, NET_MAX_S,
     NET_PER_MIN, NET_RENEW_S, NET_TRIES, NET_WAIT_S, NetAsk, NetCall, NetFault, NetField, NetForm,
-    NetHeader, NetLimits, NetNote, NetRun, NetShape, SAMPLE_BYTES, VaultAsk, VaultReply, VoiceAsk,
-    VoiceNote, Wiped,
+    NetHeader, NetLimits, NetNote, NetOwn, NetRun, NetShape, SAMPLE_BYTES, VaultAsk, VaultReply,
+    VoiceAsk, VoiceNote, Wiped,
 };
 use cases::*;
 use zeroize::Zeroizing;

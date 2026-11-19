@@ -4,8 +4,8 @@
 use super::super::*;
 use crate::net::code::FaultCode;
 use crate::{
-    NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetNote, NetRun, NetShape,
-    Wiped,
+    NetAsk, NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetNote, NetOwn, NetRun,
+    NetShape, Wiped,
 };
 use zeroize::Zeroizing;
 
@@ -88,13 +88,12 @@ pub(super) fn region_form(code: &'static str) -> NetShape<'static> {
     regioned(form("l", false, Vec::new()), code)
 }
 
-/// `ElevenLabs`' shape, its form naming its language field and asking for no sound tags, as its row says.
+/// `ElevenLabs`' shape, naming its language field and asking for no sound tags, as its row says.
 pub(super) fn eleven() -> NetShape<'static> {
-    let fixed = vec![field("tag_audio_events", "false")];
-    let NetShape::Form(form) = form("language_code", false, fixed) else {
-        unreachable!("a form")
-    };
-    NetShape::Eleven(form)
+    NetShape::Eleven(NetOwn {
+        lang: Cow::Borrowed("language_code"),
+        fixed: vec![field("tag_audio_events", "false")],
+    })
 }
 
 /// A fixed field.

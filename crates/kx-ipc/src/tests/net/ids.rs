@@ -1,5 +1,6 @@
 //! A run's model and language as both sides take them: real ids pass, a character that could break a request's body or
-//! address is refused, and `ElevenLabs` and Gemini refuse a run with no model before any frame.
+//! address is refused, `ElevenLabs` and Gemini refuse a run with no model before any frame, and `ElevenLabs`' shape
+//! holds only its language and fixed fields.
 
 use super::*;
 use IpcError::BadField;
@@ -140,4 +141,35 @@ fn a_shape_code_no_shape_has_is_refused_when_read_the_dropped_2_too() {
         let bytes = patch(good.clone(), 0, &[code]);
         assert_eq!(read_net_ask(&mut &bytes[..]), Err(BadField), "{code}");
     }
+}
+
+#[test]
+fn elevenlabs_shape_sends_only_its_language_and_fixed_fields_and_refuses_a_forms_layout() {
+    let NetShape::Eleven(own) = eleven() else {
+        unreachable!("its own form")
+    };
+    let as_form = form("language_code", false, own.fixed.clone());
+    // An upload form's list, paywall and region flags are the three bytes `ElevenLabs` never sends.
+    assert_eq!(
+        shape_bytes(&eleven()).len() + 3,
+        shape_bytes(&as_form).len()
+    );
+    let test = |shape| NetAsk::Test {
+        id: 1,
+        call: call(shape, NetHeader::Bearer),
+    };
+    round_trips(test(eleven()));
+    let code = shape_bytes(&eleven())[0];
+    let layout = patch(net_ask_bytes(&test(as_form)), 0, &[code]);
+    assert!(read_net_ask(&mut &layout[..]).is_err(), "a form's layout");
+    let spaced = NetOwn {
+        lang: Cow::Borrowed("language code"),
+        ..own.clone()
+    };
+    refused(&test(NetShape::Eleven(spaced)), BadField);
+    let many = NetOwn {
+        fixed: vec![field("a", "1"); MAX_FIXED + 1],
+        ..own
+    };
+    refused(&test(NetShape::Eleven(many)), IpcError::TooLong);
 }

@@ -10,7 +10,7 @@ use super::multipart::{self, FILE, Text};
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, RETRY, Row, Then, row};
-use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetForm, NetShape};
+use kx_ipc::{NET_RENEW_S, NetCall, NetFault, NetField, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
 use zeroize::Zeroizing;
@@ -96,7 +96,12 @@ impl Shape for Form {
         let model = piece.model.map(|m| Text::of(MODEL, m));
         let texts: Vec<Text<'_>> = model
             .into_iter()
-            .chain(fields(form, piece.lang, &[MODEL, FORMAT])?)
+            .chain(fields(
+                (&form.lang, form.list),
+                &form.fixed,
+                piece.lang,
+                &[MODEL, FORMAT],
+            )?)
             .chain([Text::of(FORMAT, JSON)])
             .collect();
         let sent = multipart::sent(&texts, &multipart::wav(piece.wav))?;
@@ -137,28 +142,29 @@ fn form<'a>(call: &'a NetCall<'_>) -> Option<&'a NetForm<'a>> {
     }
 }
 
-/// `form`'s language field holding `lang`, a list's name followed by `LIST`, then its fixed fields; `Range` when a
-/// fixed field repeats a name of `own`, the file's or the language's, in any case.
+/// The language field `field` holding `lang`, a list's name followed by `LIST`, then the `fixed` fields; `Range` when
+/// a fixed field repeats a name of `own`, the file's or the language's, in any case.
 pub(super) fn fields<'a>(
-    form: &'a NetForm<'_>,
+    (field, list): (&'a str, bool),
+    fixed: &'a [NetField<'_>],
     lang: &'a str,
     own: &[&str],
 ) -> Result<Vec<Text<'a>>, NetFault> {
-    let name = if form.list {
-        Cow::Owned(format!("{}{LIST}", form.lang))
+    let name = if list {
+        Cow::Owned(format!("{field}{LIST}"))
     } else {
-        Cow::Borrowed(form.lang.as_ref())
+        Cow::Borrowed(field)
     };
-    let names = [FILE, form.lang.as_ref(), name.as_ref()];
+    let names = [FILE, field, name.as_ref()];
     let repeats = |field: &str| {
         own.iter()
             .chain(&names)
             .any(|o| o.eq_ignore_ascii_case(field))
     };
-    if form.fixed.iter().any(|f| repeats(&f.name)) {
+    if fixed.iter().any(|f| repeats(&f.name)) {
         return Err(NetFault::Range);
     }
-    let fixed = form.fixed.iter().map(|f| Text::of(&f.name, &f.value));
+    let fixed = fixed.iter().map(|f| Text::of(&f.name, &f.value));
     Ok([Text { name, value: lang }]
         .into_iter()
         .chain(fixed)

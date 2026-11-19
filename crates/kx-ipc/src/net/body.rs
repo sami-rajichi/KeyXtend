@@ -4,7 +4,7 @@
 
 use super::code::{HeaderCode, ShapeCode};
 use super::wire::{FIXED, KEY, SIZES, SOUND, TAG, URL, VALUE};
-use super::{NetCall, NetField, NetForm, NetHeader, NetLimits, NetRun, NetShape};
+use super::{NetCall, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, NetShape};
 use crate::code::Code;
 use crate::error::IpcError;
 use crate::limits::{
@@ -37,20 +37,25 @@ fn read_text<R: Read + ?Sized>(
     Ok(Cow::Owned(text))
 }
 
-/// Sends a shape: its code, then the form's language name, list flag, fixed fields, paywall flag and region code for a
-/// shape with one.
+/// Sends a shape: its code, then an upload form's language name, list flag, fixed fields, paywall flag and region
+/// code, or `ElevenLabs`' language name and fixed fields.
 fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     s.byte(shape.code().code())?;
-    let (NetShape::Form(form) | NetShape::Eleven(form)) = shape else {
-        return Ok(());
-    };
+    match shape {
+        NetShape::Form(form) => put_form(s, form),
+        NetShape::Eleven(own) => {
+            put_text(s, TAG, &own.lang, rules::token)?;
+            put_fixed(s, &own.fixed)
+        }
+        NetShape::Gemini => Ok(()),
+    }
+}
+
+/// Sends an upload form's language name, list flag, fixed fields, paywall flag and region code.
+fn put_form(s: &mut dyn Sink, form: &NetForm<'_>) -> Result<(), IpcError> {
     put_text(s, TAG, &form.lang, rules::token)?;
     s.byte(u8::from(form.list))?;
-    s.count(FIXED, form.fixed.len())?;
-    form.fixed.iter().try_for_each(|f| {
-        put_text(s, TAG, &f.name, rules::token)?;
-        put_text(s, VALUE, &f.value, rules::form_value)
-    })?;
+    put_fixed(s, &form.fixed)?;
     s.byte(u8::from(form.paywall))?;
     s.byte(u8::from(form.region.is_some()))?;
     match &form.region {
@@ -59,28 +64,47 @@ fn put_shape(s: &mut dyn Sink, shape: &NetShape<'_>) -> Result<(), IpcError> {
     }
 }
 
+/// Sends the fixed fields' count, then each name and value.
+fn put_fixed(s: &mut dyn Sink, fixed: &[NetField<'_>]) -> Result<(), IpcError> {
+    s.count(FIXED, fixed.len())?;
+    fixed.iter().try_for_each(|f| {
+        put_text(s, TAG, &f.name, rules::token)?;
+        put_text(s, VALUE, &f.value, rules::form_value)
+    })
+}
+
 /// Reads a shape.
 fn read_shape<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetShape<'static>, IpcError> {
     Ok(
         match ShapeCode::from_code(p.byte()?).ok_or(IpcError::BadField)? {
             ShapeCode::Form => NetShape::Form(read_form(p)?),
-            ShapeCode::Eleven => NetShape::Eleven(read_form(p)?),
+            ShapeCode::Eleven => NetShape::Eleven(NetOwn {
+                lang: read_text(p, TAG, rules::token)?,
+                fixed: read_fixed(p)?,
+            }),
             ShapeCode::Gemini => NetShape::Gemini,
         },
     )
 }
 
-/// Reads a form's language name, list flag, fixed fields, paywall flag and region code.
-fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static>, IpcError> {
-    let lang = read_text(p, TAG, rules::token)?;
-    let list = p.flag()?;
+/// Reads the fixed fields' count, then each name and value.
+fn read_fixed<R: Read + ?Sized>(
+    p: &mut Payload<'_, R>,
+) -> Result<Vec<NetField<'static>>, IpcError> {
     let n = p.count(FIXED)?;
     let field = |p: &mut Payload<'_, R>| {
         let name = read_text(p, TAG, rules::token)?;
         let value = read_text(p, VALUE, rules::form_value)?;
         Ok::<_, IpcError>(NetField { name, value })
     };
-    let fixed = (0..n).map(|_| field(p)).collect::<Result<_, _>>()?;
+    (0..n).map(|_| field(p)).collect()
+}
+
+/// Reads a form's language name, list flag, fixed fields, paywall flag and region code.
+fn read_form<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetForm<'static>, IpcError> {
+    let lang = read_text(p, TAG, rules::token)?;
+    let list = p.flag()?;
+    let fixed = read_fixed(p)?;
     let paywall = p.flag()?;
     let region = if p.flag()? {
         Some(read_text(p, TAG, rules::token)?)

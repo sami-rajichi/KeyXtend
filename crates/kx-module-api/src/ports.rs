@@ -84,7 +84,7 @@ pub use clips::{
 pub use cloud::{
     CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,
     CloudSpeechKey, CloudTest, FormField, FormFields, HttpsUrl, KeyHeader, MAX_FIELD_VALUE,
-    MAX_FIXED, MAX_KEY_BYTES,
+    MAX_FIXED, MAX_KEY_BYTES, OwnFields,
 };
 pub use code::CodeError;
 pub use face::{

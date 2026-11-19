@@ -4,7 +4,7 @@
 
 use super::*;
 use kx_ipc::{MAX_SOUND_BYTES, NET_JOB, NetHeader, NetShape, Wiped};
-use kx_module_api::ports::FormField;
+use kx_module_api::ports::{FormField, OwnFields};
 use std::sync::{Mutex, PoisonError};
 
 #[test]
@@ -75,12 +75,9 @@ fn elevenlabs_form_reaches_the_frame_in_its_own_shape() {
         name: "tag_audio_events".into(),
         value: "false".into(),
     };
-    let shape = CloudShape::Eleven(FormFields {
+    let shape = CloudShape::Eleven(OwnFields {
         lang: "language_code".into(),
-        list: false,
         fixed: vec![tags],
-        paywall: false,
-        region: None,
     });
     let ask = CloudAsk {
         shape,

@@ -53,7 +53,9 @@ pub use limits::{
 pub use net::ask::NetAsk;
 pub use net::code::ShapeCode;
 pub use net::note::NetNote;
-pub use net::{NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetRun, NetShape};
+pub use net::{
+    NetCall, NetFault, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, NetShape,
+};
 pub use reply::Reply;
 pub use vault::ask::VaultAsk;
 pub use vault::reply::VaultReply;

@@ -35,8 +35,8 @@ pub struct NetCall<'a> {
 pub enum NetShape<'a> {
     /// The `OpenAI`-style upload form, with the row's field names.
     Form(NetForm<'a>),
-    /// `ElevenLabs`' own form, with the row's language field and fixed fields; its paywall and region stay unread.
-    Eleven(NetForm<'a>),
+    /// `ElevenLabs`' own form: the row's language field and fixed fields, and nothing else.
+    Eleven(NetOwn<'a>),
     /// Gemini's single request, with the sound inline.
     Gemini,
 }
@@ -68,6 +68,15 @@ pub struct NetForm<'a> {
     /// The error code a reply gives where the service is not offered in the user's country or region (`rules::token`),
     /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
     pub region: Option<Cow<'a, str>>,
+}
+
+/// `ElevenLabs`' own form: it sends the model, the language under `lang`, the fixed fields, then the sound.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NetOwn<'a> {
+    /// The language field's name (`rules::token`).
+    pub lang: Cow<'a, str>,
+    /// Fields sent as they are after the language, in order, at most `MAX_FIXED`.
+    pub fixed: Vec<NetField<'a>>,
 }
 
 /// A field a form always sends, such as `OpenRouter`'s keep-nothing `provider`.

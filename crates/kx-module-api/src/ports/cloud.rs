@@ -9,7 +9,9 @@ mod url;
 
 pub use ask::{CloudAsk, CloudLimits, CloudTest, MAX_KEY_BYTES};
 pub use fault::CloudFault;
-pub use shape::{CloudShape, FormField, FormFields, KeyHeader, MAX_FIELD_VALUE, MAX_FIXED};
+pub use shape::{
+    CloudShape, FormField, FormFields, KeyHeader, MAX_FIELD_VALUE, MAX_FIXED, OwnFields,
+};
 pub use url::HttpsUrl;
 
 use crate::{Capability, Secret, ServiceId, ServiceKey};

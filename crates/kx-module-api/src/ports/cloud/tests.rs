@@ -70,12 +70,9 @@ fn eleven() -> CloudShape {
         name: "tag_audio_events".into(),
         value: "false".into(),
     }];
-    CloudShape::Eleven(FormFields {
+    CloudShape::Eleven(OwnFields {
         lang: "language_code".into(),
-        list: false,
         fixed,
-        paywall: false,
-        region: None,
     })
 }
 

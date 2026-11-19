@@ -10,7 +10,7 @@ use super::*;
 use crate::net::eleven::Eleven;
 use crate::net::send::{self, Sending};
 use crate::net::shape::{self, Shape};
-use kx_ipc::{NetFault, NetField, ShapeCode};
+use kx_ipc::{NetFault, NetField, NetOwn, ShapeCode};
 use kx_platform_net::Verb;
 use std::sync::atomic::AtomicBool;
 
@@ -30,19 +30,18 @@ const SAID: &str = "Bonjour tout le monde.";
 const TAGS: &str = "tag_audio_events";
 
 /// The row's form: its language field, and no sound tags such as "(laughter)" in the text.
-fn own_form() -> NetForm<'static> {
-    NetForm {
+fn own_form() -> NetOwn<'static> {
+    NetOwn {
         lang: Cow::Borrowed("language_code"),
         fixed: vec![NetField {
             name: Cow::Borrowed(TAGS),
             value: Cow::Borrowed("false"),
         }],
-        ..form()
     }
 }
 
 /// A call to `url` in `ElevenLabs`' shape with `form`, the key under its own header.
-fn eleven_with(url: &'static str, form: NetForm<'static>) -> NetCall<'static> {
+fn eleven_with(url: &'static str, form: NetOwn<'static>) -> NetCall<'static> {
     NetCall {
         header: NetHeader::Named(Cow::Borrowed(HEADER)),
         ..call_to(url, NetShape::Eleven(form))
@@ -86,15 +85,6 @@ fn a_fixed_field_that_repeats_one_of_its_own_names_is_out_of_range() {
         let got = Eleven.build(&piece(&call, Some(SCRIBE), "fr", WAV)).err();
         assert_eq!(got, Some(NetFault::Range), "{name}");
     }
-    let listed = NetForm {
-        list: true,
-        ..own_form()
-    };
-    let call = eleven_with(ADDRESS, listed);
-    let req = Eleven
-        .build(&piece(&call, Some(SCRIBE), "fr", WAV))
-        .unwrap();
-    assert_eq!(names(&req)[1], "language_code[]", "a list as the row says");
 }
 
 #[test]
