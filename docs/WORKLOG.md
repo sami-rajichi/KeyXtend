@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-19 12:11 — P11: only the services the owner can test are offered
+Azure is dropped, because it has no free path and needs a card; its MAI-Transcribe-2 model stays reachable through OpenRouter, and Azure's unused connection code is removed. OpenAI, Mistral, Together and DeepInfra are hidden for the same reason, while their tested code stays, so one can be switched on after a real test. A hidden service cannot be shown, picked or sent to, and an older saved setting that names one falls back to the local model. ADR-0050 records that only services the owner tests by hand are offered.
+
 ## 2026-11-19 11:09 — P11: six more cloud services
 Voice typing can now send to OpenAI, Mistral, Together, Lemonfox, DeepInfra and OpenRouter, each built from its row in the services table, with the fields, language codes, limits, prices and terms read from the services' own pages. A refused key, a missing payment method and a country the service does not serve each show their own reason, and OpenRouter's keep-nothing switch marks a model without such a host as unavailable instead of moving the dictation elsewhere. Arabic prices now agree with their number, as in "دولار واحد", "من دولارين" and "15 دولارًا". Values no page states are marked untested for the final check with real keys.
 
