@@ -4,6 +4,7 @@
 use super::*;
 use crate::models::{self, Pick};
 use crate::services::table;
+use crate::services::tests::{TEXT, parse};
 use kx_module_api::ports::{FactValue, ServiceName, Unavailable};
 
 mod keep;
@@ -11,8 +12,6 @@ mod props;
 mod router;
 mod typed;
 
-/// The compiled-in services table text.
-const TEXT: &str = include_str!("../../services.toml");
 /// Groq's turbo model.
 const TURBO: &str = "whisper-large-v3-turbo";
 /// An address Custom takes: HTTPS on a host name.
@@ -148,7 +147,7 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     let mut s = groq_for_french();
     s.picks.insert("nl".into(), "canary-v2-q8".into());
     assert!(rules().pick(&mut s, "ar", "groq", "whisper-large-v3"));
-    let newer = Services::parse(&TEXT.replacen("terms = 1", "terms = 2", 1)).unwrap();
+    let newer = parse(&TEXT.replacen("terms = 1", "terms = 2", 1)).unwrap();
     let rules = Cloud::new(&newer, false);
     let groq = newer.get("groq").unwrap();
     assert!(rules.asks(&s, groq) && rules.choice(&s, "fr").is_some_and(|c| c.ask));

@@ -24,9 +24,11 @@ use thiserror::Error;
 /// Bytes in the KiB `room_kb` counts in.
 const KIB: u64 = 1 << 10;
 
-/// The table, read and checked at its first use.
-static TABLE: LazyLock<Result<Services, ServicesError>> =
-    LazyLock::new(|| Services::parse(include_str!("../services.toml")));
+/// The table and its language sets, read and checked at their first use.
+static TABLE: LazyLock<Result<Services, ServicesError>> = LazyLock::new(|| {
+    let langs = include_str!("../langs.toml");
+    Services::parse(include_str!("../services.toml"), langs)
+});
 
 /// The compiled-in services table, read and checked once.
 ///
@@ -42,6 +44,9 @@ pub enum ServicesError {
     /// The text is not a services table.
     #[error("the services table does not parse: {0}")]
     Parse(String),
+    /// The language sets' text is not a list of named sets.
+    #[error("the language sets do not parse: {0}")]
+    Langs(String),
     /// It lists no service.
     #[error("the services table lists no service")]
     Empty,
@@ -75,9 +80,6 @@ struct Raw {
     max_models: usize,
     /// What a form may ask about its reply.
     reply: form::Reply,
-    /// Language sets by name, each keyboard language with its code, which a model names in place of its own list.
-    #[serde(default)]
-    langs: BTreeMap<String, LangCodes>,
     /// The rows.
     services: Vec<row::RawService>,
 }
@@ -109,12 +111,14 @@ pub struct Services {
 }
 
 impl Services {
-    /// Reads and checks a services table.
+    /// Reads and checks a services table, whose models may name the language sets in `langs`.
     ///
     /// # Errors
     /// The first fault found.
-    pub fn parse(text: &str) -> Result<Self, ServicesError> {
+    pub fn parse(text: &str, langs: &str) -> Result<Self, ServicesError> {
         let raw: Raw = toml::from_str(text).map_err(|e| ServicesError::Parse(e.to_string()))?;
+        let sets: BTreeMap<String, LangCodes> =
+            toml::from_str(langs).map_err(|e| ServicesError::Langs(e.to_string()))?;
         let room = u64::from(raw.room_kb) * KIB;
         let ordered = raw.light_hours > 0 && raw.light_hours < raw.heavy_hours;
         if !ordered || room == 0 || raw.max_models == 0 {
@@ -124,7 +128,7 @@ impl Services {
             room,
             max_models: raw.max_models,
             reply: &raw.reply,
-            sets: &raw.langs,
+            sets: &sets,
         };
         let rows = checked_rows(raw.services, &rules)?;
         Ok(Self {

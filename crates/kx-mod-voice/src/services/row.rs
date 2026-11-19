@@ -95,6 +95,9 @@ pub(super) struct RawService {
     /// A 403 is the form's paywall: a missing payment method or a spending cap, so it tells no credit.
     #[serde(default)]
     paywall: bool,
+    /// The error code by which a form's reply says the service is not offered in the user's country or region.
+    #[serde(default)]
+    region: Option<String>,
     /// The only host, or the domain a typed host must be under.
     #[serde(default)]
     host: Option<String>,
@@ -167,7 +170,8 @@ impl Service {
         let address = address::address(&raw.address, raw.host.as_deref())?;
         name_ok(raw.name.as_deref(), &address)?;
         let keep = raw.keep.as_ref().map(form::RawField::field);
-        let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall);
+        let region = raw.region.as_deref();
+        let sent = form::Sent::new(rules.reply, keep.as_ref(), raw.paywall, region);
         let shape = form::shape(&raw.shape, raw.form.as_ref(), &sent)?;
         let test = address::test(raw.test.as_deref(), &address)?;
         let header = header(&raw.header)?;

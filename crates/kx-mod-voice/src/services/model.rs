@@ -68,7 +68,7 @@ pub(super) struct RawModel {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum RawLangs {
-    /// The name of a set in the table's `langs`.
+    /// The name of a set in `langs.toml`.
     Set(String),
     /// Its own list.
     Own(LangCodes),

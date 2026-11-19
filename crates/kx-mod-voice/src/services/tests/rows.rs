@@ -143,6 +143,23 @@ fn each_form_row_posts_to_its_own_address_and_tests_its_key_there() {
     }
 }
 
+/// `OpenAI`'s error code for a country or region it does not serve [O5].
+const REGION: &str = "unsupported_country_region_territory";
+
+#[test]
+fn only_openais_forms_read_its_country_refusal_code_as_the_region() {
+    for w in &WANTS {
+        let row = shipped().get(w.id).unwrap();
+        let want = (w.id == "openai").then_some(REGION);
+        for model in row.models.iter().map(Some).chain([None]) {
+            let CloudShape::Form(form) = row.shape_for(model, false) else {
+                panic!("{}: a form", w.id)
+            };
+            assert_eq!(form.region.as_deref(), want, "{}", w.id);
+        }
+    }
+}
+
 #[test]
 fn openais_gpt_transcribe_sends_its_language_as_a_languages_list() {
     let row = shipped().get("openai").unwrap();
@@ -257,4 +274,10 @@ fn each_rows_prices_are_its_pages_numbers_for_light_and_heavy_use() {
             assert_eq!((got, args), (kind, want), "{id}");
         }
     }
+}
+
+#[test]
+fn openrouters_pieces_last_no_longer_than_its_upstream_timeout() {
+    // [R1]: "Upstream timeout is 60 s per request", so a longer recording goes in pieces.
+    assert_eq!(shipped().get("openrouter").unwrap().limits.max_s, 60);
 }

@@ -1798,10 +1798,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "5 دولار"
+                    "text": "5 دولارات"
                   }
                 ],
-                "text": "5 دولار"
+                "text": "5 دولارات"
               },
               "warn": false
             },
@@ -1812,10 +1812,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "10 دولار"
+                    "text": "10 دولارات"
                   }
                 ],
-                "text": "10 دولار"
+                "text": "10 دولارات"
               },
               "warn": false
             }
@@ -2356,10 +2356,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "لا شيء قبل دفع 15 دولار على الأقل"
+                    "text": "لا شيء، وأول شراء 15 دولارًا على الأقل"
                   }
                 ],
-                "text": "لا شيء قبل دفع 15 دولار على الأقل"
+                "text": "لا شيء، وأول شراء 15 دولارًا على الأقل"
               },
               "warn": false
             },
@@ -2839,7 +2839,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "مجانًا: لا شيء قبل دفع 15 دولار على الأقل",
+              "line": "مجانًا: لا شيء، وأول شراء 15 دولارًا على الأقل",
               "marks": [
                 {
                   "id": "warn",
@@ -9441,10 +9441,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "None before you pay at least $15"
+                    "text": "None; first purchase at least $15"
                   }
                 ],
-                "text": "None before you pay at least $15"
+                "text": "None; first purchase at least $15"
               },
               "warn": false
             },
@@ -9924,7 +9924,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Free: None before you pay at least $15",
+              "line": "Free: None; first purchase at least $15",
               "marks": [
                 {
                   "id": "warn",
@@ -16526,10 +16526,10 @@ var views = {
                 "parts": [
                   {
                     "own": false,
-                    "text": "Aucun avant de payer au moins 15 $"
+                    "text": "Aucun ; premier achat d’au moins 15 $"
                   }
                 ],
-                "text": "Aucun avant de payer au moins 15 $"
+                "text": "Aucun ; premier achat d’au moins 15 $"
               },
               "warn": false
             },
@@ -17009,7 +17009,7 @@ var views = {
               "tick": false
             },
             {
-              "line": "Gratuit : Aucun avant de payer au moins 15 $",
+              "line": "Gratuit : Aucun ; premier achat d’au moins 15 $",
               "marks": [
                 {
                   "id": "warn",

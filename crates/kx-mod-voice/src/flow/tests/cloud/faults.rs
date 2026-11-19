@@ -18,6 +18,7 @@ fn faults() -> Vec<(CloudFault, CloudWhy)> {
         (CloudFault::Rate, CloudWhy::Rate),
         (CloudFault::TooBig, CloudWhy::TooBig),
         (CloudFault::Language, CloudWhy::Language(french())),
+        (CloudFault::Region, CloudWhy::Region),
         (CloudFault::Empty, CloudWhy::Empty),
         (CloudFault::Strange, CloudWhy::Strange),
         (CloudFault::Gone, CloudWhy::Fault),

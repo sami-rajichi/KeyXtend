@@ -51,6 +51,7 @@ fn shape_of(shape: CloudShape) -> NetShape<'static> {
                 })
                 .collect(),
             paywall: form.paywall,
+            region: form.region.map(Cow::Owned),
         }),
         CloudShape::Azure => NetShape::Azure,
         CloudShape::Eleven => NetShape::Eleven,
@@ -134,6 +135,7 @@ pub(super) fn fault(fault: NetFault) -> CloudFault {
         NetFault::Rate => CloudFault::Rate,
         NetFault::TooBig => CloudFault::TooBig,
         NetFault::Language => CloudFault::Language,
+        NetFault::Region => CloudFault::Region,
         NetFault::Empty => CloudFault::Empty,
         NetFault::Strange => CloudFault::Strange,
         NetFault::Network => CloudFault::Network,

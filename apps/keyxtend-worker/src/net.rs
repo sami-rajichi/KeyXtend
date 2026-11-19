@@ -57,8 +57,8 @@ pub enum Said {
 
 /// What wakes the job.
 pub enum Event {
-    /// An ask from the host.
-    Ask(NetAsk<'static>),
+    /// An ask from the host, boxed as it is far larger than an outcome.
+    Ask(Box<NetAsk<'static>>),
     /// A request's outcome.
     Told(Told),
     /// The input ended cleanly, or with the frame that could not be read.
@@ -151,14 +151,14 @@ fn wake(rx: &Receiver<Event>) -> Event {
 /// Takes `event`. A panic inside drops every run and test, told as `Gone` on the ask's id and on each live id.
 fn act(job: &mut Job, event: Event, out: &mut dyn Notes) -> Result<Flow, IpcError> {
     let asked = match &event {
-        Event::Ask(NetAsk::Bye) | Event::End(_) | Event::Told(_) => None,
-        Event::Ask(ask) => Some(ask.id()),
+        Event::Ask(ask) if !bye(ask) => Some(ask.id()),
+        _ => None,
     };
     let live = job.live();
     let taken = panic::catch_unwind(AssertUnwindSafe(|| match event {
-        Event::Ask(NetAsk::Bye) => Ok(Flow::Exit(Ok(()))),
+        Event::Ask(ask) if bye(&ask) => Ok(Flow::Exit(Ok(()))),
         Event::End(end) => Ok(Flow::Exit(end)),
-        Event::Ask(ask) => job.take(ask, &mut *out).map(|()| Flow::Go),
+        Event::Ask(ask) => job.take(*ask, &mut *out).map(|()| Flow::Go),
         Event::Told(told) => job.told(told, &mut *out).map(|()| Flow::Go),
     }));
     let Ok(taken) = taken else {
@@ -175,12 +175,21 @@ fn act(job: &mut Job, event: Event, out: &mut dyn Notes) -> Result<Flow, IpcErro
     taken
 }
 
+/// True when `ask` is the host's goodbye.
+fn bye(ask: &NetAsk<'_>) -> bool {
+    matches!(ask, NetAsk::Bye)
+}
+
 /// Reads asks from `input` on the reader thread until goodbye, the end of input or a broken frame.
 fn read<R: Read + Send + 'static>(mut input: R, tx: Sender<Event>) -> Result<(), IpcError> {
     let reader = move || {
         loop {
             let event = next(&mut input);
-            let last = matches!(event, Event::End(_) | Event::Ask(NetAsk::Bye));
+            let last = match &event {
+                Event::Ask(ask) => bye(ask),
+                Event::End(_) => true,
+                Event::Told(_) => false,
+            };
             if tx.send(event).is_err() || last {
                 return;
             }
@@ -196,7 +205,7 @@ fn read<R: Read + Send + 'static>(mut input: R, tx: Sender<Event>) -> Result<(),
 /// The next ask on `input`; the end of input, a broken frame or a panic inside the read ends the job.
 fn next<R: Read>(input: &mut R) -> Event {
     match panic::catch_unwind(AssertUnwindSafe(|| NetAsk::read(input))) {
-        Ok(Ok(ask)) => Event::Ask(ask),
+        Ok(Ok(ask)) => Event::Ask(Box::new(ask)),
         Ok(Err(IpcError::Closed)) => Event::End(Ok(())),
         Ok(Err(e)) => Event::End(Err(e)),
         Err(_) => Event::End(Err(IpcError::Io(ErrorKind::Other))),

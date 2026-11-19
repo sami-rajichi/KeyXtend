@@ -1,11 +1,11 @@
 //! Each row's answers read as its own pages say: its text, a bad key, no credit, a 403 behind a paywall or not, a
-//! language refused in an `error` or in a 422's `detail[]`, too big, too many requests and a service down. The fixtures
-//! under `replies/<service>/` copy each page's body with made-up ids and no key; a body the pages do not show is
-//! marked as assumed, for the live check.
+//! country refused by its row's code, a language refused in an `error` or in a 422's `detail[]`, too big, too many
+//! requests and a service down. The fixtures under `replies/<service>/` copy each page's body with made-up ids and
+//! no key; a body the pages do not show is marked as assumed, for the live check.
 
 use super::super::table::{Extra, Got, read_by, tested_by};
 use super::*;
-use kx_ipc::NetFault::{Credit, Key, Language, Network, Strange, TooBig};
+use kx_ipc::NetFault::{Credit, Key, Language, Network, Region, Strange, TooBig};
 
 /// The text each case of `CASES` reads, in its order.
 pub(super) const TEXTS: [&[u8]; 9] = [
@@ -72,7 +72,7 @@ fn reads(row: Row, answers: &[Answer<'_>]) {
             other => other,
         };
         let shown = String::from_utf8_lossy(body);
-        assert_eq!(&got, want, "{} {status} {shown}", row.url);
+        assert_eq!(&got, want, "{} {status} {shown}", row.name);
     }
 }
 
@@ -107,7 +107,7 @@ fn openais_answers_read_as_its_error_page_says() {
                 OPENAI_RATE,
                 Got::Wait(Some(2)),
             ),
-            (403, &[], OPENAI_COUNTRY, Got::Fault(Key)),
+            (403, &[], OPENAI_COUNTRY, Got::Fault(Region)),
             (503, &[], OPENAI_BUSY, Got::Fault(Network)),
         ],
     );
@@ -206,4 +206,24 @@ fn the_same_403_is_the_key_without_a_paywall_and_credit_behind_one() {
         assert_eq!(read_by(&walled(false), 403, &[], body), Got::Fault(Key));
         assert_eq!(read_by(&walled(true), 403, &[], body), Got::Fault(Credit));
     }
+}
+
+#[test]
+fn a_region_refusal_reads_by_the_rows_exact_code_and_the_same_403_without_it_as_before() {
+    let read = |row: Row, body| read_by(&row.call(), 403, &[], body);
+    assert_eq!(read(OPENAI, OPENAI_COUNTRY), Got::Fault(Region));
+    assert_eq!(read(OPENAI, OPENAI_KEY), Got::Fault(Key));
+    assert_eq!(read(GROQ, OPENAI_COUNTRY), Got::Fault(Key), "no code named");
+    assert_eq!(read(TOGETHER, OPENAI_COUNTRY), Got::Fault(Credit));
+    let near = Row {
+        region: Some("unsupported_country"),
+        ..OPENAI
+    };
+    assert_eq!(
+        read(near, OPENAI_COUNTRY),
+        Got::Fault(Key),
+        "the exact code"
+    );
+    let tested = tested_by(&OPENAI.call(), 403, &[], OPENAI_COUNTRY);
+    assert_eq!(tested, Got::Fault(Region), "a key test too");
 }

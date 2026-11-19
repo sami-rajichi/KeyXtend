@@ -58,7 +58,7 @@ fn top_pieces(top: u32) -> usize {
 #[test]
 fn the_small_send_has_the_payload_its_offsets_name() {
     let good = net_ask_bytes(&small());
-    assert_eq!(good.len(), HEADER_LEN + 51);
+    assert_eq!(good.len(), HEADER_LEN + 52);
     assert_eq!(NetAsk::read(&mut &good[..]), Ok(small()));
 }
 
@@ -94,7 +94,7 @@ fn an_address_that_is_not_plain_https_is_refused_both_ways() {
     let good = net_ask_bytes(&small());
     refused_reads(
         &good,
-        &[(12, b"H"), (20, b"A"), (20, b"@"), (21, b"#"), (22, b"\r")],
+        &[(13, b"H"), (21, b"A"), (21, b"@"), (22, b"#"), (23, b"\r")],
         BadField,
     );
 }
@@ -136,6 +136,8 @@ fn a_name_or_value_that_could_break_a_request_is_refused_when_written() {
         (|c| c.shape = one_field("a.b", "1"), BadField),
         (|c| c.shape = one_field("a", "1\r\n2"), BadField),
         (|c| c.shape = one_field("a", "1\t2"), BadField),
+        (|c| c.shape = region_form("a b"), BadField),
+        (|c| c.shape = region_form(""), Inconsistent),
         (
             |c| c.shape = form("l", false, vec![field("a", "1"); MAX_FIXED + 1]),
             TooLong,
@@ -227,7 +229,7 @@ fn a_piece_and_a_run_at_their_caps_pass() {
 fn a_bad_call_or_run_is_refused_when_read() {
     let good = net_ask_bytes(&small());
     let over = (groq_cap() + 2).to_le_bytes();
-    let reads: [(usize, &[u8]); 25] = [
+    let reads: [(usize, &[u8]); 26] = [
         (0, &[0]),
         (0, &[5]),
         (2, b" "),
@@ -235,31 +237,32 @@ fn a_bad_call_or_run_is_refused_when_read() {
         (6, b"."),
         (8, b"\n"),
         (9, &[2]),
-        (23, &[0]),
-        (23, &[3]),
-        (26, b" "),
-        (26, b"\x7f"),
-        (27, &(*NET_WAIT_S.start() - 1).to_le_bytes()),
-        (29, &[2]),
-        (31, b" "),
-        (33, b"\0"),
-        (35, &0u32.to_le_bytes()),
-        (39, &(*NET_MAX_S.start() - 1).to_le_bytes()),
-        (41, &0u16.to_le_bytes()),
-        (43, &[*NET_AT_ONCE.end() + 1]),
-        (44, &[0]),
-        (47, &0u32.to_le_bytes()),
-        (47, &3u32.to_le_bytes()),
-        (47, &over),
+        (10, &[2]),
+        (24, &[0]),
+        (24, &[3]),
+        (27, b" "),
+        (27, b"\x7f"),
+        (28, &(*NET_WAIT_S.start() - 1).to_le_bytes()),
+        (30, &[2]),
+        (32, b" "),
+        (34, b"\0"),
+        (36, &0u32.to_le_bytes()),
+        (40, &(*NET_MAX_S.start() - 1).to_le_bytes()),
+        (42, &0u16.to_le_bytes()),
+        (44, &[*NET_AT_ONCE.end() + 1]),
+        (45, &[0]),
+        (48, &0u32.to_le_bytes()),
+        (48, &3u32.to_le_bytes()),
+        (48, &over),
         (1, &[0]),
-        (45, &0u16.to_le_bytes()),
+        (46, &0u16.to_le_bytes()),
     ];
     let (bad, empty) = reads.split_at(reads.len() - 2);
     refused_reads(&good, bad, BadField);
     refused_reads(&good, empty, Inconsistent);
     let fixed = [u8::try_from(MAX_FIXED + 1).unwrap()];
     let pieces = u16::try_from(MAX_SPEECH_PIECES + 1).unwrap().to_le_bytes();
-    refused_reads(&good, &[(4, &fixed), (45, &pieces)], TooLong);
+    refused_reads(&good, &[(4, &fixed), (46, &pieces)], TooLong);
 }
 
 #[test]

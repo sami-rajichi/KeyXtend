@@ -21,8 +21,11 @@ fn nothing_starts_before_send_and_each_run_has_a_job_of_its_own() {
     assert_eq!(launches[0].memory_mb, job().job_mb + room);
 }
 
+/// `OpenAI`'s error code for a country or region it does not serve.
+const REGION: &str = "unsupported_country_region_territory";
+
 #[test]
-fn the_rows_form_reaches_the_frame_whole_with_its_paywall() {
+fn the_rows_form_reaches_the_frame_whole_with_its_paywall_and_region() {
     let (host, script, _) = host();
     let keep = FormField {
         name: "provider".into(),
@@ -33,6 +36,7 @@ fn the_rows_form_reaches_the_frame_whole_with_its_paywall() {
         list: true,
         fixed: vec![keep],
         paywall: true,
+        region: Some(REGION.into()),
     });
     let (_run, _) = sent(
         &host,
@@ -48,8 +52,13 @@ fn the_rows_form_reaches_the_frame_whole_with_its_paywall() {
         panic!("a form, not {:?}", call.shape);
     };
     assert_eq!(
-        (form.lang.as_ref(), form.list, form.paywall),
-        ("languages", true, true)
+        (
+            form.lang.as_ref(),
+            form.list,
+            form.paywall,
+            form.region.as_deref()
+        ),
+        ("languages", true, true, Some(REGION))
     );
     let fixed: Vec<(&str, &str)> = form
         .fixed

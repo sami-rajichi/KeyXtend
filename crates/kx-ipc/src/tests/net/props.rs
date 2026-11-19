@@ -37,12 +37,14 @@ fn a_shape() -> impl Strategy<Value = NetShape<'static>> {
     });
     let fixed = prop::collection::vec(field, 0..=MAX_CASE_ITEMS);
     let flags = (any::<bool>(), any::<bool>());
-    let form = (NAME, flags, fixed).prop_map(|(lang, (list, paywall), fixed)| {
+    let region = prop::option::of(NAME);
+    let form = (NAME, flags, fixed, region).prop_map(|(lang, (list, paywall), fixed, region)| {
         NetShape::Form(NetForm {
             lang: owned(lang),
             list,
             fixed,
             paywall,
+            region: region.map(owned),
         })
     });
     prop_oneof![

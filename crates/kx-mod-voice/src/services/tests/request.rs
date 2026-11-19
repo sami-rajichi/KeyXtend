@@ -11,6 +11,7 @@ fn form(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
         list,
         fixed,
         paywall: false,
+        region: None,
     })
 }
 
@@ -48,14 +49,16 @@ fn a_model_carries_its_own_form_fields_beside_the_rows() {
 }
 
 #[test]
-fn a_rows_paywall_goes_with_every_form_it_sends_a_models_own_too() {
-    let walled = OPENAI.replace("shape = \"form\"", "shape = \"form\"\npaywall = true");
+fn a_rows_paywall_and_region_go_with_every_form_it_sends_a_models_own_too() {
+    let rules =
+        "shape = \"form\"\npaywall = true\nregion = \"unsupported_country_region_territory\"";
+    let walled = OPENAI.replace("shape = \"form\"", rules);
     let table = with_rows(&walled);
     let row = table.get("openai-test").unwrap();
     for model in [row.model("gpt-transcribe"), row.model("whisper-1"), None] {
         let shape = row.shape_for(model, false);
         assert!(
-            matches!(&shape, CloudShape::Form(f) if f.paywall),
+            matches!(&shape, CloudShape::Form(f) if f.paywall && f.region.is_some()),
             "{shape:?}"
         );
     }
@@ -63,7 +66,7 @@ fn a_rows_paywall_goes_with_every_form_it_sends_a_models_own_too() {
     let row = open.get("openai-test").unwrap();
     let shape = row.shape_for(row.model("gpt-transcribe"), false);
     assert!(
-        matches!(&shape, CloudShape::Form(f) if !f.paywall),
+        matches!(&shape, CloudShape::Form(f) if !f.paywall && f.region.is_none()),
         "none by default"
     );
 }

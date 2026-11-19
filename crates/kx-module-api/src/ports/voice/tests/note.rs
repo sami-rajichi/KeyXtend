@@ -55,6 +55,7 @@ fn every_reason_and_local_state_is_distinct() {
         CloudWhy::Rate,
         CloudWhy::TooBig,
         CloudWhy::Language(english()),
+        CloudWhy::Region,
         CloudWhy::Empty,
         CloudWhy::Strange,
         CloudWhy::Terms,

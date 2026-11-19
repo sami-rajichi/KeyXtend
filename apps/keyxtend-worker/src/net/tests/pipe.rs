@@ -176,10 +176,10 @@ fn a_panic_on_an_ask_tells_gone_on_it_and_on_every_live_run() {
     let (mut job, mut out) = (Job::new(kit, mpsc::channel().0), Shaky(false, Vec::new()));
     for id in [1, 2] {
         let ask = send(id, call(), run_of(&[2], 1, 1, 20));
-        assert!(act(&mut job, Event::Ask(ask), &mut out).is_ok());
+        assert!(act(&mut job, Event::Ask(Box::new(ask)), &mut out).is_ok());
     }
     let azure = send(3, call_to(URL, NetShape::Azure), run_of(&[2], 1, 1, 20));
-    assert!(act(&mut job, Event::Ask(azure), &mut out).is_ok());
+    assert!(act(&mut job, Event::Ask(Box::new(azure)), &mut out).is_ok());
     let (asked, live) = out.1.split_first().unwrap();
     assert_eq!(asked, &fault(3, NetFault::Gone));
     let mut live = live.to_vec();

@@ -11,7 +11,7 @@ const FREE: &str = "free = { id = \"daily\", count = { hours = 8, per_min = 20 }
 /// The model error one edit of `rows`, put after the shipped text, gives, with the model's id.
 fn model_err(rows: &str, from: &str, to: &str) -> Option<(String, ModelError)> {
     let rows = edits_text(rows, &[(from, to)]);
-    match Services::parse(&format!("{TEXT}{rows}")) {
+    match parse(&format!("{TEXT}{rows}")) {
         Err(ServicesError::Row {
             why: ServiceError::Model { id, why },
             ..

@@ -58,8 +58,17 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
         list: false,
         fixed: Vec::new(),
         paywall: false,
+        region: None,
     });
     assert!(!spaced.fits());
+    let long = "r".repeat(*TAG_LEN.end() + 1);
+    for code in ["unsupported country", "", long.as_str()] {
+        let CloudShape::Form(mut odd) = form() else {
+            unreachable!("a form")
+        };
+        odd.region = Some(code.to_owned());
+        assert!(!CloudShape::Form(odd).fits(), "{code:?}");
+    }
     assert!(!form().needs_model() && !CloudShape::Azure.needs_model());
     assert!(CloudShape::Eleven.needs_model() && CloudShape::Gemini.needs_model());
 }

@@ -14,7 +14,7 @@ use kx_mod_keyboard::view::{
     EMPTY_NAME, FILL_OFF_TIP, LABEL_PREFIX, LONE_TIP, NAME_PREFIX, NO_SHORTCUTS_TIP, POWER_OFF_TIP,
     PREP_NAME, SCROLL_OFF_TIP, SHORTCUT_NAME_PREFIX,
 };
-use kx_module_api::ports::Fact;
+use kx_module_api::ports::{Fact, FactValue};
 use kx_platform_fake::DEFAULT_LANGUAGE;
 use kx_theme::assets::{MARK_CIRCLE, MARKS};
 use kx_ui::i18n::keys::{
@@ -229,18 +229,23 @@ fn every_warning_fact_in_the_services_table_has_its_rows_mark() {
     assert_eq!(missing(&wanted), Vec::new());
 }
 
-/// Every fact of the services table reads whole in each language once filled: no key, placeholder or marker is left.
+/// Every fact of the services table reads whole in each language once filled: no key, placeholder or marker is left,
+/// and a service's own words end the sentence after a colon, as kx-ui's `own` checks for its samples.
 #[test]
 fn every_fact_in_the_services_table_reads_whole_in_every_language() {
     let facts = table_facts();
+    let colon = |lead: &str| lead.trim_end().ends_with(':');
     for l in &LANGS {
         let t = I18n::new(l);
         for (group, fact) in &facts {
-            let said = t.voice_fact(group, fact).text;
-            let key = fact_key(group, &fact.id);
+            let said = t.voice_fact(group, fact);
+            let (key, text) = (fact_key(group, &fact.id), &said.text);
             let left =
-                said.contains('{') || said.contains(&key) || said.chars().any(char::is_control);
-            assert!(!left, "{} {key}: {said}", l.tag);
+                text.contains('{') || text.contains(&key) || text.chars().any(char::is_control);
+            assert!(!left, "{} {key}: {text}", l.tag);
+            let named = (fact.args.iter()).any(|a| matches!(a.value, FactValue::Text(_)));
+            let last = matches!(&said.parts[..], [lead, own] if own.own && colon(&lead.text));
+            assert!(!named || last, "{} {key}: {text}", l.tag);
         }
     }
 }

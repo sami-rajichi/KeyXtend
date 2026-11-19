@@ -90,6 +90,7 @@ fn ask() -> CloudAsk {
         list: false,
         fixed: Vec::new(),
         paywall: false,
+        region: None,
     });
     let piece = || Redacted::new(Zeroizing::new(vec![0; 4]));
     CloudAsk {

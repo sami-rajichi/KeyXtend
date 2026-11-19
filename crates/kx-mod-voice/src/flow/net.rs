@@ -110,6 +110,7 @@ pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
         CloudFault::Rate => CloudWhy::Rate,
         CloudFault::TooBig => CloudWhy::TooBig,
         CloudFault::Language => CloudWhy::Language(lang.clone()),
+        CloudFault::Region => CloudWhy::Region,
         CloudFault::Empty => CloudWhy::Empty,
         CloudFault::Strange => CloudWhy::Strange,
         CloudFault::Range(_) | CloudFault::Gone => CloudWhy::Fault,

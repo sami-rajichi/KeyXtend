@@ -1,7 +1,8 @@
-//! Each upload-form row as `services.toml` gives it from the services' pages read 2026-11-17 (research file `[X]`
-//! lines): Groq, `OpenAI`'s `languages[]` list, Mistral, Together, Lemonfox with no model and English names,
-//! `DeepInfra`, `OpenRouter` with its keep-nothing field and a Custom address. Each sends its fields in order to its own
-//! address with the key in its header and reads its text; `replies` reads each one's faults.
+//! Each upload-form row's form parameters from the services' pages read 2026-11-17 (research file `[X]` lines):
+//! Groq, `OpenAI`'s `languages[]` list and region code, Mistral, Together's paywall, Lemonfox with no model and English
+//! names, `DeepInfra`, `OpenRouter` with its keep-nothing field and paywall, and a Custom address. Each sends its fields
+//! in order with the key in its header and reads its text; `replies` reads each one's faults. The table itself is
+//! pinned by kx-mod-voice's row tests, so every call here goes to one test address.
 
 mod replies;
 
@@ -14,29 +15,36 @@ use kx_ipc::{NetField, ShapeCode};
 use kx_platform_net::Verb;
 use std::sync::atomic::AtomicBool;
 
+/// The one address the row tests send to.
+const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
 /// The sound the row tests send.
 const WAV: &[u8] = b"RIFF-and-samples";
 /// What the rows' text fixtures say.
 const SAID: &str = "Bonjour tout le monde.";
+/// `OpenAI`'s error code for a country or region it does not serve [O5].
+const REGION: &str = "unsupported_country_region_territory";
 
-/// A form row as `services.toml` gives it: its address, language field, list flag, fixed fields and paywall.
+/// A form row's parameters: the service it stands for, its language field, list flag, fixed fields, paywall and region
+/// code.
 #[derive(Clone, Copy)]
 struct Row {
-    url: &'static str,
+    name: &'static str,
     lang: &'static str,
     list: bool,
     fixed: &'static [(&'static str, &'static str)],
     paywall: bool,
+    region: Option<&'static str>,
 }
 
-/// A row at `url` with the one `language` field.
-const fn plain(url: &'static str) -> Row {
+/// Service `name`'s row with the one `language` field and no reply rule.
+const fn plain(name: &'static str) -> Row {
     Row {
-        url,
+        name,
         lang: "language",
         list: false,
         fixed: &[],
         paywall: false,
+        region: None,
     }
 }
 
@@ -44,40 +52,41 @@ const fn plain(url: &'static str) -> Row {
 const ZDR: (&str, &str) = ("provider", r#"{"zdr":true}"#);
 
 /// Groq [G1].
-const GROQ: Row = plain(URL);
-/// `OpenAI`: `gpt-transcribe` takes `languages[]` in place of `language` [O2].
+const GROQ: Row = plain("groq");
+/// `OpenAI`: `gpt-transcribe` takes `languages[]` in place of `language` [O2], and a country refusal has its code [O5].
 const OPENAI: Row = Row {
     lang: "languages",
     list: true,
-    ..plain("https://api.openai.com/v1/audio/transcriptions")
+    region: Some(REGION),
+    ..plain("openai")
 };
 /// Mistral: multipart is the working reading of its guide [M1].
-const MISTRAL: Row = plain("https://api.mistral.ai/v1/audio/transcriptions");
+const MISTRAL: Row = plain("mistral");
 /// Together: its 403 is a plan limit or a missing payment method [T5].
 const TOGETHER: Row = Row {
     paywall: true,
-    ..plain("https://api.together.ai/v1/audio/transcriptions")
+    ..plain("together")
 };
 /// Lemonfox [L2].
-const LEMONFOX: Row = plain("https://api.lemonfox.ai/v1/audio/transcriptions");
-/// `DeepInfra`: the `OpenAI`-style address its reference names [D3].
-const DEEPINFRA: Row = plain("https://api.deepinfra.com/v1/audio/transcriptions");
+const LEMONFOX: Row = plain("lemonfox");
+/// `DeepInfra` [D3].
+const DEEPINFRA: Row = plain("deepinfra");
 /// `OpenRouter` with its keep-nothing switch on: its 403 is a key's spending cap [R2][R7].
 const ROUTER: Row = Row {
     fixed: &[ZDR],
     paywall: true,
-    ..plain("https://openrouter.ai/api/v1/audio/transcriptions")
+    ..plain("openrouter")
 };
 /// `OpenRouter` with its keep-nothing switch off.
 const ROUTER_OPEN: Row = Row {
     fixed: &[],
     ..ROUTER
 };
-/// A Custom address the user types, on any HTTPS host name.
-const CUSTOM: Row = plain("https://stt.example.com/v1/audio/transcriptions");
+/// A Custom address the user types.
+const CUSTOM: Row = plain("custom");
 
 impl Row {
-    /// The row's call, its key as a bearer.
+    /// The row's call to the test address, its key as a bearer.
     fn call(self) -> NetCall<'static> {
         let fixed = self.fixed.iter().map(|&(name, value)| NetField {
             name: Cow::Borrowed(name),
@@ -88,8 +97,9 @@ impl Row {
             list: self.list,
             fixed: fixed.collect(),
             paywall: self.paywall,
+            region: self.region.map(Cow::Borrowed),
         };
-        call_to(self.url, NetShape::Form(form))
+        call_to(ADDRESS, NetShape::Form(form))
     }
 }
 
@@ -179,7 +189,7 @@ fn each_row_sends_its_model_and_language_then_its_fixed_fields_then_the_sound() 
         let call = c.row.call();
         let req = Form.build(&piece(&call, c.model, c.lang, WAV)).unwrap();
         let got: Vec<(String, Vec<u8>)> = parts(&req).into_iter().map(|p| (p.0, p.3)).collect();
-        assert_eq!(got, c.want(), "{}", c.row.url);
+        assert_eq!(got, c.want(), "{}", c.row.name);
     }
 }
 
@@ -192,21 +202,21 @@ fn openrouters_keep_nothing_field_goes_only_while_its_switch_is_on() {
 }
 
 #[test]
-fn each_row_posts_to_its_own_address_with_the_key_in_its_header_and_reads_its_text() {
+fn each_row_posts_its_form_with_the_key_in_its_header_and_reads_its_text() {
     let texts = replies::TEXTS;
     for (c, text) in CASES.iter().zip(texts) {
         let http = Arc::new(FakeHttp::new([reply(OK, text)]));
         let clock = Arc::new(Still::default());
         let got = send::piece(&kit(&http, &clock), &c.sending(), WAV);
         let got = got.map(|t| t.trim().to_owned());
-        assert_eq!(got, Ok(SAID.to_owned()), "{}", c.row.url);
+        assert_eq!(got, Ok(SAID.to_owned()), "{}", c.row.name);
         let called = http.called();
         let [one] = &called[..] else {
-            panic!("{}: one call, not {}", c.row.url, called.len())
+            panic!("{}: one call, not {}", c.row.name, called.len())
         };
-        assert_eq!((one.url.as_str(), one.verb), (c.row.url, Verb::Post));
+        assert_eq!((one.url.as_str(), one.verb), (ADDRESS, Verb::Post));
         let auth = one.fields.iter().find(|(n, _)| n == "Authorization");
         let bearer = format!("Bearer {KEY_TEXT}").into_bytes();
-        assert_eq!(auth.map(|(_, v)| v), Some(&bearer), "{}", c.row.url);
+        assert_eq!(auth.map(|(_, v)| v), Some(&bearer), "{}", c.row.name);
     }
 }

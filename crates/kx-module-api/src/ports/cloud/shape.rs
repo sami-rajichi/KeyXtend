@@ -51,7 +51,7 @@ impl CloudShape {
 }
 
 /// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound last, as
-/// Together asks the model before the file.
+/// Together asks the model before the file. Its `paywall` and `region` are rules for reading the replies, never fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FormFields {
     /// The language field's name, such as `language`.
@@ -63,13 +63,17 @@ pub struct FormFields {
     /// A 403 asks the account to pay, as Together's missing payment method or `OpenRouter`'s spending cap: no credit,
     /// not a bad key.
     pub paywall: bool,
+    /// The error code a reply gives where the service is not offered in the user's country or region, a plain name,
+    /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
+    pub region: Option<String>,
 }
 
 impl FormFields {
-    /// True when every name is a plain name and every value fits.
+    /// True when every name and the region code are plain names and every value fits.
     fn fits(&self) -> bool {
         let fixed = self.fixed.len() <= MAX_FIXED && self.fixed.iter().all(FormField::fits);
-        name_ok(&self.lang) && fixed
+        let region = self.region.as_deref().is_none_or(name_ok);
+        name_ok(&self.lang) && fixed && region
     }
 }
 

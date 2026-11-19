@@ -87,7 +87,7 @@ cloud =
     } في الدقيقة
     .fact-free-unknown = غير معروف، ويتوقف على الخدمة
     .fact-free-none = لا شيء
-    .fact-free-first-buy = لا شيء قبل دفع { $least } على الأقل
+    .fact-free-first-buy = لا شيء، وأول شراء { $least } على الأقل
     .fact-free-first-month = الشهر الأول
     .fact-free-small = حصة صغيرة للحسابات الجديدة
     .fact-price-free-or = مجاني ضمن الحصة المجانية، وإلا فمن { $low } إلى { $high } حسب النموذج
@@ -104,7 +104,13 @@ cloud =
         [many] { $seconds } ثانية
        *[other] { $seconds } ثانية
     }، فتكلّف المقاطع القصيرة أكثر
-    .money-usd = { $amount } دولار
+    .money-usd = { $amount-form ->
+        [one] دولار واحد
+        [two] دولاران
+        [few] { $amount } دولارات
+        [many] { $amount } دولارًا
+       *[other] { $amount } دولار
+    }
     .money = { $amount } { $code }
     .key-line = المفتاح
     .key-hint = اكتب مفتاحك أو الصقه
@@ -142,6 +148,7 @@ cloud =
     .note-net = لم تستجب الخدمة. تحقّق من الشبكة وحاول مرة أخرى.
     .note-key = رفضت الخدمة المفتاح. تحقّق منه في صفحة المفتاح.
     .note-credit = لم يبقَ رصيد في الحساب.
+    .note-region = الخدمة غير متاحة في بلدك أو منطقتك.
     .note-allowance = نفدت الحصة المجانية حاليًا.
     .note-allowance-in = نفدت الحصة المجانية، وتتجدد بعد مدة قدرها { $in }.
     .note-rate = الطلبات كثيرة جدًا. انتظر قليلًا وحاول مرة أخرى.

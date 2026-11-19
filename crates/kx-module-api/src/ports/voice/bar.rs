@@ -186,6 +186,8 @@ pub enum CloudWhy {
     TooBig,
     /// The service's model does not take this language's code, such as a regional one.
     Language(VoiceLang),
+    /// The service is not offered in the user's country or region.
+    Region,
     /// The service sent no text.
     Empty,
     /// The reply was not the service's, such as a hotspot's sign-in page.

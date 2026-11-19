@@ -93,6 +93,7 @@ fn each_fault_of_the_job_is_the_ports_and_range_names_the_shape() {
         (NetFault::Rate, CloudFault::Rate),
         (NetFault::TooBig, CloudFault::TooBig),
         (NetFault::Language, CloudFault::Language),
+        (NetFault::Region, CloudFault::Region),
         (NetFault::Empty, CloudFault::Empty),
         (NetFault::Strange, CloudFault::Strange),
         (NetFault::Network, CloudFault::Network),

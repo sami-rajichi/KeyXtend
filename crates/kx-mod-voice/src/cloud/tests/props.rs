@@ -111,7 +111,7 @@ fn tables() -> Vec<Services> {
     ];
     let tables: Vec<Services> = edits
         .iter()
-        .map(|(from, to)| Services::parse(&TEXT.replacen(from, to, 1)).unwrap())
+        .map(|(from, to)| parse(&TEXT.replacen(from, to, 1)).unwrap())
         .collect();
     assert_eq!(tables.len(), TABLES);
     tables

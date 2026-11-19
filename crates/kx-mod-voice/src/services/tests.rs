@@ -6,14 +6,21 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
+mod langs;
 mod parts;
 mod refuse;
 mod request;
 mod room;
 mod rows;
 
-/// The compiled-in text.
-const TEXT: &str = include_str!("../../services.toml");
+/// The compiled-in table text and its language sets.
+pub(crate) const TEXT: &str = include_str!("../../services.toml");
+const LANGS: &str = include_str!("../../langs.toml");
+
+/// The table `text` gives with the shipped language sets.
+pub(crate) fn parse(text: &str) -> Result<Services, ServicesError> {
+    Services::parse(text, LANGS)
+}
 
 /// An `OpenAI` row as the 2026-11-17 pages give it: `gpt-transcribe` takes `languages[]`, `whisper-1` `language`.
 const OPENAI: &str = r#"
@@ -140,7 +147,7 @@ fn shipped() -> &'static Services {
 
 /// The shipped text with `rows` after it.
 pub(crate) fn with_rows(rows: &str) -> Services {
-    Services::parse(&format!("{TEXT}{rows}")).unwrap()
+    parse(&format!("{TEXT}{rows}")).unwrap()
 }
 
 /// `text` with each pair's first `from` replaced by its `to`, in turn.
@@ -153,7 +160,7 @@ fn edits_text(text: &str, pairs: &[(&str, &str)]) -> String {
 
 /// The table `text` gives with the edits.
 fn edits_of(text: &str, pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
-    Services::parse(&edits_text(text, pairs))
+    parse(&edits_text(text, pairs))
 }
 
 /// The shipped table with the edits.
@@ -176,7 +183,7 @@ fn the_shipped_table_loads_groq_first_with_custom() {
     let first = shipped().offered().next().map(|r| r.id.as_str());
     assert_eq!(first, Some("groq"), "edge 24: Groq is listed first");
     assert_eq!((shipped().light_hours(), shipped().heavy_hours()), (15, 60));
-    assert_eq!(Services::parse(TEXT).as_ref(), Ok(shipped()));
+    assert_eq!(parse(TEXT).as_ref(), Ok(shipped()));
 }
 
 #[test]
@@ -264,6 +271,6 @@ fn no_row_can_name_a_default_or_a_field_the_table_does_not_know() {
 #[test]
 fn a_bad_table_turns_cloud_off_and_never_panics() {
     for text in ["", "light_hours = 15", "services = []", "\u{0}"] {
-        assert!(Services::parse(text).is_err(), "{text:?}");
+        assert!(parse(text).is_err(), "{text:?}");
     }
 }

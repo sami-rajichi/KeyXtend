@@ -8,14 +8,15 @@
 # - `max_models`: the most models a row offers (design "Connections and services").
 # - `[reply]`: replies stay plain text or JSON without timings: a fixed field named in `formats` asks only for one of
 #   `plain`, and one named in `timings` only for one of `untimed`.
-# - `[langs]`: language sets by name, which a model's `langs` may name in place of its own list.
+# - The language sets live in `langs.toml`; a model's `langs` may name one in place of its own list.
 #
 # Each row ([[services]]):
 # - `id`: the name `services`, `picks` and the key's sealed blob use; `name`: the shown name, left out for Custom,
 #   which the ui names in the user's language.
 # - `shape`: "form", "azure", "eleven" or "gemini"; `form`: a form's language field, whether it goes as a list (`[]`)
 #   and its fixed fields; `keep`: a field sent while the keep-nothing switch is on, which gives the row that switch;
-#   `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells no credit.
+#   `paywall`: a form's 403 asks the account to pay (a missing payment method or a spending cap), so it tells no credit;
+#   `region`: the error code by which a form's reply says the service is not offered in the user's country or region.
 # - `host`: the only host its requests reach; for a typed address, the `.` domain it must be under, or none for
 #   Custom, which takes any HTTPS host name.
 # - `address`: where the pieces go, or "typed"; `test`: the key's test address, a path under a typed host, or none.
@@ -27,9 +28,9 @@
 # - `other`: an Other model line takes a typed id, sent with the keyboard's language code as it is.
 # - `terms`: raised when the training, retention or region fact changes, so the user confirms again.
 # - `offered`: shown on the Cloud page; `untested`: no real key has checked the connection yet.
-# - `[[services.models]]`: each `id`, shown `name`, its `langs` (the code it wants per keyboard language, or a set's
-#   name), maybe its own `form`, `unnamed = true` when the request names no model, and `keeps` when every host of it
-#   keeps the voice.
+# - `[[services.models]]`: each `id`, shown `name`, its `langs` (the code it wants per keyboard language, or the name
+#   of a set in `langs.toml`), maybe its own `form`, `unnamed = true` when the request names no model, and `keeps` when
+#   every host of it keeps the voice.
 # - `[services.facts]`: the day `read` and its `source` page, the `currency`, and the card's facts: each a text `id`
 #   with its values by kind (`count`, `number`, `money`, `day`, `text`) and `warn` for the warning tone. The optional
 #   `warn` fact is the card's warning, and `bills` the least a request bills when the service rounds up.
@@ -44,47 +45,6 @@ formats = ["response_format"]
 plain = ["json", "text"]
 timings = ["timestamp_granularities", "timestamps_granularity"]
 untimed = ["none"]
-
-# Language sets by name, each keyboard language with the code a model wants, written once for every model that shares
-# it. `whisper`: the models table's Whisper languages less haw and yue, with fil, jv and nb in Whisper's own codes.
-[langs]
-whisper = {
-    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
-    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
-    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
-    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
-    jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
-    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
-    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
-    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
-    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
-    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
-}
-# `whisper-names`: the same languages by Whisper's own lower-case English names, which Lemonfox's `language` takes; its
-# page shows english, french and arabic, and "haitian" stands for Whisper's two-word name.
-whisper-names = {
-    af = "afrikaans", am = "amharic", ar = "arabic", as = "assamese", az = "azerbaijani", ba = "bashkir",
-    be = "belarusian", bg = "bulgarian", bn = "bengali", bo = "tibetan", br = "breton", bs = "bosnian",
-    ca = "catalan", cs = "czech", cy = "welsh", da = "danish", de = "german", el = "greek", en = "english",
-    es = "spanish", et = "estonian", eu = "basque", fa = "persian", fi = "finnish", fil = "tagalog", fo = "faroese",
-    fr = "french", gl = "galician", gu = "gujarati", ha = "hausa", he = "hebrew", hi = "hindi", hr = "croatian",
-    ht = "haitian", hu = "hungarian", hy = "armenian", id = "indonesian", is = "icelandic", it = "italian",
-    ja = "japanese", jv = "javanese", ka = "georgian", kk = "kazakh", km = "khmer", kn = "kannada", ko = "korean",
-    la = "latin", lb = "luxembourgish", ln = "lingala", lo = "lao", lt = "lithuanian", lv = "latvian",
-    mg = "malagasy", mi = "maori", mk = "macedonian", ml = "malayalam", mn = "mongolian", mr = "marathi",
-    ms = "malay", mt = "maltese", my = "myanmar", nb = "norwegian", ne = "nepali", nl = "dutch", nn = "nynorsk",
-    no = "norwegian", oc = "occitan", pa = "punjabi", pl = "polish", ps = "pashto", pt = "portuguese",
-    ro = "romanian", ru = "russian", sa = "sanskrit", sd = "sindhi", si = "sinhala", sk = "slovak", sl = "slovenian",
-    sn = "shona", so = "somali", sq = "albanian", sr = "serbian", su = "sundanese", sv = "swedish", sw = "swahili",
-    ta = "tamil", te = "telugu", tg = "tajik", th = "thai", tk = "turkmen", tl = "tagalog", tr = "turkish",
-    tt = "tatar", uk = "ukrainian", ur = "urdu", uz = "uzbek", vi = "vietnamese", yi = "yiddish", yo = "yoruba",
-    zh = "chinese",
-}
-# `checked`: the keyboard languages read on a model's page whose whole list is not in the table yet (Voxtral's 53 and
-# MAI-Transcribe-2's 60 name English, French and Arabic); the live check adds the rest.
-checked = { ar = "ar", en = "en", fr = "fr" }
-# `english`: a model whose page names its language count only, such as Nemotron 3.5 Transcribe's 40.
-english = { en = "en" }
 
 # Groq: console.groq.com docs read 2026-11-17 (speech-to-text, rate-limits, models, billing-faqs, your-data, and the
 # services agreement section 4.2). The free plan's 20 requests a minute and 28,800 audio seconds a day; 25 MB a file.
@@ -127,13 +87,14 @@ heavy = { id = "free-or", money = { low = 2.40, high = 6.66 } }
 bills = { id = "least", count = { seconds = 10 } }
 
 # OpenAI: developers.openai.com read 2026-11-17 (pricing, speech-to-text, the transcriptions reference, rate limits, error
-# codes, your data). Only gpt-transcribe is offered, as whisper-1 and the gpt-4o models shut down on 2027-02-26; it takes
-# `languages[]` in place of `language`. 25 MB a file; transcription keeps nothing for abuse checks; no free allowance.
+# codes, your data). Only gpt-transcribe, with `languages[]`; 25 MB a file, nothing kept for abuse checks, no free use.
 [[services]]
 id = "openai"
 name = "OpenAI"
 shape = "form"
+# `language` is for a typed Other id; the old models that take it shut down on 2027-02-26.
 form = { lang = "language", list = false }
+region = "unsupported_country_region_territory"
 host = "api.openai.com"
 address = "https://api.openai.com/v1/audio/transcriptions"
 test = "https://api.openai.com/v1/models"
@@ -148,7 +109,7 @@ untested = true
 [[services.models]]
 id = "gpt-transcribe"
 name = "GPT Transcribe"
-langs = "whisper"
+langs = "iso-639-1"
 form = { lang = "languages", list = true }
 
 [services.facts]
@@ -164,7 +125,7 @@ heavy = { id = "plain", money = { price = 16.20 } }
 
 # Mistral: docs.mistral.ai and help.mistral.ai read 2026-11-17 (transcribe files, the transcriptions endpoint, languages,
 # limits, pricing, usage limits, the training switch, zero data retention). Voxtral 3 in multipart, the guide's working
-# reading; no API use without billing; data in the EU; keeping nothing only on request. No cap is stated, so 25 MB.
+# reading, with billing first and data in the EU; no cap is stated, so 25 MB.
 [[services]]
 id = "mistral"
 name = "Mistral"
@@ -184,12 +145,12 @@ untested = true
 [[services.models]]
 id = "voxtral-mini-transcribe-3-0"
 name = "Voxtral Mini Transcribe 3"
-langs = "checked"
+langs = "en-fr-ar"
 
 [[services.models]]
 id = "voxtral-small-transcribe-3-0"
 name = "Voxtral Small Transcribe 3"
-langs = "checked"
+langs = "en-fr-ar"
 
 [services.facts]
 read = 2026-11-17
@@ -203,8 +164,8 @@ light = { id = "range", money = { low = 3.15, high = 3.60 } }
 heavy = { id = "range", money = { low = 12.60, high = 14.40 } }
 
 # Together AI: together.ai and docs.together.ai read 2026-11-17 (pricing, speech-to-text, billing, zero data retention,
-# error codes, rate limits). No key before a first purchase of $15; prompts are stored until a switch is off; a 403 is a
-# plan limit or a missing payment method. 80 MB and 4 hours a request; no rate is published.
+# error codes, rate limits). No key before a first purchase of $15, a 403 is a plan limit or a missing payment method,
+# and a request takes 80 MB and 4 hours with no published rate.
 [[services]]
 id = "together"
 name = "Together AI"
@@ -239,8 +200,7 @@ light = { id = "plain", money = { price = 1.35 } }
 heavy = { id = "plain", money = { price = 5.40 } }
 
 # Lemonfox: lemonfox.ai read 2026-11-17 (home, speech-to-text API, Whisper API, terms). Whisper large-v3 with no model
-# field and the language as an English name; deleted right after processing; the first month free; a $5 plan for about
-# 30 hours, then $0.50 for about 3 more. 100 MB an upload; fair use; no key test.
+# field and the language as an English name; 100 MB an upload, fair use and no key test.
 [[services]]
 id = "lemonfox"
 name = "Lemonfox"
@@ -310,7 +270,8 @@ address = "https://openrouter.ai/api/v1/audio/transcriptions"
 test = "https://openrouter.ai/api/v1/key"
 header = "bearer"
 keys = "https://openrouter.ai/settings/keys"
-limits = { cap_mb = 25, max_mb = 23, max_s = 180, per_min = 60, at_once = 4 }
+# A piece lasts at most the 60 s upstream timeout a request [R1].
+limits = { cap_mb = 25, max_mb = 23, max_s = 60, per_min = 60, at_once = 4 }
 other = true
 terms = 1
 offered = true
@@ -329,18 +290,18 @@ langs = "whisper"
 [[services.models]]
 id = "openai/gpt-transcribe"
 name = "GPT Transcribe"
-langs = "whisper"
+langs = "iso-639-1"
 
 [[services.models]]
 id = "microsoft/mai-transcribe-2"
 name = "MAI-Transcribe-2"
-langs = "checked"
+langs = "en-fr-ar"
 
 # Mistral keeps nothing only on request, so no host of it keeps nothing.
 [[services.models]]
 id = "mistralai/voxtral-mini-transcribe-3-0"
 name = "Voxtral Mini Transcribe 3"
-langs = "checked"
+langs = "en-fr-ar"
 keeps = true
 
 [services.facts]

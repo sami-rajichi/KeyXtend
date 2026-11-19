@@ -10,6 +10,7 @@ fn form_as(lang: &str, list: bool, fixed: Vec<FormField>) -> CloudShape {
         list,
         fixed,
         paywall: false,
+        region: None,
     })
 }
 
@@ -18,6 +19,17 @@ fn paywalled(shape: CloudShape) -> CloudShape {
     match shape {
         CloudShape::Form(form) => CloudShape::Form(FormFields {
             paywall: true,
+            ..form
+        }),
+        other => other,
+    }
+}
+
+/// `shape` with `OpenAI`'s region refusal code, read as the region fault.
+fn regioned(shape: CloudShape) -> CloudShape {
+    match shape {
+        CloudShape::Form(form) => CloudShape::Form(FormFields {
+            region: Some("unsupported_country_region_territory".into()),
             ..form
         }),
         other => other,
@@ -40,6 +52,10 @@ fn every_shape_with_its_header_passes() {
         (form_as("language", false, zdr), KeyHeader::Bearer),
         (
             paywalled(form_as("language", false, Vec::new())),
+            KeyHeader::Bearer,
+        ),
+        (
+            regioned(form_as("language", false, Vec::new())),
             KeyHeader::Bearer,
         ),
         (

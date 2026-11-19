@@ -21,9 +21,15 @@ pub(crate) const SOUND: Spec = Spec::new(FOUR, 1, MAX_SOUND_BYTES);
 /// A piece's text, possibly empty.
 pub(crate) const TEXT: Spec = Spec::new(FOUR, 0, MAX_NET_TEXT_BYTES);
 
-/// A form: its language field's name, the list flag, its fixed fields' names and values, then the paywall flag.
-const FORM_MOST: usize =
-    TAG.most() + ONE + FIXED.width + FIXED.max * (TAG.most() + VALUE.most()) + ONE;
+/// A form: its language field's name, the list flag, its fixed fields' names and values, the paywall flag, then
+/// whether a region code follows, and the code.
+const FORM_MOST: usize = TAG.most()
+    + ONE
+    + FIXED.width
+    + FIXED.max * (TAG.most() + VALUE.most())
+    + ONE
+    + ONE
+    + TAG.most();
 /// A shape: its code, then a form.
 const SHAPE_LEAST: usize = ONE;
 const SHAPE_MOST: usize = ONE + FORM_MOST;

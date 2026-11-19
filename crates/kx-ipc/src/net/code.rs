@@ -78,6 +78,8 @@ pub(crate) enum FaultCode {
     Range = 11,
     /// `NetFault::Gone`.
     Gone = 12,
+    /// `NetFault::Region`.
+    Region = 13,
 }
 
 impl Code for FaultCode {
@@ -94,6 +96,7 @@ impl Code for FaultCode {
         Self::Timeout,
         Self::Range,
         Self::Gone,
+        Self::Region,
     ];
 
     fn code(self) -> u8 {

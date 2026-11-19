@@ -204,7 +204,7 @@ fn a_typed_model_id_never_prints_in_the_ticks_the_plan_or_the_send() {
 }
 
 /// Every cloud fault, each allowance with and without its renewal.
-const FAULTS: [CloudFault; 13] = [
+const FAULTS: [CloudFault; 14] = [
     CloudFault::Range("model"),
     CloudFault::Key,
     CloudFault::Credit,
@@ -215,6 +215,7 @@ const FAULTS: [CloudFault; 13] = [
     CloudFault::Rate,
     CloudFault::TooBig,
     CloudFault::Language,
+    CloudFault::Region,
     CloudFault::Empty,
     CloudFault::Strange,
     CloudFault::Network,

@@ -7,7 +7,7 @@ use crate::lang;
 use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths};
 use kx_ui::i18n::keys::vars::FREE;
 use kx_ui::i18n::keys::{
-    FACT_BILLS, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
+    FACT_BILLS, FACT_FREE, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
 };
 use kx_ui::{I18n, LANGS};
 use std::time::Duration;
@@ -16,7 +16,7 @@ use std::time::Duration;
 const TAGS: [&str; 3] = ["en", "fr", "ar"];
 
 /// Each reworded line's key and its words in English, French and Arabic, `$https` filled.
-const LINES: [(&str, [&str; 3]); 11] = [
+const LINES: [(&str, [&str; 3]); 12] = [
     (
         "cloud.key-unfit",
         [
@@ -99,6 +99,14 @@ const LINES: [(&str, [&str; 3]); 11] = [
             "The free allowance is used up for now.",
             "Le quota gratuit est épuisé pour l’instant.",
             "نفدت الحصة المجانية حاليًا.",
+        ],
+    ),
+    (
+        "cloud.note-region",
+        [
+            "The service is not offered in your country or region.",
+            "Le service n’est pas proposé dans votre pays ou votre région.",
+            "الخدمة غير متاحة في بلدك أو منطقتك.",
         ],
     ),
 ];
@@ -198,4 +206,30 @@ fn the_free_allowance_and_the_least_billed_read_as_approved() {
         fr.ends_with("les morceaux courts coûtent donc plus cher"),
         "{fr}"
     );
+}
+
+/// Together's free line: nothing is free, and a key needs a first purchase of at least $15 [T3].
+const FIRST_BUY: [&str; 3] = [
+    "None; first purchase at least $15",
+    "Aucun\u{a0}; premier achat d’au moins 15\u{a0}$",
+    "لا شيء، وأول شراء 15 دولارًا على الأقل",
+];
+
+#[test]
+fn a_first_purchase_reads_as_nothing_free_and_never_as_free_after_paying() {
+    let least = FactArg {
+        name: "least".to_owned(),
+        value: FactValue::Money {
+            amount: Hundredths(1500),
+            currency: "USD".to_owned(),
+        },
+    };
+    let free = Fact {
+        id: "first-buy".to_owned(),
+        args: vec![least],
+        warn: false,
+    };
+    for (tag, want) in TAGS.into_iter().zip(FIRST_BUY) {
+        assert_eq!(lang(tag).voice_fact(FACT_FREE, &free).text, want, "{tag}");
+    }
 }

@@ -79,6 +79,7 @@ fn form() -> NetForm<'static> {
         list: false,
         fixed: Vec::new(),
         paywall: false,
+        region: None,
     }
 }
 

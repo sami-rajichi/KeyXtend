@@ -59,6 +59,7 @@ fn asks() -> [NetAsk<'static>; 5] {
         list: false,
         fixed: Vec::new(),
         paywall: false,
+        region: None,
     });
     let send = |id, call| NetAsk::Send {
         id,

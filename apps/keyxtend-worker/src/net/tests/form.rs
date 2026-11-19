@@ -143,6 +143,7 @@ fn a_list_language_and_the_rows_fixed_fields_keep_the_rows_order() {
         list: true,
         fixed,
         paywall: false,
+        region: None,
     });
     let call = call_to(URL, shape);
     let req = Form.build(&piece(&call, Some(MODEL), "ar", WAV)).unwrap();
@@ -230,6 +231,7 @@ fn a_fixed_field_may_not_repeat_a_list_languages_name() {
             list: true,
             fixed,
             paywall: false,
+            region: None,
         });
         let call = call_to(URL, shape);
         let got = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).err();

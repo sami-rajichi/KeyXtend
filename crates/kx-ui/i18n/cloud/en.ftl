@@ -73,7 +73,7 @@ cloud =
     } a minute
     .fact-free-unknown = Unknown; it depends on the service
     .fact-free-none = None
-    .fact-free-first-buy = None before you pay at least { $least }
+    .fact-free-first-buy = None; first purchase at least { $least }
     .fact-free-first-month = The first month
     .fact-free-small = A small allowance for new accounts
     .fact-price-free-or = Free within the free allowance, else { $low } to { $high } by model
@@ -125,6 +125,7 @@ cloud =
     .note-net = The service did not answer. Check the network and try again.
     .note-key = The service refused the key. Check it on the key page.
     .note-credit = The account has no credit left.
+    .note-region = The service is not offered in your country or region.
     .note-allowance = The free allowance is used up for now.
     .note-allowance-in = The free allowance is used up. It renews in { $in }.
     .note-rate = Too many requests. Wait a moment and try again.

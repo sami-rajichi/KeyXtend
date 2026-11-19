@@ -15,6 +15,8 @@ pub(super) const KEY: &str = "gsk_live-7731-zebra";
 pub(super) const SPOKEN: &[u8] = b"spoken words";
 /// Groq's address, which no output may show, as a typed address is the user's.
 pub(super) const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
+/// `OpenAI`'s error code for a country or region it does not serve [O5].
+pub(super) const REGION: &str = "unsupported_country_region_territory";
 /// A model id no output may show, as a typed one is the user's.
 pub(super) const MODEL: &str = "whisper-large-v3-turbo";
 /// Words no `Debug` may show: the key, the address, the model, the sound and the texts.
@@ -55,6 +57,7 @@ pub(super) fn form(
         list,
         fixed,
         paywall: false,
+        region: None,
     })
 }
 
@@ -67,6 +70,22 @@ pub(super) fn paywalled(shape: NetShape<'static>) -> NetShape<'static> {
         }),
         other => other,
     }
+}
+
+/// `shape` with the error code `code` read as a region refusal, as `OpenAI`'s row says.
+pub(super) fn regioned(shape: NetShape<'static>, code: &'static str) -> NetShape<'static> {
+    match shape {
+        NetShape::Form(form) => NetShape::Form(NetForm {
+            region: Some(Cow::Borrowed(code)),
+            ..form
+        }),
+        other => other,
+    }
+}
+
+/// A one-letter form whose replies name `code` their region refusal.
+pub(super) fn region_form(code: &'static str) -> NetShape<'static> {
+    regioned(form("l", false, Vec::new()), code)
 }
 
 /// A fixed field.
@@ -128,8 +147,8 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
     }
 }
 
-/// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall, Azure with no model,
-/// `ElevenLabs` and Gemini.
+/// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall with a region code,
+/// Azure with no model, `ElevenLabs` and Gemini.
 fn sends() -> Vec<NetAsk<'static>> {
     let zdr = vec![field("provider", r#"{"zdr":true}"#)];
     let named = |name| NetHeader::Named(Cow::Borrowed(name));
@@ -150,7 +169,10 @@ fn sends() -> Vec<NetAsk<'static>> {
         ),
         send(
             3,
-            call(paywalled(form("language", false, zdr)), NetHeader::Bearer),
+            call(
+                regioned(paywalled(form("language", false, zdr)), REGION),
+                NetHeader::Bearer,
+            ),
         ),
         azure,
         send(5, call(NetShape::Eleven, named("xi-api-key"))),

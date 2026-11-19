@@ -73,7 +73,7 @@ cloud =
     } par minute
     .fact-free-unknown = Inconnu ; cela dépend du service
     .fact-free-none = Aucun
-    .fact-free-first-buy = Aucun avant de payer au moins { $least }
+    .fact-free-first-buy = Aucun ; premier achat d’au moins { $least }
     .fact-free-first-month = Le premier mois
     .fact-free-small = Un petit quota pour les nouveaux comptes
     .fact-price-free-or = Gratuit dans la limite du quota gratuit, sinon de { $low } à { $high } selon le modèle
@@ -125,6 +125,7 @@ cloud =
     .note-net = Le service n’a pas répondu. Vérifiez le réseau et réessayez.
     .note-key = Le service a refusé la clé. Vérifiez-la sur la page de la clé.
     .note-credit = Le compte n’a plus de crédit.
+    .note-region = Le service n’est pas proposé dans votre pays ou votre région.
     .note-allowance = Le quota gratuit est épuisé pour l’instant.
     .note-allowance-in = Le quota gratuit est épuisé. Il se renouvelle dans { $in }.
     .note-rate = Trop de requêtes. Patientez un instant et réessayez.

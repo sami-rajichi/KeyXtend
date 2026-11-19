@@ -31,7 +31,8 @@ fn after(why: &CloudWhy) -> Option<CloudWhy> {
     Some(match why {
         CloudWhy::Net => CloudWhy::Key,
         CloudWhy::Key => CloudWhy::Credit,
-        CloudWhy::Credit => CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Credit => CloudWhy::Region,
+        CloudWhy::Region => CloudWhy::Allowance { renews_in: None },
         CloudWhy::Allowance { .. } => CloudWhy::Rate,
         CloudWhy::Rate => CloudWhy::TooBig,
         CloudWhy::TooBig => CloudWhy::Language(front("en")),
@@ -265,4 +266,29 @@ fn money_reads_in_each_languages_way_with_cents_only_when_it_has_some() {
     assert_eq!(usd("fr", 60), "0,60\u{a0}$");
     assert_eq!(usd("ar", 167), "1,67 دولار");
     assert_eq!(lang("en").voice_money(Hundredths(69), "EUR"), "0.69 EUR");
+}
+
+/// Dollars in Arabic and the words they take: the noun agrees with a whole number, as CLDR's forms read it, and every
+/// fraction takes the singular, whatever its whole part.
+const DOLLARS: [(u32, &str); 11] = [
+    (100, "دولار واحد"),
+    (200, "دولاران"),
+    (300, "3 دولارات"),
+    (1100, "11 دولارًا"),
+    (1500, "15 دولارًا"),
+    (10_000, "100 دولار"),
+    (10_300, "103 دولارات"),
+    (60, "0,60 دولار"),
+    (167, "1,67 دولار"),
+    (720, "7,20 دولار"),
+    (1620, "16,20 دولار"),
+];
+
+#[test]
+fn arabic_dollars_agree_with_their_number_and_a_fraction_takes_the_singular() {
+    for (h, want) in DOLLARS {
+        assert_eq!(lang("ar").voice_money(Hundredths(h), "USD"), want, "{h}");
+    }
+    let usd = |tag: &str| lang(tag).voice_money(Hundredths(1500), "USD");
+    assert_eq!((usd("en"), usd("fr")), ("$15".into(), "15\u{a0}$".into()));
 }

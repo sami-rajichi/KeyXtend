@@ -27,7 +27,7 @@ const SAMPLE: [u8; 2] = [0x7f, 0x3e];
 /// `SAMPLE` as a plain `Debug` prints it.
 const SAMPLE_SHOWN: &str = "127, 62";
 /// Every fault a run may tell, as `Range` is only `send`'s own refusal.
-const FAULTS: [CloudFault; 12] = [
+const FAULTS: [CloudFault; 13] = [
     CloudFault::Key,
     CloudFault::Credit,
     CloudFault::Allowance { renews_in: None },
@@ -37,6 +37,7 @@ const FAULTS: [CloudFault; 12] = [
     CloudFault::Rate,
     CloudFault::TooBig,
     CloudFault::Language,
+    CloudFault::Region,
     CloudFault::Empty,
     CloudFault::Strange,
     CloudFault::Network,
@@ -88,6 +89,7 @@ fn form() -> CloudShape {
         list: false,
         fixed: Vec::new(),
         paywall: false,
+        region: None,
     };
     CloudShape::Form(fields)
 }

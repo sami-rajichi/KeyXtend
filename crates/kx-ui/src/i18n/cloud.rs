@@ -9,7 +9,7 @@ use super::keys::{
     VOICE_HOURS, VOICE_MINUTES, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
     cloud_why_id, fact_key,
 };
-use fluent_bundle::FluentArgs;
+use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::ports::{CloudWhy, Fact, FactValue, Hundredths, LINK_SCHEME, VoiceLang};
 use serde::Serialize;
 use std::time::Duration;
@@ -26,6 +26,9 @@ const OPEN: char = '\u{1}';
 const SHUT: char = '\u{2}';
 /// Money's decimals, shown only when it has cents.
 const CENTS: u32 = 2;
+/// CLDR's plural form for an Arabic fraction, by name: `intl_pluralrules` 7.0.2 reads a fraction's few and many by its
+/// whole part, so 7.20 would take the plural.
+const FRACTION_FORM: &str = "other";
 /// Seconds in a minute, and minutes in an hour: a renewal reads in minutes below an hour.
 const SECS_PER_MIN: u64 = 60;
 const MIN_PER_HOUR: u64 = 60;
@@ -78,7 +81,8 @@ impl I18n {
         said(&filled, &names)
     }
 
-    /// `amount` hundredths of `currency` in this language's way, cents only when it has some.
+    /// `amount` hundredths of `currency` in this language's way, cents only when it has some; `$amount-form` gives the
+    /// plural form its noun takes, as Arabic's dollars agree with their number.
     #[must_use]
     pub fn voice_money(&self, amount: Hundredths, currency: &str) -> String {
         let cents = !amount.0.is_multiple_of(Hundredths::PER_ONE);
@@ -87,6 +91,7 @@ impl I18n {
         let key = format!("{VOICE_MONEY}{}", code.to_lowercase());
         let mut values = FluentArgs::new();
         values.set(AMOUNT_VAR, shown);
+        values.set(format!("{AMOUNT_VAR}{FORM_END}"), money_form(amount, cents));
         if self.has(&key) {
             return self.format(&key, Some(&values));
         }
@@ -134,6 +139,15 @@ impl I18n {
         let per = u128::from(Hundredths::PER_ONE);
         self.places(u128::from(h.0), per, CENTS, !cents)
     }
+}
+
+/// The plural form `amount` takes: its whole number's, or CLDR's form for a fraction when it has `cents`.
+fn money_form(amount: Hundredths, cents: bool) -> FluentValue<'static> {
+    if cents {
+        return FluentValue::from(FRACTION_FORM);
+    }
+    let whole = amount.0 / Hundredths::PER_ONE;
+    form(usize::try_from(whole).unwrap_or(usize::MAX))
 }
 
 /// `filled` cut at each marked name of `names` into parts, the names in their own; the whole joined again.

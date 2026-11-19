@@ -93,21 +93,29 @@ pub(super) struct Sent<'a> {
     pub(super) keep: Option<&'a FormField>,
     /// A 403 is the row's paywall.
     paywall: bool,
+    /// The error code by which a reply says the service is not offered in the user's country or region.
+    region: Option<&'a str>,
 }
 
 impl<'a> Sent<'a> {
-    /// What a row with `keep` and `paywall` sends, under `reply`'s rules.
-    pub(super) fn new(reply: &'a Reply, keep: Option<&'a FormField>, paywall: bool) -> Self {
+    /// What a row with `keep`, `paywall` and `region` sends, under `reply`'s rules.
+    pub(super) fn new(
+        reply: &'a Reply,
+        keep: Option<&'a FormField>,
+        paywall: bool,
+        region: Option<&'a str>,
+    ) -> Self {
         Self {
             reply,
             keep,
             paywall,
+            region,
         }
     }
 }
 
 /// The shape `name` names, with `form`'s fields for a form, whose fixed fields and keep field must fit one request; only
-/// a form takes a keep field or a paywall.
+/// a form takes a keep field, a paywall or a region code.
 pub(super) fn shape(
     name: &str,
     form: Option<&RawForm>,
@@ -118,7 +126,7 @@ pub(super) fn shape(
         .find(|(n, ..)| *n == name)
         .map(|(_, kind, _)| *kind)
         .ok_or(ServiceError::Shape)?;
-    let bare = sent.keep.is_none() && !sent.paywall;
+    let bare = sent.keep.is_none() && !sent.paywall && sent.region.is_none();
     match (kind, form, bare) {
         (Kind::Form, Some(form), _) => fields(form, sent),
         (Kind::Azure, None, true) => Ok(CloudShape::Azure),
@@ -129,7 +137,7 @@ pub(super) fn shape(
 }
 
 /// A form's checked fields: plain names, values that fit, at most `MAX_FIXED` with the keep field, and a plain reply;
-/// it carries the row's paywall.
+/// it carries the row's paywall and region code, which must be a plain name.
 pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, ServiceError> {
     let fixed: Vec<FormField> = form.fixed.iter().map(RawField::field).collect();
     let mut all = fixed.clone();
@@ -140,6 +148,7 @@ pub(super) fn fields(form: &RawForm, sent: &Sent<'_>) -> Result<CloudShape, Serv
             list: form.list,
             fixed,
             paywall: sent.paywall,
+            region: sent.region.map(str::to_owned),
         })
     };
     if !shape(all.clone()).fits() || all.len() > MAX_FIXED {

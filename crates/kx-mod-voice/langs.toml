@@ -1,0 +1,55 @@
+# The language sets (ADR-0047 decisions 5 to 9) that a model in `services.toml` names in place of its own list: each
+# keyboard language (ISO 639) with the code the model wants, written once for every model that shares it, and read and
+# checked with that table.
+
+# `whisper`: the models table's Whisper languages less haw and yue, with fil, jv and nb in Whisper's own codes.
+whisper = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
+    jv = "jw", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
+    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
+    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
+    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
+    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
+    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
+}
+# `iso-639-1`: the same languages in ISO 639-1 codes, which OpenAI's models take [O2]: Javanese as jv.
+iso-639-1 = {
+    af = "af", am = "am", ar = "ar", as = "as", az = "az", ba = "ba", be = "be", bg = "bg", bn = "bn", bo = "bo",
+    br = "br", bs = "bs", ca = "ca", cs = "cs", cy = "cy", da = "da", de = "de", el = "el", en = "en", es = "es",
+    et = "et", eu = "eu", fa = "fa", fi = "fi", fil = "tl", fo = "fo", fr = "fr", gl = "gl", gu = "gu", ha = "ha",
+    he = "he", hi = "hi", hr = "hr", ht = "ht", hu = "hu", hy = "hy", id = "id", is = "is", it = "it", ja = "ja",
+    jv = "jv", ka = "ka", kk = "kk", km = "km", kn = "kn", ko = "ko", la = "la", lb = "lb", ln = "ln", lo = "lo",
+    lt = "lt", lv = "lv", mg = "mg", mi = "mi", mk = "mk", ml = "ml", mn = "mn", mr = "mr", ms = "ms", mt = "mt",
+    my = "my", nb = "no", ne = "ne", nl = "nl", nn = "nn", no = "no", oc = "oc", pa = "pa", pl = "pl", ps = "ps",
+    pt = "pt", ro = "ro", ru = "ru", sa = "sa", sd = "sd", si = "si", sk = "sk", sl = "sl", sn = "sn", so = "so",
+    sq = "sq", sr = "sr", su = "su", sv = "sv", sw = "sw", ta = "ta", te = "te", tg = "tg", th = "th", tk = "tk",
+    tl = "tl", tr = "tr", tt = "tt", uk = "uk", ur = "ur", uz = "uz", vi = "vi", yi = "yi", yo = "yo", zh = "zh",
+}
+# `whisper-names`: the same languages by Whisper's own lower-case English names, which Lemonfox's `language` takes; its
+# page shows english, french and arabic, and "haitian" stands for Whisper's two-word name.
+whisper-names = {
+    af = "afrikaans", am = "amharic", ar = "arabic", as = "assamese", az = "azerbaijani", ba = "bashkir",
+    be = "belarusian", bg = "bulgarian", bn = "bengali", bo = "tibetan", br = "breton", bs = "bosnian",
+    ca = "catalan", cs = "czech", cy = "welsh", da = "danish", de = "german", el = "greek", en = "english",
+    es = "spanish", et = "estonian", eu = "basque", fa = "persian", fi = "finnish", fil = "tagalog", fo = "faroese",
+    fr = "french", gl = "galician", gu = "gujarati", ha = "hausa", he = "hebrew", hi = "hindi", hr = "croatian",
+    ht = "haitian", hu = "hungarian", hy = "armenian", id = "indonesian", is = "icelandic", it = "italian",
+    ja = "japanese", jv = "javanese", ka = "georgian", kk = "kazakh", km = "khmer", kn = "kannada", ko = "korean",
+    la = "latin", lb = "luxembourgish", ln = "lingala", lo = "lao", lt = "lithuanian", lv = "latvian",
+    mg = "malagasy", mi = "maori", mk = "macedonian", ml = "malayalam", mn = "mongolian", mr = "marathi",
+    ms = "malay", mt = "maltese", my = "myanmar", nb = "norwegian", ne = "nepali", nl = "dutch", nn = "nynorsk",
+    no = "norwegian", oc = "occitan", pa = "punjabi", pl = "polish", ps = "pashto", pt = "portuguese",
+    ro = "romanian", ru = "russian", sa = "sanskrit", sd = "sindhi", si = "sinhala", sk = "slovak", sl = "slovenian",
+    sn = "shona", so = "somali", sq = "albanian", sr = "serbian", su = "sundanese", sv = "swedish", sw = "swahili",
+    ta = "tamil", te = "telugu", tg = "tajik", th = "thai", tk = "turkmen", tl = "tagalog", tr = "turkish",
+    tt = "tatar", uk = "ukrainian", ur = "urdu", uz = "uzbek", vi = "vietnamese", yi = "yiddish", yo = "yoruba",
+    zh = "chinese",
+}
+# `en-fr-ar`: the keyboard languages read on a model's page whose whole list is not in this file yet (Voxtral's 53 and
+# MAI-Transcribe-2's 60 name English, French and Arabic); the live check adds the rest.
+en-fr-ar = { ar = "ar", en = "en", fr = "fr" }
+# `english`: a model whose page names its language count only, such as Nemotron 3.5 Transcribe's 40.
+english = { en = "en" }

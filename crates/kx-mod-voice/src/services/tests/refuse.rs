@@ -62,7 +62,7 @@ fn only_one_row_may_go_unnamed_and_only_the_custom_one() {
     );
     let custom = &TEXT[TEXT.find("[[services]]\nid = \"custom\"").unwrap()..];
     let second = custom.replace("id = \"custom\"", "id = \"custom-two\"");
-    let twice = Services::parse(&format!("{TEXT}{second}"));
+    let twice = parse(&format!("{TEXT}{second}"));
     assert_eq!(twice.err(), unnamed("custom-two"), "a second Custom row");
 }
 
@@ -84,15 +84,20 @@ fn a_shape_or_form_that_breaks_a_request_is_refused() {
 }
 
 #[test]
-fn a_paywall_is_refused_on_a_shape_without_a_form() {
+fn a_paywall_or_region_is_refused_on_a_shape_without_a_form_and_an_odd_region_code_anywhere() {
     let azure = "shape = \"azure\"";
-    let walled = format!("{azure}\npaywall = true");
-    let refused = edits_of(&format!("{TEXT}{AZURE}"), &[(azure, &walled)]);
     let form = ServicesError::Row {
         id: "azure-test".into(),
         why: E::Form,
     };
-    assert_eq!(refused.err(), Some(form));
+    for rule in ["paywall = true", "region = \"unsupported_country\""] {
+        let ruled = format!("{azure}\n{rule}");
+        let got = edits_of(&format!("{TEXT}{AZURE}"), &[(azure, &ruled)]);
+        assert_eq!(got.err(), Some(form.clone()), "{rule}");
+    }
+    for code in ["unsupported country", ""] {
+        refused(FORM, &format!("{FORM}\nregion = \"{code}\""), E::Form);
+    }
 }
 
 #[test]

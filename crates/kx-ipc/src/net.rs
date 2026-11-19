@@ -56,7 +56,8 @@ impl NetShape<'_> {
     }
 }
 
-/// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound.
+/// How an upload form names its fields; it sends the model, the language, the fixed fields, then the sound. Its
+/// `paywall` and `region` are rules for reading the service's replies, never form fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NetForm<'a> {
     /// The language field's name (`rules::token`).
@@ -67,6 +68,9 @@ pub struct NetForm<'a> {
     pub fixed: Vec<NetField<'a>>,
     /// A 403 asks the account to pay, as a missing payment method or a spending cap does: no credit, not a bad key.
     pub paywall: bool,
+    /// The error code a reply gives where the service is not offered in the user's country or region (`rules::token`),
+    /// such as `OpenAI`'s `unsupported_country_region_territory`; `None` for none.
+    pub region: Option<Cow<'a, str>>,
 }
 
 /// A field a form always sends, such as `OpenRouter`'s keep-nothing `provider`.
@@ -143,6 +147,8 @@ pub enum NetFault {
     TooBig,
     /// The service's model does not take the language code.
     Language,
+    /// The service is not offered in the user's country or region.
+    Region,
     /// The service sent no text.
     Empty,
     /// The reply was not the shape's: a sign-in page, a redirect to another host, or one past `MAX_NET_REPLY_BYTES`.
@@ -167,6 +173,7 @@ impl NetFault {
             FaultCode::Rate => Self::Rate,
             FaultCode::TooBig => Self::TooBig,
             FaultCode::Language => Self::Language,
+            FaultCode::Region => Self::Region,
             FaultCode::Empty => Self::Empty,
             FaultCode::Strange => Self::Strange,
             FaultCode::Network => Self::Network,
@@ -185,6 +192,7 @@ impl NetFault {
             Self::Rate => FaultCode::Rate,
             Self::TooBig => FaultCode::TooBig,
             Self::Language => FaultCode::Language,
+            Self::Region => FaultCode::Region,
             Self::Empty => FaultCode::Empty,
             Self::Strange => FaultCode::Strange,
             Self::Network => FaultCode::Network,

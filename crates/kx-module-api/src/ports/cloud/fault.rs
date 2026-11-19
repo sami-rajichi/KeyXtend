@@ -31,6 +31,9 @@ pub enum CloudFault {
     /// The service's model does not take the language code, such as a regional one.
     #[error("the service does not take this language")]
     Language,
+    /// The service is not offered in the user's country or region.
+    #[error("the service is not offered in this country or region")]
+    Region,
     /// The service sent no text.
     #[error("the service sent no text")]
     Empty,
