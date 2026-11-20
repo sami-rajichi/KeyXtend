@@ -28,7 +28,7 @@ pub const P11_FILE: &str = "kx-gates-p11.toml";
 /// the exe, never from the user-writable repo.
 pub const LOCAL_FILE: &str = "kx-gates.local.toml";
 /// The only keys `LOCAL_FILE` may set, by section; a tracked file never sets them.
-pub const LOCAL_KEYS: [(&str, &str); 1] = [("g22_bench", "models_dir")];
+pub const LOCAL_KEYS: [(&str, &str); 2] = [("g22_bench", "models_dir"), ("g22_cloud", "daily_dir")];
 /// kx-gates' own settings files, in the order they are read.
 pub const OWN: [&str; 9] = [
     FILE, P3_FILE, P4_FILE, P5_FILE, P7_FILE, P8_FILE, P9_FILE, P10_FILE, P11_FILE,

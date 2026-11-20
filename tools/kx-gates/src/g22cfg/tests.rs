@@ -17,8 +17,14 @@ const BAR_IDS: &str = include_str!("../../../../crates/kx-ui/src/i18n/keys/voice
 const APP_RUN: &str = include_str!("../../../../apps/keyxtend/src/run.rs");
 /// The voice gate build's speech, which logs each written dictation's device.
 const APP_TOLD: &str = include_str!("../../../../apps/keyxtend/src/played/told.rs");
+/// The voice gate build's stage lines.
+const APP_STAGE: &str = include_str!("../../../../apps/keyxtend/src/played/stage.rs");
+/// The voice module's typing, which logs each text sent to the keyboard.
+const MOD_TYPING: &str = include_str!("../../../../crates/kx-mod-voice/src/actor/typing.rs");
 /// The root manifest, whose stage settings G22's staged edges read.
 const ROOT_MANIFEST: &str = include_str!("../../../../Cargo.toml");
+
+mod cloud;
 
 fn shipped() -> GatesConfig {
     load().expect("the settings load")
@@ -50,7 +56,7 @@ fn a_plain_name_is_one_folder_name_and_a_clip_must_be_one() {
 fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_product.check(&c.g22_bench), Ok(()));
-    let bad: [fn(&mut G22Product); 21] = [
+    let bad: [fn(&mut G22Product); 24] = [
         |g| g.card_wait_ms = 0,
         |g| g.wrote_line = " ".into(),
         |g| g.program = "../../target/p11-gates/release/other.exe".into(),
@@ -72,6 +78,9 @@ fn the_shipped_product_run_passes_its_check_and_each_bad_key_is_refused() {
         |g| g.log_level = "loud".into(),
         |g| g.why_marks.clear(),
         |g| g.why_marks.push(" ".into()),
+        |g| g.stage_line = " ".into(),
+        |g| g.typed_line.clear(),
+        |g| g.log_level = "info".into(),
     ];
     for (i, spoil) in bad.iter().enumerate() {
         let mut g = c.g22_product.clone();
@@ -103,6 +112,20 @@ fn the_product_runs_names_are_kx_uis_and_the_apps() {
         APP_TOLD.contains(&format!("\"{}\"", g.wrote_line)),
         "the app's written-dictation line"
     );
+}
+
+#[test]
+fn the_timing_lines_are_the_apps_and_the_voice_modules_at_the_level_the_run_keeps() {
+    let g = shipped().g22_product;
+    let level = G22Product::LINES_LEVEL;
+    assert!(APP_STAGE.contains(&format!("\"{}\"", g.stage_line)));
+    assert!(APP_STAGE.contains(&format!("tracing::{level}!(stage")));
+    let typed = format!("tracing::{level}!(\"{}\")", g.typed_line);
+    assert!(MOD_TYPING.contains(&typed), "{typed}");
+    let mut trace = g;
+    trace.log_level = "trace".into();
+    let c = shipped();
+    assert_eq!(trace.check(&c.g22_bench), Ok(()), "trace keeps debug lines");
 }
 
 #[test]
@@ -181,7 +204,13 @@ fn each_g22_section_sits_in_one_file_and_the_spike_run_is_gone() {
                 .unwrap()
         })
         .collect();
-    for section in ["g22_bench", "g22_product", "g22_staged", "boxed"] {
+    for section in [
+        "g22_bench",
+        "g22_product",
+        "g22_cloud",
+        "g22_staged",
+        "boxed",
+    ] {
         let files = tables.iter().filter(|t| t.contains_key(section)).count();
         assert_eq!(files, 1, "[{section}]");
     }
@@ -228,6 +257,8 @@ fn each_g22_and_box_section_refuses_an_unknown_key() {
         refused::<G22Staged>(with_stray("g22_staged", &[])),
         "[g22_staged]"
     );
+    let cloud = with_stray("g22_cloud", &[]);
+    assert!(refused::<G22Cloud>(cloud), "[g22_cloud]");
     let boxed = with_stray("boxed", &[]);
     assert!(refused::<crate::boxed::BoxProofs>(boxed), "[boxed]");
 }

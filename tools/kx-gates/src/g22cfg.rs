@@ -1,15 +1,17 @@
 //! G22's settings in `kx-gates-p11.toml`: the bench's (`[g22_bench]`, in `bench`), the product run's
-//! (`[g22_product]`, in `prod`) and the staged worker's edges (`[g22_staged]`, in `staged`). The run and the edges
-//! read the bench's clips, folders and gate worker, so each is written once.
+//! (`[g22_product]`, in `prod`) with its cloud line (`[g22_cloud]`, in `cloud`), and the staged worker's edges
+//! (`[g22_staged]`, in `staged`). The run and the edges read the bench's clips, folders and gate worker.
 #![cfg(windows)]
 
 mod bench;
+mod cloud;
 mod prod;
 mod staged;
 
 #[cfg(feature = "voice")]
 pub use bench::fewest;
 pub use bench::{Clip, G22Bench, is_part};
+pub use cloud::G22Cloud;
 pub use prod::G22Product;
 pub use staged::G22Staged;
 

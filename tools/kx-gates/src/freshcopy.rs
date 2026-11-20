@@ -147,6 +147,15 @@ impl<'a> Fresh<'a> {
         (got, Some(ended))
     }
 
+    /// The copy's data folder, which the gate made and removes at the end.
+    #[cfg_attr(
+        not(feature = "voice"),
+        allow(dead_code, reason = "Only the voice gates call it.")
+    )]
+    pub fn data(&self) -> &Path {
+        &self.data
+    }
+
     /// Removes the data folder once the copy that went as `ended` no longer runs.
     pub fn close(mut self, ended: Option<&Ended>) -> Result<(), String> {
         self.closed = true;

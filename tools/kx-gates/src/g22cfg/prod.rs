@@ -45,13 +45,20 @@ pub struct G22Product {
     pub group: String,
     /// Stop's id on the bar (kx-ui `bar_button_id`).
     pub stop: String,
-    /// The copy's `[kernel] log_level`.
+    /// The copy's `[kernel] log_level`; it must keep `LINES_LEVEL`'s lines.
     pub log_level: String,
     /// What marks the copy's log lines a failed language prints, each found as written.
     pub why_marks: Vec<String>,
+    /// The line the voice gate build logs for each stage of a dictation, which the timing lines read.
+    pub stage_line: String,
+    /// The voice module's line as a text goes to the keyboard, which ends Stop to text.
+    pub typed_line: String,
 }
 
 impl G22Product {
+    /// The level of the stage and typed lines, which the copy's log must keep.
+    pub const LINES_LEVEL: &str = "debug";
+
     /// Stop's gate id.
     #[cfg_attr(
         not(feature = "voice"),
@@ -96,9 +103,7 @@ impl G22Product {
         if self.pick().is_none() {
             return Err("g22_product.device must be one [voice] device takes".into());
         }
-        if kx_kernel::log::level(&self.log_level).is_none() {
-            return Err("g22_product.log_level must be a log level name".into());
-        }
+        self.check_lines()?;
         let waits = [
             self.ready_ms,
             self.card_wait_ms,
@@ -116,6 +121,21 @@ impl G22Product {
             ));
         }
         self.check_marks()
+    }
+
+    /// Refuses a log level that drops the timing lines, or a blank stage or typed line.
+    fn check_lines(&self) -> Result<(), String> {
+        let level = kx_kernel::log::level(&self.log_level);
+        if level.is_none() || level < kx_kernel::log::level(Self::LINES_LEVEL) {
+            return Err(format!(
+                "g22_product.log_level must be a log level name that keeps {} lines",
+                Self::LINES_LEVEL
+            ));
+        }
+        if self.stage_line.trim().is_empty() || self.typed_line.trim().is_empty() {
+            return Err("g22_product needs a stage_line and a typed_line".into());
+        }
+        Ok(())
     }
 
     /// Refuses an empty `why_marks` or a blank mark in it.

@@ -6,15 +6,14 @@
 use std::time::{Duration, Instant};
 
 use kx_mod_keyboard::Role;
-use kx_mod_voice::VoiceSettings;
 use kx_module_api::Redacted;
 
 use super::bar::{self, BarLook};
 use super::front::Watch;
+use super::line::Waits;
 use super::settle::Settle;
 use super::{Case, Said, why};
 use crate::apps::{Ctx, Opened};
-use crate::g22bench::within;
 use crate::g27type::Typist;
 use crate::keymap::Reader;
 use crate::ownkeys::{self, Real};
@@ -36,7 +35,7 @@ pub(super) fn dictate(
     pid: u32,
     t: &Typist,
     case: &Case,
-    s: &VoiceSettings,
+    waits: &Waits,
 ) -> Result<Said, String> {
     let (g, poll) = (&ctx.cfg.g22_product, ctx.cfg.timing.poll_ms);
     let id = g
@@ -46,8 +45,8 @@ pub(super) fn dictate(
     // Watched from here, as a card's check runs during the wait and may bring a window to the front.
     let watch = Watch::start(Duration::from_millis(poll));
     // A card serves only once its check of this language's model passed, and that check follows the language in front.
-    sleep_ms(product::follow_ms(poll)?.saturating_add(g.dictate_wait_ms()));
-    let heard = listen(ctx, pid, t, case, s);
+    sleep_ms(product::follow_ms(poll)?.saturating_add(waits.before_ms));
+    let heard = listen(ctx, pid, t, case, waits);
     let fronts = watch.finish();
     let target = win::key(t.app().hwnd);
     let away = |e| format!("{e}; other windows in front: {:?}", fronts.away(target));
@@ -63,13 +62,7 @@ pub(super) fn dictate(
 }
 
 /// Clicks Dictation, waits for the bar and the clip, clicks Stop and reads the text once it settles.
-fn listen(
-    ctx: &Ctx,
-    pid: u32,
-    t: &Typist,
-    case: &Case,
-    s: &VoiceSettings,
-) -> Result<Heard, String> {
+fn listen(ctx: &Ctx, pid: u32, t: &Typist, case: &Case, waits: &Waits) -> Result<Heard, String> {
     let (g, poll) = (&ctx.cfg.g22_product, ctx.cfg.timing.poll_ms);
     let (kb, reader, stop_id) = (Keyboard::find()?, Reader::new()?, g.stop_id());
     let voice = board::id_of(Role::Voice)?;
@@ -78,12 +71,12 @@ fn listen(
     let shown = crate::g23::live::poll_read(g.bar_wait_ms, poll, find)?;
     let (bar, _) = shown.ok_or_else(|| format!("no bar showed within {} ms", g.bar_wait_ms))?;
     let (at, look) = (Instant::now(), bar::look(bar, kb.hwnd)?);
-    let play = g.open_ms + u64::from(case.clip_ms) + ctx.cfg.g22_bench.tail_ms;
+    let play = waits.open_ms + u64::from(case.clip_ms) + ctx.cfg.g22_bench.tail_ms;
     sleep_ms(play.saturating_sub(ms_since(at)));
     let (now, stop) = find()?.ok_or("Stop went before its click")?;
     bar::stop(t.app(), now, stop)?;
     let stopped = Instant::now();
-    let settles = settled(t, g.settle_ms, within(s), poll);
+    let settles = settled(t, g.settle_ms, waits.text, poll);
     let (text, first) = settles.map_err(|e| why::with_bar(&e, &reader, now))?;
     let first_ms = first.map(|f| ms(f.saturating_duration_since(stopped)));
     Ok(Heard {

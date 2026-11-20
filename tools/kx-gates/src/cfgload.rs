@@ -119,6 +119,14 @@ mod tests {
     }
 
     #[test]
+    fn the_local_file_sets_the_daily_folder_of_g22s_cloud_line() {
+        let mut all = table("[g22_cloud]\nopen_ms = 1\n");
+        let local = table("[g22_cloud]\ndaily_dir = 'E:\\daily'\n");
+        add_local(&mut all, local).expect("its key");
+        assert_eq!(all["g22_cloud"]["daily_dir"].as_str(), Some(r"E:\daily"));
+    }
+
+    #[test]
     fn the_local_file_never_replaces_a_tracked_key_or_sets_another() {
         let refused = [
             "[g22_bench]\nworker = \"x.exe\"\n",

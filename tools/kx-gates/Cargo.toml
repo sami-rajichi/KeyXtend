@@ -29,6 +29,9 @@ toml.workspace = true
 # The sound flag the gate worker and the voice gate build take, written once in kx-ipc; only `voice` turns it on.
 kx-ipc = { path = "../../crates/kx-ipc", optional = true }
 kx-module-api = { path = "../../crates/kx-module-api" }
+# The sealed shelf's file names (`KEY_FILE`, `SEALED_EXT`), which G22's cloud line copies a sealed key by; it never
+# opens one, and names no key guard.
+kx-crypto = { path = "../../crates/kx-crypto" }
 # G8's bus publish time on the product's own event bus.
 kx-kernel = { path = "../../crates/kx-kernel" }
 # The product's board (key ids, roles), its legend naming rule (`legend`) and the boxes (`Area`) the spike's tools-row maths returns.

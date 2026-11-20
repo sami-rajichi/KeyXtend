@@ -96,11 +96,35 @@ wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"
 stop = "stop"
-# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard.
+# The copy's [kernel] log_level; "debug" adds the voice module's line for each text sent to the keyboard and the gate
+# build's stage lines, which the timing lines need (checked).
 log_level = "debug"
 # What marks the copy's log lines a failed language prints: warnings, errors and the voice module's own lines, none of
 # which holds text.
 why_marks = [" WARN ", " ERROR ", " INFO kx_mod_voice", " DEBUG kx_mod_voice"]
+# The line the voice gate build logs for each stage of a dictation: its start, the microphone open, the model's load,
+# each piece, Stop and a cloud dictation's send (apps/keyxtend/src/played/stage.rs). Each passing language prints the
+# time between them in ms.
+stage_line = "voice gate build: a stage"
+# The voice module's line as a text goes to the keyboard, which ends Stop to text (kx-mod-voice actor/typing.rs).
+typed_line = "a text went to the keyboard"
+
+# G22's cloud line on the product, after the local line: each offered service whose sealed key is in the owner's daily
+# data folder dictates the clips its row's first model knows (Custom with the daily address and model), on a fresh copy
+# with only that row on and the key copied still sealed, never opened. A service with no key is skipped, never failed.
+[g22_cloud]
+# The owner's daily data folder, `daily_dir`, is this PC's own absolute drive path, so it is set only in the git-ignored
+# kx-gates.local.toml beside this file; without it the cloud line prints one skipped line and the local line runs.
+
+# Wait after the bar shows before Stop, beside the clip's length and the bench's tail_ms, in ms: no model loads, and the
+# clip plays from the moment the microphone opens, which is when the bar shows.
+open_ms = 2000
+# Longest wait for a cloud dictation's text after Stop, in ms: at most [voice] net_wait_s, the product's own wait for one
+# request's answer (checked).
+text_wait_ms = 60000
+# The line the voice gate build logs with the service and the fault's kind of each cloud dictation that failed
+# (apps/keyxtend/src/played/sent.rs).
+failed_line = "voice gate build: a cloud dictation failed"
 
 # The staged worker's edges (`g22 staged`), on a copy of what `cargo xtask stage` wrote, with no screen and no mouse.
 # Edge 28: without the card part the worker starts and offers no card. Edge 29: with only the plainest processor part,
