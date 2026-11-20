@@ -5,7 +5,7 @@ use kx_module_api::ports::{FieldKind, Hundredths, SpeechError, Verdict};
 use kx_platform_fake::FileCall;
 
 use super::super::Msg;
-use super::super::auto::kept;
+use super::super::auto::{DRIVER, PASS, kept};
 use super::super::cards::{
     BOTH, CARD, arabic, arabic_layout, build, build_picked, devices, differs, passed, served,
 };
@@ -86,10 +86,7 @@ fn a_dictation_says_why_the_processor_serves_only_when_a_card_is_picked() {
 
 #[test]
 fn edge_3_arabic_written_on_the_processor_after_its_clip_differs_says_why() {
-    let pass = Verdict::Passed {
-        gain: Hundredths(300),
-    };
-    let english = vec![kept(CARD, "1.0", arabic(), "en", pass)];
+    let english = vec![kept(CARD, DRIVER, arabic(), "en", PASS)];
     let lines = lines_of(|| {
         let mut rig = build_picked(CARD, Some(devices()), Ok(differs()), english, Some(BOTH));
         rig.send(Msg::Layout(arabic_layout()));
@@ -112,11 +109,8 @@ fn every_verdict_a_checks_texts_give_logs_the_words_apart_as_a_number() {
         words: 4,
         allowed: 1,
     };
-    let pass = Verdict::Passed {
-        gain: Hundredths(300),
-    };
     let ends = [
-        (pass, 0, "passed"),
+        (PASS, 0, "passed"),
         (slow, 1, "slow"),
         (differs, 4, "differs"),
     ];

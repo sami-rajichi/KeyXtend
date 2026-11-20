@@ -1,5 +1,6 @@
 //! Automatic's checks on the actor: a card that passed one model's check under its present driver is checked for each
-//! newly used model, in turn and one at a time; a card that passed none, or failed, is never checked by a switch.
+//! newly used model, in turn and one at a time; one that passed none is not. A failure stops its own model and
+//! language alone (ADR-0052).
 
 use kx_module_api::ports::{
     CardId, Date, Device, Hundredths, PanelButton, SpeechError, Verdict, VoiceClick,
@@ -13,14 +14,14 @@ use super::cards::{
 use super::rig::{Rig, english, english_layout};
 use super::taps::{held, waiting};
 use crate::counts::Checked;
-use crate::models::Row;
+use crate::models::{Row, table};
 
 /// The rig's cards' driver now.
-const DRIVER: &str = "1.0";
+pub(super) const DRIVER: &str = "1.0";
 /// A driver before an update.
 const OLD: &str = "0.9";
-/// A passed check's verdict.
-const PASS: Verdict = Verdict::Passed {
+/// A passed check's verdict, the gain each test that keeps one uses.
+pub(super) const PASS: Verdict = Verdict::Passed {
     gain: Hundredths(300),
 };
 
@@ -44,6 +45,11 @@ fn auto(kept: Vec<Checked>, devices: Vec<Device>) -> Rig {
 /// The rig on Automatic with one card that passed English's model before.
 fn passed_english() -> Rig {
     auto(vec![kept(CARD, DRIVER, english(), "en", PASS)], devices())
+}
+
+/// A model that neither layout here uses.
+fn third() -> &'static Row {
+    table().unwrap().get("whisper-small-q5km").unwrap()
 }
 
 /// The card each check was asked on, in order.
@@ -88,18 +94,40 @@ fn automatic_checks_each_card_that_passed_in_turn_one_at_a_time() {
 }
 
 #[test]
-fn automatic_never_checks_a_new_model_on_a_card_whose_check_failed() {
-    let english_failed = vec![kept(CARD, DRIVER, english(), "en", Verdict::Failed)];
-    let arabic_failed = vec![
+fn a_failure_stops_automatic_on_its_own_model_and_language_alone() {
+    let rows = vec![
         kept(CARD, DRIVER, english(), "en", PASS),
         kept(CARD, DRIVER, arabic(), "ar", Verdict::Failed),
     ];
-    for rows in [english_failed, arabic_failed] {
+    let mut rig = auto(rows, devices());
+    for layout in [arabic_layout(), english_layout(), arabic_layout()] {
+        rig.send(Msg::Layout(layout));
+    }
+    assert!(checked(&rig).is_empty());
+    rig.listen();
+    assert_eq!(served(&rig), None);
+}
+
+#[test]
+fn a_failure_with_one_model_never_stops_automatic_checking_another() {
+    let rows = vec![
+        kept(CARD, DRIVER, english(), "en", Verdict::Failed),
+        kept(CARD, DRIVER, third(), "en", PASS),
+    ];
+    let mut rig = auto(rows, devices());
+    rig.send(Msg::Layout(arabic_layout()));
+    assert_eq!(checked(&rig), [files().1]);
+    rig.listen();
+    assert_eq!(served(&rig), Some(card_id()));
+}
+
+#[test]
+fn automatic_checks_a_new_model_only_on_a_card_that_passed_one_whatever_it_failed() {
+    let failed = kept(CARD, DRIVER, english(), "en", Verdict::Failed);
+    for rows in [vec![], vec![failed]] {
         let mut rig = auto(rows, devices());
-        for layout in [arabic_layout(), english_layout(), arabic_layout()] {
-            rig.send(Msg::Layout(layout));
-        }
-        assert!(checked(&rig).is_empty());
+        rig.send(Msg::Layout(arabic_layout()));
+        assert!(checked(&rig).is_empty(), "ADR-0044 decision 8");
         rig.listen();
         assert_eq!(served(&rig), None);
     }

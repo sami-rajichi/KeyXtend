@@ -1,23 +1,18 @@
 //! The cards' checks by language on the actor (ADR-0052): Arabic's model, passed on the English clip before, is
-//! checked on the Arabic clip before the card writes Arabic; a card that differs there keeps English; and an old result
-//! of no language is checked again.
+//! checked on the Arabic clip before the card writes Arabic; a card that differs there keeps English; an old result of
+//! no language is checked again; and a failure in English never stops a model's other languages.
 
-use kx_module_api::ports::{Hundredths, SpeechError, Verdict};
+use kx_module_api::ports::{LayoutChanged, LayoutId, SpeechError, Verdict};
 
 use super::super::Msg;
-use super::super::auto::kept;
+use super::super::auto::{DRIVER, PASS, kept};
 use super::super::rig::{Rig, english, english_layout};
 use super::{
     BOTH, CARD, arabic, arabic_layout, build, build_picked, card_id, devices, differs, passed,
     served,
 };
 use crate::counts::Checked;
-
-/// The rig's cards' driver.
-const DRIVER: &str = "1.0";
-const PASS: Verdict = Verdict::Passed {
-    gain: Hundredths(300),
-};
+use crate::models::Row;
 
 /// The clip each check read, in order.
 fn clips(rig: &Rig) -> Vec<String> {
@@ -81,5 +76,37 @@ fn an_old_result_of_no_language_serves_nothing_and_is_checked_again() {
         let mut rig = build(device, Some(devices()), Ok(passed()), vec![old.clone()]);
         rig.listen();
         assert_eq!(served(&rig), Some(card_id()), "{device}: a new pass serves");
+    }
+}
+
+/// The French layout.
+fn french_layout() -> LayoutChanged {
+    LayoutChanged {
+        id: LayoutId::new(3),
+        iso: "fr".into(),
+        name: "Français".into(),
+        rtl: false,
+    }
+}
+
+/// Automatic over a card whose check of `row`'s model failed on the English clip, with `picks`.
+fn failed_in_english(row: &Row, picks: Option<&str>) -> Rig {
+    let failed = vec![kept(CARD, DRIVER, row, "en", Verdict::Failed)];
+    build_picked("auto", Some(devices()), Ok(passed()), failed, picks)
+}
+
+#[test]
+fn a_failure_in_english_never_stops_automatic_checking_that_model_in_arabic_or_french() {
+    let cases = [
+        (failed_in_english(arabic(), Some(BOTH)), arabic_layout()),
+        (failed_in_english(english(), None), french_layout()),
+    ];
+    for (mut rig, layout) in cases {
+        assert!(clips(&rig).is_empty(), "English failed");
+        let lang = layout.iso.clone();
+        rig.send(Msg::Layout(layout));
+        assert_eq!(clips(&rig), [lang]);
+        rig.listen();
+        assert_eq!(served(&rig), Some(card_id()));
     }
 }

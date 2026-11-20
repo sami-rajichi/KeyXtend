@@ -204,7 +204,8 @@ pub struct CheckAsk {
     pub card: CardUse,
     /// Processor threads for the processor's run, as `SpeechAsk::threads`.
     pub threads: u8,
-    /// The shipped clip's language, an ISO 639 code such as `ar`: the language in front's when the model knows it.
+    /// The shipped clip's language, an ISO 639 code such as `ar`: the language in front's when the model knows it,
+    /// else the first shipped clip it knows (ADR-0052).
     pub clip: String,
 }
 
