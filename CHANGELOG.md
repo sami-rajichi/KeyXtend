@@ -29,6 +29,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - A panel's search takes the keys after a press on the panel, with its own caret, in Quick-fill and Clipboard history; one wheel notch turns one page (ADR-0040).
 - The selection helper (P10): a strip of keys beside text selected in any app that tells its selection, with Copy, Cut, Paste and Translate by the kind of box, Paste after a click at a caret, and Translate that opens the site in the browser after a yes; no text is read before a click (ADR-0041).
 - Voice typing on this PC (P11, part 1): the Dictation key and its bar with a live wave, ten local models through one engine with a default per language, a models folder the user picks with checked downloads, the processor or a checked graphics card, Compare models, a sealed history and optional recordings (ADR-0042 to ADR-0046).
+- Cloud voice typing with your own key (P11, part 2): seven offered services (Groq, Lemonfox, OpenRouter, ElevenLabs, Gemini, AssemblyAI and a Custom address), each marked untested until the owner's hands-on check, Paste at once, a Preparing state while a model loads, the gear that ends a dictation, and a graphics card check on a clip in the language in front (ADR-0047 to ADR-0052).
 
 ### Changed
 - The licence: KeyXtend is now view only, all rights reserved, and the app is sold under its own user licence (ADR-0030). Versions published before keep the GPL-3.0-or-later.
