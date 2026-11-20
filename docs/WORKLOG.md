@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-20 01:20 — P11: AssemblyAI
+Voice typing can now send to AssemblyAI's Universal-3.6 Pro on its European servers, which do not train on the files, in one Sync request with the keyboard's language as one of its 32 codes. Its card shows $50 of free credit with no card needed and plain prices from $0.30 an hour, and says the first dictation tests the key, since this API has no call without sound. Every server fault except a paced 503 is retried before the network note, and the header that names the model can never repeat one the request already sends. ADR-0051 records this fourth request shape.
+
 ## 2026-11-19 23:06 — P11: Gemini
 Voice typing can now send to Google's Gemini 3.5 Transcribe in one request, with the keyboard's language as a regional code (Arabic as ar-SA) and `store: false`, so Google stores no copy of the request. Its card warns that the free tier uses the voice to improve Google's products and that people may read it, says paid use is required in the EEA, Switzerland and the UK, and labels its prices and logging as the paid tier's. A step the user must take on a service's site, such as a verification, a payment method or a spending cap, now has its own note instead of "no credit left", and a used-up free day says so without guessing when it renews. A key test that fails now names its reason; only a missing answer points at the network.
 
