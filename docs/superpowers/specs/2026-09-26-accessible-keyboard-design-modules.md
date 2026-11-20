@@ -233,47 +233,7 @@ Decided with the owner on 2026-10-30 (P8), from the mock-up's panel. Every numbe
 
 ### 8.2 Voice typing
 
-Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](2026-11-10-voice-typing-design.md) on this PC (ADR-0042 to ADR-0045) and [`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md) for the cloud (ADR-0047); the lines below are the first plan, kept as written.
-
-- **Mic key:** click to start, click to stop. There is no voice-activity auto-stop, so users who speak slowly or pause are never cut off.
-- Distinct start and stop sounds, and a live waveform in a **caption bar at the bottom centre**, never over the keyboard.
-- **Flow:** Listening, then Transcribing (shimmer), then the text is inserted into the focused field and shown in the caption with **Copy** and **Undo insert**.
-- **Forced language setting:** Auto, English, French or Arabic. Auto can mis-detect Arabic, so forcing is recommended for Arabic.
-- **Engines:**
-  - Default: local **whisper.cpp** via `whisper-rs` (MIT).
-    - Model `large-v3-turbo` q5_0 (574 MB), or `small` q5_1 (190 MB) for weak PCs.
-    - Models are downloaded on first use and verified by SHA-256; they are not bundled.
-    - A **benchmark button** tells the user which model their PC can handle.
-  - Optional cloud, **bring your own free key**, off by default:
-    - Groq (free tier: 8 audio hours/day);
-    - Cloudflare Workers AI;
-    - Azure Speech F0 (5 h/month; 18 Arabic locales, including Maghrebi dialects).
-    - Gemini's free tier is offered only after a warning that the data may be used for training.
-- Silence trimming before sending, to reduce Whisper's hallucinations on silence.
-- **Transcript history:** kept locally and encrypted, 1 day by default. It can be exported later to build a personal dataset; this is opt-in.
-- Runs in the **voice worker process**, the only process that may use the microphone and the network (§11).
-- **As built (P11 part 1, 2026-11-16):** where the build settles or differs from the text above; the 2026-11-10 design holds the full rules.
-  - The key reads Dictation · Dictée · إملاء. Click to start and click to stop stays; a `silence_stop` setting, off by default, can also stop after a silence (owner).
-  - The bar sits just above the keyboard, else at the bottom centre, else at the top, never over the keyboard, and it takes clicks but never focus (ADR-0045). It offers Copy and Undo insert, as above.
-  - There is no forced-language setting: the language is the keyboard's shown layout, fixed at Start and never guessed (ADR-0042, owner).
-  - One engine, transcribe.cpp, runs ten models from one table, in place of whisper-rs. The defaults are Parakeet v3 for English and French and Cohere Transcribe Arabic for Arabic (ADR-0043, owner).
-  - Models download on demand into a folder the user picks, each checked by its size and SHA-256; none is bundled (ADR-0043).
-  - Models run on the processor, or on a graphics card through Vulkan once the card passes its check; Automatic takes the fastest checked card with room (ADR-0044). Under Automatic, a card that passed one model's check is checked by itself for each newly used model; a first check stays one click on Check or picking the card.
-  - The benchmark button is Compare models: the user reads a set text once, each ready model writes it, and only the numbers are kept.
-  - Silence trimming is the Silero voice detector, which cuts pieces at pauses and keeps `pad_ms` (300 ms) of silence around speech.
-  - History keeps the last 50 texts (`history_max`, pins aside), sealed on disk with no time limit, not one day. Recordings are kept only with `keep_voice`, off by default.
-  - The worker runs two jobs: `voice` hears the microphone and has no network, and `fetch` downloads models and has no microphone (ADR-0042).
-  - The cloud engines are part 2 ([`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md), ADR-0047).
-- **As built (P11 part 2, 2026-11-20):** the cloud, in place of the "Optional cloud" lines above.
-  - Cloud stays off until the user switches a service on and confirms its card; a cloud model is never a default, and nothing moves from local to cloud by itself (ADR-0047).
-  - Offered: Groq, Lemonfox, Custom, OpenRouter, ElevenLabs, Gemini and AssemblyAI. OpenAI, Mistral, Together and DeepInfra are built but hidden; Azure, Cloudflare and OVHcloud are not used (ADR-0050).
-  - Each service brings the user's own key, sealed on the voice shelf; KeyXtend ships none and makes no account.
-  - Nothing leaves the PC before Stop. Then the recording goes, in pieces cut at pauses, to the one service named on the bar.
-  - The worker runs three jobs: `voice` and `fetch` as above, and `speech-net`, which has the network and no microphone and sends the pieces over HTTPS in one of four request shapes (ADR-0047, ADR-0051).
-  - Each card shows the service's facts with the day they were read; ElevenLabs and Gemini carry a training warning on the card and again at the first dictation.
-  - A password box always uses the local model, and a failed upload keeps the recording, with Try again and "Use the local model".
-  - A dictated text can also be pasted at once through the clipboard module (`insert`, ADR-0048); the panel's lines take typed text (ADR-0049).
-  - A card serves a language only after its check passes on that language's clip (ADR-0052).
+Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](2026-11-10-voice-typing-design.md) on this PC (ADR-0042 to ADR-0045) and [`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md) for the cloud (ADR-0047). The first plan's lines, kept as written, and where P11 settled or changed them (as built, 2026-11-16 and 2026-11-20) moved to [Voice typing](../../architecture/voice.md#spec-82-as-built), to keep this file short.
 
 ### 8.3 Selection helper
 

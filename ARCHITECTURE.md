@@ -43,18 +43,14 @@ apps/
                          the packs' folders and the sealed store's folder (`words.rs`, P7); the clipboard history's
                          folder, made at boot (`clip.rs`, P8); the notebook's folder (`vault.rs`, P9); the probe before
                          the log and the settings, and a hidden run's memory stores and banner, with the questions
-                         about copies left behind (`hidden.rs`, ADR-0037); voice typing's sealed folder and the voice
-                         files beside the worker (`voice.rs`, P11); `gate-input` makes the gate-only test build
-                         (`--sim-input`, no uiAccess, refused by the stage and `dev-install`; ADR-0027), and
-                         `gate-voice` the voice one (`--sound`, `played.rs`; its `played/` hands a listen-only run's
-                         speech on and logs each stage and each cloud dictation's service or fault kind, never content)
+                         about copies left behind (`hidden.rs`, ADR-0037); voice typing's folders (`voice.rs`, P11);
+                         `gate-input` makes the gate-only test build (`--sim-input`, no uiAccess, refused by the stage
+                         and `dev-install`; ADR-0027), and `gate-voice` the voice one (`played.rs`, P11)
   keyxtend-worker/       worker binary over its stdin and stdout: the `media` job decodes PNG and DIB images into small
                          RGBA pixels, and makes the `CF_DIB` an inserted PNG goes with (P8, ADR-0034); the `vault` job
                          makes padlocks, seals, opens and checks backup boxes and reads KeePass files, with `age` and
-                         `keepass` (P9, ADR-0038); the streamed `voice` job (microphone, Silero, `transcribe.cpp`) and
-                         `fetch` job (model downloads; P11, ADR-0042); the `speech-net` job (`net/`: one adapter per
-                         request shape, the WAV and Base64 writers, pacing and tries; ADR-0047, ADR-0051); OCR and
-                         update come later
+                         `keepass` (P9, ADR-0038); the `voice`, `fetch` and `speech-net` jobs (P11); OCR and update
+                         come later
 crates/
   kx-module-api/        Module trait, Manifest, Capability, ports (service traits, the pointer hook's too: ADR-0027,
                          the scroll target's: ADR-0029, `Shortcuts`, gated by `InjectInput`, and `PowerDialog`, by
@@ -64,22 +60,18 @@ crates/
                          rule that only an absolute drive path is looked at, any other being `FileFact::Unchecked`: P8;
                          `Boxes`, `Places`, `Random` and Quick-fill's events and pages: ADR-0038, ADR-0039;
                          `SelectionWatch`, `WebLink`, the chips' events and the strip's place, `geom::anchor`:
-                         ADR-0041; `Speech`, `ModelFiles`, `SessionWatch`, the voice events and views: ADR-0042,
-                         `FolderReveal`: ADR-0046; `CloudSpeech`, gated by `Network`: ADR-0047; `PasteText` and
-                         `TextPasted`: ADR-0048; `VoiceLine`, `VoiceLineKey` and `VoiceClose`: ADR-0049), events, Clock and Mono, settings contract, notices, Redacted<T> and
-                         `Secret`, and `text`: folding and casing, which prediction and the clipboard search share
-                         (P8), and Quick-fill's search too; it re-exports the worker's memory figures and the box facts
-                         from `kx-ipc` (`READ_TIMES`, `DECODE_BYTES`), so the settings checks follow the worker (P8,
-                         ADR-0036)
+                         ADR-0041; the voice ports, events and views: P11), events, Clock and Mono, settings contract,
+                         notices, Redacted<T> and `Secret`, and `text`: folding and casing, which prediction and the
+                         clipboard search share (P8), and Quick-fill's search too; it re-exports the worker's memory
+                         figures and the box facts from `kx-ipc` (`READ_TIMES`, `DECODE_BYTES`), so the settings
+                         checks follow the worker (P8, ADR-0036)
   kx-kernel/            registry, lifecycle state machine, event bus, service registry,
                          grants, boot and runtime controls, redacted log
   kx-settings/          versioned TOML settings, repair, migrations (never edit an old migration)
   kx-ipc/               worker frames (P8): asks, replies and their codec, each field and length checked before a
                          buffer grows; no auth, as the pipe is anonymous and only the started worker inherits its ends;
                          the vault job's frames, with secrets in wiped buffers, and the box's facts and caps (P9); the
-                         voice and fetch frames, the `[voice]` ranges and the gate's `SOUND_FLAG` (P11); the net frames
-                         (`net/`: `NetSend`, `NetTest`, `NetText`, `NetFault`, the key and sound as secrets, replies
-                         capped) and the gate's log names (`gate`; P11 part 2)
+                         voice, fetch and net frames, the `[voice]` ranges and the gate's names (P11)
   kx-platform/          Platform (clock, AppDirs and the data folder rule, `VAULT_DIR`) and the UI ports (WindowGuard,
                          with the entry watch and `lay_under` from P5, Screens, SystemLook, Backdrop, Instance, Tray:
                          ADR-0019, Memory: ADR-0023, Speaker: P4, `Reveal`, which shows a folder in the file manager:
@@ -92,10 +84,8 @@ crates/
                          `pictures` (its `kx-pictures` session thread and media frames), `boxes` (P9: its `kx-boxes`
                          session thread and vault frames) and `mirror` (P9: the probe's steps, the copies list and the
                          checked delete, over an adapter's `MirrorDisk`), and `selection` (P10: the watch's `kx-select`
-                         thread, its settle wait, look cap and read deadline, over a `SelProbe`); P11: the worker's
-                         streaming session (`worker/stream`), and `speech` and `models`, the voice and fetch hosts over
-                         an adapter's `Hardware` and `Disk`; `cloud` (P11 part 2: `WorkerCloud`, the relay that runs one
-                         `speech-net` job per run or key test, in wiped buffers, on its `kx-net` thread)
+                         thread, its settle wait, look cap and read deadline, over a `SelProbe`); and the voice hosts
+                         (`worker/stream`, `speech`, `models` and `cloud`; P11)
   kx-platform-windows/  the only crate that may call Win32/WinRT: input, hooks, UIA, windows, look, tray, sound, the
                          scroll target (`scroll`), the shortcuts (`WinShortcuts`, from the `shortcuts.toml` and
                          `keynames.toml` tables), the power dialog (`WinPower`), the box watch (`WinFieldWatch`, kinds
@@ -110,9 +100,8 @@ crates/
                          one step) and the hidden-run probe (`WinHidden`, from `redirect.toml`; P9); the selection
                          watch (`WinSelectionWatch`, kinds from `selection.toml`) and the web link (`WinWebLink`,
                          through Explorer's desktop shell as the reveal, `explorer.rs`), with every UIA handler locked
-                         (P10); the worker's kept variables and own folder (`worker/env.toml`), the cores, memory, card
-                         drivers and models disk (`voice`), the session watch (`WinSessionWatch`, `session.toml`) and
-                         the models folder's reveal (`WinFolderReveal`, ADR-0046; P11)
+                         (P10); the worker's kept variables and own folder (`worker/env.toml`) and the voice adapters
+                         (`voice`, `WinSessionWatch`, `WinFolderReveal`; P11)
   kx-platform-macos/    (P15)
   kx-platform-linux/    X11 + Wayland portals (P15)
   kx-platform-fake/     deterministic fake for tests (records injected input, fake clock, golden layout tables, a
@@ -126,9 +115,8 @@ crates/
                          copies and files, record writes, keep folders of blobs, queue draws, set the wall time and
                          record folders shown (P8); `FakeBoxes`, `FakePlaces`, `FakeHidden` and `FakeRandom` script
                          boxes, places, hidden runs and random bytes (P9); `FakeSelectionWatch` and `FakeWebLink`
-                         script spots and reads and record links (P10); `FakeSpeech`, `FakeModelFiles`,
-                         `FakeSessionWatch`, `FakeFolderReveal` and `FakeCloud` (P11); kx-module-api's contract test
-                         uses it too
+                         script spots and reads and record links (P10); the voice fakes (P11); kx-module-api's
+                         contract test uses it too
   kx-platform-net/      worker-only HTTPS (WinHTTP): the `fetch` job's downloads and the `speech-net` job's POSTs, which
                          follow no redirect; `keyxtend` must never depend on it (P11)
   kx-ui/                qml/ (views and parts), src/bridges/ (cxx-qt objects), the `ui` module and its hub, and the
@@ -143,16 +131,12 @@ crates/
                          shared `Panel*` parts) over `fill_json`, which holds shown values and is never logged, with
                          its texts in `i18n/fill/` (P9); the selection strip (`SelStrip`, `SelChips`, `SelKey`) over
                          `sel_json`, placed by `sel_at`, texts in `i18n/sel/` (P10); the voice bar and the Voice panel
-                         (`VoiceBar`, `VoicePanel`) over `voice_json`, texts in `i18n/voice/` (P11); the Cloud page and
-                         a service's card (`VoiceCloud`, `VoiceCard`, `VoiceKeys`), the bar's warning line
-                         (`VoiceWarn`), and the cloud texts in `i18n/cloud/` (P11 part 2)
+                         over `voice_json`, texts in `i18n/voice/` and `i18n/cloud/` (P11)
   kx-theme/             theme tokens compiled in (tokens/: themes, shape, motion, icons, sounds), the look view, WCAG
                          contrast of what the keyboard draws, measured on the face's row height (`row_px`), the
                          high-contrast palette, and the strict reader kx-ui's build checks sounds with; no Qt, so it
                          tests everywhere (ADR-0016); Quick-fill's icons sit in `icons.toml` (P9); the voice bar's and
-                         panel's tokens are `[caption]`, `[voice]`, `wave`, `run`, `voice_start` and `voice_stop` (P11),
-                         with `prep`/`prep_ink` (the amber Preparing light) and `warn`/`warn_ink` (card warnings, old
-                         facts) in every theme (P11 part 2)
+                         panel's tokens (P11)
   kx-mod-keyboard/      the board (`board.toml`: rows, widths, scan codes, roles), its boxes at any size, size steps
                          and presets, and the place on screen per DPI; typing: sticky modifiers, legends and each
                          click's route (ADR-0009); the face (board and state JSON, clicks, and the board's row height,
@@ -162,8 +146,8 @@ crates/
                          (pages, cells, Next) and the `shortcut_pages` setting (P6); the typed pieces it tells and the
                          picked words it types (P7); the fill key and each fill it types (`run/fill`, `face/fill`),
                          never past `fill_late_ms` or to another app after a Tab (P9); the selection chips' edit keys,
-                         sent with nothing held and every latch kept (`run/edit.rs`, P10); dictation (`run/voice.rs`, P11)
-                         and the Voice panel as its third panel, whose lines take the keys (ADR-0049)
+                         sent with nothing held and every latch kept (`run/edit.rs`, P10); dictation (`run/voice.rs`,
+                         P11) and the Voice panel as its third panel, whose lines take the keys (ADR-0049)
   kx-mod-layouts/       the Layouts service over the OS layouts (EN/FR/AR + any installed): the shown layout's
                          table (keys from `scans.toml`), the list in the OS order, step and pick; short names
                          in `[layouts]`; `LayoutChanged` names the language, told at start and on `LayoutAsk` (P7)
@@ -181,12 +165,11 @@ crates/
                          email chips (`email`) and the word-pack format (`pack`; the `build` feature's
                          `PackWriter` serves `cargo xtask words` only); it folds with `kx_module_api::text`; the
                          notebook's emails, wiped and never stored (`email/saved`, P9); `[predict]`
-  kx-mod-clipboard/     clipboard history (P8, ADR-0034): the `kx-clip` actor over the watch, the kind rules
-                         (`entry`, `media.toml`), the limits (`keep`), follow-the-clear and skipped apps (`follow`),
-                         the sealed day folders (`store`), search (`find`), the panel and its page (`panel`,
-                         `view`), insert (`insert`), the take Paste asks for (`actor/take`, P9) and the media and
-                         files threads (`media`); voice's Paste at once, which writes the text as ours and puts the
-                         clipboard back (`actor/lend`, `actor/board`; ADR-0048); `[clipboard]`
+  kx-mod-clipboard/     clipboard history (P8, ADR-0034): the `kx-clip` actor over the watch, the kind rules (`entry`,
+                         `media.toml`), the limits (`keep`), follow-the-clear and skipped apps (`follow`), the sealed
+                         day folders (`store`), search (`find`), the panel and its page (`panel`, `view`), insert
+                         (`insert`), the take Paste asks for (`actor/take`, P9) and the media and files threads
+                         (`media`); voice's Paste at once (`actor/lend`, `actor/board`; ADR-0048); `[clipboard]`
   kx-mod-vault/         Quick-fill (P9, ADR-0038): the `kx-vault` actor over the notebook sealed with the account
                          key, its kinds and labels tables (`kinds`), the entry rules (`entry`), the notebook (`book`)
                          and its blob (`store`), search (`find`), order and By label (`order`), Make one (`make`),
@@ -196,11 +179,8 @@ crates/
   kx-mod-selection/     selection chips (P10, ADR-0041): which keycaps show (`chips`), the strip's show and hide
                          machine (`strip`), the Translate link and its site table (`link`, `sites.toml`) and the
                          `kx-selection` actor over the watch and the link; `[selection]`
-  kx-mod-voice/         voice typing (P11, ADR-0042 to ADR-0052): the models table, device rule, scorer, dictation flow,
-                         History, counts, sealed store, models folder, downloads, Compare and the panel's state, run by
-                         the `kx-voice` actor; the services table (`services.toml`, `services-own.toml`, `langs.toml`),
-                         the cloud pick and its rules (`cloud`), the sealed keys (`keys`) and the typed lines (`line`);
-                         `[voice]`
+  kx-mod-voice/         voice typing (P11, ADR-0042 to ADR-0052): the `kx-voice` actor, its tables, flow, panel, cloud
+                         pick and sealed keys; `[voice]`; each crate's voice parts: docs/architecture/voice.md
   kx-mod-snip/          capture overlay, editor, OCR client (P12)
   kx-crypto/            sealed files: XChaCha20-Poly1305 under a data key the `KeyGuard` port wraps
                          (DPAPI/Keychain/Secret Service); `SealedFiles` backs the `SealedStore` port (P7), and
