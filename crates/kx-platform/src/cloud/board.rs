@@ -97,6 +97,14 @@ impl Board {
         }
     }
 
+    /// Ends the run as `Gone` when the job could not take a part of its sound, cancelling the job's run.
+    pub(super) fn lose(&mut self) -> Step {
+        if self.ended {
+            return Step::default();
+        }
+        self.end(CloudNote::Fault(CloudFault::Gone), true)
+    }
+
     /// Ends the run as its owner drops it: nothing more is told.
     pub(super) fn drop_run(&mut self) {
         (self.ended, self.due) = (true, None);

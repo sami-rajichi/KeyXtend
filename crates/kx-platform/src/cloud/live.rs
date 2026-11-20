@@ -94,9 +94,20 @@ impl Live {
     pub(super) fn start(&self) {
         let mut board = self.board();
         board.start(self.clock.now());
-        let due = board.due();
-        drop(board);
-        self.wake(Wake::At(due));
+        // The wake goes while the board is held, so an older due time never reaches the timer after a newer one.
+        self.wake(Wake::At(board.due()));
+    }
+
+    /// Ends the run as `Gone` on the stream's thread, as the job could not take a part of its sound.
+    pub(super) fn lose(self: &Arc<Self>) {
+        let Some(back) = self.back.get().and_then(Weak::upgrade) else {
+            return;
+        };
+        let live = Arc::clone(self);
+        back.defer(Box::new(move || {
+            let step = live.board().lose();
+            live.apply(step);
+        }));
     }
 
     /// True once the run ended.
@@ -140,8 +151,8 @@ impl Live {
     /// Tells `step`'s notes after giving the timer the due time, cancels the job's run if it asks, and lets an ended
     /// run's timer and job go.
     fn apply(&self, step: Step) {
-        let due = self.board().due();
-        self.wake(Wake::At(due));
+        // The board's guard lives until the statement ends, so the wake goes while it is held, as in `start`.
+        self.wake(Wake::At(self.board().due()));
         self.ear.tell(step.notes);
         if step.cancel {
             self.cancel();

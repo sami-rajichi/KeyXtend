@@ -1,6 +1,6 @@
 //! A run's relay: no job before `send`, one job per run sized by its sound, the row, the key and each piece's size
 //! first, then the sound in wiped parts in order, the texts back in order, and a drop that cancels at once, even while
-//! its upload and its job are held. Each shape reaching the frame is in `shapes`.
+//! its upload and its job are held. Each shape reaching the frame is in `shapes`, what an ended run tells in `hand`.
 
 use super::*;
 use kx_ipc::{MAX_SOUND_BYTES, NET_JOB, NetHeader, NetShape, Wiped};
@@ -117,8 +117,6 @@ fn a_fault_after_its_tries_is_told_once_then_the_job_is_told_goodbye() {
     let fault = CloudNote::Fault(CloudFault::Network);
     assert_eq!(next(&heard, 2), [piece(0, SAID), fault]);
     assert!(said_bye(&called), "an ended run keeps no job");
-    script.say(Ok(text(1, SAID)));
-    assert!(heard.try_recv().is_err(), "nothing after");
 }
 
 #[test]
@@ -151,12 +149,10 @@ fn dropping_a_run_cancels_its_requests_and_says_goodbye() {
     let (host, script, _) = host();
     let (calls, called) = mpsc::channel();
     script.tell(calls);
-    let (run, heard) = sent(&host, ask(&[PER_S, PER_S]));
+    let (run, _heard) = sent(&host, ask(&[PER_S, PER_S]));
     drop(run);
     took(&called, &NetAsk::Cancel { id: ID });
     assert!(said_bye(&called), "a goodbye");
-    script.say(Ok(text(0, SAID)));
-    assert!(heard.try_recv().is_err(), "a closed run tells nothing");
 }
 
 #[test]
@@ -164,7 +160,7 @@ fn a_run_dropped_while_its_upload_and_its_job_are_held_returns_at_once() {
     let (host, script, _) = host();
     let (calls, called) = mpsc::channel();
     script.tell(calls);
-    let (run, heard) = sent(&host, ask(&[PER_S, PER_S]));
+    let (run, _heard) = sent(&host, ask(&[PER_S, PER_S]));
     let (open, gate) = mpsc::channel::<()>();
     script.hold(gate);
     let (gone, dropped) = mpsc::channel();
@@ -179,8 +175,6 @@ fn a_run_dropped_while_its_upload_and_its_job_are_held_returns_at_once() {
     drop(open);
     took(&called, &NetAsk::Cancel { id: ID });
     assert!(said_bye(&called), "then a goodbye");
-    script.say(Ok(text(0, SAID)));
-    assert!(heard.try_recv().is_err(), "a closed run tells nothing");
 }
 
 /// Waits for a goodbye among the calls `called` hears.

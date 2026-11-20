@@ -19,13 +19,16 @@ fn tested(
     })
 }
 
+/// Waits until the worker took the test's ask; a host that never sends it fails the test.
+fn asked(called: &Receiver<Call>) {
+    let test = |call: &Call| matches!(call, Call::Net(NetAsk::Test { .. }));
+    while !test(&called.recv_timeout(LONG).expect("the test is sent")) {}
+}
+
 /// Waits for the test's ask, then gives it `note`.
 fn answer(script: &Script<NetFrames>, note: NetNote) -> impl FnOnce(&Receiver<Call>) {
     move |called| {
-        while !matches!(
-            called.recv_timeout(LONG),
-            Ok(Call::Net(NetAsk::Test { .. }))
-        ) {}
+        asked(called);
         script.say(Ok(note));
     }
 }
@@ -56,10 +59,7 @@ fn a_refused_key_is_told_as_the_key() {
 fn a_key_test_past_its_bound_is_a_timeout() {
     let (host, script, clock) = host();
     let late = tested(&host, &script, |called| {
-        while !matches!(
-            called.recv_timeout(LONG),
-            Ok(Call::Net(NetAsk::Test { .. }))
-        ) {}
+        asked(called);
         clock.advance(size::bound(0, WAIT_S, kx_ipc::NET_TEST_TRIES, TEST_PACE_S));
         host.poke();
     });

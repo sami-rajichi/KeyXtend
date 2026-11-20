@@ -70,12 +70,15 @@ impl<S: Spawner<NetFrames, Worker: Split<NetFrames>>> NetJob<S> {
             .map_err(|_| CloudFault::Gone)
     }
 
-    /// Hands run `id`'s `pieces` over in parts, stopping once the run ended, then starts the first piece's time; a
-    /// piece's buffer is wiped once its parts are sent.
+    /// Hands run `id`'s `pieces` over in parts, stopping once the run ended, then starts the first piece's time; a part
+    /// the job cannot take ends the run as `Gone`. A piece's buffer is wiped once its parts are sent.
     pub(super) fn hand_over(&self, id: u32, pieces: Vec<SecretBytes>) {
         for part in frame::parts(id, pieces) {
-            if self.live.ended() || self.stream.ask(part, Wait::Off).is_err() {
+            if self.live.ended() {
                 break;
+            }
+            if self.stream.ask(part, Wait::Off).is_err() {
+                return self.live.lose();
             }
         }
         self.live.start();
