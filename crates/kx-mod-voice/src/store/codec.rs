@@ -108,18 +108,12 @@ impl<'b> Reader<'b> {
 
     /// The form's head: another mark is `Damaged`, a later version `Newer`, an earlier one `Damaged`.
     pub(crate) fn head(&mut self, mark: Mark, version: u8) -> Result<(), Bad> {
-        self.head_in(mark, version, version).map(drop)
-    }
-
-    /// The form's head of a version from `oldest` to `version`, which it gives: another mark or an older version is
-    /// `Damaged`, a later one `Newer`.
-    pub(crate) fn head_in(&mut self, mark: Mark, oldest: u8, version: u8) -> Result<u8, Bad> {
         if self.take(mark.len())? != mark.as_slice() {
             return Err(Bad::Damaged);
         }
         match self.u8()? {
+            v if v == version => Ok(()),
             v if v > version => Err(Bad::Newer),
-            v if v >= oldest => Ok(v),
             _ => Err(Bad::Damaged),
         }
     }
@@ -279,15 +273,6 @@ mod tests {
         });
         assert_eq!(Reader::new(&bad_day).date(), Err(Bad::Damaged));
         assert_eq!(Reader::new(&[1]).end(), Err(Bad::Damaged));
-    }
-
-    #[test]
-    fn a_head_within_its_versions_tells_which_one_it_is() {
-        let read =
-            |mark: Mark, v: u8| Reader::new(&encode(|w| w.head(mark, v))).head_in(MARK, 1, 2);
-        let got = [0, 1, 2, 3].map(|v| read(MARK, v));
-        assert_eq!(got, [Err(Bad::Damaged), Ok(1), Ok(2), Err(Bad::Newer)]);
-        assert_eq!(read(*b"ELSE", 1), Err(Bad::Damaged));
     }
 
     #[test]

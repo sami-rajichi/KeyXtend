@@ -151,6 +151,7 @@ fn read_all(bytes: &[u8]) {
     let _ = text::decode(bytes);
     let _ = numbers::decode_counts(bytes);
     let _ = numbers::decode_checks(bytes);
+    let _ = numbers::decode_langs(bytes);
     let _ = numbers::decode_scores(bytes);
 }
 
@@ -161,8 +162,8 @@ proptest! {
         let forms = [
             (text::MARK, text::VERSION),
             (numbers::COUNTS_MARK, numbers::VERSION),
-            (numbers::CHECKS_MARK, numbers::CHECKS_LANGLESS),
-            (numbers::CHECKS_MARK, numbers::CHECKS_VERSION),
+            (numbers::CHECKS_MARK, numbers::VERSION),
+            (numbers::LANGS_MARK, numbers::VERSION),
             (numbers::SCORES_MARK, numbers::VERSION),
         ];
         for (mark, version) in forms {
@@ -184,16 +185,18 @@ proptest! {
     #[test]
     fn any_numbers_come_back(c in counts(), k in checks(), s in scores()) {
         prop_assert_eq!(numbers::decode_counts(&numbers::encode_counts(&c)), Ok(c));
-        prop_assert_eq!(numbers::decode_checks(&numbers::encode_checks(&k)), Ok(k));
+        let plain = numbers::decode_checks(&numbers::encode_checks(&k)).unwrap();
+        let langs = numbers::decode_langs(&numbers::encode_langs(&k)).unwrap();
+        prop_assert_eq!(numbers::named(plain, langs), k);
         prop_assert_eq!(numbers::decode_scores(&numbers::encode_scores(&s)), Ok(s));
     }
 
     #[test]
     fn a_shelf_of_random_blobs_opens_without_panic(
-        blobs in prop::collection::btree_map((0..3_usize, 0..6_usize), prop::collection::vec(any::<u8>(), 0..64), 0..12),
+        blobs in prop::collection::btree_map((0..3_usize, 0..7_usize), prop::collection::vec(any::<u8>(), 0..64), 0..12),
     ) {
         let folders = ["texts", "sounds", "numbers"];
-        let names = ["1", "2", "1-0", "2-1", "counts", "checks"];
+        let names = ["1", "2", "1-0", "2-1", "counts", "checks", "check-langs"];
         let shelf = Arc::new(Mem::default());
         let planted: BTreeMap<_, _> = blobs.into_iter().collect();
         for ((f, n), bytes) in &planted {

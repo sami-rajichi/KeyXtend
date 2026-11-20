@@ -24,5 +24,6 @@ Decided with the owner on 2026-11-20 ("check each language").
 
 - Each language checks a card once, the first time the card would serve it. That adds a few seconds per language; the processor serves meanwhile, under the waits a check already has.
 - A card that fails in Arabic but passed in English runs Arabic on the processor and keeps English on the card.
+- A failure stops only its own card, driver, model and language: under Automatic, a model that failed in English is still checked in Arabic and French, and a failure with one model never stops another's check. Automatic still tries a card only once it passed a check (ADR-0044 decision 8).
 - A driver update checks every language again, as before. A card that fails mid-run drops that file's results in every language.
-- The checks' file gains a version. An older app that meets it stops opening the voice store, as for any newer file.
+- The checks' file keeps its first form, so an older app still reads it, as results of no language. Each result's language is kept in a file beside it (`numbers/check-langs`) that older apps never open, and only the same result takes it back, so one an older app wrote since names none.

@@ -9,7 +9,9 @@ use kx_module_api::Zeroizing;
 use kx_module_api::ports::{BlobName, MAX_BLOB_BYTES, SealedError, SealedShelf};
 
 use super::codec::Bad;
-use super::names::{CHECKS, COUNTS, NUMBERS, SCORES, SOUNDS, TEXTS, name, sound_of, text_id};
+use super::names::{
+    CHECKS, COUNTS, LANGS, NUMBERS, SCORES, SOUNDS, TEXTS, name, sound_of, text_id,
+};
 use super::{Damage, Opened, Store, StoreError, numbers, text};
 use crate::history::{Edit, Entry, History, Sound};
 
@@ -66,7 +68,9 @@ impl Store {
         store.read_texts(&mut found)?;
         store.read_sounds(&mut found)?;
         let counts = store.number(COUNTS, numbers::decode_counts, &mut found)?;
-        let checks = store.number(CHECKS, numbers::decode_checks, &mut found)?;
+        let plain = store.number(CHECKS, numbers::decode_checks, &mut found)?;
+        let langs = store.number(LANGS, numbers::decode_langs, &mut found)?;
+        let checks = numbers::named(plain, langs);
         let scores = store.number(SCORES, numbers::decode_scores, &mut found)?;
         let history = History::new(std::mem::take(&mut found.entries), found.next);
         let damaged = found.damaged;

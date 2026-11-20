@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use crate::counts::{Checks, Counts, Scores};
 use crate::history::{Edit, Entry, History, Rules, Sound};
-use names::{CHECKS, COUNTS, NUMBERS, SCORES, SOUNDS, TEXTS, name, sound_name, text_name};
+use names::{CHECKS, COUNTS, LANGS, NUMBERS, SCORES, SOUNDS, TEXTS, name, sound_name, text_name};
 
 /// Why the store did not open.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
@@ -157,12 +157,13 @@ impl Store {
         self.save_number(COUNTS, &bytes)
     }
 
-    /// Saves the card checks.
+    /// Saves the card checks in the form older builds read, then their languages beside them (ADR-0052).
     ///
     /// # Errors
     /// `Io` past one blob, else the shelf's error.
     pub fn save_checks(&self, checks: &Checks) -> Result<(), SealedError> {
-        self.save_number(CHECKS, &numbers::encode_checks(checks))
+        self.save_number(CHECKS, &numbers::encode_checks(checks))?;
+        self.save_number(LANGS, &numbers::encode_langs(checks))
     }
 
     /// Saves Compare's results.

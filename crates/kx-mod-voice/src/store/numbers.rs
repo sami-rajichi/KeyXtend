@@ -1,37 +1,28 @@
 //! The numbers' blobs, each a mark and a version, then its rows: the counts by day, model and device, a cloud
-//! service's too; the card checks by card, driver, file fingerprint and clip language; Compare's runs by language. They
-//! hold ids and numbers, never a text.
+//! service's too; the card checks by card, driver and file fingerprint, with each one's clip language beside them;
+//! Compare's runs by language. They hold ids and numbers, never a text.
 
+mod checks;
 mod tags;
 
 use std::collections::BTreeMap;
 
 use kx_module_api::Zeroizing;
-use kx_module_api::ports::{CardId, Fingerprint, Hundredths, Verdict, fits_iso};
+use kx_module_api::ports::{CardId, Fingerprint, fits_iso};
 
 use super::codec::{self, Bad, Mark, Reader, Writer};
-use crate::counts::{Board, Bucket, Checked, Checks, Counts, Score, Scores, Tally};
+use crate::counts::{Board, Bucket, Counts, Score, Scores, Tally};
+#[cfg(test)]
+pub(crate) use checks::{CHECKS_MARK, LANGS_MARK};
+pub(crate) use checks::{decode_checks, decode_langs, encode_checks, encode_langs, named};
 use tags::{device, model, put_device, put_model};
 
-/// The counts' and Compare's forms' version, the byte after each mark; a newer one is never read or written over.
+/// Each numbers form's version, the byte after each mark; a newer one is never read or written over.
 pub(crate) const VERSION: u8 = 1;
 /// What starts the counts' blob.
 pub(crate) const COUNTS_MARK: Mark = *b"KXVC";
-/// What starts the card checks' blob.
-pub(crate) const CHECKS_MARK: Mark = *b"KXVK";
 /// What starts Compare's results' blob.
 pub(crate) const SCORES_MARK: Mark = *b"KXVS";
-/// The card checks' form, which names each result's clip language (ADR-0052).
-pub(crate) const CHECKS_VERSION: u8 = 2;
-/// The card checks' first form, still read: its results name no language, so they serve none.
-pub(crate) const CHECKS_LANGLESS: u8 = 1;
-
-/// A verdict's tag, in `Verdict`'s order.
-const PASSED: u8 = 0;
-const SLOW: u8 = 1;
-const DIFFERS: u8 = 2;
-const NO_ROOM: u8 = 3;
-const FAILED: u8 = 4;
 
 /// `counts` as bytes.
 pub(crate) fn encode_counts(counts: &Counts) -> Zeroizing<Vec<u8>> {
@@ -75,60 +66,6 @@ pub(crate) fn decode_counts(bytes: &[u8]) -> Result<Counts, Bad> {
     }
     r.end()?;
     Ok(Counts::new(rows))
-}
-
-/// `checks` as bytes.
-pub(crate) fn encode_checks(checks: &Checks) -> Zeroizing<Vec<u8>> {
-    codec::encode(|w| {
-        w.head(CHECKS_MARK, CHECKS_VERSION);
-        w.count(checks.rows().len());
-        for row in checks.rows() {
-            w.text(row.card.as_str());
-            w.text(&row.driver);
-            w.text(&row.model.hex());
-            w.flag(row.lang.is_some());
-            if let Some(lang) = &row.lang {
-                w.text(lang);
-            }
-            put_verdict(w, row.verdict);
-            w.date(row.day);
-        }
-    })
-}
-
-/// The checks in `bytes`, in either form; the first form's results name no language.
-pub(crate) fn decode_checks(bytes: &[u8]) -> Result<Checks, Bad> {
-    let mut r = Reader::new(bytes);
-    let named = r.head_in(CHECKS_MARK, CHECKS_LANGLESS, CHECKS_VERSION)? > CHECKS_LANGLESS;
-    let mut rows = Vec::new();
-    for _ in 0..r.count()? {
-        let card = card(&mut r)?;
-        let driver = r.text()?.to_owned();
-        let model = print(&mut r)?;
-        let lang = if named { lang(&mut r)? } else { None };
-        let (verdict, day) = (verdict(&mut r)?, r.date()?);
-        rows.push(Checked {
-            card,
-            driver,
-            model,
-            lang,
-            verdict,
-            day,
-        });
-    }
-    r.end()?;
-    Ok(Checks::new(rows))
-}
-
-/// A result's clip language: a flag, then an ISO code; another code is `Damaged`.
-fn lang(r: &mut Reader<'_>) -> Result<Option<String>, Bad> {
-    if !r.flag()? {
-        return Ok(None);
-    }
-    let lang = r.text()?;
-    fits_iso(lang)
-        .then(|| Some(lang.to_owned()))
-        .ok_or(Bad::Damaged)
 }
 
 /// `scores` as bytes.
@@ -198,46 +135,6 @@ fn score(r: &mut Reader<'_>) -> Result<Score, Bad> {
     })
 }
 
-fn put_verdict(w: &mut Writer, verdict: Verdict) {
-    match verdict {
-        Verdict::Passed { gain } => {
-            w.u8(PASSED);
-            w.u32(gain.0);
-        }
-        Verdict::Slow { gain, need } => {
-            w.u8(SLOW);
-            w.u32(gain.0);
-            w.u32(need.0);
-        }
-        Verdict::Differs { words, allowed } => {
-            w.u8(DIFFERS);
-            w.u16(words);
-            w.u8(allowed);
-        }
-        Verdict::NoRoom => w.u8(NO_ROOM),
-        Verdict::Failed => w.u8(FAILED),
-    }
-}
-
-fn verdict(r: &mut Reader<'_>) -> Result<Verdict, Bad> {
-    Ok(match r.u8()? {
-        PASSED => Verdict::Passed {
-            gain: Hundredths(r.u32()?),
-        },
-        SLOW => Verdict::Slow {
-            gain: Hundredths(r.u32()?),
-            need: Hundredths(r.u32()?),
-        },
-        DIFFERS => Verdict::Differs {
-            words: r.u16()?,
-            allowed: r.u8()?,
-        },
-        NO_ROOM => Verdict::NoRoom,
-        FAILED => Verdict::Failed,
-        _ => return Err(Bad::Damaged),
-    })
-}
-
 fn card(r: &mut Reader<'_>) -> Result<CardId, Bad> {
     CardId::new(r.text()?).ok_or(Bad::Damaged)
 }
@@ -245,6 +142,3 @@ fn card(r: &mut Reader<'_>) -> Result<CardId, Bad> {
 fn print(r: &mut Reader<'_>) -> Result<Fingerprint, Bad> {
     Fingerprint::from_hex(r.text()?).ok_or(Bad::Damaged)
 }
-
-#[cfg(test)]
-mod tests;
