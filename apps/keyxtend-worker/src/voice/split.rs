@@ -13,6 +13,12 @@ use zeroize::Zeroizing;
 /// The stretch whose loudness picks a cut, and the step between the stretches weighed, in ms.
 const QUIET_MS: usize = 300;
 const STEP_MS: usize = 50;
+/// Steps in the stretch weighed, which holds whole steps.
+const STEPS: usize = QUIET_MS / STEP_MS;
+const _: () = assert!(
+    QUIET_MS.is_multiple_of(STEP_MS),
+    "the stretch weighed is whole steps"
+);
 /// The cut falls between these shares of the part, in tenths, so neither side is tiny.
 const FROM_TENTHS: usize = 3;
 const TO_TENTHS: usize = 7;
@@ -72,42 +78,65 @@ pub fn text<M: Loaded + ?Sized>(
 
 /// Spans of `pcm` of at most `most` samples each, covering it in order; one span when it fits or has no limit.
 pub fn spans<T: Sample>(pcm: &[T], most: Option<usize>) -> Vec<Range<usize>> {
+    let most = most.unwrap_or(usize::MAX).max(1);
     let mut out = Vec::new();
-    split(
-        pcm,
-        0..pcm.len(),
-        most.unwrap_or(usize::MAX).max(1),
-        &mut out,
-    );
+    if pcm.len() <= most {
+        out.push(0..pcm.len());
+    } else {
+        split(&Steps::of(pcm), 0..pcm.len(), most, &mut out);
+    }
     out
 }
 
+/// Each whole step's power from the piece's start, weighed once, so no cut weighs a sample again.
+struct Steps {
+    /// Samples in a step.
+    len: usize,
+    /// Each step's power, in order.
+    power: Vec<f64>,
+}
+
+impl Steps {
+    /// The steps of `pcm`; a part step at its end is never weighed, as no stretch reaches it.
+    fn of<T: Sample>(pcm: &[T]) -> Self {
+        let len = SOUND_HZ * STEP_MS / MS_PER_S;
+        let weigh = |step: &[T]| step.iter().map(|v| f64::from(v.power())).sum();
+        let power = pcm.chunks_exact(len).map(weigh).collect();
+        Self { len, power }
+    }
+}
+
 /// Adds `span`'s parts to `out`, halving it at its quietest stretch until each fits.
-fn split<T: Sample>(pcm: &[T], span: Range<usize>, most: usize, out: &mut Vec<Range<usize>>) {
+fn split(steps: &Steps, span: Range<usize>, most: usize, out: &mut Vec<Range<usize>>) {
     if span.len() <= most {
         out.push(span);
         return;
     }
-    let at = span.start + quiet(&pcm[span.clone()]);
-    split(pcm, span.start..at, most, out);
-    split(pcm, at..span.end, most, out);
+    let at = quiet(steps, span.clone());
+    split(steps, span.start..at, most, out);
+    split(steps, at..span.end, most, out);
 }
 
-/// Where to cut `x`: the middle of its quietest stretch between three and seven tenths of it, never at either end.
-fn quiet<T: Sample>(x: &[T]) -> usize {
-    let win = SOUND_HZ * QUIET_MS / MS_PER_S;
-    let step = SOUND_HZ * STEP_MS / MS_PER_S;
-    let (lo, hi) = (x.len() * FROM_TENTHS / TENTHS, x.len() * TO_TENTHS / TENTHS);
-    let mut best = (f32::MAX, x.len() / 2);
-    let mut at = lo;
-    while at + win < hi {
-        let energy: f32 = x[at..at + win].iter().map(|v| v.power()).sum();
+/// Where to cut `span`: the middle of its quietest stretch between three and seven tenths of it, never at either end.
+fn quiet(steps: &Steps, span: Range<usize>) -> usize {
+    let len = span.len();
+    let lo = span.start + len * FROM_TENTHS / TENTHS;
+    let hi = span.start + len * TO_TENTHS / TENTHS;
+    let win = steps.len * STEPS;
+    let mut best = (f64::MAX, span.start + len / 2);
+    let mut step = lo.div_ceil(steps.len);
+    // A stretch that ends before `hi` holds whole steps of the piece, so it is always in `power`.
+    while (step + STEPS) * steps.len < hi {
+        let energy: f64 = steps.power[step..step + STEPS].iter().sum();
         if energy < best.0 {
-            best = (energy, at + win / 2);
+            best = (energy, step * steps.len + win / 2);
         }
-        at += step;
+        step += 1;
     }
-    best.1.clamp(1, x.len().saturating_sub(1).max(1))
+    best.1.clamp(
+        span.start + 1,
+        span.end.saturating_sub(1).max(span.start + 1),
+    )
 }
 
 /// Adds as much of `more` as fits one note, cut at a character boundary.
