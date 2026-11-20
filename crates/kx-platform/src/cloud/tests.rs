@@ -7,7 +7,7 @@ use kx_ipc::{NetAsk, NetFault, NetNote, SAMPLE_BYTES, SOUND_BYTES_PER_S};
 use kx_module_api::ports::{CloudShape, FormFields, KeyHeader};
 use kx_module_api::{Redacted, Zeroizing};
 use kx_platform_fake::cloud_suite::{
-    ADDRESS, LANG, MODEL, MODELS, TRIES, WAIT_S, ask, job, key, key_test, limits, sound,
+    ADDRESS, LANG, MODEL, MODELS, TRIES, WAIT_S, WITHIN, ask, job, key, key_test, limits, sound,
 };
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -21,8 +21,8 @@ mod relay;
 mod show;
 mod suite;
 
-/// How long a test waits for a note or a call; a wait, never a sleep.
-const LONG: Duration = Duration::from_secs(10);
+/// How long a test waits for a note, a call or a poke: the shared suite's wait, never a sleep.
+pub(super) const LONG: Duration = WITHIN;
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
 /// Bytes of hand-over sound in one second.
