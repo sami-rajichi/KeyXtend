@@ -12,6 +12,7 @@ mod gemini;
 mod job;
 mod multipart;
 mod pace;
+mod reason;
 mod reply;
 mod run;
 mod send;
@@ -171,7 +172,8 @@ where
     end
 }
 
-/// The next event; the job holds a sender, so the channel only ends if the reader thread is gone.
+/// The next event; the job holds a sender itself, so the channel never ends and the `End` fallback only keeps this
+/// total.
 fn wake(rx: &Receiver<Event>) -> Event {
     rx.recv().unwrap_or(Event::End(Ok(())))
 }

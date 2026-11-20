@@ -13,6 +13,7 @@ mod job;
 mod pace;
 mod pipe;
 mod props;
+mod reason;
 mod reply;
 mod rows;
 mod run;

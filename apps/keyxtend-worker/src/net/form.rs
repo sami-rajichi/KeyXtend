@@ -7,12 +7,14 @@
 pub use super::multipart::escape;
 
 use super::multipart::{self, FILE, Text};
-use super::reply;
+use super::reason::Reason;
+use super::reply::{self, ERROR, SAYING};
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
 use kx_ipc::{NET_PACE_S, NetCall, NetFault, NetField, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
+use std::cell::LazyCell;
 use zeroize::Zeroizing;
 
 /// The upload form.
@@ -178,12 +180,13 @@ pub(super) fn fields<'a>(
 /// What an answer that is not done means, by the first table row that takes it, under `form`'s paywall and region code.
 fn judge<T>(form: Option<&NetForm<'_>>, head: &Head, body: &[u8]) -> Verdict<T> {
     let region = form.and_then(|f| f.region.as_deref());
+    let reason = LazyCell::new(|| Reason::read(body, &ERROR, SAYING));
     let said = |says: Says| match says {
         Says::Any => true,
         Says::Paywall => form.is_some_and(|f| f.paywall),
-        Says::Region => region.is_some_and(|code| reply::coded(body, &reply::ERROR, &[code])),
-        Says::Code(codes) => reply::coded(body, &reply::ERROR, codes),
-        Says::Words(words) => reply::says(body, words),
+        Says::Region => region.is_some_and(|code| reason.coded(&[code])),
+        Says::Code(codes) => reason.coded(codes),
+        Says::Words(words) => reason.says(words),
     };
     status::judge(TABLE, head, said, busy)
 }

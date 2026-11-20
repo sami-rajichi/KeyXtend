@@ -1,17 +1,18 @@
 //! What Gemini's error answers mean [N5][N7]: a detail's exact reason or the canonical status first, then the status
 //! table; a 429 waits as asked, by `Retry-After` or the error's `RetryInfo` delay, unless the free tier's day ran out.
 
-use super::super::reply::{self, Coded};
+use super::super::reason::Reason;
+use super::super::reply::{self, Coded, SAYING};
 use super::super::shape::Verdict;
 use super::super::status::{self, LANGUAGE, RETRY, Row, Then, row};
+use super::lax::Text;
 use kx_ipc::NetFault;
 use kx_platform_net::Head;
-use serde_json::Value;
+use serde::Deserialize;
+use std::cell::LazyCell;
 
-/// Google's error object, its list of details and a detail's reason [N7].
+/// Google's error object [N7].
 const ERROR: &str = "error";
-const DETAILS: &str = "details";
-const REASON: &str = "reason";
 /// Where the error names its canonical status.
 const STATUS: Coded = Coded {
     object: ERROR,
@@ -26,15 +27,43 @@ const BAD_KEY: &[&str] = &["API_KEY_INVALID"];
 const DENIED: &[&str] = &["PERMISSION_DENIED"];
 /// Words of a location the service refuses [N7].
 const LOCATION: &[&str] = &["location is not supported"];
-/// A `RetryInfo` detail's wait, as a span such as `37s`.
-const RETRY_DELAY: &str = "retryDelay";
-/// A `QuotaFailure` detail's quotas run out, each by its id.
-const VIOLATIONS: &str = "violations";
-const QUOTA_ID: &str = "quotaId";
 /// What the free tier's daily quota id names, as in `GenerateRequestsPerDayPerProjectPerModel-FreeTier` (assumed
 /// from Google's quota ids, checked at task 24); a paid tier's day stays a wait.
 const PER_DAY: &str = "PerDay";
 const FREE_TIER: &str = "FreeTier";
+
+/// Google's error reply, read for its details alone [N7]; another shape reads as no detail.
+#[derive(Deserialize)]
+struct Reply {
+    error: Error,
+}
+
+/// Google's error object: its list of details.
+#[derive(Deserialize)]
+struct Error {
+    #[serde(default)]
+    details: Vec<Detail>,
+}
+
+/// One detail: its reason, a `RetryInfo` wait such as `37s`, and a `QuotaFailure`'s quotas run out.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Detail {
+    #[serde(default)]
+    reason: Text,
+    #[serde(default)]
+    retry_delay: Text,
+    #[serde(default)]
+    violations: Vec<Violation>,
+}
+
+/// A quota run out, by its id.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Violation {
+    #[serde(default)]
+    quota_id: Text,
+}
 
 /// What a row asks of the error beside its status.
 #[derive(Copy, Clone)]
@@ -76,52 +105,50 @@ const TABLE: &[Row<Says>] = &[
 /// What an answer that is not done means, by the first table row that takes it.
 pub fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
     let details = details(body);
+    let reason = LazyCell::new(|| Reason::read(body, &STATUS, SAYING));
     let said = |says: Says| match says {
         Says::Any => true,
         Says::Reason(reasons) => reasoned(&details, reasons),
-        Says::Status(names) => reply::coded(body, &STATUS, names),
-        Says::Words(words) => reply::says(body, words),
+        Says::Status(names) => reason.coded(names),
+        Says::Words(words) => reason.says(words),
     };
     status::judge(TABLE, head, said, |head| busy(head, &details))
 }
 
-/// The details of a Google error [N7]; none for any other body.
-fn details(body: &[u8]) -> Vec<Value> {
-    let mut reply = serde_json::from_slice::<Value>(body).unwrap_or_default();
-    let details = reply.get_mut(ERROR).and_then(|e| e.get_mut(DETAILS));
-    match details.map(Value::take) {
-        Some(Value::Array(details)) => details,
-        _ => Vec::new(),
-    }
+/// The details of a Google error [N7], read into these few fields alone; none for any other body.
+fn details(body: &[u8]) -> Vec<Detail> {
+    let reply = reply::opens_object(body).then(|| serde_json::from_slice::<Reply>(body).ok());
+    reply.flatten().map(|r| r.error.details).unwrap_or_default()
+}
+
+/// The text `t` holds, if any.
+fn text(t: &Text) -> Option<&str> {
+    t.0.as_ref().map(|w| w.0.as_str())
 }
 
 /// True when a detail gives one of `reasons` exactly, in any case.
-fn reasoned(details: &[Value], reasons: &[&str]) -> bool {
+fn reasoned(details: &[Detail], reasons: &[&str]) -> bool {
     let is = |r: &str| reasons.iter().any(|c| c.eq_ignore_ascii_case(r));
-    let mut given = details.iter().filter_map(|d| d.get(REASON)?.as_str());
+    let mut given = details.iter().filter_map(|d| text(&d.reason));
     given.any(is)
 }
 
 /// A 429: the used allowance with no date when the free tier's daily quota ran out, as its delay is no renewal; else
 /// a wait for its `Retry-After`, or for its `RetryInfo` delay.
-fn busy<T>(head: &Head, details: &[Value]) -> Verdict<T> {
+fn busy<T>(head: &Head, details: &[Detail]) -> Verdict<T> {
     if details.iter().any(daily) {
         return Verdict::Fault(NetFault::Allowance { renews_s: None });
     }
     let delay = details
         .iter()
-        .filter_map(|d| d.get(RETRY_DELAY)?.as_str())
+        .filter_map(|d| text(&d.retry_delay))
         .find_map(reply::span_s);
     let asked = head.header(RETRY).and_then(reply::seconds);
     Verdict::Busy(asked.or_else(|| delay.and_then(|s| u32::try_from(s).ok())))
 }
 
 /// True when `detail` names the free tier's daily quota among the quotas run out.
-fn daily(detail: &Value) -> bool {
-    let quotas = detail.get(VIOLATIONS).and_then(Value::as_array);
-    let mut ids = quotas
-        .into_iter()
-        .flatten()
-        .filter_map(|v| v.get(QUOTA_ID)?.as_str());
+fn daily(detail: &Detail) -> bool {
+    let mut ids = detail.violations.iter().filter_map(|v| text(&v.quota_id));
     ids.any(|id| id.contains(PER_DAY) && id.contains(FREE_TIER))
 }

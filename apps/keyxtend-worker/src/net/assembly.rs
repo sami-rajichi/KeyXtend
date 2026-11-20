@@ -3,12 +3,14 @@
 //! piece as the WAV `audio` part. A reply is `{"text": …}`; a problem (RFC 9457) is read by its status and its words.
 
 use super::multipart::{self, Text};
-use super::reply;
+use super::reason::Reason;
+use super::reply::{self, UNCODED};
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
 use kx_ipc::{NetCall, NetFault, NetShape, rules};
 use kx_platform_net::{Head, Verb};
 use serde::Serialize;
+use std::cell::LazyCell;
 use zeroize::Zeroizing;
 
 /// `AssemblyAI`'s Sync request.
@@ -111,10 +113,11 @@ impl Shape for Assembly {
 
 /// What an answer that is not done means, by the first table row that takes it.
 fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
+    let reason = LazyCell::new(|| Reason::read(body, &UNCODED, PROBLEM));
     let said = |says: Says| match says {
         Says::Any => true,
         Says::Waits => head.header(RETRY).and_then(reply::seconds).is_some(),
-        Says::Words(words) => reply::says_in(body, PROBLEM, words),
+        Says::Words(words) => reason.says(words),
     };
     status::judge(TABLE, head, said, status::wait)
 }

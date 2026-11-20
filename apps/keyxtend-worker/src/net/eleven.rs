@@ -5,11 +5,13 @@
 
 use super::form;
 use super::multipart::{self, Text};
-use super::reply::{self, Coded};
+use super::reason::Reason;
+use super::reply::{self, Coded, SAYING};
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
 use kx_ipc::{NetCall, NetFault, NetShape};
 use kx_platform_net::{Head, Verb};
+use std::cell::LazyCell;
 use zeroize::Zeroizing;
 
 /// `ElevenLabs`' form.
@@ -101,10 +103,11 @@ impl Shape for Eleven {
 
 /// What an answer that is not done means, by the first table row that takes it.
 fn judge<T>(head: &Head, body: &[u8]) -> Verdict<T> {
+    let reason = LazyCell::new(|| Reason::read(body, &DETAIL, SAYING));
     let said = |says: Says| match says {
         Says::Any => true,
-        Says::Code(codes) => reply::coded(body, &DETAIL, codes),
-        Says::Words(words) => reply::says(body, words),
+        Says::Code(codes) => reason.coded(codes),
+        Says::Words(words) => reason.says(words),
     };
     status::judge(TABLE, head, said, status::wait)
 }

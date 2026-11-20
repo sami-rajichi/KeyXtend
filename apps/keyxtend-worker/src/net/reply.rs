@@ -1,11 +1,11 @@
 //! Reading a service's reply, an untrusted body: read within a cap, refused one byte past it and ended once its call
-//! stops, its JSON `text` read straight into a wiped string, its error's exact code or words, and the headers a 429 is
+//! stops, its JSON `text` read straight into a wiped string, where its error's code sits, and the headers a 429 is
 //! judged by. Every reader takes any bytes without a panic.
 
 use kx_ipc::NetFault;
 use kx_platform_net::Body;
 use serde::Deserialize;
-use serde::de::{self, Deserializer, Visitor};
+use serde::de::{self, Deserializer, IgnoredAny, Visitor};
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use zeroize::Zeroizing;
@@ -27,14 +27,13 @@ const MAX_DIGITS: usize = 20;
 const POINT: char = '.';
 /// Base ten, for a span's fraction.
 const TEN: u128 = 10;
-/// The names an error's words sit under.
-const SAYING: &[&str] = &["error", "message", "type", "code", "detail", "msg", "loc"];
-/// How many levels of objects and lists the words are looked for in: a list of `loc` inside a `detail` item, inside
-/// `detail`, inside `message`, inside the reply.
-const SAYING_DEPTH: usize = 5;
+/// The names an error's words sit under: `error` or its message, type and code, and a 422's `detail[]` with each item's
+/// `msg`, `type` and `loc`, at the top as `DeepInfra` sends it or under `message`.
+pub const SAYING: &[&str] = &["error", "message", "type", "code", "detail", "msg", "loc"];
 
-/// `body`'s bytes, read into wiped chunks of `READ` bytes, each filled before the next, and joined once, so no growth
-/// leaves an unwiped copy and the room taken stays within `cap` and one chunk; `stop` is looked at before each read.
+/// `body`'s bytes, read into wiped chunks of `READ` bytes, each filled before the next, then joined once into a wiped
+/// buffer sized once, so no growth leaves an unwiped copy and the room peaks near twice `cap`. `stop` is looked at
+/// before each read.
 ///
 /// # Errors
 /// `Strange` once the body passes `cap`, read no further; `Gone` once `stop` is set; `Network`, `Timeout` or `Gone`
@@ -131,9 +130,9 @@ pub fn opens_object(bytes: &[u8]) -> bool {
     bytes.trim_ascii_start().first() == Some(&OBJECT)
 }
 
-/// True when `bytes` is one JSON object.
+/// True when `bytes` is one JSON object, read through without keeping any of it.
 pub fn object(bytes: &[u8]) -> bool {
-    serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(bytes).is_ok()
+    opens_object(bytes) && serde_json::from_slice::<IgnoredAny>(bytes).is_ok()
 }
 
 /// Where a JSON error reply keeps its code: the object at its top, and the names the code may sit under there.
@@ -144,66 +143,17 @@ pub struct Coded {
     pub names: &'static [&'static str],
 }
 
+/// No code, for a reply whose table reads words alone.
+pub const UNCODED: Coded = Coded {
+    object: "",
+    names: &[],
+};
+
 /// The upload form's errors (Groq's and `OpenAI`'s pages): `error.code` or `error.type`.
 pub const ERROR: Coded = Coded {
     object: "error",
     names: &["code", "type"],
 };
-
-/// True when a JSON error reply's code, where `at` says, is exactly one of `codes`, in any case; never for another
-/// body.
-pub fn coded(bytes: &[u8], at: &Coded, codes: &[&str]) -> bool {
-    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
-    let is = |v: &serde_json::Value| {
-        v.as_str()
-            .is_some_and(|s| codes.iter().any(|c| c.eq_ignore_ascii_case(s)))
-    };
-    let object = reply.get(at.object);
-    at.names
-        .iter()
-        .any(|name| object.and_then(|o| o.get(name)).is_some_and(is))
-}
-
-/// True when a JSON error reply's words hold one of `words`, in any case; never for another body. The words are the
-/// texts under `SAYING`'s names, within `SAYING_DEPTH`: `error` or its message, type and code, and a 422's `detail[]`
-/// with each item's `msg`, `type` and `loc`, at the top as `DeepInfra` sends it or under `message`.
-pub fn says(bytes: &[u8], words: &[&str]) -> bool {
-    says_in(bytes, SAYING, words)
-}
-
-/// True when the texts under `names` in a JSON error reply, within `SAYING_DEPTH`, hold one of `words`, in any case;
-/// never for another body.
-pub fn says_in(bytes: &[u8], names: &[&str], words: &[&str]) -> bool {
-    let reply = serde_json::from_slice::<serde_json::Value>(bytes).unwrap_or_default();
-    let mut said = String::new();
-    if reply.is_object() {
-        gather(&reply, names, SAYING_DEPTH, &mut said);
-    }
-    let said = said.to_ascii_lowercase();
-    words.iter().any(|w| said.contains(w))
-}
-
-/// Adds the texts of `value` under `names` to `said`, `depth` levels down at most.
-fn gather(value: &serde_json::Value, names: &[&str], depth: usize, said: &mut String) {
-    let deeper = depth.checked_sub(1);
-    match (value, deeper) {
-        (serde_json::Value::String(text), _) => {
-            said.push(' ');
-            said.push_str(text);
-        }
-        (serde_json::Value::Array(items), Some(d)) => {
-            for item in items {
-                gather(item, names, d, said);
-            }
-        }
-        (serde_json::Value::Object(map), Some(d)) => {
-            for item in names.iter().filter_map(|name| map.get(*name)) {
-                gather(item, names, d, said);
-            }
-        }
-        _ => {}
-    }
-}
 
 /// A `Retry-After` of whole seconds; none for a date or anything else.
 pub fn seconds(text: &str) -> Option<u32> {
