@@ -1,6 +1,10 @@
 //! The voice gate build only: the gate worker started with its clip after the voice job's words, so it plays the clip in
 //! place of the microphone (G22). No shipped build holds it, and the stage refuses a program holding its flag.
 
+#[cfg(test)]
+mod logged;
+mod sent;
+mod stage;
 mod told;
 
 use std::path::Path;
@@ -8,10 +12,11 @@ use std::sync::Arc;
 
 use kx_ipc::SOUND_FLAG;
 use kx_module_api::Clock;
-use kx_module_api::ports::Speech;
+use kx_module_api::ports::{CloudSpeech, Speech};
 use kx_platform::speech::{Assets, WorkerSpeech};
 use kx_platform::worker::{Launch, Piped, SpawnError, Spawner, VoiceFrames};
 use kx_platform_windows::{WinChild, WinHardware, WinSpawner};
+use sent::Sent;
 use told::Told;
 
 /// The worker's spawner, with the sound flag and the clip after each launch's own words.
@@ -60,6 +65,12 @@ pub fn speech(
     let hardware = Arc::new(WinHardware::new());
     let speech = WorkerSpeech::new(played, clock, assets, hardware);
     Some(Arc::new(Told(speech)))
+}
+
+/// Cloud speech `cloud`, logging the service of each cloud dictation and its stages.
+#[must_use]
+pub fn cloud(cloud: Arc<dyn CloudSpeech>) -> Arc<dyn CloudSpeech> {
+    Arc::new(Sent(cloud))
 }
 
 #[cfg(test)]

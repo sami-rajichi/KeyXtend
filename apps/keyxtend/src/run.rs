@@ -13,7 +13,7 @@ use keyxtend::relay::Relay;
 use keyxtend::{UI_ACCESS, clip, drain, log, quiet, vault, voice, words};
 use kx_crypto::OsRandom;
 use kx_kernel::KernelSettings;
-use kx_module_api::ports::{PointerHook, Speech};
+use kx_module_api::ports::{CloudSpeech, PointerHook, Speech};
 use kx_platform::Platform;
 use kx_platform::speech::Assets;
 use kx_platform::ui::UiError;
@@ -153,7 +153,7 @@ fn boot(platform: &Arc<WindowsPlatform>, flags: &Flags, run: &Run) -> Result<Boo
         link: platform.web_link(),
         folders: platform.folder_reveal(),
         speech: speech(platform, &dirs.exe_dir, flags),
-        cloud: platform.cloud_speech(),
+        cloud: cloud(platform, flags),
         models: platform.model_files(),
         session: platform.session_watch(),
         voice_shelf,
@@ -185,6 +185,20 @@ fn played(
 #[cfg(not(feature = "gate-voice"))]
 fn played(_: &WindowsPlatform, _: &Flags, _: &Path, _: &Assets) -> Option<Arc<dyn Speech>> {
     None
+}
+
+/// Cloud speech by the worker; the voice gate build playing a clip logs each cloud dictation's service.
+fn cloud(platform: &WindowsPlatform, flags: &Flags) -> Arc<dyn CloudSpeech> {
+    let cloud = platform.cloud_speech();
+    #[cfg(feature = "gate-voice")]
+    let cloud = if flags.clip.is_some() {
+        played::cloud(cloud)
+    } else {
+        cloud
+    };
+    #[cfg(not(feature = "gate-voice"))]
+    let _ = flags;
+    cloud
 }
 
 /// The mouse hook on `input`: the hand's, or in the gate-only build the gate tool's.
