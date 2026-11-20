@@ -4,6 +4,8 @@ use super::*;
 use kx_module_api::ports::{DeviceKind, Memory};
 use kx_module_api::{Redacted, Zeroizing};
 
+mod clips;
+
 /// The model's card need and the margin, in MB.
 const NEED: u32 = 960;
 const MARGIN: u32 = 512;

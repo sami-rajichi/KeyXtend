@@ -10,7 +10,7 @@ use super::{Check, Do, Key, Panel};
 use crate::counts::{Checked, Checks};
 use crate::device::{CardRules, told, verdict};
 use crate::flow::{Ready, Supply};
-use crate::models::{code_in, table};
+use crate::models::table;
 use crate::settings::DEVICE;
 use crate::view::Facts;
 
@@ -77,7 +77,7 @@ impl Panel {
         self.check(card, facts)
     }
 
-    /// Checks `card` for the model used for the language in front, on the first clip that model knows.
+    /// Checks `card` for the model used for the language in front, on that language's clip when the model knows it.
     fn check(&mut self, card: &CardId, facts: &Facts<'_>) -> Vec<Do> {
         let device = facts
             .devices
@@ -89,7 +89,7 @@ impl Panel {
         let (Some(device), Some(ready)) = (device, ready) else {
             return Vec::new();
         };
-        let Some((need_mb, clip, lang)) = self.clip_of(&ready, facts.clips) else {
+        let Some((need_mb, clip, lang)) = self.clip_of(&ready, facts) else {
             return Vec::new();
         };
         let mut model = ready.model;
@@ -105,29 +105,26 @@ impl Panel {
             model,
             card: use_,
             threads: settings.threads,
-            clip: clip.to_owned(),
+            clip: clip.clone(),
         };
         self.checking = Some((card.clone(), 0));
         let check = Check {
             card: card.clone(),
             driver: device.driver.clone(),
             print: ready.print,
-            clip: clip.to_owned(),
+            clip,
             ask,
         };
         vec![Do::Check(Box::new(check))]
     }
 
-    /// The card memory `ready` needs, the first of `clips` it knows and that clip's language as the model names it:
-    /// a row's own, else an other file's size and its facts' code.
-    fn clip_of<'c>(&self, ready: &Ready, clips: &'c [String]) -> Option<(u32, &'c str, String)> {
-        if let Some(row) = table().ok()?.printed(&ready.print) {
-            let (clip, code) = clips.iter().find_map(|c| Some((c, row.code(c)?)))?;
-            return Some((row.card_mb, clip.as_str(), code.to_owned()));
-        }
-        let known = self.folder.facts(&ready.print)?;
-        let (clip, code) = clips.iter().find_map(|c| Some((c, code_in(known, c)?)))?;
-        Some((ready.model.cpu_mb, clip.as_str(), code.to_owned()))
+    /// The card memory `ready` needs, a row's own else an other file's size, with the clip its check reads for the
+    /// language in front and that clip's language as the model names it (ADR-0052).
+    fn clip_of(&self, ready: &Ready, facts: &Facts<'_>) -> Option<(u32, String, String)> {
+        let (clip, code) = self.stock(facts).clip(&ready.print, facts.iso())?;
+        let row = table().ok().and_then(|t| t.printed(&ready.print));
+        let need_mb = row.map_or(ready.model.cpu_mb, |r| r.card_mb);
+        Some((need_mb, clip.to_owned(), code))
     }
 
     /// A card's warm-up moved on.

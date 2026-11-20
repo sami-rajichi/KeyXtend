@@ -9,9 +9,9 @@ use kx_module_api::ports::{
 use super::{File, Folder, Print};
 use crate::VoiceSettings;
 use crate::counts::Checks;
-use crate::device::{Seen, Serve, Why, serve};
+use crate::device::{Seen, Serve, Why, clip, serve};
 use crate::flow::{Lack, Ready, Supply};
-use crate::models::{Other, Pick, Row, table};
+use crate::models::{Other, Pick, Row, code_in, table};
 
 /// What serves a language: the settings, the folder, the devices as last read and the cards' checks.
 #[derive(Copy, Clone, Debug)]
@@ -24,6 +24,8 @@ pub struct Stock<'a> {
     pub devices: &'a [Device],
     /// Each card's check by driver and file.
     pub checks: &'a Checks,
+    /// The check clips' languages the speech port ships, in order.
+    pub clips: &'a [String],
 }
 
 impl Supply for Stock<'_> {
@@ -129,6 +131,18 @@ impl<'a> Stock<'a> {
             print,
             bytes: file.bytes,
         })
+    }
+
+    /// The clip a card's check of file `print` reads with `iso` in front, with the model's code for its language
+    /// (ADR-0052): by its row, else by its facts; `None` when the model knows no shipped clip.
+    #[must_use]
+    pub fn clip(&self, print: &Fingerprint, iso: &str) -> Option<(&'a str, String)> {
+        let owned = |(clip, code): (&'a str, &str)| (clip, code.to_owned());
+        if let Some(row) = table().ok()?.printed(print) {
+            return clip(iso, self.clips, |c| row.code(c)).map(owned);
+        }
+        let facts = self.folder.facts(print)?;
+        clip(iso, self.clips, |c| code_in(facts, c)).map(owned)
     }
 
     /// The card that runs a model needing `need_mb` on it, by `device`'s rule and each card's check of file `print`;

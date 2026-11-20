@@ -167,6 +167,7 @@ impl Panel {
             folder: &self.folder,
             devices: facts.devices,
             checks: facts.checks,
+            clips: facts.clips,
         }
     }
 

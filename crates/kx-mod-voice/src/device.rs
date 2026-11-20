@@ -1,5 +1,5 @@
 //! Where a model runs (ADR-0044 decisions 5, 7 and 8): the processor, a picked card once its check passed and it has
-//! room, or for Automatic the fastest checked card with room; and a card check's verdict from its times and texts.
+//! room, or for Automatic the fastest checked card with room; a check's clip (ADR-0052) and its verdict.
 
 pub mod told;
 
@@ -150,6 +150,19 @@ fn gain(check: Option<Verdict>) -> Option<Hundredths> {
         Some(Verdict::Passed { gain }) => Some(gain),
         _ => None,
     }
+}
+
+/// The clip a card's check reads with `front` in front (ADR-0052): `front`'s when the model knows it, else the first of
+/// `clips` it knows; with the model's own code for that clip's language, which `code` gives by ISO code.
+#[must_use]
+pub fn clip<'c, 'm>(
+    front: &str,
+    clips: &'c [String],
+    code: impl Fn(&str) -> Option<&'m str>,
+) -> Option<(&'c str, &'m str)> {
+    let known = |c: &'c String| Some((c.as_str(), code(c)?));
+    let own = clips.iter().filter(|c| *c == front).find_map(known);
+    own.or_else(|| clips.iter().find_map(known))
 }
 
 /// A card check's verdict: its text against the processor's first (`card_diff` words in the clip's language `lang`),

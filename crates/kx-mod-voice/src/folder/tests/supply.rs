@@ -49,13 +49,20 @@ fn supplied(
     checks: &Checks,
     iso: &str,
 ) -> Result<Ready, Lack> {
+    let clips = shipped();
     let stock = Stock {
         settings,
         folder,
         devices,
         checks,
+        clips: &clips,
     };
     stock.supply(iso)
+}
+
+/// The shipped clips' languages, in their order.
+fn shipped() -> Vec<String> {
+    ["en", "fr", "ar"].map(String::from).to_vec()
 }
 
 use crate::flow::Ready;
@@ -214,6 +221,7 @@ fn download_fetches_the_pick_else_the_default() {
             folder: &folder,
             devices: &[],
             checks: &checks,
+            clips: &[],
         };
         stock.wanted("en").map(|r| r.id.clone())
     };
