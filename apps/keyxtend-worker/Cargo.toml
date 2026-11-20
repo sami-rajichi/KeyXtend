@@ -38,6 +38,9 @@ sha2 = { version = "0.11.1", default-features = false }
 # the app, with `serde`, its own dependency.
 serde.workspace = true
 serde_json.workspace = true
+# Gemini's request writes the sound as Base64 (ADR-0047): `base64` 0.23.1, checked on 2026-11-20, the release
+# `keepass` already builds into this program with the same features, so no new crate.
+base64 = "0.23.1"
 
 # The voice job's microphone; other systems build without it until P15, as Linux needs ALSA's headers for it.
 [target.'cfg(windows)'.dependencies]

@@ -2,6 +2,8 @@
 //! up, sizes on each side of a chunk's edge, and any bytes reading back as themselves.
 
 use crate::net::base64::Base64;
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 use proptest::prelude::*;
 
 /// RFC 4648 section 10's test vectors.
@@ -14,34 +16,15 @@ const VECTORS: [(&str, &str); 7] = [
     ("fooba", "Zm9vYmE="),
     ("foobar", "Zm9vYmFy"),
 ];
-/// The alphabet a test reads Base64 back with, apart from the one under test.
-const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-/// What pads a last group.
-const PAD: u8 = b'=';
+/// The characters Base64 writes besides letters and digits, padding included.
+const MARKS: &[u8] = b"+/=";
 /// Bytes in a group, and the characters that write it.
 const GROUP_IN: usize = 3;
 const GROUP_OUT: usize = 4;
-/// Bits each character holds.
-const SEXTET: u32 = 6;
 
 /// `text` read back from Base64; `None` for text that is not.
 pub(super) fn decoded(text: &str) -> Option<Vec<u8>> {
-    let bytes = text.as_bytes();
-    if !bytes.len().is_multiple_of(GROUP_OUT) {
-        return None;
-    }
-    let mut out = Vec::new();
-    for group in bytes.chunks(GROUP_OUT) {
-        let pad = group.iter().rev().take_while(|&&b| b == PAD).count();
-        let mut word = 0u32;
-        for &b in group.get(..GROUP_OUT - pad.min(2))? {
-            let at = ALPHABET.iter().position(|&a| a == b)?;
-            word = word << SEXTET | u32::try_from(at).ok()?;
-        }
-        word <<= SEXTET * u32::try_from(pad).ok()?;
-        out.extend_from_slice(&word.to_be_bytes()[1..=GROUP_IN - pad]);
-    }
-    Some(out)
+    STANDARD.decode(text).ok()
 }
 
 /// `bytes` as the encoder writes them.
@@ -81,7 +64,7 @@ proptest! {
     ) {
         let text = encoded(&bytes);
         prop_assert_eq!(text.len(), len(bytes.len()));
-        prop_assert!(text.bytes().all(|b| ALPHABET.contains(&b) || b == PAD));
+        prop_assert!(text.bytes().all(|b| b.is_ascii_alphanumeric() || MARKS.contains(&b)));
         prop_assert_eq!(decoded(&text), Some(bytes));
     }
 }
