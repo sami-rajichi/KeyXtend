@@ -1,7 +1,7 @@
 # Security note: kx-platform-net
 
 - **Owner:** product owner
-- **Last review:** 2026-11-20 (P11 part 2 task 22: the `speech-net` job's POST added to this note from the code, the crate's README and the task 8 report; nothing new found); 2026-11-16 (P11 task 29 `kx-security-check`: a first address needs a host listed by name, while a redirect may reach the hosts under a listed `.` domain, for Hugging Face's regional CDN hosts; the task 13 follow-ups are done; final); 2026-11-14 (P11 task 13: the crate's first version, then a hard review against the code)
+- **Last review:** 2026-11-20 (T23 fix wave: every request pins Windows' sign-in off with the other `PINNED` options, and WinHTTP's own copies of a call's head and sound are accepted); 2026-11-20 (P11 part 2 task 22: the `speech-net` job's POST added from the code, the crate's README and the task 8 report); 2026-11-16 (P11 task 29 `kx-security-check`: a first address needs a host listed by name; final). Earlier reviews are in git.
 - **Status:** Reviewed
 - **Scope:** `crates/kx-platform-net`, used only by `keyxtend-worker`'s `fetch` and `speech-net` jobs (ADR-0004, ADR-0043 decision 8, ADR-0047 decision 6). It holds the `Http` port with its address, redirect and range rules, the one-request `Call` (GET or POST, `Field`, `Verb`, `SEND_CHUNK`) the speech job sends, the WinHTTP adapter (`WinHttp`) and a scripted fake behind the `fake` feature. The `keyxtend` app never depends on it; P11 task 22 adds it to tidy's `banned_network` list.
 
@@ -18,8 +18,8 @@
 | A redirect's `Location`, `Content-Length` and `Content-Range` | Public (server headers) | Memory, read into a buffer of at most `MAX_URL_BYTES + 1` UTF-16 units | N/A | One request |
 | Model file bytes | Public (untrusted data) | Memory, as the caller's buffer; the fetch job writes them to its `.part` file | TLS in transit | One read |
 | The user agent `AGENT` (`KeyXtend`) | Public | Sent with each request | TLS | N/A |
-| A call's header fields, a cloud key among them (speech-net job) | Secret | Memory: the caller's wiped buffer, then the head written as one block in a wiped buffer sized once (`win/post.rs`); `Call`'s `Debug` shows names and sizes only | TLS in transit | One call |
-| A call's body, a piece of sound (speech-net job) | Secret | The caller's wiped buffer, written in `SEND_CHUNK` pieces and never copied here | TLS in transit | One call |
+| A call's header fields, a cloud key among them (speech-net job) | Secret | Memory: the caller's wiped buffer, then the head written as one block in a wiped buffer sized once (`win/post.rs`), and WinHTTP's own copy (see Accepted); `Call`'s `Debug` shows names and sizes only | TLS in transit | One call |
+| A call's body, a piece of sound (speech-net job) | Secret | The caller's wiped buffer, written in `SEND_CHUNK` pieces and never copied here; WinHTTP and Schannel copy each chunk (see Accepted) | TLS in transit | One call |
 | A call's kept answer headers, such as a 429's `Retry-After` | Public (server headers) | Memory, read into a buffer no longer than the longest address | N/A | One call |
 
 No personal data is sent on a download: no cookies (`WINHTTP_DISABLE_COOKIES`), no credentials (the crate never calls `WinHttpSetCredentials`, and every request sets `WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH`, so Windows' own sign-in is never offered), no `Accept-Encoding`, and a user agent that is the product name only. A cloud call sends only the sound and key its caller hands it, to the one address its caller checked. `NetError` names a fixed reason and at most a status code, never an address or a server's words.
@@ -63,5 +63,6 @@ The host and the path go to WinHTTP apart (`WinHttpConnect`, `WinHttpOpenRequest
 - `Unlisted` reads as `FetchFault::Redirect` even for the table's first address; the table names its own hosts, so that only happens on a table mistake.
 - A `.hf.co` entry trusts every host under Hugging Face's hf.co for a redirect, as its firewall guide advises, since the CDN host differs by region and changes; TLS and the SHA-256 still guard the file. The host rule knows no public-suffix list, so the models table's test pins its `.` entries to `.hf.co` alone.
 - A stop cannot cut a WinHTTP wait already begun (the connection, a chunk's write or the answer's head); the call ends at its next step, within `stall_s` (P11 speech-net).
+- WinHTTP and Schannel copy the header block, a key among it, and each sound chunk into their own buffers, which we cannot wipe (`win/post.rs`). They go with the request's handles and the worker's job, and the worker runs as the user (P11 speech-net).
 - On a slow uplink each 64 KiB chunk must go within `stall_s`; a link slower than that reads as a stall, which the job tries again up to `net_tries`.
 - `get` is a provided method of `Http`, so an adapter could replace the rules; only this crate's `WinHttp` and `FakeHttp` implement it, and neither does.
