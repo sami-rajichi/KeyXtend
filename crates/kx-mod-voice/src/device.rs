@@ -165,27 +165,40 @@ pub fn clip<'c, 'm>(
     own.or_else(|| clips.iter().find_map(known))
 }
 
+/// A card check's verdict, with how many words apart its two texts were.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Judged {
+    /// How the check ended.
+    pub verdict: Verdict,
+    /// How many words the card's text and the processor's differ by, in the clip's language.
+    pub apart: u16,
+}
+
 /// A card check's verdict: its text against the processor's first (`card_diff` words in the clip's language `lang`),
 /// then its speed (`card_gain`).
 #[must_use]
-pub fn verdict(done: &CheckDone, lang: &str, rules: &CardRules) -> Verdict {
+pub fn verdict(done: &CheckDone, lang: &str, rules: &CardRules) -> Judged {
     let words = apart(done.card_text.expose(), done.cpu_text.expose(), lang);
+    let judged = |verdict| Judged {
+        verdict,
+        apart: words,
+    };
     if words > u16::from(rules.diff) {
-        return Verdict::Differs {
+        return judged(Verdict::Differs {
             words,
             allowed: rules.diff,
-        };
+        });
     }
     let per_one = u64::from(Hundredths::PER_ONE);
     let times = (u64::from(done.cpu_ms) * per_one).checked_div(u64::from(done.card_ms));
     let gain = Hundredths(times.map_or(u32::MAX, |t| u32::try_from(t).unwrap_or(u32::MAX)));
     if gain < rules.gain {
-        return Verdict::Slow {
+        return judged(Verdict::Slow {
             gain,
             need: rules.gain,
-        };
+        });
     }
-    Verdict::Passed { gain }
+    judged(Verdict::Passed { gain })
 }
 
 #[cfg(test)]

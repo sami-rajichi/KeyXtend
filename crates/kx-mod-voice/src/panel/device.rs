@@ -178,9 +178,9 @@ fn verdict_of(
 ) -> Option<Verdict> {
     match done {
         Ok(done) => {
-            let verdict = verdict(&done, clip, &rules);
-            told::checked(verdict, &done);
-            Some(verdict)
+            let judged = verdict(&done, clip, &rules);
+            told::checked(judged, &done);
+            Some(judged.verdict)
         }
         Err(error) => {
             told::failed(error);

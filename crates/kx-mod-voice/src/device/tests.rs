@@ -169,16 +169,30 @@ fn done(card_ms: u32, cpu_ms: u32, card_text: &str, cpu_text: &str) -> CheckDone
     }
 }
 
+/// The verdict and the words apart at `card_gain` 1.5 and `card_diff` `diff`.
+fn judged(done: &CheckDone, lang: &str, diff: u8) -> Judged {
+    let rules = CardRules {
+        gain: Hundredths(150),
+        diff,
+    };
+    verdict(done, lang, &rules)
+}
+
 /// The verdict at `card_gain` 1.5 and `card_diff` `diff`.
 fn judge(done: &CheckDone, lang: &str, diff: u8) -> Verdict {
-    verdict(
-        done,
-        lang,
-        &CardRules {
-            gain: Hundredths(150),
-            diff,
-        },
-    )
+    judged(done, lang, diff).verdict
+}
+
+#[test]
+fn a_verdict_tells_how_many_words_apart_the_texts_were_whatever_it_is() {
+    let set = "one two three four";
+    let cases = [(set, 0), ("one two tree four", 1), ("one too tree four", 2)];
+    for (card, apart) in cases {
+        let got = judged(&done(100, 2500, card, set), "en", 1);
+        assert_eq!(got.apart, apart, "{card}");
+    }
+    let slow = judged(&done(2000, 2500, "one two tree four", set), "en", 1);
+    assert!(matches!(slow.verdict, Verdict::Slow { .. }) && slow.apart == 1);
 }
 
 #[test]

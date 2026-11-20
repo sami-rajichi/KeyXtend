@@ -3,7 +3,7 @@
 
 use kx_module_api::ports::{CheckDone, SpeechError, Verdict};
 
-use super::Why;
+use super::{Judged, Why};
 
 /// The field naming why the processor serves.
 pub const WHY: &str = "why";
@@ -17,6 +17,8 @@ pub const FREE_MB: &str = "free_mb";
 pub const CARD_MS: &str = "card_ms";
 /// The field holding the processor's time on the check's clip, in ms.
 pub const CPU_MS: &str = "cpu_ms";
+/// The field holding how many words apart the card's text and the processor's were, a number.
+pub const APART: &str = "apart";
 /// The field naming a check's error.
 pub const ERROR: &str = "error";
 /// The line as a dictation runs on the processor although a card is picked.
@@ -58,11 +60,13 @@ pub fn cpu(why: Why) {
     }
 }
 
-/// Logs a check that ended with `verdict`, with each device's time on the clip.
-pub fn checked(verdict: Verdict, done: &CheckDone) {
-    let (verdict, card_ms, cpu_ms) = (verdict_kind(verdict), done.card_ms, done.cpu_ms);
+/// Logs a check that ended as `judged`: its verdict's kind, the words apart and each device's time on the clip.
+pub fn checked(judged: Judged, done: &CheckDone) {
+    let (verdict, apart) = (verdict_kind(judged.verdict), judged.apart);
+    let (card_ms, cpu_ms) = (done.card_ms, done.cpu_ms);
     tracing::debug!(
         { VERDICT } = verdict,
+        { APART } = apart,
         { CARD_MS } = card_ms,
         { CPU_MS } = cpu_ms,
         "{CHECK_ENDED}"

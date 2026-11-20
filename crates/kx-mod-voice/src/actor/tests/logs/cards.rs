@@ -7,16 +7,15 @@ use kx_platform_fake::FileCall;
 use super::super::Msg;
 use super::super::auto::kept;
 use super::super::cards::{
-    BOTH, CARD, arabic, arabic_layout, build, build_picked, card_id, devices, differs, passed,
-    served,
+    BOTH, CARD, arabic, arabic_layout, build, build_picked, devices, differs, passed, served,
 };
 use super::super::rig::{Rig, english_layout};
 use super::super::taps::{held, in_place, release, waiting};
 use super::lines_of;
-use crate::device::Why;
 use crate::device::told::{
-    self, CARD_MS, CHECK_ENDED, CPU_MS, CPU_SERVES, ERROR, FREE_MB, NEED_MB, VERDICT, WHY,
+    self, APART, CARD_MS, CHECK_ENDED, CPU_MS, CPU_SERVES, ERROR, FREE_MB, NEED_MB, VERDICT, WHY,
 };
+use crate::device::{Judged, Why};
 
 /// A card the rig's devices do not hold.
 const GONE: &str = "Vulkan9";
@@ -102,16 +101,50 @@ fn edge_3_arabic_written_on_the_processor_after_its_clip_differs_says_why() {
 }
 
 #[test]
-fn a_card_checks_end_logs_its_verdict_and_times_or_its_error_kind() {
-    let lines = lines_of(|| {
-        let mut rig = build(CARD, Some(devices()), Ok(passed()), Vec::new());
-        rig.listen();
-        assert_eq!(served(&rig), Some(card_id()));
-    });
+fn every_verdict_a_checks_texts_give_logs_the_words_apart_as_a_number() {
     let done = passed();
     let times = number(CARD_MS, done.card_ms) + &number(CPU_MS, done.cpu_ms);
-    let want = text(VERDICT, "passed") + &times;
-    assert_eq!(fields(&lines, CHECK_ENDED), [want]);
+    let slow = Verdict::Slow {
+        gain: Hundredths(120),
+        need: Hundredths(150),
+    };
+    let differs = Verdict::Differs {
+        words: 4,
+        allowed: 1,
+    };
+    let pass = Verdict::Passed {
+        gain: Hundredths(300),
+    };
+    let ends = [
+        (pass, 0, "passed"),
+        (slow, 1, "slow"),
+        (differs, 4, "differs"),
+    ];
+    let lines = lines_of(|| {
+        for (verdict, apart, _) in ends {
+            told::checked(Judged { verdict, apart }, &done);
+        }
+    });
+    let line = |(_, apart, kind): &(Verdict, u16, &str)| {
+        text(VERDICT, kind) + &number(APART, u32::from(*apart)) + &times
+    };
+    let want: Vec<String> = ends.iter().map(line).collect();
+    assert_eq!(fields(&lines, CHECK_ENDED), want);
+}
+
+#[test]
+fn a_card_checks_end_logs_its_verdict_words_apart_and_times_or_its_error_kind() {
+    let done = passed();
+    let times = number(CARD_MS, done.card_ms) + &number(CPU_MS, done.cpu_ms);
+    for (check, verdict, apart) in [(passed(), "passed", 0), (differs(), "differs", 2)] {
+        let lines = lines_of(|| {
+            let mut rig = build(CARD, Some(devices()), Ok(check), Vec::new());
+            rig.listen();
+            assert_eq!(served(&rig).is_some(), verdict == "passed");
+        });
+        let want = text(VERDICT, verdict) + &number(APART, apart) + &times;
+        assert_eq!(fields(&lines, CHECK_ENDED), [want], "{verdict}");
+    }
     for error in [SpeechError::Timeout, SpeechError::CardRoom] {
         let lines = lines_of(|| drop(build(CARD, Some(devices()), Err(error), Vec::new())));
         assert_eq!(fields(&lines, CHECK_ENDED), [text(ERROR, error.kind())]);
