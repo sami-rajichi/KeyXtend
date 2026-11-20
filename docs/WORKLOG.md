@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-20 17:30 — P11: the card check reads the language in front
+A graphics card is now checked on the clip of the language being dictated, the first time it serves that language, so a card that is wrong only in Arabic falls back to the processor. Each result counts for its card, driver, model and language alone. The results file keeps the form older builds read, with the languages in a file beside it, and an older build always lands on a failure if any language failed. ADR-0052 records this in place of ADR-0044's seventh decision.
+
 ## 2026-11-20 14:40 — P11: G22's cloud line and timing
 The automatic voice test can now send its three public clips to every offered cloud service with a key on this PC. It borrows the sealed keys from the daily data folder, never opens or shows them, and deletes its copy at the end. Each passing language now prints how long each step takes, and `--device` picks the card without editing the tracked settings. The test refuses a card run without the card part and a reference sentence the voice credits do not give, and it no longer mistakes the bar's shadow for the bar.
 
