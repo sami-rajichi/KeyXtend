@@ -5,6 +5,7 @@ mod cloud;
 mod compare;
 mod device;
 mod history;
+mod home;
 mod lines;
 mod models;
 mod remote;
@@ -14,15 +15,13 @@ use std::mem;
 
 use kx_module_api::ports::{
     BarHint, Device, DeviceKind, Drive, FolderList, LayoutChanged, LocalTime, OptionRow,
-    OptionValue, Pages, PanelButton, ServiceMark, ServiceName, VoiceHome, VoiceLang, VoicePanel,
-    VoiceSheet, VoiceTab,
+    OptionValue, Pages, PanelButton, ServiceName, VoiceLang, VoicePanel, VoiceSheet, VoiceTab,
 };
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
-use crate::cloud::{Choice, Cloud, Offered, cloud_pick};
+use crate::cloud::{Choice, Cloud, cloud_pick};
 use crate::counts::{Checks, Scores};
-use crate::flow::Supply;
 use crate::history::History;
 use crate::panel::{Key, Page, Panel, options};
 use crate::services::{self, Service};
@@ -100,7 +99,7 @@ impl Panel {
             Page::Home => {
                 let list = VoiceTab::ALL.into_iter().map(|t| (Key::Plain, t)).collect();
                 let (tabs, pages) = self.paged(list);
-                (VoiceSheet::Home(home(self, facts, tabs)), pages)
+                (VoiceSheet::Home(home::home(self, facts, tabs)), pages)
             }
             Page::Tab(VoiceTab::Cloud) => self.cloud_sheet(facts),
             Page::Card => self.card_sheet(facts),
@@ -225,37 +224,6 @@ impl Panel {
         let (rows, pages) = self.paged(list.collect());
         (VoiceSheet::Folders(FolderList { folder, rows }), pages)
     }
-}
-
-/// The home list's values for the language in front, with `tabs`, the pages its shown page lists; a cloud pick names
-/// its model, and the device stays the one picked.
-fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> VoiceHome {
-    let cloud = facts.cloud_choice();
-    let ready = (cloud.is_none())
-        .then(|| panel.stock(facts).supply(facts.iso()).ok())
-        .flatten();
-    let named = cloud.map(|c| Redacted::new(Offered::from(&c).name().to_owned()));
-    let compared = facts.scores.get(facts.iso()).map(|b| b.day);
-    VoiceHome {
-        model: named.or_else(|| ready.as_ref().map(|r| shown_name(&r.name))),
-        device: device::label(facts, ready.as_ref()),
-        compared,
-        history: u32::try_from(facts.history.len()).unwrap_or(u32::MAX),
-        changed: options::changed(facts.settings),
-        cloud: cloud_home(facts),
-        tabs,
-    }
-}
-
-/// The home's Cloud value: how many services are ready while cloud is on; `None` while off.
-fn cloud_home(facts: &Facts<'_>) -> Option<u16> {
-    let cloud = facts.cloud.filter(|c| c.on(facts.settings))?;
-    let s = facts.settings;
-    let ready = cloud.offered(s).into_iter().filter(|row| {
-        let key = facts.keyed.contains(&row.id);
-        cloud.mark(s, row, key) == ServiceMark::Ready
-    });
-    Some(short(ready.count()))
 }
 
 /// A model's shown name: its row's name, else its file's name; a cloud pick's listed model name, else its typed id.
