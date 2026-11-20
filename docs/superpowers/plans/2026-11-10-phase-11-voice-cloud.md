@@ -10,7 +10,7 @@
 - **Offered rows:** Groq, Lemonfox, Custom, OpenRouter, ElevenLabs, Gemini and AssemblyAI. OpenAI, Mistral, Together and DeepInfra are hidden (`offered = false`, code kept, ADR-0050).
 - **Dropped (owner, 2026-11-19):** Azure, classic and MAI, before its adapter was written; MAI-Transcribe-2 is reached through OpenRouter. OVHcloud was dropped on 2026-11-17.
 - **Four request shapes** (ADR-0050, ADR-0051): the upload form, ElevenLabs, Gemini, and AssemblyAI Sync. AssemblyAI's classic upload-and-poll API stays a non-goal.
-- **Gemini** is offered like ElevenLabs and AssemblyAI, marked untested until a real key checks it (the owner's ship-only-tested rule).
+- **Untested:** every offered row ships marked untested until the owner's hands-on check (task 24), which hides any row that fails (ADR-0050). Gemini is offered on the same terms.
 - **The card check (ADR-0052)** reads the clip of the language in front and keeps each result per card, driver, model and language.
 - The design notes below keep the plan's text; the services table's comments and `ARCHITECTURE.md` hold what shipped.
 
@@ -70,7 +70,7 @@
 21. **Spike removal.** *Files:* what is left of `spike/worker/`, `spike/Cargo.toml`, `spike/spike.toml`, `docs/spike-move-map.md`. *Test first:* the spike's remaining crate and the gates still build. *Verify:* `cargo test --manifest-path spike/Cargo.toml`; `cargo build -p kx-gates`.
 22. **Docs.** `docs/architecture/*`, `docs/security/{kx-mod-voice,keyxtend-worker,kx-platform,kx-platform-net,keyxtend}.md`, `docs/items/{P11,P13}.md`, spec §8.2 "as built", and a line in `.claude/skills/kx-release/SKILL.md`: read every service's facts again at each release.
 23. **Review and security.** `kx-review` on every changed file, `kx-security-check`, `/code-review` and `/security-review`; fix every finding.
-24. **Manual check, done.** First read every service's own pages again, tell the owner which can be tested without paying and whether a card is needed, and ask which keys they will make. Then `kx-windows-manual-test` with the owner's own keys; each row is corrected from what the real keys show, or marked untested. Gemini's row is offered only if its six dictations pass; else the reason goes to `docs/items/P11.md`. Then `kx-module-done` and the records.
+24. **Manual check, done.** First read every service's own pages again, tell the owner which can be tested without paying and whether a card is needed, and ask which keys they will make. Then `kx-windows-manual-test` with the owner's own keys; each row is corrected from what the real keys show, or marked untested. Gemini's row is offered only if its six dictations pass; else the reason goes to `docs/items/P11.md`. Then `kx-module-done` and the records. As built (ADR-0050): every offered row, Gemini included, ships untested, and the check hides any row that fails.
 
 ## Edge cases
 1. Nothing leaves before Stop; Cancel sends nothing; Cancel while uploading drops the requests.

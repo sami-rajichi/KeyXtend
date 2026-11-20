@@ -8,7 +8,7 @@ Decided with the owner on 2026-11-09 and 2026-11-10, from two research rounds re
 - **Dropped:** OVHcloud (owner, 2026-11-17) and Azure, classic and MAI (owner, 2026-11-19). MAI-Transcribe-2 is reached through OpenRouter.
 - **Four request shapes, not six** (ADR-0050, ADR-0051): the upload form (OpenRouter and DeepInfra took it too), ElevenLabs' form, Gemini's single JSON request, and AssemblyAI Sync. AssemblyAI's classic upload-and-poll API stays a non-goal.
 - **Facts:** the rows carry the facts read on 2026-11-17 (AssemblyAI's on 2026-11-19), in `crates/kx-mod-voice/services.toml` and `services-own.toml`. The table below stays as the design day's record.
-- **Gemini** is offered like ElevenLabs and AssemblyAI, marked untested on its card until a real key checks it (the owner's ship-only-tested rule), instead of held back until six dictations pass.
+- **Untested:** every offered row ships marked untested on its card until the owner's hands-on check (task 24), which hides any row that fails (ADR-0050). Gemini is offered on the same terms, not held back until six dictations pass.
 - **Typed addresses:** the table keeps a rule that a typed address must sit under the row's domain, but no shipped row uses it. Custom is the only typed row and takes any HTTPS host name.
 - **Also in part 2:** Paste at once (ADR-0048), the panel's typed lines (ADR-0049), the Preparing state, the gear ending a dictation, the Models page's Local | Cloud switch, and the card check by language (ADR-0052).
 
@@ -144,7 +144,7 @@ The research could not settle these. The builder makes no account, so each waits
 - OpenRouter: whether regional codes pass through.
 - Mistral: whether the plan's credit covers speech. ElevenLabs: how its plan allowance and its API price fit together.
 - DeepInfra: its sign-up credit, and its OpenAI-style address.
-- **As built (2026-11-20):** the OVHcloud and MAI items are void. OpenAI, Mistral, Together and DeepInfra are hidden, and ElevenLabs, Gemini and AssemblyAI ship marked untested until the owner's hands-on check.
+- **As built (2026-11-20):** the OVHcloud and MAI items are void. OpenAI, Mistral, Together and DeepInfra are hidden, and every offered row ships marked untested until the owner's hands-on check, which hides any row that fails.
 
 ## Build order
 
