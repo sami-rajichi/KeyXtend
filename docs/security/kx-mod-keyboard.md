@@ -1,7 +1,7 @@
 # Security note: kx-mod-keyboard
 
 - **Owner:** product owner
-- **Last review:** 2026-11-16 (P11 task 29 `kx-security-check`: the Dictation key and dictated texts unchanged, the keyboard still the only typist; final); 2026-11-16 (P11 task 28: the Dictation key and dictated texts behind `Voice`, against the code); 2026-11-08 (P10 Task 16: the selection chips' edit route, against the code); 2026-11-06 (P9 Task 27: the aimed line told to prediction, and picks for it); 2026-11-05 (P9 `kx-security-check`: the gaps after a fill's app check, and the gate's pin; P9 Task 23: a fill's data and inputs, the route, the app check and the late limit); 2026-10-31 (P8 security check: the gated `ClipPanel` and a paste asked after the stop; P8 task 15: the clipboard key, the panel keys, paste on request and the history chord; P7 security review: hidden marks in picked words, and what guards the erase; the paced erase, stopped by a click away; P7 DoD review: stopped by a board key too)
+- **Last review:** 2026-11-20 (P11 part 2, task 23: the `Voice` gate's panel line, `VoiceLine`, `VoiceLineKey` and `VoiceClose`, and a letter for a voice line, ADR-0049, against the code); 2026-11-16 (P11 task 29 `kx-security-check`: the Dictation key and dictated texts unchanged, the keyboard still the only typist; final); 2026-11-16 (P11 task 28: the Dictation key and dictated texts behind `Voice`, against the code). Older reviews are in git history.
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-keyboard`, which runs inside the uiAccess `keyxtend` process from P3 on.
 

@@ -1,7 +1,7 @@
 # Security note: kx-mod-vault
 
 - **Owner:** product owner
-- **Last review:** 2026-11-06 (P9 Task 27: the search line's text reaches prediction's memory while aimed at); 2026-11-05 (P9 `kx-security-check`: the coarse gate, plain copies, a fill's wrong-window gaps, the box's strength, hostile files and leaks; P9 Task 23: the capabilities, data, threats and residuals as built)
+- **Last review:** 2026-11-20 (P11 part 2, task 23: a `ClipTaken` counts only for its own asker and round (`ClipTaken::is_for`), so voice typing's key Paste never lands in a field, against the code); 2026-11-06 (P9 Task 27: the search line's text reaches prediction's memory while aimed at); 2026-11-05 (P9 `kx-security-check`: the coarse gate, plain copies, a fill's wrong-window gaps, the box's strength, hostile files and leaks; P9 Task 23: the capabilities, data, threats and residuals as built)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-vault`: the manifest, the settings, the tables, the entry rules, the notebook and its store, search, order and Make one, the panel, the fills, Paste, the backup (setup, writes, memory checks, Bring back, a box from another computer) and the KeePass import. It runs inside the uiAccess `keyxtend` process and reaches the OS only through its ports (ADR-0038, ADR-0039).
 

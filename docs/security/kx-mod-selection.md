@@ -1,7 +1,7 @@
 # Security note: kx-mod-selection
 
 - **Owner:** product owner
-- **Last review:** 2026-11-08 (P10 Task 10 security check, its first fix round and the Task 17 fix round: the actor, the module and Translate's consent, against the code)
+- **Last review:** 2026-11-20 (P11 part 2, task 23: the `OpenLink` row names the voice module, which holds it for a cloud card's link, against its manifest; ADR-0047); 2026-11-08 (P10 Task 10 security check, its first fix round and the Task 17 fix round: the actor, the module and Translate's consent, against the code)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-selection`: the manifest, the pure rules (`chips`, `strip`, `link`, `settings`), the actor on its `kx-selection` thread, and the short `kx-selection-open` thread each Translate opens. It runs inside the uiAccess `keyxtend` process and reaches the OS only through the `SelectionWatch` and `WebLink` ports (ADR-0041).
 
