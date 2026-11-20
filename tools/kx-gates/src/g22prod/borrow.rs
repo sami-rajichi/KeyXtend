@@ -27,14 +27,17 @@ pub(super) fn has(daily: &Path, id: &str) -> bool {
     blob(daily, id).is_some_and(|b| b.is_file()) && key_file(daily).is_file()
 }
 
-/// Copies service `id`'s sealed key and the data key from `daily` into the copy's data folder `data`; an error names
-/// the fault's kind, never a path.
+/// Copies service `id`'s sealed key and the data key from `daily` into the copy's data folder `data`, only when both
+/// are there; an error names the fault's kind, never a path.
 pub(super) fn copy(daily: &Path, data: &Path, id: &str) -> Result<(), String> {
     let (Some(from), Some(to)) = (blob(daily, id), blob(data, id)) else {
         return Err("a borrowed key's service names no blob".into());
     };
     if same(daily, data) {
         return Err("g22_cloud.daily_dir is the copy's own data folder".into());
+    }
+    if !has(daily, id) {
+        return Err("a borrowed key or its data key is missing, so nothing was copied".into());
     }
     one(&key_file(daily), &key_file(data))?;
     one(&from, &to)

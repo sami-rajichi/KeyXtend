@@ -5,8 +5,8 @@
 use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 
 use super::*;
-use crate::actor::offer::piece_s;
 use crate::services;
+use crate::services::piece_s;
 
 /// `ElevenLabs` picked for English with Scribe v3, switched on with its terms confirmed, and its key set.
 pub(super) fn eleven(fake: &Fakes, host: &mut FakeHost) {

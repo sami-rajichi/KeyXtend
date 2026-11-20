@@ -11,6 +11,7 @@ mod row;
 
 pub use address::{Address, KeyTest};
 pub use facts::{FactError, Facts};
+pub use limits::piece_s;
 pub use model::{Model, ModelError};
 pub use row::{Service, ServiceError};
 

@@ -1,16 +1,14 @@
 //! The device or service that wrote each language's text, read back from the copy's log by id, never any text.
 
-use kx_module_api::ports::{CardId, DevicePick};
+use kx_ipc::gate::{DEVICE, FAULT, SERVICE};
+use kx_mod_voice::keys::KEY_UNREAD;
+use kx_module_api::ports::{CardId, CloudFault, DevicePick};
 use serde_json::{Value, json};
 
-use super::super::wrote::{self, DEVICE, FAULT, SERVICE, Writer};
+use super::super::wrote::{self, Writer};
 use crate::budget::stamp_us;
 use crate::config::load;
 
-/// The voice gate build's speech, which logs each written dictation's device.
-const APP_TOLD: &str = include_str!("../../../../../apps/keyxtend/src/played/told.rs");
-/// The voice gate build's cloud speech, which logs each cloud dictation's service.
-const APP_SENT: &str = include_str!("../../../../../apps/keyxtend/src/played/sent.rs");
 /// Two service ids as the table writes them.
 const GROQ: &str = "groq";
 const CUSTOM: &str = "custom";
@@ -146,12 +144,6 @@ fn a_languages_fields_are_the_writers_id_and_numbers_never_text() {
 }
 
 #[test]
-fn the_device_and_service_fields_are_the_ones_the_app_logs() {
-    assert!(APP_TOLD.contains(&format!("{DEVICE} = %")), "the device");
-    assert!(APP_SENT.contains(&format!("{SERVICE} = %")), "the service");
-}
-
-#[test]
 fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
     let failed = load().expect("the settings load").g22_cloud.failed_line;
     let log = [
@@ -164,8 +156,20 @@ fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:01.000000Z").expect("a stamp");
     assert_eq!(wrote::faults(&log, since, &failed), ["Key"]);
-    assert!(
-        APP_SENT.contains(&format!("{FAULT} = %")),
-        "the app's field"
-    );
+}
+
+#[test]
+fn a_key_that_could_not_be_read_before_the_send_gives_the_key_kind_and_nothing_of_its_line() {
+    let failed = load().expect("the settings load").g22_cloud.failed_line;
+    let path = r"C:\daily\voice\keys\groq.sealed";
+    let log = [
+        logged(1, &format!("{KEY_UNREAD} error={path}")),
+        logged(2, &format!("{failed} {FAULT}=Rate {SERVICE}={GROQ}")),
+        logged(3, "a cloud key went error=Key"),
+    ]
+    .join("\n");
+    let since = stamp_us("2026-11-16T10:00:00.000000Z").expect("a stamp");
+    let got = wrote::faults(&log, since, &failed);
+    assert_eq!(got, [CloudFault::Key.kind(), CloudFault::Rate.kind()]);
+    assert!(!got.concat().contains("daily"), "never its value: {got:?}");
 }

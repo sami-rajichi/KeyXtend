@@ -2,7 +2,7 @@ use super::*;
 use crate::played::stage::{INDEX, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE};
 use crate::played::{cloud, logged};
 use kx_mod_voice::VoiceSettings;
-use kx_mod_voice::services::Service;
+use kx_mod_voice::services::{Model, Service};
 use kx_module_api::ports::CloudTest;
 use kx_module_api::{Redacted, Zeroizing};
 use kx_platform_fake::{CloudAnswer, FakeCloud};
@@ -12,6 +12,8 @@ use std::time::Duration;
 /// The rows the tests send to: one at its own address, and Custom at a typed one.
 const GROQ: &str = "groq";
 const CUSTOM: &str = "custom";
+/// A row kept in the table but not offered, whose address Custom may still be pointed at.
+const HIDDEN: &str = "openai";
 /// A typed Custom address on a test host of its own, and a typed model id.
 const TYPED: &str = "https://stt.example.test/v1/audio/transcriptions";
 const TYPED_MODEL: &str = "whisper-test";
@@ -32,26 +34,40 @@ fn key() -> kx_module_api::Secret {
     Redacted::new(Zeroizing::new(KEY.to_owned()))
 }
 
-/// An English ask to `row` at its own address, or at `typed`, with one piece of `PIECE_MS`.
-fn ask(row: &Service, typed: &str) -> CloudAsk {
+/// An English ask from `row` at its own address or at `typed`, with one piece of `PIECE_MS`, as the actor builds one
+/// for its model `listed`, or for the typed model when none, with the keep-nothing switch at `keep`.
+fn ask_as(row: &Service, typed: &str, listed: Option<&Model>, keep: bool) -> CloudAsk {
     let s = VoiceSettings::from_defaults().unwrap();
-    let listed = row.models.first();
-    let model = listed.map_or(TYPED_MODEL, |m| m.id.as_str());
+    let model = listed.map_or(Some(TYPED_MODEL), |m| (!m.unnamed).then_some(m.id.as_str()));
     let lang = listed.and_then(|m| m.code("en")).unwrap_or("en");
     let per_s = SOUND_HZ * SAMPLE_BYTES;
     let bytes = per_s * usize::try_from(PIECE_MS / MS_PER_S).unwrap();
     CloudAsk {
         job: s.job(),
-        shape: row.shape_for(listed, false),
+        shape: row.shape_for(listed, keep),
         url: row.url(typed).unwrap(),
         header: row.header.clone(),
         key: key(),
-        model: Some(Redacted::new(model.to_owned())),
+        model: model.map(|m| Redacted::new(m.to_owned())),
         lang: lang.to_owned(),
         limits: row.limits,
         wait_s: s.net_wait_s,
         tries: s.net_tries,
         pieces: vec![Redacted::new(Zeroizing::new(vec![0; bytes]))],
+    }
+}
+
+/// An ask from `row` with its first model, or the typed one, at its own address or at `typed`.
+fn ask(row: &Service, typed: &str) -> CloudAsk {
+    ask_as(row, typed, row.models.first(), false)
+}
+
+/// Each row's address: its own, or `TYPED` for a typed row.
+fn address(row: &Service) -> &'static str {
+    if matches!(row.address, Address::Typed { .. }) {
+        TYPED
+    } else {
+        ""
     }
 }
 
@@ -103,15 +119,30 @@ fn a_failed_cloud_dictation_names_its_service_and_its_faults_kind_alone() {
 }
 
 #[test]
-fn each_fixed_address_names_its_own_row_and_a_typed_one_the_typed_row() {
-    let rows = table().unwrap().rows();
-    for r in rows
-        .iter()
-        .filter(|r| matches!(r.address, Address::Fixed(_)))
-    {
-        assert_eq!(service_of(&r.url("").unwrap()), Some(r.id.as_str()));
+fn each_rows_own_ask_names_that_row_with_any_of_its_models_and_either_switch() {
+    for r in table().unwrap().rows() {
+        let models: Vec<Option<&Model>> = match r.models.as_slice() {
+            [] => vec![None],
+            listed => listed.iter().map(Some).collect(),
+        };
+        for (model, keep) in models.into_iter().flat_map(|m| [(m, false), (m, true)]) {
+            let a = ask_as(r, address(r), model, keep);
+            assert_eq!(service_of(&a), Some(r.id.as_str()), "{} {keep}", r.id);
+        }
     }
-    assert_eq!(service_of(&row(CUSTOM).url(TYPED).unwrap()), Some(CUSTOM));
+}
+
+#[test]
+fn custom_at_a_listed_rows_address_is_named_custom_even_a_hidden_rows() {
+    assert!(!row(HIDDEN).offered, "{HIDDEN} is a hidden row");
+    let custom = row(CUSTOM);
+    let fixed = table().unwrap().rows().iter();
+    for r in fixed.filter(|r| matches!(r.address, Address::Fixed(_))) {
+        let mut a = ask_as(custom, r.url("").unwrap().expose(), None, false);
+        assert_eq!(service_of(&a), Some(CUSTOM), "at {}'s address", r.id);
+        a.model = r.models.first().map(|m| Redacted::new(m.id.clone()));
+        assert_eq!(service_of(&a), Some(CUSTOM), "with {}'s model", r.id);
+    }
 }
 
 #[test]

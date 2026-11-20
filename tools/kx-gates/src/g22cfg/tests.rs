@@ -119,7 +119,7 @@ fn the_timing_lines_are_the_apps_and_the_voice_modules_at_the_level_the_run_keep
     let g = shipped().g22_product;
     let level = G22Product::LINES_LEVEL;
     assert!(APP_STAGE.contains(&format!("\"{}\"", g.stage_line)));
-    assert!(APP_STAGE.contains(&format!("tracing::{level}!(stage")));
+    assert!(APP_STAGE.contains(&format!("tracing::{level}!({{ STAGE }}")));
     let typed = format!("tracing::{level}!(\"{}\")", g.typed_line);
     assert!(MOD_TYPING.contains(&typed), "{typed}");
     let mut trace = g;

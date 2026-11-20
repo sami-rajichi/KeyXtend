@@ -11,6 +11,8 @@ use thiserror::Error;
 
 /// The shelf's folder of keys, one blob per service, named by its id.
 pub const KEYS: &str = "keys";
+/// The warning logged when a key could not be read before an upload; it holds the error's kind, never the key.
+pub const KEY_UNREAD: &str = "a cloud key could not be read";
 
 /// Why a key was not read, set or removed; no variant holds the key.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]

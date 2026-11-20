@@ -3,7 +3,9 @@
 //! in one request under its 20 MB cap [N6].
 
 use super::*;
-use kx_module_api::ports::{MAX_FIELD_VALUE, MAX_FIXED, MB, SAMPLE_BYTES, SOUND_HZ, TAG_LEN};
+use kx_module_api::ports::{
+    MAX_FIELD_VALUE, MAX_FIXED, MB, SAMPLE_BYTES, SOUND_HZ, SpeechAsk, TAG_LEN,
+};
 
 /// A plain PCM WAV header: the RIFF, `fmt ` and `data` chunks' heads.
 const WAV_HEAD: u64 = 44;
@@ -116,4 +118,18 @@ fn a_base64_shape_grows_its_piece_by_a_third_against_the_cap() {
 fn a_cap_in_seconds_bounds_a_pieces_seconds() {
     let short = own_edits(&[("cap_s = 3600", "cap_s = 300")]);
     assert!(roomless(&short), "420 s past a 300 s cap");
+}
+
+#[test]
+fn a_rows_longest_piece_is_whole_seconds_its_caps_take_within_the_runs_range() {
+    let per_s = SOUND_HZ * SAMPLE_BYTES;
+    for row in table().unwrap().rows() {
+        let secs = piece_s(&row.limits);
+        assert!(SpeechAsk::PIECE_S.contains(&secs), "{}", row.id);
+        assert!(
+            usize::from(secs) * per_s <= row.limits.piece_bytes(),
+            "{}",
+            row.id
+        );
+    }
 }

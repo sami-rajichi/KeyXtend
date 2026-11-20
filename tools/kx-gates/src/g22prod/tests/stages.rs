@@ -1,13 +1,10 @@
 //! Where a passing language's time went, read from the copy's stage and typed lines by their stamps, numbers only.
 
-use super::super::stages::{
-    self, LOAD, Lines, OPEN, PIECE, Piece, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS, Timing,
-};
+use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS};
+
+use super::super::stages::{self, Lines, Piece, Timing};
 use crate::budget::stamp_us;
 use crate::config::load;
-
-/// The voice gate build's stage lines.
-const APP_STAGE: &str = include_str!("../../../../../apps/keyxtend/src/played/stage.rs");
 
 /// The shipped stage and typed lines.
 fn names() -> (String, String) {
@@ -156,17 +153,4 @@ fn only_keys(v: &serde_json::Value) -> bool {
         serde_json::Value::Object(o) => o.values().all(only_keys),
         _ => true,
     }
-}
-
-#[test]
-fn the_stage_names_and_fields_are_the_apps() {
-    for name in [
-        START, OPEN, STOP, LOAD, PIECE, SEND, STAGE, SOUND_MS, TOOK_MS,
-    ] {
-        assert!(APP_STAGE.contains(&format!("\"{name}\"")), "{name}");
-    }
-    for field in [SOUND_MS, TOOK_MS] {
-        assert!(APP_STAGE.contains(&format!(" {field}, \"")), "{field}");
-    }
-    assert!(APP_STAGE.contains(&format!("{STAGE} = %")), "{STAGE}");
 }

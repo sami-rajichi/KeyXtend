@@ -1,22 +1,12 @@
 //! Where a passing language's time went, from the copy's log: the gate build's stage lines and the voice module's
 //! typed line, by their stamps, give start to microphone open, the model's load, each piece and Stop to text, in ms.
 
+use kx_ipc::gate::{LOAD, OPEN, PIECE, SEND, SOUND_MS, STAGE, START, STOP, TOOK_MS};
 use kx_module_api::US_PER_MS;
 use serde::Serialize;
 
 use crate::budget::stamp_us;
 use crate::hooklog::{read_since, value_of};
-
-/// The fields and stage names the gate build writes (`apps/keyxtend/src/played/stage.rs`); a test pins each.
-pub(super) const STAGE: &str = "stage";
-pub(super) const SOUND_MS: &str = "sound_ms";
-pub(super) const TOOK_MS: &str = "took_ms";
-pub(super) const START: &str = "start";
-pub(super) const OPEN: &str = "open";
-pub(super) const STOP: &str = "stop";
-pub(super) const LOAD: &str = "load";
-pub(super) const PIECE: &str = "piece";
-pub(super) const SEND: &str = "send";
 
 /// What a line of the log marks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

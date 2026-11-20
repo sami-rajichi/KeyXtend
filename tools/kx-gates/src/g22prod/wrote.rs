@@ -1,17 +1,12 @@
 //! Who wrote a language's text: the voice gate build logs each written dictation's device by id, or a cloud
 //! dictation's service by its row's id, and the run reads those lines back from the copy's log, never any text.
 
-use kx_module_api::ports::{BlobName, DevicePick};
+use kx_ipc::gate::{DEVICE, FAULT, SERVICE};
+use kx_mod_voice::keys::KEY_UNREAD;
+use kx_module_api::ports::{BlobName, CloudFault, DevicePick};
 use serde_json::{Value, json};
 
 use crate::hooklog::{read_since, value_of};
-
-/// The field of the build's line that holds the device id.
-pub(super) const DEVICE: &str = "device";
-/// The field of the build's line that holds the service's id.
-pub(super) const SERVICE: &str = "service";
-/// The field of the failed line that holds the fault's kind.
-pub(super) const FAULT: &str = "fault";
 
 /// Who wrote a dictation, or who must: a device by id (Automatic takes any), or a cloud service by its row's id.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,11 +77,14 @@ pub(super) fn judge(read: &Result<Vec<Writer>, String>, want: &Writer) -> (Value
     (v, fit)
 }
 
-/// The fault kinds of `log`'s lines holding `marker` stamped at or after `since_us`, oldest first; a value that is no
-/// plain kind name is left out, so nothing else is ever printed.
+/// The fault kinds of `log`'s lines stamped at or after `since_us`, oldest first: those holding `marker`, and the voice
+/// module's key-read warning as a key fault. A value that is no plain kind name is left out, so nothing else prints.
 pub(super) fn faults(log: &str, since_us: i64, marker: &str) -> Vec<String> {
     let plain = |k: &&str| !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric());
     let kind = |l: &str| {
+        if l.contains(KEY_UNREAD) {
+            return Ok(Some(CloudFault::Key.kind().to_owned()));
+        }
         let value = l.contains(marker).then(|| value_of(l, FAULT)).flatten();
         Ok(value.filter(plain).map(str::to_owned))
     };

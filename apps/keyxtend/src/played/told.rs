@@ -4,6 +4,7 @@
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
+use kx_ipc::gate::DEVICE;
 use kx_module_api::SecretBytes;
 use kx_module_api::ports::{
     CardId, CheckAsk, CheckDone, Device, DevicePick, FactsAsk, JobLimits, ModelFacts, Speech,
@@ -141,7 +142,7 @@ fn device(card: Option<&CardId>, served: bool) -> &str {
 
 /// Logs that `device` wrote a dictation; its Display form keeps the id one bare word on the line.
 fn wrote(device: &str) {
-    tracing::info!(device = %device, "{WROTE_LINE}");
+    tracing::info!({ DEVICE } = %device, "{WROTE_LINE}");
 }
 
 /// `m`, even after a panic elsewhere held it.

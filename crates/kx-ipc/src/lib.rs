@@ -11,6 +11,7 @@ mod command;
 mod error;
 mod fetch;
 mod frame;
+pub mod gate;
 mod limits;
 mod net;
 mod reply;

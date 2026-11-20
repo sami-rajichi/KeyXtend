@@ -12,7 +12,7 @@ use kx_module_api::{Redacted, Secret, SecretBytes};
 
 use crate::VoiceSettings;
 use crate::cloud::{Choice, Chosen};
-use crate::keys::Keys;
+use crate::keys::{KEY_UNREAD, Keys};
 
 /// The service's run, which prints nothing of itself; dropping it cancels its requests.
 pub(crate) struct Wired {
@@ -102,7 +102,7 @@ pub(super) fn deliver(
         Ok(Some(key)) => key,
         Ok(None) => return Err(CloudFault::Key),
         Err(error) => {
-            tracing::warn!(%error, "a cloud key could not be read");
+            tracing::warn!(%error, "{KEY_UNREAD}");
             return Err(CloudFault::Key);
         }
     };

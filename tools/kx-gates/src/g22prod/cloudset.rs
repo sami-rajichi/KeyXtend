@@ -2,11 +2,9 @@
 //! a typed row's address and model from the daily settings, and the copy's `[voice]` with only that service on.
 
 use kx_mod_voice::cloud::pick_text;
-use kx_mod_voice::services::{Address, Service, Services};
+use kx_mod_voice::services::{Address, Service, Services, piece_s};
 use kx_mod_voice::{ServiceOn, VoiceSettings};
-use kx_module_api::ports::{
-    CloudAsk, CloudLimits, Date, SAMPLE_BYTES, SOUND_HZ, SpeechAsk, fits_iso,
-};
+use kx_module_api::ports::{CloudAsk, CloudLimits, Date, fits_iso};
 use kx_module_api::{MS_PER_S, Redacted};
 
 /// Why a service is skipped.
@@ -149,12 +147,9 @@ pub(super) fn voice(p: &Planned, day: Date) -> Result<VoiceSettings, String> {
     Ok(s)
 }
 
-/// The requests a clip of `clip_ms` takes within `limits`, as a listen-only run cuts it: at least one.
+/// The requests a clip of `clip_ms` takes within `limits`, as a listen-only run cuts it (`piece_s`): at least one.
 pub(super) fn pieces(clip_ms: u32, limits: &CloudLimits) -> u64 {
-    let (low, high) = (*SpeechAsk::PIECE_S.start(), *SpeechAsk::PIECE_S.end());
-    let secs = limits.piece_bytes() / (SOUND_HZ * SAMPLE_BYTES);
-    let secs = u8::try_from(secs).map_or(high, |s| s.clamp(low, high));
-    let piece_ms = u64::from(secs) * u64::from(MS_PER_S);
+    let piece_ms = u64::from(piece_s(limits)) * u64::from(MS_PER_S);
     u64::from(clip_ms).div_ceil(piece_ms).max(1)
 }
 

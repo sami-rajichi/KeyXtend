@@ -1,10 +1,7 @@
-//! G22 on the product (`g22 keyxtend`): for each check clip, a copy of the voice gate build on a data folder the gate
-//! makes plays that clip through the gate worker in place of the microphone, while the gate dictates it by clicks into
-//! target-window in the clip's layout. The words typed must be within `[voice] card_diff`, target-window must keep the
-//! foreground, the bar must sit on top above the keyboard, never activated, and the device `device` allows must write
-//! the text, as the copy's log says. Then the cloud line (`cloud`) does the same for each service with a key on this
-//! PC. It prints numbers and ids, never text: a passing language adds where its time went, a failed one the copy's
-//! marked log lines, the windows in front by class and program, and the bar's button ids.
+//! G22 on the product (`g22 keyxtend`): a copy of the voice gate build plays each check clip in place of the microphone
+//! while the gate dictates it into target-window, and a language passes within `[voice] card_diff`, with the foreground
+//! kept, the bar on top and never activated, and the right writer in the copy's log. It prints numbers and ids, never
+//! text: a passing language's timing, or a failed one's marked log lines, windows in front and bar button ids.
 #![cfg(windows)]
 
 mod bar;

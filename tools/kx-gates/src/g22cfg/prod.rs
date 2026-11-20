@@ -39,7 +39,7 @@ pub struct G22Product {
     pub settle_ms: u64,
     /// The line the voice gate build logs at start with its clip; without it the copy may hear the microphone.
     pub warn_line: String,
-    /// The line the voice gate build logs with the device id of each dictation it writes.
+    /// The line the voice gate build logs with the device or service id of each dictation it writes.
     pub wrote_line: String,
     /// The bar's gate-id group (kx-ui `VoiceNames.group`).
     pub group: String,

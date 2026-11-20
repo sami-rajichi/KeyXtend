@@ -90,8 +90,8 @@ open_ms = 15000
 settle_ms = 3000
 # The line the voice gate build logs at start with its clip (apps/keyxtend/src/run.rs).
 warn_line = "played sound in place of the microphone: a gate build, never for daily use"
-# The line it logs with the device id of each dictation it writes, which each language's line prints
-# (apps/keyxtend/src/played/told.rs).
+# The line it logs with the device or service id of each dictation it writes, which each language's line prints
+# (apps/keyxtend/src/played/told.rs, sent.rs).
 wrote_line = "voice gate build: a dictation was written"
 # The bar's gate ids: kx-ui VoiceNames' group, and Stop's id from kx-ui's bar_button_id.
 group = "voice"

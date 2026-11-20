@@ -7,9 +7,9 @@ use std::path::Path;
 use kx_crypto::{KEY_FILE, SEALED_EXT};
 use kx_mod_voice::cloud::{Cloud, pick_text};
 use kx_mod_voice::keys::KEYS;
-use kx_mod_voice::services::table;
+use kx_mod_voice::services::{piece_s, table};
 use kx_mod_voice::{ID, SPEC, VoiceSettings};
-use kx_module_api::ports::{CloudLimits, Date, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
+use kx_module_api::ports::{Date, SpeechAsk};
 use kx_module_api::{MS_PER_S, Redacted};
 use kx_platform::VOICE_DIR;
 use kx_platform::ui::{HiddenError, Probe};
@@ -93,6 +93,23 @@ fn a_failed_borrow_names_no_path_and_no_folder_is_copied_onto_itself() {
         "its own folder"
     );
     assert_eq!(files(d.path()), 4, "the daily folder is as it was");
+}
+
+#[test]
+fn a_borrow_missing_either_file_copies_nothing() {
+    let d = daily(&[GROQ]);
+    let copy = TempDir::new("g22-copy").expect("a folder");
+    assert!(
+        borrow::copy(d.path(), copy.path(), "lemonfox").is_err(),
+        "no blob"
+    );
+    assert_eq!(files(copy.path()), 0, "not even the data key");
+    fs::remove_file(d.path().join(VOICE_DIR).join(KEY_FILE)).expect("removed");
+    assert!(
+        borrow::copy(d.path(), copy.path(), GROQ).is_err(),
+        "no data key"
+    );
+    assert_eq!(files(copy.path()), 0, "not even the blob");
 }
 
 /// The plans of every offered row with `has` keys, for the clip languages, with `typed` lines.
@@ -207,26 +224,25 @@ fn only_a_typed_rows_two_lines_are_read_from_the_daily_settings() {
     assert!(read(GROQ).is_none(), "a row not on");
 }
 
-/// The whole seconds of sound one piece within `limits` holds, before the run's own piece range.
-fn cap_s(limits: &CloudLimits) -> u32 {
-    u32::try_from(limits.piece_bytes() / (SOUND_HZ * SAMPLE_BYTES)).unwrap()
-}
-
 #[test]
 fn a_clip_within_a_piece_is_one_request_and_a_longer_one_more_as_the_product_cuts_it() {
     let services = table().unwrap();
-    let groq = services.get(GROQ).unwrap().limits;
-    let top_s = u32::from(*SpeechAsk::PIECE_S.end());
-    assert!(
-        cap_s(&groq) > top_s,
-        "groq's cap is above the run's longest piece"
+    let secs = |id: &str| u32::from(piece_s(&services.get(id).unwrap().limits));
+    for id in [GROQ, OPENROUTER] {
+        let (limits, piece_ms) = (services.get(id).unwrap().limits, secs(id) * MS_PER_S);
+        assert_eq!(cloudset::pieces(0, &limits), 1, "at least one");
+        assert_eq!(cloudset::pieces(piece_ms, &limits), 1, "{id}");
+        assert_eq!(cloudset::pieces(piece_ms + 1, &limits), 2, "{id}");
+    }
+    assert_eq!(
+        secs(GROQ),
+        u32::from(*SpeechAsk::PIECE_S.end()),
+        "the run's longest"
     );
-    assert_eq!(cloudset::pieces(6000, &groq), 1);
-    assert_eq!(cloudset::pieces(0, &groq), 1, "at least one");
-    assert_eq!(cloudset::pieces((top_s + 1) * MS_PER_S, &groq), 2);
-    let short = services.get(OPENROUTER).unwrap().limits;
-    assert!(cap_s(&short) < top_s, "openrouter's cap is below it");
-    assert_eq!(cloudset::pieces((cap_s(&short) + 1) * MS_PER_S, &short), 2);
+    assert!(
+        secs(OPENROUTER) < secs(GROQ),
+        "a row's own cap cuts shorter pieces"
+    );
 }
 
 #[test]

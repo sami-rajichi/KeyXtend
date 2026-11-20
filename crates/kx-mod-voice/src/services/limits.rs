@@ -2,7 +2,7 @@
 //! `room_kb` for the WAV header and the form's other parts under the service's own cap, grown by a third when the shape
 //! sends Base64.
 
-use kx_module_api::ports::{CloudLimits, MB, SAMPLE_BYTES, SOUND_HZ};
+use kx_module_api::ports::{CloudLimits, MB, SAMPLE_BYTES, SOUND_HZ, SpeechAsk};
 use serde::Deserialize;
 
 use super::ServiceError;
@@ -72,4 +72,13 @@ fn grown(bytes: u64, base64: bool) -> u64 {
     } else {
         bytes
     }
+}
+
+/// The longest piece a listen-only run cuts for a row's `limits`: the whole seconds its size and time caps both allow
+/// (`piece_bytes`), within `SpeechAsk::PIECE_S`.
+#[must_use]
+pub fn piece_s(limits: &CloudLimits) -> u8 {
+    let (low, high) = (*SpeechAsk::PIECE_S.start(), *SpeechAsk::PIECE_S.end());
+    let secs = limits.piece_bytes() / (SOUND_HZ * SAMPLE_BYTES);
+    u8::try_from(secs).map_or(high, |s| s.clamp(low, high))
 }

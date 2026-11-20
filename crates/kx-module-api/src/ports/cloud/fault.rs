@@ -53,3 +53,26 @@ pub enum CloudFault {
     #[error("the cloud worker ended")]
     Gone,
 }
+
+impl CloudFault {
+    /// The fault's plain name, letters only, which a log line may hold; never a value it carries.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Range(_) => "Range",
+            Self::Key => "Key",
+            Self::Credit => "Credit",
+            Self::Account => "Account",
+            Self::Allowance { .. } => "Allowance",
+            Self::Rate => "Rate",
+            Self::TooBig => "TooBig",
+            Self::Language => "Language",
+            Self::Region => "Region",
+            Self::Empty => "Empty",
+            Self::Strange => "Strange",
+            Self::Network => "Network",
+            Self::Timeout => "Timeout",
+            Self::Gone => "Gone",
+        }
+    }
+}

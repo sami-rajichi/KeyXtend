@@ -15,7 +15,7 @@ fn logged(f: impl FnOnce()) -> String {
 
 /// The device ids of `text`'s written-dictation lines, in order.
 fn devices(text: &str) -> Vec<String> {
-    logged::values(text, WROTE_LINE, "device")
+    logged::values(text, WROTE_LINE, kx_ipc::gate::DEVICE)
 }
 
 fn card(id: &str) -> CardId {

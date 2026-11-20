@@ -26,12 +26,13 @@ fn all() -> Vec<(String, String)> {
 }
 
 #[test]
-fn no_gate_source_names_the_key_guard_or_a_shelf_that_unseals() {
+fn no_gate_source_names_the_sealing_guard_or_a_shelf_that_unseals() {
     let needles = [
         ["Key", "Guard"].concat(),
         ["Sealed", "Shelf"].concat(),
         ["Crypt", "Unprotect"].concat(),
         ["guard", "_key"].concat(),
+        ["key", "_guard"].concat(),
     ];
     for (file, text) in all() {
         for needle in &needles {
