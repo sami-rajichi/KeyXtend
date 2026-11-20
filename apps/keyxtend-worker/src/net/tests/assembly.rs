@@ -109,7 +109,13 @@ fn a_run_with_no_model_or_code_another_shapes_call_or_a_breaking_model_is_out_of
 #[test]
 fn a_model_header_naming_a_header_the_request_sets_is_out_of_range() {
     let key = NetHeader::Named(Cow::Borrowed("X-Test-Key"));
-    let bearer = ["authorization", "CONTENT-TYPE", "Content-Length", "host"];
+    let bearer = [
+        "authorization",
+        "CONTENT-TYPE",
+        "Content-Length",
+        "host",
+        "USER-agent",
+    ];
     let cases = bearer.map(|n| (n, NetHeader::Bearer));
     for (name, header) in cases.into_iter().chain([("x-test-key", key)]) {
         let model_header = Cow::Borrowed(name);

@@ -223,6 +223,7 @@ fn a_header_the_request_sets_or_the_keys_own_is_taken_in_any_case() {
         "content-type",
         "CONTENT-LENGTH",
         "Host",
+        "user-AGENT",
         key,
         "x-test-key",
     ];

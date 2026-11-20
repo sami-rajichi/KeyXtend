@@ -234,7 +234,13 @@ fn a_model_header_goes_on_assemblyais_shape_alone_which_needs_a_plain_one() {
 #[test]
 fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
     let named = "model_header = \"X-AAI-Model\"";
-    for taken in ["Authorization", "content-type", "CONTENT-LENGTH", "host"] {
+    for taken in [
+        "Authorization",
+        "content-type",
+        "CONTENT-LENGTH",
+        "host",
+        "User-Agent",
+    ] {
         let to = format!("model_header = \"{taken}\"");
         assert_eq!(own_err(named, &to), Some(E::Form), "{taken}");
     }

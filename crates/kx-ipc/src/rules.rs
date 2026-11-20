@@ -28,8 +28,15 @@ const DOT_SEGMENTS: [&str; 2] = [".", ".."];
 pub const AUTHORIZATION: &str = "Authorization";
 /// The header that names a body's type, a request's and a form part's.
 pub const CONTENT_TYPE: &str = "Content-Type";
-/// The headers every cloud request sets itself: the bearer key's, the body's type and length, and the host.
-const SET_HEADERS: [&str; 4] = [AUTHORIZATION, CONTENT_TYPE, "Content-Length", "Host"];
+/// The headers every cloud request sends besides a row's: the bearer key's, the body's type and length, the host,
+/// and the user agent the transport names.
+const SET_HEADERS: [&str; 5] = [
+    AUTHORIZATION,
+    CONTENT_TYPE,
+    "Content-Length",
+    "Host",
+    "User-Agent",
+];
 
 /// Format marks that reorder or hide text in a right-to-left panel: the Arabic letter mark, zero-width and direction
 /// marks, embeddings and overrides, invisible operators, isolates and the byte-order mark.

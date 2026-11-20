@@ -151,6 +151,7 @@ fn a_model_header_naming_a_header_the_request_sets_is_refused_as_the_shape() {
     let named = KeyHeader::Named("X-Test-Key".into());
     let rows = [
         (shape("authorization"), KeyHeader::Bearer),
+        (shape("user-agent"), KeyHeader::Bearer),
         (shape("x-test-key"), named),
     ];
     for (shape, header) in rows {

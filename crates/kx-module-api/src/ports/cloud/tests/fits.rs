@@ -88,7 +88,13 @@ fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
     let shape = |name: &str| CloudShape::Assembly {
         model_header: name.to_owned(),
     };
-    for name in ["authorization", "Content-Type", "content-length", "HOST"] {
+    for name in [
+        "authorization",
+        "Content-Type",
+        "content-length",
+        "HOST",
+        "User-AGENT",
+    ] {
         assert!(!shape(name).fits_beside(&KeyHeader::Bearer), "{name}");
     }
     assert!(
