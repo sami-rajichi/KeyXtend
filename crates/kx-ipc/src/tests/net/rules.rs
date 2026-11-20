@@ -6,8 +6,8 @@ use super::*;
 use crate::IpcError::BadField;
 use crate::code::Code;
 use crate::rules::{
-    AUTHORIZATION, CONTENT_TYPE, form_value, https, https_host, https_origin, key_header, model,
-    token, unset_header,
+    AUTHORIZATION, CONTENT_TYPE, cloud_piece, form_value, https, https_host, https_origin,
+    key_header, model, token, unset_header,
 };
 use crate::{
     MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB,
@@ -186,6 +186,22 @@ fn a_form_value_is_visible_ascii_and_spaces() {
     for value in ["a\r\nb", "a\tb", "é", "\x7f"] {
         assert_eq!(form_value(value), Err(BadField), "{value:?}");
     }
+}
+
+#[test]
+fn a_cloud_piece_is_whole_samples_within_its_cap_and_a_run_holds_the_longest_dictation() {
+    let most = piece_bytes(*NET_MAX_MB.end(), *NET_MAX_S.end());
+    for bad in [0, 3, most + SAMPLE_BYTES] {
+        assert_eq!(cloud_piece(bad, most, &mut 0), Err(BadField), "{bad}");
+    }
+    let mut total = 0;
+    while MAX_RECORD_BYTES - total >= most {
+        assert_eq!(cloud_piece(most, most, &mut total), Ok(()));
+    }
+    let left = MAX_RECORD_BYTES - total;
+    assert!(left == 0 || cloud_piece(left, most, &mut total).is_ok());
+    let past = cloud_piece(SAMPLE_BYTES, most, &mut total);
+    assert_eq!(past, Err(BadField), "one sample past the longest dictation");
 }
 
 #[test]

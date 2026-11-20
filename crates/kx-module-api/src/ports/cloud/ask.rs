@@ -2,9 +2,10 @@
 //! pieces, each refused outside its range. The `[voice]` settings and the services table check against these ranges.
 
 use super::{CloudFault, CloudShape, HttpsUrl, KeyHeader};
-use crate::ports::{JobLimits, SAMPLE_BYTES, TAG_LEN};
+use crate::ports::{JobLimits, TAG_LEN};
 use crate::{Redacted, Secret, SecretBytes};
 pub use kx_ipc::MAX_KEY_BYTES;
+use kx_ipc::rules::cloud_piece;
 use std::ops::RangeInclusive;
 
 /// A service row's limits on one request, from the service's own pages; a dictation is cut within them.
@@ -126,15 +127,11 @@ impl CloudAsk {
         (1..=MAX_KEY_BYTES).contains(&key.len()) && kx_ipc::rules::key(key).is_ok()
     }
 
-    /// True for one to `PIECES` pieces, each whole samples within `limits.piece_bytes`, at most `MAX_RECORD_BYTES`
-    /// together, as the frames check.
+    /// True for one to `PIECES` pieces that each pass the frames' `rules::cloud_piece` within `limits.piece_bytes`.
     fn pieces_fit(&self) -> bool {
-        let most = self.limits.piece_bytes();
-        let mut sizes = self.pieces.iter().map(|p| p.expose().len());
-        let total: usize = sizes.clone().sum();
-        let count = Self::PIECES.contains(&self.pieces.len());
-        let piece = |n: usize| n > 0 && n <= most && n.is_multiple_of(SAMPLE_BYTES);
-        count && total <= kx_ipc::MAX_RECORD_BYTES && sizes.all(piece)
+        let (most, mut total) = (self.limits.piece_bytes(), 0);
+        let fits = |p: &SecretBytes| cloud_piece(p.expose().len(), most, &mut total).is_ok();
+        Self::PIECES.contains(&self.pieces.len()) && self.pieces.iter().all(fits)
     }
 }
 

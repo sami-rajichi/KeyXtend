@@ -1,5 +1,5 @@
-//! An ask's pieces: each within the row's size and seconds in whole samples, their count, and together at most the
-//! longest dictation, as the frames check.
+//! An ask's pieces: each within the row's size and seconds in whole samples, and their count. Their total is the
+//! frames' `rules::cloud_piece`, which kx-ipc tests on sizes alone.
 
 use super::*;
 
@@ -49,26 +49,6 @@ fn pieces_past_the_cap_or_count_or_of_half_samples_are_refused() {
         ..ask()
     };
     assert_eq!(ask.check(), Ok(()), "a piece at the cap fits");
-}
-
-#[test]
-fn pieces_past_the_longest_dictation_together_are_refused() {
-    let limits = CloudLimits {
-        max_mb: *CloudLimits::MAX_MB.end(),
-        max_s: *CloudLimits::MAX_S.end(),
-        ..limits()
-    };
-    let top = limits.piece_bytes();
-    let whole = kx_ipc::MAX_RECORD_BYTES / top;
-    let silence = |n| Redacted::new(Zeroizing::new(vec![0; n]));
-    let mut ask = CloudAsk {
-        limits,
-        pieces: (0..whole).map(|_| silence(top)).collect(),
-        ..ask()
-    };
-    assert_eq!(ask.check(), Ok(()), "the longest dictation fits");
-    ask.pieces.push(silence(crate::ports::SAMPLE_BYTES));
-    assert_eq!(refused(&ask), Some("pieces"), "one sample past it");
 }
 
 #[test]

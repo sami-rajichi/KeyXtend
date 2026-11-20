@@ -8,8 +8,7 @@ use super::{NetCall, NetField, NetForm, NetHeader, NetLimits, NetOwn, NetRun, Ne
 use crate::code::Code;
 use crate::error::IpcError;
 use crate::limits::{
-    MAX_RECORD_BYTES, MAX_SPEECH_PIECES, NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN,
-    NET_TRIES, NET_WAIT_S, SAMPLE_BYTES,
+    MAX_SPEECH_PIECES, NET_AT_ONCE, NET_MAX_MB, NET_MAX_S, NET_PER_MIN, NET_TRIES, NET_WAIT_S,
 };
 use crate::rules::{self, ok_if, within};
 use crate::voice::body::sound_index;
@@ -176,12 +175,10 @@ pub(super) fn read_call<R: Read + ?Sized>(
     })
 }
 
-/// Checks a piece of `n` bytes against `limits`, adding it to `total`, which stays within the longest dictation.
+/// Checks a piece of `n` bytes against `limits` by `rules::cloud_piece`, adding it to `total`.
 fn size(limits: NetLimits, n: u32, total: &mut usize) -> Result<u32, IpcError> {
     let bytes = usize::try_from(n).map_err(|_| IpcError::BadField)?;
-    *total = total.saturating_add(bytes);
-    let whole = bytes > 0 && bytes.is_multiple_of(SAMPLE_BYTES);
-    ok_if(whole && bytes <= limits.piece_bytes() && *total <= MAX_RECORD_BYTES)?;
+    rules::cloud_piece(bytes, limits.piece_bytes(), total)?;
     Ok(n)
 }
 

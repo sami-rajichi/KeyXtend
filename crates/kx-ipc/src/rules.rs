@@ -3,7 +3,7 @@
 //! host-list and cloud request rules are public, so the ports and the jobs refuse what the frames refuse.
 
 use crate::error::IpcError;
-use crate::limits::{HTTPS, MAX_HOST_BYTES};
+use crate::limits::{HTTPS, MAX_HOST_BYTES, MAX_RECORD_BYTES, SAMPLE_BYTES};
 use std::ops::RangeInclusive;
 
 /// The marks a request's header or form field name may hold besides ASCII letters and digits.
@@ -126,6 +126,17 @@ pub fn model(text: &str) -> Result<(), IpcError> {
 /// `BadField` for any other byte.
 pub fn form_value(text: &str) -> Result<(), IpcError> {
     ok_if(text.bytes().all(|b| b.is_ascii_graphic() || b == SPACE))
+}
+
+/// Refuses a cloud piece of `bytes` unless it is whole samples, one at least, within `most`; it adds the piece to
+/// `total`, which a run keeps within `MAX_RECORD_BYTES`.
+///
+/// # Errors
+/// `BadField` for an empty piece, a part sample, a piece past `most` or a run past the longest dictation.
+pub fn cloud_piece(bytes: usize, most: usize, total: &mut usize) -> Result<(), IpcError> {
+    *total = total.saturating_add(bytes);
+    let whole = bytes > 0 && bytes.is_multiple_of(SAMPLE_BYTES);
+    ok_if(whole && bytes <= most && *total <= MAX_RECORD_BYTES)
 }
 
 /// True for a byte a link may hold: an ASCII letter or digit, or one of RFC 3986's marks.
