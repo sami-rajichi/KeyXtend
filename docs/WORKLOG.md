@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-20 21:30 — P11: part 2's documents as built
+The plan, the spec, the architecture pages, the security notes and the item notes now describe part 2 as built: seven offered services, all untested until the owner's check, four request shapes, sealed keys and the card check by language. ADR-0047 is marked superseded in part by ADR-0050 and ADR-0051, and the voice detail moved from `ARCHITECTURE.md` into its own architecture page. The cloud mock-up now shows AssemblyAI and no Azure, split into its data and its drawing.
+
 ## 2026-11-20 19:10 — P11: the spike's worker is gone
 The P1 prototype's worker crate is deleted, with its cloud settings, now that the upload form, its multipart body and the WinHTTP upload all live in the product. The prototype workspace keeps only its core crate, without the five Windows features nothing used any more. The move map records each part's home.
 
