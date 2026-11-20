@@ -2,6 +2,7 @@
 
 use super::*;
 use kx_module_api::Mono;
+mod cloud;
 
 #[test]
 fn the_dirs_are_the_known_folder_ones() {

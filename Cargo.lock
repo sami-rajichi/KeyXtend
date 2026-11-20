@@ -1784,6 +1784,7 @@ dependencies = [
  "kx-ipc",
  "kx-module-api",
  "kx-platform",
+ "kx-platform-fake",
  "kx-test-support",
  "proptest",
  "serde",

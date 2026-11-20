@@ -92,6 +92,8 @@ windows-core.workspace = true
 [dev-dependencies]
 # The worker tests write raw asks and goodbyes to the real media worker.
 kx-ipc = { path = "../kx-ipc" }
+# The cloud speech smoke test takes its made-up asks from the shared cloud suite.
+kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true
 
