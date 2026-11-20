@@ -3,8 +3,8 @@
 
 use super::suite::{SAMPLE, WITHIN, ask, key, key_test, secret};
 use super::*;
-use kx_module_api::ports::CloudRun;
 use kx_module_api::REDACTED_MARKER;
+use kx_module_api::ports::CloudRun;
 use std::sync::Mutex;
 
 mod keys;
