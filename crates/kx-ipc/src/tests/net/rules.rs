@@ -6,8 +6,8 @@ use super::*;
 use crate::IpcError::BadField;
 use crate::code::Code;
 use crate::rules::{
-    AUTHORIZATION, CONTENT_TYPE, form_value, https, https_host, https_origin, model, token,
-    unset_header,
+    AUTHORIZATION, CONTENT_TYPE, form_value, https, https_host, https_origin, key_header, model,
+    token, unset_header,
 };
 use crate::{
     MAX_NET_REPLY_BYTES, MAX_NET_RUN_TEXT_BYTES, MAX_RECORD_BYTES, MAX_TEXT_BYTES, NET_JOB,
@@ -224,6 +224,7 @@ fn a_header_the_request_sets_or_the_keys_own_is_taken_in_any_case() {
         "CONTENT-LENGTH",
         "Host",
         "user-AGENT",
+        "connection",
         key,
         "x-test-key",
     ];
@@ -237,4 +238,21 @@ fn a_header_the_request_sets_or_the_keys_own_is_taken_in_any_case() {
         (AUTHORIZATION, CONTENT_TYPE),
         ("Authorization", "Content-Type")
     );
+}
+
+#[test]
+fn a_key_header_is_a_token_naming_no_header_the_request_sets_but_authorization() {
+    let taken = [
+        "content-TYPE",
+        "Content-Length",
+        "HOST",
+        "user-agent",
+        "Connection",
+    ];
+    for name in taken.into_iter().chain(["x y", "x:y"]) {
+        assert_eq!(key_header(name), Err(BadField), "{name}");
+    }
+    for name in [AUTHORIZATION, "xi-api-key", "x-goog-api-key"] {
+        assert_eq!(key_header(name), Ok(()), "{name}");
+    }
 }

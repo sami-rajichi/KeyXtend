@@ -121,7 +121,7 @@ fn a_form_that_could_break_a_request_is_refused() {
 
 #[test]
 fn a_header_or_a_key_that_could_break_a_requests_head_is_refused() {
-    for name in ["", "xi api key", "x-key:", "x\r\nkey"] {
+    for name in ["", "xi api key", "x-key:", "x\r\nkey", "content-LENGTH"] {
         let ask = CloudAsk {
             header: KeyHeader::Named(name.into()),
             ..ask()

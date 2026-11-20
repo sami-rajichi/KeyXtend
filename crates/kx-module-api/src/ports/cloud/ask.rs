@@ -179,8 +179,8 @@ fn head_bad(shape: &CloudShape, header: &KeyHeader, key: &Secret) -> Option<&'st
     ])
 }
 
-/// True for a code within `TAG_LEN` that passes `rule`, as the frames take a model's id or a language code.
-fn fits(text: &str, rule: fn(&str) -> Result<(), kx_ipc::IpcError>) -> bool {
+/// True for a code within `TAG_LEN` that passes `rule`, as the frames take a model's id, a language code or a name.
+pub(super) fn fits(text: &str, rule: fn(&str) -> Result<(), kx_ipc::IpcError>) -> bool {
     TAG_LEN.contains(&text.len()) && rule(text).is_ok()
 }
 

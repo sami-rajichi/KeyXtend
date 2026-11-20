@@ -81,6 +81,22 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
 }
 
 #[test]
+fn a_key_header_never_names_a_header_the_request_sets_but_authorization() {
+    for name in [
+        "content-type",
+        "Content-Length",
+        "HOST",
+        "User-Agent",
+        "connection",
+    ] {
+        let named = KeyHeader::Named(name.into());
+        assert!(!named.fits(), "{name}: the request sets it");
+    }
+    let raw = KeyHeader::Named("Authorization".into());
+    assert!(raw.fits(), "a key without Bearer");
+}
+
+#[test]
 fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
     let named = KeyHeader::Named("X-Test-Key".to_owned());
     assert_eq!(KeyHeader::Bearer.name(), "Authorization");

@@ -2,6 +2,8 @@
 //! break a request, a wait, try or limit outside its range, piece sizes past their caps, bad sound, extra bytes and a
 //! goodbye with an id. Model and language refusals are in `ids`.
 
+mod heads;
+
 use super::*;
 use crate::{MAX_RECORD_BYTES, NET_MAX_MB, piece_bytes};
 use IpcError::{BadField, Inconsistent, TooLong};

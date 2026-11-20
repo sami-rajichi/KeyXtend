@@ -29,13 +29,14 @@ pub const AUTHORIZATION: &str = "Authorization";
 /// The header that names a body's type, a request's and a form part's.
 pub const CONTENT_TYPE: &str = "Content-Type";
 /// The headers every cloud request sends besides a row's: the bearer key's, the body's type and length, the host,
-/// and the user agent the transport names.
-const SET_HEADERS: [&str; 5] = [
+/// the user agent the transport names, and the connection header `WinHTTP` adds.
+const SET_HEADERS: [&str; 6] = [
     AUTHORIZATION,
     CONTENT_TYPE,
     "Content-Length",
     "Host",
     "User-Agent",
+    "Connection",
 ];
 
 /// Format marks that reorder or hide text in a right-to-left panel: the Arabic letter mark, zero-width and direction
@@ -83,6 +84,17 @@ pub fn token(text: &str) -> Result<(), IpcError> {
         text.bytes()
             .all(|b| b.is_ascii_alphanumeric() || TOKEN_MARKS.contains(&b)),
     )
+}
+
+/// Refuses a key header's name unless it is a `token` naming none of `SET_HEADERS` but `AUTHORIZATION`, in any case,
+/// so the key repeats no header the request sets.
+///
+/// # Errors
+/// `BadField` for any other name.
+pub fn key_header(name: &str) -> Result<(), IpcError> {
+    token(name)?;
+    let taken = |set: &&str| set.eq_ignore_ascii_case(name) && *set != AUTHORIZATION;
+    ok_if(!SET_HEADERS.iter().any(taken))
 }
 
 /// Refuses a header name a request already sets, in any case: `key`, the key's own, or one of `SET_HEADERS`.

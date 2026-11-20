@@ -1,10 +1,10 @@
 //! A service row's request (ADR-0047 decision 5, ADR-0051): its shape, the upload form's field names and the header
 //! that carries the key, each refused when it could break a request's head or body.
 
-use crate::ports::TAG_LEN;
+use super::ask::fits;
 pub use kx_ipc::MAX_FIXED;
 use kx_ipc::ShapeCode;
-use kx_ipc::rules::{AUTHORIZATION, form_value, token, unset_header};
+use kx_ipc::rules::{AUTHORIZATION, form_value, key_header, token, unset_header};
 
 /// The longest fixed field's value, in bytes: the frames' cap on a name.
 pub const MAX_FIELD_VALUE: usize = kx_ipc::MAX_NAME_BYTES;
@@ -141,12 +141,12 @@ pub enum KeyHeader {
 }
 
 impl KeyHeader {
-    /// True for `Bearer` or a plain header name.
+    /// True for `Bearer`, or a plain header name within `TAG_LEN` that the request does not set (`rules::key_header`).
     #[must_use]
     pub fn fits(&self) -> bool {
         match self {
             Self::Bearer => true,
-            Self::Named(name) => name_ok(name),
+            Self::Named(name) => fits(name, key_header),
         }
     }
 
@@ -163,5 +163,5 @@ impl KeyHeader {
 /// True for a name within `TAG_LEN` of ASCII letters, digits, `-` and `_` (`rules::token`), which no request's head
 /// misreads.
 fn name_ok(name: &str) -> bool {
-    TAG_LEN.contains(&name.len()) && token(name).is_ok()
+    fits(name, token)
 }

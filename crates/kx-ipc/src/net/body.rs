@@ -130,7 +130,7 @@ fn put_header(s: &mut dyn Sink, header: &NetHeader<'_>) -> Result<(), IpcError> 
         NetHeader::Bearer => s.byte(HeaderCode::Bearer.code()),
         NetHeader::Named(name) => {
             s.byte(HeaderCode::Named.code())?;
-            put_text(s, TAG, name, rules::token)
+            put_text(s, TAG, name, rules::key_header)
         }
     }
 }
@@ -140,7 +140,7 @@ fn read_header<R: Read + ?Sized>(p: &mut Payload<'_, R>) -> Result<NetHeader<'st
     Ok(
         match HeaderCode::from_code(p.byte()?).ok_or(IpcError::BadField)? {
             HeaderCode::Bearer => NetHeader::Bearer,
-            HeaderCode::Named => NetHeader::Named(read_text(p, TAG, rules::token)?),
+            HeaderCode::Named => NetHeader::Named(read_text(p, TAG, rules::key_header)?),
         },
     )
 }
