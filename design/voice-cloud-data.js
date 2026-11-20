@@ -22,6 +22,10 @@ en:{cloud:'Cloud services', cloudSub:'Your own key · nothing leaves before Stop
   cloudModelSub:'In the cloud, with your key', sides:'Where the model runs', sideLocal:'Local', sideCloud:'Cloud',
   noneOn:'No cloud service is switched on yet.', cloudLine:'Models of the services you switched on; nothing leaves before Stop.', slow:'Local models for {lang} will be very slow on this PC.',
   onBar:'Your voice goes to {name} at Stop', onBarSend:'Sending your voice to {name}',
+  useLocal:'Use the local model', openSvc:'Open service',
+  notes:{key:'The service refused the key. Check it on the key page.', terms:'The service’s terms changed. Confirm its facts again to send.',
+    account:'The service asks for a step on its site, such as a verification, a payment method or a spending cap.',
+    allowance:'The free allowance is used up. It renews at {at}.', off:'The service is off, so nothing was sent.'},
   mo:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   fx:{where:{us:'United States', eu:'European Union', typed:'The address you type', host:'Depends on the host that serves the model', unstated:'Not stated on its pages'},
     trains:{never:'Not used for training', unknown:'Unknown; it depends on the service', unstated:'Not stated on its pages', host:'Depends on the host that serves the model',
@@ -53,6 +57,10 @@ fr:{cloud:'Services cloud', cloudSub:'Votre propre clé · rien ne part avant l�
   cloudModelSub:'Dans le cloud, avec votre clé', sides:'Où le modèle s’exécute', sideLocal:'Sur ce PC', sideCloud:'Dans le cloud',
   noneOn:'Aucun service cloud n’est encore activé.', cloudLine:'Modèles des services que vous avez activés ; rien ne part avant l’arrêt.', slow:'Les modèles locaux en {lang} seront très lents sur ce PC.', langIn:{en:'anglais', fr:'français', ar:'arabe'},
   onBar:'Votre voix partira chez {name} à l’arrêt', onBarSend:'Envoi de votre voix à {name}',
+  useLocal:'Utiliser le modèle local', openSvc:'Ouvrir le service',
+  notes:{key:'Le service a refusé la clé. Vérifiez-la sur la page de la clé.', terms:'Les conditions du service ont changé. Confirmez de nouveau ses informations pour envoyer.',
+    account:'Le service demande une étape sur son site, comme une vérification, un moyen de paiement ou un plafond de dépenses.',
+    allowance:'Le quota gratuit est épuisé. Il se renouvelle à {at}.', off:'Le service est désactivé ; rien n’a été envoyé.'},
   mo:['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'],
   fx:{where:{us:'États-Unis', eu:'Union européenne', typed:'L’adresse que vous saisissez', host:'Dépend de l’hébergeur qui sert le modèle', unstated:'Non précisé sur ses pages'},
     trains:{never:'Non utilisée pour l’entraînement', unknown:'Inconnu ; cela dépend du service', unstated:'Non précisé sur ses pages', host:'Dépend de l’hébergeur qui sert le modèle',
@@ -84,6 +92,10 @@ ar:{cloud:'الخدمات السحابية', cloudSub:'بمفتاحك الخاص
   cloudModelSub:'في السحابة، بمفتاحك', sides:'مكان تشغيل النموذج', sideLocal:'محلية', sideCloud:'سحابية',
   noneOn:'لم تُفعَّل أي خدمة سحابية بعد.', cloudLine:'نماذج الخدمات التي فعّلتها، ولا يُرسَل شيء قبل الإيقاف.', slow:'ستكون النماذج المحلية للغة {lang} بطيئة جدًا على هذا الحاسوب.',
   onBar:'يُرسَل صوتك إلى {name} عند الإيقاف', onBarSend:'جارٍ إرسال صوتك إلى {name}',
+  useLocal:'استخدام النموذج المحلي', openSvc:'فتح الخدمة',
+  notes:{key:'رفضت الخدمة المفتاح. تحقّق منه في صفحة المفتاح.', terms:'تغيّرت شروط الخدمة. أكّد معلوماتها مرة أخرى لإرسال الصوت.',
+    account:'تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع أو حدٍّ للإنفاق.',
+    allowance:'نفدت الحصة المجانية، وتتجدد في الساعة {at}.', off:'الخدمة معطّلة، فلم يُرسَل شيء.'},
   mo:['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
   fx:{where:{us:'الولايات المتحدة', eu:'الاتحاد الأوروبي', typed:'العنوان الذي تكتبه', host:'يتوقف على المضيف الذي يشغّل النموذج', unstated:'غير مذكور في صفحات الخدمة'},
     trains:{never:'لا يُستخدم للتدريب', unknown:'غير معروف، ويتوقف على الخدمة', unstated:'غير مذكور في صفحات الخدمة', host:'يتوقف على المضيف الذي يشغّل النموذج',
@@ -125,6 +137,8 @@ const TODAY = '2026-11-20', FACTS_DAYS = 180;
 // on the lines: a good Custom address, one the line refuses, and an Other model id for OpenRouter.
 const USE_H = {light:15, heavy:60}, KEY_LEN = 56, READ = '2026-11-17', OLD_READ = '2026-04-02';
 const HOME = 'https://speech.example.net/v1/audio/transcriptions', LAN = 'http://192.168.1.20:8000/v1/audio/transcriptions', OR_MODEL = 'mistralai/voxtral-small-24b-2507';
+// The clock time a used free allowance renews at, on its note (owner, 2026-11-20: a clock time, never a wait).
+const RENEW_AT = '14:30';
 
 // The offered rows of services.toml and services-own.toml, in the Cloud page's order, with the facts read on 2026-11-17
 // (AssemblyAI's on 2026-11-19). A fact is its id, or its id with its numbers; site is the facts' page, keys where a key is
@@ -156,10 +170,12 @@ const CM = {'gq-turbo':['Whisper Large v3 Turbo', 'groq'], 'gq-large':['Whisper 
 Object.keys(CM).forEach(id => { M[id] = [CM[id][0], 0]; });
 
 // Sample state: the user already switched on Groq (tested), Lemonfox (a key; it has no test call) and OpenRouter (no key).
+// ElevenLabs is Off but keeps its sealed key, as after declined newer terms, so its row offers Remove key.
 S.cloud = true;
 S.svc = Object.fromEntries(SVC.map(s => [s.id, {st:'off', key:0, test:'', will:'ok', on:'', keep0:true}]));
 Object.assign(S.svc.groq, {st:'ready', key:KEY_LEN, test:'ok', on:READ});
 Object.assign(S.svc.openrouter, {st:'key', on:'2026-11-18'});
 Object.assign(S.svc.lemonfox, {st:'ready', key:48, on:'2026-11-18'});
+S.svc.elevenlabs.key = KEY_LEN;
 S.typed = {addr:{custom:LAN}, model:{}}; S.aim = ''; S.card = {id:'groq', ask:true, read:''}; S.cur = 'groq'; S.ret = 'cloud';
 if (['svccard','svcpage'].includes(S.panel)) S.panel = 'cloud';

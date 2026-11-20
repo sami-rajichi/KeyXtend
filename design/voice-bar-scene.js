@@ -33,7 +33,8 @@ function keyboard() {
 // Drawing, placing and fitting: the bar sits just above the keyboard, centred; the open panel sits just above the bar.
 function controls() {
   const g = (label, k, opts, cur) => '<div class="grp"><b>' + label + '</b><div class="opts">' + opts.map(([v, s]) => '<button class="o" data-k="' + k + '" data-v="' + v + '" aria-pressed="' + (String(v) === String(cur)) + '">' + s + '</button>').join('') + '</div></div>';
-  return g('Bar', 'bar', CTL.bar, S.bar) + g('Voice panel', 'panel', CTL.panel, S.panel) + g('Cloud (part 2)', 'panel', CTL.cloud, S.panel) + g('Dictating with', 'engine', CTL.engine, S.engine) +
+  return g('Bar', 'bar', CTL.bar, S.bar) + g('Cloud notes (part 2)', 'bar', CTL.notes, S.bar) + g('Voice panel', 'panel', CTL.panel, S.panel) +
+    g('Cloud (part 2)', 'panel', CTL.cloud, S.panel) + g('Dictating with', 'engine', CTL.engine, S.engine) +
     g('Theme', 'theme', CTL.theme, S.theme) + g('Light or dark', 'mode', CTL.mode, S.mode) +
     g('Language', 'lang', CTL.lang, S.lang) + g('Keyboard size', 'size', CTL.size, S.size) + g('Motion', 'still', CTL.still, S.still ? 1 : 0) + g('View', 'view', CTL.view, S.view);
 }

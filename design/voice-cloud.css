@@ -14,6 +14,12 @@
 .vw{flex:1 0 100%; box-sizing:border-box; padding:0 calc(var(--caption-words-pad-px) * var(--u)) calc(var(--caption-words-pad-px) * var(--u)); color:var(--warn-ink);
   font:400 calc(var(--notice-font-px) * var(--u))/1.35 var(--latin-fonts); text-align:start}
 .vw.ar{font-family:var(--arabic-fonts); font-size:calc(var(--notice-font-px) * var(--arabic-scale) * var(--u))}
+/* A cloud note with Open service (owner, 2026-11-20): its line sits beside the gear and Close, and its three acts take a
+   row under it, as the Windows 11 InfoBar puts its buttons under a long message. */
+.vbar.cn{flex-wrap:wrap}
+.vbar.cn .vtx{font-size:calc(var(--notice-font-px) * var(--u))}
+.vbar.cn .vtx.ar{font-size:calc(var(--notice-font-px) * var(--arabic-scale) * var(--u))}
+.cna{flex:1 0 100%; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:calc(var(--caption-gap-px) * var(--u))}
 
 /* Models' Local | Cloud and Options' Insert the text: the panel's filter chips (PanelChip.qml), the shown one filled and checked. */
 .flt{display:flex; gap:calc(var(--panel-filter-gap-px) * var(--u)); margin:calc(var(--panel-body-gap-px) * var(--u)) calc(var(--panel-body-pad-px-1) * var(--u)) 0}
@@ -32,7 +38,8 @@
 /* The Cloud page: the master switch band, rows dimmed while it is off, and marks or bands in the warning colours. */
 .pn.swb{cursor:pointer}
 .pn.swb:hover{box-shadow:inset 0 0 0 999px var(--hover)}
-.pr.off{opacity:var(--panel-off-share)}
+/* A dimmed row's Remove key keeps its full strength, as it still acts. */
+.pr.off>:not(.rk){opacity:var(--panel-off-share)}
 /* The Untested tag beside a service's name: a small outlined chip in the muted ink. */
 .tag{display:inline-block; margin-inline-start:calc(var(--chip-gap-px) * var(--u)); padding:0 calc(var(--chip-gap-px) * var(--u)); border:var(--line-px) solid var(--pop-line); border-radius:999px;
   color:var(--pop-muted); font:var(--chip-weight) calc(var(--panel-hint-px-0) * var(--u))/1.4 var(--latin-fonts); vertical-align:middle}

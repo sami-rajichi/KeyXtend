@@ -72,11 +72,22 @@ function cloudChip(kind) {
 // row in warn_ink while it listens, holding nothing back.
 const barBase = bar;
 bar = () => {
+  if (NOTE[S.bar]) return noteBar();
   const html = barBase(), u = S.models && inUse(), s = u && u.cloud && byId(u.cloud);
   if (S.bar !== 'listening' || !s || !s.warn) return html;
   const line = '<div class="vw' + A + '"' + D + '>' + t(l.warns[s.warn], {sw:bdi(s.sw || '')}) + '</div>';
   return html.replace('<div class="vbar', '<div class="vbar wide warns').replace(/<\/div>$/, line + '</div>');
 };
+// A cloud note that the service must settle (owner, 2026-11-20) adds Open service to Try again and Use the local model:
+// one click to the card, or to the key page for the Key note. The acts sit under a long line, as the Windows 11 InfoBar's.
+const NOTE = {nkey:'key', nterms:'terms', naccount:'account', nallow:'allowance', noff:'off'};
+const noteSvc = () => { const u = S.models && inUse(); return u && u.cloud ? u.cloud : SVC[0].id; };
+function noteBar() {
+  const k = NOTE[S.bar], line = '<div class="vtx' + A + '"' + D + '><div class="w">' + t(l.notes[k], {at:bdi(RENEW_AT)}) + '</div></div>';
+  const acts = vt('again', 'rotate-ccw', l.again, 'enter') + vt('uselocal', 'cpu', l.useLocal) + vt('opensvc', k === 'key' ? 'key' : 'file', l.openSvc);
+  return '<div class="vbar wide cn' + (S.bar !== seen.bar ? ' in' : '') + '" role="toolbar" aria-label="' + l.title + '">' + slot('cloud') + line +
+    vb('gear', 'settings-2', l.gear) + vb('close', 'x', l.close) + '<div class="cna">' + acts + '</div></div>';
+}
 const cloudHome = () => S.cloud ? l.on + ' · ' + cn().svc(SVC.filter(s => S.svc[s.id].st === 'ready').length) : l.off;
 // Local | Cloud (owner, 2026-11-17): the panel's filter chips (PanelChip.qml), the shown one filled and checked.
 const sides = on => chips(l.sides, [['side:local', l.sideLocal], ['side:cloud', l.sideCloud]], on === 'cloud' ? 1 : 0);
@@ -99,13 +110,15 @@ function cloudModels() {
 }
 const slowBand = () => '<div class="pn' + A + '">' + ic('cpu') + '<span class="x"' + D + '>' + t(l.slow, {lang:(l.langIn || l.langs)[S.lang]}) + '</span>' + btn('go:cloud', 'cloud', l.cloud) + '</div>';
 
-// The Cloud page: the master switch, then the services, five a page; a ticked row's acts in the footer.
+// The Cloud page: the master switch, then the services, five a page; a ticked row's acts in the footer. A row whose key
+// is sealed has its own Remove key, as a download row its Pause, even while it or the master switch is off (owner, 2026-11-20).
 function cloudPage() {
   const on = S.cloud, s = S.tick.length ? SVC[S.tick[0]] : null, st = s ? S.svc[s.id].st : '', live = on && !!s;
   const rows = SVC.map((v, i) => {
     const sub = v.id === 'custom' ? l.customSub : t(l.freeLine, {v:freeText(v)});
-    const inner = tickBox(i, true) + cell(svcName(v) + untestedTag(v), sub) + '<div class="marks">' + (v.warn ? mark(l[WARN_MARK[v.warn]], 'triangle-alert', 'warn') : '') + stateMark(v.id) + '</div>';
-    return on ? tickRow([CK, '1fr', 'auto'], inner, i) : row([CK, '1fr', 'auto'], inner, '', 'flat off');
+    const rk = S.svc[v.id].key ? '<span class="rk">' + btn('rmrow:' + i, 'trash-2', l.remove) + '</span>' : '', cols = [CK, '1fr', 'auto'].concat(rk ? ['auto'] : []);
+    const inner = tickBox(i, true) + cell(svcName(v) + untestedTag(v), sub) + '<div class="marks">' + (v.warn ? mark(l[WARN_MARK[v.warn]], 'triangle-alert', 'warn') : '') + stateMark(v.id) + '</div>' + rk;
+    return on ? tickRow(cols, inner, i) : row(cols, inner, '', 'flat off');
   });
   const band = '<div class="pn swb' + A + '" data-a="cloudsw" role="switch" aria-checked="' + on + '" tabindex="0">' + ic('cloud') + '<span class="x"' + D + '>' + l.master + '</span>' +
     '<span class="onoff' + A + '"' + D + '>' + (on ? l.on : l.off) + '</span><span class="sw' + (on ? ' on' : '') + '"></span></div>';
@@ -200,6 +213,9 @@ Object.assign(ACT, {
     ctimer = setTimeout(() => { const ok = v.will === 'ok'; Object.assign(v, {test:ok ? 'ok' : 'bad', st:ok ? 'ready' : 'key'}); fallback(); render(); }, PACE.test);
   },
   rmkey:() => { Object.assign(S.svc[S.cur], {key:0, test:'', st:'key'}); fallback(); },
+  rmrow:x => { const v = S.svc[SVC[+x].id]; Object.assign(v, {key:0, test:'', st:v.st === 'off' ? 'off' : 'key'}); fallback(); },
+  uselocal:transcribe,
+  opensvc:() => { const id = noteSvc(), k = NOTE[S.bar]; if (k === 'key') { openSvc(id); go('svcpage'); } else { openCard(id, ['terms','off'].includes(k), 'cloud'); go('svccard'); } },
   side:x => go(x === 'cloud' ? 'mcloud' : S.weak ? 'slow' : 'models'),
   aim:x => { S.aim = S.aim === x ? '' : x; }, keep0:() => { const v = S.svc[S.cur]; v.keep0 = !v.keep0; fallback(); }, link:() => {}});
 
@@ -207,6 +223,7 @@ Object.assign(ACT, {
 CTL.cloud = [['cloud','Cloud page'],['card','Card: Groq'],['cardwarn','Card: ElevenLabs'],['cardgem','Card: Gemini'],['cardold','Card: old facts'],['key','Key works'],
   ['keybad','Key refused'],['address','Custom address'],['model','Other model'],['mcloud','Models: Cloud'],['slow','Models, slow PC'],['paste','Options: Paste']];
 CTL.engine = [['local','Local model'],['cloud','Groq (cloud)'],['elevenlabs','ElevenLabs, first dictation']];
+CTL.notes = [['nkey','Key'],['nterms','New terms'],['naccount','Account step'],['nallow','Allowance used'],['noff','Service off']];
 SAY.home += ' Part 2 adds Cloud services as the second row, so Options moves to page 2.';
 SAY.options += ' Part 2: Insert the text, Type it or Paste at once, as two filter chips (page 3).';
 SAY.models += ' Part 2: Local | Cloud at the top, as the clipboard panel’s filter chips; this Local side lists only the models on this PC.';
@@ -226,4 +243,10 @@ Object.assign(SAY, {
   svcpage:' <strong>Key and model.</strong> The key line, Test, the model line and where to make a key; Custom also has its address line, which must be https. Lemonfox, AssemblyAI and Custom have no test call, so the first dictation tests the key.',
   slow:' <strong>Models on a weak PC.</strong> The Local side: the default is Not for this PC, so the band says local models will be very slow here and leads to Cloud services.',
   paste:' <strong>Insert the text: Paste at once.</strong> Two filter chips, Type it the default; while Paste is chosen, its one-line hint takes the row below.',
-  mcloud:' <strong>Models, Cloud side.</strong> Its own list, five a page: only the models of the services you switched on, each with the cloud mark and its service; one still needing a key says so and Use stays dimmed. The band leads to Cloud services.'});
+  mcloud:' <strong>Models, Cloud side.</strong> Its own list, five a page: only the models of the services you switched on, each with the cloud mark and its service; one still needing a key says so and Use stays dimmed. The band leads to Cloud services.',
+  nkey:'<strong>Cloud note: the key.</strong> Try again, Use the local model, and Open service, which opens the service’s key page in one click; the buttons sit under the line, as the Windows 11 InfoBar’s under a long message.',
+  nterms:'<strong>Cloud note: new terms.</strong> Nothing is sent until the terms are confirmed again; Open service opens the card, ready to confirm.',
+  naccount:'<strong>Cloud note: a step on the service’s site.</strong> Open service opens the card, with the link to the service’s page.',
+  nallow:'<strong>Cloud note: the free allowance is used.</strong> It says the clock time it renews at, never a wait that goes stale; Open service opens the card.',
+  noff:'<strong>Cloud note: the service is off.</strong> Nothing was sent; Open service opens the card, where Confirm switches it on again.'});
+SAY.cloud += ' A row whose key is saved has its own Remove key, even while the service is off (ElevenLabs here) or cloud services are off.';

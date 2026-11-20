@@ -88,14 +88,15 @@ function list(rows, head = '') {
     '<button class="pg" data-a="pg:1" aria-label="' + l.pageOn + '"' + (S.pg >= pages - 1 ? ' disabled' : '') + '>' + ic('chevron-down') + '</button></div></div>';
 }
 
+// The bar's parts: a round icon button, a pill with its word, the mark before a text or note, and a note's line.
+const vb = (act, icon, name, cls = '', dis = false) => '<button class="vb ' + cls + '" data-a="' + act + '" aria-label="' + name + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '</button>';
+const vt = (act, icon, label, cls = '', dis = false) => '<button class="vt ' + cls + A + '" data-a="' + act + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '<span' + D + '>' + label + '</span></button>';
+const slot = n => '<span class="slot" aria-hidden="true">' + ic(n) + '</span>';
+const msg = s => '<span class="msg' + A + '"' + D + '>' + s + '</span>';
 // The bar in each state; Cancel stays at the left end and Stop or Close at the right end in every language.
 function bar() {
   // Preparing (owner, 2026-11-17): no bar until the microphone is open; only the Dictation key glows amber.
   if (S.bar === 'none' || S.bar === 'preparing') return '';
-  const vb = (act, icon, name, cls = '', dis = false) => '<button class="vb ' + cls + '" data-a="' + act + '" aria-label="' + name + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '</button>';
-  const vt = (act, icon, label, cls = '', dis = false) => '<button class="vt ' + cls + A + '" data-a="' + act + '"' + (dis ? ' disabled' : '') + '>' + ic(icon) + '<span' + D + '>' + label + '</span></button>';
-  const slot = n => '<span class="slot" aria-hidden="true">' + ic(n) + '</span>';
-  const msg = s => '<span class="msg' + A + '"' + D + '>' + s + '</span>';
   const gear = vb('gear', 'settings-2', l.gear), close = vb('close', 'x', l.close), cancel = vb('cancel', 'x', l.cancel);
   let inner = '', wide = false;
   const own = '<span class="lc' + A + '"' + D + '>' + l.own + '</span>';
