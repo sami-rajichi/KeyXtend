@@ -91,6 +91,12 @@ fn a_head_that_would_break_is_refused_before_anything_is_sent() {
     }
     let got = http.call(&call(&t, Verb::Post, &[], b"", &["no good"]));
     assert_eq!(got.err(), Some(NetError::Header), "a kept name is a token");
+    let fields = [Field {
+        name: "X-Key",
+        value: b"a\r\nX-Evil: 1",
+    }];
+    let got = http.deliver(&call(&t, Verb::Post, &fields, b"", &[]));
+    assert_eq!(got.err(), Some(NetError::Header), "deliver checks too");
     assert!(http.called().is_empty());
 }
 

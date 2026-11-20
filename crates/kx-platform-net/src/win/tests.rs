@@ -1,8 +1,9 @@
 //! The adapter's error table, and requests to a local server on the loopback that speaks plain HTTP behind an HTTPS
 //! address, with no proxy: each is refused, and the first byte sent is TLS's, never a plain GET or a POST's key.
 
+use super::handle::Handle;
 use super::{WinHttp, codes, post};
-use crate::{Call, Field, Hop, Http, NetError, Target, Verb};
+use crate::{Call, Field, Hop, Http, NetError, Target, Verb, wait_ms};
 use kx_ipc::STALL_S;
 use std::io::{Read, Write};
 use std::net::{Ipv4Addr, TcpListener, TcpStream};
@@ -14,6 +15,8 @@ use windows::Win32::Networking::WinHttp::{
     ERROR_WINHTTP_INVALID_SERVER_RESPONSE, ERROR_WINHTTP_NAME_NOT_RESOLVED,
     ERROR_WINHTTP_SECURE_FAILURE, ERROR_WINHTTP_SECURE_INVALID_CA, ERROR_WINHTTP_TIMEOUT,
     WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_ACCESS_TYPE_NO_PROXY,
+    WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH, WINHTTP_OPTION_AUTOLOGON_POLICY,
+    WINHTTP_OPTION_REDIRECT_POLICY, WINHTTP_OPTION_REDIRECT_POLICY_NEVER, WinHttpQueryOption,
 };
 
 /// TLS's first byte: a handshake record.
@@ -168,6 +171,33 @@ fn deliver_refuses_a_head_that_would_break_before_it_connects() {
         access: WINHTTP_ACCESS_TYPE_NO_PROXY,
     };
     assert_eq!(direct.deliver(&call).err(), Some(NetError::Header));
+}
+
+#[test]
+fn a_request_hands_redirects_back_and_never_offers_windows_sign_in() {
+    let direct = WinHttp {
+        access: WINHTTP_ACCESS_TYPE_NO_PROXY,
+    };
+    let target = Target::parse("https://api.example/v1").unwrap();
+    let wait = wait_ms(*STALL_S.start());
+    let session = direct.session(i32::try_from(wait).unwrap()).unwrap();
+    let connect = super::connect(&session, &target).unwrap();
+    let req = super::request(&connect, &target, Verb::Post, wait).unwrap();
+    let redirects = read(&req, WINHTTP_OPTION_REDIRECT_POLICY);
+    assert_eq!(redirects, Some(WINHTTP_OPTION_REDIRECT_POLICY_NEVER));
+    let sign_in = read(&req, WINHTTP_OPTION_AUTOLOGON_POLICY);
+    assert_eq!(sign_in, Some(WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH));
+}
+
+/// The number `option` holds on `h`, read back from `WinHTTP`.
+#[allow(unsafe_code, reason = "Reads a WinHTTP option back.")]
+fn read(h: &Handle, option: u32) -> Option<u32> {
+    let mut bytes = [0u8; size_of::<u32>()];
+    let mut len = u32::try_from(bytes.len()).ok()?;
+    let buf = Some(bytes.as_mut_ptr().cast());
+    // SAFETY: `h` is open, `bytes` has `len` writable bytes for the DWORD, and `len` takes the count.
+    unsafe { WinHttpQueryOption(h.raw(), option, buf, &raw mut len) }.ok()?;
+    Some(u32::from_le_bytes(bytes))
 }
 
 /// Answers each connection with `PLAIN` until `done`; gives the first byte the first client sent.

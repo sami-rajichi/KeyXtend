@@ -12,12 +12,14 @@ use self::handle::{Handle, owned, set};
 use crate::range::range_header;
 use crate::{AGENT, Body, Call, Hop, Http, NetError, Reply, Target, Verb, wait_ms};
 use windows::Win32::Networking::WinHttp::{
-    WINHTTP_ACCESS_TYPE, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_DISABLE_COOKIES,
-    WINHTTP_FLAG_SECURE, WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2, WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3,
-    WINHTTP_OPTION_DISABLE_FEATURE, WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT,
-    WINHTTP_OPTION_REDIRECT_POLICY, WINHTTP_OPTION_REDIRECT_POLICY_NEVER,
-    WINHTTP_OPTION_SECURE_PROTOCOLS, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest,
-    WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest, WinHttpSetTimeouts,
+    WINHTTP_ACCESS_TYPE, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+    WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH, WINHTTP_DISABLE_COOKIES, WINHTTP_FLAG_SECURE,
+    WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2, WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3,
+    WINHTTP_OPTION_AUTOLOGON_POLICY, WINHTTP_OPTION_DISABLE_FEATURE,
+    WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT, WINHTTP_OPTION_REDIRECT_POLICY,
+    WINHTTP_OPTION_REDIRECT_POLICY_NEVER, WINHTTP_OPTION_SECURE_PROTOCOLS, WinHttpConnect,
+    WinHttpOpen, WinHttpOpenRequest, WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest,
+    WinHttpSetTimeouts,
 };
 use windows::core::{HSTRING, PCWSTR};
 
@@ -25,6 +27,18 @@ use windows::core::{HSTRING, PCWSTR};
 const TLS: u32 = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
 /// The TLS version a Windows without 1.3 in `WinHTTP` allows.
 const TLS_OLD: u32 = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
+/// The options every request takes: redirects handed back unfollowed, no cookies, and Windows' sign-in never offered.
+const PINNED: [(u32, u32); 3] = [
+    (
+        WINHTTP_OPTION_REDIRECT_POLICY,
+        WINHTTP_OPTION_REDIRECT_POLICY_NEVER,
+    ),
+    (WINHTTP_OPTION_DISABLE_FEATURE, WINHTTP_DISABLE_COOKIES),
+    (
+        WINHTTP_OPTION_AUTOLOGON_POLICY,
+        WINHTTP_AUTOLOGON_SECURITY_LEVEL_HIGH,
+    ),
+];
 
 /// Sends GET and POST requests through `WinHTTP`, over HTTPS only.
 #[derive(Clone, Copy, Debug)]
@@ -107,7 +121,7 @@ fn connect(session: &Handle, target: &Target) -> Result<Handle, NetError> {
     owned(unsafe { WinHttpConnect(session.raw(), &host, target.port(), 0) })
 }
 
-/// A secure `verb` of `target`'s path that hands redirects back, keeps no cookies and waits `wait` ms for its head.
+/// A secure `verb` of `target`'s path that takes the `PINNED` options and waits `wait` ms for its head.
 #[allow(unsafe_code, reason = "Opens a WinHTTP request.")]
 fn request(connect: &Handle, target: &Target, verb: Verb, wait: u32) -> Result<Handle, NetError> {
     let (path, none) = (HSTRING::from(target.path()), PCWSTR::null());
@@ -125,13 +139,9 @@ fn request(connect: &Handle, target: &Target, verb: Verb, wait: u32) -> Result<H
         )
     };
     let req = owned(req)?;
-    let never = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
-    set(&req, WINHTTP_OPTION_REDIRECT_POLICY, never)?;
-    set(
-        &req,
-        WINHTTP_OPTION_DISABLE_FEATURE,
-        WINHTTP_DISABLE_COOKIES,
-    )?;
+    for (option, value) in PINNED {
+        set(&req, option, value)?;
+    }
     set(&req, WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT, wait)?;
     Ok(req)
 }

@@ -1,6 +1,6 @@
-//! A scripted `Http` for tests: each request takes the next act and is kept in order. It never sleeps or touches the
-//! network; a quiet step at or past the hop's `wait_ms` reads as a stall, as `WinHTTP`'s receive timeout does. A call's
-//! body is written in chunks that end once it is stopped, and its answer keeps only the headers it asked for.
+//! A scripted `Http` for tests that never sleeps or touches the network: each request takes the next act in order, and
+//! a quiet step at or past `wait_ms` reads as a stall. A call is checked first, as `WinHttp` checks it, then written in
+//! chunks that end once it is stopped, and its answer keeps only the headers it asked for.
 
 use crate::follow::FOUND;
 use crate::range::{DASH, OK, OVER, PARTIAL, UNIT};
@@ -141,6 +141,7 @@ impl Http for FakeHttp {
     }
 
     fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError> {
+        call.check()?;
         let field = |f: &crate::Field<'_>| (f.name.to_owned(), f.value.to_vec());
         let index = {
             let mut called = lock(&self.called);
