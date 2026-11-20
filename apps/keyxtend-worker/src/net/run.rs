@@ -6,14 +6,12 @@ use super::pace::Pace;
 use super::send::{self, Sending};
 use super::shape;
 use super::wav;
-use super::{Event, Kit, Said, Told};
+use super::{Event, Kit, Said, spawn};
 use kx_ipc::{MAX_NET_RUN_TEXT_BYTES, NetCall, NetFault, NetNote, NetRun};
 use std::collections::{BTreeMap, VecDeque};
-use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::thread;
 use zeroize::Zeroizing;
 
 /// The name of each request's thread.
@@ -115,18 +113,10 @@ impl Run {
             let Some((index, wav)) = self.waiting.pop_front() else {
                 return Ok(());
             };
-            let (kit, tx, sending, serial) =
-                (kit.clone(), tx.clone(), self.sending.clone(), self.serial);
-            let work = move || {
-                let said =
-                    panic::catch_unwind(AssertUnwindSafe(|| send::piece(&kit, &sending, &wav)));
-                let said = Said::Piece(index, said.unwrap_or(Err(NetFault::Gone)));
-                let _ = tx.send(Event::Told(Told { id, serial, said }));
-            };
-            thread::Builder::new()
-                .name(SENDER.to_owned())
-                .spawn(work)
-                .map_err(|_| NetFault::Gone)?;
+            let (kit, sending) = (kit.clone(), self.sending.clone());
+            let work = move || send::piece(&kit, &sending, &wav);
+            let said = move |got| Said::Piece(index, got);
+            spawn(SENDER, (id, self.serial), tx.clone(), work, said)?;
             self.flying += 1;
         }
         Ok(())

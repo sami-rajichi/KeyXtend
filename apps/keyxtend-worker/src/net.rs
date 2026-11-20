@@ -19,12 +19,13 @@ mod shape;
 mod status;
 mod wav;
 
+use crate::stream::{self, Heard, Note, Pipe, Streamed};
 use crate::{client, serve};
 use clock::Clock;
 use job::Job;
 use kx_ipc::{IpcError, NetAsk, NetFault, NetNote};
 use kx_platform_net::Http;
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Read, Write};
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -88,18 +89,39 @@ pub trait Notes {
     fn tell(&mut self, note: NetNote) -> Result<(), IpcError>;
 }
 
-/// The pipe: a note that fails its own checks goes as `Gone` instead.
-struct Pipe<'w, W: Write + ?Sized>(&'w mut W);
-
 impl<W: Write + ?Sized> Notes for Pipe<'_, W> {
     fn tell(&mut self, note: NetNote) -> Result<(), IpcError> {
-        match note.write(self.0) {
-            Err(IpcError::Io(kind)) => Err(IpcError::Io(kind)),
-            Err(_) => {
-                let (id, fault) = (note.id(), NetFault::Gone);
-                NetNote::Fault { id, fault }.write(self.0)
-            }
-            Ok(()) => Ok(()),
+        self.send(&note)
+    }
+}
+
+/// A note that fails its own checks goes as `Gone` instead.
+impl Note for NetNote {
+    fn put<W: Write + ?Sized>(&self, w: &mut W) -> Result<(), IpcError> {
+        self.write(w)
+    }
+
+    fn instead(&self) -> Self {
+        let (id, fault) = (self.id(), NetFault::Gone);
+        Self::Fault { id, fault }
+    }
+}
+
+impl Streamed for NetAsk<'static> {
+    fn read_from(r: &mut dyn Read) -> Result<Self, IpcError> {
+        Self::read(r)
+    }
+
+    fn last(&self) -> bool {
+        bye(self)
+    }
+}
+
+impl From<Heard<NetAsk<'static>>> for Event {
+    fn from(heard: Heard<NetAsk<'static>>) -> Self {
+        match heard {
+            Heard::Ask(ask) => Self::Ask(Box::new(ask)),
+            Heard::End(end) => Self::End(end),
         }
     }
 }
@@ -136,7 +158,7 @@ where
     W: Write + ?Sized,
 {
     let (tx, rx) = mpsc::channel();
-    read(input, tx.clone())?;
+    stream::listen::<NetAsk<'static>, _, _>(input, tx.clone(), READER)?;
     let (mut job, mut pipe) = (Job::new(kit, tx), Pipe(w));
     let end = loop {
         match act(&mut job, wake(&rx), &mut pipe) {
@@ -186,36 +208,28 @@ fn bye(ask: &NetAsk<'_>) -> bool {
     matches!(ask, NetAsk::Bye)
 }
 
-/// Reads asks from `input` on the reader thread until goodbye, the end of input or a broken frame.
-fn read<R: Read + Send + 'static>(mut input: R, tx: Sender<Event>) -> Result<(), IpcError> {
-    let reader = move || {
-        loop {
-            let event = next(&mut input);
-            let last = match &event {
-                Event::Ask(ask) => bye(ask),
-                Event::End(_) => true,
-                Event::Told(_) => false,
-            };
-            if tx.send(event).is_err() || last {
-                return;
-            }
-        }
+/// Runs `work` on a thread named `name` and tells `tx` its outcome, a panic as `Gone`, as `said` makes it for `id`
+/// under `serial`.
+///
+/// # Errors
+/// `Gone` when the thread does not start.
+pub fn spawn<T: 'static>(
+    name: &str,
+    (id, serial): (u32, u64),
+    tx: Sender<Event>,
+    work: impl FnOnce() -> Result<T, NetFault> + Send + 'static,
+    said: impl FnOnce(Result<T, NetFault>) -> Said + Send + 'static,
+) -> Result<(), NetFault> {
+    let body = move || {
+        let got = panic::catch_unwind(AssertUnwindSafe(work)).unwrap_or(Err(NetFault::Gone));
+        let said = said(got);
+        let _ = tx.send(Event::Told(Told { id, serial, said }));
     };
     thread::Builder::new()
-        .name(READER.to_owned())
-        .spawn(reader)
+        .name(name.to_owned())
+        .spawn(body)
         .map(drop)
-        .map_err(|e| IpcError::Io(e.kind()))
-}
-
-/// The next ask on `input`; the end of input, a broken frame or a panic inside the read ends the job.
-fn next<R: Read>(input: &mut R) -> Event {
-    match panic::catch_unwind(AssertUnwindSafe(|| NetAsk::read(input))) {
-        Ok(Ok(ask)) => Event::Ask(Box::new(ask)),
-        Ok(Err(IpcError::Closed)) => Event::End(Ok(())),
-        Ok(Err(e)) => Event::End(Err(e)),
-        Err(_) => Event::End(Err(IpcError::Io(ErrorKind::Other))),
-    }
+        .map_err(|_| NetFault::Gone)
 }
 
 #[cfg(test)]

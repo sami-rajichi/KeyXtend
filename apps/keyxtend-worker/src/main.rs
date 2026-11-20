@@ -14,6 +14,7 @@ mod media;
 mod net;
 mod riff;
 mod serve;
+mod stream;
 mod vault;
 mod voice;
 

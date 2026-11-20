@@ -6,43 +6,12 @@ use super::bench::{WAIT, fault, part, send, text};
 use super::*;
 use crate::net::job::Job;
 use crate::net::{Event, Notes, act, run};
+use crate::stream::pipes::{Feed, Tap};
 use kx_ipc::{IpcError, NetAsk, NetFault, NetNote};
 use kx_platform_net::{Call, Hop, Http, NetError, Reply};
-use std::io::{self, Cursor, Read, Write};
+use std::io::Cursor;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-
-/// Input fed by the test, one frame at a time; it ends when the test drops its sender.
-struct Feed(Receiver<Vec<u8>>, Vec<u8>);
-
-impl Read for Feed {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if self.1.is_empty() {
-            match self.0.recv() {
-                Ok(bytes) => self.1 = bytes,
-                Err(_) => return Ok(0),
-            }
-        }
-        let n = buf.len().min(self.1.len());
-        buf[..n].copy_from_slice(&self.1[..n]);
-        self.1.drain(..n);
-        Ok(n)
-    }
-}
-
-/// Output that hands each write to the test.
-struct Tap(Sender<Vec<u8>>);
-
-impl Write for Tap {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let _ = self.0.send(buf.to_vec());
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
 
 /// A server whose every call panics.
 struct Boom;

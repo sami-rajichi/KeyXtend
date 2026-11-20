@@ -2,19 +2,16 @@
 //! a part for no live run is dropped unread, as a cancelled run's parts may still be in the pipe; an outcome for a run
 //! or test no longer live, or for an older one of the same id, is never told.
 
-use super::Notes;
 use super::run::Run;
 use super::send::{self, Sending};
 use super::shape;
-use super::{Event, Kit, Said, Told};
+use super::{Event, Kit, Notes, Said, Told, spawn};
 use kx_ipc::{IpcError, NET_TEST_TRIES, NetAsk, NetCall, NetFault, NetNote};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::panic::{self, AssertUnwindSafe};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use std::thread;
 
 /// The name of each test's thread.
 const TESTER: &str = "speech-net-test";
@@ -143,17 +140,9 @@ impl Job {
             pace: None,
             dropped: dropped.clone(),
         };
-        let (kit, tx) = (self.kit.clone(), self.tx.clone());
-        let work = move || {
-            let said = panic::catch_unwind(AssertUnwindSafe(|| send::test(&kit, &sending)));
-            let said = Said::Test(said.unwrap_or(Err(NetFault::Gone)));
-            let _ = tx.send(Event::Told(Told { id, serial, said }));
-        };
-        let name = TESTER.to_owned();
-        thread::Builder::new()
-            .name(name)
-            .spawn(work)
-            .map_err(|_| NetFault::Gone)?;
+        let kit = self.kit.clone();
+        let work = move || send::test(&kit, &sending);
+        spawn(TESTER, (id, serial), self.tx.clone(), work, Said::Test)?;
         self.tests.insert(id, Test { serial, dropped });
         Ok(())
     }
