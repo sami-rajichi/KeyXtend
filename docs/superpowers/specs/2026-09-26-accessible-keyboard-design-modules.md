@@ -264,6 +264,16 @@ Replaced by the 2026-11-10 voice designs: [`2026-11-10-voice-typing-design.md`](
   - History keeps the last 50 texts (`history_max`, pins aside), sealed on disk with no time limit, not one day. Recordings are kept only with `keep_voice`, off by default.
   - The worker runs two jobs: `voice` hears the microphone and has no network, and `fetch` downloads models and has no microphone (ADR-0042).
   - The cloud engines are part 2 ([`2026-11-10-voice-cloud-design.md`](2026-11-10-voice-cloud-design.md), ADR-0047).
+- **As built (P11 part 2, 2026-11-20):** the cloud, in place of the "Optional cloud" lines above.
+  - Cloud stays off until the user switches a service on and confirms its card; a cloud model is never a default, and nothing moves from local to cloud by itself (ADR-0047).
+  - Offered: Groq, Lemonfox, Custom, OpenRouter, ElevenLabs, Gemini and AssemblyAI. OpenAI, Mistral, Together and DeepInfra are built but hidden; Azure, Cloudflare and OVHcloud are not used (ADR-0050).
+  - Each service brings the user's own key, sealed on the voice shelf; KeyXtend ships none and makes no account.
+  - Nothing leaves the PC before Stop. Then the recording goes, in pieces cut at pauses, to the one service named on the bar.
+  - The worker runs three jobs: `voice` and `fetch` as above, and `speech-net`, which has the network and no microphone and sends the pieces over HTTPS in one of four request shapes (ADR-0047, ADR-0051).
+  - Each card shows the service's facts with the day they were read; ElevenLabs and Gemini carry a training warning on the card and again at the first dictation.
+  - A password box always uses the local model, and a failed upload keeps the recording, with Try again and "Use the local model".
+  - A dictated text can also be pasted at once through the clipboard module (`insert`, ADR-0048); the panel's lines take typed text (ADR-0049).
+  - A card serves a language only after its check passes on that language's clip (ADR-0052).
 
 ### 8.3 Selection helper
 
