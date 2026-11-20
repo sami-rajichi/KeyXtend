@@ -20,12 +20,17 @@ const DIFFERS: u8 = 2;
 const NO_ROOM: u8 = 3;
 const FAILED: u8 = 4;
 
-/// `checks` in the first form, each result without its language, so an older build still reads them.
+/// `checks` in the first form, each result without its language, so an older build still reads them. Passes come
+/// first: an older build keeps a card and file's last row, so it keeps a non-pass if any language had one.
 pub(crate) fn encode_checks(checks: &Checks) -> Zeroizing<Vec<u8>> {
+    let mut rows: Vec<&Checked> = checks.rows().iter().collect();
+    rows.sort_by_key(|c| !matches!(c.verdict, Verdict::Passed { .. }));
     codec::encode(|w| {
         w.head(CHECKS_MARK, VERSION);
-        w.count(checks.rows().len());
-        checks.rows().iter().for_each(|row| put_row(w, row));
+        w.count(rows.len());
+        for row in &rows {
+            put_row(w, row);
+        }
     })
 }
 
@@ -70,8 +75,8 @@ pub(crate) fn decode_langs(bytes: &[u8]) -> Result<Vec<Checked>, Bad> {
     Ok(rows)
 }
 
-/// The checks of `plain`, each taking its language from the same result in `langs`. A result an older build wrote
-/// since finds none there, so it serves no language.
+/// The checks of `plain`, each taking its language from a result in `langs` identical in every other field. A result
+/// an older build rewrote any other way finds none there, so it serves no language.
 pub(crate) fn named(plain: Vec<Checked>, mut langs: Vec<Checked>) -> Checks {
     let take = |row: Checked| {
         let same = langs.iter().position(|l| {
