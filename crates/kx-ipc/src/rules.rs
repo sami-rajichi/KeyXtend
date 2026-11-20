@@ -16,6 +16,8 @@ const HOST_END: [char; 2] = ['/', '?'];
 const PORT_MARK: char = ':';
 /// Marks a user name or a fragment, which a service's address never holds.
 const NOT_IN: [char; 2] = ['@', '#'];
+/// The marks a link may hold besides ASCII letters and digits: RFC 3986's unreserved and reserved ones, and `%`.
+const LINK_MARKS: &[u8] = b"-._~:/?#[]@!$&'()*+,;=%";
 /// Starts a hex number, which a URL reader takes as part of an IPv4 address.
 const HEX_MARK: &str = "0x";
 /// The marks a model's id may hold besides a name's: a version's dot, a provider's slash and a tag's colon.
@@ -126,7 +128,13 @@ pub fn form_value(text: &str) -> Result<(), IpcError> {
     ok_if(text.bytes().all(|b| b.is_ascii_graphic() || b == SPACE))
 }
 
-/// Refuses a service's address unless it is `HTTPS`, visible ASCII without `NOT_IN`, then a plain host (`listed`,
+/// True for a byte a link may hold: an ASCII letter or digit, or one of RFC 3986's marks.
+#[must_use]
+pub fn link_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || LINK_MARKS.contains(&b)
+}
+
+/// Refuses a service's address unless it is `HTTPS`, link bytes without `NOT_IN`, then a plain host (`listed`,
 /// never `UNDER`, never a number) within `MAX_HOST_BYTES` and maybe `:` and a port from 1; its requests may reach only
 /// that host.
 ///
@@ -134,7 +142,7 @@ pub fn form_value(text: &str) -> Result<(), IpcError> {
 /// `BadField` for anything else.
 pub fn https(text: &str) -> Result<(), IpcError> {
     let plain = text.starts_with(HTTPS) && !text.contains(NOT_IN);
-    visible(text.as_bytes())?;
+    ok_if(text.bytes().all(link_byte))?;
     let (host, port) = host_port(text);
     let port_ok = port.is_none_or(|p| digits(p) && p.parse::<u16>().is_ok_and(|n| n > 0));
     let short = !host.starts_with(UNDER) && host.len() <= MAX_HOST_BYTES;

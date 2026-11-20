@@ -2,6 +2,7 @@
 //! opens it without our rights. Only `OpenLink` reaches it, and a link may hold selected text, so it never prints.
 
 use crate::{Capability, Redacted, ServiceId, ServiceKey};
+use kx_ipc::rules::link_byte;
 use thiserror::Error;
 
 /// The one scheme a link may start with, in lower case.
@@ -9,8 +10,6 @@ pub const LINK_SCHEME: &str = "https://";
 /// The longest link, in bytes: a safety ceiling under every platform's command-line limit (32,767 characters on
 /// Windows), never a user setting.
 pub const MAX_LINK_BYTES: usize = 16 * 1024;
-/// The marks a link may hold besides ASCII letters and digits: RFC 3986's unreserved and reserved ones, and `%`.
-const LINK_MARKS: &str = "-._~:/?#[]@!$&'()*+,;=%";
 
 /// Why a link was refused or not opened; no variant holds the link.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Error)]
@@ -51,8 +50,7 @@ impl Link {
         if !host.is_some_and(|c| c.is_ascii_alphanumeric()) {
             return Err(LinkError::NotHttps);
         }
-        let fits = |c: char| c.is_ascii_alphanumeric() || LINK_MARKS.contains(c);
-        if !text.chars().all(fits) {
+        if !text.bytes().all(link_byte) {
             return Err(LinkError::BadChar);
         }
         Ok(Self(Redacted::new(text)))

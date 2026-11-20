@@ -51,6 +51,16 @@ fn an_addresss_origin_is_its_scheme_host_and_port_up_to_its_path_or_query() {
 }
 
 #[test]
+fn an_address_holds_only_the_characters_a_link_holds() {
+    for mark in ['"', '\\', '<', '>', '^', '`', '{', '|', '}'] {
+        let url = format!("https://stt.example.com/a{mark}b");
+        assert_eq!(https(&url), Err(BadField), "{url:?}");
+    }
+    let marks = "https://stt.example.com/v1/a-b_c.d~e:f?x=%20&y=(1)*+,;z=$!'[]";
+    assert_eq!(https(marks), Ok(()));
+}
+
+#[test]
 fn an_address_that_could_reach_another_host_or_break_a_request_is_refused() {
     let bad = [
         "",
