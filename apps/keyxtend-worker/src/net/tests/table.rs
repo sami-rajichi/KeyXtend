@@ -184,20 +184,22 @@ fn a_429_asks_to_wait_for_its_retry_after_in_whole_seconds() {
 fn a_used_allowance_tells_its_renewal_within_the_frames_range() {
     let renews = |s| Got::Fault(NetFault::Allowance { renews_s: s });
     assert_eq!(allowance("2m59.56s"), renews(Some(180)));
-    assert_eq!(allowance("7.66s"), renews(Some(8)));
     assert_eq!(allowance("1h"), renews(Some(3600)));
     assert_eq!(allowance("1h2m3s"), renews(Some(3723)));
-    assert_eq!(allowance("250ms"), renews(Some(1)));
-    assert_eq!(
-        allowance("0s"),
-        renews(Some(1)),
-        "held up to the range's start"
-    );
+    assert_eq!(allowance("1m0.5s"), renews(Some(61)));
     assert_eq!(allowance("745h"), renews(None), "past a month is not told");
     assert_eq!(allowance("soon"), renews(None));
     assert_eq!(allowance(""), renews(None));
     let no_reset = [("x-ratelimit-remaining-requests", "0")];
     assert_eq!(read(BUSY, &no_reset, RATE), renews(None));
+}
+
+#[test]
+fn no_request_left_until_a_reset_within_a_minute_is_a_wait() {
+    assert_eq!(allowance("7.66s"), Got::Wait(Some(8)), "a minute's limit");
+    assert_eq!(allowance("250ms"), Got::Wait(Some(1)));
+    assert_eq!(allowance("0s"), Got::Wait(Some(0)));
+    assert_eq!(allowance("1m"), Got::Wait(Some(60)), "the pace's span");
 }
 
 #[test]

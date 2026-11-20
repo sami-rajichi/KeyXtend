@@ -10,7 +10,7 @@ use super::multipart::{self, FILE, Text};
 use super::reply;
 use super::shape::{self, Piece, Request, Shape, Verdict};
 use super::status::{self, LANGUAGE, RETRY, Row, Then, row};
-use kx_ipc::{NetCall, NetFault, NetField, NetForm, NetShape};
+use kx_ipc::{NET_PACE_S, NetCall, NetFault, NetField, NetForm, NetShape};
 use kx_platform_net::{Head, Verb};
 use std::borrow::Cow;
 use zeroize::Zeroizing;
@@ -25,11 +25,11 @@ const FORMAT: &str = "response_format";
 const JSON: &str = "json";
 /// What follows a list field's name.
 const LIST: &str = "[]";
-/// The answer headers a 429 is read by (Groq's rate-limit page): the wait, the day's requests left and their renewal.
+/// The answer headers a 429 is read by (Groq's rate-limit page): the wait, the requests left and their reset.
 const LEFT: &str = "x-ratelimit-remaining-requests";
 const RESET: &str = "x-ratelimit-reset-requests";
 const KEEP: &[&str] = &[RETRY, LEFT, RESET];
-/// `LEFT` once the day's requests are used.
+/// `LEFT` once the requests are used until their reset.
 const NONE_LEFT: &str = "0";
 /// The exact error codes or types that mean no credit (`OpenAI`'s error page): a rate limit's message may name billing,
 /// so words never decide it.
@@ -188,14 +188,18 @@ fn judge<T>(form: Option<&NetForm<'_>>, head: &Head, body: &[u8]) -> Verdict<T> 
     status::judge(TABLE, head, said, busy)
 }
 
-/// A 429: the used allowance with its renewal when no request is left today, else the wait the service asks for.
+/// A 429: the wait the service asks for, or, when no request is left, a wait for a reset within `NET_PACE_S`, as a
+/// minute's limit, else the used allowance with its renewal, as Groq's day.
 fn busy<T>(head: &Head) -> Verdict<T> {
-    if head.header(LEFT).map(str::trim) == Some(NONE_LEFT) {
-        let renews_s = head
-            .header(RESET)
-            .and_then(reply::span_s)
-            .and_then(status::renewal);
-        return Verdict::Fault(NetFault::Allowance { renews_s });
+    if head.header(LEFT).map(str::trim) != Some(NONE_LEFT) {
+        return status::wait(head);
     }
-    status::wait(head)
+    let reset_s = head.header(RESET).and_then(reply::span_s);
+    match reset_s {
+        Some(s) if s <= u64::from(NET_PACE_S) => Verdict::Busy(u32::try_from(s).ok()),
+        _ => {
+            let renews_s = reset_s.and_then(status::renewal);
+            Verdict::Fault(NetFault::Allowance { renews_s })
+        }
+    }
 }

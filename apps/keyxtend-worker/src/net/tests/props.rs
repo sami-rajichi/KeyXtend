@@ -1,7 +1,7 @@
 //! Properties: a random reply never panics the readers, behind a paywall or not, a random JSON error with a used
-//! allowance always tells a renewal in range, a random `detail[]` names the language only on a 400 or a 422, a body
-//! past any cap is always refused one byte past it, a run takes exactly the parts that fill its pieces in order, and
-//! texts are told in the pieces' order whatever order they come in.
+//! allowance tells a renewal in range or a wait within a minute, a random `detail[]` names the language only on a 400
+//! or a 422, a body past any cap is refused one byte past it, a run takes exactly the parts that fill its pieces in
+//! order, and texts are told in the pieces' order whatever order they come in.
 
 use super::reply::{NEVER, endless};
 use super::*;
@@ -9,7 +9,7 @@ use crate::net::form::Form;
 use crate::net::reply::{drain, seconds, span_s, text};
 use crate::net::run::Run;
 use crate::net::shape::{Shape, Verdict};
-use kx_ipc::{NET_RENEW_S, NetFault, NetNote};
+use kx_ipc::{NET_PACE_S, NET_RENEW_S, NetFault, NetNote};
 use proptest::prelude::*;
 
 /// What a model of the run expects of a part: the pieces' cursor and the bytes in the current one.
@@ -63,10 +63,13 @@ proptest! {
         let used = [("x-ratelimit-remaining-requests", "0"), ("x-ratelimit-reset-requests", reset.as_str())];
         let head = head(status, &used);
         let _ = Form.tested(&call(), &head, body.as_bytes());
+        let soon = span_s(&reset).filter(|&s| s <= u64::from(NET_PACE_S));
         match Form.read(&call(), &head, body.as_bytes()) {
             Verdict::Fault(NetFault::Allowance { renews_s }) => {
+                prop_assert!(soon.is_none(), "a reset within a minute is a wait");
                 prop_assert!(renews_s.is_none_or(|s| NET_RENEW_S.contains(&s)), "{renews_s:?}");
             }
+            Verdict::Busy(wait) => prop_assert_eq!(wait.map(u64::from), soon),
             Verdict::Fault(NetFault::Credit) => {}
             _ => prop_assert!(status != BUSY, "a used allowance is told"),
         }
