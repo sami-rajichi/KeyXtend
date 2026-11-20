@@ -1,6 +1,7 @@
 //! The command-line help.
 #![cfg(windows)]
 
+use kx_module_api::ports::DevicePick;
 use spike_core::config::FACE;
 
 use crate::apps::AppKind;
@@ -35,7 +36,8 @@ fn product_lines() -> String {
        {PROG} g11 <{NAME}>
        {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
-       {PROG} g22 <{NAME}|{bench}|{staged}> [{device} <pick>]
+       {PROG} g22 <{NAME}|{bench}|{staged}>
+       {PROG} g22 {NAME} [{device} <pick>]
        {PROG} g23 <{NAME}>
        {PROG} g26 <{NAME}>
        {PROG} g27 <{NAME}>"
@@ -55,11 +57,12 @@ fn face_lines() -> String {
 fn voice_lines() -> String {
     let (bench, staged, build) = (g22::BENCH, g22::STAGED, g22::worker_build());
     let (app, device) = (g22::app_build(), g22::DEVICE_FLAG);
+    let (cpu, auto) = (DevicePick::CPU, DevicePick::AUTO);
     format!(
         "g22 {NAME} starts the build with {app} beside the gate worker on a data folder it makes, so \
          close the product first; it dictates each shipped clip into target-window by clicks and prints numbers and \
          the id of the device that wrote each text.
-g22 {NAME} {device} with cpu, auto or a card's id runs the copy on that device in place of [g22_product] device, \
+g22 {NAME} {device} with {cpu}, {auto} or a card's id runs the copy on that device in place of [g22_product] device, \
          so a card run edits no file.
 g22 {bench} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
          the worker built with {build}, normal then weak, and it prints a table of numbers.

@@ -165,11 +165,21 @@ fn p11_lists_g22s_runs_and_says_which_move_nothing() {
     let product = told(NAME).is_some_and(|l| l.contains(&g22::app_build()) && l.contains("close"));
     assert!(product, "{text}");
     let flag = g22::DEVICE_FLAG;
-    assert!(text.contains(&format!("{runs} [{flag} <")), "{text}");
-    let device = text
-        .lines()
+    let offered: Vec<&str> = text.lines().filter(|l| l.contains(flag)).collect();
+    let form = format!("{PROG} g22 {NAME} [{flag} <");
+    let forms: Vec<&&str> = offered
+        .iter()
+        .filter(|l| l.contains(&format!("{PROG} g22")))
+        .collect();
+    assert!(
+        forms.len() == 1 && forms[0].contains(&form),
+        "only {NAME}'s form: {text}"
+    );
+    let device = offered
+        .iter()
         .find(|l| l.starts_with(&format!("g22 {NAME} {flag} ")));
-    let instead = |l: &str| l.contains("[g22_product] device") && l.contains("cpu");
+    let names = format!("{}, {} or", DevicePick::CPU, DevicePick::AUTO);
+    let instead = |l: &&str| l.contains("[g22_product] device") && l.contains(&names);
     assert!(device.is_some_and(instead), "{text}");
     let voiced = format!("g22 {NAME} and g22 {} ", g22::BENCH);
     let hint = text.lines().find(|l| l.starts_with(&voiced));
