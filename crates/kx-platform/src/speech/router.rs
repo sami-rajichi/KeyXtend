@@ -106,6 +106,13 @@ impl Router {
         entry.spoken.give()
     }
 
+    /// Wipes `run`'s speech, as a Cancel does.
+    pub(super) fn forget(&mut self, run: u64) {
+        if let Some(entry) = self.runs.get_mut(&run) {
+            entry.spoken = Spoken::default();
+        }
+    }
+
     /// Sends `run`'s next kept pieces to `to`, until the last.
     pub(super) fn keep(&mut self, run: u64, to: Sender<Kept>) {
         if let Some(entry) = self.runs.get_mut(&run) {

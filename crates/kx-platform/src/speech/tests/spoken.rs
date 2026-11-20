@@ -32,6 +32,11 @@ fn stray_speech(id: u32) -> VoiceNote {
     spoken(id, 1, false)
 }
 
+/// The only piece of speech, marked last.
+fn lone_speech(id: u32) -> VoiceNote {
+    spoken(id, 0, true)
+}
+
 /// A cloud dictation: no model, cut within the row.
 fn cloud() -> SpeechAsk {
     SpeechAsk {
@@ -112,6 +117,29 @@ fn a_wipe_takes_the_speech_and_speech_out_of_order_is_the_jobs_fault() {
 }
 
 #[test]
+fn a_cancel_after_done_takes_the_speech_as_the_port_says() {
+    let (script, _, speech) = solo();
+    let notes: Vec<fn(u32) -> VoiceNote> = vec![shut, first_speech, last_speech, done];
+    let (mut run, heard) = stopped(&speech, &script, notes);
+    next(&heard, 2);
+    script.act(VoiceAct::Say(vec![shut]));
+    run.cancel().unwrap();
+    assert_eq!(run.pieces().err(), Some(SpeechError::NoSound));
+}
+
+#[test]
+fn speech_with_no_last_piece_or_a_piece_after_the_last_is_the_jobs_fault() {
+    let (script, _, speech) = solo();
+    let cut: Vec<fn(u32) -> VoiceNote> = vec![shut, first_speech, done];
+    let after: Vec<fn(u32) -> VoiceNote> = vec![shut, lone_speech, last_speech, done];
+    for notes in [cut, after] {
+        let (mut run, heard) = stopped(&speech, &script, notes);
+        next(&heard, 2);
+        assert_eq!(run.pieces().err(), Some(SpeechError::Internal));
+    }
+}
+
+#[test]
 fn a_run_that_heard_no_speech_has_no_pieces() {
     let (script, _, speech) = solo();
     let notes: Vec<fn(u32) -> VoiceNote> = vec![shut, done];
@@ -138,35 +166,36 @@ fn a_run_with_a_model_has_no_pieces_even_after_its_end() {
 /// What the job tells a run in a property case.
 #[derive(Clone, Debug)]
 enum Step {
-    Speech(u16),
+    /// A piece this many places past the next in order, marked last or not.
+    Speech(u16, bool),
     Done,
     Wipe,
 }
 
 fn a_step() -> impl Strategy<Value = Step> {
-    let index = 0..u16::try_from(MAX_SPEECH_PIECES).unwrap();
+    let skip = prop_oneof![4 => Just(0), 1 => 1..u16::try_from(MAX_SPEECH_PIECES).unwrap()];
     prop_oneof![
-        4 => index.prop_map(Step::Speech),
+        4 => (skip, any::<bool>()).prop_map(|(skip, last)| Step::Speech(skip, last)),
         1 => Just(Step::Done),
         1 => Just(Step::Wipe),
     ]
 }
 
 proptest! {
-    /// The router gives a run its speech only after `Done`, exactly the pieces told in order since its last ask, and
-    /// nothing once a piece came out of order or a wipe took the recording.
+    /// The router gives a run its speech only after `Done`, exactly the pieces told in order up to the last since its
+    /// last ask, and nothing once a piece came out of order or after the last, or a wipe took the recording.
     #[test]
     fn the_router_gives_speech_only_whole_and_in_order(steps in prop::collection::vec(a_step(), 0..40)) {
         let mut router = Router::default();
         let run = router.add(Box::new(|_| ()));
         router.map(run, 1);
-        let (mut good, mut count, mut done, mut held) = (true, 0_u16, false, true);
+        let (mut good, mut count, mut done, mut held, mut whole) = (true, 0_u16, false, true, false);
         for step in steps {
             match step {
-                Step::Speech(index) => {
-                    router.hear(Told::Note(spoken(1, index, false)));
-                    good &= !done && held && index == count;
-                    count += 1;
+                Step::Speech(skip, last) => {
+                    router.hear(Told::Note(spoken(1, count.saturating_add(skip), last)));
+                    good &= !done && held && skip == 0 && !whole;
+                    (count, whole) = (count + 1, last);
                 }
                 Step::Done => {
                     router.hear(Told::Note(done_note()));
@@ -178,7 +207,7 @@ proptest! {
                 }
             }
             let got = router.spoken(run);
-            match (held, done, good) {
+            match (held, done, good && (whole || count == 0)) {
                 (false, ..) | (true, false, _) => prop_assert_eq!(got.err(), Some(SpeechError::NoSound)),
                 (true, true, false) => prop_assert_eq!(got.err(), Some(SpeechError::Internal)),
                 (true, true, true) => prop_assert_eq!(got.map(|p| p.len()), Ok(usize::from(count))),

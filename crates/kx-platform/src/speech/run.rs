@@ -26,7 +26,7 @@ pub(super) struct WorkerRun<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>>
     limits: JobLimits,
     /// A recording a new job did not take yet.
     parked: Option<Vec<SecretBytes>>,
-    /// It listens with no model, so its Stop hands its speech over.
+    /// It listens with no model, so its Stop hands its speech over until a Cancel or an `again`.
     alone: bool,
     closed: bool,
 }
@@ -175,6 +175,8 @@ impl<S: Spawner<VoiceFrames, Worker: Split<VoiceFrames>>> SpeechRun for WorkerRu
         if self.closed {
             return Ok(());
         }
+        self.alone = false;
+        lock(&self.shared.router).forget(self.run);
         if self.state().dead {
             return Err(SpeechError::Gone);
         }

@@ -1,5 +1,6 @@
-//! A listen-only run's speech as the job hands it over at Stop: taken only in order and within the longest recording,
-//! and given out as fresh copies once the run's end came. Anything else wipes it and marks the job at fault.
+//! A listen-only run's speech as the job hands it over at Stop: taken only in order up to the piece marked last and
+//! within the longest recording, and given out as fresh copies once the run's end came. Anything else wipes it and
+//! marks the job at fault.
 
 use super::router::secret;
 use kx_ipc::{MAX_RECORD_BYTES, MAX_SPEECH_PIECES, SoundPiece};
@@ -13,7 +14,9 @@ pub(super) struct Spoken {
     bytes: usize,
     /// The run's end came.
     done: bool,
-    /// A piece came out of order, after the end or past a bound.
+    /// The piece marked last came.
+    whole: bool,
+    /// A piece came out of order, after the last or the end, or past a bound.
     broken: bool,
 }
 
@@ -23,7 +26,7 @@ impl Spoken {
         let len = piece.bytes.len();
         let next = usize::from(piece.index) == self.pieces.len();
         let fits = self.pieces.len() < MAX_SPEECH_PIECES && self.bytes + len <= MAX_RECORD_BYTES;
-        if self.broken || self.done || !next || !fits {
+        if self.broken || self.done || self.whole || !next || !fits {
             *self = Self {
                 done: self.done,
                 broken: true,
@@ -31,7 +34,7 @@ impl Spoken {
             };
             return;
         }
-        self.bytes += len;
+        (self.bytes, self.whole) = (self.bytes + len, piece.last);
         self.pieces.push(secret(piece.bytes));
     }
 
@@ -43,9 +46,10 @@ impl Spoken {
     /// Fresh copies of the whole speech.
     ///
     /// # Errors
-    /// `NoSound` before the run's end, `Internal` once broken.
+    /// `NoSound` before the run's end, `Internal` once broken or when the piece marked last never came.
     pub(super) fn give(&self) -> Result<Vec<SecretBytes>, SpeechError> {
-        match (self.done, self.broken) {
+        let cut = !self.whole && !self.pieces.is_empty();
+        match (self.done, self.broken || cut) {
             (false, _) => Err(SpeechError::NoSound),
             (true, true) => Err(SpeechError::Internal),
             (true, false) => Ok(self.pieces.clone()),
