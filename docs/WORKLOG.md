@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-20 14:40 — P11: G22's cloud line and timing
+The automatic voice test can now send its three public clips to every offered cloud service with a key on this PC. It borrows the sealed keys from the daily data folder, never opens or shows them, and deletes its copy at the end. Each passing language now prints how long each step takes, and `--device` picks the card without editing the tracked settings. The test refuses a card run without the card part and a reference sentence the voice credits do not give, and it no longer mistakes the bar's shadow for the bar.
+
 ## 2026-11-20 01:20 — P11: AssemblyAI
 Voice typing can now send to AssemblyAI's Universal-3.6 Pro on its European servers, which do not train on the files, in one Sync request with the keyboard's language as one of its 32 codes. Its card shows $50 of free credit with no card needed and plain prices from $0.30 an hour, and says the first dictation tests the key, since this API has no call without sound. Every server fault except a paced 503 is retried before the network note, and the header that names the model can never repeat one the request already sends. ADR-0051 records this fourth request shape.
 
