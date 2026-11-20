@@ -17,6 +17,7 @@ mod reply;
 mod rows;
 mod run;
 mod send;
+mod stale;
 mod table;
 mod wav;
 
