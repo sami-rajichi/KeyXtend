@@ -1,10 +1,10 @@
 /* Part 2 of the voice typing mock-up (design/voice-bar.html): the bar's cloud mark, the Cloud page, a service's card, and
-   the panel's own lines. Tokens are copied from crates/kx-theme/tokens/shape.toml and named after it; "proposed" ones
-   are not there yet. Colours are the theme tokens in voice-bar.html, with part 2's warn and warn_ink. */
+   the panel's own lines. Tokens are copied from crates/kx-theme/tokens/shape.toml and named after it. Colours are the
+   theme tokens in voice-bar.html, with part 2's warn and warn_ink. */
 :root{--panel-field-px-0:34; --panel-field-px-1:7; --panel-field-px-2:10; --panel-field-px-3:14.5;
   --panel-line-px-0:15; --panel-line-px-1:2; --panel-line-px-2:2; --panel-line-px-3:2; --press-ring-px:2;
   --panel-filter-gap-px:4; --panel-filter-px-0:28; --panel-filter-px-1:10; --panel-filter-px-2:12; --panel-filter-px-3:5;
-  --voice-fact-px:200; /* proposed: a card's label column */}
+  --voice-fact-px:200; /* [voice] fact_px: a card's label column */}
 
 /* The bar's cloud mark: the language chip's shape, with a cloud in the ring colour and the service's name. */
 .lc.cm{gap:calc(var(--chip-gap-px) * var(--u))}

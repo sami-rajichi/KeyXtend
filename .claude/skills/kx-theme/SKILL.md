@@ -5,11 +5,13 @@ description: Use when adding or changing a KeyXtend keyboard theme or any colour
 
 # Theme work
 
-- Tokens live in four files in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
-  - `themes/`: each theme's colours for light and dark, fonts and shape, a file per theme (`native.toml`, `et66.toml`, `dolch.toml`) after `common.toml`;
+- Tokens live in `crates/kx-theme/tokens/`, compiled in and checked by the `kx-theme` crate (ADR-0016):
+  - the `themes/` folder: each theme's colours for light and dark, fonts and shape, a file per theme (`native.toml`, `et66.toml`, `dolch.toml`) after `common.toml`;
   - `shape.toml`: sizes all themes share;
   - `motion.toml`: each animation's length and curve, plus the reduced set;
-  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`).
+  - `icons.toml`: the icon each part shows (Lucide files in `assets/icons/lucide/`);
+  - `sounds.toml`: the sound format, how the speaker plays, and each event's files (in `assets/sounds/`);
+  - `font_files.toml`: each bundled font family's files (in `assets/fonts/`, ADR-0021).
 - The reference values are in `design/keyboard-style-lab.html`, in the CSS blocks `[data-style=...][data-mode=...]`. Cite the mock-up line in the token's comment.
 - QML reads tokens only through the look object; it never writes a colour, size or time itself.
 - After a token change, run `cargo test -p kx-theme` with `KX_BLESS=1` to rewrite the QML look fixtures.
