@@ -21,12 +21,14 @@ use std::path::Path;
 use kx_kernel::{KERNEL, KernelSettings, SPEC as KERNEL_SPEC};
 use kx_mod_voice::score::Wrong;
 use kx_mod_voice::{SPEC, VoiceSettings};
+use kx_module_api::ports::DevicePick;
 use kx_settings::VERSION_KEY;
 use serde::Serialize;
 use serde_json::{Value, json};
 use toml::Table;
 
 use crate::apps::Ctx;
+use crate::g22::worker_build;
 use crate::g22bench::clip::read_ms;
 use crate::g22cfg::{Clip, G22Bench, G22Product, clip_in};
 use crate::out::{self, say};
@@ -46,7 +48,7 @@ struct Case<'a> {
     clip_ms: u32,
 }
 
-/// One language's reading: the words wrong, the bar's look and the foreground's count, numbers only.
+/// One language's reading: the words wrong, the bar's look and the foreground's count, numbers and one class name.
 #[derive(Debug, Clone)]
 struct Said {
     lang: String,
@@ -56,6 +58,8 @@ struct Said {
     wrong: Option<Wrong>,
     look: BarLook,
     front: FrontCount,
+    /// The class of the window over the bar's box, only when one covers it.
+    top_class: Option<String>,
 }
 
 impl Said {
@@ -65,16 +69,21 @@ impl Said {
         words && self.look.ok() && self.front.kept()
     }
 
-    /// Its result line, which names the language and holds numbers only.
+    /// Its result line, which names the language and holds numbers, with the covering window's class when one covers
+    /// the bar.
     fn json(&self, diff: u8) -> Value {
         let (l, f) = (&self.look, &self.front);
-        json!({
+        let mut line = json!({
             "lang": self.lang, "clip_ms": self.clip_ms, "first_ms": self.first_ms,
             "wrong": self.wrong.map(|w| w.words), "of": self.wrong.map(|w| w.total),
             "no_activate": l.no_activate, "topmost": l.topmost, "above": l.above, "apart": l.apart,
             "uncovered": l.uncovered,
             "samples": f.samples, "away": f.away, "bar_front": f.bar, "pass": self.pass(diff),
-        })
+        });
+        if let Some(class) = &self.top_class {
+            line["top_class"] = json!(class);
+        }
+        line
     }
 }
 
@@ -129,11 +138,29 @@ fn cases<'a>(bench: &'a G22Bench, voice: &Path) -> Result<Vec<Case<'a>>, String>
     bench.clips.iter().map(case).collect()
 }
 
+/// Fine unless `pick` is a card and `has_part` finds no card part beside the gate worker, a run the gate cannot judge.
+fn card_ready(pick: Option<&DevicePick>, has_part: impl FnOnce() -> bool) -> Result<(), String> {
+    if matches!(pick, Some(DevicePick::Card(_))) && !has_part() {
+        return Err(format!(
+            "the gate worker has no card part, so build it with {}",
+            worker_build()
+        ));
+    }
+    Ok(())
+}
+
 /// Runs G22 on the product: the local line, one copy per clip on a data folder that then goes, and the cloud line.
 pub fn run(ctx: &Ctx) -> Result<Value, String> {
     let (g, b) = (&ctx.cfg.g22_product, &ctx.cfg.g22_bench);
     let program = out::plain(&ctx.cfg.dir.join(&g.program))
         .map_err(|e| format!("{e}; build it with --features gate-voice"))?;
+    // The copy's worker is the gate worker beside the program.
+    let part = || {
+        program
+            .with_file_name(&ctx.cfg.g22_staged.card_part)
+            .is_file()
+    };
+    card_ready(g.pick().as_ref(), part)?;
     let cases = cases(b, &out::plain(&ctx.cfg.dir.join(&b.voice_dir))?)?;
     let settings = VoiceSettings::from_defaults().map_err(|e| e.to_string())?;
     let (file, local) = (table(g, b)?, Line::local(ctx, &settings)?);

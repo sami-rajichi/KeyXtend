@@ -21,6 +21,15 @@ pub const STAGED: &str = "staged";
 const VOICED: [&str; 2] = [NAME, BENCH];
 /// The feature that adds them.
 const VOICE_FEATURE: &str = "voice";
+/// The gate worker's features: `gate` plays a sound file in place of the microphone, `card` adds the card part.
+pub const WORKER_FEATURES: &str = "gate,card";
+/// The variable naming the Vulkan SDK's folder, which the card part's build needs.
+pub const CARD_SDK: &str = "VULKAN_SDK";
+
+/// How the gate worker is built: its features, and the variable its card part's build needs.
+pub fn worker_build() -> String {
+    format!("--features {WORKER_FEATURES} with {CARD_SDK} set")
+}
 
 /// The one-line hint for `gate` run on `name` when this kx-gates lacks the `voice` feature it needs; none otherwise.
 pub fn unvoiced(gate: &str, name: &str) -> Option<String> {
@@ -79,6 +88,29 @@ mod tests {
             assert_eq!(unvoiced(GATE, name), None, "{name}");
         }
         assert_eq!(sound_flag(), kx_ipc::SOUND_FLAG);
+    }
+
+    #[test]
+    fn the_worker_build_line_names_the_workers_gate_and_card_features_and_the_sdk_variable() {
+        let manifest: toml::Table = include_str!("../../../apps/keyxtend-worker/Cargo.toml")
+            .parse()
+            .expect("TOML");
+        let features = manifest["features"].as_table().expect("[features]");
+        for feature in WORKER_FEATURES.split(',') {
+            assert!(features.contains_key(feature), "{feature}");
+        }
+        let build = worker_build();
+        assert!(
+            build.contains(&format!("--features {WORKER_FEATURES}")),
+            "{build}"
+        );
+        assert!(build.contains(CARD_SDK), "{build}");
+        let p11 = include_str!("../kx-gates-p11.toml");
+        assert!(
+            p11.contains(&format!("--features {WORKER_FEATURES}`")),
+            "the bench's build line"
+        );
+        assert!(p11.contains(CARD_SDK), "the card build's variable");
     }
 
     #[test]

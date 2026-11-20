@@ -3,6 +3,7 @@
 
 use kx_module_api::ports::{BarButton, BarHint};
 
+use super::acts::local_ask;
 use super::net::Engine;
 use super::{Flow, Out, Phase, RunCall, State, Supply};
 
@@ -67,7 +68,7 @@ impl Flow {
         }
         match supply.supply(take.lang.iso()) {
             Ok(ready) => {
-                let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
+                let ask = local_ask(&self.settings, &ready);
                 take.engine = Engine::Local(ready);
                 take.ask = ask.clone();
                 take.redo();

@@ -8,7 +8,7 @@ use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::WindowsAndMessaging::{WS_EX_NOACTIVATE, WS_EX_TOPMOST};
 
 use super::super::Said;
-use super::super::bar::BarLook;
+use super::super::bar::{BarLook, top_class};
 use super::super::front::{FrontCount, Fronts};
 use super::super::settle::Settle;
 
@@ -111,6 +111,9 @@ fn the_text_settles_once_it_shows_and_stays_the_same_for_the_wait() {
     assert_eq!(s.first(), Some(t0 + ms(1000)));
 }
 
+/// A class name a window over the bar could have.
+const CLASS: &str = "Qt683QWindowToolSaveBits";
+
 fn said(words: Option<u16>) -> Said {
     Said {
         lang: "en".into(),
@@ -129,6 +132,7 @@ fn said(words: Option<u16>) -> Said {
             away: 0,
             bar: false,
         },
+        top_class: None,
     }
 }
 
@@ -158,4 +162,34 @@ fn a_languages_line_holds_numbers_never_text() {
         .filter_map(|x| x.as_str())
         .collect();
     assert_eq!(strings, ["en"], "only the language's code is text");
+}
+
+#[test]
+fn a_covered_bars_line_names_the_class_on_top_and_an_uncovered_ones_does_not() {
+    let clear = said(Some(1)).json(1);
+    assert!(clear.get("top_class").is_none(), "{clear}");
+    let mut s = said(Some(1));
+    s.look.uncovered = false;
+    s.top_class = Some(CLASS.into());
+    let v = s.json(1);
+    assert_eq!(v["top_class"], CLASS);
+    assert_eq!(v["pass"], false);
+}
+
+#[test]
+fn the_class_on_top_is_read_only_for_a_covered_bar() {
+    let look = said(Some(0)).look;
+    assert_eq!(
+        top_class(look, || panic!("read for an uncovered bar")),
+        None
+    );
+    let covered = BarLook {
+        uncovered: false,
+        ..look
+    };
+    assert_eq!(
+        top_class(covered, || Some(CLASS.into())),
+        Some(CLASS.into())
+    );
+    assert_eq!(top_class(covered, || None), None, "no window found");
 }

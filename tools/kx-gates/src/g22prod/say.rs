@@ -25,6 +25,7 @@ use crate::{board, langkey, langs};
 struct Heard {
     bar: isize,
     look: BarLook,
+    top_class: Option<String>,
     first_ms: Option<u64>,
     text: Redacted<String>,
 }
@@ -58,6 +59,7 @@ pub(super) fn dictate(
         wrong: case.clip.wrong(heard.text.expose(), &case.lang),
         look: heard.look,
         front: fronts.count(target, heard.bar),
+        top_class: heard.top_class,
     })
 }
 
@@ -70,7 +72,7 @@ fn listen(ctx: &Ctx, pid: u32, t: &Typist, case: &Case, waits: &Waits) -> Result
     let find = || bar::find(&reader, pid, kb.hwnd, &stop_id);
     let shown = crate::g23::live::poll_read(g.bar_wait_ms, poll, find)?;
     let (bar, _) = shown.ok_or_else(|| format!("no bar showed within {} ms", g.bar_wait_ms))?;
-    let (at, look) = (Instant::now(), bar::look(bar, kb.hwnd)?);
+    let (at, (look, top_class)) = (Instant::now(), bar::look(bar, kb.hwnd)?);
     let play = waits.open_ms + u64::from(case.clip_ms) + ctx.cfg.g22_bench.tail_ms;
     sleep_ms(play.saturating_sub(ms_since(at)));
     let (now, stop) = find()?.ok_or("Stop went before its click")?;
@@ -82,6 +84,7 @@ fn listen(ctx: &Ctx, pid: u32, t: &Typist, case: &Case, waits: &Waits) -> Result
     Ok(Heard {
         bar: win::key(bar),
         look,
+        top_class,
         first_ms,
         text,
     })

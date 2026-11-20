@@ -81,6 +81,7 @@ fn ready(name: &str, code: &str) -> Ready {
     Ready {
         model,
         card: None,
+        why: None,
         name: Redacted::new(name.into()),
         print: PRINT,
         bytes: BYTES,

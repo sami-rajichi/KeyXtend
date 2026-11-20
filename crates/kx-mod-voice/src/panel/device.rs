@@ -8,7 +8,7 @@ use kx_module_api::ports::{
 
 use super::{Check, Do, Key, Panel};
 use crate::counts::{Checked, Checks};
-use crate::device::verdict;
+use crate::device::{CardRules, told, verdict};
 use crate::flow::{Ready, Supply};
 use crate::models::{code_in, table};
 use crate::settings::DEVICE;
@@ -152,15 +152,9 @@ impl Panel {
         {
             self.checking = None;
         }
-        // A card gone keeps no verdict: only a check that met the card says why it is not used.
-        let verdict = match done {
-            Ok(done) => verdict(&done, &check.clip, &facts.settings.card_rules()),
-            Err(SpeechError::CardRoom) => Verdict::NoRoom,
-            Err(SpeechError::CardFailed) => Verdict::Failed,
-            Err(_) => {
-                self.note = Some(BarHint::Fault);
-                return Vec::new();
-            }
+        let Some(verdict) = verdict_of(done, &check.clip, facts.settings.card_rules()) else {
+            self.note = Some(BarHint::Fault);
+            return Vec::new();
         };
         let checked = Checked {
             card: check.card.clone(),
@@ -171,6 +165,30 @@ impl Panel {
         };
         self.queued = true;
         vec![Do::Checked(checked)]
+    }
+}
+
+/// The verdict a check of `clip` that ended with `done` gives under `rules`, logged. A card gone keeps none: only a
+/// check that met the card says why it is not used.
+fn verdict_of(
+    done: Result<CheckDone, SpeechError>,
+    clip: &str,
+    rules: CardRules,
+) -> Option<Verdict> {
+    match done {
+        Ok(done) => {
+            let verdict = verdict(&done, clip, &rules);
+            told::checked(verdict, &done);
+            Some(verdict)
+        }
+        Err(error) => {
+            told::failed(error);
+            match error {
+                SpeechError::CardRoom => Some(Verdict::NoRoom),
+                SpeechError::CardFailed => Some(Verdict::Failed),
+                _ => None,
+            }
+        }
     }
 }
 

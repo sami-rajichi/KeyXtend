@@ -156,8 +156,9 @@ fn p11_lists_g22s_runs_and_says_which_move_nothing() {
             .find(|l| l.starts_with(&format!("g22 {name} ")))
     };
     let still = |l: &str| l.contains("moves nothing");
+    let build = |l: &str| l.contains(&g22::worker_build()) && l.contains(g22::CARD_SDK);
     assert!(
-        told(g22::BENCH).is_some_and(|l| still(l) && l.contains("--features gate")),
+        told(g22::BENCH).is_some_and(|l| still(l) && build(l)),
         "{text}"
     );
     assert!(told(g22::STAGED).is_some_and(still), "{text}");

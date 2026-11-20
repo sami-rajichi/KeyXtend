@@ -53,13 +53,13 @@ fn face_lines() -> String {
 
 /// The help lines of P11's voice gates.
 fn voice_lines() -> String {
-    let (bench, staged) = (g22::BENCH, g22::STAGED);
+    let (bench, staged, build) = (g22::BENCH, g22::STAGED, g22::worker_build());
     format!(
         "g22 {NAME} starts the build with --features gate-voice beside the gate worker on a data folder it makes, so \
          close the product first; it dictates each shipped clip into target-window by clicks and prints numbers and \
          the id of the device that wrote each text.
 g22 {bench} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
-         the worker built with --features gate, normal then weak, and it prints a table of numbers.
+         the worker built with {build}, normal then weak, and it prints a table of numbers.
 g22 {staged} starts no screen and moves nothing: it copies the worker cargo xtask stage wrote, checks edges 28, 29 \
          and 39 on it, then deletes every copy.
 g22 {NAME} and g22 {bench} pass the sound flag, so they run only from kx-gates built with --features voice, never \

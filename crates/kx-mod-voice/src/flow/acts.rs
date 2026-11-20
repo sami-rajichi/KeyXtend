@@ -8,6 +8,8 @@ use kx_module_api::ports::{
 use super::net::Engine;
 use super::take::{Lang, Take};
 use super::{Flow, Lack, Out, Phase, Ready, RunCall, State, Supply};
+use crate::VoiceSettings;
+use crate::device::told;
 
 impl Flow {
     /// The Dictation key: Start, Stop while listening, or, as Cancel, an end with nothing sent and no bar while
@@ -89,7 +91,7 @@ impl Flow {
 
     /// Opens a run for `ready`, which prepares until its microphone opens.
     pub(super) fn open(&mut self, lang: Lang, ready: Ready, out: &mut Vec<Out>) {
-        let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
+        let ask = local_ask(&self.settings, &ready);
         self.open_with(lang, Engine::Local(ready), ask, out);
     }
 
@@ -245,4 +247,12 @@ impl Flow {
         }
         out.push(take.call(RunCall::Close));
     }
+}
+
+/// The ask of a local run on `ready` under `settings`; a debug line says why the processor serves a picked card.
+pub(super) fn local_ask(settings: &VoiceSettings, ready: &Ready) -> SpeechAsk {
+    if let Some(why) = ready.why {
+        told::cpu(why);
+    }
+    settings.ask(Some(ready.model.clone()), ready.card.clone())
 }

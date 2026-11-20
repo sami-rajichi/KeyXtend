@@ -2,12 +2,14 @@
 //! the devices and their checks. A pick's file that is gone takes the default; a model too big for this PC never runs.
 
 use kx_module_api::Redacted;
-use kx_module_api::ports::{CardUse, Device, DeviceKind, Fingerprint, Memory, SpeechModel};
+use kx_module_api::ports::{
+    CardUse, Device, DeviceKind, DevicePick, Fingerprint, Memory, SpeechModel,
+};
 
 use super::{File, Folder, Print};
 use crate::VoiceSettings;
 use crate::counts::Checks;
-use crate::device::{Seen, Serve, serve};
+use crate::device::{Seen, Serve, Why, serve};
 use crate::flow::{Lack, Ready, Supply};
 use crate::models::{Other, Pick, Row, table};
 
@@ -72,9 +74,15 @@ impl<'a> Stock<'a> {
         // A file served by its name and size before its fingerprint is read stays on the processor, as each card's
         // check goes by the fingerprint.
         let read = file.print == Print::Known(row.print);
+        let (card, why) = if read {
+            self.card(row.card_mb, &row.print)
+        } else {
+            (None, None)
+        };
         Ok(Ready {
             model,
-            card: read.then(|| self.card(row.card_mb, &row.print)).flatten(),
+            card,
+            why,
             name: Redacted::new(row.id.clone()),
             print: row.print,
             bytes: row.bytes,
@@ -112,17 +120,20 @@ impl<'a> Stock<'a> {
             return Err(Lack::NoFit);
         }
         let model = other.model(dir, facts, iso).ok_or(Lack::Stranger)?;
+        let (card, why) = self.card(need, &print);
         Ok(Ready {
             model,
-            card: self.card(need, &print),
+            card,
+            why,
             name: Redacted::new(file.name.clone()),
             print,
             bytes: file.bytes,
         })
     }
 
-    /// The card that runs a model needing `need_mb` on it, by `device`'s rule and each card's check of file `print`.
-    fn card(&self, need_mb: u32, print: &Fingerprint) -> Option<CardUse> {
+    /// The card that runs a model needing `need_mb` on it, by `device`'s rule and each card's check of file `print`;
+    /// else why the processor serves, when a card is picked.
+    fn card(&self, need_mb: u32, print: &Fingerprint) -> (Option<CardUse>, Option<Why>) {
         let check = |d: &Device| match &d.kind {
             DeviceKind::Card(id) => self.checks.verdict(id, &d.driver, print),
             DeviceKind::Cpu => None,
@@ -133,10 +144,10 @@ impl<'a> Stock<'a> {
                 check: check(device),
             })
             .collect();
-        let margin = self.settings.card_margin_mb;
-        match serve(&self.settings.device(), &seen, need_mb, margin) {
-            Serve::Card(card) => Some(card),
-            Serve::Cpu(_) => None,
+        let (pick, margin) = (self.settings.device(), self.settings.card_margin_mb);
+        match serve(&pick, &seen, need_mb, margin) {
+            Serve::Card(card) => (Some(card), None),
+            Serve::Cpu(why) => (None, matches!(pick, DevicePick::Card(_)).then_some(why)),
         }
     }
 

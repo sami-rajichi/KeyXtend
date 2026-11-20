@@ -1,6 +1,8 @@
 //! Where a model runs (ADR-0044 decisions 5, 7 and 8): the processor, a picked card once its check passed and it has
 //! room, or for Automatic the fastest checked card with room; and a card check's verdict from its times and texts.
 
+pub mod told;
+
 use kx_module_api::ports::{
     CardId, CardUse, CheckDone, Device, DeviceKind, DevicePick, Hundredths, Verdict,
 };
@@ -45,6 +47,21 @@ pub enum Why {
         /// The card's free memory now.
         free_mb: u32,
     },
+}
+
+impl Why {
+    /// Its plain name, which a log line may hold; never a value it carries.
+    #[must_use]
+    pub const fn kind(self) -> &'static str {
+        match self {
+            Self::Picked => "picked",
+            Self::NoneChecked => "none_checked",
+            Self::Unchecked => "unchecked",
+            Self::Failed(_) => "failed",
+            Self::Gone => "gone",
+            Self::NoRoom { .. } => "no_room",
+        }
+    }
 }
 
 /// Where the model runs.

@@ -1,5 +1,5 @@
 //! What the actor logs when a port fails: fixed texts and error kinds, never a dictated text, a folder or a cloud key;
-//! a key it cannot read is logged by kind wherever it is read.
+//! a key it cannot read is logged by kind wherever it is read. The device lines are in `cards`.
 
 use std::cell::RefCell;
 use std::fmt::{self, Write as _};
@@ -15,6 +15,8 @@ use tracing::{Event, Metadata, Subscriber};
 
 use super::rig::Rig;
 use super::{Msg, cloud};
+
+mod cards;
 
 /// A dictated text that appears nowhere else.
 const SECRET: &str = "zebra-quartz";

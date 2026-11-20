@@ -6,8 +6,9 @@
 # and the product's speech host, with [voice]'s defaults, normal then weak. It starts no screen, moves nothing and
 # prints numbers, never text.
 [g22_bench]
-# The worker built with `gate`, which plays a sound file in place of the microphone; never a staged one. Build it with
-# `cargo build --release -p keyxtend-worker --features gate` into this target folder.
+# The worker built with `gate`, which plays a sound file in place of the microphone, and `card`, which adds the card
+# part a card run needs; never a staged one. The card part's build needs VULKAN_SDK set to the Vulkan SDK's folder.
+# Build it with `cargo build --release -p keyxtend-worker --features gate,card` into this target folder.
 worker = "../../target/p11-gates/release/keyxtend-worker.exe"
 # Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts, as the roadmap's weak
 # PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses a folder holding any other part.
@@ -68,7 +69,8 @@ layouts = { en = "0409", fr = "040C", ar = "1C01" }
 # Where the copy's models run ([voice] device): "cpu", "auto", or a card's id as the engine lists it, such as "Vulkan1"
 # (ASCII letters, digits, "-", "_" and "."; built-in graphics list as a card too). For the card run, pick the card with
 # Use on the Voice panel's Device page and copy the `device` value it writes into the product's settings file. With a
-# card here, a language passes only when that card wrote its text.
+# card here, a language passes only when that card wrote its text, and the run refuses to start while the gate worker's
+# folder lacks g22_staged.card_part.
 device = "cpu"
 # Wait after the copy's keyboard shows before the first click, so the voice module has read the models folder, in ms.
 ready_ms = 5000

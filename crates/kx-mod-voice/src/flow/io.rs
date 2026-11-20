@@ -10,6 +10,7 @@ use kx_module_api::{Redacted, Secret};
 
 use super::{Lend, Net, Sent, Upload};
 use crate::VoiceSettings;
+use crate::device::Why;
 
 /// One input to the flow, from the bus, a port or the clock.
 #[derive(Clone, Debug)]
@@ -167,6 +168,8 @@ pub struct Ready {
     pub model: SpeechModel,
     /// The card that runs it; `None` runs it on the processor.
     pub card: Option<CardUse>,
+    /// Why the processor runs it although a card is picked; `None` otherwise.
+    pub why: Option<Why>,
     /// Its row's id or its file's name, for History and the counts.
     pub name: Redacted<String>,
     /// Its file's fingerprint, which a card's check goes by.

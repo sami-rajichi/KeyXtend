@@ -1,19 +1,23 @@
-//! G22 on the product's pure parts: the copy's settings here; the bar's look, the foreground, the settling and each
-//! language's verdict (`look`); who wrote each text (`wrote`); where its time went (`stages`); the cloud line (`cloud`)
-//! and its sealed key never opened (`guard`).
+//! G22 on the product's pure parts: the copy's settings and a card run's card part here; the bar's look, the
+//! foreground, the settling and each language's verdict (`look`); the bar never taken from its shadow (`shadow`); who
+//! wrote each text (`wrote`); where its time went (`stages`); the cloud line (`cloud`) and its sealed key never
+//! opened (`guard`).
 
 mod cloud;
 mod guard;
 mod look;
+mod shadow;
 mod stages;
 mod wrote;
 
 use kx_kernel::{KERNEL, SPEC as KERNEL_SPEC};
 use kx_mod_voice::{SPEC, VoiceSettings};
+use kx_module_api::ports::DevicePick;
 use kx_settings::VERSION_KEY;
 
-use super::table;
+use super::{card_ready, table};
 use crate::config::load;
+use crate::g22::worker_build;
 
 #[test]
 fn the_copy_reads_the_bench_models_on_the_runs_device_and_logs_at_the_runs_level() {
@@ -51,4 +55,23 @@ fn the_copy_reads_the_bench_models_on_the_runs_device_and_logs_at_the_runs_level
         table(&c.g22_product, &c.g22_bench).is_err(),
         "no models folder"
     );
+}
+
+#[test]
+fn a_card_run_needs_the_card_part_beside_the_gate_worker_and_cpu_or_auto_never_look() {
+    let card = DevicePick::parse("Vulkan1");
+    let refused = card_ready(card.as_ref(), || false).expect_err("no card part");
+    assert!(refused.contains(&worker_build()), "{refused}");
+    assert!(!refused.contains('\n'), "one sentence");
+    assert_eq!(
+        card_ready(card.as_ref(), || true),
+        Ok(()),
+        "the part is there"
+    );
+    for name in [DevicePick::CPU, DevicePick::AUTO] {
+        let pick = DevicePick::parse(name);
+        assert!(pick.is_some(), "{name}");
+        let looked = card_ready(pick.as_ref(), || panic!("{name} looked for the card part"));
+        assert_eq!(looked, Ok(()), "{name}");
+    }
 }

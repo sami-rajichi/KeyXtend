@@ -86,7 +86,8 @@ impl<'a> Bench<'a> {
     /// error naming it.
     fn of(g: &'a G22Bench, weak: Weak, dir: &Path) -> Result<Self, String> {
         let file = |rel: &str| out::plain(&dir.join(rel));
-        let worker = file(&g.worker).map_err(|e| format!("{e}; build it with --features gate"))?;
+        let worker =
+            file(&g.worker).map_err(|e| format!("{e}; build it with {}", g22::worker_build()))?;
         let weak_worker = file(&g.weak_worker).map_err(|e| {
             format!(
                 "{e}; copy the gate worker's folder there with only {:?}",

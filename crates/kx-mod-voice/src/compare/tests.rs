@@ -45,6 +45,7 @@ fn entrant(n: u8, card: bool) -> Entrant {
     let ready = Ready {
         model,
         card,
+        why: None,
         name: Redacted::new(format!("m{n}")),
         print: print(n),
         bytes: 1,

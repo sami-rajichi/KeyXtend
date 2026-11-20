@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     BarButton, BarHint, CloudNote, CloudWhy, LocalUse, SpeechAsk, SpeechDone,
 };
 
+use super::acts::local_ask;
 use super::net::{self, Engine, Net, Sent, Upload};
 use super::notes::lost;
 use super::take::Lang;
@@ -104,7 +105,7 @@ impl Flow {
         let Ok(ready) = supply.supply(take.lang.iso()) else {
             return self.cloud_note(none, out);
         };
-        let ask = (self.settings).ask(Some(ready.model.clone()), ready.card.clone());
+        let ask = local_ask(&self.settings, &ready);
         take.engine = Engine::Local(ready);
         take.wire = take.wire.take().filter(|w| w.spoken.is_none());
         take.ask = ask.clone();

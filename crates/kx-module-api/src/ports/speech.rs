@@ -97,6 +97,33 @@ impl SpeechError {
     pub fn ends(self) -> bool {
         !matches!(self, Self::NoCard | Self::CardRoom | Self::CardFailed)
     }
+
+    /// The error's plain name, letters only, which a log line may hold; never a value it carries.
+    #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        match self {
+            Self::Range(_) => "Range",
+            Self::BadPath => "BadPath",
+            Self::NoMic => "NoMic",
+            Self::MicBusy => "MicBusy",
+            Self::MicRefused => "MicRefused",
+            Self::Unplugged => "Unplugged",
+            Self::NoFile => "NoFile",
+            Self::BadFile => "BadFile",
+            Self::Language => "Language",
+            Self::Runner => "Runner",
+            Self::NoCard => "NoCard",
+            Self::CardRoom => "CardRoom",
+            Self::CardFailed => "CardFailed",
+            Self::NoSound => "NoSound",
+            Self::OutOfStep => "OutOfStep",
+            Self::Memory => "Memory",
+            Self::Internal => "Internal",
+            Self::Timeout => "Timeout",
+            Self::Gone => "Gone",
+            Self::Down { .. } => "Down",
+        }
+    }
 }
 
 /// Each fault the `voice` job sends, as the same error.

@@ -49,6 +49,7 @@ fn supply(iso: &str) -> Result<Ready, Lack> {
     Ok(Ready {
         model,
         card: None,
+        why: None,
         name,
         print: Fingerprint::new([1; Fingerprint::BYTES]),
         bytes: 1,
