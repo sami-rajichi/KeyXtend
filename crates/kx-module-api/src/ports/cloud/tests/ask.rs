@@ -129,7 +129,7 @@ fn a_header_or_a_key_that_could_break_a_requests_head_is_refused() {
         assert_eq!(refused(&ask), Some("header"), "{name:?}");
     }
     let long = "k".repeat(MAX_KEY_BYTES + 1);
-    for key in ["", "gsk 7731", "gsk\r\nX-Other: 1", "مفتاح", long.as_str()] {
+    for key in ["", "kx 7731", "kx\r\nX-Other: 1", "مفتاح", long.as_str()] {
         let ask = CloudAsk {
             key: secret(key),
             ..ask()
