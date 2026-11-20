@@ -198,8 +198,10 @@ pub enum CloudWhy {
     Strange,
     /// The service's terms changed since they were confirmed, so nothing is sent until they are confirmed again.
     Terms,
-    /// The service was switched off, or the language's pick left it, so nothing was sent.
+    /// The service was switched off, so nothing was sent.
     Off,
+    /// The language's pick moved to another service or to a local model, so nothing was sent.
+    Moved,
     /// A password box never goes to a cloud service, and no local model is ready for it.
     NoLocal,
     /// The cloud worker failed.

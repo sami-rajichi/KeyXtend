@@ -8,7 +8,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::ports::{Fingerprint, SpeechAsk, SpeechDone, SpeechModel};
 use kx_module_api::{Redacted, Secret, Zeroizing};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -56,8 +56,12 @@ impl Clock for TestClock {
     }
 }
 
-/// What each language gets: its local model, then its cloud pick, if any.
-struct Book(BTreeMap<String, Result<Ready, Lack>>, BTreeMap<String, Net>);
+/// What each language gets: its local model, then its cloud pick, if any; and the services still switched on.
+struct Book(
+    BTreeMap<String, Result<Ready, Lack>>,
+    BTreeMap<String, Net>,
+    BTreeSet<String>,
+);
 
 impl Supply for Book {
     fn supply(&self, iso: &str) -> Result<Ready, Lack> {
@@ -66,6 +70,10 @@ impl Supply for Book {
 
     fn cloud(&self, iso: &str) -> Option<Net> {
         self.1.get(iso).cloned()
+    }
+
+    fn on(&self, service: &str) -> bool {
+        self.2.contains(service)
     }
 }
 
@@ -160,7 +168,7 @@ impl Rig {
         let mut rig = Self {
             flow,
             clock,
-            book: Book(book, BTreeMap::new()),
+            book: Book(book, BTreeMap::new(), BTreeSet::new()),
             take: 0,
             upload: None,
             page: None,

@@ -155,6 +155,7 @@ cloud =
     .note-strange = La réponse ne venait pas du service, peut-être une page de connexion. Vérifiez le réseau.
     .note-terms = Les conditions du service ont changé. Confirmez de nouveau ses informations pour envoyer.
     .note-off = Le service est désactivé ; rien n’a été envoyé.
+    .note-moved = La langue n’utilise plus ce service ; rien n’a été envoyé.
     .note-no-local = Ce qui est dicté dans un champ de mot de passe ne part jamais vers le cloud, et aucun modèle local n’est prêt.
     .note-fault = La partie cloud s’est arrêtée après une erreur. Réessayez.
     .note-keep-nothing = Aucun hébergeur ne s’engage à ne rien garder.

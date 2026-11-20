@@ -2,6 +2,7 @@
 //! names, with whether a key is set from the blobs' names alone. A hidden run offers no service and reads no key.
 
 use kx_module_api::Redacted;
+use kx_module_api::ports::ServiceMark;
 
 use crate::VoiceSettings;
 use crate::cloud::{Chosen, Cloud, pick_text};
@@ -47,5 +48,12 @@ impl Supply for Offer<'_> {
             unavailable: choice.unavailable,
             warn: choice.warn,
         })
+    }
+
+    fn on(&self, service: &str) -> bool {
+        let Some((cloud, row)) = self.cloud.and_then(|c| Some((c, c.row(service)?))) else {
+            return false;
+        };
+        cloud.mark(self.settings, row, true) != ServiceMark::Off
     }
 }

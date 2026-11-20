@@ -25,7 +25,7 @@ impl Flow {
                 Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned()),
             };
         }
-        if let Some(why) = net::blocked(&net, Some(&net)) {
+        if let Some(why) = net::unfit(&net) {
             return self.show_cloud(why, lang.iso().to_owned());
         }
         let ask = SpeechAsk {
@@ -78,7 +78,8 @@ impl Flow {
             take.masked = true;
             return self.write_local(CloudWhy::NoLocal, supply, out);
         }
-        if let Some(why) = net::blocked(net, supply.cloud(take.lang.iso()).as_ref()) {
+        let now = supply.cloud(take.lang.iso());
+        if let Some(why) = net::blocked(net, now.as_ref(), supply.on(&net.service)) {
             return self.cloud_note(why, out);
         }
         wire.round = wire.round.wrapping_add(1);
@@ -90,6 +91,10 @@ impl Flow {
             lang: take.lang.iso().to_owned(),
         }));
         take.pieces.clear();
+        // The same service's pick may name another model since Start: the counts and History name the one sent.
+        if let Some(now) = now {
+            take.engine = Engine::Cloud(now);
+        }
     }
 
     /// Writes the held recording with the language's local model: "Use the local model", a password box, or Try
@@ -146,12 +151,12 @@ impl Flow {
         if text {
             take.before = Some(std::mem::replace(&mut self.state, State::Transcribing));
         }
-        match supply.cloud(take.lang.iso()) {
-            Some(net) => {
-                take.engine = Engine::Cloud(net);
-                self.upload(supply, out);
-            }
-            None => self.write_local(CloudWhy::Off, supply, out),
+        if let Some(net) = supply.cloud(take.lang.iso()) {
+            take.engine = Engine::Cloud(net);
+            self.upload(supply, out);
+        } else {
+            let on = take.engine.net().is_some_and(|n| supply.on(&n.service));
+            self.write_local(net::left(on), supply, out);
         }
     }
 
@@ -164,7 +169,8 @@ impl Flow {
         let Some(net) = take.engine.net() else {
             return;
         };
-        let Some(why) = net::blocked(net, supply.cloud(take.lang.iso()).as_ref()) else {
+        let now = supply.cloud(take.lang.iso());
+        let Some(why) = net::blocked(net, now.as_ref(), supply.on(&net.service)) else {
             return;
         };
         match self.phase() {

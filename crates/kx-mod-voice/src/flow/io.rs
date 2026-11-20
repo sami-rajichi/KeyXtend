@@ -208,6 +208,11 @@ pub trait Supply {
     fn cloud(&self, _iso: &str) -> Option<Net> {
         None
     }
+
+    /// True while `service` is switched on with cloud services on, so a pick that left it moved rather than went off.
+    fn on(&self, _service: &str) -> bool {
+        false
+    }
 }
 
 impl<F: Fn(&str) -> Result<Ready, Lack>> Supply for F {

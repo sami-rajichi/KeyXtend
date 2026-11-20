@@ -9,6 +9,7 @@ use kx_module_api::ports::{BarNote, CloudFault, CloudNote, CloudWhy, LocalUse, S
 mod faults;
 mod guard;
 mod late;
+mod moved;
 mod redo;
 mod warn;
 

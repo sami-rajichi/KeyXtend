@@ -61,6 +61,7 @@ fn every_reason_and_local_state_is_distinct() {
         CloudWhy::Strange,
         CloudWhy::Terms,
         CloudWhy::Off,
+        CloudWhy::Moved,
         CloudWhy::NoLocal,
         CloudWhy::Fault,
         CloudWhy::Unavailable(Unavailable::KeepNothing),

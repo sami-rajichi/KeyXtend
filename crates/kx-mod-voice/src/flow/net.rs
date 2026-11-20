@@ -120,15 +120,26 @@ pub(crate) fn why(fault: CloudFault, lang: &VoiceLang) -> CloudWhy {
     }
 }
 
-/// Why `shown`, the service on the bar, cannot have the speech now that the language picks `now`: another service or
-/// none, a key gone, newer terms, or a model ruled out; `None` when it can.
-pub(super) fn blocked(shown: &Net, now: Option<&Net>) -> Option<CloudWhy> {
+/// Why `shown`, the service on the bar, cannot have the speech now that the language picks `now`: a pick that moved
+/// while `shown` stays `on`, a service off, a key gone, newer terms, or a model ruled out; `None` when it can.
+pub(super) fn blocked(shown: &Net, now: Option<&Net>, on: bool) -> Option<CloudWhy> {
     match now {
-        None => Some(CloudWhy::Off),
-        Some(net) if net.service != shown.service => Some(CloudWhy::Off),
-        Some(net) if !net.key => Some(CloudWhy::Key),
-        Some(net) if net.terms => Some(CloudWhy::Terms),
-        Some(net) => net.unavailable.map(CloudWhy::Unavailable),
+        Some(net) if net.service == shown.service => unfit(net),
+        _ => Some(left(on)),
+    }
+}
+
+/// The note for a pick that left a service: it moved while that service stays `on`, else the service went off.
+pub(super) fn left(on: bool) -> CloudWhy {
+    if on { CloudWhy::Moved } else { CloudWhy::Off }
+}
+
+/// Why `net` cannot have the speech: no key, newer terms, or a model ruled out; `None` when it can.
+pub(super) fn unfit(net: &Net) -> Option<CloudWhy> {
+    match net {
+        Net { key: false, .. } => Some(CloudWhy::Key),
+        Net { terms: true, .. } => Some(CloudWhy::Terms),
+        Net { unavailable, .. } => unavailable.map(CloudWhy::Unavailable),
     }
 }
 

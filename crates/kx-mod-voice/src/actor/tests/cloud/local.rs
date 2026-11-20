@@ -40,3 +40,15 @@ fn after_the_local_model_wrote_it_try_again_types_with_it_and_sends_nothing() {
     assert_eq!(local, [true, true], "the local model wrote both");
     assert!(run.held && !run.closed, "the recording stays");
 }
+
+#[test]
+fn a_pick_moved_to_the_local_model_while_the_service_stays_on_says_it_moved_not_off() {
+    let mut rig = Rig::build(groq);
+    rig.talk();
+    rig.actor.dos(vec![crate::panel::Do::Set(
+        crate::settings::PICKS,
+        table(""),
+    )]);
+    assert_eq!(rig.bar(), cloud_note(CloudWhy::Moved));
+    assert!(rig.fake.cloud.calls().runs.is_empty());
+}

@@ -155,6 +155,7 @@ cloud =
     .note-strange = The reply was not the service’s, maybe a sign-in page. Check the network.
     .note-terms = The service’s terms changed. Confirm its facts again to send.
     .note-off = The service is off, so nothing was sent.
+    .note-moved = The language no longer uses this service, so nothing was sent.
     .note-no-local = Speech for a password box never goes to the cloud, and no local model is ready.
     .note-fault = The cloud part stopped after an error. Try again.
     .note-keep-nothing = No host of this model promises to keep nothing.

@@ -258,6 +258,7 @@ pub const fn cloud_why_id(why: &CloudWhy) -> &'static str {
         CloudWhy::Strange => "strange",
         CloudWhy::Terms => "terms",
         CloudWhy::Off => "off",
+        CloudWhy::Moved => "moved",
         CloudWhy::NoLocal => "no-local",
         CloudWhy::Fault => "fault",
         CloudWhy::Unavailable(Unavailable::KeepNothing) => "keep-nothing",
