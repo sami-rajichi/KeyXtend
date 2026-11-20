@@ -1,6 +1,7 @@
 //! The command line: parses the arguments, runs one gate and saves its result line.
 #![cfg(windows)]
 
+use kx_module_api::ports::DevicePick;
 use serde_json::{Value, json};
 
 use crate::apps::{AppKind, Ctx};
@@ -33,6 +34,8 @@ pub struct Args {
     attach: bool,
     /// G1: pause between characters, instead of the one in kx-gates.toml.
     pause_ms: Option<u64>,
+    /// G22 on the product: the device pick for this run, in place of `[g22_product] device`.
+    device: Option<DevicePick>,
 }
 
 fn number<T: std::str::FromStr>(value: &str) -> Result<T, String> {
@@ -61,6 +64,7 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
         seed: None,
         attach: false,
         pause_ms: None,
+        device: None,
     };
     let mut it = rest.iter();
     while let Some(flag) = it.next() {
@@ -73,6 +77,9 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
             f if Some(f) == count_flag => out.count = Some(number(value)?),
             "--seed" if SEEDED.contains(&gate.as_str()) => out.seed = Some(number(value)?),
             "--pause" if g1 => out.pause_ms = Some(number(value)?),
+            f if f == g22::DEVICE_FLAG && g22::takes_device(gate, name) => {
+                out.device = Some(g22::device_arg(value)?);
+            }
             _ => return Err(format!("unknown option {flag}\n{}", usage())),
         }
     }
@@ -202,7 +209,8 @@ pub fn run(args: &Args) -> Result<Value, String> {
     if let Some(hint) = g22::unvoiced(&args.gate, &args.name) {
         return Err(hint);
     }
-    let cfg = config::load()?;
+    let mut cfg = config::load()?;
+    cfg.g22_product.set_pick(args.device.as_ref());
     let spike = spike_core::config::load()?;
     let target = kx_target_window::config::load().map_err(|e| e.to_string())?;
     let out = out::out_dir(&cfg.out_dir())?;

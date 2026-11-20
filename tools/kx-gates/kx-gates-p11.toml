@@ -7,11 +7,11 @@
 # prints numbers, never text.
 [g22_bench]
 # The worker built with `gate`, which plays a sound file in place of the microphone, and `card`, which adds the card
-# part a card run needs; never a staged one. The card part's build needs VULKAN_SDK set to the Vulkan SDK's folder.
-# Build it with `cargo build --release -p keyxtend-worker --features gate,card` into this target folder.
+# part a card run needs; never a staged one. Build it with
+# `cargo build --release -p keyxtend-worker --features gate,card`, with VULKAN_SDK set, into this target folder.
 worker = "../../target/p11-gates/release/keyxtend-worker.exe"
-# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts, as the roadmap's weak
-# PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses a folder holding any other part.
+# Weak mode's copy of that worker: its folder's files with only the processor parts in weak_parts and no card part, as
+# the roadmap's weak PC (Celeron N4020 class: SSE4.2, no AVX) would load. The bench refuses any other part there.
 weak_worker = "../../target/p11-gates/weak/keyxtend-worker.exe"
 # What every processor part of the engine is named from, and the ones a processor without AVX loads.
 part_prefix = "ggml-cpu-"
@@ -67,10 +67,9 @@ program = "../../target/p11-gates/release/keyxtend.exe"
 # The layout (LANGID) target-window takes for each clip's language: English (US), French (France), Arabic (Tunisia).
 layouts = { en = "0409", fr = "040C", ar = "1C01" }
 # Where the copy's models run ([voice] device): "cpu", "auto", or a card's id as the engine lists it, such as "Vulkan1"
-# (ASCII letters, digits, "-", "_" and "."; built-in graphics list as a card too). For the card run, pick the card with
-# Use on the Voice panel's Device page and copy the `device` value it writes into the product's settings file. With a
-# card here, a language passes only when that card wrote its text, and the run refuses to start while the gate worker's
-# folder lacks g22_staged.card_part.
+# (the `device` value Use writes on the Voice panel's Device page); `g22 keyxtend --device <pick>` replaces it for one
+# run, so a card run edits no tracked file. With a card, a language passes only when that card wrote its text, and the
+# run refuses to start while the gate worker's folder lacks g22_staged.card_part.
 device = "cpu"
 # Wait after the copy's keyboard shows before the first click, so the voice module has read the models folder, in ms.
 ready_ms = 5000

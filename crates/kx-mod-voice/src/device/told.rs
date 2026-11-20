@@ -52,7 +52,7 @@ pub fn cpu(why: Why) {
                 "{CPU_SERVES}"
             );
         }
-        Why::Picked | Why::NoneChecked | Why::Unchecked | Why::Gone => {
+        Why::Picked | Why::NoneChecked | Why::Unchecked | Why::Unread | Why::Gone => {
             tracing::debug!({ WHY } = kind, "{CPU_SERVES}");
         }
     }

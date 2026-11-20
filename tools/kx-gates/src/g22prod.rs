@@ -28,7 +28,7 @@ use serde_json::{Value, json};
 use toml::Table;
 
 use crate::apps::Ctx;
-use crate::g22::worker_build;
+use crate::g22::{app_build, worker_build};
 use crate::g22bench::clip::read_ms;
 use crate::g22cfg::{Clip, G22Bench, G22Product, clip_in};
 use crate::out::{self, say};
@@ -153,7 +153,7 @@ fn card_ready(pick: Option<&DevicePick>, has_part: impl FnOnce() -> bool) -> Res
 pub fn run(ctx: &Ctx) -> Result<Value, String> {
     let (g, b) = (&ctx.cfg.g22_product, &ctx.cfg.g22_bench);
     let program = out::plain(&ctx.cfg.dir.join(&g.program))
-        .map_err(|e| format!("{e}; build it with --features gate-voice"))?;
+        .map_err(|e| format!("{e}; build it with {}", app_build()))?;
     // The copy's worker is the gate worker beside the program.
     let part = || {
         program

@@ -17,7 +17,8 @@ fn parses_each_gate() {
             count: Some(5),
             seed: Some(7),
             attach: false,
-            pause_ms: None
+            pause_ms: None,
+            device: None,
         }
     );
     let a = parse(&args("g1 word --attach --pause 100")).expect("parses");
@@ -39,6 +40,22 @@ fn parses_each_gate() {
         (a.gate.as_str(), a.count, a.seed),
         ("g4", Some(50), Some(3))
     );
+}
+
+#[test]
+fn only_g22_on_the_product_takes_a_device_pick_and_a_bad_one_is_refused() {
+    let card = parse(&args("g22 keyxtend --device Vulkan1")).expect("parses");
+    assert_eq!(card.device, DevicePick::parse("Vulkan1"));
+    assert_eq!(parse(&args("g22 keyxtend")).expect("parses").device, None);
+    let bad = parse(&args("g22 keyxtend --device Vulkan/1")).expect_err("no pick");
+    assert!(
+        bad.contains(g22::DEVICE_FLAG) && !bad.contains('\n'),
+        "{bad}"
+    );
+    for other in ["g22 bench --device cpu", "g19 keyxtend --device cpu"] {
+        let e = parse(&args(other)).expect_err(other);
+        assert!(e.starts_with("unknown option"), "{other}: {e}");
+    }
 }
 
 #[test]

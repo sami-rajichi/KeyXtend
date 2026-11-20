@@ -1,4 +1,5 @@
-//! The bar's look, the foreground's count, the typed text's settling and each language's verdict, numbers only.
+//! The bar's look, the foreground's count, the typed text's settling and each language's verdict: numbers, and the
+//! class of a window over the bar.
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};

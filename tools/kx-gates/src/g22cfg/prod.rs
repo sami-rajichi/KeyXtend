@@ -78,6 +78,13 @@ impl G22Product {
         DevicePick::parse(&self.device)
     }
 
+    /// Puts `pick`, the run's `--device`, in place of `device` for this run; none keeps the file's.
+    pub fn set_pick(&mut self, pick: Option<&DevicePick>) {
+        if let Some(pick) = pick {
+            pick.name().clone_into(&mut self.device);
+        }
+    }
+
     /// The wait before Dictation once a clip's layout is in front: `card_wait_ms` with a card in `device`, else none.
     #[cfg_attr(
         not(feature = "voice"),

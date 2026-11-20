@@ -42,20 +42,34 @@ impl Alive {
     }
 }
 
-/// Refuses a weak worker whose folder holds a processor part beyond `weak`, or none of them, as the engine loads the
-/// best part it finds beside the worker.
-pub(super) fn plain_parts(worker: &Path, prefix: &str, weak: &[String]) -> Result<(), String> {
+/// Refuses a weak worker whose folder holds a processor part beyond `weak`, none of them, or the `card` part, as the
+/// engine loads the best part it finds beside the worker.
+pub(super) fn plain_parts(
+    worker: &Path,
+    prefix: &str,
+    weak: &[String],
+    card: &str,
+) -> Result<(), String> {
     let dir = worker.parent().ok_or("the weak worker has no folder")?;
     let list = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let names: Vec<String> = list
         .filter_map(Result::ok)
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .collect();
-    only(&names, prefix, weak).map_err(|e| format!("{} holds {e}", dir.display()))
+    only(&names, prefix, weak, card).map_err(|e| format!("{} holds {e}", dir.display()))
 }
 
-/// Refuses `names` unless their processor parts, those that start with `prefix`, are some of `weak` alone.
-pub(super) fn only(names: &[String], prefix: &str, weak: &[String]) -> Result<(), String> {
+/// Refuses `names` unless their processor parts, those that start with `prefix`, are some of `weak` alone, with no
+/// `card` part.
+pub(super) fn only(
+    names: &[String],
+    prefix: &str,
+    weak: &[String],
+    card: &str,
+) -> Result<(), String> {
+    if names.iter().any(|n| n.eq_ignore_ascii_case(card)) {
+        return Err(format!("{card}, the card part weak mode leaves out"));
+    }
     let parts: Vec<&String> = names.iter().filter(|n| is_part(n, prefix)).collect();
     if parts.is_empty() {
         return Err(format!("none of {weak:?}"));

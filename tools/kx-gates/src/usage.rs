@@ -23,7 +23,7 @@ fn product_lines() -> String {
     let (weak, arabic, lit, osk) = (g8::WEAK, g8lang::ARABIC, g8lit::LIT, g8lit::OSK);
     let (hook, hook_weak, predict) = (g8hook::HOOK, g8hook::HOOK_WEAK, g8predict::PREDICT);
     let (apps, records, clip) = (names(&g6::APPS), g6rec::NAMES.join("|"), g8clip::CLIP);
-    let (bench, staged) = (g22::BENCH, g22::STAGED);
+    let (bench, staged, device) = (g22::BENCH, g22::STAGED, g22::DEVICE_FLAG);
     format!(
         "       {PROG} g2 <{NAME}> [--clicks N] [--seed S]
        {PROG} g3 <{NAME}>
@@ -35,7 +35,7 @@ fn product_lines() -> String {
        {PROG} g11 <{NAME}>
        {PROG} g12 <{NAME}>
        {PROG} g13 <{NAME}>
-       {PROG} g22 <{NAME}|{bench}|{staged}>
+       {PROG} g22 <{NAME}|{bench}|{staged}> [{device} <pick>]
        {PROG} g23 <{NAME}>
        {PROG} g26 <{NAME}>
        {PROG} g27 <{NAME}>"
@@ -54,10 +54,13 @@ fn face_lines() -> String {
 /// The help lines of P11's voice gates.
 fn voice_lines() -> String {
     let (bench, staged, build) = (g22::BENCH, g22::STAGED, g22::worker_build());
+    let (app, device) = (g22::app_build(), g22::DEVICE_FLAG);
     format!(
-        "g22 {NAME} starts the build with --features gate-voice beside the gate worker on a data folder it makes, so \
+        "g22 {NAME} starts the build with {app} beside the gate worker on a data folder it makes, so \
          close the product first; it dictates each shipped clip into target-window by clicks and prints numbers and \
          the id of the device that wrote each text.
+g22 {NAME} {device} with cpu, auto or a card's id runs the copy on that device in place of [g22_product] device, \
+         so a card run edits no file.
 g22 {bench} starts no screen and moves nothing: each language's default voice model reads its shipped clip through \
          the worker built with {build}, normal then weak, and it prints a table of numbers.
 g22 {staged} starts no screen and moves nothing: it copies the worker cargo xtask stage wrote, checks edges 28, 29 \

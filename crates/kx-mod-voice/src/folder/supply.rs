@@ -77,7 +77,7 @@ impl<'a> Stock<'a> {
         let (card, why) = if read {
             self.card(row.card_mb, &row.print)
         } else {
-            (None, None)
+            (None, self.held(Why::Unread))
         };
         Ok(Ready {
             model,
@@ -144,11 +144,16 @@ impl<'a> Stock<'a> {
                 check: check(device),
             })
             .collect();
-        let (pick, margin) = (self.settings.device(), self.settings.card_margin_mb);
-        match serve(&pick, &seen, need_mb, margin) {
+        let margin = self.settings.card_margin_mb;
+        match serve(&self.settings.device(), &seen, need_mb, margin) {
             Serve::Card(card) => (Some(card), None),
-            Serve::Cpu(why) => (None, matches!(pick, DevicePick::Card(_)).then_some(why)),
+            Serve::Cpu(why) => (None, self.held(why)),
         }
+    }
+
+    /// `why` the processor serves, kept only while a card is picked.
+    fn held(&self, why: Why) -> Option<Why> {
+        matches!(self.settings.device(), DevicePick::Card(_)).then_some(why)
     }
 
     /// The processor's memory, once the devices were read.

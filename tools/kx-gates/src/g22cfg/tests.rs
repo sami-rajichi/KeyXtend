@@ -146,6 +146,27 @@ fn only_a_card_in_device_waits_after_the_layout_before_dictation() {
 }
 
 #[test]
+fn a_device_flags_pick_replaces_the_files_for_the_run_and_none_keeps_it() {
+    let mut g = shipped().g22_product;
+    let kept = g.clone();
+    g.set_pick(None);
+    assert_eq!(
+        (g.device.as_str(), g.pick()),
+        (kept.device.as_str(), kept.pick())
+    );
+    let card = DevicePick::parse("Vulkan1");
+    g.set_pick(card.as_ref());
+    assert_eq!(g.pick(), card, "the flag wins");
+    assert_eq!(
+        g.dictate_wait_ms(),
+        g.card_wait_ms,
+        "a card's wait follows it"
+    );
+    g.set_pick(Some(&DevicePick::Cpu));
+    assert_eq!((g.pick(), g.dictate_wait_ms()), (Some(DevicePick::Cpu), 0));
+}
+
+#[test]
 fn the_shipped_staged_edges_pass_their_check_and_each_bad_key_is_refused() {
     let c = shipped();
     assert_eq!(c.g22_staged.check(&c.g22_bench), Ok(()));

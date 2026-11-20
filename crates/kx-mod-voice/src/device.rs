@@ -36,6 +36,8 @@ pub enum Why {
     NoneChecked,
     /// The picked card has no check for this model yet.
     Unchecked,
+    /// The model's file is not fingerprinted yet, and a card's check goes by its fingerprint; only the folder sets it.
+    Unread,
     /// The picked card's check failed, with its verdict.
     Failed(Verdict),
     /// The picked card is gone.
@@ -57,6 +59,7 @@ impl Why {
             Self::Picked => "picked",
             Self::NoneChecked => "none_checked",
             Self::Unchecked => "unchecked",
+            Self::Unread => "unread",
             Self::Failed(_) => "failed",
             Self::Gone => "gone",
             Self::NoRoom { .. } => "no_room",

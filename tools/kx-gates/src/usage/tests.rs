@@ -162,9 +162,15 @@ fn p11_lists_g22s_runs_and_says_which_move_nothing() {
         "{text}"
     );
     assert!(told(g22::STAGED).is_some_and(still), "{text}");
-    let product =
-        told(NAME).is_some_and(|l| l.contains("--features gate-voice") && l.contains("close"));
+    let product = told(NAME).is_some_and(|l| l.contains(&g22::app_build()) && l.contains("close"));
     assert!(product, "{text}");
+    let flag = g22::DEVICE_FLAG;
+    assert!(text.contains(&format!("{runs} [{flag} <")), "{text}");
+    let device = text
+        .lines()
+        .find(|l| l.starts_with(&format!("g22 {NAME} {flag} ")));
+    let instead = |l: &str| l.contains("[g22_product] device") && l.contains("cpu");
+    assert!(device.is_some_and(instead), "{text}");
     let voiced = format!("g22 {NAME} and g22 {} ", g22::BENCH);
     let hint = text.lines().find(|l| l.starts_with(&voiced));
     assert!(

@@ -1,9 +1,13 @@
 //! The device lines: why a dictation runs on the processor although a card is picked, and how each card's check ended.
 //! Each holds kinds and numbers only.
 
-use kx_module_api::ports::{Hundredths, SpeechError, Verdict};
+use kx_module_api::ports::{FieldKind, Hundredths, SpeechError, Verdict};
+use kx_platform_fake::FileCall;
 
+use super::super::Msg;
 use super::super::cards::{CARD, build, card_id, devices, passed, served};
+use super::super::rig::{Rig, english_layout};
+use super::super::taps::{held, in_place, release, waiting};
 use super::lines_of;
 use crate::device::Why;
 use crate::device::told::{
@@ -43,6 +47,7 @@ fn the_processor_serving_a_picked_card_logs_its_why_kind_alone() {
     let lines = lines_of(|| {
         told::cpu(Why::Gone);
         told::cpu(Why::Unchecked);
+        told::cpu(Why::Unread);
         told::cpu(Why::Failed(slow));
         told::cpu(Why::NoRoom {
             need_mb: NEED,
@@ -52,6 +57,7 @@ fn the_processor_serving_a_picked_card_logs_its_why_kind_alone() {
     let want = [
         text(WHY, "gone"),
         text(WHY, "unchecked"),
+        text(WHY, "unread"),
         text(WHY, "failed") + &text(VERDICT, "slow"),
         text(WHY, "no_room") + &number(NEED_MB, NEED) + &number(FREE_MB, FREE),
     ];
@@ -90,4 +96,41 @@ fn a_card_checks_end_logs_its_verdict_and_times_or_its_error_kind() {
         let lines = lines_of(|| drop(build(CARD, Some(devices()), Err(error), Vec::new())));
         assert_eq!(fields(&lines, CHECK_ENDED), [text(ERROR, error.kind())]);
     }
+}
+
+/// A begun rig with `device` picked whose model's fingerprint is still being read: that job alone is held.
+fn unread(device: &str) -> Rig {
+    let mut rig = Rig::unbegun(|fake, host| {
+        host.put("device", device.into());
+        fake.speech.set_devices(Ok(devices()));
+    });
+    rig.actor.ports.spawn = held;
+    rig.actor.begin();
+    // Jobs end until the folder's scan has, so the fingerprint's job it starts stays held; later jobs run.
+    while rig.fake.files.calls(FileCall::Scan) == 0 && waiting() {
+        release();
+        rig.pump();
+    }
+    rig.actor.ports.spawn = in_place;
+    rig.fake.field.focus(FieldKind::Text);
+    rig.pump();
+    rig.send(Msg::Layout(english_layout()));
+    rig
+}
+
+#[test]
+fn a_picked_card_says_its_model_is_unread_while_the_fingerprint_is_read() {
+    let lines = lines_of(|| {
+        let mut rig = unread(CARD);
+        assert!(waiting(), "the fingerprint is still read");
+        rig.listen();
+        assert_eq!(served(&rig), None);
+        release();
+    });
+    assert_eq!(fields(&lines, CPU_SERVES), [text(WHY, "unread")]);
+    let lines = lines_of(|| {
+        unread("cpu").listen();
+        release();
+    });
+    assert!(fields(&lines, CPU_SERVES).is_empty(), "{lines:?}");
 }
