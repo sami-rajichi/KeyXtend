@@ -20,6 +20,14 @@ fn net_fault(fault: CloudFault) -> NetFault {
     }
 }
 
+/// The job's note for piece `index`'s answer.
+fn note(index: u16, said: CloudAnswer) -> NetNote {
+    match said {
+        CloudAnswer::Text(said) => text(index, said.expose()),
+        CloudAnswer::Fault(f) => fault(net_fault(f)),
+    }
+}
+
 impl Served for Played {
     fn speech(&self) -> &dyn CloudSpeech {
         &self.host
@@ -34,10 +42,7 @@ impl Served for Played {
         let run = self.host.send(ask, tell)?;
         let mut ended = false;
         for (index, said) in (0..).zip(answers) {
-            let note = match said {
-                CloudAnswer::Text(said) => text(index, said.expose()),
-                CloudAnswer::Fault(f) => fault(net_fault(f)),
-            };
+            let note = note(index, said);
             ended |= matches!(note, NetNote::Fault { .. });
             self.script.say(Ok(note));
         }
@@ -58,6 +63,20 @@ impl Served for Played {
             answer(&self.script, note)(&called);
             back.join().expect("the test returns")
         })
+    }
+
+    fn drop_held(&self, ask: CloudAsk, answers: Vec<CloudAnswer>, tell: Tell) -> bool {
+        let (calls, called) = mpsc::channel();
+        self.script.tell(calls);
+        let Ok(run) = self.host.send(ask, tell) else {
+            return false;
+        };
+        drop(run);
+        for (index, said) in (0..).zip(answers) {
+            self.script.say(Ok(note(index, said)));
+        }
+        let cancel = Call::Net(NetAsk::Cancel { id: ID });
+        std::iter::from_fn(|| called.recv_timeout(LONG).ok()).any(|call| call == cancel)
     }
 }
 

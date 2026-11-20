@@ -7,7 +7,7 @@ use kx_module_api::ports::{
     FormFields, HttpsUrl, JobLimits, KeyHeader, SAMPLE_BYTES, SOUND_HZ,
 };
 use kx_module_api::{Redacted, Secret, SecretBytes, Zeroizing};
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::time::Duration;
 
 /// An example address.
@@ -53,6 +53,10 @@ pub trait Served {
     /// # Errors
     /// The test's fault.
     fn test(&self, ask: CloudTest, answer: Result<(), CloudFault>) -> Result<(), CloudFault>;
+
+    /// Sends `ask` while the service holds every answer, drops the run, then has the service give `answers`; true
+    /// when the run was cancelled.
+    fn drop_held(&self, ask: CloudAsk, answers: Vec<CloudAnswer>, tell: Tell) -> bool;
 }
 
 /// Runs the whole suite on `served`, failing the test that calls it at the first broken promise.
@@ -61,6 +65,7 @@ pub fn check(served: &dyn Served) {
     a_fault_is_told_once_and_ends_the_run(served);
     a_bad_ask_or_test_is_refused_by_its_value(served);
     a_key_test_answers_as_the_service_does(served);
+    a_dropped_run_is_cancelled_and_tells_nothing_more(served);
 }
 
 /// A made-up key no output may show, built as the test runs so no key-like text sits in the source.
@@ -221,4 +226,14 @@ fn a_key_test_answers_as_the_service_does(served: &dyn Served) {
     assert_eq!(served.test(key_test(), Ok(())), Ok(()));
     let refused = Err(CloudFault::Key);
     assert_eq!(served.test(key_test(), refused), refused);
+}
+
+/// A dropped run is cancelled, and lets go of its callback having told nothing, though the service answers after.
+fn a_dropped_run_is_cancelled_and_tells_nothing_more(served: &dyn Served) {
+    let (tell, heard) = hearer();
+    let answers = vec![CloudAnswer::text("one"), CloudAnswer::text("two")];
+    let cancelled = served.drop_held(ask(&[SECOND, SECOND]), answers, tell);
+    assert!(cancelled, "the run is cancelled");
+    let after = heard.recv_timeout(WITHIN);
+    assert_eq!(after, Err(RecvTimeoutError::Disconnected), "nothing told");
 }

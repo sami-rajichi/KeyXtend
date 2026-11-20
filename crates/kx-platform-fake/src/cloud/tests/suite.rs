@@ -26,6 +26,16 @@ impl Served for Scripted {
         self.0.script_test(answer);
         self.0.test(ask)
     }
+
+    fn drop_held(&self, ask: CloudAsk, answers: Vec<CloudAnswer>, tell: Tell) -> bool {
+        let at = self.0.calls().runs.len();
+        let Ok(run) = self.0.send(ask, tell) else {
+            return false;
+        };
+        drop(run);
+        let told = self.0.answer(at, answers);
+        !told && self.0.calls().runs[at].state == CloudState::Dropped
+    }
 }
 
 #[test]
