@@ -44,6 +44,7 @@ pub use boxes::{BoxCall, FakeBoxes};
 pub use calendar::{FakeCalendar, PARIS};
 pub use clip::{FakeClipboard, FakeClipboardWriter};
 pub use clock::FakeClock;
+pub use cloud::suite as cloud_suite;
 pub use cloud::{CloudAnswer, CloudCalls, CloudLog, CloudState, CloudTestLog, FakeCloud};
 pub use field::FakeFieldWatch;
 pub use folder::FakeFolderReveal;

@@ -26,7 +26,7 @@ fn asked(called: &Receiver<Call>) {
 }
 
 /// Waits for the test's ask, then gives it `note`.
-fn answer(script: &Script<NetFrames>, note: NetNote) -> impl FnOnce(&Receiver<Call>) {
+pub(super) fn answer(script: &Script<NetFrames>, note: NetNote) -> impl FnOnce(&Receiver<Call>) {
     move |called| {
         asked(called);
         script.say(Ok(note));

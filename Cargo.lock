@@ -1746,6 +1746,7 @@ version = "0.0.0"
 dependencies = [
  "kx-ipc",
  "kx-module-api",
+ "kx-platform-fake",
  "kx-test-support",
  "proptest",
  "thiserror 2.0.21",

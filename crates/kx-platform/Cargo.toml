@@ -20,5 +20,7 @@ thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+# The cloud port's shared behaviour suite and its made-up asks, which the fake runs too.
+kx-platform-fake = { path = "../kx-platform-fake" }
 kx-test-support = { path = "../kx-test-support" }
 proptest.workspace = true

@@ -10,6 +10,7 @@ use std::time::Duration;
 
 mod calls;
 mod log;
+pub mod suite;
 
 pub use calls::{CloudAnswer, CloudCalls, CloudLog, CloudState, CloudTestLog};
 use log::{FakeCloudRun, Shared};

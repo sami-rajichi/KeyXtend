@@ -1,27 +1,19 @@
 //! The fake cloud speech, held to the port: asks checked by their own rule, scripted texts and every fault told in
 //! order, scripts taken in turn, a failed send, and pieces counted by size with no key, sound or text kept or shown.
 
+use super::suite::{SAMPLE, WITHIN, ask, key, key_test, secret};
 use super::*;
-use kx_module_api::ports::{
-    CloudLimits, CloudRun, CloudShape, FormFields, HttpsUrl, JobLimits, KeyHeader,
-};
-use kx_module_api::{REDACTED_MARKER, Redacted, SecretBytes, Zeroizing};
+use kx_module_api::ports::CloudRun;
+use kx_module_api::REDACTED_MARKER;
 use std::sync::Mutex;
 
 mod keys;
 mod life;
 mod props;
+mod suite;
 
-/// How long a test waits for another thread; it never sleeps.
-const WITHIN: Duration = Duration::from_secs(10);
-/// An example address.
-const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
-/// The example's key test address.
-const MODELS: &str = "https://stt.example.com/v1/models";
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
-/// One sample of sound no output may show; a piece repeats it.
-const SAMPLE: [u8; 2] = [0x7f, 0x3e];
 /// `SAMPLE` as a plain `Debug` prints it.
 const SAMPLE_SHOWN: &str = "127, 62";
 /// Every fault a run may tell, as `Range` is only `send`'s own refusal.
@@ -47,20 +39,6 @@ const FAULTS: [CloudFault; 14] = [
 /// What a test run heard.
 type Heard = Arc<Mutex<Vec<CloudNote>>>;
 
-fn secret(text: &str) -> Secret {
-    Redacted::new(Zeroizing::new(text.to_owned()))
-}
-
-/// A made-up key no output may show, built as the test runs so no key-like text sits in the source.
-fn key() -> String {
-    ["kx", "made", "up", "key"].join("-")
-}
-
-/// A piece of `bytes` bytes of sound, whole samples.
-fn sound(bytes: usize) -> SecretBytes {
-    Redacted::new(Zeroizing::new(SAMPLE.repeat(bytes / SAMPLE.len())))
-}
-
 /// `text` as a scripted answer.
 fn text(text: &str) -> CloudAnswer {
     CloudAnswer::text(text)
@@ -70,67 +48,6 @@ fn text(text: &str) -> CloudAnswer {
 fn piece(index: u16, text: &str) -> CloudNote {
     let text = secret(text);
     CloudNote::Piece { index, text }
-}
-
-/// Test values; the real ones come from the voice module's settings.
-fn job() -> JobLimits {
-    JobLimits {
-        job_mb: 512,
-        idle_min: 5,
-        ask_ms: 3_000,
-        load_s: 60,
-        warm_s: 180,
-        piece_wait_s: 120,
-        restart_ms: 1_000,
-        restart_max_ms: 30_000,
-    }
-}
-
-/// A plain upload form.
-fn form() -> CloudShape {
-    let fields = FormFields {
-        lang: "language".into(),
-        list: false,
-        fixed: Vec::new(),
-        paywall: false,
-        region: None,
-    };
-    CloudShape::Form(fields)
-}
-
-/// French pieces of these sizes, in bytes, for a made-up model under made-up limits.
-fn ask(sizes: &[usize]) -> CloudAsk {
-    let limits = CloudLimits {
-        max_mb: 25,
-        max_s: 600,
-        per_min: 20,
-        at_once: 2,
-    };
-    CloudAsk {
-        job: job(),
-        shape: form(),
-        url: HttpsUrl::new(ADDRESS).unwrap(),
-        header: KeyHeader::Bearer,
-        key: secret(&key()),
-        model: Some(Redacted::new("made-up-model-v3".into())),
-        lang: "fr".into(),
-        limits,
-        wait_s: 60,
-        tries: 2,
-        pieces: sizes.iter().map(|n| sound(*n)).collect(),
-    }
-}
-
-/// A key test: the example's models list.
-fn key_test() -> CloudTest {
-    CloudTest {
-        job: job(),
-        shape: form(),
-        url: HttpsUrl::new(MODELS).unwrap(),
-        header: KeyHeader::Bearer,
-        key: secret(&key()),
-        wait_s: 60,
-    }
 }
 
 /// A `tell` that records each note into the returned list.
