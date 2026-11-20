@@ -8,7 +8,8 @@ description: Use when preparing a tagged KeyXtend release - version bump, change
 1. **Preconditions:**
    - `main` is green;
    - every module in the release passed `kx-module-done`;
-   - no open "Must fix" items in `docs/security/`.
+   - no open "Must fix" items in `docs/security/`;
+   - every cloud service's facts are read again on its own pages, and each row's `read` date (and its terms number, if training, keeping or region changed) is updated in `crates/kx-mod-voice/services.toml` and `services-own.toml` (ADR-0047 decision 8).
 2. **Version and changelog:**
    - bump the workspace version (SemVer; pre-1.0 is `0.x`);
    - move "Unreleased" in `CHANGELOG.md` to the new version with today's date.
