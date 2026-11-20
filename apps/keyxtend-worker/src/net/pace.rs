@@ -5,7 +5,7 @@ use kx_ipc::{MS_PER_S, NET_PACE_S};
 use std::collections::VecDeque;
 
 /// The span `per_min` counts requests in, in ms.
-const MINUTE_MS: u64 = NET_PACE_S as u64 * MS_PER_S as u64;
+pub(super) const MINUTE_MS: u64 = NET_PACE_S as u64 * MS_PER_S as u64;
 
 /// When a run's requests started or will start.
 pub struct Pace {

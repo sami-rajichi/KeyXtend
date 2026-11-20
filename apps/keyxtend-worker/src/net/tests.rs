@@ -1,6 +1,6 @@
 //! The speech job over a scripted server and a still clock: the upload form, `ElevenLabs`' form, Gemini's JSON and
-//! `AssemblyAI`'s Sync request with their status tables, the reply reader, the WAV wrap and Base64, the tries and the
-//! wait after a 429, a run's sound and texts, and the loop over pipes. None touches the network or sleeps; replies are
+//! `AssemblyAI`'s Sync request with their status tables, the reply reader, the WAV wrap and Base64, the tries, the pace and
+//! the wait after a 429, a run's sound and texts, and the loop over pipes. None touches the network or sleeps; replies are
 //! fixtures under `replies/`, and the key is a made-up one.
 
 mod assembly;
@@ -10,6 +10,7 @@ mod eleven;
 mod form;
 mod gemini;
 mod job;
+mod pace;
 mod pipe;
 mod props;
 mod reply;
