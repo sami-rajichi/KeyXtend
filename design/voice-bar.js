@@ -1,5 +1,5 @@
 // Voice typing mock-up (design/voice-bar.html): texts in three languages, sample data and drawing. Reference only.
-// Part 2's cloud services live in voice-cloud.js, which loads after this file and before boot() at the end.
+// Part 2's cloud services live in voice-cloud-data.js and voice-cloud.js, which load after this file and before boot().
 'use strict';
 
 // Lucide icons (ISC), copied from assets/icons/lucide; win-logo is our own drawing (selection-chips.html).
@@ -583,7 +583,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-a]:not(button)')) { e.preventDefault(); e.target.click(); } });
 addEventListener('resize', fit);
-// Starts once voice-cloud.js has added part 2's texts, pages and acts.
+// Starts once voice-cloud-data.js and voice-cloud.js have added part 2's texts, pages and acts.
 function boot() {
   fresh();
   if (S.panel === 'device' || PRESET[S.panel]) go(S.panel);

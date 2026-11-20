@@ -27,7 +27,7 @@ Every colour, radius and size is a token copied below from crates/kx-theme/token
 "proposed" are not in shape.toml yet; task 24 adds them as [voice]. The app window and wall behind are the scene's
 stand-ins, copied from selection-chips.html.
 
-Part 2 (spec 2026-11-10-voice-cloud-design.md, plan task 2) adds, mostly in voice-cloud.js and voice-cloud.css:
+Part 2 (spec 2026-11-10-voice-cloud-design.md, task 2) adds, mostly in voice-cloud-data.js, voice-cloud.js and .css:
 - Preparing (owner, 2026-11-17): no bar until the microphone opens, only an amber Dictation key, as a studio's amber
   stand-by light comes before the red on-air light; the bar then opens straight in Listening.
 - The Cloud page: a master switch drawn as Options' switches (Windows Settings' toggles), then the paged services list
@@ -354,6 +354,7 @@ body{margin:0; overflow:hidden; background:var(--pop-bg); color:var(--pop-ink); 
 <div id="say" role="status"></div>
 <div id="fit"><div id="stage" class="sc"></div></div>
 <script src="voice-bar.js"></script>
+<script src="voice-cloud-data.js"></script>
 <script src="voice-cloud.js"></script>
 </body>
 </html>
