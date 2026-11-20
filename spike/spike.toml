@@ -44,15 +44,6 @@ snip_hint = "Snip: click two corners of the region. Click the same spot twice to
 # The region's size tag, in physical pixels.
 snip_size = "{w} × {h}"
 
-# The opt-in cloud speech engine, kept as source for P11 part 2; the key is read from the environment, never from a file.
-# The local voice parts moved to the product in P11 (docs/spike-move-map.md).
-[cloud]
-host = "api.groq.com"
-path = "/openai/v1/audio/transcriptions"
-model = "whisper-large-v3"
-key_env = "GROQ_API_KEY"
-timeout_ms = 30000
-
 # The Arabic test panel for gate G7 (mock-up .pop): a right-to-left stand-in for Settings, opened by the Settings key.
 # Rows per page (ADR-0008), the page text with {n} and {count}, the field's screen-reader name, and each button's icon and name.
 [panel]
