@@ -23,5 +23,5 @@ Decided with the owner on 2026-11-19.
 ## Consequences
 
 - The worker holds four adapters; `shape::of` stays total, so a fifth shape is again one more file and one more arm.
-- A piece is cut at two minutes, the Sync API's live limit, so it is expected to finish within the 30-second server deadline. The owner checks that by hand with a real key at task 24, with the rates, the credit reply and whether the free credit covers Sync.
+- A piece is cut at pauses and packed within one frame, about 33 seconds of speech (task 9's ruling), well inside the row's two-minute `max_s`, the Sync API's live limit, so it is expected to finish within the 30-second server deadline. The owner checks that by hand with a real key at task 24, with the rates, the credit reply and whether the free credit covers Sync.
 - No new crate: the shape reuses the shared multipart body, status table, reply reader and `serde_json`.

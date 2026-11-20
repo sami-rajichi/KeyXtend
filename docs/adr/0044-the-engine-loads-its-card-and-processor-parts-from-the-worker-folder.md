@@ -1,7 +1,7 @@
 # 44. The engine loads its card and processor parts from the worker's folder only
 
 - **Date:** 2026-11-14
-- **Status:** Accepted. Adds to ADR-0042's `voice` job and ADR-0043's runner how a device is picked and how the engine's parts load.
+- **Status:** Accepted. Adds to ADR-0042's `voice` job and ADR-0043's runner how a device is picked and how the engine's parts load. Partly superseded by ADR-0052, which replaces decision 7's clip choice.
 
 ## Context
 
