@@ -57,6 +57,15 @@ fn nothing_added_is_no_piece() {
     assert!(Packer::new(0).pieces().is_empty());
 }
 
+#[test]
+fn a_stretch_past_the_sound_packs_only_the_sound_within_the_cap() {
+    let mut pack = Packer::new(4);
+    pack.add(&[LOUD; 10], 6..20);
+    pack.add(&[LOUD; 10], 12..20);
+    let pieces = pack.pieces();
+    assert_eq!(ends(&pieces), [vec![(6, 10)]]);
+}
+
 /// Stretches in order with gaps between them, each of fewer than `most` samples.
 fn stretches(most: usize) -> impl Strategy<Value = Vec<Range<usize>>> {
     let parts = prop::collection::vec((0..most, 0..most), 0..20);

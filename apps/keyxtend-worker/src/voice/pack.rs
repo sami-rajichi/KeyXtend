@@ -23,16 +23,17 @@ impl Packer {
         }
     }
 
-    /// Adds the stretch `span` of `sound` after the last, cut at its quietest stretches when longer than `cap`; an
-    /// empty one adds nothing.
+    /// Adds the stretch `span` of `sound` after the last, cut at its quietest stretches when longer than `cap`. Only
+    /// the part within `sound` is packed, so an empty one, or one past its end, adds nothing.
     pub fn add(&mut self, sound: &[i16], span: Range<usize>) {
-        match sound.get(span.clone()) {
-            Some(stretch) if span.len() > self.cap => {
-                for part in split::spans(stretch, Some(self.cap)) {
-                    self.join(span.start + part.start..span.start + part.end);
-                }
-            }
-            _ => self.join(span),
+        let end = span.end.min(sound.len());
+        let start = span.start.min(end);
+        if end - start <= self.cap {
+            self.join(start..end);
+            return;
+        }
+        for part in split::spans(&sound[start..end], Some(self.cap)) {
+            self.join(start + part.start..start + part.end);
         }
     }
 
