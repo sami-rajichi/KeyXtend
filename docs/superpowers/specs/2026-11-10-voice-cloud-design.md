@@ -183,7 +183,7 @@ Picks stay in part 1's `picks`: a pick may now name a service and model.
 - Each adapter is tested against a small fake service inside the tests: good replies, each error of the edge cases, slow and cut connections. No test reaches the real network.
 - Property tests for every reply reader and for the services table (every row valid: HTTPS, a known shape, languages, limits, dated facts).
 - Qt Quick tests for the Cloud page, a service card with and without a warning, the key line, and the bar's cloud mark, in three languages.
-- The manual Windows check uses the owner's own keys, one service per connection the owner has a key for; a connection without a real-key check is marked untested on its card.
+- The manual Windows check uses the owner's own keys, one service per connection the owner has a key for; a connection without a real-key check is marked untested on its card. As built, every offered row is marked untested until that check, which hides a row that fails or cannot be tested (ADR-0050 decision 4).
 
 ## Left to the builder
 
