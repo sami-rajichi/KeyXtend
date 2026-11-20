@@ -16,6 +16,10 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock, Weak};
 /// The callback a run tells its notes to.
 pub(super) type Tell = Box<dyn Fn(CloudNote) + Send>;
 
+/// How long a test's poke waits for the timer and the stream, so a broken host fails the test instead of hanging it.
+#[cfg(test)]
+const POKE_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// The way back to a run's job, reached without waiting.
 pub(super) trait Back: Send + Sync {
     /// Cancels the job's run `id`: its requests are dropped and it tells nothing more.
@@ -138,13 +142,13 @@ impl Live {
     pub(super) fn poke(&self) {
         let (looked, seen) = std::sync::mpsc::channel();
         self.wake(Wake::Poke(looked));
-        let _ = seen.recv();
+        let _ = seen.recv_timeout(POKE_WAIT);
         let (marked, flushed) = std::sync::mpsc::channel();
         if let Some(back) = self.back.get().and_then(Weak::upgrade) {
             back.defer(Box::new(move || {
                 let _ = marked.send(());
             }));
-            let _ = flushed.recv();
+            let _ = flushed.recv_timeout(POKE_WAIT);
         }
     }
 
