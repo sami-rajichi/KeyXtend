@@ -4,6 +4,9 @@ Newest first. One entry per implemented feature or fixed issue: a timestamp plus
 
 Older entries, P0 to P3: [worklog/p0-p3.md](worklog/p0-p3.md).
 
+## 2026-11-20 19:10 — P11: the spike's worker is gone
+The P1 prototype's worker crate is deleted, with its cloud settings, now that the upload form, its multipart body and the WinHTTP upload all live in the product. The prototype workspace keeps only its core crate, without the five Windows features nothing used any more. The move map records each part's home.
+
 ## 2026-11-20 17:30 — P11: the card check reads the language in front
 A graphics card is now checked on the clip of the language being dictated, the first time it serves that language, so a card that is wrong only in Arabic falls back to the processor. Each result counts for its card, driver, model and language alone. The results file keeps the form older builds read, with the languages in a file beside it, and an older build always lands on a failure if any language failed. ADR-0052 records this in place of ADR-0044's seventh decision.
 
