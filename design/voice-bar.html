@@ -35,9 +35,9 @@ Part 2 (spec 2026-11-10-voice-cloud-design.md, plan task 2) adds, mostly in voic
 - A service's card: fixed rows of facts with the date read, as Apple's App Store privacy labels and Google Play's Data
   safety section; a warning band in the Windows 11 InfoBar's Warning colours.
 - The key, address and model lines: the panel's own line (PanelLine.qml), drawn as WinUI's focused TextBox.
-- The bar's cloud mark: a chip beside the language chip, so the user always sees where the voice goes.
-- Models' Local | Cloud and Options' Insert the text: the panel's filter chips (PanelChip.qml), as the clipboard panel's
-  filters; each side of Models is its own paged list.
+- The bar's cloud mark: a chip beside the language chip, so the user sees where the voice goes; at the first dictation
+  to a service with a warning, the warning wraps under the row in warn_ink. Models' Local | Cloud and Options' Insert
+  the text: the panel's filter chips (PanelChip.qml), as the clipboard panel's filters; each Models side pages alone.
 Colours prep, prep_ink, warn and warn_ink are proposed for themes.toml; Native's warn pair is Fluent's Caution pair and its
 prep is the Windows accent palette's Gold. Each text pair is at least 4.5:1, also under the row's hover.
 -->

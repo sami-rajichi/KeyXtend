@@ -9,6 +9,11 @@
 /* The bar's cloud mark: the language chip's shape, with a cloud in the ring colour and the service's name. */
 .lc.cm{gap:calc(var(--chip-gap-px) * var(--u))}
 .lc.cm .i{font-size:calc(var(--chip-icon-px) * var(--u)); color:var(--ring)}
+/* The first dictation's warning (VoiceWarn.qml): the bar widens and the card's warning wraps under its row in warn_ink. */
+.vbar.warns{flex-wrap:wrap}
+.vw{flex:1 0 100%; box-sizing:border-box; padding:0 calc(var(--caption-words-pad-px) * var(--u)) calc(var(--caption-words-pad-px) * var(--u)); color:var(--warn-ink);
+  font:400 calc(var(--notice-font-px) * var(--u))/1.35 var(--latin-fonts); text-align:start}
+.vw.ar{font-family:var(--arabic-fonts); font-size:calc(var(--notice-font-px) * var(--arabic-scale) * var(--u))}
 
 /* Models' Local | Cloud and Options' Insert the text: the panel's filter chips (PanelChip.qml), the shown one filled and checked. */
 .flt{display:flex; gap:calc(var(--panel-filter-gap-px) * var(--u)); margin:calc(var(--panel-body-gap-px) * var(--u)) calc(var(--panel-body-pad-px-1) * var(--u)) 0}
