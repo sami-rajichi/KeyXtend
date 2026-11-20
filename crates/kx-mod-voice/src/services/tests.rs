@@ -15,6 +15,7 @@ mod refuse;
 mod request;
 mod room;
 mod rows;
+pub(crate) mod shipped;
 mod split;
 
 /// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.

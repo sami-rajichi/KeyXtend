@@ -35,7 +35,7 @@ fn on(iso: &str) -> (String, String, String) {
 }
 
 /// Parakeet's check on the card under its driver, kept in `lang`.
-fn parakeet_in(lang: Option<&str>) -> Checked {
+pub(in crate::panel::tests) fn parakeet_in(lang: Option<&str>) -> Checked {
     Checked {
         card: CardId::new("Vulkan0").unwrap(),
         driver: "1.0".into(),

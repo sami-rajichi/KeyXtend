@@ -22,6 +22,7 @@ mod parts;
 mod rows;
 mod trial;
 mod typing;
+mod used;
 
 /// Applies the `[voice]` writes in `dos`, as the settings would after the actor wrote them.
 pub(super) fn apply(rig: &mut Rig, dos: &[Do]) {

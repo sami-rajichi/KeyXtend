@@ -20,7 +20,7 @@ use kx_module_api::ports::{
 use kx_module_api::{Redacted, is_arabic};
 
 use crate::VoiceSettings;
-use crate::cloud::{Cloud, cloud_pick};
+use crate::cloud::{Choice, Cloud, Offered, cloud_pick};
 use crate::counts::{Checks, Scores};
 use crate::flow::Supply;
 use crate::history::History;
@@ -80,6 +80,14 @@ impl Facts<'_> {
     #[must_use]
     pub fn cpu(&self) -> Option<&Device> {
         self.devices.iter().find(|d| d.kind == DeviceKind::Cpu)
+    }
+}
+
+impl<'a> Facts<'a> {
+    /// The language in front's cloud pick while the rules take it; it then dictates with that, not a local model.
+    #[must_use]
+    pub fn cloud_choice(&self) -> Option<Choice<'a>> {
+        self.cloud?.choice(self.settings, &self.front.iso)
     }
 }
 
@@ -219,12 +227,17 @@ impl Panel {
     }
 }
 
-/// The home list's values for the language in front, with `tabs`, the pages its shown page lists.
+/// The home list's values for the language in front, with `tabs`, the pages its shown page lists; a cloud pick names
+/// its model, and the device stays the one picked.
 fn home(panel: &Panel, facts: &Facts<'_>, tabs: Vec<VoiceTab>) -> VoiceHome {
-    let ready = panel.stock(facts).supply(facts.iso()).ok();
+    let cloud = facts.cloud_choice();
+    let ready = (cloud.is_none())
+        .then(|| panel.stock(facts).supply(facts.iso()).ok())
+        .flatten();
+    let named = cloud.map(|c| Redacted::new(Offered::from(&c).name().to_owned()));
     let compared = facts.scores.get(facts.iso()).map(|b| b.day);
     VoiceHome {
-        model: ready.as_ref().map(|r| shown_name(&r.name)),
+        model: named.or_else(|| ready.as_ref().map(|r| shown_name(&r.name))),
         device: device::label(facts, ready.as_ref()),
         compared,
         history: u32::try_from(facts.history.len()).unwrap_or(u32::MAX),

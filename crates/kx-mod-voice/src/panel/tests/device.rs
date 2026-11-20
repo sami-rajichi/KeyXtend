@@ -12,7 +12,7 @@ use super::super::rig::{Rig, card, row};
 use super::{Check, Do, Panel};
 use crate::settings::DEVICE;
 
-mod clips;
+pub(super) mod clips;
 
 /// The Device page as shown.
 fn device(rig: &mut Rig) -> DeviceSheet {

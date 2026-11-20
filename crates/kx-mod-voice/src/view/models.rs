@@ -123,8 +123,11 @@ impl Panel {
         )
     }
 
-    /// The model used for the language in front, as the flow's `Supply` finds it.
+    /// The local model used for the language in front, as the flow's `Supply` finds it; none while a cloud pick holds.
     pub(crate) fn used_choice(&self, facts: &Facts<'_>) -> Option<Choice> {
+        if facts.cloud_choice().is_some() {
+            return None;
+        }
         let table = table().ok()?;
         let default = || {
             table
