@@ -102,7 +102,7 @@ ar:{cloud:'الخدمات السحابية', cloudSub:'بمفتاحك الخاص
 };
 Object.keys(CT).forEach(k => Object.assign(L[k], CT[k]));
 
-// Counts and money: CLDR plural forms as voice-bar.js's AR table; the decimal mark is voice-bar.js's nf.
+// Counts and money: CLDR plural forms as voice-bar-data.js's AR table; the decimal mark is its nf.
 const COUNT = {
   en:{h:n => n + (n === 1 ? ' hour' : ' hours'), r:n => n + (n === 1 ? ' request' : ' requests'), m:n => n + (n === 1 ? ' minute' : ' minutes'),
     d:n => n + (n === 1 ? ' day' : ' days'), s:n => n + (n === 1 ? ' second' : ' seconds'), hm:n => n + (n === 1 ? ' hour a month' : ' hours a month'),

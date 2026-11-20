@@ -1,5 +1,5 @@
 // Part 2 of the voice typing mock-up (design/voice-bar.html): cloud services. Its icons, pages and acts draw the texts
-// and rows of voice-cloud-data.js, which loads first, and extend voice-bar.js's PAGE, ACT, CTL and SAY before boot()
+// and rows of voice-cloud-data.js, which loads first, and extend part 1's PAGE, ACT, CTL and SAY before boot()
 // draws the scene. Reference only, never shipped.
 'use strict';
 

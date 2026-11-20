@@ -3,7 +3,7 @@
 Mock-up of voice typing (P11, spec 2026-11-10-voice-typing-design.md): the dictation bar in each state and every page of the
 Voice panel, in the three themes, light and soft dark, in English, French and Arabic. Reference only, never shipped.
 The owner saw the first picture (Listening bar, panel home) on 2026-11-10; this file adds the rest for the owner's yes
-before any QML. Texts, sample data and drawing are in voice-bar.js beside it.
+before any QML. Texts and samples are in voice-bar-data.js, the drawing in voice-bar.js and voice-bar-scene.js.
 
 Which reference each choice follows:
 - The bar as one pill with a live wave of the real sound level: Wispr Flow's dictation bar and ChatGPT's dictation mode.
@@ -353,7 +353,9 @@ body{margin:0; overflow:hidden; background:var(--pop-bg); color:var(--pop-ink); 
 <div id="ctl"></div>
 <div id="say" role="status"></div>
 <div id="fit"><div id="stage" class="sc"></div></div>
+<script src="voice-bar-data.js"></script>
 <script src="voice-bar.js"></script>
+<script src="voice-bar-scene.js"></script>
 <script src="voice-cloud-data.js"></script>
 <script src="voice-cloud.js"></script>
 </body>
