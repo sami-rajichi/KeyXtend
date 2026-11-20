@@ -22,7 +22,7 @@ const LINK_MARKS: &[u8] = b"-._~:/?#[]@!$&'()*+,;=%";
 const HEX_MARK: &str = "0x";
 /// The marks a model's id may hold besides a name's: a version's dot, a provider's slash and a tag's colon.
 const MODEL_MARKS: &[u8] = b"./:";
-/// Parts a model id's path segments, as in `openai/whisper-large-v3`.
+/// Parts a model id's path segments, as in `vendor/model-v3`.
 const SEGMENT_MARK: char = '/';
 /// Path segments that would climb or stay in an address's path.
 const DOT_SEGMENTS: [&str; 2] = [".", ".."];

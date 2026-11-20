@@ -176,15 +176,23 @@ fn the_key_goes_only_in_its_header() {
     let req = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).unwrap();
     assert_eq!(
         field(&req, "Authorization"),
-        Some(format!("Bearer {KEY_TEXT}"))
+        Some(format!("Bearer {}", made_key()))
     );
-    assert_eq!(find(&req.body, KEY), None, "the body holds no key");
+    assert_eq!(
+        find(&req.body, made_key().as_bytes()),
+        None,
+        "the body holds no key"
+    );
     let others = req.fields.iter().filter(|(n, _)| n != "Authorization");
-    assert!(others.clone().all(|(_, v)| find(v, KEY).is_none()));
+    assert!(
+        others
+            .clone()
+            .all(|(_, v)| find(v, made_key().as_bytes()).is_none())
+    );
     let mut call = call;
     call.header = NetHeader::Named(Cow::Borrowed("X-Test-Key"));
     let req = Form.build(&piece(&call, Some(MODEL), LANG, WAV)).unwrap();
-    assert_eq!(field(&req, "X-Test-Key"), Some(KEY_TEXT.to_owned()));
+    assert_eq!(field(&req, "X-Test-Key"), Some(made_key()));
     assert_eq!(field(&req, "Authorization"), None);
 }
 
@@ -287,7 +295,7 @@ fn the_key_test_is_a_get_of_the_test_address_with_the_key_alone() {
     );
     assert_eq!(
         field(&req, "Authorization"),
-        Some(format!("Bearer {KEY_TEXT}"))
+        Some(format!("Bearer {}", made_key()))
     );
 }
 

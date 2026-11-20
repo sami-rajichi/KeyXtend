@@ -39,8 +39,8 @@ fn small() -> NetAsk<'static> {
     }
 }
 
-/// The largest piece Groq's limits take, in bytes.
-fn groq_cap() -> u32 {
+/// The largest piece the made-up limits take, in bytes.
+fn row_cap() -> u32 {
     let limits = limits();
     u32::try_from(piece_bytes(limits.max_mb, limits.max_s)).unwrap()
 }
@@ -194,7 +194,7 @@ fn a_run_value_outside_its_range_is_refused_when_written() {
         (|r| r.sizes = vec![2; MAX_SPEECH_PIECES + 1], TooLong),
         (|r| r.sizes = vec![2, 0], BadField),
         (|r| r.sizes = vec![3], BadField),
-        (|r| r.sizes = vec![groq_cap() + 2], BadField),
+        (|r| r.sizes = vec![row_cap() + 2], BadField),
         (|r| r.sizes = vec![2, u32::MAX - 1], BadField),
         (
             |r| {
@@ -217,7 +217,7 @@ fn a_piece_and_a_run_at_their_caps_pass() {
     let mut longest = run(Vec::new());
     let top = at_top(&mut longest);
     longest.sizes = vec![top; top_pieces(top)];
-    for run in [run(vec![groq_cap(), 2]), longest] {
+    for run in [run(vec![row_cap(), 2]), longest] {
         let at_cap = NetAsk::Send {
             id: 1,
             call: small_call(),
@@ -230,7 +230,7 @@ fn a_piece_and_a_run_at_their_caps_pass() {
 #[test]
 fn a_bad_call_or_run_is_refused_when_read() {
     let good = net_ask_bytes(&small());
-    let over = (groq_cap() + 2).to_le_bytes();
+    let over = (row_cap() + 2).to_le_bytes();
     let reads: [(usize, &[u8]); 26] = [
         (0, &[0]),
         (0, &[6]),

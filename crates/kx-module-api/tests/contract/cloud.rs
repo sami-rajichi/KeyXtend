@@ -72,8 +72,16 @@ fn host(granted: &[Capability], stub: Arc<Stub>) -> FakeHost {
     host
 }
 
-/// Two pieces for Groq, with a key the user typed.
-#[allow(clippy::unwrap_used, reason = "a test helper; Groq's address is HTTPS")]
+/// A made-up key, built as the test runs so no key-like text sits in the source.
+fn made_key() -> String {
+    ["kx", "contract", "key"].join("-")
+}
+
+/// Two pieces for the example address under made-up limits, with a key the user typed.
+#[allow(
+    clippy::unwrap_used,
+    reason = "a test helper; the example address is HTTPS"
+)]
 fn ask() -> CloudAsk {
     let job = JobLimits {
         job_mb: 512,
@@ -96,10 +104,10 @@ fn ask() -> CloudAsk {
     CloudAsk {
         job,
         shape,
-        url: HttpsUrl::new("https://api.groq.com/openai/v1/audio/transcriptions").unwrap(),
+        url: HttpsUrl::new("https://stt.example.com/v1/audio/transcriptions").unwrap(),
         header: KeyHeader::Bearer,
-        key: Redacted::new(Zeroizing::new("gsk_contract".into())),
-        model: Some(Redacted::new("whisper-large-v3".into())),
+        key: Redacted::new(Zeroizing::new(made_key())),
+        model: Some(Redacted::new("made-up-model-v3".into())),
         lang: "ar".into(),
         limits: CloudLimits {
             max_mb: 25,
@@ -166,6 +174,6 @@ fn a_bad_ask_never_starts_and_an_http_address_is_never_built() {
     };
     let refused = cloud.send(empty, Box::new(|_| {}));
     assert_eq!(refused.err(), Some(CloudFault::Range("pieces")));
-    let plain = "http://api.groq.com/openai/v1/audio/transcriptions";
+    let plain = "http://stt.example.com/v1/audio/transcriptions";
     assert_eq!(HttpsUrl::new(plain), None, "edge 13");
 }

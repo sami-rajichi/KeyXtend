@@ -33,8 +33,8 @@ fn the_row_and_the_key_go_first_then_the_sound_in_wiped_parts_in_order() {
     };
     assert_eq!(*id, ID);
     assert!(matches!(call.shape, NetShape::Form(_)) && call.header == NetHeader::Bearer);
-    assert_eq!((call.url.as_ref(), call.wait_s), (GROQ, WAIT_S));
-    assert!(matches!(&call.key, Wiped::Kept(k) if k.as_slice() == KEY.as_bytes()));
+    assert_eq!((call.url.as_ref(), call.wait_s), (ADDRESS, WAIT_S));
+    assert!(matches!(&call.key, Wiped::Kept(k) if k.as_slice() == key().as_bytes()));
     let wanted: Vec<u32> = sizes.iter().map(|&n| u32::try_from(n).unwrap()).collect();
     assert_eq!(
         (run.sizes.clone(), run.tries, run.lang.as_ref()),

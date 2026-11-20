@@ -21,7 +21,7 @@ pub enum CloudShape {
     Gemini,
     /// `AssemblyAI`'s Sync request: a JSON `config` part, then the sound, with the model under its own header.
     Assembly {
-        /// The name of the header that carries the model, such as `X-AAI-Model`.
+        /// The name of the header that carries the model, such as `X-Model`.
         model_header: String,
     },
 }

@@ -14,12 +14,10 @@ mod props;
 
 /// How long a test waits for another thread; it never sleeps.
 const WITHIN: Duration = Duration::from_secs(10);
-/// A key no output may show.
-const KEY: &str = "gsk_live-7731-zebra";
-/// Groq's address, from its row.
-const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-/// Groq's key test address.
-const MODELS: &str = "https://api.groq.com/openai/v1/models";
+/// An example address.
+const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
+/// The example's key test address.
+const MODELS: &str = "https://stt.example.com/v1/models";
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
 /// One sample of sound no output may show; a piece repeats it.
@@ -53,6 +51,11 @@ fn secret(text: &str) -> Secret {
     Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
+/// A made-up key no output may show, built as the test runs so no key-like text sits in the source.
+fn key() -> String {
+    ["kx", "made", "up", "key"].join("-")
+}
+
 /// A piece of `bytes` bytes of sound, whole samples.
 fn sound(bytes: usize) -> SecretBytes {
     Redacted::new(Zeroizing::new(SAMPLE.repeat(bytes / SAMPLE.len())))
@@ -83,7 +86,7 @@ fn job() -> JobLimits {
     }
 }
 
-/// The upload form as Groq names its fields.
+/// A plain upload form.
 fn form() -> CloudShape {
     let fields = FormFields {
         lang: "language".into(),
@@ -95,7 +98,7 @@ fn form() -> CloudShape {
     CloudShape::Form(fields)
 }
 
-/// French pieces of these sizes, in bytes, for Groq's turbo model.
+/// French pieces of these sizes, in bytes, for a made-up model under made-up limits.
 fn ask(sizes: &[usize]) -> CloudAsk {
     let limits = CloudLimits {
         max_mb: 25,
@@ -106,10 +109,10 @@ fn ask(sizes: &[usize]) -> CloudAsk {
     CloudAsk {
         job: job(),
         shape: form(),
-        url: HttpsUrl::new(GROQ).unwrap(),
+        url: HttpsUrl::new(ADDRESS).unwrap(),
         header: KeyHeader::Bearer,
-        key: secret(KEY),
-        model: Some(Redacted::new("whisper-large-v3-turbo".into())),
+        key: secret(&key()),
+        model: Some(Redacted::new("made-up-model-v3".into())),
         lang: "fr".into(),
         limits,
         wait_s: 60,
@@ -118,14 +121,14 @@ fn ask(sizes: &[usize]) -> CloudAsk {
     }
 }
 
-/// Groq's key test: its models list.
+/// A key test: the example's models list.
 fn key_test() -> CloudTest {
     CloudTest {
         job: job(),
         shape: form(),
         url: HttpsUrl::new(MODELS).unwrap(),
         header: KeyHeader::Bearer,
-        key: secret(KEY),
+        key: secret(&key()),
         wait_s: 60,
     }
 }
@@ -231,7 +234,7 @@ fn debug_never_shows_the_key_the_sound_a_text_or_the_address() {
     let (_run, _heard) = sent(&fake, &[2, 2]);
     assert_eq!(fake.test(key_test()), Ok(()));
     let shown = format!("{fake:?} {:?} {:?}", fake.calls(), text(SAID));
-    for secret in [KEY, SAID, "api.groq.com", SAMPLE_SHOWN] {
+    for secret in [&key(), SAID, "stt.example.com", SAMPLE_SHOWN] {
         assert!(!shown.contains(secret), "{shown} shows {secret}");
     }
     assert!(shown.contains(REDACTED_MARKER), "{shown}");

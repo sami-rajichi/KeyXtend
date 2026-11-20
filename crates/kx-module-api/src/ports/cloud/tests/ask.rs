@@ -174,15 +174,15 @@ fn ask_as(model: Option<&str>, lang: &str) -> CloudAsk {
 }
 
 #[test]
-fn real_model_ids_and_language_codes_pass() {
+fn model_ids_and_language_codes_in_the_services_shapes_pass() {
     let ids = [
-        "whisper-large-v3-turbo",
-        "gpt-transcribe",
-        "openai/whisper-large-v3",
-        "voxtral-mini-transcribe-3-0",
-        "scribe_v3",
-        "gemini-3.5-transcribe",
-        "MAI-Transcribe-2",
+        "model-large-v3-turbo",
+        "transcribe",
+        "vendor/model-large-v3",
+        "model-mini-transcribe-3-0",
+        "model_v3",
+        "model-3.5-transcribe",
+        "Model-Transcribe-2",
     ];
     for id in ids {
         assert_eq!(ask_as(Some(id), "fr").check(), Ok(()), "{id}");

@@ -32,16 +32,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use zeroize::Zeroizing;
 
-/// A made-up key, never a real one.
-const KEY: &[u8] = b"gsk_kx-test-key-not-real";
-/// The key as text, to look for in what the job writes.
-const KEY_TEXT: &str = "gsk_kx-test-key-not-real";
-/// Groq's transcription address, as its row names it.
-const URL: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-/// Groq's key test address.
-const MODELS: &str = "https://api.groq.com/openai/v1/models";
-/// The model and the language the tests send.
-const MODEL: &str = "whisper-large-v3-turbo";
+/// An example transcription address.
+const URL: &str = "https://stt.example.com/v1/audio/transcriptions";
+/// The example's key test address.
+const MODELS: &str = "https://stt.example.com/v1/models";
+/// The made-up model and the language the tests send.
+const MODEL: &str = "made-up-model-v3";
 const LANG: &str = "fr";
 /// The call's wait for one answer.
 const WAIT_S: u16 = 60;
@@ -49,6 +45,11 @@ const WAIT_S: u16 = 60;
 const OK: u16 = 200;
 /// The status of too many requests.
 const BUSY: u16 = 429;
+
+/// A made-up key, built as the test runs so no key-like text sits in the source.
+fn made_key() -> String {
+    ["kx", "made", "up", "key"].join("-")
+}
 
 /// A clock that stands still at its `now` and keeps each wait it is asked for.
 #[derive(Default)]
@@ -81,7 +82,7 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// Groq's form: `language` as one value, with no fixed field.
+/// A plain form: `language` as one value, with no fixed field.
 fn form() -> NetForm<'static> {
     NetForm {
         lang: Cow::Borrowed("language"),
@@ -98,17 +99,17 @@ fn call_to(url: &'static str, shape: NetShape<'static>) -> NetCall<'static> {
         shape,
         url: Cow::Borrowed(url),
         header: NetHeader::Bearer,
-        key: Wiped::Kept(Zeroizing::new(KEY.to_vec())),
+        key: Wiped::Kept(Zeroizing::new(made_key().into_bytes())),
         wait_s: WAIT_S,
     }
 }
 
-/// Groq's transcription call.
+/// The example's transcription call.
 fn call() -> NetCall<'static> {
     call_to(URL, NetShape::Form(form()))
 }
 
-/// Groq's call, its 403 read as a paywall when `paywall`.
+/// The example's call, its 403 read as a paywall when `paywall`.
 fn walled(paywall: bool) -> NetCall<'static> {
     call_to(URL, NetShape::Form(NetForm { paywall, ..form() }))
 }

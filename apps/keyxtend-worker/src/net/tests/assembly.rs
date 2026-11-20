@@ -19,8 +19,8 @@ use std::sync::atomic::AtomicBool;
 const ADDRESS: &str = "https://stt.example.com/v1/transcribe";
 /// A made-up header for the model, so a name held in the worker would fail.
 const MODEL_HEADER: &str = "X-Test-Model";
-/// The model the row offers, the only Sync model [A1][A6].
-const UNIVERSAL: &str = "universal-3-6-pro";
+/// A made-up model, as the row offers one.
+const UNIVERSAL: &str = "made-up-model-pro";
 /// The sound the tests send.
 const WAV: &[u8] = b"RIFF-and-samples";
 /// What the text fixture says.
@@ -73,13 +73,20 @@ fn the_model_goes_only_in_its_own_header_and_the_key_only_in_authorization() {
     let heads: Vec<&str> = req.fields.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(heads, [AUTHORIZATION, MODEL_HEADER, "Content-Type"]);
     assert_eq!(field(&req, MODEL_HEADER), Some(UNIVERSAL.to_owned()));
-    let bearer = format!("Bearer {KEY_TEXT}");
+    let bearer = format!("Bearer {}", made_key());
     assert_eq!(field(&req, AUTHORIZATION), Some(bearer));
     let holds = |hay: &[u8], pat: &[u8]| hay.windows(pat.len()).any(|w| w == pat);
-    assert!(!holds(&req.body, KEY), "the body holds no key");
+    assert!(
+        !holds(&req.body, made_key().as_bytes()),
+        "the body holds no key"
+    );
     assert!(!holds(&req.body, UNIVERSAL.as_bytes()), "nor the model");
     let others = req.fields.iter().filter(|(n, _)| n != AUTHORIZATION);
-    assert!(others.clone().all(|(_, v)| !holds(v, KEY)));
+    assert!(
+        others
+            .clone()
+            .all(|(_, v)| !holds(v, made_key().as_bytes()))
+    );
 }
 
 #[test]

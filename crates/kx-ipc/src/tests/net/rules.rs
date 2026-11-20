@@ -22,13 +22,13 @@ fn an_https_address_passes_and_names_its_host() {
     let colon =
         "https://kx-test.speech.example.com/v1/transcriptions:transcribe?api-version=2025-10-15";
     let good = [
-        (GROQ, "api.groq.com"),
+        (ADDRESS, "stt.example.com"),
         (colon, "kx-test.speech.example.com"),
         ("https://stt.lan:8443/v1", "stt.lan"),
         ("https://localhost:8000", "localhost"),
         (
-            "https://api.elevenlabs.io/v1/speech-to-text?x=1",
-            "api.elevenlabs.io",
+            "https://api.example.net/v1/speech-to-text?x=1",
+            "api.example.net",
         ),
     ];
     for (url, host) in good {
@@ -38,15 +38,27 @@ fn an_https_address_passes_and_names_its_host() {
 }
 
 #[test]
-fn an_addresss_origin_is_its_scheme_host_and_port_up_to_its_path_or_query() {
+fn an_addresses_origin_is_its_scheme_host_and_port_up_to_its_path_or_query() {
     for (url, origin) in [
         ("https://stt.lan:8443/v1?x=1", "https://stt.lan:8443"),
-        ("https://api.groq.com?x=1", "https://api.groq.com"),
+        ("https://stt.example.com?x=1", "https://stt.example.com"),
         ("https://localhost:8000", "https://localhost:8000"),
-        ("https://api.groq.com/v 1", "https://api.groq.com"),
-        ("http://api.groq.com/v1", ""),
+        ("https://stt.example.com/v 1", "https://stt.example.com"),
+        ("http://stt.example.com/v1", ""),
+        (
+            "https://a.example#@stt.example.com/v1",
+            "https://a.example#@stt.example.com",
+        ),
+        ("https://[::1]:8443/v1", "https://[::1]:8443"),
     ] {
         assert_eq!(https_origin(url), origin, "{url}");
+    }
+    for odd in ["https://a.example#@stt.example.com", "https://[::1]:8443"] {
+        assert_eq!(
+            https(odd),
+            Err(BadField),
+            "the origin keeps what https refuses"
+        );
     }
 }
 
@@ -64,24 +76,24 @@ fn an_address_holds_only_the_characters_a_link_holds() {
 fn an_address_that_could_reach_another_host_or_break_a_request_is_refused() {
     let bad = [
         "",
-        "http://api.groq.com/v1",
-        "HTTPS://api.groq.com/v1",
-        "//api.groq.com/v1",
+        "http://stt.example.com/v1",
+        "HTTPS://stt.example.com/v1",
+        "//stt.example.com/v1",
         "https://",
         "https:///v1",
-        "https://api.groq.com@evil.example/v1",
-        "https://user:pass@api.groq.com/v1",
-        "https://API.groq.com/v1",
+        "https://stt.example.com@evil.example/v1",
+        "https://user:pass@stt.example.com/v1",
+        "https://STT.example.com/v1",
         "https://[::1]/v1",
-        "https://.groq.com/v1",
-        "https://api..groq.com/v1",
-        "https://api.groq.com:0/v1",
-        "https://api.groq.com:99999/v1",
-        "https://api.groq.com:/v1",
-        "https://api.groq.com:+1/v1",
-        "https://api.groq.com/v1#part",
-        "https://api.groq.com/a b",
-        "https://api.groq.com/v1\r\nX-Key: 1",
+        "https://.example.com/v1",
+        "https://stt..example.com/v1",
+        "https://stt.example.com:0/v1",
+        "https://stt.example.com:99999/v1",
+        "https://stt.example.com:/v1",
+        "https://stt.example.com:+1/v1",
+        "https://stt.example.com/v1#part",
+        "https://stt.example.com/a b",
+        "https://stt.example.com/v1\r\nX-Key: 1",
         "https://مثال.com/v1",
     ];
     for url in bad {
@@ -138,14 +150,14 @@ fn a_request_name_is_letters_digits_and_two_marks() {
 #[test]
 fn a_model_id_is_a_name_with_dots_slashes_and_colons_and_a_language_a_name() {
     let ids = [
-        "whisper-large-v3-turbo",
-        "gpt-transcribe",
-        "openai/whisper-large-v3",
-        "voxtral-mini-transcribe-3-0",
-        "scribe_v3",
-        "gemini-3.5-transcribe",
-        "MAI-Transcribe-2",
-        "whisper:large",
+        "model-large-v3-turbo",
+        "transcribe",
+        "vendor/model-large-v3",
+        "model-mini-transcribe-3-0",
+        "model_v3",
+        "model-3.5-transcribe",
+        "Model-Transcribe-2",
+        "model:large",
     ];
     for id in ids {
         assert_eq!(model(id), Ok(()), "{id}");
@@ -180,7 +192,7 @@ fn elevenlabs_gemini_and_assemblyai_alone_need_a_model() {
 
 #[test]
 fn a_form_value_is_visible_ascii_and_spaces() {
-    for value in [r#"{"zdr":true}"#, "a b", ""] {
+    for value in [r#"{"none":true}"#, "a b", ""] {
         assert_eq!(form_value(value), Ok(()), "{value}");
     }
     for value in ["a\r\nb", "a\tb", "é", "\x7f"] {
@@ -257,8 +269,8 @@ fn a_header_the_request_sets_or_the_keys_own_is_taken_in_any_case() {
     for name in taken {
         assert_eq!(unset_header(name, key), Err(BadField), "{name}");
     }
-    assert_eq!(unset_header("X-AAI-Model", key), Ok(()));
-    assert_eq!(unset_header("X-AAI-Model", AUTHORIZATION), Ok(()));
+    assert_eq!(unset_header("X-Kx-Model", key), Ok(()));
+    assert_eq!(unset_header("X-Kx-Model", AUTHORIZATION), Ok(()));
     assert_eq!(unset_header("authorization", AUTHORIZATION), Err(BadField));
     assert_eq!(
         (AUTHORIZATION, CONTENT_TYPE),

@@ -2,13 +2,8 @@
 //! cloud model's row with its service, mark and why it is unavailable, and Compare's cloud models with the send warning.
 
 use super::hidden;
-use super::panel::{holds, shown};
+use super::panel::{day, holds, service, shown};
 use crate::ports::voice::*;
-
-/// Groq, as a line names it.
-fn groq() -> ServiceName {
-    ServiceName::Named("Groq".into())
-}
 
 #[test]
 fn the_models_page_has_two_sides_and_the_cloud_side_says_what_it_lists() {
@@ -27,7 +22,7 @@ fn the_models_page_has_two_sides_and_the_cloud_side_says_what_it_lists() {
 #[test]
 fn a_cloud_models_row_names_its_service_mark_and_why_it_is_unavailable() {
     let cloud = CloudRow {
-        service: groq(),
+        service: service(),
         mark: ServiceMark::Ready,
         unavailable: Some(Unavailable::KeepNothing),
     };
@@ -53,7 +48,7 @@ fn a_cloud_models_row_names_its_service_mark_and_why_it_is_unavailable() {
     };
     let shown = shown(VoiceSheet::Models(sheet));
     let parts = [
-        "Named(\"Groq\")",
+        "Named(\"Service A\")",
         "mark: Ready",
         "Some(KeepNothing)",
         "side: Cloud",
@@ -66,7 +61,7 @@ fn a_cloud_models_row_names_its_service_mark_and_why_it_is_unavailable() {
 fn compare_lists_its_cloud_models_and_names_each_ticked_service_before_it_sends() {
     let pick = |tick| CompareCloud {
         name: hidden(2),
-        service: groq(),
+        service: service(),
         tick,
     };
     let ready = CompareSheet::Ready {
@@ -75,12 +70,12 @@ fn compare_lists_its_cloud_models_and_names_each_ticked_service_before_it_sends(
         recording: false,
         preparing: false,
         cloud: vec![pick(true), pick(false)],
-        send: vec![groq()],
+        send: vec![service()],
     };
     let first = shown(VoiceSheet::Compare(ready));
     holds(
         &first,
-        &["tick: true", "tick: false", "send: [Named(\"Groq\")]"],
+        &["tick: true", "tick: false", "send: [Named(\"Service A\")]"],
     );
     let row = CompareRow {
         name: hidden(2),
@@ -90,18 +85,13 @@ fn compare_lists_its_cloud_models_and_names_each_ticked_service_before_it_sends(
         mb: 0,
         text: None,
         tick: false,
-        cloud: Some(groq()),
+        cloud: Some(service()),
     };
     let results = CompareSheet::Results {
-        day: kx_date(),
+        day: day(),
         device: DeviceLabel::Cpu,
         rows: vec![row],
     };
     let second = shown(VoiceSheet::Compare(results));
-    holds(&second, &["mb: 0", "cloud: Some(Named(\"Groq\"))"]);
-}
-
-/// A day for the results.
-fn kx_date() -> crate::ports::Date {
-    crate::ports::Date::new(2026, 11, 17).unwrap()
+    holds(&second, &["mb: 0", "cloud: Some(Named(\"Service A\"))"]);
 }

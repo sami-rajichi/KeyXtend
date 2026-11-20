@@ -36,7 +36,7 @@ fn call(shape: NetShape<'static>) -> NetCall<'static> {
     }
 }
 
-/// A run of two pieces of `bytes` each.
+/// A run of two pieces of `bytes` each, under made-up limits.
 fn run(bytes: u32) -> NetRun<'static> {
     let limits = NetLimits {
         max_mb: 25,
@@ -45,7 +45,7 @@ fn run(bytes: u32) -> NetRun<'static> {
         at_once: 1,
     };
     NetRun {
-        model: Some(Cow::Borrowed("whisper-large-v3-turbo")),
+        model: Some(Cow::Borrowed("made-up-model-v3")),
         lang: Cow::Borrowed("fr"),
         limits,
         tries: 1,

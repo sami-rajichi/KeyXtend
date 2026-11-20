@@ -12,7 +12,7 @@ fn made_key() -> String {
 #[test]
 fn a_model_id_and_a_language_code_fit_as_an_ask_takes_them() {
     let long = "m".repeat(*TAG_LEN.end() + 1);
-    for id in [MODEL, "openai/whisper-large-v3", "llama:7b", "v1.5"] {
+    for id in [MODEL, "vendor/model-large-v3", "model:7b", "v1.5"] {
         assert!(CloudAsk::model_fits(id), "{id}");
     }
     for id in ["", "a//b", "../x", "a b", "/x", "é", long.as_str()] {
@@ -72,7 +72,7 @@ fn a_shape_and_a_header_say_whether_they_fit_and_need_a_model() {
     assert!(!form().needs_model());
     assert!(eleven().needs_model() && CloudShape::Gemini.needs_model());
     assert!(assembly().needs_model() && assembly().fits());
-    for name in ["X AAI-Model", "X-AAI:Model", "", long.as_str()] {
+    for name in ["X Kx-Model", "X-Kx:Model", "", long.as_str()] {
         let odd = CloudShape::Assembly {
             model_header: name.to_owned(),
         };

@@ -2,16 +2,11 @@
 //! carry a key, an address or a model id and never print them, a card's facts as ids, numbers and dates, the key page's
 //! dots and the bar's cloud mark.
 
-use super::panel::{holds, shown};
+use super::panel::{day, holds, service, shown};
 use super::{hidden, keeps_secrets, page, secret};
+use crate::ports::Hundredths;
 use crate::ports::voice::*;
-use crate::ports::{Date, Hundredths};
 use crate::{REDACTED_MARKER, Redacted};
-
-/// 17 Nov 2026, the day the services' facts were read.
-fn read() -> Date {
-    Date::new(2026, 11, 17).unwrap()
-}
 
 /// A fact of id `id` with `args`.
 fn fact(id: &str, args: Vec<FactArg>) -> Fact {
@@ -38,7 +33,7 @@ fn usd(cents: u32) -> FactValue {
     }
 }
 
-/// Groq's free allowance: 8 hours a day, 20 requests a minute.
+/// A made-up free allowance: 8 hours a day, 20 requests a minute.
 fn free() -> Fact {
     let counts = vec![
         arg("hours", FactValue::Count(8)),
@@ -150,9 +145,9 @@ fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
         tick: false,
     };
     let rows = vec![
-        row(ServiceName::Named("Groq".into()), ServiceMark::Ready, false),
+        row(service(), ServiceMark::Ready, false),
         row(
-            ServiceName::Named("ElevenLabs".into()),
+            ServiceName::Named("Service B".into()),
             ServiceMark::Off,
             true,
         ),
@@ -168,7 +163,7 @@ fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
         acts,
     }));
     let parts = [
-        "Groq",
+        "Service A",
         "Ready",
         "untested: true",
         "warn: Some(\"trains\")",
@@ -180,15 +175,15 @@ fn the_cloud_page_lists_services_with_their_marks_free_allowance_and_warning() {
     holds(&shown, &parts);
 }
 
-/// `ElevenLabs`' card, its price part on show, with the training warning and old facts.
-fn elevenlabs() -> CloudCard {
+/// A made-up card, its price part on show, with the training warning and old facts.
+fn card() -> CloudCard {
     let price = |hours, cents| UsePrice {
         hours,
         price: fact("one", vec![arg("amount", usd(cents))]),
     };
-    let switch = FactValue::Text("Use my data for training".into());
+    let switch = FactValue::Text("Made-up switch".into());
     CloudCard {
-        service: ServiceName::Named("ElevenLabs".into()),
+        service: ServiceName::Named("Service B".into()),
         place: fact("us", Vec::new()),
         trains: Fact {
             warn: true,
@@ -200,9 +195,9 @@ fn elevenlabs() -> CloudCard {
         heavy: price(60, 1_320),
         bills: Some(fact("least", vec![arg("seconds", FactValue::Count(10))])),
         rule: Some(fact("non-commercial", Vec::new())),
-        read: read(),
+        read: day(),
         old: true,
-        site: Some("elevenlabs.io".into()),
+        site: Some("example.com".into()),
         warn: Some(fact("trains", vec![arg("sw", switch)])),
         untested: true,
         on: None,
@@ -212,17 +207,17 @@ fn elevenlabs() -> CloudCard {
 
 #[test]
 fn a_card_holds_its_facts_as_ids_numbers_and_dates_with_its_least_bill_warning_and_age() {
-    let shown = shown(VoiceSheet::Card(Box::new(elevenlabs())));
+    let shown = shown(VoiceSheet::Card(Box::new(card())));
     let parts = [
         "by-default",
         "warn: true",
         "hours: 15",
         "Hundredths(1320)",
         "\"USD\"",
-        "day: 17",
+        "day: 12",
         "old: true",
-        "elevenlabs.io",
-        "Text(\"Use my data for training\")",
+        "example.com",
+        "Text(\"Made-up switch\")",
         "Count(10)",
         "non-commercial",
         "untested: true",
@@ -274,12 +269,15 @@ fn the_key_page_shows_the_key_as_dots_and_never_the_typed_lines() {
 
 #[test]
 fn the_bar_names_the_service_its_voice_goes_to() {
-    let groq = VoicePage {
-        cloud: Some(ServiceName::Named("Groq".into())),
+    let page_a = VoicePage {
+        cloud: Some(service()),
         ..page(VoiceBar::Transcribing)
     };
-    let shown = format!("{:?}", VoiceView::new(groq));
-    holds(&shown, &["cloud: Some(Named(\"Groq\"))", "Transcribing"]);
+    let shown = format!("{:?}", VoiceView::new(page_a));
+    holds(
+        &shown,
+        &["cloud: Some(Named(\"Service A\"))", "Transcribing"],
+    );
     let local = format!("{:?}", page(VoiceBar::Hidden));
     assert!(local.contains("cloud: None"), "{local}");
 }

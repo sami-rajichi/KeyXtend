@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::worker::fake::{Call, Hands, Script};
-use kx_ipc::{NetAsk, NetFault, NetNote, SAMPLE_BYTES, SOUND_HZ};
+use kx_ipc::{NetAsk, NetFault, NetNote, SAMPLE_BYTES, SOUND_BYTES_PER_S};
 use kx_module_api::ports::{CloudLimits, CloudShape, FormFields, HttpsUrl, JobLimits, KeyHeader};
 use kx_module_api::{Redacted, SecretBytes, Zeroizing};
 use std::sync::mpsc::{self, Receiver};
@@ -18,14 +18,12 @@ mod show;
 
 /// How long a test waits for a note or a call; a wait, never a sleep.
 const LONG: Duration = Duration::from_secs(10);
-/// A key no output may show.
-const KEY: &str = "gsk_live-7731-zebra";
-/// Groq's address, from its row.
-const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-/// Groq's test address, from its row.
-const MODELS: &str = "https://api.groq.com/openai/v1/models";
-/// The model the test row names.
-const MODEL: &str = "whisper-large-v3-turbo";
+/// An example address.
+const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
+/// The example's key test address.
+const MODELS: &str = "https://stt.example.com/v1/models";
+/// The made-up model the test row names.
+const MODEL: &str = "made-up-model-v3";
 /// The language code the test row sends.
 const LANG: &str = "fr";
 /// A transcript no output may show.
@@ -33,7 +31,7 @@ const SAID: &str = "bonjour-4417";
 /// One test sample, little-endian.
 const SAMPLE: [u8; SAMPLE_BYTES] = [0x11, 0x5a];
 /// Bytes of hand-over sound in one second.
-const PER_S: usize = SOUND_HZ * SAMPLE_BYTES;
+const PER_S: usize = SOUND_BYTES_PER_S;
 /// The wait and the tries the test asks give, as the `[voice]` defaults do.
 const WAIT_S: u16 = 60;
 const TRIES: u8 = 2;
@@ -59,7 +57,7 @@ fn job() -> JobLimits {
     }
 }
 
-/// Groq's limits on its free plan.
+/// Made-up limits, as a row might set them.
 fn limits() -> CloudLimits {
     CloudLimits {
         max_mb: 25,
@@ -74,7 +72,7 @@ fn sound(bytes: usize) -> SecretBytes {
     Redacted::new(Zeroizing::new(SAMPLE.repeat(bytes / SAMPLE_BYTES)))
 }
 
-/// A run of pieces of these sizes for Groq's turbo model in French.
+/// A run of pieces of these sizes for the made-up model in French.
 fn ask(sizes: &[usize]) -> CloudAsk {
     CloudAsk {
         job: job(),
@@ -85,9 +83,9 @@ fn ask(sizes: &[usize]) -> CloudAsk {
             paywall: false,
             region: None,
         }),
-        url: HttpsUrl::new(GROQ).expect("an https address"),
+        url: HttpsUrl::new(ADDRESS).expect("an https address"),
         header: KeyHeader::Bearer,
-        key: Redacted::new(Zeroizing::new(KEY.to_owned())),
+        key: Redacted::new(Zeroizing::new(key())),
         model: Some(Redacted::new(MODEL.to_owned())),
         lang: LANG.to_owned(),
         limits: limits(),
@@ -97,7 +95,7 @@ fn ask(sizes: &[usize]) -> CloudAsk {
     }
 }
 
-/// A key test of Groq's key.
+/// A key test of the made-up key.
 fn key_test() -> CloudTest {
     CloudTest {
         job: job(),
@@ -110,9 +108,14 @@ fn key_test() -> CloudTest {
         }),
         url: HttpsUrl::new(MODELS).expect("an https address"),
         header: KeyHeader::Bearer,
-        key: Redacted::new(Zeroizing::new(KEY.to_owned())),
+        key: Redacted::new(Zeroizing::new(key())),
         wait_s: WAIT_S,
     }
+}
+
+/// A made-up key no output may show, built as the test runs so no key-like text sits in the source.
+fn key() -> String {
+    ["kx", "made", "up", "key"].join("-")
 }
 
 /// A host over a fresh script, on a clock the test moves.

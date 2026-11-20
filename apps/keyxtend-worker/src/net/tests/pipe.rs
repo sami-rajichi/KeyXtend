@@ -103,7 +103,11 @@ fn no_note_holds_the_key_or_the_sound() {
     tx.send(frame(&part(2, 0, sound.clone()))).unwrap();
     let bytes = until(&rx, 1);
     assert_eq!(notes(&bytes), [fault(2, NetFault::Key)]);
-    assert!(!bytes.windows(KEY.len()).any(|w| w == KEY));
+    assert!(
+        !bytes
+            .windows(made_key().len())
+            .any(|w| w == made_key().as_bytes())
+    );
     assert!(!bytes.windows(sound.len()).any(|w| w == sound.as_slice()));
     drop(tx);
     job.join().unwrap();

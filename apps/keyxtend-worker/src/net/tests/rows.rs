@@ -1,8 +1,6 @@
-//! Each upload-form row's form parameters from the services' pages read 2026-11-17 (research file `[X]` lines):
-//! Groq, `OpenAI`'s `languages[]` list and region code, Mistral, Together's paywall, Lemonfox with no model and English
-//! names, `DeepInfra`, `OpenRouter` with its keep-nothing field and paywall, and a Custom address. Each sends its fields
-//! in order with the key in its header and reads its text; `replies` reads each one's faults. The table itself is
-//! pinned by kx-mod-voice's row tests, so every call here goes to one test address.
+//! The upload form in each variant its rows take, with made-up models and fields at one example address: a list field
+//! and a region code, a paywall, no model, a keep-nothing field on and off. Each sends its fields in order with the key
+//! in its header, and `replies` reads each service's faults from its fixtures; kx-mod-voice pins the rows themselves.
 
 mod replies;
 
@@ -48,14 +46,14 @@ const fn plain(name: &'static str) -> Row {
     }
 }
 
-/// `OpenRouter`'s keep-nothing field while its switch is on: `provider` as a JSON string [R2][R5].
-const ZDR: (&str, &str) = ("provider", r#"{"zdr":true}"#);
+/// A made-up keep-nothing field while its switch is on, as `OpenRouter`'s row adds one [R2][R5].
+const ZDR: (&str, &str) = ("keep", r#"{"none":true}"#);
 
 /// Groq [G1].
 const GROQ: Row = plain("groq");
-/// `OpenAI`: `gpt-transcribe` takes `languages[]` in place of `language` [O2], and a country refusal has its code [O5].
+/// `OpenAI`'s variant: a made-up list field in place of `language` [O2], and a country refusal with its code [O5].
 const OPENAI: Row = Row {
-    lang: "languages",
+    lang: "langs",
     list: true,
     region: Some(REGION),
     ..plain("openai")
@@ -111,23 +109,20 @@ struct Case {
     parts: &'static [(&'static str, &'static str)],
 }
 
-/// Each row with a model it offers; Lemonfox names none and wants an English name [L2], a Custom row a typed id.
+/// Each row with a made-up model; Lemonfox names none and wants an English name [L2], a Custom row a typed id.
 const CASES: [Case; 9] = [
-    case(GROQ, Some("whisper-large-v3-turbo"), "fr", &[]),
-    case(OPENAI, Some("gpt-transcribe"), "fr", &[]),
-    case(MISTRAL, Some("voxtral-mini-transcribe-3-0"), "ar", &[]),
-    case(TOGETHER, Some("openai/whisper-large-v3"), "en", &[]),
+    case(GROQ, Some("model-large-v3-turbo"), "fr", &[]),
+    case(OPENAI, Some("transcribe"), "fr", &[]),
+    case(MISTRAL, Some("model-mini-transcribe-3-0"), "ar", &[]),
+    case(TOGETHER, Some("vendor/model-large-v3"), "en", &[]),
     case(LEMONFOX, None, "french", &[]),
-    case(DEEPINFRA, Some("openai/whisper-large-v3-turbo"), "fr", &[]),
-    case(ROUTER, Some("openai/whisper-large-v3-turbo"), "fr", &[ZDR]),
-    case(
-        ROUTER_OPEN,
-        Some("openai/whisper-large-v3-turbo"),
-        "fr",
-        &[],
-    ),
+    case(DEEPINFRA, Some(VENDOR_MODEL), "fr", &[]),
+    case(ROUTER, Some(VENDOR_MODEL), "fr", &[ZDR]),
+    case(ROUTER_OPEN, Some(VENDOR_MODEL), "fr", &[]),
     case(CUSTOM, Some("my-own-model"), "fr", &[]),
 ];
+/// A made-up model under a vendor's name, as some rows offer.
+const VENDOR_MODEL: &str = "vendor/model-large-v3-turbo";
 
 /// A case for `row`, naming `model` in `lang`, with `fixed` after the language.
 const fn case(
@@ -195,7 +190,7 @@ fn each_row_sends_its_model_and_language_then_its_fixed_fields_then_the_sound() 
 
 #[test]
 fn openrouters_keep_nothing_field_goes_only_while_its_switch_is_on() {
-    let model = Some("openai/whisper-large-v3-turbo");
+    let model = Some(VENDOR_MODEL);
     let named = |row: Row| names(&Form.build(&piece(&row.call(), model, "fr", WAV)).unwrap());
     assert!(named(ROUTER).contains(&ZDR.0.to_owned()));
     assert!(!named(ROUTER_OPEN).contains(&ZDR.0.to_owned()));
@@ -216,7 +211,7 @@ fn each_row_posts_its_form_with_the_key_in_its_header_and_reads_its_text() {
         };
         assert_eq!((one.url.as_str(), one.verb), (ADDRESS, Verb::Post));
         let auth = one.fields.iter().find(|(n, _)| n == "Authorization");
-        let bearer = format!("Bearer {KEY_TEXT}").into_bytes();
+        let bearer = format!("Bearer {}", made_key()).into_bytes();
         assert_eq!(auth.map(|(_, v)| v), Some(&bearer), "{}", c.row.name);
     }
 }

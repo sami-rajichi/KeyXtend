@@ -9,18 +9,25 @@ use crate::{
 };
 use zeroize::Zeroizing;
 
-/// A key no output may show.
-pub(super) const KEY: &str = "gsk_live-7731-zebra";
 /// Sound the tests send, an even length so it is whole samples; no output may show it.
 pub(super) const SPOKEN: &[u8] = b"spoken words";
-/// Groq's address, which no output may show, as a typed address is the user's.
-pub(super) const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-/// `OpenAI`'s error code for a country or region it does not serve [O5].
-pub(super) const REGION: &str = "unsupported_country_region_territory";
-/// A model id no output may show, as a typed one is the user's.
-pub(super) const MODEL: &str = "whisper-large-v3-turbo";
+/// An example address, which no output may show, as a typed address is the user's.
+pub(super) const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
+/// A made-up error code for a country or region a service does not serve.
+pub(super) const REGION: &str = "kx_region_not_served";
+/// A made-up model id no output may show, as a typed one is the user's.
+pub(super) const MODEL: &str = "made-up-model-v3";
+
+/// A made-up key no output may show, built as the test runs so no key-like text sits in the source.
+pub(super) fn key() -> String {
+    ["kx", "made", "up", "key"].join("-")
+}
+
 /// Words no `Debug` may show: the key, the address, the model, the sound and the texts.
-pub(super) const SECRETS: &[&str] = &[KEY, "groq", MODEL, "spoken", "bonjour", "مرحبا"];
+pub(super) fn secrets() -> Vec<String> {
+    let words = ["stt.example", MODEL, "spoken", "bonjour", "مرحبا"];
+    [key()].into_iter().chain(words.map(String::from)).collect()
+}
 
 pub(super) fn net_ask_bytes(ask: &NetAsk) -> Vec<u8> {
     let mut out = Vec::new();
@@ -72,7 +79,7 @@ pub(super) fn paywalled(shape: NetShape<'static>) -> NetShape<'static> {
     }
 }
 
-/// `shape` with the error code `code` read as a region refusal, as `OpenAI`'s row says.
+/// `shape` with the error code `code` read as a region refusal, as a form row may say.
 pub(super) fn regioned(shape: NetShape<'static>, code: &'static str) -> NetShape<'static> {
     match shape {
         NetShape::Form(form) => NetShape::Form(NetForm {
@@ -99,7 +106,7 @@ pub(super) fn eleven() -> NetShape<'static> {
 /// `AssemblyAI`'s shape, naming the header its model goes in, as its row says.
 pub(super) fn assembly() -> NetShape<'static> {
     NetShape::Assembly {
-        model_header: Cow::Borrowed("X-AAI-Model"),
+        model_header: Cow::Borrowed("X-Kx-Model"),
     }
 }
 
@@ -111,23 +118,23 @@ pub(super) fn field(name: &'static str, value: &'static str) -> NetField<'static
     }
 }
 
-/// A call to Groq with `shape` and `header`, lending the key.
+/// A call to the example address with `shape` and `header`, holding the key.
 pub(super) fn call(shape: NetShape<'static>, header: NetHeader<'static>) -> NetCall<'static> {
     NetCall {
         shape,
-        url: Cow::Borrowed(GROQ),
+        url: Cow::Borrowed(ADDRESS),
         header,
-        key: Wiped::Lent(KEY.as_bytes()),
+        key: Wiped::Kept(Zeroizing::new(key().into_bytes())),
         wait_s: 60,
     }
 }
 
-/// Groq's call: its form and `Authorization: Bearer`.
-pub(super) fn groq() -> NetCall<'static> {
+/// A plain call: an upload form and `Authorization: Bearer`.
+pub(super) fn bearer() -> NetCall<'static> {
     call(form("language", false, Vec::new()), NetHeader::Bearer)
 }
 
-/// Groq's limits on its free plan, at most ten minutes a request.
+/// Made-up limits, as a row might set them: at most ten minutes a request.
 pub(super) fn limits() -> NetLimits {
     NetLimits {
         max_mb: 25,
@@ -137,7 +144,7 @@ pub(super) fn limits() -> NetLimits {
     }
 }
 
-/// A French run of pieces of `sizes` bytes for the turbo model.
+/// A French run of pieces of `sizes` bytes for the made-up model.
 pub(super) fn run(sizes: Vec<u32>) -> NetRun<'static> {
     NetRun {
         model: Some(Cow::Borrowed(MODEL)),
@@ -162,10 +169,10 @@ pub(super) fn send(id: u32, call: NetCall<'static>) -> NetAsk<'static> {
     }
 }
 
-/// A run sent to each shape: Groq, `OpenAI`'s list, `OpenRouter`'s keep-nothing field and paywall with a region code,
-/// a form with no model and its key in a named header, `ElevenLabs`, Gemini and `AssemblyAI`.
+/// A run sent to each shape: a plain form, a list field, a fixed keep-nothing field and paywall with a region code, a
+/// form with no model and its key in a named header, `ElevenLabs`, Gemini and `AssemblyAI`.
 fn sends() -> Vec<NetAsk<'static>> {
-    let zdr = vec![field("provider", r#"{"zdr":true}"#)];
+    let keep = vec![field("keep", r#"{"none":true}"#)];
     let named = |name| NetHeader::Named(Cow::Borrowed(name));
     let unnamed = NetAsk::Send {
         id: 4,
@@ -177,7 +184,7 @@ fn sends() -> Vec<NetAsk<'static>> {
         },
     };
     vec![
-        send(1, groq()),
+        send(1, bearer()),
         send(
             2,
             call(form("languages", true, Vec::new()), NetHeader::Bearer),
@@ -185,7 +192,7 @@ fn sends() -> Vec<NetAsk<'static>> {
         send(
             3,
             call(
-                regioned(paywalled(form("language", false, zdr)), REGION),
+                regioned(paywalled(form("language", false, keep)), REGION),
                 NetHeader::Bearer,
             ),
         ),
@@ -212,7 +219,7 @@ pub(super) fn every_net_ask() -> Vec<NetAsk<'static>> {
         },
         NetAsk::Test {
             id: 10,
-            call: groq(),
+            call: bearer(),
         },
         NetAsk::Cancel { id: 11 },
         NetAsk::Bye,

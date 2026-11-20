@@ -10,8 +10,8 @@ use crate::{
     SOUND_HZ, STALL_S, THREADS,
 };
 
-/// `ElevenLabs`' cap on one file in MB, the largest a service row names.
-const ELEVEN_MB: u32 = 5_000;
+/// A made-up large cap on one file in MB, as a service may name.
+const LARGE_MB: u32 = 5_000;
 
 /// Seconds in ten minutes, the dictation edge 31 names.
 const TEN_MIN_S: usize = 600;
@@ -91,7 +91,7 @@ fn the_cloud_ranges_are_the_plans_and_never_zero() {
         (*NET_AT_ONCE.start()).into(),
     ];
     assert_eq!(starts, [1; 3], "a row's limit is never zero");
-    assert!(NET_MAX_MB.contains(&ELEVEN_MB), "{NET_MAX_MB:?}");
+    assert!(NET_MAX_MB.contains(&LARGE_MB), "{NET_MAX_MB:?}");
     // The key's and the fixed fields' widths are the net frames' own (`tests/net.rs`).
-    const { assert!(MAX_FIXED >= 1, "OpenRouter's keep-nothing field") };
+    const { assert!(MAX_FIXED >= 1, "a keep-nothing switch's field") };
 }

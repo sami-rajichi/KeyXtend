@@ -167,14 +167,22 @@ fn the_request_waits_the_calls_seconds_and_carries_the_key_in_its_header_only() 
         (called.verb, called.url.as_str(), called.stall_s),
         (Verb::Post, URL, WAIT_S)
     );
-    let bearer = [&b"Bearer "[..], KEY].concat();
+    let bearer = [&b"Bearer "[..], made_key().as_bytes()].concat();
     let keyed: Vec<_> = called
         .fields
         .iter()
-        .filter(|(_, v)| v.windows(KEY.len()).any(|w| w == KEY))
+        .filter(|(_, v)| {
+            v.windows(made_key().len())
+                .any(|w| w == made_key().as_bytes())
+        })
         .collect();
     assert_eq!(keyed, [&("Authorization".to_owned(), bearer)]);
-    assert!(!called.body.windows(KEY.len()).any(|w| w == KEY));
+    assert!(
+        !called
+            .body
+            .windows(made_key().len())
+            .any(|w| w == made_key().as_bytes())
+    );
 }
 
 #[test]
@@ -188,7 +196,7 @@ fn no_fault_names_the_key() {
     for act in failing {
         let (got, _, _) = post([act], 1);
         let shown = format!("{got:?}");
-        assert!(got.is_err() && !shown.contains(KEY_TEXT), "{shown}");
+        assert!(got.is_err() && !shown.contains(&made_key()), "{shown}");
     }
 }
 

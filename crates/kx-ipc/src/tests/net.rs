@@ -182,7 +182,7 @@ fn the_longest_text_and_a_told_renewal_fill_their_caps_and_round_trip() {
 #[test]
 fn a_run_and_its_sound_read_back_in_order_and_then_close() {
     let asks = [
-        send(1, groq()),
+        send(1, bearer()),
         NetAsk::Sound {
             id: 1,
             piece: 0,
@@ -218,8 +218,8 @@ fn a_note_that_reads_back_passes_its_check() {
 fn debug_shows_no_key_sound_address_model_or_text() {
     let (asks, notes) = (every_net_ask(), every_net_note());
     let said = format!("{asks:?}{asks:#?}{notes:?}{notes:#?}");
-    for secret in SECRETS {
-        assert!(!said.contains(secret), "{secret} in {said}");
+    for secret in secrets() {
+        assert!(!said.contains(&secret), "{secret} in {said}");
     }
     let sound = NetAsk::Sound {
         id: 1,
@@ -233,7 +233,7 @@ fn debug_shows_no_key_sound_address_model_or_text() {
         text: text("bonjour"),
     };
     assert_eq!(format!("{piece:?}"), "Text { id: 3, index: 1, len: 7 }");
-    let send = format!("{:?}", send(1, groq()));
+    let send = format!("{:?}", send(1, bearer()));
     for part in ["lang: \"fr\"", "Bearer", "max_mb: 25", "pieces: 1"] {
         assert!(send.contains(part), "{send} lacks {part}");
     }

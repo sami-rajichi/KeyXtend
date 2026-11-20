@@ -20,8 +20,8 @@ const ADDRESS: &str = "https://stt.example.com/v1/speech-to-text";
 const TEST: &str = "https://stt.example.com/v1/user/subscription";
 /// A made-up header for the key, so a name held in the worker would fail.
 const HEADER: &str = "X-Test-Key";
-/// A model the row offers, as the run names it [E4].
-const SCRIBE: &str = "scribe_v3";
+/// A made-up model, as the run names one.
+const SCRIBE: &str = "made_up_v3";
 /// The sound the tests send.
 const WAV: &[u8] = b"RIFF-and-samples";
 /// What the text fixture says.
@@ -93,9 +93,12 @@ fn the_key_goes_only_in_its_own_header() {
     let req = Eleven
         .build(&piece(&call, Some(SCRIBE), "en", WAV))
         .unwrap();
-    assert_eq!(field(&req, HEADER), Some(KEY_TEXT.to_owned()));
+    assert_eq!(field(&req, HEADER), Some(made_key()));
     assert_eq!(field(&req, "Authorization"), None);
-    let holds = |hay: &[u8]| hay.windows(KEY.len()).any(|w| w == KEY);
+    let holds = |hay: &[u8]| {
+        hay.windows(made_key().len())
+            .any(|w| w == made_key().as_bytes())
+    };
     assert!(!holds(&req.body), "the body holds no key");
     let others = req.fields.iter().filter(|(n, _)| n != HEADER);
     assert!(others.clone().all(|(_, v)| !holds(v)));
@@ -127,7 +130,7 @@ fn the_key_test_is_a_get_of_the_test_address_with_the_key_alone() {
         (req.verb, req.body.len(), req.fields.len()),
         (Verb::Get, 0, 1)
     );
-    assert_eq!(field(&req, HEADER), Some(KEY_TEXT.to_owned()));
+    assert_eq!(field(&req, HEADER), Some(made_key()));
 }
 
 #[test]
@@ -159,5 +162,5 @@ fn the_job_builds_it_and_a_piece_posts_its_form_and_reads_its_text() {
     };
     assert_eq!((one.url.as_str(), one.verb), (ADDRESS, Verb::Post));
     let key = one.fields.iter().find(|(n, _)| n == HEADER);
-    assert_eq!(key.map(|(_, v)| v.as_slice()), Some(KEY));
+    assert_eq!(key.map(|(_, v)| v.as_slice()), Some(made_key().as_bytes()));
 }

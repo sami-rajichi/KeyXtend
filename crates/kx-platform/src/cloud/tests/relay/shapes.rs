@@ -84,7 +84,7 @@ fn elevenlabs_form_reaches_the_frame_in_its_own_shape() {
 #[test]
 fn assemblyais_model_header_reaches_the_frame_in_its_own_shape() {
     let (host, script, _) = host();
-    let name = "X-AAI-Model";
+    let name = "X-Kx-Model";
     let model_header = name.to_owned();
     let mut asked = ask(&[PER_S]);
     asked.shape = CloudShape::Assembly { model_header };

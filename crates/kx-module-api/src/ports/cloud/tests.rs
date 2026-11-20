@@ -17,10 +17,10 @@ const KEY_LEN: usize = 40;
 const SOUND: [u8; 4] = [0x7f, 0x3e, 0x11, 0x5a];
 /// The bytes of `SOUND` as a plain `Debug` prints them.
 const SOUND_SHOWN: &str = "127, 62, 17, 90";
-/// Groq's address, from its row.
-const GROQ: &str = "https://api.groq.com/openai/v1/audio/transcriptions";
-/// A model id no output may show, as a typed one is the user's.
-const MODEL: &str = "whisper-large-v3-turbo";
+/// An example address.
+const ADDRESS: &str = "https://stt.example.com/v1/audio/transcriptions";
+/// A made-up model id no output may show, as a typed one is the user's.
+const MODEL: &str = "made-up-model-v3";
 /// A transcript no output may show.
 const SAID: &str = "bonjour-4417";
 
@@ -54,7 +54,7 @@ fn job() -> JobLimits {
     }
 }
 
-/// The upload form as Groq names its fields.
+/// A plain upload form.
 fn form() -> CloudShape {
     CloudShape::Form(FormFields {
         lang: "language".into(),
@@ -80,11 +80,11 @@ fn eleven() -> CloudShape {
 /// `AssemblyAI`'s shape, naming the header its model goes in.
 fn assembly() -> CloudShape {
     CloudShape::Assembly {
-        model_header: "X-AAI-Model".into(),
+        model_header: "X-Kx-Model".into(),
     }
 }
 
-/// Groq's limits on its free plan.
+/// Made-up limits, as a row might set them.
 fn limits() -> CloudLimits {
     CloudLimits {
         max_mb: 25,
@@ -103,12 +103,12 @@ fn refused(ask: &CloudAsk) -> Option<&'static str> {
     }
 }
 
-/// One French piece for Groq's turbo model.
+/// One French piece for the made-up model.
 fn ask() -> CloudAsk {
     CloudAsk {
         job: job(),
         shape: form(),
-        url: HttpsUrl::new(GROQ).unwrap(),
+        url: HttpsUrl::new(ADDRESS).unwrap(),
         header: KeyHeader::Bearer,
         key: secret(&key()),
         model: Some(Redacted::new(MODEL.into())),
@@ -120,12 +120,12 @@ fn ask() -> CloudAsk {
     }
 }
 
-/// Groq's key test: its models list.
+/// A key test: the example's models list.
 fn test() -> CloudTest {
     CloudTest {
         job: job(),
         shape: form(),
-        url: HttpsUrl::new("https://api.groq.com/openai/v1/models").unwrap(),
+        url: HttpsUrl::new("https://stt.example.com/v1/models").unwrap(),
         header: KeyHeader::Bearer,
         key: secret(&key()),
         wait_s: 60,
@@ -135,7 +135,7 @@ fn test() -> CloudTest {
 /// Asserts `shown` holds no key, sound, address, model or text, and the marker in their place.
 fn keeps_secrets(shown: &str) {
     let key = key();
-    for secret in [key.as_str(), SOUND_SHOWN, "api.groq.com", MODEL, SAID] {
+    for secret in [key.as_str(), SOUND_SHOWN, "stt.example.com", MODEL, SAID] {
         assert!(!shown.contains(secret), "{shown} shows {secret}");
     }
     assert!(shown.contains(REDACTED_MARKER), "{shown}");
@@ -150,29 +150,29 @@ fn the_cloud_speech_service_is_named_and_gated_by_the_network() {
 
 #[test]
 fn an_address_that_is_not_https_cannot_be_built() {
-    let long = format!("{GROQ}/{}", "a".repeat(kx_ipc::MAX_URL_BYTES));
+    let long = format!("{ADDRESS}/{}", "a".repeat(kx_ipc::MAX_URL_BYTES));
     let bad = [
         "",
-        "http://api.groq.com/openai/v1/audio/transcriptions",
-        "HTTPS://api.groq.com/v1",
-        "ftp://api.groq.com/v1",
-        "api.groq.com/openai/v1",
-        "//api.groq.com/v1",
+        "http://stt.example.com/v1/audio/transcriptions",
+        "HTTPS://stt.example.com/v1",
+        "ftp://stt.example.com/v1",
+        "stt.example.com/v1",
+        "//stt.example.com/v1",
         "https://",
         "https:///v1",
-        "https://api.groq.com@evil.example/v1",
-        "https://user:pass@api.groq.com/v1",
-        "https://API.groq.com/v1",
+        "https://stt.example.com@evil.example/v1",
+        "https://user:pass@stt.example.com/v1",
+        "https://STT.example.com/v1",
         "https://[::1]/v1",
-        "https://.groq.com/v1",
-        "https://api..groq.com/v1",
-        "https://api.groq.com:0/v1",
-        "https://api.groq.com:99999/v1",
-        "https://api.groq.com:/v1",
-        "https://api.groq.com:+1/v1",
-        "https://api.groq.com/v1#part",
-        "https://api.groq.com/a b",
-        "https://api.groq.com/v1\r\nX-Key: 1",
+        "https://.example.com/v1",
+        "https://stt..example.com/v1",
+        "https://stt.example.com:0/v1",
+        "https://stt.example.com:99999/v1",
+        "https://stt.example.com:/v1",
+        "https://stt.example.com:+1/v1",
+        "https://stt.example.com/v1#part",
+        "https://stt.example.com/a b",
+        "https://stt.example.com/v1\r\nX-Key: 1",
         "https://مثال.com/v1",
         "https://192.168.1.20:8443/v1",
         "https://2130706433/v1",
@@ -189,13 +189,13 @@ fn an_https_address_keeps_its_text_and_names_its_host() {
     let colon =
         "https://kx-test.speech.example.com/v1/transcriptions:transcribe?api-version=2025-10-15";
     let good = [
-        (GROQ, "api.groq.com"),
+        (ADDRESS, "stt.example.com"),
         (colon, "kx-test.speech.example.com"),
         ("https://stt.lan:8443/v1/audio/transcriptions", "stt.lan"),
         ("https://localhost:8000", "localhost"),
         (
-            "https://api.elevenlabs.io/v1/speech-to-text?x=1",
-            "api.elevenlabs.io",
+            "https://api.example.net/v1/speech-to-text?x=1",
+            "api.example.net",
         ),
     ];
     for (text, host) in good {
@@ -206,9 +206,9 @@ fn an_https_address_keeps_its_text_and_names_its_host() {
 
 #[test]
 fn an_address_prints_redacted_as_a_typed_one_is_the_users() {
-    let url = HttpsUrl::new(GROQ).unwrap();
+    let url = HttpsUrl::new(ADDRESS).unwrap();
     let shown = format!("{url:?}");
-    assert!(!shown.contains("groq"), "{shown}");
+    assert!(!shown.contains("example"), "{shown}");
     assert!(shown.contains(REDACTED_MARKER), "{shown}");
 }
 

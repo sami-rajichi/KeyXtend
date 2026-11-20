@@ -78,6 +78,9 @@ fn a_typed_address_with_a_good_host_and_a_bad_path_still_has_a_host() {
         "https://10.0.0.1/v1",
         "https://user@speech.example.com/v1",
         "http://speech.example.com/v1",
+        "https://a.example#@speech.example.com/v1",
+        "https://[::1]:8443/v1",
+        "https://speech.example.com:0/v1",
     ] {
         assert!(!HttpsUrl::has_host(text), "{text}");
     }

@@ -51,21 +51,21 @@ fn a_slow_key_test_returns_only_when_released() {
 
 #[test]
 fn the_service_refuses_a_key_other_than_its_own() {
-    let fake = FakeCloud::new();
-    fake.take_key(Some(secret(KEY)));
+    let (fake, other) = (FakeCloud::new(), ["kx", "other", "key"].join("-"));
+    fake.take_key(Some(secret(&key())));
     fake.script(vec![text(SAID)]);
-    let other = CloudAsk {
-        key: secret("gsk_other-1"),
+    let other_ask = CloudAsk {
+        key: secret(&other),
         ..ask(&[2])
     };
     let (heard, tell) = hearer();
-    let _refused = fake.send(other, tell).unwrap();
+    let _refused = fake.send(other_ask, tell).unwrap();
     assert_eq!(notes(&heard), [CloudNote::Fault(CloudFault::Key)]);
     let (_run, heard) = sent(&fake, &[2]);
     let texts = [piece(0, SAID), CloudNote::Done];
     assert_eq!(notes(&heard), texts, "the refused run left the script");
     let wrong = CloudTest {
-        key: secret("gsk_other-1"),
+        key: secret(&other),
         ..key_test()
     };
     fake.script_test(Err(CloudFault::Rate));
@@ -73,13 +73,13 @@ fn the_service_refuses_a_key_other_than_its_own() {
     assert_eq!(fake.test(key_test()), Err(CloudFault::Rate), "it waited");
     fake.take_key(None);
     let any = CloudTest {
-        key: secret("gsk_other-1"),
+        key: secret(&other),
         ..key_test()
     };
     assert_eq!(fake.test(any), Ok(()));
     let shown = format!("{fake:?} {:?}", fake.calls());
     assert!(
-        !shown.contains(KEY) && !shown.contains("gsk_other"),
+        !shown.contains(&key()) && !shown.contains(&other),
         "{shown}"
     );
 }

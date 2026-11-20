@@ -29,6 +29,6 @@ fn debug_never_shows_the_key_or_a_text() {
     ];
     shown.extend(faults.iter().map(|f| format!("{f:?}")));
     for s in shown {
-        assert!(!s.contains(KEY) && !s.contains(SAID), "{s}");
+        assert!(!s.contains(&key()) && !s.contains(SAID), "{s}");
     }
 }

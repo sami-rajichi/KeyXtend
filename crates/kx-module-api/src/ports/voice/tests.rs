@@ -7,6 +7,7 @@ use crate::{REDACTED_MARKER, Redacted, Secret, Zeroizing};
 use std::collections::HashSet;
 
 mod cloud;
+mod compare;
 mod lines;
 mod names;
 mod note;
