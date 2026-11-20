@@ -51,7 +51,9 @@ pub(crate) const SPEECH_MOST: usize = TWO + ONE + SPEECH.most();
 /// A run of sound pieces: each one's bytes, and the count its index stays below.
 #[derive(Copy, Clone)]
 pub(crate) struct Pieces {
+    /// Each piece's byte spec.
     pub spec: Spec,
+    /// The count each piece's index stays below.
     pub most: usize,
 }
 

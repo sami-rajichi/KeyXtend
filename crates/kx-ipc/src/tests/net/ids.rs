@@ -1,6 +1,7 @@
-//! A run's model and language as both sides take them: ids in the services' shapes pass, a character that could break a request's body or
-//! address is refused, `ElevenLabs`, Gemini and `AssemblyAI` refuse a run with no model before any frame, `ElevenLabs`'
-//! shape holds only its language and fixed fields, Gemini's only its code, and `AssemblyAI`'s only its model header.
+//! A run's model and language as both sides take them: ids in the services' shapes pass, and a character that could
+//! break a request's body or address is refused. `ElevenLabs`, Gemini and `AssemblyAI` refuse a run with no model
+//! before any frame, and each shape holds only its own fields: `ElevenLabs`' its language and fixed fields, Gemini's
+//! its code, and `AssemblyAI`'s its model header.
 
 use super::*;
 use crate::ShapeCode;
