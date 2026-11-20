@@ -15,6 +15,7 @@ mod pipe;
 mod props;
 mod reply;
 mod rows;
+mod run;
 mod send;
 mod table;
 mod wav;

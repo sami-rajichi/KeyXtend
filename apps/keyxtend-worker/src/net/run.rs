@@ -1,13 +1,13 @@
 //! One run: its pieces' sound taken in order into wiped WAV buffers sized once, each full piece sent on its own thread
-//! within `at_once` and the run's pace, and the texts told in the pieces' order. A part out of order or past its piece is
-//! `Gone`; a run whose every text is blank ends `Empty`, as the service heard nothing.
+//! within `at_once` and the run's pace, and the texts told in the pieces' order within `MAX_NET_RUN_TEXT_BYTES`. A part
+//! out of order or past its piece is `Gone`; a run whose every text is blank ends `Empty`, as the service heard nothing.
 
 use super::pace::Pace;
 use super::send::{self, Sending};
 use super::shape;
 use super::wav;
 use super::{Event, Kit, Said, Told};
-use kx_ipc::{NetCall, NetFault, NetNote, NetRun};
+use kx_ipc::{MAX_NET_RUN_TEXT_BYTES, NetCall, NetFault, NetNote, NetRun};
 use std::collections::{BTreeMap, VecDeque};
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -36,6 +36,8 @@ pub struct Run {
     flying: usize,
     /// Texts come out of order, told in order.
     texts: BTreeMap<u16, Zeroizing<String>>,
+    /// The text bytes taken so far, told and held.
+    bytes: usize,
     /// The next index to tell.
     told: u16,
     /// True once a text holds more than blanks.
@@ -65,6 +67,7 @@ impl Run {
             waiting: VecDeque::new(),
             flying: 0,
             texts: BTreeMap::new(),
+            bytes: 0,
             told: 0,
             heard: false,
         }
@@ -141,38 +144,48 @@ impl Run {
             Ok(text) => text,
             Err(fault) => return (vec![NetNote::Fault { id, fault }], true),
         };
+        self.bytes = self.bytes.saturating_add(text.len());
+        if self.bytes > MAX_NET_RUN_TEXT_BYTES {
+            let fault = NetFault::Strange;
+            return (vec![NetNote::Fault { id, fault }], true);
+        }
         self.texts.insert(index, text);
         let mut notes = Vec::new();
-        while let Some(text) = self.texts.remove(&self.told) {
-            self.heard |= !text.trim().is_empty();
-            let note = NetNote::Text {
-                id,
-                index: self.told,
-                text,
-            };
-            if note.check().is_err() {
-                notes.push(NetNote::Fault {
-                    id,
-                    fault: NetFault::Strange,
-                });
-                return (notes, true);
-            }
-            notes.push(note);
-            self.told += 1;
+        if !self.drain(id, &mut notes) {
+            return (notes, true);
         }
         if usize::from(self.told) < self.sizes.len() {
             return (notes, false);
         }
-        let end = if self.heard {
+        notes.push(self.end(id));
+        (notes, true)
+    }
+
+    /// Tells into `notes` the held texts now due, in order; false once one fails its check, told as `Strange`.
+    fn drain(&mut self, id: u32, notes: &mut Vec<NetNote>) -> bool {
+        while let Some(text) = self.texts.remove(&self.told) {
+            self.heard |= !text.trim().is_empty();
+            let index = self.told;
+            let note = NetNote::Text { id, index, text };
+            if note.check().is_err() {
+                let fault = NetFault::Strange;
+                notes.push(NetNote::Fault { id, fault });
+                return false;
+            }
+            notes.push(note);
+            self.told += 1;
+        }
+        true
+    }
+
+    /// The run's end once every text is told: `Done`, or `Empty` when every text was blank.
+    const fn end(&self, id: u32) -> NetNote {
+        if self.heard {
             NetNote::Done { id }
         } else {
-            NetNote::Fault {
-                id,
-                fault: NetFault::Empty,
-            }
-        };
-        notes.push(end);
-        (notes, true)
+            let fault = NetFault::Empty;
+            NetNote::Fault { id, fault }
+        }
     }
 
     /// Stops the run: its threads send nothing more, and their outcomes are not told.
