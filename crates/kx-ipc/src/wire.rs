@@ -3,6 +3,8 @@
 
 use crate::error::IpcError;
 use crate::frame::{read_array, read_exact, read_tail, read_wiped};
+use crate::limits::SAMPLE_BYTES;
+use crate::rules::ok_if;
 use std::io::{Read, Write};
 use zeroize::Zeroizing;
 
@@ -82,6 +84,12 @@ pub(crate) trait Sink {
     /// Takes an eight-byte number.
     fn u64(&mut self, n: u64) -> Result<(), IpcError> {
         self.raw(&n.to_le_bytes())
+    }
+
+    /// Takes sound after its length, refusing a length outside `spec` or a part sample.
+    fn samples(&mut self, spec: Spec, bytes: &[u8]) -> Result<(), IpcError> {
+        self.field(spec, bytes)?;
+        ok_if(bytes.len().is_multiple_of(SAMPLE_BYTES))
     }
 }
 
@@ -228,6 +236,13 @@ impl<'r, R: Read + ?Sized> Payload<'r, R> {
     pub(crate) fn wiped(&mut self, n: usize) -> Result<Zeroizing<Vec<u8>>, IpcError> {
         self.take(n)?;
         read_wiped(self.r, n)
+    }
+
+    /// Reads sound of `spec` into a wiped buffer, refusing a part sample before its bytes are read.
+    pub(crate) fn samples(&mut self, spec: Spec) -> Result<Zeroizing<Vec<u8>>, IpcError> {
+        let n = self.count(spec)?;
+        ok_if(n.is_multiple_of(SAMPLE_BYTES))?;
+        self.wiped(n)
     }
 
     /// Reads a secret UTF-8 field of `spec`; the bytes are wiped whether or not they are text.

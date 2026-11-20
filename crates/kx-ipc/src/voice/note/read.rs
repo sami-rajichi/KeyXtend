@@ -1,13 +1,13 @@
 //! How each voice note's payload is read: the notes a run sends while it goes, and those that answer an ask.
 
 use super::super::body::{read_devices, read_sound, read_tag};
-use super::super::wire::{LANGS, PERCENT, TEXT};
+use super::super::wire::{HELD, LANGS, PERCENT, SPOKEN, TEXT};
 use super::super::{Stage, VoiceFault};
 use super::VoiceNote;
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
 use crate::frame::Head;
-use crate::limits::{MAX_PIECES, MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_SPEECH_PIECES};
+use crate::limits::{MAX_PIECES, MAX_SOUND_MS};
 use crate::rules::{ok_if, within};
 use crate::wire::Payload;
 use std::io::Read;
@@ -35,15 +35,7 @@ pub(super) fn read_run<R: Read + ?Sized>(
             id,
             percent: within(p.byte()?, &PERCENT)?,
         },
-        Kind::Piece => {
-            let index = p.u16()?;
-            ok_if(usize::from(index) < MAX_PIECES)?;
-            VoiceNote::Piece {
-                id,
-                index,
-                text: p.secret(TEXT)?,
-            }
-        }
+        Kind::Piece => read_piece(p, id)?,
         Kind::Done => read_done(p, id)?,
         Kind::VoiceFailed => {
             let fault = VoiceFault::from_code(p.byte()?).ok_or(IpcError::BadField)?;
@@ -51,9 +43,20 @@ pub(super) fn read_run<R: Read + ?Sized>(
         }
         Kind::SpeechOut => VoiceNote::Speech {
             id,
-            piece: read_sound(p, MAX_SPEECH_PIECES)?,
+            piece: read_sound(p, SPOKEN)?,
         },
         _ => return Err(IpcError::BadKind),
+    })
+}
+
+/// Reads a piece's index and text.
+fn read_piece<R: Read + ?Sized>(p: &mut Payload<'_, R>, id: u32) -> Result<VoiceNote, IpcError> {
+    let index = p.u16()?;
+    ok_if(usize::from(index) < MAX_PIECES)?;
+    Ok(VoiceNote::Piece {
+        id,
+        index,
+        text: p.secret(TEXT)?,
     })
 }
 
@@ -106,7 +109,7 @@ pub(super) fn read_answer<R: Read + ?Sized>(
         }
         Kind::SoundOut => VoiceNote::Sound {
             id,
-            piece: read_sound(p, MAX_SOUND_PIECES)?,
+            piece: read_sound(p, HELD)?,
         },
         _ => return Err(IpcError::BadKind),
     })

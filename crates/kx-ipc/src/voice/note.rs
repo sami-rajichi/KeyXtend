@@ -5,12 +5,12 @@
 mod read;
 
 use super::body::{put_devices, put_sound, put_tag};
-use super::wire::{LANGS, PERCENT, TEXT};
+use super::wire::{HELD, LANGS, PERCENT, SPOKEN, TEXT};
 use super::{Device, SoundPiece, Stage, VoiceFault};
 use crate::code::{Code, Kind};
 use crate::error::IpcError;
 use crate::frame::{Head, check_len, write_head};
-use crate::limits::{MAX_PIECES, MAX_SOUND_MS, MAX_SOUND_PIECES, MAX_SPEECH_PIECES};
+use crate::limits::{MAX_PIECES, MAX_SOUND_MS};
 use crate::rules::{ok_if, within};
 use crate::wire::{Payload, Put, Sink, Size};
 use read::{read_answer, read_run};
@@ -220,8 +220,8 @@ impl VoiceNote {
                 s.field(TEXT, card_text.as_bytes())?;
                 s.field(TEXT, cpu_text.as_bytes())
             }
-            Self::Sound { piece, .. } => put_sound(s, piece, MAX_SOUND_PIECES),
-            Self::Speech { piece, .. } => put_sound(s, piece, MAX_SPEECH_PIECES),
+            Self::Sound { piece, .. } => put_sound(s, piece, HELD),
+            Self::Speech { piece, .. } => put_sound(s, piece, SPOKEN),
         }
     }
 

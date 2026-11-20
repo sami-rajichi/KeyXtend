@@ -69,8 +69,8 @@ fn a_setup() -> impl Strategy<Value = Setup<'static>> {
     )
 }
 
-fn a_piece(most: usize) -> impl Strategy<Value = SoundPiece<'static>> {
-    let samples = prop::collection::vec(any::<[u8; 2]>(), 0..MAX_CASE_BYTES / 2);
+fn a_piece(most: usize, least: usize) -> impl Strategy<Value = SoundPiece<'static>> {
+    let samples = prop::collection::vec(any::<[u8; 2]>(), least..MAX_CASE_BYTES / 2);
     let index = 0..u16::try_from(most).unwrap();
     (index, any::<bool>(), samples).prop_map(|(index, last, samples)| SoundPiece {
         index,
@@ -98,7 +98,7 @@ fn a_voice_ask() -> impl Strategy<Value = VoiceAsk<'static>> {
             model,
             clip: owned(clip)
         }),
-        (id(), a_piece(MAX_SOUND_PIECES)).prop_map(|(id, piece)| VoiceAsk::Sound { id, piece }),
+        (id(), a_piece(MAX_SOUND_PIECES, 0)).prop_map(|(id, piece)| VoiceAsk::Sound { id, piece }),
         Just(VoiceAsk::Bye),
     ]
 }
@@ -135,8 +135,9 @@ fn a_run_note() -> impl Strategy<Value = VoiceNote> {
         }),
         (id(), prop::sample::select(VoiceFault::ALL))
             .prop_map(|(id, fault)| VoiceNote::Fault { id, fault }),
-        (id(), a_piece(MAX_SOUND_PIECES)).prop_map(|(id, piece)| VoiceNote::Sound { id, piece }),
-        (id(), a_piece(MAX_SPEECH_PIECES)).prop_map(|(id, piece)| VoiceNote::Speech { id, piece }),
+        (id(), a_piece(MAX_SOUND_PIECES, 0)).prop_map(|(id, piece)| VoiceNote::Sound { id, piece }),
+        (id(), a_piece(MAX_SPEECH_PIECES, 1))
+            .prop_map(|(id, piece)| VoiceNote::Speech { id, piece }),
     ]
 }
 

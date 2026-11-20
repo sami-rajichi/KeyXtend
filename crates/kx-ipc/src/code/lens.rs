@@ -52,9 +52,8 @@ impl Kind {
             Self::VoiceStart | Self::VoiceAgain => voice::SETUP_LEAST..=voice::SETUP_MOST,
             Self::VoiceFacts => voice::PATH.least()..=voice::PATH.most(),
             Self::VoiceCheck => voice::CHECK_LEAST..=voice::CHECK_MOST,
-            Self::SoundIn | Self::SoundOut | Self::SpeechOut => {
-                voice::SOUND_LEAST..=voice::SOUND_MOST
-            }
+            Self::SoundIn | Self::SoundOut => voice::SOUND_LEAST..=voice::SOUND_MOST,
+            Self::SpeechOut => voice::SPEECH_LEAST..=voice::SPEECH_MOST,
             Self::Piece => voice::PIECE_LEAST..=voice::PIECE_MOST,
             Self::Done => voice::DONE_LEN..=voice::DONE_LEN,
             Self::DeviceList => voice::DEVICES_LEAST..=voice::DEVICES_MOST,
@@ -62,11 +61,9 @@ impl Kind {
             Self::CardChecked => voice::CHECKED_LEAST..=voice::CHECKED_MOST,
             Self::Fetch => fetch::GET_LEAST..=fetch::GET_MOST,
             Self::Progress => fetch::PROGRESS_LEN..=fetch::PROGRESS_LEN,
-            Self::NetSend => net::SEND_LEAST..=net::SEND_MOST,
-            Self::NetSound => net::SOUND_LEAST..=net::SOUND_MOST,
-            Self::NetTest => net::TEST_LEAST..=net::TEST_MOST,
-            Self::NetText => net::TEXT_LEAST..=net::TEXT_MOST,
-            Self::NetFailed => net::FAULT_LEAST..=net::FAULT_MOST,
+            Self::NetSend | Self::NetSound | Self::NetTest | Self::NetText | Self::NetFailed => {
+                self.net_lens()
+            }
             Self::Pixels => PIXELS_HEAD + RGBA_BYTES..=MAX_REPLY_LEN,
             Self::MakeDib => MAKE_HEAD + MIN_IMAGE_BYTES..=MAKE_HEAD + MAX_IMAGE_BYTES,
             Self::Dib => MIN_IMAGE_BYTES..=MAX_IMAGE_BYTES,
@@ -83,6 +80,18 @@ impl Kind {
                 debug_assert!(other.bare(), "a payload kind has no lengths");
                 NONE
             }
+        }
+    }
+
+    /// The payload lengths of the net kinds that carry one; `NONE` for any other kind.
+    const fn net_lens(self) -> RangeInclusive<usize> {
+        match self {
+            Self::NetSend => net::SEND_LEAST..=net::SEND_MOST,
+            Self::NetSound => net::SOUND_LEAST..=net::SOUND_MOST,
+            Self::NetTest => net::TEST_LEAST..=net::TEST_MOST,
+            Self::NetText => net::TEXT_LEAST..=net::TEXT_MOST,
+            Self::NetFailed => net::FAULT_LEAST..=net::FAULT_MOST,
+            _ => NONE,
         }
     }
 }

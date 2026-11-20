@@ -168,3 +168,27 @@ fn a_speech_piece_may_pass_the_hand_overs_count_but_never_its_own() {
     let bytes = patch(voice_note_bytes(&speech(0)), 0, &past.to_le_bytes());
     assert_eq!(read_voice_note(&mut &bytes[..]), Err(BadField));
 }
+
+#[test]
+fn an_empty_speech_piece_is_refused_both_ways_though_an_empty_held_piece_is_not() {
+    let piece = || SoundPiece {
+        index: 0,
+        last: true,
+        bytes: Wiped::Kept(Zeroizing::new(Vec::new())),
+    };
+    let held = VoiceNote::Sound {
+        id: 1,
+        piece: piece(),
+    };
+    assert_eq!(held.check(), Ok(()));
+    refused_note(
+        &VoiceNote::Speech {
+            id: 1,
+            piece: piece(),
+        },
+        Inconsistent,
+    );
+    let empty = [0, 0, 1, 0, 0, 0, 0];
+    let bytes = frame(Kind::SpeechOut, 1, &empty);
+    assert_eq!(read_voice_note(&mut &bytes[..]), Err(Inconsistent));
+}

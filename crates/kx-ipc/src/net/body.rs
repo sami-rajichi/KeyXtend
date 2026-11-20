@@ -12,6 +12,7 @@ use crate::limits::{
     NET_TRIES, NET_WAIT_S, SAMPLE_BYTES,
 };
 use crate::rules::{self, ok_if, within};
+use crate::voice::body::sound_index;
 use crate::wiped::Wiped;
 use crate::wire::{Payload, Sink, Spec};
 use std::borrow::Cow;
@@ -241,15 +242,13 @@ pub(super) fn read_run<R: Read + ?Sized>(
 
 /// `index` when it is below `MAX_SPEECH_PIECES`.
 pub(super) fn piece_index(index: u16) -> Result<u16, IpcError> {
-    ok_if(usize::from(index) < MAX_SPEECH_PIECES)?;
-    Ok(index)
+    sound_index(index, MAX_SPEECH_PIECES)
 }
 
 /// Sends a part of a piece's sound: the piece's index, then its whole samples.
 pub(super) fn put_sound(s: &mut dyn Sink, piece: u16, bytes: &[u8]) -> Result<(), IpcError> {
     s.u16(piece_index(piece)?)?;
-    s.field(SOUND, bytes)?;
-    ok_if(bytes.len().is_multiple_of(SAMPLE_BYTES))
+    s.samples(SOUND, bytes)
 }
 
 /// Reads a part of a piece's sound into a wiped buffer, refusing a part sample before its bytes are read.
@@ -257,7 +256,5 @@ pub(super) fn read_sound<R: Read + ?Sized>(
     p: &mut Payload<'_, R>,
 ) -> Result<(u16, Wiped<'static>), IpcError> {
     let piece = piece_index(p.u16()?)?;
-    let n = p.count(SOUND)?;
-    ok_if(n.is_multiple_of(SAMPLE_BYTES))?;
-    Ok((piece, Wiped::Kept(p.wiped(n)?)))
+    Ok((piece, Wiped::Kept(p.samples(SOUND)?)))
 }

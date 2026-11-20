@@ -2,7 +2,7 @@
 
 use crate::limits::{
     MAX_DEVICES, MAX_LANGS, MAX_NAME_BYTES, MAX_PATH_BYTES, MAX_PERCENT, MAX_SOUND_BYTES,
-    MAX_TAG_BYTES, MAX_TEXT_BYTES,
+    MAX_SOUND_PIECES, MAX_SPEECH_PIECES, MAX_TAG_BYTES, MAX_TEXT_BYTES, SAMPLE_BYTES,
 };
 use crate::wire::{FOUR, ONE, Spec, TWO};
 use std::ops::RangeInclusive;
@@ -17,6 +17,8 @@ pub(crate) const NAME: Spec = Spec::new(ONE, 0, MAX_NAME_BYTES);
 pub(crate) const TEXT: Spec = Spec::new(TWO, 0, MAX_TEXT_BYTES);
 /// A sound piece's bytes; an empty last piece ends an empty recording.
 pub(crate) const SOUND: Spec = Spec::new(FOUR, 0, MAX_SOUND_BYTES);
+/// A speech piece's bytes: one sample at least, as a cloud run sends no empty piece.
+pub(crate) const SPEECH: Spec = Spec::new(FOUR, SAMPLE_BYTES, MAX_SOUND_BYTES);
 /// The count of devices: the processor at least.
 pub(crate) const DEVICES: Spec = Spec::new(ONE, 1, MAX_DEVICES);
 /// The count of a file's language codes.
@@ -42,6 +44,27 @@ pub(crate) const CHECK_MOST: usize = MODEL_MOST + PATH.most();
 /// A sound piece: its index, whether it is the last, then its bytes.
 pub(crate) const SOUND_LEAST: usize = TWO + ONE + SOUND.least();
 pub(crate) const SOUND_MOST: usize = TWO + ONE + SOUND.most();
+/// A speech piece, laid out as a sound piece.
+pub(crate) const SPEECH_LEAST: usize = TWO + ONE + SPEECH.least();
+pub(crate) const SPEECH_MOST: usize = TWO + ONE + SPEECH.most();
+
+/// A run of sound pieces: each one's bytes, and the count its index stays below.
+#[derive(Copy, Clone)]
+pub(crate) struct Pieces {
+    pub spec: Spec,
+    pub most: usize,
+}
+
+/// The held recording's pieces, handed in or kept.
+pub(crate) const HELD: Pieces = Pieces {
+    spec: SOUND,
+    most: MAX_SOUND_PIECES,
+};
+/// A listen-only Stop's speech pieces.
+pub(crate) const SPOKEN: Pieces = Pieces {
+    spec: SPEECH,
+    most: MAX_SPEECH_PIECES,
+};
 /// A piece's text after its index.
 pub(crate) const PIECE_LEAST: usize = TWO + TEXT.least();
 pub(crate) const PIECE_MOST: usize = TWO + TEXT.most();
