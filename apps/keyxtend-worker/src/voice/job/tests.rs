@@ -29,7 +29,7 @@ const CHUNK: usize = SEC / 100;
 /// The silence the tests' setup keeps around speech, in ms.
 const PAD_TEST_MS: u16 = 300;
 /// That silence in samples.
-const PAD: usize = SEC * PAD_TEST_MS as usize / 1000;
+const PAD: usize = SEC * PAD_TEST_MS as usize / kx_ipc::MS_PER_S as usize;
 
 /// The tests' list of notes, checked as the pipe would check them.
 impl Notes for Vec<VoiceNote> {

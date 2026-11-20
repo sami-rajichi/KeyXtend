@@ -2,14 +2,12 @@
 //! job, and the waits each ask is watched with, all from the ask's own limits.
 
 use crate::worker::{Launch, Spawner, Split, Stream, Times, VoiceFrames};
-use kx_ipc::{MAX_RECORD_BYTES, READ_TIMES, SAMPLE_BYTES, SOUND_HZ, VOICE_JOB};
+use kx_ipc::{MAX_RECORD_BYTES, MIB, READ_TIMES, SOUND_BYTES_PER_S, VOICE_JOB};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{JobLimits, S_PER_MIN, SpeechAsk};
 use std::path::PathBuf;
 use std::time::Duration;
 
-/// Bytes in one MB of a job's cap.
-const MIB: u64 = 1 << 20;
 /// A check reads the clip twice, on the card and then on the processor, each after its own load.
 const CHECK_RUNS: u32 = 2;
 
@@ -76,7 +74,7 @@ pub(super) fn single(job: &JobLimits, need_mb: u32) -> Launch {
 
 /// The room a recording of `bytes` holds in a job while its buffer grows, in MB.
 pub(super) fn room_mb(bytes: usize) -> u32 {
-    let held = u64::try_from(bytes.saturating_mul(READ_TIMES)).unwrap_or(u64::MAX);
+    let held = bytes.saturating_mul(READ_TIMES);
     u32::try_from(held.div_ceil(MIB)).unwrap_or(u32::MAX)
 }
 
@@ -87,7 +85,7 @@ pub(super) fn extra_mb(bytes: usize, record_max_s: u16) -> u32 {
 
 /// The bytes of a recording `seconds` long as hand-over sound, never past the longest the frames allow.
 fn record_bytes(seconds: u16) -> usize {
-    (usize::from(seconds) * SOUND_HZ * SAMPLE_BYTES).min(MAX_RECORD_BYTES)
+    (usize::from(seconds) * SOUND_BYTES_PER_S).min(MAX_RECORD_BYTES)
 }
 
 /// The host's times from `job`.

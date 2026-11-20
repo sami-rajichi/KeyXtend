@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use zeroize::Zeroizing;
 
 /// Milliseconds in a second.
-const MS_PER_S: u64 = 1000;
+const MS_PER_S: u64 = kx_ipc::MS_PER_S as u64;
 
 /// What a run's or a test's threads send with.
 pub struct Sending {

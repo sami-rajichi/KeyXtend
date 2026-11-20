@@ -84,11 +84,10 @@ fn the_engine_writes_pieces_in_the_models_language_while_listening_goes_on() {
     heard.extend(rig.speak(&talk, CHUNK));
     let notes = rig.until(|n| matches!(n, VoiceNote::Piece { .. }), heard);
     assert!(rig.open(), "listening goes on");
-    let pad = SEC * 3 / 10;
     let want = [
         stage(1, Stage::Open),
         stage(1, Stage::Loading),
-        said(0, 12 * SEC + pad),
+        said(0, 12 * SEC + PAD),
     ];
     assert_eq!(plain(&notes), want);
     rig.only(VoiceAsk::Stop { id: 1 });
@@ -105,7 +104,7 @@ fn the_engine_writes_pieces_in_the_models_language_while_listening_goes_on() {
     assert_eq!((pieces, sound_ms, card), (2, 16_000, false));
     assert_eq!(
         plain(&notes),
-        [stage(1, Stage::Shut), said(1, pad + 3 * SEC)]
+        [stage(1, Stage::Shut), said(1, PAD + 3 * SEC)]
     );
     assert!(lib.script().runs.iter().all(|r| r.2 == "fr-FR"));
 }
@@ -132,12 +131,11 @@ fn sound_heard_while_the_model_still_loads_is_all_written_once_it_loads() {
     go.send(()).unwrap();
     rig.only(VoiceAsk::Stop { id: 1 });
     let notes = rig.until(|n| matches!(n, VoiceNote::Done { .. }), heard);
-    let pad = SEC * 3 / 10;
     let pieces: Vec<VoiceNote> = (notes.iter())
         .filter(|n| matches!(n, VoiceNote::Piece { .. }))
         .cloned()
         .collect();
-    assert_eq!(pieces, [said(0, 12 * SEC + pad), said(1, pad + 3 * SEC)]);
+    assert_eq!(pieces, [said(0, 12 * SEC + PAD), said(1, PAD + 3 * SEC)]);
 }
 
 #[test]

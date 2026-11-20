@@ -16,9 +16,10 @@ const STEP_MS: usize = 50;
 /// The cut falls between these shares of the part, in tenths, so neither side is tiny.
 const FROM_TENTHS: usize = 3;
 const TO_TENTHS: usize = 7;
-/// Tenths in a whole, and milliseconds in a second.
+/// Tenths in a whole.
 const TENTHS: usize = 10;
-const MS_PER_S: usize = 1000;
+/// Milliseconds in a second.
+const MS_PER_S: usize = kx_ipc::MS_PER_S as usize;
 /// What joins the parts' texts.
 #[cfg(any(test, feature = "engine"))]
 const JOIN: &str = " ";

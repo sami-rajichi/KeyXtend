@@ -136,10 +136,12 @@ pub const STALL_S: RangeInclusive<u16> = 5..=300;
 pub const SOUND_HZ: usize = 16_000;
 /// Bytes in one sound sample: signed 16-bit, little-endian.
 pub const SAMPLE_BYTES: usize = size_of::<i16>();
+/// Bytes of hand-over sound in one second.
+pub const SOUND_BYTES_PER_S: usize = SOUND_HZ * SAMPLE_BYTES;
 /// The most sound one frame carries, in whole samples: about 33 seconds.
 pub const MAX_SOUND_BYTES: usize = MIB;
 /// The longest recording in bytes: `record_max_s` at its top, as hand-over sound.
-pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_HZ * SAMPLE_BYTES;
+pub const MAX_RECORD_BYTES: usize = *RECORD_MAX_S.end() as usize * SOUND_BYTES_PER_S;
 /// The most pieces a recording is handed over in, so a piece's index stays bounded.
 pub const MAX_SOUND_PIECES: usize = MAX_RECORD_BYTES.div_ceil(MAX_SOUND_BYTES);
 /// Milliseconds in a second.
@@ -234,7 +236,7 @@ pub const NET_TEST_TRIES: u8 = 1;
 pub fn piece_bytes(max_mb: u32, max_s: u16) -> usize {
     let by_size = u64::from(max_mb).saturating_mul(MIB as u64);
     let by_size = usize::try_from(by_size).unwrap_or(usize::MAX);
-    let by_time = usize::from(max_s) * SOUND_HZ * SAMPLE_BYTES;
+    let by_time = usize::from(max_s) * SOUND_BYTES_PER_S;
     let most = by_size.min(by_time);
     most - most % SAMPLE_BYTES
 }
