@@ -1,7 +1,7 @@
 # Security note: kx-mod-clipboard
 
 - **Owner:** product owner
-- **Last review:** 2026-11-06 (P9 Task 27: the search line's text reaches prediction's memory while aimed at); 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues; final fix: the DIB an inserted PNG goes with)
+- **Last review:** 2026-11-20 (P11 part 2 task 22: Paste at once's skipped-copy rules made plain against `actor/board.rs`, the start-up gap accepted, and ADR-0048's line qualified); 2026-11-06 (P9 Task 27: the search line's text reaches prediction's memory while aimed at); 2026-10-31 (P8 security check: the panel's gate, the insert's file-check deadline and the paths never probed; P8 Task 14: the module, the actor, insert and the helper threads; fix round 1: joins, insert notes, the helper queues; final fix: the DIB an inserted PNG goes with)
 - **Status:** Reviewed
 - **Scope:** `crates/kx-mod-clipboard`: the manifest, the `[clipboard]` settings, the `kx-clip` actor (`actor.rs`, `actor/`), insert, the media and files threads (`media.rs`), the store, the panel and the view. It runs inside the uiAccess `keyxtend` process; pictures decode in `keyxtend-worker` (ADR-0004).
 
@@ -53,7 +53,8 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
   - Each insert step puts its content on the system clipboard, where any app can read it, and the last entry stays there.
   - Each paste goes to whichever app has focus at that step; the keyboard sends it, never this module.
   - A lent paste puts back a kept entry whole, or a text the history cannot name alone, and types when a kept entry cannot be read whole. A cut file comes back as a copy, and a failed put-back is logged and leaves the text.
-  - A lent paste never puts back a skipped app's copy: after a `skip_apps` note, or a change the watch could not read, it types until another app's copy or a clear. Otherwise a password manager's clear timer firing in the gap would see our text, skip its clear, and get its password back for good.
+  - A lent paste never puts back a skipped app's copy: after a `skip_apps` note, or a change the watch could not read, it types until another app's copy, a clear or our own write. Otherwise a password manager's clear timer could fire while our text is on the clipboard and skip its clear, as the password is gone; our put-back would then leave the password on the clipboard with no clear to come.
+  - Our own write releases that hold: each Insert step, like a lent paste or a put-back, writes the clipboard as ours (`Board::wrote`), so the skipped copy is no longer there to put back.
   - A lent paste reads the clipboard only through `Clipboard::unmarked_text`, which checks the presence markers in the same open: a copy a password manager marks is never read or written back, and the text is typed instead (ADR-0048). Our writes set only the history and cloud switches to 0, so an unmarked text written back is as private as it was. A copy made during the gap stays.
   - Follow-the-clear drops what an app clears within `clear_follow_s`, unless pinned.
   - Copied file paths are looked at before the user acts, on each file copy and panel open. So only absolute drive paths are probed: a copied share, device or NT path, or a link to one, never makes our process reach another machine.
@@ -74,3 +75,4 @@ A file entry keeps paths only, never the files. Copies an app marks as private (
 - The module cannot tell a local path from a remote one: `probe_ok` and the platform's file facts decide what is looked at. A drive letter mapped to a share is still probed (builder's call; `kx-platform-windows.md`).
 - The board counts our writes' echoes only to put an entry back whole, as a `Marked` note does not say whose mark it is. A stale count can put back a stale entry's other formats with the clipboard's text, or write "empty" over a picture whose note it swallowed: the current clipboard is lost, but the live check, not the board, keeps private copies from being read.
 - A note that names no app is never taken as a `skip_apps` app's, as the history keeps such a copy too, so a skipped app the watch cannot name can still have its copy put back.
+- A skipped app's copy already on the clipboard when the keyboard starts can be put back: the history does no first read at start-up, so the board knows nothing of it until the next note (P11 part 2). ADR-0048's consequences say Paste at once types while a skipped app's copy is on the clipboard; that holds from the first note the watch tells, not for a copy made before the start.
