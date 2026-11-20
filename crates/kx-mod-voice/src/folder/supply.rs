@@ -22,7 +22,7 @@ pub struct Stock<'a> {
     pub folder: &'a Folder,
     /// The processor and the cards; empty before they are read, when every model fits and no card serves.
     pub devices: &'a [Device],
-    /// Each card's check by driver and file.
+    /// Each card's check by driver, file and clip language.
     pub checks: &'a Checks,
     /// The check clips' languages the speech port ships, in order.
     pub clips: &'a [String],
@@ -77,7 +77,7 @@ impl<'a> Stock<'a> {
         // check goes by the fingerprint.
         let read = file.print == Print::Known(row.print);
         let (card, why) = if read {
-            self.card(row.card_mb, &row.print)
+            self.card(row.card_mb, &row.print, iso)
         } else {
             (None, self.held(Why::Unread))
         };
@@ -122,7 +122,7 @@ impl<'a> Stock<'a> {
             return Err(Lack::NoFit);
         }
         let model = other.model(dir, facts, iso).ok_or(Lack::Stranger)?;
-        let (card, why) = self.card(need, &print);
+        let (card, why) = self.card(need, &print, iso);
         Ok(Ready {
             model,
             card,
@@ -145,11 +145,12 @@ impl<'a> Stock<'a> {
         clip(iso, self.clips, |c| code_in(facts, c)).map(owned)
     }
 
-    /// The card that runs a model needing `need_mb` on it, by `device`'s rule and each card's check of file `print`;
-    /// else why the processor serves, when a card is picked.
-    fn card(&self, need_mb: u32, print: &Fingerprint) -> (Option<CardUse>, Option<Why>) {
+    /// The card that runs a model needing `need_mb` on it for `iso`, by `device`'s rule and each card's check of file
+    /// `print` on the clip `iso` reads; else why the processor serves, when a card is picked.
+    fn card(&self, need_mb: u32, print: &Fingerprint, iso: &str) -> (Option<CardUse>, Option<Why>) {
+        let lang = self.clip(print, iso).map(|(clip, _)| clip);
         let check = |d: &Device| match &d.kind {
-            DeviceKind::Card(id) => self.checks.verdict(id, &d.driver, print),
+            DeviceKind::Card(id) => lang.and_then(|l| self.checks.verdict(id, &d.driver, print, l)),
             DeviceKind::Cpu => None,
         };
         let seen: Vec<Seen<'_>> = (self.devices.iter())

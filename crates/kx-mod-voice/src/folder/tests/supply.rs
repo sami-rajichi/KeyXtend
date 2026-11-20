@@ -7,6 +7,8 @@ use crate::counts::{Checked, Checks};
 use crate::flow::{Lack, Supply};
 use kx_module_api::ports::{CardId, Date, Device, DeviceKind, Hundredths, Memory, Verdict};
 
+mod langs;
+
 /// The processor with `total_mb` of memory and a card `Vulkan0` with `card_free_mb` free.
 fn devices(total_mb: u32, card_free_mb: u32) -> Vec<Device> {
     let memory = |total_mb, free_mb| Memory { total_mb, free_mb };
@@ -187,6 +189,7 @@ fn automatic_runs_on_a_card_once_its_check_passed_and_it_has_room() {
         card: card(),
         driver: "1.0".into(),
         model: parakeet.print,
+        lang: Some("en".into()),
         verdict: Verdict::Passed {
             gain: Hundredths(900),
         },

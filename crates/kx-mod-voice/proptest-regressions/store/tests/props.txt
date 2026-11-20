@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc ee5aeab361f1ad3ecd3e072f01261d63da102ffdf0156dd72c63fe1f8960f57d # shrinks to c = Counts({}), k = Checks([Checked { card: CardId("Vulkan0"), driver: "", model: Fingerprint(0000000000000000000000000000000000000000000000000000000000000000), lang: Some("en"), verdict: Passed { gain: Hundredths(0) }, day: Date { year: 1, month: 1, day: 1 } }]), s = Scores([])

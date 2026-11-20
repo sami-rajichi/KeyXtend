@@ -100,11 +100,13 @@ fn card() -> impl Strategy<Value = CardId> {
 }
 
 fn checks() -> impl Strategy<Value = Checks> {
-    let one = (card(), words(), any::<u8>(), verdict(), date());
-    let row = one.prop_map(|(card, driver, m, verdict, day)| Checked {
+    let lang = prop::option::of(prop::sample::select(vec!["en", "fr", "ar"]));
+    let one = (card(), words(), any::<u8>(), lang, verdict(), date());
+    let row = one.prop_map(|(card, driver, m, lang, verdict, day)| Checked {
         card,
         driver,
         model: print(m),
+        lang: lang.map(str::to_owned),
         verdict,
         day,
     });
@@ -159,7 +161,8 @@ proptest! {
         let forms = [
             (text::MARK, text::VERSION),
             (numbers::COUNTS_MARK, numbers::VERSION),
-            (numbers::CHECKS_MARK, numbers::VERSION),
+            (numbers::CHECKS_MARK, numbers::CHECKS_LANGLESS),
+            (numbers::CHECKS_MARK, numbers::CHECKS_VERSION),
             (numbers::SCORES_MARK, numbers::VERSION),
         ];
         for (mark, version) in forms {

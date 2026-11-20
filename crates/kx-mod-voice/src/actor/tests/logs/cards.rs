@@ -5,7 +5,11 @@ use kx_module_api::ports::{FieldKind, Hundredths, SpeechError, Verdict};
 use kx_platform_fake::FileCall;
 
 use super::super::Msg;
-use super::super::cards::{CARD, build, card_id, devices, passed, served};
+use super::super::auto::kept;
+use super::super::cards::{
+    BOTH, CARD, arabic, arabic_layout, build, build_picked, card_id, devices, differs, passed,
+    served,
+};
 use super::super::rig::{Rig, english_layout};
 use super::super::taps::{held, in_place, release, waiting};
 use super::lines_of;
@@ -79,6 +83,22 @@ fn a_dictation_says_why_the_processor_serves_only_when_a_card_is_picked() {
         });
         assert!(fields(&lines, CPU_SERVES).is_empty(), "{device}: {lines:?}");
     }
+}
+
+#[test]
+fn edge_3_arabic_written_on_the_processor_after_its_clip_differs_says_why() {
+    let pass = Verdict::Passed {
+        gain: Hundredths(300),
+    };
+    let english = vec![kept(CARD, "1.0", arabic(), "en", pass)];
+    let lines = lines_of(|| {
+        let mut rig = build_picked(CARD, Some(devices()), Ok(differs()), english, Some(BOTH));
+        rig.send(Msg::Layout(arabic_layout()));
+        rig.listen();
+        assert_eq!(served(&rig), None);
+    });
+    let want = text(WHY, "failed") + &text(VERDICT, "differs");
+    assert_eq!(fields(&lines, CPU_SERVES), [want]);
 }
 
 #[test]

@@ -33,18 +33,18 @@ impl Panel {
         }
     }
 
-    /// The check a card lacks under its driver for the model the language in front uses now (edge 26). While a check,
-    /// a dictation or Compare runs, it waits for `dequeue`. The actor calls it after the devices or a layout; `follow`
-    /// and the folder's reads call it too.
+    /// The check a card lacks under its driver for the model the language in front uses now, in that language's clip
+    /// (edge 26, ADR-0052). While a check, a dictation or Compare runs, it waits for `dequeue`. The actor calls it after
+    /// the devices or a layout; `follow` and the folder's reads call it too.
     pub fn recheck(&mut self, facts: &Facts<'_>) -> Vec<Do> {
         self.queued = self.checking.is_some() || facts.dictating || self.compare.busy();
-        let Some(print) = self.used_print(facts).filter(|_| !self.queued) else {
+        let Some((print, lang)) = self.used(facts).filter(|_| !self.queued) else {
             return Vec::new();
         };
         let pick = facts.settings.device();
         let lacks = |d: &Device| match &d.kind {
             DeviceKind::Card(id) => {
-                let unchecked = facts.checks.verdict(id, &d.driver, &print).is_none();
+                let unchecked = facts.checks.verdict(id, &d.driver, &print, &lang).is_none();
                 (unchecked && wanted(&pick, d, id, &print, facts.checks)).then(|| id.clone())
             }
             DeviceKind::Cpu => None,
@@ -61,16 +61,19 @@ impl Panel {
         self.recheck(facts)
     }
 
-    /// A card picked with no check for the model in use is checked now.
+    /// A card picked with no check for the model in use in the language in front is checked now.
     fn check_unchecked(&mut self, card: &CardId, facts: &Facts<'_>) -> Vec<Do> {
         let device = facts
             .devices
             .iter()
             .find(|d| d.kind == DeviceKind::Card(card.clone()));
-        let print = self.used_print(facts);
-        let checked = device
-            .zip(print)
-            .is_some_and(|(d, p)| facts.checks.verdict(card, &d.driver, &p).is_some());
+        let used = self.used(facts);
+        let checked = device.zip(used).is_some_and(|(d, (print, lang))| {
+            facts
+                .checks
+                .verdict(card, &d.driver, &print, &lang)
+                .is_some()
+        });
         if checked || self.checking.is_some() {
             return Vec::new();
         }
@@ -134,8 +137,8 @@ impl Panel {
         }
     }
 
-    /// A card's check ended: its verdict is kept and another card the model lacks is queued, or its error shows a
-    /// note and nothing is kept, so a fault never loops.
+    /// A card's check ended: its verdict is kept for its clip's language and another card the model lacks is queued, or
+    /// its error shows a note and nothing is kept, so a fault never loops.
     pub fn checked(
         &mut self,
         check: &Check,
@@ -157,6 +160,7 @@ impl Panel {
             card: check.card.clone(),
             driver: check.driver.clone(),
             model: check.print,
+            lang: Some(check.clip.clone()),
             verdict,
             day: facts.now.date,
         };
@@ -190,7 +194,8 @@ fn verdict_of(
 }
 
 /// Whether `pick` wants card `id`, device `d`, checked for file `print`: the picked card; with Automatic, a card
-/// checked for it under another driver, or one that passed another model's check under its present driver.
+/// checked for it under another driver or in another language, or one that passed another model's check under its
+/// present driver.
 fn wanted(
     pick: &DevicePick,
     d: &Device,

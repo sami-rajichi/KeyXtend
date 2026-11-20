@@ -24,12 +24,13 @@ const PASS: Verdict = Verdict::Passed {
     gain: Hundredths(300),
 };
 
-/// A check an earlier run kept: card `card` under `driver` for `row`'s file.
-fn kept(card: &str, driver: &str, row: &Row, verdict: Verdict) -> Checked {
+/// A check an earlier run kept: card `card` under `driver` for `row`'s file, on the clip of `lang`.
+pub(super) fn kept(card: &str, driver: &str, row: &Row, lang: &str, verdict: Verdict) -> Checked {
     Checked {
         card: CardId::new(card).unwrap(),
         driver: driver.into(),
         model: row.print,
+        lang: Some(lang.into()),
         verdict,
         day: Date::new(2026, 11, 14).unwrap(),
     }
@@ -42,7 +43,7 @@ fn auto(kept: Vec<Checked>, devices: Vec<Device>) -> Rig {
 
 /// The rig on Automatic with one card that passed English's model before.
 fn passed_english() -> Rig {
-    auto(vec![kept(CARD, DRIVER, english(), PASS)], devices())
+    auto(vec![kept(CARD, DRIVER, english(), "en", PASS)], devices())
 }
 
 /// The card each check was asked on, in order.
@@ -64,14 +65,17 @@ fn automatic_checks_a_new_model_on_a_card_that_passed_another_then_dictates_on_i
 
 #[test]
 fn automatic_checks_only_the_card_that_passed_before() {
-    let mut rig = auto(vec![kept(CARD2, DRIVER, english(), PASS)], two_cards());
+    let mut rig = auto(
+        vec![kept(CARD2, DRIVER, english(), "en", PASS)],
+        two_cards(),
+    );
     rig.send(Msg::Layout(arabic_layout()));
     assert_eq!(cards(&rig), [CARD2]);
 }
 
 #[test]
 fn automatic_checks_each_card_that_passed_in_turn_one_at_a_time() {
-    let rows = [CARD, CARD2].map(|c| kept(c, DRIVER, english(), PASS));
+    let rows = [CARD, CARD2].map(|c| kept(c, DRIVER, english(), "en", PASS));
     let mut rig = auto(rows.to_vec(), two_cards());
     rig.actor.ports.spawn = held;
     rig.send(Msg::Layout(arabic_layout()));
@@ -85,10 +89,10 @@ fn automatic_checks_each_card_that_passed_in_turn_one_at_a_time() {
 
 #[test]
 fn automatic_never_checks_a_new_model_on_a_card_whose_check_failed() {
-    let english_failed = vec![kept(CARD, DRIVER, english(), Verdict::Failed)];
+    let english_failed = vec![kept(CARD, DRIVER, english(), "en", Verdict::Failed)];
     let arabic_failed = vec![
-        kept(CARD, DRIVER, english(), PASS),
-        kept(CARD, DRIVER, arabic(), Verdict::Failed),
+        kept(CARD, DRIVER, english(), "en", PASS),
+        kept(CARD, DRIVER, arabic(), "ar", Verdict::Failed),
     ];
     for rows in [english_failed, arabic_failed] {
         let mut rig = auto(rows, devices());
@@ -104,7 +108,7 @@ fn automatic_never_checks_a_new_model_on_a_card_whose_check_failed() {
 #[test]
 fn after_a_driver_update_the_model_checked_before_goes_first_and_only_a_new_pass_counts() {
     let (en, ar) = files();
-    let old = vec![kept(CARD, OLD, english(), PASS)];
+    let old = vec![kept(CARD, OLD, english(), "en", PASS)];
     let fault = Err(SpeechError::Timeout);
     let mut rig = build("auto", Some(devices()), fault, old.clone());
     rig.send(Msg::Layout(arabic_layout()));

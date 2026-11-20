@@ -36,6 +36,7 @@ fn fill(o: &mut Opened) {
         card: card.clone(),
         driver,
         model,
+        lang: Some("ar".into()),
         verdict,
         day,
     };

@@ -1,6 +1,6 @@
 //! The numbers' blobs, each a mark and a version, then its rows: the counts by day, model and device, a cloud
-//! service's too; the card checks by card, driver and file fingerprint; Compare's runs by language. They hold ids and
-//! numbers, never a text.
+//! service's too; the card checks by card, driver, file fingerprint and clip language; Compare's runs by language. They
+//! hold ids and numbers, never a text.
 
 mod tags;
 
@@ -13,7 +13,7 @@ use super::codec::{self, Bad, Mark, Reader, Writer};
 use crate::counts::{Board, Bucket, Checked, Checks, Counts, Score, Scores, Tally};
 use tags::{device, model, put_device, put_model};
 
-/// The forms' version, the byte after each mark; a newer one is never read or written over.
+/// The counts' and Compare's forms' version, the byte after each mark; a newer one is never read or written over.
 pub(crate) const VERSION: u8 = 1;
 /// What starts the counts' blob.
 pub(crate) const COUNTS_MARK: Mark = *b"KXVC";
@@ -21,6 +21,10 @@ pub(crate) const COUNTS_MARK: Mark = *b"KXVC";
 pub(crate) const CHECKS_MARK: Mark = *b"KXVK";
 /// What starts Compare's results' blob.
 pub(crate) const SCORES_MARK: Mark = *b"KXVS";
+/// The card checks' form, which names each result's clip language (ADR-0052).
+pub(crate) const CHECKS_VERSION: u8 = 2;
+/// The card checks' first form, still read: its results name no language, so they serve none.
+pub(crate) const CHECKS_LANGLESS: u8 = 1;
 
 /// A verdict's tag, in `Verdict`'s order.
 const PASSED: u8 = 0;
@@ -76,38 +80,55 @@ pub(crate) fn decode_counts(bytes: &[u8]) -> Result<Counts, Bad> {
 /// `checks` as bytes.
 pub(crate) fn encode_checks(checks: &Checks) -> Zeroizing<Vec<u8>> {
     codec::encode(|w| {
-        w.head(CHECKS_MARK, VERSION);
+        w.head(CHECKS_MARK, CHECKS_VERSION);
         w.count(checks.rows().len());
         for row in checks.rows() {
             w.text(row.card.as_str());
             w.text(&row.driver);
             w.text(&row.model.hex());
+            w.flag(row.lang.is_some());
+            if let Some(lang) = &row.lang {
+                w.text(lang);
+            }
             put_verdict(w, row.verdict);
             w.date(row.day);
         }
     })
 }
 
-/// The checks in `bytes`.
+/// The checks in `bytes`, in either form; the first form's results name no language.
 pub(crate) fn decode_checks(bytes: &[u8]) -> Result<Checks, Bad> {
     let mut r = Reader::new(bytes);
-    r.head(CHECKS_MARK, VERSION)?;
+    let named = r.head_in(CHECKS_MARK, CHECKS_LANGLESS, CHECKS_VERSION)? > CHECKS_LANGLESS;
     let mut rows = Vec::new();
     for _ in 0..r.count()? {
         let card = card(&mut r)?;
         let driver = r.text()?.to_owned();
         let model = print(&mut r)?;
+        let lang = if named { lang(&mut r)? } else { None };
         let (verdict, day) = (verdict(&mut r)?, r.date()?);
         rows.push(Checked {
             card,
             driver,
             model,
+            lang,
             verdict,
             day,
         });
     }
     r.end()?;
     Ok(Checks::new(rows))
+}
+
+/// A result's clip language: a flag, then an ISO code; another code is `Damaged`.
+fn lang(r: &mut Reader<'_>) -> Result<Option<String>, Bad> {
+    if !r.flag()? {
+        return Ok(None);
+    }
+    let lang = r.text()?;
+    fits_iso(lang)
+        .then(|| Some(lang.to_owned()))
+        .ok_or(Bad::Damaged)
 }
 
 /// `scores` as bytes.
@@ -224,3 +245,6 @@ fn card(r: &mut Reader<'_>) -> Result<CardId, Bad> {
 fn print(r: &mut Reader<'_>) -> Result<Fingerprint, Bad> {
     Fingerprint::from_hex(r.text()?).ok_or(Bad::Damaged)
 }
+
+#[cfg(test)]
+mod tests;
