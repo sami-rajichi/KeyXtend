@@ -7,6 +7,7 @@ mod lend;
 mod net;
 mod notes;
 mod redo;
+mod reply;
 mod take;
 mod text;
 mod view;
