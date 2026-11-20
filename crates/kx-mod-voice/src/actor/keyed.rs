@@ -48,6 +48,23 @@ impl Actor {
         self.held.keyed = listed.unwrap_or_default();
     }
 
+    /// Deletes the keys of rows no longer offered, as an update hid them; none in a hidden run or while the table fails.
+    pub(super) fn sweep_keys(&mut self) {
+        let (Some(table), false) = (self.held.table, self.held.hidden) else {
+            return;
+        };
+        let keys = self.keys();
+        let listed = keys.listed();
+        let listed = listed
+            .inspect_err(|error| tracing::warn!(%error, "the cloud keys could not be listed"));
+        let gone = |id: &&String| table.get(id).is_none_or(|row| !row.offered);
+        for id in listed.unwrap_or_default().iter().filter(gone) {
+            if let Err(error) = keys.remove(id) {
+                tracing::warn!(%error, "a hidden row's cloud key was not removed");
+            }
+        }
+    }
+
     /// Seals `key` as `service`'s; the panel shows its dots, and the flow hears the keys changed.
     fn seal(&mut self, service: &str, key: Secret) {
         let dots = u32::try_from(key.expose().chars().count()).unwrap_or(u32::MAX);
@@ -61,12 +78,16 @@ impl Actor {
         self.step(In::Keys);
     }
 
-    /// Removes `service`'s key; the flow hears it, so an upload under way that needs it stops.
+    /// Removes `service`'s key; the flow hears it, so an upload under way that needs it stops. A refused removal keeps
+    /// the key listed and in use, and the panel says so.
     fn unseal(&mut self, service: &str) {
-        if let Err(error) = self.keys().remove(service) {
-            tracing::warn!(%error, "a cloud key was not removed");
+        let removed = self.keys().remove(service);
+        match &removed {
+            Ok(()) => drop(self.held.keyed.remove(service)),
+            Err(error) => tracing::warn!(%error, "a cloud key was not removed"),
         }
-        self.held.keyed.remove(service);
+        let dos = self.panel.key_removed(service, removed);
+        self.dos(dos);
         self.step(In::Keys);
     }
 

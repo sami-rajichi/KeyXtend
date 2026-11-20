@@ -71,6 +71,15 @@ impl Panel {
         }
     }
 
+    /// Service `id`'s key was removed, or why not: a refused removal shows the fault band and reads its dots again.
+    pub fn key_removed(&mut self, id: &str, removed: Result<(), KeyError>) -> Vec<Do> {
+        if removed.is_ok() {
+            return Vec::new();
+        }
+        self.note = Some(BarHint::Fault);
+        vec![Do::Dots(id.to_owned())]
+    }
+
     /// The clipboard's text a Paste of `round` took: set as the key while the page and round are still the same.
     pub fn pasted(&mut self, round: u32, text: ClipText) -> Vec<Do> {
         let waited = self.cloud.take == Some(round) && self.page == Some(Page::Lines);

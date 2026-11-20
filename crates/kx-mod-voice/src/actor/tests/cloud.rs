@@ -7,6 +7,7 @@ mod keys;
 mod local;
 mod page;
 mod port;
+mod remove;
 mod trial;
 mod typed;
 mod warn;
