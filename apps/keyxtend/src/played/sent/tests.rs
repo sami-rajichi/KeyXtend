@@ -2,6 +2,7 @@ use super::*;
 use crate::played::stage::{INDEX, PIECE, SEND, SOUND_MS, STAGE, STAGE_LINE};
 use crate::played::{cloud, logged};
 use kx_mod_voice::VoiceSettings;
+use kx_mod_voice::cloud::Chosen;
 use kx_mod_voice::services::{Model, Service};
 use kx_module_api::ports::CloudTest;
 use kx_module_api::{Redacted, Zeroizing};
@@ -38,7 +39,9 @@ fn key() -> kx_module_api::Secret {
 /// for its model `listed`, or for the typed model when none, with the keep-nothing switch at `keep`.
 fn ask_as(row: &Service, typed: &str, listed: Option<&Model>, keep: bool) -> CloudAsk {
     let s = VoiceSettings::from_defaults().unwrap();
-    let model = listed.map_or(Some(TYPED_MODEL), |m| (!m.unnamed).then_some(m.id.as_str()));
+    let model = listed
+        .map_or(Chosen::Typed(TYPED_MODEL), Chosen::Listed)
+        .sent();
     let lang = listed.and_then(|m| m.code("en")).unwrap_or("en");
     let per_s = SOUND_HZ * SAMPLE_BYTES;
     let bytes = per_s * usize::try_from(PIECE_MS / MS_PER_S).unwrap();
@@ -121,15 +124,31 @@ fn a_failed_cloud_dictation_names_its_service_and_its_faults_kind_alone() {
 #[test]
 fn each_rows_own_ask_names_that_row_with_any_of_its_models_and_either_switch() {
     for r in table().unwrap().rows() {
-        let models: Vec<Option<&Model>> = match r.models.as_slice() {
-            [] => vec![None],
-            listed => listed.iter().map(Some).collect(),
-        };
+        let listed = r.models.iter().map(Some);
+        let other = (r.other || r.models.is_empty()).then_some(None);
+        let models: Vec<Option<&Model>> = listed.chain(other).collect();
         for (model, keep) in models.into_iter().flat_map(|m| [(m, false), (m, true)]) {
             let a = ask_as(r, address(r), model, keep);
             assert_eq!(service_of(&a), Some(r.id.as_str()), "{} {keep}", r.id);
         }
     }
+}
+
+#[test]
+fn groqs_own_ask_is_groq_and_custom_at_groqs_address_is_custom() {
+    let (groq, custom) = (row(GROQ), row(CUSTOM));
+    let at = groq.url("").unwrap();
+    for model in groq.models.iter().map(Some).chain([None]) {
+        assert_eq!(service_of(&ask_as(groq, "", model, false)), Some(GROQ));
+    }
+    let mut a = ask_as(custom, at.expose(), None, false);
+    assert_eq!(
+        service_of(&a),
+        Some(CUSTOM),
+        "Custom's own model at Groq's address"
+    );
+    a.model = groq.models.first().map(|m| Redacted::new(m.id.clone()));
+    assert_eq!(service_of(&a), Some(CUSTOM), "even with Groq's model");
 }
 
 #[test]

@@ -71,3 +71,16 @@ fn a_typed_row_is_neither_ready_nor_picked_until_its_address_is_typed() {
     let back = rules().choice(&s, "en");
     assert!(back.is_none(), "typing it again brings no pick back");
 }
+
+#[test]
+fn a_listed_model_sends_its_id_unless_its_request_names_none_and_a_typed_id_goes_as_it_is() {
+    let turbo = row("groq").model(TURBO).unwrap();
+    assert_eq!(Chosen::Listed(turbo).sent(), Some(TURBO));
+    let unnamed = row("lemonfox").models.iter().find(|m| m.unnamed).unwrap();
+    assert_eq!(
+        Chosen::Listed(unnamed).sent(),
+        None,
+        "Lemonfox's request names none"
+    );
+    assert_eq!(Chosen::Typed("my-model").sent(), Some("my-model"));
+}

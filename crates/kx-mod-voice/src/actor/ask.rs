@@ -64,10 +64,11 @@ pub(super) fn head_of(s: &VoiceSettings, choice: &Choice<'_>) -> Option<Head> {
     if choice.unavailable.is_some() {
         return None;
     }
-    let (listed, model) = match choice.model {
-        Chosen::Listed(m) => (Some(m), (!m.unnamed).then(|| m.id.clone())),
-        Chosen::Typed(id) => (None, Some(id.to_owned())),
+    let listed = match choice.model {
+        Chosen::Listed(m) => Some(m),
+        Chosen::Typed(_) => None,
     };
+    let model = choice.model.sent().map(str::to_owned);
     Some(Head {
         service: row.id.clone(),
         job: s.job(),

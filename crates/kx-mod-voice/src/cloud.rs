@@ -39,6 +39,17 @@ pub enum Chosen<'a> {
     Typed(&'a str),
 }
 
+impl<'a> Chosen<'a> {
+    /// The model id an ask for this model sends: a listed model's own unless its request names none, or the typed id.
+    #[must_use]
+    pub fn sent(self) -> Option<&'a str> {
+        match self {
+            Self::Listed(m) => (!m.unnamed).then_some(m.id.as_str()),
+            Self::Typed(id) => Some(id),
+        }
+    }
+}
+
 /// A language's cloud pick, as the user made it and the rules still take it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Choice<'a> {

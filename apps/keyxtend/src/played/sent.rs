@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use kx_ipc::gate::{FAULT, SERVICE};
+use kx_mod_voice::cloud::Chosen;
 use kx_mod_voice::services::{Address, Service, table};
 use kx_module_api::MS_PER_S;
 use kx_module_api::ports::{
@@ -69,19 +70,14 @@ fn service_of(ask: &CloudAsk) -> Option<&'static str> {
     first.or_else(|| fit.next()).map(|r| r.id.as_str())
 }
 
-/// True when `row` could have made `ask`: its address, header and limits, one of its shapes, and a model it sends.
+/// True when `row` could have made `ask`: its address, header and limits, one of its shapes, and a model id it sends,
+/// as `Chosen::sent` gives it; Lemonfox and Custom differ only there.
 fn made(row: &Service, ask: &CloudAsk) -> bool {
     let at = row.url(ask.url.expose()).as_ref() == Some(&ask.url);
-    let model = match &ask.model {
-        None => row.models.iter().any(|m| m.unnamed),
-        Some(id) => {
-            row.other
-                || row
-                    .models
-                    .iter()
-                    .any(|m| !m.unnamed && m.id == *id.expose())
-        }
-    };
+    let id = ask.model.as_ref().map(|m| m.expose().as_str());
+    let listed_id = row.models.iter().any(|m| Chosen::Listed(m).sent() == id);
+    let typed_id = row.other && id.is_some_and(|t| Chosen::Typed(t).sent() == Some(t));
+    let model = listed_id || typed_id;
     let listed = row.models.iter().map(Some).chain([None]);
     let mut shapes = listed.flat_map(|m| [false, true].map(|keep| row.shape_for(m, keep)));
     at && model
