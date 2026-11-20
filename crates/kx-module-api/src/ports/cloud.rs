@@ -32,7 +32,7 @@ pub enum CloudNote {
     Fault(CloudFault),
 }
 
-/// A run on the platform's side. Dropping it cancels it: the requests in flight are dropped and nothing more is told.
+/// A run on the platform's side; dropping it cancels it, dropping the requests in flight and telling nothing more.
 /// The drop never blocks, so Cancel never waits on the network.
 pub trait CloudRun: Send {}
 

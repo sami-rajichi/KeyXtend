@@ -22,7 +22,7 @@ pub use target::Target;
 #[cfg(windows)]
 pub use win::WinHttp;
 
-use kx_ipc::STALL_S;
+use kx_ipc::{MS_PER_S, STALL_S};
 use std::borrow::Cow;
 use std::fmt;
 
@@ -30,8 +30,6 @@ use std::fmt;
 pub const AGENT: &str = "KeyXtend";
 /// The most redirects one download follows; a model's host sends one or two.
 pub const MAX_HOPS: usize = 5;
-/// Milliseconds in a second.
-const MS_PER_S: u32 = 1000;
 
 /// One GET to one checked address, from byte `from` on; it never follows a redirect.
 #[derive(Clone, Copy, Debug)]
@@ -122,14 +120,14 @@ pub trait Http: Send + Sync {
     /// Sends one call as it is and hands back the answer as it came, a redirect included; use `call`.
     ///
     /// # Errors
-    /// As `send`.
+    /// As `send`; `Header` for a head `Call::check` refuses, and `Stopped` once the call's stop is set.
     fn deliver(&self, call: &Call<'_>) -> Result<Reply, NetError>;
 
     /// Sends `call` once its head passes `Call::check`; a redirect comes back unfollowed, so its headers and body
     /// reach one address only.
     ///
     /// # Errors
-    /// `Header` before anything is sent for a call `check` refuses; else as `send`.
+    /// `Header` before anything is sent for a call `check` refuses; else as `deliver`.
     fn call(&self, call: &Call<'_>) -> Result<Reply, NetError> {
         call.check()?;
         self.deliver(call)

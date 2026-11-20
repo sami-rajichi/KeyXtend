@@ -191,7 +191,7 @@ pub const PART_EXT: &str = ".part";
 pub const NET_WAIT_S: RangeInclusive<u16> = 5..=300;
 /// The `net_tries` setting's range: tries per piece before a cloud fault is told.
 pub const NET_TRIES: RangeInclusive<u8> = 1..=5;
-/// A service row's megabytes a request: up to 8 GiB, past the largest cap a service names (`ElevenLabs`' 5 GB).
+/// A service row's megabytes a request: up to 8 GiB, far past the largest cap a service names.
 pub const NET_MAX_MB: RangeInclusive<u32> = 1..=8_192;
 /// A service row's requests a minute: up to 100 a second, a sanity ceiling far past any service's own rate.
 pub const NET_PER_MIN: RangeInclusive<u16> = 1..=6_000;
@@ -199,8 +199,8 @@ pub const NET_PER_MIN: RangeInclusive<u16> = 1..=6_000;
 pub const NET_AT_ONCE: RangeInclusive<u8> = 1..=16;
 /// The longest cloud key a header carries: 1 KiB, far past any service's key of a few hundred bytes.
 pub const MAX_KEY_BYTES: usize = KIB;
-/// The most fixed fields an upload form adds: `OpenRouter`'s keep-nothing `provider` needs one, and 4 leaves room
-/// for a new row's own without a frame change.
+/// The most fixed fields an upload form adds: a keep-nothing switch needs one, and 4 leaves room for a new row's own
+/// without a frame change.
 pub const MAX_FIXED: usize = 4;
 /// The longest cloud piece, in seconds: ten minutes, 19.2 MB raw, under the ~25 MB a request most services take; a
 /// longer dictation goes in more pieces.

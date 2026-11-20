@@ -205,8 +205,7 @@ pub struct CloudCard {
     pub light: UsePrice,
     /// The price of heavy use.
     pub heavy: UsePrice,
-    /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` when it bills the
-    /// sound's own length.
+    /// The least a request bills when the service rounds a short one up; `None` when it bills the sound's own length.
     pub bills: Option<Fact>,
     /// A rule the service sets on its use, such as a free plan for non-commercial use only; `None` for none.
     pub rule: Option<Fact>,
@@ -214,7 +213,7 @@ pub struct CloudCard {
     pub read: Date,
     /// They are older than `facts_days`, so their day takes the warning tone.
     pub old: bool,
-    /// The host of the facts' page, which the link names, such as `groq.com`; `None` for the Custom row.
+    /// The host of the facts' page, which the link names, such as `example.com`; `None` for the Custom row.
     pub site: Option<String>,
     /// The card's warning, for a service that trains by default, with its account switch's name as a `Text`; `None`
     /// for none.

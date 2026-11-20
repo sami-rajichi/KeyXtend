@@ -38,7 +38,8 @@ impl HttpsUrl {
         Some(Self(link))
     }
 
-    /// True when `text`'s scheme, host and port alone make an address, so a refusal of `text` lies in its path or query.
+    /// True when `text`'s scheme, host and port alone make an address, so a refusal of `text` lies in its path, its query
+    /// or its length.
     #[must_use]
     pub fn has_host(text: &str) -> bool {
         Self::new(https_origin(text)).is_some()

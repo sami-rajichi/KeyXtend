@@ -1,6 +1,6 @@
 //! WAV files the voice job reads: the card check's shipped clips and, in gate builds, the sound played in place of the
-//! microphone. It takes 16-bit PCM and 32-bit float within `RATES` and `MAX_CHANNELS`, up to `MAX_WAV_BYTES`; anything
-//! else is `BadFile`. The bytes and samples sit in wiped buffers, as a clip may be someone's voice.
+//! microphone. It takes 16-bit PCM and 32-bit float within `RATES`, `MAX_CHANNELS` and `MAX_WAV_BYTES` into wiped
+//! buffers, as a clip may be someone's voice, and anything else is `BadFile`.
 
 use super::mic::Format;
 use super::wipe::Buf;

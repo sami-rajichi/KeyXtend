@@ -1,6 +1,5 @@
 //! The job over the real engine and a fake library: pieces written in the model's language while listening goes on,
-//! and engine asks answered by notes. Without an engine every engine ask answers `Runner`. Notes are awaited, never
-//! slept for.
+//! and engine asks answered by notes, or by `Runner` without an engine. Notes are awaited, never slept for.
 
 use super::*;
 use crate::voice::cut::NoDetectors;

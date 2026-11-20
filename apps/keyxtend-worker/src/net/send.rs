@@ -1,7 +1,6 @@
-//! One piece's request, or a key's test, as its thread sends it: the shape builds it once; a broken link, a stall or a
-//! service down is tried again up to the run's tries; a 429 waits once for its `Retry-After`, held within the call's
-//! wait, then is the rate fault; every other fault is told at once. Every try waits its turn in the run's pace. A
-//! reply is read within `MAX_NET_REPLY_BYTES`, a redirect is never followed, and a dropped run's call stops mid-upload.
+//! One piece's request, or a key's test, built once and sent in turn with the run's pace: a broken link, a stall or a
+//! service down is tried again up to its tries, and a 429 waits once within the call's wait before it is the rate fault.
+//! Every other fault is told at once, a reply is read within `MAX_NET_REPLY_BYTES`, and a dropped run's call stops.
 
 use super::Kit;
 use super::pace::Pace;

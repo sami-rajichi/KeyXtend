@@ -1,7 +1,6 @@
-//! A listening run: the source's chunks become 16 kHz mono samples, recorded up to `record_max_s`, measured into
-//! levels at `level_hz` and cut at pauses into pieces for the engine's writer, or packed for a listen-only run's Stop.
-//! It stops itself at the limit, or after `silence_stop_s` of silence once speech was heard. Again cuts a held
-//! recording the same way, a stretch at a time.
+//! A listening run: the source's chunks become 16 kHz mono samples up to `record_max_s`, measured into levels at
+//! `level_hz` and cut at pauses into pieces for the engine's writer, or packed for a listen-only run's Stop. It stops at
+//! the limit or after `silence_stop_s` of silence once speech was heard, and Again cuts a held recording the same way.
 
 use super::Notes;
 use super::cut::{Cut, Cutter, Piece};

@@ -32,7 +32,7 @@ pub enum NetError {
     /// A call's header would break its head, or a GET carries a body; nothing was sent.
     #[error("a header would break the request")]
     Header,
-    /// The call was stopped before its body was all sent, as its run was cancelled.
+    /// The call was stopped before its answer was read, as its run was cancelled.
     #[error("the request was stopped")]
     Stopped,
     /// The system failed inside.

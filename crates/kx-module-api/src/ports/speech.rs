@@ -227,8 +227,8 @@ pub trait Speech: Send + Sync {
         tell: Box<dyn Fn(SpeechNote) + Send>,
     ) -> Result<CheckDone, SpeechError>;
 
-    /// The ISO 639 codes of the shipped check clips, in the order a model takes them: a card's check reads the first
-    /// one the model knows.
+    /// The ISO 639 codes of the shipped check clips, in order: a card's check reads the language in front's when the
+    /// model knows it, else the first one it knows (ADR-0052).
     fn clips(&self) -> Vec<String>;
 }
 
