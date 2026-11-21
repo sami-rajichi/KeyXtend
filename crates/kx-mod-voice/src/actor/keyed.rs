@@ -36,7 +36,7 @@ impl Actor {
     }
 
     /// The keys on the voice shelf, none in a hidden run.
-    fn keys(&self) -> Keys {
+    pub(super) fn keys(&self) -> Keys {
         Keys::new(Arc::clone(&self.ports.shelf), self.held.hidden)
     }
 

@@ -2,6 +2,7 @@
 //! row and `[voice]`, and its delivery in a job, which reads the key just before `send`.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use kx_module_api::ports::{
@@ -10,6 +11,7 @@ use kx_module_api::ports::{
 };
 use kx_module_api::{Redacted, Secret, SecretBytes};
 
+use super::{Actor, Back, Job, Msg};
 use crate::VoiceSettings;
 use crate::cloud::{Choice, Chosen};
 use crate::keys::{KEY_UNREAD, Keys};
@@ -114,4 +116,73 @@ pub(super) fn deliver(
     let sent = catch_unwind(AssertUnwindSafe(|| cloud.send(ask, tell)));
     sent.unwrap_or(Err(CloudFault::Gone))
         .map(|run| Some(Wired { _run: run }))
+}
+
+/// One upload's holder, a dictation's or a Compare model's: the ask's head until the speech comes, the flag a job
+/// between the key and `send` reads, and the service's run once `send` gave it.
+pub(super) struct Pending {
+    head: Option<Head>,
+    stop: Arc<AtomicBool>,
+    /// The service's run, held until it ends.
+    pub(super) run: Option<Wired>,
+}
+
+impl Pending {
+    /// An upload of `head`, its speech still to come.
+    pub(super) fn new(head: Head) -> Self {
+        Self {
+            head: Some(head),
+            stop: Arc::new(AtomicBool::new(false)),
+            run: None,
+        }
+    }
+
+    /// The head and the stop flag for its job, once the speech came; `None` after the first time.
+    pub(super) fn start(&mut self) -> Option<(Head, Arc<AtomicBool>)> {
+        Some((self.head.take()?, Arc::clone(&self.stop)))
+    }
+}
+
+impl Drop for Pending {
+    /// A dropped upload sends nothing more, and its run's requests are cancelled.
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(run) = self.run.take() {
+            shut(run);
+        }
+    }
+}
+
+impl Actor {
+    /// Reads the key and sends `job`'s head with `pieces` off the actor; `note` and `opened` build what goes back to
+    /// the inbox. False when the job could not start.
+    pub(super) fn post<N, O>(
+        &self,
+        (head, stop): (Head, Arc<AtomicBool>),
+        pieces: Vec<SecretBytes>,
+        note: N,
+        opened: O,
+    ) -> bool
+    where
+        N: Fn(CloudNote) -> Back + Clone + Send + 'static,
+        O: FnOnce(Wired) -> Back + Send + 'static,
+    {
+        let (back, cloud, keys) = (
+            self.ports.back.clone(),
+            self.ports.cloud.clone(),
+            self.keys(),
+        );
+        let job: Job = Box::new(move || {
+            let (notes, told) = (back.clone(), note.clone());
+            let tell: Tell = Box::new(move |n| drop(notes.send(Msg::Back(told(n)))));
+            let back_of = match deliver(cloud.as_deref(), &keys, head, pieces, &stop, tell) {
+                Ok(Some(run)) => opened(run),
+                Ok(None) => return,
+                Err(fault) => note(CloudNote::Fault(fault)),
+            };
+            // Only a stopped actor misses it, and the run then drops, which cancels it.
+            let _ = back.send(Msg::Back(back_of));
+        });
+        (self.ports.spawn)(job)
+    }
 }

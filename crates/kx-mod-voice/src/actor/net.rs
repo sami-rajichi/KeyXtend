@@ -3,44 +3,25 @@
 //! or at Halt, which cancels its requests.
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use kx_module_api::SecretBytes;
 use kx_module_api::ports::{CloudFault, CloudNote, SpeechError};
 
-use super::ask::{Head, Tell, Wired, deliver, head_of, shut};
+use super::ask::{Head, Pending, Wired, head_of, shut};
 use super::lanes::Owner;
 use super::trial::Trial;
-use super::{Actor, Back, Job, Msg};
+use super::{Actor, Back};
 use crate::flow::{In, Sent, Upload};
 use crate::keys::Keys;
 
-/// One dictation's upload.
+/// One dictation's upload; dropped at Halt, it sends nothing more.
 struct Up {
     round: u32,
-    /// The ask's head, until the speech comes.
-    head: Option<Head>,
-    /// Set at Halt, so a job between the key and `send` sends nothing.
-    stop: Arc<AtomicBool>,
-    /// The service's run, once `send` gave it.
-    run: Option<Wired>,
-}
-
-impl Drop for Up {
-    /// A dropped upload sends nothing more, and its run's requests are cancelled.
-    fn drop(&mut self) {
-        self.stop.store(true, Ordering::SeqCst);
-        if let Some(run) = self.run.take() {
-            shut(run);
-        }
-    }
+    pending: Pending,
 }
 
 /// The actor's cloud side: the keys, each dictation's upload and Compare's.
 pub(super) struct Uploads {
-    /// The run's saves would be hidden (ADR-0037), so cloud is off and no key is read.
-    pub hidden: bool,
     /// The keys on the voice shelf; a hidden run's has none.
     pub keys: Keys,
     ups: HashMap<u32, Up>,
@@ -49,10 +30,9 @@ pub(super) struct Uploads {
 }
 
 impl Uploads {
-    /// No upload yet, with `keys`, in a run that is `hidden` or not.
-    pub(super) fn new(keys: Keys, hidden: bool) -> Self {
+    /// No upload yet, with `keys`.
+    pub(super) fn new(keys: Keys) -> Self {
         Self {
-            hidden,
             keys,
             ups: HashMap::new(),
             trials: HashMap::new(),
@@ -82,12 +62,9 @@ impl Actor {
                 Sent::Note(CloudNote::Fault(CloudFault::Gone)),
             );
         };
-        let stop = Arc::new(AtomicBool::new(false));
         let entry = Up {
             round: up.round,
-            head: Some(head),
-            stop,
-            run: None,
+            pending: Pending::new(head),
         };
         self.net.ups.insert(up.take, entry);
         self.hand((Owner::Flow, up.take), up.round);
@@ -109,8 +86,8 @@ impl Actor {
         let Some(up) = self.net.ups.get_mut(&take).filter(|u| u.round == round) else {
             return;
         };
-        let (pieces, head) = match (pieces, up.head.take()) {
-            (Ok(pieces), Some(head)) if !pieces.is_empty() => (pieces, head),
+        let (pieces, job) = match (pieces, up.pending.start()) {
+            (Ok(pieces), Some(job)) if !pieces.is_empty() => (pieces, job),
             (pieces, _) => {
                 self.net.ups.remove(&take);
                 let sent = match pieces {
@@ -123,8 +100,14 @@ impl Actor {
                 return self.sent(take, round, sent);
             }
         };
-        let stop = Arc::clone(&up.stop);
-        self.post(take, round, head, pieces, stop);
+        let note = move |note| Back::Net { take, round, note };
+        if !self.post(job, pieces, note, move |run| Back::Sending {
+            take,
+            round,
+            run,
+        }) {
+            self.net_note(take, round, CloudNote::Fault(CloudFault::Gone));
+        }
     }
 
     /// A note from dictation `take`'s upload: its end drops the run, and its text comes after a look at the box.
@@ -144,7 +127,7 @@ impl Actor {
     /// The service's run opened: it is held until it ends, or dropped at once when it ended or was halted already.
     pub(super) fn opened_net(&mut self, take: u32, round: u32, run: Wired) {
         match self.net.ups.get_mut(&take).filter(|u| u.round == round) {
-            Some(up) => up.run = Some(run),
+            Some(up) => up.pending.run = Some(run),
             None => shut(run),
         }
     }
@@ -158,39 +141,6 @@ impl Actor {
             sent,
             at,
         });
-    }
-
-    /// Reads the key and sends, in a job off the actor; its notes and its run come back through the inbox.
-    fn post(
-        &mut self,
-        take: u32,
-        round: u32,
-        head: Head,
-        pieces: Vec<SecretBytes>,
-        stop: Arc<AtomicBool>,
-    ) {
-        let (back, cloud) = (self.ports.back.clone(), self.ports.cloud.clone());
-        let keys = Keys::new(Arc::clone(&self.ports.shelf), self.net.hidden);
-        let job: Job = Box::new(move || {
-            let notes = back.clone();
-            let tell: Tell = Box::new(move |note| {
-                drop(notes.send(Msg::Back(Back::Net { take, round, note })));
-            });
-            let back_of = match deliver(cloud.as_deref(), &keys, head, pieces, &stop, tell) {
-                Ok(Some(run)) => Back::Sending { take, round, run },
-                Ok(None) => return,
-                Err(fault) => Back::Net {
-                    take,
-                    round,
-                    note: CloudNote::Fault(fault),
-                },
-            };
-            // Only a stopped actor misses it, and the run then drops, which cancels it.
-            let _ = back.send(Msg::Back(back_of));
-        });
-        if !(self.ports.spawn)(job) {
-            self.net_note(take, round, CloudNote::Fault(CloudFault::Gone));
-        }
     }
 
     /// The head of `up`'s ask from the language's pick, while it still names `up`'s service.

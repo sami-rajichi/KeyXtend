@@ -92,7 +92,7 @@ impl Actor {
             typing: Typing::default(),
             pasting: Pasting::default(),
             jobs: Jobs::default(),
-            net: Uploads::new(keys, hidden),
+            net: Uploads::new(keys),
             inputs: VecDeque::new(),
             stepping: false,
             drawn: None,

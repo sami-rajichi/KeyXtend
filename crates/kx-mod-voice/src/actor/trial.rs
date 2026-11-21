@@ -2,41 +2,22 @@
 //! ticked model through `CloudSpeech`, with the dictation's rules: its service still on and ready for the language, the
 //! key read in the job just before `send`, none in a hidden run. Cancel, Back, Close or a newer run drops the uploads.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use kx_module_api::ports::{CloudFault, CloudNote, SpeechError};
 use kx_module_api::{Mono, SecretBytes};
 
-use super::ask::{Head, Tell, Wired, deliver, head_of, shut};
+use super::ask::{Head, Pending, Wired, head_of, shut};
 use super::lanes::{Lane, Owner};
-use super::{Actor, Back, Job, Msg};
+use super::{Actor, Back};
 use crate::compare::Remote;
-use crate::keys::Keys;
 
 /// The round Compare's hand-over is asked for, as its run hands its recording over once.
 const ONCE: u32 = 0;
 
-/// One cloud model's upload in a Compare run.
+/// One cloud model's upload in a Compare run; dropped, it sends nothing more.
 pub(super) struct Trial {
-    /// The ask's head, until the speech comes.
-    head: Option<Head>,
-    /// Set as it drops, so a job between the key and `send` sends nothing.
-    stop: Arc<AtomicBool>,
-    /// The service's run, once `send` gave it.
-    run: Option<Wired>,
+    pending: Pending,
     /// When the speech went, for the model's wait.
     since: Mono,
-}
-
-impl Drop for Trial {
-    /// A dropped upload sends nothing more, and its run's requests are cancelled.
-    fn drop(&mut self) {
-        self.stop.store(true, Ordering::SeqCst);
-        if let Some(run) = self.run.take() {
-            shut(run);
-        }
-    }
 }
 
 impl Actor {
@@ -50,14 +31,8 @@ impl Actor {
                 self.tell_compare(take, at, CloudNote::Fault(CloudFault::Gone), 0);
                 continue;
             };
-            let stop = Arc::new(AtomicBool::new(false));
-            let head = Some(head);
-            let trial = Trial {
-                head,
-                stop,
-                run: None,
-                since,
-            };
+            let pending = Pending::new(head);
+            let trial = Trial { pending, since };
             self.net.trials.insert((take, at), trial);
         }
         if !self.net.trials.is_empty() {
@@ -97,10 +72,11 @@ impl Actor {
                 continue;
             };
             trial.since = since;
-            let (head, stop) = (trial.head.take(), Arc::clone(&trial.stop));
-            match head.filter(|_| !pieces.is_empty()) {
-                Some(head) => self.post_trial((take, at), head, pieces.clone(), stop),
-                None => self.trial_note(take, at, CloudNote::Fault(CloudFault::Gone)),
+            let job = trial.pending.start().filter(|_| !pieces.is_empty());
+            let note = move |note| Back::Trial { take, at, note };
+            let opened = move |run| Back::Tried { take, at, run };
+            if !job.is_some_and(|job| self.post(job, pieces.clone(), note, opened)) {
+                self.trial_note(take, at, CloudNote::Fault(CloudFault::Gone));
             }
         }
     }
@@ -125,7 +101,7 @@ impl Actor {
     /// Model `at`'s service run opened: held until it ends, or dropped at once when its upload went.
     pub(super) fn tried(&mut self, take: u32, at: usize, run: Wired) {
         match self.net.trials.get_mut(&(take, at)) {
-            Some(trial) => trial.run = Some(run),
+            Some(trial) => trial.pending.run = Some(run),
             None => shut(run),
         }
     }
@@ -140,37 +116,6 @@ impl Actor {
         let now = self.ports.calendar.now();
         let dos = self.panel.compare_net(take, at, note, wait_ms, now);
         self.dos(dos);
-    }
-
-    /// Reads the key and sends, in a job off the actor; its notes and its run come back through the inbox.
-    fn post_trial(
-        &mut self,
-        (take, at): (u32, usize),
-        head: Head,
-        pieces: Vec<SecretBytes>,
-        stop: Arc<AtomicBool>,
-    ) {
-        let (back, cloud) = (self.ports.back.clone(), self.ports.cloud.clone());
-        let keys = Keys::new(Arc::clone(&self.ports.shelf), self.net.hidden);
-        let job: Job = Box::new(move || {
-            let notes = back.clone();
-            let tell: Tell =
-                Box::new(move |note| drop(notes.send(Msg::Back(Back::Trial { take, at, note }))));
-            let back_of = match deliver(cloud.as_deref(), &keys, head, pieces, &stop, tell) {
-                Ok(Some(run)) => Back::Tried { take, at, run },
-                Ok(None) => return,
-                Err(fault) => Back::Trial {
-                    take,
-                    at,
-                    note: CloudNote::Fault(fault),
-                },
-            };
-            // Only a stopped actor misses it, and the run then drops, which cancels it.
-            let _ = back.send(Msg::Back(back_of));
-        });
-        if !(self.ports.spawn)(job) {
-            self.trial_note(take, at, CloudNote::Fault(CloudFault::Gone));
-        }
     }
 
     /// The head of model `remote`'s ask for `lang`, while its service is on, its terms confirmed and the model usable.
