@@ -240,6 +240,7 @@ fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
         "CONTENT-LENGTH",
         "host",
         "User-Agent",
+        "user-AGENT",
     ] {
         let to = format!("model_header = \"{taken}\"");
         assert_eq!(own_err(named, &to), Some(E::Form), "{taken}");
