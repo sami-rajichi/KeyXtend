@@ -4,10 +4,6 @@ use super::*;
 use FactError as F;
 use ModelError as M;
 
-/// Groq's light price and free allowance, which the fact edits below break.
-const LIGHT: &str = "light = { id = \"free-or\", money = { low = 0.60, high = 1.67 } }";
-const FREE: &str = "free = { id = \"daily\", count = { hours = 8, per_min = 20 } }";
-
 /// The model error one edit of `rows`, put after the shipped text, gives, with the model's id.
 fn model_err(rows: &str, from: &str, to: &str) -> Option<(String, ModelError)> {
     let rows = edits_text(rows, &[(from, to)]);
@@ -77,7 +73,7 @@ fn a_model_takes_a_named_language_set_that_must_exist() {
         "the set as its own file writes it"
     );
     let turbo = Some((groq.models[0].id.clone(), M::Set));
-    let typo = edits(&[("langs = \"whisper\"", "langs = \"whispr\"")]);
+    let typo = edits(&[(groq_line("langs"), "langs = \"no-such-set\"")]);
     let typo = match typo {
         Err(ServicesError::Row {
             why: ServiceError::Model { id, why },
@@ -103,8 +99,9 @@ fn groqs_least_billed_length_is_a_fact_the_validator_checks() {
     let bills = shipped().get("groq").unwrap().facts.bills.clone().unwrap();
     assert_eq!((bills.id.as_str(), bills.args.len()), ("least", 1));
     assert!(shipped().get("custom").unwrap().facts.bills.is_none());
-    let least = "bills = { id = \"least\", count = { seconds = 10 } }";
-    refused(least, &least.replace("least", "Least"), "bills", F::Id);
+    let least = groq_line("bills");
+    let upper = with_field(least, "id", &field_of(least, "id").to_uppercase());
+    refused(least, &upper, "bills", F::Id);
 }
 
 #[test]
@@ -122,46 +119,44 @@ fn a_model_on_a_shape_that_needs_a_name_or_takes_no_form_is_refused() {
 
 #[test]
 fn a_fact_that_breaks_a_rule_is_refused_by_its_name() {
-    let source = "source = \"https://console.groq.com/docs/your-data\"\n";
-    refused(
-        "read = 2026-11-17",
-        "read = 2026-11-17T10:00:00",
-        "facts",
-        F::Day,
-    );
-    refused(
-        source,
-        &source.replace("https://", "http://"),
-        "facts",
-        F::Source,
-    );
-    refused(source, "", "facts", F::Source);
-    refused(
-        "currency = \"USD\"",
-        "currency = \"usd\"",
-        "facts",
-        F::Currency,
-    );
-    refused("currency = \"USD\"\n", "", "light", F::Currency);
-    refused(LIGHT, &LIGHT.replace("0.60", "0.605"), "light", F::Amount);
-    refused(LIGHT, &LIGHT.replace("0.60", "-1.0"), "light", F::Amount);
-    refused(
-        "place = { id = \"us\" }",
-        "place = { id = \"US\" }",
-        "place",
-        F::Id,
-    );
-    let switch = "switch = \"Settings → Data Controls\"";
-    refused(switch, "switch = \"a\\nb\"", "keeps", F::Text);
+    let (read, source) = (groq_line("read"), groq_line("source"));
+    refused(read, &format!("{read}T10:00:00"), "facts", F::Day);
+    let http = source.replace("https://", "http://");
+    refused(source, &http, "facts", F::Source);
+    refused(&format!("{source}\n"), "", "facts", F::Source);
+    let currency = groq_line("currency");
+    refused(currency, &currency.to_lowercase(), "facts", F::Currency);
+    refused(&format!("{currency}\n"), "", "light", F::Currency);
+    let light = groq_line("light");
+    for low in ["0.605", "-1.0"] {
+        refused(light, &with_field(light, "low", low), "light", F::Amount);
+    }
+    let place = groq_line("place");
+    let upper = with_field(place, "id", &field_of(place, "id").to_uppercase());
+    refused(place, &upper, "place", F::Id);
+    let keeps = groq_line("keeps");
+    let odd = with_field(keeps, "switch", "\"a\\nb\"");
+    refused(keeps, &odd, "keeps", F::Text);
 }
 
 #[test]
 fn a_fact_value_with_an_odd_or_twice_given_name_or_day_is_refused() {
-    let twice = FREE.replace("per_min = 20 }", "per_min = 20 }, number = { hours = 1.0 }");
-    refused(FREE, &twice, "free", F::Arg);
-    refused(FREE, &FREE.replace("hours", "Hours"), "free", F::Arg);
-    let day = "free = { id = \"daily\", day = { until = 2026-12-31T00:00:00 } }";
-    refused(FREE, day, "free", F::Day);
+    let free = groq_line("free");
+    let group = free.splitn(3, "{ ").nth(2).unwrap_or_default();
+    let first = group.split(" = ").next().unwrap_or_default();
+    let open = free.strip_suffix(" }").unwrap_or(free);
+    let twice = format!("{open}, number = {{ {first} = 1.0 }} }}");
+    refused(free, &twice, "free", F::Arg);
+    let upper = format!("{} =", first.to_uppercase());
+    refused(
+        free,
+        &free.replacen(&format!("{first} ="), &upper, 1),
+        "free",
+        F::Arg,
+    );
+    let until = "day = { until = 2026-12-31T00:00:00 }";
+    let day = format!("free = {{ id = {}, {until} }}", field_of(free, "id"));
+    refused(free, &day, "free", F::Day);
 }
 
 #[test]

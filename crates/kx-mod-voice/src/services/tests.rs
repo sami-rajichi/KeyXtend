@@ -6,6 +6,7 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
+mod keyed;
 mod langs;
 mod parts;
 mod refuse;
@@ -14,6 +15,8 @@ mod research;
 mod room;
 pub(crate) mod shipped;
 mod split;
+
+use keyed::{field_of, groq_line, head_line, own_line, row_edit, with_field};
 
 /// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.
 pub(crate) const TEXT: &str = include_str!("../../services.toml");
