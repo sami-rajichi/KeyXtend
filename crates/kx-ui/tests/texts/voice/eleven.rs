@@ -6,7 +6,7 @@
 use crate::lang;
 use kx_mod_voice::services::table;
 use kx_module_api::ports::{Fact, FactArg, FactValue, Hundredths};
-use kx_ui::LANGS;
+use kx_ui::find;
 use kx_ui::i18n::keys::{
     CARD_RULE, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE, FACT_TRAINS, FACT_WARN, VOICE_CARD,
     warn_mark_key,
@@ -65,7 +65,7 @@ const MINUTES: [(u32, [&str; 3]); 5] = [
         1,
         [
             "About 1 minute a month",
-            "Environ 1 minute par mois",
+            "Environ 1\u{a0}minute par mois",
             "نحو دقيقة واحدة شهريًا",
         ],
     ),
@@ -73,7 +73,7 @@ const MINUTES: [(u32, [&str; 3]); 5] = [
         2,
         [
             "About 2 minutes a month",
-            "Environ 2 minutes par mois",
+            "Environ 2\u{a0}minutes par mois",
             "نحو دقيقتين شهريًا",
         ],
     ),
@@ -81,7 +81,7 @@ const MINUTES: [(u32, [&str; 3]); 5] = [
         3,
         [
             "About 3 minutes a month",
-            "Environ 3 minutes par mois",
+            "Environ 3\u{a0}minutes par mois",
             "نحو 3 دقائق شهريًا",
         ],
     ),
@@ -89,7 +89,7 @@ const MINUTES: [(u32, [&str; 3]); 5] = [
         30,
         [
             "About 30 minutes a month",
-            "Environ 30 minutes par mois",
+            "Environ 30\u{a0}minutes par mois",
             "نحو 30 دقيقة شهريًا",
         ],
     ),
@@ -97,7 +97,7 @@ const MINUTES: [(u32, [&str; 3]); 5] = [
         100,
         [
             "About 100 minutes a month",
-            "Environ 100 minutes par mois",
+            "Environ 100\u{a0}minutes par mois",
             "نحو 100 دقيقة شهريًا",
         ],
     ),
@@ -190,15 +190,15 @@ fn own_warning() -> Fact {
 #[test]
 fn its_mark_and_first_sentence_are_the_shared_ones_written_once_in_each_language() {
     let id = own_warning().id;
-    for (l, (shared, own)) in LANGS.iter().zip(SHARED.into_iter().zip(WARNED)) {
-        let t = lang(l.tag);
+    for (tag, (shared, own)) in TAGS.into_iter().zip(SHARED.into_iter().zip(WARNED)) {
+        let (t, l) = (lang(tag), find(tag).expect("a shipped language"));
         let mark = t.text(&warn_mark_key("trains"));
-        assert_eq!(t.text(&warn_mark_key(&id)), mark, "{}: one mark", l.tag);
+        assert_eq!(t.text(&warn_mark_key(&id)), mark, "{tag}: one mark");
         let first = shared.split_inclusive(". ").next().expect("a sentence");
-        assert!(own.starts_with(first), "{}: one first sentence", l.tag);
+        assert!(own.starts_with(first), "{tag}: one first sentence");
         let files = l.files().collect::<String>();
         for once in [mark.as_str(), first.trim_end()] {
-            assert_eq!(files.matches(once).count(), 1, "{}: {once}", l.tag);
+            assert_eq!(files.matches(once).count(), 1, "{tag}: {once}");
         }
     }
 }

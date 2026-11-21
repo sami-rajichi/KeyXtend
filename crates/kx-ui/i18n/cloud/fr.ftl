@@ -38,6 +38,7 @@ cloud =
     }
     .card-read-on = Informations relevées le { $date }.
     .card-old = Elles datent peut-être ; vérifiez la page du service.
+    .card-read-old = { cloud.card-read-on } { cloud.card-old }
     .card-link = Ouvrir { $site }
     .card-confirm = Confirmer
     .card-ask = Votre voix ne part vers { $name } qu’après l’arrêt, avec votre propre clé.
@@ -82,7 +83,7 @@ cloud =
     .fact-free-first-buy = Aucun ; premier achat d’au moins { $least }
     .fact-free-first-month = Le premier mois
     .fact-free-small = Un petit quota pour les nouveaux comptes
-    .fact-free-minutes-month = Environ { $minutes } { $minutes-form ->
+    .fact-free-minutes-month = Environ { $minutes } { $minutes-form ->
         [one] minute
        *[other] minutes
     } par mois

@@ -44,6 +44,8 @@ pub const VOICE_CARD_HOURS: &str = "cloud.card-hours";
 pub const VOICE_CARD_READ_ON: &str = "cloud.card-read-on";
 /// The words after the day once the facts are old.
 pub const VOICE_CARD_OLD: &str = "cloud.card-old";
+/// What readers hear of the day read and the words after it, in the language's order.
+pub const VOICE_CARD_READ_OLD: &str = "cloud.card-read-old";
 /// The card's link: `$site`.
 pub const VOICE_CARD_LINK: &str = "cloud.card-link";
 /// The card's Confirm.

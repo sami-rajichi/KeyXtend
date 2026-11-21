@@ -19,7 +19,7 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CloudButton, CloudLine, CloudWhy, LinesPart, PanelButton, ServiceName, ServiceSheet,
+    CloudButton, CloudLine, CloudWhy, KeyCheck, LinesPart, PanelButton, ServiceName, ServiceSheet,
     Unavailable,
 };
 use serde::Serialize;
@@ -74,12 +74,43 @@ impl LineView {
     }
 }
 
+/// The key test's answer, lit when the key works or a warning band when it warns, so QML keeps no list of answers.
+#[derive(Serialize)]
+struct Check {
+    #[serde(flatten)]
+    hint: Hint,
+    works: bool,
+    warns: bool,
+}
+
+impl Check {
+    /// The answer `hint` for test state `check`; a test that runs or a row with none is plain.
+    fn new(check: KeyCheck, hint: Hint) -> Self {
+        use KeyCheck as K;
+        let (works, warns) = match check {
+            K::Works => (true, false),
+            K::Untested | K::Testing | K::NoTest => (false, false),
+            K::Refused
+            | K::Failed
+            | K::Credit
+            | K::Account
+            | K::Region
+            | K::Allowance
+            | K::Rate
+            | K::Strange
+            | K::Unfit
+            | K::Busy => (false, true),
+        };
+        Self { hint, works, warns }
+    }
+}
+
 /// The key page's body: the key line, the test's answer, the address and model lines, keep-nothing and where keys are
 /// made; a part of two shows only its own.
 #[derive(Serialize)]
 pub(super) struct KeyPage {
     key: Option<LineView>,
-    check: Option<Hint>,
+    check: Option<Check>,
     address: Option<LineView>,
     model: Option<LineView>,
     keep: Option<Switch>,
@@ -96,7 +127,7 @@ pub(super) fn page(cx: &Cx<'_>, s: &ServiceSheet) -> Page {
     );
     let check = key_check_id(s.check)
         .zip(t.voice_key_check(s.check, s.renews_at))
-        .map(|(id, text)| Hint::new(id, text));
+        .map(|(id, text)| Check::new(s.check, Hint::new(id, text)));
     let link = s.site.as_ref().map(|site| {
         let text = t.voice_with(VOICE_KEY_LINK, &[(SITE, clean(site))]);
         let open = t.text(&word(panel_button_id(PanelButton::Open)));

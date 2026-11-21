@@ -43,6 +43,7 @@ cloud =
     }
     .card-read-on = قُرئت هذه المعلومات في { $date }.
     .card-old = قد تكون قديمة، فراجع صفحة الخدمة.
+    .card-read-old = { cloud.card-read-on } { cloud.card-old }
     .card-link = فتح { $site }
     .card-confirm = تأكيد
     .card-ask = لا يُرسَل صوتك إلى { $name } إلا بعد الإيقاف، وبمفتاحك الخاص.

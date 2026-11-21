@@ -132,7 +132,7 @@ Item {
             const box = make("card", d.t);
             const s = box.view.sheet;
             for (const f of s.facts)
-                compare(heard(box.contentItem, f.label + " " + f.value.text).length, 1, f.id);
+                compare(heard(box.contentItem, f.said).length, 1, f.id);
             compare(heard(box.contentItem, s.read.text).length, 1, "the day the facts were read");
             const day = Kit.texts(box.contentItem, s.read.text)[0];
             verify(Qt.colorEqual(day.color, N.lk.palette.pop_muted), "a recent day stays muted");
@@ -151,7 +151,7 @@ Item {
         function test_an_old_card_says_so_in_the_warning_tone(d) {
             const box = make("cardOld", d.t);
             const s = box.view.sheet;
-            compare(heard(box.contentItem, s.read.text + " " + s.read.old).length, 1, "edge 15: the facts may be old");
+            compare(heard(box.contentItem, s.read.said).length, 1, "edge 15: the facts may be old");
             const old = Kit.texts(box.contentItem, s.read.old)[0];
             verify(Qt.colorEqual(old.color, N.lk.palette.warn_ink), "in warn_ink");
             const day = Kit.texts(box.contentItem, s.read.text)[0];
@@ -269,7 +269,7 @@ Item {
             const s = box.view.sheet;
             compare(Kit.only(warnings(box)).Accessible.name, s.send, "the send warning before Start");
             const p = s.picks[0];
-            compare(heard(box.contentItem, p.name + " " + p.service).length, 1, "a ticked cloud model");
+            compare(heard(box.contentItem, p.said).length, 1, "a ticked cloud model");
             const run = make("comparingCloud", d.t);
             compare(rows(run)[0].Accessible.description, run.view.sheet.rows[0].why, "carry 5: why it failed");
             box.visible = run.visible = false;

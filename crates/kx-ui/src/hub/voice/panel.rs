@@ -3,7 +3,8 @@
 //! The home list lives here; the other pages build their own part.
 
 use super::acts::CONFIRM;
-use super::cloud::{self, FactView, Lead, Read, ServiceView, Switch};
+use super::card::{self, FactView, Read};
+use super::cloud::{self, Lead, ServiceView, Switch};
 use super::parts::{Button, Hint, Lang, Tone, Top, word};
 use super::service;
 use super::{device, lists, options, sheets};
@@ -215,7 +216,7 @@ pub(super) fn of(panel: &VoicePanel, t: &I18n, read: Option<&str>) -> Panel {
         VoiceSheet::History(h) => lists::history(&cx, h),
         VoiceSheet::Options(rows) => options::page(&cx, rows),
         VoiceSheet::Cloud(c) => cloud::page(&cx, c),
-        VoiceSheet::Card(c) => cloud::card(&cx, c),
+        VoiceSheet::Card(c) => card::card(&cx, c),
         VoiceSheet::Service(s) => service::page(&cx, s),
     };
     // Back and Close always act: the module names only the buttons that may dim.

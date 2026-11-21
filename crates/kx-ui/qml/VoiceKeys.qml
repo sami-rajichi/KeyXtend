@@ -25,8 +25,8 @@ Item {
     // The pager's room beside the lines while the page has more than one part.
     readonly property real pager: host.view.pages.count > 1 ? (pn.body_gap_px + pn.page_px[0]) * s : 0
     // The key works, which shows as a lit mark; or its answer warns, which shows as a warning band (mock-up .res.bad).
-    readonly property bool works: shows && !!sheet.check && sheet.check.id === names.works
-    readonly property bool refused: shows && !!sheet.check && names.refused.indexOf(sheet.check.id) >= 0
+    readonly property bool works: shows && !!sheet.check && sheet.check.works
+    readonly property bool refused: shows && !!sheet.check && sheet.check.warns
     readonly property alias body: col
 
     height: (pn.body_pad_px[0] + pn.body_pad_px[2]) * s + host.pageH

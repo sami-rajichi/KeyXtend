@@ -139,6 +139,23 @@ fn a_card_fills_its_facts_from_the_row_the_voice_then_the_price_with_the_least_b
     );
 }
 
+/// Readers hear a fact's label then its sentence, and the day read then the words after it, joined in the language.
+#[test]
+fn readers_hear_each_fact_and_the_day_read_as_one_line() {
+    let p = card_json(groq_card());
+    let all = p["sheet"]["facts"].as_array().cloned().unwrap_or_default();
+    for (f, (id, label, text, _)) in all.iter().zip(facts(&p)) {
+        assert_eq!(f["said"], format!("{label}, {text}"), "{id}");
+    }
+    assert_eq!(p["sheet"]["read"]["said"], "Facts read on 17/11/2026.");
+    let old = card_json(CloudCard {
+        old: true,
+        ..groq_card()
+    });
+    let said = "Facts read on 17/11/2026. They may be out of date; check the service’s page.";
+    assert_eq!(old["sheet"]["read"]["said"], said, "edge 15");
+}
+
 #[test]
 fn a_card_asks_with_the_day_read_its_link_and_untested() {
     let p = card_json(groq_card());

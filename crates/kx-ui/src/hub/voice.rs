@@ -3,6 +3,7 @@
 //! handle limited to the `ui` module's capabilities. Nothing here logs a text, a name or a path.
 
 pub mod acts;
+mod card;
 mod cloud;
 mod device;
 mod lists;
@@ -100,11 +101,9 @@ impl Hub {
     }
 
     /// Sends the click `kind` names (one of `acts`) with `id` and `arg` on the view of round `round`, sounding as a key
-    /// does unless `silent`. A click before any view or a bad one, which warns, sends nothing; call it on the Qt thread.
+    /// does unless `silent`. A click before any view or a bad one, which warns, sends and sounds nothing; call it on the
+    /// Qt thread.
     pub fn voice_act(&self, kind: &str, id: &str, arg: i32, round: i64) {
-        if !silent(kind) {
-            self.tapped();
-        }
         if self.voice().page.is_none() {
             tracing::debug!("a late voice click was dropped");
             return;
@@ -115,6 +114,9 @@ impl Hub {
             tracing::warn!(arg, "QML sent an unknown voice click or a bad argument");
             return;
         };
+        if !silent(kind) {
+            self.tapped();
+        }
         let click = match click {
             Click::Gear => return self.voice_send(&VoiceOpen),
             Click::Compare => {

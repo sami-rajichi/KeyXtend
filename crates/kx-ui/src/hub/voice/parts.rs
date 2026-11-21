@@ -3,7 +3,7 @@
 
 use super::acts::{BAR, BUTTON};
 use crate::I18n;
-use crate::i18n::keys::{VOICE_WORD, bar_button_id, bar_hint_id, panel_button_id};
+use crate::i18n::keys::{VOICE_JOIN, VOICE_WORD, bar_button_id, bar_hint_id, panel_button_id};
 use kx_module_api::ports::{BarButton, BarHint, PanelButton, VoiceLang};
 use serde::Serialize;
 
@@ -161,4 +161,9 @@ impl Top {
 /// The voice key of word `id`.
 pub(super) fn word(id: &str) -> String {
     format!("{VOICE_WORD}{id}")
+}
+
+/// The line readers hear of `first` then `then`, joined in `t`'s language.
+pub(super) fn heard(t: &I18n, first: &str, then: &str) -> String {
+    [first, then].join(&t.text(VOICE_JOIN))
 }

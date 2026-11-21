@@ -45,7 +45,7 @@ Item {
                     width: col.width
                     height: Math.max(key.height, words.height)
                     Accessible.role: Accessible.StaticText
-                    Accessible.name: modelData.label + " " + modelData.value.text
+                    Accessible.name: modelData.said
                     Label {
                         id: key
                         width: card.lk.shape.voice.fact_px * card.s
@@ -76,6 +76,7 @@ Item {
             icon: card.lk.icons.voice.panel.cloud.read
             text: card.read ? card.read.text : ""
             more: card.read && card.read.old ? card.read.old : ""
+            said: card.read ? card.read.said : ""
             button: card.read ? card.read.link : null
         }
         Note {
@@ -119,11 +120,13 @@ Item {
         property string icon: ""
         property string text: ""
         property string more: ""
+        // The line readers hear, which the hub joins in the language; the line alone when empty.
+        property string said: ""
         property var button: null
         width: col.width
         height: Math.max(glyph.height, line.height, press.visible ? press.height : 0)
         Accessible.role: Accessible.StaticText
-        Accessible.name: more ? text + " " + more : text
+        Accessible.name: said || text
         Icon {
             id: glyph
             anchors.verticalCenter: parent.verticalCenter

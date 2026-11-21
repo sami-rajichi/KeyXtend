@@ -124,9 +124,11 @@ fn compare_lists_its_cloud_models_and_warns_where_the_voice_goes_before_start() 
         send: vec![groq(), ServiceName::Custom],
     });
     let p = panel_json(&rig, &heard, panel(sheet));
-    let picks = json!([{"name": "Whisper Large v3 Turbo", "service": "Groq", "tick": true}]);
+    let said = "Whisper Large v3 Turbo, Groq";
+    let picks =
+        json!([{"name": "Whisper Large v3 Turbo", "service": "Groq", "said": said, "tick": true}]);
     assert_eq!(p["sheet"]["picks"], picks);
-    let send = "Compare sends your voice to Groq, Custom address at Stop.";
+    let send = "Compare sends your voice to Groq, the address you type at Stop.";
     assert_eq!(p["sheet"]["send"], send);
 }
 
@@ -167,9 +169,18 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
     heard.view(shown.clone());
     assert_eq!(json(&rig)["cloud"], Value::Null);
     shown.cloud = Some(groq());
-    heard.view(shown);
+    heard.view(shown.clone());
     let mark = json!({"name": "Groq", "said": "Your voice goes to Groq at Stop"});
     assert_eq!(json(&rig)["cloud"], mark);
+    shown.cloud = Some(ServiceName::Custom);
+    heard.view(shown);
+    let said = "Your voice goes to the address you type at Stop";
+    let mark = json!({"name": "Custom address", "said": said});
+    assert_eq!(
+        json(&rig)["cloud"],
+        mark,
+        "a sentence names Custom mid-line"
+    );
 }
 
 /// The bar's two rows for a cloud note on `why` with `local`, and Try again when `again`: its buttons, then the acts

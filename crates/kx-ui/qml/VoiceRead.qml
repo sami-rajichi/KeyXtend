@@ -69,7 +69,7 @@ Item {
                     required property var modelData
                     spacing: read.lk.shape.chip.gap_px * read.s
                     Accessible.role: Accessible.StaticText
-                    Accessible.name: modelData.name + " " + modelData.service
+                    Accessible.name: modelData.said
                     Label {
                         anchors.verticalCenter: parent.verticalCenter
                         text: pick.modelData.name

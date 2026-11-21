@@ -1,30 +1,25 @@
-//! The cloud pages as QML reads them (ADR-0047): the Cloud page with its switch and services, a service's card with
-//! its facts, the day they were read and its link, and the parts the key page, Models, Compare and the bar share.
+//! The cloud pages as QML reads them (ADR-0047): the Cloud page with its switch and services, and the parts the card,
+//! the key page, Models, Compare and the bar share.
 
-use super::acts::{CLOUD, CONFIRM, OPEN, SERVICE};
+use super::acts::{CLOUD, OPEN, SERVICE};
 use super::panel::{Cx, Page, Sheet};
-use super::parts::{Button, Hint, Tone, word};
+use super::parts::{Button, Hint, Tone, heard};
 use super::sheets::{mark, mark_key, tab_id};
 use crate::I18n;
-use crate::i18n::keys::vars::{DATE, FREE, HOURS, NAME, NAMES, SITE};
+use crate::i18n::clean;
+use crate::i18n::keys::vars::{FREE, NAME, NAMES};
 use crate::i18n::keys::{
-    CARD_BILLS, CARD_LABELS, CARD_RULE, FACT_BILLS, FACT_FREE, FACT_KEEPS, FACT_PRICE, FACT_RULE,
-    FACT_TRAINS, FACT_WARN, FACT_WHERE, VOICE_CARD, VOICE_CARD_ASK, VOICE_CARD_CONFIRM,
-    VOICE_CARD_CUSTOM, VOICE_CARD_HOURS, VOICE_CARD_LINK, VOICE_CARD_OLD, VOICE_CARD_ON,
-    VOICE_CARD_READ_ON, VOICE_CARD_SUB, VOICE_CARD_UNTESTED, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL,
-    VOICE_CLOUD_OFF, VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE,
-    VOICE_JOIN, VOICE_OFF, VOICE_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VoiceMark,
-    cloud_button_id, cloud_button_key, panel_button_id, service_mark, warn_mark_key,
+    FACT_FREE, VOICE_CARD_CUSTOM, VOICE_CLOUD_FREE, VOICE_CLOUD_MODEL, VOICE_CLOUD_OFF,
+    VOICE_CLOUD_SUB, VOICE_CLOUD_SWITCH, VOICE_CUSTOM, VOICE_CUSTOM_LINE, VOICE_OFF, VOICE_ON,
+    VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VoiceMark, cloud_button_id, cloud_button_key,
+    service_mark, warn_mark_key,
 };
-use crate::i18n::{Said, clean};
 use kx_module_api::ports::{
-    CardPart, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud, Fact,
-    PanelButton, ServiceMark, ServiceName, ServiceRow, UsePrice, VoiceTab,
+    CloudButton, CloudRow, CloudSheet, CloudWhy, CompareCloud, ServiceMark, ServiceName,
+    ServiceRow, VoiceTab,
 };
 use serde::Serialize;
 
-/// The card's page id.
-pub(super) const CARD: &str = "card";
 /// The id of the mark naming a cloud model's service, which takes the cloud icon.
 const MARK_CLOUD: &str = "cloud";
 /// The id of a row's warning mark, which takes the warning tone; its word is its warning fact's own.
@@ -76,28 +71,12 @@ pub(super) struct ServiceView {
     tick: bool,
 }
 
-/// A card's fact: its label's id and words, its sentence in parts, and whether it takes the warning tone.
-#[derive(Serialize)]
-pub(super) struct FactView {
-    id: &'static str,
-    label: String,
-    value: Said,
-    warn: bool,
-}
-
-/// The day a card's facts were read, the words after it once they are old, and the link to the service's page.
-#[derive(Serialize)]
-pub(super) struct Read {
-    text: String,
-    old: Option<String>,
-    link: Option<Button>,
-}
-
-/// A cloud model Compare may send the recording to, with its service, ticked or not.
+/// A cloud model Compare may send the recording to, with its service, the line readers hear, ticked or not.
 #[derive(Serialize)]
 pub(super) struct PickView {
     name: String,
     service: String,
+    said: String,
     tick: bool,
 }
 
@@ -113,6 +92,14 @@ pub(super) fn service(t: &I18n, name: &ServiceName) -> String {
     match name {
         ServiceName::Named(n) => clean(n),
         ServiceName::Custom => t.text(VOICE_CUSTOM),
+    }
+}
+
+/// Service `name` inside a sentence; the Custom row as the address the user types.
+pub(super) fn in_sentence(t: &I18n, name: &ServiceName) -> String {
+    match name {
+        ServiceName::Named(n) => clean(n),
+        ServiceName::Custom => t.text(VOICE_CARD_CUSTOM),
     }
 }
 
@@ -175,82 +162,6 @@ fn row(t: &I18n, r: &ServiceRow) -> ServiceView {
     }
 }
 
-/// A service's card: its facts, the day read with the link, Untested and the warning; Cancel and Confirm while it
-/// asks, else the day it was switched on.
-pub(super) fn card(cx: &Cx<'_>, c: &CloudCard) -> Page {
-    let t = cx.t;
-    let read = t.voice_with(VOICE_CARD_READ_ON, &[(DATE, t.voice_date(c.read))]);
-    let link = c.site.as_ref().map(|s| {
-        let label = t.voice_with(VOICE_CARD_LINK, &[(SITE, clean(s))]);
-        Button::new(SERVICE, cloud_button_id(CloudButton::Link), 0, label)
-    });
-    let sheet = Sheet::Card {
-        facts: facts(t, c),
-        read: Read {
-            text: read,
-            old: c.old.then(|| t.text(VOICE_CARD_OLD)),
-            link,
-        },
-        untested: c.untested.then(|| t.text(VOICE_CARD_UNTESTED)),
-        warn: c.warn.as_ref().map(|w| t.voice_fact(FACT_WARN, w)),
-    };
-    let sub = c.on.map_or_else(
-        || t.text(VOICE_CARD_SUB),
-        |d| t.voice_with(VOICE_CARD_ON, &[(DATE, t.voice_date(d))]),
-    );
-    let mut page = Page::new(CARD, service(t, &c.service), sub, sheet);
-    if c.on.is_none() {
-        let who = match &c.service {
-            ServiceName::Named(n) => clean(n),
-            ServiceName::Custom => t.text(VOICE_CARD_CUSTOM),
-        };
-        page.line = Some(t.voice_with(VOICE_CARD_ASK, &[(NAME, who)]));
-        let cancel = word(panel_button_id(PanelButton::Cancel));
-        let yes = Button::new(CONFIRM, "", 1, t.text(VOICE_CARD_CONFIRM));
-        page.foot = vec![
-            Button::new(CONFIRM, "", 0, t.text(&cancel)),
-            yes.tone(Tone::Primary),
-        ];
-    }
-    page
-}
-
-/// The facts of the card's shown part in their fixed order, then the least billed and the service's rule if any.
-fn facts(t: &I18n, c: &CloudCard) -> Vec<FactView> {
-    let label = |id: &str| t.text(&format!("{VOICE_CARD}{id}"));
-    let fact = |id, label, group, f: &Fact| FactView {
-        id,
-        label,
-        value: t.voice_fact(group, f),
-        warn: f.warn,
-    };
-    let used = |id, u: &UsePrice| {
-        let hours = t.counted(VOICE_CARD_HOURS, usize::from(u.hours));
-        let label = t.voice_with(&format!("{VOICE_CARD}{id}"), &[(HOURS, hours)]);
-        fact(id, label, FACT_PRICE, &u.price)
-    };
-    let [place, trains, keeps, free, light, heavy] = CARD_LABELS;
-    match c.part {
-        CardPart::Voice => vec![
-            fact(place, label(place), FACT_WHERE, &c.place),
-            fact(trains, label(trains), FACT_TRAINS, &c.trains),
-            fact(keeps, label(keeps), FACT_KEEPS, &c.keeps),
-        ],
-        CardPart::Price => {
-            let mut out = vec![
-                fact(free, label(free), FACT_FREE, &c.free),
-                used(light, &c.light),
-                used(heavy, &c.heavy),
-            ];
-            let bills = c.bills.as_ref();
-            out.extend(bills.map(|b| fact(CARD_BILLS, label(CARD_BILLS), FACT_BILLS, b)));
-            let rule = c.rule.as_ref();
-            out.extend(rule.map(|r| fact(CARD_RULE, label(CARD_RULE), FACT_RULE, r)));
-            out
-        }
-    }
-}
-
 /// A cloud model's line and marks on Models: in the cloud, or why it cannot be used now; its service, then where it
 /// stands, In use while it is the pick.
 pub(super) fn model(t: &I18n, used: bool, c: &CloudRow) -> (String, Vec<Hint>) {
@@ -270,23 +181,26 @@ pub(super) fn model(t: &I18n, used: bool, c: &CloudRow) -> (String, Vec<Hint>) {
 
 /// Compare's cloud model `c`.
 pub(super) fn pick(t: &I18n, c: &CompareCloud) -> PickView {
+    let (name, service) = (clean(c.name.expose()), service(t, &c.service));
     PickView {
-        name: clean(c.name.expose()),
-        service: service(t, &c.service),
+        said: heard(t, &name, &service),
+        name,
+        service,
         tick: c.tick,
     }
 }
 
-/// Compare's warning before Start, naming the services the recording goes to; `None` for none.
+/// Compare's warning before Start, naming the services the recording goes to in a list; `None` for none.
 pub(super) fn send(t: &I18n, send: &[ServiceName]) -> Option<String> {
-    let names: Vec<String> = send.iter().map(|s| service(t, s)).collect();
-    let names = names.join(&t.text(VOICE_JOIN));
-    (!send.is_empty()).then(|| t.voice_with(VOICE_SEND_WARNING, &[(NAMES, names)]))
+    let names: Vec<String> = send.iter().map(|s| in_sentence(t, s)).collect();
+    (!send.is_empty()).then(|| t.voice_with(VOICE_SEND_WARNING, &[(NAMES, t.list(&names, 0))]))
 }
 
-/// The bar's cloud mark for `name`.
+/// The bar's cloud mark for `name`, which its sentence names as a sentence does.
 pub(super) fn cloud_mark(t: &I18n, name: &ServiceName) -> CloudMark {
-    let name = service(t, name);
-    let said = t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, name.clone())]);
-    CloudMark { name, said }
+    let said = t.voice_with(VOICE_ON_BAR_CLOUD, &[(NAME, in_sentence(t, name))]);
+    CloudMark {
+        name: service(t, name),
+        said,
+    }
 }

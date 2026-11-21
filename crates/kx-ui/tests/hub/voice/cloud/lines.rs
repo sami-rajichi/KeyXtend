@@ -256,3 +256,25 @@ fn a_key_page_in_two_parts_shows_the_key_then_the_address_model_and_keep_nothing
     assert_eq!(typed, (Some("http://lan.example"), Some("no such/model")));
     assert_eq!(sheet["keep"]["on"], true);
 }
+
+/// The test's answer shows lit only when the key works, as a warning band when it warns, and plain while it tests or the
+/// row has none, so QML holds no list of answers.
+#[test]
+fn each_key_tests_answer_tells_qml_whether_it_works_or_warns() {
+    for check in KeyCheck::ALL {
+        let mut lines = groq_lines();
+        lines.check = check;
+        let c = &lines_json(lines)["sheet"]["check"];
+        let want = match check {
+            KeyCheck::Untested => (None, None),
+            KeyCheck::Works => (Some(true), Some(false)),
+            KeyCheck::Testing | KeyCheck::NoTest => (Some(false), Some(false)),
+            _ => (Some(false), Some(true)),
+        };
+        assert_eq!(
+            (c["works"].as_bool(), c["warns"].as_bool()),
+            want,
+            "{check:?}"
+        );
+    }
+}

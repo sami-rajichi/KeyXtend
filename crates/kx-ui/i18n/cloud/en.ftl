@@ -38,6 +38,7 @@ cloud =
     }
     .card-read-on = Facts read on { $date }.
     .card-old = They may be out of date; check the service’s page.
+    .card-read-old = { cloud.card-read-on } { cloud.card-old }
     .card-link = Open { $site }
     .card-confirm = Confirm
     .card-ask = Your voice goes to { $name } only after Stop, with your own key.

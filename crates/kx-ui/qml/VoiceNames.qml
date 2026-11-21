@@ -79,12 +79,8 @@ QtObject {
     // The marks in the badge colours and the outlined ones, by id; the rest sit on a chip, and Writing draws its line.
     readonly property var lit: ["used"]
     readonly property var outlined: ["download", "not-here", "other", "failed", "waiting", "run-failed", "off", "unavailable"]
-    // The marks in the warning tone, with no sign of their own (ADR-0047), and the key tests whose answer warns, drawn
-    // as a warning band.
+    // The marks in the warning tone, with no sign of their own (ADR-0047).
     readonly property var warned: ["warn"]
-    readonly property var refused: ["bad", "failed", "credit", "account", "region", "allowance", "rate", "strange", "unfit", "busy"]
-    // The key test whose answer shows as a mark in the badge colours: Key works.
-    readonly property string works: "ok"
     // The mark naming a cloud model's service, which takes the cloud icon.
     readonly property string cloud: "cloud"
     readonly property string writing: "writing"
