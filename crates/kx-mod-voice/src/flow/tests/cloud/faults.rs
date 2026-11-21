@@ -2,11 +2,13 @@
 //! local model", nothing is typed, and a recording the job let go, or no speech at all, has its own note.
 
 use super::*;
+use kx_module_api::ports::Renewal;
 
 /// Each fault the service's run tells, with the line the bar shows.
 fn faults() -> Vec<(CloudFault, CloudWhy)> {
     let renews_in = Some(Duration::from_mins(10));
-    let renews_at = LocalTime::at(WALL_MS + 600_000, EAST_MIN);
+    let at = LocalTime::at(WALL_MS + 600_000, EAST_MIN).unwrap();
+    let renews_at = Some(Renewal { at, today: true });
     vec![
         (CloudFault::Network, CloudWhy::Net),
         (CloudFault::Timeout, CloudWhy::Net),
@@ -166,13 +168,15 @@ fn a_used_allowance_names_the_wall_time_it_renews_at_from_when_the_fault_came() 
         panic!("a note shows");
     };
     let BarHint::Cloud {
-        why: CloudWhy::Allowance {
-            renews_at: Some(at),
-        },
+        why: CloudWhy::Allowance { renews_at: Some(r) },
         ..
     } = note.hint
     else {
         panic!("the used allowance's note");
     };
-    assert_eq!((at.hour, at.minute), (14, 30), "13:00 and 90 minutes");
+    assert_eq!(
+        (r.at.hour, r.at.minute, r.today),
+        (14, 30, true),
+        "13:00 and 90 minutes"
+    );
 }

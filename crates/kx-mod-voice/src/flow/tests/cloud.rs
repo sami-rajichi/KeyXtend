@@ -2,7 +2,7 @@
 //! Stop, then the service's texts typed in order, kept and counted under the pick. Faults are in `faults`, the
 //! password box, the key and the service's switch in `guard`, Cancel, Try again and the local model in `redo`, a
 //! hand-over that comes after the local model took over in `late`, the card's warning while it listens in `warn`, a
-//! pick that moved in `moved`, and Open service in `settle`.
+//! pick that moved in `moved`, Open service in `settle`, and a used allowance's renewal in `renewal`.
 
 use super::*;
 use kx_module_api::ports::{BarNote, CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName};
@@ -12,8 +12,11 @@ mod guard;
 mod late;
 mod moved;
 mod redo;
+pub(super) mod renewal;
 mod settle;
 mod warn;
+
+use renewal::renewed;
 
 /// The pick the tests dictate French with.
 const PICK: &str = "groq:whisper-large-v3-turbo";
@@ -96,11 +99,12 @@ impl Rig {
     /// The service's run tells `sent` for the last upload.
     fn sent(&mut self, sent: Sent) -> Vec<Out> {
         let (take, round) = self.upload.unwrap();
+        let renews = renewed(&sent);
         self.on(In::Sent {
             take,
             round,
             sent,
-            at: wall(),
+            renews,
         })
     }
 
@@ -258,13 +262,13 @@ fn a_note_of_an_older_upload_or_take_is_dropped() {
     let stale = [(take, round + 1), (take + 1, round)];
     for (take, round) in stale {
         let sent = Sent::Note(CloudNote::Done);
-        let at = wall();
+        let renews = None;
         assert!(
             ask(&rig.on(In::Sent {
                 take,
                 round,
                 sent,
-                at
+                renews
             }))
             .is_none()
         );
@@ -281,7 +285,7 @@ fn a_cloud_note_prints_no_text() {
             index: 0,
             text: secret("bonjour"),
         }),
-        at: wall(),
+        renews: None,
     };
     assert!(!format!("{sent:?}").contains("bonjour"));
 }

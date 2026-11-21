@@ -9,6 +9,7 @@ use super::ask::{Head, Pending, Wired, head_of, shut};
 use super::lanes::{Lane, Owner};
 use super::{Actor, Back};
 use crate::compare::Remote;
+use crate::flow::{fault_of, renewal};
 
 /// The round Compare's hand-over is asked for, as its run hands its recording over once.
 const ONCE: u32 = 0;
@@ -115,8 +116,8 @@ impl Actor {
 
     /// Tells the panel model `at`'s note, with when it came on the wall clock.
     fn tell_compare(&mut self, take: u32, at: usize, note: CloudNote, wait_ms: u32) {
-        let now = self.ports.calendar.now();
-        let dos = self.panel.compare_net(take, at, note, wait_ms, now);
+        let renews = renewal(&*self.ports.calendar, fault_of(&note));
+        let dos = self.panel.compare_net(take, at, note, wait_ms, renews);
         self.dos(dos);
     }
 

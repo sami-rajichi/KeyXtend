@@ -4,8 +4,8 @@
 
 use crate::{all, lang};
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, LINK_SCHEME, LocalTime,
-    ModelSide, Unavailable, VoiceLang,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, LINK_SCHEME, ModelSide,
+    Unavailable, VoiceLang,
 };
 use kx_ui::i18n::keys::{
     CARD_BILLS, CARD_LABELS, CARD_RULE, CLOUD_WORD, VOICE_ADDRESS, VOICE_ADDRESS_HINT,
@@ -16,11 +16,10 @@ use kx_ui::i18n::keys::{
     VOICE_CUSTOM, VOICE_CUSTOM_LINE, VOICE_KEEP_NOTHING, VOICE_KEY, VOICE_KEY_HINT, VOICE_KEY_LINE,
     VOICE_KEY_LINK, VOICE_KEY_SEALED, VOICE_LINE_SAVE, VOICE_LINE_SAVE_NAME, VOICE_MODEL_HINT,
     VOICE_MODEL_LINE, VOICE_MODEL_REFUSED, VOICE_MODELS_SIDE, VOICE_MODELS_SIDES, VOICE_MONEY_ANY,
-    VOICE_NOTE_RENEWS, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING, VOICE_USE_LOCAL, address_fault_id,
-    cloud_band_id, cloud_button_key, cloud_line_id, key_check_id, key_check_why, model_side_id,
+    VOICE_NOTE_RENEWS, VOICE_NOTE_RENEWS_ON, VOICE_ON_BAR_CLOUD, VOICE_SEND_WARNING,
+    VOICE_USE_LOCAL, address_fault_id, cloud_band_id, cloud_button_key, cloud_line_id,
+    key_check_id, key_check_why, model_side_id,
 };
-/// A used allowance's renewal in the tests: 09:05 UTC, a time whose hour takes a leading zero.
-const RENEWS_MS: i64 = 1_794_647_100_000;
 
 /// Every cloud reason a note gives, chained by `after`.
 fn whys() -> Vec<CloudWhy> {
@@ -61,7 +60,7 @@ fn front(iso: &str) -> VoiceLang {
 }
 
 /// The keys the hub builds for the cloud pages from no id.
-const FIXED: [&str; 37] = [
+const FIXED: [&str; 38] = [
     VOICE_CLOUD_SUB,
     VOICE_CLOUD_SWITCH,
     VOICE_CLOUD_OFF,
@@ -95,6 +94,7 @@ const FIXED: [&str; 37] = [
     VOICE_USE_LOCAL,
     VOICE_SEND_WARNING,
     VOICE_NOTE_RENEWS,
+    VOICE_NOTE_RENEWS_ON,
     VOICE_MODELS_SIDES,
     "voice.cloud",
     VOICE_ADDRESS_LINE,
@@ -228,7 +228,7 @@ fn each_address_fault_says_its_own_reason_and_the_custom_hint_shows_an_https_hos
 }
 
 #[test]
-fn each_cloud_reason_has_its_own_line_and_names_its_language_or_renewal() {
+fn each_cloud_reason_has_its_own_line_and_names_its_language() {
     for t in all() {
         let lines: Vec<String> = whys().iter().map(|w| t.voice_cloud(w)).collect();
         let mut unique = lines.clone();
@@ -246,21 +246,6 @@ fn each_cloud_reason_has_its_own_line_and_names_its_language_or_renewal() {
             lang(tag).voice_cloud(&CloudWhy::Language(front("en"))),
             want
         );
-    }
-    // A used allowance says the clock time it renews at, in Western digits on a 24-hour clock (owner, 2026-11-20).
-    let renews = CloudWhy::Allowance {
-        renews_at: LocalTime::at(RENEWS_MS, 0),
-    };
-    let at = [
-        ("en", "The free allowance is used up. It renews at 09:05."),
-        (
-            "fr",
-            "Le quota gratuit est épuisé. Il se renouvelle à 09:05.",
-        ),
-        ("ar", "نفدت الحصة المجانية، وتتجدد في الساعة 09:05."),
-    ];
-    for (tag, want) in at {
-        assert_eq!(lang(tag).voice_cloud(&renews), want, "{tag}");
     }
 }
 

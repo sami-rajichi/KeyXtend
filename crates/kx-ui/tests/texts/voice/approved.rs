@@ -4,7 +4,7 @@
 
 use crate::files::keys_of;
 use crate::lang;
-use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths, LocalTime};
+use kx_module_api::ports::{CloudWhy, Fact, FactArg, FactValue, Hundredths, LocalTime, Renewal};
 use kx_ui::i18n::keys::vars::FREE;
 use kx_ui::i18n::keys::{
     FACT_BILLS, FACT_FREE, FACT_PRICE, FACT_WARN, VOICE_CLOUD_FREE, fact_key, warn_mark_key,
@@ -107,14 +107,14 @@ const ALLOWANCE: [(&str, &str, &str); 3] = [
     (
         "en",
         "Free: 8",
-        "The free allowance is used up. It renews at ",
+        "The free allowance is used up. It renews ",
     ),
     (
         "fr",
         "Gratuit\u{a0}: 8",
-        "Le quota gratuit est épuisé. Il se renouvelle à ",
+        "Le quota gratuit est épuisé. Il se renouvelle ",
     ),
-    ("ar", "مجانًا: 8", "نفدت الحصة المجانية، وتتجدد في الساعة "),
+    ("ar", "مجانًا: 8", "نفدت الحصة المجانية، وتتجدد "),
 ];
 
 #[test]
@@ -144,15 +144,16 @@ fn every_warning_fact_has_its_own_short_mark_in_each_language() {
 
 #[test]
 fn the_free_allowance_keeps_one_term_on_the_row_and_the_renewal() {
-    let renews = CloudWhy::Allowance {
-        renews_at: LocalTime::at(0, 0),
-    };
+    let at = LocalTime::at(0, 0).unwrap();
     for (tag, row, renewal) in ALLOWANCE {
         let t = lang(tag);
         let line = t.voice_with(VOICE_CLOUD_FREE, &[(FREE, "8".to_owned())]);
         assert_eq!(line, row, "{tag}");
-        let said = t.voice_cloud(&renews);
-        assert!(said.starts_with(renewal), "{tag}: {said}");
+        for today in [true, false] {
+            let renews_at = Some(Renewal { at, today });
+            let said = t.voice_cloud(&CloudWhy::Allowance { renews_at });
+            assert!(said.starts_with(renewal), "{tag}, today {today}: {said}");
+        }
     }
 }
 

@@ -16,7 +16,7 @@ mod wire;
 pub use io::{Count, In, Kept, Lack, Out, Ready, RunCall, Supply};
 pub use lend::Lend;
 pub use net::{Net, Sent, Upload};
-pub(crate) use net::{renews, why as net_why};
+pub(crate) use net::{fault_of, renewal, why as net_why};
 pub(crate) use notes::mic_hint;
 pub(crate) use take::suffixed;
 
@@ -150,8 +150,8 @@ impl Flow {
                 take,
                 round,
                 sent,
-                at,
-            } => self.sent(take, round, sent, at, &mut out),
+                renews,
+            } => self.sent(take, round, sent, renews, &mut out),
             In::Keys => self.recheck(supply, &mut out),
             In::Field(change) => self.field(change),
             In::Elsewhere => self.elsewhere(),

@@ -4,14 +4,14 @@
 
 use super::I18n;
 use super::compose::{clean, form};
-use super::keys::vars::{HTTPS, LANG};
+use super::keys::vars::{DATE, HTTPS, LANG};
 use super::keys::{
-    VOICE_KEY, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS, cloud_why_id,
-    fact_key, key_check_id, key_check_why,
+    VOICE_KEY, VOICE_MONEY, VOICE_MONEY_ANY, VOICE_NOTE_CLOUD, VOICE_NOTE_RENEWS,
+    VOICE_NOTE_RENEWS_ON, cloud_why_id, fact_key, key_check_id, key_check_why,
 };
 use fluent_bundle::{FluentArgs, FluentValue};
 use kx_module_api::ports::{
-    CloudWhy, Fact, FactValue, Hundredths, KeyCheck, LINK_SCHEME, LocalTime, VoiceLang,
+    CloudWhy, Fact, FactValue, Hundredths, KeyCheck, LINK_SCHEME, Renewal, VoiceLang,
 };
 use serde::Serialize;
 
@@ -117,26 +117,34 @@ impl I18n {
         self.with(key, [(HTTPS, LINK_SCHEME.to_owned())])
     }
 
-    /// The cloud note's line for `why`, naming the language, or the clock time a used allowance renews at (owner,
-    /// 2026-11-20).
+    /// The cloud note's line for `why`, naming the language, or when a used allowance renews (owner, 2026-11-20).
     #[must_use]
     pub fn voice_cloud(&self, why: &CloudWhy) -> String {
         match why {
             CloudWhy::Allowance {
-                renews_at: Some(at),
-            } => self.with(
-                VOICE_NOTE_RENEWS,
-                [(AT_VAR, self.clock(at.hour, at.minute))],
-            ),
+                renews_at: Some(renews),
+            } => self.renewal(renews),
             CloudWhy::Language(lang) => self.cloud_line(cloud_why_id(why), lang),
             _ => self.text(&format!("{VOICE_NOTE_CLOUD}{}", cloud_why_id(why))),
         }
     }
 
+    /// A used allowance's line: the clock time it renews at, with its date when that is not today.
+    fn renewal(&self, renews: &Renewal) -> String {
+        let at = (AT_VAR, self.clock(renews.at.hour, renews.at.minute));
+        if renews.today {
+            return self.with(VOICE_NOTE_RENEWS, [at]);
+        }
+        self.with(
+            VOICE_NOTE_RENEWS_ON,
+            [(DATE, self.date(renews.at.date)), at],
+        )
+    }
+
     /// A key test's answer: the cloud note of the reason the service gave, a used allowance's with `renews_at`, else
     /// the key page's own line; none while untested.
     #[must_use]
-    pub fn voice_key_check(&self, check: KeyCheck, renews_at: Option<LocalTime>) -> Option<String> {
+    pub fn voice_key_check(&self, check: KeyCheck, renews_at: Option<Renewal>) -> Option<String> {
         let id = key_check_id(check)?;
         Some(match key_check_why(check, renews_at) {
             Some(why) => self.voice_cloud(&why),

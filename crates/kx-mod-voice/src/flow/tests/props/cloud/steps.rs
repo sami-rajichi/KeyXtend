@@ -1,6 +1,7 @@
 //! The steps a cloud run meets, their odds, the picks they move between, and how each is fed to the rig.
 
 use super::*;
+use crate::flow::tests::cloud::renewal::renewed;
 use kx_module_api::ports::{CloudFault, CloudNote, Fact, ServiceName, Unavailable};
 
 /// Each language's pick: none, Groq, Custom, Groq without its key, Groq with newer terms, a model ruled out, and
@@ -183,11 +184,13 @@ fn tell_sent(rig: &mut Rig, told: &Told, old: bool) -> Vec<Out> {
         return Vec::new();
     };
     let round = round.wrapping_sub(u32::from(old));
+    let sent = told.sent();
+    let renews = renewed(&sent);
     rig.on(In::Sent {
         take,
         round,
-        sent: told.sent(),
-        at: wall(),
+        sent,
+        renews,
     })
 }
 

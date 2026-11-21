@@ -13,6 +13,7 @@ use kx_module_api::ports::{
 
 use super::dos::Fetches;
 use super::{Actor, Back, Job, Msg};
+use crate::flow::renewal;
 use crate::panel::Check;
 
 /// The downloads running and the reads waiting or in flight.
@@ -50,8 +51,8 @@ impl Actor {
             Back::Net { take, round, note } => self.net_note(take, round, note),
             Back::Sending { take, round, run } => self.opened_net(take, round, run),
             Back::Tested { ticket, answer } => {
-                let at = self.ports.calendar.now();
-                self.panel.tested(ticket, answer, at);
+                let renews = renewal(&*self.ports.calendar, answer.as_ref().err());
+                self.panel.tested(ticket, answer, renews);
             }
             Back::Trial { take, at, note } => self.trial_note(take, at, note),
             Back::Tried { take, at, run } => self.tried(take, at, run),

@@ -8,8 +8,8 @@ mod panel;
 
 pub use act::{BarButton, CloudButton, FetchButton, PanelButton, VoiceClick};
 pub use bar::{
-    BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, VoiceBar, VoiceLang,
-    VoicePage, VoiceText,
+    BarHint, BarNote, BarPlace, BarText, CloudWhy, Listening, LocalUse, Renewal, VoiceBar,
+    VoiceLang, VoicePage, VoiceText,
 };
 pub use panel::{
     AddressFault, CardCheck, CardPart, CloudBand, CloudCard, CloudLine, CloudRow, CloudSheet,

@@ -3,9 +3,9 @@
 //! count, the Models page's Cloud side with Use (edge 29), and Compare's cloud ticks with the send warning (edge 12).
 
 use kx_module_api::ports::{
-    CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, Date, ModelSide, PanelButton,
-    ServiceMark, ServiceName, ServiceSheet, Unavailable, VoiceClick, VoiceHome, VoiceSheet,
-    VoiceTab,
+    Calendar, CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, Date, LocalTime, ModelSide,
+    PanelButton, ServiceMark, ServiceName, ServiceSheet, Unavailable, VoiceClick, VoiceHome,
+    VoiceSheet, VoiceTab,
 };
 
 use super::super::rig::Rig;
@@ -28,6 +28,15 @@ mod settle;
 mod trial;
 mod typing;
 mod used;
+
+/// A calendar that tells `now`, on which the actor reads a used allowance's renewal.
+pub(super) struct At(pub LocalTime);
+
+impl Calendar for At {
+    fn now(&self) -> LocalTime {
+        self.0
+    }
+}
 
 /// Applies the `[voice]` writes in `dos`, as the settings would after the actor wrote them.
 pub(super) fn apply(rig: &mut Rig, dos: &[Do]) {

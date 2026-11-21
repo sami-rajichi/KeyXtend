@@ -181,7 +181,7 @@ fn act(compare: &mut Compare, step: &Step, seen: &Seen) -> Result<Vec<Act>, Test
         Step::Net(at, net, old) => {
             let (note, wait_ms) = net.note();
             told(compare, take(*old), seen, |c, t| {
-                c.net(t, *at, note, wait_ms, wall())
+                c.net(t, *at, note, wait_ms, None)
             })?
         }
     })

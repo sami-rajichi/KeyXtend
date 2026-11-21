@@ -148,6 +148,7 @@ cloud =
     .note-region = Le service n’est pas proposé dans votre pays ou votre région.
     .note-allowance = Le quota gratuit est épuisé pour l’instant.
     .note-allowance-at = Le quota gratuit est épuisé. Il se renouvelle à { $at }.
+    .note-allowance-on = Le quota gratuit est épuisé. Il se renouvelle le { $date } à { $at }.
     .note-rate = Trop de requêtes. Patientez un instant et réessayez.
     .note-too-big = L’enregistrement était trop gros pour le service.
     .note-language = Le service n’écrit pas en { $lang }.

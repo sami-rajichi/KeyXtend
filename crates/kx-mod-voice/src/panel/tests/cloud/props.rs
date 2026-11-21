@@ -123,7 +123,7 @@ fn run(rig: &mut Rig, step: &Step) -> Result<Vec<Do>, TestCaseError> {
         }
         Step::Tested(lag, ok) => {
             let (ticket, answer) = (older(rig, *lag), ok.then_some(()).ok_or(CloudFault::Key));
-            rig.with(|p, f| p.tested(ticket, answer, f.now));
+            rig.with(|p, _| p.tested(ticket, answer, None));
             (Vec::new(), true)
         }
     };

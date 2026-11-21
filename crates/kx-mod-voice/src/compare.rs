@@ -10,7 +10,7 @@ pub use act::{Act, Entrant, Line, Plan, Remote};
 use std::collections::BTreeMap;
 
 use kx_module_api::ports::{
-    BarHint, CardId, CloudFault, LocalTime, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
+    BarHint, CardId, CloudFault, Renewal, RunStep, SpeechAsk, SpeechDone, SpeechNote, SpeechStage,
 };
 use kx_module_api::{Redacted, Secret};
 
@@ -58,8 +58,8 @@ pub struct Compare {
     /// The cloud models with where each stands, and their texts by model and piece until each ends.
     remotes: Vec<(Remote, RunStep)>,
     texts: BTreeMap<(usize, u16), Secret>,
-    /// Why each cloud model that failed did, and when on the wall clock, by its place among the cloud models.
-    faults: BTreeMap<usize, (CloudFault, LocalTime)>,
+    /// Why each cloud model that failed did, with a used allowance's renewal, by its place among the cloud models.
+    faults: BTreeMap<usize, (CloudFault, Option<Renewal>)>,
     hint: Option<BarHint>,
 }
 
@@ -213,9 +213,9 @@ impl Compare {
         Some((at, runs.collect()))
     }
 
-    /// Why model `at` of `running`'s list failed and when, for a cloud model that did while the run shows; else `None`.
+    /// Why cloud model `at` of `running`'s list failed, with a used allowance's renewal, while the run shows.
     #[must_use]
-    pub fn why(&self, at: usize) -> Option<(CloudFault, LocalTime)> {
+    pub fn why(&self, at: usize) -> Option<(CloudFault, Option<Renewal>)> {
         let remote = at.checked_sub(self.turns.len())?;
         matches!(self.stage, Stage::Running(_))
             .then(|| self.faults.get(&remote).copied())

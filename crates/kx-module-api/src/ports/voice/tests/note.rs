@@ -25,7 +25,8 @@ fn the_bar_offers_try_again_beside_its_other_buttons() {
 
 #[test]
 fn a_cloud_note_names_why_with_try_again_and_the_local_models_state() {
-    let renews_at = LocalTime::at(1_794_657_600_000, 60);
+    let at = LocalTime::at(1_794_657_600_000, 60).unwrap();
+    let renews_at = Some(Renewal { at, today: false });
     let notes = [
         cloud(CloudWhy::Allowance { renews_at }, LocalUse::Ready),
         cloud(CloudWhy::Key, LocalUse::Download { bytes: 740_000_000 }),
@@ -34,8 +35,9 @@ fn a_cloud_note_names_why_with_try_again_and_the_local_models_state() {
     let shown = format!("{notes:?}");
     let parts = [
         "Allowance",
-        "renews_at: Some(LocalTime",
+        "renews_at: Some(Renewal { at: LocalTime",
         "hour: 13",
+        "today: false",
         "Ready",
         "Key",
         "Download { bytes: 740000000 }",

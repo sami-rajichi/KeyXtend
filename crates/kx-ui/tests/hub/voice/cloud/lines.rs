@@ -8,8 +8,8 @@ use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, ServiceMark, ServiceName,
-    ServiceSheet, VoiceSheet,
+    AddressFault, CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, Renewal, ServiceMark,
+    ServiceName, ServiceSheet, VoiceSheet,
 };
 use kx_ui::voice_acts::{KEEP, SAVE, SERVICE};
 use serde_json::Value;
@@ -126,7 +126,7 @@ fn the_key_page_says_where_keys_are_made_and_that_the_key_is_sealed() {
     assert_eq!(buttons(&p["foot"]), foot);
 }
 
-/// A used allowance's renewal: 17:00 UTC.
+/// A used allowance's renewal: 17:00 UTC on 14 November 2026.
 const RENEWS_MS: i64 = 1_794_675_600_000;
 
 /// Each test answer with a reason, its id and its line, which is that reason's cloud note; and no answer's own line.
@@ -169,7 +169,7 @@ const ANSWERS: [(KeyCheck, &str, &str); 7] = [
 ];
 
 /// The key test's answer `check` on Groq's key page, renewing at `renews_at`, as its id and line.
-fn answer(check: KeyCheck, renews_at: Option<LocalTime>) -> Vec<(String, String)> {
+fn answer(check: KeyCheck, renews_at: Option<Renewal>) -> Vec<(String, String)> {
     let mut lines = groq_lines();
     (lines.check, lines.renews_at) = (check, renews_at);
     marks(&one(&lines_json(lines)["sheet"]["check"]))
@@ -184,9 +184,13 @@ fn a_tests_refusal_reads_as_the_cloud_note_of_its_reason_and_no_answer_as_its_ow
 
 #[test]
 fn a_used_allowance_on_test_names_its_renewal_when_the_service_told() {
-    let renews = "The free allowance is used up. It renews at 17:00.";
-    let got = answer(KeyCheck::Allowance, LocalTime::at(RENEWS_MS, 0));
-    assert_eq!(got, pairs(&[("allowance", renews)]));
+    let at = LocalTime::at(RENEWS_MS, 0).unwrap();
+    let today = "The free allowance is used up. It renews at 17:00.";
+    let got = answer(KeyCheck::Allowance, Some(Renewal { at, today: true }));
+    assert_eq!(got, pairs(&[("allowance", today)]));
+    let later = "The free allowance is used up. It renews on 14/11/2026 at 17:00.";
+    let got = answer(KeyCheck::Allowance, Some(Renewal { at, today: false }));
+    assert_eq!(got, pairs(&[("allowance", later)]), "a later day");
 }
 
 #[test]

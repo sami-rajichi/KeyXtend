@@ -3,7 +3,7 @@
 
 use super::VoiceMark;
 use kx_module_api::ports::{
-    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, LocalTime, ModelSide,
+    AddressFault, CloudBand, CloudButton, CloudLine, CloudWhy, KeyCheck, ModelSide, Renewal,
     ServiceMark, Unavailable,
 };
 
@@ -117,6 +117,8 @@ pub const VOICE_SEND_WARNING: &str = "cloud.send-warning";
 pub const VOICE_NOTE_CLOUD: &str = "cloud.note-";
 /// The used-up allowance's line with the clock time it renews at: `$at`.
 pub const VOICE_NOTE_RENEWS: &str = "cloud.note-allowance-at";
+/// The used-up allowance's line when it renews on a later day: `$date` and `$at`.
+pub const VOICE_NOTE_RENEWS_ON: &str = "cloud.note-allowance-on";
 /// A Models side's chip: this, then its `model_side_id`.
 pub const VOICE_MODELS_SIDE: &str = "cloud.side-";
 /// The side chips' group name.
@@ -214,7 +216,7 @@ pub const fn key_check_id(check: KeyCheck) -> Option<&'static str> {
 /// The cloud reason whose note a key test's answer reads as, a used allowance with `renews_at`, so each reason is
 /// written once; `None` for the rest.
 #[must_use]
-pub const fn key_check_why(check: KeyCheck, renews_at: Option<LocalTime>) -> Option<CloudWhy> {
+pub const fn key_check_why(check: KeyCheck, renews_at: Option<Renewal>) -> Option<CloudWhy> {
     Some(match check {
         KeyCheck::Credit => CloudWhy::Credit,
         KeyCheck::Account => CloudWhy::Account,

@@ -14,7 +14,7 @@ use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud,
     CompareSheet, DeviceLabel, DeviceName, Fact, KeyCheck, LinesPart, LocalTime, ModelRow,
-    ModelSide, ModelState, ModelsSheet, PanelButton, ServiceMark, ServiceName, ServiceRow,
+    ModelSide, ModelState, ModelsSheet, PanelButton, Renewal, ServiceMark, ServiceName, ServiceRow,
     Unavailable, VoiceSheet,
 };
 use kx_ui::UiSettings;
@@ -150,13 +150,13 @@ fn card_long(s: &Service, part: CardPart) -> VoiceSheet {
 /// A renewal at 23:59 UTC, as a used allowance's answer shows it.
 const RENEWS_MS: i64 = 1_794_700_740_000;
 
-/// The renewal a used allowance's answer shows.
-fn renews() -> Option<LocalTime> {
-    LocalTime::at(RENEWS_MS, 0)
+/// The renewal a used allowance's answer shows, on a later day, so its line takes its longest form.
+fn renews() -> Option<Renewal> {
+    LocalTime::at(RENEWS_MS, 0).map(|at| Renewal { at, today: false })
 }
 
 /// The key test's answer with the longest line in language `tag`, with the renewal it shows.
-fn longest_check(tag: &str) -> (KeyCheck, Option<LocalTime>) {
+fn longest_check(tag: &str) -> (KeyCheck, Option<Renewal>) {
     let t = lang(tag);
     let len = |c: &KeyCheck| {
         t.voice_key_check(*c, renews())

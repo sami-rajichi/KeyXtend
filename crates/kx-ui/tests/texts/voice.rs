@@ -21,6 +21,7 @@ mod money;
 mod newer;
 mod numbers;
 pub(crate) mod own;
+mod renewal;
 
 /// A language as the module names it, by its own name.
 fn named(name: &str) -> VoiceLang {

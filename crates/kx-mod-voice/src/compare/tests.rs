@@ -5,8 +5,7 @@ use super::*;
 use crate::flow::Ready;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CardId, CardUse, Date, Fingerprint, LocalTime, RunStep, ServiceName, SpeechError, SpeechModel,
-    SpeechStage,
+    CardId, CardUse, Date, Fingerprint, RunStep, ServiceName, SpeechError, SpeechModel, SpeechStage,
 };
 use kx_module_api::{Secret, Zeroizing};
 use std::path::PathBuf;
@@ -17,14 +16,6 @@ mod props;
 
 /// The set text the tests read, nine words.
 pub(crate) const SET: &str = "The evening train leaves at a quarter past seven.";
-/// When a cloud model's note comes on the wall clock: noon UTC.
-const WALL_MS: i64 = 1_794_657_600_000;
-
-/// The wall time a cloud model's note comes at.
-fn wall() -> LocalTime {
-    LocalTime::at(WALL_MS, 0).unwrap()
-}
-
 fn settings() -> VoiceSettings {
     VoiceSettings::from_defaults().unwrap()
 }

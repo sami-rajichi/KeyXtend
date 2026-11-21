@@ -1,20 +1,21 @@
 //! What a cloud dictation's upload tells (ADR-0047): its pieces, kept until every one came and typed once; a fault's
 //! note, which keeps the recording; and a run that let the recording go before it reached the service.
 
-use kx_module_api::ports::{BarHint, CloudNote, CloudWhy, LocalTime, SpeechDone};
+use kx_module_api::ports::{BarHint, CloudNote, CloudWhy, Renewal, SpeechDone};
 
 use super::net::{self, Sent};
 use super::notes::lost;
 use super::{Count, Flow, Out};
 
 impl Flow {
-    /// What dictation `id`'s upload of `round` tells at wall time `at`; an older or dropped upload's notes go unheard.
+    /// What dictation `id`'s upload of `round` tells, a used allowance with `renews`; an older or dropped upload's notes
+    /// go unheard.
     pub(super) fn sent(
         &mut self,
         id: u32,
         round: u32,
         sent: Sent,
-        at: LocalTime,
+        renews: Option<Renewal>,
         out: &mut Vec<Out>,
     ) {
         let live = |w: &net::Wire| w.sending && w.round == round;
@@ -32,7 +33,7 @@ impl Flow {
             }
             Sent::Note(CloudNote::Done) => self.replied(out),
             Sent::Note(CloudNote::Fault(fault)) => {
-                let why = net::why(fault, &take.lang.shown, at);
+                let why = net::why(fault, &take.lang.shown, renews);
                 self.cloud_note(why, out);
             }
             Sent::Silent => self.nothing(false, out),

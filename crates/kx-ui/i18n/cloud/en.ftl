@@ -148,6 +148,7 @@ cloud =
     .note-region = The service is not offered in your country or region.
     .note-allowance = The free allowance is used up for now.
     .note-allowance-at = The free allowance is used up. It renews at { $at }.
+    .note-allowance-on = The free allowance is used up. It renews on { $date } at { $at }.
     .note-rate = Too many requests. Wait a moment and try again.
     .note-too-big = The recording was too big for the service.
     .note-language = The service does not take { $lang }.

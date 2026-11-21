@@ -3,7 +3,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    CloudButton, CloudLine, KeyCheck, LinesPart, LocalTime, Pages, ServiceSheet, VoiceSheet,
+    CloudButton, CloudLine, KeyCheck, LinesPart, Pages, Renewal, ServiceSheet, VoiceSheet,
 };
 
 use super::Facts;
@@ -79,7 +79,7 @@ impl Panel {
 
     /// Why a Paste or typed key kept nothing, else how the shown key's test stands, with a used allowance's renewal
     /// while that answer shows; a row with no test says so while the key is untested.
-    fn key_check(&self, row: &Service) -> (KeyCheck, Option<LocalTime>) {
+    fn key_check(&self, row: &Service) -> (KeyCheck, Option<Renewal>) {
         if let Some(unkept) = self.cloud.unkept {
             return (unkept, None);
         }

@@ -247,6 +247,6 @@ Object.assign(SAY, {
   nkey:'<strong>Cloud note: the key.</strong> Try again, Use the local model, and Open service, which opens the service’s key page in one click; the buttons sit under the line, as the Windows 11 InfoBar’s under a long message.',
   nterms:'<strong>Cloud note: new terms.</strong> Nothing is sent until the terms are confirmed again; Open service opens the card, ready to confirm.',
   naccount:'<strong>Cloud note: a step on the service’s site.</strong> Open service opens the card, with the link to the service’s page.',
-  nallow:'<strong>Cloud note: the free allowance is used.</strong> It says the clock time it renews at, never a wait that goes stale; Open service opens the card.',
+  nallow:'<strong>Cloud note: the free allowance is used.</strong> It says the clock time it renews at, with its date when that is not today, never a wait that goes stale; Open service opens the card.',
   noff:'<strong>Cloud note: the service is off.</strong> Nothing was sent; Open service opens the card, where Confirm switches it on again.'});
 SAY.cloud += ' Tick a row whose key is saved and Remove key in the footer deletes it, even while the service is off (ElevenLabs here); with cloud services off the page lists none.';

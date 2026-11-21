@@ -249,6 +249,12 @@ pub trait Calendar: Send + Sync {
     /// The local wall time now. A caller stores `unix_ms` with `offset_min`, so `LocalTime::at` shows a saved moment
     /// at its own local time, across a summer-time change.
     fn now(&self) -> LocalTime;
+
+    /// The local wall time at moment `unix_ms`, in the offset in force then, so a later time across a summer-time
+    /// change shows its own hour. This default keeps the offset in force now, for a platform that cannot tell.
+    fn local(&self, unix_ms: i64) -> Option<LocalTime> {
+        LocalTime::at(unix_ms, self.now().offset_min)
+    }
 }
 
 /// The calendar service; it needs no capability.

@@ -3,7 +3,7 @@
 //! with these values, so no price or claim is written twice, and typed text stays redacted.
 
 use crate::Redacted;
-use crate::ports::{CloudButton, Date, Hundredths, LocalTime};
+use crate::ports::{CloudButton, Date, Hundredths, Renewal};
 
 listed! {
     /// Where a service stands, as its row's mark says; a cloud model's Unavailable is its Models row's.
@@ -238,8 +238,8 @@ pub struct ServiceSheet {
     pub typed: Redacted<u32>,
     /// How the key's test stands.
     pub check: KeyCheck,
-    /// The wall time the free allowance renews at, while `check` is `Allowance` and the service told.
-    pub renews_at: Option<LocalTime>,
+    /// When the free allowance renews, while `check` is `Allowance` and the service told.
+    pub renews_at: Option<Renewal>,
     /// The address line's text, as typed, just refused or kept, for a typed row such as Custom; `None` for a row with
     /// its own address.
     pub address: Option<Redacted<String>>,

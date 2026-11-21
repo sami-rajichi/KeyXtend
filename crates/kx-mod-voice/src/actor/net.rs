@@ -11,7 +11,7 @@ use super::ask::{Head, Pending, Wired, head_of, shut};
 use super::lanes::Owner;
 use super::trial::Trial;
 use super::{Actor, Back};
-use crate::flow::{In, Sent, Upload};
+use crate::flow::{In, Sent, Upload, renewal};
 use crate::keys::Keys;
 
 /// One dictation's upload; dropped at Halt, it sends nothing more.
@@ -132,14 +132,14 @@ impl Actor {
         }
     }
 
-    /// Tells the flow what dictation `take`'s upload of `round` told, and when on the wall clock.
+    /// Tells the flow what dictation `take`'s upload of `round` told, with when a used allowance renews.
     fn sent(&mut self, take: u32, round: u32, sent: Sent) {
-        let at = self.ports.calendar.now();
+        let renews = renewal(&*self.ports.calendar, sent.fault());
         self.step(In::Sent {
             take,
             round,
             sent,
-            at,
+            renews,
         });
     }
 

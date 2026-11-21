@@ -177,6 +177,7 @@ cloud =
     .note-region = الخدمة غير متاحة في بلدك أو منطقتك.
     .note-allowance = نفدت { -cloud-free-use } حاليًا.
     .note-allowance-at = نفدت { -cloud-free-use }، وتتجدد في الساعة { $at }.
+    .note-allowance-on = نفدت { -cloud-free-use }، وتتجدد يوم { $date } في الساعة { $at }.
     .note-rate = الطلبات كثيرة جدًا. انتظر قليلًا وحاول مرة أخرى.
     .note-too-big = كان التسجيل أكبر مما تقبله الخدمة.
     .note-language = لا تقبل الخدمة اللغة { $lang }.

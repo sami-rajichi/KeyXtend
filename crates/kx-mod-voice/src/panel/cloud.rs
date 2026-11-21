@@ -4,7 +4,7 @@
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CloudButton, KeyCheck, Link, LocalTime, ModelSide, ServiceMark, VoiceClick,
+    AddressFault, CloudButton, KeyCheck, Link, ModelSide, Renewal, ServiceMark, VoiceClick,
     VoiceTab,
 };
 
@@ -25,8 +25,8 @@ pub(crate) struct Clouds {
     pub(crate) dots: u32,
     /// How the shown key's test stands.
     pub(crate) check: KeyCheck,
-    /// When a test found the free allowance used up, the wall time it renews at, if the service told.
-    pub(crate) renews_at: Option<LocalTime>,
+    /// When a test found the free allowance used up, when it renews, if the service told.
+    pub(crate) renews_at: Option<Renewal>,
     /// Counts Pastes, tests and key changes, so an answer to an older one is dropped.
     pub(crate) round: u32,
     /// Why a Paste or a typed key kept nothing, Busy or Unfit, until the next round; the test's answer stays beneath.

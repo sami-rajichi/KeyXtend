@@ -2,11 +2,10 @@
 //! actor carries out, and the bar's line for each cloud fault.
 
 use kx_module_api::ports::{
-    CloudFault, CloudNote, CloudWhy, Fact, LocalTime, LocalUse, ServiceName, SpeechDone,
+    Calendar, CloudFault, CloudNote, CloudWhy, Fact, LocalUse, Renewal, ServiceName, SpeechDone,
     SpeechError, Unavailable, VoiceLang,
 };
 use kx_module_api::{Mono, Redacted};
-use std::time::Duration;
 
 use super::{Lack, Ready};
 
@@ -90,6 +89,24 @@ pub enum Sent {
     Note(CloudNote),
 }
 
+impl Sent {
+    /// The fault it tells, if any.
+    pub(crate) fn fault(&self) -> Option<&CloudFault> {
+        match self {
+            Self::Note(note) => fault_of(note),
+            _ => None,
+        }
+    }
+}
+
+/// The fault `note` tells, if any.
+pub(crate) fn fault_of(note: &CloudNote) -> Option<&CloudFault> {
+    match note {
+        CloudNote::Fault(fault) => Some(fault),
+        _ => None,
+    }
+}
+
 /// Sends a dictation's speech to its service; the actor reads the key just before.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Upload {
@@ -103,16 +120,14 @@ pub struct Upload {
     pub lang: String,
 }
 
-/// The reason the bar and a Compare row give for `fault`, about language `lang`, which came at wall time `at`.
-pub(crate) fn why(fault: CloudFault, lang: &VoiceLang, at: LocalTime) -> CloudWhy {
+/// The reason the bar and a Compare row give for `fault`, about language `lang`, a used allowance's with `renews`.
+pub(crate) fn why(fault: CloudFault, lang: &VoiceLang, renews: Option<Renewal>) -> CloudWhy {
     match fault {
         CloudFault::Network | CloudFault::Timeout => CloudWhy::Net,
         CloudFault::Key => CloudWhy::Key,
         CloudFault::Credit => CloudWhy::Credit,
         CloudFault::Account => CloudWhy::Account,
-        CloudFault::Allowance { renews_in } => CloudWhy::Allowance {
-            renews_at: renews(renews_in, at),
-        },
+        CloudFault::Allowance { .. } => CloudWhy::Allowance { renews_at: renews },
         CloudFault::Rate => CloudWhy::Rate,
         CloudFault::TooBig => CloudWhy::TooBig,
         CloudFault::Language => CloudWhy::Language(lang.clone()),
@@ -123,11 +138,20 @@ pub(crate) fn why(fault: CloudFault, lang: &VoiceLang, at: LocalTime) -> CloudWh
     }
 }
 
-/// The wall time a used allowance renews at: `renews_in` after `at`, kept in `at`'s offset, so a note left open
-/// never goes stale (owner, 2026-11-20); `None` when the service did not tell.
-pub(crate) fn renews(renews_in: Option<Duration>, at: LocalTime) -> Option<LocalTime> {
-    let ms = i64::try_from(renews_in?.as_millis()).ok()?;
-    LocalTime::at(at.unix_ms.checked_add(ms)?, at.offset_min)
+/// When `fault`'s used allowance renews, read on `calendar`: a clock time, so a note left open never goes stale
+/// (owner, 2026-11-20), in the offset in force then, and whether it is today; `None` for another fault or no time.
+pub(crate) fn renewal(calendar: &dyn Calendar, fault: Option<&CloudFault>) -> Option<Renewal> {
+    let Some(CloudFault::Allowance {
+        renews_in: Some(wait),
+    }) = fault
+    else {
+        return None;
+    };
+    let now = calendar.now();
+    let ms = i64::try_from(wait.as_millis()).ok()?;
+    let at = calendar.local(now.unix_ms.checked_add(ms)?)?;
+    let today = at.date == now.date;
+    Some(Renewal { at, today })
 }
 
 /// Why `shown`, the service on the bar, cannot have the speech now that the language picks `now`: a pick that moved

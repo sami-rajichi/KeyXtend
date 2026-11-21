@@ -12,7 +12,8 @@ use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::lines::on_groq_lines;
 use super::rows::named;
-use super::{act, apply, cloud_sheet, lines_sheet};
+use super::{At, act, apply, cloud_sheet, lines_sheet};
+use crate::flow::renewal;
 
 #[test]
 fn a_busy_clipboard_on_paste_shows_busy_on_the_key_line_and_no_fault_band() {
@@ -87,23 +88,19 @@ fn a_tests_refusal_names_its_reason_and_only_no_answer_points_at_the_network() {
 fn a_used_allowance_on_test_carries_its_renewal_only_while_its_answer_shows() {
     let mut rig = on_groq_lines();
     let ticket = test(&mut rig);
-    rig.with(|p, f| {
-        p.tested(
-            ticket,
-            Err(CloudFault::Allowance { renews_in: RENEWS }),
-            f.now,
-        );
-    });
+    let used = CloudFault::Allowance { renews_in: RENEWS };
+    let renews = rig.with(|_, f| renewal(&At(f.now), Some(&used)));
+    rig.with(|p, _| p.tested(ticket, Err(used), renews));
     let sheet = lines_sheet(&mut rig);
-    let at = sheet.renews_at.map(|t| (t.hour, t.minute));
+    let at = sheet.renews_at.map(|r| (r.at.hour, r.at.minute, r.today));
     assert_eq!(
         (sheet.check, at),
-        (KeyCheck::Allowance, Some((17, 0))),
-        "12:00 and five hours"
+        (KeyCheck::Allowance, Some((17, 0, true))),
+        "12:00 and five hours, as the actor read it"
     );
     let ticket = test(&mut rig);
     assert_eq!(lines_sheet(&mut rig).renews_at, None, "testing again");
-    rig.with(|p, f| p.tested(ticket, Ok(()), f.now));
+    rig.with(|p, _| p.tested(ticket, Ok(()), None));
     assert_eq!(lines_sheet(&mut rig).renews_at, None, "the key works");
 }
 
@@ -111,7 +108,7 @@ fn a_used_allowance_on_test_carries_its_renewal_only_while_its_answer_shows() {
 fn tested(answer: Result<(), CloudFault>) -> ServiceSheet {
     let mut rig = on_groq_lines();
     let ticket = test(&mut rig);
-    rig.with(|p, f| p.tested(ticket, answer, f.now));
+    rig.with(|p, _| p.tested(ticket, answer, None));
     lines_sheet(&mut rig)
 }
 
@@ -135,7 +132,7 @@ fn a_paste_that_kept_nothing_says_so_once_and_leaves_the_tests_answer_standing()
         let [Do::Test { ticket, .. }] = out[..] else {
             panic!("no test: {out:?}");
         };
-        rig.with(|p, f| p.tested(ticket, Ok(()), f.now));
+        rig.with(|p, _| p.tested(ticket, Ok(()), None));
         let out = rig.click(&VoiceClick::Service(CloudButton::Paste));
         let [Do::Take(round)] = out[..] else {
             panic!("no take: {out:?}");

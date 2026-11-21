@@ -71,14 +71,14 @@ fn a_cloud_fault_fails_that_model_alone_and_the_run_ends_once_every_model_ended(
     );
     assert!(
         compare
-            .net(take, 0, CloudNote::Fault(CloudFault::Key), 0, wall())
+            .net(take, 0, CloudNote::Fault(CloudFault::Key), 0, None)
             .is_empty()
     );
     let text = secret(SET);
-    compare.net(take, 1, CloudNote::Piece { index: 0, text }, 0, wall());
+    compare.net(take, 1, CloudNote::Piece { index: 0, text }, 0, None);
     let wait = RunStep::Done { wait_ms: 1_000 };
     assert_eq!(steps(&compare), [wait, RunStep::Failed, RunStep::Writing]);
-    let last = compare.net(take, 1, CloudNote::Done, 1_500, wall());
+    let last = compare.net(take, 1, CloudNote::Done, 1_500, None);
     let saved = last.iter().find_map(|a| match a {
         Act::Save(board) => Some(board.scores.len()),
         _ => None,
@@ -96,11 +96,11 @@ fn a_cloud_model_that_failed_keeps_its_reason_for_the_page() {
     let (mut compare, take) = recorded_with(vec![entrant(1, false)], vec![remote(1), remote(2)]);
     compare.note(take, done(0, 0));
     assert_eq!(compare.why(1), None, "none before a fault");
-    compare.net(take, 0, CloudNote::Fault(CloudFault::Key), 0, wall());
+    compare.net(take, 0, CloudNote::Fault(CloudFault::Key), 0, None);
     assert_eq!(steps(&compare)[1], RunStep::Failed);
     assert_eq!(
         (compare.why(0), compare.why(1), compare.why(2)),
-        (None, Some((CloudFault::Key, wall())), None),
+        (None, Some((CloudFault::Key, None)), None),
         "only the failed cloud model, after the local one"
     );
     compare.cancel();
@@ -124,7 +124,7 @@ fn cancel_drops_the_uploads_and_a_later_note_is_not_heard() {
     );
     let cancel = compare.cancel();
     assert!(cancel.contains(&Act::Halt(take)));
-    assert!(compare.net(take, 0, CloudNote::Done, 0, wall()).is_empty());
+    assert!(compare.net(take, 0, CloudNote::Done, 0, None).is_empty());
     assert!(compare.results().is_empty());
 }
 

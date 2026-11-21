@@ -168,6 +168,15 @@ pub enum BarHint {
     },
 }
 
+/// When a used free allowance renews: its local wall time, and whether that falls on the day the note came.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Renewal {
+    /// The local wall time, in the offset in force then, so a summer-time change between shows its own hour.
+    pub at: LocalTime,
+    /// It falls on the day the note came, so the clock time alone names it.
+    pub today: bool,
+}
+
 /// Why a cloud dictation's voice brought no text back, or never left; each names one line of the bar's cloud note.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CloudWhy {
@@ -181,8 +190,8 @@ pub enum CloudWhy {
     Account,
     /// The free allowance is used up.
     Allowance {
-        /// The wall time it renews at, from when the fault came, when the service tells.
-        renews_at: Option<LocalTime>,
+        /// When it renews, from when the fault came, when the service tells.
+        renews_at: Option<Renewal>,
     },
     /// Too many requests, still after one wait.
     Rate,
