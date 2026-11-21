@@ -31,7 +31,7 @@ fn takes(bus: &Bus) -> (Receiver<ClipTake>, Subscription) {
     (rx, ear.unwrap())
 }
 
-/// Clicks Paste on Groq's key page; the take it asked.
+/// Clicks Paste on the first service's key page; the take it asked.
 fn paste(bus: &Bus, heard: &Heard, takes: &Receiver<ClipTake>) -> ClipTake {
     let round = first_service(bus, heard);
     let lines = |s: &VoiceSheet| matches!(s, VoiceSheet::Service(_));
@@ -64,8 +64,16 @@ fn another_modules_answer_of_the_same_round_is_never_sealed_and_its_own_is() {
     let fakes = Fakes::new();
     let mut host = fakes.host();
     host.put("cloud", true.into());
-    let groq = "groq = { on = 2026-11-01, terms = 1 }".parse().unwrap();
-    host.put("services", toml::Value::Table(groq));
+    let row = kx_mod_voice::services::table()
+        .unwrap()
+        .offered()
+        .next()
+        .unwrap();
+    let entry = format!(
+        r#""{}" = {{ on = 2026-11-01, terms = {} }}"#,
+        row.id, row.terms
+    );
+    host.put("services", toml::Value::Table(entry.parse().unwrap()));
     let (heard, bus) = (Heard::listen(&host), Bus::new(Arc::clone(&host.core)));
     let (asked, _ear) = takes(&bus);
     let mut module = VoiceModule::new();

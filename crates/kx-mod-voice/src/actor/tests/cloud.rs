@@ -28,20 +28,24 @@ use kx_test_support::host::FakeHost;
 use super::rig::{Fakes, Rig, done};
 use crate::counts::{Device, Model};
 use crate::keys::Keys;
+use crate::services::piece_s;
+use crate::services::tests::shipped::{entry, first, model, pick};
 use crate::store::Store;
 
-/// The pick English dictates with.
-const PICK: &str = "groq:whisper-large-v3-turbo";
-/// Groq's model, as the request names it.
-const MODEL: &str = "whisper-large-v3-turbo";
+/// The pick English dictates with: the first offered row's first model.
+fn pick0() -> String {
+    pick(first(), 0)
+}
 /// A tenth of a second of sound, as one piece.
 const PIECE: usize = 3_200;
 /// The test's own key for the fake service, built as the test runs so no key-like text sits in the source.
 pub(super) fn key() -> String {
     ["kx", "fake", "key"].join("-")
 }
-/// The longest piece Groq's row takes, held to the most a run cuts.
-const PIECE_S: u8 = 120;
+/// The longest piece the first row takes, held to the most a run cuts.
+fn piece_s0() -> u8 {
+    piece_s(&first().limits)
+}
 
 fn secret(text: &str) -> Secret {
     Redacted::new(Zeroizing::new(text.to_owned()))
@@ -52,17 +56,17 @@ fn table(text: &str) -> toml::Value {
     toml::Value::Table(text.parse().unwrap())
 }
 
-/// Sets `key` as Groq's.
+/// Sets `key` as Groq's, the first offered row.
 pub(super) fn set_key(fake: &Fakes, key: &str) {
     let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
-    keys.set("groq", secret(key)).unwrap();
+    keys.set(&first().id, secret(key)).unwrap();
 }
 
 /// Groq picked for English, switched on with its terms confirmed, and its key set.
 pub(super) fn groq(fake: &Fakes, host: &mut FakeHost) {
     host.put("cloud", true.into());
-    host.put("services", table("groq = { on = 2026-11-17, terms = 1 }"));
-    host.put("picks", table(&format!("en = \"{PICK}\"")));
+    host.put("services", table(&entry(first(), "")));
+    host.put("picks", table(&format!("en = \"{}\"", pick0())));
     set_key(fake, &key());
 }
 
@@ -115,10 +119,10 @@ fn nothing_leaves_before_stop_then_the_speech_goes_and_its_text_is_typed() {
     let ask = rig.fake.speech.runs()[0].ask.clone();
     assert_eq!(
         (ask.model, ask.piece_s),
-        (None, PIECE_S),
+        (None, piece_s0()),
         "listen-only, cut by the row"
     );
-    assert_eq!(rig.mark(), Some(ServiceName::Named("Groq".into())));
+    assert_eq!(rig.mark(), Some(first().shown()));
     rig.key();
     assert!(
         rig.fake.cloud.calls().runs.is_empty(),
@@ -127,10 +131,11 @@ fn nothing_leaves_before_stop_then_the_speech_goes_and_its_text_is_typed() {
     rig.tell(SpeechNote::Done(done(0)));
     let runs = rig.fake.cloud.calls().runs;
     assert_eq!(runs.len(), 1);
-    let model = runs[0].model.as_ref().map(|m| m.expose().clone());
+    let sent = runs[0].model.as_ref().map(|m| m.expose().clone());
+    let listed = model(first(), 0).id.as_str();
     assert_eq!(
-        (runs[0].lang.as_str(), model.as_deref()),
-        ("en", Some(MODEL))
+        (runs[0].lang.as_str(), sent.as_deref()),
+        ("en", Some(listed))
     );
     assert_eq!(
         (&runs[0].sizes[..], runs[0].state),
@@ -159,11 +164,11 @@ fn the_text_is_kept_and_counted_under_the_service() {
         .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);
     rig.dictate();
     let opened = Store::open(Arc::new(rig.fake.shelf.clone()), MAX_BLOB_BYTES).unwrap();
-    assert_eq!(opened.history.entries()[0].model.expose(), PICK);
+    assert_eq!(*opened.history.entries()[0].model.expose(), pick0());
     let bucket = opened.counts.rows().keys().next().unwrap().clone();
     let model = Model::Cloud {
-        service: "groq".into(),
-        model: Some(MODEL.into()),
+        service: first().id.clone(),
+        model: Some(model(first(), 0).id.clone()),
     };
     assert_eq!((bucket.model, bucket.device), (model, Device::Cloud));
 }

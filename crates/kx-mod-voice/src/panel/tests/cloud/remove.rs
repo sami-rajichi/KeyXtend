@@ -1,23 +1,21 @@
 //! A Cloud page row's own Remove key (owner, 2026-11-20): it shows while a key is sealed and its key page is out of
 //! reach, as the service or cloud services are off, whose rows show dimmed and take no tick; a hidden run lists none.
+//! Off alone never deletes a key.
 
 use kx_module_api::ports::{CloudButton, ServiceMark, ServiceName, VoiceClick};
 
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::rows::{every_row, named, row_of, tick};
-use super::{act, apply, card, cloud_sheet, on_cloud, put};
+use super::{act, apply, card, cloud_sheet, lines_sheet, on_cloud, put};
+use crate::services::tests::shipped::{entry, first, pick};
 use crate::services::{self, tests::ROUTER};
 
-/// Groq on with its key sealed, on the Cloud page.
+/// Groq, the first offered row, on with its key sealed, on the Cloud page.
 fn keyed_groq() -> Rig {
     let mut rig = on_cloud("");
-    put(
-        &mut rig,
-        "services",
-        "groq = { on = 2026-11-01, terms = 1 }",
-    );
-    rig.keyed.insert("groq".into());
+    put(&mut rig, "services", &entry(first(), ""));
+    rig.keyed.insert(first().id.clone());
     rig
 }
 
@@ -31,12 +29,12 @@ fn remove(rig: &mut Rig, name: &ServiceName) -> (bool, Vec<Do>) {
 #[test]
 fn switching_a_service_off_leaves_its_row_a_remove_key_that_deletes_it() {
     let mut rig = keyed_groq();
-    let out = act(&mut rig, &named("Groq"), CloudButton::Off);
+    let out = act(&mut rig, &first().shown(), CloudButton::Off);
     apply(&mut rig, &out);
-    let at = usize::from(row_of(&mut rig, &named("Groq")));
+    let at = usize::from(row_of(&mut rig, &first().shown()));
     assert_eq!(cloud_sheet(&mut rig).rows[at].mark, ServiceMark::Off);
-    let removed = vec![Do::RemoveKey("groq".into())];
-    assert_eq!(remove(&mut rig, &named("Groq")), (true, removed));
+    let removed = vec![Do::RemoveKey(first().id.clone())];
+    assert_eq!(remove(&mut rig, &first().shown()), (true, removed));
 }
 
 #[test]
@@ -66,23 +64,23 @@ fn cloud_off_lists_the_rows_dimmed_untickable_each_sealed_one_with_its_remove_ke
     let rows = every_row(&mut rig);
     assert!(rows.len() > 1, "{rows:?}");
     for row in &rows {
-        let groq = row.name == named("Groq");
+        let groq = row.name == first().shown();
         assert_eq!(
             (row.mark, row.remove, row.tick),
             (ServiceMark::Off, groq, false)
         );
     }
-    let at = row_of(&mut rig, &named("Groq"));
+    let at = row_of(&mut rig, &first().shown());
     rig.click(&VoiceClick::Row(at));
     let sheet = cloud_sheet(&mut rig);
     assert!(
         !sheet.rows[usize::from(at)].tick && sheet.acts.is_empty(),
         "no tick"
     );
-    let other = rows.iter().find(|r| r.name != named("Groq")).unwrap();
+    let other = rows.iter().find(|r| r.name != first().shown()).unwrap();
     assert_eq!(remove(&mut rig, &other.name), (false, Vec::new()));
-    let removed = vec![Do::RemoveKey("groq".into())];
-    assert_eq!(remove(&mut rig, &named("Groq")), (true, removed));
+    let removed = vec![Do::RemoveKey(first().id.clone())];
+    assert_eq!(remove(&mut rig, &first().shown()), (true, removed));
 }
 
 #[test]
@@ -99,7 +97,7 @@ fn a_remove_key_on_rows_that_moved_since_is_dropped() {
     rig.keyed
         .extend(services::table().unwrap().offered().map(|s| s.id.clone()));
     rig.settings.cloud = false;
-    let at = row_of(&mut rig, &named("Groq"));
+    let at = row_of(&mut rig, &first().shown());
     let seen = rig.round;
     rig.click(&VoiceClick::Page { back: false });
     rig.view();
@@ -109,12 +107,35 @@ fn a_remove_key_on_rows_that_moved_since_is_dropped() {
 #[test]
 fn a_service_on_keeps_remove_key_on_its_key_page_not_on_its_row() {
     let mut rig = keyed_groq();
-    assert_eq!(remove(&mut rig, &named("Groq")), (false, Vec::new()));
-    let out = act(&mut rig, &named("Groq"), CloudButton::Lines);
+    assert_eq!(remove(&mut rig, &first().shown()), (false, Vec::new()));
+    let out = act(&mut rig, &first().shown(), CloudButton::Lines);
     assert!(
         out.iter().all(|d| !matches!(d, Do::RemoveKey(_))),
         "{out:?}"
     );
     let out = rig.click(&VoiceClick::Service(CloudButton::Remove));
-    assert_eq!(out, [Do::RemoveKey("groq".into())]);
+    assert_eq!(out, [Do::RemoveKey(first().id.clone())]);
+}
+
+#[test]
+fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
+    let mut rig = on_cloud("");
+    put(&mut rig, "services", &entry(first(), ""));
+    put(
+        &mut rig,
+        "picks",
+        &format!(r#"en = "{}""#, pick(first(), 0)),
+    );
+    rig.keyed.insert(first().id.clone());
+    let out = act(&mut rig, &first().shown(), CloudButton::Off);
+    assert!(
+        !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
+        "only Remove key deletes it"
+    );
+    apply(&mut rig, &out);
+    assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
+    rig.click(&VoiceClick::Service(CloudButton::On)); // Groq stays ticked.
+    let out = rig.click(&VoiceClick::Confirm(true));
+    apply(&mut rig, &out);
+    assert_eq!(lines_sheet(&mut rig).mark, ServiceMark::Ready);
 }

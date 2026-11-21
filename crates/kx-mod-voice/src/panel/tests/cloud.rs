@@ -11,6 +11,7 @@ use kx_module_api::ports::{
 use super::super::rig::Rig;
 use super::super::{Do, Page};
 use super::{models, on_models};
+use crate::services::tests::shipped::{entry, first, pick};
 use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
 use rows::{named, row_of, tick};
@@ -79,7 +80,9 @@ pub(super) fn lines_sheet(rig: &mut Rig) -> ServiceSheet {
 /// The Home's values, after Back from the shown page.
 fn home(rig: &mut Rig) -> VoiceHome {
     while rig.panel.page != Some(Page::Home) {
+        let before = rig.panel.page;
         rig.click(&VoiceClick::Button(PanelButton::Back));
+        assert_ne!(rig.panel.page, before, "Back went nowhere");
     }
     match rig.view().unwrap().sheet {
         VoiceSheet::Home(home) => home,
@@ -239,19 +242,19 @@ fn use_on_a_ready_cloud_model_picks_it_and_a_kept_model_is_unavailable_with_its_
     let mut rig = on_models(&[]);
     rig.services = Some(with_rows(ROUTER));
     rig.settings.cloud = true;
+    let router = r#""router-test" = { on = 2026-11-01, terms = 1, keep = true }"#;
     put(
         &mut rig,
         "services",
-        r#"groq = { on = 2026-11-01, terms = 1 }
-"router-test" = { on = 2026-11-01, terms = 1, keep = true }"#,
+        &format!("{}\n{router}", entry(first(), "")),
     );
-    rig.keyed.extend(["groq".into(), "router-test".into()]);
+    rig.keyed.extend([first().id.clone(), "router-test".into()]);
     rig.click(&VoiceClick::Side(ModelSide::Cloud));
     let view = rig.view().unwrap();
     let sheet = models(&view);
     assert_eq!(sheet.band, Some(CloudBand::Listed));
     let groq = CloudRow {
-        service: ServiceName::Named("Groq".into()),
+        service: first().shown(),
         mark: ServiceMark::Ready,
         unavailable: None,
     };
@@ -269,33 +272,7 @@ fn use_on_a_ready_cloud_model_picks_it_and_a_kept_model_is_unavailable_with_its_
     let out = rig.click(&VoiceClick::Button(PanelButton::Use));
     assert!(matches!(&out[..], [Do::Set(PICKS, _)]));
     apply(&mut rig, &out);
-    assert_eq!(
-        rig.settings.picks.get("en").map(String::as_str),
-        Some("groq:whisper-large-v3-turbo")
-    );
+    assert_eq!(rig.settings.picks.get("en"), Some(&pick(first(), 0)));
     let view = rig.view().unwrap();
     assert!(models(&view).rows[0].used);
-}
-
-#[test]
-fn switching_a_service_off_keeps_its_key_so_on_again_finds_it_ready() {
-    let mut rig = on_cloud("");
-    put(
-        &mut rig,
-        "services",
-        "groq = { on = 2026-11-01, terms = 1 }",
-    );
-    put(&mut rig, "picks", r#"en = "groq:whisper-large-v3-turbo""#);
-    rig.keyed.insert("groq".into());
-    let out = act(&mut rig, &named("Groq"), CloudButton::Off);
-    assert!(
-        !out.iter().any(|d| matches!(d, Do::RemoveKey(_))),
-        "only Remove key deletes it"
-    );
-    apply(&mut rig, &out);
-    assert!(rig.settings.services.is_empty() && !rig.settings.picks.contains_key("en"));
-    rig.click(&VoiceClick::Service(CloudButton::On)); // Groq stays ticked.
-    let out = rig.click(&VoiceClick::Confirm(true));
-    apply(&mut rig, &out);
-    assert_eq!(lines_sheet(&mut rig).mark, ServiceMark::Ready);
 }

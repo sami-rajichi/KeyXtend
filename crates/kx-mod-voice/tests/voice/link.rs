@@ -1,5 +1,5 @@
 //! A card's link through the module's own service lookup (edge 23): the manifest requires the web link, so Link on
-//! Groq's card opens its facts page in the browser.
+//! the first service's card opens its facts page in the browser.
 
 use std::sync::Arc;
 

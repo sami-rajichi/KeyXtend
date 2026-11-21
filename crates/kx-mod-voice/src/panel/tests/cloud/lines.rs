@@ -13,6 +13,7 @@ use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::{act, apply, lines_sheet, named, on_cloud, put};
 use crate::services::tests::DOMAIN;
+use crate::services::tests::shipped::{entry, first};
 use crate::settings::{PICKS, SERVICES};
 
 /// A key-like text, built as the test runs so no key sits in the source.
@@ -24,16 +25,12 @@ fn secret(text: &str) -> Secret {
     Redacted::new(Zeroizing::new(text.to_owned()))
 }
 
-/// Groq on and keyed, on its key page.
+/// Groq, the first offered row, on and keyed, on its key page.
 pub(super) fn on_groq_lines() -> Rig {
     let mut rig = on_cloud("");
-    put(
-        &mut rig,
-        "services",
-        "groq = { on = 2026-11-01, terms = 1 }",
-    );
-    rig.keyed.insert("groq".into());
-    act(&mut rig, &named("Groq"), CloudButton::Lines);
+    put(&mut rig, "services", &entry(first(), ""));
+    rig.keyed.insert(first().id.clone());
+    act(&mut rig, &first().shown(), CloudButton::Lines);
     rig
 }
 
@@ -145,7 +142,8 @@ fn remove_drops_the_key_and_its_dots() {
 fn the_link_opens_only_the_rows_own_https_address() {
     let mut rig = on_groq_lines();
     let out = rig.click(&VoiceClick::Service(CloudButton::Link));
-    assert!(matches!(&out[..], [Do::Link(l)] if l.expose() == "https://console.groq.com/keys"));
+    let keys = first().keys.as_ref().unwrap().expose();
+    assert!(matches!(&out[..], [Do::Link(l)] if l.expose() == keys));
     rig.click(&VoiceClick::Service(CloudButton::Facts));
     assert_eq!(rig.panel.page, Some(Page::Card));
     let out = rig.click(&VoiceClick::Service(CloudButton::Link));

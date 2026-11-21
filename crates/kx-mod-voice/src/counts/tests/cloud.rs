@@ -2,6 +2,7 @@
 //! model's id is never kept, and a pick of a service the table lacks counts as any other model.
 
 use super::*;
+use crate::services::tests::shipped::{first, model as listed, pick};
 
 /// The counts' one bucket after one dictation by `pick` on day 14.
 fn only(pick: &str) -> (Bucket, Counts) {
@@ -14,10 +15,10 @@ fn only(pick: &str) -> (Bucket, Counts) {
 
 #[test]
 fn a_cloud_dictation_counts_under_its_service_and_model() {
-    let (bucket, counts) = only("groq:whisper-large-v3-turbo");
+    let (bucket, counts) = only(&pick(first(), 0));
     let model = Model::Cloud {
-        service: "groq".into(),
-        model: Some("whisper-large-v3-turbo".into()),
+        service: first().id.clone(),
+        model: Some(listed(first(), 0).id.clone()),
     };
     assert_eq!(bucket, self::bucket(14, model, Device::Cloud));
     assert_eq!(counts.rows()[&bucket].wait_ms, 700);

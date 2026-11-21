@@ -11,6 +11,7 @@ use kx_module_api::{Redacted, Zeroizing};
 
 use crate::counts::Board;
 use crate::panel::rig::{ROWS, Rig, cpu, row};
+use crate::services::tests::shipped::{first, model, pick};
 
 /// The rig on `tab`.
 fn on(tab: VoiceTab) -> Rig {
@@ -167,7 +168,8 @@ fn history_names_a_cloud_texts_model_and_its_service_never_the_raw_pick() {
         voice: false,
         voice_bytes: 0,
     };
-    for (take, pick) in [(1, "custom:whisper-1"), (2, "groq:whisper-large-v3-turbo")] {
+    let listed = pick(first(), 0);
+    for (take, pick) in [(1, "custom:whisper-1"), (2, listed.as_str())] {
         let kept = crate::flow::Kept {
             take,
             text: Redacted::new(Zeroizing::new(format!("texte {take}"))),
@@ -187,9 +189,8 @@ fn history_names_a_cloud_texts_model_and_its_service_never_the_raw_pick() {
     let named: Vec<_> = (sheet.rows.iter())
         .map(|r| (r.model.expose().clone(), r.cloud.clone()))
         .collect();
-    let groq = Some(ServiceName::Named("Groq".into()));
     let want = [
-        ("Whisper Large v3 Turbo".to_owned(), groq),
+        (model(first(), 0).name.clone(), Some(first().shown())),
         ("whisper-1".to_owned(), Some(ServiceName::Custom)),
     ];
     assert_eq!(named, want);

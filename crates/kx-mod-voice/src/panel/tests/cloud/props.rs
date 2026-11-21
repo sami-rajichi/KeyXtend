@@ -13,6 +13,7 @@ use proptest::sample::select;
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Panel};
 use super::{apply, on_cloud, put};
+use crate::services::tests::shipped::{entry, first};
 
 /// The highest row place a click names, past a page's rows.
 const MAX_ROW: u8 = 7;
@@ -142,8 +143,8 @@ proptest! {
         steps in vec(step(), 1..MAX_STEPS),
     ) {
         let mut rig = on_cloud("");
-        put(&mut rig, "services", "groq = { on = 2026-11-01, terms = 1 }");
-        rig.keyed.insert("groq".into());
+        put(&mut rig, "services", &entry(first(), ""));
+        rig.keyed.insert(first().id.clone());
         for step in &steps {
             let out = run(&mut rig, step)?;
             apply(&mut rig, &out);

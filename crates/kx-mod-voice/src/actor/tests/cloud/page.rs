@@ -14,6 +14,7 @@ use super::super::taps::{Heard, held, release, waiting};
 use super::*;
 use crate::actor::Msg;
 use crate::panel::Do;
+use crate::services::tests::shipped::{entry, first};
 use crate::settings::{PASTE_MS, TAKE_MS};
 use crate::{ID, VoiceSettings};
 
@@ -40,7 +41,7 @@ fn on_lines() -> Rig {
 fn on_lines_with(set: impl FnOnce(&mut FakeHost)) -> Rig {
     let mut rig = Rig::build(|_, host| {
         host.put("cloud", true.into());
-        host.put("services", table("groq = { on = 2026-11-01, terms = 1 }"));
+        host.put("services", table(&entry(first(), "")));
         set(host);
     });
     rig.send(Msg::Open);
@@ -86,10 +87,8 @@ fn a_key_set_on_its_page_is_sealed_shown_as_dots_and_tested_with_the_key_read_in
     rig.act(VoiceClick::Service(CloudButton::Test));
     let tests = rig.fake.cloud.calls().tests;
     assert_eq!(tests.len(), 1);
-    assert_eq!(
-        tests[0].url.expose(),
-        "https://api.groq.com/openai/v1/models"
-    );
+    let own = first().test_url("").unwrap();
+    assert_eq!(tests[0].url.expose(), own.expose());
     assert_eq!(lines(&rig).check, KeyCheck::Works);
 }
 

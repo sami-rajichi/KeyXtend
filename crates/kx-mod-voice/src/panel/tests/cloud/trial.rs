@@ -14,18 +14,15 @@ use super::super::super::rig::Rig;
 use super::{apply, put};
 use crate::compare::{Act, Remote};
 use crate::flow::net_why;
+use crate::services::tests::shipped::{entry, first, model, pick};
 use crate::settings::PICKS;
 
-/// Groq on and keyed, cloud on, on the Compare page.
+/// The first offered row on and keyed, cloud on, on the Compare page.
 fn on_compare() -> Rig {
     let mut rig = Rig::new();
     rig.settings.cloud = true;
-    put(
-        &mut rig,
-        "services",
-        "groq = { on = 2026-11-01, terms = 1 }",
-    );
-    rig.keyed.insert("groq".into());
+    put(&mut rig, "services", &entry(first(), ""));
+    rig.keyed.insert(first().id.clone());
     rig.click(&VoiceClick::Open(VoiceTab::Compare));
     rig
 }
@@ -59,13 +56,14 @@ fn done(wait_ms: u32) -> SpeechNote {
     })
 }
 
-/// Groq's Whisper Large v3 Turbo as Compare sends to it.
+/// The first offered row's first model as Compare sends to it.
 fn turbo() -> Remote {
+    let (row, listed) = (first(), model(first(), 0));
     Remote {
-        name: Redacted::new("Whisper Large v3 Turbo".into()),
-        shown: ServiceName::Named("Groq".into()),
-        service: "groq".into(),
-        model: Redacted::new("whisper-large-v3-turbo".into()),
+        name: Redacted::new(listed.name.clone()),
+        shown: row.shown(),
+        service: row.id.clone(),
+        model: Redacted::new(listed.id.clone()),
     }
 }
 
@@ -76,13 +74,13 @@ fn start_takes_only_the_ticked_ready_models_and_ticks_alone_send_nothing() {
         rig.click(&VoiceClick::Row(0)).is_empty(),
         "a tick sends nothing"
     );
-    assert_eq!(ready(&mut rig).1, [ServiceName::Named("Groq".into())]);
+    assert_eq!(ready(&mut rig).1, [first().shown()]);
     start(&mut rig);
     let plan = rig.panel.compare.plan().unwrap();
     assert_eq!(
         plan.clouds,
         [turbo()],
-        "the unticked Whisper Large v3 is not sent to"
+        "the unticked second model is not sent to"
     );
 }
 
@@ -117,26 +115,20 @@ fn a_cloud_result_is_named_by_its_service_and_use_picks_it() {
     };
     assert_eq!(
         (rows[0].cloud.clone(), rows[0].wait_ms),
-        (Some(ServiceName::Named("Groq".into())), 900)
+        (Some(first().shown()), 900)
     );
     rig.click(&VoiceClick::Row(0));
     assert!(rig.view().unwrap().acts.contains(&PanelButton::Use));
     let out = rig.click(&VoiceClick::Button(PanelButton::Use));
     assert!(matches!(&out[..], [Do::Set(PICKS, _)]));
     apply(&mut rig, &out);
-    assert_eq!(rig.settings.picks["en"], "groq:whisper-large-v3-turbo");
+    assert_eq!(rig.settings.picks["en"], pick(first(), 0));
 }
 
 #[test]
 fn compare_lists_the_ready_cloud_models_and_names_each_ticked_service_once_before_it_sends() {
-    let mut rig = Rig::new();
-    rig.settings.cloud = true;
-    put(
-        &mut rig,
-        "services",
-        "groq = { on = 2026-11-01, terms = 1 }",
-    );
-    rig.click(&VoiceClick::Open(VoiceTab::Compare));
+    let mut rig = on_compare();
+    rig.keyed.clear();
     let ready = |rig: &mut Rig| match rig.view().unwrap().sheet {
         VoiceSheet::Compare(CompareSheet::Ready { cloud, send, .. }) => (cloud, send),
         other => panic!("not ready: {other:?}"),
@@ -145,14 +137,14 @@ fn compare_lists_the_ready_cloud_models_and_names_each_ticked_service_once_befor
         ready(&mut rig).0.is_empty(),
         "a service with no key is not offered"
     );
-    rig.keyed.insert("groq".into());
+    rig.keyed.insert(first().id.clone());
     let (cloud, send) = ready(&mut rig);
-    assert_eq!((cloud.len(), send.len()), (2, 0));
+    assert_eq!((cloud.len(), send.len()), (first().models.len(), 0));
     rig.click(&VoiceClick::Row(0));
     rig.click(&VoiceClick::Row(1));
     let (cloud, send) = ready(&mut rig);
     assert!(cloud.iter().all(|c| c.tick));
-    assert_eq!(send, [ServiceName::Named("Groq".into())]);
+    assert_eq!(send, [first().shown()]);
     rig.click(&VoiceClick::Row(0));
     rig.click(&VoiceClick::Row(1));
     assert!(ready(&mut rig).1.is_empty(), "no tick, no warning");
@@ -177,9 +169,9 @@ fn the_running_header_names_the_first_cloud_model_still_writing() {
     rig.with(|p, _| p.compare_note(take, SpeechNote::Heard));
     rig.click(&VoiceClick::Bar(BarButton::Stop));
     rig.with(|p, _| p.compare_note(take, done(0)));
-    assert_eq!(header(&mut rig), (1, 2, "Whisper Large v3 Turbo".into()));
+    assert_eq!(header(&mut rig), (1, 2, model(first(), 0).name.clone()));
     rig.with(|p, f| p.compare_net(take, 0, CloudNote::Done, 700, f.now));
-    assert_eq!(header(&mut rig), (2, 2, "Whisper Large v3".into()));
+    assert_eq!(header(&mut rig), (2, 2, model(first(), 1).name.clone()));
 }
 
 #[test]

@@ -9,6 +9,7 @@ use kx_module_api::ports::{
 use super::super::taps::Heard;
 use super::*;
 use crate::actor::Msg;
+use crate::services::tests::shipped::{entry, first};
 
 /// A key-like text, built as the test runs.
 fn made_key() -> String {
@@ -28,7 +29,7 @@ fn told(rig: &Rig) -> Vec<Option<PanelLine>> {
 fn on_lines() -> Rig {
     let mut rig = Rig::build(|_, host| {
         host.put("cloud", true.into());
-        host.put("services", table("groq = { on = 2026-11-01, terms = 1 }"));
+        host.put("services", table(&entry(first(), "")));
     });
     rig.send(Msg::Open);
     rig.act(VoiceClick::Open(VoiceTab::Cloud));

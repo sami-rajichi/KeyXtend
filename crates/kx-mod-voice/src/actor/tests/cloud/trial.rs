@@ -12,6 +12,7 @@ use super::*;
 use crate::actor::Msg;
 use crate::actor::tests::taps::{held, release};
 use crate::panel::rig::ROWS;
+use crate::services::tests::shipped::{entry, first};
 
 /// Custom with its typed address and model, as a second ready service.
 const CUSTOM: &str = r#"custom = { on = 2026-11-01, terms = 1, address = "https://speech.example.com/v1/audio", model = "whisper-1" }"#;
@@ -20,7 +21,7 @@ const CUSTOM: &str = r#"custom = { on = 2026-11-01, terms = 1, address = "https:
 fn ticked(ticks: &[u8]) -> Rig {
     let mut rig = Rig::build(|fake, host| {
         host.put("cloud", true.into());
-        let both = format!("groq = {{ on = 2026-11-01, terms = 1 }}\n{CUSTOM}");
+        let both = format!("{}\n{CUSTOM}", entry(first(), ""));
         host.put("services", table(&both));
         set_key(fake, &key());
         let keys = Keys::new(Arc::new(fake.shelf.clone()), false);
@@ -58,7 +59,10 @@ fn compared(ticks: &[u8]) -> Rig {
 fn per_host(rig: &Rig) -> (usize, usize) {
     let runs = rig.fake.cloud.calls().runs;
     let on = |host: &str| runs.iter().filter(|r| r.url.host() == host).count();
-    (on("api.groq.com"), on("speech.example.com"))
+    (
+        on(first().url("").unwrap().host()),
+        on("speech.example.com"),
+    )
 }
 
 /// Each model's step on the running page.
@@ -75,7 +79,8 @@ fn steps(rig: &Rig) -> Vec<RunStep> {
 #[test]
 fn only_the_ticked_services_get_the_recording_and_an_unticked_ready_one_gets_nothing() {
     let rig = compared(&[0, 1]);
-    assert_eq!(per_host(&rig), (2, 0), "both Groq models, never Custom");
+    let both = (first().models.len(), 0);
+    assert_eq!(per_host(&rig), both, "the first row's models, never Custom");
     let none = compared(&[]);
     assert_eq!(per_host(&none), (0, 0), "no tick, nothing sent");
 }

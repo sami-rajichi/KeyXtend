@@ -7,6 +7,10 @@ use kx_module_api::ports::{
 
 use super::super::super::rig::Rig;
 use super::{act, named, on_cloud, put};
+use crate::services::{
+    self,
+    tests::shipped::{entry, first},
+};
 
 /// The shown sheet's part and the pages, after `turns` page clicks (back when negative).
 fn turned<T>(rig: &mut Rig, turns: i8, part: impl Fn(VoiceSheet) -> T) -> (T, Pages) {
@@ -55,8 +59,9 @@ fn a_card_takes_two_pages_the_voice_then_the_price() {
 /// Groq and Custom on, on the key page of row `name`.
 fn on_lines(name: &ServiceName) -> Rig {
     let mut rig = on_cloud("");
-    let on = "groq = { on = 2026-11-01, terms = 1 }\ncustom = { on = 2026-11-01, terms = 1 }";
-    put(&mut rig, "services", on);
+    let custom = services::table().unwrap().get("custom").unwrap();
+    let on = format!("{}\n{}", entry(first(), ""), entry(custom, ""));
+    put(&mut rig, "services", &on);
     act(&mut rig, name, CloudButton::Lines);
     rig
 }
