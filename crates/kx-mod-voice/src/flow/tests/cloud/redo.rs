@@ -184,3 +184,43 @@ fn a_local_takes_try_again_stays_local_when_the_language_now_picks_the_cloud() {
     assert!(uploads(&out).is_empty());
     assert!(matches!(calls(&out)[..], [RunCall::Again(_)]));
 }
+
+#[test]
+fn cancel_while_the_hand_over_is_due_sends_nothing_and_transcribe_anyway_sends_it() {
+    let mut rig = Rig::cloud();
+    rig.listen();
+    rig.wait(1_000);
+    rig.key();
+    let out = rig.bar(BarButton::Cancel);
+    assert!(
+        uploads(&out).is_empty() && calls(&out).is_empty(),
+        "{out:?}"
+    );
+    assert_eq!(note(&rig.shown()), Some(cancelled()));
+    assert!(uploads(&rig.tell(SpeechNote::Done(done(0)))).is_empty());
+    assert_eq!(uploads(&rig.bar(BarButton::Anyway)).len(), 1);
+}
+
+#[test]
+fn try_again_with_no_cloud_pick_left_before_the_hand_over_writes_locally_once_it_comes() {
+    let mut rig = Rig::cloud();
+    rig.listen();
+    rig.book.1.get_mut("fr").unwrap().key = false;
+    let out = rig.on(In::Keys);
+    assert_eq!(
+        calls(&out),
+        [RunCall::Stop],
+        "the key went while it listened"
+    );
+    rig.book.1.clear();
+    let out = rig.bar(BarButton::Again);
+    assert!(uploads(&out).is_empty(), "{out:?}");
+    assert!(matches!(calls(&out)[..], [RunCall::Again(_)]), "{out:?}");
+    assert_eq!(rig.mark(), None, "the take stays local");
+    assert!(uploads(&rig.tell(SpeechNote::Done(done(0)))).is_empty());
+    assert_eq!(
+        rig.shown(),
+        VoiceBar::Transcribing,
+        "the hand-over's end is taken in"
+    );
+}
