@@ -1,5 +1,6 @@
 //! Paste at once from the first dictation (ADR-0048 decision 5): the clipboard is checked for a private marker at the
-//! read, so a plain text there before the start, or one our own bar Copy wrote, is pasted over and comes back.
+//! read, so a plain text there before the start is pasted over and comes back. Our own bar Copy's mark is not the
+//! history's echo, so after it the text is typed until the next copy or clear.
 
 use kx_module_api::ports::ClipNote;
 
@@ -29,9 +30,14 @@ fn at_the_start_a_marked_text_is_typed_and_the_clipboard_left_untouched() {
 }
 
 #[test]
-fn after_our_own_bar_copy_a_paste_goes_and_its_text_comes_back() {
+fn after_our_own_bar_copy_the_text_is_typed_until_the_next_copy() {
     let mut rig = Rig::new();
     rig.fakes.clip.set_text(Some("copied on the bar"));
     rig.push(ClipNote::Marked { app: None });
-    assert_eq!(round_trip(&mut rig), [text("copied on the bar")]);
+    lend(&mut rig);
+    assert_eq!((lent(&rig), rig.fakes.writer.tries()), (vec![false], 0));
+    assert_eq!(rig.fakes.clip.takes(), 0, "never read");
+    rig.fakes.clip.set_text(Some("copied"));
+    rig.text("copied");
+    assert_eq!(round_trip(&mut rig), [text("copied")]);
 }

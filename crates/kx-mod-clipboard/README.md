@@ -16,16 +16,16 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 - takes copies from a queue of `queue_copies`, dropping the newest in a flood, keeps each within the limits (asking the shelf only its drive's free bytes, never a walk of its files), moves a twin up, and shows a note for one too big, out of disk room, or past a full pinned list;
 - toggles the panel on `ClipOpen`, waits for the ui's `ClipAct::Rows`, then draws one `ClipView` per change;
 - inserts with one `PasteAsk` per step, waits for `Pasted`, then `paste_gap_ms`, and writes a join only once the entry after it is read; a PNG goes with the DIB the worker makes within `media_ms`, or alone when none comes; a failed write, a paste that never comes, a file check past `check_ms` or nothing left to paste stops with a note, and the panel closes when all went in;
-- answers Quick-fill's `ClipTake` with the clipboard's text, read within the take's cap, and forgets the newest entry only when it is an unpinned text of this copy, else the next copy keeps nothing if it is that text, as its note can come after the take; a text too long, a busy clipboard or no text forgets nothing;
-- pastes another module's `PasteText` once through the keyboard and puts the clipboard back after `paste_gap_ms`, unless a copy came meanwhile; it answers no, writing nothing, when a private marker or a skipped app's copy is on the clipboard (markers checked live as it reads, `Clipboard::unmarked_text`), the read fails, or it cannot put the clipboard back whole (ADR-0048);
+- answers a module's `ClipTake` (Quick-fill's, or the voice key page's Paste) with the clipboard's text, read within the take's cap, and only to that module; it forgets the newest entry only when it is an unpinned text of this copy, else the next copy keeps nothing if it is that text, as its note can come after the take; a text too long, a busy clipboard or no text forgets nothing;
+- pastes another module's `PasteText` once through the keyboard, its text written with the presence markers so other clipboard tools leave it alone, and puts the clipboard back after `paste_gap_ms`, unless a copy came meanwhile; it answers no, writing nothing, when a presence marker is on the clipboard (checked live as it reads, `Clipboard::unmarked_text`), after a skipped app's copy or a mark that is not our echo, when the read fails, or when it cannot put the clipboard back whole (ADR-0048);
 - saves `save_ms` after a change, sweeps at local midnight, and on stop closes the panel and frees the chord (`HistoryWanted { on: false }`).
 
 ## Services and capabilities
 
 | Service | Use |
 |---|---|
-| `Clipboard` | Watches copies, checks the files of file entries, and reads the text for Quick-fill's take. |
-| `ClipboardWriter` | Sets the clipboard for each insert step. |
+| `Clipboard` | Watches copies, checks the files of file entries, reads the text for any module's take, and reads the unmarked text a lent paste puts back. |
+| `ClipboardWriter` | Sets the clipboard for each insert step, writes a lent paste's text (`write_lent`), and puts the clipboard back. |
 | `SealedShelf` | Keeps the history sealed, and tells the drive's free space. |
 | `Pictures` | Draws thumbnails and previews in the worker, and makes the DIB an inserted PNG goes with. |
 | `Calendar` | The local day, for day folders and the midnight sweep. |
@@ -33,7 +33,7 @@ Clipboard history (spec §7, ADR-0034): the module that keeps what the user copi
 | Capability | Why |
 |---|---|
 | `ReadClipboard` | It gates `Clipboard` and the panel events (`ClipPanel`, `ClipKey`, `ClipView`, `ClipAct`, `ClipTake`, `ClipTaken`; ADR-0035). |
-| `WriteClipboard` | It gates `ClipboardWriter`, `PasteAsk` and `Pasted`. |
+| `WriteClipboard` | It gates `ClipboardWriter`, `PasteAsk`, `Pasted`, `PasteText` and `TextPasted`. |
 | `SecretStore` | It gates the `SealedShelf`. |
 
 It provides no service.

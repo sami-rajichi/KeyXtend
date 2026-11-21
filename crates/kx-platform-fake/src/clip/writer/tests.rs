@@ -45,6 +45,18 @@ fn each_write_is_recorded_with_its_parts_in_order() {
 }
 
 #[test]
+fn a_lent_write_is_recorded_as_lent_and_takes_its_queued_result() {
+    let writer = FakeClipboardWriter::new();
+    writer.queue(Err(ClipError::Busy));
+    assert_eq!(writer.write_lent(&[text("a")], WAIT), Err(ClipError::Busy));
+    assert_eq!(writer.write_lent(&[text("b")], WAIT), Ok(()));
+    assert_eq!(writer.write(&[text("c")], WAIT), Ok(()));
+    assert_eq!(writer.writes(), [vec![text("b")], vec![text("c")]]);
+    assert_eq!(writer.lent(), [true, false]);
+    assert_eq!(writer.tries(), 3, "the refused one counts");
+}
+
+#[test]
 fn queued_results_answer_writes_in_turn_then_writes_succeed() {
     let writer = FakeClipboardWriter::new();
     writer.queue(Ok(()));

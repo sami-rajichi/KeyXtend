@@ -1,6 +1,6 @@
 //! A skipped app's copy is never put back (ADR-0048 decision 5): a password manager's clear timer could fire during
 //! the gap and leave its password there. A note from a skipped app, or a change the watch could not read, refuses
-//! until another app's copy or a clear, even with our echoes still due.
+//! until another app's copy or a clear, even with our echoes still due; so does a mark that is not our echo.
 
 use kx_module_api::ports::ClipNote;
 use toml::Value;
@@ -11,6 +11,8 @@ use crate::fixture::{app, text};
 
 /// The skipped app.
 pub(super) const VAULT: &str = "vault.exe";
+/// A password manager that marks its copies by number markers alone, and is not skipped.
+const KEEPER: &str = "keeper.exe";
 
 /// A rig that skips `VAULT`'s copies.
 pub(super) fn skipping() -> Rig {
@@ -52,4 +54,26 @@ fn a_skipped_apps_mark_or_a_missed_change_refuses_even_with_echoes_due() {
     rig.push(ClipNote::Cleared { app: None });
     rig.push(ClipNote::Busy);
     refused(&mut rig, "a change the watch missed");
+}
+
+#[test]
+fn a_mark_that_is_not_our_echo_refuses_until_another_copy_or_a_clear() {
+    let mut rig = Rig::new();
+    rig.fakes.clip.set_text(Some("hunter2"));
+    let keeper = || ClipNote::Marked {
+        app: Some(app(KEEPER)),
+    };
+    rig.push(keeper());
+    refused(&mut rig, "marked by number markers alone");
+    rig.fakes.clip.set_text(Some("mine"));
+    rig.text("mine");
+    assert_eq!(round_trip(&mut rig), [text("mine")], "another app's copy");
+    rig.push(ClipNote::Marked { app: None });
+    rig.push(ClipNote::Marked { app: None });
+    rig.fakes.clip.set_text(Some("hunter2"));
+    rig.push(keeper());
+    refused(&mut rig, "with no echo left due");
+    rig.fakes.clip.set_text(None);
+    rig.push(ClipNote::Cleared { app: None });
+    assert!(round_trip(&mut rig).is_empty(), "a clear");
 }

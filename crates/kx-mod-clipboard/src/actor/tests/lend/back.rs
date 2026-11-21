@@ -1,17 +1,24 @@
 //! When a lent paste leaves the clipboard alone: one with a private marker on it is never read or written back, even
 //! when a stale echo kept the board, a kept entry that cannot come back whole is typed, a text past `back_chars` is
-//! never read whole, and a copy made during the gap is never overwritten.
+//! never read whole, and a copy made during the gap is never overwritten. Only the lent text carries presence markers.
 
 use kx_module_api::ports::{ClipNote, ClipPart, SealedError};
 use kx_platform_fake::ShelfCall;
 use toml::Value;
 
+use super::super::logs::lines_of;
 use super::super::rig::Rig;
 use super::{SAID, holding, html, lend, lent, round_trip};
 use crate::fixture::{app, text};
 
 /// The most characters the rigs here read back.
 const CHARS: usize = 1000;
+/// The setting a long text's log line names.
+const BACK_CHARS: &str = "back_chars";
+/// How a captured line at info level starts.
+const INFO: &str = "INFO";
+/// How a captured line at warn level starts.
+const WARN: &str = "WARN";
 
 /// A rig that reads at most `CHARS` characters back.
 fn capped() -> Rig {
@@ -51,6 +58,23 @@ fn a_text_past_back_chars_is_never_read_whole_and_the_text_is_typed() {
     rig.text(&fits);
     lend(&mut rig);
     assert_eq!(rig.pastes().len(), 1, "a text within the cap comes back");
+}
+
+#[test]
+fn only_the_lent_text_carries_the_presence_markers_and_the_put_back_never_does() {
+    let mut rig = holding(vec![text("kept")]);
+    assert_eq!(round_trip(&mut rig), [text("kept")]);
+    assert_eq!(rig.fakes.writer.lent(), [true, false]);
+}
+
+#[test]
+fn a_text_past_back_chars_is_logged_as_typed_never_as_a_failed_read() {
+    let mut rig = capped();
+    rig.fakes.clip.set_text(Some(&"a".repeat(CHARS + 1)));
+    let lines = lines_of(|| lend(&mut rig));
+    let typed = |l: &&String| l.starts_with(INFO) && l.contains(BACK_CHARS);
+    assert_eq!(lines.iter().filter(typed).count(), 1, "{lines:?}");
+    assert!(lines.iter().all(|l| !l.starts_with(WARN)), "{lines:?}");
 }
 
 #[test]

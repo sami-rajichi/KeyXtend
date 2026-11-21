@@ -1,6 +1,6 @@
 //! What the clipboard holds, as the watch and our own writes told it, so Paste at once can put an entry back whole
-//! and never put back a skipped app's copy (owner, 2026-11-17, ADR-0048). Our writes' echoes keep the board, and
-//! privacy is checked live at the read, so a clipboard with a private marker on it is never read.
+//! and never put back a skipped app's or a marked copy the watch told (owner, 2026-11-17, ADR-0048); a copy made before
+//! the start is unknown. Our writes' echoes keep the board, and a presence marker is checked live at the read.
 
 use std::mem;
 
@@ -25,7 +25,7 @@ pub(super) enum Held {
 }
 
 /// What the clipboard holds, how many of our writes the watch has not told back yet, and whether it may hold a
-/// skipped app's copy.
+/// skipped app's or a marked copy.
 #[derive(Debug, Default)]
 pub(super) struct Board {
     held: Held,
@@ -35,14 +35,16 @@ pub(super) struct Board {
 
 impl Board {
     /// The watch told `note`, from a skipped app or unread when `skipped`; true for our own write's echo, which keeps
-    /// the board. A skipped app's note is never taken as our echo, and only another app's copy or a clear lets it go.
+    /// the board. A mark that is not our echo holds like a skipped app's note, as number markers alone may mark a
+    /// password, and only another app's copy, a clear or our own write lets either go.
     pub(super) fn heard(&mut self, note: &ClipNote, skipped: bool) -> bool {
         let cleared = matches!(note, ClipNote::Cleared { .. });
-        if matches!(note, ClipNote::Marked { .. }) && self.echoes > 0 && !skipped {
+        let marked = matches!(note, ClipNote::Marked { .. });
+        if marked && self.echoes > 0 && !skipped {
             self.echoes -= 1;
             return true;
         }
-        self.skipped = skipped && !cleared;
+        self.skipped = (skipped || marked) && !cleared;
         self.held = if cleared { Held::Empty } else { Held::Other };
         false
     }
@@ -78,11 +80,13 @@ enum Found {
 
 impl Actor {
     /// What to put back after a paste: the entry on the board, whole; else the clipboard's unmarked text alone; or
-    /// nothing for an empty clipboard. `None` for a skipped app's copy, a marked or unreadable clipboard, an entry that
-    /// cannot come back whole, or no text the history can name, as it may be a picture.
+    /// nothing for an empty clipboard. `None` for a skipped app's or a marked copy, an unreadable clipboard, an entry
+    /// that cannot come back whole, or no text the history can name, as it may be a picture.
     pub(super) fn previous(&mut self) -> Option<Back> {
         if self.board.skipped {
-            tracing::info!("a skipped app's copy may be on the clipboard, so the text is typed");
+            tracing::info!(
+                "a skipped app's or a marked copy may be on the clipboard, so the text is typed"
+            );
             return None;
         }
         let text = self.unmarked().ok()?;
@@ -107,7 +111,8 @@ impl Actor {
         Some(Back { parts, held })
     }
 
-    /// The clipboard's text once the live check finds no private marker on it; a marked or unreadable one is logged.
+    /// The clipboard's text once the live check finds no private marker on it; a marked, long or unreadable one is
+    /// logged, and only a failed read warns.
     fn unmarked(&self) -> Result<Option<Secret>, ClipError> {
         let (wait, cap) = (self.settings.wait(), self.settings.back_chars);
         let read = self.ports.clip.unmarked_text(wait, cap);
@@ -115,6 +120,9 @@ impl Actor {
             Ok(_) => {}
             Err(ClipError::Marked) => {
                 tracing::info!("a private copy is on the clipboard, so the text is typed");
+            }
+            Err(ClipError::TooLong) => {
+                tracing::info!("a text past back_chars is on the clipboard, so the text is typed");
             }
             Err(error) => tracing::warn!(%error, "the clipboard was not read before a paste"),
         }

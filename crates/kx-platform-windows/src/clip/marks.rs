@@ -33,8 +33,8 @@ impl Marks {
         Self::new(keep(&self.present), keep(&self.zero))
     }
 
-    /// The presence markers alone, for a put-back's read: our own writes set only number markers, so a text that
-    /// passes keeps its privacy when written back.
+    /// The presence markers alone, for a put-back's read: only our lent writes set one, and a put-back sets only number
+    /// markers, so a text that passes keeps its privacy when written back.
     pub(crate) fn presence(&self) -> Self {
         Self::new(self.present.clone(), Vec::new())
     }

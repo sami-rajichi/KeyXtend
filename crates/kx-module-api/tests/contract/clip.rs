@@ -223,6 +223,7 @@ fn ports_reached_through_their_gates_answer() {
     assert_eq!(clipboard.unmarked_text(wait, 1), Err(ClipError::Busy));
     let writer = cx.service::<ClipboardWriterKey>().unwrap();
     assert_eq!(writer.write(&[], wait), Err(ClipError::Busy));
+    assert_eq!(writer.write_lent(&[], wait), Err(ClipError::Busy));
     let shelf = cx.service::<SealedShelfKey>().unwrap();
     assert_eq!(shelf.room(), Err(SealedError::Locked));
 }

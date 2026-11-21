@@ -179,3 +179,12 @@ fn an_unmarked_read_takes_our_own_write_but_never_a_presence_marked_copy() {
     let marked = WinClipboard::new().unmarked_text(WAIT, TEXT.len());
     assert_eq!(marked, Err(ClipError::Marked), "never read");
 }
+
+#[test]
+#[cfg_attr(not(kx_live_clipboard), ignore = "writes the real clipboard; opt-in")]
+fn a_lent_write_carries_the_presence_markers_so_an_unmarked_read_refuses_it() {
+    let _real = hold();
+    WinClipboardWriter.write_lent(&[text(TEXT)], WAIT).unwrap();
+    let lent = WinClipboard::new().unmarked_text(WAIT, TEXT.len());
+    assert_eq!(lent, Err(ClipError::Marked), "never read back");
+}

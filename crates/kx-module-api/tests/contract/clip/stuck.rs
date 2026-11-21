@@ -43,6 +43,10 @@ impl ClipboardWriter for Stuck {
     fn write(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
         Err(ClipError::Busy)
     }
+
+    fn write_lent(&self, _: &[ClipPart], _: ClipWait) -> Result<(), ClipError> {
+        Err(ClipError::Busy)
+    }
 }
 
 impl SealedShelf for Stuck {

@@ -15,6 +15,8 @@ struct Log {
     queued: VecDeque<Result<(), ClipError>>,
     /// The parts of each write that set the clipboard, oldest first.
     writes: Vec<Vec<ClipPart>>,
+    /// Whether each of those writes was lent, so it also carried the presence markers.
+    lent: Vec<bool>,
     last_wait: Option<ClipWait>,
     tries: usize,
 }
@@ -44,6 +46,12 @@ impl FakeClipboardWriter {
     #[must_use]
     pub fn writes(&self) -> Vec<Vec<ClipPart>> {
         lock(&self.log).writes.clone()
+    }
+
+    /// Whether each write that set the clipboard was lent, oldest first.
+    #[must_use]
+    pub fn lent(&self) -> Vec<bool> {
+        lock(&self.log).lent.clone()
     }
 
     /// How many writes were asked, refused ones too.
@@ -81,8 +89,9 @@ impl fmt::Debug for FakeClipboardWriter {
     }
 }
 
-impl ClipboardWriter for FakeClipboardWriter {
-    fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+impl FakeClipboardWriter {
+    /// Takes the next queued result for a write of `parts`, lent or not, and records it when it succeeds.
+    fn record(&self, parts: &[ClipPart], wait: ClipWait, lent: bool) -> Result<(), ClipError> {
         let mut log = lock(&self.log);
         log.tries += 1;
         log.last_wait = Some(wait);
@@ -90,8 +99,19 @@ impl ClipboardWriter for FakeClipboardWriter {
         let result = log.queued.pop_front().unwrap_or(Ok(()));
         if result.is_ok() {
             log.writes.push(parts.to_vec());
+            log.lent.push(lent);
         }
         result
+    }
+}
+
+impl ClipboardWriter for FakeClipboardWriter {
+    fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+        self.record(parts, wait, false)
+    }
+
+    fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError> {
+        self.record(parts, wait, true)
     }
 }
 

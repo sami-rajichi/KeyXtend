@@ -1,6 +1,7 @@
-//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private and skipped
-//! copies, clears, echoes, failed reads and inserts never run a lend beside an insert, answer each ask once, never
-//! write a private or skipped text, and always end with the clipboard put back, unless the watch told a change since.
+//! Property test of the lent paste: random asks, answers right or stale, clock steps, copies, private, numbered and
+//! skipped copies, clears, echoes, failed reads and inserts never run a lend beside an insert, answer each ask once,
+//! never write a private, skipped or numbered text, and always end with the clipboard put back, unless the watch told a
+//! change since. A numbered copy is one marked by number markers alone; it may come back only when an echo was due.
 
 use std::time::Duration;
 
@@ -31,6 +32,8 @@ const COPY: &str = "x";
 const PRIVATE: &str = "p";
 /// The text a skipped app copies, unmarked.
 const VAULTED: &str = "v";
+/// The text a password manager copies marked by number markers alone, which the presence check lets through.
+const NUMBERED: &str = "n";
 
 /// One thing that can happen around a lent paste.
 #[derive(Clone, Debug)]
@@ -47,6 +50,8 @@ enum Step {
     Skipped,
     /// A password manager copies `PRIVATE` with a private marker.
     Private,
+    /// A password manager copies `NUMBERED`, marked by number markers alone.
+    Numbered,
     /// The watch tells a marked copy.
     Marked,
     /// The user clears the clipboard.
@@ -72,6 +77,7 @@ fn step() -> impl Strategy<Value = Step> {
         2 => Just(Step::Copy),
         2 => Just(Step::Marked),
         1 => Just(Step::Private),
+        1 => Just(Step::Numbered),
         1 => Just(Step::Skipped),
         1 => Just(Step::Clear),
         1 => Just(Step::Busy),
@@ -79,13 +85,16 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
-/// A rig, the asks made so far, whether the watch told a change since the text was last written, and whether a skipped
-/// app's copy came after every other change.
+/// A rig, the asks made so far, whether the watch told a change since the text was last written, whether a skipped
+/// app's copy came after every other change, our writes whose echo is due, and whether a numbered copy ever came while
+/// one was, so it was taken as our echo.
 struct Run {
     rig: Rig,
     asks: u32,
     told: bool,
     vault: bool,
+    due: u32,
+    echoed: bool,
 }
 
 impl Run {
@@ -125,6 +134,10 @@ impl Run {
                 rig.fakes.clip.set_marked(Some(PRIVATE));
                 rig.push(ClipNote::Marked { app: None });
             }
+            Step::Numbered => {
+                rig.fakes.clip.set_text(Some(NUMBERED));
+                rig.push(ClipNote::Marked { app: None });
+            }
             Step::Marked => rig.push(ClipNote::Marked { app: None }),
             Step::Clear => {
                 rig.fakes.clip.set_text(None);
@@ -152,22 +165,38 @@ impl Run {
         rounds
     }
 
-    /// Does `step`, noting a change the watch told, then checks no private or skipped text was written, no lend runs
-    /// beside an insert and no ask is answered twice.
-    fn step(&mut self, step: &Step) -> Result<(), TestCaseError> {
-        let writes = self.rig.fakes.writer.writes().len();
-        self.apply(step);
+    /// Notes what `step` changed, given the writes before it and whether its mark was taken as our echo.
+    fn note(&mut self, step: &Step, writes: usize, echo: bool) {
         let moved = matches!(
             step,
-            Step::Copy | Step::Skipped | Step::Private | Step::Marked | Step::Clear
+            Step::Copy
+                | Step::Skipped
+                | Step::Private
+                | Step::Numbered
+                | Step::Marked
+                | Step::Clear
         );
         self.told |= moved;
         self.vault = matches!(step, Step::Skipped)
             || (self.vault && !moved && !matches!(step, Step::Insert));
         let now = self.rig.fakes.writer.writes();
-        if now.len() > writes && now.last() == Some(&vec![text(SAID)]) {
+        let wrote = u32::try_from(now.len() - writes).unwrap();
+        self.due = self.due - u32::from(echo) + wrote;
+        self.echoed |= echo && matches!(step, Step::Numbered);
+        if wrote > 0 && now.last() == Some(&vec![text(SAID)]) {
             self.told = false;
         }
+    }
+
+    /// Does `step`, noting a change the watch told, then checks no private, skipped or numbered text was written, no
+    /// lend runs beside an insert and no ask is answered twice.
+    fn step(&mut self, step: &Step) -> Result<(), TestCaseError> {
+        let writes = self.rig.fakes.writer.writes().len();
+        let marks = matches!(step, Step::Private | Step::Numbered | Step::Marked);
+        let echo = marks && self.due > 0;
+        self.apply(step);
+        self.note(step, writes, echo);
+        let now = self.rig.fakes.writer.writes();
         prop_assert!(
             !now.contains(&vec![text(PRIVATE)]),
             "a private text is never written"
@@ -176,6 +205,10 @@ impl Run {
         prop_assert!(
             !(self.vault && vaulted),
             "a skipped app's text is never put back"
+        );
+        prop_assert!(
+            self.echoed || !now.contains(&vec![text(NUMBERED)]),
+            "a numbered copy is put back only when it was taken as our echo"
         );
         let inserting = !matches!(self.rig.pasting(), Paste::Idle);
         let idle = self.rig.actor.lent.idle();
@@ -216,7 +249,7 @@ proptest! {
     fn random_lends_run_alone_answer_once_and_always_put_the_clipboard_back(
         steps in prop::collection::vec(step(), 0..MAX_STEPS),
     ) {
-        let mut run = Run { rig: skipping(), asks: 0, told: false, vault: false };
+        let mut run = Run { rig: skipping(), asks: 0, told: false, vault: false, due: 0, echoed: false };
         for step in &steps {
             run.step(step)?;
         }

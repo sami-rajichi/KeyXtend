@@ -1,7 +1,7 @@
 //! Paste at once for another module (owner, 2026-11-17, ADR-0048): the history keeps what the clipboard holds, writes
-//! the text as ours, asks the keyboard for one paste on a round of its own, answers right after the keyboard does, and
-//! puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile. It answers no, writing
-//! nothing, when a private marker is on the clipboard or it cannot put the clipboard back.
+//! the text as ours with the presence markers, asks the keyboard for one paste on a round of its own, answers right
+//! after the keyboard does, and puts the clipboard back after `paste_gap_ms` unless another app changed it meanwhile.
+//! It answers no, writing nothing, while an insert or a lend runs, past the asker's start, or when `previous` refuses.
 
 use std::mem;
 use std::time::Duration;
@@ -40,7 +40,7 @@ impl Lend {
 
 impl Actor {
     /// Pastes `ask`'s text, asked at `at`, unless an insert or a paste is under way, the paste could not start within
-    /// the asker's `start_ms`, a private marker is on the clipboard, or it cannot be put back.
+    /// the asker's `start_ms`, or `previous` finds nothing it may put back.
     pub(super) fn lend(&mut self, ask: PasteText, at: Mono) {
         let (asker, start) = (ask.round, Duration::from_millis(ask.start_ms().into()));
         let free = self.lent.idle() && matches!(self.paste.state, Paste::Idle);
@@ -51,7 +51,8 @@ impl Actor {
             return self.answer(asker, false);
         };
         let parts = vec![ClipPart::Text(own(ask.text))];
-        let wrote = self.ports.writer.write(&parts, self.settings.wait());
+        // The presence markers keep other clipboard tools from the text; it is never written back, so none is lost.
+        let wrote = self.ports.writer.write_lent(&parts, self.settings.wait());
         wipe(parts);
         if let Err(error) = wrote {
             tracing::warn!(%error, "a text to paste was not written to the clipboard");

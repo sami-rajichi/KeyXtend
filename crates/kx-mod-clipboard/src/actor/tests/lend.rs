@@ -103,7 +103,7 @@ fn the_text_is_pasted_once_answered_then_the_copy_comes_back() {
 }
 
 #[test]
-fn the_echoes_of_our_writes_keep_the_entry_whole_and_another_mark_leaves_its_text() {
+fn the_echoes_of_our_writes_keep_the_entry_whole_and_another_mark_holds_the_paste() {
     let mut rig = holding(vec![text("kept"), html("<b>kept</b>")]);
     let whole = round_trip(&mut rig);
     assert_eq!(whole, [text("kept"), html("<b>kept</b>")]);
@@ -114,11 +114,10 @@ fn the_echoes_of_our_writes_keep_the_entry_whole_and_another_mark_leaves_its_tex
     for _ in 0..3 {
         rig.push(marked());
     }
-    assert_eq!(
-        round_trip(&mut rig),
-        [text("kept")],
-        "unmarked, its text alone"
-    );
+    let tries = rig.fakes.writer.tries();
+    lend(&mut rig);
+    assert_eq!(lent(&rig).last(), Some(&false), "a mark not ours");
+    assert_eq!(rig.fakes.writer.tries(), tries, "nothing written");
 }
 
 #[test]

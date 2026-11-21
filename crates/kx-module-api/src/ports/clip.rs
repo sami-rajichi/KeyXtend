@@ -177,7 +177,7 @@ pub trait Clipboard: Send + Sync {
     fn text(&self, wait: ClipWait, max_chars: usize) -> Result<Option<Secret>, ClipError>;
 
     /// The clipboard's text as `text` reads it, but only when no private marker whose mere presence asks to be left
-    /// alone is on it, checked in the same open. Our own writes never carry one, so writing such a text back keeps it
+    /// alone is on it, checked in the same open. Only our lent writes carry one, so writing such a text back keeps it
     /// as private as it was.
     ///
     /// # Errors
@@ -193,6 +193,13 @@ pub trait ClipboardWriter: Send + Sync {
     /// `Busy` when another app holds the clipboard past `wait.open_ms`, `Refused` when the OS refuses, `Io` when a
     /// part cannot be written.
     fn write(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
+
+    /// Sets the clipboard as `write` does, and also with the private markers whose mere presence asks every clipboard
+    /// tool to leave it alone, for a lent paste's text, which is never written back.
+    ///
+    /// # Errors
+    /// As `write`.
+    fn write_lent(&self, parts: &[ClipPart], wait: ClipWait) -> Result<(), ClipError>;
 }
 
 /// The clipboard watch service; it needs `ReadClipboard`.
