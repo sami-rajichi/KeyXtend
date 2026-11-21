@@ -1,6 +1,6 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
 //! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, and the cloud
-//! mark with a cloud note's buttons, Open service under a note's line, and a card's warning; and the click kinds QML
+//! mark with a cloud note's buttons, Open service under a note's line, and a card's warning; and every click kind QML
 //! sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
@@ -41,6 +41,26 @@ fn kinds() -> Value {
         "side": acts::SIDE, "local": acts::LOCAL, "save": acts::SAVE, "caret": acts::CARET,
         "pick": acts::PICK,
     })
+}
+
+/// The hub's click kinds, each a `pub const` text there.
+const ACTS: &str = include_str!("../../src/hub/voice/acts.rs");
+
+/// Every click kind the hub takes has a name in `kinds()`, so a QML test can send each one.
+#[test]
+fn every_click_kind_has_a_name_for_qml() {
+    let named = kinds();
+    let named: Vec<&Value> = named.as_object().expect("names").values().collect();
+    let all = ACTS.lines().filter_map(|l| {
+        let (_, text) = l.strip_prefix("pub const ")?.split_once(": &str = \"")?;
+        text.strip_suffix("\";")
+    });
+    let all: Vec<&str> = all.collect();
+    let missing: Vec<&&str> = all
+        .iter()
+        .filter(|k| !named.iter().any(|v| v == *k))
+        .collect();
+    assert!(!all.is_empty() && missing.is_empty(), "{missing:?}");
 }
 
 /// The language the keyboard in `tag` dictates in, as Windows names it, and a sentence said in it (the mock-up's).
@@ -158,8 +178,8 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
 }
 
 /// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
-/// most acts under its line.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 6] {
+/// most acts under its line, and the account note the longest line over its acts.
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 7] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
@@ -167,6 +187,10 @@ fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 6] {
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
         ("cloudOff", cloud(CloudWhy::Off, fetch, true)),
+        (
+            "cloudAccount",
+            cloud(CloudWhy::Account, LocalUse::Ready, true),
+        ),
         (
             "cloudNoLocal",
             cloud(CloudWhy::NoLocal, LocalUse::Dimmed, false),

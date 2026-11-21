@@ -99,6 +99,67 @@ var views = {
         "window": "شريط الإملاء في KeyXtend"
       }
     },
+    "cloudAccount": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "إعادة المحاولة",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "استخدام النموذج المحلي",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "فتح الخدمة",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "تطلب الخدمة خطوةً على موقعها، مثل التحقق أو وسيلة دفع أو حدٍّ للإنفاق."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
     "cloudKey": {
       "bar": {
         "acts": [
@@ -302,7 +363,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "تم النسخ",
@@ -1094,6 +1155,67 @@ var views = {
         "window": "KeyXtend dictation bar"
       }
     },
+    "cloudAccount": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Try again",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Use the local model",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Open service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "The service asks for a step on its site, such as a verification, a payment method or a spending cap."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
     "cloudKey": {
       "bar": {
         "acts": [
@@ -1297,7 +1419,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "Copied",
@@ -2089,6 +2211,67 @@ var views = {
         "window": "Barre de dictée de KeyXtend"
       }
     },
+    "cloudAccount": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Réessayer",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Utiliser le modèle local",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Ouvrir le service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "Le service demande une étape sur son site, comme une vérification, un moyen de paiement ou un plafond de dépenses."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
     "cloudKey": {
       "bar": {
         "acts": [
@@ -2292,7 +2475,7 @@ var views = {
       },
       "panel": null,
       "place": "above",
-      "round": 22,
+      "round": 23,
       "sounds": true,
       "words": {
         "copied": "Copié",

@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 mod cloud;
 mod device;
+mod keys;
 mod long;
 mod sheets;
 
@@ -209,7 +210,10 @@ fn panels(tag: &str) -> Vec<(String, Shown)> {
         .chain(other_panels())
         .chain(cloud::panels())
         .map(|(name, s)| (name.to_owned(), s));
-    fixed.chain(long::panels(tag)).collect()
+    fixed
+        .chain(keys::panels(tag))
+        .chain(long::panels())
+        .collect()
 }
 
 /// Every view in language `tag`, by name, each its own round from 1, the bar hidden.

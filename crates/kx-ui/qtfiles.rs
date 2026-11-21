@@ -120,6 +120,7 @@ pub const QML: &[&str] = &[
     "qml/SelNames.qml",
     "qml/VoiceNames.qml",
     "qml/VoiceGlow.qml",
+    "qml/VoiceActs.qml",
     "qml/VoiceBar.qml",
     "qml/VoiceButton.qml",
     "qml/VoiceBarButton.qml",

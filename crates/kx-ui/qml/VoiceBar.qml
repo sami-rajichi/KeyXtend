@@ -1,6 +1,6 @@
-// The dictation bar (design "The bar"; design/voice-bar.html .vbar): a pill in the keyboard's theme where the hub
-// places it, one key row tall, taller by a card's warning or a note's acts under the row. It
-// listens, writes, then shows the text or a note with each state's buttons in one order (ADR-0020), taking clicks but
+// The dictation bar (design "The bar"; design/voice-bar.css .vbar): a pill in the keyboard's theme where the hub
+// places it, one key row tall, taller by a card's warning or a note's acts under the row. It listens, writes, then
+// shows the text or a note with each state's buttons in one order in every language (ADR-0020), taking clicks but
 // never focus, playing the start and stop sounds and telling the module when the pointer is over it.
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -18,6 +18,8 @@ Window {
     required property var box
     required property var logical
     property var now: () => Date.now()
+    // Hands a line to screen readers; a test puts its own in place to hear what is told.
+    property var announce: said => body.Accessible.announce(said)
 
     // The view as the hub writes it (null before any), the pointer over the bar as last told, the round Copy was
     // clicked on, and when the listening view came on the clock.
@@ -185,7 +187,7 @@ Window {
     function tell() {
         const said = spoken();
         if (said)
-            body.Accessible.announce(said);
+            announce(said);
     }
     // What readers hear of the shown bar: Listening's sentence, else its line, else its word or its text.
     function spoken() {
@@ -273,20 +275,9 @@ Window {
             y: body.height - height
             host: bar
         }
-        // A note's acts under its line, at the end as the row's buttons, in their one order.
-        Row {
+        VoiceActs {
             id: actRow
-            x: bar.width - bar.pad - width
-            y: bar.row
-            spacing: bar.gap
-            layoutDirection: Qt.LeftToRight
-            Repeater {
-                model: bar.acts
-                delegate: VoiceBarButton {
-                    host: bar
-                    under: true
-                }
-            }
+            host: bar
         }
         PressWatch {
             onTouched: bar.touched()

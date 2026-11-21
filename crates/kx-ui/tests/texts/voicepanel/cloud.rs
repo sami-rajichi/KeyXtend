@@ -1,13 +1,13 @@
 //! The Qt Quick tests' cloud panels: the Cloud page on, then with an Off row's sealed key ticked, and off, a card
-//! asking and an old one with its warning, two key pages, the Models page's Cloud side, and Compare with cloud models.
+//! asking and an old one with its warning, the Models page's Cloud side, and Compare with cloud models.
 
 use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet,
-    CloudWhy, CompareCloud, CompareMic, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName,
-    Fact, FactArg, FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet,
-    RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
+    CardPart, CloudBand, CloudButton, CloudCard, CloudRow, CloudSheet, CloudWhy, CompareCloud,
+    CompareMic, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg, FactValue,
+    Hundredths, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep, ServiceMark, ServiceName,
+    ServiceRow, Unavailable, UsePrice, VoiceSheet,
 };
 
 /// The training warning's fact id, which the sample card and the warned rows carry.
@@ -134,70 +134,6 @@ pub(super) fn card(old: bool) -> VoiceSheet {
     }))
 }
 
-/// Groq's key page with its key tested, the keep-nothing row's with a refused model, or the Custom row's with an
-/// address that is not HTTPS taking the letters.
-pub(super) fn lines(which: &str) -> VoiceSheet {
-    let text = |s: &str| Redacted::new(s.to_owned());
-    let mut s = ServiceSheet {
-        service: named("Groq"),
-        mark: ServiceMark::Ready,
-        key: Redacted::new(56),
-        typed: Redacted::new(0),
-        check: KeyCheck::Works,
-        renews_at: None,
-        address: None,
-        address_fault: None,
-        model: text(""),
-        model_na: false,
-        model_refused: false,
-        keep: None,
-        site: Some("console.groq.com".to_owned()),
-        acts: CloudButton::ALL.to_vec(),
-        part: None,
-        typing: CloudLine::Key,
-        caret: Redacted::new(0),
-        saves: Vec::new(),
-    };
-    if which == "router" {
-        (s.service, s.mark, s.check) = (named("OpenRouter"), ServiceMark::Ready, KeyCheck::NoTest);
-        (s.model, s.model_na, s.keep) = (text("mistralai/voxtral-small"), true, Some(true));
-        s.saves.push(CloudLine::Model);
-    } else if which == "custom" {
-        (s.service, s.mark, s.key, s.check) = (
-            ServiceName::Custom,
-            ServiceMark::NeedsKey,
-            Redacted::new(0),
-            KeyCheck::Untested,
-        );
-        (s.address, s.address_fault) =
-            (Some(text("http://lan.example")), Some(AddressFault::Https));
-        (s.model, s.model_refused, s.site) = (text("no such/model"), true, None);
-        s.acts = vec![CloudButton::Paste, CloudButton::Facts, CloudButton::Off];
-        (s.typing, s.caret) = (CloudLine::Address, Redacted::new(7));
-        s.saves = vec![CloudLine::Address, CloudLine::Model];
-    }
-    VoiceSheet::Service(s)
-}
-
-/// Groq's key page with a new key typed, its caret inside it.
-fn typed() -> VoiceSheet {
-    let VoiceSheet::Service(mut s) = lines("groq") else {
-        unreachable!("a key page")
-    };
-    (s.typed, s.caret, s.saves) = (Redacted::new(20), Redacted::new(12), vec![CloudLine::Key]);
-    VoiceSheet::Service(s)
-}
-
-/// `AssemblyAI`'s key page: no call tests its key, so it says the first dictation does.
-fn assembly() -> VoiceSheet {
-    let VoiceSheet::Service(mut s) = lines("groq") else {
-        unreachable!("a key page")
-    };
-    (s.service, s.check) = (named("AssemblyAI"), KeyCheck::NoTest);
-    s.site = Some("www.assemblyai.com".to_owned());
-    VoiceSheet::Service(s)
-}
-
 /// A cloud model `name` of `service` at `mark`, maybe Unavailable.
 fn model(name: &str, service: &str, mark: ServiceMark, na: bool) -> ModelRow {
     ModelRow {
@@ -289,11 +225,6 @@ pub fn panels() -> Vec<(&'static str, Shown)> {
         ("cloudOff", shown(cloud_off(), &[])),
         ("card", shown(card(false), &[])),
         ("cardOld", shown(card(true), &[])),
-        ("service", shown(lines("groq"), &[])),
-        ("serviceRouter", shown(lines("router"), &[])),
-        ("serviceAssembly", shown(assembly(), &[])),
-        ("serviceCustom", shown(lines("custom"), &[])),
-        ("serviceTyped", shown(typed(), &[])),
         ("modelsCloud", paged(shown(models(), &[Use]), 0, 1, 1)),
         ("compareCloud", shown(compare(), &[])),
         ("comparingCloud", shown(comparing(), &[Cancel])),

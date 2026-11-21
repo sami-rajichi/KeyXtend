@@ -1,8 +1,8 @@
 // The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service
 // takes the voice, which readers hear as a sentence, as they hear the hub's sentence while it listens; a cloud note's
 // Try again, Use the local model dimmed unless one is ready, and Download when none is (edge 20), under the line with
-// Open service for a note the service's pages settle; and the card's warning in full under the row on the first
-// dictation to its service, in English, French and Arabic.
+// Open service for a note the service's pages settle, the longest line whole; the card's warning in full under the row
+// on the first dictation to its service; and each new state told to readers once, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -37,14 +37,14 @@ Item {
         function langs_data() {
             return ["en", "fr", "ar"].map(t => ({ tag: t, t: t }));
         }
-        // A shown bar over a stand-in Voice object for the hub's view `name` in language `tag`.
-        function make(name, tag) {
+        // A shown bar over a stand-in Voice object for the hub's view `name` in language `tag`, with `more` set on it.
+        function make(name, tag, more) {
             const v = JSON.parse(JSON.stringify(Voice.views[tag][name]));
             const voice = createTemporaryObject(voiceC, root, { page: null });
-            const bar = createTemporaryObject(barC, root, {
+            const bar = createTemporaryObject(barC, root, Object.assign({
                 voice: voice, lk: N.lk, res: Board.resOf(N.lk, root.texts[tag]), s: 1, ar: tag === "ar",
                 box: () => root.over, logical: (x, y) => ({ x: x, y: y })
-            });
+            }, more || {}));
             Pointer.through([bar]);
             voice.page = v;
             tryVerify(() => bar.visible, 2000, "it shows");
@@ -138,16 +138,27 @@ Item {
             verify(icons.service_key !== "" && icons.service_key !== icons.service, "two icons");
         }
 
+        // The Off note with the most acts, and the account note with the longest line over them.
         function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line_data() {
-            return langs_data();
+            const notes = [["cloudOff", ["voice.again", "voice.local", "voice.download", "voice.service"]],
+                ["cloudAccount", ["voice.again", "voice.local", "voice.service"]]];
+            const all = [];
+            for (const t of ["en", "fr", "ar"])
+                notes.forEach(([name, acts]) => all.push({ tag: name + " " + t, t: t, name: name, acts: acts }));
+            return all;
         }
         function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line(d) {
-            const bar = make("cloudOff", d.t);
+            const bar = make(d.name, d.t);
             const under = b => b.mapToItem(bar.body, 0, 0).y >= bar.row - 0.5;
             const all = buttons(bar);
             compare(all.filter(b => !under(b)).map(b => b.Accessible.id), ["voice.gear", "voice.close"], "Close stays");
             const acts = all.filter(under);
-            compare(acts.map(b => b.Accessible.id), ["voice.again", "voice.local", "voice.download", "voice.service"]);
+            compare(acts.map(b => b.Accessible.id), d.acts);
+            const text = bar.view.bar.hint.text;
+            const line = Board.all(bar.contentItem, o => o.visible && o.text === text && o.font !== undefined);
+            compare(line.length, 1, "the note's line shows once");
+            verify(!line[0].truncated, "the note reads whole over its acts");
+            verify(line[0].mapToItem(bar.body, 0, 0).y + line[0].height <= bar.row + 0.5, "the line sits in the row");
             for (const b of acts) {
                 const at = b.mapToItem(bar.body, 0, 0);
                 verify(at.x >= 0 && at.x + b.width <= bar.body.width + 0.5, b.Accessible.id + " inside the bar's width");
@@ -173,6 +184,20 @@ Item {
                 compare(bar.spoken(), Voice.views[d.t][name].bar.said, name);
                 bar.visible = false;
             }
+        }
+
+        // Each new state is told to readers once: the hub's sentence as it listens, then the text it wrote.
+        function test_each_new_state_is_told_to_readers_once_data() {
+            return langs_data();
+        }
+        function test_each_new_state_is_told_to_readers_once(d) {
+            const told = [];
+            const views = Voice.views[d.t];
+            const bar = make("cloudListening", d.t, { announce: said => told.push(said) });
+            bar.voice.page = JSON.parse(JSON.stringify(views.text));
+            bar.voice.page = JSON.parse(JSON.stringify(views.text));
+            compare(told, [views.cloudListening.bar.said, views.text.bar.text.text], "the sentence, then the text");
+            bar.visible = false;
         }
     }
 }
