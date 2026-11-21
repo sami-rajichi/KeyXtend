@@ -2,7 +2,7 @@
 //! file, shows its banner, keeps its off list off for that run and gives Open folder no folder.
 
 use crate::A_KEY;
-use crate::rig::{Rig, char_key};
+use crate::rig::{APP, Rig, char_key};
 use keyxtend::drain;
 use keyxtend::hidden::Run;
 use kx_module_api::ModuleState::{Active, Stopped};
@@ -11,9 +11,6 @@ use kx_module_api::ports::{FaceAction, KeyId};
 use kx_ui::I18n;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-
-/// The app the run was started from.
-const APP: &str = "Claude";
 
 /// Everything under `dir`, A to Z, with each file's bytes.
 pub fn tree(dir: &Path) -> Vec<(PathBuf, Option<Vec<u8>>)> {

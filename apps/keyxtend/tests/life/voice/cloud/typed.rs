@@ -1,7 +1,7 @@
 //! A key typed on our keyboard into the key page's line (ADR-0049): the letters go to the voice module, not the app,
 //! Enter seals the key, and no view, no text for the keyboard, no log line and no span field holds it.
 
-use super::{dots, groq, key_page, sealed, unseen};
+use super::{dots, key_page, sealed, switch_on, unseen};
 use crate::rig::{Rig, WAIT, hear};
 use kx_module_api::ports::{
     FaceAction, KeyId, PanelLine, ServiceSheet, VoiceLine, VoiceSheet, VoiceView,
@@ -138,7 +138,7 @@ fn a_key_typed_on_our_keyboard_into_its_line_is_sealed_and_shows_nowhere() {
     let rig = Rig::new();
     let mut boot = rig.load();
     boot.start().unwrap();
-    groq(&mut boot);
+    switch_on(&mut boot);
     let bus = boot.kernel.bus();
     let ((_views, views), (_lines, lines)) = (hear::<VoiceView>(&bus), hear::<VoiceLine>(&bus));
     key_page(&bus, &views);

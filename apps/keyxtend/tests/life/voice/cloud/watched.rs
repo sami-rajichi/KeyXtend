@@ -1,15 +1,15 @@
-//! The voice shelf behind a watch that counts each load or listing of the cloud keys' folder, so a test tells a key's
-//! read from the store's own reads.
+//! The voice shelf behind a watch that counts each load, listing, save, removal and drop of the cloud keys' folder,
+//! so a test tells a key's use from the store's own reads.
 
 use kx_mod_voice::keys::KEYS;
 use kx_module_api::ports::{BlobName, Room, SealedError, SealedShelf};
 use kx_platform_fake::FakeShelf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// A fake shelf whose key reads are counted.
+/// A fake shelf whose key uses are counted.
 pub struct Watched {
     shelf: FakeShelf,
-    reads: AtomicUsize,
+    uses: AtomicUsize,
 }
 
 impl Watched {
@@ -17,19 +17,19 @@ impl Watched {
     pub const fn new(shelf: FakeShelf) -> Self {
         Self {
             shelf,
-            reads: AtomicUsize::new(0),
+            uses: AtomicUsize::new(0),
         }
     }
 
-    /// The loads and listings of the keys' folder so far.
-    pub fn key_reads(&self) -> usize {
-        self.reads.load(Ordering::SeqCst)
+    /// The loads, listings, saves, removals and drops of the keys' folder so far.
+    pub fn key_uses(&self) -> usize {
+        self.uses.load(Ordering::SeqCst)
     }
 
-    /// Counts a read of `folder` when it is the keys' folder.
+    /// Counts a use of `folder` when it is the keys' folder.
     fn note(&self, folder: &BlobName) {
         if folder.as_str() == KEYS {
-            self.reads.fetch_add(1, Ordering::SeqCst);
+            self.uses.fetch_add(1, Ordering::SeqCst);
         }
     }
 }
@@ -41,14 +41,17 @@ impl SealedShelf for Watched {
     }
 
     fn save(&self, folder: &BlobName, name: &BlobName, bytes: &[u8]) -> Result<(), SealedError> {
+        self.note(folder);
         self.shelf.save(folder, name, bytes)
     }
 
     fn remove(&self, folder: &BlobName, name: &BlobName) -> Result<(), SealedError> {
+        self.note(folder);
         self.shelf.remove(folder, name)
     }
 
     fn drop_folder(&self, folder: &BlobName) -> Result<(), SealedError> {
+        self.note(folder);
         self.shelf.drop_folder(folder)
     }
 

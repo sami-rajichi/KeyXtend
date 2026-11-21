@@ -4,8 +4,10 @@
 //! the model files reach it alone, `OpenLink` and `ReadClipboard` each gain exactly the voice module, its shelf and the
 //! cloud port reach only it in a run, either run, and the session watch needs no gate.
 
+use super::clip::readers;
+use super::sel::linkers;
 use super::{asking, defaults, features, holders, reached};
-use crate::rig::{OS, Rig};
+use crate::rig::{APP, OS, Rig};
 use keyxtend::boot::{Services, modules};
 use keyxtend::hidden::Run;
 use kx_module_api::ports::{
@@ -21,8 +23,6 @@ use std::sync::Arc;
 const VOICE_FEATURE: &str = "mod-voice";
 /// The modules that hold `Voice` as an event gate only.
 const GATES: [ModuleId; 2] = [kx_mod_keyboard::ID, kx_ui::ID];
-/// The app a hidden run was started from.
-const APP: &str = "Claude";
 
 /// Every shipped module's id.
 fn shipped() -> BTreeSet<ModuleId> {
@@ -60,15 +60,12 @@ fn only_the_voice_module_holds_the_microphone_the_network_and_the_folder_reveal(
 
 #[test]
 fn open_link_and_read_clipboard_each_gain_exactly_the_voice_module() {
-    let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
-    let before = [
-        (Capability::OpenLink, BTreeSet::from([kx_mod_selection::ID])),
-        (
-            Capability::ReadClipboard,
-            BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID]),
-        ),
+    let sets = [
+        (Capability::OpenLink, linkers()),
+        (Capability::ReadClipboard, readers()),
     ];
-    for (cap, was) in before {
+    for (cap, mut was) in sets {
+        assert!(was.remove(&kx_mod_voice::ID), "{cap:?}: voice holds it");
         let now = holders(cap);
         let gained: BTreeSet<ModuleId> = now.difference(&was).copied().collect();
         assert_eq!(gained, voice(), "{cap:?}: ADR-0047 decision 11");

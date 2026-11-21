@@ -34,12 +34,14 @@ const GOLDEN: [&str; 3] = ["en-us", "fr-fr", "ar-tn"];
 /// The longest a test waits for a module's thread; it never sleeps.
 pub const WAIT: Duration = Duration::from_secs(10);
 /// The calendar's day, hour, minute and offset east of UTC: Paris on 31 October 2026 at 16:32.
-const TODAY: (u16, u8, u8) = (2026, 10, 31);
+pub const TODAY: (u16, u8, u8) = (2026, 10, 31);
 const NOW: (u8, u8, i16) = (16, 32, 60);
 /// The seed of Quick-fill's random bytes, so its ids repeat from run to run.
 const SEED: u64 = 9;
 /// The system's display language the tests build the modules with: the fake look's own.
 pub const OS: &str = DEFAULT_LANGUAGE;
+/// The app a hidden run is started from, a made-up short name as the probe gives it.
+pub const APP: &str = "Claude";
 
 /// The app's folders and fakes; the folders go when it drops.
 pub struct Rig {

@@ -18,6 +18,12 @@ use std::sync::Arc;
 /// The clipboard module's feature.
 const CLIP_FEATURE: &str = "mod-clipboard";
 
+/// The modules holding `ReadClipboard`: the panel's events and the Paste takes, written once for every test.
+pub(super) fn readers() -> BTreeSet<ModuleId> {
+    let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
+    BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID, kx_mod_voice::ID])
+}
+
 #[test]
 fn mod_clipboard_is_a_default_feature_and_the_default_build_ships_it() {
     assert!(defaults(&features()).contains(&CLIP_FEATURE));
@@ -38,11 +44,10 @@ fn the_clipboard_holds_read_write_and_the_secret_store() {
 
 #[test]
 fn the_clipboard_gates_go_to_the_clipboard_the_keyboard_the_ui_quick_fill_predict_and_voice() {
-    let (clip, keyboard, ui) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID, kx_ui::ID);
-    let read = BTreeSet::from([clip, keyboard, ui, kx_mod_vault::ID, kx_mod_voice::ID]);
+    let (clip, keyboard) = (kx_mod_clipboard::ID, kx_mod_keyboard::ID);
     assert_eq!(
         holders(Capability::ReadClipboard),
-        read,
+        readers(),
         "the panel's events and the Paste takes"
     );
     let write = BTreeSet::from([clip, keyboard, kx_mod_voice::ID]);

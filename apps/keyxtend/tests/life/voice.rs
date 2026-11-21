@@ -5,7 +5,7 @@
 
 mod cloud;
 
-use crate::rig::{Rig, WAIT, hear};
+use crate::rig::{APP, Rig, WAIT, hear};
 use keyxtend::boot::Boot;
 use keyxtend::hidden::Run;
 use kx_mod_clipboard::ClipSettings;
@@ -26,8 +26,6 @@ const MODELS: &str = r"D:\KeyXtend\models";
 const MIC: &str = "mic";
 /// The language the tests dictate in, the rig's first layout.
 const ENGLISH: &str = "en";
-/// The app the hidden run was started from.
-const APP: &str = "Claude";
 /// What the test says.
 const SAID: &str = "hello";
 /// What the clipboard held before.
@@ -70,6 +68,12 @@ fn start(boot: &mut Boot, insert: &str) {
 
 /// Starts a dictation in English on a started `boot`, and the key stops it once speech was heard.
 fn talk(rig: &Rig, boot: &Boot) {
+    listen(rig, boot);
+    stop(rig, boot);
+}
+
+/// Starts a dictation in English on a started `boot` and waits until it records and speech was heard.
+fn listen(rig: &Rig, boot: &Boot) {
     let bus = boot.kernel.bus();
     let (_lit, lit) = hear::<VoiceLit>(&bus);
     let english = LayoutChanged {
@@ -84,6 +88,10 @@ fn talk(rig: &Rig, boot: &Boot) {
     tap_mic(boot);
     while lit.recv_timeout(WAIT).unwrap() != VoiceLit::Rec {}
     assert!(rig.speech.tell(SpeechNote::Heard));
+}
+
+/// The key stops the dictation `listen` started, once its debounce passed.
+fn stop(rig: &Rig, boot: &Boot) {
     rig.clock()
         .advance(VoiceSettings::from_defaults().unwrap().debounce());
     tap_mic(boot);

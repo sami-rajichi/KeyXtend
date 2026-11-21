@@ -3,7 +3,7 @@
 //! fill key, and writes nothing. `fill` types a saved login through the keyboard.
 
 use crate::hidden::tree;
-use crate::rig::{Rig, WAIT, char_key, hear};
+use crate::rig::{APP, Rig, WAIT, char_key, hear};
 use keyxtend::boot::Boot;
 use keyxtend::drain;
 use keyxtend::hidden::Run;
@@ -33,8 +33,6 @@ const NAME_KEYS: [u16; 4] = [0x30, 0x1E, 0x31, 0x25];
 const NAME: &str = "bank";
 /// The New and Edit page's tag in the panel's JSON.
 const EDIT_SHEET: &str = "edit";
-/// The app a hidden run was started from.
-const APP: &str = "Claude";
 
 /// Clicks key `id` on the board.
 fn tap(boot: &Boot, id: &str) {

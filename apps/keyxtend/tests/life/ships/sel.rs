@@ -15,8 +15,8 @@ use std::sync::Arc;
 /// The selection module's feature.
 const SEL_FEATURE: &str = "mod-selection";
 
-/// The modules the link goes to: the selection chips' Translate and a cloud card's link.
-fn linkers() -> BTreeSet<ModuleId> {
+/// The modules the link goes to: the selection chips' Translate and a cloud card's link, written once for every test.
+pub(super) fn linkers() -> BTreeSet<ModuleId> {
     BTreeSet::from([kx_mod_selection::ID, kx_mod_voice::ID])
 }
 
