@@ -22,6 +22,7 @@ voice =
     .listen = إعادة الاستماع
     .download = تنزيل
     .download-size = تنزيل · { $size }
+    .service = فتح الخدمة
     .mask = ••••••••
     .timer = { $minutes }:{ $seconds }
     .note-nothing = لم يُسمع شيء. هل يعمل الميكروفون؟

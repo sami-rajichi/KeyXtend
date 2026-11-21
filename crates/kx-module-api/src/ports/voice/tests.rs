@@ -151,9 +151,9 @@ fn a_place_reads_and_writes_as_its_lowercase_name() {
 
 #[test]
 fn the_bar_has_the_approved_mock_ups_buttons() {
-    use BarButton::{Again, Anyway, Cancel, Close, Copy, Download, Listen, Stop, Undo};
+    use BarButton::{Again, Anyway, Cancel, Close, Copy, Download, Listen, Service, Stop, Undo};
     let want = [
-        Cancel, Stop, Copy, Undo, Anyway, Again, Listen, Download, Close,
+        Cancel, Stop, Copy, Undo, Anyway, Again, Listen, Download, Service, Close,
     ];
     assert_eq!(
         BarButton::ALL,

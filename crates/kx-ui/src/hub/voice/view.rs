@@ -1,6 +1,7 @@
 //! The bar as QML reads it (design "The bar"): each state's words in the keyboard's language, its buttons in one order
-//! in every language with the dimmed ones in place, a text with its own direction or dots, a note with its action, and
-//! a service's card warning while the first dictation to it listens.
+//! in every language with the dimmed ones in place, a text with its own direction or dots, a note with its action and,
+//! for a note the service's pages settle, its acts under the line, and a service's card warning while the first
+//! dictation to it listens.
 //! The gear shows in every state but `hidden`, before the last button.
 
 use super::cloud::{self, CloudMark};
@@ -76,6 +77,8 @@ enum Bar {
         hint: Hint,
         mic: bool,
         buttons: Vec<Button>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        acts: Vec<Button>,
     },
 }
 
@@ -187,19 +190,27 @@ fn text_bar(text: &BarText, t: &I18n) -> Bar {
     }
 }
 
-/// The Note state: the action it names, a cloud note's local model, then Close.
+/// The Note state: the action it names, a cloud note's local model, then Close; a note the service's own pages settle
+/// puts them under its line with Open service, as the Windows 11 info bar does, and keeps Close (owner, 2026-11-20).
 fn note_bar(note: &BarNote, t: &I18n) -> Bar {
     let act = note.act.map(|b| action(b, &note.hint, t));
-    let local = match note.hint {
-        BarHint::Cloud { local, .. } => use_local(t, local),
-        _ => Vec::new(),
+    let (local, opens) = match &note.hint {
+        BarHint::Cloud { local, why } => (use_local(t, *local), why.opens()),
+        _ => (Vec::new(), false),
     };
     let close = Button::bar(t, BarButton::Close);
-    let buttons = act.into_iter().chain(local).chain([close]);
+    let mut acts: Vec<Button> = act.into_iter().chain(local).collect();
+    let buttons = if opens {
+        acts.push(Button::bar(t, BarButton::Service));
+        vec![close]
+    } else {
+        acts.drain(..).chain([close]).collect()
+    };
     Bar::Note {
         hint: Hint::of(t, &note.hint),
         mic: note.mic,
-        buttons: buttons.collect(),
+        buttons,
+        acts,
     }
 }
 

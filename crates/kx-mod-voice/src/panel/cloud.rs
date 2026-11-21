@@ -140,6 +140,17 @@ impl Panel {
         }
     }
 
+    /// Open service on a cloud note: service `id`'s card, or its key page for the key note, with Back to the Cloud page;
+    /// that page while cloud does not offer the row, as with cloud off, where the switch is.
+    pub fn settle(&mut self, id: &str, key: bool, facts: &Facts<'_>) -> Vec<Do> {
+        let offered = facts.cloud.map(|c| c.offered(facts.settings));
+        if !offered.is_some_and(|rows| rows.iter().any(|r| r.id == id)) {
+            return self.go(Page::Tab(VoiceTab::Cloud));
+        }
+        self.cloud.from_lines = false;
+        self.show(id.to_owned(), if key { Page::Lines } else { Page::Card })
+    }
+
     /// Shows service `id`'s card or key page; another service's key starts untested.
     fn show(&mut self, id: String, page: Page) -> Vec<Do> {
         if self.cloud.shown.as_ref() != Some(&id) {

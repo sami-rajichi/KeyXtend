@@ -24,6 +24,8 @@ listed! {
         Listen,
         /// Download the language's model.
         Download,
+        /// Open service: a cloud note's service opens on its card, or on its key page for the key note.
+        Service,
         /// Close the bar, wiping the recording.
         Close,
     }

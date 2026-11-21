@@ -1204,6 +1204,7 @@ var lk = {
       "again": "rotate-ccw",
       "listen": "mic",
       "download": "download",
+      "service": "file",
       "local": "cpu",
       "cloud": "cloud",
       "transcribing": "audio-lines",

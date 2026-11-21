@@ -22,6 +22,7 @@ voice =
     .listen = Listen again
     .download = Download
     .download-size = Download · { $size }
+    .service = Open service
     .mask = ••••••••
     .timer = { $minutes }:{ $seconds }
     .note-nothing = Nothing heard. Is the microphone on?

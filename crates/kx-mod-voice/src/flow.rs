@@ -62,6 +62,8 @@ enum State {
         act: Option<BarButton>,
         /// The language, which Download fetches a model for.
         iso: String,
+        /// The service a cloud note the service's own pages settle names, which Open service opens; `None` otherwise.
+        service: Option<String>,
     },
 }
 

@@ -1,13 +1,15 @@
 //! A cloud dictation through the actor (ADR-0047): the listen-only run hands its speech over at Stop, the key is read
 //! just before `send`, and the service's texts are typed, kept and counted under the pick; the run is dropped once it
 //! ends, and Cancel drops its requests. Keys and hidden runs are in `keys`, the key page's effects in `page`, the local
-//! model's take in `local`, the missing port and the row's piece length in `port`, and the card's warning in `warn`.
+//! model's take in `local`, the missing port and the row's piece length in `port`, the card's warning in `warn`, and
+//! Open service in `settle`.
 
 mod keys;
 mod local;
 mod page;
 mod port;
 mod remove;
+mod settle;
 mod trial;
 mod typed;
 mod warn;

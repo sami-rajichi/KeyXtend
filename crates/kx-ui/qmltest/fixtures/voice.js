@@ -101,7 +101,7 @@ var views = {
     },
     "cloudKey": {
       "bar": {
-        "buttons": [
+        "acts": [
           {
             "arg": 0,
             "id": "again",
@@ -118,6 +118,16 @@ var views = {
             "on": true,
             "tone": "plain"
           },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "فتح الخدمة",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
           {
             "arg": 0,
             "id": "close",
@@ -281,6 +291,75 @@ var views = {
         "hint": {
           "id": "cloud",
           "text": "لا يُرسَل ما يُملى في حقل كلمة المرور إلى السحابة أبدًا، ولا يوجد نموذج محلي جاهز."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "يُرسَل صوتك إلى Groq عند الإيقاف"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "تم النسخ",
+        "gear": "إعدادات الإملاء",
+        "timer": "%1:%2",
+        "title": "إملاء",
+        "window": "شريط الإملاء في KeyXtend"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "إعادة المحاولة",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "استخدام النموذج المحلي",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "تنزيل · 776 ميغابايت",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "فتح الخدمة",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "إغلاق",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "الخدمة معطّلة، فلم يُرسَل شيء."
         },
         "mic": false,
         "state": "note"
@@ -1016,7 +1095,7 @@ var views = {
     },
     "cloudKey": {
       "bar": {
-        "buttons": [
+        "acts": [
           {
             "arg": 0,
             "id": "again",
@@ -1033,6 +1112,16 @@ var views = {
             "on": true,
             "tone": "plain"
           },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Open service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
           {
             "arg": 0,
             "id": "close",
@@ -1196,6 +1285,75 @@ var views = {
         "hint": {
           "id": "cloud",
           "text": "Speech for a password box never goes to the cloud, and no local model is ready."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Your voice goes to Groq at Stop"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copied",
+        "gear": "Dictation settings",
+        "timer": "%1:%2",
+        "title": "Dictation",
+        "window": "KeyXtend dictation bar"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Try again",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Use the local model",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "Download · 776 MB",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Open service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Close",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "The service is off, so nothing was sent."
         },
         "mic": false,
         "state": "note"
@@ -1931,7 +2089,7 @@ var views = {
     },
     "cloudKey": {
       "bar": {
-        "buttons": [
+        "acts": [
           {
             "arg": 0,
             "id": "again",
@@ -1948,6 +2106,16 @@ var views = {
             "on": true,
             "tone": "plain"
           },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Ouvrir le service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
           {
             "arg": 0,
             "id": "close",
@@ -2111,6 +2279,75 @@ var views = {
         "hint": {
           "id": "cloud",
           "text": "Ce qui est dicté dans un champ de mot de passe ne part jamais vers le cloud, et aucun modèle local n’est prêt."
+        },
+        "mic": false,
+        "state": "note"
+      },
+      "cloud": {
+        "name": "Groq",
+        "said": "Votre voix partira chez Groq à l’arrêt"
+      },
+      "panel": null,
+      "place": "above",
+      "round": 22,
+      "sounds": true,
+      "words": {
+        "copied": "Copié",
+        "gear": "Réglages de la dictée",
+        "timer": "%1:%2",
+        "title": "Dictée",
+        "window": "Barre de dictée de KeyXtend"
+      }
+    },
+    "cloudOff": {
+      "bar": {
+        "acts": [
+          {
+            "arg": 0,
+            "id": "again",
+            "kind": "bar",
+            "label": "Réessayer",
+            "on": true,
+            "tone": "primary"
+          },
+          {
+            "arg": 0,
+            "id": "local",
+            "kind": "local",
+            "label": "Utiliser le modèle local",
+            "on": false,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "download",
+            "kind": "bar",
+            "label": "Télécharger · 776 Mo",
+            "on": true,
+            "tone": "plain"
+          },
+          {
+            "arg": 0,
+            "id": "service",
+            "kind": "bar",
+            "label": "Ouvrir le service",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "buttons": [
+          {
+            "arg": 0,
+            "id": "close",
+            "kind": "bar",
+            "label": "Fermer",
+            "on": true,
+            "tone": "plain"
+          }
+        ],
+        "hint": {
+          "id": "cloud",
+          "text": "Le service est désactivé ; rien n’a été envoyé."
         },
         "mic": false,
         "state": "note"

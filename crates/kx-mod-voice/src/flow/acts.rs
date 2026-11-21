@@ -2,7 +2,7 @@
 //! dictation. Cancel, Transcribe anyway and Try again are in `redo`.
 
 use kx_module_api::ports::{
-    BarButton, BarHint, LocalUse, PanelButton, SpeechAsk, VoiceAct, VoiceClick, VoiceText,
+    BarButton, BarHint, CloudWhy, LocalUse, PanelButton, SpeechAsk, VoiceAct, VoiceClick, VoiceText,
 };
 
 use super::net::Engine;
@@ -65,6 +65,7 @@ impl Flow {
             }
             (B::Listen, Phase::Note) if self.offers(B::Listen) => self.start(supply, out),
             (B::Download, Phase::Note) => self.download(out),
+            (B::Service, Phase::Note) => self.settle(out),
             _ => {}
         }
     }
@@ -130,7 +131,12 @@ impl Flow {
 
     /// Shows a note about language `iso`; `done_ms` starts.
     pub(super) fn show_note(&mut self, hint: BarHint, act: Option<BarButton>, iso: String) {
-        self.state = State::Note { hint, act, iso };
+        self.state = State::Note {
+            hint,
+            act,
+            iso,
+            service: None,
+        };
         self.shown_at = self.now();
     }
 
@@ -206,6 +212,22 @@ impl Flow {
         let offered = fetch || self.offers(BarButton::Download);
         if let (true, State::Note { iso, .. }) = (offered, &self.state) {
             out.push(Out::Download(iso.clone()));
+        }
+    }
+
+    /// Open service: the note's service opens on its card, or on its key page for the key note (owner, 2026-11-20).
+    fn settle(&self, out: &mut Vec<Out>) {
+        if let State::Note {
+            hint: BarHint::Cloud { why, .. },
+            service: Some(service),
+            ..
+        } = &self.state
+        {
+            let key = *why == CloudWhy::Key;
+            out.push(Out::Settle {
+                service: service.clone(),
+                key,
+            });
         }
     }
 

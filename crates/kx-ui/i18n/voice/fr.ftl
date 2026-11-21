@@ -23,6 +23,7 @@ voice =
     .listen = Écouter de nouveau
     .download = Télécharger
     .download-size = Télécharger · { $size }
+    .service = Ouvrir le service
     .mask = ••••••••
     .timer = { $minutes }:{ $seconds }
     .note-nothing = Rien entendu. Le micro est-il allumé ?

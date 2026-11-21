@@ -1,7 +1,7 @@
 //! The dictation bar's views the Qt Quick tests draw (`qmltest/fixtures/voice.js`), as the hub writes them in each
 //! language: each state, a long text, the password dots, each kind of note, the lines a text can carry, and the cloud
-//! mark with a cloud note's buttons and a card's warning; and the click kinds QML sends to `Voice.act`, by the name
-//! QML holds each under (VoiceNames.qml).
+//! mark with a cloud note's buttons, Open service under a note's line, and a card's warning; and the click kinds QML
+//! sends to `Voice.act`, by the name QML holds each under (VoiceNames.qml).
 
 use crate::qml::{HEAD, LANGS, fixture, hub, var};
 use kx_mod_voice::services::table;
@@ -157,14 +157,16 @@ fn bars(tag: &str) -> Vec<(&'static str, VoiceBar)> {
     .collect()
 }
 
-/// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first.
-fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 5] {
+/// The bars a cloud dictation draws in `lang`, each named with `CLOUD` first; the Off note with Download carries the
+/// most acts under its line.
+fn cloud_bars(lang: &VoiceLang) -> [(&'static str, VoiceBar); 6] {
     let fetch = LocalUse::Download { bytes: MODEL_BYTES };
     [
         ("cloudListening", listening(lang, false, None)),
         (WARNED, listening(lang, false, Some(warned().1))),
         ("cloudKey", cloud(CloudWhy::Key, LocalUse::Ready, true)),
         ("cloudNet", cloud(CloudWhy::Net, fetch, true)),
+        ("cloudOff", cloud(CloudWhy::Off, fetch, true)),
         (
             "cloudNoLocal",
             cloud(CloudWhy::NoLocal, LocalUse::Dimmed, false),

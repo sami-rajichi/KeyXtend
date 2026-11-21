@@ -1,6 +1,7 @@
 //! Cloud models and the bar through the hub: the Models page's Local | Cloud chips and band (edge 29), a cloud model's
 //! row with its service and mark or why it is Unavailable (edge 17), Compare's ticked cloud models and send warning,
-//! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4).
+//! a cloud model's reason while Compare runs (carry 5), the bar's cloud mark, and a cloud note's buttons (carry 4), with
+//! Open service under the line of a note the service's pages settle (final review m5).
 
 use super::super::{button, buttons, english, heard, json, listening_bar, page, panel, panel_json};
 use super::{groq, marks, pairs};
@@ -171,8 +172,9 @@ fn the_bar_shows_the_cloud_mark_with_its_service_only_while_one_takes_the_voice(
     assert_eq!(json(&rig)["cloud"], mark);
 }
 
-/// The bar's buttons for a cloud note on `why` with `local`, and Try again when `again`.
-fn note_buttons(why: CloudWhy, local: LocalUse, again: bool) -> Vec<[String; 5]> {
+/// The bar's two rows for a cloud note on `why` with `local`, and Try again when `again`: its buttons, then the acts
+/// under its line.
+fn note_rows(why: CloudWhy, local: LocalUse, again: bool) -> [Vec<[String; 5]>; 2] {
     let rig = Rig::new();
     let heard = heard(&rig);
     let note = BarNote {
@@ -183,7 +185,14 @@ fn note_buttons(why: CloudWhy, local: LocalUse, again: bool) -> Vec<[String; 5]>
     heard.view(page(1, VoiceBar::Note(note), None));
     let bar = json(&rig)["bar"].clone();
     assert_eq!(bar["state"], "note");
-    buttons(&bar["buttons"])
+    [buttons(&bar["buttons"]), buttons(&bar["acts"])]
+}
+
+/// The bar's buttons for a cloud note no service page settles, all on one row.
+fn note_buttons(why: &CloudWhy, local: LocalUse, again: bool) -> Vec<[String; 5]> {
+    let [buttons, acts] = note_rows(why.clone(), local, again);
+    assert!(acts.is_empty(), "{why:?} keeps one row");
+    buttons
 }
 
 #[test]
@@ -191,10 +200,10 @@ fn a_cloud_note_offers_try_again_then_the_local_model_dimmed_with_download_when_
     let again = button(BAR, "again", "Try again", true, "primary");
     let local = |on| button(LOCAL, "local", "Use the local model", on, "plain");
     let close = button(BAR, "close", "Close", true, "plain");
-    let ready = note_buttons(CloudWhy::Key, LocalUse::Ready, true);
+    let ready = note_buttons(&CloudWhy::Rate, LocalUse::Ready, true);
     assert_eq!(ready, [again.clone(), local(true), close.clone()]);
     let fetch = note_buttons(
-        CloudWhy::Net,
+        &CloudWhy::Net,
         LocalUse::Download { bytes: 740_000_000 },
         true,
     );
@@ -204,6 +213,33 @@ fn a_cloud_note_offers_try_again_then_the_local_model_dimmed_with_download_when_
         [again, local(false), download, close.clone()],
         "edge 20"
     );
-    let none = note_buttons(CloudWhy::NoLocal, LocalUse::Dimmed, false);
+    let none = note_buttons(&CloudWhy::NoLocal, LocalUse::Dimmed, false);
     assert_eq!(none, [local(false), close]);
+}
+
+#[test]
+fn a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line() {
+    let again = button(BAR, "again", "Try again", true, "primary");
+    let local = button(LOCAL, "local", "Use the local model", true, "plain");
+    let open = button(BAR, "service", "Open service", true, "plain");
+    let close = button(BAR, "close", "Close", true, "plain");
+    let opens = [
+        CloudWhy::Key,
+        CloudWhy::Terms,
+        CloudWhy::Account,
+        CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Off,
+    ];
+    for why in opens {
+        let [buttons, acts] = note_rows(why.clone(), LocalUse::Ready, true);
+        assert_eq!(
+            buttons,
+            std::slice::from_ref(&close),
+            "{why:?}: Close stays on the row"
+        );
+        let want = [again.clone(), local.clone(), open.clone()];
+        assert_eq!(acts, want, "{why:?}: the owner, 2026-11-20");
+    }
+    let net = note_buttons(&CloudWhy::Net, LocalUse::Ready, true);
+    assert!(!net.contains(&open), "a network fault opens nothing");
 }

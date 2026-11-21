@@ -159,6 +159,13 @@ pub enum Out {
     },
     /// The first dictation to this service at its row's terms number showed the card's warning: note it as seen.
     Warned(String),
+    /// Open service on a cloud note: the panel opens on this service's card, or on its key page when `key`.
+    Settle {
+        /// The service's row id.
+        service: String,
+        /// The key note, so its key page opens.
+        key: bool,
+    },
 }
 
 /// The model and device that serve a language now.

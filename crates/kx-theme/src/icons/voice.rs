@@ -31,6 +31,8 @@ pub struct VoiceIcons {
     pub listen: String,
     /// Download.
     pub download: String,
+    /// Open service, on a cloud note its card or key page settles.
+    pub service: String,
     /// "Use the local model", after a cloud note.
     pub local: String,
     /// The cloud mark beside the language while a cloud service takes the voice.
@@ -64,6 +66,7 @@ impl VoiceIcons {
             ("voice.again", &self.again),
             ("voice.listen", &self.listen),
             ("voice.download", &self.download),
+            ("voice.service", &self.service),
             ("voice.local", &self.local),
             ("voice.cloud", &self.cloud),
             ("voice.transcribing", &self.transcribing),

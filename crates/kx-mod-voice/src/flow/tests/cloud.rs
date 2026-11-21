@@ -1,7 +1,8 @@
 //! A cloud dictation (ADR-0047): the cloud mark from Start, a listen-only run cut by the row, nothing sent before
 //! Stop, then the service's texts typed in order, kept and counted under the pick. Faults are in `faults`, the
-//! password box, the key and the service's switch in `guard`, Cancel, Try again and the local model in `redo`, and a
-//! hand-over that comes after the local model took over in `late`; the card's warning while it listens is in `warn`.
+//! password box, the key and the service's switch in `guard`, Cancel, Try again and the local model in `redo`, a
+//! hand-over that comes after the local model took over in `late`, the card's warning while it listens in `warn`, a
+//! pick that moved in `moved`, and Open service in `settle`.
 
 use super::*;
 use kx_module_api::ports::{BarNote, CloudFault, CloudNote, CloudWhy, LocalUse, ServiceName};
@@ -11,6 +12,7 @@ mod guard;
 mod late;
 mod moved;
 mod redo;
+mod settle;
 mod warn;
 
 /// The pick the tests dictate French with.

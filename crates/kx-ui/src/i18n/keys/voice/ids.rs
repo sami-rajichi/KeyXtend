@@ -137,6 +137,7 @@ pub const fn bar_button_id(button: BarButton) -> &'static str {
         BarButton::Again => "again",
         BarButton::Listen => "listen",
         BarButton::Download => "download",
+        BarButton::Service => "service",
         BarButton::Close => "close",
     }
 }

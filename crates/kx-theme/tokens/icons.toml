@@ -222,8 +222,8 @@ done = "check"
 lock = "lock"
 
 # The dictation bar (design/voice-bar.html bar(), lines 279-298): each button by the hub's id (Listen again as the
-# Dictation key, Copy turning to its tick once copied), the gear, the mark before Transcribing, a text and a password
-# box's dots, and before each note by its hint id; a note not listed wears `note`.
+# Dictation key, Copy turning to its tick once copied, Open service as a page), the gear, the mark before Transcribing,
+# a text and a password box's dots, and before each note by its hint id; a note not listed wears `note`.
 [voice]
 cancel = "x"
 stop = "square"
@@ -236,6 +236,7 @@ anyway = "rotate-ccw"
 again = "rotate-ccw"
 listen = "mic"
 download = "download"
+service = "file"
 local = "cpu"
 cloud = "cloud"
 transcribing = "audio-lines"

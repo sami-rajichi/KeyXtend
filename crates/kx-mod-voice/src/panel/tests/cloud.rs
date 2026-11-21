@@ -20,6 +20,7 @@ mod lines;
 mod offered;
 mod parts;
 mod rows;
+mod settle;
 mod trial;
 mod typing;
 mod used;
@@ -57,7 +58,7 @@ pub(super) fn cloud_sheet(rig: &mut Rig) -> CloudSheet {
 }
 
 /// The card as shown.
-fn card(rig: &mut Rig) -> CloudCard {
+pub(super) fn card(rig: &mut Rig) -> CloudCard {
     match rig.view().unwrap().sheet {
         VoiceSheet::Card(card) => *card,
         other => panic!("not a card: {other:?}"),

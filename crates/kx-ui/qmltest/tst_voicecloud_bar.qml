@@ -1,7 +1,7 @@
 // The dictation bar's cloud parts over the hub's views (ADR-0047): the cloud mark with its service while a service takes
 // the voice, which readers hear as a sentence, and a cloud note's Try again, Use the local model dimmed unless one is
-// ready, and Download when none is (edge 20); and the card's warning in full under the row on the first dictation to its
-// service, in English, French and Arabic.
+// ready, and Download when none is (edge 20), under the line with Open service for a note the service's pages settle;
+// and the card's warning in full under the row on the first dictation to its service, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -111,7 +111,6 @@ Item {
         function test_a_cloud_note_offers_the_local_model_dimmed_with_download_when_none_is_ready(d) {
             const ids = name => buttons(make(name, d.t)).map(b => b.Accessible.id);
             const gear = "voice.gear";
-            compare(ids("cloudKey"), ["voice.again", "voice.local", gear, "voice.close"]);
             compare(ids("cloudNet"), ["voice.again", "voice.local", "voice.download", gear, "voice.close"], "edge 20");
             compare(ids("cloudNoLocal"), ["voice.local", gear, "voice.close"]);
             const ready = make("cloudKey", d.t);
@@ -127,6 +126,29 @@ Item {
             mouseClick(dim);
             compare(none.voice.calls, [], "a dimmed button sends nothing");
             ready.visible = none.visible = false;
+        }
+
+        function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line_data() {
+            return langs_data();
+        }
+        function test_a_note_the_services_pages_settle_puts_its_acts_and_open_service_under_the_line(d) {
+            const bar = make("cloudOff", d.t);
+            const under = b => b.mapToItem(bar.body, 0, 0).y >= bar.row - 0.5;
+            const all = buttons(bar);
+            compare(all.filter(b => !under(b)).map(b => b.Accessible.id), ["voice.gear", "voice.close"], "Close stays");
+            const acts = all.filter(under);
+            compare(acts.map(b => b.Accessible.id), ["voice.again", "voice.local", "voice.download", "voice.service"]);
+            for (const b of acts) {
+                const at = b.mapToItem(bar.body, 0, 0);
+                verify(at.x >= 0 && at.x + b.width <= bar.body.width + 0.5, b.Accessible.id + " inside the bar's width");
+                verify(at.y + b.height <= bar.body.height + 0.5, b.Accessible.id + " inside the bar's height");
+                verify(b.width > b.height, b.Accessible.id + " is a pill with its word");
+            }
+            const net = make("cloudNet", d.t);
+            verify(bar.height > net.height, "the acts add their row");
+            mouseClick(acts[acts.length - 1]);
+            compare(bar.voice.calls, ["act bar service 0 " + bar.view.round]);
+            bar.visible = net.visible = false;
         }
     }
 }

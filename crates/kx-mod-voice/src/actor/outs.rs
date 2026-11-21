@@ -1,6 +1,6 @@
 //! The flow's effects, carried out in order: the runs, the view and the light, the level, the text for the typer or to
 //! paste, Copy, History and the counts, a download, a lost model file, a failed card, the bar's clicks Compare holds,
-//! a cloud upload sent or dropped, a card's warning seen, and the notices the actor tells.
+//! a cloud upload sent or dropped, a card's warning seen, Open service on a cloud note, and the notices the actor tells.
 
 use kx_module_api::ports::{
     BarButton, CardId, ClipPart, Fingerprint, VoiceAct, VoiceBar, VoiceClick, VoiceView,
@@ -41,6 +41,7 @@ impl Actor {
             Out::Send(up) => self.send(&up),
             Out::Halt { take } => self.halt(take),
             Out::Warned(id) => self.warned(&id),
+            Out::Settle { service, key } => self.settle(&service, key),
         }
     }
 
@@ -81,6 +82,14 @@ impl Actor {
         self.held.drives = self.ports.files.drives();
         let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
         let dos = self.panel.download_for(iso, &facts);
+        self.dos(dos);
+    }
+
+    /// Open service on a cloud note: the panel opens on the service's card or key page, with the keys read now.
+    fn settle(&mut self, service: &str, key: bool) {
+        self.read_keyed();
+        let facts = self.held.facts(self.ports.calendar.now(), &self.flow);
+        let dos = self.panel.settle(service, key, &facts);
         self.dos(dos);
     }
 

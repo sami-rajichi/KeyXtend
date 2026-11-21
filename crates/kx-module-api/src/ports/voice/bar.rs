@@ -210,6 +210,17 @@ pub enum CloudWhy {
     Unavailable(Unavailable),
 }
 
+impl CloudWhy {
+    /// True for a note the service's own card or key page settles, so its bar offers Open service (owner, 2026-11-20).
+    #[must_use]
+    pub const fn opens(&self) -> bool {
+        matches!(
+            self,
+            Self::Key | Self::Terms | Self::Account | Self::Allowance { .. } | Self::Off
+        )
+    }
+}
+
 /// "Use the local model" on a cloud note, which writes the held recording with the language's local model.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LocalUse {

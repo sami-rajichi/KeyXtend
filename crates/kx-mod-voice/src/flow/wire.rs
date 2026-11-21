@@ -22,11 +22,11 @@ impl Flow {
         if self.password() {
             return match supply.supply(lang.iso()) {
                 Ok(ready) => self.open(lang, ready, out),
-                Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned()),
+                Err(_) => self.show_cloud(CloudWhy::NoLocal, lang.iso().to_owned(), None),
             };
         }
         if let Some(why) = net::unfit(&net) {
-            return self.show_cloud(why, lang.iso().to_owned());
+            return self.show_cloud(why, lang.iso().to_owned(), Some(net.service));
         }
         let ask = SpeechAsk {
             piece_s: net.piece_s,
@@ -175,10 +175,10 @@ impl Flow {
         };
         match self.phase() {
             Phase::Preparing => {
-                let iso = take.lang.iso().to_owned();
+                let (iso, service) = (take.lang.iso().to_owned(), net.service.clone());
                 self.end_run(true, out);
                 self.take = None;
-                self.show_cloud(why, iso);
+                self.show_cloud(why, iso, Some(service));
             }
             Phase::Listening => {
                 out.push(take.call(RunCall::Stop));
@@ -193,20 +193,25 @@ impl Flow {
         self.lit = false;
         let front = self.front.iso().to_owned();
         let iso = (self.take.as_ref()).map_or(front, |t| t.lang.iso().to_owned());
+        let service = (self.take.as_ref()).and_then(|t| Some(t.engine.net()?.service.clone()));
         if let Some(take) = self.take.as_mut() {
             take.halt(out);
             take.pieces.clear();
             take.before = None;
         }
-        self.show_cloud(why, iso);
+        self.show_cloud(why, iso, service);
     }
 
     /// Shows the cloud note for `why` about language `iso`, with Try again unless no local model can serve a password
-    /// box; `refresh` sets "Use the local model".
-    fn show_cloud(&mut self, why: CloudWhy, iso: String) {
+    /// box, and `service` for Open service when its own pages settle the note; `refresh` sets "Use the local model".
+    fn show_cloud(&mut self, why: CloudWhy, iso: String, service: Option<String>) {
         let act = (why != CloudWhy::NoLocal).then_some(BarButton::Again);
+        let service = service.filter(|_| why.opens());
         let local = LocalUse::Dimmed;
         self.show_note(BarHint::Cloud { why, local }, act, iso);
+        if let State::Note { service: about, .. } = &mut self.state {
+            *about = service;
+        }
     }
 
     /// "Use the local model" on a cloud note follows the language's local model and the recording held (edge 20).

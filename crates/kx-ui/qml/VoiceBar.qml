@@ -1,5 +1,5 @@
 // The dictation bar (design "The bar"; design/voice-bar.html .vbar): a pill in the keyboard's theme where the hub
-// places it, one key row tall, taller by all the warning's lines while a card's warning shows under the row. It
+// places it, one key row tall, taller by a card's warning or a note's acts under the row. It
 // listens, writes, then shows the text or a note with each state's buttons in one order (ADR-0020), taking clicks but
 // never focus, playing the start and stop sounds and telling the module when the pointer is over it.
 pragma ComponentBehavior: Bound
@@ -51,18 +51,22 @@ Window {
     // Cancel leads while it listens or writes; the rest end the bar, the gear before the last.
     readonly property var front: listens || writes ? buttons.slice(0, 1) : []
     readonly property var back: gearIn(listens || writes ? buttons.slice(1) : buttons)
+    // A note the service's own pages settle: its acts under the line, Open service last (design/voice-cloud.js .cna).
+    readonly property var acts: shown && shown.acts ? shown.acts : []
 
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowDoesNotAcceptFocus
     title: view ? view.words.window : ""
     color: "transparent"
     visible: false
-    // Whole units up, as a window's size is whole; a warning adds its lines under the row.
+    // Whole units up, as a window's size is whole; a warning or a note's acts add their height under the row.
     width: rescale.keep(Math.ceil(lk.shape.voice.bar_px[wide || warns ? 1 : 0] * s))
-    height: rescale.keep(Math.ceil(row + (warns ? warnLine.height : 0)))
+    height: rescale.keep(Math.ceil(row + under))
     // The row's height: one key row, or its parts with their padding.
     readonly property real row: Math.max(cap.bar_px * s, Math.max(lead.height, middle.need, tail.height) + 2 * pad)
-    // How far the row's parts rise from the middle, so a warning sits under them.
-    readonly property real lift: warns ? warnLine.height / 2 : 0
+    // What sits under the row: the warning's lines, or a note's acts with the padding under them.
+    readonly property real under: warns ? warnLine.height : acts.length > 0 ? actRow.height + pad : 0
+    // How far the row's parts rise from the middle, so what sits under them fits.
+    readonly property real lift: under / 2
 
     // Keeps the size above across display scale changes, and the place on a new scale.
     Rescale {
@@ -211,7 +215,9 @@ Window {
             layoutDirection: Qt.LeftToRight
             Repeater {
                 model: bar.front
-                delegate: BarButton {}
+                delegate: VoiceBarButton {
+                    host: bar
+                }
             }
             VoiceStatus {
                 visible: bar.listens || bar.writes
@@ -253,7 +259,9 @@ Window {
             }
             Repeater {
                 model: bar.back
-                delegate: BarButton {}
+                delegate: VoiceBarButton {
+                    host: bar
+                }
             }
         }
         VoiceWarn {
@@ -261,25 +269,24 @@ Window {
             y: body.height - height
             host: bar
         }
+        // A note's acts under its line, at the end as the row's buttons, in their one order.
+        Row {
+            id: actRow
+            x: bar.width - bar.pad - width
+            y: bar.row
+            spacing: bar.gap
+            layoutDirection: Qt.LeftToRight
+            Repeater {
+                model: bar.acts
+                delegate: VoiceBarButton {
+                    host: bar
+                    under: true
+                }
+            }
+        }
         PressWatch {
             onTouched: bar.touched()
         }
-    }
-
-    // One of the hub's buttons: round when it leads or ends the bar, or for the gear; a pill with its word otherwise.
-    component BarButton: VoiceButton {
-        required property var modelData
-        required property int index
-        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-        button: modelData
-        round: bar.front.indexOf(modelData) >= 0 || modelData.id === bar.names.gear || index === bar.back.length - 1
-        lk: bar.lk
-        res: bar.res
-        s: bar.s
-        ar: bar.ar
-        uid: bar.res.uid(bar.names.group, modelData.id)
-        done: modelData.id === bar.names.copy && bar.view && bar.copiedAt === bar.view.round ? bar.view.words.copied : ""
-        onClicked: bar.press(modelData)
     }
 
     // Each new state pops in (mock-up .vbar.in, @keyframes rise).

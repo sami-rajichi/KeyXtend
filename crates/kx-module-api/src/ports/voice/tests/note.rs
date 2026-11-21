@@ -76,3 +76,29 @@ fn every_reason_and_local_state_is_distinct() {
     let names: HashSet<String> = locals.iter().map(|l| format!("{l:?}")).collect();
     assert_eq!(names.len(), locals.len());
 }
+
+#[test]
+fn open_service_shows_on_the_five_notes_the_services_own_pages_settle() {
+    let opens = [
+        CloudWhy::Key,
+        CloudWhy::Terms,
+        CloudWhy::Account,
+        CloudWhy::Allowance { renews_in: None },
+        CloudWhy::Off,
+    ];
+    assert!(opens.iter().all(CloudWhy::opens));
+    let rest = [
+        CloudWhy::Net,
+        CloudWhy::Credit,
+        CloudWhy::Rate,
+        CloudWhy::Moved,
+        CloudWhy::NoLocal,
+        CloudWhy::Fault,
+        CloudWhy::Unavailable(Unavailable::KeepNothing),
+    ];
+    assert!(
+        rest.iter().all(|w| !w.opens()),
+        "a moved pick opens nothing"
+    );
+    assert!(BarButton::ALL.contains(&BarButton::Service));
+}
