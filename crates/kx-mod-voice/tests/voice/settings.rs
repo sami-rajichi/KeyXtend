@@ -1,6 +1,6 @@
 //! The kernel's repair of `[voice]`: a bad pick stays for the module to drop alone (plan edge case 19), while a bad
-//! `place`, `device` (edge case 35) or `history_join` goes back to its default with the settings notice; the other values
-//! stay.
+//! `place`, `device` (edge case 35) or `history_join` goes back to its default with the settings notice; the other
+//! values stay.
 
 use std::fs;
 

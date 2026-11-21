@@ -33,9 +33,8 @@ impl Panel {
         }
     }
 
-    /// The check a card lacks under its driver for the model the language in front uses now, in that language's clip
-    /// (edge 26, ADR-0052). While a check, a dictation or Compare runs, it waits for `dequeue`. The actor calls it after
-    /// the devices or a layout; `follow` and the folder's reads call it too.
+    /// The check a card lacks for the model the language in front uses, in its clip (edge 26, ADR-0052), after the
+    /// devices, a layout, `follow` or a folder read. While a check, dictation or Compare runs, it waits for `dequeue`.
     pub fn recheck(&mut self, facts: &Facts<'_>) -> Vec<Do> {
         self.queued = self.checking.is_some() || facts.dictating || self.compare.busy();
         let Some((print, lang)) = self.used(facts).filter(|_| !self.queued) else {

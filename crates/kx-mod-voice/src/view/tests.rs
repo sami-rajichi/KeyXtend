@@ -1,5 +1,5 @@
-//! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home
-//! list names the model, the device, the last Compare and the counts; Try again acts as the flow allows; History names a
+//! The panel's view (plan task 19): pages hold `page_rows` rows, 5 by default, and turn within the list; the home list
+//! names the model, the device, the last Compare and the counts; Try again acts as the flow allows; History names a
 //! cloud text's model and service.
 
 use kx_module_api::ports::{

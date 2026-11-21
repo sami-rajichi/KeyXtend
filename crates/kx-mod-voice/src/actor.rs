@@ -126,8 +126,8 @@ impl Actor {
         }
     }
 
-    /// Tells the hidden bar and the dark key, opens the store, deletes hidden rows' keys, reads the folder, and asks for
-    /// the layout.
+    /// Tells the hidden bar and the dark key, opens the store, deletes hidden rows' keys, reads the folder, and asks
+    /// for the layout.
     pub(crate) fn begin(&mut self) {
         let kind = (self.ports.field.as_ref()).map_or(FieldKind::Unknown, |run| run.kind());
         self.step(In::Field(FieldChange {

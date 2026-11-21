@@ -108,8 +108,8 @@ impl<'a> Cloud<'a> {
         self.table.offered().collect()
     }
 
-    /// Where `service` stands: Off until the user confirms its card while cloud is on, then it needs a key, then a typed
-    /// row needs its address, so a user with a key is never told to add one; Ready once it has both.
+    /// Where `service` stands: Off until the user confirms its card while cloud is on, then it needs a key, then a
+    /// typed row needs its address, so a user with a key is never told to add one; Ready once it has both.
     #[must_use]
     pub fn mark(&self, s: &VoiceSettings, service: &Service, key: bool) -> ServiceMark {
         match self.entry(s, service) {
@@ -128,8 +128,8 @@ impl<'a> Cloud<'a> {
     }
 
     /// What `lang` dictates with in the cloud; `None` means its local model, as for cloud off, a hidden run, a service
-    /// not on or not offered, or a model that does not know the language (edge 21). A model the keep-nothing switch rules
-    /// out still resolves, marked unavailable, so nothing moves to the local model by itself (edge 17).
+    /// not on or not offered, or a model that does not know the language (edge 21). A model the keep-nothing switch
+    /// rules out still resolves, marked unavailable, so nothing moves to the local model by itself (edge 17).
     #[must_use]
     pub fn choice<'s>(&self, s: &'s VoiceSettings, lang: &str) -> Option<Choice<'s>>
     where

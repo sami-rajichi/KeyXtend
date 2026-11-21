@@ -127,7 +127,7 @@ pub struct Facts {
     pub heavy: Fact,
     /// The card's warning, in the warning tone; `None` for none.
     pub warn: Option<Fact>,
-    /// The least a request bills when the service rounds up, such as Groq's 10 seconds; `None` for none.
+    /// The least a request bills when the service rounds up; `None` for none.
     pub bills: Option<Fact>,
     /// A rule the service sets on its use, such as a free plan for non-commercial use only; `None` for none.
     pub rule: Option<Fact>,

@@ -1,6 +1,6 @@
-//! The key page's effects (ADR-0047): a key sealed or removed, which the flow hears so a cloud dictation under way checks
-//! its own; the key's length for its dots; its test off the actor; Paste through the clipboard history's `ClipTake`, as
-//! Quick-fill's; and the table's own link in the browser. No key is logged or kept beyond its blob.
+//! The key page's effects (ADR-0047): a key sealed or removed, which the flow hears so a cloud dictation under way
+//! checks its own; the key's length for its dots; its test off the actor; Paste through the clipboard history's
+//! `ClipTake`, as Quick-fill's; and the table's own link in the browser. No key is logged or kept beyond its blob.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
@@ -48,7 +48,7 @@ impl Actor {
         self.held.keyed = listed.unwrap_or_default();
     }
 
-    /// Deletes the keys of rows no longer offered, as an update hid them; none in a hidden run or while the table fails.
+    /// Deletes the keys of rows no longer offered, as an update hid them; none in a hidden run or with no table.
     pub(super) fn sweep_keys(&mut self) {
         let (Some(table), false) = (self.held.table, self.held.hidden) else {
             return;

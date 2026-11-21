@@ -1,6 +1,6 @@
 //! A pick that left the service on the bar (final review m4, voice-a M10): it moved, to another service or to the local
-//! model, while that service stays on, so the bar never says it is off; a new model of the same service is the one sent,
-//! counted and kept.
+//! model, while that service stays on, so the bar never says it is off; a new model of the same service is the one
+//! sent, counted and kept.
 
 use super::*;
 

@@ -1,4 +1,4 @@
-//! What a Compare run takes and gives: the ready and cloud models, the plan, each model's result line and the actor's effects.
+//! What a Compare run takes and gives: the models, the plan, each model's result line and the actor's effects.
 
 use kx_module_api::ports::{CardId, Date, Fingerprint, ServiceName, SpeechAsk};
 use kx_module_api::{Redacted, Secret};

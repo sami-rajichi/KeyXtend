@@ -1,6 +1,6 @@
-//! Typing on the key page's lines (ADR-0049, edge 22): letters, Space, Backspace, Delete and the arrows work the line at
-//! its caret, a click places it, Enter and Save set it through the page's own acts, an empty key saves nothing, and the
-//! key typed is wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
+//! Typing on the key page's lines (ADR-0049, edge 22): letters, Space, Backspace, Delete and the arrows work the line
+//! at its caret, a click places it, Enter and Save set it through the page's own acts, an empty key saves nothing, and
+//! the key typed is wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{

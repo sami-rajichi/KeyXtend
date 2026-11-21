@@ -87,7 +87,7 @@ impl Actor {
         }
     }
 
-    /// At `now`, each text whose answer is past `paste_ms` is typed, and a key page's take past `take_ms` shows as busy.
+    /// At `now`, a text whose answer is past `paste_ms` is typed, and a key page's take past `take_ms` shows as busy.
     pub(super) fn paste_tick(&mut self, now: Mono) {
         let s = &self.held.settings;
         let late = |since: Mono, wait| now.saturating_since(since) >= wait;

@@ -1,6 +1,6 @@
 //! The Cloud page and a service's card (ADR-0047): the `cloud` switch, then the services offered, Groq first, each with
-//! its mark, free allowance, warning and sealed key (edge 24), dimmed while cloud is off (edge 21). A card shows its facts with
-//! the day read, old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
+//! its mark, free allowance, warning and sealed key (edge 24), dimmed while cloud is off (edge 21). A card shows its
+//! facts with the day read, old past `facts_days` (edge 15), and asks again for newer terms (edge 16).
 
 use kx_module_api::ports::{
     CardPart, CloudButton, CloudSheet, Pages, ServiceMark, ServiceRow, VoiceSheet, VoiceTab,
@@ -11,7 +11,7 @@ use crate::panel::{Key, Page, Panel};
 use crate::services::Service;
 
 impl Panel {
-    /// The Cloud page's shown services; while cloud is off they show dimmed, untickable, each sealed key still removable.
+    /// The Cloud page's shown services; with cloud off they show dimmed and untickable, a sealed key still removable.
     pub(super) fn cloud_sheet(&mut self, facts: &Facts<'_>) -> (VoiceSheet, Pages) {
         let on = facts.cloud.is_some_and(|c| c.on(facts.settings));
         let ticks = self.ticks.clone();

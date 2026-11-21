@@ -1,6 +1,6 @@
 //! Typing on the key page's lines (ADR-0049, edge 22): our keyboard's keys and a click on a line work its text at the
-//! caret, and Enter or Save sets it through the page's own acts and checks. A line's text lives only while it shows, and
-//! the key typed only here, wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
+//! caret, and Enter or Save sets it through the page's own acts and checks. A line's text lives only while it shows,
+//! and the key typed only here, wiped on Save, Paste, Remove, a page turn, leaving the page and the panel closing.
 
 use kx_module_api::Redacted;
 use kx_module_api::caret;

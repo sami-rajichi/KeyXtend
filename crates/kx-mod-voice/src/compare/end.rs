@@ -34,7 +34,7 @@ impl Compare {
         });
     }
 
-    /// Ends the run, cancelled first when `cancel`, which also drops the cloud uploads; the page goes back to the set text.
+    /// Ends the run, cancelled first when `cancel`, which drops the cloud uploads; the page goes back to the set text.
     pub(super) fn end(&mut self, cancel: bool) -> Vec<Act> {
         let mut acts = Vec::new();
         if cancel {

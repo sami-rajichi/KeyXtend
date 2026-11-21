@@ -1,7 +1,7 @@
 //! The key page's effects through the actor (ADR-0047): a set key is sealed and shown as dots, a removed one stops the
 //! upload under way (carry 7), the key's test runs in a job that reads the key there and whose late answer is dropped
-//! (carry 3), Paste asks the clipboard history as Quick-fill does and stops waiting after `take_ms`, past the clipboard's
-//! longest read (carry 9), and a card's link opens (edge 23).
+//! (carry 3), Paste asks the clipboard history as Quick-fill does and stops waiting after `take_ms`, past the
+//! clipboard's longest read (carry 9), and a card's link opens (edge 23).
 
 use std::time::Duration;
 

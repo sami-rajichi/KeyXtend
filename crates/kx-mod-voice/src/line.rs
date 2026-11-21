@@ -1,6 +1,6 @@
-//! A typed line of the key page (ADR-0049): letters go in at its caret, which a click places and Left and Right move. A
-//! shown line reads left to right in any language; a hidden one, the key's, steps one dot per character. It reserves its
-//! room at once and is wiped when dropped, so a key typed into it never leaves an unwiped copy.
+//! A typed line of the key page (ADR-0049): letters go in at its caret, which a click places and Left and Right move;
+//! it reads left to right in any language, and the key's hidden line steps one dot per character. It reserves its room
+//! at once and is wiped when dropped.
 
 use std::fmt;
 
@@ -18,8 +18,8 @@ pub struct Line {
 }
 
 impl Line {
-    /// An empty line of at most `max` bytes and one letter more, so a text past its limit is refused at Save with its own
-    /// reason; `hidden` for the key's dots.
+    /// An empty line of at most `max` bytes and one letter more, so a text past its limit is refused at Save with its
+    /// own reason; `hidden` for the key's dots.
     #[must_use]
     pub fn new(max: usize, hidden: bool) -> Self {
         let room = max.saturating_add(char::MAX_LEN_UTF8);
@@ -39,8 +39,8 @@ impl Line {
         line
     }
 
-    /// Types `text` at the caret, letter by letter: a hidden mark never goes in, nor any letter once the line holds more
-    /// than its most, so it never reallocates. True when one went in.
+    /// Types `text` at the caret, letter by letter: a hidden mark never goes in, nor any letter once the line holds
+    /// more than its most, so it never reallocates. True when one went in.
     pub fn write(&mut self, text: &str) -> bool {
         let mut took = false;
         for c in text.chars() {

@@ -1,7 +1,7 @@
-//! What keeps the voice on the PC (edges 9, 10, 19 and 20): a password box takes the local model or says none is
-//! ready, a box the system cannot read goes as text, the key or the service gone sends nothing after it, newer terms
-//! wait for a confirmation, a pick the keep-nothing switch rules out says why, and "Use the local model" with none ready
-//! stays dimmed and offers Download.
+//! What keeps the voice on the PC (edges 9, 10, 19 and 20): a password box takes the local model or says none is ready,
+//! a box the system cannot read goes as text, the key or the service gone sends nothing after it, newer terms wait for
+//! a confirmation, a pick the keep-nothing switch rules out says why, and "Use the local model" with none ready stays
+//! dimmed and offers Download.
 
 use super::*;
 use kx_module_api::ports::Unavailable;

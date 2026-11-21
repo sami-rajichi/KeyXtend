@@ -8,7 +8,7 @@ use super::notes::lost;
 use super::{Count, Flow, Out};
 
 impl Flow {
-    /// What dictation `id`'s upload of `round` tells, at wall time `at`; an older or dropped upload's notes are not heard.
+    /// What dictation `id`'s upload of `round` tells at wall time `at`; an older or dropped upload's notes go unheard.
     pub(super) fn sent(
         &mut self,
         id: u32,

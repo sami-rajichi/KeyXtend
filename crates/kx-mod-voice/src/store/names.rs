@@ -1,5 +1,5 @@
-//! The shelf's folders and blob names: `texts/<id>`, `sounds/<id>-<n>` and `numbers/{counts,checks,check-langs,scores}`.
-//! Ids are plain decimal, so a name reads back to one number only.
+//! The shelf's folders and blob names: `texts/<id>`, `sounds/<id>-<n>` and
+//! `numbers/{counts,checks,check-langs,scores}`. Ids are plain decimal, so a name reads back to one number only.
 
 use kx_module_api::ports::{BlobName, SealedError};
 

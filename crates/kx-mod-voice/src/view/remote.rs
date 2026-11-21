@@ -61,7 +61,7 @@ impl Panel {
         usable.then_some(PanelButton::Use).into_iter().collect()
     }
 
-    /// Compare's cloud models: the ready ones that can be used, ticked or not; and the ticked ones' services, once each.
+    /// Compare's cloud models: the usable ready ones, ticked or not; and the ticked ones' services, once each.
     pub(crate) fn compare_clouds(
         &self,
         facts: &Facts<'_>,

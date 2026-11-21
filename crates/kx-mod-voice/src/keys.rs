@@ -69,7 +69,7 @@ impl Keys {
         }
     }
 
-    /// True when service `id` has a key blob, from the folder's names alone, so no key is opened; false in a hidden run.
+    /// True when service `id` has a key blob, by the folder's names alone, so no key is opened; false in a hidden run.
     ///
     /// # Errors
     /// `Shelf` with `BadName` for an id that names no blob, or the shelf's error.

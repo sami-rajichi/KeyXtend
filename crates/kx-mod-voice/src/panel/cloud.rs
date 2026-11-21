@@ -149,8 +149,8 @@ impl Panel {
         }
     }
 
-    /// A Cloud page row's own Remove key: it deletes the row's sealed key as the key page's does, while that page is out
-    /// of reach (owner, 2026-11-20).
+    /// A Cloud page row's own Remove key: it deletes the row's sealed key as the key page's does, while that page is
+    /// out of reach (owner, 2026-11-20).
     fn remove_row_key(&mut self, at: usize, facts: &Facts<'_>) -> Vec<Do> {
         let (Some(Page::Tab(VoiceTab::Cloud)), Some(cloud)) = (self.page, facts.cloud) else {
             return Vec::new();
@@ -166,8 +166,8 @@ impl Panel {
         self.key_button(&id, CloudButton::Remove, facts)
     }
 
-    /// Open service on a cloud note: service `id`'s card, or its key page for the key note, with Back to the Cloud page;
-    /// that page while cloud does not offer the row, as with cloud off, where the switch is.
+    /// Open service on a cloud note: service `id`'s card, or its key page for the key note, with Back to the Cloud
+    /// page; that page while cloud does not offer the row, as with cloud off, where the switch is.
     pub fn settle(&mut self, id: &str, key: bool, facts: &Facts<'_>) -> Vec<Do> {
         let offered = facts.cloud.map(|c| c.offered(facts.settings));
         if !offered.is_some_and(|rows| rows.iter().any(|r| r.id == id)) {

@@ -1,6 +1,7 @@
 //! A row's models (design "Connections and services"): at most the table's count, each with its id, shown name and the
-//! code it wants per keyboard language (its own list or a table's set), maybe its own form (`OpenAI`'s `languages[]` beside `whisper-1`'s `language`,
-//! ruling 2026-11-17), whether the request names it, and whether every host of it keeps the voice.
+//! code it wants per keyboard language (its own list or a table's set), maybe its own form (`OpenAI`'s `languages[]`
+//! beside `whisper-1`'s `language`, ruling 2026-11-17), whether the request names it, and whether every host of it
+//! keeps the voice.
 
 use std::collections::BTreeMap;
 
@@ -33,7 +34,7 @@ pub enum ModelError {
     #[error("its own form is odd or on a shape without a form")]
     Form,
     /// Its own form asks for timings or a reply that is not plain text or JSON (ruling 2026-11-17).
-    #[error("its own form asks for timings or a reply that is not plain text or json")]
+    #[error("its own form asks for timings or a reply that is not plain text or JSON")]
     Reply,
     /// The request would name no model on a shape that needs one.
     #[error("it is unnamed on a shape that needs a model")]

@@ -1,7 +1,7 @@
-//! A service's key page (design "Keys"): Paste puts the clipboard's text on the key line as dots (edges 23 and carry 9),
-//! a test's answer counts only while its page and key stand (carry 3), the link opens only the row's own HTTPS address
-//! (edge 23), and a typed address is kept or refused with why: no https, no host name, a bad path or query, outside the
-//! domain or too long (edges 13 and 22, carries 6, 10 and 11).
+//! A service's key page (design "Keys"): Paste puts the clipboard's text on the key line as dots (edges 23 and carry
+//! 9), a test's answer counts only while its page and key stand (carry 3), the link opens only the row's own HTTPS
+//! address (edge 23), and a typed address is kept or refused with why: no https, no host name, a bad path or query,
+//! outside the domain or too long (edges 13 and 22, carries 6, 10 and 11).
 
 use kx_module_api::ports::{
     AddressFault, ClipText, CloudButton, CloudFault, HttpsUrl, KeyCheck, PanelButton, ServiceMark,

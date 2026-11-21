@@ -93,8 +93,8 @@ impl<'a> Cloud<'a> {
     }
 
     /// Why `service`'s `model` cannot be used now: a model every host of which keeps the voice, listed or typed by its
-    /// id, while the row's keep-nothing switch is on (edge 17). Another typed id still sends the keep-nothing field, and
-    /// with no host that keeps nothing its refusal reads as Strange until task 24 captures the real reply.
+    /// id, while the row's keep-nothing switch is on (edge 17). Another typed id still sends the keep-nothing field,
+    /// and with no host that keeps nothing its refusal reads as Strange until task 24 captures the real reply.
     #[must_use]
     pub fn unavailable(
         &self,

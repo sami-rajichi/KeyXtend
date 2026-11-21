@@ -1,6 +1,5 @@
-//! Compare models (design "Compare models"): the set text is read aloud once into a run that loads no model, then each
-//! ready model writes that recording in a fresh job, one after another. Only the numbers are kept, through
-//! `Scores::put`; a text shows only for a language with no set text, and is never kept. Pure: effects out, notes in.
+//! Compare models (design "Compare models"), pure: the set text is read aloud once, then each ready local model and
+//! ticked cloud model writes that recording in turn. Only the numbers are kept, through `Scores::put`, never a text.
 
 mod act;
 mod end;
