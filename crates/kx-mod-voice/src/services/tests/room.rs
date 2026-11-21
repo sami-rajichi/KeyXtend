@@ -1,6 +1,6 @@
 //! Each row's largest piece, by size and by time, leaves room for the WAV header and the form's other parts under the
 //! service's own cap, grown by a third when the shape sends Base64 (ruling 2026-11-17), so Gemini's largest piece goes
-//! in one request under its 20 MB cap [N6].
+//! in one request under its 20 MB cap [N6]. A free allowance that names requests a minute says the row's own limit.
 
 use super::*;
 use kx_module_api::ports::{MAX_FIELD_VALUE, MAX_FIXED, MB, SOUND_BYTES_PER_S, SpeechAsk, TAG_LEN};
@@ -130,4 +130,19 @@ fn a_rows_longest_piece_is_whole_seconds_its_caps_take_within_the_runs_range() {
             row.id
         );
     }
+}
+
+#[test]
+fn a_free_allowance_that_names_requests_a_minute_says_the_rows_own_limit() {
+    let named = table().unwrap().rows().iter().filter_map(|row| {
+        let arg = row.facts.free.args.iter().find(|a| a.name == "per_min")?;
+        Some((row, &arg.value))
+    });
+    let mut seen = 0;
+    for (row, value) in named {
+        let limit = FactValue::Count(u32::from(row.limits.per_min));
+        assert_eq!(*value, limit, "{}", row.id);
+        seen += 1;
+    }
+    assert!(seen > 0, "a shipped allowance names it");
 }
