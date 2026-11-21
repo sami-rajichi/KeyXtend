@@ -137,6 +137,8 @@ var texts = {
   "langkey.carousel": "Carrousel",
   "langkey.cycle": "Cycle",
   "langkey.list": "Liste",
+  "list.and": " et ",
+  "list.and-join": ", ",
   "list.count": "{$more} paramètres",
   "list.join": ", ",
   "list.more": "{$list} et {$more} autres",

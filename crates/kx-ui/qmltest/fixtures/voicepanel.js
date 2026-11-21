@@ -5196,7 +5196,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "سترسل المقارنة صوتك إلى Groq و العنوان الذي تكتبه عند الإيقاف.",
+          "send": "سترسل المقارنة صوتك إلى Groq والعنوان الذي تكتبه عند الإيقاف.",
           "text": "يغادر قطار المساء في السابعة والربع. يُرجى إحضار معطف دافئ وشطيرتين والمظلة الزرقاء، لأن الطقس على الساحل يتغير بسرعة."
         },
         "sub": "للغة العربية",
@@ -14731,7 +14731,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Compare sends your voice to Groq, the address you type at Stop.",
+          "send": "Compare sends your voice to Groq and the address you type at Stop.",
           "text": "The evening train leaves at a quarter past seven. Please bring a warm coat, two sandwiches and the blue umbrella, because the weather on the coast changes quickly."
         },
         "sub": "For English",
@@ -24266,7 +24266,7 @@ var views = {
             }
           ],
           "recording": null,
-          "send": "Comparer enverra votre voix à Groq, l’adresse que vous saisissez à l’arrêt.",
+          "send": "Comparer enverra votre voix à Groq et l’adresse que vous saisissez à l’arrêt.",
           "text": "Le train du soir part à sept heures et quart. Prenez un manteau chaud, deux sandwichs et le parapluie bleu, car le temps change vite sur la côte."
         },
         "sub": "En français",

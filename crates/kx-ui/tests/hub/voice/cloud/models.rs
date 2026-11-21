@@ -128,7 +128,7 @@ fn compare_lists_its_cloud_models_and_warns_where_the_voice_goes_before_start() 
     let picks =
         json!([{"name": "Whisper Large v3 Turbo", "service": "Groq", "said": said, "tick": true}]);
     assert_eq!(p["sheet"]["picks"], picks);
-    let send = "Compare sends your voice to Groq, the address you type at Stop.";
+    let send = "Compare sends your voice to Groq and the address you type at Stop.";
     assert_eq!(p["sheet"]["send"], send);
 }
 

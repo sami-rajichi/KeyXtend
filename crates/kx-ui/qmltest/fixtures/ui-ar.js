@@ -137,6 +137,8 @@ var texts = {
   "langkey.carousel": "عرض دوّار",
   "langkey.cycle": "تناوب",
   "langkey.list": "قائمة",
+  "list.and": " و",
+  "list.and-join": " و",
   "list.count": "{$more} إعداد",
   "list.join": " و ",
   "list.more": "{$list} و{$more} إعداد آخر",

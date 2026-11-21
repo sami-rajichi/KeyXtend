@@ -190,10 +190,11 @@ pub(super) fn pick(t: &I18n, c: &CompareCloud) -> PickView {
     }
 }
 
-/// Compare's warning before Start, naming the services the recording goes to in a list; `None` for none.
+/// Compare's warning before Start, naming the services the recording goes to in a list that ends with "and"; `None`
+/// for none.
 pub(super) fn send(t: &I18n, send: &[ServiceName]) -> Option<String> {
     let names: Vec<String> = send.iter().map(|s| in_sentence(t, s)).collect();
-    (!send.is_empty()).then(|| t.voice_with(VOICE_SEND_WARNING, &[(NAMES, t.list(&names, 0))]))
+    (!send.is_empty()).then(|| t.voice_with(VOICE_SEND_WARNING, &[(NAMES, t.and_list(&names))]))
 }
 
 /// The bar's cloud mark for `name`, which its sentence names as a sentence does.

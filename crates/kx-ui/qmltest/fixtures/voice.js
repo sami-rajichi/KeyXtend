@@ -2258,7 +2258,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2320,7 +2320,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2369,7 +2369,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2428,7 +2428,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2471,7 +2471,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2540,7 +2540,7 @@ var views = {
       },
       "cloud": {
         "name": "Groq",
-        "said": "Votre voix partira chez Groq à l’arrêt"
+        "said": "Votre voix partira vers Groq à l’arrêt"
       },
       "panel": null,
       "place": "above",
@@ -2589,7 +2589,7 @@ var views = {
       },
       "cloud": {
         "name": "ElevenLabs",
-        "said": "Votre voix partira chez ElevenLabs à l’arrêt"
+        "said": "Votre voix partira vers ElevenLabs à l’arrêt"
       },
       "panel": null,
       "place": "above",

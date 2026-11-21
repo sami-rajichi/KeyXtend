@@ -33,6 +33,10 @@ pub const LIST_JOIN: &str = "list.join";
 pub const LIST_MORE: &str = "list.more";
 /// A list that names nothing: only how many, `$more`.
 pub const LIST_COUNT: &str = "list.count";
+/// What joins a sentence's list items before the last one.
+pub const LIST_AND_JOIN: &str = "list.and-join";
+/// What comes before a sentence's last list item, as "and" does.
+pub const LIST_AND: &str = "list.and";
 /// The space bar: `$lang`, then `$layout`.
 pub const SPACE: &str = "lang.space";
 /// The size buttons' letters, by an id in `SIZES`.

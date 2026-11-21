@@ -339,8 +339,11 @@ theme =
 
 ## Listes : ce qui sépare deux éléments, la fin d’une liste qui en omet $more, et une liste qui n’en nomme aucun.
 ## Les formes du pluriel se choisissent selon $form, c’est-à-dire $more tel que le lisent les règles CLDR ; $more vaut au moins 1.
+## Dans une phrase, list.and-join sépare les éléments d’une liste et list.and précède le dernier, selon les modèles de listes CLDR.
 list =
     .join = {", "}
+    .and-join = {", "}
+    .and = {" et "}
     .more = { $list } et { $form ->
         [one] { $more } autre
        *[other] { $more } autres
