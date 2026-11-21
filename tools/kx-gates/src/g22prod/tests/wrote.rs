@@ -8,9 +8,9 @@ use serde_json::{Value, json};
 use super::super::wrote::{self, Writer};
 use crate::budget::stamp_us;
 
-/// Two service ids as the table writes them.
-const GROQ: &str = "groq";
-const CUSTOM: &str = "custom";
+/// Two made-up service ids, as a row's id is written.
+const ONE: &str = "alpha";
+const OTHER: &str = "beta";
 
 fn card(id: &str) -> Writer {
     Writer::Device(DevicePick::Card(CardId::new(id).expect("an id")))
@@ -43,12 +43,12 @@ fn the_copys_written_lines_since_its_start_give_each_device_or_service_by_id() {
         logged(2, "another line device=Vulkan8"),
         logged(3, &format!("{m} device=cpu")),
         logged(4, &format!("{m} device=Vulkan0")),
-        logged(5, &format!("{m} service={GROQ}")),
+        logged(5, &format!("{m} service={ONE}")),
     ]
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:01.000000Z").expect("a stamp");
     let got = wrote::read(&log, since);
-    assert_eq!(got, Ok(vec![cpu(), card("Vulkan0"), service(GROQ)]));
+    assert_eq!(got, Ok(vec![cpu(), card("Vulkan0"), service(ONE)]));
     assert_eq!(wrote::read("", since), Ok(Vec::new()), "none written");
 }
 
@@ -63,7 +63,7 @@ fn a_written_line_without_one_id_is_refused_and_its_value_never_printed() {
         "",
         "service=",
         "service=a/b",
-        "device=cpu service=groq",
+        "device=cpu service=alpha",
     ] {
         let log = logged(3, &format!("{m} {bad}"));
         let e = wrote::read(&log, 0).expect_err(bad);
@@ -90,7 +90,7 @@ fn with_a_card_picked_only_that_card_may_write_and_some_device_must() {
     );
     assert!(!fits(&[], &auto), "but needs one");
     assert!(
-        !fits(&[&service(GROQ)], &auto),
+        !fits(&[&service(ONE)], &auto),
         "never a silent move to a service"
     );
     let (v, ok) = wrote::judge(&Err("no log".into()), &vk);
@@ -99,13 +99,13 @@ fn with_a_card_picked_only_that_card_may_write_and_some_device_must() {
 
 #[test]
 fn on_a_cloud_line_only_its_service_may_write_and_it_must() {
-    let groq = service(GROQ);
-    assert!(fits(&[&groq], &groq));
-    assert!(fits(&[&groq, &groq], &groq), "each dictation");
-    assert!(!fits(&[&service(CUSTOM)], &groq), "another service");
-    assert!(!fits(&[&groq, &cpu()], &groq), "a local model wrote one");
-    assert!(!fits(&[], &groq), "nothing written");
-    let (v, ok) = wrote::judge(&Err("no log".into()), &groq);
+    let one = service(ONE);
+    assert!(fits(&[&one], &one));
+    assert!(fits(&[&one, &one], &one), "each dictation");
+    assert!(!fits(&[&service(OTHER)], &one), "another service");
+    assert!(!fits(&[&one, &cpu()], &one), "a local model wrote one");
+    assert!(!fits(&[], &one), "nothing written");
+    let (v, ok) = wrote::judge(&Err("no log".into()), &one);
     assert!(!ok && v["service_error"] == "no log", "{v}");
 }
 
@@ -128,24 +128,24 @@ fn a_languages_fields_are_the_writers_id_and_numbers_never_text() {
     let (none, _) = wrote::judge(&Ok(Vec::new()), &vk);
     let fields = [&none["device"], &none["written"], &none["device_match"]];
     assert_eq!(fields, [&Value::Null, &json!(0), &json!(false)]);
-    let (cloud, _) = wrote::judge(&Ok(vec![service(GROQ)]), &service(GROQ));
+    let (cloud, _) = wrote::judge(&Ok(vec![service(ONE)]), &service(ONE));
     let fields = [
         &cloud["service"],
         &cloud["written"],
         &cloud["service_match"],
     ];
-    assert_eq!(fields, [&json!(GROQ), &json!(1), &json!(true)]);
+    assert_eq!(fields, [&json!(ONE), &json!(1), &json!(true)]);
 }
 
 #[test]
 fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
     let failed = FAILED_LINE;
     let log = [
-        logged(0, &format!("{failed} {FAULT}=Rate {SERVICE}={GROQ}")),
-        logged(2, &format!("{failed} {FAULT}=Key {SERVICE}={GROQ}")),
-        logged(3, &format!("{failed} {FAULT}=a/b {SERVICE}={GROQ}")),
+        logged(0, &format!("{failed} {FAULT}=Rate {SERVICE}={ONE}")),
+        logged(2, &format!("{failed} {FAULT}=Key {SERVICE}={ONE}")),
+        logged(3, &format!("{failed} {FAULT}=a/b {SERVICE}={ONE}")),
         logged(4, &format!("another line {FAULT}=Credit")),
-        logged(5, &format!("{failed} {SERVICE}={GROQ}")),
+        logged(5, &format!("{failed} {SERVICE}={ONE}")),
     ]
     .join("\n");
     let since = stamp_us("2026-11-16T10:00:01.000000Z").expect("a stamp");
@@ -155,10 +155,10 @@ fn a_failed_cloud_dictation_gives_its_faults_kind_and_never_another_value() {
 #[test]
 fn a_key_that_could_not_be_read_before_the_send_gives_the_key_kind_and_nothing_of_its_line() {
     let failed = FAILED_LINE;
-    let path = r"C:\daily\voice\keys\groq.sealed";
+    let path = r"C:\daily\voice\keys\alpha.sealed";
     let log = [
         logged(1, &format!("{KEY_UNREAD} error={path}")),
-        logged(2, &format!("{failed} {FAULT}=Rate {SERVICE}={GROQ}")),
+        logged(2, &format!("{failed} {FAULT}=Rate {SERVICE}={ONE}")),
         logged(3, "a cloud key went error=Key"),
     ]
     .join("\n");

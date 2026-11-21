@@ -11,9 +11,10 @@ use kx_settings::Files;
 use kx_test_support::tempdir::TempDir;
 
 use super::super::super::borrow;
-use super::{BLOB, GROQ, WRAPPED, daily};
+use super::{BLOB, WRAPPED, daily};
 
-/// A made-up service id the daily folder holds no key for.
+/// A made-up service id whose key the daily folder holds, and one it holds no key for.
+const KEYED: &str = "keyed";
 const KEYLESS: &str = "keyless";
 
 /// How many files lie under `dir`.
@@ -41,22 +42,22 @@ fn a_daily_folder_is_a_data_folder_only_with_its_settings_or_its_voice_data_key(
 
 #[test]
 fn a_key_is_there_only_with_its_blob_and_the_data_key_by_their_names() {
-    let d = daily(&[GROQ]);
-    assert!(borrow::has(d.path(), GROQ));
+    let d = daily(&[KEYED]);
+    assert!(borrow::has(d.path(), KEYED));
     assert!(!borrow::has(d.path(), KEYLESS), "no blob");
     assert!(!borrow::has(d.path(), "a/b"), "no blob name");
     fs::remove_file(d.path().join(VOICE_DIR).join(KEY_FILE)).expect("removed");
-    assert!(!borrow::has(d.path(), GROQ), "no data key");
+    assert!(!borrow::has(d.path(), KEYED), "no data key");
 }
 
 #[test]
 fn a_borrow_copies_that_blob_and_the_data_key_byte_for_byte_and_nothing_else() {
-    let d = daily(&[GROQ, KEYLESS]);
+    let d = daily(&[KEYED, KEYLESS]);
     let copy = TempDir::new("g22-copy").expect("a folder");
-    let made = borrow::copy(d.path(), copy.path(), GROQ).expect("copied");
+    let made = borrow::copy(d.path(), copy.path(), KEYED).expect("copied");
     let voice = copy.path().join(VOICE_DIR);
     assert_eq!(fs::read(voice.join(KEY_FILE)).expect("copied"), WRAPPED);
-    let blob = voice.join(KEYS).join(format!("{GROQ}.{SEALED_EXT}"));
+    let blob = voice.join(KEYS).join(format!("{KEYED}.{SEALED_EXT}"));
     assert_eq!(fs::read(&blob).expect("copied"), BLOB);
     assert_eq!(files(copy.path()), 2, "only those two");
     assert_eq!(made, [voice.join(KEY_FILE), blob], "each named, to be lent");
@@ -64,14 +65,14 @@ fn a_borrow_copies_that_blob_and_the_data_key_byte_for_byte_and_nothing_else() {
 
 #[test]
 fn a_failed_borrow_names_no_path_and_no_folder_is_copied_onto_itself() {
-    let d = daily(&[GROQ]);
+    let d = daily(&[KEYED]);
     let copy = TempDir::new("g22-copy").expect("a folder");
     let e = borrow::copy(d.path(), copy.path(), KEYLESS).expect_err("no blob");
     for path in [d.path(), copy.path()] {
         assert!(!e.contains(&path.display().to_string()), "{e}");
     }
     assert!(
-        borrow::copy(d.path(), d.path(), GROQ).is_err(),
+        borrow::copy(d.path(), d.path(), KEYED).is_err(),
         "its own folder"
     );
     assert_eq!(files(d.path()), 4, "the daily folder is as it was");
@@ -79,7 +80,7 @@ fn a_failed_borrow_names_no_path_and_no_folder_is_copied_onto_itself() {
 
 #[test]
 fn a_borrow_missing_either_file_copies_nothing() {
-    let d = daily(&[GROQ]);
+    let d = daily(&[KEYED]);
     let copy = TempDir::new("g22-copy").expect("a folder");
     assert!(
         borrow::copy(d.path(), copy.path(), KEYLESS).is_err(),
@@ -88,7 +89,7 @@ fn a_borrow_missing_either_file_copies_nothing() {
     assert_eq!(files(copy.path()), 0, "not even the data key");
     fs::remove_file(d.path().join(VOICE_DIR).join(KEY_FILE)).expect("removed");
     assert!(
-        borrow::copy(d.path(), copy.path(), GROQ).is_err(),
+        borrow::copy(d.path(), copy.path(), KEYED).is_err(),
         "no data key"
     );
     assert_eq!(files(copy.path()), 0, "not even the blob");
