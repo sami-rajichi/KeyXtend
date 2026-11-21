@@ -104,11 +104,7 @@ const LINES: [(&str, [&str; 3]); 11] = [
 
 /// The free allowance's row line, short, and the start of its renewal's line, in each language: one term throughout.
 const ALLOWANCE: [(&str, &str, &str); 3] = [
-    (
-        "en",
-        "Free: 8",
-        "The free allowance is used up. It renews ",
-    ),
+    ("en", "Free: 8", "The free allowance is used up. It renews "),
     (
         "fr",
         "Gratuit\u{a0}: 8",
