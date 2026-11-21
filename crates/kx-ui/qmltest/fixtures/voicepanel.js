@@ -8023,7 +8023,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -8185,7 +8185,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -8347,7 +8347,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -8954,7 +8954,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -9121,7 +9121,7 @@ var views = {
             "value": "مفعّل"
           },
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -9283,7 +9283,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -17558,7 +17558,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -17720,7 +17720,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -17882,7 +17882,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -18489,7 +18489,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -18656,7 +18656,7 @@ var views = {
             "value": "On"
           },
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -18818,7 +18818,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -27093,7 +27093,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -27255,7 +27255,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -27417,7 +27417,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -28024,7 +28024,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -28191,7 +28191,7 @@ var views = {
             "value": "Activé"
           },
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,
@@ -28353,7 +28353,7 @@ var views = {
           "is": "service",
           "keep": null,
           "key": {
-            "at": 0,
+            "at": 56,
             "buttons": [
               {
                 "arg": 0,

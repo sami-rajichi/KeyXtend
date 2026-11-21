@@ -205,8 +205,12 @@ impl Panel {
         kept.unwrap_or_default().to_owned()
     }
 
-    /// `line`'s caret in what it draws: a line not yet edited waits at its text's end.
+    /// `line`'s caret in what it draws: a line not yet edited waits at its text's end, and the key line with nothing
+    /// typed after the sealed key's dots, which it draws then.
     pub(crate) fn line_caret(&self, line: CloudLine, facts: &Facts<'_>) -> u32 {
+        if line == CloudLine::Key && self.cloud.typed.key_dots() == 0 {
+            return self.cloud.dots;
+        }
         if let Some(draft) = self.cloud.typed.draft(line) {
             return draft.caret();
         }

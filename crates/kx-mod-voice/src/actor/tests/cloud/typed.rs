@@ -1,6 +1,6 @@
 //! The key page's lines through the actor (ADR-0049): the keyboard hears which line the panel shows after each view,
-//! once per change, again when it asks and closed at the stop; a key typed on the key line is sealed and shown only
-//! as dots; and another panel opening closes this one.
+//! once per change, again when it asks and closed at the stop; a key typed on the key line and saved by Enter or Save
+//! is sealed and shown at once only as dots; and another panel opening closes this one.
 
 use kx_module_api::ports::{
     CloudButton, CloudLine, PanelKey, PanelLine, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
@@ -71,23 +71,30 @@ fn the_keyboard_hears_the_panels_line_after_each_view_once_per_change() {
 }
 
 #[test]
-fn a_key_typed_on_its_line_is_sealed_and_shown_only_as_dots() {
-    let mut rig = on_lines();
-    let key = made_key();
-    for c in key.chars() {
-        rig.send(Msg::LineKey(PanelKey::Text(Redacted::new(c.into()))));
+fn a_key_typed_on_its_line_and_saved_by_enter_or_save_is_sealed_and_shown_only_as_dots() {
+    let saves: [fn(&mut Rig); 2] = [
+        |rig| rig.send(Msg::LineKey(PanelKey::Enter)),
+        |rig| rig.act(VoiceClick::Save(CloudLine::Key)),
+    ];
+    for (at, save) in saves.into_iter().enumerate() {
+        let mut rig = on_lines();
+        let key = made_key();
+        for c in key.chars() {
+            rig.send(Msg::LineKey(PanelKey::Text(Redacted::new(c.into()))));
+        }
+        let n = u32::try_from(key.len()).unwrap();
+        assert_eq!(*lines(&rig).typed.expose(), n);
+        save(&mut rig);
+        let keys = Keys::new(Arc::new(rig.fake.shelf.clone()), false);
+        let sealed = keys.get("groq").unwrap().map(|k| k.expose().to_string());
+        assert_eq!(sealed.as_deref(), Some(key.as_str()), "{at}");
+        let s = lines(&rig);
+        let shown = (*s.key.expose(), *s.typed.expose(), *s.caret.expose());
+        assert_eq!(shown, (n, 0, n), "{at}: the dots, the caret after them");
+        assert!(!s.saves.contains(&CloudLine::Key));
+        let heard = format!("{:?}", rig.heard());
+        assert!(!heard.contains(&key), "no event printed it");
     }
-    let n = u32::try_from(key.len()).unwrap();
-    assert_eq!(*lines(&rig).typed.expose(), n);
-    rig.send(Msg::LineKey(PanelKey::Enter));
-    let keys = Keys::new(Arc::new(rig.fake.shelf.clone()), false);
-    let sealed = keys.get("groq").unwrap().map(|k| k.expose().to_string());
-    assert_eq!(sealed.as_deref(), Some(key.as_str()));
-    let sheet = lines(&rig);
-    assert_eq!((*sheet.key.expose(), *sheet.typed.expose()), (n, 0));
-    assert!(!sheet.saves.contains(&CloudLine::Key));
-    let heard = format!("{:?}", rig.heard());
-    assert!(!heard.contains(&key), "no event printed it");
 }
 
 #[test]

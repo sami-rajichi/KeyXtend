@@ -1,14 +1,16 @@
 //! A service's key page (design "Keys"): Paste puts the clipboard's text on the key line as dots (edges 23 and carry
-//! 9), a test's answer counts only while its page and key stand (carry 3), and the link opens only the row's own HTTPS
-//! address (edge 23); a typed address's checks are in `address`.
+//! 9), whose caret waits after them until a new key is typed, a test's answer counts only while its page and key stand
+//! (carry 3), and the link opens only the row's own HTTPS address (edge 23); a typed address's checks are in `address`.
 
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    ClipText, CloudButton, CloudFault, KeyCheck, PanelButton, ServiceName, VoiceClick,
+    ClipText, CloudButton, CloudFault, CloudLine, KeyCheck, PanelButton, PanelKey, ServiceName,
+    VoiceClick,
 };
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
+use super::typing::key;
 use super::{act, apply, lines_sheet, on_cloud, put, shown};
 use crate::compare::tests::secret;
 use crate::services::table;
@@ -120,6 +122,34 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
     let fifth = test(&mut rig);
     rig.with(|p, _| p.tested(fifth, Err(CloudFault::Gone), None));
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Failed);
+}
+
+#[test]
+fn with_a_sealed_key_and_nothing_typed_the_caret_waits_after_its_dots() {
+    let mut rig = on_groq_lines();
+    rig.with(|p, _| p.dots("groq", 12));
+    let shown = |rig: &mut Rig| {
+        let s = lines_sheet(rig);
+        (
+            *s.key.expose(),
+            *s.typed.expose(),
+            s.typing,
+            *s.caret.expose(),
+        )
+    };
+    let sealed = (12, 0, CloudLine::Key, 12);
+    assert_eq!(shown(&mut rig), sealed);
+    key(&mut rig, &PanelKey::Erase);
+    rig.click(&VoiceClick::Caret {
+        line: CloudLine::Key,
+        at: Redacted::new(12),
+    });
+    assert_eq!(shown(&mut rig), sealed, "Backspace and a click leave it");
+    key(&mut rig, &PanelKey::Text(Redacted::new("a".into())));
+    let new = (12, 1, CloudLine::Key, 1);
+    assert_eq!(shown(&mut rig), new, "a new key of one letter");
+    key(&mut rig, &PanelKey::Erase);
+    assert_eq!(shown(&mut rig), sealed);
 }
 
 #[test]

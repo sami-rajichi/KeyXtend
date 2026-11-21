@@ -6,8 +6,8 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    CLIP_OPEN_MAX_MS, ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark,
-    ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
+    CLIP_OPEN_MAX_MS, ClipTake, ClipText, CloudButton, CloudLine, KeyCheck, MAX_KEY_BYTES,
+    PanelKey, ServiceMark, ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
 };
 
 use super::super::taps::{Heard, held, release, waiting};
@@ -130,6 +130,20 @@ fn paste_asks_the_clipboard_history_and_seals_its_text() {
     rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
     assert_eq!(sealed(&rig).as_deref(), Some(key.as_str()));
     assert!(rig.views().iter().all(|v| !format!("{v:?}").contains(&key)));
+}
+
+#[test]
+fn after_a_paste_the_last_view_holds_the_keys_dots_and_nothing_typed() {
+    let mut rig = on_lines();
+    rig.send(Msg::LineKey(PanelKey::Text(Redacted::new("a".into()))));
+    rig.act(VoiceClick::Service(CloudButton::Paste));
+    let take = asked(&rig);
+    let key = made_key();
+    rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
+    let (sheet, dots) = (lines(&rig), u32::try_from(key.len()).unwrap());
+    let shown = (*sheet.key.expose(), *sheet.typed.expose(), sheet.typing);
+    assert_eq!(shown, (dots, 0, CloudLine::Key), "no later message needed");
+    assert_eq!(*sheet.caret.expose(), dots, "the caret after the dots");
 }
 
 #[test]

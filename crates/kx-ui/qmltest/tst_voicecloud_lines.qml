@@ -1,7 +1,7 @@
 // The key page's lines over the hub's views (ADR-0049): a typed key draws only its dots and its caret, the sealed key
-// gives way to an empty line once the keys aim at it, an address reads left to right in Arabic too, a click places the
-// caret, a reader's press picks its line, an empty line's hint starts at its caret, and each Save dims while its line is
-// empty, has a name of its own and sends its line, in English, French and Arabic.
+// keeps its dots with the caret after them once the keys aim at it, an address reads left to right in Arabic too, a click
+// places the caret, a reader's press picks its line, an empty line's hint starts at its caret, and each Save dims while
+// its line is empty, has a name of its own and sends its line, in English, French and Arabic.
 import QtQuick
 import QtTest
 import "../qml"
@@ -46,16 +46,69 @@ Item {
             box.visible = false;
         }
 
-        function test_aimed_the_sealed_key_gives_way_to_an_empty_line_data() {
+        // Hands the panel view `v`, as the hub's next view does.
+        function turn(box, v) {
+            box.view = v.panel;
+            box.round = v.round;
+            verify(waitForPolish(box), "laid out");
+        }
+        // Checks that `line` draws its caret after its last dot, as the dots count from the left.
+        function after(line, why) {
+            const text = Board.all(line, o => o.visible && o.readOnly === true)[0];
+            verify(!!caret(line) && !!text, why);
+            fuzzyCompare(caret(line).mapToItem(text, 0, 0).x, text.width, 1, why);
+        }
+        // The hints `line` shows.
+        function hints(line) {
+            return Board.all(line, o => o.visible && o.text === line.hint).length;
+        }
+
+        function test_aimed_a_sealed_key_keeps_its_dots_with_its_caret_after_them_data() {
             return langs_data();
         }
-        function test_aimed_the_sealed_key_gives_way_to_an_empty_line(d) {
+        // The owner's rule (2026-11-21): the sealed key's dots stay while the keys aim at its line, and the first
+        // letter starts a new key whose dots replace them; Save lights only then.
+        function test_aimed_a_sealed_key_keeps_its_dots_with_its_caret_after_them(d) {
             const box = make("service", d.t);
-            const key = one(box, "voice.line-key");
-            verify(key.masked, "the sealed key's dots");
+            const k = box.view.sheet.key;
+            let key = one(box, "voice.line-key");
             box.aimed = true;
+            verify(key.takes && key.masked, "the sealed key's dots take the letters");
+            compare(key.drawn, k.mask.charAt(0).repeat(k.dots));
+            after(key, "its caret after the dots");
+            compare(hints(key), 0, "no hint over the dots");
+            verify(!one(box, "voice.save-key").can, "Save dims while nothing is typed");
+            const v = Kit.view(d.t, "serviceTyped");
+            v.panel.sheet.key.typed = v.panel.sheet.key.at = 1;
+            turn(box, v);
+            key = one(box, "voice.line-key");
+            compare(key.drawn, k.mask.charAt(0), "the new key's one dot");
+            after(key, "its caret after it");
+            verify(one(box, "voice.save-key").can, "a typed key saves");
+            box.visible = false;
+        }
+
+        function test_aimed_a_new_sealed_key_shows_its_dots_at_once_data() {
+            return langs_data();
+        }
+        // After Paste, Save or Enter the next view holds the new key's dots and nothing typed while the keys stay
+        // aimed, and they show at once; after Remove the empty line shows its hint beside the caret.
+        function test_aimed_a_new_sealed_key_shows_its_dots_at_once(d) {
+            const box = make("serviceTyped", d.t);
+            box.aimed = true;
+            const v = Kit.view(d.t, "service");
+            const k = v.panel.sheet.key;
+            turn(box, v);
+            let key = one(box, "voice.line-key");
+            verify(key.takes, "the keys stay aimed");
+            compare(key.drawn, k.mask.charAt(0).repeat(k.dots), "the new key's dots");
+            after(key, "its caret after them");
+            const gone = Kit.view(d.t, "service");
+            gone.panel.sheet.key.dots = gone.panel.sheet.key.at = 0;
+            turn(box, gone);
+            key = one(box, "voice.line-key");
             verify(key.takes && !key.masked && key.drawn === "", "an empty line takes the letters");
-            compare(Board.all(key, o => o.visible && o.text === key.hint).length, 1, "its hint beside the caret");
+            compare(hints(key), 1, "its hint beside the caret");
             verify(!one(box, "voice.save-key").can, "Save dims while nothing is typed");
             box.visible = false;
         }

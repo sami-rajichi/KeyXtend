@@ -50,8 +50,8 @@ Item {
                     height: field.height
                     PanelLine {
                         id: field
-                        // The key shows the typed key's dots while one is typed or the line takes the letters, else the
-                        // sealed key's; an address or model id reads left to right in every language (ADR-0049).
+                        // The key shows the typed key's dots while one is typed, else the sealed key's, aimed or not; an
+                        // address or model id reads left to right in every language (ADR-0049).
                         readonly property var d: entry.modelData
                         width: parent.width - (ends.width > 0 ? ends.width + keys.gap : 0)
                         said: d.mask && count > 0 ? null : ({ text: d.text, rtl: false, arabic: false })
@@ -63,7 +63,7 @@ Item {
                         search: true
                         secret: !!d.mask
                         mask: d.mask || ""
-                        count: !d.mask ? 0 : d.typed > 0 || takes ? d.typed : d.dots
+                        count: !d.mask ? 0 : d.typed > 0 ? d.typed : d.dots
                         rtl: !!d.mask && keys.host.ar
                         lk: keys.lk
                         res: keys.host.res

@@ -14,6 +14,8 @@ use kx_module_api::ports::{
 
 /// A renewal at 23:59 UTC, as a used allowance's answer shows it.
 const RENEWS_MS: i64 = 1_794_700_740_000;
+/// The sealed key's length, after whose dots the caret waits while nothing is typed.
+const DOTS: u32 = 56;
 /// The answers a test draws as a warning band, by the page's name.
 const BANDS: [(&str, KeyCheck); 3] = [
     ("serviceAllowance", KeyCheck::Allowance),
@@ -28,7 +30,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
     let mut s = ServiceSheet {
         service: named("Groq"),
         mark: ServiceMark::Ready,
-        key: Redacted::new(56),
+        key: Redacted::new(DOTS),
         typed: Redacted::new(0),
         check: KeyCheck::Works,
         renews_at: None,
@@ -42,7 +44,7 @@ pub(super) fn lines(which: &str) -> VoiceSheet {
         acts: CloudButton::ALL.to_vec(),
         part: None,
         typing: CloudLine::Key,
-        caret: Redacted::new(0),
+        caret: Redacted::new(DOTS),
         saves: Vec::new(),
     };
     if which == "router" {
@@ -99,7 +101,7 @@ fn service_long(part: LinesPart, tag: &str) -> VoiceSheet {
     let VoiceSheet::Service(mut s) = lines("custom") else {
         unreachable!("a key page")
     };
-    (s.key, (s.check, s.renews_at)) = (Redacted::new(56), longest_check(tag));
+    (s.key, (s.check, s.renews_at)) = (Redacted::new(DOTS), longest_check(tag));
     (s.address_fault, s.keep) = (Some(AddressFault::Path), Some(true));
     (s.site, s.part) = (Some("console.groq.com".to_owned()), Some(part));
     VoiceSheet::Service(s)
