@@ -1,7 +1,7 @@
 # 22. Texts carry no bidi marks
 
 - **Date:** 2026-10-10
-- **Status:** Accepted. Supersedes ADR-0017's bidi rule ("Fluent's isolation marks stay on") and its Arabic list join ("، ").
+- **Status:** Accepted. Supersedes ADR-0017's bidi rule ("Fluent's isolation marks stay on") and its Arabic list join ("، "). Decision 5's loose و is superseded by ADR-0053 (attached و).
 
 ## Context
 

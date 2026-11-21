@@ -25,7 +25,7 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0019 | [The tray icon: a port over the taskbar, and our own QML menu](0019-tray-icon-port-and-qml-menu.md) | Accepted (2026-09-30). Adds the `Tray` port to ADR-0016's UI ports. |
 | 0020 | [The keyboard's text follows the keyboard's language](0020-keyboard-text-follows-the-keyboard-language.md) | Accepted (2026-10-01). Supersedes ADR-0017's language choice for the keyboard's text. |
 | 0021 | [One graphics device for every window](0021-one-graphics-device-for-every-window.md) | Accepted (2026-10-10). Adds how ADR-0013's windows draw; sets spec §10's idle memory to 100 MB. Its decisions 6 and 7 gain ADR-0028's after-use reading and buffer pool limit. |
-| 0022 | [Texts carry no bidi marks](0022-texts-carry-no-bidi-marks.md) | Accepted (2026-10-10). Supersedes ADR-0017's bidi rule and Arabic list join. |
+| 0022 | [Texts carry no bidi marks](0022-texts-carry-no-bidi-marks.md) | Accepted (2026-10-10). Supersedes ADR-0017's bidi rule and Arabic list join. Decision 5's loose و is superseded by ADR-0053 (attached و). |
 | 0023 | [Give freed heap pages back after a look change](0023-give-freed-heap-pages-back-after-a-look-change.md) | Accepted (2026-10-11). Adds to ADR-0021 how memory stays flat over G8's churn; its decision 6 stands. |
 | 0024 | [Controls act on the press they got](0024-controls-act-on-the-press-they-got.md) | Accepted (2026-10-11) |
 | 0025 | [A pressed key draws first and presents without vsync](0025-a-pressed-key-draws-first-and-presents-without-vsync.md) | Accepted (2026-10-12). Changes spec §10's key light target. Its `present_vsync = false` is superseded by ADR-0026. |
@@ -56,5 +56,6 @@ Never rewrite an accepted ADR. Supersede it with a new one.
 | 0050 | [Only the cloud services the owner tests by hand are offered, and Azure is dropped](0050-only-the-cloud-services-the-owner-tests-are-offered-and-azure-is-dropped.md) | Accepted (2026-11-19). Narrows ADR-0047 decision 5 to three request shapes and replaces its decision 7's Gemini line; OpenAI, Mistral, Together AI and DeepInfra stay in the table, hidden until tested. Every offered row ships untested, and the owner's check hides a row that fails. ADR-0051 adds a fourth shape. |
 | 0051 | [AssemblyAI's Sync API is a fourth request shape](0051-assemblyai-sync-is-a-fourth-request-shape.md) | Accepted (2026-11-19). Adds the `assembly` shape to ADR-0050's three: one multipart request a piece to the European servers, the model in its own header, no key test. |
 | 0052 | [A card's check reads the clip of the language in front](0052-a-cards-check-reads-the-clip-of-the-language-in-front.md) | Accepted (2026-11-20). Supersedes ADR-0044 decision 7's clip choice: a result counts for the card, driver, model and clip language, and an older result for none. |
+| 0053 | [Arabic lists attach و to the next word](0053-arabic-lists-attach-waw.md) | Accepted (2026-11-21). Supersedes ADR-0022 decision 5's loose " و ": every Arabic list joiner attaches و, never "،". |
 
 ADR-0011 names "ADR-0012" for the toolkit result; that number went to the installer decision, so the toolkit result is ADR-0013.
