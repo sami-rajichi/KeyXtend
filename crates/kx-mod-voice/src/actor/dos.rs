@@ -164,8 +164,12 @@ impl Actor {
             .map(|(at, e)| suffixed(e.text.expose(), if at == last { suffix } else { join }))
             .collect();
         if s.way() == Insert::Paste && !self.flow.password() && !texts.is_empty() {
-            let all: Zeroizing<String> =
-                Zeroizing::new(texts.iter().map(|t| t.expose().as_str()).collect());
+            // Reserved up front, so no copy of the text is left behind by a growing buffer.
+            let room = texts.iter().map(|t| t.expose().len()).sum();
+            let mut all = Zeroizing::new(String::with_capacity(room));
+            for t in &texts {
+                all.push_str(t.expose());
+            }
             let (round, erase, text) = (UNSENT, 0, Redacted::new(all));
             return self.paste_text(
                 Source::History,
