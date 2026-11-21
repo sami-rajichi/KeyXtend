@@ -19,9 +19,9 @@ pub const FACTS_DAYS: RangeInclusive<u16> = 30..=730;
 pub const KEEP_START: bool = true;
 
 /// A service the user switched on: the day and terms number confirmed, its typed address and Other model, its
-/// keep-nothing switch, and the terms number its card warning was seen at.
+/// keep-nothing switch, and the terms number its card warning was seen at. A field a later version adds is ignored, so
+/// a downgrade keeps the entry.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct ServiceOn {
     /// The day the user confirmed the card.
     pub on: Datetime,

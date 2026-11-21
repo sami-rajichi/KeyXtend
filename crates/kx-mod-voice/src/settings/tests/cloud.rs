@@ -66,7 +66,6 @@ fn a_service_entry_reads_with_its_day_terms_typed_lines_and_keep_switch() {
         "terms = 1",
         "on = 2026-11-17",
         "on = \"2026-11-17\", terms = 1",
-        "on = 2026-11-17, terms = 1, x = 1",
     ] {
         assert!(unread(&with("services", services("groq", odd))), "{odd}");
     }
@@ -132,4 +131,13 @@ fn the_warning_seen_reads_back_and_is_left_out_until_shown() {
     assert_eq!(value["elevenlabs"]["warned"].as_integer(), Some(1));
     let back = s.with("services", value).unwrap();
     assert_eq!(back.services["elevenlabs"].warned, 1);
+}
+
+#[test]
+fn a_field_a_later_version_adds_keeps_the_entry_on_a_downgrade() {
+    let later = "on = 2026-11-17, terms = 1, model = \"m\", later = 1";
+    let t = with("services", services("groq", later));
+    let s = parse_as::<VoiceSettings>(&t).unwrap();
+    let on = &s.services["groq"];
+    assert_eq!((on.terms, on.model.as_str()), (1, "m"), "the rest stays");
 }
