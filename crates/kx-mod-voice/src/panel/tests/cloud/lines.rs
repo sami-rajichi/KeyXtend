@@ -279,3 +279,16 @@ fn edge_17_the_other_model_line_says_why_a_kept_models_id_cannot_go_while_keep_n
     let sheet = lines_sheet(&mut rig);
     assert_eq!((sheet.keep, sheet.model_na), (Some(false), false));
 }
+
+#[test]
+fn back_or_no_on_a_card_opened_from_the_key_page_goes_back_to_that_page() {
+    let mut rig = on_groq_lines();
+    rig.click(&VoiceClick::Service(CloudButton::Facts));
+    assert_eq!(rig.panel.page, Some(Page::Card));
+    rig.click(&VoiceClick::Button(PanelButton::Back));
+    assert_eq!(rig.panel.page, Some(Page::Lines), "Back");
+    rig.click(&VoiceClick::Service(CloudButton::Facts));
+    rig.settings.services.clear();
+    rig.click(&VoiceClick::Confirm(false));
+    assert_eq!(rig.panel.page, Some(Page::Lines), "No on a service still off");
+}
