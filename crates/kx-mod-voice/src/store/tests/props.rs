@@ -189,8 +189,9 @@ proptest! {
         let langs = numbers::decode_langs(&numbers::encode_langs(&k)).unwrap();
         // The blob puts passes first, so the checks come back in another order.
         let back = numbers::named(plain, langs);
+        let times = |rows: &[_], row| rows.iter().filter(|r| *r == row).count();
         prop_assert_eq!(back.rows().len(), k.rows().len());
-        prop_assert!(k.rows().iter().all(|row| back.rows().contains(row)));
+        prop_assert!(k.rows().iter().all(|row| times(back.rows(), row) == times(k.rows(), row)));
         prop_assert_eq!(numbers::decode_scores(&numbers::encode_scores(&s)), Ok(s));
     }
 

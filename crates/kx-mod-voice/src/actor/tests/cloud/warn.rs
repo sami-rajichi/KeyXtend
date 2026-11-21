@@ -49,8 +49,11 @@ fn a_service_without_a_warning_never_shows_one() {
 
 /// The shipped table with `ElevenLabs`' terms raised to 2, kept for the run.
 fn newer() -> &'static Services {
-    let own = OWN.replacen("terms = 1", "terms = 2", 1);
-    Box::leak(Box::new(Services::parse(TEXT, &own, LANGS).unwrap()))
+    let (head, row) = OWN.split_at(OWN.find(r#"id = "elevenlabs""#).unwrap());
+    let own = format!("{head}{}", row.replacen("terms = 1", "terms = 2", 1));
+    let table = Services::parse(TEXT, &own, LANGS).unwrap();
+    assert_eq!(table.get("elevenlabs").unwrap().terms, 2, "its own row");
+    Box::leak(Box::new(table))
 }
 
 #[test]
