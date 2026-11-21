@@ -6,8 +6,9 @@ use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    BoxConfig, HOURS_PER_DAY, MAX_BLOB_BYTES, MAX_BOX_BYTES, MAX_BOX_WORK, MAX_FIELD_CHARS,
-    MAX_VAULT_ENTRIES, MAX_VAULT_FIELDS, MB, MIN_BOX_WORK, MIN_PER_HOUR, S_PER_MIN,
+    BoxConfig, CLIP_ANSWER_MIN_MS, HOURS_PER_DAY, MAX_BLOB_BYTES, MAX_BOX_BYTES, MAX_BOX_WORK,
+    MAX_FIELD_CHARS, MAX_VAULT_ENTRIES, MAX_VAULT_FIELDS, MB, MIN_BOX_WORK, MIN_PER_HOUR,
+    S_PER_MIN,
 };
 use kx_module_api::{Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within};
 use serde::{Deserialize, Serialize};
@@ -46,8 +47,8 @@ pub const WORKER_IDLE_S: RangeInclusive<u32> = 5..=3_600;
 pub const RESTART_MS: RangeInclusive<u32> = 100..=30_000;
 /// The longest wait before a failed vault worker starts again, in ms.
 pub const RESTART_MAX_MS: RangeInclusive<u32> = 1_000..=600_000;
-/// How long Paste waits for the clipboard history, in ms: past the clipboard's longest open wait, `open_ms` up to 2000.
-pub const PASTE_WAIT_MS: RangeInclusive<u32> = 2500..=10_000;
+/// How long Paste waits for the clipboard history, in ms: past its longest wait for the clipboard.
+pub const PASTE_WAIT_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=10_000;
 /// Seconds between looks at a waiting backup place.
 pub const PLACE_CHECK_S: RangeInclusive<u32> = 10..=3_600;
 /// Hours before a memory check asks again after Later: an hour to a week.

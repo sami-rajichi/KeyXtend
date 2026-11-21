@@ -6,8 +6,8 @@
 use std::time::Duration;
 
 use kx_module_api::ports::{
-    ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark, ServiceSheet,
-    VoiceClick, VoiceSheet, VoiceTab,
+    CLIP_OPEN_MAX_MS, ClipTake, ClipText, CloudButton, KeyCheck, MAX_KEY_BYTES, ServiceMark,
+    ServiceSheet, VoiceClick, VoiceSheet, VoiceTab,
 };
 
 use super::super::taps::{Heard, held, release, waiting};
@@ -17,9 +17,6 @@ use crate::panel::Do;
 use crate::services::tests::shipped::{entry, first};
 use crate::settings::{PASTE_MS, TAKE_MS};
 use crate::{ID, VoiceSettings};
-
-/// The clipboard's longest read of a take, its `open_ms` at most, which the key page's Paste must outwait.
-const CLIP_READ_MS: u64 = 2_000;
 
 /// A key-like text, built as the test runs.
 fn made_key() -> String {
@@ -166,7 +163,7 @@ fn take_ms_at_its_floor_still_takes_an_answer_just_inside_the_clipboards_longest
     });
     rig.act(VoiceClick::Service(CloudButton::Paste));
     let take = asked(&rig);
-    rig.advance(Duration::from_millis(CLIP_READ_MS - 1));
+    rig.advance(Duration::from_millis(u64::from(CLIP_OPEN_MAX_MS) - 1));
     let key = made_key();
     rig.send(Msg::Taken(take.answer(ClipText::Text(secret(&key)))));
     assert_eq!(sealed(&rig).as_deref(), Some(key.as_str()));

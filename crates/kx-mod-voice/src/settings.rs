@@ -15,7 +15,9 @@ use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
 use std::path::Path;
 
-use kx_module_api::ports::{CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, path_ok};
+use kx_module_api::ports::{
+    CLIP_ANSWER_MIN_MS, CardUse, DevicePick, FetchAsk, JobLimits, SpeechAsk, path_ok,
+};
 use kx_module_api::{
     Settings, SettingsError, SettingsSpec, is_hidden, refuse_if, validate_as, within,
 };
@@ -51,8 +53,8 @@ pub const COPY_MS: RangeInclusive<u32> = 10..=2_000;
 pub const COPY_POLL_MS: RangeInclusive<u32> = 1..=100;
 /// The longest wait for the clipboard history to paste a text, in ms.
 pub const PASTE_MS: RangeInclusive<u32> = 500..=10_000;
-/// How long the key page's Paste waits for the clipboard's text, in ms: past its longest read, `open_ms` up to 2000.
-pub const TAKE_MS: RangeInclusive<u32> = 2_500..=10_000;
+/// How long the key page's Paste waits for the clipboard's text, in ms: past the clipboard history's longest read.
+pub const TAKE_MS: RangeInclusive<u32> = CLIP_ANSWER_MIN_MS..=10_000;
 
 /// Why a value or a pair was refused.
 const BAD_RESTART: &str = "restart_ms must not pass restart_max_ms";

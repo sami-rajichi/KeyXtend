@@ -77,9 +77,10 @@ pub use clip::{
     ClipboardWriter, ClipboardWriterKey, FileFact, ImageCodec, probe_ok,
 };
 pub use clips::{
-    ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage, ClipPanel, ClipRow, ClipTake,
-    ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted, MB, Pages, PanelKey,
-    PanelLine, PanelNote, PasteAsk, PasteText, Pasted, Preview, TextPasted, When,
+    CLIP_ANSWER_MIN_MS, CLIP_OPEN_MAX_MS, ClipAct, ClipKey, ClipKind, ClipLine, ClipOpen, ClipPage,
+    ClipPanel, ClipRow, ClipTake, ClipTaken, ClipText, ClipView, Filter, HistoryAsk, HistoryWanted,
+    MB, Pages, PanelKey, PanelLine, PanelNote, PasteAsk, PasteText, Pasted, Preview, TextPasted,
+    When,
 };
 pub use cloud::{
     CloudAsk, CloudFault, CloudLimits, CloudNote, CloudRun, CloudShape, CloudSpeech,

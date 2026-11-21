@@ -7,7 +7,9 @@ mod parts;
 use std::fmt;
 use std::ops::RangeInclusive;
 
-use kx_module_api::ports::{MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES};
+use kx_module_api::ports::{
+    CLIP_OPEN_MAX_MS, MB, RGBA_BYTES, WORKER_DECODE_BYTES, WORKER_READ_TIMES,
+};
 use kx_module_api::{
     Redacted, Settings, SettingsError, SettingsSpec, refuse_if, validate_as, within,
 };
@@ -64,7 +66,7 @@ pub const RESTART_MS: RangeInclusive<u32> = 100..=30_000;
 /// The longest wait before a failed worker starts again, in ms.
 pub const RESTART_MAX_MS: RangeInclusive<u32> = 1_000..=600_000;
 /// The longest wait for the clipboard, in ms.
-pub const OPEN_MS: RangeInclusive<u32> = 10..=2_000;
+pub const OPEN_MS: RangeInclusive<u32> = 10..=CLIP_OPEN_MAX_MS;
 /// How often the clipboard is tried within that wait, in ms.
 pub const POLL_MS: RangeInclusive<u32> = 1..=100;
 /// The most copies that wait for the history to keep them.

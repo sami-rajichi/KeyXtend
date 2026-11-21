@@ -21,6 +21,11 @@ const WRITE: Option<Capability> = Some(Capability::WriteClipboard);
 /// Bytes in a megabyte, as Windows counts sizes: the one unit the history's limits and the panel's sizes use.
 pub const MB: u64 = 1 << 20;
 
+/// The clipboard history's longest wait for the clipboard, in ms: the top of its `open_ms`.
+pub const CLIP_OPEN_MAX_MS: u32 = 2_000;
+/// The shortest wait for the clipboard history's answer, in ms: its longest wait for the clipboard, and a margin.
+pub const CLIP_ANSWER_MIN_MS: u32 = CLIP_OPEN_MAX_MS + 500;
+
 /// From the keyboard: the side key or the history chord toggles the panel.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ClipOpen;
