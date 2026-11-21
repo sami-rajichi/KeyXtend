@@ -163,13 +163,13 @@ pub use speech::{
 };
 pub use voice::{
     AddressFault, BarButton, BarHint, BarNote, BarPlace, BarText, CardCheck, CardPart, CloudBand,
-    CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet, CloudWhy, CompareCloud, CompareRow,
-    CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow, DeviceSheet, Ends,
-    Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine, FolderList,
-    HistoryRow, HistorySheet, KeyCheck, LinesPart, Listening, LocalUse, ModelRow, ModelSide,
-    ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, Renewal, RunStep,
-    ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, Unavailable, UsePrice,
-    VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceHome, VoiceKey, VoiceLang,
+    CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet, CloudWhy, CompareCloud, CompareMic,
+    CompareRow, CompareRun, CompareSheet, DeviceItem, DeviceLabel, DeviceName, DeviceRow,
+    DeviceSheet, Ends, Fact, FactArg, FactValue, FailedCheck, FetchButton, FetchState, FolderLine,
+    FolderList, HistoryRow, HistorySheet, KeyCheck, LinesPart, Listening, LocalUse, ModelRow,
+    ModelSide, ModelState, ModelsSheet, OptionRow, OptionUnit, OptionValue, PanelButton, Renewal,
+    RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, TextAsk, TextDone, Unavailable,
+    UsePrice, VoiceAct, VoiceAsk, VoiceBar, VoiceClick, VoiceClose, VoiceHome, VoiceKey, VoiceLang,
     VoiceLevel, VoiceLine, VoiceLineKey, VoiceLit, VoiceOpen, VoicePage, VoicePanel, VoiceSheet,
     VoiceTab, VoiceText, VoiceView,
 };

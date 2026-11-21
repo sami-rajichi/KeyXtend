@@ -18,8 +18,8 @@ use crate::i18n::keys::{
 };
 use kx_module_api::Zeroizing;
 use kx_module_api::ports::{
-    CompareCloud, CompareRow, CompareRun, CompareSheet, DeviceLabel, HistoryRow, HistorySheet,
-    PanelButton, RunStep, ServiceName, VoiceTab,
+    CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, DeviceLabel, HistoryRow,
+    HistorySheet, PanelButton, RunStep, ServiceName, VoiceTab,
 };
 use serde::Serialize;
 
@@ -66,11 +66,10 @@ pub(super) fn compare(cx: &Cx<'_>, c: &CompareSheet) -> Page {
         CompareSheet::Ready {
             models,
             device,
-            recording,
-            preparing,
+            mic,
             cloud,
             send,
-        } => ready(cx, *models, device, (*recording, *preparing), (cloud, send)),
+        } => ready(cx, *models, device, *mic, (cloud, send)),
         CompareSheet::Running { at, of, name, rows } => {
             let sheet = Sheet::Running {
                 rows: rows.iter().map(|r| run(t, r)).collect(),
@@ -105,12 +104,12 @@ fn compare_page(cx: &Cx<'_>, sub: String, sheet: Sheet) -> Page {
 }
 
 /// The set text with the `models` it runs on `device`, its cloud models and where they send the voice, and Start, or
-/// Cancel while its microphone opens (`preparing`) or the user reads it (`recording`); only reading asks to read.
+/// Cancel while its microphone `mic` opens or reads; only reading asks to read.
 fn ready(
     cx: &Cx<'_>,
     models: u16,
     device: &DeviceLabel,
-    (recording, preparing): (bool, bool),
+    mic: CompareMic,
     (picks, send): (&[CompareCloud], &[ServiceName]),
 ) -> Page {
     let t = cx.t;
@@ -128,16 +127,16 @@ fn ready(
         intro: t.text(intro),
         text: cx.read.map(str::to_owned),
         line,
-        recording: recording.then(|| t.text(VOICE_RECORDING)),
+        recording: (mic == CompareMic::Reading).then(|| t.text(VOICE_RECORDING)),
         picks: picks.iter().map(|p| cloud::pick(t, p)).collect(),
         send: cloud::send(t, send),
     };
     let mut page = compare_page(cx, cx.for_lang(), sheet);
     let start = Button::new(COMPARE, "", 0, t.text(VOICE_START)).on(models > 0);
-    page.foot = if recording || preparing {
-        vec![cx.button(PanelButton::Cancel)]
-    } else {
+    page.foot = if mic == CompareMic::Closed {
         vec![start.tone(Tone::Primary)]
+    } else {
+        vec![cx.button(PanelButton::Cancel)]
     };
     page
 }

@@ -7,9 +7,9 @@ use crate::Rig;
 use crate::logs::lines_of;
 use crate::texts::rig;
 use kx_module_api::ports::{
-    BarButton, BarText, CompareSheet, DeviceLabel, DeviceName, FetchButton, PanelButton,
-    ScrollPage, VoiceAct, VoiceBar, VoiceClick, VoicePanel, VoiceSheet, VoiceTab, VoiceText,
-    VoiceView,
+    BarButton, BarText, CompareMic, CompareSheet, DeviceLabel, DeviceName, FetchButton,
+    PanelButton, ScrollPage, VoiceAct, VoiceBar, VoiceClick, VoicePanel, VoiceSheet, VoiceTab,
+    VoiceText, VoiceView,
 };
 use kx_module_api::{Redacted, Zeroizing};
 use kx_ui::i18n::keys::VOICE_READ_TEXT;
@@ -32,8 +32,7 @@ fn ready() -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 6,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: Vec::new(),
         send: Vec::new(),
     })

@@ -67,8 +67,7 @@ fn compare_lists_its_cloud_models_and_names_each_ticked_service_before_it_sends(
     let ready = CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Cpu,
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: vec![pick(true), pick(false)],
         send: vec![service()],
     };

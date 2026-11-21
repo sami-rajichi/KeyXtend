@@ -12,7 +12,7 @@ use kx_mod_voice::cloud::Cloud;
 use kx_mod_voice::services::{Address, Service, Services, table};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud,
+    AddressFault, CardPart, CloudBand, CloudButton, CloudRow, CloudSheet, CompareCloud, CompareMic,
     CompareSheet, DeviceLabel, DeviceName, Fact, KeyCheck, LinesPart, LocalTime, ModelRow,
     ModelSide, ModelState, ModelsSheet, PanelButton, Renewal, ServiceMark, ServiceName, ServiceRow,
     Unavailable, VoiceSheet,
@@ -190,8 +190,7 @@ fn compare_long() -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: vec![
             pick("Whisper Large v3 Turbo", named("Groq")),
             pick("Whisper Large v3", named("Groq")),

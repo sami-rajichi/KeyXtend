@@ -2,9 +2,9 @@
 //! mark, a download and the folder line, Compare's three steps and History.
 
 use kx_module_api::ports::{
-    CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, FetchState, FolderLine,
-    HistoryRow, HistorySheet, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep, VoiceHome,
-    VoiceSheet, VoiceTab, When,
+    CompareMic, CompareRow, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, FetchState,
+    FolderLine, HistoryRow, HistorySheet, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep,
+    VoiceHome, VoiceSheet, VoiceTab, When,
 };
 use kx_module_api::{Redacted, Secret, Zeroizing};
 
@@ -159,8 +159,7 @@ pub fn ready() -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 6,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: Vec::new(),
         send: Vec::new(),
     })

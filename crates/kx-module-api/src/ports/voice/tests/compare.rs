@@ -64,21 +64,12 @@ fn compare_shows_its_ready_models_and_results_with_their_day_and_device() {
     let ready = CompareSheet::Ready {
         models: 6,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: Vec::new(),
         send: Vec::new(),
     };
     let shown = [ready, results].map(|s| shown(VoiceSheet::Compare(s)));
-    holds(
-        &shown[0],
-        &[
-            "models: 6",
-            "Auto(Cpu)",
-            "recording: false",
-            "preparing: false",
-        ],
-    );
+    holds(&shown[0], &["models: 6", "Auto(Cpu)", "mic: Closed"]);
     holds(&shown[1], &["day: Date", "RTX 4060", "wait_ms: 2900"]);
 }
 

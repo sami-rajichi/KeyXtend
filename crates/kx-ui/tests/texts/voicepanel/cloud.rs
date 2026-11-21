@@ -5,9 +5,9 @@ use super::{Shown, paged, shown};
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
     AddressFault, CardPart, CloudBand, CloudButton, CloudCard, CloudLine, CloudRow, CloudSheet,
-    CloudWhy, CompareCloud, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName, Fact, FactArg,
-    FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet, RunStep,
-    ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
+    CloudWhy, CompareCloud, CompareMic, CompareRun, CompareSheet, Date, DeviceLabel, DeviceName,
+    Fact, FactArg, FactValue, Hundredths, KeyCheck, ModelRow, ModelSide, ModelState, ModelsSheet,
+    RunStep, ServiceMark, ServiceName, ServiceRow, ServiceSheet, Unavailable, UsePrice, VoiceSheet,
 };
 
 /// The training warning's fact id, which the sample card and the warned rows carry.
@@ -252,8 +252,7 @@ fn compare() -> VoiceSheet {
     VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: vec![pick],
         send: vec![named("Groq")],
     })

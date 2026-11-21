@@ -13,7 +13,7 @@ pub use cloud::{
     AddressFault, CardPart, CloudCard, CloudLine, CloudSheet, Fact, FactArg, FactValue, KeyCheck,
     LinesPart, ServiceMark, ServiceName, ServiceRow, ServiceSheet, UsePrice,
 };
-pub use compare::{CompareCloud, CompareRow, CompareRun, CompareSheet, RunStep};
+pub use compare::{CompareCloud, CompareMic, CompareRow, CompareRun, CompareSheet, RunStep};
 pub use device::{CardCheck, DeviceItem, DeviceRow, DeviceSheet, FailedCheck};
 pub use history::{HistoryRow, HistorySheet};
 pub use models::{

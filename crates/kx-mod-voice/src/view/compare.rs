@@ -1,7 +1,9 @@
 //! The Compare page: the set text with the ready models and where they run, each model's turn while they run, and the
 //! results with their day and device. A text shows only for a language with no set text.
 
-use kx_module_api::ports::{CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet};
+use kx_module_api::ports::{
+    CompareMic, CompareRow, CompareRun, CompareSheet, Pages, PanelButton, VoiceSheet,
+};
 
 use super::{Facts, device, short};
 use crate::compare::Line;
@@ -43,8 +45,7 @@ impl Panel {
         let sheet = CompareSheet::Ready {
             models: short(entrants.len()),
             device: device::label(facts, entrants.first().map(|e| &e.ready)),
-            recording: lend == Lend::Listen,
-            preparing: lend == Lend::Prep,
+            mic: mic(lend),
             cloud,
             send,
         };
@@ -107,5 +108,14 @@ fn result_key(line: &Line) -> Key {
         },
         (None, Some(print)) => Key::Score(print),
         (None, None) => Key::Plain,
+    }
+}
+
+/// Where Compare's microphone stands while its run holds it as `lend`; closed once its models write.
+fn mic(lend: Lend) -> CompareMic {
+    match lend {
+        Lend::Prep => CompareMic::Opening,
+        Lend::Listen => CompareMic::Reading,
+        Lend::Off | Lend::Write => CompareMic::Closed,
     }
 }

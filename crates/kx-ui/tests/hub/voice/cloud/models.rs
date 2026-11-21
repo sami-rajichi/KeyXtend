@@ -8,9 +8,9 @@ use super::{groq, marks, pairs};
 use crate::Rig;
 use kx_module_api::Redacted;
 use kx_module_api::ports::{
-    BarButton, BarHint, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareRun,
-    CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState, ModelsSheet,
-    RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
+    BarButton, BarHint, BarNote, CloudBand, CloudRow, CloudWhy, CompareCloud, CompareMic,
+    CompareRun, CompareSheet, DeviceLabel, DeviceName, LocalUse, ModelRow, ModelSide, ModelState,
+    ModelsSheet, RunStep, ServiceMark, ServiceName, Unavailable, VoiceBar, VoiceSheet,
 };
 use kx_ui::i18n::keys::SERVICE_KEY_ICON;
 use kx_ui::voice_acts::{BAR, LOCAL, OPEN, SIDE};
@@ -119,8 +119,7 @@ fn compare_lists_its_cloud_models_and_warns_where_the_voice_goes_before_start() 
     let sheet = VoiceSheet::Compare(CompareSheet::Ready {
         models: 2,
         device: DeviceLabel::Auto(DeviceName::Cpu),
-        recording: false,
-        preparing: false,
+        mic: CompareMic::Closed,
         cloud: vec![pick],
         send: vec![groq(), ServiceName::Custom],
     });

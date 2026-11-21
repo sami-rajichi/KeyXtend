@@ -65,6 +65,17 @@ pub struct CompareRow {
     pub cloud: Option<ServiceName>,
 }
 
+/// Where Compare's microphone stands before its models write.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum CompareMic {
+    /// Closed, so Start shows.
+    Closed,
+    /// It opens: Start is gone and Cancel ends it, but nothing asks to read yet, as no bar shows.
+    Opening,
+    /// It is open and the user reads aloud now, so Start is gone and the bar's Stop ends it.
+    Reading,
+}
+
 /// Where Compare stands.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CompareSheet {
@@ -74,10 +85,8 @@ pub enum CompareSheet {
         models: u16,
         /// Where they run.
         device: DeviceLabel,
-        /// The microphone is open and the user reads it aloud now, so Start is gone and the bar's Stop ends it.
-        recording: bool,
-        /// Its microphone opens: Start is gone and Cancel ends it, but nothing asks to read yet, as no bar shows.
-        preparing: bool,
+        /// Where its microphone stands, which says whether Start shows.
+        mic: CompareMic,
         /// The shown page of the cloud models of the services ready, ticked or not.
         cloud: Vec<CompareCloud>,
         /// The services the recording goes to after it is read, which the send warning names before Start; empty for
