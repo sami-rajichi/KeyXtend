@@ -25,3 +25,9 @@ fn usd(cents: u32) -> FactValue {
         currency: "USD".into(),
     }
 }
+
+#[test]
+fn the_cards_prices_cover_15_and_60_hours_of_sound_a_month() {
+    let hours = (shipped().light_hours(), shipped().heavy_hours());
+    assert_eq!(hours, (15, 60), "light and heavy use");
+}

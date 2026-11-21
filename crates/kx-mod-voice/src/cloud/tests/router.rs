@@ -46,9 +46,11 @@ fn edge_17_the_keep_nothing_switch_rules_out_a_kept_model_with_its_reason_and_mo
 #[test]
 fn openrouters_request_carries_its_keep_nothing_field_only_while_its_switch_is_on() {
     let routed = row("openrouter").model(router_model(false));
+    let keep: toml::Table = row_line(TEXT, "openrouter", "keep").parse().unwrap();
+    let text = |key: &str| keep["keep"][key].as_str().unwrap().into();
     let zdr = FormField {
-        name: "provider".into(),
-        value: r#"{"zdr":true}"#.into(),
+        name: text("name"),
+        value: text("value"),
     };
     assert_eq!(fixed(routed, true), std::slice::from_ref(&zdr));
     assert!(fixed(routed, false).is_empty());

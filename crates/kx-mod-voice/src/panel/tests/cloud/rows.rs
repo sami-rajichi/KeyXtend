@@ -14,6 +14,11 @@ pub(super) fn named(name: &str) -> ServiceName {
     ServiceName::Named(name.into())
 }
 
+/// Shipped row `id`'s shown name, as the table gives it.
+pub(super) fn shown(id: &str) -> ServiceName {
+    services::table().unwrap().get(id).unwrap().shown()
+}
+
 /// Turns the Cloud page to the one that lists `name`, from the first, and gives its row there.
 pub(super) fn row_of(rig: &mut Rig, name: &ServiceName) -> u8 {
     while rig.view().unwrap().pages.at > 0 {
@@ -40,7 +45,7 @@ pub(super) fn tick(rig: &mut Rig, name: &ServiceName) {
 
 /// Every page's rows, from the first page to the last.
 pub(super) fn every_row(rig: &mut Rig) -> Vec<ServiceRow> {
-    row_of(rig, &named("Groq"));
+    row_of(rig, &shown("groq"));
     let mut rows = cloud_sheet(rig).rows;
     loop {
         let before = rig.view().unwrap().pages;
@@ -65,13 +70,9 @@ fn a_row_carries_its_cards_warning_fact_id_and_none_without_one() {
     let rows = every_row(&mut rig);
     let router = named("Router Test");
     assert!(rows.iter().any(|r| r.name == router), "{rows:?}");
-    let eleven = rows.iter().find(|r| r.name == named("ElevenLabs"));
+    let eleven = rows.iter().find(|r| r.name == shown("elevenlabs"));
     let trains = eleven.and_then(|r| r.warn.as_deref());
-    assert_eq!(
-        trains,
-        Some(warn_id("elevenlabs")),
-        "ElevenLabs trains by default [E5][E7]"
-    );
+    assert_eq!(trains, Some(warn_id("elevenlabs")), "its card's warning");
     for row in &rows {
         let want = if row.name == router {
             Some("keeps-logs".to_owned())

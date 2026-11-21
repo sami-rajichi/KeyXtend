@@ -148,8 +148,7 @@ fn too_many_models_or_none_without_an_other_line_is_refused() {
         })
     };
     assert_eq!(too_many.err(), models("groq"));
-    let (custom, none) = row_edit("custom", "other", "other = false");
-    let none = edits(&[(custom, &none)]);
+    let none = parse(&row_edit(TEXT, "custom", &[("other", "other = false")]));
     assert_eq!(none.err(), models("custom"));
 }
 
@@ -182,14 +181,9 @@ fn a_refusal_names_the_row_and_its_rule_in_plain_words() {
     assert_eq!(err, format!("the service groq is refused: {room}"));
 }
 
-/// The row error one edit of the shipped second file gives.
-fn own_err(from: &str, to: &str) -> Option<ServiceError> {
-    own_errs(&[(from, to)])
-}
-
-/// The row error these edits of the shipped second file give.
-fn own_errs(pairs: &[(&str, &str)]) -> Option<ServiceError> {
-    match Services::parse(TEXT, &edits_text(OWN, pairs), LANGS) {
+/// The row error `AssemblyAI`'s row in the shipped second file gives with each key's line set to its `to`.
+fn assembly_err(edits: &[(&str, &str)]) -> Option<ServiceError> {
+    match Services::parse(TEXT, &row_edit(OWN, "assemblyai", edits), LANGS) {
         Err(ServicesError::Row { why, .. }) => Some(why),
         _ => None,
     }
@@ -197,16 +191,17 @@ fn own_errs(pairs: &[(&str, &str)]) -> Option<ServiceError> {
 
 #[test]
 fn a_model_header_goes_on_assemblyais_shape_alone_which_needs_a_plain_one() {
-    let named = own_line("assemblyai", "model_header");
+    let named = row_line(OWN, "assemblyai", "model_header");
     assert_eq!(
-        own_err(named, ""),
+        assembly_err(&[("model_header", "")]),
         Some(E::Form),
         "its model header is needed"
     );
-    let spaced = "model_header = \"X AAI-Model\"";
-    assert_eq!(own_err(named, spaced), Some(E::Form), "a plain name");
+    let spaced = ("model_header", "model_header = \"X Model\"");
+    assert_eq!(assembly_err(&[spaced]), Some(E::Form), "a plain name");
     let with_form = format!("{named}\n{}", form());
-    assert_eq!(own_err(named, &with_form), Some(E::Form), "no form");
+    let formed = assembly_err(&[("model_header", &with_form)]);
+    assert_eq!(formed, Some(E::Form), "no form");
     let shape = groq_line("shape");
     refused(shape, &format!("{shape}\n{named}"), E::Form);
     refused(
@@ -218,7 +213,6 @@ fn a_model_header_goes_on_assemblyais_shape_alone_which_needs_a_plain_one() {
 
 #[test]
 fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
-    let named = own_line("assemblyai", "model_header");
     for taken in [
         "Authorization",
         "content-type",
@@ -228,11 +222,16 @@ fn a_model_header_never_names_a_header_the_request_sets_or_the_keys_own() {
         "user-AGENT",
     ] {
         let to = format!("model_header = \"{taken}\"");
-        assert_eq!(own_err(named, &to), Some(E::Form), "{taken}");
+        let err = assembly_err(&[("model_header", &to)]);
+        assert_eq!(err, Some(E::Form), "{taken}");
     }
-    let key = (own_line("assemblyai", "header"), "header = \"X-Test-Key\"");
-    let alone = Services::parse(TEXT, &edits_text(OWN, &[key]), LANGS);
+    let key = ("header", "header = \"X-Test-Key\"");
+    let alone = Services::parse(TEXT, &row_edit(OWN, "assemblyai", &[key]), LANGS);
     assert!(alone.is_ok(), "a named key header alone passes");
-    let same = (named, "model_header = \"x-test-key\"");
-    assert_eq!(own_errs(&[key, same]), Some(E::Form), "nor the key's own");
+    let same = ("model_header", "model_header = \"x-test-key\"");
+    assert_eq!(
+        assembly_err(&[key, same]),
+        Some(E::Form),
+        "nor the key's own"
+    );
 }

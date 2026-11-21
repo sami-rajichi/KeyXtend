@@ -1,6 +1,6 @@
-//! Gemini through the cloud rules: its card carries the free allowance's warning, the training line in the warning tone
-//! and its rule for the EEA and for age; a pick of Gemini 3.5 Transcribe sends the keyboard language's BCP-47 code in
-//! its own shape, and a language its set lacks cannot pick it.
+//! Gemini through the cloud rules: its card carries its row's own facts, and a pick of its first model sends that
+//! model's code for the keyboard language in its own shape with the card's own reminder. A language its set lacks
+//! cannot pick it.
 
 use super::*;
 use kx_module_api::ports::CloudShape;
@@ -11,24 +11,12 @@ fn transcribe() -> &'static Model {
 }
 
 #[test]
-fn its_card_carries_the_free_allowances_warning_the_training_tone_and_its_rule() {
-    let card = rules().card(&on(), row("gemini"), today());
-    assert_eq!(card.service, row("gemini").shown());
-    let warn = card.warn.as_ref().map(|w| (w.id.as_str(), w.warn));
-    assert_eq!(
-        warn,
-        Some((warn_id("gemini"), true)),
-        "the card's warning band"
-    );
-    assert!(card.trains.warn, "the training line takes the warning tone");
-    let rule = card.rule.as_ref().map(|r| r.id.as_str());
-    assert_eq!(rule, id_of(row("gemini").facts.rule.as_ref()));
-    assert_eq!(card.site.as_deref(), site("gemini"));
-    assert!(card.untested && card.on.is_none(), "asks to switch it on");
+fn its_card_carries_its_rows_facts_and_asks_to_switch_it_on() {
+    card_is_its_rows("gemini");
 }
 
 #[test]
-fn a_pick_sends_the_keyboard_languages_bcp_47_code_in_its_own_shape() {
+fn a_pick_sends_its_models_code_in_its_own_shape_with_the_cards_reminder() {
     let mut s = on();
     assert!(rules().confirm(&mut s, "gemini", today()));
     for lang in ["en", "fr", "ar"] {
@@ -46,12 +34,8 @@ fn a_pick_sends_the_keyboard_languages_bcp_47_code_in_its_own_shape() {
         assert_eq!(model.id, transcribe().id);
         let shape = choice.service.shape_for(Some(model), true);
         assert_eq!(shape, CloudShape::Gemini, "{lang}: no form, no keep field");
-        let warned = choice.warn.as_ref().map(|w| w.id.as_str());
-        assert_eq!(
-            warned,
-            Some(warn_id("gemini")),
-            "{lang}: the first dictation's reminder"
-        );
+        let own = &row("gemini").facts.warn;
+        assert_eq!(&choice.warn, own, "{lang}: the first dictation's reminder");
     }
     assert!(
         !rules().pick(

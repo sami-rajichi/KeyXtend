@@ -6,7 +6,7 @@ use kx_module_api::ports::{
     CloudLimits, CloudShape, Date, FactValue, HttpsUrl, Hundredths, LINK_SCHEME,
 };
 
-mod keyed;
+pub(crate) mod keyed;
 mod langs;
 mod parts;
 mod refuse;
@@ -16,7 +16,7 @@ mod room;
 pub(crate) mod shipped;
 mod split;
 
-use keyed::{field_of, groq_line, head_line, own_line, row_edit, with_field};
+use keyed::{field_of, groq_line, head_line, row_edit, row_line, with_field};
 
 /// The compiled-in table: its first file, its second with the rows of their own shape, and its language sets.
 pub(crate) const TEXT: &str = include_str!("../../services.toml");
@@ -173,7 +173,7 @@ pub(crate) fn with_rows(rows: &str) -> Services {
 }
 
 /// `text` with each pair's first `from` replaced by its `to`, in turn.
-fn edits_text(text: &str, pairs: &[(&str, &str)]) -> String {
+pub(crate) fn edits_text(text: &str, pairs: &[(&str, &str)]) -> String {
     pairs.iter().fold(text.to_owned(), |text, (from, to)| {
         assert!(text.contains(from), "{from}");
         text.replacen(from, to, 1)
@@ -204,7 +204,12 @@ fn the_shipped_table_loads_groq_first_with_custom() {
     assert!(ids.contains(&"custom"), "{ids:?}");
     let first = shipped().offered().next().map(|r| r.id.as_str());
     assert_eq!(first, Some("groq"), "edge 24: Groq is listed first");
-    assert_eq!((shipped().light_hours(), shipped().heavy_hours()), (15, 60));
+    let hours = |key| field_of(head_line(key), key).parse().ok();
+    let read = (hours("light_hours"), hours("heavy_hours"));
+    assert_eq!(
+        read,
+        (Some(shipped().light_hours()), Some(shipped().heavy_hours()))
+    );
     assert_eq!(parse(TEXT).as_ref(), Ok(shipped()));
 }
 

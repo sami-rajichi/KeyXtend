@@ -3,7 +3,9 @@
 //! brings one back by itself.
 
 use super::*;
+use crate::cloud::pick_text;
 use crate::services::tests::NOT_OFFERED;
+use crate::services::{Service, table};
 use kx_module_api::ports::Date;
 
 /// The day the entries below were confirmed.
@@ -18,27 +20,33 @@ fn on() -> VoiceSettings {
     s
 }
 
-/// An entry of terms 1, with `edit` applied.
+/// An entry at the first terms number, which no row's is below, with `edit` applied.
 fn entry(edit: impl FnOnce(&mut ServiceOn)) -> ServiceOn {
     let mut on = ServiceOn::new(day(), 1);
     edit(&mut on);
     on
 }
 
-/// An entry of terms 1 with `address` typed.
+/// An entry at the first terms number with `address` typed.
 fn at(address: &str) -> ServiceOn {
     entry(|on| address.clone_into(&mut on.address))
+}
+
+/// The shipped row `id`.
+fn row(id: &str) -> &'static Service {
+    table().unwrap().get(id).unwrap()
 }
 
 #[test]
 fn a_bad_service_entry_is_dropped_alone_and_named() {
     let at_ten = "2026-11-17T10:00:00".parse().unwrap();
+    let own_host = format!("https://{}/v1", row("groq").url("").unwrap().host());
     let bad = [
         ("ovhcloud", entry(|_| {})),
         ("groq", entry(|on| on.terms = 0)),
-        ("groq", entry(|on| on.terms = 2)),
+        ("groq", entry(|on| on.terms = row("groq").terms + 1)),
         ("groq", entry(|on| on.on = at_ten)),
-        ("groq", at("https://api.groq.com/v1")),
+        ("groq", at(&own_host)),
         ("custom", at("http://stt.example.com/v1")),
         ("custom", at("https://192.168.1.20/v1")),
         ("custom", entry(|on| on.model = "a//b".into())),
@@ -82,21 +90,20 @@ fn a_cloud_pick_stays_only_while_it_names_a_service_on_and_a_model_for_its_langu
     let mut custom = at("https://stt.example.com/v1/audio/transcriptions");
     custom.model = "my-model".into();
     s.services.insert("custom".into(), custom);
+    let (groq, hidden) = (&row("groq").models, &row("openai").models[0].id);
+    let (first, last) = (&groq[0].id, &groq[groq.len() - 1].id);
     let picks = [
-        ("fr", "groq:whisper-large-v3-turbo"),
-        ("ar", "groq:whisper-large-v3"),
-        ("en", "custom:my-model"),
-        ("nl", "canary-v2-q8"),
-        ("de", "groq:whisper-large-v4"),
-        ("es", "openai:gpt-transcribe"),
-        ("it", "custom:other-model"),
-        ("pt", "groq:"),
-        ("tlh", "groq:whisper-large-v3-turbo"),
+        ("fr", pick_text("groq", first)),
+        ("ar", pick_text("groq", last)),
+        ("en", "custom:my-model".into()),
+        ("nl", "canary-v2-q8".into()),
+        ("de", pick_text("groq", &format!("{first}-gone"))),
+        ("es", pick_text("openai", hidden)),
+        ("it", "custom:other-model".into()),
+        ("pt", "groq:".into()),
+        ("tlh", pick_text("groq", first)),
     ];
-    s.picks = picks
-        .iter()
-        .map(|(l, p)| ((*l).to_owned(), (*p).to_owned()))
-        .collect();
+    s.picks = picks.map(|(l, p)| (l.to_owned(), p)).into();
     let named = ["picks.de", "picks.es", "picks.it", "picks.pt", "picks.tlh"];
     assert_eq!(s.drop_bad(), named);
     assert_eq!(s.picks.keys().collect::<Vec<_>>(), ["ar", "en", "fr", "nl"]);
@@ -122,11 +129,14 @@ fn a_saved_entry_of_a_row_not_offered_drops_alone_and_its_picks_go_back_to_local
         let mut s = on();
         s.services.insert("groq".into(), entry(|_| {}));
         s.services.insert(id.into(), entry(|_| {}));
-        let row = crate::services::table().unwrap().get(id).unwrap();
-        let model = row.models.iter().find(|m| m.code("fr").is_some()).unwrap();
+        let model = row(id)
+            .models
+            .iter()
+            .find(|m| m.code("fr").is_some())
+            .unwrap();
         let picks = [
-            ("fr", crate::cloud::pick_text(id, &model.id)),
-            ("en", "groq:whisper-large-v3-turbo".into()),
+            ("fr", pick_text(id, &model.id)),
+            ("en", pick_text("groq", &row("groq").models[0].id)),
             ("nl", "canary-v2-q8".into()),
         ];
         s.picks = picks.map(|(l, p)| (l.to_owned(), p)).into();

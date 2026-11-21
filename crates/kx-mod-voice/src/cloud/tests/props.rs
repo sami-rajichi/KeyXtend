@@ -106,23 +106,26 @@ fn mostly_on() -> impl Strategy<Value = bool> {
 
 /// The shipped table, then Groq's terms raised, Groq not offered, Groq's turbo gone, Groq with no Other line, and
 /// `OpenAI`, the first row not offered, offered as a later version may, so its entries and picks meet a load hiding it.
+/// Each edit finds its line by key or from the table, so a missing one fails rather than leaves the table as it is.
 fn tables() -> Vec<Services> {
-    let edits = [
-        ("", ""),
-        ("terms = 1", "terms = 2"),
-        ("offered = true", "offered = false"),
-        (
-            "id = \"whisper-large-v3-turbo\"",
-            "id = \"whisper-large-v3-turbo-2\"",
-        ),
-        ("other = true", "other = false"),
-        ("offered = false", "offered = true"),
+    let gone = (
+        format!("id = \"{}\"", turbo()),
+        format!("id = \"{}-2\"", turbo()),
+    );
+    let texts = [
+        TEXT.to_owned(),
+        raised(TEXT, "groq"),
+        row_edit(TEXT, "groq", &[("offered", "offered = false")]),
+        edits_text(TEXT, &[(&gone.0, &gone.1)]),
+        row_edit(TEXT, "groq", &[("other", "other = false")]),
+        row_edit(TEXT, "openai", &[("offered", "offered = true")]),
     ];
-    let tables: Vec<Services> = edits
-        .iter()
-        .map(|(from, to)| parse(&TEXT.replacen(from, to, 1)).unwrap())
-        .collect();
+    let tables: Vec<Services> = texts.iter().map(|text| parse(text).unwrap()).collect();
     assert_eq!(tables.len(), TABLES);
+    assert!(
+        tables[1..].iter().all(|t| *t != tables[0]),
+        "each edit changes the table"
+    );
     let offers = |t: &Services| t.get("openai").is_some_and(|r| r.offered);
     assert!(!offers(&tables[0]) && offers(&tables[TABLES - 1]));
     tables

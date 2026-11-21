@@ -2,7 +2,7 @@
 //! recording, a listen-only run cuts pieces no longer than the row's size and time caps both allow, and `ElevenLabs`,
 //! Gemini and `AssemblyAI` dictations ask in their own shapes with the key under their row's header.
 
-use kx_module_api::ports::{CloudLimits, CloudShape, KeyHeader, SOUND_BYTES_PER_S, SpeechAsk};
+use kx_module_api::ports::{CloudLimits, CloudShape, SOUND_BYTES_PER_S, SpeechAsk};
 
 use super::*;
 use crate::services;
@@ -55,12 +55,14 @@ fn an_elevenlabs_dictation_asks_in_its_own_shape_with_its_own_key_header() {
         row.url(&entry.address),
         "its address"
     );
-    assert!(matches!(run.header, KeyHeader::Named(_)), "its own header");
     assert_eq!(run.header, row.header, "the row's header");
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     assert_eq!(
         (model, run.lang.as_str()),
-        (Some(first_id("elevenlabs")), "en")
+        (
+            Some(first_id("elevenlabs")),
+            row.models[0].code("en").unwrap_or_default()
+        )
     );
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }
@@ -110,7 +112,7 @@ fn assembly(fake: &Fakes, host: &mut FakeHost) {
 }
 
 #[test]
-fn an_assemblyai_dictation_asks_in_its_own_shape_with_its_model_header_and_a_bearer_key() {
+fn an_assemblyai_dictation_asks_in_its_own_shape_with_its_model_header_and_its_rows_key_header() {
     let mut rig = Rig::build(assembly);
     rig.fake
         .cloud
@@ -126,11 +128,14 @@ fn an_assemblyai_dictation_asks_in_its_own_shape_with_its_model_header_and_a_bea
         .unwrap();
     assert!(matches!(run.shape, CloudShape::Assembly { .. }));
     assert_eq!(run.shape, row.shape, "the row's model header");
-    assert_eq!((&run.header, run.limits), (&KeyHeader::Bearer, row.limits));
+    assert_eq!((&run.header, run.limits), (&row.header, row.limits));
     let model = run.model.as_ref().map(|m| m.expose().as_str());
     assert_eq!(
         (model, run.lang.as_str()),
-        (Some(first_id("assemblyai")), "en")
+        (
+            Some(first_id("assemblyai")),
+            row.models[0].code("en").unwrap_or_default()
+        )
     );
     assert_eq!(rig.typed_texts(), ["hello world"]);
 }

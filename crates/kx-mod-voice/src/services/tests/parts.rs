@@ -96,10 +96,11 @@ fn a_models_own_form_that_asks_for_timings_says_so() {
 
 #[test]
 fn groqs_least_billed_length_is_a_fact_the_validator_checks() {
-    let bills = shipped().get("groq").unwrap().facts.bills.clone().unwrap();
-    assert_eq!((bills.id.as_str(), bills.args.len()), ("least", 1));
-    assert!(shipped().get("custom").unwrap().facts.bills.is_none());
     let least = groq_line("bills");
+    let bills = shipped().get("groq").unwrap().facts.bills.clone().unwrap();
+    let id = field_of(least, "id").trim_matches('"');
+    assert_eq!(bills.id, id, "the row's own fact, as its line writes it");
+    assert!(shipped().get("custom").unwrap().facts.bills.is_none());
     let upper = with_field(least, "id", &field_of(least, "id").to_uppercase());
     refused(least, &upper, "bills", F::Id);
 }
@@ -142,18 +143,24 @@ fn a_fact_that_breaks_a_rule_is_refused_by_its_name() {
 #[test]
 fn a_fact_value_with_an_odd_or_twice_given_name_or_day_is_refused() {
     let free = groq_line("free");
-    let group = free.splitn(3, "{ ").nth(2).unwrap_or_default();
-    let first = group.split(" = ").next().unwrap_or_default();
-    let open = free.strip_suffix(" }").unwrap_or(free);
-    let twice = format!("{open}, number = {{ {first} = 1.0 }} }}");
-    refused(free, &twice, "free", F::Arg);
-    let upper = format!("{} =", first.to_uppercase());
-    refused(
+    let raw: toml::Table = free.parse().unwrap();
+    let mut groups = raw["free"].as_table().unwrap().iter();
+    let (kind, args) = groups.find_map(|(k, v)| Some((k, v.as_table()?))).unwrap();
+    let first = args.keys().next().unwrap();
+    let group = field_of(free, kind);
+    let (other, one) = if kind == "number" {
+        ("count", "1")
+    } else {
+        ("number", "1.0")
+    };
+    let twice = with_field(
         free,
-        &free.replacen(&format!("{first} ="), &upper, 1),
-        "free",
-        F::Arg,
+        kind,
+        &format!("{group}, {other} = {{ {first} = {one} }}"),
     );
+    refused(free, &twice, "free", F::Arg);
+    let upper = group.replacen(first.as_str(), &first.to_uppercase(), 1);
+    refused(free, &with_field(free, kind, &upper), "free", F::Arg);
     let until = "day = { until = 2026-12-31T00:00:00 }";
     let day = format!("free = {{ id = {}, {until} }}", field_of(free, "id"));
     refused(free, &day, "free", F::Day);

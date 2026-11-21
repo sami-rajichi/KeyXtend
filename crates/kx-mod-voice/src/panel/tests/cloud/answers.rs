@@ -11,7 +11,7 @@ use std::time::Duration;
 use super::super::super::Do;
 use super::super::super::rig::Rig;
 use super::lines::on_groq_lines;
-use super::rows::named;
+use super::rows::shown;
 use super::{At, act, apply, cloud_sheet, lines_sheet};
 use crate::flow::renewal;
 
@@ -164,7 +164,7 @@ fn a_paste_answer_from_before_a_close_never_lands_on_the_key_page_opened_again()
     rig.panel.close();
     rig.panel.open();
     rig.click(&VoiceClick::Open(VoiceTab::Cloud));
-    act(&mut rig, &named("Groq"), CloudButton::Lines);
+    act(&mut rig, &shown("groq"), CloudButton::Lines);
     assert_ne!(paste(&mut rig), old, "the round goes on across the close");
     assert!(rig.with(|p, _| p.pasted(old, ClipText::Busy)).is_empty());
     assert_eq!(lines_sheet(&mut rig).check, KeyCheck::Untested);

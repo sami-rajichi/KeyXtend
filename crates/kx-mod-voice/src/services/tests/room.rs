@@ -51,9 +51,23 @@ fn sent(row: &Service, bytes: u64) -> u64 {
     }
 }
 
-/// The table with the second file edited.
-fn own_edits(pairs: &[(&str, &str)]) -> Result<Services, ServicesError> {
-    Services::parse(TEXT, &edits_text(OWN, pairs), LANGS)
+/// The table with Gemini's line of each key set to its `to`.
+fn gemini_with(edits: &[(&str, &str)]) -> Result<Services, ServicesError> {
+    Services::parse(TEXT, &row_edit(OWN, "gemini", edits), LANGS)
+}
+
+/// Gemini's limits line with each field set to its value, added where the line names none.
+fn gemini_limits(fields: &[(&str, u64)]) -> String {
+    let limits = row_line(OWN, "gemini", "limits");
+    fields
+        .iter()
+        .fold(limits.to_owned(), |line, (field, value)| {
+            if line.contains(&format!(" {field} = ")) {
+                with_field(&line, field, &value.to_string())
+            } else {
+                line.replacen("{ ", &format!("{{ {field} = {value}, "), 1)
+            }
+        })
 }
 
 /// True when `got` refuses Gemini's row for the room its piece leaves.
@@ -98,14 +112,22 @@ fn geminis_largest_piece_goes_in_one_request_under_its_cap() {
 
 #[test]
 fn a_base64_shape_grows_its_piece_by_a_third_against_the_cap() {
-    assert!(own_edits(&[]).is_ok(), "the shipped row fits");
-    let long = own_edits(&[("max_s = 420", "max_s = 480")]);
+    assert!(gemini_with(&[]).is_ok(), "the shipped row fits");
+    let per_s = u64::try_from(SOUND_BYTES_PER_S).unwrap();
+    let secs = (cap("gemini") - room_kb() * 1024) * B64_IN / (B64_OUT * per_s) + 1;
+    let ranged = u16::try_from(secs).is_ok_and(|s| CloudLimits::MAX_S.contains(&s));
     assert!(
-        roomless(&long),
-        "480 s of sound is 15.36 MB raw, 20.48 MB as Base64"
+        ranged,
+        "{secs} s, the fewest whose Base64 passes the cap, is a piece"
+    );
+    let long = gemini_limits(&[("max_s", secs), ("cap_s", secs)]);
+    let base64 = gemini_with(&[("limits", &long)]);
+    assert!(
+        roomless(&base64),
+        "{secs} s of sound as Base64 passes the cap"
     );
     let form = "shape = \"form\"\nform = { lang = \"language\", list = false }";
-    let as_form = own_edits(&[("shape = \"gemini\"", form), ("max_s = 420", "max_s = 480")]);
+    let as_form = gemini_with(&[("shape", form), ("limits", &long)]);
     assert!(
         as_form.is_ok(),
         "the same piece fits a form's cap: {as_form:?}"
@@ -114,8 +136,11 @@ fn a_base64_shape_grows_its_piece_by_a_third_against_the_cap() {
 
 #[test]
 fn a_cap_in_seconds_bounds_a_pieces_seconds() {
-    let short = own_edits(&[("cap_s = 3600", "cap_s = 300")]);
-    assert!(roomless(&short), "420 s past a 300 s cap");
+    let max_s: u64 = field_of(row_line(OWN, "gemini", "limits"), "max_s")
+        .parse()
+        .unwrap();
+    let short = gemini_with(&[("limits", &gemini_limits(&[("cap_s", max_s - 1)]))]);
+    assert!(roomless(&short), "{max_s} s past a {} s cap", max_s - 1);
 }
 
 #[test]

@@ -290,3 +290,10 @@ fn openrouters_piece_lasts_its_60_second_upstream_timeout() {
     // [R1]: "Upstream timeout is 60 s per request", so a longer recording goes in pieces.
     assert_eq!(shipped().get("openrouter").unwrap().limits.max_s, 60);
 }
+
+#[test]
+fn openrouters_keep_nothing_switch_sends_its_zero_data_retention_field() {
+    let keep = shipped().get("openrouter").unwrap().keep.as_ref();
+    let field = keep.map(|f| (f.name.as_str(), f.value.as_str()));
+    assert_eq!(field, Some(("provider", r#"{"zdr":true}"#)));
+}

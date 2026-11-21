@@ -11,7 +11,7 @@ use kx_module_api::ports::{
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
 use super::lines::on_groq_lines;
-use super::{act, apply, lines_sheet, named, on_cloud, put};
+use super::{act, apply, lines_sheet, on_cloud, put, shown};
 use crate::settings::SERVICES;
 
 /// A key-like text, built as the test runs so no key sits in the source.
@@ -118,14 +118,14 @@ fn the_typed_key_is_wiped_on_paste_remove_leaving_the_page_and_closing() {
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Back));
             assert!(rig.panel.cloud.typed.key.is_none(), "wiped on leaving");
-            act(rig, &named("Groq"), CloudButton::Lines);
+            act(rig, &shown("groq"), CloudButton::Lines);
         },
         |rig| {
             rig.click(&VoiceClick::Button(PanelButton::Close));
             assert!(rig.panel.cloud.typed.key.is_none(), "wiped on closing");
             rig.panel.open();
             rig.click(&VoiceClick::Open(VoiceTab::Cloud));
-            act(rig, &named("Groq"), CloudButton::Lines);
+            act(rig, &shown("groq"), CloudButton::Lines);
         },
     ];
     for (at, wipe) in wipes.into_iter().enumerate() {

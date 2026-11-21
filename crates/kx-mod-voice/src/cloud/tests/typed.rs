@@ -78,11 +78,12 @@ fn a_typed_row_is_neither_ready_nor_picked_until_its_address_is_typed() {
 fn a_listed_model_sends_its_id_unless_its_request_names_none_and_a_typed_id_goes_as_it_is() {
     let listed = row("groq").model(turbo()).unwrap();
     assert_eq!(Chosen::Listed(listed).sent(), Some(turbo()));
-    let unnamed = row("lemonfox").models.iter().find(|m| m.unnamed).unwrap();
+    let mut all = table().unwrap().rows().iter().flat_map(|r| &r.models);
+    let unnamed = all.find(|m| m.unnamed).unwrap();
     assert_eq!(
         Chosen::Listed(unnamed).sent(),
         None,
-        "Lemonfox's request names none"
+        "a model whose request names none"
     );
     assert_eq!(Chosen::Typed("my-model").sent(), Some("my-model"));
 }

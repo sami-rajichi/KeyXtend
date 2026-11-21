@@ -6,7 +6,7 @@ use kx_module_api::ports::{
 };
 
 use super::super::super::rig::Rig;
-use super::{act, named, on_cloud, put};
+use super::{act, on_cloud, put, shown};
 use crate::services::{
     self,
     tests::shipped::{entry, first},
@@ -45,7 +45,7 @@ const fn of_two(at: u16) -> Pages {
 #[test]
 fn a_card_takes_two_pages_the_voice_then_the_price() {
     let mut rig = on_cloud("");
-    act(&mut rig, &named("Groq"), CloudButton::Facts);
+    act(&mut rig, &shown("groq"), CloudButton::Facts);
     assert_eq!(turned(&mut rig, 0, card), (CardPart::Voice, of_two(0)));
     assert_eq!(turned(&mut rig, 1, card), (CardPart::Price, of_two(1)));
     assert_eq!(
@@ -70,7 +70,7 @@ fn on_lines(name: &ServiceName) -> Rig {
 fn a_key_page_takes_two_pages_only_with_a_typed_address() {
     let one = Pages { at: 0, count: 1 };
     assert_eq!(
-        turned(&mut on_lines(&named("Groq")), 0, lines),
+        turned(&mut on_lines(&shown("groq")), 0, lines),
         (None, one),
         "Groq's"
     );

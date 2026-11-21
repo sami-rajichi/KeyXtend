@@ -109,13 +109,14 @@ fn every_fixed_rows_address_and_test_stay_on_its_own_host() {
         }
     }
     let groq = shipped().get("groq").unwrap();
+    let written = |key| Some(field_of(groq_line(key), key).trim_matches('"'));
+    let host = groq.url("").map(|u| u.host().to_owned());
+    assert_eq!(host.as_deref(), written("host"), "its row's host");
+    let test = groq.test_url("").map(|u| u.expose().to_owned());
     assert_eq!(
-        groq.url("").map(|u| u.host().to_owned()).as_deref(),
-        Some("api.groq.com")
-    );
-    assert_eq!(
-        groq.test_url("").map(|u| u.expose().to_owned()).as_deref(),
-        Some("https://api.groq.com/openai/v1/models")
+        test.as_deref(),
+        written("test"),
+        "its row's test, as written"
     );
 }
 

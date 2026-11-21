@@ -1,5 +1,5 @@
 //! Groq's row as its pages read 2026-11-17 give it (research file `[G…]` lines): its facts as numbers and flags with
-//! their day and source, models that know English, French and Arabic, and no training.
+//! their day and source, models that know English, French and Arabic, no training, its one host and its least bill.
 
 use super::*;
 
@@ -32,4 +32,14 @@ fn groqs_facts_are_numbers_and_flags_with_their_day_and_source() {
     assert_eq!(values(&facts.free), ("daily", counts.to_vec()));
     let heavy: Vec<&FactValue> = facts.heavy.args.iter().map(|a| &a.value).collect();
     assert_eq!(heavy, [&usd(666), &usd(240)], "high then low, by name");
+}
+
+#[test]
+fn groq_reaches_its_one_host_and_bills_ten_seconds_at_least() {
+    let groq = shipped().get("groq").unwrap();
+    let host = groq.url("").map(|u| u.host().to_owned());
+    assert_eq!(host.as_deref(), Some("api.groq.com"));
+    let ten = [("seconds", &FactValue::Count(10))];
+    let bills = groq.facts.bills.as_ref().map(values);
+    assert_eq!(bills, Some(("least", ten.to_vec())));
 }

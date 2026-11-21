@@ -14,7 +14,7 @@ use super::{models, on_models};
 use crate::services::tests::shipped::{entry, first, pick};
 use crate::services::tests::{ROUTER, with_rows};
 use crate::settings::{PICKS, SERVICES};
-use rows::{named, row_of, tick};
+use rows::{named, row_of, shown, tick};
 
 mod address;
 mod answers;
@@ -128,15 +128,15 @@ fn cloud_off_offers_no_service_on_the_page_on_models_or_at_home() {
 }
 
 #[test]
-fn groq_is_listed_first_off_and_untested_and_custom_names_no_free_allowance() {
+fn groq_is_listed_first_off_with_its_untested_mark_and_custom_names_no_free_allowance() {
     let mut rig = on_cloud("");
     let sheet = cloud_sheet(&mut rig);
     assert!(sheet.on);
     let groq = &sheet.rows[0];
-    assert_eq!(groq.name, named("Groq"), "edge 24; `offered` pins the rest");
+    assert_eq!(groq.name, shown("groq"), "edge 24; `offered` pins the rest");
     assert_eq!(
         (groq.mark, groq.untested, groq.free.is_some()),
-        (ServiceMark::Off, true, true)
+        (ServiceMark::Off, first().untested, true)
     );
     assert!(sheet.acts.is_empty(), "nothing acts before a tick");
     let custom = usize::from(row_of(&mut rig, &ServiceName::Custom));
@@ -153,7 +153,10 @@ fn a_service_goes_on_through_its_card_to_its_key_page_and_the_home_counts_it_onc
     );
     rig.click(&VoiceClick::Service(CloudButton::On));
     let card = card(&mut rig);
-    assert_eq!((card.on, card.untested, card.old), (None, true, false));
+    assert_eq!(
+        (card.on, card.untested, card.old),
+        (None, first().untested, false)
+    );
     let out = rig.click(&VoiceClick::Confirm(true));
     assert!(matches!(&out[..], [Do::Set(SERVICES, _), Do::Dots(id)] if id == "groq"));
     apply(&mut rig, &out);

@@ -9,7 +9,7 @@ use kx_module_api::ports::{
 
 use super::super::super::rig::Rig;
 use super::super::super::{Do, Page};
-use super::{act, apply, lines_sheet, named, on_cloud, put};
+use super::{act, apply, lines_sheet, on_cloud, put, shown};
 use crate::compare::tests::secret;
 use crate::services::table;
 use crate::services::tests::shipped::{entry, first};
@@ -108,7 +108,7 @@ fn a_tests_answer_counts_only_while_its_page_and_key_stand() {
     let third = test(&mut rig);
     rig.click(&VoiceClick::Button(PanelButton::Back));
     rig.with(|p, _| p.tested(third, Err(CloudFault::Key), None));
-    act(&mut rig, &named("Groq"), CloudButton::Lines);
+    act(&mut rig, &shown("groq"), CloudButton::Lines);
     assert_eq!(
         lines_sheet(&mut rig).check,
         KeyCheck::Untested,

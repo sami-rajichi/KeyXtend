@@ -4,8 +4,9 @@
 use super::*;
 use crate::models::{self, Pick};
 use crate::services::table;
+use crate::services::tests::keyed::{raised, row_edit, row_line};
 use crate::services::tests::shipped::warn_id;
-use crate::services::tests::{ROUTER, TEXT, parse, with_rows};
+use crate::services::tests::{ROUTER, TEXT, edits_text, parse, with_rows};
 use kx_module_api::ports::{HttpsUrl, ServiceName, Unavailable};
 
 mod assembly;
@@ -59,11 +60,6 @@ fn turbo() -> &'static str {
     first_model("groq")
 }
 
-/// The id of `fact`, if any.
-fn id_of(fact: Option<&Fact>) -> Option<&str> {
-    fact.map(|f| f.id.as_str())
-}
-
 /// `OpenRouter`'s listed model every host of which keeps the voice when `keeps`, else one that a host keeping
 /// nothing serves.
 fn router_model(keeps: bool) -> &'static str {
@@ -86,6 +82,23 @@ fn lacked(id: &str, model: &str) -> &'static str {
 /// The host shipped row `id`'s card links to: its facts page's.
 fn site(id: &str) -> Option<&'static str> {
     row(id).facts.source.as_ref().map(HttpsUrl::host)
+}
+
+/// Asserts shipped row `id`'s card carries its row's own facts and untested mark, and asks to switch it on.
+fn card_is_its_rows(id: &str) {
+    let (own, card) = (row(id), rules().card(&on(), row(id), today()));
+    assert_eq!(card.service, own.shown(), "{id}");
+    let facts = (&card.warn, &card.trains, &card.rule, &card.bills);
+    let rows = (
+        &own.facts.warn,
+        &own.facts.trains,
+        &own.facts.rule,
+        &own.facts.bills,
+    );
+    assert_eq!(facts, rows, "{id}: its row's own facts");
+    assert_eq!(card.site.as_deref(), site(id), "{id}");
+    let asks = card.untested == own.untested && card.on.is_none();
+    assert!(asks, "{id}: asks to switch it on");
 }
 
 /// The defaults with cloud on, Groq confirmed and picked for French.
@@ -161,11 +174,13 @@ fn edge_11_a_hidden_run_offers_nothing_and_moves_nothing_to_the_cloud() {
 fn edge_15_facts_past_facts_days_take_the_warning_tone() {
     let s = on();
     let card = |day| rules().card(&s, row("groq"), day);
+    let read = row("groq").facts.read.day_number();
+    let since = |days: i64| Date::from_day_number(read + days).unwrap();
     let days = i64::from(s.facts_days);
-    assert!(!card(after(days)).old && card(after(days + 1)).old);
+    assert!(!card(since(days)).old && card(since(days + 1)).old);
     let mut short = on();
     short.facts_days = 30;
-    assert!(rules().card(&short, row("groq"), after(31)).old);
+    assert!(rules().card(&short, row("groq"), since(31)).old);
     let (groq, row_of) = (card(today()), row("groq"));
     assert_eq!(
         (groq.service, groq.read, groq.untested),
@@ -193,7 +208,7 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
     s.picks.insert("nl".into(), "canary-v2-q8".into());
     let other = row("groq").models.last().unwrap();
     assert!(rules().pick(&mut s, "ar", "groq", &other.id));
-    let newer = parse(&TEXT.replacen("terms = 1", "terms = 2", 1)).unwrap();
+    let newer = parse(&raised(TEXT, "groq")).unwrap();
     let rules = Cloud::new(&newer, false);
     let groq = newer.get("groq").unwrap();
     assert!(rules.asks(&s, groq) && rules.choice(&s, "fr").is_some_and(|c| c.ask));
@@ -211,7 +226,7 @@ fn edge_16_a_newer_terms_number_asks_again_and_a_no_goes_back_to_local() {
         models::table().unwrap().default_for("fr").map(Pick::Row)
     );
     assert!(rules.confirm(&mut s, "groq", today()) && !rules.asks(&s, groq));
-    assert_eq!(s.services["groq"].terms, 2);
+    assert_eq!(s.services["groq"].terms, groq.terms, "at the newer number");
 }
 
 #[test]

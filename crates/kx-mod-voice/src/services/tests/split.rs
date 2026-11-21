@@ -29,7 +29,11 @@ fn the_two_files_read_as_one_table_the_form_rows_first() {
 
 #[test]
 fn a_table_wide_key_in_the_second_file_is_refused() {
-    for key in ["light_hours = 15", "room_kb = 64", "[reply]\nformats = []"] {
+    for key in [
+        head_line("light_hours"),
+        head_line("room_kb"),
+        "[reply]\nformats = []",
+    ] {
         let own = format!("{key}\n{OWN}");
         let got = Services::parse(TEXT, &own, LANGS);
         assert!(matches!(got, Err(ServicesError::Own(_))), "{key}: {got:?}");
@@ -38,7 +42,7 @@ fn a_table_wide_key_in_the_second_file_is_refused() {
 
 #[test]
 fn the_second_files_rows_meet_the_same_rules() {
-    let header = OWN.replace("header = \"xi-api-key\"", "header = \"x y\"");
+    let header = row_edit(OWN, "elevenlabs", &[("header", "header = \"x y\"")]);
     let got = Services::parse(TEXT, &header, LANGS);
     let why = Some(ServiceError::Header);
     assert_eq!(got.err().and_then(row_why), why, "a row's rule");
