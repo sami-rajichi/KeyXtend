@@ -7,12 +7,21 @@ use crate::services::Services;
 use crate::services::tests::{ROUTER, with_rows};
 
 /// The test row's id and its listed model, as `ROUTER` writes them.
-const ROW: &str = "router-test";
+pub(super) const ROW: &str = "router-test";
 const LISTED: &str = "openai/whisper-large-v3-turbo";
 
 /// The shipped table with the test row, kept for the run.
-fn held() -> &'static Services {
+pub(super) fn held() -> &'static Services {
     Box::leak(Box::new(with_rows(ROUTER)))
+}
+
+/// A rig on the test row, held as the run's table, with its key sealed.
+pub(super) fn router_rig() -> Rig {
+    let mut rig = Rig::build(router);
+    rig.actor.held.table = Some(held());
+    let keys = Keys::new(Arc::new(rig.fake.shelf.clone()), false);
+    keys.set(ROW, secret(&key())).unwrap();
+    rig
 }
 
 /// The test row picked for English and switched on with its terms confirmed; its key waits for the table, as the
@@ -29,10 +38,7 @@ fn router(_: &Fakes, host: &mut FakeHost) {
 
 #[test]
 fn a_dictation_through_a_row_only_the_runs_table_knows_is_counted_under_it() {
-    let mut rig = Rig::build(router);
-    rig.actor.held.table = Some(held());
-    let keys = Keys::new(Arc::new(rig.fake.shelf.clone()), false);
-    keys.set(ROW, secret(&key())).unwrap();
+    let mut rig = router_rig();
     rig.fake
         .cloud
         .script(vec![CloudAnswer::text("hello"), CloudAnswer::text("world")]);

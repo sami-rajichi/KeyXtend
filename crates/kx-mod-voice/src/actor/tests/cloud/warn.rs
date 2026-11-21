@@ -1,8 +1,9 @@
 //! The card's warning through the actor (ruling 11): the first `ElevenLabs` dictation shows it on the bar while it
-//! listens and saves it seen at the row's terms number, nothing waiting on it; the next shows none, and a Groq
-//! dictation shows only its row's own. Newer terms, once confirmed, show it again.
+//! listens and saves it seen at the row's terms number, nothing waiting on it; the next shows none, a row without one
+//! shows none, and a Groq dictation shows only its row's own. Newer terms, once confirmed, show it again.
 
 use super::port::eleven;
+use super::table::{ROW, held, router_rig};
 use super::*;
 use crate::cloud::Cloud;
 use crate::services::tests::keyed::raised;
@@ -49,6 +50,18 @@ fn the_first_dictation_shows_the_warning_and_saves_it_seen_and_the_next_shows_no
     rig.fake.cloud.script(answers());
     rig.talk();
     assert_eq!(warn(&rig), None, "the next dictation");
+}
+
+#[test]
+fn a_dictation_through_a_row_without_a_warning_shows_none_and_notes_none() {
+    assert!(
+        held().get(ROW).unwrap().facts.warn.is_none(),
+        "the test row has none"
+    );
+    let mut rig = router_rig();
+    rig.talk();
+    assert_eq!(warn(&rig), None);
+    assert_eq!(seen_at(&rig, ROW), 0, "nothing noted");
 }
 
 #[test]
