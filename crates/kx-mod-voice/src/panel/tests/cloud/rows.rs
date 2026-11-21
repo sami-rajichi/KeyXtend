@@ -18,7 +18,9 @@ pub(super) fn named(name: &str) -> ServiceName {
 /// Turns the Cloud page to the one that lists `name`, from the first, and gives its row there.
 pub(super) fn row_of(rig: &mut Rig, name: &ServiceName) -> u8 {
     while rig.view().unwrap().pages.at > 0 {
+        let before = rig.view().unwrap().pages;
         rig.click(&VoiceClick::Page { back: true });
+        assert_ne!(rig.view().unwrap().pages, before, "no page back");
     }
     loop {
         let rows = cloud_sheet(rig).rows;

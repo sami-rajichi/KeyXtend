@@ -23,7 +23,9 @@ fn insert_page(rig: &mut Rig) -> Vec<OptionRow> {
         if rows.iter().any(|r| r.key == "insert") {
             return rows;
         }
+        let before = rig.view().unwrap().pages;
         rig.click(&VoiceClick::Page { back: false });
+        assert_ne!(rig.view().unwrap().pages, before, "no Insert row");
     }
 }
 
@@ -90,6 +92,7 @@ fn option_pages(settings: &str, per: u8) -> Vec<Vec<OptionRow>> {
             return pages;
         }
         rig.click(&VoiceClick::Page { back: false });
+        assert_ne!(rig.view().unwrap().pages, view.pages, "no next page");
     }
 }
 
