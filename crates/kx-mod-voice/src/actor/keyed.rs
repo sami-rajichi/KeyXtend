@@ -3,7 +3,6 @@
 //! `ClipTake`, as Quick-fill's; and the table's own link in the browser. No key is logged or kept beyond its blob.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::Arc;
 
 use kx_module_api::Secret;
 use kx_module_api::ports::{
@@ -35,9 +34,9 @@ impl Actor {
         }
     }
 
-    /// The keys on the voice shelf, none in a hidden run.
+    /// The actor's one set of keys on the voice shelf, none in a hidden run, which `Offer` reads too.
     pub(super) fn keys(&self) -> Keys {
-        Keys::new(Arc::clone(&self.ports.shelf), self.held.hidden)
+        self.net.keys.clone()
     }
 
     /// Reads which services have a key, from the blobs' names alone, as the panel opens; a failed listing keeps the
@@ -49,9 +48,10 @@ impl Actor {
         }
     }
 
-    /// Deletes the keys of rows no longer offered, as an update hid them; none in a hidden run or with no table.
+    /// Deletes the keys of rows no longer offered, as an update hid them; none with no table. A hidden run's keys list
+    /// nothing, so it deletes none: `keys` is the one hidden-run guard.
     pub(super) fn sweep_keys(&mut self) {
-        let (Some(table), false) = (self.held.table, self.held.hidden) else {
+        let Some(table) = self.held.table else {
             return;
         };
         let keys = self.keys();

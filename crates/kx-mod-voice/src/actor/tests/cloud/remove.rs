@@ -92,5 +92,6 @@ fn a_hidden_run_deletes_no_key_at_its_start() {
     let ids = [NOT_OFFERED[0], "gone-row"];
     let rig = Rig::hidden_with(|fake, _| plant(fake, &ids));
     assert_eq!(left(&rig, &ids), ids);
-    assert_eq!(rig.fake.shelf.calls(ShelfCall::Remove), 0);
+    let removed = rig.fake.shelf.calls(ShelfCall::Remove);
+    assert_eq!(removed, 0, "its keys have no shelf, the sweep's one guard");
 }

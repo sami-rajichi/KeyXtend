@@ -28,7 +28,9 @@ pub enum KeyError {
     Shelf(#[from] SealedError),
 }
 
-/// The keys on the voice shelf; in a hidden run it has no shelf, so it reads and writes nothing.
+/// The keys on the voice shelf; in a hidden run it has no shelf, so it reads and writes nothing. A clone shares the
+/// shelf, so a job carries the actor's own keys.
+#[derive(Clone)]
 pub struct Keys {
     shelf: Option<Arc<dyn SealedShelf>>,
 }
