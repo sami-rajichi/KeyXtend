@@ -42,10 +42,10 @@ panel = { ms = 180, curve = "swift" }
 layer = { ms = 180, curve = "swift" }
 # One pass of the shimmer while the words are on their way (.shimmer).
 shimmer = { ms = 1000, curve = "linear" }
-# One turn of the dictation wave's ripple across its bars (design/voice-bar.html frame(), sin(s * 7)); reduced motion
-# draws a plain meter instead.
+# One turn of the dictation wave's ripple across its bars (design/voice-bar-scene.js frame(), sin(s * 7)); reduced
+# motion draws a plain meter instead.
 wave = { ms = 900, curve = "linear" }
-# One slide of Compare's writing line across its track, then one back (design/voice-bar.html .prog.run, --shimmer-ms).
+# One slide of Compare's writing line across its track, then one back (design/voice-bar.css .prog.run, --shimmer-ms).
 run = { ms = 1000, curve = "ease_in_out" }
 # The burst when a hold fires (.burst .b-ring, .b-dot).
 burst = { ms = 420, curve = "ease_out" }

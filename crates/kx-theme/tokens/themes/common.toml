@@ -10,7 +10,7 @@
 
 # Where the P1 test build and the mock-up differ, the test build's tokens are the owner's reference.
 # The drawn check (src/drawn.rs) keeps all drawn text at WCAG AA where it sits, except the Carousel's faded side names.
-# A colour marked "owner 2026-09-30", "2026-10-02" or "2026-10-11" was nudged just enough to pass it.
+# A colour marked "owner 2026-09-30", "2026-10-02", "2026-10-11" or "2026-11-17" was nudged just enough to pass it.
 
 # Colours every theme shares, written once in the mock-up: the press shade (.key.down brightness .94), which light
 # palettes lay over their hover, the caption's recording dot (.rec-dot), the snip overlay (.snip-dim, .snip-rect, .dims)

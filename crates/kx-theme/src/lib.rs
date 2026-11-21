@@ -42,8 +42,6 @@ pub use view::{LookChoice, LookView, look_view, reach};
 
 use thiserror::Error;
 
-/// Name of the themes' folder, whose parts are joined before they are read, for errors.
-const THEMES_FILE: &str = "themes/*.toml";
 /// Name of the shared sizes file, for errors.
 const SHAPE_FILE: &str = "shape.toml";
 /// Name of the motion file, for errors.
@@ -58,10 +56,12 @@ macro_rules! theme_parts {
         /// The themes, their parts joined in order and compiled in, so the app reads nothing it draws from disk
         /// (ADR-0016).
         const THEMES: &str = concat!($(include_str!(concat!("../tokens/themes/", $part, ".toml"))),+);
-        /// Each part with its name, in the order `THEMES` joins them.
-        #[cfg(test)]
-        const THEME_PARTS: &[(&str, &str)] =
-            &[$(($part, include_str!(concat!("../tokens/themes/", $part, ".toml")))),+];
+        /// Each part with its name and file, in the order `THEMES` joins them, so an error names its file.
+        const THEME_PARTS: &[theme::Part] = &[$(theme::Part {
+            name: $part,
+            file: concat!("themes/", $part, ".toml"),
+            text: include_str!(concat!("../tokens/themes/", $part, ".toml")),
+        }),+];
     };
 }
 theme_parts!("common", "native", "et66", "dolch");
@@ -114,7 +114,7 @@ impl Themes {
     /// A token file that does not parse or breaks a rule, named with the reason.
     pub fn shipped() -> Result<Self, ThemeError> {
         let at = |file| move |why| ThemeError { file, why };
-        let (mut list, common) = theme::parse(THEMES).map_err(at(THEMES_FILE))?;
+        let (mut list, common) = theme::load(THEME_PARTS, THEMES)?;
         let shape = shape::parse(SHAPE).map_err(at(SHAPE_FILE))?;
         let motion = motion::parse(MOTION).map_err(at(MOTION_FILE))?;
         let icons = icons::parse(ICONS).map_err(at(ICONS_FILE))?;

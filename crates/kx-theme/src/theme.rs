@@ -9,6 +9,9 @@ use crate::look::Look;
 use crate::mode::Mode;
 use crate::palette::{Palette, own_press, plate_default};
 
+mod files;
+pub(crate) use files::{Part, load};
+
 /// Text weights run from thin to black.
 pub(crate) const FONT_WEIGHTS: std::ops::RangeInclusive<u16> = 100..=900;
 
@@ -71,7 +74,7 @@ pub(crate) fn parse(text: &str) -> Result<(Vec<Theme>, Common), String> {
     }
     for (i, t) in themes.iter().enumerate() {
         if themes[..i].iter().any(|u| u.look.id == t.look.id) {
-            return Err(format!("theme id {:?} is used twice", t.look.id));
+            return Err(format!("{}: the theme id is used twice", t.look.id));
         }
     }
     Ok((themes, common))

@@ -1,4 +1,4 @@
-//! The dictation bar's icons (design/voice-bar.html `bar()`): its buttons by id, each state's mark and each note's.
+//! The dictation bar's icons (design/voice-bar.js `bar()`): its buttons by id, each state's mark and each note's.
 
 use std::collections::BTreeMap;
 

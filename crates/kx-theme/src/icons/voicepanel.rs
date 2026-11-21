@@ -1,4 +1,4 @@
-//! The Voice panel's icons (design/voice-bar.html `PAGE`): each page, button, mark, line above a list and device kind by
+//! The Voice panel's icons (design/voice-bar.js `PAGE`): each page, button, mark, line above a list and device kind by
 //! the id the hub gives it, and the parts every page shares.
 
 use std::collections::BTreeMap;

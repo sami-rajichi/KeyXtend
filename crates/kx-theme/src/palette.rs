@@ -57,8 +57,9 @@ const PLATE_TEXT: (&str, &str) = ("legend_2_plate", "legend_2");
 /// The press shade token, which a mode table writes only to replace the shade made from `[common] press`.
 const PRESS: &str = "press";
 
-/// How many key and light tokens `named` starts with, and how many panel and state tokens follow them.
+/// How many key, light and warning tokens `named` starts with.
 const KEY_TOKENS: usize = 25;
+/// How many panel and state tokens follow them.
 const REST_TOKENS: usize = 14;
 /// How many colour tokens a palette names; each part's array holds its own count, so none is dropped.
 const TOKENS: usize = KEY_TOKENS + REST_TOKENS;
@@ -202,7 +203,7 @@ impl Palette {
         std::array::from_fn(|i| keys.get(i).copied().unwrap_or_else(|| rest[i - keys.len()]))
     }
 
-    /// The keys' and lights' tokens, the first part of `named`.
+    /// The keys', lights' and warnings' tokens, the first part of `named`.
     fn keys_named(&self) -> [(&'static str, Rgba); KEY_TOKENS] {
         [
             ("plate", self.plate),

@@ -66,7 +66,7 @@ fn an_empty_or_twice_used_theme_list_is_refused() {
     assert!(empty.expect_err("no themes").contains("no [[theme]]"));
     let twice = format!("{head}\n[[theme]]{first}\n[[theme]]{first}");
     let e = parse(&twice).expect_err("the same id twice");
-    assert!(e.contains("\"native\""), "{e}");
+    assert!(e.starts_with("native: ") && e.contains("twice"), "{e}");
 }
 
 #[test]

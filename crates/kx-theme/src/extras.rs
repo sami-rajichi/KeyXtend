@@ -35,7 +35,7 @@ impl ChipsShape {
     }
 }
 
-/// The dictation bar's status and words (design/voice-bar.html `.vbar`); its own sizes are `VoiceShape`'s.
+/// The dictation bar's status and words (design/voice-bar.css `.vbar`); its own sizes are `VoiceShape`'s.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CaptionShape {
@@ -43,7 +43,7 @@ pub struct CaptionShape {
     pub pad_px: f32,
     /// Room beside a status, a text or a note (`.st`, `.vtx`, `.msg`).
     pub inset_px: f32,
-    /// Padding around the words heard (design/voice-bar.html `.vtx`).
+    /// Padding around the words heard (design/voice-bar.css `.vtx`).
     pub words_pad_px: f32,
     /// Gap between the dot and the status text.
     pub gap_px: f32,

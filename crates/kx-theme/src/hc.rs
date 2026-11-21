@@ -61,17 +61,18 @@ fn keys(p: &mut Palette, s: &SysColors) {
     p.hover = Rgba { a: 0, ..face };
 }
 
-/// Enter, every on, locked, recording or preparing key, and a pressed key, in `Highlight` with `HighlightText`.
+/// Enter, every on, locked or recording key, and a pressed key, in `Highlight` with `HighlightText`; a preparing key
+/// swaps a button's pair, so it never looks like Recording or a resting key.
 fn states(p: &mut Palette, s: &SysColors) {
     let (sel, sel_ink): (Rgba, Rgba) = (s.highlight.into(), s.highlight_text.into());
     p.press = sel;
     p.press_ink = Some(sel_ink);
+    (p.prep, p.prep_ink) = (s.button_text.into(), s.button.into());
     for c in [
         &mut p.enter,
         &mut p.on,
         &mut p.lock,
         &mut p.rec,
-        &mut p.prep,
         &mut p.led_on,
         &mut p.ring,
         &mut p.badge_bg,
@@ -83,7 +84,6 @@ fn states(p: &mut Palette, s: &SysColors) {
         &mut p.on_ink,
         &mut p.lock_ink,
         &mut p.rec_ink,
-        &mut p.prep_ink,
         &mut p.badge_ink,
     ] {
         *c = sel_ink;

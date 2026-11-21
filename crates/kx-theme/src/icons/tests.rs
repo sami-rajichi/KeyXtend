@@ -234,7 +234,7 @@ fn the_dictation_bar_and_its_tray_row_show_the_mock_ups_icons() {
         .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.")))
         .collect();
     let want: Vec<&str> = want.split_whitespace().collect();
-    assert_eq!(got, want, "design/voice-bar.html bar() and voice-cloud.js");
+    assert_eq!(got, want, "design/voice-bar.js bar() and voice-cloud.js");
     assert_eq!(i.tray.voice, "mic", "the Dictation key's icon");
     assert!(
         i.named()
@@ -275,7 +275,7 @@ fn the_voice_panel_shows_the_mock_ups_icons() {
         .map(|(role, name)| format!("{}={name}", role.trim_start_matches("voice.panel.")))
         .collect();
     let want: Vec<&str> = want.split_whitespace().collect();
-    assert_eq!(got, want, "design/voice-bar.html PAGE and voice-cloud.js");
+    assert_eq!(got, want, "design/voice-bar.js PAGE and voice-cloud.js");
     let named = i.named();
     assert!(named.contains(&("voice.panel.kinds.card".into(), "gpu")));
     let t = text().replacen("built-in = \"gpu\"", "built-in = \"Gpu\"", 1);

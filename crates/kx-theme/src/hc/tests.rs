@@ -67,6 +67,22 @@ fn a_pressed_key_takes_highlight_with_its_text_never_a_tint() {
 }
 
 #[test]
+fn preparing_swaps_a_buttons_pair_so_it_never_looks_like_recording_or_a_resting_key() {
+    let t = themes();
+    let (face, ink) = (Rgba::from(HC.button), Rgba::from(HC.button_text));
+    for base in t.list.iter().flat_map(|t| [&t.light, &t.dark]) {
+        let p = contrast_palette(base, &HC, t.shape.line.px);
+        assert_eq!(
+            (p.prep, p.prep_ink),
+            (ink, face),
+            "a button's pair, swapped"
+        );
+        assert_ne!(p.prep, p.rec, "never Recording's Highlight");
+        assert_ne!(p.prep, p.key, "never a resting key");
+    }
+}
+
+#[test]
 fn a_key_edge_is_a_hairline_wide() {
     let t = themes();
     for px in [t.shape.line.px, 2.5] {

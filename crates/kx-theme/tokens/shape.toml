@@ -150,7 +150,7 @@ icon_gap_px = 5.0
 gap_px = 8.0
 
 [caption]
-# The dictation bar (design/voice-bar.html .vbar): padding around its parts and room beside a status, text or note
+# The dictation bar (design/voice-bar.css .vbar): padding around its parts and room beside a status, text or note
 # (.st, .vtx padding-inline), padding around words (.vtx), the gap between its parts and from the dot to the status
 # (.vbar, .st), status text size and weight, words size (Latin, Arabic), recording dot, icon size (.i), the bar's height
 # (3 + 6 + the 26 px wave + 3), radius around words (.vbar.wide).
@@ -367,9 +367,9 @@ kind_px = [8.0, 10.0, 24.0, 6.0]
 kind_rows = 2
 
 [voice]
-# The dictation bar's and the Voice panel's own parts (design/voice-bar.html --voice-*). The bar's width while it
-# listens or writes, then with a text or a note; the wave's bars: width, gap, height at rest and at full level (.wave b,
-# frame()'s 3 + 21); the lines a text or a note shows before it is cut.
+# The dictation bar's and the Voice panel's own parts (design/voice-bar.html --voice-*, classes in voice-bar.css). The
+# bar's width while it listens or writes, then with a text or a note; the wave's bars: width, gap, height at rest and at
+# full level (.wave b, voice-bar-scene.js frame()'s 3 + 21); the lines a text or a note shows before it is cut.
 bar_px = [500.0, 640.0]
 wave_px = [4.0, 3.0, 3.0, 24.0]
 text_lines = 2
@@ -383,5 +383,5 @@ col_px = 84.0
 # line (.prog.run): the moving part's share of its track, and the whole line's opacity while motion is reduced (.still).
 panel_px = 600.0
 run_share = [0.4, 0.5]
-# A cloud card's label column (.facts, --voice-fact-px).
+# A cloud card's label column (design/voice-cloud.css .facts, --voice-fact-px).
 fact_px = 200.0
